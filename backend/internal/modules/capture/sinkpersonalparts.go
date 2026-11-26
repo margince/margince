@@ -3,7 +3,8 @@
 
 package capture
 
-// What a private thread's files are allowed to leave behind.
+// What a withholding message's files are allowed to leave behind: a private
+// thread's, and a copied-only message's.
 //
 // The read boundary already keeps a colleague out of personal mail, and
 // erasure reaches the bytes. This is minimisation rather than correctness: not
@@ -40,20 +41,82 @@ const withheldPersonalParts = "capture_personal_parts_withheld"
 // the thread, made the message private.
 const verdictPersonalSender = "personal_sender"
 
-// messageIsPrivateTx answers "does this message keep its files". The raw store
-// and staging both call it with the same record.
+// messageIsPrivateTx answers "does this message keep its files", asked fresh.
 func messageIsPrivateTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
 ) (bool, string, error) {
-	private, verdict, err := threadIsPrivateTx(ctx, tx, rec)
-	if err != nil || private {
-		return private, verdict, err
+	decided, err := decideMessagePrivacyTx(ctx, tx, rec, fields)
+	return decided.private, decided.verdict, err
+}
+
+// capturedMessageIsPrivateTx is messageIsPrivateTx for a new message's readers:
+// the stored original, its files and its filing take the capture's one answer.
+func capturedMessageIsPrivateTx(
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
+) (bool, string, error) {
+	if decided, ok := decidedPrivacy(ctx, rec); ok {
+		return decided.private, decided.verdict, nil
+	}
+	return messageIsPrivateTx(ctx, tx, rec, fields)
+}
+
+// messagePrivacy is the privacy answer for one record, with the thread's half
+// kept apart for the ladder, which asks only that half.
+type messagePrivacy struct {
+	key           connector.NaturalKey
+	threadPrivate bool
+	private       bool
+	verdict       string
+}
+
+type messagePrivacyKey struct{}
+
+func decideMessagePrivacyTx(
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
+) (messagePrivacy, error) {
+	decided := messagePrivacy{key: rec.NaturalKey}
+	var err error
+	decided.threadPrivate, decided.verdict, err = threadIsPrivateTx(ctx, tx, rec)
+	if err != nil || decided.threadPrivate {
+		decided.private = decided.threadPrivate
+		return decided, err
 	}
 	personal, err := senderIsPersonalTx(ctx, tx, rec, fields)
 	if err != nil || !personal {
-		return false, "", err
+		return decided, err
 	}
-	return true, verdictPersonalSender, nil
+	decided.private, decided.verdict = true, verdictPersonalSender
+	return decided, nil
+}
+
+// withMessagePrivacyTx decides rec's privacy once and carries it on ctx, so the
+// stored original, the files and the filing take one answer. The capture writes
+// only pending verdicts after this, and only the verdict engine settles one private.
+func withMessagePrivacyTx(
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
+) (context.Context, error) {
+	decided, err := decideMessagePrivacyTx(ctx, tx, rec, fields)
+	if err != nil {
+		return ctx, err
+	}
+	return context.WithValue(ctx, messagePrivacyKey{}, decided), nil
+}
+
+// decidedPrivacy is the answer carried for this record. A record under another
+// key, such as the seat-scoped copy of a collided message, asks for itself.
+func decidedPrivacy(ctx context.Context, rec connector.NormalizedRecord) (messagePrivacy, bool) {
+	decided, ok := ctx.Value(messagePrivacyKey{}).(messagePrivacy)
+	return decided, ok && decided.key == rec.NaturalKey
+}
+
+// capturedThreadIsPrivateTx is threadIsPrivateTx, answered from the capture's
+// own decision when it carries one for rec.
+func capturedThreadIsPrivateTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {
+	if decided, ok := decidedPrivacy(ctx, rec); ok {
+		return decided.threadPrivate, nil
+	}
+	private, _, err := threadIsPrivateTx(ctx, tx, rec)
+	return private, err
 }
 
 // storedMessageIsPrivateTx is messageIsPrivateTx for a message already stored,
@@ -82,15 +145,18 @@ func storedMessageIsPrivateTx(ctx context.Context, tx pgx.Tx, activity ids.Activ
 //
 // It asks the sender-scoped half of PersonalPurgeScope (purgepersonal.go): the
 // seat's own verdict, inbound mail only, inside noiseVerdictReach, and no
-// `business` override and no attested reply to the address. It also refuses an
-// address a correspondence contact holds, because unlike the purge it acts at
-// once and leaves no window to correct a forged verdict. The purge's other
+// `business` override. It also refuses an address a correspondence contact
+// holds. Unlike the purge it acts at once, so no window is left to correct a
+// forged verdict. The purge's other
 // clauses are about a stored row — a hold, a contact filing — and no row exists
 // yet. Spelled here rather than shared because that scope is a SQL fragment
 // over a stored activity `a`, and this message is not one.
 func senderIsPersonalTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
 ) (bool, error) {
+	if original := fields.forwardedFrom; original != nil {
+		return senderIsPersonalForTx(ctx, tx, actorUserID(ctx), original.From, false)
+	}
 	if fields.Kind != kindEmail || fields.Direction != connector.DirectionInbound || rec.Counterparty.SentByOwner() {
 		return false, nil
 	}
@@ -114,20 +180,16 @@ func senderIsPersonalForTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, sender
 	// address a personal verdict. A contact the workspace corresponds with at
 	// that address outranks it, as it does for noiseMailScope. So does
 	// authenticated Google meeting mail, unless the seat itself chose personal.
+	// A reply to the address does not, as in PersonalPurgeScope.
 	var personal bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		  SELECT 1 FROM capture_pending_counterparty p
 		   WHERE p.owner_id = $1 AND p.email = $2
 		     AND p.status = $3 AND p.kind = $4
-		     AND p.resolved_at IS NOT NULL
+		     AND `+latestResolvedSenderVerdict("p")+`
 		     AND (p.resolved_by_owner OR NOT $5)
 		     AND now() <= p.resolved_at + `+quoteInterval(noiseVerdictReach)+`
-		     AND NOT EXISTS (
-		       SELECT 1 FROM activity c
-		        WHERE c.counterparty_email = $2
-		          AND c.direction = 'outbound' AND c.counterparty_outbound_attested
-		          AND c.archived_at IS NULL)
 		     AND NOT EXISTS (
 		       SELECT 1 FROM contact_email pe JOIN contact pr ON pr.id = pe.contact_id
 		        WHERE pe.email = $2 AND pr.archived_at IS NULL AND pe.archived_at IS NULL
@@ -143,7 +205,7 @@ func senderIsPersonalForTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, sender
 // read from. Raw capture is append-once, so a private message's files leave the
 // original here, before its only write.
 func storeOriginalTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (connector.NormalizedRecord, error) {
-	rec, err := withholdPrivateOriginalTx(ctx, tx, rec)
+	rec, err := withholdOriginalPartsTx(ctx, tx, rec)
 	if err != nil {
 		return rec, err
 	}
@@ -155,24 +217,34 @@ func storeOriginalTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRec
 	return rec, nil
 }
 
-// withholdPrivateOriginalTx is the record raw_capture should store: a private
+// withholdOriginalPartsTx is the record raw_capture should store: a withholding
 // message's original without its attachment bytes, anything else unchanged.
-func withholdPrivateOriginalTx(
+//
+// Both reasons strip the original, not just the rows. Bytes left here would
+// keep a copy of the file whose row says it has none, and a restore would hand
+// it back.
+func withholdOriginalPartsTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord,
 ) (connector.NormalizedRecord, error) {
 	fields, ok := rec.Fields.(ActivityFields)
 	if !ok {
 		return rec, nil
 	}
-	private, _, err := messageIsPrivateTx(ctx, tx, rec, fields)
-	if err != nil || !private {
+	private, _, err := capturedMessageIsPrivateTx(ctx, tx, rec, fields)
+	if err != nil {
 		return rec, err
+	}
+	if !private {
+		copied, err := copiedOnlyTx(ctx, tx, fields)
+		if err != nil || !copied {
+			return rec, err
+		}
 	}
 	return withholdRawParts(rec), nil
 }
 
-// withholdRawParts takes a private message's attachment bytes out of the
-// original raw_capture is about to store. The parts themselves stay on the
+// withholdRawParts takes a withholding message's attachment bytes out of the
+// original raw_capture is about to store. Both reasons reach it. The parts themselves stay on the
 // record until finishNewActivity strips them and leaves the breadcrumb.
 func withholdRawParts(rec connector.NormalizedRecord) connector.NormalizedRecord {
 	if len(rec.Raw) == 0 || (len(rec.Parts) == 0 && len(rec.PartDrops) == 0) {
@@ -196,15 +268,10 @@ func withholdRawParts(rec connector.NormalizedRecord) connector.NormalizedRecord
 // reading, or the seat's own hand.
 const fieldVerdict = "verdict"
 
-// stripPersonalParts takes a private message's files out of the record before
-// anything stores them, and returns the parts it took so the caller can name
-// them on rows without bytes.
-//
-// The parts are REMOVED rather than emptied. Staging writes each body to the
-// object store unconditionally, so an emptied part would put a zero-length
-// object there — storing something, under a key the message then points at,
-// which is worse than either keeping the file or keeping nothing.
-func stripPersonalParts(rec connector.NormalizedRecord) (connector.NormalizedRecord, []connector.Part) {
+// stripParts takes a withholding message's files off the record and returns
+// them for naming on rows without bytes. Removed rather than emptied: staging
+// writes every body, so an emptied part would store a zero-length object.
+func stripParts(rec connector.NormalizedRecord) (connector.NormalizedRecord, []connector.Part) {
 	taken := rec.Parts
 	rec.Parts = nil
 	return rec, taken

@@ -1,0 +1,15 @@
+{
+  "tool": "change_compliance",
+  "action": "confirm_notice_source",
+  "verb": "confirm_notice_source",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

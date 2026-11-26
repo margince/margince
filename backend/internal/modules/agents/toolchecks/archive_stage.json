@@ -1,0 +1,9 @@
+{
+  "verb": "archive_stage",
+  "checks": [
+    "pipeline.delete"
+  ],
+  "takes": [
+    "stage"
+  ]
+}

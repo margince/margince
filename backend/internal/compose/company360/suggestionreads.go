@@ -61,6 +61,9 @@ type lastMessage struct {
 	Excerpt string
 	// Move is the History badge's move when the message is a mail.
 	Move *crmcontracts.EmailSummaryMove
+	// EarlierOwed says our message left the correspondent's newest earlier mail
+	// still owed (activities.EarlierMailOwed).
+	EarlierOwed bool
 }
 
 // excerptRunes bounds what a citation quotes of a message body. A quote is
@@ -96,18 +99,19 @@ func newestMessage(
 	if activityScope == "" {
 		activityScope = scopeAll
 	}
-	// The WORDS ride the audience test and the ROW does not: which message is
-	// newest is a fact about the account, what it said is content a limited
-	// audience withholds. Filtering the row on the audience would make the
-	// rule fall through to an older message and advise a chase on a thread
-	// somebody else already answered.
-	audience, err := auth.ActivityAudienceArm(ctx, "a", arg)
+	// The WORDS ride the content gate and the ROW does not. Which message is
+	// newest is a fact about the account; what it said is content a limited
+	// audience withholds. Filtering the row would fall through to an older
+	// message and advise a chase on a thread somebody else already answered.
+	// The words and the move test membership in one gated set.
+	readable, err := activities.MailThreadReadableSQL(ctx, newestMessageRows, arg)
 	if err != nil {
 		return lastMessage{}, false, err
 	}
+	contentReadable := activities.InGatedSetSQL(newestMessageReadable, "a")
 	// A mail's own History badge says whose move it is, so the strip and the
 	// no-reply advice read the same rule as the message's row.
-	move, err := activities.MailMoveColumnSQL(ctx, arg, now)
+	move, err := activities.MailMoveColumnSQL(ctx, tx, arg, now, newestMessageReadable)
 	if err != nil {
 		return lastMessage{}, false, err
 	}
@@ -117,17 +121,21 @@ func newestMessage(
 	// LastWord wants every row at the newest stored instant, in the timeline's order (storekit's created_at, id).
 	// Not a rank() window: without a small LIMIT the planner sorts every reached row instead of stopping on the index.
 	query := fmt.Sprintf(`
-		SELECT a.id, a.direction, a.occurred_at, a.occurred_precision = 'day', a.kind,
-		       CASE WHEN %[1]s THEN a.subject END,
-		       CASE WHEN %[1]s THEN left(a.body, %[2]d) END,
-		       %[3]s
-		FROM (SELECT a.id, a.created_at FROM activity a
+		WITH %[6]s AS MATERIALIZED (
+		      SELECT a.id, a.created_at, a.thread_key, a.kind, a.channel_provider FROM activity a
 		      WHERE %[4]s AND a.occurred_at = (
 		        SELECT a.occurred_at FROM activity a WHERE %[4]s ORDER BY a.occurred_at DESC LIMIT 1)
 		      ORDER BY a.created_at DESC, a.id DESC
-		      LIMIT %[5]d) newest
+		      LIMIT %[5]d),
+		     %[7]s AS MATERIALIZED (%[8]s)
+		SELECT a.id, `+activities.WriterSideSQL("a", "%[1]s")+`, a.occurred_at, a.occurred_precision = 'day', a.kind,
+		       CASE WHEN %[1]s THEN a.subject END,
+		       CASE WHEN %[1]s THEN left(a.body, %[2]d) END,
+		       %[3]s
+		FROM %[6]s newest
 		JOIN activity a ON a.id = newest.id
-		ORDER BY newest.created_at DESC, newest.id DESC`, audience, excerptRunes, move, reached, activities.NewestTiedCap)
+		ORDER BY newest.created_at DESC, newest.id DESC`, contentReadable, excerptRunes, move, reached, activities.NewestTiedCap,
+		newestMessageRows, newestMessageReadable, readable)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return lastMessage{}, false, fmt.Errorf("read the account's newest message: %w", err)
@@ -136,10 +144,25 @@ func newestMessage(
 	if err != nil || len(found) == 0 {
 		return lastMessage{}, false, err
 	}
-	return activities.LastWord(found, func(m lastMessage) (occurredday.Moment, bool) {
+	last := activities.LastWord(found, func(m lastMessage) (occurredday.Moment, bool) {
 		return occurredday.Moment{At: m.At, DateOnly: m.DateOnly}, m.Direction == string(crmcontracts.ActivityDirectionInbound)
-	}), true, nil
+	})
+	// Only our own mail can leave an earlier one owed, so an inbound newest
+	// message costs no second read.
+	if last.Direction == string(crmcontracts.ActivityDirectionOutbound) {
+		if last.EarlierOwed, err = activities.EarlierMailOwed(ctx, tx, last.ID, now); err != nil {
+			return lastMessage{}, false, err
+		}
+	}
+	return last, true, nil
 }
+
+// The sets newestMessage reads: the rows at the newest instant, and the ids
+// among them and their threads that the reader may read.
+const (
+	newestMessageRows     = "newest_message_rows"
+	newestMessageReadable = "newest_message_readable"
+)
 
 func scanLastMessage(row pgx.CollectableRow) (lastMessage, error) {
 	var found lastMessage
@@ -248,6 +271,7 @@ type suggestionInputs struct {
 	open                pipeline
 	contractStrip       contractStrip
 	scheduled           bool
+	dormancy            dormancyInputs
 }
 
 // advisable reports whether this caller can be advised at all. Neither input
@@ -279,7 +303,7 @@ func gatherSuggestionInputs(
 	contractsGranted := auth.ReadGranted(ctx, "contract")
 	in := suggestionInputs{timeline: timeline, pipeline: pipeline, contracts: contractsGranted, language: language, loc: loc}
 	if in.contracts {
-		strip, err := readContractStrip(ctx, tx, companyID, now, baseCurrency)
+		strip, err := readContractStrip(ctx, tx, companyID, now, baseCurrency, loc)
 		if err != nil {
 			return suggestionInputs{}, err
 		}
@@ -310,6 +334,11 @@ func gatherSuggestionInputs(
 	in.contractEndedSource = facts.ContractEndedSource
 	in.lifecycle = heading.lifecycle
 	in.companyName = heading.name
+	dormant, err := readDormancyInputs(ctx, tx, companyID, heading, now, loc)
+	if err != nil {
+		return suggestionInputs{}, err
+	}
+	in.dormancy = dormant
 	return in, nil
 }
 
@@ -319,6 +348,9 @@ func gatherSuggestionInputs(
 type companyHeading struct {
 	lifecycle string
 	name      string
+	// owner and lastActivity feed the dormancy ladder and its follow-up.
+	owner        *ids.UUID
+	lastActivity *time.Time
 }
 
 // readCompanyHeading takes it from the company row, for the caller
@@ -329,13 +361,12 @@ func readCompanyHeading(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 ) (companyHeading, error) {
 	var lifecycle *string
-	var name string
+	out := companyHeading{}
 	if err := tx.QueryRow(ctx,
-		`SELECT lifecycle, display_name FROM company WHERE id = $1`, companyID,
-	).Scan(&lifecycle, &name); err != nil {
+		`SELECT status, display_name, owner_id, last_activity_at FROM company WHERE id = $1`, companyID,
+	).Scan(&lifecycle, &out.name, &out.owner, &out.lastActivity); err != nil {
 		return companyHeading{}, fmt.Errorf("read the account's stage and name: %w", err)
 	}
-	out := companyHeading{name: name}
 	if lifecycle != nil {
 		out.lifecycle = *lifecycle
 	}
@@ -348,6 +379,8 @@ func readCompanyHeading(
 // The order below IS the spec's evaluation order and the states are mutually
 // exclusive — the first match wins, so a silent account reads as dormant rather
 // than as whichever side happened to write last a year ago.
+// Dormant is the dormancy ladder's cold rungs, and only while the newest
+// message this reader sees is as old as the ladder's dormant day.
 //
 // waiting_on_them reuses noReplyDays rather than restating it, which is what
 // makes the strip and the no_reply suggestion beneath it agree by construction
@@ -358,7 +391,7 @@ func engagementState(in suggestionInputs, now time.Time) crmcontracts.Company360
 	}
 	age := now.Sub(in.newest.At)
 	switch {
-	case age > engagementDormantDays*24*time.Hour:
+	case in.dormancy.quietSince(in.newest, now, in.loc):
 		return "dormant"
 	case in.newest.awaitsThem() && age >= noReplyDays*24*time.Hour:
 		return "waiting_on_them"
@@ -367,9 +400,3 @@ func engagementState(in suggestionInputs, now time.Time) crmcontracts.Company360
 	}
 	return "active"
 }
-
-// engagementDormantDays (PO-PARAM-4) is where "whose move is it" stops being a
-// useful question. Past it the distinction is not actionable, and a strip still
-// saying "waiting on them" after a quarter would be advising a reply to a
-// conversation nobody remembers.
-const engagementDormantDays = 90

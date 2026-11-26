@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import {
   OTHER_KINDS,
   SOURCE_ANSWERS,
@@ -39,7 +40,9 @@ describe("the source question maps each answer to an existing kind", () => {
       ...OTHER_KINDS,
     ]);
     reached.delete(null);
-    expect([...reached].sort()).toEqual([...SOURCE_KINDS].sort());
+    expect([...reached].sort((a, b) => stable(String(a), String(b)))).toEqual(
+      [...SOURCE_KINDS].sort(stable),
+    );
     expect(OTHER_KINDS).toHaveLength(6);
     expect(SOURCE_KINDS).not.toContain("unknown_legacy");
   });

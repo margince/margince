@@ -10,7 +10,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -61,6 +60,8 @@ type Service struct {
 	// scans recognises a dismissal of advice the account scan raised, when a
 	// deployment has one. See RecogniseScanFindings.
 	scans ScanRecogniser
+	// doneAnswers keeps the card's Not yet to Done? (WithDoneAnswers).
+	doneAnswers DoneAnswers
 	// lists: the page names the Shortlists the account is on (lists.enabled).
 	lists bool
 	// activities answers the timeline's custom-field columns (WithActivityFields).
@@ -107,6 +108,10 @@ type AssembleOptions struct {
 	// (relstrength.WrittenByHumanSQL) before its cap, for the briefs and
 	// drafts. The page itself keeps every record.
 	WrittenByHumanOnly bool
+	// PartyContactID narrows the timeline and the last-touch dates to rows
+	// this contact is a party to, and the open tasks to theirs. An account
+	// draft to one contact sets it. The page keeps every record.
+	PartyContactID *ids.ContactID
 }
 
 // AssembleScoped is Assemble narrowed by opts.
@@ -148,7 +153,11 @@ func (s *Service) AssembleScoped(ctx context.Context, companyID ids.CompanyID, o
 			if err != nil {
 				return err
 			}
-			return s.sections(prepared, tx, companyID, now, opts, activityColumns, &out)
+			// Each section's statement is tens of kilobytes of row scope, planned
+			// longer than it runs, so the sections keep their generic plans.
+			return database.ReuseGenericPlansTx(prepared, tx, func() error {
+				return s.sections(prepared, tx, companyID, now, opts, activityColumns, &out)
+			})
 		})
 	})
 	if err != nil {
@@ -354,8 +363,11 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 		if a.adviceErr == nil {
 			// The stage and the name come off the company row this
 			// assembly already read, so the page adds no query for either.
-			heading := companyHeading{name: a.out.Company.DisplayName}
-			if lc := a.out.Company.Lifecycle; lc != nil {
+			heading := companyHeading{name: a.out.Company.DisplayName, lastActivity: a.out.Company.LastActivityAt}
+			if owner := a.out.Company.OwnerId; owner != nil {
+				heading.owner = new(ids.UUID(*owner))
+			}
+			if lc := a.out.Company.Status; lc != nil {
 				heading.lifecycle = string(*lc)
 			}
 			var base string
@@ -390,8 +402,11 @@ func (a *assembly) readNextSteps() error {
 	if err := auth.Require(a.ctx, "activity", principal.ActionRead); err != nil {
 		return err
 	}
-	data, page, _, err := nextStepsSection(a.ctx, a.tx, a.companyID, a.now, a.opts)
+	data, page, sources, err := nextStepsSection(a.ctx, a.tx, a.companyID, a.now, a.opts)
 	if err != nil {
+		return err
+	}
+	if err := a.svc.askTasksDone(a.ctx, a.tx, data, sources, a.now); err != nil {
 		return err
 	}
 	a.out.NextSteps = &struct {
@@ -454,38 +469,4 @@ func (a *assembly) readSinceLastVisit() error {
 	}
 	a.out.SinceLastVisit = &delta
 	return nil
-}
-
-// pageInfo carries a store page onto the wire shape.
-func pageInfo(p storekit.Page) crmcontracts.PageInfo {
-	info := crmcontracts.PageInfo{HasMore: p.HasMore}
-	if p.NextCursor != "" {
-		info.NextCursor = &p.NextCursor
-	}
-	return info
-}
-
-// accountStrengthToWire adds the two account-only facts to the shared
-// shape: whose relationship carries the score, and how many contacts it
-// was chosen from. The shared half comes from compose.StrengthToWire, so
-// a bucket rename is made once for both the account roll-up and the
-// per-contact routes.
-func accountStrengthToWire(account contacts.AccountStrength, now time.Time) *crmcontracts.CompanyStrength {
-	base := contacts.StrengthToWire(account.RelationshipStrength, now)
-	out := crmcontracts.CompanyStrength{
-		Score:                   base.Score,
-		Bucket:                  crmcontracts.CompanyStrengthBucket(base.Bucket),
-		Factors:                 base.Factors,
-		ComputedAt:              base.ComputedAt,
-		LastInteraction:         base.LastInteraction,
-		Inbound90d:              base.Inbound90d,
-		Outbound90d:             base.Outbound90d,
-		ContributingActivityIds: base.ContributingActivityIds,
-		ContactCount:            account.ContactCount,
-	}
-	if account.ContributorContactID != nil {
-		v := openapi_types.UUID(account.ContributorContactID.UUID)
-		out.ContributorContactId = &v
-	}
-	return &out
 }

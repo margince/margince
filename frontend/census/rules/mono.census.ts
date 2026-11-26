@@ -68,11 +68,15 @@ export function monoDeclarations(css: string): MonoDeclaration[] {
   // The selectors each open block applies to. An at-rule block (`@media`,
   // `@supports`) applies to whatever its parent did.
   const open: string[][] = [];
+  // A `@font-face` family names the face it declares and dresses nothing.
+  const faces: boolean[] = [];
   let start = 0;
   const judge = (end: number) => {
     const chunk = text.slice(start, end);
     const match = /^\s*(font-family|font|--[\w-]+)\s*:([\s\S]*)$/i.exec(chunk);
-    if (match && MONO_FAMILY.test(match[2])) {
+    const declaresFace =
+      faces.at(-1) === true && match?.[1].toLowerCase() === "font-family";
+    if (match && !declaresFace && MONO_FAMILY.test(match[2])) {
       const offset = start + chunk.search(/\S/);
       found.push({
         line: text.slice(0, offset).split("\n").length,
@@ -87,10 +91,14 @@ export function monoDeclarations(css: string): MonoDeclaration[] {
       const prelude = text.slice(start, index).trim();
       const parents = open.at(-1) ?? [];
       open.push(selectorsInside(parents, prelude));
+      faces.push(prelude.toLowerCase() === "@font-face");
       start = index + 1;
     } else if (char === ";" || char === "}") {
       judge(index);
-      if (char === "}") open.pop();
+      if (char === "}") {
+        open.pop();
+        faces.pop();
+      }
       start = index + 1;
     }
   }

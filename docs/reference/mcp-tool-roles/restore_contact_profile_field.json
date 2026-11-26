@@ -1,0 +1,19 @@
+{
+  "tool": "change_relationships",
+  "action": "restore_profile_field",
+  "verb": "restore_contact_profile_field",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

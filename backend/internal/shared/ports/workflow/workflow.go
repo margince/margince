@@ -12,11 +12,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -68,6 +70,17 @@ type Spec struct {
 	// answers no. A caller re-driving reads this; a false answer means the run
 	// needs a human rather than a button.
 	RedrivableWithoutDuplicating bool
+	// ReplaysAfterFailedApply lets the bus redelivery of an event run Apply again
+	// when its first Apply failed on a fault that is not a refusal.
+	//
+	// Set it only when Apply is idempotent end to end through its own natural
+	// keys, such as a notice's dedupe key. Never set it for an Apply that creates
+	// records through the effect claim (applyCreate). A replay finds the earlier
+	// firing's unconfirmed claim and reports the create as deduplicated.
+	// The record is then lost.
+	ReplaysAfterFailedApply bool
+	// IgnoreUnmatchedEvents leaves a source occurrence available for a later qualifying event.
+	IgnoreUnmatchedEvents bool
 }
 
 // Trigger binds to the event bus or a schedule: EventType for bus events,
@@ -82,6 +95,13 @@ type Trigger struct {
 	EventType string
 	Schedule  string
 	Filter    map[string]any // cheap envelope pre-filter before Match
+	// AdditionalEventTypes reuse this handler's planner and occurrence identity.
+	AdditionalEventTypes []string
+}
+
+// MatchesEventType reports whether an event of this type starts the handler.
+func (t Trigger) MatchesEventType(eventType string) bool {
+	return eventType != "" && (eventType == t.EventType || slices.Contains(t.AdditionalEventTypes, eventType))
 }
 
 // Event is the bus envelope slice a handler sees (events.md §2), plus
@@ -100,6 +120,9 @@ type Event struct {
 
 	AutomationID ids.UUID
 	Params       json.RawMessage
+
+	// EnabledFrom is set for a reviewed event rule that only acts on new work.
+	EnabledFrom time.Time
 
 	// OwnerID is the human who authored this automation instance
 	// (automation.owner_id) — the "on behalf of" attribute of a firing,
@@ -184,9 +207,10 @@ func AllActionKinds() []ActionKind {
 }
 
 type Action struct {
-	Kind   ActionKind
-	Target datasource.EntityRef
-	Args   json.RawMessage
+	SystemText *systemtext.Message `json:"system_text,omitempty"`
+	Kind       ActionKind
+	Target     datasource.EntityRef
+	Args       json.RawMessage
 
 	// Deduplicated marks a create the effect-level claim folded: a sibling
 	// instance's identical firing performed the write, so this action was
@@ -194,6 +218,10 @@ type Action struct {
 	// it). Typed here rather than smuggled into Args so a trace reader can
 	// render the fold instead of reporting a write that never happened.
 	Deduplicated bool `json:"deduplicated,omitempty"`
+
+	// Created is the record an applied create made, so a reader of the trace can
+	// open it under its own grants.
+	Created *datasource.EntityRef `json:"created,omitempty"`
 }
 
 // ApprovalToken references the typed, signed, single-use, effect-bound

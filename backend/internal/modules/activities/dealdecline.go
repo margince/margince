@@ -4,9 +4,9 @@
 package activities
 
 // A colleague's "not about this deal", and "none of them" to the deal
-// question. The decline is per deal: the mail leaves that deal, and no
-// automatic pass files it there again (provenance.DealDeclinedSQL). Other
-// deals stay open to it.
+// question. The decline is per deal: the mail's link to that deal is marked
+// unrelated (dealrelevance.go), and no automatic pass files it there again
+// (provenance.DealDeclinedSQL).
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // dealDeclineUndoReason is the stated reason of the project-filing undo a
@@ -42,14 +43,14 @@ func (s *Store) DeclineDeal(ctx context.Context, id ids.ActivityID, deal *ids.UU
 		return out, err
 	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := lockForFilingChange(ctx, tx, id); err != nil {
-			return err
-		}
 		if deal != nil {
-			if err := auth.EnsureVisibleExisting(ctx, tx, linkEntityDeal, *deal); err != nil {
+			if err := lockMarkedLink(ctx, tx, id, *deal); err != nil {
 				return err
 			}
 			return s.declineOnMessage(ctx, tx, id, []ids.UUID{*deal}, &out)
+		}
+		if err := lockForFilingChange(ctx, tx, id); err != nil {
+			return err
 		}
 		return s.declineEveryOfferedDeal(ctx, tx, id, &out)
 	})
@@ -92,24 +93,20 @@ func (s *Store) declineEveryOfferedDeal(ctx context.Context, tx pgx.Tx, mail ids
 }
 
 // declineOnMessage declines each deal on the message the caller named, which
-// lockForFilingChange holds. A project link that came from a deal taken off
+// lockForFilingChange holds. A project link that came from a deal marked so
 // goes too, under the project-filing undo's rules.
 func (s *Store) declineOnMessage(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deals []ids.UUID, out *crmcontracts.ActivityDealDecline) error {
 	for _, deal := range deals {
-		declined, removed, err := declineDealTx(ctx, tx, mail, deal)
+		decline, err := declineDealTx(ctx, tx, mail, deal)
 		if err != nil {
 			return err
 		}
-		if declined {
+		if decline.declined {
 			out.DeclinedDealIds = append(out.DeclinedDealIds, openapi_types.UUID(deal))
 		}
-		if !removed {
-			continue
-		}
-		out.Unlinked = true
-		if err := unfileDealProject(ctx, tx, mail, deal, out); err != nil {
-			return err
-		}
+		out.MarkedUnrelated = out.MarkedUnrelated || decline.marked
+		out.ProjectUnfiled = out.ProjectUnfiled || decline.project.unfiled
+		out.ProjectKept = out.ProjectKept || decline.project.kept
 	}
 	return nil
 }
@@ -129,31 +126,56 @@ func declineOnSibling(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deals
 		return err
 	}
 	for _, deal := range deals {
-		if _, _, err := declineDealTx(ctx, tx, mail, deal); err != nil {
+		if _, err := declineDealTx(ctx, tx, mail, deal); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// declineDealTx takes the deal link off the locked message and records the
-// decline. A deal declined before, and not linked again since, writes nothing.
-// It answers whether this call declined the deal, and whether a link came off.
-func declineDealTx(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID) (declined, removed bool, err error) {
+// dealDecline is what declineDealTx did. linked says the message carries a
+// link to the deal, which the decline marks rather than takes off.
+type dealDecline struct {
+	declined, linked, marked bool
+	project                  projectUnfiling
+}
+
+// declineDealTx marks the locked message's link to deal unrelated, or records
+// the decline when there is no link. A deal declined before writes nothing,
+// and so does a linked deal the caller may not change.
+func declineDealTx(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID) (dealDecline, error) {
 	var args []any
 	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
 	mailArg, dealArg := arg(mail), arg(deal)
 	var already, linked bool
-	err = tx.QueryRow(ctx, `SELECT `+provenance.DealDeclinedSQL(mailArg, dealArg+"::uuid")+`,
+	err := tx.QueryRow(ctx, `SELECT `+provenance.DealDeclinedSQL(mailArg, dealArg+"::uuid")+`,
 		 EXISTS (SELECT 1 FROM activity_link l
 		          WHERE l.activity_id = `+mailArg+` AND l.entity_type = 'deal' AND l.deal_id = `+dealArg+`)`,
 		args...).Scan(&already, &linked)
-	if err != nil || (already && !linked) {
-		return false, false, err
+	if err != nil {
+		return dealDecline{}, err
 	}
 	decision := map[string]any{fieldEntityType: linkEntityDeal, fieldEntityID: deal, provenance.DealDeclinedKey: true}
-	removed, err = unlinkRecordedTx(ctx, tx, mail, linkEntityDeal, deal, decision, nil)
-	return !already, removed, err
+	if !linked {
+		if already {
+			return dealDecline{}, nil
+		}
+		_, err := unlinkRecordedTx(ctx, tx, mail, linkEntityDeal, deal, decision, nil)
+		return dealDecline{declined: true}, err
+	}
+	if err := auth.EnsureChangeable(ctx, tx, linkEntityDeal, deal); notTheirsToFile(err) {
+		return dealDecline{linked: true}, nil
+	} else if err != nil {
+		return dealDecline{}, err
+	}
+	marked, err := writeDealMarkTx(ctx, tx, mail, deal, dealMark{
+		relevance: relstrength.DealUnrelated, source: relstrength.RelevanceByHuman, decision: decision,
+	})
+	if err != nil || !marked {
+		return dealDecline{linked: true}, err
+	}
+	project, err := unfileDealProject(ctx, tx, mail, deal)
+	return dealDecline{declined: !already, linked: true, marked: true, project: project}, err
 }
 
 // answerableWhichDealQuestions is the open deal questions of mail's

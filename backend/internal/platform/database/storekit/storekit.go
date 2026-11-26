@@ -16,6 +16,8 @@ import (
 	"fmt"
 	"maps"
 	"reflect"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -184,16 +186,41 @@ func LogSystem(ctx context.Context, tx pgx.Tx, action string, detail map[string]
 //
 //craft:ignore naked-any the outbox payload seam: each event type carries its own events.md payload shape, serialized into the envelope
 func Emit(ctx context.Context, tx pgx.Tx, auditID ids.UUID, eventType, entityType string, entityID ids.UUID, payload any) error {
+	_, err := emitEnvelope(ctx, tx, auditID, eventType, entityType, entityID, payload)
+	return err
+}
+
+//craft:ignore naked-any event payloads are serialized to the outbox's JSON envelope
+func emitEnvelope(ctx context.Context, tx pgx.Tx, auditID ids.UUID, eventType, entityType string, entityID ids.UUID, payload any) (events.Envelope, error) {
+	staged, err := stageEnvelope(ctx, auditID, eventType, entityType, entityID, payload)
+	if err != nil {
+		return events.Envelope{}, err
+	}
+	if err := insertEvents(ctx, tx, []stagedEvent{staged}); err != nil {
+		return events.Envelope{}, err
+	}
+	return staged.env, nil
+}
+
+// stagedEvent is one outbox row ready to insert.
+type stagedEvent struct {
+	stream string
+	body   []byte
+	env    events.Envelope
+}
+
+//craft:ignore naked-any event payloads are serialized to the outbox's JSON envelope
+func stageEnvelope(ctx context.Context, auditID ids.UUID, eventType, entityType string, entityID ids.UUID, payload any) (stagedEvent, error) {
 	p, err := Actor(ctx)
 	if err != nil {
-		return err
+		return stagedEvent{}, err
 	}
 	correlationID, ok := principal.CorrelationID(ctx)
 	if !ok {
 		// Every write path opens an operation scope (the HTTP middleware,
 		// a consumer re-binding its trigger); a missing one is a
 		// programming error, caught before the row hits the events.
-		return errors.New("store: no correlation id bound to context")
+		return stagedEvent{}, errors.New("store: no correlation id bound to context")
 	}
 
 	env := events.Envelope{
@@ -219,26 +246,39 @@ func Emit(ctx context.Context, tx pgx.Tx, auditID ids.UUID, eventType, entityTyp
 	if payload != nil {
 		raw, err := json.Marshal(payload)
 		if err != nil {
-			return err
+			return stagedEvent{}, err
 		}
 		env.Payload = raw
 	}
 
 	stream, err := events.StreamFor(eventType)
 	if err != nil {
-		return err
+		return stagedEvent{}, err
 	}
 	if err := env.Validate(); err != nil {
-		return err
+		return stagedEvent{}, err
 	}
 
 	body, err := json.Marshal(env)
 	if err != nil {
-		return err
+		return stagedEvent{}, err
 	}
-	_, err = tx.Exec(ctx,
-		`INSERT INTO `+TableOutbox+` (stream, envelope) VALUES ($1, $2)`,
-		stream, body)
+	return stagedEvent{stream: stream, body: body, env: env}, nil
+}
+
+// insertEvents is this package's INSERT into the outbox: staged rows in one
+// statement. The write-shape gate counts a function that reaches it as an emitter.
+func insertEvents(ctx context.Context, tx pgx.Tx, staged []stagedEvent) error {
+	if len(staged) == 0 {
+		return nil
+	}
+	args := make([]any, 0, 3*len(staged))
+	rows := make([]string, 0, len(staged))
+	for _, event := range staged {
+		args = append(args, event.stream, event.body, assuranceInputsRead(event.env.Type))
+		rows = append(rows, "($"+strconv.Itoa(len(args)-2)+", $"+strconv.Itoa(len(args)-1)+", $"+strconv.Itoa(len(args))+")")
+	}
+	_, err := tx.Exec(ctx, `INSERT INTO `+TableOutbox+` (stream, envelope, assurance_inputs_read) VALUES `+strings.Join(rows, ", "), args...)
 	return err
 }
 
@@ -250,6 +290,12 @@ func Emit(ctx context.Context, tx pgx.Tx, auditID ids.UUID, eventType, entityTyp
 // subject (the common case); use EmitEventForEntity for the handful of
 // dynamic-entity types below.
 func EmitEvent(ctx context.Context, tx pgx.Tx, auditID ids.UUID, entityID ids.UUID, p events.Payload) error {
+	_, err := EmitEventEnvelope(ctx, tx, auditID, entityID, p)
+	return err
+}
+
+// EmitEventEnvelope returns the staged event for immediate work under the same source identity.
+func EmitEventEnvelope(ctx context.Context, tx pgx.Tx, auditID ids.UUID, entityID ids.UUID, p events.Payload) (events.Envelope, error) {
 	// A dynamic-entity payload (contract `x-entity-type: dynamic`, EntityType()
 	// == "dynamic") has no static subject — its runtime entity type must be
 	// supplied through EmitEventForEntity. Staging one here would stamp the
@@ -257,9 +303,9 @@ func EmitEvent(ctx context.Context, tx pgx.Tx, auditID ids.UUID, entityID ids.UU
 	// so the webhook fan-out would silently never deliver it. Reject at the
 	// seam rather than emit a mislabeled envelope.
 	if p.EntityType() == "dynamic" {
-		return fmt.Errorf("store: %s is a dynamic-entity event — use EmitEventForEntity with its runtime entity type, not EmitEvent", p.EventType())
+		return events.Envelope{}, fmt.Errorf("store: %s is a dynamic-entity event — use EmitEventForEntity with its runtime entity type, not EmitEvent", p.EventType())
 	}
-	return Emit(ctx, tx, auditID, p.EventType(), p.EntityType(), entityID, p)
+	return emitEnvelope(ctx, tx, auditID, p.EventType(), p.EntityType(), entityID, p)
 }
 
 // EmitEventForEntity is EmitEvent for the dynamic-entity event types

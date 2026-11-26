@@ -1,8 +1,8 @@
-import { Search } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
 import { type Translator, useT } from "../i18n";
 import { useFoldedViewport } from "../lib/viewport";
 import { FilterRow, FilterStep } from "./listfilter";
+import { ListSearch } from "./listsearch";
 import { SortStep, sortSummary } from "./listsort";
 import {
   type ListChip,
@@ -131,19 +131,14 @@ export function Toolbar({
   return (
     <div className="lt-tools" ref={root}>
       {search && (
-        <label className="lt-search">
-          <Search size={13} strokeWidth={1.6} aria-hidden="true" />
-          <span className="sr-only">{t("list.search")}</span>
-          <input
-            // A search field, not a plain text box: it is what the control is,
-            // and it is how a reader's assistive technology announces it.
-            type="search"
-            className="lt-search-input"
-            value={search.value}
-            placeholder={t("list.search")}
-            onChange={(event) => search.onChange(event.target.value)}
-          />
-        </label>
+        <ListSearch
+          search={search}
+          chips={chips}
+          chosen={chosen}
+          onPick={onChipChange ? applyFilter : undefined}
+          onFocus={() => setOpenMenu(null)}
+          menuOpen={openMenu !== null}
+        />
       )}
       {hasPanel && (
         <ListViewMenu

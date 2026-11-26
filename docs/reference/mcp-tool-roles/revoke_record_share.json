@@ -1,0 +1,15 @@
+{
+  "tool": "change_access",
+  "action": "unshare",
+  "verb": "revoke_record_share",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "tool": "change_attention",
+  "action": "raise_notice",
+  "verb": "raise_notice",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager"
+  ],
+  "refused_for": [
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

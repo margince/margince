@@ -1,0 +1,6 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__change_compliance", "mcp__margince__find_records"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__find_records", "input": {"engine": "search", "q": "Rheinufer AG", "record_type": "company"}, "id": "fixture1"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture1", "content": "{\"evidence\": [{\"record_type\": \"company\", \"record_id\": \"01a1ff09-6cab-72e0-8ae0-79d897a97979\", \"title\": \"Rheinufer AG\"}]}", "is_error": false}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__change_compliance", "input": {"action": "place_legal_hold", "entityType": "company", "recordId": "01a1ff09-6cab-72e0-8ae0-79d897a97979", "reason": "Possible litigation; Legal asked that nothing be deleted."}, "id": "fixture2"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture2", "content": "{\"data\": {\"legal_hold\": true}}", "is_error": false}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "I placed a legal hold on Rheinufer AG, with the reason \"possible litigation; Legal asked that nothing be deleted\". Nothing about the company can be deleted until the hold is lifted, which is done in the app."}

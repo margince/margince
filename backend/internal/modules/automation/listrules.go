@@ -17,9 +17,11 @@ import (
 	"maps"
 	"math"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -37,6 +39,8 @@ const (
 	paramDirection   = "direction"
 	paramShortlistID = "shortlist_id"
 	paramDueInDays   = "due_in_days"
+	paramRecipient   = "recipient"
+	paramTaskTitle   = "task_title"
 )
 
 // The directions a rule watches, and the observed actions each one fires on.
@@ -52,7 +56,10 @@ const (
 	formatShortlist = "shortlist"
 )
 
-const defaultListTaskDueInDays = 2
+const (
+	defaultListTaskDueInDays    = 2
+	paramIncludeImportedChanges = "include_imported_changes"
+)
 
 // listRuleDescription is what every list rule says about when it fires.
 const listRuleDescription = " It fires from the list's check every 15 minutes, once for each record seen" +
@@ -63,22 +70,26 @@ const listRuleDescription = " It fires from the list's check every 15 minutes, o
 func listRuleEntries() []CatalogEntry {
 	entry := func(key, name, description string, action ActionType, extra map[string]any) CatalogEntry {
 		return CatalogEntry{
-			Key: key, Name: name, Description: description + listRuleDescription,
-			Trigger: eventListEvaluated, Action: string(action), Tier: tierAutoExecute,
+			Group: crmcontracts.AutomationCatalogEntryGroupLists,
+			Key:   key, Name: name, Description: description + listRuleDescription,
+			Trigger: eventListEvaluated, Action: string(action),
 			ParamsSchema: listRuleSchema(extra), Validate: validateListRuleParams(extra),
 			ValidateRefs: validateListRuleRefs,
 		}
 	}
 	return []CatalogEntry{
-		entry(listTaskName, "Follow up when a record joins or leaves a Live List",
-			"Mints a follow-up task on each record that joins or leaves the list, for the record's owner.",
+		entry(listTaskName, "Create a task when someone joins this list",
+			"Creates a task for the chosen recipient when a record joins or leaves the list.",
 			ActionTypeCreateTask, map[string]any{
-				paramDueInDays: intParamProperty(defaultListTaskDueInDays, 30, "How many days out the follow-up task is due."),
+				paramDueInDays:    intParamProperty(defaultListTaskDueInDays, 30, "How many days out the follow-up task is due."),
+				paramTaskTimezone: taskTimezoneSchema(),
+				paramRecipient:    taskRecipientSchema(),
+				paramTaskTitle:    map[string]any{schemaKeyType: schemaTypeString, schemaKeyMinLength: 1, schemaKeyMaxLength: maxTaskTitleCharacters},
 			}),
-		entry(listNotifyName, "Tell me when a record joins or leaves a Live List",
+		entry(listNotifyName, "Tell me when this list changes",
 			"Sends the rule's owner a notice for each record that joins or leaves the list.",
 			ActionTypeNotify, nil),
-		entry(listShortlistName, "Add to a Shortlist when a record joins or leaves a Live List",
+		entry(listShortlistName, "Save matching records to a list",
 			"Adds each record that joins or leaves the list to a Shortlist of the same record type. A record already on it stays as it is.",
 			ActionTypeAddToShortlist, map[string]any{
 				paramShortlistID: map[string]any{
@@ -93,6 +104,7 @@ func listRuleEntries() []CatalogEntry {
 // plus what its action needs.
 func listRuleSchema(extra map[string]any) map[string]any {
 	properties := map[string]any{
+		paramIncludeImportedChanges: map[string]any{schemaKeyType: schemaTypeBoolean, schemaKeyDefault: false},
 		paramListID: map[string]any{
 			schemaKeyType: schemaTypeString, schemaKeyFormat: formatLiveList,
 			schemaKeyDescription: "The Live List this rule watches.",
@@ -113,6 +125,9 @@ func requiredListParams(extra map[string]any) []string {
 	required := []string{paramListID}
 	if _, ok := extra[paramShortlistID]; ok {
 		required = append(required, paramShortlistID)
+	}
+	if extra[paramRecipient] != nil {
+		required = append(required, paramRecipient, paramTaskTitle)
 	}
 	return required
 }
@@ -138,6 +153,11 @@ func validateListRuleParams(extra map[string]any) func(map[string]any) error {
 func validateListRuleParam(params map[string]any, key string, extra map[string]any) error {
 	field := "params." + key
 	switch key {
+	case paramIncludeImportedChanges:
+		if _, ok := params[key].(bool); !ok {
+			return &ParamError{Field: field, Reason: "must be a boolean"}
+		}
+		return nil
 	case paramListID:
 		return validateListRef(params, key)
 	case paramShortlistID:
@@ -150,6 +170,22 @@ func validateListRuleParam(params map[string]any, key string, extra map[string]a
 			return &ParamError{Field: field, Reason: "must be entered, left or either"}
 		}
 		return nil
+	case paramRecipient:
+		if extra[key] == nil {
+			return &ParamError{Field: field, Reason: errNotAParameter}
+		}
+		return validateTaskRecipientParam(params)
+	case paramTaskTitle:
+		value, ok := params[key].(string)
+		if extra[key] == nil || !ok || !validTaskTitle(value) {
+			return &ParamError{Field: field, Reason: "enter a task title of up to 200 characters"}
+		}
+		return nil
+	case paramTaskTimezone:
+		if extra[paramTaskTimezone] == nil {
+			return &ParamError{Field: field, Reason: errNotAParameter}
+		}
+		return validateTaskTimezone(params)
 	case paramDueInDays:
 		if extra[paramDueInDays] == nil {
 			return &ParamError{Field: field, Reason: errNotAParameter}
@@ -250,10 +286,12 @@ func validateShortlistRef(ctx context.Context, lists Lists, id ids.UUID, entityT
 
 // listRuleParams is a list rule's params, decoded.
 type listRuleParams struct {
-	ListID      ids.UUID  `json:"list_id"`
-	Direction   string    `json:"direction"`
-	DueInDays   *int      `json:"due_in_days"`
-	ShortlistID *ids.UUID `json:"shortlist_id"`
+	IncludeImported *bool     `json:"include_imported_changes"`
+	TaskTitle       string    `json:"task_title"`
+	ListID          ids.UUID  `json:"list_id"`
+	Direction       string    `json:"direction"`
+	DueInDays       *int      `json:"due_in_days"`
+	ShortlistID     *ids.UUID `json:"shortlist_id"`
 }
 
 func decodeListRuleParams(raw json.RawMessage) (listRuleParams, error) {
@@ -321,14 +359,18 @@ func (r listRule) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect,
 	}
 	switch r.action {
 	case ActionTypeCreateTask:
-		days := defaultListTaskDueInDays
-		if rule.DueInDays != nil {
-			days = *rule.DueInDays
+		dueAt, err := taskDueAt(ev.Params, ev.OccurredAt, defaultListTaskDueInDays)
+		if err != nil {
+			return workflow.Effect{}, err
 		}
 		// The task is read by whoever may read the record, so it names no
 		// list: a list's name and membership stay with the list's own sharing.
-		return ownedTaskEffectNoKey(ctx, r.ex, ev, firing.taskSubject(),
-			ev.OccurredAt.AddDate(0, 0, days))
+		subject := rule.TaskTitle
+		if subject == "" {
+			subject = firing.taskSubject()
+			ctx = systemtext.WithMessage(ctx, &systemtext.Message{Subject: systemtext.Sentence(firing.taskCode())})
+		}
+		return configuredTaskEffect(ctx, r.ex, ev, taskWords{subject: subject, why: firing.taskReason}, dueAt)
 	case ActionTypeNotify:
 		return r.planNotice(ev, firing)
 	case ActionTypeAddToShortlist:
@@ -350,29 +392,38 @@ func (r listRule) planNotice(ev workflow.Event, firing listFiring) (workflow.Eff
 		Recipient: ev.OwnerID,
 		DedupeKey: r.IdempotencyKey(ev),
 		Subject:   firing.ListName,
-		Body:      fmt.Sprintf("A record %s the list.", firing.did()),
+		Body:      systemtext.Literal(firing.noticeCode()),
 		Origin:    noticeOrigin(ev),
 	})
 	if err != nil {
 		return workflow.Effect{}, fmt.Errorf("automation: encoding the notify action: %w", err)
 	}
-	return workflow.Effect{Actions: []workflow.Action{{Kind: workflow.ActionNotify, Target: ev.Entity, Args: args}}}, nil
+	return workflow.Effect{Actions: []workflow.Action{{Kind: workflow.ActionNotify, Target: ev.Entity, Args: args, SystemText: &systemtext.Message{Body: systemtext.Sentence(firing.noticeCode())}}}}, nil
 }
 
 // taskSubject is a follow-up task's subject, which names no list.
-func (f listFiring) taskSubject() string {
+func (f listFiring) taskSubject() string { return systemtext.Literal(f.taskCode()) }
+
+func (f listFiring) taskCode() string {
 	if f.Action == directionLeft {
-		return "Left a Live List"
+		return "automation.list_left_task"
 	}
-	return "Joined a Live List"
+	return "automation.list_joined_task"
 }
 
-// did says what the record did, in the past tense a sentence needs.
-func (f listFiring) did() string {
+// taskReason says the record crossed a list's filter, without naming the list.
+func (f listFiring) taskReason(record string) *systemtext.Component {
 	if f.Action == directionLeft {
-		return "left"
+		return systemtext.Sentence("automation.why.list_left", systemtext.Text(record))
 	}
-	return "joined"
+	return systemtext.Sentence("automation.why.list_joined", systemtext.Text(record))
+}
+
+func (f listFiring) noticeCode() string {
+	if f.Action == directionLeft {
+		return "automation.list_left_notice"
+	}
+	return "automation.list_joined_notice"
 }
 
 func (r listRule) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {

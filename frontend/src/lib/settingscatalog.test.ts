@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { translate } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import type { RbacAction, RbacObject } from "./capability";
@@ -100,6 +101,8 @@ describe("the scope each page declares", () => {
     "system-health": "installation",
     configuration: "installation",
     reset: "installation",
+    // A read of the build, whoever the reader is.
+    about: "installation",
 
     // One workspace's state.
     members: "workspace",
@@ -135,8 +138,8 @@ describe("the scope each page declares", () => {
   // The other direction. Without this, deleting a page leaves a stale entry
   // that nothing reads, and the census quietly describes a catalog that moved.
   it("names every page in the catalog and nothing else", () => {
-    expect(Object.keys(DECLARED_SCOPE).sort()).toEqual(
-      SETTINGS_PAGES.map((page) => page.id).sort(),
+    expect(Object.keys(DECLARED_SCOPE).sort(stable)).toEqual(
+      SETTINGS_PAGES.map((page) => page.id).sort(stable),
     );
   });
 });
@@ -194,7 +197,8 @@ describe("what each page lets a reader change", () => {
   const DECLARED_CHANGES: Record<SettingsPageId, string> = {
     // The reader's own rows, with no grant between them and the control.
     account: "always",
-    meetings: "always",
+    // A booking profile belongs to a seat that may book.
+    meetings: "all(full-seat, any(any(activity:create)))",
     agents: "always",
     notifications: "always",
     connections: "always",
@@ -270,6 +274,7 @@ describe("what each page lets a reader change", () => {
     extensions: "all(full-seat, any(any(role_admin:update)))",
     configuration: "all(full-seat, any(any(installation_settings:update)))",
     reset: "all(full-seat, system_reset:delete, flag:data_reset_available)",
+    about: "same-as-requires",
   };
 
   it("declares the expression this census names, for every page", () => {
@@ -283,8 +288,8 @@ describe("what each page lets a reader change", () => {
   // The other direction: a page added with no entry fails, and an entry for a
   // page that no longer exists fails too.
   it("names every page in the catalog and nothing else", () => {
-    expect(Object.keys(DECLARED_CHANGES).sort()).toEqual(
-      SETTINGS_PAGES.map((page) => page.id).sort(),
+    expect(Object.keys(DECLARED_CHANGES).sort(stable)).toEqual(
+      SETTINGS_PAGES.map((page) => page.id).sort(stable),
     );
   });
 
@@ -368,24 +373,30 @@ describe("who may open what", () => {
   const writes = (object: RbacObject) =>
     grantOf(object, ["read", "create", "update"]);
 
-  it("shows the personal pages to everyone, including before /me resolves", () => {
-    // These carry no grant because they are about the reader themselves. They
-    // must survive the loading window too, or the rail flashes empty on every
-    // first paint.
+  it("shows the pages that need no grant to everyone, including before /me resolves", () => {
+    // The personal pages, Teams and About. They must survive the loading
+    // window too, or the rail flashes empty on every first paint.
     expect(visibleIds(nobody)).toEqual([
       "account",
       "notifications",
-      "meetings",
       "voice",
       "agents",
       "connections",
+      "teams",
+      "about",
     ]);
   });
 
-  // Members and Teams used to be on that list. `GET /users` still answers any
-  // authenticated caller and must — the share and assignee pickers read it —
-  // but a directory is not an administration page, and a reader who may not
-  // invite, change a role or switch a seat off has nothing to do on either.
+  // The server answers GET /scheduling/profile only with activity:create, so
+  // Meetings is the one personal page a grant opens.
+  it("opens meetings only to a seat that may book", () => {
+    expect(visibleIds(readsOnly("activity"))).not.toContain("meetings");
+    expect(visibleIds(grantOf("activity", ["create"]))).toContain("meetings");
+  });
+
+  // `GET /users` answers any caller, because the share and assignee pickers
+  // read it. A reader who may not invite, change a role or switch a seat off
+  // has nothing to do on Members.
   it("withholds members from a reader holding no user_admin", () => {
     expect(visibleIds(readsOnly("contact"))).not.toContain("members");
     // Any authority over the roster opens it, and the READ is one of them —
@@ -393,21 +404,16 @@ describe("who may open what", () => {
     expect(visibleIds(readsOnly("user_admin"))).toContain("members");
   });
 
-  it("withholds teams from a reader holding neither team verb nor the roster read", () => {
-    expect(visibleIds(readsOnly("contact"))).not.toContain("teams");
-    // The team object's READ is not one of its arms: teams.go takes create and
-    // update, and nothing on the page answers to a `team_admin:read`.
-    expect(visibleIds(readsOnly("team_admin"))).not.toContain("teams");
-    expect(visibleIds(writes("team_admin"))).toContain("teams");
-  });
-
-  // The roster's privileged projection is what Teams RENDERS: `team_ids` rides
-  // `user_admin:read` (handlers_roster.go), not the team object. So a reader
-  // holding that read alone still opens Teams — they see who is in which team
-  // and may change none of it — and the checkboxes are disabled rather than
-  // absent, because the list IS the answer they came for.
-  it("opens teams to the roster read that carries membership", () => {
+  // `GET /teams` answers every member with names and counts, so the page asks
+  // nothing to open. The team verbs decide what it lets a reader change.
+  it("opens teams to every reader and makes it theirs only with a team verb", () => {
+    expect(visibleIds(readsOnly("contact"))).toContain("teams");
     expect(visibleIds(readsOnly("user_admin"))).toContain("teams");
+    const acting = (snapshot: Parameters<typeof settingsReach>[0]) =>
+      settingsReach(snapshot).acts.map((page) => page.id);
+    expect(acting(readsOnly("contact"))).not.toContain("teams");
+    expect(acting(readsOnly("user_admin"))).not.toContain("teams");
+    expect(acting(writes("team_admin"))).toContain("teams");
   });
 
   // The seat switch WITHOUT the read does not open it, and that is the fix

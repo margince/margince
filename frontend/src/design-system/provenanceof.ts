@@ -95,6 +95,25 @@ export function provenanceOf(
 }
 
 /**
+ * The agent tag for a row the server says an assistant wrote. `source` reads
+ * `manual` there, and captured_by can name another principal. An import keeps
+ * its own tag.
+ */
+export function withAgentOrigin(
+  provenance: Provenance,
+  recordedByAgent: boolean | undefined,
+): Provenance {
+  if (
+    !recordedByAgent ||
+    provenance.kind === "agent" ||
+    provenance.kind === "import"
+  ) {
+    return provenance;
+  }
+  return { kind: "agent" };
+}
+
+/**
  * An agent's tag with what its audit row adds: the tool it was typed through
  * and the colleague it worked for. captured_by and actor_id name only a
  * passport, so without the row the tag can say neither.

@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "site_read_logo",
+  "verb": "read_site_read_logo",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

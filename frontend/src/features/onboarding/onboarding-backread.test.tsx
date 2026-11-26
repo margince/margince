@@ -52,6 +52,7 @@ function Backread({
         caption=""
         held={held}
         finishing={false}
+        finishFailed={false}
         onFinish={onFinish}
       />
     </>

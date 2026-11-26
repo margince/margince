@@ -212,7 +212,7 @@ func TestAnErasedSubjectKeepsNoMissedReceiptNotice(t *testing.T) {
 			`SELECT delivery_due_at FROM comms_outbound WHERE template_key = 'optout_acknowledgement'`).Scan(&dueAt); err != nil {
 			t.Fatal(err)
 		}
-		if err := ComposedEraser(l.e.Pool, nil, nil).EraseContact(l.e.Admin(), l.contact, "Art. 17 request"); err != nil {
+		if err := ComposedEraser(l.e.Pool, nil).EraseContact(l.e.Admin(), l.contact, "Art. 17 request"); err != nil {
 			t.Fatalf("erasing the subject: %v", err)
 		}
 		if err := DriveControllerPayloadSweepForTest(context.Background(), l.e.Pool, keyvault.NewMemory(), dueAt.Add(time.Minute)); err != nil {
@@ -229,7 +229,7 @@ func TestAnErasedSubjectKeepsNoMissedReceiptNotice(t *testing.T) {
 		if l.liveNoticeTargets(t, l.contact) == 0 {
 			t.Fatal("no notice to take back; the test proves nothing")
 		}
-		if err := ComposedEraser(l.e.Pool, nil, nil).EraseContact(l.e.Admin(), l.contact, "Art. 17 request"); err != nil {
+		if err := ComposedEraser(l.e.Pool, nil).EraseContact(l.e.Admin(), l.contact, "Art. 17 request"); err != nil {
 			t.Fatalf("erasing the subject: %v", err)
 		}
 		if n := l.liveNoticeTargets(t, l.contact); n != 0 {
@@ -380,7 +380,7 @@ func TestAReceiptErasedBetweenTheReadAndTheRaiseIsNotRaised(t *testing.T) {
 	if err != nil || len(overdue) != 1 {
 		t.Fatalf("read %d overdue receipts (%v), want the one", len(overdue), err)
 	}
-	if err := ComposedEraser(l.e.Pool, nil, nil).EraseContact(l.e.Admin(), l.contact, "Art. 17 request"); err != nil {
+	if err := ComposedEraser(l.e.Pool, nil).EraseContact(l.e.Admin(), l.contact, "Art. 17 request"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 	if failed := (receiptAlarm{db: db}).raiseOverdue(ctx, store, now, overdue); failed != 0 {

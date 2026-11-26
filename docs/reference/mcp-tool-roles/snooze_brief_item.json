@@ -1,0 +1,14 @@
+{
+  "tool": "change_attention",
+  "action": "snooze_brief_item",
+  "verb": "snooze_brief_item",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

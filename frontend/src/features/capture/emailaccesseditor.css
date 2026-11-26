@@ -16,6 +16,12 @@
   margin: 0;
 }
 
+.emailaccess__mailboxes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .emailaccess__members {
   display: flex;
   flex-wrap: wrap;
@@ -31,7 +37,6 @@
   padding: 0 var(--space-2);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 
 /* The verb, with its scope and what came of pressing it UNDER it rather than

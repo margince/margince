@@ -47,7 +47,7 @@
 # The base always runs on the build platform and cross-compiles to the target:
 # in a multi-platform bake only the thin runtime stages run emulated, never
 # the toolchains.
-FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS gobase
+FROM --platform=$BUILDPLATFORM golang:1.27.4-alpine@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf AS gobase
 
 RUN apk add --no-cache git ca-certificates
 
@@ -118,7 +118,10 @@ RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
 # is always the composed one — an installation's image must serve the units
 # that installation enabled — which is what the gobase stage's gen-composition
 # run provides.
-FROM --platform=$BUILDPLATFORM node:24-alpine@sha256:50c8e8ca1d27439048670df5883f32d57cf81cff6233222c893fd0d9884cbd81 AS web-build
+FROM --platform=$BUILDPLATFORM node:24-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5 AS web-build
+
+# The composed OpenAPI graph exceeds V8's default heap in this build image.
+ENV NODE_OPTIONS=--max-old-space-size=4096
 
 # The pnpm version is the repository's, not the build day's. `corepack enable`
 # installs the shim and nothing else: with no manifest to read, the shim
@@ -255,7 +258,8 @@ WORKDIR /app/frontend
 # `pnpm build:composed` type-checks incrementally, and the cache mount below keeps
 # its .tsbuildinfo across builds. Content hashes still re-check a changed file.
 # The same revision the api target is built with, written into each MCP App view
-# document so the api can report skew between the two tiers. See the api-build
+# document so the api can report skew between the two tiers, and compiled into
+# the bundle to label an unstamped build. See the api-build
 # stage for why an absent value disables the comparison rather than alarming.
 ARG MARGINCE_BUILD_REVISION=""
 ENV MARGINCE_BUILD_REVISION=$MARGINCE_BUILD_REVISION
@@ -314,14 +318,23 @@ RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
     && GOWORK=/src/build/composition/go.work CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
         go build -ldflags="$stamp" -o /bin/margince-migrate ./cmd/migrate
 
+# ── notices: licence texts of what the Go programs link ───────────────────────
+# One file for the three programs, written from the packages they link, so the
+# api image, the worker image and the server bundle ship the same text. The
+# build fails on a linked module with no licence text rather than shipping a
+# file that claims completeness. The web image carries its own notices.
+FROM gobase AS notices
+RUN GOWORK=/src/build/composition/go.work sh /src/scripts/backend-notices.sh /out/THIRD-PARTY-NOTICES.txt
+
 # ── api: runtime ──────────────────────────────────────────────────────────────
 # cmd/api — the HTTP process role (serves /v1 + /healthz + /readyz + /metrics).
-FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS api
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS api
 
 RUN apk add --no-cache ca-certificates tzdata
 
 COPY --from=api-build /bin/margince-api /usr/local/bin/margince-api
 COPY --from=api-build /bin/margince-migrate /usr/local/bin/margince-migrate
+COPY --from=notices /out/THIRD-PARTY-NOTICES.txt /licenses/THIRD-PARTY-NOTICES.txt
 COPY scripts/deploy/api-entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # The release version, a second time, as a file in the image.
@@ -357,11 +370,12 @@ EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # ── worker: runtime ───────────────────────────────────────────────────────────
-FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS worker
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS worker
 
 RUN apk add --no-cache ca-certificates tzdata
 
 COPY --from=worker-build /bin/margince-worker /usr/local/bin/margince-worker
+COPY --from=notices /out/THIRD-PARTY-NOTICES.txt /licenses/THIRD-PARTY-NOTICES.txt
 COPY scripts/deploy/worker-entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # The in-image release version; the api runtime stage carries why.
@@ -417,6 +431,7 @@ COPY scripts/deploy/ /deploy/
 COPY config/margince.example.yaml /config/margince.example.yaml
 COPY .env.example /margince.env.example
 COPY LICENSE /LICENSE
+COPY --from=notices /out/THIRD-PARTY-NOTICES.txt /licenses/THIRD-PARTY-NOTICES.txt
 
 # Exported as files and never run, so no account is named; a non-root id keeps
 # a `docker run` of it from starting as root.

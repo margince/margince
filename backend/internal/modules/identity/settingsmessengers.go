@@ -16,7 +16,7 @@ var CallWhatsApp = config.DefineStored(config.Spec[bool]{
 	Type:    config.Bool,
 	Default: config.Some(true),
 	Doc:     "Show a WhatsApp chat link next to a contact's phone number that starts with a country code.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
+}, config.Store{Cacheable: true, RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // CallTelegram is one switch for the whole installation; no seat turns the Telegram link on for itself.
 var CallTelegram = config.DefineStored(config.Spec[bool]{
@@ -25,7 +25,7 @@ var CallTelegram = config.DefineStored(config.Spec[bool]{
 	Type:    config.Bool,
 	Default: config.Some(true),
 	Doc:     "Show a Telegram chat link next to a contact's phone number that starts with a country code.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
+}, config.Store{Cacheable: true, RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // CallZalo is one switch for the whole installation; no seat turns the Zalo link on for itself.
 var CallZalo = config.DefineStored(config.Spec[bool]{
@@ -34,7 +34,7 @@ var CallZalo = config.DefineStored(config.Spec[bool]{
 	Type:    config.Bool,
 	Default: config.Some(true),
 	Doc:     "Show a Zalo chat link next to a contact's phone number that starts with a country code.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
+}, config.Store{Cacheable: true, RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 func (s *InstallationSettingsStore) readCallMessengers(ctx context.Context, out *InstallationSettings) error {
 	var err error

@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
 # The patch base of the next release, as shell values the release workflow reads.
 #
-# The release CLI's `resolve-patch-base --version <next> --jsonl` asks the dist
+# The release CLI's `resolve-patch-base --release <next> --jsonl` asks the dist
 # service and writes one record: `patch-base-resolved` with the version and git
-# revision of the newest release that went out on the next release's line,
-# withdrawn included, or `first-release` when none went out on `main`. One dist
-# row gives both values, so the patch is cut from the same release the upload
-# names as its base.
+# revision of the newest release that went out, withdrawn included, or
+# `first-release` when none went out. One dist row gives both values, so the
+# patch is cut from the same release the upload names as its base.
 #
-# Usage: release-management resolve-patch-base --version <next> --jsonl | scripts/release-patch-base.sh
+# Usage: release-management resolve-patch-base --release <next> --jsonl | scripts/release-patch-base.sh
 #
 # Prints `first_release=true`, or `first_release=false`, `base_version=<v>` and
 # `base_revision=<r>`, one per line. Any other record exits 1 and prints nothing
 # on stdout: the workflow sources stdout, so only checked values reach it.
 set -euo pipefail
+
+# shellcheck source=scripts/lib-dist-version.sh
+source "$(dirname "$0")/lib-dist-version.sh"
 
 record="$(cat)"
 
@@ -40,8 +42,7 @@ first-release)
 patch-base-resolved)
 	version="$(field version)"
 	revision="$(field revision)"
-	# The dist version grammar: YYYY.edition.bugfix with an optional LTS patch level.
-	if [[ ! "$version" =~ ^[0-9]{4}\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-p[1-9][0-9]*)?$ ]]; then
+	if [[ ! "$version" =~ $DIST_VERSION_RE ]]; then
 		refuse "the base version is not a release version"
 	fi
 	if [[ ! "$revision" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]]; then

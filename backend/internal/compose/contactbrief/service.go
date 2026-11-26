@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -61,10 +62,9 @@ type Service struct {
 	view Assembler
 	lane Completer
 	now  func() time.Time
-	// routingVersion identifies the model binding in the fingerprint, so
-	// re-pointing the lane rewrites briefs rather than leaving text attributed
-	// to a model that no longer writes it.
-	routingVersion string
+	// routingVersion names the model binding in the fingerprint. It is read per
+	// request, so a rebind rewrites the briefs the previous model wrote.
+	routingVersion func() string
 	// emailRows opens the messages the brief cites. Held rather than read
 	// inline because the brief is CACHED: what a citation says is one reader's
 	// to keep, and the message behind it is another reader's to receive, so it
@@ -91,8 +91,11 @@ func (s *Service) enrich(ctx context.Context, out crmcontracts.ContactBrief) (cr
 // model lane that writes it. lane may be nil: that is a deployment running no
 // model, and the deterministic floor is the answer.
 func NewService(
-	pool *pgxpool.Pool, view Assembler, lane Completer, routingVersion string, now func() time.Time,
+	pool *pgxpool.Pool, view Assembler, lane Completer, routingVersion func() string, now func() time.Time,
 ) *Service {
+	if routingVersion == nil {
+		routingVersion = func() string { return "" }
+	}
 	return &Service{pool: pool, view: view, lane: lane, routingVersion: routingVersion, now: now}
 }
 
@@ -130,7 +133,7 @@ func (s *Service) Get(ctx context.Context, contactID ids.ContactID, force bool) 
 	}
 	in := FromView(view)
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
-	fingerprint, err := Fingerprint(in, s.routingVersion, lang)
+	fingerprint, err := Fingerprint(in, s.routingVersion(), lang)
 	if err != nil {
 		return crmcontracts.ContactBrief{}, err
 	}
@@ -146,9 +149,10 @@ func (s *Service) Get(ctx context.Context, contactID ids.ContactID, force bool) 
 	// The contact is NAMED to the rail here, where the assembled input holds
 	// the name the product shows for them everywhere else.
 	lane, withheld := ai.ReadLane(ctx, s.lane)
-	sentences, by, err := Write(ai.WithSubject(ctx, contactID.Ref(), in.Name), lane, contactID.String(), in, lang)
-	if err != nil {
-		return crmcontracts.ContactBrief{}, err
+	sentences, by, laneFailed := Write(ai.WithSubject(ctx, contactID.Ref(), in.Name), lane, contactID.String(), in, lang)
+	if laneFailed && found && cached.Version == storedVersion && cached.Fingerprint == fingerprint {
+		// A forced rewrite that failed keeps the model's brief for these facts.
+		return s.enrich(ctx, cached.wire(contactID))
 	}
 	written := stored{
 		Fingerprint: fingerprint,
@@ -157,7 +161,7 @@ func (s *Service) Get(ctx context.Context, contactID ids.ContactID, force bool) 
 		GeneratedBy: by,
 		Sentences:   sentences,
 	}
-	if withheld {
+	if laneFailed || withheld {
 		return s.enrich(ctx, written.wire(contactID))
 	}
 	if err := s.save(ctx, userID, contactID, written); err != nil {
@@ -215,29 +219,23 @@ func wireSentences(in []Sentence) []crmcontracts.CompanyBriefSentence {
 	return out
 }
 
-// cached reads this user's brief for this contact. The user_id predicate is
-// explicit in SQL: row-level security binds the workspace, so without it one
-// rep would read another's brief — written from records they may not share.
+// cached reads this user's brief for this contact. The store keys the row on
+// the reader, without which one rep would read a brief written from records
+// they may not share.
 func (s *Service) cached(ctx context.Context, userID ids.UserID, contactID ids.ContactID) (stored, bool, error) {
-	var out stored
-	var payload []byte
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `
-			SELECT fingerprint, generated_at, generated_by, payload FROM contact_brief
-			WHERE user_id = $1 AND contact_id = $2`,
-			userID, contactID).Scan(&out.Fingerprint, &out.GeneratedAt, &out.GeneratedBy, &payload)
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return stored{}, false, nil
-	}
-	if err != nil {
+	row, found, err := generatedsummary.Read(ctx, s.pool, userID, generatedsummary.ContactBrief(contactID))
+	if err != nil || !found {
 		return stored{}, false, err
+	}
+	out := stored{
+		Fingerprint: row.Fingerprint, GeneratedAt: row.GeneratedAt,
+		GeneratedBy: crmcontracts.WrittenBy(row.GeneratedBy),
 	}
 	// The WHOLE envelope, version included: unmarshalling into the sentence
 	// list alone leaves Version at zero, the version check can never pass, and
 	// the cache never once answers — a rewrite on every page load, invisible to
 	// a build gate because nothing about the served brief looks wrong.
-	if err := json.Unmarshal(payload, &out); err != nil {
+	if err := json.Unmarshal(row.Payload, &out); err != nil {
 		// A payload this build cannot read is a cache MISS, not a failure: the
 		// brief is derived content, regenerating it is cheap, and the new row
 		// replaces the unreadable one.
@@ -253,33 +251,35 @@ func (s *Service) save(ctx context.Context, userID ids.UserID, contactID ids.Con
 		return fmt.Errorf("encode the brief payload: %w", err)
 	}
 	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		// Written THROUGH the contact row, which is what stops a brief composed
-		// before an erasure from landing after it. Generation reads the record,
-		// waits on a model, and saves — a window wide enough for the erasure to
-		// run in whole, and this payload still holds the name it destroyed.
-		//
-		// FOR SHARE is the half that closes it and is not decoration: a bare
-		// archived_at test reads the pre-erasure row under MVCC and writes
-		// anyway. The lock waits on the erasure's own row lock instead, and the
-		// row is re-checked when that commits, so the CTE yields nothing and
-		// this writes nothing. Erasure takes the contact before the cache, so
-		// taking them in that order here cannot deadlock against it.
-		_, err := tx.Exec(ctx, `
-			WITH live AS (
-			    SELECT id FROM contact WHERE id = $2 AND archived_at IS NULL FOR SHARE
-			)
-			INSERT INTO contact_brief (user_id, contact_id, fingerprint,
-			                          generated_at, generated_by, payload)
-			SELECT $1, live.id, $3, $4, $5, $6 FROM live
-			ON CONFLICT (user_id, contact_id) DO UPDATE
-			SET fingerprint = EXCLUDED.fingerprint,
-			    generated_at = EXCLUDED.generated_at,
-			    generated_by = EXCLUDED.generated_by,
-			    payload = EXCLUDED.payload`,
-			userID, contactID, brief.Fingerprint,
-			brief.GeneratedAt, brief.GeneratedBy, payload)
-		return err
+		return SaveForLiveContact(ctx, tx, userID, contactID, generatedsummary.Entry{
+			Fingerprint: brief.Fingerprint,
+			GeneratedAt: brief.GeneratedAt,
+			GeneratedBy: string(brief.GeneratedBy),
+			Payload:     payload,
+		})
 	})
+}
+
+// SaveForLiveContact stores a brief only while its contact is live, which
+// stops a brief composed before an erasure from landing after it.
+//
+// Generation reads the record, waits on a model and then saves, and an
+// erasure can run whole inside that wait. FOR SHARE waits on the erasure's
+// row lock and reads the row again when it commits; a plain read would not.
+// Erasure takes the contact before the cache, so this order cannot deadlock.
+func SaveForLiveContact(
+	ctx context.Context, tx pgx.Tx, userID ids.UserID, contactID ids.ContactID, brief generatedsummary.Entry,
+) error {
+	var live ids.UUID
+	err := tx.QueryRow(ctx,
+		`SELECT id FROM contact WHERE id = $1 AND archived_at IS NULL FOR SHARE`, contactID).Scan(&live)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("check the contact is live before storing its brief: %w", err)
+	}
+	return generatedsummary.SaveTx(ctx, tx, userID, generatedsummary.ContactBrief(contactID), brief)
 }
 
 // actingUser resolves the human this brief belongs to. That the brief is

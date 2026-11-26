@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
 
@@ -75,13 +76,14 @@ func (r *mergeTagsResolver) Subject(ctx context.Context, cmd MergeTagsCommand) (
 	if err != nil {
 		return StageInfo{}, err
 	}
+	from, into := systemtext.Inline(fmt.Sprint(source.Name)), systemtext.Inline(fmt.Sprint(target.Name))
 	return StageInfo{
 		TargetType:   tagRecordType,
 		TargetID:     cmd.SourceID,
 		CoTargetType: tagRecordType,
 		CoTargetID:   cmd.TargetID,
-		Summary: fmt.Sprintf(summaryIn(ctx, r.language).mergeTags,
-			source.Name, target.Name, source.Name),
+		SystemText:   &systemtext.Message{Subject: systemtext.Sentence("agent.mergeTags", systemtext.Label(from), systemtext.Label(into), systemtext.Label(from))},
+		Summary:      fmt.Sprintf(summaryIn(ctx, r.language).mergeTags, from, into, from),
 	}, nil
 }
 

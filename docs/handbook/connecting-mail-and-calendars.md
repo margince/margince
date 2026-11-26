@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
+<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/imap-send-fields.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/connectors.telegrambusiness.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx frontend/src/features/capture/connection-stop.tsx backend/internal/modules/capture/gdocs backend/internal/modules/capture/meetingnotes.go backend/internal/modules/capture/meetingnotesread.go backend/internal/modules/capture/meetingnotesmail.go backend/internal/modules/activities/meetingnotes.go backend/internal/modules/activities/meetingnotesmail.go backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -24,11 +24,23 @@ Google also shares your account's picture. If that Google account is the address
 To connect any other mail host to Margince, open **Settings → Connections**, choose **Add account** and pick **Another mail host**. Then fill in the **Connect IMAP mailbox** form.
 1. Open **Settings**, then **Connections**.
 2. Choose **Add account**, pick **Another mail host**, then **Continue**.
-3. Fill **IMAP server**, **Port**, **Email address**, **App password**, **Mailbox** and **Messages per sync**, then press **Connect**.
-Use a password made for this one app. Missing fields show "Required: {fields}". An IMAP mailbox only captures: no calendar, Margince cannot send from it, and it has no past email import.
+3. Fill **IMAP server**, **Port**, **Email address**, **App password**, **Mailbox** and **Messages per sync**.
+4. To send mail from this mailbox too, tick **Send from this mailbox**. Then press **Connect**.
+Use a password made for this one app. Missing fields show "Required: {fields}". An IMAP mailbox has no calendar and no past email import.
 
 **Messages per sync** is the most one check reads. The first messages arrive a few minutes after you connect, not at once.
 Also called: connect Fastmail, connect my own mail server, app password.
+
+### How do I send from an IMAP mailbox?
+To send from an IMAP mailbox, tick **Send from this mailbox** on the **Connect IMAP mailbox** form. Margince then sends through the mailbox's SMTP server.
+- **SMTP server**: leave it empty to use the IMAP server.
+- **Security**: **SSL/TLS** uses port 465, **STARTTLS** uses port 587.
+- **SMTP port**: leave it empty to use the port that goes with **Security**.
+
+Margince logs in to the SMTP server with the same app password before it saves anything. Each mail you send gets a copy in the mailbox's **Sent** folder.
+A mailbox you connected without the tick stays read-only. To turn sending on later, press **Reconnect** and tick the box.
+Mail an agent drafts still waits for your approval, as it does for Gmail and Outlook.
+Also called: SMTP, send through my own mail server.
 
 ### How do I get an app password for IMAP?
 To get an app password, turn on two-step sign-in for your mail account, then create an app password in its security settings.
@@ -40,11 +52,14 @@ Margince seals the password and never shows it again. **Disconnect** deletes it,
 Also called: app-specific password, IMAP password, Gmail app password.
 
 ### Why does my IMAP mailbox not connect?
-When the **Connect IMAP mailbox** form refuses, the message under it says which of two things went wrong.
+When the **Connect IMAP mailbox** form refuses, the message under it says what went wrong.
 - "The mailbox rejected these credentials. Check host, email and app password.": a value is wrong, or you used your normal password.
 - "The mail server could not be reached. Check the host and port.": the server name or port is wrong, or the server is down.
-An IMAP server inside your own network is always unreachable, because Margince never connects to a private address.
-Also called: IMAP login failed, credentials rejected, mail server unreachable.
+- "The SMTP server rejected this login. Check the server, the security and the app password.": sending is ticked, and the SMTP server refused the login.
+- "The SMTP server could not be reached. Check the server and port.": sending is ticked, and its name, port or security is wrong.
+- "To send from this mailbox, its email address must be a plain address, such as name@example.com.": the login is not an email address.
+A mail server inside your own network is always unreachable, because Margince never connects to a private address.
+Also called: IMAP login failed, credentials rejected, mail server unreachable, SMTP login failed.
 
 ### How do I connect my calendar?
 To connect your calendar to Margince, tick **Calendar** when you connect your Google or Microsoft 365 account in **Settings → Connections**. Mail and calendar connect in one go.
@@ -55,6 +70,38 @@ To connect your calendar to Margince, tick **Calendar** when you connect your Go
 If the calendar is refused, mail still connects and the note says so, with **Connect calendar** to try again.
 A calendar brings meetings from 90 days back to one year from now, and the window moves forward on its own. There is no history import for a calendar.
 Also called: calendar sync, sync meetings, link my agenda.
+
+### How do I let Margince read my Google Meet notes?
+Margince can read the notes and transcripts Google Meet writes. You connect this in **Settings → Connections**.
+1. Open **Settings**, then **Connections**.
+2. In your Google account, find the **Meeting notes** row and choose **Connect meeting notes**.
+3. Approve access on the Google screen. Google asks for this apart from mail and calendar.
+
+Margince may then open a Google Doc by its address, and nothing else in your Drive. It cannot list or search your files. It reads only the notes and transcripts Google Meet adds to a meeting in your calendar.
+
+Once Google adds the notes to a meeting, Margince puts their text on the meeting as a transcript. It marks a meeting that still waits for an outcome as held, and suggests the tasks it finds in the transcript. An outcome already recorded stays as it is.
+
+Each document is read once. Margince also does this for notes it already read. Margince reads notes only for meetings of the last 14 days that someone at your company set up. Everyone who can see the meeting can see its transcript. A document taken off the meeting is not read.
+
+Connect meeting notes with the same Google account as your calendar. Notes are read only for meetings in that account's calendar, and the row says so when the two accounts differ.
+
+Google may show **Error 400: redirect_uri_mismatch** when you connect meeting notes. Then ask your admin to add the meeting-notes address to the Google app and turn on the Google Docs API. The admin finds the addresses under Settings → **Sign-in and security** → **Sign-in apps** → **Set up Google app**. Reconnecting your account does not help until then.
+
+If you untick the permission on the Google screen, the row says **Cannot read meeting notes** and the account offers **Reconnect**. The same happens when Google later refuses it.
+
+To stop it, choose **Stop reading meeting notes** in the row. Mail and calendar keep running, and notes already on a meeting stay. Disconnecting the whole account stops it too.
+
+A meeting with notes waiting to be read offers **Connect meeting notes** in its **Files** panel.
+It says when your Google accounts differ. The message leaves once the transcript lands or the reading window ends.
+
+### What happens to the "Notes by Gemini" email?
+Google emails the notes to the guests of the meeting. Margince keeps that email private to those guests. It files the email under no contact, so the contact with your own address does not hold every set of notes.
+
+When the subject names one of your meetings, Margince puts the notes on that meeting as its transcript. The meeting must have started in the 24 hours before the email, and the title must be the same, in any case. The contacts and readers of the meeting get it, and Margince suggests the tasks it finds.
+
+Margince adds nothing if two meetings fit, or if the meeting already has a transcript. It does the same for a forwarded email, or one sent to someone else. It does this only for email Gmail confirms came from Google. This needs no Meeting notes connection, only your connected mailbox and calendar.
+
+Also called: Google Docs, Meet transcripts, Gemini notes, meeting minutes.
 
 ### Who a meeting from your calendar shows
 
@@ -68,11 +115,15 @@ A colleague's own calendar decides their answer while it is connected. Once they
 
 A colleague on the invitation can read the meeting. A colleague who declined is shown under **Attendees** and cannot read it.
 
-A guest added to the invitation later joins the meeting at the next calendar sync. A guest taken off the invitation leaves it, and a colleague taken off can no longer read it. A colleague taken off by whoever set the meeting up leaves it at the next calendar sync of whoever set it up. Their own calendar does not need to sync first. If a colleague deletes the meeting from their own calendar, only they leave it.
+A guest added to the invitation later joins the meeting at the next calendar sync. A guest taken off the invitation leaves it, and a colleague taken off can no longer read it. When the calendars of several colleagues show the same guest, the guest stays until the last of those calendars drops them. Whoever set the meeting up decides alone: a guest or colleague they take off leaves it at their next calendar sync. The calendar of a colleague they took off does not need to sync first.
+
+If a colleague deletes the meeting from their own calendar, they leave it, and so does each colleague no other connected calendar shows. The colleague whose calendar first filed the meeting stays on it. A guest from outside the team whom only their calendar showed stays on the meeting, as a record of who was invited.
 
 If someone set who can see the meeting by hand, a colleague added later is shown but cannot read it unless they are picked. A meeting you imported from another CRM gets its guests from your calendar the same way.
 
 An invitation with more than 50 guests is a mailing list to Margince. It keeps your colleagues on it and names up to 200 outside guests by the name or address on the invitation. Those guests are not linked to a contact, no contact is made for them, and the meeting does not count as contact with anyone. Past 200, the meeting says how many more guests it does not list.
+
+When whoever set up the meeting hides the guest list, your copy of the invitation names only that host and you. Margince files that meeting, and only you and the host can read it. It shows on a guest's record once the host's calendar is connected, because that copy names every guest. Margince does not take guests from an invitation email, because the sender types that list.
 
 ## What you can connect
 
@@ -82,9 +133,9 @@ calendar**. One account is one row, with what it brings in listed under it.
 
 | Account | What it brings | Can send? |
 |---|---|---|
-| **Google** | Mail from Gmail and meetings from Google Calendar, either or both. | Yes |
+| **Google** | Mail from Gmail and meetings from Google Calendar, either or both. Meeting notes from Google Meet, if you connect them. | Yes |
 | **Microsoft 365** | Mail and calendar from Outlook on a Microsoft work account, either or both. | Yes |
-| **Another mail host** | "IMAP with an app password. Mail only, no calendar, no sending." | No |
+| **Another mail host** | "IMAP with an app password. Mail only, no calendar. Sending is optional." | If you tick **Send from this mailbox** |
 
 The company's **Telegram** bot lives on **Settings → Integrations**. It is one
 bot for the whole company, connected by an administrator.
@@ -101,8 +152,8 @@ Each account carries one badge:
 - **Needs attention**: one of its parts needs you. The row under it says which.
 - **Not connected**
 
-Under the account, each part (**New mail**, **Past email**, **Calendar**) has
-its own word:
+Under the account, each part (**New mail**, **Past email**, **Calendar**,
+**Meeting notes**) has its own word:
 
 - **Up to date**
 - **Needs reconnect**: "The provider rejected the stored credentials. Reconnect
@@ -208,6 +259,37 @@ Find that program and stop it. It may be a second Margince, a test installation,
 Margince does not try again on its own. Once the other reader is gone, press **Disconnect**, then connect the bot again.
 Also called: Telegram not syncing, bot stopped capturing.
 
+### How do I link a Telegram Business account?
+To capture a company's Telegram Business account, its owner links the company's bot inside the Telegram app, and an administrator then approves it in Margince. The **Telegram Business** card appears on **Settings → Integrations** once the Telegram bot is connected. Only an administrator or operations user sees it.
+1. The account owner opens Telegram, then **Settings**, then **Telegram Business**, then **Chatbots**.
+2. The owner enters the bot's name from the **Telegram Business** card and chooses which chats the bot may see.
+3. In Margince, open **Settings**, then **Integrations**. The account appears in the **Telegram Business** card as **Waiting for approval**.
+4. Press **Approve as company account**, choose the team that reads the account's messages, and confirm.
+Nothing from the account is captured until you approve it. After that, customer messages and the owner's replies from the Telegram app appear in the customer's **History**. Staff keep replying in Telegram, because Margince has no reply box for these chats.
+
+A new account starts as **Held**: only the team you chose can read its messages. Check with the owner which chats they selected before you approve. The team is required the first time. An account that comes back to the seat it had keeps that team.
+Also called: Telegram Business bot, approve a Telegram account, connect a business account.
+
+### Who reads a Telegram Business account's messages?
+Each approved account shows **Read by** its team and either **Held** or **Shared** on its row in the **Telegram Business** card.
+- **Held** means only the reader team can read the messages.
+- **Shared** means a message follows the sharing of the contact it is filed on.
+
+To change it, press **Change who reads** on the row, pick **Held** or **Shared**, and confirm with **Change visibility**. The change applies to messages the account captures after it. Messages held before stay held. It works the same way as for a shared mailbox.
+
+**Shared** needs the company's opt-in. Without it the dialog says so and nothing changes. An account that belongs to a single member shows **each chat is held** and has no team to change.
+Also called: Telegram Business visibility, who sees business chats, reader team.
+
+### What does Switched off in Telegram mean?
+**Switched off in Telegram** means the owner removed the bot from their Telegram Business settings. Margince captures nothing new from that account, and what it already captured stays.
+The account cannot be approved while it is switched off, and pressing **Approve as company account** then says so. To use it again, the owner links the bot once more, and the account waits for approval again.
+Also called: Telegram Business account disconnected, owner removed the bot.
+
+### How do I disconnect a Telegram Business account?
+To stop capturing a Telegram Business account, open the **…** (**Actions**) menu on its row in the **Telegram Business** card, choose **Disconnect**, and confirm.
+Margince stops capturing from the account at once. Everything it already captured stays in the CRM. If the owner links the bot again, the account waits for approval again.
+Also called: remove a business account, stop Telegram Business capture.
+
 ### How do I import my old emails?
 To import your old emails into Margince, pick a window under **Import past email** when you connect. Or choose **Import older email** in the account's menu in **Settings → Connections**.
 1. When you connect, pick a window from **3 months** to **10 years**, or **None**. 6 months is the default.
@@ -261,10 +343,10 @@ judges it ordinary business. The same holds for contacts the import creates. A
 contact from a thread that nothing has judged yet is yours alone until
 Margince has sorted the thread.
 
-Once an import finishes, check two places:
-**Senders**, for what was decided about each address it found, and **Held
-threads**, for the threads still held. Both are under Settings → Capture
-activity.
+Once an import finishes, check two places.
+**Sender decisions** shows what was decided about each address it found. **Mail
+not shared with the team** shows the threads still held. Both are under Settings →
+Connections → Activity.
 
 ## Why is there a warning about my mailbox?
 

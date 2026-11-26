@@ -61,6 +61,8 @@ export const Flat: Story = {
           direction: "inbound",
           counterparts: "Dana Buyer",
           body: "Can you hold the price until Friday?",
+          // Two colleagues received it too: one row, with a badge.
+          copies: 3,
         }),
         entry("f2", "2026-08-14T09:05:00Z", {
           kind: "call",
@@ -474,11 +476,19 @@ export const TaskStates: Story = {
         kind: "task",
         title: "Send the revised quote",
         isDone: false,
+        terms: "Lena Fischer · Due 6 Dec 2026",
       }),
       entry("task-done", "2026-08-13T09:00:00Z", {
         kind: "task",
         title: "Confirm the meeting",
         isDone: true,
+      }),
+      entry("task-withheld", "2026-08-12T09:00:00Z", {
+        kind: "task",
+        title: "Private task",
+        isDone: false,
+        withheld: true,
+        terms: "Lena Fischer · Due 6 Dec 2026",
       }),
     ],
   },
@@ -637,4 +647,36 @@ export const NotesAnAgentLogged: Story = {
     ).toBeVisible();
     await expect(canvas.getByText("Automated by an agent")).toBeVisible();
   },
+};
+
+export const ThreadSplitIntoParts: Story = {
+  render: () => (
+    <GroupedTimelineList
+      zone={ZONE}
+      groups={groupChronology([
+        entry("split-new", "2026-08-20T09:00:00Z", {
+          threadKey: "split-thread",
+          body: "The revised quote is ready.",
+        }),
+        entry("split-task", "2026-08-18T09:00:00Z", {
+          kind: "task",
+          title: "Review the pricing",
+          isDone: true,
+        }),
+        entry("split-meeting", "2026-08-15T09:00:00Z", {
+          kind: "meeting",
+          title: "Pricing review",
+        }),
+        entry("split-old", "2026-08-11T09:00:00Z", {
+          threadKey: "split-thread",
+          body: "Can you update the quote?",
+        }),
+      ])}
+    />
+  ),
+};
+
+export const ThreadSplitIntoPartsDark: Story = {
+  ...ThreadSplitIntoParts,
+  globals: { theme: "dark" },
 };

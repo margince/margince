@@ -1,0 +1,9 @@
+{
+  "verb": "archive_signal",
+  "checks": [
+    "signal.delete"
+  ],
+  "takes": [
+    "signal"
+  ]
+}

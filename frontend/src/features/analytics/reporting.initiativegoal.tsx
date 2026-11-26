@@ -5,8 +5,10 @@ import type { components } from "../../api/schema";
 import { useOwnerPicker } from "../../components/recordowners";
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { Field, Textarea, TextInput } from "../../design-system/field";
+import type { FieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import type { SalesInitiative } from "./reporting.initiatives.queries";
 import { useMetricNames, useReportingCatalog } from "./reporting.queries";
 import {
@@ -110,9 +112,14 @@ export function GoalFields({
   goal,
   onChange,
   onProposal,
+  faults,
+  faultsRoot,
 }: Readonly<{
   goal: Goal;
   onChange: (goal: Goal) => void;
+  // The drawer's press-time sentences for the name and the deadline.
+  faults?: FieldFaults;
+  faultsRoot?: (element: HTMLDivElement | null) => void;
   // A proposal read from the description, for the drawer to apply to the
   // goal and the rule together.
   onProposal: (proposal: SetupProposal) => void;
@@ -125,16 +132,22 @@ export function GoalFields({
     catalog.data?.metrics.some((metric) => metric.id === id),
   );
   return (
-    <div className="form-stack">
-      <Field label={t("reporting.initiativeName")}>
+    <div className="form-stack" ref={faultsRoot}>
+      <Field
+        label={t("reporting.initiativeName")}
+        required
+        error={faults?.of("name")}
+      >
         {(field) => (
           <TextInput
             {...field}
             value={goal.name}
+            maxLength={TEXT_LIMITS.label}
             placeholder={t("reporting.initiativeNamePlaceholder")}
-            onChange={(event) =>
-              onChange({ ...goal, name: event.target.value })
-            }
+            onChange={(event) => {
+              faults?.edited("name");
+              onChange({ ...goal, name: event.target.value });
+            }}
           />
         )}
       </Field>
@@ -147,7 +160,7 @@ export function GoalFields({
             {...field}
             value={goal.description}
             rows={3}
-            maxLength={2000}
+            maxLength={TEXT_LIMITS.document}
             onChange={(event) =>
               onChange({ ...goal, description: event.target.value })
             }
@@ -193,14 +206,19 @@ export function GoalFields({
           />
         )}
       </Field>
-      <Field label={t("reporting.deadline")}>
+      <Field
+        label={t("reporting.deadline")}
+        required
+        error={faults?.of("deadline")}
+      >
         {(field) => (
           <DateInput
             {...field}
             value={isoOrBlank(goal.deadline)}
-            onChange={(event) =>
-              onChange({ ...goal, deadline: event.target.value })
-            }
+            onChange={(event) => {
+              faults?.edited("deadline");
+              onChange({ ...goal, deadline: event.target.value });
+            }}
           />
         )}
       </Field>

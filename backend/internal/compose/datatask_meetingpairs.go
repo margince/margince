@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // meetingPairsDataTask folds a Google Calendar meeting onto the meeting its
@@ -23,7 +24,7 @@ func meetingPairsDataTask(pool *pgxpool.Pool) datatask.Task {
 	meetings := activities.NewStore(InstallationDB(pool))
 	return datatask.Task{
 		ID: "core/1793634207_calendar_meeting_pairs", Version: 1,
-		Title: "Folding meetings two calendars stored twice",
+		Title: systemtext.Literal("datatask.title.core.1793634207_calendar_meeting_pairs"),
 		Steps: []datatask.Step{{
 			Name: "fold_calendar_meeting_pairs", Limit: 100, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

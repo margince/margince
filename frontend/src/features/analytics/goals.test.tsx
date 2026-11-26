@@ -1,0 +1,414 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+/** @vitest-environment happy-dom */
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it } from "vitest";
+import { installFetchStub, jsonResponse } from "../../testing/story-utils";
+import { render } from "./analytics.testkit";
+import { SalesGoalsScreen } from "./goals";
+import { GoalEditor } from "./goals.editor";
+import {
+  draftPlan,
+  goalProposal,
+  goalRoster,
+  publishedPlan,
+  sellerMarch,
+} from "./progress.fixtures";
+import type { SalesGoalPlan } from "./progress.queries";
+
+afterEach(() => {
+  cleanup();
+  window.location.hash = "";
+});
+
+const ALEX = draftPlan.owner_id;
+const SAM = "0194f8a0-0000-7000-8000-000000000002";
+const PLAN = `/analytics/sales-goals/${ALEX}/2026`;
+
+// A plan a manager published and may still change.
+const editablePublished: SalesGoalPlan = {
+  ...publishedPlan,
+  capabilities: { edit: true },
+  published: draftPlan.draft,
+};
+
+type Sent = { method: string; path: string; body: unknown };
+
+// Routes every write of one plan and records what each one sent.
+function stubWrites(plan: SalesGoalPlan): Sent[] {
+  const sent: Sent[] = [];
+  const record = (method: string, path: string) => (body: unknown) => {
+    sent.push({ method, path, body });
+    return jsonResponse(plan);
+  };
+  installFetchStub({
+    [`PUT ${PLAN}/draft`]: record("PUT", "draft"),
+    [`DELETE ${PLAN}/draft`]: record("DELETE", "draft"),
+    [`POST ${PLAN}/publish`]: record("POST", "publish"),
+    [`POST ${PLAN}/withdraw`]: record("POST", "withdraw"),
+    [`GET ${PLAN}`]: () => jsonResponse(plan),
+  });
+  return sent;
+}
+
+describe("SalesGoalsScreen", () => {
+  it("lists the sellers beside the plan of the first, with its history", async () => {
+    window.location.hash = "#/goals?year=2026";
+    installFetchStub({
+      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
+      [`GET ${PLAN}`]: () => jsonResponse(draftPlan),
+    });
+    render(<SalesGoalsScreen />);
+    const roster = await screen.findByRole("table", { name: "Team members" });
+    expect(within(roster).getByText("Sam Okafor")).toBeTruthy();
+    expect(within(roster).getByText("€1,140,000")).toBeTruthy();
+    expect(within(roster).getAllByText("Not set")).toHaveLength(2);
+    expect(within(roster).getByText("No plan")).toBeTruthy();
+    expect(
+      await screen.findByText("Sales goals of Alex Brandt for 2026"),
+    ).toBeTruthy();
+    expect(screen.getByText("Dana Manager saved a draft")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save draft" })).toBeTruthy();
+  });
+
+  it("dates the history on the company's clock and names that zone once, for every season", async () => {
+    const [first] = draftPlan.history;
+    if (!first) throw new Error("the draft plan has a history");
+    const acrossSeasons: SalesGoalPlan = {
+      ...draftPlan,
+      history: [
+        { ...first, revision: 1, created_at: "2026-07-10T09:00:00Z" },
+        { ...first, revision: 2, created_at: "2026-11-10T09:00:00Z" },
+      ],
+    };
+    window.location.hash = "#/goals?year=2026";
+    installFetchStub({
+      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
+      [`GET ${PLAN}`]: () => jsonResponse(acrossSeasons),
+    });
+    render(<SalesGoalsScreen />);
+    const history = await screen.findByRole("region", { name: "History" });
+    expect(
+      within(history).getByText("Times in Central European Time"),
+    ).toBeTruthy();
+    expect(within(history).queryByText(/UTC/)).toBeNull();
+    expect(within(history).getByText("10/07/2026, 11:00")).toBeTruthy();
+    expect(within(history).getByText("10/11/2026, 10:00")).toBeTruthy();
+  });
+
+  it("opens the plan of the seller a manager picks from the list", async () => {
+    window.location.hash = "#/goals?year=2026";
+    installFetchStub({
+      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
+      [`GET ${PLAN}`]: () => jsonResponse(draftPlan),
+      [`GET /analytics/sales-goals/${SAM}/2026`]: () =>
+        jsonResponse({
+          ...publishedPlan,
+          owner_id: SAM,
+          owner_name: "Sam Okafor",
+        }),
+    });
+    const user = userEvent.setup();
+    render(<SalesGoalsScreen />);
+    await user.click(await screen.findByText("Sam Okafor"));
+    expect(
+      await screen.findByText("Sales goals of Sam Okafor for 2026"),
+    ).toBeTruthy();
+    expect(window.location.hash).toContain(`seller=${SAM}`);
+  });
+
+  it("names a drafted year in the list instead of calling it not set", async () => {
+    window.location.hash = "#/goals?year=2026";
+    const [alex, ...rest] = goalRoster.data;
+    installFetchStub({
+      "GET /analytics/sales-goals": () =>
+        jsonResponse({
+          ...goalRoster,
+          data: [{ ...alex, draft_total_minor: 120000000 }, ...rest],
+        }),
+      [`GET ${PLAN}`]: () => jsonResponse(draftPlan),
+    });
+    render(<SalesGoalsScreen />);
+    const roster = await screen.findByRole("table", { name: "Team members" });
+    expect(within(roster).getByText("€1,200,000 draft")).toBeTruthy();
+  });
+
+  it("reads a published plan as text until the manager asks to change it", async () => {
+    window.location.hash = "#/goals?year=2026";
+    installFetchStub({
+      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
+      [`GET ${PLAN}`]: () => jsonResponse(editablePublished),
+      "GET /analytics/progress": () => jsonResponse(sellerMarch),
+    });
+    const user = userEvent.setup();
+    render(<SalesGoalsScreen />);
+    expect(
+      await screen.findByText("2026 so far: €60,000 of €100,000 (60%)"),
+    ).toBeTruthy();
+    await user.click(
+      await screen.findByRole("button", { name: "Change goals" }),
+    );
+    expect(screen.getByRole("button", { name: "Publish" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
+  });
+
+  it("lets a manager leave a pending draft for the published plan", async () => {
+    window.location.hash = "#/goals?year=2026";
+    installFetchStub({
+      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
+      [`GET ${PLAN}`]: () =>
+        jsonResponse({
+          ...editablePublished,
+          state: "published_with_draft",
+          draft: draftPlan.draft,
+        }),
+      "GET /analytics/progress": () => jsonResponse(sellerMarch),
+    });
+    const user = userEvent.setup();
+    render(<SalesGoalsScreen />);
+    expect(await screen.findByRole("button", { name: "Publish" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Change goals" }));
+    expect(screen.getByRole("button", { name: "Publish" })).toBeTruthy();
+  });
+
+  it("shows a seller their own year as text they cannot change", async () => {
+    window.location.hash = "#/goals?year=2026";
+    installFetchStub({
+      "GET /analytics/sales-goals": () =>
+        jsonResponse({ ...goalRoster, data: goalRoster.data.slice(0, 1) }),
+      [`GET ${PLAN}`]: () => jsonResponse(publishedPlan),
+    });
+    render(<SalesGoalsScreen />);
+    expect(await screen.findByText(/^Read-only\./)).toBeTruthy();
+    expect(screen.queryByRole("table", { name: "Team members" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull();
+    const months = screen.getByLabelText("Monthly goals");
+    expect(within(months).getByText("January")).toBeTruthy();
+    expect(within(months).getByText("Year total")).toBeTruthy();
+    expect(screen.getByText("Published")).toBeTruthy();
+  });
+});
+
+describe("GoalEditor", () => {
+  it("spreads a yearly goal equally over the twelve months", async () => {
+    stubWrites(draftPlan);
+    const user = userEvent.setup();
+    render(<GoalEditor plan={{ ...draftPlan, draft: undefined }} />);
+    expect(screen.getByText("12 months are not set.")).toBeTruthy();
+    const yearly = screen.getByLabelText("Yearly goal in EUR");
+    await user.clear(yearly);
+    await user.type(yearly, "120000");
+    await user.click(screen.getByRole("button", { name: "Spread equally" }));
+    expect(
+      await screen.findByText("The months add up to €120,000."),
+    ).toBeTruthy();
+  });
+
+  it("warns while the months do not add up to the yearly goal", async () => {
+    stubWrites(draftPlan);
+    const user = userEvent.setup();
+    render(<GoalEditor plan={draftPlan} />);
+    const january = screen.getByLabelText("January");
+    await user.clear(january);
+    await user.type(january, "1");
+    expect(
+      await screen.findByText(/not the yearly goal of €1,200,000\.$/),
+    ).toBeTruthy();
+  });
+
+  it("saves the months as a draft with the reason given", async () => {
+    const sent = stubWrites(draftPlan);
+    const user = userEvent.setup();
+    render(<GoalEditor plan={draftPlan} />);
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({
+      method: "PUT",
+      body: {
+        months: draftPlan.draft?.months,
+        declared_total_minor: 120000000,
+        reason: "Agreed in the yearly review",
+        origin: "manual",
+      },
+    });
+  });
+
+  it("discards the open draft", async () => {
+    const sent = stubWrites(draftPlan);
+    const user = userEvent.setup();
+    render(<GoalEditor plan={draftPlan} />);
+    await user.click(screen.getByRole("button", { name: "Discard draft" }));
+    await waitFor(() =>
+      expect(sent).toEqual([expect.objectContaining({ method: "DELETE" })]),
+    );
+  });
+
+  it("publishes only once the manager confirms the goals were agreed", async () => {
+    const sent = stubWrites(draftPlan);
+    const user = userEvent.setup();
+    render(<GoalEditor plan={draftPlan} />);
+    await user.click(screen.getByRole("button", { name: "Publish" }));
+    const dialog = await screen.findByRole("dialog");
+    const confirm = within(dialog).getByRole("button", { name: "Publish" });
+    expect(
+      confirm.getAttribute("aria-disabled") ?? confirm.hasAttribute("disabled"),
+    ).toBeTruthy();
+    await user.click(
+      within(dialog).getByLabelText("These goals were agreed together."),
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Publish" }));
+    await waitFor(() =>
+      expect(sent).toEqual([
+        expect.objectContaining({
+          path: "publish",
+          body: { reason: "Agreed in the yearly review", confirm_agreed: true },
+        }),
+      ]),
+    );
+  });
+
+  it("refuses to publish while the reason on screen is not the saved one", async () => {
+    stubWrites(draftPlan);
+    const user = userEvent.setup();
+    render(<GoalEditor plan={draftPlan} />);
+    const publish = () => screen.getByRole("button", { name: "Publish" });
+    expect(publish().hasAttribute("disabled")).toBe(false);
+    await user.type(screen.getByLabelText(/^Reason/), " and the pipeline");
+    expect(publish().hasAttribute("disabled")).toBe(true);
+  });
+
+  it("withdraws published goals with the reason written", async () => {
+    const sent = stubWrites(editablePublished);
+    const user = userEvent.setup();
+    render(<GoalEditor plan={editablePublished} />);
+    await user.click(screen.getByRole("button", { name: "Withdraw" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText("Reason"), "Left the team");
+    await user.click(within(dialog).getByRole("button", { name: "Withdraw" }));
+    await waitFor(() =>
+      expect(sent).toEqual([
+        expect.objectContaining({
+          path: "withdraw",
+          body: { reason: "Left the team" },
+        }),
+      ]),
+    );
+  });
+
+  it("refuses to publish months that are not all set", () => {
+    stubWrites(draftPlan);
+    const months = [...(draftPlan.draft?.months ?? [])];
+    months[3] = null;
+    render(
+      <GoalEditor
+        plan={{
+          ...draftPlan,
+          draft: draftPlan.draft && { ...draftPlan.draft, months },
+        }}
+      />,
+    );
+    expect(screen.getByText("1 month is not set.")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Publish" }).hasAttribute("disabled"),
+    ).toBe(true);
+  });
+});
+
+describe("GoalProposalStep", () => {
+  const PROPOSAL = `POST ${PLAN}/proposed-months`;
+
+  it("takes proposed months into the editor and saves them as proposed", async () => {
+    const sent = stubWrites(draftPlan);
+    const asked: unknown[] = [];
+    installFetchStub({
+      [`PUT ${PLAN}/draft`]: (body: unknown) => {
+        sent.push({ method: "PUT", path: "draft", body });
+        return jsonResponse(draftPlan);
+      },
+      [PROPOSAL]: (body: unknown) => {
+        asked.push(body);
+        return jsonResponse(goalProposal);
+      },
+    });
+    const user = userEvent.setup();
+    render(<GoalEditor plan={{ ...draftPlan, draft: undefined }} />);
+    await user.click(screen.getByRole("button", { name: "Propose months" }));
+    expect(
+      await screen.findByText("Proposed: €1,200,000 for the year"),
+    ).toBeTruthy();
+    expect(asked[0]).toEqual({});
+    expect(screen.getByText("12 months are not set.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Use these months" }));
+    expect(
+      await screen.findByText("The months add up to €1,200,000."),
+    ).toBeTruthy();
+    expect(screen.getByText("Proposed by Margince")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]?.body).toMatchObject({
+      months: goalProposal.months,
+      declared_total_minor: 120000000,
+      reason: goalProposal.reason,
+      origin: "ai",
+    });
+  });
+
+  it("asks to spread the yearly goal already entered, and keeps the reason written", async () => {
+    const asked: unknown[] = [];
+    installFetchStub({
+      [PROPOSAL]: (body: unknown) => {
+        asked.push(body);
+        return jsonResponse(goalProposal);
+      },
+    });
+    const user = userEvent.setup();
+    render(<GoalEditor plan={draftPlan} />);
+    await user.click(screen.getByRole("button", { name: "Propose months" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Use these months" }),
+    );
+    expect(asked[0]).toEqual({ yearly_total_minor: 120000000 });
+    expect(screen.getByLabelText("Reason")).toHaveProperty(
+      "value",
+      "Agreed in the yearly review",
+    );
+  });
+
+  it("leaves the months alone when the proposal is dismissed", async () => {
+    installFetchStub({ [PROPOSAL]: () => jsonResponse(goalProposal) });
+    const user = userEvent.setup();
+    render(<GoalEditor plan={{ ...draftPlan, draft: undefined }} />);
+    await user.click(screen.getByRole("button", { name: "Propose months" }));
+    await user.click(await screen.findByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByText(/^Proposed:/)).toBeNull();
+    expect(screen.getByText("12 months are not set.")).toBeTruthy();
+    expect(screen.queryByText("Proposed by Margince")).toBeNull();
+  });
+
+  it("says so when there is no model or nothing won to read", async () => {
+    const refuse = (code: string) => () =>
+      new Response(JSON.stringify({ code, detail: code }), { status: 409 });
+    installFetchStub({ [PROPOSAL]: refuse("no_sales_history") });
+    const user = userEvent.setup();
+    const { unmount } = render(<GoalEditor plan={draftPlan} />);
+    await user.click(screen.getByRole("button", { name: "Propose months" }));
+    expect(
+      await screen.findByText(
+        /^Alex Brandt has no finished month with sales won in 2026 or the year before/,
+      ),
+    ).toBeTruthy();
+    unmount();
+    installFetchStub({ [PROPOSAL]: refuse("ai_not_configured") });
+    render(<GoalEditor plan={draftPlan} />);
+    await user.click(screen.getByRole("button", { name: "Propose months" }));
+    expect(
+      await screen.findByText(/^Proposing months needs an AI model/),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Propose months" })).toBeNull();
+  });
+});

@@ -4,6 +4,9 @@
 package storekit
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -30,6 +33,9 @@ type Page struct {
 // (nil = the row sits in the NULL tail), so a token can only continue
 // the ordering it was minted under.
 type Cursor struct {
+	// Scope names the list that minted the token, so a token from another
+	// list is refused instead of continuing an unrelated keyset.
+	Scope     string    `json:"r,omitempty"`
 	CreatedAt time.Time `json:"t"`
 	ID        ids.UUID  `json:"id"`
 	SortField string    `json:"s,omitempty"`
@@ -49,8 +55,8 @@ type Cursor struct {
 // years 0000-9999, and Postgres timestamptz reaches year 294276, so a row with
 // an absurd-but-storable created_at produces exactly this. Every caller is a
 // store method that already answers an error, so there is a channel for it.
-func EncodeCursor(createdAt time.Time, id ids.UUID) (string, error) {
-	return EncodeOpaque(Cursor{CreatedAt: createdAt, ID: id})
+func EncodeCursor(scope string, createdAt time.Time, id ids.UUID) (string, error) {
+	return EncodeOpaque(Cursor{Scope: scope, CreatedAt: createdAt, ID: id})
 }
 
 // SweepCursor is a position in one of several streams: which stream the page
@@ -105,19 +111,20 @@ type MalformedCursorError struct{}
 
 func (*MalformedCursorError) Error() string { return "store: malformed cursor" }
 
-// CursorSortMismatchError is the other cursor client fault: the token
-// decodes fine but was minted under a different sort (field or
-// direction), so its keyset tuple cannot continue this list. Distinct
-// from MalformedCursorError because the contract's Cursor parameter
-// promises its own code (422 cursor_param_mismatch) for exactly this
-// case — the caller drops the cursor or restores the original sort.
+// CursorSortMismatchError is the other cursor client fault. The token
+// decodes fine but was minted under a different sort or for a different list.
+// The contract promises 422 cursor_param_mismatch for it, so it stays apart
+// from MalformedCursorError. The caller drops the cursor or restores the sort.
 type CursorSortMismatchError struct{}
 
 func (*CursorSortMismatchError) Error() string {
 	return "store: cursor was minted under a different sort"
 }
 
-func DecodeCursor(token string) (Cursor, error) {
+// DecodeCursor reads a token the list named by scope minted. A token from
+// another list, or one minted before tokens carried a scope, is a
+// CursorSortMismatchError: the caller restarts the walk without a cursor.
+func DecodeCursor(scope, token string) (Cursor, error) {
 	c, err := DecodeOpaque[Cursor](token)
 	if err != nil {
 		return Cursor{}, err
@@ -131,29 +138,62 @@ func DecodeCursor(token string) (Cursor, error) {
 	if c.CreatedAt.IsZero() || c.ID == (ids.UUID{}) {
 		return Cursor{}, &MalformedCursorError{}
 	}
+	if c.Scope != scope {
+		return Cursor{}, &CursorSortMismatchError{}
+	}
 	return c, nil
 }
 
-// DecodeIDCursor reads the cursor of a page Query.SelectPage walks: the last id
-// of the page before. An empty token reads the first page.
-func DecodeIDCursor(token string) (*ids.UUID, error) {
+// idCursor is the position of a page an id keyset walks. It holds the last id
+// of the page before, and the scope of the paging that minted it. A token from
+// another filter or list names a different scope, so it is refused rather
+// than starting an arbitrary tail.
+type idCursor struct {
+	Scope string   `json:"s"`
+	After ids.UUID `json:"a"`
+}
+
+// CursorScope names one paging: the thing paged and what narrows it, such as
+// a resource and its filter, or a list. JSON writes a map's keys in order, so
+// one filter spelt in two key orders is one scope.
+//
+//craft:ignore naked-any a scope is built from whichever values name the paging
+func CursorScope(parts ...any) (string, error) {
+	raw, err := json.Marshal(parts)
+	if err != nil {
+		return "", fmt.Errorf("store: naming a cursor scope: %w", err)
+	}
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:12]), nil
+}
+
+// DecodeIDCursor reads the cursor of a page Query.SelectPage walks, for the
+// paging scope names. An empty token reads the first page.
+func DecodeIDCursor(scope, token string) (*ids.UUID, error) {
 	if token == "" {
 		return nil, nil //nolint:nilnil // no cursor is the first page, the after SelectPage reads as nil
 	}
-	after, err := ids.Parse(token)
+	position, err := DecodeOpaque[idCursor](token)
 	if err != nil {
+		return nil, err
+	}
+	if position.Scope != scope || position.After == (ids.UUID{}) {
 		return nil, &MalformedCursorError{}
 	}
-	return &after, nil
+	return &position.After, nil
 }
 
-// IDPage is the Page that continues a Query.SelectPage answer, whose cursor
-// DecodeIDCursor reads back.
-func IDPage(matched []ids.UUID, more bool) Page {
+// IDPage is the Page that continues a Query.SelectPage answer within scope,
+// whose cursor DecodeIDCursor reads back.
+func IDPage(scope string, matched []ids.UUID, more bool) (Page, error) {
 	if !more || len(matched) == 0 {
-		return Page{}
+		return Page{}, nil
 	}
-	return Page{HasMore: true, NextCursor: matched[len(matched)-1].String()}
+	token, err := EncodeOpaque(idCursor{Scope: scope, After: matched[len(matched)-1]})
+	if err != nil {
+		return Page{}, err
+	}
+	return Page{HasMore: true, NextCursor: token}, nil
 }
 
 // SQLf keeps store-side SQL assembly lines readable; arguments are
@@ -172,6 +212,16 @@ func ClampLimit(limit *int) int {
 	default:
 		return *limit
 	}
+}
+
+// QuickFindQuery is a list's q without its outer spaces, and false when nothing
+// is left: a box holding only spaces asks for no filter.
+func QuickFindQuery(q *string) (string, bool) {
+	if q == nil {
+		return "", false
+	}
+	trimmed := strings.TrimSpace(*q)
+	return trimmed, trimmed != ""
 }
 
 // QuickFindClause renders the list-q predicate: the full-text match

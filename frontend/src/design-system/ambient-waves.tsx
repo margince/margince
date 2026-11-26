@@ -46,7 +46,7 @@ import { usePrefersReducedMotion } from "./motion";
  * light the Core standing in front of it would throw, not a second palette
  * arriving on the one screen whose subject is the Core.
  */
-const PAPER_TOKEN = "--bgElevated";
+const PAPER_TOKEN = "--bgField";
 const BAND_TOKENS = ["--orbGlow", "--orbMid", "--orbBright"];
 
 /** Seconds the ground takes to rise out of the paper on arrival. */

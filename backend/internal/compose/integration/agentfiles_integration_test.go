@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -114,10 +115,10 @@ func TestAPassportListsAndUploadsFilesOverREST(t *testing.T) {
 		"name": "Filing renewal", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
 		"company_id": company, "source": "manual",
 	})
-	if status, raw := apptest.UploadAs(t, d.e, nil, "company", company, []byte("PDF-FROM-A-HUMAN")); status != http.StatusCreated {
+	if status, raw := apptest.UploadAs(t, d.e, nil, "company", company, []byte("%PDF-FROM-A-HUMAN")); status != http.StatusCreated {
 		t.Fatalf("the admin's upload → %d %s", status, raw)
 	}
-	status, raw := apptest.UploadAs(t, d.e, d.bearer, "deal", deal, []byte("PDF-FROM-AN-AGENT"))
+	status, raw := apptest.UploadAs(t, d.e, d.bearer, "deal", deal, []byte("%PDF-FROM-AN-AGENT"))
 	if status != http.StatusCreated {
 		t.Fatalf("the passport's upload → %d %s", status, raw)
 	}
@@ -164,7 +165,7 @@ func assertTheAgentWrote(t *testing.T, e *apptest.AppEnv, entity, action string)
 func TestAReadOnlyPassportCannotUploadAFile(t *testing.T) {
 	d := newTwoDoors(t, "files-read-only", "read")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Read Only Works", "source": "manual"})
-	status, raw := apptest.UploadAs(t, d.e, d.bearer, "company", company, []byte("PDF"))
+	status, raw := apptest.UploadAs(t, d.e, d.bearer, "company", company, []byte("%PDF-1.4"))
 	var refusal fileRefusal
 	if err := json.Unmarshal(raw, &refusal); err != nil {
 		t.Fatalf("the refusal does not decode: %v\n%s", err, raw)
@@ -181,7 +182,7 @@ func capturedPrivately(t *testing.T, e *apptest.AppEnv, owner, address string) s
 	mail := createdID(t, e, "/v1/activities", AnyMap{"kind": "note", "body": "Mail from " + address})
 	ws := apptest.InstallationWorkspaceUUID(t.Context(), t, e.Owner)
 	capture := principal.SystemActing(principal.WithWorkspaceID(t.Context(), ws), "capture")
-	store := contacts.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](ws)))
+	store := contacts.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](ws))).WithSenderStamp(activities.StampProvenSendersTx)
 	captured, err := store.EnsureCounterparty(capture, contacts.EnsureCounterpartyInput{
 		Email: address, OwnerID: ids.MustParse(owner), ActivityID: ids.From[ids.ActivityKind](ids.MustParse(mail)),
 		Source: "gmail:" + mail, CapturedBy: "connector:gmail", SuppressCompany: true,
@@ -206,7 +207,7 @@ func TestAFileOnARecordOutsideTheRowScopeIsNotFound(t *testing.T) {
 	if status := d.e.Call(t, "GET", "/v1/attachments?entity_type=contact&entity_id="+hidden, nil, d.bearer, nil); status != http.StatusNotFound {
 		t.Errorf("listing a hidden contact's files → %d, want 404", status)
 	}
-	if status, raw := apptest.UploadAs(t, d.e, d.bearer, "contact", hidden, []byte("PDF")); status != http.StatusNotFound {
+	if status, raw := apptest.UploadAs(t, d.e, d.bearer, "contact", hidden, []byte("%PDF-1.4")); status != http.StatusNotFound {
 		t.Errorf("uploading to a hidden contact → %d %s, want 404", status, raw)
 	}
 	var stored int
@@ -223,7 +224,7 @@ func TestAFileOnARecordOutsideTheRowScopeIsNotFound(t *testing.T) {
 func TestAPassportReadsAFileThroughTheToolUntilItIsArchived(t *testing.T) {
 	d := newTwoDoors(t, "files-read", "read", "write")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Kept Works", "source": "manual"})
-	content := []byte("PDF-KEPT\x00\xff")
+	content := []byte("%PDF-KEPT\x00\xff")
 	status, raw := apptest.UploadAs(t, d.e, nil, "company", company, content)
 	if status != http.StatusCreated {
 		t.Fatalf("the admin's upload → %d %s", status, raw)

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/lint-cache.yml .github/workflows/pace.yml .github/workflows/scheduled.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key .github/actions/ci-image scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh scripts/pace-workflow.sh -->
+<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/lint-cache.yml .github/workflows/pace.yml .github/workflows/scheduled.yml .github/workflows/mcp-sweep.yml .github/workflows/_records.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key .github/actions/ci-image scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh scripts/pace-workflow.sh -->
 # CI pipeline
 
 The merge gate as GitHub Actions. The workflow is
@@ -19,32 +19,32 @@ both lanes, plus the craftsmanship gate, the license gate and the frontend lane,
 - an error that code drops without a trace;
 - a UI regression.
 
-Four lanes run without blocking: `vuln`, the SonarCloud scan, `live-boot` and `home-budget`. `scheduled.yml` checks
-`vuln` and the scan again daily on `main`. See [the workflows beside the merge gate](../reference/ci-workflows.md)
-for why a gate that does not block needs that second check. Why they do not block yet is under
-[The `ci` aggregate](#the-ci-aggregate-is-the-only-required-context).
+Five lanes run without blocking: `vuln`, the SonarCloud scan, `live-boot`, `home-budget` and
+`repeat-changed-tests`. `scheduled.yml` checks `vuln` and the scan again daily on `main`. See
+[the workflows beside the merge gate](../reference/ci-workflows.md) for why a gate that does not block needs that
+second check. Why they do not block yet is under [The `ci` aggregate](#the-ci-aggregate-is-the-only-required-build-context).
 
-`scheduled.yml` also calls each data vendor once a day, through the production adapter. For Surfe that
-call is `GET /v1/credits` (`make vendor-live`), which costs nothing. It proves that the key works, and
-that the answer still has the fields the adapter and `surfe/testdata/vendor-wire.json` name. It does
-not reach the calls that cost money.
+`scheduled.yml` also calls each data vendor once a day, through the production adapter. For Surfe that call
+is `GET /v1/credits` (`make vendor-live`), which costs nothing. It proves that the key works, and that the answer
+still has the fields the adapter and `surfe/testdata/vendor-wire.json` name. It does not reach the calls that cost money.
 
-The key is the repository secret `SURFE_LIVE_KEY`. Without it the job reports "not checked", which is
-not a pass. The job is not required, so a vendor that is down blocks no merge.
+The key is the repository secret `SURFE_LIVE_KEY`. Without it the job reports "not checked", which
+is not a pass. The job is not required, so a vendor that is down blocks no merge.
 
 `scheduled.yml` also renders every story on `main` once a day (`make fe-uat ARGS=--all-stories`). On a branch,
 `make fe-uat` renders only the stories the diff reaches, so a story that fails on `main` stays hidden until
 some change reaches it.
 
-Once a week `scheduled.yml` also measures the PERF budgets and the use cases a model drives, and
-records the results. It never writes them to `main`. It opens one pull request with the
-records and the pages they feed, and a record is published when a maintainer merges that pull request. See
-[the workflows beside the merge gate](../reference/ci-workflows.md#scheduledyml).
+Once a week `scheduled.yml` also measures the PERF budgets. The use cases a model drives cost tokens, so they
+run only when a maintainer starts `mcp-sweep.yml`. No record goes to `main` from either: each opens a pull
+request with the records and the pages they feed, and a maintainer merges it. See [the workflows beside the
+merge gate](../reference/ci-workflows.md#scheduledyml).
 
-**The merge queue is not turned on.** Each active ruleset on `main` requires the `ci` check, and none
-holds a merge queue rule. So no `merge_group` run happens, and a pull request's own run, scoped to its diff, is
-the merge verdict. `ci.yml` still handles `merge_group`. The sections below that describe the queue
-describe how the pipeline acts when the queue is switched on. Where that matters, the text says so.
+**The merge queue is a ruleset setting**, not a file in this tree. Both required checks, `ci` and `cla`,
+run on `merge_group`. `backend/gates/mergequeuereach_test.go` fails a pull request workflow that does not,
+unless a waiver names it as advisory. The gate cannot read the ruleset, so a workflow with a waiver that a
+ruleset requires still passes it. With no queue rule, no `merge_group` run happens, and a pull request's
+own run is the merge verdict.
 
 ## Triggers
 
@@ -56,69 +56,65 @@ There is no `push` trigger on `main`. With the queue on, a push to `main` is the
 already reached, because the queue gated that tree before it landed. With the queue off, nothing runs
 `ci.yml` on `main` after a merge; `scheduled.yml` checks `main` again daily.
 
-### The merge queue, when turned on
+### The merge queue
 
 A `merge_group` run builds `main` + everything ahead of it in the queue + the entry under test, on a
 `gh-readonly-queue/main/...` ref that is removed later. It gates that tree. Two things follow:
 
 - **The full tree, always.** The change classifier is overridden on `merge_group` (every scope reports
   `true`), so no job can be skipped there.
-- **Every commit, not just the last one.** The tree that is measured is the tree that merges.
+- **The tree that lands.** Each group's head is the tree that reaches `main`. With `HEADGREEN` it is
+  the only one that must pass, so a commit inside a group can land without a green run of its own.
 
-The queue merges in **batches**. Say it merged one PR at a time, with a lane of about 20 minutes. That
-would cap merges at three an hour, against a measured rate of 70–82 a day. A batch makes gating per commit
-cheap enough.
+The queue merges in **batches**. One PR at a time, with a lane of about 25 minutes, caps merges near
+two an hour. The measured rate is 55 merges a day on average, and up to 10 in a busy hour. Five builds at
+once lift that cap to about 12 an hour. A queue rule on `main` takes these settings:
 
-The queue was set up with these ruleset settings. Two of the limits are often taken for each other:
-
-| Setting in the ruleset | Set to | What it bounds |
+| Setting in the ruleset | Set to | What it bounds, and why this value |
 |---|---|---|
-| `max_entries_to_merge` | **2** | how many entries may merge together as one group |
-| `max_entries_to_build` | **2** | how many queued entries may ask for checks at once |
-| `min_entries_to_merge` / `…_wait_minutes` | 1 / 2 | a single entry still merges after a 2 minute wait |
-| `grouping_strategy` | `HEADGREEN` | **which commits get checked** (see below) |
-| `check_response_timeout_minutes` | 60 | clears the `p90` of 22 minutes with a margin |
-| `merge_method` | `SQUASH` | keeps `required_linear_history` |
+| `max_entries_to_build` | **5** | queued entries that build at once; 10 merges an hour times a 25 minute lane is about 4 in flight |
+| `max_entries_to_merge` | **5** | entries that merge together as one group; equal to the build limit, so one green head can merge every entry in flight |
+| `min_entries_to_merge` / `…_wait_minutes` | 1 / 5 | a single entry merges as soon as it passes, so the wait never applies |
+| `grouping_strategy` | `HEADGREEN` | **which commits must pass** (see below) |
+| `check_response_timeout_minutes` | 75 | clears the `p95` full lane of 45 minutes by 30 minutes |
+| `merge_method` | `SQUASH` | one commit per pull request on `main` |
 
-`grouping_strategy` is not about partial merging. `HEADGREEN` checks only the merge group's **head**
-commit (the changes of every entry in the group put together). `ALLGREEN` checks the commit of each
-entry on its own. It sets cost against knowing which entry failed.
+`grouping_strategy` is not about partial merging. `HEADGREEN` asks only the group's **head** commit (the
+changes of every entry in the group put together) to pass. `ALLGREEN` asks the commit of each entry to
+pass on its own.
 
-- `ALLGREEN` tells you *which* entry failed the batch. But it runs the lane of 28 jobs once per entry
-  in the group, which a limit of 20 jobs at a time cannot take.
-- `HEADGREEN` pays one lane per group, and leaves GitHub to work out which entry to drop when the
-  group fails.
+- `ALLGREEN` tells you *which* entry failed, and a flaky failure in any entry removes it from the queue.
+- `HEADGREEN` merges the group when its head passes. An entry whose own run failed by chance still
+  merges once a later run that holds it passes.
 - Neither one merges the passing first part of a failing group.
-
-`max_entries_to_merge` starts at **2**, because in a batched queue a flaky job costs a whole group's run,
-not one. It is a live ruleset setting: raise it once the queue has a measured baseline.
 
 `concurrency` is keyed on `github.ref`, with `cancel-in-progress` held to `pull_request` only. A new push
 replaces the review under way, and a merge verdict can never be cancelled. Each queue entry has its own
 ref, so entries never get in each other's way in that group.
 
-`release.yml` and `sbom.yml` do not take from the runner budget. Both are **started by hand only**, so a
-merge triggers neither. They keep their job groups for the case of two dispatch runs at once. There, a
-cancel must reach the costly steps that generate output. It must never reach the step that publishes or
-signs; see [the workflows beside the merge gate](../reference/ci-workflows.md).
+The release workflows and `sbom.yml` do not take from the runner budget. A merge triggers none of them:
+`sbom.yml` and `release.yml` start by hand, and `release-tag.yml` starts on a `v*` tag. They keep their job groups for the case of two
+dispatch runs at once. There, a cancel must reach the costly steps that generate output. It must never reach
+the step that publishes or signs; see [the workflows beside the merge gate](../reference/ci-workflows.md).
 
-`scheduled.yml` groups without
-cancelling, because nothing replaces a daily run. `cache-warm.yml` groups without cancelling, because a
-cancelled run saves no cache.
+`scheduled.yml` groups without cancelling, because nothing replaces a daily run. `cache-warm.yml` groups
+without cancelling, because a cancelled run saves no cache.
 
-A skipped required check counts as *passing* on GitHub. That is why the required checks are put together
-in one `ci` job that refuses a skip on `merge_group`; see
-[The `ci` aggregate](#the-ci-aggregate-is-the-only-required-context).
+A pull request workflow that also starts with no new commit groups without cancelling, because Renovate
+never merges a head with a `cancelled` check. `backend/gates/samecommitcancel_test.go` holds this.
+
+A skipped required check counts as *passing* on GitHub. That is why the build checks are put together in one
+`ci` job that refuses a skip on `merge_group`; see [The `ci` aggregate](#the-ci-aggregate-is-the-only-required-build-context).
 
 ## Run only the checks a change can reach
 
 The first job, **`changes`**, sorts the diff (dorny/paths-filter, pinned to a SHA) into the scopes in the
 table below. Every later job gates on the output it needs.
 
-**This applies to `pull_request` only.** On `merge_group` every scope is set to `true`, so the queue
-lane covers the full tree and nothing can be skipped there. Scoping to the diff is good for what the author
-learns, and wrong for a merge verdict. A skip on the PR side is safe only while the queue lane covers
-the ground it skipped.
+**This applies to `pull_request` only.** On `merge_group` every scope is set to `true`, so the queue lane
+covers the full tree and nothing can be skipped there. Scoping to the diff is good for what the author learns,
+and wrong for a merge verdict. A skip on the PR side is safe only while the queue lane covers the ground it
+skipped.
 
 With the queue off, the PR run is the verdict, so a skip on a PR is a gap. The override sits in the
 outputs of the `changes` job, where nobody can forget it. It is not in the `if:` of each reader.
@@ -145,7 +141,8 @@ to run the Go unit gates. The other is to boot the sharded Postgres databases.
 |---|---|---|
 | `backend_db` | `backend/**`, `docker-compose.dev.yml`, `go.mod`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it calls, matched by a glob so a new lane is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json` | the integration shards and the `integration` fan-in: every lane that opens a database |
 | `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus every file a Go gate reads without running (listed below) | Go build and gate, the staged `crm-hello` walk, craftsmanship, unit coverage, vuln |
-| `frontend` | `third-party-files.txt`, `frontend/**`, `backend/api/**` (the contract drives FE types), the composition inputs the lane type checks against (`instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs), and for the same reason the CI image `.github/ci-image/**` and `.github/actions/ci-image/**` | frontend lane, UAT |
+| `backend_lint` | `backend_db` plus `tools/**`, a module `lint-modules` lints. golangci reads no frontend or docs file | `backend-lint` |
+| `frontend` | `third-party-files.txt`, `frontend/**`, `backend/api/**` (the contract drives FE types), `backend/internal/modules/agents/previewcatalog_gen.json` (only `fe-drift` builds it again from `frontend/`), the composition inputs the lane type checks against (`instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs), and for the same reason the CI image `.github/ci-image/**` and `.github/actions/ci-image/**` | frontend lane, UAT |
 | `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `scripts/**`, `Makefile` | full stack live-boot |
 | `images` | `Dockerfile`, `.dockerignore`, `docker-bake.hcl` | `images (build only)` |
 | `deps` | `go.work`, `go.work.sum`, `**/go.mod`, `**/go.sum`, `**/package.json`, `**/pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.syft.yaml`, `.grant.yaml`, `sbom-schemas/**`, `Makefile`, `scripts/sbom-census.sh`, `scripts/test-sbom-census.sh`, `scripts/install-sbom-python.sh`, `scripts/test-install-sbom-python.sh`, `scripts/sbom-license-parity.sh`, `scripts/test-sbom-license-parity.sh`, `third-party-files.txt`, `scripts/third_party_files.py`, `scripts/third-party-files.sh`, `scripts/test-third-party-files.sh`, `embedded-binaries.txt`, `scripts/embedded-binary-licenses.sh`, `scripts/test-embedded-binary-licenses.sh`, `.github/workflows/**`, `.github/actions/**` | the license gate |
@@ -159,7 +156,7 @@ What the `backend` scope adds on top of `backend_db`:
 - The rest of what the suite opens: `.github/**`, `.coderabbit.yaml`, `.env.example`, `.tool-versions`,
   `config/**`, `e2e/**`, `tools/**`, `user-guide/**`, `Dockerfile*`, `package.json`, `pnpm-lock.yaml`
   and `renovate.json`. It also opens the root pages `README.md`, `CLA.md`,
-  `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `LICENSING.md`, `SECURITY.md` and `SUPPORT.md`.
+  `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `LICENSING.md`, `MAINTAINERS.md`, `SECURITY.md` and `SUPPORT.md`.
 
 That list is worked out from the tree, not kept by hand. `backend/gates/gatelanetrigger_test.go` checks every path literal
 in the suite against the tree, and fails on one this scope does not cover. These paths sit in `backend`
@@ -189,11 +186,11 @@ What follows from this:
   matches the `images` scope. It runs the **`images (build only)`** job: a `docker buildx bake` of the
   default group (the three roles) that pushes nothing.
   - There are no registry credentials, no digest, and no release side effect. It answers "does it still
-    build", which nothing else asks now that `release.yml` only runs by hand.
+    build", which nothing else asks now that the release workflows run only on a tag or by hand.
   - The scope is those three paths, not `backend/**` or `frontend/**`. The images copy build output, so
     a source change *can* break one without touching any of the three.
-  - But a bake of three roles on every backend PR would cost most of what making `release.yml` run by
-    hand saved. And the compile that catches nearly all of that class already runs in
+  - But a bake of three roles on every backend PR would cost most of what taking `release.yml` off
+    every merge saved. And the compile that catches nearly all of that class already runs in
     `deterministic-gates`. What is left with no cover is a source change that builds and then fails to
     package, which the release still finds.
 - A **PR that only changes the backend** skips the frontend + UAT lanes; a **PR that only changes the
@@ -203,11 +200,11 @@ What follows from this:
 - A **CI PR still runs the full backend lane**, integration shards too, when it touches `ci.yml`, a
   `_lane-*.yml`, the `Makefile`, or `scripts/**`. Those change what a gate *does*, so the gates run again
   to prove they still pass under the new version.
-  - `release.yml` and `sbom.yml` sit outside `backend_db`, because neither runs a backend gate, so they
+  - The release workflows and `sbom.yml` sit outside `backend_db`, because none runs a backend gate, so they
     boot no Postgres shard. They still match `backend` (through `.github/**`) and `deps` (through
     `.github/workflows/**`). So the Go gates and the license gate run on them.
-  - Neither workflow proves itself on a schedule, since both only run by hand. The next user to start
-    one finds a change that made it fail. So start a PR that touches either from its branch before merging.
+  - None of them proves itself on a schedule. The next user to start one finds a change that made it fail.
+    So start `sbom.yml` from the branch of a PR that touches it. A release workflow publishes, so read its diff.
 - A **PR into `develop`** skips `integration`, `uat`, `live-boot`, `images` and `sonarcloud`, plus the
   test-input census. The `full_lane` output of `changes` is false only there. The `develop` into `main`
   pull request runs them under the usual path filters: [land-through-develop.md](../how-to/land-through-develop.md).
@@ -228,8 +225,8 @@ changes ──┬─> deterministic-gates *
           ├─> backend-lint *
           ├─> craftsmanship
           ├─> integration  →  _lane-integration.yml ────────────────┐
-          │                     integration-build                   │
-          │                      └─> integration-shards (×8) ┐      │
+          │                     integration-build ┐ (binaries)      │
+          │                     integration-shards (×8) ─────┐      │
           │                     integration-unit-coverage ───┴> fan-in
           ├─> vuln                                              │   │
           ├─> license gate  (`deps` scope)                      │   │
@@ -243,12 +240,13 @@ changes ──┬─> deterministic-gates *
  deterministic-gates + integration + frontend ──> sonarcloud
   craft-residue  (every non-draft change, independent)
   secret-scan    (every non-draft change, independent — + the image-pin gate)
+  repeat-changed-tests  (every non-draft pull request, independent, advisory)
 
   ci  ── the ONE required context. needs: ci-image, deterministic-gates,
          test-budget, backend-lint, craftsmanship, craft-residue,
          secret-scan, integration, frontend, uat, license-gate, images
-         (twelve — vuln, live-boot and home-budget stay advisory and are
-         NOT in the fan-in)
+         (twelve — vuln, live-boot, home-budget and repeat-changed-tests
+         stay advisory and are NOT in the fan-in)
 ```
 
 ### Two lanes are called, not inlined
@@ -274,11 +272,11 @@ pass, one level down.
 without that, every step would run from the repository root.
 
 Check names inside a lane are reported as `<caller-job> / <lane-job>`, for example
-`integration / integration shard (3/8)`. Only `ci` is a required check, so no ruleset depends on those
+`integration / integration shard (3/8)`. No check inside a lane is required, so no ruleset depends on those
 names.
 
 The pipeline stays **one caller**, and does not split into `pr.yml` and `merge-queue.yml`. The `ci`
-aggregate is the single required check. Two callers would mean two copies of it that must stay the same
+aggregate is the single required build check. Two callers would mean two copies of it that must stay the same
 byte for byte, or the two events gate in different ways. That is two lists kept by hand, guarding the
 check everything depends on.
 
@@ -296,24 +294,25 @@ The integration lane on a real Postgres runs **beside** `deterministic-gates` fo
 the longest lane in the pipeline. Running the two slowest jobs one after the other would set the clock
 time of a PR. And `deterministic-gates` itself still catches a broken build.
 
-- The lane is **sharded**. 8 matrix runners each run a fixed part of the tests, picked per test.
-  Splitting per package could go no faster than the largest package, `compose/integration`.
+- The lane is **sharded** per test over 8 runners: per package, `compose/integration` sets the floor.
 - The `integration` fan-in puts them together again, into the single result the `ci` aggregate reads.
 
 The lane **compiles once**: a part picked per test reaches nearly every package. The `integration build`
 job links each package's test binary with the shards' flags, and each shard runs its part from them in
-the package directory. A compile error fails the build job, so no shard starts. Each shard still pays
-start-up, the fetch and its own template, so size the matrix from the measured test times.
+the package directory. The shards start beside the build: stack and template come up while it compiles,
+then they wait for `test-binaries-integration-<attempt>`. A failed build uploads `…-<attempt>-failed`,
+and the shards stop ([`lib-lanebinaries.sh`](../../scripts/lib-lanebinaries.sh)).
 
-The shards **split by measured test time**, so they end close together. The fan-in uploads the time
-of every test (`test-timing-integration`). On `main`, the `integration-timing` job of `cache-warm.yml`
-takes each test's mean time over the five newest uploads. It saves the result as the cache entry
-`integration-test-timing-<run>`.
+The shards **share one queue**, so they end close together. Runner speed differs by up to 1.9 times,
+and with a fixed split the fast shards waited for the slow ones. Parts of about 120 seconds of test time
+form groups of about 240 seconds, slowest first. A shard with a free slot claims a group: it creates the
+group's cache entry, which only one job of the run can do. It claims its own groups from the front, then
+those of others from the back ([`lib-shardqueue.sh`](../../scripts/lib-shardqueue.sh)). Without cache
+writes the split is fixed; on a re-run, shards skip what passed and the fan-in reads each one's newest.
 
-The build job restores the newest entry, or takes the committed `scripts/integration-test-timing.txt`
-when none is there, and packs it with the binaries. So every shard of a run splits by one file, and the
-fan-in fails a run whose shards name another digest of it. A test the file does not name counts as its
-package's mean, so old times cost balance and never a test. Each shard starts its slowest part first.
+The fan-in uploads each test's time (`test-timing-integration`). On `main`, `cache-warm.yml` saves the
+mean of the five newest as `integration-test-timing-<run>`. The build packs it, or the committed file,
+with the binaries; the fan-in fails shards with another digest. An unknown test counts as its package's mean.
 
 ### The `ci` aggregate is the only required build context
 
@@ -349,11 +348,13 @@ These jobs are not in `needs`:
 - `integration-build`, `integration-shards`, `integration-unit-coverage`: the `integration` fan-in checks them.
 - `sonarcloud`: not blocking, by decision. Listing it here would make it required in a hidden way.
 - `vuln`, `live-boot`, `home-budget`: advisory. They are the plain next ones to add, since each runs on every change
-  that counts, and a red one does not stop a merge. `home-budget` waits for runs that show its budgets hold.
+  that counts, and a red one does not stop a merge. `home-budget` waits for runs that show its fixed budgets hold.
   - The batch is the reason to wait. Under a merge queue, a flaky job does not cost one more run. It
     fails the whole group it was checked in, and every entry in that group is queued again.
   - Nothing has tested these two under a blocking gate. Make them block once the queue has a measured
     baseline, each as its own change, so a regression has one cause.
+- `repeat-changed-tests`: advisory until a week of runs shows which of its reds are real, so a red
+  that is wrong stops no merge. It skips on the merge queue, where `scripts/ci-verdict.sh` fails a skip.
 
 `uat` is in the aggregate. It reads no clock. PERF-1 holds a request, and checks that the heading did not
 wait on it; the budget for opening a record belongs to `make bench-mobile`. So a busy runner cannot turn
@@ -374,30 +375,28 @@ loads that first snapshot forever.
   coverage pass, `live-boot` and `govulncheck`.
 - setup-go still owns the module cache; this action owns the build cache beside it.
 
-Two kinds exist. A build tag and coverage code change the package builds, and only the
+Three kinds exist. A build tag and coverage code change the package builds, and only the
 dependency builds under them are shared:
 
 | Kind | Written by | Read by |
 |---|---|---|
 | `plain` | `cache-warm.yml` job `plain`, its `runner` part | `integration unit coverage`, `live-boot`, `vuln`, and the [CI image](ci-image.md) jobs when they run on the runner |
-| `plain-in-image` | `cache-warm.yml` job `plain`, its `image` part | `deterministic-gates`, `backend-lint` |
-| `integration` | `cache-warm.yml` job `integration` | `integration build`, and every shard for the tools it runs with `go run` |
+| `plain-in-image` | `cache-warm.yml` job `plain`, its `image` part | `deterministic-gates` |
+| `lint`, `lint-in-image` | `lint-cache.yml`, after each push to `main` or `develop`: it compiles, and runs no test | `backend-lint` |
+| `integration` | `cache-warm.yml` job `integration`, on `main` only | `integration build`, and every shard for the tools it runs with `go run` |
 
-### The writer lives in `cache-warm.yml`, on a schedule
+### The writer lives in `cache-warm.yml`, on `main` and `develop`
 
-`ci.yml` only ever **loads** the cache. The writing lives in
-[`.github/workflows/cache-warm.yml`](../../.github/workflows/cache-warm.yml). It runs on `main` every
-three hours, plus `workflow_dispatch`, and **gates nothing**. GitHub drops some cron runs, so `pace.yml`
-also starts one from a push to `main` once the newest run is three hours old. A red or cancelled run there costs time on
-the next lane, and nothing else.
+`ci.yml` only ever **loads** the cache. The writing of `plain` and `integration` lives in
+[`.github/workflows/cache-warm.yml`](../../.github/workflows/cache-warm.yml), and it **gates nothing**.
+It runs every three hours on `main` and on `develop` (`integration` on `main` only), started by
+`pace.yml` from a push. Which job runs where: [cache-warm.yml](../reference/ci-workflows.md#cache-warmyml).
 
 Three limits shaped that, and each rules out a choice that looks less hard:
 
-- **The writer cannot live on the merge queue.** `actions/cache` scopes an entry to the branch that wrote
-  it, plus the default branch. A `merge_group` run lives on a `gh-readonly-queue/main/...` ref that is
-  removed later. An entry saved there is hidden from every PR lane, and dies with the ref. *Loading* has
-  no such scope (entries on the default branch can be read from any branch). So only the write has to be
-  on `main`.
+- **The writer cannot live on the merge queue.** A reader looks in its own ref, then its base branch,
+  then the default branch. A `merge_group` ref is removed later, so an entry saved there reaches no PR
+  lane. So the write runs on `main` and `develop`, the branches pull requests merge into.
 - **The writer cannot run on each push.** Seeding a kind is a side effect of compiling. The `plain` job
   runs a full `make check-backend`, and the `integration` job builds the test binaries and runs a shard from them against a live Postgres. At
   about 80 merges a day, that pair would run about 80 times and mostly cancel itself. Paced to one run
@@ -407,15 +406,17 @@ Three limits shaped that, and each rules out a choice that looks less hard:
   because a stale load only misses the entries whose inputs changed. A cache three hours old is mostly
   warm. A cache from before a new dependency version is still better than an empty one.
 
-There is one writer per kind. Each run of a kind compiles much the same set. So a second writer would add
-nothing but two writers on the same key. And every runner sending up about 550 MB would push out the entry
-they meant to seed. `cache-warm.yml` runs one job per kind, and takes
-`concurrency: cancel-in-progress: false`, because a cancelled run saves nothing.
+There is one writer per kind and branch, because a second writer on the same key would push out the entry
+it meant to seed. `cache-warm.yml` and `lint-cache.yml` take `concurrency: cancel-in-progress: false`,
+because a cancelled run saves nothing.
+
+`scripts/reap-build-caches.sh` keeps the newest entry per ref and key prefix. A `develop` entry hides
+every `main` entry from a pull request into `develop`, which reads an old entry if that writer stops.
 
 The refresh steps use `!cancelled()`, not `success()`. A red gate still compiled the tree, and that build
 output can be used again as well as a green run's.
 
-### The lint caches are saved on `main`, and the golangci one on `develop` too
+### The lint caches are saved on `main` and `develop`
 
 Three smaller caches follow the same rule: `ci.yml` loads them and never saves them. An entry that a PR
 saves can be read by that PR alone. It still counts against the 10 GB cache quota of the repository,
@@ -423,9 +424,9 @@ and there it pushes out the `main` entries that every PR loads.
 
 | Cache | Key | Saved by |
 |---|---|---|
-| Gate binaries, `~/go/bin` | [`gate-binaries`](../../.github/actions/gate-binaries/action.yml): the `make -n tools` recipe with its pins filled in, plus `go env GOVERSION` | `cache-warm.yml`, `main-health.yml` and `scheduled.yml`, on a miss on `main` |
+| Gate binaries, `~/go/bin` | [`gate-binaries`](../../.github/actions/gate-binaries/action.yml): the `make -n tools` recipe with its pins filled in, plus `go env GOVERSION` | `cache-warm.yml`, `main-health.yml` and `scheduled.yml`, on a miss on `main` only: the key holds no commit, so a `develop` copy would only take room |
 | golangci analysis, `~/.cache/golangci-lint` | [`golangci-cache-key`](../../.github/actions/golangci-cache-key/action.yml): `go.mod`, `go.sum`, both lint configs, then the commit | `cache-warm.yml` job `plain`, and [`lint-cache.yml`](../../.github/workflows/lint-cache.yml) after each push to `main` or `develop` |
-| Type check and compiler lint, under `frontend/node_modules` | [`frontend-cache-key`](../../.github/actions/frontend-cache-key/action.yml): `pnpm-lock.yaml`, `frontend/eslint.config.js`, then the commit | `cache-warm.yml` job `frontend`; `fe-quality` and `fe-bundle` load it |
+| Type check and compiler lint, under `frontend/node_modules` | [`frontend-cache-key`](../../.github/actions/frontend-cache-key/action.yml): `pnpm-lock.yaml`, `frontend/eslint.config.js`, then the commit | `cache-warm.yml` job `frontend`, on `main` and `develop`; `fe-quality` and `fe-bundle` load it |
 
 - **The gate binaries key reads the recipe.** An edit elsewhere in `backend/Makefile` keeps the
   key, and a new tool or pin in `make tools` changes it.
@@ -433,30 +434,31 @@ and there it pushes out the `main` entries that every PR loads.
   restore. The save runs under `!cancelled()`, and only if a cache file is newer than the stamp. A
   red lint run still saves, because it read the whole tree. A run that stopped before lint saves
   nothing. The census does not hold this entry back, because golangci replays no test result.
-- `lint-cache.yml` also saves the golangci entry, after each push to `main` or `develop` that changes Go
-  files. A cold pass costs about 39 minutes of CPU, and `internal/compose` imports every module, so an old
-  entry lints close to cold. The job runs `make lint` on the pushed tree from the entry of the push before.
-  Lint keeps the result of each package whose inputs did not change; the job then deletes older entries.
-- **A new dependency or lint config lints cold.** The key prefix of such a PR matches no `main`
-  entry until `cache-warm` runs after the merge.
+- `lint-cache.yml` also saves the golangci entry after each push to `main` or `develop` that changes Go files,
+  from the entry of the push before. It also saves the `lint` build cache of that branch, compiled from empty. Lint
+  compiles each package it loads before it reads its own cache. So a build cache hours behind cost minutes,
+  even when every analysis was cached. The job then deletes the older entries.
 - **An old frontend entry is never wrong.** tsc checks the hash of each input against what it stored.
   The compiler lint checks the hash of each file and its own version, so the lockfile is in the key.
 
 ### Test results replay only on a stable mtime
 
-The build cache holds test results as well as compiled packages. So a PR whose change does not reach a
-package replays that package's result, and does not run it. Go checks a cached result against every file
-the test opened at runtime: a migration, a fixture, its own source. It checks by size, mode and
-**mtime**, never content. A new checkout stamps every file with the time of checkout. So without stable `mtime` values,
-every package whose tests read the tree would run again on every job, `internal/compose` and `identity`
-among them.
+The build cache holds test results as well as compiled packages. **No job in `ci.yml` replays one.**
+`ci.yml` sets `TEST_SHUFFLE_SEED` for the whole workflow, `backend/Makefile` turns it into
+`-shuffle=<n>`, and Go caches no result of a run with `-shuffle`. `main-health.yml` and a local run
+pass no seed, and replay.
+
+Go checks a cached result against every file the test opened at runtime: a migration, a fixture, its
+own source. It checks by size, mode and **mtime**, never content. A new checkout stamps every file with
+the time of checkout. So without stable `mtime` values, every package whose tests read the tree would
+run again on every job, `internal/compose` and `identity` among them.
 
 [`scripts/ci-stable-mtimes.sh`](../../scripts/ci-stable-mtimes.sh) runs first in the action, in the writer
 and in every reader. It sets each tracked file's `mtime` from a hash of its bytes, and each directory's
 from its tracked entries. So content that did not change reads as it did in the run that wrote the cache,
 and changed content reads as new. On a new checkout in a test, 121 of 163 unit packages replayed without
-it, and all 163 with it. `./gates` and the `ai` module still run with no cache by design;
-`UNCACHED_TEST_PKGS` in `backend/Makefile` says why.
+it, and all 163 with it. `./gates` still runs with no cache by design; `UNCACHED_TEST_PKGS` in
+`backend/Makefile` says why.
 
 Two kinds of input stay hidden from that check, and each is declared through `gatekit.DeclareInputs`:
 
@@ -473,7 +475,7 @@ The first kind is held by a census, not a scan, because such paths are mostly bu
 `backend/tools/check-test-inputs` fails on any package that read outside its module without reading the
 matching digest.
 
-On a ready PR into `main` that touches the backend, `deterministic-gates (unit)` runs its own tests through that wrapper. It then judges the logs (`make test-input-census-judge`), so the PR that adds such a read fails. `cache-warm`
+On a ready PR into `main` that touches the backend, `deterministic-gates (unit)` and `deterministic-gates (solo)` each run their own tests through that wrapper. It then judges the logs (`make test-input-census-judge`), so the PR that adds such a read fails. `cache-warm`
 runs it before it saves an entry, and a failing census holds back the entry, so readers stay on the last
 good one. The second kind is held by a gate: a cached test file that runs `git` or `go` must declare its inputs.
 
@@ -515,8 +517,9 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md). `determ
   needed about `340s`, of which vitest alone needed about `207s`.
 - **`live-boot`** exists because the integration shards never boot the api or run the seed script.
   Without it, the seed that runs through the API and the boot proof would break with no one seeing.
-- **`home-budget`** holds Home to its fixed budgets on every PR that can reach Home, `develop` included.
-  What it runs and when it skips: [ci-jobs.md](../reference/ci-jobs.md).
+- **`home-budget`** is switched off: its `if` is `false`. On, it runs on every PR that can reach Home. It fails a PR
+  that makes Home slower than its merge base, measured on the same runner. The fixed budgets stay the bar for making
+  it required. What it runs and when it skips: [ci-jobs.md](../reference/ci-jobs.md).
 
 ### What `secret-scan` runs
 

@@ -21,6 +21,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
+	"github.com/margince/margince/backend/internal/modules/capture/gdocs"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
@@ -64,6 +65,8 @@ func (h connectorHandlers) providerWired(provider string) bool {
 		return h.oauth != nil || (h.googleCredentials != nil && h.canRunConsent(providerGmail))
 	case providerGcal:
 		return h.gcalOAuth != nil || (h.googleCredentials != nil && h.canRunConsent(providerGcal))
+	case providerGdocs:
+		return h.gdocsOAuth != nil || (h.googleCredentials != nil && h.canRunConsent(providerGdocs))
 	case providerGraph:
 		return h.graphOAuth != nil || (h.microsoftCredentials != nil && h.canRunConsent(providerGraph))
 	case providerGraphCal:
@@ -255,6 +258,8 @@ func (h connectorHandlers) oauthApp(ctx context.Context, provider string) (oauth
 		return h.gmailApp(ctx)
 	case providerGcal:
 		return h.gcalApp(ctx)
+	case providerGdocs:
+		return h.gdocsApp(ctx)
 	case providerGraph:
 		return h.graphApp(ctx)
 	case providerGraphCal:
@@ -333,6 +338,31 @@ func (h connectorHandlers) gcalApp(ctx context.Context) (oauthApp, bool, error) 
 				return nil, err
 			}
 			return gcal.New(consent.googleAuthorizer(oauth), h.gcalAPI).Authenticate(ctx, req)
+		},
+	}, true, nil
+}
+
+// gdocsApp is the Google Docs half of the same Google app: its own consent for
+// documents.readonly, resolved the way the calendar half is.
+func (h connectorHandlers) gdocsApp(ctx context.Context) (oauthApp, bool, error) {
+	if h.gdocsOAuth == nil && !h.canRunConsent(providerGdocs) {
+		return oauthApp{}, false, nil
+	}
+	oauth, err := consentClient(ctx, h.gdocsOAuth, h.googleCredentials, h.canRunConsent(providerGdocs),
+		func(app capture.ConnectorApp) gdocs.OAuth {
+			return gdocs.NewOAuth(gdocs.OAuthConfig{ClientID: app.ClientID, ClientSecret: app.ClientSecretRef})
+		})
+	if err != nil || oauth == nil {
+		return oauthApp{}, false, err
+	}
+	return oauthApp{
+		authCodeURL: oauth.AuthCodeURL,
+		authenticate: func(ctx context.Context, consent *consentCode) (connector.Auth, error) {
+			req, err := gdocs.AuthRequestFrom(consent.code, consent.redirectURI)
+			if err != nil {
+				return nil, err
+			}
+			return gdocs.New(consent.googleAuthorizer(oauth), h.gdocsOwner).Authenticate(ctx, req)
 		},
 	}, true, nil
 }

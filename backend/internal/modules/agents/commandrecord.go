@@ -32,6 +32,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -136,6 +137,7 @@ func (r *mergeResolver) Subject(ctx context.Context, cmd MergeCommand) (StageInf
 		TargetVersion: &survivor.Version,
 		CoTargetType:  cmd.RecordType,
 		CoTargetID:    cmd.SourceID,
+		SystemText:    &systemtext.Message{Subject: systemtext.Sentence("agent.merge", systemtext.NounArgument(fmt.Sprint(cmd.RecordType)), systemtext.Label(fmt.Sprint(recordLabel(source))), systemtext.Label(fmt.Sprint(recordLabel(survivor))))},
 		Summary:       fmt.Sprintf(said.merge, said.noun(cmd.RecordType), recordLabel(source), recordLabel(survivor)),
 	}, nil
 }
@@ -212,6 +214,7 @@ func (r *enrichResolver) Subject(ctx context.Context, cmd EnrichCommand) (StageI
 		TargetType:    string(datasource.EntityCompany),
 		TargetID:      cmd.CompanyID,
 		TargetVersion: &rec.Version,
+		SystemText:    &systemtext.Message{Subject: systemtext.Sentence("agent.enrich", systemtext.Text(fmt.Sprint(cmd.Depth)), systemtext.Text(fmt.Sprint(target)), systemtext.Label(fmt.Sprint(recordLabel(rec))))},
 		Summary: fmt.Sprintf(said.enrich,
 			cmd.Depth, target, recordLabel(rec)),
 	}, nil

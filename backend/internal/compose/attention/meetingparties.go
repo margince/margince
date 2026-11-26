@@ -67,6 +67,42 @@ func (s *Service) nameTheOrganizers(ctx context.Context, rows []crmcontracts.Wor
 	return nil
 }
 
+// MeetingRooms answers who is in each of a set of meetings, under the caller's
+// own grants. A meeting the caller may not read is absent from the answer.
+type MeetingRooms interface {
+	WorklistMeetingRooms(ctx context.Context, meetingIDs []ids.UUID) (map[ids.UUID]crmcontracts.WorklistMeetingRoom, error)
+}
+
+// nameTheRooms puts who is in the room on every row about a meeting still
+// ahead. The row then says who it is with, not only what the calendar called it.
+func (s *Service) nameTheRooms(ctx context.Context, rows []crmcontracts.WorklistItem) error {
+	if s.rooms == nil {
+		return nil
+	}
+	var meetings []ids.UUID
+	for _, row := range rows {
+		if row.Source == sourceMeeting && row.Subject != nil {
+			meetings = append(meetings, ids.UUID(row.Subject.Id))
+		}
+	}
+	if len(meetings) == 0 {
+		return nil
+	}
+	rooms, err := s.rooms.WorklistMeetingRooms(ctx, meetings)
+	if err != nil {
+		return fmt.Errorf("attention: naming who is in the meetings: %w", err)
+	}
+	for i := range rows {
+		if rows[i].Source != sourceMeeting || rows[i].Subject == nil {
+			continue
+		}
+		if room, known := rooms[ids.UUID(rows[i].Subject.Id)]; known {
+			rows[i].Room = &room
+		}
+	}
+	return nil
+}
+
 // hostOnTheWire is the seat a meeting row's meeting came off, with its name
 // still to resolve; nil where no calendar claims the meeting. It reads the same
 // host id the row's owner is drawn from.
@@ -84,9 +120,9 @@ func isMeetingRow(row crmcontracts.WorklistItem) bool {
 }
 
 // nameTheEmployers puts the contact's employer on every row that names a
-// contact, in one read for the page, so each card can name the account. The
-// employer only decorates a row, so a failed read leaves the rows unchanged
-// and says so instead of failing the page.
+// contact, and on each recipient of a follow-up. One read serves the page, so
+// each card can name the account. The employer only decorates a row, so a
+// failed read leaves the rows unchanged and says so instead of failing the page.
 func (s *Service) nameTheEmployers(
 	ctx context.Context, rows []crmcontracts.WorklistItem,
 ) *crmcontracts.WorklistSourceUnavailable {
@@ -96,17 +132,18 @@ func (s *Service) nameTheEmployers(
 	var wanted []ids.UUID
 	seen := map[ids.UUID]bool{}
 	for _, row := range rows {
-		if row.Contact == nil || seen[ids.UUID(row.Contact.Id)] {
-			continue
+		for _, contact := range namedContacts(row) {
+			if !seen[ids.UUID(contact.Id)] {
+				seen[ids.UUID(contact.Id)] = true
+				wanted = append(wanted, ids.UUID(contact.Id))
+			}
 		}
-		seen[ids.UUID(row.Contact.Id)] = true
-		wanted = append(wanted, ids.UUID(row.Contact.Id))
 	}
 	if len(wanted) == 0 {
 		return nil
 	}
 	var employers map[ids.UUID]crmcontracts.ContactEmployer
-	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+	err := s.degradable(ctx, sourceContactEmployers, laneBudget, func(ctx context.Context) error {
 		var err error
 		employers, err = s.employers.CurrentEmployers(ctx, wanted)
 		return err
@@ -124,12 +161,26 @@ func (s *Service) nameTheEmployers(
 		return note
 	}
 	for i := range rows {
-		if rows[i].Contact == nil {
-			continue
-		}
-		if employer, known := employers[ids.UUID(rows[i].Contact.Id)]; known {
-			rows[i].Contact.Employer = &employer
+		for _, contact := range namedContacts(rows[i]) {
+			if employer, known := employers[ids.UUID(contact.Id)]; known {
+				contact.Employer = &employer
+			}
 		}
 	}
 	return nil
+}
+
+// namedContacts lists the contacts a row names: its own, then a follow-up's
+// recipients. Each is the row's own value, so setting a field sets it on the row.
+func namedContacts(row crmcontracts.WorklistItem) []*crmcontracts.WorklistContactFacts {
+	var named []*crmcontracts.WorklistContactFacts
+	if row.Contact != nil {
+		named = append(named, row.Contact)
+	}
+	if row.Recipients != nil {
+		for i := range *row.Recipients {
+			named = append(named, &(*row.Recipients)[i])
+		}
+	}
+	return named
 }

@@ -40,6 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // cohortRepairBatch bounds ONE pass, in messages of each kind.
@@ -112,7 +113,7 @@ func (s *Store) promoteCohortTx(
 	// answer to "gone" differs from its answer to a failed read, and only the
 	// sentinel tells the two apart.
 	if errors.Is(err, pgx.ErrNoRows) {
-		return CohortPromotion{}, fmt.Errorf("contacts: the contact a cohort belongs to is gone: %w", apperrors.ErrNotFound)
+		return CohortPromotion{}, fmt.Errorf("the contact a cohort belongs to is gone: %w", apperrors.ErrNotFound)
 	}
 	if err != nil {
 		return CohortPromotion{}, fmt.Errorf("contacts: resolving the contact a cohort belongs to: %w", err)
@@ -140,6 +141,11 @@ func (s *Store) promoteCohortTx(
 	if err := fillContactNameFromAttendance(ctx, tx, canonical); err != nil {
 		return CohortPromotion{}, err
 	}
+	stamped, err := s.stampProvenSenders(ctx, tx, held, canonical)
+	if err != nil {
+		return CohortPromotion{}, err
+	}
+	promoted = append(promoted, stamped...)
 	// A meeting this pass has just FILED is no longer the link-less record the
 	// capture limiter held. Re-deriving says so: until this ran, a meeting
 	// captured before its attendee was a contact stayed participants-only
@@ -305,8 +311,9 @@ func (s *Store) ContactsOwedACohortRepair(ctx context.Context, limit int) ([]ids
 			WITH owed AS (
 				SELECT pe.contact_id
 				  FROM activity_participant ap
-				  JOIN contact_email pe ON lower(pe.email) = ap.address AND pe.archived_at IS NULL
+				  JOIN contact_email pe ON pe.email = ap.address AND pe.archived_at IS NULL
 				 WHERE ap.contact_id IS NULL AND ap.user_id IS NULL AND ap.address IS NOT NULL AND NOT ap.past_party_cap
+				   AND `+relstrength.AddressProvesSQL("pe.contact_id", "ap.address")+`
 				   AND NOT EXISTS (
 				       SELECT 1 FROM activity_participant other
 				        WHERE other.activity_id = ap.activity_id
@@ -415,12 +422,14 @@ func (s *Store) DomainsOwedTheirContacts(ctx context.Context, limit int) ([]Doma
 			    -- The SAME two arms the plant matches on, subdomain included. A
 			    -- selector narrower than the write leaves a backlog nothing ever
 			    -- offers; one wider offers work the write will not take, and the
-			    -- domain is returned on every tick for ever.
-			   AND `+owndomain.CoversSQL("pe.email_domain_folded", "od.domain_folded")+`
+			    -- domain is returned on every tick for ever. The index range keeps it fast.
+			   AND `+owndomain.CoversIndexedSQL("pe.email_domain_folded", "od.domain_folded")+`
 			  JOIN contact p ON p.id = pe.contact_id
 			 WHERE od.archived_at IS NULL
 			   AND o.archived_at IS NULL AND o.merged_into_id IS NULL
 			   AND p.archived_at IS NULL AND p.merged_into_id IS NULL
+			   -- A folded domain held by two live companies has no single owner.
+			   AND NOT EXISTS (SELECT 1 FROM company_domain twin JOIN company tc ON tc.id = twin.company_id WHERE twin.domain_folded = od.domain_folded AND twin.company_id <> od.company_id AND twin.archived_at IS NULL AND tc.archived_at IS NULL AND tc.merged_into_id IS NULL)
 			   AND NOT EXISTS (
 			       SELECT 1 FROM relationship r
 			        WHERE r.contact_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)
@@ -480,21 +489,11 @@ func (s *Store) AttachDomainBacklog(ctx context.Context, owed DomainBacklog) (in
 		if !live {
 			return nil
 		}
-		planted, err = plantDomainEmployment(ctx, tx, owed.Domain, owed.CompanyID)
+		planted, err = s.plantDomainEmploymentAndAsk(ctx, tx, owed.Domain, owed.CompanyID)
 		return err
 	})
 	if err != nil {
 		return 0, err
 	}
 	return planted, nil
-}
-
-const (
-	cohortLinkedKey   = "cohort_linked"
-	cohortPromotedKey = "cohort_promoted"
-)
-
-// CohortAuditSQL identifies the additive address-to-contact repair by its immutable audit payload.
-func CohortAuditSQL(alias string) string {
-	return `COALESCE((` + alias + `.entity_type='contact' AND ` + alias + `.action='update' AND ` + alias + `.after ? '` + cohortLinkedKey + `' AND ` + alias + `.after ? '` + cohortPromotedKey + `'),false)`
 }

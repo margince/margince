@@ -10,6 +10,7 @@ import {
   browserZone,
   dayInZone,
   startOfDayInZone,
+  wallClockIntent,
 } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -25,14 +26,19 @@ export function BookingReschedule({
   id?: string;
   token?: string;
   pending: boolean;
-  onSelect: (slot: { start: string; end: string }) => void;
+  onSelect: (slot: {
+    start: string;
+    end: string;
+    start_intent: { wall_clock: string; timezone: string };
+  }) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   // A guest on the public token link has only the browser's clock; a
   // signed-in host starts from their own zone.
+  const guest = Boolean(token);
   const readerZone = useViewerZone();
-  const [zone, setZone] = useState(() => (token ? browserZone() : readerZone));
+  const [zone, setZone] = useState(() => (guest ? browserZone() : readerZone));
   const [from, setFrom] = useState(() => new Date().toISOString());
   const [selected, setSelected] = useState<{
     start: string;
@@ -59,7 +65,7 @@ export function BookingReschedule({
   const shownDay = dayInZone(new Date(from).getTime(), zone);
   return (
     <div className="book-form">
-      <p>{t("scheduling.rescheduleHelp")}</p>
+      <p>{t(guest ? "book.rescheduleHelp" : "scheduling.rescheduleHelp")}</p>
       <BookingZone value={zone} onChange={setZone} />
       <Field label={t("scheduling.date")}>
         {(control) => (
@@ -85,7 +91,7 @@ export function BookingReschedule({
               }))}
               selected={selected?.start}
               onSelect={setSelected}
-              empty={t("scheduling.noTimes")}
+              empty={t(guest ? "book.noTimes" : "scheduling.noTimes")}
             />
             {value.truncated && (
               <Button
@@ -112,7 +118,11 @@ export function BookingReschedule({
         disabled={!selected}
         pending={pending}
         onClick={() => {
-          if (selected) onSelect(selected);
+          if (selected)
+            onSelect({
+              ...selected,
+              start_intent: wallClockIntent(selected.start, zone),
+            });
         }}
       >
         {t("scheduling.saveTime")}

@@ -10,7 +10,6 @@ package contacts
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -21,6 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -54,13 +55,16 @@ const (
 // TestEverySortAListOffersIsOneItsResourceAccepts is what keeps the two
 // answering together.
 var leadListFields = map[string]storekit.SortField{
-	createdAtColumn:   storekit.Column(storekit.KindTimestamp),
-	updatedAtColumn:   storekit.Column(storekit.KindTimestamp),
-	leadNameColumn:    storekit.Column(fieldcatalog.TypeText),
-	leadCompanyColumn: storekit.Column(fieldcatalog.TypeText),
-	leadStatusColumn:  storekit.Column(fieldcatalog.TypeText),
-	leadScoreColumn:   storekit.Column(fieldcatalog.TypeNumber),
-	ownerIDColumn:     storekit.OwnerNameSort(leadEntity),
+	createdAtColumn: storekit.Column(storekit.KindTimestamp),
+	updatedAtColumn: storekit.Column(storekit.KindTimestamp),
+	leadNameColumn:  storekit.Column(fieldcatalog.TypeText),
+	// The cursor field is renamed so a cursor from the typed-name order is refused.
+	leadCompanyColumn: {Kind: fieldcatalog.TypeText, CursorField: "company_shown", Expr: orderByLeadCompanyShown},
+	// The ladder position, so New sorts before Contacted. The cursor field is
+	// renamed so a cursor from the alphabetical order is refused.
+	leadStatusColumn: {Kind: fieldcatalog.TypeNumber, CursorField: "status_rung", Expr: orderByLeadStatusRung},
+	leadScoreColumn:  storekit.Column(fieldcatalog.TypeNumber),
+	ownerIDColumn:    storekit.OwnerNameSort(leadEntity),
 	// The three the list draws and does not store. Each reads the same
 	// expression the row is PRINTED from (lead_read.go), so a reader sees the
 	// value the page was arranged by.
@@ -90,6 +94,26 @@ func orderByLeadNextTaskDue(ctx context.Context, arg func(any) int) (string, err
 		return "", err
 	}
 	return leadNextTaskDueSQL(work), nil
+}
+
+// orderByLeadStatusRung orders by the status's place in the lead's lifecycle:
+// the open ladder, then the terminal pair.
+func orderByLeadStatusRung(context.Context, func(any) int) (string, error) {
+	return LeadStatusRungSQL("lead.status", true), nil
+}
+
+// orderByLeadCompanyShown orders by the name the Company column prints: the
+// linked company's own name where the reader may see that company, else the
+// typed name. A position must not reveal a name the reader cannot read.
+func orderByLeadCompanyShown(ctx context.Context, arg func(any) int) (string, error) {
+	if !auth.ReadGranted(ctx, companyEntity) {
+		return "lead.company_name", nil
+	}
+	linked, err := storekit.LinkedCompanyColumn(ctx, "lead.company_id", "display_name", arg)
+	if err != nil {
+		return "", err
+	}
+	return "coalesce(" + linked + ", lead.company_name)", nil
 }
 
 // orderByLeadSourceLabel orders by the words the Source column prints rather
@@ -130,17 +154,18 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	}
 	// One instant for this read: the sla_state filter is built once for the
 	// page and once for the total, and they must judge the same leads overdue.
-	ctx = withPinnedSLANow(ctx, leadSLAClock().UTC())
+	ctx = pinSLANow(ctx)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Lead]{
-		entity:  leadEntity,
-		prepare: withLeadTaskIdentities,
-		columns: leadColumns,
-		fields:  leadListFields,
+		entity:    leadEntity,
+		firstPage: in.Cursor == nil || *in.Cursor == "",
+		prepare:   withLeadTaskIdentities,
+		columns:   leadColumns,
+		fields:    leadListFields,
 		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
 			return leadListWhere(ctx, in, active, sorted, policy, arg)
 		},
 		scan: func(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.ListSort) ([]crmcontracts.Lead, []*string, error) {
-			return scanLeadPage(rows, active, sorted, policy)
+			return scanLeadPage(rows, active, sorted, policy, slaNow(ctx), systemtext.Locale(ctx))
 		},
 		attach: attachLeadRows,
 		cursorKey: func(last crmcontracts.Lead) (time.Time, ids.UUID) {
@@ -243,8 +268,8 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 		}
 		where = append(where, member)
 	}
-	if in.Query != nil && *in.Query != "" {
-		where = append(where, leadQuickFindClause(*in.Query, arg))
+	if q, ok := storekit.QuickFindQuery(in.Query); ok {
+		where = append(where, leadQuickFindClause(q, arg))
 	}
 	if in.Status != nil {
 		where = append(where, storekit.SQLf(leadStatusColumn+" = $%d", arg(*in.Status)))
@@ -294,7 +319,7 @@ func attachLeadRows(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lead) e
 const leadQuickFindExpr = `(coalesce(full_name, '') || ' ' || coalesce(company_name, ''))`
 
 func leadQuickFindClause(query string, arg func(any) int) string {
-	pos := arg(strings.TrimSpace(query))
+	pos := arg(query)
 	return storekit.SQLf(`(%s
 		OR lower(rtrim(linkedin_url, '/')) = lower(rtrim($%d, '/')))`,
 		storekit.QuickFindClauseWith(pos, leadQuickFindExpr, storekit.LeadEmails), pos)
@@ -302,7 +327,7 @@ func leadQuickFindClause(query string, arg func(any) int) string {
 
 // scanLeadPage drains one list query's rows: each lead plus, under a
 // non-default sort, the row's trailing __cursor_key.
-func scanLeadPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.ListSort, policy leadSLAPolicy) ([]crmcontracts.Lead, []*string, error) {
+func scanLeadPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.ListSort, policy leadSLAPolicy, now time.Time, reader textlang.Lang) ([]crmcontracts.Lead, []*string, error) {
 	var leads []crmcontracts.Lead
 	var cursorKeys []*string
 	for rows.Next() {
@@ -311,7 +336,7 @@ func scanLeadPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.
 		if sorted != nil {
 			extra = append(extra, &key)
 		}
-		l, err := scanLead(rows, active, policy, extra...)
+		l, err := scanLead(rows, active, policy, now, reader, extra...)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -21,6 +21,7 @@ import (
 type paymentArgs struct {
 	connectionID ids.UUID
 	companyID    ids.CompanyID
+	linkID       ids.UUID
 	payment      SourcePayment
 	capturedBy   string
 	// source is the provider's own name, stamped on every row it produced.
@@ -37,7 +38,7 @@ func (s *Store) mirrorPayment(
 	if err != nil {
 		return wroteNothing, err
 	}
-	if found && before.SyncHash == hash && before.CompanyID == args.companyID {
+	if found && before.SyncHash == hash && before.mirroredThrough(args.linkID, args.companyID) {
 		return wroteNothing, nil
 	}
 	if found {
@@ -54,13 +55,13 @@ func findPayment(
 	// FOR UPDATE for the reason findInvoice takes it: this read is the first
 	// half of a read-modify-write, and two sweeps must not both write.
 	err = tx.QueryRow(ctx, `
-		SELECT id, sync_hash, company_id, invoice_id, currency,
+		SELECT id, sync_hash, company_id, customer_link_id, invoice_id, currency,
 		       amount_minor, paid_at
 		  FROM finance_payment
 		 WHERE connection_id = $1 AND external_id = $2
 		   FOR UPDATE`,
 		connectionID, externalID).Scan(&id, &image.SyncHash,
-		&image.CompanyID, &image.InvoiceID, &image.Currency,
+		&image.CompanyID, &image.CustomerLinkID, &image.InvoiceID, &image.Currency,
 		&image.AmountMinor, &image.PaidAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UUID{}, paymentImage{}, false, nil
@@ -90,10 +91,10 @@ func updatePayment(
 		UPDATE finance_payment
 		   SET company_id = $2, invoice_id = $3, paid_at = $4,
 		       currency = $5, amount_minor = $6, source_updated_at = $7,
-		       sync_hash = $8
+		       sync_hash = $8, customer_link_id = $9
 		 WHERE id = $1`,
 		id, args.companyID, after.InvoiceID,
-		after.PaidAt, after.Currency, after.AmountMinor, args.payment.UpdatedAt, hash); err != nil {
+		after.PaidAt, after.Currency, after.AmountMinor, args.payment.UpdatedAt, hash, args.linkID); err != nil {
 		return fmt.Errorf("update the mirrored payment: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "update", entityPayment, id, before, after); err != nil {
@@ -109,11 +110,11 @@ func insertPayment(ctx context.Context, tx pgx.Tx, args paymentArgs, hash string
 		INSERT INTO finance_payment
 		       (id, connection_id, company_id, external_id, invoice_id,
 		        paid_at, currency, amount_minor, source_updated_at, sync_hash,
-		        source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+		        source, captured_by, customer_link_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 		id, args.connectionID, args.companyID, args.payment.ExternalID,
 		after.InvoiceID, after.PaidAt, after.Currency, after.AmountMinor,
-		args.payment.UpdatedAt, hash, args.source, args.capturedBy); err != nil {
+		args.payment.UpdatedAt, hash, args.source, args.capturedBy, args.linkID); err != nil {
 		return fmt.Errorf("mirror the payment: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "create", entityPayment, id, nil, after); err != nil {
@@ -127,7 +128,7 @@ func insertPayment(ctx context.Context, tx pgx.Tx, args paymentArgs, hash string
 func paymentImageOf(args paymentArgs, hash string) paymentImage {
 	pay := args.payment
 	return paymentImage{
-		CompanyID: args.companyID,
+		CompanyID: args.companyID, CustomerLinkID: &args.linkID,
 		InvoiceID: resolveInvoice(pay, args.rowIDs), Currency: pay.Currency,
 		AmountMinor: pay.AmountMinor, PaidAt: pay.PaidAt, SyncHash: hash,
 	}

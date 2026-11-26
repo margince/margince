@@ -1,0 +1,11 @@
+{
+  "verb": "add_deal_room_document",
+  "checks": [
+    "deal_room.create"
+  ],
+  "takes": [
+    "attachment",
+    "deal_room",
+    "room_attachment"
+  ]
+}

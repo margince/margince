@@ -120,7 +120,7 @@ func checkOriginDetail(raw string) (string, error) {
 	detail := cleanOriginDetail(raw, false)
 	if utf8.RuneCountInString(detail) > LeadOriginDetailMax {
 		return "", &values.ParseError{
-			Field: leadOriginDetailField, Code: codeTooLong,
+			Field: leadOriginDetailField, Code: codeTooLong, Max: LeadOriginDetailMax,
 			Message: fmt.Sprintf("origin_detail is at most %d characters", LeadOriginDetailMax),
 		}
 	}

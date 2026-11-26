@@ -21,9 +21,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -37,7 +38,7 @@ var assuranceSubjectsSQL = `
 		       ` + deals.WinProbabilitySQL("d") + `, s.name, d.stage_id,
 		       COALESCE((SELECT max(h.changed_at) FROM deal_stage_history h
 		                  WHERE h.deal_id = d.id AND h.to_stage_id = d.stage_id), d.created_at),
-		       d.created_at, d.wait_until,
+		       d.created_at, ` + deals.PauseEndsSQL("d") + `,
 		       (SELECT max(a.occurred_at)
 		          FROM activity a
 		          JOIN activity_link al ON al.activity_id = a.id
@@ -66,17 +67,18 @@ var assuranceSubjectsSQL = `
 		                WHERE x.subject_kind = 'deal' AND x.subject_id = d.id
 		                  AND x.type = $4 AND x.status = 'open') AS open_review,
 		       %[4]s AS viability_fingerprint,
-		       (SELECT o.gross_minor
+		       (SELECT o.net_minor
 		          FROM offer o
 		         WHERE o.deal_id = d.id
 		           AND o.archived_at IS NULL
 		           AND o.status IN ('sent', 'accepted')
 		           AND o.currency = d.currency
 		         ORDER BY o.updated_at DESC
-		         LIMIT 1) AS offer_total_minor,
+		         LIMIT 1) AS offer_net_minor,
 		       (SELECT c.value_minor
 		          FROM contract c
 		         WHERE c.deal_id = d.id
+                   AND ` + auth.ContractDealMatchesSQL("c", "d") + `
 		           AND c.archived_at IS NULL
 		           AND c.status = 'active'
 		           AND c.currency = d.currency
@@ -106,10 +108,9 @@ var assuranceSubjectsSQL = `
 		                OR (a.kind = 'meeting' AND %[3]s))) AS has_next_step,
 		       EXISTS (SELECT 1
 		          FROM relationship r
-		         WHERE r.kind = 'deal_stakeholder'
+		         WHERE %[12]s
 		           AND r.deal_id = d.id
-		           AND r.role = $3
-		           AND r.archived_at IS NULL) AS has_economic_buyer,
+		           AND %[13]s = $3) AS has_economic_buyer,
 		       (SELECT count(*)
 		          FROM stage_exit_criterion c
 		         WHERE c.stage_id = d.stage_id
@@ -164,9 +165,48 @@ func AssuranceSubjects(
 }
 
 // assuranceSubjects is AssuranceSubjects, narrowed to the deals in only when it
-// is not nil. A review answer and the forecast's risk signals read the same
-// evidence the nightly pass reads.
+// is not nil. Each open deal carries its one win chance, and Likely is read
+// from it.
 func assuranceSubjects(
+	ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage, only []ids.UUID,
+) ([]assurance.Subject, error) {
+	subjects, err := assuranceEvidenceSubjects(ctx, tx, asOf, coverage, only)
+	if err != nil {
+		return nil, err
+	}
+	dealIDs := make([]ids.UUID, 0, len(subjects))
+	for _, s := range subjects {
+		id, err := ids.Parse(s.DealID)
+		if err != nil {
+			return nil, fmt.Errorf("compose: a subject deal id %q does not parse: %w", s.DealID, err)
+		}
+		dealIDs = append(dealIDs, id)
+	}
+	if len(dealIDs) == 0 {
+		return subjects, nil
+	}
+	chances, err := chances.WinChances(ctx, tx, asOf, dealIDs)
+	if err != nil {
+		return nil, err
+	}
+	threshold, err := identity.ForecastLikelyThresholdTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range subjects {
+		if chance, ok := chances[dealIDs[i]]; ok {
+			subjects[i].WinProbability = chance.Percent
+			subjects[i].Likely = chance.Percent >= threshold
+		}
+	}
+	return subjects, nil
+}
+
+// assuranceEvidenceSubjects reads the evidence the nightly pass reads, with the
+// stored probability. The risk signals that feed the win chance read this and
+// never the chance, which keeps the chance from depending on itself. No signal
+// reads WinProbability or Likely.
+func assuranceEvidenceSubjects(
 	ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage, only []ids.UUID,
 ) ([]assurance.Subject, error) {
 	now := asOf.UTC()
@@ -228,12 +268,13 @@ func scanAssuranceSubject(
 		&evidence.CreatedAt, &evidence.CustomerWaitUntil, &evidence.LastCustomerProgressAt,
 		&evidence.LastCustomerRefusalAt,
 		&evidence.ConfirmedMeetingAt, &evidence.EarlierAnswerUntil, &evidence.OpenReview, &fingerprint,
-		&out.OfferTotalMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
+		&out.OfferNetMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
 		&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria, &mailboxes)
 	if err != nil {
 		return out, err
 	}
 	out.DealID = dealID.String()
+	out.Zone = zone
 	if owner != nil {
 		out.Owner = owner.String()
 	}
@@ -251,7 +292,7 @@ func scanAssuranceSubject(
 	assessed := deals.AssessViability(evidence, asOf, zone)
 	out.Viability = &assurance.SubjectViability{
 		Outcome: assessed.Outcome, Reasons: assessed.Reasons, SilentDays: assessed.SilentDays,
-		NextChange: assessed.NextChange, Fingerprint: fingerprint,
+		Fingerprint: fingerprint,
 	}
 	return out, nil
 }
@@ -262,14 +303,15 @@ func scanAssuranceSubject(
 // Our own mail, a task, a field edit and a machine's mail never count. Nor do a
 // message not every member may read, or a refusal. An unjudged message counts,
 // because every message from before the verdict existed is unjudged.
-func customerProgressSQL(alias, asOf string) string {
-	return "(" + visibleToAllSQL(alias) + " AND " + customerProgressAnyAudienceSQL(alias, asOf) + ")"
+func customerProgressSQL(alias, deal, asOf string) string {
+	return "(" + visibleToAllSQL(alias) + " AND " + customerProgressAnyAudienceSQL(alias, relstrength.DealEvidenceSQL(alias, deal), asOf) + ")"
 }
 
 // customerProgressAnyAudienceSQL is customerProgressSQL over every message,
-// those only their participants may read included. Only its date may be used.
-func customerProgressAnyAudienceSQL(alias, asOf string) string {
-	return "(" + relstrength.DirectionClockSQL(alias, asOf) +
+// those only their participants may read included, under the evidence clause
+// given. Only its date may be used.
+func customerProgressAnyAudienceSQL(alias, evidence, asOf string) string {
+	return "(" + evidence + " AND " + relstrength.DirectionClockSQL(alias, asOf) +
 		" AND ((" + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict IS DISTINCT FROM '" + activities.ReplyVerdictNegative + "' AND " +
 		occurredday.BegunSQL(alias, asOf) + ") OR (" + alias + ".kind IN ('meeting', 'call') AND " +
@@ -277,15 +319,21 @@ func customerProgressAnyAudienceSQL(alias, asOf string) string {
 		activities.CustomerMeetingSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, asOf) + ")))"
 }
 
+// dealMeetingAheadSQL is a meeting still to come that may defer or carry the
+// deal, under the evidence clause given. A personal meeting is neither.
+func dealMeetingAheadSQL(alias, evidence, asOf string) string {
+	return "(" + relstrength.MeetingAheadSQL(alias, asOf) + " AND " + evidence + ")"
+}
+
 // customerRefusalSQL admits a message a contact on the deal wrote that was
 // judged a refusal.
-func customerRefusalSQL(alias, asOf string) string {
-	return "(" + visibleToAllSQL(alias) + " AND " + customerRefusalAnyAudienceSQL(alias, asOf) + ")"
+func customerRefusalSQL(alias, deal, asOf string) string {
+	return "(" + visibleToAllSQL(alias) + " AND " + customerRefusalAnyAudienceSQL(alias, deal, asOf) + ")"
 }
 
 // customerRefusalAnyAudienceSQL is customerRefusalSQL over every message.
-func customerRefusalAnyAudienceSQL(alias, asOf string) string {
-	return "(" + relstrength.DirectionClockSQL(alias, asOf) + " AND " + customerWroteSQL(alias) + " AND " +
+func customerRefusalAnyAudienceSQL(alias, deal, asOf string) string {
+	return "(" + relstrength.DealEvidenceSQL(alias, deal) + " AND " + relstrength.DirectionClockSQL(alias, asOf) + " AND " + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict = '" + activities.ReplyVerdictNegative + "' AND " + occurredday.BegunSQL(alias, asOf) + ")"
 }
 
@@ -294,22 +342,24 @@ func customerRefusalAnyAudienceSQL(alias, asOf string) string {
 // night the mail is read, but the answers stay. A deal somebody answered is not
 // asked again before its answer ends. The answer was about one silence:
 // once the customer moved the deal after it, a later silence is a new one. A
-// reminder holds at most as long as any answer may hide a finding.
+// reminder holds at most as long as any answer may hide a finding. The outcomes
+// are literals: a bound outcome reads as a partial-index predicate to the plan
+// reuse check.
 func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 	capped := assurance.LiveRemindAtSQL("r", fmt.Sprintf("$%d", arg(assurance.MaxSuppressionDays())))
 	return fmt.Sprintf(`(SELECT CASE
 		    WHEN EXISTS (SELECT 1 FROM activity pa JOIN activity_link pl ON pl.activity_id = pa.id
 		                  WHERE pl.deal_id = %[1]s.id AND pa.archived_at IS NULL
 		                    AND NOT %[8]s AND %[7]s) THEN NULL
-		    WHEN r.outcome = $%[3]d AND `+capped+` > %[2]s THEN `+capped+`
-		    WHEN r.outcome IN ($%[4]d, $%[5]d) AND r.expires_at > %[2]s THEN r.expires_at END
+		    WHEN r.outcome = '%[3]s' AND `+capped+` > %[2]s THEN `+capped+`
+		    WHEN r.outcome IN ('%[4]s', '%[5]s') AND r.expires_at > %[2]s THEN r.expires_at END
 		  FROM assurance_resolution r
 		  JOIN assurance_exception x ON x.id = r.exception_id
 		 WHERE x.subject_kind = 'deal' AND x.subject_id = %[1]s.id AND x.type = $%[6]d
 		 ORDER BY r.created_at DESC, r.id DESC
 		 LIMIT 1)`,
-		deal, asOf, arg(assurance.OutcomeRemindLater), arg(assurance.OutcomeValueCorrect),
-		arg(assurance.OutcomeNotRelevant), arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", asOf),
+		deal, asOf, assurance.OutcomeRemindLater, assurance.OutcomeValueCorrect,
+		assurance.OutcomeNotRelevant, arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", "pl.deal_id", asOf),
 		occurredday.BegunSQL("pa", "r.created_at"))
 }
 
@@ -317,14 +367,15 @@ func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 // apart so a test can read which tables the check reads.
 func assuranceSubjectsQuery(now time.Time, identities string, only []ids.UUID, arg func(any) int) string {
 	// A task the product filed itself asks for a next step; it is not one.
-	humanTask := activities.CurrentTaskClause("a", now, identities, arg) +
+	humanTask := activities.CurrentTaskClauseToLineOnly("a", now, identities, arg) +
 		" AND a.origin <> '" + activities.OriginSystemRemediation + "'"
 	return fmt.Sprintf(assuranceSubjectsSQL, humanTask,
-		customerProgressSQL("a", "$2"), relstrength.MeetingAheadSQL("a", "$2"),
-		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"),
+		customerProgressSQL("a", "al.deal_id", "$2"), dealMeetingAheadSQL("a", relstrength.DealEvidenceSQL("a", "al.deal_id"), "$2"),
+		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "al.deal_id", "$2"), visibleToAllSQL("a"),
 		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg),
 		// A date an import moved is the source system's history, not a push.
-		storekit.AuditNotFromAnImport("au"), dealMailboxesSQL("d"))
+		storekit.AuditNotFromAnImport("au"), dealMailboxesSQL("d"), dealseat.CurrentSQL("r"),
+		dealrole.RecordedSQL("r.role"))
 }
 
 // onlyDealSQL narrows the read to the deals in only, or not at all when only is
@@ -336,12 +387,7 @@ func onlyDealSQL(only []ids.UUID, arg func(any) int) string {
 	return fmt.Sprintf(" AND d.id = ANY($%d)", arg(only))
 }
 
-// visibleToAllSQL admits an activity every member may read. The check runs as
-// the system and its answer reaches every reader of the forecast, so a limited
-// or restricted message must not move it.
-func visibleToAllSQL(alias string) string {
-	return "(" + relstrength.WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL)"
-}
+func visibleToAllSQL(alias string) string { return relstrength.VisibleToAllSQL(alias) }
 
 // customerWroteSQL is a message one of the deal's contacts wrote.
 func customerWroteSQL(alias string) string {
@@ -358,17 +404,6 @@ func sourceChecked(coverage []assurance.SourceCoverage, source string) bool {
 		}
 	}
 	return false
-}
-
-// AssuranceConfig is the check's configuration, with a receipt lifetime taken
-// from the job catalog: one cadence plus one run's deadline. A receipt older
-// than that has outlived the check that should have replaced it.
-func AssuranceConfig() assurance.Config {
-	cfg := assurance.DefaultConfig()
-	if spec, ok := jobs.SpecFor(AssuranceSweepArgs{}.Kind()); ok {
-		cfg.ReceiptLifetime = spec.Cadence.Fixed + spec.Timeout.Duration()
-	}
-	return cfg
 }
 
 // AssuranceCoverage answers which sources the run could reach.

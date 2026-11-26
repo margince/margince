@@ -18,6 +18,7 @@ import { openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, LeadsScreen } from "./leads";
 import {
+  editSection,
   emptyPage,
   jsonResponse,
   LEAD_GRANTS,
@@ -496,7 +497,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     await showLayout(user, "Board");
 
     expect(
-      screen.getByRole("searchbox", { name: "Search" }),
+      screen.getByRole("combobox", { name: "Search" }),
     ).toBeInTheDocument();
     // And it admits there is more than it is showing.
     expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();
@@ -520,14 +521,12 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadScreen id="l-1" />);
 
-    // The row reads as its value; pressing it opens the field's dialog.
-    await user.click(
-      await screen.findByRole("button", { name: /^Change Company/ }),
-    );
-    const field = await screen.findByDisplayValue("Nordwind Logistik");
+    // The row reads as its value; its section's Edit opens the dialog.
+    const about = await editSection(user, "About");
+    const field = within(about).getByRole("textbox", { name: "Company" });
     await user.clear(field);
     await user.type(field, "Nordwind GmbH");
-    await user.keyboard("{Enter}");
+    await user.click(within(about).getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(patched.length).toBe(1));
     expect(patched[0].body).toMatchObject({ company_name: "Nordwind GmbH" });
@@ -550,9 +549,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     expect(
       (await screen.findAllByText("Nordwind Logistik")).length,
     ).toBeGreaterThan(0);
-    expect(
-      screen.queryByRole("button", { name: /^Change Company/ }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Edit About" })).toBeNull();
     expect(screen.queryByDisplayValue("Nordwind Logistik")).toBeNull();
   });
 
@@ -567,8 +564,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
 
     const sentence =
       "You cannot change this lead. Ask its owner to share it, or an administrator for edit access.";
-    // The band says it once for the page. Each row carries the same sentence
-    // on its own value, as on a closed lead.
+    // The band says it once for the page.
     expect((await screen.findAllByText(sentence)).length).toBeGreaterThan(0);
     // Each verb is refused in place, and the id it describes itself by
     // resolves to that one sentence — a disabled button whose reason is
@@ -582,11 +578,8 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
           ?.textContent,
       ).toBe(sentence);
     }
-    // The rows read as text with no control to press, the same shape a
-    // closed lead takes.
-    expect(
-      screen.queryByRole("button", { name: /^Change Company/ }),
-    ).toBeNull();
+    // The rows read as text with no Edit, the same shape a closed lead takes.
+    expect(screen.queryByRole("button", { name: "Edit About" })).toBeNull();
   });
 
   it("a promoted lead keeps its page and says what the promotion did", async () => {

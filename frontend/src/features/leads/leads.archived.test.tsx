@@ -3,16 +3,40 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { en } from "../../i18n/en";
-import { changeChoice } from "../../testing/choicedialog.testkit";
+import { meFixture } from "../../testing/mefixture";
 import { LeadScreen } from "./leads";
 import {
   jsonResponse,
+  LEAD_GRANTS,
   lead,
   openLeadActions,
   render,
+  stubFetch,
   stubFetchWithMe,
 } from "./leads.testkit";
+
+const DISQUALIFY_REASON = {
+  id: "r-2",
+  label: "Bad timing",
+  sort_order: 20,
+  active: true,
+  system: true,
+  lead_count: 0,
+  version: 1,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+};
+
+// What the server answers for a disqualified lead: archived, so never
+// writable, whatever the reader's grants.
+const disqualifiedLead = {
+  ...lead,
+  status: "disqualified",
+  archived_at: "2026-07-13T00:00:00Z",
+  writable: false,
+};
 
 beforeEach(() => {
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
@@ -40,6 +64,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
         score_override_reason: "set by hand",
         score_computed: 46,
         archived_at: "2026-07-13T00:00:00Z",
+        writable: false,
       });
     });
     render(<LeadScreen id="l-1" />);
@@ -125,11 +150,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
       if (url.includes("/score")) {
         return jsonResponse({ score: 72, explained: false });
       }
-      return jsonResponse({
-        ...lead,
-        status: "disqualified",
-        archived_at: "2026-07-13T00:00:00Z",
-      });
+      return jsonResponse(disqualifiedLead);
     });
     render(<LeadScreen id="l-1" />);
 
@@ -148,18 +169,34 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     await waitFor(() => expect(calls).toContain("POST /v1/leads/l-1/reopen"));
   });
 
+  // Reopening restores the row and clears its archive stamp, so the server
+  // asks for both grants; a reader holding update alone is refused there.
+  it("offers no Reopen to a reader who may not delete leads", async () => {
+    stubFetch(async (url) => {
+      if (url.endsWith("/v1/me")) {
+        return jsonResponse({
+          user: { id: "u-9", display_name: "Me" },
+          roles: ["rep"],
+          teams: [],
+          authorization: meFixture({
+            allow: { ...LEAD_GRANTS, lead: ["read", "create", "update"] },
+          }).authorization,
+        });
+      }
+      return jsonResponse(disqualifiedLead);
+    });
+    render(<LeadScreen id="l-1" />);
+
+    await openLeadActions();
+    expect(screen.queryByRole("button", { name: "Reopen" })).toBeNull();
+  });
+
   it("a disqualified lead keeps its controls DISABLED with the reason, never hidden", async () => {
     // Blocked by state rather than permission means visible and disabled
     // with the reason, since hiding the control hides the fact the reader
     // needs. A promoted lead never reaches this page; it redirects to the
     // contact it became.
-    stubFetchWithMe(async () =>
-      jsonResponse({
-        ...lead,
-        status: "disqualified",
-        archived_at: "2026-07-13T00:00:00Z",
-      }),
-    );
+    stubFetchWithMe(async () => jsonResponse(disqualifiedLead));
     render(<LeadScreen id="l-1" />);
 
     await waitFor(() =>
@@ -182,8 +219,12 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // qualifiable one, and the header's primary action is for live leads.
     expect(screen.queryByRole("button", { name: "Qualify" })).toBeNull();
     const owner = screen.getByText("Unassigned");
-    expect(owner).toHaveAttribute("title", en["lead.terminalReadOnly"]);
+    // The terminal reason on the page describes it; the shorter one is its tip.
     expect(owner).toHaveAccessibleDescription(reason);
+    owner.focus();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      en["lead.terminalReadOnly"],
+    );
   });
 
   it("shows an 'overridden' badge when the score is human-overridden", async () => {
@@ -432,7 +473,13 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     }, "u-9");
     render(<LeadScreen id="l-1" />);
 
-    await changeChoice(userEvent.setup(), "Owner", "Dana Fischer");
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Edit Ownership" }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: "Dana Fischer" }),
+    );
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({ owner_id: "u-42" });
@@ -481,6 +528,73 @@ describe("LeadScreen — an archived lead does not ask for what the server refus
     expect(urls.filter((url) => /\/(score|lists|tags)/.test(url))).toEqual([]);
     // No section reads as failed: a refused read was never asked.
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  // The page still holds the live lead in the beat after a closure. The
+  // writes' own refresh must not ask for the reads the closed lead refuses.
+  it("closing the lead asks for neither the score breakdown nor the lists again", async () => {
+    const user = userEvent.setup();
+    let closed = false;
+    const me = meFixture({
+      allow: { ...LEAD_GRANTS, list: ["read", "update"] },
+      settingsAvailability: { lists: true },
+    });
+    const { urls } = stubFetch(async (url, method) => {
+      if (url.endsWith("/v1/me")) {
+        return jsonResponse({ ...me, roles: ["rep"] });
+      }
+      if (method === "DELETE") {
+        closed = true;
+        return jsonResponse(disqualifiedLead);
+      }
+      if (url.endsWith("/v1/lead-disqualify-reasons")) {
+        return jsonResponse({ data: [DISQUALIFY_REASON] });
+      }
+      if (url.includes("/score") || url.includes("/lists")) {
+        return closed
+          ? jsonResponse(
+              { status: 404, code: "not_found", title: "Not found" },
+              404,
+            )
+          : jsonResponse(
+              url.includes("/score")
+                ? { score: 72, explained: false }
+                : { data: [] },
+            );
+      }
+      return jsonResponse(closed ? disqualifiedLead : lead);
+    });
+    render(<LeadScreen id="l-1" />);
+
+    await openLeadActions(user);
+    // Offered on the live lead, so the refusal below is the closure's.
+    const shortlist = { name: en["lists.addToShortlist"] as string };
+    for (const add of screen.getAllByRole("button", shortlist)) {
+      expect(add).toBeEnabled();
+    }
+    await user.click(screen.getByTestId("lead-disqualify"));
+    await pickOption(user, screen.getByLabelText("Reason *"), "Bad timing");
+    const asked = urls.length;
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Disqualify",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getAllByText("Disqualified").length).toBeGreaterThan(0),
+    );
+    expect(
+      urls.slice(asked).filter((url) => /\/(score|lists)/.test(url)),
+    ).toEqual([]);
+    // A closed lead keeps its figure and draws no breakdown it cannot read.
+    expect(screen.queryByText(en["lead.dims.notRead"] as string)).toBeNull();
+    await openLeadActions(user);
+    const offered = screen.getAllByRole("button", shortlist);
+    expect(offered.length).toBeGreaterThan(0);
+    for (const add of offered) {
+      expect(add).toBeDisabled();
+    }
   });
 
   it("reads all three for a live lead", async () => {

@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "my_working_hours",
+  "verb": "read_my_working_hours",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

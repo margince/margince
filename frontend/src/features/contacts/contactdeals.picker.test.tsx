@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import {
   jsonResponse,
   StoryProviders,
@@ -145,6 +146,28 @@ it.each(scenarios)(
             page: { has_more: false },
           });
         }
+        if (path === "/records/references") {
+          expect(url.searchParams.get("kind")).toBe("company");
+          if (companyFailure)
+            return jsonResponse(
+              {
+                title: "Company names unavailable",
+                status: companyFailure,
+                code:
+                  companyFailure === 403
+                    ? "permission_denied"
+                    : "internal_error",
+              },
+              companyFailure,
+            );
+          const answer = companyNamesAnswer(url.href, {
+            o1: "Employer A",
+            o2: "Employer B",
+            o3: "Partner company",
+          });
+          if (!answer) throw new Error(`unexpected reference lookup: ${url}`);
+          return answer;
+        }
         if (path === "/companies") {
           if (companyFailure)
             return jsonResponse(
@@ -175,11 +198,13 @@ it.each(scenarios)(
             data:
               url.searchParams.get("status") === "open"
                 ? data
-                : [
-                    ...data,
-                    { id: "won", name: "Won renewal" },
-                    { id: "lost", name: "Lost renewal" },
-                  ],
+                : url.searchParams.get("status") === "won"
+                  ? Array.from({ length: 20 }, (_, index) => ({
+                      id: `won-${index}`,
+                      name: `Won renewal ${index}`,
+                      status: "won",
+                    }))
+                  : [{ id: "lost", name: "Lost renewal", status: "lost" }],
             page: { has_more: false },
           });
         }
@@ -232,7 +257,27 @@ it.each(scenarios)(
     );
     await within(dialog).findByRole("button", { name: /Partner renewal/ });
     expect(
-      queries.every((url) => url.searchParams.get("status") === "open"),
+      within(dialog).getByRole("button", { name: /Won renewal 0/ }),
+    ).toBeTruthy();
+    expect(
+      new Set(
+        queries
+          .filter((url) => url.searchParams.get("q") === "renewal")
+          .map((url) => url.searchParams.get("status")),
+      ),
+    ).toEqual(new Set(["open", "won", "lost"]));
+    const results = within(dialog)
+      .getAllByRole("button")
+      .map((button) => button.textContent ?? "");
+    expect(
+      results.findIndex((text) => text.includes("Partner renewal")),
+    ).toBeLessThan(results.findIndex((text) => text.includes("Won renewal 0")));
+    expect(
+      queries.every(
+        (url) =>
+          url.searchParams.get("q") ||
+          url.searchParams.get("status") === "open",
+      ),
     ).toBe(true);
     expect(queries.every((url) => url.searchParams.get("limit") !== "50")).toBe(
       true,
@@ -257,10 +302,11 @@ it.each(scenarios)(
       ).toBe(true);
     }
     expect(
-      within(dialog).queryByRole("button", {
-        name: /Won renewal|Lost renewal/,
-      }),
-    ).toBeNull();
+      await within(dialog).findByRole("button", { name: /Won renewal 0.*Won/ }),
+    ).toBeTruthy();
+    expect(
+      within(dialog).getByRole("button", { name: /Lost renewal.*Lost/ }),
+    ).toBeTruthy();
     if (employers.length) {
       const candidates = within(dialog).getAllByRole("button", {
         name: /Employer [AB] renewal|Partner renewal/,

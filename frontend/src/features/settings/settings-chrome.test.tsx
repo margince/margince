@@ -66,9 +66,10 @@ describe("SettingsScreen page layout", () => {
     // does open are named in catalog order.
     expect(navGroupNames(nav).slice(1)).toEqual([
       "You",
+      "Compliance",
       "People",
       "Sales",
-      "Compliance",
+      "System",
     ]);
     // And the name is one the accessibility tree computes, not only one this
     // file can read off an attribute: the role and the name have to find the
@@ -193,7 +194,7 @@ describe("the settings search in the rail", () => {
     // Waited on a row a resolved snapshot draws, so the empty result below is
     // about the grants rather than about a rail that has not loaded.
     await screen.findByRole("link", { name: labelOf("account") });
-    await user.type(screen.getByRole("combobox"), "audit");
+    await user.type(await screen.findByRole("combobox"), "audit");
 
     expect(screen.queryAllByRole("option")).toHaveLength(0);
   });
@@ -209,7 +210,7 @@ describe("the settings search in the rail", () => {
     renderNav();
 
     await screen.findByRole("link", { name: labelOf("audit") });
-    await user.type(screen.getByRole("combobox"), "audit");
+    await user.type(await screen.findByRole("combobox"), "audit");
 
     expect(
       screen

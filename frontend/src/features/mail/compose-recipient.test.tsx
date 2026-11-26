@@ -16,7 +16,7 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 // Who the composer says a reply goes to, before a draft is asked for.
 //
@@ -107,14 +107,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("ComposeModal recipient", () => {
+describe("ComposeWindow recipient", () => {
   it("addresses the reply to the thread's counterparty on open", async () => {
     stubRoutes({
       "GET /activities/act-1/reply-recipient": () =>
         jsonResponse(THREAD_RECIPIENT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -134,7 +134,7 @@ describe("ComposeModal recipient", () => {
   it("addresses a first message to the record's own address", async () => {
     stubRoutes();
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="lead"
         entityId="l-1"
         recordAddress="dung.ly@example.test"
@@ -155,7 +155,7 @@ describe("ComposeModal recipient", () => {
         jsonResponse(THREAD_RECIPIENT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="lead"
         entityId="l-1"
@@ -180,7 +180,7 @@ describe("ComposeModal recipient", () => {
   it("addresses a first message to the contact's live primary address", async () => {
     stubRoutes();
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="p-1"
         contactId="p-1"
@@ -201,7 +201,7 @@ describe("ComposeModal recipient", () => {
   it("offers nothing when the record has no address", async () => {
     stubRoutes();
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="lead"
         entityId="l-1"
         recordAddress={undefined}
@@ -241,7 +241,7 @@ describe("ComposeModal recipient", () => {
     const composer = (activityId: string) => (
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">
-          <ComposeModal
+          <ComposeWindow
             activityId={activityId}
             entityType="contact"
             entityId="p-1"
@@ -276,7 +276,7 @@ describe("ComposeModal recipient", () => {
     const composer = (activityId: string) => (
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">
-          <ComposeModal
+          <ComposeWindow
             activityId={activityId}
             entityType="contact"
             entityId="p-1"
@@ -317,7 +317,7 @@ describe("ComposeModal recipient", () => {
     const composer = (activityId: string) => (
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">
-          <ComposeModal
+          <ComposeWindow
             activityId={activityId}
             entityType="contact"
             entityId="p-1"
@@ -356,7 +356,7 @@ describe("ComposeModal recipient", () => {
     const composer = (activityId: string) => (
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">
-          <ComposeModal
+          <ComposeWindow
             activityId={activityId}
             entityType="contact"
             entityId="p-1"
@@ -392,7 +392,7 @@ describe("ComposeModal recipient", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -431,7 +431,7 @@ describe("ComposeModal recipient", () => {
       },
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -462,7 +462,7 @@ describe("ComposeModal recipient", () => {
         jsonResponse(THREAD_RECIPIENT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -474,7 +474,7 @@ describe("ComposeModal recipient", () => {
     const user = userEvent.setup();
     expect(await screen.findByText("dietmar@buyer.test")).toBeTruthy();
     await user.click(
-      screen.getByRole("button", { name: /dietmar@buyer.test/ }),
+      screen.getByRole("button", { name: /Remove dietmar@buyer.test/ }),
     );
 
     // Offering it again on the next render would make the field impossible to

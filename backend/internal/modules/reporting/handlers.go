@@ -108,7 +108,7 @@ func (h Handlers) ListReportingTargets(w http.ResponseWriter, r *http.Request, p
 		httperr.Write(w, r, err)
 		return
 	}
-	out, err := h.service.ListTargets(r.Context(), after, pageLimit(params.Limit), TargetFilter{Retired: params.Retired, PeriodStart: params.PeriodStart})
+	out, err := h.service.ListTargets(r.Context(), after, pageLimit(params.Limit), TargetFilter{Retired: params.Retired, PeriodStart: params.PeriodStart, PlanOwned: params.PlanOwned})
 	respond(w, r, out, err)
 }
 

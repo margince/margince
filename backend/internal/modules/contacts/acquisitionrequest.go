@@ -80,7 +80,7 @@ func (s *Store) RetractAcquisitionRequest(ctx context.Context, contactID ids.Con
 			return fmt.Errorf("contacts: retracting the acquisition request: %w", err)
 		}
 		if len(kinds) == 0 {
-			return fmt.Errorf("contacts: this contact holds no live acquisition request: %w", apperrors.ErrNotFound)
+			return fmt.Errorf("this contact holds no live acquisition request: %w", apperrors.ErrNotFound)
 		}
 		// Audit-only: the public-event catalog has no type for a lawful basis,
 		// and the trail answers who withdrew which request.

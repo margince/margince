@@ -213,26 +213,31 @@ func TestPrivacyRetentionRecordsAFailedPassAsAFailedRow(t *testing.T) {
 	}
 }
 
-// TestPrivacyRetentionDispatchRepeatsOnItsConfiguredInterval pins the half of
-// the schedule a boot pass hides. RunOnStart fires once whatever the cadence
-// is, so a dispatcher wired to a constant instead of the admin's retention
-// setting looks identical at boot and then never runs again — a
-// dead storage-limitation obligation with every gate green. Two dispatches less
-// than jobtest.DispatchGapBound apart can only happen if a cadence far shorter
-// than any constant in reach is what River is scheduling on.
+// TestPrivacyRetentionDispatchRepeatsOnItsConfiguredInterval pins what a boot
+// pass hides. RunOnStart fires once whatever the cadence is. So a dispatcher
+// wired to a constant instead of the admin's retention setting looks the same
+// at boot, and then never runs again.
+//
+// The pass yields between its pages (river.JobSnooze), so its own length is
+// not the schedule's. The cadence decides how long the queue stays idle once a
+// pass ends. Only a cadence far shorter than any constant in reach keeps that
+// under jobtest.DispatchGapBound.
 func TestPrivacyRetentionDispatchRepeatsOnItsConfiguredInterval(t *testing.T) {
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 
-	_, completed, _ := startRetentionRunner(t, e, jobtest.DispatchInterval)
+	runner, completed, _ := startRetentionRunner(t, e, jobtest.DispatchInterval)
+	// The first pass yields at least once before it completes, so this
+	// subscription is in place before the second pass can report anything.
+	snoozed, cancelSnoozed := runner.SubscribeSnoozed()
+	t.Cleanup(cancelSnoozed)
 	// Generous compared with the gap bound: a run this slow is a sick machine,
 	// and the assertion that decides the outcome is the gap below, not this.
 	waitCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	kind := compose.PrivacyRetentionArgs{}.Kind()
-	first, second := jobtest.AwaitTwoDispatchArrivals(waitCtx, t, completed, kind)
-	if gap := second.Sub(first); gap > jobtest.DispatchGapBound {
-		t.Fatalf("the two %s dispatches were %s apart, over the %s bound — the schedule is not the configured %s interval but some larger constant, and the gmail_sync dispatcher's declared 30s scan is the one that would look exactly like this",
-			kind, gap, jobtest.DispatchGapBound, jobtest.DispatchInterval)
+	if idle := jobtest.AwaitIdleBetweenPasses(waitCtx, t, completed, snoozed, kind); idle > jobtest.DispatchGapBound {
+		t.Fatalf("the next %s pass reported %s after the last one completed, over the %s bound — the schedule is not the configured %s interval but some larger constant, and the gmail_sync dispatcher's declared 30s scan is the one that would look exactly like this",
+			kind, idle, jobtest.DispatchGapBound, jobtest.DispatchInterval)
 	}
 }

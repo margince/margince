@@ -57,15 +57,6 @@ func actFixture() onboardingActFixture {
 	}
 }
 
-func actFixtureJSON(t *testing.T, f onboardingActFixture) json.RawMessage {
-	t.Helper()
-	raw, err := json.Marshal(f)
-	if err != nil {
-		t.Fatalf("encoding the fixture: %v", err)
-	}
-	return raw
-}
-
 // actExpectation is what the corpus asserts, encoded as the corpus will carry
 // it — beside the fixture, never inside it.
 func actExpectation(t *testing.T, kind string) json.RawMessage {
@@ -79,7 +70,7 @@ func actExpectation(t *testing.T, kind string) json.RawMessage {
 
 func runActCase(t *testing.T, expected, reply string) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
-	prepared, err := onboardingActCases{}.Prepare(actFixtureJSON(t, actFixture()), actExpectation(t, expected))
+	prepared, err := onboardingActCases{}.Prepare(fixtureJSON(t, actFixture()), actExpectation(t, expected))
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -227,7 +218,7 @@ func TestOnboardingActCaseTraceCarriesTheRequestItIssued(t *testing.T) {
 // assertion.
 func TestOnboardingActFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(actFixtureJSON(t, actFixture()), &fields); err != nil {
+	if err := json.Unmarshal(fixtureJSON(t, actFixture()), &fields); err != nil {
 		t.Fatalf("decoding the fixture: %v", err)
 	}
 	given := map[string]bool{"act": true, "message": true, "history": true, "context": true, "locale": true}
@@ -316,7 +307,7 @@ func TestOnboardingActCaseRefusesAFixtureTheTransportWould(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fixture := actFixture()
 			tc.mutate(&fixture)
-			_, err := onboardingActCases{}.Prepare(actFixtureJSON(t, fixture), actExpectation(t, "answer"))
+			_, err := onboardingActCases{}.Prepare(fixtureJSON(t, fixture), actExpectation(t, "answer"))
 			if err == nil {
 				t.Fatalf("a fixture the transport refuses prepared")
 			}
@@ -332,7 +323,7 @@ func TestOnboardingActCaseRefusesAFixtureTheTransportWould(t *testing.T) {
 // scenario would measure nothing for as long as it stayed in the corpus.
 func TestOnboardingActCaseRefusesAnUnreachableExpectedKind(t *testing.T) {
 	for _, expected := range []string{"", "celebration"} {
-		_, err := onboardingActCases{}.Prepare(actFixtureJSON(t, actFixture()), actExpectation(t, expected))
+		_, err := onboardingActCases{}.Prepare(fixtureJSON(t, actFixture()), actExpectation(t, expected))
 		if err == nil {
 			t.Fatalf("a scenario expecting the kind %q prepared", expected)
 		}
@@ -347,7 +338,7 @@ func TestOnboardingActCaseRefusesAnUnreachableExpectedKind(t *testing.T) {
 // nobody wrote a claim for.
 func TestOnboardingActCaseRefusesAnExpectationItCannotRead(t *testing.T) {
 	for _, expected := range []json.RawMessage{nil, json.RawMessage(`{"kind":"answer"}`), json.RawMessage(`7`)} {
-		_, err := onboardingActCases{}.Prepare(actFixtureJSON(t, actFixture()), expected)
+		_, err := onboardingActCases{}.Prepare(fixtureJSON(t, actFixture()), expected)
 		if err == nil {
 			t.Fatalf("a scenario expecting %s prepared", expected)
 		}

@@ -125,7 +125,7 @@ func (t readLists) Spec() mcp.ToolSpec {
 			"sharing":{"type":"array","items":{"type":"string","enum":["private","team","workspace"]},"description":"For find (optional): only lists with one of these sharing settings; private alone is the caller's own private lists"},
 			"definition":{"type":"object","description":"For preview: a filter tree, as a Live List stores it","properties":{"and":{"type":"array","items":{"type":"object","properties":{"and":{"type":"array"},"or":{"type":"array"},"field":{"type":"string"},"op":{"type":"string"},"value":{}}}},"or":{"type":"array","items":{"type":"object","properties":{"and":{"type":"array"},"or":{"type":"array"},"field":{"type":"string"},"op":{"type":"string"},"value":{}}}},"field":{"type":"string"},"op":{"type":"string","enum":` + listOperatorEnum + `},"value":{"description":"A value, a list for in, true or false for exists, {\"days_ago\": N} for a date, or {\"lat\": N, \"lon\": N, \"radius_km\": N, \"label\": \"optional place name\"} for within_radius"}}},
 			"limit":{"type":"integer","minimum":1,"maximum":100},
-			"cursor":{"type":"string","description":"For members and history: the next_cursor a page answered"}},
+			"cursor":{"type":"string","description":"For members, history and preview: the next_cursor a page answered, with the same list or filter"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ListsAnswer](),
 	}

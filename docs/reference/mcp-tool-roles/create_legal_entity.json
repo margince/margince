@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "create_legal_entity",
+  "verb": "create_legal_entity",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

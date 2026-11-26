@@ -30,7 +30,7 @@ type retiredReviewFixture struct {
 func seedRetiredReviews(t *testing.T, e *integration.Env) retiredReviewFixture {
 	t.Helper()
 	pipeline, stage, _ := integration.DealFixture(t, e)
-	created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{Name: "Quiet since spring", PipelineID: pipeline, StageID: stage})
+	created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{Source: "manual", Name: "Quiet since spring", PipelineID: pipeline, StageID: stage})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func TestAnEditDuringTheBatchDoesNotAbortTheTaskCompletion(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	f := seedRetiredReviews(t, e)
-	editor, err := integration.OwnerConn(t).Begin(ctx)
+	editor, err := integration.FreshOwnerConn(t).Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

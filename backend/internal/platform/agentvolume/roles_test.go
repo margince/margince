@@ -22,7 +22,8 @@ func rolePolicy() Policy {
 			"ops":     {Calls: 2000, Writes: 1000},
 			"guest":   {Calls: 100},
 		},
-		Window: WindowPlan{Length: DefaultWindow},
+		Window:  WindowPlan{Length: DefaultWindow},
+		Unpaced: []string{"admin"},
 	}
 }
 
@@ -102,6 +103,63 @@ func TestTheHeldPolicyNeverLendsOneCallersAllowanceToTheNext(t *testing.T) {
 	}
 	if human.limits.Calls != DefaultCalls {
 		t.Errorf("a human's call reads %d calls; the roles choose an agent's allowance only", human.limits.Calls)
+	}
+}
+
+// One unpaced role lifts the per-minute pacing, whatever else the human holds.
+// A human with no live role is paced.
+func TestAnAdminsAgentIsNotPacedAndEveryOtherIs(t *testing.T) {
+	p := rolePolicy()
+	for _, tc := range []struct {
+		roles []string
+		paced bool
+	}{
+		{[]string{"admin"}, false},
+		{[]string{"rep", "admin"}, false},
+		{[]string{"rep"}, true},
+		{[]string{"manager", "ops"}, true},
+		{nil, true},
+	} {
+		if got := p.Paced(tc.roles); got != tc.paced {
+			t.Errorf("roles %v paced = %v, want %v", tc.roles, got, tc.paced)
+		}
+	}
+}
+
+// The meter judges pacing by each caller's own roles, as it judges the window
+// allowances. A User's agent right after an Admin's is paced, and so is a
+// caller that is not an agent.
+func TestPacingNeverCarriesOverFromOneCallerToTheNext(t *testing.T) {
+	at := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
+	meter := sourcedMeter(&scriptedSource{policy: rolePolicy()}, &at)
+	ctx := inWorkspace(t)
+	human := principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, Permissions: principal.Permissions{RoleKeys: []string{"admin"}},
+	})
+
+	for i, tc := range []struct {
+		call  context.Context
+		paced bool
+	}{
+		{agentOf(ctx, "admin"), false},
+		{agentOf(ctx, "rep"), true},
+		{agentOf(ctx, "admin"), false},
+		{human, true},
+		{ctx, true},
+		{agentOf(ctx, "rep"), true},
+	} {
+		if got := meter.Paced(tc.call); got != tc.paced {
+			t.Errorf("call %d paced = %v, want %v", i, got, tc.paced)
+		}
+	}
+}
+
+// With no policy read yet and none to read, the meter's own policy names no
+// unpaced role, so every agent keeps today's pacing.
+func TestAMeterWithNoPolicySourcePacesEveryAgent(t *testing.T) {
+	meter := New(nil, Limits{}, DefaultWindow)
+	if !meter.Paced(agentOf(inWorkspace(t), "admin")) {
+		t.Error("an Admin's agent went unpaced on a meter that never read the allowances")
 	}
 }
 

@@ -3,13 +3,8 @@
 
 package compose
 
-// Proposing a filter from plain words (POST /filters/propose).
-//
-// It lives in compose for filter preview's reason and one more: it reads the
-// collections store's vocabulary, the custom-field catalogue's labels and the
-// nl_search model lane, and only compose may hold all three. What it answers is
-// never saved — the builder shows the proposal as ordinary clauses, the preview
-// counts it, and a human presses Save.
+// Compose joins the collections vocabulary, custom-field labels and nl_search lane.
+// Proposals stay unsaved until a human saves the builder.
 
 import (
 	"context"
@@ -40,10 +35,6 @@ import (
 // filterProposalMaxRunes is the contract's maxLength for the sentence: a list
 // description, not a document to be summarised.
 const filterProposalMaxRunes = 500
-
-// codeAINotConfigured answers a deployment with no model bound: there is no
-// deterministic reading of a sentence to fall back to, so it says so instead.
-const codeAINotConfigured = "ai_not_configured"
 
 // customFieldLabels answers the admin's label for each cf_* column, keyed by
 // column name. A reader without custom_field:read gets none and the model reads
@@ -99,7 +90,7 @@ func (h filterProposalHandlers) ProposeFilter(w http.ResponseWriter, r *http.Req
 	}
 	if h.lane == nil {
 		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusConflict, Code: codeAINotConfigured,
+			Status: http.StatusConflict, Code: httperr.CodeAINotConfigured,
 			Detail: "plain-words filters need an AI model — an administrator can bind one under Settings → AI; the filter can still be built by hand",
 		})
 		return

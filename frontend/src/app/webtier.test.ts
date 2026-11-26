@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { build } from "vite";
 import { describe, expect, it } from "vitest";
+import { MIN_BYTES, PRECOMPRESSED_TYPES } from "../../scripts/vite-precompress";
 import { BOOKING_HOST_IDS, BOOKING_ID_PREFIXES } from "../lib/bookingaddress";
 import { CONSENT_PATH } from "../lib/recordaddress";
 
@@ -18,6 +23,12 @@ const conf = readFileSync(join(frontendRoot, "nginx.conf"), "utf8")
   .split("\n")
   .map((line) => line.replace(/^\s*#.*$/, ""))
   .join("\n");
+
+// The app's icon, as the shell names it. The Dispact app manifest and the MCP
+// handshake hand this same path to pages on other origins.
+const ICON_PATH = /<link rel="icon" type="image\/svg\+xml" href="([^"]+)"/.exec(
+  readFileSync(join(frontendRoot, "index.html"), "utf8"),
+)?.[1];
 
 type Location = { modifier: string; pattern: string; body: string };
 
@@ -204,6 +215,13 @@ describe("every response the web tier sends carries the whole security set", () 
           continue;
         }
         if (
+          name === "Cross-Origin-Resource-Policy" &&
+          where.pattern === ICON_PATH
+        ) {
+          expect(own.get(name), "the icon's own CORP").toBe("cross-origin");
+          continue;
+        }
+        if (
           name === "Cross-Origin-Opener-Policy" &&
           where.pattern === CONSENT_PATH
         ) {
@@ -218,6 +236,26 @@ describe("every response the web tier sends carries the whole security set", () 
       }
     }
   });
+});
+
+// Another origin's page shows the icon in an <img>, which a same-origin CORP
+// blocks. Only the icon is opened up; the shell and the assets stay closed.
+it("lets another origin load the app's icon, and nothing else", () => {
+  expect(ICON_PATH, "the shell names its icon").toBe("/icon.svg");
+  const where = locate(ICON_PATH ?? "");
+  expect(where.modifier).toBe("=");
+  expect(where.body).toContain("try_files $uri =404;");
+  const own = headers(where.body);
+  expect(own.get("Cross-Origin-Resource-Policy")).toBe("cross-origin");
+  expect(own.get("Access-Control-Allow-Origin")).toBe("*");
+  const server = headers(conf.slice(0, conf.search(/^\s*location\s/m)));
+  for (const path of ["/", "/index.html", "/assets/app.js", "/icon.png"]) {
+    expect(
+      headers(locate(path).body).get("Cross-Origin-Resource-Policy") ??
+        server.get("Cross-Origin-Resource-Policy"),
+      path,
+    ).toBe("same-origin");
+  }
 });
 
 // The app's consent path is the one nginx serves with a popup's opener kept.
@@ -259,17 +297,18 @@ describe("a booking page has a real path a preview fetcher can read", () => {
     "/book/ALEX",
     "/book/alex-sales/",
   ])(
-    "sends a non-browser fetch of %s to the booking preview and a navigation to the shell",
+    "sends every fetch of %s, a browser's navigation and a preview fetcher's alike, to the booking card",
     (path) => {
       const where = locate(path);
       expect(where.pattern).toBe("^/book/([A-Za-z0-9_-]+)/?$");
-      expect(where.body).toContain(
-        "if ($http_sec_fetch_dest != document) {\n            return 302 /v1/public/booking/$1/preview;",
+      expect(where.body).toMatch(
+        /^\s*return 302 \/v1\/public\/booking\/\$1\/preview\$is_args\$args;\s*$/m,
       );
-      // The shell is the one file tried, so a navigation always gets the app.
-      expect(where.body).toContain("try_files /index.html =404;");
+      // No branch on the request: the shell's head names Margince, so no
+      // header variant may reach it here.
+      expect(where.body).not.toMatch(/\bif\s*\(|try_files|sec_fetch_dest/);
       expect(headers(where.body).get("Cache-Control")).toBe("no-store");
-      expect(headers(where.body).get("Vary")).toBe("Sec-Fetch-Dest");
+      expect(headers(where.body).has("Vary")).toBe(false);
     },
   );
 
@@ -324,5 +363,82 @@ describe("a booking path that names a host control or a guest token is refused u
 
   it("does not log a booking page's slug", () => {
     expect(locate("/book/Ab3_x-9Q").body).toMatch(/access_log off;/);
+  });
+});
+
+describe("the web tier sends the build's precompressed files", () => {
+  const directive = (name: string) =>
+    new RegExp(`^    ${name}\\s+([^;]+);`, "m").exec(conf)?.[1];
+
+  it("serves a .gz the build wrote, and compresses the rest at level 6 behind any proxy", () => {
+    expect(directive("gzip")).toBe("on");
+    expect(directive("gzip_static")).toBe("on");
+    expect(directive("gzip_comp_level")).toBe("6");
+    expect(directive("gzip_proxied")).toBe("any");
+    expect(directive("gzip_vary")).toBe("on");
+    expect(conf).not.toMatch(/gzip(?:_static)?\s+off;/);
+  });
+
+  // Below the floor nginx sends a file as it is, so a .gz there is never read.
+  it("skips the files nginx would not compress", () => {
+    expect(Number(directive("gzip_min_length"))).toBe(MIN_BYTES);
+  });
+
+  it("precompresses every type nginx compresses on the fly", () => {
+    const types = directive("gzip_types")?.split(/\s+/) ?? [];
+    expect(types).not.toHaveLength(0);
+    const written = new Set(Object.values(PRECOMPRESSED_TYPES));
+    expect(types.filter((type) => !written.has(type))).toEqual([]);
+    expect(written.has("text/html")).toBe(true);
+  });
+});
+
+describe("the content policy admits the shell's inline theme script and nothing else", () => {
+  const shell = readFileSync(join(frontendRoot, "index.html"), "utf8");
+  const inline = [...shell.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
+    (match) => match[1],
+  );
+  const digest = (script: string) =>
+    `'sha256-${createHash("sha256").update(script).digest("base64")}'`;
+  const scriptSources = (csp: string) =>
+    /(?:^|;\s*)script-src\s+([^;]+)/.exec(csp)?.[1].split(/\s+/);
+
+  it("names the script's sha256 in every policy that sets script-src", () => {
+    expect(inline).toHaveLength(1);
+    const policies = [
+      ...conf.matchAll(/add_header\s+Content-Security-Policy\s+"([^"]*)"/g),
+    ].map((match) => match[1]);
+    expect(policies.filter((csp) => scriptSources(csp))).not.toHaveLength(0);
+    for (const csp of policies) {
+      const sources = scriptSources(csp);
+      if (sources === undefined) continue;
+      expect(sources, csp).toEqual(["'self'", digest(inline[0])]);
+    }
+  });
+
+  // The policy hashes index.html's bytes, so the build must emit them as written.
+  it("leaves the script's bytes as written in the built shell", async () => {
+    const dir = await realpath(await mkdtemp(join(tmpdir(), "inline-script-")));
+    try {
+      await writeFile(
+        join(dir, "index.html"),
+        `<!doctype html><html><head><script>${inline[0]}</script></head><body><script type="module" src="./entry.js"></script></body></html>`,
+      );
+      await writeFile(join(dir, "entry.js"), "console.log(1);");
+      await build({
+        root: dir,
+        configFile: false,
+        logLevel: "silent",
+        build: { outDir: join(dir, "dist") },
+      });
+      const built = await readFile(join(dir, "dist", "index.html"), "utf8");
+      expect(
+        [...built.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) =>
+          digest(m[1]),
+        ),
+      ).toEqual([digest(inline[0])]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });

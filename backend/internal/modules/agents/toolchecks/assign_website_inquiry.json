@@ -1,0 +1,13 @@
+{
+  "verb": "assign_website_inquiry",
+  "checks": [
+    "activity.read",
+    "activity.update",
+    "lead.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "activity",
+    "assignable_website_inquiry"
+  ]
+}

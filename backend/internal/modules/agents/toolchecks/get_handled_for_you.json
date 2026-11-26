@@ -1,0 +1,16 @@
+{
+  "verb": "get_handled_for_you",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "contract.read",
+    "deal.read",
+    "deal_room.read",
+    "finance.read",
+    "introduction.read",
+    "lead.read",
+    "offer.read",
+    "project.read"
+  ]
+}

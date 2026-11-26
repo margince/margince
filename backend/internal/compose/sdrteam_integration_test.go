@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"maps"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -195,7 +196,7 @@ func TestSdrTeamReviewWithIndividualPerformanceOffKeepsTeamTotalsOnly(t *testing
 	e.showIndividualPerformance(t, false)
 
 	got := f.review(f.as(f.manager), t, crmcontracts.GetSdrTeamReviewParamsScopeKindTeam, &e.Team1)
-	if got.Withheld || got.Handoffs == nil || got.Handoffs.Outcomes.Submitted != 2 {
+	if got.Withheld || got.WithheldReason != nil || got.Handoffs == nil || got.Handoffs.Outcomes.Submitted != 2 {
 		t.Fatalf("two colleagues' work is a team total the manager may read: %+v", got)
 	}
 	if !got.MembersWithheld || len(got.Members) != 0 {
@@ -205,6 +206,10 @@ func TestSdrTeamReviewWithIndividualPerformanceOffKeepsTeamTotalsOnly(t *testing
 	mine := f.review(f.as(e.Rep1), t, crmcontracts.GetSdrTeamReviewParamsScopeKindTeam, &e.Team1)
 	if !mine.Withheld || mine.Handoffs != nil || mine.Meetings != nil || len(mine.Members) != 0 || mine.Workflow != crmcontracts.SdrTeamReviewWorkflowHandoff {
 		t.Fatalf("a total one colleague makes up is withheld: %+v", mine)
+	}
+	// The review says why in the words a chart withheld by the same floor uses.
+	if mine.WithheldReason == nil || *mine.WithheldReason != reportingCoverageWords.BelowFloor.En {
+		t.Fatalf("withheld_reason = %v, want the chart's below-floor sentence", mine.WithheldReason)
 	}
 }
 
@@ -415,5 +420,34 @@ func TestSdrTeamReviewGivesNoMeetingsToASeatThatMayNotReadActivities(t *testing.
 		if row.MeetingsHeld != nil {
 			t.Fatalf("%s's meetings reach a seat that may not read activities: %d", row.Label, *row.MeetingsHeld)
 		}
+	}
+}
+
+// The summary's waiting count holds one colleague's handoff. To Rep1 that total
+// is the second SDR's own figure. While individual performance is off, the
+// team review's floor refuses it.
+func TestSdrSummaryWithIndividualPerformanceOffRefusesATotalOneColleagueMakesUp(t *testing.T) {
+	f := newSdrTeamFixture(t)
+	e := f.e
+	f.submitAs(t, f.second, "Second SDR's")
+	h := newSdrSummaryHandlers(InstallationDB(e.Pool), func() time.Time { return f.now })
+	kind := crmcontracts.GetSdrSummaryParamsScopeKindTeam
+	read := func() *httptest.ResponseRecorder {
+		w := httptest.NewRecorder()
+		h.GetSdrSummary(w, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(f.as(e.Rep1)),
+			crmcontracts.GetSdrSummaryParams{ScopeKind: &kind, ScopeId: (*openapi_types.UUID)(&e.Team1)})
+		return w
+	}
+	var shown crmcontracts.SdrSummary
+	if w := read(); w.Code != http.StatusOK || json.Unmarshal(w.Body.Bytes(), &shown) != nil || shown.Handoffs == nil || shown.Handoffs.Waiting != 1 {
+		t.Fatalf("with the switch on the team summary = %d %s, want 200 counting the one waiting handoff", w.Code, w.Body.String())
+	}
+	e.showIndividualPerformance(t, false)
+	w := read()
+	var problem struct {
+		Code string `json:"code"`
+	}
+	if w.Code != http.StatusForbidden || json.Unmarshal(w.Body.Bytes(), &problem) != nil || problem.Code != "individual_performance_off" {
+		t.Errorf("with the switch off the team summary = %d %s, want 403 individual_performance_off", w.Code, w.Body.String())
 	}
 }

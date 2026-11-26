@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -61,7 +62,7 @@ func (e *stagingEnv) seedPassport(t *testing.T) ids.UUID {
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO passport (id, label, on_behalf_of, granted_by, token_hash, scopes, expires_at)
 		VALUES ($1, $2, $3, $3, $4, $5, now() + interval '30 days')`,
-		id, "agent "+id.String(), e.rep, "hash-"+id.String(), []string{"read", "enrich"}); err != nil {
+		id, "agent "+id.String(), e.rep, storekit.TokenHash(id.String()), []string{"read", "enrich"}); err != nil {
 		t.Fatalf("seeding a passport: %v", err)
 	}
 	return id
@@ -407,7 +408,7 @@ func TestAStagedCallKeepsItsSummaryPartsCleaned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the staged row: %v", err)
 	}
-	got := wire(stored, e.svc.now()).SummaryParts
+	got := wire(context.Background(), stored, e.svc.now()).SummaryParts
 	want := []crmcontracts.ApprovalSummaryField{{Field: "depth", Value: "2, note=x"}}
 	if got == nil || got.Sentence != "Read stainzer.at" || !slices.Equal(got.Fields, want) {
 		t.Errorf("read back parts %+v, want the sentence and %+v", got, want)
@@ -418,7 +419,7 @@ func TestAStagedCallKeepsItsSummaryPartsCleaned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("staging without parts: %v", err)
 	}
-	if row, err := e.svc.Get(e.asDecider(), plain); err != nil || wire(row, e.svc.now()).SummaryParts != nil {
+	if row, err := e.svc.Get(e.asDecider(), plain); err != nil || wire(context.Background(), row, e.svc.now()).SummaryParts != nil {
 		t.Errorf("a staging without parts read back %v (err %v), want none", row.SummaryParts, err)
 	}
 }

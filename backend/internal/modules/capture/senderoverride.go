@@ -59,7 +59,8 @@ type SenderOverride struct {
 
 // SenderOverrideStore holds what contacts decided.
 type SenderOverrideStore struct {
-	db *database.DB
+	db             *database.DB
+	withdrawReview ReviewWithdrawer
 }
 
 // NewSenderOverrideStore builds the store.
@@ -114,8 +115,7 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The same key every reader of this decision takes, so a seat recording
 		// one cannot land between a reader's look and the act it drives.
-		if err := storekit.LockWriteIdentity(ctx, tx, senderOverrideEntity,
-			senderOverrideIdentity(actor.UserID, folded)); err != nil {
+		if err := lockSenderDecisionTx(ctx, tx, actor.UserID, folded); err != nil {
 			return err
 		}
 		if err := refuseAgentOverAUsersDecisionTx(ctx, tx, actor, folded); err != nil {
@@ -138,8 +138,7 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 			ON CONFLICT (user_id, address) DO UPDATE
 			   SET decision = EXCLUDED.decision,
 			       overruled_kind = COALESCE(EXCLUDED.overruled_kind, capture_sender_override.overruled_kind),
-			       captured_by = EXCLUDED.captured_by,
-			       updated_at = now()
+			       captured_by = EXCLUDED.captured_by
 			RETURNING id, address, decision, coalesce(overruled_kind, '')`,
 			actor.UserID, folded, decision, kind, capturedBy).
 			Scan(&out.ID, &out.Address, &out.Decision, &out.OverruledKind); err != nil {
@@ -150,9 +149,11 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 		// The object spelled as a literal, not through the constant: the audit
 		// gate reads call sites to tell an entity named at runtime from one
 		// named in the source, and a constant is something it cannot resolve.
-		_, err = storekit.AuditEvent(ctx, tx, "update", "capture_settings", storekit.MustWorkspace(ctx),
-			map[string]any{fieldDecision: decision, "overruled_kind": kind})
-		return err
+		if _, err := storekit.AuditEvent(ctx, tx, "update", "capture_settings", storekit.MustWorkspace(ctx),
+			map[string]any{fieldDecision: decision, "overruled_kind": kind}); err != nil {
+			return err
+		}
+		return s.handOverToVerdictTx(ctx, tx, actor.UserID, folded)
 	})
 	return out, err
 }
@@ -171,8 +172,7 @@ func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error 
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		folded := normalizeEmail(address)
-		if err := storekit.LockWriteIdentity(ctx, tx, senderOverrideEntity,
-			senderOverrideIdentity(actor.UserID, folded)); err != nil {
+		if err := lockSenderDecisionTx(ctx, tx, actor.UserID, folded); err != nil {
 			return err
 		}
 		if err := refuseAgentOverAUsersDecisionTx(ctx, tx, actor, folded); err != nil {
@@ -260,8 +260,7 @@ func OverrideForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, address string
 	// own transaction commits between this read and that write, and the answer
 	// acted on was already stale. Reentrant, so Set may take it and then write
 	// through here without deadlocking.
-	if err := storekit.LockWriteIdentity(ctx, tx, senderOverrideEntity,
-		senderOverrideIdentity(user, folded)); err != nil {
+	if err := lockSenderDecisionTx(ctx, tx, user, folded); err != nil {
 		return "", err
 	}
 	var decision string
@@ -305,4 +304,9 @@ func (e *InvalidOverrideError) Error() string { return "capture sender decision:
 // FieldFault maps the refusal onto the wire.
 func (e *InvalidOverrideError) FieldFault() (field, code, message string) {
 	return e.Field, "invalid_sender_decision", e.Reason
+}
+
+func lockSenderDecisionTx(ctx context.Context, tx pgx.Tx, user ids.UUID, address string) error {
+	return storekit.LockWriteIdentity(ctx, tx, senderOverrideEntity,
+		senderOverrideIdentity(user, normalizeEmail(address)))
 }

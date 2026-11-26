@@ -24,16 +24,23 @@ var searchRecordsCopy = toolCopy{
 }
 
 var listRecordsCopy = toolCopy{
-	Purpose: "List one page of matching records: deals in a pipeline, a rep's leads, or a contact's timeline.",
-	Limits:  "Only declared record_type filters apply. Further pages may exist.",
-	Instead: "Use search_records to find a record by what it is called, and run_report for a count " +
-		"or a total.",
-	Retain: "Pass next_cursor for the next page; omit it for the first. `owner` names the holder. " + sayWhoseItIs,
+	Purpose: "List one page of records matching record_type and filters.",
+	Limits:  "Only declared record_type filters apply.",
+	Instead: "Use search_records for names, run_report for counts or totals.",
+	Retain:  "Pass next_cursor for the next page. `owner` names the holder. " + sayWhoseItIs,
 }
 
 var readViewCopy = toolCopy{
-	Purpose: "Read derived record views, workspace reference lists and reporting objects through their REST routes.",
-	Limits:  "Name the view, its id and filters. Unknown arguments are refused with the accepted names.",
+	Purpose: "Read one view the app draws that no other tool answers: a record's panels, such as a " +
+		"company's 360, contacts, documents, facts, graph or strength, a deal's status, documents or " +
+		"stakeholders, and a contact's cases; the workspace's reference lists, such as stages, custom " +
+		"fields, lead sources, loss reasons, teams and lists; and reporting objects, such as targets, " +
+		"schedules, executions, sales progress and forecast calls.",
+	Limits: "Each view takes only a few of the arguments listed here: a record view its id, and its " +
+		"own filters. Each argument names the views that take it, describe_views names what each view " +
+		"takes, and a refusal names the arguments the view accepts.",
+	Instead: "Use find_records to find or list records, and read_reports for the standard metrics " +
+		"and named reports.",
 }
 
 var changeRecordPartsCopy = toolCopy{
@@ -41,15 +48,14 @@ var changeRecordPartsCopy = toolCopy{
 		"profile fields, a project's companies and stakeholders. Prices are in minor units; read a " +
 		"product for its unit_price_minor rather than inventing one.",
 	Limits: "An offer's totals are computed from its lines and cannot be supplied, and a sent or " +
-		"accepted offer keeps its lines. Pass if_version from your read so a change made since is " +
-		"refused. Each action answers as its route does.",
+		"accepted offer keeps its lines.",
 	Instead: "Use update_record for a record's own fields, and create_record with record_type offer " +
 		"to make an offer with its first lines.",
 }
 
 var readRecordCopy = toolCopy{
 	Purpose: "Read one record's own stored fields — the values a reader would see on its detail " +
-		"page — when you already know which record you mean.",
+		"page, a company's profile fields and facts included — when you already know which record you mean.",
 	Limits: "It returns that record and nothing around it: no timeline, no related contacts, no " +
 		"deals on the company.",
 	Instead: "Use catch_me_up_on when the goal is what has been happening on the record rather " +
@@ -118,14 +124,14 @@ var updateRecordCopy = toolCopy{
 // clause, with the instruction itself down in the `links` field description —
 // which is read after the call has already been shaped.
 var logActivityCopy = toolCopy{
-	Purpose: "Record something that happened — a call, a meeting, a note, a message — on the " +
-		"records it was about: name every one of them in this call. A meeting is with a contact, " +
-		"and also concerns their company and its deal.",
-	Limits: "It writes history and can add a follow_up_task to a meeting, call or note in one " +
+	// The links field says which records to name, so the purpose does not repeat it.
+	Purpose: "Record something that happened — a call, a meeting, a note, a message — on every " +
+		"record it was about.",
+	Limits: "It can add a follow_up_task to a meeting, call or note in one " +
 		"transaction; the task inherits source links and audience, and its assignee must be able to " +
 		"read the source. A source-identity replay adds no task. " +
 		"No deal or field changes; nobody is notified. Unlinked, it is on no timeline; " +
-		"relink_activity links it later (onto a project, after the user's yes)." +
+		"relink_activity links it later." +
 		pastDayNeedsATime,
 	Instead: "Use progress_deal when the event also moves a deal; create_task for something " +
 		"still owed; attach_document for a file, whose text never goes into a note.",
@@ -135,7 +141,7 @@ var logActivityCopy = toolCopy{
 
 var createTaskCopy = toolCopy{
 	Purpose: "Put a to-do on someone's list: what is owed, by whom, on which records.",
-	Limits: "Creates the task only — no reminder, no deal move. A source activity supplies its " +
+	Limits: "Creates the task only, with no deal move; it reminds only at a due_at with due_has_time. A source activity supplies its " +
 		"visible links when none are sent; without either, the task sits on no timeline.",
 	Instead: "log_activity is for what already happened.",
 }
@@ -191,13 +197,14 @@ var relinkActivitiesCopy = toolCopy{
 var bulkUpdateRecordsCopy = toolCopy{
 	Purpose: "Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add " +
 		"them to or take them off a Shortlist, put a tag on or take it off, or file one task under " +
-		"each, in one change; or mark up to 500 of the user's Worklist tasks done " +
+		"each, in one change; move up to 500 deals to one open stage (verb move_stage); or mark up to 500 of the user's Worklist tasks done " +
 		"(record_type worklist_item, verb complete) — or undo such a change.",
 	Limits: "Call mode preview first and show the user what it says: how many records change, " +
 		"which are left alone and why, and the sample rows. Execute only after they agree. Each " +
 		"record is changed only if it still has the version you sent and you may change it. To " +
 		"undo, pass the batch_id to undo_preview, show the user the answer, and call undo after " +
-		"they agree; a change is undone once, and records changed since are left alone. Ask in " +
+		"they agree; a change is undone once, and records changed since are left alone. A stage " +
+		"move skips a deal that is won or lost, and its undo moves each deal back as a new move. Ask in " +
 		"words even when the host also shows a form.",
 	Instead: "update_record and archive_record change one record.",
 	Retain: "Above 10 records, execute and undo need the confirm_token their preview answered; " +

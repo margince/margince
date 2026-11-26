@@ -22,6 +22,7 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
+	"github.com/margince/margince/backend/internal/compose/chatsync"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/comms"
@@ -60,16 +61,16 @@ func sweepInsertOpts() *river.InsertOpts {
 //
 // WHICH of these a kind needs, and what an absent one costs it, is declared
 // per kind in api/jobs.yaml and resolved in jobschedule.go — not counted here.
-// A field below says what it IS and what its absence means for the pass that
-// reads it; the two postures that absence takes are the declaration's to
-// choose, and they are not interchangeable. Registers nothing means a row
-// nothing here could work is never queued at all; registers anyway keeps the
-// worker so a picked-up row fails with an actionable message instead of
-// rotting queued. The SAME field takes opposite postures on different kinds —
-// Embedder registers nothing for the drift sweep and anyway for a reindex —
-// which is why the posture is stated per kind and never per field.
+// A field below says what it is and what its absence means for its pass.
+// The declaration chooses between two postures. Registers nothing means a row
+// nothing here could work is never queued. Registers anyway keeps the worker,
+// so a picked-up row fails with an actionable message, not rotting queued.
+// One field takes opposite postures on different kinds: Embedder registers
+// nothing for the drift sweep and anyway for a reindex. So the posture is
+// stated per kind and never per field.
 type JobRunnerConfig struct {
-	DataTasksPace time.Duration
+	DisabledCoreFeatures                 []string
+	DataTasksPace, UnusedClientRetention time.Duration
 	// Schedules is the interval every {setting: …} cadence runs at, read from
 	// the admin's settings at boot and moved by its Watch while the worker
 	// runs. Nil schedules from the registered defaults.
@@ -87,6 +88,10 @@ type JobRunnerConfig struct {
 	// moment the context the runner was started under is — which only a test
 	// harness wants.
 	DrainWindow time.Duration
+	// Paused snoozes every job while it answers true: an installation whose
+	// trial has ended does no background work. Nil never pauses.
+	Paused     func(context.Context) bool
+	ModelBound func() bool // unbound: gated model jobs no-op; nil is always bound
 	// SendBlob is the object store the send lane AND the document reading read
 	// attachment bytes from. Both need it for the same reason — the bytes are
 	// object-store references, never rows — so they share the field rather than
@@ -191,6 +196,11 @@ type JobRunnerConfig struct {
 	// deal's evidence with. Nil = no AI configured: dates, amounts and
 	// probabilities change only by hand and by the close-date sweep.
 	DealVerdictBrain completer
+	// ChatSummaryBrain is the chat_summary lane; nil files no chat summary.
+	ChatSummaryBrain completer
+	// ChatPushMarks holds when Dispact last pushed a notice; nil reads every
+	// connection on every chat_pull_sweep tick.
+	ChatPushMarks chatsync.Marks
 	// TagSuggestBrain is the tag_suggest lane, which reads captured items
 	// against the suggestible tags' descriptions. Nil = the tag scout matches
 	// description phrases instead.
@@ -296,7 +306,8 @@ type JobRunnerConfig struct {
 	//
 	// It also holds the uploads an import commits from. Nil registers the
 	// import jobs anyway, and a commit then fails with that cause.
-	Blobstore blobstore.Store
+	Blobstore        blobstore.Store
+	JournalBlobstore blobstore.Store // blobstore.ResolveJournal's answer; nil is a role with neither
 	// ImportUploadCap is the deployment's ceiling for an import upload, so a
 	// commit reads a stored ZIP under the limits its upload was accepted with.
 	ImportUploadCap int64
@@ -379,13 +390,14 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	if pool != nil {
 		reg.sessionSlots = make(chan struct{}, database.WorkerSessionCapacity(pool.Config().MaxConns))
 	}
+	reg.paused, reg.modelBound = cfg.Paused, cfg.ModelBound
 
 	// The workers, in the groups their gating and their concern make: each
 	// helper registers its own and states what an absent dependency costs
 	// them. The schedules that drive them are the list below, because a
 	// cadence is the declaration's and not the group's.
 	addModelLaneJobs(reg, pool, cfg, log)
-	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail, cfg.DealVerdictBrain, cfg.ClassifyBrain)
+	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail, cfg.DealVerdictBrain, cfg.ClassifyBrain, cfg.DisabledCoreFeatures)
 	addCapturePipelineJobs(reg, pool, cfg, log)
 	addStoredObjectJobs(reg, pool, cfg, log)
 	addSuppressionJournalJobs(reg, pool, cfg, log)
@@ -405,7 +417,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addGraphJobs(reg, pool, cfg, log),
 		addEmbedDriftSweepJob(reg, pool, cfg, log),
 		addScheduledSendRecoveryJob(reg, pool, cfg, log),
-		addImportRunSweepJob(reg, pool, cfg, log),
+		addImportRunSweepJob(reg, pool, cfg, log), addUnusedClientSweepJob(reg, pool, cfg, log),
 		addControllerPayloadSweepJob(reg, pool, cfg, log),
 		addPrivacyRetentionJobs(reg, pool, cfg, log),
 		addCapturePartSlimJobs(reg, pool, cfg, log),
@@ -425,24 +437,28 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addFinanceJobs(reg, pool, cfg, log),
 		addAIPriceSyncJobs(reg, pool, cfg, log),
 		registerTelegramPoll(reg, pool, cfg, log),
+		registerChatLinkFlush(reg, pool, cfg, log),
 		// The composed extension jobs, if any. Empty on every vanilla process:
 		// the ext_ kinds and their ticks do not exist there at all.
-		addExtensionJobs(reg, pool, log),
+		addExtensionJobs(reg, pool, schedulesOf(cfg), log),
 		placedSchedules(cfg),
 	)
 
 	return reg, periodic
 }
 
-// placedSchedules are the schedules this file places. Each carries its own gate:
-// the cadence, the configuration it needs, and what an absent dependency costs.
-// So every one is named here, whether or not this boot places it.
+// placedSchedules names every schedule this file places, whether or not this boot
+// places it. Each carries its own gate: cadence, configuration, absent-dependency cost.
 func placedSchedules(cfg JobRunnerConfig) []*river.PeriodicJob {
 	return slices.Concat(
 		periodicFor(cfg, AssuranceSweepArgs{}),
 		periodicFor(cfg, CloseDateSweepArgs{}),
+		periodicFor(cfg, MeetingProfileRetractSweepArgs{}),
+		periodicFor(cfg, TranscriptAudienceSweepArgs{}),
+		periodicFor(cfg, PromiseKeptSweepArgs{}),
 		periodicFor(cfg, FollowUpReconcileArgs{}),
 		periodicFor(cfg, ForecastSnapshotSweepArgs{}),
+		periodicFor(cfg, InitiativeEnrolmentSweepArgs{}),
 		periodicFor(cfg, ReportScheduleSweepArgs{}),
 		periodicFor(cfg, RiskVerdictSweepArgs{}),
 		periodicFor(cfg, TimeScanArgs{}),
@@ -472,7 +488,6 @@ func placedSchedules(cfg JobRunnerConfig) []*river.PeriodicJob {
 		periodicFor(cfg, CaptureTraceSweepArgs{}),
 		periodicFor(cfg, CapturedDealRefileSweepArgs{}),
 		periodicFor(cfg, CompanyNamePromotionArgs{}),
-		periodicFor(cfg, CaptureDigestArgs{}),
 		periodicFor(cfg, CaptureBackfillReconcileArgs{}),
 		periodicFor(cfg, BriefGenerateArgs{}),
 		periodicFor(cfg, NotificationDigestArgs{}),

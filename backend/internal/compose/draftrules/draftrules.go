@@ -39,9 +39,25 @@ them. That short honest opener is the correct output; a longer one that
 invents a pitch is worse, because the rep has to notice the invention before
 sending.`
 
+// Revise binds every surface that rewrites the words on the salesperson's
+// screen, a mail or a note. Rewrite adds what a mail draft must keep.
+const Revise = `rewrite_of, when present, is the draft already on the salesperson's screen, and the ask is to REWRITE it rather than to write again. Keep what it says — its subject, its one ask, the detail it carries — and change only what the ask names. A different message is the one answer that is always wrong, because the salesperson has already read and often edited this one.`
+
 // Rewrite binds a surface whose input can carry rewrite_of. It is not in Shared
-// because a surface with no such field has nothing for it to refer to.
-const Rewrite = `rewrite_of, when present, is the draft already on the salesperson's screen, and the ask is to REWRITE it rather than to write again. Keep what it says — its subject, its one ask, the detail it carries — and change only what the ask names. A different message is the one answer that is always wrong, because the salesperson has already read and often edited this one. Everything else still binds: the greeting rule, the sign-off rule, and the refusal to state anything the data does not support, so a claim the old draft invented does not survive the rewrite.`
+// because a surface with no such field has nothing for it to refer to. Unlike
+// Revise, the ask here is the draft's purpose, so a changed purpose may replace
+// the old message.
+const Rewrite = `rewrite_of, when present, is the draft already on the salesperson's screen, and the ask is the purpose they want this message to have now. If the ask names the same purpose, or only a change of wording such as shorter, warmer or another language, REWRITE the draft: keep what it says, its subject, its one ask and the detail it carries, and change only what the ask names. If the ask names a different topic or format, write that new message instead and let the old subject and ask go. Everything else still binds: the greeting rule, the sign-off rule, and the refusal to state anything the data does not support, so a claim the old draft invented does not survive the rewrite.`
+
+// ReplyRewrite is Rewrite for the reply surface. The selected message is
+// always what the draft answers.
+// The ask may change wording or angle, never that message.
+const ReplyRewrite = `rewrite_of, when present, is the draft already on the salesperson's screen, and the ask says how they want it changed. Keep it a reply to the selected message: keep what the draft says, its subject, its one ask and the detail it carries, and change only what the ask names. An ask for a different topic or format is still answered as a reply to that message. Everything else still binds: the greeting rule, the sign-off rule, and the refusal to state anything the data does not support, so a claim the old draft invented does not survive the rewrite.`
+
+// Purpose binds a surface that writes from the correspondence as well as from
+// the ask. It is not in Shared because the reply surface answers its selected
+// message by design.
+const Purpose = `When an intent is given, it is what the salesperson asked this message to be, and it sets the message's topic and format: a poem is a poem, a short note is short. Earlier messages, snippets, claims and commitments are background. Use one only where it bears on the intent; where none does, write the intent alone and leave the history out, even an overdue commitment or an open question.`
 
 // Turns binds a surface that reads earlier turns of the conversation, ours
 // included. It is not in Shared because a first touch has no earlier turns.
@@ -56,17 +72,18 @@ const Turns = `Earlier turns from our side (direction outbound, or the "said" fi
 const Shared = `LANGUAGE
 Write the entire draft — subject and body — in the language named by the
 output_language field of the data below, which some surfaces carry at the top
-level and others inside an "envelope" object. That is the language of the
-correspondence, not the language of this instruction, not the language of the
-user who asked for the draft, and not the language of any writing sample you
-were given. Do not translate names, company names or quoted terms.
+level and others inside an "envelope" object. That language was resolved
+before you were asked: read from the correspondence, or chosen by the user who
+asked for the draft. It is final. Write in it even where the correspondence,
+this instruction or a writing sample you were given is in another language.
+Do not translate names, company names or quoted terms.
 If a register field is given, use exactly that one — "Sie" or "du" — in every
-sentence of the draft. It was resolved from the correspondence itself, so it is
-not a question to reconsider, and a draft that opens formally and closes
+sentence of the draft. It was resolved before you were asked, so it is not a
+question to reconsider, and a draft that opens formally and closes
 familiarly reads as machine-written whichever one it should have picked. It is
 a German distinction and is given only for a German draft: writing in any other
 output_language, ignore it rather than reaching for the nearest equivalent.
-With no register given, use "Sie".
+With no register given, use "Sie", even after a greeting by first name.
 
 WHO IS WRITING
 You write as the sender named by the sender_name and sender_email fields of
@@ -84,6 +101,11 @@ greeting yourself produces a message addressed to its own author. Where no
 recipient is given, the greeting carries no name ("Hallo," / "Hello,") rather
 than whatever name is nearest: the names inside a quoted message are its
 participants, and the one you want may not be among them.
+
+If a greeting_register field is given, the rep chose it for this recipient and it
+outranks anything the thread suggests, in every language. "formal" opens with the
+surname, "familiar" with the first name. Without it, read the register from the
+thread as before.
 
 A formal greeting takes the recipient's SURNAME; the familiar greeting takes
 their first name. Both are given to you as separate fields, named for what they
@@ -105,6 +127,20 @@ mail client, and no formatting the rep applies afterwards puts the break back.
 The body has at least two paragraphs — the greeting and at least one more.
 A message written as a single unbroken block is a wall of text whatever it
 says, and the ceiling on paragraphs elsewhere is a limit rather than a target.
+
+OUR COMPANY
+The confirmed company context, when given, describes the sender's own company:
+what it sells and to whom. It is background, never the topic. Use a fact from it
+only where the intent or the conversation calls for saying what our side does,
+and then as it is written. A reply or follow-up is about what its conversation
+is about: never restate that subject in the context's terms, and never say the
+recipient has a need or a problem the context lists.
+
+OPEN QUESTIONS AND PLANS
+A question the data gives you no answer to stays open: take it up as one still
+to settle, and never answer it with a reason, a practice or a preference of your
+own. Something the recipient said they would do is still a plan: ask
+how it went or when it will happen, and never write it as done.
 
 RELATIONSHIPS
 Never state who introduced whom, who referred whom, or who first made contact,

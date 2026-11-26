@@ -65,6 +65,9 @@ function mount(
     "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
     "GET /scheduling/profile": () => jsonResponse(server.profile),
     "GET /scheduling/calendars": () => jsonResponse(calendars),
+    "GET /scheduling/team-candidates": () => jsonResponse([]),
+    "GET /scheduling/team-links": () => jsonResponse([]),
+    "GET /scheduling/team-requests": () => jsonResponse([]),
     "PUT /scheduling/profile": (body) => {
       server.profile = body as Profile;
       server.profileWrites.push(server.profile);
@@ -104,7 +107,9 @@ async function ruleName(name: string) {
 
 // The page's one save bar, drawn only while some card holds a draft.
 function saveBar() {
-  return screen.queryByRole("region", { name: "Unsaved changes" });
+  return screen.queryByRole("region", {
+    name: /^(Unsaved changes|Save to make these yours\.)$/,
+  });
 }
 
 function barSave() {
@@ -766,4 +771,102 @@ it("reports a calendar connected from this page on its landing", async () => {
   const dismiss = await screen.findByRole("button", { name: "Dismiss" });
   await userEvent.setup().click(dismiss);
   expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
+});
+
+async function editLengths(user: User, value: string, input = "keyboard") {
+  const actions = await screen.findAllByRole("button", {
+    name: /More actions for/,
+  });
+  await user.click(actions[0]);
+  await user.click(screen.getByRole("button", { name: "Edit link" }));
+  const offered = await screen.findByRole<HTMLInputElement>("textbox", {
+    name: "Additional meeting lengths",
+  });
+  if (input === "keyboard") {
+    await user.clear(offered);
+    await user.type(offered, value);
+  } else {
+    offered.value = value;
+  }
+  await user.click(screen.getByRole("button", { name: "Save link" }));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("textbox", { name: "Additional meeting lengths" }),
+    ).toBeNull(),
+  );
+}
+
+it.each(["keyboard", "accessibility"])(
+  "saves additional lengths again after reopening through %s edits",
+  async (input) => {
+    const user = userEvent.setup();
+    const server = mount({ video_call: true, location: "" });
+    await editLengths(user, "15, 30, 45, 60, 90", input);
+    expect(server.profileWrites).toHaveLength(1);
+    await editLengths(user, "15, 45, 60, 90", input);
+    expect(server.profileWrites).toHaveLength(2);
+    expect(server.profile.offered_lengths).toEqual([15, 45, 60, 90]);
+  },
+);
+
+it("removes an unoffered length from the main link and keeps the default", async () => {
+  const user = userEvent.setup();
+  const server = mount({
+    video_call: true,
+    location: "",
+    offered_lengths: [15, 30, 45, 60, 90],
+  });
+  await editLengths(user, "15, 60, 90");
+  expect(server.profileWrites).toHaveLength(1);
+  expect(server.profileWrites[0]).toMatchObject({
+    offered_lengths: [15, 60, 90],
+  });
+  await waitFor(() =>
+    expect(lengthsCell().textContent).toBe("30 min15 min60 min90 min"),
+  );
+});
+
+// The one cell that lists every length the main link offers.
+function lengthsCell() {
+  const cell = screen
+    .getAllByRole("cell")
+    .find((candidate) => /^\d+ min/.test(candidate.textContent ?? ""));
+  if (!cell) throw new Error("no lengths cell");
+  return cell;
+}
+
+it("refuses a repeated extra length with a message that names the repeat", async () => {
+  const user = userEvent.setup();
+  const server = mount({ video_call: true, location: "" });
+  await user.click(
+    (await screen.findAllByRole("button", { name: /More actions for/ }))[0],
+  );
+  await user.click(screen.getByRole("button", { name: "Edit link" }));
+  const offered = await screen.findByRole("textbox", {
+    name: "Additional meeting lengths",
+  });
+  await user.clear(offered);
+  await user.type(offered, "45, 45, 60");
+  await user.click(screen.getByRole("button", { name: "Save link" }));
+  expect(await screen.findByText("Name each length once.")).toBeTruthy();
+  expect(
+    screen.queryByText("Enter a length from 15 to 480 minutes."),
+  ).toBeNull();
+  expect(server.profileWrites).toHaveLength(0);
+});
+
+it("shows one main link with its lengths, each extra length's link still copyable", async () => {
+  const user = userEvent.setup();
+  const copy = stubClipboard("accepts");
+  mount({ video_call: true, location: "", offered_lengths: [45, 60] });
+  expect(await screen.findByText("(main link)")).toBeTruthy();
+  expect(screen.getAllByText(bookingProfile.public_url ?? "")).toHaveLength(1);
+  expect(lengthsCell().textContent).toBe("30 min45 min60 min");
+  expect(
+    screen.queryByRole("button", { name: "Copy the 30 min link" }),
+  ).toBeNull();
+  await user.click(
+    screen.getByRole("button", { name: "Copy the 45 min link" }),
+  );
+  expect(copy.written).toEqual([`${bookingProfile.public_url}?l=45`]);
 });

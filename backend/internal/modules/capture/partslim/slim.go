@@ -102,12 +102,10 @@ const partStoredNotice = "The bytes of this part are held in the object store, "
 // wrapped at, and the first width tried when locating an original.
 //
 // 76 is RFC 2045's own limit and what every provider in this corpus emits.
-// Measured over a forty-attachment sample of real captured mail: thirty
-// located at 76 with CRLF and restored byte-exactly; the other ten were the
-// SAME logo repeated two to four times down a quoted thread, which
-// locateEncoded refuses because bytes cannot tell one copy from another. Those
-// ten ran 760 B to 30 kB — a rounding error against the megabyte attachments
-// this exists for, and the right trade for never splicing a guess.
+// In a sample of forty attachments, thirty located at 76 with CRLF and
+// restored byte for byte. The other ten were one logo repeated two to four
+// times down a quoted thread, one part per copy. splicesFor cuts those when
+// the copies and the parts agree in number.
 //
 // The other widths exist because "every provider we have seen" is not "every
 // provider".
@@ -118,11 +116,10 @@ const base64WrapWidth = 76
 // line, however long.
 var candidateWraps = []int{base64WrapWidth, 72, 64, 998, 0}
 
-// ErrPartNotLocated says the encoded body was not found exactly once, so
-// nothing was removed. Not a fault: a provider that wrapped its base64 at a
-// width this does not try, or a message carrying the same attachment twice,
-// both land here and both are correctly left alone.
-var ErrPartNotLocated = errors.New("partslim: the part's encoded body was not located exactly once")
+// ErrPartNotLocated says the encoded body was not found once per part that
+// carries it, so nothing was removed. A width this does not try, or a file
+// whose bytes also appear outside its parts, lands here and is left alone.
+var ErrPartNotLocated = errors.New("partslim: the part's encoded body was not located once per part")
 
 // StoredPart is one part whose bytes are proved durable, with those bytes.
 type StoredPart struct {
@@ -159,15 +156,15 @@ func StripStoredParts(raw []byte, parts []StoredPart) ([]byte, int, error) {
 		return raw, 0, nil
 	}
 	splices := make([]splice, 0, len(parts))
-	for _, part := range parts {
-		s, err := spliceFor(raw, part)
+	for _, copies := range partsByBytes(parts) {
+		located, err := splicesFor(raw, copies)
 		if errors.Is(err, ErrPartNotLocated) {
 			continue
 		}
 		if err != nil {
 			return nil, 0, err
 		}
-		splices = append(splices, s)
+		splices = append(splices, located...)
 	}
 	if len(splices) == 0 {
 		return raw, 0, nil
@@ -183,43 +180,83 @@ func StripStoredParts(raw []byte, parts []StoredPart) ([]byte, int, error) {
 	return applySplices(raw, splices), len(splices), nil
 }
 
-// spliceFor locates one part and describes the replacement for it.
-func spliceFor(raw []byte, part StoredPart) (splice, error) {
-	if got := sha256Hex(part.Body); got != part.Sha256 {
-		return splice{}, fmt.Errorf("partslim: part:%d hashes to %s, its row says %s",
-			part.Ordinal, got, part.Sha256)
+// partsByBytes groups the parts that carry identical bytes, each group in
+// ordinal order, which is the order the parts appear in the message.
+func partsByBytes(parts []StoredPart) [][]StoredPart {
+	index := map[string]int{}
+	var groups [][]StoredPart
+	for _, part := range parts {
+		at, seen := index[part.Sha256]
+		if !seen {
+			at = len(groups)
+			index[part.Sha256] = at
+			groups = append(groups, nil)
+		}
+		groups[at] = append(groups[at], part)
 	}
-	encoded, width, eol, err := locateEncoded(raw, part.Body)
-	if err != nil {
-		return splice{}, err
+	for _, group := range groups {
+		sort.Slice(group, func(i, j int) bool { return group[i].Ordinal < group[j].Ordinal })
 	}
-	at := bytes.Index(raw, encoded)
-	header, err := headerBlockBefore(raw, at)
-	if err != nil {
-		return splice{}, err
-	}
-	stanza := stanzaFields(part, encoded, width, eol, header.eol)
-	return splice{
-		start: header.fieldsEnd,
-		end:   at + len(encoded),
-		// The header block's terminating blank line is re-emitted after the
-		// appended fields, so what replaces the region is: new fields, the blank
-		// line that ended the block, then the substitute body.
-		// The blank line takes the header block's own terminator, and the
-		// substitute body the one the removed body used.
-		with: concat(stanza, header.eol,
-			wrapBase64WithEOL([]byte(base64.StdEncoding.EncodeToString([]byte(partStoredNotice))),
-				base64WrapWidth, eol)),
-	}, nil
+	return groups
 }
 
-// locateEncoded finds the one encoding of body that appears in raw exactly
-// once, returning it, the width it was wrapped at, and the terminator it used.
+// splicesFor locates the parts that carry one set of bytes and describes the
+// replacement for each. k parts with the same bytes are cut only when their
+// encoding occurs k times, and the occurrences go to them in order. A further
+// copy, such as the file quoted as text, leaves them all in place.
+func splicesFor(raw []byte, copies []StoredPart) ([]splice, error) {
+	for _, part := range copies {
+		if got := sha256Hex(part.Body); got != part.Sha256 {
+			return nil, fmt.Errorf("partslim: part:%d hashes to %s, its row says %s",
+				part.Ordinal, got, part.Sha256)
+		}
+	}
+	encoded, width, eol, err := locateEncodedTimes(raw, copies[0].Body, len(copies))
+	if err != nil {
+		return nil, err
+	}
+	splices := make([]splice, 0, len(copies))
+	from := 0
+	for _, part := range copies {
+		at := from + bytes.Index(raw[from:], encoded)
+		header, err := headerBlockBefore(raw, at)
+		if err != nil {
+			return nil, err
+		}
+		if !declaresBase64(raw[:header.fieldsEnd]) {
+			// A quoted text body holding the same encoding would otherwise be
+			// cut in the place of a real part.
+			return nil, ErrPartNotLocated
+		}
+		stanza := stanzaFields(part, encoded, width, eol, header.eol)
+		splices = append(splices, splice{
+			start: header.fieldsEnd,
+			end:   at + len(encoded),
+			// The region becomes the new fields, the header block's blank line
+			// in that block's terminator, then the substitute body. The body
+			// keeps the terminator the removed body used.
+			with: concat(stanza, header.eol,
+				wrapBase64WithEOL([]byte(base64.StdEncoding.EncodeToString([]byte(partStoredNotice))),
+					base64WrapWidth, eol)),
+		})
+		from = at + len(encoded)
+	}
+	return splices, nil
+}
+
+// locateEncoded finds the one encoding of body that appears in raw once,
+// returning it, the width it was wrapped at, and the terminator it used.
 //
 // The terminator is returned rather than assumed because both are tried: a
 // restore that rebuilt an LF-wrapped body with CRLF would produce different
 // bytes and fail the digest this same call recorded.
 func locateEncoded(raw, body []byte) ([]byte, int, []byte, error) {
+	return locateEncodedTimes(raw, body, 1)
+}
+
+// locateEncodedTimes finds the encoding of body that appears in raw `times`
+// times, no more and no fewer.
+func locateEncodedTimes(raw, body []byte, times int) ([]byte, int, []byte, error) {
 	b64 := make([]byte, base64.StdEncoding.EncodedLen(len(body)))
 	base64.StdEncoding.Encode(b64, body)
 	// Sized for the narrowest candidate with CRLF, so no candidate grows it.
@@ -229,7 +266,7 @@ func locateEncoded(raw, body []byte) ([]byte, int, []byte, error) {
 			// One buffer serves every candidate, so a large attachment is held
 			// twice while it is located, not once per width tried.
 			folded = foldInto(folded[:0], b64, width, eol)
-			if bytes.Count(raw, folded) == 1 {
+			if bytes.Count(raw, folded) == times {
 				at := bytes.Index(raw, folded)
 				return raw[at : at+len(folded)], width, eol, nil
 			}

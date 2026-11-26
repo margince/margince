@@ -58,8 +58,8 @@ export const Closed: Story = {
 };
 
 /** The shape inside How it stands: one bar per phase with the days spent in
- *  it, the current bar in green, Closed as a way out. A phase not reached
- *  carries no line. */
+ *  it, the current bar in green, and the way out as the verb Close project.
+ *  A phase not reached carries no line. */
 export const Bars: Story = {
   render: phase(
     <PhaseStepper
@@ -70,6 +70,11 @@ export const Bars: Story = {
       onMove={() => {}}
     />,
   ),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("button", {
+      name: "Close project",
+    });
+  },
 };
 
 /** A move already in flight: every rung refuses a second press. */

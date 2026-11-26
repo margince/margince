@@ -117,7 +117,7 @@ func TestACrowdedMeetingNamesItsOutsideGuestsAndCreditsNone(t *testing.T) {
 	}
 
 	later := ensureGuestContact(t, e, crowdGuest(2))
-	if _, err := contacts.NewStore(e.DB()).RepairContactCohort(contactCreator(e), later); err != nil {
+	if _, err := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx).RepairContactCohort(contactCreator(e), later); err != nil {
 		t.Fatal(err)
 	}
 	if got := answeredRows(t, e, meeting)[crowdGuest(2)]; len(got) != 1 || got[0].contactID != nil {

@@ -28,6 +28,15 @@ func (c Copy) AccountMessage(invitation bool, inviter, company, link string) ema
 	return content.Message(title, string(c.Language), c.Preview(title))
 }
 
+// ReturnMessage asks an erased subject to confirm that they may be stored again.
+func (c Copy) ReturnMessage(link string) emailview.Message {
+	var content emailview.Content
+	content.Lead(c.ReturnIntro)
+	content.Action(c.ReturnAction, link)
+	content.Footnote(c.ReturnIgnore)
+	return content.Message(c.ReturnSubject, string(c.Language), c.Preview(c.ReturnSubject))
+}
+
 // RoomMessage identifies the shared material and discloses personal access and activity recording.
 func (c Copy) RoomMessage(title, inviter, company, link string, expires time.Time) emailview.Message {
 	var content emailview.Content

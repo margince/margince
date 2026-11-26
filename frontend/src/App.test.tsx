@@ -263,6 +263,12 @@ describe("locale switch", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    client.setQueryData(["reader-rendering", "previous-language"], {
+      subject: "Earlier wording",
+    });
+    client.setQueryData(["activities", "localized-presentation"], {
+      subject: "Earlier wording",
+    });
     render(
       <QueryClientProvider client={client}>
         <LocaleProvider>
@@ -293,6 +299,13 @@ describe("locale switch", () => {
       expect(screen.getByRole("link", { name: "Kontakte" })).toBeTruthy(),
     );
     expect(screen.queryByRole("link", { name: "Contacts" })).toBeNull();
+    expect(
+      client.getQueryData(["reader-rendering", "previous-language"]),
+    ).toBeUndefined();
+    expect(
+      client.getQueryState(["activities", "localized-presentation"])
+        ?.isInvalidated,
+    ).toBe(true);
   });
 });
 
@@ -581,199 +594,6 @@ describe("auth boundary states (login spec §4)", () => {
 // a password-reset link into the authenticated shell's unrecognised-route
 // fallback, and a token redeemed to completion must not strand the
 // following sign-in off the app's normal post-login redirect.
-describe("password-reset deep link", () => {
-  const supportingRoutes = async (input: Request | string | URL) => {
-    const url = String(input instanceof Request ? input.url : input);
-    if (url.endsWith("/v1/auth/capabilities")) {
-      return new Response(
-        JSON.stringify({ oidc_providers: [], password: true }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    }
-    // No digest yet, as on a new install. The catch-all list body below is no
-    // digest, and the Brief's greeting reads one the moment it arrives.
-    if (url.endsWith("/v1/digest")) {
-      return new Response(JSON.stringify({ code: "no_digest_yet" }), {
-        status: 404,
-        headers: { "Content-Type": "application/problem+json" },
-      });
-    }
-    if (url.endsWith("/v1/assistant/profile")) {
-      return new Response(
-        JSON.stringify({
-          name: "Margince",
-          kind: "ai",
-          state: "unconfigured",
-          inference_mode: "none",
-          providers: [],
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    }
-    return null;
-  };
-
-  it("opens the reset form for an already-signed-in browser, not the pending screen", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: Request | string | URL) => {
-        const supporting = await supportingRoutes(input);
-        if (supporting) return supporting;
-        const url = String(input instanceof Request ? input.url : input);
-        if (url.endsWith("/v1/me")) {
-          return new Response(
-            JSON.stringify({ user: { id: "u1" }, roles: [], teams: [] }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          );
-        }
-        return new Response(JSON.stringify({ data: [], page: {} }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }),
-    );
-    window.location.hash = "#/reset-password?token=live-session-token";
-    mount();
-    expect(await screen.findByLabelText("New password")).toBeTruthy();
-  });
-
-  it("reaches the Brief on the sign-in that follows a completed reset", async () => {
-    // No session at the start: the ordinary case for a password reset. Once
-    // the login below succeeds, /v1/me flips to authenticated — proving the
-    // sign-in actually completed the redirect rather than getting stuck
-    // because the reset route was still sitting in the hash.
-    let authenticated = false;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: Request | string | URL) => {
-        const supporting = await supportingRoutes(input);
-        if (supporting) return supporting;
-        const url = String(input instanceof Request ? input.url : input);
-        if (url.endsWith("/v1/me")) {
-          return authenticated
-            ? new Response(
-                JSON.stringify({ user: { id: "u1" }, roles: [], teams: [] }),
-                {
-                  status: 200,
-                  headers: { "Content-Type": "application/json" },
-                },
-              )
-            : new Response(JSON.stringify({ code: "unauthorized" }), {
-                status: 401,
-                headers: { "Content-Type": "application/problem+json" },
-              });
-        }
-        if (url.endsWith("/v1/auth/reset-password")) {
-          return new Response(null, { status: 204 });
-        }
-        if (url.endsWith("/v1/auth/login")) {
-          authenticated = true;
-          return new Response(JSON.stringify({}), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        if (url.endsWith("/v1/company")) {
-          return new Response(
-            JSON.stringify({ company_id: "o1", display_name: "Acme" }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          );
-        }
-        return new Response(JSON.stringify({ data: [], page: {} }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }),
-    );
-    window.location.hash = "#/reset-password?token=completed-reset-token";
-    mount();
-
-    await userEvent.type(
-      await screen.findByLabelText("New password"),
-      "an entirely new password{enter}",
-    );
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Back to sign in" }),
-    );
-    await waitFor(() =>
-      expect(window.location.hash).not.toContain("reset-password"),
-    );
-    await userEvent.type(await screen.findByLabelText("Email"), "a@b.com");
-    await userEvent.type(
-      screen.getByLabelText("Password"),
-      "an entirely new password{enter}",
-    );
-    // The rail is proof the app reached the Brief, not proof merely that /v1/me
-    // now resolves — a stale reset hash would instead leave login re-rendered
-    // with nowhere for the post-login redirect to go.
-    expect(
-      await screen.findByRole("navigation", { name: "Primary navigation" }),
-    ).toBeTruthy();
-  });
-
-  it("reaches the Brief on a sign-in from a bare reset link that never carried a token", async () => {
-    // No query string at all — a stale or hand-typed "#/reset-password" with
-    // nothing to reset. No token reaches the screen, so this mounts
-    // straight into the ordinary login form (never ResetForm, and never the
-    // "Back to sign in" step that would otherwise have cleared the hash) — the
-    // hash stays exactly "#/reset-password" through the whole sign-in.
-    let authenticated = false;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: Request | string | URL) => {
-        const supporting = await supportingRoutes(input);
-        if (supporting) return supporting;
-        const url = String(input instanceof Request ? input.url : input);
-        if (url.endsWith("/v1/me")) {
-          return authenticated
-            ? new Response(
-                JSON.stringify({ user: { id: "u1" }, roles: [], teams: [] }),
-                {
-                  status: 200,
-                  headers: { "Content-Type": "application/json" },
-                },
-              )
-            : new Response(JSON.stringify({ code: "unauthorized" }), {
-                status: 401,
-                headers: { "Content-Type": "application/problem+json" },
-              });
-        }
-        if (url.endsWith("/v1/auth/login")) {
-          authenticated = true;
-          return new Response(JSON.stringify({}), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        if (url.endsWith("/v1/company")) {
-          return new Response(
-            JSON.stringify({ company_id: "o1", display_name: "Acme" }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          );
-        }
-        return new Response(JSON.stringify({ data: [], page: {} }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }),
-    );
-    window.location.hash = "#/reset-password";
-    mount();
-
-    await userEvent.type(await screen.findByLabelText("Email"), "a@b.com");
-    await userEvent.type(
-      screen.getByLabelText("Password"),
-      "an entirely new password{enter}",
-    );
-    // The rail is proof the sign-in actually landed the reader on the app —
-    // the non-empty "#/reset-password" hash LoginForm's own redirect check
-    // preserves would otherwise leave this render stuck on the login form.
-    expect(
-      await screen.findByRole("navigation", { name: "Primary navigation" }),
-    ).toBeTruthy();
-  });
-});
-
 describe("a session confined while it is open", () => {
   it("swaps the open account page for the setup once /me answers the factor requirement", async () => {
     let confined = false;
@@ -840,6 +660,58 @@ describe("a session confined while it is open", () => {
     } finally {
       api.eject(watch);
     }
+  });
+});
+
+describe("a session that ends while it is open", () => {
+  // A refused re-read keeps the earlier answer beside its error, so the
+  // notice must follow the refusal and not the answer still held.
+  it("tells the reader on the sign-in screen that the session expired", async () => {
+    let ended = false;
+    const answer = (body: unknown, status = 200) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { "Content-Type": "application/problem+json" },
+      });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request | string | URL) => {
+        const path = new URL(
+          String(input instanceof Request ? input.url : input),
+          "http://localhost",
+        ).pathname;
+        if (ended) return answer({ code: "unauthorized" }, 401);
+        if (path === "/v1/me") return answer(meFixture());
+        if (path === "/v1/company") {
+          return answer({ company_id: "o1", display_name: "Acme" });
+        }
+        return answer({ data: [], page: {} });
+      }),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    window.location.hash = "#/settings/account";
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <App />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    await screen.findByText("Two-step sign-in");
+
+    ended = true;
+    await client.invalidateQueries({ queryKey: ["me"] });
+
+    expect(
+      await screen.findByText(
+        "The session expired. Sign in again to continue.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Sign in to Margince" }),
+    ).toBeTruthy();
   });
 });
 

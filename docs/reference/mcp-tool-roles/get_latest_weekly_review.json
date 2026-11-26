@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "latest_weekly_review",
+  "verb": "get_latest_weekly_review",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

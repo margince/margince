@@ -13,6 +13,7 @@ import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemCodeOf, problemStatus } from "../lib/problem";
 import { CaseEvidence, CasePreview } from "./contactcase.evidence";
+import { CasePreferences } from "./contactcase.prefer";
 import {
   type ContactCase,
   type ContactCaseDecision,
@@ -22,6 +23,7 @@ import {
   useContactCasePreview,
 } from "./contactcase.queries";
 import {
+  type CasePreference,
   defaultOwner,
   defaultSelection,
   dismissedWith,
@@ -31,6 +33,7 @@ import {
   pairKeep,
   pairLocked,
   pairProblem,
+  preferFor,
 } from "./contactcase.selection";
 
 type Props = Readonly<{
@@ -123,6 +126,7 @@ export function CaseForm({
   );
   // Until the reviewer picks an owner, the owner follows the kept record.
   const [ownerPicked, setOwnerPicked] = useState(false);
+  const [prefer, setPrefer] = useState<CasePreference>({});
   const preview = useContactCasePreview();
   const merge = useContactCaseMerge();
   const locked = !contactCase.can_merge;
@@ -134,6 +138,7 @@ export function CaseForm({
     member_ids: [...selected],
     survivor_id: survivor,
     owner_id: owner,
+    prefer: preferFor(contactCase, selected, survivor, prefer),
   };
   const previewed =
     preview.data && preview.variables?.body
@@ -196,20 +201,6 @@ export function CaseForm({
                   }
                   onChange={(event) => toggle(member.id, event.target.checked)}
                 />
-                <Radio
-                  name={radioName}
-                  label={t("contactCase.member.keep")}
-                  aria-label={t("contactCase.member.keepNamed", {
-                    name: memberLabel(contactCase, member.id),
-                  })}
-                  checked={survivor === member.id}
-                  disabled={
-                    locked ||
-                    !ticked ||
-                    (mustKeep !== undefined && mustKeep !== member.id)
-                  }
-                  onChange={() => choose(selected, member.id)}
-                />
                 {!ticked && against.length > 0 && (
                   <p className="t-caption">
                     {t("contactCase.member.dismissedWith", { names })}
@@ -219,6 +210,27 @@ export function CaseForm({
             );
           })}
         </ul>
+        <CaseEvidence
+          contactCase={contactCase}
+          onStale={onStale}
+          onPairMerged={onPairMerged}
+        />
+        <fieldset className="form-stack">
+          <legend>{t("contactCase.survivor.legend")}</legend>
+          <p className="t-caption">{t("contactCase.survivor.hint")}</p>
+          {selected.map((id) => (
+            <Radio
+              key={id}
+              name={radioName}
+              label={t("contactCase.member.stays", {
+                name: memberLabel(contactCase, id),
+              })}
+              checked={survivor === id}
+              disabled={locked || (mustKeep !== undefined && mustKeep !== id)}
+              onChange={() => choose(selected, id)}
+            />
+          ))}
+        </fieldset>
         <Field
           label={t("contactCase.ownerLabel")}
           hint={t("contactCase.ownerHint")}
@@ -229,7 +241,10 @@ export function CaseForm({
               aria-describedby={control["aria-describedby"]}
               options={choices.map((one) => ({
                 value: one.user_id,
-                label: one.name,
+                label:
+                  one.status === "invited"
+                    ? t("list.ownerInvited", { name: one.name })
+                    : one.name,
               }))}
               value={owner}
               placeholder={t("contactCase.ownerPlaceholder")}
@@ -241,12 +256,17 @@ export function CaseForm({
             />
           )}
         </Field>
-        {!locked && problem && <p className="t-caption">{t(problem)}</p>}
-        <CaseEvidence
+        <CasePreferences
           contactCase={contactCase}
-          onStale={onStale}
-          onPairMerged={onPairMerged}
+          selected={selected}
+          survivor={survivor}
+          prefer={prefer}
+          disabled={locked}
+          onChange={(field, member) =>
+            setPrefer((now) => ({ ...now, [field]: member }))
+          }
         />
+        {!locked && problem && <p className="t-caption">{t(problem)}</p>}
         {previewed && preview.data && (
           <CasePreview contactCase={contactCase} outcome={preview.data} />
         )}

@@ -1,0 +1,10 @@
+{
+  "verb": "replace_sales_initiative_members",
+  "checks": [
+    "sales_initiative.read",
+    "sales_initiative.update"
+  ],
+  "takes": [
+    "initiative"
+  ]
+}

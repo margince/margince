@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { CallLogHost } from "../../components/calllog.host";
+import { en } from "../../i18n/en";
 import {
   type Contact360,
   mount,
@@ -24,12 +25,20 @@ afterEach(() => {
 });
 
 // Add task is the first row of the header's menu, which mounts its rows on the
-// first open and portals them out of the header.
+// first open and portals them out of the header. The Open tasks card offers its
+// own Add task, so the row is the button the open adds.
 async function addTaskRow(header: HTMLElement): Promise<HTMLElement> {
+  const onPage = screen.queryAllByRole("button", { name: "Add task" });
   await userEvent.click(
     within(header).getByRole("button", { name: "More actions" }),
   );
-  return screen.findByRole("button", { name: "Add task" });
+  return waitFor(() => {
+    const row = screen
+      .getAllByRole("button", { name: "Add task" })
+      .find((button) => !onPage.includes(button));
+    if (!row) throw new Error("the header's menu opened no Add task row");
+    return row;
+  });
 }
 
 // The one thing a CRM must let a rep do on a contact is write down what
@@ -89,9 +98,7 @@ describe("logging an activity", () => {
     const reason = document.getElementById(
       button.getAttribute("aria-describedby") ?? "",
     );
-    expect(reason?.textContent).toBe(
-      "You do not have permission to log activities on this record.",
-    );
+    expect(reason?.textContent).toBe(en["record.actionRefused"]);
     expect(reason?.closest(".record-aside")).not.toBeNull();
   });
 
@@ -116,11 +123,7 @@ describe("logging an activity", () => {
     const header = await recordHeader();
     // Stated once on the page; the open menu then repeats it beside its
     // refused rows, which is the menu's own rule.
-    expect(
-      screen.getAllByText(
-        "You do not have permission to log activities on this record.",
-      ),
-    ).toHaveLength(1);
+    expect(screen.getAllByText(en["record.actionRefused"])).toHaveLength(1);
     const addTask = await addTaskRow(header);
     const logActivity = within(header).getByRole("button", {
       name: /Log activity/,
@@ -147,11 +150,7 @@ describe("logging an activity", () => {
     });
     expect(addTask).toHaveProperty("disabled", true);
     expect(logActivity).toHaveProperty("disabled", true);
-    expect(
-      within(header).queryByText(
-        "You do not have permission to log activities on this record.",
-      ),
-    ).toBeNull();
+    expect(within(header).queryByText(en["record.actionRefused"])).toBeNull();
   });
 
   // The button names a verb and opens the same form Log activity does,
@@ -385,9 +384,7 @@ describe("logging a call started on the page", () => {
       { contact: ["read", "update"] },
       inShell,
     );
-    await screen.findByText(
-      "You do not have permission to log activities on this record.",
-    );
+    await screen.findByText(en["record.actionRefused"]);
 
     const [number] = await screen.findAllByRole("link", { name: NUMBER });
     expect(fireEvent.click(number)).toBe(true);

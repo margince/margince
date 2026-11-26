@@ -1,7 +1,9 @@
 import type { components } from "../../api/schema";
+import type { Locale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
 import { problemCodeOf } from "../../lib/problem";
+import { wholeNumberFault } from "../../lib/wholenumber";
 
 // The retention-authoring screen's pure half: the authorable vocabulary, the
 // three states a stored policy can be in, and the two server refusals this
@@ -39,6 +41,7 @@ export const RETENTION_SCOPES = [
   "raw_capture",
   "deal_risk_day",
   "report_edition",
+  "extension",
 ] as const satisfies readonly RetentionScope[];
 
 // Ordered by how much they take away — archive keeps the record, erase does
@@ -63,6 +66,7 @@ export const SCOPE_LABEL_KEYS: Record<RetentionScope, MessageKey> = {
   "ai_call_payload/content": "retention.scopeAiCallPayloadContent",
   raw_capture: "retention.scopeRawCapture",
   deal_risk_day: "retention.scopeDealRiskDay",
+  extension: "retention.scopeExtension",
 };
 
 export function scopeLabelKey(scope: RetentionScope): MessageKey {
@@ -167,14 +171,15 @@ export function isDuplicateScope(error: unknown): boolean {
   return problemCodeOf(error) === "conflict";
 }
 
+// The window the server stores: at least a day, at most a century
+// (`RetainDaysCeiling` in backend/internal/modules/privacy/retentionpolicystore.go,
+// held equal by backend/gates/frontendretaindays_test.go).
+export const RETAIN_DAYS = { min: 1, max: 36500 } as const;
+
 /**
  * A retain-days field's value as the contract wants it, or null when what was
- * typed is not a window.
- *
- * The contract's minimum is 1 and the type is integer, so a blank field, a
- * fraction, a zero and a negative are all the same answer: not a window yet.
- * Refusing them here keeps the Save button honest rather than sending a body
- * the server can only 422.
+ * typed is not a window. Save stays off for it, so no body goes out that the
+ * server can only refuse.
  */
 export function parseRetainDays(input: string): number | null {
   const trimmed = input.trim();
@@ -182,5 +187,32 @@ export function parseRetainDays(input: string): number | null {
     return null;
   }
   const days = Number(trimmed);
-  return days >= 1 ? days : null;
+  return days >= RETAIN_DAYS.min && days <= RETAIN_DAYS.max ? days : null;
+}
+
+// The bases the product seeds, as a reader says them. An admin's own text is
+// shown as typed.
+const SEEDED_BASIS_WORDS: Readonly<Record<string, MessageKey>> = {
+  storage_limitation: "retention.basis.storage_limitation",
+};
+
+/** A stored lawful basis as the editor shows it. */
+export function lawfulBasisText(
+  stored: string | null | undefined,
+  t: (key: MessageKey) => string,
+): string {
+  if (!stored) return "";
+  const words = SEEDED_BASIS_WORDS[stored];
+  return words === undefined ? stored : t(words);
+}
+
+/** What is wrong with a typed window, said once something is typed. */
+export function retainDaysFault(
+  input: string,
+  locale: Locale,
+  label: string,
+): string | undefined {
+  return input.trim() === ""
+    ? undefined
+    : wholeNumberFault(input, locale, label, RETAIN_DAYS);
 }

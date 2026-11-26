@@ -250,6 +250,9 @@ type MergeRecordsResult struct {
 type DraftEmailResult struct {
 	Subject string `json:"subject"`
 	Body    string `json:"body"`
+	// CommunicationContext is what the instruction says the message is
+	// (draftreason), for the send to carry as its communication_context.
+	CommunicationContext string `json:"communication_context,omitempty"`
 	// InReplyToActivityID is echoed back because send_email needs it, and a
 	// caller that had to remember it across the two calls is a caller that can
 	// send a draft against the wrong thread. Absent on a FIRST message, which
@@ -443,7 +446,8 @@ type SendEmailResult struct {
 	// a caller can read, move or cancel it. Zero for a message sent now.
 	ScheduledSendID ids.UUID `json:"scheduled_send_id,omitempty"`
 	// ScheduledAt is when a deferred message is due. Empty for one sent now.
-	ScheduledAt string `json:"scheduled_at,omitempty"`
+	ScheduledAt     string                   `json:"scheduled_at,omitempty"`
+	ScheduledIntent *crmcontracts.IntentTime `json:"scheduled_intent,omitempty"`
 	// Status is what the path accepted, not what the recipient did: "accepted"
 	// means it left, "scheduled" means it will leave at ScheduledAt and every
 	// gate will be asked again then. Neither means it arrived.

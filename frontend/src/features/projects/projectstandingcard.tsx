@@ -10,7 +10,9 @@ import { formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { PROJECT_PHASES } from "../../format/projectphase";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { reveal } from "../../lib/reveal";
+import { latestWord } from "../../lib/standinglatest";
 import { activityMarks } from "../../lib/standingmarks";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useUndoProjectHealth } from "./projecthealth.queries";
@@ -31,7 +33,7 @@ import {
 // phase ladder under it, three readings beside it, the dated axis and the
 // figures. A reading the health job wrote carries the agent tag, its reason and
 // an undo. That job judges from filed activity and tasks, so the sources pill
-// still reads from CRM records.
+// still reads from CRM records; a colleague's reading names its author instead.
 
 // The days under each rung ("9 days", "18 days · now") and a dash for a rung
 // the project has not reached. Closed is a way out, not a rung.
@@ -110,7 +112,7 @@ export function ProjectStanding({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const ctx = { t, plural, locale, zone };
+  const ctx = { t, plural, locale, zone, companyZone: useCompanyZone() };
   // The 360's page seeds the line; a wider zoom pages older rows from the list.
   const history = useRecordTimeline("project", view.project.id, {
     firstPage: view.activities,
@@ -125,6 +127,11 @@ export function ProjectStanding({
   return (
     <HowItStands
       date={formatDayMonth(view.as_of, locale, zone)}
+      sources={
+        reading.kind === "assessed" && !reading.byAI
+          ? { by: "colleague" }
+          : { by: "records" }
+      }
       verdict={
         reading.kind === "assessed" && reading.byAI
           ? {
@@ -140,6 +147,12 @@ export function ProjectStanding({
             }
           : verdict
       }
+      latest={latestWord(history.activities, {
+        ...ctx,
+        record: zone,
+        asOf: view.as_of,
+        onOpen: onOpenHistory,
+      })}
       heroLayout="below"
       hero={
         <PhaseStepper

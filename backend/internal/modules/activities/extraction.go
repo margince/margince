@@ -21,6 +21,8 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // GetAttachmentExtraction answers the poll with the newest reading of this
@@ -132,7 +134,7 @@ func requestAccessLinks(entityType crmcontracts.AttachmentEntityType, entityID i
 // requestAccessBody renders the courtesy note's body: the filename, so the
 // timeline entry is legible without opening the attachment.
 func requestAccessBody(filename string) *string {
-	body := "Access requested: " + filename
+	body := systemtext.Canonical(systemtext.Sentence("activity.access_requested", systemtext.Label(filename)), textlang.English)
 	return &body
 }
 
@@ -152,10 +154,11 @@ func (h Handlers) RequestAttachmentAccess(w http.ResponseWriter, r *http.Request
 		return
 	}
 	_, _, err = h.store.LogActivity(r.Context(), LogActivityInput{
-		Kind:   string(crmcontracts.ActivityKindNote),
-		Body:   requestAccessBody(att.Filename),
-		Links:  requestAccessLinks(att.EntityType, ids.UUID(att.EntityId)),
-		Source: requestAccessSource,
+		Kind:       string(crmcontracts.ActivityKindNote),
+		Body:       requestAccessBody(att.Filename),
+		SystemText: &systemtext.Message{Body: systemtext.Sentence("activity.access_requested", systemtext.Label(att.Filename))},
+		Links:      requestAccessLinks(att.EntityType, ids.UUID(att.EntityId)),
+		Source:     requestAccessSource,
 	})
 	if err != nil {
 		writeStoreErr(w, r, err)

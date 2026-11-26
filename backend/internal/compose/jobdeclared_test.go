@@ -508,6 +508,7 @@ var argsForKind = map[string]river.JobArgs{
 	AIActivityReconcileArgs{}.Kind():     AIActivityReconcileArgs{},
 	AIActivityRetentionArgs{}.Kind():     AIActivityRetentionArgs{},
 	MailDraftRetentionArgs{}.Kind():      MailDraftRetentionArgs{},
+	OAuthClientUnusedSweepArgs{}.Kind():  OAuthClientUnusedSweepArgs{},
 	RequestProofExpiryArgs{}.Kind():      RequestProofExpiryArgs{},
 	WaitingHorizonRefreshArgs{}.Kind():   WaitingHorizonRefreshArgs{},
 	EvidenceAuthorshipArgs{}.Kind():      EvidenceAuthorshipArgs{},
@@ -519,4 +520,5 @@ var argsForKind = map[string]river.JobArgs{
 	PrivacyRetentionArgs{}.Kind():        PrivacyRetentionArgs{},
 	ProviderRunSubmitArgs{}.Kind():       ProviderRunSubmitArgs{},
 	TelegramPollArgs{}.Kind():            TelegramPollArgs{},
+	ChatPullArgs{}.Kind():                ChatPullArgs{},
 }

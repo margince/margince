@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "company_for_address",
+  "verb": "get_company_for_address",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

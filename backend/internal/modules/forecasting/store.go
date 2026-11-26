@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -62,8 +63,9 @@ const (
 
 // Store owns the forecast tables.
 type Store struct {
-	db   *database.DB
-	lens SnapshotLens
+	db           *database.DB
+	lens         SnapshotLens
+	focusActions FocusActionsFunc
 }
 
 // SnapshotLens narrows a frozen snapshot to what the caller may see: it refuses
@@ -297,6 +299,9 @@ func checkCall(in NewCall) (string, error) {
 			Message: "a called amount names the currency it is in",
 		}
 	}
+	if err := values.RequireAssignableCurrency(in.Currency); err != nil {
+		return "", err
+	}
 	if err := checkScope(in.Scope); err != nil {
 		return "", err
 	}
@@ -453,9 +458,9 @@ func nullIfEmpty(s string) *string {
 // field so the answer points at what to shorten.
 func bounded(field, value string, limit int) (string, error) {
 	trimmed := strings.TrimSpace(value)
-	if len(trimmed) > limit {
+	if utf8.RuneCountInString(trimmed) > limit {
 		return "", &values.ParseError{
-			Field: field, Code: "too_long",
+			Field: field, Code: "too_long", Max: limit,
 			Message: fmt.Sprintf("%s is at most %d characters", field, limit),
 		}
 	}

@@ -53,8 +53,13 @@ function useDealSummary(dealId: string) {
 function dealSummaryQuery(dealId: string) {
   return {
     queryKey: ["deal", dealId],
-    queryFn: async (): Promise<Deal | null> => {
+    queryFn: async ({
+      signal,
+    }: {
+      signal: AbortSignal;
+    }): Promise<Deal | null> => {
       const { data, error, response } = await api.GET("/deals/{id}", {
+        signal,
         params: { path: { id: dealId } },
       });
       if (error) {
@@ -78,11 +83,12 @@ function useDealCompany(companyId: string | null | undefined) {
   return useQuery({
     queryKey: ["company", companyId ?? null],
     enabled: companyId != null,
-    queryFn: async (): Promise<Company | null> => {
+    queryFn: async ({ signal }): Promise<Company | null> => {
       if (!companyId) {
         return null;
       }
       const { data, error, response } = await api.GET("/companies/{id}", {
+        signal,
         params: { path: { id: companyId } },
       });
       if (error) {
@@ -166,6 +172,9 @@ function DealTile({ role }: Readonly<{ role: DealRole }>) {
               {role.deal_stage ?? t("contact.deals.noStage")}
             </Badge>
             {roleWord && <Badge>{roleWord}</Badge>}
+            {role.seat_current === false && (
+              <Badge>{t("contact.deals.seatEnded")}</Badge>
+            )}
           </>
         }
       />
@@ -186,6 +195,7 @@ function DealRow({
   const meta = [
     role.deal_stage ?? t("contact.deals.noStage"),
     closeLine(deal, t, locale, readerZone),
+    role.seat_current === false ? t("contact.deals.seatEnded") : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -283,19 +293,20 @@ function Committee({ members }: Readonly<{ members: CommitteeMember[] }>) {
   return (
     <p className="t-caption ct-committee">
       <span>{t("contact.commercial.committee")}</span>
-      {members.map((member) => (
-        <span className="ct-seat" key={member.contact_id}>
-          <span className="ct-seat-name">{member.full_name}</span>
-          {member.role && (
-            <>
-              {" "}
-              <span className="ct-seat-role">
-                {dealRoleLabel(member.role, t)}
-              </span>
-            </>
-          )}
-        </span>
-      ))}
+      {members.map((member) => {
+        const role = dealRoleLabel(member.role ?? "", t);
+        return (
+          <span className="ct-seat" key={member.contact_id}>
+            <span className="ct-seat-name">{member.full_name}</span>
+            {role && (
+              <>
+                {" "}
+                <span className="ct-seat-role">{role}</span>
+              </>
+            )}
+          </span>
+        );
+      })}
     </p>
   );
 }

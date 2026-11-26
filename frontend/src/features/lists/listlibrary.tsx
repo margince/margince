@@ -18,14 +18,20 @@ import {
 } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { useTruncationTooltip } from "../../design-system/tooltip";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { RECORDS_COUNT_LABEL } from "../../lib/filtersaddress";
-import { problemMessageOf } from "../../lib/problem";
-import { navigate, routeHash } from "../../lib/router";
+import {
+  listEntityTypeOf,
+  RECORDS_COUNT_LABEL,
+} from "../../lib/filtersaddress";
+import { fromHere } from "../../lib/navigatefrom";
+import { blankRequired, problemMessageOf } from "../../lib/problem";
+import { recordKindLabel, useRecordKindDirectory } from "../../lib/recordkinds";
+import { routeHash } from "../../lib/router";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
 import {
   isArchived,
@@ -33,7 +39,6 @@ import {
   type LibraryGroup,
   type LibraryItem,
   nameOf,
-  resourceOf,
 } from "./library";
 import "../voice-knowledge/library.css";
 import { labelFor } from "../../lib/labelfor";
@@ -45,6 +50,7 @@ import {
 import {
   type ListAudience,
   ListAudienceFields,
+  useDefaultAudience,
   useListAudienceLabel,
 } from "./listsharing";
 import { DeleteViewAction, RenameViewAction } from "./viewactions";
@@ -89,6 +95,9 @@ export function ListHealthBadge({
   list,
 }: Readonly<{ list: Pick<List, "health"> }>) {
   const t = useT();
+  if (list.health === "unavailable") {
+    return <Badge>{t("lists.health.unavailable")}</Badge>;
+  }
   if (list.health === "ownerless") {
     return <Badge tone="warning">{t("lists.health.ownerless")}</Badge>;
   }
@@ -102,9 +111,9 @@ export function ListHealthBadge({
 }
 
 /**
- * Which table a group draws. Only me and Shared carry the kind, since both
- * hold views and lists; Shared adds who can find each row. With lists off,
- * every row is a saved view, so the kind says nothing and is left out.
+ * Which table a group draws. Both list groups carry the kind and who can find
+ * each list, so a list the reader shares reads as shared in their own group.
+ * With lists off, every row is a saved view, and both are left out.
  */
 export type LibraryTableGroup = LibraryGroup | "views";
 
@@ -167,13 +176,15 @@ export function LibraryTable({
     header: t("lists.sharingLabel"),
     render: (item) => (item.kind === "list" ? audienceOf(item.list) : null),
   };
+  const listsHere = group !== "views";
+  const anyList = items.some((item) => item.kind === "list");
   const columns = folded
     ? [name, more]
     : [
         name,
-        ...(group === "views" ? [] : [kind]),
+        ...(listsHere ? [kind] : []),
         records,
-        ...(group === "shared" ? [who] : []),
+        ...(listsHere && anyList ? [who] : []),
         more,
       ];
   return (
@@ -235,7 +246,7 @@ function LibraryFacts({
     <span className="t-caption library-facts">
       {group !== "views" && <LibraryKind item={item} />}
       <LibraryRecords item={item} />
-      {group === "shared" && item.kind === "list" && (
+      {group !== "views" && item.kind === "list" && (
         <span>{audienceOf(item.list)}</span>
       )}
     </span>
@@ -286,8 +297,16 @@ export function ListRecordsCount({
  */
 function LibraryRecords({ item }: Readonly<{ item: LibraryItem }>) {
   const t = useT();
+  const directory = useRecordKindDirectory().data?.data ?? [];
   if (item.kind === "view") {
-    return <span>{t(labelFor(RECORD_TYPE_LABEL, resourceOf(item)))}</span>;
+    const type = listEntityTypeOf(item.tab);
+    return (
+      <span>
+        {type
+          ? t(RECORD_TYPE_LABEL[type])
+          : recordKindLabel(item.tab, directory)}
+      </span>
+    );
   }
   return (
     <span className="library-records">
@@ -356,32 +375,51 @@ export function ListPulseBadge({
 /**
  * "New Shortlist": an empty list of chosen records, named and typed here and
  * filled from a selection or a record page. A Live List is made from the
- * builder instead, where its filter is previewed before it is saved. It
- * starts with the audience its caller names.
+ * builder instead, where its filter is previewed before it is saved.
  */
-export function NewShortlistAction({
-  defaultAudience,
-}: Readonly<{ defaultAudience: ListAudience }>) {
+export function NewShortlistAction() {
   const t = useT();
+  const { locale } = useLocale();
+  const defaultAudience = useDefaultAudience();
   const create = useCreateList();
   const [open, setOpen] = useState(false);
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const nameLabel = t("lists.name");
   const [name, setName] = useState("");
   const [purpose, setPurpose] = useState("");
   const [entityType, setEntityType] = useState<ListRecordType>("contact");
   const [audience, setAudience] = useState<ListAudience>(defaultAudience);
   return (
     <>
-      <Button onClick={() => setOpen(true)}>{t("lists.newShortlist")}</Button>
+      <Button
+        onClick={() => {
+          // Every opening starts from nothing typed before: a kept draft under
+          // a reset audience would be shared wider than the reader chose.
+          setName("");
+          setPurpose("");
+          setEntityType("contact");
+          setAudience(defaultAudience);
+          create.reset();
+          faults.show(new Map());
+          setOpen(true);
+        }}
+      >
+        {t("lists.newShortlist")}
+      </Button>
       <ConfirmModal
         open={open}
         onClose={() => setOpen(false)}
         intent="form"
         title={t("lists.newShortlistTitle")}
         confirmLabel={t("lists.create")}
-        confirmDisabled={name.trim() === ""}
+        bodyRef={faultsRoot}
         pending={create.isPending}
         error={create.isError ? problemMessageOf(create.error, t) : null}
-        onConfirm={() =>
+        onConfirm={() => {
+          if (faults.show(blankRequired(locale, { name: [nameLabel, name] }))) {
+            return;
+          }
+          const from = fromHere();
           create.mutate(
             {
               name: name.trim(),
@@ -394,18 +432,21 @@ export function NewShortlistAction({
             {
               onSuccess: (list) => {
                 setOpen(false);
-                navigate({ screen: "lists", id: list.id });
+                from.navigate({ screen: "lists", id: list.id });
               },
             },
-          )
-        }
+          );
+        }}
       >
-        <Field label={t("lists.name")}>
+        <Field label={nameLabel} required error={faults.of("name")}>
           {(control) => (
             <TextInput
               {...control}
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => {
+                setName(event.target.value);
+                faults.edited("name");
+              }}
             />
           )}
         </Field>

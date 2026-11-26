@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { meFixture } from "../testing/mefixture";
 import { settingsReach, visibleSettingsPages } from "./settingscatalog";
 
@@ -70,12 +71,16 @@ describe("what the rail carries and what it leaves behind", () => {
       // domains is not wanted, that CARD's grant is the thing to change — the
       // rail is only reporting what the card already allows.
       "capture",
+      // Reading About is the act, so it lands in `acts` for every reader.
+      "about",
     ]);
   });
 
   it("leaves the pages a rep can only read out of the rail, not out of reach", () => {
     const reach = settingsReach(seededRep);
     expect(reach.looksUp.map((page) => page.id)).toEqual([
+      // Every member reads the teams; only a team verb changes one.
+      "teams",
       // Pipelines and the deal vocabularies: a rep reads the stages, picks a
       // source or a loss reason and answers the review, and changes none.
       "deals",
@@ -108,11 +113,11 @@ describe("what the rail carries and what it leaves behind", () => {
       const reach = settingsReach(snapshot);
       const partitioned = [...reach.acts, ...reach.looksUp]
         .map((page) => page.id)
-        .sort();
+        .sort(stable);
       expect(partitioned).toEqual(
         visibleSettingsPages(snapshot)
           .map((page) => page.id)
-          .sort(),
+          .sort(stable),
       );
       expect(new Set(partitioned).size).toBe(partitioned.length);
     }

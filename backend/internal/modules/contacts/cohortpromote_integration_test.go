@@ -5,27 +5,22 @@
 
 package contacts
 
-// The cohort repair over a real Postgres: a contact who arrives AFTER their mail
-// still ends up with that mail on their record.
+// A contact who arrives after their mail still ends up with that mail on their record.
 //
-// This needs a database because everything that makes the repair safe is a
-// constraint or a predicate the unit lane cannot see — uq_activity_participant
-// refusing a second row for one party, uq_activity_link making a re-run a no-op,
-// and the merge redirect deciding which id the link is written under.
-//
-// The failure it guards is silent and total, and it shipped: a Gmail backfill
-// walks newest-first, so the contact is created partway through the run and every
-// message captured before that moment kept an address-only participant row and no
-// link. Nothing errored. The company page just said "no reply for 47 days" about
-// somebody who had written that week.
+// It needs a database, because what makes the repair safe is held there.
+// uq_activity_participant_identity refuses a second row for one party, and
+// uq_activity_link makes a second run change nothing.
+// The merge redirect decides which id the link is written under.
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -339,4 +334,18 @@ func earlierIDStrings(activities []ids.ActivityID) []string {
 		out = append(out, a.String())
 	}
 	return out
+}
+
+// A contact the table no longer holds is reported as gone. A failed read is not,
+// so the caller can tell the two apart.
+func TestTheCohortRepairOfAContactThatIsGoneIsNotFound(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := e.store.PromoteContactCohortTx(ctx, tx, ids.New[ids.ContactKind]())
+		return err
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("repairing the cohort of a missing contact = %v, want ErrNotFound", err)
+	}
 }

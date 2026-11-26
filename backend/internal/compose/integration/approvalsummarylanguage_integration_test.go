@@ -60,7 +60,7 @@ func TestAHeldSendCardIsWrittenInTheInstallationsBaseLanguage(t *testing.T) {
 	ctx := e.Admin()
 
 	SetBaseLanguage(ctx, t, e.Pool, "de")
-	german := `"Angebot Q3" wurde nicht gesendet: eine Prüfung hat den Versand zum Sendezeitpunkt abgelehnt`
+	german := `„Angebot Q3“ wurde nicht gesendet: eine Prüfung hat den Versand zum Sendezeitpunkt abgelehnt`
 	if got := holdAndReadSummary(ctx, t, e); got != german {
 		t.Errorf("the installation is set to German and the card reads %q, want %q", got, german)
 	}
@@ -69,7 +69,7 @@ func TestAHeldSendCardIsWrittenInTheInstallationsBaseLanguage(t *testing.T) {
 	// constant: a test asserting only German passes against code that always
 	// writes German.
 	SetBaseLanguage(ctx, t, e.Pool, "en")
-	english := `"Angebot Q3" was not sent: a gate refused it at send time`
+	english := `“Angebot Q3” was not sent: a gate refused it at send time`
 	if got := holdAndReadSummary(ctx, t, e); got != english {
 		t.Errorf("the installation was changed to English and the card reads %q, want %q", got, english)
 	}

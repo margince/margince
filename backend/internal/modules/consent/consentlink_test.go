@@ -67,7 +67,7 @@ func TestARecordLinkStillCarriesCorrections(t *testing.T) {
 // violation, and it happens before any database work.
 func TestAConsentLinkRefusesWithoutAPurpose(t *testing.T) {
 	_, err := (&Store{}).IssueConsentLink(context.Background(),
-		ids.New[ids.ContactKind](), ids.PurposeID{}, "")
+		ids.New[ids.ContactKind](), ids.PurposeID{}, "", "")
 	if err == nil {
 		t.Fatal("a consent link with no purpose must be refused before it is minted")
 	}
@@ -91,7 +91,8 @@ func TestAConsentLinkReadServesOnlyTheSubscriptionQuestion(t *testing.T) {
 	for field := range ct.Fields() {
 		got[field.Name] = true
 	}
-	want := map[string]bool{"PurposeKey": true, "PurposeLabel": true, "State": true}
+	// Frequency is part of the subscription: the question states it.
+	want := map[string]bool{"PurposeKey": true, "PurposeLabel": true, "Frequency": true, "State": true}
 
 	for name := range got {
 		if !want[name] {

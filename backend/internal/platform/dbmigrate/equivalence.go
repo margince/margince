@@ -25,6 +25,10 @@ package dbmigrate
 // half differs need that checked separately; equal up-schemas do not imply it.
 var equivalentContent = map[string]map[string][]equivalence{
 	"core": {
+		// The up SQL is unchanged. The down restores the validated provider vocabulary;
+		// its rollback test admits the old digest and preserves live credential references.
+		"1794379079": {{applied: "b072a9301b6a7adb4b5cfdc6e97461da09d02a515fbbe3725e681ee393f0e499", source: "07383c2e7cf9d9e126f51d9e9e07ae406507b5c7517b53b5a30967dd8714947c"}},
+		"1794412054": {{applied: "7095201fa85775e88f7fa30e3c6e1c33a274f457f9e37118b74a51da14bfddcd", source: "a6d8d5969440802eb035846f76246f9b7e59b5f6b76b6be0a9fa11a73092cbb0"}},
 		// 1789122755 is the migration that renamed the company record type's
 		// columns. It rewrote stored row values BEFORE the PL/pgSQL function
 		// bodies naming the renamed columns, so on a database holding rows the
@@ -79,6 +83,28 @@ var equivalentContent = map[string]map[string][]equivalence{
 			applied: "d5ec53c23e2347fadc65f9bdd9d63e9dfae40c6897c1e1b8c59f046c8e99eb0e",
 			source:  "76336c558410fc1ee67862f22fb4689b5f9655917af35617f55c11b31f154669",
 		}},
+		// a_unit_sql_runs_as_the_ext_runtime_role first shipped as 1794364497 and
+		// resetting the ext_runtime role always. The source resets it only when an
+		// attribute is wrong. Both leave the same role and grants, and the down
+		// half is unchanged. The applied half is that first text under 1794364497:
+		// a database holding it reaches this version through renumbered.txt.
+		"1794412052": {{
+			applied: "8e277071e58fc236abf58acb178be1c8efbeb0014ef3440f49db0809546e401c",
+			source:  "1822dfeae5b85103a5fb20e819c4f4258c0d3aa4c5b4ef5ea71130c057a53024",
+		}},
+		// The applied pair rewrote decisions holding the retired basis to consent
+		// and refused a stored basis row, then validated both checks. The current
+		// pair keeps every row and validates a check only when no row breaks it.
+		// A database that applied the old pair holds no such row, so both checks
+		// end validated with the same lists. The down halves differ in comments.
+		"1795388887": {{
+			applied: "0ab57237649bd663379393576642774b89df7bc0312e6842025d6b905b38351f",
+			source:  "78902b05da28b4f0c85fef69c26058f08ba6867b810e0795eb2ab1b08a0d92b0",
+		}},
+		"1795388888": {{
+			applied: "d641a312d5aaefa1f060757a73f000fcd7045c7ac855fc6d18f2668a24c928e7",
+			source:  "15cea25a279872b10bc758ef84c7c9379365648ee9ec844d573d84285a14ecd8",
+		}},
 	},
 }
 
@@ -95,11 +121,20 @@ var equivalentContent = map[string]map[string][]equivalence{
 // (backend/internal/platform/dbmigrate/dbmigrate_test.go), which puts the same
 // three cases to this and to assertContentMatches and compares their verdicts.
 func ContentAdmitted(namespace string, m Migration, applied string) bool {
-	current := Digest(m)
-	if applied == current {
-		return true
-	}
-	for _, eq := range equivalentContent[namespace][m.Version] {
+	return applied == Digest(m) || equivalentTo(namespace, m, applied)
+}
+
+// equivalentTo answers whether a checked entry for m's version names applied
+// as building the schema m's source builds today.
+func equivalentTo(namespace string, m Migration, applied string) bool {
+	return pairedWith(namespace, m.Version, Digest(m), applied)
+}
+
+// pairedWith answers whether a checked entry for version names applied as
+// building what current builds. A replaced version whose file is gone has no
+// source to hash, so its manifest digest stands in as current.
+func pairedWith(namespace, version, current, applied string) bool {
+	for _, eq := range equivalentContent[namespace][version] {
 		if applied == eq.applied && current == eq.source {
 			return true
 		}

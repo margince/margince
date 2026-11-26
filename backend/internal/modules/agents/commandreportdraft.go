@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
 
@@ -34,6 +35,7 @@ func (r draftReportResolver) Subject(ctx context.Context, cmd DraftReportCommand
 	return StageInfo{
 		TargetType: reportDefinitionRecordType,
 		TargetID:   cmd.ReportID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.draftReport", systemtext.Text(fmt.Sprint(cmd.ReportID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).draftReport, cmd.ReportID),
 	}, nil
 }

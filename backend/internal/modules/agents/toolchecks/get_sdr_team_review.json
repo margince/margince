@@ -1,0 +1,7 @@
+{
+  "verb": "get_sdr_team_review",
+  "checks": [
+    "installation_settings.read",
+    "lead.read"
+  ]
+}

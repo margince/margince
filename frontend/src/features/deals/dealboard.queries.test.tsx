@@ -7,7 +7,9 @@ import {
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stable } from "../../format/collate";
 import type { DealFilters } from "../../lib/deals.queries";
+import { meFixture } from "../../testing/mefixture";
 import { STAGE_COLUMN_LIMIT, useStageColumns } from "./dealboard.queries";
 
 afterEach(() => {
@@ -87,7 +89,11 @@ const noDials: DealFilters = {
 };
 
 function newClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
+  return client;
 }
 
 function renderColumns(
@@ -151,9 +157,11 @@ describe("useStageColumns", () => {
     );
     await waitFor(() => expect(result.current.isPending).toBe(false));
 
-    expect(asked.map((url) => url.searchParams.get("stage_id")).sort()).toEqual(
-      ["s1", "s2"],
-    );
+    expect(
+      asked
+        .map((url) => url.searchParams.get("stage_id"))
+        .sort((a, b) => stable(String(a), String(b))),
+    ).toEqual(["s1", "s2"]);
     for (const url of asked) {
       expect(url.searchParams.get("limit")).toBe(String(STAGE_COLUMN_LIMIT));
       expect(url.searchParams.get("pipeline_id")).toBe("pl");

@@ -21,11 +21,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -83,6 +86,37 @@ type Acquisition struct {
 	// OccurredAt records the acquisition or captured activity time when known.
 	// An unknown source needs review; capture time only bounds a confirmed indirect duty.
 	OccurredAt *time.Time
+	// StatedSource is where the user creating the contact by hand said it
+	// came from, and Note their own words beside it. Both reach the contact's
+	// privacy page. They leave Kind alone: what a rep says about a card is not
+	// the act a kind records.
+	StatedSource string
+	Note         string
+}
+
+// statedAcquisition checks what the create request says about its source.
+// "other" says nothing on its own, so it needs the note.
+func statedAcquisition(source *crmcontracts.ContactStatedSource, note *string) (Acquisition, error) {
+	var out Acquisition
+	if note != nil {
+		out.Note = strings.TrimSpace(*note)
+		if err := httperr.RequireWithin("acquisition_note", out.Note, 500); err != nil {
+			return Acquisition{}, err
+		}
+	}
+	if source == nil || *source == "" {
+		return out, nil
+	}
+	if !source.Valid() {
+		return Acquisition{}, httperr.Validation("acquisition_source", "invalid",
+			"pick met in person, business card, referral, website or other")
+	}
+	if *source == crmcontracts.ContactStatedSourceOther && out.Note == "" {
+		return Acquisition{}, httperr.Validation("acquisition_note", "required",
+			"say where the contact came from when the source is other")
+	}
+	out.StatedSource = string(*source)
+	return out, nil
 }
 
 // recordAcquisition writes one evidence row beside a contact that was just
@@ -94,16 +128,46 @@ type Acquisition struct {
 // question unasked.
 func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, in Acquisition, capturedBy string) error {
 	in = normalizedAcquisition(in)
+	var entity *ids.UUID
+	if user := storekit.SenderOf(ctx); !user.IsZero() {
+		resolved, err := storekit.LegalEntityOf(ctx, tx, user)
+		if err != nil {
+			return err
+		}
+		entity = &resolved
+	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by)
-		VALUES ($1, $2, $3, $4)`,
-		contactID, in.Kind, in.OccurredAt, capturedBy); err != nil {
+		INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by, legal_entity_id, stated_source, note)
+		VALUES (@contact, @kind, @occurred, @actor, @entity, nullif(@stated, ''), nullif(@note, ''))`,
+		pgx.StrictNamedArgs{
+			contactKey: contactID, acquisitionKindField: in.Kind, "occurred": in.OccurredAt, actorKey: capturedBy,
+			"entity": entity, "stated": in.StatedSource, "note": in.Note,
+		}); err != nil {
 		return fmt.Errorf("contacts: recording how this contact was acquired: %w", err)
 	}
 	return nil
 }
 
-const acquisitionActivityEntity = "activity"
+// AcquisitionSource is the kind of record a piece of acquisition evidence cites.
+// The schema CHECK on contact_acquisition_evidence.source_entity_type is held
+// equal to this set. Only a mail is written today; consent reads evidence that
+// cites a deal.
+type AcquisitionSource string
+
+// The kinds of record acquisition evidence cites.
+const (
+	AcquisitionSourceActivity AcquisitionSource = "activity"
+	AcquisitionSourceDeal     AcquisitionSource = "deal"
+)
+
+const acquisitionActivityEntity = string(AcquisitionSourceActivity)
+
+// The named arguments for the contact a write is about and the seat it records
+// as its author.
+const (
+	contactKey = "contact"
+	actorKey   = "actor"
+)
 
 // RecordSubjectWroteTx records, once, that an existing contact has written to
 // us — evidence that arrived after the contact was created.
@@ -129,7 +193,7 @@ func RecordSubjectWroteTx(
  (contact_id, kind, source_entity_type, source_entity_id, occurred_at, captured_by)
  SELECT @proof_contact, @kind, @proof_entity, @mail, @sent, @actor
  WHERE NOT EXISTS (SELECT 1 FROM contact_acquisition_evidence WHERE contact_id = @proof_contact AND kind = @kind)
- RETURNING id`, pgx.NamedArgs{"proof_contact": contactID, "proof_entity": acquisitionActivityEntity, acquisitionKindField: AcquiredSubjectInitiated, "mail": mail, "sent": sent, "actor": capturedBy}).Scan(&proof)
+ RETURNING id`, pgx.NamedArgs{"proof_contact": contactID, "proof_entity": acquisitionActivityEntity, acquisitionKindField: AcquiredSubjectInitiated, "mail": mail, "sent": sent, actorKey: capturedBy}).Scan(&proof)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}

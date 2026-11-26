@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
@@ -107,6 +108,9 @@ func (a *httpAPI) get(ctx context.Context, accessToken, fullURL string, hdr http
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Prefer", immutableMessageIDs)
+	if a.maxPageSize > 0 {
+		req.Header.Add("Prefer", "odata.maxpagesize="+strconv.Itoa(a.maxPageSize))
+	}
 	for k, vs := range hdr {
 		for _, v := range vs {
 			req.Header.Add(k, v)

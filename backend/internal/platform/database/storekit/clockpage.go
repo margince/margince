@@ -20,13 +20,19 @@ const (
 	// ClockNotFolded is a stored clock that is not what its fold function
 	// now gives, whatever older rule left it.
 	ClockNotFolded
+	// ClockStrengthUnfolded is a live contact whose stored strength dates were
+	// never folded from its history. Only the contact table has them.
+	ClockStrengthUnfolded
 )
 
 // clockRuleSQL renders rule over the record aliased t. Both arms are
 // compile-time text and a constant table name.
 func clockRuleSQL(rule ClockRule, table ClockTable) string {
-	if rule == ClockNotFolded {
+	switch rule {
+	case ClockNotFolded:
 		return `t.last_activity_at IS DISTINCT FROM last_activity_of_` + clockTableIdent(table) + `(t.id)`
+	case ClockStrengthUnfolded:
+		return `(NOT t.strength_folded AND t.archived_at IS NULL)`
 	}
 	return `coalesce(t.last_activity_at > now(), false)`
 }

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Translator } from "../../i18n";
+import { CF_TYPES } from "../../lib/customfields.logic";
 import type { ImportObject, ImportReasonCode } from "./importtypes";
 
 const OBJECTS: readonly ImportObject[] = [
@@ -21,16 +22,6 @@ const OBJECT_OF_PLURAL: Readonly<Record<string, ImportObject>> = {
   activities: "activity",
 };
 
-const FIELD_TYPES = [
-  "text",
-  "number",
-  "date",
-  "currency",
-  "multiselect",
-  "picklist",
-  "boolean",
-] as const;
-
 function objectOf(value: string): ImportObject | undefined {
   return OBJECTS.find((one) => one === value) ?? OBJECT_OF_PLURAL[value];
 }
@@ -44,7 +35,7 @@ function inReadersWords(
   const out: Record<string, string> = {};
   for (const [name, value] of Object.entries(params)) {
     const object = objectOf(value);
-    const fieldType = FIELD_TYPES.find((one) => one === value);
+    const fieldType = CF_TYPES.find((one) => one === value);
     if (object && ["plural", "object", "from", "to"].includes(name)) {
       out[name] = t(`import.object.${object}`);
     } else if (fieldType && name === "type") {

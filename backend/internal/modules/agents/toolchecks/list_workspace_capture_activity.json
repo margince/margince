@@ -1,0 +1,6 @@
+{
+  "verb": "list_workspace_capture_activity",
+  "checks": [
+    "capture_trace.read"
+  ]
+}

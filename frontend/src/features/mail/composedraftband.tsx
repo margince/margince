@@ -1,34 +1,33 @@
 import { Sparkles } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 import type { components } from "../../api/schema";
 import { ActionRow } from "../../design-system/actionrow";
 import { Badge, Button } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { Heading } from "../../design-system/heading";
 import { identifierNumber } from "../../format/format";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { useOpenEmail } from "../../lib/openemail";
+import { REWRITES, type RewriteVerb } from "../../lib/rewrites";
 import { useViewerZone } from "../../lib/viewerzone";
 import { openCitation } from "../records/record360";
 import { VoiceDegradedNotice } from "./compose.notices";
+import {
+  type DraftProvenance,
+  isTemplateDraft,
+  modelWrote,
+} from "./composedraftcall";
 import { DraftReasons } from "./composedraftcontext";
 import { OpenEmailDrawer } from "./openemaildrawer";
 
-type EmailDraft = components["schemas"]["EmailDraft"];
 type VoiceProfile = components["schemas"]["VoiceProfile"];
 
 // What the AI band says about a draft nobody typed, and the rewrites offered
 // under it. Extracted from compose.tsx unchanged.
 //
 // The two belong together: the band discloses that a machine wrote the words,
-// and every rewrite row asks that machine to write them again. A surface that
-// showed one without the other would either disclose nothing or offer a rewrite
-// of prose the reader believes they wrote themselves.
-
-type DraftProvenance = Pick<
-  EmailDraft,
-  "ai_generated" | "ai_disclosure" | "voice_profile_version" | "voice_degraded"
->;
+// and a rewrite asks that machine to write them. A rewrite of the rep's own
+// words fills the body with model words, so the disclosure follows it.
 
 // Keep the server's disclosure verbatim, with a fallback when it is missing.
 // One line at the head of the band, then the rep's verbs on the machine's
@@ -49,8 +48,33 @@ export function DraftBand({
   // One shared email drawer keeps sources from opening competing dialogs.
   const [openEmail, setOpenEmail] = useOpenEmail();
   const zone = useViewerZone();
-  if (!provenance.ai_generated) {
-    return null;
+  const sources = (
+    <>
+      <DraftReasons
+        reasons={reasons}
+        onOpenRecord={openCitation}
+        onOpenEmail={setOpenEmail}
+      />
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={zone}
+        onClose={() => setOpenEmail(null)}
+      />
+    </>
+  );
+  if (!modelWrote(provenance)) {
+    return isTemplateDraft(provenance) ? (
+      <div className="compose-band-body">
+        <Callout
+          tone="info"
+          kind="outcome"
+          title={t("compose.templateDraftTitle")}
+        >
+          {t("compose.templateDraft")}
+        </Callout>
+        {sources}
+      </div>
+    ) : null;
   }
   return (
     <div className="compose-band-body">
@@ -78,16 +102,7 @@ export function DraftBand({
         </p>
         {actions && <ActionRow>{actions}</ActionRow>}
       </div>
-      <DraftReasons
-        reasons={reasons}
-        onOpenRecord={openCitation}
-        onOpenEmail={setOpenEmail}
-      />
-      <OpenEmailDrawer
-        activityId={openEmail}
-        zone={zone}
-        onClose={() => setOpenEmail(null)}
-      />
+      {sources}
       <VoiceDegradedNotice degraded={provenance.voice_degraded} />
       {provenance.voice_profile_version != null &&
         maturity === "provisional" && (
@@ -100,44 +115,9 @@ export function DraftBand({
   );
 }
 
-// The four things a rep asks the machine to do to its own draft, as one press
-// each. Each is an instruction for ONE call — it never becomes the standing
-// steer in the intent field.
-// The label a rep reads and the instruction the model is given are two
-// different strings and both are translated: the button says "Shorter" and the
-// model is asked for it in a sentence, because an instruction of one word is
-// one the model has to guess the scope of.
-export const REWRITES = [
-  {
-    key: "shorter",
-    label: "compose.rewriteShorter",
-    instruction: "compose.rewriteShorterAsk",
-  },
-  {
-    key: "warmer",
-    label: "compose.rewriteWarmer",
-    instruction: "compose.rewriteWarmerAsk",
-  },
-  {
-    key: "formal",
-    label: "compose.rewriteFormal",
-    instruction: "compose.rewriteFormalAsk",
-  },
-  {
-    key: "deadline",
-    label: "compose.rewriteDeadline",
-    instruction: "compose.rewriteDeadlineAsk",
-  },
-] as const satisfies readonly {
-  key: string;
-  label: MessageKey;
-  instruction: MessageKey;
-}[];
-
-// Offered only over the machine's OWN untouched words. Once the rep has
-// edited the body, a rewrite would throw their work away to answer a question
-// about text that is no longer there — so the row withdraws rather than
-// growing a confirm nobody would read.
+// Offered over any body on screen, whoever wrote it: the call revises the
+// words sent as `rewrite_of`, and the editor's undo brings the old ones back.
+// `refusal` names why this body cannot be sent for revision.
 // `disabled` and not `pending`: these buttons do not report a write of their
 // own, they refuse to start a second one. Named for what it does, because named
 // for a state it does not have it read as the draft button's own spinner and a
@@ -145,24 +125,35 @@ export const REWRITES = [
 export function RewriteRow({
   onRewrite,
   disabled,
+  refusal = null,
 }: Readonly<{
-  onRewrite: (instruction: string) => void;
+  onRewrite: (verb: RewriteVerb) => void;
   disabled: boolean;
+  refusal?: string | null;
 }>) {
   const t = useT();
+  const refusalId = useId();
   return (
-    <fieldset className="compose-rewrite">
+    <fieldset
+      className="compose-rewrite"
+      aria-describedby={refusal ? refusalId : undefined}
+    >
       <legend className="sr-only">{t("compose.rewrite")}</legend>
       {REWRITES.map((rewrite) => (
         <Button
           key={rewrite.key}
           variant="aiQuiet"
-          disabled={disabled}
-          onClick={() => onRewrite(t(rewrite.instruction))}
+          disabled={disabled || refusal !== null}
+          onClick={() => onRewrite(rewrite.key)}
         >
           {t(rewrite.label)}
         </Button>
       ))}
+      {refusal && (
+        <p id={refusalId} className="t-caption">
+          {refusal}
+        </p>
+      )}
     </fieldset>
   );
 }

@@ -45,6 +45,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"github.com/margince/margince/backend/internal/platform/sweepreach"
 )
 
 var (
@@ -168,6 +170,7 @@ type execQuerier interface {
 // Postgres will never complain about, and a later suite would read them as real
 // data.
 func Reset(ctx context.Context, owner *pgx.Conn) error {
+	sweepreach.InstallForTestDatabase()
 	tx, err := owner.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("beginning reset: %w", err)
@@ -246,7 +249,7 @@ func resetWithin(ctx context.Context, tx execQuerier) error {
 // here, and the default's own fields go back to the seeded NULLs.
 func restoreSeededLegalEntity(ctx context.Context, tx execQuerier) error {
 	if _, err := tx.Exec(ctx, `DELETE FROM legal_entity WHERE NOT is_default;
-		UPDATE legal_entity SET country = NULL, default_language = NULL, bank_account_holder = NULL,
+		UPDATE legal_entity SET country = NULL, jurisdiction = NULL, default_language = NULL, bank_account_holder = NULL,
 		       iban = NULL, bic = NULL, imprint = NULL, archived_at = NULL, version = 1
 		 WHERE is_default;`); err != nil {
 		return fmt.Errorf("restoring the seeded legal entity: %w", err)

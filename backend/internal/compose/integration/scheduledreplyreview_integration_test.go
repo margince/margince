@@ -28,7 +28,7 @@ func TestReviewingAReplyReleasesTheMessageButANewerReplyPausesItAgain(t *testing
 			p := setupPreflight(t)
 			p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 			p.stakeADeal(t)
-			id := p.scheduleClaiming(t, AnyMap{"communication_context": "active_deal_followup"})
+			id := p.scheduleClaimingAt(t, AnyMap{"communication_context": "active_deal_followup"}, "/v1/emails")
 			arrived := p.scheduledCreation(t, id).Add(time.Microsecond)
 			reply := p.theyWrite(t, inbound{dated: arrived, arrived: arrived, authenticated: true})
 			if reply.IsZero() {

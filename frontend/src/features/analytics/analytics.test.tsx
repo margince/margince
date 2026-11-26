@@ -211,8 +211,9 @@ describe("the my-outcomes section", () => {
     expect(
       await screen.findByText(en["analytics.meetingsAsTheyStand"]),
     ).toBeTruthy();
-    expect(screen.getByText("Held")).toBeTruthy();
-    expect(screen.getByText("3")).toBeTruthy();
+    // Found, not got: the counts can draw a render after the heading.
+    expect(await screen.findByText("Held")).toBeTruthy();
+    expect(await screen.findByText("3")).toBeTruthy();
     expect(screen.getByText("No-show")).toBeTruthy();
 
     // The meetings question is pinned to the seat: hosted by this user, and
@@ -423,6 +424,7 @@ describe("AnalyticsScreen", () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
+        companyRead: true,
         companyRows: [
           {
             company_id: "o1",

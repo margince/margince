@@ -72,7 +72,7 @@ func TestATaskCarriesCompleteExactlyWhenTheReaderMayChangeIt(t *testing.T) {
 }
 
 // Decide and cancel both PATCH the meeting, so a reader who may only read it is
-// offered neither. The row says why rather than standing empty.
+// offered neither. The row says why, and Done still takes it off their list.
 func TestAMeetingTheReaderMayNotChangeOffersNoAnswer(t *testing.T) {
 	asOf := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	for name, tc := range map[string]struct {
@@ -88,10 +88,49 @@ func TestAMeetingTheReaderMayNotChangeOffersNoAnswer(t *testing.T) {
 				t.Errorf("%s: offers %s = %v, want %v (actions %v)", name, verb, got, tc.answers, item.Actions)
 			}
 		}
-		row := classifyUnansweredMeeting(item, asOf).item
-		says := slices.ContainsFunc(row.Because, func(r crmcontracts.WorklistReason) bool { return r.Kind == "read_only" })
+		ranked := classifyUnansweredMeeting(item, asOf)
+		says := slices.ContainsFunc(ranked.item.Because, func(r crmcontracts.WorklistReason) bool { return r.Kind == "read_only" })
 		if says == tc.answers {
 			t.Errorf("%s: says read_only = %v, want %v", name, says, !tc.answers)
+		}
+		if !slices.Contains(dispositionsFor(ranked, ids.NewV7()), disposeHandled) {
+			t.Errorf("%s: offers no Done, so nothing takes it off the reader's list", name)
+		}
+	}
+}
+
+// Done on an unanswered meeting the reader may only read is written. The row
+// then stays off their day, and the organizer still answers it.
+func TestDoneTakesAMeetingTheReaderCannotAnswerOffTheirDay(t *testing.T) {
+	t.Parallel()
+	meeting := ids.NewV7()
+	ref := RowRef{Source: string(crmcontracts.WorklistItemSourceMeetingOutcome), RowID: meeting.String()}
+	unanswered := &stubMeetingsAwaitingOutcome{rows: []MeetingAwaitingOutcome{{
+		ID: meeting, Subject: "Second demo", StartedAt: readInstant.Add(-2 * time.Hour), ReadOnly: true,
+	}}}
+	service := func(done *doneStoreSpy) *Service {
+		return NewService(
+			stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
+			nil, nil, nil, &stubMeetings{}, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock,
+			WithMeetingsAwaitingOutcome(unanswered)).WithDone(done)
+	}
+
+	spy := &doneStoreSpy{}
+	if err := service(spy).MarkRowsDone(pageReader(), []RowRef{ref}); err != nil {
+		t.Fatalf("marking the meeting done: %v", err)
+	}
+	if len(spy.marked) != 1 || !slices.Contains(spy.marked[0], ref) {
+		t.Fatalf("Done wrote %v, want the meeting's row", spy.marked)
+	}
+
+	marked := &doneStoreSpy{already: map[RowRef]time.Time{ref: readInstant.Add(-time.Minute)}}
+	day, err := service(marked).Worklist(pageReader(), "", "", ids.UUID{}, 25, "")
+	if err != nil {
+		t.Fatalf("reading the Worklist: %v", err)
+	}
+	for _, row := range day.Queue {
+		if row.Id == meeting.String() {
+			t.Fatalf("the meeting marked done is still on the day: %+v", row)
 		}
 	}
 }

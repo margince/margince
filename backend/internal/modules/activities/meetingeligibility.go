@@ -5,10 +5,19 @@ package activities
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // CustomerMeetingSQL shares the customer-link rule between capture and reporting.
@@ -22,8 +31,9 @@ const customerLinkSQL = "(al.contact_id IS NOT NULL OR al.lead_id IS NOT NULL OR
 
 // OpenMeetingStatusSQL is a meeting under alias a whose result nobody has recorded. NULL counts:
 // capture writes calendar events with no status, and dropping them would empty
-// the question on a connected calendar.
-const OpenMeetingStatusSQL = "(a.meeting_status IS NULL OR a.meeting_status = 'booked')"
+// the question on a connected calendar. A transcript is the record of a
+// meeting, so it never owes an outcome of its own.
+const OpenMeetingStatusSQL = "((a.meeting_status IS NULL OR a.meeting_status = 'booked') AND a.source_system IS DISTINCT FROM '" + transcriptSourceSystem + "')"
 
 // appendCustomerMeetingClause narrows a list to customer meetings, counting
 // only a customer link whose record this reader may see. A link to a record
@@ -55,7 +65,7 @@ func customerMeetingClause(ctx context.Context, arg func(any) int) (string, erro
 // appendOutsidePartyClause keeps the meetings with somebody from outside on
 // them, when the read asks for WithOutsideParty.
 func appendOutsidePartyClause(in ListActivitiesInput, arg func(any) int, where []string) ([]string, error) {
-	if in.outsideParty == nil {
+	if in.outsideParty == nil || in.AwaitingOutcomeAsOf != nil {
 		return where, nil
 	}
 	outside, err := in.outsideParty(arg)
@@ -69,7 +79,7 @@ func appendAwaitingOutcomeClause(ctx context.Context, in ListActivitiesInput, ar
 	if in.AwaitingOutcomeAsOf == nil {
 		return where, nil
 	}
-	owed, err := awaitingOutcomeClause(ctx, *in.AwaitingOutcomeAsOf, arg)
+	owed, err := awaitingOutcomeClause(ctx, *in.AwaitingOutcomeAsOf, arg, in.outsideParty)
 	if err != nil {
 		return nil, err
 	}
@@ -77,11 +87,25 @@ func appendAwaitingOutcomeClause(ctx context.Context, in ListActivitiesInput, ar
 }
 
 // awaitingOutcomeClause is a live customer meeting with no result recorded that
-// took place by asOf. The outcome lane filters on it and every Activity read
-// stamps it (stampAwaitingOutcome).
-func awaitingOutcomeClause(ctx context.Context, asOf time.Time, arg func(any) int) (string, error) {
+// took place by asOf and is not travel logistics. The outcome lane filters on it
+// and every Activity read stamps it (stampAwaitingOutcome).
+func awaitingOutcomeClause(ctx context.Context, asOf time.Time, arg func(any) int, outsideParty func(func(any) int) (string, error)) (string, error) {
 	open, tookPlace, err := openCustomerMeeting(ctx, asOf, arg)
-	return "(a.archived_at IS NULL AND " + open + " AND " + tookPlace + ")", err
+	if err != nil {
+		return "", err
+	}
+	if outsideParty == nil {
+		return "", errors.New("activities: outcome eligibility needs the outside-party reader")
+	}
+	outside, err := outsideParty(arg)
+	if err != nil {
+		return "", err
+	}
+	travel, err := travelLogisticsClause(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	return "(a.archived_at IS NULL AND " + open + " AND " + tookPlace + " AND " + outside + " AND NOT " + travel + ")", nil
 }
 
 // UpcomingMeetingClause is a live customer meeting under alias a with no
@@ -98,4 +122,40 @@ func openCustomerMeeting(ctx context.Context, asOf time.Time, arg func(any) int)
 		return "", "", err
 	}
 	return customer + " AND " + OpenMeetingStatusSQL, occurredday.MeetingTookPlaceSQL("a", sprintf("$%d::timestamptz", arg(asOf))), nil
+}
+
+// ReadyForRecap checks the meeting as the authorizer can see it.
+func (s *Store) ReadyForRecap(ctx context.Context, id ids.ActivityID, asOf time.Time) (bool, error) {
+	rows, _, err := s.ListActivities(ctx, ListActivitiesInput{
+		IDs:                  []ids.ActivityID{id},
+		CustomerMeetingsOnly: true,
+		ReadableOnly:         true,
+		WithOutsideParty:     true,
+		ConversationAsOf:     &asOf,
+	})
+	if err != nil || len(rows) == 0 {
+		return false, err
+	}
+	meeting := rows[0]
+	if meeting.SourceSystem != nil && provenance.ImporterNamespace(*meeting.SourceSystem) {
+		return false, nil
+	}
+	if !meetingReadyForRecap(meeting) {
+		return false, nil
+	}
+	capturedBody := meeting.CapturedBy != nil && strings.HasPrefix(*meeting.CapturedBy, "connector:")
+	if !capturedBody && (meeting.CapturedBy != nil || meeting.SourceSystem == nil) {
+		return true, nil
+	}
+	var notes bool
+	err = database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM audit_log edit
+ WHERE edit.entity_type='activity' AND edit.entity_id=@id AND `+meetingBodyAuthoredSQL+`)`, pgx.NamedArgs{"id": id}).Scan(&notes)
+	})
+	return notes, err
+}
+
+func meetingReadyForRecap(meeting crmcontracts.Activity) bool {
+	return meeting.Kind == crmcontracts.ActivityKindMeeting && meeting.MeetingStatus != nil &&
+		*meeting.MeetingStatus == crmcontracts.ActivityMeetingStatusHeld && meeting.Body != nil && values.HasVisibleText(*meeting.Body)
 }

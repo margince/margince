@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // The closed set the column's CHECK admits, spelled here because the store is
@@ -120,47 +119,36 @@ type RepliedRequest struct {
 // verdict that recorded its evidence is skipped while that evidence is
 // unchanged, so an edit, a narrowing or a backdated answer brings it back. An
 // older verdict without it is skipped while its answer is still the newest. A
-// still_owed verdict from an older rule is never skipped.
-var repliedRequestsSQL = `((` + outstandingRequestSQL + `) OR (` + reArmedSettlementSQL + `))
- AND a.audience = 'workspace'
+// still_owed verdict from an older rule is never skipped. A never-owed invitation is not judged;
+// $4 is the own-domain list that tells a colleague's invitation.
+func repliedRequestsSQL(private bool) string {
+	return `((` + outstandingRequestSQL + `) OR (` + reArmedSettlementSQL + `)) AND (` + acceptedRequestSQL + ` OR NOT ` + invitationNeverOwedSQL("$1::timestamptz", "$4") + `)
+ AND ` + judgeableAudienceSQL("a", private) + `
+ AND NOT ` + auth.ActivityRestrictedSQL("a.id") + `
  AND a.counterparty_email IS NOT NULL
- AND EXISTS (` + settlementAnswersSQL() + `)
+ AND EXISTS (` + settlementAnswersSQL(private) + `)
  AND ` + settlementEvidenceCompleteSQL + `
  AND NOT EXISTS (SELECT 1 FROM activity_request_settlement judged
    WHERE judged.request_activity_id = a.id
      AND judged.revalidation_requested_at IS NULL
      AND (judged.verdict <> '` + RequestStillOwed + `' OR judged.rule_version = '` + RequestSettlementRule + `')
-     AND ((judged.judged_evidence IS NULL AND judged.judged_through_activity_id = (` + newestAnswerSince + `))
-       OR judged.judged_evidence = (` + settlementEvidenceSQL() + `)))`
-
-// settlementEvidenceCompleteSQL keeps a request off the candidate list when its
-// evidence holds a body that was not read in full. The settlement pass would
-// refuse to judge it. A refused request left on the list comes back first on
-// every pass, so a few of them would starve every other request. It covers at
-// least what the pass reads. That is the request, its later thread messages
-// with the same correspondent, and the answers off its thread.
-var settlementEvidenceCompleteSQL = provenance.MailBodyCompleteSQL("a") + `
- AND NOT EXISTS (SELECT 1 FROM activity later
-   WHERE later.thread_key = a.thread_key AND later.kind = a.kind
-     AND later.counterparty_email = a.counterparty_email AND later.archived_at IS NULL
-     AND ` + occurredday.BegunSQL("later", "$1") + ` AND ` + SettlementThreadSQL("later", "a") + ` AND later.id <> a.id
-     AND NOT ` + provenance.MailBodyCompleteSQL("later") + `)
- AND NOT EXISTS (SELECT 1 FROM (` + offThreadAnswersSQL("a", "$1") + `) off
-   JOIN activity answer ON answer.id = off.id
-   WHERE NOT ` + provenance.MailBodyCompleteSQL("answer") + `)`
+     AND ((judged.judged_evidence IS NULL AND judged.judged_through_activity_id = (` + newestAnswerSince(private) + `))
+       OR judged.judged_evidence = (` + settlementEvidenceSQL(private) + `)))`
+}
 
 // settlementAnswersSQL selects, as (id, occurred_at), every answer to request a
-// as of the pass's own instant ($1): our attested reply in the conversation and
-// the answers off its thread. Each is one the whole workspace may read, so the
-// newest answer, which a verdict is recorded through, is always one the
-// settlement model may be shown.
-func settlementAnswersSQL() string {
+// as of the pass's own instant ($1). These are our attested reply in the
+// conversation, our reply on a new topic to it, and the answers off its thread.
+// Each is one the whole workspace may read. So the newest answer, which a
+// verdict is recorded through, is always one the settlement model may be shown.
+func settlementAnswersSQL(private bool) string {
 	return `SELECT reply.id, reply.occurred_at FROM activity reply
    WHERE (` + ourOutboundInThisThread("reply", "a") + `
      OR (` + correspondentInThisThread("reply", "a") + ` AND ` + CapturedInboundSQL("reply") + `))
-     AND reply.audience = 'workspace' AND reply.restricted_at IS NULL
+     AND ` + judgeableAudienceSQL("reply", private) + `
      AND ` + occurredday.BegunSQL("reply", "$1") + `
      AND ` + occurredday.AnswersSQL("reply", "a") + ` AND reply.id <> a.id
+ UNION ` + splitAnswersSQL(private) + `
  UNION ` + offThreadAnswersSQL("a", "$1")
 }
 
@@ -174,14 +162,18 @@ func settlementAnswersSQL() string {
 //
 // Held by: TestOurOwnOutboundIsAskedTheSameWayEverywhere
 // (backend/internal/modules/activities/ourownoutbound_test.go)
-var newestAnswerSince = newestAnswer("newest.id")
+func newestAnswerSince(private bool) string { return newestAnswer("newest.id", "", private) }
 
 // newestAnswerRow is that newest answer's id and time, read by the same walk,
 // for the candidate read to select and order by without walking twice.
-var newestAnswerRow = newestAnswer("newest.id, newest.occurred_at")
+func newestAnswerRow(private bool) string {
+	return newestAnswer("newest.id, newest.occurred_at", "", private)
+}
 
-func newestAnswer(column string) string {
-	return `SELECT ` + column + ` FROM (` + settlementAnswersSQL() + `) newest
+// newestAnswer selects column from the newest answer that `join` keeps; an
+// empty join keeps every answer.
+func newestAnswer(column, join string, private bool) string {
+	return `SELECT ` + column + ` FROM (` + settlementAnswersSQL(private) + `) newest ` + join + `
         ORDER BY newest.occurred_at DESC, newest.id DESC LIMIT 1`
 }
 
@@ -205,6 +197,14 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 	}
 	var out []RepliedRequest
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		ownDomains, err := s.ownDomainList(ctx, tx)
+		if err != nil {
+			return err
+		}
+		private, err := privateMailRequests(ctx, tx)
+		if err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx, storekit.SQLf(`
 			SELECT a.id, coalesce(a.counterparty_email, ''),
 			       latest.id,
@@ -227,8 +227,8 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 			   AND task.archived_at IS NULL AND task.is_done = false
 			 WHERE %[5]s
 			 ORDER BY latest.occurred_at DESC, latest.id DESC, a.id DESC
-			 LIMIT $3`, settlementEvidenceSQL(), newestAnswerRow, EmailRequestTaskSource, settlementCompletedTaskSQL("reminder"), repliedRequestsSQL),
-			asOf, OwedVerdictCapturedBy, limit)
+			 LIMIT $3`, settlementEvidenceSQL(private), newestAnswerRow(private), EmailRequestTaskSource, settlementCompletedTaskSQL("reminder"), repliedRequestsSQL(private)),
+			asOf, OwedVerdictCapturedBy, limit, ownDomains)
 		if err != nil {
 			return fmt.Errorf("activities: reading answered requests: %w", err)
 		}

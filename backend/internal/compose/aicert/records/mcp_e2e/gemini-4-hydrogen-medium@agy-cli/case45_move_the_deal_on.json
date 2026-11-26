@@ -1,0 +1,103 @@
+{
+  "scenario": "case45_move_the_deal_on",
+  "criteria": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "b8934ba17c77ac6e",
+    "tools": "8493e4e1446e8714",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "5dfb7ceebe8ce1b1607ab3992fb9d36b3ac8208f",
+    "ran_at": "2026-11-25T06:51:09Z",
+    "graded_commit": "8d1a2e3f3d0e19ca67b1a23f47f3c2d8686628c3",
+    "graded_at": "2026-11-25T10:48:52Z"
+  },
+  "usage": {
+    "input_tokens": 70827,
+    "output_tokens": 15422,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 200822,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "change_state",
+        "find_records",
+        "forecast_readings",
+        "list_pipelines",
+        "progress_deal",
+        "read_context",
+        "read_forecast",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "change_state",
+        "find_records",
+        "forecast_readings",
+        "list_pipelines",
+        "progress_deal",
+        "read_context",
+        "read_forecast",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 10,
+      "min": 9,
+      "max": 11
+    },
+    "turns": {
+      "median": 6.5,
+      "min": 6,
+      "max": 7
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 135824.5,
+      "min": 127579,
+      "max": 144070
+    },
+    "output_tokens": {
+      "median": 7711,
+      "min": 7647,
+      "max": 7775
+    }
+  }
+}

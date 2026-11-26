@@ -86,11 +86,13 @@ var recognisedOwners = []string{
 	"capture_classify/deal_topic",
 	"capture_confidentiality_verdict/thread",
 	"capture_counterparty_verdict/verdict",
+	"chat_task_reading/chat_tasks",
 	"cold_start/acts, cold_start/company_message, cold_start/sitereadmessage",
 	"deal_verdict/deal_verdict",
 	// strong | moderate | weak. The band IS the answer; the claims are why.
 	"growth_fit/growth_fit",
 	"nl_search/filter_propose",
+	"nl_search/search_data_plan",
 	// asks_us | informs_us. An ANSWER vocabulary rather than a set of field
 	// names: the site's whole output is one of these two words per message, so
 	// every kind wants a scenario that scores it — and both do, in
@@ -104,6 +106,9 @@ var recognisedOwners = []string{
 	// scoring only the two confident words would never measure the abstention
 	// the floor exists to produce.
 	"request_settlement/request_settle",
+	// explicit_request | need: whether the buyer asked us outright for a
+	// quote. Deal Scout opens a deal on the first alone, so each wants a scenario.
+	"signal_extract/thread_events",
 	"signal_extract/thread_events",
 	"signal_extract/thread_events",
 	"signal_extract/thread_events",

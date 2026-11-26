@@ -2,9 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ListPlus, Mail, MailPlus, Send, Sparkles } from "lucide-react";
-import { type ReactNode, useRef } from "react";
+import type { ReactNode, RefObject } from "react";
 import { type ActivityMoment, activityAgo } from "../format/activitywhen";
-import { calendarDay } from "../format/calendarday";
 import {
   formatAge,
   formatDayMonthNearYear,
@@ -15,12 +14,16 @@ import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useLocale, useT } from "../i18n";
 import { AppLink } from "./applink";
 import { Avatar, Badge } from "./atoms";
-import { DealOwner } from "./dealowner";
+import { DealCardClose } from "./dealcardclose";
+import { DealOwner, handOnTo } from "./dealowner";
 import { IconAction } from "./iconaction";
+import { OverflowMenu } from "./overflowmenu";
 import type { BoardDeal } from "./pipelineboard";
 import { Popover } from "./popover";
+import { ProbabilityRing } from "./probabilityring";
 import { FieldGuard } from "./rbac";
 import { Chip } from "./readings";
+import { useTooltip, useTruncationTooltipAround } from "./tooltip";
 
 // One deal, as a card on the pipeline board (pipelineboard.tsx draws the board).
 // The card's vocabulary — `BoardDeal` — stays with the board, because a column
@@ -41,6 +44,8 @@ export type DealCardActions = Readonly<{
   onSummary?: () => void;
   onEmail?: () => void;
   onAddTask?: () => void;
+  /** The items of the "…" menu that closes the row; a staged card draws none. */
+  menu?: ReactNode;
 }>;
 
 /** What a caller hangs on every card of a board, keyed by the deal. */
@@ -127,37 +132,6 @@ function DealCardCompany({
 }
 
 /**
- * When the deal closes, on the card's figure line.
- *
- * Read as a calendar day in the record's zone, never as the instant midnight
- * UTC — that instant is the previous date for half the world. The tone marks
- * the DATE when it is one nobody confirmed or one already behind us, and says
- * so in words for a reader who does not get the colour; the deal strip states
- * the same fact the same two ways.
- */
-function DealCloses({
-  day,
-  provisional,
-  zone,
-}: Readonly<{ day: string; provisional: boolean; zone: string }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const overdue = day < calendarDay(new Date(), zone);
-  const classes =
-    provisional || overdue ? "deal-closes deal-closes-warning" : "deal-closes";
-  return (
-    <span className={classes}>
-      {t("deal.closes", {
-        date: formatDayMonthNearYear(day, locale, zone, new Date()),
-      })}
-      {provisional && (
-        <span className="sr-only"> · {t("deal.closesProvisional")}</span>
-      )}
-    </span>
-  );
-}
-
-/**
  * When mail last moved on this deal: at the foot of the card, and in the deals
  * table's own column, which is why it is exported — one chip, one flyout, on
  * both views of the same deal.
@@ -216,9 +190,11 @@ function DealCardFoot({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const menu = deal.staged ? undefined : actions?.menu;
   const verbs =
-    actions !== undefined &&
-    [actions.onSummary, actions.onEmail, actions.onAddTask].some(Boolean);
+    menu !== undefined ||
+    (actions !== undefined &&
+      [actions.onSummary, actions.onEmail, actions.onAddTask].some(Boolean));
   if (!deal.stalled && !deal.lastEmail && !deal.singleThreaded && !verbs) {
     return null;
   }
@@ -248,7 +224,9 @@ function DealCardFoot({
           <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
         )}
       </span>
-      {verbs && <DealCardVerbs actions={actions} dealName={deal.name} />}
+      {verbs && (
+        <DealCardVerbs actions={{ ...actions, menu }} dealName={deal.name} />
+      )}
     </span>
   );
 }
@@ -300,6 +278,41 @@ function DealCardVerbs({
           onClick={actions.onAddTask}
         />
       )}
+      {actions.menu !== undefined && (
+        <OverflowMenu
+          inline
+          label={t("record.moreActionsFor", { subject: dealName })}
+        >
+          {actions.menu}
+        </OverflowMenu>
+      )}
+    </span>
+  );
+}
+
+/**
+ * The deal's probability ring, and on hover why the deal has that figure. It
+ * takes no tab stop: the card's link holds the one tab stop, and the deal's
+ * details say the same reason beside the figure.
+ */
+function DealProbability({
+  percent,
+  reason,
+  dealLink,
+}: Readonly<{
+  percent: number;
+  reason?: string;
+  dealLink: RefObject<HTMLAnchorElement | null>;
+}>) {
+  const { ref, trigger, tip } = useTooltip<HTMLSpanElement>(reason ?? "");
+  const press = handOnTo(dealLink);
+  if (!reason) {
+    return <ProbabilityRing percent={percent} />;
+  }
+  return (
+    <span className="deal-probability" ref={ref} {...trigger} {...press}>
+      <ProbabilityRing percent={percent} />
+      {tip}
     </span>
   );
 }
@@ -357,7 +370,12 @@ export function DealCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const dealLink = useRef<HTMLAnchorElement>(null);
+  const {
+    ref: dealLink,
+    // No `aria-describedby`: the link's own name is already the whole name.
+    trigger: { onPointerEnter, onPointerLeave, onFocus, onBlur: hideName },
+    tip: nameTip,
+  } = useTruncationTooltipAround<HTMLAnchorElement>(deal.name);
   // No `stalled` class: the warning Badge in the foot says it in words, and an
   // edge stripe saying the same thing is one statement drawn twice — the reader
   // who cannot see colour reads the badge, and the reader who can read both.
@@ -404,32 +422,52 @@ export function DealCard({
         // would also catch the company link's bubbled click, and the drop
         // guard would then refuse a navigation the reader did ask for.
         onClick={(event) => onOpen?.(deal, event)}
+        // A press anywhere on the card focuses this link through its
+        // stretched `::after`; only keyboard focus asks for the name's tip.
+        onFocus={(event) => {
+          if (event.currentTarget.matches(":focus-visible")) onFocus(event);
+        }}
+        onBlur={hideName}
       >
-        {deal.name}
+        {/* The hover rides the name's own box: on the link it would ride the
+            stretched `::after`, and the whole card would raise the tip. */}
+        <span
+          className="deal-name-text"
+          onPointerEnter={onPointerEnter}
+          onPointerLeave={() => {
+            onPointerLeave();
+            // Focus a press gave the link does not hold a hover's tip up.
+            if (dealLink.current?.matches(":focus:not(:focus-visible)")) {
+              hideName();
+            }
+          }}
+        >
+          {deal.name}
+        </span>
       </AppLink>
+      {nameTip}
       <span className="deal-figure">
         {/* Compact, because a card is compared at a glance: the column head
             sums the stage exactly and the deal states its own figure whole. */}
-        <span className="deal-value">
-          {formatMoneyOrWord(
-            deal.valueMinor,
-            deal.currency,
-            locale,
-            MONEY_ABSENT,
-            formatMoneyCompact,
+        <span className="deal-worth">
+          <span className="deal-value">
+            {formatMoneyOrWord(
+              deal.valueMinor,
+              deal.currency,
+              locale,
+              MONEY_ABSENT,
+              formatMoneyCompact,
+            )}
+          </span>
+          {deal.probabilityPct != null && (
+            <DealProbability
+              percent={deal.probabilityPct}
+              reason={deal.probabilityReason}
+              dealLink={dealLink}
+            />
           )}
         </span>
-        {closed !== undefined ? (
-          <span className="deal-closes">{closed ?? t("deal.undated")}</span>
-        ) : deal.closeDate ? (
-          <DealCloses
-            day={deal.closeDate}
-            provisional={deal.closeDateProvisional ?? false}
-            zone={zone}
-          />
-        ) : (
-          <span className="deal-closes">{t("deal.undated")}</span>
-        )}
+        <DealCardClose deal={deal} closed={closed} zone={zone} />
       </span>
       {standing != null && <span className="deal-standing">{standing}</span>}
       <DealCardFoot

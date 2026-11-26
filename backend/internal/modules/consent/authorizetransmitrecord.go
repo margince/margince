@@ -66,7 +66,7 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 		// The country this recipient was decided under, so the row names the
 		// pack that judged it.
 		ruleset := rulesetStamp(countries[i])
-		protection := claims[decisionRecipientKey(d.Recipient)].dataProtection
+		protection := stagedClaimOf(claims, d.Recipient).dataProtection
 		values := []any{
 			req.DeliveryID, req.Attempt, setID, decisionRecipientKey(d.Recipient),
 			subjectKind, subjectID, string(d.Phase), nullableCategory(d.Requested), string(d.Resolved), string(d.Verdict),
@@ -76,17 +76,18 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			// for one recipient and directed for another did not go out on
 			// somebody's decision for both.
 			authorityFor(authority, d.Verdict), instructionFor(instruction, d.Verdict),
-			ruleset.Version, ruleset.Codes, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
+			ruleset.Version, ruleset.Codes, ruleset.Digest, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
 			groundNotice(d), groundOffer(d), groundSoldAt(d), protection,
+			nullableText(string(countries[i].Source)),
 		}
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, requested_category, resolved_category, verdict, reason_code, basis, suppression,
 			   content_fingerprint, legacy_verdict, mode, actor,
-			   execution_authority, instruction_id, ruleset_version, ruleset_codes,
+			   execution_authority, instruction_id, ruleset_version, ruleset_codes, ruleset_digest,
 			   legal_entity_id, purpose_key, existing_customer_notice_id, existing_customer_offer_id,
-			   existing_customer_sold_at, data_protection_country)
+			   existing_customer_sold_at, data_protection_country, country_source)
 			VALUES (`+storekit.Placeholders(values)+`)
 			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`, values...)
 		if err != nil {
@@ -123,6 +124,7 @@ func nullableText(s string) *string {
 // when the row binds every marketing purpose, as every row does until a
 // writer narrows one (see communication_suppression.purpose_id).
 type liveStop struct {
+	Revision  string
 	Kind      string
 	PurposeID *ids.UUID
 	// RecordedAt is when the newest row of this kind and purpose was recorded.
@@ -175,7 +177,7 @@ func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connect
 	// drop one of them. The newest recorded_at of each is kept.
 	lowered, hashes := storekit.StopAddressArgs(r.Email)
 	rows, err := tx.Query(ctx, `
-		SELECT kind, purpose_id, max(recorded_at) FROM communication_suppression s
+		SELECT kind, purpose_id, max(recorded_at), string_agg(id::text, ',' ORDER BY id) FROM communication_suppression s
 		 WHERE revoked_at IS NULL
 		   AND (contact_id = $1
 		        OR lead_id = $1
@@ -191,10 +193,11 @@ func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connect
 		var kind string
 		var purposeID *ids.UUID
 		var recordedAt time.Time
-		if err := rows.Scan(&kind, &purposeID, &recordedAt); err != nil {
+		var revision string
+		if err := rows.Scan(&kind, &purposeID, &recordedAt, &revision); err != nil {
 			return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
 		}
-		stops = append(stops, liveStop{Kind: reasonForSuppressionKind(kind), PurposeID: purposeID, RecordedAt: recordedAt})
+		stops = append(stops, liveStop{Revision: revision, Kind: reasonForSuppressionKind(kind), PurposeID: purposeID, RecordedAt: recordedAt})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
@@ -237,11 +240,24 @@ func reasonForSuppressionKind(kind string) string {
 //
 // A channel identity is therefore stored structurally. It stays inside the
 // installation, where the timeline already holds the same id.
+//
+// An address is stored folded the way the cap count reads it, so one mailbox
+// in two spellings is one row under the uniqueness index. A channel id is kept
+// as supplied, because a provider may tell two ids apart by case.
 func decisionRecipientKey(r connector.Recipient) string {
 	if r.Channel != nil {
 		return r.Channel.Provider + ":" + r.Channel.ChannelUserID
 	}
-	return r.Email
+	return normalizeCapAddress(r.Email)
+}
+
+// stagedClaimOf finds what staging decided for a recipient. A delivery staged
+// by a release that stored the address as typed is found under that spelling.
+func stagedClaimOf(claims map[string]stagedClaim, r connector.Recipient) stagedClaim {
+	if claim, ok := claims[decisionRecipientKey(r)]; ok {
+		return claim
+	}
+	return claims[r.Email]
 }
 
 // deliveryAuthorityTx reads what the staging phase decided this delivery goes
@@ -263,19 +279,31 @@ func deliveryAuthorityTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (s
 	return authority, instruction, nil
 }
 
-// exceptionGivenByAdminTx answers whether the exception this delivery goes out
-// under was given by an admin. A delivery with no exception answers false.
-func exceptionGivenByAdminTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (bool, error) {
-	var byAdmin bool
+// deliveryException is what dispatch needs from the decision a delivery goes
+// out under: who gave it, and which refusals its review showed them.
+type deliveryException struct {
+	givenByAdmin bool
+	shown        []RefusedRecipient
+	directedAt   time.Time
+}
+
+// deliveryExceptionTx reads it. A delivery with no decision reads as none given
+// and nothing shown, so no refusal is answered.
+func deliveryExceptionTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (deliveryException, error) {
+	var out deliveryException
 	err := tx.QueryRow(ctx, `
-		SELECT coalesce(bool_or(i.given_by_admin), false)
+		SELECT i.given_by_admin, r.refusals, i.directed_at
 		  FROM comms_outbound o
 		  JOIN communication_instruction i ON i.id = o.instruction_id
-		 WHERE o.id = $1`, deliveryID).Scan(&byAdmin)
-	if err != nil {
-		return false, fmt.Errorf("consent: reading who gave the exception this delivery goes out under: %w", err)
+		  JOIN communication_review r ON r.id = i.review_id
+		 WHERE o.id = $1`, deliveryID).Scan(&out.givenByAdmin, &out.shown, &out.directedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return deliveryException{}, nil
 	}
-	return byAdmin, nil
+	if err != nil {
+		return deliveryException{}, fmt.Errorf("consent: reading the decision this delivery goes out under: %w", err)
+	}
+	return out, nil
 }
 
 // authorityFor names the instruction on a refused row and the engine's own

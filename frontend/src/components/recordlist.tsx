@@ -5,6 +5,7 @@ import { useListFocusHandoff } from "../design-system/listfocus";
 import type { ListChip } from "../design-system/listsurface.dials";
 import type { ListColumn } from "../design-system/listtable";
 import { RowTags } from "../design-system/rowtags";
+import { ABSENT } from "../format/absent";
 import { formatDateAbbrev } from "../format/format";
 import type { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -92,17 +93,13 @@ export function createdColumn<Row extends OwnedRecord>(
       <span>
         {row.created_at
           ? formatDateAbbrev(row.created_at, locale, recordZone)
-          : ""}
+          : ABSENT}
       </span>
     ),
     sort: "created_at",
   };
 }
 
-/**
- * The Last activity column: the timeline's clock, maintained in the schema so
- * the server can sort on it; empty until something has happened.
- */
 /**
  * The Last activity CELL, without a column around it.
  *
@@ -120,7 +117,7 @@ export function lastActivityCell<Row extends OwnedRecord>(
     <span>
       {row.last_activity_at
         ? formatDateAbbrev(row.last_activity_at, locale, recordZone)
-        : ""}
+        : ABSENT}
     </span>
   );
 }
@@ -162,25 +159,12 @@ export function standardViews(
 }
 
 /**
- * What an empty "Mine" tab says, and the way back to everything.
- *
- * The other half of `standardViews`, and it belongs beside it: a screen that
- * renders the Mine tab owes the reader this sentence, because a bare "no
- * matches" over a filter they may not remember turning reads as an empty
- * workspace. It was spelled on the leads queue alone, so the companies and
- * contacts lists — same tab, same emptiness a reader reaches in one click —
- * said nothing at all.
- *
- * Undefined unless Mine is what is actually on screen, and the ONLY thing
- * narrowing it. Under a search or another filter the table's own line is the
- * right one: "no deals owned by you" over a search that matched nothing names a
- * cause that is not the cause, and its Show all would leave the search standing.
- *
- * "Show all" drops the view's own filter and nothing else. That is why it is
- * worth having beside the table's own "clear filters". One undoes the tab, and
- * the other undoes every dial the reader has turned.
+ * What an empty "Mine" tab says, and the way back to everything. Undefined
+ * unless Mine is the only narrowing: over a search, "no deals owned by you"
+ * names a cause that is not the cause. Defined, it replaces the table's line
+ * as `emptyLine`, since the reader set no filter to clear.
  */
-export function mineEmptyNote<Row>({
+export function mineEmptyLine<Row>({
   t,
   state,
   viewerId,
@@ -193,7 +177,7 @@ export function mineEmptyNote<Row>({
   unit: MessageKey;
 }>): ReactNode | undefined {
   if (!viewerId) return undefined;
-  return viewEmptyNote(state, "owner_id", viewerId, t, {
+  return viewEmptyLine(state, "owner_id", viewerId, t, {
     sentence: t("list.emptyMine", { unit: t(unit) }),
   });
 }
@@ -207,20 +191,20 @@ export function sharedWithMeView(sort = "-created_at"): ViewSpec {
   };
 }
 
-/** What an empty "Shared with me" view says, on the terms of `mineEmptyNote`. */
-export function sharedEmptyNote<Row>({
+/** What an empty "Shared with me" view says, on the terms of `mineEmptyLine`. */
+export function sharedEmptyLine<Row>({
   t,
   state,
   unit,
 }: Readonly<{ t: Translate; state: ListState<Row>; unit: MessageKey }>):
   | ReactNode
   | undefined {
-  return viewEmptyNote(state, "shared_with_me", "true", t, {
+  return viewEmptyLine(state, "shared_with_me", "true", t, {
     sentence: t("list.emptyShared", { unit: t(unit) }),
   });
 }
 
-function viewEmptyNote<Row>(
+function viewEmptyLine<Row>(
   state: ListState<Row>,
   key: string,
   value: string,

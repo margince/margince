@@ -1,23 +1,33 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/knowledge frontend/src/features/contacts/contactchatcapture.tsx backend/internal/compose/chatcapturefile.go -->
+<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/components/filerowverbs.tsx frontend/src/features/contacts/contactfiles.tsx frontend/src/features/companies/companydocuments.tsx frontend/src/features/records/activityfiles.tsx frontend/src/features/projects/projectdocuments.tsx frontend/src/components/adddocument.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/activities/attachmentlink.go backend/internal/modules/knowledge frontend/src/components/chatcapture.tsx frontend/src/features/leads/leadhistory.tsx backend/internal/compose/chatcapturefile.go backend/internal/compose/chattasks -->
 # Documents and files
 
 Margince holds files in three different places, for three different reasons:
 
-1. **Documents** on a company, a contact or a deal: the papers of the
-   relationship.
+1. **Documents** on a company, a contact, a deal or a project: the papers
+   of the relationship.
 2. **Files** on a deal: everything the deal has picked up, including
    attachments that arrived with email.
 3. **Document sets** in Settings → Knowledge: bodies of text the whole
    company can ask questions of.
 
 ### How do I upload a document?
-To upload a document in Margince, such as a customer's signed contract, open the company, contact or deal. Choose its **Documents** tab and click **Add document**.
+To upload a document in Margince, such as a customer's signed contract, open the company, contact or deal. Choose its **Documents** tab and click **Add document**. On a project, press **Documents** on the **Contracts** card and click **Add document** in the panel that opens.
 1. On a company, set **About** to **This company** or **A deal** and pick the deal.
 2. Choose a **Category** (a signed contract takes **SOW/Contract**); **Title** is optional.
 3. Drop the file on **File**, or click to choose one, and click **Upload**.
 Without write access the button is not shown. The contract record itself is added on its own, see [Contracts and invoices](contracts-and-invoices.md).
 Also called: attach a file, add an attachment, add a PDF, upload a contract document.
+
+### How do I add a link, such as a Google Doc?
+To add a link to a Google Doc, a Google Sheet or a web page, open the company, contact or deal. Choose its **Documents** tab and click **Add document**.
+1. Choose **Link** at the top of the form and paste the address into **Address**.
+2. Margince reads the page and fills **Title** with the name the page gives.
+3. Choose a **Category** and, on a company, **About**, as for a file. Click **Add link**.
+Margince does not read Google files, so type a title for one. Without a title, the link shows the site's address.
+
+The link opens in a new tab. Its tile says **Docs**, **Sheets**, **Slides**, **Forms**, **Drive** or **Web**. Margince keeps only the address, so whoever opens it needs access to the file itself. One address can be added to a record only once.
+Also called: link a Google Drive file, add a URL, add a web link to a company.
 
 ### How do I attach a file to a contact?
 To attach or upload a file to a contact in Margince, open the contact, choose its **Documents** tab and click **Add document**.
@@ -48,7 +58,9 @@ Also called: attach a proposal to a deal, add a file to an opportunity.
 To attach a file to a meeting, call or note in Margince, add it while you log the activity.
 1. In the **Log activity** form, drop the files on **Attach files**, or click it to choose them.
 2. Choose **Log**. The files are uploaded once the activity is logged.
-If a file is refused, a message names it and says why. The others are still attached.
+An empty file, a file over the limit, or a kind Margince does not keep is not added.
+A line under **Attach files** names it and says why, before you log.
+If the server still refuses a file, a message names it and says why. The others are still attached.
 
 If an upload does not finish, Margince checks the activity's files first, so no message asks you to add a file that is already there. To add a file later, press **Files** on the activity in the record's History, then **Add document**. The activity panel that opens from search or the worklist lists the same files under **Files**. The size limit and the file kinds are the same as for any document. Whoever may read the activity may open its files.
 Also called: attach a document to a meeting, add a file to a call, meeting attachments.
@@ -66,7 +78,7 @@ Margince takes these kinds of file as a document on a record, or as a file on an
 - Text files: `.txt`, `.csv`, `.md`, `.html`, `.htm`
 - Images: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.heic`, `.heif`, `.tif`, `.tiff`
 - Archives and saved emails: `.zip`, `.eml`, `.msg`
-Any other kind is refused, and the message names the kinds Margince takes. An `.svg` image and a program such as an `.exe` are refused.
+Any other kind is refused, and the message names the kinds Margince takes. An `.svg` image and a program such as an `.exe` are refused. The file's content must also match its kind, so a program renamed to `.pdf` is refused too.
 Files that arrive with a captured email are kept even when they are of another kind.
 A document set takes fewer kinds; see [Which files can a document set take?](#which-files-can-a-document-set-take).
 Also called: supported file types, file formats, can I upload an archive.
@@ -153,26 +165,36 @@ A field the file names but not clearly enough is left out and labelled
 name at all is labelled "omitted (not stated in this file)". Margince does
 not guess a missing value.
 
-## A chat on a contact
+## A chat on a contact, lead or deal
 
-### How do I save a chat from WhatsApp on a contact?
-To save a chat from a messaging app on a contact in Margince, open the contact's **Documents** tab and click **Capture a chat**.
+### How do I save a chat from WhatsApp on a contact, lead or deal?
+To save a chat from a messaging app in Margince, click **Capture a chat**. It is on a contact's **Documents** tab, on a lead's **History** tab, and in a deal's **Files** panel.
 1. Take a screenshot of the chat and paste it, drop it on **Screenshot**, or click to choose it.
 2. AI reads the messages into **What was said**, marked "Copied from the screenshot by AI". Check the text and change it if needed.
-3. Pick the **Chat app** and click **File on this contact**.
-Nothing is saved on the contact's history until you click **File on this contact**. **Discard** removes the screenshot again.
+3. Pick the **Chat app** and click **File on this contact**, **File on this lead** or **File on this deal**.
+Nothing is saved on the record's history until you click the file button. **Discard** removes the screenshot again.
 Also called: save a WhatsApp chat, log a Telegram message, add a chat screenshot.
 
-The chat is saved as one message on the contact, with the screenshot
+The chat is saved as one message on the record, with the screenshot
 attached to it. When the chat's header shows a name or number that is
-not this contact's, the panel says so. Tick the box to save it here all the same. When AI cannot read the screenshot, or no AI model is set up,
+not this contact's or lead's, the panel says so. Tick the box to save it here all the same. A deal has many contacts, so a chat on a deal gets no such warning. When AI cannot read the screenshot, or no AI model is set up,
 the panel says why and **What was said** stays empty. You can type the text
 yourself or save the screenshot alone.
 
 A message whose text you left as AI read it is recorded as written by AI for
 you. A text you typed or changed is recorded as yours.
 
-The screenshot and the text are part of the contact's data. Deleting the
+### Does a filed chat change my open task?
+Yes, when an AI model is set up. After you file a chat, AI reads it against your open tasks on the same record. It changes a task only when the chat clearly settles it:
+- The chat shows the task's work happened, for example "I booked a slot for Thursday". The task is marked done.
+- The chat shows the task waits, for example "ping me again next week". The task moves to that day.
+
+Every other task stays as it was. AI reads only tasks that are yours and that you may change. It skips tasks Margince made, and a task you opened again after Margince closed it.
+The change shows in **Done for you** with the chat line it rests on, and **Undo** puts the task back as it was. AI reads a chat once, when you first file it, so it never changes that task again.
+
+The receipt quotes the chat only while you may read it. A deleted, archived or private chat leaves the receipt without its words.
+
+The screenshot and the text are part of the record's data. Deleting a
 contact's data on request removes both.
 
 ## Files on a deal
@@ -189,9 +211,15 @@ sender is unknown, it says "an unknown sender".
 ### How do I remove a file from a deal?
 To remove a file from a deal in Margince, open the deal's **Documents** tab. Open the file's **⋯** menu on its tile or row in the **Files** panel, and choose **Hide from this deal** or **Delete**. The panel's **Grid** and **List** switch shows files as tiles or as rows, and your device keeps the choice.
 - **Hide from this deal**: the deal stops listing the file at once. The message and its attachment stay on the activity and in the company library. The toast "Hidden from this deal" offers **Undo**. Later, bring it back with **Show hidden files** and **Show on this deal again**.
-- **Delete**: asks first, "The file is removed from this deal, and from any Deal Room sharing it."
+- **Delete**: asks first, and names the file as its tile does. "The file is removed from this deal, and buyers no longer see it in any Deal Room. The room entry stays until you remove it from the room."
 Use hide when the file does not matter here; use delete when it should not be on the deal at all.
 Also called: delete an attachment, remove a document.
+
+### How do I edit or delete a document I uploaded?
+To change or remove an uploaded document in Margince, open the **⋯** menu on its tile or row in **Documents**. This works on a contact, a company and a deal. Choose **Edit** or **Delete**. The menu is missing when you may not edit the record. It is also missing on a file that came with an email or chat message, because that file belongs to its message.
+- **Edit**: opens a small dialog for **Title**, **Category** and **State** (**Draft**, **Current**, **Final** or **Superseded**). Only the fields you change are saved. On a company's library, a **Superseded** document leaves the list until you choose **Show superseded**. On a contact or a deal it stays in the list and is marked as superseded.
+- **Delete**: asks first and names the file. The file leaves every Documents list that showed it. A saved link to it then opens a page that says "This file was deleted or you no longer have access."
+Also called: rename a document, change a document's category, mark a document superseded, remove a wrong upload.
 
 ## Document sets — asking your documents questions
 
@@ -215,15 +243,18 @@ Also called: knowledge base, FAQ, handbook, document library, corpus.
 
 ### Which files can a document set take?
 A document set in Margince takes **plain text, Markdown, CSV or JSON** only: "PDF and Word files are not supported and are refused."
-Each refused file is named: `{filename}: {message}`. To use a PDF or Word document, save it as plain text or Markdown first.
+Each refused file is named: `{filename}: {message}`, for example "contract.docx: Word files are not supported. Save it as plain text, Markdown, CSV or JSON first."
 The size limit for one document in a set is **5 MB by default**; see [What is the maximum file size for an upload?](#what-is-the-maximum-file-size-for-an-upload).
+
+An empty file, or one over the limit, is named as soon as you drop it and is not added.
+Once you click **Add document**, every file it sent leaves the drop zone; the ones refused are named below it.
 Also called: can I upload a PDF to the knowledge base, supported formats.
 
 ### How do I ask my documents a question?
 To ask your documents a question in Margince, open the command palette and choose **Ask your documents**.
 1. Press ⌘K (Mac) or Ctrl+K, or click **Search or ask Margince** in the top bar.
-2. Choose **Ask your documents**, the first row.
-3. Pick the **Document set**, type **Your question**, and click **Ask**.
+2. Choose **Ask your documents**, the last row.
+3. Pick the **Document set**, type **Your question** (at most 1,000 characters), and click **Ask**.
 
 "Answers come only from one document set, questions the set does not cover are refused, and every sentence cites its passage."
 Also called: search the knowledge base, ask the handbook, FAQ.
@@ -246,8 +277,9 @@ you always know whether an AI model was used.
 
 - **This set is still being read**: "{embedded} of {total} passages are
   searchable. Retry shortly. The question is not the problem."
-- **No search index is configured**: "Nothing was searched. This installation
-  has no search index configured."
+- **Documents cannot be searched yet**: "No embedding model is chosen for search, so nothing was
+  searched." With the right to change AI settings you get **Choose an embedding model**, which opens
+  **AI models**, **Model tiers**. Without that right, it says an administrator can choose one there.
 - **No document sets**: "This company has no documents yet, so there is
   nothing to search."
 - **You cannot open this company’s documents**: "You do not have access to this
@@ -295,7 +327,7 @@ to the list of document sets."
 
 Margince takes files in two more places, with their own limits:
 
-- **A CSV file to import** (prospects, companies or contacts), and **vCard
+- **A CSV file to import** (leads, companies or contacts), and **vCard
   files**: 10 MB by default.
 - **Your own LinkedIn `Connections.csv`**: 8 MB by default.
 

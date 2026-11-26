@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -37,7 +38,9 @@ func TestADateFieldGoesBackWhereItWas(t *testing.T) {
 	ctx := e.Admin()
 	pipeline, open, _ := integration.DealFixture(t, e)
 
-	was := time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC)
+	// Both dates are taken from the clock, since the writer refuses a close date
+	// already past.
+	was := clocktest.Now(t).AddDate(0, 1, 0).Truncate(24 * time.Hour)
 	deal, err := e.Deals.CreateDeal(ctx, deals.CreateDealInput{
 		Name: "Dated", PipelineID: pipeline, StageID: open, Source: "manual",
 		ExpectedClose: &was,
@@ -48,7 +51,7 @@ func TestADateFieldGoesBackWhereItWas(t *testing.T) {
 	id := ids.UUID(deal.Id)
 	dealID := ids.From[ids.DealKind](id)
 
-	moved := time.Date(2027, 3, 15, 0, 0, 0, 0, time.UTC)
+	moved := was.AddDate(0, 3, 14)
 	if _, err := e.Deals.UpdateDeal(ctx, dealID, deals.UpdateDealInput{ExpectedClose: &moved}); err != nil {
 		t.Fatalf("move the close date: %v", err)
 	}

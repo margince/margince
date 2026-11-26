@@ -5,7 +5,8 @@
 // rendering in it, so it reads and tests on its own.
 
 import type { components } from "../../api/schema";
-import type { CreateField } from "../../components/create";
+import type { CreateField, CreateFieldOption } from "../../components/create";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 
 type UpdateLeadRequest = components["schemas"]["UpdateLeadRequest"];
 
@@ -38,13 +39,75 @@ export function mapLeadUpdate(
   };
 }
 
-export const leadEditFields: CreateField[] = [
-  { key: "full_name", label: "create.fullName", required: true },
+/** The choices of the lead's select fields, each with its own unset option first. */
+export type LeadFieldChoices = Readonly<{
+  industries: CreateFieldOption[];
+  origins: CreateFieldOption[];
+  partners: CreateFieldOption[];
+}>;
+
+// Typed, never offered from the contacts: someone is either a lead or a
+// contact, and the server refuses a contact's address.
+export const LEAD_IDENTITY_CREATE_FIELDS: readonly CreateField[] = [
+  {
+    key: "full_name",
+    label: "create.fullName",
+    required: true,
+    maxLength: TEXT_LIMITS.label,
+  },
   { key: "email", label: "create.email", type: "email" },
-  // Plain text, as a contact's number is. The server normalises to E.164
-  // through values.ParsePhone. A `tel` input would let a browser offer a local
-  // format the writer then refuses.
-  { key: "phone", label: "create.phone" },
-  { key: "title", label: "create.contactTitle" },
-  { key: "company_name", label: "create.companyName" },
+  { key: "linkedin_url", label: "create.linkedinUrl" },
+  { key: "title", label: "create.contactTitle", maxLength: TEXT_LIMITS.label },
+  {
+    key: "company_name",
+    label: "create.companyName",
+    maxLength: TEXT_LIMITS.label,
+  },
 ];
+
+export function leadEditFields(choices: LeadFieldChoices): CreateField[] {
+  return [
+    {
+      key: "full_name",
+      label: "create.fullName",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
+    },
+    {
+      key: "company_name",
+      label: "create.companyName",
+      maxLength: TEXT_LIMITS.label,
+    },
+    {
+      key: "title",
+      label: "create.contactTitle",
+      maxLength: TEXT_LIMITS.label,
+    },
+    {
+      key: "industry",
+      label: "create.industry",
+      type: "select",
+      options: choices.industries,
+    },
+    { key: "email", label: "create.email", type: "email" },
+    // Plain text, as a contact's number is. The server normalises to E.164
+    // through values.ParsePhone. A `tel` input would let a browser offer a local
+    // format the writer then refuses.
+    { key: "phone", label: "create.phone" },
+    {
+      key: "origin",
+      label: "lead.origin",
+      type: "select",
+      options: choices.origins,
+    },
+    { key: "origin_detail", label: "lead.originDetail" },
+    {
+      key: "partner_company_id",
+      label: "lead.partner",
+      type: "select",
+      options: choices.partners,
+    },
+    { key: "linkedin_url", label: "create.linkedinUrl" },
+    { key: "candidate_company_key", label: "record.companyRoutingKey" },
+  ];
+}

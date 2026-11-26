@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -17,30 +18,20 @@ import (
 // NextMeetingFollowUpsByDealTx selects the newest actionable follow-up for each deal.
 // The feed's global page bound cannot hide another deal's first matching meeting.
 func (s *Store) NextMeetingFollowUpsByDealTx(ctx context.Context, tx pgx.Tx, asOf time.Time, dealIDs []ids.UUID) (map[ids.UUID][]AwaitingReply, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		return nil, err
-	}
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+	// Before any SQL, so a refused caller costs no read; the builder checks
+	// again because it is where the deal table is read.
+	if err := requireDealFollowUpRead(ctx); err != nil {
 		return nil, err
 	}
 	days, err := followUpAfterDays(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
-	var dealScope string
-	query, args, err := meetingFollowUpsStatement(ctx, asOf, days, func(arg func(any) int) (string, error) {
-		var err error
-		dealScope, err = readableDealBatchSQL(ctx, dealIDs, arg)
-		return `cardinality(attendees.recipients) > 0 AND EXISTS (SELECT 1 FROM activity_link on_deal
-   WHERE on_deal.activity_id = a.id AND on_deal.deal_id = d.id)`, err
-	}, 1)
+	query, args, err := meetingFollowUpsByDealStatement(ctx, asOf, days, dealIDs)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, `SELECT owed.id, owed.subject, owed.occurred_at, owed.recipients,
-  owed.company_id, d.id, owed.precision FROM deal d CROSS JOIN LATERAL (`+query+`)
-  owed(id, subject, occurred_at, recipients, company_id, deal_id, precision)
-  WHERE `+dealScope+` ORDER BY d.id`, args...)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -53,6 +44,45 @@ func (s *Store) NextMeetingFollowUpsByDealTx(ctx context.Context, tx pgx.Tx, asO
 		out[meeting.DealID] = append(out[meeting.DealID], meeting)
 	}
 	return out, nil
+}
+
+// followUpsOwed names the batch's follow-up rows, which every deal link joins.
+const followUpsOwed = "follow_up_owed"
+
+// meetingFollowUpsByDealStatement selects each readable deal's newest meeting follow-up.
+func meetingFollowUpsByDealStatement(ctx context.Context, asOf time.Time, days int, dealIDs []ids.UUID) (string, []any, error) {
+	if err := requireDealFollowUpRead(ctx); err != nil {
+		return "", nil, err
+	}
+	var dealScope string
+	query, args, err := unpagedMeetingFollowUpsStatement(ctx, asOf, days, func(arg func(any) int) (meetingNarrowing, error) {
+		// The candidates are only the asked deals' meetings, so the per-meeting
+		// work never runs on the reader's other meetings.
+		onTheDeals := fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link asked
+   WHERE asked.activity_id = a.id AND asked.deal_id = ANY($%d))`, arg(dealIDs))
+		var err error
+		dealScope, err = readableDealBatchSQL(ctx, dealIDs, arg)
+		return meetingNarrowing{candidates: onTheDeals, reported: `cardinality(recipient_set.recipients) > 0 AND EXISTS (SELECT 1 FROM activity_link on_deal
+   JOIN deal d ON d.id = on_deal.deal_id WHERE on_deal.activity_id = a.id AND ` + dealScope + `)`}, err
+	})
+	if err != nil {
+		return "", nil, err
+	}
+	// Materialized, so a nested loop over the deals' links never runs the
+	// follow-up query once for each link it joins.
+	return `WITH ` + followUpsOwed + `(id, subject, occurred_at, recipients, company_id, deal_id, precision) AS MATERIALIZED (` + query + `)
+  SELECT DISTINCT ON (d.id) owed.id, owed.subject, owed.occurred_at, owed.recipients,
+  owed.company_id, d.id, owed.precision FROM ` + followUpsOwed + ` owed
+  JOIN activity_link on_deal ON on_deal.activity_id = owed.id
+  JOIN deal d ON d.id = on_deal.deal_id
+  WHERE ` + dealScope + ` ORDER BY d.id, owed.occurred_at DESC, owed.id DESC`, args, nil
+}
+
+func requireDealFollowUpRead(ctx context.Context) error {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return err
+	}
+	return auth.Require(ctx, "deal", principal.ActionRead)
 }
 
 // NextMeetingFollowUpOnDeal shares the batch selector so page bounds cannot change the answer.

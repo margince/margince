@@ -1,0 +1,6 @@
+{
+  "verb": "preview_mail_deal_repair",
+  "checks": [
+    "data_task.read"
+  ]
+}

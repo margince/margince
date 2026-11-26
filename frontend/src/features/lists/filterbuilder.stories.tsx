@@ -13,10 +13,11 @@ import {
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { FilterBuilder } from "./filterbuilder";
-import { ClauseRow } from "./filterclause";
+import { ClauseRow, firstClause } from "./filterclause";
 
 // The predicate builder: a tree of clauses, each offering only what the server's
 // vocabulary admits for the field it names.
@@ -47,8 +48,6 @@ const FIELDS: VocabularyField[] = [
     references: "app_user",
   },
   {
-    // Unbounded: a workspace has as many accounts as customers, so this one
-    // keeps a plain box rather than a dropdown that could never be complete.
     name: "company_id",
     type: "id",
     operators: ["eq", "neq", "in", "exists"],
@@ -84,6 +83,11 @@ const FIELDS: VocabularyField[] = [
 // makes it stop at its page budget instead, which the clause has to disclose.
 function routes(nextCursor: string | null = null): void {
   installFetchStub({
+    "GET /me": meRoute({
+      contact: ["read"],
+      company: ["read"],
+      deal: ["read"],
+    }),
     "GET /users": () =>
       jsonResponse({
         data: [
@@ -114,6 +118,17 @@ function story(start: Node, nextCursor: string | null = null) {
 
 type Story = StoryObj<typeof FilterBuilder>;
 
+// A new condition names no field; its operator and value wait for one.
+export const NewCondition: Story = {
+  render: story(newGroup("and", [firstClause()])),
+};
+
+export const NewConditionPhone: Story = {
+  ...NewCondition,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
 export const RecordPicker: Story = {
   // An id clause names a seat, chosen by name. The stored value is still the id.
   render: story(newGroup("and", [newLeaf("owner_id", "eq", "u-2")])),
@@ -127,8 +142,6 @@ export const RecordPickerOnAPartialRoster: Story = {
 };
 
 export const UnboundedTargetKeepsABox: Story = {
-  // The documented exception. A dropdown here could never be complete, and a
-  // half-filled one would read as "this account does not exist".
   render: story(newGroup("and", [newLeaf("company_id", "eq", "")])),
 };
 

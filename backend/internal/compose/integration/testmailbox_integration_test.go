@@ -177,8 +177,8 @@ type testMailboxResolver struct {
 
 var _ comms.ConnectionResolver = testMailboxResolver{}
 
-func (m testMailboxResolver) Resolve(ctx context.Context, userID ids.UserID, provider string) (connector.EmailSender, connector.Auth, []string, error) {
-	sender, auth, granted, err := m.registry.SenderFor(ctx, userID, provider)
+func (m testMailboxResolver) Resolve(ctx context.Context, userID ids.UserID, provider string, connection *ids.UUID) (connector.EmailSender, connector.Auth, []string, error) {
+	sender, auth, granted, err := m.registry.SenderFor(ctx, userID, capture.MailboxNamed(provider, connection))
 	switch {
 	case errors.Is(err, capture.ErrNoConnection):
 		return nil, nil, nil, fmt.Errorf("%w: %w", comms.ErrNoMailbox, err)
@@ -327,7 +327,7 @@ func TestTestMailboxFullLoop(t *testing.T) {
 		t.Fatalf("disconnect status = %d, want 204", status)
 	}
 	status2, code, _ := p.send(t)
-	if status2 != http.StatusUnprocessableEntity || code != "mailbox_not_send_capable" {
-		t.Fatalf("send after disconnect → %d %q, want 422 mailbox_not_send_capable", status2, code)
+	if status2 != http.StatusUnprocessableEntity || code != "mailbox_not_connected" {
+		t.Fatalf("send after disconnect → %d %q, want 422 mailbox_not_connected", status2, code)
 	}
 }

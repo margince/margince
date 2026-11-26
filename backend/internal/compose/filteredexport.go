@@ -30,23 +30,25 @@ package compose
 import (
 	"bytes"
 	"context"
-	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
+	"time"
+	"unicode"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/recordexport"
 	"github.com/margince/margince/backend/internal/modules/collections"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -73,11 +75,12 @@ type FilteredExportResult struct {
 // format over the shared pool.
 type FilteredExportWriter struct {
 	pool *pgxpool.Pool
+	now  func() time.Time
 }
 
 // NewFilteredExportWriter builds the writer over the shared pool.
 func NewFilteredExportWriter(pool *pgxpool.Pool) *FilteredExportWriter {
-	return &FilteredExportWriter{pool: pool}
+	return &FilteredExportWriter{pool: pool, now: time.Now}
 }
 
 // codeInvalid is the contract's machine code for a supplied-but-unusable value,
@@ -138,25 +141,15 @@ func (w *FilteredExportWriter) write(ctx context.Context, engine storekit.Query,
 		if err != nil {
 			return err
 		}
-		columns, err := exportableColumns(ctx, tx, engine.Table)
-		if err != nil {
-			return err
-		}
-		rows, err := readRowsByID(ctx, tx, engine.Table, columns, matched)
-		if err != nil {
-			return err
-		}
-		data := memberData{table: engine.Table, columns: columns, rows: rows}
-
-		body, contentType, err := renderExport(data, format)
+		body, contentType, rowCount, err := w.renderSlice(ctx, tx, engine.Table, matched, src.Sort, format)
 		if err != nil {
 			return err
 		}
 		result = FilteredExportResult{
 			ContentType: contentType,
-			Filename:    fmt.Sprintf("%s-export.%s", engine.Table, format),
+			Filename:    exportFilename(src.Name, engine.Table, w.now(), format),
 			Body:        body,
-			RowCount:    len(rows),
+			RowCount:    rowCount,
 		}
 
 		// The export operation itself is logged (P7/P12): who exported which
@@ -168,7 +161,7 @@ func (w *FilteredExportWriter) write(ctx context.Context, engine storekit.Query,
 			"kind":      "filtered",
 			"table":     engine.Table,
 			"format":    string(format),
-			"row_count": len(rows),
+			"row_count": result.RowCount,
 			"filter":    exportedSlice(src),
 		}))
 		return err
@@ -177,6 +170,63 @@ func (w *FilteredExportWriter) write(ctx context.Context, engine storekit.Query,
 		return FilteredExportResult{}, err
 	}
 	return result, nil
+}
+
+// csvContentType is the media type of every CSV the export writes.
+const csvContentType = "text/csv; charset=utf-8"
+
+// renderSlice renders the matched rows. The CSV of a contact, company, deal or
+// lead is the file the import reads back. Every other file keeps the stored
+// table's own columns.
+func (w *FilteredExportWriter) renderSlice(ctx context.Context, tx pgx.Tx, table string, matched []ids.UUID, sort string, format exportFileFormat) (body []byte, contentType string, rowCount int, err error) {
+	if spec, readable := readableExport(table, InstallationDB(w.pool), sort); readable && format == exportFmtCSV {
+		rows, err := recordexport.Rows(ctx, tx, spec, matched)
+		if err != nil {
+			return nil, "", 0, err
+		}
+		body, err := recordexport.CSV(spec.Targets, rows)
+		return body, csvContentType, len(rows), err
+	}
+	columns, err := exportableColumns(ctx, tx, table)
+	if err != nil {
+		return nil, "", 0, err
+	}
+	rows, err := readRowsByID(ctx, tx, table, columns, matched)
+	if err != nil {
+		return nil, "", 0, err
+	}
+	body, contentType, err = renderExport(memberData{table: table, columns: columns, rows: rows}, format)
+	return body, contentType, len(rows), err
+}
+
+// readableExport is the file the import takes back for an object. It holds the
+// import's own fields, the employer name where the import links one, and the id.
+func readableExport(table string, db *database.DB, sort string) (recordexport.Spec, bool) {
+	if !selectsByID(table) {
+		return recordexport.Spec{}, false
+	}
+	fields := csvTargets[table]
+	if linksEmployer(table) {
+		fields = append(slices.Clone(fields), csvEmployerName)
+	}
+	return recordexport.Spec{Object: table, Targets: recordexport.ExportedTargets(table, fields), Sort: sort, DB: db, Stored: storedText}, true
+}
+
+// storedText is a field's text as the import compares it with a mapped cell.
+func storedText(record map[string]json.RawMessage, target string) string {
+	return textOf(storedValue(record, target))
+}
+
+// exportFilename names the file after its list or view and the day, so two
+// exports do not both arrive as the table's name.
+func exportFilename(name, table string, day time.Time, format exportFileFormat) string {
+	stem := strings.Join(strings.FieldsFunc(strings.ToLower(name), func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	}), "-")
+	if stem == "" {
+		stem = table
+	}
+	return fmt.Sprintf("%s-%s.%s", stem, day.Format(time.DateOnly), format)
 }
 
 // readRowsByID reads the given rows' exportable columns, ordered by id for
@@ -188,7 +238,7 @@ func readRowsByID(ctx context.Context, tx pgx.Tx, table string, columns []string
 	if len(idList) == 0 {
 		return nil, nil
 	}
-	selects, args, err := maskedRowSelects(ctx, tx, table, columns, idList)
+	selects, args, err := recordexport.MaskedRowSelects(ctx, tx, table, columns, idList)
 	if err != nil {
 		return nil, err
 	}
@@ -201,8 +251,9 @@ func readRowsByID(ctx context.Context, tx pgx.Tx, table string, columns []string
 	defer pgRows.Close()
 
 	var out [][]any
+	reader := rowvalue.NewReader()
 	for pgRows.Next() {
-		values, err := pgRows.Values()
+		values, err := reader.Values(pgRows)
 		if err != nil {
 			return nil, err
 		}
@@ -220,92 +271,6 @@ func readRowsByID(ctx context.Context, tx pgx.Tx, table string, columns []string
 	return out, nil
 }
 
-// maskedRowSelects renders the per-column SELECT list with the caller's
-// field masks applied in the statement itself: an always-masked column goes
-// out NULL on every row, a write-authority-conditioned one only on the rows
-// the caller could not change — the identical decision the deal list makes
-// per row, spelled here once for the export and the filter preview, which
-// otherwise print every column of every visible row.
-func maskedRowSelects(ctx context.Context, tx pgx.Tx, table string, columns []string, idList []ids.UUID) ([]string, []any, error) {
-	args := []any{idList}
-	p, err := storekit.Actor(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	alwaysMasked := map[string]bool{}
-	for _, f := range auth.MaskedFields(p, table, true) {
-		alwaysMasked[f] = true
-	}
-	conditioned := map[string]bool{}
-	for _, f := range auth.MaskedFields(p, table, false) {
-		if !alwaysMasked[f] {
-			conditioned[f] = true
-		}
-	}
-	withholdDerivedColumns(table, columns, alwaysMasked, conditioned)
-	// Only a conditioned mask naming a REAL column earns the writable-set
-	// bind: a stale mask row naming no column would otherwise register a
-	// parameter no CASE references, which Postgres refuses outright.
-	rendered := false
-	for _, col := range columns {
-		if conditioned[col] {
-			rendered = true
-			break
-		}
-	}
-	writablePos := 0
-	if rendered {
-		writable, err := auth.WritableSubset(ctx, tx, table, idList)
-		if err != nil {
-			return nil, nil, err
-		}
-		writableIDs := make([]ids.UUID, 0, len(writable))
-		for id, ok := range writable {
-			if ok {
-				writableIDs = append(writableIDs, id)
-			}
-		}
-		args = append(args, writableIDs)
-		writablePos = len(args)
-	}
-	selects := make([]string, len(columns))
-	for i, col := range columns {
-		source := "t." + col
-		if derived, ok := derivedColumnExpr(table, col); ok {
-			source = derived
-		}
-		switch {
-		case alwaysMasked[col]:
-			selects[i] = fmt.Sprintf("NULL AS %s", col)
-		case conditioned[col]:
-			selects[i] = fmt.Sprintf("CASE WHEN t.id = ANY($%d) THEN %s END AS %s", writablePos, source, col)
-		default:
-			selects[i] = source + " AS " + col
-		}
-	}
-	return selects, args, nil
-}
-
-// withholdDerivedColumns extends both mask sets to the stored columns computed
-// from a withheld field. A deal's base amount and rate print the masked money
-// and currency back out. The stricter mask on any input decides the column.
-func withholdDerivedColumns(table string, columns []string, alwaysMasked, conditioned map[string]bool) {
-	for _, col := range columns {
-		inputs, derived := fieldmask.DerivedInputs(table, col)
-		if !derived {
-			continue
-		}
-		for _, input := range inputs {
-			switch {
-			case alwaysMasked[input]:
-				alwaysMasked[col] = true
-			case conditioned[input]:
-				conditioned[col] = true
-			}
-		}
-	}
-}
-
 // renderExport renders one member as the requested open format, reusing the
 // bundle writer's cell/value normalizers so a filtered slice and a full
 // bundle spell the same CSV and JSON.
@@ -313,24 +278,11 @@ func renderExport(data memberData, format exportFileFormat) (body []byte, conten
 	var buf bytes.Buffer
 	switch format {
 	case exportFmtCSV:
-		cw := csv.NewWriter(&buf)
-		if err := cw.Write(data.columns); err != nil {
+		buf.Write(recordexport.ByteOrderMark)
+		if err := writeMemberCSV(&buf, data); err != nil {
 			return nil, "", err
 		}
-		record := make([]string, len(data.columns))
-		for _, row := range data.rows {
-			for i := range data.columns {
-				record[i] = csvCell(row[i])
-			}
-			if err := cw.Write(record); err != nil {
-				return nil, "", err
-			}
-		}
-		cw.Flush()
-		if err := cw.Error(); err != nil {
-			return nil, "", err
-		}
-		return buf.Bytes(), "text/csv; charset=utf-8", nil
+		return buf.Bytes(), csvContentType, nil
 	case exportFmtJSON:
 		enc := json.NewEncoder(&buf)
 		enc.SetIndent("", "  ")
@@ -403,12 +355,7 @@ func (h filteredExportHandlers) CreateFilteredExport(w http.ResponseWriter, r *h
 		return
 	}
 
-	var result FilteredExportResult
-	if list != nil {
-		result, err = h.writer.WriteListExport(r.Context(), engine, src, exportFileFormat(req.Format), *list)
-	} else {
-		result, err = h.writer.WriteFiltered(r.Context(), engine, src.Predicate, exportFileFormat(req.Format))
-	}
+	result, err := h.writer.write(r.Context(), engine, src, exportFileFormat(req.Format), list)
 	if err != nil {
 		writeFilteredExportError(w, r, err)
 		return

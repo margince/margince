@@ -26,13 +26,11 @@ import (
 )
 
 // runReplayErasures builds the eraser the api erases with, from the same
-// environment. The replay then reaches attachment bytes, sealed link material
-// and provider originals, as an Art. 17 erasure does.
-//
-// The vault is resolved here and not by the dispatcher, so the other database
-// subcommands run without one, as they always have.
+// environment. The replay then reaches attachment bytes and provider originals,
+// as an Art. 17 erasure does. It resolves no vault: erasure marks link secrets
+// for the retrying passes that destroy them after the commit.
 func runReplayErasures(
-	ctx context.Context, pool *pgxpool.Pool, resolveVault func() (keyvault.Vault, error),
+	ctx context.Context, pool *pgxpool.Pool, _ func() (keyvault.Vault, error),
 	settings *config.Config, args []string, stdout io.Writer,
 ) error {
 	fs := flag.NewFlagSet("replay-erasures", flag.ContinueOnError)
@@ -49,11 +47,14 @@ func runReplayErasures(
 	if err != nil {
 		return fmt.Errorf("replay-erasures: blobstore: %w", err)
 	}
-	vault, err := resolveVault()
+	journal, separate, err := blobstore.ResolveJournal(ctx, settings, blob)
 	if err != nil {
-		return err
+		return fmt.Errorf("replay-erasures: %w", err)
 	}
-	replay, err := compose.ReplayErasureSuppressions(ctx, pool, blob, vault, *emptyJournalOK)
+	if !separate {
+		_, _ = fmt.Fprintln(stdout, sharedJournalWarning)
+	}
+	replay, err := compose.ReplayErasureSuppressions(ctx, pool, blob, journal, *emptyJournalOK)
 	if errors.Is(err, compose.ErrReplayNeedsObjectStore) || errors.Is(err, compose.ErrReplayJournalEmpty) {
 		return err
 	}
@@ -62,6 +63,12 @@ func runReplayErasures(
 	writeErasureReplayReport(stdout, replay)
 	return err
 }
+
+// sharedJournalWarning is printed when no separate journal store is set: the
+// list then sits in the store a restore may have rolled back.
+const sharedJournalWarning = "WARNING: no separate erasure journal store is set (MARGINCE_ERASURE_JOURNAL_ENDPOINT or " +
+	"MARGINCE_ERASURE_JOURNAL_PATH), so the erasure journal lives in the restored object store and may have been rolled " +
+	"back with it. Erasures newer than the restored copy can be missing from it."
 
 // writeErasureReplayReport says what the replay took and, as plainly, what it
 // could not cover.

@@ -1,0 +1,10 @@
+{
+  "verb": "archive_voice_profile",
+  "checks": [
+    "voice_profile.delete",
+    "voice_profile.read"
+  ],
+  "takes": [
+    "voice_profile"
+  ]
+}

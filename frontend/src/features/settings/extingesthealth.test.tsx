@@ -21,6 +21,7 @@ vi.mock("@composition/extensions", () => ({
     {
       name: "openchannel",
       title: "extOpenchannel.title",
+      summary: "",
       secretScope: "workspace",
       panels: [],
       verbs: [],
@@ -29,6 +30,7 @@ vi.mock("@composition/extensions", () => ({
 }));
 vi.mock("@composition/copy", () => ({
   extensionCopy: { en: { "extOpenchannel.title": "Open channel" } },
+  extensionOverrides: {},
 }));
 
 // Every request the card could make, recorded: the ABSENCE of one is what the

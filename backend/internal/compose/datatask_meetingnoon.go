@@ -14,8 +14,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // meetingNoonStartsDataTask puts back the start of a meeting the old outcome
@@ -25,7 +27,7 @@ import (
 func meetingNoonStartsDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792912000_meeting_noon_starts", Version: 3,
-		Title: "Restore meeting times an old outcome save moved to noon",
+		Title: systemtext.Literal("datatask.title.core.1792912000_meeting_noon_starts"),
 		// The selection also reads occurred_precision, which core/1792983858 adds.
 		Requires: []string{"core/" + activities.MeetingNoonCutoffMigration, "core/1792983858"},
 		Steps: []datatask.Step{{
@@ -39,7 +41,7 @@ func meetingNoonStartsDataTask() datatask.Task {
 				if !ok {
 					return 0, false, errors.New("meeting noon estimate: the executor passed no transaction")
 				}
-				zone, err := identity.TimezoneAppliedTx(ctx, tx)
+				zone, err := storedZoneForRepair(ctx, tx)
 				if err != nil {
 					return 0, false, err
 				}
@@ -59,7 +61,7 @@ func restoreNoonMeetingsBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	zone, err := identity.TimezoneAppliedTx(ctx, tx)
+	zone, err := storedZoneForRepair(ctx, tx)
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
@@ -80,4 +82,10 @@ func restoreNoonMeetingsBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 		}
 	}
 	return datatask.AdvanceUUID(in, scanned, changed)
+}
+
+// storedZoneForRepair reads the stored zone name. A repair is kept, so it
+// counts in the stored zone and never in the UTC a background pass falls back to.
+func storedZoneForRepair(ctx context.Context, tx pgx.Tx) (string, error) {
+	return settings.ApplyTx(ctx, tx, identity.Timezone)
 }

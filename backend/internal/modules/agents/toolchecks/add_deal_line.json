@@ -1,0 +1,9 @@
+{
+  "verb": "add_deal_line",
+  "checks": [
+    "deal.update"
+  ],
+  "takes": [
+    "deal"
+  ]
+}

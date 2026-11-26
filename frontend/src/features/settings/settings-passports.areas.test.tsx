@@ -294,7 +294,9 @@ describe("PassportCard: minting with areas", () => {
     await user.click(
       await screen.findByRole("button", { name: "New passport" }),
     );
-    return screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText(/^Agent name/), "Scout");
+    return dialog;
   }
 
   it("starts at all areas and sends them", async () => {
@@ -305,7 +307,7 @@ describe("PassportCard: minting with areas", () => {
       within(dialog).getByRole("radio", { name: /All areas/ }),
     ).toBeChecked();
     await user.click(
-      within(dialog).getByRole("button", { name: "Mint passport" }),
+      within(dialog).getByRole("button", { name: "Create passport" }),
     );
     await within(dialog).findByText("mgp_live_0f3a91c4");
     expect(sent[0]?.body).toMatchObject({ areas: { mode: "all", areas: [] } });
@@ -327,7 +329,7 @@ describe("PassportCard: minting with areas", () => {
       await user.click(within(dialog).getByRole("checkbox", { name: area }));
     }
     await user.click(
-      within(dialog).getByRole("button", { name: "Mint passport" }),
+      within(dialog).getByRole("button", { name: "Create passport" }),
     );
     await within(dialog).findByText("mgp_live_0f3a91c4");
     expect(sent[0]?.body).toMatchObject({

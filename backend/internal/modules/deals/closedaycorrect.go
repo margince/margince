@@ -68,13 +68,12 @@ func (s *Store) CorrectCloseDay(ctx context.Context, id ids.DealID, in CorrectCl
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return crmcontracts.Deal{}, err
-	}
 	var out crmcontracts.Deal
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		out, err = s.correctCloseDayInTx(ctx, tx, id, in, active)
 		return err
 	})
@@ -100,7 +99,7 @@ func (s *Store) correctCloseDayInTx(ctx context.Context, tx pgx.Tx, id ids.DealI
 		return crmcontracts.Deal{}, err
 	}
 	if storekit.WorkspaceDay(*current.ClosedAt, zone).Equal(day) {
-		return readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+		return s.readDealStamped(ctx, tx, id, storekit.LiveOnly, active)
 	}
 
 	closedAt := time.Date(day.Year(), day.Month(), day.Day(), 12, 0, 0, 0, zone).UTC()
@@ -115,7 +114,7 @@ func (s *Store) correctCloseDayInTx(ctx context.Context, tx pgx.Tx, id ids.DealI
 	if err := recordDealUpdate(ctx, tx, id, current, UpdateDealInput{}, p); err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	return readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+	return s.readDealStamped(ctx, tx, id, storekit.LiveOnly, active)
 }
 
 // lockClosedDeal locks the deal row and returns it, refusing a deal that is
@@ -138,7 +137,7 @@ func (s *Store) lockClosedDeal(ctx context.Context, tx pgx.Tx, id ids.DealID) (c
 }
 
 func (s *Store) installationZoneIn(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
-	tzName, err := s.installation.Timezone(ctx, tx)
+	tzName, err := s.installation.TimezoneApplied(ctx, tx)
 	if err != nil {
 		return nil, fmt.Errorf("resolve the installation's timezone: %w", err)
 	}

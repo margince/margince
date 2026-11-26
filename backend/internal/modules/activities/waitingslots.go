@@ -42,12 +42,13 @@ func (s *Store) waitingQueueSlots(
 	instant := arg(asOf)
 	// The CONTENT gate, not the discover one: everything this read answers is
 	// derived from thread membership. A message the reader may not read makes
-	// no row, and a reply they may not read lifts no snooze.
-	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	// no row, and a reply they may not read lifts no snooze. Both rows are
+	// messages, so the message form answers alike at a third of the size.
+	content, err := auth.ActivityMessageContentClause(ctx, "a", arg)
 	if err != nil {
 		return waitingSlots{}, err
 	}
-	backContent, err := auth.ActivityContentClause(ctx, "back", arg)
+	backContent, err := auth.ActivityMessageContentClause(ctx, "back", arg)
 	if err != nil {
 		return waitingSlots{}, err
 	}
@@ -95,8 +96,12 @@ func (s *Store) waitingQueueSlots(
 		}
 		readerAddresses = storekit.MailSeatAddressesSQL(identities, fmt.Sprintf("$%d::uuid", reader))
 	}
+	withheld, err := withheldColumns(ctx, tx, arg)
+	if err != nil {
+		return waitingSlots{}, err
+	}
 	values := []any{
-		instant, content, linkVisible, WaitingScanCap,
+		instant, content, linkVisible, "",
 		horizon,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
@@ -104,12 +109,13 @@ func (s *Store) waitingQueueSlots(
 		reader,
 		seats.responsibilitySQL(identities, arg, fmt.Sprintf("$%d", instant), fmt.Sprint(horizon)),
 		neverRelaxed, neverRelaxed,
-		neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
+		neverRelaxed, fmt.Sprintf("$%d", arg(ownDomains)),
 		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 		readerAddresses,
 		neverRelaxed,
 		noKeyset, bookedDiscover,
 		neverRelaxed, neverRelaxed, requestTaskDiscover,
+		withheld,
 	}
 	return waitingSlots{identities: identities, values: values}, nil
 }

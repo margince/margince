@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -85,6 +86,7 @@ func recordActor(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []
 func (f sharedContactFixture) share(t *testing.T, access string) {
 	t.Helper()
 	svc := identity.NewService(f.env.Pool)
+	f.env.GrantRole(t, f.env.Rep1, "rep")
 	if _, err := svc.CreateRecordGrant(f.owner, identity.CreateGrantInput{
 		RecordType: "contact", RecordID: f.contact,
 		SubjectType: "user", SubjectID: f.env.Rep1, Access: access,
@@ -96,7 +98,7 @@ func (f sharedContactFixture) share(t *testing.T, access string) {
 // AAD-AC-4 against the database: a read-seat member holding a WRITE share is
 // still refused.
 //
-// The rule had one guard, at grant creation (refuseWriteGrantToReadSeat), and
+// The rule had one guard, at grant creation (identity.grantAccessFor), and
 // nothing revokes a standing grant when a seat is downgraded. So the stored
 // row can say the opposite of the rule, and the only thing making that inert
 // is the seat ceiling on the doors that exist today — which is exactly the
@@ -184,7 +186,7 @@ func TestAReadShareOpensAContactButCannotEditIt(t *testing.T) {
 func TestAReadShareCannotArchiveOrEraseTheContactItOpens(t *testing.T) {
 	f := seedSharedContact(t, "Destructible Subject")
 	store := contacts.NewStore(f.env.DB())
-	eraser := privacy.NewEraser(f.env.DB())
+	eraser := privacy.NewEraser(f.env.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities)
 	id := ContactIDOf(f.contact)
 
 	f.share(t, "read")
@@ -233,6 +235,7 @@ func TestAReadShareOfALeadCannotScoreIt(t *testing.T) {
 	}
 	shareLead := func(access string) {
 		t.Helper()
+		e.GrantRole(t, e.Rep1, "rep")
 		if _, err := identity.NewService(e.Pool).CreateRecordGrant(owner, identity.CreateGrantInput{
 			RecordType: "lead", RecordID: lead,
 			SubjectType: "user", SubjectID: e.Rep1, Access: access,
@@ -275,14 +278,14 @@ func leadActor(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []id
 
 // A merge changes BOTH ends — the source is archived onto the survivor, the
 // survivor absorbs its fields — so both ends carry the write-authority probe.
-// The survivor's refusal is a bare conflict rather than a 403: naming it would
-// disclose more than the caller could already read.
+// A survivor the caller cannot see answers a bare conflict, since naming it
+// would disclose it. One they may only read answers 403 with the reason.
 func TestAMergeNeedsWriteAuthorityOnBothEnds(t *testing.T) {
 	f := seedSharedContact(t, "Merge Source")
 	e := f.env
 	survivor := e.SeedID(t,
-		`INSERT INTO contact (id, full_name, owner_id, source, captured_by)
-		 VALUES ($1, 'Merge Survivor', $2, 'manual', 'human:x')`, e.Rep3)
+		`INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
+		 VALUES ($1, 'Merge Survivor', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
 	store := contacts.NewStore(e.DB()).WithGrantCarrier(identity.NewServiceFor(e.DB()))
 
 	// Read on the source, write on the survivor: the caller may change what the
@@ -296,20 +299,25 @@ func TestAMergeNeedsWriteAuthorityOnBothEnds(t *testing.T) {
 		t.Fatalf("merging away a source held on a read share → %v, want permission-denied", err)
 	}
 
-	// Write on the source, nothing on the survivor: the caller may change what
-	// they are folding away and not what it folds into.
+	// Write on the source, nothing on the capture-private survivor: the caller
+	// may change what they fold away and cannot even see what it folds into.
 	f.share(t, "write")
 	revokeShare(t, e, survivor, e.Rep1)
 	_, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor), nil)
 	if !errors.Is(err, apperrors.ErrConflict) {
-		t.Fatalf("merging into a survivor the caller cannot change → %v, want conflict", err)
+		t.Fatalf("merging into a survivor the caller cannot see → %v, want conflict", err)
 	}
 
-	// Read on the survivor is not enough either — it is the arm the visibility
-	// probe used to accept, and the one this change closes.
+	// Read on the survivor is not enough either. The caller can already see it,
+	// so the refusal says why instead of reading as a stale version.
 	shareWith(f.owner, t, e, survivor, e.Rep1, "read")
-	if _, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor), nil); !errors.Is(err, apperrors.ErrConflict) {
-		t.Fatalf("merging into a survivor held on a read share → %v, want conflict", err)
+	_, err = store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor), nil)
+	fault, ok := errors.AsType[apperrors.MessageFault](err)
+	if !ok || !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("merging into a survivor held on a read share → %v, want permission-denied with a reason", err)
+	}
+	if code, _ := fault.MessageFault(); code != "merge_target_read_only" {
+		t.Fatalf("merging into a survivor held on a read share answered code %q, want merge_target_read_only", code)
 	}
 
 	// Write on both: the merge goes through, so the two refusals above are the
@@ -337,6 +345,7 @@ func revokeShare(t *testing.T, e *SearchEnv, record, subject ids.UUID) {
 
 func shareWith(owner context.Context, t *testing.T, e *SearchEnv, record, subject ids.UUID, access string) {
 	t.Helper()
+	e.GrantRole(t, subject, "rep")
 	if _, err := identity.NewService(e.Pool).CreateRecordGrant(owner, identity.CreateGrantInput{
 		RecordType: "contact", RecordID: record,
 		SubjectType: "user", SubjectID: subject, Access: access,
@@ -403,6 +412,7 @@ func TestAReadShareOfADealCannotEditItsOffer(t *testing.T) {
 	}
 	shareDeal := func(access string) {
 		t.Helper()
+		e.GrantRole(t, e.Rep1, "rep")
 		if _, err := identity.NewService(e.Pool).CreateRecordGrant(owner, identity.CreateGrantInput{
 			RecordType: "deal", RecordID: deal,
 			SubjectType: "user", SubjectID: e.Rep1, Access: access,

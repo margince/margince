@@ -1,23 +1,29 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
 import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
 import { pickOption } from "../../design-system/select-testing";
+import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import {
-  changeChoice,
-  openChoiceDialog,
-} from "../../testing/choicedialog.testkit";
+import { companyDocumentsKey } from "../../lib/attachmentkeys";
+import { openChoiceDialog } from "../../testing/choicedialog.testkit";
 import { meFixture } from "../../testing/mefixture";
-import { CompanyActionBadges, CompanyOwnerControl } from "./companyheader";
+import { CompanyActionBadges } from "./companyheader";
 import { CompanyHeadLines } from "./companyheaderfacts";
-import { CompanyLifecycleControl } from "./companylifecycle";
 import { CompanyMarks } from "./companymarks";
+import { CompanyRail } from "./companyrail";
 
 // Who wrote the record and the record's own verbs are pinned in
 // companyheaderfacts.test.tsx and companyheaderactions.test.tsx: the two
@@ -36,7 +42,7 @@ const COMPANY: Company = {
   writable: true,
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
-  lifecycle: "customer",
+  status: "customer",
   owner_id: "u-owner",
   captured_by: "human:u-author",
   source: "manual",
@@ -135,10 +141,12 @@ function stubRosterRefused() {
   );
 }
 
-function renderInApp(ui: ReactNode) {
-  const client = new QueryClient({
+function renderInApp(
+  ui: ReactNode,
+  client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  });
+  }),
+) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
@@ -146,16 +154,27 @@ function renderInApp(ui: ReactNode) {
   );
 }
 
+// The owner's dialog, opened from the details' Ownership Edit.
+async function openOwner(user: UserEvent) {
+  return openChoiceDialog(
+    user,
+    "Owner",
+    await screen.findByRole("button", { name: "Edit Ownership" }),
+  );
+}
+
 // The owner's choices as its dialog offers them.
 async function openOwnerChoices(user: UserEvent) {
-  const { chooser } = await openChoiceDialog(user, "Owner");
+  const { chooser } = await openOwner(user);
   await user.click(chooser);
 }
 
-// The owner control, as the details' Ownership row mounts it.
-function renderFacts() {
-  renderInApp(<CompanyOwnerControl company={COMPANY} />);
+// The details column, where the Ownership section names and changes the owner.
+function renderOwnership(company: Company = COMPANY) {
+  renderInApp(<CompanyRail company={company} loading={false} />);
 }
+
+const ownership = () => screen.getByRole("region", { name: "Ownership" });
 
 // Who owns the record, off the roster read. The owner has three states.
 // Reading the owner through the generic record reference would paint the id
@@ -164,7 +183,7 @@ function renderFacts() {
 describe("who owns this record", () => {
   it("names the owner the roster can resolve", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
-    renderFacts();
+    renderOwnership();
 
     expect(await screen.findByText("Mira Voss")).toBeTruthy();
     expect(document.body.textContent).not.toContain("u-owner");
@@ -172,15 +191,13 @@ describe("who owns this record", () => {
 
   it("does not call the owner gone while the roster read is still in flight", async () => {
     const answer = stubRosterInFlight();
-    renderFacts();
+    renderOwnership();
 
     // "no longer in the user list" is a claim about a read that came back. Said
     // over one still running, it reports an owner as departed on the evidence
     // of nothing having arrived yet.
-    expect(
-      (await screen.findByRole("button", { name: /^Change Owner/ }))
-        .textContent,
-    ).toContain("Loading…");
+    await screen.findByRole("button", { name: "Edit Ownership" });
+    expect(ownership()).toHaveTextContent("Loading…");
     expect(
       screen.queryByText("Current owner (no longer in the user list)"),
     ).toBeNull();
@@ -202,7 +219,7 @@ describe("who owns this record", () => {
 
   it("does not call the owner gone when the roster read failed", async () => {
     stubRosterRefused();
-    renderFacts();
+    renderOwnership();
 
     // A refused read excludes nobody. Reading it as "no longer in the user
     // list" turns a 403 into a fact about who owns this account, which is the
@@ -218,7 +235,7 @@ describe("who owns this record", () => {
     stub([
       { id: "u-owner", display_name: "Rainer Schuller", status: "invited" },
     ]);
-    renderFacts();
+    renderOwnership();
 
     // An import hands accounts to colleagues before they first sign in. They
     // are not offered as a new owner, and they are still named as this one.
@@ -228,7 +245,7 @@ describe("who owns this record", () => {
 
   it("says the owner is outside the user list once the roster has answered without them", async () => {
     stub([]);
-    renderFacts();
+    renderOwnership();
 
     expect(await screen.findByText(en["ref.notInRoster"])).toBeTruthy();
     // An owner the roster cannot name is still not shown as a uuid: waiting
@@ -280,9 +297,11 @@ describe("claiming an unowned account", () => {
   it("claims the account when the reader picks themselves", async () => {
     const calls = stubClaim();
     const user = userEvent.setup();
-    renderInApp(<CompanyOwnerControl company={UNOWNED} />);
+    renderOwnership(UNOWNED);
 
-    await changeChoice(user, "Owner", "The Reader");
+    const { dialog, chooser } = await openOwner(user);
+    await pickOption(user, chooser, "The Reader");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(calls.find((call) => call.path.endsWith("/claim"))).toMatchObject({
@@ -303,7 +322,7 @@ describe("claiming an unowned account", () => {
   it("offers a reader who cannot write the row only themselves", async () => {
     stubClaim(READER, TEAM);
     const user = userEvent.setup();
-    renderInApp(<CompanyOwnerControl company={UNOWNED} />);
+    renderOwnership(UNOWNED);
 
     await openOwnerChoices(user);
     await screen.findByRole("option", { name: "The Reader" });
@@ -315,9 +334,7 @@ describe("claiming an unowned account", () => {
   it("offers every colleague to a reader who can write the unowned row", async () => {
     stubClaim(READER, TEAM);
     const user = userEvent.setup();
-    renderInApp(
-      <CompanyOwnerControl company={{ ...UNOWNED, writable: true }} />,
-    );
+    renderOwnership({ ...UNOWNED, writable: true });
 
     await openOwnerChoices(user);
     expect(
@@ -329,10 +346,12 @@ describe("claiming an unowned account", () => {
     stubClaim({
       authorization: meFixture({ allow: { company: ["read"] } }).authorization,
     });
-    renderInApp(<CompanyOwnerControl company={UNOWNED} />);
+    renderOwnership(UNOWNED);
 
-    expect(await screen.findByText(en["field.unset"])).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /^Change Owner/ })).toBeNull();
+    await waitFor(() =>
+      expect(ownership()).toHaveTextContent(en["field.unset"]),
+    );
+    expect(screen.queryByRole("button", { name: "Edit Ownership" })).toBeNull();
   });
 });
 
@@ -341,7 +360,7 @@ describe("claiming an unowned account", () => {
 // to tell a record that is closed from a build without an edit button.
 // The menu reads the page's activity gate for its Add task row.
 function MenuHost({ company }: Readonly<{ company: Company }>) {
-  const activity = useActivityGate();
+  const activity = useActivityGate("company");
   return (
     <CompanyActionBadges
       company={company}
@@ -392,6 +411,110 @@ describe("an archived account's verbs", () => {
   });
 });
 
+// The reader, the merge's answer, and one search result: the company kept.
+function stubMergeInto(kept: Company) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return Response.json({ user: { id: "u-reader" }, ...READER });
+      }
+      if (pathname.endsWith("/merge")) {
+        return Response.json(kept);
+      }
+      if (pathname === "/v1/companies") {
+        return Response.json({
+          data: [kept],
+          page: { has_more: false, next_cursor: null },
+        });
+      }
+      return Response.json({
+        data: [],
+        page: { has_more: false, next_cursor: null },
+      });
+    }),
+  );
+}
+
+describe("merging an account into another", () => {
+  it("refreshes both companies' document libraries, and no other", async () => {
+    stubMergeInto({ ...COMPANY, id: "o-kept", display_name: "Brandt AG" });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    for (const id of ["o-1", "o-kept", "o-other"]) {
+      client.setQueryData(companyDocumentsKey(id), { data: [] });
+    }
+    const user = userEvent.setup();
+    renderInApp(<MenuHost company={COMPANY} />, client);
+
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+    await user.click(await screen.findByTestId("merge-record"));
+    await user.type(screen.getByRole("searchbox"), "Brandt");
+    await user.click(await screen.findByRole("button", { name: /Brandt AG/ }));
+    await user.click(screen.getByTestId("merge-confirm"));
+
+    const stale = (id: string) =>
+      client.getQueryState(companyDocumentsKey(id))?.isInvalidated;
+    await waitFor(() =>
+      expect([stale("o-1"), stale("o-kept")]).toEqual([true, true]),
+    );
+    expect(stale("o-other")).toBe(false);
+  });
+
+  // Two companies of one name are the usual duplicate, so the question names
+  // each side by its domain, and the answer says which one survived.
+  it("tells two same-name companies apart before and after the merge", async () => {
+    const domain = (name: string) => [
+      {
+        id: `d-${name}`,
+        domain: name,
+        is_primary: true,
+        source: "manual",
+        captured_by: "human:u-author",
+      },
+    ];
+    stubMergeInto({
+      ...COMPANY,
+      id: "o-kept",
+      domains: domain("brandt.example"),
+    });
+    const user = userEvent.setup();
+    renderInApp(
+      <ToastProvider>
+        <MenuHost
+          company={{ ...COMPANY, domains: domain("brandt-dup.example") }}
+        />
+        <ToastRegion />
+      </ToastProvider>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+    await user.click(await screen.findByTestId("merge-record"));
+    await user.type(screen.getByRole("searchbox"), "Brandt");
+    await user.click(
+      await screen.findByRole("button", { name: /brandt\.example/ }),
+    );
+
+    expect(
+      screen.getByText(
+        "Merge Brandt Automotive GmbH (brandt-dup.example) into Brandt Automotive GmbH (brandt.example)? The record you keep takes over the history, tasks, tags and links of the other, and fills its empty standard fields from it. The other is archived and keeps its custom field values. A merge cannot be undone.",
+      ),
+    ).toBeTruthy();
+    await user.click(screen.getByTestId("merge-confirm"));
+    expect(
+      await screen.findByText(
+        "Brandt Automotive GmbH (brandt-dup.example) was merged into Brandt Automotive GmbH (brandt.example).",
+      ),
+    ).toBeTruthy();
+  });
+});
+
 // Beside the lifecycle chip the head says what the company is to the business:
 // a customer, a partner, or both on one record. Other relationship types stay a
 // Profile tab field.
@@ -402,7 +525,7 @@ describe("the marks under an account's name", () => {
       <CompanyMarks
         company={{
           ...COMPANY,
-          lifecycle: "opportunity",
+          status: "opportunity",
           relationship_types: ["customer", "partner", "supplier"],
         }}
       />,
@@ -440,21 +563,37 @@ describe("the marks under an account's name", () => {
     ).toBeTruthy();
   });
 
-  it("does not repeat the customer the lifecycle chip already names", async () => {
+  it("names a customer by relationship now that no lifecycle chip says so", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
       <CompanyMarks
         company={{
           ...COMPANY,
-          lifecycle: "customer",
+          status: "customer",
           relationship_types: ["customer"],
         }}
       />,
     );
 
     expect(
-      await screen.findAllByText(en["company.lifecycle.customer"]),
-    ).toHaveLength(1);
+      await screen.findByText(en["company.relType.customer"]),
+    ).toBeTruthy();
+  });
+
+  it("does not call a former customer a customer", async () => {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }]);
+    renderInApp(
+      <CompanyMarks
+        company={{
+          ...COMPANY,
+          status: "former_customer",
+          relationship_types: ["customer", "partner"],
+        }}
+      />,
+    );
+
+    await screen.findByText(en["company.relType.partner"]);
+    expect(screen.queryByText(en["company.relType.customer"])).toBeNull();
   });
 });
 
@@ -548,229 +687,23 @@ describe("the shape of the header's verbs", () => {
 
 it("names an owner for readers who cannot edit the company", async () => {
   stub([{ id: "u-owner", display_name: "Mira Voss" }]);
-  renderInApp(
-    <CompanyOwnerControl company={{ ...COMPANY, writable: false }} />,
-  );
+  renderOwnership({ ...COMPANY, writable: false });
   expect(await screen.findByText("Mira Voss")).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /^Change Owner/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Edit Ownership" })).toBeNull();
 });
-// The stage beside the account's name. A real control, not the inline value
-// the Details grid carries: the header's is the design system's dropdown worn
-// as a filled button, and these pin that it is one, that it writes through
-// the ordinary PATCH, and that a refused write keeps the reader's answer.
-describe("the lifecycle control beside the name", () => {
-  // /me grants the update; PATCH answers with `patchStatus`, echoing what was
-  // sent on success. Every body sent is collected so a case can assert the
-  // exact write rather than that some request happened.
-  function stubPatch(patchStatus: number) {
-    const sent: unknown[] = [];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (request: Request) => {
-        const { pathname } = new URL(request.url);
-        const json = (body: unknown, status = 200) =>
-          new Response(JSON.stringify(body), {
-            status,
-            headers: {
-              "content-type":
-                status >= 400 ? "application/problem+json" : "application/json",
-            },
-          });
-        if (pathname.endsWith("/me")) {
-          return json({
-            user: { id: "u-reader", display_name: "The Reader" },
-            ...READER,
-          });
-        }
-        if (request.method === "PATCH") {
-          const body: unknown = await request.json();
-          sent.push(body);
-          if (patchStatus >= 400) {
-            return json(
-              {
-                title: "Conflict",
-                status: patchStatus,
-                detail: "Someone else changed this account.",
-              },
-              patchStatus,
-            );
-          }
-          return json({ ...COMPANY, lifecycle: "prospect", version: 2 });
-        }
-        return json({ data: [], page: { has_more: false, next_cursor: null } });
-      }),
-    );
-    return sent;
-  }
-
-  it("is a button-shaped control, not an inline value", async () => {
-    stubPatch(200);
-    renderInApp(<CompanyLifecycleControl company={COMPANY} />);
-    const control = await screen.findByRole("combobox", { name: "Lifecycle" });
-    // The button's box (`--controlHeight`), not the inline value's 24px one:
-    // what the record layout suite measures is this element.
-    expect(control.classList.contains("btn")).toBe(true);
-    expect(control.closest(".editable-value")).toBeNull();
-    expect(control.getAttribute("data-testid")).toBe("company-lifecycle");
-    expect(control.textContent).toContain("Customer");
-  });
-
-  it("writes the stage the reader picks, once", async () => {
-    const sent = stubPatch(200);
-    const user = userEvent.setup();
-    renderInApp(<CompanyLifecycleControl company={COMPANY} />);
-    await pickOption(
-      user,
-      await screen.findByRole("combobox", { name: "Lifecycle" }),
-      "Prospect",
-    );
-    await waitFor(() => expect(sent).toEqual([{ lifecycle: "prospect" }]));
-  });
-
-  it("says under Live that only a colleague sets it", async () => {
-    stubPatch(200);
+// The stage is edited in the side rail and shown there; the head has no
+// second control for it.
+describe("the head carries no lifecycle select", () => {
+  it("draws the marks without a lifecycle dropdown", async () => {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
-      <CompanyLifecycleControl company={{ ...COMPANY, lifecycle: "live" }} />,
+      <CompanyMarks
+        company={{ ...COMPANY, relationship_types: ["customer"] }}
+      />,
     );
-    const control = await screen.findByRole("combobox", { name: "Lifecycle" });
-    const hint = document.getElementById(
-      control.getAttribute("aria-describedby") ?? "",
-    );
-    expect(hint?.textContent).toBe(en["company.lifecycle.live.help"]);
-  });
-
-  it("draws no help line under any other stage", async () => {
-    stubPatch(200);
-    renderInApp(<CompanyLifecycleControl company={COMPANY} />);
-    await screen.findByRole("combobox", { name: "Lifecycle" });
-    expect(screen.queryByText(en["company.lifecycle.live.help"])).toBeNull();
-  });
-
-  it("does not write the stage the account already has", async () => {
-    const sent = stubPatch(200);
-    const user = userEvent.setup();
-    renderInApp(<CompanyLifecycleControl company={COMPANY} />);
-    await pickOption(
-      user,
-      await screen.findByRole("combobox", { name: "Lifecycle" }),
-      "Customer",
-    );
-    expect(screen.queryByRole("listbox")).toBeNull();
-    expect(sent).toEqual([]);
-  });
-
-  it("keeps the reader's pick and says why when the write is refused", async () => {
-    stubPatch(409);
-    const user = userEvent.setup();
-    renderInApp(<CompanyLifecycleControl company={COMPANY} />);
-    const control = await screen.findByRole("combobox", { name: "Lifecycle" });
-    await pickOption(user, control, "Prospect");
-    expect(
-      await screen.findByText("Someone else changed this account."),
-    ).toBeTruthy();
-    expect(control.textContent).toContain("Prospect");
-    expect(control.getAttribute("aria-invalid")).toBe("true");
-  });
-
-  it("drops a refused pick once the stage is saved from somewhere else", async () => {
-    stubPatch(409);
-    const user = userEvent.setup();
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const at = (company: Company) => (
-      <QueryClientProvider client={client}>
-        <LocaleProvider initial="en">
-          <CompanyLifecycleControl company={company} />
-        </LocaleProvider>
-      </QueryClientProvider>
-    );
-    const { rerender } = render(at(COMPANY));
-    const control = await screen.findByRole("combobox", { name: "Lifecycle" });
-    await pickOption(user, control, "Prospect");
-    await screen.findByText("Someone else changed this account.");
-    // The Details grid saved a different stage; the record refetched with it.
-    rerender(at({ ...COMPANY, lifecycle: "former_customer", version: 2 }));
-    expect(control.textContent).toContain("Former customer");
-    expect(screen.queryByText("Someone else changed this account.")).toBeNull();
-    expect(control.getAttribute("aria-invalid")).not.toBe("true");
-  });
-
-  it("does not draw a late refusal over a stage saved meanwhile", async () => {
-    let refuse: (response: Response) => void = () => {};
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((request: Request) => {
-        if (new URL(request.url).pathname.endsWith("/me")) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                user: { id: "u-reader", display_name: "The Reader" },
-                ...READER,
-              }),
-              { status: 200, headers: { "content-type": "application/json" } },
-            ),
-          );
-        }
-        if (request.method === "PATCH") {
-          return new Promise<Response>((resolve) => {
-            refuse = resolve;
-          });
-        }
-        return Promise.resolve(
-          new Response(
-            JSON.stringify({
-              data: [],
-              page: { has_more: false, next_cursor: null },
-            }),
-            { status: 200, headers: { "content-type": "application/json" } },
-          ),
-        );
-      }),
-    );
-    const user = userEvent.setup();
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const at = (company: Company) => (
-      <QueryClientProvider client={client}>
-        <LocaleProvider initial="en">
-          <CompanyLifecycleControl company={company} />
-        </LocaleProvider>
-      </QueryClientProvider>
-    );
-    const { rerender } = render(at(COMPANY));
-    const control = await screen.findByRole("combobox", { name: "Lifecycle" });
-    await pickOption(user, control, "Prospect");
-    // While the header's write is out, the Details grid saves another stage.
-    rerender(at({ ...COMPANY, lifecycle: "former_customer", version: 2 }));
-    refuse(
-      new Response(
-        JSON.stringify({
-          title: "Conflict",
-          status: 409,
-          detail: "Someone else changed this account.",
-        }),
-        {
-          status: 409,
-          headers: { "content-type": "application/problem+json" },
-        },
-      ),
-    );
-    await waitFor(() =>
-      expect(control.getAttribute("aria-busy")).not.toBe("true"),
-    );
-    expect(screen.queryByText("Someone else changed this account.")).toBeNull();
-    expect(control.textContent).toContain("Former customer");
-  });
-
-  it("shows the stage, with no control, to a reader who may not change it", async () => {
-    stubPatch(200);
-    renderInApp(
-      <CompanyLifecycleControl company={{ ...COMPANY, writable: false }} />,
-    );
-    expect(await screen.findByText("Customer")).toBeTruthy();
+    await screen.findByText(en["company.relType.customer"]);
     expect(screen.queryByRole("combobox", { name: "Lifecycle" })).toBeNull();
+    expect(screen.queryByTestId("company-lifecycle")).toBeNull();
   });
 });
 
@@ -788,14 +721,5 @@ describe("the head's lines and pills", () => {
     renderInApp(<CompanyHeadLines company={withSite} />);
     expect(screen.getByText("Automotive").tagName).toBe("SPAN");
     expect(screen.getByText("brandt.example").closest("a")).toBeTruthy();
-  });
-
-  it("leads the pills with the lifecycle control", async () => {
-    stub([]);
-    renderInApp(<CompanyMarks company={withSite} />);
-    expect(
-      await screen.findByRole("combobox", { name: "Lifecycle" }),
-    ).toBeTruthy();
-    expect(screen.queryByText("Automotive")).toBeNull();
   });
 });

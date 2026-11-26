@@ -14,20 +14,29 @@ export type ParamField = {
     | "date_field"
     | "enum"
     | "live_list"
-    | "shortlist";
+    | "record_list"
+    | "shortlist"
+    | "timezone"
+    | "pipeline"
+    | "stages";
   min?: number;
   max?: number;
+  required: boolean;
   initial: string;
   // Set only for kind "enum" — the schema's own closed value list (e.g.
   // renewal_reminder's object property), rendered as a picker instead of
   // a free-text box so a typo can't silently name a value the backend
   // would refuse.
   options?: string[];
+  entityTypes?: string[];
 };
 
 // Catalog defaults and stored params are JSON scalars; anything non-scalar
 // has no honest single-line rendering, so it collapses to empty.
 export function scalarText(value: unknown): string {
+  if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
+    return JSON.stringify(value);
+  }
   if (value === undefined || value === null || typeof value === "object") {
     return "";
   }
@@ -47,21 +56,32 @@ function paramKind(type: unknown): ParamField["kind"] | null {
   return null;
 }
 
-// listKind reads a string property the schema marks as naming a list, by
-// the kind of list it must be.
-function listKind(format: unknown): "live_list" | "shortlist" | null {
-  return format === "live_list" || format === "shortlist" ? format : null;
+// The format selects a shared picker without tying it to a parameter name.
+function formattedKind(
+  format: unknown,
+):
+  | "live_list"
+  | "record_list"
+  | "shortlist"
+  | "timezone"
+  | "pipeline"
+  | "stages"
+  | null {
+  return format === "live_list" ||
+    format === "record_list" ||
+    format === "shortlist" ||
+    format === "timezone" ||
+    format === "pipeline" ||
+    format === "stages"
+    ? format
+    : null;
 }
 
-// enumOptions reads a schema property's own closed value list, when it
-// has one — a string-typed "enum" array is the schema's way of saying
-// "pick one of these", which renders as a picker rather than free text
-// so a typo can't silently name a value the backend would refuse.
-function enumOptions(raw: Record<string, unknown>): string[] | undefined {
-  if (!Array.isArray(raw.enum)) {
+function stringOptions(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
     return undefined;
   }
-  const values = raw.enum.filter((v): v is string => typeof v === "string");
+  const values = value.filter((v): v is string => typeof v === "string");
   return values.length > 0 ? values : undefined;
 }
 
@@ -77,15 +97,17 @@ export function paramFields(schema: Record<string, unknown>): ParamField[] {
   // unrelated — is what selects the picker over a free-text box.
   const isDateFieldPicker =
     "object" in properties && "date_field" in properties;
+  const required = new Set(stringOptions(schema.required));
   return Object.entries(properties).flatMap(([key, raw]) => {
     if (!isRecord(raw)) {
       return [];
     }
-    const options = enumOptions(raw);
+    const options = stringOptions(raw.enum);
     const kind: ParamField["kind"] | null =
       key === "date_field" && isDateFieldPicker
         ? "date_field"
-        : (listKind(raw.format) ?? (options ? "enum" : paramKind(raw.type)));
+        : (formattedKind(raw.format) ??
+          (options ? "enum" : paramKind(raw.type)));
     if (kind === null) {
       return [];
     }
@@ -95,8 +117,10 @@ export function paramFields(schema: Record<string, unknown>): ParamField[] {
         kind,
         min: typeof raw.minimum === "number" ? raw.minimum : undefined,
         max: typeof raw.maximum === "number" ? raw.maximum : undefined,
+        required: required.has(key),
         initial: scalarText(raw.default),
         options,
+        entityTypes: stringOptions(raw["x-entity-types"]),
       },
     ];
   });
@@ -107,16 +131,28 @@ export function paramsFromValues(
   values: Record<string, string>,
 ): Record<string, unknown> {
   return Object.fromEntries(
-    fields.map((field) => {
-      const value = values[field.key] ?? field.initial;
-      if (field.kind === "integer") {
-        return [field.key, Number(value)];
-      }
-      if (field.kind === "boolean") {
-        return [field.key, value === "true"];
-      }
-      return [field.key, value];
-    }),
+    fields
+      // An optional parameter left empty is left out, and is read as its
+      // default, or for a cap, no cap.
+      .filter(
+        (field) =>
+          field.required ||
+          field.kind === "boolean" ||
+          (values[field.key] ?? field.initial).trim() !== "",
+      )
+      .map((field) => {
+        const value = values[field.key] ?? field.initial;
+        if (field.kind === "stages") {
+          return [field.key, value === "" ? [] : JSON.parse(value)];
+        }
+        if (field.kind === "integer") {
+          return [field.key, Number(value)];
+        }
+        if (field.kind === "boolean") {
+          return [field.key, value === "true"];
+        }
+        return [field.key, value];
+      }),
   );
 }
 

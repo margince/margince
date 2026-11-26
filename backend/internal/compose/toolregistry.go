@@ -32,6 +32,9 @@ func (s *Server) rebuildToolRegistry(pool *pgxpool.Pool) {
 	// counters would step an agent up against a number nothing was charging.
 	opts := []agents.RegistryOption{agents.WithVolumeCharger(s.volumeMeter), agents.WithCostShare(s.volumeMeter)}
 	opts = append(opts, s.registryForTest...)
+	if s.trial != nil {
+		opts = append(opts, agents.WithInstallationLock(s.trial.Lock))
+	}
 	s.toolRegistry = registryWithGate(InstallationDB(pool),
 		auth.NewGate(identity.NewService(pool), auth.WithVolumeMeter(s.volumeMeter)),
 		s.replyDrafter, s.send, companyEnricher{srv: s},
@@ -39,6 +42,6 @@ func (s *Server) rebuildToolRegistry(pool *pgxpool.Pool) {
 		// The SERVER's brief service, not a second one built from the pool: the
 		// model lane is bound to that instance, so a fresh service here would
 		// serve agents the deterministic floor while the contact page got prose.
-		meetingBriefReader(s.meetingBriefSvc), s.log, registryFeatures{lists: s.listsEnabled, firstDrafts: &s.firstDrafts, served: s},
+		meetingBriefReader(s.meetingBriefSvc), s.log, registryFeatures{coreFeatures: s.coreFeatures, lists: s.listsEnabled, firstDrafts: &s.firstDrafts, served: s},
 		opts...)
 }

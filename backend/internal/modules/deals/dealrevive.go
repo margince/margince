@@ -68,7 +68,7 @@ type ReviveLostDealInput struct {
 	// rests on is Deal Scout's.
 	Arrival func(ctx context.Context, tx pgx.Tx, evidence []SuggestionEvidence) (EvidenceArrival, bool, error)
 	// Record writes the entry on the deal's timeline, in the same transaction.
-	Record func(ctx context.Context, tx pgx.Tx, deal ids.DealID, name string) error
+	Record func(ctx context.Context, tx pgx.Tx, deal ids.DealID, name string) (ids.UUID, error)
 	// AsOwner binds the owner's agent as of the reopen's transaction, so a
 	// role change or suspension that committed before it stops the reopen.
 	AsOwner OwnerAuthorityTx
@@ -81,12 +81,12 @@ func (s *Store) ReviveLostDeal(ctx context.Context, in ReviveLostDealInput) (boo
 	if err := RequireSuggestionDecision(ctx, true); err != nil {
 		return false, err
 	}
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return false, err
-	}
 	var revived bool
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		ctx, may, err := actAsOwnerNow(ctx, tx, in.AsOwner, func(ctx context.Context) error {
 			return RequireSuggestionDecision(ctx, true)
 		})
@@ -119,11 +119,16 @@ func (s *Store) ReviveLostDeal(ctx context.Context, in ReviveLostDealInput) (boo
 		if err := recordRevived(ctx, tx, current.ID, in.DealID.UUID); err != nil {
 			return err
 		}
-		if _, err := recordStageCorrection(ctx, tx, in.DealID, moved, DealReviveCorrection); err != nil {
+		correction, err := recordStageCorrection(ctx, tx, in.DealID, moved, DealReviveCorrection)
+		if err != nil {
 			return err
 		}
 		revived = true
-		return in.Record(ctx, tx, in.DealID, moved.Name)
+		note, err := in.Record(ctx, tx, in.DealID, moved.Name)
+		if err != nil {
+			return err
+		}
+		return linkCorrectionNote(ctx, tx, []ids.UUID{correction}, note)
 	})
 	return revived, err
 }
@@ -239,14 +244,10 @@ const suggestionKindKey = "kind"
 // recordRevived settles the suggestion as the reopen of the deal. Its kind
 // says so, so no reader takes it for the suggestion the deal was opened from.
 func recordRevived(ctx context.Context, tx pgx.Tx, suggestion, deal ids.UUID) error {
-	actor, err := storekit.Actor(ctx)
-	if err != nil {
-		return err
-	}
 	tag, err := tx.Exec(ctx, `
-		UPDATE deal_suggestion SET state = $2, kind = $3, accepted_deal_id = $4, decided_by = $5, decided_at = now()
+		UPDATE deal_suggestion SET state = $2, kind = $3, accepted_deal_id = $4, decided_at = now()
 		 WHERE id = $1 AND state = 'open'`,
-		suggestion, SuggestionAccepted, SuggestionKindRevive, deal, storekit.UUIDOrNil(actor.UserID))
+		suggestion, SuggestionAccepted, SuggestionKindRevive, deal)
 	if err != nil {
 		return fmt.Errorf("deals: recording the reopen on the suggestion: %w", err)
 	}
@@ -293,7 +294,7 @@ func (s *Store) revertDealRevive(
 		return err
 	}
 	history := *c.StageHistoryID
-	closed, err := s.advanceOnTx(ctx, tx, c.DealID, AdvanceDealInput{
+	_, err = s.advanceOnTx(ctx, tx, c.DealID, AdvanceDealInput{
 		ToStageID: lostStage, ReversalOf: &history, auditEvidence: evidence,
 		LostReason: loss.note, LostReasonCode: loss.code, closedAt: loss.closedAt,
 		// The deal goes back to the lost stage it left, so the move claims no win.
@@ -306,7 +307,7 @@ func (s *Store) revertDealRevive(
 	if err != nil {
 		return err
 	}
-	stamped, err := markReversed(ctx, tx, c.ID, closed.AuditLogID, by)
+	stamped, err := markReversed(ctx, tx, c.ID, by)
 	if err != nil {
 		return err
 	}

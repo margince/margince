@@ -1,0 +1,6 @@
+{
+  "verb": "get_current_weekly_plan",
+  "checks": [
+    "weekly_plan.read"
+  ]
+}

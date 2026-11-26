@@ -1,0 +1,8 @@
+{
+  "verb": "start_connector_backfill",
+  "checks": [
+    "activity.create",
+    "contact.create",
+    "lead.create"
+  ]
+}

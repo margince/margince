@@ -1,0 +1,9 @@
+{
+  "verb": "disconnect_provider",
+  "checks": [
+    "integrations.delete"
+  ],
+  "takes": [
+    "connected_provider"
+  ]
+}

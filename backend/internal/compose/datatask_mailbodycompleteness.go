@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // mailBodyCompletenessDataTask first restores mail bodies an older parser or
@@ -27,7 +28,7 @@ import (
 func mailBodyCompletenessDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792776165_mail_body_completeness", Version: 2,
-		Title: "Restore and assess the text of stored mail", Requires: []string{"core/1793445933"},
+		Title: systemtext.Literal("datatask.title.core.1792776165_mail_body_completeness"), Requires: []string{"core/1793445933"},
 		Steps: []datatask.Step{{
 			Name: "restore_stored_mail_bodies", Limit: 50, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

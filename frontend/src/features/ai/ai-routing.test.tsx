@@ -4,6 +4,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption, pickSuggestion } from "../../design-system/select-testing";
+import { stable } from "../../format/collate";
 import type { GrantSpec } from "../../testing/mefixture";
 import { reachableProviders } from "./ai-provider-reach";
 import { AiRoutingCard } from "./ai-routing";
@@ -54,7 +55,7 @@ describe("AiRoutingCard", () => {
     // and the reader would be exactly where they started.
     await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
     const sent = backend.getCapturedPut() as CapturedRouting;
-    expect(Object.keys(sent.tiers).sort()).toEqual([
+    expect(Object.keys(sent.tiers).sort(stable)).toEqual([
       "cheap_cloud",
       "frontier",
       "local_large",
@@ -149,11 +150,39 @@ describe("AiRoutingCard", () => {
     render(<AiRoutingCard />);
 
     const line = await screen.findByTestId("ai-routing-profile");
-    expect(line.textContent).toContain("eu_hosted");
+    expect(line.textContent).toContain("EU-hosted");
     expect(within(line).queryByRole("combobox")).toBeNull();
     expect(screen.queryByRole("combobox", { name: /profile/i })).toBeNull();
     // And no Preview step stands between an edit and its save.
     expect(screen.queryByRole("button", { name: /preview/i })).toBeNull();
+  });
+
+  it.each([
+    [
+      "eu_hosted",
+      "EU-hosted (partner inference; it does not limit where a tier runs, which each tier’s connection decides)",
+    ],
+    [
+      "sovereign",
+      "Sovereign (AI runs only on the installation’s own hosts; cloud providers are refused)",
+    ],
+    [
+      "cloud_frontier",
+      "Cloud (cloud providers with the installation’s own API keys)",
+    ],
+    ["regional_partner", "regional_partner"],
+    ["", "Not set"],
+  ])("names the %j profile by what it allows", async (profile, name) => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ROUTING_EDITOR, { ...BOUND, profile }).fetchMock,
+    );
+    render(<AiRoutingCard />);
+
+    const line = await screen.findByTestId("ai-routing-profile");
+    expect(line.textContent).toBe(
+      `Installation profile: ${name}. It limits which providers a tier can use and is set by the operator.`,
+    );
   });
 
   it("sends the WHOLE binding, so an untouched tier is not dropped", async () => {
@@ -289,7 +318,7 @@ describe("AiRoutingCard", () => {
     await pickOption(
       user,
       within(tier).getByRole("combobox", { name: "Provider" }),
-      "openai_compatible",
+      "OpenAI-compatible",
     );
     // Emptied, and focused, so the list of what the new vendor serves opens.
     const modelBox = within(tier).getByRole("combobox", { name: "Model" });
@@ -302,7 +331,7 @@ describe("AiRoutingCard", () => {
     );
     expect(within(tier).queryByLabelText("Host")).toBeNull();
     expect(
-      within(tier).getByText(/openai_compatible has no host yet/),
+      within(tier).getByText(/OpenAI-compatible has no host yet/),
     ).toBeInTheDocument();
     await saveEditor(user, backend);
     const sent = backend.getCapturedPut();
@@ -334,7 +363,7 @@ describe("AiRoutingCard", () => {
     await pickOption(
       user,
       within(tier).getByRole("combobox", { name: "Provider" }),
-      "gemini",
+      "Google Gemini",
     );
     // A provider change empties the model; the reader picks one.
     await user.type(
@@ -362,7 +391,7 @@ describe("AiRoutingCard", () => {
     await pickOption(
       user,
       within(lane).getByRole("combobox", { name: "Provider" }),
-      "openai_compatible",
+      "OpenAI-compatible",
     );
     // A provider change empties the model; the reader picks one.
     await user.type(
@@ -501,15 +530,15 @@ describe("AiRoutingCard", () => {
       .getAllByRole("option")
       .map((o) => o.textContent);
     // Keyed or keyless, never a vendor whose key is missing.
-    expect(offered).toContain("gemini");
-    expect(offered).toContain("ollama");
-    expect(offered).toContain("openai_compatible");
-    expect(offered).not.toContain("anthropic");
-    expect(offered).not.toContain("openai");
+    expect(offered).toContain("Google Gemini");
+    expect(offered).toContain("Ollama");
+    expect(offered).toContain("OpenAI-compatible");
+    expect(offered).not.toContain("Anthropic");
+    expect(offered).not.toContain("OpenAI");
     // Keyless adapters are offered on the probe's word: ollama answered, vllm
     // did not, and nothing binds fake.
-    expect(offered).not.toContain("vllm");
-    expect(offered).not.toContain("fake");
+    expect(offered).not.toContain("vLLM");
+    expect(offered).not.toContain("Built-in test provider");
     await user.keyboard("{Escape}");
     await user.click(within(tier).getByRole("button", { name: /cancel/i }));
 
@@ -519,7 +548,7 @@ describe("AiRoutingCard", () => {
       within(screen.getByRole("listbox"))
         .getAllByRole("option")
         .map((o) => o.textContent),
-    ).toContain("anthropic");
+    ).toContain("Anthropic");
   });
 
   it("offers fake only where a lane is already bound to it, and keeps a lane's own unreachable adapter", async () => {
@@ -551,9 +580,9 @@ describe("AiRoutingCard", () => {
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
       .map((o) => o.textContent);
-    expect(offered).toContain("fake");
-    expect(offered).toContain("ollama");
-    expect(offered).not.toContain("vllm");
+    expect(offered).toContain("Built-in test provider");
+    expect(offered).toContain("Ollama");
+    expect(offered).not.toContain("vLLM");
     await user.keyboard("{Escape}");
     await user.click(within(tier).getByRole("button", { name: /cancel/i }));
 
@@ -563,7 +592,7 @@ describe("AiRoutingCard", () => {
       within(screen.getByRole("listbox"))
         .getAllByRole("option")
         .map((o) => o.textContent),
-    ).toContain("vllm");
+    ).toContain("vLLM");
   });
 
   // A lane on a vendor with no key cannot be saved there: it would fail closed

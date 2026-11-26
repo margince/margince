@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "owner_identities",
+  "verb": "list_capture_owner_identities",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

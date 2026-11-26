@@ -20,14 +20,17 @@ type ConnectionView struct {
 	ID                    ids.UUID
 	Provider              string
 	Status                string
-	Cursor                []byte
-	WatchExpiresAt        *time.Time
+	// DefaultSender marks the mailbox the member's new mail goes out from.
+	DefaultSender  bool
+	Cursor         []byte
+	WatchExpiresAt *time.Time
 	// A missing provider grant is unknown, not an empty scope.
 	ProviderScopes []string
 	// AccountLabel is display text, never an identity or routing key.
-	AccountLabel *string
-	MailPosture  string
-	ContextTag   *ContextTag
+	AccountLabel         *string
+	CalendarAccountLabel *string
+	MailPosture          string
+	ContextTag           *ContextTag
 	// Attempts include failures; success stamps only completed pulls.
 	LastSyncedAt   *time.Time
 	LastSuccessAt  *time.Time

@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "retire_custom_field",
+  "verb": "retire_custom_field",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

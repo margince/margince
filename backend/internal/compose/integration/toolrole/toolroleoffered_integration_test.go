@@ -18,7 +18,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/toolroles"
 )
 
 // listingPass is one operator's holding of roles, checked against the gate.
@@ -37,7 +39,7 @@ func TestToolsListOffersEachSeededRoleItsAllowedCells(t *testing.T) {
 		keys = append(keys, role.Key)
 	}
 	if doc := publishedMatrix(t); !slices.Equal(doc.Roles, keys) {
-		t.Errorf("%s publishes the roles %v and the database seeds %v", toolRolesFile, doc.Roles, keys)
+		t.Errorf("%s publishes the roles %v and the database seeds %v", toolRolesDir, doc.Roles, keys)
 	}
 	holdCellsAreOffered(t, d, "tool-role-cells@fable.test")
 }
@@ -81,19 +83,24 @@ func operatorListings(t *testing.T, d *apptest.TwoDoors, recorded *toolCheckReco
 			offered := offeredCalls(t, clients[0].ListedTools(t), specs)
 			answers := map[string]roleAnswer{}
 			for n, call := range calls {
-				pool.caller = clients[n/toolRoleCallsPerPassport].Bearer()
-				got, args := callHolding(t, e, email, clients[n/toolRoleCallsPerPassport], call, pool, holding)
-				roleRefused := refused(call.verb, got)
-				// A refusal the admin meets too is about the record, not the role.
-				// The published matrix says how the admin was answered; a kind
-				// variant it does not hold is asked of the admin on the same records.
-				adminAdmitted, published := adminRows[call.row]
-				if !published {
-					apptest.AssignRoleTo(t, e, email, "admin")
-					adminAdmitted = !refused(call.verb, controls[n/toolRoleCallsPerPassport].Call(t, call.verb, args))
-					apptest.AssignRoleTo(t, e, email, holding...)
-				}
-				answers[call.row] = roleAnswer{ran: !got.IsError, refused: roleRefused && adminAdmitted, text: got.Text}
+				oneWebFormAtATime(t, call, func() {
+					pool.caller = clients[n/toolRoleCallsPerPassport].Bearer()
+					got, args := callHolding(t, e, email, clients[n/toolRoleCallsPerPassport], call, pool, holding)
+					holdNoBusyForm(t, call.verb, got)
+					roleRefused := refused(call.verb, got)
+					// A refusal the admin meets too is about the record, not the role.
+					// The published matrix says how the admin was answered; a kind
+					// variant it does not hold is asked of the admin on the same records.
+					adminAdmitted, published := adminRows[call.row]
+					if !published {
+						apptest.AssignRoleTo(t, e, email, "admin")
+						control := controls[n/toolRoleCallsPerPassport].Call(t, call.verb, args)
+						holdNoBusyForm(t, call.verb, control)
+						adminAdmitted = !refused(call.verb, control)
+						apptest.AssignRoleTo(t, e, email, holding...)
+					}
+					answers[call.row] = roleAnswer{ran: !got.IsError, refused: roleRefused && adminAdmitted, text: got.Text}
+				})
 			}
 			for _, disagreement := range listingDisagreements(calls, specs, offered, answers) {
 				t.Error(disagreement)
@@ -123,22 +130,22 @@ func callHolding(t *testing.T, e *apptest.AppEnv, email string, client *apptest.
 	return client.Call(t, call.verb, args), args
 }
 
-// publishedMatrix is docs/reference/mcp-tool-roles.json as committed.
+// publishedMatrix is docs/reference/mcp-tool-roles/ as committed.
 func publishedMatrix(t *testing.T) toolRolesFileShape {
 	t.Helper()
-	raw, err := os.ReadFile(toolRolesFile)
+	head, rows, err := toolroles.Read[toolroles.Row](os.DirFS(toolRolesDir))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%s does not read: %v", toolRolesDir, err)
 	}
-	var doc toolRolesFileShape
-	if err := json.Unmarshal(raw, &doc); err != nil {
-		t.Fatalf("%s does not read: %v", toolRolesFile, err)
+	doc := toolRolesFileShape{Head: head}
+	for _, verb := range slices.Sorted(maps.Keys(rows)) {
+		doc.Rows = append(doc.Rows, rows[verb])
 	}
 	return doc
 }
 
 // publishedRow is a published row's name as the sweep's calls name it.
-func publishedRow(row toolRoleRow) string {
+func publishedRow(row toolroles.Row) string {
 	return strings.TrimSuffix(row.Tool+"."+row.Action, ".")
 }
 
@@ -179,7 +186,7 @@ func holdCellsAreOffered(t *testing.T, d *apptest.TwoDoors, email string) {
 // the matrix refuses it, or hides while the matrix allows it. A router that
 // picks its action by the arguments named has no enum to narrow. It is held as
 // one tool, allowed where any of its rows is.
-func cellDisagreements(role string, rows []toolRoleRow, specs []mcp.ToolSpec, offered map[string]bool) []string {
+func cellDisagreements(role string, rows []toolroles.Row, specs []mcp.ToolSpec, offered map[string]bool) []string {
 	byArguments := map[string]bool{}
 	for _, spec := range specs {
 		byArguments[spec.Name] = len(spec.Actions) > 0 && spec.ActionField == ""
@@ -216,7 +223,7 @@ func holdPathDependentTools(t *testing.T, client *apptest.MCPClient, offered map
 		}
 	}
 	contact := client.Call(t, "create_record", map[string]any{
-		"record_type": "contact", "fields": map[string]any{"full_name": "Path Bound", "source": "manual"},
+		"record_type": "contact", "fields": map[string]any{"full_name": "Path Bound", "source": "manual", "linkedin_url": "https://www.linkedin.com/in/" + ids.NewV7().String()},
 	})
 	if contact.IsError {
 		t.Errorf("creating a contact was refused: %.300s", contact.Text)

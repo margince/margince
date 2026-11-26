@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // eraseActivityContent is the activity/erase action: the record of the meeting
@@ -22,30 +23,40 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 	if err := s.refuseIfShieldedNow(ctx, tx, id); err != nil {
 		return err
 	}
+	return s.eraser.eraseActivityContent(ctx, tx, id, theClockRanOut)
+}
+
+// eraseActivityContent erases an activity's content, for the nightly erase
+// action and a controller's archive deletion alike. The caller has already
+// decided that nothing keeps the record.
+func (e *Eraser) eraseActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID, act erasureAct) error {
 	err := clearActivityContent(ctx, tx, id)
 	if err == nil {
-		// Everything the text left behind, through the call the restriction lift
-		// and the controller's release make too, so the three cannot drift.
-		err = s.eraser.purgeContentDerivedFrom(ctx, tx, id, theClockRanOut)
+		// The same purge the restriction lift and the release run, so none drift.
+		err = e.purgeContentDerivedFrom(ctx, tx, id, act)
 	}
-	if err == nil {
-		// Not in the shared helper: this arm removes an interaction the
-		// relationship aggregates counted, so it re-folds them here. The lift
-		// paths emit events, and the bus consumer re-folds for them.
-		err = s.invalidateGraph(ctx, tx, id)
+	if err == nil && e.invalidateEdges != nil {
+		// The aggregates counted this interaction. Without an invalidator, the
+		// retention.applied consumer re-folds them.
+		err = e.invalidateEdges(ctx, tx, []ids.UUID{id})
 	}
 	return err
 }
 
 func clearActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	_, err := tx.Exec(ctx, `UPDATE activity SET body = NULL, raw = NULL, agenda_fingerprint = NULL, subject = @subject,
+	_, err := tx.Exec(ctx, `UPDATE activity SET body = NULL, body_own_end = NULL, owed_ask = NULL, system_text = @system_text, raw = NULL, agenda_fingerprint = NULL, calendar_event = NULL, subject = @subject,
  internal_mail_authorization = `+erasedInternalMailAuthorizationSQL+`,
  language = NULL, source_author_name = NULL, reply_verdict = NULL, reply_verdict_at = NULL,
- reply_verdict_by = NULL, archived_at = coalesce(archived_at, now()) WHERE id = @id`, pgx.StrictNamedArgs{"subject": erasedActivitySubject, "id": id})
+ reply_verdict_by = NULL, archived_at = coalesce(archived_at, now()) WHERE id = @id`, pgx.StrictNamedArgs{"subject": erasedActivitySubject, "id": id, "system_text": erasedActivityText()})
 	if err != nil {
 		return err
 	}
 	return clearActivityCustomValues(ctx, tx, []ids.UUID{id})
+}
+
+// erasedActivityText marks an erased activity; only erasure writes it.
+func erasedActivityText() *systemtext.Message {
+	return systemtext.BoundLiteral("core.erased", erasedActivitySubject)
 }
 
 // A tombstone keeps replay restricted after source identifiers and folder names are erased.

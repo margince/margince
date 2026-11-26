@@ -52,14 +52,20 @@ func (f fixedExchanger) Exchange(context.Context, string, string, string) (strin
 	return f.idToken, nil
 }
 
-type fixedStateSigner struct{ provider, clientID, nonce, codeVerifier string }
+type fixedStateSigner struct {
+	provider, clientID, nonce, codeVerifier string
+	returnToConsent                         bool
+}
 
-func (f fixedStateSigner) Sign(string, string, string, string, time.Duration) string {
+func (f fixedStateSigner) Sign(OIDCLoginState, time.Duration) string {
 	return "irrelevant"
 }
 
-func (f fixedStateSigner) Verify(string) (string, string, string, string, error) {
-	return f.provider, f.clientID, f.nonce, f.codeVerifier, nil
+func (f fixedStateSigner) Verify(string) (OIDCLoginState, error) {
+	return OIDCLoginState{
+		Provider: f.provider, ClientID: f.clientID, Nonce: f.nonce,
+		CodeVerifier: f.codeVerifier, ReturnToConsent: f.returnToConsent,
+	}, nil
 }
 
 type erroringExchanger struct{}
@@ -83,7 +89,7 @@ func TestStartOidcSignInUnknownProviderIs404(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil)
 	rec := httptest.NewRecorder()
 
-	h.StartOidcSignIn(rec, req, "google")
+	h.StartOidcSignIn(rec, req, "google", crmcontracts.StartOidcSignInParams{})
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", rec.Code)
@@ -101,7 +107,7 @@ func TestStartOidcSignInRedirectsWithPKCEAndSetsStateCookie(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil)
 	rec := httptest.NewRecorder()
 
-	h.StartOidcSignIn(rec, req, "google")
+	h.StartOidcSignIn(rec, req, "google", crmcontracts.StartOidcSignInParams{})
 
 	if rec.Code != http.StatusFound {
 		t.Fatalf("status = %d, want 302", rec.Code)
@@ -348,7 +354,7 @@ func TestADisabledProviderIsRefusedAtStartAndAtCallback(t *testing.T) {
 	}.WithOIDCProvidersEnabledFn(disabled)
 
 	start := httptest.NewRecorder()
-	h.StartOidcSignIn(start, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google")
+	h.StartOidcSignIn(start, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google", crmcontracts.StartOidcSignInParams{})
 	if start.Code != http.StatusNotFound {
 		t.Errorf("start for a disabled provider = %d, want 404 — indistinguishable from one that was never configured", start.Code)
 	}
@@ -388,7 +394,7 @@ func TestAFailedProviderPolicyReadDoesNotReadAsAnAbsentProvider(t *testing.T) {
 	})
 
 	rec := httptest.NewRecorder()
-	h.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google")
+	h.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google", crmcontracts.StartOidcSignInParams{})
 	if rec.Code == http.StatusNotFound {
 		t.Error("a failed policy read answered 404, which claims the provider does not exist")
 	}
@@ -414,7 +420,7 @@ func TestAProviderWithoutAClientIsNeitherOfferedNorStarted(t *testing.T) {
 		t.Errorf("oidc_providers = %v, want none while the provider has no client", got)
 	}
 	start := httptest.NewRecorder()
-	h.StartOidcSignIn(start, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google")
+	h.StartOidcSignIn(start, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google", crmcontracts.StartOidcSignInParams{})
 	if start.Code != http.StatusNotFound {
 		t.Errorf("start without a client = %d, want 404", start.Code)
 	}
@@ -439,7 +445,7 @@ func TestAFailedClientResolutionDoesNotReadAsAnAbsentProvider(t *testing.T) {
 		t.Errorf("oidc_providers = %v, want the button withheld while the client cannot be read", got)
 	}
 	start := httptest.NewRecorder()
-	h.StartOidcSignIn(start, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google")
+	h.StartOidcSignIn(start, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google", crmcontracts.StartOidcSignInParams{})
 	if start.Code == http.StatusNotFound || start.Code < 500 {
 		t.Errorf("start on a failed resolution = %d, want a server-side failure, never a 404", start.Code)
 	}
@@ -552,5 +558,48 @@ func TestOidcSignInCallbackAdmitsTheClientTheFlowStartedOn(t *testing.T) {
 	if redeemed.calls != 1 {
 		t.Fatalf("the token endpoint was reached %d time(s), want exactly 1 — "+
 			"the state named the client this deployment serves", redeemed.calls)
+	}
+}
+
+// A refused sign-in that began on the OAuth consent screen goes back to that
+// screen with the failure marker. An MCP client's window keeps its opener.
+// Only a verified state may ask for that. A forged one gets the plain failure.
+func TestARefusedConsentSignInLandsBackOnTheConsentScreen(t *testing.T) {
+	const (
+		signInFailed  = "https://spa.example.com/#/login?oidc=failed"
+		consentFailed = "https://spa.example.com" + ConsentScreenPath + "?oidc=failed"
+	)
+	denied := crmcontracts.OidcSignInCallbackParams{State: new("n"), Error: new("access_denied")}
+	for _, tc := range []struct {
+		name      string
+		exchanger OIDCExchanger
+		params    crmcontracts.OidcSignInCallbackParams
+		signer    fixedStateSigner
+		want      string
+	}{
+		{"denied, from the consent screen", fixedExchanger{}, denied, fixedStateSigner{provider: "google", nonce: "n", returnToConsent: true}, consentFailed},
+		{"denied, from the sign-in page", fixedExchanger{}, denied, fixedStateSigner{provider: "google", nonce: "n"}, signInFailed},
+		{"exchange failed, from the consent screen", erroringExchanger{}, callbackParams("x", "n"), fixedStateSigner{provider: "google", nonce: "n", returnToConsent: true}, consentFailed},
+		{"exchange failed, from the sign-in page", erroringExchanger{}, callbackParams("x", "n"), fixedStateSigner{provider: "google", nonce: "n"}, signInFailed},
+		{"state for another flow", fixedExchanger{}, callbackParams("x", "n"), fixedStateSigner{provider: "google", nonce: "other", returnToConsent: true}, signInFailed},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := Handlers{}.WithOIDCProviders(
+				map[string]OIDCProviderSource{"google": FixedOIDCProvider(OIDCProvider{
+					Config: OIDCProviderConfig{Key: "google"}, Verifier: fixedVerifier{}, Exchanger: tc.exchanger,
+				})},
+				tc.signer,
+				OIDCRoutes{RedirectBase: "https://api.example.com", PostLoginURL: "https://spa.example.com/", FailureURL: signInFailed},
+			)
+			req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback", nil)
+			req.AddCookie(&http.Cookie{Name: oidcLoginCookie, Value: "irrelevant"})
+			rec := httptest.NewRecorder()
+
+			h.OidcSignInCallback(rec, req, "google", tc.params)
+
+			if rec.Code != http.StatusFound || rec.Header().Get("Location") != tc.want {
+				t.Fatalf("status=%d location=%q, want 302 to %q", rec.Code, rec.Header().Get("Location"), tc.want)
+			}
+		})
 	}
 }

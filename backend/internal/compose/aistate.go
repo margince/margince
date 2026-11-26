@@ -15,7 +15,7 @@ import (
 // AI-unconfigured deployment is a legitimate, ready deployment; the
 // state is a visibility line, not a gate.
 const (
-	AIStateConfigured   = "configured"   // a declared ai-routing.yaml is bound
+	AIStateConfigured   = "configured"   // a stored routing setting is bound
 	AIStateFake         = "fake"         // --ai-fake, dev/test only
 	AIStateUnconfigured = "unconfigured" // neither wired
 )
@@ -24,12 +24,13 @@ const (
 // configuration from which the anonymous profile could be derived; callers
 // that own that configuration use WithAssistantProfile instead.
 func WithAIState(state string) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.aiState = state }
+	return func(s *Server, _ *pgxpool.Pool) { s.aiState = func() string { return state } }
 }
 
 // WithAssistantProfile binds both public login posture and the operational
-// readiness line from the process's one routing decision.
-func WithAssistantProfile(state string, profile ai.PublicProfile) Option {
+// readiness line from the process's one routing decision. Both are read per
+// request, so a binding adopted after boot shows on /readyz.
+func WithAssistantProfile(state func() string, profile func() ai.PublicProfile) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.aiState = state
 		s.voiceHandlers = s.WithPublicProfile(profile)
@@ -40,20 +41,21 @@ func WithAssistantProfile(state string, profile ai.PublicProfile) Option {
 // WithAIState (it wires no AI surfaces at all) still answers honestly
 // rather than with an empty component.
 func (s *Server) aiStateOrDefault() string {
-	if s.aiState == "" {
+	if s.aiState == nil {
 		return AIStateUnconfigured
 	}
-	return s.aiState
+	return s.aiState()
 }
 
 // WithLaneHealthBindings counts each lane's /ai/health row against the model
-// router serves on it now. A rebind then leaves no failures of the previous
-// model on the lane. A role with no router keeps counting by tier alone.
+// router serves on it now, and orders a task's call flow as router walks it. A
+// rebind then leaves no failures of the previous model on the lane. A role with
+// no router keeps counting by tier alone.
 func WithLaneHealthBindings(router *ai.Router) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		if router == nil {
 			return
 		}
-		s.voiceHandlers = s.WithBoundModels(router.BoundModels)
+		s.voiceHandlers = s.WithBoundModels(router.BoundModels).WithTaskOrder(router.TaskOrder)
 	}
 }

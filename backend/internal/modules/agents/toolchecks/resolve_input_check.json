@@ -1,0 +1,11 @@
+{
+  "verb": "resolve_input_check",
+  "checks": [
+    "deal.update",
+    "forecast.update",
+    "signal.update"
+  ],
+  "takes": [
+    "next_step_finding"
+  ]
+}

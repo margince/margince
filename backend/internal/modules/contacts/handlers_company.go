@@ -5,7 +5,6 @@ package contacts
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -52,7 +51,7 @@ func (h Handlers) ListCompanies(w http.ResponseWriter, r *http.Request, params c
 		AiWritten:        params.AiWritten,
 		Sort:             params.Sort,
 		CustomFilters:    httperr.CustomFieldFilters(r),
-		Lifecycle:        enumArg(params.Lifecycle),
+		Status:           enumArg(params.Status),
 		RelationshipType: enumArg(params.RelationshipType),
 		Domain:           params.Domain,
 		TagIDs:           uuidArgs(params.TagId),
@@ -67,9 +66,11 @@ func (h Handlers) ListCompanies(w http.ResponseWriter, r *http.Request, params c
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
 	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
 	in.Unassigned = params.Unassigned
+	in.ExtensionRelationshipType = params.ExtensionRelationshipType
 	in.Industry = enumArg(params.Industry)
 	in.SizeBand = enumArg(params.SizeBand)
 	in.SourceSystem, in.SourceID = params.SourceSystem, params.SourceId
+	in.Dormancy = enumArg(params.Dormancy)
 	in.Partner = partnerProgramFilter{
 		Kind: enumArg(params.PartnerKind), Stage: params.PartnerStage, Meaning: enumArg(params.PartnerStageMeaning),
 	}
@@ -317,9 +318,8 @@ func (h Handlers) RejectCompany(w http.ResponseWriter, r *http.Request, id crmco
 	// The contract says maxLength: 500 and the generated type does not enforce
 	// it. Unchecked, one caller stores a megabyte on the domain and every
 	// reader of the blocked list is served it back in full.
-	if len([]rune(reason)) > maxRejectReason {
-		httperr.Write(w, r, httperr.Validation(fieldKeyReason, "too_long",
-			fmt.Sprintf("a reason is at most %d characters; this one is %d", maxRejectReason, len([]rune(reason)))))
+	if err := httperr.RequireWithin(fieldKeyReason, reason, maxRejectReason); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	ifVersion, ok := httperr.IfMatchVersion(w, r)

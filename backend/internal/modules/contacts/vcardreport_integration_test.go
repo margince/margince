@@ -12,9 +12,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -128,8 +130,8 @@ func TestACardOverACorrectionNeedsTheVerdictReader(t *testing.T) {
 	}
 	key := sha256.Sum256([]byte("profile_field:" + fieldTitle))
 	e.execAs(ctx, t, `INSERT INTO ai_feedback
-		(subject_type, subject_id, claim_kind, claim_key, verdict, corrected_value, source, captured_by)
-		VALUES ('contact', $1, 'profile_field', $2, 'corrected', 'Head of Treasury', 'human', 'human:x')`,
+		(subject_type, subject_id, claim_kind, claim_key, verdict, corrected_value, captured_by)
+		VALUES ('contact', $1, 'profile_field', $2, 'corrected', 'Head of Treasury', 'human:x')`,
 		incumbent.Id, hex.EncodeToString(key[:]))
 
 	entries, err := ParseVCards(strings.NewReader(
@@ -187,5 +189,32 @@ func TestAPhotoProposalAndAReviewCarryNoFieldReport(t *testing.T) {
 	}
 	if len(photo) != 1 || photo[0].Outcome != VCardProposed || photo[0].Fields != nil {
 		t.Errorf("photo = %+v, want one proposed with no field report", photo)
+	}
+}
+
+// A card whose name is past the import bound is skipped with its length, and
+// the next card in the file still lands. A title cut to the column says so.
+func TestACardPastTheNameBoundIsSkippedAndACutTitleIsReported(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	limit := textbounds.LimitOf("public.contact.title")
+
+	results := importCards(ctx, t, e,
+		"BEGIN:VCARD\nFN:"+strings.Repeat("n", 410)+"\nEMAIL:long@name.example\nEND:VCARD\n"+
+			"BEGIN:VCARD\nFN:Tara Title\nTITLE:"+strings.Repeat("t", 400)+"\nEMAIL:tara@title.example\nEND:VCARD\n")
+	if len(results) != 2 {
+		t.Fatalf("results = %+v, want two", results)
+	}
+	if got := results[0]; got.Outcome != VCardSkipped || got.ContactID != nil ||
+		got.Reason != "The name is 410 characters. A contact name holds at most "+strconv.Itoa(ContactNameLimit)+"." {
+		t.Errorf("long name = %+v, want it skipped with its length", got)
+	}
+	created := results[1]
+	if created.Outcome != VCardCreated ||
+		created.Reason != "The title is 400 characters, so only its first "+strconv.Itoa(limit)+" were imported." {
+		t.Fatalf("cut title = %+v, want it created with the cut reported", created)
+	}
+	if got := reportRow(t, created.Fields, fieldTitle); got.Action != VCardFieldImported || len(got.Value) != limit {
+		t.Errorf("title row = %+v, want the first %d characters imported", got, limit)
 	}
 }

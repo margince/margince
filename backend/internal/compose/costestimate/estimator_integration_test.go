@@ -138,8 +138,8 @@ func (e *estEnv) seedConnection(t *testing.T, user ids.UserID, provider string) 
 	t.Helper()
 	connID := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO capture_connection (id, provider, user_id, scopes, status)
-		VALUES ($1, $2, $3, '{}', 'connected')`,
+		INSERT INTO capture_connection (id, provider, user_id, status)
+		VALUES ($1, $2, $3, 'connected')`,
 		connID, provider, user.UUID); err != nil {
 		t.Fatal(err)
 	}
@@ -173,10 +173,10 @@ type callRow struct {
 func (e *estEnv) insertCall(t *testing.T, c callRow) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO ai_call (task, tier, provider, model_id, request_fingerprint,
+		INSERT INTO ai_call (task, tier, provider, model_id,
 		  tokens_in, tokens_out, cached_tokens, cache_write_tokens, cache_hit, occurred_at, logical_call_id, error_sentinel)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,false,$10,$11,NULLIF($12,''))`,
-		string(c.task), string(c.tier), c.provider, c.model, "fp-"+ids.NewV7().String(),
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,false,$9,$10,NULLIF($11,''))`,
+		string(c.task), string(c.tier), c.provider, c.model,
 		c.tokensIn, c.tokensOut, c.cachedTokens, c.cacheWriteTokens, inWindow, ids.NewV7(), c.errorSentinel); err != nil {
 		t.Fatalf("insert call %+v: %v", c, err)
 	}
@@ -193,7 +193,7 @@ func (e *estEnv) insertLabeledActivity(t *testing.T, ws ids.UUID) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO activity (kind, source, captured_by, capture_label, capture_labeled_at)
-		VALUES ('email', 'gmail', 'system', 'noise', $1)`, inWindow); err != nil {
+		VALUES ('email', 'gmail', 'system', 'other', $1)`, inWindow); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -239,7 +239,7 @@ func TestEstimatorPricesObservedHistory(t *testing.T) {
 		e.insertLabeledActivity(t, ws)
 	}
 
-	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, "gmail", user, 100)
+	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, capture.ProviderMailbox("gmail"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
@@ -293,7 +293,7 @@ func TestEstimatorEnrichFloorsWhenContactsCreatedZero(t *testing.T) {
 		e.insertLabeledActivity(t, ws)
 	}
 
-	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, "gmail", user, 100)
+	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, capture.ProviderMailbox("gmail"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
@@ -332,7 +332,7 @@ func TestEstimatorExcludesRatelessModelAndFlagsHeuristic(t *testing.T) {
 		e.insertLabeledActivity(t, ws)
 	}
 
-	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, "gmail", user, 100)
+	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, capture.ProviderMailbox("gmail"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
@@ -372,7 +372,7 @@ func TestEstimatorCountsMeteringFailedRows(t *testing.T) {
 	e.insertCall(t, callRow{task: ai.TaskCaptureClassify, tier: ai.TierCheapCloud, provider: ai.ProviderFake, model: "cloud-model", tokensIn: 2_000_000, tokensOut: 0, errorSentinel: "metering_failed"})
 	e.insertLabeledActivity(t, ws)
 
-	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, "gmail", user, 100)
+	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, capture.ProviderMailbox("gmail"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
@@ -413,7 +413,7 @@ func TestEstimatorEnrichMeteringFailedRetryDoesNotInflateDenominator(t *testing.
 	e.insertCall(t, callRow{task: ai.TaskEnrich, tier: ai.TierCheapCloud, provider: ai.ProviderFake, model: "cloud-model", tokensIn: 500_000, tokensOut: 0})
 	e.insertCall(t, callRow{task: ai.TaskEnrich, tier: ai.TierCheapCloud, provider: ai.ProviderFake, model: "cloud-model", tokensIn: 500_000, tokensOut: 0, errorSentinel: "metering_failed"})
 
-	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, "gmail", user, 100)
+	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, capture.ProviderMailbox("gmail"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
@@ -447,7 +447,7 @@ func TestEstimatorRepricesSinceUnboundSlice(t *testing.T) {
 	e.insertCall(t, callRow{task: ai.TaskCaptureClassify, tier: ai.TierCheapCloud, provider: ai.ProviderFake, model: "old-cloud-model", tokensIn: 2_000_000, tokensOut: 0})
 	e.insertLabeledActivity(t, ws)
 
-	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, "gmail", user, 100)
+	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, capture.ProviderMailbox("gmail"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
@@ -472,7 +472,7 @@ func TestEstimatorNoHistoryUsesFloor(t *testing.T) {
 	// Rate the floor's classify head (local-model) so the floor prices honestly.
 	e.insertRate(t, "local-model", 1_000_000, 0)
 
-	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, "gmail", user, 100)
+	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, capture.ProviderMailbox("gmail"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
@@ -499,7 +499,7 @@ func TestEstimatorConnectionScopedYields(t *testing.T) {
 	e.insertRate(t, "local-model", 1_000_000, 0)
 
 	est := e.newEstimator(ws)
-	imap, err := est.EstimateBackfill(wsCtx, "imap", user, 100)
+	imap, err := est.EstimateBackfill(wsCtx, capture.ProviderMailbox("imap"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill(imap): %v", err)
 	}

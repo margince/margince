@@ -34,6 +34,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -128,8 +129,9 @@ type relinkActivitiesResolver struct {
 // theirs to be shown by name.
 func (r *relinkActivitiesResolver) Subject(ctx context.Context, cmd RelinkActivitiesCommand) (StageInfo, error) {
 	said := summaryIn(ctx, r.language)
-	return destinationSubject(ctx, &r.destination, cmd.EntityType, cmd.EntityID, func(label string) string {
-		return fmt.Sprintf(said.relinkActivities, len(cmd.ActivityIDs), said.noun(cmd.EntityType), label)
+	return destinationSubject(ctx, &r.destination, cmd.EntityType, cmd.EntityID, func(label string) (string, *systemtext.Component) {
+		component := systemtext.Sentence("agent.relinkActivities", systemtext.Count(int64(len(cmd.ActivityIDs))), systemtext.NounArgument(cmd.EntityType), systemtext.Label(label))
+		return systemtext.Canonical(component, said.lang), component
 	})
 }
 
@@ -162,15 +164,17 @@ func destinationRecord(records datasource.SystemOfRecordProvider, entityType str
 // destinationSubject is the one spelling of a batch card's subject: the
 // destination's type and id, its version as read, and the sentence. The
 // sentence names the destination by its label.
-func destinationSubject(ctx context.Context, destination *anchoredRecord, entityType string, entityID ids.UUID, summary func(label string) string) (StageInfo, error) {
+func destinationSubject(ctx context.Context, destination *anchoredRecord, entityType string, entityID ids.UUID, summary func(label string) (string, *systemtext.Component)) (StageInfo, error) {
 	rec, err := destination.row(ctx, entityID)
 	if err != nil {
 		return StageInfo{}, err
 	}
+	text, component := summary(recordLabel(rec))
 	return StageInfo{
 		TargetType:    entityType,
 		TargetID:      entityID,
 		TargetVersion: &rec.Version,
-		Summary:       summary(recordLabel(rec)),
+		Summary:       text,
+		SystemText:    &systemtext.Message{Subject: component},
 	}, nil
 }

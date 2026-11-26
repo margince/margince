@@ -1,0 +1,9 @@
+{
+  "verb": "unpin_worklist_row",
+  "checks": [
+    "activity.read"
+  ],
+  "takes": [
+    "activity"
+  ]
+}

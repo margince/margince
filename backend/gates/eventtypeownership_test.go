@@ -283,6 +283,7 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 	"reporting.changed <- internal/compose":                   "compose writes down the calendar a saved analytics question's periods keep when the reporting zone or fiscal start moves. report_run is compose's table, and the event says what every reporting.changed says: a reporting object changed, so a consumer re-reads its authorized state",
 	"reporting.changed <- internal/modules/forecasting":       "forecasting records a capture status change on its own capture table. The event carries only the object and the action, as every reporting.changed does, so a consumer re-reads authorized state whichever module wrote it",
 	"reporting.changed <- internal/modules/contacts":          "the partner stage list changes the labels and meanings the partner reads and filters show. The event carries only the object and the action, which is what reporting.changed means wherever it is built: consumers re-read authorized state",
+	"reporting.changed <- internal/modules/activities":        "the outcome review templates set what a closed deal's review asks, and adding, editing or retiring one changes that list. The event carries only the object and the action, which is what reporting.changed means wherever it is built: consumers re-read authorized state",
 	"reporting.changed <- internal/modules/deals":             "the loss reason list and its legacy mappings change what the win-loss report labels and counts. The event carries only the object and the action, which is what reporting.changed means wherever it is built: consumers re-read authorized state",
 	"activity.updated <- internal/modules/privacy":            "Privacy removes or redacts commitment evidence in its erasure transaction. The activity event invalidates the same admission projection the owning activity writer updates; importing that module would violate module boundaries.",
 	"conversation_claim.changed <- internal/modules/contacts": "The claim owner publishes corrections, renewals and settlement.",
@@ -335,6 +336,7 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 	// that a pipeline ran, which no consumer of the record wants.
 	"lead.created <- internal/modules/contacts":        "a lead somebody created",
 	"lead.created <- internal/modules/capture":         "a lead an inbound message created; source_system names where it came from. Both are a lead existing that did not before",
+	"activity.captured <- internal/compose/inquiries":  "builds planner input from an already accepted note; this preview emits no event",
 	"activity.captured <- internal/modules/activities": "an activity logged through the product",
 	"activity.captured <- internal/modules/capture":    "an activity an inbound message produced, again with source_system. The verb is already `captured` for both — it is the record's arrival, not the pipeline's run",
 })

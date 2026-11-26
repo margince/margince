@@ -1,0 +1,13 @@
+{
+  "verb": "share_company_contacts",
+  "checks": [
+    "company.read",
+    "contact.read",
+    "contact.update",
+    "relationship.read"
+  ],
+  "takes": [
+    "company",
+    "user"
+  ]
+}

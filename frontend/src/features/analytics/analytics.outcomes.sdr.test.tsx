@@ -37,6 +37,8 @@ afterEach(() => {
 
 const SELF = "u-rep-1";
 const AS_OF = "2026-09-21T12:00:00Z";
+// Names for the copies of the view a test mounts side by side.
+const VIEW_NAMES = ["first", "second"] as const;
 
 const handoffSummary: SdrSummary = {
   as_of: AS_OF,
@@ -112,6 +114,10 @@ function show(
     worklist?: () => Response;
     evaluation?: unknown;
     evaluationHeld?: Promise<unknown>;
+    // Answers a request before the routes do, for a test that reads its URL.
+    intercept?: (url: URL) => Response | Promise<Response> | undefined;
+    // How many copies of the view share one client, as two panels on a page do.
+    views?: number;
   }> = {},
 ) {
   const asked: URL[] = [];
@@ -145,6 +151,10 @@ function show(
       "https://storybook.local",
     );
     asked.push(url);
+    const intercepted = over.intercept?.(url);
+    if (intercepted) {
+      return intercepted;
+    }
     if (url.searchParams.get("state") === "returned") {
       return jsonResponse(returnedPage);
     }
@@ -155,7 +165,9 @@ function show(
   }) as typeof fetch;
   render(
     <StoryProviders>
-      <MySdrWork self={SELF} locale="en" />
+      {VIEW_NAMES.slice(0, over.views ?? 1).map((view) => (
+        <MySdrWork key={view} self={SELF} locale="en" />
+      ))}
     </StoryProviders>,
   );
   return asked;
@@ -171,6 +183,152 @@ describe("MySdrWork", () => {
     expect(summary?.searchParams.get("as_of")).toBe(
       reportingStoryEvaluation.context.evaluated_at,
     );
+  });
+
+  it("re-pins once when its instant is too old, and never asks the stale summary again", async () => {
+    const stale = "2026-09-21T11:30:00Z";
+    const fresh = reportingStoryEvaluation.context.evaluated_at;
+    const refresh = heldOpen();
+    let evaluations = 0;
+    const asked = show({
+      intercept: (url) => {
+        if (url.pathname.endsWith("/analytics/evaluate")) {
+          evaluations += 1;
+          return evaluations === 1
+            ? evaluatedAt(stale)
+            : refresh.held.then(() => evaluatedAt(fresh));
+        }
+        if (isSummaryAt(url, stale)) {
+          return asOfRefused("too_old");
+        }
+        return echoedSummary(url);
+      },
+    });
+    await waitFor(() => expect(evaluations).toBe(2));
+    await settle();
+    expect(asked.filter((url) => isSummaryAt(url, stale))).toHaveLength(1);
+    refresh.release();
+    expect(
+      await screen.findByText(/Alex Seller can no longer act/),
+    ).toBeVisible();
+    expect(asked.some((url) => isSummaryAt(url, fresh))).toBe(true);
+    expect(asked.filter((url) => isSummaryAt(url, stale))).toHaveLength(1);
+    expect(evaluations).toBe(2);
+  });
+
+  it("re-pins a refused instant once when two views read it", async () => {
+    const stale = "2026-09-21T11:30:00Z";
+    const refresh = heldOpen();
+    let evaluations = 0;
+    show({
+      views: 2,
+      intercept: (url) => {
+        if (url.pathname.endsWith("/analytics/evaluate")) {
+          evaluations += 1;
+          return evaluations === 1
+            ? evaluatedAt(stale)
+            : refresh.held.then(() => evaluatedAt(stale));
+        }
+        if (isSummaryAt(url, stale)) {
+          return asOfRefused("too_old");
+        }
+        return echoedSummary(url);
+      },
+    });
+    await waitFor(() => expect(evaluations).toBe(2));
+    await settle();
+    expect(evaluations).toBe(2);
+    refresh.release();
+  });
+
+  it("re-pins once when a later page crosses the window, and never asks that page again", async () => {
+    const first = reportingStoryEvaluation.context.evaluated_at;
+    const second = "2026-09-21T12:20:00Z";
+    const refresh = heldOpen();
+    let evaluations = 0;
+    const isLaterPageAt = (url: URL, at: string) =>
+      url.pathname.endsWith("/analytics/sdr-summary/handoffs") &&
+      url.searchParams.get("cursor") === "cursor-2" &&
+      url.searchParams.get("as_of") === at;
+    const asked = show({
+      intercept: (url) => {
+        if (url.pathname.endsWith("/analytics/evaluate")) {
+          evaluations += 1;
+          return evaluations === 1
+            ? evaluatedAt(first)
+            : refresh.held.then(() => evaluatedAt(second));
+        }
+        if (isLaterPageAt(url, first)) {
+          return asOfRefused("too_old");
+        }
+        return echoedSummary(url);
+      },
+    });
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["analytics.sdrShowMore"] }),
+    );
+    await waitFor(() => expect(evaluations).toBe(2));
+    await settle();
+    expect(asked.filter((url) => isLaterPageAt(url, first))).toHaveLength(1);
+    expect(asked.filter((url) => isSummaryAt(url, first))).toHaveLength(1);
+    refresh.release();
+    await waitFor(() =>
+      expect(
+        asked.some(
+          (url) =>
+            url.pathname.endsWith("/analytics/sdr-summary/handoffs") &&
+            url.searchParams.get("as_of") === second,
+        ),
+      ).toBe(true),
+    );
+    expect(asked.filter((url) => isLaterPageAt(url, first))).toHaveLength(1);
+    expect(evaluations).toBe(2);
+  });
+
+  it("re-pins once when the server's clock says its instant is in the future", async () => {
+    const ahead = "2026-09-21T12:00:05Z";
+    const fresh = reportingStoryEvaluation.context.evaluated_at;
+    let evaluations = 0;
+    show({
+      intercept: (url) => {
+        if (url.pathname.endsWith("/analytics/evaluate")) {
+          evaluations += 1;
+          return evaluatedAt(evaluations === 1 ? ahead : fresh);
+        }
+        if (isSummaryAt(url, ahead)) {
+          return asOfRefused("future");
+        }
+        return echoedSummary(url);
+      },
+    });
+    expect(
+      await screen.findByText(/Alex Seller can no longer act/),
+    ).toBeVisible();
+    expect(evaluations).toBe(2);
+  });
+
+  it("does not read again on a refusal a fresh instant does not cure", async () => {
+    let evaluations = 0;
+    show({
+      intercept: (url) => {
+        if (url.pathname.endsWith("/analytics/evaluate")) {
+          evaluations += 1;
+          return jsonResponse(reportingStoryEvaluation);
+        }
+        if (url.pathname.endsWith("/analytics/sdr-summary")) {
+          return asOfRefused("invalid");
+        }
+        return undefined;
+      },
+    });
+    const panel = (await screen.findByText(en["analytics.sdrWaiting"])).closest(
+      "section",
+    );
+    expect(
+      await within(panel as HTMLElement).findByText(en["state.failed"]),
+    ).toBeVisible();
+    await settle();
+    expect(evaluations).toBe(1);
   });
 
   it("still reads the summary, at now, when the lead readings failed", async () => {
@@ -374,3 +532,59 @@ describe("MySdrWork", () => {
     ).toBeTruthy();
   });
 });
+
+// The 422 the server answers when it refuses an SDR read's instant.
+function asOfRefused(code: string): Response {
+  return jsonResponse(
+    {
+      status: 422,
+      code: "validation_error",
+      detail: "choose another instant",
+      details: {
+        errors: [{ field: "as_of", code, message: "choose another instant" }],
+      },
+    },
+    422,
+  );
+}
+
+// A response the test holds back until it says, as a slow network would.
+function heldOpen() {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { held, release: () => release() };
+}
+
+// Lets every queued fetch and effect run, so a loop has room to show itself.
+async function settle() {
+  for (let turn = 0; turn < 10; turn += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+}
+
+function evaluatedAt(at: string): Response {
+  return jsonResponse({
+    ...reportingStoryEvaluation,
+    context: { ...reportingStoryEvaluation.context, evaluated_at: at },
+  });
+}
+
+function isSummaryAt(url: URL, at: string): boolean {
+  return (
+    url.pathname.endsWith("/analytics/sdr-summary") &&
+    url.searchParams.get("as_of") === at
+  );
+}
+
+// The summary as the server answers it: at the instant it was asked for.
+function echoedSummary(url: URL): Response | undefined {
+  if (!url.pathname.endsWith("/analytics/sdr-summary")) {
+    return undefined;
+  }
+  return jsonResponse({
+    ...handoffSummary,
+    as_of: url.searchParams.get("as_of") ?? AS_OF,
+  });
+}

@@ -31,12 +31,14 @@ const REASON: Record<GuardEntry["reason_code"], MessageKey> = {
     "consent.reason.no_consent_exception_not_offered",
   no_consent: "consent.reason.no_consent",
   existing_customer: "consent.reason.existing_customer",
+  opt_out_allowed: "consent.reason.opt_out_allowed",
 };
 
-const QUALIFYING: Record<QualifyingKind, MessageKey> = {
+// Partial: the retired active_deal kind has no sentence, and an unnamed kind
+// falls back to the server's own.
+const QUALIFYING: Partial<Record<QualifyingKind, MessageKey>> = {
   inbound_message: "consent.reason.qualifying.inbound_message",
   inquiry: "consent.reason.qualifying.inquiry",
-  active_deal: "consent.reason.qualifying.active_deal",
   in_person: "consent.reason.qualifying.in_person",
   meeting: "consent.reason.qualifying.meeting",
   requested_by_subject: "consent.reason.qualifying.requested_by_subject",
@@ -68,7 +70,7 @@ export function consentReason(
   const date = (iso: string) => formatDateAbbrev(iso, locale, zone);
   const event = entry.qualifying_event;
   if (entry.reason_code === "qualifying_event" && event) {
-    const key = valueFor(QUALIFYING, event.kind, undefined);
+    const key = QUALIFYING[event.kind];
     return key
       ? t(key, { date: date(event.occurred_at), note: event.note ?? "" })
       : entry.reason;

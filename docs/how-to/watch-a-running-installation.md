@@ -3,7 +3,8 @@
 Margince measures itself over one Prometheus exposition per program. This page
 is how to scrape it and what its shape means for an alert. The settings that
 decide who may scrape, and the address the worker answers on, are in
-[configuration.md](../reference/configuration.md).
+[configuration.md](../reference/configuration.md). To check a problem and show that it is fixed, use
+[the operations runbook](../operations/observability.md).
 
 ## Scrape the API and the worker separately
 

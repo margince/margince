@@ -188,6 +188,7 @@ func TestEveryOtherForeignKeyIsIndexedOrMeasured(t *testing.T) {
 // measurement found. Not a waiver: its keys are parents, where a finding names one
 // child key. The test above checks the directions, not subject matching.
 var foreignKeyNoIndexNeeded = map[string]string{
+	"legal_entity":               "a sending company is archived in place, so retained mail and permission records keep naming it; TestEveryEntityWriteCommitsItsAuditAndItsEvent checks that retirement keeps the row",
 	"deal_room_participant":      "a seat is revoked and anonymized in place by the erasure, never deleted: a comment names its participant row, and deleting the seat would orphan the conversation",
 	"report_definition_revision": "append-only: a revision is what a report meant when it ran",
 	"sdr_handoff_reason":         "a reason is a vocabulary row the handoffs that cite it keep resolving",
@@ -199,7 +200,6 @@ var foreignKeyNoIndexNeeded = map[string]string{
 	"deal_room_document":         "a document is withdrawn in place, keeping the engagement rows that reference it readable",
 	"maskable_field":             "the field vocabulary a mask policy cites",
 	"meeting_invitation":         "append-only: an invitation is the record that it was sent",
-	"oauth_client":               "a client is disabled in place so its grants stay attributable",
 	"project_health_assessment":  "append-only: an assessment is what somebody judged at a point in time",
 	"company":                    "a company is archived, never deleted: archived_at retires it and every read filters on it",
 	"consent_purpose":            "a purpose is archived rather than deleted, so a policy that cited it keeps resolving",
@@ -221,17 +221,14 @@ var foreignKeyNoIndexNeeded = map[string]string{
 	"communication_instruction":  "an instruction is consumed or revoked in place",
 	"communication_review":       "append-only: a review is the decision somebody made",
 	"consent_text_version":       "append-only, and the migration revokes DELETE on it: a proof row pointing at a removed version is the failure it prevents",
-	"audit_log":                  "append-only by trigger (audit_log_immutable refuses DELETE), which is the whole point of the table",
 	"close_date_run":             "append-only: a sweep run holds the cursor the next one resumes from",
 	"deal_stage_evidence":        "append-only: evidence for why a stage moved",
 	"stage_exit_criterion":       "a criterion is archived, so the evidence that met it keeps resolving",
 	"deal_stage_history":         "append-only: the history is the record",
-	"finance_connection":         "a connection is archived, keeping the entries it produced attributable",
 	"product":                    "a product is archived; the offers that priced it still name it",
 	"relationship":               "a relationship is archived or ended in place",
 	"record_role":                "append-only: a role assignment is who could do what, when",
 	"report_schedule":            "append-only in practice: a schedule is retired by its own flags rather than removed",
-	"agent_run":                  "append-only: the run is how an outcome was reached",
 	"comms_outbound":             "append-only: the ledger of what was sent",
 	"weekly_review":              "append-only: a review is what a reader saw that week",
 	"app_user": "nothing deletes an app_user row. A member is retired by setting " +

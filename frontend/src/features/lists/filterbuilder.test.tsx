@@ -24,8 +24,8 @@ import { FilterBuilder } from "./filterbuilder";
 // an operator in a list the field's type does not admit is a clause the engine
 // will refuse, and that is the failure this screen exists to prevent.
 
-// A new clause starts on owner_id, whose picker reads the seat roster, so
-// every test owns its fetch: none reaches the network or a neighbour's stub.
+// The owner picker reads the seat roster, so every test owns its fetch: none
+// reaches the network or a neighbour's stub.
 beforeEach(stubSeats);
 afterEach(() => {
   cleanup();
@@ -43,8 +43,6 @@ const VOCAB: VocabularyField[] = [
     references: "app_user",
   },
   {
-    // An unbounded target: too many accounts to enumerate, so this one keeps the
-    // plain box until the async picker exists.
     name: "company_id",
     type: "id",
     operators: ["eq", "neq", "in", "exists"],
@@ -236,6 +234,33 @@ describe("what the builder offers", () => {
     expect(screen.queryByText("owner id")).toBeNull();
   });
 
+  it("offers a custom field by its catalog label", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    const labelled = VOCAB.map((field) =>
+      field.name === "cf_loyalty_tier"
+        ? { ...field, label: "Loyalty Tier" }
+        : field,
+    );
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <FilterBuilder
+          tree={newGroup("and", [newLeaf("cf_loyalty_tier", "eq", "gold")])}
+          onChange={() => {}}
+          fields={labelled}
+        />
+      </QueryClientProvider>,
+    );
+
+    const field = screen.getByRole("combobox", { name: "Field" });
+    expect(field.textContent).toContain("Loyalty Tier");
+    await user.click(field);
+
+    expect(screen.getByRole("option", { name: "Loyalty Tier" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "loyalty tier" })).toBeNull();
+    expect(screen.getByRole("option", { name: "deal score" })).toBeTruthy();
+  });
+
   it("does not mark a core field as custom", () => {
     resetIDsForTest();
     render(
@@ -279,7 +304,7 @@ describe("an id clause names a record, not a uuid", () => {
     // An account list grows with the business, so it is not a dropdown. It is
     // not a uuid box either: nobody types one from memory, and one typed wrong
     // matches nothing and reads as "no companies match".
-    const box = await screen.findByRole("textbox", {
+    const box = await screen.findByRole("combobox", {
       name: "Search companies",
     });
     expect(screen.queryByRole("combobox", { name: "Value" })).toBeNull();
@@ -292,7 +317,7 @@ describe("an id clause names a record, not a uuid", () => {
       and: [{ field: "company_id", op: "eq", value: "" }],
     });
 
-    await user.click(await screen.findByRole("button", { name: "Northgate" }));
+    await user.click(await screen.findByRole("option", { name: "Northgate" }));
 
     // And what lands on the wire is the id, chosen rather than composed.
     expect(wire()).toEqual({
@@ -315,7 +340,7 @@ describe("an id clause names a record, not a uuid", () => {
     // workspace has no such company", which is a settled answer to a question
     // that got one — the exact failure this whole surface exists to prevent.
     await user.type(
-      await screen.findByRole("textbox", { name: "Search companies" }),
+      await screen.findByRole("combobox", { name: "Search companies" }),
       "zzz",
     );
     expect(await screen.findByText("No companies match")).toBeTruthy();
@@ -369,16 +394,16 @@ describe("an id clause names a record, not a uuid", () => {
     // search box stays open under what the clause already holds, because the
     // next pick is the point.
     await user.type(
-      await screen.findByRole("textbox", { name: "Search companies" }),
+      await screen.findByRole("combobox", { name: "Search companies" }),
       "north",
     );
-    await user.click(await screen.findByRole("button", { name: "Northgate" }));
+    await user.click(await screen.findByRole("option", { name: "Northgate" }));
 
     expect(wire()).toEqual({
       and: [{ field: "company_id", op: "in", value: ["company-1"] }],
     });
     expect(
-      screen.getByRole("textbox", { name: "Search companies" }),
+      screen.getByRole("combobox", { name: "Search companies" }),
     ).toBeTruthy();
   });
 
@@ -488,10 +513,9 @@ describe("editing the tree", () => {
 
     await user.click(screen.getByRole("button", { name: "Add condition" }));
 
-    // The first field the picker would offer, with its first admitted operator.
-    expect(wire()).toEqual({
-      and: [{ field: "owner_id", op: "eq", value: "" }],
-    });
+    // No field until the reader picks one, and so no operator or value yet.
+    expect(wire()).toEqual({ and: [{ field: "", op: "eq", value: "" }] });
+    expect(screen.queryByRole("combobox", { name: "Operator" })).toBeNull();
   });
 
   it("removes the condition whose control was pressed, not the last one", async () => {
@@ -536,6 +560,21 @@ describe("editing the tree", () => {
     expect(after.and[0].field).toBe("created_at");
     expect(after.and[0].op).toBe("eq");
     expect(after.and[0].value).toBe("");
+  });
+
+  it("keeps a count of days when only the operator changes", async () => {
+    const user = userEvent.setup();
+    const week = { days_ago: 7 };
+    render(
+      <Harness start={newGroup("and", [newLeaf("created_at", "eq", week)])} />,
+    );
+    const operator = screen.getByRole("combobox", { name: "Operator" });
+    await pickOption(user, operator, "is on or after");
+    expect(wire().and[0]).toMatchObject({ op: "gte", value: week });
+    expect(screen.getByRole("textbox", { name: /days before/ })).toHaveProperty(
+      "value",
+      "7",
+    );
   });
 
   it("starts a yes/no field on the arm its control shows", async () => {
@@ -697,7 +736,7 @@ describe("groups", () => {
     expect(wire()).toEqual({
       and: [
         { field: "owner_id", op: "eq", value: "u1" },
-        { or: [{ field: "owner_id", op: "eq", value: "" }] },
+        { or: [{ field: "", op: "eq", value: "" }] },
       ],
     });
     expect(screen.getByRole("group", { name: "Any of these" })).toBeTruthy();
@@ -754,7 +793,7 @@ describe("groups", () => {
     expect(wire().and[1]).toEqual({
       or: [
         { field: "full_name", op: "contains", value: "ann" },
-        { field: "owner_id", op: "eq", value: "" },
+        { field: "", op: "eq", value: "" },
       ],
     });
     // The group's own offer of a group, named apart from the root's.

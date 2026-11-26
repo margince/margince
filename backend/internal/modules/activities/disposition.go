@@ -80,24 +80,22 @@ func readerOrNobody(ctx context.Context) ids.UUID {
 // undone by that reply: the newer inbound is a different row and becomes the
 // thread's waiting candidate.
 //
-// Idempotent: saying it twice is the same statement, and the second records who
-// last said it. The row's presence IS the judgement — there is no false to
-// store — so clearing it is a delete rather than a flag.
+// Saying it twice is the same statement. The row's presence is the judgement,
+// so clearing it is a delete rather than a flag.
 func (s *Store) SetThreadNotSales(ctx context.Context, id ids.ActivityID) error {
-	return s.judgeMessage(ctx, id, func(ctx context.Context, tx pgx.Tx, capturedBy string) error {
+	return s.judgeMessage(ctx, id, func(ctx context.Context, tx pgx.Tx, _ string) error {
 		thread, err := threadOf(ctx, tx, id)
 		if err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity_sales_state (thread_key, kind, channel_provider, set_by)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT (thread_key, kind, channel_provider)
-			DO UPDATE SET set_by = EXCLUDED.set_by, set_at = now()`,
-			thread.key, thread.kind, thread.provider, capturedBy); err != nil {
+			INSERT INTO activity_sales_state (thread_key, kind, channel_provider)
+			VALUES ($1, $2, $3)
+			ON CONFLICT (thread_key, kind, channel_provider) DO NOTHING`,
+			thread.key, thread.kind, thread.provider); err != nil {
 			return fmt.Errorf("activities: recording the thread as not sales: %w", err)
 		}
-		return s.recordDisposition(ctx, tx, id, stateNotSales, nil, "")
+		return s.recordDisposition(ctx, tx, id, stateNotSales, nil, "", nil)
 	})
 }
 
@@ -123,7 +121,7 @@ func (s *Store) ClearThreadNotSales(ctx context.Context, id ids.ActivityID) erro
 			// decision that was never made.
 			return nil
 		}
-		return s.recordDisposition(ctx, tx, id, stateSalesAgain, nil, "")
+		return s.recordDisposition(ctx, tx, id, stateSalesAgain, nil, "", nil)
 	})
 }
 
@@ -184,7 +182,7 @@ func threadOf(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (threadIdentity
 // channel message. threadOf and ensureInboundMessage both ask it, so the two
 // verbs that judge a message agree on what one is.
 func inboundMessageShape(kind string, direction *string) error {
-	if kind != kindEmail && kind != kindMessage {
+	if kind != kindEmail && kind != KindMessage {
 		return &values.ParseError{
 			Field: "id", Code: "not_a_message",
 			Message: "only an email or a channel message carries a disposition",
@@ -199,13 +197,9 @@ func inboundMessageShape(kind string, direction *string) error {
 	return nil
 }
 
-// The other two halves of what the waiting lane reads. kindEmail is already
-// spelled in this package (pipelinefacts.go) and is reused rather than given a
-// second spelling here.
-const (
-	kindMessage      = "message"
-	directionInbound = "inbound"
-)
+// directionInbound is what the waiting lane reads beside the two message kinds,
+// kindEmail (pipelinefacts.go) and KindMessage (channelvocabulary.go).
+const directionInbound = "inbound"
 
 // SnoozeMessage puts one message down for this reader until its reopen
 // condition is met.
@@ -221,8 +215,11 @@ const (
 // than turned into a guessed date here.
 func (s *Store) SnoozeMessage(
 	ctx context.Context, id ids.ActivityID, on values.ReopenCondition,
-	until *time.Time, ref *ids.UUID,
+	until *time.Time, ref *ids.UUID, intent *crmcontracts.IntentTime,
 ) error {
+	if err := applyPickedTime("snoozed_intent", intent, &until); err != nil {
+		return err
+	}
 	if on.WantsInstant() {
 		if until == nil {
 			return &values.ParseError{
@@ -248,7 +245,7 @@ func (s *Store) SnoozeMessage(
 			Message: "only a snooze waiting on a meeting names the meeting it waits for",
 		}
 	}
-	return s.setReaderState(ctx, id, stateSnoozed, until, on, ref)
+	return s.setReaderState(ctx, id, stateSnoozed, until, on, ref, intent)
 }
 
 // SetMessageNotMine records that this reader is not the contact to answer.
@@ -257,16 +254,17 @@ func (s *Store) SnoozeMessage(
 // Thursday — what makes it stop applying is the record changing hands, which
 // the reader of these rows judges against the owner of the day.
 func (s *Store) SetMessageNotMine(ctx context.Context, id ids.ActivityID) error {
-	return s.setReaderState(ctx, id, stateNotMine, nil, "", nil)
+	return s.setReaderState(ctx, id, stateNotMine, nil, "", nil, nil)
 }
 
 // MarkMessageHandled records that this reader dealt with the message another
-// way: by phone, in a meeting, or with no reply owed.
+// way: by phone, in a meeting, or with no reply owed. On a message we sent it
+// says the reader needs no answer to it (ensureDoneMessage).
 //
-// It carries no moment and nothing lifts it. The customer's next message is a
+// It carries no moment and nothing lifts it. The next message either way is a
 // new activity with no state, so it reaches the list on its own.
 func (s *Store) MarkMessageHandled(ctx context.Context, id ids.ActivityID) error {
-	return s.judgeMessage(ctx, id, s.writeReaderState(id, stateHandled, nil, "", nil, ensureInboundMessage))
+	return s.judgeMessage(ctx, id, s.writeReaderState(id, stateHandled, nil, "", nil, s.ensureDoneMessage, nil))
 }
 
 // ClearMessageDisposition picks a message back up — the undo behind every
@@ -312,7 +310,7 @@ func (s *Store) pickUp(id ids.ActivityID, only string) judgement {
 			if tag.RowsAffected() == 0 {
 				continue
 			}
-			if err := s.recordDisposition(ctx, tx, message, statePickedUp, nil, ""); err != nil {
+			if err := s.recordDisposition(ctx, tx, message, statePickedUp, nil, "", nil); err != nil {
 				return err
 			}
 		}
@@ -324,6 +322,8 @@ func (s *Store) pickUp(id ids.ActivityID, only string) judgement {
 const replaceReaderState = `DO UPDATE
    SET state = EXCLUDED.state,
        snoozed_until = EXCLUDED.snoozed_until,
+       snoozed_wall = EXCLUDED.snoozed_wall,
+       snoozed_zone = EXCLUDED.snoozed_zone,
        reopen_on = EXCLUDED.reopen_on,
        reopen_ref = EXCLUDED.reopen_ref,
        set_by = EXCLUDED.set_by,
@@ -332,9 +332,9 @@ const replaceReaderState = `DO UPDATE
 // setReaderState writes one reader's own judgement about one message.
 func (s *Store) setReaderState(
 	ctx context.Context, id ids.ActivityID, state string, until *time.Time,
-	on values.ReopenCondition, ref *ids.UUID,
+	on values.ReopenCondition, ref *ids.UUID, intent *crmcontracts.IntentTime,
 ) error {
-	return s.judgeMessage(ctx, id, s.writeReaderState(id, state, until, on, ref, nil))
+	return s.judgeMessage(ctx, id, s.writeReaderState(id, state, until, on, ref, nil, intent))
 }
 
 // writeReaderState is setReaderState's write. shape, where set, refuses an
@@ -343,6 +343,7 @@ func (s *Store) setReaderState(
 func (s *Store) writeReaderState(
 	id ids.ActivityID, state string, until *time.Time, on values.ReopenCondition, ref *ids.UUID,
 	shape func(context.Context, pgx.Tx, ids.ActivityID) error,
+	intent *crmcontracts.IntentTime,
 ) judgement {
 	return func(ctx context.Context, tx pgx.Tx, capturedBy string) error {
 		reader := readerOrNobody(ctx)
@@ -384,18 +385,19 @@ func (s *Store) writeReaderState(
 		// keeps a judgement the reader already made on it, so undoing the card
 		// can never erase one: it only gains a state where it had none.
 		write := func(message ids.ActivityID, onConflict string) error {
+			args := []any{message, reader, state, until, storedOn, ref, capturedBy, setAt, pickedWall(intent), pickedZone(intent)}
 			tag, err := tx.Exec(ctx, `
-				INSERT INTO activity_reader_state (activity_id, reader_id, state, snoozed_until, reopen_on, reopen_ref, set_by, set_at)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+				INSERT INTO activity_reader_state (activity_id, reader_id, state, snoozed_until, reopen_on, reopen_ref, set_by, set_at, snoozed_wall, snoozed_zone)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, `+storekit.SQLf("$%d::text::timestamp, $%d", len(args)-1, len(args))+`)
 				ON CONFLICT (activity_id, reader_id) `+onConflict,
-				message, reader, state, until, storedOn, ref, capturedBy, setAt)
+				args...)
 			if err != nil {
 				return fmt.Errorf("activities: setting the message aside: %w", err)
 			}
 			if tag.RowsAffected() == 0 {
 				return nil
 			}
-			return s.recordDisposition(ctx, tx, message, state, until, on)
+			return s.recordDisposition(ctx, tx, message, state, until, on, intent)
 		}
 		if err := write(id, replaceReaderState+sameStateWritesNothing(state)); err != nil {
 			return err
@@ -419,7 +421,7 @@ func earlierRequestKeeps(state string) string {
 	}
 	return `
 				WHERE activity_reader_state.state = '` + stateSnoozed + `'
-				  AND activity_reader_state.snoozed_until <= EXCLUDED.set_at`
+				  AND ` + storekit.IntentInstantColumnSQL("activity_reader_state", "snoozed", "snoozed_until") + ` <= EXCLUDED.set_at`
 }
 
 // judgeMessage is the gate every disposition write takes before it writes.
@@ -461,9 +463,12 @@ type judgement func(ctx context.Context, tx pgx.Tx, capturedBy string) error
 // announcement, in the same transaction as the judgement itself.
 func (s *Store) recordDisposition(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, state string, until *time.Time,
-	on values.ReopenCondition,
+	on values.ReopenCondition, intent *crmcontracts.IntentTime,
 ) error {
 	after := map[string]any{dispositionField: state}
+	if intent != nil {
+		after["snoozed_intent"] = intent
+	}
 	if until != nil {
 		after["snoozed_until"] = until.UTC()
 	}

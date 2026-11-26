@@ -1,0 +1,9 @@
+{
+  "verb": "read_import_report",
+  "checks": [
+    "import_run.read"
+  ],
+  "takes": [
+    "import_run"
+  ]
+}

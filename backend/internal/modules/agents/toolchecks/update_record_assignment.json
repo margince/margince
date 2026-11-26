@@ -1,0 +1,10 @@
+{
+  "verb": "update_record_assignment",
+  "checks": [
+    "company.read",
+    "company.update"
+  ],
+  "takes": [
+    "assignment"
+  ]
+}

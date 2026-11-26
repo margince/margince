@@ -33,7 +33,10 @@ var (
 	}()
 )
 
-func checkSection(source, rendered string) error {
+// CheckSection refuses a rewrite of one section that lost a number, an email
+// address, a link or an open question. It also refuses one that grew or shrank
+// past a rewording.
+func CheckSection(source, rendered string) error {
 	source, rendered = strings.TrimSpace(source), strings.TrimSpace(rendered)
 	if (source == "") != (rendered == "") {
 		return errors.New("keep each section present or absent as in the original")

@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -118,24 +119,61 @@ func (w *transcriptProposeWorker) Work(ctx context.Context, job *river.Job[Trans
 			"transcript_read_id", args.TranscriptReadID)
 		return nil
 	}
+	err = snoozeWhileRestricted(err)
+	if jobs.Exhausted(job.JobRow, err) {
+		// The reading was handed back for a try that will not come, and a
+		// queued reading with no job is one the door joins forever. Detached,
+		// because a try that ran out of time has a cancelled context.
+		closeCtx, cancel := terminalCtx(wsCtx)
+		defer cancel()
+		code := activities.TranscriptFailureUnfinished
+		if modelfailure.Unanswered(err) {
+			code = activities.TranscriptFailureUnanswered
+		}
+		closed, closeErr := w.closeUnread(closeCtx, args, code)
+		if wait := waitToClose(wsCtx, w.log, args.TranscriptReadID, closed, closeErr,
+			activities.TranscriptReadLease); wait != nil {
+			return jobs.FaultContext(ctx, wait)
+		}
+	}
 	return jobs.FaultContext(ctx, err)
 }
 
-// declineUnread closes a reading no configured lane can perform. Failing it
-// visibly is the point: a queued row nobody will ever pick up is
-// indistinguishable, to the rep watching it, from one still being worked.
+// declineUnread closes a reading no configured lane can perform.
 func (w *transcriptProposeWorker) declineUnread(ctx context.Context, args TranscriptProposeArgs) error {
 	w.log.WarnContext(ctx, "transcript reading declined: no model lane configured",
 		"transcript_read_id", args.TranscriptReadID)
+	_, err := w.closeUnread(ctx, args, activities.TranscriptFailureNoModel)
+	return err
+}
+
+// closeUnread fails a reading no worker will read, with the reason why, and
+// reports whether it did. To the rep, a queued row nobody picks up looks the
+// same as one being worked. A claim refused means another claim holds it.
+func (w *transcriptProposeWorker) closeUnread(ctx context.Context, args TranscriptProposeArgs, code string) (bool, error) {
 	if _, err := w.activities.BeginTranscriptRead(ctx, args.TranscriptReadID, activities.TranscriptReadLease); err != nil {
 		if errors.Is(err, apperrors.ErrConflict) {
-			return nil
+			return false, nil
 		}
-		return err
+		return false, err
 	}
-	return w.activities.FinishTranscriptRead(ctx, args.TranscriptReadID,
+	return true, w.activities.FinishTranscriptRead(ctx, args.TranscriptReadID,
 		transcriptCopyFor(string(w.language.Resolve(ctx))).failedOutcome(
-			activities.TranscriptFailure{Code: activities.TranscriptFailureNoModel}))
+			activities.TranscriptFailure{Code: code}))
+}
+
+// waitToClose keeps a live job behind a reading its last try could not close.
+// The release failed and a claim still holds it, or the close did not write.
+// The job then sleeps one lease, which River does not count as a try, and the
+// next run reclaims the reading or finds it settled. It answers nil once the
+// reading is closed.
+func waitToClose(ctx context.Context, log *slog.Logger, readID ids.UUID, closed bool, closeErr error, lease time.Duration) error {
+	if closed && closeErr == nil {
+		return nil
+	}
+	log.WarnContext(ctx, "a reading's last try could not close it; the job waits one lease and tries again",
+		"read_id", readID, "error", closeErr)
+	return river.JobSnooze(lease)
 }
 
 // newTranscriptProposeWorker assembles the worker-role reading. brain may be

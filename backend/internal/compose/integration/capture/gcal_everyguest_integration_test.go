@@ -79,7 +79,13 @@ func (f *calendarFeed) serve(t *testing.T, owner string) *httptest.Server {
 // answers a sync of it.
 func connectFeed(t *testing.T, env captureEnv, feed *calendarFeed) func() {
 	t.Helper()
-	stub := feed.serve(t, captureOwner)
+	return connectFeedAs(t, env, feed, captureOwner)
+}
+
+// connectFeedAs is connectFeed for a calendar on the account owner.
+func connectFeedAs(t *testing.T, env captureEnv, feed *calendarFeed, owner string) func() {
+	t.Helper()
+	stub := feed.serve(t, owner)
 	oauth := gmail.NewOAuth(gmail.OAuthConfig{ClientID: "cid", ClientSecret: "sec", TokenURL: stub.URL + "/token"})
 	api := gcal.NewAPI(stub.Client(), stub.URL)
 	env.registry.Register(gcal.New(oauth, api))
@@ -115,7 +121,7 @@ func seatFor(t *testing.T, e *integration.SearchEnv, address string) ids.UUID {
 
 func ensureGuestContact(t *testing.T, e *integration.SearchEnv, address string) ids.ContactID {
 	t.Helper()
-	contact, err := contacts.NewStore(e.DB()).EnsureContactByEmail(contactCreator(e), "", address, "manual", storekit.RefuseErased)
+	contact, err := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx).EnsureContactByEmail(contactCreator(e), "", address, "manual", storekit.RefuseErased)
 	if err != nil {
 		t.Fatalf("creating the contact %s: %v", address, err)
 	}
@@ -188,7 +194,7 @@ func gcalMeeting(t *testing.T, e *integration.SearchEnv) ids.UUID {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM activity WHERE source_system = 'gcal' AND source_id = 'review'`).Scan(&id)
 	}); err != nil {
-		t.Fatalf("the meeting was not captured: %v", err)
+		t.Fatalf("no gcal meeting with source_id 'review' was captured: %v", err)
 	}
 	return id
 }
@@ -247,13 +253,100 @@ func TestEveryGuestOnAnInvitationIsOnTheMeeting(t *testing.T) {
 	}
 
 	later := ensureGuestContact(t, e, guestLater)
-	store := contacts.NewStore(e.DB())
+	store := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx)
 	if _, err := store.RepairContactCohort(contactCreator(e), later); err != nil {
 		t.Fatal(err)
 	}
 	if !meetingLinkedTo(t, e, meeting, later) {
 		t.Error("the meeting is not filed under the guest who became a contact after it")
 	}
+}
+
+// A link a member moved off a guest outlives the organiser dropping that
+// guest. A roster never retires a row a member relinked, so the next sync
+// cannot undo what the member chose.
+func TestTheRosterDoesNotRetireALinkAMemberMoved(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	seatFor(t, e, guestColleagueA)
+	ensureGuestContact(t, e, guestKnown)
+	feed := &calendarFeed{}
+	start := captureNow.AddDate(0, 0, -3)
+	feed.set(lateGuestEvent("review", "confirmed", start, guestColleagueA, guestList()...))
+	sync := connectFeed(t, env, feed)
+	sync()
+	meeting := gcalMeeting(t, e)
+
+	// Read the row while the roster still lists the guest, so a later zero is
+	// the retirement and not a fixture that seeded nothing.
+	if got := len(guestRows(t, e, meeting)[guestKnown]); got != 1 {
+		t.Fatalf("the guest holds %d rows before the move, want 1", got)
+	}
+
+	elsewhere := ensureGuestContact(t, e, "elsewhere@other-co.example")
+	if _, err := activities.NewStore(e.DB()).RelinkActivity(importerCtx(e),
+		ids.From[ids.ActivityKind](meeting), activities.RelinkActivityInput{
+			EntityType: "contact", EntityID: elsewhere.UUID, ReplaceExistingOfType: true,
+		}); err != nil {
+		t.Fatalf("moving the meeting off the known guest: %v", err)
+	}
+
+	feed.set(lateGuestEvent("review", "confirmed", start, guestColleagueA, rosterWithout(guestKnown)...))
+	sync()
+
+	if got := len(guestRows(t, e, meeting)[guestKnown]); got != 1 {
+		t.Errorf("the moved row holds %d rows once the organiser dropped the guest, want 1", got)
+	}
+}
+
+// A link a member moved still follows the guest's answer on the calendar. The
+// move keeps the row out of the roster's reach, not out of its answers.
+func TestAMovedLinkStillTakesTheGuestsAnswer(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	seatFor(t, e, guestColleagueA)
+	ensureGuestContact(t, e, guestKnown)
+	feed := &calendarFeed{}
+	start := captureNow.AddDate(0, 0, -3)
+	feed.set(lateGuestEvent("review", "confirmed", start, guestColleagueA, guestList()...))
+	sync := connectFeed(t, env, feed)
+	sync()
+	meeting := gcalMeeting(t, e)
+	if rows := answeredRows(t, e, meeting)[guestKnown]; len(rows) != 1 || rows[0].response == nil || *rows[0].response != "accepted" {
+		t.Fatalf("the guest's row before the move: %+v, want one that accepted", rows)
+	}
+
+	elsewhere := ensureGuestContact(t, e, "elsewhere@other-co.example")
+	if _, err := activities.NewStore(e.DB()).RelinkActivity(importerCtx(e),
+		ids.From[ids.ActivityKind](meeting), activities.RelinkActivityInput{
+			EntityType: "contact", EntityID: elsewhere.UUID, ReplaceExistingOfType: true,
+		}); err != nil {
+		t.Fatalf("moving the meeting off the known guest: %v", err)
+	}
+	answers := guestList()
+	for _, guest := range answers {
+		if guest["email"] == guestKnown {
+			guest["responseStatus"] = "tentative"
+		}
+	}
+	feed.set(lateGuestEvent("review", "confirmed", start, guestColleagueA, answers...))
+	sync()
+
+	rows := answeredRows(t, e, meeting)[guestKnown]
+	if len(rows) != 1 || rows[0].contactID == nil || *rows[0].contactID != elsewhere.UUID {
+		t.Fatalf("the guest's rows after the sync: %+v, want the one moved to the other contact", rows)
+	}
+	if rows[0].response == nil || *rows[0].response != "tentative" {
+		t.Errorf("the moved row after the guest changed their answer: %v, want tentative", rows[0].response)
+	}
+}
+
+// rosterWithout is the standard roster less one address, which is how an
+// organiser dropping a guest reaches the sync.
+func rosterWithout(address string) []map[string]any {
+	return slices.DeleteFunc(guestList(), func(g map[string]any) bool {
+		return g["email"] == address
+	})
 }
 
 // A guest the organizer adds after the first sync joins the meeting once, and

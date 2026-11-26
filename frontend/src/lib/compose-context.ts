@@ -18,6 +18,7 @@
 import type { components } from "../api/schema";
 import type { SelectOption } from "../design-system/select";
 import type { Translator } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 
 export type CommunicationContext =
   components["schemas"]["CommunicationContext"];
@@ -45,39 +46,31 @@ export function repliesToTheSubject(anchor: Anchor | undefined): boolean {
 }
 
 /**
- * What the composer should say this message is, or nothing.
+ * What the composer should say this message is, or nothing when nobody said.
  *
- * Three answers, and the difference between the first two matters more than it
- * looks:
- *
- *  - `undefined` — say nothing, because the anchor already says it. The engine
- *    resolves `reply_to_inbound` from the thread, and a claim added on top
- *    could only agree with it or contradict it.
- *  - a category — the reader answered the question, because there was no anchor
- *    to answer it for them.
- *  - `undefined` with `asks` true — nobody has answered yet.
+ * A reply sends a reason too once one was picked or drafted. Where the thread
+ * shows a reply, the server lets any reason but marketing yield to it. So the
+ * claim cannot cost a reply the thread already allows.
  */
 export function contextFor(args: {
   anchor: Anchor | undefined;
   chosen: CommunicationContext | "";
 }): CommunicationContext | undefined {
-  if (repliesToTheSubject(args.anchor)) {
-    return undefined;
-  }
   return args.chosen === "" ? undefined : args.chosen;
 }
 
 /**
  * Whether the composer has to ask the reader why they are writing.
  *
- * Only where nothing else answers it. A reply derives, so asking would be
- * asking a reader to restate what the thread in front of them already says —
- * and a question with an obvious answer trains contacts to answer without
- * reading, which is how the purpose dropdown this replaces came to be set to
- * whatever was first in the list.
+ * Only where nothing else answers it. A reply usually derives its reason from
+ * the thread, so it asks only when the check could not (needsReason). A
+ * question with an obvious answer trains readers to answer without reading.
  */
-export function asksWhy(anchor: Anchor | undefined): boolean {
-  return !repliesToTheSubject(anchor);
+export function asksWhy(
+  anchor: Anchor | undefined,
+  needsReason = false,
+): boolean {
+  return needsReason || !repliesToTheSubject(anchor);
 }
 
 // The categories a rep may claim, in the order a first message is usually
@@ -101,4 +94,116 @@ export function contextOptions(t: Translator): SelectOption[] {
     { value: "account_notice", label: t("compose.why.account") },
     { value: "marketing", label: t("compose.why.marketing") },
   ];
+}
+
+/**
+ * The five answers the composer offers. Each stands for a family of categories
+ * the engine settles from the record. A rep never has to tell an invoice
+ * notice from an account notice. "We met in person" sends as a requested
+ * follow-up, with the meeting recorded first.
+ */
+export type ComposeReason =
+  | "in_person"
+  | "requested_followup"
+  | "active_deal_followup"
+  | "customer_service"
+  | "marketing";
+
+const REASONS: readonly Readonly<{
+  value: ComposeReason;
+  label: MessageKey;
+  hint: MessageKey;
+}>[] = [
+  {
+    value: "in_person",
+    label: "compose.why.met",
+    hint: "compose.whyHint.met",
+  },
+  {
+    value: "requested_followup",
+    label: "compose.why.asked",
+    hint: "compose.whyHint.asked",
+  },
+  {
+    value: "active_deal_followup",
+    label: "compose.why.openDeal",
+    hint: "compose.whyHint.openDeal",
+  },
+  {
+    value: "customer_service",
+    label: "compose.why.customer",
+    hint: "compose.whyHint.customer",
+  },
+  {
+    value: "marketing",
+    label: "compose.why.marketing",
+    hint: "compose.whyHint.marketing",
+  },
+];
+
+/** The answers on offer. "We met in person" needs a record to note it on. */
+export function reasonOptions(
+  t: Translator,
+  canRecordMeeting: boolean,
+): SelectOption[] {
+  return REASONS.filter(
+    (reason) => canRecordMeeting || reason.value !== "in_person",
+  ).map((reason) => ({ value: reason.value, label: t(reason.label) }));
+}
+
+/** What the chosen answer does to the message, in one line. */
+export function reasonHint(reason: ComposeReason): MessageKey {
+  const found = REASONS.find((entry) => entry.value === reason);
+  return found ? found.hint : "compose.whyHint.asked";
+}
+
+/**
+ * The answer a stored category reads as. A draft saved under an older, finer
+ * category shows the family it belongs to.
+ */
+export function reasonOf(
+  context: CommunicationContext | "",
+  metInPerson: boolean,
+): ComposeReason | "" {
+  if (metInPerson) return "in_person";
+  switch (context) {
+    case "":
+      return "";
+    case "precontract_quote":
+      return "requested_followup";
+    case "invoice_or_payment":
+    case "contract_notice":
+    case "account_notice":
+      return "customer_service";
+    case "requested_followup":
+    case "active_deal_followup":
+    case "customer_service":
+    case "marketing":
+      return context;
+    default:
+      return "";
+  }
+}
+
+/** The category an answer claims. "We met in person" claims a follow-up. */
+export function contextOfReason(reason: ComposeReason): CommunicationContext {
+  return reason === "in_person" ? "requested_followup" : reason;
+}
+
+export function communicationContextLabel(
+  category: string | undefined,
+  t: Translator,
+): string | undefined {
+  const option = contextOptions(t).find((entry) => entry.value === category);
+  if (option) return option.label;
+  const derived: Readonly<Record<string, MessageKey>> = {
+    reply_to_inbound: "approval.preview.contextReply",
+    security_notice: "approval.preview.contextSecurity",
+    privacy_notice: "approval.preview.contextPrivacy",
+    record_confirmation: "approval.preview.contextRecord",
+    consent_confirmation: "approval.preview.contextConsent",
+    optout_confirmation: "approval.preview.contextOptout",
+  };
+  const key = category ? derived[category] : undefined;
+  return key ? t(key) : undefined;
 }

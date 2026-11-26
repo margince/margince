@@ -66,6 +66,25 @@ export function replyIsTheMove(item: WorklistItem): boolean {
 }
 
 /**
+ * Whether the reply follows up on our own unanswered mail. A reminder row does,
+ * and so does the promise task that carries the reminder.
+ */
+function followsUp(item: WorklistItem): boolean {
+  return item.source === "awaiting_reply" || item.source === "task";
+}
+
+/**
+ * The message the reply answers. A task's own id names the task, so its
+ * follow-up answers the mail the promise was read out of. A task with no such
+ * mail has nothing to answer.
+ */
+export function repliedMessage(item: WorklistItem): string | undefined {
+  return item.source === "task"
+    ? (item.move?.activity_id ?? undefined)
+    : item.id;
+}
+
+/**
  * Answering the buyer, over the row that named the wait.
  *
  * Its own component so it can hold the hook that refreshes the queue. The
@@ -88,29 +107,39 @@ export function WaitingReply({
   if (item.source === "meeting_follow_up") {
     return <MeetingFollowUp item={item} />;
   }
+  const message = repliedMessage(item);
+  if (!message) {
+    return null;
+  }
+  const prepared = replyIsTheMove(item)
+    ? {
+        // Not `moveLabel`: its "Read and reply" names a link to the record.
+        // This control opens the composer itself, so it says it drafts.
+        label: t(
+          followsUp(item)
+            ? "worklist.verb.draft_follow_up_now"
+            : "worklist.verb.draft_reply_now",
+        ),
+        intent: replyIntent(item, t, locale, readerZone),
+      }
+    : undefined;
+  // The server refused this reader the reply; it is drawn with its reason.
+  const refused = prepared && item.move?.blocked_reason;
+  if (refused) {
+    return (
+      <Button variant="ai" reason={refused}>
+        {prepared.label}
+      </Button>
+    );
+  }
   return (
     <ChannelReplyAction
-      activityId={item.id}
+      activityId={message}
       kind="email"
       entityType={to.type}
       entityId={to.id}
-      prepared={
-        replyIsTheMove(item)
-          ? {
-              // THE WORD IS THE ACT, always. `moveLabel` says "Read and reply"
-              // where the move is only a LINK that may land on the record
-              // rather than the composer; this control mounts the composer
-              // itself, on every row it is drawn on, so the weaker word would
-              // under-promise what pressing it does.
-              label: t(
-                item.source === "awaiting_reply"
-                  ? "worklist.verb.draft_follow_up_now"
-                  : "worklist.verb.draft_reply_now",
-              ),
-              intent: replyIntent(item, t, locale, readerZone),
-            }
-          : undefined
-      }
+      invitation={item.email_summary?.calendar_invitation}
+      prepared={prepared}
       // `worklistKey`, not `[worklistKey]`. The key IS the segment array, so
       // wrapping it once more asks for a query whose first segment is itself
       // an array — which nothing in the cache is, so the invalidation matched
@@ -141,17 +170,20 @@ function replyIntent(
   locale: Locale,
   zone: string,
 ): string {
-  const why = phrasedReasons(item, false).flatMap(
-    (reason) => reasonText(reason, t, locale, zone, partyName(item)) ?? [],
-  )[0];
   // The composer's own phrase for answering a message, not a second spelling
   // of it: one sentence reaches the model whichever surface opened the drawer.
   // A follow-up is anchored on OUR message, which has nothing of theirs to
   // reply to.
-  const phrase =
-    item.source === "awaiting_reply"
-      ? t("contact.composer.intentFollowUp")
-      : t("contact.composer.intentReply");
+  const phrase = followsUp(item)
+    ? t("contact.composer.intentFollowUp")
+    : t("contact.composer.intentReply");
+  // A promise names what the follow-up is for; the queue's reason does not.
+  if (item.source === "task" && item.title) {
+    return intentAbout(phrase, item.title);
+  }
+  const why = phrasedReasons(item, false).flatMap(
+    (reason) => reasonText(reason, t, locale, zone, partyName(item)) ?? [],
+  )[0];
   return intentAbout(phrase, why);
 }
 

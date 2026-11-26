@@ -116,7 +116,11 @@ test.describe("the reindex advisory", () => {
     await open(page, "#/settings/knowledge", {
       embedReindex: "needed",
     });
+    // The page's heading paints before the banner's own read answers.
+    await expect(page.locator(BANNER)).toBeVisible();
 
+    // axe finds nothing to include if it runs before the banner is drawn.
+    await expect(page.locator(BANNER)).toBeVisible();
     const results = await new AxeBuilder({ page })
       .include(BANNER)
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])

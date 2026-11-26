@@ -1,0 +1,19 @@
+{
+  "tool": "change_offers",
+  "action": "use_deal_estimate",
+  "verb": "use_deal_estimate",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

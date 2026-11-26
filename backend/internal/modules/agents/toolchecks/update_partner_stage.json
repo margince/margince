@@ -1,0 +1,9 @@
+{
+  "verb": "update_partner_stage",
+  "checks": [
+    "custom_field.update"
+  ],
+  "takes": [
+    "partner_stage"
+  ]
+}

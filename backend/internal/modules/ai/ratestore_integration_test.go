@@ -101,8 +101,10 @@ func (e *rateEnv) insertRate(ctx context.Context, t *testing.T, r ModelRate) {
 		  long_context_above_tokens, long_context_input_per_mtok_microusd, long_context_output_per_mtok_microusd,
 		  long_context_cache_read_per_mtok_microusd, long_context_cache_write_per_mtok_microusd)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-		append([]any{r.Provider, r.ModelID, r.InputPerMTokMicroUSD, r.OutputPerMTokMicroUSD,
-			r.CacheReadPerMTokMicroUSD, r.CacheWritePerMTokMicroUSD, r.EffectiveDate}, bandArgs(r.LongContext)...)...); err != nil {
+		append([]any{
+			r.Provider, r.ModelID, r.InputPerMTokMicroUSD, r.OutputPerMTokMicroUSD,
+			r.CacheReadPerMTokMicroUSD, r.CacheWritePerMTokMicroUSD, r.EffectiveDate,
+		}, bandArgs(r.LongContext)...)...); err != nil {
 		t.Fatalf("insert rate %+v: %v", r, err)
 	}
 }
@@ -125,10 +127,10 @@ func (e *rateEnv) insertCall(ctx context.Context, t *testing.T, c callFixture) {
 	// wants a single-attempt logical call mints its own id, the same as a
 	// pre-0100 row backfilled to logical_call_id = id.
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO ai_call (task, tier, provider, model_id, request_fingerprint,
+		INSERT INTO ai_call (task, tier, provider, model_id,
 		  tokens_in, tokens_out, cached_tokens, cache_write_tokens, cache_hit, occurred_at, logical_call_id)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-		string(c.task), string(c.tier), c.provider, c.model, "fp-"+ids.NewV7().String(),
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+		string(c.task), string(c.tier), c.provider, c.model,
 		c.tokensIn, c.tokensOut, c.cachedTokens, c.cacheWriteTokens, c.cacheHit, c.occurredAt, ids.NewV7()); err != nil {
 		t.Fatalf("insert call %+v: %v", c, err)
 	}
@@ -360,6 +362,58 @@ func TestCostReportGroupsByCalendarDay(t *testing.T) {
 	}
 	if got, ok := byDay["2026-02-06"]; !ok || got.CostMicroUSD != want2 {
 		t.Errorf("day2 = %+v, want cost %d", got, want2)
+	}
+}
+
+// Each line mixes calls priced at different rates, so a call matched to another
+// call's rate shows as a wrong total. The figures are worked out by hand.
+func TestCostReportPricesEachCallAtItsOwnModelAndDay(t *testing.T) {
+	e := setupRateStore(t)
+	ctx := context.Background()
+	ws, wsCtx := e.seedWorkspace(ctx, t)
+	store := e.storeFor(ws)
+
+	jan1 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	feb15 := time.Date(2026, 2, 15, 0, 0, 0, 0, time.UTC)
+	for _, r := range []ModelRate{
+		{Provider: providerAnthropic, ModelID: "model-a", InputPerMTokMicroUSD: 1_000_000, OutputPerMTokMicroUSD: 2_000_000, EffectiveDate: jan1},
+		{Provider: providerAnthropic, ModelID: "model-a", InputPerMTokMicroUSD: 3_000_000, OutputPerMTokMicroUSD: 4_000_000, EffectiveDate: feb15},
+		{Provider: providerOpenAI, ModelID: "model-b", InputPerMTokMicroUSD: 10_000_000, OutputPerMTokMicroUSD: 20_000_000, EffectiveDate: jan1},
+	} {
+		e.insertRate(ctx, t, r)
+	}
+	for _, c := range []callFixture{
+		{provider: providerAnthropic, model: "model-a", tokensIn: 1000, tokensOut: 500, occurredAt: feb15.Add(-time.Hour)},
+		{provider: providerOpenAI, model: "model-b", tokensIn: 100, tokensOut: 10, occurredAt: feb15.Add(-2 * time.Hour)},
+		{provider: providerAnthropic, model: "model-a", tokensIn: 1000, tokensOut: 500, occurredAt: feb15.Add(30 * time.Minute)},
+		{provider: providerOpenAI, model: "model-b", tokensIn: 100, tokensOut: 10, occurredAt: feb15.Add(time.Hour)},
+		{provider: providerOpenAI, model: "model-c", tokensIn: 100, tokensOut: 10, occurredAt: feb15.Add(2 * time.Hour)},
+	} {
+		c.task, c.tier = TaskSummarize, TierPremium
+		e.insertCall(ctx, t, c)
+	}
+
+	report, err := store.CostReport(wsCtx, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]DayCost{}
+	for _, dc := range report {
+		got[dc.Day.Format(time.DateOnly)] = dc
+	}
+	// 14 Feb: model-a at the old rate (1000 + 1000) and model-b (1000 + 200).
+	// 15 Feb: model-a at the new rate (3000 + 2000), model-b again, model-c unpriced.
+	want := map[string]DayCost{
+		"2026-02-14": {CostMicroUSD: 3200},
+		"2026-02-15": {CostMicroUSD: 6200, UnpricedCalls: 1},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("report = %+v, want one line for each of %d days", report, len(want))
+	}
+	for day, w := range want {
+		if g := got[day]; g.CostMicroUSD != w.CostMicroUSD || g.UnpricedCalls != w.UnpricedCalls {
+			t.Errorf("%s: cost %d unpriced %d, want cost %d unpriced %d", day, g.CostMicroUSD, g.UnpricedCalls, w.CostMicroUSD, w.UnpricedCalls)
+		}
 	}
 }
 
@@ -624,5 +678,55 @@ func TestSheetHeadLeavesOutTheRowThatNamesNoModelWhilePricingStillReadsIt(t *tes
 	}
 	if free == nil {
 		t.Fatal("the fake binding's call reads as unpriced; the row must still price it")
+	}
+}
+
+// Two calls on one UTC date fall on different Los Angeles days. The report
+// lists them under different days. It prices each at the rate in force on its
+// own installation day.
+func TestCostReportDatesACallByTheInstallationDay(t *testing.T) {
+	e := setupRateStore(t)
+	ctx := context.Background()
+	ws, wsCtx := e.seedWorkspace(ctx, t)
+	store := e.storeFor(ws)
+	if _, err := e.owner.Exec(ctx, `INSERT INTO setting (key, value) VALUES ('installation.timezone', '"America/Los_Angeles"')
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, r := range []ModelRate{
+		{
+			Provider: providerAnthropic, ModelID: "zone-model", InputPerMTokMicroUSD: 1_000_000,
+			EffectiveDate: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			Provider: providerAnthropic, ModelID: "zone-model", InputPerMTokMicroUSD: 2_000_000,
+			EffectiveDate: time.Date(2026, 2, 6, 0, 0, 0, 0, time.UTC),
+		},
+	} {
+		e.insertRate(ctx, t, r)
+	}
+	// 2026-02-06 03:00 UTC is 19:00 on the 5th in Los Angeles; 20:00 UTC is 12:00 on the 6th.
+	for _, at := range []time.Time{
+		time.Date(2026, 2, 6, 3, 0, 0, 0, time.UTC),
+		time.Date(2026, 2, 6, 20, 0, 0, 0, time.UTC),
+	} {
+		e.insertCall(ctx, t, callFixture{
+			task: TaskSummarize, tier: TierPremium, provider: providerAnthropic, model: "zone-model",
+			tokensIn: 1000, occurredAt: at,
+		})
+	}
+
+	report, err := store.CostReport(wsCtx, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]int64{}
+	for _, dc := range report {
+		got[dc.Day.Format(time.DateOnly)] = dc.CostMicroUSD
+	}
+	want := map[string]int64{"2026-02-05": 1000, "2026-02-06": 2000}
+	if len(got) != len(want) || got["2026-02-05"] != want["2026-02-05"] || got["2026-02-06"] != want["2026-02-06"] {
+		t.Errorf("report by day = %v, want %v", got, want)
 	}
 }

@@ -1,0 +1,15 @@
+{
+  "verb": "request_ownership_transfer",
+  "checks": [
+    "activity.read",
+    "contact.read",
+    "contact.update",
+    "deal.read",
+    "relationship.read",
+    "scope-narrower-than:all"
+  ],
+  "takes": [
+    "company",
+    "stranger_contact"
+  ]
+}

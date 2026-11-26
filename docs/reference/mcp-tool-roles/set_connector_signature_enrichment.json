@@ -1,0 +1,14 @@
+{
+  "tool": "change_capture",
+  "action": "set_signature_enrichment",
+  "verb": "set_connector_signature_enrichment",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

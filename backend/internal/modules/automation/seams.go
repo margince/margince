@@ -17,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -56,6 +57,7 @@ type Approvals interface {
 // automation wants to do and for the action to be identified again once
 // decided.
 type StageRequest struct {
+	SystemText     *systemtext.Message
 	Kind           string          // the action kind being staged, e.g. "send_email"
 	ProposedChange json.RawMessage // the action's args, as the approver will see them
 	DiffHash       string
@@ -165,15 +167,28 @@ type EffectClaims interface {
 // unguarded.
 var ErrNoEffectClaims = errors.New("automation: no effect claim store configured, so a create cannot be deduplicated across instances")
 
+// RecapDraftClaims stages a meeting recap draft once per occurrence.
+type RecapDraftClaims interface {
+	StageOnce(context.Context, string, string, string, func(context.Context) (ids.ApprovalID, error)) (ids.ApprovalID, error)
+}
+
+// MeetingRecapReader reports whether a meeting is ready for a recap.
+type MeetingRecapReader interface {
+	ReadyForRecap(context.Context, ids.ActivityID, time.Time) (bool, error)
+}
+
 // Executors bundles every seam ApplyActions may drive a typed action
 // through. One struct rather than a five-parameter signature: adding a
 // seam is one field here, not a break at every existing call site.
 type Executors struct {
-	Provider  datasource.SystemOfRecordProvider
-	Approvals Approvals
-	Comms     Comms
-	Notifier  Notifier // the durable notice transport — see Notifier's doc
-	Claims    EffectClaims
+	MeetingRecaps    MeetingRecapReader
+	RecapDraftClaims RecapDraftClaims
+	Inquiries        *InquiryService
+	Provider         datasource.SystemOfRecordProvider
+	Approvals        Approvals
+	Comms            Comms
+	Notifier         Notifier // the durable notice transport
+	Claims           EffectClaims
 	// Language is the installation's base language every staged summary is
 	// written in; nil writes English.
 	Language baselanguage.Resolver
@@ -194,6 +209,8 @@ type ListRef struct {
 	Version    int64
 	// Invalid says the list's latest check could not evaluate its filter.
 	Invalid bool
+	// Unavailable says no installed extension declares the list's kind.
+	Unavailable bool
 }
 
 // ListChange is one record a Live List's check saw joining or leaving.
@@ -211,7 +228,7 @@ type Lists interface {
 	// ObservedChanges answers the entered or left events (actions) one check
 	// recorded at checkedAt under version, of records the caller can see now:
 	// at most limit of them, and how many there are in all.
-	ObservedChanges(ctx context.Context, id ids.UUID, version int64, checkedAt time.Time, actions []string, limit int) ([]ListChange, int, error)
+	ObservedChanges(ctx context.Context, id ids.UUID, version int64, checkedAt time.Time, actions []string, limit int, includeImported ...bool) ([]ListChange, int, error)
 	// CheckShortlist says whether the caller may change the Shortlist's
 	// membership for records of entityType.
 	CheckShortlist(ctx context.Context, id ids.UUID, entityType string) error

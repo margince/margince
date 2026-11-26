@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -43,6 +44,7 @@ func (r listChangeResolver) Subject(ctx context.Context, cmd ListChangeCommand) 
 	return StageInfo{
 		TargetType: listRecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.changeList", systemtext.Text(fmt.Sprint(cmd.ID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).changeList, cmd.ID),
 	}, nil
 }

@@ -83,7 +83,7 @@ BEGIN
     ('USD', 'EUR', 0.92, CURRENT_DATE),
     ('GBP', 'EUR', 1.17, CURRENT_DATE),
     ('CHF', 'EUR', 1.04, CURRENT_DATE)
-  ON CONFLICT (from_currency, to_currency, rate_date)
+  ON CONFLICT (from_currency, to_currency, rate_date) WHERE superseded_at IS NULL
     DO UPDATE SET rate = EXCLUDED.rate;
 
   RAISE NOTICE 'seed-dev.sql: FX rates USD/GBP/CHF → EUR seeded for demo-workspace (rate_date=%)', CURRENT_DATE;
@@ -153,7 +153,7 @@ BEGIN
   -- statement that repeats its WHERE.
   INSERT INTO team (name)
   VALUES ('DACH Sales')
-  ON CONFLICT (name) WHERE archived_at IS NULL DO NOTHING;
+  ON CONFLICT (lower(btrim(name))) WHERE archived_at IS NULL DO NOTHING;
 
   -- Live only, for the same reason the upsert above says archived_at IS NULL: the
   -- name is unique among live rows now, so a name alone can match an archived team
@@ -263,10 +263,29 @@ BEGIN
 
   IF conn IS NULL THEN
     INSERT INTO finance_connection
-           (provider, status, credential_ref, source, captured_by)
-    VALUES ('offline_demo', 'active', 'extension:offline_demo', 'system', 'system:seed')
+           (provider, status, captured_by)
+    VALUES ('offline_demo', 'active', 'system:seed')
     RETURNING id INTO conn;
   END IF;
+
+  -- The directory the links name, as the finance-demo unit lists it and with
+  -- the source the sync writes, which it never rewrites. A link must name an
+  -- entry of its connection's directory. Each new entry gets the create audit
+  -- row the sync writes. The first sync restates each entry, since the empty
+  -- sync_hash never matches its own.
+  WITH entry AS (
+    INSERT INTO finance_external_customer
+           (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
+    SELECT conn, 'DEMO-' || lpad(g::text, 4, '0'), 'Demo customer ' || lpad(g::text, 2, '0'),
+           '', 'offline_demo', 'system:seed'
+      FROM generate_series(1, 50) g
+    ON CONFLICT (connection_id, external_customer_id) DO NOTHING
+    RETURNING id, display_name, sync_hash
+  )
+  INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, after)
+  SELECT 'system', 'system:seed', 'create', 'finance_external_customer', id,
+         jsonb_build_object('display_name', display_name, 'sync_hash', sync_hash)
+    FROM entry;
 
   -- Customers only. A target or a prospect has never been invoiced, and the
   -- card is absent for them by design (FIN-AC-3) — linking one would put a
@@ -276,12 +295,11 @@ BEGIN
   -- unit's directory (DEMO-0001 to DEMO-0050), so a re-run links only what is
   -- new and never reuses an id another company holds.
   INSERT INTO finance_customer_link
-         (connection_id, company_id, external_customer_id,
-          sync_hash, source, captured_by)
-  SELECT conn, unlinked.id, free.external_id, 'seed', 'system', 'system:seed'
+         (connection_id, company_id, external_customer_id, captured_by)
+  SELECT conn, unlinked.id, free.external_id, 'system:seed'
     FROM (SELECT c.id, row_number() OVER (ORDER BY c.created_at, c.id) AS n
             FROM company c
-           WHERE c.archived_at IS NULL AND c.lifecycle = 'customer'
+           WHERE c.archived_at IS NULL AND c.status = 'customer'
              AND NOT EXISTS (SELECT 1 FROM finance_customer_link l
                               WHERE l.connection_id = conn AND l.company_id = c.id
                                 AND l.archived_at IS NULL)) unlinked
@@ -295,7 +313,7 @@ BEGIN
 
   SELECT count(*) INTO unmatched
     FROM company c
-   WHERE c.archived_at IS NULL AND c.lifecycle = 'customer'
+   WHERE c.archived_at IS NULL AND c.status = 'customer'
      AND NOT EXISTS (SELECT 1 FROM finance_customer_link l
                       WHERE l.connection_id = conn AND l.company_id = c.id
                         AND l.archived_at IS NULL);
@@ -369,6 +387,103 @@ BEGIN
   VALUES (activity_row, 'from', counterparty, contact_row);
 
   RAISE NOTICE 'seed-dev.sql: a customer is waiting on the Worklist';
+END $$;
+
+-- 5. A thread a reply can rest on: Alice asked for the renewal terms, and we
+-- answered. The consent check counts a thread only through its thread_key and
+-- the contact's own `from` row, which the create endpoint cannot write.
+--
+-- Our answer is the newest message, so the thread waits on nobody and the
+-- customer waiting above stays the only one.
+DO $$
+DECLARE
+  contact_row uuid;
+  admin_row uuid;
+  inbound_row uuid;
+  outbound_row uuid;
+  capturer text;
+  counterparty constant text := 'alice@demo.test';
+BEGIN
+  SELECT id INTO contact_row FROM contact
+   WHERE full_name = 'Alice Müller' AND archived_at IS NULL
+   ORDER BY created_at LIMIT 1;
+  SELECT id INTO admin_row FROM app_user WHERE email = 'admin@demo.test' LIMIT 1;
+  IF contact_row IS NULL OR admin_row IS NULL THEN
+    RAISE NOTICE 'seed-dev.sql: no Alice Müller or admin yet — run the API seed first; skipping the renewal thread';
+    RETURN;
+  END IF;
+  IF EXISTS (SELECT 1 FROM activity WHERE thread_key = 'seed-renewal-terms') THEN
+    RAISE NOTICE 'seed-dev.sql: the renewal thread is already seeded';
+    RETURN;
+  END IF;
+  -- Older seeds logged this pair through the API with no thread. Keep one copy.
+  UPDATE activity SET archived_at = now(), updated_at = now(), version = version + 1
+   WHERE source_system = 'seed' AND archived_at IS NULL
+     AND source_id IN ('conversation:renewal-terms-outbound', 'conversation:renewal-terms-inbound');
+  capturer := 'human:' || admin_row;
+
+  inbound_row := uuidv7();
+  INSERT INTO activity (id, kind, direction, subject, body, occurred_at, is_done,
+                        source, captured_by, version, created_at, updated_at,
+                        counterparty_email, counterparty_outbound_attested,
+                        thread_key, audience)
+  VALUES (inbound_row, 'email', 'inbound',
+          'Renewal terms for Demo GmbH',
+          'Our contract renews in March. Could you send the terms for next year?',
+          now() - interval '12 days', false, 'system', capturer, 1, now(), now(),
+          counterparty, false, 'seed-renewal-terms', 'workspace');
+  INSERT INTO activity_link (activity_id, entity_type, contact_id)
+  VALUES (inbound_row, 'contact', contact_row);
+  INSERT INTO activity_participant (activity_id, role, address, contact_id)
+  VALUES (inbound_row, 'from', counterparty, contact_row);
+
+  outbound_row := uuidv7();
+  INSERT INTO activity (id, kind, direction, subject, body, occurred_at, is_done,
+                        source, captured_by, version, created_at, updated_at,
+                        counterparty_email, counterparty_outbound_attested,
+                        thread_key, audience)
+  VALUES (outbound_row, 'email', 'outbound',
+          'Re: Renewal terms for Demo GmbH',
+          'Here are the terms for next year. The price stays as agreed.',
+          now() - interval '9 days', false, 'system', capturer, 1, now(), now(),
+          counterparty, false, 'seed-renewal-terms', 'workspace');
+  INSERT INTO activity_link (activity_id, entity_type, contact_id)
+  VALUES (outbound_row, 'contact', contact_row);
+  INSERT INTO activity_participant (activity_id, role, user_id)
+  VALUES (outbound_row, 'from', admin_row);
+  INSERT INTO activity_participant (activity_id, role, address, contact_id)
+  VALUES (outbound_row, 'to', counterparty, contact_row);
+
+  RAISE NOTICE 'seed-dev.sql: the renewal thread with Alice is seeded';
+END $$;
+
+
+-- One shared mailbox, so every demo runs with one present: sales@demo.test,
+-- owned by no seat, read by DACH Sales, and held. The admin connect accepts
+-- imap only, so this row is written here. Its test_mailbox credential names no
+-- seat, so a sync where operations.allow_test_mailbox registered the
+-- connector brings in nothing. Idempotent on the provider and address.
+DO $$
+DECLARE
+  admin_id uuid;
+  dach_team_id uuid;
+BEGIN
+  IF pg_temp.installation_workspace() IS NULL THEN
+    RAISE NOTICE 'seed-dev.sql: no live workspace — run make seed-dev first';
+    RETURN;
+  END IF;
+  SELECT id INTO admin_id FROM app_user WHERE lower(email) = lower('admin@demo.test');
+  SELECT id INTO dach_team_id FROM team WHERE name = 'DACH Sales' AND archived_at IS NULL;
+  IF admin_id IS NULL OR dach_team_id IS NULL THEN
+    RAISE NOTICE 'seed-dev.sql: no admin or DACH Sales team yet — skipping the shared mailbox';
+    RETURN;
+  END IF;
+  INSERT INTO capture_connection (provider, user_id, connected_by, reader_team_id, account_label,
+                                  mail_posture, status, auth, share_acknowledged_at)
+  VALUES ('test_mailbox', NULL, admin_id, dach_team_id, 'sales@demo.test', 'held', 'connected',
+          convert_to('{"user_id":"00000000-0000-0000-0000-000000000000"}', 'UTF8'), now())
+  ON CONFLICT (provider, lower(account_label)) WHERE user_id IS NULL DO NOTHING;
+  RAISE NOTICE 'seed-dev.sql: shared mailbox sales@demo.test, read by DACH Sales';
 END $$;
 
 COMMIT;

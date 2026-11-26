@@ -66,6 +66,10 @@ func (s *recordingReadStore) FinishTranscriptReadTx(
 	return s.finishErr
 }
 
+func (*recordingReadStore) ReleaseTranscriptRead(context.Context, ids.UUID, time.Time) error {
+	return nil
+}
+
 func transcriptJob(args TranscriptProposeArgs) *river.Job[TranscriptProposeArgs] {
 	return &river.Job[TranscriptProposeArgs]{Args: args}
 }
@@ -87,7 +91,7 @@ func TestAWorkerWithNoModelLaneFailsTheReadingInsteadOfLeavingItQueued(t *testin
 	if outcome.Status != activities.TranscriptReadFailed {
 		t.Errorf("want the reading failed, got %q", outcome.Status)
 	}
-	if !strings.Contains(outcome.Detail, "no AI model configured") {
+	if !strings.Contains(outcome.Detail, "no AI provider is set up") {
 		t.Errorf("the detail must say what is missing so an operator can act: %q", outcome.Detail)
 	}
 }

@@ -70,18 +70,18 @@ function details(
 describe("the dates", () => {
   it("names the target end as a day, with no count beside it", () => {
     details("2026-09-20");
-    expect(screen.getByText(en["project.aside.targetEnd"])).toBeTruthy();
+    expect(screen.getByText(en["project.targetEnd"])).toBeTruthy();
     expect(screen.getByText("20 Sept 2026")).toBeTruthy();
     expect(screen.queryByText(/in \d+ days?/)).toBeNull();
   });
 
   it("folds a date nobody set behind the empty fields link", async () => {
     details(null);
-    expect(screen.queryByText(en["project.aside.targetEnd"])).toBeNull();
+    expect(screen.queryByText(en["project.targetEnd"])).toBeNull();
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: /Show \d+ empty fields?/ }));
-    expect(screen.getByText(en["project.aside.targetEnd"])).toBeTruthy();
+    expect(screen.getByText(en["project.targetEnd"])).toBeTruthy();
   });
 });
 
@@ -135,6 +135,50 @@ describe("the details groups", () => {
       />,
     );
     expect(screen.getByTestId("project-company-withheld")).toBeTruthy();
+  });
+
+  it("says a project with no customer company has none, not that it is hidden", async () => {
+    show(
+      <ProjectDetails
+        view={project360({
+          company: undefined,
+          sections_omitted: [],
+          project: project({ company_id: undefined }),
+        })}
+      />,
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: /Show \d+ empty fields?/ }));
+    expect(screen.getByTestId("project-company-none").textContent).toBe(
+      en["project.noCustomerSet"],
+    );
+    expect(screen.queryByTestId("project-company-withheld")).toBeNull();
+  });
+
+  it("shows a written description and folds only an unwritten one", async () => {
+    const written = "Roll out the CRM.\nThen train the team.";
+    const { unmount } = show(
+      <ProjectDetails
+        view={project360({ project: project({ description: written }) })}
+      />,
+    );
+    // Drawn under its term across the column, with its line break as written.
+    const row = screen.getByText(en["project.description"]).closest("div");
+    expect(row?.classList.contains("factlist-row-block")).toBe(true);
+    expect(row?.querySelector("dd")?.textContent).toBe(written);
+    unmount();
+
+    show(
+      <ProjectDetails
+        view={project360({ project: project({ description: null }) })}
+      />,
+    );
+    expect(screen.queryByText(en["project.description"])).toBeNull();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: /Show \d+ empty fields?/ }));
+    expect(screen.getByText(en["project.description"])).toBeTruthy();
   });
 
   it("drops the closing rule once the project is closed", () => {

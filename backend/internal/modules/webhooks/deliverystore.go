@@ -258,7 +258,7 @@ func (s *Store) matchingSubscriptions(ctx context.Context, eventType string) ([]
 	return out, err
 }
 
-// claimDueRetry claims the next due retrying delivery in the ctx's workspace
+// claimDueRetry claims a due retry or a pending delivery past its first-send window
 // whose subscription is live and active. The claim is a lease on claimed_until
 // that a second sweep or a replay respects. The returned instant is the token
 // the sender records its outcome under. Runs under the tenant GUC.
@@ -272,10 +272,12 @@ func (s *Store) claimDueRetry(ctx context.Context, now time.Time) (ids.UUID, tim
 				SELECT d.id
 				FROM webhook_delivery d
 				JOIN webhook_subscription s ON s.id = d.subscription_id
-				WHERE d.status = 'retrying' AND d.next_retry_at <= $1
+				WHERE ((d.status = 'retrying' AND d.next_retry_at <= $1)
+ OR (d.status = 'pending' AND d.created_at < $1 - make_interval(secs => $2)))
+ AND d.payload_pruned_at IS NULL
 				  AND (d.claimed_until IS NULL OR d.claimed_until < now())
 				  AND s.state = 'active' AND s.archived_at IS NULL
-				ORDER BY d.next_retry_at
+				ORDER BY coalesce(d.next_retry_at, d.created_at), d.id
 				LIMIT 1
 				FOR UPDATE OF d SKIP LOCKED)
 			RETURNING id, claimed_until`, now, claimLease.Seconds()).Scan(&id, &claim)
@@ -392,7 +394,7 @@ func (s *Store) recordOutcome(ctx context.Context, t attemptTarget, res outcome,
 // Every writer of this table carries `status <> 'visibility_revoked'`, and that
 // clause is DEFENCE rather than a reachable race. Three things already stop a
 // revoked row being written over. The visibility check refuses it again, this
-// method clears next_retry_at, and claimDueRetry claims only 'retrying'.
+// method clears next_retry_at, and the retry sweep excludes revoked rows.
 // Removing any one of them leaves the behaviour unchanged, so no test drives
 // this clause.
 //

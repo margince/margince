@@ -13,7 +13,6 @@ import { ListChecks } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { useActivityWritable } from "../../components/activitygate";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -33,6 +32,12 @@ export type PerformableMove = {
   action: string;
   recommendation?: components["schemas"]["RecommendationReceipt"];
   arguments?: Record<string, unknown>;
+  // Why the server offers the move, for the verbs whose reasons are facts about the record.
+  reason?: string;
+  // Set by the server when this reader may not take the verb; drawn as refused.
+  // It is the only answer to whether this reader may: the server marks every
+  // move it serves, and the client itself builds only `open_task`, a read.
+  blocked_reason?: string;
 };
 
 // activityIdOf reads the one operand the meeting-brief verb takes. The
@@ -60,6 +65,17 @@ export function recipientsOf(move: PerformableMove): string[] {
   });
 }
 
+// managerRequestOf reads the deal and the reasons a "bring in the manager" move
+// carries. It is null where either is missing, so no refused button is drawn.
+function managerRequestOf(
+  move: PerformableMove,
+): { dealId: string; reasons: string[] } | null {
+  const { deal_id: dealId, reasons } = move.arguments ?? {};
+  if (typeof dealId !== "string" || !Array.isArray(reasons)) return null;
+  const named = reasons.filter((r): r is string => typeof r === "string");
+  return named.length > 0 ? { dealId, reasons: named } : null;
+}
+
 // Whether the verb has what it needs to be drawn, decided BEFORE the slot is:
 // a slot handed a control that renders nothing still draws the slot, and an
 // empty action region reads as a verb that failed to load. MoveButton keeps
@@ -69,6 +85,8 @@ export function hasMoveControl(move: PerformableMove): boolean {
   switch (move.action) {
     case "create_task":
       return Boolean(move.arguments);
+    case "bring_in_manager":
+      return managerRequestOf(move) !== null;
     case "open_task":
     case "open_meeting_brief":
       return activityIdOf(move) !== null;
@@ -193,10 +211,13 @@ export function MoveButton({
           )}
         </>
       );
+    case "bring_in_manager":
+      return <BringInManagerVerb move={move} refused={move.blocked_reason} />;
     case "create_task":
       return (
         <CreateTaskVerb
           body={taskBody}
+          refused={move.blocked_reason}
           pending={createTask.isPending}
           error={createTask.error}
           onCreate={createTask.mutate}
@@ -215,6 +236,7 @@ export function MoveButton({
           meetingId={activityId}
           recipients={recipientsOf(move)}
           recommendation={move.recommendation}
+          refused={move.blocked_reason}
         />
       );
     case "open_meeting_brief":
@@ -261,15 +283,16 @@ function FollowUpDraft({
   meetingId,
   recipients,
   recommendation,
+  refused,
 }: Readonly<{
   recommendation?: components["schemas"]["RecommendationReceipt"];
+  refused?: string;
   dealId?: string;
   meetingId: string;
   recipients: readonly string[];
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const writable = useActivityWritable();
   const [target, setTarget] = useState<{
     dealId?: string;
     meetingId: string;
@@ -278,11 +301,12 @@ function FollowUpDraft({
   const check = useCurrentMove<NonNullable<typeof target>>(setTarget);
   const selected = target ?? { dealId, meetingId, recipients };
   const [contact, ...alsoTo] = selected.recipients;
-  if (contact === undefined || !writable) return null;
+  if (contact === undefined) return null;
   return (
     <>
       <Button
         variant="ai"
+        reason={refused}
         pending={check.isPending}
         onClick={() =>
           check.mutate({
@@ -323,26 +347,27 @@ function FollowUpDraft({
 // press, so it is the plain primary, not indigo.
 function CreateTaskVerb({
   body,
+  refused,
   pending,
   error,
   onCreate,
 }: Readonly<{
   body: Record<string, unknown> | undefined;
+  refused?: string;
   pending: boolean;
   error: unknown;
   onCreate: (body: Record<string, unknown>) => void;
 }>) {
   const t = useT();
-  const writable = useActivityWritable();
-  // No body, no button: a click that sent {} would only be refused, and so
-  // would any press from a seat that may not write activities.
-  if (!body || !writable) {
+  // No body, no button: a click that sent {} would only be refused.
+  if (!body) {
     return null;
   }
   return (
     <>
       <Button
         variant="primary"
+        reason={refused}
         pending={pending}
         onClick={() => onCreate(body)}
       >
@@ -380,6 +405,55 @@ function CreatedFollowUp({
           update={update}
         />
       )}
+    </>
+  );
+}
+
+/** Accepting the move asks the team's manager, and the queue stops offering it. */
+function BringInManagerVerb({
+  move,
+  refused,
+}: Readonly<{ move: PerformableMove; refused?: string }>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const request = managerRequestOf(move);
+  const ask = useMutation({
+    mutationKey: ["deal-manager-request"],
+    mutationFn: async () => {
+      if (!request) return;
+      unwrap(
+        await api.POST("/deals/{id}/manager-request", {
+          params: { path: { id: request.dealId } },
+          body: {
+            reasons:
+              request.reasons as components["schemas"]["RequestDealManagerRequest"]["reasons"],
+          },
+        }),
+        t,
+      );
+    },
+    onError: () => refreshSuggestedMoves(queryClient),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["worklist"] });
+      queryClient.invalidateQueries({ queryKey: ["deal-status"] });
+    },
+  });
+  if (!request) return null;
+  if (ask.isSuccess) {
+    return <span role="status">{t("deal360.managerAsked")}</span>;
+  }
+  return (
+    <>
+      {move.reason && <span>{move.reason}</span>}
+      <Button
+        variant="primary"
+        reason={refused}
+        pending={ask.isPending}
+        onClick={() => ask.mutate()}
+      >
+        {t("deal360.bringInManager")}
+      </Button>
+      <ErrorLine error={ask.error} />
     </>
   );
 }

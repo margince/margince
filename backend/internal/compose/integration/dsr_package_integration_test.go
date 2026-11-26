@@ -24,10 +24,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -91,6 +93,7 @@ func TestTheQueueGateIsWhatKeepsTheExportAdminOnly(t *testing.T) {
 	created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
 		Kind:       "access",
 		SubjectRef: contact.String(),
+		ReceivedAt: new(time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC)),
 		DueAt:      new(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
@@ -143,6 +146,7 @@ func TestOnlyAnAccessRequestHasAPackage(t *testing.T) {
 		created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
 			Kind:       kind,
 			SubjectRef: contact.String(),
+			ReceivedAt: new(time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC)),
 			DueAt:      new(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)),
 		})
 		if err != nil {
@@ -167,6 +171,7 @@ func TestAnAccessRequestNamingNobodyHasNothingToAssemble(t *testing.T) {
 	created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
 		Kind:       "access",
 		SubjectRef: subjectAddress,
+		ReceivedAt: new(time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC)),
 		DueAt:      new(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
@@ -288,7 +293,8 @@ func TestTheHandlerRefusesARequestOfTheWrongKind(t *testing.T) {
 	store := consent.NewStore(e.DB())
 	created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
 		Kind: "erasure", SubjectRef: contact.String(),
-		DueAt: new(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)),
+		ReceivedAt: new(time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC)),
+		DueAt:      new(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatalf("seeding an erasure request: %v", err)
@@ -321,12 +327,54 @@ func TestTheHandlerRefusesARequestNamingNobody(t *testing.T) {
 	}
 }
 
+// seamAssembler is the assembler the server binds, behind the handler.
+type seamAssembler struct{ e *Env }
+
+func (a seamAssembler) AssemblePackage(ctx context.Context, contactID ids.UUID) ([]byte, error) {
+	return compose.AssembleSARForTest(ctx, a.e.DB(), blobstore.NewMemory(), contactID)
+}
+
+func TestAPackageForAMergedAwaySubjectIsTheSurvivors(t *testing.T) {
+	// The request names the record a merge later retired. The survivor holds
+	// the contact's live data, so the package is assembled for it, and the
+	// retired record still rides along as its predecessor.
+	e := Setup(t)
+	retired := seedSubjectWithMail(t, e)
+	const survivorAddress = "betroffene.privat@example.test"
+	survivor, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+		FullName: "Die Betroffene",
+		Source:   "manual",
+		Emails:   []contacts.ContactEmailInput{{Email: survivorAddress, EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("creating the survivor: %v", err)
+	}
+	request := seedAccessRequest(t, e, retired.String())
+	if _, err := e.Contacts.MergeContact(e.Admin(),
+		ContactIDOf(retired), ContactIDOf(ids.UUID(survivor.Id)), nil); err != nil {
+		t.Fatalf("merging the request's contact away: %v", err)
+	}
+
+	rec := downloadPackage(e.Admin(), t, e, request, seamAssembler{e})
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("the package route answered %d: %s", rec.Code, rec.Body.String())
+	}
+	for _, address := range []string{survivorAddress, subjectAddress} {
+		if !strings.Contains(rec.Body.String(), address) {
+			t.Errorf("the package lacks %q: a request on a merged-away contact must export "+
+				"the survivor together with every record merged into it", address)
+		}
+	}
+}
+
 // seedAccessRequest lands one Art. 15 request naming whatever the caller says.
 func seedAccessRequest(t *testing.T, e *Env, subjectRef string) ids.UUID {
 	t.Helper()
 	created, err := consent.NewStore(e.DB()).CreateDSR(e.Admin(), consent.CreateDSRInput{
 		Kind: "access", SubjectRef: subjectRef,
-		DueAt: new(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)),
+		ReceivedAt: new(time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC)),
+		DueAt:      new(time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatalf("seeding an access request: %v", err)

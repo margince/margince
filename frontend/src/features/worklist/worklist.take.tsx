@@ -5,6 +5,7 @@ import { Button } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useMe } from "../../lib/session";
+import { InquiryTakeButton } from "./worklist.inquiryassignment";
 import type { WorklistItem } from "./worklist.queries";
 import { useReassignTask } from "./worklist.writes";
 
@@ -20,7 +21,11 @@ export function TakeVerb({ item }: Readonly<{ item: WorklistItem }>) {
   ) {
     return null;
   }
-  return <TakeButton item={item} />;
+  return item.kind === "website_inquiry" ? (
+    <InquiryTakeButton item={item} />
+  ) : (
+    <TakeButton item={item} />
+  );
 }
 
 // Apart from TakeVerb so a row with nothing to take never asks who is reading.
@@ -35,15 +40,20 @@ function TakeButton({ item }: Readonly<{ item: WorklistItem }>) {
   return (
     <Button
       pending={take.isPending}
+      // mutateAsync, not per-call callbacks. The refetch after the write takes
+      // the row off the Unassigned list. React Query drops the callbacks of an
+      // unmounted button, but the promise still settles, so the line shows.
       onClick={() =>
-        take.mutate(
-          { activityId: item.id, version: item.version, assigneeId: reader },
-          {
-            onSuccess: () => toast.show(t("worklist.take.done")),
-            onError: () =>
-              toast.show(t("worklist.take.failed"), { tone: "danger" }),
-          },
-        )
+        take
+          .mutateAsync({
+            activityId: item.id,
+            version: item.version,
+            assigneeId: reader,
+          })
+          .then(
+            () => toast.show(t("worklist.take.done")),
+            () => toast.show(t("worklist.take.failed"), { tone: "danger" }),
+          )
       }
     >
       {t("worklist.take.action")}

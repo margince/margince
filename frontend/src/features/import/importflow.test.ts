@@ -2,7 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { stepOfRun, type WizardStep } from "./importflow";
+import { stable } from "../../format/collate";
+import { formatFixture } from "../../testing/import.fixtures";
+import {
+  SOURCE_NAME_MAX,
+  sourceNameFits,
+  stepOfRun,
+  uploadObjectFor,
+  type WizardStep,
+} from "./importflow";
 import { moving, wroteNothing } from "./importrun";
 import type { ImportRun } from "./importtypes";
 
@@ -34,7 +42,9 @@ const STEP_OF_STATUS = {
 
 describe("stepOfRun", () => {
   it("stepOfRun answers every status", () => {
-    expect([...STATUSES].sort()).toEqual(Object.keys(STEP_OF_STATUS).sort());
+    expect([...STATUSES].sort(stable)).toEqual(
+      Object.keys(STEP_OF_STATUS).sort(stable),
+    );
     for (const status of STATUSES) {
       expect(stepOfRun(status, "map")).toBe(STEP_OF_STATUS[status]);
     }
@@ -60,5 +70,40 @@ describe("what a run's status says to the screen", () => {
 
   it("names a draft and a cancelled run as runs that wrote nothing", () => {
     expect(STATUSES.filter(wroteNothing)).toEqual(["pending", "cancelled"]);
+  });
+});
+
+describe("the type a single CSV is uploaded as", () => {
+  it("is the type a bundle file name gives, in any case", () => {
+    expect(uploadObjectFor("Contacts.CSV", formatFixture)).toBe("contact");
+  });
+
+  it("is none for a name that names no type, nor for a ZIP", () => {
+    expect(
+      uploadObjectFor("clean-contacts.csv", formatFixture),
+    ).toBeUndefined();
+    expect(uploadObjectFor("crm.zip", formatFixture)).toBeUndefined();
+  });
+
+  it("is a preset type over the name", () => {
+    expect(uploadObjectFor("leads.csv", formatFixture, "activity")).toBe(
+      "activity",
+    );
+  });
+});
+
+describe("sourceNameFits", () => {
+  it("takes letters A to Z, digits, space, dot, underscore and hyphen", () => {
+    expect(sourceNameFits("")).toBe(true);
+    expect(sourceNameFits("crm export_2026-11.v2")).toBe(true);
+    expect(sourceNameFits("  padded  ")).toBe(true);
+  });
+
+  it("refuses any other character and a name over the limit", () => {
+    for (const name of ["wiz ünïcödé!", "a/b", "tab\there", "née"]) {
+      expect(sourceNameFits(name)).toBe(false);
+    }
+    expect(sourceNameFits("a".repeat(SOURCE_NAME_MAX))).toBe(true);
+    expect(sourceNameFits("a".repeat(SOURCE_NAME_MAX + 1))).toBe(false);
   });
 });

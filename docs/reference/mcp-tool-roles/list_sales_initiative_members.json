@@ -1,0 +1,14 @@
+{
+  "tool": "read_reports",
+  "action": "sales_initiative_members",
+  "verb": "list_sales_initiative_members",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

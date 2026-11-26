@@ -1,0 +1,15 @@
+{
+  "tool": "change_tags",
+  "action": "create",
+  "verb": "create_tag",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

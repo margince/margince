@@ -1,0 +1,8 @@
+{
+  "verb": "get_ownership_offer",
+  "checks": [],
+  "takes": [
+    "company",
+    "offered_company"
+  ]
+}

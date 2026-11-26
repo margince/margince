@@ -1,19 +1,6 @@
-import {
-  CalendarClock,
-  CheckSquare,
-  Mail,
-  MessageCircle,
-  PencilLine,
-  Phone,
-  StickyNote,
-} from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import {
-  activityDay,
-  activityTimeOfDay,
-  type OccurredPrecision,
-} from "../format/activitywhen";
+import type { OccurredPrecision } from "../format/activitywhen";
 import { formatNumber } from "../format/format";
 import {
   type Locale,
@@ -45,6 +32,9 @@ export type TimelineGroup = {
   entries: TimelineEntry[];
   /** This group may continue past what the page holds. */
   partial: boolean;
+  newerPart?: string;
+  olderPart?: string;
+  threadEntries?: readonly TimelineEntry[];
 };
 
 type EmailSummary = components["schemas"]["EmailSummary"];
@@ -56,6 +46,8 @@ type AutomaticKind = NonNullable<
 >;
 
 export type TimelineEntry = {
+  sourceVersion?: number;
+  systemDisplay?: components["schemas"]["SystemDisplay"];
   id: string;
   // The backend's activity kinds, not a reduced set: collapsing call, task
   // and the chat kinds into "note" told the reader an email was a note.
@@ -65,9 +57,24 @@ export type TimelineEntry = {
   // what was changed about it are one chronology to the reader. Kept apart, a
   // rep comparing "we told them X" against "someone set stage to Y" had to
   // hold two orderings in their head.
-  kind: "email" | "meeting" | "note" | "call" | "task" | "message" | "change";
+  //
+  // `extension` and `signal` are a row of an installed extension's own kind and
+  // one of its signals. Core builds them from a declaration, so the extension
+  // draws no entry of its own.
+  kind:
+    | "email"
+    | "meeting"
+    | "note"
+    | "call"
+    | "task"
+    | "message"
+    | "change"
+    | "extension"
+    | "signal";
   title: string;
   isDone?: boolean;
+  // A task's holder and due day, drawn by the caller, which can name a member.
+  terms?: ReactNode;
   atIso: string;
   // `day` when only the date is known, so the row draws no time.
   atPrecision: OccurredPrecision;
@@ -150,11 +157,21 @@ export type TimelineEntry = {
    */
   bulkAttested?: boolean;
   /**
+   * How many colleagues' mailboxes hold a copy of this email that the reader
+   * may open, this row included. The server shows the copies as one row, so
+   * they count as one message and one recipient here too.
+   */
+  copies?: number;
+  /**
    * What sent a message no human wrote, as the server judged it: a calendar
    * invitation, a sending system or the product. Such a row counts on neither
    * side of a conversation.
    */
   automaticKind?: AutomaticKind | null;
+  /** A model rewrote the words before a rep saved them (Polish wording). */
+  aiAssisted?: boolean;
+  /** The chat talk an AI summary note was written from. */
+  chatEpisode?: components["schemas"]["ChatEpisode"] | null;
   /**
    * The message's own subject, when it had one. This is not the rendered
    * `title`, which falls back to the body (or to the kind) so a subjectless
@@ -205,6 +222,11 @@ export type TimelineEntry = {
    * the same place in the row as a message does.
    */
   detail?: ReactNode;
+  /**
+   * Rendered above the body: the AI-written summary of a meeting, read before
+   * the transcript it summarizes.
+   */
+  lead?: ReactNode;
 };
 
 // One icon per kind and one for all messaging transports. An extension unit's
@@ -212,14 +234,25 @@ export type TimelineEntry = {
 // The kind in a word beside the row, not an icon alone. A glyph is a thing to
 // recognise and a word is a thing to read. A timeline that mixes mail,
 // meetings and field edits is scanned by reading.
-export const TIMELINE_KIND_LABEL = {
-  email: "timeline.kind.email",
-  meeting: "timeline.kind.meeting",
+//
+// The activity kinds' words are the one table every surface reads.
+export const ACTIVITY_KIND_LABEL = {
   note: "timeline.kind.note",
-  call: "timeline.kind.call",
   task: "timeline.kind.task",
+  call: "timeline.kind.call",
+  meeting: "timeline.kind.meeting",
+  email: "timeline.kind.email",
   message: "timeline.kind.message",
+} as const satisfies Record<
+  components["schemas"]["Activity"]["kind"],
+  MessageKey
+>;
+
+export const TIMELINE_KIND_LABEL = {
+  ...ACTIVITY_KIND_LABEL,
   change: "timeline.kind.change",
+  extension: "timeline.kind.extension",
+  signal: "timeline.kind.signal",
 } as const satisfies Record<TimelineEntry["kind"], MessageKey>;
 
 /**
@@ -241,15 +274,7 @@ export function dotClass(entry: TimelineEntry): string {
     : "tl-dot tl-dot-quiet";
 }
 
-export const TIMELINE_ICON = {
-  email: Mail,
-  meeting: CalendarClock,
-  note: StickyNote,
-  call: Phone,
-  task: CheckSquare,
-  message: MessageCircle,
-  change: PencilLine,
-} as const;
+export { TIMELINE_ICON } from "./timelineicons";
 
 // A link inside a captured message, rendered as an element rather than as
 // markup: the body is escaped text and stays that way. The visible label is
@@ -312,6 +337,10 @@ function entryMoveValue(
 
 export function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   const t = useT();
+  // An open invitation's move is an RSVP, so it says so as EmailEntry does.
+  if (entry.emailSummary?.calendar_invitation && entry.withheld !== true) {
+    return <Badge tone="info">{t("email.invitation.badge")}</Badge>;
+  }
   const move = entryMove(entry);
   if (!move) {
     return null;
@@ -325,75 +354,6 @@ export function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   );
 }
 
-/**
- * TimelineWhen is the row's place on the axis: the day, and under it the time
- * of day when one is known. The day alone told a reader two calls happened on
- * the 26th, and not which came first. Nor did it say whether the reply landed
- * an hour after the ask or a working day later. That is the one thing a
- * chronology is opened to settle. Tabular digits keep the column straight
- * whatever each date's digits are.
- */
-export function TimelineWhen({
-  entry,
-  zone,
-  repeatsDay = false,
-}: Readonly<{
-  entry: TimelineMoment;
-  zone: string;
-  // The row above fell on the same day. The day then stays for a screen
-  // reader and leaves the screen, so the gutter reads as one date per day.
-  repeatsDay?: boolean;
-}>) {
-  const { locale } = useLocale();
-  const time = entryTimeOfDay(entry, locale, zone);
-  const day = entryDay(entry, locale, zone);
-  return (
-    <span className="tl-when t-num">
-      {repeatsDay ? <span className="sr-only">{day}</span> : day}
-      {time && <span className="tl-when-time">{time}</span>}
-    </span>
-  );
-}
-
-/**
- * dayRepeats says, for each moment in a newest-first list, whether the one
- * above it fell on the same day.
- */
-export function dayRepeats(
-  moments: readonly (TimelineMoment | undefined)[],
-  locale: Locale,
-  zone: string,
-): boolean[] {
-  const days = moments.map((moment) =>
-    moment ? entryDay(moment, locale, zone) : undefined,
-  );
-  return days.map(
-    (day, index) => index > 0 && day !== undefined && day === days[index - 1],
-  );
-}
-
-type TimelineMoment = Pick<TimelineEntry, "atIso" | "atPrecision">;
-
-/** The date an entry falls on. */
-export function entryDay(
-  entry: TimelineMoment,
-  locale: Locale,
-  zone: string,
-): string {
-  return activityDay(entry.atIso, entry.atPrecision, locale, zone);
-}
-
-/** An entry's clock reading, or undefined when only its day is known. */
-export function entryTimeOfDay(
-  entry: TimelineMoment,
-  locale: Locale,
-  zone: string,
-): string | undefined {
-  return (
-    activityTimeOfDay(entry.atIso, entry.atPrecision, locale, zone) ?? undefined
-  );
-}
-
 // groupCountLabel counts the group's members in words that read. Both group
 // kinds can hold one member. A thread can have its other messages on another
 // page, and a sender can attest a single message as a bulk send. The plural
@@ -401,7 +361,8 @@ export function entryTimeOfDay(
 // A thread also says how many messages each side wrote. Four from them and
 // five from the team then never read as nine from one contact.
 export function groupCountLabel(group: TimelineGroup, locale: Locale): string {
-  const count = group.entries.length;
+  const entries = group.threadEntries ?? group.entries;
+  const count = entries.length;
   const base = {
     bulk: "timeline.group.bulk",
     newsletters: "timeline.group.newsletters",
@@ -414,7 +375,7 @@ export function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   if (group.kind !== "thread") {
     return total;
   }
-  const { theirs, ours } = threadSides(group.entries);
+  const { theirs, ours } = threadSides(entries);
   if (theirs + ours === 0) {
     return total;
   }
@@ -470,6 +431,16 @@ export function AutomaticFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   return label ? <Badge>{t(label)}</Badge> : null;
 }
 
+// AiAssistedFlag marks words a model rewrote, as every AI-written text is marked.
+export function AiAssistedFlag({
+  entry,
+}: Readonly<{ entry: Pick<TimelineEntry, "aiAssisted" | "withheld"> }>) {
+  const t = useT();
+  return entry.aiAssisted && !entry.withheld ? (
+    <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+  ) : null;
+}
+
 export function CommitmentReviewFlag({
   count = 0,
 }: Readonly<{ count?: number }>) {
@@ -479,6 +450,21 @@ export function CommitmentReviewFlag({
     <Badge tone="ai">
       {plural("commitment.review.count", count, {
         count: formatNumber(count, locale),
+      })}
+    </Badge>
+  ) : null;
+}
+
+// CopiesFlag says the row stands for the same mail in other colleagues'
+// mailboxes, so a reader knows why only one row shows.
+export function CopiesFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const others = (entry.copies ?? 1) - 1;
+  return others > 0 ? (
+    <Badge>
+      {plural("timeline.copies", others, {
+        count: formatNumber(others, locale),
       })}
     </Badge>
   ) : null;

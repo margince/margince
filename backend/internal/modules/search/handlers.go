@@ -4,13 +4,17 @@
 package search
 
 import (
+	"context"
 	"net/http"
+	"slices"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Handlers is the module's transport slice; compose embeds it so the
@@ -59,10 +63,14 @@ func NewHandlers(
 func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontracts.SearchParams) {
 	in := Input{Query: params.Q, AddressCompanies: true}
 	if params.Types != nil {
-		for _, t := range *params.Types {
-			in.Types = append(in.Types, string(t))
+		in.Types = *params.Types
+	}
+	if params.ExcludeIds != nil {
+		for _, id := range *params.ExcludeIds {
+			in.Exclude = append(in.Exclude, ids.UUID(id))
 		}
 	}
+	in.WithExtensions = true
 	if params.Cursor != nil {
 		in.Cursor = *params.Cursor
 	}
@@ -71,6 +79,7 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 	}
 	in.PerType = params.PerType
 	in.WithEmployees = params.WithEmployees != nil && *params.WithEmployees
+	in.Typeahead = typeaheadFor(r.Context(), params.Typeahead)
 	in.NearMatches = true
 
 	page, err := h.store.Search(r.Context(), in)
@@ -82,9 +91,9 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 	httperr.WriteJSON(w, http.StatusOK, wirePage(page))
 }
 
-// wirePage renders a page as the contract's response. `types_with_more` is
-// present on a grouped page alone, empty when every type fit, so a client can
-// tell "nothing more of any type" from "this was a ranked page".
+// wirePage renders a page as the contract's response. `types_with_more` and
+// `types_timed_out` are present on a grouped page alone. They are empty when
+// every type fit, so a client can tell "nothing more of any type" from "this was a ranked page".
 func wirePage(page Page) crmcontracts.SearchResponse {
 	pageInfo := crmcontracts.PageInfo{HasMore: page.HasMore}
 	if page.NextCursor != "" {
@@ -92,11 +101,12 @@ func wirePage(page Page) crmcontracts.SearchResponse {
 	}
 	response := crmcontracts.SearchResponse{Data: wireHits(page.Hits), Page: pageInfo}
 	if page.TypesWithMore != nil {
-		more := make([]crmcontracts.SearchResponseTypesWithMore, 0, len(page.TypesWithMore))
-		for _, entity := range page.TypesWithMore {
-			more = append(more, crmcontracts.SearchResponseTypesWithMore(entity))
-		}
+		more := slices.Clone(page.TypesWithMore)
 		response.TypesWithMore = &more
+	}
+	if page.TypesTimedOut != nil {
+		timedOut := slices.Clone(page.TypesTimedOut)
+		response.TypesTimedOut = &timedOut
 	}
 	if len(page.NearMatches) > 0 {
 		response.NearMatches = wireNearMatches(page.NearMatches)
@@ -115,7 +125,7 @@ func wireHits(hits []Hit) []crmcontracts.SearchResult {
 	for _, hit := range hits {
 		result := crmcontracts.SearchResult{
 			Id:    openapi_types.UUID(hit.ID),
-			Type:  crmcontracts.SearchResultType(hit.Type),
+			Type:  hit.Type,
 			Score: new(float32(hit.Score)),
 			// Unconditionally, on every hit: this search reads the store the
 			// record lives in, so a hit is never a copy of somebody else's
@@ -150,6 +160,9 @@ func wireHits(hits []Hit) []crmcontracts.SearchResult {
 		if hit.LogoURL != nil {
 			result.LogoUrl = new(*hit.LogoURL)
 		}
+		if hit.Standing != nil {
+			result.Standing = new(*hit.Standing)
+		}
 		data = append(data, result)
 	}
 	return data
@@ -169,4 +182,11 @@ func wireNearMatches(matches []NearMatch) *[]crmcontracts.SearchNearMatch {
 		out = append(out, near)
 	}
 	return &out
+}
+
+// typeaheadFor honours the typeahead flag for a human's search box alone. An
+// agent or connector that sends it still gets every message it matches.
+func typeaheadFor(ctx context.Context, asked *bool) bool {
+	actor, ok := principal.Actor(ctx)
+	return asked != nil && *asked && ok && actor.Type == principal.PrincipalHuman
 }

@@ -265,7 +265,7 @@ func TestDisconnectDeletesTheStoredCredential(t *testing.T) {
 		t.Fatalf("precondition: the secret should exist before disconnect: %v", err)
 	}
 
-	if err := reg.Disconnect(ctx, "gmail"); err != nil {
+	if err := reg.Disconnect(ctx, capture.ProviderMailbox("gmail")); err != nil {
 		t.Fatalf("Disconnect: %v", err)
 	}
 
@@ -296,10 +296,10 @@ func TestDisconnectIsIdempotentAfterTheSecretIsGone(t *testing.T) {
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	connectFixtureConnection(ctx, t, reg)
 
-	if err := reg.Disconnect(ctx, "gmail"); err != nil {
+	if err := reg.Disconnect(ctx, capture.ProviderMailbox("gmail")); err != nil {
 		t.Fatalf("first Disconnect: %v", err)
 	}
-	if err := reg.Disconnect(ctx, "gmail"); err != nil {
+	if err := reg.Disconnect(ctx, capture.ProviderMailbox("gmail")); err != nil {
 		t.Errorf("second Disconnect: %v — disconnect must stay idempotent", err)
 	}
 }
@@ -352,7 +352,7 @@ func TestDisconnectErasesALegacyAuthOnlyRow(t *testing.T) {
 	actor, _ := principal.Actor(ctx)
 	insertLegacyConnection(ctx, t, ids.From[ids.UserKind](actor.UserID), "gmail", []byte("legacy-refresh-token"))
 
-	if err := reg.Disconnect(ctx, "gmail"); err != nil {
+	if err := reg.Disconnect(ctx, capture.ProviderMailbox("gmail")); err != nil {
 		t.Fatalf("Disconnect: %v", err)
 	}
 
@@ -426,7 +426,7 @@ func TestDisconnectCompletesEvenWhenTheVaultDeleteFails(t *testing.T) {
 	reg2 := capture.NewRegistry(database.BindTo(poolFromFixture(t), ws), nil, fixtureAuthority{}, failing)
 	reg2.Register(fixtureConnector{})
 
-	if err := reg2.Disconnect(ctx, "gmail"); err != nil {
+	if err := reg2.Disconnect(ctx, capture.ProviderMailbox("gmail")); err != nil {
 		t.Fatalf("Disconnect: %v — a committed withdrawal must not be reported as a failure", err)
 	}
 
@@ -463,7 +463,7 @@ func TestDisconnectPhase3DoesNotClobberAConcurrentReconnect(t *testing.T) {
 	reg2.Register(fixtureConnector{})
 
 	disconnectErr := make(chan error, 1)
-	go func() { disconnectErr <- reg2.Disconnect(ctx, "gmail") }()
+	go func() { disconnectErr <- reg2.Disconnect(ctx, capture.ProviderMailbox("gmail")) }()
 
 	<-deleteStarted // phase 1 has committed (status disconnected, ref = firstRef); phase 2's Delete is blocked
 

@@ -8,7 +8,15 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/signature"
 )
+
+// WithSignatureImages wires the drawing of a preview's https images. Only this
+// preview uses it; the send path never does.
+func (h Handlers) WithSignatureImages(images signature.PreviewImages) Handlers {
+	h.signatureImages = images
+	return h
+}
 
 // PreviewEmailSignOff implements POST /emails:sign-off.
 //
@@ -42,6 +50,9 @@ func (h Handlers) PreviewEmailSignOff(w http.ResponseWriter, r *http.Request) {
 		Kind: crmcontracts.EmailSignOffKind(sign.Kind),
 	}
 	if sign.HTML != "" {
+		if h.signatureImages != nil {
+			sign.HTML = h.signatureImages.Inline(r.Context(), sign.HTML)
+		}
 		out.Html = &sign.HTML
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)

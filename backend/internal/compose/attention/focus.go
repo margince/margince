@@ -56,6 +56,11 @@ func focusOf(rows, considered []ranked, asOf time.Time, reader ids.UUID) crmcont
 }
 
 func focusEligible(row ranked, asOf time.Time) bool {
+	// A stopped source or automation is reported on System health, where an
+	// admin restores it; Home names how many there are instead.
+	if destinationOf(row) == destinationSystemHealth {
+		return false
+	}
 	// An agreed future date is not a request to act today. Legal preparation and
 	// deal close windows already have their own semantic classifier horizons.
 	switch row.item.Source {
@@ -125,6 +130,9 @@ func (s *Service) nameRows(ctx context.Context, rows []crmcontracts.WorklistItem
 		return err
 	}
 	if err := s.nameTheOrganizers(ctx, rows); err != nil {
+		return err
+	}
+	if err := s.nameTheRooms(ctx, rows); err != nil {
 		return err
 	}
 	return s.nameTheOwners(ctx, rows)

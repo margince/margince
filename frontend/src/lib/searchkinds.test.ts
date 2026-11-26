@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
+import { type Translator, translate } from "../i18n";
 import { parseHash, type Route, routeHash } from "./router";
 import {
   bestIdentifierMatch,
@@ -12,10 +14,14 @@ import {
   SEARCH_HIT_ORDER,
   searchActivityRoute,
   searchEmailRoute,
+  searchFilterLabel,
+  searchGroupHeading,
   searchGroupType,
   searchHitDestination,
+  searchHitGroup,
   searchHitHasCard,
   searchHitRoute,
+  searchTimedOutLines,
 } from "./searchkinds";
 
 // Where a hit goes, asked of the one place that knows.
@@ -132,8 +138,8 @@ describe("groupSearchHits", () => {
   // on the way to the screen — how project hits once went missing — so the
   // list is checked against the record rather than against a third copy.
   it("draws every group a heading exists for, once", () => {
-    expect([...SEARCH_GROUP_ORDER].sort()).toEqual(
-      Object.keys(SEARCH_GROUP_KEY).sort(),
+    expect([...SEARCH_GROUP_ORDER].sort(stable)).toEqual(
+      Object.keys(SEARCH_GROUP_KEY).sort(stable),
     );
   });
 
@@ -170,6 +176,69 @@ describe("groupSearchHits", () => {
   });
 });
 
+describe("an extension's hits", () => {
+  const ROOM = "ext:hotel:room";
+  const GUEST = "ext:hotel:guest";
+  const t: Translator = (key, params) => translate("en", key, params);
+  const directory = [{ name: ROOM, display_name: "Room" }];
+
+  it("groups after the core records and before mail, activities and tags", () => {
+    const groups = groupSearchHits([
+      { type: "tag", id: "t1" },
+      { type: GUEST, id: "g1" },
+      { type: "activity", id: "m1", email_summary: { activity_id: "m1" } },
+      { type: ROOM, id: "r1" },
+      { type: "product", id: "p1" },
+      { type: "contact", id: "c1" },
+    ]);
+    expect(groups.map(({ group }) => group)).toEqual([
+      "contact",
+      "product",
+      GUEST,
+      ROOM,
+      "email",
+      "tag",
+    ]);
+  });
+
+  it("leaves the core order as it was when no extension answers", () => {
+    expect(groupSearchHits([{ type: "contact", id: "c1" }])).toEqual([
+      { group: "contact", hits: [{ type: "contact", id: "c1" }] },
+    ]);
+  });
+
+  it("drops a type this build does not know instead of drawing it nameless", () => {
+    expect(groupSearchHits([{ type: "hologram", id: "h1" }])).toEqual([]);
+  });
+
+  it("is its own group and narrows to itself", () => {
+    expect(searchHitGroup({ type: ROOM })).toBe(ROOM);
+    expect(searchGroupType(ROOM)).toBe(ROOM);
+  });
+
+  it("has no page and no card", () => {
+    expect(searchHitRoute(ROOM, "r1")).toBeNull();
+    expect(searchHitDestination({ type: ROOM, id: "r1" }, "suite")).toBeNull();
+    expect(searchHitHasCard(ROOM)).toBe(false);
+  });
+
+  it("takes its heading and pill from the directory", () => {
+    expect(searchGroupHeading(ROOM, t, directory)).toBe("Room");
+    expect(searchFilterLabel(ROOM, t, directory)).toBe("Room");
+  });
+
+  it("names itself from the kind when the directory has not loaded", () => {
+    expect(searchGroupHeading(GUEST, t, [])).toBe("guest");
+    expect(searchFilterLabel(GUEST, t, directory)).toBe("guest");
+  });
+
+  it("leaves a core group's heading to the catalogue", () => {
+    expect(searchGroupHeading("company", t, directory)).toBe(
+      t("search.group.company"),
+    );
+  });
+});
+
 describe("searchHitHasCard", () => {
   // The two records a chip stands for, and nothing else: a deal or a tag
   // drawn with a monogram would read as a contact or a company.
@@ -194,5 +263,27 @@ describe("bestIdentifierMatch", () => {
         { type: "lead", id: "old", title: "Lena", score: 1 },
       ]),
     ).toBeUndefined();
+  });
+});
+
+describe("searchTimedOutLines", () => {
+  const t: Translator = (key, params) => translate("en", key, params);
+
+  it("names a type by the label of its Show only pill", () => {
+    expect(searchTimedOutLines(["activity"], t, [])).toEqual([
+      "Emails and activities could not be searched for this word in time. Add another word to search them.",
+    ]);
+  });
+
+  it("labels an extension kind from the directory and skips a type it does not know", () => {
+    const lines = searchTimedOutLines(["ext:hotel:room", "mystery"], t, [
+      { name: "ext:hotel:room", display_name: "Room" },
+    ]);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^Room could not be searched/);
+  });
+
+  it("is empty when no type timed out", () => {
+    expect(searchTimedOutLines([], t, [])).toEqual([]);
   });
 });

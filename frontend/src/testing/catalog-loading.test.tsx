@@ -1,4 +1,6 @@
 /** @vitest-environment happy-dom */
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
   cleanup,
@@ -32,7 +34,7 @@ it("waits for the complete language before a lazy view renders", async () => {
   }));
   await act(async () => {
     render(
-      <LocaleProvider initial="de" initialEssential>
+      <LocaleProvider initial="de">
         <Suspense fallback={<p>Waiting</p>}>
           <View />
         </Suspense>
@@ -42,33 +44,95 @@ it("waits for the complete language before a lazy view renders", async () => {
   expect(await screen.findByText("Complete view")).toBeTruthy();
 });
 
-it("loads complete copy for a language change from an initial dictionary", async () => {
-  const { useLocale, useT, LocaleProvider, loadedCatalogs } =
-    await freshLocale();
+async function pickerFor(to: "de" | "vi") {
+  const locale = await freshLocale();
   function Pick() {
-    const { locale, setLocale } = useLocale();
-    const t = useT();
+    const { locale: shown, setLocale } = locale.useLocale();
+    const t = locale.useT();
     return (
-      <button type="button" onClick={() => setLocale("vi")}>
-        {locale}: {t("common.loading")}
+      <button type="button" onClick={() => setLocale(to)}>
+        {shown}: {t("common.loading")}
       </button>
     );
   }
+  return { ...locale, Pick };
+}
+
+it("switches language on the new essential catalog when the page asked for no more", async () => {
+  const { LocaleProvider, loadEssentialLocale, completeRequested, Pick } =
+    await pickerFor("vi");
+  await loadEssentialLocale("en");
   await act(async () => {
     render(
-      <LocaleProvider initial="en" initialEssential>
+      <LocaleProvider initial="en">
         <Pick />
       </LocaleProvider>,
     );
   });
-  const button = await screen.findByRole("button");
   await act(async () => {
-    fireEvent.click(button);
+    fireEvent.click(await screen.findByRole("button"));
   });
   expect(
     await screen.findByRole("button", { name: "vi: Đang tải…" }),
   ).toBeTruthy();
-  expect(loadedCatalogs.has("vi")).toBe(true);
+  expect(completeRequested("vi")).toBe(false);
+});
+
+it("asks for the new complete catalog at once when the page already read the old one", async () => {
+  const { LocaleProvider, loadLocale, completeRequested, Pick } =
+    await pickerFor("vi");
+  await loadLocale("en");
+  await act(async () => {
+    render(
+      <LocaleProvider initial="en">
+        <Pick />
+      </LocaleProvider>,
+    );
+  });
+  await act(async () => {
+    fireEvent.click(await screen.findByRole("button"));
+  });
+  expect(completeRequested("vi")).toBe(true);
+  expect(
+    await screen.findByRole("button", { name: "vi: Đang tải…" }),
+  ).toBeTruthy();
+});
+
+it("keeps the page in the old language, not blank, while the account's own language loads", async () => {
+  let release = () => {};
+  const arrived = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  vi.doMock("../i18n/essential/de_gen.json", async () => {
+    await arrived;
+    return vi.importActual("../i18n/essential/de_gen.json");
+  });
+  try {
+    const { LocaleProvider, loadEssentialLocale, useLocale, useT } =
+      await freshLocale();
+    await loadEssentialLocale("en");
+    let adopt: (locale: "de") => void = () => {
+      throw new Error("The provider never rendered");
+    };
+    function Signed() {
+      const { adoptLocale } = useLocale();
+      adopt = adoptLocale;
+      return <p>{useT()("common.loading")}</p>;
+    }
+    await act(async () => {
+      render(
+        <LocaleProvider initial="en">
+          <Signed />
+        </LocaleProvider>,
+      );
+    });
+    await act(async () => adopt("de"));
+    expect(screen.getByText("Loading…")).toBeTruthy();
+    await act(async () => release());
+    expect(await screen.findByText("Wird geladen…")).toBeTruthy();
+  } finally {
+    vi.doUnmock("../i18n/essential/de_gen.json");
+  }
 });
 
 it("keeps route children behind the complete catalog boundary", async () => {
@@ -82,7 +146,7 @@ it("keeps route children behind the complete catalog boundary", async () => {
   }
   await act(async () => {
     render(
-      <LocaleProvider initial="en" initialEssential>
+      <LocaleProvider initial="en">
         <Suspense fallback={null}>
           <CompleteLocale>
             <View />
@@ -110,13 +174,15 @@ it("retries a dictionary failure without remounting a cached lazy module", async
   try {
     await act(async () => {
       render(
-        <LocaleProvider initial="en" initialEssential>
-          <AppErrorBoundary>
-            <Suspense fallback={null}>
-              <View />
-            </Suspense>
-          </AppErrorBoundary>
-        </LocaleProvider>,
+        <QueryClientProvider client={new QueryClient()}>
+          <LocaleProvider initial="en">
+            <AppErrorBoundary>
+              <Suspense fallback={null}>
+                <View />
+              </Suspense>
+            </AppErrorBoundary>
+          </LocaleProvider>
+        </QueryClientProvider>,
       );
     });
     const retry = await screen.findByRole("button", { name: "Retry" });
@@ -143,7 +209,7 @@ it("keeps first-page lazy children on their essential catalog", async () => {
   );
   await act(async () => {
     render(
-      <LocaleProvider initial="en" initialEssential>
+      <LocaleProvider initial="en">
         <Suspense fallback={null}>
           <View />
         </Suspense>

@@ -12,13 +12,85 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "0861ff98a78eb850",
+    "tools": "5856c0e9e82a006d",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "0fbb56525a64e3a0d67dce27557b9284616654eb",
+    "ran_at": "2026-11-22T04:05:10Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:30Z"
+  },
   "usage": {
-    "input_tokens": 69757,
-    "output_tokens": 5648,
+    "input_tokens": 99334,
+    "output_tokens": 6785,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 689024,
+    "cache_read_input_tokens": 1551232,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "attach_document",
+        "change_activities",
+        "describe_views",
+        "find_records",
+        "list_documents",
+        "list_records",
+        "read_project",
+        "read_project_360",
+        "read_view",
+        "read_workspace",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "attach_document",
+        "catch_me_up_on",
+        "change_activities",
+        "describe_router_actions",
+        "describe_views",
+        "find_records",
+        "list_company_contracts",
+        "list_documents",
+        "list_records",
+        "read_context",
+        "read_details",
+        "read_view",
+        "read_workspace",
+        "search_records",
+        "update_attachment_metadata"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 21.5,
+      "min": 18,
+      "max": 25
+    },
+    "refused": {
+      "median": 7,
+      "min": 6,
+      "max": 8
+    },
+    "prompt_tokens": {
+      "median": 825283,
+      "min": 632087,
+      "max": 1018479
+    },
+    "output_tokens": {
+      "median": 3392.5,
+      "min": 2808,
+      "max": 3977
+    }
   }
 }

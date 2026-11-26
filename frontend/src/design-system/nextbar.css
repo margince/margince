@@ -35,6 +35,8 @@
 .next-bar-title {
   font: var(--fontHeadingSmall);
   color: var(--textPrimary);
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
 }
 /* The task's own words, cut at one line; the title attribute keeps the rest. */
 .next-bar-detail {
@@ -48,6 +50,7 @@
 .next-bar-none {
   font: var(--fontBody);
   color: var(--textSecondary);
+  overflow-wrap: anywhere;
 }
 /* Sized to its verbs, so the cap is what lets it wrap on a narrow bar. */
 .next-bar-verbs {

@@ -74,7 +74,7 @@ func TestGoogleSignInOptionsSplitOriginUsesTheAPIHostForGoogleAndThePublicHostFo
 
 	startReq := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil)
 	startRec := httptest.NewRecorder()
-	s.StartOidcSignIn(startRec, startReq, "google")
+	s.StartOidcSignIn(startRec, startReq, "google", crmcontracts.StartOidcSignInParams{})
 	loc, err := url.Parse(startRec.Header().Get("Location"))
 	if err != nil {
 		t.Fatalf("parse Location: %v", err)

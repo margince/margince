@@ -37,7 +37,10 @@ var publicRequests = map[string]map[string]bool{
 	"/v1/auth/mfa": {http.MethodPost: true},
 	// The reachability probe external uptime monitors call: a fixed body,
 	// no dependency work, nothing disclosed (see compose.Server.GetStatus).
-	"/v1/status": {http.MethodGet: true},
+	"/v1/status": {http.MethodGet: true, http.MethodHead: true},
+	// Dispact's push receiver: the signature with the sealed events secret is
+	// the credential, and the handler checks it before reading anything.
+	"/v1/channel-events/dispact": {http.MethodPost: true},
 	// The OAuth AS endpoints authenticate by their own means: DCR is
 	// open (public clients + PKCE), token exchange proves possession via
 	// the code + verifier, and RFC 7009 revocation proves it by presenting
@@ -90,10 +93,13 @@ func isConsentEntry(r *http.Request) bool {
 //     the same way.
 func AdmittedWithoutSession(r *http.Request) bool {
 	return isPublicRequest(r) ||
-		strings.HasPrefix(r.URL.Path, "/v1/public/") ||
+		strings.HasPrefix(r.URL.Path, publicBookingPrefix) ||
 		isConnectorOAuthCallback(r.URL.Path) ||
 		isExtensionOAuthCallback(r.URL.Path)
 }
+
+// publicBookingPrefix is the anonymous booking surface's mount.
+const publicBookingPrefix = "/v1/public/"
 
 func isPublicRequest(r *http.Request) bool {
 	return publicRequests[r.URL.Path][r.Method] || (r.Method == http.MethodGet && isOIDCLoginRequest(r.URL.Path))
@@ -171,6 +177,16 @@ func (h Handlers) Middleware(next http.Handler) http.Handler {
 		ctx = principal.WithWorkspaceID(ctx, wsID.UUID)
 
 		if AdmittedWithoutSession(r) {
+			// Sign-in stays open while locked, so a seat can reach the screen that
+			// says so. A chat notice only records a channel that is gone, and its
+			// pull waits for the paused worker. The anonymous booking surface is
+			// work, and stops.
+			if strings.HasPrefix(r.URL.Path, publicBookingPrefix) {
+				if err := h.refuseWhenLocked(ctx, r); err != nil {
+					httperr.Write(w, r, err)
+					return
+				}
+			}
 			next.ServeHTTP(w, r.WithContext(ctx))
 			return
 		}

@@ -38,7 +38,17 @@ import (
 //
 // A snooze is not an error: a message whose moment has moved reports one, and
 // the lane reads the ROW to see what happened rather than the return.
-func DriveScheduledSendForTest(ctx context.Context, pool *pgxpool.Pool, workspace, id ids.UUID, origin SendOrigin) error {
+func DriveScheduledSendForTest(ctx context.Context, pool *pgxpool.Pool, workspace, id ids.UUID, origin SendOrigin, disabled ...string) error {
+	return driveScheduledSendAttempt(ctx, pool, workspace, id, origin, 1, disabled...)
+}
+
+// DriveLastScheduledSendAttemptForTest is the same wake on the ladder's last
+// rung, where a fault holds the message instead of retrying it.
+func DriveLastScheduledSendAttemptForTest(ctx context.Context, pool *pgxpool.Pool, workspace, id ids.UUID, origin SendOrigin) error {
+	return driveScheduledSendAttempt(ctx, pool, workspace, id, origin, scheduledSendMaxAttempts)
+}
+
+func driveScheduledSendAttempt(ctx context.Context, pool *pgxpool.Pool, workspace, id ids.UUID, origin SendOrigin, attempt int, disabled ...string) error {
 	inserter, err := jobs.NewInserter(pool, slog.New(slog.DiscardHandler))
 	if err != nil {
 		return err
@@ -46,9 +56,9 @@ func DriveScheduledSendForTest(ctx context.Context, pool *pgxpool.Pool, workspac
 	// The origin the worker role composes. Without it this harness assembles a
 	// worker production does not have, and a message carrying an unsubscribe
 	// link refuses here for a reason no deployment would hit.
-	worker := newScheduledSendWorker(pool, NewDeliveryStager(pool, inserter), nil, origin)
+	worker := newScheduledSendWorker(pool, NewDeliveryStager(pool, inserter), nil, origin, disabled...)
 	err = worker.Work(ctx, &river.Job[ScheduledSendArgs]{
-		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: scheduledSendMaxAttempts},
+		JobRow: &rivertype.JobRow{Attempt: attempt, MaxAttempts: scheduledSendMaxAttempts},
 		Args:   ScheduledSendArgs{Workspace: workspace, ScheduledSendID: id.String()},
 	})
 	if _, ok := errors.AsType[*river.JobSnoozeError](err); ok {
@@ -116,3 +126,7 @@ func DriveScheduledSendRecoveryForTest(ctx context.Context, pool *pgxpool.Pool, 
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 1},
 	})
 }
+
+// ScheduledSendRecoveryBatchForTest is how many messages one recovery pass
+// re-arms, so a test can queue more than one pass reaches.
+const ScheduledSendRecoveryBatchForTest = recoveryBatch

@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/auditverb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -259,7 +260,9 @@ func TestEachColumnIsRewoundByItsOwnOldestChange(t *testing.T) {
 
 	// First edit: the close date moves. Second: the deal is won. Different
 	// columns, in that order, both after the week closed.
-	future := time.Date(2027, 3, 31, 0, 0, 0, 0, time.UTC)
+	// Dated from the clock: a fixed date stops being future, and the writer
+	// then refuses it as a past close date.
+	future := clocktest.Now(t).AddDate(0, 4, 0).Truncate(24 * time.Hour)
 	if _, err := e.Deals.UpdateDeal(e.Admin(), id, deals.UpdateDealInput{
 		ExpectedClose: &future,
 	}); err != nil {

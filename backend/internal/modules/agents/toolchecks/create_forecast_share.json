@@ -1,0 +1,10 @@
+{
+  "verb": "create_forecast_share",
+  "checks": [
+    "forecast.create",
+    "forecast.read"
+  ],
+  "takes": [
+    "me"
+  ]
+}

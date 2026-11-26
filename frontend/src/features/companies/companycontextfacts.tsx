@@ -4,26 +4,22 @@
 import type { components } from "../../api/schema";
 import { Badge, Button, Disclosure } from "../../design-system/atoms";
 import { DisclosureGroup } from "../../design-system/disclosure";
-import {
-  EvidenceMark,
-  type EvidenceMarkSource,
-} from "../../design-system/evidencemark";
+import { EvidenceMark } from "../../design-system/evidencemark";
 import {
   Panel,
   PanelBody,
   PanelIntro,
   PanelRow,
 } from "../../design-system/panel";
-import { provenanceOf } from "../../design-system/provenanceof";
 import { QueryGate, type QueryLike } from "../../design-system/querystates";
 import { RowOpen } from "../../design-system/rowopen";
 import { SettingRow } from "../../design-system/settingrow";
-import { confidenceLevel } from "../../design-system/trust";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { coldFieldLabel } from "../../lib/coldfieldlabels";
 import { SavedNotice } from "./company-context.notices";
+import { useDerivedSource } from "./evidencesource";
 import "./companycontextfacts.css";
 
 type CompanyProfile = components["schemas"]["CompanyProfile"];
@@ -206,6 +202,7 @@ function CompanyFactRow({
   const t = useT();
   const label = coldFieldLabel(field, t);
   const stored = profile.fields?.find((item) => item.field === field);
+  const sourceOf = useDerivedSource();
   return (
     <PanelRow
       record={canEdit}
@@ -221,7 +218,7 @@ function CompanyFactRow({
           ) : (
             <EvidenceMark
               value={value}
-              source={stored ? derivedSource(stored) : undefined}
+              source={stored ? sourceOf(stored) : undefined}
             />
           )
         }
@@ -237,21 +234,4 @@ function CompanyFactRow({
       )}
     </PanelRow>
   );
-}
-
-// A typed value gets no mark, as on the record page, so the mark keeps its
-// meaning.
-function derivedSource(
-  stored: components["schemas"]["CompanyProfileField"],
-): EvidenceMarkSource | undefined {
-  const provenance = provenanceOf(stored.captured_by);
-  if (provenance.kind === "human") {
-    return undefined;
-  }
-  return {
-    provenance,
-    confidence: confidenceLevel(stored.confidence) ?? undefined,
-    snippet: stored.evidence_snippet,
-    sourceUrl: stored.source_url,
-  };
 }

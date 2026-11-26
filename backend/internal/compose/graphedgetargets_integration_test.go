@@ -22,7 +22,7 @@ import (
 
 func TestAMergeDropsTheSourceEdgesAndRefoldsTheSurvivor(t *testing.T) {
 	v := edgeEnv{integration.Setup(t)}
-	owner := integration.OwnerConn(t)
+	owner := integration.FreshOwnerConn(t)
 	ctx := context.Background()
 	gen := search.NewGraphEdgeGen(search.NewStore(v.e.DB()))
 	source := v.contact(t, "Merge Source")
@@ -53,7 +53,7 @@ func TestAMergeDropsTheSourceEdgesAndRefoldsTheSurvivor(t *testing.T) {
 
 func TestRefoldingAContactRestoresItsEdgesAndDroppingRemovesThem(t *testing.T) {
 	v := edgeEnv{integration.Setup(t)}
-	owner := integration.OwnerConn(t)
+	owner := integration.FreshOwnerConn(t)
 	c := v.contact(t, "Refold Subject")
 	other := v.contact(t, "Refold Peer")
 	activity := v.interaction(t, v.e.Rep1, c, time.Now().UTC().Add(-time.Minute), "inbound", "from")
@@ -99,7 +99,7 @@ func (v edgeEnv) inTx(t *testing.T, fn func(pgx.Tx) error) error {
 // the bus retries the entry instead of acking a projection it did not fold.
 func TestAProjectionWriteTheDatabaseRefusesSurfaces(t *testing.T) {
 	v := edgeEnv{integration.Setup(t)}
-	owner := integration.OwnerConn(t)
+	owner := integration.FreshOwnerConn(t)
 	ctx := context.Background()
 	c := v.contact(t, "Refused Subject")
 	activity := v.interaction(t, v.e.Rep1, c, time.Now().UTC().Add(-time.Minute), "inbound", "from")
@@ -171,7 +171,7 @@ func TestRefoldingNoActivitiesTouchesNothing(t *testing.T) {
 // restored.
 func TestArchivedContactEdgesDroppedDirectly(t *testing.T) {
 	v := edgeEnv{integration.Setup(t)}
-	owner := integration.OwnerConn(t)
+	owner := integration.FreshOwnerConn(t)
 	ctx := context.Background()
 	gen := search.NewGraphEdgeGen(search.NewStore(v.e.DB()))
 	c := v.contact(t, "Archived Subject")

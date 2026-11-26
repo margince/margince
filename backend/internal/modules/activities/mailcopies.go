@@ -24,12 +24,12 @@ import (
 const mailCopyReason = "mail_duplicate"
 
 // MailCopyCandidatesSQL uses message identities, never a conversation key shared by replies.
-const MailCopyCandidatesSQL = `FROM activity copy
+var MailCopyCandidatesSQL = `FROM activity copy
  LEFT JOIN raw_capture original ON original.id=copy.raw_capture_id
  LEFT JOIN LATERAL (SELECT evidence->>'` + fieldRFCMessageID + `' AS message_id FROM audit_log WHERE entity_type='activity' AND entity_id=copy.id AND action='create' AND evidence ? '` + fieldRFCMessageID + `' ORDER BY occurred_at,id LIMIT 1) claimed ON true
  JOIN activity_identity identity ON identity.identity_kind='mail' AND identity.identity_key=
  coalesce(nullif(claimed.message_id,''),nullif(copy.raw->>'rfc_message_id',''),nullif(coalesce(original.payload_object->>'rfc_message_id',original.payload->>'rfc_message_id'),''),
-  CASE WHEN copy.source_system='email' THEN split_part(copy.source_id,'` + connector.MailSeatMarker + `',1) END)
+  ` + connector.SharedMailKeySQL("copy") + `)
  JOIN activity kept ON kept.id=identity.activity_id
  WHERE copy.kind='email' AND copy.archived_at IS NULL AND kept.archived_at IS NULL
  AND copy.restricted_at IS NULL AND kept.restricted_at IS NULL AND copy.id<>kept.id`
@@ -165,16 +165,16 @@ func carryMailCopyTx(ctx context.Context, tx pgx.Tx, duplicate, kept ids.Activit
 	if err != nil {
 		return err
 	}
-	links, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (RelinkActivityInput, error) {
-		var one RelinkActivityInput
+	links, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (ActivityLinkInput, error) {
+		var one ActivityLinkInput
 		err := row.Scan(&one.EntityType, &one.EntityID)
 		return one, err
 	})
 	if err != nil {
 		return err
 	}
-	for _, link := range links {
-		if _, err := RelinkActivityInTx(ctx, tx, kept, link); err != nil {
+	for _, link := range projectLinksFirst(links) {
+		if _, err := RelinkActivityInTx(ctx, tx, kept, RelinkActivityInput{EntityType: link.EntityType, EntityID: link.EntityID}); err != nil {
 			return err
 		}
 	}
@@ -182,9 +182,9 @@ func carryMailCopyTx(ctx context.Context, tx pgx.Tx, duplicate, kept ids.Activit
 		return err
 	}
 	args = schedulingArgs{}
-	_, err = tx.Exec(ctx, `INSERT INTO activity_reader_state (activity_id,reader_id,state,snoozed_until,reopen_on,reopen_ref,set_by,set_at)
- SELECT `+args.add(kept)+`,reader_id,state,snoozed_until,reopen_on,reopen_ref,set_by,set_at FROM activity_reader_state WHERE activity_id=`+args.add(duplicate)+`
- ON CONFLICT (activity_id,reader_id) DO UPDATE SET state=excluded.state,snoozed_until=excluded.snoozed_until,reopen_on=excluded.reopen_on,reopen_ref=excluded.reopen_ref,set_by=excluded.set_by,set_at=excluded.set_at
+	_, err = tx.Exec(ctx, `INSERT INTO activity_reader_state (activity_id,reader_id,state,snoozed_until,reopen_on,reopen_ref,set_by,set_at,snoozed_wall,snoozed_zone)
+ SELECT `+args.add(kept)+`,reader_id,state,snoozed_until,reopen_on,reopen_ref,set_by,set_at,snoozed_wall,snoozed_zone FROM activity_reader_state WHERE activity_id=`+args.add(duplicate)+`
+ ON CONFLICT (activity_id,reader_id) DO UPDATE SET state=excluded.state,snoozed_until=excluded.snoozed_until,reopen_on=excluded.reopen_on,reopen_ref=excluded.reopen_ref,set_by=excluded.set_by,set_at=excluded.set_at,snoozed_wall=excluded.snoozed_wall,snoozed_zone=excluded.snoozed_zone
  WHERE activity_reader_state.set_at<excluded.set_at`, args...)
 	return err
 }

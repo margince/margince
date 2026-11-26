@@ -133,6 +133,9 @@ expect:
   # general register, so either sample of a register proves it was read.
   answer: [email, general]
   rubric: >
+    register_notes follow the labels the samples carry (email, general); a
+    profile that does not split email further is not at fault. Restating the
+    human-authored preferences in directness is allowed.
     Score whether the derived profile identifies concise, direct,
     decision-oriented writing — the verdict in the opening line, the reasoning
     after it, the willingness to disagree in writing rather than call a meeting —

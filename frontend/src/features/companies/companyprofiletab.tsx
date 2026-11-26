@@ -10,13 +10,14 @@ import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
 import { InlineText } from "../../design-system/inlinetext";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
-import { useCanWriteRecord } from "../../lib/capability";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import type { OpenReceipt } from "../records/record360";
 import { profileFieldLabel } from "./companies";
+import { useLatestSiteRead } from "./companydeepread";
 import { DossierPanel } from "./companydossier";
 import { CompanyFactsPanel } from "./companyfactspanel";
-import { useCompanyReadOnlyReason } from "./companyheader";
 import { CompanyProfileDetails } from "./companyprofiledetails";
+import { useCompanyEditGate } from "./companyrail";
 import { SidecarFieldRow } from "./companyraildetails";
 import { useCompanyFieldSave } from "./companyrailedit";
 import { useCompanyProfileFields } from "./evidenceverdict";
@@ -60,14 +61,9 @@ const NARRATIVE_FIELDS = [
  * genuinely editable ones lived in the record rail two tabs away. A record's
  * own fields belong in one place that can be read top to bottom.
  *
- * WRITE STATE IS DERIVED ONCE, HERE. `useCanWriteRecord` folds the three
- * independent axes — the object grant, the seat ceiling, and the server's own
- * per-row `writable` — where the tab previously consulted only the first.
- * A rep who cannot write a colleague's account was still shown every verb,
- * and found out at the save. The reason sentence is rendered ONCE at the top
- * and every refused control points at it by id, rather than each control
- * carrying its own copy: withholding twelve buttons individually is noise,
- * and withholding the page's one explanation is the defect.
+ * Write state comes from the rail's gate (`useCompanyEditGate`), so this tab
+ * refuses where the rail does. The reason is drawn once at the top. Every
+ * refused control points at it by id instead of carrying its own copy.
  */
 export function CompanyProfileForm({
   company,
@@ -97,21 +93,10 @@ export function CompanyProfileForm({
 }>): ReactNode {
   const t = useT();
   const reasonId = useId();
-  const writable = useCanWriteRecord("company", company);
-  // The archived/not-yours sentence, when there is one. It is the
-  // more specific answer, so it wins over the generic refusal below whenever
-  // it applies.
-  const specificReason = useCompanyReadOnlyReason(company);
-  // Every denial owes the reader a sentence. `useCanWriteRecord` also refuses
-  // a read seat and a missing grant, neither of which the specific reason
-  // knows about, and a control pointing at an id that renders nothing is a
-  // refusal the reader cannot resolve.
-  const reason = writable
-    ? undefined
-    : (specificReason ?? t("record.notYoursToChange"));
-  const canEdit = writable && !specificReason;
+  const { canEdit, reason } = useCompanyEditGate(company);
   const profileQuery = useCompanyProfileFields(company.id);
   const fields = profileQuery.data ?? [];
+  const latestRead = useLatestSiteRead(company.id);
   const save = useCompanyFieldSave(company);
 
   return (
@@ -147,20 +132,26 @@ export function CompanyProfileForm({
           <FieldGrid>
             {/* The account's own description: prose, so it reads here with
                 the account's story rather than in the details column. */}
-            <FieldRow label={t("co.description.label")}>
-              <InlineText
-                label={t("co.description.label")}
-                value={company.description ?? ""}
-                placeholder={t("co.narrative.add")}
-                multiline
-                maxLength={500}
-                canEdit={canEdit}
-                readOnlyReason={reason}
-                onSave={(next) =>
-                  save(mapCompanyUpdate({ description: next }, {}))
-                }
-              />
-            </FieldRow>
+            {!repeatsDescription(
+              "offer_summary",
+              fields,
+              company.description,
+            ) && (
+              <FieldRow label={t("co.description.label")}>
+                <InlineText
+                  label={t("co.description.label")}
+                  value={company.description ?? ""}
+                  placeholder={t("co.narrative.add")}
+                  multiline
+                  maxLength={TEXT_LIMITS.document}
+                  canEdit={canEdit}
+                  readOnlyReason={reason}
+                  onSave={(next) =>
+                    save(mapCompanyUpdate({ description: next }, {}))
+                  }
+                />
+              </FieldRow>
+            )}
             {NARRATIVE_FIELDS.map((field) => (
               <SidecarFieldRow
                 key={field}
@@ -176,7 +167,8 @@ export function CompanyProfileForm({
                 // (PROFILE_FIELD_LABELS), not a second list here: a field
                 // renamed there must not keep its old name on this tab.
                 label={profileFieldLabel(field, t)}
-                placeholderKey="co.narrative.add"
+                placeholderKey={emptyReason(latestRead.data?.status)}
+                emptyKey={emptyReason(latestRead.data?.status)}
                 canEdit={canEdit}
                 readOnlyReason={reason}
                 multiline
@@ -198,4 +190,26 @@ export function CompanyProfileForm({
       {tools}
     </div>
   );
+}
+
+// Matching stored text appears once, with the offer's editor and evidence.
+// A distinct description remains visible beside the offer.
+export function repeatsDescription(
+  field: (typeof NARRATIVE_FIELDS)[number],
+  fields: readonly { field: string; value: string }[],
+  description: string | null | undefined,
+): boolean {
+  const offer = fields.find((one) => one.field === field)?.value.trim();
+  return field === "offer_summary" && !!offer && offer === description?.trim();
+}
+
+// An empty narrative field says why it is empty. A site read fills these
+// fields from the website only and leaves out what the site does not state.
+// So after a finished read, an empty field is one the site does not mention.
+export function emptyReason(
+  status: components["schemas"]["SiteReadReport"]["status"] | null | undefined,
+): "co.narrative.notOnSite" | "co.narrative.notReadYet" {
+  return status === "done" || status === "partial"
+    ? "co.narrative.notOnSite"
+    : "co.narrative.notReadYet";
 }

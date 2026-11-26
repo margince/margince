@@ -9,12 +9,15 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { stable } from "../../format/collate";
 import { en } from "../../i18n/en";
 import type { List } from "../../lib/lists.queries";
+import { FOLD_MAX_WIDTH, widthMedia } from "../../lib/viewport";
 import {
   LIVE_ID,
   liveList,
   OTHER_OWNER_ID,
+  READER_ID,
   shortlist,
   TEAM_ID,
 } from "../../testing/lists.fixtures";
@@ -146,30 +149,122 @@ describe("a row", () => {
     ).toBeInTheDocument();
   });
 
-  it("says who can find each shared list: a named team, the owner's teams, everyone", async () => {
+  it("says who can find each list in either group: a named team, the owner's teams, everyone, its owner, its steward or both", async () => {
     const { wrapper } = mountFilters({
       listsOn: true,
       teams: { [TEAM_ID]: "Team Germany" },
       lists: [
         { ...liveList, id: "named", name: "Named", team_id: TEAM_ID },
-        { ...liveList, id: "mine", name: "Mine" },
+        { ...liveList, id: "ours", name: "Our accounts" },
         { ...liveList, id: "theirs", name: "Theirs", owner_id: OTHER_OWNER_ID },
         { ...shortlist, id: "all", name: "Launch deck" },
+        {
+          ...shortlist,
+          id: "kept",
+          name: "Kept to myself",
+          sharing: "private",
+          owner_id: READER_ID,
+        },
+        {
+          ...shortlist,
+          id: "stewarded",
+          name: "Board introductions",
+          sharing: "private",
+          owner_id: OTHER_OWNER_ID,
+          steward_id: READER_ID,
+        },
+        {
+          ...shortlist,
+          id: "ownerless",
+          name: "Left behind",
+          sharing: "private",
+          owner_id: null,
+          steward_id: READER_ID,
+        },
+        {
+          ...shortlist,
+          id: "cared",
+          name: "Cared for together",
+          sharing: "private",
+          owner_id: READER_ID,
+          steward_id: OTHER_OWNER_ID,
+        },
+        {
+          ...shortlist,
+          id: "theirs-alone",
+          name: "Their own picks",
+          sharing: "private",
+          owner_id: OTHER_OWNER_ID,
+          steward_id: OTHER_OWNER_ID,
+        },
       ],
     });
     render(<FiltersScreen />, { wrapper });
-    await vi.waitFor(async () =>
-      expect((await rowOf("Named")).textContent).toContain("Team Germany"),
+    // One read draws every row, so once the team is named all rows are there.
+    const said = (name: string) =>
+      screen.getByText(name).closest("tr")?.textContent ?? "";
+    await vi.waitFor(() => expect(said("Named")).toContain("Team Germany"));
+    expect(said("Kept to myself")).toContain(en["lists.sharing.private"]);
+    const stewarded = said("Board introductions");
+    expect(stewarded).toContain(en["lists.audience.ownerAndSteward"]);
+    expect(stewarded).not.toContain(en["lists.sharing.private"]);
+    expect(said("Their own picks")).toContain(en["lists.audience.ownerOnly"]);
+    expect(said("Cared for together")).toContain(
+      en["lists.audience.youAndSteward"],
     );
-    expect((await rowOf("Mine")).textContent).toContain(
-      en["lists.audience.yourTeams"],
-    );
-    expect((await rowOf("Theirs")).textContent).toContain(
-      en["lists.audience.ownerTeams"],
-    );
-    expect((await rowOf("Launch deck")).textContent).toContain(
-      en["lists.sharing.workspace"],
-    );
+    const ownerless = said("Left behind");
+    expect(ownerless).toContain(en["lists.audience.stewardOnly"]);
+    expect(ownerless).not.toContain(en["lists.audience.ownerOnly"]);
+    expect(said("Our accounts")).toContain(en["lists.audience.yourTeams"]);
+    expect(said("Theirs")).toContain(en["lists.audience.ownerTeams"]);
+    expect(said("Launch deck")).toContain(en["lists.sharing.workspace"]);
+  });
+
+  it("asks who can find a row only in a group that holds a list", async () => {
+    const { wrapper } = mountFilters({
+      listsOn: true,
+      views: [BERLIN],
+      lists: [{ ...liveList, owner_id: OTHER_OWNER_ID }],
+    });
+    render(<FiltersScreen />, { wrapper });
+    await screen.findByText(liveList.name);
+    const who = { name: en["lists.sharingLabel"] };
+    const mine = screen.getByRole("region", {
+      name: en["filters.library.mine"],
+    });
+    const shared = screen.getByRole("region", {
+      name: en["filters.library.shared"],
+    });
+    expect(within(mine).getByText(BERLIN.name)).toBeInTheDocument();
+    expect(within(mine).queryByRole("columnheader", who)).toBeNull();
+    expect(within(shared).getByRole("columnheader", who)).toBeInTheDocument();
+  });
+
+  it("says, folded, who can find a list the reader shares from their own group", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === widthMedia(FOLD_MAX_WIDTH),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    const { wrapper } = mountFilters({
+      listsOn: true,
+      lists: [liveList],
+      teams: { [TEAM_ID]: "Team Germany" },
+    });
+    render(<FiltersScreen />, { wrapper });
+    const mine = await screen.findByRole("region", {
+      name: en["filters.library.mine"],
+    });
+    const facts = (await within(mine).findByText(liveList.name))
+      .closest(".library-name-cell")
+      ?.querySelector(".library-facts");
+    expect(facts?.textContent).toContain(en["lists.audience.yourTeams"]);
+    expect(
+      within(mine).queryByRole("columnheader", {
+        name: en["lists.sharingLabel"],
+      }),
+    ).toBeNull();
   });
 
   it("says a Live List uses a retired field", async () => {
@@ -225,7 +320,9 @@ describe("a row", () => {
     expect(
       within(await rowOf(liveList.name)).getByText(liveList.purpose ?? ""),
     ).toBeVisible();
-    expect(vocabularyReads(seen).sort()).toEqual(["contact", "project"]);
+    expect(
+      vocabularyReads(seen).sort((a, b) => stable(String(a), String(b))),
+    ).toEqual(["contact", "project"]);
   });
 });
 
@@ -287,7 +384,7 @@ describe("a saved view's ⋯", () => {
     expect(window.location.hash).toBe("");
     const firstRun = screen.getByText(en["filters.library.viewsEmptyTitle"]);
     await vi.waitFor(() =>
-      expect(firstRun.closest(".library-anchor")).toHaveFocus(),
+      expect(firstRun.closest('[data-testid="library-anchor"]')).toHaveFocus(),
     );
   });
 
@@ -350,6 +447,7 @@ describe("New Shortlist", () => {
     const { written, wrapper } = mountFilters({
       listsOn: true,
       lists: [liveList],
+      teams: { [TEAM_ID]: "Team Germany" },
     });
     const user = userEvent.setup();
     render(<FiltersScreen />, { wrapper });
@@ -402,6 +500,37 @@ describe("New Shortlist", () => {
     );
     await user.click(
       await screen.findByRole("option", { name: en["lists.sharing.private"] }),
+    );
+    await user.click(screen.getByRole("button", { name: en["lists.create"] }));
+    await vi.waitFor(() => expect(written).toHaveLength(1));
+    expect(written[0]?.body).toMatchObject({ sharing: "private" });
+  });
+
+  it("starts a reader in no team on only them, with a team on offer but barred", async () => {
+    const { written, wrapper } = mountFilters({
+      listsOn: true,
+      lists: [liveList],
+    });
+    const user = userEvent.setup();
+    render(<FiltersScreen />, { wrapper });
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.newShortlist"] }),
+    );
+    const sharing = screen.getByRole("combobox", {
+      name: en["lists.sharingLabel"],
+    });
+    expect(sharing).toHaveTextContent(en["lists.sharing.private"]);
+    expect(sharing).toHaveAccessibleDescription(
+      `${en["lists.sharing.noTeamHint"]} ${en["lists.sharingHint"]}`,
+    );
+    await user.click(sharing);
+    expect(
+      await screen.findByRole("option", { name: en["lists.sharing.team"] }),
+    ).toHaveAttribute("aria-disabled", "true");
+    await user.keyboard("{Escape}");
+    await user.type(
+      screen.getByRole("textbox", { name: en["lists.name"] }),
+      "Dinner",
     );
     await user.click(screen.getByRole("button", { name: en["lists.create"] }));
     await vi.waitFor(() => expect(written).toHaveLength(1));

@@ -18,12 +18,9 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// unitManifestFile is the per-unit generated manifest: what
-// the unit declares that an OPERATOR must resolve, derived from the
-// declaration and written next to the unit, so preflight, permission
-// review, and the boot inventory read it WITHOUT compiling or executing
-// the code. The drift gate (-verify), not a signature, binds it to the
-// source for in-repo units.
+// unitManifestFile is the per-unit generated manifest of what an operator must
+// resolve. It stays a literal so check-generators-twice ties the committed
+// manifests to this tool. A test holds it equal to unitset.ManifestFile.
 const unitManifestFile = "manifest.generated.json"
 
 // opAgentToolInvoke is the operation a governed agent tool performs; the
@@ -95,14 +92,15 @@ type unitManifest struct {
 
 	// Entries are the places on core screens that offer a way into the unit.
 	Entries []declaredEntry `json:"entries,omitempty"`
-
-	// Settings are the values an admin can change for the unit, drawn by the
-	// core on the unit's card of the Extensions page.
-	Settings []declaredSetting `json:"settings,omitempty"`
-
+	// Settings are the values an admin can change, drawn on the unit's card.
+	Settings     []declaredSetting     `json:"settings,omitempty"`
+	CompanyTypes []declaredCompanyType `json:"company_types,omitempty"`
+	RecordKinds  []declaredRecordKind  `json:"record_kinds,omitempty"`
+	LinkTypes    []declaredLinkType    `json:"link_types,omitempty"`
+	reportDecls
 	// Panels are the places on core pages that draw the unit's own component.
 	Panels []declaredPanel `json:"panels,omitempty"`
-
+	appDecl
 	// Instrumentation says what the unit observes of the whole process.
 	Instrumentation *unitInstrumentation `json:"instrumentation,omitempty"`
 
@@ -111,14 +109,14 @@ type unitManifest struct {
 	// consent asks for, and the endpoint that receives the client secret.
 	// omitempty for the reason the fields above have it.
 	OAuthApps []declaredOAuthApp `json:"oauth_apps,omitempty"`
-
 	// SystemReads are the deals and colleagues' details the unit reads.
-	SystemReads []string `json:"system_reads,omitempty"`
+	SystemReads []string       `json:"system_reads,omitempty"`
+	Needs       []declaredNeed `json:"needs,omitempty"`
+	mailHooksDecl
 }
 
-// inboundEndpoint is one declared anonymous edge (see
-// extension.InboundEndpoint), sorted by slug so the encoding does not depend on
-// declaration order.
+// inboundEndpoint is one declared anonymous edge (see extension.InboundEndpoint),
+// sorted by slug so the encoding does not depend on declaration order.
 //
 // Durations are published in WHOLE SECONDS rather than as Go duration strings:
 // this document is read by an operator comparing a skew against a sender's own
@@ -174,9 +172,10 @@ type subscriptionRequest struct {
 // field a unit does not use must not rewrite its committed manifest, which is
 // what lets this land without a schema bump.
 type ingressSource struct {
-	System string   `json:"system"`
-	Lands  []string `json:"lands"`
-	Merges []string `json:"merges,omitempty"`
+	System        string   `json:"system"`
+	Lands         []string `json:"lands"`
+	Merges        []string `json:"merges,omitempty"`
+	PinnedPosture string   `json:"pinned_posture,omitempty"`
 }
 
 // declaredChannel is one messaging transport the unit supplies, as an operator

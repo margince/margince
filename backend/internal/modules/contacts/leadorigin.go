@@ -23,6 +23,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -42,6 +43,20 @@ const (
 	// leadOriginFilterUnset is the list filter's word for a lead with no origin.
 	leadOriginFilterUnset = "unset"
 )
+
+// The indexes holding one origin per key and per label (trimmed, case-folded,
+// retired origins included), and the noun their refusal names.
+const (
+	leadOriginKeyIndex   = "lead_origin_key_key"
+	leadOriginLabelIndex = "lead_origin_label_once"
+	leadOriginEntry      = "a lead origin"
+)
+
+// requireVocabularyLabelWithin refuses a lead list's label past the label
+// limit, measured trimmed as it is stored.
+func requireVocabularyLabelWithin(label string) error {
+	return httperr.RequireWithin(leadOriginLabelField, strings.TrimSpace(label), values.TextLabelCharacters)
+}
 
 // OriginIntents maps an origin key to the intent the scorer weighs.
 type OriginIntents map[string]SourceIntent
@@ -85,7 +100,7 @@ func LoadOriginIntents(ctx context.Context, tx pgx.Tx) (OriginIntents, error) {
 // misfiling the lead.
 func ResolveOrigin(ctx context.Context, tx pgx.Tx, text string) (string, bool, error) {
 	exact := strings.TrimSpace(text)
-	wanted := deriveSourceKey(text)
+	wanted := values.CatalogKey(text)
 	if wanted == "" {
 		return "", false, nil
 	}
@@ -103,7 +118,7 @@ func ResolveOrigin(ctx context.Context, tx pgx.Tx, text string) (string, bool, e
 		if key == exact {
 			return key, true, nil
 		}
-		if deriveSourceKey(label) == wanted {
+		if values.CatalogKey(label) == wanted {
 			labelMatches = append(labelMatches, key)
 		}
 	}
@@ -120,7 +135,7 @@ func ResolveOrigin(ctx context.Context, tx pgx.Tx, text string) (string, bool, e
 type UnknownLeadOriginError struct{ Key string }
 
 func (e *UnknownLeadOriginError) Error() string {
-	return "origin " + e.Key + " is not in the lead origin list; pick one from Settings › Data model"
+	return "origin " + e.Key + " is not in the lead origin list; pick one from Settings › Leads"
 }
 
 // FieldFault names the origin as the invalid input.
@@ -133,7 +148,7 @@ func (e *UnknownLeadOriginError) FieldFault() (field, code, message string) {
 type InactiveLeadOriginError struct{ Key string }
 
 func (e *InactiveLeadOriginError) Error() string {
-	return "origin " + e.Key + " is retired; pick an active origin or reactivate it in Settings › Data model"
+	return "origin " + e.Key + " is retired; pick an active origin or reactivate it in Settings › Leads"
 }
 
 // FieldFault names the origin as the invalid input.
@@ -269,9 +284,12 @@ func (s *Store) CreateLeadOrigin(ctx context.Context, in CreateLeadOriginInput) 
 	if label == "" {
 		return crmcontracts.LeadOrigin{}, &values.ParseError{Field: leadOriginLabelField, Code: codeRequired, Message: msgLabelRequired}
 	}
+	if err := requireVocabularyLabelWithin(label); err != nil {
+		return crmcontracts.LeadOrigin{}, err
+	}
 	key := strings.TrimSpace(in.Key)
 	if key == "" {
-		key = deriveSourceKey(label)
+		key = values.CatalogKey(label)
 	}
 	if key == "" || key != strings.ToLower(key) {
 		return crmcontracts.LeadOrigin{}, &values.ParseError{Field: leadOriginKeyField, Code: codeInvalidKey, Message: "key must be a non-empty lowercase value"}
@@ -295,11 +313,8 @@ func (s *Store) CreateLeadOrigin(ctx context.Context, in CreateLeadOriginInput) 
 		_, err := tx.Exec(ctx,
 			`INSERT INTO lead_origin (id, key, label, intent, sort_order) VALUES ($1, $2, $3, $4, $5)`,
 			id, key, label, string(intent), in.SortOrder)
-		if storekit.IsUniqueViolation(err) {
-			return apperrors.ErrConflict
-		}
 		if err != nil {
-			return fmt.Errorf("insert lead origin: %w", err)
+			return storekit.NameTaken(fmt.Errorf("insert lead origin: %w", err), leadOriginEntry, label, leadOriginKeyIndex, leadOriginLabelIndex)
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", "lead_origin", id, nil,
 			map[string]any{leadOriginKeyField: key, leadOriginLabelField: label, leadOriginIntentField: string(intent)}); err != nil {
@@ -319,6 +334,11 @@ func (s *Store) UpdateLeadOrigin(ctx context.Context, id ids.UUID, in UpdateLead
 	}
 	if in.Label != nil && strings.TrimSpace(*in.Label) == "" {
 		return crmcontracts.LeadOrigin{}, &values.ParseError{Field: leadOriginLabelField, Code: codeRequired, Message: msgLabelNotEmpty}
+	}
+	if in.Label != nil {
+		if err := requireVocabularyLabelWithin(*in.Label); err != nil {
+			return crmcontracts.LeadOrigin{}, err
+		}
 	}
 	if in.Intent != nil {
 		if _, err := ParseSourceIntent(string(*in.Intent)); err != nil {
@@ -355,7 +375,7 @@ func (s *Store) UpdateLeadOrigin(ctx context.Context, id ids.UUID, in UpdateLead
 			return err
 		}
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
-			return err
+			return storekit.NameTaken(err, leadOriginEntry, storekit.NameAfter(before.Label, in.Label), leadOriginLabelIndex)
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "lead_origin", id, p.Before(), p.After()); err != nil {
 			return err

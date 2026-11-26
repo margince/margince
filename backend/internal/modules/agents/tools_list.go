@@ -131,9 +131,9 @@ func (t listRecords) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["record_type"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","project","product","offer_template","activity","offer","commission","deal_room","deal_room_thread","deal_room_document","deal_room_participant","partner"]},` +
 			t.filtersProperty() + compactRecordsProperty + `
-			"q":{"type":"string","description":"List-route text match alongside filters. Types without text search refuse it."},
+			"q":{"type":"string","description":"Text match beside filters; a type without text search refuses it."},
 			"limit":{"type":"integer","minimum":1,"maximum":50},
-			"cursor":{"type":"string","description":"Keyset cursor from a previous page's next_cursor"}},
+			"cursor":{"type":"string","description":"The previous page's next_cursor"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ListRecordsResult](),
 	}

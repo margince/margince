@@ -38,16 +38,23 @@ type SheetRow = components["schemas"]["AiModelRate"];
 export type ProviderUsage = ProviderUse;
 
 // Whether a vendor can be called (`usable`, the server's answer) crossed with
-// whether routing binds it. Four readings, and the two worth a reader's attention are the off-diagonal
-// ones: a binding with nothing to call it with fails closed, and a keyed vendor
-// nothing is bound to is ready to take a binding.
-export type ProviderState = "active" | "ready" | "needs_key" | "inactive";
+// whether routing binds it. A binding with nothing to call it with fails
+// closed, and a keyed vendor nothing binds is ready to take one. A keyed vendor
+// with no host is neither, so it asks for its service first.
+export type ProviderState =
+  | "active"
+  | "ready"
+  | "needs_key"
+  | "needs_service"
+  | "inactive";
 
 export function providerState(
   status: ProviderStatus,
   usage: ProviderUsage | undefined,
+  unhosted: boolean,
 ): ProviderState {
   const usable = status.usable;
+  if (usable && unhosted) return "needs_service";
   if (usage) return usable ? "active" : "needs_key";
   return usable ? "ready" : "inactive";
 }
@@ -56,6 +63,7 @@ export const STATE_LABEL = {
   active: "aiProviders.state.active",
   ready: "aiProviders.state.ready",
   needs_key: "aiProviders.state.needsKey",
+  needs_service: "aiProviders.state.needsService",
   inactive: "aiProviders.state.inactive",
 } as const satisfies Record<ProviderState, MessageKey>;
 
@@ -64,6 +72,7 @@ export const STATE_KIND: Readonly<Record<ProviderState, StatusKind>> = {
   active: "done",
   ready: "neutral",
   needs_key: "attention",
+  needs_service: "attention",
   inactive: "neutral",
 };
 
@@ -76,6 +85,7 @@ export const STATE_KIND: Readonly<Record<ProviderState, StatusKind>> = {
 export function ProviderSheet({
   status,
   usage,
+  unhosted,
   health,
   connection,
   figures,
@@ -83,6 +93,7 @@ export function ProviderSheet({
 }: Readonly<{
   status: ProviderStatus;
   usage: ProviderUsage | undefined;
+  unhosted: boolean;
   health?: ProviderHealthEntry;
   connection: ReactNode;
   // What this vendor's calls did, between how it is reached and what it costs.
@@ -91,7 +102,7 @@ export function ProviderSheet({
 }>) {
   const t = useT();
   const titleId = useId();
-  const state = providerState(status, usage);
+  const state = providerState(status, usage, unhosted);
   return (
     <Modal open onClose={onClose} labelledBy={titleId} intent="drawer-reading">
       <DrawerHead>

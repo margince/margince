@@ -4,7 +4,13 @@
 import { describe, expect, it } from "vitest";
 import { type Locale, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { DEAL_ROLES, roleFromTyped } from "./recordlabels";
+import {
+  DEAL_ROLES,
+  dealRoleLabel,
+  projectRoleLabel,
+  roleFromTyped,
+  signalKindLabel,
+} from "./recordlabels";
 
 const LOCALES: readonly Locale[] = ["en", "de", "vi"];
 
@@ -44,5 +50,53 @@ describe("a deal role typed in a reader's words", () => {
       "Người ủng hộ nội bộ",
     );
     expect(roleFromTyped("", t, DEAL_ROLES)).toBe("");
+  });
+});
+
+describe("a stored deal role in a reader's words", () => {
+  it.each(LOCALES)("is empty for a typed role (%s)", (locale) => {
+    const t = wordsOf(locale);
+    for (const typed of ["contact", "Key contact", "technical_lead", ""]) {
+      expect(dealRoleLabel(typed, t)).toBe("");
+      expect(projectRoleLabel(typed, t)).toBe("");
+    }
+  });
+
+  it.each(LOCALES)(
+    "is empty for a name every object inherits (%s)",
+    (locale) => {
+      const t = wordsOf(locale);
+      for (const typed of ["__proto__", "constructor", "toString"]) {
+        expect(dealRoleLabel(typed, t)).toBe("");
+        expect(projectRoleLabel(typed, t)).toBe("");
+      }
+    },
+  );
+
+  it.each(LOCALES)("names a built-in role in any case (%s)", (locale) => {
+    const t = wordsOf(locale);
+    expect(dealRoleLabel(" Champion ", t)).toBe(t("co.roleLabel.champion"));
+    expect(dealRoleLabel("decision_maker", t)).toBe(
+      t("co.roleLabel.decision_maker"),
+    );
+    expect(projectRoleLabel("Sponsor", t)).toBe(t("project.role.sponsor"));
+  });
+});
+
+describe("signalKindLabel", () => {
+  const t = (key: string) => `t:${key}`;
+
+  it("words a core kind through the catalog", () => {
+    expect(signalKindLabel("risk", t)).toBe("t:signal.kind.risk");
+  });
+
+  it("shows an extension kind by its own name, without the unit prefix", () => {
+    expect(signalKindLabel("ext:finance-demo:ledger_loss", t)).toBe(
+      "ledger loss",
+    );
+  });
+
+  it("degrades an unknown kind to its own words", () => {
+    expect(signalKindLabel("made_up_kind", t)).toBe("made up kind");
   });
 });

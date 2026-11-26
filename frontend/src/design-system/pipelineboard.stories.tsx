@@ -61,6 +61,7 @@ const boardColumns: BoardMoneyColumn[] = [
     currency: "EUR",
     deals: [
       boardDeal("d1", "Contoso renewal", 12_000, 3, {
+        probabilityPct: 10,
         singleThreaded: true,
         closeDate: "2026-10-14",
         owner: { id: "u-1", name: "Ada Lindqvist" },
@@ -69,6 +70,9 @@ const boardColumns: BoardMoneyColumn[] = [
       // A close date the nightly run set and nobody confirmed: marked, not
       // hidden.
       boardDeal("d2", "Fabrikam expansion", 33_000, 9, {
+        probabilityPct: 25,
+        probabilityReason:
+          "Ada Lindqvist set this by hand. Without it, the stage Discovery gives 10%.",
         stalled: true,
         closeDate: "2026-09-30",
         closeDateProvisional: true,
@@ -85,6 +89,7 @@ const boardColumns: BoardMoneyColumn[] = [
     currency: "EUR",
     deals: [
       boardDeal("d3", "Globex onboarding", 28_000, 14, {
+        probabilityPct: 30,
         owner: { id: "u-2", name: "Tim Rasche" },
       }),
     ],
@@ -107,6 +112,7 @@ const boardColumns: BoardMoneyColumn[] = [
     currency: "EUR",
     deals: [
       boardDeal("d4", "Initech upgrade", 54_000, 21, {
+        probabilityPct: 80,
         singleThreaded: true,
       }),
     ],
@@ -205,7 +211,7 @@ const absentMoneyColumns: BoardMoneyColumn[] = [
     weightedMinor: 22_800,
     currency: "EUR",
     asOf: "2026-10-01",
-    unpricedCount: 1,
+    coverage: { partial: true, noValue: 0, noRate: 1, rateCurrencies: ["USD"] },
     count: 3,
     deals: [
       boardDeal("a4", "Globex EU", 28_000, 6),
@@ -282,7 +288,8 @@ export const WithWithheldCompany: Story = {
 };
 
 // The name truncates and the count beside it never does: the count is the
-// figure a reader compares across the board.
+// figure a reader compares across the board. The head shows the whole name on
+// hover and on focus.
 const longStageColumns: BoardMoneyColumn[] = [
   {
     stage: "negotiation",
@@ -315,6 +322,14 @@ export const WithALongStageName: Story = {
       zone="Europe/Berlin"
     />
   ),
+  play: async ({ canvasElement }) => {
+    const head = canvasElement.querySelector<HTMLElement>(".board-col-head");
+    if (!head) throw new Error("the board drew no stage head");
+    head.focus();
+    await expect(
+      await within(document.body).findByRole("tooltip"),
+    ).toHaveTextContent("Contract negotiation & legal review");
+  },
 };
 
 // Three stages, so the fold at the pipeline's terminal end stays inside the

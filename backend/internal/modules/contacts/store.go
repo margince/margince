@@ -14,9 +14,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // ownerIDColumn is the owner reference column contact and company
@@ -27,8 +27,12 @@ const ownerIDColumn = "owner_id"
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
 // every write rides the storekit audit+outbox shape in one transaction.
 type Store struct {
+	privacyReviewer         PrivacyReviewer
+	signaturePreview        func(string) (string, error)
 	floorCarry              FloorCarry
 	mergeSignalReader       MergeSignalReader
+	signalCarrier           SignalCarrier
+	initiativeCarrier       InitiativeCarrier
 	mergeCommitmentReader   MergeCommitmentReader
 	mergeNoticeReader       MergeNoticeReader
 	mergeContentReader      MergeContentReader
@@ -41,7 +45,7 @@ type Store struct {
 	db *database.DB
 	// catalog is the fieldcatalog seam (custom-field columns); nil means
 	// no catalog is wired and every read/write runs core-columns-only.
-	catalog fieldcatalog.Reader
+	catalog storekit.FieldCatalog
 	// geocodeEnqueue queues a coordinate lookup when an address is written.
 	// Nil is a real composition — a deployment with no geocoder writes the
 	// address and queues nothing; the coordinates are what an installation can
@@ -53,6 +57,9 @@ type Store struct {
 	// contacts never imports a sibling. Nil files links and derives nothing —
 	// which is what every fixture is until it says otherwise.
 	recomputeAudience AudienceRecompute
+	// stampSenders names a newly filed contact the sender where the stated
+	// address proves it. activities owns that rule and compose injects it.
+	stampSenders SenderStamp
 	// seatReadsLeads answers whether another seat may read leads; see the
 	// type below. Nil is a composition that did not wire it.
 	seatReadsLeads SeatReadsLeads
@@ -88,15 +95,24 @@ type Store struct {
 	// grantCarrier moves the shares on a retiring record; nil refuses a merge
 	// that would strand one (grantcarry.go).
 	grantCarrier GrantCarrier
+	// promotionWitness dates what a promoted lead belonged to; nil records nothing.
+	promotionWitness PromotionWitness
 	// shareRequests files the request a held address raises; nil asks nobody.
 	shareRequests ShareRequests
 	// leadArrivals tells a contact's owner about a lead refused for them; nil tells nobody.
 	leadArrivals LeadArrivals
+	// partnerNextSteps writes a partner's next step as a task; nil refuses one.
+	partnerNextSteps PartnerNextSteps
 	// leadQualifyTasks files the durable follow-up when captured work lands on a lead.
 	leadQualifyTasks LeadQualifyTasks
+	// extensions declares the extension tables whose rows depend on a record; a
+	// merge of a record they name is refused (mergedependents.go).
+	extensions extprivacy.Registry
 	// renameInstallation keeps the installation's name on the anchor's display
 	// name (anchorname.go); nil refuses an anchor rename.
 	renameInstallation InstallationRenamer
+	// employerChanges asks a contact's owner about a newer employer; nil asks nobody.
+	employerChanges EmployerChangeProposer
 }
 
 // ConsumerMailReader builds the workspace's consumer-mail matcher on a
@@ -142,7 +158,7 @@ func (s *Store) consumerMailMatcher(ctx context.Context, tx pgx.Tx) (*freemail.M
 // (compose injects modules/customfields' Service here — ADR-0054: a
 // module never imports a sibling), making active cf_* columns
 // participate in person/company reads and writes.
-func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
+func (s *Store) WithFieldCatalog(catalog storekit.FieldCatalog) *Store {
 	s.catalog = catalog
 	return s
 }
@@ -182,6 +198,35 @@ type AudienceRecompute func(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 func (s *Store) WithAudienceRecompute(recompute AudienceRecompute) *Store {
 	s.recomputeAudience = recompute
 	return s
+}
+
+// SenderStamp makes contact the proven sender of the held activities it
+// proves, and answers the activities it wrote (activities.StampProvenSendersTx).
+type SenderStamp func(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, contact ids.UUID) ([]ids.UUID, error)
+
+// WithSenderStamp wires the proven-sender rule every link this store writes
+// applies. A store that links or promotes without it returns an error.
+func (s *Store) WithSenderStamp(stamp SenderStamp) *Store {
+	s.stampSenders = stamp
+	return s
+}
+
+// WithSenderStamp wires the rule on the store behind the agent provider.
+func (p *Provider) WithSenderStamp(stamp SenderStamp) *Provider {
+	p.store.WithSenderStamp(stamp)
+	return p
+}
+
+// WithConsumerMail wires the consumer-mail reader on the store behind the agent provider.
+func (p *Provider) WithConsumerMail(read ConsumerMailReader) *Provider {
+	p.store.WithConsumerMail(read)
+	return p
+}
+
+// WithSenderStamp wires the rule on the store behind the handlers.
+func (h Handlers) WithSenderStamp(stamp SenderStamp) Handlers {
+	h.store.WithSenderStamp(stamp)
+	return h
 }
 
 // WithVatCheckEnqueue wires the VIES consultation a VAT-number write queues.
@@ -224,6 +269,9 @@ func (s *Store) txSnapshot(ctx context.Context, fn func(pgx.Tx) error) error {
 // its own, so every caller that embeds a scope in a larger WHERE needs this
 // substitute. The site read's system worker is one such actor.
 const scopeAllRows = "TRUE"
+
+// scopeNoRows is the predicate for a read the caller may make of no row at all.
+const scopeNoRows = "FALSE"
 
 // scopeOrAllRows renders one table's row-scope clause as a predicate that
 // always composes into a larger WHERE.

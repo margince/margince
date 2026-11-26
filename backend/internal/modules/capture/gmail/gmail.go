@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"golang.org/x/sync/semaphore"
 
@@ -54,6 +55,9 @@ type Connector struct {
 	// dropped with the rest of the delivery-system mail.
 	bounces   connector.BounceSink
 	rawMemory *semaphore.Weighted
+	tuning    connector.BackfillTuning
+	// shared mints shared mailboxes' tokens; nil on a connector that reads none.
+	shared *SharedAuthorizer
 }
 
 var (
@@ -61,6 +65,8 @@ var (
 	_ connector.Watcher        = (*Connector)(nil)
 	_ connector.AccountLabeler = (*Connector)(nil)
 	_ connector.GrantedScoper  = (*Connector)(nil)
+
+	_ connector.SharedMailboxReader = (*Connector)(nil)
 )
 
 // authState is the persisted credential bundle (the opaque connector.Auth).
@@ -153,9 +159,9 @@ func (c *Connector) Authenticate(ctx context.Context, req connector.AuthRequest)
 	return auth, nil
 }
 
-// Sync mints a fresh access token, then pulls incrementally: with no cursor
+// Sync takes the mailbox's access token and pulls incrementally. With no cursor
 // it anchors at the mailbox's current historyId and backfills a bounded
-// window; with a cursor it walks the history API for messages added since.
+// window. With a cursor it walks the history API for messages added since.
 // A cursor Gmail no longer holds (ErrHistoryGone) degrades to a bounded
 // re-list rather than a full re-scan. The advanced historyId is returned as
 // the new cursor; the registry persists it only on a fully-successful Sync.
@@ -164,13 +170,6 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return nil, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	owner := st.Owner // local — never stored on the shared instance
-
-	ctx, access, err := c.authorize(ctx, st)
-	if err != nil {
-		return nil, err
-	}
-
 	start, err := parseCursor(cursor)
 	if err != nil {
 		// A stored cursor we can't read is a bug/corruption, NOT a fresh mailbox:
@@ -178,10 +177,20 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 		// overwriting the watermark (which would drop everything in between).
 		return nil, err
 	}
-	ids, deleted, nextHistory, err := c.selectMessages(ctx, access, start)
+	return authorized(ctx, c, st, func(ctx context.Context, access string) (connector.Cursor, error) {
+		return c.syncFrom(ctx, access, st.Owner, start, sink)
+	})
+}
+
+// syncFrom is one Sync's pull under one access token.
+func (c *Connector) syncFrom(
+	ctx context.Context, access, owner, start string, sink connector.Sink,
+) (connector.Cursor, error) {
+	ids, deleted, nextHistory, relisted, err := c.selectMessages(ctx, access, start)
 	if err != nil {
 		return nil, err
 	}
+	var oldestRead time.Time
 	// The owner's own deletions, reported before this round's new mail lands.
 	// Order matters only in the degenerate case — a message deleted and
 	// re-delivered within one history span — and reporting first is the safe
@@ -207,6 +216,16 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 		if _, err := captureOne(ctx, msg, sink, c.bounces, owner); err != nil {
 			return nil, err
 		}
+		if !msg.ReceivedAt.IsZero() && (oldestRead.IsZero() || msg.ReceivedAt.Before(oldestRead)) {
+			oldestRead = msg.ReceivedAt
+		}
+	}
+	// Gmail dropped the stored cursor and the bounded list came back full, so
+	// mail older than it was left out. That span is recorded, never skipped silently.
+	if start != "" && relisted && len(ids) >= backfillWindow {
+		if err := connector.RecordLostCursor(ctx, oldestRead); err != nil {
+			return nil, err
+		}
 	}
 
 	if nextHistory == "" {
@@ -222,20 +241,20 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 // A BACKFILL reports no deletions, and that is right rather than a gap: it
 // anchors a cursor from the mailbox's current state, so it has no prior state
 // to say anything was removed from.
-func (c *Connector) selectMessages(ctx context.Context, access, start string) (ids, deleted []string, next string, err error) {
+func (c *Connector) selectMessages(ctx context.Context, access, start string) (ids, deleted []string, next string, relisted bool, err error) {
 	if start == "" {
 		anchored, historyID, backfillErr := c.backfill(ctx, access)
-		return anchored, nil, historyID, backfillErr
+		return anchored, nil, historyID, true, backfillErr
 	}
 	added, removed, next, err := c.api.History(ctx, access, start)
 	if errors.Is(err, ErrHistoryGone) {
 		anchored, historyID, backfillErr := c.backfill(ctx, access)
-		return anchored, nil, historyID, backfillErr
+		return anchored, nil, historyID, true, backfillErr
 	}
 	if err != nil {
-		return nil, nil, "", err
+		return nil, nil, "", false, err
 	}
-	return added, removed, next, nil
+	return added, removed, next, false, nil
 }
 
 // backfill anchors the cursor at the mailbox's current historyId and returns
@@ -278,22 +297,18 @@ func captureOne(ctx context.Context, fetched Message, sink connector.Sink, bounc
 	// reported symptom was five "sent" rows in eleven minutes for one email
 	// nobody had sent, rather than a single wrong row.
 	//
-	// Before the parse: a draft needs no reading to be refused.
-	if hasDraftLabel(fetched.Labels) {
-		return false, nil
-	}
-	// Spam and trash for the same reason and in the same place. Both
-	// enumerations already ask Gmail to leave them out — messages.list carries
-	// includeSpamTrash=false — but neither ask is a guarantee about the message
-	// that finally arrives: ids are listed in one call and read in another, and
-	// a message can be moved between them. The listing narrows what is offered;
-	// this refuses what turns up anyway.
-	if hasRejectedLabel(fetched.Labels) {
+	// Before the parse: a draft needs no reading to be refused. Spam and trash
+	// too: both enumerations ask Gmail to leave them out, but a message can be
+	// moved between the listing and this read.
+	if refusedUnread(fetched) {
 		return false, nil
 	}
 	msg, err := parseTimed(ctx, fetched.RFC822, owner)
 	if err != nil {
 		return false, nil //nolint:nilerr // a single unparseable message is a skip, not a fatal pull error (mirrors the IMAP connector)
+	}
+	if unsentOwnMail(fetched, msg) {
+		return false, nil
 	}
 	if _, drop := msg.SkipReason(); drop {
 		return false, mailmap.RecordIfBounce(ctx, fetched.RFC822, bounces)
@@ -335,23 +350,21 @@ func (c *Connector) Normalize(_ context.Context, raw connector.RawRecord) ([]con
 // Watch registers a Gmail users.watch against the Pub/Sub topic so Gmail
 // publishes change notifications for the mailbox, returning the mailbox's
 // historyId at watch time and when the watch expires (Gmail caps it at 7 days).
-// Re-calling it renews the watch. Like Sync, it mints a fresh access token from
-// the stored refresh token; it never touches the CRM or the connection row —
-// the registry persists the expiration into capture_connection.watch_expires_at.
+// Re-calling it renews the watch. Like Sync, it takes an access token from the
+// stored refresh token. It never touches the CRM or the connection row: the
+// registry persists the expiration into capture_connection.watch_expires_at.
 func (c *Connector) Watch(ctx context.Context, auth connector.Auth, topic string) (connector.WatchResult, error) {
 	var st authState
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return connector.WatchResult{}, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	ctx, access, err := c.authorize(ctx, st)
-	if err != nil {
-		return connector.WatchResult{}, err
-	}
-	historyID, expiration, err := c.api.Watch(ctx, access, topic)
-	if err != nil {
-		return connector.WatchResult{}, err
-	}
-	return connector.WatchResult{HistoryID: historyID, ExpiresAt: expiration}, nil
+	return authorized(ctx, c, st, func(ctx context.Context, access string) (connector.WatchResult, error) {
+		historyID, expiration, err := c.api.Watch(ctx, access, topic)
+		if err != nil {
+			return connector.WatchResult{}, err
+		}
+		return connector.WatchResult{HistoryID: historyID, ExpiresAt: expiration}, nil
+	})
 }
 
 // HealthCheck confirms the stored credential still mints a token and the
@@ -361,14 +374,11 @@ func (c *Connector) HealthCheck(ctx context.Context, auth connector.Auth) error 
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	ctx, access, err := c.authorize(ctx, st)
-	if err != nil {
-		return err
-	}
-	if _, _, err := c.api.Profile(ctx, access); err != nil {
-		return err
-	}
-	return nil
+	_, err := authorized(ctx, c, st, func(ctx context.Context, access string) (string, error) {
+		_, historyID, err := c.api.Profile(ctx, access)
+		return historyID, err
+	})
+	return err
 }
 
 // AccountLabel reports the authorizing mailbox, read from the sealed bundle the
@@ -453,10 +463,14 @@ func (c *Connector) ListContainers(
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return nil, false, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	ctx, access, err := c.authorize(ctx, st)
-	if err != nil {
-		return nil, false, err
-	}
-	labels, err := c.api.ListLabels(ctx, access)
+	labels, err := authorized(ctx, c, st, c.api.ListLabels)
 	return labels, false, err
+}
+
+// unsentOwnMail reports whether the owner wrote this message and Gmail has not
+// sent it. The API shows a "Schedule send" message with no label at all, and
+// Gmail files every message the owner sent under SENT. It is captured once
+// Gmail adds SENT, which History reports as a label change.
+func unsentOwnMail(m Message, parsed mailmap.Message) bool {
+	return len(m.Labels) == 0 && parsed.Outbound()
 }

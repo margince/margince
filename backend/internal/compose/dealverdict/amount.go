@@ -15,7 +15,7 @@ import (
 // and the rates, and sets the change in the deal's own currency. The amount
 // written is the one the quote states, to the minor unit.
 func decideAmount(in Input, state State, action Action, rates Rates, change *deals.VerdictChange) (string, error) {
-	if !quoteFound(in, action.Cited, action.QuotedWords) {
+	if !buyerQuoteFound(in, action.Cited, action.QuotedWords) {
 		return DroppedQuoteNotFound, nil
 	}
 	quotedMinor, currency, ok := QuotedPrice(action.QuotedWords)
@@ -33,10 +33,10 @@ func decideAmount(in Input, state State, action Action, rates Rates, change *dea
 	}
 	change.Evidence["amount_currency"] = target
 	if offer := state.AcceptedOffer; offer != nil {
-		if currency != offer.Currency || quotedMinor != offer.GrossMinor || target != offer.Currency {
+		if currency != offer.Currency || quotedMinor != offer.NetMinor || target != offer.Currency {
 			return DroppedOfferFixes, nil
 		}
-		return setAmount(state, change, offer.GrossMinor), nil
+		return setAmount(state, change, offer.NetMinor), nil
 	}
 	if target == currency {
 		return setAmount(state, change, quotedMinor), nil

@@ -25,6 +25,7 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -187,6 +188,7 @@ func generate(root string) error {
 	// frontend/ at all.
 	var screens []extensionUnit
 	var screenDirs []string
+	pins := map[string]string{}
 	for _, m := range composed.Manifests {
 		if m.Unit.Frontend == nil {
 			continue
@@ -196,9 +198,10 @@ func generate(root string) error {
 			return err
 		}
 		screens = append(screens, m.Unit)
+		maps.Copy(pins, m.Unit.Frontend.Pins)
 		screenDirs = append(screenDirs, filepath.ToSlash(rel))
 	}
-	if err := emitComposedFrontendWorkspace(filepath.Join(root, filepath.FromSlash(composedFrontendWorkspaceDir)), screenDirs); err != nil {
+	if err := emitComposedFrontendWorkspace(filepath.Join(root, filepath.FromSlash(composedFrontendWorkspaceDir)), screenDirs, pins); err != nil {
 		return err
 	}
 	if err := linkUnitScreens(root, screens); err != nil {
@@ -397,7 +400,7 @@ var vanillaStubs = []struct {
 }{
 	{
 		rel:   "composition/extensions_gen.go",
-		emit:  func() []byte { return extensionsGen(nil, nil, nil) },
+		emit:  func() []byte { return extensionsGen(nil, nil, nil, nil) },
 		align: "align the committed stub with tools/gen-composition",
 	},
 	{
@@ -407,12 +410,12 @@ var vanillaStubs = []struct {
 	},
 	{
 		rel:   frontendScreensVanillaStub,
-		emit:  func() []byte { return extScreensGen(nil, nil) },
+		emit:  func() []byte { return extScreensGen(nil, nil, nil) },
 		align: "align the committed stub with tools/gen-composition (emit.go's extScreensGenHeader)",
 	},
 	{
 		rel:   frontendLocalesVanillaStub,
-		emit:  func() []byte { return extLocalesGen(nil) },
+		emit:  func() []byte { return extLocalesGen(nil, nil) },
 		align: "align the committed stub with tools/gen-composition (emit.go's extLocalesGenHeader)",
 	},
 	{

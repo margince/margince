@@ -1,0 +1,9 @@
+{
+  "verb": "acknowledge_company_view",
+  "checks": [
+    "company.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

@@ -3,6 +3,24 @@
 
 import type { MessageKey } from "../../i18n/en";
 import type { SettingsPageId } from "../../lib/settingscatalog";
+import { AGENT_RULES_SUBPAGE } from "../../lib/settingsrouting";
+
+// Agent rules is drawn at an address of its own under its page, led by its own
+// name as a tab is.
+const AGENT_RULES_SECTIONS = [
+  "aiAccess.dev.tab.rules",
+  "tools.title",
+  "settings.autonomy",
+  "settings.tierRead",
+  "settings.tierSend",
+  "settings.tierWait",
+  "settings.tierAdvance",
+] as const satisfies readonly MessageKey[];
+
+/** The sections a tabless page draws at a sub-address, keyed by its segment. */
+export const SUBPAGE_SECTIONS: Partial<
+  Record<SettingsPageId, Readonly<Record<string, readonly MessageKey[]>>>
+> = { agents: { [AGENT_RULES_SUBPAGE]: AGENT_RULES_SECTIONS } };
 
 // The panel titles and setting names each page draws, as catalog keys. Search
 // finds a page by one of its settings in the reader's language. A tabbed page
@@ -11,6 +29,7 @@ export const SETTINGS_SECTIONS = {
   account: [
     "settings.profileTitle",
     "account.signInCard",
+    "account.devicesCard",
     "account.browserCard",
     "account.pictureLabel",
     "settings.displayName",
@@ -23,6 +42,7 @@ export const SETTINGS_SECTIONS = {
     "account.languageCard",
     "account.timezoneLabel",
     "settings.appearance",
+    "account.singleKeyShortcuts",
     "overnightGrant.title",
     "overnightGrant.label",
   ],
@@ -32,6 +52,8 @@ export const SETTINGS_SECTIONS = {
       "scheduling.linksTitle",
       "scheduling.setup.title",
       "scheduling.acceptBookings",
+      "scheduling.teamLinks.title",
+      "scheduling.teamLinks.create",
     ],
     availability: [
       "settings.part.meetings.availability",
@@ -58,19 +80,15 @@ export const SETTINGS_SECTIONS = {
     "settings.voice.sentMailLabel",
   ],
   agents: [
+    "aiAccess.yourAgent.title",
     "aiAccess.connect.title",
     "agents.connected",
-    "aiAccess.dev.title",
-    "settings.passports",
-    "tools.title",
-    "settings.autonomy",
     "autonomy.title",
     "approvalPreferences.title",
+    "aiAccess.dev.title",
+    "settings.passports",
     "settings.passportUseAi",
-    "settings.tierRead",
-    "settings.tierSend",
-    "settings.tierWait",
-    "settings.tierAdvance",
+    ...AGENT_RULES_SECTIONS,
   ],
   notifications: [
     "notifications.title",
@@ -172,7 +190,7 @@ export const SETTINGS_SECTIONS = {
       "lossReasons.title",
       "lossReasons.legacyTitle",
     ],
-    reviews: ["settings.part.deals.reviews"],
+    reviews: ["settings.part.deals.reviews", "reviewTemplates.title"],
     legal: [
       "settings.part.deals.legal",
       "legalReview.settingsTitle",
@@ -214,6 +232,9 @@ export const SETTINGS_SECTIONS = {
       "mailSharing.sharedPosture.label",
       "captureMailSync.interval.label",
       "captureReview.passCap.label",
+      "captureReview.verdictCap.label",
+      "captureReview.classifyCap.label",
+      "captureReview.owedCap.label",
     ],
     domains: [
       "settings.part.capture.domains",
@@ -245,6 +266,11 @@ export const SETTINGS_SECTIONS = {
     telegram: [
       "settings.part.integrations.telegram",
       "connectors.telegramTitle",
+      "connectors.bot.dispactTitle",
+    ],
+    "shared-mailboxes": [
+      "settings.part.integrations.sharedMailboxes",
+      "sharedMailboxes.title",
     ],
     units: ["settings.part.integrations.units"],
   },
@@ -273,7 +299,13 @@ export const SETTINGS_SECTIONS = {
   models: {
     providers: ["settings.part.models.providers", "aiProviderKeys.title"],
     tiers: ["settings.part.models.tiers", "aiRouting.title"],
-    tasks: ["settings.part.models.tasks", "aiTasks.title"],
+    tasks: [
+      "settings.part.models.tasks",
+      "aiTasks.title",
+      "privateMailRequests.title",
+      "privateMailRequests.switch",
+      "privateMailRequests.share",
+    ],
     prices: [
       "settings.part.models.prices",
       "aiPriceSync.title",
@@ -304,6 +336,9 @@ export const SETTINGS_SECTIONS = {
       "settings.part.privacy.retention",
       "retention.title",
       "retention.retainOnly",
+      "archivePurpose.title",
+      "archivePurpose.label",
+      "archiveReview.title",
     ],
     requests: ["settings.part.privacy.requests", "privacy.requestsPanel"],
     duties: ["settings.part.privacy.duties", "notice.title"],
@@ -312,6 +347,12 @@ export const SETTINGS_SECTIONS = {
     "jurisdiction.effects.title",
     "jurisdiction.selected.label",
     "jurisdiction.documents.title",
+    "particulars.title",
+    "particulars.legalName",
+    "particulars.postalAddress",
+    "particulars.privacyContact",
+    "particulars.objectionRoute",
+    "particulars.advertiserContact",
   ],
   audit: [],
   "system-health": {
@@ -331,6 +372,7 @@ export const SETTINGS_SECTIONS = {
       "settings.captureHealth",
       "settings.automaticWork",
       "settings.recoveryHealth",
+      "settings.vacuumHealth",
     ],
     configuration: [
       "health.configuration",
@@ -357,6 +399,7 @@ export const SETTINGS_SECTIONS = {
   configuration: ["configuration.title"],
   extensions: [],
   reset: ["settings.dangerZone", "settings.resetDataLabel"],
+  about: [],
 } as const satisfies Record<
   SettingsPageId,
   readonly MessageKey[] | Readonly<Record<string, readonly MessageKey[]>>
@@ -380,7 +423,7 @@ export function settingsSectionKeys(
     .flatMap(([, keys]) => keys);
 }
 
-/** The tab of `page` that draws the section `key`, if the page has tabs. */
+/** The tab or sub-address of `page` that draws the section `key`, if any. */
 export function settingsSectionTab(
   page: SettingsPageId,
   key: MessageKey,
@@ -388,8 +431,10 @@ export function settingsSectionTab(
   const sections:
     | readonly MessageKey[]
     | Readonly<Record<string, readonly MessageKey[]>> = SETTINGS_SECTIONS[page];
-  if (Array.isArray(sections)) return undefined;
-  return Object.entries(sections).find(([, keys]) => keys.includes(key))?.[0];
+  const parts = Array.isArray(sections)
+    ? (SUBPAGE_SECTIONS[page] ?? {})
+    : sections;
+  return Object.entries(parts).find(([, keys]) => keys.includes(key))?.[0];
 }
 
 // The company-context card's names, drawn where `companyContextShown` says.

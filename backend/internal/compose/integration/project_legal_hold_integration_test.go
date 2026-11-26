@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -124,7 +125,7 @@ func TestErasureKeepsASubjectOnlyNoteFiledUnderAHeldProject(t *testing.T) {
 	seedDerivedRows(t, e, onHeld, subject)
 	seedDerivedRows(t, e, onFree, subject)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), subject, "test"); err != nil {
 		t.Fatalf("erasing an unheld subject: %v", err)
 	}
 

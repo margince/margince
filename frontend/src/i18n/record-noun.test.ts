@@ -80,9 +80,19 @@ const RETIRED_NOUN: Record<string, RegExp> = {
 // catalog is judged against the retired noun.
 const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   en: [
+    // Automation authority and assignments name human account holders.
+    "auto.setup.noAuthorizer",
+    "auto.setup.inactive",
+    "auto.ownerFor",
+    "auto.ownerHint",
+    "auto.renewal.authorizer",
     // A duplicate case asks whether two contacts are the same human being.
     "contactCase.intro",
+    // "In person" says the rep and the contact were in one room.
+    "compose.why.met",
+    "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
+    "contactCase.evidence.hint",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
     "worklist.ask.contact_case",
@@ -97,10 +107,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // "a person" here is a HUMAN BEING deciding, not the contact record.
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
-    "confirm.done.body",
-    "firstRun.microsoft.note",
+    "analytics.outcomesOwnLensOnly",
     "firstRun.microsoft.tenantHint",
-    "firstRun.platform.redirectHint",
     "firstRun.platform.sub",
     "oauthApp.google.sub",
     "oauthApp.microsoft.sub",
@@ -130,6 +138,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "compose.audienceParticipantsHint",
     "compose.audienceSelected",
     "compose.audienceSelectedHint",
+    "activity.audience.participantsHint",
+    "activity.audience.selectedHint",
     "connectors.mailPosture.help.classified",
     "connectors.mailPosture.help.held",
     "email.access.sentence.participants",
@@ -168,12 +178,41 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   de: [
+    // Automation authority and assignments name human account holders.
+    "auto.setup.noAuthorizer",
+    "auto.setup.inactive",
+    "auto.ownerHint",
+    "auto.renewal.recordOwner",
+    "auto.renewal.authorizer",
+    "inquiry.trigger",
+    "inquiry.mode.one",
+    "inquiry.mode.rotate",
+    "inquiry.colleague",
+    "inquiry.colleagues",
+    "inquiry.chooseColleague",
+    "inquiry.chooseColleagues",
+    "inquiry.colleagueUnavailable",
+    "inquiry.keepOwner",
+    "inquiry.coordinatorHint",
+    "inquiry.reason.owner",
+    "inquiry.reason.recipientChanged",
+    "inquiry.reason.rotation",
+    "inquiry.existingLimit",
+    "inquiry.assignment.chooseColleague",
+    "inquiry.assignment.movesLead",
+    "inquiry.assignment.taskOnly",
+    // The room names a colleague who answers buyers, not a contact record.
+    "room.stewardNeeded.body",
+    // The signature belongs to a human member, not a contact record.
+    "settings.signatureReviewIntro",
     "analytics.team.eventCredit",
     "analytics.team.qualificationBasis",
     "analytics.team.targetBasis",
     // A duplicate case asks whether two contacts are the same human being; an owner is a human too.
     "contactCase.intro",
+    "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
+    "contactCase.evidence.hint",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
     "worklist.ask.contact_case",
@@ -206,22 +245,28 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // These name the human making a promise or decision, not a contact record.
     "approval.commitment.unresolved",
 
+    // The meeting's organizer is a human, not the CRM contact record type.
+    "meetingChange.line.details",
+    "worklist.ask.invitation",
+    "worklist.ask.changedInvitation",
+    "worklist.ask.meeting.updated",
+    "worklist.ask.meeting.canceled",
     // The meeting host is a human, not the CRM contact record type.
     "scheduling.windowHorizon",
     "scheduling.windowLimits",
     "scheduling.calendarUnavailable",
-    "scheduling.guestRecovery",
-    "scheduling.deliveryUnknown",
-    "scheduling.personalGuest",
-    "scheduling.unavailable",
+    "book.recovery",
+    "book.deliveryUnknown",
+    "book.personalGuest",
+    "book.unavailable",
     // Names this rename leaves alone: Settings → People, which heads the SEATS
     // group beside Company and Sales, not this record type.
     "settings.group.people",
     // "a person" here is a HUMAN BEING deciding, not the contact record.
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
+    "common.ownerNotMeasurable",
     "common.permissionDenied",
-    "confirm.done.body",
     "deal.notYoursToChange",
     "deals.totalsOwnerNotMeasurable",
     "lead.boardCountsOwnerNotMeasurable",
@@ -229,6 +274,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // The same refusal as the two above, for a colleague's queue.
     "worklist.owner.refused",
     "lists.audience.ownerTeams",
+    "lists.audience.ownerOnly",
+    "lists.audience.stewardOnly",
+    "lists.audience.youAndSteward",
+    "lists.audience.ownerAndSteward",
     "lists.team.allOwners",
     "ob.conv.team.body",
     "ob.conv.voice.speakerContinue",
@@ -261,6 +310,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "compose.audienceParticipantsHint",
     "compose.audienceSelected",
     "compose.audienceSelectedHint",
+    "activity.audience.selectedHint",
     "email.access.sentence.selected",
     "timeline.group.bulk_one",
     "timeline.group.bulk_other",
@@ -281,25 +331,53 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "trust.typedByHuman",
     // A human being in a sentence about contacts rather than about the record.
     "privacy.inboxAdminOnly",
-    "sendPermission.reason.askedUsToStop",
     "sendPermission.reason.noMarketingConsent",
     "sendPermission.reason.noMarketingConsentFact",
-    "sendPermission.reason.objected",
-    "sendPermission.reason.restricted",
     "sendPermission.reason.tooMany",
-    "sendPermission.reason.optedOutAfterRequest",
     "sendPermission.reason.consentRequired",
+    "sendPermission.reason.subjectLabelMissing",
+    "sendPermission.reason.subjectLabelsConflict",
     "sendPermission.reason.dealNotRequested",
     "sendPermission.reason.unconfirmed",
-    "sendPermission.reason.withdrawn",
     // A human being on the committee, or who owns or sets something, not the record type.
     "co.aside.visibleOnlyOwner",
+    "filters.pickOwner",
+    "co.aside.visibleTheOwnerAndShared_one",
+    "co.aside.visibleTheOwnerAndShared_other",
     "contact.card.committee_one",
     "contact.card.committee_other",
     // The person who runs the server restores the backup.
     "health.setup.recovery.todo",
+    // The data subject who asked for the erasure: the privacy term itself.
+    "create.addressErased",
   ],
   vi: [
+    // "Người tổ chức" is the meeting's organizer, a person.
+    "meetingChange.line.details",
+    "worklist.ask.changedInvitation",
+    "worklist.ask.meeting.updated",
+    "worklist.ask.meeting.canceled",
+    "worklist.ask.meeting_outcome.read_only",
+    // Automation authority and assignments name human account holders.
+    "auto.setup.noAuthorizer",
+    "auto.setup.inactive",
+    "auto.colOwner",
+    "auto.ownerFor",
+    "auto.ownerHint",
+    "auto.renewal.recordOwner",
+    "auto.renewal.authorizer",
+    "inquiry.keepOwner",
+    "inquiry.assignmentReason",
+    "inquiry.reason.owner",
+    "inquiry.reason.ownerReview",
+    "inquiry.reason.recipientChanged",
+    "inquiry.reason.rotation",
+    "inquiry.existingLimit",
+    "inquiry.assignment.taskHolder",
+    "inquiry.assignment.newHolder",
+    "inquiry.assignment.taskOnly",
+    "inquiry.currentRecordOwner",
+    "directSend.correctionScope",
     // These messages name actual readers and participants, not contact records.
     "internalMail.historyImportNote",
     "internalMail.scope",
@@ -312,6 +390,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "analytics.team.qualificationUnattributed_one",
     "analytics.team.qualificationUnattributed_other",
     // Operators and mailbox owners are human roles, not contact record types.
+    "settings.signatureReviewChanged",
     "health.stoppedNext",
     "health.readFailedNext",
     "health.effect.jobs",
@@ -331,7 +410,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
 
     // A duplicate case asks whether two contacts are the same human being; an owner is a human too.
     "contactCase.intro",
+    "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
+    "contactCase.evidence.hint",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
     "worklist.ask.contact_case",
@@ -358,11 +439,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "homeRepair.explain",
     // These name users, recipients and participants, not contact records.
     "approval.scheduled.rearm",
-    "sendPermission.appliesToAndMore_one",
-    "sendPermission.appliesToAndMore_other",
     "sendPermission.appliesToSome_one",
     "sendPermission.appliesToSome_other",
-    "sendPermission.ready",
     "approval.read.retained",
     "approval.read.effect",
     "approval.preview.companyPrivateReadings",
@@ -421,13 +499,14 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "scheduling.windowHorizon",
     "scheduling.windowLimits",
     "scheduling.calendarUnavailable",
-    "scheduling.guestRecovery",
-    "scheduling.deliveryUnknown",
-    "scheduling.personalGuest",
-    "scheduling.unavailable",
+    "book.recovery",
+    "book.deliveryUnknown",
+    "book.personalGuest",
+    "book.unavailable",
     // Human account holders whose full seats determine the shared allowance.
     "aiAdmin.fixed",
-    "aiAdmin.formula",
+    "aiAdmin.formula_one",
+    "aiAdmin.formula_other",
     "aiAdmin.floor",
     "aiAdmin.perUser",
     "aiAdmin.overrideHint",
@@ -476,9 +555,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "common.permissionDenied",
     "deepread.sub",
     "extUnits.workspace.sub",
-    "firstRun.microsoft.note",
     "firstRun.microsoft.tenantHint",
-    "firstRun.platform.redirectHint",
     "firstRun.platform.sub",
     "ob.conv.invite.noBody",
     "ob.conv.team.body",
@@ -514,7 +591,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "log.attendee",
     "log.otherAttendees",
     "activity.detail.attendees",
-    "book.attendee",
+    "scheduling.attendeeEmail",
     "followUpSettings.daysHint",
     "scheduling.cancelConfirm",
     "pipeline.reason.answered_on_the_company",
@@ -529,14 +606,15 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.tooMany",
     "sendPermission.reason.optedOutAfterRequest",
     "sendPermission.reason.consentRequired",
+    "sendPermission.reason.subjectLabelMissing",
+    "sendPermission.reason.subjectLabelsConflict",
     "sendPermission.reason.dealNotRequested",
     "sendPermission.reason.unconfirmed",
     "sendPermission.reason.withdrawn",
-    "buyer.contact",
     "buyer.contactEyebrow",
     "buyer.deadAskContact",
     "buyer.docs.downloadFailed",
-    "buyer.previewBanner",
+    "room.previewBanner",
     "buyer.stewardUnknown",
     "captureNotice.yourControl",
     "captureSettings.signatureEnrich.help",
@@ -544,10 +622,11 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "compose.audienceParticipantsHint",
     "compose.audienceSelected",
     "compose.audienceSelectedHint",
+    "activity.audience.participantsHint",
+    "activity.audience.selectedHint",
     "compose.colleagueMailbox_one",
     "compose.colleagueMailbox_other",
     "compose.emptyRecipients",
-    "compose.multiRecipientWarning",
     "compose.sharedUnsubscribeToken",
     "compose.threadGone",
     // "người gửi" is a sender, a human the mailbox heard from.
@@ -575,9 +654,13 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "roompage.pauseHint",
     "roompage.previewNotYours",
     "roompage.viewAsBuyer",
+    "room.stewardNeeded.title",
+    "room.stewardNeeded.body",
+    "roomtab.manage.contactMissing",
     "roomtab.manage.contactHint",
     "roomtab.manage.contactLabel",
     "roomtab.manage.contactOwner",
+    "roomtab.manage.expiredHint",
     "roomtab.manage.foot",
     "roomtab.manage.liveHint",
     "roomtab.manage.welcomeHint",
@@ -638,6 +721,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "bulk.refusal.required",
     "bulk.titleReassign",
     "lists.audience.ownerTeams",
+    "lists.audience.ownerOnly",
+    "lists.audience.stewardOnly",
+    "lists.audience.youAndSteward",
+    "lists.audience.ownerAndSteward",
     "lists.team.allOwners",
     "client.sender",
     "client.unknownDetail",
@@ -648,10 +735,12 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "co.role.user",
     "co.roleLabel.blocker",
     "co.roleLabel.champion",
+    "co.roleLabel.decision_maker",
     "co.roleLabel.economic_buyer",
     "co.roleLabel.influencer",
     "co.roleLabel.user",
     "co.spine.andOthers",
+    "common.ownerNotMeasurable",
     "coverage.risk.champion_left",
     "coverage.risk.coverage_gap",
     "deal.newProjectOwner",
@@ -663,6 +752,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "files.originUnknown",
     "lead.boardCountsOwnerNotMeasurable",
     "lead.bulkOwnerPick",
+    "filters.pickOwner",
     "log.transcriptHint",
     "ob.manual.buying_centerHint",
     "contact.intro.answerSuggest",
@@ -700,6 +790,14 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "senders.keepOutBody",
     "senders.keepOutTitle",
     "senders.title",
+    // "người gửi" in the waiting drawer is the SENDER of the mail, as above.
+    "senders.waiting.businessTitle",
+    "senders.waiting.removeBody",
+    "senders.waiting.why.classifying",
+    "senders.waiting.why.decided",
+    "senders.waiting.why.queued",
+    "senders.waiting.why.unjudgeable",
+    "senders.waiting.why.unsure",
     "signal.kind.champion_left",
     "timeline.withheld",
     "visibility.participants",
@@ -747,10 +845,13 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "legalReview.settingsHint",
     "legalReview.col.requestedBy",
     "legalReview.col.decidedBy",
+    "ownerPick.change",
     // A human being on the committee, or who owns or sets something, not the record type.
     "co.overview.noEconomicBuyer",
     "co.aside.visibleEveryone",
     "co.aside.visibleOnlyOwner",
+    "co.aside.visibleTheOwnerAndShared_one",
+    "co.aside.visibleTheOwnerAndShared_other",
     "deal.committee.missing.champion",
     "deal.committee.foot",
     "contact.card.noEconomicBuyer",
@@ -811,3 +912,45 @@ describe.each(Object.keys(CATALOGS))(
     });
   },
 );
+
+// The company record is called a company, and English once called it an
+// account. The word also names a mail, user, channel or provider account, so a
+// sweep of every value cannot tell the two apart. The key can. These keys, and
+// the keys under these prefixes, use "account" for the company record. Their
+// English value must not.
+const COMPANY_SENSE_ACCOUNT_KEYS = [
+  "analytics.sectionAccounts",
+  "analytics.accounts.",
+  "deal.aside.account",
+  "dealSuggestion.accountOwner",
+  "linkedinReach.account",
+  "co.contacts.map.account",
+  "rollup.accounts",
+  "reporting.prepared.accounts",
+  "reporting.account_cohort",
+  "agent.activity.accountScan",
+  "jobs.kind.account_scan",
+  "aiTask.name.account_scan",
+  "worklist.because.account_termination",
+];
+
+describe("en names the company record a company", () => {
+  const underCompanySense = (key: string) =>
+    COMPANY_SENSE_ACCOUNT_KEYS.some((prefix) => key.startsWith(prefix));
+
+  it("no key that names the company with the old word says account", () => {
+    const stale = Object.keys(en).filter(
+      (key) =>
+        underCompanySense(key) &&
+        /\baccounts?\b/i.test(visibleWords((en as Catalog)[key])),
+    );
+    expect(stale).toEqual([]);
+  });
+
+  it("every listed key or prefix still names a key", () => {
+    const spent = COMPANY_SENSE_ACCOUNT_KEYS.filter(
+      (prefix) => !Object.keys(en).some((key) => key.startsWith(prefix)),
+    );
+    expect(spent).toEqual([]);
+  });
+});

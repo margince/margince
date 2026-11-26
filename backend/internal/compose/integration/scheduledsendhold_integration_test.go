@@ -45,17 +45,29 @@ func (p *preflightEnv) scheduledCreation(t *testing.T, id ids.UUID) time.Time {
 // the rep claimed, and returns the scheduled record's id.
 func (p *preflightEnv) scheduleClaiming(t *testing.T, claim AnyMap) ids.UUID {
 	t.Helper()
+	return p.scheduleClaimingAt(t, claim, "/v1/activities/"+p.activityID+"/send-email")
+}
+
+func (p *preflightEnv) scheduleClaimingAt(t *testing.T, claim AnyMap, path string) ids.UUID {
+	t.Helper()
 	body := AnyMap{
 		"subject": "Next steps", "body": "Written the night before.",
 		"to":           []string{"buyer@preflight.test"},
 		"scheduled_at": clocktest.Now(t).Add(2 * time.Hour).UTC().Format(time.RFC3339),
 		"scheduled_tz": "Europe/Berlin",
 	}
+	if path == "/v1/emails" {
+		links := []AnyMap{{"entity_type": "contact", "entity_id": p.contactID}}
+		if p.dealID != "" {
+			links = append(links, AnyMap{"entity_type": "deal", "entity_id": p.dealID})
+		}
+		body["links"] = links
+	}
 	maps.Copy(body, claim)
 	var scheduled struct {
 		ID string `json:"id"`
 	}
-	if status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", body, nil, &scheduled); status != http.StatusCreated {
+	if status := p.Call(t, "POST", path, body, nil, &scheduled); status != http.StatusCreated {
 		t.Fatalf("scheduling %v → %d, want 201", claim, status)
 	}
 	return uuidOf(t, scheduled.ID)

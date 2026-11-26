@@ -59,6 +59,24 @@ func refuseRemovedEmail(ctx context.Context, tx pgx.Tx, email string) error {
 	return nil
 }
 
+// errAlreadyInvited refuses an invite to a member who is still waiting on one.
+// That member exists, and a resend from the roster reaches them.
+var errAlreadyInvited = fmt.Errorf("%w: this address already has an invitation waiting", apperrors.ErrConflict)
+
+func refuseWaitingInvitation(ctx context.Context, tx pgx.Tx, email string) error {
+	var waiting bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM app_user u
+		 WHERE `+storekit.SeatLoginIsSQL("u", "@"+memberEmailField, "@"+memberDomainField)+`
+		   AND `+ActivatableMemberSQL("u")+` AND u.status = '`+userStatusInvited+`'
+		   AND NOT u.is_agent AND u.removed_at IS NULL)`, memberLoginArgs(email)).Scan(&waiting); err != nil {
+		return err
+	}
+	if waiting {
+		return errAlreadyInvited
+	}
+	return nil
+}
+
 // typedLoginAddress lowercases and trims the address, and leaves its domain
 // un-IDNA-folded.
 //
@@ -66,6 +84,22 @@ func refuseRemovedEmail(ctx context.Context, tx pgx.Tx, email string) error {
 // email_domain_folded is unwritten, and FoldLoginDomainsTx writes those a page
 // at a time.
 func typedLoginAddress(email string) string { return strings.ToLower(strings.TrimSpace(email)) }
+
+// sameLoginIdentity reports whether two spellings name one seat login. The
+// local parts match lowercased and the domains match once folded, as
+// SeatLoginIsSQL reads them. A Unicode domain, its punycode form and a trailing
+// dot are one address.
+func sameLoginIdentity(a, b string) bool {
+	a, b = typedLoginAddress(a), typedLoginAddress(b)
+	if a == b {
+		return true
+	}
+	domainA, domainB := owndomain.OfAddress(a), owndomain.OfAddress(b)
+	if domainA == "" || domainA != domainB {
+		return false
+	}
+	return a[:strings.LastIndex(a, "@")] == b[:strings.LastIndex(b, "@")]
+}
 
 // memberLoginArgs binds one typed address for a seat-login comparison: the
 // address as typed, and its domain folded the way the column stores it.

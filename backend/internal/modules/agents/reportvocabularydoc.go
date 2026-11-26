@@ -4,8 +4,8 @@
 package agents
 
 // `margince://schema/reports` — the three plan vocabularies each prebuilt report
-// accepts, published as a document rather than recited into run_report's own
-// input schema.
+// accepts. run_report's description lists only measures and dimensions; filters
+// and aggregates live here.
 //
 // run_report's `report` property carried these lists for all nine prebuilt
 // reports — 3.4KB of one tool's description, 6% of the whole served catalog and
@@ -93,7 +93,7 @@ func (ReportVocabularyResource) Resources(context.Context) []mcp.Resource {
 // matching every other read on this surface.
 func (r ReportVocabularyResource) ReadResource(ctx context.Context, uri string) (mcp.ResourceContents, error) {
 	if uri != ReportVocabularyURI {
-		return mcp.ResourceContents{}, fmt.Errorf("agents: resource %q: %w", uri, apperrors.ErrNotFound)
+		return mcp.ResourceContents{}, fmt.Errorf("no resource is published at %q: %w", uri, apperrors.ErrNotFound)
 	}
 	// Through the same seam the tool reads, so the two doors serve one byte
 	// sequence rather than two renderings that agree today.
@@ -174,7 +174,7 @@ func (r ReportVocabularyResource) document() reportVocabularyDoc {
 			GroupBy:    closedList(entry.GroupBy),
 			Filters:    closedList(entry.Filters),
 			Aggregates: closedList(entry.Aggregates),
-			Defaults:   entry.Defaults,
+			Defaults:   entry.defaults(),
 			Notes:      entry.Notes,
 		})
 	}

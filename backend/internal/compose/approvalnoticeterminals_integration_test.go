@@ -14,7 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/notices"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -56,7 +55,7 @@ func TestNoticeReconciliationRetractsDecidedExpiredAndSupersededProposals(t *tes
 func stageRevisedNoticeCorrection(t *testing.T, a approvalNotifyEnv) {
 	t.Helper()
 	proposal, err := json.Marshal(deals.CloseDateCorrection{
-		DealID: ids.From[ids.DealKind](a.deal), ExpectedCloseDate: "2027-01-01", Basis: "The buyer confirmed a later date",
+		DealID: ids.From[ids.DealKind](a.deal), ExpectedCloseDate: closeDateAhead(t), Basis: "The buyer confirmed a later date",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -80,14 +79,14 @@ func TestNoticeReconciliationDoesNotRestoreErasedProposalEvidence(t *testing.T) 
 	subject, activity, _ := transcriptSubject(t, a.e)
 	_, staged := a.stage(a.proposerCtx(ids.Nil), t, approvals.StageInput{
 		Kind: deals.CloseDateCorrectionKind, TargetType: "deal", TargetID: a.deal,
-		ProposedChange: json.RawMessage(`{"deal_id":"` + a.deal.String() + `","expected_close_date":"2027-01-01","basis":"The buyer confirmed a later date"}`),
+		ProposedChange: json.RawMessage(`{"deal_id":"` + a.deal.String() + `","expected_close_date":"` + closeDateAhead(t) + `","basis":"The buyer confirmed a later date"}`),
 		DiffHash:       "private-quote", Summary: quotedTranscriptLine,
 		Evidence: []approvals.Evidence{{Snippet: quotedTranscriptLine, SourceType: transcriptTargetType, SourceID: activity}},
 	})
 	a.deliver(t, staged)
 	assertReconciledHomeNotices(t, a, 0)
 	ctx := principal.SystemActing(a.e.Admin(), approvalNoticeRetractActor)
-	if err := privacy.NewEraser(a.db).EraseContact(a.e.Admin(), subject.UUID, "Subject requested erasure"); err != nil {
+	if err := eraserWithGraph(a.db).EraseContact(a.e.Admin(), subject.UUID, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
 	_, changed, err := newApprovalNoticeReconcileWorker(a.e.Pool).reconcilePage(ctx, ids.Nil)
@@ -126,13 +125,13 @@ func TestRepeatedSubjectErasureRecordsEachNoticeOnce(t *testing.T) {
 	subject := a.e.SeedContact(t, "Dana Buyer", &a.e.AdminUser)
 	_, staged := a.stage(a.proposerCtx(ids.Nil), t, approvals.StageInput{
 		Kind: "update_record", TargetType: "contact", TargetID: subject,
-		ProposedChange: json.RawMessage(`{"record_type":"contact","id":"` + subject.String() + `","fields":{"title":"Buyer"}}`),
+		ProposedChange: json.RawMessage(`{"why":"A test asks for this change.","record_type":"contact","id":"` + subject.String() + `","fields":{"title":"Buyer"}}`),
 		DiffHash:       "contact-title", Summary: "Update contact title",
 	})
 	a.deliver(t, staged)
 	assertReconciledHomeNotices(t, a, 0)
 	for range 2 {
-		if err := privacy.NewEraser(a.db).EraseContact(a.e.Admin(), subject, "Subject requested erasure"); err != nil {
+		if err := eraserWithGraph(a.db).EraseContact(a.e.Admin(), subject, "Subject requested erasure"); err != nil {
 			t.Fatal(err)
 		}
 	}

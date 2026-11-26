@@ -22,12 +22,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
-	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -55,6 +53,7 @@ type WorkflowEngine struct {
 	// clock fixes the instant a setter's expiry is judged at; nil reads the
 	// database's own clock, the one authentication judges a passport by.
 	clock func() time.Time
+	fence FiringFence
 }
 
 // NewWorkflowEngine builds the engine over the pool and the authz resolver
@@ -86,11 +85,11 @@ func (e *WorkflowEngine) RegisterWorkflow(h workflow.Handler) {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic("crmagents: registering a workflow with no name")
 	}
-	if spec.Trigger.EventType == "" && spec.Trigger.Schedule == "" {
+	if spec.Trigger.EventType == "" && (spec.Trigger.Schedule == "" || len(spec.Trigger.AdditionalEventTypes) > 0) {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic(fmt.Sprintf("crmagents: workflow %s declares no trigger", spec.Name))
 	}
-	if spec.Trigger.EventType != "" && spec.Trigger.Schedule != "" {
+	if spec.Trigger.Schedule != "" && (spec.Trigger.EventType != "" || len(spec.Trigger.AdditionalEventTypes) > 0) {
 		// isClockTrigger (engine_run.go) and runOne's dispatch both
 		// assume EventType/Schedule are mutually exclusive: a handler
 		// setting both would have its non-matches silently swallowed as a
@@ -118,7 +117,7 @@ func (e *WorkflowEngine) RegisterWorkflow(h workflow.Handler) {
 // run row still claims (handler, key), so redelivery stays exactly-once.
 func (e *WorkflowEngine) RegisterSystemWorkflow(h workflow.Handler) {
 	spec := h.Spec()
-	if spec.Name == "" || spec.Trigger.EventType == "" {
+	if spec.Name == "" || spec.Trigger.EventType == "" || spec.Trigger.Schedule != "" {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic("crmagents: system workflow needs a name and an event trigger")
 	}
@@ -169,7 +168,7 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 
 	var firstErr error
 	for _, h := range system {
-		if h.Spec().Trigger.EventType != env.Type {
+		if !h.Spec().Trigger.MatchesEventType(env.Type) {
 			continue
 		}
 		if err := e.runOne(runCtx, h, ev); err != nil && firstErr == nil {
@@ -182,7 +181,7 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 		}
 	}
 	for _, h := range handlers {
-		if h.Spec().Trigger.EventType != env.Type {
+		if !h.Spec().Trigger.MatchesEventType(env.Type) {
 			continue
 		}
 		for _, inst := range instances[h.Spec().Name] {
@@ -190,6 +189,7 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 			iev.AutomationID = inst.id.UUID
 			iev.OwnerID = inst.owner
 			iev.Params = inst.params
+			iev.EnabledFrom = inst.enabledFrom
 			if err := e.dispatch(runCtx, h, iev, inst.version); err != nil && firstErr == nil {
 				firstErr = fmt.Errorf("workflow %s: %w", h.Spec().Name, err)
 			}
@@ -201,6 +201,10 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 // dispatch runs one instance's firing. A list rule's event stands for every
 // record one check saw change, so it fans out first.
 func (e *WorkflowEngine) dispatch(ctx context.Context, h workflow.Handler, ev workflow.Event, version int64) error {
+	// Accepted website notes already name the policy that owes their handling.
+	if h.Spec().Name != inquiryRecipeName && !ev.EnabledFrom.IsZero() && ev.OccurredAt.Before(ev.EnabledFrom) {
+		return nil
+	}
 	if rule, ok := h.(listRule); ok {
 		// Before the fan-out, so a check that moved no records still stops the rule.
 		if stop, err := e.stopIfSetterLapsed(ctx, ev); stop || err != nil {
@@ -232,10 +236,11 @@ func (e *WorkflowEngine) clockHandlers() []workflow.Handler {
 // match-time gate reads it to decide whether a firing has a human
 // authority to re-check at all.
 type automationInstance struct {
-	id      ids.AutomationID
-	owner   ids.UUID
-	params  json.RawMessage
-	version int64
+	id          ids.AutomationID
+	owner       ids.UUID
+	params      json.RawMessage
+	version     int64
+	enabledFrom time.Time
 }
 
 // liveInstances loads the workspace's enabled, unarchived automations,
@@ -245,7 +250,8 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 	out := map[string][]automationInstance{}
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT id, key, params, owner_id, version FROM automation WHERE enabled AND archived_at IS NULL ORDER BY created_at, id`)
+			`SELECT id, key, params, owner_id, version, enabled_from
+			 FROM automation WHERE enabled AND archived_at IS NULL ORDER BY created_at, id`)
 		if err != nil {
 			return err
 		}
@@ -254,11 +260,15 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 			var inst automationInstance
 			var key string
 			var owner *ids.UUID
-			if err := rows.Scan(&inst.id, &key, &inst.params, &owner, &inst.version); err != nil {
+			var enabledFrom *time.Time
+			if err := rows.Scan(&inst.id, &key, &inst.params, &owner, &inst.version, &enabledFrom); err != nil {
 				return err
 			}
 			if owner != nil {
 				inst.owner = *owner
+			}
+			if enabledFrom != nil {
+				inst.enabledFrom = *enabledFrom
 			}
 			out[key] = append(out[key], inst)
 		}
@@ -346,12 +356,7 @@ func applyOne(ctx context.Context, ex Executors, eff workflow.Effect, action wor
 	case workflow.ActionUpdateRecord:
 		return action, nil, applyUpdate(ctx, ex.Provider, action)
 	case workflow.ActionAssignOwner:
-		// AUTO-T07's dynamic tier: every real firing today is single-entity
-		// (assign_owner_tier.go's AssignOwnerScope doc) — the zero-value
-		// scope here is that honest default, not a fabricated bulk signal.
-		// applyAssignOwner's own branch (🟢 write vs 🟡 stage) is proven
-		// against a synthetic scaled scope by its unit tests.
-		return action, nil, applyAssignOwner(ctx, ex, action, AssignOwnerScope{})
+		return action, nil, applyAssignOwner(ctx, ex, action, ruleFiringScope)
 	case workflow.ActionEmitFlowEvent:
 		// request_approval's own executor, confirm-first by its very nature: the
 		// action IS the asking, so staging it is executing it. A deterministic
@@ -410,87 +415,4 @@ func applyUpdate(ctx context.Context, provider datasource.SystemOfRecordProvider
 		Source: systemSource,
 	})
 	return err
-}
-
-// stageForApproval builds the human-facing staging request for one 🟡
-// action and hands it to the approvals seam. ProposedChange/DiffHash are
-// derived the same way every other stager in this codebase derives them
-// (e.g. compose/closedate.go): canonicalize the action's own args and
-// hash that, never a fabricated placeholder — so a redelivered firing of
-// the identical action reaches the identical diff_hash a human already
-// saw, instead of minting a fresh unrecognizable staging each retry.
-func stageForApproval(ctx context.Context, approvals Approvals, language baselanguage.Resolver, action workflow.Action) (ids.ApprovalID, error) {
-	raw := action.Args
-	if len(raw) == 0 {
-		raw = json.RawMessage(`{}`)
-	}
-	summary := fmt.Sprintf(summaryIn(ctx, language).stagedAction, action.Kind, action.Target.Type, action.Target.ID)
-	if action.Kind == workflow.ActionEmitFlowEvent {
-		request, err := ReadConfirmationRequest(raw)
-		if err != nil {
-			return ids.ApprovalID{}, err
-		}
-		summary = fmt.Sprintf(summaryIn(ctx, language).confirmation, request.Question)
-	}
-	canonical, diffHash, err := diffhash.Canonical(raw)
-	if err != nil {
-		return ids.ApprovalID{}, fmt.Errorf("automation: canonicalizing %s for staging: %w", action.Kind, err)
-	}
-	return approvals.Stage(ctx, StageRequest{
-		Kind:           string(action.Kind),
-		ProposedChange: canonical,
-		DiffHash:       diffHash,
-		TargetType:     string(action.Target.Type),
-		TargetID:       action.Target.ID,
-		Summary:        summary,
-	})
-}
-
-// HeldDraftKind is the staging kind an automation-composed email waits under.
-//
-// It differs from send_email, the kind an agent's send stages under when a
-// tier floor makes it confirm first. Two reasons, and either alone would be enough.
-// The pin: this kind waives the target version pin (approvals' contextTargetKinds).
-// A draft waits in an inbox while ordinary work bumps the message it answers.
-// send_email must keep its pin, so a shared name would waive it for agent sends too.
-// The effect: the release executor is registered per kind. An agent's staged
-// send is redeemed by token, so it must not gain an executor that fires it on approval.
-const HeldDraftKind = "held_draft"
-
-// stageHeldDraft puts one composed draft in front of a human.
-//
-// JoinPending, unlike the generic stager above: a firing reaches this seam more
-// than once (the bus is at-least-once, and a scan re-evaluates candidates), and
-// an identical re-stage must return the row already waiting rather than add a
-// second copy of the same message to somebody's inbox. The generic stager has
-// no such caller today and is left alone.
-//
-// The summary names the addressee, because the inbox row is read before the
-// draft is opened and "send an email" is not a decision anyone can take.
-func stageHeldDraft(ctx context.Context, approvals Approvals, language baselanguage.Resolver, target datasource.EntityRef, proposal HeldDraftProposal) (ids.ApprovalID, error) {
-	if approvals == nil {
-		// A composition with no staging seam cannot hold this draft for
-		// anybody, and the alternative to saying so is a nil dereference. It
-		// refuses the way a notify firing with no transport does (§3.3): the
-		// run records a visible outcome an operator can act on, rather than the
-		// process falling over — or, worse, the draft quietly evaporating.
-		return ids.ApprovalID{}, ErrNoApprovalStaging
-	}
-	raw, err := json.Marshal(proposal)
-	if err != nil {
-		return ids.ApprovalID{}, fmt.Errorf("automation: encoding a held draft for staging: %w", err)
-	}
-	canonical, diffHash, err := diffhash.Canonical(raw)
-	if err != nil {
-		return ids.ApprovalID{}, fmt.Errorf("automation: canonicalizing a held draft for staging: %w", err)
-	}
-	return approvals.Stage(ctx, StageRequest{
-		Kind:           HeldDraftKind,
-		ProposedChange: canonical,
-		DiffHash:       diffHash,
-		TargetType:     string(target.Type),
-		TargetID:       target.ID,
-		Summary:        fmt.Sprintf(summaryIn(ctx, language).heldDraft, proposal.To),
-		JoinPending:    true,
-	})
 }

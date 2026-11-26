@@ -7,6 +7,7 @@ import {
   emptyPage,
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import type { Offer } from "./offers";
@@ -46,6 +47,7 @@ const draftOffer: Offer = {
 export const Open: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read", "update"] }),
       "GET /offer-templates": () => jsonResponse(emptyPage),
     });
     return (
@@ -63,6 +65,7 @@ export const Open: Story = {
 export const TwoLegalEntities: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read", "update"] }),
       "GET /offer-templates": () => jsonResponse(emptyPage),
       "GET /legal-entities": () =>
         jsonResponse({
@@ -101,5 +104,19 @@ export const PickingValidUntil: Story = {
     await screen.findByRole("textbox", { name: "Valid until" });
     await userEvent.click(screen.getByRole("button", { name: /^Choose date/ }));
     await screen.findByRole("dialog", { name: /^Choose date/ });
+  },
+};
+
+/** A valid-until day the server cannot store, refused on its field. */
+export const ValidUntilOutOfRange: Story = {
+  ...Open,
+  play: async () => {
+    const day = await screen.findByRole("textbox", { name: "Valid until" });
+    await userEvent.clear(day);
+    await userEvent.type(day, "31/12/9999");
+    await userEvent.tab();
+    await screen.findByText(
+      "Valid until must be from 02/01/0001 to 30/12/9999.",
+    );
   },
 };

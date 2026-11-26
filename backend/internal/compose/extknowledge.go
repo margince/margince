@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/modules/knowledge"
-	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -35,17 +34,6 @@ var extensionCorpora = map[string]knowledge.ManagedCorpus{
 		Topic: "Company documents kept in Google Docs: policies, procedures and rules, " +
 			"with the owner, department, country and effective date each one states.",
 	},
-}
-
-// BindExtensionKnowledge records the object store a unit's documents are kept
-// in. A role that serves or runs a unit that files documents calls it once at
-// boot; one that does not leaves UpsertDocument refusing by name. It is a
-// separate bind for the reason BindExtensionCapture is: it is a deployment
-// dependency, not derivable from the pool.
-func BindExtensionKnowledge(blob blobstore.Store) {
-	extensionRuntimeDeps.mu.Lock()
-	defer extensionRuntimeDeps.mu.Unlock()
-	extensionRuntimeDeps.knowledgeBlob = blob
 }
 
 // errKnowledgeUnwired is a role that bound no object store.
@@ -65,10 +53,10 @@ func (k runtimeKnowledge) store(ctx context.Context) (context.Context, *knowledg
 	if !ok {
 		return nil, nil, corpus, extension.ErrNoKnowledge
 	}
-	if k.rt.deps.pool == nil || k.rt.deps.knowledgeBlob == nil {
+	if k.rt.deps.pool == nil || k.rt.deps.blob == nil {
 		return nil, nil, corpus, errKnowledgeUnwired
 	}
-	return ctx, knowledge.NewStore(InstallationDB(k.rt.deps.pool)).WithBlobstore(k.rt.deps.knowledgeBlob), corpus, nil
+	return ctx, knowledge.NewStore(InstallationDB(k.rt.deps.pool)).WithBlobstore(k.rt.deps.blob), corpus, nil
 }
 
 func (k runtimeKnowledge) UpsertDocument(ctx context.Context, d extension.KnowledgeDocument) (extension.KnowledgeResult, error) {

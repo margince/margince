@@ -18,13 +18,10 @@
 #                     explicitly does not want, and three other accounts carry
 #                     it honestly.
 #
-# What this case CANNOT see, stated rather than papered over: check.py has no
-# must_not_call, so a run that removes the tagging AND also retires the word
-# would be caught only if it said so. The positive criterion below — that the
-# word survives for the other accounts — is the whole guard, and a silent
-# retirement passes it. Reaching that needs the database read back after the
-# run, which this lane does not do.
+# Retiring the word would also take it off the three accounts that carry it
+# honestly, so the end state reads it back on them (must_end_with).
 name: case31_wrong_word_on_the_record
+title: The word that should not be on this one
 criteria: [1, 2]
 
 # WRITES: the author's own statement that this case changes the world. It is not
@@ -45,19 +42,6 @@ prompt: |
   And to be clear I mean that one account only. Plenty of others genuinely are
   strategic accounts and that word stays.
 
-must_call:
-  - read_tags
-  - change_tags
-
-# record_type is pinned on both. The tool name alone passes on a read or a
-# removal aimed at a CONTACT of the same name — get_record_tags serves three
-# record types and remove_tag five, and this errand is about a company.
-must_call_with:
-  - read_tags.mode=record
-  - change_tags.action=remove
-  - read_tags.record_type=company
-  - change_tags.record_type=company
-
 may_call:
   - search_records
   - read_record
@@ -65,6 +49,8 @@ may_call:
   - query_workspace
   - whoami
   - read_workspace
+  - read_tags
+  - change_tags
 
 must_mention:
   # Criterion 1, MECHANICAL: the retired word, which only get_record_tags could

@@ -407,7 +407,6 @@ describe("RetentionCard rows", () => {
       ).toEqual({
         retain_days: 900,
         action: "archive",
-        lawful_basis: null,
       });
     });
   });
@@ -419,9 +418,11 @@ describe("RetentionCard rows", () => {
     const row = await openEditor("deal/won");
     const days = within(row).getByLabelText(/window in days/i);
     await userEvent.clear(days);
-    await userEvent.type(days, "0");
+    await userEvent.type(days, "99999999999");
 
-    expect(within(row).getByText(/whole number of days/i)).toBeInTheDocument();
+    expect(
+      within(row).getByText("Window in days must be from 1 to 36,500."),
+    ).toBeInTheDocument();
     expect(
       within(row).getByRole("button", { name: /save policy/i }),
     ).toBeDisabled();
@@ -429,6 +430,40 @@ describe("RetentionCard rows", () => {
       false,
     );
   });
+});
+
+it("shows a seeded lawful basis in words, and keeps the stored one unless it is changed", async () => {
+  const sent = backend({
+    retainOnly: false,
+    policies: [{ ...WON_DEALS, lawful_basis: "storage_limitation" }],
+  });
+  render(<RetentionCard />);
+  const dialog = await openEditor("deal/won");
+  const basis =
+    within(dialog).getByLabelText<HTMLInputElement>(/lawful basis/i);
+  expect(basis.value).toBe("Storage limitation, GDPR Art. 5(1)(e)");
+  await userEvent.click(
+    within(dialog).getByRole("button", { name: /save policy/i }),
+  );
+  await waitFor(() =>
+    expect(
+      sent.find(
+        (call) => call.key === `PATCH /retention-policies/${WON_DEALS.id}`,
+      )?.body,
+    ).toEqual({ retain_days: 2555, action: "archive" }),
+  );
+});
+
+it("closes Add policy through its Cancel, as Edit does", async () => {
+  const sent = backend({ retainOnly: false, policies: [] });
+  render(<RetentionCard />);
+  await userEvent.click(
+    await screen.findByRole("button", { name: /add policy/i }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(sent.some((call) => call.key.startsWith("POST"))).toBe(false);
 });
 
 describe("a refused policy write", () => {

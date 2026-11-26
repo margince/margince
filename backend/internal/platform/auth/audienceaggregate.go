@@ -19,6 +19,12 @@ import (
 // tells them when it arrived. Neither shows a word of the message, and both
 // disclose it.
 //
+// One exception, a deal's own last-activity date. A private message filed on
+// the deal moves it. The deal timeline already lists that message to every
+// reader of the deal with its time and direction, and blanks the text. The date
+// adds nothing the timeline withholds. Contact and company dates stay
+// workspace-only, as does every other aggregate.
+//
 // Spelled once here rather than per module because four readers ask the same
 // question — relationship strength, deal health, the meeting brief and the
 // weekly digest — and a fifth will be written by somebody who greps for it. The
@@ -38,7 +44,14 @@ import (
 // difference between them. An aggregate asks "may everyone see this", and the
 // answer is the same for everybody.
 func AudienceWorkspaceOnly(alias string) string {
-	return " AND " + alias + ".audience = 'workspace' AND (" + alias + ".kind <> 'task' OR " + alias + ".source_activity_id IS NULL AND coalesce(" + alias + ".source_system, '') <> '" + provenance.LeadRepliedSource + "' OR EXISTS (SELECT 1 FROM activity follow_up_source WHERE follow_up_source.id = " + provenance.TaskSourceActivitySQL(alias) + " AND follow_up_source.audience = 'workspace' AND follow_up_source.restricted_at IS NULL))"
+	return " AND " + WorkspaceAudienceSQL(alias) + " AND (" + alias + ".kind <> 'task' OR " + alias + ".source_activity_id IS NULL AND coalesce(" + alias + ".source_system, '') <> '" + provenance.LeadRepliedSource + "' OR EXISTS (SELECT 1 FROM activity follow_up_source WHERE follow_up_source.id = " + provenance.TaskSourceActivitySQL(alias) + " AND " + WorkspaceAudienceSQL("follow_up_source") + " AND follow_up_source.restricted_at IS NULL))"
+}
+
+// PrivateAudienceSQL admits an activity limited to its participants. Only the
+// deal's activity clock and the verdict's dated notice may count such a row.
+// They use its date alone. No reader shows its id, direction, subject or sender.
+func PrivateAudienceSQL(alias string) string {
+	return alias + ".audience = 'participants'"
 }
 
 // ReaderlessAudience narrows the system principal to the rows every member may

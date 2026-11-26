@@ -17,7 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
-	"github.com/margince/margince/backend/internal/modules/capture/telegram"
+	"github.com/margince/margince/backend/internal/modules/capture/imap"
 	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
 	"github.com/margince/margince/backend/internal/modules/comms"
 )
@@ -33,11 +33,11 @@ var sendingMailProviders = []struct {
 }{
 	{provider: "gmail", recheck: gmail.SendScope, requested: gmailScopes},
 	{provider: "graph", recheck: graph.SendScope, requested: graphScopes},
-	// test_mailbox has no OAuth consent screen — its "request" is the one
-	// scope it always reports holding (testmailbox.GrantedScopes), which is
-	// also the scope comms.SendScopeFor demands back. Degenerate but honest:
-	// there is nothing else to request.
+	// test_mailbox and imap have no OAuth consent screen. Their "request" is the
+	// one scope the connector reports holding (GrantedScopes). comms.SendScopeFor
+	// demands that same scope back.
 	{provider: "test_mailbox", recheck: testmailbox.SendScope, requested: []string{testmailbox.SendScope}},
+	{provider: "imap", recheck: imap.SendScope, requested: []string{imap.SendScope}},
 }
 
 // The scope the authority gate DEMANDS must be the scope the connector
@@ -58,9 +58,8 @@ func TestTheSendScopeCommsDemandsIsTheOneTheConnectorRechecks(t *testing.T) {
 	}
 }
 
-// The OAuth consent must REQUEST what the gate demands. Neither vendor will add
-// a permission to an existing refresh token, so a connection consented without
-// this one can never be repaired short of reconnecting the mailbox.
+// The OAuth consent must REQUEST what the gate demands. No vendor adds a
+// permission to an existing grant, so a connection without it must reconnect.
 func TestEveryMailConsentRequestsTheScopeTheSendPathDemands(t *testing.T) {
 	for _, p := range sendingMailProviders {
 		t.Run(p.provider, func(t *testing.T) {
@@ -132,15 +131,13 @@ func TestTheChannelKindTheReplyPathAnswersIsTheOneCaptureFilesUnder(t *testing.T
 		t.Errorf("activities cannot send on %q, the provider capture files Telegram messages under; every Telegram reply would be refused as uncarriable",
 			capture.ProviderTelegram)
 	}
-	// The FOURTH spelling, and the one the narrowing created: capture's
-	// connector restates the message kind rather than importing it (a capture
-	// connector must not reach across to a sibling module), so the two literals
-	// are held against each other here. Drift files every captured message under
-	// a kind the reply path does not answer — and, since the kind FKs into
-	// activity_kind, would fail the write outright.
-	if telegram.KindMessage != activities.KindMessage {
+	// The fourth spelling: capture restates the message kind rather than
+	// importing it, so the two literals are held against each other here.
+	// Drift would file every captured message under a kind the reply path does
+	// not answer, and the kind's foreign key would fail the write.
+	if capture.ChatMessageKind != activities.KindMessage {
 		t.Errorf("capture files channel messages under kind %q and the reply path answers %q; every captured message would be unrepliable",
-			telegram.KindMessage, activities.KindMessage)
+			capture.ChatMessageKind, activities.KindMessage)
 	}
 	// And it is not a blanket yes: mail has its own send path, and admitting it
 	// here would route a mail reply through a transport with no address to send

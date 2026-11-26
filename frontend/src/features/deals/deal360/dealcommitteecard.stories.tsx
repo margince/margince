@@ -69,6 +69,7 @@ const champion: DealCoverage["stakeholders"][number] = {
 function view(over: Partial<DealCoverage>): DealCoverage {
   return {
     deal_id: DEAL,
+    max_engaged_seats: 1,
     stakeholders: [champion],
     our_side: [],
     risks: [],
@@ -96,6 +97,7 @@ function Card({
         style={width ? { inlineSize: width } : { padding: "var(--padCard)" }}
       >
         <DealCommitteeCard
+          canWrite
           dealId={DEAL}
           ownerId={OWNER}
           coverage={coverage}

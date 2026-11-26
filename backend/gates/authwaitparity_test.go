@@ -34,7 +34,7 @@ import (
 // authWait names each bound and where it is declared.
 var authWait = map[string]struct{ file, constant string }{
 	"the consent-metadata fetch": {"backend/internal/modules/identity/oauth_cimd.go", "cimdFetchTimeout"},
-	"the signing-key fetch":      {"backend/internal/compose/oidcverify.go", "jwksFetchTimeout"},
+	"the signing-key fetch":      {"backend/internal/compose/oidctoken/oidcverify.go", "jwksFetchTimeout"},
 }
 
 func TestEveryFetchAnAuthenticationWaitsOnHasTheSameBound(t *testing.T) {

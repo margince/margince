@@ -10,7 +10,8 @@ import {
   stubWithSession,
 } from "../testing/story-utils";
 import { RelationshipsTab } from "./relationshiprows";
-import { AddRelationshipAction } from "./relationships";
+import { AddRelationshipAction, type Relationship } from "./relationships";
+import { dateRange } from "./relationships.edges";
 
 // RelationshipsTab reads GET /relationships?contact_id=… (there is no
 // GET /relationships/{id} in the contract — every row is hydrated straight
@@ -285,6 +286,98 @@ export const DealStakeholdersEmpty: Story = {
     return (
       <StoryProviders>
         <RelationshipsTab scope={{ deal_id: "d-1" }} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const ClosedDealSearch: Story = {
+  render: () => {
+    stubWithSession(
+      {
+        "GET /contacts/p-1/360": () =>
+          jsonResponse({
+            contact: { id: "p-1" },
+            employments: { data: [], page: { has_more: false } },
+          }),
+      },
+      { relationship: ["create"], deal: ["read"], contact: ["read"] },
+    );
+    const routed = globalThis.fetch;
+    globalThis.fetch = async (input, init) => {
+      const url = new URL(
+        input instanceof Request ? input.url : String(input),
+        "https://storybook.local",
+      );
+      if (url.pathname.endsWith("/deals")) {
+        return jsonResponse({
+          data:
+            url.searchParams.get("q") &&
+            url.searchParams.get("status") === "won"
+              ? [{ id: "closed", name: "Renewal paperwork", status: "won" }]
+              : [],
+          page: { has_more: false },
+        });
+      }
+      return routed(input, init);
+    };
+    return (
+      <StoryProviders>
+        <AddRelationshipAction
+          scope={{ contact_id: "p-1" }}
+          only={{ kind: "deal_stakeholder", label: "rel.seatOnDeal" }}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Add to a deal",
+      }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(within(dialog).getByRole("searchbox"), "Renewal");
+    await expect(
+      await within(dialog).findByRole("button", {
+        name: "Renewal paperwork Won",
+      }),
+    ).toBeVisible();
+  },
+};
+
+export const CurrentAndFormerEmployment: Story = {
+  render: () => {
+    const current: Relationship = { ...employmentRel, kind: "employment" };
+    const former: Relationship = {
+      ...current,
+      id: "rel-former",
+      employment_status: "former",
+    };
+    return (
+      <StoryProviders>
+        <dl>
+          <dt>Current role</dt>
+          <dd>
+            {dateRange(
+              current,
+              (key) => translate("en", key),
+              "en",
+              "UTC",
+              "UTC",
+            )}
+          </dd>
+          <dt>Former role</dt>
+          <dd>
+            {dateRange(
+              former,
+              (key) => translate("en", key),
+              "en",
+              "UTC",
+              "UTC",
+            )}
+          </dd>
+        </dl>
       </StoryProviders>
     );
   },

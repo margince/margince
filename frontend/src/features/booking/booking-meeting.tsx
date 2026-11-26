@@ -9,6 +9,7 @@ import {
   MeetingFacts,
   openCalendarLabel,
 } from "../../components/booking-meeting-parts";
+import { GoneNotice } from "../../components/gonenotice";
 import { ActionRow } from "../../design-system/actionrow";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -20,7 +21,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
 import { useLocale, useT } from "../../i18n";
-import { backStaysInApp } from "../../lib/historydepth";
+import { stepBackOutOf } from "../../lib/historydepth";
 import {
   meetingInvitationKey,
   useMeetingInvitation,
@@ -40,8 +41,11 @@ type Change = components["schemas"]["MeetingInvitationChange"];
 // calendar, so "back" is wherever they were; a page opened cold has no screen
 // of ours behind it, whatever else the tab visited, and lands on home instead.
 function leaveMeeting() {
-  if (backStaysInApp()) globalThis.history.back();
-  else navigate({ screen: "home" });
+  const here = globalThis.location.hash;
+  stepBackOutOf(
+    (hash) => hash === here,
+    () => navigate({ screen: "home" }),
+  );
 }
 
 export function BookingMeetingScreen({
@@ -82,13 +86,15 @@ export function BookingMeetingScreen({
       setReschedule(false);
     },
   });
+  const host = !token;
   const changeError =
     problemCodeOf(change.error) === "conflict" ? (
-      <ErrorLine>{t("scheduling.meetingChanged")}</ErrorLine>
+      <ErrorLine>
+        {t(host ? "scheduling.meetingChanged" : "book.meetingChanged")}
+      </ErrorLine>
     ) : (
       <ErrorLine error={change.error} />
     );
-  const host = !token;
   useBookingTitle(host ? null : t("book.meetingTitle"));
   return (
     <div className={host ? "book-page" : "book-guest-page"}>
@@ -101,7 +107,11 @@ export function BookingMeetingScreen({
             </Button>
           </div>
         )}
-        <QueryGate pendingLabel={t("common.loading")} query={query}>
+        <QueryGate
+          pendingLabel={t("common.loading")}
+          query={query}
+          gone={host ? undefined : <GoneNotice messageKey="book.linkGone" />}
+        >
           {(meeting) => {
             const cancelable =
               meeting.status !== "canceled" && meeting.status !== "canceling";
@@ -179,7 +189,13 @@ export function BookingMeetingScreen({
                       send({ action: "cancel", version: meeting.version })
                     }
                   >
-                    <p>{t("scheduling.cancelConfirm")}</p>
+                    <p>
+                      {t(
+                        host
+                          ? "scheduling.cancelConfirm"
+                          : "book.cancelConfirm",
+                      )}
+                    </p>
                     {changeError}
                   </ConfirmModal>
                 )}
@@ -236,8 +252,7 @@ function AttentionNotice({
 }>) {
   const t = useT();
   if (meeting.status !== "needs_attention") return null;
-  if (!host)
-    return <Callout tone="warning" title={t("scheduling.guestRecovery")} />;
+  if (!host) return <Callout tone="warning" title={t("book.recovery")} />;
   // A refused calendar parked every queued invitation of the host. Retrying
   // one would fail the same way; reconnecting sends them all on.
   if (meeting.attention_reason === "calendar_disconnected")

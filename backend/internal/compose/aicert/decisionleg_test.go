@@ -116,11 +116,12 @@ func TestTheDecisionLegRecordsKeptWrongAndFallbacks(t *testing.T) {
 		t.Fatalf("the LLM leg ran %d runs, want %d: the case must extend for this test to mean anything", got.llm.Runs, adaptiveMaxRuns)
 	}
 	// The last scripted reply repeats, so every run after the third falls back.
+	fallbacks := adaptiveMaxRuns - 2
 	want := DecisionStats{
-		Kept: 2, KeptCorrect: 1, KeptWrong: 1, Fallbacks: 7, FallbackRate: 7.0 / 9,
-		FallbackByReason: map[string]int{"below_floor": 7}, MinKeptConfidence: 0.9,
-		// One kept-correct run, plus seven fallbacks credited with the LLM's 9/9.
-		ServedPassRate: 8.0 / 9,
+		Kept: 2, KeptCorrect: 1, KeptWrong: 1, Fallbacks: fallbacks, FallbackRate: float64(fallbacks) / adaptiveMaxRuns,
+		FallbackByReason: map[string]int{"below_floor": fallbacks}, MinKeptConfidence: 0.9,
+		// One kept-correct run, plus every fallback credited with the LLM's pass rate of 1.
+		ServedPassRate: float64(fallbacks+1) / adaptiveMaxRuns,
 	}
 	if !reflect.DeepEqual(*rec.Decision, want) {
 		t.Errorf("decision stats = %+v, want %+v", *rec.Decision, want)
@@ -206,15 +207,8 @@ func TestTheLLMLegRunsEveryScenarioEvenWhenTheDecisionKept(t *testing.T) {
 	}
 }
 
-// A local-only task's data reaches a non-local lane today: localOnlyAdmits
-// (ai.decisionSkipFor's predicate) is unconditional, #6396 reverted the
-// ladder's own narrowing pending #3351, and the decision lane follows the
-// same premise. Certifying it behaves exactly as certifying any other task.
-func TestAVerdictTaskCertifiesOnJevWhileLocalOnlyIsReverted(t *testing.T) {
+func TestAVerdictTaskCertifiesOnJev(t *testing.T) {
 	task := ai.TaskCaptureCounterpartyVerdict
-	if !ai.LocalOnly(task) {
-		t.Fatalf("%s is no longer local-only; pick a task that is", task)
-	}
 	decider := &scriptedDecider{replies: []decision.Response{answer(labelWidget, 0.99, "jev")}}
 	leg := decisionLeg{
 		task: task, scenarios: []Scenario{decidingScenario("basic", task)}, census: decidingCensus(t, task, defaultWidgetForm()),
@@ -227,7 +221,7 @@ func TestAVerdictTaskCertifiesOnJevWhileLocalOnlyIsReverted(t *testing.T) {
 		t.Fatalf("certify: %v", err)
 	}
 	if decider.called() != 3 {
-		t.Fatalf("the decision model was sent a local-only task's data %d times, want 3", decider.called())
+		t.Fatalf("the decision model was sent the verdict task’s data %d times, want 3", decider.called())
 	}
 	if len(records) != 1 {
 		t.Fatalf("got %d records, want one", len(records))
@@ -255,7 +249,7 @@ func TestADecisionLegServedByTwoModelsWritesNoDecisionRecord(t *testing.T) {
 
 // The pre-flight fails the run when the lane's one probe call fails, and
 // passes over a task the lane may not be asked at all.
-func TestTheDecisionPreflightFailsOnAFailedProbeAndSkipsLocalOnlyTasks(t *testing.T) {
+func TestTheDecisionPreflightFailsOnAFailedProbe(t *testing.T) {
 	scenarios := map[ai.Task][]Scenario{
 		ai.TaskCaptureCounterpartyVerdict: {decidingScenario("basic", ai.TaskCaptureCounterpartyVerdict)},
 		ai.TaskSiteTriage:                 {decidingScenario("basic", ai.TaskSiteTriage)},
@@ -280,7 +274,7 @@ func TestTheDecisionPreflightFailsOnAFailedProbeAndSkipsLocalOnlyTasks(t *testin
 		t.Fatalf("a failed probe: want the run refused naming the lane, got %v", err)
 	}
 	if failing.called() != 1 {
-		t.Errorf("the pre-flight asked the lane %d times, want once — and never for the local-only task", failing.called())
+		t.Errorf("the pre-flight asked the lane %d times, want once", failing.called())
 	}
 
 	healthy := &scriptedDecider{replies: []decision.Response{answer(labelWidget, 0.9, "jev")}}

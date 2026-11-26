@@ -48,8 +48,10 @@ concurrency:
   # collide. Saying so explicitly beats relying on that.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# A job in the CI image runs `sh` unless told otherwise, and the steps use bash.
 defaults:
   run:
+    shell: bash
     working-directory: backend
 
 # A module the proxy cannot serve is not a broken build: the PIPE falls through
@@ -62,6 +64,11 @@ env:
   # adds to the branch it merges into, so one into develop is not held to all of
   # develop's lines. The develop into main pull request judges those.
   CHECK_BASE_REF: origin/${{ github.base_ref || 'main' }}
+  # Every Go and vitest battery runs its tests in the order this seed gives, so
+  # a test that needs the state an earlier test left fails in the PR that adds
+  # it. The run number is one order per run: "Re-run failed jobs" replays it,
+  # and the next run tries another. TEST_SHUFFLE_SEED=<n> replays it locally.
+  TEST_SHUFFLE_SEED: ${{ github.run_number }}
 
 jobs:
   # Classify the diff so a change runs only the checks it can affect — a
@@ -109,6 +116,8 @@ jobs:
       # The database-bearing subset of `backend`. See the filter below for why
       # the two differ, and by exactly what.
       backend_db: ${{ steps.filter.outputs.backend_db == 'true' || github.event_name == 'merge_group' }}
+      # What backend-lint reads. See the filter below.
+      backend_lint: ${{ steps.filter.outputs.backend_lint == 'true' || github.event_name == 'merge_group' }}
       frontend: ${{ steps.filter.outputs.frontend == 'true' || github.event_name == 'merge_group' }}
       e2e: ${{ steps.filter.outputs.e2e == 'true' || github.event_name == 'merge_group' }}
       deps: ${{ steps.filter.outputs.deps == 'true' || github.event_name == 'merge_group' }}
@@ -235,12 +244,14 @@ jobs:
               - 'tools/**'
               - 'user-guide/**'
               - 'Dockerfile*'
+              - 'docker-bake.hcl'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - 'renovate.json'
               - 'README.md'
               - 'CLA.md'
               - 'LICENSING.md'
+              - 'MAINTAINERS.md'
               - 'CODE_OF_CONDUCT.md'
               - 'CONTRIBUTING.md'
               - 'SECURITY.md'
@@ -249,6 +260,8 @@ jobs:
               - 'third-party-files.txt'
               - 'frontend/**'
               - 'backend/api/**'
+              # Built from frontend/ by fe-drift, which alone sees a stale copy.
+              - 'backend/internal/modules/agents/previewcatalog_gen.json'
               # The frontend job runs BOTH SPA lanes (ADR-0120), and the
               # composed one is derived from inputs that live nowhere near
               # frontend/. A unit's api/ fragment is the ONLY thing that changes
@@ -301,6 +314,12 @@ jobs:
               # browser.
               - '.github/ci-image/**'
               - '.github/actions/ci-image/**'
+            # What backend-lint reads: `backend_db` plus `tools/`, a module
+            # lint-modules lints. Not `backend`: its frontend/ and docs/ paths are
+            # there for Go gates that read them, and golangci reads Go only.
+            backend_lint:
+              - *backend_db
+              - 'tools/**'
             e2e:
               - 'backend/**'
               - 'frontend/**'
@@ -439,8 +458,9 @@ jobs:
     permissions:
       contents: read
     # The uncached root fitness packages were most of the test leg, so they get
-    # a runner. Both legs run the build; only the unit leg runs the gates that
-    # read the tree the same way on either (CHECK_TREE_GATES).
+    # a runner, and so does SOLO_TEST_PKGS. Every leg runs the build; only the
+    # unit leg runs the gates that read the tree the same way on each
+    # (CHECK_TREE_GATES).
     # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
     strategy:
       fail-fast: false
@@ -449,9 +469,16 @@ jobs:
           - part: unit
             legs: test-cached test-extensions
             tree-gates: "on"
+            census-minimum: "100"
           - part: gates
             legs: test-uncached
             tree-gates: "off"
+          # SOLO_TEST_PKGS in backend/Makefile: a package whose time beside the
+          # rest was the runner's load, not its own.
+          - part: solo
+            legs: test-solo
+            tree-gates: "off"
+            census-minimum: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -469,10 +496,8 @@ jobs:
         with:
           go-version-file: ${{ needs.ci-image.outputs.pinned-image == '' && 'backend/go.mod' || '' }}
           cache-dependency-path: backend/go.sum
-      # The shared Go build cache (see .github/actions/go-build-cache): this job
-      # compiles the untagged tree twice over — `go build ./...` plus the unit
-      # test binaries — and is the natural writer of the `plain` flavour every
-      # other untagged Go job reads.
+      # The shared Go build cache (see .github/actions/go-build-cache). Restored,
+      # never saved: cache-warm.yml writes the `plain` entries on main and develop.
       - name: Restore the Go build cache
         id: go-cache
         uses: ./.github/actions/go-build-cache
@@ -485,6 +510,13 @@ jobs:
       - name: Gate binaries on PATH
         if: needs.ci-image.outputs.pinned-image == ''
         uses: ./.github/actions/gate-binaries
+      # In the image pnpm is on PATH, so the contract drift gate regenerates
+      # the frontend's types and needs its packages; on the runner it skips.
+      - name: Frontend packages for the contract drift gate
+        if: matrix.part == 'unit' && needs.ci-image.outputs.pinned-image != ''
+        working-directory: frontend
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile --ignore-scripts
       # The backend half of the merge gate in one pass:
       # check-craft-doc, image pins, contract-breaking, migration-versions,
       # test-lanes, file-length,
@@ -521,11 +553,12 @@ jobs:
         # Outside a PR into develop, the unit leg's pass is also the test-input
         # census: testlog-exec.sh logs what each package read, and the next step
         # judges it. It runs uncached (-count=1), since a replayed result reads
-        # nothing; develop keeps the test cache.
+        # nothing. No leg replays a test result here: TEST_SHUFFLE_SEED adds
+        # -shuffle, and Go caches no result run with it.
         run: |
           set -o pipefail
           census=()
-          if [ "${{ matrix.part }}" = unit ] && [ "${{ needs.changes.outputs.full_lane }}" = true ]; then
+          if [ "${{ matrix.part }}" != gates ] && [ "${{ needs.changes.outputs.full_lane }}" = true ]; then
             export TESTLOG_DIR="$RUNNER_TEMP/testlogs"
             mkdir -p "$TESTLOG_DIR"
             census=(TEST_EXEC="$PWD/scripts/testlog-exec.sh")
@@ -538,9 +571,9 @@ jobs:
       # pass: a failed test stops make before the rest log their reads, and a
       # verdict over part of the tree is not one.
       - name: Census the test cache's inputs (make test-input-census-judge)
-        if: ${{ success() && matrix.part == 'unit' && needs.changes.outputs.full_lane == 'true' }}
+        if: ${{ success() && matrix.part != 'gates' && needs.changes.outputs.full_lane == 'true' }}
         working-directory: .
-        run: make test-input-census-judge TESTLOG_DIR="$RUNNER_TEMP/testlogs"
+        run: make test-input-census-judge TESTLOG_DIR="$RUNNER_TEMP/testlogs" TESTLOG_MINIMUM="${{ matrix.census-minimum }}"
       # crm-hello declares capabilities no shipped unit does, so this is the one
       # walk of them; TestEveryPublishedCapabilityHasALiveDeclaringUnit reads the
       # require below. It runs after the merge gate, which must see only the committed
@@ -552,7 +585,7 @@ jobs:
         run: |
           printf 'require example.margince.dev/ext/crm-hello v0.0.0\nreplace example.margince.dev/ext/crm-hello => ../fixtures/extensions/crm-hello\n' >> instance/go.mod
           make -C backend build check-composition
-          (cd backend && GOWORK="$PWD/../build/composition/go.work" go test ./cmd/...)
+          (cd backend && GOWORK="$PWD/../build/composition/go.work" go test -shuffle="$TEST_SHUFFLE_SEED" ./cmd/...)
           make -C backend test-extensions EXT_COVER_OUT="$PWD/backend/coverage-extensions.out"
       # Extension units are their own Go modules, so the shards' profile never
       # reaches them.
@@ -605,14 +638,14 @@ jobs:
     name: backend-lint (${{ matrix.pass }})
     timeout-minutes: 30
     needs: [changes, ci-image]
-    if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: needs.changes.outputs.backend_lint == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     container: ${{ needs.ci-image.outputs.pinned-image }}
     permissions:
       contents: read
     # The baseline pass loads the whole tree, so it gets a runner. The strict
     # pass loads only the packages a change touched, which leaves room for the
-    # modules outside backend/.
+    # modules outside backend/ and the few packages the untagged pass reads.
     # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
     strategy:
       fail-fast: false
@@ -623,7 +656,7 @@ jobs:
             fetch-depth: 1
             filter: ""
           - pass: strict
-            legs: lint-strict lint-modules
+            legs: lint-strict lint-untagged lint-modules
             fetch-depth: 0
             filter: blob:none
     # Setup mirrors deterministic-gates, which says why each step is there.
@@ -639,11 +672,14 @@ jobs:
         with:
           go-version-file: ${{ needs.ci-image.outputs.pinned-image == '' && 'backend/go.mod' || '' }}
           cache-dependency-path: backend/go.sum
+      # golangci loads every package before it reads its own cache, and that
+      # load compiles whatever the Go build cache lacks. lint-cache.yml saves
+      # this flavor after each push to main, so the load starts from the tip.
       - name: Restore the Go build cache
         id: go-cache
         uses: ./.github/actions/go-build-cache
         with:
-          flavor: plain
+          flavor: lint
       - name: Gate binaries on PATH
         if: needs.ci-image.outputs.pinned-image == ''
         uses: ./.github/actions/gate-binaries
@@ -831,6 +867,11 @@ jobs:
   integration:
     needs: [changes]
     if: needs.changes.outputs.backend_db == 'true' && needs.changes.outputs.full_lane == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    # The most a job of the lane may ask for: the shards read the run's jobs to
+    # learn whether a re-run builds the binaries again.
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/_lane-integration.yml
 
   vuln:
@@ -1190,7 +1231,7 @@ jobs:
         run: |
           # Composed boot (ADR-0120): a plain `go run` would resolve the
           # vanilla composition stub and this lane would never boot with
-          # the enabled extensions (extensions/de ships by default). The
+          # the enabled extensions (extensions/eu ships by default). The
           # generator itself pins the ROOT workspace (the tool is its own
           # module — a stray GOWORK would break its resolution).
           GOWORK="$PWD/../go.work" go run ./tools/gen-composition -include-development
@@ -1220,15 +1261,20 @@ jobs:
 
   # Home's per-PR budget (scripts/home-budget.sh): the API p95 of Home's reads,
   # cold and warm, on a small corpus of its own, then the day paint and CLS of a
-  # production bundle against an api booted the way live-boot boots it.
+  # production bundle against an api booted the way live-boot boots it. While
+  # advisory, it measures the base commit on the same runner too and fails only
+  # when the change is slower past a margin, so runner speed cannot redden it.
   # ADVISORY: it is not in the `ci` fan-in, and a red run stops no merge. The
   # scope step skips the rest when the diff cannot reach Home
   # (scripts/home-budget-scope.sh); a push or a merge group always runs.
   home-budget:
     name: home-budget (advisory)
-    timeout-minutes: 30
+    timeout-minutes: 60
     needs: [changes]
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    # Switched off until someone owns its budgets: its noise taught reviewers to
+    # ignore it. Restore the commented condition to turn it back on.
+    # if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: false
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1242,8 +1288,8 @@ jobs:
           # The scope step diffs against the pull request's base branch.
           fetch-depth: 0
       # No version input: the pin is package.json's "packageManager".
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: pnpm
@@ -1321,12 +1367,105 @@ jobs:
         uses: ./.github/actions/install-playwright-chromium
       # Writes the wall time of each half, the API rows and the vitals line to
       # the job summary, pass or fail.
+      # The commit this change is judged against: a pull request's merge base,
+      # a push's previous tip, a merge group's base. A new branch has none, and
+      # then the fixed budgets judge it.
+      - name: Choose the base to compare with
+        id: base
+        if: steps.scope.outputs.run == 'true'
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+          GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+        run: |
+          case "$EVENT" in
+            pull_request) base="$(git merge-base "origin/$BASE_REF" HEAD)" ;;
+            merge_group) base="$GROUP_BASE" ;;
+            push) base="$BEFORE" ;;
+            *) base="" ;;
+          esac
+          if [ -n "$base" ] && ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo "home-budget: base $base is not in this clone, so the fixed budgets judge"
+            base=""
+          fi
+          echo "sha=$base" >> "$GITHUB_OUTPUT"
       - name: Home budget
         if: steps.scope.outputs.run == 'true'
+        env:
+          HOME_BUDGET_BASE: ${{ steps.base.outputs.sha }}
         run: make home-budget BENCH_API_PORT=8080
       - name: API log (on failure)
         if: failure()
         run: cat "$RUNNER_TEMP/api.log" || true
+
+  # Every Go and vitest test the pull request adds or changes, run many times
+  # (scripts/repeat-changed-tests.sh), so a test that fails at random fails the
+  # pull request that brings it and not the next one. The three lanes run at the
+  # same time, so each runs on a loaded runner. A diff with no test file ends
+  # after the first step.
+  # ADVISORY: it is not in the `ci` fan-in, and a red run stops no merge. A pull
+  # request only: the merge queue's entry is a tree this job already judged.
+  repeat-changed-tests:
+    name: repeat-changed-tests (advisory)
+    timeout-minutes: 60
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    env:
+      BASE_REF: origin/${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The plan diffs against the merge base with the base branch.
+          fetch-depth: 0
+          filter: blob:none
+      - name: Find the changed test files
+        id: scope
+        run: scripts/repeat-changed-tests.sh scope "$BASE_REF"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: steps.scope.outputs.run == 'true'
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: plain
+      - name: Choose the tests and how often each runs
+        id: plan
+        if: steps.scope.outputs.run == 'true'
+        run: scripts/repeat-changed-tests.sh plan "$BASE_REF" "$RUNNER_TEMP/repeat-plan.tsv"
+      - name: Start the dev infra stack (compose + app role)
+        if: steps.plan.outputs.integration == 'true'
+        run: make db-up
+      - name: Build the migrated template
+        if: steps.plan.outputs.integration == 'true'
+        run: make test-db-up
+      # No version input: the pin is package.json's "packageManager".
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        if: steps.plan.outputs.vitest == 'true'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.plan.outputs.vitest == 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install deps
+        if: steps.plan.outputs.vitest == 'true'
+        working-directory: frontend
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Run each changed test many times
+        if: steps.plan.outputs.go == 'true' || steps.plan.outputs.integration == 'true' || steps.plan.outputs.vitest == 'true'
+        # Through make: its composition profile is the one `make test-db-up` used.
+        run: make repeat-changed-tests REPEAT_BASE="$BASE_REF"
 
   # The SPA lane. Its four jobs live in
   # .github/workflows/_lane-frontend.yml (fe-quality, fe-unit, fe-bundle and the
@@ -1386,10 +1525,10 @@ jobs:
       # No version input: the pin is package.json's "packageManager", which pnpm
       # and corepack read too. A second one here is refused as a mismatch.
       # The image's corepack holds that pnpm already.
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         if: needs.ci-image.outputs.pinned-image == ''
       # In the image Node is already there, so only the pnpm store is restored.
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ needs.ci-image.outputs.pinned-image == '' && '24' || '' }}
           cache: pnpm
@@ -1408,6 +1547,16 @@ jobs:
         uses: ./.github/actions/install-playwright-chromium
       - name: Screen-acceptance UAT (build → preview → AC + axe)
         run: make frontend-e2e E2E_ARGS=--shard=${{ matrix.shard }}/3
+      # A failure that does not repeat leaves only this: each failed test's
+      # page as the reader saw it (error-context.md) and its screenshot.
+      - name: Keep what a failed UAT test saw
+        if: failure()
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: uat-failures-${{ matrix.shard }}
+          path: frontend/test-results
+          if-no-files-found: ignore
+          retention-days: 7
 
   # ONE required context stands for the whole lane.
   #
@@ -1430,11 +1579,14 @@ jobs:
   #                                advisory here. See below.
   #   home-budget                — advisory while its budgets are measured
   #                                for feasibility; it joins as its own change.
+  #   repeat-changed-tests       — advisory until its false alarms are known;
+  #                                it joins as its own change.
   #
   # WHAT THE REPOSITORY ACTUALLY REQUIRES, said once and only here so the file
   # cannot answer it twice with different answers: `ci` — this job — is the ONE
-  # required context, from the `main-required-status-checks` ruleset. There is no
-  # classic branch protection at all. `main-required-ai-reviewers` names
+  # required context this workflow reports, from the `main-required-status-checks`
+  # ruleset; the other is `cla`, from cla.yml. There is no classic branch
+  # protection at all. `main-required-ai-reviewers` names
   # CodeRabbit and is DISABLED. Nothing else is required, SonarCloud included,
   # and three comments in this file used to say otherwise (margince/margince#2544).
   #
@@ -1524,10 +1676,11 @@ jobs:
       - frontend
       # The screen-acceptance lane gates the merge. It was advisory on the
       # argument that a flaky job under a merge queue re-queues every entry in
-      # its group; the queue is not in use, and an advisory lane is one a red
-      # verdict never stops anybody on. Its classifier skip is admissible here
-      # for the same reason `frontend`'s is: on a pull request a skip means out
-      # of scope, and on the merge queue every scope is true so it cannot skip.
+      # its group; an advisory lane is one a red verdict never stops anybody
+      # on, and a flake it shows is a test to fix. Its classifier skip is
+      # admissible here for the same reason `frontend`'s is: on a pull request
+      # a skip means out of scope, and on the merge queue every scope is true
+      # so it cannot skip.
       - uat
       - license-gate
       - images

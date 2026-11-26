@@ -15,6 +15,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -37,7 +38,7 @@ const (
 	// subcontractor — so the companies are edges rather than one anchor column,
 	// and they ride this table for the same reason the stakeholders do: it
 	// already carries a role, a source and the archive semantics an edge needs.
-	ProjectCompanyKind = "project_company"
+	ProjectCompanyKind = auth.ProjectCompanyKind
 )
 
 // ListProjectStakeholders serves the project-scoped stakeholder view; the

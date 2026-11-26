@@ -14,48 +14,52 @@ import (
 )
 
 // StatementCost is what the pgx calls made under one metered context cost.
-// DBTime runs from the start of each pgx call, before encoding or prepare,
-// until its result is closed. So it holds the network, the server's planning
-// and execution, and the rows read in Go between Query and Close. PoolWait is
-// the whole of each Acquire call: checkout, any connect and health check.
-// Exchanges counts round trips to the server: a batch is one exchange however
-// many queries it holds. Transactions counts the begins among them.
+// DBTime includes encoding, planning, execution, network and row scans until
+// Close. PoolWait covers pool checkout, connect and health checks.
+// Exchanges counts pgx calls, with a batch as one. Internal plan lookups may
+// add protocol trips. Transactions counts the begins among those calls.
 type StatementCost struct {
-	Statements   int64
-	Exchanges    int64
-	Transactions int64
-	Prepares     int64
-	Failed       int64
-	Acquires     int64
-	DBTime       time.Duration
-	PoolWait     time.Duration
+	Statements    int64
+	Exchanges     int64
+	Transactions  int64
+	Prepares      int64
+	Failed        int64
+	Acquires      int64
+	DBTime        time.Duration
+	PoolWait      time.Duration
+	Admissions    int64
+	AdmissionWait time.Duration
 }
 
 // Minus answers the cost run since earlier was read off the same meter.
 func (c StatementCost) Minus(earlier StatementCost) StatementCost {
 	return StatementCost{
-		Statements:   c.Statements - earlier.Statements,
-		Exchanges:    c.Exchanges - earlier.Exchanges,
-		Transactions: c.Transactions - earlier.Transactions,
-		Prepares:     c.Prepares - earlier.Prepares,
-		Failed:       c.Failed - earlier.Failed,
-		Acquires:     c.Acquires - earlier.Acquires,
-		DBTime:       c.DBTime - earlier.DBTime,
-		PoolWait:     c.PoolWait - earlier.PoolWait,
+		Statements:    c.Statements - earlier.Statements,
+		Exchanges:     c.Exchanges - earlier.Exchanges,
+		Transactions:  c.Transactions - earlier.Transactions,
+		Prepares:      c.Prepares - earlier.Prepares,
+		Failed:        c.Failed - earlier.Failed,
+		Acquires:      c.Acquires - earlier.Acquires,
+		DBTime:        c.DBTime - earlier.DBTime,
+		PoolWait:      c.PoolWait - earlier.PoolWait,
+		Admissions:    c.Admissions - earlier.Admissions,
+		AdmissionWait: c.AdmissionWait - earlier.AdmissionWait,
 	}
 }
 
 // Plus answers both costs together.
 func (c StatementCost) Plus(other StatementCost) StatementCost {
 	return StatementCost{
-		Statements:   c.Statements + other.Statements,
-		Exchanges:    c.Exchanges + other.Exchanges,
-		Transactions: c.Transactions + other.Transactions,
-		Prepares:     c.Prepares + other.Prepares,
-		Failed:       c.Failed + other.Failed,
-		Acquires:     c.Acquires + other.Acquires,
-		DBTime:       c.DBTime + other.DBTime,
-		PoolWait:     c.PoolWait + other.PoolWait,
+		Statements:    c.Statements + other.Statements,
+		Exchanges:     c.Exchanges + other.Exchanges,
+		Transactions:  c.Transactions + other.Transactions,
+		Prepares:      c.Prepares + other.Prepares,
+		Failed:        c.Failed + other.Failed,
+		Acquires:      c.Acquires + other.Acquires,
+		DBTime:        c.DBTime + other.DBTime,
+		PoolWait:      c.PoolWait + other.PoolWait,
+		Admissions:    c.Admissions + other.Admissions,
+		AdmissionWait: c.AdmissionWait + other.AdmissionWait,
 	}
 }
 

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor, within } from "storybook/test";
+import { INTRO_MS } from "../design-system/motion";
 import { StoryProviders } from "../testing/story-utils";
 import { ConfinedAccountScreen } from "./confinement";
 
@@ -22,7 +23,11 @@ async function ready({ canvasElement }: { canvasElement: HTMLElement }) {
   const button = await within(canvasElement).findByRole("button", {
     name: "Set up",
   });
-  await waitFor(() => expect(button).toBeVisible());
+  // The button arrives with the page's intro, which takes longer than the
+  // default wait.
+  await waitFor(() => expect(button).toBeVisible(), {
+    timeout: INTRO_MS + 1000,
+  });
 }
 export const MfaRequired: Story = { play: ready };
 export const MfaRequiredDark: Story = {

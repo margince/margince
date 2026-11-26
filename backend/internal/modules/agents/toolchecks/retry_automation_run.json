@@ -1,0 +1,9 @@
+{
+  "verb": "retry_automation_run",
+  "checks": [
+    "automation.update"
+  ],
+  "takes": [
+    "failed_automation_run"
+  ]
+}

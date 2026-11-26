@@ -129,10 +129,10 @@ func sealedSMTPPassword(ctx context.Context, pool *pgxpool.Pool, vault keyvault.
 //
 // A SOURCE rather than a token, because the watcher re-reads it. Only a
 // license.token_file renewed in place takes effect on the next re-check;
-// license.token is fixed at boot.
-func SealedLicenseTokenSource(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, log *slog.Logger) func() (string, error) {
+// license.token is fixed at boot. Sealed reads use the current check's context.
+func SealedLicenseTokenSource(pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, log *slog.Logger) func(context.Context) (string, error) {
 	declared := declaredLicenseToken(cfg)
-	return func() (string, error) {
+	return func(ctx context.Context) (string, error) {
 		token, err := declared()
 		if err != nil {
 			return "", err

@@ -19,8 +19,10 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // The deal's context is the counterparty's own words and the rate card is the
@@ -134,6 +136,23 @@ func TestGroundOfferLinesGroundsAQuoteThatSpansALineBreakInTheSource(t *testing.
 	}
 	if len(lines) != 1 || lines[0].Description != "Priority support" {
 		t.Fatalf("staged %+v, want only the line whose words the source says, whatever whitespace separates them", lines)
+	}
+}
+
+func TestGroundOfferLinesDropsADescriptionTheLineColumnWouldRefuse(t *testing.T) {
+	d := offerDrafter{}
+	dealContext := []dealContextItem{{SourceID: "activity:1", Snippet: "they want a kickoff workshop"}}
+
+	limit := textbounds.LimitOf("public.offer_line_item.description")
+	atLimit := candidate(strings.Repeat("w", limit), "they want a kickoff workshop")
+	pastLimit := candidate(strings.Repeat("x", limit+1), "they want a kickoff workshop")
+
+	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{atLimit, pastLimit}, dealContext, "EUR", "en")
+	if err != nil {
+		t.Fatalf("groundOfferLines: %v", err)
+	}
+	if len(lines) != 1 || lines[0].Description != atLimit.Description {
+		t.Fatalf("staged %d lines, want only the one at the column limit of %d", len(lines), limit)
 	}
 }
 
@@ -281,4 +300,30 @@ func findStagedLine(t *testing.T, lines []deals.StagedOfferLineInput, descriptio
 	}
 	t.Fatalf("no staged line with description %q among %d lines", description, len(lines))
 	return deals.StagedOfferLineInput{}
+}
+
+// Both optional fields are spelled null, as a schema-held model writes them.
+func TestOfferDraftRequestHoldsTheModelToTheShapeTheParserReads(t *testing.T) {
+	req := offerDraftRequest(
+		[]dealContextItem{{SourceID: offerDraftKickoffSource, Snippet: "agreed to 20000 cents for it"}},
+		[]crmcontracts.Product{{Name: offerDraftSupportPlan, UnitPriceMinor: 5000, Currency: "EUR"}},
+		string(textlang.English),
+	)
+	if len(req.ResponseSchema) == 0 {
+		t.Fatal("the offer-draft request sends no response schema")
+	}
+	reply := draftReply(
+		kickoffLine(`"conversation_price_minor":20000`, `"product_id":null`),
+		supportLine(`"conversation_price_minor":null`, `"product_id":"p1"`),
+	)
+	lines, err := parseOfferDraftLines(reply)
+	if err != nil || len(lines) != 2 || lines[0].ProductID != "" || lines[1].ConversationPriceMinor != nil {
+		t.Fatalf("parseOfferDraftLines read %+v (%v), want two lines with null read as absent", lines, err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, reply); err != nil {
+		t.Errorf("the schema refuses a reply the parser reads: %v", err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, draftReply(kickoffLine(`"conversation_price_minor":"20000"`, `"product_id":null`))); err == nil {
+		t.Error("the schema accepts a price written as text")
+	}
 }

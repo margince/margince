@@ -70,6 +70,8 @@ func (h Reads) WithIntroNoteLane(lane Completer) Reads {
 // exactly one thing — why it is worth the contact's time — because that is the
 // one fact no record holds.
 type noteFacts struct {
+	// subjects are the contacts whose data the note carries.
+	subjects []ids.UUID
 	// colleague is who the contact will hear from. The note is written in
 	// their voice: they are the sender, and the rep is the colleague being
 	// introduced.
@@ -113,6 +115,10 @@ func (h Reads) DraftIntroNote(w http.ResponseWriter, r *http.Request, id crmcont
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
+	}
+	facts.subjects = []ids.UUID{contactID.UUID}
+	if body.ThroughContactId != nil {
+		facts.subjects = append(facts.subjects, ids.UUID(*body.ThroughContactId))
 	}
 	// The contact the note is addressed to. Everything the note says is what
 	// this product knows about them, so an erasure reaching that contact must
@@ -357,7 +363,7 @@ func (h Reads) callerName(ctx context.Context, tx pgx.Tx) (string, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
 		return "", fmt.Errorf(
-			"network: drafting a note needs an authenticated contact: %w",
+			"drafting a note needs an authenticated contact: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	names, err := UserNames(ctx, tx, []ids.UUID{actor.UserID})

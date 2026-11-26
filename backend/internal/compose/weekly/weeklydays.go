@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -41,19 +42,20 @@ func countWeekDays(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 		return nil, err
 	}
 	authored := auth.ActivityAuthorSQL("a", seat, arg)
-	credited := storekit.MeetingCreditSQL("a", "$"+strconv.Itoa(seat))
+	credited := meetingIsTheirsSQL(storekit.LatestHeldCredit, "a", "$"+strconv.Itoa(seat))
 	rows, err := tx.Query(ctx, `
 		SELECT width_bucket(`+occurredday.StartSQL("a")+`, `+boundsAt+`::timestamptz[]) AS day,
 		       count(*) FILTER (WHERE a.kind = 'email'),
 		       count(*) FILTER (WHERE a.kind = 'call'),
 		       count(*) FILTER (WHERE a.kind = 'meeting')
-		  FROM activity a
+		  FROM activity a `+storekit.LatestHeldJoinSQL("a")+`
 		 WHERE a.archived_at IS NULL
 		   AND `+occurredday.WithinSQL("a", startAt, endAt)+`
 		   AND (`+orUnbounded(scope)+`)
 		   AND ((a.kind = 'email' AND `+relstrength.WeWroteSQL("a")+` AND `+authored+`)
 		     OR (a.kind = 'call' AND `+authored+`)
-		     OR (a.kind = 'meeting' AND (a.meeting_status IS NULL OR a.meeting_status = 'held') AND `+credited+`))
+		     OR (a.kind = 'meeting' AND (a.meeting_status IS NULL OR a.meeting_status = 'held') AND `+credited+`
+		         AND NOT `+meetingoutcome.RecordsMeetingSQL("a")+`))
 		 GROUP BY 1`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: counting the week's days: %w", err)

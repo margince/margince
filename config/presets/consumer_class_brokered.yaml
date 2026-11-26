@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=../margince.schema.json
+# Model setup: Gemma 4 you could run yourself, through OpenRouter
 # config/presets/consumer_class_brokered.yaml — weights a customer could host on
 # their own consumer hardware, served through the broker so we can measure them
 # before anybody buys a GPU.

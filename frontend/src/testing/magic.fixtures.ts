@@ -155,3 +155,42 @@ export const BUSY_NIGHT: MagicReceipt = {
   not_shown: [{ reason: "unadmitted_action", count: 12 }],
   sources_unavailable: [],
 };
+
+/** Complete quiet receipt so a field override keeps a valid API payload. */
+export function receipt(over: Partial<MagicReceipt> = {}): MagicReceipt {
+  const done = over.done ?? [];
+  const needsYou = over.needs_you ?? [];
+  const failed = over.could_not_complete ?? [];
+  const watching = over.watching ?? [];
+  return {
+    as_of: "2026-09-13T08:00:00Z",
+    since: "2026-09-12T08:00:00Z",
+    done,
+    needs_you: needsYou,
+    could_not_complete: failed,
+    watching,
+    // The server counts what it draws, so a case's totals are its lanes'.
+    totals: {
+      done: done.length,
+      needs_you: needsYou.length,
+      could_not_complete: failed.length,
+      watching: watching.length,
+    },
+    not_shown: [],
+    sources_unavailable: [],
+    ...over,
+  };
+}
+
+/** One line, in the `done` lane unless a case says otherwise. */
+export function line(over: Partial<MagicLine> = {}): MagicLine {
+  return {
+    id: "00000000-0000-7000-8000-000000000001",
+    occurred_at: "2026-09-13T07:30:00Z",
+    lane: "done",
+    summary: { key: "magic.action.advance_stage" },
+    actor: { type: "agent", id: "runner" },
+    undo: { undoable: false, reason: "not_a_replayable_verb" },
+    ...over,
+  };
+}

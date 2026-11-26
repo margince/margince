@@ -69,37 +69,11 @@ func filterFor(ctx context.Context, t *testing.T, entityType string) (where stri
 	return strings.Join(terms, " AND "), args
 }
 
-func TestCompanyFilterWalksTheAccountsFourArms(t *testing.T) {
+func TestCompanyFilterUsesAccountReach(t *testing.T) {
 	where, args := filterFor(unscopedCtx(), t, "company")
-	if !strings.Contains(where, "a.id IN (SELECT reach.activity_id") {
-		t.Fatalf("company filter is not a membership test against the account's reach: %s", where)
+	if !strings.Contains(where, CompanyLinkedActivityExists(1)) {
+		t.Fatalf("company filter bypasses the account reach: %s", where)
 	}
-	for _, arm := range []string{
-		"l.company_id = $1", "d.company_id = $1", "r.company_id = $1",
-		"e0.company_id = $1",
-	} {
-		if !strings.Contains(where, arm) {
-			t.Errorf("company filter misses the %q arm: %s", arm, where)
-		}
-	}
-	if !strings.Contains(where, "r.kind = 'employment'") ||
-		!strings.Contains(where, "r.ended_at IS NULL") {
-		t.Errorf("the employment arm must be live employment only: %s", where)
-	}
-	// The participant arm reads employment the same way. A former colleague's
-	// company is one they left, whether they were linked or invited.
-	if !strings.Contains(where, "emp.kind = 'employment'") ||
-		!strings.Contains(where, "emp.ended_at IS NULL") {
-		t.Errorf("the participant arm must be live employment only: %s", where)
-	}
-	// Anchored on the activity in hand. Without it the arm asks "is anybody
-	// anywhere a participant who works here", which is true of the whole
-	// workspace at once.
-	if !strings.Contains(where, "ap.activity_id = a.id") {
-		t.Errorf("the participant arm is not anchored on the activity: %s", where)
-	}
-	// One bind position, read by all four arms: an account id registered
-	// four times would silently mis-number every later placeholder.
 	if len(args) != 1 {
 		t.Errorf("company filter bound %d args, want 1 (the account id): %v", len(args), args)
 	}
@@ -124,24 +98,6 @@ func TestTheReachSetDoesNotFileThroughParticipants(t *testing.T) {
 	}
 }
 
-// The set form is the predicate's walk split by arm. Every link branch carries
-// the shared arms verbatim. The participant branch decides with the predicate's
-// own arm, bound to the account the branch started from.
-func TestTheReachedSetIsThePredicatesArmsOneBranchEach(t *testing.T) {
-	set := CompanyReachedActivities(1)
-	if got := strings.Count(set, companyArms); got != 2 {
-		t.Errorf("the reached set carries the shared arms %d times, want one per joined link branch:\n%s", got, set)
-	}
-	for _, column := range []string{"l.company_id", "d.company_id", "r.company_id"} {
-		if !strings.Contains(set, column+" = ANY($1)") {
-			t.Errorf("the reached set has no branch on %s:\n%s", column, set)
-		}
-	}
-	if !strings.Contains(set, sprintf(participantEmployerArm, "e0.company_id")) {
-		t.Errorf("the reached set's participant branch is not the predicate's own arm:\n%s", set)
-	}
-}
-
 func TestEveryOtherEntityTypeKeepsItsFlatLinkJoin(t *testing.T) {
 	for entityType, column := range map[string]string{
 		"contact": "al.contact_id",
@@ -156,17 +112,19 @@ func TestEveryOtherEntityTypeKeepsItsFlatLinkJoin(t *testing.T) {
 		if !strings.Contains(where, "EXISTS (SELECT 1 FROM activity_link al") {
 			t.Errorf("%s filter is not an EXISTS over activity_link: %s", entityType, where)
 		}
-		if !strings.Contains(where, "al.entity_type = $1") {
+		// The type is a literal, so a generic plan still matches the partial
+		// index on activity_link.
+		if !strings.Contains(where, "al.entity_type = '"+entityType+"'") {
 			t.Errorf("%s filter does not pin the link's entity_type: %s", entityType, where)
 		}
-		if !strings.Contains(where, column+" = $2") {
+		if !strings.Contains(where, column+" = $1") {
 			t.Errorf("%s filter does not match %s: %s", entityType, column, where)
 		}
 		if strings.Contains(where, "r.kind = 'employment'") {
 			t.Errorf("%s filter walks the account's employment arm; only an account does", entityType)
 		}
-		if len(args) != 2 {
-			t.Errorf("%s filter bound %d args, want 2: %v", entityType, len(args), args)
+		if len(args) != 1 {
+			t.Errorf("%s filter bound %d args, want 1: %v", entityType, len(args), args)
 		}
 	}
 }
@@ -260,12 +218,19 @@ func TestTheWaitingQueryUsesTheContentGate(t *testing.T) {
 	if !strings.Contains(waitingRepliesSQL, "%[2]s") {
 		t.Fatal("the waiting query no longer binds an activity scope clause at all")
 	}
+	// Every surface that judges waiting mail, so none disagrees with the queue.
+	for _, file := range []string{"waitingslots.go", "waitingcards.go", "waitingrecordscope.go", "hiddenbacklog.go"} {
+		judged, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading the waiting source: %v", err)
+		}
+		if !strings.Contains(string(judged), `auth.ActivityMessageContentClause(ctx, "a"`) {
+			t.Fatalf("%s judges waiting mail without the message content gate the queue uses", file)
+		}
+	}
 	source, err := os.ReadFile("waitingslots.go")
 	if err != nil {
 		t.Fatalf("reading the waiting source: %v", err)
-	}
-	if !strings.Contains(string(source), "auth.ActivityContentClause") {
-		t.Fatal("the waiting read admits rows through the discover gate, which is for safe markers only")
 	}
 	if !strings.Contains(string(source), "auth.LinkTargetReadableClause") {
 		t.Fatal("the waiting read returns links without checking the reader may read what they point at")
@@ -292,7 +257,7 @@ func TestTheWaitingQueryBreaksTimestampTies(t *testing.T) {
 		t.Fatal("an answer is ordered by id, so capture order decides whether a same-second reply answered")
 	}
 	rest := answers
-	for _, arm := range []string{"answer_thread", "answer_mail", "answer_touch"} {
+	for _, arm := range []string{"answer_thread", "answer_split", "answer_mail", "answer_touch"} {
 		ordered := occurredday.AnswersSQL(arm, "a")
 		if !strings.Contains(rest, ordered) {
 			t.Errorf("the %s arm does not ask occurredday.AnswersSQL, so a day tie and an instant tie read alike", arm)
@@ -383,16 +348,16 @@ func TestTheWaitingQueryNeverNullMatchesThreadKeys(t *testing.T) {
 // threadless unjudged row would turn a hand-logged note into a standing
 // obligation on the deal.
 func TestOnlyTheObligationAdmitsThreadlessMail(t *testing.T) {
-	if strings.Contains(owedSQL("$1", neverRelaxed, neverRelaxed, neverRelaxed), "a.thread_key IS NOT NULL") {
+	if strings.Contains(owedSQL("$1", "$2", neverRelaxed, neverRelaxed, neverRelaxed), "a.thread_key IS NOT NULL") {
 		t.Fatal("the obligation asks a message for a thread key, so a customer's threadless " +
 			"mail cannot be judged and stays invisible")
 	}
-	if !strings.Contains(reviewableRequestSQL("$1"), "a.thread_key IS NOT NULL AND NOT") {
+	if !strings.Contains(reviewableRequestSQL("$1", "$2"), "a.thread_key IS NOT NULL AND NOT") {
 		t.Fatal("request review admits unjudged threadless mail without a sender rule in front of it")
 	}
 	// Every reader of the waiting query asks the same obligation, because the
 	// query carries it rather than taking it from its caller.
-	if !strings.Contains(waitingRepliesSQL, owedSQL("$%[1]d", "%[11]s", "%[17]s", "%[21]s")) {
+	if !strings.Contains(waitingRepliesSQL, owedSQL("$%[1]d", "%[14]s", "%[11]s", "%[17]s", "%[21]s")) {
 		t.Fatal("the waiting query no longer carries owedSQL, so the lane and the badge can disagree")
 	}
 }

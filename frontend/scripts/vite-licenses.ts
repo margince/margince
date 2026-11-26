@@ -8,7 +8,7 @@ import {
   realpathSync,
   statSync,
 } from "node:fs";
-import { dirname, relative, resolve } from "node:path";
+import { dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   type Plugin,
@@ -16,9 +16,12 @@ import {
   type ResolvedConfig,
   type Rolldown,
 } from "vite";
+import { stable } from "../src/format/collate";
 
 const REPOSITORY = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const THIRD_PARTY_NOTICES = "licenses/THIRD-PARTY-NOTICES.txt";
+// Written by backend/tools/gen-composition (fetchedUnitsIndex), one `name | module@version` line per downloaded unit.
+const FETCHED_UNITS = "build/extensions/fetched-units.txt";
 
 type CopiedFile = {
   path: string;
@@ -26,6 +29,7 @@ type CopiedFile = {
   license: string;
   text: string;
 };
+type FetchedUnit = { dir: string; source: string };
 type BundledPackage = {
   root: string;
   name: string;
@@ -110,19 +114,60 @@ function noticeText(path: string): string {
   return text;
 }
 
+function licenceTexts(dir: string): string[] {
+  return readdirSync(dir)
+    .filter(
+      (name) =>
+        /^(?:licen[cs]e|notice|copying)(?:[._-].*)?$/i.test(name) &&
+        statSync(resolve(dir, name)).isFile(),
+    )
+    .sort(stable)
+    .map((name) => noticeText(resolve(dir, name)));
+}
+
+// Downloaded units sit in the repository tree, outside node_modules, and the
+// composer's index is what names them.
+function fetchedUnits(root: string): FetchedUnit[] {
+  const index = resolve(root, FETCHED_UNITS);
+  if (!existsSync(index)) {
+    const folder = dirname(index);
+    if (
+      existsSync(folder) &&
+      readdirSync(folder, { withFileTypes: true }).some((entry) =>
+        entry.isDirectory(),
+      )
+    )
+      throw new Error(
+        `third-party notices: ${folder} holds downloaded units but ${FETCHED_UNITS} is missing; rerun gen-composition`,
+      );
+    return [];
+  }
+  return readFileSync(index, "utf8")
+    .split(/\r?\n/)
+    .filter((line) => line.trim())
+    .map((line) => {
+      const [name, source] = line.split("|").map((field) => field.trim());
+      if (!name || !source)
+        throw new Error(`${FETCHED_UNITS}: expected name | module@version`);
+      return { dir: realpathSync(resolve(dirname(index), name)), source };
+    });
+}
+
+function unitNotice(unit: FetchedUnit): string {
+  const texts = licenceTexts(unit.dir);
+  if (texts.length === 0)
+    throw new Error(
+      `third-party notices: downloaded unit ${unit.source} has no LICENSE, NOTICE or COPYING file`,
+    );
+  return `${unit.source}\n\n${texts.join("\n\n")}`;
+}
+
 function packageNotice(
   pkg: BundledPackage,
   copied: CopiedFile[],
   root: string,
 ): string {
-  const files = readdirSync(pkg.root)
-    .filter(
-      (name) =>
-        /^(?:licen[cs]e|notice|copying)(?:[._-].*)?$/i.test(name) &&
-        statSync(resolve(pkg.root, name)).isFile(),
-    )
-    .sort();
-  const texts = files.map((name) => noticeText(resolve(pkg.root, name)));
+  const texts = licenceTexts(pkg.root);
   if (texts.length === 0) {
     const recorded = copied.find(
       (entry) => entry.source === `${pkg.name}@${pkg.version}`,
@@ -145,18 +190,26 @@ function bundleNotices(
   const copied = copiedFiles(root);
   const packages = new Map<string, BundledPackage>();
   const loaded = new Set<string>();
+  const shipped: string[] = [];
   for (const output of Object.values(bundle)) {
     if (output.type !== "chunk") continue;
     for (const id of Object.keys(output.modules)) {
       loaded.add(relative(root, moduleFile(id)));
+      shipped.push(moduleFile(id));
       const pkg = bundledPackage(id);
       if (pkg) packages.set(pkg.root, pkg);
     }
   }
   for (const file of cssFiles.filter((file) => file.endsWith(".css"))) {
+    shipped.push(file);
     const pkg = bundledPackage(file);
     if (pkg) packages.set(pkg.root, pkg);
   }
+  const units = fetchedUnits(root)
+    .filter((unit) =>
+      shipped.some((file) => file.startsWith(`${unit.dir}${sep}`)),
+    )
+    .map(unitNotice);
   const notices = [...packages.values()]
     .sort((a, b) =>
       `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`),
@@ -171,7 +224,7 @@ function bundleNotices(
       );
     }
   }
-  return `${[...notices, ...copiedNotices.values()].join("\n\n====================\n\n")}\n`;
+  return `${[...notices, ...units, ...copiedNotices.values()].join("\n\n====================\n\n")}\n`;
 }
 
 // CSS imports are inlined outside chunk.modules. Vite reports their resolved

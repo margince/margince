@@ -303,6 +303,15 @@ var contextTargetKinds = map[string]string{
 		"because that is the record its owner decides about. The effect writes a record " +
 		"grant and never the contact's own fields. Pinning bound the answer to a row that " +
 		"every edit and every captured message bumps while the request waits in the inbox.",
+	approvalsubject.KindEditAccess: "An edit access request is filed under the RECORD it asks for, because " +
+		"that is the record its owner decides about. The effect writes a record grant and never the " +
+		"record's own fields. The owner keeps working the record while the request waits, and every edit " +
+		"would cancel it. The accept re-reads the owner and refuses when the owner it names has moved.",
+	approvalsubject.KindEmployerChange: "An employer change is filed under the CONTACT it is about. The effect " +
+		"writes only the contact's employment edges, and every captured message bumps the contact while the " +
+		"question waits. The effect refuses when the employment it would end is no longer current.",
+	approvalsubject.KindTaskDueDate: "A due-date question is filed under the TASK it is about. The effect " +
+		"writes only the task's due date, and the task's other fields change while the question waits.",
 	kindCommitmentTask: "A promise read out of a conversation is filed under the ACTIVITY " +
 		"it was said in — the message or the meeting — because those words are the evidence " +
 		"a human judges it on. The effect CREATES a task activity and never writes the " +
@@ -338,6 +347,10 @@ var unpinnedKinds = map[string]string{
 		"and a record waits in the inbox for days while its owner keeps working it, so " +
 		"every edit and every captured message would cancel the request. The accept re-reads " +
 		"the owner under the record's row lock and refuses when the owner it names has moved.",
+	kindDealProposalStage: "The question is \"this deal may move to the proposal stage\", and no edit to the deal " +
+		"makes that false: the owner keeps working the deal while the question waits, and every edit or " +
+		"captured message would cancel it. The accept re-reads under the deal's row lock that the deal is " +
+		"still open, off legal hold, and that the target is still a later open stage (deals.ApplyProposalStageTx).",
 	kindLinkedInMatch: "The proposal's claim is \"this imported connection is this contact\", and no " +
 		"field edit on the contact can make that claim false — the founder decision is " +
 		"explicitly that editing a contact must not cancel a LinkedIn match waiting to be " +

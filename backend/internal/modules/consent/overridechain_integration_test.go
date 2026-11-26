@@ -46,12 +46,7 @@ func TestRevokingACarriedVouchAnnouncesEveryRowItTookBack(t *testing.T) {
 	e := setupChannelConsent(t)
 	survivor := seedOverrideContact(t, e, "Carry Survivor")
 
-	recorded, err := e.store.Allow(e.ctx, AllowInput{
-		ContactID: e.contact, Category: "marketing", Reason: "they asked us at the trade fair",
-	})
-	if err != nil {
-		t.Fatalf("recording the override: %v", err)
-	}
+	recorded := plantOverride(t, e, e.contact, string(commsauthz.LevelAdmin))
 	carryOverrides(t, e, e.contact, survivor)
 	copied := liveOverrideID(t, e, survivor)
 
@@ -93,12 +88,7 @@ func TestAMergeCannotCarryAVouchPastTheRevokeTakingItBack(t *testing.T) {
 	middle := seedOverrideContact(t, e, "Chain Middle")
 	last := seedOverrideContact(t, e, "Chain Last")
 
-	recorded, err := e.store.Allow(e.ctx, AllowInput{
-		ContactID: e.contact, Category: "marketing", Reason: "they asked us at the trade fair",
-	})
-	if err != nil {
-		t.Fatalf("recording the override: %v", err)
-	}
+	recorded := plantOverride(t, e, e.contact, string(commsauthz.LevelAdmin))
 	carryOverrides(t, e, e.contact, middle)
 
 	// The second merge's carry, held open on its own connection: it has copied
@@ -137,11 +127,7 @@ func TestRevokingACarriedCopyTakesBackItsOriginalToo(t *testing.T) {
 	e := setupChannelConsent(t)
 	survivor := seedOverrideContact(t, e, "Copy Survivor")
 
-	if _, err := e.store.Allow(e.ctx, AllowInput{
-		ContactID: e.contact, Category: "marketing", Reason: "they asked us at the trade fair",
-	}); err != nil {
-		t.Fatalf("recording the override: %v", err)
-	}
+	plantOverride(t, e, e.contact, string(commsauthz.LevelAdmin))
 	carryOverrides(t, e, e.contact, survivor)
 	copied := liveOverrideID(t, e, survivor)
 
@@ -264,8 +250,7 @@ func liveOverridesOn(t *testing.T, e *channelConsentEnv, contact ids.ContactID) 
 // "which override, announced on whose stream".
 //
 // Read off event_outbox rather than asserted against the call, because the row
-// a consumer will actually receive is the thing under test — the same reason
-// lastRecordedOverridePayload reads it there.
+// a consumer will actually receive is the thing under test.
 func liftedOverrideStreams(t *testing.T, e *channelConsentEnv) map[ids.UUID]ids.UUID {
 	t.Helper()
 	rows, err := e.owner.Query(context.Background(), `
@@ -305,12 +290,7 @@ func TestRevokingAVouchAuditsEveryContactTheChainReached(t *testing.T) {
 	e := setupChannelConsent(t)
 	survivor := seedOverrideContact(t, e, "Audit Survivor")
 
-	recorded, err := e.store.Allow(e.ctx, AllowInput{
-		ContactID: e.contact, Category: "marketing", Reason: "they asked us at the trade fair",
-	})
-	if err != nil {
-		t.Fatalf("recording the override: %v", err)
-	}
+	recorded := plantOverride(t, e, e.contact, string(commsauthz.LevelAdmin))
 	carryOverrides(t, e, e.contact, survivor)
 	copied := liveOverrideID(t, e, survivor)
 

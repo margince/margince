@@ -10,6 +10,7 @@ package integration
 // surface that names the installation reads the new name.
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -162,7 +163,7 @@ func anchorRenameDoors(d *twoDoors, anchor string) map[string]renameDoor {
 		"PATCH the record": rest("/v1/companies/"+anchor, "display_name"),
 		"PATCH the field":  rest("/v1/companies/"+anchor+"/profile-fields/display_name", "value"),
 		"update_record": tool("update_record", func(name string) map[string]any {
-			return map[string]any{"record_type": "company", "id": anchor, "fields": map[string]any{"display_name": name}}
+			return map[string]any{"why": "A test asks for this change.", "record_type": "company", "id": anchor, "fields": map[string]any{"display_name": name}}
 		}),
 		"change_record_parts": tool("change_record_parts", func(name string) map[string]any {
 			return map[string]any{"action": "update_company_profile_field", "company_id": anchor, "field": "display_name", "value": name}
@@ -212,14 +213,16 @@ func TestAnAgentRenamingTheAnchorIsRefusedBeforeAnyoneIsAsked(t *testing.T) {
 	}
 }
 
-// The anchor's name carries the installation name's bound on every path that
-// renames it; a customer company's name does not.
+// The anchor's name carries the label bound on every path that renames it, and
+// a refusal moves neither the anchor nor the installation. A customer company's
+// typed name carries the same label bound.
 func TestAnAnchorNameTheInstallationCannotCarryIsRefused(t *testing.T) {
 	e := oneNameApp(t)
 	anchor := saveAnchor(t, e, "Profile Name AG")
-	tooLong := strings.Repeat("a", 201)
+	tooLong := strings.Repeat("a", values.TextLabelCharacters+1)
+	pastTheSetting := strings.Repeat("a", values.MaxCompanyNameRunes+1)
 
-	for name, code := range map[string]string{tooLong: "too_long", "   ": "required"} {
+	for name, code := range map[string]string{tooLong: "too_long", pastTheSetting: "too_long", "   ": "required"} {
 		body := wellFormedCompany()
 		body["display_name"] = name
 		var problem companyProblem
@@ -248,9 +251,34 @@ func TestAnAnchorNameTheInstallationCannotCarryIsRefused(t *testing.T) {
 	}
 
 	customer := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Brandt Logistik GmbH", "source": "manual"})
+	var customerProblem companyProblem
 	if status := e.Call(t, http.MethodPatch, "/v1/companies/"+customer,
-		AnyMap{"display_name": tooLong}, nil, nil); status != http.StatusOK {
-		t.Errorf("a customer's 201-character name = %d, want 200: only the anchor carries the bound", status)
+		AnyMap{"display_name": tooLong}, nil, &customerProblem); status != http.StatusUnprocessableEntity {
+		t.Fatalf("a customer's typed name past the label limit = %d, want 422", status)
+	}
+	wantNameFault(t, customerProblem, "too_long")
+}
+
+// A name stored before the label limit stays saveable while it is unchanged,
+// so its company can still edit the rest of the profile. Only a hand-written
+// row can hold one now, because every writer refuses a new one.
+func TestAnExistingLongAnchorNameSavesUnchanged(t *testing.T) {
+	e := oneNameApp(t)
+	anchor := saveAnchor(t, e, "Profile Name AG")
+	stored := strings.Repeat("a", values.TextLabelCharacters+30)
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE company SET display_name = $1 WHERE id = $2`, stored, anchor); err != nil {
+		t.Fatalf("store a long legacy name: %v", err)
+	}
+
+	body := wellFormedCompany()
+	body["display_name"] = stored
+	body["icp"] = "Mid-market RevOps teams in the DACH region."
+	if status := e.Call(t, http.MethodPut, "/v1/company", body, nil, nil); status != http.StatusOK {
+		t.Fatalf("PUT /v1/company with the stored name unchanged = %d, want 200", status)
+	}
+	if got := anchorName(t, e, anchor); got != stored {
+		t.Errorf("the save left the anchor named %q, want the stored name", got)
 	}
 }
 
@@ -303,6 +331,10 @@ func wantNameFault(t *testing.T, problem companyProblem, code string) {
 	if len(problem.Details.Errors) != 1 || problem.Details.Errors[0].Field != "display_name" ||
 		problem.Details.Errors[0].Code != code {
 		t.Errorf("refusal = %+v, want one %s error on display_name", problem.Details.Errors, code)
+		return
+	}
+	if wantMax := map[string]int{"too_long": values.TextLabelCharacters}[code]; problem.Details.Errors[0].Max != wantMax {
+		t.Errorf("refusal max = %d, want %d", problem.Details.Errors[0].Max, wantMax)
 	}
 }
 

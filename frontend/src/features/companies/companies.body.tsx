@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { ExtensionPanels } from "../../components/extensionpanels";
 import type { JustIn } from "../../components/latestinbound";
 import { RecordTeam } from "../../components/recordteam";
 import type { useTaskUpdate } from "../../components/taskactions";
@@ -28,6 +29,7 @@ import { CompanyDocumentsCard } from "./companydocuments";
 import { EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
 import { useCompanyVerbRefusal } from "./companyheader";
+import { CompanyMeetingsTab } from "./companymeetings";
 import "./company360.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import "./companytabs.css";
@@ -207,6 +209,14 @@ export function CompanyRecordBody({
         onPerform={onPerform}
         taskUpdate={taskUpdate}
       />
+      {tab === "meetings" && !company.archived_at && (
+        <CompanyMeetingsTab
+          companyId={company.id}
+          view={view}
+          loading={loading}
+          onBriefMeeting={setPreparing}
+        />
+      )}
       {/* The composer, anchored on the message a draft_reply suggestion named.
           It is the same modal the timeline's own Reply opens. The advice
           leads to it rather than to a second way to answer. */}
@@ -264,6 +274,10 @@ export function CompanyRecordBody({
             companyId={company.id}
             companyName={company.display_name}
           />
+          <ExtensionPanels
+            slot="record_panel.company"
+            record={{ type: "company", id: company.id }}
+          />
         </div>
       )}
       {/* Files get the whole column on their own tab, which is what the mockup
@@ -277,10 +291,7 @@ export function CompanyRecordBody({
           (historical)". The tab strip cannot say that, because a tab label
           names a place, not its qualifier. */}
       {tab === "finance" && !company.archived_at && (
-        <CompanyFinanceCard
-          companyId={company.id}
-          lifecycle={company.lifecycle}
-        />
+        <CompanyFinanceCard companyId={company.id} lifecycle={company.status} />
       )}
       {tab === "documents" && (
         // The tab's stacked column, so the two panels are spaced like every
@@ -295,6 +306,7 @@ export function CompanyRecordBody({
           )}
           <CompanyDocumentsCard
             companyId={company.id}
+            writable={company.writable}
             refusedReasonId={refusedReasonId}
             refusedReason={verbRefusal}
             onOpenEmail={receipt.openEmail}
@@ -304,6 +316,8 @@ export function CompanyRecordBody({
       {receipt.cited && (
         <EvidenceModal
           companyId={company.id}
+          anchor={company.is_anchor === true}
+          canEdit={company.writable === true}
           cited={receipt.cited}
           onClose={receipt.close}
           onStep={receipt.step}

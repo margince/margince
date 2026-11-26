@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { addressKey } from "./addresskey";
 import { throwProblem } from "./problem";
 
 // Asking the engine whether a message would be allowed, before anybody presses
@@ -16,6 +17,8 @@ import { throwProblem } from "./problem";
 // The answer depends on evidence a composer cannot see — a suppression row, a
 // thread it is not showing, a jurisdiction's ceiling — so a surface that
 // guessed would be a second implementation of the authorization engine.
+
+export const SEND_PERMISSION_KEY = ["send-permission"] as const;
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
 
@@ -53,12 +56,27 @@ export function useSendPermission(args: {
    * "unproven" about a message the send allows.
    */
   evidence?: components["schemas"]["CommunicationEvidence"];
+  /** The countries the sender stated, which the send's rules follow too. */
+  recipientCountries?: readonly components["schemas"]["RecipientCountry"][];
+  /**
+   * The message written so far, read for an offer as the send reads it and
+   * checked against the advertising content rules of the recipients' packs.
+   * Settled by the caller, so typing does not ask once per key.
+   */
+  draft?: Readonly<{
+    subject?: string;
+    body?: string;
+    htmlBody?: string;
+    attachmentIds?: readonly string[];
+  }>;
   /** Off while the rep is still choosing a recipient — nothing to ask about yet. */
   enabled?: boolean;
 }): {
   preview: Preview | undefined;
   asking: boolean;
   unanswered: boolean;
+  /** Asks the same question again, for a surface that waits on the answer. */
+  recheck: () => void;
 } {
   const recipients = distinctAddresses(args.recipients);
   const links = args.links ?? [];
@@ -76,7 +94,7 @@ export function useSendPermission(args: {
   // question, so they are the whole key. Changing any of them must re-ask
   // rather than serve the answer to a different message.
   const queryKey = [
-    "send-permission",
+    ...SEND_PERMISSION_KEY,
     args.anchorActivityId ?? "",
     recipients,
     links,
@@ -84,6 +102,8 @@ export function useSendPermission(args: {
     args.marketingPurpose ?? "",
     args.consentPurpose ?? "",
     args.evidence ?? {},
+    args.recipientCountries ?? [],
+    args.draft ?? {},
   ];
   const query = useQuery({
     queryKey,
@@ -92,20 +112,31 @@ export function useSendPermission(args: {
     // and the send — so this is a reading taken close to the write, never a
     // cached verdict that outlives what it described.
     staleTime: 0,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const body = {
         to: [...recipients],
         communication_context: args.context,
         marketing_purpose: args.marketingPurpose,
         consent_purpose: args.consentPurpose,
         evidence: args.evidence,
+        recipient_countries: args.recipientCountries?.length
+          ? [...args.recipientCountries]
+          : undefined,
+        subject: args.draft?.subject,
+        body: args.draft?.body,
+        html_body: args.draft?.htmlBody || undefined,
+        attachment_ids: args.draft?.attachmentIds?.length
+          ? [...args.draft.attachmentIds]
+          : undefined,
       };
       const answered = args.anchorActivityId
         ? await api.POST("/activities/{id}/send-email:preview", {
+            signal,
             params: { path: { id: args.anchorActivityId } },
             body,
           })
         : await api.POST("/emails:preview", {
+            signal,
             body: { ...body, links: [...links] },
           });
       // Only a real 2xx is an answer. openapi-fetch reports a falsy `error` for
@@ -142,8 +173,11 @@ export function useSendPermission(args: {
   // the exact failure this hook exists to end.
   return {
     preview: query.data,
-    asking: query.isPending && enabled,
+    asking: (query.isPending || query.isFetching) && enabled,
     unanswered: enabled && query.isError,
+    recheck: () => {
+      void query.refetch();
+    },
   };
 }
 
@@ -167,13 +201,13 @@ function answersEveryone(
     ) {
       return false;
     }
-    const normal = normalAddress(address);
+    const normal = addressKey(address);
     if (answered.has(normal)) return false;
     answered.add(normal);
   }
   return (
     answered.size === asked.length &&
-    asked.every((address) => answered.has(normalAddress(address)))
+    asked.every((address) => answered.has(addressKey(address)))
   );
 }
 
@@ -183,16 +217,10 @@ function distinctAddresses(addresses: readonly string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const address of addresses) {
-    const normal = normalAddress(address);
+    const normal = addressKey(address);
     if (normal === "" || seen.has(normal)) continue;
     seen.add(normal);
     out.push(address);
   }
   return out;
-}
-
-// The server stores an address trimmed and lowercased, so it may answer for
-// one in that form.
-function normalAddress(address: string): string {
-  return address.trim().toLowerCase();
 }

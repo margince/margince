@@ -23,7 +23,7 @@ func (r approvalPreviewReader) populateFrozenMessage(ctx context.Context, input 
 	if err != nil {
 		return err
 	}
-	details := mailPreviewDetails(crmcontracts.SendCompanyEmailRequest{}, input, to)
+	details := mailPreviewDetails(input, to)
 	filing, err := r.previewLinkedRecords(ctx, links)
 	if err != nil {
 		return err

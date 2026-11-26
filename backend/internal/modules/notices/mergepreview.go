@@ -44,7 +44,7 @@ func PreviewNoticeCarryTx(ctx context.Context, tx pgx.Tx, kind string, source id
 		return nil, err
 	}
 	defer rows.Close()
-	items, err := scanCentreItems(rows)
+	items, err := scanCentreItems(ctx, rows)
 	if err != nil {
 		return nil, err
 	}

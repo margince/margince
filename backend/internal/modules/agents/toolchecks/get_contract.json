@@ -1,0 +1,12 @@
+{
+  "verb": "get_contract",
+  "checks": [
+    "company.read",
+    "contract.read",
+    "deal.read",
+    "project.read"
+  ],
+  "takes": [
+    "contract"
+  ]
+}

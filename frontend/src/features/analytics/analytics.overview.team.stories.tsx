@@ -7,6 +7,7 @@ import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import {
@@ -232,7 +233,9 @@ export const ReturnReasons: Story = {
 
 export const WaitingHandoffs: Story = {
   render: () => {
+    // A manager who may hand a waiting lead to someone else.
     installFetchStub({
+      "GET /me": meRoute({ lead: ["read", "update"] }, { roles: ["manager"] }),
       "GET /analytics/sdr-summary/handoffs": () =>
         jsonResponse({
           as_of: review.as_of,

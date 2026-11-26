@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -48,8 +49,10 @@ const maxMailErrorRunes = 500
 // is a different question from anything the centre displays.
 type EmailAttempt struct {
 	ApprovalID *ids.ApprovalID
-	Notice     Notice
-	Recipient  ids.UserID
+	// TeamRequestPage is the team link a team request names.
+	TeamRequestPage *ids.UUID
+	Notice          Notice
+	Recipient       ids.UserID
 	// ClaimedAt is the stamp this claim wrote. A release matches it, so a
 	// claim another attempt took since is never freed.
 	ClaimedAt time.Time
@@ -62,13 +65,10 @@ type EmailAttempt struct {
 // the caller does after it is allowed to fail and lose the message; nothing
 // after it is allowed to produce a second one.
 //
-// FALSE covers three different worlds on purpose, because they are one answer
-// to a sender: the attempt is already spent, the reader has already answered
-// the card on screen, or the notice is gone. `read_at IS NULL` is the half that
-// is not about duplicates — a job staged when the notice was written may be
-// worked seconds later, and by then the colleague may be looking at the card.
-// Mailing them about something they just answered is the most avoidable message
-// this lane can send, and it costs one predicate.
+// FALSE means one thing to a sender: do not send. The attempt is spent, the
+// reader answered on screen, the producer took the notice back, or the notice
+// is gone. A job runs seconds after the notice it mails, so the reader may
+// have answered it on screen by then.
 //
 // The row is read in the SAME statement that claims it. Two statements would
 // leave a window in which the row could be settled between them, and the sender
@@ -80,7 +80,7 @@ func (s *Store) ClaimEmailAttempt(ctx context.Context, id ids.UUID) (EmailAttemp
 		row := tx.QueryRow(ctx, `
 			UPDATE notice
 			   SET email_attempted_at = now()
-			 WHERE id = $1 AND email_attempted_at IS NULL AND read_at IS NULL
+			 WHERE id = $1 AND email_attempted_at IS NULL AND read_at IS NULL AND retracted_at IS NULL
 			 RETURNING `+claimedNoticeColumns, id)
 		var claimedAt time.Time
 		var scanErr error
@@ -102,7 +102,7 @@ func (s *Store) ClaimEmailAttempt(ctx context.Context, id ids.UUID) (EmailAttemp
 
 // claimedNoticeColumns is what a claim returns about each notice it took.
 const claimedNoticeColumns = `id, recipient_user_id, kind, subject, body,
-	target_type, target_id, created_at, origin, email_attempted_at, coalesce(dedupe_key,'')`
+	target_type, target_id, created_at, origin, email_attempted_at, coalesce(dedupe_key,''), system_text`
 
 // scanClaimedNotice reads one row of claimedNoticeColumns.
 func scanClaimedNotice(row pgx.Row) (EmailAttempt, time.Time, error) {
@@ -116,12 +116,15 @@ func scanClaimedNotice(row pgx.Row) (EmailAttempt, time.Time, error) {
 	var targetID *ids.UUID
 	if err := row.Scan(&id, &recipient, &attempt.Notice.Kind, &attempt.Notice.Subject,
 		&attempt.Notice.Body, &targetType, &targetID, &attempt.Notice.CreatedAt,
-		&attempt.Notice.Origin, &claimedAt, &noticeKey); err != nil {
+		&attempt.Notice.Origin, &claimedAt, &noticeKey, &attempt.Notice.SystemText); err != nil {
 		return attempt, claimedAt, err
 	}
 	if approval, ok := approvalOfNoticeKey(attempt.Notice.Kind, noticeKey); ok {
 		typed := ids.From[ids.ApprovalKind](approval)
 		attempt.ApprovalID = &typed
+	}
+	if page, ok := pageOfTeamRequestKey(attempt.Notice.Kind, noticeKey); ok {
+		attempt.TeamRequestPage = &page
 	}
 	attempt.Notice.ID = id
 	attempt.Recipient = ids.From[ids.UserKind](recipient)

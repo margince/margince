@@ -16,7 +16,7 @@ import {
   translatePlural,
 } from "../../../i18n";
 import { en } from "../../../i18n/en";
-import { deal, stages } from "../deals.testkit";
+import { deal, offer, stages } from "../deals.testkit";
 import { DealFigures, timelineEvents } from "./dealfigures";
 import type { DealStandingInputs } from "./dealstanding";
 
@@ -90,6 +90,34 @@ function arrival(stageId: string, at: string) {
     actor_id: "u1",
   };
 }
+
+describe("the offer under the deal's value", () => {
+  it("names the accepted offer the value came from", () => {
+    show({
+      offers: [
+        offer({
+          id: "draft",
+          offer_number: "A-1002",
+          created_at: "2026-06-05T00:00:00Z",
+        }),
+        offer({
+          id: "won",
+          offer_number: "A-1001",
+          status: "accepted",
+          accepted_at: "2026-06-03T00:00:00Z",
+        }),
+      ],
+    });
+    expect(screen.getByText("Offer A-1001 · version 1")).toBeInTheDocument();
+  });
+
+  it("says when the offer it names is still in progress", () => {
+    show({ offers: [offer({ offer_number: "A-1028" })] });
+    expect(
+      screen.getByText("Offer A-1028 · version 1 · Draft"),
+    ).toBeInTheDocument();
+  });
+});
 
 describe("Days in stage", () => {
   it("counts the days since the deal arrived in its stage, and names the stage", async () => {
@@ -239,6 +267,7 @@ describe("what the axis marks", () => {
     ) => translatePlural("en", base, count, params),
     locale: ENGLISH,
     zone: UTC_ZONE,
+    companyZone: UTC_ZONE,
   };
   const row = (over: Partial<Activity>): Activity => ({
     occurred_precision: "instant",
@@ -275,6 +304,12 @@ describe("what the axis marks", () => {
   it("marks what happened, the buyer's last word, what is ahead and the close", () => {
     expect(
       marks({
+        lastInbound: row({
+          id: "mail",
+          kind: "email",
+          direction: "inbound",
+          occurred_at: "2026-05-20T09:00:00Z",
+        }),
         activities: [
           row({
             id: "held",
@@ -285,19 +320,6 @@ describe("what the axis marks", () => {
             id: "gone",
             meeting_status: "canceled",
             occurred_at: "2026-05-03T09:00:00Z",
-          }),
-          row({
-            id: "mail",
-            kind: "email",
-            direction: "inbound",
-            voice: {
-              author: {
-                kind: "contact_record",
-                display_name: "Buyer",
-                is_reader: false,
-              },
-            },
-            occurred_at: "2026-05-20T09:00:00Z",
           }),
           row({
             id: "booked",
@@ -318,6 +340,19 @@ describe("what the axis marks", () => {
     ]);
   });
 
+  it("marks the buyer's last word the server dated, though no loaded row holds it", () => {
+    expect(
+      marks({
+        lastInbound: row({
+          id: "old",
+          kind: "email",
+          direction: "inbound",
+          occurred_at: "2026-01-02T09:00:00Z",
+        }),
+      }),
+    ).toContainEqual(["last-old", "last"]);
+  });
+
   it("keeps the five newest conversations held", () => {
     const held = Array.from({ length: 7 }, (_, index) =>
       row({
@@ -332,10 +367,10 @@ describe("what the axis marks", () => {
     expect(kept.map(([key]) => key)).toEqual(["m6", "m5", "m4", "m3", "m2"]);
   });
 
-  it("titles a closed deal's close by its outcome, never as expected", () => {
-    const close = timelineEvents(
+  const closeOf = (over: Parameters<typeof deal>[0]) =>
+    timelineEvents(
       {
-        deal: deal({ status: "lost", closed_at: "2026-05-20T12:00:00Z" }),
+        deal: deal(over),
         stages,
         asOf: AS_OF,
         activities: [],
@@ -349,7 +384,24 @@ describe("what the axis marks", () => {
       },
       words,
     ).find((event) => event.key === "close");
+
+  it("titles a closed deal's close by its outcome, never as expected", () => {
+    const close = closeOf({
+      status: "lost",
+      closed_at: "2026-05-20T12:00:00Z",
+    });
     expect(close?.title).toBe(en["deals.statusLost"]);
+  });
+
+  it("flags the day a deal was won or lost, never an open deal's expected close", () => {
+    const decided = "2026-05-20T12:00:00Z";
+    expect(closeOf({ status: "won", closed_at: decided })?.outcome).toBe("won");
+    expect(closeOf({ status: "lost", closed_at: decided })?.outcome).toBe(
+      "lost",
+    );
+    expect(
+      closeOf({ expected_close_date: "2026-06-30" })?.outcome,
+    ).toBeUndefined();
   });
 
   it("draws no close on a deal that closed without a day", () => {
@@ -358,5 +410,33 @@ describe("what the axis marks", () => {
         deal: deal({ status: "won", expected_close_date: "2026-05-01" }),
       }),
     ).toEqual([]);
+  });
+});
+
+describe("an amount Margince read from the customer's mail", () => {
+  it.each([
+    [["amount_minor"], "deal.standing.figure.amountByModel"],
+    [["amount_minor", "currency"], "deal.standing.figure.currencyGuessed"],
+  ] as const)("says so under the value (%s)", (fields, key) => {
+    stubHistory([]);
+    show({
+      deal: deal({
+        stage_id: "s2",
+        amount_minor: 1_000_000,
+        currency: "EUR",
+        ai_written_fields: [...fields],
+      }),
+    });
+    expect(screen.getByText(en[key])).toBeInTheDocument();
+  });
+
+  it("says nothing once a rep edited it", () => {
+    stubHistory([]);
+    show({
+      deal: deal({ stage_id: "s2", amount_minor: 1_000_000, currency: "EUR" }),
+    });
+    expect(
+      screen.queryByText(en["deal.standing.figure.amountByModel"]),
+    ).toBeNull();
   });
 });

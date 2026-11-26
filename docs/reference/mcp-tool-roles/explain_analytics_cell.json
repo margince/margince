@@ -1,0 +1,14 @@
+{
+  "tool": "read_reports",
+  "action": "analytics_cell_records",
+  "verb": "explain_analytics_cell",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

@@ -4,8 +4,12 @@ import { reloadReportingFigures } from "../../lib/reportingfigures";
 // Reads whose sentences the server writes in the caller's display language.
 // They stay cached in the old language until a language change reloads them.
 const READER_LANGUAGE_READS = [
-  "contact360",
+  "analytics-account-coverage",
+  "analytics-schema",
+  "company-graph",
   "company360",
+  "contact-graph",
+  "contact360",
   "reporting-catalog",
   "reporting-card-preview",
   "reporting-comparison",

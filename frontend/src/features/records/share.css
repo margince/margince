@@ -51,6 +51,7 @@
 }
 
 .share-subject-list {
+  position: relative;
   list-style: none;
   margin: var(--space-2) 0 0;
   padding: 0;
@@ -70,7 +71,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  text-align: left;
+  text-align: start;
   padding: var(--space-2) var(--space-3);
 }
 
@@ -122,6 +123,13 @@
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
+}
+
+/* A reason is free text, and one long word must break inside the row rather
+   than run out of it under the Revoke button. */
+.share-acl-reason {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .share-reason {

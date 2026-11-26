@@ -17,12 +17,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/leadsource"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -43,6 +44,7 @@ func StarterWorkflows(ex Executors) []workflow.Handler {
 		checkInCadence{ex: ex},
 		renewalReminder{ex: ex},
 		routeLeadCreateTask{ex: ex},
+		websiteInquiry{ex: ex},
 	}, listRuleWorkflows(ex)...)
 }
 
@@ -82,7 +84,7 @@ func (stageChangeCreateTask) Spec() workflow.Spec {
 	}
 }
 
-func (stageChangeCreateTask) Match(_ context.Context, ev workflow.Event) (bool, error) {
+func (w stageChangeCreateTask) Match(ctx context.Context, ev workflow.Event) (bool, error) {
 	// A close (won/lost) ends the cadence; only open moves need a next
 	// step. An absent payload (defensive — every real deal.stage_changed
 	// carries one) is treated as an open move rather than silently dropped.
@@ -94,7 +96,10 @@ func (stageChangeCreateTask) Match(_ context.Context, ev workflow.Event) (bool, 
 		return false, err
 	}
 	status, _ := payload[dealStageStatusField].(string)
-	return status == "" || status == dealStatusOpen, nil
+	if status != "" && status != dealStatusOpen {
+		return false, nil
+	}
+	return stageScopeMatches(ctx, w.ex, ev)
 }
 
 // fieldKind is the "kind" json key shared by the action snapshot and the
@@ -102,7 +107,7 @@ func (stageChangeCreateTask) Match(_ context.Context, ev workflow.Event) (bool, 
 const fieldKind = "kind"
 
 func (w stageChangeCreateTask) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect, error) {
-	dueInDays, err := DueInDays(ev.Params, 2)
+	dueAt, err := taskDueAt(ev.Params, ev.OccurredAt, 2)
 	if err != nil {
 		return workflow.Effect{}, err
 	}
@@ -111,8 +116,61 @@ func (w stageChangeCreateTask) Plan(ctx context.Context, ev workflow.Event) (wor
 	// resolves to "deal" — the same value this map hardcoded before the
 	// shared builder existed. The deal's owner is who the next step belongs
 	// to; without them the task reaches nobody's own queue.
-	return ownedTaskEffectNoKey(ctx, w.ex, ev, "Plan the next step after the stage change",
-		ev.OccurredAt.AddDate(0, 0, dueInDays))
+	var configured stageChangeParams
+	if len(ev.Params) > 0 {
+		if err := json.Unmarshal(ev.Params, &configured); err != nil {
+			return workflow.Effect{}, err
+		}
+	}
+	move, err := readStageMove(ev.Payload)
+	if err != nil {
+		return workflow.Effect{}, err
+	}
+	why := move.reason()
+	if configured.TaskTitle != "" {
+		return ownedTaskEffectNoKey(ctx, w.ex, ev, taskWords{subject: configured.TaskTitle, why: why}, dueAt)
+	}
+	ctx = systemtext.WithMessage(ctx, &systemtext.Message{Version: 1, Subject: systemtext.Sentence("automation.stage_change")})
+	return ownedTaskEffectNoKey(ctx, w.ex, ev, taskWords{subject: systemtext.Literal("automation.stage_change"), why: why},
+		dueAt)
+}
+
+// stageMove holds the stage names a deal had at the move.
+type stageMove struct{ from, to string }
+
+func readStageMove(payload json.RawMessage) (stageMove, error) {
+	if len(payload) == 0 {
+		return stageMove{}, nil
+	}
+	var moved crmcontracts.PublicEventDealStageChanged
+	if err := json.Unmarshal(payload, &moved); err != nil {
+		return stageMove{}, fmt.Errorf("automation: reading the stage move: %w", err)
+	}
+	var move stageMove
+	if moved.FromStageName != nil {
+		move.from = *moved.FromStageName
+	}
+	if moved.ToStageName != nil {
+		move.to = *moved.ToStageName
+	}
+	return move, nil
+}
+
+// reason says which stages the deal moved between. A move without the
+// destination's name says nothing.
+func (m stageMove) reason() func(string) *systemtext.Component {
+	switch {
+	case m.to == "":
+		return nil
+	case m.from == "":
+		return func(deal string) *systemtext.Component {
+			return systemtext.Sentence("automation.why.stage_placed", systemtext.Text(deal), systemtext.Text(m.to))
+		}
+	default:
+		return func(deal string) *systemtext.Component {
+			return systemtext.Sentence("automation.why.stage_moved", systemtext.Text(deal), systemtext.Text(m.from), systemtext.Text(m.to))
+		}
+	}
 }
 
 func (w stageChangeCreateTask) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
@@ -194,12 +252,18 @@ func (routeLeadCreateTask) Match(_ context.Context, ev workflow.Event) (bool, er
 // so the two orders differ in WHERE the task first appears and never in whether
 // it appears at all.
 func (w routeLeadCreateTask) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect, error) {
-	dueInDays, err := DueInDays(ev.Params, defaultRouteLeadDueInDays)
+	dueAt, err := taskDueAt(ev.Params, ev.OccurredAt, defaultRouteLeadDueInDays)
 	if err != nil {
 		return workflow.Effect{}, err
 	}
-	return ownedTaskEffectNoKey(ctx, w.ex, ev, "Follow up with the new lead",
-		ev.OccurredAt.AddDate(0, 0, dueInDays))
+	ctx = systemtext.WithMessage(ctx, &systemtext.Message{Version: 1, Subject: systemtext.Sentence("automation.new_lead")})
+	day := ev.OccurredAt.UTC().Format(time.DateOnly)
+	return ownedTaskEffectNoKey(ctx, w.ex, ev, taskWords{
+		subject: systemtext.Literal("automation.new_lead"),
+		why: func(lead string) *systemtext.Component {
+			return systemtext.Sentence("automation.why.new_lead", systemtext.Text(lead), systemtext.Date(day))
+		},
+	}, dueAt)
 }
 
 func (w routeLeadCreateTask) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
@@ -229,7 +293,7 @@ type dealOwnerFields struct {
 // would meet the same record — so the run lands 'skipped' with this reason
 // (visible history, no phantom recipient) rather than a 'failed' that would
 // leave the event re-delivering forever and poison its sibling handlers.
-var errDealHasNoOwner = declineFiring("the moved deal has no assigned owner to notify")
+var errDealHasNoOwner = workflow.Declined("the moved deal has no assigned owner to notify")
 
 // stageChangeNotifyName is the catalog key Task 6 seeds this starter
 // under — CatalogEntry.Key must equal the backing handler's Spec().Name
@@ -247,13 +311,15 @@ func (stageChangeNotify) Spec() workflow.Spec {
 		Name:    stageChangeNotifyName,
 		Trigger: workflow.Trigger{EventType: eventDealStageChanged},
 		Tier:    mcp.TierAutoExecute,
+		// The notice carries the handler's idempotency key as its dedupe key.
+		ReplaysAfterFailedApply: true,
 	}
 }
 
 // Both open and closed destinations can matter. Plan resolves the owner
 // before deciding whether the original actor has anything new to tell them.
-func (stageChangeNotify) Match(_ context.Context, _ workflow.Event) (bool, error) {
-	return true, nil
+func (w stageChangeNotify) Match(ctx context.Context, ev workflow.Event) (bool, error) {
+	return stageScopeMatches(ctx, w.ex, ev)
 }
 
 func (w stageChangeNotify) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect, error) {
@@ -272,13 +338,15 @@ func (w stageChangeNotify) Plan(ctx context.Context, ev workflow.Event) (workflo
 	ownerID := deal.OwnerID.String()
 	if ev.Actor.Type == string(principal.PrincipalHuman) &&
 		(strings.EqualFold(ev.Actor.ID, ownerID) || strings.EqualFold(ev.Actor.ID, principal.HumanIDPrefix+ownerID)) {
-		return workflow.Effect{}, declineFiring("the owner made this stage change")
+		return workflow.Effect{}, workflow.Declined("the owner made this stage change")
 	}
+	metadata := &systemtext.Message{Body: systemtext.Sentence("automation.stage_unavailable")}
 	dealName := deal.Name
 	if dealName == "" {
-		dealName = "Deal"
+		dealName = systemtext.Literal("automation.unnamed_deal")
+		metadata.Subject = systemtext.Sentence("automation.unnamed_deal")
 	}
-	body := "Stage changed. The previous and new stages are unavailable."
+	body := systemtext.Literal("automation.stage_unavailable")
 	var change crmcontracts.PublicEventDealStageChanged
 	if len(ev.Payload) > 0 {
 		if err := json.Unmarshal(ev.Payload, &change); err != nil {
@@ -286,6 +354,7 @@ func (w stageChangeNotify) Plan(ctx context.Context, ev workflow.Event) (workflo
 		}
 		if change.FromStageName != nil && change.ToStageName != nil {
 			body = fmt.Sprintf("%s → %s", *change.FromStageName, *change.ToStageName)
+			metadata.Body = nil
 		}
 	}
 	origin := noticeOrigin(ev)
@@ -306,7 +375,7 @@ func (w stageChangeNotify) Plan(ctx context.Context, ev workflow.Event) (workflo
 		return workflow.Effect{}, fmt.Errorf("automation: encoding the notify action: %w", err)
 	}
 	return workflow.Effect{Actions: []workflow.Action{{
-		Kind: workflow.ActionNotify, Target: ev.Entity, Args: args,
+		Kind: workflow.ActionNotify, Target: ev.Entity, Args: args, SystemText: metadata,
 	}}}, nil
 }
 
@@ -317,116 +386,4 @@ func (w stageChangeNotify) Apply(ctx context.Context, _ workflow.Event, eff work
 
 func (stageChangeNotify) IdempotencyKey(ev workflow.Event) string {
 	return stageChangeNotifyName + ":" + ev.ID.String()
-}
-
-// activityKindMeeting is the wire value activity.captured carries in its
-// payload's "kind" field for a logged meeting (mirrors the contract's
-// ActivityKind enum). Named here because post_meeting_recap's Match pins to
-// it and a bare string literal would be a goconst finding besides.
-const activityKindMeeting = "meeting"
-
-// recapIntent is the intent post_meeting_recap hands the draft_email
-// executor — the same "what to write" hint applyDraftEmail (handlers_actions.go)
-// reads off draftEmailArgs.Intent and threads into Comms.DraftEmail.
-const recapIntent = "post-meeting recap"
-
-// capturedActivityKind is the one field post_meeting_recap's Match reads off
-// the activity.captured payload (activities/activity.go emits {"kind": …}).
-type capturedActivityKind struct {
-	Kind string `json:"kind"`
-}
-
-// postMeetingRecap drafts a follow-up recap whenever a meeting is logged.
-//
-// It fires on activity.captured (the first-class capture verb, whose payload
-// carries the activity's kind) and matches kind=meeting — a captured meeting
-// IS the "the meeting happened, write it up" signal, and the kind rides the
-// event so Match never reads the store.
-//
-// Honest limitation: activity.captured carries no meeting_status, so this
-// cannot tell a logged-past meeting (held) from one captured while still
-// booked in the future — it fires on ANY captured meeting. A first-class
-// meeting-concluded event, or meeting_status in the capture payload, would
-// let it narrow to concluded meetings; until the wire contract carries that,
-// meeting capture is the available signal and this triggers on it.
-type postMeetingRecap struct {
-	ex Executors
-}
-
-// postMeetingRecapName is the catalog key Task 6 seeds this starter
-// under — CatalogEntry.Key must equal the backing handler's Spec().Name
-// (automations_catalog.go's CatalogEntry doc).
-const postMeetingRecapName = "post_meeting_recap"
-
-// purposeBusinessCorrespondence is the seeded consent purpose whose class is
-// never consent-gated (ADR-0098 D1): answering somebody individually rests on
-// Art 6(1)(b)/(f), and consent with its German evidence standard belongs to
-// marketing. Spelled once here so a starter and its tests cannot disagree
-// about which purpose a recap is sent under.
-//
-// It rides ALONGSIDE the context rather than being replaced by it. The context
-// is what the engine decides on; the purpose is what the legacy fallback reads
-// when a record supports no category on its own evidence. A recap into a thread
-// with a real inbound anchor never reaches that fallback, but one whose anchor
-// has since been archived does, and dropping the key would turn that into a
-// denial rather than the answer the old model gave.
-const purposeBusinessCorrespondence = "business_correspondence"
-
-func (postMeetingRecap) Spec() workflow.Spec {
-	return workflow.Spec{
-		Name:    postMeetingRecapName,
-		Trigger: workflow.Trigger{EventType: eventActivityCaptured},
-		Tier:    mcp.TierAutoExecute,
-	}
-}
-
-// Match reads the captured activity's kind straight off the event payload —
-// true for a meeting, false for every other kind (call, email, note, …) — so
-// a recap is drafted only when a meeting was logged, with no store read.
-func (postMeetingRecap) Match(_ context.Context, ev workflow.Event) (bool, error) {
-	var payload capturedActivityKind
-	if len(ev.Payload) > 0 {
-		if err := json.Unmarshal(ev.Payload, &payload); err != nil {
-			return false, fmt.Errorf("automation: decoding the captured activity kind: %w", err)
-		}
-	}
-	return payload.Kind == activityKindMeeting, nil
-}
-
-func (postMeetingRecap) Plan(_ context.Context, ev workflow.Event) (workflow.Effect, error) {
-	// business_correspondence is NAMED here rather than left to a default, and
-	// naming it is not this code choosing a lawful basis: the purpose exists
-	// for exactly this case. ADR-0098 D1 added it because ADR-0011's blanket
-	// default-deny "overshoots on one class: replying to a contact who wrote to
-	// us" — individual business correspondence is not advertising under UWG §7
-	// and rests on Art 6(1)(b)/(f), not consent. A recap to the contact you just
-	// met with is that and nothing else.
-	//
-	// A user-configured draft_email instance declares its own purpose and is
-	// refused without one (MissingConsentPurposeError). This is a seeded
-	// starter whose recipient and register are both fixed by the template, so
-	// its purpose is fixed with them.
-	args, err := json.Marshal(draftEmailArgs{
-		Intent:               recapIntent,
-		ConsentPurpose:       purposeBusinessCorrespondence,
-		CommunicationContext: commsauthz.CategoryReplyToInbound,
-	})
-	if err != nil {
-		return workflow.Effect{}, fmt.Errorf("automation: encoding the draft_email action: %w", err)
-	}
-	// Target is the captured meeting activity itself: applyDraftEmail anchors
-	// the composed draft on it (Comms.DraftEmail's anchor), and the draft
-	// lands durably on workflow_run.applied.
-	return workflow.Effect{Actions: []workflow.Action{{
-		Kind: workflow.ActionDraftEmail, Target: ev.Entity, Args: args,
-	}}}, nil
-}
-
-func (w postMeetingRecap) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
-	applied, err := ApplyActions(ctx, w.ex, eff)
-	return workflow.RunResult{Applied: applied}, err
-}
-
-func (postMeetingRecap) IdempotencyKey(ev workflow.Event) string {
-	return postMeetingRecapName + ":" + ev.ID.String()
 }

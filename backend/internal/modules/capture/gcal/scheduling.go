@@ -116,6 +116,9 @@ const freeBusyNotFound = "notFound"
 
 type eventTime struct {
 	At time.Time `json:"dateTime"`
+	// Zone is the host's chosen IANA zone, so the event keeps its local clock
+	// in Google; empty for a booking that named only an instant.
+	Zone string `json:"timeZone,omitempty"`
 }
 type eventAttendee struct {
 	Email string `json:"email"`
@@ -164,7 +167,7 @@ func (e scheduledEvent) conferencePending() bool {
 func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarAppointment) (connector.CalendarReceipt, error) {
 	event := scheduledEvent{
 		Summary: in.Subject, Description: emailview.MeetingDescription(in.Description), Location: in.Location,
-		Start: eventTime{in.Start}, End: eventTime{in.End},
+		Start: eventTime{At: in.Start, Zone: in.StartZone}, End: eventTime{At: in.End, Zone: in.StartZone},
 	}
 	for _, email := range in.Attendees {
 		event.Attendees = append(event.Attendees, eventAttendee{email})

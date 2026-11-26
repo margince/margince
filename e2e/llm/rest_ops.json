@@ -15,6 +15,7 @@
     "DELETE /v1/capture/owner-identities/{id}": "withdraw_owner_identity",
     "DELETE /v1/capture/senders/{address}/decision": "withdraw_capture_sender_decision",
     "DELETE /v1/channel-connections/{id}": "disconnect_channel",
+    "DELETE /v1/channel-links/{record_type}/{id}": "unlink_channel",
     "DELETE /v1/companies/{id}": "archive_record",
     "DELETE /v1/companies/{id}/facts/{factKey}": "change_record_parts",
     "DELETE /v1/companies/{id}/suggestions/dismiss": "restore_company_suggestion",
@@ -30,6 +31,7 @@
     "DELETE /v1/deals/{id}": "archive_record",
     "DELETE /v1/deals/{id}/documents/{attachmentId}/hide": "unhide_deal_document",
     "DELETE /v1/deals/{id}/lines/{lineId}": "remove_deal_line",
+    "DELETE /v1/deals/{id}/manager-request": "clear_deal_manager_request",
     "DELETE /v1/deals/{id}/move/dismiss": "restore_deal_move",
     "DELETE /v1/finance/source": "disconnect_finance_source",
     "DELETE /v1/finance/source/customers/{external_id}/link": "unlink_finance_customer",
@@ -53,6 +55,7 @@
     "DELETE /v1/projects/{id}/stakeholders/{contact_id}": "change_record_parts",
     "DELETE /v1/provider-connections/{provider}": "disconnect_provider",
     "DELETE /v1/record-grants/{id}": "revoke_record_share",
+    "DELETE /v1/records/{record_type}/{id}/edit-access-request": "withdraw_edit_access_request",
     "DELETE /v1/records/{record_type}/{id}/ownership-offer": "withdraw_ownership_offer",
     "DELETE /v1/records/{record_type}/{id}/ownership-request": "withdraw_ownership_request",
     "DELETE /v1/relationships/{id}": "archive_record",
@@ -124,6 +127,8 @@
     "GET /v1/analytics/initiatives/{id}": "get_sales_initiative",
     "GET /v1/analytics/initiatives/{id}/members": "list_sales_initiative_members",
     "GET /v1/analytics/metrics": "read_reporting",
+    "GET /v1/analytics/progress": "read_view",
+    "GET /v1/analytics/progress/deals": "read_view",
     "GET /v1/analytics/reports": "read_reporting",
     "GET /v1/analytics/reports/blocks": "describe_report_blocks",
     "GET /v1/analytics/reports/vocabulary": "describe_report_vocabulary",
@@ -136,6 +141,8 @@
     "GET /v1/analytics/reports/{id}/schedules": "read_view",
     "GET /v1/analytics/runs": "list_report_runs",
     "GET /v1/analytics/runs/{run_id}": "get_report_run",
+    "GET /v1/analytics/sales-goals": "read_view",
+    "GET /v1/analytics/sales-goals/{owner_id}/{year}": "read_view",
     "GET /v1/analytics/schema": "get_analytics_schema",
     "GET /v1/analytics/sdr-summary": "get_sdr_summary",
     "GET /v1/analytics/sdr-summary/handoffs": "list_sdr_waiting_handoffs",
@@ -173,6 +180,7 @@
     "GET /v1/capture/traces/{id}": "read_capture_trace_pipeline",
     "GET /v1/catch-up": "catch_me_up_on",
     "GET /v1/channel-connections": "list_channel_connections",
+    "GET /v1/channel-links/{record_type}/{id}": "channel_link",
     "GET /v1/channel-providers": "list_channel_providers",
     "GET /v1/commissions": "list_records",
     "GET /v1/commissions/summary": "read_reporting",
@@ -219,13 +227,16 @@
     "GET /v1/connectors": "list_connectors",
     "GET /v1/connectors/{provider}/containers": "list_connector_containers",
     "GET /v1/consent-purposes": "read_view",
+    "GET /v1/consent-purposes/send-counts": "read_view",
     "GET /v1/contacts": "list_records",
     "GET /v1/contacts/{id}": "read_record",
     "GET /v1/contacts/{id}/360": "read_view",
     "GET /v1/contacts/{id}/brief": "get_contact_brief",
     "GET /v1/contacts/{id}/consent": "get_contact_consent",
+    "GET /v1/contacts/{id}/consent/allow": "list_contact_overrides",
     "GET /v1/contacts/{id}/consent/guard": "get_contact_consent_guard",
     "GET /v1/contacts/{id}/consent/mail-preview": "preview_controller_mail",
+    "GET /v1/contacts/{id}/consent/optout-records": "export_contact_optout_records",
     "GET /v1/contacts/{id}/consent/stops": "list_contact_stops",
     "GET /v1/contacts/{id}/conversation-suggestions": "read_view",
     "GET /v1/contacts/{id}/employment-import": "read_view",
@@ -239,6 +250,7 @@
     "GET /v1/context-search": "search_context",
     "GET /v1/contracts/{id}": "get_contract",
     "GET /v1/custom-fields": "read_view",
+    "GET /v1/custom-fields/{id}/choices": "read_view",
     "GET /v1/custom-fields/{id}/lists": "read_view",
     "GET /v1/data-subject-requests": "list_data_subject_requests",
     "GET /v1/data-subject-requests/deadline": "get_data_subject_request_deadline",
@@ -281,6 +293,8 @@
     "GET /v1/extensions/{name}/settings": "get_extension_settings",
     "GET /v1/field-history": "get_field_history",
     "GET /v1/filters/vocabulary": "read_view",
+    "GET /v1/finance/customer-payments": "read_view",
+    "GET /v1/finance/invoices/{id}/pdf": "download_finance_invoice_pdf",
     "GET /v1/finance/source": "get_finance_source",
     "GET /v1/finance/source/customers": "list_finance_source_customers",
     "GET /v1/forecast": "forecast_readings",
@@ -288,6 +302,7 @@
     "GET /v1/forecast/assurance/exceptions": "list_input_checks",
     "GET /v1/forecast/assurance/preview": "preview_forecast_assurance",
     "GET /v1/forecast/calls": "read_view",
+    "GET /v1/forecast/focus": "get_forecast_focus",
     "GET /v1/forecast/movement": "forecast_movement",
     "GET /v1/forecast/shared/{token}": "open_forecast_share",
     "GET /v1/forecast/shared/{token}/export.csv": "export_forecast_share",
@@ -377,9 +392,11 @@
     "GET /v1/read-views": "describe_views",
     "GET /v1/record-fields": "describe_record_fields",
     "GET /v1/record-roles": "read_view",
+    "GET /v1/records/references": "read_view",
     "GET /v1/records/{entity_type}/{entity_id}/lists": "read_view",
     "GET /v1/records/{entity_type}/{entity_id}/tags": "get_record_tags",
     "GET /v1/records/{entity_type}/{id}/history": "get_record_history",
+    "GET /v1/records/{record_type}/{id}/edit-access-request": "get_edit_access_request",
     "GET /v1/records/{record_type}/{id}/ownership-offer": "get_ownership_offer",
     "GET /v1/records/{record_type}/{id}/ownership-offer/candidates": "list_ownership_offer_candidates",
     "GET /v1/records/{record_type}/{id}/ownership-request": "get_ownership_request",
@@ -399,6 +416,10 @@
     "GET /v1/scheduling/invitations/{id}/availability": "get_meeting_availability",
     "GET /v1/scheduling/profile": "read_view",
     "GET /v1/scheduling/proposals": "list_meeting_proposals",
+    "GET /v1/scheduling/team-candidates": "read_view",
+    "GET /v1/scheduling/team-links": "read_view",
+    "GET /v1/scheduling/team-requests": "read_view",
+    "GET /v1/sdr-handoffs/{id}/assignee": "get_handoff_assignee",
     "GET /v1/search": "search_records",
     "GET /v1/signals": "read_view",
     "GET /v1/signals/{id}": "read_view",
@@ -455,6 +476,7 @@
     "PATCH /v1/assignments/{id}": "update_record_assignment",
     "PATCH /v1/attachments/{id}/metadata": "update_attachment_metadata",
     "PATCH /v1/automations/{id}": "update_automation",
+    "PATCH /v1/channel-links/{record_type}/{id}": "set_channel_verbosity",
     "PATCH /v1/companies/{id}": "update_record",
     "PATCH /v1/companies/{id}/facts/{factKey}": "change_record_parts",
     "PATCH /v1/companies/{id}/profile-fields/{field}": "change_record_parts",
@@ -488,6 +510,7 @@
     "PATCH /v1/relationships/{id}": "update_record",
     "PATCH /v1/scheduled-sends/{id}": "reschedule_scheduled_send",
     "PATCH /v1/scheduling/invitations/{id}": "change_meeting_invitation",
+    "PATCH /v1/sdr-handoffs/{id}/assignee": "reassign_handoff",
     "PATCH /v1/signals/{id}": "update_signal",
     "PATCH /v1/stages/{id}": "update_stage",
     "PATCH /v1/stages/{id}/exit-criteria/{criterion_id}": "update_exit_criterion",
@@ -507,11 +530,14 @@
     "POST /v1/activities/threads/{thread_key}/audience": "set_thread_audience",
     "POST /v1/activities/{id}/deal-decline": "decline_activity_deal",
     "POST /v1/activities/{id}/draft-email": "draft_email",
+    "POST /v1/activities/{id}/inquiry-assignment": "assign_website_inquiry",
+    "POST /v1/activities/{id}/inquiry-assignment/preview": "preview_website_inquiry_assignment",
     "POST /v1/activities/{id}/relink": "relink_activity",
     "POST /v1/activities/{id}/send-email": "send_email",
     "POST /v1/activities/{id}/send-email:preview": "preview_send_authorization",
     "POST /v1/activities/{id}/send-message": "send_message",
     "POST /v1/activities/{id}/transcript-proposals": "read_transcript_for_next_steps",
+    "POST /v1/activity-review-templates": "create_activity_review_template",
     "POST /v1/admin/data-tasks/control": "control_data_task",
     "POST /v1/admin/home-repair/activate": "activate_home_repair",
     "POST /v1/admin/home-repair/preview": "preview_home_repair",
@@ -546,6 +572,7 @@
     "POST /v1/approvals/{id}/failure-acknowledgement": "acknowledge_approval_failure",
     "POST /v1/approvals/{id}/reject": "decide_approval",
     "POST /v1/attachments": "attach_document",
+    "POST /v1/attachments/links": "attach_link",
     "POST /v1/attachments/{id}/extraction": "read_attachment_for_fields",
     "POST /v1/attachments/{id}/extraction:accept": "accept_attachment_extraction",
     "POST /v1/attachments/{id}/request-access": "request_attachment_access",
@@ -572,11 +599,12 @@
     "POST /v1/capture/exclusions": "add_capture_exclusion",
     "POST /v1/capture/owner-identities": "add_owner_identity",
     "POST /v1/capture/owner-identities/{id}/restore": "restore_owner_identity",
+    "POST /v1/channel-links/{record_type}/{id}": "link_channel",
+    "POST /v1/channel-links/{record_type}/{id}/notes": "file_channel_message",
     "POST /v1/claims/{id}/settle": "settle_conversation_claim",
     "POST /v1/claims/{id}/take-over": "take_over_conversation_claim",
     "POST /v1/commissions/{id}/decide": "decide_commission_entry",
     "POST /v1/communication-reviews/{id}/context": "record_communication_context",
-    "POST /v1/communication-reviews/{id}/direct-send": "direct_communication_send",
     "POST /v1/companies": "create_record",
     "POST /v1/companies/{id}/ask": "ask_about_company",
     "POST /v1/companies/{id}/brief": "regenerate_company_brief",
@@ -613,7 +641,6 @@
     "POST /v1/contacts/{id}/brief": "regenerate_contact_brief",
     "POST /v1/contacts/{id}/claims": "record_conversation_claim",
     "POST /v1/contacts/{id}/consent": "record_consent",
-    "POST /v1/contacts/{id}/consent/allow": "allow_contact",
     "POST /v1/contacts/{id}/consent/allow/{overrideId}/revoke": "revoke_contact_override",
     "POST /v1/contacts/{id}/consent/confirm-request": "request_details_confirmation",
     "POST /v1/contacts/{id}/consent/double-opt-in": "issue_double_opt_in",
@@ -662,6 +689,8 @@
     "POST /v1/deals/{id}/legal-reviews": "request_legal_review",
     "POST /v1/deals/{id}/lines": "add_deal_line",
     "POST /v1/deals/{id}/lines/estimate": "use_deal_estimate",
+    "POST /v1/deals/{id}/manager-request": "request_deal_manager",
+    "POST /v1/deals/{id}/move-pipeline": "move_deal_pipeline",
     "POST /v1/deals/{id}/move/dismiss": "dismiss_deal_move",
     "POST /v1/deals/{id}/offers": "create_record",
     "POST /v1/deals/{id}/outcome-reviews": "create_deal_outcome_review",
@@ -694,6 +723,7 @@
     "POST /v1/intro-requests/{id}/cancel": "cancel_intro_request",
     "POST /v1/intro-requests/{id}/complete": "complete_intro_request",
     "POST /v1/intro-requests/{id}/decision": "decide_intro_request",
+    "POST /v1/intro-requests/{id}/replace": "replace_intro_request",
     "POST /v1/knowledge/corpora": "create_corpus",
     "POST /v1/knowledge/corpora/{id}/ask": "ask_knowledge_corpus",
     "POST /v1/knowledge/corpora/{id}/documents": "upload_corpus_document",
@@ -701,6 +731,8 @@
     "POST /v1/lead-origins": "create_lead_origin",
     "POST /v1/lead-sources": "create_lead_source",
     "POST /v1/leads": "create_record",
+    "POST /v1/leads/{id}/consent/qualifying-events": "record_lead_qualifying_event",
+    "POST /v1/leads/{id}/consent/qualifying-events/{event_id}/retract": "retract_lead_qualifying_event",
     "POST /v1/leads/{id}/consent/suppress/{suppressionId}/lift": "lift_lead_suppression",
     "POST /v1/leads/{id}/demote": "demote_lead",
     "POST /v1/leads/{id}/link-company": "link_lead_company",
@@ -748,6 +780,7 @@
     "POST /v1/record-grants": "share_record",
     "POST /v1/record-roles": "create_record_role",
     "POST /v1/records/{record_type}/{id}/claim": "claim_record",
+    "POST /v1/records/{record_type}/{id}/edit-access-request": "request_edit_access",
     "POST /v1/records/{record_type}/{id}/ownership-offer": "offer_ownership_transfer",
     "POST /v1/records/{record_type}/{id}/ownership-request": "request_ownership_transfer",
     "POST /v1/records/{record_type}/{record_id}/assignments": "create_record_assignment",
@@ -759,6 +792,7 @@
     "POST /v1/scheduling/invitations": "invite_meeting",
     "POST /v1/scheduling/profile/shared": "mark_booking_page_shared",
     "POST /v1/scheduling/proposals": "create_meeting_proposal",
+    "POST /v1/search/data-answer": "ask_search_data",
     "POST /v1/signals": "create_signal",
     "POST /v1/signals/{id}/resolve": "resolve_signal",
     "POST /v1/stages": "create_stage",
@@ -788,11 +822,16 @@
     "POST /v1/voice-profiles/{id}/versions/{profileVersion}/apply": "apply_voice_version",
     "POST /v1/voice-profiles/{id}/versions/{profileVersion}/reject": "reject_voice_version",
     "POST /v1/voice-profiles/{id}/versions/{profileVersion}/rollback": "rollback_voice_version",
+    "POST /v1/web-forms": "create_web_form",
+    "POST /v1/web-forms/{id}/handling/existing": "handle_website_inquiries",
+    "POST /v1/web-forms/{id}/handling/preview": "preview_website_inquiries",
     "POST /v1/weekly-plans/commitments": "add_weekly_plan_commitment",
     "POST /v1/weekly-plans/current": "start_weekly_plan",
     "POST /v1/worklist/done/undo": "reopen_worklist_rows",
     "POST /v1/worklist/ready/undo": "undo_meeting_ready",
     "POST /v1/workspace-queries": "query_workspace",
+    "PUT /v1/activities/{id}/calendar-response": "answer_calendar_invitation",
+    "PUT /v1/activities/{id}/deal-relevance": "set_activity_deal_relevance",
     "PUT /v1/activities/{id}/disposition": "set_activity_disposition",
     "PUT /v1/ai/price-sync": "set_ai_price_sync",
     "PUT /v1/analytics/framework": "publish_reporting_framework",
@@ -844,5 +883,2997 @@
     "PUT /v1/worklist/done": "mark_worklist_rows_done",
     "PUT /v1/worklist/pins": "pin_worklist_row",
     "PUT /v1/worklist/ready": "confirm_meeting_ready"
+  },
+  "record_types": {
+    "DELETE /v1/activities/{id}": "activity",
+    "DELETE /v1/companies/{id}": "company",
+    "DELETE /v1/contacts/{id}": "contact",
+    "DELETE /v1/deals/{id}": "deal",
+    "DELETE /v1/leads/{id}": "lead",
+    "DELETE /v1/lists/{id}": "list",
+    "DELETE /v1/offer-templates/{id}": "offer_template",
+    "DELETE /v1/offers/{id}": "offer",
+    "DELETE /v1/products/{id}": "product",
+    "DELETE /v1/projects/{id}": "project",
+    "DELETE /v1/relationships/{id}": "relationship",
+    "DELETE /v1/tags/{id}": "tag",
+    "GET /v1/activities": "activity",
+    "GET /v1/activities/{id}": "activity",
+    "GET /v1/channel-providers": "activity",
+    "GET /v1/commissions": "commission",
+    "GET /v1/commissions/{id}": "commission",
+    "GET /v1/companies": "company",
+    "GET /v1/companies/{id}": "company",
+    "GET /v1/companies/{id}/intro-paths": "company",
+    "GET /v1/companies/{id}/partner": "partner",
+    "GET /v1/contacts": "contact",
+    "GET /v1/contacts/{id}": "contact",
+    "GET /v1/contacts/{id}/network": "contact",
+    "GET /v1/deal-rooms": "deal_room",
+    "GET /v1/deal-rooms/{id}": "deal_room",
+    "GET /v1/deal-rooms/{id}/documents": "deal_room_document",
+    "GET /v1/deal-rooms/{id}/participants": "deal_room_participant",
+    "GET /v1/deal-rooms/{id}/threads": "deal_room_thread",
+    "GET /v1/deals": "deal",
+    "GET /v1/deals/at-risk": "deal",
+    "GET /v1/deals/slipping": "deal",
+    "GET /v1/deals/{id}": "deal",
+    "GET /v1/deals/{id}/coverage": "deal",
+    "GET /v1/deals/{id}/offers": "offer",
+    "GET /v1/imports/{id}/report": "import_run",
+    "GET /v1/leads": "lead",
+    "GET /v1/leads/{id}": "lead",
+    "GET /v1/offer-templates": "offer_template",
+    "GET /v1/offer-templates/{id}": "offer_template",
+    "GET /v1/offers/{id}": "offer",
+    "GET /v1/partners": "partner",
+    "GET /v1/products": "product",
+    "GET /v1/products/{id}": "product",
+    "GET /v1/projects": "project",
+    "GET /v1/projects/{id}": "project",
+    "GET /v1/projects/{id}/360": "project",
+    "GET /v1/projects/{id}/handoff": "project",
+    "GET /v1/tags": "tag",
+    "GET /v1/tags/{id}": "tag",
+    "GET /v1/users": "app_user",
+    "PATCH /v1/activities/{id}": "activity",
+    "PATCH /v1/companies/{id}": "company",
+    "PATCH /v1/contacts/{id}": "contact",
+    "PATCH /v1/deals/{id}": "deal",
+    "PATCH /v1/leads/{id}": "lead",
+    "PATCH /v1/lists/{id}": "list",
+    "PATCH /v1/offers/{id}": "offer",
+    "PATCH /v1/products/{id}": "product",
+    "PATCH /v1/projects/{id}": "project",
+    "PATCH /v1/relationships/{id}": "relationship",
+    "PATCH /v1/tags/{id}": "tag",
+    "POST /v1/activities": "activity",
+    "POST /v1/activities/relink-bulk": "activity",
+    "POST /v1/activities/relink-thread": "activity",
+    "POST /v1/activities/{id}/draft-email": "activity",
+    "POST /v1/activities/{id}/relink": "activity",
+    "POST /v1/activities/{id}/send-email": "activity",
+    "POST /v1/activities/{id}/send-message": "activity",
+    "POST /v1/companies": "company",
+    "POST /v1/companies/{id}/deep-read": "company",
+    "POST /v1/companies/{id}/enrich": "company",
+    "POST /v1/companies/{id}/merge": "company",
+    "POST /v1/companies/{id}/partner/setup": "company",
+    "POST /v1/companies/{id}/technical-enrich": "company",
+    "POST /v1/contacts": "contact",
+    "POST /v1/contacts/{id}/merge": "contact",
+    "POST /v1/deal-rooms": "deal_room",
+    "POST /v1/deals": "deal",
+    "POST /v1/deals/follow-up-drafts": "deal",
+    "POST /v1/deals/{id}/advance": "deal",
+    "POST /v1/deals/{id}/offers": "offer",
+    "POST /v1/deals/{id}/progress": "deal",
+    "POST /v1/dedupe/candidates/{id}/disposition": "contact",
+    "POST /v1/dedupe/candidates/{id}/undo": "contact",
+    "POST /v1/dedupe/contact-cases/{contact_id}/merge": "contact",
+    "POST /v1/dedupe/contact-cases/{contact_id}/preview": "contact",
+    "POST /v1/emails": "activity",
+    "POST /v1/imports": "import_run",
+    "POST /v1/imports/{id}/approve": "import_run",
+    "POST /v1/leads": "lead",
+    "POST /v1/leads/{id}/demote": "lead",
+    "POST /v1/leads/{id}/promote": "lead",
+    "POST /v1/leads/{id}/qualify": "lead",
+    "POST /v1/lists": "list",
+    "POST /v1/lists/{id}/members": "list",
+    "POST /v1/lists/{id}/members/remove": "list",
+    "POST /v1/lists/{id}/restore": "list",
+    "POST /v1/offer-templates": "offer_template",
+    "POST /v1/products": "product",
+    "POST /v1/projects": "project",
+    "POST /v1/projects/{id}/advance": "project",
+    "POST /v1/relationships": "relationship",
+    "POST /v1/scheduling/invitations": "contact",
+    "POST /v1/tags": "tag",
+    "POST /v1/tags/{id}/merge": "tag",
+    "POST /v1/tasks": "activity",
+    "POST /v1/users/{id}/merge": "user_admin",
+    "PUT /v1/offer-templates/{id}": "offer_template"
+  },
+  "fields_verbs": [
+    "create_record",
+    "update_record"
+  ],
+  "arguments": {
+    "accept_applied_deal_change": [
+      "changeId",
+      "id",
+      "if_version"
+    ],
+    "accept_attachment_extraction": [
+      "id",
+      "request_body"
+    ],
+    "accept_deal_suggestion": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "accept_offer": [
+      "id",
+      "if_version"
+    ],
+    "accept_partner_lead": [
+      "id",
+      "idempotency_key"
+    ],
+    "accept_tag_suggestion": [
+      "id"
+    ],
+    "acknowledge_approval_failure": [
+      "id",
+      "request_body"
+    ],
+    "acknowledge_company_view": [
+      "id"
+    ],
+    "acknowledge_contact_view": [
+      "id"
+    ],
+    "activate_home_repair": [
+      "request_body"
+    ],
+    "add_capture_exclusion": [
+      "request_body"
+    ],
+    "add_consumer_mail_domain": [
+      "request_body"
+    ],
+    "add_counterparty_hold": [
+      "request_body"
+    ],
+    "add_deal_line": [
+      "id",
+      "request_body"
+    ],
+    "add_deal_room_document": [
+      "id",
+      "request_body"
+    ],
+    "add_owner_identity": [
+      "request_body"
+    ],
+    "add_team_member": [
+      "id",
+      "userId"
+    ],
+    "add_voice_source": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "add_weekly_plan_commitment": [
+      "request_body"
+    ],
+    "add_workspace_email_domain": [
+      "request_body"
+    ],
+    "advance_deal": [
+      "approval_id",
+      "deal_id",
+      "idempotency_key",
+      "if_version",
+      "lost_reason",
+      "lost_reason_code",
+      "to_stage_id",
+      "won_without_contract_detail",
+      "won_without_contract_reason"
+    ],
+    "advance_project_phase": [
+      "approval_id",
+      "idempotency_key",
+      "if_version",
+      "project_id",
+      "reason",
+      "to_phase"
+    ],
+    "annotate_brief": [
+      "idempotency_key",
+      "items",
+      "narrative"
+    ],
+    "answer_calendar_invitation": [
+      "id",
+      "request_body"
+    ],
+    "answer_reporting_question_card": [
+      "card_id",
+      "id",
+      "revision"
+    ],
+    "answer_weekly_plan_commitment": [
+      "id",
+      "request_body"
+    ],
+    "apply_contact_employment_import": [
+      "id",
+      "request_body"
+    ],
+    "apply_legacy_loss_reasons": [
+      "request_body"
+    ],
+    "apply_tag": [
+      "idempotency_key",
+      "record_id",
+      "record_type",
+      "tag_id",
+      "tag_name"
+    ],
+    "apply_voice_version": [
+      "id",
+      "idempotency_key",
+      "if_version",
+      "profileVersion"
+    ],
+    "archive_automation": [
+      "id"
+    ],
+    "archive_contract": [
+      "id"
+    ],
+    "archive_corpus": [
+      "id"
+    ],
+    "archive_deal_room": [
+      "id",
+      "if_version"
+    ],
+    "archive_exit_criterion": [
+      "criterion_id",
+      "id",
+      "if_version"
+    ],
+    "archive_legal_entity": [
+      "id",
+      "if_version"
+    ],
+    "archive_pipeline": [
+      "id",
+      "if_version"
+    ],
+    "archive_record": [
+      "approval_id",
+      "id",
+      "idempotency_key",
+      "record_type"
+    ],
+    "archive_record_assignment": [
+      "id"
+    ],
+    "archive_reporting_report": [
+      "id"
+    ],
+    "archive_saved_view": [
+      "id"
+    ],
+    "archive_signal": [
+      "id"
+    ],
+    "archive_stage": [
+      "id",
+      "if_version"
+    ],
+    "archive_tag": [
+      "idempotency_key",
+      "tag_id"
+    ],
+    "archive_voice_profile": [
+      "id",
+      "if_version"
+    ],
+    "archive_web_form": [
+      "id"
+    ],
+    "ask_about_company": [
+      "id",
+      "request_body"
+    ],
+    "ask_for_weekly_plan_help": [
+      "id",
+      "request_body"
+    ],
+    "ask_knowledge_corpus": [
+      "id",
+      "request_body"
+    ],
+    "ask_search_data": [
+      "request_body"
+    ],
+    "assess_sales_review": [
+      "request_body"
+    ],
+    "assign_legal_entity_member": [
+      "id",
+      "request_body"
+    ],
+    "assign_notice_case": [
+      "id",
+      "request_body"
+    ],
+    "assign_notice_case_review": [
+      "id",
+      "request_body"
+    ],
+    "assign_website_inquiry": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "at_risk_relationships": [
+      "owner_id"
+    ],
+    "attach_document": [
+      "content_base64",
+      "content_type",
+      "contract_id",
+      "entity_id",
+      "entity_type",
+      "filename",
+      "idempotency_key"
+    ],
+    "attach_link": [
+      "request_body"
+    ],
+    "backfill_employment_import": [
+      "request_body"
+    ],
+    "build_voice_profile": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "bulk_update_records": [
+      "batch_id",
+      "confirm_token",
+      "idempotency_key",
+      "items",
+      "list_id",
+      "mode",
+      "note",
+      "owner_id",
+      "record_type",
+      "stage_id",
+      "tag_id",
+      "task",
+      "verb"
+    ],
+    "cancel_connector_backfill": [
+      "connection_id",
+      "provider"
+    ],
+    "cancel_contract": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "cancel_import_run": [
+      "id"
+    ],
+    "cancel_intro_request": [
+      "id",
+      "request_body"
+    ],
+    "cancel_scheduled_send": [
+      "id"
+    ],
+    "catch_me_up_on": [
+      "max_items",
+      "project_id",
+      "record_id",
+      "record_name",
+      "record_type"
+    ],
+    "change_contract_status": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "change_lists": [
+      "definition",
+      "entity_type",
+      "idempotency_key",
+      "list_id",
+      "list_type",
+      "mode",
+      "name",
+      "note",
+      "purpose",
+      "record_id",
+      "sharing",
+      "steward_id",
+      "team_id",
+      "version"
+    ],
+    "change_meeting_invitation": [
+      "id",
+      "request_body"
+    ],
+    "change_record_parts": [
+      "action",
+      "category",
+      "company_id",
+      "contact_id",
+      "fact_key",
+      "field",
+      "idempotency_key",
+      "if_version",
+      "line",
+      "line_item_id",
+      "offer_id",
+      "project_id",
+      "role",
+      "value"
+    ],
+    "change_user_role": [
+      "id",
+      "request_body"
+    ],
+    "channel_link": [
+      "id",
+      "record_type"
+    ],
+    "check_availability": [
+      "duration_minutes",
+      "from",
+      "host_user_id",
+      "reliable",
+      "to"
+    ],
+    "claim_record": [
+      "id",
+      "if_version",
+      "record_type"
+    ],
+    "clear_activity_disposition": [
+      "id",
+      "scope"
+    ],
+    "clear_deal_manager_request": [
+      "id"
+    ],
+    "clear_lead_manual_signal": [
+      "factor",
+      "id"
+    ],
+    "close_deal_room": [
+      "id"
+    ],
+    "commit_import": [
+      "approval_id",
+      "idempotency_key",
+      "run_id"
+    ],
+    "company_coverage": [
+      "deal_id"
+    ],
+    "complete_intro_request": [
+      "id",
+      "request_body"
+    ],
+    "compose_analytics_report": [
+      "blocks"
+    ],
+    "confirm_anchor_company_site_read": [
+      "idempotency_key",
+      "readId",
+      "request_body"
+    ],
+    "confirm_meeting_ready": [
+      "activity_id",
+      "idempotency_key",
+      "preparation_revision"
+    ],
+    "confirm_notice_source": [
+      "id",
+      "request_body"
+    ],
+    "control_data_task": [
+      "request_body"
+    ],
+    "correct_deal_close_day": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "correct_project_health_assessment": [
+      "assessment_id",
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_acquisition_source": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_activity_review_template": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_automation": [
+      "request_body"
+    ],
+    "create_contract": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_corpus": [
+      "request_body"
+    ],
+    "create_custom_field": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_deal_outcome_review": [
+      "id",
+      "request_body"
+    ],
+    "create_exit_criterion": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_forecast_share": [
+      "request_body"
+    ],
+    "create_former_member": [
+      "request_body"
+    ],
+    "create_intro_request": [
+      "id",
+      "request_body"
+    ],
+    "create_lead_disqualify_reason": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_lead_origin": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_lead_source": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_legal_entity": [
+      "request_body"
+    ],
+    "create_loss_reason": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_meeting_proposal": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_partner_stage": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_pipeline": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_project_health_assessment": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_record": [
+      "approval_id",
+      "fields",
+      "idempotency_key",
+      "offer_tag",
+      "record_type"
+    ],
+    "create_record_assignment": [
+      "idempotency_key",
+      "record_id",
+      "record_type",
+      "request_body"
+    ],
+    "create_record_role": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_reporting_report": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_reporting_schedule": [
+      "id",
+      "request_body"
+    ],
+    "create_reporting_target": [
+      "request_body"
+    ],
+    "create_sales_initiative": [
+      "request_body"
+    ],
+    "create_saved_view": [
+      "request_body"
+    ],
+    "create_signal": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_stage": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_tag": [
+      "color",
+      "description",
+      "idempotency_key",
+      "name"
+    ],
+    "create_task": [
+      "assignee_id",
+      "body",
+      "due_at",
+      "due_has_time",
+      "idempotency_key",
+      "links",
+      "source_activity_id",
+      "subject",
+      "task_type"
+    ],
+    "create_team": [
+      "request_body"
+    ],
+    "create_voice_profile": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "create_web_form": [
+      "request_body"
+    ],
+    "data_coverage": [],
+    "deactivate_user": [
+      "id",
+      "request_body"
+    ],
+    "decide_approval": [
+      "decision",
+      "idempotency_key",
+      "reason",
+      "staged_action_id"
+    ],
+    "decide_approval_bundle": [
+      "bundle_id",
+      "decision",
+      "idempotency_key",
+      "reason"
+    ],
+    "decide_commission_entry": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "decide_duplicate": [
+      "candidate_id",
+      "decision",
+      "idempotency_key"
+    ],
+    "decide_intro_request": [
+      "id",
+      "request_body"
+    ],
+    "decide_legacy_loss_reason": [
+      "idempotency_key",
+      "request_body",
+      "text_hash"
+    ],
+    "decide_legal_review": [
+      "id",
+      "request_body"
+    ],
+    "decline_activity_deal": [
+      "id",
+      "request_body"
+    ],
+    "delete_anchor_company_logo": [],
+    "delete_anchor_company_logo_icon": [],
+    "delete_attachment": [
+      "id"
+    ],
+    "delete_lead_disqualify_reason": [
+      "id"
+    ],
+    "delete_lead_origin": [
+      "id"
+    ],
+    "delete_lead_source": [
+      "id"
+    ],
+    "delete_legal_entity_logo": [
+      "id",
+      "if_version"
+    ],
+    "demote_lead": [
+      "approval_id",
+      "idempotency_key",
+      "lead_id",
+      "reason"
+    ],
+    "describe_analytics_vocabulary": [],
+    "describe_import_format": [
+      "lang"
+    ],
+    "describe_list_filters": [],
+    "describe_query_vocabulary": [],
+    "describe_record_fields": [],
+    "describe_report_blocks": [],
+    "describe_report_vocabulary": [],
+    "describe_router_actions": [
+      "action",
+      "router"
+    ],
+    "describe_views": [],
+    "discard_domain_question": [
+      "domain"
+    ],
+    "discard_mail_draft": [
+      "id"
+    ],
+    "discard_reporting_report_draft": [
+      "id",
+      "if_version"
+    ],
+    "disconnect_channel": [
+      "id"
+    ],
+    "disconnect_connector": [
+      "connection_id",
+      "provider"
+    ],
+    "disconnect_finance_source": [],
+    "disconnect_provider": [
+      "provider"
+    ],
+    "dismiss_company_suggestion": [
+      "id",
+      "request_body"
+    ],
+    "dismiss_connector_silence": [
+      "connection_id",
+      "provider",
+      "request_body"
+    ],
+    "dismiss_contact_moment": [
+      "id",
+      "request_body"
+    ],
+    "dismiss_deal_move": [
+      "id",
+      "request_body"
+    ],
+    "dismiss_deal_suggestion": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "dismiss_relationship_nudge": [
+      "id",
+      "request_body"
+    ],
+    "dismiss_relationship_nudges": [
+      "request_body"
+    ],
+    "dismiss_tag_suggestion": [
+      "id"
+    ],
+    "disqualify_lead": [
+      "approval_id",
+      "idempotency_key",
+      "lead_id",
+      "note",
+      "reason_id"
+    ],
+    "download_attachment": [
+      "id"
+    ],
+    "download_corpus_document": [
+      "id"
+    ],
+    "download_finance_invoice_pdf": [
+      "id"
+    ],
+    "download_import_problems": [
+      "id",
+      "lang"
+    ],
+    "download_import_template": [],
+    "download_jurisdiction_document": [
+      "documentId"
+    ],
+    "download_offer_pdf": [
+      "id"
+    ],
+    "draft_email": [
+      "activity_id",
+      "idempotency_key",
+      "intent",
+      "links"
+    ],
+    "draft_follow_ups_for": [
+      "idempotency_key",
+      "limit",
+      "segment"
+    ],
+    "draft_intro_note": [
+      "id",
+      "request_body"
+    ],
+    "draft_intro_request": [
+      "id",
+      "request_body"
+    ],
+    "draft_report": [
+      "description",
+      "idempotency_key",
+      "name",
+      "report_id",
+      "selection"
+    ],
+    "edit_weekly_plan_commitment": [
+      "id",
+      "request_body"
+    ],
+    "embed_reindex_identities": [],
+    "embed_reindex_preview": [],
+    "embed_reindex_status": [],
+    "enrich": [
+      "approval_id",
+      "company_id",
+      "confirm_code",
+      "depth",
+      "idempotency_key",
+      "url"
+    ],
+    "enrich_contact_from_provider": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "ensure_company_scan": [
+      "id",
+      "request_body"
+    ],
+    "explain_analytics_cell": [
+      "request_body"
+    ],
+    "explain_lead_score": [
+      "cursor",
+      "history",
+      "id",
+      "limit"
+    ],
+    "explain_report_run_cell": [
+      "request_body",
+      "run_id"
+    ],
+    "explain_reporting_question_card": [
+      "card_id",
+      "id",
+      "request_body",
+      "revision"
+    ],
+    "export_contact_optout_records": [
+      "id"
+    ],
+    "export_forecast_share": [
+      "token"
+    ],
+    "file_channel_message": [
+      "id",
+      "record_type",
+      "request_body"
+    ],
+    "forecast_input_checks": [],
+    "forecast_movement": [
+      "from",
+      "reading",
+      "to"
+    ],
+    "forecast_readings": [
+      "as_of",
+      "contributions",
+      "period",
+      "scope_id",
+      "scope_kind"
+    ],
+    "freeze_reporting_edition": [
+      "id"
+    ],
+    "generate_morning_brief": [],
+    "get_activity_deal_filing": [
+      "record_id",
+      "record_type"
+    ],
+    "get_activity_project_filing": [
+      "id"
+    ],
+    "get_ai_budget": [],
+    "get_ai_call": [
+      "id"
+    ],
+    "get_ai_call_stats": [
+      "group",
+      "model",
+      "provider",
+      "task",
+      "tier",
+      "window"
+    ],
+    "get_ai_health": [],
+    "get_ai_profile": [],
+    "get_ai_provider_health": [],
+    "get_ai_routing_schema": [],
+    "get_ai_status": [],
+    "get_ai_task_flow": [
+      "task",
+      "window"
+    ],
+    "get_ai_task_overrides": [],
+    "get_ai_usage": [
+      "from",
+      "to"
+    ],
+    "get_ai_usage_summary": [
+      "from",
+      "to"
+    ],
+    "get_analytics_context": [],
+    "get_analytics_schema": [],
+    "get_anchor_company": [],
+    "get_anchor_company_context": [
+      "scopes"
+    ],
+    "get_anchor_company_context_capabilities": [],
+    "get_anchor_company_site_read": [
+      "readId"
+    ],
+    "get_attachment_extraction": [
+      "id",
+      "question"
+    ],
+    "get_claim_evidence": [
+      "entityId",
+      "entityType",
+      "id"
+    ],
+    "get_communication_review": [
+      "id"
+    ],
+    "get_company_brief": [
+      "id",
+      "project_id"
+    ],
+    "get_company_capture_triage": [
+      "id"
+    ],
+    "get_company_coverage": [
+      "scope_id",
+      "scope_kind",
+      "view"
+    ],
+    "get_company_dossier": [
+      "id"
+    ],
+    "get_company_for_address": [
+      "email"
+    ],
+    "get_company_growth_fit": [
+      "id"
+    ],
+    "get_company_linked_in_reach": [
+      "id"
+    ],
+    "get_company_logo": [
+      "id"
+    ],
+    "get_company_logo_icon": [
+      "id"
+    ],
+    "get_company_scan": [
+      "id"
+    ],
+    "get_contact_brief": [
+      "id"
+    ],
+    "get_contact_case_settings": [],
+    "get_contact_consent": [
+      "id"
+    ],
+    "get_contact_consent_guard": [
+      "id"
+    ],
+    "get_contact_enrichment_run": [
+      "id",
+      "run_id"
+    ],
+    "get_contact_profile_fields": [
+      "id"
+    ],
+    "get_contract": [
+      "id"
+    ],
+    "get_controller_particulars": [],
+    "get_current_weekly_plan": [],
+    "get_data_subject_request_deadline": [
+      "kind",
+      "received_at"
+    ],
+    "get_deal_room_brief": [
+      "id"
+    ],
+    "get_deal_suggestion": [
+      "id"
+    ],
+    "get_deal_win_evidence": [
+      "id"
+    ],
+    "get_edit_access_request": [
+      "id",
+      "record_type"
+    ],
+    "get_extension_settings": [
+      "name"
+    ],
+    "get_field_history": [
+      "actor_type",
+      "cursor",
+      "entity_id",
+      "entity_type",
+      "field",
+      "limit"
+    ],
+    "get_finance_source": [],
+    "get_forecast_focus": [
+      "team"
+    ],
+    "get_forecast_stage_chances": [],
+    "get_handled_for_you": [
+      "cursor"
+    ],
+    "get_handoff_assignee": [
+      "id"
+    ],
+    "get_hidden_backlog": [],
+    "get_hidden_backlog_rows": [
+      "rule"
+    ],
+    "get_latest_weekly_review": [
+      "week"
+    ],
+    "get_lead_signal_catalog": [],
+    "get_legal_entity": [
+      "id"
+    ],
+    "get_legal_entity_logo": [
+      "id"
+    ],
+    "get_legal_review": [
+      "id"
+    ],
+    "get_legal_review_settings": [],
+    "get_magic": [
+      "limit",
+      "since"
+    ],
+    "get_magic_line_records": [
+      "cursor",
+      "id",
+      "limit",
+      "since"
+    ],
+    "get_mail_draft": [
+      "anchor_id",
+      "anchor_type"
+    ],
+    "get_meeting_availability": [
+      "from",
+      "id",
+      "to"
+    ],
+    "get_member": [
+      "id"
+    ],
+    "get_my_ai_activity": [
+      "kinds"
+    ],
+    "get_my_email_signature": [],
+    "get_my_linked_in_account": [],
+    "get_my_linked_in_reach": [
+      "cursor",
+      "limit"
+    ],
+    "get_notice_case": [
+      "id"
+    ],
+    "get_notice_case_review": [
+      "id"
+    ],
+    "get_notice_source_evidence": [
+      "cursor",
+      "id"
+    ],
+    "get_ownership_offer": [
+      "id",
+      "record_type"
+    ],
+    "get_ownership_request": [
+      "id",
+      "record_type"
+    ],
+    "get_pending_margince_changes": [],
+    "get_record_history": [
+      "action",
+      "cursor",
+      "entity_type",
+      "id",
+      "limit"
+    ],
+    "get_record_tags": [
+      "record_id",
+      "record_type"
+    ],
+    "get_relationship_nudge": [
+      "id"
+    ],
+    "get_report_run": [
+      "run_id"
+    ],
+    "get_response_metrics": [
+      "days"
+    ],
+    "get_sales_initiative": [
+      "id"
+    ],
+    "get_saved_view": [
+      "id"
+    ],
+    "get_scheduled_send": [
+      "id"
+    ],
+    "get_scheduling_calendars": [
+      "provider"
+    ],
+    "get_sdr_summary": [
+      "as_of",
+      "scope_id",
+      "scope_kind"
+    ],
+    "get_sdr_team_review": [
+      "period",
+      "scope_id",
+      "scope_kind"
+    ],
+    "get_tag": [
+      "tag_id"
+    ],
+    "get_tag_suggestion": [
+      "id"
+    ],
+    "get_team_board": [
+      "team"
+    ],
+    "get_team_exceptions": [],
+    "get_team_margince_changes": [
+      "since"
+    ],
+    "get_team_weekly_review": [
+      "team",
+      "week"
+    ],
+    "get_teammate_weekly_plan": [
+      "owner_id"
+    ],
+    "get_user_handover": [
+      "id"
+    ],
+    "get_voice_build": [
+      "buildId",
+      "id"
+    ],
+    "get_voice_learning_summary": [
+      "id"
+    ],
+    "get_voice_profile": [
+      "id"
+    ],
+    "get_web_form": [
+      "id"
+    ],
+    "get_worklist": [
+      "cursor",
+      "filter",
+      "limit",
+      "owner",
+      "relationships",
+      "scope",
+      "shape",
+      "view"
+    ],
+    "hand_over_user_work": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "handle_website_inquiries": [
+      "id",
+      "request_body"
+    ],
+    "hide_deal_document": [
+      "attachmentId",
+      "id"
+    ],
+    "import_linkedin_connections": [
+      "content_base64",
+      "content_type",
+      "filename"
+    ],
+    "import_vcards": [
+      "company_id",
+      "content_base64",
+      "content_type",
+      "filename"
+    ],
+    "intro_path_to": [
+      "company_id"
+    ],
+    "invite_deal_room_participant": [
+      "id",
+      "request_body"
+    ],
+    "invite_meeting": [
+      "attendee_email",
+      "attendee_emails",
+      "contact_id",
+      "description",
+      "end",
+      "idempotency_key",
+      "links",
+      "location",
+      "start",
+      "start_intent",
+      "subject",
+      "video_call"
+    ],
+    "invite_user": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "issue_double_opt_in": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "keep_domain_as_company": [
+      "domain",
+      "request_body"
+    ],
+    "keep_domain_as_vendor": [
+      "domain"
+    ],
+    "launch_sales_initiative": [
+      "id",
+      "if_version"
+    ],
+    "lift_capture_exclusion": [
+      "id"
+    ],
+    "lift_contact_suppression": [
+      "id",
+      "request_body",
+      "suppressionId"
+    ],
+    "lift_counterparty_hold": [
+      "id"
+    ],
+    "lift_lead_suppression": [
+      "id",
+      "request_body",
+      "suppressionId"
+    ],
+    "link_channel": [
+      "id",
+      "record_type",
+      "request_body"
+    ],
+    "link_company_contacts": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "link_finance_customer": [
+      "external_id",
+      "request_body"
+    ],
+    "link_lead_company": [
+      "id",
+      "request_body"
+    ],
+    "list_agent_tools": [],
+    "list_ai_calls": [
+      "cursor",
+      "from",
+      "limit",
+      "model",
+      "outcome",
+      "provider",
+      "q",
+      "served_model",
+      "served_provider",
+      "task",
+      "tier",
+      "to"
+    ],
+    "list_ai_model_rates": [
+      "model_id",
+      "provider"
+    ],
+    "list_approvals": [
+      "bundle_id",
+      "cursor",
+      "include_muted",
+      "kind",
+      "limit",
+      "status",
+      "target_entity_id",
+      "target_entity_type",
+      "targets"
+    ],
+    "list_assignable_roles": [],
+    "list_audit_log": [
+      "action",
+      "actor",
+      "batch_id",
+      "cursor",
+      "entity_id",
+      "entity_type",
+      "from",
+      "limit",
+      "to"
+    ],
+    "list_automation_runs": [
+      "cursor",
+      "id",
+      "limit",
+      "outcome"
+    ],
+    "list_available_models": [
+      "location",
+      "model",
+      "provider",
+      "tier",
+      "top"
+    ],
+    "list_blocked_domains": [],
+    "list_capture_contacts_awaiting_decision": [],
+    "list_capture_counterparty_holds": [],
+    "list_capture_exclusions": [],
+    "list_capture_owner_identities": [],
+    "list_capture_senders": [
+      "cursor",
+      "decision",
+      "limit",
+      "overrides",
+      "q"
+    ],
+    "list_channel_connections": [],
+    "list_channel_providers": [],
+    "list_colleagues": [
+      "include_inactive",
+      "include_invited",
+      "q"
+    ],
+    "list_company_contracts": [
+      "cursor",
+      "id",
+      "limit",
+      "status",
+      "under_contract_only"
+    ],
+    "list_company_link_candidates": [
+      "id"
+    ],
+    "list_company_offered_values": [
+      "id"
+    ],
+    "list_confirm_submissions": [
+      "contact_id",
+      "cursor",
+      "limit",
+      "resolved"
+    ],
+    "list_connector_containers": [
+      "connection_id",
+      "provider"
+    ],
+    "list_connectors": [],
+    "list_consumer_mail_baseline": [
+      "q"
+    ],
+    "list_consumer_mail_domains": [],
+    "list_contact_overrides": [
+      "cursor",
+      "id",
+      "limit"
+    ],
+    "list_contact_stops": [
+      "id"
+    ],
+    "list_corpora": [],
+    "list_corpus_documents": [
+      "id"
+    ],
+    "list_data_subject_requests": [
+      "cursor",
+      "limit",
+      "status"
+    ],
+    "list_deal_legal_reviews": [
+      "id"
+    ],
+    "list_deal_margince_changes": [
+      "change_kind",
+      "cursor",
+      "id",
+      "note_activity_id",
+      "stage_history_id"
+    ],
+    "list_deal_products": [
+      "id"
+    ],
+    "list_deal_suggestions": [
+      "company_id",
+      "cursor",
+      "limit",
+      "owner_id",
+      "owner_team_id",
+      "pipeline_id",
+      "stage_id",
+      "unassigned"
+    ],
+    "list_domain_questions": [
+      "cursor",
+      "domain",
+      "limit"
+    ],
+    "list_extensions": [],
+    "list_finance_source_customers": [
+      "cursor",
+      "limit"
+    ],
+    "list_forecast_shares": [],
+    "list_fx_rate_currencies": [],
+    "list_fx_rates": [
+      "from"
+    ],
+    "list_held_threads": [
+      "contact_id",
+      "cursor",
+      "from",
+      "limit",
+      "q",
+      "reason",
+      "status",
+      "to"
+    ],
+    "list_import_runs": [
+      "cursor",
+      "limit",
+      "view"
+    ],
+    "list_input_checks": [
+      "country",
+      "industry",
+      "product_id",
+      "scope_id",
+      "scope_kind"
+    ],
+    "list_intro_requests": [
+      "id"
+    ],
+    "list_lead_manual_signals": [
+      "id"
+    ],
+    "list_lead_stops": [
+      "id"
+    ],
+    "list_legacy_loss_reasons": [
+      "limit"
+    ],
+    "list_legal_entities": [
+      "include_archived"
+    ],
+    "list_legal_entity_members": [
+      "id"
+    ],
+    "list_legal_holds": [
+      "cursor",
+      "limit"
+    ],
+    "list_legal_reviews": [
+      "cursor",
+      "limit",
+      "status"
+    ],
+    "list_meeting_proposals": [
+      "contact_id"
+    ],
+    "list_my_capture_activity": [
+      "cursor",
+      "limit"
+    ],
+    "list_notice_case_reviews": [
+      "cursor",
+      "limit",
+      "state"
+    ],
+    "list_notice_cases": [
+      "cursor",
+      "limit",
+      "state"
+    ],
+    "list_notices": [
+      "cursor",
+      "limit"
+    ],
+    "list_notification_preferences": [],
+    "list_ownership_offer_candidates": [
+      "id",
+      "record_type"
+    ],
+    "list_pipelines": [
+      "include_archived"
+    ],
+    "list_product_translations": [
+      "id"
+    ],
+    "list_provider_connections": [],
+    "list_provider_locations": [
+      "provider"
+    ],
+    "list_record_documents": [
+      "cursor",
+      "entity_id",
+      "entity_type",
+      "limit"
+    ],
+    "list_records": [
+      "compact",
+      "cursor",
+      "filters",
+      "limit",
+      "q",
+      "record_type"
+    ],
+    "list_report_runs": [
+      "cursor",
+      "entity",
+      "limit"
+    ],
+    "list_reporting_report_revisions": [
+      "id"
+    ],
+    "list_restricted_activities": [
+      "cursor",
+      "limit"
+    ],
+    "list_retention_policies": [],
+    "list_roles": [
+      "include_archived"
+    ],
+    "list_sales_decisions": [
+      "country",
+      "deal_id",
+      "industry",
+      "initiative_id",
+      "pipeline_id",
+      "product_id",
+      "scope_id",
+      "scope_kind",
+      "status"
+    ],
+    "list_sales_initiative_members": [
+      "id",
+      "record_type"
+    ],
+    "list_sales_initiatives": [
+      "status"
+    ],
+    "list_saved_views": [
+      "include_archived",
+      "resource"
+    ],
+    "list_scheduled_sends": [
+      "status"
+    ],
+    "list_sdr_upcoming_meetings": [
+      "cursor",
+      "limit",
+      "scope_id",
+      "scope_kind",
+      "window_end",
+      "window_start"
+    ],
+    "list_sdr_waiting_handoffs": [
+      "as_of",
+      "cursor",
+      "limit",
+      "scope_id",
+      "scope_kind",
+      "state"
+    ],
+    "list_tags": [
+      "include_archived",
+      "with_carried_by"
+    ],
+    "list_tax_rates": [
+      "country"
+    ],
+    "list_voice_corpus_sources": [
+      "id"
+    ],
+    "list_voice_profile_deltas": [
+      "cursor",
+      "id",
+      "limit"
+    ],
+    "list_voice_profile_versions": [
+      "cursor",
+      "id",
+      "limit"
+    ],
+    "list_voice_profiles": [],
+    "list_web_forms": [
+      "include_archived"
+    ],
+    "list_weekly_reviews": [],
+    "list_workspace_capture_activity": [
+      "cursor",
+      "limit"
+    ],
+    "list_workspace_email_domains": [],
+    "log_activity": [
+      "attendee_user_ids",
+      "body",
+      "channel_provider",
+      "direction",
+      "due_at",
+      "follow_up_task",
+      "idempotency_key",
+      "kind",
+      "links",
+      "meeting_status",
+      "occurred_at",
+      "occurred_precision",
+      "source_activity_id",
+      "source_id",
+      "source_system",
+      "subject"
+    ],
+    "mark_all_notices_read": [],
+    "mark_booking_page_shared": [],
+    "mark_brief_item_acted": [
+      "itemId"
+    ],
+    "mark_brief_item_dismissed": [
+      "itemId"
+    ],
+    "mark_notice_read": [
+      "id"
+    ],
+    "mark_worklist_rows_done": [
+      "request_body"
+    ],
+    "merge_members": [
+      "approval_id",
+      "confirm_code",
+      "idempotency_key",
+      "preview_token",
+      "source_id",
+      "to_user_id"
+    ],
+    "merge_records": [
+      "approval_id",
+      "contact_id",
+      "idempotency_key",
+      "member_ids",
+      "owner_id",
+      "preview",
+      "record_type",
+      "revision",
+      "source_id",
+      "survivor_id",
+      "target_id"
+    ],
+    "merge_tags": [
+      "approval_id",
+      "idempotency_key",
+      "into_tag_id",
+      "tag_id"
+    ],
+    "message_anchor_company_site_read": [
+      "readId",
+      "request_body"
+    ],
+    "move_deal_pipeline": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "offer_ownership_transfer": [
+      "id",
+      "idempotency_key",
+      "record_type",
+      "request_body"
+    ],
+    "open_data_subject_request": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "open_deal_room_thread": [
+      "id",
+      "request_body"
+    ],
+    "open_forecast_share": [
+      "token"
+    ],
+    "pause_deal_room": [
+      "id"
+    ],
+    "pin_activity_to_floor": [
+      "activityId",
+      "idempotency_key",
+      "request_body"
+    ],
+    "pin_worklist_row": [
+      "request_body"
+    ],
+    "place_legal_hold": [
+      "entityType",
+      "idempotency_key",
+      "recordId",
+      "request_body"
+    ],
+    "prep_for_meeting": [
+      "max_items",
+      "project_id",
+      "record_id",
+      "record_name",
+      "record_type"
+    ],
+    "prepare_handoff": [
+      "project_id"
+    ],
+    "preview_account_send_authorization": [
+      "request_body"
+    ],
+    "preview_ai_budget": [
+      "request_body"
+    ],
+    "preview_ai_routing": [
+      "request_body"
+    ],
+    "preview_ai_task_overrides": [
+      "request_body"
+    ],
+    "preview_automation": [
+      "id",
+      "request_body"
+    ],
+    "preview_connector_backfill": [
+      "connection_id",
+      "provider",
+      "request_body"
+    ],
+    "preview_controller_mail": [
+      "id",
+      "kind",
+      "language"
+    ],
+    "preview_email_sign_off": [
+      "request_body"
+    ],
+    "preview_filter": [
+      "request_body"
+    ],
+    "preview_forecast_assurance": [],
+    "preview_home_repair": [
+      "request_body"
+    ],
+    "preview_import": [
+      "csv",
+      "files",
+      "idempotency_key",
+      "mapping",
+      "object",
+      "on_broken_link",
+      "on_duplicate",
+      "source_name"
+    ],
+    "preview_lead_promotion": [
+      "create_company",
+      "deals_cursor",
+      "id"
+    ],
+    "preview_mail_deal_repair": [
+      "request_body"
+    ],
+    "preview_member_retirement": [
+      "mode",
+      "source_id",
+      "to_user_id"
+    ],
+    "preview_notice_source": [
+      "id",
+      "request_body"
+    ],
+    "preview_send_authorization": [
+      "id",
+      "request_body"
+    ],
+    "preview_voice_source": [
+      "id",
+      "request_body"
+    ],
+    "preview_website_inquiries": [
+      "id",
+      "request_body"
+    ],
+    "preview_website_inquiry_assignment": [
+      "id",
+      "request_body"
+    ],
+    "progress_deal": [
+      "approval_id",
+      "deal_id",
+      "idempotency_key",
+      "if_version",
+      "lost_reason",
+      "lost_reason_code",
+      "note",
+      "settle",
+      "to_stage_id",
+      "won_without_contract_detail",
+      "won_without_contract_reason"
+    ],
+    "promote_lead": [
+      "approval_id",
+      "create_company",
+      "deal",
+      "evidence_note",
+      "existing_deal_id",
+      "idempotency_key",
+      "lead_id",
+      "trigger"
+    ],
+    "propose_deal_roles": [
+      "id"
+    ],
+    "propose_filter": [
+      "request_body"
+    ],
+    "propose_fx_rate_refresh": [],
+    "propose_report_setup": [
+      "request_body"
+    ],
+    "publish_captured_contact": [
+      "id"
+    ],
+    "publish_reporting_framework": [
+      "if_version",
+      "request_body"
+    ],
+    "publish_reporting_report_draft": [
+      "id",
+      "if_version"
+    ],
+    "put_anchor_company": [
+      "request_body"
+    ],
+    "put_product_translation": [
+      "id",
+      "language",
+      "request_body"
+    ],
+    "put_scheduling_alias": [
+      "request_body"
+    ],
+    "put_scheduling_profile": [
+      "request_body"
+    ],
+    "qualify_lead": [
+      "idempotency_key",
+      "lead_id"
+    ],
+    "query_workspace": [
+      "compact",
+      "plan"
+    ],
+    "raise_notice": [
+      "request_body"
+    ],
+    "reactivate_user": [
+      "id"
+    ],
+    "read_activity_pipeline_trace": [
+      "id"
+    ],
+    "read_ai_price_sync": [],
+    "read_ai_routing": [],
+    "read_approval": [
+      "staged_action_id"
+    ],
+    "read_attachment_for_fields": [
+      "id",
+      "request_body"
+    ],
+    "read_automatic_work_health": [
+      "days"
+    ],
+    "read_brief": [],
+    "read_capture_health": [],
+    "read_capture_trace_pipeline": [
+      "id"
+    ],
+    "read_card_photo": [
+      "content_base64",
+      "content_type",
+      "filename"
+    ],
+    "read_corpus": [
+      "id"
+    ],
+    "read_data_tasks": [],
+    "read_deal_lines": [
+      "id"
+    ],
+    "read_extension_ingest_health": [],
+    "read_import_report": [
+      "run_id"
+    ],
+    "read_installation_jurisdiction": [],
+    "read_job_health": [],
+    "read_job_health_history": [
+      "cursor",
+      "days",
+      "kind",
+      "state"
+    ],
+    "read_lists": [
+      "cursor",
+      "definition",
+      "entity_type",
+      "limit",
+      "list_id",
+      "mode",
+      "query",
+      "record_id",
+      "sharing"
+    ],
+    "read_my_brief_delivery": [],
+    "read_my_working_hours": [],
+    "read_onboarding_company_proposal": [
+      "locale"
+    ],
+    "read_onboarding_state": [],
+    "read_project_360": [
+      "project_id"
+    ],
+    "read_record": [
+      "id",
+      "record_type"
+    ],
+    "read_recovery_health": [],
+    "read_reporting": [
+      "cursor",
+      "evaluated_at",
+      "evaluation_key",
+      "framework_revision",
+      "id",
+      "limit",
+      "mode",
+      "reference",
+      "revision",
+      "right_id",
+      "scheduled",
+      "selection"
+    ],
+    "read_retention_settings": [],
+    "read_site_read_logo": [
+      "readId"
+    ],
+    "read_system_health": [],
+    "read_transcript_for_next_steps": [
+      "id"
+    ],
+    "read_view": [
+      "agg",
+      "as_of",
+      "blocks",
+      "by",
+      "category",
+      "close_end_at",
+      "close_start_at",
+      "close_window",
+      "company_id",
+      "contact_id",
+      "contract_id",
+      "country",
+      "cursor",
+      "days",
+      "deal_id",
+      "doc_state",
+      "end_at",
+      "entity_id",
+      "entity_type",
+      "evaluated_at",
+      "evaluation_key",
+      "facts_only",
+      "framework_revision",
+      "handle_version",
+      "id",
+      "if_recommendation",
+      "if_rule",
+      "include_archived",
+      "include_hidden",
+      "industry",
+      "initiative_id",
+      "kind",
+      "limit",
+      "list_type",
+      "metrics",
+      "month",
+      "object",
+      "owner_id",
+      "period",
+      "period_month",
+      "period_quarter",
+      "period_start",
+      "period_year",
+      "pinned_only",
+      "pipeline_id",
+      "plan_owned",
+      "product_id",
+      "project_id",
+      "q",
+      "readId",
+      "record_id",
+      "record_type",
+      "refresh",
+      "report",
+      "resolution_state",
+      "resource",
+      "retired",
+      "scope",
+      "scope_id",
+      "scope_kind",
+      "sharing",
+      "sort",
+      "start_at",
+      "status",
+      "target_basis",
+      "thread_cursor",
+      "value_basis",
+      "view",
+      "year"
+    ],
+    "reassign_handoff": [
+      "id",
+      "request_body"
+    ],
+    "record_communication_context": [
+      "id",
+      "request_body"
+    ],
+    "record_consent": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "record_conversation_claim": [
+      "id",
+      "request_body"
+    ],
+    "record_forecast_call": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "record_introduction": [
+      "id",
+      "request_body"
+    ],
+    "record_lead_qualifying_event": [
+      "id",
+      "request_body"
+    ],
+    "record_qualifying_event": [
+      "id",
+      "request_body"
+    ],
+    "record_sales_decision": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "record_sales_decision_outcome": [
+      "id",
+      "request_body"
+    ],
+    "record_tax_rate": [
+      "request_body"
+    ],
+    "refresh_ai_model_rates": [],
+    "refresh_company_dossier": [
+      "id"
+    ],
+    "refresh_company_growth_fit": [
+      "id"
+    ],
+    "refresh_offer_from_deal": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "regenerate_company_brief": [
+      "id",
+      "project_id"
+    ],
+    "regenerate_contact_brief": [
+      "id"
+    ],
+    "regenerate_offer": [
+      "id",
+      "idempotency_key"
+    ],
+    "reject_offer": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "reject_voice_version": [
+      "id",
+      "idempotency_key",
+      "if_version",
+      "profileVersion"
+    ],
+    "relink_activities": [
+      "activity_ids",
+      "approval_id",
+      "confirm_code",
+      "entity_id",
+      "entity_type",
+      "idempotency_key",
+      "replace_existing_of_type"
+    ],
+    "relink_activity": [
+      "activity_id",
+      "approval_id",
+      "confirm_code",
+      "entity_id",
+      "entity_type",
+      "idempotency_key",
+      "replace_existing_of_type"
+    ],
+    "relink_thread": [
+      "approval_id",
+      "confirm_code",
+      "entity_id",
+      "entity_type",
+      "idempotency_key",
+      "replace_existing_of_type",
+      "thread_key"
+    ],
+    "remove_consumer_mail_domain": [
+      "id"
+    ],
+    "remove_deal_line": [
+      "expected_revision",
+      "id",
+      "lineId"
+    ],
+    "remove_deal_room_document": [
+      "documentId",
+      "id",
+      "if_version"
+    ],
+    "remove_tag": [
+      "idempotency_key",
+      "record_id",
+      "record_type",
+      "tag_id",
+      "tag_name"
+    ],
+    "remove_team_member": [
+      "id",
+      "userId"
+    ],
+    "remove_workspace_email_domain": [
+      "domain"
+    ],
+    "remove_workspace_member": [
+      "id",
+      "request_body"
+    ],
+    "rename_custom_field": [
+      "id",
+      "idempotency_key",
+      "if_version",
+      "request_body"
+    ],
+    "render_offer": [
+      "id",
+      "idempotency_key"
+    ],
+    "renew_contract": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "reopen_lead": [
+      "id",
+      "idempotency_key"
+    ],
+    "reopen_withheld_domain": [
+      "domain"
+    ],
+    "reopen_worklist_rows": [
+      "request_body"
+    ],
+    "reorder_pipelines": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "reorder_stages": [
+      "id",
+      "idempotency_key",
+      "if_version",
+      "request_body"
+    ],
+    "replace_deal_products": [
+      "id",
+      "request_body"
+    ],
+    "replace_intro_request": [
+      "id",
+      "request_body"
+    ],
+    "replace_sales_initiative_members": [
+      "id",
+      "request_body"
+    ],
+    "reply_deal_room_thread": [
+      "id",
+      "request_body",
+      "threadId"
+    ],
+    "request_attachment_access": [
+      "id"
+    ],
+    "request_company_vat_check": [
+      "id"
+    ],
+    "request_deal_manager": [
+      "id",
+      "request_body"
+    ],
+    "request_details_confirmation": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "request_edit_access": [
+      "id",
+      "idempotency_key",
+      "record_type"
+    ],
+    "request_legal_review": [
+      "id",
+      "request_body"
+    ],
+    "request_ownership_transfer": [
+      "id",
+      "idempotency_key",
+      "record_type",
+      "request_body"
+    ],
+    "reschedule_scheduled_send": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "resend_deal_room_invitation": [
+      "id",
+      "participantId"
+    ],
+    "resend_member_invite": [
+      "id",
+      "idempotency_key"
+    ],
+    "resolve_confirm_submission": [
+      "id",
+      "request_body"
+    ],
+    "resolve_deal_room_thread": [
+      "id",
+      "threadId"
+    ],
+    "resolve_entities": [
+      "candidates"
+    ],
+    "resolve_input_check": [
+      "id",
+      "request_body"
+    ],
+    "resolve_signal": [
+      "id",
+      "idempotency_key"
+    ],
+    "restore_company_suggestion": [
+      "fingerprint",
+      "id"
+    ],
+    "restore_contact_moment": [
+      "claim_key",
+      "evidence_fingerprint",
+      "id"
+    ],
+    "restore_contact_profile_field": [
+      "field",
+      "id",
+      "value_key"
+    ],
+    "restore_deal_move": [
+      "fingerprint",
+      "id"
+    ],
+    "restore_owner_identity": [
+      "id"
+    ],
+    "restore_pipeline": [
+      "id"
+    ],
+    "restore_relationship_nudge": [
+      "id"
+    ],
+    "restore_reporting_report_revision": [
+      "id",
+      "if_version",
+      "revision"
+    ],
+    "restore_tag": [
+      "id"
+    ],
+    "resume_deal_room": [
+      "id"
+    ],
+    "retire_custom_field": [
+      "id",
+      "idempotency_key"
+    ],
+    "retract_acquisition_request": [
+      "id"
+    ],
+    "retract_lead_qualifying_event": [
+      "event_id",
+      "id"
+    ],
+    "retract_qualifying_event": [
+      "event_id",
+      "id"
+    ],
+    "retry_automation_run": [
+      "id"
+    ],
+    "retry_reporting_execution": [
+      "id"
+    ],
+    "review_commitments": [
+      "assignee_id",
+      "limit",
+      "project_id"
+    ],
+    "revoke_contact_override": [
+      "id",
+      "overrideId",
+      "request_body"
+    ],
+    "revoke_deal_room_participant": [
+      "id",
+      "participantId"
+    ],
+    "revoke_forecast_share": [
+      "id"
+    ],
+    "revoke_record_share": [
+      "id",
+      "if_version"
+    ],
+    "rollback_voice_version": [
+      "id",
+      "idempotency_key",
+      "profileVersion"
+    ],
+    "run_analytics_query": [
+      "entity",
+      "filters",
+      "group_by",
+      "limit",
+      "measures",
+      "save",
+      "scope_id",
+      "scope_kind"
+    ],
+    "run_contact_research": [
+      "id"
+    ],
+    "run_report": [
+      "aggregates",
+      "filters",
+      "group_by",
+      "report",
+      "scope"
+    ],
+    "save_contact_research": [
+      "id",
+      "request_body"
+    ],
+    "save_email_signature_template": [
+      "request_body"
+    ],
+    "save_mail_draft": [
+      "if_version",
+      "request_body"
+    ],
+    "save_my_display_name": [
+      "request_body"
+    ],
+    "save_my_email_signature": [
+      "request_body"
+    ],
+    "save_my_greeting_name": [
+      "request_body"
+    ],
+    "save_my_linked_in_account": [
+      "request_body"
+    ],
+    "save_my_locale": [
+      "request_body"
+    ],
+    "save_my_onboarding_state": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "save_my_timezone": [
+      "request_body"
+    ],
+    "save_my_working_hours": [
+      "request_body"
+    ],
+    "search_context": [
+      "limit",
+      "query",
+      "record_types"
+    ],
+    "search_records": [
+      "cursor",
+      "exclude_ids",
+      "limit",
+      "per_type",
+      "q",
+      "record_type",
+      "record_types",
+      "with_employees"
+    ],
+    "search_report_evidence": [
+      "cell",
+      "limit",
+      "query",
+      "run_id"
+    ],
+    "send_company_email": [
+      "approval_id",
+      "body",
+      "cc",
+      "communication_context",
+      "consent_purpose",
+      "evidence",
+      "idempotency_key",
+      "links",
+      "marketing_purpose",
+      "operator_reason",
+      "scheduled_at",
+      "scheduled_tz",
+      "subject",
+      "to"
+    ],
+    "send_email": [
+      "activity_id",
+      "approval_id",
+      "body",
+      "cc",
+      "communication_context",
+      "consent_purpose",
+      "evidence",
+      "idempotency_key",
+      "marketing_purpose",
+      "operator_reason",
+      "scheduled_at",
+      "scheduled_tz",
+      "subject",
+      "to"
+    ],
+    "send_message": [
+      "activity_id",
+      "approval_id",
+      "body",
+      "communication_context",
+      "consent_purpose",
+      "evidence",
+      "idempotency_key",
+      "marketing_purpose",
+      "operator_reason"
+    ],
+    "send_offer": [
+      "id",
+      "idempotency_key",
+      "if_version"
+    ],
+    "send_privacy_notice": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "set_activity_audience": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "set_activity_deal_relevance": [
+      "id",
+      "request_body"
+    ],
+    "set_activity_disposition": [
+      "id",
+      "request_body"
+    ],
+    "set_ai_model_rate": [
+      "request_body"
+    ],
+    "set_ai_price_sync": [
+      "request_body"
+    ],
+    "set_blocked_domain": [
+      "request_body"
+    ],
+    "set_capture_sender_decision": [
+      "address",
+      "request_body"
+    ],
+    "set_channel_verbosity": [
+      "id",
+      "record_type",
+      "request_body"
+    ],
+    "set_connector_context_tag": [
+      "connection_id",
+      "provider",
+      "request_body"
+    ],
+    "set_connector_history_baseline": [
+      "connection_id",
+      "provider",
+      "request_body"
+    ],
+    "set_connector_mail_posture": [
+      "connection_id",
+      "provider",
+      "request_body"
+    ],
+    "set_connector_signature_enrichment": [
+      "connection_id",
+      "provider",
+      "request_body"
+    ],
+    "set_deal_room_expiry": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "set_fx_rate": [
+      "request_body"
+    ],
+    "set_lead_manual_signal": [
+      "id",
+      "request_body"
+    ],
+    "set_thread_audience": [
+      "request_body",
+      "thread_key"
+    ],
+    "set_up_partner": [
+      "approval_id",
+      "company_id",
+      "confirm_code",
+      "idempotency_key",
+      "next_step",
+      "next_step_due_at",
+      "partner_kinds",
+      "partner_role",
+      "relationship_stage"
+    ],
+    "set_weekly_plan_commitment_state": [
+      "id",
+      "request_body"
+    ],
+    "set_weekly_plan_contract": [
+      "request_body"
+    ],
+    "settle_conversation_claim": [
+      "id",
+      "request_body"
+    ],
+    "share_company_contacts": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "share_counterparty_hold_history": [],
+    "share_record": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "snooze_brief_item": [
+      "itemId",
+      "request_body"
+    ],
+    "start_connector_backfill": [
+      "connection_id",
+      "provider",
+      "request_body"
+    ],
+    "start_forecast_assurance_run": [],
+    "start_search_reindex": [
+      "request_body"
+    ],
+    "start_weekly_plan": [],
+    "suppress_contact": [
+      "id",
+      "request_body"
+    ],
+    "sync_finance_source": [],
+    "take_over_conversation_claim": [
+      "id"
+    ],
+    "transfer_project_ownership": [
+      "idempotency_key",
+      "request_body"
+    ],
+    "undo_import_run": [
+      "id"
+    ],
+    "undo_meeting_ready": [
+      "activity_id",
+      "idempotency_key",
+      "preparation_revision"
+    ],
+    "unhide_deal_document": [
+      "attachmentId",
+      "id"
+    ],
+    "unlink_channel": [
+      "id",
+      "record_type"
+    ],
+    "unlink_finance_customer": [
+      "external_id"
+    ],
+    "unpin_worklist_row": [
+      "row_id",
+      "source"
+    ],
+    "unsnooze_brief_item": [
+      "itemId"
+    ],
+    "update_acquisition_source": [
+      "id",
+      "idempotency_key",
+      "if_version",
+      "request_body"
+    ],
+    "update_activity_review_template": [
+      "id",
+      "request_body"
+    ],
+    "update_attachment_metadata": [
+      "id",
+      "request_body"
+    ],
+    "update_automation": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "update_contact_case_settings": [
+      "request_body"
+    ],
+    "update_contract": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "update_corpus": [
+      "id",
+      "request_body"
+    ],
+    "update_custom_field_options": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "update_data_subject_request": [
+      "id",
+      "request_body"
+    ],
+    "update_deal_line": [
+      "id",
+      "lineId",
+      "request_body"
+    ],
+    "update_deal_room": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "update_deal_room_document": [
+      "documentId",
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "update_deal_room_participant": [
+      "id",
+      "participantId",
+      "request_body"
+    ],
+    "update_exit_criterion": [
+      "criterion_id",
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "update_follow_up_settings": [
+      "request_body"
+    ],
+    "update_import_run": [
+      "id",
+      "request_body"
+    ],
+    "update_lead_disqualify_reason": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "update_lead_origin": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "update_lead_settings": [
+      "request_body"
+    ],
+    "update_lead_source": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "update_legal_entity": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "update_legal_review_settings": [
+      "request_body"
+    ],
+    "update_loss_reason": [
+      "id",
+      "idempotency_key",
+      "if_version",
+      "request_body"
+    ],
+    "update_member": [
+      "id",
+      "request_body"
+    ],
+    "update_partner_stage": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "update_pipeline": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "update_record": [
+      "approval_id",
+      "fields",
+      "id",
+      "idempotency_key",
+      "if_version",
+      "record_type",
+      "why"
+    ],
+    "update_record_assignment": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "update_record_role": [
+      "id",
+      "idempotency_key",
+      "request_body"
+    ],
+    "update_reporting_report": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "update_reporting_schedule": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "update_reporting_target": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "update_sales_initiative": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "update_saved_view": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "update_signal": [
+      "id",
+      "idempotency_key",
+      "if_version",
+      "request_body"
+    ],
+    "update_stage": [
+      "id",
+      "idempotency_key",
+      "if_version",
+      "request_body"
+    ],
+    "update_tag": [
+      "color",
+      "description",
+      "idempotency_key",
+      "name",
+      "tag_id"
+    ],
+    "update_team": [
+      "id",
+      "request_body"
+    ],
+    "update_voice_profile": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "update_voice_source": [
+      "id",
+      "if_version",
+      "request_body",
+      "sourceId"
+    ],
+    "update_web_form": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "upload_company_logo": [
+      "content_base64",
+      "content_type",
+      "filename"
+    ],
+    "upload_company_logo_icon": [
+      "content_base64",
+      "content_type",
+      "filename"
+    ],
+    "upload_corpus_document": [
+      "content_base64",
+      "content_type",
+      "filename",
+      "id"
+    ],
+    "upload_legal_entity_logo": [
+      "content_base64",
+      "content_type",
+      "filename",
+      "id",
+      "if_version"
+    ],
+    "upsert_partner": [
+      "id",
+      "if_version",
+      "request_body"
+    ],
+    "use_deal_estimate": [
+      "id",
+      "request_body"
+    ],
+    "validate_import_run": [
+      "id",
+      "request_body"
+    ],
+    "visit_list": [
+      "id"
+    ],
+    "whats_slipping_this_week": [
+      "limit",
+      "owner_id",
+      "quiet_days"
+    ],
+    "who_knows": [
+      "contact_id"
+    ],
+    "whoami": [],
+    "withdraw_capture_sender_decision": [
+      "address"
+    ],
+    "withdraw_edit_access_request": [
+      "id",
+      "record_type"
+    ],
+    "withdraw_legal_review": [
+      "id"
+    ],
+    "withdraw_owner_identity": [
+      "id"
+    ],
+    "withdraw_ownership_offer": [
+      "id",
+      "record_type"
+    ],
+    "withdraw_ownership_request": [
+      "id",
+      "record_type"
+    ]
   }
 }

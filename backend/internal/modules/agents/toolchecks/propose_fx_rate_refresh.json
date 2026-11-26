@@ -1,0 +1,6 @@
+{
+  "verb": "propose_fx_rate_refresh",
+  "checks": [
+    "fx_rate.create|update"
+  ]
+}

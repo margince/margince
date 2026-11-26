@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 const (
@@ -51,7 +53,9 @@ func (r approvalPreviewReader) mailPreview(ctx context.Context, approval crmcont
 		}
 		return nil, err
 	}
-	appendMailSchedule(message, out)
+	if err := appendMailSchedule(message, out); err != nil {
+		return nil, err
+	}
 	out.Effects = &[]string{"authorize_message_send"}
 	if err := r.appendMailPresentation(ctx, approval, origin, links, input, out); err != nil {
 		if previewUnavailable(err) {
@@ -87,19 +91,13 @@ func mailApprovalOrigin(ctx context.Context, store *activities.Store, approval c
 	return origin, links, err
 }
 
-func mailPreviewDetails(message crmcontracts.SendCompanyEmailRequest, input activities.SendEmailInput, to []string) []crmcontracts.ApprovalPreviewDetail {
+func mailPreviewDetails(input activities.SendEmailInput, to []string) []crmcontracts.ApprovalPreviewDetail {
 	details := []crmcontracts.ApprovalPreviewDetail{
 		previewDetail("to", strings.Join(to, "\n")),
 		previewDetail("cc", strings.Join(input.Cc, "\n")),
 		previewDetail("bcc", strings.Join(input.Bcc, "\n")),
 		previewDetail(activityTargetSubject, input.Subject),
 		previewDetail("body", input.Body),
-	}
-	if message.ScheduledAt != nil {
-		details = append(details, previewDetail("scheduled_at", message.ScheduledAt.Format(time.RFC3339)))
-	}
-	if message.ScheduledTz != nil {
-		details = append(details, previewDetail("scheduled_tz", *message.ScheduledTz))
 	}
 	return details
 }
@@ -112,7 +110,12 @@ func (r approvalPreviewReader) appendMailFooter(ctx context.Context, origin acti
 		return err
 	}
 	for _, line := range footer.Disclosures {
-		*out.Details = append(*out.Details, previewDetail("disclosure_text", line.Text))
+		if !line.Missing() {
+			*out.Details = append(*out.Details, previewDetail("disclosure_text", line.Text))
+		}
+	}
+	for _, finding := range footer.Findings {
+		*out.Details = append(*out.Details, previewDetail("footer_warning", mailFooterFinding(finding)))
 	}
 	if footer.OffersUnsubscribe {
 		*out.Effects = append(*out.Effects, "append_recipient_unsubscribe")
@@ -120,11 +123,40 @@ func (r approvalPreviewReader) appendMailFooter(ctx context.Context, origin acti
 	return nil
 }
 
-func appendMailSchedule(message crmcontracts.SendCompanyEmailRequest, out *crmcontracts.ApprovalPreview) {
-	if message.ScheduledAt != nil {
-		*out.Details = append(*out.Details, previewDetail("scheduled_at", message.ScheduledAt.Format(time.RFC3339)))
+func appendMailSchedule(message crmcontracts.SendCompanyEmailRequest, out *crmcontracts.ApprovalPreview) error {
+	schedule, err := activities.ParseSendSchedule(message.ScheduledAt, message.ScheduledTz, message.ScheduledIntent)
+	if err != nil {
+		return err
 	}
-	if message.ScheduledTz != nil {
-		*out.Details = append(*out.Details, previewDetail("scheduled_tz", *message.ScheduledTz))
+	if schedule == nil {
+		return nil
 	}
+	*out.Details = append(*out.Details, previewDetail("scheduled_at", schedule.At.Format(time.RFC3339)), previewDetail("scheduled_tz", schedule.TZ))
+	return nil
+}
+
+func mailFooterFinding(finding commsauthz.FooterFinding) string {
+	label := "some company footer text"
+	switch finding.Kind {
+	case "objection_route":
+		label = "opt-out instructions"
+	case "privacy_contact":
+		label = "privacy contact information"
+	case "controller_identity":
+		label = "the company name and address"
+	case "advertiser_contact":
+		label = "advertiser contact information"
+	case "advertisement":
+		label = "the line that identifies it as an advertisement"
+	case "recipient_private_link":
+		label = "a private opt-out link, to protect each recipient's private information"
+	case "public_opt_out_link":
+		label = "an opt-out link because the company has not configured a working public address"
+	case "unsubscribe_link":
+		label = "an opt-out link because the send could be given no stop link"
+	}
+	if finding.Language != "" {
+		label += " in " + finding.Language
+	}
+	return fmt.Sprintf("The email will omit %s. Sending requires a recorded reason.", label)
 }

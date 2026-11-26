@@ -37,7 +37,7 @@ func MemberNumbersTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (m
 		  JOIN app_user u ON u.id = s.owner_id
 		 WHERE NOT EXISTS (
 		   SELECT 1 FROM contact_email ce
-		    WHERE ce.contact_id = $1 AND ce.archived_at IS NULL AND lower(ce.email) = lower(u.email))`,
+		    WHERE ce.contact_id = $1 AND ce.archived_at IS NULL AND ce.email = lower(u.email))`,
 		contactID)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading the numbers members sign with: %w", err)

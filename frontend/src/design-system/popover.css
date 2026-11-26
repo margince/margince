@@ -15,7 +15,7 @@
   padding: 0;
   border: 0;
   background: none;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 
@@ -52,13 +52,8 @@
    atoms, which already stand --controlHeight tall. */
 .popover-panel {
   position: fixed;
-  /* Above the modal (atoms.css: scrim 50, dialog 60), not below it like the
-     overflow menu. A popover is opened from INSIDE whatever is on top —
-     including a dialog's own action row — and a panel underneath the dialog
-     that opened it is a control that answers a press with nothing. Nothing
-     opens a popover from behind a modal, because a modal makes the page
-     behind it inert. */
-  z-index: 70;
+  /* In the top layer (toplayer.ts), so it stands above the dialog it was
+     opened from with no z-index to keep in step. */
   inline-size: max-content;
   max-inline-size: 20rem;
   overflow-y: auto;

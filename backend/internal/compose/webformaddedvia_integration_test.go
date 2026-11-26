@@ -9,7 +9,9 @@ import (
 	"log/slog"
 	"maps"
 	"net/http"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/webforms"
@@ -36,7 +38,8 @@ func TestALeadFromAWebsiteFormNamesTheForm(t *testing.T) {
 	if _, err := intake.Submit(ctx, webforms.Arrival{
 		FormKey: form.Key, ContentType: "application/x-www-form-urlencoded",
 		Header: http.Header{"Origin": {"https://visitor.example"}},
-		Body:   []byte("email=ada%40visitor.example&name=Ada"), Now: clocktest.Now(t),
+		Body:   []byte("email=ada%40visitor.example&name=Ada&_mrg_ts=" + strconv.FormatInt(clocktest.Now(t).Add(-20*time.Second).UnixMilli(), 10)),
+		Now:    clocktest.Now(t),
 	}); err != nil {
 		t.Fatalf("submitting the form: %v", err)
 	}

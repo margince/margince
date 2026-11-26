@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // ListSignalsInput scopes the visible signal page.
@@ -26,6 +27,11 @@ type ListSignalsInput struct {
 	// The company key also matches the polymorphic signal subject.
 	CompanyID       *ids.UUID
 	IncludeArchived bool
+	// SubjectType and SubjectID, together, keep the signals about one record.
+	SubjectType *string
+	SubjectID   *ids.UUID
+	// ExtensionKindsOnly keeps the signals of a kind an extension declared.
+	ExtensionKindsOnly bool
 }
 
 // OfCompanyWhere includes direct company subjects and resolved contacts.
@@ -87,7 +93,7 @@ func ListSignalsTx(ctx context.Context, tx pgx.Tx, in ListSignalsInput, words Su
 	if len(signals) > limit {
 		signals = signals[:limit]
 		last := signals[len(signals)-1]
-		next, err := storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))
+		next, err := storekit.EncodeCursor("signals", last.CreatedAt, ids.UUID(last.Id))
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
@@ -156,6 +162,12 @@ func signalListFilters(ctx context.Context, in ListSignalsInput) ([]string, []an
 	if in.ResolutionState != nil {
 		where = append(where, storekit.SQLf("s.resolution_state = $%d", arg(*in.ResolutionState)))
 	}
+	if in.SubjectType != nil && in.SubjectID != nil {
+		where = append(where, storekit.SQLf("s.entity_type = $%d AND s.entity_id = $%d", arg(*in.SubjectType), arg(*in.SubjectID)))
+	}
+	if in.ExtensionKindsOnly {
+		where = append(where, storekit.SQLf("s.kind LIKE $%d", arg(extension.RecordKindPrefix+"%")))
+	}
 	if in.CompanyID != nil {
 		where = append(where, OfCompanyWhere(arg(*in.CompanyID)))
 	}
@@ -167,7 +179,7 @@ func signalListFilters(ctx context.Context, in ListSignalsInput) ([]string, []an
 		where = append(where, scope)
 	}
 	if in.Cursor != nil && *in.Cursor != "" {
-		c, err := storekit.DecodeCursor(*in.Cursor)
+		c, err := storekit.DecodeCursor("signals", *in.Cursor)
 		if err != nil {
 			return nil, nil, err
 		}

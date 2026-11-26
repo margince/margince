@@ -16,6 +16,10 @@ The line under **Forecast landing** names what it counts, such as **Won + weight
 
 A salesperson's target is for the month or the fiscal quarter that holds the end of the time span you picked. If the cutoff of today comes first, it is the month or quarter that holds that cutoff. It is compared with the real result for that month or quarter. Changing the time span does not turn today's pipeline into history.
 
+The monthly targets of a seller can come from a published plan on **Sales goals**. Those months change only there; see [Progress and sales goals](progress-and-sales-goals.md).
+
+With no target typed for a month or quarter, sales won are held against the published goals. A quarter adds up its three months, and a team adds up its members. When a month has no published goal for one of them, the figure gets no goal. Analytics calls a figure for sales won a goal, and a figure for anything else a target.
+
 “This week”, “This month” and “This quarter” follow the calendar of your Margince and start again when that time span starts.
 
 A week starts on Monday at 00:00. At that exact moment the week holds nothing yet, and Analytics says so instead of showing zeros. With “This week”, a monthly target still counts the whole month up to the cutoff.
@@ -46,17 +50,17 @@ The split keeps the kind a product had when the deal was priced. A later change 
 
 A figure that cannot follow a product, an address or an industry, such as meetings held, says so instead of answering for everything. With any of these filters chosen, no target is compared. A target is set for a whole scope.
 
-## How far is this quarter from its target?
+## How far is this quarter from its goal?
 
-With the time span set to this quarter, **This quarter against its target** sits under the row of figures. It holds the forecast landing against the sales won target of the same scope and quarter:
+With the time span set to this quarter, **This quarter against its goal** sits under the row of figures. It holds the forecast landing against the goal for sales won of the same scope and quarter:
 
-- **Gap to target** is the target minus the forecast landing. A manager's call is the whole quarter, so it is not added to what is already won.
-- **Left to win** is the target minus sales won so far, and never below zero.
+- **Gap to goal** is the goal minus the forecast landing. A manager's call is the whole quarter, so it is not added to what is already won.
+- **Left to win** is the goal minus sales won so far, and never below zero.
 - **Coverage, deals closing this quarter** is the open value eligible to close this quarter, over what is left to win. It is not all open pipeline, which also holds deals expected later.
 
-When nothing is left to win, the panel says **Target reached** and shows no coverage. When it cannot compare, it says why:
+When nothing is left to win, the panel says **Goal reached** and shows no coverage. When it cannot compare, it says why:
 
-- No sales won target is set for this scope, pipeline and quarter. A missing target is not a target of zero.
+- No sales goal is published and no sales won target is set for this scope, pipeline and quarter. A missing goal is not a goal of zero.
 - A deal amount has no exchange rate, so the totals would be too low.
 - You cannot see every deal in the scope, or the amount of one.
 - **Show individual performance** is off, and one colleague besides you makes up the figures.
@@ -73,7 +77,7 @@ This comparison is not **Deal value needed** on the **Forecast** page. That figu
 
 - **Sales won:** won value added up over time, and the time span before it when the two can be compared. It also shows a target for the full time span. The target is for the whole time span; it does not ask for the same amount each day.
 - **Pipeline stages:** open value of today for each stage in order, all measured the same way, with the number of priced deals in each stage.
-- **Sales by salesperson:** real result and target for the same target time span. A missing target and a zero
+- **Sales won by team member:** real result and goal for the same target time span. A missing target and a zero
   target are two different states; a missing target does not mean low results.
   The chart says whom it credits and how much of the target time span has passed.
 - **Stage age:** the middle age and the age that 75% of open deals stay under, for open deals of today. Small groups
@@ -90,7 +94,7 @@ This comparison is not **Deal value needed** on the **Forecast** page. That figu
   shows only for given targets; an SDR without a target sees totals without a
   target column. Exact amounts, time zones and who gets credit stay in the
   reporting details.
-- **Forecast:** won value, Commit value whose close date someone confirmed, and extra value that may close, each shown on its own.
+- **Forecast:** **Forecast by probability** groups open deals by their win probability, from **90% or more** down to **0%**, beside won value. **Likely** and **Weighted** are its main amounts.
   The manager's forecast is a mark of its own. Movement uses stored captures with their
   real dates; a new view needs two captures before it can show movement.
 
@@ -104,7 +108,7 @@ Ask a question about won and lost deals, and group it by **Loss reason from the 
 - **Mapped from a note**: an administrator matched the deal's older note to a reason.
 - **Note not mapped**: the deal has only a note, and nobody has matched it yet.
 
-Deals lost before the list existed have only a note. Under **Settings → Loss reasons**, **Older loss notes** lists each note once, with how many deals carry it. An administrator picks the reason each note counts as and presses **Apply to deals**. Margince updates those deals in the background, for the decisions on the page. Each note stays as it was written, and a reason picked at close is never replaced. A decided note stays on the list, so you can change its reason and apply it again.
+Deals lost before the list existed have only a note. Under **Settings → Deals → Loss reasons**, **Older loss notes** lists each note once, with how many deals carry it. An administrator picks the reason each note counts as and presses **Apply to deals**. Margince updates those deals in the background, for the decisions on the page. Each note stays as it was written, and a reason picked at close is never replaced. A decided note stays on the list, so you can change its reason and apply it again.
 
 ## Where do deals and leads stop moving?
 
@@ -120,6 +124,10 @@ Each deal counts for the team member who owned it when it entered the stage, als
 
 On **Analytics → Leads**, **What became of new leads** does the same for the leads that came in during your time span. It counts how many had a handoff accepted, were qualified or disqualified, or are still open. Each lead counts for the team member who owned it when it came in. Leads that came in before Margince kept that owner count for the whole workspace, but for no team member or team.
 
+## How do I create a custom report?
+To create a custom report in Margince, open **Reports** and choose **New custom report**. Set the **Reporting selection** and the **Charts and order**, check it with **Preview report**, then choose **Save report**. **Customize report** on a sales review opens the same window with what you are reading.
+Also called: build a report, report builder, new report, make my own report.
+
 ## How do I save or share a report?
 
 To build a report of your own, open **Reports** and choose **New custom report**. **Customize report** on a sales review opens the same window with what you are reading. The window holds the report name and the question it answers. Below come **Reporting selection**, **Charts and order** with **Include the assessment**, and a **Custom question** over the open deals. **Preview report** shows the report before it is saved. There, **Customize report** returns to the window and **Save report** keeps the report under **Reports**.
@@ -133,6 +141,8 @@ Choose **Save report**, name it and choose **Visible to**. A **Purpose** tells r
 The saved report keeps its graphs and their layout, scope, pipeline and time span rules. Open it from **Reports** to see its values of today. Copy a report to keep a setup of its own; editing creates a new version.
 
 To change a shared report without readers seeing it half done, choose **Save as draft** in **Edit report**. Readers keep the published report. Use **Preview draft** to see it, then **Publish draft** or **Discard draft**. While a draft is open, edits go into it. An admin can choose **Preview as** to read the report as a role would, limited to what the admin may read.
+
+A new report that an agent prepares for you is private, and nothing on it is published yet. It opens on its draft, and it can't be scheduled or saved as a snapshot until you choose **Publish draft**.
 
 Under **History and schedules**, **Versions** lists who saved each version and when. **Restore version** publishes an earlier version again as the newest one. Snapshots and schedules keep the version they were made from. Only someone who may edit the report sees drafts and versions.
 
@@ -149,6 +159,18 @@ A forecast link can share a live view or a stored capture. The user who gets it 
 Amounts in Analytics use grouped whole currency units. The ≈ mark means the value was rounded. An amount below one unit keeps its sign and shows <1. Exports keep the exact amount.
 
 The figures and actions remain available without AI text. Actions for quarter deals without amounts or exchange rates open those deals. **My prospecting** puts work and booked meetings before the text. **Team prospecting** puts team results and work before the text. See [Analytics](analytics.md) for qualification credit and the team readings.
+
+## How do I set up a sales initiative or campaign?
+To set up a sales initiative, which tracks a campaign or a group of deals, open **Reports** and choose **New sales initiative** under **Sales initiatives**. Fill in the **Goal**: **Initiative name**, **Primary objective**, **Target**, **Owner** and **Deadline**; an empty **Target** means **Tracking only**. Then **Choose included records**, by conditions or with **Pick deals** and **Pick leads**, and choose **Launch sales initiative**. Pick it under **Sales initiative** in **Filters** to narrow Analytics to its records.
+Also called: campaign, sales push, sales effort, target account program, track a group of deals.
+
+## When does a sales initiative count a deal as sourced?
+
+A deal counts as **Sourced by the initiative** when the lead it came from was in the initiative when the lead was promoted. A lead you pick after its promotion belongs to the initiative, but its deal shows as **Added after launch** or **Created after launch**.
+
+Margince records when each lead and deal joins and leaves a live initiative. A pick, or a record you take out, is recorded when you save it. A record that starts or stops matching a rule is recorded when Margince sees it, within 15 minutes. A lead is also checked at the moment it is promoted, so a lead that matched a rule only minutes before its promotion still counts. Nothing is recorded for a draft: the record starts when the initiative goes live.
+
+An initiative that was already live before this record started is dated once by a background task, and those dates are estimates. A pick counts from when it was last saved. A rule match counts from the last of three days: the day the initiative went live, its last rule change, and the record's first day.
 
 ## Can I describe a report or an initiative in words?
 
@@ -174,13 +196,26 @@ Select an edition in the history to see the values, targets, graphs and records 
 
 ## How do I set targets or export figures?
 
-Open **Targets** and choose a figure that takes a target: sales won, qualified pipeline created, meetings held, accepted opportunities, leads qualified or partner pipeline. Select the owner or team, and month or fiscal quarter. A sales or partner figure can also be held to one pipeline; a lead or SDR figure counts every pipeline.
+Open **Targets** and choose a figure that takes a target. Sales won, qualified pipeline created, meetings held, accepted opportunities and leads qualified take one. So do partner pipeline, introductions made and meetings booked for colleagues. Select the owner or team, and month or fiscal quarter. A sales or partner pipeline figure can also be held to one pipeline. Every other figure counts every pipeline.
 
-Choose a year and a first month; only months that can start a fiscal quarter are offered. Each new version needs a reason. Filter the list by active or retired status and by first month. The team target stays apart from the targets of each member; the difference shows as **Unallocated** or **Overallocated**.
+Two of these figures count work done for colleagues:
+
+- **Introductions made**: the introductions a colleague made between another colleague and a contact. An asked introduction counts on the day it was completed. One recorded afterwards counts on the day it was recorded, not on the date it names. Permission to mention a name does not count.
+- **Meetings booked for colleagues**: the meetings a colleague booked, or had an agent book, for another colleague to host. They count for the colleague who booked them, on the day of booking. A meeting you host yourself does not count. Neither does a meeting entered after it took place, an imported one, or one from a transcript, a calendar sync or a public booking page. A booking cancelled later still counts.
+
+An introduction someone asked for is visible only to the two colleagues in it. For anyone else it is left out of these figures.
+
+Choose a year and a first month; only months that can start a fiscal quarter are offered. Each new version needs a reason. Filter the list by active or retired status and by first month. The team target stays apart from the targets of each member; the difference shows as **Unallocated** or **Overallocated**. A member with no target of their own counts with their published sales goals.
+
+Published sales goals show in the list as one row per team member. **Open sales goals** opens the plan, which is the only place its months change.
 
 A team lead, management or an admin sets targets. Every other seat with access to **Targets** sees its own targets, the targets of its teams and the company targets. It sees no button to add one. When none is set yet, the list says who sets them. Your own progress shows under **Analytics** → **My outcomes**.
 
-Use **Export CSV**, next to **Save report**, for the report's numbers of today. Export a fixed edition for the numbers and question answers it stored. The `label` column names each figure as the screen does, in your language. The `metric` column keeps a fixed id that stays the same in every language. An export follows the same permissions and the same limits as the screen. For a report you build yourself, open **Reports** → **New custom report** or ask your connected AI to report through Margince.
+Use **Export CSV**, next to **Save report**, for the report's numbers of today. Export a fixed edition for the numbers and question answers it stored. The `label` column names each figure as the screen does, in your language. The `metric` column keeps a fixed id that stays the same in every language. Amounts are in whole currency units with the currency beside them, such as `17100.55` and `EUR`. The file is named for the scope, period and day, such as `reporting-team-this-quarter-2026-11-18.csv`.
+
+An edition with the **Assessment** card has one row for it, with `assessment` in the `metric` column and `not_exported` as its coverage. The file holds the figures the summary is written from, and the summary itself is on the page.
+
+An export follows the same permissions and the same limits as the screen. For a report you build yourself, open **Reports** → **New custom report** or ask your connected AI to report through Margince.
 
 Any user who reads a report can see the definitions of its numbers. Admins open **Reporting setup** on its own to set up qualifying stages and the daily history of the pipeline.
 

@@ -1,0 +1,287 @@
+[
+ {
+  "note": "https on a public host",
+  "uri": "https://claude.ai/api/mcp/auth_callback",
+  "valid": true
+ },
+ {
+  "note": "https with a port",
+  "uri": "https://crm.example.test:8443/cb",
+  "valid": true
+ },
+ {
+  "note": "a decodable query",
+  "uri": "https://client.example/cb?tenant=acme",
+  "valid": true
+ },
+ {
+  "note": "an empty fragment marker",
+  "uri": "https://client.example/cb#",
+  "valid": true
+ },
+ {
+  "note": "http on localhost",
+  "uri": "http://localhost/callback",
+  "valid": true
+ },
+ {
+  "note": "http on localhost with a port",
+  "uri": "http://localhost:1234/cb",
+  "valid": true
+ },
+ {
+  "note": "http on 127.0.0.1",
+  "uri": "http://127.0.0.1:8080/callback",
+  "valid": true
+ },
+ {
+  "note": "http on ::1",
+  "uri": "http://[::1]:8080/callback",
+  "valid": true
+ },
+ {
+  "note": "a scheme in capitals",
+  "uri": "HTTPS://client.example/cb",
+  "valid": true
+ },
+ {
+  "note": "words, not an address",
+  "uri": "not a url",
+  "valid": false
+ },
+ {
+  "note": "ftp",
+  "uri": "ftp://x/cb",
+  "valid": false
+ },
+ {
+  "note": "a custom scheme",
+  "uri": "myapp://callback",
+  "valid": false
+ },
+ {
+  "note": "http on a public host",
+  "uri": "http://evil.test/cb",
+  "valid": false
+ },
+ {
+  "note": "http on a host that ends in localhost",
+  "uri": "http://localhost.evil.test/cb",
+  "valid": false
+ },
+ {
+  "note": "localhost in capitals",
+  "uri": "http://LOCALHOST/cb",
+  "valid": false
+ },
+ {
+  "note": "a fragment",
+  "uri": "https://client.example/cb#frag",
+  "valid": false
+ },
+ {
+  "note": "an undecodable query",
+  "uri": "https://client.example/cb?%zz=1&ok=2",
+  "valid": false
+ },
+ {
+  "note": "a semicolon in the query",
+  "uri": "https://client.example/cb?a=1;b=2",
+  "valid": false
+ },
+ {
+  "note": "https with no host",
+  "uri": "https:///cb",
+  "valid": false
+ },
+ {
+  "note": "https with no slashes",
+  "uri": "https:client.example/cb",
+  "valid": false
+ },
+ {
+  "note": "a space in the host",
+  "uri": "https://exa mple.com/cb",
+  "valid": false
+ },
+ {
+  "note": "a path alone",
+  "uri": "/callback",
+  "valid": false
+ },
+ {
+  "note": "a port past 65535 on localhost",
+  "uri": "http://localhost:99999/cb",
+  "valid": true
+ },
+ {
+  "note": "an overlong UTF-8 escape in the query",
+  "uri": "https://a/cb?q=%C0%80",
+  "valid": true
+ },
+ {
+  "note": "a surrogate escape in the query",
+  "uri": "https://a/cb?q=%ED%A0%80",
+  "valid": true
+ },
+ {
+  "note": "a broken escape in the path",
+  "uri": "https://a/%zz",
+  "valid": false
+ },
+ {
+  "note": "a NUL in the path",
+  "uri": "https://a/\u0000",
+  "valid": false
+ },
+ {
+  "note": "a tab at the end",
+  "uri": "https://a/cb\t",
+  "valid": false
+ },
+ {
+  "note": "a newline in the host",
+  "uri": "https://a\nb/cb",
+  "valid": false
+ },
+ {
+  "note": "javascript",
+  "uri": "javascript:alert(1)",
+  "valid": false
+ },
+ {
+  "note": "data",
+  "uri": "data:text/html,hi",
+  "valid": false
+ },
+ {
+  "note": "a wildcard host",
+  "uri": "https://*.example.com/cb",
+  "valid": true
+ },
+ {
+  "note": "userinfo on https",
+  "uri": "https://user:pw@claude.ai/cb",
+  "valid": true
+ },
+ {
+  "note": "localhost as userinfo before a public host",
+  "uri": "http://localhost@evil.test/cb",
+  "valid": false
+ },
+ {
+  "note": "localhost and a port as userinfo before a public host",
+  "uri": "http://localhost:80@evil.test/cb",
+  "valid": false
+ },
+ {
+  "note": "a space in userinfo",
+  "uri": "https://us er@claude.ai/cb",
+  "valid": false
+ },
+ {
+  "note": "an IDN look-alike host",
+  "uri": "https://сlaude.ai/cb",
+  "valid": true
+ },
+ {
+  "note": "the look-alike's punycode",
+  "uri": "https://xn--laude-2ve.ai/cb",
+  "valid": true
+ },
+ {
+  "note": "localhost with a trailing dot",
+  "uri": "http://localhost./cb",
+  "valid": false
+ },
+ {
+  "note": "127.0.0.1 with a trailing dot",
+  "uri": "http://127.0.0.1./cb",
+  "valid": false
+ },
+ {
+  "note": "a public host with a trailing dot",
+  "uri": "https://evil.test./cb",
+  "valid": true
+ },
+ {
+  "note": "127.1 shorthand",
+  "uri": "http://127.1/cb",
+  "valid": false
+ },
+ {
+  "note": "127.0.0.1 in hex",
+  "uri": "http://0x7f000001/cb",
+  "valid": false
+ },
+ {
+  "note": "::1 written out",
+  "uri": "http://[0:0:0:0:0:0:0:1]/cb",
+  "valid": false
+ },
+ {
+  "note": "an escaped localhost",
+  "uri": "http://%6Cocalhost/cb",
+  "valid": false
+ },
+ {
+  "note": "an escaped non-ASCII host byte",
+  "uri": "https://%C3%A9.example/cb",
+  "valid": true
+ },
+ {
+  "note": "two ports",
+  "uri": "http://localhost:80:80/cb",
+  "valid": false
+ },
+ {
+  "note": "a letter in the port",
+  "uri": "http://localhost:8o/cb",
+  "valid": false
+ },
+ {
+  "note": "an empty port",
+  "uri": "http://localhost:/cb",
+  "valid": true
+ },
+ {
+  "note": "a bracketed name",
+  "uri": "http://[localhost]/cb",
+  "valid": false
+ },
+ {
+  "note": "a bracket with no close",
+  "uri": "http://[::1/cb",
+  "valid": false
+ },
+ {
+  "note": "a plus in the query",
+  "uri": "https://a/cb?q=a+b",
+  "valid": true
+ },
+ {
+  "note": "an empty query part",
+  "uri": "https://a/cb?&&x=1",
+  "valid": true
+ },
+ {
+  "note": "a broken escape in the fragment",
+  "uri": "https://a/cb#%zz",
+  "valid": false
+ },
+ {
+  "note": "an escaped fragment",
+  "uri": "https://a/cb#%41",
+  "valid": false
+ },
+ {
+  "note": "an opaque http on localhost",
+  "uri": "http:localhost/cb",
+  "valid": false
+ },
+ {
+  "note": "an encoded slash in the path",
+  "uri": "https://a/c%2Fb",
+  "valid": true
+ }
+]

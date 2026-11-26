@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
@@ -67,7 +68,7 @@ func leadActivityScopes(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) ([]st
 	err := tx.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM activity a JOIN activity_link l ON l.activity_id = a.id WHERE l.lead_id = $1),
 		       EXISTS (SELECT 1 FROM activity a JOIN activity_link l ON l.activity_id = a.id
-		                WHERE l.lead_id = $1 AND a.source_system = 'transcript'),
+		                WHERE l.lead_id = $1 AND a.source_system = '`+meetingoutcome.TranscriptSourceSystem+`'),
 		       EXISTS (SELECT 1 FROM activity a JOIN activity_link l ON l.activity_id = a.id
 		                JOIN raw_capture r ON `+storekit.StoredOriginalSQL("a", "r")+`
 		                WHERE l.lead_id = $1)`, leadID).Scan(&activity, &transcript, &original)
@@ -125,5 +126,5 @@ func retentionReaching(ctx context.Context, tx pgx.Tx, country CountryReader, sc
 // what the correspondence floor shields, read off the selector itself.
 func floorShields(scope RetentionScope) bool {
 	selector, known := retentionSelectors[scope.selectorKey()]
-	return known && strings.Contains(selector, correspondenceFloorPredicate(3, 4))
+	return known && strings.Contains(selector, excluding(handelsbriefShielded(3, 4)))
 }

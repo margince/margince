@@ -1,0 +1,57 @@
+{
+  "name": "search_data_falls_back_for_a_handbook_question",
+  "task": "nl_search",
+  "site": "search_data_plan",
+  "source": "hand_authored",
+  "sanitized_by": "hand_authored/codex",
+  "fixture": {
+    "now": "2026-11-16T12:00:00Z",
+    "context": {
+      "timezone": "UTC",
+      "base_currency": "EUR",
+      "as_of": "2026-11-16T12:00:00Z",
+      "default_scope": {
+        "kind": "owner",
+        "id": "019f0000-0000-7000-8000-000000000001",
+        "label": "Me"
+      },
+      "allowed_scopes": [
+        {
+          "kind": "owner",
+          "id": "019f0000-0000-7000-8000-000000000001",
+          "label": "Me"
+        }
+      ],
+      "capabilities": {
+        "submit_manager_forecast": false,
+        "view_manager_forecast": false
+      }
+    },
+    "self_user_id": "019f0000-0000-7000-8000-000000000001",
+    "objects": [
+      "deal",
+      "company",
+      "contact",
+      "forecast",
+      "report_definition",
+      "installation_settings",
+      "pipeline",
+      "activity"
+    ],
+    "question": "How do I create a contact?"
+  },
+  "expect": {
+    "outcome": "accepted",
+    "answer": {
+      "engine": "unsupported",
+      "count": false,
+      "arguments": "{}"
+    },
+    "bands": {
+      "certified_min": 80,
+      "degraded_min": 60,
+      "floor": 50
+    },
+    "rubric": "Preserve the requested source, owner and complete period; unsupported questions use the handbook."
+  }
+}

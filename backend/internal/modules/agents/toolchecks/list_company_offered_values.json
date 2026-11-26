@@ -1,0 +1,9 @@
+{
+  "verb": "list_company_offered_values",
+  "checks": [
+    "company.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

@@ -36,7 +36,7 @@ func (s *Store) GetRoom(ctx context.Context, id ids.DealRoomID) (crmcontracts.De
 		// press itself still asks — this is what the button should look like,
 		// never what it is allowed to do.
 		rooms := []crmcontracts.DealRoom{out}
-		if err := StampPreviewAvailable(ctx, tx, rooms); err != nil {
+		if err := stampCapabilities(ctx, tx, rooms); err != nil {
 			return err
 		}
 		out = rooms[0]
@@ -109,7 +109,7 @@ func scanRoom(row rowScanner) (crmcontracts.DealRoom, error) {
 	if err := row.Scan(&id, &dealID, &out.Title, &out.WelcomeMessage, &state,
 		&steward, &out.ExpiresAt, &out.ClosedAt,
 		&out.Source, &capturedBy, &version, &out.CreatedAt, &out.UpdatedAt,
-		&out.ArchivedAt); err != nil {
+		&out.ArchivedAt, &out.NeedsSteward); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
 	out.Id = openapi_types.UUID(id)

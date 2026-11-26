@@ -11,6 +11,7 @@ package briefs
 // not-found (existence-hiding), never forbidden.
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -43,7 +44,8 @@ func (h Handlers) WithL2Ranker(brain briefBrain, log *slog.Logger) {
 // on-open path that never re-ranks (B-E05.3b). No run yet is a 404, the
 // same existence-hiding shape as any absent personal resource. The read
 // resolves snoozes against the current instant: expired ones re-surface,
-// running ones stay hidden (A77/AC-home-6).
+// running ones stay hidden (A77/AC-home-6). The brief is sent first and the
+// open recorded after it, so the open's write never fails or holds the read.
 func (h Handlers) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
 	run, err := h.engine.LatestRun(r.Context(), time.Now().UTC())
 	if err != nil {
@@ -51,6 +53,10 @@ func (h Handlers) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, briefRunToWire(run))
+	if err := http.NewResponseController(w).Flush(); err != nil && !errors.Is(err, http.ErrNotSupported) {
+		slog.DebugContext(r.Context(), "the brief could not be flushed before its open", "error", err)
+	}
+	h.engine.RecordShown(r.Context(), run)
 }
 
 // GenerateMorningBrief assembles today's run if the overnight pass has not.
@@ -118,16 +124,12 @@ func (h Handlers) SnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemID
 		return
 	}
 	now := time.Now().UTC()
-	if on == values.ReopenOnTime && req.SnoozedUntil != nil && !req.SnoozedUntil.After(now) {
-		httperr.Write(w, r, httperr.Validation("snoozed_until", "not_in_future", "snoozed_until must lie in the future"))
-		return
-	}
 	var ref *ids.UUID
 	if req.ReopenRef != nil {
 		id := ids.UUID(*req.ReopenRef)
 		ref = &id
 	}
-	item, err := h.engine.MarkSnoozed(r.Context(), ids.UUID(itemID), on, req.SnoozedUntil, ref, now)
+	item, err := h.engine.MarkSnoozed(r.Context(), ids.UUID(itemID), on, req.SnoozedUntil, ref, now, req.SnoozedIntent)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -263,14 +265,15 @@ func briefItemToWire(item BriefRunItem) crmcontracts.MorningBriefItem {
 			Momentum:    float32(item.Features.Momentum),
 			Warmth:      float32(item.Features.Warmth),
 		},
-		EvidenceIds:  evidence,
-		State:        crmcontracts.MorningBriefItemState(item.State),
-		StateAt:      item.StateAt,
-		SnoozedUntil: item.SnoozedUntil,
-		ReopenOn:     reopenToWire(item.ReopenOn),
-		ReopenRef:    reopenRefToWire(item.ReopenRef),
-		Finding:      nullableText(item.Finding),
-		Lineage:      lineageToWire(item.Lineage),
+		EvidenceIds:   evidence,
+		State:         crmcontracts.MorningBriefItemState(item.State),
+		StateAt:       item.StateAt,
+		SnoozedUntil:  item.SnoozedUntil,
+		SnoozedIntent: item.SnoozedIntent,
+		ReopenOn:      reopenToWire(item.ReopenOn),
+		ReopenRef:     reopenRefToWire(item.ReopenRef),
+		Finding:       nullableText(item.Finding),
+		Lineage:       lineageToWire(item.Lineage),
 	}
 }
 

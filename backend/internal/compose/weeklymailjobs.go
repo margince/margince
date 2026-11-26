@@ -7,6 +7,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/emailview"
@@ -185,7 +187,21 @@ func (w *weeklyGenerateWorker) claimWeeklyMail(ctx context.Context, candidate we
 	if err != nil {
 		return out, false, err
 	}
-	claim, claimed, err := claimRoutine(ctx, w.pool, run.ID, candidate.review.ID, part, now)
+	digest := newNotificationDigestWorker(w.pool, NotificationMailConfig{}, w.log)
+	digest.now = w.now
+	reading := digest.digestReading(ctx, ids.From[ids.UserKind](mailUser(ctx)), part.window)
+	render := reading.render
+	reading.render = func(excluded map[ids.UUID]bool) (digestLines, sendRefs, bool, error) {
+		lines, refs, _, err := render(excluded)
+		return lines, refs, true, err
+	}
+	lines, basis, _, err := readSendPayload(ctx, w.pool, reading)
+	if err != nil {
+		return out, false, err
+	}
+	part.lines = lines
+	claim, claimed, err := claimRoutine(ctx, w.pool, run.ID, candidate.review.ID, part, now,
+		func(tx pgx.Tx) error { return holdSendBasisTx(ctx, tx, basis, reading.clock) })
 	if err != nil || !claimed {
 		return out, false, err
 	}

@@ -13,13 +13,89 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "09f25ba8c52e21ce",
+    "tools": "42f7f135ac62768d",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "8551a428626d254858a634a2d1e0b95a0e03f93a",
+    "ran_at": "2026-11-22T09:22:00Z",
+    "graded_commit": "24405859b1f4fe6f5c16d1e06e82b54398a7f1fa",
+    "graded_at": "2026-11-22T16:00:19Z"
+  },
   "usage": {
-    "input_tokens": 102114,
-    "output_tokens": 6611,
+    "input_tokens": 113064,
+    "output_tokens": 6721,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 873856,
+    "cache_read_input_tokens": 1220352,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "change_state",
+        "describe_record_fields",
+        "describe_router_actions",
+        "disqualify_lead",
+        "find_records",
+        "list_records",
+        "promote_lead",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "read_workspace",
+        "resolve_entities",
+        "review_commitments",
+        "update_record",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "change_state",
+        "describe_record_fields",
+        "disqualify_lead",
+        "find_records",
+        "list_legacy_loss_reasons",
+        "list_records",
+        "promote_lead",
+        "read_context",
+        "read_record",
+        "read_workspace",
+        "resolve_entities",
+        "update_record",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 25.5,
+      "min": 25,
+      "max": 26
+    },
+    "refused": {
+      "median": 5,
+      "min": 4,
+      "max": 6
+    },
+    "prompt_tokens": {
+      "median": 666708,
+      "min": 597055,
+      "max": 736361
+    },
+    "output_tokens": {
+      "median": 3360.5,
+      "min": 3291,
+      "max": 3430
+    }
   }
 }

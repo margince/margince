@@ -21,12 +21,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -37,7 +39,9 @@ import (
 type owedBrainStub struct {
 	verdict    string
 	confidence float64
-	prompts    []model.Request
+	// doubtful, when set, is a subject text answered below the floor every time.
+	doubtful string
+	prompts  []model.Request
 }
 
 func (b *owedBrainStub) Complete(_ context.Context, req model.Request) (model.Response, error) {
@@ -46,10 +50,15 @@ func (b *owedBrainStub) Complete(_ context.Context, req model.Request) (model.Re
 	if len(fenced) == 0 {
 		return model.Response{}, fmt.Errorf("owed prompt fenced no message: %q", req.System)
 	}
+	subjects := fencedSubjects(req.System, req.Messages[0].Content, "source_id")
 	results := make([]map[string]any, 0, len(fenced))
 	for _, id := range fenced {
+		confidence := b.confidence
+		if b.doubtful != "" && strings.Contains(subjects[id], b.doubtful) {
+			confidence = 0.1
+		}
 		results = append(results, map[string]any{
-			"id": id, "verdict": b.verdict, "confidence": b.confidence,
+			"id": id, "verdict": b.verdict, "confidence": confidence,
 		})
 	}
 	payload, err := json.Marshal(map[string]any{"results": results})
@@ -148,6 +157,41 @@ func TestTheWorkerJudgesWhatIsWaiting(t *testing.T) {
 	}
 }
 
+// The owed question is asked of the sender's own words. A quoted request under
+// a short reply never reaches the model. A mail that is only a quote takes no
+// verdict, because someone else's old question is not owed by us.
+func TestTheOwedVerdictReadsOnlyTheSendersOwnWords(t *testing.T) {
+	e := integration.Setup(t)
+	quoted := "On Mon, 10 Nov 2026 at 09:00, Anna Berg <anna@example.test> wrote:\n> Could you send the signed contract by Friday?" +
+		strings.Repeat("\n> More of the old thread.", 200)
+	reply := seedWaitingMail(t, e, "Re: contract")
+	onlyQuote := seedWaitingMail(t, e, "Fwd: contract")
+	e.WsExec(t, `UPDATE activity SET body = $2 WHERE id = $1`, reply, "Thanks, all clear now.\n\n"+quoted)
+	e.WsExec(t, `UPDATE activity SET body = $2 WHERE id = $1`, onlyQuote, quoted)
+
+	brain := &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: 0.95}
+	runOwedWorker(t, e, brain)
+
+	for _, req := range brain.prompts {
+		prompt := req.Messages[0].Content
+		if strings.Contains(prompt, "signed contract") {
+			t.Fatalf("the quoted request reached the model:\n%s", prompt)
+		}
+		if !strings.Contains(prompt, "Thanks, all clear now.") {
+			t.Fatalf("the short reply's own words did not reach the model:\n%s", prompt)
+		}
+	}
+	if got := verdictOf(t, e, reply); got == nil {
+		t.Error("the short reply was not judged")
+	}
+	if got := verdictOf(t, e, onlyQuote); got != nil {
+		t.Errorf("a mail that is only a quote was judged %q, want no verdict", *got)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND owed_verdict_declined_at IS NOT NULL`, onlyQuote); n != 1 {
+		t.Error("the mail that is only a quote stays in the backlog; it should be stamped declined")
+	}
+}
+
 // An answer below the floor leaves the message unjudged rather than guessing.
 //
 // The engine re-asks it solo first, so a stub answering low twice must produce
@@ -171,13 +215,9 @@ func TestAnAnswerBelowTheFloorLeavesTheMessageUnjudged(t *testing.T) {
 
 // A backlog the model will not commit to ends the pass rather than spinning.
 //
-// An unjudged message stays in the backlog by design, so the next read returns
-// it again. A pass bounded only by verdicts WRITTEN therefore never advances on
-// a batch that mixes one confident row with nine abstentions: it re-asks the
-// same nine forever, and one stubborn tenant spends the whole model budget.
-//
 // The stub answers the FIRST message of each batch confidently and every other
-// below the floor, which is that mixture exactly.
+// below the floor. Most rows then cost a batch slot and a solo call each, and
+// the pass must stay inside its call bound.
 func TestABacklogTheModelWillNotCommitToStillEndsThePass(t *testing.T) {
 	e := integration.Setup(t)
 	for i := range owedBatchSize + 4 {
@@ -192,14 +232,13 @@ func TestABacklogTheModelWillNotCommitToStillEndsThePass(t *testing.T) {
 	if brain.calls == 0 {
 		t.Fatal("the pass made no model call for a seeded backlog")
 	}
-	if brain.calls > owedCatchUpCap {
+	if brain.calls > capture.DefaultOwedClassifyPassCap {
 		t.Errorf("the pass made %d calls on a backlog it cannot finish", brain.calls)
 	}
 }
 
 // owedStubbornBrain judges the first message of every batch confidently and
-// abstains on the rest, so the backlog shrinks by one per call at best and the
-// abstained rows come back on the next read.
+// abstains on the rest.
 type owedStubbornBrain struct{ calls int }
 
 func (b *owedStubbornBrain) Complete(_ context.Context, req model.Request) (model.Response, error) {

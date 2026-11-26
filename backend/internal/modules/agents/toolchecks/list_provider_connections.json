@@ -1,0 +1,6 @@
+{
+  "verb": "list_provider_connections",
+  "checks": [
+    "integrations.read"
+  ]
+}

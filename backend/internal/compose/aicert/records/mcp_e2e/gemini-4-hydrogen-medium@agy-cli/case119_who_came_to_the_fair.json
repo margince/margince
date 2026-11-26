@@ -1,0 +1,92 @@
+{
+  "scenario": "case119_who_came_to_the_fair",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "499c9ee41c178121",
+    "tools": "8738aea5f1d10081",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T07:55:02Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T07:55:02Z"
+  },
+  "usage": {
+    "input_tokens": 76215,
+    "output_tokens": 20871,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 80626,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "get_tag",
+        "list_records",
+        "list_tags",
+        "read_lists",
+        "read_tags",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "get_tag",
+        "list_records",
+        "list_tags",
+        "read_lists",
+        "read_tags",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 5,
+      "min": 5,
+      "max": 5
+    },
+    "turns": {
+      "median": 5,
+      "min": 5,
+      "max": 5
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 78420.5,
+      "min": 68499,
+      "max": 88342
+    },
+    "output_tokens": {
+      "median": 10435.5,
+      "min": 10386,
+      "max": 10485
+    }
+  }
+}

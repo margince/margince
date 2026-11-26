@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"image"
 	"io"
 	"sync"
 
@@ -42,6 +43,21 @@ type signatureLogo struct {
 	sized map[string]connector.InlineImage
 }
 
+// mailSizedPNG fits an image to the edges a signature shows it at, smaller
+// until it is under signatureLogoMaxBytes. Still over the cap at the smallest
+// legible edge, it does not fit, and the mail carries no heavy image.
+func mailSizedPNG(decoded image.Image) (png []byte, fits bool, err error) {
+	for _, edge := range signatureLogoEdges {
+		if png, err = imagenorm.FitPNG(decoded, edge); err != nil {
+			return nil, false, err
+		}
+		if len(png) <= signatureLogoMaxBytes {
+			return png, true, nil
+		}
+	}
+	return nil, false, nil
+}
+
 func newSignatureLogo(blob blobstore.Store) signatureLogo {
 	return signatureLogo{blob: blob, mu: &sync.Mutex{}, sized: map[string]connector.InlineImage{}}
 }
@@ -74,27 +90,19 @@ func (l signatureLogo) SignatureLogo(ctx context.Context, key string) (connector
 	if err != nil {
 		return connector.InlineImage{}, false, fmt.Errorf("compose: decoding the workspace logo: %w", err)
 	}
-	var png []byte
-	for _, edge := range signatureLogoEdges {
-		if png, err = imagenorm.FitPNG(decoded, edge); err != nil {
-			return connector.InlineImage{}, false, fmt.Errorf("compose: sizing the workspace logo for mail: %w", err)
-		}
-		if len(png) <= signatureLogoMaxBytes {
-			break
-		}
+	png, fits, err := mailSizedPNG(decoded)
+	if err != nil {
+		return connector.InlineImage{}, false, fmt.Errorf("compose: sizing the workspace logo for mail: %w", err)
 	}
-	// Still over the cap at the smallest legible edge: the logo is left out
-	// and the mail carries the name alone, rather than adding a heavy image to
-	// every message.
-	if len(png) > signatureLogoMaxBytes {
+	if !fits {
 		return connector.InlineImage{}, false, nil
 	}
-	image := connector.InlineImage{ContentID: connector.SignatureLogoContentID, ContentType: "image/png", Body: png}
+	inline := connector.InlineImage{ContentID: connector.SignatureLogoContentID, ContentType: "image/png", Body: png}
 	l.mu.Lock()
 	if len(l.sized) >= signatureLogoCacheSize {
 		clear(l.sized)
 	}
-	l.sized[key] = image
+	l.sized[key] = inline
 	l.mu.Unlock()
-	return image, true, nil
+	return inline, true, nil
 }

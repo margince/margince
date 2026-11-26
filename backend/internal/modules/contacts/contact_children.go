@@ -24,39 +24,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-//nolint:unparam // all four child writers here take (ctx, tx, wsID, contactID, …); dropping wsID from the two that do not spend it would make a reader check which is which at every call site.
-func replaceContactSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, social map[string]any, converting []ids.LeadID) error {
-	rows, err := contactSocialInputs(social)
-	if social == nil || err != nil {
-		return err
-	}
-	if err := refuseLeadHeldLinkedIn(ctx, tx, contactID, social, converting); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM contact_social WHERE contact_id = $1`, contactID); err != nil {
-		return fmt.Errorf("clear contact social rows: %w", err)
-	}
-	for _, row := range rows {
-		if _, err := tx.Exec(ctx,
-			`INSERT INTO contact_social (contact_id, platform, handle) VALUES ($1, $2, $3)`,
-			contactID, row.Platform, row.Handle); err != nil {
-			return fmt.Errorf("insert contact social row: %w", err)
-		}
-		if row.Platform == SocialLinkedIn {
-			if err := fileLinkedInTwinsAtWrite(ctx, tx, contactID, row.Handle); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // replaceContactEmails makes the contact's LIVE addresses mirror the given set.
 // nil means "not supplied": existing rows stand.
 //
 // It ARCHIVES rather than deletes, which is the one place this differs from
-// replaceContactSocial above. contact_social carries no cross-record uniqueness
+// writeContactSocial above. contact_social carries no cross-record uniqueness
 // and no history; contact_email carries both. uq_contact_email_dedupe is what
 // makes an address name exactly one contact, and the dedupe ladder, the merge
 // trail and every audit read filter on archived_at IS NULL. A hard DELETE would
@@ -64,7 +36,7 @@ func replaceContactSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 // merge dispute is settled by.
 //
 // Order is load-bearing: archive first, then insert. The reverse would put two
-// is_primary rows of one type on the record while both are live, which the
+// is_primary rows on the record while both are live, which the
 // schema answers with a bare conflict.
 //
 //nolint:cyclop // the rename added no branch: this body is what it was under the old noun.
@@ -105,16 +77,13 @@ func replaceContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 	}
 	// Retained rows are re-placed BEFORE the new addresses land, and demotions
 	// before promotions within that. uq_contact_email_primary allows one primary
-	// per (contact_id, email_type), and both movements meet it:
+	// per contact, and both movements meet it:
 	//
-	// A swap of which of two same-type rows is primary travels this loop with both
-	// rows retained; promoting the incoming one while the stored one is still
-	// primary is two live primaries of one type for the length of a statement,
-	// which the index refuses. So does a corrected export, where the stored
-	// primary is carried through demoted and the file's new one promoted.
+	// A primary swap keeps both rows. Promoting the new one first leaves two
+	// live primaries for one statement, and the index refuses that. A corrected
+	// export, which demotes the stored primary, hits the same refusal.
 	//
-	// Demoting first empties the slot every later write — this loop's promotions
-	// and the archive-then-insert below alike — is about to claim.
+	// Demoting first frees the slot that the later promotions and inserts claim.
 	place := func(e ContactEmailInput) error {
 		// Safe to match on value here, unlike phones: uq_contact_email_dedupe makes
 		// one address name at most one live row per contact, so this can never hit
@@ -180,11 +149,10 @@ func liveContactEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 // write" contract true instead of documentary. Values are written back
 // in place so everything downstream handles only normalized strings.
 //
-// It also refuses a set that marks two rows of one type primary. This is the
-// one seam create, update and vCard import all pass through, so the intent
-// behind uq_contact_{email,phone}_primary is enforced here once rather than at
-// each writer, and the contradiction is answered with a typed refusal before
-// any write instead of the bare conflict the index would raise.
+// It also refuses a set that marks two addresses, or two numbers, primary.
+// Create, update and vCard import all pass through here. The refusal is typed
+// and comes before any write, instead of the bare conflict that
+// uq_contact_{email,phone}_primary would raise.
 func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput) error {
 	for i, e := range emails {
 		parsed, err := values.ParseEmail(e.Email)
@@ -203,17 +171,13 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 		}
 		phones[i].Phone = parsed.String()
 	}
-	if err := ensureOnePrimaryPerType("address", emails, func(e ContactEmailInput) (string, bool) {
-		return e.EmailType, e.IsPrimary
-	}); err != nil {
+	if err := ensureOnePrimary("address", emails, func(e ContactEmailInput) bool { return e.IsPrimary }); err != nil {
 		return err
 	}
-	return ensureOnePrimaryPerType("phone number", phones, func(p ContactPhoneInput) (string, bool) {
-		return p.PhoneType, p.IsPrimary
-	})
+	return ensureOnePrimary("phone number", phones, func(p ContactPhoneInput) bool { return p.IsPrimary })
 }
 
-//nolint:unparam // the same shape as its siblings; see replaceContactSocial.
+//nolint:unparam // the same shape as its siblings; see writeContactSocial.
 func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput, erasure storekit.ErasureAdmission, converting []ids.LeadID) error {
 	// Every address a contact gains is written here, so every create and
 	// update door meets the erasure list without asking for it.
@@ -302,22 +266,24 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var resolvedCountries []string
 	var version int64
 	var visibility string
-	var sourceSystem, authorName, authorSeatName *string
+	var authorName, authorSeatName *string
 	var authorID *ids.UUID
-	var mark *string
+	var mark, greetingRegister *string
 	// Null where the contact was typed, and null where the reader may not open
 	// the record it was read from. The query cannot tell those apart, and a
 	// reader is owed the same answer either way.
 	var createdFrom *ids.UUID
+	var warnedAt *time.Time
+	var warnedFor *string
 
 	dests := []any{
 		&id, &p.FullName, &p.FirstName, &p.LastName, &p.Title, &ownerID, &visibility,
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
 		&resolvedCountries,
 		&mergedInto, &fromLead, &p.Source, &p.CapturedBy,
-		&sourceSystem, &authorID, &authorName, &authorSeatName,
+		&p.SourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &p.LastActivityAt, &p.LegalHold,
-		&mark, &createdFrom,
+		&mark, &greetingRegister, &warnedAt, &warnedFor, &createdFrom,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -344,28 +310,24 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		m := crmcontracts.ContactRelationshipMark(*mark)
 		p.RelationshipMark = &m
 	}
-	p.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
-	p.ImportedFrom = provenance.ImportedFrom(sourceSystem)
+	if greetingRegister != nil {
+		g := crmcontracts.ContactGreetingRegister(*greetingRegister)
+		p.GreetingRegister = &g
+	}
+	p.ImpersonationWarning = impersonationWarningOf(warnedAt, warnedFor)
+	p.Author = sourceAuthorOf(authorID, authorSeatName, authorName, p.SourceSystem)
+	p.ImportedFrom = provenance.ImportedFrom(p.SourceSystem)
 	return p, nil
 }
 
-// attachContactChildren loads emails + phones + social for a page in
-// three queries, not 3N.
+// attachContactChildren attaches the same child facts to lists and record reads.
 func attachContactChildren(ctx context.Context, tx pgx.Tx, contacts []crmcontracts.Contact) error {
 	if len(contacts) == 0 {
 		return nil
 	}
-	// Whether each row is this caller's to change, one statement for the page.
-	// It is stamped HERE because this is the seam the list and the single read
-	// already share: a client is otherwise left inferring write access from the
-	// object grant alone, which says nothing about who owns the row.
-	if _, err := auth.StampWritable(ctx, tx, "contact", contacts,
+	if _, err := auth.StampRecordAffordances(ctx, tx, auth.ContactArchive, contacts,
 		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
-		func(p *crmcontracts.Contact, may bool) { p.Writable = &may }); err != nil {
-		return err
-	}
-	if err := stampArchivable(ctx, tx, auth.ContactArchive, contacts,
-		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
+		func(p *crmcontracts.Contact, may bool) { p.Writable = &may },
 		func(p *crmcontracts.Contact, may bool) { p.Archivable = &may }); err != nil {
 		return err
 	}
@@ -378,35 +340,18 @@ func attachContactChildren(ctx context.Context, tx pgx.Tx, contacts []crmcontrac
 		idx[contacts[i].Id] = &contacts[i]
 		contactIDs[i] = ids.UUID(contacts[i].Id)
 	}
-	if err := attachContactEmails(ctx, tx, idx, contactIDs); err != nil {
-		return err
-	}
-	if err := attachContactPhones(ctx, tx, idx, contactIDs); err != nil {
-		return err
-	}
-	if err := attachContactSocial(ctx, tx, idx, contactIDs); err != nil {
+	if err := attachContactChannels(ctx, tx, idx, contactIDs); err != nil {
 		return err
 	}
 	if err := attachContactEmployers(ctx, tx, idx, contactIDs); err != nil {
 		return err
 	}
-	if err := storekit.AttachRowTags(ctx, tx, contactEntity, contacts,
+	return storekit.AttachRowTags(ctx, tx, contactEntity, contacts,
 		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
-		func(p *crmcontracts.Contact, tags []storekit.RowTag) { p.Tags = wireRowTags(tags) }); err != nil {
-		return err
-	}
-	return attachContactReachability(ctx, tx, idx, contactIDs)
+		func(p *crmcontracts.Contact, tags []storekit.RowTag) { p.Tags = wireRowTags(tags) })
 }
 
-func attachContactPhones(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Contact, contactIDs []ids.UUID) error {
-	phoneRows, err := tx.Query(ctx,
-		`SELECT contact_id, id, phone, phone_type, is_primary, position, source, captured_by
-		 FROM contact_phone WHERE contact_id = ANY($1) AND archived_at IS NULL
-		 ORDER BY position, created_at`, contactIDs)
-	if err != nil {
-		return err
-	}
-	defer phoneRows.Close()
+func attachContactPhones(phoneRows pgx.Rows, idx map[openapi_types.UUID]*crmcontracts.Contact) error {
 	for phoneRows.Next() {
 		var contactID, phoneID ids.UUID
 		var ph crmcontracts.ContactPhone
@@ -423,16 +368,7 @@ func attachContactPhones(ctx context.Context, tx pgx.Tx, idx map[openapi_types.U
 	return phoneRows.Err()
 }
 
-func attachContactSocial(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Contact, contactIDs []ids.UUID) error {
-	// The wire keeps social as the (platform → handle) map; the relation
-	// is the stored form.
-	socialRows, err := tx.Query(ctx,
-		`SELECT contact_id, platform, handle FROM contact_social WHERE contact_id = ANY($1)
-		 ORDER BY platform`, contactIDs)
-	if err != nil {
-		return err
-	}
-	defer socialRows.Close()
+func attachContactSocial(socialRows pgx.Rows, idx map[openapi_types.UUID]*crmcontracts.Contact) error {
 	for socialRows.Next() {
 		var contactID ids.UUID
 		var platform, handle string
@@ -444,6 +380,9 @@ func attachContactSocial(ctx context.Context, tx pgx.Tx, idx map[openapi_types.U
 			p.Social = &map[string]any{}
 		}
 		(*p.Social)[platform] = handle
+		if platform == SocialLinkedIn {
+			p.LinkedinUrl = &handle
+		}
 	}
 	return socialRows.Err()
 }
@@ -454,15 +393,7 @@ func attachContactSocial(ctx context.Context, tx pgx.Tx, idx map[openapi_types.U
 // one. A blocked identity is still a live row (archived_at IS NULL), so it
 // still appears here, with reachable=false — the record must keep showing
 // that a conversation exists even when a reply cannot currently be delivered.
-func attachContactReachability(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Contact, contactIDs []ids.UUID) error {
-	rows, err := tx.Query(ctx,
-		`SELECT contact_id, provider, blocked_at, created_at
-		 FROM contact_channel_identity WHERE contact_id = ANY($1) AND archived_at IS NULL
-		 ORDER BY provider, created_at`, contactIDs)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
+func attachContactReachability(rows pgx.Rows, idx map[openapi_types.UUID]*crmcontracts.Contact) error {
 	for rows.Next() {
 		var contactID ids.UUID
 		var provider string

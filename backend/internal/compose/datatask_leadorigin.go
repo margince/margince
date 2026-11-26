@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // leadScoresFollowOriginDataTask repairs what the move from source to origin
@@ -24,7 +25,7 @@ import (
 func leadScoresFollowOriginDataTask(now func() time.Time) datatask.Task {
 	return datatask.Task{
 		ID: "core/1792811003_lead_scores_follow_origin", Version: 1,
-		Title: "Scoring leads by where they came from", Requires: []string{"core/1792840940"},
+		Title: systemtext.Literal("datatask.title.core.1792811003_lead_scores_follow_origin"), Requires: []string{"core/1792840940"},
 		Steps: []datatask.Step{
 			{
 				Name: "origin_from_retained_capture", Limit: 200, MinLimit: 10,

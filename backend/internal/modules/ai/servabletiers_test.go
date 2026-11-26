@@ -6,14 +6,14 @@ package ai
 import "testing"
 
 func TestServableTiersReachesTheDegradeClosure(t *testing.T) {
-	// capture_confidentiality_verdict is local-only, and local_small degrades to
+	// capture_confidentiality_verdict uses local_small, which degrades to
 	// itself, so its servable set is exactly its ladder.
 	got := ServableTiers(TaskCaptureConfidentialityVerdict)
 	if len(got) != 1 || got[0] != TierLocalSmall {
 		t.Errorf("ServableTiers(capture_confidentiality_verdict) = %v, want [local_small]", got)
 	}
-	if lead := LeadingTier(TaskCaptureConfidentialityVerdict); lead != TierLocalSmall {
-		t.Errorf("LeadingTier = %q, want local_small", lead)
+	if lead := leadingTierOf(RoutingConfig{}, TaskCaptureConfidentialityVerdict); lead != TierLocalSmall {
+		t.Errorf("lead tier = %q, want local_small", lead)
 	}
 	// draft_reply's ladder never names local_small, but cheap_cloud degrades to
 	// it — so a model bound there can serve the task. This is the case a
@@ -31,8 +31,8 @@ func TestServableTiersReachesTheDegradeClosure(t *testing.T) {
 // inventing a rung. nl_search is declared `planned` and ships no ladder.
 func TestTierResolutionOnATaskWithNoLadder(t *testing.T) {
 	unrouted := Task("not_a_task_this_build_declares")
-	if lead := LeadingTier(unrouted); lead != "" {
-		t.Errorf("LeadingTier(unrouted) = %q, want the empty tier", lead)
+	if lead := leadingTierOf(RoutingConfig{}, unrouted); lead != "" {
+		t.Errorf("lead tier of an unrouted task = %q, want the empty tier", lead)
 	}
 	if tiers := ServableTiers(unrouted); tiers != nil {
 		t.Errorf("ServableTiers(unrouted) = %v, want nil — no ladder means no rung can serve it", tiers)

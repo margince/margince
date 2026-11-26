@@ -4,6 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { expectNextBarHoldsItsText } from "../testing/nextbarchecks";
+import { UNBROKEN_SUBJECT } from "../testing/unbrokentext";
 import { Button } from "./atoms";
 import { NextBar } from "./nextbar";
 
@@ -26,6 +28,69 @@ export default meta;
 type Story = StoryObj<typeof NextBar>;
 
 const noop = () => undefined;
+
+const PHONE = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+const WIDE = { tags: ["uat-wide"] };
+
+const holdsTheWord: Story["play"] = ({ canvasElement }) =>
+  expectNextBarHoldsItsText(canvasElement, UNBROKEN_SUBJECT);
+
+/** A subject with no space in it wraps inside the bar, clear of its verbs. */
+export const UnbrokenSubject: Story = {
+  args: {
+    title: UNBROKEN_SUBJECT,
+    sub: `Re: ${UNBROKEN_SUBJECT}`,
+    action: <Button variant="primary">Reply</Button>,
+    snooze: { onSnooze: noop },
+  },
+  play: holdsTheWord,
+};
+export const UnbrokenSubjectPhone: Story = { ...UnbrokenSubject, ...PHONE };
+export const UnbrokenSubjectWide: Story = { ...UnbrokenSubject, ...WIDE };
+
+/** The task's own words are cut at one line, inside the bar. */
+export const UnbrokenDetailPhone: Story = {
+  ...PHONE,
+  args: {
+    title: "Send the revised offer",
+    detail: UNBROKEN_SUBJECT,
+    snooze: { onSnooze: noop },
+  },
+  play: holdsTheWord,
+};
+
+/** Why it is next can be a subject too, and wraps the same way. */
+export const UnbrokenSubPhone: Story = {
+  ...PHONE,
+  args: {
+    title: "Answer the buyer",
+    sub: `Re: ${UNBROKEN_SUBJECT}`,
+    snooze: { onSnooze: noop },
+  },
+  play: holdsTheWord,
+};
+
+/** The caller's sentence for an empty bar wraps the same way. */
+export const UnbrokenEmptyLinePhone: Story = {
+  ...PHONE,
+  args: { empty: UNBROKEN_SUBJECT },
+  play: holdsTheWord,
+};
+
+/** Text running right to left keeps the word inside the bar's start edge. */
+export const UnbrokenSubjectRightToLeft: Story = {
+  ...UnbrokenSubject,
+  decorators: [
+    (Story) => (
+      <div dir="rtl">
+        <Story />
+      </div>
+    ),
+  ],
+};
 
 /** An overdue promise: the late tag, why it is next, the verb, Snooze, and
  *  the other open tasks. */

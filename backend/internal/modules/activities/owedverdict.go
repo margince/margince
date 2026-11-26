@@ -97,7 +97,9 @@ type OwedCandidate struct {
 	ID      ids.UUID
 	Kind    string
 	Subject string
-	Body    string // pre-truncated to bodyLimit
+	// Body is the sender's current message as ClassifyBody cuts it. Empty
+	// when the message is only a quote or a forward.
+	Body string
 	// To and Cc are the addresses the message was sent to, so the model can
 	// tell a direct ask from a copy. Bounded by the caller.
 	To []string
@@ -111,6 +113,9 @@ type OwedCandidate struct {
 	// PriorOutbound is our own last message in this thread, when there is one.
 	// Nil for a threadless message and for one that opens a conversation.
 	PriorOutbound *PriorOutbound
+	// Version is the row's version when it was read. MarkOwedVerdictDeclined
+	// stamps only that version, so text edited during the call is asked again.
+	Version int64
 }
 
 // candidateColumns is what both reads select, including our own last message in
@@ -127,60 +132,15 @@ const candidateColumns = `a.id, a.kind, coalesce(a.subject, ''), coalesce(left(a
                 FILTER (WHERE p.role = 'to' AND p.address <> ''), '{}'),
        coalesce(array_agg(DISTINCT p.address)
                 FILTER (WHERE p.role = 'cc' AND p.address <> ''), '{}'),
-       prior.id, coalesce(prior.subject, ''), coalesce(prior.body, ''), prior.occurred_at`
-
-// priorOutboundJoin finds OUR newest message before this one in the same
-// conversation, or nothing.
-//
-// The conversation test is ourOutboundInThisThread, shared with the settlement
-// pass, and why a thread key alone is not evidence of one is written there.
-// What this adds is its own, and the two additions are for the same reason:
-// this join ships the prior message's BODY to a model.
-//
-// The join is guarded on the CANDIDATE having a thread and a correspondent at
-// all. The helper compares both by equality, so a NULL on either side matches
-// nothing — but a guard that says so at the top reads as the intent rather than
-// as a consequence, and it lets the planner drop the lateral outright.
-//
-// The audience and hold clauses are on the prior message too. It is our own
-// text, but it goes to the same cloud tier as the message being judged, and a
-// thread the confidentiality engine narrowed is exactly the mail that must not.
-var priorOutboundJoin = priorOutboundVisibleJoin("true")
-
-func priorOutboundVisibleJoin(scope string) string {
-	return `LEFT JOIN LATERAL (
-  SELECT prior.id, prior.subject, left(prior.body, $%[4]d) AS body, prior.occurred_at
-    ` + priorOutboundFrom(scope) + `) prior ON true`
-}
-
-// priorOutboundFrom finds that message for candidate a.
-func priorOutboundFrom(scope string) string {
-	return `FROM activity prior
-   WHERE a.thread_key IS NOT NULL
-     AND a.counterparty_email IS NOT NULL
-     AND ` + ourOutboundInThisThread("prior", "a") + `
-     -- On the prior row and not on the settlement pass's own uses of the same
-     -- helper, because this one ships the body to a model. A thread the
-     -- confidentiality engine narrowed is exactly the mail that must not go.
-     AND prior.audience = 'workspace'
-     AND prior.restricted_at IS NULL AND (` + scope + `)
-     AND (prior.occurred_at, prior.id) < (a.occurred_at, a.id)
-   ORDER BY prior.occurred_at DESC, prior.id DESC
-   LIMIT 1`
-}
-
-// priorContextComplete refuses a candidate whose newest prior message of ours
-// was not read in full. That message is the context the verdict turns on, and
-// skipping to an older one would show the model a stale exchange as current.
-// A subquery rather than the join, so it can sit inside the waiting scan.
-var priorContextComplete = `coalesce((SELECT ` + provenance.MailBodyCompleteSQL("prior") + ` ` + priorOutboundFrom("true") + `), true)`
+       prior.id, coalesce(prior.subject, ''), coalesce(prior.body, ''), prior.occurred_at, a.version`
 
 // candidateGroupBy keeps the participant aggregation from multiplying the row.
-const candidateGroupBy = `a.id, a.kind, a.subject, a.body, a.has_calendar_part, a.calendar_method, a.occurred_at,
+const candidateGroupBy = `a.id, a.kind, a.subject, a.body, a.has_calendar_part, a.calendar_method, a.occurred_at, a.version,
           prior.id, prior.subject, prior.body, prior.occurred_at`
 
-// scanCandidates reads the rows both candidate queries return.
-func scanCandidates(rows pgx.Rows) ([]OwedCandidate, error) {
+// scanCandidates reads the rows both candidate queries return, each body cut
+// to the sender's current message of at most bodyLimit runes.
+func scanCandidates(rows pgx.Rows, bodyLimit int) ([]OwedCandidate, error) {
 	defer rows.Close()
 	var out []OwedCandidate
 	for rows.Next() {
@@ -188,6 +148,7 @@ func scanCandidates(rows pgx.Rows) ([]OwedCandidate, error) {
 		if err != nil {
 			return nil, err
 		}
+		m.Body = ClassifyBody(m.Body, bodyLimit)
 		out = append(out, m)
 	}
 	return out, rows.Err()
@@ -199,7 +160,7 @@ func scanOwedCandidate(row pgx.CollectableRow, extra ...any) (OwedCandidate, err
 	var priorID *ids.UUID
 	var priorSubject, priorBody string
 	var priorAt *time.Time
-	fields := []any{&m.ID, &m.Kind, &m.Subject, &m.Body, &m.HasCalendarPart, &m.CalendarMethod, &m.To, &m.Cc, &priorID, &priorSubject, &priorBody, &priorAt}
+	fields := []any{&m.ID, &m.Kind, &m.Subject, &m.Body, &m.HasCalendarPart, &m.CalendarMethod, &m.To, &m.Cc, &priorID, &priorSubject, &priorBody, &priorAt, &m.Version}
 	fields = append(fields, extra...)
 	if err := row.Scan(fields...); err != nil {
 		return OwedCandidate{}, err
@@ -255,7 +216,7 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 		}
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		body := arg(bodyLimit)
+		body := arg(storedBodyReadRunes)
 		prior := arg(priorBodyLimit)
 		own, err := s.ownDomainList(ctx, tx)
 		if err != nil {
@@ -274,22 +235,20 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 			return err
 		}
 		// The backlog is judged for the WORKSPACE, so it carries no reader
-		// addresses: the verdict says what a message asks, which is a fact
-		// about the message rather than about who is reading it. The waiting
-		// queue applies the addressing test when it ranks.
+		// addresses: what a message asks is a fact about the message.
 		//
-		// The AUDIENCE clause stays, and it is not about who may see the row —
-		// it is about what leaves the building. This backlog hands subject and
-		// body to a model, and the pass runs as a system principal, which
-		// auth.ActivityContentClause lets read every audience. A thread the
-		// confidentiality engine narrowed to its participants is exactly the
-		// mail that must not be shipped to a cloud tier, and dropping this
-		// clause would have done that silently — the statutory-hold check
-		// beside it does not cover a confidentiality narrowing.
+		// The AUDIENCE clause is about what leaves the building. This pass runs
+		// as a system principal, which reads every audience, so without the
+		// clause held mail would go to a cloud tier.
+		private, err := privateMailRequests(ctx, tx)
+		if err != nil {
+			return err
+		}
 		waiting, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, own, nil, horizon,
 			`a.owed_verdict IS NULL AND `+owedVerdictDecline.offeredSQL("a.", fmt.Sprintf("$%d", arg(ruleset)))+
-				` AND a.audience = 'workspace' AND a.restricted_at IS NULL AND `+provenance.MailBodyCompleteSQL("a")+
-				` AND `+priorContextComplete,
+				` AND `+judgeableAudienceSQL("a", private)+` AND `+provenance.MailBodyCompleteSQL("a")+
+				` AND NOT `+auth.ActivityRestrictedSQL("a.id")+
+				` AND `+priorContextComplete(private),
 			// An unjudged calendar response is off the lane until judged, and
 			// judged it must be: any sender can mark a request REPLY.
 			scopeUnbounded)
@@ -300,7 +259,7 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 			SELECT `+candidateColumns+`
 			  FROM activity a
 			  LEFT JOIN activity_participant p ON p.activity_id = a.id
-			  `+priorOutboundJoin+`
+			  `+priorOutboundJoin(private)+`
 			 WHERE %[2]s
 			 GROUP BY `+candidateGroupBy+`
 			 ORDER BY a.occurred_at
@@ -309,7 +268,7 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 		if err != nil {
 			return err
 		}
-		out, err = scanCandidates(rows)
+		out, err = scanCandidates(rows, bodyLimit)
 		return err
 	})
 	if err != nil {
@@ -364,23 +323,27 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 		}
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		body := arg(bodyLimit)
+		body := arg(storedBodyReadRunes)
 		prior := arg(priorBodyLimit)
+		private, err := privateMailRequests(ctx, tx)
+		if err != nil {
+			return err
+		}
 		query := fmt.Sprintf(`
 			SELECT `+candidateColumns+`
 			  FROM activity a
 			  LEFT JOIN activity_participant p ON p.activity_id = a.id
-			  `+priorOutboundJoin+`
+			  `+priorOutboundJoin(private)+`
 			 WHERE a.direction = 'inbound'
 			   AND a.kind IN ('email', 'message')
 			   AND a.owed_verdict IS NOT NULL
 			   AND NOT `+humanReviewedOwedSQL("a")+`
 			   AND `+rulesetStaleSQL("a.owed_verdict_ruleset", "$%[2]d")+`
 			   AND a.archived_at IS NULL
-			   AND a.audience = 'workspace'
-			   AND a.restricted_at IS NULL
+			   AND `+judgeableAudienceSQL("a", private)+`
+			   AND NOT `+auth.ActivityRestrictedSQL("a.id")+`
 			   AND `+provenance.MailBodyCompleteSQL("a")+`
-			   AND `+priorContextComplete+`
+			   AND `+priorContextComplete(private)+`
 			   -- Declined by every rung under THESE rules (MarkOwedVerdictDeclined):
 			   -- its verdict stands. A decline under older rules is re-offered.
 			   AND `+owedVerdictDecline.offeredSQL("a.", "$%[2]d")+`
@@ -403,7 +366,7 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 		if err != nil {
 			return err
 		}
-		out, err = scanCandidates(rows)
+		out, err = scanCandidates(rows, bodyLimit)
 		return err
 	})
 	if err != nil {
@@ -429,24 +392,37 @@ func rulesetStaleSQL(col, param string) string {
 // SetOwedVerdict retains the ordinary ruleset and read-time compare-and-swap.
 // readAt must be the database read timestamp so a slow prediction cannot replace a newer verdict.
 func (s *Store) SetOwedVerdict(ctx context.Context, id ids.UUID, verdict, ruleset string, readAt time.Time) (applied bool, err error) {
+	return s.SetOwedVerdictAsked(ctx, id, verdict, ruleset, readAt, "")
+}
+
+// SetOwedVerdictAsked is SetOwedVerdict that also keeps the sender's own
+// sentence for the ask, which the reminder filed later quotes.
+func (s *Store) SetOwedVerdictAsked(ctx context.Context, id ids.UUID, verdict, ruleset string, readAt time.Time, ask string) (applied bool, err error) {
 	if err := validateOwedVerdictWrite(ctx, verdict, ruleset); err != nil {
 		return false, err
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var writeErr error
-		applied, writeErr = setOwedVerdictTx(ctx, tx, id, verdict, ruleset, readAt, nil)
+		applied, writeErr = setOwedVerdictTx(ctx, tx, id, verdict, ruleset, readAt, nil, ask)
 		return writeErr
 	})
 	return applied, err
 }
 
-func setOwedVerdictTx(ctx context.Context, tx pgx.Tx, id ids.UUID, verdict, ruleset string, readAt time.Time, evidence map[string]any) (bool, error) {
+func setOwedVerdictTx(ctx context.Context, tx pgx.Tx, id ids.UUID, verdict, ruleset string, readAt time.Time, evidence map[string]any, ask string) (bool, error) {
 	if err := validateOwedVerdictWrite(ctx, verdict, ruleset); err != nil {
 		return false, err
 	}
+	// A verdict stands only on mail the model was allowed to read, and the
+	// setting may have changed since the read.
+	private, err := privateMailRequests(ctx, tx)
+	if err != nil {
+		return false, err
+	}
+	judgeable := judgeableAudienceSQL("activity", private)
 	var before, beforeRules *string
-	err := tx.QueryRow(ctx, `SELECT owed_verdict,owed_verdict_ruleset FROM activity WHERE id=@id
- AND archived_at IS NULL AND audience='workspace' AND restricted_at IS NULL FOR UPDATE`, pgx.NamedArgs{"id": id}).Scan(&before, &beforeRules)
+	err = tx.QueryRow(ctx, `SELECT owed_verdict,owed_verdict_ruleset FROM activity WHERE id=@id
+ AND archived_at IS NULL AND `+judgeable+` FOR UPDATE`, pgx.NamedArgs{"id": id}).Scan(&before, &beforeRules)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -454,11 +430,11 @@ func setOwedVerdictTx(ctx context.Context, tx pgx.Tx, id ids.UUID, verdict, rule
 		return false, err
 	}
 	reviewed := evidence != nil
-	tag, err := tx.Exec(ctx, `UPDATE activity SET owed_verdict=@verdict,owed_verdict_at=now(),owed_verdict_ruleset=@rules
+	tag, err := tx.Exec(ctx, `UPDATE activity SET owed_verdict=@verdict,owed_verdict_at=now(),owed_verdict_ruleset=@rules,owed_ask=nullif(@ask,'')
  WHERE id=@id AND (@reviewed OR (`+rulesetStaleSQL("owed_verdict_ruleset", "@rules")+`
  AND (owed_verdict_at IS NULL OR owed_verdict_at<@read_at) AND NOT `+humanReviewedOwedSQL("activity")+`))
- AND archived_at IS NULL AND audience='workspace' AND restricted_at IS NULL`,
-		pgx.NamedArgs{"id": id, "verdict": verdict, "rules": ruleset, "reviewed": reviewed, "read_at": readAt})
+ AND archived_at IS NULL AND `+judgeable,
+		pgx.NamedArgs{"id": id, "verdict": verdict, "rules": ruleset, "reviewed": reviewed, "read_at": readAt, "ask": ask})
 	if err != nil || tag.RowsAffected() == 0 {
 		return false, err
 	}

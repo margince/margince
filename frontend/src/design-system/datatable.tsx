@@ -1,8 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Fragment, type ReactNode, useId, useRef, useState } from "react";
+import {
+  Fragment,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { opensRow } from "../lib/linkclick";
+import { pointerMarks } from "../lib/pointertarget";
 import { TableScroll } from "./atoms";
 import { ExpanderChevron } from "./disclosure";
 import { type FoldEnds, useFocusHandBack, useFold } from "./fold";
@@ -29,6 +37,7 @@ export function DataTable<Row>({
   fold,
   stickyFirst,
   reorder,
+  selectedKey,
 }: Readonly<{
   columns: DataTableColumn<Row>[];
   rows: Row[];
@@ -50,6 +59,8 @@ export function DataTable<Row>({
   stickyFirst?: boolean;
   /** The reader puts the rows in order by hand; see `DataTableReorder`. */
   reorder?: DataTableReorder<Row>;
+  /** The row whose record a pane beside the table shows, by its `rowKey`. */
+  selectedKey?: string;
 }>) {
   const tableId = useId();
   const disclosure = useDisclosure(rows, rowKey, detail);
@@ -108,7 +119,9 @@ export function DataTable<Row>({
                     opens !== undefined,
                     disclosure?.isOpen(row) === true,
                     sortable.lifted === key,
+                    selectedKey === key,
                   )}
+                  aria-current={selectedKey === key ? "true" : undefined}
                   onClick={
                     opens
                       ? (event) => {
@@ -240,10 +253,26 @@ function DetailRow({
   render: () => ReactNode;
 }>) {
   const box = useRef<HTMLDivElement>(null);
+  const [opener] = useState(() => pointerMarks(OPENER_HOVER));
   useFocusHandBack(id, open);
   const shown = useFold(box, open, detailEnds);
+  // A detail that closes or unmounts under the pointer gets no pointerleave.
+  useEffect(() => {
+    if (!open) {
+      opener.clear();
+    }
+    return opener.clear;
+  }, [open, opener]);
   return (
-    <tr className="datatable-detail" role={role("row")} hidden={!shown}>
+    <tr
+      className="datatable-detail"
+      role={role("row")}
+      hidden={!shown}
+      onPointerEnter={(event) =>
+        opener.move(event.pointerId, event.currentTarget.previousElementSibling)
+      }
+      onPointerLeave={(event) => opener.move(event.pointerId, null)}
+    >
       <td colSpan={span} id={id} role={role("cell")}>
         <div ref={box} className="datatable-detail-fold">
           <div className="datatable-detail-body" inert={shown && !open}>
@@ -254,6 +283,11 @@ function DetailRow({
     </tr>
   );
 }
+
+// The row a detail belongs to takes its hover ground while the pointer is on
+// the detail. Not `tr:has(+ tr:hover)`: Chromium restyles the whole document
+// on every hover change while any `:has()` holds `:hover`.
+const OPENER_HOVER = "data-detail-hover";
 
 const detailEnds: FoldEnds = (box) => ({
   shut: 0,
@@ -286,11 +320,13 @@ function rowClass(
   opens: boolean,
   open: boolean,
   lifted: boolean,
+  selected: boolean,
 ): string | undefined {
   const classes = [
     opens ? "rowlink" : "",
     open ? "datatable-open" : "",
     lifted ? "is-lifted" : "",
+    selected ? "is-selected" : "",
   ];
   return classes.filter(Boolean).join(" ") || undefined;
 }
@@ -313,6 +349,7 @@ export type DataTableColumn<Row> = Readonly<{
   // still read, so it must not hold a control. "lead" and "trail" keep their
   // width empty or not, so every title and every last control sits on one edge.
   // "only" is hide's mirror: absent until the table folds, then a line of its own.
+  // Not ListTable's `phone`: a phone row drops a column without one, a fold keeps it.
   fold?: "title" | "end" | "hide" | "lead" | "trail" | "only";
   /** The cell once its table folds and the heading is out of sight: a bare figure says its unit. Undefined keeps the cell. */
   folded?: (row: Row) => ReactNode | undefined;

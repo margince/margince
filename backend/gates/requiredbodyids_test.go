@@ -43,6 +43,8 @@ const generatedContract = "internal/contracts/api_gen.go"
 // name today, proved by a TestEveryRequired...BodyIDIsNamedWhenAbsent in the
 // module that owns the mapping.
 var probedRequiredIDBodies = map[string]bool{
+	"WebsiteInquiryAssignmentRequest":   true,
+	"WebsiteInquiryExistingRequest":     true,
 	"MergeMembersRequest":               true,
 	"MeetingInvitationRequest":          true,
 	"AssignLegalEntityMemberRequest":    true,
@@ -52,13 +54,16 @@ var probedRequiredIDBodies = map[string]bool{
 	"CreateOutcomeReviewRequest":        true,
 	"CreateDealRequest":                 true,
 	"AddDealRoomDocumentRequest":        true,
+	"AddAttachmentLinkRequest":          true,
 	"CreateProjectRequest":              true,
 	"TransferProjectOwnershipRequest":   true,
 	"HandOverUserWorkRequest":           true,
 	"CreateContractRequest":             true,
 	"AdvanceDealRequest":                true,
 	"CreateStageRequest":                true,
+	"MoveDealPipelineRequest":           true,
 	"ApplyTagRequest":                   true,
+	"SetActivityDealRelevanceRequest":   true,
 	"ListMemberChangeRequest":           true,
 	"MergeTagsRequest":                  true,
 	"RecordConsentRequest":              true,
@@ -76,6 +81,7 @@ var probedRequiredIDBodies = map[string]bool{
 	"LinkFinanceSourceCustomerRequest":  true,
 	"RecordConversationClaimRequest":    true,
 	"MergeCompanyJSONBody":              true,
+	"MergeDealJSONBody":                 true,
 	"RelinkActivityJSONBody":            true,
 	"RelinkThreadRequest":               true,
 	"RelinkActivitiesRequest":           true,
@@ -99,12 +105,15 @@ var probedRequiredIDBodies = map[string]bool{
 var unguardedRequiredIDBodies = gatekit.Waive(map[string]string{
 	"DeclareExistingCustomerNoticeRequest": "DeclareNoticeInput.validate refuses a zero legal_entity_id as a 422 naming the field, before any lookup",
 	"SetTransitionPolicyRequest":           "the route is retired and answers 501 without reading its body",
+	"ConnectSharedMailboxRequest":          "ConnectShared reads the reader team under lock first and refuses a zero reader_team_id as a 422 naming the field",
 	// Not a request body at all: the GDPR data-subject-request ENTITY, whose `id`
 	// is its own primary key rather than a caller-supplied reference. Waived
 	// because the name heuristic above cannot tell the two apart, and narrowing
 	// the heuristic to exclude it would risk excluding a real body.
-	"OwnershipRequest":   "not a request body — a handover request as the server answers it; every id is read from the stored request",
-	"DataSubjectRequest": "not a request body — the DSR entity; `id` is its own key, not a caller-supplied reference",
+	"OwnershipRequest":      "not a request body — a handover request as the server answers it; every id is read from the stored request",
+	"EditAccessRequest":     "not a request body — an edit access request as the server answers it; every id is read from the stored request",
+	"DataSubjectRequest":    "not a request body — the DSR entity; `id` is its own key, not a caller-supplied reference",
+	"SchedulingTeamRequest": "not a request body — a colleague's link that names the caller, as the server answers it",
 	// Multipart never decodes into this generated type. The handler
 	// (activities/handlers_attachment.go) calls ParseMultipartForm and
 	// FormValue("entity_id"), so an absent part yields "" and ids.Parse already

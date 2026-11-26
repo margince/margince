@@ -1,0 +1,9 @@
+{
+  "verb": "list_contact_stops",
+  "checks": [
+    "contact.read"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

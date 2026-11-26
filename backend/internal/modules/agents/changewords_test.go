@@ -27,7 +27,7 @@ type wordsSeen struct {
 	err              error
 }
 
-func (w *wordsSeen) words(_ context.Context, current, changes map[string]json.RawMessage) ([]crmcontracts.ApprovalPreviewChange, error) {
+func (w *wordsSeen) words(_ context.Context, _ string, current, changes map[string]json.RawMessage) ([]crmcontracts.ApprovalPreviewChange, error) {
 	w.current, w.changes = current, changes
 	if w.err != nil {
 		return nil, w.err
@@ -89,6 +89,7 @@ func promoteToCTO(t *testing.T, p *patchingProvider) json.RawMessage {
 	t.Helper()
 	in, err := json.Marshal(map[string]any{
 		"record_type": "contact", "id": p.record.Ref.ID, "fields": map[string]any{"title": "CTO"},
+		"why": "Her signature on 14 Nov names her CTO.",
 	})
 	if err != nil {
 		t.Fatal(err)

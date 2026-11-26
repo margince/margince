@@ -10,14 +10,83 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "87bf361416fe5a25",
+    "tools": "ab38210dbfe62ffc",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T06:09:00Z",
+    "graded_commit": "e78e69d3f41bf45bbc08207d2d75a94ae33d19f4",
+    "graded_at": "2026-11-25T11:02:09Z"
+  },
   "usage": {
-    "input_tokens": 16,
-    "output_tokens": 3325,
-    "cache_creation_input_tokens": 22506,
-    "cache_read_input_tokens": 482613,
+    "input_tokens": 12,
+    "output_tokens": 2044,
+    "cache_creation_input_tokens": 6076,
+    "cache_read_input_tokens": 434316,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1716
+    "cost_usd": 0.0882
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "list_colleagues",
+        "preview_member_retirement",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "get_user_handover",
+        "list_colleagues",
+        "preview_member_retirement",
+        "read_workspace",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3,
+      "min": 2,
+      "max": 4
+    },
+    "turns": {
+      "median": 4,
+      "min": 3,
+      "max": 5
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 220202,
+      "min": 219556,
+      "max": 220848
+    },
+    "output_tokens": {
+      "median": 1022,
+      "min": 893,
+      "max": 1151
+    },
+    "duration_ms": {
+      "median": 11449.5,
+      "min": 11230,
+      "max": 11669
+    }
   }
 }

@@ -18,6 +18,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -41,14 +42,7 @@ func (s *Store) ActivityLabels(ctx context.Context, want []ids.UUID) (map[ids.UU
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idsPos := arg(want)
-	discover, err := auth.ActivityDiscoverClause(ctx, "a", arg)
-	if err != nil {
-		return nil, err
-	}
-	if discover == "" {
-		discover = scopeUnbounded
-	}
-	content, err := auth.ActivityAudienceArm(ctx, "a", arg)
+	discover, content, err := readableClauses(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -71,4 +65,68 @@ func (s *Store) ActivityLabels(ctx context.Context, want []ids.UUID) (map[ids.UU
 		return nil, fmt.Errorf("activities: reading activity subjects: %w", err)
 	}
 	return labels, nil
+}
+
+// readableClauses are the two gates every read in this file carries: which
+// rows the caller may know about, and whether each row's content comes along.
+func readableClauses(ctx context.Context, arg func(any) int) (discover, content string, err error) {
+	discover, err = auth.ActivityDiscoverClause(ctx, "a", arg)
+	if err != nil {
+		return "", "", err
+	}
+	if discover == "" {
+		discover = scopeUnbounded
+	}
+	content, err = auth.ActivityAudienceArm(ctx, "a", arg)
+	return discover, content, err
+}
+
+// ActivityMoment is when an activity happened, and how much of that is known.
+type ActivityMoment struct {
+	At        time.Time
+	Precision string
+}
+
+// ActivityOccurredAt answers when each named activity happened, under the
+// caller's own grants. An activity whose content is withheld from this caller
+// is absent, as its subject line is from ActivityLabels.
+func (s *Store) ActivityOccurredAt(ctx context.Context, want []ids.UUID) (map[ids.UUID]ActivityMoment, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	found := map[ids.UUID]ActivityMoment{}
+	if len(want) == 0 {
+		return found, nil
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	idsPos := arg(want)
+	discover, content, err := readableClauses(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, fmt.Sprintf(`
+			SELECT a.id, a.occurred_at, a.occurred_precision
+			  FROM activity a
+			 WHERE a.id = ANY($%d) AND a.archived_at IS NULL AND (%s) AND (%s)`,
+			idsPos, discover, content), args...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id ids.UUID
+			var moment ActivityMoment
+			if err := rows.Scan(&id, &moment.At, &moment.Precision); err != nil {
+				return err
+			}
+			found[id] = moment
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading when activities happened: %w", err)
+	}
+	return found, nil
 }

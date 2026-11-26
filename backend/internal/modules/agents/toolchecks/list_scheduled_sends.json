@@ -1,0 +1,6 @@
+{
+  "verb": "list_scheduled_sends",
+  "checks": [
+    "activity.read"
+  ]
+}

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/dbrole.go backend/internal/compose/schemareadiness.go backend/internal/compose/releaseversion.go backend/internal/compose/releasewatch.go backend/cmd/api/mcpapps.go backend/internal/compose/installationcountry.go docker-bake.hcl -->
+<!-- describes: backend/internal/compose/dbrole.go backend/internal/compose/schemareadiness.go backend/internal/compose/releaseversion.go backend/internal/compose/releasewatch.go backend/cmd/api/mcpapps.go backend/internal/compose/installationcountry.go docker-bake.hcl frontend/src/api/client.ts scripts/deploy/compose/compose.yaml -->
 # Self-hosting: why a deployment is shaped this way
 
 The steps to run Margince on your own servers are in
@@ -15,6 +15,9 @@ A superuser ignores every grant, so **both** runtime roles must be neither a sup
 `margince_owner` applies migrations and the custom-field DDL. `margince_app` serves the api and the
 worker with table grants only. The baseline migration grants to `margince_app` only when the role
 already exists, which is why the bootstrap creates it first.
+
+The SQL of an extension runs as a third role, `ext_runtime`, which nobody connects as. It holds the `ext`
+schema and nothing on core tables, so an extension cannot read or write a core table with raw SQL.
 
 ## One host
 
@@ -34,6 +37,34 @@ cross the split:
   else than `/oauth/authorize`, or routes `/oauth` to the web service. Then it gives a 404
   to the human in the middle of approving a connection. It fails only there, since
   the client's own handshake never touches the SPA.
+- A human who signs in with a provider on that screen comes back to it, also when the
+  sign-in fails. Its buttons start the sign-in with `?return=consent`, and the callback
+  (api) then lands on `/consent#/oauth-consent` (web) instead of `/`. A failure adds
+  `?oidc=failed`. So an MCP client that opened the screen in its own window can still
+  read the answer from it.
+
+## Postgres memory on one host
+
+The compose file starts Postgres with four settings, because the defaults of Postgres fit no host
+that Margince supports. The defaults give 128 MB of `shared_buffers` and 4 MB of `work_mem`, and
+they set `random_page_cost` to 4, the value for a disk that turns.
+
+| Setting | Compose value | Rule for a larger host |
+|---|---|---|
+| `shared_buffers` | 512 MB | 12.5% of the host's memory |
+| `effective_cache_size` | 1536 MB | Three times `shared_buffers` |
+| `work_mem` | 16 MB | Keep |
+| `random_page_cost` | 1.1 | Keep on storage with no turning disk |
+
+The compose values fit the smallest host, 4 GB. A host with only Postgres would give it 25% of
+the memory. Here the API, the worker and Redis use the same memory, so the rule gives it 12.5%.
+Each connection also needs memory of its own. `POSTGRES_SHARED_BUFFERS` and
+`POSTGRES_EFFECTIVE_CACHE_SIZE` in `.env` set the two values that grow with the host: 1 GB and
+3 GB on 8 GB, 4 GB and 12 GB on 32 GB.
+
+A managed Postgres takes no settings from the compose file. Set `work_mem` and `random_page_cost`
+in the provider's parameter group. Most providers size `shared_buffers` and `effective_cache_size`
+from the instance class, so leave those two as the provider set them.
 
 ## Readiness waits for the schema
 
@@ -73,7 +104,7 @@ Every release image carries the release it was built from, derived from one buil
 | OCI label `org.opencontainers.image.version` | `docker inspect` / `crane config`, no pull needed | an operator diffing a set |
 | `/etc/margince/release-version` | `docker run --rm <image> cat /etc/margince/release-version`, or `kubectl exec` into a running one | an operator inspecting a role that is running or crash-looping. It is the only place the **web** image's release can be read from the outside, because nginx runs none of our code. It is not what the web tier itself compares against |
 | `margince-api --version`, and the same for `margince-worker` and `margince-migrate` | on a server `/opt/margince/bin/margince-api --version`, or `docker run --rm --entrypoint margince-api <image> --version`. It prints the release and the commit | an operator on a server install, which has no image to look at |
-| `VERSION` at the top of a server bundle | `cat /opt/margince/VERSION` | anyone with the files of a bundle |
+| `VERSION` and `REVISION` at the top of a server bundle | `cat /opt/margince/VERSION /opt/margince/REVISION` | anyone with the files of a bundle |
 | the Go binary's link-time stamp, and the SPA bundle's compiled-in copy | the guard below. This is the value each role compares; the label and the file are for humans | the software itself |
 
 ### Why the guard exists
@@ -111,9 +142,9 @@ Rollback works for the same reason: the api states the release rather than advan
 going back to an older one needs no permission.
 
 **A half-finished api rollout breaks it.** The recorded release is last writer wins: whichever api
-records last decides what release the installation is, including an older one. A `1970.42` pod that
-restarts after `1970.43` recorded will put the record back to `1970.42`. Every correctly deployed
-`1970.43` worker then refuses to start
+records last decides what release the installation is, including an older one. A `1.0.0` pod that
+restarts after `1.1.0` recorded will put the record back to `1.0.0`. Every correctly deployed
+`1.1.0` worker then refuses to start
 ([#1735](https://github.com/margince/margince/issues/1735)).
 
 A refusing role logs both releases and the fix. A torn pull and a half-finished api rollout look
@@ -168,6 +199,26 @@ The lever, when the api cannot reliably reach the web tier at boot, is `--mcp-ap
 The scheme must be `https` unless the host is a loopback or private address. A cleartext hostname is
 refused at boot with a message naming the setting, so it never reaches the fetches. Full flag
 reference: [configuration.md](../reference/configuration.md).
+
+## A WAF challenge stays at the edge
+
+A WAF in front of the app can answer a request with a challenge in the app's place. A challenge
+works only on a page load, where the browser can run it. The app reads its data through `fetch`
+calls under `/v1/`, and a `fetch` call cannot run one.
+
+So the app treats such an answer as a failed read, and leaves the challenge to the edge:
+
+- A `GET` answered `202` or `205` fails as a read. No read in `backend/api/crm.yaml` answers with
+  either status, so the client knows something in between answered (`frontend/src/api/client.ts`).
+- The read is not tried again on its own, because another try would meet the same challenge
+  (`retryQuery` in `frontend/src/app/queryclient.ts`).
+- A screen that already shows data keeps it. A first read that fails shows an error with Retry,
+  and Retry asks once more.
+- A write keeps its own `202`. Sign-in answers one when it asks for a second step, and so do the
+  writes that start work in the background.
+
+The rules that challenge belong to your edge, not to the app. Keep them off `/v1/`, or set them for
+page loads only, where a reader can pass one before Retry reads again.
 
 ## What an operator meets at run time
 

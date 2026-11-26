@@ -171,6 +171,9 @@ func (w *briefGenerateWorker) claimMorningMail(ctx context.Context, candidate mo
 	var attempt briefs.MailAttempt
 	var claimed bool
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		if err := identity.HoldAuthorizationTx(ctx, tx); err != nil {
+			return err
+		}
 		var err error
 		if attempt, claimed, err = w.engine.ClaimMailAttemptTx(ctx, tx, candidate.run.ID, now); err != nil || !claimed {
 			return err

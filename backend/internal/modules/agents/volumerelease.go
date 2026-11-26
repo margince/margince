@@ -24,11 +24,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // VolumeReleaseRequest is what the surface asks the approvals engine to put in
 // front of the human who lent this passport.
 type VolumeReleaseRequest struct {
+	SystemText *systemtext.Message
 	// Proposal is the question itself, in the one spelling both modules read.
 	Proposal agentvolume.ReleaseProposal
 	// Summary is the sentence the inbox shows.
@@ -110,8 +112,9 @@ func (r *Registry) stageStepUp(ctx context.Context, refusal *auth.VolumeExceeded
 	}
 	proposal := agentvolume.NewReleaseProposal(refusal.Reading, actor.PassportID, actor.ConnectionID, refusal.Tool)
 	id, staged, err := r.approvals.StageVolumeRelease(ctx, VolumeReleaseRequest{
-		Proposal: proposal,
-		Summary:  stepUpSummary(summaryIn(ctx, r.language), proposal),
+		Proposal:   proposal,
+		Summary:    stepUpSummary(summaryIn(ctx, r.language), proposal),
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.stepUpChanges", systemtext.Count(int64(proposal.Observed)), systemtext.Count(int64(proposal.Limit)), systemtext.Text(proposal.Tool), systemtext.Count(int64(proposal.Allowance)))},
 	})
 	if err != nil {
 		// The refusal stands as the answer; the staging failure is ours and

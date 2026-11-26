@@ -12,7 +12,11 @@ package consent
 //     offer's buyer company. A stakeholder who only advised is not the
 //     customer. The sale is the accepted offer, not the deal's own status or
 //     close date, which a rep may edit at will. An offer that names no
-//     issuing entity carries no sale for any entity.
+//     issuing entity carries no sale for any entity. The address the message
+//     goes to was on the buyer's record no later than the acceptance and has
+//     stayed there: an address added after the sale, or archived and added
+//     again, came from somewhere else. An offer records no address of its own,
+//     so the contact's address row is the proof the data holds.
 //  2. The mail advertises goods like the ones bought: the declaration that
 //     covers the sale names this marketing purpose.
 //  3. The customer did not object: verdictFor refuses on an objection or a
@@ -34,6 +38,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -51,15 +56,16 @@ const noticeCoversFromSQL = `greatest(n.effective_from, coalesce(n.evidence_date
 var buyerRoles = []string{dealrole.EconomicBuyer, dealrole.LegacyDecisionMaker}
 
 // existingCustomerGround finds the newest sale of the sending entity to this
-// contact that a live declaration covers for this purpose. None found, or no
-// known entity, answers nil.
+// contact that a live declaration covers for this purpose, and that address
+// came with. A nil address asks whether any address of the contact did. None
+// found, or no known entity, answers nil.
 //
 // A declaration covers sales from its effective start, but no earlier than
 // the date of the evidence it names. Without evidence it covers nothing before
 // the day it was declared. A period back-dated on the admin's word alone covers
 // nothing before that day.
 func existingCustomerGround(
-	ctx context.Context, tx pgx.Tx, contactID, purposeID string, entity ids.UUID,
+	ctx context.Context, tx pgx.Tx, contactID string, address *string, purposeID string, entity ids.UUID,
 ) (*ExistingCustomerGround, error) {
 	if entity.IsZero() {
 		return nil, nil
@@ -79,16 +85,21 @@ func existingCustomerGround(
 		   AND o.legal_entity_id = $3
 		   AND (EXISTS (
 		         SELECT 1 FROM relationship r
-		          WHERE r.kind = 'deal_stakeholder' AND r.deal_id = o.deal_id
-		            AND r.contact_id = $1 AND r.archived_at IS NULL
-		            AND r.role = ANY($4) AND r.created_at <= o.accepted_at)
+		          WHERE `+dealseat.CurrentAtSQL("r", "o.accepted_at")+` AND r.deal_id = o.deal_id
+		            AND r.contact_id = $1
+		            AND `+dealrole.RecordedSQL("r.role")+` = ANY($4) AND r.created_at <= o.accepted_at)
 		     OR EXISTS (
 		         SELECT 1 FROM relationship b
 		          WHERE b.kind = 'billing_contact' AND b.company_id = o.buyer_company_id
 		            AND b.contact_id = $1 AND b.archived_at IS NULL
 		            AND b.created_at <= o.accepted_at))
+		   AND EXISTS (
+		         SELECT 1 FROM contact_email ce
+		          WHERE ce.contact_id = $1 AND ce.archived_at IS NULL
+		            AND ce.created_at <= o.accepted_at
+		            AND ($5::text IS NULL OR ce.email = lower($5)))
 		 ORDER BY o.accepted_at DESC, n.id
-		 LIMIT 1`, contactID, purposeID, entity, buyerRoles).Scan(&g.NoticeID, &g.OfferID, &g.SoldAt)
+		 LIMIT 1`, contactID, purposeID, entity, buyerRoles, address).Scan(&g.NoticeID, &g.OfferID, &g.SoldAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -102,7 +113,7 @@ func existingCustomerGround(
 // ctx: the pack's exception, and the entity a sale must be with. The entity is
 // read only when the pack grants an exception.
 func marketingContextTx(ctx context.Context, tx pgx.Tx, w packRules) (MarketingContext, error) {
-	out := MarketingContext{Exception: w.marketingException}
+	out := w.marketingContext(ids.UUID{})
 	if out.Exception == nil {
 		return out, nil
 	}

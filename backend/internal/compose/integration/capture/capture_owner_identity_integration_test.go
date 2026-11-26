@@ -142,6 +142,22 @@ func TestAColleaguesIdentityIsNotMine(t *testing.T) {
 	}
 }
 
+// The internal-only check judges from the workspace's own domains and the
+// acting seat's own addresses. A colleague's private address is not among
+// them, and a dropped message cannot be brought back.
+func TestMailWithAColleaguesPrivateAddressIsStoredNotDroppedAsInternal(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	const colleaguePrivate = "colleague@private.example"
+	declareIdentity(t, e, e.Rep3, capturemod.IdentityKindAddress, colleaguePrivate)
+
+	env.sync(t, email(colleaguePrivate, "Colleague Private", captureOwner, "colleague1@private.example", ""))
+
+	if n := countRows(t, e, `SELECT count(*) FROM activity WHERE kind = 'email'`); n != 1 {
+		t.Fatalf("%d activity row(s), want 1: another seat's declared address must not make this mailbox's mail internal", n)
+	}
+}
+
 func TestWithdrawingAnIdentityJudgesTheAddressLikeAnyOther(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync

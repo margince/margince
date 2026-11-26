@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/platform/outbound"
 )
 
@@ -156,10 +157,8 @@ func (p *publicOriginProbe) probe(ctx context.Context) PublicOriginStatus {
 // dial wherever the answer pointed.
 func newOriginProbeClient() *http.Client {
 	return &http.Client{
-		Timeout: originProbeTimeout,
-		CheckRedirect: func(*http.Request, []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
+		Timeout:       originProbeTimeout,
+		CheckRedirect: netguard.RefuseRedirect,
 	}
 }
 

@@ -29,7 +29,8 @@ func TestSidesNameWhichWayItRuns(t *testing.T) {
 func TestTheyWroteAsksWhoSentTheMessage(t *testing.T) {
 	t.Parallel()
 	rule := TheyWroteSQL("c.id", "a")
-	for _, clause := range []string{"a.direction = 'inbound'", SenderSQL("c.id", "a")} {
+	clauses := []string{"a.direction = 'inbound'", SenderSQL("c.id", "a"), AddressProvesSQL("c.id", "a.counterparty_email")}
+	for _, clause := range clauses {
 		if !strings.Contains(rule, clause) {
 			t.Errorf("TheyWroteSQL = %q lacks %q", rule, clause)
 		}

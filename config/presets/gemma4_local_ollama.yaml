@@ -1,13 +1,15 @@
 # yaml-language-server: $schema=../margince.schema.json
+# Model setup: Gemma 4 on your own server, through Ollama
 # config/presets/gemma4_local_ollama.yaml — Gemma 4 on the operator's own box,
 # through Ollama on loopback. Zero egress.
 #
-# WHAT THIS PRESET IS NOT CERTIFIED FOR: it binds a model to every task, and the
-# certification records do not grade every one of those bindings as certified.
-# Which tasks, and how badly, is in docs/reference/ai-certification.md under
-# this file's name. Read it before binding this preset to a workspace whose
-# confidentiality decisions matter: a task graded `supported_degraded` or
-# `not_supported` answers wrongly often enough to have been measured doing so.
+# NOT YET MEASURED: no certification record exists for this setup, so no task is
+# graded on it and none of its answers is known to be good enough. Certify it
+# with `make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml`
+# on a machine that serves it, then regenerate the page with
+# `cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert`;
+# its grades then appear in docs/reference/ai-certification.md under this file's name. Until
+# then, do not bind this preset to a workspace whose confidentiality decisions matter.
 #
 # No task list here on purpose. The bands move when a prompt is fixed or the
 # corpus grows, and a list in this comment would read as true long after it
@@ -29,9 +31,9 @@
 # only by unloading it between calls, and its reloads then land in the
 # recorded latency; measure serving speed with a direct call, not a record.
 #
-# The committed records cover every shipped task this binding can carry, 28
-# of 29 (all but document_extract, below): 8 certified, 6 usable with care, 14
-# not supported. docs/explanation/ollama-self-hosting.md section 4 lists them.
+# NOT YET MEASURED: no record is committed for this binding, so every task
+# reads "not measured" on the certification page. The last run, on older
+# weights, is in docs/explanation/ollama-self-hosting.md section 4.
 #
 # WHY 12b ON EVERY TIER. Sized for a 24GB Apple-silicon machine, the smallest
 # this preset is meant to run on, with Ollama 0.34 (its server log reports

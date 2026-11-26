@@ -32,12 +32,17 @@ const (
 	// A rule read answers at most this many records, the predicate engine's
 	// own row bound. Past it a membership is an export and not a list.
 	ruleReadLimit = storekit.PredicateRowLimit
+	// unscoped is the clause a read carries when the reader has no row scope.
+	unscoped = "TRUE"
 )
 
 // RuleMatcher evaluates a rule in a record type's list vocabulary under the
 // caller's row scope. The composition root binds the list filter engine.
 type RuleMatcher interface {
 	Match(ctx context.Context, tx pgx.Tx, recordType string, rule storekit.Predicate, limit int) (matched []ids.UUID, count int, err error)
+	// Page answers up to limit matches after after (nil for the first page),
+	// id-ordered, and whether more follow.
+	Page(ctx context.Context, tx pgx.Tx, recordType string, rule storekit.Predicate, after *ids.UUID, limit int) (matched []ids.UUID, more bool, err error)
 }
 
 // Store owns the initiative tables.
@@ -99,8 +104,8 @@ func (s *Store) Create(ctx context.Context, in Definition) (crmcontracts.SalesIn
 				return err
 			}
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO sales_initiative (id, name, description, owner_id, objective_metric, target_value, deadline, lead_rule, deal_rule, include_future, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'manual', $11)`,
+		if _, err := tx.Exec(ctx, `INSERT INTO sales_initiative (id, name, description, owner_id, objective_metric, target_value, deadline, lead_rule, deal_rule, include_future, captured_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 			id, in.Name, in.Description, owner, in.Objective, in.Target, in.Deadline, leadRule, dealRule, include, by); err != nil {
 			return fmt.Errorf("insert initiative: %w", err)
 		}
@@ -170,7 +175,11 @@ func (s *Store) Update(ctx context.Context, id ids.UUID, in Definition, ifVersio
 		if err != nil {
 			return err
 		}
-		return recordChange(ctx, tx, out, &before, []string{"definition"})
+		if err := recordChange(ctx, tx, out, &before, []string{"definition"}); err != nil {
+			return err
+		}
+		_, err = s.observeEnrolmentTx(ctx, tx, out)
+		return err
 	})
 	return out, err
 }
@@ -197,7 +206,7 @@ func (s *Store) Launch(ctx context.Context, id ids.UUID, ifVersion *int64) (crmc
 		if before.Status != crmcontracts.SalesInitiativeStatusDraft {
 			return fmt.Errorf("the initiative is already launched: %w", apperrors.ErrConflict)
 		}
-		members, err := s.membersTx(ctx, tx, before)
+		members, err := s.membersTx(ctx, tx, before, boundedRead)
 		if err != nil {
 			return err
 		}
@@ -208,9 +217,9 @@ func (s *Store) Launch(ctx context.Context, id ids.UUID, ifVersion *int64) (crmc
 			return httperr.Validation("members", "too_many", "narrow the rules: a launch freezes at most "+strconv.Itoa(ruleReadLimit)+" records of each kind")
 		}
 		now := s.now().UTC()
-		if _, err := tx.Exec(ctx, `INSERT INTO sales_initiative_baseline (initiative_id, deal_id, amount_minor_base, status, stage_id, captured_at)
-			SELECT $1, d.id, d.amount_minor_base, d.status, d.stage_id, $3 FROM deal d WHERE d.id = ANY($2)`,
-			id, members.Deals, now); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO sales_initiative_baseline (initiative_id, deal_id)
+			SELECT $1, d.id FROM deal d WHERE d.id = ANY($2)`,
+			id, members.Deals); err != nil {
 			return fmt.Errorf("freeze the baseline: %w", err)
 		}
 		tag, err := tx.Exec(ctx, `UPDATE sales_initiative SET status = 'live', launch_at = $2, version = version + 1, updated_at = now() WHERE id = $1 AND archived_at IS NULL AND version = $3`, id, now, versionOf(before))
@@ -224,7 +233,11 @@ func (s *Store) Launch(ctx context.Context, id ids.UUID, ifVersion *int64) (crmc
 		if err != nil {
 			return err
 		}
-		return recordChange(ctx, tx, out, &before, []string{"status", "baseline"})
+		if err := recordChange(ctx, tx, out, &before, []string{"status", "baseline"}); err != nil {
+			return err
+		}
+		_, err = s.observeEnrolmentTx(ctx, tx, out)
+		return err
 	})
 	return out, err
 }
@@ -281,7 +294,7 @@ func initiativeScope(ctx context.Context, args *[]any) (string, error) {
 		return "", err
 	}
 	if scope == "" {
-		return "TRUE", nil
+		return unscoped, nil
 	}
 	return scope, nil
 }

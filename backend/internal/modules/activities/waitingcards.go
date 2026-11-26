@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -48,10 +49,10 @@ func (s *Store) WaitingRepliesNarrowedBefore(
 // conversation folds by the conversation; any other message with a subject
 // folds by its sender and subject; the rest stand alone. The sender is the
 // least `from` address, as waitingSelectSQL picks it.
-const waitingFoldSQL = `CASE
-	WHEN coalesce(a.owed_verdict, '') = '` + OwedVerdictAsksUs + `' AND coalesce(a.thread_key, '') <> ''
+var waitingFoldSQL = `CASE
+	WHEN coalesce(` + storekit.AsksUsClause("a") + `, false) AND coalesce(a.thread_key, '') <> ''
 	  THEN ARRAY['conversation', a.kind::text, coalesce(a.channel_provider, '')::text, a.thread_key::text]
-	WHEN coalesce(a.owed_verdict, '') <> '` + OwedVerdictAsksUs + `' AND coalesce(a.subject, '') <> ''
+	WHEN NOT coalesce(` + storekit.AsksUsClause("a") + `, false) AND coalesce(a.subject, '') <> ''
 	  THEN ARRAY['subject', coalesce((SELECT min(card_from.address) FROM activity_participant card_from
 	                                   WHERE card_from.activity_id = a.id AND card_from.role = 'from'), '')::text,
 	             a.subject::text]
@@ -59,7 +60,7 @@ const waitingFoldSQL = `CASE
 
 // waitingNotMachineSQL leaves out a message a sending system wrote, unless it
 // asks us something. It reads the stamp the one Go rule wrote.
-const waitingNotMachineSQL = ` AND NOT (a.sender_is_machine AND coalesce(a.owed_verdict, '') <> '` + OwedVerdictAsksUs + `')`
+var waitingNotMachineSQL = ` AND NOT (a.sender_is_machine AND NOT coalesce(` + storekit.AsksUsClause("a") + `, false))`
 
 // WaitingTail is one read of the queue past the page. It holds the cards among
 // the messages it judged, oldest first, and the last message it judged. More
@@ -103,13 +104,30 @@ func (s *Store) WaitingCardsAfter(
 // WaitingCardsOnDeals answers the cards whose messages are filed under any of
 // these deals, judged as WaitingCardsAfter judges them. A card names the deal
 // its own row carries, which may be none of these.
+//
+// One statement: the card statement judges the deals' linked messages itself,
+// since it applies every rule the candidate read would. Its cost follows the
+// mail filed under these deals, not the whole waiting horizon.
 func (s *Store) WaitingCardsOnDeals(
 	ctx context.Context, asOf time.Time, narrow WaitingNarrow, deals []ids.UUID,
-) ([]WaitingReply, error) {
-	return s.waitingCardsWhere(ctx, asOf, narrow, deals, func(arg func(any) int) string {
-		return fmt.Sprintf(" AND EXISTS (SELECT 1 FROM activity_link on_deal WHERE on_deal.activity_id = a.id"+
-			" AND on_deal.deal_id = ANY ($%d::uuid[]))", arg(deals))
-	})
+) (cards []WaitingReply, err error) {
+	if len(deals) == 0 {
+		return nil, auth.Require(ctx, "activity", principal.ActionRead)
+	}
+	seats := narrow.mailSeats()
+	err = s.readWaitingQueue(ctx, asOf, seats, waitingShape{drawsRows: true},
+		func(slots waitingSlots, arg func(any) int) string {
+			return waitingCardsStatement(slots, fmt.Sprintf("ARRAY(SELECT on_deal.activity_id FROM activity_link on_deal"+
+				" WHERE on_deal.deal_id = ANY ($%d::uuid[]))", arg(deals)))
+		},
+		func(rows pgx.Rows) (err error) {
+			cards, err = collectWaiting(rows, seats.owner)
+			return err
+		})
+	if err != nil {
+		return nil, fmt.Errorf("activities: judging waiting cards on deals: %w", err)
+	}
+	return cards, nil
 }
 
 // WaitingCardsAmong answers which of these messages are cards, judged as
@@ -160,7 +178,7 @@ func (s *Store) cardsAmong(
 	}
 	err = s.queryWaitingQueue(ctx, tx, asOf, seats, waitingShape{drawsRows: true},
 		func(slots waitingSlots, arg func(any) int) string {
-			return waitingCardsStatement(slots, arg, messages)
+			return waitingCardsStatement(slots, fmt.Sprintf("$%d::uuid[]", arg(messages)))
 		},
 		func(rows pgx.Rows) (err error) {
 			cards, err = collectWaiting(rows, seats.owner)
@@ -190,7 +208,7 @@ func (s *Store) waitingCandidates(
 	}
 	// The content gate here as well. The position after the last judged message
 	// goes to the client, so a message the reader may not read is never judged.
-	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	content, err := auth.ActivityMessageContentClause(ctx, "a", arg)
 	if err != nil {
 		return nil, false, err
 	}
@@ -219,31 +237,31 @@ func (s *Store) waitingCandidates(
 }
 
 // waitingCardsStatement draws the cards among the judged messages, oldest
-// first. The newer-member read formats the same template, so a member is
-// waiting by the same rules as the card it would fold into.
-func waitingCardsStatement(slots waitingSlots, arg func(any) int, judged []ids.UUID) string {
+// first. judged is an SQL array of message ids. The newer-member read formats
+// the same template, so a member is waiting by the same rules as its card.
+func waitingCardsStatement(slots waitingSlots, judged string) string {
 	newer := slices.Clone(slots.values)
 	newer[waitingResponsibilitySlot] = fmt.Sprintf("(%s) AND %s", newer[waitingResponsibilitySlot], waitingSameFoldNewerSQL)
 	newer[waitingKeysetSlot] = waitingNotMachineSQL
-	slots.values[waitingResponsibilitySlot] = fmt.Sprintf("(%s) AND a.id = ANY ($%d::uuid[])",
-		slots.values[waitingResponsibilitySlot], arg(judged))
-	slots.values[waitingCapSlot] = len(judged)
+	slots.values[waitingResponsibilitySlot] = fmt.Sprintf("(%s) AND a.id = ANY (%s)",
+		slots.values[waitingResponsibilitySlot], judged)
+	slots.values[waitingCapSlot] = fmt.Sprintf("cardinality(%s)", judged)
 	slots.values[waitingKeysetSlot] = waitingNotMachineSQL +
 		" AND NOT EXISTS (SELECT 1 FROM " + waitingCardOfSQL + " CROSS JOIN LATERAL (" +
 		fmt.Sprintf(waitingEligibleSQL, newer...) + " LIMIT 1) newer)"
-	return "SELECT waiting.*, " + directMailSeatsSQL(slots.identities) + " FROM (" +
+	return "SELECT waiting.*, " + mailAnswerersSQL(slots.identities) + " FROM (" +
 		fmt.Sprintf(waitingCardsAfterSQL, slots.values...) +
 		") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at, waiting.id"
 }
 
 // waitingCardOfSQL holds the message under judgement as `card`, for the
 // newer-member read whose own rows take the alias `a`.
-const waitingCardOfSQL = `(SELECT a.id AS card_id, a.occurred_at AS card_at, a.thread_key AS card_thread,
+var waitingCardOfSQL = `(SELECT a.id AS card_id, a.occurred_at AS card_at, a.thread_key AS card_thread,
 	        a.subject AS card_subject, ` + waitingFoldSQL + ` AS card_fold) card`
 
 // waitingSameFoldNewerSQL is a newer message of the card's fold. The thread
 // or subject test comes first, so a row of another fold costs one compare.
-const waitingSameFoldNewerSQL = `CASE card.card_fold[1]
+var waitingSameFoldNewerSQL = `CASE card.card_fold[1]
 	  WHEN 'conversation' THEN a.thread_key = card.card_thread
 	  WHEN 'subject' THEN a.subject = card.card_subject
 	  ELSE FALSE END
@@ -254,9 +272,9 @@ const waitingSameFoldNewerSQL = `CASE card.card_fold[1]
 // slot 4.
 var waitingCardsAfterSQL = waitingSelectSQL + `
 	 WHERE a.id = ANY (ARRAY(` + waitingEligibleSQL + `
-	   ORDER BY a.occurred_at, a.id LIMIT %[4]d))` + waitingGroupSQL
+	   ORDER BY a.occurred_at, a.id LIMIT %[4]s))` + waitingGroupSQL
 
-// Slot indexes in the values waitingQueueSlots answers: the cap %[4]d and the
+// Slot indexes in the values waitingQueueSlots answers: the cap %[4]s and the
 // responsibility clause %[10]s.
 const (
 	waitingCapSlot            = 3

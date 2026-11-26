@@ -26,6 +26,8 @@ import {
   useT,
 } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
+import { useCompanyZone } from "../../lib/companyzone";
+import { latestWord } from "../../lib/standinglatest";
 import { activityMarks } from "../../lib/standingmarks";
 import { useViewerZone } from "../../lib/viewerzone";
 import { companyActivityVerdict } from "./companyactivity";
@@ -67,6 +69,7 @@ export function CompanyHowItStands({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
+  const companyZone = useCompanyZone();
   const payment = usePaymentHealth(companyId);
   const healthReason = useHealthReason();
   // The 360's page seeds the line; a wider zoom pages older rows from the list.
@@ -100,7 +103,7 @@ export function CompanyHowItStands({
     locale,
   });
   const withheld = omitted(view, "health");
-  const late = nextBarLateness(view, zone, { t, plural, locale });
+  const late = nextBarLateness(view, zone, { t, plural, locale }, companyZone);
   const verdict = companyVerdict({
     dimensions,
     withheld,
@@ -111,7 +114,7 @@ export function CompanyHowItStands({
     unrated: companyActivityVerdict(view, { t, locale, zone }),
   });
   const word = t(verdict.word);
-  const words = { t, plural, locale, zone };
+  const words = { t, plural, locale, zone, companyZone };
   const { events, gap } = companyTimeline(view, words);
   const peeks: Partial<Record<RatedDimension["key"], StandingPeek>> = {
     relationship: contactsInTouch(view, words),
@@ -127,6 +130,12 @@ export function CompanyHowItStands({
           : formatDayMonth(view.as_of, locale, zone)
       }
       verdict={{ word, sentence: verdict.sentence, tone: verdict.tone }}
+      latest={latestWord(history.activities, {
+        ...words,
+        record: zone,
+        asOf: view.as_of,
+        onOpen: onOpenTab && (() => onOpenTab("timeline")),
+      })}
       hero={
         <HealthRing
           arcs={dimensions.map((dimension) => ({

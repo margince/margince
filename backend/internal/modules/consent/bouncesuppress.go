@@ -105,6 +105,9 @@ func RecordHardBounceTx(ctx context.Context, tx pgx.Tx, fact HardBounceFact) err
 	if address == "" {
 		return errors.New("consent: a hard bounce names no address")
 	}
+	if err := storekit.LockStopAddresses(ctx, tx, []string{address}, nil); err != nil {
+		return err
+	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
@@ -123,7 +126,7 @@ func RecordHardBounceTx(ctx context.Context, tx pgx.Tx, fact HardBounceFact) err
 	var contactID *ids.ContactID
 	if err := tx.QueryRow(ctx, `
 		SELECT contact_id FROM contact_email
-		 WHERE lower(email) = $1 LIMIT 1`, address).Scan(&contactID); err != nil &&
+		 WHERE email = $1 LIMIT 1`, address).Scan(&contactID); err != nil &&
 		!errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("consent: resolving whose address refused delivery: %w", err)
 	}
@@ -268,6 +271,9 @@ func (s *Store) LiftAddressStop(ctx context.Context, address, reason string) err
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := storekit.LockStopAddresses(ctx, tx, []string{address}, nil); err != nil {
+			return err
+		}
 		var stopID ids.UUID
 		err := tx.QueryRow(ctx, `
 			UPDATE communication_suppression

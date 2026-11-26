@@ -2,6 +2,7 @@ import { RecordTabs } from "../../design-system/recordtabs";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { CONTACT_TABS, type ContactTab } from "../../lib/contacttab";
+import { useHiddenCoreFeatures, type Withheld } from "../../lib/corefeatures";
 import { useWriteRefusal } from "./contactactions";
 import { ContactDealsTab } from "./contactdeals";
 import { Employers } from "./contactemployers";
@@ -18,12 +19,20 @@ import { ContactTimelineTab } from "./contacttabs";
 export const TAB_LABEL_KEYS: Readonly<Record<ContactTab, MessageKey>> = {
   overview: "tab.overview",
   timeline: "tab.timeline",
+  companies: "tab.companies",
   network: "tab.network",
   deals: "tab.deals",
   meetings: "tab.meetings",
   research: "tab.research",
   documents: "tab.documents",
 };
+
+export function contactTabForFeatures(
+  tab: ContactTab,
+  disabled: readonly Withheld[],
+): ContactTab {
+  return tab === "deals" && disabled.includes("deals") ? "overview" : tab;
+}
 
 /**
  * ContactRecordTabs is the strip over the work column. It carries the tab
@@ -44,17 +53,22 @@ export function ContactRecordTabs({
   onChange: (next: ContactTab) => void;
 }>) {
   const t = useT();
+  const disabled = useHiddenCoreFeatures();
   const files = useContactFiles(view.contact.id);
   const filesRead =
     files.query.isSuccess && !files.hasMore ? files.files.length : undefined;
   return (
     <RecordTabs
-      options={CONTACT_TABS}
+      options={CONTACT_TABS.filter(
+        (tab) => contactTabForFeatures(tab, disabled) === tab,
+      )}
       value={value}
       onChange={onChange}
+      keepPlace
       labels={{
         overview: t(TAB_LABEL_KEYS.overview),
         timeline: t(TAB_LABEL_KEYS.timeline),
+        companies: t(TAB_LABEL_KEYS.companies),
         network: t(TAB_LABEL_KEYS.network),
         deals: t(TAB_LABEL_KEYS.deals),
         meetings: t(TAB_LABEL_KEYS.meetings),
@@ -88,6 +102,7 @@ export function ContactTabPanel({
   onBriefMeeting,
   onAction,
   onWrite,
+  onResearch,
   refusedReasonId,
 }: Readonly<{
   tab: ContactTab;
@@ -102,10 +117,16 @@ export function ContactTabPanel({
   // Opens the page's composer. The Network tab drops it while the header's
   // Email verb is refused, so the map offers no write the header would not.
   onWrite?: () => void;
+  // Opens the page's public-source research drawer, from the Research tab.
+  onResearch?: () => void;
   // The page's one sentence about why this contact takes no changes, for
   // the tab whose verb writes the record: the upload on Documents.
   refusedReasonId?: string;
 }>) {
+  const disabled = useHiddenCoreFeatures();
+  if (contactTabForFeatures(tab, disabled) !== tab) {
+    return null;
+  }
   switch (tab) {
     case "timeline":
       return (
@@ -116,19 +137,16 @@ export function ContactTabPanel({
           onBriefMeeting={onBriefMeeting}
         />
       );
+    case "companies":
+      return <Employers view={view} />;
     case "network":
       return (
-        // Where they work, and worked, with the way to add or end a job:
-        // the relationship tab's first question.
-        <div className="record-stack">
-          <Employers view={view} />
-          <NetworkTab
-            contactId={contactId}
-            view={view}
-            onOpenEmail={onOpenEmail}
-            onWrite={onWrite}
-          />
-        </div>
+        <NetworkTab
+          contactId={contactId}
+          view={view}
+          onOpenEmail={onOpenEmail}
+          onWrite={onWrite}
+        />
       );
     case "deals":
       return <ContactDealsTab view={view} />;
@@ -141,12 +159,13 @@ export function ContactTabPanel({
         />
       );
     case "research":
-      return <ContactResearchTab view={view} />;
+      return <ContactResearchTab view={view} onResearch={onResearch} />;
     case "documents":
       return (
         <ContactFilesTab
           contactId={contactId}
           contactName={view.contact.full_name}
+          writable={view.contact.writable}
           refusedReasonId={refusedReasonId}
           onOpenEmail={onOpenEmail}
         />

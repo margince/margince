@@ -229,8 +229,8 @@ func TestAPartnerMovesOnALadderTheAdministratorReshaped(t *testing.T) {
 	if _, err := e.store.UpdatePartnerStage(ctx, ids.UUID(ready.Id), UpdatePartnerStageInput{Active: &retired}); err != nil {
 		t.Fatalf("retiring ready: %v", err)
 	}
-	step := "send the deck"
-	kept, err := e.store.UpsertPartner(ctx, UpsertPartnerInput{CompanyID: retiredCompany, PartnerRole: "hosting", NextStep: &step})
+	segments := []string{"fintech"}
+	kept, err := e.store.UpsertPartner(ctx, UpsertPartnerInput{CompanyID: retiredCompany, PartnerRole: "hosting", ServedSegments: &segments})
 	if err != nil || *kept.RelationshipStage != "ready" {
 		t.Errorf("an edit to a partner on a retired stage: stage %v, err %v; want it kept on ready", kept.RelationshipStage, err)
 	}
@@ -348,4 +348,29 @@ func TestASeatThatCannotReadPartnersSeesCompaniesWithoutTheirProgramme(t *testin
 	if err != nil || withPartner.Partner == nil || *withPartner.Partner.StageLabel != "Research" {
 		t.Errorf("a partner reader's company read: partner %+v, err %v; want the programme on research", withPartner.Partner, err)
 	}
+}
+
+func TestThePartnerStageListHoldsEachLabelOnce(t *testing.T) {
+	e := setupDedupe(t)
+	keepPartnerStagesAsSeeded(t, e)
+	ctx := asStageAdmin(e, stageAdminGrants())
+	stages := vocabularyList{
+		name: "partner stage", keyed: true,
+		create: func(key, label string) (ids.UUID, error) {
+			made, err := e.store.CreatePartnerStage(ctx, CreatePartnerStageInput{
+				Key: key, Label: label, Meaning: crmcontracts.PartnerStageMeaningCandidate,
+			})
+			return ids.UUID(made.Id), err
+		},
+		rename: func(id ids.UUID, label string) error {
+			_, err := e.store.UpdatePartnerStage(ctx, id, UpdatePartnerStageInput{Label: &label})
+			return err
+		},
+		retire: func(id ids.UUID) error {
+			_, err := e.store.UpdatePartnerStage(ctx, id, UpdatePartnerStageInput{Active: new(false)})
+			return err
+		},
+	}
+	requireLabelHeldOnce(t, stages)
+	requireLongLabelRefused(t, stages)
 }

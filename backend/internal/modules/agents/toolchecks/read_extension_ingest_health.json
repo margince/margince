@@ -1,0 +1,6 @@
+{
+  "verb": "read_extension_ingest_health",
+  "checks": [
+    "job_health.read"
+  ]
+}

@@ -1,6 +1,7 @@
 {
   "pkg:github/actions/cache": "MIT",
   "pkg:github/actions/checkout": "MIT",
+  "pkg:github/actions/create-github-app-token": "MIT",
   "pkg:github/actions/download-artifact": "MIT",
   "pkg:github/actions/setup-go": "MIT",
   "pkg:github/actions/setup-node": "MIT",

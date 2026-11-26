@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -17,7 +18,12 @@ import { activityTimeline } from "../../design-system/activitytimeline";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
 import { WriteToProvider } from "../../lib/writeto";
-import { meFixture } from "../../testing/mefixture";
+import {
+  type GrantSpec,
+  meFixture,
+  READS_RECORDS,
+} from "../../testing/mefixture";
+import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
 import { ContactsScreen } from "./contacts";
 
 // B-EP09.10a acceptance: per-row provenance chips, row→360 navigation, and
@@ -38,10 +44,20 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+// A seat that may add contacts: every create and the vCard import ask it.
+const WRITES_CONTACTS: GrantSpec = {
+  ...READS_RECORDS,
+  contact: ["read", "create", "update"],
+};
+
 function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(
+    ["me"],
+    meFixture({ rowScope: "all", allow: WRITES_CONTACTS }),
+  );
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
@@ -95,6 +111,10 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     );
     render(<ContactsScreen />);
     await waitFor(() => expect(screen.getByText("Anna Weber")).toBeTruthy());
+    // A name the column cuts short reads in full on hover.
+    expect(screen.getByText("Anna Weber").getAttribute("title")).toBe(
+      "Anna Weber",
+    );
     // The owner column answers "whose record is this?". The column it replaced
     // rendered "typed by a person" for every human-captured row — the same
     // string for every colleague, which named nobody.
@@ -191,7 +211,15 @@ describe("ContactsScreen (B-EP09.10a)", () => {
                 company_name: "Brandt AG",
               },
             },
-            { ...anna, id: "p-2", full_name: "Bruno Klein" },
+            // Dated, so the row's one empty cell is the employer's: an empty
+            // date cell shows the list's absent mark.
+            {
+              ...anna,
+              id: "p-2",
+              full_name: "Bruno Klein",
+              last_activity_at: "2026-07-01T09:00:00Z",
+              created_at: "2026-06-01T09:00:00Z",
+            },
           ],
           page: { next_cursor: null },
         });
@@ -331,6 +359,7 @@ function stubFetch(
       return jsonResponse(
         meFixture({
           allow: {
+            ...READS_RECORDS,
             contact: ["read", "create", "update", "delete"],
             relationship: ["read", "create", "update", "delete"],
             activity: ["read", "create"],
@@ -404,7 +433,7 @@ describe("ContactsScreen — rich create (P-15)", () => {
     stubFetch(async () => emptyPage());
     render(<ContactsScreen />);
     await userEvent.click(screen.getByTestId("new-record"));
-    expect(screen.getByLabelText("Title")).toBeTruthy();
+    expect(screen.getByLabelText("Job title")).toBeTruthy();
     expect(screen.getByLabelText("LinkedIn")).toBeTruthy();
     expect(screen.getByText("Add email")).toBeTruthy();
     expect(screen.getByText("Add phone")).toBeTruthy();
@@ -445,6 +474,10 @@ describe("ContactsScreen — rich create (P-15)", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    client.setQueryData(
+      ["me"],
+      meFixture({ rowScope: "all", allow: WRITES_CONTACTS }),
+    );
     rtlRender(
       <QueryClientProvider client={client}>
         <LocaleProvider initial="de">
@@ -487,7 +520,7 @@ describe("ContactsScreen — rich create (P-15)", () => {
         {
           email: "otto@example.test",
           email_type: "work",
-          is_primary: false,
+          is_primary: true,
           position: 0,
         },
       ],
@@ -635,5 +668,63 @@ describe("activityTimeline", () => {
       { ...base, kind: "note", subject: null, body: null } as never,
     ]);
     expect(entry.title).toBe("note");
+  });
+});
+
+describe("ContactsScreen — a row on a phone", () => {
+  function listContacts(rows: readonly Record<string, unknown>[]) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({ data: rows, page: { next_cursor: null } }),
+      ),
+    );
+    render(<ContactsScreen />);
+  }
+
+  const employed = {
+    ...anna,
+    employer: { company_id: "o-1", company_name: "Brandt AG" },
+  };
+
+  it("moves the title off the name, onto line two before the company", async () => {
+    stubWindowWidth(390);
+    listContacts([employed]);
+    const row = await phoneRowOf("Anna Weber");
+    expect(row.identity).not.toHaveTextContent("Head of Procurement");
+    expect(row.end).toEqual([]);
+    expect(row.caption).toEqual(["Head of Procurement", "Brandt AG"]);
+  });
+
+  it("names only the company for a contact with no title", async () => {
+    stubWindowWidth(390);
+    listContacts([{ ...employed, title: null }]);
+    expect((await phoneRowOf("Anna Weber")).caption).toEqual(["Brandt AG"]);
+  });
+
+  it("draws no line two for a contact with neither title nor company", async () => {
+    stubWindowWidth(390);
+    listContacts([{ ...anna, title: null }]);
+    expect((await phoneRowOf("Anna Weber")).caption).toEqual([]);
+  });
+
+  it("keeps the title beside the name, and no title column, on a wide screen", async () => {
+    stubWindowWidth(1440);
+    listContacts([employed]);
+    const row = await phoneRowOf("Anna Weber");
+    expect(row.identity).toHaveTextContent("Anna Weber · Head of Procurement");
+    expect(
+      screen.queryByRole("columnheader", { name: "Job title" }),
+    ).toBeNull();
+  });
+
+  it("draws the contact's monogram before the name at every width", async () => {
+    for (const width of [390, 1440]) {
+      stubWindowWidth(width);
+      listContacts([employed]);
+      const { identity } = await phoneRowOf("Anna Weber");
+      expect(identity.querySelector(".avatar")).toHaveTextContent("AW");
+      cleanup();
+    }
   });
 });

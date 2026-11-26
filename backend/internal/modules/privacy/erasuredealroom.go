@@ -36,6 +36,7 @@ package privacy
 import (
 	"context"
 	"fmt"
+	"math"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -140,55 +141,81 @@ func anonymizeDealRoomSeats(ctx context.Context, tx pgx.Tx, emails []string) ([]
 	return wiped, nil
 }
 
+// allSeatTraces is the bound a live erasure purges under: every trace, in the
+// subject's own transaction.
+const allSeatTraces = math.MaxInt64
+
 // purgeDealRoomSeatTraces deletes what the wiped seats still say about the
 // subject: live sessions, engagement rows, comments and the threads they opened.
 // Each deleted session, comment and thread gets an erase tombstone, which redacts
 // its audit history. The invitations stay as the seller's record that access was
 // granted. The seat's own audit history is tombstoned by eraseDealRoomSeats.
 func purgeDealRoomSeatTraces(ctx context.Context, tx pgx.Tx, seats []ids.UUID) error {
-	if len(seats) == 0 {
-		return nil
+	_, err := purgeDealRoomSeatTracesUpTo(ctx, tx, seats, allSeatTraces)
+	return err
+}
+
+// purgeDealRoomSeatTracesUpTo deletes at most budget traces and returns how many
+// it deleted. A count below the budget means the seats hold nothing more.
+func purgeDealRoomSeatTracesUpTo(ctx context.Context, tx pgx.Tx, seats []ids.UUID, budget int64) (int64, error) {
+	if len(seats) == 0 || budget <= 0 {
+		return 0, nil
 	}
-	sessions, err := scrubbedIDs(ctx, tx,
-		`DELETE FROM deal_room_session WHERE participant_id = ANY($1) RETURNING id`, seats)
+	sessions, err := scrubbedIDs(ctx, tx, `DELETE FROM deal_room_session WHERE id IN (
+		SELECT id FROM deal_room_session WHERE participant_id = ANY($1) LIMIT $2) RETURNING id`, seats, budget)
 	if err != nil {
-		return fmt.Errorf("purge deal room sessions of an erased subject: %w", err)
+		return 0, fmt.Errorf("purge deal room sessions of an erased subject: %w", err)
 	}
 	if err := tombstoneCollateralScrubs(ctx, tx, "deal_room_session", sessions, subjectRedactionReason, subjectRedactionCause); err != nil {
-		return err
+		return 0, err
 	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM deal_room_engagement WHERE participant_id = ANY($1)`, seats); err != nil {
-		return fmt.Errorf("purge deal room engagement of an erased subject: %w", err)
+	removed := int64(len(sessions))
+	if removed == budget {
+		return removed, nil
 	}
-	return purgeDealRoomSeatConversation(ctx, tx, seats)
+	engagement, err := tx.Exec(ctx, `DELETE FROM deal_room_engagement WHERE id IN (
+		SELECT id FROM deal_room_engagement WHERE participant_id = ANY($1) LIMIT $2)`, seats, budget-removed)
+	if err != nil {
+		return 0, fmt.Errorf("purge deal room engagement of an erased subject: %w", err)
+	}
+	removed += engagement.RowsAffected()
+	if removed == budget {
+		return removed, nil
+	}
+	conversation, err := purgeDealRoomSeatConversation(ctx, tx, seats, budget-removed)
+	return removed + conversation, err
 }
 
 // purgeDealRoomSeatConversation deletes the seats' comments and the threads they
-// opened. A comment's body must not be empty, so it cannot be blanked. A thread
-// must name one author, so its seat link cannot be cut. The seller's replies in
-// such a thread go with it; the seller's own threads stay.
-func purgeDealRoomSeatConversation(ctx context.Context, tx pgx.Tx, seats []ids.UUID) error {
+// opened, at most budget rows. A comment's body must not be empty, so it cannot
+// be blanked. A thread must name one author, so its seat link cannot be cut.
+// The seller's replies in such a thread go with it; the seller's own threads stay.
+// A thread is deleted only once no comment is left in it to cascade untombstoned.
+func purgeDealRoomSeatConversation(ctx context.Context, tx pgx.Tx, seats []ids.UUID, budget int64) (int64, error) {
 	// Locked as a reply locks its thread, so no reply lands after the comments
 	// are read and goes in the thread's cascade without a tombstone.
 	if _, err := tx.Exec(ctx,
 		`SELECT id FROM deal_room_thread WHERE author_participant_id = ANY($1) FOR UPDATE`, seats); err != nil {
-		return fmt.Errorf("lock the deal room threads of an erased subject: %w", err)
+		return 0, fmt.Errorf("lock the deal room threads of an erased subject: %w", err)
 	}
-	comments, err := scrubbedIDs(ctx, tx,
-		`DELETE FROM deal_room_comment WHERE author_participant_id = ANY($1)
+	comments, err := scrubbedIDs(ctx, tx, `DELETE FROM deal_room_comment WHERE id IN (
+		SELECT id FROM deal_room_comment WHERE author_participant_id = ANY($1)
 		    OR thread_id IN (SELECT id FROM deal_room_thread WHERE author_participant_id = ANY($1))
-		 RETURNING id`, seats)
+		 LIMIT $2) RETURNING id`, seats, budget)
 	if err != nil {
-		return fmt.Errorf("purge deal room comments of an erased subject: %w", err)
+		return 0, fmt.Errorf("purge deal room comments of an erased subject: %w", err)
 	}
 	if err := tombstoneCollateralScrubs(ctx, tx, "deal_room_comment", comments, subjectRedactionReason, subjectRedactionCause); err != nil {
-		return err
+		return 0, err
 	}
-	threads, err := scrubbedIDs(ctx, tx,
-		`DELETE FROM deal_room_thread WHERE author_participant_id = ANY($1) RETURNING id`, seats)
+	removed := int64(len(comments))
+	if removed == budget {
+		return removed, nil
+	}
+	threads, err := scrubbedIDs(ctx, tx, `DELETE FROM deal_room_thread WHERE id IN (
+		SELECT id FROM deal_room_thread WHERE author_participant_id = ANY($1) LIMIT $2) RETURNING id`, seats, budget-removed)
 	if err != nil {
-		return fmt.Errorf("purge deal room threads of an erased subject: %w", err)
+		return 0, fmt.Errorf("purge deal room threads of an erased subject: %w", err)
 	}
-	return tombstoneCollateralScrubs(ctx, tx, "deal_room_thread", threads, subjectRedactionReason, subjectRedactionCause)
+	return removed + int64(len(threads)), tombstoneCollateralScrubs(ctx, tx, "deal_room_thread", threads, subjectRedactionReason, subjectRedactionCause)
 }

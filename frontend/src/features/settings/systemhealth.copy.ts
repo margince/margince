@@ -24,6 +24,9 @@ export const healthSourceLabels: Readonly<Record<string, MessageKey>> = {
   updates: "health.source.updates",
   recovery: "health.source.recovery",
   automatic: "health.source.automatic",
+  receipts: "health.source.receipts",
+  unplaced: "health.source.unplaced",
+  footer: "health.source.footer",
 };
 export const healthCodes: Readonly<Record<string, MessageKey>> = {
   queue_checked: "health.code.queue_checked",
@@ -39,6 +42,9 @@ export const healthCodes: Readonly<Record<string, MessageKey>> = {
   capture_connection_sync_failing: CAPTURE_CONCERNS.sync_failing,
   capture_connection_backfill_failed: CAPTURE_CONCERNS.backfill_failed,
   capture_connection_sync_stalled: CAPTURE_CONCERNS.sync_stalled,
+  capture_connection_notes_grant_missing: CAPTURE_CONCERNS.notes_grant_missing,
+  capture_connection_notes_account_mismatch:
+    CAPTURE_CONCERNS.notes_account_mismatch,
   capture_connection_capture_silent: CAPTURE_CONCERNS.capture_silent,
   capture_checked: "health.code.capture_checked",
   capture_processing: "health.code.capture_processing",
@@ -63,11 +69,19 @@ export const healthCodes: Readonly<Record<string, MessageKey>> = {
   updates_failed: "health.code.updates_failed",
   updates_retrying: "health.code.updates_retrying",
   updates_review: "health.code.updates_review",
+  updates_action: "health.code.updates_action",
   recovery_missing: "health.code.recovery_missing",
   recovery_verified: "health.code.recovery_verified",
   recovery_unverified: "health.code.recovery_unverified",
   automatic_checked: "health.code.automatic_checked",
   automatic_routing: "health.code.automatic_routing",
+  receipts_sent: "health.code.receipts_sent",
+  receipts_missed: "health.code.receipts_missed",
+  unplaced_none: "health.code.unplaced_none",
+  unplaced_counted: "health.code.unplaced_counted",
+  zone_unresolved: "health.code.zone_unresolved",
+  footer_complete: "health.code.footer_complete",
+  footer_incomplete: "health.code.footer_incomplete",
   withheld: "health.withheld",
   read_failed: "health.failed",
   unknown: "health.unknown",
@@ -89,6 +103,7 @@ export const healthConditions: Record<Source["condition"], MessageKey> = {
   technical: "health.condition.technical",
   unverified: "health.condition.unverified",
   recovered: "health.condition.recovered",
+  information: "health.condition.information",
   unknown: "health.unknown",
 };
 export const healthResponsible: Record<Finding["responsible"], MessageKey> = {
@@ -106,6 +121,9 @@ export const healthRecovery: Readonly<Record<string, MessageKey>> = {
   updates: "health.recovery.updates",
   recovery: "health.recovery.recovery",
   automatic: "health.recovery.automatic",
+  receipts: "health.recovery.receipts",
+  zone: "health.recovery.zone",
+  footer: "health.recovery.footer",
 };
 
 export const healthImpacts: Readonly<Record<string, MessageKey>> = {
@@ -117,6 +135,7 @@ export const healthImpacts: Readonly<Record<string, MessageKey>> = {
   updates: "health.impact.updates",
   recovery: "health.impact.recovery",
   automatic: "health.impact.automatic",
+  receipts: "health.impact.receipts",
 };
 
 export function diagnosticSummary(
@@ -142,4 +161,16 @@ export const healthMeasures: Readonly<
   records: "health.measure.records",
   updates: "health.measure.updates",
   items: "health.measure.items",
+  messages: "health.measure.messages",
+};
+
+export const footerDetails: Readonly<
+  Record<NonNullable<Finding["footer_gap"]>["missing"][number], MessageKey>
+> = {
+  controller_identity: "health.footerDetail.controller_identity",
+  privacy_contact: "health.footerDetail.privacy_contact",
+  objection_route: "health.footerDetail.objection_route",
+  advertiser_contact: "health.footerDetail.advertiser_contact",
+  advertisement: "health.footerDetail.advertisement",
+  entity_name: "health.footerDetail.entity_name",
 };

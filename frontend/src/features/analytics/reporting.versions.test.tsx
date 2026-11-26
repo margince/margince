@@ -203,3 +203,48 @@ it("shows a reader no draft and no version list", async () => {
   expect(screen.queryByRole("button", { name: "Preview draft" })).toBeNull();
   expect(sent().some((r) => r.url.pathname.endsWith("/revisions"))).toBe(false);
 });
+
+it("opens the draft of a report with nothing published", async () => {
+  const user = userEvent.setup({ delay: null });
+  const publish = vi.fn(() =>
+    jsonResponse({ ...reportingStoryReport, revision: 2, version: 2 }),
+  );
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/reports/report": () =>
+      jsonResponse({
+        ...reportingStoryReport,
+        revision: 1,
+        draft_revision: 2,
+        version: 1,
+        selection: {
+          ...reportingStoryReport.selection,
+          metrics: [],
+          blocks: [],
+        },
+      }),
+    "GET /analytics/reports/report/revisions": () =>
+      jsonResponse({ data: [revision(2, "draft"), revision(1, "published")] }),
+    "POST /analytics/reports/report/draft/publish": publish,
+  });
+  const sent = sentRequests();
+  renderReport();
+
+  expect(
+    await screen.findByText(/Nothing on this report is published yet/),
+  ).toBeVisible();
+  await waitFor(() =>
+    expect(
+      sent().some(
+        (r) =>
+          r.url.pathname.endsWith("/evaluation") &&
+          r.url.searchParams.get("revision") === "2",
+      ),
+    ).toBe(true),
+  );
+  expect(
+    screen.queryByRole("button", { name: "Show published report" }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Publish draft" }));
+  await waitFor(() => expect(publish).toHaveBeenCalledOnce());
+});

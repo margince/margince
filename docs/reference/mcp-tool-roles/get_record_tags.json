@@ -1,0 +1,18 @@
+{
+  "tool": "read_tags",
+  "action": "record",
+  "verb": "get_record_tags",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

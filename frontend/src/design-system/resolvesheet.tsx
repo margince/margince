@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useId, useState } from "react";
+import { useLocale } from "../i18n";
+import { blankRequired } from "../lib/problem";
 import { Button, Field, Modal, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
 import { DateInput, type ISODate } from "./dateinput";
@@ -9,6 +11,7 @@ import { DrawerBody, DrawerFoot, DrawerHead } from "./drawerbands";
 import { ErrorLine } from "./errorline";
 import { refuseUnreadableField } from "./formvalidity";
 import { Heading } from "./heading";
+import { useFieldFaults } from "./savepage";
 
 // Answering a finding from the nightly input check.
 //
@@ -66,13 +69,20 @@ export function ResolveSheet({
   const needsExpiry =
     needsReason && outcome !== "" && (asksExpiry?.(outcome) ?? true);
   const needsRemind = outcome === "remind_later";
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   // Nothing chosen is not an answer. Submitting with no outcome would post a
   // body the server refuses, and the reader would read the refusal as a bug.
-  const complete =
-    outcome !== "" &&
-    (!needsReason || reason.trim() !== "") &&
-    (!needsRemind || remindAt !== "") &&
-    (canSubmit?.(outcome) ?? true);
+  const blank = () =>
+    blankRequired(locale, {
+      outcome: [labels.outcomeLegend, outcome],
+      ...(needsReason ? { reason: [labels.reason, reason] as const } : {}),
+      ...(needsRemind
+        ? { remindAt: [labels.remindAt, remindAt] as const }
+        : {}),
+    });
+  // A state the sheet cannot word, such as data its caller still loads.
+  const held = outcome !== "" && !(canSubmit?.(outcome) ?? true);
 
   return (
     <Modal
@@ -88,25 +98,37 @@ export function ResolveSheet({
         </Heading>
       </DrawerHead>
       <DrawerBody>
-        <div className="form-stack">
+        <div className="form-stack" ref={faultsRoot}>
           {context}
           <ChoiceList
             legend={labels.outcomeLegend}
             value={outcome}
             choices={labels.outcomes}
-            onChange={setOutcome}
+            onChange={(next) => {
+              setOutcome(next);
+              faults.edited("outcome");
+            }}
           />
+          <ErrorLine>{faults.of("outcome")}</ErrorLine>
 
           {outcomeFields?.(outcome)}
 
           {/* A hidden finding owes the next reader the reason it is not flagged. */}
           {needsReason && (
-            <Field label={labels.reason} hint={labels.reasonHelp}>
+            <Field
+              label={labels.reason}
+              hint={labels.reasonHelp}
+              required
+              error={faults.of("reason")}
+            >
               {(control) => (
                 <TextInput
                   {...control}
                   value={reason}
-                  onChange={(event) => setReason(event.target.value)}
+                  onChange={(event) => {
+                    setReason(event.target.value);
+                    faults.edited("reason");
+                  }}
                 />
               )}
             </Field>
@@ -114,12 +136,19 @@ export function ResolveSheet({
 
           {/* A deferral without a date is a dismissal. */}
           {needsRemind && (
-            <Field label={labels.remindAt}>
+            <Field
+              label={labels.remindAt}
+              required
+              error={faults.of("remindAt")}
+            >
               {(control) => (
                 <DateInput
                   {...control}
                   value={remindAt}
-                  onChange={(event) => setRemindAt(event.target.value)}
+                  onChange={(event) => {
+                    setRemindAt(event.target.value);
+                    faults.edited("remindAt");
+                  }}
                 />
               )}
             </Field>
@@ -146,9 +175,13 @@ export function ResolveSheet({
         <Button onClick={onClose}>{labels.cancel}</Button>
         <Button
           variant="primary"
-          disabled={!complete || pending}
+          disabled={held || pending}
           onClick={(event) => {
-            if (outcome === "" || refuseUnreadableField(event.currentTarget)) {
+            if (
+              faults.show(blank()) ||
+              outcome === "" ||
+              refuseUnreadableField(event.currentTarget)
+            ) {
               return;
             }
             // Only the fields this outcome takes. Sending an expiry with a
@@ -175,7 +208,9 @@ function suppresses(outcome: ResolveOutcome | ""): boolean {
   return outcome === "value_correct" || outcome === "not_relevant";
 }
 
-// ResolveOutcome is the six answers a contact can give.
+// ResolveOutcome is the seven answers a contact can give. `separate` answers only
+// a finding about two deals that may be one buying motion, and its own sheet
+// offers it.
 //
 // `condition_cleared` is deliberately absent: that is the check's own answer,
 // and a contact naming it would be saying the condition stopped being true
@@ -186,7 +221,8 @@ export type ResolveOutcome =
   | "value_correct"
   | "not_relevant"
   | "remind_later"
-  | "reassign";
+  | "reassign"
+  | "separate";
 
 // ResolveAnswer is what the sheet submits: the outcome, and only the fields
 // that outcome takes.

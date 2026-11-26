@@ -12,13 +12,85 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": true,
+  "stamp": {
+    "scenario": "e64b1e840f9a659d",
+    "tools": "9e784fcb85bfc56c",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "1796d51361de08d5",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T05:56:03Z",
+    "graded_commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "graded_at": "2026-11-25T05:56:03Z"
+  },
   "usage": {
     "input_tokens": 16,
-    "output_tokens": 2803,
-    "cache_creation_input_tokens": 68126,
-    "cache_read_input_tokens": 430420,
+    "output_tokens": 2972,
+    "cache_creation_input_tokens": 13167,
+    "cache_read_input_tokens": 593059,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.3436
+    "cost_usd": 0.1417
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "compose_analytics_report",
+        "describe_analytics_vocabulary",
+        "describe_report_blocks",
+        "read_analytics",
+        "read_workspace",
+        "run_analytics_query"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "compose_analytics_report",
+        "describe_analytics_vocabulary",
+        "describe_report_blocks",
+        "read_analytics",
+        "read_workspace",
+        "run_analytics_query"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 4.5,
+      "min": 4,
+      "max": 5
+    },
+    "turns": {
+      "median": 5.5,
+      "min": 5,
+      "max": 6
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 303121,
+      "min": 302518,
+      "max": 303724
+    },
+    "output_tokens": {
+      "median": 1486,
+      "min": 1310,
+      "max": 1662
+    },
+    "duration_ms": {
+      "median": 14047,
+      "min": 13745,
+      "max": 14349
+    }
   }
 }

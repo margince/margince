@@ -31,7 +31,7 @@ func triageDecisionRow(logical ids.UUID, terminal bool, sentinel string) Call {
 func triageLadderRow(logical ids.UUID, attempt int, reason string) Call {
 	return Call{
 		LogicalCallID: logical, Attempt: attempt, IsTerminal: true, Kind: callKindCompletion, Task: TaskSiteTriage,
-		Tier: TierCheapCloud, Provider: providerGemini, ModelID: "gemini-3.1-flash-lite", RequestFingerprint: "fp-triage",
+		Tier: TierCheapCloud, Provider: providerGemini, ModelID: "gemini-3.1-flash-lite",
 		AttemptReason: reason, TokensIn: 900, TokensOut: 40,
 	}
 }
@@ -51,15 +51,18 @@ func triageFailedOverWalk(logical ids.UUID, reason string) []Call {
 func recordDecisionOutcomes(ctx context.Context, t *testing.T, meter *CallMeter) {
 	t.Helper()
 	decided, belowFloor, errored, refused, plain := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
+	canceled := ids.NewV7()
 	logicalCalls := [][]Call{
 		{triageDecisionRow(decided, true, "")},
 		append([]Call{triageDecisionRow(belowFloor, false, "")}, triageFailedOverWalk(belowFloor, attemptReasonDecisionBelowFloor)...),
 		// The errored decision's own row and the reason its ladder carries are
 		// one consultation, not two.
 		{triageDecisionRow(errored, false, "provider_error"), triageLadderRow(errored, 2, attemptReasonDecisionError)},
-		// Refused before any call: the ladder's row is all there is.
-		{triageLadderRow(refused, 1, attemptReasonDecisionUncertified)},
+		// A row stored before the lane stopped reading certification still counts.
+		{triageLadderRow(refused, 1, attemptReasonDecisionUncertifiedLegacy)},
 		{triageLadderRow(plain, 1, "")},
+		// The caller left during the decision: a consultation, not a decision.
+		{triageDecisionRow(canceled, true, sentinelCanceled)},
 	}
 	for _, calls := range logicalCalls {
 		if err := meter.Record(ctx, calls); err != nil {
@@ -82,11 +85,11 @@ func TestDecisionSummaryCountsEachConsultationOnce(t *testing.T) {
 		t.Fatalf("summaries = %+v, want site triage alone", got)
 	}
 	triage := got[0]
-	if triage.Task != string(TaskSiteTriage) || triage.Asked != 4 || triage.Decided != 1 {
-		t.Errorf("triage = %+v, want asked 4, decided 1", triage)
+	if triage.Task != string(TaskSiteTriage) || triage.Asked != 5 || triage.Decided != 1 {
+		t.Errorf("triage = %+v, want asked 5, decided 1", triage)
 	}
 	want := map[string]int{
-		attemptReasonDecisionBelowFloor: 1, attemptReasonDecisionError: 1, attemptReasonDecisionUncertified: 1,
+		attemptReasonDecisionBelowFloor: 1, attemptReasonDecisionError: 1, attemptReasonDecisionUncertifiedLegacy: 1,
 	}
 	if !maps.Equal(triage.Fallbacks, want) {
 		t.Errorf("fallbacks = %v, want %v", triage.Fallbacks, want)

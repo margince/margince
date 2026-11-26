@@ -10,14 +10,81 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "5534c8a5db93ea0d",
+    "tools": "9dabbb105e703649",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T05:35:15Z",
+    "graded_commit": "e78e69d3f41bf45bbc08207d2d75a94ae33d19f4",
+    "graded_at": "2026-11-25T11:01:51Z"
+  },
   "usage": {
-    "input_tokens": 10,
-    "output_tokens": 1293,
-    "cache_creation_input_tokens": 14540,
-    "cache_read_input_tokens": 301719,
+    "input_tokens": 12,
+    "output_tokens": 1409,
+    "cache_creation_input_tokens": 12878,
+    "cache_read_input_tokens": 442188,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1013
+    "cost_usd": 0.1098
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "list_notification_preferences",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "list_notification_preferences",
+        "read_workspace"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3.5,
+      "min": 2,
+      "max": 5
+    },
+    "turns": {
+      "median": 4.5,
+      "min": 3,
+      "max": 6
+    },
+    "refused": {
+      "median": 1.5,
+      "min": 0,
+      "max": 3
+    },
+    "prompt_tokens": {
+      "median": 227539,
+      "min": 149860,
+      "max": 305218
+    },
+    "output_tokens": {
+      "median": 704.5,
+      "min": 472,
+      "max": 937
+    },
+    "duration_ms": {
+      "median": 8504,
+      "min": 6012,
+      "max": 10996
+    }
   }
 }

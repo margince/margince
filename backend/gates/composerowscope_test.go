@@ -5,9 +5,8 @@
 
 package gates
 
-// Anything in the compose tier that returns a record is a read, so a query that
-// hands back a reference to a row-scoped record applies that record's row
-// scope.
+// Anything in the compose tier that returns a record is a read. A query handing
+// back a reference to a row-scoped record applies that record's row scope.
 //
 // The class this closes is the reference held across time. A read model, a link
 // row and a graph edge all store somebody else's record id, and the scope was
@@ -74,22 +73,26 @@ const (
 
 // unscopedReferenceReads names the authority used instead of row scope, keyed by package and function.
 var unscopedReferenceReads = gatekit.Waive(map[string]string{
+	"internal/compose:readDealSummary":              "the extension system read of one deal, which no caller scopes. It answers the deal's own merged_into_id, a deal id that names the deal carrying on, to a unit authorised for system deal reads under SystemReadDeals",
+	"internal/modules/forecasting:addTeamStandings": "a team freeze's deal ids go through the snapshot lens before the caller sees any: the lens applies the reader's deal row scope and the team's assertion check, as FocusLists does",
+	"internal/compose:adHocSpec":                    "the ad-hoc project vocabulary names the project's first customer; withProjectCompany registers it in spec.referenceScopes, so the report engine applies the company row scope and requireVocabularyGrants the company and relationship grants before it is served",
+	"internal/compose:withProjectCompany":           "a project report's company filter: the edge's company_id is compared with the bound company inside an EXISTS and never selected, and filterScopes read-gates the bound company before it binds",
 	// The tag scout's evidence read runs as the system principal
 	// "agent:tag-scout" (jobs_tagscout.go). Each record it names goes to
 	// collections.RecordTagSuggestionTx, never to a reader. A user sees the
 	// suggestion only through visibleTagSuggestionsQuery, which applies the
 	// record's row scope and each cited activity's content gate.
-	"internal/compose/company360:employeeRoster":    "the account's employees as contacts.CompanyRosterSQL renders them, which composes the edge gate and the contact row scope into the same statement; the ids only decide which activities move the two direction clocks, and none is served",
-	"internal/compose/momentaction:DoneSetAsidesTx": "reads only the reader's own Not yet answers, keyed by question, to match them against questions the caller already built from rows it may read; the contact ids are compared, never served",
-	"internal/compose:tagScoutSQL":                  "the tag scout's one read of captured activities that mention a suggestible tag's phrases, under the tag-scout sweep's system principal: every contact and company it names is one a suggestion is filed against, handed to collections.RecordTagSuggestionTx and never to a reader",
-	"internal/compose:raiseFromAnswers":             "the tag scout's model path replays the stored model answers into the contacts and companies the answered activities are filed under, under the tag-scout sweep's system principal, on tagScoutSQL's terms: each record goes to collections.RecordTagSuggestionTx and never to a reader",
-	"internal/compose:forecastStageEvidence":        "the recorded stage entries behind a stage's chance, read installation-wide as the system; the deal ids are grouped by stage inside the read and only per-stage counts and won shares are returned",
-	"internal/compose:viabilityFingerprintSQL":      "a digest of what a viability assessment read about one deal: the participant and address rows are folded into one md5 inside the statement and only that hash is stored on the receipt and compared, so no contact or seat id leaves the read",
-	"internal/compose:forecastRiskEffects":          "the settled frozen forecast rows behind each risk signal's effect, read installation-wide as the system; only one odds ratio per signal is returned",
-	"internal/compose/weekly:StageEntriesSQL":       "a fragment whose narrowing argument carries the row scope: both callers, measureTeamFunnel and readReportingStageConversion, render auth.ScopeClauseFor for deal on its alias d into it",
-	"internal/modules/projects:LinkPhaseHistoryTx":  "the data task that links phase-history rows to their audit rows runs as the system principal and returns only the ids of the history rows it inspected, to page the next batch; it reads no project and serves nothing to a caller",
+	"internal/compose/company360:employeeRoster":        "the account's employees as contacts.CompanyRosterSQL renders them, which composes the edge gate and the contact row scope into the same statement; the ids only decide which activities move the two direction clocks, and none is served",
+	"internal/compose/momentaction:DoneSetAsidesTx":     "reads only the reader's own Not yet answers, keyed by question, to match them against questions the caller already built from rows it may read; the contact ids are compared, never served",
+	"internal/compose:tagScoutSQL":                      "the tag scout's one read of captured activities that mention a suggestible tag's phrases, under the tag-scout sweep's system principal: every contact and company it names is one a suggestion is filed against, handed to collections.RecordTagSuggestionTx and never to a reader",
+	"internal/compose:raiseFromAnswers":                 "the tag scout's model path replays the stored model answers into the contacts and companies the answered activities are filed under, under the tag-scout sweep's system principal, on tagScoutSQL's terms: each record goes to collections.RecordTagSuggestionTx and never to a reader",
+	"internal/compose/winchance:StageEvidence":          "the recorded stage entries behind a stage's chance, read installation-wide as the system; the deal ids are grouped by stage inside the read and only per-stage counts and won shares are returned",
+	"internal/compose:viabilityFingerprintSQL":          "a digest of what a viability assessment read about one deal: the participant and address rows are folded into one md5 inside the statement and only that hash is stored on the receipt and compared, so no contact or seat id leaves the read",
+	"internal/compose/winchance:forecastRiskTallies":    "the settled frozen forecast rows behind each risk signal's effect, read installation-wide as the system; only counts per signal leave it, and the odds ratios built from them",
+	"internal/compose/winchance:forecastSettledChances": "the settled frozen forecast rows behind the accuracy view, read installation-wide as the system; only a chance and whether the deal was won leave it, plus owners as seats for the small-group floor, never a deal id",
+	"internal/compose/weekly:StageEntriesSQL":           "a fragment whose narrowing argument carries the row scope: both callers, measureTeamFunnel and readReportingStageConversion, render auth.ScopeClauseFor for deal on its alias d into it",
+	"internal/modules/projects:LinkPhaseHistoryTx":      "the data task that links phase-history rows to their audit rows runs as the system principal and returns only the ids of the history rows it inspected, to page the next batch; it reads no project and serves nothing to a caller",
 	// --- The module tier, one package at a time (censusedModules). ---
-	//
 	// These are the FIRST kind of read the widening has to tell apart, and the
 	// distinction is the reason this could not be one change: a store that OWNS
 	// its table answers "which of my rows may you see", while a read model
@@ -99,6 +102,7 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	"internal/modules/commissions:summaryTx":             "the partner totals, grouped under the COMMISSION's own visibility clause (VisibleClause, applied in this statement). A caller admitted to an entry is admitted to what the entry is about, and the partner is what it is about — no company content is read, only the id it groups by. The cost is that a total confirms a partner company exists on a commission the caller may already open",
 	"internal/modules/contracts:ensureLinksShareCompany": "the cross-company guard on a contract WRITE, and scoping it would defeat it. Its own doc says why: the predicate deciding who may READ a contract judges a deal-anchored one by its deal alone, so pairing company A's contract with company B's deal publishes A's agreement to everyone who can see B. The company this cannot see is exactly the one the rule protects, and what leaves the function is a refusal rather than an id",
 	"internal/modules/projects:lockedDealProject":        "the project pointer read off a deal row the caller's transaction ALREADY HOLDS — the win path calls it only after its patch applied, and applying is what took the lock. The caller is past the deal's own write gate to be here, and the pointer is used to attach, never served. The cost is that a deal write learns which project the deal names",
+	"internal/modules/forecasting:FocusLists":            "each team's stored focus list, behind the forecast read gate and then the store's SnapshotLens per team, as SnapshotSide reads its rows: the lens refuses a team the caller may not measure, drops the deals they cannot read and nulls masked amounts",
 	"internal/modules/forecasting:SnapshotSide":          "one snapshot's frozen per-deal rows, behind the forecast read gate and then the store's SnapshotLens, which compose binds (forecastSnapshotLens): it refuses a population the caller may not measure, drops the deals they cannot read and nulls the amounts a field mask withholds. The module holds no deal table, so the row scope is applied by that injected lens rather than by a clause here",
 	"internal/modules/dealrooms:liveRoomForBuyerWrite":   "a BUYER session's write precondition. Row scope over deals is the seller side's model — it narrows to a seat's own rows — and a buyer holds no seat for it to narrow to. The authority here is the room being live and the capability admitting the write, which this function is entirely about; the deal it names is the room's own subject",
 	"internal/modules/dealrooms:reissueFor":              "the resend, whose authority its own doc states: the participant row IS the authority, and it was found by the address the mail will go to. The deal is that participant's room, so a scope clause would ask whether the SELLER may see a deal on a path that has no seller session at all",
@@ -121,8 +125,8 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// deals.RecordSuggestionTx, never to a reader; a rep sees the suggestion
 	// only through deals' suggestion visibility clause, which applies the
 	// company's row scope and every evidence item's content gate.
-	"internal/compose:dealScoutSQL":     "system-only Scout candidate aggregation; selected company references go to the scoped suggestion writer and never directly to a reader",
-	"internal/compose:scoutEvidenceSQL": "the scout's one read of meetings, signal pairs and sent documents, under the deal-scout sweep's system principal: every company it names is one a suggestion is filed against, handed to deals.RecordSuggestionTx and never to a reader",
+	"internal/compose/dealscout:EvidenceSQL":      "system-only Scout candidate aggregation; selected company references go to the scoped suggestion writer and never directly to a reader",
+	"internal/compose/dealscout:scoutEvidenceSQL": "the scout's one read of meetings, signal pairs and sent documents, under the deal-scout sweep's system principal: every company it names is one a suggestion is filed against, handed to deals.RecordSuggestionTx and never to a reader",
 
 	// The company rollup's tree walk, found by the aliased-column pass:
 	// `parent_company_id` is an FK to company named for its role, so the
@@ -142,12 +146,11 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// joins no deal, no stage and no company, so there is no current row
 	// for a scope to narrow. Freezing is the point — a past week that changed
 	// when a deal was renamed, archived or deleted would not be a record of
-	// that week. The review itself is already the acting rep's own
-	// (weeklystore.go's reviewUser reads the principal and takes no user id),
-	// so the lines a caller reaches are the lines of their own weeks; the deal
-	// id travels so the card can offer a link, which the deal page then gates
-	// on its own terms.
-	"internal/compose/weekly:readDealLines": "the weekly review's frozen deal lines: every word served was written when the review was and no live record is joined, and the review row is already scoped to the acting rep by reviewUser",
+	// that week. The review itself is already the acting rep's own:
+	// auth.OwnSeat reads the principal and takes no user id. So the lines a
+	// caller reaches are the lines of their own weeks. The deal id travels so
+	// the card can offer a link, which the deal page then gates on its own terms.
+	"internal/compose/weekly:readDealLines": "the weekly review's frozen deal lines: every word served was written when the review was and no live record is joined, and the review row is already scoped to the acting rep by auth.OwnSeat",
 
 	// The movement bridge's frozen drivers, the same shape as the deal lines
 	// above and for the same reasons: the label was written when the review was,
@@ -218,23 +221,19 @@ var rowScopeSpellings = map[string]bool{
 	"EnsureVisible": true, "EnsureVisibleLive": true, "EnsureVisibleExisting": true, "EnsureVisibleForSubjectRights": true,
 	"EnsureLinkTarget": true, "EnsureAttachTarget": true,
 	"VisibleTo": true, "LinkTargetVisibleClause": true, "LinkTargetReadableClause": true,
-	"ActivityDiscoverClause": true, "ActivityContentClause": true,
+	"ActivityDiscoverClause": true, "ActivityContentClause": true, "ActivityMessageContentClause": true,
 	"EnsureActivityVisible": true, "EnsureActivityVisibleLive": true,
 	"EnsureActivityContentVisible": true, "EnsureActivityContentVisibleLive": true,
 	"SignalScopeClause": true, "EnsureSignalVisible": true, "EnsureSignalVisibleLive": true,
 	"RelationshipEndpointScope": true, "EnsureRelationshipVisible": true,
-	// EdgeReadScope RETURNS RelationshipEndpointScope's clause — it is that
-	// conjunction with the object gate in front of it — so a read reaching it
-	// applies the endpoint bound as surely as one calling the conjunction
-	// directly. Its absence here was a gap rather than a policy: the first
-	// compose read whose ONLY row bound came through it reported as unscoped,
-	// and the fix a reader would reach for from that message is a SECOND scope
-	// call over a column the conjunction already covers.
+	// EdgeReadScope returns RelationshipEndpointScope's clause behind the
+	// object gate. A read reaching it applies the endpoint bound as surely as
+	// one calling the conjunction directly. Without this entry such a read
+	// reported as unscoped, inviting a second scope call over a covered column.
 	//
-	// Adding it does not weaken the census. The two halves are unbundled in
-	// exactly one direction: this list accepts the pair because the pair
-	// includes the row half, while backend/gates/edgereaders_test.go refuses the row
-	// half alone. Neither gate accepts the object half on its own.
+	// Adding it does not weaken the census. This list accepts the pair because
+	// it includes the row half; backend/gates/edgereaders_test.go refuses the
+	// row half alone. Neither gate accepts the object half on its own.
 	"EdgeReadScope": true,
 	// The write-authority family, for the same reason EdgeReadScope is here:
 	// each OPENS with a member of the EnsureVisible family and then narrows
@@ -256,6 +255,7 @@ var rowScopeSpellings = map[string]bool{
 	// projection whose references pass through it is bounded row by row.
 	// It counts at function granularity, as EnsureVisible and VisibleTo do.
 	"VisibleSubset": true, "PassingSubset": true, "ActivityContentSubset": true, "SignalVisibleLiveSubset": true, "RelationshipVisibleSubset": true,
+	"ProjectCompanyPredicates": true, "ProjectCustomerSQL": true, "ProjectCompanyEdgesSQL": true, // company scope
 }
 
 // referenceSite is one SQL select list in the compose tier that names a

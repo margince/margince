@@ -1,0 +1,9 @@
+{
+  "verb": "remove_workspace_email_domain",
+  "checks": [
+    "capture_settings.update"
+  ],
+  "takes": [
+    "workspace_email_domain"
+  ]
+}

@@ -27,11 +27,13 @@ on:
 permissions:
   contents: read
 
-# Per pull request, cancelling in flight: only the tip's answer is worth having,
-# and `edited` fires on every body keystroke a client saves.
+# Per pull request, one run at a time, and never cancelling the one in flight.
+# `edited` fires with no new commit, so a cancel would leave a `cancelled` check
+# on the head beside the run that replaced it, and Renovate never merges a head
+# with one. A run still waiting is replaced before it starts and leaves no check.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   declaration:

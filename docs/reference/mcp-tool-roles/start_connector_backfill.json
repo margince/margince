@@ -1,0 +1,15 @@
+{
+  "tool": "run_research",
+  "action": "start_backfill",
+  "verb": "start_connector_backfill",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

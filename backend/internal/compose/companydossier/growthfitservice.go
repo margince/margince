@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -64,12 +65,9 @@ var growthFitPromptVersion = ai.PromptDigest(func(fence promptfence.Fence) strin
 })
 
 // growthFitStoredVersion is the payload SHAPE this build writes and can read.
-// v2 adds the sub-scores (DOSS-AC-17). A v1 payload has none, and serving one
-// would render a card with a band and no bars that looks like a complete
-// answer. v3 carries the missing inputs and the next step as
-// codes. A v2 payload holds English sentences the client no longer words. v4 names the
-// offering the company was judged against; a v3 payload has no such name.
-const growthFitStoredVersion = 4
+// A payload of an older version lacks a part the card draws (sub-scores, input
+// codes, the offering, the per-input states), so it is assessed again.
+const growthFitStoredVersion = 5
 
 // GrowthFitService assembles and caches one company's growth fit per reader.
 type GrowthFitService struct {
@@ -78,10 +76,9 @@ type GrowthFitService struct {
 	self  SelfOffering
 	lane  Completer
 	now   func() time.Time
-	// routingVersion identifies the model binding in the fingerprint, so a
-	// re-pointed lane invalidates rather than serving assessments written
-	// against a model that is no longer wired.
-	routingVersion string
+	// routingVersion names the model binding in the fingerprint. It is read per
+	// request, so a rebind invalidates the assessments an unwired model wrote.
+	routingVersion func() string
 	// emailRows opens the messages the assessment cites. Held rather than read
 	// inline because the assessment is CACHED: a summary is assembled out of
 	// one reader's own grants, so it is attached on the way out and never to
@@ -127,10 +124,13 @@ func (s *GrowthFitService) enrich(ctx context.Context, out crmcontracts.CompanyG
 // once per process role. A nil lane is the no-model deployment, which serves
 // the deterministic floor and says so.
 func NewGrowthFitService(pool *pgxpool.Pool, facts Facts, self SelfOffering,
-	lane Completer, routingVersion string, now func() time.Time,
+	lane Completer, routingVersion func() string, now func() time.Time,
 ) *GrowthFitService {
 	if now == nil {
 		now = time.Now
+	}
+	if routingVersion == nil {
+		routingVersion = func() string { return "" }
 	}
 	return &GrowthFitService{
 		pool: pool, facts: facts, self: self, lane: lane,
@@ -198,7 +198,7 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 		return zero, err
 	}
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
-	fingerprint, err := growthFitFingerprint(in, s.routingVersion, offering, lang)
+	fingerprint, err := growthFitFingerprint(in, s.routingVersion(), offering, lang)
 	if err != nil {
 		return zero, err
 	}
@@ -209,7 +209,7 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 		return zero, err
 	}
 	if found && !force && cached.usable(fingerprint, utc()) {
-		return s.enrich(ctx, cached.wire(companyID))
+		return s.enrich(ctx, cached.wire(companyID, crmcontracts.AssemblyServedFromCache))
 	}
 
 	lane, withheld := ai.ReadLane(ctx, s.lane)
@@ -224,7 +224,7 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 		// The contract says as much for this endpoint: a refresh the budget
 		// refuses returns the cached assembly with its age rather than an
 		// error. Its `generated_at` is that age.
-		return s.enrich(ctx, cached.wire(companyID))
+		return s.enrich(ctx, cached.wire(companyID, crmcontracts.AssemblyServedFromCache))
 	}
 	written := storedGrowthFit{
 		Fingerprint:  fingerprint,
@@ -246,12 +246,12 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 	// retry never happens. For a company held on human-entered values there is
 	// no expiry either, so that would be permanent.
 	if laneFailed || withheld {
-		return s.enrich(ctx, written.wire(companyID))
+		return s.enrich(ctx, written.wire(companyID, crmcontracts.AssemblyServedFromGenerated))
 	}
 	if err := s.save(ctx, userID, companyID, written); err != nil {
 		return zero, err
 	}
-	return s.enrich(ctx, written.wire(companyID))
+	return s.enrich(ctx, written.wire(companyID, crmcontracts.AssemblyServedFromGenerated))
 }
 
 // usable reports whether this build may still serve a cached entry.
@@ -298,13 +298,14 @@ func growthFitFingerprint(in Input, routingVersion string, offering Offering, la
 	return hex.EncodeToString(sum[:]), nil
 }
 
-func (g storedGrowthFit) wire(companyID ids.CompanyID) crmcontracts.CompanyGrowthFit {
+func (g storedGrowthFit) wire(companyID ids.CompanyID, from crmcontracts.AssemblyServedFrom) crmcontracts.CompanyGrowthFit {
 	out := crmcontracts.CompanyGrowthFit{
 		CompanyId:        openapi_types.UUID(companyID.UUID),
 		Band:             crmcontracts.GrowthFitBand(g.Band),
 		DataCompleteness: g.Completeness,
 		GeneratedAt:      g.GeneratedAt,
 		GeneratedBy:      crmcontracts.WrittenBy(g.GeneratedBy),
+		ServedFrom:       &from,
 	}
 	// Both stay ABSENT rather than empty when nothing capped the band and
 	// nothing is outstanding: an empty string would render as a reason and a
@@ -353,7 +354,7 @@ func (g storedGrowthFit) wire(companyID ids.CompanyID) crmcontracts.CompanyGrowt
 }
 
 func (s *GrowthFitService) cached(ctx context.Context, userID ids.UserID, companyID ids.CompanyID) (storedGrowthFit, bool, error) {
-	row, found, err := growthFitCache.load(ctx, s.pool, userID, companyID)
+	row, found, err := generatedsummary.Read(ctx, s.pool, userID, generatedsummary.CompanyGrowthFit(companyID))
 	if err != nil || !found {
 		return storedGrowthFit{}, false, err
 	}
@@ -373,10 +374,11 @@ func (s *GrowthFitService) save(ctx context.Context, userID ids.UserID, companyI
 	if err != nil {
 		return fmt.Errorf("encode the growth-fit payload: %w", err)
 	}
-	return growthFitCache.save(ctx, s.pool, userID, companyID, entry{
-		Fingerprint: fit.Fingerprint,
-		GeneratedAt: fit.GeneratedAt,
-		GeneratedBy: fit.GeneratedBy,
-		Payload:     payload,
-	})
+	return generatedsummary.Save(ctx, s.pool, userID, generatedsummary.CompanyGrowthFit(companyID),
+		generatedsummary.Entry{
+			Fingerprint: fit.Fingerprint,
+			GeneratedAt: fit.GeneratedAt,
+			GeneratedBy: fit.GeneratedBy,
+			Payload:     payload,
+		})
 }

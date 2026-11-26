@@ -3,9 +3,10 @@
 
 package main
 
-// The decision table the report prints after the site table: every committed
-// decision record, whether it still describes the decision question this build
-// asks, and whether it earns the row the runtime serves the decisions lane by.
+// The decision table the report prints after the site table. It lists every
+// committed decision record, whether it still describes this build's decision
+// question, and whether it earns a certified row. A bound lane answers every
+// site with or without one; the row is what an operator trusts the binding on.
 
 import (
 	"fmt"
@@ -17,25 +18,25 @@ import (
 )
 
 var decisionColumns = []string{
-	"SITE", "STATUS", "VERDICT", "SERVES", "PROVIDER", "MODEL", "ENV",
+	"SITE", "STATUS", "VERDICT", "CERTIFIED_ROW", "PROVIDER", "MODEL", "ENV",
 	"RUNS", "KEPT", "KEPT_WRONG", "FALLBACK_RATE", "FALLBACKS", "SERVED_PASS_RATE",
 }
 
-// renderDecisions reports the decision records. With none it says the lane
-// serves nothing, which is the state until a decision certification is run.
+// renderDecisions reports the decision records. With none it says no site has
+// a measured verdict; a bound lane still answers every site.
 func renderDecisions(rows []aicert.DecisionRow) string {
 	if len(rows) == 0 {
-		return "\nDecision models: no decision record is committed, so the decisions lane serves no site.\n"
+		return "\nDecision models: no decision record is committed, so no site has a measured verdict; a bound lane answers every site all the same.\n"
 	}
 	var buf strings.Builder
-	buf.WriteString("\nDecision models: the lane answers a site only where SERVES is yes (make gen writes those rows).\n\n")
+	buf.WriteString("\nDecision models: a bound lane answers every site; CERTIFIED_ROW yes is a current certified record behind it (make gen writes those rows).\n\n")
 	w := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
 	lines := []string{strings.Join(decisionColumns, "\t")}
 	var reasons []string
 	for _, row := range rows {
 		rec := row.Record
 		lines = append(lines, strings.Join(decisionCells(row), "\t"))
-		if reason := row.Standing.Reason(); reason != "" {
+		if reason := row.NoRowReason(); reason != "" {
 			reasons = append(reasons, "  - "+row.Site+" on "+rec.Provider+" · "+rec.Model+" · "+rec.EnvClass+": "+reason)
 		}
 	}
@@ -55,11 +56,11 @@ func renderDecisions(rows []aicert.DecisionRow) string {
 
 func decisionCells(row aicert.DecisionRow) []string {
 	rec := row.Record
-	servesCell := "no"
-	if row.Serves() {
-		servesCell = "yes"
+	certifiedCell := "no"
+	if row.Certified() {
+		certifiedCell = "yes"
 	}
-	cells := []string{row.Site, row.Status(), rec.Verdict, servesCell, rec.Provider, rec.Model, rec.EnvClass, fmt.Sprintf("%d", rec.Runs)}
+	cells := []string{row.Site, row.Status(), rec.Verdict, certifiedCell, rec.Provider, rec.Model, rec.EnvClass, fmt.Sprintf("%d", rec.Runs)}
 	stats := rec.Decision
 	if stats == nil {
 		for len(cells) < len(decisionColumns) {

@@ -23,6 +23,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -101,7 +103,7 @@ func (r listRule) expand(ctx context.Context, resolver authz.Resolver, ev workfl
 		return nil, nil, err
 	}
 	changes, total, err := r.ex.Lists.ObservedChanges(owner, list.ID, check.DefinitionVersion, check.EvaluatedAt,
-		actionsFor(rule.Direction), burstCap)
+		actionsFor(rule.Direction), burstCap, rule.IncludeImported == nil || *rule.IncludeImported)
 	switch {
 	case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
 		// The owner can no longer find or read the list: what it holds is no
@@ -126,6 +128,8 @@ func (r listRule) watchedList(ctx context.Context, id ids.UUID) (ListRef, *ruleP
 		return ListRef{}, nil, err
 	case list.Archived:
 		return list, &rulePause{reason: PausedListArchived}, nil
+	case list.Unavailable:
+		return list, &rulePause{reason: PausedListUnavailable}, nil
 	case list.Invalid:
 		return list, &rulePause{reason: PausedListInvalid}, nil
 	}
@@ -200,7 +204,7 @@ func (p *RulePauser) PauseRulesOnList(ctx context.Context, listID ids.UUID, reas
 		rows, err := tx.Query(ctx, `SELECT id, version FROM automation
 			WHERE enabled AND archived_at IS NULL AND key = ANY(@keys)
 			  AND (params ->> 'list_id' = @list_id OR params ->> 'shortlist_id' = @list_id)`,
-			pgx.StrictNamedArgs{"keys": listRuleKeys, "list_id": listID.String()})
+			pgx.StrictNamedArgs{argKeys: listRuleKeys, "list_id": listID.String()})
 		if err != nil {
 			return err
 		}
@@ -277,23 +281,30 @@ func (p *RulePauser) tellOwner(ctx context.Context, tx pgx.Tx, rule pausedRule, 
 	if !listID.IsZero() {
 		target = datasource.EntityRef{Type: rbacObjList, ID: listID}
 	}
-	return p.notifier.NotifyTx(ctx, tx, *rule.Owner, "Paused: "+rule.Name, pauseSentence(pause), target,
+	ctx = systemtext.WithMessage(ctx, &systemtext.Message{Subject: systemtext.Sentence("automation.paused_subject", systemtext.Text(rule.Name)), Body: pauseComponent(pause)})
+	return p.notifier.NotifyTx(ctx, tx, *rule.Owner, fmt.Sprintf(systemtext.Copy("automation.paused_subject", textlang.English), rule.Name), pauseSentence(pause), target,
 		fmt.Sprintf("automation_paused:%s:%d", rule.ID, rule.Version))
 }
 
 // pauseSentence says why a rule stopped and what brings it back.
 func pauseSentence(pause rulePause) string {
+	if pause.reason == PausedBurst {
+		return fmt.Sprintf(systemtext.Copy("automation.pause_burst", textlang.English), pause.count, burstCap)
+	}
+	return systemtext.Literal(pauseComponent(pause).Code)
+}
+
+func pauseComponent(pause rulePause) *systemtext.Component {
 	switch pause.reason {
 	case PausedListArchived:
-		return "The list this rule watches or adds to was archived. Restoring the list does not resume the rule; resume it in Settings."
+		return systemtext.Sentence("automation.pause_archived")
 	case PausedListInvalid:
-		return "The filter of the Live List this rule watches no longer works. Fixing the filter does not resume the rule; resume it in Settings."
+		return systemtext.Sentence("automation.pause_invalid")
 	case PausedPassportRevoked:
-		return "The agent that set this rule up no longer has a live passport or connection, so the rule stopped. Resume it in Settings to keep it running as your own."
+		return systemtext.Sentence("automation.pause_passport")
 	case PausedBurst:
-		return fmt.Sprintf("One check of the list moved %d records, more than the %d this rule acts on at once, so it acted on none of them. Resume it in Settings when you are ready.",
-			pause.count, burstCap)
+		return systemtext.Sentence("automation.pause_burst", systemtext.Count(int64(pause.count)), systemtext.Count(int64(burstCap)))
 	default:
-		return "You can no longer find the list this rule watches. Resume it in Settings once you can."
+		return systemtext.Sentence("automation.pause_unavailable")
 	}
 }

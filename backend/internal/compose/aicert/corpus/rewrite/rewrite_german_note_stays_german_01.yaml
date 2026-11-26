@@ -1,0 +1,23 @@
+name: rewrite_german_note_stays_german
+task: rewrite
+site: rewrite
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+# The reader works in English, but the note is German: Polish keeps the
+# language the rep wrote in and never translates it.
+fixture:
+  envelope: "note"
+  verb: "polish"
+  subject: "telefonat Herr Lindqvist"
+  body: "hat gesagt budget kommt erst Q1, will aber angebot 2026-118 bis freitag nochmal sehen. rückruf am 20.11. um 14 uhr"
+  reader: "en"
+expect:
+  outcome: accepted
+  answer:
+    keeps: ["Lindqvist", "2026-118", "20.11.", "14"]
+    omits: ["budget only comes", "call back"]
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "The note stays in German. It keeps the offer number, the call-back date and time, and the budget timing. It reads as clean German prose and adds nothing."

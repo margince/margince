@@ -6,11 +6,11 @@ package consent
 // The read half of a rep's override: a standing row that outranks the
 // machine's own reading for one subject and one category, and nothing else.
 //
-// The write door is Store.Allow (override.go); this file only answers "is there
-// a live one that applies here". decideOne (authorizetransmit.go) is the only
-// caller, and it asks ONLY when the decision is already known to be
-// CanBeOverruledByCategory — a machine-level, non-absolute refusal that resolved
-// to a category — so this never has to re-derive that.
+// No door records a new row; the live ones were recorded earlier or carried by
+// a merge. This file only answers "is there a live one that applies here".
+// decideOne (authorizetransmit.go) is the only caller. It asks only when the
+// decision is CanBeOverruledByCategory: a machine-level, non-absolute refusal
+// that resolved to a category. So this never re-derives that.
 
 import (
 	"context"
@@ -28,13 +28,10 @@ import (
 // CanBeOverruled, so it never has to re-check the reason: a subject act or an
 // absolute machine fact never reaches here.
 //
-// CONTACT ONLY. decideOne hands over a resolved
-// contact id; decideLead has no override arm (authorizelead.go), and
-// overridesubject_test.go holds the lead half of this table unwritable. A
-// lead_id arm here would be a clause that can never match — the appearance of
-// mirroring the engine without the fact, the same shape lift.go refuses —
-// and it would cost the planner communication_override_live_contact on every
-// send evaluation.
+// Contact only. decideOne hands over a resolved contact id, and decideLead has
+// no override arm (authorizelead.go). No door writes a new row, so the lead
+// half stays empty. A lead_id arm here could never match. It would also cost
+// the planner communication_override_live_contact on every send evaluation.
 //
 // The level filter derives from LevelsWeakestFirst rather than a retyped rank,
 // so "outranks machine" here reads the same ladder CanOverrule elsewhere

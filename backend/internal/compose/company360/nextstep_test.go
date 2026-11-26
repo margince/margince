@@ -9,6 +9,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // The no-next-step rule used to hand the reader back their own problem: it had
@@ -150,4 +151,38 @@ func soleLink(
 	}
 	link := (*body.Links)[0]
 	return link.EntityType, ids.UUID(link.EntityId)
+}
+
+// A deal name is quoted in the reader's own marks and shown as typed: a quote
+// mark inside it carries no backslash.
+func TestADealNameIsQuotedInTheReadersMarksAndEscapesNothing(t *testing.T) {
+	t.Parallel()
+	company := ids.CompanyID{UUID: ids.NewV7()}
+	name := `Order „Zitat“ "Test"`
+	sole := noNextStepSuggestion(company, suggestionInputs{
+		language: textlang.German,
+		open: pipeline{
+			OpenCount: 1, OpenDigest: "d",
+			Open: []openDeal{{ID: ids.NewV7(), Name: name}},
+		},
+	})
+	if sole == nil || sole.Title == nil {
+		t.Fatalf("the rule prepared no step: %+v", sole)
+	}
+	if want := "Den nächsten Schritt für „" + name + "“ vereinbaren"; *sole.Title != want {
+		t.Errorf("title = %s, want %s", *sole.Title, want)
+	}
+	several := noNextStepSuggestion(company, suggestionInputs{
+		language: textlang.German,
+		open: pipeline{
+			OpenCount: 2, OpenDigest: "d",
+			Open: []openDeal{{ID: ids.NewV7(), Name: name}, {ID: ids.NewV7(), Name: "Kleinauftrag"}},
+		},
+	})
+	if several == nil || !strings.Contains(several.Reason, "„"+name+"“, „Kleinauftrag“") {
+		t.Errorf("reason = %+v, want both names in German marks", several)
+	}
+	if strings.Contains(*sole.Title+several.Reason, `\`) {
+		t.Error("a quote mark in the name was escaped with a backslash")
+	}
 }

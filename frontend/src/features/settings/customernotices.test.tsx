@@ -146,15 +146,15 @@ describe("the existing-customer notices card", () => {
     );
     const dialog = await screen.findByRole("dialog");
     await user.type(
-      within(dialog).getByLabelText(en["privacy.customerNoticeGroup"]),
+      within(dialog).getByLabelText(`${en["privacy.customerNoticeGroup"]} *`),
       "Web shop buyers",
     );
     await user.type(
-      within(dialog).getByLabelText(en["privacy.customerNoticeChannel"]),
+      within(dialog).getByLabelText(`${en["privacy.customerNoticeChannel"]} *`),
       "web shop checkout",
     );
     await user.type(
-      within(dialog).getByLabelText(en["privacy.customerNoticeText"]),
+      within(dialog).getByLabelText(`${en["privacy.customerNoticeText"]} *`),
       "You may object at any time.",
     );
     await user.type(
@@ -202,6 +202,47 @@ describe("the existing-customer notices card", () => {
     expect(from - Date.parse(String(body.evidence_dated_at))).toBe(5 * DAY_MS);
   });
 
+  it("says on Save which required fields are empty, and sends nothing", async () => {
+    const posted: unknown[] = [];
+    stubWithSession(
+      {
+        "GET /existing-customer-notices": () => jsonResponse({ data: [] }),
+        "GET /legal-entities": entities,
+        "GET /consent-purposes": purposes,
+        "POST /existing-customer-notices": (body) => {
+          posted.push(body);
+          return jsonResponse(notice(), 201);
+        },
+      },
+      ADMIN,
+    );
+    const user = userEvent.setup();
+    mount();
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["privacy.customerNoticeDeclare"],
+      }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: en["privacy.customerNoticeSave"],
+      }),
+    );
+
+    const group = en["privacy.customerNoticeGroup"];
+    expect(within(dialog).getByText(`${group} is required.`)).toBeTruthy();
+    expect(
+      within(dialog).getByText(
+        `${en["privacy.customerNoticePurposes"]} is required.`,
+      ),
+    ).toBeTruthy();
+    expect(document.activeElement).toBe(
+      within(dialog).getByLabelText(`${group} *`),
+    );
+    expect(posted).toEqual([]);
+  });
+
   it("withdraws a declaration with the reason typed", async () => {
     const posted: unknown[] = [];
     stubWithSession(
@@ -226,7 +267,9 @@ describe("the existing-customer notices card", () => {
     );
     const dialog = await screen.findByRole("dialog");
     await user.type(
-      within(dialog).getByLabelText(en["privacy.customerNoticeWithdrawReason"]),
+      within(dialog).getByLabelText(
+        `${en["privacy.customerNoticeWithdrawReason"]} *`,
+      ),
       "the checkout never showed it",
     );
     await user.click(

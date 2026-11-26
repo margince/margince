@@ -28,17 +28,6 @@ type RecordKind string
 // kind without idempotency would offer a guarantee this side cannot keep.
 const KindActivity RecordKind = "activity"
 
-// ActivityKindMessage is the timeline kind a message on a messaging channel
-// lands as, published here because a unit cannot reach the core's own
-// vocabulary and would otherwise spell the string blind.
-//
-// It is the ONE kind whose transport is separable from it (ADR-0107/A158): a
-// message names what carried it on ActivityFields.ChannelProvider, and every
-// other kind names nothing there. A fitness test outside this package holds
-// this constant equal to the core's own, so the two cannot drift into a unit
-// filing a kind the core no longer calls a message.
-const ActivityKindMessage = "message"
-
 // IngressSource is one provider a unit brings records in from: the unit's own
 // stable key for it, and which kinds it lands.
 //
@@ -68,6 +57,16 @@ type IngressSource struct {
 	// Empty — the default — means this source contributes no identity key. A
 	// source that says nothing gets no power it did not ask for.
 	Merges []MergeKey
+
+	// PinnedPosture marks a member-owned chat source and fixes the posture its
+	// messages are filed under: PostureClassified or PostureHeld. Empty is a
+	// source that is not member-owned, and nothing changes for it.
+	//
+	// It sits on the source because an operator reads it in the manifest. A unit
+	// that picked it per message could pick the widest. The core writes it as the
+	// import's posture. Audience derivation and the confidentiality engine then
+	// treat the message as mail held in a member's mailbox.
+	PinnedPosture Posture
 }
 
 // systemGrammar bounds the declared system key to what can sit inside a
@@ -97,8 +96,8 @@ func (s IngressSource) Validate() error {
 	}
 	for _, kind := range s.Lands {
 		if !slices.Contains(landableKinds, kind) {
-			return fmt.Errorf("extension: ingress source %q declares record kind %q — an ingress may land %q, %q or %q",
-				s.System, string(kind), string(KindActivity), string(KindCompany), string(KindDeal))
+			return fmt.Errorf("extension: ingress source %q declares record kind %q — an ingress may land %q, %q, %q or %q",
+				s.System, string(kind), string(KindActivity), string(KindCompany), string(KindDeal), string(KindSignal))
 		}
 	}
 	for _, key := range s.Merges {
@@ -107,7 +106,7 @@ func (s IngressSource) Validate() error {
 				s.System, string(key), string(MergeKeyEmail))
 		}
 	}
-	return nil
+	return s.validatePinnedPosture()
 }
 
 // Message direction, relative to the member whose connection produced the
@@ -236,14 +235,14 @@ type Record struct {
 	// answerable, and ADR-0082 §1 permits it for exactly that reason.
 	KeyNamesAContact bool
 
-	// Activity is the record itself when it is an activity. A company or a deal
-	// arrives in its own field instead. At most one of the three is set.
+	// Activity is the record when it is an activity; the other kinds use their own field.
 	Activity ActivityFields
 
-	// Company and Deal carry the other two kinds, matched by the outside id that
-	// System and Key name. They take no Counterparty, Addresses, Participants or ThreadKey.
+	// Company, Deal and Signal are matched by the outside id that System and Key
+	// name. They take no Counterparty, Addresses, Participants or ThreadKey.
 	Company *CompanyFields
 	Deal    *DealFields
+	Signal  *SignalFields
 
 	// ThreadKey is the conversation this belongs to, and it MUST be namespaced
 	// by the provider — a bare provider id shares one column with every other
@@ -289,6 +288,25 @@ type Record struct {
 
 	// Raw is the provider's record as received, kept as evidence.
 	Raw []byte
+
+	// ChosenSubject is the contact or lead a member chose to file this message
+	// on. Only an activity may carry one. The core checks it under the ingesting
+	// member's live authority, files the message on it directly and never
+	// resolves it by identity. One the member cannot see answers
+	// DispositionSubjectNotFound and lands nothing.
+	ChosenSubject *ChosenSubject
+
+	// OccurredPrecision says how well Activity.OccurredAt is known. Empty means
+	// an instant, or a day when Activity.DateOnly says so. PrecisionUnknown may
+	// leave OccurredAt zero.
+	OccurredPrecision OccurredPrecision
+
+	// Parts are the files the record carried, and PartDrops what the unit
+	// refused to carry. They are the core's own Parts and PartDrops: bounded by
+	// MaxInboundFiles, MaxInboundFileBytes and MaxInboundMessageBytes, and
+	// filed through the core's file keeper.
+	Parts     []InboundFile
+	PartDrops []FileDrop
 }
 
 // Participant is one further party to a record: someone in the conversation who
@@ -401,6 +419,16 @@ const (
 	// this one, which is the safe direction — an unrecognised outcome is not an
 	// acceptance.
 	DispositionUnrepresentable Disposition = "unrepresentable"
+
+	// DispositionSubjectNotFound is a record whose ChosenSubject the ingesting
+	// member cannot see, or that does not exist. The two give one answer, so a
+	// unit cannot use it to ask whether a record exists. Nothing was stored.
+	//
+	// It advances a cursor like every disposition. The member's access does not
+	// change by waiting, and the unit can tell the member the subject is gone.
+	// It is not counted as a refusal of the grammar, because the record was well
+	// formed.
+	DispositionSubjectNotFound Disposition = "subject_not_found"
 )
 
 // Ref names a record the core holds.

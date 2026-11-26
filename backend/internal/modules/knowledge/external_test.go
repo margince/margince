@@ -14,9 +14,9 @@ func TestExternalMetaIsHeldToAKnownShape(t *testing.T) {
 		refused bool
 	}{
 		"clean vietnamese value":  {map[string]string{"owner": "Nguyễn Thị Lan", "department": "Nhân sự"}, false},
-		"bidi override in value":  {map[string]string{"owner": "Lan‮evil"}, true},
-		"bidi isolate in value":   {map[string]string{"owner": "Lan⁦x⁩"}, true},
-		"direction mark in value": {map[string]string{"owner": "Lan‏"}, true},
+		"bidi override in value":  {map[string]string{"owner": "Lan\u202eevil"}, true},
+		"bidi isolate in value":   {map[string]string{"owner": "Lan\u2066x\u2069"}, true},
+		"direction mark in value": {map[string]string{"owner": "Lan\u200f"}, true},
 		"newline in value":        {map[string]string{"owner": "Lan\nOwner: CEO"}, true},
 		"line separator in value": {map[string]string{"owner": "Lan x"}, true},
 		"control char in key":     {map[string]string{"own\x00er": "Lan"}, true},

@@ -81,7 +81,7 @@ func (s *Store) ListDealDocuments(
 			where = append(where, fmt.Sprintf("at.category = $%d", arg(*in.Category)))
 		}
 		if in.Cursor != nil && *in.Cursor != "" {
-			c, err := storekit.DecodeCursor(*in.Cursor)
+			c, err := storekit.DecodeCursor("deal_documents", *in.Cursor)
 			if err != nil {
 				return err
 			}
@@ -119,7 +119,7 @@ func (s *Store) ListDealDocuments(
 		if len(out) > lim {
 			out = out[:lim]
 			last := out[len(out)-1].Attachment
-			next, err := storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))
+			next, err := storekit.EncodeCursor("deal_documents", last.CreatedAt, ids.UUID(last.Id))
 			if err != nil {
 				return err
 			}
@@ -219,14 +219,10 @@ func (s *Store) setDealDocumentHidden(ctx context.Context, dealID, attachmentID 
 		if err := ensureInDealDocuments(ctx, tx, dealID, attachmentID); err != nil {
 			return err
 		}
-		by, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return err
-		}
 		if hidden {
-			_, err = tx.Exec(ctx, `INSERT INTO deal_document_hide (deal_id, attachment_id, hidden_by)
-			                       VALUES ($1, $2, $3) ON CONFLICT (deal_id, attachment_id) DO NOTHING`,
-				dealID, attachmentID, by)
+			_, err = tx.Exec(ctx, `INSERT INTO deal_document_hide (deal_id, attachment_id)
+			                       VALUES ($1, $2) ON CONFLICT (deal_id, attachment_id) DO NOTHING`,
+				dealID, attachmentID)
 		} else {
 			_, err = tx.Exec(ctx, `DELETE FROM deal_document_hide WHERE deal_id = $1 AND attachment_id = $2`,
 				dealID, attachmentID)

@@ -53,6 +53,10 @@ func decodeRequest(w http.ResponseWriter, r *http.Request) (Request, bool) {
 	if !httperr.Decode(w, r, &body) {
 		return Request{}, false
 	}
-	steering := draftfloor.NewSteering(body.Intent, body.RewriteOf, body.Subject)
-	return Request{Intent: steering.Intent, RewriteOf: steering.RewriteOf, Subject: steering.Subject}, true
+	steering, err := draftfloor.NewSteering(body.Intent, body.RewriteOf, body.Subject, (*string)(body.Language))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return Request{}, false
+	}
+	return Request{Intent: steering.Intent, RewriteOf: steering.RewriteOf, Subject: steering.Subject, Language: steering.Language}, true
 }

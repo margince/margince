@@ -48,12 +48,14 @@ func TestMeReportsTheCompanyContextAvailabilityItWasGiven(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			var published map[string]bool
+			var published struct {
+				CompanyContext *bool `json:"company_context"`
+			}
 			if err := json.Unmarshal(encoded, &published); err != nil {
 				t.Fatal(err)
 			}
-			if available, present := published["company_context"]; !present || available != tt.want {
-				t.Fatalf("compatibility field present=%t available=%t want=%t", present, available, tt.want)
+			if published.CompanyContext == nil || *published.CompanyContext != tt.want {
+				t.Fatalf("company_context = %v, want %t", published.CompanyContext, tt.want)
 			}
 		})
 	}

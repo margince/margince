@@ -4,23 +4,33 @@
 package approvals
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // Handlers is the module's transport surface: the /approvals inbox ops.
 type Handlers struct {
 	svc *Service
+	// settings holds the installation switch; nil answers 501 on its route.
+	settings *config.Config
+	// locks reports the settings a boot source sets on the switch's response.
+	locks func(surface []config.Any) *[]crmcontracts.SettingLock
 }
 
 func NewHandlers(svc *Service) Handlers { return Handlers{svc: svc} }
@@ -96,10 +106,9 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 	return info
 }
 
-// listInput binds the inbox query parameters, or answers the one validation
-// error this surface has: the target pair is a discriminated reference, so
-// half of it filters nothing a client could have meant — a type alone matches
-// every record of that type, an id alone every type carrying that id.
+// listInput binds the inbox query parameters. It refuses a record filter that
+// names nothing a client could have meant. That is half of the target pair (a
+// type alone matches every record of that type), a malformed target, or both.
 func listInput(params crmcontracts.ListApprovalsParams) (ListInput, *httperr.DetailedError) {
 	in := ListInput{Kind: params.Kind}
 	if params.IncludeMuted != nil {
@@ -121,11 +130,46 @@ func listInput(params crmcontracts.ListApprovalsParams) (ListInput, *httperr.Det
 		targetID := ids.UUID(*params.TargetEntityId)
 		in.TargetType, in.TargetID = params.TargetEntityType, &targetID
 	}
+	if params.Target != nil {
+		if in.TargetID != nil {
+			return ListInput{}, httperr.Validation("target", "conflicts_with_target_entity",
+				"target names records on its own: drop target_entity_type and target_entity_id, or drop target")
+		}
+		targets, invalid := parseTargets(*params.Target)
+		if invalid != nil {
+			return ListInput{}, invalid
+		}
+		in.Targets = targets
+	}
 	if params.BundleId != nil {
 		bundleID := ids.UUID(*params.BundleId)
 		in.BundleID = &bundleID
 	}
 	return in, nil
+}
+
+// maxTargets bounds one read's target list, as the contract's maxItems does.
+const maxTargets = 25
+
+// parseTargets reads each `<entity_type>:<uuid>` item. A malformed item is
+// refused rather than skipped, because a skipped record is one whose waiting
+// work the caller would then report as absent.
+func parseTargets(items []string) ([]ids.Ref, *httperr.DetailedError) {
+	if len(items) > maxTargets {
+		return nil, httperr.Validation("target", "too_many",
+			fmt.Sprintf("name at most %d records per request", maxTargets))
+	}
+	targets := make([]ids.Ref, 0, len(items))
+	for _, item := range items {
+		entityType, rawID, found := strings.Cut(item, ":")
+		recordID, err := ids.Parse(rawID)
+		if !found || entityType == "" || err != nil {
+			return nil, httperr.Validation("target", "malformed",
+				fmt.Sprintf("target %q is not <entity_type>:<uuid>, e.g. contact:0190f6c2-0000-7000-8000-000000000000", item))
+		}
+		targets = append(targets, ids.Ref{Type: entityType, ID: recordID})
+	}
+	return targets, nil
 }
 
 func (h Handlers) GetApproval(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
@@ -150,7 +194,8 @@ func (h Handlers) ApproveApproval(w http.ResponseWriter, r *http.Request, id crm
 	if req.EditedPayload != nil {
 		edited, marshalErr := json.Marshal(*req.EditedPayload)
 		if marshalErr != nil {
-			httperr.Write(w, r, httperr.Validation("edited_payload", "malformed_json", marshalErr.Error()))
+			slog.WarnContext(r.Context(), "re-encoding an edited approval payload", "err", marshalErr)
+			httperr.Write(w, r, httperr.Validation("edited_payload", "malformed_json", "edited_payload must be a JSON object"))
 			return
 		}
 		a, err = h.svc.DecideEditedWire(r.Context(), approvalID, edited, req.Reason)
@@ -248,7 +293,7 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 
 // wire maps the store row onto the contract shape; effectiveStatus folds
 // lazy expiry in so a stale pending row never reads as approvable.
-func wire(a row, now time.Time) crmcontracts.Approval {
+func wire(ctx context.Context, a row, now time.Time) crmcontracts.Approval {
 	out := crmcontracts.Approval{
 		Id:         openapi_types.UUID(a.ID.UUID),
 		Kind:       a.Kind,
@@ -261,6 +306,20 @@ func wire(a row, now time.Time) crmcontracts.Approval {
 		DecidedAt:  a.DecidedAt,
 	}
 	out.SummaryParts = readSummaryParts(a.SummaryParts)
+	out.Why = readWhy(ctx, a.SummaryParts)
+	sentence := ""
+	if out.SummaryParts != nil {
+		sentence = out.SummaryParts.Sentence
+	} else if a.Summary != nil {
+		sentence = *a.Summary
+	}
+	metadata := SummarySystemText(a.SummaryParts)
+	if metadata != nil {
+		subject, _ := metadata.Displays(sentence, "", systemtext.Locale(ctx))
+		if subject != nil {
+			out.SystemDisplay = &crmcontracts.SystemDisplay{Locale: crmcontracts.SystemDisplayLocale(systemtext.Locale(ctx)), Subject: subject}
+		}
+	}
 	if recipient := requestedDecider(a); !recipient.IsZero() {
 		out.RequestedDeciderId = new(openapi_types.UUID(recipient))
 	}
@@ -298,7 +357,39 @@ func wire(a row, now time.Time) crmcontracts.Approval {
 	out.Evidence = wireEvidence(a.Evidence)
 	out.EffectFailedAt = a.EffectFailedAt
 	out.EffectFailure = a.EffectFailure
+	if unredeemedPastWindow(a, now) {
+		// The sweep will record this same outcome. Until it does, the row must
+		// not read as done.
+		lapsedAt := a.DecidedAt.Add(redemptionTTL)
+		sentence := failureLapsed.sentence
+		out.EffectFailedAt, out.EffectFailure = &lapsedAt, &sentence
+	}
+	out.EffectFailureCode = effectFailureCode(out.EffectFailure)
+	if awaitsAgent(a, now) {
+		out.AwaitingAgent = new(true)
+	}
 	return out
+}
+
+// unredeemedAgentStaging is an approved agent staging that has neither run nor
+// failed on record. The agent either still can come back or the window closed
+// without it, and lapsedUnmarkedSQL asks the same question of the table.
+func unredeemedAgentStaging(a row) bool {
+	return a.Status == approvalStatusApproved && agentRedeems(a) &&
+		a.ConsumedAt == nil && a.EffectRanAt == nil && a.EffectFailedAt == nil
+}
+
+// unredeemedPastWindow is such a staging whose window closed and which no
+// sweep has marked yet. Every reader gives it the failure the sweep will write.
+func unredeemedPastWindow(a row, now time.Time) bool {
+	return unredeemedAgentStaging(a) && redemptionLapsed(a, now)
+}
+
+// awaitsAgent is an approved proposal the staging agent has not redeemed. The
+// decision released no effect of its own, so nothing changes until the agent
+// comes back inside the redemption window.
+func awaitsAgent(a row, now time.Time) bool {
+	return unredeemedAgentStaging(a) && !redemptionLapsed(a, now)
 }
 
 // wireEvidence maps the persisted evidence array onto the contract shape.

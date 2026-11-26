@@ -7,6 +7,7 @@ import { reportingStoryEvaluation } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { DimensionChips, DimensionFilters } from "./reporting.dimensions";
@@ -36,6 +37,7 @@ const everyDimension: ReportingSelection = {
 
 function catalog(products: readonly { id: string; name: string }[]) {
   installFetchStub({
+    "GET /me": meRoute({ deal: ["read"] }),
     "GET /products": () =>
       jsonResponse({
         data: products,
@@ -116,6 +118,20 @@ export const ChipForAProductTheCatalogCannotName: Story = {
     return (
       <StoryProviders>
         <Chips initial={{ ...base, product_id: "p-retired" }} />
+      </StoryProviders>
+    );
+  },
+};
+
+/** With no product or initiative, the profile chip names the scope it reads. */
+export const ProfileChipForEachScope: Story = {
+  render: () => {
+    catalog(PRODUCTS);
+    return (
+      <StoryProviders>
+        <Chips initial={{ ...base, scope: { kind: "workspace" } }} />
+        <Chips initial={{ ...base, scope: { kind: "team", id: "t-north" } }} />
+        <Chips initial={{ ...base, scope: { kind: "owner", id: "maya" } }} />
       </StoryProviders>
     );
   },

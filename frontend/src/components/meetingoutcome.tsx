@@ -1,49 +1,29 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// "Held" and "Mark as canceled" write the status from the card. "Add notes"
-// opens a dialog that PATCHES the existing meeting, because a second activity
-// would leave the original unanswered.
-
-import {
-  type QueryKey,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { useId, useState } from "react";
+import type { QueryKey } from "@tanstack/react-query";
+import { useState } from "react";
 import type { components } from "../api/schema";
-import { Button, Field, Modal, TextInput } from "../design-system/atoms";
-import { DateInput, isoOrBlank } from "../design-system/dateinput";
-import { ErrorLine } from "../design-system/errorline";
-import { refuseUnreadableField } from "../design-system/formvalidity";
-import { Heading } from "../design-system/heading";
-import { Select } from "../design-system/select";
-import { useToast } from "../design-system/toast";
-import { isTranscriptActivity } from "../design-system/transcriptread";
-import {
-  type ActivityMoment,
-  activityDate,
-  latestHeldDay,
-  movedActivityStart,
-  type OccurredPrecision,
-} from "../format/activitywhen";
-import { calendarDay } from "../format/calendarday";
-import type { ISODate } from "../format/datepattern";
+import { Button } from "../design-system/atoms";
+import { undoAction, useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { outgoingBody } from "../lib/activitybody";
-import { useActivity } from "../lib/activityread";
 import { useCanWriteRecord } from "../lib/capability";
-import { problemFieldErrorsOf } from "../lib/problem";
-import { useViewerZone } from "../lib/viewerzone";
+import { isVersionSkewOf, problemFieldErrorsOf } from "../lib/problem";
 import { worklistKey } from "../lib/workkeys";
-import { ActivityBodyField } from "./activitybodyfield";
-import { useMeetingCustomFields } from "./meetingoutcome.custom";
-import { useMeetingOutcome } from "./taskactions";
-import { writeMeetingOutcome } from "./taskactions.rowwrites";
+import {
+  type MeetingDialogMode,
+  MeetingOutcomeDialog,
+} from "./meetingoutcome.dialog";
+import { readMeetingStatus, useMeetingOutcome } from "./taskactions";
+
+const readPrior = (id: string) => readMeetingStatus(id).catch(() => null);
 
 type Activity = components["schemas"]["Activity"];
 
-/** The outcome choice on a record page, for a meeting the server stamps as awaiting one. */
+/**
+ * The meeting verbs on a record page. The outcome choice shows while the
+ * server stamps the meeting as awaiting one; its notes show once it was held.
+ */
 export function RecordMeetingOutcome({
   activity,
   invalidateKeys,
@@ -52,8 +32,13 @@ export function RecordMeetingOutcome({
   invalidateKeys: readonly QueryKey[];
 }>) {
   const writable = useCanWriteRecord("activity", activity);
-  if (!(activity.awaiting_outcome && writable)) {
+  if (!writable) {
     return null;
+  }
+  if (!activity.awaiting_outcome) {
+    return (
+      <HeldMeetingNotes activity={activity} invalidateKeys={invalidateKeys} />
+    );
   }
   return (
     <MeetingOutcome
@@ -61,93 +46,85 @@ export function RecordMeetingOutcome({
       version={activity.version}
       title={activity.subject ?? undefined}
       cancellable={activity.calendar_managed !== true}
+      priorStatus={activity.meeting_status === "booked" ? "booked" : null}
       // The Worklist asks about the same meeting, so an answer here clears it there.
       invalidateKeys={[...invalidateKeys, worklistKey]}
     />
   );
 }
 
-// The two statuses the dialog can record. `canceled` is absent:
-// the card's own verb writes it, and offering it here as well would give one
-// answer two doors that could drift.
-type HappenedStatus = "held" | "no_show";
-
-/** What the dialog holds while it is open. */
-type OutcomeDraft = {
-  status: HappenedStatus;
-  subject: string;
-  body: string;
-  day: string;
-};
-
 /**
- * The one read the draft was seeded from. The save is checked against its
- * version. A meeting that changed while the dialog was open is refused, so
- * words written against the older copy are not stored on the newer one.
+ * "Add notes" or "Edit notes" on a held meeting, so what was discussed can be
+ * written the day after. A live invitation keeps the meeting's notes, and the
+ * server refuses them from here, so such a meeting offers none.
  */
-type OutcomeSeed = {
-  start: ActivityMoment;
-  day: string;
-  version: number | undefined;
-};
-
-type MovedStart = {
-  occurred_at: string;
-  occurred_precision: OccurredPrecision;
-};
-
-/**
- * The start the save sends: none when the day stayed, so the meeting keeps
- * its real start. A moved meeting keeps its time of day in the record zone,
- * capped just before now, because a held meeting cannot start later. A
- * date-only meeting names its new date alone, which the date box caps.
- */
-function movedStart(
-  seed: OutcomeSeed,
-  day: string,
-  zone: string,
-  now: Date,
-): MovedStart | undefined {
-  if (day === seed.day) {
-    return undefined;
+function HeldMeetingNotes({
+  activity,
+  invalidateKeys,
+}: Readonly<{
+  activity: Activity;
+  invalidateKeys: readonly QueryKey[];
+}>) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  if (
+    activity.kind !== "meeting" ||
+    activity.meeting_status !== "held" ||
+    activity.calendar_managed === true ||
+    activity.content_state === "withheld"
+  ) {
+    return null;
   }
-  const { at, precision } = movedActivityStart(seed.start, day, zone, now);
-  return { occurred_at: at, occurred_precision: precision };
+  const title = activity.subject ?? undefined;
+  const edits = Boolean(activity.body?.trim());
+  return (
+    <>
+      <Button
+        aria-label={
+          title
+            ? t(
+                edits
+                  ? "worklist.verb.meetingEditNotesFor"
+                  : "worklist.verb.meetingAddNotesFor",
+                { subject: title },
+              )
+            : undefined
+        }
+        onClick={() => setOpen(true)}
+      >
+        {t(
+          edits
+            ? "worklist.verb.meetingEditNotes"
+            : "worklist.verb.meetingAddNotes",
+        )}
+      </Button>
+      {open && (
+        <MeetingOutcomeDialog
+          id={activity.id}
+          title={title}
+          invalidateKeys={invalidateKeys}
+          mode="notes"
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
 }
 
-/**
- * The date box's ceiling, and the day it marks as today. Held means taken
- * place: a date-only meeting once its date is over, a timed one once it began.
- */
-function heldDays(
-  seed: OutcomeSeed | null,
-  zone: string,
-): { latest: ISODate | undefined; today: ISODate | undefined } {
-  const now = new Date();
-  const precision = seed?.start.precision ?? "instant";
-  return {
-    latest: isoOrBlank(latestHeldDay(precision, now, zone)) || undefined,
-    today: isoOrBlank(calendarDay(now, zone)) || undefined,
-  };
-}
-
-/**
- * MeetingOutcome is the row's answer to How did it go? It happened (held), it
- * did not happen (canceled), or the reader says more about what came of it.
- *
- * "It happened" is the commonest answer and a fact with nothing to add, so it writes
- * at once, as Cancel does. "Add notes" opens the dialog, which also offers
- * No-show and moves the date.
- */
+/** The shared outcome controls for the Worklist and meeting panel. */
 export function MeetingOutcome({
   id,
   version,
   title,
   invalidateKeys,
   cancellable,
+  priorStatus,
 }: Readonly<{
   id: string;
   version: number | undefined;
+  // What the meeting holds now, for the Undo of a cancel. Left out where the
+  // surface does not know it, and read before the cancel then.
+  priorStatus?: "booked" | null;
   // The reads that show this meeting, so each surface refreshes its own list.
   invalidateKeys: readonly QueryKey[];
   // The row's own heading for the meeting, so the dialog is titled before its read answers.
@@ -157,24 +134,46 @@ export function MeetingOutcome({
 }>) {
   const t = useT();
   const toast = useToast();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<MeetingDialogMode | undefined>();
   // An invitation can arrive after the row was read, so its refusal hides Cancel too.
   const [refusedAsManaged, setRefusedAsManaged] = useState(false);
+  const [reading, setReading] = useState(false);
   const record = useMeetingOutcome(invalidateKeys);
-  const answer = (status: "held" | "canceled") =>
+  const cancel = async () => {
+    // The row may not carry the status, and an Undo that guesses would write
+    // "booked" over a meeting that had none.
+    setReading(true);
+    const prior = priorStatus === undefined ? await readPrior(id) : priorStatus;
+    setReading(false);
     record.mutate(
-      { id, version, status },
+      { id, version, status: "canceled" },
       {
-        onSuccess: () => toast.show(t("worklist.verb.meetingOutcomeRecorded")),
+        onSuccess: (saved) =>
+          toast.show(t("worklist.verb.meetingCanceledRecorded"), {
+            action: undoAction(t("common.undo"), () =>
+              // The version is the one the cancel produced. The row may be
+              // gone by then, so a refusal is told here.
+              record
+                .mutateAsync({ id, version: saved.version, status: prior })
+                .catch((error: unknown) =>
+                  toast.show(
+                    t(
+                      isVersionSkewOf(error)
+                        ? "common.versionSkew"
+                        : "worklist.verb.meetingOutcomeFailed",
+                    ),
+                    { tone: "danger" },
+                  ),
+                ),
+            ),
+          }),
         // A refused write leaves the row as it was, which looks like a
         // click that did nothing.
         onError: (error) => {
-          const managed =
-            status === "canceled" &&
-            problemFieldErrorsOf(error).some(
-              (fault) => fault.code === "calendar_managed",
-            );
-          if (status === "canceled") setRefusedAsManaged(managed);
+          const managed = problemFieldErrorsOf(error).some(
+            (fault) => fault.code === "calendar_managed",
+          );
+          setRefusedAsManaged(managed);
           toast.show(
             t(
               managed
@@ -186,40 +185,43 @@ export function MeetingOutcome({
         },
       },
     );
+  };
   return (
     <>
       <span className="t-caption">{t("worklist.verb.meetingHowDidItGo")}</span>
+      {/* Only "Did not happen" writes from here; the other two open a
+          dialog, so they wait on its write without showing it as theirs. */}
       <Button
-        pending={record.isPending}
+        disabled={record.isPending}
         aria-label={
           title
             ? t("worklist.verb.meetingHeldFor", { subject: title })
             : undefined
         }
-        onClick={() => answer("held")}
+        onClick={() => setOpen("held")}
       >
         {t("worklist.verb.meetingHeld")}
       </Button>
       <Button
-        pending={record.isPending}
+        disabled={record.isPending}
         aria-label={
           title
             ? t("worklist.verb.meetingAddNotesFor", { subject: title })
             : undefined
         }
-        onClick={() => setOpen(true)}
+        onClick={() => setOpen("edit")}
       >
         {t("worklist.verb.meetingAddNotes")}
       </Button>
       {cancellable && !refusedAsManaged && (
         <Button
-          pending={record.isPending}
+          pending={record.isPending || reading}
           aria-label={
             title
               ? t("worklist.verb.meetingCanceledFor", { subject: title })
               : undefined
           }
-          onClick={() => answer("canceled")}
+          onClick={() => void cancel()}
         >
           {t("worklist.verb.meetingCanceled")}
         </Button>
@@ -229,271 +231,10 @@ export function MeetingOutcome({
           id={id}
           title={title}
           invalidateKeys={invalidateKeys}
-          onClose={() => setOpen(false)}
+          mode={open}
+          onClose={() => setOpen(undefined)}
         />
       )}
-    </>
-  );
-}
-
-/**
- * The composer, bound to one meeting.
- *
- * It reads the meeting first rather than drawing an empty form. The subject and
- * the captured body are what the reader is amending. A blank form would invite
- * them to retype what the calendar knew, or to save an empty body over it.
- */
-function MeetingOutcomeDialog({
-  id,
-  title,
-  invalidateKeys,
-  onClose,
-}: Readonly<{
-  id: string;
-  title: string | undefined;
-  invalidateKeys: readonly QueryKey[];
-  onClose: () => void;
-}>) {
-  const t = useT();
-  const toast = useToast();
-  const titleId = useId();
-  const formId = useId();
-  const readerZone = useViewerZone();
-  const queryClient = useQueryClient();
-  const [draft, setDraft] = useState<OutcomeDraft | null>(null);
-  const [seed, setSeed] = useState<OutcomeSeed | null>(null);
-  const [dayRefused, setDayRefused] = useState(false);
-  // The read the task detail makes, keyed the same way. A write that
-  // invalidates ["activity", id] refreshes whichever of the two is open.
-  const meeting = useActivity(id);
-  const transcript = meeting.data ? isTranscriptActivity(meeting.data) : false;
-  const managed = meeting.data?.calendar_managed === true;
-  const custom = useMeetingCustomFields(meeting.data);
-  // Seeded during render, not in an effect: an effect paints an empty form first
-  // and replaces words typed into that frame.
-  if (draft === null && meeting.data) {
-    const day = activityDate(
-      meeting.data.occurred_at,
-      meeting.data.occurred_precision,
-      readerZone,
-    );
-    setDraft({
-      status: "held",
-      subject: meeting.data.subject ?? "",
-      body: meeting.data.body ?? "",
-      day,
-    });
-    setSeed({
-      start: {
-        at: meeting.data.occurred_at,
-        precision: meeting.data.occurred_precision,
-      },
-      day,
-      version: meeting.data.version,
-    });
-  }
-  const days = heldDays(seed, readerZone);
-  const save = useMutation({
-    // Fields travel as variables: a closure would read the last committed render.
-    mutationFn: async (input: {
-      draft: OutcomeDraft;
-      seed: OutcomeSeed;
-      moved: MovedStart | undefined;
-      transcript: boolean;
-      managed: boolean;
-      custom: Record<string, unknown>;
-    }) => {
-      await writeMeetingOutcome(
-        {
-          id,
-          version: input.seed.version,
-          status: input.draft.status,
-          // The workspace's own fields, which no calendar holds.
-          custom: input.custom,
-          // A calendar-managed meeting keeps the calendar's subject, notes
-          // and start; only its outcome is written.
-          ...(input.managed
-            ? {}
-            : {
-                subject: input.draft.subject.trim(),
-                // An emptied box clears the note rather than storing "": null
-                // is what the column holds for a meeting nobody wrote about.
-                body: outgoingBody(input.draft.body, input.transcript),
-                start: input.moved,
-              }),
-        },
-        t,
-      );
-    },
-    onSuccess: () => {
-      for (const queryKey of invalidateKeys) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-      queryClient.invalidateQueries({ queryKey: ["activity", id] });
-      toast.show(t("worklist.verb.meetingOutcomeRecorded"));
-      onClose();
-    },
-  });
-  return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="form">
-      <Heading size="large" id={titleId} className="t-h2 modal-title">
-        {title ?? t("worklist.verb.meetingUpdateTitle")}
-      </Heading>
-      {meeting.isPending && (
-        <p className="t-caption">{t("worklist.verb.meetingReading")}</p>
-      )}
-      <ErrorLine error={meeting.error} />
-      {/* Only while the read holds the meeting: a refused re-read withdraws
-          what the draft was seeded from, and the version a save needs. */}
-      {draft && seed && meeting.data && (
-        <>
-          <form
-            id={formId}
-            className="form-stack"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (
-                save.isPending ||
-                refuseUnreadableField(event.currentTarget)
-              ) {
-                return;
-              }
-              let moved: MovedStart | undefined;
-              try {
-                moved = managed
-                  ? undefined
-                  : movedStart(seed, draft.day, readerZone, new Date());
-              } catch (error) {
-                // A day the record zone skipped has no start to keep, so
-                // nothing is sent and the reader picks another date.
-                if (!(error instanceof RangeError)) throw error;
-                setDayRefused(true);
-                return;
-              }
-              setDayRefused(false);
-              save.mutate({
-                draft,
-                seed,
-                moved,
-                transcript,
-                managed,
-                custom: custom.patch(),
-              });
-            }}
-          >
-            <div className="form-row">
-              <Field label={t("worklist.verb.meetingWhatHappened")}>
-                {(control) => (
-                  <Select
-                    {...control}
-                    options={[
-                      { value: "held", label: t("worklist.verb.meetingHeld") },
-                      {
-                        value: "no_show",
-                        label: t("worklist.verb.meetingNoShow"),
-                      },
-                    ]}
-                    value={draft.status}
-                    // The Select can only hand back one of the two above; anything
-                    // else is the ordinary answer rather than a refusal.
-                    onChange={(value) =>
-                      setDraft({
-                        ...draft,
-                        status: value === "no_show" ? "no_show" : "held",
-                      })
-                    }
-                  />
-                )}
-              </Field>
-              {!managed && (
-                <Field label={t("log.date")}>
-                  {(control) => (
-                    <DateInput
-                      {...control}
-                      value={isoOrBlank(draft.day)}
-                      max={days.latest}
-                      today={days.today}
-                      onChange={(event) => {
-                        setDayRefused(false);
-                        setDraft({ ...draft, day: event.target.value });
-                      }}
-                    />
-                  )}
-                </Field>
-              )}
-            </div>
-            {managed ? (
-              <p className="t-caption">
-                {t("worklist.verb.meetingCalendarManaged")}
-              </p>
-            ) : (
-              <OutcomeWords
-                draft={draft}
-                transcript={transcript}
-                onChange={setDraft}
-              />
-            )}
-            {custom.controls}
-            {dayRefused && (
-              <ErrorLine>{t("worklist.verb.meetingDayMissing")}</ErrorLine>
-            )}
-            <ErrorLine error={save.error} />
-          </form>
-          <div className="actions">
-            <Button variant="ghost" type="button" onClick={onClose}>
-              {t("common.close")}
-            </Button>
-            <Button
-              variant="primary"
-              type="submit"
-              form={formId}
-              disabled={!save.isPending && !managed && !draft.subject.trim()}
-              pending={save.isPending}
-              busyLabel={t("log.saving")}
-            >
-              {t("log.save")}
-            </Button>
-          </div>
-        </>
-      )}
-    </Modal>
-  );
-}
-
-/** The subject and notes a meeting without a live invitation takes with its outcome. */
-function OutcomeWords({
-  draft,
-  transcript,
-  onChange,
-}: Readonly<{
-  draft: OutcomeDraft;
-  transcript: boolean;
-  onChange: (draft: OutcomeDraft) => void;
-}>) {
-  const t = useT();
-  return (
-    <>
-      <Field label={t("log.subject")} required>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={draft.subject}
-            onChange={(event) =>
-              onChange({ ...draft, subject: event.target.value })
-            }
-          />
-        )}
-      </Field>
-      {/* The editor Log activity writes with; a transcript keeps its
-          lines, which a citation points at. */}
-      <ActivityBodyField
-        label={t("log.body")}
-        hint={t("worklist.verb.meetingBodyHint")}
-        transcript={transcript}
-        rows={6}
-        value={draft.body}
-        onChange={(body) => onChange({ ...draft, body })}
-      />
     </>
   );
 }

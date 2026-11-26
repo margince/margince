@@ -4,9 +4,25 @@
 package messagingrules
 
 import (
+	"slices"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
+
+// registerForTest registers r for one test and removes it after, so the
+// package's tests stay repeatable within one process (-count).
+func registerForTest(t *testing.T, r Rules) {
+	t.Helper()
+	Register(r)
+	t.Cleanup(func() {
+		mu.Lock()
+		defer mu.Unlock()
+		delete(rules, r.Jurisdiction)
+	})
+}
 
 // Two jurisdictions apply to one message when the sender and the recipient sit
 // in different countries, and the answer is never "pick one". A message lawful
@@ -81,9 +97,8 @@ func TestDisclosuresAccumulate(t *testing.T) {
 	}
 }
 
-// The tighter cap wins, compared as a RATE. Three per 24h is tighter than ten
-// per 24h and also tighter than four per hour — comparing raw counts would let
-// a high-count short-window cap look looser than it is.
+// The tighter cap wins. Three per 24h is tighter than ten per 24h and also
+// tighter than four per hour, which lets more through in every stretch.
 func TestTheTighterCapWinsByRate(t *testing.T) {
 	threePerDay := &FrequencyCap{Messages: 3, Window: 24 * time.Hour}
 	tenPerDay := &FrequencyCap{Messages: 10, Window: 24 * time.Hour}
@@ -126,6 +141,23 @@ func TestAFoldedSetClaimsNoSingleJurisdiction(t *testing.T) {
 	}
 }
 
+// A fold carries no one pack's review, citations or digest. Each describes the
+// source of a single pack. A citation shown under the fold would name one
+// country's law for a send two countries govern.
+func TestAFoldCarriesNoSinglePacksProvenance(t *testing.T) {
+	reviewed := Provenance{ReviewedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), Reviewer: "a"}
+	a := Rules{
+		Jurisdiction: "aa", Version: 3, Provenance: reviewed,
+		Citations: []Citation{{Code: "frequency_cap_reached", Instrument: "Decree 1/2020"}},
+		Digest:    strings.Repeat("a", 64),
+	}
+	b := Rules{Jurisdiction: "bb", Version: 7}
+	got := stricter(a, b)
+	if got.Provenance != (Provenance{}) || got.Citations != nil || got.Digest != "" {
+		t.Errorf("the fold kept one pack's provenance: %+v %+v %q", got.Provenance, got.Citations, got.Digest)
+	}
+}
+
 // A jurisdiction the binary was not compiled with contributes nothing, and
 // Strictest reports that it found nothing rather than returning an empty set
 // that reads as "no obligations".
@@ -150,11 +182,16 @@ func TestAnUnknownJurisdictionIsNotAnAnswer(t *testing.T) {
 // thing to write — would rewrite the registered rules for every later send in
 // the process, silently dropping a statutory condition with nothing failing.
 func TestTheRegistryHandsOutCopies(t *testing.T) {
-	Register(Rules{
+	registerForTest(t, Rules{
 		Jurisdiction: "qa", Version: 1,
 		MarketingExceptions: []MarketingException{{Kind: ExistingCustomer, RequiresSimilarity: true}},
 		FrequencyCap:        &FrequencyCap{Messages: 3, Window: 24 * time.Hour},
-		Instruments:         []Instrument{{Name: "Decree 1/2020"}},
+		Instruments:         []Instrument{{Name: "Decree 1/2020", SourceURL: "https://example.org/decree"}},
+		Provenance: Provenance{
+			SourceCheckedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			ReviewedAt:      time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), Reviewer: "a",
+		},
+		Citations: []Citation{{Code: "frequency_cap_reached", Instrument: "Decree 1/2020", Provision: "Art. 1"}},
 	})
 
 	got, ok := For("qa")
@@ -164,6 +201,7 @@ func TestTheRegistryHandsOutCopies(t *testing.T) {
 	got.MarketingExceptions[0].RequiresSimilarity = false
 	got.FrequencyCap.Messages = 1000
 	got.Instruments[0].Name = "something else entirely"
+	got.Citations[0].Provision = "Art. 99"
 
 	again, _ := For("qa")
 	if !again.MarketingExceptions[0].RequiresSimilarity {
@@ -177,6 +215,9 @@ func TestTheRegistryHandsOutCopies(t *testing.T) {
 	if again.Instruments[0].Name != "Decree 1/2020" {
 		t.Errorf("a caller rewrote the registered citation to %q", again.Instruments[0].Name)
 	}
+	if again.Citations[0].Provision != "Art. 1" {
+		t.Errorf("a caller rewrote the registered provision to %q", again.Citations[0].Provision)
+	}
 }
 
 // Registering is a copy too, so a caller that keeps its literal and mutates it
@@ -184,7 +225,7 @@ func TestTheRegistryHandsOutCopies(t *testing.T) {
 func TestRegisteringTakesACopy(t *testing.T) {
 	exceptions := []MarketingException{{Kind: ExistingCustomer, RequiresSaleEvidence: true}}
 	instruments := []Instrument{{Name: "Decree 1/2020"}}
-	Register(Rules{
+	registerForTest(t, Rules{
 		Jurisdiction: "qb", Version: 1,
 		MarketingExceptions: exceptions,
 		Instruments:         instruments,
@@ -255,6 +296,33 @@ func TestADegenerateCapDoesNotWinByArgumentOrder(t *testing.T) {
 	}
 }
 
+// A cap is tighter only if it lets no more through in every stretch of time.
+// Two per 3h has the lower average and lets two out at once. One per hour lets
+// one out at once and more over a day. Neither holds the other, so the fold
+// answers a cap that holds both, whichever side each is on.
+func TestACapWithTheLowerRateAndTheBiggerBurstDoesNotWin(t *testing.T) {
+	hourly := &FrequencyCap{Messages: 1, Window: time.Hour}
+	burst := &FrequencyCap{Messages: 2, Window: 3 * time.Hour}
+	want := FrequencyCap{Messages: 1, Window: 3 * time.Hour}
+	for _, got := range []*FrequencyCap{tighterCap(hourly, burst), tighterCap(burst, hourly)} {
+		if *got != want {
+			t.Errorf("the fold of 1/1h and 2/3h is %+v, want %+v", *got, want)
+		}
+	}
+	// Two per hour against three per 1h24m: lower burst, lower rate, and
+	// still four through just after the first hour against three.
+	fast := &FrequencyCap{Messages: 2, Window: time.Hour}
+	slow := &FrequencyCap{Messages: 3, Window: 84 * time.Minute}
+	if got := tighterCap(fast, slow); got == fast || got == slow {
+		t.Errorf("one of 2/1h and 3/84m won although neither holds the other: %+v", *got)
+	}
+	// A cap that holds the other in every stretch still wins outright.
+	daily := &FrequencyCap{Messages: 1, Window: 24 * time.Hour}
+	if tighterCap(hourly, daily) != daily || tighterCap(daily, hourly) != daily {
+		t.Error("one per day lost to one per hour")
+	}
+}
+
 // Equal rates are not equal burst: {1, 1h} and {24, 24h} permit the same
 // average, and a 24-message burst is not the same restriction as one an hour.
 func TestEqualRatesBreakTowardTheSmallerBurst(t *testing.T) {
@@ -274,7 +342,7 @@ func TestEqualRatesBreakTowardTheSmallerBurst(t *testing.T) {
 // whose law the process knows nothing about, which is exactly the
 // laxest-country-decides failure the fold exists to prevent.
 func TestStrictestReportsTheJurisdictionsItCouldNotResolve(t *testing.T) {
-	Register(Rules{
+	registerForTest(t, Rules{
 		Jurisdiction: "qc", Version: 1,
 		MarketingExceptions: []MarketingException{{Kind: ExistingCustomer, RequiresSaleEvidence: true}},
 	})
@@ -310,8 +378,8 @@ func TestStrictestReportsTheJurisdictionsItCouldNotResolve(t *testing.T) {
 // with nothing to say about what judged it. The applied codes are the answer,
 // and they are the reason Strictest returns them at all.
 func TestAFoldNamesTheJurisdictionsItUsedBecauseTheVersionCannot(t *testing.T) {
-	Register(Rules{Jurisdiction: "fa", Version: 7, ReplyWindow: 30 * 24 * time.Hour})
-	Register(Rules{Jurisdiction: "fb", Version: 9, ReplyWindow: 365 * 24 * time.Hour})
+	registerForTest(t, Rules{Jurisdiction: "fa", Version: 7, ReplyWindow: 30 * 24 * time.Hour})
+	registerForTest(t, Rules{Jurisdiction: "fb", Version: 9, ReplyWindow: 365 * 24 * time.Hour})
 
 	got, applied, ok := Strictest("fa", "fb")
 	if !ok {
@@ -332,5 +400,98 @@ func TestAFoldNamesTheJurisdictionsItUsedBecauseTheVersionCannot(t *testing.T) {
 	// consolation prize for having lost the rules.
 	if got.ReplyWindow != 30*24*time.Hour {
 		t.Errorf("reply window = %s, want the shorter one", got.ReplyWindow)
+	}
+}
+
+// A fold keeps every advertising content rule either side declares: the
+// refusal layout, the foreign-advertiser notice and every restricted claim.
+func TestAdvertisingContentRulesSurviveTheFold(t *testing.T) {
+	a := Rules{Jurisdiction: "aa", Version: 1, ClaimsNeedProof: []string{"best"}}
+	b := Rules{
+		Jurisdiction: "bb", Version: 1, RefusalSectionLast: true, ForeignAdvertiserNeedsLocalAgency: true,
+		ClaimsNeedProof: []string{"best", "tốt nhất"},
+	}
+
+	got := stricter(a, b)
+	if !got.RefusalSectionLast {
+		t.Error("the fold dropped the refusal layout")
+	}
+	if !got.ForeignAdvertiserNeedsLocalAgency {
+		t.Error("the fold dropped the foreign-advertiser notice")
+	}
+	if !slices.Equal(got.ClaimsNeedProof, []string{"best", "tốt nhất"}) {
+		t.Errorf("claims %v, want each restricted word once", got.ClaimsNeedProof)
+	}
+	if !slices.Equal(a.ClaimsNeedProof, []string{"best"}) {
+		t.Errorf("the fold wrote into its input: %v", a.ClaimsNeedProof)
+	}
+}
+
+// A caller that edits the means it was handed must not edit the registered
+// rule for every later send.
+func TestTheRegistryHandsOutItsOwnCopyOfTheMeans(t *testing.T) {
+	r := Rules{Disclosures: []Disclosure{{Kind: ObjectionRoute, Means: []ContactMeans{MeansWeb}}}}
+	copied := clone(r)
+	copied.Disclosures[0].Means[0] = MeansPhone
+	if r.Disclosures[0].Means[0] != MeansWeb {
+		t.Error("the clone shares its means with the registered rule set")
+	}
+}
+
+// A data-protection law that follows the recipient, and one with no
+// legitimate-interest basis, bind a send whichever side declares them.
+func TestARecipientBoundLawSurvivesTheFold(t *testing.T) {
+	bound := Rules{
+		Jurisdiction: "aa", Version: 1, DataProtectionFollowsRecipient: true,
+		NoLegitimateInterests: true, DisclosureLanguage: "vi",
+	}
+	plain := Rules{Jurisdiction: "bb", Version: 1}
+	for _, folded := range []Rules{stricter(plain, bound), stricter(bound, plain)} {
+		if !folded.DataProtectionFollowsRecipient || !folded.NoLegitimateInterests || folded.DisclosureLanguage != "vi" {
+			t.Errorf("fold = %+v, want the recipient-bound law and its language kept", folded)
+		}
+	}
+}
+
+// The request rule of a fold covers each class either side covers, and every
+// class when one side covers every class.
+func TestTheRequestRuleSurvivesTheFold(t *testing.T) {
+	narrow := Rules{
+		Jurisdiction: "aa", Version: 1, ConsentConfirmationNeedsRequest: true,
+		ConsentRequestFirstFor: []PurposeClass{"marketing"},
+	}
+	none := Rules{Jurisdiction: "bb", Version: 1}
+	if got := stricter(none, narrow); !slices.Equal(got.ConsentRequestFirstFor, []PurposeClass{"marketing"}) {
+		t.Errorf("classes %v, want the one side's marketing", got.ConsentRequestFirstFor)
+	}
+	every := Rules{Jurisdiction: "cc", Version: 1, ConsentConfirmationNeedsRequest: true}
+	if got := stricter(narrow, every); len(got.ConsentRequestFirstFor) != 0 || !got.ConsentConfirmationNeedsRequest {
+		t.Errorf("classes %v, want every class: one side asks a request for each", got.ConsentRequestFirstFor)
+	}
+}
+
+// One subject begins with one label, so Rules.SubjectPrefix holds the first.
+// Every distinct label stays owed in Applied.SubjectPrefixes.
+func TestTheFoldKeepsEveryDistinctSubjectLabel(t *testing.T) {
+	Register(Rules{Jurisdiction: "pa", Version: 1, SubjectPrefix: "(광고)"})
+	Register(Rules{Jurisdiction: "pb", Version: 1, SubjectPrefix: "<ADV>"})
+	Register(Rules{Jurisdiction: "pc", Version: 1, SubjectPrefix: "<adv>"})
+	Register(Rules{Jurisdiction: "pd", Version: 1})
+	for _, tc := range []struct {
+		codes []jurisdiction.Code
+		first string
+		want  []string
+	}{
+		{[]jurisdiction.Code{"pa"}, "(광고)", []string{"(광고)"}},
+		{[]jurisdiction.Code{"pd", "pa"}, "(광고)", []string{"(광고)"}},
+		{[]jurisdiction.Code{"pb", "pc"}, "<ADV>", []string{"<ADV>"}},
+		{[]jurisdiction.Code{"pa", "pd", "pb"}, "(광고)", []string{"(광고)", "<ADV>"}},
+		{[]jurisdiction.Code{"pd"}, "", nil},
+	} {
+		rules, applied, _ := Strictest(tc.codes...)
+		if rules.SubjectPrefix != tc.first || !slices.Equal(applied.SubjectPrefixes, tc.want) {
+			t.Errorf("%v: prefix %q and labels %q, want %q and %q",
+				tc.codes, rules.SubjectPrefix, applied.SubjectPrefixes, tc.first, tc.want)
+		}
 	}
 }

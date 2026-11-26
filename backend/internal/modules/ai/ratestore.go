@@ -7,11 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // RateStore is the ai_model_rate price sheet — the fx_rate-style
@@ -38,17 +40,17 @@ func (s *RateStore) SetClock(clock func() time.Time) *RateStore {
 	return s
 }
 
-// RateFor resolves the rate effective on day for (provider, modelID) —
-// the latest row whose effective_date is on or before day, mirroring
-// fx_rate's as-of-date resolution (deal_advance.go). No matching row is
-// not an error: it means the call is UNPRICED, a materially different
-// signal from a 0 price (price-on-read; never fabricate a price), so the
-// caller gets (nil, nil) and decides what "unpriced" means to it.
-func (s *RateStore) RateFor(ctx context.Context, provider, modelID string, day time.Time) (*ModelRate, error) {
+// RateFor resolves the rate effective at the instant at for (provider, modelID).
+// It is the latest row whose effective_date is on or before the installation's
+// day at that instant, mirroring fx_rate's as-of-date resolution. No matching
+// row is not an error. It means the call is UNPRICED, a different signal from
+// a 0 price (price-on-read; never fabricate a price). The caller gets
+// (nil, nil) and decides what "unpriced" means to it.
+func (s *RateStore) RateFor(ctx context.Context, provider, modelID string, at time.Time) (*ModelRate, error) {
 	var rate *ModelRate
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var e error
-		rate, e = rateForInTx(ctx, tx, provider, modelID, day)
+		rate, e = rateForInTx(ctx, tx, provider, modelID, at)
 		return e
 	})
 	if err != nil {
@@ -57,7 +59,7 @@ func (s *RateStore) RateFor(ctx context.Context, provider, modelID string, day t
 	return rate, nil
 }
 
-func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day time.Time) (*ModelRate, error) {
+func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, at time.Time) (*ModelRate, error) {
 	var rate ModelRate
 	var band scannedBand
 	from, to := rateFallbacks()
@@ -65,8 +67,8 @@ func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day t
 		SELECT r.provider, r.model_id, r.input_per_mtok_microusd, r.output_per_mtok_microusd,
 		       r.cache_read_per_mtok_microusd, r.cache_write_per_mtok_microusd, r.effective_date,
 		       `+longContextColumns("r")+`
-		FROM (`+rateMatch("$1", "$2", "$3", 4, 5)+`) r`,
-		provider, modelID, day, from, to).Scan(
+		FROM (`+rateMatch("$1", "$2", occurredday.TodaySQL("$3::timestamptz"), 4, 5)+`) r`,
+		provider, modelID, at, from, to).Scan(
 		&rate.Provider, &rate.ModelID, &rate.InputPerMTokMicroUSD, &rate.OutputPerMTokMicroUSD,
 		&rate.CacheReadPerMTokMicroUSD, &rate.CacheWritePerMTokMicroUSD, &rate.EffectiveDate,
 		&band.above, &band.input, &band.output, &band.cacheRead, &band.cacheWrite,
@@ -86,8 +88,8 @@ func rateForInTx(ctx context.Context, tx pgx.Tx, provider, modelID string, day t
 // computation that runs at read time; the router, meter and adapters never
 // compute a cost.
 //
-// It is one SQL statement. A LATERAL join picks each row's as-of-date rate, as
-// RateFor does, so the window prices in one query. The arithmetic mirrors
+// It is one SQL statement. pricedRate picks the as-of-date rate, as RateFor
+// does, once for each rate key and day (costReportSQL). The arithmetic mirrors
 // PriceCall: the same floor, zero-cache fallback, long-context band and
 // truncating /1000000. GROUP BY day, task and tier matches the /ai/usage wire
 // grain, so the handler attaches each line to one row. A shared task total
@@ -105,18 +107,7 @@ func (s *RateStore) CostReport(ctx context.Context, from, to time.Time) ([]DayCo
 	var report []DayCost
 	fallbackFrom, fallbackTo := rateFallbacks()
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT
-			  ac.occurred_at::date AS day,
-			  ac.task,
-			  ac.tier,
-			  COALESCE(SUM(`+callCostMicroUSD("ac")+`), 0) AS cost_microusd,
-			  COUNT(*) FILTER (WHERE `+callUnpriced("ac")+`) AS unpriced_calls
-			FROM ai_call ac
-			LEFT JOIN LATERAL (`+pricedRate("ac", 3, 4)+`) r ON true
-			WHERE ac.occurred_at >= $1 AND ac.occurred_at < $2
-			GROUP BY ac.occurred_at::date, ac.task, ac.tier
-			ORDER BY day, ac.task, ac.tier`,
+		rows, err := tx.Query(ctx, costReportSQL(),
 			from, to, fallbackFrom, fallbackTo)
 		if err != nil {
 			return err
@@ -138,6 +129,48 @@ func (s *RateStore) CostReport(ctx context.Context, from, to time.Time) ([]DayCo
 		return nil, fmt.Errorf("ai: cost report: %w", err)
 	}
 	return report, nil
+}
+
+// rateKeyColumns are the ai_call columns pricedRate reads besides the call's
+// day. Calls alike in these and the day are priced at one rate.
+var rateKeyColumns = strings.Fields("provider model_id served_model served_identity_source")
+
+// costReportSQL looks up the rate once for each rate key and day in the
+// window, then joins it back to the calls. A lookup per call was the read's
+// whole cost.
+func costReportSQL() string {
+	const inWindow = `ac.occurred_at >= $1 AND ac.occurred_at < $2`
+	keyMatch := make([]string, 0, len(rateKeyColumns)+1)
+	for _, column := range rateKeyColumns {
+		keyMatch = append(keyMatch, "r."+column+" = ac."+column)
+	}
+	keyMatch = append(keyMatch, "r.day = "+callDaySQL("ac"))
+	return `
+			WITH key_rate AS MATERIALIZED (
+			  SELECT k.*,
+			         r.id, r.input_per_mtok_microusd, r.output_per_mtok_microusd,
+			         r.cache_read_per_mtok_microusd, r.cache_write_per_mtok_microusd,
+			         ` + longContextColumns("r") + `
+			  FROM (
+			    -- One call's instant stands for its day, the column pricedRate dates a call by.
+			    SELECT ac.` + strings.Join(rateKeyColumns, ", ac.") + `, ` + callDaySQL("ac") + ` AS day,
+			           min(ac.occurred_at) AS occurred_at
+			    FROM ai_call ac WHERE ` + inWindow + `
+			    GROUP BY ac.` + strings.Join(rateKeyColumns, ", ac.") + `, ` + callDaySQL("ac") + `
+			  ) k
+			  LEFT JOIN LATERAL (` + pricedRate("k", 3, 4) + `) r ON true
+			)
+			SELECT
+			  ` + callDaySQL("ac") + ` AS day,
+			  ac.task,
+			  ac.tier,
+			  COALESCE(SUM(` + callCostMicroUSD("ac") + `), 0) AS cost_microusd,
+			  COUNT(*) FILTER (WHERE ` + callUnpriced("ac") + `) AS unpriced_calls
+			FROM ai_call ac
+			LEFT JOIN key_rate r ON ` + strings.Join(keyMatch, " AND ") + `
+			WHERE ` + inWindow + `
+			GROUP BY ` + callDaySQL("ac") + `, ac.task, ac.tier
+			ORDER BY day, ac.task, ac.tier`
 }
 
 // callCostMicroUSD is what one ai_call row (aliased alias, joined to its rate

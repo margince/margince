@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/lib/pwa.ts frontend/src/offline/serviceworker.js frontend/src/offline/page.ts frontend/scripts/vite-pwa.ts frontend/public/manifest.webmanifest frontend/src/lib/connectivity.ts -->
+<!-- describes: frontend/src/lib/pwa.ts frontend/src/bootstrap.ts frontend/scripts/pwa-icons.mjs frontend/src/offline/serviceworker.js frontend/src/offline/page.ts frontend/scripts/vite-pwa.ts frontend/public/manifest.webmanifest frontend/src/lib/connectivity.ts frontend/src/lib/installhint.ts frontend/src/app/installhint.tsx frontend/nginx.conf -->
 # The app you can install: manifest, service worker, offline page
 
 Margince can be installed from the browser as an app. It gets its own window, its own icon and its
@@ -10,8 +10,8 @@ what the parts are, what the service worker may do, and why its job is so small.
 
 | Part | Where | What it does |
 |---|---|---|
-| Manifest | `frontend/public/manifest.webmanifest` | names the app, its colors, `start_url` and `display: standalone`, which makes it something you can install |
-| Icons | `frontend/public/`: `icon.svg`, `favicon.ico`, `favicon-96x96.png`, `apple-touch-icon.png`, `web-app-manifest-192x192.png` and `-512x512.png` | the icons the browser tab, iOS and the manifest name; `frontend/src/app/sharepreview.test.ts` holds each one to what it declares |
+| Manifest | `frontend/public/manifest.webmanifest` | names the app, its colors, `start_url` and `display: standalone`, which makes it something you can install. Its `shortcuts` are the links the launcher offers beside the app (Home, Worklist, Deals). A manifest is one fixed file and cannot change with the language, so the links are in English. Its `launch_handler` (`navigate-existing`) opens a launcher link or any other link in a window of the app that is already open, where Chromium supports it |
+| Icons | `frontend/public/`: `icon.svg`, `icon-192x192.png`, `icon-512x512.png`, `web-app-manifest-192x192.png`, `web-app-manifest-512x512.png`, `favicon.ico`, `favicon-96x96.png`, `apple-touch-icon.png` | The manifest offers `icon.svg` and the two `icon-*` files as `any`: the rounded square, shown as it is. The two `.png` files serve an installer that does not draw a vector image. It offers the two `web-app-manifest-*` files as `maskable`: the mark on a ground that fills the square, for a launcher that cuts its own shape. `pnpm gen:pwa-icons` (`frontend/scripts/pwa-icons.mjs`) draws all four `.png` files from `icon.svg`. The browser tab uses the favicons, and iOS uses `apple-touch-icon.png`. `frontend/src/app/sharepreview.test.ts` holds each icon to a file and each `.png` file to the size it declares. `frontend/src/lib/pwa-manifest.test.ts` holds the ground of each `maskable` file to `--accentBrand`, with its mark well inside the round safe zone in the middle. It also holds the edge of each `any` `.png` file clear outside its rounded square |
 | Service worker | source `frontend/src/offline/serviceworker.js`, written out as `/sw.js` by `frontend/scripts/vite-pwa.ts` | answers a page request the network could not complete with the offline page, and the offline page's own script; nothing else |
 | Offline page | `frontend/src/offline/page.ts` (the HTML), `present.ts` (block, retry, load again when the network is back), `entry.ts`, `offline.css`; written out as `/assets/offline-<hash>.html` | tells the reader the device cannot reach Margince, in their language, with a retry |
 | Sign-up and install state | `frontend/src/lib/pwa.ts` | signs up the worker in a production build; keeps the browser's install offer for the app to show |
@@ -39,11 +39,18 @@ from the cache can pin no build. When the network works, the app always comes fr
 
 Page requests into what the API owns on this origin are never answered by the worker, not even
 offline. So an OAuth consent, an MCP `/.well-known` document or a webhook URL opened in a tab fails
-the way the browser fails it. `vite-pwa.ts` reads the list from the keys of the dev server's proxy
-in `frontend/vite.config.ts` (`/v1`, `/setup`, `/oauth`, `/mcp`, `/.well-known`, `/webhooks`,
-`/healthz`, `/readyz`, `/metrics`). It matches them by whole path part: the way the served app
-routes them, rather than the way the dev server does. `/mcp` and `/mcp/…` go to the network as they
-are. `/mcp-apps/…` is shipped files, so a failed page request there gets the offline page.
+the way the browser fails it. `apiNavigationPaths` in `vite-pwa.ts` reads the list from the keys of
+the dev server's proxy in `frontend/vite.config.ts`, and the built `sw.js` carries it. The worker
+matches the list by whole path part: the way the served app routes them, rather than the way the
+dev server does. `/mcp` and `/mcp/…` go to the network as they are.
+
+Some paths a page request opens in the app. A proxy key whose `bypass` hands a page request to the
+app stays out of the list. That is `/r/` for a record card. The nginx server answers a page request
+there with the app as well, so a failed one there gets the offline page. The same holds for
+`/mcp-apps/…`, which is shipped files.
+
+A booking page at `/book` has no `bypass`. The nginx server sends every fetch of it to the API's
+booking card, so the worker leaves it to the network.
 
 The worker does **not** use `navigation preload`. With it on, the browser requests every page in
 scope before the worker decides, including the ones the worker then leaves alone. A page request
@@ -97,11 +104,13 @@ it: `frontend/scripts/vite-pwa.test.ts`.
 
 The page shows when the device cannot reach Margince at all. It carries one block per language the
 app ships, with the text from the `offline.*` keys of the catalogs. Its CSS is part of the page,
-with `tokens.css` and `base.css` built in. So its colors, type and button are the product's own in
-both themes.
+with `tokens.css` and `base.css` built in. So its colors and button are the product's own in both
+themes. It carries no font file, so its text shows in the device's own font.
 
-Its script is the one thing it loads. The site's content security policy allows no script written
-inside the page, so the script is a file of its own under `/assets/`. The worker answers it from the
+Its script is the one thing it loads. The site's content security policy admits one script written
+inside a page, the theme script of `index.html`, by its hash. It refuses any other, and a second one
+would need its own hash in each place `nginx.conf` sets the policy. So the script is a file of its
+own under `/assets/`. The worker answers it from the
 cache it installed it into. The browser's HTTP cache is not enough: `vite preview` sends no cache
 headers, and any browser may drop an entry.
 
@@ -119,16 +128,18 @@ normal link that loads the page again without the route.
 ## Sign-up and the install offer
 
 `registerServiceWorker()` in `frontend/src/lib/pwa.ts` signs up `/sw.js` with scope `/`. It does so
-only in a production build, and only where the browser has service workers. It also waits for the
-window's `load` event, so installing the worker never slows the app's first load. A failed sign-up
-is logged with `console.warn` and changes nothing else.
+only in a production build, and only where the browser has service workers. It signs up once the
+window's `load` event has fired, so installing the worker never slows the app's first load. It does
+so at once when `load` has already fired. A failed sign-up is logged with `console.warn` and
+changes nothing else.
 
 `frontend/census/rules/serviceworker-registrar.census.ts` fails any shipped module but `pwa.ts` that names
 `navigator.serviceWorker` in code. It reads every kind of script under `frontend/src` or the
 frontend of an extension. So a second module that signs up a worker cannot come in without notice.
 
-`listenForInstall()` runs from `main.tsx` before React shows the first screen, because the browser
-can make its offer before React starts. It returns the function that undoes it. `useInstallState()`
+`frontend/src/bootstrap.ts`, the entry script, calls `listenForInstall()` and
+`registerServiceWorker()`. `main.tsx` can load after the window's `load` event, and Chrome can
+make its offer before it loads. `listenForInstall()` returns the function that undoes it. `useInstallState()`
 answers one of:
 
 | State | Meaning |
@@ -136,8 +147,18 @@ answers one of:
 | `installed` | running as the installed app (`display-mode: standalone`, or `navigator.standalone` on iOS; a browser without `matchMedia` reads as not installed), or accepted or installed during this visit |
 | `available` | the browser offered to install; `prompt()` asks it once and answers `accepted` or `dismissed`. A browser that refuses to show its window (an offer already used) answers `dismissed` and logs it, so the row never keeps offering a button that cannot work |
 | `dismissed` | the reader turned the offer down; it holds until the browser offers again (`available`) or the app is installed |
-| `manual-ios` | an iPhone or iPad browser, where Add to Home Screen is a step by hand |
-| `unavailable` | nothing this page can offer |
+| `manual-ios` | an iPhone or iPad browser whose agent carries `Safari/` (Safari, and Chrome, Edge and Firefox on iOS), where Add to Home Screen is a step by hand |
+| `manual-macos` | Safari 26 or later on a Mac, where File › Add to Dock is a step by hand |
+| `unavailable` | nothing this page can offer, including an app's own browser on iOS |
+
+Some iOS apps open a link in their own browser: LinkedIn, the Google app, and the apps whose agent
+carries `FBAN` or `Instagram`. That browser leaves `Safari/` out of its agent, and its share sheet
+cannot add to the home screen. So that agent reads as `unavailable`, and no row or notice offers
+steps that cannot work there.
+
+Add to Dock needs macOS 14. Safari reports every macOS as 10.15.7, so the agent cannot name the
+system. Safari 26 ships for macOS 14 and later only, so the first number after `Version/` stands in.
+An older Safari on a Mac reads as `unavailable`.
 
 ## Network state
 
@@ -176,13 +197,48 @@ built from `useInstallState()` alone:
 - `dismissed`: a line of text naming the browser's menu and the install icon in its address line.
   Chromium does not offer again in this page session.
 - `manual-ios`: one line: Share, then Add to Home Screen.
+- `manual-macos`: one line: File, then Add to Dock.
 - `installed`: the row says so, with nothing to click.
 - `unavailable`: no row and no section. A browser that cannot install is missing a part on this
   device; it has not refused.
 
 When the button is removed and takes focus with it, focus moves to the text or to the "Installed"
-that takes its place. Focus in any other place stays where it is. On macOS, the Safari menu entry
-File › Add to Dock gets no row: it needs macOS 14, and Safari reports every macOS as 10.15.7.
+that takes its place. Focus in any other place stays where it is. The row keeps its Install button
+as long as the browser offers one, whatever the schedule of the notice on Home says.
+
+## The install notice on Home
+
+`listenForInstall()` cancels the browser's own install offer, which turns off the small install bar
+that Chrome shows on Android. So `frontend/src/app/installhint.tsx` offers the install on Home instead, as a
+`discovery` `Callout` in the shell's banner slot. It never takes focus as it appears, and a
+standing notice is not read out at rest.
+
+- **Who:** a device whose pointer matches `(pointer: coarse)`, such as a phone, in state
+  `available` or `manual-ios`. A desktop keeps the browser's address-bar icon and the Settings row.
+- **Where:** only on Home, and only when no other shell banner has something to say. The notice asks
+  the same hooks the banners draw from (`useConnectivity`, `useCaptureConcerns`, `useEconomyBand`,
+  `useReindexNeeded`, `useLicenseNotice`). A banner the reader put away for the session or the day
+  still keeps the notice back.
+- **What:** both states end on a "Not now" button. In `available`, Install follows it and
+  calls `prompt()` inside the click. `manual-ios` shows the Share step with
+  the Share icon, and no Install.
+
+`frontend/src/lib/installhint.ts` holds the schedule in one JSON record under
+`STORAGE_KEYS.installHint` (`margince.installHint`). It is kept per `device`, so a new sign-in keeps it:
+
+- The shell records the first calendar day this device runs it, in the reader's zone. The notice
+  waits until the next day, unless the reader completes a task on Home first. The round tick and
+  Done on the open task card both count.
+- "Not now", or a dismissal of the browser's install window opened from the notice, hides it for 30
+  days (`INSTALL_HINT_SNOOZE_MS`).
+- The second dismissal hides it on this device for good.
+- Once the app is installed, the record says so and the notice never shows again. iOS is the
+  exception. A tab in Safari and the app on the home screen keep their own storage. Safari also
+  cannot tell a page that the app is installed. So a Safari tab can still show the notice until the
+  reader turns it down twice.
+
+A stored value in another shape reads as never seen. When the notice goes, focus inside it moves to
+the page content, never to `<body>`.
 
 ## Turning the worker off when it goes wrong
 
@@ -218,7 +274,6 @@ None of these ships today, and each needs its own decision before it ships:
   worker change needed while the app is open.
 - **Share target.** A `share_target` entry in the manifest, so a shared link or file can land in
   capture.
-- **Links for the launcher.** `shortcuts` in the manifest, for the list of links the launcher shows.
 - **Install images.** `screenshots` in the manifest, for the fuller install window.
 - **Offline data.** Reading records without a connection. This is the one that would change the rule
   above. It needs a design for data that is out of date and for writes made offline, before any

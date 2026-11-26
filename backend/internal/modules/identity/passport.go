@@ -23,7 +23,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -89,6 +88,8 @@ type IssuePassportInput struct {
 	Scopes []string
 	TTL    *time.Duration
 	Areas  principal.WorkAreas
+	// App is set only by AuthenticateAppCaller, never from a request body.
+	App *AppCaller
 }
 
 // IssuedPassport carries the raw token exactly once.
@@ -104,6 +105,9 @@ type IssuedPassport struct {
 type InvalidPassportFieldError struct{ Field, Code, Message string }
 
 func (e *InvalidPassportFieldError) Error() string { return e.Field + ": " + e.Message }
+
+// requiredFieldCode is the field code of a value that must be present.
+const requiredFieldCode = "required"
 
 // maxPassportLabelRunes is the label bound crm.yaml declares as maxLength,
 // which counts characters rather than bytes.
@@ -193,6 +197,15 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 	if err := admitAreas(in.Areas); err != nil {
 		return IssuedPassport{}, err
 	}
+	// A name that is given must say something, or two rows cannot be told
+	// apart. An absent name stays accepted for older API clients.
+	if in.Label != nil {
+		label := strings.TrimSpace(*in.Label)
+		if label == "" {
+			return IssuedPassport{}, &InvalidPassportFieldError{Field: "label", Code: requiredFieldCode, Message: "label must not be blank"}
+		}
+		in.Label = &label
+	}
 	if grantID == nil {
 		if err := admitCallerChosenFields(in); err != nil {
 			return IssuedPassport{}, err
@@ -221,11 +234,12 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 	token := passportTokenPrefix + raw
 	out := IssuedPassport{Token: token, Scopes: in.Scopes}
 
+	appIssuer, appSubject := in.App.columns()
 	if err := tx.QueryRow(ctx,
-		`INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id, work_areas)
-		 VALUES ($1, $1, $2, $3, $4, now() + $5::interval, $6, $7)
+		`INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id, work_areas, app_issuer, app_subject)
+		 VALUES ($1, $1, $2, $3, $4, now() + $5::interval, $6, $7, $8, $9)
 		 RETURNING id, expires_at`,
-		id.UserID, in.Label, in.Scopes, hashToken(token), ttl.String(), grantID, areasColumn(in.Areas)).
+		id.UserID, in.Label, in.Scopes, hashToken(token), ttl.String(), grantID, areasColumn(in.Areas), appIssuer, appSubject).
 		Scan(&out.ID, &out.ExpiresAt); err != nil {
 		return IssuedPassport{}, err
 	}
@@ -283,24 +297,8 @@ func (s *Service) revokePassportTx(
 	if err != nil {
 		return err
 	}
-	// Another user's passport reads as absent, not forbidden —
-	// existence-hiding matches the row-scope convention.
-	//
-	// Only the CROSS-USER branch is gated. Revoking your own passport is
-	// self-authorized and always was: it needs no member-administration grant,
-	// and requiring one would take from every seat the ability to cut off an
-	// agent acting as them.
-	if onBehalfOf != id.UserID {
-		if err := auth.Require(ctx, objectUserAdmin, principal.ActionUpdate); err != nil {
-			return apperrors.ErrNotFound
-		}
-		// The same ceiling IssuePasswordLink carries, for a smaller reason.
-		// Revoking is denial rather than takeover — but a delegated holder who
-		// could cut off every agent acting for an administrator has reach over
-		// that administrator's work.
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, id, onBehalfOf, reachDenial); err != nil {
-			return apperrors.ErrNotFound
-		}
+	if err := mayManagePassport(ctx, tx, id, onBehalfOf); err != nil {
+		return err
 	}
 	if revokedAt != nil && grantID == nil {
 		return nil // idempotent: a locally minted passport has nothing beneath it
@@ -373,6 +371,10 @@ type AgentIdentity struct {
 	Roles        []string
 	Teams        []ids.TeamID
 	Permissions  principal.Permissions
+	// Locale is the language the granting human reads: their saved choice,
+	// else the installation's base language. No screen sits behind an agent
+	// to answer for a human who never chose.
+	Locale string
 }
 
 // Principal renders the principal shape every store entry point enforces. The
@@ -390,6 +392,7 @@ func (a AgentIdentity) Principal() principal.Principal {
 		SeatType:     principal.SeatType(a.SeatType),
 		Scopes:       a.Scopes,
 		Areas:        a.Areas,
+		Locale:       a.Locale,
 		Permissions:  a.Permissions,
 	}
 }
@@ -412,8 +415,9 @@ func (s *Service) authenticateAgentWhere(ctx context.Context, tx pgx.Tx, predica
 	// oauth_grant_id is NULL for a locally minted passport, which the principal
 	// spells as a zero connection rather than a pointer nobody else carries.
 	var connection *ids.UUID
+	var locale *string
 	err = tx.QueryRow(ctx, agentAuthQuery(predicate), args...).
-		Scan(&a.PassportID, &a.OnBehalfOf, &scopes, &a.SeatType, &connection, &areas)
+		Scan(&a.PassportID, &a.OnBehalfOf, &scopes, &a.SeatType, &connection, &areas, &locale)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return AgentIdentity{}, apperrors.ErrNotFound
 	}
@@ -433,6 +437,7 @@ func (s *Service) authenticateAgentWhere(ctx context.Context, tx pgx.Tx, predica
 	if loadErr != nil {
 		return AgentIdentity{}, loadErr
 	}
+	a.Locale = string(readingLanguage(ctx, tx, a.Principal(), locale))
 	return a, nil
 }
 
@@ -457,14 +462,14 @@ func (s *Service) AuthenticateAgentByID(ctx context.Context, passportID ids.Pass
 	return a, nil
 }
 
-// touchPassport stamps the passport as used, at most once a minute. /mcp
+// touchPassport stamps the passport as used, at most once per stampInterval. /mcp
 // authenticates on every exchange, so an unconditional write would add a row
 // update to every tool call. It is a read model, so like a deal-room session's
 // last-seen stamp it writes no audit row or event.
 func touchPassport(ctx context.Context, tx pgx.Tx, passport ids.PassportID) error {
 	if _, err := tx.Exec(ctx, `
 		UPDATE passport SET last_used_at = now()
-		 WHERE id = $1 AND (last_used_at IS NULL OR last_used_at < now() - interval '1 minute')`, passport); err != nil {
+		 WHERE id = $1 AND (last_used_at IS NULL OR last_used_at < now() - $2::interval)`, passport, stampInterval.String()); err != nil {
 		return fmt.Errorf("identity: stamping passport %s as used: %w", passport, err)
 	}
 	return nil

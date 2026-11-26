@@ -1,0 +1,6 @@
+{
+  "verb": "set_weekly_plan_contract",
+  "checks": [
+    "weekly_plan.update"
+  ]
+}

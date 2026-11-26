@@ -1,0 +1,12 @@
+{
+  "verb": "accept_partner_lead",
+  "checks": [
+    "company.read",
+    "lead.update",
+    "partner.update"
+  ],
+  "takes": [
+    "lead",
+    "partner_lead"
+  ]
+}

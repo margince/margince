@@ -1,15 +1,16 @@
 import "./auth-core.css";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { AmbientWaves } from "../design-system/ambient-waves";
-import { AppLink } from "../design-system/applink";
 import { Heading } from "../design-system/heading";
 import {
   MarginceCoreScene,
   type MarginceCoreState,
 } from "../design-system/margince-core";
 import { useDocumentIntro, useTypeStream } from "../design-system/motion";
+import { OffsiteLink } from "../design-system/offsitelink";
 import { ThemeToggle } from "../design-system/theme-toggle";
 import { useT } from "../i18n";
+import { LEGAL_LINKS } from "../lib/legallinks";
 
 /**
  * The unauthenticated surface: two regions (ADR-0076 Decision 1).
@@ -97,9 +98,20 @@ export function typeSpeedFor(text: string): number {
 export function AuthExperience({
   children,
   phase,
+  notice = false,
+  wide = false,
+  core = true,
 }: Readonly<{
   children: ReactNode;
   phase: AuthPhase;
+  // A notice the signed-in reader is held at, not a sign-in. The system does
+  // not introduce itself to someone already inside, and access is not the point.
+  notice?: boolean;
+  // A form with sections of its own, which the sign-in measure would wrap
+  // line by line.
+  wide?: boolean;
+  // Off where a signed-in reader is asked for a decision rather than a sign-in.
+  core?: boolean;
 }>) {
   // The entry choreography belongs to the page load, not to this mount: every
   // animation below — the staggered rows, the typed statement — is gated on it,
@@ -107,7 +119,13 @@ export function AuthExperience({
   const intro = useDocumentIntro();
   return (
     <div
-      className="auth-surface"
+      className={[
+        "auth-surface",
+        wide && "auth-surface-wide",
+        !core && "auth-surface-coreless",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       data-auth-phase={phase}
       data-auth-intro={intro ? "play" : "done"}
     >
@@ -126,9 +144,9 @@ export function AuthExperience({
           in the DOM (see the order note above), not from the tag. */}
       <div className="auth-task">
         <div className="auth-task-in">{children}</div>
-        <LegalFooter />
+        <LegalFooter notice={notice} />
       </div>
-      <IdentityRegion phase={phase} />
+      {core && <IdentityRegion phase={phase} greeting={!notice} />}
     </div>
   );
 }
@@ -150,9 +168,10 @@ export function AuthExperience({
 export function AuthCardTitle({
   children,
   className,
-}: Readonly<{ children: ReactNode; className?: string }>) {
+  as = "h2",
+}: Readonly<{ children: ReactNode; className?: string; as?: "h1" | "h2" }>) {
   return (
-    <Heading size="xlarge" as="h2" className={className}>
+    <Heading size="xlarge" as={as} className={className}>
       {children}
     </Heading>
   );
@@ -171,13 +190,12 @@ export function AuthCardTitle({
  * `auth.tsx`) is a control and stays the last child of the card column inside
  * `.auth-task-in`. Different grid rows, so neither can push the other around.
  *
- * **The hrefs are server paths, not app routes.** Both documents have to be
+ * **The links are off-site documents, from `lib/legallinks`.** Both have to be
  * readable BEFORE anyone authenticates, so they cannot sit behind the SPA
- * router — the SPA is what a 401 keeps you out of. Nothing serves them yet and
- * they 404: a missing document, which is a content gap rather than a faked
- * capability.
+ * router. They open in a new tab so the form keeps what was typed, and a
+ * document with no address draws no link.
  */
-function LegalFooter() {
+function LegalFooter({ notice }: Readonly<{ notice: boolean }>) {
   const t = useT();
   return (
     <div className="auth-legal">
@@ -186,17 +204,21 @@ function LegalFooter() {
           those are outcome claims the installation's own configuration can
           contradict (VOICE-RULE-7). It must also not read as a control, which is
           why it is not inside the links group. */}
-      <p>{t("auth.legalProtected")}</p>
+      {!notice && <p>{t("auth.legalProtected")}</p>}
       {/* The bottom row is the surface's chrome row, and the theme control is
           chrome: it changes how this page looks and claims nothing about the
           company. It sits after the two links, behind a separator, so the
           legal sentence above still reads as a statement and not as a control.
           The row already wraps, so the extra item cannot widen the surface. */}
       <span className="auth-legal-links">
-        <AppLink href="/legal/terms">{t("auth.legalTerms")}</AppLink>
-        <span className="auth-legal-sep" aria-hidden />
-        <AppLink href="/legal/privacy">{t("auth.legalPrivacy")}</AppLink>
-        <span className="auth-legal-sep" aria-hidden />
+        {LEGAL_LINKS.map((link) => (
+          <Fragment key={link.key}>
+            <OffsiteLink href={link.href} className="">
+              {t(link.labelKey)}
+            </OffsiteLink>
+            <span className="auth-legal-sep" aria-hidden />
+          </Fragment>
+        ))}
         <ThemeToggle />
       </span>
     </div>
@@ -232,7 +254,10 @@ function LegalFooter() {
  * STILL NO CONTROLS. That is what keeps the region from competing with the form,
  * and it is structural rather than a matter of taste.
  */
-export function IdentityRegion({ phase }: Readonly<{ phase: AuthPhase }>) {
+export function IdentityRegion({
+  phase,
+  greeting = true,
+}: Readonly<{ phase: AuthPhase; greeting?: boolean }>) {
   const t = useT();
   return (
     /*
@@ -247,18 +272,20 @@ export function IdentityRegion({ phase }: Readonly<{ phase: AuthPhase }>) {
     <div className="auth-identity-col">
       <MarginceCoreScene state={coreState(phase)} />
 
-      <div className="auth-identity">
-        <div className="auth-identity-copy">
-          {/* The greeting is what gets typed, and it is the only row that does:
+      {greeting && (
+        <div className="auth-identity">
+          <div className="auth-identity-copy">
+            {/* The greeting is what gets typed, and it is the only row that does:
               a system saying its own name as it arrives is what the motion is
               ABOUT. The line under it fades up complete, so a reader who looks
               down mid-reveal finds a finished sentence rather than two
               paragraphs assembling themselves. */}
-          <TypedStatement text={t("auth.coreGreeting")} />
+            <TypedStatement text={t("auth.coreGreeting")} />
 
-          <p className="auth-purpose">{t("auth.corePurpose")}</p>
+            <p className="auth-purpose">{t("auth.corePurpose")}</p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

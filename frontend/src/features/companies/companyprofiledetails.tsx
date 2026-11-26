@@ -11,15 +11,15 @@ import { useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { type Edit, useRowBuilders } from "./companyrail";
 import { SidecarFieldValue } from "./companyraildetails";
-import { CompanyTagsSection } from "./companyrailtags";
+import { companyTypeLabel, useCompanyTypeDirectory } from "./companytypes";
 
 type Company = components["schemas"]["Company"];
 type ProfileField = components["schemas"]["CompanyProfileField"];
 
 /**
  * The account's filed fields that the record's details column does not draw:
- * legal name, relationship types, parent company, LinkedIn, registered
- * address and tags. They sit here, every one visible and editable.
+ * legal name, relationship types, parent company, LinkedIn and registered
+ * address. They sit here, every one visible and editable.
  * The details column then holds only what the design shows, and no value on
  * the record becomes unreachable.
  */
@@ -38,17 +38,23 @@ export function CompanyProfileDetails({
 }>) {
   const t = useT();
   const { text, compound } = useRowBuilders(company, edit);
-  const types = company.relationship_types ?? [];
+  const extensionTypes = useCompanyTypeDirectory().data?.data ?? [];
+  // The in-place edit writes core's list only, so an extension's types are
+  // shown beside it and stay as they are.
+  const typeLabels = [
+    ...(company.relationship_types ?? []).map((type) =>
+      t(labelFor(RELATIONSHIP_TYPE_LABELS, type)),
+    ),
+    ...(company.extension_relationship_types ?? []).map((type) =>
+      companyTypeLabel(type, extensionTypes),
+    ),
+  ];
   const rows = [
     text("legal_name", "create.legalName"),
     compound(
       "relationship_types",
       t("company.relationshipTypes"),
-      types.length > 0
-        ? types
-            .map((type) => t(labelFor(RELATIONSHIP_TYPE_LABELS, type)))
-            .join(", ")
-        : undefined,
+      typeLabels.length > 0 ? typeLabels.join(", ") : undefined,
     ),
     compound(
       "parent_company_id",
@@ -80,13 +86,6 @@ export function CompanyProfileDetails({
           canEdit={edit.canEdit}
           readOnlyReason={edit.reason}
         />
-      ),
-    },
-    {
-      key: "tags",
-      term: t("tags.panelTitle"),
-      value: (
-        <CompanyTagsSection company={company} companyId={company.id} bare />
       ),
     },
   ];

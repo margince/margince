@@ -32,3 +32,19 @@ export function worklistLaneHref(
   const target = worklistLaneTarget(filter, scope);
   return hashWithParams(routeHash(target.route), target.params);
 }
+
+/** The dial naming the part of the Worklist a link opens it on. */
+export const WORKLIST_SECTION_PARAM = "queue_at";
+/** The Change history panel, last on the Worklist. */
+export const CHANGE_HISTORY_SECTION = "history";
+
+/** The Worklist, opened on its Change history panel. */
+export function worklistHistoryHref() {
+  return hashWithParams(
+    routeHash({ screen: "home" }),
+    new Map([
+      ["queue", "1"],
+      [WORKLIST_SECTION_PARAM, CHANGE_HISTORY_SECTION],
+    ]),
+  );
+}

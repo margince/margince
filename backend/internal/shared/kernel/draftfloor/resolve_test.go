@@ -222,13 +222,142 @@ func TestTheThreadNamesTheLanguageWhenTheAnsweredMessageDoesNot(t *testing.T) {
 	}
 }
 
-func TestCorrespondenceOutranksTheSubjectOfANewDraft(t *testing.T) {
+// The subject the rep wrote for the draft names its language over everything
+// the server reads for itself. A subject that names no language leaves the
+// ladder below it as it was.
+func TestTheRepsSubjectDecidesTheLanguageOfTheDraft(t *testing.T) {
+	t.Parallel()
+	const englishMail = "Thank you for the proposal. Please send the project references and the delivery options."
+	const germanMail = "Hallo Anna, wir haben das Angebot geprüft und melden uns bei Ihnen wegen der offenen Punkte."
+	const germanSubject = "Unsere nächsten Schritte für das gemeinsame Projekt"
+	const englishSubject = "Your proposal and our next steps"
+
+	for name, tc := range map[string]struct {
+		written draftfloor.Written
+		want    string
+	}{
+		"a German subject over English correspondence": {
+			written: draftfloor.Written{Thread: []string{englishMail}, DraftSubject: germanSubject},
+			want:    "de",
+		},
+		"an English subject over German correspondence": {
+			written: draftfloor.Written{Thread: []string{germanMail}, DraftSubject: englishSubject, Purpose: "Please ask for a meeting"},
+			want:    "en",
+		},
+		"over the addressee's own mail": {
+			written: draftfloor.Written{Addressee: []string{englishMail}, DraftSubject: germanSubject},
+			want:    "de",
+		},
+		"over a stored label": {
+			written: draftfloor.Written{Stored: "de", Body: germanMail, DraftSubject: englishSubject},
+			want:    "en",
+		},
+		"over the draft being rewritten": {
+			written: draftfloor.Written{Rewrite: englishMail, Purpose: "make it shorter", DraftSubject: germanSubject},
+			want:    "de",
+		},
+		"under the language the rep chose": {
+			written: draftfloor.Written{Chosen: "vi", DraftSubject: germanSubject},
+			want:    "vi",
+		},
+		"an empty subject leaves the correspondence": {
+			written: draftfloor.Written{Thread: []string{germanMail}},
+			want:    "de",
+		},
+		"a project tag alone leaves the correspondence": {
+			written: draftfloor.Written{Thread: []string{germanMail}, DraftSubject: "[ACME-12]"},
+			want:    "de",
+		},
+		"a name alone leaves the stored label": {
+			written: draftfloor.Written{Stored: "de", DraftSubject: "Anna Schmidt"},
+			want:    "de",
+		},
+		"a short ambiguous phrase falls to the app language": {
+			written: draftfloor.Written{DraftSubject: "Pilot im Mai"},
+			want:    "vi",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			resolver := draftfloor.NewResolver().
+				WithUserLanguage(func(context.Context) string { return "vi" })
+			got := resolver.Resolve(context.Background(), tc.written, convstate.State{Band: convstate.BandFresh})
+			if got.Language != tc.want {
+				t.Errorf("language = %q, want %q", got.Language, tc.want)
+			}
+		})
+	}
+}
+
+// A German subject on English correspondence gives a German draft whose
+// register is read from the subject. An English draft carries no register.
+func TestASubjectThatChoosesGermanCarriesACoherentRegister(t *testing.T) {
+	t.Parallel()
 	resolver := draftfloor.NewResolver()
-	got := resolver.Resolve(context.Background(), draftfloor.Written{
-		Thread:       []string{"Hallo Anna, wir haben das Angebot geprüft und melden uns bei Ihnen."},
-		DraftSubject: "Your proposal and our next steps", Purpose: "Please ask for a meeting",
+	informal := resolver.Resolve(context.Background(), draftfloor.Written{
+		Thread:       []string{"Thanks, we will review the proposal with our team and come back to you soon."},
+		DraftSubject: "Hast du Zeit? Ich schicke dir unsere nächsten Schritte",
 	}, convstate.State{Band: convstate.BandFresh})
-	if got.Language != "de" {
-		t.Fatalf("language = %q, want the correspondence's German", got.Language)
+	if informal.Language != "de" || informal.Register != "du" {
+		t.Errorf("envelope = %q/%q, want de/du", informal.Language, informal.Register)
+	}
+
+	english := resolver.Resolve(context.Background(), draftfloor.Written{
+		Thread:       []string{"Hallo Jonas, ich wollte dich fragen, ob du im Mai Zeit hast und ob ich dir die Unterlagen schicken soll."},
+		DraftSubject: "Your proposal and our next steps",
+	}, convstate.State{Band: convstate.BandFresh})
+	if english.Language != "en" || english.Register != "" {
+		t.Errorf("envelope = %q/%q, want en with no register", english.Language, english.Register)
+	}
+}
+
+// A language the rep chose outranks every tier the server reads for itself, and
+// a German choice still carries a register.
+func TestAChosenLanguageOutranksEveryDerivedTier(t *testing.T) {
+	t.Parallel()
+	const germanMail = "Guten Tag, wir haben das Angebot geprüft und melden uns wegen der offenen Punkte bei Ihnen."
+	const englishThread = "Thanks for the update, we plan to review the proposal with our team next week and come back to you."
+
+	for name, tc := range map[string]struct {
+		written draftfloor.Written
+		want    string
+	}{
+		"over the addressee's own German": {
+			written: draftfloor.Written{Chosen: "vi", Addressee: []string{germanMail}},
+			want:    "vi",
+		},
+		"over a stored German label": {
+			written: draftfloor.Written{Chosen: "en", Stored: "de", Body: germanMail},
+			want:    "en",
+		},
+		"over an English thread": {
+			written: draftfloor.Written{Chosen: "vi", Body: englishThread, Thread: []string{englishThread}},
+			want:    "vi",
+		},
+		"over the draft being rewritten and the typed purpose": {
+			written: draftfloor.Written{Chosen: "de", Rewrite: englishThread, Purpose: englishThread},
+			want:    "de",
+		},
+		"a code the product does not write is no choice": {
+			written: draftfloor.Written{Chosen: "fr", Body: germanMail},
+			want:    "de",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			resolver := draftfloor.NewResolver().
+				WithUserLanguage(func(context.Context) string { return "en" }).
+				WithBaseLanguage(func(context.Context) string { return "en" })
+			got := resolver.Resolve(context.Background(), tc.written, convstate.State{Band: convstate.BandNone})
+			if got.Language != tc.want {
+				t.Errorf("language = %q, want %q", got.Language, tc.want)
+			}
+		})
+	}
+
+	german := draftfloor.NewResolver().Resolve(context.Background(),
+		draftfloor.Written{Chosen: "de", Body: englishThread}, convstate.State{Band: convstate.BandNone})
+	if german.Language != "de" || german.Register != "Sie" {
+		t.Errorf("German chosen on an English thread = %q/%q, want de/Sie", german.Language, german.Register)
 	}
 }

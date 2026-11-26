@@ -1,0 +1,15 @@
+{
+  "tool": "change_reports",
+  "action": "publish_draft",
+  "verb": "publish_reporting_report_draft",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "rep"
+  ],
+  "refused_for": [
+    "ops",
+    "read_only"
+  ]
+}

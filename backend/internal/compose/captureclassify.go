@@ -3,14 +3,8 @@
 
 package compose
 
-// The batched capture-classify engine (ai-operational-spec §2.8, ADR-0063):
-// label captured mail commitment | meeting | noise for attention routing.
-// The backlog IS the partial index (capture_label IS NULL on connector
-// email activities) — no work table; each model call labels up to ten
-// messages and COMMITS per call, so a budget stop or a crash loses nothing
-// and the remainder simply stays unlabeled for the next cycle. A noise
-// label demotes attention only — it never deletes, archives, or suppresses
-// the record an email created (§3.2 hard floor).
+// Capture labels route attention without deleting, archiving or suppressing records.
+// Each call commits separately so interrupted passes keep their completed work.
 
 import (
 	"context"
@@ -22,8 +16,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/capturelabel"
+	"github.com/margince/margince/backend/internal/compose/usableanswer"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -35,19 +33,16 @@ const (
 	classifyBatchSize = 10
 	// classifyBodyLimit truncates each body for the prompt (AIRT-PARAM-35).
 	classifyBodyLimit = 1500
-	// classifyConfidenceFloor: below it the item is re-asked SOLO on the
-	// routing ladder's fallback rather than guessed in-batch (§2.8).
+	// classifyConfidenceFloor: below it the item is re-asked SOLO rather than
+	// guessed in-batch.
 	classifyConfidenceFloor = 0.7
 	// classifierUnreported stands where a provider named no model. Spelled out
 	// rather than left empty so a stored row says "we do not know what judged
 	// this" instead of looking like a column nobody filled.
 	classifierUnreported = "unreported"
-	// classifyCatchUpCap bounds one catch-up pass (ADR-0063: hourly cap
-	// 500); the nightly pass runs the same engine with a higher cap.
-	classifyCatchUpCap = 500
 )
 
-var classifyLabels = map[string]bool{"commitment": true, "meeting": true, "noise": true}
+var classifyLabels = map[string]bool{"commitment": true, "meeting": true, capturekind.Other: true}
 
 // replyVerdicts is this site's second closed set. Its members are the module's
 // own constants rather than three more string literals, so the prompt's
@@ -66,18 +61,41 @@ var replyVerdicts = map[string]bool{
 // writes them only through its store.
 type CaptureClassifier struct {
 	pool  *pgxpool.Pool
-	store *activities.Store
+	store captureLabelStore
+	caps  *capture.PassCaps
 	brain completer
 	log   *slog.Logger
 }
 
+// captureLabelStore is the part of the activities store the pass reads and
+// writes. The certification case stands an in-memory backlog behind it, so the
+// pass it certifies is the one that ships, folds and floors included.
+type captureLabelStore interface {
+	UnlabeledCaptureMessages(ctx context.Context, ruleset string, limit, bodyLimit int) ([]unlabeledMessage, error)
+	SetCaptureLabel(ctx context.Context, id ids.UUID, label string, readVersion int64) (bool, error)
+	SetCaptureLabelAndReply(ctx context.Context, id ids.UUID, label string, readVersion int64, verdict, classifier string) (bool, error)
+	MarkCaptureLabelDeclined(ctx context.Context, id ids.UUID, ruleset string) (bool, error)
+	MarkCaptureLabelUnsure(ctx context.Context, id ids.UUID, ruleset string, readVersion int64) (bool, error)
+}
+
+// unusableClassifyAnswer is a model reply the pass could not read: it did not
+// parse, or it broke the id contract. It is told apart from a failed call so a
+// certification run can count it against the model.
+type unusableClassifyAnswer struct{ err error }
+
+func (e *unusableClassifyAnswer) Error() string { return e.err.Error() }
+func (e *unusableClassifyAnswer) Unwrap() error { return e.err }
+
 // NewCaptureClassifier builds the engine over the pool and one model lane.
 func NewCaptureClassifier(pool *pgxpool.Pool, brain completer, log *slog.Logger) *CaptureClassifier {
-	return &CaptureClassifier{pool: pool, store: activities.NewStore(InstallationDB(pool)), brain: brain, log: log}
+	db := InstallationDB(pool)
+	return &CaptureClassifier{
+		pool: pool, store: activities.NewStore(db), caps: capture.NewPassCaps(db), brain: brain, log: log,
+	}
 }
 
 // unlabeledMessage is one backlog row as the prompt sees it.
-type unlabeledMessage = activities.UnlabeledEmail
+type unlabeledMessage = activities.UnlabeledMessage
 
 // classifyResult is one model verdict.
 type classifyResult struct {
@@ -102,9 +120,9 @@ type classifyPayload struct {
 // RunWorkspace drains up to cap backlog messages in the workspace already
 // bound in ctx. A budget stop, or no provider bound, ends the pass cleanly — the
 // remainder requeues implicitly (it is simply still unlabeled). A message the
-// models decline is recorded so and leaves the backlog (classifyEach); any
-// other failure fails the pass. The pass is bounded by the model calls it makes
-// as well as by labels written (sweepCalls).
+// models decline or stay unsure about is stamped and leaves the backlog
+// (classifyEach); any other failure fails the pass. The pass is bounded by the
+// model calls it makes as well as by rows settled (sweepCalls).
 //
 // The cap is PER WORKSPACE, matching capture_counterparty_verdict, whose own
 // counter is declared inside its workspace loop for a stated reason: a shared
@@ -112,12 +130,15 @@ type classifyPayload struct {
 // workspace after it.
 func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) error {
 	if maxLabels <= 0 {
-		maxLabels = classifyCatchUpCap
+		var err error
+		if maxLabels, err = c.caps.Classify(ctx); err != nil {
+			return err
+		}
 	}
 	calls := newSweepCalls(maxLabels, classifyBatchSize)
-	labeled := 0
-	for labeled < maxLabels && calls.remain() {
-		batch, err := c.store.UnlabeledCaptureEmails(ctx, capturelabel.Ruleset, classifyBatchSize, classifyBodyLimit)
+	settled := 0
+	for settled < maxLabels && calls.remain() {
+		batch, err := c.store.UnlabeledCaptureMessages(ctx, capturelabel.Ruleset, min(classifyBatchSize, maxLabels-settled), classifyBodyLimit)
 		if err != nil {
 			return fmt.Errorf("classify: reading backlog: %w", err)
 		}
@@ -125,11 +146,11 @@ func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) err
 			return nil
 		}
 		n, err := c.classifyBatch(ctx, batch, calls)
-		labeled += n
+		settled += n
 		if sweepPaused(err) {
 			// ≥100% band or no model: non-interactive work stops for this
 			// cycle; what is labeled is committed, the rest waits (§2.8).
-			c.log.InfoContext(ctx, "capture classify: stopping the pass", "labeled", labeled, "reason", err)
+			c.log.InfoContext(ctx, "capture classify: stopping the pass", "settled", settled, "reason", err)
 			return nil
 		}
 		if err != nil {
@@ -143,8 +164,8 @@ func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) err
 			return fmt.Errorf("classify: draining the backlog: %w", err)
 		}
 		if n == 0 {
-			// Every verdict stayed below the floor: the same rows would be
-			// fetched again forever. They wait for the next cycle.
+			// Nothing was labeled or stamped, so the same rows would be read
+			// again: another pass labeled them first, or their text changed.
 			c.log.InfoContext(ctx, "capture classify: batch made no progress, moving on")
 			return nil
 		}
@@ -154,11 +175,9 @@ func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) err
 
 // classifyBatch labels one batch with ONE model call and commits the
 // labels — the per-call commit IS the checkpoint (AIRT-PARAM-35). Items
-// below the confidence floor are re-asked solo; a solo re-ask that still
-// fails floors leaves the row unlabeled for the next cycle rather than
-// guessing. A batch the models decline is asked message by message, so the
-// one message they will not label is recorded declined and the rest proceed.
-// Returns how many rows were labeled.
+// below the confidence floor are re-asked solo. A batch the models decline is
+// asked message by message, so the one message they will not label is stamped
+// and the rest proceed. Returns how many rows were labeled or stamped.
 func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeledMessage, calls *sweepCalls) (int, error) {
 	if !calls.take() {
 		return 0, nil
@@ -170,74 +189,89 @@ func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeled
 	if err != nil {
 		return 0, err
 	}
-	labeled := 0
+	settled := 0
 	var retry []unlabeledMessage
 	byID := indexByID(batch)
+	// A message with no usable answer is retried alone like a below-floor one.
+	// Left out of the pass instead, a batch of bad answers at the front of the
+	// backlog would be read again first, forever.
+	answered := make(map[string]bool, len(verdicts))
 	for _, v := range verdicts {
 		msg, ok := byID[v.ID]
 		if !ok {
 			continue // validator guarantees this cannot happen; belt and braces
 		}
+		answered[v.ID] = true
 		if v.Confidence < classifyConfidenceFloor {
 			retry = append(retry, msg)
 			continue
 		}
 		applied, err := c.commitLabel(ctx, msg, v, judge)
 		if err != nil {
-			return labeled, err
+			return settled, err
 		}
 		if applied {
-			labeled++
+			settled++
+		}
+	}
+	for _, msg := range batch {
+		if !answered[msg.ID.String()] {
+			retry = append(retry, msg)
 		}
 	}
 	solo, err := c.classifyEach(ctx, retry, calls)
-	return labeled + solo, err
+	return settled + solo, err
 }
 
 // classifyEach asks about each message in its own call and commits a label
 // above the floor. A call starts at the first rung and moves up only after a
-// provider error or two refused answers. A message every rung declines is
-// that message's outcome. It is recorded declined, which takes it out of the
-// backlog for this pass and every later one. The next message is asked.
+// provider error or two refused answers. A message every rung declines stays
+// unlabeled and is stamped. So does one whose solo answer is still below the
+// floor. The stamp keeps it out of the backlog until the prompt changes.
 func (c *CaptureClassifier) classifyEach(ctx context.Context, msgs []unlabeledMessage, calls *sweepCalls) (int, error) {
-	labeled := 0
+	settled := 0
 	for _, msg := range msgs {
 		if !calls.take() {
-			return labeled, nil
+			return settled, nil
 		}
-		solo, soloJudge, err := c.ask(ctx, []unlabeledMessage{msg})
-		if declinedByTheModels(err) {
-			recorded, markErr := c.store.MarkCaptureLabelDeclined(ctx, msg.ID, capturelabel.Ruleset)
-			if markErr != nil {
-				return labeled, markErr
-			}
-			c.log.WarnContext(ctx, "capture classify: the models declined one message, which stays unlabeled",
-				"activity_id", msg.ID, "recorded", recorded, "err", err)
-			continue
-		}
+		applied, err := c.classifyOne(ctx, msg)
 		if err != nil {
-			return labeled, err
-		}
-		if len(solo) != 1 || solo[0].Confidence < classifyConfidenceFloor {
-			continue
-		}
-		applied, err := c.commitLabel(ctx, msg, solo[0], soloJudge)
-		if err != nil {
-			return labeled, err
+			return settled, err
 		}
 		if applied {
-			labeled++
+			settled++
 		}
 	}
-	return labeled, nil
+	return settled, nil
+}
+
+// classifyOne is one solo call and the one write its outcome takes. That is a
+// label, or the stamp for a decline or an answer below the floor.
+func (c *CaptureClassifier) classifyOne(ctx context.Context, msg unlabeledMessage) (bool, error) {
+	solo, soloJudge, err := c.ask(ctx, []unlabeledMessage{msg})
+	if declinedByTheModels(err) {
+		recorded, markErr := c.store.MarkCaptureLabelDeclined(ctx, msg.ID, capturelabel.Ruleset)
+		c.log.WarnContext(ctx, "capture classify: the models declined one message, which stays unlabeled",
+			"activity_id", msg.ID, "recorded", recorded, "err", err)
+		return recorded, markErr
+	}
+	if err != nil {
+		return false, err
+	}
+	if len(solo) != 1 || solo[0].Confidence < classifyConfidenceFloor {
+		return c.store.MarkCaptureLabelUnsure(ctx, msg.ID, capturelabel.Ruleset, msg.Version)
+	}
+	return c.commitLabel(ctx, msg, solo[0], soloJudge)
 }
 
 // commitLabel writes one label and the reply verdict this call also produced,
 // in one transaction. A label that did not apply takes no reply verdict,
 // because both are about the text read. The reply rides the label's confidence,
-// so a message below the floor stores neither.
+// so a message below the floor stores neither. A mail with no words of its own
+// answers nothing, and takes no reply verdict whatever the model said. Nor does
+// a chat line, read without the line it answers.
 func (c *CaptureClassifier) commitLabel(ctx context.Context, msg unlabeledMessage, v classifyResult, judge string) (bool, error) {
-	if v.Reply == "" {
+	if v.Reply == "" || msg.Body == "" || msg.IsChat() {
 		return c.store.SetCaptureLabel(ctx, msg.ID, v.Label, msg.Version)
 	}
 	return c.store.SetCaptureLabelAndReply(ctx, msg.ID, v.Label, msg.Version, v.Reply, judge)
@@ -264,7 +298,16 @@ func classifyRequest(batch []unlabeledMessage) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: classifySchema(classifyIDs(batch)),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       model.AboutActivities(classifyActivityIDs(batch)...),
 	}
+}
+
+func classifyActivityIDs(batch []unlabeledMessage) []ids.UUID {
+	out := make([]ids.UUID, len(batch))
+	for i, m := range batch {
+		out[i] = m.ID
+	}
+	return out
 }
 
 // ask makes one structured classify call for the given messages, and reports
@@ -283,17 +326,18 @@ func (c *CaptureClassifier) ask(ctx context.Context, batch []unlabeledMessage) (
 	}
 	var payload classifyPayload
 	if err := json.Unmarshal([]byte(ai.Unfence(resp.Text)), &payload); err != nil {
-		return nil, "", fmt.Errorf("classify: unparseable model output: %w", err)
+		return nil, "", &unusableClassifyAnswer{fmt.Errorf("classify: unparseable model output: %w", err)}
 	}
 	if msg := validateClassifyPayload(payload, batch); msg != "" {
-		return nil, "", fmt.Errorf("classify: %s", msg)
+		return nil, "", &unusableClassifyAnswer{fmt.Errorf("classify: %s", msg)}
 	}
 	return resolveClassifyRefs(payload.Results, batch), judgeOf(resp), nil
 }
 
-// resolveClassifyRefs rewrites each validated result's ref to its activity id.
+// resolveClassifyRefs rewrites each validated result's ref to its activity id
+// and drops the results that are not usable.
 func resolveClassifyRefs(results []classifyResult, batch []unlabeledMessage) []classifyResult {
-	return resolveBatchRefs(results, capturelabel.Refs(batch))
+	return resolveBatchRefs(usableanswer.Keep(results, classifyResult.usable), capturelabel.Refs(batch))
 }
 
 // judgeOf names what actually answered.
@@ -341,11 +385,8 @@ func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) 
 		inbound[refs.For(m.ID.String())] = m.Inbound
 	}
 	for _, r := range payload.Results {
-		if !classifyLabels[r.Label] {
-			return fmt.Sprintf("label %q is not commitment|meeting|noise", clampToken(r.Label))
-		}
-		if r.Confidence < 0 || r.Confidence > 1 {
-			return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
+		if !r.usable() {
+			continue // dropped by resolveClassifyRefs; its other fields are never read
 		}
 		if r.Reply == "" {
 			continue // absent is the answer for outbound mail and for anything that does not read as a reply
@@ -360,6 +401,21 @@ func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) 
 		if !inbound[r.ID] {
 			return fmt.Sprintf("a reply verdict on outbound message %s: we wrote it, so it answers nobody", clampToken(r.ID))
 		}
+	}
+	return ""
+}
+
+// usable is whether the answer names a label of this site and a confidence in
+// [0,1]. An answer that does not is dropped and its message asked again alone.
+func (r classifyResult) usable() bool { return r.fault() == "" }
+
+// fault says what makes the answer unusable, or "" when it is usable.
+func (r classifyResult) fault() string {
+	switch {
+	case !classifyLabels[r.Label]:
+		return fmt.Sprintf("label %q is not commitment|meeting|other", clampToken(r.Label))
+	case !usableanswer.ConfidenceInRange(r.Confidence):
+		return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
 	}
 	return ""
 }
@@ -382,7 +438,7 @@ func classifySchema(requested []string) json.RawMessage {
 			"results": schema.Array(schema.Object(
 				map[string]schema.Node{
 					"id":                    requestedIDNode(requested),
-					"label":                 schema.Enum("commitment", "meeting", "noise"),
+					"label":                 schema.Enum("commitment", "meeting", capturekind.Other),
 					extractionConfidenceKey: schema.Number(),
 					// Optional, because an outbound message has no reply verdict
 					// to give and a schema demanding one would push the model to

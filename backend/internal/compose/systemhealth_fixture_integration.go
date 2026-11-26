@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/capturehealth"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/continuity"
@@ -49,7 +50,7 @@ func SeedSystemHealthFixture(ctx context.Context, pool *pgxpool.Pool, owner ids.
 		}
 	}
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		classifier, err := captureClassifierHealth(ctx, tx, now.UTC())
+		classifier, err := capturehealth.ClassifierHealth(ctx, tx, now.UTC())
 		if err != nil {
 			return err
 		}

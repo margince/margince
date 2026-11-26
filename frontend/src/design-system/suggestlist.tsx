@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import {
+  Fragment,
   type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
   type RefObject,
   useCallback,
   useId,
@@ -16,7 +16,14 @@ import {
   useAnchoredPopup,
   useDismissOnOutsidePress,
 } from "./anchoredpopup";
+import {
+  type ComboboxAria,
+  comboboxAria,
+  ListOption,
+  type ListOptionProps,
+} from "./listoption";
 import { stepEnabled, type Walkable } from "./selectlistbox";
+import { useTopLayer } from "./toplayer";
 import "./suggestlist.css";
 import { foldForMatch, holdsEveryWord, searchWords } from "../format/collate";
 
@@ -45,6 +52,8 @@ export type Suggestion = Readonly<{
   label?: string;
   /** Shown after the label, dimmed: what it is, when the label alone is thin. */
   hint?: string;
+  /** The heading the row is listed under. Rows of one group stand together. */
+  group?: string;
 }>;
 
 /**
@@ -64,13 +73,13 @@ export type Suggestion = Readonly<{
 export function matchingSuggestions(
   suggestions: readonly Suggestion[],
   typed: string,
-  taken?: ReadonlySet<string>,
+  taken?: (value: string) => boolean,
 ): readonly Suggestion[] {
   // A row already spoken for is not a suggestion. `ComboBox` names none and
   // loses nothing; a set-collecting host would otherwise offer a reader the
   // recipient standing in front of them as a chip.
   const offerable = taken
-    ? suggestions.filter((row) => !taken.has(row.value))
+    ? suggestions.filter((row) => !taken(row.value))
     : suggestions;
   const words = searchWords(typed);
   if (words.length === 0) {
@@ -94,17 +103,7 @@ export type SuggestList = Readonly<{
   matches: readonly Suggestion[];
   active: number;
   listboxId: string;
-  /** The four the driving text box spreads onto itself. */
-  fieldAria: Readonly<{
-    role: "combobox";
-    "aria-expanded": boolean;
-    "aria-haspopup": "listbox";
-    // Never "both": inline completion rewrites what a reader is halfway through
-    // typing, and the one thing these controls promise is that they do not.
-    "aria-autocomplete": "list";
-    "aria-controls": string | undefined;
-    "aria-activedescendant": string | undefined;
-  }>;
+  fieldAria: ComboboxAria;
   show: () => void;
   close: () => void;
   /** The reader typed: the rows moved, so nothing is active until they say so
@@ -224,7 +223,7 @@ export function useSuggestList({
   suggestions: readonly Suggestion[];
   typed: string;
   disabled?: boolean;
-  taken?: ReadonlySet<string>;
+  taken?: (value: string) => boolean;
   onPick: (value: string) => void;
 }>): SuggestList & { frame: ReturnType<typeof useAnchoredPopup> } {
   const listboxId = useId();
@@ -273,15 +272,11 @@ export function useSuggestList({
     matches,
     active,
     listboxId,
-    fieldAria: {
-      role: "combobox",
-      "aria-expanded": listOpen,
-      "aria-haspopup": "listbox",
-      "aria-autocomplete": "list",
-      "aria-controls": listOpen ? listboxId : undefined,
-      "aria-activedescendant":
-        listOpen && active !== -1 ? optionDomId(active) : undefined,
-    },
+    fieldAria: comboboxAria(
+      listboxId,
+      listOpen,
+      active === -1 ? undefined : optionDomId(active),
+    ),
     show: () => setOpen(true),
     close,
     retype: () => {
@@ -315,6 +310,7 @@ export function SuggestPopup({
   list: SuggestList & { frame: ReturnType<typeof useAnchoredPopup> };
   selected?: string;
 }>) {
+  useTopLayer(list.popupRef, list.open && list.frame !== null);
   if (!list.open || !list.frame) {
     return null;
   }
@@ -324,6 +320,7 @@ export function SuggestPopup({
     // would announce twice; no name, as the combobox is named.
     <div
       ref={list.popupRef}
+      popover="manual"
       className="suggest-popup"
       id={list.listboxId}
       role="listbox"
@@ -337,23 +334,71 @@ export function SuggestPopup({
       }}
     >
       <div className="suggest-list">
-        {list.matches.map((row, index) => (
-          <SuggestOption
-            key={row.value}
-            id={list.optionDomId(index)}
-            active={index === list.active}
-            selected={selected !== undefined && row.value === selected}
-            hint={row.hint}
-            onPick={() => list.pick(index)}
-            onHover={() => list.setActive(index)}
-          >
-            {row.label ?? row.value}
-          </SuggestOption>
-        ))}
+        {runsOf(list.matches).map((run) => {
+          const options = run.rows.map((row, offset) => {
+            const index = run.start + offset;
+            return (
+              <SuggestOption
+                key={row.value}
+                id={list.optionDomId(index)}
+                active={index === list.active}
+                selected={selected !== undefined && row.value === selected}
+                hint={row.hint}
+                onPick={() => list.pick(index)}
+                onHover={() => list.setActive(index)}
+              >
+                {row.label ?? row.value}
+              </SuggestOption>
+            );
+          });
+          const headingId = `${list.listboxId}-group-${run.start}`;
+          if (run.group === undefined) {
+            return <Fragment key={headingId}>{options}</Fragment>;
+          }
+          return (
+            // biome-ignore lint/a11y/useSemanticElements: a listbox owns options and groups of them; a fieldset is a form's group and no listbox child
+            <div
+              key={headingId}
+              role="group"
+              aria-labelledby={headingId}
+              className="suggest-group"
+            >
+              <div id={headingId} className="suggest-group-label t-eyebrow">
+                {run.group}
+              </div>
+              {options}
+            </div>
+          );
+        })}
       </div>
     </div>,
     document.body,
   );
+}
+
+type SuggestRun = Readonly<{
+  group: string | undefined;
+  start: number;
+  rows: readonly Suggestion[];
+}>;
+
+// Consecutive rows under one heading. An option keeps its index in the whole
+// list, which is what the arrows and `aria-activedescendant` count by.
+function runsOf(rows: readonly Suggestion[]): readonly SuggestRun[] {
+  const runs: {
+    group: string | undefined;
+    start: number;
+    rows: Suggestion[];
+  }[] = [];
+  rows.forEach((row, index) => {
+    const last = runs.at(-1);
+    if (last && last.group === row.group) {
+      last.rows.push(row);
+    } else {
+      runs.push({ group: row.group, start: index, rows: [row] });
+    }
+  });
+  return runs;
 }
 
 /**
@@ -361,32 +406,18 @@ export function SuggestPopup({
  * A `disabled` row stays listed and readable, as Select's does, and takes no press or hover.
  */
 export function SuggestOption({
-  id,
   active,
-  selected,
   disabled,
   hint,
-  onPick,
-  onHover,
   children,
-}: Readonly<{
-  id: string;
-  active: boolean;
-  selected: boolean;
-  disabled?: boolean;
-  hint?: string;
-  onPick: () => void;
-  onHover: () => void;
-  children: ReactNode;
-}>) {
+  ...option
+}: Readonly<
+  Omit<ListOptionProps, "className"> & { active: boolean; hint?: string }
+>) {
   return (
-    // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path is the driving text box's own keydown handling
-    // biome-ignore lint/a11y/useFocusableInteractive: an option in an aria-activedescendant listbox must NOT be focusable — focus stays in the text box, which is what keeps typing working
-    <div // NOSONAR: keyboard path is the text box's own keydown; an activedescendant option must not be focusable
-      id={id}
-      role="option"
-      aria-selected={selected}
-      aria-disabled={disabled === true || undefined}
+    <ListOption
+      {...option}
+      disabled={disabled}
       className={[
         "suggest-option",
         active ? "is-active" : "",
@@ -394,17 +425,9 @@ export function SuggestOption({
       ]
         .filter(Boolean)
         .join(" ")}
-      onMouseDown={(event) => {
-        // The press must not take focus off the text box before the click
-        // lands: blur closes the list, and the click would then arrive at
-        // nothing.
-        event.preventDefault();
-      }}
-      onClick={disabled ? undefined : onPick}
-      onMouseEnter={disabled ? undefined : onHover}
     >
       <span className="suggest-option-value">{children}</span>
       {hint && <span className="suggest-option-hint">{hint}</span>}
-    </div>
+    </ListOption>
   );
 }

@@ -45,11 +45,18 @@ type tailWindow struct {
 
 // tailSources are the sources a tail can continue, by the categories their
 // rows carry.
-var tailSources = map[string][]crmcontracts.WorklistItemCategory{
-	string(sourceTask):                              taskCategories,
-	string(sourceWaiting):                           {categoryOfSource(sourceWaiting)},
-	string(sourceAtRisk):                            {categoryOfSource(sourceAtRisk)},
-	string(crmcontracts.WorklistItemSourceApproval): {categoryOfSource(crmcontracts.WorklistItemSourceApproval)},
+type tailSource struct {
+	categories []crmcontracts.WorklistItemCategory
+	dated      bool
+}
+
+var tailSources = map[string]tailSource{
+	string(sourceTask):                              {taskCategories, true},
+	string(sourceWaiting):                           {[]crmcontracts.WorklistItemCategory{categoryOfSource(sourceWaiting)}, true},
+	string(sourceAtRisk):                            {[]crmcontracts.WorklistItemCategory{categoryOfSource(sourceAtRisk)}, true},
+	string(crmcontracts.WorklistItemSourceApproval): {[]crmcontracts.WorklistItemCategory{categoryOfSource(crmcontracts.WorklistItemSourceApproval)}, false},
+	sourceDealSuggestion:                            {[]crmcontracts.WorklistItemCategory{categoryOfSource(sourceDealSuggestion)}, false},
+	sourceTagSuggestion:                             {[]crmcontracts.WorklistItemCategory{categoryOfSource(sourceTagSuggestion)}, false},
 }
 
 // valid says whether a client-held tail is one this binary could have minted.
@@ -84,7 +91,7 @@ func (s *Service) startTail(page tailPage) *backlogCursor {
 	at := map[string]string{}
 	for source, categories := range tailSources {
 		bound := s.tailReader(crmcontracts.WorklistItemSource(source)) != nil
-		if page.bounded[crmcontracts.WorklistItemSource(source)] && bound && sourceAnswers(categories, s.view, page.filter) {
+		if page.bounded[crmcontracts.WorklistItemSource(source)] && bound && sourceAnswers(categories.categories, s.view, page.filter) {
 			at[source] = s.tailStart(crmcontracts.WorklistItemSource(source))
 		}
 	}
@@ -101,13 +108,11 @@ func (s *Service) startTail(page tailPage) *backlogCursor {
 	}
 }
 
-// tailStart is where a source's tail begins. Approvals resume after the last
-// one the ranked rows hold; every other source starts at its beginning.
+// tailStart is where a source's tail begins. A decision source resumes after
+// the last row of it the ranked rows hold; every other source starts at its
+// beginning.
 func (s *Service) tailStart(source crmcontracts.WorklistItemSource) string {
-	if source == crmcontracts.WorklistItemSourceApproval {
-		return s.backlog.approvalsFrom
-	}
-	return ""
+	return s.backlog.resumeAt[source]
 }
 
 // withTail fills what the ranked rows left of a page from the backlog, once
@@ -125,10 +130,20 @@ func (s *Service) withTail(
 	if from == nil || more {
 		return shown, from, nil
 	}
+	defer timeStage(ctx, "tail")()
 	above := s.aboveTheTail(ranking)
 	page.dealsAbove = dealsReported(ranking, above)
 	tail, rest, failed := s.backlogTail(ctx, page, limit-len(shown), from, above)
-	return append(shown, tail...), rest, failed
+	return append(shown, pastTheRanking(tail)...), rest, failed
+}
+
+// pastTheRanking marks the tail's rows as read in store order, not ranked. They
+// head their own last band and explain no order (renderInOrder).
+func pastTheRanking(tail []ranked) []ranked {
+	for i := range tail {
+		tail[i].pastRanking = true
+	}
+	return tail
 }
 
 // aboveTheTail is what the ranked rows hold: the frozen walk when one is
@@ -156,7 +171,10 @@ func (s *Service) backlogTail(
 	var failed []crmcontracts.WorklistSourceUnavailable
 	for round := 0; round < backlogRounds && len(rest.At) > 0 && len(tail) < need; round++ {
 		var batches []tailBatch
-		for _, source := range slices.Sorted(maps.Keys(rest.At)) {
+		for _, source := range tailReadOrder(rest.At) {
+			if frontier, bounded := tailFrontier(batches); bounded && !tailSources[source].dated && frontier.before(tailPlace{source: crmcontracts.WorklistItemSource(source)}) {
+				continue
+			}
 			batch, err := s.readTail(ctx, page, rest, crmcontracts.WorklistItemSource(source), need-len(tail))
 			if err != nil {
 				slog.Log(ctx, laneFailureLevel(ctx), "a worklist backlog source failed; scrolling stops short of it",
@@ -175,6 +193,20 @@ func (s *Service) backlogTail(
 	return tail, rest, failed
 }
 
+func tailReadOrder(positions map[string]string) []string {
+	sources := slices.Sorted(maps.Keys(positions))
+	slices.SortStableFunc(sources, func(a, b string) int {
+		if tailSources[a].dated == tailSources[b].dated {
+			return 0
+		}
+		if tailSources[a].dated {
+			return -1
+		}
+		return 1
+	})
+	return sources
+}
+
 // readTail reads one source's next batch after its position and runs it
 // through the page's admission, marking which rows the page keeps.
 func (s *Service) readTail(
@@ -184,8 +216,10 @@ func (s *Service) readTail(
 	if read == nil {
 		return tailBatch{}, errors.New("no reader is bound for this backlog source")
 	}
+	// source is a key of tailSources, so the stage and lane are one of a fixed few.
+	defer timeStage(ctx, "tail_"+string(source))()
 	var batch tailBatch
-	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+	err := s.degradable(ctx, "tail_"+string(source), laneBudget, func(ctx context.Context) error {
 		var err error
 		batch, err = read(ctx, page, rest.Window, rest.At[string(source)], limit)
 		return err
@@ -231,6 +265,10 @@ func (s *Service) tailReader(source crmcontracts.WorklistItemSource) func(
 		return s.moreRisk
 	case source == crmcontracts.WorklistItemSourceApproval && s.backlog.approvals != nil:
 		return s.moreApprovals
+	case source == sourceDealSuggestion && s.backlog.dealSuggestions != nil:
+		return s.moreDealSuggestions
+	case source == sourceTagSuggestion && s.backlog.tagSuggestions != nil:
+		return s.moreTagSuggestions
 	}
 	return nil
 }
@@ -254,13 +292,18 @@ func (s *Service) moreTasks(ctx context.Context, page tailPage, walk tailWindow,
 	if err != nil {
 		return tailBatch{}, err
 	}
-	read, more, err := s.backlog.tasks.TasksAfter(ctx, s.taskStream(walk, page.filter), after, limit)
+	stream := s.taskStream(walk, page.filter)
+	stream.Zone = dayZoneOf(stream.Scope, zone)
+	read, more, err := s.backlog.tasks.TasksAfter(ctx, stream, after, limit)
 	if err != nil {
 		return tailBatch{}, err
 	}
 	tasks := make([]Task, len(read))
 	for i, task := range read {
 		tasks[i] = task.Row
+	}
+	if !stream.From.IsZero() {
+		tasks = laterWindow(tasks)
 	}
 	items := plannedItems(tasks, walk.AsOf, walk.Until, zone)
 	// plannedItems and appendLane each draw one row per task, in order.

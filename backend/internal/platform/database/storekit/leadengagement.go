@@ -36,10 +36,16 @@ func IsInboundReply(kind, direction string) bool {
 // source is a compile-time UUID expression, never request input.
 func CurrentLeadEngagementClause(source string, asOf time.Time, arg func(any) int) string {
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
+	return leadEngagementSQL(source, instant, asOf, arg, " AND NOT "+AnsweredSQL("lead_source", instant))
+}
+
+// leadEngagementSQL is CurrentLeadEngagementClause with unanswered, its test
+// that an inbound reply is still unanswered, left to the caller.
+func leadEngagementSQL(source, instant string, asOf time.Time, arg func(any) int, unanswered string) string {
 	return `EXISTS (SELECT 1 FROM activity lead_source WHERE lead_source.id = ` + source + `
  AND lead_source.restricted_at IS NULL AND ` + SourceWithinHorizonSQL("lead_source", asOf, arg) + `
  AND ((` + InboundReplySQL("lead_source") + `
- AND ` + occurredday.BegunSQL("lead_source", instant) + ` AND NOT ` + AnsweredSQL("lead_source", instant) + `)
+ AND ` + occurredday.BegunSQL("lead_source", instant) + unanswered + `)
  OR (lead_source.kind = 'meeting' AND ` + relstrength.MeetingNotCalledOffSQL("lead_source") + `)))`
 }
 
@@ -48,7 +54,7 @@ func CurrentLeadEngagementClause(source string, asOf time.Time, arg func(any) in
 func TaskDueSQL(alias string) string {
 	sources := taskSourcesWith(func(p taskSourcePolicy) bool { return p.generatedDate })
 	return `CASE WHEN ` + alias + `.kind = 'task' AND ` + alias + `.source_system IN ('` + strings.Join(sources, "','") + `')
- AND ` + alias + `.due_at = ` + alias + `.occurred_at AND NOT ` + humanSetDueSQL(alias) + ` THEN NULL ELSE ` + alias + `.due_at END`
+ AND ` + alias + `.due_at = ` + alias + `.occurred_at AND NOT ` + humanSetDueSQL(alias) + ` THEN NULL ELSE ` + IntentInstantSQL(alias, "due") + ` END`
 }
 
 func humanSetDueSQL(alias string) string {

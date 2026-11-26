@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen, within } from "storybook/test";
+import { phoneRow } from "../../testing/phonerow";
 import {
   installFetchStub,
   jsonResponse,
@@ -31,10 +33,17 @@ const company = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
-function renderCompanies(rows: readonly (typeof company)[]) {
-  globalThis.location.hash = "#/companies";
+function renderCompanies(
+  rows: readonly (typeof company)[],
+  startCreating = false,
+) {
+  globalThis.location.hash = startCreating ? "#/companies/new" : "#/companies";
   installFetchStub({
-    "GET /me": meRoute({ company: ["read", "update"] }),
+    "GET /me": meRoute({
+      company: startCreating
+        ? ["read", "create", "update"]
+        : ["read", "update"],
+    }),
     "GET /companies": () =>
       jsonResponse({
         data: rows,
@@ -43,7 +52,7 @@ function renderCompanies(rows: readonly (typeof company)[]) {
   });
   return (
     <StoryProviders>
-      <CompaniesScreen />
+      <CompaniesScreen startCreating={startCreating} />
     </StoryProviders>
   );
 }
@@ -52,14 +61,28 @@ export const CompaniesList: Story = {
   render: () => renderCompanies([company]),
 };
 
-const longNames = [
+/** `#/companies/new`: the list with its create form open, as `C` opens it. */
+export const CreateFormOpen: Story = {
+  render: () => renderCompanies([company], true),
+  play: async () => {
+    await expect(
+      await screen.findByRole("dialog", { name: "New company" }),
+    ).toBeInTheDocument();
+  },
+};
+
+const LONG_NAMES = [
   "Brandt Automotive Fleet Services International Holdings Alpha",
   "Brandt Automotive Fleet Services International Holdings Bravo",
   "Brandt Automotive Fleet Services International Holdings Charlie",
-].map((display_name, i) => ({
+] as const;
+
+const longNames = LONG_NAMES.map((display_name, i) => ({
   ...company,
   id: `o-long-${i}`,
   display_name,
+  status: i === 1 ? "unknown" : "customer",
+  website_url: i === 2 ? null : `https://www.brandt-${i}.example/fleet`,
   archived_at: i === 2 ? "2026-06-20T09:00:00Z" : undefined,
 }));
 
@@ -68,9 +91,33 @@ export const LongNames: Story = {
   render: () => renderCompanies(longNames),
 };
 
+// Line one ends in the lifecycle, line two is the website's host; a fact the
+// company lacks is left out.
 export const LongNamesPhone: Story = {
-  name: "long names wrap in the card — on a phone",
+  name: "long names wrap in the row — on a phone",
+  parameters: { layout: "fullscreen" },
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: () => renderCompanies(longNames),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const [alpha, bravo, charlie] = LONG_NAMES;
+    const rowOf = async (name: string) =>
+      phoneRow(await canvas.findByText(name));
+    const first = await rowOf(alpha);
+    const second = await rowOf(bravo);
+    const third = await rowOf(charlie);
+    await expect([first.end, first.caption]).toEqual([
+      ["Customer"],
+      ["brandt-0.example"],
+    ]);
+    await expect([second.end, second.caption]).toEqual([
+      [],
+      ["brandt-1.example"],
+    ]);
+    await expect([third.end, third.caption]).toEqual([["Customer"], []]);
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    );
+  },
 };

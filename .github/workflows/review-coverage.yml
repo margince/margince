@@ -46,20 +46,19 @@ on:
 permissions:
   contents: read
 
-# Per pull request, cancelling in flight: only the tip's answer is worth having,
-# and a report about a commit that has already been superseded is noise on the
-# pull request rather than a finding anybody can act on. The opposite of
-# merge-attest, whose subject is one commit that will never come round again.
+# Per pull request, one run at a time, and never cancelling the one in flight,
+# for the reason closing-declaration.yml gives: a review fires with no new
+# commit, and a cancelled check on the head keeps Renovate from merging it.
 #
 # The author's own review gets a group of its own. Its job is skipped below,
-# but the run still joins the group first, so in the shared one it would cancel
-# or replace a report that was about to refresh the sticky comment.
+# but the run still joins the group first, so in the shared one it would
+# replace a report that was waiting to refresh the sticky comment.
 concurrency:
   group: >-
     ${{ github.workflow }}-${{ github.event.pull_request.number }}${{
     github.event.review.user.login == github.event.pull_request.user.login
     && format('-author-review-{0}', github.event.review.id) || '' }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   coverage:

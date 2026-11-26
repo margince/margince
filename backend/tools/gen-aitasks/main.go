@@ -35,6 +35,7 @@ var (
 	contractPath = flag.String("contract", "../api/ai-tasks.yaml", "the AI task contract to compile")
 	outGoPath    = flag.String("out-go", "../internal/modules/ai/tasks_gen.go", "generated Go table destination")
 	outEgressDoc = flag.String("out-egress", "../docs/reference/ai-egress.md", "generated egress table destination")
+	validateOnly = flag.Bool("validate", false, "check the contract against every rule and write nothing; make gen runs it over the merged contract so extension tasks meet the core's rules")
 	outOutageDoc = flag.String("out-outage", "../docs/reference/ai-provider-outages.md", "generated outage table destination")
 )
 
@@ -49,6 +50,11 @@ func main() {
 	c, err := parseContract(raw)
 	if err != nil {
 		log.Fatalf("gen-aitasks: %v", err)
+	}
+
+	if *validateOnly {
+		fmt.Printf("%d tasks valid\n", len(c.Tasks))
+		return
 	}
 
 	hash := sha256.Sum256(raw)
@@ -187,34 +193,39 @@ func (p *companyContextDef) validate(task string) error {
 // chat tier, and it has no prompt, no text answer and no completion path, so
 // it carries no sites and no certification obligation.
 type embedDef struct {
-	Tier     string `yaml:"tier"`
-	CostUnit string `yaml:"cost_unit"`
+	Tier      string `yaml:"tier"`
+	CostUnit  string `yaml:"cost_unit"`
+	NoPayload bool   `yaml:"no_payload"`
 }
 
-// taskDef is one tasks.<name> entry: the routing ladder, the
-// execution mode, budget-exhaustion policy, the declaration fields the census
-// is built on (status, sites, payload posture, company-context policy,
-// cost-unit rule name), and an optional doc string carried through
-// to the generated constant's comment.
+// taskDef is one tasks.<name> entry: the routing ladder and the execution
+// mode. It also holds the declaration fields the census is built on (status,
+// sites, payload posture, company-context policy, cost-unit rule name).
+// An optional doc string is carried through to the generated constant's comment.
 type taskDef struct {
-	Ladder            []string `yaml:"ladder"`
-	ExecutionMode     string   `yaml:"execution_mode"`
-	OnBudgetExhausted string   `yaml:"on_budget_exhausted"`
+	Ladder        []string `yaml:"ladder"`
+	ExecutionMode string   `yaml:"execution_mode"`
 	// OnOutage is what an interactive task does once no model can answer:
 	// "degrades" says it answers from the record's own facts and reports so,
 	// and absent means it fails fast. A background task waits, so it declares
 	// nothing.
-	OnOutage       string             `yaml:"on_outage"`
-	Status         string             `yaml:"status"`
-	Sites          []siteDef          `yaml:"sites"`
-	NoPayload      bool               `yaml:"no_payload"`
-	LocalOnly      bool               `yaml:"local_only"`
-	Decision       bool               `yaml:"decision"`
-	CompanyContext *companyContextDef `yaml:"company_context"`
-	CostUnit       string             `yaml:"cost_unit"`
-	Doc            string             `yaml:"doc"`
-	DisplayName    string             `yaml:"display_name"`
-	Summary        string             `yaml:"summary"`
+	OnOutage  string    `yaml:"on_outage"`
+	Status    string    `yaml:"status"`
+	Sites     []siteDef `yaml:"sites"`
+	NoPayload bool      `yaml:"no_payload"`
+	// LatencyScalesWithInput says the task takes longer the larger its input,
+	// so certified latency over fixed fixtures cannot set its time limit.
+	LatencyScalesWithInput bool               `yaml:"latency_scales_with_input"`
+	Decision               bool               `yaml:"decision"`
+	CompanyContext         *companyContextDef `yaml:"company_context"`
+	CostUnit               string             `yaml:"cost_unit"`
+	// SubjectRestriction is honour or none: whether the task refuses to read
+	// a contact under a restriction of processing. none names its reason.
+	SubjectRestriction       string `yaml:"subject_restriction"`
+	SubjectRestrictionReason string `yaml:"subject_restriction_reason"`
+	Doc                      string `yaml:"doc"`
+	DisplayName              string `yaml:"display_name"`
+	Summary                  string `yaml:"summary"`
 }
 
 // contract is the parsed ai-tasks.yaml. Tiers is a YAML sequence, so its
@@ -344,7 +355,7 @@ func emitGo(c contract, contractHash string) (string, error) {
 	b.WriteString("\tExecutionModeBackground  ExecutionMode = \"background\"\n")
 	b.WriteString(")\n\n")
 
-	b.WriteString("// Tier is a capability tier (§1.1); ai-routing.yaml binds each to a\n")
+	b.WriteString("// Tier is a capability tier (§1.1); the routing setting binds each to a\n")
 	b.WriteString("// provider+model per deployment.\n")
 	b.WriteString("type Tier string\n\n")
 

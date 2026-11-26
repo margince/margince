@@ -40,7 +40,8 @@ func ClaimOwnSentMailTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityI
 	var wasDirection string
 	err := tx.QueryRow(ctx, `
 		UPDATE activity a
-		   SET direction = $4, counterparty_email = $3, counterparty_outbound_attested = true
+		   SET direction = $4, counterparty_email = $3, counterparty_outbound_attested = true,
+		       reply_verdict = NULL, reply_verdict_at = NULL, reply_verdict_by = NULL
 		  FROM (SELECT direction FROM activity WHERE id = $1) was
 		 WHERE a.id = $1 AND a.kind = 'email' AND a.archived_at IS NULL
 		   AND ((a.direction = $5 AND a.counterparty_email = $2)

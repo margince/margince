@@ -19,16 +19,13 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
-// redactSubjectTimeline erases the subject's free text from the activity
-// timeline: subject/body of every subject-only activity are wiped (the
-// GENERATED search_tsv refreshes from the now-empty text, so the erased
-// name is no longer full-text searchable). The subject's attachments are
-// purged separately by eraseAttachments (objects first); this handles only
-// the timeline text and its field-level provenance. It returns the
-// redacted activity ids so the caller can tombstone each record's own
-// audit spine.
+// redactSubjectTimeline wipes the subject and body of every activity that is
+// about the subject alone. A trigger rebuilds search_tsv from the emptied text,
+// so search no longer finds the erased name. eraseAttachments purges the files.
+// The caller tombstones the audit spine of each activity id returned.
 // subjectTimelineLockSQL selects every row this erasure will judge, FOR UPDATE.
 //
 // The three id sets come from the same fragments the destroy and the hold
@@ -111,8 +108,10 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 	// capture idempotency key, but the same erasure arms the suppression list,
 	// and Sink.Upsert refuses a suppressed account before it writes — so there
 	// is no redelivery left for the key to deduplicate.
+	args := []any{contactID, emails, floorCurrent, floorCarried, erasedName, channelKeys}
+	args = append(args, systemtext.BoundLiteral("core.erased_subject", erasedName))
 	rows, err := tx.Query(ctx, `
-		UPDATE activity a SET subject = $5, body = NULL, raw = NULL, agenda_fingerprint = NULL,
+		UPDATE activity a SET subject = $5, body = NULL, body_own_end = NULL, owed_ask = NULL, system_text = `+fmt.Sprintf("$%d", len(args))+`, raw = NULL, agenda_fingerprint = NULL, calendar_event = NULL,
  internal_mail_authorization = `+erasedInternalMailAuthorizationSQL+`,
 		  counterparty_email = NULL,
 		  -- What a classifier concluded the message MEANT goes with the words it
@@ -138,7 +137,7 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 		    OR a.id IN (`+unlinkedSubjectMail+`)
 		    OR a.id IN (`+unlinkedSubjectChannel+`))
 		  `+correspondenceFloorPredicate(3, 4)+`
-		RETURNING a.id`, contactID, emails, floorCurrent, floorCarried, erasedName, channelKeys)
+		RETURNING a.id`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +180,6 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 	if err := deleteConversationClaimsFor(ctx, tx, contactID); err != nil {
 		return nil, err
 	}
-	// And the handoffs naming them, for the same reason and on the same act.
 	if err := deleteSubjectHandoffs(ctx, tx, contactID); err != nil {
 		return nil, err
 	}
@@ -234,9 +232,7 @@ var subjectActivityEmbeddingsDelete = `
 // activities on the subject's timeline embed text ABOUT them; the vector
 // store must not keep what a similarity probe could partially reconstruct.
 func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, displayName string, emails []string, identities []channelIdentity, erased erasedCitations) (rawPurged, aiPayloadsPurged int64, err error) {
-	rawPurged, err = deleteRawOriginalsTx(ctx, tx,
-		`r.payload_object @> jsonb_build_object('matched_subjects', jsonb_build_array(@subject::text))`,
-		pgx.NamedArgs{sqlArgSubject: contactID.String()})
+	rawPurged, err = deleteSubjectOriginalsTx(ctx, tx, contactID)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -339,13 +335,12 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		}
 		aiPayloadsPurged += tag.RowsAffected()
 	}
+	hashes := make([]string, 0, len(emails))
 	for _, email := range emails {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO erasure_suppression (kind, value_hash, key_id)
-			VALUES ('email', $1, $2)
-			ON CONFLICT DO NOTHING`, storekit.SuppressionHash(email), storekit.SuppressionKeyID()); err != nil {
-			return 0, 0, err
-		}
+		hashes = append(hashes, storekit.SuppressionHash(email))
+	}
+	if err := armSuppression(ctx, tx, "email", hashes, storekit.SuppressionKeyID()); err != nil {
+		return 0, 0, err
 	}
 	return rawPurged, aiPayloadsPurged, nil
 }

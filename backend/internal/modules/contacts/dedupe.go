@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
@@ -263,9 +264,16 @@ var contactCandidateQuery = `
 		  SELECT p.id FROM contact p
 		   WHERE p.archived_at IS NULL AND ` + exactDigraphNameKeySQL("p.full_name") + ` = ` + exactDigraphNameKeySQL("@name") + `
 		  UNION
-		  SELECT r.contact_id FROM relationship r
-		   WHERE @employer::uuid IS NOT NULL AND r.company_id = @employer AND r.kind = 'employment'
-		     AND ` + employment.CurrentPrimarySQL("r") + ` AND r.archived_at IS NULL
+		  SELECT id FROM (
+		    SELECT p.id FROM contact p
+		     WHERE @employer::uuid IS NOT NULL AND p.archived_at IS NULL
+		       AND ` + familyNameKeySQL("p.full_name") + ` = ` + familyNameKeySQL("@name") + `
+		       AND (@exclude::uuid IS NULL OR p.id <> @exclude)
+		       AND EXISTS (SELECT 1 FROM relationship r
+		        WHERE r.contact_id = p.id AND r.company_id = @employer AND r.kind = 'employment'
+		          AND ` + employment.CurrentPrimarySQL("r") + ` AND r.archived_at IS NULL)
+		     ORDER BY p.id LIMIT @limit
+		  ) same_family
 		  ) broader WHERE (SELECT count(*) FROM perfect) < @limit)
 		SELECT p.id, p.full_name, r.company_id, od.domain,
 		       ` + storekit.RequestAddressesSQL("p.id") + `
@@ -282,12 +290,18 @@ var contactCandidateQuery = `
 		    ON od.company_id = r.company_id AND od.archived_at IS NULL
 		 WHERE p.archived_at IS NULL
 		   AND (@exclude::uuid IS NULL OR p.id <> @exclude)
-		   AND (f_fold_apostrophes(lower(p.full_name)) % f_fold_apostrophes(lower(@name))
-		        OR (@employer::uuid IS NOT NULL AND r.company_id = @employer)
-		        OR ` + exactNameKeySQL("p.full_name") + ` = ` + exactNameKeySQL("@name") + `
-		        OR ` + exactDigraphNameKeySQL("p.full_name") + ` = ` + exactDigraphNameKeySQL("@name") + `)
+		   AND (` + contactNameAdmitsSQL("p.full_name", "@name") + `
+		        OR (@employer::uuid IS NOT NULL AND r.company_id = @employer))
 		 ORDER BY similarity(f_fold_apostrophes(lower(p.full_name)), f_fold_apostrophes(lower(@name))) DESC, p.id, r.id NULLS LAST, od.domain NULLS LAST
 		 LIMIT @limit`
+
+// contactNameAdmitsSQL is the condition under which the candidate query
+// returns a stored name for scoring: a trigram match or one of the name keys.
+func contactNameAdmitsSQL(column, name string) string {
+	return `(f_fold_apostrophes(lower(` + column + `)) % f_fold_apostrophes(lower(` + name + `))
+		OR ` + exactNameKeySQL(column) + ` = ` + exactNameKeySQL(name) + `
+		OR ` + exactDigraphNameKeySQL(column) + ` = ` + exactDigraphNameKeySQL(name) + `)`
+}
 
 func contactCandidateArgs(c ContactCandidate) pgx.NamedArgs {
 	return pgx.NamedArgs{
@@ -299,11 +313,30 @@ func contactCandidateArgs(c ContactCandidate) pgx.NamedArgs {
 // contactConfidence is the PO-F-1 score: weights sum to 1.0, so the
 // result is in [0,1] and comparable against the threshold directly.
 func contactConfidence(c ContactCandidate, row contactCandidateRow) float64 {
-	name := dedupeNameWeight * contactNameSimilarity(c.FullName, row.fullName)
-	if !namesCorroborate(c.FullName, row.fullName) {
+	return contactConfidenceOf(contactNameFormsOf(c.FullName), contactNameFormsOf(row.fullName), companyMatch(c, row))
+}
+
+// contactConfidenceOf is contactConfidence over names in their forms and the
+// employer agreement companyMatch gives the pair.
+func contactConfidenceOf(asked, held contactNameForms, agreement float64) float64 {
+	name := dedupeNameWeight * contactFormsSimilarity(asked, held)
+	if agreement == 0 || !namematch.CorroborateSplit(asked.given, asked.family, held.given, held.family) {
 		return name
 	}
-	return name + dedupeCompanyDomainWeight*companyMatch(c, row)
+	return name + dedupeCompanyDomainWeight*agreement
+}
+
+// contactConfidenceReaches answers contactConfidenceOf(asked, held, agreement)
+// >= bar. It asks Corroborate only when the name term leaves the answer open.
+func contactConfidenceReaches(asked, held contactNameForms, agreement, bar float64) bool {
+	name := dedupeNameWeight * contactFormsSimilarity(asked, held)
+	if name >= bar {
+		return true
+	}
+	if agreement == 0 || name+dedupeCompanyDomainWeight*agreement < bar {
+		return false
+	}
+	return namematch.CorroborateSplit(asked.given, asked.family, held.given, held.family)
 }
 
 // companyMatch is PO-F-1's employer agreement term, most-specific first: a shared

@@ -4,15 +4,17 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { removeStored, STORAGE_KEYS } from "../lib/storage";
-import { meFixture } from "../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../testing/mefixture";
+import { recordNamesRoutes } from "../testing/recordnames.testkit";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  type RouteMap,
   StoryProviders,
 } from "../testing/story-utils";
 import { CREATE_ID } from "./nav";
-import { type Command, CommandPalette } from "./palette";
+import { type Command, CommandPalette, useBuiltinCommands } from "./palette";
 import { writeRecents } from "./paletterecents.storage";
 
 // The palette had no story at all. It was mounted CLOSED behind the top bar in
@@ -47,8 +49,15 @@ const COMMANDS: Command[] = [
     id: "screen:settings-data-model",
     label: "Data model",
     keywords: ["products", "price list", "custom-fields"],
-    type: "screen",
-    route: { screen: "settings" },
+    type: "setting",
+    route: { screen: "settings", id: "records" },
+  },
+  {
+    id: "screen:settings-deals",
+    label: "Deals",
+    keywords: ["deal stages"],
+    type: "setting",
+    route: { screen: "settings", id: "deals" },
   },
   {
     id: "action:new-deal",
@@ -58,7 +67,9 @@ const COMMANDS: Command[] = [
   },
 ];
 
-function palette(hits: () => Response | Promise<Response>) {
+function palette(
+  hits: (body: unknown, url: URL) => Response | Promise<Response>,
+) {
   removeStored(STORAGE_KEYS.paletteRecents);
   installFetchStub({ "GET /search": hits, "GET /me": meRoute({}) });
   return (
@@ -78,12 +89,71 @@ const type =
   (query: string) =>
   async ({ canvasElement }: { canvasElement: HTMLElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByRole("searchbox"), query);
+    await userEvent.type(canvas.getByRole("combobox"), query);
   };
 
 // Opened, nothing typed: the whole command list, which is what ⌘K shows first.
 export const Default: Story = {
   render: () => palette(noHits),
+};
+export const DefaultDark: Story = { ...Default, globals: { theme: "dark" } };
+
+// The list screen and the settings page share a name; the badge parts them.
+export const SettingBesideScreen: Story = {
+  render: () => palette(noHits),
+  play: type("deals"),
+};
+export const SettingBesideScreenPhone: Story = {
+  ...SettingBesideScreen,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// What C opens off a list screen: the product's create commands and nothing else.
+function CreatePalette() {
+  return (
+    <CommandPalette
+      open
+      mode="create"
+      onClose={() => undefined}
+      commands={useBuiltinCommands()}
+    />
+  );
+}
+
+export const CreateOnly: Story = {
+  render: () => {
+    removeStored(STORAGE_KEYS.paletteRecents);
+    installFetchStub({
+      "GET /search": noHits,
+      "GET /me": meRoute(READS_RECORDS),
+    });
+    return (
+      <StoryProviders>
+        <CreatePalette />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement.ownerDocument.body);
+    for (const label of [
+      "New contact",
+      "New company",
+      "New lead",
+      "New deal",
+      "New project",
+    ]) {
+      await expect(
+        await canvas.findByRole("option", { name: new RegExp(label) }),
+      ).toBeInTheDocument();
+    }
+    await expect(canvas.queryByText("Ask your documents")).toBeNull();
+  },
+};
+
+export const CreateOnlyDark: Story = {
+  ...CreateOnly,
+  globals: { theme: "dark" },
 };
 
 // Live record hits under the commands, grouped under the kind each one is, in
@@ -91,6 +161,42 @@ export const Default: Story = {
 // however much higher it ranked: relevance does not compare across kinds, and
 // a short list ranked across them used to be all mail and no company. A
 // contact found only through the account says so, under the record's mark.
+const DEAL_HITS = [
+  {
+    type: "deal",
+    id: "d1",
+    title: "Fleet renewal 2027",
+    standing: {
+      state: "open",
+      stage: "Negotiation",
+      amount_minor: 42_000_000,
+      currency: "EUR",
+      due_on: "2026-12-12",
+    },
+  },
+  {
+    type: "deal",
+    id: "d2",
+    title: "Service contract 2026",
+    standing: {
+      state: "won",
+      stage: "Closed won",
+      amount_minor: 6_400_000,
+      currency: "EUR",
+    },
+  },
+  {
+    type: "deal",
+    id: "d3",
+    title: "Scrubber pilot, Hall 4",
+    standing: {
+      state: "open",
+      stage: "Proposal",
+      masked_fields: ["amount_minor", "currency"],
+    },
+  },
+];
+
 export const WithRecordHits: Story = {
   render: () =>
     palette(() =>
@@ -107,7 +213,15 @@ export const WithRecordHits: Story = {
               counterparty: "Dana Buyer",
             },
           },
-          { type: "contact", id: "p1", title: "Dana Buyer" },
+          {
+            type: "contact",
+            id: "p1",
+            title: "Dana Buyer",
+            standing: {
+              job_title: "Chief financial officer",
+              last_activity_at: "2026-09-01T09:15:00Z",
+            },
+          },
           {
             type: "contact",
             id: "p2",
@@ -122,6 +236,21 @@ export const WithRecordHits: Story = {
               "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='8' width='48' height='48' rx='10' fill='%230e7490'/%3E%3C/svg%3E",
           },
           { type: "company", id: "o2", title: "Brandt GmbH", is_partner: true },
+          ...DEAL_HITS,
+          {
+            type: "lead",
+            id: "l1",
+            title: "Acme Robotics",
+            snippet: "Acme Robotics AG",
+            standing: { state: "new" },
+          },
+          {
+            type: "project",
+            id: "j1",
+            title: "Scrubber rollout",
+            snippet: "ACME-12 · Acme GmbH",
+            standing: { state: "delivering", due_on: "2027-01-30" },
+          },
           {
             type: "product",
             id: "pr1",
@@ -135,6 +264,32 @@ export const WithRecordHits: Story = {
       }),
     ),
   play: type("acme"),
+};
+
+export const WithRecordHitsDark: Story = {
+  ...WithRecordHits,
+  globals: { theme: "dark" },
+};
+
+// Narrowed to one type, the list asks for more of it and holds nothing else.
+// The strip keeps every type's count from the whole answer.
+export const NarrowedToDeals: Story = {
+  render: () =>
+    palette((_, url) =>
+      jsonResponse({
+        data: url.searchParams.has("types")
+          ? DEAL_HITS
+          : [{ type: "contact", id: "p1", title: "Dana Buyer" }, ...DEAL_HITS],
+        page: { next_cursor: null, has_more: false },
+        types_with_more: url.searchParams.has("types") ? [] : ["deal"],
+      }),
+    ),
+  play: async (context) => {
+    await type("acme")(context);
+    const canvas = within(context.canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: /Deals/ }));
+    await canvas.findByText("Fleet renewal 2027");
+  },
 };
 
 // The wait, which is held back 300ms before it draws: a placeholder that
@@ -179,7 +334,7 @@ export const IdentifierBestMatch: Story = {
     ),
   play: async ({ canvasElement }) => {
     await userEvent.type(
-      within(canvasElement).getByRole("searchbox"),
+      within(canvasElement).getByRole("combobox"),
       "lena@exam",
     );
     await within(canvasElement).findByText("Best match");
@@ -191,7 +346,11 @@ export const IdentifierBestMatchDark: Story = {
 };
 
 const RECENT_ID = "00000000-0000-4000-8000-000000000002";
-function recentPalette(read: () => Response | Promise<Response>) {
+function recentPalette(
+  read: RouteMap["GET /records/references"] = recordNamesRoutes({
+    contact: { [RECENT_ID]: "Anna Weber" },
+  })["GET /records/references"],
+) {
   const id = RECENT_ID;
   writeRecents(meFixture().user.id, [
     { kind: "record", entity_type: "contact", id, label: "Anna Weber" },
@@ -199,8 +358,8 @@ function recentPalette(read: () => Response | Promise<Response>) {
     { kind: "query", text: "Follow up next week" },
   ]);
   installFetchStub({
+    "GET /records/references": read,
     "GET /me": meRoute({ contact: ["read"] }),
-    [`GET /contacts/${id}`]: read,
     "GET /search": noHits,
   });
   return (
@@ -211,10 +370,7 @@ function recentPalette(read: () => Response | Promise<Response>) {
 }
 export const Recent: Story = {
   beforeEach: () => () => removeStored(STORAGE_KEYS.paletteRecents),
-  render: () =>
-    recentPalette(() =>
-      jsonResponse({ id: RECENT_ID, full_name: "Anna Weber" }),
-    ),
+  render: () => recentPalette(),
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByText("Anna Weber");
   },

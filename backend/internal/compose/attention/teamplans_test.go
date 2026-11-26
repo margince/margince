@@ -147,7 +147,7 @@ func TestATeamReadWithNoRosterNamesThePlansUnavailable(t *testing.T) {
 	t.Parallel()
 	var asked []ids.UUID
 	scoped, missing := teamPlanService(teammatesFailing{}, plansByOwner{asked: &asked}).
-		readingPlan(meetingPrepReader(), scopeTeam, rankInstant)
+		readingPlan(meetingPrepReader(), rankInstant)
 	if missing == nil || missing.Reason != crmcontracts.WorklistSourceUnavailableReasonFailed {
 		t.Fatalf("a roster that did not answer must leave the plans named failed, got %+v", missing)
 	}
@@ -186,7 +186,7 @@ func TestASlowTeamReadStopsAtOneLaneBudgetAndNamesWhoWasNotAsked(t *testing.T) {
 	})
 	// Every plan read costs a whole lane budget, so the first spends the team's.
 	svc.now = func() time.Time { return rankInstant.Add(time.Duration(len(asked)) * laneBudget) }
-	scoped, missing := svc.readingPlan(meetingPrepReader(), scopeTeam, rankInstant)
+	scoped, missing := svc.readingPlan(meetingPrepReader(), rankInstant)
 	if len(asked) != 1 || asked[0] != theReader {
 		t.Fatalf("a spent budget must stop the reads, asked=%v", asked)
 	}
@@ -206,7 +206,7 @@ func TestASlowTeamReadStopsAtOneLaneBudgetAndNamesWhoWasNotAsked(t *testing.T) {
 // read was given.
 type budgetsSeen struct{ budgets *[]time.Duration }
 
-func (b budgetsSeen) InSnapshot(ctx context.Context, fn func(context.Context) error) error {
+func (b budgetsSeen) InSnapshot(ctx context.Context, _ string, fn func(context.Context) error) error {
 	return fn(ctx)
 }
 
@@ -224,7 +224,7 @@ func TestATeammateReadLateGetsOnlyWhatIsLeftOfTheTeamsBudget(t *testing.T) {
 	svc := teamPlanService(theTeam, plansByOwner{asked: &asked}).WithSnapshots(budgetsSeen{budgets: &budgets})
 	step := laneBudget * 3 / 4
 	svc.now = func() time.Time { return rankInstant.Add(time.Duration(len(asked)) * step) }
-	svc.readingPlan(meetingPrepReader(), scopeTeam, rankInstant)
+	svc.readingPlan(meetingPrepReader(), rankInstant)
 	// The roster read comes first, on its own lane budget; then one read per teammate.
 	want := []time.Duration{laneBudget, laneBudget, laneBudget - step}
 	if !slices.Equal(budgets, want) {
@@ -253,7 +253,7 @@ func TestATeamPageAsksForItsRosterWhereTheScopeResolvesAndReusesIt(t *testing.T)
 		t.Fatal(err)
 	}
 	reader.keepTeams(ctx, nil)
-	scoped, _ := reader.readingPlan(ctx, scopeTeam, rankInstant)
+	scoped, _ := reader.readingPlan(ctx, rankInstant)
 	if asks != 1 {
 		t.Fatalf("the scope filter and the plan lane asked again: %d roster reads, want the scope's one", asks)
 	}
@@ -280,21 +280,33 @@ func TestATeamWithMixedRefusalsNamesThePlansFailedWhateverTheRosterOrder(t *test
 	}
 }
 
-func TestTheAllScopeStillWithholdsWeeklyPlans(t *testing.T) {
+// All holds every row Team holds, so it reads the same plans and states the
+// same exact task total. A withheld plan lane left All's tasks without a total.
+func TestTheAllScopeReadsTheTeamsPlansAndCountsTasksExactly(t *testing.T) {
 	t.Parallel()
-	var asked []ids.UUID
-	svc := teamPlanService(theTeam, plansByOwner{
-		due:   map[ids.UUID][]PlanWork{theColleague: {promiseBy(theColleague, "Call the buyer back")}},
-		asked: &asked,
-	})
-	day, err := svc.Worklist(meetingPrepReader(), scopeAll, "", ids.UUID{}, 25, "")
-	if err != nil {
-		t.Fatal(err)
+	svc := teamPlanService(theTeam, plansByOwner{due: map[ids.UUID][]PlanWork{
+		theReader:    {promiseBy(theReader, "Send the proposal")},
+		theColleague: {promiseBy(theColleague, "Call the buyer back")},
+	}})
+	totals := map[string]*int{}
+	for _, scope := range []string{scopeTeam, scopeAll} {
+		day, err := svc.Worklist(meetingPrepReader(), scope, "", ids.UUID{}, 25, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if reason, missing := planSourceMissing(day); missing {
+			t.Fatalf("%s: the plan lane answered %s, want read", scope, reason)
+		}
+		if owners := planRowOwners(day); owners["Call the buyer back"] != theColleague {
+			t.Fatalf("%s: a teammate's promise is missing: %v", scope, owners)
+		}
+		for _, count := range day.Counts {
+			if count.Category == crmcontracts.WorklistCountCategory(categoryOfSource(sourceWeeklyCommitment)) {
+				totals[scope] = count.Total
+			}
+		}
 	}
-	if reason, _ := planSourceMissing(day); reason != crmcontracts.WorklistSourceUnavailableReasonWithheld {
-		t.Fatalf("all has no roster to read plans across, so it must stay withheld; got %q", reason)
-	}
-	if len(asked) != 0 || day.PlanCoverage != nil {
-		t.Fatalf("all read plans it has no policy for: asked=%v coverage=%+v", asked, day.PlanCoverage)
+	if totals[scopeAll] == nil || totals[scopeTeam] == nil || *totals[scopeAll] != *totals[scopeTeam] {
+		t.Fatalf("all and team must state one exact task total: all=%v team=%v", totals[scopeAll], totals[scopeTeam])
 	}
 }

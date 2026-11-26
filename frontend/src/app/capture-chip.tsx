@@ -8,6 +8,7 @@ import { useLocale, useT } from "../i18n";
 import { liveCapture } from "../lib/capture-progress";
 import { useConnectors } from "../lib/connectors";
 import { useImportRunOnScreen } from "../lib/import-onscreen";
+import { useFirstScreenSettled } from "../lib/journeymarks";
 import "./capture-chip.css";
 
 /** Where the chip leads: the connections card, which holds the run in full. */
@@ -36,7 +37,12 @@ const CONNECTIONS_HREF = "#/settings/connections";
  * card, onboarding's backread step). Those surfaces say so themselves
  * (lib/import-onscreen.ts) rather than being listed here as routes.
  */
-export function CaptureChip({
+/** The import gauge, read once the first screen's day is on screen. */
+export function CaptureChip(props: Readonly<{ linked: boolean }>) {
+  return useFirstScreenSettled() ? <CaptureGauge {...props} /> : null;
+}
+
+function CaptureGauge({
   linked,
 }: Readonly<{
   /**
@@ -64,6 +70,7 @@ export function CaptureChip({
           scanned: formatNumber(capture.scanned, locale),
           total: formatNumber(capture.estimated, locale),
         });
+  const note = capture.course === null ? null : t(capture.course);
   const gauge = (
     <>
       {/* Always `ingest`: this chip exists only while mail is arriving, so
@@ -75,12 +82,13 @@ export function CaptureChip({
         state="ingest"
         size="md"
         surface="dark"
-        progress={capture.fraction ?? undefined}
+        progress={note === null ? (capture.fraction ?? undefined) : undefined}
         className="capturechip-core"
       />
       <span className="capturechip-words">
         <span className="capturechip-line">{t("shell.capture.importing")}</span>
         <span className="capturechip-detail">{detail}</span>
+        {note !== null && <span className="capturechip-detail">{note}</span>}
       </span>
     </>
   );
@@ -92,7 +100,14 @@ export function CaptureChip({
         <AppLink
           className="capturechip-link"
           href={CONNECTIONS_HREF}
-          aria-label={`${t("shell.capture.importing")}. ${detail}. ${t("shell.capture.open")}`}
+          aria-label={[
+            t("shell.capture.importing"),
+            detail,
+            note,
+            t("shell.capture.open"),
+          ]
+            .filter(Boolean)
+            .join(". ")}
         >
           {gauge}
         </AppLink>

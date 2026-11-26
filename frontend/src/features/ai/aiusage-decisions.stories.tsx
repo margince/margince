@@ -16,7 +16,7 @@ const DECISIONS: components["schemas"]["AiDecisionSummary"][] = [
     fallbacks: {
       decision_below_floor: 4,
       decision_error: 2,
-      decision_uncertified: 1,
+      decision_state_too_large: 1,
     },
   },
   { task: "capture_classify", asked: 3, decided: 3, fallbacks: {} },

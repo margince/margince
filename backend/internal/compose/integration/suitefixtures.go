@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/integration/contactfixture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -154,6 +155,21 @@ func RegisterGoBDFloorPack() {
 	jurisdiction.Register(GoBDFloorPack{})
 }
 
+// entityLawPack is a pack with no retention classes. A further legal entity
+// may only name a compiled-in pack, and a suite binary composes no extension.
+type entityLawPack struct{ code jurisdiction.Code }
+
+func (p entityLawPack) Code() jurisdiction.Code { return p.code }
+
+//nolint:ireturn // jurisdiction.Pack declares this method returning the interface.
+func (entityLawPack) Retention() jurisdiction.Retention { return nil }
+
+// RegisterEntityLawPack compiles in a floorless pack under code, so a suite
+// can describe a further legal entity there. Call it once per binary, from init.
+func RegisterEntityLawPack(code jurisdiction.Code) {
+	jurisdiction.Register(entityLawPack{code: code})
+}
+
 // SeedRetentionPolicies authors one policy per branch the sweep must take.
 // A suite asserting an outcome then need not state the policy behind it.
 // The transcript-erase and contact-anonymize rows are not shipped defaults.
@@ -206,4 +222,9 @@ func SettleIntoInstall(t *testing.T, e *Env) {
 	if err != nil {
 		t.Fatalf("settling the seeded records into the installation: %v", err)
 	}
+}
+
+// ContactProfile gives each fixture a distinct manual-create identity.
+func ContactProfile() string {
+	return contactfixture.Profile()
 }

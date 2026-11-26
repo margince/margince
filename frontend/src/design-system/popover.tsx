@@ -37,6 +37,7 @@ import { useHoverIntent } from "./hoverintent";
 import { Modal } from "./modal";
 import { usePanelDismiss } from "./popoverdismiss";
 import { usePortalPanelFocus } from "./portalfocus";
+import { useTopLayer } from "./toplayer";
 import "./popover.css";
 
 /**
@@ -136,6 +137,7 @@ export function Popover({
   const [openedBy, setOpenedBy] = useState<"press" | "hover">("press");
   const trigger = useRef<HTMLButtonElement | null>(null);
   const panel = useRef<HTMLElement | null>(null);
+  useTopLayer(panel, open);
   const panelId = useId();
   const triggerId = useId();
   // The leading edge by default, since words open a popover as often as a chip
@@ -211,6 +213,7 @@ export function Popover({
           <section
             id={panelId}
             ref={panel}
+            popover="manual"
             className={withClass(
               withClass(
                 "popover-panel",
@@ -271,34 +274,59 @@ function PopoverTrigger({
   );
 }
 
+/** Who opens the panel: its own trigger, or (`opener="caller"`) a control
+ *  elsewhere on the page, such as a section's Edit link, with no trigger drawn. */
+export type SheetOpener =
+  | Readonly<{
+      opener?: undefined;
+      label: ReactNode;
+      variant: ButtonVariant;
+      className?: string;
+      reasonId?: string;
+      align?: "start" | "end";
+      panelClassName: string;
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      onClose?: undefined;
+    }>
+  | Readonly<{
+      opener: "caller";
+      open: boolean;
+      onClose: () => void;
+      onOpenChange?: undefined;
+    }>;
+
 /** A non-modal `Popover`, or below the fold a drawer `Modal` headed by `title`.
- * There a panel anchored to a small trigger leaves no room for the keyboard. */
-export function PopoverSheet({
-  label,
-  title,
-  variant,
-  className,
-  reasonId,
-  align,
-  panelClassName,
-  open,
-  onOpenChange,
-  children,
-}: Readonly<{
-  label: ReactNode;
-  title: string;
-  variant: ButtonVariant;
-  className?: string;
-  reasonId?: string;
-  align?: "start" | "end";
-  panelClassName: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  children: ReactNode;
-}>) {
+ * There a panel anchored to a small trigger leaves no room for the keyboard.
+ * Opened by a caller, it is that drawer at every width: no trigger to anchor to. */
+export function PopoverSheet(
+  props: Readonly<{
+    title: string;
+    children: ReactNode;
+  }> &
+    SheetOpener,
+) {
   // Modal's own fold, so no width draws a panel the sheet would also draw.
   const phone = useFoldedViewport();
-  const titleId = useId();
+  if (props.opener === "caller") {
+    return (
+      <SheetModal title={props.title} open={props.open} onClose={props.onClose}>
+        {props.children}
+      </SheetModal>
+    );
+  }
+  const {
+    label,
+    title,
+    variant,
+    className,
+    reasonId,
+    align,
+    panelClassName,
+    open,
+    onOpenChange,
+    children,
+  } = props;
   if (!phone) {
     return (
       <Popover
@@ -328,17 +356,31 @@ export function PopoverSheet({
       >
         {label}
       </Button>
-      <Modal
-        intent="drawer"
-        open={open}
-        onClose={() => onOpenChange(false)}
-        labelledBy={titleId}
-      >
-        <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {title}
-        </Heading>
+      <SheetModal title={title} open={open} onClose={() => onOpenChange(false)}>
         {children}
-      </Modal>
+      </SheetModal>
     </>
+  );
+}
+
+function SheetModal({
+  title,
+  open,
+  onClose,
+  children,
+}: Readonly<{
+  title: string;
+  open: boolean;
+  onClose: () => void;
+  children: ReactNode;
+}>) {
+  const titleId = useId();
+  return (
+    <Modal intent="drawer" open={open} onClose={onClose} labelledBy={titleId}>
+      <Heading size="large" id={titleId} className="t-h2 modal-title">
+        {title}
+      </Heading>
+      {children}
+    </Modal>
   );
 }

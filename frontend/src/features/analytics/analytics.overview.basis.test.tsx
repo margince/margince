@@ -162,7 +162,7 @@ it.each([
     if (measure === "manager_call") {
       const call = await card(label);
       expect(
-        call.getByText(`${short(20000 - amount)} short of target`),
+        call.getByText(`${short(20000 - amount)} short of goal`),
       ).toBeVisible();
       await openReceipt(user, call);
       expect(await screen.findByText("Called 30 Oct 2026")).toBeVisible();
@@ -203,7 +203,9 @@ it("names the whole quarter separately from the actuals cutoff", async () => {
   openScenario("cutoffVersusHorizon");
   const period = await screen.findByText("1 October – 31 December");
   expect(period.parentElement).toBe(
-    screen.getByText("Actuals through 31/10/2026, 17:00").parentElement,
+    screen.getByText(
+      "Actuals through 31/10/2026, 17:00 · Central European Standard Time · UTC+1",
+    ).parentElement,
   );
 });
 

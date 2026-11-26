@@ -98,16 +98,17 @@ it("clears a start date the reader emptied, rather than leaving it", async () =>
 });
 
 it("refuses to save a date the wire cannot carry", async () => {
-  sentPatches();
+  const patches = sentPatches();
   open(role);
   const user = steppedClock();
 
-  await user.type(screen.getByLabelText("End date"), "soon");
+  const end = screen.getByLabelText("End date");
+  await user.type(end, "soon");
+  await user.click(screen.getByRole("button", { name: "Save" }));
 
-  expect(screen.getByRole("button", { name: "Save" })).toHaveProperty(
-    "disabled",
-    true,
-  );
+  expect(screen.getByText("Enter a valid date for End date.")).toBeTruthy();
+  expect(document.activeElement).toBe(end);
+  expect(patches).toHaveLength(0);
 });
 
 it("offers the current-employer box only for a role that is still held", () => {
@@ -115,7 +116,7 @@ it("offers the current-employer box only for a role that is still held", () => {
   open(role);
 
   expect(
-    screen.getByRole("checkbox", { name: "This is their current employer" }),
+    screen.getByRole("checkbox", { name: "This is their primary employer" }),
   ).toHaveProperty("disabled", true);
 });
 
@@ -123,11 +124,12 @@ it("requires a current or former choice for an imported unknown link", async () 
   const user = steppedClock();
   const patches = sentPatches();
   const { onClose } = open({ ...role, employment_status: "unknown" });
-  expect(screen.getByRole("button", { name: "Save" })).toHaveProperty(
-    "disabled",
-    true,
-  );
-  await user.click(screen.getByRole("combobox", { name: "Employment status" }));
+  const status = screen.getByRole("combobox", { name: "Employment status" });
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  expect(screen.getByText("Employment status is required.")).toBeTruthy();
+  expect(document.activeElement).toBe(status);
+  expect(patches).toHaveLength(0);
+  await user.click(status);
   expect(screen.queryByRole("option", { name: "Status unknown" })).toBeNull();
   expect(screen.getAllByRole("option")).toHaveLength(2);
   await user.click(screen.getByRole("option", { name: "Current" }));

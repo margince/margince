@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -558,7 +559,7 @@ func TestErasureReachesTheEnrichmentSidecarAndTheLedger(t *testing.T) {
 		t.Fatalf("Record: %v", err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), mine, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), mine, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 

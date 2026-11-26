@@ -10,8 +10,10 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/recordexport"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -59,7 +61,7 @@ const leadStatusNew = "new"
 
 // leadTargetStatus is the lead's status column. A file may place a lead only
 // on the open ladder; the terminal statuses go through promote and disqualify.
-const leadTargetStatus = "status"
+const leadTargetStatus = recordexport.LeadStatus
 
 // The fields a CSV import may target, per object. Each one round-trips: the
 // writer can both create and update it. A create-only target would stop
@@ -102,7 +104,7 @@ var csvTargets = map[string][]string{
 // way to destroy the wrong company's data when it decides a write.
 //
 // An id has none of that. It names one record or no record.
-const csvTargetID = "id"
+const csvTargetID = recordexport.ID
 
 // csvTargetRef is the column holding the row's own id in the source system, the
 // one other files' links name. It is the part's source key, never a stored field.
@@ -110,7 +112,7 @@ const csvTargetRef = "ref"
 
 // csvTargetCompanyRef names a contact's employer by the company's ref, its
 // domain, its one name or its id. Like the employer name it writes an edge.
-const csvTargetCompanyRef = migration.AssocTargetCompanyRef
+const csvTargetCompanyRef = recordexport.CompanyRef
 
 // recordAddressTargets are the address fields a CSV column may name, spelled with
 // the `address.` prefix the record-fields schema already uses for the nested
@@ -147,6 +149,20 @@ var csvSourceKeyDefault = map[string]string{
 	migration.ObjectActivity: csvTargetRef,
 }
 
+// rowKeyTargets are the targets partMappingFrom tells an object's rows apart
+// by, and a file must map one of them. They are its natural key, the id a
+// corrections export carries, and the source's own ref.
+func rowKeyTargets(object string) []string {
+	keys := []string{csvSourceKeyDefault[object]}
+	if selectsByID(object) {
+		keys = append(keys, csvTargetID)
+	}
+	if !slices.Contains(keys, csvTargetRef) {
+		keys = append(keys, csvTargetRef)
+	}
+	return keys
+}
+
 // importTargets is the closed set a mapping may name for one object: its core
 // fields, then each active custom field by key, in column order.
 func importTargets(object string, cat importCatalog) ([]string, error) {
@@ -180,12 +196,14 @@ func hasCustomFields(object string) bool { return object != migration.ObjectActi
 
 // selectsByID reports whether an object's rows may name the record they are.
 //
-// Companies only, for now. A lead is identified by its email and the store's
-// own unique key refuses a second one, so a lead row has no ambiguity for an id
-// to resolve — and advertising a column that changes nothing would be worse than
-// not offering it.
+// A corrected export names its records by id. An id names one record where a
+// natural key can be empty or shared.
 func selectsByID(object string) bool {
-	return object == migration.ObjectCompany
+	switch object {
+	case migration.ObjectCompany, migration.ObjectContact, migration.ObjectLead, migration.ObjectDeal:
+		return true
+	}
+	return false
 }
 
 // linksEmployer reports whether an object's rows may name a company to be
@@ -344,10 +362,7 @@ func canonicalFor(field, value string) string {
 		// rewrite the row on every re-import of an unchanged file — the same
 		// defect the email lowercasing fixed, with more ways to spell it. An
 		// unparseable value compares as written and is refused later by name.
-		if parsed, err := values.ParseDomain(trimmed); err == nil {
-			return parsed.String()
-		}
-		return trimmed
+		return owndomain.DomainOrAsWritten(trimmed)
 	}
 	return trimmed
 }
@@ -447,4 +462,14 @@ func textFields(fields map[string]any) map[string]string {
 		out[name] = strings.TrimSpace(fmt.Sprint(value))
 	}
 	return out
+}
+
+// canonicalIndustry renders an imported industry the way the store holds it.
+// A file that spells the industry another way is then no change. Text that
+// names no code compares as written.
+func canonicalIndustry(trimmed string) string {
+	if code, ok := contacts.ResolveIndustry(trimmed); ok {
+		return code
+	}
+	return trimmed
 }

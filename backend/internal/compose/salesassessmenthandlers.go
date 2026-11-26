@@ -17,6 +17,8 @@ import (
 // salesAssessmentHandlers serves the Sales review's assessment.
 type salesAssessmentHandlers struct {
 	svc *salesAssessments
+	// The summary of a Progress reading is written on the same lane.
+	progressSummaryHandlers
 }
 
 // AssessSalesReview implements POST /analytics/assessment.
@@ -40,7 +42,7 @@ func (h salesAssessmentHandlers) AssessSalesReview(w http.ResponseWriter, r *htt
 
 // WithSalesAssessment binds the report_interpret lane that writes the Sales
 // review's assessment. Unbound, the panel shows the deterministic summary.
-func WithSalesAssessment(brain completer, routingVersion string) Option {
+func WithSalesAssessment(brain completer, routingVersion func() string) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		if s.salesAssessmentHandlers.svc != nil {
 			s.salesAssessmentHandlers.svc = s.salesAssessmentHandlers.svc.withLane(brain, routingVersion)

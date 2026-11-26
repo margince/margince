@@ -20,6 +20,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
@@ -37,11 +40,11 @@ import (
 // whoever the workflow happened to run as, which would file the work under a
 // system principal and hide it from everybody.
 func taskCreateEffectFor(
-	ev workflow.Event, subject string, dueAt time.Time, owner *ids.UUID, key *taskNaturalKey,
+	ctx context.Context, ev workflow.Event, words taskWords, record string, dueAt time.Time, owner *ids.UUID, key *taskNaturalKey,
 ) (workflow.Effect, error) {
 	fields := map[string]any{
 		fieldKind: "task",
-		"subject": subject,
+		"subject": words.subject,
 		"due_at":  dueAt,
 		"links": []map[string]any{{
 			"entity_type": string(ev.Entity.Type), "entity_id": ev.Entity.ID,
@@ -54,13 +57,54 @@ func taskCreateEffectFor(
 		fields["source_system"] = key.System
 		fields["source_id"] = key.ID
 	}
+	message := systemtext.MessageIn(ctx)
+	body, why, err := words.reason(record)
+	if err != nil {
+		return workflow.Effect{}, err
+	}
+	if why != nil {
+		fields["body"] = body
+		message = withBody(message, why)
+	}
 	args, err := json.Marshal(fields)
 	if err != nil {
 		return workflow.Effect{}, fmt.Errorf("automation: encoding the task: %w", err)
 	}
+	metadata := systemtext.ForWrite(ctx, message, words.subject, body)
 	return workflow.Effect{Actions: []workflow.Action{{
-		Kind: workflow.ActionCreateTask, Target: ev.Entity, Args: args,
+		Kind: workflow.ActionCreateTask, Target: ev.Entity, Args: args, SystemText: metadata,
 	}}}, nil
+}
+
+// taskWords is what a minted task says: its subject, and why it exists, told
+// about the record that fired it. A nil why mints a task with no body.
+type taskWords struct {
+	subject string
+	why     func(record string) *systemtext.Component
+}
+
+// reason is the task's body, in English and as a sentence the reader's
+// language renders. Without the record's name the task carries no reason.
+func (w taskWords) reason(record string) (string, *systemtext.Component, error) {
+	if w.why == nil || record == "" {
+		return "", nil, nil
+	}
+	why := w.why(record)
+	body, err := why.Render(textlang.English)
+	if err != nil {
+		return "", nil, fmt.Errorf("automation: wording the task's reason: %w", err)
+	}
+	return body, why, nil
+}
+
+// withBody adds the reason to the display metadata the starter already set.
+func withBody(message *systemtext.Message, body *systemtext.Component) *systemtext.Message {
+	out := systemtext.Message{Version: 1}
+	if message != nil {
+		out = *message
+	}
+	out.Body = body
+	return &out
 }
 
 // taskNaturalKey is the identity a reminder carries so the SQL draw can see it
@@ -91,10 +135,22 @@ const reminderDueInDays = 3
 // does NOT: its anchor is a renewal date that can be today, so a fixed horizon
 // would file the task three days after the renewal it exists to warn about.
 func anchorReminderTaskEffect(
-	ctx context.Context, ex Executors, ev workflow.Event, subject string, h workflow.Handler,
+	ctx context.Context, ex Executors, ev workflow.Event, words taskWords, h workflow.Handler,
 ) (workflow.Effect, error) {
 	key := taskNaturalKey{System: h.Spec().Name, ID: h.IdempotencyKey(ev)}
-	return ownedTaskEffect(ctx, ex, ev, subject, ev.OccurredAt.AddDate(0, 0, reminderDueInDays), &key)
+	population, err := quietPopulation(ev.Params)
+	if err != nil {
+		return workflow.Effect{}, err
+	}
+	if population.configured() {
+		anchor, err := touchAnchor(ev)
+		if err != nil {
+			return workflow.Effect{}, err
+		}
+		// Reviewed quiet rules share the unique task key, including concurrent scans.
+		key = taskNaturalKey{System: provenance.NoActivityReminderSource, ID: anchorIdempotencyKey(provenance.NoActivityReminderSource, ev.Entity, anchor, nil)}
+	}
+	return ownedTaskEffect(ctx, ex, ev, words, ev.OccurredAt.AddDate(0, 0, reminderDueInDays), &key)
 }
 
 // ownedTaskEffect mints a task belonging to whoever owns the record that fired.
@@ -116,43 +172,54 @@ func anchorReminderTaskEffect(
 // than by a natural key on the row — the event-driven follow-ups, and the
 // renewal reminder whose due date stays on its anchor.
 func ownedTaskEffectNoKey(
-	ctx context.Context, ex Executors, ev workflow.Event, subject string, dueAt time.Time,
+	ctx context.Context, ex Executors, ev workflow.Event, words taskWords, dueAt time.Time,
 ) (workflow.Effect, error) {
-	return ownedTaskEffect(ctx, ex, ev, subject, dueAt, nil)
+	return ownedTaskEffect(ctx, ex, ev, words, dueAt, nil)
 }
 
 func ownedTaskEffect(
-	ctx context.Context, ex Executors, ev workflow.Event, subject string, dueAt time.Time, key *taskNaturalKey,
+	ctx context.Context, ex Executors, ev workflow.Event, words taskWords, dueAt time.Time, key *taskNaturalKey,
 ) (workflow.Effect, error) {
 	if ex.Provider == nil {
-		return taskCreateEffectFor(ev, subject, dueAt, nil, key)
+		return taskCreateEffectFor(ctx, ev, words, "", dueAt, nil, key)
 	}
-	owner, err := recordOwner(ctx, ex, ev)
+	fired, err := firedRecord(ctx, ex, ev)
 	if err != nil {
 		return workflow.Effect{}, err
 	}
-	return taskCreateEffectFor(ev, subject, dueAt, owner, key)
+	return taskCreateEffectFor(ctx, ev, words, fired.title(), dueAt, fired.OwnerID, key)
 }
 
-// recordOwner reads who answers for the record that fired, or nil.
-//
-// One shape for every record type the task-minting handlers fire on: deal,
-// lead, contact and company all spell their owner `owner_id`, so one decode
-// answers all four and a per-type switch would be four spellings of one fact.
-func recordOwner(ctx context.Context, ex Executors, ev workflow.Event) (*ids.UUID, error) {
+// firedFields is what a minted task needs off the record that fired: who
+// answers for it, and what to call it. Deal, lead, contact and company all
+// spell their owner `owner_id`, so one decode answers all four.
+type firedFields struct {
+	OwnerID  *ids.UUID `json:"owner_id"`
+	Name     string    `json:"name"`
+	FullName string    `json:"full_name"`
+}
+
+// title is the record's own name: a deal's, a company's or a contact's.
+func (f firedFields) title() string {
+	if f.Name != "" {
+		return f.Name
+	}
+	return f.FullName
+}
+
+// firedRecord reads the record that fired.
+func firedRecord(ctx context.Context, ex Executors, ev workflow.Event) (firedFields, error) {
 	rec, err := ex.Provider.Read(ctx, ev.Entity)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		// The event may outlive a promoted lead or an archived record.
-		return nil, declineFiring("the target record is no longer available")
+		return firedFields{}, workflow.Declined("the target record is no longer available")
 	}
 	if err != nil {
-		return nil, err
+		return firedFields{}, err
 	}
-	var owned struct {
-		OwnerID *ids.UUID `json:"owner_id"`
+	var fired firedFields
+	if err := json.Unmarshal(rec.Fields, &fired); err != nil {
+		return firedFields{}, fmt.Errorf("reading the task owner: %w", err)
 	}
-	if err := json.Unmarshal(rec.Fields, &owned); err != nil {
-		return nil, fmt.Errorf("reading the task owner: %w", err)
-	}
-	return owned.OwnerID, nil
+	return fired, nil
 }

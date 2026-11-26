@@ -125,7 +125,7 @@ export { StatCard } from "./statcard";
 type CardElement = "section" | "div" | "article" | "form" | "li";
 
 /**
- * The one card in the product: elevated ground, subtle border, 12px radius, one
+ * The one card in the product: elevated ground, subtle border, the card radius, one
  * padding. Every surface that reads as a card comes from here — a hand-rolled
  * `<div className="card">` drifts the moment one of those five values changes.
  *
@@ -405,67 +405,6 @@ export function SectionHeader({
   );
 }
 
-export function SegmentedControl<Option extends string>({
-  options,
-  value,
-  onChange,
-  labels,
-  counts,
-  floors,
-  label,
-  marks,
-}: Readonly<{
-  options: readonly Option[];
-  value: Option;
-  onChange: (next: Option) => void;
-  labels: Record<Option, string>;
-  // How much is behind each option, for a strip that chooses between bodies of
-  // a record rather than between settings. Partial and per-option on purpose:
-  // an option whose count is absent draws none, which is what a section that
-  // is not a list of things (an overview, a form) needs — and it is NOT the
-  // same as a zero. A zero is a fact about the account and prints; a missing
-  // count is a fact about the section and does not.
-  //
-  // Inside the button, so the count joins the option's accessible name and a
-  // screen reader announces "Contacts 6" rather than leaving the figure to a
-  // sighted reader alone.
-  counts?: Partial<Record<Option, number>>;
-  // Options whose count is a floor, drawn "25+": the read stopped at a bound.
-  floors?: Partial<Record<Option, boolean>>;
-  // Accessible name for the control as a whole (the `fieldset` group); a
-  // screen reader announces it alongside each option so the buttons aren't
-  // read out of context. Optional so existing callers are unaffected.
-  label?: string;
-  // Options carrying a dot: something waits behind that option. Decorative by
-  // construction — the dot is `aria-hidden` and the fact it hints at must be
-  // stated in words on the surface the option opens, because a mark is the one
-  // thing a screen reader cannot read out and a colour-blind reader may not
-  // see. It draws attention; it never carries the meaning alone.
-  marks?: Partial<Record<Option, boolean>>;
-}>) {
-  return (
-    <fieldset className="segmented" aria-label={label}>
-      {options.map((option) => {
-        const count = counts?.[option];
-        return (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={option === value}
-            onClick={() => onChange(option)}
-          >
-            {labels[option]}
-            {count !== undefined && (
-              <OptionCount count={count} floor={floors?.[option]} />
-            )}
-            {marks?.[option] && <span className="segmented-mark" aria-hidden />}
-          </button>
-        );
-      })}
-    </fieldset>
-  );
-}
-
 export function Kbd({ children }: Readonly<{ children: ReactNode }>) {
   return <kbd className="kbd">{children}</kbd>;
 }
@@ -474,3 +413,4 @@ export function Kbd({ children }: Readonly<{ children: ReactNode }>) {
 export { Disclosure } from "./disclosure";
 export { Modal } from "./modal";
 export { useScrollRegion } from "./scrollregion";
+export { SegmentedControl } from "./segmentedcontrol";

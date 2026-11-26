@@ -1,0 +1,18 @@
+{
+  "tool": "read_details",
+  "action": "deal_lines",
+  "verb": "read_deal_lines",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

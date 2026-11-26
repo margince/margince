@@ -31,6 +31,12 @@ type invitationIntent struct {
 	// Lead is the live lead a public booking lands on when no contact holds
 	// the booker's address. The meeting is filed on it instead of a contact.
 	Lead ids.LeadID
+	// Team is the members of a team booking link, each invited and each
+	// holding the booked time beside the host.
+	Team []teamCalendar
+	// Page is the booking page the public door booked through, Nil for the
+	// host's personal page.
+	Page ids.UUID
 }
 type publicBookingIntent struct {
 	KeyHash   string           `json:"key_hash"`

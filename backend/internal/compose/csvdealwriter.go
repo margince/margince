@@ -61,7 +61,7 @@ func (w *csvWriters) createDeal(ctx context.Context, row migration.Row, typed ma
 // dealBirthOf is what a row asks the deals store to birth. The commit and the
 // dry run share it so both put the same question.
 func (w *csvWriters) dealBirthOf(row migration.Row, typed map[string]any) (dealCreate, *deals.ImportTerminal) {
-	made := dealCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
+	made := dealCreateFrom(textFields(row.Fields), typed, w.sourceSystem)
 	return made, w.terminalOf(textFields(row.Fields), made)
 }
 
@@ -133,6 +133,9 @@ func dealRefusalOf(err error, fields map[string]string, stages dealStages) (migr
 	}
 	if _, ok := errors.AsType[*deals.PastCloseDateError](err); ok {
 		return migration.Why(migration.ReasonCloseDatePast, "value", strings.TrimSpace(fields[dealTargetCloseDate])), true
+	}
+	if _, ok := errors.AsType[*deals.PipelineRetiredError](err); ok {
+		return stages.goneStage(fields[dealTargetPipeline], fields[dealTargetStage]), true
 	}
 	if _, ok := errors.AsType[*deals.StagePipelineMismatchError](err); ok {
 		return migration.Why(migration.ReasonDealPipelineFixed), true

@@ -16,6 +16,20 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+type (
+	genericPlanScope struct{}
+	customPlanScope  struct{}
+)
+
+// GenericPlansEnabled reports whether the ambient snapshot keeps generic plans.
+// Callers with costly custom-plan fallbacks can keep named statements only here.
+func GenericPlansEnabled(ctx context.Context) bool {
+	scoped, ok := ctx.Value(genericPlanScope{}).(pgx.Tx)
+	tx, joined := snapshotOf(ctx)
+	custom, _ := ctx.Value(customPlanScope{}).(pgx.Tx)
+	return ok && joined && tx == scoped && custom != tx
+}
+
 // ReuseGenericPlans runs fn with each statement on the ambient snapshot reusing
 // its generic plan, then restores the snapshot's mode. A caller opts in only
 // when its statements spell every partial-index predicate as a literal. With no
@@ -25,17 +39,46 @@ func ReuseGenericPlans(ctx context.Context, fn func(context.Context) error) erro
 	if !ok || tx == nil {
 		return fn(ctx)
 	}
-	return ReuseGenericPlansTx(ctx, tx, func() error { return fn(ctx) })
+	if GenericPlansEnabled(ctx) {
+		return fn(ctx)
+	}
+	return ReuseGenericPlansTx(ctx, tx, func() error {
+		scoped := context.WithValue(ctx, genericPlanScope{}, tx)
+		return fn(context.WithValue(scoped, customPlanScope{}, nil))
+	})
+}
+
+// UseCustomPlansTx applies the custom-plan exception to an explicit transaction.
+func UseCustomPlansTx(ctx context.Context, tx pgx.Tx, fn func(context.Context) error) error {
+	return withPlanCacheMode(ctx, tx, "force_custom_plan", func() error {
+		return fn(context.WithValue(ctx, customPlanScope{}, tx))
+	})
 }
 
 // ReuseGenericPlansTx applies the same scoped mode to an explicit transaction.
 // Its statements must keep partial-index predicates literal, as for snapshot reuse.
+// On the ambient snapshot already reusing generic plans it only runs fn.
 func ReuseGenericPlansTx(ctx context.Context, tx pgx.Tx, fn func() error) error {
+	if snapshot, joined := snapshotOf(ctx); joined && snapshot == tx && GenericPlansEnabled(ctx) {
+		return fn()
+	}
+	return withPlanCacheMode(ctx, tx, "force_generic_plan", fn)
+}
+
+func withPlanCacheMode(ctx context.Context, tx pgx.Tx, mode string, fn func() error) error {
 	// The materialized CTE reads the old mode before the outer row sets the new one.
 	var before, forced string
-	if err := tx.QueryRow(ctx, `WITH previous AS MATERIALIZED (SELECT current_setting('plan_cache_mode') AS mode)
-SELECT previous.mode, set_config('plan_cache_mode', 'force_generic_plan', true) FROM previous`).Scan(&before, &forced); err != nil {
-		return fmt.Errorf("pg: setting plan_cache_mode force_generic_plan: %w", err)
+	statement := `WITH previous AS MATERIALIZED (SELECT current_setting('plan_cache_mode') AS mode)
+SELECT previous.mode, set_config('plan_cache_mode', 'force_generic_plan', true) FROM previous`
+	if mode == "force_custom_plan" {
+		statement = `WITH previous AS MATERIALIZED (SELECT current_setting('plan_cache_mode') AS mode)
+SELECT previous.mode, set_config('plan_cache_mode', 'force_custom_plan', true) FROM previous`
+	}
+	if deferred, ok := deferredOf(tx); ok {
+		return deferredPlanCacheMode(deferred, statement, fn)
+	}
+	if err := tx.QueryRow(ctx, statement).Scan(&before, &forced); err != nil {
+		return fmt.Errorf("pg: setting plan_cache_mode %s: %w", mode, err)
 	}
 	err := fn()
 	// A failed statement leaves the transaction aborted, and its rollback
@@ -47,6 +90,20 @@ SELECT previous.mode, set_config('plan_cache_mode', 'force_generic_plan', true) 
 	if restoreErr := setPlanCacheMode(ctx, tx, before); restoreErr != nil {
 		return errors.Join(err, restoreErr)
 	}
+	return err
+}
+
+// deferredPlanCacheMode is withPlanCacheMode on a snapshot that carries the
+// mode and its restore on the exchanges around fn.
+func deferredPlanCacheMode(tx *deferredTx, statement string, fn func() error) error {
+	var before, forced string
+	scope := tx.open(deferredStatement{sql: statement, scan: func(row pgx.Row) error { return row.Scan(&before, &forced) }, opens: true})
+	err := fn()
+	if aborted(tx) {
+		tx.drop(scope)
+		return err
+	}
+	tx.close(scope, deferredStatement{sql: "SELECT set_config('plan_cache_mode', $1, true)", args: []any{before}})
 	return err
 }
 

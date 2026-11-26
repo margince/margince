@@ -26,11 +26,11 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/leadsource"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -142,7 +142,7 @@ func chooseOwner(cfg RoutingConfig, lead leadRoutingFacts, openLoad map[ids.User
 		return cfg.CapPerOwner <= 0 || openLoad[id] < cfg.CapPerOwner
 	}
 	for i, rule := range cfg.Rules {
-		if !slices.Contains(RoutableLeadFields, rule.Field) || !strings.EqualFold(rule.Equals, lead.field(rule.Field)) {
+		if !slices.Contains(RoutableLeadFields, rule.Field) || !ruleMatches(rule, lead.field(rule.Field)) {
 			continue
 		}
 		// The cap outranks the rule (AC-S5: caps are never exceeded): a
@@ -174,7 +174,12 @@ func chooseOwner(cfg RoutingConfig, lead leadRoutingFacts, openLoad map[ids.User
 // decision is still audit-logged — AC-S5 wants the decision on record,
 // and no event fires because nothing on the lead changed.
 func (s *Store) RouteLead(ctx context.Context, leadID ids.LeadID, cfg RoutingConfig) (RoutingDecision, error) {
-	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
+	return s.RouteLeadAs(ctx, ctx, leadID, cfg)
+}
+
+// RouteLeadAs keeps the authorizer's write scope while the audit records the executor.
+func (s *Store) RouteLeadAs(ctx, admit context.Context, leadID ids.LeadID, cfg RoutingConfig) (RoutingDecision, error) {
+	if err := auth.Require(admit, "lead", principal.ActionUpdate); err != nil {
 		return RoutingDecision{}, err
 	}
 	var decision RoutingDecision
@@ -183,9 +188,7 @@ func (s *Store) RouteLead(ctx context.Context, leadID ids.LeadID, cfg RoutingCon
 		// serializes rotation (fairness stays ±1 under concurrent workers)
 		// and makes the cap count race-free — the count and the assignment
 		// commit as one unit.
-		if _, err := tx.Exec(ctx,
-			`SELECT pg_advisory_xact_lock(hashtextextended('lead_routing:' || $1::text, 0))`,
-			storekit.MustWorkspace(ctx)); err != nil {
+		if err := lockLeadRouting(ctx, tx); err != nil {
 			return err
 		}
 
@@ -198,43 +201,20 @@ func (s *Store) RouteLead(ctx context.Context, leadID ids.LeadID, cfg RoutingCon
 			return err
 		}
 
-		var currentOwner *ids.UserID
-		var status string
-		var facts leadRoutingFacts
-		if err := tx.QueryRow(ctx, `
-			SELECT owner_id, status, coalesce(origin, ''), coalesce(company_name, ''), coalesce(candidate_company_key, '')
-			  FROM lead WHERE id = $1`,
-			leadID).Scan(&currentOwner, &status, &facts.Origin, &facts.CompanyName, &facts.CandidateCompanyKey); err != nil {
-			return err
-		}
-		if currentOwner != nil {
-			decision = RoutingDecision{Reason: "already_owned"} // a human assignment outranks routing
-			return nil
-		}
-		// A website lead whose notice may still bounce is not handed to anybody.
-		if held, err := websiteLeadNoticePending(ctx, tx, leadID.UUID); err != nil || held {
-			decision = RoutingDecision{Reason: "notice_pending"}
-			return err
-		}
-		if !LeadStatus(status).Open() {
-			decision = RoutingDecision{Reason: "terminal_status"}
-			return nil
-		}
-
-		candidates := candidateOwners(cfg)
-		active, openLoad, err := ownerCapacity(ctx, tx, candidates)
+		decision, err = planLeadRouting(ctx, admit, tx, leadID, cfg)
 		if err != nil {
 			return err
 		}
-
-		chosen, reason, ok := chooseOwner(cfg, facts, openLoad, active)
-		if !ok {
-			decision = RoutingDecision{Reason: reason}
+		if !decision.Assigned {
+			if decision.Reason != "no_capacity" && decision.Reason != "stale_rules" {
+				return nil
+			}
 			_, err := storekit.Audit(ctx, tx, "assign", "lead", leadID.UUID,
 				map[string]any{"owner_id": nil},
 				map[string]any{"owner_id": nil, "routed": false, "reason": decision.Reason})
 			return err
 		}
+		chosen, reason := decision.OwnerID, decision.Reason
 
 		p := storekit.NewPatch()
 		p.Set("owner_id", nil, chosen)
@@ -301,8 +281,7 @@ func ownerCapacity(ctx context.Context, tx pgx.Tx, candidates []ids.UserID) (act
 		  FROM app_user u
 		  LEFT JOIN lead l ON l.owner_id = u.id
 		       AND l.status IN ('new','contacted','engaged') AND l.archived_at IS NULL
-		 WHERE u.id = ANY($1) AND `+workforce.LiveMemberSQL("u")+`
-		       AND NOT u.is_agent AND u.seat_type <> 'read'
+		 WHERE u.id = ANY($1) AND `+auth.AssigneeEligibleSQL("u")+`
 		 GROUP BY u.id`, candidates)
 	if err != nil {
 		return nil, nil, err
@@ -452,4 +431,19 @@ func routingDeclineReason(reason string) string {
 	default:
 		return "routing placed no owner on this lead"
 	}
+}
+
+func lockLeadRouting(ctx context.Context, tx pgx.Tx) error {
+	_, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('lead_routing:' || $1::text, 0))`, storekit.MustWorkspace(ctx))
+	return err
+}
+
+// ruleMatches compares a rule's value with a lead fact, ignoring case. The
+// company key is compared in its stored form, so a Unicode spelling and its
+// punycode twin are one key.
+func ruleMatches(rule RoutingRule, fact string) bool {
+	if rule.Field == candidateCompanyKey {
+		return strings.EqualFold(owndomain.KeyForm(rule.Equals), owndomain.KeyForm(fact))
+	}
+	return strings.EqualFold(rule.Equals, fact)
 }

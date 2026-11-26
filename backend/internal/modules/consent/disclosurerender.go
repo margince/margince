@@ -28,11 +28,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
 // DisclosureLine is one obligation, rendered or recorded as unmeetable.
 type DisclosureLine struct {
+	MissingLanguage string
+	MissingMeans    []string
 	// Kind is the obligation the pack declared.
 	Kind string
 	// Text is what the message should carry. Empty exactly when the
@@ -58,9 +61,15 @@ type DisclosureQuery struct {
 	// Recipients are the addresses the one body goes to. Each one's country
 	// adds the marketing obligations of their own pack.
 	Recipients []string
+	// Countries are the ones the sender stated for this message's
+	// recipients, which come before the record's.
+	Countries []commsauthz.CountryOverride
 	// Entity is the legal entity the message goes out for; zero is the
 	// installation's default entity.
 	Entity ids.UUID
+	// Language is the language the message is written in. Each particular
+	// stated in it is printed in it; empty prints the default text.
+	Language string
 }
 
 // Disclosures answers what this message must disclose, opening its own
@@ -74,20 +83,16 @@ type DisclosureQuery struct {
 // A scheduled fire DOES hold one while it prepares, so this opens a second. What
 // it reads is committed record and settings state and an in-process pack
 // registry, none of which the outer transaction writes.
-func (s *Store) Disclosures(
-	ctx context.Context, category commsauthz.Category, recipients []string, entity ids.UUID,
-) ([]DisclosureLine, error) {
+func (s *Store) Disclosures(ctx context.Context, q DisclosureQuery) ([]DisclosureLine, error) {
 	var out []DisclosureLine
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		if entity.IsZero() {
-			if entity, err = sendingEntityOf(ctx, tx); err != nil {
+		if q.Entity.IsZero() {
+			if q.Entity, err = sendingEntityOf(ctx, tx); err != nil {
 				return err
 			}
 		}
-		out, err = s.DisclosuresFor(ctx, tx, DisclosureQuery{
-			Category: category, Recipients: recipients, Entity: entity,
-		})
+		out, err = s.DisclosuresFor(ctx, tx, q)
 		return err
 	})
 	return out, err
@@ -97,9 +102,10 @@ func (s *Store) Disclosures(
 // installation can say it.
 //
 // Two selectors meet here. Who the controller is and who answers about the
-// data are data protection, owed under the sending entity's pack. How to
-// object and who advertises are marketing rules, owed under each recipient's
-// pack. One body goes to all recipients, so it carries every recipient's.
+// data are data protection, owed under the sending entity's pack. A recipient
+// whose pack follows the recipient owes them too. How to object and who
+// advertises are marketing rules, owed under each recipient's pack. One body
+// goes to all recipients, so it carries every recipient's.
 //
 // Answers an empty slice where no pack applies. That is not a claim that
 // nothing is owed; it is the baseline, and the caller treats it the same way.
@@ -114,19 +120,16 @@ func (s *Store) DisclosuresFor(
 	if err != nil {
 		return nil, err
 	}
-	var owed []messagingrules.Disclosure
-	if senderRules, _, found := applicableRules(senderCountry); found {
-		owed = appendOwed(owed, senderRules.Disclosures, true)
-	}
+	countries := make([]jurisdiction.Code, 0, len(q.Recipients))
 	for _, address := range q.Recipients {
-		country, err := recipientCountryOf(ctx, tx, connector.Recipient{Email: address})
+		country, err := recipientCountryStated(ctx, tx, connector.Recipient{Email: address}, q.Countries)
 		if err != nil {
 			return nil, err
 		}
-		if rules, _, found := applicableRules(country.Code); found {
-			owed = appendOwed(owed, rules.Disclosures, false)
-		}
+		countries = append(countries, country.Code)
 	}
+	owed, layout := owedDisclosures(senderCountry, countries)
+	layout.language = q.Language
 	if len(owed) == 0 {
 		return nil, nil
 	}
@@ -137,48 +140,76 @@ func (s *Store) DisclosuresFor(
 	if err != nil {
 		return nil, err
 	}
-	particulars := controllerOf(installation, entity)
 	// An UNKNOWN category is treated as not-marketing, which is the safe
 	// direction: it carries the obligations binding every first contact and
 	// leaves out the advertising-only ones. A send that names no category is
 	// usually an older caller with a legacy purpose key, and putting an
 	// objection route under what may be an invoice is the error that reads as
 	// an invitation to stop receiving invoices.
-	marketing := q.Category == commsauthz.CategoryMarketing
-	out := make([]DisclosureLine, 0, len(owed))
-	for _, d := range owed {
-		// MarketingOnly is the pack's own narrowing. The objection route is
-		// owed on advertising and not on an invoice, where it would read as an
-		// unsubscribe line under a payment reminder.
-		if d.MarketingOnly && !marketing {
-			continue
-		}
-		out = append(out, DisclosureLine{
-			Kind: string(d.Kind),
-			Text: particularFor(d.Kind, particulars),
-		})
+	layout.marketing = q.Category == commsauthz.CategoryMarketing
+	layout.baseLanguage = s.mailLanguage(ctx, tx)
+	return layoutDisclosures(owed, controllerOf(installation, entity), layout), nil
+}
+
+// owedDisclosures answers what one body owes under the sender's pack and each
+// recipient's. It also answers how the recipients' packs lay the lines out.
+func owedDisclosures(sender jurisdiction.Code, recipients []jurisdiction.Code) ([]messagingrules.Disclosure, disclosureLayout) {
+	var owed []messagingrules.Disclosure
+	if senderRules, _, found := applicableRules(sender); found {
+		owed = appendOwed(owed, senderRules.Disclosures, true)
 	}
-	return out, nil
+	var layout disclosureLayout
+	for _, code := range recipients {
+		if marketingRules, _, found := applicableRules(code); found {
+			owed = appendOwed(owed, marketingRules.Disclosures, false)
+			// A pack may owe the controller's identity on advertising alone, as
+			// an anti-spam law does; the sender's own pack cannot say so for it.
+			owed = appendOwed(owed, advertisingOnlyIdentity(marketingRules.Disclosures), true)
+			// One body leads with one language, so the first recipient's
+			// pack that names one decides it.
+			if layout.packLanguage == "" {
+				layout.packLanguage = marketingRules.DisclosureLanguage
+			}
+			layout.refusalLast = layout.refusalLast || marketingRules.RefusalSectionLast
+		}
+		if rules, follows := recipientDataProtection(code); follows {
+			owed = appendOwed(owed, rules.Disclosures, true)
+		}
+	}
+	return owed, layout
 }
 
 // appendOwed adds the declared disclosures of one selector's pack: the
 // data-protection kinds from the sender's, the rest from a recipient's. A kind
 // already owed is not owed twice; a MarketingOnly copy yields to one that binds
-// every message.
+// every message. The owed kind asks for the means of both copies.
 func appendOwed(owed, declared []messagingrules.Disclosure, dataProtection bool) []messagingrules.Disclosure {
 	for _, d := range declared {
 		if dataProtectionDisclosure(d.Kind) != dataProtection {
 			continue
 		}
 		i := slices.IndexFunc(owed, func(o messagingrules.Disclosure) bool { return o.Kind == d.Kind })
-		switch {
-		case i < 0:
+		if i < 0 {
 			owed = append(owed, d)
-		case !d.MarketingOnly:
+			continue
+		}
+		if !d.MarketingOnly {
 			owed[i].MarketingOnly = false
+		}
+		for _, m := range d.Means {
+			if !slices.Contains(owed[i].Means, m) {
+				owed[i].Means = append(slices.Clone(owed[i].Means), m)
+			}
 		}
 	}
 	return owed
+}
+
+// advertisingOnlyIdentity is the data-protection kinds a pack owes on advertising only.
+func advertisingOnlyIdentity(declared []messagingrules.Disclosure) []messagingrules.Disclosure {
+	return slices.DeleteFunc(slices.Clone(declared), func(d messagingrules.Disclosure) bool {
+		return !d.MarketingOnly || !dataProtectionDisclosure(d.Kind)
+	})
 }
 
 // dataProtectionDisclosure reports whether a kind discharges a data-protection
@@ -203,6 +234,9 @@ func particularFor(kind messagingrules.DisclosureKind, p ControllerParticulars) 
 		// reporting it met would tell an operator their configuration is
 		// complete when a supervisory authority would say otherwise.
 		return bothParticulars(p.LegalName, p.PostalAddress)
+	case messagingrules.Advertisement:
+		// The legal name alone; layoutDisclosures turns it into the sentence.
+		return strings.TrimSpace(p.LegalName)
 	case messagingrules.PrivacyContact:
 		return strings.TrimSpace(p.PrivacyContact)
 	case messagingrules.ObjectionRoute:

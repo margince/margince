@@ -73,7 +73,8 @@ Follow this checklist. Fitness tests check several of these rules, so a missed o
    It limits how long a statement waits for a lock before it gives up.
    Once the statement has the lock, it holds it until the transaction ends.
 
-   The runner puts each migration in one transaction. Take an `ALTER TABLE ... ADD COLUMN`, then an
+   The runner normally puts each migration in one transaction. An index built with
+   `CREATE INDEX CONCURRENTLY` runs outside it, as the section below shows. Take an `ALTER TABLE ... ADD COLUMN`, then an
    `UPDATE` of every row and a `CHECK`. The migration keeps `ACCESS EXCLUSIVE` while it fills every row.
    Every reader of that table waits that whole time. `lock_timeout` does not keep readers safe while
    you fill rows.
@@ -94,7 +95,20 @@ Follow this checklist. Fitness tests check several of these rules, so a missed o
    `1787968162_a_brief_names_the_currency_it_normalized_against.up.sql` and
    `1787968163_the_brief_currency_check_is_validated.up.sql` are the worked pair. The second one explains
    why it is a file of its own.
+
+   A `CHECK` that older rows may break needs a `VALIDATE` that runs only when no row breaks it.
+   PostgreSQL checks a `NOT VALID` rule again on every update of a row. So a row that breaks it can
+   no longer change.
+
+   That file counts the rows that break each rule. It runs `VALIDATE` on the ones with none.
+   For the others it drops the rule and prints a notice with its name and the count. It touches no data.
+
+   On such an installation the code holds the list until the rows are fixed. The approval staging,
+   the notice insert and the edition write each refuse a value outside it.
+   `1795363398_an_approval_with_an_old_type_stays_updatable.up.sql` is the worked example.
 5. **Reach the erase and SAR paths** if the table holds personal data (`piicoverage_test.go`).
+   A column that stores the hash of a token is `token_hash bytea` with `CHECK (octet_length(token_hash) = 32)`.
+   Its writers and readers hash through `storekit.TokenHashBytes` (`backend/gates/tokenhashformat_test.go`).
 6. **Record the schema the migrations build.** Run `make db-up`, then run this from `backend/`:
 
    ```sh
@@ -116,14 +130,80 @@ Schema that only a fork needs goes in `backend/migrations/custom/`. It has its o
 applies after core. Its files are named `YYYYMMDDHHMMSS` and its columns start with `x_`. It stays as it is
 when the fork merges from the main project.
 
+## Change a limited text column of activity
+
+`activity` carries two triggers that hold its text limits, `text_bound_insert` and `text_bound_update`.
+On this one table both name the limited columns. So Postgres refuses to drop one of those columns, or to
+change its type, while the triggers stand. The reasons are in
+[Why text has a shared limit](../explanation/text-length-limits.md).
+
+To drop such a column or change its type:
+
+1. In your migration, drop both triggers before you change the column:
+   `DROP TRIGGER text_bound_insert ON activity; DROP TRIGGER text_bound_update ON activity;`
+2. In its rollback, create both triggers again after the column is back. Copy the two
+   `CREATE TRIGGER` statements for `activity` from `backend/migrations/testdata/head_catalog.txt`.
+   Take them from the file as it was before your change.
+3. Remove or change the column's line in `backend/internal/platform/database/textbounds/columns.txt`.
+4. Record the schema, as in step 6 above.
+5. From `backend/`, write the migration that puts the triggers back for the columns that are left:
+   `go run ./tools/gen-textbounds -tables activity -version <unix second> -name <name>`.
+   Give it a version after your first migration, then record the schema again.
+
+A rename needs only steps 3 to 5, because Postgres follows the new name in the triggers by itself.
+The written migration then corrects the list of columns that the refusal reports.
+
 ## Migrations that lock a busy table
 
 Some migrations take a lock on a whole table, and every other user of that table waits on it. Such a
 migration sets a short `lock_timeout`, so on a busy installation it fails, and does not wait without end.
 Run it when the app is not busy, and run `migrate up` again if it timed out.
 
-- `1790401426_bookings_reserve_their_exact_interval` builds the rule that stops two booking holds sharing
-  time. It locks the whole activity table, and waits at most three seconds for that lock.
+- `1790401426_bookings_reserve_their_exact_interval` builds the rule that stops two booking holds sharing time. It locks the whole activity table, and waits at most three seconds for that lock.
+
+## Build an index while the app still writes
+
+A plain `CREATE INDEX` blocks writes until it has read every row, so an index on a table an earlier migration made is built `CONCURRENTLY`.
+`TestAnIndexOnAPreExistingTableIsBuiltConcurrently` fails one built plainly. Put `-- pgmigrate:no-transaction` on a line by itself in the up file of such a migration.
+The [runner](../../backend/internal/platform/dbmigrate/notransaction.go) records the version after
+all statements finish, so each statement must be safe to run again.
+
+An index build can wait for older transactions and snapshots. Its `lock_timeout` bounds those
+waits too; a timeout needs a retry after the older transaction ends.
+
+A failed build can leave behind an index Postgres never uses. The
+[indexes that let a delete find its child rows](../../backend/migrations/core/1794471014_parent_deletes_find_their_children.up.sql)
+put `DROP INDEX CONCURRENTLY IF EXISTS` before each build, so a second try builds it again.
+The down file drops its indexes with `DROP INDEX CONCURRENTLY` too.
+
+A trigger made on many tables may use the same mode. In one transaction, every table it touches stays
+closed to writers until the last trigger is made. With the marker, each statement commits on its own.
+Such a file says `CREATE OR REPLACE TRIGGER` and `DROP TRIGGER IF EXISTS`, so a second run does no harm.
+
+The file opens with `SET lock_timeout`, because `SET LOCAL` does nothing outside a transaction, and ends
+with `RESET lock_timeout`. The text-limit guards
+(`1794600201_each_table_checks_its_text_limits.up.sql`, written by `backend/tools/gen-textbounds`) are
+the worked example. `TestEveryUnwrappedMigrationOnlySaysRerunnableStatements` refuses any other
+statement in a file with the marker.
+
+## Change a unique index that an `ON CONFLICT` names
+
+An `ON CONFLICT (...)` names its index by columns. With no matching unique index, Postgres refuses
+the statement with `42P10`. During an update the old and the new binary run side by side. A swap in one
+step breaks the writes of the binary that expects the other index. Mail capture is one such writer.
+
+Change such an index in two releases:
+
+1. Release 1 adds the new index and keeps the old one
+   ([build it while the app writes](#build-an-index-while-the-app-still-writes)). The code uses the new
+   form in its `ON CONFLICT`. Old binaries still find the old index.
+2. Release 2 drops the old index in a new migration and updates `migrations/testdata/head_catalog.txt`.
+
+If the old index keys off a `COALESCE(col, 'literal')`, `TestNoUniqueKeyFakesANullWithASentinel`
+reports it in release 1. Declare it as `<schema>.<table>.<index>` in `sentinelIndexesBeingRetired`
+(`backend/gates/nullsentinelindex_test.go`), with a reason that names the release that drops it. The test
+then requires another unique `NULLS NOT DISTINCT` index on the same table, with the same key columns and
+the same `WHERE`. It fails once the declared index no longer exists, so remove the declaration in release 2.
 
 ## Why no one edits a shipped migration
 
@@ -136,7 +216,7 @@ Two edits to applied migrations exist, and each one was safe for a stated reason
 
 1. **The tenant scope work** edited applied migrations.
    It shipped with repair migrations that only add, so it reached every database in use.
-2. **The baseline merge** put one baseline file each in place of the history of core and custom.
+2. **The first baseline merge** put one baseline file each in place of the history of core and custom.
    It has no repair half, because no installation then held data that could not be built again.
    It stops an old database instead.
    The baseline uses version `0001` again, and on such a database that row names a migration that no longer exists.
@@ -145,6 +225,100 @@ Two edits to applied migrations exist, and each one was safe for a stated reason
 Neither case sets a rule for others. The second needed every database to be one that could be built again.
 `scripts/migration-baseline.sh verify` also needed to prove that the baseline builds the same schema as the
 history, byte for byte. Without both, never edit a shipped migration.
+
+## A new installation starts from a baseline
+
+`backend/migrations/baseline/core/` holds one file that builds what core's migrations through a release
+build. Its `replaces.txt` names each version the file stands for, with the version's name and checksum. It
+also names the release a database part-way through those versions must reach first. `migrate up` reads the core ledger before it applies anything:
+
+- **The ledger is empty.** It runs the baseline. In the same transaction it records the baseline and
+  every replaced version, each under its own file's name and checksum. Data tasks that require an old
+  version, and repairs that read its `applied_at`, find the row they look for.
+- **The ledger holds every replaced version.** It records the baseline and does not run it.
+- **The ledger holds only some.** It stops before it changes anything and names the release to upgrade
+  with first. Run that release's `migrate up`, then this one. The first release ships the first
+  baseline, so its `replaces.txt` says `release none`. No release has part of that history. A
+  database built from a commit between releases is built again (`make dev-fresh`).
+
+In the first two cases, migrations after the baseline then apply one by one. The replaced files stay in
+`backend/migrations/core/`, so an installation that applied them upgrades as it always did. `migrate down`
+rolls them back one by one and never rolls back the baseline. After a full `down`, `up` replays the
+history, because the baseline's row stays.
+
+`migrations.Core()` is core with the baseline. `migrations.CoreHistory()` leaves it out, for a
+test that migrates to a version part-way through the history.
+
+Loading core fails when a file below the baseline is missing from `replaces.txt`, or when a listed file's
+name or checksum no longer matches. So a replaced migration that someone edits stops every binary,
+the same as an edit to an applied migration does.
+
+### Prove the baseline
+
+```sh
+make db-up
+scripts/migration-baseline.sh verify
+```
+
+`verify` builds one database by the full history and one by the baseline, both with the code `migrate up` runs.
+It then compares their schemas, reference rows and ledgers, and prints `OK` only when they match byte
+for byte. Run it on a change to the baseline, to `replaces.txt` or to the baseline code in
+`backend/internal/platform/dbmigrate/baseline.go`.
+
+### Write a new baseline
+
+```sh
+RELEASE=<tag or none> THROUGH=<last version in the tag> VERSION=<new version> NAME=<name> \
+  scripts/migration-baseline.sh generate
+scripts/migration-baseline.sh verify
+```
+
+`VERSION` sorts above `THROUGH` and below the first migration after it. Without arguments, `generate`
+writes the current baseline again.
+
+The script builds core's history through `THROUGH` and writes the baseline from that database's
+`pg_dump` output (`backend/tools/gen-baseline`). The tool changes what `pg_dump` output cannot carry:
+
+- It grants to `margince_app` only where that role exists.
+- It copies the migration that makes the `ext_runtime` role.
+- A reference row's generated key becomes `uuidv7()`, and its build time `now()`.
+- A check that `pg_dump` prints in a form that builds a different tree goes back to the words its
+  migration used.
+
+### When the replaced files may go
+
+Delete the replaced files only after every supported installation runs the release with the baseline,
+or a later one. Then every ledger records the baseline. That is a change of its own. Keep
+`replaces.txt`: a new installation still records the replaced versions from it. Then the
+`renumbered.txt` lines and the `equivalentContent` entries for those versions can go too.
+
+## A migration that moved to a new version
+
+A sync can give a develop migration a new version above what main carries. A database that applied the
+old version has already run that SQL. If the new version counted as not applied, `migrate up` would run
+the SQL again and fail.
+
+So every such move is declared in `backend/migrations/renumbered.txt`, one line per move:
+`core old_version new_version name old_checksum`. The checksum is the `content_digest` a database
+records for the old version. Declare a move only when the SQL did not change at all.
+A database may hold an earlier text of the moved SQL that builds the same schema. Then add that text's
+checksum under the old version to `equivalentContent` in `backend/internal/platform/dbmigrate/equivalence.go`,
+keyed by the new version.
+
+`migrate up` moves the ledger row of a declared old version to the new version. It does this first, under
+the migration lock, in one transaction for each folder. It moves a row only if its checksum proves
+the database ran the SQL that now ships, or the text such an entry names.
+
+Otherwise it stops, names the move and applies nothing. That happens when the row has no checksum,
+when the checksum differs, or when the ledger already holds the new version with other SQL. It prints how many rows it moved.
+
+`scripts/check-migration-versions.sh` fails a move that `renumbered.txt` does not declare. It matches by
+name, so a move fails even when the SQL stayed the same. It also fails a declared move whose SQL
+changed, unless an `equivalentContent` entry accepts the old text at the new version. It asks
+`backend/tools/check-equivalentmove`, which reads that list the way `migrate up` does.
+
+An older binary started after this move runs the moved migrations again and stops with an error. To go
+back to an older binary, restore the database from a copy taken before the upgrade.
 
 ## Data tasks
 
@@ -165,3 +339,12 @@ date fields after the task ends. Database triggers keep each row's date and visi
 
 The index reads `address_domain_folded`. It finds both a domain and names under it.
 Erasure clears that field, so the row leaves the index.
+
+## Move an extension's migration version
+
+An extension can declare a version move in `migrations/renumbered.txt`, embedded with its SQL files.
+Use the same five-column format as `backend/migrations/renumbered.txt`.
+Its first column is the unit's `ext_<name>` value, from `dbmigrate.NamespaceFor`.
+The loader checks the old content before moving the recorded version.
+The migration-version gate checks extension folders too.
+Without that file, the extension declares no moves.

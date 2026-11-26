@@ -21,11 +21,10 @@ func TestOnlyElapsedCountsDaysOfSilence(t *testing.T) {
 	t.Parallel()
 	waivers := gatekit.Waive(map[string]string{
 		"internal/shared/kernel/elapsed/elapsed.go:Days":                          "The calendar owner subtracts dates anchored at UTC midnight, so DST cannot shorten a day.",
-		"internal/shared/kernel/elapsed/elapsed.go:FullDaysUntil":                 "Remaining time promises complete periods, so a midnight boundary cannot consume a deadline day.",
 		"internal/compose/briefs/briefscore.go:briefTimingScore":                  "Both operands are date columns anchored at UTC midnight; today was resolved in the installation zone before ranking.",
 		"internal/modules/activities/waitinghorizon.go:derivedWaitingHorizonDays": "The horizon is learned from elapsed reply latencies; calendar rounding would distort the measured distribution.",
-		"internal/modules/activities/scheduledsend.go:validateSchedule":           "The label names a fixed scheduling duration limit, not an activity age or a date difference.",
-		"internal/modules/consent/reviewcontext.go:refuseAnExchangeTooOldToCount": "The refusal names a configured duration window; it does not count dates since the exchange.",
+		"internal/modules/activities/scheduleintent.go:validateSchedule":          "The label names a fixed scheduling duration limit, not an activity age or a date difference.",
+		"internal/modules/consent/reviewcontext.go:refuseSubjectExchangeTooOld":   "The refusal names a configured duration window; it does not count dates since the exchange.",
 		"internal/modules/deals/health.go:daysBetween":                            "Fractional elapsed days feed the health decay curve; rounding to calendar boundaries would change the score discontinuously.",
 		"internal/modules/contacts/leadscore.go:ScoreLeadDetail":                  "Fractional elapsed days feed behavioral decay; a local midnight cannot change the age of a signal abruptly.",
 		"internal/modules/search/graphtrust.go:rankScore":                         "Search freshness is continuous exponential decay rather than a displayed calendar age.",

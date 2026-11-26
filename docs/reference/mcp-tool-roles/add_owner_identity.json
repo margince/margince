@@ -1,0 +1,14 @@
+{
+  "tool": "change_capture",
+  "action": "add_owner_identity",
+  "verb": "add_owner_identity",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 )
 
 // InTouchDays is how long since they last wrote or we last met before contact
@@ -136,12 +137,13 @@ func scheduledRunNoteSQL(alias string) string {
 }
 
 // LastActivityCountsSQL admits an activity row to a record's last-activity
-// clock. It needs a kind that moves it, contact we had (HadContactSQL) and no
-// scheduled run's note. It must also have happened at now (occurredday.HappenedSQL).
-// The last_activity_of_* functions carry its text rendered with now().
+// clock. It needs a kind that moves it, contact we had (HadContactSQL), no
+// scheduled run's note and no newsletter (BulkMailSQL). It must also have
+// happened at now (occurredday.HappenedSQL). The last_activity_of_* functions
+// carry its text rendered with now().
 func LastActivityCountsSQL(alias, now string) string {
 	return "(" + LastActivityKindSQL(alias) + " AND " + HadContactSQL(alias, now) + " AND NOT " +
-		scheduledRunNoteSQL(alias) + " AND " + occurredday.HappenedSQL(alias, now) + ")"
+		scheduledRunNoteSQL(alias) + " AND NOT " + BulkMailSQL(alias) + " AND " + occurredday.HappenedSQL(alias, now) + ")"
 }
 
 // InteractionCountsSQL is the whole test for an activity row that counts as an
@@ -169,7 +171,14 @@ const InteractionRolesSQL = `('from','to','cc','bcc','attendee','organizer')`
 // message (audience participants|selected) is content, so anything derived for
 // all readers from its participants or timing would disclose who talked to whom.
 func WorkspaceAudienceSQL(alias string) string {
-	return alias + ".audience = 'workspace'"
+	return threadverdict.WorkspaceAudienceSQL(alias)
+}
+
+// VisibleToAllSQL admits an activity every member may read. A check runs as the
+// system and its answer reaches every reader, so a limited or restricted
+// message must not move it.
+func VisibleToAllSQL(alias string) string {
+	return "(" + WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL)"
 }
 
 // How an account's contact stands, by what made it so.

@@ -5,10 +5,11 @@ import {
   intakePaste,
   intakeTranscript,
   intakeUpload,
-  refusalOf,
+  pasteLabel,
   routePreview,
   sourceRef,
 } from "./voice-intake-core";
+import { refusalOf } from "./voice-refusal";
 
 // The intake core is what both surfaces that collect writing samples run on.
 // What it decides — what a file honestly is, which body says so, and what the
@@ -214,6 +215,7 @@ describe("which refusal the server named", () => {
     expect(refusalOf({ code: "unattributed_transcript" })).toBe("unattributed");
     expect(refusalOf({ code: "speaker_not_found" })).toBe("speaker");
     expect(refusalOf({ code: "unsupported_format" })).toBe("unsupported");
+    expect(refusalOf({ code: "body_too_large" })).toBe("tooLarge");
   });
 
   it("reads a per-field code out of details.errors", () => {
@@ -313,6 +315,22 @@ describe("the request bodies the server actually receives", () => {
   });
 });
 
+describe("a paste whose opening words end like a file name", () => {
+  // A paste is routed by what the server read, never by the words its label
+  // happens to end on.
+  it("takes prose as prose even when its label ends in .json", async () => {
+    const bodies = stubApi(preview());
+    const text = "Please review this export as report.json";
+    const outcome = await intakePaste(
+      sourceRef("paste", "Pasted text", text),
+      pasteLabel("Pasted text", text),
+      text,
+    );
+    expect(outcome.kind).toBe("ingested");
+    expect(bodies).toHaveLength(1);
+  });
+});
+
 describe("the outcomes an intake can end as", () => {
   it("reports an empty file as skipped, without asking the server", async () => {
     const bodies = stubApi(preview());
@@ -362,6 +380,33 @@ describe("the outcomes an intake can end as", () => {
     if (outcome.kind === "refused") {
       expect(outcome.problem).toBeTruthy();
     }
+  });
+});
+
+describe("a first sample from a role that may not create a profile", () => {
+  it("resolves the create refusal as an outcome and sends no source", async () => {
+    const sent: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+        sent.push(`${request.method} ${path}`);
+        if (request.method === "GET") {
+          return jsonResponse({
+            data: [],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        return jsonResponse({ code: "permission_denied", detail: "no" }, 403);
+      }),
+    );
+    const outcome = await intakePaste("r", "Pasted text", "words I wrote");
+    expect(outcome).toMatchObject({
+      kind: "refused",
+      reason: null,
+      problem: { code: "permission_denied" },
+    });
+    expect(sent).toEqual(["GET /voice-profiles", "POST /voice-profiles"]);
   });
 });
 
@@ -464,5 +509,21 @@ describe("source_ref, against rows written by earlier versions", () => {
     expect(
       sourceRef("upload", "letter.txt", "words", new Set([other])),
     ).not.toBe(other);
+  });
+});
+
+describe("the label a pasted text is listed under", () => {
+  it("tells two pastes apart by their opening words", () => {
+    expect(pasteLabel("Pasted text", "Hello from Zoe.")).toBe(
+      "Pasted text – Hello from Zoe.",
+    );
+    expect(
+      pasteLabel("Pasted text", "One two three four five six seven eight"),
+    ).toBe("Pasted text – One two three four five six…");
+  });
+
+  it("caps a text with no spaces instead of listing all of it", () => {
+    const label = pasteLabel("Pasted text", "x".repeat(500));
+    expect(label).toBe(`Pasted text – ${"x".repeat(60)}…`);
   });
 });

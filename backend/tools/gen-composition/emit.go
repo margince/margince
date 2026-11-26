@@ -16,13 +16,14 @@ import (
 
 	"golang.org/x/mod/modfile"
 
+	"github.com/margince/margince/backend/internal/platform/unitset"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // compositionModule is the constant import path the role binaries wire
 // (backend/go.mod resolves it to the committed vanilla stub; the
 // generated go.work overrides it with build/composition/backend).
-const compositionModule = "github.com/margince/margince/composition"
+const compositionModule = unitset.CompositionModule
 
 // extensionsGenHeader is shared by the vanilla stub and every composed
 // output — the vanilla body below it must stay byte-identical to
@@ -65,6 +66,13 @@ func Verbs() []extension.Verb {
 // exactly the terms the verb literals are emitted on: compose/extjobs.go's two
 // boot refusals read Tier and RequestedScope, and a bare role binary ships no
 // repository to read the merged contract back from.
+const extensionsGenAITasksDoc = `
+// AITasks returns every AI task the enabled units' ai-tasks.yaml fragments
+// declare, read out of the merged contract at generation time and re-emitted
+// here as literals, so the boot registers them in the router with no file I/O.
+func AITasks() []extension.AITaskDeclaration {
+`
+
 const extensionsGenJobsDoc = `
 // Jobs returns every scheduled job the enabled units' jobs.yaml fragments
 // declare, read out of the merged contract at generation time and re-emitted
@@ -140,12 +148,25 @@ export type ExtensionEntryDescriptor = {
 
 /**
  * One component a unit draws inline on a core page. The slot is a plain string
- * here; features/deals/extensionpanels.slots.ts narrows it to the slots the core draws.
+ * here; components/extensionpanels.slots.ts narrows it to the slots the core draws.
  */
 export type ExtensionPanelDescriptor = {
   readonly slot: string;
   readonly export: string;
   readonly object: string;
+};
+
+/**
+ * A unit's own destination in the home side drawer. The icon and group are
+ * plain strings here; lib/extensionapps.ts narrows them to the lists the core
+ * draws.
+ */
+export type ExtensionAppDescriptor = {
+  readonly icon: string;
+  readonly label: ` + "`ext${string}`" + `;
+  readonly group: string;
+  readonly object: string;
+  readonly export: string;
 };
 
 /** One enabled extension unit, as the composed installation publishes it. */
@@ -156,9 +177,16 @@ export type ExtensionDescriptor = {
    * in every locale. A screen shows what it resolves to, else the unit name.
    */
   readonly title: ` + "`ext${string}.title`" + ` | "";
+  /**
+   * The unit's copy key for a one-line account of what it does, or "" when
+   * its copy carries none in every locale. Settings shows it under the name.
+   */
+  readonly summary: ` + "`ext${string}.summary`" + ` | "";
   readonly verbs: readonly ExtensionVerbDescriptor[];
   readonly entries: readonly ExtensionEntryDescriptor[];
   readonly panels: readonly ExtensionPanelDescriptor[];
+  /** The unit's drawer destination, absent when it declares none. */
+  readonly app?: ExtensionAppDescriptor;
   /**
    * The scope the unit's declared secrets ask for, or "" when it declares
    * none. A unit spanning both scopes is refused at generation time, so this
@@ -190,6 +218,7 @@ type composition struct {
 	Files     map[string][]byte
 	Verbs     []declaredVerb
 	Jobs      []extension.JobDeclaration
+	AITasks   []extension.AITaskDeclaration
 	Manifests []derivedManifest
 }
 
@@ -220,6 +249,12 @@ func composedFiles(root string) (composition, error) {
 	if err != nil {
 		return composition{}, err
 	}
+	// And on the AI task contract: a task's ladder, mode and budget posture are
+	// declared in the merged document and nowhere in Go.
+	taskDecls, err := extensionAITasks(units, contracts)
+	if err != nil {
+		return composition{}, err
+	}
 	// The declarations themselves, which the manifests and the SPA registry
 	// below are both a projection of. Derived here, after the verbs a unit's
 	// tools are validated against, and read exactly once.
@@ -242,26 +277,41 @@ func composedFiles(root string) (composition, error) {
 	if err != nil {
 		return composition{}, err
 	}
+	mergedOverrides, err := composedOverrides(root, units)
+	if err != nil {
+		return composition{}, err
+	}
 	if err := checkEntryLabels(manifests, mergedCopy); err != nil {
 		return composition{}, err
 	}
 	if err := checkPanelFrontends(manifests); err != nil {
 		return composition{}, err
 	}
+	if err := checkAppFrontends(manifests); err != nil {
+		return composition{}, err
+	}
+	if err := checkAppLabels(manifests, mergedCopy); err != nil {
+		return composition{}, err
+	}
 	if err := checkInstrumentFrontends(manifests); err != nil {
 		return composition{}, err
 	}
-	wiring, err := canonicalGoSource("backend/extensions_gen.go", extensionsGen(units, verbs, jobDecls))
+	wiring, err := canonicalGoSource("backend/extensions_gen.go", extensionsGen(units, verbs, jobDecls, taskDecls))
+	if err != nil {
+		return composition{}, err
+	}
+	unitList, err := composedUnitList(root, units)
 	if err != nil {
 		return composition{}, err
 	}
 	files := map[string][]byte{
+		unitListFile:                     unitList,
 		goWorkFile:                       work,
 		"backend/go.mod":                 composedGoMod(goVersion),
 		"backend/extensions_gen.go":      wiring,
 		"frontend/extensions.gen.ts":     frontendGen(manifests, verbs, mergedCopy),
-		"frontend/extscreens.gen.ts":     extScreensGen(units, manifestPanels(manifests)),
-		"frontend/extlocales.gen.ts":     extLocalesGen(mergedCopy),
+		"frontend/extscreens.gen.ts":     extScreensGen(units, manifestPanels(manifests), manifestApps(manifests)),
+		"frontend/extlocales.gen.ts":     extLocalesGen(mergedCopy, mergedOverrides),
 		"frontend/extinstruments.gen.ts": extInstrumentsGen(units, manifestBrowserInstruments(manifests)),
 	}
 	// The effective contracts: base + every enabled unit's fragments. With
@@ -269,7 +319,7 @@ func composedFiles(root string) (composition, error) {
 	for base, content := range contracts {
 		files["api/"+base] = content
 	}
-	return composition{Files: files, Verbs: verbs, Jobs: jobDecls, Manifests: manifests}, nil
+	return composition{Files: files, Verbs: verbs, Jobs: jobDecls, AITasks: taskDecls, Manifests: manifests}, nil
 }
 
 // canonicalGoSource parses emitted Go source and requires it to already
@@ -354,7 +404,7 @@ func composedGoMod(goVersion string) []byte {
 // pinned to its extensions/<name> directory — composition.json and the
 // boot inventory attribute the unit by that name, so a declaration
 // disagreeing with it must not compose under a different identity.
-func extensionsGen(units []extensionUnit, verbs []declaredVerb, jobDecls []extension.JobDeclaration) []byte {
+func extensionsGen(units []extensionUnit, verbs []declaredVerb, jobDecls []extension.JobDeclaration, taskDecls []extension.AITaskDeclaration) []byte {
 	var b strings.Builder
 	b.WriteString(extensionsGenHeader)
 	if anySchema(verbs) {
@@ -400,6 +450,8 @@ func extensionsGen(units []extensionUnit, verbs []declaredVerb, jobDecls []exten
 		b.WriteString("\treturn nil\n}\n")
 		b.WriteString(extensionsGenJobsDoc)
 		b.WriteString("\treturn nil\n}\n")
+		b.WriteString(extensionsGenAITasksDoc)
+		b.WriteString("\treturn nil\n}\n")
 		return []byte(b.String())
 	}
 	b.WriteString("\treturn []extension.Extension{\n")
@@ -414,6 +466,8 @@ func extensionsGen(units []extensionUnit, verbs []declaredVerb, jobDecls []exten
 	if len(jobDecls) > 0 {
 		b.WriteString(extensionsGenDurationHelper)
 	}
+	b.WriteString(extensionsGenAITasksDoc)
+	writeAITaskLiterals(&b, taskDecls)
 	b.WriteString(`
 // mustBe pins a unit to its extensions/<name> directory: a declaration
 // whose Name disagrees with the directory it shipped in is a wiring

@@ -22,25 +22,20 @@ func TestAnUnknownLanguageStagesTheFollowUpInEnglish(t *testing.T) {
 	}
 }
 
-type stagedFollowUp struct {
-	summary  string
-	proposal FollowUpProposal
-}
-
-type recordingFollowUpStager struct{ staged []stagedFollowUp }
+type recordingFollowUpStager struct{ staged []FollowUpProposal }
 
 func (s *recordingFollowUpStager) HasPendingFollowUp(context.Context, ids.UUID) (bool, error) {
 	return false, nil
 }
 
-func (s *recordingFollowUpStager) StageFollowUp(_ context.Context, _ ids.UUID, summary string, proposal FollowUpProposal) error {
-	s.staged = append(s.staged, stagedFollowUp{summary: summary, proposal: proposal})
+func (s *recordingFollowUpStager) StageFollowUp(_ context.Context, _ ids.UUID, proposal FollowUpProposal) error {
+	s.staged = append(s.staged, proposal)
 	return nil
 }
 
 // stageOneFollowUp stages a call on "Acme Rollout" in the copy set the
 // reconciler's resolver answers, the way reconcileWorkspace resolves it.
-func stageOneFollowUp(t *testing.T, reconciler *FollowUpReconciler, subject *string) stagedFollowUp {
+func stageOneFollowUp(t *testing.T, reconciler *FollowUpReconciler, subject *string) FollowUpProposal {
 	t.Helper()
 	stager := &recordingFollowUpStager{}
 	reconciler.stager = stager
@@ -53,7 +48,7 @@ func stageOneFollowUp(t *testing.T, reconciler *FollowUpReconciler, subject *str
 		subject:      subject,
 	}
 	ctx := context.Background()
-	if err := reconciler.stage(ctx, cand, time.Date(2026, 9, 22, 0, 0, 0, 0, time.UTC), summaryIn(ctx, reconciler.language)); err != nil {
+	if err := reconciler.stage(ctx, cand, time.Date(2026, 9, 22, 0, 0, 0, 0, time.UTC), followUpWordsIn(ctx, reconciler.language)); err != nil {
 		t.Fatalf("stage: %v", err)
 	}
 	if len(stager.staged) != 1 {
@@ -62,7 +57,7 @@ func stageOneFollowUp(t *testing.T, reconciler *FollowUpReconciler, subject *str
 	return stager.staged[0]
 }
 
-// The staged summary and the drafted task are written in the language the
+// The drafted task is written in the language the
 // injected resolver answers; the exchange's own subject stays as it was.
 func TestAFollowUpFollowsTheInjectedLanguage(t *testing.T) {
 	german := func(context.Context) textlang.Lang { return textlang.German }
@@ -70,9 +65,8 @@ func TestAFollowUpFollowsTheInjectedLanguage(t *testing.T) {
 	got := stageOneFollowUp(t, NewFollowUpReconciler(nil, nil, nil).WithBaseLanguage(german), &offer)
 
 	for field, pair := range map[string][2]string{
-		"summary": {got.summary, `Entwirf ein Follow-up zu "Acme Rollout": Nach dem Austausch (call) am 2026-09-21 ist kein nächster Schritt geplant.`},
-		"subject": {got.proposal.Subject, "Follow-up zu Acme Rollout"},
-		"body":    {got.proposal.Body, "Follow-up zum Austausch (call) „Angebot Q4“ vom 2026-09-21. Im Verlauf steht noch kein nächster Schritt."},
+		"subject": {got.Subject, "Follow-up zu Acme Rollout"},
+		"body":    {got.Body, "Follow-up zum Austausch (call) „Angebot Q4“ vom 21.09.2026. Im Verlauf steht noch kein nächster Schritt."},
 	} {
 		if pair[0] != pair[1] {
 			t.Errorf("%s = %q, want %q", field, pair[0], pair[1])
@@ -87,10 +81,9 @@ func TestAFollowUpWithoutAResolverIsEnglish(t *testing.T) {
 	bare := stageOneFollowUp(t, NewFollowUpReconciler(nil, nil, nil), nil)
 
 	for field, pair := range map[string][2]string{
-		"summary":     {bare.summary, `Draft a follow-up on "Acme Rollout" — the call on 2026-09-21 left no next step planned`},
-		"subject":     {bare.proposal.Subject, "Follow up on Acme Rollout"},
-		"body":        {bare.proposal.Body, "Follow up on the call from 2026-09-21. No next step is on the timeline yet."},
-		"quoted body": {quoted.proposal.Body, "Follow up on the call “Q4 offer” from 2026-09-21. No next step is on the timeline yet."},
+		"subject":     {bare.Subject, "Follow up on Acme Rollout"},
+		"body":        {bare.Body, "Follow up on the call from 21 Sep 2026. No next step is on the timeline yet."},
+		"quoted body": {quoted.Body, "Follow up on the call “Q4 offer” from 21 Sep 2026. No next step is on the timeline yet."},
 	} {
 		if pair[0] != pair[1] {
 			t.Errorf("%s = %q, want %q", field, pair[0], pair[1])
@@ -102,7 +95,6 @@ func TestAFollowUpWithoutAResolverIsEnglish(t *testing.T) {
 // order. The census holds its key set equal to summaryCopy's fields, so a
 // sentence added to the struct with no row here fails.
 var summaryVerbs = map[string][]string{
-	"draftFollowUp":         {"%q", "%s", "%s"},
 	"followUpSubject":       {"%s"},
 	"followUpBody":          {"%s", "%s"},
 	"followUpBodyQuoted":    {"%s", "%s", "%s"},

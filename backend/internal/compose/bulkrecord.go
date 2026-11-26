@@ -39,6 +39,10 @@ type bulkOutcome struct {
 	// RemovalID is the audit row remove_tag or remove_from_list wrote, which
 	// the undo restores the link from.
 	RemovalID *openapi_types.UUID `json:"removal_id,omitempty"`
+	// StageBefore and StageHistoryID are the stage move_stage took the deal
+	// from and the history row the move wrote, which the undo reverses.
+	StageBefore    *openapi_types.UUID `json:"stage_before,omitempty"`
+	StageHistoryID *openapi_types.UUID `json:"stage_history_id,omitempty"`
 }
 
 // bulkResult is bulk_operation.result. A skip keeps its reason and code but
@@ -57,7 +61,7 @@ func recordBulkOperation(ctx context.Context, tx pgx.Tx, batchID ids.UUID, chang
 	if err != nil {
 		return err
 	}
-	params, err := json.Marshal(bulkParams{OwnerID: change.ownerID, ListID: change.listID, TagID: change.tagID, Task: change.task})
+	params, err := json.Marshal(bulkParams{OwnerID: change.ownerID, ListID: change.listID, TagID: change.tagID, Task: change.task, StageID: change.stageID})
 	if err != nil {
 		return fmt.Errorf("record the change's parameters: %w", err)
 	}
@@ -70,11 +74,11 @@ func recordBulkOperation(ctx context.Context, tx pgx.Tx, batchID ids.UUID, chang
 		undoOf = &change.undo.batchID
 	}
 	_, err = tx.Exec(ctx,
-		`INSERT INTO bulk_operation (id, record_type, verb, params, requested_by, passport_id, changed_count, skipped_count,
+		`INSERT INTO bulk_operation (id, record_type, verb, params, requested_by, changed_count, skipped_count,
 		                             result, undo_of, requested_for)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		batchID, string(change.recordType), string(change.verb), params, actor.ID,
-		storekit.UUIDOrNil(actor.PassportID), len(run.changed), len(run.skipped), result, undoOf,
+		len(run.changed), len(run.skipped), result, undoOf,
 		storekit.UUIDOrNil(humanBehind(actor)))
 	if storekit.IsUniqueViolation(err) {
 		return errBulkAlreadyUndone
@@ -113,6 +117,7 @@ type bulkParams struct {
 	ListID  *ids.UUID              `json:"list_id,omitempty"`
 	TagID   *ids.UUID              `json:"tag_id,omitempty"`
 	Task    *crmcontracts.BulkTask `json:"task,omitempty"`
+	StageID *ids.UUID              `json:"stage_id,omitempty"`
 }
 
 // bulkOperation is one bulk_operation row as its readers need it.
@@ -124,6 +129,7 @@ type bulkOperation struct {
 	listID       *ids.UUID
 	tagID        *ids.UUID
 	task         *crmcontracts.BulkTask
+	stageID      *ids.UUID
 	requester    batchRequester
 	changedCount int
 	result       bulkResult
@@ -157,7 +163,7 @@ func readBulkOperation(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkOperati
 	if err := json.Unmarshal(params, &named); err != nil {
 		return bulkOperation{}, fmt.Errorf("read bulk change %s parameters: %w", id, err)
 	}
-	op.ownerID, op.listID, op.tagID, op.task = named.OwnerID, named.ListID, named.TagID, named.Task
+	op.ownerID, op.listID, op.tagID, op.task, op.stageID = named.OwnerID, named.ListID, named.TagID, named.Task, named.StageID
 	if err := json.Unmarshal(result, &op.result); err != nil {
 		return bulkOperation{}, fmt.Errorf("read bulk change %s result: %w", id, err)
 	}
@@ -206,7 +212,7 @@ func (e *bulkEngine) Status(ctx context.Context, id ids.UUID) (crmcontracts.Bulk
 	}
 	return crmcontracts.BulkOperation{
 		BatchId: openapi_types.UUID(op.id), RecordType: op.recordType, Verb: op.verb,
-		OwnerId: wireOwner(op.ownerID), ListId: wireOwner(op.listID), TagId: wireOwner(op.tagID), Task: op.task,
+		OwnerId: wireOwner(op.ownerID), ListId: wireOwner(op.listID), TagId: wireOwner(op.tagID), Task: op.task, StageId: wireOwner(op.stageID),
 		Changed: op.changedCount, Skipped: skipped, LeftBehind: leftBehind,
 		UndoOf: wireOwner(op.undoOf), UndoneBy: wireOwner(op.undoneBy), CreatedAt: op.createdAt,
 	}, nil

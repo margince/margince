@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 const (
@@ -354,6 +355,7 @@ func (p *CompanyNamePromoter) stageCompanyNameReview(ctx context.Context, cand c
 	// the first time either did, re-offering the same rename every night until
 	// someone clicked approve.
 	_, _, err = p.approvals.StageUnlessDeclined(ctx, approvals.StageInput{
+		Why:            approvals.Grounds{Sentence: systemtext.Sentence("approval.why.signature_name", systemtext.Label(verdict.Name))},
 		Kind:           companyNameProposalKind,
 		ProposedChange: body,
 		DiffHash:       hex.EncodeToString(digest[:]),
@@ -361,6 +363,7 @@ func (p *CompanyNamePromoter) stageCompanyNameReview(ctx context.Context, cand c
 		TargetType:     companyNameTargetType,
 		TargetID:       cand.CompanyID.UUID,
 		Summary:        fmt.Sprintf(approvalSummaryCopyOver(ctx, p.pool).companyRename, cand.DisplayName, verdict.Name),
+		SystemText:     &systemtext.Message{Version: 1, Subject: systemtext.Sentence("approval.companyRename", systemtext.Label(cand.DisplayName), systemtext.Label(verdict.Name))},
 		JoinPending:    true,
 	})
 	if errors.Is(err, approvals.ErrNoDecider) {

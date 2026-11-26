@@ -28,18 +28,28 @@ async function openBody(page: Page): Promise<Locator> {
   return body;
 }
 
-/** Answers the first ask with DRAFT and every later one with REWRITE. */
+/** Answers a draft with DRAFT and a rewrite verb with REWRITE. */
 async function modelDrafts(page: Page) {
-  let asks = 0;
   await page.route("**/draft-email", async (route) => {
-    asks += 1;
     await route.fulfill({
       json: {
         ai_generated: true,
-        body: asks === 1 ? DRAFT : REWRITE,
+        body: DRAFT,
         subject: "Zum Gespräch",
         to: ["anna@example.com"],
         reasoning: [],
+        voice_degraded: false,
+      },
+    });
+  });
+  await page.route("**/rewrites", async (route) => {
+    await route.fulfill({
+      json: {
+        subject: "Zum Gespräch",
+        body: REWRITE,
+        language: "de",
+        ai_disclosure: "KI-unterstützt",
+        voice_profile_version: null,
         voice_degraded: false,
       },
     });

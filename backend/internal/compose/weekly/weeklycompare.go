@@ -14,6 +14,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -25,6 +28,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 	"github.com/margince/margince/backend/internal/shared/kernel/reportperiod"
 )
+
+// weekValuedAt is the instant a week is valued at: the last instant inside it.
+// The window's end is the exclusive midnight that starts the next week.
+// A rate effective that Monday must not price a week that ended before it.
+// Postgres keeps microseconds, so one microsecond is the smallest step.
+func weekValuedAt(end time.Time) time.Time {
+	return end.Add(-time.Microsecond)
+}
 
 // countWeekMoney sums what the week added to and took out of the pipeline, in
 // the installation's base currency — or reports that it could not.
@@ -51,10 +62,11 @@ import (
 // the one that applied at close, which is the honest figure for money that has
 // already moved.
 //
-// A deal whose currency has no usable rate makes the WHOLE figure unknown
-// rather than being skipped: a total covering three of four deals is a
-// confident number that is quietly short. Nothing is ever converted at an
-// invented rate of 1, which would report ¥5,000,000 as €5,000,000.
+// A deal whose currency has no usable rate is left out of its figure and
+// counted, with the currency named. A figure no deal converts into is unknown,
+// and the three travel together, so one such figure blanks them with the gaps
+// still stated. Nothing is ever converted at an invented rate of 1, which would
+// report ¥5,000,000 as €5,000,000.
 func countWeekMoney(
 	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time,
 ) (Money, error) {
@@ -70,34 +82,44 @@ func countWeekMoney(
 	// Rates as of the week's END, frozen into the figure written below. The
 	// lookup is per-read by design — a rate is appended forward, and a
 	// longer-lived cache would price this week at a rate corrected since.
-	rates := deals.NewFXRates(base, end)
+	rates := deals.NewFXRates(base, weekValuedAt(end))
 	var created int64
+	var converted int
+	out := Money{Assessed: true}
+	missing := map[string]bool{}
 	for _, row := range opened {
 		rate, ok, err := rates.For(ctx, tx, row.currency)
 		if err != nil {
 			return Money{}, err
 		}
 		if !ok {
-			// One unconvertible deal, and the whole figure is unknown.
-			return Money{}, nil
+			out.NoRateDeals++
+			missing[row.currency] = true
+			continue
 		}
 		amount, err := deals.ConvertToBase(row.amountMinor, rate.Rate, row.currency, base)
 		if err != nil {
 			return Money{}, fmt.Errorf("weekly: converting the week's pipeline: %w", err)
 		}
 		created += amount
+		converted++
 	}
-	won, lost, err := closedInWeek(ctx, tx, userID, start, end, base)
+	won, lost, closed, err := closedInWeek(ctx, tx, userID, start, end, base)
 	if err != nil {
 		return Money{}, err
 	}
-	if won == nil || lost == nil {
-		return Money{}, nil
+	out.NoValueDeals += closed.noValue
+	out.NoRateDeals += closed.noRate
+	for _, code := range closed.currencies {
+		missing[code] = true
 	}
-	return Money{
-		CreatedMinor: created, WonMinor: *won, LostMinor: *lost,
-		Currency: base, Known: true,
-	}, nil
+	out.MissingCurrencies = strings.Join(slices.Sorted(maps.Keys(missing)), ",")
+	if (converted == 0 && len(opened) > 0) || won == nil || lost == nil {
+		return out, nil
+	}
+	out.CreatedMinor, out.WonMinor, out.LostMinor = created, *won, *lost
+	out.Currency, out.Known = base, true
+	return out, nil
 }
 
 // baseCurrency is the currency the installation reports in, or empty when it
@@ -139,7 +161,7 @@ func openedInWeek(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
-	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	scope, err := standingDealScope(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -152,12 +174,18 @@ func openedInWeek(
 	if err != nil {
 		return nil, err
 	}
+	// The currency is masked like the amount: a masked currency is never
+	// listed as one with no rate.
+	currencySQL, err := auth.MaskedColumnSQL(ctx, "deal", "currency", "d", "currency", arg)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT %[5]s, d.currency FROM deal d
+		SELECT %[5]s, %[6]s FROM deal d
 		 WHERE d.owner_id = $%[3]d AND d.archived_at IS NULL
 		   AND d.created_at >= $%[1]d AND d.created_at < $%[2]d
-		   AND %[5]s IS NOT NULL AND d.currency IS NOT NULL
-		   AND (%[4]s)`, startPos, endPos, userPos, scope, amountSQL), args...)
+		   AND %[5]s IS NOT NULL AND %[6]s IS NOT NULL
+		   AND (%[4]s)`, startPos, endPos, userPos, scope, amountSQL, currencySQL), args...)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: reading the week's new deals: %w", err)
 	}
@@ -173,35 +201,41 @@ func openedInWeek(
 	return out, rows.Err()
 }
 
-// closedInWeek sums the deals won and lost in the week.
+// closedInWeek sums the deals won and lost in the week that convert, and
+// counts the closed deals it leaves out, by cause.
 //
 // Closed deal values preserve their frozen amount. Legacy rows without a
-// frozen value use the same as-of valuation as the other deal readers.
+// frozen value use the same as-of valuation as the other deal readers. A figure
+// no closed deal converts into is nil, never zero.
 func closedInWeek(
 	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time, base string,
-) (won, lost *int64, err error) {
+) (won, lost *int64, gaps weekGaps, err error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
-	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	scope, err := standingDealScope(ctx, arg)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, gaps, err
 	}
 	scope = orUnbounded(scope)
 	// Both halves of the closed figure sum the converted amount, so both take
 	// the mask: a withheld number reappears whole in a total, and won-and-lost
 	// is the total a review is read for.
 	amountSQL, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d",
-		deals.BaseValueSQL(fmt.Sprintf("$%d", arg(end)), fmt.Sprintf("$%d", arg(base)), "d"), arg)
+		deals.BaseValueSQL(fmt.Sprintf("$%d", arg(weekValuedAt(end))), fmt.Sprintf("$%d", arg(base)), "d"), arg)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, gaps, err
 	}
 	nativeAmount, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d", "d.amount_minor", arg)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, gaps, err
 	}
-	coverage := deals.UnpricedValueCountSQL(amountSQL, nativeAmount, "TRUE")
-	value := moneytotal.IncompleteBaseTotalSQL("sum("+amountSQL+")", coverage)
+	currency, err := auth.MaskedExpressionSQL(ctx, "deal", "currency", "d", "d.currency", arg)
+	if err != nil {
+		return nil, nil, gaps, err
+	}
+	value := moneytotal.PartialSumSQL("sum(" + amountSQL + ")")
+	var listed *string
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
 		  (SELECT %[5]s FROM deal d
@@ -209,12 +243,26 @@ func closedInWeek(
 		      AND d.closed_at >= $%[1]d AND d.closed_at < $%[2]d AND (%[4]s)),
 		  (SELECT %[5]s FROM deal d
 		    WHERE d.status = 'lost' AND d.owner_id = $%[3]d
-		      AND d.closed_at >= $%[1]d AND d.closed_at < $%[2]d AND (%[4]s))`,
-		startPos, endPos, userPos, scope, value), args...).Scan(&won, &lost)
+		      AND d.closed_at >= $%[1]d AND d.closed_at < $%[2]d AND (%[4]s)),
+		  g.*
+		FROM (SELECT %[6]s FROM deal d
+		    WHERE d.status IN ('won', 'lost') AND d.owner_id = $%[3]d
+		      AND d.closed_at >= $%[1]d AND d.closed_at < $%[2]d AND (%[4]s)) g`,
+		startPos, endPos, userPos, scope, value, moneytotal.CoverageSQL(amountSQL, nativeAmount, currency)), args...).
+		Scan(&won, &lost, &gaps.noValue, &gaps.noRate, &listed)
 	if err != nil {
-		return nil, nil, fmt.Errorf("weekly: summing the week's closed deals: %w", err)
+		return nil, nil, gaps, fmt.Errorf("weekly: summing the week's closed deals: %w", err)
 	}
-	return won, lost, nil
+	if listed != nil && *listed != "" {
+		gaps.currencies = strings.Split(*listed, ",")
+	}
+	return won, lost, gaps, nil
+}
+
+// weekGaps counts the closed deals a week's sums leave out.
+type weekGaps struct {
+	noValue, noRate int
+	currencies      []string
 }
 
 // deref reads a nullable sum as zero. A week in which nothing closed sums to

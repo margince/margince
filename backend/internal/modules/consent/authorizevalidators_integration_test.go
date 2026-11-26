@@ -308,7 +308,7 @@ func TestEvidenceTheSenderCannotReadIsNotCarriedPastStaging(t *testing.T) {
 		 WHERE delivery_id = $1 AND phase = 'staging'`, delivery).Scan(&raw); err != nil {
 		t.Fatalf("reading the decision row: %v", err)
 	}
-	if carried := evidenceFrom(raw); carried.InvoiceID != (ids.UUID{}) {
+	if carried := evidenceFrom(raw, ""); carried.InvoiceID != (ids.UUID{}) {
 		t.Fatalf("the decision row carries invoice %v, which nobody checked this sender may read: "+
 			"the transmit phase runs as the system principal and would allow on it", carried.InvoiceID)
 	}
@@ -654,23 +654,31 @@ func (e *resolveEnv) contract(t *testing.T, company ids.UUID, deal *ids.UUID) id
 	return id
 }
 
-// invoice plants a finance invoice against a company, with the finance
-// connection it hangs off.
+// invoice plants a finance invoice against a company, with the connection and
+// customer link it hangs off.
 func (e *resolveEnv) invoice(t *testing.T, company ids.UUID, _ bool) ids.UUID {
 	t.Helper()
 	ctx := context.Background()
 	conn := ids.NewV7()
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO finance_connection (id, provider, credential_ref, source, captured_by)
-		VALUES ($1, 'lexoffice', 'ref', 'manual', 'human:x')`, conn); err != nil {
+		INSERT INTO finance_connection (id, provider, captured_by)
+		VALUES ($1, 'lexoffice', 'human:x')`, conn); err != nil {
 		t.Fatalf("planting the finance connection: %v", err)
 	}
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(ctx, `
+		WITH directory AS (
+		    INSERT INTO finance_external_customer (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
+		    VALUES ($2::uuid, $4::text, $4::text, '', 'manual', 'human:x') RETURNING external_customer_id
+		), link AS (
+		    INSERT INTO finance_customer_link (connection_id, company_id, external_customer_id, captured_by)
+		    SELECT $2::uuid, $3::uuid, external_customer_id, 'human:x' FROM directory RETURNING id
+		)
 		INSERT INTO finance_invoice
-		  (id, connection_id, company_id, external_id, issued_at, status,
+		  (id, connection_id, company_id, customer_link_id, external_id, issued_at, status,
 		   currency, net_minor, gross_minor, sync_hash, source, captured_by)
-		VALUES ($1, $2, $3, $4, current_date, 'open', 'EUR', 1000, 1190, 'hash', 'lexoffice', 'human:x')`,
+		SELECT $1::uuid, $2::uuid, $3::uuid, link.id, $4::text, current_date, 'open', 'EUR', 1000, 1190, 'hash', 'lexoffice', 'human:x'
+		  FROM link`,
 		id, conn, company, "ext-"+id.String()); err != nil {
 		t.Fatalf("planting the invoice: %v", err)
 	}

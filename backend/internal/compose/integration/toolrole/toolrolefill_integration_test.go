@@ -121,14 +121,14 @@ func pathRecordKind(pattern, param string) string {
 
 func (c toolRoleCall) args(pool *recordPool) map[string]any {
 	args := fillSchema(c.input, c.route.Pattern, pool)
-	if _, takesBody := args["request_body"]; takesBody && len(c.route.Body) > 0 {
-		args["request_body"] = fillSchema(c.route.Body, "", pool)
+	if _, takesBody := args[routeBodyArgument]; takesBody && len(c.route.Body) > 0 {
+		args[routeBodyArgument] = fillSchema(c.route.Body, "", pool)
 	}
 	if fixture, ok := fixtureOf(c.verb); ok {
 		for name, value := range fixture(pool) {
-			if body, isBody := value.(map[string]any); isBody && name == "request_body" {
-				merged, _ := args["request_body"].(map[string]any)
-				args["request_body"] = mergedBody(merged, body)
+			if body, isBody := value.(map[string]any); isBody && name == routeBodyArgument {
+				merged, _ := args[routeBodyArgument].(map[string]any)
+				args[routeBodyArgument] = mergedBody(merged, body)
 				continue
 			}
 			args[name] = value
@@ -150,9 +150,13 @@ func mergedBody(base, over map[string]any) map[string]any {
 
 // schemaProp is the part of a property's JSON schema the filler reads.
 type schemaProp struct {
-	Type       any                        `json:"type"`
-	Format     string                     `json:"format"`
-	Enum       []any                      `json:"enum"`
+	Type   any    `json:"type"`
+	Format string `json:"format"`
+	Enum   []any  `json:"enum"`
+	// Extensible is a flag beside an enum, or the closed part of an open set.
+	// A saved view's core lists sit beside the extension kinds its pattern
+	// admits. Only the list form names a value.
+	Extensible json.RawMessage            `json:"x-extensible-enum"` //nolint:tagliatelle // OpenAPI extension keyword, fixed by the contract
 	Default    any                        `json:"default"`
 	Examples   []any                      `json:"examples"`
 	MinItems   int                        `json:"minItems"` //nolint:tagliatelle // JSON Schema spec keyword, must be camelCase
@@ -204,7 +208,7 @@ func fillSchema(raw json.RawMessage, pattern string, pool *recordPool) map[strin
 //
 // gatekit:fixture a valid value for each well-known field name: expected data, not a waived cost
 var namedValues = map[string]string{
-	"country": "de", "currency": "EUR", "locale": "en", "content_type": "application/pdf",
+	"country": "de", "jurisdiction": "zq", "currency": "EUR", "locale": "en", "content_type": "application/pdf",
 	"content_base64": base64.StdEncoding.EncodeToString([]byte("%PDF-1.4 role sweep")), "filename": "role-sweep.pdf",
 	"scheduled_tz": "Europe/Berlin", "timezone": "Europe/Berlin", "source": "manual",
 	"text_hash": strings.Repeat("0", 32), "url": "https://example.test/role-sweep",
@@ -243,6 +247,10 @@ func fillValue(name string, raw json.RawMessage, pattern string, pool *recordPoo
 		return prop.Default
 	case len(prop.Enum) > 0:
 		return prop.Enum[0]
+	}
+	var open []any
+	if json.Unmarshal(prop.Extensible, &open) == nil && len(open) > 0 {
+		return open[0]
 	}
 	return fillTyped(name, prop, raw, pool)
 }

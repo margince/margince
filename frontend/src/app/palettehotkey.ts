@@ -1,37 +1,76 @@
-import { useEffect } from "react";
-import { liveDialogs } from "../design-system/dialogfocus";
-import { modifierCap } from "./hotkeys";
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
 
-const PALETTE_KEY = "k";
+import { useCallback, useState } from "react";
+import { screenEnabled, useHiddenCoreFeatures } from "../lib/corefeatures";
+import { layerIsOpen } from "../lib/keyguard";
+import { useClosesWithPage } from "../lib/pageleave";
+import { navigateReplacing, type Route } from "../lib/router";
+import { useShortcutHandler } from "../lib/shortcuts";
+import { currentParams } from "../lib/urlstate";
+import { CREATE_ID, CREATE_SCREENS } from "./nav";
+
+/** What the palette lists: every command, or only the ones that create. */
+export type PaletteMode = "all" | "create";
 
 /**
- * The ⌘K / Ctrl K chord as one cap per key. Both modifiers work, but a surface
- * shows only the one the reader's keyboard has. Pure in `platform`, so a test
- * needs no stub.
+ * The palette's bindings: ⌘K toggles it, `/` opens it, and `C` opens a list's
+ * own create form on the list itself, and the palette's create list elsewhere.
  */
-export function paletteHotkeyCaps(platform: string): readonly string[] {
-  return [modifierCap(platform), PALETTE_KEY.toUpperCase()];
+export function usePaletteShortcuts(
+  open: boolean,
+  show: (mode: PaletteMode) => void,
+  hide: () => void,
+  route: Route,
+): void {
+  const disabled = useHiddenCoreFeatures();
+  useShortcutHandler("search", () => {
+    // An open dialog or menu makes the app unreachable; only the palette's own layer may close it.
+    if (open) {
+      hide();
+    } else if (!layerIsOpen(document.activeElement)) {
+      show("all");
+    }
+  });
+  useShortcutHandler("search.slash", () => show("all"));
+  useShortcutHandler("create", () => {
+    // Only on the list: replacing a record's address would erase it from history.
+    if (
+      route.id === undefined &&
+      CREATE_SCREENS.has(route.screen) &&
+      screenEnabled(route.screen, disabled)
+    ) {
+      navigateReplacing(
+        { screen: route.screen, id: CREATE_ID },
+        currentParams(),
+      );
+    } else {
+      show("create");
+    }
+  });
 }
 
-export function usePaletteHotkey(
-  open: boolean,
-  setOpen: (open: boolean) => void,
-) {
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (
-        (event.metaKey || event.ctrlKey) &&
-        event.key.toLowerCase() === PALETTE_KEY
-      ) {
-        event.preventDefault();
-        // An open dialog makes the app unreachable. Only an already-open
-        // palette may handle the shortcut while a dialog exists.
-        if (open || liveDialogs().length === 0) {
-          setOpen(!open);
-        }
+/** The palette's state with its keys bound; its code loads on first ask. While
+ *  `available` is false it stays shut: every place it lists leads back. */
+export function useCommandPalette(route: Route, available = true) {
+  const [open, setOpen] = useState<boolean | null>(null);
+  const [mode, setMode] = useState<PaletteMode>("all");
+  const show = useCallback(
+    (next: PaletteMode) => {
+      if (!available) {
+        return;
       }
-    };
-    globalThis.addEventListener("keydown", onKey);
-    return () => globalThis.removeEventListener("keydown", onKey);
-  }, [open, setOpen]);
+      setMode(next);
+      setOpen(true);
+    },
+    [available],
+  );
+  const hide = useCallback(() => setOpen(false), []);
+  // Shut, not hidden, so it does not come back once setup lets the reader go.
+  if (!available && open === true) {
+    setOpen(false);
+  }
+  usePaletteShortcuts(open === true, show, hide, route);
+  useClosesWithPage({ open: open === true, close: hide });
+  return { open, mode, show, hide };
 }

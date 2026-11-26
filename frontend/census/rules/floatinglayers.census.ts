@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// A layer that hangs over the page hides what is under it. Level 1's pane is
-// see-through in dark, so a layer that falls back to it shows the page through.
+// A layer that hangs over the page hides what is under it. A ground that is
+// see-through in either theme shows the page through it.
 
 import {
   alternativesOf,
@@ -15,6 +15,7 @@ import {
   splitTopLevel,
 } from "../../scripts/lib/css-rules";
 import { themes } from "../../src/design-system/tokens-testing";
+import { stable } from "../../src/format/collate";
 import { type CensusRule, isAppSheet, sheetRules } from "../tree";
 
 const OPAQUE = /^#[0-9a-f]{6}$/i;
@@ -24,7 +25,7 @@ const GROUND = "var(--ground)";
 
 // Layers the tree floats today, so a detector that goes blind fails.
 export const KNOWN_LAYERS = [
-  ".notifbell-loose",
+  ".notifbell-loose.topbar-popover",
   ".popover-panel",
   ".accountmenu",
 ];
@@ -51,7 +52,7 @@ export function floatingLayers(rules: readonly Rule[]): string[] {
       if (hangs(rule.body)) hanging.add(alternative);
     }
   }
-  return [...casting].filter((layer) => hanging.has(layer)).sort();
+  return [...casting].filter((layer) => hanging.has(layer)).sort(stable);
 }
 
 // The ground that wins, from the layer's own rules and those of a class it

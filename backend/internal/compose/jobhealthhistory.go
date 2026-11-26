@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/adminadmit"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -24,7 +25,7 @@ type jobHistoryCursor struct {
 }
 
 func (h jobHealthHandlers) GetJobHealthHistory(w http.ResponseWriter, r *http.Request, p crmcontracts.GetJobHealthHistoryParams) {
-	if !admitHealthReader(w, r) {
+	if !adminadmit.HealthReader(w, r) {
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), jobHealthReadTimeout)
@@ -64,7 +65,7 @@ func (h jobHealthHandlers) GetJobHealthHistory(w http.ResponseWriter, r *http.Re
 		httperr.Write(w, r, err)
 		return
 	}
-	out := crmcontracts.JobHealthHistory{ObservedAt: now, Cutoff: cursor.Cutoff, WindowStart: from, Coverage: "retained_only", HasMore: result.More, PopulationMayHaveChanged: p.Cursor != nil, Groups: []crmcontracts.JobHealthGroup{}, Runs: jobFailuresResponse(result.Runs)}
+	out := crmcontracts.JobHealthHistory{ObservedAt: now, Cutoff: cursor.Cutoff, WindowStart: from, Coverage: "retained_only", HasMore: result.More, PopulationMayHaveChanged: p.Cursor != nil, Groups: []crmcontracts.JobHealthGroup{}, Runs: jobFailuresResponse(ctx, result.Runs)}
 	for _, g := range result.Groups {
 		out.Groups = append(out.Groups, crmcontracts.JobHealthGroup{Kind: g.Kind, State: crmcontracts.JobHealthGroupState(g.State), FleetWide: g.FleetWide, Count: g.Count, FirstAt: g.FirstAt, LatestAt: g.LatestAt})
 	}
@@ -85,7 +86,7 @@ func jobHistoryFilterError(cursor jobHistoryCursor) error {
 	case cursor.Days < 1 || cursor.Days > 7:
 		return httperr.Validation("days", "out_of_range", "choose a window from one to seven days")
 	case len(cursor.Kind) > 200:
-		return httperr.Validation("kind", "too_long", "use a job kind of at most 200 characters")
+		return httperr.TooLong("kind", 200, len(cursor.Kind))
 	case cursor.State != "" && cursor.State != string(crmcontracts.GetJobHealthHistoryParamsStateRetryable) && cursor.State != string(crmcontracts.GetJobHealthHistoryParamsStateDiscarded) && cursor.State != string(crmcontracts.GetJobHealthHistoryParamsStateCancelled):
 		return httperr.Validation("state", "invalid_state", "choose retryable, discarded or cancelled")
 	default:

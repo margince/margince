@@ -156,3 +156,82 @@ export const ReadFailed: Story = {
       ),
   }),
 };
+
+// A key the registry already holds, refused on the Key field before anything is
+// sent, naming the purpose that holds it.
+export const KeyTaken: Story = {
+  render: purposes(MAY_APPEND_PURPOSE),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /add purpose/i }),
+    );
+    const dialog = within(document.body);
+    await userEvent.type(
+      await dialog.findByRole("textbox", { name: "Key" }),
+      "Transactional",
+    );
+    await userEvent.click(
+      dialog.getByRole("button", { name: /create purpose/i }),
+    );
+    await expect(
+      await dialog.findByText("This key is already used by Transactional."),
+    ).toBeVisible();
+  },
+};
+
+// A compliance reader also sees how much mail went out under each purpose, and
+// how much claimed a kind the record did not bear out. Keys no live purpose
+// defines are one row that names no key.
+const MAY_READ_SENDS: GrantSpec = { consent_config: ["read", "create"] };
+
+const SEND_COUNTS = {
+  days: 30,
+  data: [
+    {
+      purpose_key: "transactional",
+      class: "transactional",
+      sends: 1240,
+      disputed: 0,
+    },
+    {
+      purpose_key: "business_correspondence",
+      class: "business_correspondence",
+      sends: 318,
+      disputed: 41,
+    },
+    { purpose_key: "marketing", class: "marketing", sends: 52, disputed: 0 },
+    { purpose_key: "unknown", sends: 3, disputed: 1 },
+  ],
+};
+
+export const SendCounts: Story = {
+  render: purposes(MAY_READ_SENDS, PURPOSES, {
+    "GET /consent-purposes/send-counts": () => jsonResponse(SEND_COUNTS),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const table = await canvas.findByRole("table", {
+      name: "Mail sent per purpose",
+    });
+    await expect(within(table).getByText("1,240")).toBeVisible();
+  },
+};
+
+export const SendCountsDark: Story = {
+  ...SendCounts,
+  globals: { theme: "dark" },
+};
+
+export const SendCountsPhone: Story = {
+  ...SendCounts,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+export const SendCountsEmpty: Story = {
+  render: purposes(MAY_READ_SENDS, PURPOSES, {
+    "GET /consent-purposes/send-counts": () =>
+      jsonResponse({ days: 30, data: [] }),
+  }),
+};

@@ -85,6 +85,21 @@ func TestAQueuedRequestBecomesATimelineEntryUnderTheOwnersName(t *testing.T) {
 	}
 }
 
+// Once a request lands, its body is the core's: the row keeps the activity it
+// became and lets go of what the sender wrote.
+func TestALandedRequestKeepsNoBody(t *testing.T) {
+	t.Parallel()
+	rt := draining(queuedRow(firstRequestID, 0, landable(t, "m-1")))
+	rt.results = []extension.Result{accepted()}
+	if err := drain(context.Background(), rt); err != nil {
+		t.Fatalf("draining: %v", err)
+	}
+	sql, _ := rt.tx.statementMentioning(t, "activity_id = nullif")
+	if !strings.Contains(sql, "body = NULL") {
+		t.Fatalf("the landing keeps the body:\n%s", sql)
+	}
+}
+
 // The rule the whole file exists to keep: a record is ingested with NONE of this
 // unit's transactions open, and the row moves only afterwards.
 //

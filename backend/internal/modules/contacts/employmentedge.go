@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -123,7 +124,7 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 	if err != nil {
 		return fmt.Errorf("contacts: insert employment edge: %w", err)
 	}
-	if err := auditCapturedEmployment(ctx, tx, edgeID, contactID, companyID, relationshipOriginCapture); err != nil {
+	if err := auditCapturedEmployment(ctx, tx, edgeID, contactID, companyID, relationshipOriginCapture, ""); err != nil {
 		return err
 	}
 	return fileEmployerTwins(ctx, tx, contactID, in.CapturedBy)
@@ -178,7 +179,10 @@ func (s *Store) deferCompanyToTriage(ctx context.Context, tx pgx.Tx, in EnsureCo
 		return err
 	}
 	if known && prior.Settled() {
-		return attachToSettledVerdict(ctx, tx, in, base, prior, res)
+		if err := attachToSettledVerdict(ctx, tx, in, base, prior, res); err != nil || res.CompanyID == nil {
+			return err
+		}
+		return s.offerEmployerChangeTx(ctx, tx, capturedEmployerSignal(in, base, res.ContactID, *res.CompanyID))
 	}
 	if known {
 		// The question is open. Usually somebody already asked it and the crawl
@@ -209,10 +213,12 @@ func (s *Store) deferCompanyToTriage(ctx context.Context, tx pgx.Tx, in EnsureCo
 // treats an employer as a fact somebody asserted can then tell an inference
 // from a statement, which is the whole difference between the two paths — and
 // it can do so without every existing consumer of contact.updated changing.
-func auditCapturedEmployment(ctx context.Context, tx pgx.Tx, edgeID ids.UUID, contactID ids.ContactID, companyID ids.CompanyID, origin string) error {
-	auditID, err := storekit.Audit(ctx, tx, actionCreate, tableRelationship, edgeID, nil, map[string]any{
-		relationshipKindField: employmentKind, auditKeyOrigin: origin,
-	})
+func auditCapturedEmployment(ctx context.Context, tx pgx.Tx, edgeID ids.UUID, contactID ids.ContactID, companyID ids.CompanyID, origin, role string) error {
+	after := map[string]any{relationshipKindField: employmentKind, auditKeyOrigin: origin}
+	if role = strings.TrimSpace(role); role != "" {
+		after[fieldRole] = role
+	}
+	auditID, err := storekit.Audit(ctx, tx, actionCreate, tableRelationship, edgeID, nil, after)
 	if err != nil {
 		return fmt.Errorf("contacts: audit the captured employment edge: %w", err)
 	}

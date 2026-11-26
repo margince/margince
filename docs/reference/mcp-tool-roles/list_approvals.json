@@ -1,0 +1,13 @@
+{
+  "tool": "list_approvals",
+  "verb": "list_approvals",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

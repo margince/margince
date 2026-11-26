@@ -1,0 +1,10 @@
+{
+  "verb": "answer_calendar_invitation",
+  "checks": [
+    "activity.read"
+  ],
+  "takes": [
+    "activity",
+    "calendar_invitation"
+  ]
+}

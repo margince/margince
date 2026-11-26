@@ -26,9 +26,9 @@ const deliberateUtcDays: Readonly<
     sites: 2,
     why: "the two boundaries are read back off dates this function just built with Date.UTC(...) from the month it was given, so the round trip never touches a clock or a zone. Naming the month is the zoned question, and only currentMonth asks it",
   },
-  "format/timezone.ts#shifted": {
+  "format/calendarday.ts#shifted": {
     sites: 1,
-    why: "the same round trip as adjacentMonth's: the date is built with Date.UTC(...) from a day this function was GIVEN, and the components read back are the ones just written. It is arithmetic on a named day, not a reading of the clock, and the zoned question is answered by startOfDayInstant on the next line",
+    why: "the carrier is built at UTC noon from a day this function was GIVEN, and the day read back is the one just written plus whole days. It is arithmetic on a named day, not a reading of the clock; the caller answers the zoned question",
   },
   "mcp-apps/values.ts#day": {
     sites: 1,

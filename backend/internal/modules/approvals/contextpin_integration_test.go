@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -127,5 +128,30 @@ func TestADeniedContextPinWithholdsOnePreviewWithoutBreakingTheInbox(t *testing.
 	}
 	if _, err := e.svc.Decide(human, allowedID, true, nil); err != nil {
 		t.Fatalf("deciding the unaffected row: %v", err)
+	}
+}
+
+func TestOnlyASingleApprovalReadBuildsItsPreviewAsOne(t *testing.T) {
+	e := setupStaging(t)
+	passport := e.seedPassport(t)
+	var reads []bool
+	e.svc.WithPreview(func(ctx context.Context, _ crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
+		reads = append(reads, ReadsOneApproval(ctx))
+		return &crmcontracts.ApprovalPreview{Version: 2, State: "ready", Changes: []crmcontracts.ApprovalPreviewChange{}}, nil
+	})
+	staged, err := e.svc.Stage(e.asPassport(passport), e.mergeCall(e.seedTag(t, "One source"), e.seedTag(t, "One target")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	human := e.asHumanWith(tagDeciderPerms())
+	if _, _, err := e.svc.ListWire(human, ListInput{}); err != nil {
+		t.Fatal(err)
+	}
+	listed := slices.Clone(reads)
+	if _, err := e.svc.GetWire(human, staged); err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) == 0 || slices.Contains(listed, true) || !reads[len(reads)-1] {
+		t.Fatalf("list reads %v then single read %v, want false for the list and true for the single read", listed, reads[len(listed):])
 	}
 }

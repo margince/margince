@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -19,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -50,24 +48,6 @@ func ownSeatRows(t *testing.T, e *integration.Env, activity ids.UUID, seat ids.U
 	t.Helper()
 	return e.WsCount(t, `SELECT count(*) FROM activity_participant
 		WHERE activity_id = $1 AND user_id = $2 AND address IS NULL AND contact_id IS NULL`, activity, seat)
-}
-
-func runGuessedMailboxTask(ctx context.Context, t *testing.T, e *integration.Env, task datatask.Task) {
-	t.Helper()
-	now := clocktest.Now(t)
-	engine, err := datatask.New(e.Pool, []datatask.Task{task}, "test", func() time.Time { return now },
-		func(context.Context, pgx.Tx, datatask.Progress) error { return nil })
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := engine.Seed(ctx); err != nil {
-		t.Fatal(err)
-	}
-	for range 20 {
-		if _, err := engine.Execute(ctx); err != nil {
-			t.Fatal(err)
-		}
-	}
 }
 
 func guessedMailboxPreview(ctx context.Context, t *testing.T, e *integration.Env) int64 {
@@ -174,7 +154,7 @@ func TestAGuessedParticipantGrantsNothing(t *testing.T) {
 		}
 	}
 	check("before the repair")
-	runGuessedMailboxTask(ctx, t, e, guessedMailboxSeatsDataTask())
+	e.RunDataTask(ctx, t, guessedMailboxSeatsDataTask())
 	check("after the repair")
 }
 
@@ -297,7 +277,7 @@ func TestTheGuessedMailboxRepairRemovesOnlyUnprovenOwners(t *testing.T) {
 	}
 	task := guessedMailboxSeatsDataTask()
 	task.Steps[0].Limit = 1
-	runGuessedMailboxTask(ctx, t, e, task)
+	e.RunDataTask(ctx, t, task)
 
 	for name, c := range map[string]struct {
 		activity, seat ids.UUID
@@ -364,7 +344,7 @@ func TestTheGuessedMailboxRepairRollsBackWithItsProgress(t *testing.T) {
 		}
 		return out, errors.New("transaction interrupted after domain writes")
 	}
-	runGuessedMailboxTask(ctx, t, e, task)
+	e.RunDataTask(ctx, t, task)
 
 	if got := ownSeatRows(t, e, guessed, e.Rep1); got != 1 {
 		t.Errorf("the owner removal survived a rolled-back batch")

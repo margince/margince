@@ -1,0 +1,15 @@
+{
+  "tool": "change_capture",
+  "action": "undo_import_run",
+  "verb": "undo_import_run",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

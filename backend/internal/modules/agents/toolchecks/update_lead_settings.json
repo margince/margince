@@ -1,0 +1,7 @@
+{
+  "verb": "update_lead_settings",
+  "checks": [
+    "custom_field.read",
+    "custom_field.update"
+  ]
+}

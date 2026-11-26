@@ -345,6 +345,8 @@ test("the duplicate card asks its host for exactly the tools it declares and rea
     {
       name: "resolve_duplicates",
       args: {
+        // One retry key per press, made even in a frame that is no secure context.
+        idempotency_key: expect.stringMatching(/^[0-9a-f-]{36}$/),
         record_type: "contact",
         source_id: "0195c3a0-0000-7000-8000-000000000002",
         target_id: "0195c3a0-0000-7000-8000-000000000001",

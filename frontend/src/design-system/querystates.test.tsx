@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../i18n";
 import { ProblemError } from "../lib/problem";
-import { QueryStates } from "./querystates";
+import { QueryStates, WriteRefused } from "./querystates";
 
 const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
 
@@ -55,6 +55,45 @@ describe("QueryStates", () => {
     expect(screen.getByText("no seat")).toBeTruthy();
   });
 
+  // A read that finds no record or link: a retry cannot help, so the screen's
+  // own statement stands in for the failure card.
+  for (const status of [404, 410, 422]) {
+    it(`draws the screen's gone state, with no retry, for a ${status}`, () => {
+      render(
+        <QueryStates
+          query={failing(new ProblemError({ status, detail: "not found" }))}
+          pendingLabel="Loading the deal"
+          gone={<p>The deal is gone</p>}
+        >
+          {null}
+        </QueryStates>,
+      );
+      expect(screen.getByText("The deal is gone")).toBeTruthy();
+      expect(screen.queryByText(t("common.error"))).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: t("common.retry") }),
+      ).toBeNull();
+    });
+  }
+
+  for (const status of [403, 500, 503]) {
+    it(`keeps the failure card and its retry for a ${status}, gone state or not`, () => {
+      render(
+        <QueryStates
+          query={failing(new ProblemError({ status, detail: "boom" }))}
+          pendingLabel="Loading the deal"
+          gone={<p>The deal is gone</p>}
+        >
+          {null}
+        </QueryStates>,
+      );
+      expect(screen.queryByText("The deal is gone")).toBeNull();
+      expect(
+        screen.getByRole("button", { name: t("common.retry") }),
+      ).toBeTruthy();
+    });
+  }
+
   it("prints the shared line, not the message, when the failure is not a problem", () => {
     render(
       <QueryStates
@@ -94,6 +133,21 @@ describe("QueryStates", () => {
     ).toBeTruthy();
   });
 
+  it("keeps a 404 a failed load with Retry when the screen draws no gone state, since it may be a scope refusal", () => {
+    render(
+      <QueryStates
+        query={failing(new ProblemError({ status: 404, detail: "not found" }))}
+        pendingLabel="Loading the section"
+      >
+        {null}
+      </QueryStates>,
+    );
+    expect(screen.getByText(t("common.error"))).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: t("common.retry") }),
+    ).toBeTruthy();
+  });
+
   it("reports a load in progress as busy, since the shimmer bars say nothing", () => {
     render(
       <QueryStates
@@ -112,5 +166,42 @@ describe("QueryStates", () => {
     expect(loading.getAttribute("aria-busy")).toBe("true");
     // And nothing claims to have failed while it is still loading.
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("WriteRefused", () => {
+  const tooLong = new ProblemError({
+    status: 422,
+    code: "validation_error",
+    detail: "a signature's html is at most 10000 characters, this one is 10001",
+    details: {
+      errors: [
+        {
+          field: "html",
+          code: "too_long",
+          message:
+            "a signature's html is at most 10000 characters, this one is 10001",
+          max: 10000,
+        },
+      ],
+    },
+  });
+
+  it("names the field by the form's own label, and its limit, in the reader's language", async () => {
+    const client = new QueryClient();
+    rtlRender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="de">
+          <WriteRefused
+            titleKey="common.error"
+            error={tooLong}
+            fieldLabels={{ html: "HTML-Signatur" }}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(
+      await screen.findByText("HTML-Signatur: höchstens 10.000 Zeichen."),
+    ).toBeTruthy();
   });
 });

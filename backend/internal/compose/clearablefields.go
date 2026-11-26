@@ -24,8 +24,9 @@ import "slices"
 //     as coalesce($n, col), so the placeholder's NULL selects the current value
 //     and no argument can clear one. Changing that is a change to its update
 //     semantics rather than to the reversal path.
-//   - a deal's amount_minor and currency are absent because money is read as one
-//     field, and a half-cleared pair states an amount in no currency.
+//   - a deal's amount_minor and currency clear as a pair: the store takes the
+//     currency with the amount unless the recurring figure still needs it, and
+//     refuses a won or lost deal.
 //   - a deal's partner_company_id and partner_attribution are BOTH present and mean
 //     one instruction. deal_partner_attribution_pairing admits no row where one
 //     half survived the other, so forgetting either forgets both, and a reversal
@@ -39,7 +40,7 @@ import "slices"
 //
 //nolint:goconst // the rows are wire FIELD names and record types read as data; the constants goconst points at are other concepts that spell the same word — a report field, a filter param — and hiding these behind them would assert a correspondence this table exists to state on its own
 var clearableFields = map[string][]string{
-	"contact": {"first_name", "last_name", "title", "owner_id", "relationship_mark"},
+	"contact": {"first_name", "last_name", "title", "owner_id", "relationship_mark", "greeting_register"},
 	"company": {
 		"legal_name", "description", "industry", "size_band",
 		"linkedin_url", "phone", "email", "owner_id", "parent_company_id", "assess_against_entity_id",
@@ -52,7 +53,7 @@ var clearableFields = map[string][]string{
 		"expected_close_date", "win_probability", "wait_until", "owner_id",
 		"company_id", "project_id", "partner_company_id", "partner_attribution",
 		"description", "commercial_motion", "priority", "acquisition_source",
-		"expected_arr_minor",
+		"expected_arr_minor", "amount_minor", "currency",
 	},
 	"project": {
 		"description", "owner_id", "started_at", "target_end_date", "ended_at",

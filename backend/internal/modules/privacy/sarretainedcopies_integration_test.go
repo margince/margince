@@ -77,7 +77,7 @@ func TestLiveErasurePreservesDisputedRightsCases(t *testing.T) {
 	}
 }
 
-func TestIntroductionsExportOnlyRequestsAboutTheSubject(t *testing.T) {
+func TestIntroductionsExportTheSubjectsOwnRoleAndWithholdOtherTargetsNotes(t *testing.T) {
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, pair, _ := seedDedupePairs(ctx, t, tx)
@@ -114,8 +114,24 @@ func TestIntroductionsExportOnlyRequestsAboutTheSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(rows) != 1 || rows[0]["forwardable_note"] != "Subject Note" {
-			t.Fatalf("exported someone else's introduction: %+v", rows)
+		if len(rows) != 2 {
+			t.Fatalf("subject introduction rows=%+v, want target and intermediary", rows)
+		}
+		for _, row := range rows {
+			if row["subject_role"] == "target" {
+				if row["forwardable_note"] != "Subject Note" {
+					t.Fatalf("subject's own note is missing: %+v", row)
+				}
+				continue
+			}
+			if row["subject_role"] != "intermediary" {
+				t.Fatalf("unknown subject role: %+v", row)
+			}
+			for _, field := range []string{"contact_id", "forwardable_note", "value_for_target", "internal_reason", "decision_reason"} {
+				if row[field] != nil {
+					t.Fatalf("intermediary export disclosed target field %s: %+v", field, row)
+				}
+			}
 		}
 	}
 }

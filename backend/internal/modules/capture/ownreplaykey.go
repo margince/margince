@@ -44,19 +44,22 @@ import (
 // scopedToSeat answers whether this collision may be resolved by filing the
 // seat's own row, and the record to file when it may.
 //
-// False for a record with no seat behind it: replayClaimIsProvenTx already
-// treats one as claiming nothing, so an unprovable collision cannot arise, and
-// a key scoped to the nil seat would be a second shared key rather than
-// anybody's own.
+// A shared mailbox's copy is scoped to its connection. A record with neither
+// answers false: replayClaimIsProvenTx treats it as claiming nothing. A key
+// scoped to the nil seat would be a second shared key, nobody's own.
 func scopedToSeat(ctx context.Context, rec connector.NormalizedRecord) (connector.NormalizedRecord, bool) {
 	if rec.NaturalKey.SourceSystem != connector.EmailSourceSystem || rec.NaturalKey.SourceID == "" {
 		return connector.NormalizedRecord{}, false
+	}
+	scoped := rec
+	if shared, ok := sharedMailboxOf(ctx); ok {
+		scoped.NaturalKey.SourceID = connector.MailboxScopedMailKey(rec.NaturalKey.SourceID, shared.String())
+		return scoped, true
 	}
 	seat := actorUserID(ctx)
 	if seat == ids.Nil {
 		return connector.NormalizedRecord{}, false
 	}
-	scoped := rec
 	scoped.NaturalKey.SourceID = connector.SeatScopedMailKey(rec.NaturalKey.SourceID, seat.String())
 	return scoped, true
 }
@@ -158,6 +161,12 @@ func (s *Sink) upsertRefused(
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
 	if mine {
+		if _, shared := sharedMailboxOf(ctx); shared {
+			// The reader team reads what its mailbox delivered, a colleague's
+			// private copy of the same proven message included.
+			err := s.finishJoinedActivity(ctx, tx, id, rec, fields, birth, joinedCapture{memberBound: memberBound})
+			return datasource.EntityRef{Type: datasource.EntityActivity, ID: id.UUID}, false, counterpartyDecision{}, err
+		}
 		return datasource.EntityRef{}, false, counterpartyDecision{}, refusal
 	}
 	return s.fileUnderOwnReplayKey(ctx, tx, rec, fields, birth, memberBound)

@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -88,7 +89,7 @@ func TestErasureRedactsACommitmentNamingTheSubject(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "subject request"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), subject, "subject request"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 
@@ -152,7 +153,7 @@ func TestErasureLeavesTheCommitmentsThatNameSomebodyElse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "subject request"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), subject, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 

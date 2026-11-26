@@ -110,26 +110,26 @@ func verifyMeetingPrivacy(t *testing.T, anonymize bool) {
 			t.Errorf("export contains private authority %q", secret)
 		}
 	}
+	refs := []string{e.WsScalar(t, `SELECT management_ref FROM meeting_invitation`), e.WsScalar(t, `SELECT link_ref FROM meeting_proposal`)}
 	if anonymize {
-		service := NewRetentionServiceFor(e.DB(), nil, slog.Default()).WithPayloadVault(controllerPayloads{v: vault})
-		if _, err := service.AnonymiseContacts(ctx, []ids.UUID{contact}, privacy.PurgeOwnerRule, anonymiseAsChosen); err != nil {
-			t.Fatal(err)
-		}
+		_, err = NewRetentionServiceFor(e.DB(), nil, slog.Default()).AnonymiseContacts(ctx, []ids.UUID{contact}, privacy.PurgeOwnerRule, anonymiseAsChosen)
 	} else {
-		eraser := privacy.NewEraser(e.DB()).WithPayloadVault(controllerPayloads{v: vault})
-		if err := eraser.EraseContact(ctx, contact, "subject request"); err != nil {
-			t.Fatal(err)
-		}
+		err = eraserWithGraph(e.DB()).EraseContact(ctx, contact, "subject request")
+	}
+	if err != nil {
+		t.Fatal(err)
 	}
 	if _, _, err := store.ResolveMeetingToken(ctx, *meeting.ManagementToken); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("meeting capability survived erasure: %v", err)
 	}
-	token := strings.Split(proposal.URL, "proposal-")[1]
-	if _, _, err := store.ResolveProposalToken(ctx, token); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, _, err := store.ResolveProposalToken(ctx, strings.Split(proposal.URL, "proposal-")[1]); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("proposal survived erasure: %v", err)
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM meeting_invitation WHERE status<>'erased' OR management_ref<>'' OR appointment ? 'Attendees'`); got != 0 {
+	if got := e.WsCount(t, `SELECT count(*) FROM meeting_invitation WHERE status<>'erased' OR appointment ? 'Attendees'`); got != 0 {
 		t.Fatalf("pending delivery survived erasure: %d", got)
+	}
+	if destroyed := e.DestroyErasedLinks(store); destroyed != nil || e.VaultHolds(vault, refs[0]) || e.VaultHolds(vault, refs[1]) || e.WsCount(t, `SELECT (SELECT count(*) FROM meeting_invitation WHERE management_ref<>'') + (SELECT count(*) FROM meeting_proposal)`) != 0 {
+		t.Errorf("a link secret, or a row naming one, survived the destroying pass: %v", destroyed)
 	}
 }
 

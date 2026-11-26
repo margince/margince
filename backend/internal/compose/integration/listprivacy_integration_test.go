@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -43,7 +44,7 @@ func TestASubjectsShortlistsReachTheirAccessExportAndTheirErasure(t *testing.T) 
 		t.Fatalf("the export's Shortlist history = %v, want the one addition", pkg.ListMembershipHistory)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), subject, "test"); err != nil {
 		t.Fatalf("erase: %v", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM list_member WHERE entity_id = $1`, subject); n != 0 {

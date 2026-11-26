@@ -16,6 +16,7 @@ import {
   Globe,
   HeartPulse,
   History,
+  Info,
   KeyRound,
   Mail,
   Milestone,
@@ -83,4 +84,5 @@ export const PAGE_ICONS: Readonly<Record<SettingsPageId, LucideIcon>> = {
   configuration: SlidersHorizontal,
   extensions: Blocks,
   reset: RotateCcw,
+  about: Info,
 };

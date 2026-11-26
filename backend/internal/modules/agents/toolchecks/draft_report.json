@@ -1,0 +1,11 @@
+{
+  "verb": "draft_report",
+  "checks": [
+    "installation_settings.read",
+    "report_definition.create",
+    "report_definition.read"
+  ],
+  "takes": [
+    "me"
+  ]
+}

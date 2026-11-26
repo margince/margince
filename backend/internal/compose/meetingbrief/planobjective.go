@@ -44,11 +44,11 @@ func (said briefCopy) caveatFor(typ MeetingType) string {
 // implies, cited to the meeting itself — the record that carries the filing the
 // claim would have come from.
 func objectiveFor(in Input, typ MeetingType, ranked *rankedClaims) *Objective {
-	caveat := briefCopyFor(in.Language).caveatFor(typ)
+	caveat := in.words().caveatFor(typ)
 	if ask, ok := ranked.take(openOfKind(kindCommitmentOurs, kindOpenQuestion, kindDecision)); ok {
 		return &Objective{
 			Sentence: Sentence{
-				Text:     briefCopyFor(in.Language).objectiveLine(ask, typ, in.Now),
+				Text:     in.words().objectiveLine(ask, typ, in.Now),
 				Nature:   natureRecommendation,
 				Evidence: []Evidence{{EntityType: citeActivity, EntityID: ask.SourceID}},
 			},
@@ -75,18 +75,18 @@ func (said briefCopy) objectiveLine(ask ClaimIn, typ MeetingType, now time.Time)
 	if typ.Value == crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship {
 		return fmt.Sprintf(
 			said.Say(objectiveWords.Priority),
-			ask.ContactName, ask.Body)
+			said.whom(ask), ask.Body)
 	}
 	if deadline.Passed(ask.DueAt, now) {
 		return fmt.Sprintf(
 			said.Say(objectiveWords.Overdue),
-			ask.ContactName, ask.DueAt.UTC().Format(time.DateOnly), ask.Body)
+			said.whom(ask), said.dates.Day(*ask.DueAt), ask.Body)
 	}
-	return fmt.Sprintf(said.Say(objectiveWords.Answer), ask.ContactName, ask.Body)
+	return fmt.Sprintf(said.Say(objectiveWords.Answer), said.whom(ask), ask.Body)
 }
 
 func objectiveByType(typ MeetingType, in Input) string {
-	said := briefCopyFor(in.Language)
+	said := in.words()
 	switch typ.Value {
 	case crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown:
 		return said.Say(objectiveWords.Unknown)
@@ -119,13 +119,13 @@ func objectiveByType(typ MeetingType, in Input) string {
 // there is nothing real to name, it opens by asking, which is the honest move
 // and also the right one.
 func openingFor(in Input, typ MeetingType) *Sentence {
-	said := briefCopyFor(in.Language)
+	said := in.words()
 	if len(in.PriorMeetings) > 0 {
 		prior := in.PriorMeetings[0]
 		return &Sentence{
 			Text: fmt.Sprintf(
 				said.Say(objectiveWords.Prior),
-				prior.Subject, prior.StartsAt.date(in.Zone).Format(time.DateOnly)),
+				prior.Subject, said.dates.CalendarDay(prior.StartsAt.date(in.Zone))),
 			Nature:   natureRecommendation,
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: prior.ID}},
 		}
@@ -148,7 +148,7 @@ func openingFor(in Input, typ MeetingType) *Sentence {
 // unanswered objection and a promise we broke need opposite openings — one
 // needs answering, the other needs owning.
 func topRiskFor(in Input, ranked *rankedClaims) *Risk {
-	said := briefCopyFor(in.Language)
+	said := in.words()
 	claim, ok := ranked.take(func(candidate ClaimIn) bool {
 		_, isRisk := said.riskLine(candidate, in.Now)
 		return isRisk
@@ -168,7 +168,7 @@ func topRiskFor(in Input, ranked *rankedClaims) *Risk {
 }
 
 func responseFor(claim ClaimIn, in Input) Response {
-	said := briefCopyFor(in.Language)
+	said := in.words()
 	if claim.Kind == kindObjection {
 		return Response{
 			Say: fmt.Sprintf(
@@ -180,7 +180,7 @@ func responseFor(claim ClaimIn, in Input) Response {
 	return Response{
 		Say: fmt.Sprintf(
 			said.Say(objectiveWords.OwnDelay),
-			claim.ContactName, claim.Body),
+			said.whom(claim), claim.Body),
 		Show:  said.Say(objectiveWords.ShowReady),
 		Avoid: said.Say(objectiveWords.AvoidDate),
 	}

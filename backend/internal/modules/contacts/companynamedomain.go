@@ -20,14 +20,14 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // displayNameDomain answers the domain a display name spells, normalized the
 // way company_domain stores one. A name with a space or no dot is not a domain.
 func displayNameDomain(name string) (string, bool) {
-	domain, err := values.ParseDomain(name)
+	domain, err := owndomain.ParseDomain(name)
 	if err != nil {
 		return "", false
 	}

@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -41,6 +42,7 @@ type LastTouchCandidate struct {
 	EntityType string
 	EntityID   ids.UUID
 	LastTouch  time.Time
+	Total      int
 }
 
 // genuineEngagement is what counts as a real touch for the quiet reminders. It
@@ -63,21 +65,13 @@ func genuineEngagement(alias string, sourcePos, capturedByPos, patternPos int) s
 		alias, sourcePos, capturedByPos, patternPos)
 }
 
-// lastTouchCandidateQuery is LastTouchBefore's read: every linked entity's most
-// recent genuine engagement, narrowed to the ones carrying live work. It is a
-// function rather than a constant because two of its fragments are built —
-// the link-id coalesce, and the company walk — and it sits apart from the
-// scan so the scan reads as what it does with the rows.
-//
-// $1/$4/$5 are the source and captured_by the automation engine stamps —
-// excluded only TOGETHER, since source alone is a client's to spell. $5 is
-// the namespaced form: captured_by carries the principal's ID and every job
-// binds its own ("system:time-scan"), so matching the bare "system" alone
-// missed the engine's own writes and let a reminder reset the clock it
-// reads. $2 the cutoff, $3 the cap, $6 the asking handler; providersPos is
-// where the mail providers are bound when the store asks about the owner's
-// mailbox.
-func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int) string {
+// Contact evidence, account folding and mailbox protection stay shared between
+// legacy eligibility and an explicitly selected population.
+func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int, scope *quietQueryScope) string {
+	eligibility, reminder, count := lastTouchEligibility(), openReminderHoldsEntity(), ""
+	if scope != nil {
+		eligibility, reminder, count = scope.eligibility, scope.reminder, ", count(*) OVER()"
+	}
 	return storekit.SQLf(`
 			WITH genuine AS (
 				SELECT a.id, a.occurred_at
@@ -115,7 +109,7 @@ func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int) string {
 				JOIN accounts a ON a.entity_id = la.id
 				WHERE a.last_touch < $2%[6]s
 			)
-			SELECT q.entity_type, q.entity_id, q.last_touch
+			SELECT q.entity_type, q.entity_id, q.last_touch%[8]s
 			FROM quiet q
 			WHERE q.last_touch < $2
 			  AND (%[4]s)
@@ -125,10 +119,10 @@ func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int) string {
 		linkIDCoalesceQualified("al"),
 		datasource.RecordCompany,
 		CompanyReachSet(),
-		lastTouchEligibility(),
-		openReminderHoldsEntity(),
+		eligibility,
+		reminder,
 		mailbox.ownerMailboxUnseen("la.owner_id", providersPos),
-		mailbox.ownerMailboxUnseen(quietRecordOwner(), providersPos))
+		mailbox.ownerMailboxUnseen(quietRecordOwner(), providersPos), count)
 }
 
 // lastTouchEligibility is the per-type live-work test, and the collapse that
@@ -155,9 +149,7 @@ func lastTouchEligibility() string {
 			 AND NOT EXISTS (%[5]s))
 		 OR (q.entity_type = '%[3]s' AND EXISTS (
 			   SELECT 1 FROM contact p
-			   JOIN relationship r ON r.contact_id = p.id
-			              AND r.kind = 'deal_stakeholder'
-			              AND r.ended_at IS NULL AND r.archived_at IS NULL
+			   JOIN relationship r ON r.contact_id = p.id AND %[7]s
 			   JOIN deal d ON d.id = r.deal_id
 			              AND d.status = 'open' AND d.archived_at IS NULL
 			   WHERE p.id = q.entity_id
@@ -172,7 +164,8 @@ func lastTouchEligibility() string {
 		datasource.RecordDeal, datasource.RecordCompany, datasource.RecordContact,
 		contactCollapsesIntoAccount(),
 		openChildReminderHoldsAccount(),
-		datasource.RecordLead)
+		datasource.RecordLead,
+		dealseat.CurrentSQL("r"))
 }
 
 // openChildReminderHoldsAccount stops an account being drawn while a record it
@@ -205,27 +198,10 @@ func openChildReminderHoldsAccount() string {
 		           AND coalesce(cd.company_id, ce.company_id) = q.entity_id`
 }
 
-// contactCollapsesIntoAccount is the contact arm's collapse test: a stakeholder
-// currently employed by an ABSORBING account is already covered by that
-// account's own reminder, because CompanyReachSet folds a contact's touches
-// into their employer (companyscope.go's companyArms). Reminding them
-// separately asks one rep about one silence twice.
-//
-// Absorbing, not merely live: an account only absorbs a record when it is
-// ITSELF being drawn. A contact who has gone quiet while their employer is
-// worked regularly folds into an account no reminder is ever written for, and
-// the silence would be reported by nobody — five reminders turned into none,
-// which is worse than the duplication this collapse exists to end.
-//
-// Employment, not the stakeholder seat: the seat is what makes the contact a
-// candidate at all, while employment is what makes the account's anchor include
-// this contact's mail. A seat on a live account's deal does not fold the touch,
-// so collapsing on the seat would silence a contact nobody else covers.
-//
-// Its own statement rather than a clause on the arm above, so the employment
-// currency test stands alone: gates/employmentcurrency_test.go matches per
-// STATEMENT, and mixing this with the seat's own `ended_at IS NULL` would read
-// as an employment arm that skips the helper.
+// contactCollapsesIntoAccount avoids a second reminder when the employer's
+// reminder already covers this contact. A deal seat does not file the touch.
+// Keep this separate from stakeholder filtering so the employment test can
+// distinguish the two end dates.
 func contactCollapsesIntoAccount() string {
 	return `SELECT 1 FROM relationship e
 		         JOIN absorbing_accounts aa ON aa.id = e.company_id
@@ -249,13 +225,17 @@ func contactCollapsesIntoAccount() string {
 // draw entirely. The source/captured_by pair rides along because source alone
 // is a client's to spell, exactly as the genuine CTE reads it.
 func openReminderHoldsEntity() string {
+	return openReminderHoldsEntityFrom("t.source_system = $6")
+}
+
+func openReminderHoldsEntityFrom(sourcePredicate string) string {
 	return `SELECT 1 FROM activity t
 		         JOIN activity_link tl ON tl.activity_id = t.id
 		         WHERE tl.entity_type = q.entity_type
 		           AND ` + linkIDCoalesceQualified("tl") + ` = q.entity_id
 		           AND t.kind = 'task'
 		           AND t.is_done = false AND t.archived_at IS NULL
-		           AND t.source_system = $6
+		           AND ` + sourcePredicate + `
 		           AND t.source = $1
 		           AND (t.captured_by = $4 OR t.captured_by LIKE $5)`
 }
@@ -332,7 +312,15 @@ func openReminderHoldsEntity() string {
 // reminder from THAT handler is still open. Each clock handler passes its own
 // Spec().Name, which is also the source_system its task carries.
 func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int, reminder string) ([]LastTouchCandidate, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+	return s.scanLastTouch(ctx, cutoff, limit, reminder, nil)
+}
+
+func (s *Store) scanLastTouch(ctx context.Context, cutoff time.Time, limit int, reminder string, population *QuietPopulation) ([]LastTouchCandidate, error) {
+	var readers []principal.Principal
+	if population != nil {
+		readers = population.Readers
+	}
+	if err := auth.RequireReadForReaders(ctx, "activity", readers...); err != nil {
 		return nil, err
 	}
 	if limit < 1 {
@@ -344,20 +332,34 @@ func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int
 		// vocabulary (linktarget.go), the same source the coalesce
 		// expression is built from, so a renamed record type cannot leave a
 		// stale string behind in this query.
-		args := []any{systemSource, cutoff, limit, systemCapturedBy, systemCapturedByPattern, reminder}
+		args := []any{systemSource, cutoff, limit, systemCapturedBy, systemCapturedByPattern}
+		if population == nil {
+			args = append(args, reminder)
+		}
 		providersPos := 0
 		if s.ownerMailbox != nil {
 			args = append(args, s.ownerMailbox.Providers)
 			providersPos = len(args)
 		}
-		rows, err := tx.Query(ctx, lastTouchCandidateQuery(s.ownerMailbox, providersPos), args...)
+		var scope *quietQueryScope
+		if population != nil {
+			var err error
+			if scope, err = scopedQuietQuery(ctx, population, &args); err != nil {
+				return err
+			}
+		}
+		rows, err := tx.Query(ctx, lastTouchCandidateQuery(s.ownerMailbox, providersPos, scope), args...)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var c LastTouchCandidate
-			if err := rows.Scan(&c.EntityType, &c.EntityID, &c.LastTouch); err != nil {
+			columns := []any{&c.EntityType, &c.EntityID, &c.LastTouch}
+			if scope != nil {
+				columns = append(columns, &c.Total)
+			}
+			if err := rows.Scan(columns...); err != nil {
 				return err
 			}
 			out = append(out, c)

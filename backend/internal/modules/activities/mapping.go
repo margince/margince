@@ -15,7 +15,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -82,12 +84,10 @@ func (e *ReservedMailIdentityError) FieldFault() (field, code, message string) {
 // fieldKind).
 const fieldBody = "body"
 
-// transcriptSourceSystem is the ADR-0058 marker: a `logActivity` call
-// carrying it identifies its body as pasted/uploaded transcript text rather
-// than ordinary meeting notes, which is what routes it through
-// normalizeTranscript and what the activity/transcript retention selector
-// (privacy/retentionselectors.go) keys its sweep on.
-const transcriptSourceSystem = "transcript"
+// transcriptSourceSystem marks a body as pasted or uploaded transcript text
+// rather than meeting notes. It routes the body through normalizeTranscript,
+// and the activity/transcript retention selector keys its sweep on it.
+const transcriptSourceSystem = meetingoutcome.TranscriptSourceSystem
 
 // faultInvalid is the RFC 7807 code every field refusal in this module carries:
 // the value is well-formed enough to have reached us and is still not one this
@@ -189,24 +189,30 @@ func idArg[K ids.EntityKind](u *openapi_types.UUID) *ids.ID[K] {
 // over the tool surface, which is the whole point of the seam.
 func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int64) UpdateActivityInput {
 	return UpdateActivityInput{
-		DealFiling: req.DealFiling,
-		Subject:    req.Subject,
-		Body:       req.Body,
-		OccurredAt: req.OccurredAt,
+		FollowUpTask: req.FollowUpTask,
+		DealFiling:   req.DealFiling,
+		Subject:      req.Subject,
+		Body:         req.Body,
+		OccurredAt:   req.OccurredAt,
 		// Checked by the store, which also decides what a new time alone means.
 		OccurredPrecision: (*string)(req.OccurredPrecision),
 		DueAt:             req.DueAt,
+		DueIntent:         req.DueIntent,
+		RemindIntent:      req.RemindIntent,
+		MeetingIntent:     req.MeetingIntent,
 		DueHasTime:        req.DueHasTime,
+		TaskType:          req.TaskType,
+		AIAssisted:        req.AiAssisted,
 		RemindAt:          req.RemindAt,
 		AssigneeID:        idArg[ids.UserKind](req.AssigneeId),
 		IsDone:            req.IsDone,
-		// Carried, not checked here: the kind this must pair with belongs to the
-		// stored row, and only the store has read it. UpdateActivity refuses the
-		// mismatch with the same MeetingStatusKindError create raises.
-		MeetingStatus: meetingStatusArg(req.MeetingStatus),
-		CallOutcome:   callOutcomeArg(req.CallOutcome),
-		IfVersion:     ifVersion,
-		CustomFields:  req.AdditionalProperties,
+		// Carried, not checked: the kind it pairs with is on the stored row. The
+		// store refuses a mismatch with create's MeetingStatusKindError.
+		MeetingStatus:    meetingStatusArg(req.MeetingStatus),
+		CallOutcome:      callOutcomeArg(req.CallOutcome),
+		IfVersion:        ifVersion,
+		CustomFields:     req.AdditionalProperties,
+		doneAtAnyVersion: true,
 	}
 }
 
@@ -239,20 +245,13 @@ func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityIn
 	return logActivityInput(req, provenanceAdmission{})
 }
 
-// provenanceAdmission says which reserved identities THIS writer may spell.
-//
-// Two writers, two disjoint sets, and neither is "the reserved names": the
-// engine stamps its quiet-account reminders, the importer stamps its own
-// namespace, and each must stay refused the other's. A single boolean would
-// have opened both sets to whichever writer asked.
-//
-// The zero value admits nothing, so a door that says nothing is the client
-// door — the safe default, and what every existing caller gets.
-type provenanceAdmission struct{ engineReminder, importer bool }
+// The engine and importer each admit only their own reserved identities.
+// Keeping these sets apart prevents either writer from impersonating the other.
+type provenanceAdmission struct{ engineTask, importer bool }
 
 // admits answers whether this writer may spell one reserved source system.
 func (a provenanceAdmission) admits(sourceSystem string) bool {
-	if a.engineReminder && provenance.EngineReminderSource(sourceSystem) {
+	if a.engineTask && provenance.EngineTaskSource(sourceSystem) {
 		return true
 	}
 	return a.importer && provenance.ImporterNamespace(sourceSystem)
@@ -270,16 +269,9 @@ func LogActivityInputFromImporter(req crmcontracts.CreateActivityRequest) (LogAc
 	return logActivityInput(req, provenanceAdmission{importer: true})
 }
 
-// logActivityInputAllowingReminderIdentity is LogActivityInputFrom for the
-// automation engine's own reminder write, which must stamp an identity no
-// client may spell. provider.go's logInputForPrincipal decides who reaches it,
-// on the principal rather than on anything in the request.
-//
-// One body behind both, because the guard is the only difference: a second
-// mapping beside this one would be a second set of rules about the reserved
-// namespace, and the two would drift.
-func logActivityInputAllowingReminderIdentity(req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
-	return logActivityInput(req, provenanceAdmission{engineReminder: true})
+// The system-only door changes admission, while the ordinary mapper keeps all other checks.
+func logActivityInputAllowingTaskIdentity(req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
+	return logActivityInput(req, provenanceAdmission{engineTask: true})
 }
 
 // refuseReservedProvenance guards the two provenance fields on a create wire.
@@ -330,6 +322,7 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 		return LogActivityInput{}, err
 	}
 	in := LogActivityInput{
+		SystemText:     &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, ""), Body: systemtext.Prose(systemtext.Quote, "")},
 		DealFiling:     req.DealFiling,
 		Recommendation: req.Recommendation,
 		Kind:           string(req.Kind),
@@ -338,6 +331,9 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 		OccurredAt:     req.OccurredAt,
 		DueAt:          req.DueAt,
 		DueHasTime:     req.DueHasTime != nil && *req.DueHasTime,
+		TaskType:       req.TaskType,
+		AIAssisted:     req.AiAssisted != nil && *req.AiAssisted,
+		AIAssistedOn:   linkInputOf(req.AiAssistedOn),
 		RemindAt:       req.RemindAt,
 		SourceSystem:   req.SourceSystem,
 		SourceID:       req.SourceId,
@@ -348,7 +344,6 @@ func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmi
 	if err := validateDealFiling(in.Kind, in.DealFiling); err != nil {
 		return LogActivityInput{}, err
 	}
-
 	if err := optionalFieldsFrom(req, &in); err != nil {
 		return LogActivityInput{}, err
 	}
@@ -411,10 +406,7 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 		id := ids.UUID(*req.RequestActivityId)
 		in.RequestActivityID = &id
 	}
-	// The caller states the transport; nothing infers it. The predecessor of this
-	// read the provider back out of the kind, which was only ever a translation of
-	// an input shape that could not say what it meant — and since ADR-0107/A158 the
-	// kind does not name a transport at all.
+	// The caller states the transport; the kind does not name one.
 	if req.ChannelProvider != nil {
 		in.ChannelProvider = *req.ChannelProvider
 	}
@@ -425,10 +417,15 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 	if req.OccurredPrecision != nil {
 		in.OccurredPrecision = string(*req.OccurredPrecision)
 	}
+	// After the precision: a chosen meeting start refuses a whole-day meeting.
+	in.DueIntent, in.RemindIntent, in.MeetingIntent = req.DueIntent, req.RemindIntent, req.MeetingIntent
+	if err := in.admitPickedTimes(); err != nil {
+		return err
+	}
 	if err := checkMeetingStatusKind(in.Kind, meetingStatusOf(req.MeetingStatus)); err != nil {
 		return err
 	}
-	if err := checkTaskFieldsKind(in.Kind, taskFields{dueAt: req.DueAt, remindAt: req.RemindAt, assignee: idArg[ids.UserKind](req.AssigneeId)}); err != nil {
+	if err := checkTaskFieldsKind(in.Kind, taskFields{dueAt: in.DueAt, remindAt: in.RemindAt, assignee: in.AssigneeID}); err != nil {
 		return err
 	}
 	if req.MeetingStatus != nil {
@@ -466,6 +463,10 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 			in.AttendeeUserIDs = append(in.AttendeeUserIDs, ids.From[ids.UserKind](ids.UUID(attendee)))
 		}
 	}
+	if req.SenderContactId != nil {
+		sender := ids.UUID(*req.SenderContactId)
+		in.SenderContactID = &sender
+	}
 	if req.Links != nil {
 		for _, link := range *req.Links {
 			in.Links = append(in.Links, ActivityLinkInput{
@@ -487,4 +488,12 @@ func importedProvenanceFrom(req crmcontracts.CreateActivityRequest, in *LogActiv
 	}
 	in.DurationSeconds = req.DurationSeconds
 	return mailIdentityFrom(req, in)
+}
+
+// linkInputOf reads one contract link as the store's, nil for none.
+func linkInputOf(link *crmcontracts.ActivityLink) *ActivityLinkInput {
+	if link == nil {
+		return nil
+	}
+	return &ActivityLinkInput{EntityType: string(link.EntityType), EntityID: ids.UUID(link.EntityId)}
 }

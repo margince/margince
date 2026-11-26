@@ -50,10 +50,6 @@ func TestEveryPendingDomainReasonAsksOnlyItsDecider(t *testing.T) {
 				captureStaffMail(t, e, mail)
 				runVendorTriage(t, e, domain)
 				e.WsExec(t, `UPDATE company_domain_disposition SET pending_reason = $2 WHERE domain = $1`, domain, reason)
-				for _, seat := range []ids.UUID{e.Rep1, e.Rep2} {
-					e.WsExec(t, `INSERT INTO company_domain_question_reader (domain, reader_id, evidence_at)
-						VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, domain, seat, now.Add(-age))
-				}
 			}
 
 			raise("sole.example", []ids.UUID{e.Rep1}, time.Hour)
@@ -108,9 +104,6 @@ func TestNewerMailReturnsADeferredQuestionToADeciderWithNoReaderRow(t *testing.T
 	mail("deferred-1", now.Add(-2*time.Hour))
 	runVendorTriage(t, e, domain)
 	e.WsExec(t, `UPDATE company_domain_disposition SET pending_reason = $2 WHERE domain = $1`, domain, contacts.PendingUnevidenced)
-	if n := e.WsCount(t, `SELECT count(*) FROM company_domain_question_reader WHERE domain = $1 AND reader_id = $2`, domain, e.Rep1); n != 0 {
-		t.Fatalf("fixture: the decider holds %d reader rows, want none", n)
-	}
 	if !asksAbout(rep1, t, e, domain) {
 		t.Fatal("the sole direct recipient was not asked")
 	}

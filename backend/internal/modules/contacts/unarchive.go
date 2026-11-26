@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // restoreRelationship brings a link back only while every record it links is
@@ -48,8 +47,15 @@ var contactUnarchive = storekit.UnarchiveShape{
 		LIMIT 1`,
 	TakenFrom: tableContactEmail, TakenField: takenEmail,
 	Children: []storekit.ChildRestore{
-		{Table: tableContactEmail, Statement: `UPDATE contact_email SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
-		{Table: tableContactPhone, Statement: `UPDATE contact_phone p SET archived_at = NULL
+		{Table: tableContactEmail, Statement: `UPDATE contact_email e SET archived_at = NULL,
+			is_primary = e.is_primary AND NOT EXISTS (SELECT 1 FROM contact_email o
+			  WHERE o.contact_id = e.contact_id AND o.id <> e.id AND o.is_primary
+			    AND (o.archived_at IS NULL OR (o.archived_at = $2 AND (o.position, o.created_at, o.email) < (e.position, e.created_at, e.email))))
+			WHERE e.id = $1 AND e.archived_at = $2`},
+		{Table: tableContactPhone, Statement: `UPDATE contact_phone p SET archived_at = NULL,
+			is_primary = p.is_primary AND NOT EXISTS (SELECT 1 FROM contact_phone o
+			  WHERE o.contact_id = p.contact_id AND o.id <> p.id AND o.is_primary
+			    AND (o.archived_at IS NULL OR (o.archived_at = $2 AND (o.position, o.created_at, o.id) < (p.position, p.created_at, p.id))))
 			WHERE p.id = $1 AND p.archived_at = $2 AND ` + supportedSignaturePhone},
 		{Table: "contact_channel_identity", Statement: `UPDATE contact_channel_identity SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
 		{Table: tableRelationship, Statement: restoreRelationship},
@@ -91,10 +97,18 @@ func (s *Store) RestoreContactTx(
 // RestoreContactLeavingTwinsTx is RestoreContactTx for a caller that restores
 // several contacts in one transaction. It files their twins afterwards with
 // FileRestoredEmployerTwinsTx, once every contact row it changes is locked.
+//
+//gate:parent-version-door
 func (s *Store) RestoreContactLeavingTwinsTx(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64, with storekit.RestoreWith,
 ) (storekit.RestoreReport, error) {
-	if err := ensureRestorable(ctx, tx, contactEntity, id.UUID); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.ContactArchive); err != nil {
+		return storekit.RestoreReport{}, err
+	}
+	if _, err := storekit.LockRow(ctx, tx, contactEntity, id.UUID, storekit.IncludeArchived); err != nil {
+		return storekit.RestoreReport{}, err
+	}
+	if err := ensureRestorable(ctx, tx, auth.ContactArchive, contactEntity, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
 	if err := refuseRestoreOverLead(ctx, tx, id); err != nil {
@@ -113,7 +127,7 @@ func (s *Store) RestoreContactLeavingTwinsTx(
 func (s *Store) FileRestoredEmployerTwinsTx(ctx context.Context, tx pgx.Tx, restored []ids.ContactID) error {
 	// The restore's own right: only a caller that brought these contacts back
 	// files what the restore created.
-	if err := auth.Require(ctx, contactEntity, principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.ContactArchive); err != nil {
 		return err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -171,21 +185,35 @@ func refuseRestoreOverLead(ctx context.Context, tx pgx.Tx, id ids.ContactID) err
 }
 
 // RestoreCompanyTx is RestoreContactTx for a company.
+//
+//gate:parent-version-door
 func (s *Store) RestoreCompanyTx(
 	ctx context.Context, tx pgx.Tx, id ids.CompanyID, ifVersion *int64, with storekit.RestoreWith,
 ) (storekit.RestoreReport, error) {
-	if err := ensureRestorable(ctx, tx, companyEntity, id.UUID); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.CompanyArchive); err != nil {
 		return storekit.RestoreReport{}, err
 	}
-	return storekit.Unarchive(ctx, tx, companyUnarchive, id.UUID, ifVersion, with)
+	if _, err := storekit.LockRow(ctx, tx, companyEntity, id.UUID, storekit.IncludeArchived); err != nil {
+		return storekit.RestoreReport{}, err
+	}
+	if err := ensureRestorable(ctx, tx, auth.CompanyArchive, companyEntity, id.UUID); err != nil {
+		return storekit.RestoreReport{}, err
+	}
+	report, err := storekit.Unarchive(ctx, tx, companyUnarchive, id.UUID, ifVersion, with)
+	if err != nil {
+		return report, err
+	}
+	// The restore puts the company's domains back, the own company's among them.
+	return report, storekit.OwnCompanyDomainsChanged(ctx, tx, id.UUID)
 }
 
-// ensureRestorable asks what the archive asks: the delete grant on the type
-// and write authority on the row. Not the live twin — the row is archived by
-// definition, and bringing it back is the write that reaches it on purpose.
-func ensureRestorable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
-	if err := auth.Require(ctx, table, principal.ActionDelete); err != nil {
+// ensureRestorable asks what the archive asks of the row: write authority and
+// auth.EnsureRestorable. The caller asks the rule's grant and takes the row
+// lock first, so both are judged under it. Not the live twin: the row is
+// archived by definition, and a restore is the write meant to reach it.
+func ensureRestorable(ctx context.Context, tx pgx.Tx, rule auth.ArchiveRule, table string, id ids.UUID) error {
+	if err := auth.EnsureWritable(ctx, tx, table, id); err != nil {
 		return err
 	}
-	return auth.EnsureWritable(ctx, tx, table, id)
+	return auth.EnsureRestorable(ctx, tx, rule, id)
 }

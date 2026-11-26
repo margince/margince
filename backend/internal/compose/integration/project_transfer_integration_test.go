@@ -121,6 +121,7 @@ func TestTransferProjectOwnershipMovesOnlyWhatTheCallerCouldWrite(t *testing.T) 
 		project ids.ProjectID
 		access  string
 	}{{shared.ID, "write"}, {readOnly.ID, "read"}} {
+		e.GrantRole(t, e.Rep1, "rep")
 		if _, err := svc.CreateRecordGrant(granter, identity.CreateGrantInput{
 			RecordType: "project", RecordID: grant.project.UUID,
 			SubjectType: "user", SubjectID: e.Rep1, Access: grant.access,

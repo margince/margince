@@ -10,12 +10,13 @@
 import { CheckSquare, FileText, Send } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { useActivityWritable } from "../../components/activitygate";
+import { useActivityGate } from "../../components/activitygate";
 import { useClaimSettle } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { stable } from "../../format/collate";
 import { useT } from "../../i18n";
+import { type MomentVerbKind, momentVerbWrites } from "../../lib/writeverbs";
 import {
   basisAddsARecord,
   citationOpensRecord,
@@ -45,28 +46,36 @@ export function byStrengthThenId(
 // both pages meets one verb column rather than two spellings of it.
 function MomentVerb({
   label,
+  labelIsData,
   icon,
   primary,
-  writes,
+  kind,
   onAct,
 }: Readonly<{
   label: string;
+  // The server wrote the label, so it may be one long word that has to wrap.
+  labelIsData?: boolean;
   // The glyph naming the verb's kind. Absent on the server's own verb, whose
   // label is the server's sentence rather than one of the kinds this page
   // draws — a guessed glyph there would name a kind nobody stated.
   icon?: ReactNode;
   primary?: boolean;
-  // The press files an activity, which a seat without the grant is refused.
-  writes?: boolean;
+  // What the press does, as the server names it; whether it writes is the
+  // server's classification of that kind.
+  kind: MomentVerbKind;
   onAct: () => void;
 }>) {
-  const writable = useActivityWritable();
-  if (writes && !writable) {
+  const gate = useActivityGate("company");
+  if (momentVerbWrites(kind) && gate.refusalKey !== undefined) {
     return null;
   }
   return (
     <span className="today-verb">
-      <Button variant={primary ? "primary" : "ghost"} onClick={onAct}>
+      <Button
+        variant={primary ? "primary" : "ghost"}
+        className={labelIsData ? "btn-valuelabel" : undefined}
+        onClick={onAct}
+      >
         {icon}
         {label}
       </Button>
@@ -103,7 +112,13 @@ export function momentVerb({
   // The accent, not indigo: the moment is picked from a fixed rule ladder and
   // never written by a model. Indigo would claim that an agent wrote it.
   return (
-    <MomentVerb primary label={label} onAct={() => onOpenRecord(type, id)} />
+    <MomentVerb
+      primary
+      labelIsData
+      kind="open_record"
+      label={label}
+      onAct={() => onOpenRecord(type, id)}
+    />
   );
 }
 
@@ -133,7 +148,7 @@ export function momentFallbackVerb({
 }>): ReactNode {
   const secondary = onLogActivity ? (
     <MomentVerb
-      writes
+      kind="log_activity"
       label={t("log.title")}
       icon={<FileText size={15} aria-hidden="true" />}
       onAct={onLogActivity}
@@ -148,6 +163,7 @@ export function momentFallbackVerb({
       <>
         <MomentVerb
           primary
+          kind="open_record"
           label={t("today.moment.act.openTask")}
           icon={<CheckSquare size={15} aria-hidden="true" />}
           onAct={() => onOpenTask(task.activity_id)}
@@ -165,7 +181,7 @@ export function momentFallbackVerb({
   const sendVerb = (label: string) => (
     <MomentVerb
       primary
-      writes
+      kind="draft_reply"
       label={label}
       icon={<Send size={15} aria-hidden="true" />}
       onAct={draftTo}

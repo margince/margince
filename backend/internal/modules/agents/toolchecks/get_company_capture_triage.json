@@ -1,0 +1,9 @@
+{
+  "verb": "get_company_capture_triage",
+  "checks": [
+    "company.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

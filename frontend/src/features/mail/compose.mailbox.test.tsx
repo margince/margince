@@ -6,14 +6,15 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { draftButton } from "../../testing/composedraft.testkit";
-import { ComposeModal } from "./compose";
+import { allowedPreview } from "../../testing/sendpermission.testkit";
 import { findThreadChoice } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // Whose conversation the composer is answering.
 //
@@ -65,6 +66,18 @@ function stubRoutes(
       const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
       const override = overrides[key];
       if (override) return override();
+      if (key === "GET /connectors") {
+        return jsonResponse({
+          data: [
+            {
+              id: "conn-1",
+              provider: "gmail",
+              status: "connected",
+              scopes: [],
+            },
+          ],
+        });
+      }
       return jsonResponse({});
     }),
   );
@@ -125,6 +138,8 @@ describe("whose mailbox the composer is answering from", () => {
           page: { next_cursor: null, has_more: false },
         }),
       "GET /activities/act-charlotte": () => jsonResponse(colleaguesMail),
+      "POST /activities/act-charlotte/send-email:preview": () =>
+        jsonResponse(allowedPreview(["accounts@vendor.test"])),
       "GET /activities/act-charlotte/reply-recipient": () =>
         jsonResponse({
           full_name: "Accounts Singapore",
@@ -137,25 +152,27 @@ describe("whose mailbox the composer is answering from", () => {
   }
 
   async function openOnColleaguesThread(
+    user: UserEvent,
     mailboxUserIds: string[],
     standing?: Parameters<typeof mailboxRoutes>[1],
   ) {
     stubRoutes(mailboxRoutes(mailboxUserIds, standing));
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
         onClose={vi.fn()}
       />,
     );
-    await userEvent.click(await findThreadChoice(/ACTION REQUIRED/));
+    await user.click(await findThreadChoice(user, /ACTION REQUIRED/));
   }
 
   // The positive control. Every withholding case below is only meaningful
   // because this one proves the notice renders at all when it should.
   it("names the colleague whose mailbox took delivery", async () => {
-    await openOnColleaguesThread(["u-charlotte"]);
+    const user = userEvent.setup();
+    await openOnColleaguesThread(user, ["u-charlotte"]);
     expect(await screen.findByText(/Charlotte Weber’s mailbox/)).toBeTruthy();
     // And says where the reply goes and comes from, which is the half that
     // stops a reader taking Charlotte for the recipient or the sender.
@@ -169,7 +186,8 @@ describe("whose mailbox the composer is answering from", () => {
   // The reader's own mailbox took delivery too, so this thread reached them.
   // Answering your own mail is not answering somebody else's.
   it("says nothing when the reader's own mailbox took delivery", async () => {
-    await openOnColleaguesThread(["u-charlotte", "u-lars"]);
+    const user = userEvent.setup();
+    await openOnColleaguesThread(user, ["u-charlotte", "u-lars"]);
     await draftButton();
     expect(screen.queryByText(/mailbox/)).toBeNull();
   });
@@ -177,7 +195,8 @@ describe("whose mailbox the composer is answering from", () => {
   // A hand-logged activity was typed by somebody rather than delivered to
   // anybody. An empty list is an answer, and the answer is "nobody's".
   it("says nothing when no mailbox took delivery", async () => {
-    await openOnColleaguesThread([]);
+    const user = userEvent.setup();
+    await openOnColleaguesThread(user, []);
     await draftButton();
     expect(screen.queryByText(/mailbox/)).toBeNull();
   });
@@ -185,6 +204,7 @@ describe("whose mailbox the composer is answering from", () => {
   // Several colleagues, joined by the locale's own conjunction rather than a
   // comma list an i18n key would have to spell per language.
   it("names every colleague when a thread reached more than one", async () => {
+    const user = userEvent.setup();
     stubRoutes({
       ...mailboxRoutes(["u-charlotte", "u-mara"]),
       "GET /users": () =>
@@ -202,14 +222,14 @@ describe("whose mailbox the composer is answering from", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
         onClose={vi.fn()}
       />,
     );
-    await userEvent.click(await findThreadChoice(/ACTION REQUIRED/));
+    await user.click(await findThreadChoice(user, /ACTION REQUIRED/));
     expect(
       await screen.findByText(/Charlotte Weber and Mara Ott/),
     ).toBeTruthy();
@@ -218,6 +238,7 @@ describe("whose mailbox the composer is answering from", () => {
   // A seat the roster cannot name still gets a complete sentence. The label is
   // a whole noun phrase, never a fragment the possessive would mangle.
   it("falls back to a complete label for a seat the roster cannot name", async () => {
+    const user = userEvent.setup();
     stubRoutes({
       ...mailboxRoutes(["u-ghost"]),
       "GET /users": () =>
@@ -227,14 +248,14 @@ describe("whose mailbox the composer is answering from", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
         onClose={vi.fn()}
       />,
     );
-    await userEvent.click(await findThreadChoice(/ACTION REQUIRED/));
+    await user.click(await findThreadChoice(user, /ACTION REQUIRED/));
     const notice = await screen.findByText(/came in to a colleague’s mailbox/);
     expect(notice).toBeTruthy();
     // Never the raw id, and never the doubled possessive a bare fragment makes.
@@ -244,19 +265,20 @@ describe("whose mailbox the composer is answering from", () => {
 
   // Until the viewer is known, every thread would read as somebody else's.
   it("says nothing while the reader is not yet known", async () => {
+    const user = userEvent.setup();
     stubRoutes({
       ...mailboxRoutes(["u-charlotte"]),
       "GET /me": () => emptyResponse(401),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
         onClose={vi.fn()}
       />,
     );
-    await userEvent.click(await findThreadChoice(/ACTION REQUIRED/));
+    await user.click(await findThreadChoice(user, /ACTION REQUIRED/));
     await draftButton();
     expect(screen.queryByText(/mailbox/)).toBeNull();
   });
@@ -292,7 +314,7 @@ describe("whose mailbox the composer is answering from", () => {
       },
     });
     const view = render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         activityId="act-charlotte"
@@ -307,7 +329,7 @@ describe("whose mailbox the composer is answering from", () => {
     view.rerender(
       <QueryClientProvider client={view.queryClient}>
         <LocaleProvider initial="en">
-          <ComposeModal
+          <ComposeWindow
             entityType="company"
             entityId="company-1"
             activityId="act-mine"
@@ -326,6 +348,7 @@ describe("whose mailbox the composer is answering from", () => {
   // An older server that does not send the field at all must not be read as
   // "a colleague's", nor crash the composer.
   it("says nothing when the server does not send the field", async () => {
+    const user = userEvent.setup();
     stubRoutes({
       ...mailboxRoutes([]),
       "GET /activities/act-charlotte/reply-recipient": () =>
@@ -336,14 +359,14 @@ describe("whose mailbox the composer is answering from", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
         onClose={vi.fn()}
       />,
     );
-    await userEvent.click(await findThreadChoice(/ACTION REQUIRED/));
+    await user.click(await findThreadChoice(user, /ACTION REQUIRED/));
     await draftButton();
     expect(screen.queryByText(/mailbox|not on this thread/)).toBeNull();
   });
@@ -352,7 +375,8 @@ describe("whose mailbox the composer is answering from", () => {
   // it is told so, and who owns the deal, and the send stays theirs to make.
   describe("a reader who is not on the thread", () => {
     it("is told so, with the deal owner named", async () => {
-      await openOnColleaguesThread(["u-charlotte"], {
+      const user = userEvent.setup();
+      await openOnColleaguesThread(user, ["u-charlotte"], {
         viewer_on_conversation: false,
         deal_owner_user_id: "u-charlotte",
       });
@@ -364,7 +388,8 @@ describe("whose mailbox the composer is answering from", () => {
     });
 
     it("is told only that when the deal has no owner", async () => {
-      await openOnColleaguesThread(["u-charlotte"], {
+      const user = userEvent.setup();
+      await openOnColleaguesThread(user, ["u-charlotte"], {
         viewer_on_conversation: false,
         deal_owner_user_id: null,
       });
@@ -375,7 +400,8 @@ describe("whose mailbox the composer is answering from", () => {
     });
 
     it("never names an owner the roster cannot", async () => {
-      await openOnColleaguesThread(["u-charlotte"], {
+      const user = userEvent.setup();
+      await openOnColleaguesThread(user, ["u-charlotte"], {
         viewer_on_conversation: false,
         deal_owner_user_id: "u-former",
       });
@@ -386,7 +412,8 @@ describe("whose mailbox the composer is answering from", () => {
     });
 
     it("hears it on its own when no colleague's mailbox took the thread", async () => {
-      await openOnColleaguesThread([], {
+      const user = userEvent.setup();
+      await openOnColleaguesThread(user, [], {
         viewer_on_conversation: false,
         deal_owner_user_id: "u-charlotte",
       });
@@ -398,19 +425,21 @@ describe("whose mailbox the composer is answering from", () => {
     });
 
     it("can still send", async () => {
-      await openOnColleaguesThread(["u-charlotte"], {
+      const user = userEvent.setup();
+      await openOnColleaguesThread(user, ["u-charlotte"], {
         viewer_on_conversation: false,
         deal_owner_user_id: "u-charlotte",
       });
       await screen.findByText(/You are not on this thread/);
       const send = screen.getByRole("button", { name: /^Send$/ });
-      expect(send.hasAttribute("disabled")).toBe(false);
+      await waitFor(() => expect(send.hasAttribute("disabled")).toBe(false));
       expect(send.getAttribute("aria-disabled")).not.toBe("true");
     });
   });
 
   it("adds nothing about the thread for a reader on it", async () => {
-    await openOnColleaguesThread(["u-charlotte"], {
+    const user = userEvent.setup();
+    await openOnColleaguesThread(user, ["u-charlotte"], {
       viewer_on_conversation: true,
       deal_owner_user_id: "u-charlotte",
     });

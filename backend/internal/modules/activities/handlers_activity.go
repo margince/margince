@@ -34,6 +34,10 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 			in.Kinds = append(in.Kinds, string(kind))
 		}
 	}
+	if params.WebsiteFormId != nil {
+		id := ids.UUID(*params.WebsiteFormId)
+		in.WebsiteFormID = &id
+	}
 	in.ChannelProvider = params.ChannelProvider
 	if params.CallOutcome != nil {
 		outcome := string(*params.CallOutcome)
@@ -54,6 +58,7 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 	}
 	in.WaitingReply = params.WaitingReply != nil && *params.WaitingReply
 	in.RemindersDue = params.ReminderDue != nil && *params.ReminderDue
+	in.CollapseSeatCopies = params.CollapseCopies != nil && *params.CollapseCopies
 
 	activities, page, err := h.store.ListActivities(r.Context(), in)
 	if err != nil {

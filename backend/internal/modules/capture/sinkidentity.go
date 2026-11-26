@@ -114,8 +114,8 @@ func OccurrenceText(id connector.CrossDoorIdentity) string {
 	return id.Occurrence.UTC().Format(time.RFC3339)
 }
 
-// activityHoldingIdentity answers the activity another door already filed this
-// message under, and whether one did.
+// activityHoldingStatedIdentity answers the activity another door already
+// filed this message under, and whether one did.
 //
 // False covers four cases deliberately, because none is an error and each
 // leads to the same place: this sink files no cross-door identity, this record
@@ -123,7 +123,7 @@ func OccurrenceText(id connector.CrossDoorIdentity) string {
 // different seat holds it, or its holder was erased. The caller captures the
 // message as its own row either way, which is what keeps the refusal from
 // becoming an existence oracle (activities.ResolveBindableIdentity).
-func (s *Sink) activityHoldingIdentity(
+func (s *Sink) activityHoldingStatedIdentity(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord,
 ) (ids.ActivityID, bool, error) {
 	kind, key := s.identityOfRecord(rec)
@@ -158,8 +158,10 @@ func (s *Sink) claimRecordIdentity(
 	}
 	// The connector's own stamp: this identity was OBSERVED by a provider that
 	// held the message, not asserted by a caller who typed its header.
-	_, err := s.claimIdentity(ctx, tx, id, kind, key, capturedByFor(ctx, rec))
-	return err
+	if _, err := s.claimIdentity(ctx, tx, id, kind, key, capturedByFor(ctx, rec)); err != nil {
+		return err
+	}
+	return s.claimSeatCopy(ctx, tx, id, rec)
 }
 
 // reclaimMeetingIdentity files a REPLAYED meeting under its identity again,
@@ -179,4 +181,70 @@ func (s *Sink) reclaimMeetingIdentity(
 		return nil
 	}
 	return s.claimRecordIdentity(ctx, tx, id, rec)
+}
+
+// calendarSendPrefix opens the key the copies of one calendar send share. It
+// holds a space, which no Message-ID or References token can, so the key never
+// meets a real message's identity.
+const calendarSendPrefix = "calendar-send "
+
+// calendarSendKey is the identity of one calendar send in one seat's mailbox,
+// or "". Only that seat's mailbox holds the copies, and a shared mailbox binds
+// to nobody (activities.BindableTo), so neither gets a key.
+func calendarSendKey(seat ids.UUID, send string) string {
+	if seat == ids.Nil || send == "" {
+		return ""
+	}
+	return calendarSendPrefix + seat.String() + " " + send
+}
+
+// seatCopyKey is the identity the copies of one message in one seat's mailbox
+// share, or "". The copies are a calendar send's per-guest copies, or the
+// seat's forwards to self of one original. Each is one activity.
+func seatCopyKey(seat ids.UUID, rec connector.NormalizedRecord) string {
+	fields, isActivity := rec.Fields.(ActivityFields)
+	if !isActivity {
+		return ""
+	}
+	if key := calendarSendKey(seat, fields.CalendarSend); key != "" {
+		return key
+	}
+	return forwardKey(seat, fields)
+}
+
+// activityHoldingIdentity is activityHoldingStatedIdentity, and then the
+// activity another copy in this seat's mailbox filed (seatCopyKey). A copy
+// whose own natural key is stored already replays as that row, so the rows
+// stored apart stay apart.
+func (s *Sink) activityHoldingIdentity(
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord,
+) (ids.ActivityID, bool, error) {
+	known, found, err := s.activityHoldingStatedIdentity(ctx, tx, rec)
+	if err != nil || found {
+		return known, found, err
+	}
+	key := seatCopyKey(actorUserID(ctx), rec)
+	if key == "" || s.mailIdentityKind == "" || s.resolveIdentity == nil {
+		return ids.ActivityID{}, false, nil
+	}
+	var stored bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity WHERE source_system = $1 AND source_id = $2)`,
+		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID).Scan(&stored); err != nil {
+		return ids.ActivityID{}, false, fmt.Errorf("capture: reading whether a calendar copy is stored: %w", err)
+	}
+	if stored {
+		return ids.ActivityID{}, false, nil
+	}
+	return s.resolveIdentity(ctx, tx, s.mailIdentityKind, key)
+}
+
+// claimSeatCopy files a new row under its seatCopyKey, so the other copies
+// resolve onto it. A lost claim leaves the row as it is.
+func (s *Sink) claimSeatCopy(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord) error {
+	key := seatCopyKey(actorUserID(ctx), rec)
+	if key == "" || s.mailIdentityKind == "" {
+		return nil
+	}
+	_, err := s.claimIdentity(ctx, tx, id, s.mailIdentityKind, key, capturedByFor(ctx, rec))
+	return err
 }

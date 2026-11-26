@@ -313,6 +313,8 @@ func (s *standingEnv) offered(t *testing.T, row ids.UUID) string {
 func TestAWrittenAboutRowOffersItsOneLinkedContact(t *testing.T) {
 	s := setupStanding(t)
 	deal := activities.ActivityLinkInput{EntityType: "deal", EntityID: s.dealOwnedBy(t, s.Rep3)}
+	// Rep1 writes the note onto Rep3's deal, so Rep1 needs a write share.
+	s.ShareForWriting(t, "deal", deal.EntityID, "user", s.Rep1)
 	cases := []struct {
 		name, want string
 		row        func(t *testing.T) ids.UUID

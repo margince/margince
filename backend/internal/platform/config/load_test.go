@@ -315,3 +315,17 @@ func TestYAMLSourcesUseTheConfiguredFileReader(t *testing.T) {
 		})
 	}
 }
+
+func TestFileOnlySettingsReadYAMLAndRejectFlagOverrides(t *testing.T) {
+	setting := config.Define(config.Spec[string]{Key: "feature", Type: config.String, Default: config.Some("on"), Doc: "Feature."})
+	cfg, err := load(t, fixture{files: map[string]string{"margince.yaml": "feature: off\n"}, env: []string{"MARGINCE_FEATURE=on"}}, setting)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := config.Val(cfg, setting); got != "off" {
+		t.Fatalf("feature = %q", got)
+	}
+	if _, err := load(t, fixture{args: []string{"--feature=on"}}, setting); err == nil {
+		t.Fatal("file-only setting accepted a command-line override")
+	}
+}

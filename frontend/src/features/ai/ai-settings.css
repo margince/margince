@@ -123,42 +123,6 @@
   overflow-wrap: anywhere;
 }
 
-/* The paste field and the verbs that act on it, on one line: the box takes the
- * width and Save sits at the end of it, where a reader's eye already is when
- * they finish pasting. Removal follows Save because it is the rarer act and the
- * destructive one, so it is never the button under the cursor.
- *
- * `align-items: start` rather than centre: the field can grow a validation line
- * under it, and centred buttons would then drift down beside a box that has not
- * moved. */
-.ai-key-entry {
-  display: flex;
-  align-items: start;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-/* The field takes the slack and the buttons take their own content. A floor, so
- * a password box never squeezes to a width nothing can be pasted into — below
- * it the row wraps and the buttons take a line of their own. */
-.ai-key-entry > :first-child {
-  flex: 1 1 16rem;
-  min-width: 0;
-}
-
-/* A key file's verbs sit under its box rather than beside it, at their own
- * width: the box is too tall to share a line with them. */
-.ai-key-verbs {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.ai-key-stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
 /* Under the lanes: what the model lists are as of, then the installation
  * profile that limits which providers a tier may name. */
 .ai-sheet-age {
@@ -238,7 +202,6 @@
   width: 0.625rem;
   height: 0.625rem;
   border-radius: 50%;
-  corner-shape: round;
 }
 
 .ai-health-dot-ok {
@@ -520,7 +483,6 @@
   width: var(--space-2);
   height: var(--space-2);
   border-radius: 50%;
-  corner-shape: round;
   background: var(--accent);
   transform: translate(-50%, -50%);
 }

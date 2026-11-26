@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -40,8 +41,23 @@ func selectLocalBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, err
 		httpc.Transport = googleFixture{base: cfg.BaseURL}
 		cfg.BaseURL, cfg.Location = "", "eu"
 	}
+	if cfg.Provider == providerAzureOpenAI {
+		httpc.Transport = azureFixture{base: cfg.BaseURL}
+		cfg.BaseURL, cfg.Location = azureTestEndpoint, azureTestRegion
+	}
 	return selectBrainOn(cfg, keys, httpc)
 }
+
+// fixtureTransport is the fixtures' own connection pool. httptest.Server.Close
+// drops every idle connection of http.DefaultTransport, so on the shared pool a
+// parallel test's Close breaks a request that has just reused a connection.
+var fixtureTransport http.RoundTripper = func() http.RoundTripper {
+	base, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		panic(fmt.Sprintf("the fixtures clone http.DefaultTransport, which is a %T here", http.DefaultTransport))
+	}
+	return base.Clone()
+}()
 
 // googleFixture answers the token exchange itself and sends every other
 // Google request to base; any other host is dialled as addressed.
@@ -52,7 +68,7 @@ func (g googleFixture) RoundTrip(req *http.Request) (*http.Response, error) {
 		return tokenReply{status: http.StatusOK, body: `{"access_token":"ya29.fixture","expires_in":3600}`}.response(), nil
 	}
 	if !strings.HasSuffix(req.URL.Hostname(), ".googleapis.com") {
-		return http.DefaultTransport.RoundTrip(req)
+		return fixtureTransport.RoundTrip(req)
 	}
 	target, err := url.Parse(g.base)
 	if err != nil {
@@ -60,7 +76,21 @@ func (g googleFixture) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 	routed := req.Clone(req.Context())
 	routed.URL.Scheme, routed.URL.Host, routed.Host = target.Scheme, target.Host, target.Host
-	return http.DefaultTransport.RoundTrip(routed)
+	return fixtureTransport.RoundTrip(routed)
+}
+
+// azureFixture sends every request for the Azure resource host to base.
+// That is how an httptest server stands in for a host the placement rule pins.
+type azureFixture struct{ base string }
+
+func (a azureFixture) RoundTrip(req *http.Request) (*http.Response, error) {
+	target, err := url.Parse(a.base)
+	if err != nil {
+		return nil, err
+	}
+	routed := req.Clone(req.Context())
+	routed.URL.Scheme, routed.URL.Host, routed.Host = target.Scheme, target.Host, target.Host
+	return fixtureTransport.RoundTrip(routed)
 }
 
 // cloudKeyFor supplies one provider's key and nothing else, so a case that

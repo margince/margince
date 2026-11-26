@@ -12,6 +12,9 @@ import { countryOptions } from "../../format/assignedcountries";
 import { formatAnalyticsNumber } from "../../format/format";
 import { INDUSTRY_CODES, industryLabelKey } from "../../format/industry";
 import { type Translator, useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { useHealthScope } from "../../lib/healthscope";
+import { valueFor } from "../../lib/labelfor";
 import { useSalesInitiatives } from "./reporting.initiatives.queries";
 import type { ReportingSelection } from "./reporting.model";
 import { VALUE_BASES, valueBasisOf } from "./reporting.selection";
@@ -79,8 +82,9 @@ type DimensionKey = (typeof DIMENSION_KEYS)[number];
 
 /** The products a reader may narrow a report to: the live, active catalog. */
 export function useProductOptions(enabled = true) {
+  const readerScope = useHealthScope();
   return useQuery({
-    queryKey: ["reporting-products"],
+    queryKey: ["reporting-products", readerScope ?? ""],
     queryFn: async () => {
       const { data, error } = await api.GET("/products", {
         params: { query: { active: true, limit: 200, sort: "name" } },
@@ -91,7 +95,7 @@ export function useProductOptions(enabled = true) {
         label: product.name,
       }));
     },
-    enabled,
+    enabled: enabled && readerScope !== undefined,
     staleTime: 60_000,
   });
 }
@@ -254,6 +258,18 @@ export function FoldedDimensions({
   );
 }
 
+// A manager's own teams read as one team's sales, never as the company's.
+const SCOPE_PROFILE: Readonly<
+  Record<ReportingSelection["scope"]["kind"], MessageKey>
+> = {
+  workspace: "analytics.overview.profileCompany",
+  managed_teams: "analytics.overview.profileTeam",
+  team: "analytics.overview.profileTeam",
+  owner: "analytics.overview.profileSeller",
+};
+// A scope this build does not know claims no one's sales, company or team.
+const UNNAMED_PROFILE: MessageKey = "reporting.sales";
+
 function industryName(code: string, t: Translator): string {
   const key = industryLabelKey(code);
   return key ? t(key) : code;
@@ -337,7 +353,7 @@ export function DimensionChips({
           ? t("analytics.overview.profileInitiative")
           : selection.product_id
             ? t("analytics.overview.profileProduct")
-            : t("analytics.overview.profileCompany")}
+            : t(valueFor(SCOPE_PROFILE, selection.scope.kind, UNNAMED_PROFILE))}
       </Badge>
       {items.length > 0 && (
         <TokenList

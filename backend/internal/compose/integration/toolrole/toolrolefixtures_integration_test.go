@@ -32,7 +32,7 @@ var toolRoleFixtures = map[string]func(p *recordPool) map[string]any{
 		return map[string]any{"fields": map[string]any{"display_name": "Role Sweep", "source": "manual"}}
 	},
 	"update_record": func(*recordPool) map[string]any {
-		return map[string]any{"fields": map[string]any{"display_name": "Role Sweep Renamed"}}
+		return map[string]any{"fields": map[string]any{"display_name": "Role Sweep Renamed"}, "why": "A test asks for this change."}
 	},
 	"bulk_update_records": func(p *recordPool) map[string]any {
 		return map[string]any{"record_type": "company", "verb": "archive", "items": []any{map[string]any{"id": p.take("company"), "version": 1}}}
@@ -137,11 +137,13 @@ var toolRoleFixtures = map[string]func(p *recordPool) map[string]any{
 //
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
 var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
-	"get_ownership_offer":        onRecord("offered_company"),
-	"withdraw_ownership_offer":   onRecord("offered_company"),
-	"get_ownership_request":      onRecord("requested_company"),
-	"withdraw_ownership_request": onRecord("requested_company"),
-	"reactivate_user":            byID("deactivated_user"),
+	"get_ownership_offer":          onRecord("offered_company"),
+	"withdraw_ownership_offer":     onRecord("offered_company"),
+	"get_ownership_request":        onRecord("requested_company"),
+	"withdraw_ownership_request":   onRecord("requested_company"),
+	"get_edit_access_request":      onRecord("edit_asked_company"),
+	"withdraw_edit_access_request": onRecord("edit_asked_company"),
+	"reactivate_user":              byID("deactivated_user"),
 	"update_member": func(p *recordPool) map[string]any {
 		user := p.take("user")
 		return map[string]any{"id": user, "request_body": map[string]any{"email": p.fact(user, "email"), "expected_updated_at": p.fact(user, "updated_at")}}
@@ -173,9 +175,14 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"save_mail_draft": func(p *recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"anchor_type": "company", "anchor_id": p.take("company")}}
 	},
-	"set_activity_disposition": byID("inbound_email"),
+	"set_activity_disposition":   byID("inbound_email"),
+	"answer_calendar_invitation": byID("calendar_invitation"),
 	"decline_activity_deal": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("inbound_email"), "request_body": map[string]any{"deal_id": p.take("deal")}}
+	},
+	"set_activity_deal_relevance": func(p *recordPool) map[string]any {
+		note := p.take("deal_note")
+		return map[string]any{"id": note, "request_body": map[string]any{"deal_id": p.fact(note, "deal"), "deal_relevance": "unrelated"}}
 	},
 	"set_thread_audience":     func(p *recordPool) map[string]any { return map[string]any{"thread_key": p.take("captured_thread")} },
 	"hide_deal_document":      dealDocument,
@@ -273,6 +280,17 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 		}
 		return map[string]any{"id": template, "request_body": map[string]any{"version": version, "questions": questions}}
 	},
+	"create_activity_review_template": func(*recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{
+			"label": "Sweep win review", "outcome": "won",
+			"questions": []any{map[string]any{"key": "why", "label": "Why did we win?", "type": "text", "required": true}},
+		}}
+	},
+	// An omitted jurisdiction defaults to the country, and this binary compiles
+	// no pack for it.
+	"create_legal_entity": func(*recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{"jurisdiction": namedValues["jurisdiction"]}}
+	},
 	"update_legal_review_settings": func(*recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"enabled": true}}
 	},
@@ -283,6 +301,9 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	},
 	"correct_deal_close_day": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("lost_deal"), "request_body": map[string]any{"closed_on": pastDay(p)}}
+	},
+	"move_deal_pipeline": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("deal"), "request_body": map[string]any{"pipeline_id": p.take("pipeline")}}
 	},
 	"create_deal_outcome_review": func(p *recordPool) map[string]any {
 		deal := p.take("lost_deal")
@@ -295,6 +316,18 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"get_teammate_weekly_plan": func(p *recordPool) map[string]any { return map[string]any{"owner_id": p.take("teammate_plan")} },
 	"answer_weekly_plan_commitment": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("teammate_commitment"), "request_body": map[string]any{"manager_response": "Role sweep"}}
+	},
+	"get_handoff_assignee": byID("sdr_handoff"),
+	"reassign_handoff": func(p *recordPool) map[string]any {
+		id := p.take("sdr_handoff")
+		return map[string]any{"id": id, "request_body": map[string]any{"assigned_to": p.fact(id, "receiver"), "version": 1}}
+	},
+	"replace_intro_request": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("intro_request"), "request_body": map[string]any{
+			"version": 1, "reason": "Choose a different colleague.", "request": map[string]any{
+				"introducer_user_id": p.take("user"), "route_type": "direct", "internal_reason": "Please review this fresh ask.",
+			},
+		}}
 	},
 	"decide_intro_request": byID("intro_ask"),
 	"complete_intro_request": func(p *recordPool) map[string]any {
@@ -409,6 +442,9 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"request_ownership_transfer": func(p *recordPool) map[string]any {
 		return map[string]any{"record_type": "contact", "id": p.take("stranger_contact")}
 	},
+	"request_edit_access": func(p *recordPool) map[string]any {
+		return map[string]any{"record_type": "contact", "id": p.take("stranger_contact")}
+	},
 	"replace_deal_products": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("deal"), "request_body": map[string]any{"expected_tag": deals.ProductSetTag(nil), "products": []any{}}}
 	},
@@ -424,7 +460,7 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 		return map[string]any{"id": p.fact(run, "contact"), "run_id": run}
 	},
 	"send_message": func(p *recordPool) map[string]any {
-		return map[string]any{"activity_id": p.take("channel_conversation"), "consent_purpose": "transactional"}
+		return map[string]any{"activity_id": p.take("channel_conversation"), "consent_purpose": "transactional", "communication_context": "requested_followup"}
 	},
 	"request_company_vat_check": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.fact(p.take("profile_field"), "company")}
@@ -438,7 +474,7 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 //
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
 func fixtureTables() []map[string]func(p *recordPool) map[string]any {
-	return []map[string]func(p *recordPool) map[string]any{toolRoleFixtures, routeVerbFixtures, captureFixtures, complianceFixtures, reportingFixtures, projectFixtures, setupFixtures, adminFixtures, voiceFixtures}
+	return []map[string]func(p *recordPool) map[string]any{toolRoleFixtures, routeVerbFixtures, captureFixtures, complianceFixtures, reportingFixtures, projectFixtures, setupFixtures, adminFixtures, voiceFixtures, channelFixtures}
 }
 
 // fixtureOf is the fixture a verb has in any table.

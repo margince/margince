@@ -55,11 +55,24 @@ type preflightEnv struct {
 // a vault before apptest.SetupAppWithOptions has opened the harness's own.
 func setupPreflight(t *testing.T, extra ...compose.Option) *preflightEnv {
 	t.Helper()
-	gmailCfg := compose.GmailConfig{
+	return setupPreflightIn(t, append([]compose.Option{preflightGmailApp()}, extra...)...)
+}
+
+// preflightGmailApp is the Google app setupPreflight configures.
+func preflightGmailApp() compose.Option {
+	return compose.WithGmailCapture(compose.GmailConfig{
 		ClientID: "preflight-id", ClientSecret: "preflight-secret",
 		StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: preflightBaseURL,
-	}
-	return setupPreflightIn(t, append([]compose.Option{compose.WithGmailCapture(gmailCfg, compose.CaptureConfig{})}, extra...)...)
+	}, compose.CaptureConfig{})
+}
+
+// setupPreflightServingMCP is setupPreflight with the MCP connector mounted at
+// the harness's own origin, for a test that calls tools as an agent.
+func setupPreflightServingMCP(t *testing.T) *preflightEnv {
+	t.Helper()
+	return setupPreflightAt(t, func(origin string) []compose.Option {
+		return []compose.Option{preflightGmailApp(), compose.WithMCPConnector(), compose.WithMCPResource(origin + "/mcp")}
+	})
 }
 
 // setupPreflightWithoutGoogleApp boots the same composition on a deployment
@@ -78,6 +91,13 @@ func setupPreflightWithoutGoogleApp(t *testing.T) *preflightEnv {
 // database, so the one installation serves both.
 func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	t.Helper()
+	return setupPreflightAt(t, func(string) []compose.Option { return extra })
+}
+
+// setupPreflightAt is setupPreflightIn for options that name the harness's
+// origin, which is known only once its listener is open.
+func setupPreflightAt(t *testing.T, extra func(origin string) []compose.Option) *preflightEnv {
+	t.Helper()
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
 		t.Fatalf("generating a test root key: %v", err)
@@ -87,12 +107,9 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	if err != nil {
 		t.Fatalf("building the local vault: %v", err)
 	}
-	opts := append([]compose.Option{compose.WithKeyvault(vault), compose.WithOperatorMail(apptest.DiscardingMailer{})}, extra...)
-	// A marketing send derives a one-click unsubscribe link and refuses
-	// without a boot-configured base to build it from, so the fixture
-	// carries one — an install that can send at all has one.
-	opts = append(opts, compose.WithPublicBaseURL(preflightBaseURL))
-	e := apptest.SetupAppWithOptions(t, opts...)
+	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
+		return append([]compose.Option{compose.WithKeyvault(vault), compose.WithOperatorMail(apptest.DiscardingMailer{}), compose.WithPublicBaseURL(preflightBaseURL)}, extra(origin)...)
+	})
 	// This suite composes its OWN vault (a real local one, because the
 	// pre-flight it is about needs a credential custodian), and WithKeyvault
 	// replaces the harness's. AppEnv.Vault has to name the one the server
@@ -115,8 +132,9 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
-		"kind": "email", "subject": "Inbound question", "direction": "inbound",
-		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact.ID}},
+		"kind": "email", "subject": "Inbound question", "direction": "outbound",
+		"rfc_message_id": "inquiry@preflight.test",
+		"links":          []AnyMap{{"entity_type": "contact", "entity_id": contact.ID}},
 	}, nil, &activity); status != http.StatusCreated {
 		t.Fatalf("log anchor activity → %d", status)
 	}
@@ -234,9 +252,9 @@ func (p *preflightEnv) connect(t *testing.T, providerScopes ...string) {
 	t.Helper()
 	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO capture_connection (provider, user_id, scopes, status, auth, provider_scopes)
-			VALUES ('gmail', $1, '{}', 'connected', $2, $3)
-			ON CONFLICT (user_id, provider)
+			INSERT INTO capture_connection (provider, user_id, status, auth, provider_scopes)
+			VALUES ('gmail', $1, 'connected', $2, $3)
+			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL
 			DO UPDATE SET status = 'connected', provider_scopes = EXCLUDED.provider_scopes`,
 			p.user, []byte(`{"refresh_token":"r","granted":[]}`), providerScopes)
 		return err
@@ -251,11 +269,11 @@ func TestSendRefusesWhenNoMailboxIsConnected(t *testing.T) {
 
 	status, code, detail := p.send(t)
 
-	if status != http.StatusUnprocessableEntity || code != "mailbox_not_send_capable" {
-		t.Fatalf("send with no connected mailbox → %d %q, want 422 mailbox_not_send_capable", status, code)
+	if status != http.StatusUnprocessableEntity || code != "mailbox_not_connected" {
+		t.Fatalf("send with no connected mailbox → %d %q, want 422 mailbox_not_connected", status, code)
 	}
-	if !strings.Contains(detail, "reconnect") {
-		t.Fatalf("refusal detail %q does not tell the user what to do about it", detail)
+	if strings.Contains(detail, "reconnect") {
+		t.Fatalf("refusal detail %q sends the user to reconnect a mailbox they never connected", detail)
 	}
 	if n := p.stagedDeliveries(t); n != 0 {
 		t.Fatalf("%d deliveries staged behind a refused send, want 0", n)

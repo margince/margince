@@ -11,8 +11,8 @@ fixture:
   - 'Ines: Not today.'
 expect:
   outcome: accepted
-  answer: []
+  answer: [{"line": 2, "due_date": "", "tentative": true}]
   judge: none
   judge_none_reason: >
-    Trying to circle back at some point establishes no definite work owed.
-    The semantic checker rejects an actionable proposal even at low confidence.
+    Trying to circle back at some point is a tentative promise with no day.
+    It is read in the tentative band, so a member decides on it and no task is written by itself.

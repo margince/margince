@@ -55,16 +55,19 @@ type decisionTry struct {
 	servedModel string
 }
 
-// Decide serves a decision site: the decisions lane first when it may answer
-// this task and site, then the task's own ladder with the LLM request. A lane
-// that is unbound, uncertified for the site, barred from a local-only task,
-// failing or unsure never costs the caller its answer — the ladder serves as
-// CompleteStructured would, and the completion row says why it ran.
+// Decide tries the decisions lane before the task's LLM ladder.
+// A missing or refused decision falls back with its reason recorded.
 func (r *Router) Decide(ctx context.Context, task Task, site string, dreq decision.Request,
 	req model.Request, validate Validator, gate DecisionGate,
 ) (DecideOutcome, RouteInfo, error) {
+	if err := r.refuseUnbound(); err != nil {
+		return DecideOutcome{}, RouteInfo{}, err
+	}
 	if _, ok := taskLadders[task]; !ok {
 		return DecideOutcome{}, RouteInfo{}, fmt.Errorf("ai: unknown task %q", task)
+	}
+	if err := r.admitSubjects(ctx, task, req); err != nil {
+		return DecideOutcome{}, RouteInfo{}, err
 	}
 	// One snapshot for the decision half and the flush, so a Rebind mid-call
 	// cannot split them across two routings. The ladder walk behind it loads
@@ -78,6 +81,12 @@ func (r *Router) Decide(ctx context.Context, task Task, site string, dreq decisi
 	}
 	if try.decided {
 		return DecideOutcome{Decided: true, Answer: try.answer, ServedModel: try.servedModel}, try.info, nil
+	}
+	// A caller that stopped waiting is not handed on to the ladder. A decision
+	// that answered below its floor stays the terminal, so it says why.
+	if err := ctx.Err(); err != nil {
+		lc.markTerminal(sentinelFor(ctx, err))
+		return DecideOutcome{}, try.info, err
 	}
 	resp, info, err := r.completeStructuredOn(ctx, lc, task, req, validate, try.reason)
 	return DecideOutcome{Response: resp, ServedModel: resp.ServedModel}, info, err
@@ -101,7 +110,8 @@ func (r *Router) decideFirst(ctx context.Context, lc *logicalCall, b *binding, t
 	wsID := ids.From[ids.WorkspaceKind](rawWS)
 	// The decision attempt reads the band once for itself; each ladder walk
 	// after it reads the band again, as every walk does.
-	ladder, _, budgetErr := r.applyBudget(ctx, task, wsID, taskLadders[task])
+	order, _ := b.ladder(task)
+	ladder, _, budgetErr := r.applyBudget(ctx, task, wsID, order)
 	switch {
 	case errors.Is(budgetErr, ErrBudgetDeferred):
 		return decisionTry{}, budgetErr
@@ -122,6 +132,9 @@ func (r *Router) decideFirst(ctx context.Context, lc *logicalCall, b *binding, t
 func (r *Router) DecideProbe(ctx context.Context, task Task, site string, dreq decision.Request,
 	gate DecisionGate,
 ) (DecisionProbe, error) {
+	if err := r.refuseUnbound(); err != nil {
+		return DecisionProbe{}, err
+	}
 	if _, ok := taskLadders[task]; !ok {
 		return DecisionProbe{}, fmt.Errorf("ai: unknown task %q", task)
 	}
@@ -133,7 +146,8 @@ func (r *Router) DecideProbe(ctx context.Context, task Task, site string, dreq d
 	if !ok {
 		return DecisionProbe{}, fmt.Errorf("ai: task %s outside workspace context", task)
 	}
-	if _, _, err := r.applyBudget(ctx, task, ids.From[ids.WorkspaceKind](rawWS), taskLadders[task]); err != nil {
+	order, _ := b.ladder(task)
+	if _, _, err := r.applyBudget(ctx, task, ids.From[ids.WorkspaceKind](rawWS), order); err != nil {
 		return DecisionProbe{}, err
 	}
 	lc := newLogicalCall()
@@ -166,7 +180,7 @@ func (r *Router) cachedAnswerServes(b *binding, task Task, wsID ids.WorkspaceID,
 		return false
 	}
 	_, tier, hit := r.cache.get(key, wsID, b.generation)
-	return hit && tierOnLadder(servableLadder(b, task, ladder), tier)
+	return hit && tierOnLadder(servableLadder(b, ladder), tier)
 }
 
 // decisionAttempt asks the lane when it may answer this task and site, and
@@ -174,15 +188,9 @@ func (r *Router) cachedAnswerServes(b *binding, task Task, wsID ids.WorkspaceID,
 func (r *Router) decisionAttempt(ctx context.Context, lc *logicalCall, b *binding, task Task, site string,
 	dreq decision.Request, gate DecisionGate,
 ) (decisionTry, error) {
-	if reason := r.decisionRefusal(b, task); reason != "" {
-		return decisionTry{reason: reason}, nil
-	}
 	// The state is data a site assembled from mail and pages, bound for a
-	// vendor like any prompt, so it passes the same stripper a prompt does —
-	// through the recorder a completion attempt uses, so the row says what was
-	// removed.
-	strips := newStripRecorder(r.stripper)
-	state, _, err := strips.Strip(ctx, dreq.State)
+	// vendor like any prompt. So it passes the same stripper a prompt does.
+	state, _, err := r.stripper.Strip(ctx, dreq.State)
 	if err != nil {
 		r.log.WarnContext(ctx, "ai: decision state could not be stripped; asking the ladder", "task", string(task), "err", err)
 		return decisionTry{reason: attemptReasonDecisionError}, nil
@@ -191,25 +199,12 @@ func (r *Router) decisionAttempt(ctx context.Context, lc *logicalCall, b *bindin
 		return decisionTry{reason: attemptReasonDecisionStateTooLarge}, nil
 	}
 	dreq.State, dreq.Model = state, b.decisions.meta.model
-	return r.callDecider(ctx, lc, b, task, dreq, gate, strips)
-}
-
-// decisionRefusal is why the lane may not answer this site, as the attempt
-// reason the ladder walk carries; "" when it may. A bound lane serves every
-// site its local-only rule admits — no certification row required, same as
-// any other task's ladder rung: bind it and it runs, the site's own floor
-// (decisionAttempt's below-floor check) is what catches a bad answer.
-func (r *Router) decisionRefusal(b *binding, task Task) string {
-	m := b.decisions.meta
-	if decisionSkipFor(&DecisionsConfig{Provider: m.provider, Model: m.model, BaseURL: m.baseURL}, task) == DecisionSkipLocalOnly {
-		return attemptReasonDecisionLocalOnly
-	}
-	return ""
+	return r.callDecider(ctx, lc, b, task, dreq, gate)
 }
 
 // callDecider makes the one decision call: rail, trace, meter, answer.
 func (r *Router) callDecider(ctx context.Context, lc *logicalCall, b *binding, task Task,
-	dreq decision.Request, gate DecisionGate, strips *stripRecorder,
+	dreq decision.Request, gate DecisionGate,
 ) (decisionTry, error) {
 	// The rail opens here, past every refusal above, for the reason
 	// announceRailStartOnce gives: a trace is always appended after it.
@@ -230,8 +225,6 @@ func (r *Router) callDecider(ctx context.Context, lc *logicalCall, b *binding, t
 		answer, verdict = readDecision(dreq, resp, gate)
 		trace.DecisionAnswer = answerTrace(answer)
 	}
-	// Before finalize, which buffers the row, as on a completion attempt.
-	trace.SecretsRemoved, trace.SecretKinds = strips.report()
 	r.finalizeDecisionAttempt(ctx, lc, &trace, dreq, resp, errors.Join(callErr, meterErr), start)
 	if meterErr != nil {
 		return decisionTry{}, meterErr
@@ -259,7 +252,7 @@ func (r *Router) callDecider(ctx context.Context, lc *logicalCall, b *binding, t
 // as the ladder does: unmetered spend would hollow out the budget guardrail.
 // Only an answered call is metered; a failed one reports no spend.
 func (r *Router) meterDecision(ctx context.Context, task Task, resp decision.Response) error {
-	if err := r.meter.Record(ctx, Usage{Task: task, Tier: TierDecideLane, TokensIn: resp.InputTokens}); err != nil {
+	if err := r.recordUsage(ctx, Usage{Task: task, Tier: TierDecideLane, TokensIn: resp.InputTokens}); err != nil {
 		return fmt.Errorf("ai: decision served but metering failed: %w", errors.Join(errMeteringFailed, err))
 	}
 	r.spendAgentTokens(ctx, resp.InputTokens)

@@ -1,0 +1,15 @@
+{
+  "tool": "send_outbound",
+  "action": "invite_member",
+  "verb": "invite_user",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

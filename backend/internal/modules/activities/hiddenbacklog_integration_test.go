@@ -125,8 +125,8 @@ func TestAThreadJudgedNotSalesIsCountedAsHidden(t *testing.T) {
 	// here would be judged by a rule that reads thread_key and match nothing.
 	// The table has no state column: a ROW is the judgement, which is why the
 	// query anti-joins on its existence rather than on a value.
-	e.exec(t, `INSERT INTO activity_sales_state (thread_key, kind, channel_provider, set_by)
-		SELECT a.thread_key, a.kind, coalesce(a.channel_provider, ''), 'system'
+	e.exec(t, `INSERT INTO activity_sales_state (thread_key, kind, channel_provider)
+		SELECT a.thread_key, a.kind, coalesce(a.channel_provider, '')
 		  FROM activity a WHERE a.id = $1`, judged)
 
 	got := moved(before, hiddenNow(t, e))
@@ -287,8 +287,8 @@ func TestEveryRelaxationAdmitsAtLeastWhatTheQueueShows(t *testing.T) {
 	judged := e.seedPersonalWait(t, "Judged", contact)
 	// The table has no state column: a ROW is the judgement, which is why the
 	// query anti-joins on its existence rather than on a value.
-	e.exec(t, `INSERT INTO activity_sales_state (thread_key, kind, channel_provider, set_by)
-		SELECT a.thread_key, a.kind, coalesce(a.channel_provider, ''), 'system'
+	e.exec(t, `INSERT INTO activity_sales_state (thread_key, kind, channel_provider)
+		SELECT a.thread_key, a.kind, coalesce(a.channel_provider, '')
 		  FROM activity a WHERE a.id = $1`, judged)
 	old := e.seedPersonalWait(t, "Old", contact)
 	e.exec(t, `UPDATE activity SET occurred_at = now() - interval '150 days' WHERE id = $1`, old)
@@ -328,13 +328,13 @@ func TestAColleagueRequestDoesNotEnterPersonalHiddenFigures(t *testing.T) {
 	// reads against the wall clock, so the mail is moved inside its horizon.
 	colleague.exec(t, `UPDATE activity SET occurred_at = now() - interval '2 days' WHERE id = $1`, held)
 
-	e := setupLoad(t)
+	e := joinLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
-	if before.Shown != 0 {
-		t.Fatal("a colleague's request entered this reader's personal queue")
+	if before.Shown != 0 || !before.Clear() {
+		t.Fatalf("a colleague's request entered this reader's personal figures: %+v", before)
 	}
 	aside := e.seedPersonalWait(t, "Set aside", contact)
 	e.exec(t, `INSERT INTO activity_reader_state (activity_id, reader_id, state, set_by)

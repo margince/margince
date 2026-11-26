@@ -1,0 +1,21 @@
+name: a_short_reply_over_a_quoted_refusal_is_not_a_refusal
+task: capture_classify
+site: classify
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  - subject: 'Re: Re: phase two proposal'
+    inbound: true
+    body: |
+      Thanks, we will wait for your answer.
+expect:
+  outcome: accepted
+  answer:
+    - not_reply: negative
+  judge: none
+  judge_none_reason: >
+    The check is the reply verdict alone: it must not be "negative", because a
+    negative verdict on the newest customer mail closes the deal as lost
+    overnight while the customer waits on us. Any other label is acceptable, so
+    a judge only adds noise, and a weak one read the harness's second reply as a
+    contradiction.

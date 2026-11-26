@@ -1,0 +1,10 @@
+{
+  "verb": "control_data_task",
+  "checks": [
+    "data_task.read",
+    "data_task.update"
+  ],
+  "takes": [
+    "data_task"
+  ]
+}

@@ -173,19 +173,32 @@ func TestReadWorkspaceListsWhatARoutersActionsTake(t *testing.T) {
 	}
 }
 
-// An action the router runs in process has no route to describe. The refusal
-// points at the router's own inputSchema. Saying the router lacks the action
-// sends a caller to invent the action's arguments.
-func TestAnActionWithNoRouteIsNotDeniedToExist(t *testing.T) {
-	_, err := describeRouterActions{verbs: []RouteVerb{shareRecordVerb}}.Handle(context.Background(),
-		json.RawMessage(`{"router":"change_access","action":"relink_many"}`))
-	if err == nil {
-		t.Fatal("an action with no route was described")
-	}
-	for _, says := range []string{"no route action relink_many", "router's inputSchema", "no action of change_access"} {
-		if !strings.Contains(err.Error(), says) {
-			t.Errorf("refusal = %q, want it to say %q, so neither a router-run action nor a typo is misread", err, says)
+// An action the router runs in process has no route, so it is described from
+// its own spec. A client that reads schemas from a file has no inputSchema.
+// A name the router does not have is refused as one.
+func TestARouterRunActionIsDescribedFromItsOwnSpec(t *testing.T) {
+	runs := func(router, action string) (mcp.ToolSpec, bool) {
+		if router == "change_access" && action == "relink_many" {
+			return mcp.ToolSpec{
+				Description: "Move many activities.", AskUserFirst: true,
+				InputSchema: json.RawMessage(`{"type":"object","properties":{"ids":{"type":"array"}}}`),
+			}, true
 		}
+		return mcp.ToolSpec{}, false
+	}
+	d := describeRouterActions{verbs: []RouteVerb{shareRecordVerb}, runs: runs}
+	out, err := d.Handle(context.Background(), json.RawMessage(`{"router":"change_access","action":"relink_many"}`))
+	if err != nil {
+		t.Fatalf("a router-run action was refused: %v", err)
+	}
+	for _, says := range []string{`"action":"relink_many"`, "Move many activities.", `"ids"`, `"ask_user_first":true`, routerRunRoute} {
+		if !strings.Contains(string(out), says) {
+			t.Errorf("description %s does not carry %s", out, says)
+		}
+	}
+	_, err = d.Handle(context.Background(), json.RawMessage(`{"router":"change_access","action":"relink_mny"}`))
+	if err == nil || !strings.Contains(err.Error(), "no action relink_mny") {
+		t.Errorf("a name the router does not have answered %v, want a refusal naming it", err)
 	}
 }
 
@@ -279,6 +292,69 @@ func TestAnUploadVerbRefusesAFileItCannotSend(t *testing.T) {
 		_, err := tool.Handle(t.Context(), mustMarshal(tc.args))
 		if err == nil || !strings.Contains(err.Error(), tc.field) {
 			t.Errorf("%s: err = %v, want a refusal naming %s", name, err, tc.field)
+		}
+	}
+}
+
+// A model reads ask_user_first bare unless the answer says what it asks, and
+// then it drops the exception. The consequence follows what the actions do: a
+// write changes, a read surfaces. An action a human approves anyway carries
+// no ask, and an answer with no ask-first action carries no sentence.
+func TestTheCatalogSaysWhatAskUserFirstAsksOfTheModel(t *testing.T) {
+	readsFirst := RouteVerb{
+		Verb: "read_audit_call", Router: "read_workspace", Action: "ai_call", Op: "getAiCall",
+		Summary: "Read one call", Method: "GET", Pattern: "/v1/ai/calls/{id}", Scope: principal.ScopeRead,
+		PathParams: []string{"id"}, AskUserFirst: true,
+	}
+	runs := func(router, action string) (mcp.ToolSpec, bool) {
+		if router == "change_access" && action == "approved_anyway" {
+			return mcp.ToolSpec{Description: "A human approves it.", AskUserFirst: true, Tier: mcp.TierConfirmationRequired}, true
+		}
+		return mcp.ToolSpec{}, false
+	}
+	d := describeRouterActions{verbs: []RouteVerb{shareRecordVerb, revertStageVerb, readsFirst}, runs: runs}
+	answer := func(request string) map[string]any {
+		t.Helper()
+		out, err := d.Handle(context.Background(), json.RawMessage(request))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var decoded map[string]any
+		if err := json.Unmarshal(out, &decoded); err != nil {
+			t.Fatal(err)
+		}
+		return decoded
+	}
+	for name, tc := range map[string]struct{ request, want string }{
+		"a write router":  {`{"router":"change_state"}`, "tell them what the call will change and " + askFirstGetYes},
+		"a read router":   {`{"router":"read_workspace"}`, "tell them what the call will surface and " + askFirstGetYes},
+		"no ask-first":    {`{"router":"change_access"}`, ""},
+		"approved anyway": {`{"router":"change_access","action":"approved_anyway"}`, ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, present := answer(tc.request)[askFirstMeansField].(string)
+			if tc.want == "" {
+				if present {
+					t.Errorf("%s = %q, want none", askFirstMeansField, got)
+				}
+				return
+			}
+			if !present || !strings.Contains(got, tc.want) {
+				t.Errorf("%s = %q, want it to contain %q", askFirstMeansField, got, tc.want)
+			}
+		})
+	}
+	if got := (askedWrites | askedReads).consequence(); got != "what the call will change or surface" {
+		t.Errorf("a router with writes and reads says %q", got)
+	}
+}
+
+// One sentence tells a model that a refused send goes out only by the user.
+// The tool that checks a contact and the tool that sends both carry it.
+func TestACheckAndASendSayTheSameAboutSendingAnyway(t *testing.T) {
+	for name, copy := range map[string]toolCopy{"read_details": readDetailsCopy, "send_outbound": sendOutboundCopy} {
+		if !strings.Contains(copy.render(), sendAnywayRule) {
+			t.Errorf("%s does not say: %s", name, sendAnywayRule)
 		}
 	}
 }

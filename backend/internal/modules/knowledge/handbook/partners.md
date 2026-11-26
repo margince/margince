@@ -16,7 +16,7 @@ To make a company a partner in Margince, open the company, choose **More actions
 2. Choose **More actions** → **Set up partner program**. The **Partner** tab opens on "Not a partner yet" and the **Make this a partner** form.
 3. Pick one or more **Partner kinds** (required) and fill what you already know.
 4. Choose **Create**.
-The company now shows on the **Partners** list and in every deal's **via partner** picker.
+The company now shows on the **Partners** list and in every deal's **Referring partner** picker.
 Also called: add a partner, onboard a reseller, start a partner programme.
 
 ### Who may set up a partner program?
@@ -32,12 +32,13 @@ Also called: let the assistant add a partner, AI partner onboarding.
 
 ### How do I change a partner's terms?
 To change a partner's terms in Margince, open the company's **Partner** tab and choose **Edit**, change the fields and choose **Save**.
-You can change **Partner kinds**, **Certification status**, **Margin tier**, **Relationship stage**, **Next step**, **Next step due** and **Served segments**. The stage list shows the active stages in ladder order, and the stage the partner stands on even when it was retired. A new margin tier counts for commission earned from then on. Commission already earned keeps the tier it was earned at.
+You can change **Partner kinds**, **Certification status**, **Margin tier**, **Relationship stage** and **Served segments**. The stage list shows the active stages in ladder order, and the stage the partner stands on even when it was retired. A new margin tier counts for commission earned from then on. Commission already earned keeps the tier it was earned at.
 Also called: certify a partner, suspend a partner, change a partner's tier.
 
 ### How do I see all my partners?
-To see every partner in Margince, open **Companies** in the sidebar and press **Partners** beside **New company** at the top of the list. On a phone it is in the **More actions** menu there.
-The **Partners** list shows each partner's **Company**, **Partner kinds**, **Certification status** and **Relationship stage**. Make it shorter with the **Partner kinds**, **Relationship stage**, **Stage meaning** and **Certification status** filters. It has no search box and no fixed order. Click a row to open the company.
+To see every partner in Margince, open **Companies** in the sidebar and press **Partners** beside **New company** at the top of the list. On a phone it is in the **More actions** menu there. The trail above the list reads **Companies** / **Partners**, and **Companies** leads back.
+
+The **Partners** list shows each partner's **Company**, **Partner kinds**, **Certification status**, **Margin tier** and **Relationship stage**. Make it shorter with the **Partner kinds**, **Relationship stage**, **Stage meaning** and **Certification status** filters. It has no search box and no fixed order. Click a row to open the company.
 
 The **Companies** list has the **Partner kinds**, **Relationship stage** and **Stage meaning** filters too, for a role that may see partners. **Stage meaning** finds, for example, all signed partners, whatever your stages are called.
 Also called: partner list, partner overview, reseller list.
@@ -69,7 +70,10 @@ The relationship stage of a partner in Margince says where the relationship is. 
 | **Dormant** | **Dormant** | Was live, is not active now |
 | **No fit** | **Ended** | You looked, and it is a no |
 
-**Next step** and **Next step due** hold the one next thing to do in the relationship. An empty next step on a partner that is not active or ended most often means nobody owns the relationship.
+### How do I plan a partner's next step?
+To plan a partner's next step in Margince, open the company's **Partner** tab and choose **Add task** under **Next step**. Name the colleague who does it and the day it is due. The task then shows under **Next step**, the soonest due first, and on that colleague's Home and Worklist, whoever owns the company.
+A next step an assistant gives when it sets up a partner also becomes a task, held by whoever it works for. A next step kept as plain text from before shows under **Next step**, with a note that no colleague does it.
+Also called: partner next step, who follows up with a partner.
 
 ### What does activated mean?
 In Margince only an activated partner stands on a stage that means **Active**. A move to such a stage before that is refused, and the **Partner** tab says why.
@@ -102,10 +106,10 @@ Also called: new partner tier, new partner kind.
 ## Partners on a deal
 
 ### How do I record that a partner brought a deal?
-To give a partner credit for a deal in Margince, set **via partner** to the partner and choose the **Partner attribution**. Both are on the deal's form and in its **Details** panel.
-1. On **New deal**, or in an open deal's **Details**, pick the partner under **via partner**.
+To give a partner credit for a deal in Margince, set **Referring partner** to the partner and choose the **Partner attribution**. Both are on the deal's form and under **More actions** → **Edit details** on the deal.
+1. On **New deal**, or under **More actions** → **Edit details** on a deal, pick the partner under **Referring partner**. The deal page shows it as **Partner**.
 2. Under **Partner attribution**, choose **Sourced the deal (earns commission)** or **Influenced an existing deal (no commission)**.
-If you leave it empty, it reads **Not set (counted as sourced)**. The two fields show only once at least one company is a partner.
+If you leave it empty, it reads **Not set (counted as sourced)**. With no partner company yet, the field says to set one up from a company's **More actions**. Once set, the partner shows under the deal's name.
 Also called: partner-sourced deal, referral, partner influenced.
 
 A partner's own **Partner** tab lists **Partner deals**: the deals of other companies that came through this partner, sourced or influenced. Each shows the **Customer**, the **Attribution**, the **Deal value** and the **Status**. The partner's own Deals tab does not show them, because each of those deals belongs to its customer. On **Deals**, the **Partner-sourced** and **Partner** filters cut the list down to deals through any partner, or through one.
@@ -113,22 +117,23 @@ A partner's own **Partner** tab lists **Partner deals**: the deals of other comp
 ## Commission
 
 Commission in Margince is added on its own when a deal that a partner **sourced** is won; nobody creates it by hand. A deal the partner only influenced earns nothing.
+The win still earns it if the deal or the partner company is archived soon after. Commission on an archived deal shows again once the deal is restored.
 
 The partner's margin tier is fixed on the commission when it is added. So changing a partner's tier later does not change what they have already earned. A partner with no tier earns nothing, and no commission line shows at all. A zero would say "we owe them nothing"; no line says "we owe them nothing yet".
 
-If a partner earned commission on a win, opening the deal again does not delete it. A line that takes it back is added, and the first line is marked **Reversed**. A deal that was won, opened again and won again shows three lines. Nothing is written over.
+If a partner earned commission on a win, opening the deal again does not delete it. A line marked **Reversal** that takes it back is added, and the first line is marked **Reversed**. A deal that was won, opened again and won again shows three lines. Nothing is written over.
 
 ### How do I approve or pay a partner's commission?
 To approve or mark a partner's commission paid in Margince, open the partner company's **Partner** tab and use the line's action in its **Commission** panel.
 1. **Approve** an **Accrued** line: "It pays nothing: settle the payment in your finance system, then mark it paid here."
 2. **Mark as paid** an **Approved** line once your finance system has paid it. Margince moves no money.
-3. **Reverse** a line that should not stand, with a **Reversal reason**. A line that takes it back is added; nothing is deleted.
+3. **Reverse** a line that should not stand, with a **Reversal reason**. A **Reversal** line takes it back, as a minus figure with the reason under its status. Nothing is deleted.
 Without permission the column reads **No permission to decide**.
 Also called: pay a partner, partner payout, referral fee.
 
 ### The Commission panel
 
-The **Commission** panel on a partner's page holds a line for each deal. Each line shows the **Deal**, what was **Earned**, the **Rate**, the **Deal value** it was taken from, and a **Status**. Above it sits **Outstanding**: lines that are accrued or approved. Nothing earned yet reads "No commission yet".
+The **Commission** panel on a partner's page holds a line for each deal. Each line shows the **Deal**, what was **Earned**, the **Rate**, the **Deal value** it was taken from, and a **Status**. The date the line was written sits under the deal. Above it sits **Outstanding**: lines that are accrued or approved. Nothing earned yet reads "No commission yet".
 
 | Status | What it means |
 |---|---|
@@ -136,3 +141,4 @@ The **Commission** panel on a partner's page holds a line for each deal. Each li
 | **Approved** | Approved for payment |
 | **Paid** | Paid |
 | **Reversed** | Taken back, with the first line left in place |
+| **Reversal** | The line that takes a reversed one back, as a minus figure with its reason |

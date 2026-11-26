@@ -8,8 +8,9 @@ import (
 	"slices"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/datataskhealth"
+	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -64,7 +65,7 @@ func (s Server) updatesSummary(ctx context.Context) (crmcontracts.HealthSource, 
 	conditions := map[string]crmcontracts.HealthSourceCondition{}
 	attempts := map[string]*time.Time{}
 	for _, row := range rows {
-		code, condition, included := dataTaskHealth(row, now)
+		code, condition, included := datataskhealth.Finding(row, now)
 		if !included {
 			continue
 		}
@@ -131,20 +132,27 @@ func (s Server) providersSummary(ctx context.Context) (crmcontracts.HealthSource
 	return source, []crmcontracts.HealthFinding{f}, nil
 }
 
-func dataTaskHealth(row datatask.Progress, now time.Time) (string, crmcontracts.HealthSourceCondition, bool) {
-	if row.Version == 0 && row.BlockedReason == "review_required" {
-		return "", "", false
+// unplacedWindow is a rolling 7 days; the copy says "last 7 days".
+const unplacedWindow = 7 * 24 * time.Hour
+
+// unplacedSummary reports the machine changes Home's receipt cannot place. It
+// is a coverage fact rather than a fault, so it is information whatever the count.
+func (s Server) unplacedSummary(ctx context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
+	source := healthSource(healthUnplacedID, "ai_diagnostics")
+	source.Scope = healthInstallation
+	now := utcNow()
+	from := now.Add(-unplacedWindow)
+	changes, err := s.magicService.UnplacedChanges(ctx, from)
+	if err != nil {
+		return source, nil, err
 	}
-	switch {
-	case row.Status == string(crmcontracts.DataTaskProgressStatusDone):
-		return "", "", false
-	case row.Status == string(crmcontracts.DataTaskProgressStatusFailed):
-		return "updates_failed", healthTechnical, true
-	case row.Status == "paused" || row.BlockedReason == "review_required" || row.BlockedReason == "missing_prerequisite" || row.BlockedReason == "newer_release_required":
-		return "updates_review", healthWaitingHuman, true
-	case row.NextAttemptAt != nil && row.NextAttemptAt.After(now):
-		return "updates_retrying", healthRetrying, true
-	default:
-		return "updates_processing", healthProcessing, true
+	total, breakdown := magic.UnplacedBreakdown(changes)
+	unit := crmcontracts.HealthSourceUnit("items")
+	source.ObservedAt, source.WindowStart, source.WindowEnd = &now, &from, &now
+	source.Count, source.Unit, source.UnplacedChanges = &total, &unit, &breakdown
+	source.Condition, source.Code = healthInformation, "unplaced_none"
+	if total > 0 {
+		source.Code = "unplaced_counted"
 	}
+	return source, nil, nil
 }

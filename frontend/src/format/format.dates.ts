@@ -1,6 +1,8 @@
+import type { components } from "../api/schema";
 import type { Locale } from "../i18n";
 import { calendarDay, middayInstant } from "./calendarday";
-import { INTL_LOCALE } from "./intllocale";
+import { datePattern } from "./datepattern";
+import { dateTimeFormat, zonelessDateTimeFormat } from "./formatters";
 import {
   dateTimePreferences,
   FIXED_DATE_PATTERNS,
@@ -12,9 +14,13 @@ import { assertIanaZone, DAY_MS } from "./timezone";
 export { assertIanaZone, isRenderableZone } from "./timezone";
 
 /** A month number has no viewer timezone. UTC keeps Intl's scaffolding in the same month. */
-export function monthName(month: number, locale: Locale): string {
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
-    month: "long",
+export function monthName(
+  month: number,
+  locale: Locale,
+  width: "long" | "short" | "narrow" = "long",
+): string {
+  return dateTimeFormat(locale, {
+    month: width,
     timeZone: "UTC",
   }).format(new Date(Date.UTC(2026, month - 1, 1)));
 }
@@ -31,11 +37,15 @@ export function monthAndYear(
   locale: Locale,
   zone?: string,
 ): string {
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
-    month: "long",
-    year: "numeric",
-    timeZone: zone,
-  }).format(month);
+  const formatter =
+    zone === undefined
+      ? zonelessDateTimeFormat(locale, { month: "long", year: "numeric" })
+      : dateTimeFormat(locale, {
+          month: "long",
+          year: "numeric",
+          timeZone: zone,
+        });
+  return formatter.format(month);
 }
 
 /**
@@ -45,7 +55,7 @@ export function monthAndYear(
  * hand-written row would sit unchanged over a German or Vietnamese month.
  */
 export function weekdayInitial(day: Date, locale: Locale): string {
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  return zonelessDateTimeFormat(locale, {
     weekday: "narrow",
   }).format(day);
 }
@@ -57,7 +67,7 @@ export function weekdayInitial(day: Date, locale: Locale): string {
  * screen reader reaches the grid's heading several stops away.
  */
 export function fullDayName(day: Date, locale: Locale): string {
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  return zonelessDateTimeFormat(locale, {
     dateStyle: "full",
   }).format(day);
 }
@@ -78,7 +88,7 @@ export function formatDate(
   zone: string,
 ): string {
   assertIanaZone(zone);
-  const formatter = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  const formatter = dateTimeFormat(locale, {
     timeZone: zone,
     day: "2-digit",
     month: "2-digit",
@@ -100,7 +110,7 @@ export function formatDayLong(
   zone: string,
 ): string {
   assertIanaZone(zone);
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  return dateTimeFormat(locale, {
     timeZone: zone,
     weekday: "long",
     day: "numeric",
@@ -120,12 +130,35 @@ export function formatDateAbbrev(
   if (dateTimePreferences().dateFormat !== "locale")
     return formatDate(utcIso, locale, zone);
   assertIanaZone(zone);
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  return dateTimeFormat(locale, {
     timeZone: zone,
     day: "numeric",
     month: "short",
     year: "numeric",
   }).format(displayDay(utcIso, zone));
+}
+
+/**
+ * A date known only to its month, as "Mar 2021": `formatDateAbbrev` without
+ * the day. It names a calendar month, not a moment, so no zone moves it. A
+ * fixed date format writes the month and year in that format's order.
+ */
+export function formatMonthAbbrev(day: string, locale: Locale): string {
+  const year = day.slice(0, 4);
+  const month = day.slice(5, 7);
+  const format = dateTimePreferences().dateFormat;
+  if (format !== "locale") {
+    const { order, separator } = datePattern(locale, format);
+    return order
+      .filter((part) => part !== "day")
+      .map((part) => (part === "year" ? year : month))
+      .join(separator);
+  }
+  return dateTimeFormat(locale, {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(Number(year), Number(month) - 1, 1)));
 }
 
 /**
@@ -141,7 +174,7 @@ export function formatDateAbbrevRange(
   if (dateTimePreferences().dateFormat !== "locale")
     return `${formatDate(fromIso, locale, zone)} – ${formatDate(toIso, locale, zone)}`;
   assertIanaZone(zone);
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  return dateTimeFormat(locale, {
     timeZone: zone,
     day: "numeric",
     month: "short",
@@ -160,7 +193,7 @@ export function formatDayRange(
   zone: string,
 ): string {
   assertIanaZone(zone);
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  return dateTimeFormat(locale, {
     timeZone: zone,
     day: "numeric",
     month: "long",
@@ -180,7 +213,7 @@ export function formatDayMonth(
   assertIanaZone(zone);
   const format = dateTimePreferences().dateFormat;
   if (format !== "locale") {
-    const parts = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    const parts = dateTimeFormat(locale, {
       timeZone: zone,
       day: "2-digit",
       month: "2-digit",
@@ -191,7 +224,7 @@ export function formatDayMonth(
       .map((type) => parts.find((part) => part.type === type)?.value ?? "")
       .join(separator);
   }
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  return dateTimeFormat(locale, {
     timeZone: zone,
     day: "numeric",
     month: "short",
@@ -212,7 +245,7 @@ export function formatDayMonthNearYear(
   assertIanaZone(zone);
   const day = displayDay(utcIso, zone);
   const yearIn = (at: Date) => calendarDay(at, zone).slice(0, 4);
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  return dateTimeFormat(locale, {
     timeZone: zone,
     day: "numeric",
     month: "short",
@@ -235,7 +268,7 @@ export function formatTimeOfDay(
   zone: string,
 ): string {
   assertIanaZone(zone);
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  return dateTimeFormat(locale, {
     timeZone: zone,
     hour: "2-digit",
     minute: "2-digit",
@@ -252,10 +285,35 @@ export function formatDateTime(
   if (dateTimePreferences().dateFormat !== "locale") {
     return `${formatDate(utcIso, locale, zone)}, ${formatTimeOfDay(utcIso, locale, zone)}`;
   }
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  return dateTimeFormat(locale, {
     timeZone: zone,
     day: "2-digit",
     month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: hourCycle(),
+  }).format(new Date(utcIso));
+}
+
+/**
+ * An instant as a record page writes it: `formatDateAbbrev` with the time
+ * after it, as "16 Nov 2026, 13:49", so a dated row reads like the page's
+ * other dates. A fixed date format writes `formatDateTime`'s numeric form.
+ */
+export function formatDateTimeAbbrev(
+  utcIso: string,
+  locale: Locale,
+  zone: string,
+): string {
+  assertIanaZone(zone);
+  if (dateTimePreferences().dateFormat !== "locale") {
+    return formatDateTime(utcIso, locale, zone);
+  }
+  return dateTimeFormat(locale, {
+    timeZone: zone,
+    day: "numeric",
+    month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
@@ -293,16 +351,14 @@ export function calendarDaysBetween(
 /**
  * The clock hour, 0-23, that an instant reads as in one zone.
  *
- * Here because this file constructs formatters. Outside it, a locale reaches
- * `Intl` only through `INTL_LOCALE` (`census/rules/one-locale.census.ts` holds that).
- * The hour carries no locale (08 is 08 in every language). So the tag is `en-GB`
- * for an unambiguous `hourCycle: "h23"`, and the zone is what the caller asks.
+ * The hour carries no locale (08 is 08 in every language). So the locale is
+ * `en` for an unambiguous `hourCycle: "h23"`, and the zone is what the caller asks.
  *
  * Used to decide which greeting a reader gets, which is a fact about their
  * morning rather than about any record.
  */
 export function hourInZone(instant: Date, zone: string): number {
-  const hour = new Intl.DateTimeFormat(INTL_LOCALE.en, {
+  const hour = dateTimeFormat("en", {
     hour: "numeric",
     hourCycle: "h23",
     timeZone: zone,
@@ -320,10 +376,14 @@ export function formatDue(
   hasTime: boolean | undefined,
   locale: Locale,
   zone: string,
+  intent?: components["schemas"]["IntentTime"],
 ): string {
-  return hasTime === true
-    ? formatDateTime(dueAt, locale, zone)
-    : formatDate(dueAt, locale, zone);
+  const clock = dueDisplayClock(dueAt, zone, intent);
+  const shown =
+    hasTime === true
+      ? formatDateTime(clock.at, locale, clock.zone)
+      : formatDate(clock.at, locale, clock.zone);
+  return shown + clock.suffix;
 }
 
 /** formatDue in the day-and-month form a row or a chip has room for. */
@@ -332,9 +392,48 @@ export function formatDueCompact(
   hasTime: boolean | undefined,
   locale: Locale,
   zone: string,
+  intent?: components["schemas"]["IntentTime"],
 ): string {
-  const day = formatDayMonth(dueAt, locale, zone);
-  return hasTime === true
-    ? `${day}, ${formatTimeOfDay(dueAt, locale, zone)}`
-    : day;
+  const clock = dueDisplayClock(dueAt, zone, intent);
+  const day = formatDayMonth(clock.at, locale, clock.zone);
+  const shown =
+    hasTime === true
+      ? `${day}, ${formatTimeOfDay(clock.at, locale, clock.zone)}`
+      : day;
+  return shown + clock.suffix;
+}
+
+/**
+ * The clock a time was agreed on, named by its zone, to stand beside the
+ * reader's own reading of that instant. Its day shows only where it is not the
+ * reader's day.
+ */
+export function formatAgreedClock(
+  at: string,
+  intent: components["schemas"]["IntentTime"],
+  locale: Locale,
+  zone: string,
+): string {
+  const clock = dueDisplayClock(at, zone, intent);
+  const time = formatTimeOfDay(clock.at, locale, clock.zone);
+  const sameDay =
+    intent.wall_clock.slice(0, 10) === calendarDay(new Date(at), zone);
+  const shown = sameDay
+    ? time
+    : `${formatDayMonth(clock.at, locale, clock.zone)}, ${time}`;
+  return `${shown} ${intent.timezone}`;
+}
+
+function dueDisplayClock(
+  dueAt: string,
+  zone: string,
+  intent?: components["schemas"]["IntentTime"],
+) {
+  if (!intent) return { at: dueAt, zone, suffix: "" };
+  return {
+    // UTC lets Intl print the chosen clock without resolving it as an instant.
+    at: `${intent.wall_clock}Z`,
+    zone: "UTC",
+    suffix: intent.timezone === zone ? "" : ` (${intent.timezone})`,
+  };
 }

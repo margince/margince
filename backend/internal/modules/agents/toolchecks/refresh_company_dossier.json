@@ -1,0 +1,11 @@
+{
+  "verb": "refresh_company_dossier",
+  "checks": [
+    "company.read",
+    "contact.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

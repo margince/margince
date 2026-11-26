@@ -30,7 +30,7 @@ func TestMinimumWriterGrantsCanStageAndRedeemTheActionFamilies(t *testing.T) {
 		{"merge_records", "contact", principal.ObjectGrant{Read: true, Update: true}, nil},
 		{"update_record", "company", principal.ObjectGrant{Read: true, Update: true}, nil},
 		{"archive_record", "contact", principal.ObjectGrant{Read: true, Update: true}, nil},
-		{"send_email", "activity", principal.ObjectGrant{Read: true, Create: true}, nil},
+		{"send_email", "activity", principal.ObjectGrant{Read: true, Create: true}, map[string]principal.ObjectGrant{"contact": {Read: true}}},
 		{"invite_meeting", "contact", principal.ObjectGrant{Read: true}, map[string]principal.ObjectGrant{"activity": {Create: true}}},
 	} {
 		t.Run(tc.kind+"/"+tc.target, func(t *testing.T) {

@@ -46,12 +46,10 @@ const (
 )
 
 // KnownIssue ties a flow, or one row of it when Row is set, already over
-// budget to the open issue tracking it. Allow5xx lets that row's server errors
-// pass the gate, for an issue whose evidence shows them as its own symptom.
+// budget to the open issue tracking it.
 type KnownIssue struct {
 	Flow, Row string
 	Issue     int
-	Allow5xx  bool
 }
 
 // covers reports whether the entry lists this row of this flow.
@@ -73,19 +71,18 @@ func subject(flow, row string) string {
 // DailyKnownIssues lists flows and rows already over budget, each tracked by
 // an open issue; remove a row when its issue closes.
 var DailyKnownIssues = []KnownIssue{
-	{Flow: "worklist", Issue: 4912},
-	{Flow: "home", Row: "home_worklist", Issue: 4912},
-	{Flow: "morning_load", Issue: 7068, Allow5xx: true},
+	{Flow: "worklist", Issue: 10779},
+	{Flow: "home", Row: "home_worklist", Issue: 10779},
 }
 
 // DailyResult is one row of a flow measured for one seat, as the gate judges it.
 type DailyResult struct {
-	Flow, Row, Seat string
-	Verdict         DailyVerdict
-	Issue           int
-	Status5xx       int
-	Status422       int
-	P95, Budget     time.Duration
+	Flow, Row, Seat  string
+	Verdict          DailyVerdict
+	Issue            int
+	Status5xx        int
+	Status422        int
+	P50, P95, Budget time.Duration
 	// Allow422 marks a flow whose query_too_broad refusal is the known issue itself.
 	Allow422 bool
 	Samples  int
@@ -123,9 +120,6 @@ func knownEntryFor(flow, row string) KnownIssue {
 
 func knownIssueFor(flow, row string) int { return knownEntryFor(flow, row).Issue }
 
-// allows5xx reports whether the entry covering this row lets its server errors pass.
-func allows5xx(flow, row string) bool { return knownEntryFor(flow, row).Allow5xx }
-
 // JudgeDaily returns the verdict for one row's p95 and, when it is over budget
 // and listed, the issue that tracks it. A p95 equal to the budget is over, as
 // gen-perfdoc renders it.
@@ -152,15 +146,15 @@ func judgeP95(p95, budget time.Duration, samples int) DailyVerdict {
 	return DailyOver
 }
 
-// DailyGate fails the run on every unlisted breach, every 5xx outside an
-// Allow5xx entry and every 422 outside a listed flow.
+// DailyGate fails the run on every unlisted breach, every server error and
+// every refusal outside a listed flow.
 func DailyGate(results []DailyResult, scale float64) error {
 	var problems []string
 	for _, r := range results {
 		if r.Verdict == DailyOver {
 			problems = append(problems, fmt.Sprintf("%s is over budget for %s and no open issue lists it", subject(r.Flow, r.Row), r.Seat))
 		}
-		if r.Status5xx > 0 && !allows5xx(r.Flow, r.Row) {
+		if r.Status5xx > 0 {
 			problems = append(problems, fmt.Sprintf("%s answered %d server errors for %s", subject(r.Flow, r.Row), r.Status5xx, r.Seat))
 		}
 		if r.Status422 > 0 && !r.Allow422 {
@@ -253,8 +247,8 @@ func TestADailyFlowWithinItsBudgetPasses(t *testing.T) {
 
 func TestAKnownSlowFlowIsRecordedAgainstItsIssueAndPasses(t *testing.T) {
 	v, issue := JudgeDaily("worklist", "worklist", 3*time.Second, Perf8Budget, 30)
-	if v != DailyOverKnown || issue != 4912 {
-		t.Fatalf("got %q #%d, want over budget against #4912", v, issue)
+	if v != DailyOverKnown || issue != 10779 {
+		t.Fatalf("got %q #%d, want over budget against #10779", v, issue)
 	}
 	if err := DailyGate([]DailyResult{{Flow: "worklist", Seat: "rep", Verdict: v, Issue: issue}}, 1); err != nil {
 		t.Fatalf("a listed over-budget flow must not fail the run: %v", err)
@@ -296,7 +290,7 @@ func TestAListedFlowBackUnderBudgetForEverySeatAsksForItsRowToGo(t *testing.T) {
 		{Flow: "worklist", Seat: "manager", Verdict: DailyWithin},
 		{Flow: "worklist", Seat: "cold", Verdict: DailyNotGated},
 	}
-	want := "flow worklist is at or under 80% of its budget for every seat: remove the row for #4912"
+	want := "flow worklist is at or under 80% of its budget for every seat: remove the row for #10779"
 	if got := advisoryText(results, 1); got != want {
 		t.Fatalf("got %q; want %q", got, want)
 	}
@@ -308,7 +302,7 @@ func TestAListedFlowBackUnderBudgetForEverySeatAsksForItsRowToGo(t *testing.T) {
 func TestAListedFlowStillOverForOneSeatKeepsItsRow(t *testing.T) {
 	got := advisoryText([]DailyResult{
 		{Flow: "worklist", Seat: "rep", Verdict: DailyWithin},
-		{Flow: "worklist", Seat: "manager", Verdict: DailyOverKnown, Issue: 4912},
+		{Flow: "worklist", Seat: "manager", Verdict: DailyOverKnown, Issue: 10779},
 	}, 1)
 	if got != "" {
 		t.Fatalf("a flow still over for the manager must keep its row: %q", got)
@@ -330,8 +324,8 @@ func TestADevelopmentScaleRunNeverAsksForARowToGo(t *testing.T) {
 func TestARowLevelEntryMarksOnlyItsRow(t *testing.T) {
 	listed, issue := JudgeDaily("home", "home_worklist", 3*time.Second, Perf8Budget, 30)
 	sibling, _ := JudgeDaily("home", "home_digest", 3*time.Second, Perf8Budget, 30)
-	if listed != DailyOverKnown || issue != 4912 || sibling != DailyOver {
-		t.Fatalf("home_worklist %q #%d, home_digest %q; want only the listed row against #4912", listed, issue, sibling)
+	if listed != DailyOverKnown || issue != 10779 || sibling != DailyOver {
+		t.Fatalf("home_worklist %q #%d, home_digest %q; want only the listed row against #10779", listed, issue, sibling)
 	}
 	err := DailyGate([]DailyResult{
 		{Flow: "home", Row: "home_worklist", Seat: "rep", Verdict: listed, Issue: issue},
@@ -344,8 +338,8 @@ func TestARowLevelEntryMarksOnlyItsRow(t *testing.T) {
 
 func TestAFlowLevelEntryCoversEveryRowOfItsFlow(t *testing.T) {
 	for _, row := range []string{"worklist", "worklist_handled"} {
-		if v, issue := JudgeDaily("worklist", row, 3*time.Second, Perf8Budget, 30); v != DailyOverKnown || issue != 4912 {
-			t.Errorf("%s: got %q #%d, want over budget against #4912", row, v, issue)
+		if v, issue := JudgeDaily("worklist", row, 3*time.Second, Perf8Budget, 30); v != DailyOverKnown || issue != 10779 {
+			t.Errorf("%s: got %q #%d, want over budget against #10779", row, v, issue)
 		}
 	}
 }
@@ -357,7 +351,7 @@ func TestARowEntryBackUnderBudgetAsksForItsRowToGo(t *testing.T) {
 		{Flow: "lists", Row: "lists_contacts_q", Seat: "rep", Verdict: DailyOverKnown, Issue: 7082},
 		{Flow: "lists", Row: "lists_contacts_q", Seat: "manager", Verdict: DailyWithin},
 	}, 1)
-	want := "row home_worklist is at or under 80% of its budget for every seat: remove the row for #4912"
+	want := "row home_worklist is at or under 80% of its budget for every seat: remove the row for #10779"
 	if got != want {
 		t.Fatalf("got %q; want %q and no word on #7082, still over for the rep", got, want)
 	}
@@ -383,10 +377,24 @@ func TestTheDailyScaleRefusesAValueThatSeedsNothing(t *testing.T) {
 	}
 }
 
-func TestTheMorningLoadIsJudgedOnItsOwnBudgetAgainstItsIssue(t *testing.T) {
-	v, issue := JudgeDaily("morning_load", "morning_load_cheap_route", 700*time.Millisecond, Load1Budget, 40)
-	if v != DailyOverKnown || issue != 7068 {
-		t.Fatalf("got %q #%d, want over budget against #7068", v, issue)
+func TestTheMorningLoadIsGatedOnItsOwnBudget(t *testing.T) {
+	for _, tc := range []struct {
+		elapsed time.Duration
+		verdict DailyVerdict
+		over    bool
+	}{
+		{149 * time.Millisecond, DailyWithin, false}, {Load1Budget, DailyOver, true}, {700 * time.Millisecond, DailyOver, true},
+	} {
+		elapsed := tc.elapsed
+		verdict, issue := JudgeDaily("morning_load", "morning_load_cheap_route", elapsed, Load1Budget, 40)
+		over := tc.over
+		if want := tc.verdict; verdict != want || issue != 0 {
+			t.Fatalf("p95 %s: got %q #%d, want %q with no exception", elapsed, verdict, issue, want)
+		}
+		err := DailyGate([]DailyResult{{Flow: "morning_load", Row: "morning_load_cheap_route", Verdict: verdict}}, 1)
+		if (err != nil) != over {
+			t.Fatalf("p95 %s: gate = %v, want failure=%v", elapsed, err, over)
+		}
 	}
 }
 
@@ -517,16 +525,14 @@ func TestAServedFirstLoadKeepsItsColdCacheNote(t *testing.T) {
 	}
 }
 
-func TestAServerErrorPassesOnlyOnAnEntryThatAllowsIt(t *testing.T) {
-	allowed := DailyResult{Flow: "morning_load", Row: "morning_load_cheap_route", Seat: "team", Verdict: DailyOverKnown, Issue: 7068, Status5xx: 1}
-	if err := DailyGate([]DailyResult{allowed}, 1); err != nil {
-		t.Fatalf("a 5xx on an entry with Allow5xx must not fail the run: %v", err)
-	}
-	listedOnly := DailyResult{Flow: "worklist", Row: "worklist", Seat: "rep", Verdict: DailyOverKnown, Issue: 4912, Status5xx: 1}
-	unlisted := DailyResult{Flow: "lists", Row: "lists_contacts", Seat: "rep", Verdict: DailyWithin, Status5xx: 1}
-	for _, r := range []DailyResult{listedOnly, unlisted} {
-		if err := DailyGate([]DailyResult{r}, 1); err == nil || !strings.Contains(err.Error(), "answered 1 server errors") {
-			t.Errorf("%s: got %v; a 5xx outside an Allow5xx entry must fail the run", r.Row, err)
+func TestEveryServerErrorFailsTheDailyGate(t *testing.T) {
+	for _, row := range []DailyResult{
+		{Flow: "morning_load", Row: "morning_load_cheap_route", Seat: "team", Verdict: DailyWithin, Status5xx: 1},
+		{Flow: "worklist", Row: "worklist", Seat: "rep", Verdict: DailyOverKnown, Issue: 10779, Status5xx: 1},
+		{Flow: "lists", Row: "lists_contacts", Seat: "rep", Verdict: DailyWithin, Status5xx: 1},
+	} {
+		if err := DailyGate([]DailyResult{row}, 1); err == nil || !strings.Contains(err.Error(), "answered 1 server errors") {
+			t.Errorf("%s: got %v; every server error must fail the run", row.Row, err)
 		}
 	}
 }
@@ -537,7 +543,7 @@ func TestAListedRowJustUnderItsBudgetKeepsItsEntry(t *testing.T) {
 		{Flow: "worklist", Seat: "manager", Verdict: DailyWithin, P95: 820 * time.Millisecond, Budget: Perf8Budget},
 	}, 1)
 	if got != "" {
-		t.Fatalf("a seat at 82%% of its budget is not clear of the line; the row for #4912 must stay: %q", got)
+		t.Fatalf("a seat at 82%% of its budget is not clear of the line; the row for #10779 must stay: %q", got)
 	}
 }
 
@@ -546,7 +552,7 @@ func TestAListedRowWellUnderItsBudgetForEverySeatAsksForItsEntryToGo(t *testing.
 		{Flow: "worklist", Seat: "rep", Verdict: DailyWithin, P95: 500 * time.Millisecond, Budget: Perf8Budget},
 		{Flow: "worklist", Seat: "manager", Verdict: DailyWithin, P95: 800 * time.Millisecond, Budget: Perf8Budget},
 	}, 1)
-	if !strings.Contains(got, "remove the row for #4912") {
+	if !strings.Contains(got, "remove the row for #10779") {
 		t.Fatalf("got %q; every seat at or below 80%% of its budget must ask for the row to go", got)
 	}
 }

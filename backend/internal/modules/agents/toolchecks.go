@@ -5,58 +5,52 @@ package agents
 
 import (
 	"context"
-	_ "embed"
+	"embed"
 	"encoding/json"
 	"fmt"
-	"log/slog"
+	"io/fs"
 	"maps"
 	"slices"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/toolroles"
 )
 
-// toolChecksJSON is what each verb's admin call was asked by the gates on its
-// path, measured by TestTheToolRoleMatrixIsPublished and drift-gated there.
+// toolChecksFS is what each verb's admin call was asked by the gates on its
+// path, one file per verb, measured by TestTheToolRoleMatrixIsPublished and
+// drift-gated there.
 //
-//go:embed toolchecks.json
-var toolChecksJSON []byte
+//go:embed toolchecks/*.json
+var toolChecksFS embed.FS
 
-// ToolChecksFile is the generated table's shape.
-type ToolChecksFile struct {
-	Note  string                   `json:"note"`
-	Verbs map[string]ToolChecksRow `json:"verbs"`
-}
-
-// ToolChecksRow is one verb's measured checks.
-type ToolChecksRow struct {
-	Checks []string `json:"checks"`
-}
-
-var requiredChecks = mustReadToolChecks(toolChecksJSON)
+var requiredChecks = mustReadToolChecks()
 
 // EmbeddedToolChecks is the table this binary embeds, for the census that
 // holds it to the served surface.
-func EmbeddedToolChecks() (ToolChecksFile, error) {
-	var file ToolChecksFile
-	err := json.Unmarshal(toolChecksJSON, &file)
-	return file, err
+func EmbeddedToolChecks() (map[string]toolroles.Checks, error) {
+	sub, err := fs.Sub(toolChecksFS, "toolchecks")
+	if err != nil {
+		return nil, err
+	}
+	_, verbs, err := toolroles.Read[toolroles.Checks](sub)
+	return verbs, err
 }
 
-func mustReadToolChecks(raw []byte) map[string][]auth.Check {
-	var file ToolChecksFile
-	if err := json.Unmarshal(raw, &file); err != nil {
+func mustReadToolChecks() map[string][]auth.Check {
+	verbs, err := EmbeddedToolChecks()
+	if err != nil {
 		//craft:ignore panic-in-domain the table is embedded at build time, and TestTheToolChecksTableReads reads it in every unit run
-		panic(fmt.Sprintf("crmagents: toolchecks.json does not read: %v", err))
+		panic(fmt.Sprintf("crmagents: toolchecks does not read: %v", err))
 	}
-	out := make(map[string][]auth.Check, len(file.Verbs))
-	for verb, row := range file.Verbs {
+	out := make(map[string][]auth.Check, len(verbs))
+	for verb, row := range verbs {
 		for _, name := range row.Checks {
 			check, err := auth.ParseCheck(name)
 			if err != nil {
 				//craft:ignore panic-in-domain the table is embedded at build time, and TestTheToolChecksTableReads reads it in every unit run
-				panic(fmt.Sprintf("crmagents: toolchecks.json, %s: %v", verb, err))
+				panic(fmt.Sprintf("crmagents: toolchecks, %s: %v", verb, err))
 			}
 			out[verb] = append(out[verb], check)
 		}
@@ -82,32 +76,7 @@ func (r *Registry) grantedTo(ctx context.Context, spec mcp.ToolSpec) (mcp.ToolSp
 	kept := slices.DeleteFunc(slices.Clone(spec.Actions), func(a mcp.ToolAction) bool {
 		return !r.holdsChecks(p, a.Verb) || !r.inAreas(p, a.Verb)
 	})
-	if len(kept) == len(spec.Actions) {
-		return spec, true
-	}
-	if len(kept) == 0 {
-		return spec, false
-	}
-	// A router that picks its action by the arguments named has no enum to
-	// narrow. It is offered whole while any action is the caller's.
-	if spec.ActionField == "" {
-		return spec, true
-	}
-	hidden := hiddenActions(spec.Actions, kept)
-	spec.Actions = kept
-	schema, err := r.narrowedRouterSchema(spec.Name, spec.InputSchema, kept, hidden)
-	if err != nil {
-		// Offering the whole schema would advertise actions the caller cannot run.
-		slog.Warn("router schema could not be narrowed, so it is not offered", "tool", spec.Name, "err", err)
-		return spec, false
-	}
-	spec.InputSchema = schema
-	spec.Description = withoutSentencesNaming(spec.Description, hidden)
-	spec.Instead = withoutSentencesNaming(spec.Instead, hidden)
-	if spec.OutputSchema != nil {
-		spec.OutputSchema = targetsOutput(spec.Name, r.actionTargets(kept))
-	}
-	return spec, true
+	return r.withAvailableActions(spec, kept)
 }
 
 func (r *Registry) holdsChecks(p principal.Principal, verb string) bool {
@@ -123,8 +92,11 @@ func (r *Registry) holdsChecks(p principal.Principal, verb string) bool {
 // derive it, through routedSchema, which derives the registered one. An
 // argument only hidden actions take is gone. The route enum, the choices named
 // as taking an argument, a united enum and a bound note name only kept ones.
-// A member the surface added, such as the retry key, stays.
-func (r *Registry) narrowedRouterSchema(name string, served json.RawMessage, kept []mcp.ToolAction, hidden []string) (json.RawMessage, error) {
+// A member the surface added, such as the retry key, stays. A rare filter,
+// when set, also leaves out what only rare actions take.
+func (r *Registry) narrowedRouterSchema(name string, served json.RawMessage, kept []mcp.ToolAction, hidden []string,
+	rare func(string) bool,
+) (json.RawMessage, error) {
 	r.mu.RLock()
 	rt, ok := r.tools[name].(router)
 	r.mu.RUnlock()
@@ -135,7 +107,7 @@ func (r *Registry) narrowedRouterSchema(name string, served json.RawMessage, kep
 	if !byField {
 		return nil, fmt.Errorf("%s picks its action by the arguments named, so no enum narrows it", name)
 	}
-	every, err := r.routerSchemaFor(rt, field, slices.Sorted(maps.Keys(rt.routeTargets())))
+	every, err := r.routerSchemaFor(rt, field, slices.Sorted(maps.Keys(rt.routeTargets())), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +115,7 @@ func (r *Registry) narrowedRouterSchema(name string, served json.RawMessage, kep
 	for i, action := range kept {
 		choices[i] = action.Action
 	}
-	narrowed, err := r.routerSchemaFor(rt, field, choices)
+	narrowed, err := r.routerSchemaFor(rt, field, choices, rare)
 	if err != nil {
 		return nil, err
 	}
@@ -182,12 +154,12 @@ func (r *Registry) narrowedRouterSchema(name string, served json.RawMessage, kep
 // routerSchemaFor is routedSchema over choices, read back member by member.
 // Router wording for an argument no chosen target takes is left out, as that
 // argument is.
-func (r *Registry) routerSchemaFor(rt router, field string, choices []string) (routedObject, error) {
+func (r *Registry) routerSchemaFor(rt router, field string, choices []string, rare func(string) bool) (routedObject, error) {
 	targets := make([]mcp.ToolSpec, len(choices))
 	r.mu.RLock()
 	for i, choice := range choices {
 		if target, ok := r.tools[rt.routeTargets()[choice]]; ok {
-			targets[i] = target.Spec()
+			targets[i] = withConfirmCode(target.Spec())
 		}
 	}
 	r.mu.RUnlock()
@@ -195,7 +167,7 @@ func (r *Registry) routerSchemaFor(rt router, field string, choices []string) (r
 	if err != nil {
 		return routedObject{}, err
 	}
-	raw, err := routedSchema(rt.Spec().Name, field, choices, own, targets)
+	raw, err := routedSchema(rt.Spec().Name, field, choices, r.actionSentences(rt.Spec().Name, field, choices, targets), own, targets, rare)
 	if err != nil {
 		return routedObject{}, err
 	}

@@ -64,12 +64,14 @@ func holdCohortActivities(
 		         LIMIT @batch)
 		       UNION ALL
 		       (SELECT a.id FROM activity a
-		         WHERE `+attendedMeetingSQL+`
+		         WHERE a.id IN (`+cohortAttendanceSQL+`)
+		           AND `+attendedMeetingSQL+`
 		         ORDER BY a.occurred_at DESC, a.id
 		         LIMIT @batch)
 		       UNION ALL
 		       (SELECT sub.activity_id FROM activity_participant sub
-		         WHERE `+promotableParticipantSQL("sub")+`
+		         WHERE lower(sub.address) IN (`+cohortAddressesSQL+`)
+		           AND `+promotableParticipantSQL("sub")+`
 		         ORDER BY sub.id
 		         LIMIT @batch))
 		 ORDER BY a.id
@@ -83,6 +85,21 @@ func holdCohortActivities(
 	}
 	return held, nil
 }
+
+// The hold runs on every contact event, so its arms start from the contact's own
+// rows and seek activity_participant by index. Each arm then applies the write's
+// full predicate, so the seek only narrows which rows are tested.
+const (
+	// cohortAttendanceSQL lists the activities with a participant row naming the
+	// contact or a record merged into it, as attendedMeetingSQL resolves them.
+	cohortAttendanceSQL = `SELECT ap.activity_id FROM activity_participant ap
+		 WHERE ap.contact_id IN (SELECT att.id FROM contact att
+		        WHERE att.id = @cohort_contact OR att.merged_into_id = @cohort_contact)`
+	// cohortAddressesSQL is the contact's live addresses in the form
+	// idx_aparticipant_address indexes.
+	cohortAddressesSQL = `SELECT lower(pe.email) FROM contact_email pe
+		 WHERE pe.contact_id = @cohort_contact AND pe.archived_at IS NULL`
+)
 
 // cohortArgs binds the names the cohort statements share.
 func cohortArgs(contactID ids.ContactID, held []ids.UUID) pgx.NamedArgs {

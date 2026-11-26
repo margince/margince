@@ -29,19 +29,21 @@ func newComplianceDoors(t *testing.T, slug string) complianceDoors {
 	d := newTwoDoors(t, slug, "read", "write", "send")
 	var purposes struct {
 		Data []struct {
-			ID                  string `json:"id"`
-			RequiresDoubleOptIn bool   `json:"requires_double_opt_in"`
+			ID  string `json:"id"`
+			Key string `json:"key"`
 		} `json:"data"`
 	}
-	if status := d.e.Call(t, "GET", "/v1/consent-purposes", nil, nil, &purposes); status != http.StatusOK || len(purposes.Data) == 0 {
-		t.Fatalf("reading the purposes → %d, %d purposes", status, len(purposes.Data))
+	if status := d.e.Call(t, "GET", "/v1/consent-purposes", nil, nil, &purposes); status != http.StatusOK {
+		t.Fatalf("reading the purposes → %d", status)
 	}
-	purpose := purposes.Data[0].ID
+	var purpose string
 	for _, p := range purposes.Data {
-		if !p.RequiresDoubleOptIn {
+		if p.Key == "business_correspondence" {
 			purpose = p.ID
-			break
 		}
+	}
+	if purpose == "" {
+		t.Fatalf("the catalog has no business_correspondence purpose: %+v", purposes.Data)
 	}
 	return complianceDoors{
 		twoDoors: d, purpose: purpose,
@@ -101,9 +103,9 @@ func TestAUsersOwnConsentProofIsNotAnAgents(t *testing.T) {
 	}
 }
 
-// The stop and the vouch run on a real contact. Each row names the agent, and
-// each can be taken back through its own action.
-func TestAnAgentRecordsAndTakesBackAStopAndAVouch(t *testing.T) {
+// The stop and the standing exception run on a real contact. The stop names the
+// agent, and each can be taken back through its own action.
+func TestAnAgentTakesBackAStopItRecordedAndAStandingException(t *testing.T) {
 	c := newComplianceDoors(t, "agent-stops")
 	c.act(t, "suppress_contact", map[string]any{"id": c.contact, "request_body": AnyMap{
 		"kind": "subject_request", "reason": "Asked on the phone.",
@@ -126,22 +128,42 @@ func TestAnAgentRecordsAndTakesBackAStopAndAVouch(t *testing.T) {
 		"reason": "They wrote back and asked us to carry on.",
 	}})
 
-	var vouch struct {
-		ID string `json:"override_id"`
+	// A standing exception already on file, recorded by the user who made the
+	// contact: no action records a new one.
+	var vouch struct{ ID string }
+	if err := c.e.Owner.QueryRow(t.Context(), `
+		INSERT INTO communication_override
+		    (contact_id, category, reason, decided_by_level, captured_by, legal_entity_id, recorded_directly)
+		SELECT id, 'marketing', 'They asked for the newsletter at the fair.', 'admin', captured_by,
+		       (SELECT id FROM legal_entity WHERE is_default), true
+		  FROM contact WHERE id = $1
+		RETURNING id::text`, c.contact).Scan(&vouch.ID); err != nil {
+		t.Fatalf("planting the standing exception: %v", err)
 	}
-	raw := c.act(t, "allow_contact", map[string]any{"id": c.contact, "request_body": AnyMap{
-		"category": "marketing", "reason": "They asked for the newsletter at the fair.",
-	}})
-	if err := json.Unmarshal(raw, &vouch); err != nil || vouch.ID == "" {
-		t.Fatalf("allow_contact answered %s (%v), want the override id", raw, err)
+	var listed struct {
+		Data []struct {
+			ID          string `json:"override_id"`
+			Company     string `json:"sending_entity_id"`
+			CompanyName string `json:"sending_entity_name"`
+			Author      string `json:"recorded_by_name"`
+			MayRevoke   bool   `json:"may_revoke"`
+		} `json:"data"`
 	}
-	var vouchBy string
-	if err := c.e.Owner.QueryRow(t.Context(),
-		`SELECT captured_by FROM communication_override WHERE id = $1`, vouch.ID).Scan(&vouchBy); err != nil {
-		t.Fatalf("reading the vouch: %v", err)
+	shown := c.tool(t, "read_details", map[string]any{"action": "contact_overrides", "id": c.contact})
+	if err := json.Unmarshal(shown, &listed); err != nil || len(listed.Data) != 1 {
+		t.Fatalf("standing exceptions = %s, %v", shown, err)
 	}
-	if !isAgentStamp(vouchBy) {
-		t.Errorf("the vouch's captured_by = %q, want the agent", vouchBy)
+	row := listed.Data[0]
+	if row.ID != vouch.ID || row.Company == "" || row.Author == "" || !row.MayRevoke {
+		t.Fatalf("standing exception scope or authority missing: %+v", row)
+	}
+	c.e.DescribeCompany(t)
+	shown = c.tool(t, "read_details", map[string]any{"action": "contact_overrides", "id": c.contact})
+	if err := json.Unmarshal(shown, &listed); err != nil || len(listed.Data) != 1 {
+		t.Fatalf("named default company = %s, %v", shown, err)
+	}
+	if listed.Data[0].Company != row.Company || listed.Data[0].CompanyName != "Acme GmbH" {
+		t.Fatalf("the default company did not use its existing profile: %+v", listed.Data[0])
 	}
 	c.act(t, "revoke_override", map[string]any{"id": c.contact, "overrideId": vouch.ID, "request_body": AnyMap{
 		"reason": "The fair was another contact.",
@@ -188,22 +210,19 @@ func TestAnAgentsQualifyingEventNamesTheAgent(t *testing.T) {
 }
 
 // Mail to a contact runs on send_outbound and spends send. This stack has no mail
-// relay and its purpose takes no double opt-in. So each call passes every check on
-// the agent and ends on the precondition named here.
+// relay, so each call passes every check on the agent and stops there. The
+// purpose is business correspondence, which a consent link may ask about.
 func TestAnAgentMailsTheComplianceMessages(t *testing.T) {
 	c := newComplianceDoors(t, "agent-compliance-mail")
 	const noRelay = "cannot send its own mail yet"
-	for _, call := range []struct {
-		args   map[string]any
-		reason string
-	}{
-		{map[string]any{"as": "privacy_notice", "id": c.contact}, noRelay},
-		{map[string]any{"as": "details_confirmation", "id": c.contact}, noRelay},
-		{map[string]any{"as": "double_opt_in", "id": c.contact, "request_body": AnyMap{"purpose_id": c.purpose}}, "not confirmed by double opt-in"},
+	for _, args := range []map[string]any{
+		{"as": "privacy_notice", "id": c.contact},
+		{"as": "details_confirmation", "id": c.contact},
+		{"as": "double_opt_in", "id": c.contact, "request_body": AnyMap{"purpose_id": c.purpose}},
 	} {
-		got := c.mcp.Call(t, "send_outbound", call.args)
-		if !got.IsError || !strings.Contains(got.Text, call.reason) {
-			t.Errorf("send_outbound %v answered %+v, want it to end on %q", call.args["as"], got, call.reason)
+		got := c.mcp.Call(t, "send_outbound", args)
+		if !got.IsError || !strings.Contains(got.Text, noRelay) {
+			t.Errorf("send_outbound %v answered %+v, want it to end on %q", args["as"], got, noRelay)
 		}
 	}
 	readOnly := newTwoDoors(t, "agent-compliance-noscope", "read", "write")
@@ -231,6 +250,7 @@ func TestAnAgentReadsAContactsConsentAsTheUserDoes(t *testing.T) {
 		"contact_consent":       "/v1/contacts/" + c.contact + "/consent",
 		"contact_consent_guard": "/v1/contacts/" + c.contact + "/consent/guard",
 		"contact_stops":         "/v1/contacts/" + c.contact + "/consent/stops",
+		"contact_overrides":     "/v1/contacts/" + c.contact + "/consent/allow",
 	} {
 		var asUser json.RawMessage
 		if status := c.e.Call(t, "GET", route, nil, nil, &asUser); status != http.StatusOK {
@@ -442,11 +462,54 @@ func TestAnAgentReadsTheComplianceQueues(t *testing.T) {
 			t.Errorf("%s answers the agent %v and the user %v", read.topic, got, want)
 		}
 	}
+	readsListedStates(t, c)
 	history := c.tool(t, "read_workspace", map[string]any{
 		"topic": "record_history", "entity_type": "contact", "id": c.contact,
 	})
 	if !strings.Contains(string(history), "create") {
 		t.Errorf("a contact's history %s does not hold its creation", history)
+	}
+}
+
+// readsListedStates asks the notice queue for every state its action lists, in
+// one call. The route takes each listed word and refuses an unlisted one.
+func readsListedStates(t *testing.T, c complianceDoors) {
+	t.Helper()
+	var catalog struct {
+		Actions []struct {
+			Action string `json:"action"`
+			Query  []struct {
+				Name string   `json:"name"`
+				Enum []string `json:"enum"`
+			} `json:"query"`
+		} `json:"actions"`
+	}
+	if err := json.Unmarshal(c.tool(t, "read_workspace", map[string]any{"topic": "actions", "router": "read_workspace", "action": "notice_cases"}), &catalog); err != nil {
+		t.Fatal(err)
+	}
+	var states []string
+	for _, a := range catalog.Actions {
+		for _, q := range a.Query {
+			if a.Action == "notice_cases" && q.Name == "state" {
+				states = q.Enum
+			}
+		}
+	}
+	if len(states) < 2 {
+		t.Fatalf("notice_cases lists the states %v, want every state the queue holds", states)
+	}
+	var asUser, asAgent any
+	if status := c.e.Call(t, "GET", "/v1/privacy/notice-cases?state="+strings.Join(states, "&state="), nil, nil, &asUser); status != http.StatusOK {
+		t.Fatalf("the user's read of the states %v → %d", states, status)
+	}
+	if err := json.Unmarshal(c.tool(t, "read_workspace", map[string]any{"topic": "notice_cases", "state": states}), &asAgent); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(asUser, asAgent) {
+		t.Errorf("the listed states answer the agent %v and the user %v", asAgent, asUser)
+	}
+	if got := c.mcp.Call(t, "read_workspace", map[string]any{"topic": "notice_cases", "state": []string{"open", "overdue"}}); !got.IsError {
+		t.Errorf("a state the queue does not list was answered: %s", got.Text)
 	}
 }
 

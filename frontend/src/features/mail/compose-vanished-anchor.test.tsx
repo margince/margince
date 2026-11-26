@@ -10,7 +10,7 @@ import {
   allowedPreview,
   isPreviewDoor,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 // The composer, opened onto a message that is no longer there.
 //
@@ -82,12 +82,13 @@ afterEach(() => {
 
 describe("drafting a reply to a message that is gone", () => {
   it("names the vanished anchor instead of the server's bare not-found", async () => {
+    const user = userEvent.setup();
     stubRoutes({
       "POST /activities/act-1/draft-email": () =>
         jsonResponse({ title: "not found", code: "not_found" }, 404),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -96,7 +97,7 @@ describe("drafting a reply to a message that is gone", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
 
     expect(await screen.findByText(/no longer available/i)).toBeTruthy();
     expect(screen.queryByText("not found")).toBeNull();
@@ -107,6 +108,7 @@ describe("drafting a reply to a message that is gone", () => {
   // telling a rep writing a fresh mail that there is nothing to reply to would
   // name the wrong record and advise what they are already doing.
   it("does not blame a missing anchor when there is no anchor", async () => {
+    const user = userEvent.setup();
     stubRoutes({
       "POST /contacts/c-1/draft-email": () =>
         jsonResponse(
@@ -119,7 +121,7 @@ describe("drafting a reply to a message that is gone", () => {
         ),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="c-1"
         contactId="c-1"
@@ -132,11 +134,11 @@ describe("drafting a reply to a message that is gone", () => {
     // The fresh-mail composer will not draft without a purpose, so the click
     // below would otherwise be a no-op and this test would pass vacuously.
     draftButton();
-    await userEvent.type(
+    await user.type(
       screen.getByPlaceholderText(/Purpose of the email|Purpose of the reply/),
       "Ask about the rollout",
     );
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
 
     expect(
       await screen.findByText("That contact is no longer on file."),
@@ -148,6 +150,7 @@ describe("drafting a reply to a message that is gone", () => {
   // every failure with "that message is gone" would tell a rep to write a new
   // message when the one thing wrong was a lane being down for a minute.
   it("does not claim the message is gone for an unrelated failure", async () => {
+    const user = userEvent.setup();
     stubRoutes({
       "POST /activities/act-1/draft-email": () =>
         jsonResponse(
@@ -160,7 +163,7 @@ describe("drafting a reply to a message that is gone", () => {
         ),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -169,7 +172,7 @@ describe("drafting a reply to a message that is gone", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
 
     // The shared line for a failure with no reader-facing cause, which is
     // what a 502 is. What matters is the branch it is NOT on.

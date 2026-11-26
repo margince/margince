@@ -109,7 +109,7 @@ func LastTouchFor(
 	if scope != "" {
 		touched += " AND " + scope
 	}
-	touched += opts.projectScope(arg)
+	touched += opts.projectScope(arg) + opts.partyScope(arg)
 	nowAt := fmt.Sprintf("$%d", arg(now))
 	touched += " AND " + occurredday.HappenedSQL("a", nowAt)
 	roster, err := employeeRoster(ctx, arg)
@@ -121,7 +121,7 @@ func LastTouchFor(
 	// moves only the last contact. Both skip automatic mail (DirectionClockSQL).
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH reach AS MATERIALIZED (`+activities.CompanyReachedActivities(wantedPos)+`),
-		readable_activity AS MATERIALIZED (%[11]s), touched AS (
+		readable_activity AS MATERIALIZED (%[11]s), roster AS MATERIALIZED (%[12]s), touched AS (
 		  SELECT reach.company_id, a.id, a.occurred_at, a.occurred_precision, a.kind,
 		         %[5]s AND %[7]s AS they_wrote, %[5]s AND %[8]s AS we_wrote,
 		         %[6]s AS is_interaction
@@ -147,9 +147,9 @@ func LastTouchFor(
 		WHERE %[1]s.id = ANY($%[3]d) AND %[1]s.archived_at IS NULL AND (%[4]s)`,
 		lastTouchCompanyAlias, touched, wantedPos, visible,
 		relstrength.DirectionClockSQL("a", nowAt), relstrength.InteractionCountsSQL("a", nowAt),
-		employeeSQL(roster, relstrength.TheyWroteSQL("emp.contact_id", "a")),
-		employeeSQL(roster, relstrength.WeWroteSQL("a")+" AND "+employeeReachedSQL),
-		occurredday.LatestPrecisionSQL("", "they_wrote"), occurredday.LatestPrecisionSQL("", "we_wrote"), readable), args...)
+		employeeSQL(relstrength.TheyWroteSQL("emp.contact_id", "a")),
+		employeeSQL(relstrength.WeWroteSQL("a")+" AND "+employeeReachedSQL),
+		occurredday.LatestPrecisionSQL("", "they_wrote"), occurredday.LatestPrecisionSQL("", "we_wrote"), readable, roster), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -182,20 +182,25 @@ func scanLastTouches(rows pgx.Rows, out map[ids.CompanyID]LastTouch) (map[ids.Co
 	return out, nil
 }
 
-// employeeRoster is the account's employees this caller may read, the roster
-// the contacts section is built from. A caller refused it reads no employee,
-// so a hidden one moves no clock.
+// employeeRoster is the employees this caller may read for each company the
+// walk reaches, built once per company so no activity row rebuilds it. A
+// caller refused it reads no employee, so a hidden one moves no clock.
 func employeeRoster(ctx context.Context, arg func(any) int) (string, error) {
-	roster, err := contacts.CompanyRosterSQL(ctx, "reach.company_id", arg)
+	roster, err := contacts.CompanyRosterSQL(ctx, "rc.company_id", arg)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		return `SELECT NULL::uuid AS contact_id WHERE false`, nil
+		return `SELECT NULL::uuid AS company_id, NULL::uuid AS contact_id WHERE false`, nil
 	}
-	return roster, err
+	if err != nil {
+		return "", err
+	}
+	return `SELECT rc.company_id, emp.contact_id FROM (SELECT DISTINCT company_id FROM reach) rc
+		CROSS JOIN LATERAL (` + roster + `) emp`, nil
 }
 
-// employeeSQL admits a row when the predicate holds for one roster employee.
-func employeeSQL(roster, predicate string) string {
-	return `EXISTS (SELECT 1 FROM (` + roster + `) emp WHERE ` + predicate + `)`
+// employeeSQL admits a row when the predicate holds for one employee of the
+// row's company in the roster CTE.
+func employeeSQL(predicate string) string {
+	return `EXISTS (SELECT 1 FROM roster emp WHERE emp.company_id = reach.company_id AND ` + predicate + `)`
 }
 
 // employeeReachedSQL is the contact page's reach for emp.contact_id: the

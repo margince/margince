@@ -11,8 +11,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/carddoer"
+	"github.com/margince/margince/backend/internal/compose/promiseband"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
@@ -74,16 +75,22 @@ func (r approvalPreviewReader) commitmentPreview(ctx context.Context, approval c
 		}
 		return out, nil
 	}
-	assignee, named := approvalsubject.CommitmentAskedOf(raw)
+	asked, named := approvalsubject.CommitmentAskedOf(raw)
 	if !named {
 		// A proposal for nobody is withheld from every reader; one reached
 		// anyway names no owner rather than the reader.
 		return out, nil
 	}
+	assignee, err := carddoer.ForPromise(proposal.DoerID, false, asked)
+	if err != nil {
+		out.State = previewUnavailableState
+		return out, nil //nolint:nilerr // A malformed chosen doer is shown as incomplete.
+	}
 	return r.commitmentCreationPreview(ctx, proposal, assignee, out, recipients, citation)
 }
 
-// commitmentCreationPreview names the promiser as the owner, for every reader.
+// commitmentCreationPreview names who keeps the promise, for every reader: the
+// colleague the accepter chose, else the promiser.
 func (r approvalPreviewReader) commitmentCreationPreview(ctx context.Context, proposal CommitmentTaskProposal, assignee ids.UUID, out *crmcontracts.ApprovalPreview, recipients []string, citation crmcontracts.ApprovalEvidence) (*crmcontracts.ApprovalPreview, error) {
 	changes := []crmcontracts.ApprovalPreviewChange{commitmentCreateValue("summary", previewValueText, proposal.Summary)}
 	owner, err := r.referenceValue(ctx, bulkParamOwner, assignee.String())
@@ -103,8 +110,25 @@ func (r approvalPreviewReader) commitmentCreationPreview(ctx context.Context, pr
 		changes = append(changes, commitmentCreateValue("recipients", previewValueText, strings.Join(recipients, ", ")))
 	}
 	out.Changes, out.Evidence, out.State = changes, &[]crmcontracts.ApprovalEvidence{citation}, previewReadyState
+	var details []crmcontracts.ApprovalPreviewDetail
+	if proposal.Tentative {
+		details = append(details, previewDetail(promiseStrengthField, string(promiseband.Tentative)))
+	}
+	if proposal.OddDueDate != "" {
+		details = append(details, previewDetail(oddDueDateField, proposal.OddDueDate))
+	}
+	if details != nil {
+		out.Details = &details
+	}
 	return out, nil
 }
+
+// oddDueDateField carries the stated day outside the due window, so the card
+// can ask about it.
+const oddDueDateField = "odd_due_date"
+
+// promiseStrengthField says on the card how firmly the promise was made.
+const promiseStrengthField = "promise_strength"
 
 func commitmentCreateValue(field, kind, text string) crmcontracts.ApprovalPreviewChange {
 	return crmcontracts.ApprovalPreviewChange{Field: field, Before: crmcontracts.ApprovalPreviewValue{Kind: previewValueEmpty}, After: crmcontracts.ApprovalPreviewValue{Kind: kind, Text: approvals.SanitizeSummary(text)}}
@@ -192,12 +216,7 @@ func (r approvalPreviewReader) promisesStillOpen(ctx context.Context, proposal C
 	var open bool
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		claims := commitmentClaimIDs(proposal.ClaimID, proposal.ClaimIDs)
-		if len(claims) == 0 {
-			open, err = activities.CommitmentStillOpenTx(ctx, tx, proposal.SourceActivityID, proposal.Locator)
-			return err
-		}
-		open, err = contacts.NewStore(r.db).ClaimsStillOpenTx(ctx, tx, claims)
+		open, err = commitmentStillOpenTx(ctx, tx, contacts.NewStore(r.db), proposal)
 		return err
 	})
 	return open, err

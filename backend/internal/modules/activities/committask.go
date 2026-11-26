@@ -5,12 +5,14 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -54,6 +56,58 @@ func (in *LogActivityInput) VisibleOnlyTo(users ...ids.UUID) {
 // task by hand does. The commitment writer calls it for the promiser's own task.
 func (in *LogActivityInput) AdmitInvitedAssignee() {
 	in.invitedAssignee = true
+}
+
+// ContinueFiling marks the message a task is made from, so the task may be
+// filed wherever that message already is (mayCarry). The commitment writer
+// calls it: the links are the extractor's, read off the message.
+func (in *LogActivityInput) ContinueFiling(message ids.UUID) {
+	in.continues = &message
+}
+
+// FilingLinksTx answers which links a task made from message is filed under.
+// Each link is asked what the insert will ask, carried or attached. A company
+// link the caller may not change, and the message does not hold, is left out.
+// The extractor guessed it from the thread's domain, and the task stands
+// without it. Any other refusal refuses the task.
+func (s *Store) FilingLinksTx(ctx context.Context, tx pgx.Tx, message ids.UUID, links []ActivityLinkInput) ([]ActivityLinkInput, error) {
+	if len(links) > maxActivityLinks {
+		return nil, &TooManyLinksError{Count: len(links)}
+	}
+	carried, err := carriedLinks(ctx, tx, &message)
+	if err != nil {
+		return nil, err
+	}
+	kept := make([]ActivityLinkInput, 0, len(links))
+	for _, link := range links {
+		err := gateFor(carried, link)(ctx, tx, link)
+		if link.EntityType == linkEntityCompany && errors.Is(err, apperrors.ErrPermissionDenied) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		kept = append(kept, link)
+	}
+	return kept, nil
+}
+
+// FilingLinks is FilingLinksTx in a transaction of its own, for the check an
+// acceptance makes before the write asks again.
+func (s *Store) FilingLinks(ctx context.Context, message ids.UUID, links []ActivityLinkInput) ([]ActivityLinkInput, error) {
+	var kept []ActivityLinkInput
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		kept, err = s.FilingLinksTx(ctx, tx, message, links)
+		return err
+	})
+	return kept, err
+}
+
+// AdmitConfirmedDue lets the task keep a due date outside the window. Only a
+// writer acting for the human who was shown that date and kept it may call it.
+func (in *LogActivityInput) AdmitConfirmedDue() {
+	in.confirmedDue = true
 }
 
 // MessageParties is who wrote one message and who it went to, as capture

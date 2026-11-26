@@ -1,8 +1,11 @@
 import { MoreHorizontal } from "lucide-react";
 import {
+  createContext,
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
   type RefObject,
+  useCallback,
+  useContext,
   useEffect,
   useId,
   useRef,
@@ -10,7 +13,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useAnchoredToTrigger } from "./anchored";
-import { Button } from "./button";
+import { Button, RefusalLines } from "./button";
 import {
   coveredByDialog,
   panelsOpenedFrom,
@@ -18,6 +21,7 @@ import {
   useDialogFocus,
   useDialogLayer,
 } from "./dialogfocus";
+import { verbName } from "./iconaction";
 
 // Whether an item sets something rather than doing something (a toggle, or a
 // control that draws a region open). That is the one shape of item a menu must
@@ -81,6 +85,14 @@ function walkItems(event: ReactKeyboardEvent<HTMLDivElement>) {
   items[items.indexOf(here) + step]?.focus();
 }
 
+const CloseMenu = createContext<() => void>(() => undefined);
+
+/** For a pick made in a panel an item opened (a `ListPopover`'s): closes the menu
+ *  and focuses its trigger, as choosing an item does. Outside a menu, nothing. */
+export function useCloseOverflowMenu(): () => void {
+  return useContext(CloseMenu);
+}
+
 // OverflowMenu folds the verbs a record offers but a reader rarely wants
 // (merge, archive, share) behind one control. The header then carries identity
 // and the frequent actions. It avoids a row of buttons of equal weight, where
@@ -104,6 +116,7 @@ export function OverflowMenu({
   label,
   word,
   text,
+  face = "pill",
   icon = <MoreHorizontal aria-hidden="true" />,
   inline = false,
   align = "end",
@@ -115,6 +128,8 @@ export function OverflowMenu({
   label: string;
   /** A trigger that prints its verb after the glyph, as a pill; `label` stays its full name and starts with it. */
   text?: string;
+  /** How a `text` trigger is drawn: a `pill` over a picture, or a `button` beside other buttons, its word before the glyph. */
+  face?: "pill" | "button";
   /** The write an item started is out: the trigger shows it as `Button pending` does. */
   pending?: boolean;
   /** Where the panel hangs: off the trigger's `end` (a mark at a row's end), its `start`, or its `center`. */
@@ -128,19 +143,8 @@ export function OverflowMenu({
   /** The trigger's short word, drawn under the glyph in a record's verb bar. */
   word?: string;
   /**
-   * Mount the children immediately rather than on the first open.
-   *
-   * The default defers them, and that is right for a menu drawn per row. A
-   * roster of two hundred rows would otherwise mount two hundred sets of
-   * verbs, and every dialog behind them, before the reader has pressed
-   * anything.
-   *
-   * It is wrong for a control whose job starts at mount. `CreateAction` reads
-   * `startOpen` once, in `useState`, because the meaning "this address opens
-   * the form" has to hang on that. Folded into a deferred menu, the create
-   * dialog that `#/deals/new` asks for never opened. Pressing the menu then
-   * opened it as a surprise. A list header carries one menu per page and a
-   * handful of buttons in it, so mounting them costs nothing there.
+   * Mount the children at once, not on the first open. A list's create reads
+   * `#/<screen>/new` at mount, so a deferred menu would leave its form shut.
    */
   keepMounted?: boolean;
   children: ReactNode;
@@ -154,6 +158,10 @@ export function OverflowMenu({
   const at = useAnchoredToTrigger(open, trigger, panel, align, within);
   const { layer, joinLayer, join } = useDialogLayer(wrap, keepMounted);
   const [reasons, setReasons] = useState<readonly string[]>([]);
+  const close = useCallback(() => {
+    setOpen(false);
+    trigger.current?.focus();
+  }, []);
 
   // Read while open, and again when an item's refusal changes under it. A
   // grant that answers after the press turns a row grey with the panel up.
@@ -207,8 +215,7 @@ export function OverflowMenu({
       ) {
         return;
       }
-      setOpen(false);
-      trigger.current?.focus();
+      close();
     };
     const onPointer = (event: MouseEvent) => {
       if (!(event.target instanceof Node)) {
@@ -235,7 +242,7 @@ export function OverflowMenu({
       globalThis.removeEventListener("keydown", onKey);
       globalThis.removeEventListener("mousedown", onPointer);
     };
-  }, [open, layer]);
+  }, [open, layer, close]);
 
   const openFromKeys = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
     if (event.key === "ArrowDown" && !open && !pending) {
@@ -249,7 +256,7 @@ export function OverflowMenu({
     ref: trigger,
     "aria-expanded": open,
     "aria-controls": panelId,
-    "aria-label": label,
+    "aria-label": verbName(word, label),
     title: label,
     pending,
     onClick: () => {
@@ -288,9 +295,13 @@ export function OverflowMenu({
           )}
         </Button>
       ) : (
-        <Button className="overflow-menu-labelled" {...triggerProps}>
-          {icon}
+        <Button
+          className={face === "pill" ? "overflow-menu-labelled" : undefined}
+          {...triggerProps}
+        >
+          {face === "pill" && icon}
           {text}
+          {face === "button" && icon}
         </Button>
       )}
       {/* Hidden, never unmounted once mounted: the items own their dialogs, and
@@ -327,8 +338,7 @@ export function OverflowMenu({
             // the item opened mounts, so that dialog hands focus back to it.
             const item = event.target.closest("button, a");
             if (item && !isSetting(item)) {
-              setOpen(false);
-              trigger.current?.focus();
+              close();
             }
           }}
         >
@@ -337,7 +347,11 @@ export function OverflowMenu({
               {reason}
             </p>
           ))}
-          {(keepMounted || everOpened) && layer !== null && children}
+          <CloseMenu.Provider value={close}>
+            <RefusalLines>
+              {(keepMounted || everOpened) && layer !== null && children}
+            </RefusalLines>
+          </CloseMenu.Provider>
         </div>,
         layer ?? document.body,
       )}

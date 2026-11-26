@@ -25,27 +25,31 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// contactFirstTouchArm matches one touch arm as touchAnswerArm renders it:
-// the walk's table and alias, the touch predicate, and the asker predicate.
-var contactFirstTouchArm = regexp.MustCompile(`(?s)CROSS JOIN LATERAL \(SELECT (\w+)\.activity_id FROM (\w+) \w+\s+` +
+// contactFirstTouchArm matches the touch arm as touchAnswerArm renders it: the
+// walk over links and attendance, the touch predicate, and the asker predicate.
+var contactFirstTouchArm = regexp.MustCompile(`(?s)CROSS JOIN LATERAL \(SELECT \w+\.activity_id FROM activity_link \w+\s+` +
+	`WHERE \w+\.contact_id = answer_asker\.contact_id\s+UNION ALL\s+` +
+	`SELECT \w+\.activity_id FROM activity_participant \w+\s+` +
 	`WHERE \w+\.contact_id = answer_asker\.contact_id OFFSET 0\) answer_walk\s+` +
 	`CROSS JOIN LATERAL \(SELECT answer_touch\.id, answer_touch\.occurred_at FROM activity answer_touch\s+` +
 	`WHERE answer_touch\.id = answer_walk\.activity_id\s+AND (.*?) OFFSET 0\) answer_touch\s+` +
 	`WHERE (answer_asker\.activity_id = \w+\.id AND answer_asker\.role = 'from')`)
 
-// flatTouchArms is sql with its touch arms joined flat: the walked table joined
-// on the sender's contact, the activity joined on its id, and every predicate
-// in one WHERE, which is how the planner was free to start from the activity.
+// flatTouchArms is sql with its touch arm joined flat. Both walked tables join
+// on the sender's contact, and the activity joins on its id. Every predicate
+// sits in one where clause, so the planner is free to start from the activity.
 func flatTouchArms(t *testing.T, sql string) string {
 	t.Helper()
-	if n := len(contactFirstTouchArm.FindAllStringIndex(sql, -1)); n == 0 || n%2 != 0 {
-		t.Fatalf("the rendered statement carries %d contact-first touch arms, want a link and an attendee arm per answer check", n)
+	if n := len(contactFirstTouchArm.FindAllStringIndex(sql, -1)); n == 0 {
+		t.Fatal("the rendered statement carries no contact-first touch arm, want one per answer check")
 	}
 	return contactFirstTouchArm.ReplaceAllString(sql,
-		`JOIN $2 $1 ON $1.contact_id = answer_asker.contact_id
-	  JOIN activity answer_touch ON answer_touch.id = $1.activity_id
-	  WHERE $4
-	    AND $3`)
+		`JOIN (SELECT activity_id, contact_id FROM activity_link
+	         UNION ALL SELECT activity_id, contact_id FROM activity_participant) answer_walk
+	    ON answer_walk.contact_id = answer_asker.contact_id
+	  JOIN activity answer_touch ON answer_touch.id = answer_walk.activity_id
+	  WHERE $2
+	    AND $1`)
 }
 
 // seedTouchTimeline writes one inbound message per edge case, each from its own
@@ -195,7 +199,7 @@ func TestTheContactFirstTouchArmsAnswerExactlyWhatTheFlatOnesDo(t *testing.T) {
 
 	t.Run("response spread", func(t *testing.T) {
 		statement := fmt.Sprintf(firstResponseSQL, scopeUnbounded, liveRecord(openDealPredicate, "d"),
-			liveRecord(workingLeadPredicate, "ld"), ownDomainSenderSQL("inbound", 3), slowPercentile, everyMessage)
+			liveRecord(workingLeadPredicate, "ld"), "$3", slowPercentile, everyMessage)
 		now := time.Now()
 		read := func(sql string) [2]int64 {
 			var spread [2]int64

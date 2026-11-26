@@ -162,7 +162,7 @@ func TestAVanillaProcessComposesNoJobs(t *testing.T) {
 	if len(built) != 0 || len(composedJobSpecs(built)) != 0 {
 		t.Fatal("a vanilla set composed a job")
 	}
-	if periodic := addExtensionJobs(newJobRegistry(), nil, nil); periodic != nil {
+	if periodic := addExtensionJobs(newJobRegistry(), nil, DefaultSchedules(), nil); periodic != nil {
 		t.Fatalf("a vanilla set placed %d tick(s)", len(periodic))
 	}
 }

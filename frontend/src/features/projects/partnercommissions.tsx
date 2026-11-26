@@ -6,17 +6,19 @@ import { Badge, EmptyState, StatCard } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { Row } from "../../design-system/stack";
+import { Row, Stack } from "../../design-system/stack";
 import { StatStrip } from "../../design-system/statstrip";
 import { stable } from "../../format/collate";
-import { formatMoney, formatNumber, INTL_LOCALE } from "../../format/format";
+import { formatDate, formatMoney, formatNumber } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { CommissionDecision, decisionsFor } from "./commissiondecide";
 import "./partnercommissions.css";
+import { numberFormat } from "../../format/formatters";
 
 // What a partner has earned, on the partner's own company page.
 //
@@ -229,6 +231,7 @@ function CommissionLedger({
   // (decide.go's write probe) — so a grant-holder can still be refused, and
   // the dialog surfaces that refusal rather than pretending it cannot happen.
   const canDecide = useCanWrite("commission", "update");
+  const zone = useViewerZone();
   return (
     <div data-testid="commission-ledger">
       <DataTable
@@ -241,15 +244,33 @@ function CommissionLedger({
             // ledger of bare figures cannot be reconciled against anything.
             // EntityRef resolves the name and links to the record, so a
             // partner's earnings are traceable to the deals that produced them.
+            // The day the line was written sits under it: accrued for an
+            // entry, reversed for the line that cancels one.
             key: "deal",
             header: t("commission.column.deal"),
-            render: (entry) => <EntityRef kind="deal" id={entry.deal_id} />,
+            render: (entry) => (
+              <Stack gap="1">
+                <EntityRef kind="deal" id={entry.deal_id} />
+                <span className="t-caption">
+                  {formatDate(entry.created_at, locale, zone)}
+                </span>
+              </Stack>
+            ),
           },
           {
+            // A reversal carries the amount it takes back; drawn negative, it
+            // reads as the offsetting line it is.
             key: "amount",
             header: t("commission.column.amount"),
-            render: (entry) =>
-              formatMoney(entry.amount_minor, entry.currency, locale),
+            render: (entry) => (
+              <span className="partnercommissions-earned">
+                {formatMoney(
+                  entry.reversal_of ? -entry.amount_minor : entry.amount_minor,
+                  entry.currency,
+                  locale,
+                )}
+              </span>
+            ),
           },
           {
             key: "rate",
@@ -267,11 +288,23 @@ function CommissionLedger({
           {
             key: "status",
             header: t("commission.column.status"),
-            render: (entry) => (
-              <Badge tone={STATUS_TONES[entry.status]}>
-                {t(labelFor(STATUS_LABELS, entry.status))}
-              </Badge>
-            ),
+            render: (entry) =>
+              entry.reversal_of ? (
+                // The reason is said once, on the line that answers a
+                // partner's "what happened to that one".
+                <Stack gap="1">
+                  <Badge tone={STATUS_TONES.void}>
+                    {t("commission.status.reversal")}
+                  </Badge>
+                  {entry.void_reason && (
+                    <span className="t-caption">{entry.void_reason}</span>
+                  )}
+                </Stack>
+              ) : (
+                <Badge tone={STATUS_TONES[entry.status]}>
+                  {t(labelFor(STATUS_LABELS, entry.status))}
+                </Badge>
+              ),
           },
           {
             // Only what this row's state actually admits — decisionsFor
@@ -325,7 +358,7 @@ function CommissionLedger({
  */
 export function formatRate(rateBps: number, locale: Locale): string {
   const percent = rateBps / 100;
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "percent",
     maximumFractionDigits: Number.isInteger(percent) ? 0 : 2,
   }).format(percent / 100);

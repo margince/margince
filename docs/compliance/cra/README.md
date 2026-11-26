@@ -84,10 +84,11 @@ representative, the importer, the distributor, and last the member states where
 users are.
 
 On the first limb ours is Germany, because the decisions about this product's
-security are taken where it is built. So the coordinator is **BSI** (Bundesamt
-für Sicherheit in der Informationstechnik), whose operational arm is CERT-Bund.
-Its published reporting channel is on `bsi.bund.de`. The submission address is
-recorded in the pre-registration block below, with the date it was checked.
+security are taken where it is built. So the coordinator is the **BSI**
+(Bundesamt für Sicherheit in der Informationstechnik), Germany's federal office
+for information security. Its CSIRT, CERT-Bund, takes our reports. Its
+published reporting channel is on `bsi.bund.de`. The pre-registration block
+below records the submission route, and the date the BSI's channel was checked.
 
 Re-decide the coordinator when the basis changes. A second establishment, a
 move of where security decisions are taken, or an EU presence arriving or
@@ -132,7 +133,11 @@ when they change.
 - [ ] **The reporting account exists.** Registered on the Article 16 single
       reporting platform, with the submission route and the credential holder
       recorded here, and at least one other maintainer able to reach it.
-- [ ] **The coordinator's channel is confirmed** against BSI's own published
+      Registered; Dung Nguyen holds the credential. Route: a report is
+      filed on the single reporting platform, which sends it to the BSI and
+      ENISA at the same time. Open: a second maintainer who can reach the
+      account.
+- [ ] **The coordinator's channel is confirmed** against the BSI's own published
       contact, and the date of that check is written next to it. An authority's
       address can change.
 - [ ] **The Article 14(7) basis is recorded:** which limb of the rule selects
@@ -143,7 +148,7 @@ when they change.
 - [ ] **The tabletop below has been walked**, with its date and outcome
       recorded.
 
-**Recorded here:** Status: not done. Owner: [name]. Target date: [date].
+**Recorded here:** Status: in progress. Owner: [name]. Target date: 2026-12-31.
 Record each item above as it is completed. Each one is a human action against
 an external body.
 
@@ -172,6 +177,10 @@ needs two maintainers and no infrastructure.
    walked it, and every field that could not be filled.
 
 Steps 4 and 5 are what the walk tests. The rest sets them up.
+
+## Support period
+
+Which versions get security fixes, and for how long: [support-period.md](support-period.md).
 
 ## What this package does not do
 

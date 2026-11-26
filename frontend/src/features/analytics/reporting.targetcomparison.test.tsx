@@ -77,9 +77,9 @@ const sample: Comparison = {
 
 it("shows the gap, what is left and the coverage the server compared", () => {
   show(sample);
-  expect(screen.getByText("Gap to target")).toBeVisible();
+  expect(screen.getByText("Gap to goal")).toBeVisible();
   expect(screen.getByText("€40,000")).toBeVisible();
-  expect(screen.getByText("Short of the €800,000 target")).toBeVisible();
+  expect(screen.getByText("Short of the €800,000 goal")).toBeVisible();
   expect(screen.getByText("3.6×")).toBeVisible();
   expect(
     screen.getByText("Coverage, deals closing this quarter"),
@@ -94,28 +94,24 @@ it("reads a target already won as reached, never as an endless coverage", () => 
     coverage: undefined,
     gap: -15_000_000, // ds:ignore the target comparison money gap, not a CSS gap
   });
-  expect(screen.getAllByText("Target reached").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("Goal reached").length).toBeGreaterThan(0);
   expect(screen.queryByText(/×$/)).toBeNull();
   expect(screen.getByText(/^Ahead of the /)).toBeVisible();
 });
 
 it.each([
-  ["no_target", undefined, "No sales target for this quarter"],
+  ["no_target", undefined, "No sales goal for this quarter"],
   ["fx_missing", undefined, "Some deal amounts have no exchange rate"],
   ["partial_visibility", undefined, "You cannot see every deal in this scope"],
-  [
-    "incompatible",
-    "period",
-    "Pick this fiscal quarter to compare with a target",
-  ],
-  ["incompatible", "scope", "Pick one team to compare with a target"],
-  ["incompatible", "pipeline", "No target is set for this pipeline"],
+  ["incompatible", "period", "Pick this fiscal quarter to compare with a goal"],
+  ["incompatible", "scope", "Pick one team to compare with a goal"],
+  ["incompatible", "pipeline", "No goal is set for this pipeline"],
   [
     "incompatible",
     "manager_call_pipeline",
     "Pick All pipelines to compare the manager’s call",
   ],
-  ["incompatible", "currency", "The target is in another currency"],
+  ["incompatible", "currency", "The goal is in another currency"],
   [
     "colleague_withheld",
     undefined,
@@ -131,13 +127,13 @@ it.each([
   (status, incompatibility, title) => {
     show({ status, incompatibility, target_metric: "bookings_won" });
     expect(screen.getByText(title)).toBeVisible();
-    expect(screen.queryByText("Gap to target")).toBeNull();
+    expect(screen.queryByText("Gap to goal")).toBeNull();
   },
 );
 
 it("says a landing exactly on the target is at it, not ahead of it", () => {
   show({ ...sample, gap: 0, landing: 80_000_000 });
-  expect(screen.getByText("At the €800,000 target")).toBeVisible();
+  expect(screen.getByText("At the €800,000 goal")).toBeVisible();
 });
 
 it("offers the selection the server can compare and applies it as given", async () => {

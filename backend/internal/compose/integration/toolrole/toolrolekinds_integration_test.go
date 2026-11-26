@@ -12,8 +12,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The filler names a company wherever an enum argument picks the record a call
@@ -37,36 +39,63 @@ func kindVariants(t *testing.T, calls []toolRoleCall, seedable map[string]bool) 
 	var out []toolRoleCall
 	counting := countingPool(t)
 	for _, call := range calls {
-		filled, enums := call.args(counting), enumArguments(t, call)
-		for _, name := range slices.Sorted(maps.Keys(enums)) {
-			picked, named := filled[name].(string)
-			if !named || !isRecordKind(picked) || !slices.Contains(enums[name], picked) {
-				continue
-			}
-			for _, kind := range enums[name] {
-				if kind == picked {
+		for _, place := range kindPlaces(t, call, call.args(counting)) {
+			for _, name := range slices.Sorted(maps.Keys(place.enums)) {
+				picked, named := place.args[name].(string)
+				if !named || !isRecordKind(picked) || !slices.Contains(place.enums[name], picked) {
 					continue
 				}
-				variant := call
-				variant.row = call.row + "[" + name + "=" + kind + "]"
-				variant.kindArg, variant.kind, variant.kindSeeded = name, kind, seedable[kind]
-				out = append(out, variant)
+				for _, kind := range place.enums[name] {
+					if kind == picked {
+						continue
+					}
+					variant := call
+					variant.row = call.row + "[" + name + "=" + kind + "]"
+					variant.kindArg, variant.kind, variant.kindSeeded = name, kind, seedable[kind]
+					variant.kindInBody = place.body
+					out = append(out, variant)
+				}
 			}
 		}
 	}
 	return out
 }
 
-// enumArguments are a call's top-level arguments that admit only listed words.
-func enumArguments(t *testing.T, call toolRoleCall) map[string][]string {
+// kindPlace is one argument map a call may name a record kind in.
+//
+//craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
+type kindPlace struct {
+	args  map[string]any
+	enums map[string][]string
+	body  bool
+}
+
+// kindPlaces are the call's own arguments and a route verb's request body.
+// A kind enum in the body picks a path as much as a top-level one does.
+//
+//craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
+func kindPlaces(t *testing.T, call toolRoleCall, filled map[string]any) []kindPlace {
+	t.Helper()
+	places := []kindPlace{{args: filled, enums: enumArguments(t, call.verb, call.input)}}
+	if body, ok := filled[routeBodyArgument].(map[string]any); ok && len(call.route.Body) > 0 {
+		places = append(places, kindPlace{args: body, enums: enumArguments(t, call.verb, call.route.Body), body: true})
+	}
+	return places
+}
+
+// routeBodyArgument is the argument a route verb takes its request body in.
+const routeBodyArgument = "request_body"
+
+// enumArguments are a schema's top-level properties that admit only listed words.
+func enumArguments(t *testing.T, verb string, input json.RawMessage) map[string][]string {
 	t.Helper()
 	var schema struct {
 		Properties map[string]struct {
 			Enum []any `json:"enum"`
 		} `json:"properties"`
 	}
-	if err := json.Unmarshal(call.input, &schema); err != nil {
-		t.Fatalf("%s's input schema does not read: %v", call.verb, err)
+	if err := json.Unmarshal(input, &schema); err != nil {
+		t.Fatalf("%s's input schema does not read: %v", verb, err)
 	}
 	out := map[string][]string{}
 	for name, prop := range schema.Properties {
@@ -84,17 +113,25 @@ func enumArguments(t *testing.T, call toolRoleCall) map[string][]string {
 //
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
 func (c toolRoleCall) withKind(args map[string]any, pool *recordPool) map[string]any {
-	args[c.kindArg] = c.kind
+	holder := args
+	if body, ok := args[routeBodyArgument].(map[string]any); ok && c.kindInBody {
+		holder = body
+	}
+	holder[c.kindArg] = c.kind
+	if c.verb == "list_records" && c.kind == "lead" {
+		// Linked leads add optional reference checks; other calls' rows must not choose this probe's path.
+		args["q"] = pool.fact(pool.take("lead"), "email")
+	}
 	if fields, named := kindFields[c.verb][c.kind]; named {
 		args["fields"] = fields(pool)
 	}
 	for _, name := range kindIDArguments {
-		if _, named := args[name]; !named {
+		if _, named := holder[name]; !named {
 			continue
 		}
-		args[name] = placeholderUUID
+		holder[name] = placeholderUUID
 		if c.kindSeeded {
-			args[name] = pool.take(c.kind)
+			holder[name] = pool.take(c.kind)
 		}
 	}
 	return args
@@ -107,7 +144,9 @@ func (c toolRoleCall) withKind(args map[string]any, pool *recordPool) map[string
 //craft:ignore naked-any a field takes whichever JSON type its record's schema names
 var kindFields = map[string]map[string]func(*recordPool) map[string]any{
 	"create_record": {
-		"contact": func(*recordPool) map[string]any { return map[string]any{"full_name": "Role Sweep", "source": "manual"} },
+		"contact": func(*recordPool) map[string]any {
+			return map[string]any{"full_name": "Role Sweep", "source": "manual", "linkedin_url": "https://www.linkedin.com/in/" + ids.NewV7().String()}
+		},
 		"lead": func(*recordPool) map[string]any {
 			return map[string]any{"full_name": "Role Sweep", "email": uniqueEmail(), "source": "manual"}
 		},
@@ -210,4 +249,50 @@ func callVariants(t *testing.T, seat roleSeat, recorded *toolCheckRecorder, vari
 func baseRow(row string) string {
 	base, _, _ := strings.Cut(row, "[")
 	return base
+}
+
+func TestTheLeadListProbeIgnoresOtherCallsLinkedLeads(t *testing.T) {
+	recorded := newToolCheckRecorder()
+	d := toolRoleApp(t, "lead-list-probe", compose.WithToolChecksRecordedForTest(recorded.note))
+	calls := toolRoleCalls(compose.NewRegistry(nil, compose.SendPath{}).Specs(), routeShapes())
+	list := slices.IndexFunc(calls, func(c toolRoleCall) bool { return c.verb == "list_records" })
+	link := slices.IndexFunc(calls, func(c toolRoleCall) bool { return c.verb == "link_lead_company" })
+	if list < 0 || link < 0 {
+		t.Fatal("the registry lacks the list or company-link call")
+	}
+	takes, err := takesOf([]toolRoleCall{calls[list]}, func() *recordPool { return countingPool(t) })
+	if err != nil || len(takes["list_records"]) != 0 {
+		t.Fatalf("the base list takes record arguments: %v, %v", takes, err)
+	}
+	variant := calls[list]
+	variant.kindArg, variant.kind, variant.kindSeeded = "record_type", "lead", true
+	pool := seedToolRoleRecords(t, d.E, []toolRoleCall{variant, calls[link]}, "")
+	plainID := pool.fresh["lead"][0]
+	args, linkArgs := variant.args(pool), calls[link].args(pool)
+	linkedID, ok := linkArgs["id"].(string)
+	if !ok {
+		t.Fatal("the link fixture names no lead")
+	}
+	human := apptest.SessionUserID(t, d.E)
+	var before []string
+	for _, linked := range []bool{false, true} {
+		if linked {
+			got, _ := callThroughApproval(t, d.E, d.MCP, calls[link].verb, linkArgs)
+			if got.IsError {
+				t.Fatalf("linking the other call's lead: %s", got.Text)
+			}
+		}
+		got := d.MCP.Call(t, variant.verb, args)
+		run, reached := recorded.take(variant.verb, human)
+		if got.IsError || !reached || !strings.Contains(got.Text, plainID) || strings.Contains(got.Text, linkedID) {
+			t.Fatalf("isolated lead list (other linked=%v): %s, recorded=%v", linked, got.Text, reached)
+		}
+		if !slices.Contains(run.Checks, "lead.read") || slices.Contains(run.Checks, "company.read") {
+			t.Fatalf("plain-lead probe measured another lead's reference: %v", run.Checks)
+		}
+		if linked && !slices.Equal(before, run.Checks) {
+			t.Fatalf("linking another lead changed list checks: %v -> %v", before, run.Checks)
+		}
+		before = run.Checks
+	}
 }

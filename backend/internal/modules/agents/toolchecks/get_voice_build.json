@@ -1,0 +1,10 @@
+{
+  "verb": "get_voice_build",
+  "checks": [
+    "voice_profile.read"
+  ],
+  "takes": [
+    "voice_build",
+    "voice_profile"
+  ]
+}

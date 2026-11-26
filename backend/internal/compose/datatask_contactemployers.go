@@ -14,13 +14,14 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 func contactEmployersDataTask(pool *pgxpool.Pool) datatask.Task {
 	store := newContactsStore(InstallationDB(pool)).WithConsumerMail(capture.MatcherTx)
 	return datatask.Task{
 		ID: "core/1793260800_contact_employers", Version: 1,
-		Title: "Resolving employers for existing contacts", Requires: []string{dedupeScanRequiredMigration},
+		Title: systemtext.Literal("datatask.title.core.1793260800_contact_employers"), Requires: []string{dedupeScanRequiredMigration},
 		Steps: []datatask.Step{{
 			Name: "contact_employers", Limit: 50, MinLimit: 1, Audit: datatask.AuditPolicy{PerRecord: true},
 			Estimate: estimateContactEmployers,

@@ -100,24 +100,24 @@ type Store struct {
 	// catalog is the fieldcatalog seam (custom-field columns); nil means no
 	// catalog is wired and every read and write runs core-columns-only, which
 	// is the supported shape for a deployment that never mounted the module.
-	catalog fieldcatalog.Reader
+	catalog storekit.FieldCatalog
 }
 
 // WithFieldCatalog wires the workspace custom-field catalog into this store.
 // Compose injects modules/customfields' Service; contracts may not import that
 // module, so the seam is the edge (ADR-0054 §3).
-func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
+func (s *Store) WithFieldCatalog(catalog storekit.FieldCatalog) *Store {
 	s.catalog = catalog
 	return s
 }
 
-// catalogColumns answers the active custom-field columns for a contract, or
-// none when no catalog is wired.
-func (s *Store) catalogColumns(ctx context.Context) ([]fieldcatalog.Column, error) {
+// catalogColumnsIn answers the active custom-field columns for a contract on
+// the transaction the store's entry point opened, or none when no catalog is wired.
+func (s *Store) catalogColumnsIn(ctx context.Context, tx pgx.Tx) ([]fieldcatalog.Column, error) {
 	if s.catalog == nil {
 		return nil, nil
 	}
-	return s.catalog.ActiveColumns(ctx, contractObject)
+	return s.catalog.ActiveColumnsIn(ctx, tx, contractObject)
 }
 
 // TimezoneFunc answers the installation's IANA timezone name inside a
@@ -176,14 +176,20 @@ func UnderContractSQL(asOfPos int) string {
 	return contractterm.InForceSQL("", storekit.SQLf("$%d", asOfPos))
 }
 
+// derivedColumns end every read: under_contract, then term_state, in the order
+// scanContract expects. Both are judged on the one as-of day.
+func derivedColumns(asOfPos int) string {
+	return UnderContractSQL(asOfPos) + ", " + contractterm.TermStateSQL("", storekit.SQLf("$%d", asOfPos))
+}
+
 // scanContract reads one row. `active` is the custom-field columns the caller
-// asked for, appended to the select list in the same order — the values land
-// between the core columns and the derived under-contract flag, which is why
-// the flag's destination goes last rather than beside its neighbours.
+// asked for, appended to the select list in the same order. Their values land
+// between the core columns and the derived ones, so the derived go last.
 func scanContract(row pgx.Row, active []fieldcatalog.Column) (crmcontracts.Contract, error) {
 	var (
 		c             crmcontracts.Contract
 		underContract bool
+		termState     string
 		id            ids.UUID
 		companyID     ids.UUID
 		dealID        *ids.UUID
@@ -210,7 +216,7 @@ func scanContract(row pgx.Row, active []fieldcatalog.Column) (crmcontracts.Contr
 		&c.ArchivedAt,
 	}
 	cf := storekit.ScanDests(active)
-	if err := row.Scan(append(append(dests, cf...), &underContract)...); err != nil {
+	if err := row.Scan(append(append(dests, cf...), &underContract, &termState)...); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 	if values := storekit.ExtractValues(active, cf); len(values) > 0 {
@@ -226,6 +232,8 @@ func scanContract(row pgx.Row, active []fieldcatalog.Column) (crmcontracts.Contr
 	contractStatus := crmcontracts.ContractStatus(status)
 	c.Status = &contractStatus
 	c.UnderContract = &underContract
+	term := crmcontracts.ContractTermState(termState)
+	c.TermState = &term
 	c.FxRateDate = datePtr(fxDate)
 	c.StartsOn = datePtr(startsOn)
 	c.EndsOn = datePtr(endsOn)
@@ -268,15 +276,15 @@ func uuidPtr(id *ids.UUID) *openapi_types.UUID {
 
 // GetContract reads one agreement.
 func (s *Store) GetContract(ctx context.Context, id ids.ContractID) (crmcontracts.Contract, error) {
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.Contract{}, err
-	}
 	if err := auth.Require(ctx, contractObject, principal.ActionRead); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 	var out crmcontracts.Contract
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		today, err := s.today(ctx, tx)
 		if err != nil {
 			return err
@@ -307,7 +315,7 @@ func readContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf time.T
 
 	row := tx.QueryRow(ctx, storekit.SQLf(
 		`SELECT %s%s, %s FROM contract WHERE %s`,
-		contractColumns, storekit.SelectSuffix(active), UnderContractSQL(asOfPos), where), args...)
+		contractColumns, storekit.SelectSuffix(active), derivedColumns(asOfPos), where), args...)
 	out, err := scanContract(row, active)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Contract{}, apperrors.ErrNotFound

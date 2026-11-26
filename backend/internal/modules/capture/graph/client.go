@@ -119,25 +119,26 @@ type API interface {
 	// Profile returns the mailbox owner's address (mail, falling back to
 	// userPrincipalName for a mailbox with no mail attribute).
 	Profile(ctx context.Context, accessToken string) (email string, err error)
-	// DeltaInit starts a fresh delta over ONE well-known folder, bounded to
-	// messages received on or after the given instant, walks it to completion,
-	// and returns the deltaLink the next Delta resumes from. A walk that ends
-	// holding fewer messages than the folder reports for that window is
-	// refused rather than returned: the watermark only moves forward, so a
-	// short anchor would drop what it missed for good.
-	//
-	// Per folder rather than over the whole mailbox: /me/messages/delta would
-	// also yield Drafts, Deleted Items and Junk. A draft was never sent, so
-	// putting one on a customer's timeline would be recording a message that
-	// does not exist.
-	DeltaInit(ctx context.Context, accessToken, folder string, after time.Time) (messages []MessageRef, deltaLink string, err error)
-	// Delta resumes a folder's delta from a stored deltaLink and returns the
-	// message ids added/changed since plus the advanced deltaLink;
-	// ErrDeltaGone if Graph no longer honors the link.
-	// Delta returns the ids added or changed since deltaLink, the ids Graph
-	// permanently deleted in the same round, and the link to resume from.
-	// Folder moves remain available through their immutable message ids.
-	Delta(ctx context.Context, accessToken, deltaLink string) (messages []MessageRef, removed []string, newDeltaLink string, err error)
+	// DeltaInit starts a delta over one folder from the given instant, or
+	// resumes a stored anchor round. It hands each page to visit and returns
+	// the deltaLink. A census short of the folder's tally is refused, because
+	// the watermark only moves forward. It is per folder because the mailbox
+	// delta also yields drafts, which were never sent.
+	DeltaInit(ctx context.Context, accessToken, folder string, after time.Time, resume *DeltaResume, visit PageVisitor) (deltaLink string, err error)
+	// Delta resumes a folder's delta from a stored deltaLink or checkpointed
+	// page. It hands each page to visit and returns the advanced deltaLink.
+	// It returns ErrDeltaGone when Graph no longer honors the link.
+	Delta(ctx context.Context, accessToken, deltaLink string, resume *DeltaResume, visit PageVisitor) (newDeltaLink string, err error)
+	// DeletionsDelta walks the Recoverable Items Deletions delta from a stored
+	// link, or opens a fresh round for "". ErrDeltaGone on a 410.
+	DeletionsDelta(ctx context.Context, accessToken, deltaLink string, visit PageVisitor) (newDeltaLink string, err error)
+	// ListDeletions lists a bounded set of the messages Deletions holds.
+	ListDeletions(ctx context.Context, accessToken string) ([]MessageRef, error)
+	// MessageFolder reports where one message is filed; found is false on 404.
+	MessageFolder(ctx context.Context, accessToken, msgID string) (folderID string, found bool, err error)
+	// FindMessage lists the folders holding a message with this
+	// internetMessageId; none when the mailbox has no such message.
+	FindMessage(ctx context.Context, accessToken, internetMessageID string) (folderIDs []string, err error)
 	// EnsureSubscription registers or renews the Graph change-notification
 	// subscription pointing at notificationURL, carrying clientState, and
 	// reports the subscription that now covers this mailbox.
@@ -205,6 +206,9 @@ type MessageRef struct {
 	// ReceivedAt is Graph's receivedDateTime: when Exchange says the message
 	// reached this mailbox. Zero when the listing carried none.
 	ReceivedAt time.Time
+	// InternetMessageID is Graph's internetMessageId, brackets included. Set
+	// only by the Deletions reads, which select it.
+	InternetMessageID string
 }
 
 // OAuthConfig wires the OAuth client. Tenant defaults to "common";
@@ -225,6 +229,8 @@ type OAuthConfig struct {
 	// the NAME, or its own failures would read as the mail connector's in the
 	// logs and in the connection roster.
 	Provider string
+	// Tokens keeps access tokens for their lifetime; nil redeems on every call.
+	Tokens *oauthflow.TokenCache
 }
 
 // NewOAuth builds the OAuth client, applying Microsoft's default endpoints
@@ -266,34 +272,57 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 		ScopeInTokenForms: true,
 		AuthRejected:      ErrAuthRejected,
 		Unreachable:       ErrUnreachable,
+		Tokens:            cfg.Tokens,
 	})
 }
 
 type httpAPI struct {
 	client *http.Client
 	base   string
+	// mailbox is the path root every mailbox call hangs off: personalMailbox,
+	// or /users/{address} for a shared mailbox. Set once, never per call.
+	mailbox string
+	// names are what Graph may call a shared mailbox in a link or a
+	// resource: its address, and its user object id once known.
+	names []string
+	// maxPageSize caps the entries a listing page holds; zero asks for
+	// Graph's own page size.
+	maxPageSize int
+	// now closes an anchor's window; a field so tests date mail against it.
+	now func() time.Time
 }
+
+// personalMailbox is the signed-in user's own mailbox. It is the one place the
+// root is spelled; a test fails if a literal spelling of it comes back.
+const personalMailbox = "/me"
 
 // NewAPI builds the Graph REST client over the given HTTP client and base
 // URL (default Microsoft when base is empty; tests pass an httptest base).
 //
 //nolint:ireturn // returns the API seam by design — the connector holds it as an interface so tests substitute a stub
 func NewAPI(client *http.Client, base string) API {
+	return newHTTPAPI(client, base, personalMailbox)
+}
+
+func newHTTPAPI(client *http.Client, base, mailbox string) *httpAPI {
 	if client == nil {
 		client = boundedHTTPClient()
 	}
 	if base == "" {
 		base = graphAPIBase
 	}
-	return &httpAPI{client: client, base: base}
+	return &httpAPI{client: client, base: base, mailbox: mailbox, now: time.Now}
 }
+
+// root is the absolute URL of the mailbox this client reads.
+func (a *httpAPI) root() string { return a.base + a.mailbox }
 
 func (a *httpAPI) Profile(ctx context.Context, accessToken string) (string, error) {
 	var out struct {
 		Mail              string `json:"mail"`
 		UserPrincipalName string `json:"userPrincipalName"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
 	}
-	if _, err := a.get(ctx, accessToken, a.base+"/me", nil, &out); err != nil {
+	if _, err := a.get(ctx, accessToken, a.root(), nil, &out); err != nil {
 		return "", err
 	}
 	if out.Mail != "" {
@@ -309,10 +338,35 @@ func (a *httpAPI) sameAPIOrigin(link string) error {
 	return nil
 }
 
+// sameMailbox is sameAPIOrigin for a link that walks this mailbox. A shared
+// client also refuses a link under another mailbox, because the app token
+// reads every mailbox the admin granted.
+func (a *httpAPI) sameMailbox(link string) error {
+	if err := a.sameAPIOrigin(link); err != nil || a.mailbox == personalMailbox {
+		return err
+	}
+	parsed, err := url.Parse(link)
+	if err != nil || dotSegment(parsed.Path) || !a.underMailbox(parsed.Path) {
+		return fmt.Errorf("graph: a continuation link left the shared mailbox: %w", ErrUnreachable)
+	}
+	return nil
+}
+
+// dotSegment reports a "." or ".." path segment, which would climb out of
+// the mailbox root after the prefix check passed.
+func dotSegment(path string) bool {
+	for segment := range strings.SplitSeq(path, "/") {
+		if segment == "." || segment == ".." {
+			return true
+		}
+	}
+	return false
+}
+
 func (a *httpAPI) GetMIME(ctx context.Context, accessToken, folderID, msgID string) ([]byte, error) {
-	u := a.base + "/me/messages/" + url.PathEscape(msgID) + "/$value"
+	u := a.root() + "/messages/" + url.PathEscape(msgID) + "/$value"
 	if folderID != "" {
-		u = a.base + "/me/mailFolders/" + url.PathEscape(folderID) + "/messages/" + url.PathEscape(msgID) + "/$value"
+		u = a.root() + "/mailFolders/" + url.PathEscape(folderID) + "/messages/" + url.PathEscape(msgID) + "/$value"
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
@@ -369,10 +423,10 @@ func (a *httpAPI) ListAfter(ctx context.Context, accessToken string, after time.
 		q := url.Values{
 			paramFilter: {receivedAfterFilter(after)},
 			paramSelect: {"id,parentFolderId,receivedDateTime"},
-			paramTop:    {strconv.Itoa(pageSize)},
+			paramTop:    {strconv.Itoa(a.pageSize(pageSize))},
 		}
-		u = a.base + "/me/messages?" + q.Encode()
-	} else if err := a.sameAPIOrigin(u); err != nil {
+		u = a.root() + "/messages?" + q.Encode()
+	} else if err := a.sameMailbox(u); err != nil {
 		return nil, "", err
 	}
 	var out struct {
@@ -410,7 +464,7 @@ func (a *httpAPI) FolderID(ctx context.Context, accessToken, wellKnown string) (
 		ID string `json:"id"`
 	}
 	q := url.Values{paramSelect: {"id"}}
-	if _, err := a.get(ctx, accessToken, a.base+"/me/mailFolders/"+url.PathEscape(wellKnown)+"?"+q.Encode(), nil, &out); err != nil {
+	if _, err := a.get(ctx, accessToken, a.root()+"/mailFolders/"+url.PathEscape(wellKnown)+"?"+q.Encode(), nil, &out); err != nil {
 		return "", err
 	}
 	if out.ID == "" {
@@ -420,4 +474,12 @@ func (a *httpAPI) FolderID(ctx context.Context, accessToken, wellKnown string) (
 		return "", fmt.Errorf("graph: the mailbox reported no %s folder id: %w", wellKnown, ErrUnreachable)
 	}
 	return out.ID, nil
+}
+
+// pageSize is the $top a listing asks for: want, or the client's cap below it.
+func (a *httpAPI) pageSize(want int) int {
+	if a.maxPageSize > 0 && a.maxPageSize < want {
+		return a.maxPageSize
+	}
+	return want
 }

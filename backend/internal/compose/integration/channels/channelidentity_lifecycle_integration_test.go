@@ -9,8 +9,9 @@ package channels
 // path its siblings ride: Art. 17 erasure (plus the suppression row that makes
 // the erasure stick), Art. 15 subject access, the retention anonymizer, the
 // merge relink, and the archive cascade. backend/gates/satellite_lifecycle_test.go
-// proves each path WRITES the table; this suite proves the writes do the right
-// thing on real rows, which is the half a source scan cannot see.
+// and backend/gates/mergereferences_test.go prove each path WRITES the table.
+// This suite proves the writes do the right thing on real rows, which is the
+// half a source scan cannot see.
 //
 // Every failure mode here is silent in production: a satellite nobody archived
 // keeps resolving messages onto a soft-deleted record, one nobody relinked is
@@ -19,6 +20,7 @@ package channels
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -29,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -105,7 +108,7 @@ func TestErasurePurgesTheChannelIdentityAndSuppressesTheAccount(t *testing.T) {
 		t.Fatal("a live account already reads as suppressed — the probe cannot detect an erasure")
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(admin, contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(admin, contact, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 
@@ -217,17 +220,26 @@ func TestArchivingAContactArchivesTheChannelIdentity(t *testing.T) {
 // over-deletion guard test below needs.
 func seedTelegramMessageRaw(t *testing.T, e *integration.Env, sourceID string, messageID int64, senderID, text string) {
 	t.Helper()
-	e.WsExec(t, `
-		INSERT INTO raw_capture (source_system, source_id, payload)
-		VALUES ('telegram', $1,
-		  jsonb_build_object('update_id', $2::bigint,
-		    'message', jsonb_build_object(
-		      'message_id', $2::bigint,
-		      'chat', jsonb_build_object('id', 555),
-		      'from', jsonb_build_object('id', $3::bigint, 'username', 'seed'),
-		      'date', 1700000000,
-		      'text', $4::text)))`,
-		sourceID, messageID, senderID, text)
+	e.SeedRawCapture(t, "telegram", sourceID, telegramPayload(t, map[string]any{
+		"update_id": messageID,
+		"message": map[string]any{
+			"message_id": messageID,
+			"chat":       map[string]any{"id": 555},
+			"from":       map[string]any{"id": json.Number(senderID), "username": "seed"},
+			"date":       1700000000,
+			"text":       text,
+		},
+	}))
+}
+
+// telegramPayload encodes an update fixture as the JSON the receiver stores.
+func telegramPayload(t *testing.T, update map[string]any) []byte {
+	t.Helper()
+	payload, err := json.Marshal(update)
+	if err != nil {
+		t.Fatalf("encoding the telegram update: %v", err)
+	}
+	return payload
 }
 
 // seedTelegramMembershipRaw plants one raw_capture row shaped like a real
@@ -244,16 +256,16 @@ func seedTelegramMessageRaw(t *testing.T, e *integration.Env, sourceID string, m
 // production, where such a matcher purges and exports nothing at all.
 func seedTelegramMembershipRaw(t *testing.T, e *integration.Env, sourceID string, updateID int64, senderID, status string) {
 	t.Helper()
-	e.WsExec(t, `
-		INSERT INTO raw_capture (source_system, source_id, payload)
-		VALUES ('telegram', $1,
-		  jsonb_build_object('update_id', $2::bigint,
-		    'my_chat_member', jsonb_build_object(
-		      'chat', jsonb_build_object('id', $3::bigint, 'type', 'private', 'username', 'seed'),
-		      'new_chat_member', jsonb_build_object(
-		        'user', jsonb_build_object('id', 99, 'is_bot', true, 'username', 'acme_bot'),
-		        'status', $4::text))))`,
-		sourceID, updateID, senderID, status)
+	e.SeedRawCapture(t, "telegram", sourceID, telegramPayload(t, map[string]any{
+		"update_id": updateID,
+		"my_chat_member": map[string]any{
+			"chat": map[string]any{"id": json.Number(senderID), "type": "private", "username": "seed"},
+			"new_chat_member": map[string]any{
+				"user":   map[string]any{"id": 99, "is_bot": true, "username": "acme_bot"},
+				"status": status,
+			},
+		},
+	}))
 }
 
 // rawCaptureSurvives reports whether exactly one raw_capture row still holds
@@ -297,7 +309,7 @@ func TestErasureOfAChannelOnlySubjectPurgesRawCaptureWithoutOverreaching(t *test
 	// typed path match must not.
 	seedTelegramMessageRaw(t, e, "decoy-message", 10101, "30303", "reach me at 10101 anytime")
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(admin, subject, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(admin, subject, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 
@@ -408,7 +420,7 @@ func TestErasureRefusesWhenAnotherLiveContactHoldsTheSameChannelAccount(t *testi
 	archived, live := archiveAndRebindTheAccount(t, e, "60601", "ada")
 	seedTelegramMessageRaw(t, e, "rival-account-message", 11, "60601", "written to the surviving record")
 
-	err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), archived, "test")
+	err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), archived, "test")
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("EraseContact = %v, want a conflict — the erasure cannot cover an account a second live record holds", err)
 	}
@@ -440,7 +452,7 @@ func TestErasureRefusesWhenAnotherLiveContactHoldsTheSameEmail(t *testing.T) {
 	live := e.SeedContact(t, "Bruno Captured Again", nil)
 	seedContactEmail(t, e, live, "bruno@rival.test")
 
-	err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), archived, "test")
+	err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), archived, "test")
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("EraseContact = %v, want a conflict — the erasure cannot cover an address a second live record holds", err)
 	}
@@ -464,7 +476,7 @@ func TestErasingTheLiveRecordAlsoClearsAnArchivedDuplicatesBinding(t *testing.T)
 		`SELECT count(*) FROM contact_channel_identity WHERE channel_user_id = $1`, "60701"); n != 2 {
 		t.Fatalf("%d bindings hold the account before the erasure, want the archived one and the live one", n)
 	}
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), live, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), live, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 	if n := e.WsCount(t,

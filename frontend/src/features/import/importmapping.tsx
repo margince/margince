@@ -6,10 +6,11 @@ import { Badge, Button, TableScroll } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { Select } from "../../design-system/select";
-import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { formatNumber, formatPercent } from "../../format/format";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { ColumnGuideButton } from "./import.guide";
-import { ImportRefusal } from "./import.notices";
+import { ImportRefusal, useRunStopSentence } from "./import.notices";
+import { fieldLabelOf } from "./importfieldlabel";
 import type { WizardFile } from "./importflow";
 import type {
   ImportColumn,
@@ -54,19 +55,22 @@ export function ImportMappingTable({
   onChange: (column: string, target: string) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const options = [
     { value: DONT_IMPORT, label: t("import.dontImport") },
     ...targets.map((target) => ({
       value: target.name,
-      label: target.label ?? target.field_label ?? target.name,
+      label: fieldLabelOf(target),
     })),
   ];
 
   return (
     <div className="import__mapping">
       <p className="import__hint t-sub">
-        {t("import.profiled", { rows: formatNumber(rowsProfiled, locale) })}
+        {plural("import.profiled", rowsProfiled, {
+          count: formatNumber(rowsProfiled, locale),
+        })}
       </p>
       <TableScroll label={t("import.mappingTable")}>
         <table className="import__table">
@@ -95,7 +99,7 @@ export function ImportMappingTable({
                   <th scope="row" className="import__colName">
                     {column.header}
                   </th>
-                  <td className="import__fill">{fillLabel(column)}</td>
+                  <td className="import__fill">{fillLabel(column, locale)}</td>
                   <td
                     className="import__samples"
                     title={column.samples.join(", ") || undefined}
@@ -163,11 +167,11 @@ function isLink(target: ImportFormatColumn): boolean {
   return target.name !== "ref" && target.name.endsWith("_ref");
 }
 
-// fillLabel renders the rate as a percentage of the rows actually profiled.
-// Rounded to whole numbers: the decision it informs is "is this column worth
-// mapping", and nobody decides that differently at 4.2% than at 4%.
-function fillLabel(column: ImportColumn): string {
-  return `${Math.round(column.fill_rate * 100)}%`;
+// The rate as a percentage of the rows actually profiled. Whole numbers: the
+// decision it informs is "is this column worth mapping", and nobody decides
+// that differently at 4.2% than at 4%.
+function fillLabel(column: ImportColumn, locale: Locale): string {
+  return formatPercent(column.fill_rate, locale);
 }
 
 type TypedFile = Readonly<{ file: WizardFile; object: ImportObject }>;
@@ -200,8 +204,15 @@ export function MapStep({
   format,
 }: Readonly<{ wizard: ImportWizardState; format: ImportFormat }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const typed = typedInOrder(wizard, format.order);
+  const leftOut = typed.flatMap((entry): [string, number][] => {
+    const left = unmapped(entry.file, wizard.mapping[entry.file.file] ?? {});
+    return left > 0 ? [[entry.file.file, left]] : [];
+  });
   const [open, setOpen] = useState(typed[0]?.file.file ?? "");
+  const stopSentence = useRunStopSentence(wizard.run.data, format);
   const current = typed.find((entry) => entry.file.file === open) ?? typed[0];
   if (!current) return null;
   const name = current.file.file;
@@ -220,7 +231,7 @@ export function MapStep({
   const refused = test.error ?? wizard.saveFailure;
   // A test run that stopped left the run a draft, with the reason on it.
   const stopped =
-    wizard.run.data?.status === "pending" ? wizard.run.data.error : undefined;
+    wizard.run.data?.status === "pending" ? stopSentence : undefined;
   return (
     <div className="import">
       <RecordTabs
@@ -234,14 +245,14 @@ export function MapStep({
             t(`import.object.${entry.object}`),
           ]),
         )}
-        counts={Object.fromEntries(
-          typed.flatMap((entry) => {
-            const left = unmapped(
-              entry.file,
-              wizard.mapping[entry.file.file] ?? {},
-            );
-            return left > 0 ? [[entry.file.file, left]] : [];
-          }),
+        counts={Object.fromEntries(leftOut)}
+        countLabels={Object.fromEntries(
+          leftOut.map(([file, left]) => [
+            file,
+            plural("import.map.leftOut", left, {
+              count: formatNumber(left, locale),
+            }),
+          ]),
         )}
       />
       <p className="import__hint t-sub">
@@ -279,6 +290,7 @@ export function MapStep({
         <ImportRefusal
           title={t("import.map.stageFailed")}
           error={refused}
+          format={format}
           keepsDraft
         />
       ) : stopped ? (

@@ -8,26 +8,43 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// RunNoteBodyRefusal is the refusal a scheduled run's note with no body gets,
+// nil for a note that has one. Nobody watched the run, so its finding must be
+// written down; the certification case refuses the same note the same way.
+func RunNoteBodyRefusal(body *string) error {
+	if body == nil || strings.TrimSpace(*body) == "" {
+		return httperr.Validation(fieldBody, codeRequired,
+			"A scheduled run's note states its finding in the body: what the risk is and which records show it.")
+	}
+	return nil
+}
 
 // scheduledRunNoteLanding keeps a scheduled run to one note per deal and
 // member a day. A spec runs once a day per seat, so that is one per run. It
 // drops from in the deal links that already carry such a note. When it drops
 // every deal link, it answers that earlier note and nothing is written. The
 // member is the one the audit row names, so a new passport is no way around it.
+// A note with no body is refused (RunNoteBodyRefusal).
 func scheduledRunNoteLanding(ctx context.Context, tx pgx.Tx, in *LogActivityInput) (crmcontracts.Activity, bool, error) {
 	actor, ok := principal.Actor(ctx)
 	if in.Origin != OriginAgent || in.Kind != string(crmcontracts.ActivityKindNote) || !ok || actor.UserID == ids.Nil {
 		return crmcontracts.Activity{}, false, nil
+	}
+	if err := RunNoteBodyRefusal(in.Body); err != nil {
+		return crmcontracts.Activity{}, false, err
 	}
 	asOf := orWallClock(in.recordedAt)
 	// The limit counts UTC days, so its window does not move with a zone setting.

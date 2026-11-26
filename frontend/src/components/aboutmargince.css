@@ -1,0 +1,50 @@
+.aboutmargince {
+  display: grid;
+  gap: var(--space-8);
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The mark is one line box tall, so it centres on the name, and its drawing
+   starts at the viewBox edge, so it stands on the terms' left edge. */
+.aboutmargince-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--fontHeadingMedium);
+}
+.aboutmargince-brand svg {
+  block-size: 1lh;
+  inline-size: auto;
+  flex: none;
+}
+
+.aboutmargince .aboutmargince-facts {
+  gap: var(--space-4);
+}
+/* No value here is a 32px control, so a term is one text line and the gap alone sets the rhythm. */
+.aboutmargince .factlist-flat .factlist-term {
+  padding-block: 0;
+}
+
+/* The version, its commit link and any copy failure stand at a note's distance. */
+.aboutmargince-version {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-1);
+}
+
+.aboutmargince-links {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* With the stack's own --space-3 gap, the title stands --space-8 from the
+   brand, as far as the brand stands from the list. */
+.aboutmargince-dialogbody {
+  padding-block-start: var(--space-5);
+}

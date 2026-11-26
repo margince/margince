@@ -1,0 +1,92 @@
+{
+  "scenario": "case123_take_over_sofias_deal",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "a893ab89a3fd3ef0",
+    "tools": "f8b3f6c2e7caa415",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T07:56:43Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T07:56:43Z"
+  },
+  "usage": {
+    "input_tokens": 57721,
+    "output_tokens": 17135,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 113342,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "find_records",
+        "list_notification_preferences",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "find_records",
+        "list_colleagues",
+        "list_notification_preferences",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 9.5,
+      "min": 7,
+      "max": 12
+    },
+    "turns": {
+      "median": 5,
+      "min": 5,
+      "max": 5
+    },
+    "refused": {
+      "median": 2.5,
+      "min": 2,
+      "max": 3
+    },
+    "prompt_tokens": {
+      "median": 85531.5,
+      "min": 67524,
+      "max": 103539
+    },
+    "output_tokens": {
+      "median": 8567.5,
+      "min": 7321,
+      "max": 9814
+    }
+  }
+}

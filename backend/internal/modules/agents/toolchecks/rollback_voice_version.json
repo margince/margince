@@ -1,0 +1,10 @@
+{
+  "verb": "rollback_voice_version",
+  "checks": [
+    "voice_profile.update"
+  ],
+  "takes": [
+    "voice_profile",
+    "voice_rolled_forward"
+  ]
+}

@@ -12,7 +12,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `definition` | `jsonb` |  | A Live List's filter tree; null for a Shortlist. |
-| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
+| `entity_type` | `text` | yes |  |
 | `list_type` | `text`, default `'static'::text` | yes | One of `static`, `dynamic`. |
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
@@ -35,7 +35,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Rules**
 
-- `list_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
+- `list_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 - `list_list_type_check`: `CHECK ((list_type = ANY (ARRAY['static', 'dynamic'])))`
 - `list_sharing_check`: `CHECK ((sharing = ANY (ARRAY['private', 'team', 'workspace'])))`
 - `list_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
@@ -49,18 +49,18 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 - `list_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `list_steward_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.steward_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('steward_id')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "purpose": 20000, "sharing": 20000, "list_type": 20000, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000,"list_type":20000,"name":120,"purpose":20000,"sharing":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "purpose": 20000, "sharing": 20000, "list_type": 20000, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000,"list_type":20000,"name":120,"purpose":20000,"sharing":20000}')`
 - `trg_list_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## list_evaluation
 
-6 columns · primary key `(list_id)` · referenced by 0 foreign keys
+4 columns · primary key `(list_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `definition_version` | `bigint` | yes |  |
 | `evaluated_at` | `timestamp with time zone` | yes |  |
 | `list_id` | `uuid` | yes | Points at `list.id`. |
-| `member_count` | `integer` | yes |  |
 | `outcome` | `text` | yes | One of `complete`, `too_large`, `invalid`. |
 | `snapshot_version` | `bigint` |  |  |
 
@@ -72,23 +72,25 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Rules**
 
-- `list_evaluation_definition_version_js_safe`: `CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint)))`
 - `list_evaluation_outcome_check`: `CHECK ((outcome = ANY (ARRAY['complete', 'too_large', 'invalid'])))`
 
 **Indexes**
 
-- `idx_list_evaluation_due`: `btree (evaluated_at)`
 - `list_evaluation_pkey`: `unique, btree (list_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"outcome":20000}')`
 
 ## list_live_member
 
-5 columns · primary key `(list_id, entity_id)` · referenced by 0 foreign keys
+4 columns · primary key `(list_id, entity_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `definition_version` | `bigint` | yes |  |
 | `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
+| `entity_type` | `text` | yes |  |
 | `list_id` | `uuid` | yes | Points at `list.id`. |
 | `member_since` | `timestamp with time zone` | yes |  |
 
@@ -100,13 +102,17 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Rules**
 
-- `list_live_member_definition_version_js_safe`: `CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint)))`
-- `list_live_member_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
+- `list_live_member_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 
 **Indexes**
 
 - `idx_list_live_member_entity`: `btree (entity_type, entity_id)`
 - `list_live_member_pkey`: `unique, btree (list_id, entity_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000}')`
 
 ## list_member
 
@@ -117,7 +123,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `added_by` | `text` | yes | The principal that added a Shortlist member; `dynamic` for a Live List member. |
 | `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
+| `entity_type` | `text` | yes |  |
 | `list_id` | `uuid` | yes | Points at `list.id`. |
 | `note` | `text` |  |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -130,7 +136,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Rules**
 
-- `list_member_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
+- `list_member_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 - `list_member_unique`: `UNIQUE (list_id, entity_type, entity_id)`
 
 **Indexes**
@@ -139,9 +145,14 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 - `list_member_pkey`: `unique, btree (id)`
 - `list_member_unique`: `unique, btree (list_id, entity_type, entity_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note": 2000, "added_by": 20000, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"added_by":20000,"entity_type":20000,"note":2000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "added_by": 20000, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"added_by":20000,"entity_type":20000,"note":2000}')`
+
 ## list_member_event
 
-11 columns · primary key `(id)` · referenced by 0 foreign keys
+12 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -150,7 +161,8 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 | `actor` | `text` | yes |  |
 | `definition_version` | `bigint` |  |  |
 | `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
+| `entity_type` | `text` | yes |  |
+| `imported` | `boolean`, default `false` | yes |  |
 | `list_id` | `uuid` | yes | Points at `list.id`. |
 | `member_note` | `text` |  |  |
 | `note` | `text` |  |  |
@@ -167,7 +179,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 - `list_member_event_action_check`: `CHECK ((action = ANY (ARRAY['added', 'removed', 'entered', 'left'])))`
 - `list_member_event_definition_version_js_safe`: `CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint)))`
-- `list_member_event_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
+- `list_member_event_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 - `list_member_event_reason_check`: `CHECK ((reason = ANY (ARRAY['chosen', 'bulk', 'record_archived', 'record_restored', 'evaluated', 'filter_changed', 'automation'])))`
 
 **Indexes**
@@ -175,6 +187,11 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 - `idx_list_member_event_entity`: `btree (entity_type, entity_id)`
 - `idx_list_member_event_list`: `btree (list_id, occurred_at DESC, id DESC)`
 - `list_member_event_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note": 2000, "actor": 20000, "action": 20000, "reason": 2000, "entity_type": 20000, "member_note": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"action":20000,"actor":20000,"entity_type":20000,"member_note":2000,"note":2000,"reason":2000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "actor": 20000, "action": 20000, "reason": 2000, "entity_type": 20000, "member_note": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"action":20000,"actor":20000,"entity_type":20000,"member_note":2000,"note":2000,"reason":2000}')`
 
 ## list_revision
 
@@ -210,6 +227,11 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 - `list_revision_pkey`: `unique, btree (id)`
 - `list_revision_version_key`: `unique, btree (list_id, version)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "purpose": 20000, "sharing": 20000, "changed_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"changed_by":20000,"name":120,"purpose":20000,"sharing":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "purpose": 20000, "sharing": 20000, "changed_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"changed_by":20000,"name":120,"purpose":20000,"sharing":20000}')`
+
 ## list_visit
 
 4 columns · primary key `(user_id, list_id)` · referenced by 0 foreign keys
@@ -243,7 +265,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` | yes | Points at `app_user.id`. |
 | `query` | `jsonb` | yes | The saved column choice, sort, and filter state, in the list-view vocabulary; persisted and restored verbatim. |
-| `resource` | `text` | yes | One of `contacts`, `companies`, `deals`, `activities`, `leads`, `partners` and 1 more. |
+| `resource` | `text` | yes |  |
 | `shared_scope` | `text`, default `'private'::text` | yes | V1 enforces private. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -258,7 +280,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Rules**
 
-- `saved_view_resource_check`: `CHECK ((resource = ANY (ARRAY['contacts', 'companies', 'deals', 'activities', 'leads', 'partners', 'projects'])))`
+- `saved_view_resource_check`: `CHECK (((resource = ANY (ARRAY['contacts', 'companies', 'deals', 'activities', 'leads', 'partners', 'projects'])) OR (resource ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 - `saved_view_shared_scope_check`: `CHECK ((shared_scope = ANY (ARRAY['private', 'team', 'workspace'])))`
 - `saved_view_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
@@ -271,6 +293,8 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 **Triggers**
 
 - `saved_view_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "resource": 20000, "shared_scope": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000,"shared_scope":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "resource": 20000, "shared_scope": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000,"shared_scope":20000}')`
 - `trg_saved_view_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## tag
@@ -304,17 +328,18 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "color": 20000, "description": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"color":20000,"description":20000,"name":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "color": 20000, "description": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"color":20000,"description":20000,"name":120}')`
 - `trg_tag_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## tag_interest_read
 
-5 columns · primary key `(activity_id)` · referenced by 0 foreign keys
+4 columns · primary key `(activity_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `content_digest` | `text` | yes |  |
-| `read_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `tag_ids` | `uuid[]`, default `'{}'::uuid[]` | yes |  |
 | `vocabulary_digest` | `text` | yes |  |
 
@@ -328,9 +353,14 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 - `tag_interest_read_pkey`: `unique, btree (activity_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"content_digest": 20000, "vocabulary_digest": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"content_digest":20000,"vocabulary_digest":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"content_digest": 20000, "vocabulary_digest": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"content_digest":20000,"vocabulary_digest":20000}')`
+
 ## tag_suggestion
 
-12 columns · primary key `(id)` · referenced by 1 foreign key
+9 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -338,14 +368,11 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 | `company_id` | `uuid` |  | Points at `company.id`. |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `decided_at` | `timestamp with time zone` |  |  |
-| `decided_by` | `uuid` |  | Points at `app_user.id`. |
 | `evidence_count` | `integer` | yes |  |
-| `evidence_through` | `timestamp with time zone` | yes |  |
 | `state` | `text`, default `'open'::text` | yes | One of `open`, `accepted`, `dismissed`, `superseded`. |
 | `tag_id` | `uuid` | yes | Points at `tag.id`. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
 
@@ -353,7 +380,6 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 |---|---|---|
 | `company_id` | `company` | deleting the parent deletes this row |
 | `contact_id` | `contact` | deleting the parent deletes this row |
-| `decided_by` | `app_user` | deleting the parent keeps this row and clears the link |
 | `tag_id` | `tag` | deleting the parent deletes this row |
 
 **Rules**
@@ -367,7 +393,6 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 - `idx_tag_suggestion_company`: `btree (company_id, tag_id, decided_at) WHERE (company_id IS NOT NULL)`
 - `idx_tag_suggestion_contact`: `btree (contact_id, tag_id, decided_at) WHERE (contact_id IS NOT NULL)`
-- `idx_tag_suggestion_decided_by`: `btree (decided_by) WHERE (decided_by IS NOT NULL)`
 - `idx_tag_suggestion_open`: `btree (created_at DESC, id DESC) WHERE (state = 'open')`
 - `idx_tag_suggestion_tag`: `btree (tag_id)`
 - `tag_suggestion_pkey`: `unique, btree (id)`
@@ -376,7 +401,8 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Triggers**
 
-- `trg_tag_suggestion_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"state":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"state":20000}')`
 
 ## tag_suggestion_evidence
 
@@ -417,7 +443,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 | `assigned_by` | `uuid` |  |  |
 | `assigned_by_kind` | `text` |  | One of `human`, `agent`, `import`. |
 | `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
+| `entity_type` | `text` | yes |  |
 | `tag_id` | `uuid` | yes | Points at `tag.id`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
@@ -430,7 +456,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 **Rules**
 
 - `taggable_assigned_by_kind_check`: `CHECK (((assigned_by_kind IS NULL) OR (assigned_by_kind = ANY (ARRAY['human', 'agent', 'import']))))`
-- `taggable_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
+- `taggable_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 - `taggable_unique`: `UNIQUE (tag_id, entity_type, entity_id)`
 
 **Indexes**
@@ -438,3 +464,8 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 - `idx_taggable_entity`: `btree (entity_type, entity_id)`
 - `taggable_pkey`: `unique, btree (id)`
 - `taggable_unique`: `unique, btree (tag_id, entity_type, entity_id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"entity_type": 20000, "assigned_by_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"assigned_by_kind":20000,"entity_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity_type": 20000, "assigned_by_kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"assigned_by_kind":20000,"entity_type":20000}')`

@@ -234,3 +234,66 @@ func TestCombinedHTTPFollowUpAcceptsAnExplicitInvitedAssignee(t *testing.T) {
 		t.Fatalf("assigned follow-up: %+v %v", tasks, err)
 	}
 }
+
+func TestHeldOutcomeFilesItsOptionalNextStepAtomically(t *testing.T) {
+	for _, withTask := range []bool{false, true} {
+		t.Run(fmt.Sprintf("task=%t", withTask), func(t *testing.T) {
+			e := setupSend(t)
+			ctx := e.as(principal.RowScopeAll)
+			store, meeting := loggedMeeting(ctx, t, e)
+			id := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
+			body := `{"meeting_status":"held"}`
+			if withTask {
+				body = `{"meeting_status":"held","follow_up_task":{"subject":"Send revised quote"}}`
+			}
+			req := httptest.NewRequest(http.MethodPatch, "/v1/activities/"+id.String(), strings.NewReader(body)).WithContext(ctx)
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("If-Match", fmt.Sprint(*meeting.Version))
+			response := httptest.NewRecorder()
+			Handlers{store: store}.UpdateActivity(response, req, meeting.Id, crmcontracts.UpdateActivityParams{})
+			if response.Code != http.StatusOK {
+				t.Fatalf("held outcome: %d %s", response.Code, response.Body.String())
+			}
+			tasks, _, err := store.ListActivities(ctx, ListActivitiesInput{SourceActivityID: &id})
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := 0
+			if withTask {
+				want = 1
+			}
+			if len(tasks) != want {
+				t.Fatalf("got %d next steps, want %d", len(tasks), want)
+			}
+			if withTask && (tasks[0].SourceActivityId == nil || ids.UUID(*tasks[0].SourceActivityId) != id.UUID || tasks[0].Subject == nil || *tasks[0].Subject != "Send revised quote") {
+				t.Fatalf("next step lost meeting source or words: %+v", tasks[0])
+			}
+			if withTask {
+				_, err = store.UpdateActivity(ctx, id, UpdateActivityInput{MeetingStatus: new("held"), FollowUpTask: &crmcontracts.ActivityFollowUpTask{Subject: "Send revised quote"}})
+				if err == nil {
+					t.Fatal("another held outcome created the same next step")
+				}
+			}
+		})
+	}
+}
+
+func TestInvalidHeldFollowUpLeavesTheMeetingUnanswered(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	store, meeting := loggedMeeting(ctx, t, e)
+	id := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
+	_, err := store.UpdateActivity(ctx, id, UpdateActivityInput{
+		MeetingStatus: new("held"), FollowUpTask: &crmcontracts.ActivityFollowUpTask{Subject: ""},
+	})
+	if err == nil {
+		t.Fatal("blank next step was accepted")
+	}
+	row, err := store.GetActivity(ctx, id, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if row.MeetingStatus != nil {
+		t.Fatalf("invalid next step still marked meeting %v", row.MeetingStatus)
+	}
+}

@@ -20,6 +20,9 @@ type Policy struct {
 	Limits Limits
 	Roles  map[string]Limits
 	Window WindowPlan
+	// Unpaced holds the role keys whose agents have no per-minute pacing on
+	// the MCP edge. The window allowances above still bind them.
+	Unpaced []string
 }
 
 // PolicySource answers the installation's current Policy. It is a seam because

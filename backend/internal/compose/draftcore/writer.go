@@ -100,6 +100,12 @@ type Input interface {
 	// Addresses is where the draft is sent, empty when the record holds none.
 	Addresses() []string
 	RequestedSubject() string
+	// Revises is true when the call changes a draft on screen. The model then
+	// owns the subject, because a changed purpose needs a new one.
+	Revises() bool
+	// Subjects are the contacts and activities the payload carries, for a
+	// restriction of processing.
+	Subjects() *model.Subjects
 	// Booked says whether the record carries a meeting with this recipient.
 	//
 	// False is the common answer and the one that binds: with nothing booked, a
@@ -244,7 +250,7 @@ func writeChecked(
 	if draftcheck.ClaimsAttachment(served.Body) {
 		return Draft{}, errors.New("draft claims an outgoing attachment that was not supplied")
 	}
-	if subject := in.RequestedSubject(); subject != "" {
+	if subject := in.RequestedSubject(); subject != "" && !in.Revises() {
 		served.Subject = subject
 	}
 	return served, nil
@@ -330,6 +336,7 @@ func BuildRequest(surface Surface, in Input, voice draftvoice.Context) (model.Re
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: surface.schema(),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       in.Subjects(),
 	}, nil
 }
 

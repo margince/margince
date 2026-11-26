@@ -9,6 +9,7 @@ import { join, resolve } from "node:path";
 import { cleanup, render } from "@testing-library/react";
 import { Info } from "lucide-react";
 import { afterEach, describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { type Glyph, InfoFilled, WarningFilled } from "./materialsymbols";
 
 afterEach(cleanup);
@@ -73,7 +74,9 @@ describe("a Material symbol", () => {
 
 describe("the copied Material files", () => {
   it("are byte for byte the published ones, and only those", () => {
-    expect(readdirSync(COPIES).sort()).toEqual(Object.keys(PUBLISHED).sort());
+    expect(readdirSync(COPIES).sort(stable)).toEqual(
+      Object.keys(PUBLISHED).sort(stable),
+    );
     for (const [file, sha256] of Object.entries(PUBLISHED)) {
       const digest = createHash("sha256")
         .update(readFileSync(join(COPIES, file)))

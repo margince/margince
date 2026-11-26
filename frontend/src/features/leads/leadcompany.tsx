@@ -20,7 +20,7 @@ import type {
 import { industryWords } from "../../format/industry";
 import { jurisdictionName } from "../../format/jurisdiction";
 import { useLocale, useT } from "../../i18n";
-import { useCanWrite } from "../../lib/capability";
+import { useCan, useCanWrite } from "../../lib/capability";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { leadIndustry } from "./leadindustry";
@@ -103,10 +103,17 @@ function LinkCompanyOffer({
 
 // The company a lead names, without the offer: what a list row or a board card
 // draws. The link reads the company's own name, which a rename there may have
-// moved away from what the lead typed.
-export function LeadCompanyName({ lead }: Readonly<{ lead: Lead }>): ReactNode {
-  if (lead.company_id) {
-    return <EntityRef kind="company" id={lead.company_id} />;
+// moved away from what the lead typed. A company the reader may not see reads
+// as if the lead were not linked, which is what the Company sort orders by.
+// Without company read the name is not even asked for.
+export function LeadCompanyName({
+  lead,
+  asText = false,
+}: Readonly<{ lead: Lead; asText?: boolean }>): ReactNode {
+  const companyId = useCan("company", "read") ? lead.company_id : null;
+  const linked = useEntityName("company", companyId);
+  if (companyId && !linked.absent) {
+    return <EntityRef kind="company" id={companyId} asText={asText} />;
   }
   const name = lead.company_name?.trim();
   return name ? <span>{name}</span> : null;
@@ -153,14 +160,35 @@ export function LeadCompany({
     lead.company_match && lead.writable && !lead.archived_at && mayLink
       ? lead.company_match
       : undefined;
-  if (nameShown || !lead.company_name?.trim()) {
-    return match ? <LinkCompanyOffer lead={lead} match={match} /> : null;
+  const typed = Boolean(lead.company_name?.trim());
+  const qualifiable =
+    lead.writable &&
+    !lead.archived_at &&
+    mayLink &&
+    lead.status !== "promoted" &&
+    lead.status !== "disqualified";
+  // A typed company with no record yet is by design: the qualify dialog can add
+  // it. The details say so beside the typed name while the lead can still be
+  // qualified; the compact header does not.
+  const pending =
+    typed && !lead.company_match && qualifiable ? <NoCompanyRecordYet /> : null;
+  if (nameShown || !typed) {
+    return match ? <LinkCompanyOffer lead={lead} match={match} /> : pending;
   }
   return (
     <>
       <LeadCompanyName lead={lead} />
       {match && <LinkCompanyOffer lead={lead} match={match} />}
     </>
+  );
+}
+
+function NoCompanyRecordYet(): ReactNode {
+  const t = useT();
+  return (
+    <span className="lead-company-guidance t-caption">
+      {t("lead.company.addedOnQualify")}
+    </span>
   );
 }
 

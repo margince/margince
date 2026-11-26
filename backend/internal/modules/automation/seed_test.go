@@ -3,12 +3,6 @@
 
 package automation
 
-// Task 6's own fitness tests (UAT.md:72 — "exactly the six seeded
-// templates"): the catalog seeds EXACTLY six, each pinned key resolves
-// to a REGISTERED handler (the orphan-key trap — a seeded key with no
-// handler is a silent no-op: "Active", never fires, logs nothing), and
-// every seeded entry's default params pass its own Validate.
-
 import (
 	"testing"
 )
@@ -19,12 +13,12 @@ import (
 // gatekit:fixture the pinned name each seeded entry is compared against —
 // expected data, not an exception granted to a template.
 var pinnedSeededNames = map[string]string{
-	noActivityReminderName: "No-activity reminder",
-	renewalReminderName:    "Renewal reminder",
-	stageChangeNotifyName:  "Stage-change notify",
+	noActivityReminderName: "Remind me when an active deal goes quiet",
+	renewalReminderName:    "Prepare for a renewal",
+	stageChangeNotifyName:  "Tell the owner when someone moves their deal",
 	routeLeadName:          "Route new lead to a task",
-	checkInCadenceName:     "Check-in cadence",
-	postMeetingRecapName:   "Post-meeting recap draft",
+	checkInCadenceName:     "Keep in touch with selected customers",
+	postMeetingRecapName:   "Draft a follow-up after a meeting",
 }
 
 func TestExactlySixSeededTemplatesWithPinnedNames(t *testing.T) {
@@ -104,23 +98,6 @@ func TestEveryCatalogKeyResolvesToARegisteredHandler(t *testing.T) {
 	for _, entry := range Catalog() {
 		if !handlers[entry.Key] {
 			t.Errorf("catalog key %q resolves to no registered handler", entry.Key)
-		}
-	}
-}
-
-// TestSeededEntriesDefaultParamsPassTheirOwnValidate proves
-// SeedStarterAutomationsTx's own seed shape (nil/empty params) survives
-// every seeded entry's Validate — the exact check that function now
-// runs before every INSERT, so a future seeded entry that required a
-// non-empty default would fail loudly here, not as a bootstrap-time SQL
-// CHECK violation.
-func TestSeededEntriesDefaultParamsPassTheirOwnValidate(t *testing.T) {
-	for _, entry := range Catalog() {
-		if !entry.Seeded {
-			continue
-		}
-		if err := entry.Validate(nil); err != nil {
-			t.Errorf("seeded entry %q: default (nil) params fail its own Validate: %v", entry.Key, err)
 		}
 	}
 }

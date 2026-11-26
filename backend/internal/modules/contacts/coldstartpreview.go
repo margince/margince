@@ -43,11 +43,11 @@ func (s *Store) PreviewColdStart(ctx context.Context, in ApplyColdStartProfileIn
 	candidate, _ := coldStartCandidate(host, in.Fields)
 	out.Name, out.Domain = candidate.DisplayName, host
 	out.QueuesVATCheck = statesAVatNumber(in.Fields)
-	active, err := s.activeColumns(ctx, companyEntity)
-	if err != nil {
-		return out, err
-	}
 	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, companyEntity)
+		if err != nil {
+			return err
+		}
 		match, err := DedupeCompany(ctx, tx, candidate)
 		if err != nil {
 			return err
@@ -90,6 +90,13 @@ func previewNewCompanyReadFields(ctx context.Context, fields []ColdStartFieldInp
 		if err := previewFieldsVisible(ctx, companyEntity, field.Field); err != nil {
 			return nil, err
 		}
+		if field.Field == fieldIndustry {
+			code, ok := ResolveIndustry(field.Value)
+			if !ok {
+				continue
+			}
+			field.Value = code
+		}
 		out = append(out, CompanyReadValue{Field: field.Field, Proposed: field.Value, After: field.Value, Quote: field.EvidenceSnippet, SourceURL: field.SourceURL})
 	}
 	return out, nil
@@ -107,8 +114,12 @@ func previewNewCompanyReadColumns(fields []ColdStartFieldInput) []CompanyReadVal
 			continue
 		}
 		value := field.Value
-		if column == columnDescription {
-			value = headerLine(value)
+		if column == columnIndustry {
+			code, ok := ResolveIndustry(value)
+			if !ok {
+				continue
+			}
+			value = code
 		}
 		out = append(out, CompanyReadValue{Field: column, After: value, Proposed: value, SourceURL: field.SourceURL, Quote: field.EvidenceSnippet})
 	}

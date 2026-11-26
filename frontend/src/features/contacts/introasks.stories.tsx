@@ -79,18 +79,11 @@ export const BeingAsked: Story = { render: asks([ask({})]) };
 
 /**
  * The rep who asked, reading the same payload from the other side: no answer
- * to give, a withdrawal to make, and a settled row that offers neither.
+ * to give, a withdrawal to make. A settled ask is on the Progress timeline.
  */
 export const Requester: Story = {
   render: asks([
     ask({ requester_user_id: READER, introducer_user_id: REQUESTER }),
-    ask({
-      id: "018f3a1b-0000-7000-8000-0000000000a2",
-      requester_user_id: READER,
-      introducer_user_id: REQUESTER,
-      status: "introduced",
-      internal_reason: "he owns the account we are being routed through",
-    }),
   ]),
 };
 

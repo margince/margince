@@ -84,10 +84,7 @@ export function RecordCard({
   );
   return (
     <div className="record-card">
-      {/* Labelled with the name alone: the monogram inside is TEXT, so it
-          would otherwise lead the computed name and a screen reader would
-          announce two initials before the contact they stand for. */}
-      <AppLink className="record-card-open" href={href} aria-label={name}>
+      <AppLink className="record-card-open" href={href}>
         {mark}
       </AppLink>
       {(position || email) && (

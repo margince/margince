@@ -8,14 +8,17 @@ import (
 	"encoding/csv"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/reportingcsv"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/formulacell"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
 
 // reportingHandlers names the module's handler set for the Server embed, since
@@ -36,62 +39,111 @@ func (s reportingExportHandlers) ExportReportingEvaluation(w http.ResponseWriter
 		return
 	}
 	raw, err := reportingCSV(evaluation)
-	writeReportingCSV(w, r, raw, err)
+	writeReportingCSV(w, r, reportingcsv.Filename(evaluation.Context), raw, err)
 }
 
 func (s reportingExportHandlers) ExportReportingEdition(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	edition, err := s.service.GetEdition(r.Context(), ids.UUID(id))
+	edition, names, err := s.service.EditionExport(r.Context(), ids.UUID(id))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	raw, err := editionCSV(edition)
-	writeReportingCSV(w, r, raw, err)
+	raw, err := editionCSV(edition, names)
+	writeReportingCSV(w, r, reportingcsv.Filename(edition.Evaluation.Context), raw, err)
 }
 
 func reportingCSV(evaluation crmcontracts.ReportingEvaluation) ([]byte, error) {
-	return encodeReportingCSV(reportingCSVRows(evaluation))
+	return encodeReportingCSV(reportingCSVRows(evaluation, reporting.ExplanationCopy(evaluation.Context)))
 }
 
 // editionCSV is the edition's readings, then each question card's kept
-// answer in page order, as GetEdition judged it for this reader.
-func editionCSV(edition crmcontracts.ReportingEdition) ([]byte, error) {
-	return encodeReportingCSV(append(reportingCSVRows(edition.Evaluation), questionCSVRows(edition)...))
+// answer in page order, as GetEdition judged it for this reader. Catalog
+// names follow the reader's language; text frozen with the edition stays.
+func editionCSV(edition crmcontracts.ReportingEdition, names langcopy.Spoken) ([]byte, error) {
+	return encodeReportingCSV(append(reportingCSVRows(edition.Evaluation, names), questionCSVRows(edition)...))
 }
 
-func reportingCSVRows(evaluation crmcontracts.ReportingEvaluation) [][]string {
-	rows := [][]string{{"metric", "block", "label", extractionValueKey, reportingTarget, "comparison", "upper", "unit", reportingCurrency, "context", "coverage", "captured_at"}}
-	appendRow := func(metric, block, label string, value, target, comparison, upper *float64, unit, context, status string) {
+// reportingCSVRows writes metric and label names from the catalog in names.
+func reportingCSVRows(evaluation crmcontracts.ReportingEvaluation, names langcopy.Spoken) [][]string {
+	rows := [][]string{{reportingMetric, "block", "label", extractionValueKey, reportingTarget, "comparison", "upper", "unit", reportingCurrency, "context", "coverage", reportingWithheld, "coverage_reason", "captured_at"}}
+	appendRow := func(metric, block, label string, value, target, comparison, upper *float64, unit, context string, coverage csvCoverage) {
 		// A count or a duration has no currency; naming one would read as money.
-		currency := ""
+		currency, number := "", reportingCSVNumber
 		if unit == reportingMoney || unit == evaluation.Context.Currency {
-			unit, currency = reportingMinorUnits, evaluation.Context.Currency
+			unit, currency = reportingMoney, evaluation.Context.Currency
+			number = func(minor *float64) string { return reportingcsv.Major(minor, currency) }
 		}
-		rows = append(rows, []string{metric, block, formulacell.Guard(label), reportingCSVNumber(value), reportingCSVNumber(target), reportingCSVNumber(comparison), reportingCSVNumber(upper), unit, currency, context, status, evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)})
+		rows = append(rows, []string{metric, block, formulacell.Guard(label), number(value), number(target), number(comparison), number(upper), unit, currency, context, coverage.status, strconv.FormatBool(coverage.withheld), coverage.reason, evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)})
 	}
 	for _, metric := range evaluation.Metrics {
-		appendRow(string(metric.Id), "headline", reportingMetricName(evaluation.Context, metric.Id), metric.Value, metric.Target, nil, nil, metric.Unit, metric.Evidence.ContextId, string(metric.Coverage.Status))
+		covered := csvCoverageOf(metric.Coverage)
+		appendRow(string(metric.Id), "headline", reportingMetricName(names, metric.Id), metric.Value, metric.Target, nil, nil, metric.Unit, metric.Evidence.ContextId, covered)
 		if comparison := metric.TargetComparison; comparison != nil {
 			for _, figure := range targetComparisonCSV(*comparison, metric.Unit) {
-				appendRow(string(metric.Id), reportingTargetComparisonBlock, figure.label, figure.value, nil, nil, nil, figure.unit, figure.context, figure.status)
+				appendRow(string(metric.Id), reportingTargetComparisonBlock, names.Say(reportingcsv.Labels[figure.label]), figure.value, nil, nil, nil, figure.unit, figure.context, covered.as(figure.status))
 			}
 		}
 		for _, figure := range forecastBasisCSV(metric) {
-			appendRow(string(metric.Id), reportingForecastBasisBlock, figure.label, figure.value, nil, nil, nil, metric.Unit, figure.context, string(metric.Coverage.Status))
+			appendRow(string(metric.Id), reportingForecastBasisBlock, names.Say(reportingcsv.Labels[figure.label]), figure.value, nil, nil, nil, metric.Unit, figure.context, covered)
 		}
 	}
 	for _, chart := range evaluation.Charts {
+		covered := csvCoverageOf(chart.Coverage)
 		for _, point := range chart.Points {
-			appendRow(string(chart.Metric), string(chart.Kind), point.Label, point.Value, point.Target, point.Comparison, point.Upper, chart.Unit, chart.ContextId, string(point.Status))
+			appendRow(string(chart.Metric), string(chart.Kind), point.Label, point.Value, point.Target, point.Comparison, point.Upper, chart.Unit, chart.ContextId, covered.as(string(point.Status)))
 		}
 		if chart.Opening != nil {
-			appendRow(string(chart.Metric), string(chart.Kind), "opening", chart.Opening, nil, nil, nil, chart.Unit, chart.ContextId, string(chart.Coverage.Status))
+			appendRow(string(chart.Metric), string(chart.Kind), names.Say(reportingcsv.Labels["opening"]), chart.Opening, nil, nil, nil, chart.Unit, chart.ContextId, covered)
 		}
 		if chart.Closing != nil {
-			appendRow(string(chart.Metric), string(chart.Kind), "closing", chart.Closing, nil, nil, nil, chart.Unit, chart.ContextId, string(chart.Coverage.Status))
+			appendRow(string(chart.Metric), string(chart.Kind), names.Say(reportingcsv.Labels["closing"]), chart.Closing, nil, nil, nil, chart.Unit, chart.ContextId, covered)
 		}
 	}
+	// The page writes the assessment from the figures above, so the file names
+	// the card instead of keeping a second copy of its sentence rules.
+	// Written whole, since it holds no figure for appendRow to give a unit.
+	if placesAssessment(evaluation.Selection) {
+		rows = append(rows, []string{assessmentRow, assessmentRow, names.Say(reportingcsv.Labels[assessmentRow]), "", "", "", "", "", "", "", "not_exported", strconv.FormatBool(false), "", evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)})
+	}
 	return rows
+}
+
+const assessmentRow = string(crmcontracts.ReportingCardKindAssessment)
+
+func placesAssessment(selection crmcontracts.ReportingSelection) bool {
+	if selection.Layout == nil {
+		return false
+	}
+	for _, section := range *selection.Layout {
+		if slices.ContainsFunc(section.Cards, func(card crmcontracts.ReportingCard) bool {
+			return card.Kind == crmcontracts.ReportingCardKindAssessment
+		}) {
+			return true
+		}
+	}
+	return false
+}
+
+// csvCoverage is what one row says of its figure's coverage. The withheld flag
+// and reason are the metric's or chart's, so an owner chart holding only the
+// reader's row says why on every row.
+type csvCoverage struct {
+	status, reason string
+	withheld       bool
+}
+
+func csvCoverageOf(coverage crmcontracts.ReportingCoverage) csvCoverage {
+	out := csvCoverage{status: string(coverage.Status), withheld: coverage.Withheld}
+	if coverage.Reason != nil {
+		out.reason = *coverage.Reason
+	}
+	return out
+}
+
+// as is the same coverage for a figure that carries its own status.
+func (c csvCoverage) as(status string) csvCoverage {
+	c.status = status
+	return c
 }
 
 func encodeReportingCSV(rows [][]string) ([]byte, error) {
@@ -110,12 +162,12 @@ func reportingCSVNumber(value *float64) string {
 	return strconv.FormatFloat(*value, 'f', -1, 64)
 }
 
-func writeReportingCSV(w http.ResponseWriter, r *http.Request, raw []byte, err error) {
+func writeReportingCSV(w http.ResponseWriter, r *http.Request, filename string, raw []byte, err error) {
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	(httperr.Download{ContentType: reportingCSVContentType, Filename: "reporting.csv", Size: int64(len(raw))}).WriteHeaders(w)
+	(httperr.Download{ContentType: reportingCSVContentType, Filename: filename, Size: int64(len(raw))}).WriteHeaders(w)
 	w.Header().Set("Cache-Control", "no-store")
 	if _, err := w.Write(raw); err != nil { // #nosec G705 -- a CSV attachment, never rendered as a page
 		slog.WarnContext(r.Context(), "reporting export connection closed", "error", err)

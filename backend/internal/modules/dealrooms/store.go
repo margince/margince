@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // The object name this module gates on. A room is not row-scoped in its own
@@ -23,6 +24,10 @@ const dealTable = "deal"
 // fieldRoomID names the room in an audit image. Every participant write records
 // which room it happened in, so the three writers must agree on the spelling.
 const fieldRoomID = "room_id"
+
+// fieldLinkRequestedAt names the buyer's ask for a new link in an audit image.
+// The ask and the resend that answers it must record it under one key.
+const fieldLinkRequestedAt = "link_requested_at"
 
 // columnTitle is the room's headline, named once because the mapping refuses an
 // empty one, the audit image records it and the release snapshot freezes it —
@@ -48,6 +53,8 @@ func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 
 // roomColumns is the projection every room read returns, in the order
 // scanRoom consumes it.
-const roomColumns = `r.id, r.deal_id, r.title, r.welcome_message, r.state,
+var roomColumns = `r.id, r.deal_id, r.title, r.welcome_message, ` + roomStateSQL + `,
 	r.steward_user_id, r.expires_at, r.closed_at,
-	r.source, r.captured_by, r.version, r.created_at, r.updated_at, r.archived_at`
+	r.source, r.captured_by, r.version, r.created_at, r.updated_at, r.archived_at,
+ NOT EXISTS (SELECT 1 FROM app_user steward WHERE steward.id = r.steward_user_id
+ AND ` + workforce.LiveHumanSQL("steward") + `)`

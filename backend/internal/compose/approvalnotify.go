@@ -38,16 +38,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/approvalseat"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // approvalNotifyActor names this consumer in the audit rows it causes. A line
@@ -101,10 +103,7 @@ func NewApprovalNotify(pool *pgxpool.Pool, db *database.DB, mail noticeMailQueue
 // HandleEvent announces one staged approval. Anything else answers nil so the
 // group keeps flowing rather than wedging on traffic this consumer ignores.
 func (a *ApprovalNotify) HandleEvent(ctx context.Context, env events.Envelope) error {
-	// The generated constant, not a hand-typed event name: a spelling that
-	// drifts from the contract makes this consumer silently never fire, and
-	// nothing fails when a consumer does nothing.
-	if env.Type != string(crmcontracts.ApprovalRequested) || env.Entity.ID == ids.Nil {
+	if !events.ApprovalNotifyTypes.Has(env.Type) || env.Entity.ID == ids.Nil {
 		return nil
 	}
 	var staged crmcontracts.PublicEventApprovalRequested
@@ -219,11 +218,15 @@ func (a *ApprovalNotify) announceToSeat(
 	// its job is a decision nobody is told about by the route they chose. The
 	// seat's preference decides only the message, in stageNoticeMail.
 	return a.db.Tx(ctx, func(tx pgx.Tx) error {
-		decidable, parts, err := a.approvals.PendingAskOfInTx(seatCtx, tx, approvalID)
+		decidable, parts, metadata, err := a.approvals.PendingAskOfInTx(seatCtx, tx, approvalID)
 		if err != nil || !decidable {
 			return err
 		}
-		line := approvalNoticeFor(seat, approvalID, staged.Summary, parts, approvalNoticeTarget(staged))
+		line := approvalNoticeFor(seat, approvalID, staged.Summary, parts, approvalNoticeTarget(staged), metadata)
+		if approvalsubject.InAppOnly(staged.Kind) {
+			_, err := a.notices.CreateTx(ctx, tx, line)
+			return err
+		}
 		return recordApprovalNotice(ctx, tx, a.notices.CreateTx, a.mail, wsID, line)
 	})
 }
@@ -233,7 +236,8 @@ type noticeWriter func(ctx context.Context, tx pgx.Tx, line notices.NewNotice) (
 
 // recordApprovalNotice writes one decider's line and, when they asked for
 // email, the message about it, in the caller's transaction. The staging
-// announcement and a deal's owner change both tell a decider this way.
+// announcement, a deal's owner change and a booking link's team request all
+// tell their reader this way.
 func recordApprovalNotice(
 	ctx context.Context, tx pgx.Tx, write noticeWriter, mail noticeMailQueue, wsID ids.UUID, line notices.NewNotice,
 ) error {
@@ -294,21 +298,7 @@ func stageNoticeMail(
 func (a *ApprovalNotify) seatContext(
 	ctx context.Context, wsID, seat ids.UUID,
 ) (context.Context, bool, error) {
-	rbac, seatType, err := a.identity.EffectiveAuthority(ctx, wsID, seat)
-	if errors.Is(err, apperrors.ErrNotFound) {
-		return nil, false, nil
-	}
-	if err != nil {
-		return nil, false, fmt.Errorf("resolving the seat's authority: %w", err)
-	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          principal.HumanIDPrefix + seat.String(),
-		UserID:      seat,
-		SeatType:    seatType,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	}), true, nil
+	return approvalseat.Context(ctx, a.identity, wsID, seat)
 }
 
 // approvalNoticeFor is the line one decidable seat is shown.
@@ -324,16 +314,25 @@ func (a *ApprovalNotify) seatContext(
 // any later announcement about the same staging — collapses onto the one line
 // each seat already has.
 func approvalNoticeFor(
-	seat ids.UUID, approvalID ids.ApprovalID, summary string, parts *crmcontracts.ApprovalSummaryParts, target notices.Target,
+	seat ids.UUID, approvalID ids.ApprovalID, summary string, parts *crmcontracts.ApprovalSummaryParts, target notices.Target, messages ...*systemtext.Message,
 ) notices.NewNotice {
+	var metadata *systemtext.Message
+	if len(messages) > 0 {
+		metadata = systemtext.ForDestination(messages[0])
+	}
 	subject := summary
+	if metadata != nil && parts != nil && metadata.Subject != nil {
+		subject = parts.Sentence
+	}
 	if subject == "" {
 		subject = unsummarisedProposal
+		metadata = &systemtext.Message{Version: 1, Subject: systemtext.Sentence("approval.unsummarized")}
 	}
 	return notices.NewNotice{
 		Recipient:    ids.From[ids.UserKind](seat),
 		Kind:         notices.KindApprovalPending,
 		Subject:      subject,
+		SystemText:   metadata,
 		SubjectParts: parts,
 		DedupeKey:    approvalNoticeDedupeKey(approvalID.UUID),
 		Target:       target,

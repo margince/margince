@@ -14,13 +14,14 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 func unknownEmploymentDataTask(pool *pgxpool.Pool) datatask.Task {
 	store := newContactsStore(InstallationDB(pool)).WithConsumerMail(capture.MatcherTx)
 	return datatask.Task{
 		ID: "core/1793548000_unknown_employment_links", Version: 1,
-		Title: "Correcting company links members and assistants added", Requires: []string{"core/1789354558"},
+		Title: systemtext.Literal("datatask.title.core.1793548000_unknown_employment_links"), Requires: []string{"core/1789354558"},
 		Steps: []datatask.Step{{
 			Name: "current_unknown_employment_links", Limit: 200, MinLimit: 1, Audit: datatask.AuditPolicy{PerRecord: true},
 			Estimate: estimateUnknownEmployment,

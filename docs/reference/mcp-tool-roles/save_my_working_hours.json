@@ -1,0 +1,14 @@
+{
+  "tool": "change_my_settings",
+  "action": "save_working_hours",
+  "verb": "save_my_working_hours",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

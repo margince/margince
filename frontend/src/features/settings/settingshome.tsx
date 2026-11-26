@@ -3,6 +3,7 @@
 
 import { ArrowLeft, Lock } from "lucide-react";
 import type { MouseEvent } from "react";
+import type { components } from "../../api/schema";
 import { SetupSteps } from "../../components/setup-steps";
 import { AppLink } from "../../design-system/applink";
 import { Badge, EmptyState } from "../../design-system/atoms";
@@ -26,6 +27,8 @@ import {
 import { settingsHref } from "../../lib/settingsrouting";
 import { useSetupChecklist } from "../../lib/setup-checklist";
 import { usePhoneViewport } from "../../lib/viewport";
+import { changeReach, readableKinds } from "./accessreach";
+import { useKindList } from "./accesswords";
 import { PAGE_ICONS } from "./settingsnavicons";
 import { SettingsSearchBox } from "./settingssearchbox";
 
@@ -123,7 +126,7 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
   const openable = [...reach.acts, ...reach.looksUp];
 
   return (
-    <div className="settings-stack arrive-stack">
+    <div className="settings-stack page-pane arrive-stack">
       {/* The rail holds this box above phone width; below it this page is the
           directory, so the box comes here. */}
       {phone && <SettingsSearchBox pages={openable} />}
@@ -151,11 +154,13 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
               <dl className="settings-facts">
                 <dt>{t("settings.home.rolesLabel")}</dt>
                 <dd>
-                  {/* The server's role keys, so a custom role shows the word a
-                      reader would quote when asking for more. */}
                   <div className="settings-home-roles">
                     {(snapshot.roles ?? []).map((role) => (
-                      <RoleBadge key={role} roleKey={role} />
+                      <RoleBadge
+                        key={role}
+                        roleKey={role}
+                        name={snapshot.role_names?.[role]}
+                      />
                     ))}
                   </div>
                 </dd>
@@ -171,12 +176,7 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
                           : "settings.home.seat.read",
                       )}
                     </dd>
-                    <dt>{t("settings.home.reachLabel")}</dt>
-                    <dd>
-                      {t(
-                        `settings.home.reach.${snapshot.authorization.row_scope}`,
-                      )}
-                    </dd>
+                    <ReachFacts authorization={snapshot.authorization} />
                   </>
                 )}
               </dl>
@@ -185,6 +185,33 @@ export function SettingsHome({ reach }: Readonly<{ reach: SettingsReach }>) {
         </PanelBody>
       </Panel>
     </div>
+  );
+}
+
+// What the reader may read and what they may change. Row scope decides only
+// the second, and only when the seat and a write grant let them change at all.
+function ReachFacts({
+  authorization,
+}: Readonly<{ authorization: components["schemas"]["Authorization"] }>) {
+  const t = useT();
+  const kindList = useKindList();
+  const readable = readableKinds(authorization.objects);
+  const reach = changeReach(
+    authorization.objects,
+    authorization.row_scope,
+    authorization.seat_type,
+  );
+  return (
+    <>
+      <dt>{t("settings.home.readLabel")}</dt>
+      <dd>
+        {readable.length === 0
+          ? t("settings.home.read.none")
+          : t("settings.home.read.some", { kinds: kindList(readable) })}
+      </dd>
+      <dt>{t("settings.home.reachLabel")}</dt>
+      <dd>{t(`settings.home.reach.${reach}`)}</dd>
+    </>
   );
 }
 

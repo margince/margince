@@ -1,0 +1,15 @@
+{
+  "tool": "resolve_duplicates",
+  "action": "dismiss",
+  "verb": "decide_duplicate",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

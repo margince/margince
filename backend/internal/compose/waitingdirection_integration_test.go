@@ -34,9 +34,9 @@ func TestWaitingDirectionUsesExistingRelationshipAndRelevanceFacts(t *testing.T)
 		{"supplier contact", "commitment", []string{"supplier"}, true, true, false, false},
 		{"customer and supplier contact", "commitment", []string{"customer", "supplier"}, false, true, false, false},
 		{"customer and supplier", "commitment", []string{"customer", "supplier"}, false, false, false, false},
-		{"newsletter or private message", "noise", []string{"customer"}, true, false, false, false},
+		{"newsletter or private message", "other", []string{"customer"}, true, false, false, false},
 		{"supplier contact in customer context", "commitment", []string{"supplier"}, false, true, false, true},
-		{"noise with a deal", "noise", []string{"customer"}, true, false, true, false},
+		{"other with a deal", "other", []string{"customer"}, true, false, true, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -73,7 +73,7 @@ func TestWaitingDirectionUsesExistingRelationshipAndRelevanceFacts(t *testing.T)
 			if tc.openDeal {
 				pipeline, open, _ := integration.DealFixture(t, e)
 				companyID := ids.From[ids.CompanyKind](company)
-				deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{Name: "Example sale", PipelineID: pipeline, StageID: open, CompanyID: &companyID})
+				deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{Source: "manual", Name: "Example sale", PipelineID: pipeline, StageID: open, CompanyID: &companyID})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -101,8 +101,8 @@ func TestWaitingDirectionUsesExistingRelationshipAndRelevanceFacts(t *testing.T)
 			}
 			for _, row := range waiting {
 				if row.ActivityID == id {
-					if tc.label == "noise" {
-						t.Fatal("noise became a reply obligation despite its conflicting automatic request verdict")
+					if tc.label == "other" {
+						t.Fatal("other became a reply obligation despite its conflicting automatic request verdict")
 					}
 					if row.NonBuyer != tc.nonBuyer || !row.ConfirmedRequest {
 						t.Fatalf("direction changed the request verdict: %+v", row)
@@ -110,7 +110,7 @@ func TestWaitingDirectionUsesExistingRelationshipAndRelevanceFacts(t *testing.T)
 					return
 				}
 			}
-			if tc.label != "noise" {
+			if tc.label != "other" {
 				t.Fatal("the request disappeared rather than retaining its direction")
 			}
 		})

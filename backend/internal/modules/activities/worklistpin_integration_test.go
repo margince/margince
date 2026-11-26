@@ -294,20 +294,20 @@ func TestTheDatabaseRefusesAnUnnamedPin(t *testing.T) {
 	e := setupSend(t)
 
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO worklist_pin (reader_id, source, row_id, set_by)
-		VALUES ($1, '', 'a-row', 'test')`, e.rep); err == nil {
+		INSERT INTO worklist_pin (reader_id, source, row_id)
+		VALUES ($1, '', 'a-row')`, e.rep); err == nil {
 		t.Error("a pin with no source was stored")
 	}
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO worklist_pin (reader_id, source, row_id, set_by)
-		VALUES ($1, 'task', '', 'test')`, e.rep); err == nil {
+		INSERT INTO worklist_pin (reader_id, source, row_id)
+		VALUES ($1, 'task', '')`, e.rep); err == nil {
 		t.Error("a pin with no row id was stored")
 	}
 	// And the honest row IS accepted, without which the refusals above would
 	// pass against a constraint that refused everything.
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO worklist_pin (reader_id, source, row_id, set_by)
-		VALUES ($1, 'task', 'a-row', 'test')`, e.rep); err != nil {
+		INSERT INTO worklist_pin (reader_id, source, row_id)
+		VALUES ($1, 'task', 'a-row')`, e.rep); err != nil {
 		t.Fatalf("a named pin was refused: %v", err)
 	}
 }

@@ -5,6 +5,7 @@
 import {
   acts,
   allOf,
+  always,
   anyOf,
   composedUnits,
   destroys,
@@ -80,6 +81,7 @@ export const PLATFORM_PAGES = [
       { id: "accounting" },
       { id: "webhooks" },
       { id: "telegram" },
+      { id: "shared-mailboxes" },
       { id: "units", requires: composedUnits("workspace") },
     ],
   },
@@ -181,7 +183,7 @@ export const PLATFORM_PAGES = [
   },
   {
     id: "automations",
-    group: "ai",
+    group: "data",
     scope: "workspace",
     // The write, which admin and ops alone hold. Management and manager read
     // `automation` to see what ran, on the records it touched. A role that
@@ -215,9 +217,8 @@ export const PLATFORM_PAGES = [
       // read management holds on this page.
       allOf(reads("contact"), reads("consent_config")),
     ),
-    // Four cards, four objects. `contact:update` is what PrivacyInboxCard asks to
-    // open a subject request. The request is about a contact's record, so the
-    // grant is the contact's, not the queue's.
+    // Four cards, four objects. `privacy_request:update` files and works a
+    // subject request. `contact:update` decides a correction to a contact.
     changes: acts(
       writes("consent_config", ["create"]),
       writes("retention_policy"),
@@ -334,5 +335,12 @@ export const PLATFORM_PAGES = [
       { kind: "grant", object: "system_reset", action: "delete" },
       flagged("data_reset_available"),
     ),
+  },
+  {
+    id: "about",
+    group: "system",
+    scope: "installation",
+    requires: always,
+    changes: readingIsTheAct,
   },
 ] as const satisfies readonly SettingsPageRow[];

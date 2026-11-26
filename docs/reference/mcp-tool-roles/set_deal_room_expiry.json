@@ -1,0 +1,15 @@
+{
+  "tool": "send_outbound",
+  "action": "set_room_expiry",
+  "verb": "set_deal_room_expiry",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

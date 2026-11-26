@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "notice_source_preview",
+  "verb": "preview_notice_source",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -29,9 +30,9 @@ const reminderWindow = worklistAgeOutDays * 24 * time.Hour
 // SQL expression naming the user the reminder is for, its assignee.
 func dueReminderClause(alias, reader string, asOf time.Time, arg func(any) int) string {
 	return sprintf(`(%[1]s.kind = 'task' AND %[1]s.remind_at IS NOT NULL AND %[1]s.is_done = false
-		AND %[1]s.archived_at IS NULL AND %[1]s.remind_at <= $%[2]d AND %[1]s.remind_at >= $%[3]d
+		AND %[1]s.archived_at IS NULL AND %[5]s <= $%[2]d AND %[5]s >= $%[3]d
 		AND %[1]s.assignee_id = %[4]s)`,
-		alias, arg(asOf), arg(asOf.Add(-reminderWindow)), reader)
+		alias, arg(asOf), arg(asOf.Add(-reminderWindow)), reader, storekit.IntentInstantSQL(alias, "remind"))
 }
 
 // ReminderDueFor reports whether row is a reminder due for reader at asOf.

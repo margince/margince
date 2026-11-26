@@ -8,6 +8,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
@@ -38,6 +39,9 @@ const (
 // Input is the room as the model is shown it. Dates are calendar days in UTC,
 // the form the grounding filter reads a stated date against.
 type Input struct {
+	// Room names every participant, revoked seats and comment authors included,
+	// for a restriction of processing; the prompt never shows it.
+	Room         ids.UUID     `json:"-"`
 	Title        string       `json:"title"`
 	State        string       `json:"state"`
 	AccessEndsOn string       `json:"access_ends_on,omitempty"`
@@ -55,6 +59,9 @@ type BuyerIn struct {
 	LastSeenOn        string   `json:"last_seen_on,omitempty"`
 	AskedForNewLinkOn string   `json:"asked_for_new_link_on,omitempty"`
 	Downloaded        []string `json:"downloaded,omitempty"`
+	// Email names the buyer's contact for a restriction of processing; the
+	// prompt never shows it.
+	Email string `json:"-"`
 }
 
 // DocumentIn is one shared document.
@@ -68,13 +75,18 @@ type DocumentIn struct {
 type ThreadIn struct {
 	ID string `json:"id"`
 	// DocumentID and About are empty for a thread about the whole room.
-	DocumentID     string      `json:"document_id,omitempty"`
-	About          string      `json:"about,omitempty"`
-	Resolved       bool        `json:"resolved"`
-	WaitingOnYou   bool        `json:"waiting_on_you"`
-	RequiredChange bool        `json:"required_change,omitempty"`
-	Comments       []CommentIn `json:"comments"`
-	latest         time.Time
+	DocumentID     string `json:"document_id,omitempty"`
+	About          string `json:"about,omitempty"`
+	Resolved       bool   `json:"resolved"`
+	WaitingOnYou   bool   `json:"waiting_on_you"`
+	RequiredChange bool   `json:"required_change,omitempty"`
+	// BuyerSetsCondition marks a waiting thread whose last comment says the buyer
+	// will not sign or go ahead until something is met. It is read from the
+	// words, so a condition phrased another way, or in another language, is
+	// unmarked and the model reads it as before.
+	BuyerSetsCondition bool        `json:"buyer_sets_condition,omitempty"`
+	Comments           []CommentIn `json:"comments"`
+	latest             time.Time
 }
 
 // CommentIn is one comment, newest last.
@@ -95,7 +107,7 @@ func FromRoom(
 	documents []crmcontracts.DealRoomDocument,
 	threads []crmcontracts.DealRoomThread,
 ) Input {
-	in := Input{Title: room.Title, State: string(room.State)}
+	in := Input{Room: ids.UUID(room.Id), Title: room.Title, State: string(room.State)}
 	if room.ExpiresAt != nil {
 		in.AccessEndsOn = day(*room.ExpiresAt)
 	}
@@ -136,7 +148,7 @@ func buyersFrom(participants []crmcontracts.DealRoomParticipant) []BuyerIn {
 		if p.RevokedAt != nil || len(out) == maxBuyers {
 			continue
 		}
-		buyer := BuyerIn{ID: p.Id.String(), Name: p.FullName, SignedIn: p.HasSignedIn != nil && *p.HasSignedIn}
+		buyer := BuyerIn{ID: p.Id.String(), Name: p.FullName, SignedIn: p.HasSignedIn != nil && *p.HasSignedIn, Email: string(p.Email)}
 		if p.LastSeenAt != nil {
 			buyer.LastSeenOn = day(*p.LastSeenAt)
 		}
@@ -151,9 +163,9 @@ func buyersFrom(participants []crmcontracts.DealRoomParticipant) []BuyerIn {
 	return out
 }
 
-// linkStillOwed reports a link request the buyer has not been in since. The
-// request is kept as history, so a buyer who asked and then signed in again
-// is no longer waiting on a link.
+// linkStillOwed reports a link request the buyer has not been in since. A
+// seller's new link clears the request; a buyer who asked and then came in
+// again is no longer waiting either. The access panel reads it the same way.
 func linkStillOwed(p crmcontracts.DealRoomParticipant) bool {
 	if p.LinkRequestedAt == nil {
 		return false
@@ -183,6 +195,7 @@ func threadsFrom(threads []crmcontracts.DealRoomThread, titles, seats map[string
 			last := comments[len(comments)-1]
 			folded.latest = last.CreatedAt
 			folded.WaitingOnYou = !folded.Resolved && last.Author.Side == sideBuyer
+			folded.BuyerSetsCondition = folded.WaitingOnYou && setsCondition(last.Body)
 		}
 		for _, comment := range comments[max(0, len(comments)-maxThreadComments):] {
 			folded.Comments = append(folded.Comments, commentFrom(comment, seats))

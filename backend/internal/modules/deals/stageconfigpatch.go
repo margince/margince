@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/jackc/pgx/v5"
 
@@ -66,7 +67,10 @@ func pipelineUpdatePatch(current pipelineConfig, in UpdatePipelineInput) *storek
 // stageConfig is the pre-update image of the four editable stage columns, plus
 // the version an If-Match is judged against.
 type stageConfig struct {
-	name           string
+	name         string
+	translations map[string]string
+	// seeded is true while the translations are the ones the product wrote.
+	seeded         bool
 	position       int
 	semantic       string
 	winProbability int
@@ -76,16 +80,19 @@ type stageConfig struct {
 func readStageConfig(ctx context.Context, tx pgx.Tx, id ids.StageID) (stageConfig, error) {
 	var current stageConfig
 	err := tx.QueryRow(ctx, `
-		SELECT name, position, semantic, win_probability, version
+		SELECT name, name_translations, position, semantic, win_probability, version
 		FROM stage WHERE id = $1 AND archived_at IS NULL`, id).
-		Scan(&current.name, &current.position, &current.semantic, &current.winProbability, &current.version)
+		Scan(&current.name, &current.translations, &current.position, &current.semantic, &current.winProbability, &current.version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return current, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return current, fmt.Errorf("read stage before update: %w", err)
 	}
-	return current, nil
+	if carriesSeededTranslations(current.name, current.translations) {
+		current.seeded, err = translationsWrittenBySeed(ctx, tx, id)
+	}
+	return current, err
 }
 
 // terminalWinProbability is the odds the stage_terminal_prob CHECK pins a won
@@ -128,12 +135,29 @@ func committedWinProbability(in UpdateStageInput) *int {
 	return in.WinProbability
 }
 
+// renamedTranslations answers the translations the update stores, and false
+// when it leaves them as they are. A sent map always replaces the stored one.
+// A rename that sends none drops translations the product seeded, so the
+// admin's new name shows in every language.
+func renamedTranslations(current stageConfig, in UpdateStageInput) (map[string]string, bool) {
+	switch {
+	case in.NameTranslations != nil:
+		return in.NameTranslations, true
+	case current.seeded && in.Name != nil && *in.Name != current.name:
+		return map[string]string{}, true
+	}
+	return nil, false
+}
+
 // stageUpdatePatch folds the caller's sparse update onto the row that was just
 // read, so the audit diff spans exactly the columns this save touches.
 func stageUpdatePatch(current stageConfig, in UpdateStageInput) *storekit.Patch {
 	patch := storekit.NewPatch()
 	if in.Name != nil {
 		patch.Set("name", current.name, *in.Name)
+	}
+	if translations, ok := renamedTranslations(current, in); ok && !maps.Equal(translations, current.translations) {
+		patch.Set(stageNameTranslationsField, current.translations, translations)
 	}
 	if in.Position != nil {
 		patch.Set(positionField, current.position, *in.Position)

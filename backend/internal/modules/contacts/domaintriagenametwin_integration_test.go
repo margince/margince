@@ -167,9 +167,10 @@ func imageDomains(t *testing.T, image map[string]any) []string {
 	}
 	out := make([]string, 0, len(list))
 	for _, v := range list {
-		domain, ok := v.(string)
-		if !ok {
-			t.Fatalf("audit image domain %v is not a string", v)
+		row, ok := v.(map[string]any)
+		domain, named := row["domain"].(string)
+		if !ok || !named {
+			t.Fatalf("audit image domain %v is not a domain row", v)
 		}
 		out = append(out, domain)
 	}
@@ -258,7 +259,7 @@ func TestADomainNamedLikeTheOwnCompanyDoesNotJoinIt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("seeding the own company: %v", err)
 	}
-	res := e.resolveSiteVerdict(ctx, t, "eve@lookalike.test", "lookalike.test", "Our House GmbH")
+	res := e.resolveSiteVerdict(ctx, t, "eve@ourhouse.example", "ourhouse.example", "Our House GmbH")
 
 	if !res.CompanyCreated || res.CompanyID == nil || *res.CompanyID == anchor.CompanyID {
 		t.Fatalf("the verdict = %+v, want a record of its own beside the own company", res)

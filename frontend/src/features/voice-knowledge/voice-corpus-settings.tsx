@@ -1,14 +1,17 @@
 import { FileUp } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Button, Field, Radio, Textarea } from "../../design-system/atoms";
 import { FileDropzoneControl } from "../../design-system/filedropzone";
+import { useFieldFaults } from "../../design-system/savepage";
 import { SettingRow } from "../../design-system/settingrow";
-import { formatNumber } from "../../format/format";
+import { formatBytes, formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
-import { problemMessageOf } from "../../lib/problem";
+import { blankRequired, problemMessageOf } from "../../lib/problem";
+import { useUnsavedGuard } from "../../lib/unsavedclaims";
 import { useFileDrop } from "../../lib/use-file-drop";
 import { ACCEPTED_CORPUS_ATTR } from "../../lib/voice-corpus-file";
 import { VOICE_MIN_WORDS } from "../../lib/voice-intake-core";
+import { VOICE_SOURCE_MAX_BYTES } from "../../lib/voice-refusal";
 import type { IntakeNotice, SpeakerAsk, VoiceIntake } from "./use-voice-intake";
 
 // The Settings intake: hand over files, and answer who is speaking when one
@@ -27,8 +30,6 @@ type VoiceCorpusIntakeProps = Readonly<{
   /** The intake this zone feeds. Its caller owns it, so work in flight
    * outlives the swap from the first-sample card to the full one. */
   intake: VoiceIntake;
-  /** Told when intake is in progress, so the caller can hold the build. */
-  onBusyChange?: (busy: boolean) => void;
   /** The first sample is the one that MINTS the profile: the row names itself
    * for that, and there is no meter yet to say how far the floor is, so the
    * card states the floor itself. */
@@ -37,7 +38,6 @@ type VoiceCorpusIntakeProps = Readonly<{
 
 export function VoiceCorpusIntake({
   intake,
-  onBusyChange,
   first = false,
 }: VoiceCorpusIntakeProps) {
   const t = useT();
@@ -49,21 +49,15 @@ export function VoiceCorpusIntake({
   // browser away from the app, which is what a stray drop does by default.
   useFileDrop({ container: zoneRef, active: false, onFiles: intake.addFiles });
 
-  // Told AFTER the render that changed it: calling a parent's setState from a
-  // render body updates one component while another is rendering, which React
-  // does not support.
-  const busy = intake.busy;
-  useEffect(() => {
-    onBusyChange?.(busy);
-  }, [busy, onBusyChange]);
-
   return (
     <div ref={zoneRef}>
       <SettingRow
         label={t(
           first ? "settings.voice.addFirstLabel" : "settings.voice.addSource",
         )}
-        description={t("settings.voice.dropHint")}
+        description={t("settings.voice.dropHint", {
+          limit: formatBytes(VOICE_SOURCE_MAX_BYTES, locale),
+        })}
         layout="stack"
         control={(control) => (
           <div className="vdna-zone">
@@ -91,18 +85,7 @@ export function VoiceCorpusIntake({
                 }
               />
             </div>
-            {intake.pendingAsk && (
-              // Keyed by the source: when the queue advances to the next file
-              // the panel is a NEW panel, so the previous file's chosen
-              // speaker cannot survive into a question about different
-              // contacts.
-              <SpeakerPanel
-                key={intake.pendingAsk.ref}
-                ask={intake.pendingAsk}
-                onAnswer={intake.answerSpeaker}
-                onDismiss={intake.dismissAsk}
-              />
-            )}
+            <VoicePendingAsk intake={intake} />
             {/* Polite, so the outcome of a drop reaches a screen reader as it
                 lands: the zone's own live region only ever states the
                 invitation, because the input is cleared after every pick. A
@@ -137,25 +120,35 @@ function PasteSample({
   onAdd: (text: string, onSettled: (taken: boolean) => void) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
-  const blank = text.trim() === "";
+  const label = t("settings.voice.pasteLabel");
+  // A tab change unmounts the box, so an unsent paste asks before it goes.
+  useUnsavedGuard(text.trim() !== "");
   return (
-    <div className="vdna-paste">
-      <Field label={t("settings.voice.pasteLabel")}>
+    <div className="vdna-paste" ref={faultsRoot}>
+      <Field label={label} required error={faults.of("text")}>
         {(control) => (
           <Textarea
             {...control}
             rows={4}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              faults.edited("text");
+            }}
           />
         )}
       </Field>
       <div className="vdna-composer-actions">
         <Button
-          disabled={blank || sending}
+          disabled={sending}
           onClick={() => {
+            if (faults.show(blankRequired(locale, { text: [label, text] }))) {
+              return;
+            }
             setSending(true);
             onAdd(text, (taken) => {
               setSending(false);
@@ -192,6 +185,24 @@ function WhatTeachesTheVoice() {
 
 // A file the preview found several speakers in: only the owner's own turns may
 // become their voice, so the source waits here until they say which is theirs.
+/** The open speaker question of an intake, if any. A tab without the intake
+ * card draws it too, so a question never waits where no one sees it. */
+export function VoicePendingAsk({ intake }: Readonly<{ intake: VoiceIntake }>) {
+  if (!intake.pendingAsk) {
+    return null;
+  }
+  // Keyed by the source: the next file's question is a new panel, so a chosen
+  // speaker cannot carry over to different contacts.
+  return (
+    <SpeakerPanel
+      key={intake.pendingAsk.ref}
+      ask={intake.pendingAsk}
+      onAnswer={intake.answerSpeaker}
+      onDismiss={intake.dismissAsk}
+    />
+  );
+}
+
 function SpeakerPanel({
   ask,
   onAnswer,
@@ -284,6 +295,11 @@ function noticeText(
           return t("settings.voice.refusalSpeaker", { name: notice.label });
         case "unsupported":
           return t("settings.voice.refusalUnsupported", { name: notice.label });
+        case "tooLarge":
+          return t("settings.voice.refusalTooLarge", {
+            name: notice.label,
+            limit: formatBytes(VOICE_SOURCE_MAX_BYTES, locale),
+          });
         default:
           return t("settings.voice.noticeFailed", {
             name: notice.label,

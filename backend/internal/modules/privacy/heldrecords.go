@@ -37,10 +37,10 @@ func (r heldRecord) args(floor FloorPolicy, records any) []any {
 // legalHoldPredicate is the hold every record with a legal_hold column keeps.
 const legalHoldPredicate = "a.legal_hold"
 
-// heldRecordRule is the legal hold, open dispute or statutory floor that keeps
-// a record of kind, or false for a kind no hold reaches. The audit cleanup asks
-// it of one record and the copy retention of a page of them, so the two keep
-// the same records.
+// heldRecordRule is what keeps a record of kind: a legal hold, an open dispute,
+// an opt-out floor or the statutory floor. It is false for a kind no hold
+// reaches. The audit cleanup asks it of one record and the copy retention of a
+// page of them, so the two keep the same records.
 func heldRecordRule(kind string) (heldRecord, bool) {
 	switch kind {
 	case contactObject:
@@ -56,10 +56,19 @@ func heldRecordRule(kind string) (heldRecord, bool) {
 	case rightsRequestEntity:
 		return heldRecord{from: " FROM data_subject_request a", predicate: "a.dispute_open"}, true
 	case "activity":
-		return heldRecord{from: " FROM activity a", predicate: "a.restricted_at IS NOT NULL OR " +
-			retentionscope.HeldThroughAnyLink("a.id") + " OR (" + handelsbriefShielded(1, 2) + ")", floor: true}, true
+		return heldRecord{from: " FROM activity a", predicate: keptActivitySQL(1, 2), floor: true}, true
 	}
 	return heldRecord{}, false
+}
+
+// relayedEventRule is heldRecordRule for a delivered event. The floor protects
+// the activity row and not the event about it, which carries no mail content.
+// So only a legal hold on a linked record keeps an activity's event.
+func relayedEventRule(kind string) (heldRecord, bool) {
+	if kind == "activity" {
+		return heldRecord{from: " FROM activity a", predicate: retentionscope.HeldThroughAnyLink("a.id")}, true
+	}
+	return heldRecordRule(kind)
 }
 
 // RecordCopy is a stored copy of a record's content and the record it was made
@@ -71,15 +80,15 @@ type RecordCopy struct {
 }
 
 // heldCopies answers which copies a hold or floor keeps: those whose record
-// heldRecordRule keeps under floor.
-func heldCopies(ctx context.Context, tx pgx.Tx, copies []RecordCopy, floor FloorPolicy) (map[ids.UUID]bool, error) {
+// the store's rule keeps under floor.
+func heldCopies(ctx context.Context, tx pgx.Tx, copies []RecordCopy, floor FloorPolicy, ruleOf func(kind string) (heldRecord, bool)) (map[ids.UUID]bool, error) {
 	byKind := map[string][]ids.UUID{}
 	for _, c := range copies {
 		byKind[c.EntityType] = append(byKind[c.EntityType], c.EntityID)
 	}
 	held := map[ids.UUID]bool{}
 	for kind, records := range byKind {
-		rule, ok := heldRecordRule(kind)
+		rule, ok := ruleOf(kind)
 		if !ok {
 			continue
 		}

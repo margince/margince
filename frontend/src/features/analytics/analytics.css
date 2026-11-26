@@ -58,6 +58,7 @@
   grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
   align-items: start;
   gap: var(--gapCards);
+  column-gap: var(--gapPanes);
 }
 @media (max-width: 1100px) {
   .analytics-pair {
@@ -202,6 +203,7 @@
   grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
   align-items: stretch;
   gap: var(--gapCards);
+  column-gap: var(--gapPanes);
 }
 /* One column of the lead row: its cards stacked at the gap between cards. */
 .analytics-column {
@@ -238,6 +240,14 @@
 
 .analytics-outlook-prose > p + p {
   margin-block-start: var(--paragraphSpacing);
+}
+/* The rest opens under the prose, as the panel's last line. */
+.analytics-outlook-more {
+  margin-block-start: var(--space-4);
+}
+.analytics-outlook-more > .disclosure {
+  /* ds:ignore the panel body's own padding ends the panel under its last line */
+  margin-bottom: 0;
 }
 
 .analytics-lead > .panel,

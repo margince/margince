@@ -20,11 +20,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { findRowMenu, jsonResponse, row } from "../../testing/worklist.testkit";
-import { CoachControl, OwnerPicker } from "./worklist.manager";
+import { CoachControl, coachableDeals } from "./worklist.coach";
+import { OwnerPicker } from "./worklist.manager";
 import type { WorklistItem } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
 import { RowActs } from "./worklist.rowverbs";
@@ -201,6 +203,64 @@ describe("handing a task to somebody else", () => {
     ).toBeTruthy();
   });
 
+  // The refetch after a hand-off drops the row from the day, and its form
+  // with it. The line must not hang on a form that is still mounted.
+  it("says Reassigned when the row leaves the day before the write answers", async () => {
+    let answer: (response: Response) => void = () => {};
+    const held = new Promise<Response>((resolve) => {
+      answer = resolve;
+    });
+    const fetched = vi.fn(async (input: RequestInfo | URL) => {
+      if (input instanceof Request && input.method === "PATCH") {
+        return held;
+      }
+      if (
+        String(input instanceof Request ? input.url : input).includes("/users")
+      ) {
+        return jsonResponse({
+          data: [{ id: MINH, display_name: "Minh Tran" }],
+          page: { next_cursor: null },
+        });
+      }
+      return jsonResponse({ data: [] });
+    });
+    vi.stubGlobal("fetch", fetched);
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const day = (rows: React.ReactNode) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ToastProvider>
+            {rows}
+            <ToastRegion />
+          </ToastProvider>
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const { rerender } = render(
+      day(rowOf(row({ id: "task-1", actions: ["complete"] }), LENA)),
+    );
+
+    await openHandOff(user);
+    await user.click(await screen.findByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "Minh Tran" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.manager.reassignConfirm"],
+      }),
+    );
+    await waitFor(async () => expect(await wrote(fetched)).toBeDefined());
+
+    rerender(day(null));
+    answer(jsonResponse({}));
+
+    expect(
+      await screen.findByText(en["worklist.manager.reassigned"]),
+    ).toBeTruthy();
+  });
+
   // The contact who already holds the work is not a destination for it.
   it("offers everyone except the contact whose queue this is", async () => {
     stubRosterAnd(() => jsonResponse({}));
@@ -245,7 +305,7 @@ describe("leaving a note on somebody's queue", () => {
   it("AC-WORKLIST-MGR-03: writes the note to the contact it is about", async () => {
     const fetched = stubRosterAnd(() => jsonResponse({}));
     const user = userEvent.setup();
-    renderUnderAToastRegion(<CoachControl owner={LENA} />);
+    renderUnderAToastRegion(<CoachControl owner={LENA} deals={[]} />);
 
     await user.click(
       await screen.findByRole("button", { name: en["worklist.manager.coach"] }),
@@ -282,7 +342,7 @@ describe("leaving a note on somebody's queue", () => {
     stubRosterAnd(() => refusal("permission_denied"));
     const user = userEvent.setup();
     const { container } = renderUnderAToastRegion(
-      <CoachControl owner={LENA} name="Lena Fischer" />,
+      <CoachControl owner={LENA} name="Lena Fischer" deals={[]} />,
     );
 
     await user.click(
@@ -306,7 +366,9 @@ describe("leaving a note on somebody's queue", () => {
   it("falls back to the shared line where no code was stated", async () => {
     stubRosterAnd(() => refusal());
     const user = userEvent.setup();
-    renderUnderAToastRegion(<CoachControl owner={LENA} name="Lena Fischer" />);
+    renderUnderAToastRegion(
+      <CoachControl owner={LENA} name="Lena Fischer" deals={[]} />,
+    );
 
     await user.click(
       await screen.findByRole("button", { name: en["worklist.manager.coach"] }),
@@ -327,7 +389,7 @@ describe("leaving a note on somebody's queue", () => {
   it("sends no note field where the coach wrote nothing", async () => {
     const fetched = stubRosterAnd(() => jsonResponse({}));
     const user = userEvent.setup();
-    renderUnderAToastRegion(<CoachControl owner={LENA} />);
+    renderUnderAToastRegion(<CoachControl owner={LENA} deals={[]} />);
 
     await user.click(
       await screen.findByRole("button", { name: en["worklist.manager.coach"] }),
@@ -343,6 +405,72 @@ describe("leaving a note on somebody's queue", () => {
       recipient_user_id: LENA,
       kind: "coach_general",
     });
+  });
+
+  // The server words a next-step headline from its deal. So a press without
+  // one says the deal is required and sends nothing; with one, it sends it.
+  it("sends a next-step note only with the deal it names", async () => {
+    const fetched = stubRosterAnd(() => jsonResponse({}));
+    const user = userEvent.setup();
+    renderUnderAToastRegion(
+      <CoachControl
+        owner={LENA}
+        deals={[{ value: "d-7", label: "Depot rollout" }]}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: en["worklist.manager.coach"] }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.manager.kind.next_step"],
+      }),
+    );
+    const confirm = screen.getByRole("button", {
+      name: en["worklist.manager.coachConfirm"],
+    });
+    await user.click(confirm);
+    expect(
+      await screen.findByText(
+        `${en["worklist.manager.coachDeal"]} is required.`,
+      ),
+    ).toBeTruthy();
+    expect(await wrote(fetched)).toBeUndefined();
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: en["worklist.manager.coachDeal"] }),
+      "Depot rollout",
+    );
+    await user.click(confirm);
+
+    const sent = await wrote(fetched);
+    expect(sent?.body).toEqual({
+      recipient_user_id: LENA,
+      kind: "coach_deal_needs_next_step",
+      deal_id: "d-7",
+    });
+  });
+});
+
+describe("the deals a next-step note can name", () => {
+  it("lists each named deal of the day once and skips other records", () => {
+    const deal = (id: string, label?: string) =>
+      row({
+        id: `r-${id}-${label ?? ""}`,
+        subject: { type: "deal", id, label },
+      });
+    expect(
+      coachableDeals([
+        deal("d-1", "Depot rollout"),
+        deal("d-1", "Depot rollout"),
+        deal("d-2"),
+        row({
+          id: "c",
+          subject: { type: "contact", id: "p-1", label: "Anna" },
+        }),
+      ]),
+    ).toEqual([{ value: "d-1", label: "Depot rollout" }]);
   });
 });
 

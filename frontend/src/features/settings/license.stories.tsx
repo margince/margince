@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import { StoryProviders } from "../../testing/story-utils";
-import { LicenseReading, SeatUsageReading } from "./license";
+import { LicenseCheck, LicenseReading, SeatUsageReading } from "./license";
 
 // The reading renders without the fetching card. Every state worth seeing is a
 // state of the entitlement, and a stubbed query would test the fetch instead.
@@ -43,6 +43,24 @@ export const CapacityOnly: Story = {
   render: () => (
     <StoryProviders>
       <SeatUsageReading seatsUsed={7} />
+    </StoryProviders>
+  ),
+};
+
+// What admin and ops see: the "Check now" button under the reading, before
+// it is pressed.
+export const WithCheckNow: Story = {
+  render: () => (
+    <StoryProviders>
+      <LicenseReading
+        entitlement={{
+          state: "absent",
+          seats_used: 12,
+          over_limit: false,
+          checked_at: CHECKED_AT,
+        }}
+        action={<LicenseCheck />}
+      />
     </StoryProviders>
   ),
 };
@@ -103,6 +121,19 @@ export const Unlicensed: Story = {
 export const LicenseRefused: Story = {
   render: story({
     state: "rejected",
+    seats_used: 12,
+    over_limit: false,
+    checked_at: CHECKED_AT,
+  }),
+};
+
+// Refused while the last valid ceiling still holds. The server sends that
+// ceiling, so the seat row reads used against it. The callout says no full
+// seat is added beyond it.
+export const LicenseRefusedWithAHeldCeiling: Story = {
+  render: story({
+    state: "rejected",
+    seats_granted: 12,
     seats_used: 12,
     over_limit: false,
     checked_at: CHECKED_AT,

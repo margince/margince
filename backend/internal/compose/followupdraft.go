@@ -31,6 +31,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -40,6 +41,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -151,7 +153,7 @@ func draftFollowUpReply(
 // here, and the anchor's liveness is the send path's own check.
 func stageFollowUpDraft(
 	ctx context.Context, tx pgx.Tx, svc *approvals.Service, summary string,
-	dealID ids.UUID, evidence ids.UUID, draft automation.HeldDraftProposal,
+	dealID ids.UUID, evidence ids.UUID, wrote time.Time, draft automation.HeldDraftProposal,
 ) error {
 	raw, err := json.Marshal(draft)
 	if err != nil {
@@ -177,8 +179,12 @@ func stageFollowUpDraft(
 		TargetType:     approvalTargetDeal,
 		TargetID:       dealID,
 		Summary:        summary,
-		Identity:       identity,
-		JoinPending:    true,
+		SystemText:     &systemtext.Message{Version: 1, Subject: systemtext.Sentence("approval.draftedReplyWaiting", systemtext.Text(draft.Subject))},
+		Why: approvals.Grounds{
+			Sentence: systemtext.Sentence("approval.why.reply_owed", systemtext.Text(draft.Subject), systemtext.Date(wrote.UTC().Format(time.DateOnly))),
+		},
+		Identity:    identity,
+		JoinPending: true,
 	})
 	return err
 }

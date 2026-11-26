@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // One item's shape, per producer.
@@ -71,6 +72,7 @@ const actionDismiss crmcontracts.AttentionItemActions = "dismiss"
 // contacts.MayMergePair, the rule the merge itself asks of a filed pair.
 func (s *Service) duplicateItem(
 	pair DuplicatePair, known pairFaces, decidable pairAuthority, settleable map[ids.UUID]bool,
+	recipient *ids.UUID,
 ) crmcontracts.AttentionItem {
 	kind := pair.EntityType
 	confidence := float32(pair.Confidence)
@@ -80,6 +82,9 @@ func (s *Service) duplicateItem(
 		Kind:       &kind,
 		Confidence: &confidence,
 		Actions:    []crmcontracts.AttentionItemActions{},
+	}
+	if recipient != nil {
+		item.RequestedDeciderId = idPtr(*recipient)
 	}
 	left, leftKnown := known.side(pair.EntityType, pair.LeftID)
 	right, rightKnown := known.side(pair.EntityType, pair.RightID)
@@ -255,12 +260,14 @@ func evidenceRows(rows []FieldComparison) []crmcontracts.AttentionPairEvidence {
 func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcontracts.AttentionItem {
 	kind := approval.Kind
 	item := crmcontracts.AttentionItem{
-		Id:           approval.Id.String(),
-		Source:       crmcontracts.AttentionItemSource("approval"),
-		Kind:         &kind,
-		Title:        approval.Summary,
-		SummaryParts: approval.SummaryParts,
-		Actions:      []crmcontracts.AttentionItemActions{"decide"},
+		Id:            approval.Id.String(),
+		Source:        crmcontracts.AttentionItemSource("approval"),
+		Kind:          &kind,
+		Title:         approval.Summary,
+		SummaryParts:  approval.SummaryParts,
+		SystemDisplay: approval.SystemDisplay,
+		Why:           approval.Why,
+		Actions:       []crmcontracts.AttentionItemActions{"decide"},
 	}
 	if approvals.PreviewRefusal(approval.Preview) != nil {
 		item.Actions = []crmcontracts.AttentionItemActions{}
@@ -329,11 +336,19 @@ func stagedFacts(
 func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts.AttentionItem {
 	subject := task.Subject
 	item := crmcontracts.AttentionItem{
-		Id:      task.ID.String(),
-		Source:  crmcontracts.AttentionItemSource("task"),
-		Title:   &subject,
-		Subject: subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,
-		Actions: taskActions(task),
+		Id:             task.ID.String(),
+		Source:         crmcontracts.AttentionItemSource("task"),
+		Title:          &subject,
+		Why:            task.Why,
+		SystemDisplay:  task.SystemDisplay,
+		WebsiteInquiry: task.Inquiry,
+		Subject:        subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,
+		RequestCheck: task.RequestCheck,
+		TaskType:     task.TaskType,
+		Actions:      taskActions(task),
+	}
+	if task.WebsiteInquiry {
+		item.Kind = new(provenance.WebsiteInquirySource)
 	}
 	if task.SourceActivityID != nil {
 		item.SourceRecord = subjectOf("activity", *task.SourceActivityID)
@@ -349,13 +364,20 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		due := *task.DueAt
 		item.DueAt = &due
 		item.DueHasTime = new(task.DueHasTime)
-		past := deadline.Passed(task.DueAt, asOf)
+		item.DueIntent = task.DueIntent
+		past := taskLateAt(task.DueAt, asOf, task.MayBeDone)
+		name := dueGroup(due, asOf, until, loc)
+		if days, ok := pickedDay(task.DueAt, task.DueHasTime, task.DueIntent, asOf, loc); ok {
+			name = pickedDayGroup(days)
+			past = name == dueGroupOverdue && task.MayBeDone == nil
+		}
 		item.Overdue = &past
-		// Which run of the page it heads. Only dated rows carry one, which is
-		// what the contract says and what lets a client group without having to
+		// Which run of the page it heads, so a client groups without having to
 		// decide the day's end for itself.
-		group := crmcontracts.AttentionItemDueGroup(dueGroup(due, asOf, until, loc))
+		group := crmcontracts.AttentionItemDueGroup(name)
 		item.DueGroup = &group
+	} else if task.later {
+		item.DueGroup = new(crmcontracts.AttentionItemDueGroupNone)
 	}
 	// Who holds it. Absent means nobody has taken it, which the unassigned
 	// scope exists to surface and which the row could not say before.

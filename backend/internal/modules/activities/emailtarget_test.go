@@ -89,6 +89,36 @@ func TestTheEmailTargetRule(t *testing.T) {
 			emailCandidates{companies: []emailCandidate{company, {id: ids.NewV7()}}},
 			want{},
 		},
+		{
+			"a deal with one stakeholder", task,
+			emailCandidates{dealContacts: []emailCandidate{contact}, dealCompanies: []emailCandidate{company}},
+			want{true, contact.id, contact.address, ""},
+		},
+		{
+			"a deal with two stakeholders and a company", task,
+			emailCandidates{dealContacts: []emailCandidate{contact, {id: ids.NewV7()}}, dealCompanies: []emailCandidate{company}},
+			want{true, company.id, "", ""},
+		},
+		{
+			"a deal's stakeholder under a linked company", task,
+			emailCandidates{companies: []emailCandidate{company}, dealContacts: []emailCandidate{contact}},
+			want{true, company.id, "", ""},
+		},
+		{
+			"two contacts at one company", task,
+			emailCandidates{contacts: []emailCandidate{contact, {id: ids.NewV7()}}, employers: []emailCandidate{company}},
+			want{true, company.id, "", ""},
+		},
+		{
+			"two contacts at two companies", task,
+			emailCandidates{contacts: []emailCandidate{contact, {id: ids.NewV7()}}, employers: []emailCandidate{company, {id: ids.NewV7()}}},
+			want{},
+		},
+		{
+			"a call with two contacts at one company", call,
+			emailCandidates{contacts: []emailCandidate{contact, {id: ids.NewV7()}}, employers: []emailCandidate{company}},
+			want{},
+		},
 		{"a call on a lead", call, emailCandidates{leads: []emailCandidate{lead}}, want{}},
 		{"nothing", task, emailCandidates{}, want{}},
 	} {

@@ -48,15 +48,15 @@ func TestAdvanceAndScenariosKeepTheMeetingTheyCite(t *testing.T) {
 	}
 }
 
-func TestCoachingReusesThePlansScenariosInEveryLanguage(t *testing.T) {
+func TestCoachingKeepsThePlansBranchesInEveryLanguage(t *testing.T) {
 	langcopytest.Census(t, coachingWords)
 	for _, plan := range []Plan{{}, {Objective: &Objective{}}, {TopRisk: &Risk{}}, {LikelyAsks: make([]Ask, 2)}, {Type: MeetingType{Value: crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown}}, {Arc: []ArcSentence{{}}, Questions: []Question{{}}}} {
-		plan.Scenarios = []Scenario{{Label: "Original branch", Play: "Original recommendation"}}
+		plan.Scenarios = []Scenario{{Label: "Original branch", Play: "Original recommendation", Coach: "Watch the rep's answer"}}
 		english := briefCopyFor("en").coachingFor(plan)
 		for _, language := range []string{"de", "vi"} {
 			got := briefCopyFor(language).coachingFor(plan)
-			if !reflect.DeepEqual(got.Paths, english.Paths) || got.Paths[0].Label != plan.Scenarios[0].Label || got.Paths[0].Play != plan.Scenarios[0].Play {
-				t.Fatal("coaching invented a separate scenario")
+			if !reflect.DeepEqual(got.Paths, english.Paths) || got.Paths[0].Label != plan.Scenarios[0].Label || got.Paths[0].Play != plan.Scenarios[0].Coach {
+				t.Fatal("coaching invented a separate branch, or lost the coach's reading of it")
 			}
 			actual := []string{got.Focus, got.FailureMode, got.ListenFor, got.WatchFor, got.InterveneIf}
 			before := []string{english.Focus, english.FailureMode, english.ListenFor, english.WatchFor, english.InterveneIf}

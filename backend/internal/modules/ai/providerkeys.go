@@ -52,11 +52,15 @@ var (
 	}, providerKeyStore)
 	GeminiKey = config.DefineStored(config.Spec[string]{
 		Key: "ai.provider_keys_gemini", Env: "GEMINI_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
-		Doc: "BYOK API key for the Gemini provider; required only when a binding names it.",
+		Doc: "BYOK API key for the Gemini provider, also sent by gemini_decision; required only when a binding names either.",
 	}, providerKeyStore)
 	GeminiVertexKey = config.DefineStored(config.Spec[string]{
 		Key: "ai.provider_keys_gemini_vertex", Env: "GEMINI_VERTEX_SA_JSON", Type: config.String, Secret: true, Roles: keyRoles,
 		Doc: "BYOK service-account key (the JSON key file's contents) for the gemini_vertex provider; required only when a binding names it.",
+	}, providerKeyStore)
+	AzureOpenAIKey = config.DefineStored(config.Spec[string]{
+		Key: "ai.provider_keys_azure_openai", Env: "AZURE_OPENAI_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
+		Doc: "BYOK API key for the azure_openai provider (the Azure OpenAI resource's static key); required only when a binding names it.",
 	}, providerKeyStore)
 	JevKey = config.DefineStored(config.Spec[string]{
 		Key: "ai.provider_keys_jev", Env: "TYPESAFE_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
@@ -87,10 +91,32 @@ func KeySettings() []*config.Setting[string] {
 	return out
 }
 
-// keySettings maps a provider to the setting its key is read through.
+// keySettings maps each key slot's provider to the setting its key is read
+// through. An adapter that sends another's key has no slot of its own.
 var keySettings = projectProviders(
 	func(d providerDescriptor) *config.Setting[string] { return d.key },
-	func(d providerDescriptor) bool { return d.key != nil })
+	func(d providerDescriptor) bool { return d.key != nil && keySlotOf(d.name) == d.name },
+)
+
+// keySlotOf is the provider whose slot holds provider's key: the first registry
+// row that reads the same setting. One secret is one row on the key screen.
+func keySlotOf(provider string) string {
+	d, _ := providerByName(provider)
+	for _, owner := range providerRegistry {
+		if d.key != nil && owner.key == d.key {
+			return owner.name
+		}
+	}
+	return provider
+}
+
+// keyBorrowers names the providers that send slot's key and have no slot of
+// their own, so a screen can say each one needs that key.
+func keyBorrowers(slot string) []string {
+	return providerNamesWhere(func(d providerDescriptor) bool {
+		return d.name != slot && keySlotOf(d.name) == slot
+	})
+}
 
 // KeyLookup resolves each provider's key through its setting: the boot value
 // where a boot source sets one, else the sealed row. It satisfies config.Lookup,
@@ -147,9 +173,10 @@ func (cfg RoutingConfig) CloudProvidersBound() []string {
 	}
 	named[cfg.Embeddings.Provider] = true
 	// The decisions lane is bound apart from the tiers, so its key is named
-	// here or nowhere. A key the adapter only sends when held is never demanded.
+	// here or nowhere. A key the adapter only sends when held is never demanded,
+	// and one it borrows is demanded of the slot that holds it.
 	if cfg.Decisions != nil && !keyIsOptional(cfg.Decisions.Provider) {
-		named[cfg.Decisions.Provider] = true
+		named[keySlotOf(cfg.Decisions.Provider)] = true
 	}
 
 	out := make([]string, 0, len(named))
@@ -161,15 +188,15 @@ func (cfg RoutingConfig) CloudProvidersBound() []string {
 	return out
 }
 
-// CloudProvidersNeedingKeys names the providers whose credential this module
-// holds, in a stable order so a log line reads the same on every boot.
+// CloudProvidersNeedingKeys names the key slots this module holds, in a stable
+// order so a log line reads the same on every boot.
 //
-// Derived from cloudKeyEnv rather than restated, so a provider added there is
-// covered by the key store the day it appears.
+// Derived from keySettings rather than restated, so a provider added to the
+// registry is covered by the key store the day it appears.
 func CloudProvidersNeedingKeys() []string {
-	out := make([]string, 0, len(cloudKeyEnv))
+	out := make([]string, 0, len(keySettings))
 	for _, provider := range providerNames() {
-		if _, cloud := cloudKeyEnv[provider]; cloud {
+		if _, slot := keySettings[provider]; slot {
 			out = append(out, provider)
 		}
 	}

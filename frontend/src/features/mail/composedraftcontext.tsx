@@ -47,6 +47,10 @@ export function RelatedFiling({
     onDealChange(kind === "deal" ? id : "");
     onProjectChange(kind === "project" ? id : "");
   };
+  // "Nothing specific" alone is no choice to offer.
+  if (projects.length + deals.length === 0) {
+    return null;
+  }
   return (
     <Field label={t("compose.relatedTo")} labelHidden>
       {(control) => (
@@ -65,7 +69,6 @@ export function RelatedFiling({
           ]}
           value={relatedValue(dealId, projectId)}
           onChange={choose}
-          disabled={projects.length + deals.length === 0}
         />
       )}
     </Field>
@@ -148,7 +151,8 @@ export type PendingAction = Readonly<{
 export type DraftNeed = "recipient" | "contacts" | null;
 
 // The ask for a draft: what the rep wants said, and the one control that asks
-// for it. It stays once a draft exists, so a changed steer can ask again.
+// for it. Once a draft stands, the control is Redraft, offered only after the
+// rep changes the purpose that draft was written to.
 //
 // Rejecting a draft sits beside the disclosure instead. It is a verdict on the
 // finished words.
@@ -159,6 +163,7 @@ export function DraftOffer({
   draft,
   unavailable,
   need = null,
+  verb = "draft",
 }: Readonly<{
   replying?: boolean;
   intent: string;
@@ -167,9 +172,11 @@ export function DraftOffer({
   unavailable: DraftUnavailable | null;
   /** Who the draft still needs before it can be asked for. */
   need?: DraftNeed;
+  verb?: "draft" | "redraft" | null;
 }>) {
   const t = useT();
   const ask = replying ? "compose.replyIntent" : "compose.newIntent";
+  const draftLabel = replying ? "compose.draftReply" : "compose.draftEmail";
   return (
     <div className="compose-offer">
       {/* One line, as a mail client draws its own: the ask names itself in its
@@ -197,15 +204,17 @@ export function DraftOffer({
             />
             {/* Outlined with its sparkle: Send is the composer's one filled
                 verb, and the mark alone says "Margince does this". */}
-            <Button
-              variant="aiQuiet"
-              onClick={draft.run}
-              disabled={draft.disabled}
-              pending={draft.pending}
-              busyLabel={t("compose.drafting")}
-            >
-              {t(replying ? "compose.draftReply" : "compose.draftEmail")}
-            </Button>
+            {verb && (
+              <Button
+                variant="aiQuiet"
+                onClick={draft.run}
+                disabled={draft.disabled}
+                pending={draft.pending}
+                busyLabel={t("compose.drafting")}
+              >
+                {t(verb === "redraft" ? "compose.redraft" : draftLabel)}
+              </Button>
+            )}
           </div>
         )}
       </Field>

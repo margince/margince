@@ -18,12 +18,14 @@ import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { Meter } from "../../design-system/readings";
+import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { lockFor } from "../../format/settinglocks";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { wholeNumberFault } from "../../lib/wholenumber";
 import { AiFeatureTable } from "./ai-feature-table";
 import { formatTokens } from "./tokens";
 import "./ai-admin.css";
@@ -51,12 +53,6 @@ export function AiBudgetCard() {
   const canManage = useCanWrite("ai_budget", "update");
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
-  // Set as the editor closes, so the Edit button that comes back takes focus.
-  const handBack = useRef(false);
-  const close = () => {
-    handBack.current = true;
-    setEditing(false);
-  };
   const query = useQuery({
     queryKey: ["ai-budget"],
     enabled: canSee,
@@ -75,14 +71,8 @@ export function AiBudgetCard() {
     <Panel
       title={t("aiAdmin.allowance")}
       titleAction={
-        budget && canManage && !editing ? (
+        budget && canManage ? (
           <Button
-            ref={(node) => {
-              if (node && handBack.current) {
-                handBack.current = false;
-                node.focus();
-              }
-            }}
             reason={lock.disabled ? lock.reason : undefined}
             onClick={() => {
               setSaved(false);
@@ -107,7 +97,7 @@ export function AiBudgetCard() {
           <SettingList bleed="settings">
             <BudgetReading budget={budget} />
           </SettingList>
-          {(budget.band !== "normal" || saved || editing) && (
+          {(budget.band !== "normal" || saved) && (
             <PanelBody className="form-stack">
               <BandNote band={budget.band} />
               {saved && (
@@ -119,17 +109,17 @@ export function AiBudgetCard() {
                   {t("aiAdmin.recovery")}
                 </Callout>
               )}
-              {editing && (
-                <BudgetEditor
-                  budget={budget}
-                  onClose={close}
-                  onSaved={() => {
-                    close();
-                    setSaved(true);
-                  }}
-                />
-              )}
             </PanelBody>
+          )}
+          {editing && (
+            <BudgetEditor
+              budget={budget}
+              onClose={() => setEditing(false)}
+              onSaved={() => {
+                setEditing(false);
+                setSaved(true);
+              }}
+            />
           )}
         </>
       )}
@@ -155,6 +145,7 @@ function BandNote({ band }: Readonly<{ band: Budget["band"] }>) {
 
 function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const number = (value: number) => formatNumber(value, locale);
   const tokens = (value: number) => formatTokens(value, locale);
@@ -162,7 +153,7 @@ function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
   const basis =
     budget.source === "company_override"
       ? t("aiAdmin.fixed")
-      : t("aiAdmin.formula", {
+      : plural("aiAdmin.formula", budget.config.tokens_per_full_user, {
           users: number(budget.eligible_full_users),
           tokens: tokens(budget.config.tokens_per_full_user),
         });
@@ -241,9 +232,8 @@ function companyText(config: Budget["config"]): string {
     : String(config.company_monthly_tokens);
 }
 
-function validTokenAllowance(value: string) {
-  return /^\d+$/.test(value) && Number(value) > 0 && Number(value) <= 1e12;
-}
+// The server's bounds on either allowance, in whole tokens.
+const ALLOWANCE_BOUNDS = { min: 1, max: 1e12 } as const;
 
 function BudgetEditor({
   budget,
@@ -251,6 +241,7 @@ function BudgetEditor({
   onSaved,
 }: Readonly<{ budget: Budget; onClose: () => void; onSaved: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const client = useQueryClient();
   const [perUser, setPerUser] = useState(() =>
     String(budget.config.tokens_per_full_user),
@@ -286,13 +277,27 @@ function BudgetEditor({
       ]);
     },
   });
-  const valid =
-    validTokenAllowance(perUser) &&
-    (company === "" || validTokenAllowance(company));
+  const perUserFault = wholeNumberFault(
+    perUser,
+    locale,
+    t("aiAdmin.perUser"),
+    ALLOWANCE_BOUNDS,
+  );
+  const companyFault =
+    company.trim() === ""
+      ? undefined
+      : wholeNumberFault(
+          company,
+          locale,
+          t("aiAdmin.companyName"),
+          ALLOWANCE_BOUNDS,
+        );
+  const valid = perUserFault === undefined && companyFault === undefined;
   const change: Change = {
     config: {
-      tokens_per_full_user: Number(perUser),
-      company_monthly_tokens: company === "" ? null : Number(company),
+      tokens_per_full_user: Number(perUser.trim()),
+      company_monthly_tokens:
+        company.trim() === "" ? null : Number(company.trim()),
     },
     expected_revision: revision,
   };
@@ -308,80 +313,100 @@ function BudgetEditor({
     perUserBox.current?.focus();
   };
   return (
-    <>
-      <div className="form-row">
-        <Field label={t("aiAdmin.perUser")} hint={t("aiAdmin.range")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              ref={perUserBox}
-              inputMode="numeric"
-              value={perUser}
-              disabled={busy}
-              onChange={(e) => {
-                setPerUser(e.target.value);
-                preview.reset();
-              }}
-            />
+    <RecordFormDialog
+      open
+      title={t("aiAdmin.allowance")}
+      onClose={onClose}
+      fieldCount={2}
+      closeDisabled={busy}
+      form={
+        <div className="form-stack">
+          <div className="form-row">
+            <Field
+              label={t("aiAdmin.perUser")}
+              hint={t("aiAdmin.range")}
+              error={perUserFault}
+            >
+              {(control) => (
+                <TextInput
+                  {...control}
+                  ref={perUserBox}
+                  inputMode="numeric"
+                  value={perUser}
+                  disabled={busy}
+                  onChange={(e) => {
+                    setPerUser(e.target.value);
+                    preview.reset();
+                  }}
+                />
+              )}
+            </Field>
+            <Field
+              label={t("aiAdmin.company")}
+              hint={t("aiAdmin.overrideHint")}
+              error={companyFault}
+            >
+              {(control) => (
+                <TextInput
+                  {...control}
+                  inputMode="numeric"
+                  value={company}
+                  disabled={busy}
+                  onChange={(e) => {
+                    setCompany(e.target.value);
+                    preview.reset();
+                  }}
+                />
+              )}
+            </Field>
+          </div>
+          {revision !== budget.revision && (
+            <Callout
+              kind="standing"
+              tone="warning"
+              title={t("aiAdmin.stale")}
+              actions={<Button onClick={reload}>{t("aiAdmin.reload")}</Button>}
+            >
+              {t("aiAdmin.staleHelp")}
+            </Callout>
           )}
-        </Field>
-        <Field label={t("aiAdmin.company")} hint={t("aiAdmin.overrideHint")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              inputMode="numeric"
-              value={company}
-              disabled={busy}
-              onChange={(e) => {
-                setCompany(e.target.value);
-                preview.reset();
-              }}
-            />
+          {(preview.isError || save.isError) && (
+            <Callout kind="outcome" tone="danger" title={t("aiAdmin.failed")}>
+              {problemMessageOf(preview.error ?? save.error, t)}
+            </Callout>
           )}
-        </Field>
-      </div>
-      {revision !== budget.revision && (
-        <Callout
-          kind="standing"
-          tone="warning"
-          title={t("aiAdmin.stale")}
-          actions={<Button onClick={reload}>{t("aiAdmin.reload")}</Button>}
-        >
-          {t("aiAdmin.staleHelp")}
-        </Callout>
-      )}
-      {(preview.isError || save.isError) && (
-        <Callout kind="outcome" tone="danger" title={t("aiAdmin.failed")}>
-          {problemMessageOf(preview.error ?? save.error, t)}
-        </Callout>
-      )}
-      {preview.data && <BudgetPreview preview={preview.data} />}
-      <div className="card-actions">
-        <Button
-          disabled={!valid || revision !== budget.revision}
-          pending={preview.isPending}
-          onClick={() => preview.mutate(change)}
-        >
-          {t("aiAdmin.preview")}
-        </Button>
-        <Button
-          variant="primary"
-          disabled={
-            !preview.data ||
-            !valid ||
-            revision !== budget.revision ||
-            preview.isPending
-          }
-          pending={save.isPending}
-          onClick={() => save.mutate(change)}
-        >
-          {t("aiAdmin.save")}
-        </Button>
-        <Button disabled={busy} onClick={onClose}>
-          {t("aiAdmin.cancel")}
-        </Button>
-      </div>
-    </>
+          {preview.data && <BudgetPreview preview={preview.data} />}
+        </div>
+      }
+      actions={
+        <>
+          <Button
+            disabled={revision !== budget.revision}
+            reason={valid ? undefined : t("aiAdmin.fixToPreview")}
+            pending={preview.isPending}
+            onClick={() => preview.mutate(change)}
+          >
+            {t("aiAdmin.preview")}
+          </Button>
+          <Button
+            variant="primary"
+            disabled={
+              !preview.data ||
+              !valid ||
+              revision !== budget.revision ||
+              preview.isPending
+            }
+            pending={save.isPending}
+            onClick={() => save.mutate(change)}
+          >
+            {t("aiAdmin.save")}
+          </Button>
+          <Button disabled={busy} onClick={onClose}>
+            {t("aiAdmin.cancel")}
+          </Button>
+        </>
+      }
+    />
   );
 }
 

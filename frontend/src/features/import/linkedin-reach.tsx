@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { DataTable } from "../../design-system/datatable";
@@ -17,24 +17,36 @@ import { navigate } from "../../lib/router";
 export type LinkedInReach = components["schemas"]["LinkedInReachResponse"];
 type ReachAccount = LinkedInReach["accounts"][number];
 
-// The largest page the contract's `limit` admits, asked for explicitly. The
-// endpoint declares no cursor, so one page is all a reader can reach. The list
-// edge is therefore this screen's choice, not the server's default of 50.
-// The caveat reads `accounts_total`, so what sits past the edge is still counted.
+// The largest page the contract's `limit` admits, so most networks are one
+// read. A longer one continues from the cursor of the page before.
 const REACH_PAGE_LIMIT = 200;
 
 const REACH_KEY = ["linkedin-reach", REACH_PAGE_LIMIT] as const;
 
+/** Every page read so far as one answer, its totals from the newest read. */
+function mergeReachPages(
+  pages: readonly LinkedInReach[],
+): LinkedInReach | undefined {
+  const newest = pages.at(-1);
+  if (newest === undefined) {
+    return undefined;
+  }
+  return { ...newest, accounts: pages.flatMap((page) => page.accounts) };
+}
+
 export function useLinkedInReach() {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: REACH_KEY,
-    queryFn: async (): Promise<LinkedInReach> => {
-      return unwrap(
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam }): Promise<LinkedInReach> =>
+      unwrap(
         await api.GET("/me/linkedin-reach", {
-          params: { query: { limit: REACH_PAGE_LIMIT } },
+          params: { query: { limit: REACH_PAGE_LIMIT, cursor: pageParam } },
         }),
-      );
-    },
+      ),
+    // The last page carries no cursor, and neither does a server older than paging.
+    getNextPageParam: (last) => last.next_cursor,
+    select: (data) => mergeReachPages(data.pages),
   });
 }
 

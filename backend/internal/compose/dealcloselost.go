@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -22,12 +23,15 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
@@ -58,10 +62,14 @@ func newSilentDealCloser(pool *pgxpool.Pool, log *slog.Logger) silentDealCloser 
 
 // closeDecision is one deal the check would close, and why.
 type closeDecision struct {
-	deal   ids.DealID
-	owner  ids.UUID
-	code   string
-	reason string
+	reasonCode string
+	reasonDays int
+	// refusal is the message a refusal close was judged on.
+	refusal ids.UUID
+	deal    ids.DealID
+	owner   ids.UUID
+	code    string
+	reason  string
 }
 
 // CloseWorkspace closes every due deal in the workspace bound in ctx and
@@ -95,10 +103,15 @@ func (c silentDealCloser) CloseWorkspace(ctx context.Context) (int, error) {
 
 // closeOne closes one deal as its owner's agent. The close reads the owner's
 // grants in its own transaction, before the deal row lock. Under that lock the
-// owner's switch must be on and the deal still due.
+// owner's switch must be on and the deal still due. The re-check reads the
+// deal's activities under their lock, so no verdict can change before commit.
 func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, now time.Time) (bool, error) {
 	return c.deals.CloseAsLost(ctx, deals.CloseLostInput{
 		DealID: decision.deal, Owner: decision.owner, ReasonCode: decision.code, Reason: decision.reason,
+		SourceActivityID: decision.refusal,
+		HoldEvidence: func(ctx context.Context, tx pgx.Tx) error {
+			return activities.LockDealActivitiesTx(ctx, tx, decision.deal.UUID)
+		},
 		StillDue: func(ctx context.Context, tx pgx.Tx) (bool, error) {
 			mode, err := approvals.AutoApplyModeTx(ctx, tx, decision.owner, deals.DealCloseLostKind)
 			if err != nil || mode != approvals.ModeAuto {
@@ -107,7 +120,7 @@ func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, 
 			again, err := closeDecisions(ctx, tx, now, []ids.UUID{decision.deal.UUID})
 			return len(again) == 1 && again[0] == decision, err
 		},
-		Record: func(ctx context.Context, tx pgx.Tx, _ ids.UUID) error {
+		Record: func(ctx context.Context, tx pgx.Tx) (ids.UUID, error) {
 			return c.recordOnTimeline(ctx, tx, decision)
 		},
 		AsOwner: ownersAgentTx(c.users, decision.owner, marginceActorID),
@@ -117,17 +130,39 @@ func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, 
 // recordOnTimeline writes the close on the deal's timeline as a note. Its
 // origin keeps it out of every recency clock, so it never reads as the
 // deal being worked on.
-func (c silentDealCloser) recordOnTimeline(ctx context.Context, tx pgx.Tx, decision closeDecision) error {
-	subject := "Margince closed this deal as lost"
-	body := decision.reason + ". Undo it from Home if the deal is still alive, and add a note on why."
-	_, _, err := c.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
-		Kind: string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
+func (c silentDealCloser) recordOnTimeline(ctx context.Context, tx pgx.Tx, decision closeDecision) (ids.UUID, error) {
+	subject := systemtext.Literal("deal.lost")
+	tail := []string{"deal.lost_undo"}
+	if !decision.refusal.IsZero() {
+		tail = append(tail, "deal.lost_refusal_linked")
+	}
+	sentences := []string{decision.reason + "."}
+	for _, code := range tail {
+		sentences = append(sentences, systemtext.Literal(code))
+	}
+	body := strings.Join(sentences, " ")
+	var component *systemtext.Component
+	if decision.reasonCode != "" {
+		component = systemtext.Sentence(decision.reasonCode)
+		if decision.reasonCode != "deal.customer_declined" {
+			component.Args = []systemtext.Argument{systemtext.Count(int64(decision.reasonDays))}
+		}
+		following := make([]*systemtext.Component, 0, len(tail))
+		for _, code := range tail {
+			following = append(following, systemtext.Sentence(code))
+		}
+		component = systemtext.Sequence(component, following...)
+		component.Layout = "sentences"
+	}
+	note, _, err := c.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.lost"), Body: component},
+		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
 		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: decision.deal.UUID}},
 	})
 	if err != nil {
-		return fmt.Errorf("compose: writing the close on the deal's timeline: %w", err)
+		return ids.Nil, fmt.Errorf("compose: writing the close on the deal's timeline: %w", err)
 	}
-	return nil
+	return ids.UUID(note.Id), nil
 }
 
 // closeDecisions reads the open deals the check would close now, narrowed to
@@ -155,6 +190,10 @@ func closeDecisions(ctx context.Context, tx pgx.Tx, now time.Time, only []ids.UU
 	if err != nil {
 		return nil, err
 	}
+	backfilled, err := capture.StakeholderBackfillDoneTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
 	var out []closeDecision
 	for _, subject := range subjects {
 		dealFacts := facts[subject.DealID]
@@ -162,7 +201,7 @@ func closeDecisions(ctx context.Context, tx pgx.Tx, now time.Time, only []ids.UU
 		if err != nil || !mailRead(&owner, dealFacts.mailboxes) {
 			continue
 		}
-		if decision, ok := decideClose(subject, dealFacts, threshold, now, zone); ok {
+		if decision, ok := decideClose(subject, dealFacts, threshold, now, zone, !backfilled); ok {
 			out = append(out, decision)
 		}
 	}
@@ -186,11 +225,14 @@ func closeMailRead(
 	return dealMailCovered(sourceChecked(coverage, sourceMail), byOwner, byConnection), nil
 }
 
-// decideClose is the rule; it needs the owner's mail read on time. With no
-// wait or accepted meeting ahead, a deal closes when the customer refused, or
-// after more than threshold days of silence.
+// decideClose is the rule; it needs the owner's mail read on time. It closes
+// nothing while a wait, an accepted meeting or an owed reply is open. Else a
+// deal closes when the customer refused, or after threshold days of silence.
+// While silenceHeld, no deal closes for silence: the stakeholder mail backfill
+// has not yet filed the mail that decides whether the customer was answering.
+// A refusal does not rest on silence, so it still closes.
 func decideClose(
-	subject assurance.Subject, facts closeFacts, threshold int, now time.Time, zone *time.Location,
+	subject assurance.Subject, facts closeFacts, threshold int, now time.Time, zone *time.Location, silenceHeld bool,
 ) (closeDecision, bool) {
 	owner, err := ids.Parse(subject.Owner)
 	assessed := subject.Viability
@@ -205,15 +247,17 @@ func decideClose(
 	keptOpen := facts.keptOpenAt()
 	silentDays := min(assessed.SilentDays, daysSince(facts.anyProgressAt, now, zone))
 	switch {
-	case facts.deferredAt(now):
+	case facts.deferredAt(now), facts.replyOwed:
 		return closeDecision{}, false
 	case slices.Contains(assessed.Reasons, viability.ReasonCustomerDeclined) &&
 		after(facts.refusalAt, keptOpen) && after(facts.refusalAt, facts.anyProgressAt):
-		decision.code, decision.reason = deals.LossReasonOther, "The customer wrote that they will not go ahead"
+		decision.code, decision.reason = deals.LossReasonOther, systemtext.Literal("deal.customer_declined")
+		decision.reasonCode, decision.refusal = "deal.customer_declined", facts.refusal
 		return decision, true
-	case silentReason(assessed.Reasons) && silentDays > threshold && daysSince(keptOpen, now, zone) > threshold:
+	case !silenceHeld && silentReason(assessed.Reasons) && silentDays > threshold && daysSince(keptOpen, now, zone) > threshold:
 		decision.code = deals.LossReasonWentSilent
 		decision.reason = silenceReason(silentDays, assessed.SilentDays, threshold)
+		decision.reasonCode, decision.reasonDays = silenceReasonParts(silentDays, assessed.SilentDays, threshold)
 		return decision, true
 	}
 	return closeDecision{}, false
@@ -223,10 +267,15 @@ func decideClose(
 // every reader of the deal. When private mail is newer than all visible mail,
 // it names the threshold, not a day that private mail set.
 func silenceReason(silentDays, visibleDays, threshold int) string {
+	code, days := silenceReasonParts(silentDays, visibleDays, threshold)
+	return fmt.Sprintf(systemtext.Copy(code, textlang.English), days)
+}
+
+func silenceReasonParts(silentDays, visibleDays, threshold int) (string, int) {
 	if silentDays < visibleDays {
-		return fmt.Sprintf("No word from the customer for more than %d days", threshold)
+		return "deal.silent_threshold", threshold
 	}
-	return fmt.Sprintf("No word from the customer for %d days", silentDays)
+	return "deal.silent", silentDays
 }
 
 func silentReason(reasons []viability.Reason) bool {

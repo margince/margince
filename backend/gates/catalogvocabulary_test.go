@@ -61,7 +61,19 @@ var accountWord = regexp.MustCompile(`(?i)(^|[^a-z])(accounts?)([^a-z]|$)`)
 // asked again, which is the direction that matters. A quote no catalog string
 // carries any more is reported below rather than left standing.
 var otherSenses = gatekit.Waive(map[string]string{
-	"merge_member_accounts": "the action consolidates sign-in identities for one colleague; it never merges customer company records",
+	"linkedin-account":                            "the route to the user's own LinkedIn account, a LinkedIn identity and never a customer company",
+	"Your own LinkedIn account":                   "the user's LinkedIn identity, the same sense as the route it describes",
+	"account-coverage":                            "the analytics route's published path, the name of a report and not a record type",
+	"account_coverage":                            "the analytics report key the route is named for",
+	"account_cohort":                              "an analytics population key, published in the contract's enum",
+	"account_progression":                         "an analytics population key, published in the contract's enum",
+	"account_scan":                                "an AI job kind a filter of the AI activity read takes, published in the contract's enum",
+	"bank_account_holder":                         "a bank account's holder on a legal entity, which has nothing to do with the CRM record",
+	"before the account has been used to sign in": "a colleague's sign-in account, which an imported seat may rename until first use",
+	"host account display name":                   "the calendar host's own account, whose display name the booking page shows",
+	"nobody can account for":                      "the verb: an input nobody can explain",
+	"produce an account whose whole access":       "a seat's sign-in account, which a role grant shapes",
+	"merge_member_accounts":                       "the action consolidates sign-in identities for one colleague; it never merges customer company records",
 	"account_notice": "a communication_context: a notice about the customer's ACCOUNT WITH US — their subscription, their billing " +
 		"relationship — which is a consent category in the published enum and not the CRM record type. Renaming it would " +
 		"change what a sender is claiming about a message",

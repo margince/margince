@@ -34,6 +34,7 @@ package gates
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -57,7 +58,8 @@ const contractDocument = "api/crm.yaml"
 // picklist added tomorrow is covered the day it lands — by forcing whoever adds
 // it to say where the contract admits its values.
 var picklistInContract = map[string]struct{ schema, property string }{
-	"company.lifecycle":         {"Company", "lifecycle"},
+	"company.status":            {"Company", "status"},
+	"company.lifecycle":         {"Company", "status"},
 	"company.industry":          {"Company", "industry"},
 	"company.size_band":         {"Company", "size_band"},
 	"company.relationship_type": {"Company", "relationship_types"},
@@ -68,7 +70,8 @@ var picklistInContract = map[string]struct{ schema, property string }{
 	// sets above appear a second time under the deal engine. Both entries name the
 	// Company property they reach, which is the point: a link leaf offering a
 	// different set from the field it reads is exactly the drift this catches.
-	"deal.company_lifecycle": {"Company", "lifecycle"},
+	"deal.company_status":    {"Company", "status"},
+	"deal.company_lifecycle": {"Company", "status"},
 	"deal.company_size_band": {"Company", "size_band"},
 	"deal.company_industry":  {"Company", "industry"},
 	"lead.company_industry":  {"Company", "industry"},
@@ -152,6 +155,9 @@ func vocabularyResources(t *testing.T, doc map[string]any) []string {
 		if !isMap {
 			t.Fatal("the resource parameter carries no schema")
 		}
+		if ref, isRef := schema["$ref"].(string); isRef {
+			schema = descendContract(t, doc, "components", "schemas", strings.TrimPrefix(ref, "#/components/schemas/"))
+		}
 		return enumStrings(t, schema, "the resource parameter")
 	}
 	t.Fatal("GET /filters/vocabulary declares no resource parameter")
@@ -197,6 +203,10 @@ func contractEnum(t *testing.T, doc map[string]any, schema, property string) map
 func enumStrings(t *testing.T, node map[string]any, subject string) []string {
 	t.Helper()
 	raw, ok := node["enum"].([]any)
+	if !ok {
+		// A set a unit may extend spells its core values as x-extensible-enum.
+		raw, ok = node["x-extensible-enum"].([]any)
+	}
 	if !ok {
 		t.Fatalf("%s carries no enum", subject)
 	}

@@ -1,0 +1,23 @@
+name: rewrite_email_shorter_keeps_the_ask
+task: rewrite
+site: rewrite
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+# The composer's Shorter over a body the rep wrote: fewer words, the same
+# greeting, offer number, date and question, and no sign-off added.
+fixture:
+  envelope: "email"
+  verb: "shorter"
+  subject: "Offer 2026-118"
+  body: "Hello Ms Berg,\n\nI wanted to follow up on the offer 2026-118 that we sent over to you last week, because I know that the budget discussion on your side was planned for this month and I did not want it to get lost. Could you tell me by 20.11.2026 whether you would like us to adjust the number of seats from 40 before you take it to procurement?"
+  reader: "en"
+expect:
+  outcome: accepted
+  answer:
+    keeps: ["Berg", "2026-118", "20.11.2026", "40"]
+    omits: ["Best regards", "Kind regards"]
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "The body is shorter and still greets Ms Berg on its own line. It keeps the offer number, the date, the seat count and the question, and adds no sign-off."

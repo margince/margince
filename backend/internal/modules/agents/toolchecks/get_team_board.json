@@ -1,0 +1,12 @@
+{
+  "verb": "get_team_board",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "project.read",
+    "relationship.read",
+    "scope:team"
+  ]
+}

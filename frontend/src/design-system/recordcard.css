@@ -11,8 +11,11 @@
 .record-card {
   display: grid;
   /* The name keeps a floor of its own: an aside that is long in a translation
-     (a role word in Vietnamese) shortens itself, never the name beside it. */
-  grid-template-columns: minmax(calc(var(--space-16) * 2), 1fr) minmax(0, auto);
+     (a role word in Vietnamese) shortens itself, never the name beside it. On
+     a narrow card the floor stops at half, so a one-word aside keeps its word. */
+  grid-template-columns:
+    minmax(min(calc(var(--space-16) * 2), 50%), 1fr)
+    minmax(0, auto);
   align-items: start;
   column-gap: var(--space-3);
   row-gap: var(--space-1);
@@ -97,7 +100,7 @@ a.record-card-open:focus-visible {
 .record-card-handles > .link-button {
   display: block;
   max-width: 100%;
-  text-align: left;
+  text-align: start;
   overflow: hidden;
   text-overflow: ellipsis;
 }

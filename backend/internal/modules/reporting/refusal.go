@@ -5,7 +5,9 @@ package reporting
 
 import (
 	"errors"
+	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
@@ -14,9 +16,16 @@ import (
 // so a caller that branches on the sentinel still sees it. It implements
 // FieldFault, so every surface answers 422 naming the field, as the contract
 // lists for the analytics writes.
-type fieldRefusal struct{ field, code, message string }
+type fieldRefusal struct {
+	field, code, message string
+	// max is the limit a too_long refusal names.
+	max int
+}
 
 func (e *fieldRefusal) Error() string { return e.message }
+
+// FieldMax is the limit the refusal names; zero states none.
+func (e *fieldRefusal) FieldMax() int { return e.max }
 func (e *fieldRefusal) Unwrap() error { return apperrors.ErrInvalidArgument }
 func (e *fieldRefusal) FieldFault() (field, code, message string) {
 	return e.field, e.code, e.message
@@ -24,6 +33,20 @@ func (e *fieldRefusal) FieldFault() (field, code, message string) {
 
 func refuse(field, code, message string) error {
 	return &fieldRefusal{field: field, code: code, message: message}
+}
+
+// maxReasonRunes bounds the reason a framework or target change records.
+const maxReasonRunes = 1000
+
+// refuseLongReason refuses a reason past maxReasonRunes, or answers nil.
+func refuseLongReason(reason string) error {
+	if utf8.RuneCountInString(reason) <= maxReasonRunes {
+		return nil
+	}
+	return &fieldRefusal{
+		field: "reason", code: "too_long", max: maxReasonRunes,
+		message: fmt.Sprintf("a reason holds at most %d characters", maxReasonRunes),
+	}
 }
 
 // refusedField names the request field behind a refusal that a shared helper

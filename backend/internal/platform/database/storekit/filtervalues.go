@@ -74,7 +74,7 @@ type valueColumn struct {
 // caller, the value of every field the filter names. A record the filter does
 // not select, or the caller cannot see, is absent from the answer.
 func (q Query) SelectedValues(ctx context.Context, tx pgx.Tx, p Predicate, recordIDs []ids.UUID) (map[ids.UUID]map[string]FieldValue, error) {
-	where, args, err := q.predicateWhere(ctx, p)
+	where, args, err := q.predicateWhere(ctx, tx, p)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +279,7 @@ func (q Query) SelectsEach(ctx context.Context, tx pgx.Tx, filters []Predicate, 
 	var columns []string
 	where, args, err := q.scopedWhere(ctx, func(arg func(any) int) (string, error) {
 		for _, filter := range filters {
-			compiled, err := CompilePredicate(filter, q.Fields, arg)
+			compiled, err := q.compile(ctx, tx, filter, arg)
 			if err != nil {
 				return "", err
 			}

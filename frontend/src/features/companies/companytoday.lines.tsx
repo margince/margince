@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { EntityRef } from "../../components/entityref";
 import { MeetingOthers } from "../../components/meetingothers";
 import { Badge } from "../../design-system/atoms";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatDateTimeAbbrev, formatNumber } from "../../format/format";
 import type { Locale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { TodoRow, WrittenBy } from "../records/record360";
@@ -71,7 +71,7 @@ export function scanFoot({
     return (
       <p className="co-row-meta">
         {t(resumeKey, {
-          when: formatDateTime(scan.resumes_at, locale, recordZone),
+          when: formatDateTimeAbbrev(scan.resumes_at, locale, recordZone),
         })}
       </p>
     );

@@ -15,9 +15,11 @@
 // two-year life is safe. communication_instruction is a named human's decision
 // that one refused message goes out anyway. It sits beside the refusal and never
 // replaces it with a grant nobody made. communication_override is a rep's
-// standing vouch that outranks a machine-level refusal for one contact and
-// category. It never outranks a subject-level stop. communication_review is what a refused send leaves behind, so the work
-// is visible and the message can resume instead of being retyped.
+// earlier standing vouch that outranks a machine-level refusal for one contact
+// and category. No door records a new one; the rows on file count until
+// revoked. It never outranks a subject-level stop. communication_review is what
+// a refused send leaves behind, so the work is visible and the message can
+// resume instead of being retyped.
 // lead_privacy_notice, the record of a website lead's notice, names nobody.
 // privacy_request_proof is what a closed request did. It is kept for three
 // years past the year it closed in.

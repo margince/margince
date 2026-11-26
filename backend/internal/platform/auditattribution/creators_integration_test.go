@@ -55,6 +55,9 @@ func creatorsTx(t *testing.T) pgx.Tx {
 	if err := testdb.EnsureSchema(ctx, conn); err != nil {
 		t.Fatalf("bringing the test database to head: %v", err)
 	}
+	if err := testdb.CapStatements(ctx, conn); err != nil {
+		t.Fatalf("capping the test connection's statements: %v", err)
+	}
 	tx, err := conn.Begin(ctx)
 	if err != nil {
 		t.Fatalf("opening the test transaction: %v", err)

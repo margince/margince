@@ -127,7 +127,7 @@ func TestInternalMailUsesTheSameSourceDecisionInPreflightAndStorage(t *testing.T
 	run()
 	rec.ProviderReceivedAt = policy.Since.Add(time.Second)
 	exclusions := capture.NewExclusionStore(db)
-	rule, err := exclusions.Add(admin, capture.ExclusionScopeWorkspace, capture.ExclusionKindAddress, "colleague@example.test")
+	rule, err := exclusions.Add(admin, capture.ExclusionScopeWorkspace, capture.ExclusionKindAddress, "colleague@example.test", ids.Nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -12,8 +12,11 @@ import {
 } from "../../testing/story-utils";
 import { CompanyProfileTab } from "./companies.profile";
 import { CompanyProfileForm } from "./companyprofiletab";
+import "./company360.css";
+import "./companytabs.css";
 
 type Company = components["schemas"]["Company"];
+type ProfileField = components["schemas"]["CompanyProfileField"];
 
 // The Profile tab's own body, in the two states that differ by WRITE STANDING:
 // every field editable, and the same fields with the verbs gone and one
@@ -29,7 +32,7 @@ const company: Company = {
   workspace_id: "01a04298-1971-7076-8076-8064da20fd01",
   display_name: "Brandt Automotive GmbH",
   legal_name: "Brandt Automotive GmbH",
-  lifecycle: "customer",
+  status: "customer",
   owner_id: "01a04298-1971-7076-8076-8064da20fd02",
   industry: "automotive",
   size_band: "51-200",
@@ -50,12 +53,31 @@ const company: Company = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
-function frame(company: Company, allow: Parameters<typeof meRoute>[0]) {
+function frame(
+  company: Company,
+  allow: Parameters<typeof meRoute>[0],
+  fields: ProfileField[] = [],
+  readFinished = false,
+) {
   const routes: RouteMap = {
     "GET /me": meRoute(allow),
     [`GET /companies/${COMPANY}/profile-fields`]: () =>
-      jsonResponse({ data: [] }),
+      jsonResponse({ data: fields }),
     [`GET /companies/${COMPANY}/facts`]: () => jsonResponse({ data: [] }),
+    [`GET /companies/${COMPANY}/site-reads/latest`]: () =>
+      readFinished
+        ? jsonResponse({
+            read_id: "read-profile",
+            company_id: COMPANY,
+            seed_url: "https://brandt.example",
+            status: "done",
+            status_detail: null,
+            pages: [],
+            skipped: [],
+            proposal_ids: [],
+            created_at: "2026-06-01T08:00:00Z",
+          })
+        : jsonResponse({}, 404),
   };
   installFetchStub(routes);
   return (
@@ -82,6 +104,32 @@ type Story = StoryObj<typeof CompanyProfileForm>;
 /** The ordinary tab: the account's own fields, every one of them editable. */
 export const Editable: Story = { render: () => frame(company, WRITER) };
 
+const OFFER: ProfileField = {
+  id: "pf-offer",
+  field: "offer_summary",
+  value: "Charging systems for commercial electric fleets.",
+  source: "site_read",
+  captured_by: "agent:site-read",
+  evidence_snippet:
+    "We supply charging systems for commercial electric fleets.",
+  source_url: "https://brandt.example/solutions",
+  updated_at: "2026-06-01T08:00:00Z",
+  version: 1,
+};
+
+export const DuplicateOfferDescription: Story = {
+  render: () =>
+    frame({ ...company, description: OFFER.value }, WRITER, [OFFER]),
+};
+
+export const DistinctDescription: Story = {
+  render: () => frame(company, WRITER, [OFFER]),
+};
+
+export const EmptyFieldsAfterWebsiteRead: Story = {
+  render: () => frame(company, WRITER, [OFFER], true),
+};
+
 /**
  * Archived, which is the more specific of the two denials and the one a reader
  * can act on. The notice is the tab's single explanation, and it is the state
@@ -107,6 +155,8 @@ export const CompleteProfileContext: Story = {
       [`GET /companies/${COMPANY}/profile-fields`]: () =>
         jsonResponse({ data: [] }),
       [`GET /companies/${COMPANY}/facts`]: () => jsonResponse({ data: [] }),
+      [`GET /companies/${COMPANY}/site-reads/latest`]: () =>
+        jsonResponse({}, 404),
       [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
         jsonResponse({ lanes: [] }),
       "GET /relationships": () =>

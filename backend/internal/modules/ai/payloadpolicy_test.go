@@ -11,6 +11,7 @@ package ai
 // of either side alone would notice.
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -30,6 +31,9 @@ func TestNoPayloadTasksMatchTheTaskContract(t *testing.T) {
 		Tasks map[string]struct {
 			NoPayload bool `yaml:"no_payload"`
 		} `yaml:"tasks"`
+		Embed struct {
+			NoPayload bool `yaml:"no_payload"`
+		} `yaml:"embed"`
 	}
 	if err := yaml.Unmarshal(raw, &contract); err != nil {
 		t.Fatalf("parsing the task contract: %v", err)
@@ -46,6 +50,12 @@ func TestNoPayloadTasksMatchTheTaskContract(t *testing.T) {
 		if got := NoPayload(Task(name)); got != def.NoPayload {
 			t.Errorf("task %q: contract no_payload=%t, runtime NoPayload=%t", name, def.NoPayload, got)
 		}
+	}
+	// The embed lane traces under TaskEmbeddings and has no capture path, so
+	// the workload must declare what the lane does: its inputs are record text.
+	if !contract.Embed.NoPayload || !NoPayload(TaskEmbeddings) {
+		t.Errorf("embed workload: contract no_payload=%t, runtime NoPayload=%t; both must be true, "+
+			"because an embed input is record text such as a mail body", contract.Embed.NoPayload, NoPayload(TaskEmbeddings))
 	}
 	if declared == 0 {
 		t.Fatal("no task in the contract declares no_payload — either the field was dropped upstream or the pin was lost")
@@ -77,5 +87,27 @@ func TestAPinnedTaskIsRefusedCaptureEvenWithCaptureEnabled(t *testing.T) {
 	disabled := &Router{capturePayloads: false}
 	if disabled.CapturesPayload(TaskSummarize) {
 		t.Error("capture happened under a disabling posture — the operator setting still governs every unpinned task")
+	}
+}
+
+// CallMeter writes ai_call_payload through storablePayload, so content a lane or
+// another package put on a Call for a no_payload task never reaches the table.
+func TestThePayloadWriterDropsANoPayloadTasksContent(t *testing.T) {
+	content := &Payload{Request: json.RawMessage(`{"inputs":["mail text"]}`), Response: json.RawMessage(`{}`)}
+	pinned := 0
+	for _, task := range append(AllTasks(), TaskEmbeddings) {
+		got := storablePayload(Call{Task: task, Payload: content})
+		switch {
+		case NoPayload(task) && got != nil:
+			t.Errorf("task %q is no_payload, but the writer would store its content", task)
+		case !NoPayload(task) && got != content:
+			t.Errorf("task %q is not no_payload, but the writer dropped its content", task)
+		}
+		if NoPayload(task) {
+			pinned++
+		}
+	}
+	if pinned == 0 {
+		t.Fatal("no task is no_payload, so this census proved nothing")
 	}
 }

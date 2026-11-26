@@ -46,6 +46,22 @@ func TestTheBaseValueColumnsAnswerToTheMoneyMasks(t *testing.T) {
 	}
 }
 
+// A withheld input reaches every column computed from it, and a field no
+// column is computed from reaches none.
+func TestDerivedFromNamesTheColumnsAWithheldInputReaches(t *testing.T) {
+	t.Parallel()
+
+	want := []string{"amount_minor_base", "fx_rate_to_base"}
+	for _, input := range DealBaseValueInputs() {
+		if got := DerivedFrom(Deal, []string{input}); !slices.Equal(got, want) {
+			t.Errorf("DerivedFrom(deal, [%s]) = %v, want %v", input, got, want)
+		}
+	}
+	if got := DerivedFrom(Deal, []string{DealCompanyID}); len(got) != 0 {
+		t.Errorf("DerivedFrom(deal, [company_id]) = %v, want none", got)
+	}
+}
+
 // A field this table never grouped withholds ITSELF.
 //
 // The table records what a field drags along with it, so an object that groups

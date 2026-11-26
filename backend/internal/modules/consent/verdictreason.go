@@ -32,6 +32,7 @@ const (
 	ReasonNoConsentExceptionNotOffered = "no_consent_exception_not_offered"
 	ReasonNoConsent                    = "no_consent"
 	ReasonExistingCustomer             = "existing_customer"
+	ReasonOptOutAllowed                = commsauthz.ReasonOptOutAllowed
 )
 
 // said fills a verdict's sentence from its code.
@@ -75,12 +76,13 @@ var reasonSentences = map[string]string{
 	ReasonNoCallPath:                   "no call path is configured",
 	ReasonSaidWeMayWrite:               "they agreed to be written to",
 	ReasonUnconfirmedDOI:               "consent was recorded but never confirmed by the double opt-in",
-	ReasonNoConnection:                 "they have never written to you and no deal or inquiry connects you",
+	ReasonNoConnection:                 "no message, meeting or request on file connects you",
 	ReasonConsentConfirmed:             "they gave consent, with the confirmation on file",
 	ReasonConsentWithdrawn:             "they withdrew consent for this purpose",
 	ReasonNoConsentExceptionNotOffered: "no consent recorded, and no purchase of theirs is covered by a declared collection notice",
 	ReasonNoConsent:                    "no consent recorded",
 	ReasonExistingCustomer:             "they bought from you and were told then that they may object to advertising",
+	ReasonOptOutAllowed:                "advertising here is allowed until they refuse, and no refusal is on file",
 }
 
 func reasonSentence(v Verdict) string {
@@ -100,12 +102,10 @@ func reasonSentence(v Verdict) string {
 func qualifyingReason(event QualifyingEvent) string {
 	when := event.OccurredAt.Format("2 Jan")
 	switch event.Kind {
-	case "inbound_message":
+	case kindInboundMessage:
 		return fmt.Sprintf("they wrote to you on %s", when)
-	case "inquiry":
+	case KindInquiry:
 		return fmt.Sprintf("they made an inquiry on %s", when)
-	case "active_deal":
-		return "an open deal connects you"
 	case KindMeeting:
 		// Tenseless: the arm admits a meeting still in the diary, and a reason
 		// on the wrong side of today reads as a bug.

@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "extension_ingest_health",
+  "verb": "read_extension_ingest_health",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

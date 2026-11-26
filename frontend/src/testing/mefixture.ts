@@ -31,9 +31,53 @@ const NO_GRANT: RbacObjectGrant = {
 const AVAILABLE: SettingsAvailability = {
   company_context: true,
   embedding_reindex: true,
+  vat_register: true,
 };
 
 export type GrantSpec = Partial<Record<RbacObject, readonly RbacAction[]>>;
+
+/** Read access to every record kind a primary rail destination lists. */
+export const READS_RECORDS: GrantSpec = {
+  contact: ["read"],
+  company: ["read"],
+  lead: ["read"],
+  deal: ["read"],
+  project: ["read"],
+};
+
+/** Read access to everything a primary rail destination needs, Insights, Progress and Goals included. */
+export const READS_DESTINATIONS: GrantSpec = {
+  ...READS_RECORDS,
+  forecast: ["read"],
+  report_definition: ["read"],
+  sales_target: ["read"],
+};
+
+const WRITE: readonly RbacAction[] = ["read", "create", "update", "delete"];
+
+/** Every verb on each record kind and on activities: a seat a create admits. */
+export const WRITES_RECORDS: GrantSpec = {
+  contact: WRITE,
+  company: WRITE,
+  lead: WRITE,
+  deal: WRITE,
+  project: WRITE,
+  activity: WRITE,
+};
+
+/**
+ * Answers `/me` in `client` with a full seat holding `WRITES_RECORDS`, for a
+ * suite about what a write does rather than about who may make it.
+ */
+export function seedWriter<
+  C extends { setQueryData: (key: string[], data: MeResponse) => unknown },
+>(client: C): C {
+  client.setQueryData(
+    ["me"],
+    meFixture({ rowScope: "all", allow: WRITES_RECORDS }),
+  );
+  return client;
+}
 
 /** The zone the fixture user stores, for fixtures that need a zone string. */
 export const FIXTURE_TIMEZONE = "Europe/Berlin";
@@ -52,6 +96,7 @@ export function meFixture({
   allow = {},
   rowScope = "own",
   settingsAvailability = {},
+  personalChoicesMade = false,
   refusedDealFilters,
   refusedLeadFilters,
 }: {
@@ -77,6 +122,11 @@ export function meFixture({
    * absence needs its own spelling rather than riding the default.
    */
   settingsAvailability?: Partial<SettingsAvailability> | null;
+  /**
+   * The seat has chosen its own time zone and language, as the setup
+   * checklist's personal steps read them. Left out, it has chosen neither.
+   */
+  personalChoicesMade?: boolean;
   /** The deal list filters the server says this role is refused. */
   refusedDealFilters?: string[];
   /** The lead list filters the server says this role is refused. */
@@ -96,6 +146,7 @@ export function meFixture({
       email: "test@example.test",
       display_name: "Test User",
       timezone: FIXTURE_TIMEZONE,
+      ...(personalChoicesMade ? { timezone_chosen: true, locale: "en" } : {}),
       status: "active",
       is_agent: false,
     },

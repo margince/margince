@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -217,7 +218,7 @@ func (w *commsSendWorker) Work(ctx context.Context, job *river.Job[SendEmailArgs
 // whose mis-reading permanently destroys mail, so it must be provable without
 // a database. *capture.Registry is the only implementation the product ships.
 type mailboxSenders interface {
-	SenderFor(ctx context.Context, userID ids.UserID, provider string) (connector.EmailSender, connector.Auth, []string, error)
+	SenderFor(ctx context.Context, userID ids.UserID, mailbox capture.Mailbox) (connector.EmailSender, connector.Auth, []string, error)
 }
 
 var _ mailboxSenders = (*capture.Registry)(nil)
@@ -241,8 +242,8 @@ type commsResolver struct {
 var _ comms.ConnectionResolver = commsResolver{}
 
 //nolint:ireturn // implements comms.ConnectionResolver, whose contract returns the optional connector.EmailSender seam
-func (r commsResolver) Resolve(ctx context.Context, userID ids.UserID, provider string) (connector.EmailSender, connector.Auth, []string, error) {
-	sender, auth, granted, err := r.registry.SenderFor(ctx, userID, provider)
+func (r commsResolver) Resolve(ctx context.Context, userID ids.UserID, provider string, connection *ids.UUID) (connector.EmailSender, connector.Auth, []string, error) {
+	sender, auth, granted, err := r.registry.SenderFor(ctx, userID, capture.MailboxNamed(provider, connection))
 	switch {
 	case errors.Is(err, capture.ErrNoConnection):
 		return nil, nil, nil, fmt.Errorf("%w: %w", comms.ErrNoMailbox, err)
@@ -326,6 +327,16 @@ func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, blob blobstor
 	})}
 }
 
+// NewMailDeliveryStore is the delivery store the send worker records receipts
+// through. Comms owns the delivery and activities owns the timeline row.
+// Capture owns the echo that can supply an identity the read-back could not.
+// Consent owns the restriction a sent lift notice releases.
+func NewMailDeliveryStore(pool *pgxpool.Pool, admitParties func(context.Context, ids.ActivityID) error) *comms.Store {
+	return comms.NewStore(InstallationDB(pool), time.Now, sentIdentity(InstallationDB(pool)),
+		comms.WithPartyAdmission(admitParties), comms.WithEchoIdentity(capture.EchoIdentityTx),
+		comms.WithSentEffect(consent.NewStore(InstallationDB(pool)).LiftNoticedRestriction))
+}
+
 // newSendDispatcher builds the dispatcher for one pace.
 func newSendDispatcher(pool *pgxpool.Pool, registry *capture.Registry, pace sendPace, blob blobstore.Store, relay comms.ControllerRelay, vault keyvault.Vault) *comms.Dispatcher {
 	var admitParties func(context.Context, ids.ActivityID) error
@@ -333,10 +344,7 @@ func newSendDispatcher(pool *pgxpool.Pool, registry *capture.Registry, pace send
 		admitParties = registry.AdmitActivityParties
 	}
 	return controllerLaneOn(comms.NewDispatcher(
-		// The reconcile seam is the cross-module edge comms must not hold
-		// itself: activities owns the timeline row, comms owns the delivery,
-		// and the two meet here.
-		comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool)), comms.WithPartyAdmission(admitParties)),
+		NewMailDeliveryStore(pool, admitParties),
 		commsResolver{registry: registry, channels: registry},
 		NewSendSeatAuthority(pool),
 		NewSendAttachmentAuthority(pool, blob),

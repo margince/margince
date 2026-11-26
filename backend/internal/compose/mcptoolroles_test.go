@@ -4,7 +4,6 @@
 package compose
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"slices"
@@ -14,42 +13,29 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/toolroles"
 )
 
-type toolRolesDoc struct {
-	Roles []string `json:"roles"`
-	Rows  []struct {
-		Tool    string   `json:"tool"`
-		Action  string   `json:"action"`
-		Verb    string   `json:"verb"`
-		Allowed []string `json:"allowed_for"`
-		Refused []string `json:"refused_for"`
-	} `json:"rows"`
-}
-
-func readToolRoles(t *testing.T) toolRolesDoc {
+// readToolRoles is the sweep's rows folder as committed, one file per verb.
+func readToolRoles(t *testing.T) (toolroles.Head, map[string]toolroles.Row) {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(mcpDocsDir, "mcp-tool-roles.json"))
+	head, rows, err := toolroles.Read[toolroles.Row](os.DirFS(filepath.Join(mcpDocsDir, "mcp-tool-roles")))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var doc toolRolesDoc
-	if err := json.Unmarshal(raw, &doc); err != nil {
-		t.Fatal(err)
-	}
-	return doc
+	return head, rows
 }
 
 // The integration lane measures the JSON. This lane holds it to the surface, so
 // a tool or action that ships without a row fails before any database.
 func TestTheToolRoleMatrixCoversEveryServedAction(t *testing.T) {
-	doc := readToolRoles(t)
+	head, rows := readToolRoles(t)
 	published := map[string]bool{}
-	for _, row := range doc.Rows {
+	for _, row := range rows {
 		published[row.Tool+"."+row.Action] = true
 		every := slices.Concat(row.Allowed, row.Refused)
 		slices.Sort(every)
-		roles := slices.Sorted(slices.Values(doc.Roles))
+		roles := slices.Sorted(slices.Values(head.Roles))
 		if !slices.Equal(every, roles) {
 			t.Errorf("%s %s sorts the roles %v; want each of %v exactly once", row.Tool, row.Action, every, roles)
 		}
@@ -71,28 +57,24 @@ func TestTheToolRoleMatrixCoversEveryServedAction(t *testing.T) {
 	}
 	for row := range served {
 		if !published[row] {
-			t.Errorf("%s is served and docs/reference/mcp-tool-roles.json has no row for it. Run: UPDATE_MCP_TOOL_ROLES=1 make test-roles", row)
+			t.Errorf("%s is served and docs/reference/mcp-tool-roles/ has no file for its verb. Run: UPDATE_MCP_TOOL_ROLES=1 make test-roles", row)
 		}
 	}
 	for row := range published {
 		if !served[row] {
-			t.Errorf("docs/reference/mcp-tool-roles.json has a row for %s, which is not served", row)
+			t.Errorf("docs/reference/mcp-tool-roles/ has a row for %s, which is not served", row)
 		}
 	}
 }
 
 // readToolChecks is the table the binary embeds, which tools/list narrows by.
-func readToolChecks(t *testing.T) agents.ToolChecksFile {
+func readToolChecks(t *testing.T) map[string]toolroles.Checks {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join("..", "modules", "agents", "toolchecks.json"))
+	verbs, err := agents.EmbeddedToolChecks()
 	if err != nil {
 		t.Fatal(err)
 	}
-	var table agents.ToolChecksFile
-	if err := json.Unmarshal(raw, &table); err != nil {
-		t.Fatal(err)
-	}
-	return table
+	return verbs
 }
 
 // everyMeasuredGrant holds the admin role key, every grant the table names and
@@ -103,7 +85,7 @@ func everyMeasuredGrant(t *testing.T) principal.Permissions {
 	perms := principal.Permissions{RoleKeys: []string{"admin"}, Objects: map[string]principal.ObjectGrant{}}
 	all := principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	var scopeChecks []auth.Check
-	for _, row := range readToolChecks(t).Verbs {
+	for _, row := range readToolChecks(t) {
 		for _, name := range row.Checks {
 			check, err := auth.ParseCheck(name)
 			switch {

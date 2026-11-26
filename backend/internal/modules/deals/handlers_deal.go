@@ -89,6 +89,7 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 		WinProbabilityMin: params.WinProbabilityMin, WinProbabilityMax: params.WinProbabilityMax,
 		Currency: params.Currency, Country: params.Country,
 	}
+	in.LinkType = params.LinkType
 	in.SourceSystem, in.SourceID = params.SourceSystem, params.SourceId
 	if params.ListId != nil {
 		member := ids.UUID(*params.ListId)
@@ -202,6 +203,55 @@ func (h Handlers) AdvanceDeal(w http.ResponseWriter, r *http.Request, id crmcont
 	httperr.WriteJSON(w, http.StatusOK, wire)
 }
 
+// MoveDealPipeline moves an open deal to another pipeline through the stage
+// advance path, so the same gates, history and audit rows apply.
+func (h Handlers) MoveDealPipeline(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.MoveDealPipelineParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	var req crmcontracts.MoveDealPipelineRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	in, err := moveDealPipelineInput(req, ifVersion)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	moved, err := h.store.MoveDealToPipeline(r.Context(), pathID[ids.DealKind](id), in)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	wire, err := moved.Wire()
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wire)
+}
+
+// UndoDealPipelineMove puts a deal back where its latest move to another
+// pipeline took it from.
+func (h Handlers) UndoDealPipelineMove(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.UndoDealPipelineMoveParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	undone, err := h.store.UndoDealPipelineMove(r.Context(), pathID[ids.DealKind](id), ifVersion)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	wire, err := undone.Wire()
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wire)
+}
+
 // CorrectDealCloseDay moves a closed deal's close day. The store refuses an
 // agent; the contract's human-only mark refuses it at the gate first.
 func (h Handlers) CorrectDealCloseDay(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.CorrectDealCloseDayParams) {
@@ -220,6 +270,25 @@ func (h Handlers) CorrectDealCloseDay(w http.ResponseWriter, r *http.Request, id
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, deal)
+}
+
+// MergeDeal serves POST /deals/{id}/merge: it merges this deal (A, the path id)
+// into target_id (B, the survivor) and returns the survivor.
+func (h Handlers) MergeDeal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.MergeDealParams) {
+	var req crmcontracts.MergeDealJSONBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	survivor, err := h.store.MergeDeal(r.Context(), pathID[ids.DealKind](id), ids.From[ids.DealKind](ids.UUID(req.TargetId)), ifVersion)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, survivor)
 }
 
 // ArchiveDeal retires one deal and the edges hanging off it, honouring

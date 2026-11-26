@@ -5,11 +5,13 @@ import { Field, PendingBody } from "../../design-system/atoms";
 import { DateInput, type ISODate } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { FactList } from "../../design-system/factlist";
+import { todayIn } from "../../format/calendarday";
+import { isoOrBlank } from "../../format/datepattern";
 import { formatDate } from "../../format/format";
 import { ruleText } from "../../format/jurisdiction";
 import { endOfDayInZone, startOfDayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
-import { throwProblem } from "../../lib/problem";
+import { refusalSentences, throwProblem } from "../../lib/problem";
 
 // The deadline a manual subject request gets. The server computes it from the
 // installation's jurisdiction and the day the request arrived. The form shows
@@ -53,17 +55,30 @@ export function dueAtOf(
   return Date.parse(picked) < Date.parse(computed.due_at) ? picked : undefined;
 }
 
-/** Whether a picked day starts after the computed deadline, which the server refuses. */
-export function earlierDueTooLate(
+/** The day a draft's request arrived: the picked one, or today. */
+function receivedDayOf(draft: DeadlineDraft, zone: string): string {
+  return draft.receivedOn === "" ? todayIn(zone) : draft.receivedOn;
+}
+
+/**
+ * What the server refuses in a picked day: one that starts after the computed
+ * deadline, or one before the day the request arrived.
+ */
+export function earlierDueFault(
   draft: DeadlineDraft,
   computed: RequestDeadline | undefined,
   zone: string,
-): boolean {
-  if (draft.earlierDue === "" || computed === undefined) return false;
-  return (
+): "too_late" | "too_early" | undefined {
+  if (draft.earlierDue === "" || computed === undefined) return undefined;
+  if (
     Date.parse(startOfDayInZone(draft.earlierDue, zone)) >
     Date.parse(computed.due_at)
-  );
+  ) {
+    return "too_late";
+  }
+  return draft.earlierDue < receivedDayOf(draft, zone)
+    ? "too_early"
+    : undefined;
 }
 
 /** The deadline fields of a create body, from a draft and its computed deadline. */
@@ -118,13 +133,26 @@ export function DsrDeadlineFields({
   const t = useT();
   const { locale } = useLocale();
   const computed = query.data;
-  const tooLate = refused || earlierDueTooLate(draft, computed, zone);
+  // A refusal the form did not foresee names the bound it already shows.
+  const fault =
+    earlierDueFault(draft, computed, zone) ??
+    (refused ? "too_late" : undefined);
+  const today = isoOrBlank(todayIn(zone)) || undefined;
+  const preview = refusalSentences(query.error, t, {
+    received_at: t("privacy.receivedAt"),
+  });
   return (
     <>
-      <Field label={t("privacy.receivedAt")} hint={t("privacy.receivedAtHint")}>
+      <Field
+        label={t("privacy.receivedAt")}
+        hint={t("privacy.receivedAtHint")}
+        error={preview.byField.get("received_at")}
+      >
         {(control) => (
           <DateInput
             {...control}
+            max={today}
+            today={today}
             value={draft.receivedOn}
             onChange={(event) => onChange({ receivedOn: event.target.value })}
           />
@@ -146,17 +174,25 @@ export function DsrDeadlineFields({
       ) : query.isPending ? (
         <PendingBody label={t("privacy.deadline.loading")} lines={1} visible />
       ) : (
-        <ErrorLine error={query.error} />
+        preview.rest && <ErrorLine>{preview.rest}</ErrorLine>
       )}
       <Field
         label={t("privacy.earlierDue")}
-        hint={tooLate ? undefined : t("privacy.earlierDueHint")}
+        hint={fault ? undefined : t("privacy.earlierDueHint")}
         error={
-          tooLate && computed
-            ? t("privacy.earlierDueTooLate", {
-                date: formatDate(computed.due_at, locale, zone),
+          fault === "too_early"
+            ? t("privacy.earlierDueTooEarly", {
+                date: formatDate(
+                  startOfDayInZone(receivedDayOf(draft, zone), zone),
+                  locale,
+                  zone,
+                ),
               })
-            : undefined
+            : fault === "too_late" && computed
+              ? t("privacy.earlierDueTooLate", {
+                  date: formatDate(computed.due_at, locale, zone),
+                })
+              : undefined
         }
       >
         {(control) => (

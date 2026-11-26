@@ -1,0 +1,9 @@
+{
+  "verb": "set_thread_audience",
+  "checks": [
+    "activity.update"
+  ],
+  "takes": [
+    "captured_thread"
+  ]
+}

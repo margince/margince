@@ -1,10 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useId, useState } from "react";
 import type { components } from "../../api/schema";
-import {
-  type ActivityGate,
-  useActivityGate,
-} from "../../components/activitygate";
+import { useActivityGate } from "../../components/activitygate";
+import { MergedIntoSentence } from "../../components/historymergedref";
 import {
   LatestInboundLine,
   useLatestInbound,
@@ -16,13 +14,17 @@ import {
   type RecordViewProps,
 } from "../../design-system/recordview";
 import { useT } from "../../i18n";
-import { useRecordWriteRefusal } from "../../lib/capability";
-import { contactPageState, contactQuery } from "../../lib/contact.queries";
+import {
+  archivedContactRow,
+  contactPageState,
+  contactQuery,
+  openingIdentity,
+} from "../../lib/contact.queries";
 import { BRIEF_PARAM } from "../../lib/contactpage.address";
-import { type ContactTab, contactTabRoute } from "../../lib/contacttab";
+import type { ContactTab } from "../../lib/contacttab";
 import { useOpenEmail } from "../../lib/openemail";
-import { scrollPageToTop } from "../../lib/reveal";
 import { useUrlParams } from "../../lib/urlstate";
+import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { BriefQueue } from "../brief/brief.queue";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { useWaitingDraftBand } from "../mail/composewaitingdraft";
@@ -34,17 +36,18 @@ import { useConsentGuard } from "./contactconsentpanel";
 import { ContactResearchDrawer } from "./contactdrawers";
 import { useContactEdit } from "./contactedit";
 import { ContactFollowState } from "./contactfollowstate";
+import { ContactImpersonationWarning } from "./contactimpersonation";
 import { ContactOpening } from "./contactopening";
 import { ContactOverview } from "./contactoverview";
 import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
 import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
+import { RecordGone } from "../../components/recordgone";
+import { useHiddenCoreFeatures } from "../../lib/corefeatures";
+import { isGone } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
-import {
-  navigateKeepingReturn,
-  WorklistReturnLink,
-} from "../worklist/worklist.return";
+import { openContactTab } from "../worklist/worklist.return";
 import {
   ContactActivityDrawer,
   ContactCallStart,
@@ -55,8 +58,12 @@ import {
   runContactMomentAction,
   useComposer,
 } from "./contactpage.drawers";
-import { ContactMarks } from "./contactpage.marks";
-import { ContactRecordTabs, ContactTabPanel } from "./contactpage.tabs";
+import { ContactPulse, placeLogRefusal } from "./contactpage.marks";
+import {
+  ContactRecordTabs,
+  ContactTabPanel,
+  contactTabForFeatures,
+} from "./contactpage.tabs";
 
 export { runContactMomentAction } from "./contactpage.drawers";
 
@@ -65,35 +72,18 @@ type Contact = components["schemas"]["Contact"];
 
 export type ContactMomentAction = components["schemas"]["ContactMomentAction"];
 
-// The refusals the left card's footnote states, or nothing while the record
-// and the activity gate refuse nothing.
-function refusalsOf(
-  readOnlyReason: string | undefined,
-  readOnlyReasonId: string,
-  activity: ActivityGate,
-  t: ReturnType<typeof useT>,
-): ReactNode {
-  const activityRefused = activity.refusedId !== undefined;
-  if (!readOnlyReason && !activityRefused) {
-    return undefined;
-  }
-  return (
-    <>
-      {readOnlyReason && <span id={readOnlyReasonId}>{readOnlyReason}</span>}
-      {readOnlyReason && activityRefused && " "}
-      {activityRefused && (
-        <span id={activity.sentenceId}>
-          {t(activity.refusalKey ?? "record.logActivityRefused")}
-        </span>
-      )}
-    </>
-  );
+// An archived contact that was merged says where it went, after its reason.
+function mergedInto(row: Contact | undefined): ReactNode {
+  if (!row?.archived_at || !row.merged_into_id) return undefined;
+  return <MergedIntoSentence kind="contact" id={row.merged_into_id} />;
 }
 
 export function ContactPageV2({
   id,
-  tab,
+  tab: addressedTab,
 }: Readonly<{ id: string; tab: ContactTab }>) {
+  const tab = contactTabForFeatures(addressedTab, useHiddenCoreFeatures());
+
   // Which message the drawer is showing. One drawer over the record, owned by
   // the page: the timeline and the rail both open into it, so a citation in
   // the aside and a row in the body lead to the same place.
@@ -110,7 +100,7 @@ export function ContactPageV2({
   const view = useContact360(id, !record.data?.archived_at);
 
   const guard = useConsentGuard(id, live);
-  const activity = useActivityGate(record.data ?? null);
+  const activity = useActivityGate("contact", record.data ?? null);
   const latest = useLatestInbound("contact", id);
   const writeRefusalId = useId();
 
@@ -160,34 +150,35 @@ export function ContactPageV2({
   const readOnlyReasonId = useId();
   // A 360 cached from before the archive would not say the row is archived.
   const shownRow = record.data?.archived_at ? record.data : view.data?.contact;
-  const readOnlyReason = useRecordWriteRefusal("contact", shownRow, {
-    archived: t("contact.rail.archivedReadOnly"),
-    notYours: t("contact.notYoursToChange"),
-  });
+  const readOnlyReason = useKindWriteRefusal("contact", shownRow);
   const refusedReasonId = readOnlyReason ? readOnlyReasonId : undefined;
-  // A live contact states its read-only sentence in the left card's
-  // footnote; the archived page has no such card, so its band states it.
+  // A live contact states its read-only sentence in the head's View only
+  // pill; the archived page states it in its band.
   const band = useWaitingDraftBand({
     anchor: { type: "contact", id },
     composerOpen: drawer === "composer",
     onOpen: () => openComposer(""),
     readOnlyReason: record.data?.archived_at ? readOnlyReason : undefined,
     readOnlyReasonId,
+    readOnlyMore: mergedInto(record.data),
   });
 
-  if (record.data?.archived_at) {
+  const archived = archivedContactRow(record);
+  if (archived) {
     return (
       <ArchivedContactPage
-        contact={record.data}
+        contact={archived}
         band={band}
         refusedReasonId={readOnlyReasonId}
       />
     );
   }
   const reads = contactPageState(record, view);
-  if (reads === "opening") return <ContactOpening id={id} />;
+  if (reads === "opening") {
+    return <ContactOpening id={id} {...openingIdentity(record, view)} />;
+  }
   if (reads === "notOpened" || !view.data) {
-    return <div className="wrap">{t("contact.page.notOpened")}</div>;
+    return <ContactNotOpened gone={readsGone(record, view)} />;
   }
 
   const contact = view.data.contact;
@@ -210,10 +201,10 @@ export function ContactPageV2({
       nextMeetingId: view.data.next_meeting?.activity_id ?? null,
     });
 
-  // What the record refuses this reader, stated once at the foot of the left
-  // card: every refused verb points at its sentence by id. The rail adds the
-  // Email verb's own refusal, which it reads from the same transports.
-  const refusals = refusalsOf(readOnlyReason, readOnlyReasonId, activity, t);
+  // A contact this reader may only view says so once, in the head's pill.
+  // Any other refusal stays at the foot of the left card, beside the Email
+  // verb's own, which the rail reads from the same transports.
+  const logRefusal = placeLogRefusal(activity, t, readOnlyReason);
   const contactDetails = (
     <ContactRail
       view={view.data}
@@ -225,15 +216,12 @@ export function ContactPageV2({
           void guard.refetch();
         },
       }}
-      refusals={refusals}
+      refusals={logRefusal.footnote}
       writeRefusalId={writeRefusalId}
     />
   );
 
-  const openTab = (next: ContactTab) => {
-    navigateKeepingReturn(contactTabRoute(id, next));
-    scrollPageToTop();
-  };
+  const openTab = (next: ContactTab) => openContactTab(id, next);
 
   return (
     <div className="wrap">
@@ -253,7 +241,6 @@ export function ContactPageV2({
         >
           <ContactRecordView
             contact={contact}
-            back={<WorklistReturnLink />}
             // The contact's details, under the head in the left card. They hold
             // for the contact, not the open tab, so a tab change leaves them put.
             // The split folds them above the feed once the row has no room.
@@ -263,7 +250,13 @@ export function ContactPageV2({
             // What they do and where under the name, then the pills. The ways
             // to reach them are details, and live in the aside.
             nameBadge={<ContactSubtitle view={view.data} />}
-            pulse={<ContactMarks view={view.data} />}
+            pulse={
+              <ContactPulse
+                view={view.data}
+                reasonId={readOnlyReasonId}
+                activityRefused={logRefusal.head}
+              />
+            }
             latest={
               tab !== "overview" && (
                 <LatestInboundLine
@@ -273,7 +266,7 @@ export function ContactPageV2({
               )
             }
             actions={
-              // refusedReasonId is the same sentence the band below states.
+              // refusedReasonId is the sentence the View only pill holds.
               // It is one write gate for the whole header, not a narrower one per
               // verb. Edit, merge and archive ride inside the header's menu,
               // so they read it too.
@@ -301,6 +294,10 @@ export function ContactPageV2({
               />
             }
           >
+            <ContactImpersonationWarning
+              contact={contact}
+              refusedReasonId={refusedReasonId}
+            />
             {tab === "overview" && (
               <>
                 <ContactFollowState contactId={id} />
@@ -332,6 +329,7 @@ export function ContactPageV2({
               onAction={runAction}
               onOpenEmail={setOpenEmail}
               onWrite={() => openComposer("")}
+              onResearch={() => setDrawer("research")}
               refusedReasonId={refusedReasonId}
             />
             {/* One drawer over the record. The timeline's rows and the rail's
@@ -426,4 +424,24 @@ function ContactRecordView({
     t("create.fullName"),
   );
   return <RecordView {...view} rename={rename} />;
+}
+
+// A failed row read decides. After a live row, the 360 can still find the
+// contact gone, since it can go between the two reads.
+function readsGone(
+  record: Readonly<{ isError: boolean; error: unknown }>,
+  view: Readonly<{ error: unknown }>,
+): boolean {
+  return isGone(record.isError ? record.error : view.error);
+}
+
+// A read no retry can answer says the contact is not there; any other failure
+// keeps the page's own sentence.
+function ContactNotOpened({ gone }: Readonly<{ gone: boolean }>) {
+  const t = useT();
+  return (
+    <div className="wrap">
+      {gone ? <RecordGone kind="contact" /> : t("contact.page.notOpened")}
+    </div>
+  );
 }

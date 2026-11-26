@@ -5,6 +5,7 @@ import { join } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { sourceFileAt } from "../../scripts/lib/source-tree";
+import { stable } from "../../src/format/collate";
 import { type Area, plantedFindings, srcDir } from "../tree";
 import {
   COMPONENT,
@@ -132,7 +133,7 @@ describe("heading spelling", () => {
     );
     const keys = [
       ...new Set([...Object.keys(component), ...Object.keys(builder)]),
-    ].sort();
+    ].sort(stable);
     expect(keys.length).toBeGreaterThan(0);
     const differing = keys.filter((key) => component[key] !== builder[key]);
     expect(

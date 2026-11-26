@@ -1,0 +1,14 @@
+{
+  "tool": "read_context",
+  "action": "brief",
+  "verb": "read_brief",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

@@ -15,14 +15,17 @@ import (
 )
 
 // lockConnectionClaimsTx takes the seat-address claim locks a change to one
-// connection needs: the label it holds now and the label it will hold. Read
+// connection needs: the label the row holds now and the label it will hold.
+// A zero connection is a mailbox being added, which holds no label yet. Read
 // before the row lock, as storekit.LockSeatAddressClaims requires.
-func lockConnectionClaimsTx(ctx context.Context, tx pgx.Tx, user ids.UUID, provider string, next *string) error {
+func lockConnectionClaimsTx(ctx context.Context, tx pgx.Tx, user, connection ids.UUID, next *string) error {
 	var current *string
-	err := tx.QueryRow(ctx, `SELECT account_label FROM capture_connection WHERE user_id = $1 AND provider = $2`,
-		user, provider).Scan(&current)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("capture: reading the mailbox address a connection change touches: %w", err)
+	if !connection.IsZero() {
+		err := tx.QueryRow(ctx, `SELECT account_label FROM capture_connection WHERE id = $1 AND user_id = $2`,
+			connection, user).Scan(&current)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("capture: reading the mailbox address a connection change touches: %w", err)
+		}
 	}
 	var labels []string
 	for _, label := range []*string{current, next} {
@@ -49,16 +52,20 @@ func lockIdentityClaimTx(ctx context.Context, tx pgx.Tx, id, user ids.UUID) erro
 	return storekit.LockSeatAddressClaims(ctx, tx, value)
 }
 
-// lockPendingChecksTx takes the check lock of the address a ledger row asks
-// about, before a transition writes the row (contacts/lockorder.go).
+// Ledger transitions hold the address check and sender decision locks before
+// writing, so a reviewed verdict cannot race destruction of its sender's mail.
 func lockPendingChecksTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	var email string
-	err := tx.QueryRow(ctx, `SELECT email FROM capture_pending_counterparty WHERE id = $1`, id).Scan(&email)
+	var owner ids.UUID
+	err := tx.QueryRow(ctx, `SELECT email, owner_id FROM capture_pending_counterparty WHERE id = $1`, id).Scan(&email, &owner)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("capture: reading the address a ledger transition is about: %w", err)
 	}
-	return storekit.LockSeatAddressChecks(ctx, tx, email)
+	if err := storekit.LockSeatAddressChecks(ctx, tx, email); err != nil {
+		return err
+	}
+	return lockSenderDecisionTx(ctx, tx, owner, email)
 }

@@ -56,6 +56,9 @@ func TestTheAdminPresetYieldsToAnInstallationValueSomebodyChose(t *testing.T) {
 	wantValue(t, "Admin changes", admin.AgentWritesPerWindow, 2000, crmcontracts.AgentRoleAllowanceValueSourceAdminPreset)
 	wantValue(t, "Admin sends", admin.AgentEgressPerWindow, agentvolume.DefaultEgress, crmcontracts.AgentRoleAllowanceValueSourceInstallation)
 	wantValue(t, "User calls", roleRow(t, saved, "rep").AgentCallsPerWindow, agentvolume.DefaultCalls, crmcontracts.AgentRoleAllowanceValueSourceInstallation)
+	if admin.PacedPerMinute || !roleRow(t, saved, "rep").PacedPerMinute {
+		t.Error("the settings show Admin paced or User unpaced per minute, want Admin alone unpaced")
+	}
 
 	if code, saved = patchAllowances(installationAdminCtx(e), t, h, `{"agent_calls_per_window":5000}`); code != http.StatusOK {
 		t.Fatalf("choosing 5000 calls → %d", code)

@@ -4,6 +4,7 @@
 package webforms
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -21,6 +22,42 @@ type Handlers struct {
 	intake *Intake
 	// now is the clock signed timestamps and the fill-time check read.
 	now func() time.Time
+	// throttle brakes the public intake and answers each form's intake state.
+	throttle *Throttle
+}
+
+// WithThrottle brakes the public intake and shows each form's state on its read.
+func (h Handlers) WithThrottle(t *Throttle) Handlers {
+	h.throttle = t
+	return h
+}
+
+// Throttle is the intake's brake, which the public edge asks before any work.
+func (h Handlers) Throttle() *Throttle { return h.throttle }
+
+// formChanged tells the throttle's memory of real form keys that key changed.
+func (h Handlers) formChanged(key string) {
+	if h.throttle != nil {
+		h.throttle.FormChanged(key)
+	}
+}
+
+// wireWithIntake is the form as its admin reads it, throttle state included.
+func (h Handlers) wireWithIntake(ctx context.Context, f Form) crmcontracts.WebForm {
+	w := WireForm(f)
+	if h.throttle == nil {
+		return w
+	}
+	state := h.throttle.IntakeState(ctx, f.Key)
+	if state.State == "" {
+		return w
+	}
+	w.Intake = &struct {
+		Since *time.Time                      `json:"since,omitempty"`
+		State crmcontracts.WebFormIntakeState `json:"state"`
+		Until *time.Time                      `json:"until,omitempty"`
+	}{Since: state.Since, State: crmcontracts.WebFormIntakeState(state.State), Until: state.Until}
+	return w
 }
 
 // NewHandlers wires the transport.
@@ -41,7 +78,7 @@ func (h Handlers) ListWebForms(w http.ResponseWriter, r *http.Request, params cr
 	}
 	data := make([]crmcontracts.WebForm, 0, len(forms))
 	for _, f := range forms {
-		data = append(data, wireForm(f))
+		data = append(data, h.wireWithIntake(r.Context(), f))
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.WebFormListResponse{Data: data, SecretsAvailable: h.store.SecretsAvailable()})
 }
@@ -72,6 +109,7 @@ func (h Handlers) CreateWebForm(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
+	h.formChanged(f.Key)
 	httperr.WriteJSON(w, http.StatusCreated, wireCreated(f, secret))
 }
 
@@ -82,7 +120,7 @@ func (h Handlers) GetWebForm(w http.ResponseWriter, r *http.Request, id crmcontr
 		writeErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireForm(f))
+	httperr.WriteJSON(w, http.StatusOK, h.wireWithIntake(r.Context(), f))
 }
 
 // UpdateWebForm changes a form under the If-Match version.
@@ -105,7 +143,8 @@ func (h Handlers) UpdateWebForm(w http.ResponseWriter, r *http.Request, id crmco
 		ConsentRequired: req.ConsentRequired, ConsentPolicyVersion: req.ConsentPolicyVersion,
 		ConsentWording: req.ConsentWording, PrivacyNotice: req.PrivacyNotice, PrivacyNoticeURL: req.PrivacyNoticeUrl,
 		RedirectURL: req.RedirectUrl, SuccessMessage: req.SuccessMessage,
-		Clear: httperr.ClearedFields(r), IfVersion: ifVersion,
+		HandlingAutomationID: uuidOf(req.HandlingAutomationId),
+		Clear:                httperr.ClearedFields(r), IfVersion: ifVersion,
 	}
 	if req.State != nil {
 		state := string(*req.State)
@@ -116,7 +155,8 @@ func (h Handlers) UpdateWebForm(w http.ResponseWriter, r *http.Request, id crmco
 		writeErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireForm(f))
+	h.formChanged(f.Key)
+	httperr.WriteJSON(w, http.StatusOK, WireForm(f))
 }
 
 // ArchiveWebForm retires a form; its address answers 404 from then on.
@@ -126,7 +166,8 @@ func (h Handlers) ArchiveWebForm(w http.ResponseWriter, r *http.Request, id crmc
 		writeErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireForm(f))
+	h.formChanged(f.Key)
+	httperr.WriteJSON(w, http.StatusOK, WireForm(f))
 }
 
 // RotateWebFormSecret mints a server form's new secret and answers it once.

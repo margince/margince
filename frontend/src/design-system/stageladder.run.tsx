@@ -7,7 +7,11 @@ import { useT } from "../i18n";
 import { useScrollRegion } from "./atoms";
 import { IconAction } from "./iconaction";
 import { usePrefersReducedMotion } from "./motion";
-import { type ClippedEdges, useClippedEdges } from "./scrollregion";
+import {
+  type ClippedEdges,
+  clippedClass,
+  useClippedEdges,
+} from "./scrollregion";
 import type { StageStep } from "./stageladder";
 
 /**
@@ -55,6 +59,12 @@ export function LadderRun({
   );
 }
 
+// A way out is shown while the record stands on it or the move to it is on
+// offer. One the reader may not take and the record never took says nothing.
+export function isOfferedExit(step: StageStep): boolean {
+  return step.terminal === true && (step.current === true || !!step.onPick);
+}
+
 // The rung the run centres on: where the record stands, or, for a record that
 // has taken a way out, the last stage it climbed. A record the pipeline cannot
 // place leaves the run at its start.
@@ -82,13 +92,7 @@ function restingShift(rungBox: DOMRect, scroller: HTMLElement): number {
 }
 
 function runClass(edges: ClippedEdges) {
-  return [
-    "stage-ladder-run",
-    edges.start ? "is-clipped-start" : "",
-    edges.end ? "is-clipped-end" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  return clippedClass("stage-ladder-run", edges);
 }
 
 // Most of a row per press, so the last rung in view stays in view as the

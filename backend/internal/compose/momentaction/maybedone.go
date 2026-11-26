@@ -16,13 +16,13 @@ import (
 )
 
 var doneWords = struct{ YourEmail, MaybeDone, Done langcopy.Phrase }{
-	YourEmail: langcopy.Phrase{En: "Your email", De: "Ihre E-Mail", Vi: "Email của bạn"},
-	MaybeDone: langcopy.Phrase{En: "You may have done this — you wrote to them on %s", De: "Möglicherweise schon erledigt: Sie haben am %s geschrieben", Vi: "Bạn có thể đã hoàn thành việc này: bạn đã viết cho họ vào ngày %s"},
+	YourEmail: langcopy.Phrase{En: "The email", De: "Die E-Mail", Vi: "Email"},
+	MaybeDone: langcopy.Phrase{En: "This may be done: an email went to them on %s", De: "Möglicherweise schon erledigt: Am %s ging eine E-Mail an sie", Vi: "Việc này có thể đã xong: một email đã được gửi cho họ vào ngày %s"},
 	Done:      langcopy.Phrase{En: "Done", De: "Erledigt", Vi: "Hoàn thành"},
 }
 
-// DoneQuestion is a promise card and the later mail that may have kept it.
-type DoneQuestion struct {
+// doneQuestion is a promise card and the later mail that may have kept it.
+type doneQuestion struct {
 	Plain     crmcontracts.ContactMoment
 	Kind      crmcontracts.ContactMomentMayBeDonePromiseType
 	PromiseID openapi_types.UUID
@@ -32,9 +32,9 @@ type DoneQuestion struct {
 	Key string
 }
 
-// DoneEvidence is the plain card's own evidence plus the mail. The mail is in
+// doneEvidence is the plain card's own evidence plus the mail. The mail is in
 // the fingerprint, so Not yet holds only until we write on the thread again.
-func DoneEvidence(said langcopy.Spoken, q DoneQuestion) []crmcontracts.ContactMomentEvidence {
+func doneEvidence(said langcopy.Spoken, q doneQuestion) []crmcontracts.ContactMomentEvidence {
 	label := q.Sent.Subject
 	if label == "" {
 		label = said.Say(doneWords.YourEmail)
@@ -46,9 +46,9 @@ func DoneEvidence(said langcopy.Spoken, q DoneQuestion) []crmcontracts.ContactMo
 	}}
 }
 
-// AskDone is the card that asks whether the mail kept the promise. Both
+// askDone is the card that asks whether the mail kept the promise. Both
 // record pages draw it, so both say the same sentence and offer one Done.
-func AskDone(said langcopy.Spoken, zone *time.Location, q DoneQuestion, evidence []crmcontracts.ContactMomentEvidence, fingerprint string) crmcontracts.ContactMoment {
+func askDone(said langcopy.Spoken, zone *time.Location, q doneQuestion, evidence []crmcontracts.ContactMomentEvidence, fingerprint string) crmcontracts.ContactMoment {
 	at := q.Sent.At
 	return crmcontracts.ContactMoment{
 		ClaimKey:            q.Key,
@@ -67,8 +67,18 @@ func AskDone(said langcopy.Spoken, zone *time.Location, q DoneQuestion, evidence
 			Label: said.Say(doneWords.Done),
 			State: crmcontracts.ContactMomentActionStateAvailable,
 		},
+		SecondaryActions: callOf(q.Plain),
 		MayBeDone: &crmcontracts.ContactMomentMayBeDone{
 			PromiseType: q.Kind, PromiseId: q.PromiseID, EmailActivityId: *evidence[1].Id, WroteAt: at,
 		},
 	}
+}
+
+// callOf keeps the plain card's call on the question card, which replaces the
+// card's lead move with Done. The call is the same action the plain card chose.
+func callOf(plain crmcontracts.ContactMoment) *[]crmcontracts.ContactMomentAction {
+	if plain.RecommendedAction.Kind != crmcontracts.ContactMomentActionKindCall {
+		return nil
+	}
+	return &[]crmcontracts.ContactMomentAction{plain.RecommendedAction}
 }

@@ -128,7 +128,7 @@ func TestTheMigrationCopiesOnlyANameTheSettingAccepts(t *testing.T) {
 			runFile(ctx, t, conn, installationNameMigration)
 
 			want, audits := "Configured GmbH", 0
-			if code, _ := values.CompanyNameFault(name); code == "" {
+			if values.CompanyNameFault("display_name", name) == nil {
 				want, audits = name, 1
 			}
 			if got := storedInstallationName(ctx, t, conn); got != want {

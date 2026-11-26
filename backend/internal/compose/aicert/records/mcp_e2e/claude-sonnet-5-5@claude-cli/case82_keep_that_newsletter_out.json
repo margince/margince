@@ -11,13 +11,79 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": true,
+  "stamp": {
+    "scenario": "1230d1b26a0a56d1",
+    "tools": "72cb02c2675bc468",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "1796d51361de08d5",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T06:07:07Z",
+    "graded_commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "graded_at": "2026-11-25T06:07:07Z"
+  },
   "usage": {
     "input_tokens": 12,
-    "output_tokens": 854,
-    "cache_creation_input_tokens": 3599,
-    "cache_read_input_tokens": 359482,
+    "output_tokens": 751,
+    "cache_creation_input_tokens": 5207,
+    "cache_read_input_tokens": 434573,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.0589
+    "cost_usd": 0.0718
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "add_capture_exclusion",
+        "change_capture"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "add_capture_exclusion",
+        "change_capture",
+        "describe_router_actions",
+        "read_workspace"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 2,
+      "min": 1,
+      "max": 3
+    },
+    "turns": {
+      "median": 3,
+      "min": 2,
+      "max": 4
+    },
+    "refused": {
+      "median": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 219896,
+      "min": 145858,
+      "max": 293934
+    },
+    "output_tokens": {
+      "median": 375.5,
+      "min": 226,
+      "max": 525
+    },
+    "duration_ms": {
+      "median": 5639,
+      "min": 3940,
+      "max": 7338
+    }
   }
 }

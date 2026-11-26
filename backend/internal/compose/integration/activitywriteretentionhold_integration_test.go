@@ -24,6 +24,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -33,7 +34,7 @@ import (
 func TestARetentionHeldActivityAnswers423NotNotFoundOnWrite(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 	held := ids.From[ids.ActivityKind](f.email)
@@ -108,7 +109,7 @@ func TestARetentionHeldActivityAnswers423NotNotFoundOnWrite(t *testing.T) {
 func TestARelinkAlreadyPresentOnAHeldRowStillReadsBack(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 	held := ids.From[ids.ActivityKind](f.email)

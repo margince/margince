@@ -1,0 +1,12 @@
+{
+  "verb": "assign_notice_case",
+  "checks": [
+    "contact.read",
+    "privacy_request.read",
+    "privacy_request.update"
+  ],
+  "takes": [
+    "me",
+    "notice_case"
+  ]
+}

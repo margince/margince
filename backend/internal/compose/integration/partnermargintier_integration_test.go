@@ -108,13 +108,13 @@ func TestAMaskedWriterEditsAPartnerWithoutWipingTheTier(t *testing.T) {
 	// Owned by the writer, because write authority over the company is what the
 	// promotion asks for and a team-scoped seat holds it on its own rows.
 	company := ids.From[ids.CompanyKind](e.SeedPartnerCompany(t, "Northgate Partners", &tier, &e.Rep1))
-	step := "renew the agreement"
+	segments := []string{"fintech"}
 
 	// The masked client's own shape: it prefills from what it read, and what it
 	// read carries no tier.
 	if _, err := e.Contacts.UpsertPartner(e.As(e.Rep1, []ids.UUID{e.Team1}, marginMaskedWriter()),
 		contacts.UpsertPartnerInput{
-			CompanyID: company, PartnerRole: "consulting", MarginTier: nil, NextStep: &step,
+			CompanyID: company, PartnerRole: "consulting", MarginTier: nil, ServedSegments: &segments,
 		}); err != nil {
 		t.Fatalf("a masked seat editing the partner it may write: %v", err)
 	}
@@ -127,8 +127,8 @@ func TestAMaskedWriterEditsAPartnerWithoutWipingTheTier(t *testing.T) {
 		t.Errorf("margin_tier = %v after an unrelated edit by a masked writer, want %q kept: "+
 			"a seat that cannot read a field cannot be the one that clears it", after.MarginTier, tier)
 	}
-	if after.NextStep == nil || *after.NextStep != step {
-		t.Errorf("next_step = %v, want the edit the writer actually made", after.NextStep)
+	if after.ServedSegments == nil || len(*after.ServedSegments) != 1 || (*after.ServedSegments)[0] != "fintech" {
+		t.Errorf("served_segments = %v, want the edit the writer actually made", after.ServedSegments)
 	}
 }
 
@@ -138,14 +138,9 @@ func TestAnExplicitNullClearsTheTierAndTheNextStepForAnUnmaskedWriter(t *testing
 	e := Setup(t)
 	tier := "tier1_15"
 	company := ids.From[ids.CompanyKind](e.SeedPartnerCompany(t, "Vestergaard", &tier, nil))
-	step := "renew the agreement"
 	writer := e.As(e.AdminUser, nil, partnerWritingPerms())
-
-	if _, err := e.Contacts.UpsertPartner(writer, contacts.UpsertPartnerInput{
-		CompanyID: company, PartnerRole: "consulting", NextStep: &step,
-	}); err != nil {
-		t.Fatalf("setting the next step: %v", err)
-	}
+	// Text a partner write stored before next steps became tasks.
+	e.WsExec(t, `UPDATE partner SET next_step = 'renew the agreement' WHERE company_id = $1`, company)
 	empty := ""
 	if _, err := e.Contacts.UpsertPartner(writer, contacts.UpsertPartnerInput{
 		CompanyID: company, PartnerRole: "consulting", MarginTier: &empty,

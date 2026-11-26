@@ -21,12 +21,15 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/capturelabel"
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -66,15 +69,15 @@ func seedTracedMessage(t *testing.T, e *Env, owner ids.UUID, in seed) seededMess
 	// key on this address.
 	counterparty := "dana-" + in.trace.SourceID + "@client.io"
 	e.WsExec(t, `
-		INSERT INTO activity (id, kind, occurred_at, source, captured_by, counterparty_email, subject, channel_provider, source_system, source_id)
-		VALUES ($1, $2, now(), $3, $4, $5, 'Q3 pricing', nullif($6, ''), $3, $7)`,
+		INSERT INTO activity (id, kind, occurred_at, source, captured_by, counterparty_email, subject, channel_provider, source_system, source_id, thread_key)
+		VALUES ($1, $2, now(), $3, $4, $5, 'Q3 pricing', nullif($6, ''), $3, $7, nullif($8, ''))`,
 		activityID, in.kind, in.trace.SourceSystem,
 		// The provenance the sink stamps when a granting human exists
 		// (connectorProvenance): connector:<CONNECTOR NAME>:<user>. The connector
 		// name, not the source system — they coincide for gmail and diverge for a
 		// channel unit, whose records say `telegram` over `dispact`.
 		"connector:"+in.trace.Connector+":"+owner.String(),
-		counterparty, in.channelProvider, in.trace.SourceID)
+		counterparty, in.channelProvider, in.trace.SourceID, in.threadKey)
 
 	entry := in.trace
 	entry.UserID, entry.ActivityID = owner, activityID
@@ -103,6 +106,7 @@ type seed struct {
 	trace           capture.TraceEntry
 	kind            string
 	channelProvider string
+	threadKey       string
 }
 
 // capturedMail is the ordinary shape: an email the tier ladder let through.
@@ -195,22 +199,28 @@ func TestTheLadderAnswersFromBothDoorsForTheSameMessage(t *testing.T) {
 	}
 }
 
-func TestAChatTransportIsToldWhyTheClassifierSkippedIt(t *testing.T) {
-	// activities owns the exclusion table and proves it per-reason; the rung
-	// unit test proves the pass-through. What THIS adds is that the composed
-	// wiring carries the module's answer end to end rather than the assembler
-	// re-deciding it.
+func TestAChatIsLabelledButNotReadForMaterialEvents(t *testing.T) {
+	// The composed wiring carries both answers end to end. The chat carries a
+	// thread key, as a channel unit writes one. So the material rung cannot
+	// fall back on "no thread" and must say the transport is not read.
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
-	msg := seedTracedMessage(t, e, e.Rep1, capturedChat("chat-msg", "telegram", "dispact"))
-	got, err := ladderAssembler(e, false).ByActivityID(ctx, msg.activityID)
+	chat := capturedChat("chat-msg", "telegram", "dispact")
+	chat.threadKey = "telegram:chat-msg"
+	msg := seedTracedMessage(t, e, e.Rep1, chat)
+	now := func() time.Time { return clocktest.Now(t) }
+	got, err := ladderAssembler(e, false).WithThreadReader(compose.NewThreadReadings(e.DB(), now)).
+		ByActivityID(ctx, msg.activityID)
 	if err != nil {
 		t.Fatalf("reading the ladder: %v", err)
 	}
-	label := rungFor(t, got, trace.StageAttentionLabel)
-	if label.Status != trace.StatusSkipped || label.Reason != trace.ReasonTransportNotRead {
-		t.Errorf("attention rung = %q/%q, want skipped/transport_not_read",
+	if label := rungFor(t, got, trace.StageAttentionLabel); label.Reason != trace.ReasonAwaitingBatch {
+		t.Errorf("attention rung = %q/%q, want awaiting_batch: the classifier reads connector chat",
 			label.Status, label.Reason)
+	}
+	material := rungFor(t, got, trace.StageMaterialEvents)
+	if material.Status != trace.StatusSkipped || material.Reason != trace.ReasonTransportNotRead {
+		t.Errorf("material rung = %q/%q, want skipped/transport_not_read", material.Status, material.Reason)
 	}
 }
 

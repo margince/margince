@@ -54,12 +54,15 @@ type BookingHealth interface {
 	BookingConcerns(ctx context.Context) ([]BookingConcern, error)
 }
 
-// BookingConcern is the reader's paused booking page and why it is paused.
+// BookingConcern is one of the reader's paused booking pages, their personal
+// page or a team link, and why it is paused.
 type BookingConcern struct {
 	PageID ids.UUID
-	// Blocker is the profile's own reason: no_calendar, calendar_read_only or
-	// calendar_unavailable.
+	// Blocker is the profile's own reason: no_calendar, calendar_read_only,
+	// calendar_unavailable or team_not_ready.
 	Blocker string
+	// Title names a team link, and is empty for the reader's personal page.
+	Title string
 }
 
 // AIWork is the reader's own AI runs that went wrong — failed inside the

@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "my_ai_activity",
+  "verb": "get_my_ai_activity",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

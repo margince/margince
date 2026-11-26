@@ -57,6 +57,9 @@ const CAPTURE_SETTINGS: Schemas["CaptureSettings"] = {
   site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
   mail_sync_interval_seconds: 120,
   confidentiality_pass_cap: 40,
+  verdict_pass_cap: 200,
+  classify_pass_cap: 500,
+  owed_classify_pass_cap: 500,
 };
 
 export const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {
@@ -135,6 +138,12 @@ const UNUSED_AI: RouteMap = {
     jsonResponse({ providers: [] } satisfies Schemas["AiProviderKeyList"]),
   "GET /ai/health": () =>
     jsonResponse({ window_hours: 1, rungs: [] } satisfies Schemas["AiHealth"]),
+  "GET /ai/call-stats": (_body, url) =>
+    jsonResponse({
+      window: url.searchParams.get("window") ?? "7d",
+      group: url.searchParams.get("group") ?? "provider",
+      rows: [],
+    } satisfies Schemas["AiCallStats"]),
   "GET /ai/agent-usage": () =>
     jsonResponse({ resets_at: "2026-10-15T00:00:00Z", data: [] }),
 };
@@ -186,12 +195,17 @@ export const UNUSED_INSTALLATION_ROUTES: RouteMap = {
     jsonResponse({ items: [] } satisfies Schemas["KnowledgeCorpusList"]),
   "GET /imports/format": () => jsonResponse(formatFixture),
   "GET /extensions": () => jsonResponse({ extensions: [] }),
+  "GET /shared-mailboxes": () =>
+    jsonResponse({ items: [] } satisfies Schemas["SharedMailboxList"]),
   "GET /finance/source": () =>
     jsonResponse({ available: [] } satisfies Schemas["FinanceSourceState"]),
   "GET /installation/jurisdiction": () => jsonResponse(NO_JURISDICTION),
   "GET /installation/settings": () => jsonResponse(INSTALLATION_SETTINGS),
   "GET /installation/configuration": () => jsonResponse(CONFIGURATION),
   "GET /scheduling/profile": () => jsonResponse(bookingProfile),
+  "GET /scheduling/team-candidates": () => jsonResponse([]),
+  "GET /scheduling/team-links": () => jsonResponse([]),
+  "GET /scheduling/team-requests": () => jsonResponse([]),
   "GET /company": () => jsonResponse(UNREAD_COMPANY),
   "GET /company/context/capabilities": () => jsonResponse(COMPANY_CONTEXT_ON),
 };

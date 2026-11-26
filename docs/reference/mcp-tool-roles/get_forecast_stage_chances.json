@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "forecast_stage_chances",
+  "verb": "get_forecast_stage_chances",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

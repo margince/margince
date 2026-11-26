@@ -69,7 +69,7 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		Because:     waitingBecause(waiting, days, demoted),
 		Actions:     []crmcontracts.WorklistItemActions{},
 	}
-	if demoted.informational || waiting.ActionUnconfirmed || demoted.elsewhere || waiting.NonBuyer {
+	if demoted.informational || waiting.unconfirmed() || demoted.elsewhere || waiting.NonBuyer {
 		row.Consequence = "none"
 	}
 	// The subject travels because the row exists at all only for a reader the
@@ -116,6 +116,9 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	row.Move = &crmcontracts.WorklistMove{
 		Action:     crmcontracts.WorklistMoveActionDraftReply,
 		ActivityId: &answers,
+	}
+	if answeredOnTheCalendar(row.EmailSummary) {
+		row.Move.Action = crmcontracts.WorklistMoveActionNone
 	}
 	// Both ages travel: the true one for everything a reader is shown, the
 	// bounded one for the order. A rep reading "waiting 180 days" is being told
@@ -182,8 +185,34 @@ func demotionsOf(waiting WaitingCustomer, days int) waitingDemotions {
 		unproven:      !waiting.Engaged && !waiting.HasOpenDeal && !waiting.ConfirmedRequest,
 		elsewhere:     waiting.AddressedElsewhere,
 		informational: waiting.AsksNothing,
-		booked:        waiting.MeetingBookedAt != nil,
+		booked:        waiting.MeetingBookedAt != nil && !asksForAnswer(waiting),
 	}
+}
+
+// unconfirmed is a wait with no verdict to rank it by. Mail no model may judge
+// never gets one. On a conversation the seat owing the reply wrote on first,
+// it is the customer answering that seat, so it ranks as a request.
+func (w WaitingCustomer) unconfirmed() bool {
+	return w.ActionUnconfirmed && (!w.JudgeWithheld || !w.OwnerWroteOnThread)
+}
+
+// answeredOnTheCalendar is calendar mail no drafted reply answers: an
+// invitation, or a change only to be seen. A proposed new time may get a reply.
+func answeredOnTheCalendar(mail *crmcontracts.EmailSummary) bool {
+	if mail == nil {
+		return false
+	}
+	if mail.CalendarInvitation != nil {
+		return true
+	}
+	return mail.CalendarChange != nil && mail.CalendarChange.Kind != crmcontracts.EmailCalendarChangeKindProposed
+}
+
+// asksForAnswer is an invitation the reader has not answered. The meeting it
+// books is the one it asks about, so that booking schedules nothing yet.
+func asksForAnswer(waiting WaitingCustomer) bool {
+	return waiting.EmailSummary != nil && waiting.EmailSummary.CalendarInvitation != nil &&
+		waiting.EmailSummary.CalendarInvitation.Response == crmcontracts.EmailCalendarInvitationResponseNeedsAction
 }
 
 // waitingLevel is the band one wait claims once every demotion has spoken.
@@ -201,7 +230,7 @@ func waitingLevel(waiting WaitingCustomer, d waitingDemotions) int {
 			level = levelMaterialRisk
 		}
 	}
-	if d.unproven || d.elsewhere || d.informational || waiting.ActionUnconfirmed || waiting.NonBuyer || d.booked {
+	if d.unproven || d.elsewhere || d.informational || waiting.unconfirmed() || waiting.NonBuyer || d.booked {
 		level = levelRoutine
 	}
 	if d.strangerBcc || d.strangerLink {

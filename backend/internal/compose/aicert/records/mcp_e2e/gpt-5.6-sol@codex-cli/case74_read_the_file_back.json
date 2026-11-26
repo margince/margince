@@ -11,13 +11,69 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "715e19471ae875bc",
+    "tools": "b9f97b096d4b671c",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "0fbb56525a64e3a0d67dce27557b9284616654eb",
+    "ran_at": "2026-11-22T04:29:42Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:43Z"
+  },
   "usage": {
-    "input_tokens": 85634,
-    "output_tokens": 4273,
+    "input_tokens": 70517,
+    "output_tokens": 3411,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 760704,
+    "cache_read_input_tokens": 464384,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "attach_document",
+        "change_activities",
+        "find_records",
+        "list_documents",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "attach_document",
+        "change_activities",
+        "find_records",
+        "list_documents",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 5,
+      "min": 4,
+      "max": 6
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 267450.5,
+      "min": 226178,
+      "max": 308723
+    },
+    "output_tokens": {
+      "median": 1705.5,
+      "min": 1536,
+      "max": 1875
+    }
   }
 }

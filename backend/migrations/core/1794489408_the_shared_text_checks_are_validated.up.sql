@@ -1,0 +1,16 @@
+SET LOCAL lock_timeout = '2s';
+ALTER TABLE "public"."activity_review_template" VALIDATE CONSTRAINT "activity_review_template_label_shape";
+ALTER TABLE "public"."app_user" VALIDATE CONSTRAINT "app_user_greeting_name_length";
+ALTER TABLE "public"."brief_run" VALIDATE CONSTRAINT "brief_run_narrative_length";
+ALTER TABLE "public"."contact_confirm_submission" VALIDATE CONSTRAINT "contact_confirm_submission_note_length";
+ALTER TABLE "public"."deal_line_item" VALIDATE CONSTRAINT "deal_line_item_bounded";
+ALTER TABLE "public"."deal_line_item" VALIDATE CONSTRAINT "deal_line_item_description_present";
+ALTER TABLE "public"."legal_entity" VALIDATE CONSTRAINT "legal_entity_imprint_bounded";
+ALTER TABLE "public"."legal_entity" VALIDATE CONSTRAINT "legal_entity_offering_bounded";
+ALTER TABLE "public"."legal_entity" VALIDATE CONSTRAINT "legal_entity_signature_template_bounded";
+ALTER TABLE "public"."notice" VALIDATE CONSTRAINT "notice_content_bounded";
+ALTER TABLE "public"."privacy_notice_case" VALIDATE CONSTRAINT "privacy_notice_case_resolution_note_length";
+ALTER TABLE "public"."product_translation" VALIDATE CONSTRAINT "product_translation_bounded";
+ALTER TABLE "public"."web_form" VALIDATE CONSTRAINT "web_form_name_present";
+ALTER TABLE "public"."weekly_review" VALIDATE CONSTRAINT "weekly_review_narrative_length";
+ALTER TABLE "public"."weekly_review_learning" VALIDATE CONSTRAINT "weekly_review_learning_text_bound";

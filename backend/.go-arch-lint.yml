@@ -96,6 +96,7 @@ components:
   deals:       { in: internal/modules/deals }
   projects:    { in: internal/modules/projects }
   dealrooms:   { in: internal/modules/dealrooms }
+  chatlinks:   { in: internal/modules/chatlinks/** }
   # Includes internal/modules/knowledge/handbook: the shipped prose and the
   # reader that opens it belong to the module that files them into a corpus.
   knowledge:   { in: [internal/modules/knowledge, internal/modules/knowledge/**] }
@@ -119,6 +120,7 @@ components:
   assignments: { in: internal/modules/assignments }
   introductions: { in: internal/modules/introductions }
   weeklyplan:  { in: internal/modules/weeklyplan }
+  recordlinks: { in: internal/modules/recordlinks }
   forecasting: { in: internal/modules/forecasting }
   reporting:   { in: internal/modules/reporting }
   assurance:   { in: internal/modules/assurance }
@@ -147,7 +149,8 @@ deps:
     # xmod: the API policy uses the standard semantic-version parser.
     # xtext: pdftext NFKC-folds a PDF's typographic ligatures back to the
     # characters the word is made of — a Unicode normal form the stdlib lacks.
-    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, prometheus, pdfium, gopool, fpdf, xtext, xmod]
+    # namematch folds case and accents out of names the same way.
+    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, prometheus, pdfium, gopool, fpdf, xtext, xmod, xsemaphore]
   # Modules import shared + platform + contracts — NEVER a sibling; every
   # cross-module edge is injected by the composition layer.
   identity:
@@ -170,7 +173,9 @@ deps:
     canUse: [pgx, oapi, emersion, xnet, xsemaphore, xtext]
   consent:
     mayDependOn: [contracts, platform]
-    canUse: [pgx, oapi]
+    # xtext: an advertising draft's claim words are matched in NFC, so a
+    # decomposed Vietnamese tone mark cannot hide "tốt nhất" from the check.
+    canUse: [pgx, oapi, xtext]
   collections:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
@@ -203,6 +208,10 @@ deps:
     canUse: [pgx, oapi]
   dealrooms:
     mayDependOn: [contracts, platform]
+    canUse: [pgx, oapi]
+  chatlinks:
+    # chatlinks itself: the store calls its own dispact client subpackage.
+    mayDependOn: [chatlinks, contracts, platform]
     canUse: [pgx, oapi]
   knowledge:
     # knowledge itself: the module reads its own handbook subpackage, the same
@@ -275,6 +284,9 @@ deps:
   weeklyplan:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
+  recordlinks:
+    mayDependOn: [contracts, platform]
+    canUse: [pgx, oapi]
   forecasting:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
@@ -285,7 +297,7 @@ deps:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   compose:
-    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, initiatives, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, assignments, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, recordlinks, initiatives, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, chatlinks, knowledge, assignments, platform, migrations, projects]
     # xtext: the evidence gate normalizes page text to NFC before matching
     # (evidencematch.go) — Unicode normal forms need golang.org/x/text.
     # yaml: aicert's corpus loader parses scenario files directly — the
@@ -384,9 +396,11 @@ deps:
     # offers the outcomes the server accepts without copying its catalog.
     # frontendrunreasons_test.go reads automation.RunReasonCodes and holds them
     # to the browser's words, as frontendapprovalkinds_test.go does for approvals.
+    # consumergrouptypes_test.go feeds search.EmbedGen every event type its
+    # group leaves out, as it does for the compose handlers.
     # gates carries test files only, so this grants no production edge.
-    mayDependOn: [contracts, compose, ai, collections, webforms, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity, introductions, privacy, assurance, automation]
+    mayDependOn: [contracts, compose, ai, collections, webforms, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity, introductions, privacy, assurance, automation, search]
     canUse: [yaml, jsonschema]
   cmd:
-    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, initiatives, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, recordlinks, initiatives, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, chatlinks, assignments, platform, migrations, projects]
     canUse: [pgx, redis, xterm, composition]

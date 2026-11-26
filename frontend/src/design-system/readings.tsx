@@ -112,7 +112,7 @@ type MeterFill =
 
 // A share as a percentage of the track, clamped to it. A zero whole reads as
 // an empty bar instead of NaN.
-function percentOf(value: number, whole: number): number {
+export function percentOf(value: number, whole: number): number {
   return whole > 0 ? Math.min(100, Math.max(0, (value / whole) * 100)) : 0;
 }
 
@@ -215,6 +215,7 @@ export function Chip({
   appHref,
   label,
   dense,
+  wrap,
 }: Readonly<
   {
     children: ReactNode;
@@ -230,13 +231,21 @@ export function Chip({
     // It is a size on the primitive, like `Meter`'s dense rung, so one author
     // owns the geometry.
     dense?: boolean;
+    // A name the reader must read whole, such as a contact's: it breaks across
+    // lines inside its container instead of running past it.
+    wrap?: boolean;
   } & (
     | { icon: LucideIcon; lead?: never }
     // A mark in the icon's place: a record's Avatar, or a company's logo.
     | { icon?: never; lead: ReactNode }
   )
 >) {
-  const shape = ["chip", dense ? "chip-dense" : "", Icon ? "" : "chip-lead"]
+  const shape = [
+    "chip",
+    dense ? "chip-dense" : "",
+    Icon ? "" : "chip-lead",
+    wrap ? "chip-wrap" : "",
+  ]
     .filter(Boolean)
     .join(" ");
   const body = (
@@ -248,7 +257,7 @@ export function Chip({
           {lead}
         </span>
       )}
-      <span>{children}</span>
+      <span className="chip-label">{children}</span>
     </>
   );
   if (appHref) {
@@ -322,6 +331,7 @@ export function BarList({
             {onSelect ? (
               <Button
                 variant="link"
+                align="start"
                 className="barlist-row barlist-action"
                 onClick={() => onSelect(row.key)}
                 aria-label={`${row.label}: ${row.amount}`}
@@ -381,104 +391,3 @@ export type BarListRow = Readonly<{
   amount: string;
   tone?: "warning" | "danger";
 }>;
-
-// Parts of ONE total laid end to end on one track, with a mark where a target
-// sits: what is already won, what is committed with a confirmed date, what is
-// best case, and the call they are measured against.
-//
-// The claim differs from `BarList`'s. A bar list's rows are separate readings
-// compared on one scale; these parts are DISJOINT, so their lengths add up to
-// the whole the track shows, and a caller passes only sets that do not
-// overlap — a part that contained another would be drawn twice. They run from
-// most to least certain, so their colour steps down ONE hue rather than cycling
-// through several, and three is the most a single hue tells apart.
-//
-// The track is aria-hidden and the legend carries every label and figure as
-// text, which also makes colour a second channel rather than the only one.
-// Amounts arrive formatted, for the reason `BarList`'s do.
-export function SegmentBar({
-  parts,
-  marker,
-  label,
-  onSelect,
-}: Readonly<{
-  parts: SegmentBarParts;
-  onSelect?: (key: string) => void;
-  // A figure the parts are read against rather than one of them: a line across
-  // the track, drawn in ink so it never reads as a fourth part.
-  marker?: SegmentBarPart;
-  // What the legend is, for a reader who meets it as a list.
-  label: string;
-}>) {
-  const total = parts.reduce((sum, part) => sum + Math.max(0, part.value), 0);
-  // The scale is the larger of the parts and the mark. A mark beyond the parts
-  // leaves recessed track between them, and that track is the gap.
-  const scale = Math.max(total, marker?.value ?? 0);
-  return (
-    <div className="segbar">
-      <div className="segbar-track" aria-hidden={onSelect ? undefined : true}>
-        {parts.map((part, step) =>
-          onSelect ? (
-            <Button
-              key={part.key}
-              variant="link"
-              className={segmentActionClass(step)}
-              style={{ width: `${percentOf(part.value, scale)}%` }}
-              aria-label={`${part.label}: ${part.amount}`}
-              onClick={() => onSelect(part.key)}
-            />
-          ) : (
-            <span
-              key={part.key}
-              className={`segbar-part segbar-step-${step}`}
-              style={{ width: `${percentOf(part.value, scale)}%` }}
-            />
-          ),
-        )}
-        {marker && (
-          <span
-            className="segbar-marker"
-            style={{ left: `${percentOf(marker.value, scale)}%` }}
-          />
-        )}
-      </div>
-      <ul className="segbar-legend" aria-label={label}>
-        {parts.map((part, step) => (
-          <li key={part.key} className="segbar-key">
-            <span
-              className={`segbar-swatch segbar-step-${step}`}
-              aria-hidden="true"
-            />
-            {part.label}
-            <span className="segbar-amount t-num">{part.amount}</span>
-          </li>
-        ))}
-        {marker && (
-          <li className="segbar-key">
-            <span className="segbar-swatch-marker" aria-hidden="true" />
-            {marker.label}
-            <span className="segbar-amount t-num">{marker.amount}</span>
-          </li>
-        )}
-      </ul>
-    </div>
-  );
-}
-
-export type SegmentBarPart = Readonly<{
-  key: string;
-  label: string;
-  value: number;
-  amount: string;
-}>;
-
-// One to three parts, as a type: a fourth step of one hue is not told apart,
-// and a list that could hold one would colour it by cycling back to the first.
-export type SegmentBarParts =
-  | readonly [SegmentBarPart]
-  | readonly [SegmentBarPart, SegmentBarPart]
-  | readonly [SegmentBarPart, SegmentBarPart, SegmentBarPart];
-
-function segmentActionClass(step: number): string {
-  return `segbar-part segbar-action segbar-step-${step}`;
-}

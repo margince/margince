@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
@@ -30,6 +31,15 @@ var IndividualPerformance = config.DefineStored(config.Spec[bool]{
 // already holds, ungated: every reader's figures obey it, whatever their grants.
 func IndividualPerformanceTx(ctx context.Context, tx pgx.Tx) (bool, error) {
 	return config.StoredApplyTx(ctx, tx, config.Bound(), IndividualPerformance)
+}
+
+// IndividualPerformanceFor answers the switch for one request: the value its
+// door bound, or the stored setting read in tx.
+func IndividualPerformanceFor(ctx context.Context, tx pgx.Tx) (bool, error) {
+	if allowed, bound := auth.IndividualPerformanceOf(ctx); bound {
+		return allowed, nil
+	}
+	return IndividualPerformanceTx(ctx, tx)
 }
 
 // individualPerformance reads the switch for a door that holds no transaction.

@@ -1,0 +1,9 @@
+{
+  "verb": "remove_consumer_mail_domain",
+  "checks": [
+    "capture_settings.update"
+  ],
+  "takes": [
+    "consumer_mail_domain"
+  ]
+}

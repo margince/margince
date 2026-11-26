@@ -201,7 +201,6 @@ function AllowancesBody({
         )}
         <p className="t-caption">
           {t("agentAllowances.burst", {
-            calls: formatNumber(allowances.mcp_calls_per_minute, locale),
             streams: formatNumber(
               allowances.mcp_stream_opens_per_minute,
               locale,

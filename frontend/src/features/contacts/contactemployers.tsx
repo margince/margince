@@ -11,7 +11,11 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { stable } from "../../format/collate";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
-import { stillHeld, today } from "../../lib/employmentcurrency";
+import {
+  stillHeld,
+  today,
+  useEmploymentZone,
+} from "../../lib/employmentcurrency";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useAddEmployment } from "./addemploymentmodal";
 import { BoughtMark, boughtFields } from "./boughtmarks";
@@ -28,7 +32,11 @@ import {
   useEmployerProposal,
 } from "./employerproposal";
 import { EmploymentEdit } from "./employmentedit";
-import { ImportedEmploymentHistory } from "./employmentimport";
+import {
+  type EmploymentImport,
+  ImportedEmploymentHistory,
+  useEmploymentImport,
+} from "./employmentimport";
 import { useEmploymentPages } from "./employmentpages";
 import { patchEmployment } from "./employmentpatch";
 
@@ -57,20 +65,46 @@ export async function searchCompanyCandidates(
 // Refresh the record, paginated roles and brief together after any employment
 // edit so the saved value and employer summary agree. The companies list
 // counts each company's contacts, and a create and link adds a company to it.
+// The track reads as a career, so each employer sits where its latest role
+// ended. A role still held sorts above every ended one.
+function lastHeldByCompany(
+  roles: readonly Employment[],
+  zone: string,
+): Map<string, string> {
+  const lastHeld = new Map<string, string>();
+  for (const role of roles) {
+    const held = stillHeld(role, zone)
+      ? "\uffff"
+      : (role.ended_at ?? role.started_at ?? "");
+    const known = lastHeld.get(role.company_id);
+    if (known === undefined || known < held)
+      lastHeld.set(role.company_id, held);
+  }
+  return lastHeld;
+}
+
 export function useEmploymentActions(contactId: string) {
   const t = useT();
+  const zone = useEmploymentZone();
   const queryClient = useQueryClient();
+  // The keys are independent, so their refetches run side by side.
   const invalidate = async () => {
-    await queryClient.invalidateQueries({
-      queryKey: ["contact360", contactId],
-    });
-    await queryClient.invalidateQueries({
-      queryKey: ["contactEmployments", contactId],
-    });
-    await queryClient.invalidateQueries({
-      queryKey: ["contactBrief", contactId],
-    });
-    await queryClient.invalidateQueries({ queryKey: ["companies"] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["contact360", contactId] }),
+      queryClient.invalidateQueries({
+        queryKey: ["contactEmployments", contactId],
+      }),
+      queryClient.invalidateQueries({ queryKey: ["contactBrief", contactId] }),
+      queryClient.invalidateQueries({ queryKey: ["companies"] }),
+    ]);
+  };
+  // A job that ends or changes moves its company's contact count, which the
+  // row reads from the company's own record.
+  const invalidateWithCompany = async (companyId: string) => {
+    await Promise.all([
+      invalidate(),
+      queryClient.invalidateQueries({ queryKey: ["company", companyId] }),
+    ]);
   };
   const create = useMutation({
     mutationFn: async (body: CreateRelationshipRequest) => {
@@ -80,8 +114,9 @@ export function useEmploymentActions(contactId: string) {
   });
   const end = useMutation({
     mutationFn: (employment: Employment) =>
-      patchEmployment(employment, contactId, { ended_at: today() }, t),
-    onSuccess: invalidate,
+      patchEmployment(employment, contactId, { ended_at: today(zone) }, t),
+    onSuccess: (_saved, employment) =>
+      invalidateWithCompany(employment.company_id),
   });
   const update = useMutation({
     mutationFn: ({
@@ -91,7 +126,8 @@ export function useEmploymentActions(contactId: string) {
       employment: Employment;
       body: UpdateRelationshipRequest;
     }) => patchEmployment(employment, contactId, body, t),
-    onSuccess: invalidate,
+    onSuccess: (_saved, { employment }) =>
+      invalidateWithCompany(employment.company_id),
   });
   const remove = useMutation({
     mutationFn: async (relationshipId: string) => {
@@ -103,7 +139,7 @@ export function useEmploymentActions(contactId: string) {
     },
     onSuccess: invalidate,
   });
-  return { create, end, update, remove, invalidate };
+  return { create, end, update, remove, invalidate, invalidateWithCompany };
 }
 
 export type EmploymentActions = ReturnType<typeof useEmploymentActions>;
@@ -114,6 +150,16 @@ export function useCanEditEmployment(contact: Contact360["contact"]): boolean {
   return useCanWriteRecord("contact", contact) && !readOnlyReason;
 }
 
+// The panel's word while the bought episodes are unknown. A disabled read is
+// pending but idle forever; one paused offline is still in flight.
+function unreadImport(
+  reading: EmploymentImport["reading"],
+): "loading" | "failed" | undefined {
+  if (reading.isLoadingError) return "failed";
+  if (reading.isPending && reading.fetchStatus !== "idle") return "loading";
+  return undefined;
+}
+
 // A contact can hold more than one employment edge at once, so this is a
 // list rather than the single Details row it used to be. The current
 // employer leads and carries an explicit marker: `is_current_primary` is
@@ -122,6 +168,7 @@ export function useCanEditEmployment(contact: Contact360["contact"]): boolean {
 // know which company to email has already lost the point of the marker.
 export function Employers({ view }: Readonly<{ view: Contact360 }>) {
   const t = useT();
+  const employmentZone = useEmploymentZone();
   const contact = view.contact;
   const readOnlyReason = useContactReadOnlyReason(contact);
   const canEdit = useCanEditEmployment(contact);
@@ -148,7 +195,7 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
   const [editingOpen, setEditingOpen] = useState(false);
   const [removing, setRemoving] = useState<Employment | null>(null);
   const primaryCompany = allEmployments.find(
-    (e) => e.is_current_primary && stillHeld(e),
+    (e) => e.is_current_primary && stillHeld(e, employmentZone),
   )?.company_id;
   // A contact who still works somewhere and has no primary employer is a
   // DELIBERATE gap, not a missing value: a human cleared the flag, or their
@@ -159,16 +206,36 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
   // Not the empty state — the list is not empty — and not a warning, because
   // nothing is wrong. A prompt, and the hook the row's own edit offers.
   const noPrimaryEmployer =
-    primaryCompany === undefined && allEmployments.some(stillHeld);
+    primaryCompany === undefined &&
+    allEmployments.some((row) => stillHeld(row, employmentZone));
+  const lastHeld = lastHeldByCompany(allEmployments, employmentZone);
   const employments = [...allEmployments].sort(
     (a, b) =>
       Number(b.company_id === primaryCompany) -
         Number(a.company_id === primaryCompany) ||
+      stable(
+        lastHeld.get(b.company_id) ?? "",
+        lastHeld.get(a.company_id) ?? "",
+      ) ||
       stable(a.company_id, b.company_id) ||
+      // Within one company a role still held leads, dated or not: the first
+      // row's badge stands for the company.
+      Number(stillHeld(b, employmentZone)) -
+        Number(stillHeld(a, employmentZone)) ||
       stable(b.started_at ?? "", a.started_at ?? ""),
   );
   const adding = useAddEmployment(contact.id, actions.create, employments);
-  const proposed = proposedEmployer(view, employments);
+  const proposed = proposedEmployer(view, employments, employmentZone);
+  const withheld = withheldSections(view).employments;
+  const importView = {
+    ...view,
+    employments: { data: employments, page: { has_more: false } },
+  };
+  const imported = useEmploymentImport(importView, !withheld);
+  const importState =
+    !withheld && employments.length === 0
+      ? unreadImport(imported.reading)
+      : undefined;
   return (
     <Panel
       title={t("contact.rail.employmentTitle")}
@@ -199,11 +266,19 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
       <PanelBody>
         <ErrorLine error={proposal.verdict.error} />
         <SurfaceState
-          loadingLabel={t("contact.rail.employmentTitle")}
-          state={bodyState(
-            withheldSections(view).employments,
-            employments.length,
+          loadingLabel={t(
+            importState
+              ? "employment.importLoading"
+              : "contact.rail.employmentTitle",
           )}
+          state={
+            importState ??
+            bodyState(
+              withheld,
+              employments.length + imported.outstanding.length,
+            )
+          }
+          detail={{ onRetry: () => imported.reading.refetch() }}
           emptyLabel={t("contact.rail.noEmployment")}
         >
           {employments.map((employment, index) => (
@@ -232,7 +307,8 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
               // only the primary one: the title is contact-wide, and offered
               // on every live row it would be saved to each of them.
               fallbackRole={
-                stillHeld(employment) && employment.is_current_primary
+                stillHeld(employment, employmentZone) &&
+                employment.is_current_primary
                   ? (contact.title ?? undefined)
                   : undefined
               }
@@ -262,14 +338,12 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
             {t("employment.more")}
           </Button>
         )}
-        {!withheldSections(view).employments && (
+        {!withheld && !importState && (
           <ImportedEmploymentHistory
             key={contact.id}
-            view={{
-              ...view,
-              employments: { data: employments, page: { has_more: false } },
-            }}
+            view={importView}
             canEdit={canEdit}
+            imported={imported}
           />
         )}
         {/* The guard falls only before the first row is ever edited: `editing`
@@ -282,7 +356,9 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
             open={editingOpen}
             contactId={contact.id}
             onClose={() => setEditingOpen(false)}
-            onSaved={actions.invalidate}
+            onSaved={() =>
+              actions.invalidateWithCompany(editing.row.company_id)
+            }
           />
         )}
         {adding.modal}

@@ -20,10 +20,10 @@ import {
 } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
-  problemFieldErrorsOf,
+  problemFieldSentencesOf,
   problemMessageOf,
   unwrap,
 } from "../../lib/problem";
@@ -204,9 +204,8 @@ function useDrawerErrors(
   missing: ReadonlyMap<string, MessageKey>,
 ) {
   const t = useT();
-  const fieldErrors = new Map(
-    problemFieldErrorsOf(failure).map((p) => [p.field, p.message]),
-  );
+  const { locale } = useLocale();
+  const fieldErrors = new Map(problemFieldSentencesOf(failure, locale));
   for (const [field, key] of missing) {
     fieldErrors.set(field, t(key));
   }
@@ -352,11 +351,13 @@ export function WebFormDrawer({
             </Field>
           )}
         </div>
-        <OwnerField
-          ownerId={draft.ownerId}
-          error={fieldErrors.get("owner_id")}
-          onChange={(ownerId) => set({ ownerId })}
-        />
+        {!form?.handling_automation_id && (
+          <OwnerField
+            ownerId={draft.ownerId}
+            error={fieldErrors.get("owner_id")}
+            onChange={(ownerId) => set({ ownerId })}
+          />
+        )}
         <ProductField
           productId={draft.productId}
           error={fieldErrors.get("product_id")}

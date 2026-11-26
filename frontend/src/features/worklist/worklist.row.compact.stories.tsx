@@ -6,7 +6,7 @@ import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Panel } from "../../design-system/panel";
 import { waitingEmailRow } from "../../testing/brief.fixtures";
-import { jsonResponse, StoryProviders } from "../../testing/story-utils";
+import { emptyListAnswer, StoryProviders } from "../../testing/story-utils";
 import { WorklistRow } from "./worklist.row";
 import "./worklist.css";
 
@@ -26,9 +26,9 @@ import "./worklist.css";
 //   · the count at the end is as quiet as the fragments and louder than
 //     nothing, and it opens beside the line rather than pushing it down.
 //
-// Both themes. The fragments are `--textMeta` over the panel's translucent
-// ground and the count is a ghost control on the same ground — both are
-// `color-mix()` over canonical tokens and both re-resolve on the flip.
+// Both themes. The fragments are `--textMeta` over the panel's ground, and the
+// count is a ghost control on it. Both are `color-mix()` over canonical tokens
+// and re-resolve on the flip.
 
 type WorklistItem = components["schemas"]["WorklistItem"];
 
@@ -67,8 +67,8 @@ function dealRow(over: Partial<WorklistItem> = {}): WorklistItem {
 
 /** Nothing this row's frames press reaches a real API. */
 function stubRow() {
-  globalThis.fetch = (async (): Promise<Response> =>
-    jsonResponse({ data: [] })) as typeof fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> =>
+    emptyListAnswer(input)) as typeof fetch;
 }
 
 const meta: Meta<typeof WorklistRow> = {

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -25,14 +26,17 @@ const defaultLeadOrigin = "website"
 // Store owns web_form. vault is nil on an installation with no secret store:
 // browser forms still work, and every signed sender is refused at create.
 type Store struct {
-	db    *database.DB
-	vault keyvault.Vault
-	log   *slog.Logger
+	db       *database.DB
+	vault    keyvault.Vault
+	log      *slog.Logger
+	now      func() time.Time
+	fence    HandlingFence
+	settings InquirySettings
 }
 
 // NewStore wires the forms table over the workspace database.
 func NewStore(db *database.DB, log *slog.Logger) *Store {
-	return &Store{db: db, log: log}
+	return &Store{db: db, log: log, now: time.Now}
 }
 
 // WithVault binds the secret store signed senders keep their secret in.
@@ -111,10 +115,18 @@ func checkSettings(fieldMap map[string]string, consentRequired bool, wording, re
 	return checkSenderSecret(secret)
 }
 
-// CreateForm registers a form. It answers the signing secret it minted, if it
-// minted one; that is the only time the secret leaves the vault.
+// CreateForm registers a form. It answers the signing secret it minted, if any,
+// and never to an agent. That is the only time the secret leaves the vault.
 func (s *Store) CreateForm(ctx context.Context, in CreateInput) (Form, string, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionCreate); err != nil {
+		return Form{}, "", err
+	}
+	// Before normalize, so an agent hears 403 for what stays with its user, not a
+	// 422 about the same field.
+	if err := refuseAgentSecret(ctx, in.SenderSecret != nil); err != nil {
+		return Form{}, "", err
+	}
+	if err := refuseAgentPromiseChange(ctx, Form{}, in.promises()); err != nil {
 		return Form{}, "", err
 	}
 	if err := in.normalize(); err != nil {
@@ -161,7 +173,26 @@ func (s *Store) CreateForm(ctx context.Context, in CreateInput) (Form, string, e
 		s.dropSecret(ctx, ref, "web form create rolled back")
 		return Form{}, "", err
 	}
-	return out, minted, nil
+	return out, secretForCaller(ctx, minted), nil
+}
+
+// secretForCaller withholds a minted secret from an agent, whose answer would put
+// it in a model transcript. Its user sees a new one through RotateSecret instead.
+func secretForCaller(ctx context.Context, minted string) string {
+	if actingAgent(ctx) {
+		return ""
+	}
+	return minted
+}
+
+// promises is what a new form would promise a visitor and where it takes posts
+// from. An agent leaves that part of a form to its user.
+func (in CreateInput) promises() Form {
+	return Form{
+		AllowedOrigins: in.AllowedOrigins, ConsentRequired: in.ConsentRequired,
+		ConsentWording: in.ConsentWording, ConsentPolicyVersion: in.ConsentPolicyVersion,
+		PrivacyNotice: in.PrivacyNotice, PrivacyNoticeURL: in.PrivacyNoticeURL,
+	}
 }
 
 // checkReferences refuses a lead origin, owner or product the lead writer would
@@ -199,6 +230,7 @@ func auditImage(f Form) map[string]any {
 	return map[string]any{
 		"name": f.Name, "sender": f.Sender, "allowed_origins": f.AllowedOrigins,
 		colLeadOrigin: f.LeadOrigin, colOwnerID: f.OwnerID, colProductID: f.ProductID, "field_map": f.FieldMap,
+		colHandlingAutomationID: f.HandlingAutomationID, colHandlingCutoverAt: f.HandlingCutoverAt,
 		"consent_required": f.ConsentRequired, colConsentPolicyVersion: f.ConsentPolicyVersion,
 		colConsentWording: f.ConsentWording,
 		colPrivacyNotice:  f.PrivacyNotice, colPrivacyNoticeURL: f.PrivacyNoticeURL,

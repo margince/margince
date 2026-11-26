@@ -194,6 +194,30 @@ if reported; then
   fail "a digest-pinned container, the CI image's output, its lane input or a mapping was reported"
 fi
 
+# --- the operators' compose folder is read too --------------------------------
+
+plant_compose() {
+  plant "FROM scratch"
+  mkdir -p "$TMP/repo/scripts/deploy/compose"
+  printf 'services:\n  one:\n    image: %s\n' "$1" > "$TMP/repo/scripts/deploy/compose/compose.yaml"
+  ( cd "$TMP/repo" && git add -A )
+}
+
+plant_compose "redis:7.2"
+if ! reported; then
+  fail "a tag-only image in the release compose folder passed; operators pull it as written"
+fi
+
+plant_compose "ghcr.io/margince/api:RELEASE"
+if reported; then
+  fail "the release placeholder was reported; the packer replaces it with the pushed digest"
+fi
+
+plant_compose "ghcr.io/margince/api:latest"
+if ! reported; then
+  fail "a Margince image on a real tag passed; only the RELEASE placeholder is swapped at pack time"
+fi
+
 # --- and the gate must actually be reading this repository ------------------
 #
 # The cases above prove the rule; this proves the corpus. A gate whose file list

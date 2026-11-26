@@ -44,8 +44,13 @@ The headers let a server in the middle route without reading the body.
 
 The server compares each header with the body value the handler will act on, read the way the handler reads it. That
 matters because `encoding/json` matches struct members no matter the case. A map lookup does not. Both take the last of
-two members with the same name. Margince never sends `-32021 MissingRequiredClientCapability`: no tool here needs
-sampling, elicitation or roots.
+two members with the same name.
+
+Margince sends `-32021 MissingRequiredClientCapability` for one case only. A modern
+`tasks/get`, `tasks/update` or `tasks/cancel` whose `_meta` passes the modern checks but does not declare the
+`io.modelcontextprotocol/tasks` extension gets it. A `_meta` with no `clientCapabilities` object fails those checks
+first and gets `-32602`. `data.requiredCapabilities` names the extension to declare. No tool here needs sampling, elicitation
+or roots.
 
 **A warning for a gateway.** Before `/mcp`, `Mcp-Name` may come as Base64 sentinel text (`=?base64?…?=`). The protocol
 lets a client write *any* value that way, plain ASCII included. This server reads the value back before it compares.
@@ -69,8 +74,11 @@ menu. A caller sees a prompt only when it is offered every tool the prompt names
 `-32602`. In the modern framing `prompts/get` needs `Mcp-Name`, like `tools/call`.
 
 **What the server says about itself.** `serverInfo` carries a `title` and a `description`. When the public origin is
-set, it also carries `websiteUrl` and `icons`, both on that origin. The server instructions open with what Margince is
-and the tools to start with, before the rules.
+set, it also carries `websiteUrl` and `icons`, both on that origin. The server instructions open with what Margince is.
+
+**How the server names a tool.** Every text of the server names a tool bare, because it cannot know the prefix a
+client adds to the name. So the instructions say, before they name the tools to start with, that a client may list
+each tool under a prefix of its own. The rules come after.
 
 **Links and money in a result.** Each `evidence` entry for a deal, contact, company, lead or project carries a
 `web_url`. It opens the record in the app, on the public origin. Every `<name>_minor` beside a `currency`, or beside
@@ -84,9 +92,26 @@ signed with the deployment's `connector_state_key`. Two questions go this way. O
 more than one.
 
 The client then sends the same call again, with `inputResponses` and the same `requestState`. A state for some other
-caller, tool or set of arguments, or one older than ten minutes, gets the question again. The answer comes back
-through the client, so it only decides what the client could decide by itself. A change a human must approve still
-goes to the approval inbox. A client with no form support, or a server with no key, gets the answer it had before.
+caller, tool, set of arguments or question, or one older than ten minutes, gets the question again. So does a state
+sent a second time: Redis spends each one once, so one yes covers one retry. The answer comes back through the
+client, so it only decides what the client could decide by itself. A change a human must approve still goes to the
+approval inbox. A client with no form support, or a server with no key or Redis, gets the answer it had before.
+
+**Confirming in the conversation.** A tool marked `WaitsEvenForItsUser` waits for a human even when the agent acts
+as its user. Over MCP, when that user is in the conversation, the call does not stage. Its first answer is a refusal
+that says what would change and carries a `confirm_code`, in the text and under `_meta` `margince/confirm` with
+`next_steps`. After the user says yes, the agent sends the same call again with `confirm_code`. It runs once.
+
+The code is signed with the `connector_state_key`. It binds the caller's principal, passport and connection, the
+tool, the argument digest and the rows a staging would pin. A code for another caller or call, a used code, or one
+older than 15 minutes is refused, and the agent asks for a new preview. Redis makes each code single-use, and a failed
+run spends it too.
+
+Only a call the passport could release from the inbox itself is confirmed this way. That needs a connected client
+outside a scheduled run, and a change the user can undo. Any other such call still waits in the approval inbox.
+
+No form is needed, so every client can confirm this way. Without the key or Redis, and over REST, such a call stages
+into the approval inbox as before.
 
 `check_client` measures whether a client can answer such a form. It is off until a seat with `agent_client` update
 turns it on in Settings → MCP. Then `tools/list` names it only for a passport whose human is an admin, and any other
@@ -106,13 +131,23 @@ the same in either era. A missing or empty `uri` is `-32602`, and a read that fa
 later. That is also why the server reports `tools.listChanged: false`: the notice would go on a stream this transport
 does not open. The surface does change per caller, but this server cannot say so.
 
-**A tool result carries the answer twice.** Every registered tool declares an `outputSchema`. So a `tools/call` that
-works returns the JSON both in a `TextContent` block and as `structuredContent`. Both are the same bytes, not a second
-copy built again.
+**A tool result carries the answer twice.** A tool with an output schema returns the JSON of a `tools/call` that
+works both in a `TextContent` block and as `structuredContent`. Both are the same bytes, not a second copy built
+again. A router has no output schema, because its actions answer different shapes. A routed call is checked against
+the schema of the action it ran. Only a router bound to an app view has one, built from its actions' shapes.
 
-So a client that compares the two never finds a number changed or a key moved. Each tool lists the shape its handler
-writes. A result that misses its **declared schema** is kept out of `structuredContent`, and logged as a bug in this
-server.
+So a client that compares the two never finds a number changed or a key moved. A result that misses its schema is kept
+out of `structuredContent`, and logged as a bug in this server.
+
+`tools/list` names an `outputSchema` only where an app view reads the answer: the tool bound to a view, and a tool a
+view runs. Every other tool keeps its schema in the server, which checks each answer against it, and its answer
+still carries `structuredContent`. The protocol allows structured content without a listed schema. The rule is
+`listsOutputSchema` in `backend/internal/modules/agents/toollist.go`.
+
+Text every tool would repeat is in the server instructions. A tool's text names a tier only when the tool does not
+run at once. It names a scope only past the defaults: read for a tool that only reads, write for one that changes
+anything. An ask-first tool says "Ask the user first", and the instructions say what that asks for. No schema
+explains `idempotency_key`; the instructions say what it does.
 
 **No sessions, in either era.** `initialize` still answers a handshake-era client, and it makes no `Mcp-Session-Id`.
 If a client sends one, Margince does not use it or send it back, and `DELETE /mcp` answers `405`, since there is no
@@ -163,6 +198,11 @@ minute waits for the reset after that. The bucket number comes from the moment a
 changed mid-window would restart every count. The passports of one OAuth grant share their counters
 (`agentvolume.SubjectOf`), so a refresh, which mints a new passport, keeps the count. The per-minute limits of the
 transport stay in the build (`compose/mcpedge.go`).
+
+The limit on tool calls a minute is checked once the passport is known. It reads the roles of the human who granted
+the passport (`agentvolume.Policy.Paced`). A role in `identity.UnpacedRoles`, today `admin`, has no such limit. The
+limit on streams opened a minute and the limits on failed sign-ins hold for every caller. They are checked before the
+passport is known.
 
 **How a client gets a `client_id`.** There are three ways. A client that reads the priority order of the profile
 tries a client it was given first, then a metadata document, then dynamic registration:

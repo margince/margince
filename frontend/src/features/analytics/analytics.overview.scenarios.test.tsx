@@ -3,9 +3,10 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { stable } from "../../format/collate";
 import { forgetSeat } from "../../lib/storage";
 import { reportingFixtureFrames } from "../../testing/reporting.fixtures";
 import { backlogFindings } from "./analytics.overview.scenariodata";
@@ -98,8 +99,8 @@ const censusPairs = Object.entries(CENSUS).flatMap(([name, views]) =>
 
 describe("the Overview scenario map", () => {
   it("holds exactly the census scenarios, each on the views it names", () => {
-    expect(Object.keys(OVERVIEW_SCENARIOS).sort()).toEqual(
-      Object.keys(CENSUS).sort(),
+    expect(Object.keys(OVERVIEW_SCENARIOS).sort(stable)).toEqual(
+      Object.keys(CENSUS).sort(stable),
     );
     for (const [name, views] of Object.entries(CENSUS)) {
       const scenario = OVERVIEW_SCENARIOS[name as ScenarioName];
@@ -125,7 +126,9 @@ describe("the Overview scenario map", () => {
       scenarioStoryName(name, view),
     );
     const exported = Object.keys(stories).filter((key) => key !== "default");
-    expect(exported.sort()).toEqual([...expected, ...ALIASES].sort());
+    expect(exported.sort(stable)).toEqual(
+      [...expected, ...ALIASES].sort(stable),
+    );
   });
 
   it("puts at least 20 findings on at most 8 deals in the backlog", () => {
@@ -196,10 +199,12 @@ describe("the Overview scenario map", () => {
 });
 
 type Signature = () => Promise<unknown>;
+// Waits for the first match to be visible. A lazy card further down, such as
+// the closed history, can render its copy before the one on show.
 const shows =
   (text: string | RegExp): Signature =>
   async () =>
-    expect((await screen.findAllByText(text))[0]).toBeVisible();
+    waitFor(() => expect(screen.getAllByText(text)[0]).toBeVisible());
 const lacks =
   (text: string): Signature =>
   async () =>
@@ -223,10 +228,10 @@ const SIGNATURES: Readonly<
     team: shows(/Of the 0 rounds/),
   },
   noTarget: {
-    sales: shows("No sales target for this quarter"),
+    sales: shows("No sales goal for this quarter"),
     prospecting: shows(/^No monthly target set\./),
   },
-  wrongTargetScope: { sales: shows("Pick one team to compare with a target") },
+  wrongTargetScope: { sales: shows("Pick one team to compare with a goal") },
   notEnoughHistory: {
     sales: shows(/^History starts with the next capture, /),
     prospecting: async () => {
@@ -236,7 +241,10 @@ const SIGNATURES: Readonly<
   },
   limitedImportHistory: { sales: lacks("4 Oct"), team: shows("Members") },
   partialValuation: {
-    sales: shows(/1 open deal in NOK has no exchange rate to EUR\./),
+    sales: async () => {
+      await shows(/1 open deal in NOK has no exchange rate to EUR\./)();
+      expect(await screen.findByText("of €800,000 goal")).toBeVisible();
+    },
   },
   sourceUnavailable: {
     sales: async () => {
@@ -328,7 +336,7 @@ const SIGNATURES: Readonly<
       ).toBeNull();
     },
   },
-  targetReached: { sales: shows("Target reached") },
+  targetReached: { sales: shows("Goal reached") },
   landingBases: { sales: shows("Won + Likely deals") },
   legacyLanding: { sales: shows("Landing") },
   noForecast: { sales: shows("Unavailable") },

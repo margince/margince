@@ -8,14 +8,25 @@ import {
 } from "../features/settings/systemhealthnavigation";
 import type { MessageKey } from "../i18n/en";
 import { approvalHref } from "../lib/approvalhref";
-import { type EntityKind, isEntityKind, recordRoute } from "../lib/entity";
+import { auditHistoryHref } from "../lib/auditloglink";
+import {
+  type EntityKind,
+  isEntityKind,
+  isExtensionEntityKind,
+  recordRoute,
+} from "../lib/entity";
+import { extensionRecordHref } from "../lib/extensionentries";
 import { labelFor } from "../lib/labelfor";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
+import { signatureReviewHref } from "../lib/signaturereviewlink";
 
 type NoticeTarget = NonNullable<
   components["schemas"]["NotificationItem"]["target"]
 >;
+
+/** The views the installed units declared for their record kinds, by kind. */
+export type RecordKindViews = readonly { name: string; view?: string }[];
 
 /** Where a notice sends its reader, and the verb that names the trip. */
 export type NoticeAction = { href: string; label: MessageKey };
@@ -36,11 +47,18 @@ const OPEN_RECORD: Readonly<Record<EntityKind, MessageKey>> = {
  */
 export function noticeAction(
   target: NoticeTarget | undefined,
+  kindViews: RecordKindViews = [],
 ): NoticeAction | undefined {
   if (!target) return undefined;
   if (target.type === "approval") {
     return {
       href: approvalHref(target.id),
+      label: "notifications.action.review",
+    };
+  }
+  if (target.type === "approval_history") {
+    return {
+      href: auditHistoryHref("approval", target.id),
       label: "notifications.action.review",
     };
   }
@@ -67,13 +85,38 @@ export function noticeAction(
       label: "signatureTemplate.title",
     };
   }
+  if (target.type === "retained_email_signature") {
+    return {
+      href: signatureReviewHref(target.id),
+      label: "notifications.action.review",
+    };
+  }
   if (target.type === "email_signature") {
     return {
       href: routeHash(settingsHref("account")),
       label: "settings.signatureEdit",
     };
   }
+  if (isExtensionEntityKind(target.type)) {
+    const view = kindViews.find((kind) => kind.name === target.type)?.view;
+    return {
+      href: extensionRecordHref(target.type, target.id, view),
+      label: "notifications.action.openExtensionRecord",
+    };
+  }
   const route = recordRoute(target.type, target.id);
   if (!route || !isEntityKind(target.type)) return undefined;
   return { href: routeHash(route), label: labelFor(OPEN_RECORD, target.type) };
+}
+
+/**
+ * The move a notice about no record offers, by its kind: a colleague named on a
+ * booking link answers under Settings, Meetings.
+ */
+export function noticeKindAction(kind: string): NoticeAction | undefined {
+  if (kind !== "meeting_team_request") return undefined;
+  return {
+    href: routeHash(settingsHref("meetings")),
+    label: "scheduling.settings",
+  };
 }

@@ -7,6 +7,7 @@ import { LogActivityAction } from "../../components/logactivity.action";
 import { Button } from "../../design-system/atoms";
 import { VerbWord } from "../../design-system/iconaction";
 import { useT } from "../../i18n";
+import { useShortcut } from "../../lib/shortcuts";
 
 export type LogDrawer = "log" | "task" | null;
 
@@ -29,18 +30,25 @@ export function ProjectLogVerbs({
   onDrawer: (next: LogDrawer) => void;
 }>) {
   const t = useT();
+  const refusedId = refusedReasonId ?? activity.refusedId;
+  const logKeys = useShortcut(
+    "record.logActivity",
+    () => onDrawer("log"),
+    !activity.pending && !refusedId,
+  );
   return (
     <>
-      {!refusedReasonId && activity.refusedId && (
+      {!refusedReasonId && activity.refusalKey && (
         <p className="t-caption" id={activity.sentenceId}>
-          {t("record.logActivityRefused")}
+          {t(activity.refusalKey)}
         </p>
       )}
       <Button
         disabled={activity.pending}
-        reasonId={refusedReasonId ?? activity.refusedId}
+        reasonId={refusedId}
         title={t("log.title")}
         onClick={() => onDrawer("log")}
+        aria-keyshortcuts={logKeys}
       >
         <FileText aria-hidden="true" />
         <VerbWord word={t("record.verb.log")} label={t("log.title")} />

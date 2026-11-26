@@ -9,20 +9,21 @@ for the developer who changes or runs the code. So a product task goes in the ha
 
 These docs explain how to build and run Margince. It is a CRM with one company per installation, and
 the server refuses a second one. The backend is a Go API under `/v1`, and the React web app ships
-on its own. The docs follow the four kinds of [Diátaxis](https://diataxis.fr/). Tutorials help you learn, how-to
-guides do tasks, reference pages are to look things up, and explanation pages say why. The
+on its own. The docs follow the four kinds of [Diátaxis](https://diataxis.fr/), and the pages in
+`operations/` say how to install and run Margince. Tutorials help you learn, how-to guides do tasks,
+reference pages are to look things up, and explanation pages say why. The
 [principles](principles/README.md) answer many questions about the shape of this code before they
 start.
 
 **Do you design something a user can see?** [DESIGN.md](../DESIGN.md) holds the look of the app, and
 the research behind it. The plan to add it to the app, one pull request per step, is [how-to/adopt-the-design.md](how-to/adopt-the-design.md). It goes on in
 [how-to/adopt-the-design-records.md](how-to/adopt-the-design-records.md) for the record pages and
-[how-to/adopt-the-design-surfaces.md](how-to/adopt-the-design-surfaces.md) for the rest. The list of
-web app parts is in
+[how-to/adopt-the-design-surfaces.md](how-to/adopt-the-design-surfaces.md) for the rest. The list of web app parts is in
 [frontend/src/design-system/README.md](../frontend/src/design-system/README.md).
 
-**New to the backend?** Start with [tutorials/getting-started.md](tutorials/getting-started.md), then
-follow the [reading order](#reading-order-for-a-new-developer) below.
+**AI in Margince?** Start at [reference/which-ai-you-can-use.md](reference/which-ai-you-can-use.md): which AI to use, and its grade. How we test it: [explanation/ai-certification.md](explanation/ai-certification.md) and [explanation/how-we-test-your-ai-assistant.md](explanation/how-we-test-your-ai-assistant.md).
+
+**New to the backend?** Start with [tutorials/getting-started.md](tutorials/getting-started.md), then follow the [reading order](#reading-order-for-a-new-developer) below.
 
 ## Map
 
@@ -36,14 +37,10 @@ The one tree here for the user of Margince, not the developer. It has no code an
   that can answer a question, and to measure it, read
   [how-to/update-the-handbook.md](how-to/update-the-handbook.md).
 
-### Compliance: the German documents a customer signs
+### Compliance documents for mail capture
 
-An installation needs these documents before it may read the mail of its own team in Germany. The
-customer signs them, and Margince does not check them.
-[handbook/compliance.md](handbook/compliance.md) says why.
-
-- [compliance/README.md](compliance/README.md): the list, with each German document next to its
-  English copy. `extensions/de` ships them, and only the German text is the legal one.
+[The list of compliance documents](compliance/README.md) links to the built-in forms.
+[The handbook](handbook/compliance.md) shows where to find them in Settings.
 
 ### Attacks: what we must do as the maker
 
@@ -81,12 +78,14 @@ ready before we need it, because the first date comes 24 hours after we learn of
   Worklist before a repair. It changes nothing.
 - [how-to/rename-key-named-deals.md](how-to/rename-key-named-deals.md): rename imported deals whose name
   is the source key. Test with a dry run first.
+- [how-to/turn-off-core-features.md](how-to/turn-off-core-features.md): turn off core features in the file.
 - [how-to/operate-reporting.md](how-to/operate-reporting.md): run sales reports and their schedules.
 - [how-to/pre-register-a-forecast-evaluation.md](how-to/pre-register-a-forecast-evaluation.md): set the values
   a new forecast model is tested against, before it is scored.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md): add or change an API call.
 - [prove-a-tool-in-the-role-matrix.md](how-to/prove-a-tool-in-the-role-matrix.md): make a new MCP tool show
   ✓ or ✗ for every role.
+- [choose-how-a-tool-asks-first.md](how-to/choose-how-a-tool-asks-first.md): choose how an agent tool asks first.
 - [add-a-module.md](how-to/add-a-module.md): add a module, or link two modules.
 - [add-a-job.md](how-to/add-a-job.md): add a job.
 - [add-a-setting.md](how-to/add-a-setting.md): add, rename or remove a setting.
@@ -110,9 +109,13 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [improve-mcp-quality.md](how-to/improve-mcp-quality.md): find why a model fails an MCP test, and fix
   the right part.
 - [run-the-frontend.md](how-to/run-the-frontend.md): run the web app while you develop.
+- [set-up-windows-wsl-development.md](how-to/set-up-windows-wsl-development.md): work on the code
+  on Windows, in WSL.
 - [move-frontend-code.md](how-to/move-frontend-code.md): put a frontend file in the folder that owns it.
 - [connect-a-mailbox.md](how-to/connect-a-mailbox.md): set up the provider apps and settings that mailbox
   and calendar capture need.
+- [connect-a-shared-mailbox.md](how-to/connect-a-shared-mailbox.md): set up IMAP, Microsoft 365 or Google
+  Workspace for a mailbox one team reads, and connect it.
 - [measure-mail-import.md](how-to/measure-mail-import.md): measure a mail import.
 - [profile-mail-import.md](how-to/profile-mail-import.md): profile a mail import.
 - [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local model on Ollama or
@@ -123,18 +126,21 @@ ready before we need it, because the first date comes 24 hours after we learn of
   register, and find why one gets no answer.
 - [set-up-outbound-mail.md](how-to/set-up-outbound-mail.md): which mail goes out through which server.
 - [connect-telegram.md](how-to/connect-telegram.md): set up the Telegram bot, and read what each error means.
+- [connect-dispact.md](how-to/connect-dispact.md): connect the Dispact bot, and read what each error means.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md): import a CSV file of
   companies over MCP or REST.
 - [run-import-jobs.md](how-to/run-import-jobs.md): run the import worker, and read an import that
   has stopped.
 - [connect-a-cloud-model-provider.md](how-to/connect-a-cloud-model-provider.md): use your own key for a
-  cloud model provider.
+  cloud model provider, or [Azure OpenAI](how-to/connect-azure-openai.md).
 - [recover-after-a-provider-outage.md](how-to/recover-after-a-provider-outage.md): what to do after a
   model provider goes down.
 - [back-up-an-installation.md](how-to/back-up-an-installation.md): which data to copy, when, and who does
   which part.
 - [run-a-restore-drill.md](how-to/run-a-restore-drill.md): test that a copy of your data can be
   used, and record the time it takes.
+- [rebuild-queue-table-indexes.md](how-to/rebuild-queue-table-indexes.md): repair a small
+  database table that is slow after many changes.
 - [run-from-container-images.md](how-to/run-from-container-images.md): what each image holds, and
   which part starts first.
 - [watch-a-running-installation.md](how-to/watch-a-running-installation.md): what each program can
@@ -153,7 +159,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [design-a-bench-case.md](how-to/design-a-bench-case.md): add a screen to the daily-use speed test
   (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
-- [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
+- [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`. Also [customize-a-deployment.md](how-to/customize-a-deployment.md): choose the extensions to build, change core text, add an app and set settings. And [update-a-messaging-policy-pack.md](how-to/update-a-messaging-policy-pack.md): change the mail rules in `extensions/eu` or `extensions/apac`.
+- Extension text: [change core text](how-to/override-core-wording-from-an-extension.md). Extension use of core's AI models and files: [what it can use](reference/extension-capabilities.md), [why](explanation/extension-capability-grants.md). Extension apps: [why](explanation/extension-apps-in-the-drawer.md).
 - [install-extensions-as-go-modules.md](how-to/install-extensions-as-go-modules.md): turn
   extensions on from `instance/go.mod`, here or in a client's own repository.
 - [declare-a-service-member.md](how-to/declare-a-service-member.md): make the account that a timed job
@@ -186,16 +193,21 @@ ready before we need it, because the first date comes 24 hours after we learn of
   limit on it, and who it is for.
 - [agent-tools.md](reference/agent-tools.md): every agent tool, whether a human must approve it, and the pages
   that go with it.
+- [extension-record-kinds-links-signals-and-reports.md](reference/extension-record-kinds-links-signals-and-reports.md): the
+  what an extension can add to Margince: its own record kinds, links and reports.
+- [record-links.md](reference/record-links.md): typed links for deals, companies and contacts: types,
+  rights and routes.
+- [extension-privacy-and-retention.md](reference/extension-privacy-and-retention.md): how an extension's data
+  follows core's privacy and retention rules.
 - [mcp-protocol.md](reference/mcp-protocol.md): how `/mcp` works: message forms, limits and client sign-in.
 - [mcp-info.md](reference/mcp-info.md): each MCP tool's text as a client sees it. Generated.
 - [ai-prompts.md](reference/ai-prompts.md): every text this build sends to a model. Generated.
 - [agent-tool-budget.md](reference/agent-tool-budget.md): what the tool list of each agent costs a
   model. Generated.
-- [ai-certification.md](reference/ai-certification.md): which AI features each model passed. Generated.
+- [ai-certification.md](reference/ai-certification.md): the grade of each Margince AI feature on each model. Generated.
 - [mcp-parity.md](reference/mcp-parity.md): how much of the web app an agent can do through MCP. Generated.
 - [mcp-tool-roles.md](reference/mcp-tool-roles.md): which role can use which MCP tool, measured by a test. Generated.
-- [mcp-tool-coverage.md](reference/mcp-tool-coverage.md): which MCP tools the tests use, and how they
-  score. Generated.
+- [mcp-tool-coverage.md](reference/mcp-tool-coverage.md): the score of each AI tool a user can connect, per job. Generated.
 - [rbac-matrix.md](reference/rbac-matrix.md): what each role may do to each kind of record. Generated.
 - [performance-budgets.md](reference/performance-budgets.md): each speed limit and its last
   score. Generated.
@@ -218,13 +230,14 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [Watch an installation](operations/observability.md): how to watch work, check a problem and show that it is fixed.
 - [operator-endpoints.md](reference/operator-endpoints.md) and [job-surfaces.md](reference/job-surfaces.md):
   the checks and numbers the api and the worker serve.
+- [send-metrics.md](reference/send-metrics.md): the numbers the api counts for each email Send.
 - [worker-diagnostics.md](reference/worker-diagnostics.md): profile the worker, read one site, stop it.
 - [feature-settings.md](reference/feature-settings.md), [connectors-and-sign-in.md](reference/connectors-and-sign-in.md),
   [storage-secrets-and-license.md](reference/storage-secrets-and-license.md),
   [data-reset.md](reference/data-reset.md) and [model-binding.md](reference/model-binding.md): how each
   feature reads its settings.
 - [extension-doors-for-core-data.md](reference/extension-doors-for-core-data.md): what an extension can read
-  and write in core records, one row for each feature, and which are built.
+  and write in core records, and the page for each feature.
 - [rest-api.md](reference/rest-api.md): the rules every REST call follows, and where its OpenAPI document is.
 - [ai-provider-key-test.md](reference/ai-provider-key-test.md): what the Test button on the Models page
   checks.
@@ -237,15 +250,17 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [openrouter-routing-fields.md](reference/openrouter-routing-fields.md): each field of a `routing:`
   setting, the default we ship, and region pins.
 - [make-targets.md](reference/make-targets.md): every `make` command.
-- [system-requirements.md](reference/system-requirements.md): what an installation needs, on one
+- [system-requirements.md](operations/system-requirements.md): what an installation needs, on one
   machine or on many.
+- [install-from-binaries.md](operations/install-from-binaries.md): build the three
+  programs and start them on a host without images.
 - [ai-egress.md](reference/ai-egress.md): which AI tasks can send data out of the installation.
   Generated.
-- [ai-provider-outages.md](reference/ai-provider-outages.md): what each AI task does while its provider
-  is down. Generated.
+- [ai-provider-outages.md](reference/ai-provider-outages.md): what each AI task does while its provider is down. Generated.
 - [glossary.md](reference/glossary.md): what each technical name in the plain pages means.
-- [record-vocabulary.md](reference/record-vocabulary.md): one name for each kind of record, in the app
-  and in the code.
+- [record-vocabulary.md](reference/record-vocabulary.md): one name for each kind of record, in the app and in the code.
+- [administered-lists.md](reference/administered-lists.md): the two shapes of a list an admin changes, and when to use each.
+- [browser-support.md](reference/browser-support.md): the browsers the app supports, and when code may use a web feature.
 - [ui-copy-style.md](reference/ui-copy-style.md): how to write English text in the app.
 - [docs-prose-style.md](reference/docs-prose-style.md): how to write a doc page.
 - [ui-copy-style-de.md](reference/ui-copy-style-de.md): what German text in the app adds.
@@ -262,6 +277,7 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 ### Explanation: understand the why
 
 - [shared-record-language.md](explanation/shared-record-language.md): text on shared records.
+- [text-length-limits.md](explanation/text-length-limits.md): why text fields share length rules.
 
 #### The shape of the system
 
@@ -284,7 +300,7 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
   and links the modules.
 - [job-fleet.md](explanation/job-fleet.md): how a job is declared, run and failed.
 - [prompt-shape.md](explanation/prompt-shape.md): how a prompt is built.
-- [ai-certification.md](explanation/ai-certification.md): how an AI feature gets its grade.
+- [ai-certification.md](explanation/ai-certification.md): how we test Margince AI, and how a feature gets its grade.
 - [prompt-principles.md](explanation/prompt-principles.md): the rules a prompt keeps, and the checks
   before a merge.
 - [raw-capture-part-slimming.md](explanation/raw-capture-part-slimming.md): how a stored mail holds its
@@ -300,10 +316,12 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 - [channel-capture-parity.md](explanation/channel-capture-parity.md): whose messages a captured chat
   holds.
 - [outbound-messaging.md](explanation/outbound-messaging.md): how a message goes out.
+- [chat-channel-links.md](explanation/chat-channel-links.md): how a linked deal or project sends its changes to the team chat.
 - [outbound-webhooks.md](explanation/outbound-webhooks.md): how events reach a webhook.
 - [scheduling.md](explanation/scheduling.md): how the app finds a meeting time.
 - [privacy-and-consent.md](explanation/privacy-and-consent.md): whether a message may go, and the GDPR
   rules.
+- [messaging-policy-packs.md](explanation/messaging-policy-packs.md): where the mail rules of `extensions/eu`, `extensions/apac` and `extensions/us` are read.
 
 #### AI, search and workflows
 
@@ -343,6 +361,7 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 
 #### Extensions
 
+- [extensions-at-a-glance.md](explanation/extensions-at-a-glance.md): what an extension can add, in one table.
 - [extensibility.md](explanation/extensibility.md): how an extension adds to Margince, and the checks
   that keep it in line.
 

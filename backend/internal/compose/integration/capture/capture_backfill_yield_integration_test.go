@@ -190,7 +190,7 @@ func TestBackfillCountsOnlyTheCounterpartiesItsOwnPagesCreated(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 	rep := ids.From[ids.UserKind](e.Rep1)
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 3}, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, capture.ProviderMailbox("gmail"), rep, 6, connector.BackfillEstimate{Messages: 3}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -205,7 +205,7 @@ func TestBackfillCountsOnlyTheCounterpartiesItsOwnPagesCreated(t *testing.T) {
 		t.Fatalf("the single page must finish the run: done=%v retryAfter=%v err=%v", done, retryAfter, err)
 	}
 
-	status, err := registry.BackfillStatus(grantCtx, "gmail", rep)
+	status, err := registry.BackfillStatus(grantCtx, capture.ProviderMailbox("gmail"), rep)
 	if err != nil || status == nil {
 		t.Fatalf("BackfillStatus: %v (run=%v)", err, status)
 	}
@@ -259,14 +259,14 @@ func TestBackfillYieldsAreVisibleWhileThePageRuns(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 	rep := ids.From[ids.UserKind](e.Rep1)
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 2}, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, capture.ProviderMailbox("gmail"), rep, 6, connector.BackfillEstimate{Messages: 2}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
 
 	var midPageContacts, midPageCompanies int
 	prov.afterMessage = func() {
-		status, err := registry.BackfillStatus(grantCtx, "gmail", rep)
+		status, err := registry.BackfillStatus(grantCtx, capture.ProviderMailbox("gmail"), rep)
 		if err != nil || status == nil {
 			t.Fatalf("mid-page status read: %v (run=%v)", err, status)
 		}
@@ -287,7 +287,7 @@ func TestBackfillYieldsAreVisibleWhileThePageRuns(t *testing.T) {
 		t.Fatalf("mid-page company questions = %d, want 1 — the corporate domain, before the page committed", midPageCompanies)
 	}
 
-	status, err := registry.BackfillStatus(grantCtx, "gmail", rep)
+	status, err := registry.BackfillStatus(grantCtx, capture.ProviderMailbox("gmail"), rep)
 	if err != nil || status == nil {
 		t.Fatalf("BackfillStatus: %v (run=%v)", err, status)
 	}
@@ -366,7 +366,7 @@ func TestBackfillYieldsSurviveATransientFault(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 	rep := ids.From[ids.UserKind](e.Rep1)
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 2}, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, capture.ProviderMailbox("gmail"), rep, 6, connector.BackfillEstimate{Messages: 2}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -395,7 +395,7 @@ func TestBackfillYieldsSurviveATransientFault(t *testing.T) {
 	if _, _, _, err := registry.RunBackfillStep(wsCtx, run.ID); err != nil {
 		t.Fatalf("retry: %v", err)
 	}
-	status, err := registry.BackfillStatus(grantCtx, "gmail", rep)
+	status, err := registry.BackfillStatus(grantCtx, capture.ProviderMailbox("gmail"), rep)
 	if err != nil || status == nil {
 		t.Fatalf("BackfillStatus: %v (run=%v)", err, status)
 	}
@@ -433,7 +433,7 @@ func TestBackfillYieldsSurviveACancelUnderTheRunningPage(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 	rep := ids.From[ids.UserKind](e.Rep1)
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 2}, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, capture.ProviderMailbox("gmail"), rep, 6, connector.BackfillEstimate{Messages: 2}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -444,7 +444,7 @@ func TestBackfillYieldsSurviveACancelUnderTheRunningPage(t *testing.T) {
 			return
 		}
 		cancelled = true
-		if _, err := registry.CancelBackfill(grantCtx, "gmail", rep); err != nil {
+		if _, err := registry.CancelBackfill(grantCtx, capture.ProviderMailbox("gmail"), rep); err != nil {
 			t.Fatalf("CancelBackfill mid-page: %v", err)
 		}
 	}
@@ -493,7 +493,7 @@ func TestBackfillYieldsAreCreditedOnceAtTheRetryCeiling(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 	rep := ids.From[ids.UserKind](e.Rep1)
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 2}, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, capture.ProviderMailbox("gmail"), rep, 6, connector.BackfillEstimate{Messages: 2}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -565,7 +565,7 @@ func TestRetriedCreationCreditsCountOnce(t *testing.T) {
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 3}, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 3}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -666,7 +666,7 @@ func TestACompletedImportReconcilesItsCreationLedger(t *testing.T) {
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	started, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 10}, enqueueNothing)
+	started, err := registry.StartBackfill(grantCtx, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 10}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -777,7 +777,7 @@ func TestConcurrentCreationsAreAllCounted(t *testing.T) {
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1),
+	run, err := registry.StartBackfill(grantCtx, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1),
 		6, connector.BackfillEstimate{Messages: counterparties}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
@@ -829,7 +829,7 @@ func TestACountTheLedgerCannotSeeIsKept(t *testing.T) {
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	started, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 10}, enqueueNothing)
+	started, err := registry.StartBackfill(grantCtx, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 10}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}

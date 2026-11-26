@@ -29,6 +29,17 @@ export function problemExistingId(
   return code && typeof id === "string" && id !== "" ? { id, code } : null;
 }
 
+// problemRequestId is the server's X-Request-Id, which the API client copies
+// into the body of a failed answer (api/requestreference.ts). Null when the
+// answer had none, as a proxy's own failure has not.
+export function problemRequestId(problem: unknown): string | null {
+  return isRecord(problem) &&
+    typeof problem.request_id === "string" &&
+    problem.request_id !== ""
+    ? problem.request_id
+    : null;
+}
+
 // problemCode pulls the RFC-7807 `code` out of a problem body, or null when
 // absent. A caller keys on the server condition (e.g. webhooks_not_configured),
 // not the bare HTTP status, which a transient dependency failure can share.
@@ -45,6 +56,10 @@ export type FieldProblem = Readonly<{
   field: string;
   code: string;
   message: string;
+  // The limit a too_long refusal names. Absent from an older server.
+  max?: number;
+  // The values the code's sentence names, by name. Absent when it names none.
+  params?: Readonly<Record<string, string>>;
 }>;
 
 // The top-level code every 422 carries. httperr.Validation is the only
@@ -63,14 +78,30 @@ export function problemFieldErrors(problem: unknown): FieldProblem[] {
   const out: FieldProblem[] = [];
   for (const entry of errors) {
     if (!isRecord(entry)) continue;
-    const { field, code, message } = entry;
+    const { field, code, message, max } = entry;
     if (
       typeof field === "string" &&
       typeof code === "string" &&
       typeof message === "string"
     ) {
-      out.push({ field, code, message });
+      const params = stringParams(entry.params);
+      out.push({
+        field,
+        code,
+        message,
+        ...(typeof max === "number" && max > 0 ? { max } : null),
+        ...(params ? { params } : null),
+      });
     }
   }
   return out;
+}
+
+// Only the string values: a sentence puts each one in as it is.
+function stringParams(value: unknown): Readonly<Record<string, string>> | null {
+  if (!isRecord(value)) return null;
+  const entries = Object.entries(value).filter(
+    (pair): pair is [string, string] => typeof pair[1] === "string",
+  );
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
 }

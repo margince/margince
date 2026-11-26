@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/margince/margince/backend/internal/compose/corereach"
+	"github.com/margince/margince/backend/internal/compose/extensionprivacy"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -36,6 +38,9 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	if err := validateVerbSet(verbs); err != nil {
 		return err
 	}
+	if err := preflightExtensionKinds(exts); err != nil {
+		return err
+	}
 	if err := preflightEntryObjects(exts, verbs); err != nil {
 		return err
 	}
@@ -56,12 +61,20 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	if err != nil {
 		return err
 	}
+	if rbacObjects, rbacDefaults, err = withRecordKindRbac(exts, rbacObjects, rbacDefaults); err != nil {
+		return err
+	}
 	// Still the validate phase: joining a unit's Go job behavior to its
 	// contract-declared kinds can refuse the set (an undeclared job, a
 	// confirm-first tier, an outbound scope), and it must do so before a
 	// jurisdiction pack is applied.
 	composedSet, err := buildExtensionJobs(exts, jobDecls)
 	if err != nil {
+		return err
+	}
+	// The last fallible step, because it also installs. It seals the set the
+	// merge and the erasure refuse to run without.
+	if err := corereach.Install(exts); err != nil {
 		return err
 	}
 	for _, e := range exts {
@@ -83,6 +96,7 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 		}
 		compliancedocs.Register(e.Documents)
 	}
+	registerExtensionKinds(exts)
 	// After the jurisdiction packs, and still in the apply phase: the RBAC
 	// vocabulary is validate-then-apply inside RegisterRbacObjects itself (a set
 	// with one bad name registers none), so it cannot half-widen what a role
@@ -236,6 +250,9 @@ func validateExtensionSet(exts []extension.Extension) error {
 		}
 		if err := e.Description.Validate(); err != nil {
 			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+		}
+		if err := extensionprivacy.Preflight(e); err != nil {
+			return err
 		}
 		if err := preflightJurisdictions(e, packCodes); err != nil {
 			return err
@@ -448,16 +465,15 @@ func preflightSecrets(e extension.Extension) error {
 	return nil
 }
 
-// preflightFailureClasses validates one unit's declared failure vocabulary
-// through the same published ValidateFailureClasses the job layer runs at
-// registration, so a bad class is refused with the unit's name attached.
-//
-// It is preflighted HERE as well as at registration because the registration
-// is keyed by River kind, and a kind names a unit only to somebody who can
-// decode the namespace. The unit is what an operator has to go fix, and the
-// validate phase is the only place that still knows it.
+// preflightFailureClasses validates one unit's declared failure vocabulary and
+// mail hook reasons, so a bad entry is refused with the unit's name attached.
+// The job layer validates the classes again at registration, by kind, which
+// names a unit only to somebody who can decode the namespace.
 func preflightFailureClasses(e extension.Extension) error {
 	if err := extension.ValidateFailureClasses(e.FailureClasses); err != nil {
+		return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+	}
+	if err := e.MailHooks.Validate(); err != nil {
 		return fmt.Errorf("compose: extension %q: %w", e.Name, err)
 	}
 	return nil

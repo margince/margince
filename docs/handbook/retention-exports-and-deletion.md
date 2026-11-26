@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/privacy frontend/src/features/lists/filterexport.tsx frontend/src/features/import/import.result.tsx backend/internal/modules/privacy backend/internal/modules/consent backend/internal/modules/collections/exportsource.go backend/internal/compose/export.go -->
+<!-- describes: backend/internal/compose/erasuremanualreview.go backend/internal/compose/privacyreview frontend/src/features/privacy frontend/src/features/lists/filterexport.tsx frontend/src/features/import/import.result.tsx backend/internal/modules/privacy backend/internal/modules/consent backend/internal/modules/collections/exportsource.go backend/internal/compose/export.go -->
 # What is kept, what is destroyed
 
 What Margince keeps, for how long, what a delete destroys, and how you get data in and out. Read it before you promise anything to a customer or to someone who checks your records.
@@ -25,7 +25,7 @@ Margince has an export of the whole company: a ZIP with one CSV for each record 
 Also called: full export, data handover, migrate away, leave Margince.
 
 ### How do I import contacts from a spreadsheet?
-To import contacts, companies or prospects, save them as CSV files, or as a ZIP of CSV files, and open **Settings → Data import**.
+To import contacts, companies or leads, save them as CSV files, or as a ZIP of CSV files, and open **Settings → Data import**.
 1. Drop the file on **Upload your data**, or fill in the file from **Download template** first.
 2. On **Check your files**, check **Import as** for each file, then choose **Next: map {count} files**.
 3. In **Map columns**, pick a **Field** for each column on each tab, or **Do not import**.
@@ -36,7 +36,7 @@ Also called: upload a CSV, bulk import, Excel import, import a ZIP.
 
 ### How do I undo an import?
 To undo an import in Margince, open **Settings → Data import** and choose **Undo** beside it in **Recent imports**, or **Undo this import** on its result.
-Undo goes in reverse order: deals first, then prospects, then contacts, then companies. It archives the records that import created (a prospect is disqualified), unless someone edited them since. A deal edited after the import stays. Those are listed under "Left in place by the undo:".
+Undo goes in reverse order: activities first, then deals, leads, contacts and companies. It archives the records that import created (a lead is disqualified), unless someone edited them since. A deal edited after the import stays. Those are listed under "Left in place by the undo:" by name.
 
 Records the import only updated keep their new values. New tags stay, because they may be in use. If the undo stops part of the way, choose **Continue undo**. When done it says **Import undone**.
 
@@ -53,25 +53,42 @@ To erase a contact on request, an admin opens **Settings → Privacy and retenti
 2. Set **Due**, then choose **Open request**.
 3. Choose the request in the list to open it. Leave **Resolution** empty: the erasure records its own answer.
 4. Fill **How the identity was checked** and choose **Fulfill**.
-5. Type ERASE in **Type ERASE to confirm** and choose **Erase and suppress**.
+5. Type ERASE in **Type this word to confirm: ERASE** and choose **Erase and suppress**.
 This cannot be undone. A contact that the law says you must still keep is refused with **Blocked by legal hold**.
 Also called: right to be forgotten, Art. 17, delete my data, data subject request, DSR.
 
 The audit details and stored event copies of the records being erased lose their personal values too. The audit still keeps who acted, what happened and when.
+
+An erased contact can come back only on their own request. Margince keeps a coded copy of each erased address and does not store that address again. No admin can lift that block. It lifts only when the contact confirms a link that Margince mailed to that address. Margince then stores them again, with the consent from their request, and a new erasure blocks the address again. To send someone the page where they ask for that link, see [Someone whose data was erased wants to come back](meetings-and-booking.md#someone-whose-data-was-erased-wants-to-come-back).
 
 ### What still needs a human review after erasure?
 
 A **Manual privacy review needed** notification points to retained text that may name the contact.
 Descriptions, signatures, uploaded files and their search copies are kept for a human to review.
 Held notes and possible name matches are flagged too. Open the notice and decide what may be removed.
-An inactive member's signature needs help from whoever runs Margince; the notice names it.
+An inactive member's signature opens from the notice for a privacy controller to review.
+See [Review a retained signature](email-signatures.md#review-a-retained-signature-for-an-inactive-member).
 
 Matching full names and email addresses are removed from notes without contact or lead links.
-Other note text stays. If no active administrator or ops member can read the retained content,
-erasure stops and says how to restore review access and retry.
+Other note text stays. Reviewers need a full seat, rights to read and delete all contacts without hidden fields,
+and read access to the retained content. If no active Admin or Ops member qualifies, erasure stops
+and says how to restore review access and retry.
+
+Some older decided proposals had their text removed by an erasure but no longer say which contact
+they were about. Margince keeps their old history, because it cannot prove whose details it holds.
+After an upgrade, each such proposal gets one **Manual privacy review needed** notification.
+
+The link opens **Settings → Audit log** filtered to that proposal, so you can read its history and
+decide. Reviewers also need to read the audit log. A proposal about a record under legal hold gets
+no notification. If no one can review it, the update stops in **Settings → System health** until
+review access is restored.
+
+The same review access is needed to receive alerts about an opt-out receipt that could not be sent. If no one has it when a receipt is
+missed, the alert arrives within 15 minutes of access being restored. This works only when
+access is restored within 30 days of the missed receipt.
 
 ### How do I answer a data access request?
-To log a GDPR access request, an admin opens **Settings → Privacy and retention → Requests → Privacy** and chooses **New request**. Set **Kind** to **Access**, fill **Subject reference** and **Due**, and choose **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Bring the data together (or have the package made, see below) and send it. Then write the **Resolution**, fill **How the identity was checked** and choose **Fulfill**.
+To log a GDPR access request, an admin opens **Settings → Privacy and retention → Requests → Privacy** and chooses **New request**. Set **Kind** to **Access**, pick the **Contact** the request is about, and choose **Open request**. Margince works out the due date. Open the request and choose **Download data package** (see [Access requests](#access-requests)). Send the file to the contact who asked. Then write the **Resolution**, fill **How the identity was checked** and choose **Fulfill**.
 
 Open a closed request to read its proof, including its reference, identity check, answer date and how long the proof is kept.
 An erasure proof also counts changes to stored entries.
@@ -80,6 +97,15 @@ A request opened through a confirm link already has its identity check filled in
 
 Also called: subject access request, SAR, Art. 15, what do you hold about me.
 
+### How do I restrict the processing of a contact's data?
+A contact may ask you to restrict the processing of their data (GDPR Art. 18), for example while they dispute that a field is correct. Only an admin can restrict a contact. An agent cannot. Open **Settings → Privacy and retention → Requests → Privacy**, choose **New request**, set **Kind** to **Restriction** and pick the contact. Write the answer and choose **Fulfill**: that restricts the contact.
+
+While the contact is restricted, it shows "Processing is restricted". Margince keeps the contact and stores new mail, but sends them nothing except a privacy notice, a security warning or the confirmation of an opt-out. The AI does not read any mail they send or receive, and writes no brief or draft about them. Search still finds that mail by its words. Mail that arrives in that time is read once the contact is no longer restricted. No agent sees the contact or reads their mail, Margince asks no data provider about them, and no AI scores or enriches their record.
+
+To end it, an admin opens the contact's stops, chooses **Lift the restriction** and writes why. The law says the contact must be told first, so Margince sends them a notice. The contact stays restricted until that notice is sent, and the stop shows "The notice is waiting to be sent." If the notice does not go out, the contact stays restricted and the stop says why. Choose **Lift the restriction** again to send a new notice. Once the notice is sent, Margince reads the mail that arrived while the contact was restricted, as if it had just arrived.
+
+Also called: restrict processing, Art. 18, freeze a contact.
+
 ### How do I archive a record?
 To archive a contact or company, open it and choose **More actions → Archive**, then confirm "Archive this record? You can bring it back from its history." For a deal, choose **Archive deal**; for a project, **Archive project**. Leads are not archived: choose **Disqualify**. To see archived records on a list, choose **Show archived**.
 
@@ -87,7 +113,7 @@ Team lead, Management, Ops and Admin may archive a contact, company or deal. So 
 Also called: hide, remove, retire a record.
 
 ### How do I restore an archived record?
-An archived contact, company or deal comes back with **Undo** on the entry that archived it, in the record's **History**. Open it with **Show archived** on its list. You cannot bring back a project from the app. You can also take back a single field change with **Undo** in the record's **History**. Tags and pipelines have their own **Restore**; an archived team comes back with **Undo** on the "Team archived" notice.
+An archived contact, company or deal comes back with **Undo** on the entry that archived it, in the record's **History**. Open it with **Show archived** on its list. You cannot bring back a project from the app. You can also take back a single field change with **Undo** in the record's **History**. Tags, pipelines and teams have their own **Restore**; for a team, an Admin turns on **Show archived teams** first.
 Also called: unarchive, undelete, recover.
 
 ### How do I change how long Margince keeps data?
@@ -103,20 +129,30 @@ To record consent, or to mark a contact as do-not-contact for a purpose, open th
 
 Also called: opt-in, opt-out, do not contact, unsubscribe someone, marketing permission, GDPR consent.
 
+### How do I unblock a contact, or remove a stop recorded by mistake?
+To unblock a contact in Margince, open its **Research** tab and find **Stops** in **Communication permissions**. Choose **Correct this stop** if it was recorded by mistake, or **Take back this stop**. Give a reason under **Why (kept in the record history)**. Only the contact can lift a stop they set.
+Also called: unblock a contact, undo do-not-contact, lift an opt-out, contact blocked by mistake.
+
+### How do I take back a recorded request to be contacted?
+To take back or stop a recorded request to be contacted, open the contact's **Research** tab. In **Communication permissions**, choose **Take back this request**, and confirm **Take back this request?**.
+Also called: stop a contact request, withdraw a contact request, undo "asked to be contacted".
+
+### How do I send newsletters to existing customers without consent?
+<!-- opens: settings/privacy -->
+To let existing customers receive newsletters, open **Settings → Privacy and retention**, tab **Existing customers**, and choose **Declare a notice**. The newsletters must be for products like the ones they have. Say where and when the customers were told they can object. This follows German law. Customers of that entity in that period then get your newsletters with an opt-out link.
+Also called: newsletter to customers, opt-in for customers, existing customer exception.
+
 ## Archive is not delete
 
 Across the whole product, removing a record keeps it. An archived record leaves the live lists, but you can still open it.
 
 Some examples of the difference in the product's own words:
 
-- Archiving a project "removes this project from the active list and frees its
-  key." The project is then read-only: "This project is archived and takes no
-  changes."
-- Archiving a document set stops the set, and everything filed in it, from showing up in
-  search. Nothing is destroyed.
-- Merging two records destroys nothing either: "Merge {source} into {target}?
-  This archives {source}." Both values are kept in a merge; choosing a side decides
-  which record stays and which value is shown first.
+- Archiving a project "removes this project from the active list and frees its key." The project is then read-only: "This project is archived and takes no changes."
+- Archiving a document set stops the set, and everything filed in it, from showing up in search. Nothing is destroyed.
+- Merging two records destroys nothing either: the record merged away is archived, and
+  the one you keep takes over its history, tasks, tags and links. A merge cannot be undone.
+  Both values are kept; choosing a side decides which record stays and which value shows first.
 
 ## A new company starts with retention rules
 
@@ -131,13 +167,13 @@ A new company starts with these retention rules already in place. You can edit a
 | Stored message originals | 90 days | Erase |
 | Daily record of material deals at risk | 90 days | Erase |
 
-Margince does not destroy a record just because it is old. Each starting rule archives, which keeps the record so you can restore it. Or it erases only a second copy, or data made from your records. Those are the stored message originals, the AI call payloads and the daily deal-risk record.
+Margince does not destroy a record just because it is old. Each starting rule archives, which keeps the record so you can restore it. Why the archive keeps captured activity, and how an admin deletes what no longer serves that purpose, is in [The archive and its purpose](the-archive.md). Or it erases only a second copy, or data made from your records. Those are the stored message originals, the AI call payloads and the daily deal-risk record.
 
-**Won deals**, **Saved report editions**, **Call transcripts** and **Contacts with no consent and no deal** can also have a rule, but start with none. Margince does not say when your company should stop keeping a won deal; that is your choice. A rule that erases call transcripts or anonymizes contacts destroys data for good, so only an admin who wants one adds it. To destroy one contact's data, an admin fulfills an erasure request (see "How do I delete a contact permanently?").
+**Won deals**, **Saved report editions**, **Call transcripts** and **Contacts with no consent and no deal** can also have a rule, but start with none. So can **Records kept by extensions**. Margince does not say when your company should stop keeping a won deal; that is your choice. A rule that erases call transcripts or anonymizes contacts destroys data for good, so only an admin who wants one adds it. To destroy one contact's data, an admin fulfills an erasure request (see "How do I delete a contact permanently?").
 
 **Stored message originals** are the copies that capture keeps of every message it filed, apart from the timeline entry made from each one. On a large mailbox they take the most storage. An original is never destroyed while the law still says its mail must be kept. The timeline entry stays, so the same message cannot be captured again.
 
-If you delete every rule, the screen tells you what that means: "No retention policy yet. Nothing in this installation ages out." One fixed time limit still runs with no rule: traces of AI embedding calls end after 90 days (below).
+If you delete every rule, the screen tells you what that means: "No retention policy yet. Nothing in this installation ages out." Four fixed time limits still run with no rule (below).
 
 ### What each retention window counts from
 Most records have two clocks, and a rule acts only once both are past its window. One clock is the date the record carries. The other is how long the record has been in Margince. So a record you import is not removed on the day it arrives because it was old somewhere else.
@@ -149,6 +185,10 @@ Most records have two clocks, and a rule acts only once both are past its window
 | Deals | When the deal was closed | When it entered Margince |
 
 **Stored message originals** have one clock: when capture imported the message. **AI call payloads** count from the call, and the **daily deal-risk record** from the day it describes.
+
+**Records kept by extensions** have one clock too, the date the extension names for each kind of record that holds personal data. The rule does not touch the other kinds. Anonymize clears every column the extension marks as personal, which can be the whole text of a message. Erase deletes the record.
+
+The rule keeps a record while the law still says it must be kept. It also keeps a record the extension links to a contact, lead or company on legal hold. The same goes for a link to an activity that one of those holds. A record the extension has not linked yet, such as a message that has not arrived on a timeline, can still be anonymized or erased. An extension can also delete its own records sooner, on its own clock, and that does not wait for the law or a legal hold.
 
 ### The three retention actions
 
@@ -164,7 +204,10 @@ messages the requester may share. It excludes other recipients' addresses and
 private folder names.
 
 ### What anonymize and erase do
-**Anonymizing a lead** puts "Anonymized Lead" in place of the name, clears the email, title and company, and deletes the lead's score history.
+**Anonymizing a lead** puts "Anonymized Lead" in place of the name, clears the email, title and company, and deletes the lead's score history. Queued opt-out receipts are stopped and lose the name and address.
+Already-sent receipts keep their recipient, subject and message as correspondence under the separate
+correspondence-retention rules and any legal hold. This does not erase sent correspondence.
+An erase request follows the erasure rules described above.
 
 **Anonymizing a contact** clears the names, title and address, sets the name to "Erased Subject", and clears every custom field. It deletes their email addresses, phone numbers, and their names on other sites and services. No block entry is written: the law allows the contact to come back.
 
@@ -185,15 +228,16 @@ Not every mix is allowed: there is no way to archive an AI call payload, or to a
 - archive a deal;
 - archive or anonymize a lead;
 - erase an AI call payload, a stored message original, a daily record of
-  material deals at risk, or a saved report edition.
+  material deals at risk, or a saved report edition;
+- anonymize or erase a record kept by an extension.
 
 A rule can hold a **Lawful basis** if you like (the Article 6 reason for the time limit). It is recorded for whoever checks the rule later. The rules a new company starts with all say "storage limitation".
 
 Enabled rules act each time the retention pass runs, as the panel says: "Enabled policies act on the data retention schedule." The pass runs once a day by default. An Admin or Ops user can change that from hourly to weekly: in **Settings → System health**, open **All schedules** and set **Data retention**, in seconds. A rule shows a badge only when it is not acting: "Disabled" or "Paused by retain-only mode". Each pass works on up to 200 records for each rule, so years of old records take many passes to clear.
 
-### One window nobody can change
+### Windows nobody can change
 
-Traces of AI embedding calls are kept for **90 days**, fixed. This runs with or without a rule, and no admin can edit it.
+These four run with or without a rule, and no admin can edit them. Traces of AI embedding calls are kept for **90 days**, and traces of every other AI call for **400 days**. Error and skip entries of the system log are kept for **90 days**. Its sign-in, password reset and mailbox credential entries are kept for **400 days**, and every other entry of it is kept. Traces of AI answers that still have their stored content are kept past their window. Retain-only mode keeps all these system log entries, and it still removes old traces that have no stored content.
 
 ### Turning a retention policy off, versus deleting it
 
@@ -223,7 +267,7 @@ Only an **Admin** or **Ops** user can change retention. Everyone else cannot eve
 
 The list of privacy requests, **Settings → Privacy and retention → Requests → Privacy**, holds "Data subject requests with their statutory deadlines." Only admins can open it by default, because the list names whoever asked. An admin can give that access to someone else by itself, without letting them manage members.
 
-A request has a kind (**Access**, **Correction** or **Erasure**), a subject, an assignee, a due date, and a resolution. Choose its subject in the list to open it. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." Fulfilling an erasure is the exception: it records its own answer. To give a request back, set **Assignee** to **Unassigned**.
+A request has a kind (**Access**, **Correction**, **Erasure** or **Restriction**), a subject, an assignee, a due date, and a resolution. Choose its subject in the list to open it. It moves through **In progress** and is closed by **Fulfill** or **Reject**. To close one you must write the answer: "Closing a request needs its answer." Fulfilling an erasure is the exception: it records its own answer. To give a request back, set **Assignee** to **Unassigned**.
 
 To close a request you also fill **How the identity was checked**. If it could not be checked, the request can only be rejected. Fill **Requester’s email address** when the request came from an address that the subject reference does not name.
 
@@ -245,18 +289,26 @@ If someone disputes the answer, open the closed request and choose **Record a co
 
 ### Access requests
 
-The screen says:
+An access request **names a contact**, picked the same way as for an erasure. The form says: "Pick the contact this request is about. You can then download everything held about them from the request."
 
-> An access request is fulfilled manually: record what you sent in the
-> resolution. This system does not assemble or export the data for you.
-
-There is no "download everything about this contact" button in the app, but Margince can put together the Art. 15 package. It holds the contact's record, their mail, their consent history, and the facts that show why the contact is in Margince at all. Ask whoever runs your Margince to download it for you.
+Open the request and choose **Download data package**. The file is the Art. 15 package. It holds the contact's record, their mail, their consent history, and the facts that show why the contact is in Margince at all. It also holds what a colleague or the AI read out of the contact's messages, such as a promise to send an order. Each reading is marked as derived and sits next to the words it was read from. The package does not name the colleague who wrote it.
 
 - **Only a human user can have it made**, never an agent. By default that
-  is an admin. A custom role can also be given the permission for privacy requests. The user who holds it also needs to delete contacts and to see every record in the company.
+  is an admin. A custom role can also be given the permission for privacy requests. The user who holds it also needs to delete contacts and to see every record in the company. Anyone else who chooses the button sees why it was refused, and no file is saved.
 - **It answers access requests only**, never erasure or rectify requests.
 - **It does not close the request.** Mark it fulfilled yourself once you have
   really sent it, and record what you sent in the resolution.
+- **Every download goes into the audit log**, on the contact.
+
+An access request logged earlier with a free-text subject names no contact, so it has no button. Open a new request with the contact picked.
+
+The button stays when the contact was archived after the request was opened. If Margince cannot export the contact, the button shows the reason instead of saving a file.
+
+### Possible duplicates on a request
+
+Someone can sit in Margince as two contacts, for example one with a work address and one with a private address. When the request's contact is in an open duplicate case, the request says: "Other records may be the same person. Check them before you answer." Beside it is the **Possible duplicates** button with a count. It opens the same review the Worklist and the contact page open, with the reason each pair was matched.
+
+This message changes nothing by itself. It merges nothing and adds nothing to the package. If both records are one contact, merge them in the review. The request keeps naming the contact it was opened for. Its package then holds the contact that was kept, and every record merged into it. The count holds only contacts you can see.
 
 ### Erasure requests
 
@@ -315,7 +367,7 @@ You can only add to the list: "A purpose cannot be renamed or removed once creat
 
 Your team cannot record a purpose that needs **double opt-in** at all. Only the contact can confirm one, by opening a link that works once, mailed to their own recorded address. Use **Ask them to confirm their details**. If a colleague could confirm it for the contact, it would not prove the contact agreed.
 
-The default is **deny**. A purpose with no record for a contact is not consent.
+The default is **deny**. A purpose with no record for a contact is not consent. Each mail you send names a purpose, and the kind of purpose decides if it needs consent: correspondence does not, marketing does. Margince checks the kind a mail claims against the record, yet some mail can still go out under the wrong purpose. To find it later, open **Consent purposes**, which counts the mail sent under each purpose in the last 30 days. It also counts the mail whose claimed kind the record did not support.
 
 Every consent change is written to a **Proof log**. It records who made the change and how: a Human, an Agent, the System, or a Connector. Where Margince has no record of it, it says "actor not recorded" and "source not recorded". You may one day have to prove consent, so Margince keeps the proof, not only the current state.
 
@@ -325,9 +377,9 @@ An agent can record consent for its user, and it asks them first. It cannot reco
 
 The audit trail, **Settings → Audit log**, records "Every action, attributed to a user, agent or connector."
 
-You can filter it by **Actor**, **Entity type**, **Entity ID**, **Action**, and a date range (**From**, **To**). Choose **Show change detail** on any entry to see the change and the **Authorization rule** that allowed it. Where something was done for someone else, the entry says so.
+You can filter it by **Actor**, **Entity type**, **Entity ID**, **Action**, and a date range (**From**, **To**). Pick a member in **Actor** to see what they did, and what an AI assistant did for them. **Entity ID** takes a record's full ID: use **Copy record ID** on an entry. The address keeps your filters, so you can share the link. Choose **Show change detail** on any entry to see the change and the **Authorization rule** that allowed it. Where something was done for someone else, the entry says so.
 
-Only an admin can read the full trail: "Your role cannot read the full audit log. It records every actor and every record they accessed."
+Only an admin can read the full trail: "Your role cannot read the full audit log. It records every actor and every record they accessed." Margince keeps the trail for good: no retention rule removes an entry because it is old.
 
 It is also where a record's full ID is shown, which you need to pin a record under the retention floor by hand.
 

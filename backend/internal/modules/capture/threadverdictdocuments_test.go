@@ -17,7 +17,9 @@ func TestWhichFilesAThreadVerdictMustRead(t *testing.T) {
 		{"payroll.csv", "text/plain; charset=utf-8", true},
 		{"notes", "text/plain", true},
 		{"invite.ics", "text/plain", false},
-		{"logo.png", "image/png", false},
+		{"logo.png", "image/png", true},
+		{"scan.bin", "image/jpeg; charset=binary", true},
+		{"image.JPG", "application/octet-stream", true},
 		{"passport.png", "image/png", true},
 		{"test_result.jpg", "image/jpeg", true},
 		{"smime.p7s", "application/octet-stream", false},
@@ -30,11 +32,11 @@ func TestWhichFilesAThreadVerdictMustRead(t *testing.T) {
 
 func TestAMessageWithMoreDocumentsThanTheCapCountsTheRest(t *testing.T) {
 	var files []ThreadDocument
-	for _, name := range []string{"a.pdf", "logo.png", "b.pdf", "c.pdf", "d.pdf"} {
+	for _, name := range []string{"a.pdf", "invite.ics", "b.pdf", "c.pdf", "d.pdf"} {
 		files = append(files, ThreadDocument{Filename: name})
 	}
 	kept, omitted := threadDocuments(files)
 	if len(kept) != MaxThreadDocuments || omitted != 1 {
-		t.Errorf("kept %d omitted %d, want %d and 1: the logo is no document", len(kept), omitted, MaxThreadDocuments)
+		t.Errorf("kept %d omitted %d, want %d and 1: the invitation is no document", len(kept), omitted, MaxThreadDocuments)
 	}
 }

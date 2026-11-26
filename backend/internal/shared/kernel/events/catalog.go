@@ -24,14 +24,22 @@ var catalog = map[string]struct {
 	stream  string
 	version int
 }{
-	"internal_mail_history.created": {captureStreamEntity, 1},
-	"capture_settings.updated":      {captureStreamEntity, 1},
-	"contact.created":               {contactStreamEntity, 1},
-	"contact.updated":               {contactStreamEntity, 1},
-	"contact.archived":              {contactStreamEntity, 1},
-	"contact.merged":                {contactStreamEntity, 1},
-	"contact.restored":              {contactStreamEntity, 1},
-	"consent.changed":               {contactStreamEntity, 1},
+	"sdr_handoff.created":               {leadStreamEntity, 1},
+	"sdr_handoff.updated":               {leadStreamEntity, 1},
+	"record_assignment.created":         {identityStreamEntity, 1},
+	"record_assignment.updated":         {identityStreamEntity, 1},
+	"record_assignment.archived":        {identityStreamEntity, 1},
+	"communication_instruction.updated": {activityStreamEntity, 1},
+	"scheduled_send.updated":            {activityStreamEntity, 1},
+	"internal_mail_history.created":     {captureStreamEntity, 1},
+	"capture_settings.updated":          {captureStreamEntity, 1},
+	"shared_mailbox.changed":            {captureStreamEntity, 1},
+	"contact.created":                   {contactStreamEntity, 1},
+	"contact.updated":                   {contactStreamEntity, 1},
+	"contact.archived":                  {contactStreamEntity, 1},
+	"contact.merged":                    {contactStreamEntity, 1},
+	"contact.restored":                  {contactStreamEntity, 1},
+	"consent.changed":                   {contactStreamEntity, 1},
 	// Somebody recorded that we may not write to a subject. Its own type rather
 	// than a consent.changed, because a suppression is not the absence of
 	// consent: it outranks a grant and a later re-grant does not erase it, so a
@@ -196,6 +204,9 @@ var catalog = map[string]struct {
 	"list.member_added":   {contactStreamEntity, 1},
 	"list.member_removed": {contactStreamEntity, 1},
 	"list.evaluated":      {contactStreamEntity, 1},
+	// A typed link was made or removed. Its subject is the record it starts on,
+	// a deal, company or contact. It rides the contact stream as list events do.
+	"record_link.changed": {contactStreamEntity, 1},
 
 	"reporting.changed":    {identityStreamEntity, 1},
 	"booking_page.updated": {identityStreamEntity, 1},
@@ -222,6 +233,7 @@ var catalog = map[string]struct {
 	"attachment.created":  {activityStreamEntity, 1},
 	"attachment.updated":  {activityStreamEntity, 1},
 	"attachment.archived": {activityStreamEntity, 1},
+	"attachment.restored": {activityStreamEntity, 1},
 	// Somebody decided what to do about a waiting message and the Worklist
 	// stopped offering it. `disposition_recorded` rather than `disposition_set`
 	// because the catalog's verbs are past tense, and a compound one puts the
@@ -236,6 +248,13 @@ var catalog = map[string]struct {
 	// disposition_recorded's enum is closed at v1, and a new value would break
 	// subscribers that validate it.
 	"activity.marked_handled": {activityStreamEntity, 1},
+	// One reader answered a calendar invitation that came by email. Its own
+	// type because the answer went to the organizer, not into the message.
+	"activity.invitation_answered": {activityStreamEntity, 1},
+	// An extension proposed a record a message may belong to, or a reader decided
+	// one. Its own type because activity.updated carries a closed set of changed
+	// fields, and a proposal changes none of the message.
+	"activity.link_suggestion_changed": {activityStreamEntity, 1},
 	// One attendee said they are ready for a meeting, or took it back. Its
 	// own type because it is one attendee's state, not a change to the meeting.
 	"activity.readiness_recorded": {activityStreamEntity, 1},
@@ -362,8 +381,8 @@ var catalog = map[string]struct {
 	"deal_suggestion.dismissed":  {dealStreamEntity, 1},
 	"deal_suggestion.superseded": {dealStreamEntity, 1},
 
-	// A deal's legal review: asked for, answered, taken back. Internal only,
-	// and entity-less for the reason api/internal-events.yaml gives.
+	// A deal's legal review: asked for, answered, taken back. Public, and the
+	// payload names the deal and the review only, never the note or comments.
 	"legal_review.requested": {dealStreamEntity, 1},
 	"legal_review.decided":   {dealStreamEntity, 1},
 	"legal_review.withdrawn": {dealStreamEntity, 1},

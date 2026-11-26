@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
+import { emailFault } from "../lib/emailshape";
 import { Textarea, TextInput } from "./atoms";
 import { DateInput, isoOrBlank } from "./dateinput";
 import { EditableValue } from "./editablevalue";
@@ -9,48 +10,56 @@ import {
   useFieldEditor,
 } from "./fieldeditdialog";
 import "./inlinechoice.css";
+import { ReadOnlyValue } from "./readonlyvalue";
 
 // The field for a reader who cannot edit it. `placeholder` is written for
-// someone about to press it ("Add legal name"), so it never stands in here:
-// a suggested value does, muted, and failing that `field.unset`.
+// someone about to press it ("Add legal name"), so it never stands in here.
+// A suggested value does, muted, then `emptyText`, and failing that `field.unset`.
 function ReadOnlyText({
   value,
   display,
   suggested,
+  emptyText,
   readOnlyReason,
 }: Readonly<{
   value: string;
   display?: string;
   suggested?: string;
+  emptyText?: string;
   readOnlyReason?: string;
 }>) {
   const t = useT();
   return (
-    <span
+    <ReadOnlyValue
       className={
         !value && suggested ? "inlinetext inlinetext-suggested" : "inlinetext"
       }
-      title={readOnlyReason}
+      reason={readOnlyReason}
     >
-      {(value && display) || value || suggested || t("field.unset")}
-    </span>
+      {(value && display) ||
+        value ||
+        suggested ||
+        emptyText ||
+        t("field.unset")}
+    </ReadOnlyValue>
   );
 }
 
-type TextKind = "text" | "email" | "number" | "date";
+// "number" is a whole number; "decimal" may carry a decimal sign, which the
+// reader chooses rather than the browser. Both are typed as text.
+type TextKind = "text" | "email" | "number" | "date" | "decimal";
 
-function InlineTextControl({
+/** The one control a text field's edit dialog holds. */
+export function InlineTextControl({
   field,
   multiline,
   type,
-  step,
   maxLength,
   suggested,
 }: Readonly<{
   field: FieldEditControl;
   multiline?: boolean;
   type?: TextKind;
-  step?: string;
   maxLength?: number;
   suggested?: string;
 }>) {
@@ -79,11 +88,16 @@ function InlineTextControl({
       />
     );
   }
+  // A number is typed as text, because the edit form sets noValidate. A number
+  // box hands over "" for text it cannot read, which would save as no value.
+  const numeric = type === "decimal" || type === "number";
   return (
     <TextInput
       {...control}
-      type={type}
-      step={step}
+      type={numeric ? "text" : type}
+      inputMode={
+        type === "number" ? "numeric" : numeric ? "decimal" : undefined
+      }
       value={draft}
       maxLength={maxLength}
       placeholder={suggested}
@@ -104,10 +118,10 @@ export function InlineText({
   link,
   placeholder,
   suggested,
+  emptyText,
   maxLength,
   multiline,
   type,
-  step,
   frame,
   onEditingChange,
   onDirtyChange,
@@ -127,9 +141,11 @@ export function InlineText({
   // A value the record carries elsewhere (a contact's title at their employer),
   // shown muted until one is written here, since "Unset" would deny it.
   suggested?: string;
+  // Why the field is empty, for a reader who cannot fill it ("Not on their
+  // website"). Absent, an empty field reads "Unset".
+  emptyText?: string;
   maxLength?: number;
   type?: TextKind;
-  step?: string;
   // Holds the resting value in the element its text belongs to, such as a
   // record's h1.
   frame?: (resting: ReactNode) => ReactNode;
@@ -146,6 +162,7 @@ export function InlineText({
   onSave: (next: string) => Promise<void>;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const { open, editing } = useFieldEditor(canEdit, onEditingChange);
   const held = frame ?? ((resting: ReactNode) => resting);
   const linked = Boolean(link);
@@ -173,6 +190,7 @@ export function InlineText({
             value={value}
             display={display}
             suggested={suggested}
+            emptyText={emptyText}
             readOnlyReason={readOnlyReason}
           />
         ),
@@ -182,6 +200,11 @@ export function InlineText({
         label={label}
         value={value}
         settle={multiline ? undefined : asLine}
+        check={
+          type === "email"
+            ? (next) => emailFault(next, locale, label)
+            : undefined
+        }
         onClose={() => editing(false)}
         onSave={onSave}
         onDirtyChange={onDirtyChange}
@@ -191,7 +214,6 @@ export function InlineText({
             field={field}
             multiline={multiline}
             type={type}
-            step={step}
             maxLength={maxLength}
             suggested={suggested}
           />

@@ -55,7 +55,7 @@ func TestAnAutomaticRowIsNoInteraction(t *testing.T) {
 func TestTheCountingRuleAsksWhoWroteTheRow(t *testing.T) {
 	t.Parallel()
 	rule := InteractionCountsSQL("a", "now()")
-	for _, clause := range []string{"NOT a.sender_is_machine", "a.calendar_method IS NULL", "NOT a.bulk_mail_attested", OriginIsEngagementSQL("a")} {
+	for _, clause := range []string{"NOT a.sender_is_machine", "a.calendar_method IS NULL", "NOT " + BulkMailSQL("a"), OriginIsEngagementSQL("a")} {
 		if !strings.Contains(rule, clause) {
 			t.Errorf("InteractionCountsSQL = %q lacks %q", rule, clause)
 		}
@@ -64,5 +64,23 @@ func TestTheCountingRuleAsksWhoWroteTheRow(t *testing.T) {
 		if !strings.Contains(OriginIsEngagementSQL("a"), "'"+origin+"'") {
 			t.Errorf("OriginIsEngagementSQL does not exclude %q", origin)
 		}
+	}
+}
+
+// The exchange readers and the last-activity clocks refuse a newsletter through
+// one text, so a change to what makes mail bulk reaches both.
+func TestTheClockAndTheExchangeRefuseANewsletterAlike(t *testing.T) {
+	t.Parallel()
+	refusal := "NOT " + BulkMailSQL("a")
+	for name, rule := range map[string]string{
+		"WrittenByHumanSQL":     WrittenByHumanSQL("a"),
+		"LastActivityCountsSQL": LastActivityCountsSQL("a", "now()"),
+	} {
+		if !strings.Contains(rule, refusal) {
+			t.Errorf("%s = %q does not carry %q", name, rule, refusal)
+		}
+	}
+	if strings.Count(WrittenByHumanSQL("a"), "bulk_mail_attested") != 1 {
+		t.Errorf("WrittenByHumanSQL spells the bulk column outside BulkMailSQL: %q", WrittenByHumanSQL("a"))
 	}
 }

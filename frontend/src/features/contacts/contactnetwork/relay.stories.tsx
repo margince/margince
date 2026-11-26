@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Panel, PanelBody } from "../../../design-system/panel";
 import {
   installFetchStub,
   meRoute,
   StoryProviders,
 } from "../../../testing/story-utils";
 import type { IntroRequest } from "../introrequests";
-import { RelayPanel } from "./relay";
+import { RelaySteps } from "./relay";
 import "../contactnetwork.css";
 
 // Where an introduction has got to, and who owes the next move.
@@ -53,9 +54,9 @@ function ask(over: Partial<IntroRequest> = {}): IntroRequest {
   };
 }
 
-const meta: Meta<typeof RelayPanel> = {
+const meta: Meta<typeof RelaySteps> = {
   title: "Records/Contact 360/Network/Introduction relay",
-  component: RelayPanel,
+  component: RelaySteps,
   beforeEach: () => {
     // The owner line asks the session who the reader is, for the ask whose
     // requester the payload leaves unnamed.
@@ -63,12 +64,16 @@ const meta: Meta<typeof RelayPanel> = {
   },
 };
 export default meta;
-type Story = StoryObj<typeof RelayPanel>;
+type Story = StoryObj<typeof RelaySteps>;
 
 function relay(request: IntroRequest | undefined) {
   return () => (
     <StoryProviders>
-      <RelayPanel ask={request} />
+      <Panel>
+        <PanelBody>
+          <RelaySteps ask={request} />
+        </PanelBody>
+      </Panel>
     </StoryProviders>
   );
 }

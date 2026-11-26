@@ -165,7 +165,7 @@ func composedJobSpecs(set []composedJob) []jobs.Spec {
 				// anything but `default`.
 				Queue:     river.QueueDefault,
 				OptsOwner: jobs.OptsCaller,
-				Cadence:   jobs.Cadence{Fixed: j.decl.Cadence},
+				Cadence:   composedCadence(j.decl),
 				Args:      []jobs.ArgField{{Name: "JobKind", Scalar: true, Reason: "the composed kind this row dispatches; one args type serves every extension job, so the kind is data rather than a Go type"}},
 			},
 			jobs.Spec{
@@ -224,7 +224,7 @@ func composedFailureClasses(exts []extension.Extension, set []composedJob) map[s
 // process: the ext_ queues, kinds and ticks simply do not exist there, and that
 // is what keeps the composed lane a superset of the vanilla one rather than a
 // different program.
-func addExtensionJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) []*river.PeriodicJob {
+func addExtensionJobs(reg *jobRegistry, pool *pgxpool.Pool, book *ScheduleBook, log *slog.Logger) []*river.PeriodicJob {
 	set := servedExtensionJobs()
 	if len(set) == 0 {
 		return nil
@@ -237,7 +237,7 @@ func addExtensionJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) []
 		addComposedWorker(reg,
 			extJobWorkspaceArgs{JobKind: j.decl.ChildKind()},
 			&extJobWorkspaceWorker{pool: pool, decl: j.decl, handle: j.handle, log: log})
-		periodic = append(periodic, periodicForComposed(j.decl))
+		periodic = append(periodic, periodicForComposed(book, j.decl))
 	}
 	return periodic
 }
@@ -247,16 +247,23 @@ func addExtensionJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) []
 // the closed declared set — that constraint is what keeps an undeclared CORE
 // kind unschedulable, and widening it to river.JobArgs to admit these two would
 // give that guarantee up for every caller.
-//
-// RunOnStart matches every other pass here, for the reason periodicFor states:
-// a restart must not defer a catch-up pass by a whole interval.
-func periodicForComposed(d extension.JobDeclaration) *river.PeriodicJob {
+func periodicForComposed(book *ScheduleBook, d extension.JobDeclaration) *river.PeriodicJob {
 	args := extJobDispatcherArgs{JobKind: d.DispatcherKind()}
-	return river.NewPeriodicJob(
-		river.PeriodicInterval(d.Cadence),
-		func() (river.JobArgs, *river.InsertOpts) { return args, periodicInsertOpts(args) },
-		&river.PeriodicJobOpts{RunOnStart: true},
-	)
+	ctor := func() (river.JobArgs, *river.InsertOpts) { return args, periodicInsertOpts(args) }
+	if d.At != nil {
+		return book.scheduleClockTime(args.JobKind, *d.At, ctor)
+	}
+	job, _ := book.periodicJob(args.JobKind, "", river.PeriodicInterval(d.Cadence), ctor)
+	return job
+}
+
+// composedCadence is the census form of a job's schedule. A clock-time job has
+// no fixed interval; its longest gap is how job health tells late from on time.
+func composedCadence(d extension.JobDeclaration) jobs.Cadence {
+	if d.At != nil {
+		return jobs.Cadence{ClockGap: d.At.LongestGap()}
+	}
+	return jobs.Cadence{Fixed: d.Cadence}
 }
 
 // addComposedWorker is addGovernedWorker for a kind that is not in

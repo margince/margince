@@ -16,7 +16,7 @@ import (
 )
 
 var errBookingInviteeRequired = &SchedulingArgumentError{
-	Field: "links", Code: "invitee_required",
+	Field: fieldLinks, Code: "invitee_required",
 	Message: "Name who the meeting is with: link a contact or a lead with an email address, or add the email of a contact you can see. " +
 		"To block time without inviting anyone, log a meeting instead",
 }
@@ -27,7 +27,7 @@ var errBookingInviteeRequired = &SchedulingArgumentError{
 func (s *Store) bookingInvitation(ctx context.Context, in BookMeetingInput) (crmcontracts.MeetingInvitationRequest, invitationIntent, error) {
 	subject := in.Subject
 	if subject == "" {
-		subject = DefaultMeetingSubject
+		subject = s.DefaultMeetingSubject(ctx)
 	}
 	addresses, err := normalizedAttendees(in.AttendeeEmails)
 	if err != nil {

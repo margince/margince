@@ -105,6 +105,15 @@ describe("the thread card and the message row read one move", () => {
     expect(cardLabel(entryOf(summaryOf("none", "inbound")))).toBeNull();
   });
 
+  it("marks an invitation the reader may answer on the card and the row alike", () => {
+    const summary: EmailSummary = {
+      ...summaryOf("none", "inbound"),
+      calendar_invitation: { response: "needs_action" },
+    };
+    expect(cardLabel(entryOf(summary))).toBe(en["email.invitation.badge"]);
+    expect(rowShows(summary, en["email.invitation.badge"])).toBe(true);
+  });
+
   it("draws no move on a withheld message, whatever the server's move", () => {
     const summary = summaryOf("needs_reply", "inbound", true);
     expect(cardLabel(entryOf(summary))).toBeNull();

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/platform/auth backend/internal/shared/kernel/principal backend/internal/compose/agentgate.go backend/internal/modules/identity/passport.go backend/internal/modules/identity/meresponse.go backend/internal/modules/identity/roster.go frontend/src/lib/settingscatalog.ts frontend/src/features/settings/settingsnav.tsx backend/internal/platform/database/database.go backend/internal/compose/dbrole.go scripts/check-rls-store-path.sh backend/api/crm.yaml backend/internal/modules/contacts/contactcasedecide.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/duplicatepairmerge.go -->
+<!-- describes: backend/internal/compose/briefmailjobs.go backend/internal/compose/weeklymailjobs.go backend/internal/compose/routineclaim.go backend/internal/modules/identity/authority.go backend/internal/compose/sendbasis.go backend/internal/compose/sendbasishold.go backend/internal/compose/dealownernotify.go backend/internal/compose/jobs_approvalownernotice.go backend/internal/platform/auth backend/internal/shared/kernel/principal backend/internal/compose/agentgate.go backend/internal/modules/identity/passport.go backend/internal/modules/identity/meresponse.go backend/internal/modules/identity/roster.go frontend/src/lib/settingscatalog.ts frontend/src/features/settings/settingsnav.tsx backend/internal/platform/database/database.go backend/internal/compose/dbrole.go scripts/check-rls-store-path.sh backend/api/crm.yaml backend/internal/modules/contacts/contactcasedecide.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/duplicatepairmerge.go -->
 # Authorization & access control
 
 How Margince decides who may do what, and where that decision is made. You may look for the auth check in
@@ -7,7 +7,7 @@ an HTTP handler and not find it. The check is at the entry point of the store or
 transaction seam and the grants of the app role are the last guard under it. This is a design
 decision.
 
-A record link has a limited public card: its name, type and short context are readable without a session.
+A record link for a feature that is on has a limited public card: its name, type and short context are readable without a session.
 The public card edge binds a system principal only for that projection. It cannot reach the signed-in router.
 The full record still needs the reader's session and record access. See [Sharing record links](../handbook/sharing-record-links.md).
 
@@ -19,7 +19,7 @@ module code is reached by:
 
 - the REST surface (`internal/compose/server.go`),
 - the MCP tool surface (`/mcp` on the api),
-- agent runs (the runner of Surface B, acting under a passport; see [agent-surface.md](agent-surface.md)),
+- agent runs (the runner of the night helpers, acting under a passport; see [agent-surface.md](agent-surface.md)),
 - workers (retention, the job that checks data still agrees, the close date sweep, the readers of the
   outbox relay),
 - compose flows (briefs, reports, exports, enrich).
@@ -99,6 +99,14 @@ each row. Clients use the snapshot to explain access and show controls, and
 fetch it again on window focus and after a 403. Human-only checks and any route that
 asks for the admin role still apply.
 
+The file setting `features.disabled` turns off a whole feature for this installation.
+The API and MCP refuse its public calls. Other reads leave out parts that need it.
+
+`GET /v1/me` names the features turned off in `settings_availability.disabled_features`.
+The client hides their pages and controls; the stored grants stay as they are.
+Privacy exports, erasure and retention still run under their own grants.
+See [Turn off core features](../how-to/turn-off-core-features.md).
+
 The `passport` field on this response is marked `deprecated` and always null. A passport
 cannot reach this human-session endpoint. The field stays for published clients;
 an agent asks MCP `tools/list` which tools its passport may call. The server
@@ -134,6 +142,20 @@ would read a different snapshot. More is in [rbac-roles-and-teams.md](rbac-roles
 row scope (own, team or all) and teams decide which rows. It also covers how a share per record adds
 visibility on top.
 
+### Keep authority until the transaction ends
+
+`identity.EffectiveAuthorityTx` takes a shared authorization lock before reading current roles,
+teams and seat rights. Changes to those rights wait until the transaction ends.
+The lock comes before member and record locks. Mail sent later takes it before holding the
+rows its words describe, and checks the basis again with the current permissions.
+
+A deal owner change moves pending requests and takes back old notices in one transaction.
+Its new notice is queued with that change. The worker takes the authorization lock first. After waiting for the request, it checks that it has not expired.
+It checks who is still asked and what they may read before writing the notice and its mail job.
+An old job cannot take back the current owner's notice.
+
+For each request that moves, the owner change queues a job. A running job cannot hide a later change.
+
 ### Capture privacy, and the one actor it does not hold a row back from
 
 A contact or a company can be kept by the colleague who captured it.
@@ -168,6 +190,11 @@ both, or over the source alone when the pair is filed. So the one-sided merge on
 caller's own record away, and the record they cannot change stays with its owner. A rep who copies a
 colleague's record, or meets a pair an earlier merge moved, still cannot archive the colleague's
 record. The other direction answers 403 `merge_direction`.
+
+Outside a filed pair, a merge into a record the caller may read but not change answers 403
+`merge_target_read_only`. Its message is the sentence the merge picker shows for that record. A
+target the caller cannot see answers a bare 409, so the refusal does not confirm that it exists. An
+id no record holds answers the same 409.
 
 A pair is filed while a live `dedupe_candidate` row names those two records with the disposition
 `open`. A `merged` row counts only when this transaction marked it (`disposed_at = now()`). The
@@ -234,7 +261,9 @@ below the transport, so REST and MCP act the same:
 
 - **🟢 `auto_execute`**: the default, for what the passport's holder could already do with no help.
   - A passport holds the granting human's own seat, grants and row scope. So to ask that same human to
-    confirm a second time would make the agent surface weaker than the human behind it, and no safer.
+    confirm a direct instruction a second time adds work. The send scope grants permission,
+    but does not approve messages with nobody there. The runner marks its context as having nobody there;
+    `auth.TierFor` makes every send wait for approval, including after a run resumes.
   - It is audited, with provenance that marks the agent. The same reason already settles who may
     *decide* an approval (below).
 - **🟡 `confirmation_required`**: kept for the calls where the holder of the credential did not choose
@@ -242,6 +271,8 @@ below the transport, so REST and MCP act the same:
   - `enrich` is the standing case. The model names the URL the server fetches. So a prompt that changes
     what the model says reaches an address that nobody with the credential picked. That is a question about
     data leaving, not about rights.
+  - Filing activities under a project waits too, even for a user's own agent. It sets a retention floor that
+    only a member can undo, so a call naming up to 500 activities does not set it with nobody looking.
   - An installation can also set a verb back to confirm first, per record type, by declaring
     `tier: confirmation_required` on the operation. Every verb still has the staging code that sends
     such a call to a human's inbox, so it does not just end as a refusal.

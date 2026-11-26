@@ -28,14 +28,15 @@ import { useOwnerChips } from "../../components/ownerdials";
 import {
   createdColumn,
   lastActivityColumn,
-  mineEmptyNote,
+  mineEmptyLine,
   ownerColumn,
   standardViews,
   tagsColumn,
 } from "../../components/recordlist";
 import { Avatar, Badge, Button } from "../../design-system/atoms";
 import type { ListChip } from "../../design-system/listsurface";
-import { CellStrip } from "../../design-system/listtable";
+import { CellStrip, useListRefusal } from "../../design-system/listtable";
+import { useToast } from "../../design-system/toast";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
@@ -51,22 +52,28 @@ import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
 import { useViewerZone } from "../../lib/viewerzone";
+import { useActionRefusal } from "../../lib/writerefusal";
 import {
   SavedViewsFailure,
   SaveViewAction,
   useSavedViewTabs,
 } from "../lists/savedviews";
 import type { Company } from "./companies";
+import { DORMANCY_LABELS, DORMANCY_RUNGS } from "./companyactivity";
 import { offerDomainContacts } from "./companycontacts/domaincontacts";
+import { announceCompanyDuplicates } from "./companyduplicates";
 import { displayHost } from "./companyheader";
 import { partnerMarkText } from "./companymarks";
+import { companyTypeLabel, useCompanyTypeDirectory } from "./companytypes";
 
 async function fetchCompaniesPage(
   query: ListQuery,
   cursor: string | null,
+  signal?: AbortSignal,
 ): Promise<ListPage<Company>> {
   const data = unwrap(
     await api.GET("/companies", {
+      signal,
       params: {
         query: {
           q: query.q || undefined,
@@ -89,10 +96,16 @@ async function fetchCompaniesPage(
   };
 }
 
-export function CompaniesScreen() {
+export function CompaniesScreen({
+  startCreating = false,
+}: Readonly<{ startCreating?: boolean }>) {
   const t = useT();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const pageName = usePageName("companies");
+  const refusal = useListRefusal(
+    useActionRefusal({ object: "company", action: "create" }),
+  );
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const cf = useObjectCustomFields("company", "create");
@@ -113,6 +126,7 @@ export function CompaniesScreen() {
   const viewerId = useViewerId();
   const ownerChips = useOwnerChips();
   const tagChips = useTagChips();
+  const extensionTypes = useCompanyTypeDirectory().data?.data ?? [];
   const savedViews = useSavedViewTabs("companies");
   // The partner dials read the partner register, which the server refuses a
   // seat without the partner grant.
@@ -173,12 +187,14 @@ export function CompaniesScreen() {
         title={pageName}
         state={state}
         unit="unit.companies"
-        emptyNote={mineEmptyNote({
+        unitOne="unit.company"
+        emptyLine={mineEmptyLine({
           t,
           state,
           viewerId,
           unit: "unit.companies",
         })}
+        refusal={refusal}
         action={
           <>
             <Button onClick={() => navigate({ screen: "partners" })}>
@@ -186,13 +202,24 @@ export function CompaniesScreen() {
             </Button>
             <CreateAction
               label={t("create.company")}
+              requires={{ object: "company", action: "create" }}
+              refusalId={refusal?.id}
               invalidate="companies"
               screen="companies"
+              listCreate={{ open: startCreating }}
               create={(values, rows, key) =>
                 createCompany(values, rows, cf.toBody(values), t, key)
               }
               resolveExisting={(_code, id) => ({ screen: "companies", id })}
-              onCreated={(company) => offerDomainContacts(queryClient, company)}
+              onCreated={(company) => {
+                offerDomainContacts(queryClient, company);
+                void announceCompanyDuplicates(
+                  queryClient,
+                  toast,
+                  t,
+                  company.id,
+                );
+              }}
               fields={[...companyCreateFields(t, locale), ...cf.formFields]}
             />
           </>
@@ -227,13 +254,18 @@ export function CompaniesScreen() {
             header: t("company.description"),
             cell: (company: Company) => company.description ?? "",
             sort: "description",
+            initiallyHidden: true,
           },
-          tagsColumn<Company>(t),
+          { ...tagsColumn<Company>(t), initiallyHidden: true },
           {
             key: "website",
+            initiallyHidden: true,
             header: t("company.website"),
             // Sorted by the host the cell prints; the scheme is a constant.
             sort: "website_url",
+            phone: "caption",
+            folded: (company: Company) =>
+              company.website_url ? displayHost(company.website_url) : null,
             cell: (company: Company) =>
               company.website_url ? (
                 <a
@@ -252,6 +284,7 @@ export function CompaniesScreen() {
             // must tell "no contacts" from "not shown".
             key: "contacts",
             header: t("company.contactCount"),
+            initiallyHidden: true,
             numeric: true,
             cell: (company: Company) => company.contact_count ?? "",
             // A reader shown no count is ordered by none: such rows go last.
@@ -270,14 +303,13 @@ export function CompaniesScreen() {
           {
             key: "class",
             header: t("company.lifecycle"),
-            sort: "lifecycle",
-            // Reads lifecycle, because nothing writes classification. A column
+            sort: "status",
+            phone: "end",
+            // Reads status, because nothing writes classification. A column
             // on classification would show stale values forever.
             cell: (company: Company) =>
-              company.lifecycle && company.lifecycle !== "unknown" ? (
-                <Badge>
-                  {t(labelFor(LIFECYCLE_LABELS, company.lifecycle))}
-                </Badge>
+              company.status && company.status !== "unknown" ? (
+                <Badge>{t(labelFor(LIFECYCLE_LABELS, company.status))}</Badge>
               ) : null,
           },
           {
@@ -291,13 +323,19 @@ export function CompaniesScreen() {
             // is multi-valued (ADR-0079), because showing only the first type
             // would make the second look untrue.
             cell: (company: Company) =>
-              company.relationship_types?.length ? (
+              company.relationship_types?.length ||
+              company.extension_relationship_types?.length ? (
                 <CellStrip>
-                  {company.relationship_types.map((type) => (
+                  {(company.relationship_types ?? []).map((type) => (
                     <Badge key={type}>
                       {type === "partner"
                         ? partnerMarkText(company, t)
                         : t(labelFor(RELATIONSHIP_TYPE_LABELS, type))}
+                    </Badge>
+                  ))}
+                  {(company.extension_relationship_types ?? []).map((type) => (
+                    <Badge key={type}>
+                      {companyTypeLabel(type, extensionTypes)}
                     </Badge>
                   ))}
                 </CellStrip>
@@ -315,7 +353,7 @@ export function CompaniesScreen() {
         dataChips={[...ownerChips, ...sizeChip, ...partnerChips, ...tagChips]}
         chips={[
           {
-            key: "lifecycle",
+            key: "status",
             label: "company.lifecycle",
             allLabel: "company.filterLifecycleAll",
             options: LIFECYCLE_OPTIONS.filter(
@@ -329,9 +367,29 @@ export function CompaniesScreen() {
             key: "relationship_type",
             label: "company.relationshipTypes",
             allLabel: "company.filterRelTypeAll",
-            options: RELATIONSHIP_TYPE_OPTIONS.map((value) => ({
+            options: [
+              ...RELATIONSHIP_TYPE_OPTIONS.map((value) => ({
+                value,
+                label: labelFor(RELATIONSHIP_TYPE_LABELS, value),
+              })),
+              // An option value holding a colon reads as `param:value`. The
+              // extension filter is its own parameter, so naming it keeps the
+              // whole `ext:<unit>:<type>` value.
+              ...extensionTypes.map(({ value, label }) => ({
+                value: `extension_relationship_type:${value}`,
+                text: label,
+              })),
+            ],
+          },
+          {
+            // The server's dormancy ladder, read from each company's last
+            // activity by the rule the company page uses.
+            key: "dormancy",
+            label: "company.dormancy",
+            allLabel: "company.filterDormancyAll",
+            options: DORMANCY_RUNGS.map((value) => ({
               value,
-              label: labelFor(RELATIONSHIP_TYPE_LABELS, value),
+              label: labelFor(DORMANCY_LABELS, value),
             })),
           },
         ]}
@@ -341,12 +399,12 @@ export function CompaniesScreen() {
           {
             label: "list.viewCustomers",
             sort: "display_name",
-            filters: { lifecycle: "customer" },
+            filters: { status: "customer" },
           },
           {
             label: "list.viewProspects",
             sort: "display_name",
-            filters: { lifecycle: "prospect" },
+            filters: { status: "prospect" },
           },
         ]}
       />

@@ -21,11 +21,13 @@ func invitationAppointment(profile crmcontracts.SchedulingProfile, in crmcontrac
 	if videoCall {
 		location = ""
 	}
-	return connector.CalendarAppointment{
+	appointment := connector.CalendarAppointment{
 		ContactID: ids.UUID(in.ContactId), CalendarID: profile.CalendarId, Subject: in.Subject, Description: in.Description,
 		Location: location, Start: in.Start, End: in.End, Attendees: []string{string(in.AttendeeEmail)},
 		VideoCall: videoCall, EmailReminder: profile.EmailReminder != nil && *profile.EmailReminder,
 	}
+	setBookedStartIntent(&appointment, in.StartIntent)
+	return appointment
 }
 
 // PreviewInvitation reads the proposed delivery without reserving time or contacting a provider.
@@ -40,6 +42,9 @@ func (s *Store) PreviewInvitation(ctx context.Context, host ids.UserID, in crmco
 		}
 	}
 	if err := validateInvitation(in); err != nil {
+		return connector.CalendarAppointment{}, err
+	}
+	if err := admitBookedStart(in.StartIntent, &in.Start, &in.End); err != nil {
 		return connector.CalendarAppointment{}, err
 	}
 	if !in.End.After(in.Start) {

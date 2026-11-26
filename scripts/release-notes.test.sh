@@ -7,14 +7,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BUILD="$SCRIPT_DIR/release-notes.sh"
+BUILD="$SCRIPT_DIR/release_notes.py"
 
 FAILURES=0
 
 # writes <reason> <expected notes> [budget]; the subjects come from stdin.
 writes() {
 	local got
-	got="$(bash "$BUILD" v1.0.0 v1.1.0 margince/margince "${3:-100000}")"
+	got="$(python3 "$BUILD" v1.0.0 v1.1.0 margince/margince "${3:-100000}")"
 	if [[ "$got" != "$2" ]]; then
 		printf 'FAIL: %s\n--- want\n%s\n--- got\n%s\n' "$1" "$2" "$got"
 		FAILURES=$((FAILURES + 1))
@@ -51,6 +51,16 @@ feat(api)!: offers drop the legacy total (#12)
 perf(reports): the pipeline report reads one query (#13)
 fix: dialogs survive a drag (#14)
 EOF
+
+writes 'a subject that is not UTF-8 is left out, and a NUL byte is dropped' "$(
+	cat <<EOF
+### Added
+
+- ab (#31)
+
+$compare
+EOF
+)" < <(printf 'feat: caf\xe9 (#30)\nfeat: a\000b (#31)\n')
 
 writes 'work a user cannot notice, and subjects with no type, are left to the compare view' "$compare" <<'EOF'
 refactor(store): one writer for the audit row (#20)
@@ -121,13 +131,29 @@ perf(reports): one query for the whole pipeline report, not one per stage (#13)
 perf(search): the index answers prefix search without a scan of every row (#15)
 EOF
 
+named="$(printf 'fix: dialogs survive a drag (#14)\n' |
+	python3 "$BUILD" 3f786850e387550fdab836ed7e6dc881de23001b 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b margince/margince 100000 2026.1.0)"
+want_named="$(
+	cat <<'EOF'
+### Fixed
+
+- dialogs survive a drag (#14)
+
+Every change since 2026.1.0: https://github.com/margince/margince/compare/3f786850e387550fdab836ed7e6dc881de23001b...9f86d081884c7d659a2feaa0c55ad015a3bf4f1b
+EOF
+)"
+if [[ "$named" != "$want_named" ]]; then
+	printf 'FAIL: a named previous release is the sentence, the revisions stay the link\n--- want\n%s\n--- got\n%s\n' "$want_named" "$named"
+	FAILURES=$((FAILURES + 1))
+fi
+
 if printf 'feat(api)!: offers drop the legacy total (#12)\n' |
-	bash "$BUILD" v1.0.0 v1.1.0 margince/margince 10 >/dev/null 2>&1; then
+	python3 "$BUILD" v1.0.0 v1.1.0 margince/margince 10 >/dev/null 2>&1; then
 	echo "FAIL: notes that cannot fit the room were printed instead of refused"
 	FAILURES=$((FAILURES + 1))
 fi
 
-if bash "$BUILD" v1.0.0 v1.1.0 </dev/null >/dev/null 2>&1; then
+if python3 "$BUILD" v1.0.0 v1.1.0 </dev/null >/dev/null 2>&1; then
 	echo "FAIL: a call with no repository was accepted"
 	FAILURES=$((FAILURES + 1))
 fi

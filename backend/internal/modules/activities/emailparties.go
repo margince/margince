@@ -19,6 +19,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -104,12 +105,17 @@ func readEmailPartiesOf(ctx context.Context, tx pgx.Tx, messages []ids.UUID) (ma
 		SELECT activity_id, role, address, contact_id, name, user_id, seat_email, contact_email FROM (
 		SELECT ap.activity_id, ap.role, coalesce(ap.address, '') AS address, p.id AS contact_id,
 		       coalesce(p.full_name, u.display_name, ap.display_name) AS name, ap.user_id,
-		       coalesce(u.email, '') AS seat_email, coalesce(stated_pe.email, own_pe.email, '') AS contact_email,
+		       coalesce(mailbox.account_label, u.email, '') AS seat_email, coalesce(stated_pe.email, own_pe.email, '') AS contact_email,
 		       ap.created_at, ap.id
 		  FROM activity_participant ap
 		  JOIN activity act ON act.id = ap.activity_id
 		  `+contactJoin+`
 		  LEFT JOIN app_user u ON u.id = ap.user_id
+		  LEFT JOIN LATERAL (
+		       SELECT nullif(btrim(coalesce(substring(c.account_label FROM '<([^>]*)>'), c.account_label)), '') AS account_label FROM capture_connection c
+		        WHERE c.user_id = ap.user_id AND `+storekit.CapturingMailboxSQL("c", "act")+`
+		          AND nullif(btrim(c.account_label), '') IS NOT NULL
+		        ORDER BY c.created_at, c.id LIMIT 1) mailbox ON ap.user_id IS NOT NULL AND ap.address IS NULL
 		  LEFT JOIN LATERAL (
 		       SELECT e.email FROM contact_email e
 		        WHERE e.contact_id = p.id AND e.archived_at IS NULL
@@ -124,7 +130,7 @@ func readEmailPartiesOf(ctx context.Context, tx pgx.Tx, messages []ids.UUID) (ma
 		contactaddress.ReachableOrder+` LIMIT 1) own_pe ON p.id IS NOT NULL
 		 WHERE ap.activity_id = ANY($1)
 		   AND ap.role IN ('from', 'to', 'cc', 'bcc', 'organizer', 'attendee')
-		   AND NOT `+unstatedContactSQL("ap")+`
+		   AND NOT `+auth.ParticipantUnstatedSQL("ap")+`
 		   -- A seat row the legacy backfill guessed for bare mail is no party.
 		   AND `+auth.ParticipantStandsSQL("ap", "act")+`
 		UNION ALL
@@ -160,10 +166,29 @@ func receivedFromSQL() string {
 		SELECT a.id, 'from', a.counterparty_email, NULL::uuid, NULL::text, NULL::uuid, '', '',
 		       a.created_at, a.id
 		  FROM activity a
-		 WHERE a.id = ANY($1) AND a.archived_at IS NULL AND a.direction = 'inbound'
-		   AND coalesce(a.counterparty_email, '') <> ''
-		   AND NOT EXISTS (SELECT 1 FROM activity_participant ap
-		         WHERE ap.activity_id = a.id AND ap.role = 'from' AND NOT ` + unstatedContactSQL("ap") + `)`
+		 WHERE a.id = ANY($1) AND ` + receivedFromArmSQL("a")
+}
+
+// receivedFromArmSQL admits a received row whose sender the mail named only
+// as its counterparty: no From party was stated.
+func receivedFromArmSQL(alias string) string {
+	return `(` + alias + `.archived_at IS NULL AND ` + alias + `.direction = 'inbound'
+		AND coalesce(` + alias + `.counterparty_email, '') <> ''
+		AND NOT EXISTS (SELECT 1 FROM activity_participant ap
+		      WHERE ap.activity_id = ` + alias + `.id AND ap.role = 'from' AND NOT ` + auth.ParticipantUnstatedSQL("ap") + `))`
+}
+
+// rowCounterparty is whom a message row was with: the far side of the
+// exchange. That is the sender of a received message, and the recipients of a
+// sent one. The viewer's summary and every list's summary name it here alone.
+func rowCounterparty(
+	direction *crmcontracts.ActivityDirection, parties emailParties,
+) (*string, *openapi_types.UUID) {
+	far := parties.to
+	if direction != nil && *direction == crmcontracts.ActivityDirectionInbound {
+		far = parties.from
+	}
+	return counterpartyOf(far)
 }
 
 // counterpartyOf names the other side for a row: the first party the caller
@@ -249,11 +274,10 @@ func collectEmailParties(rows pgx.Rows, messages []ids.UUID) (map[ids.UUID]email
 			return nil, err
 		}
 		out := byMessage[message]
-		// The seat's own address, when the participant row carries none. Capture
-		// writes an address for a party it read off a header and only a user_id
-		// for one it resolved to a seat, so this is the difference between a
-		// header line naming a colleague and one with a gap in it. A contact
-		// resolved without an address gets their own the same way.
+		// The seat's address, when the participant row carries none: the mailbox
+		// that captured the message, else the seat's login. A seat with several
+		// mailboxes must not read as its login on mail that came in elsewhere. A
+		// contact resolved without an address gets their own the same way.
 		if address == "" {
 			address = seatEmail
 		}

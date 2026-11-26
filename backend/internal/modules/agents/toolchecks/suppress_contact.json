@@ -1,0 +1,9 @@
+{
+  "verb": "suppress_contact",
+  "checks": [
+    "contact.update"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

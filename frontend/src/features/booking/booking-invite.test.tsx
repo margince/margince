@@ -6,8 +6,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { formatDateTime } from "../../format/format";
-import { browserZone } from "../../format/timezone";
+import { browserZone, wallClockIntent } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
+import { watchAddress } from "../../lib/router";
 import {
   bookingConnection,
   bookingContact,
@@ -66,6 +68,7 @@ function mount(
     dealId?: string;
     dealStatus?: string;
     stakeholder?: boolean;
+    seatCurrent?: boolean;
     replyContactId?: string;
   } = {},
 ) {
@@ -86,7 +89,9 @@ function mount(
       paths.push(path);
       let body: unknown;
       if (path === "/v1/me") {
-        body = meFixture({ allow: { activity: ["read", "create"] } });
+        body = meFixture({
+          allow: { activity: ["read", "create"], contact: ["read", "update"] },
+        });
       } else if (request.method === "POST" && path.endsWith("/invitations")) {
         invitations.push(await request.json());
         body = { ...bookingInvitation, id: "meeting-1" };
@@ -108,16 +113,6 @@ function mount(
             },
           ],
         };
-      else if (path.startsWith("/v1/deals/"))
-        body = { id: context.dealId, status: context.dealStatus ?? "open" };
-      else if (path.endsWith("/relationships"))
-        body = {
-          data:
-            context.stakeholder === false
-              ? []
-              : [{ deal_id: context.dealId, contact_id: bookingContact.id }],
-          page: { has_more: false },
-        };
       else if (path === "/v1/search")
         body = {
           data: [{ type: "contact", id: "contact-b", title: "Other buyer" }],
@@ -126,6 +121,23 @@ function mount(
         body = {
           contact: bookingContact,
           sections_omitted: [],
+          deal_roles: {
+            data:
+              context.dealId &&
+              context.stakeholder !== false &&
+              path.includes(bookingContact.id)
+                ? [
+                    {
+                      relationship_id: "rel-1",
+                      deal_id: context.dealId,
+                      role: "champion",
+                      deal_status: context.dealStatus ?? "open",
+                      seat_current: context.seatCurrent ?? true,
+                    },
+                  ]
+                : [],
+            page: { has_more: false },
+          },
           commercial: {
             committee: [],
             ...(context.openDealId
@@ -205,7 +217,7 @@ it("prefills the contact and saved details, then offers two picked times in one 
     screen.getByRole("heading", { name: "Book a meeting with Nina Weber" }),
   ).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: "Pick at least 2 times" }),
+    await screen.findByRole("button", { name: "Pick at least 2 times" }),
   ).toHaveProperty("disabled", true);
   for (const slot of bookingSlots)
     await user.click(
@@ -257,6 +269,7 @@ it("removes an offered time from the review list", async () => {
 it("sends an agreed time as an invitation without a video link when switched off", async () => {
   const user = userEvent.setup();
   const { invitations } = mount();
+  const entries = window.history.length;
   await user.click(
     await screen.findByRole("radio", { name: /Send an invite/ }),
   );
@@ -280,12 +293,15 @@ it("sends an agreed time as an invitation without a video link when switched off
   await waitFor(() => expect(invitations).toHaveLength(1));
   expect(invitations[0]).toMatchObject({
     ...bookingSlots[1],
+    start_intent: wallClockIntent(bookingSlots[1].start, browserZone()),
     location: "Office, Room 2",
     video_call: false,
   });
   await waitFor(() =>
     expect(window.location.hash).toBe("#/book/meeting-meeting-1"),
   );
+  // In the form's place: Back must not offer to send it again.
+  expect(window.history.length).toBe(entries);
 });
 
 it("shows the calendar setup step instead of times when no calendar can send invites", async () => {
@@ -454,6 +470,7 @@ it.each([
   ],
   [{ dealId: "d-2", dealStatus: "lost" }, null, "contact", bookingContact.id],
   [{ dealId: "d-2", stakeholder: false }, null, "contact", bookingContact.id],
+  [{ dealId: "d-2", seatCurrent: false }, null, "contact", bookingContact.id],
   [
     { replyActivityId: "mail-1", replyContactId: "other-contact" },
     null,
@@ -510,11 +527,7 @@ it.each([false, undefined])(
     const { proposals } = mount(true, 30, () => bookingSlots, bookingHours, {
       attachable,
     });
-    expect(
-      await screen.findByText(
-        "You can only read this contact. Ask its owner for write access.",
-      ),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["contact.attachRefused"])).toBeTruthy();
     for (const slot of bookingSlots) {
       await user.click(
         await screen.findByRole("button", { name: slotName(slot.start) }),
@@ -528,3 +541,30 @@ it.each([false, undefined])(
     expect(proposals).toHaveLength(0);
   },
 );
+
+it("closes onto the contact's meetings by going back when it was opened from them", async () => {
+  const user = userEvent.setup();
+  window.history.replaceState(
+    null,
+    "",
+    `#/contacts/${bookingContact.id}/meetings`,
+  );
+  const stop = watchAddress(() => undefined);
+  mount();
+  const go = vi
+    .spyOn(globalThis.history, "go")
+    .mockImplementation(() => undefined);
+  await user.click(await screen.findByRole("button", { name: "Close" }));
+  expect(go.mock.calls).toEqual([[-1]]);
+  go.mockRestore();
+  stop();
+});
+
+it("closes onto the contact's meetings in place when it was opened elsewhere", async () => {
+  const user = userEvent.setup();
+  mount();
+  const entries = window.history.length;
+  await user.click(await screen.findByRole("button", { name: "Close" }));
+  expect(window.location.hash).toBe(`#/contacts/${bookingContact.id}/meetings`);
+  expect(window.history.length).toBe(entries);
+});

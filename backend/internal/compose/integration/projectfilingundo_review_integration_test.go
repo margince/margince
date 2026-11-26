@@ -22,17 +22,19 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // A legal hold on the project an activity was filed under outranks the undo: the
 // writer refuses it by name and the trigger refuses a direct delete of the proof.
 func TestAFilingUnderAHeldProjectIsNotUndone(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	f := filedUnderAProject(t, e)
 	e.WsExec(t, `UPDATE project SET legal_hold = true WHERE id = $1`, f.project)
 
@@ -83,7 +85,7 @@ func TestTheUndoTriggersAgreeWithTheGoPredicates(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := Setup(t)
-			owner := OwnerConn(t)
+			owner := FreshOwnerConn(t)
 			f := filedUnderAProject(t, e)
 			tc.arrange(t, e, f)
 
@@ -177,7 +179,7 @@ func TestAnUnnamedMemberIsToldToSetADisplayName(t *testing.T) {
 // question about the activity's state.
 func TestAProjectRelinkIsReleasableOnlyWhileTheUndoCouldTakeItBack(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
 	clean, held, erasing, restricted := f.mine[0], f.mine[1], ids.NewV7(), ids.NewV7()
 	contact := e.SeedContact(t, "Erasure Subject", &e.Rep1)
@@ -242,7 +244,7 @@ func TestAProjectRelinkIsReleasableOnlyWhileTheUndoCouldTakeItBack(t *testing.T)
 // deal's lock first, so it waits for the win and then reads its evidence.
 func TestAnUndoWaitsForADealWinInFlightAndThenRefuses(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	ctx := context.Background()
 	f := filedUnderAProject(t, e)
 	deal := seedStampFixture(t, e)
@@ -296,16 +298,11 @@ func waitUntilBlockedBy(t *testing.T, holder interface {
 	tick := time.NewTicker(20 * time.Millisecond)
 	defer tick.Stop()
 	for {
-		var blocked int
-		// A fresh reading each pass: the statistics view is a per-transaction snapshot.
-		if _, err := observer.Exec(context.Background(), `SELECT pg_stat_clear_snapshot()`); err != nil {
+		queued, err := testdb.QueuedBehind(context.Background(), observer, int32(holderPID))
+		if err != nil {
 			t.Fatal(err)
 		}
-		if err := observer.QueryRow(context.Background(),
-			`SELECT count(*) FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))`, holderPID).Scan(&blocked); err != nil {
-			t.Fatal(err)
-		}
-		if blocked > 0 {
+		if queued > 0 {
 			return
 		}
 		select {
@@ -316,11 +313,12 @@ func waitUntilBlockedBy(t *testing.T, holder interface {
 	}
 }
 
-// A credential files an activity under a project as its colleague could in the
-// app, also while an erasure is open on the activity's contact. Nothing waits.
-func TestACredentialFilesAnActivityUnderErasureAsItsColleagueCould(t *testing.T) {
+// A credential's filing under a project waits for a human. Once approved, it
+// files the activity as its colleague could in the app. An open erasure on the
+// activity's contact does not stop it.
+func TestACredentialFilesAnActivityUnderErasureOnceAHumanApproves(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
 	relinkLender(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -333,10 +331,18 @@ func TestACredentialFilesAnActivityUnderErasureAsItsColleagueCould(t *testing.T)
 	e.WsExec(t, `INSERT INTO data_subject_request (kind, status, subject_ref, due_at, contact_id)
 		VALUES ('erasure', 'open', $1::text, now() + interval '30 days', $2)`, contact.String(), contact)
 
+	args := `{"activity_ids":["` + f.mine[0].String() + `"],"entity_type":"project","entity_id":"` + f.project.String() + `"`
+	_, err := registry.Invoke(agent, "relink_activities", json.RawMessage(args+`}`))
+	staged, ok := errors.AsType[*workflow.StagedApprovalError](err)
+	if !ok {
+		t.Fatalf("relink_activities onto a project on a passport → %v, want it staged for a human", err)
+	}
+	if _, err := compose.NewApprovalsService(e.DB()).Decide(e.Admin(), staged.ApprovalID, true, nil); err != nil {
+		t.Fatalf("approving the filing: %v", err)
+	}
 	if _, err := registry.Invoke(agent, "relink_activities", json.RawMessage(
-		`{"activity_ids":["`+f.mine[0].String()+`"],"entity_type":"project","entity_id":"`+f.project.String()+`"}`,
-	)); err != nil {
-		t.Fatalf("relink_activities on a passport → %v, want it filed at once", err)
+		args+`,"approval_id":"`+staged.ApprovalID.String()+`"}`)); err != nil {
+		t.Fatalf("the approved relink → %v, want it filed", err)
 	}
 	if projectLinks(t, e, f.mine[0], f.project) != 1 {
 		t.Error("the relink did not file the activity under the project")
@@ -360,7 +366,7 @@ func staysUndoable(e *Env, named []ids.UUID, project ids.UUID) (bool, error) {
 // FOR SHARE, so it waits for the hold and then refuses.
 func TestAnUndoWaitsForALegalHoldBeingPlacedAndThenRefuses(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	ctx := context.Background()
 	f := filedUnderAProject(t, e)
 

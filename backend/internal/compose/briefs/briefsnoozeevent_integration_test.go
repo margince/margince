@@ -41,7 +41,7 @@ func TestASnoozeWaitingForAReplyLiftsWhenOneArrives(t *testing.T) {
 	}
 	item := run.Items[0]
 	setDown := briefClock.Add(time.Hour)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnReply, nil, nil, setDown); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnReply, nil, nil, setDown, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -94,7 +94,7 @@ func TestAnInboundBeforeTheSnoozeIsNotTheReplyBeingWaitedFor(t *testing.T) {
 	old := seedInbound(t, owner, "last week's mail", setDown.Add(-2*time.Hour))
 	integration.LinkActivity(t, owner, old, "deal", b.dealA)
 
-	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnReply, nil, nil, setDown); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnReply, nil, nil, setDown, nil); err != nil {
 		t.Fatal(err)
 	}
 	if visible := readableDeals(t, b, setDown.Add(2*time.Hour)); visible[item.DealID] {
@@ -115,7 +115,7 @@ func TestAFutureDatedReplyDoesNotLiftASnoozeYet(t *testing.T) {
 	}
 	item := run.Items[0]
 	setDown := briefClock.Add(time.Hour)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnReply, nil, nil, setDown); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnReply, nil, nil, setDown, nil); err != nil {
 		t.Fatal(err)
 	}
 	ahead := seedInbound(t, owner, "dated next week", setDown.AddDate(0, 0, 7))
@@ -139,7 +139,7 @@ func TestOurOwnOutboundIsNotTheCustomerReplying(t *testing.T) {
 	}
 	item := run.Items[0]
 	setDown := briefClock.Add(time.Hour)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnReply, nil, nil, setDown); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnReply, nil, nil, setDown, nil); err != nil {
 		t.Fatal(err)
 	}
 	chasedAt := setDown.Add(time.Hour)
@@ -165,7 +165,7 @@ func TestASnoozeWaitingForAMeetingLiftsOnceItIsOver(t *testing.T) {
 	meetsAt := setDown.Add(4 * time.Hour)
 	meeting := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'the demo', $2, 'manual', 'human:x')`, meetsAt)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnMeeting, nil, &meeting, setDown); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnMeeting, nil, &meeting, setDown, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -192,7 +192,7 @@ func TestACancelledMeetingReturnsTheWorkRatherThanHoldingItForever(t *testing.T)
 	item := run.Items[0]
 	meeting := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'the demo', $2, 'manual', 'human:x')`, briefClock.AddDate(0, 0, 16))
-	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnMeeting, nil, &meeting, briefClock.Add(time.Hour)); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnMeeting, nil, &meeting, briefClock.Add(time.Hour), nil); err != nil {
 		t.Fatal(err)
 	}
 	// Still far ahead, so nothing but the cancellation can bring this back.
@@ -223,7 +223,7 @@ func TestTheMarkGuardAgreesWithTheReadAboutAnEventSnooze(t *testing.T) {
 	}
 	item := run.Items[0]
 	setDown := briefClock.Add(time.Hour)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnReply, nil, nil, setDown); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnReply, nil, nil, setDown, nil); err != nil {
 		t.Fatal(err)
 	}
 	// No reply: the guard refuses, exactly as the read hides it.
@@ -267,7 +267,7 @@ func TestASnoozeShapeIsRefusedBeforeItReachesTheDatabase(t *testing.T) {
 		{"a reply snooze naming a meeting", values.ReopenOnReply, nil, &item.DealID},
 	} {
 		t.Run(bad.name, func(t *testing.T) {
-			if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, bad.on, bad.till, bad.ref, at); err == nil {
+			if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, bad.on, bad.till, bad.ref, at, nil); err == nil {
 				t.Fatal("accepted, and the row it would write describes a wait nothing can lift")
 			}
 		})
@@ -313,7 +313,7 @@ func TestASnoozeCannotWaitForSomethingThatIsNotAMeeting(t *testing.T) {
 	} {
 		t.Run(bad.name, func(t *testing.T) {
 			ref := bad.ref
-			if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnMeeting, nil, &ref, at); err == nil {
+			if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnMeeting, nil, &ref, at, nil); err == nil {
 				t.Fatal("accepted; the snooze it writes either never lifts or lifts on the wrong row")
 			}
 		})
@@ -336,7 +336,7 @@ func TestAMeetingSnoozeHoldsUntilTheMeetingHasENDED(t *testing.T) {
 	startsAt := setDown.Add(2 * time.Hour)
 	meeting := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, duration_seconds, source, captured_by)
 		VALUES ($1, 'meeting', 'the demo', $2, 3600, 'manual', 'human:x')`, startsAt)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnMeeting, nil, &meeting, setDown); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnMeeting, nil, &meeting, setDown, nil); err != nil {
 		t.Fatal(err)
 	}
 	// Thirty minutes in: the meeting has started and is not over.
@@ -362,7 +362,7 @@ func TestACancelledMeetingStatusReturnsTheWork(t *testing.T) {
 	item := run.Items[0]
 	meeting := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, meeting_status, source, captured_by)
 		VALUES ($1, 'meeting', 'the demo', $2, 'booked', 'manual', 'human:x')`, briefClock.AddDate(0, 0, 16))
-	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnMeeting, nil, &meeting, briefClock.Add(time.Hour)); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnMeeting, nil, &meeting, briefClock.Add(time.Hour), nil); err != nil {
 		t.Fatal(err)
 	}
 	stillWaiting := briefClock.Add(5 * time.Hour)

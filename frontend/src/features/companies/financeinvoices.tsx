@@ -2,7 +2,11 @@ import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel } from "../../design-system/panel";
-import { formatDate, formatMoney, formatNumber } from "../../format/format";
+import {
+  formatDateAbbrev,
+  formatMoneyWhole,
+  formatNumber,
+} from "../../format/format";
 import {
   type Locale,
   type PluralBase,
@@ -22,6 +26,8 @@ type Cells = {
   plural: ReturnType<typeof usePlural>;
   locale: Locale;
   zone: string;
+  // The source serves each invoice's own PDF, so its number opens it.
+  documents: boolean;
 };
 
 /**
@@ -53,7 +59,13 @@ export function RecentInvoices({
         bleed
         fold
         label={t("finance.recentInvoices")}
-        columns={invoiceColumns({ t, plural, locale, zone })}
+        columns={invoiceColumns({
+          t,
+          plural,
+          locale,
+          zone,
+          documents: summary.invoice_documents === true,
+        })}
         rows={invoices}
         rowKey={(invoice) => invoice.id}
       />
@@ -68,19 +80,19 @@ function invoiceColumns(cells: Cells): DataTableColumn<FinanceInvoice>[] {
       key: "number",
       header: t("finance.col.invoice"),
       grow: true,
-      render: (invoice) => invoice.number ?? t("finance.unnumbered"),
+      render: (invoice) => <InvoiceNumber invoice={invoice} cells={cells} />,
     },
     {
       key: "issued",
       header: t("finance.col.issued"),
-      render: (invoice) => formatDate(invoice.issued_at, locale, zone),
+      render: (invoice) => formatDateAbbrev(invoice.issued_at, locale, zone),
     },
     {
       key: "amount",
       header: t("finance.col.amount"),
       align: "end",
       render: (invoice) =>
-        formatMoney(invoice.gross_minor, invoice.currency, locale),
+        formatMoneyWhole(invoice.gross_minor, invoice.currency, locale),
     },
     {
       key: "due",
@@ -89,12 +101,12 @@ function invoiceColumns(cells: Cells): DataTableColumn<FinanceInvoice>[] {
       // An unpaid invoice has no date to put there.
       render: (invoice) => (
         <span>
-          {invoice.due_at ? formatDate(invoice.due_at, locale, zone) : ""}
+          {invoice.due_at ? formatDateAbbrev(invoice.due_at, locale, zone) : ""}
           {invoice.paid_at && (
             <span className="t-caption">
               {invoice.due_at ? " · " : ""}
               {t("finance.paidOn", {
-                when: formatDate(invoice.paid_at, locale, zone),
+                when: formatDateAbbrev(invoice.paid_at, locale, zone),
               })}
             </span>
           )}
@@ -108,6 +120,30 @@ function invoiceColumns(cells: Cells): DataTableColumn<FinanceInvoice>[] {
       render: (invoice) => <InvoiceStatus invoice={invoice} cells={cells} />,
     },
   ];
+}
+
+// The invoice's number, which opens the source's own PDF of it when the source
+// serves one. The document is fetched on demand under the reader's own grant.
+function InvoiceNumber({
+  invoice,
+  cells,
+}: Readonly<{ invoice: FinanceInvoice; cells: Cells }>) {
+  const { t, documents } = cells;
+  const number = invoice.number ?? t("finance.unnumbered");
+  if (!documents) {
+    return number;
+  }
+  return (
+    <a
+      className="link-button"
+      href={`/v1/finance/invoices/${invoice.id}/pdf`}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={t("finance.openInvoicePdf", { number })}
+    >
+      {number}
+    </a>
+  );
 }
 
 // How late, and whether it was, as one reading. "Paid" and "paid 22 days

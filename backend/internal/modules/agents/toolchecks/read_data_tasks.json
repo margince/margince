@@ -1,0 +1,6 @@
+{
+  "verb": "read_data_tasks",
+  "checks": [
+    "data_task.read"
+  ]
+}

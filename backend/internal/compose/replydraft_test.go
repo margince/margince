@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/draftcheck"
+	"github.com/margince/margince/backend/internal/compose/draftrules"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -117,10 +118,12 @@ type sequencedBrainStub struct {
 	// which is the only way to reach a path that runs between two successes.
 	errs     []error
 	requests []model.Request
+	subject  ai.Subject
 }
 
-func (b *sequencedBrainStub) Complete(_ context.Context, req model.Request) (model.Response, error) {
+func (b *sequencedBrainStub) Complete(ctx context.Context, req model.Request) (model.Response, error) {
 	b.requests = append(b.requests, req)
+	b.subject, _ = ai.SubjectOf(ctx)
 	index := len(b.requests) - 1
 	if index >= len(b.responses) {
 		index = len(b.responses) - 1
@@ -258,8 +261,8 @@ func TestVoicedDraftWithoutAProfileIsThePlainPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version != nil {
-		t.Fatal("no profile must mean no voice version stamp")
+	if version != nil || brain.subject.Label != "plan" {
+		t.Fatalf("version %v, rail label %q; want no stamp, named by the subject line", version, brain.subject.Label)
 	}
 	if strings.Contains(brain.requests[0].Messages[0].Content, "<voice_profile>") {
 		t.Fatal("no profile must mean no voice block")
@@ -542,7 +545,7 @@ func TestTheReplyPromptHasOnlySelectedContentAndDeclaredSteering(t *testing.T) {
 	t.Parallel()
 	// This boundary is explicit: deriving its policy from the payload would
 	// silently approve a newly added history field.
-	want := []string{"body", "conversation_state", "intent", "now", "occurred_at", "output_language", "recipient", "recipient_last_name", "register", "rewrite_of", "sender_email", "sender_name", "silence_days", "subject", "thread"}
+	want := []string{"body", "conversation_state", "greeting_register", "intent", "now", "occurred_at", "output_language", "recipient", "recipient_last_name", "register", "rewrite_of", "sender_email", "sender_name", "silence_days", "subject", "thread"}
 	var got []string
 	for _, field := range reflect.VisibleFields(reflect.TypeFor[replyActivityData]()) {
 		if field.PkgPath != "" {
@@ -556,5 +559,19 @@ func TestTheReplyPromptHasOnlySelectedContentAndDeclaredSteering(t *testing.T) {
 	slices.Sort(got)
 	if !slices.Equal(got, want) {
 		t.Fatalf("reply payload fields = %v, want the reviewed content/steering boundary %v", got, want)
+	}
+}
+
+func TestAReplyToASelectedMessageStaysAnchoredOnThatMessage(t *testing.T) {
+	system := replyDraftSystemFor(promptfence.New(), false)
+	if !strings.Contains(system, "Answer that exact message") {
+		t.Error("a reply is no longer told to answer the selected message")
+	}
+	if !strings.Contains(system, draftrules.ReplyRewrite) || strings.Contains(system, draftrules.Rewrite) ||
+		strings.Contains(system, "names a different topic or format") {
+		t.Error("a reply redraft may be told to write a new message instead of answering the selected one")
+	}
+	if strings.Contains(system, draftrules.Purpose) {
+		t.Error("the new-email purpose rule leaked into a reply, which answers its selected message by design")
 	}
 }

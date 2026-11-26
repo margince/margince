@@ -23,11 +23,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
 
@@ -92,11 +92,13 @@ func (r importResolver) Subject(ctx context.Context, cmd ImportCommand) (StageIn
 			TargetType: importRunRecordType,
 			TargetID:   cmd.RunID,
 			Summary:    describeImport(summaryIn(ctx, r.language), object, report),
+			SystemText: &systemtext.Message{Subject: importComponent(object, report)},
 		}, nil
 	}
 	said := summaryIn(ctx, r.language)
 	return StageInfo{
 		TargetType: importRunRecordType,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.importPreview", systemtext.NounArgument(fmt.Sprint(cmd.Object)))},
 		Summary:    fmt.Sprintf(said.importPreview, said.noun(cmd.Object)),
 	}, nil
 }
@@ -137,23 +139,7 @@ func (r importResolver) reportFor(
 // though it is the least flattering number — a summary that quietly drops it
 // reads as a clean import.
 func describeImport(said summaryCopy, object string, report crmcontracts.ImportRunReport) string {
-	d := report.Disposition
-	parts := []string{fmt.Sprintf(said.importCreate, d.Created)}
-	if d.Updated > 0 {
-		parts = append(parts, fmt.Sprintf(said.importUpdate, d.Updated))
-	}
-	if d.Unchanged > 0 {
-		parts = append(parts, fmt.Sprintf(said.importUnchanged, d.Unchanged))
-	}
-	if d.Skipped > 0 {
-		parts = append(parts, fmt.Sprintf(said.importSkip, d.Skipped))
-	}
-	summary := fmt.Sprintf(said.importCommit,
-		report.RowsRead, said.noun(object), strings.Join(parts, ", "))
-	if len(report.Issues) > 0 {
-		summary += fmt.Sprintf(said.importIssues, len(report.Issues))
-	}
-	return summary
+	return systemtext.Canonical(importComponent(object, report), said.lang)
 }
 
 // Guards is where a family refuses a call no approval could carry out. There

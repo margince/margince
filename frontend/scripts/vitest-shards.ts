@@ -8,6 +8,7 @@
 import { globSync } from "node:fs";
 import { join } from "node:path";
 import type { TestSequencer, TestSpecification, Vitest } from "vitest/node";
+import { stable } from "../src/format/collate";
 
 /**
  * Splits `costs` into `count` slices, heaviest first, each onto the slice
@@ -41,6 +42,24 @@ export function partition(
   return slices.map((slice) => slice.files);
 }
 
+/**
+ * The test order inside each file. `seed` (TEST_SHUFFLE_SEED, the run number
+ * in CI) shuffles the tests with it; unset, they run in source order. The files
+ * keep the sequencer's order, so the shards split the same files as before.
+ */
+export function shuffledTests(seed: string | undefined): {
+  shuffle?: { files: false; tests: true };
+  seed?: number;
+} {
+  if (seed === undefined || seed === "") return {};
+  if (!/^\d+$/.test(seed)) {
+    throw new Error(
+      `TEST_SHUFFLE_SEED must be a whole number, got "${seed}"`,
+    );
+  }
+  return { shuffle: { files: false, tests: true }, seed: Number(seed) };
+}
+
 // The cost model loads the TypeScript compiler, so it is imported only once a
 // test run asks for it. A `vite build` reading this config never pays for it.
 async function costsOf(
@@ -69,7 +88,7 @@ export async function compilerTests(frontendRoot: string): Promise<string[]> {
   const costs = testCosts(files.map((file) => join(frontendRoot, file)));
   return files
     .filter((file) => costs.get(join(frontendRoot, file))?.kind !== "render")
-    .sort();
+    .sort(stable);
 }
 
 export class CostSequencer implements TestSequencer {

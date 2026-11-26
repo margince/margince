@@ -1,0 +1,11 @@
+{
+  "verb": "record_consent",
+  "checks": [
+    "contact.update"
+  ],
+  "takes": [
+    "consent_purpose",
+    "contact",
+    "mail_contact"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "verb": "update_deal_room_document",
+  "checks": [
+    "deal_room.update"
+  ],
+  "takes": [
+    "deal_room",
+    "room_document"
+  ]
+}

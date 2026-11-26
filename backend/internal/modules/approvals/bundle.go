@@ -197,7 +197,7 @@ func (s *Service) decidableMembers(ctx context.Context, tx pgx.Tx, p principal.P
 			continue
 		}
 		seen++
-		if agentMayDecide(p, a, approve, s.ownReleaseFor(ctx, tx, a)) == nil {
+		if agentMayDecide(ctx, p, a, approve, s.ownReleaseFor(ctx, tx, a)) == nil {
 			mine = append(mine, a)
 		}
 	}

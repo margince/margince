@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 
 // `settingscatalog.ts` spells `UnitSecretScope` a second time rather than
 // importing it, because the extensions registry reaches `@composition/screens`
@@ -26,7 +27,7 @@ function scopesDeclaredIn(file: string, name: string): string[] {
   if (match === null) {
     throw new Error(`no \`export type ${name}\` in ${file}`);
   }
-  return [...match[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1]).sort();
+  return [...match[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1]).sort(stable);
 }
 
 describe("the mirrored UnitSecretScope", () => {

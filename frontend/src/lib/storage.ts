@@ -22,11 +22,6 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
-  homeSwipeSeen: {
-    name: "margince.home.swipeSeen",
-    area: "local",
-    lifetime: "device",
-  },
   locale: { name: "margince.locale", area: "local", lifetime: "device" },
   theme: { name: "margince.theme", area: "local", lifetime: "device" },
   sidebarCollapsed: {
@@ -40,6 +35,11 @@ export const STORAGE_KEYS = {
     lifetime: "device",
   },
   edgeLight: { name: "margince.edgeLight", area: "local", lifetime: "device" },
+  singleKeyShortcuts: {
+    name: "margince.shortcuts.singleKey",
+    area: "local",
+    lifetime: "device",
+  },
   worklistDrawerWide: {
     name: "margince.worklist.drawerWide",
     area: "local",
@@ -62,14 +62,18 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "device",
   },
+  tableHidden: {
+    prefix: "margince.table.hidden.",
+    area: "local",
+    lifetime: "device",
+  },
+  tableDense: {
+    prefix: "margince.table.dense.",
+    area: "local",
+    lifetime: "device",
+  },
   faultsSeen: {
     name: "margince.agent.faults-seen",
-    area: "local",
-    lifetime: "seat",
-  },
-  // The local day Home's greeting last played on, so it plays once a day.
-  briefIntroShown: {
-    name: "margince.brief.introShown",
     area: "local",
     lifetime: "seat",
   },
@@ -89,6 +93,11 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "account",
   },
+  aiDeclined: {
+    prefix: "margince.first-run.ai-declined:",
+    area: "local",
+    lifetime: "account",
+  },
   oauthAttempt: {
     name: "ob.connect.oauthAttempt",
     area: "session",
@@ -105,11 +114,6 @@ export const STORAGE_KEYS = {
     area: "session",
     lifetime: "seat",
   },
-  buyerRoomSession: {
-    name: "margince.room.session",
-    area: "session",
-    lifetime: "seat",
-  },
   // When this tab last reloaded onto a newer build, so it reloads once per deploy.
   staleBuildReloadedAt: {
     name: "margince.staleBuildReloadedAt",
@@ -120,6 +124,20 @@ export const STORAGE_KEYS = {
   // the session brings the reminder back.
   setupReminderHidden: {
     name: "margince.setup.reminderHidden",
+    area: "local",
+    lifetime: "seat",
+  },
+  // Whether this account read what Margince reads and writes, per account id.
+  // The server holds no such fact; a new browser asks once more.
+  setupPermissionsSeen: {
+    prefix: "margince.setup.permissionsSeen:",
+    area: "local",
+    lifetime: "account",
+  },
+  // What the last Undo of many deals answered for each deal. The server keeps
+  // no record of a run, so this browser keeps the last one.
+  lastBulkUndo: {
+    name: "margince.changes.lastBulkUndo",
     area: "local",
     lifetime: "seat",
   },
@@ -161,6 +179,24 @@ export const STORAGE_KEYS = {
     name: "margince.session.seen",
     area: "local",
     lifetime: "seat",
+  },
+  // A user whose journey read "complete", per user id, so the splash skips it.
+  onboardingComplete: {
+    prefix: "margince.onboarding.complete:",
+    area: "local",
+    lifetime: "seat",
+  },
+  trialNoticeHiddenOn: {
+    name: "margince.trial.noticeHiddenOn",
+    area: "local",
+    lifetime: "seat",
+  },
+  // The install hint's schedule: the day this device first ran the app, and
+  // what the reader did with the hint since. Device: a new seat changes neither.
+  installHint: {
+    name: "margince.installHint",
+    area: "local",
+    lifetime: "device",
   },
 } as const satisfies Record<string, Declared>;
 
@@ -289,6 +325,18 @@ function registeredAs(area: StorageArea, name: string): Registered | undefined {
     (key) =>
       key.area === area &&
       ("name" in key ? key.name === name : name.startsWith(key.prefix)),
+  );
+}
+
+/** Whether this browser holds any member of the family. */
+export function storedInFamily(family: KeyFamily): boolean {
+  return withStorage(
+    family.area,
+    (storage) =>
+      Array.from({ length: storage.length }, (_, index) =>
+        storage.key(index),
+      ).some((name) => name?.startsWith(family.prefix) === true),
+    false,
   );
 }
 

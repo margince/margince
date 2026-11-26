@@ -36,6 +36,23 @@ type EmailSender interface {
 	SendEmail(ctx context.Context, auth Auth, msg EmailMessage) (SendReceipt, error)
 }
 
+// PriorSendLookup is how a mail sender declares whether a retry can find an
+// earlier attempt at the provider. A sender that does not implement it can,
+// as the EmailSender contract asks. One answering false gets each send marked
+// in flight, and a retry of an unlearned outcome parks.
+type PriorSendLookup interface {
+	DetectsPriorSend() bool
+}
+
+// DetectsPriorSend asks a resolved mail sender whether a retry can find an
+// earlier attempt.
+//
+//craft:ignore naked-any the type assertion seam: a sender is whichever connector the resolver bound
+func DetectsPriorSend(sender any) bool {
+	lookup, ok := sender.(PriorSendLookup)
+	return !ok || lookup.DetectsPriorSend()
+}
+
 // AttachmentCarrier is how a sending connector declares whether it can transmit
 // files.
 //
@@ -228,14 +245,29 @@ type SendReceipt struct {
 	// a provider that rewrites, the message stays keyed on an identity the wire
 	// does not carry and its captured echo lands as a second timeline row.
 	//
-	// It stays a plain identity because a receipt reporting "unknown" would ask
-	// every caller to carry a recovery path that is not theirs. ProviderMessageID
-	// is durable on the delivery, so a later pass can re-ask the provider.
+	// IdentityUnread tells the second fact apart. ProviderMessageID is durable
+	// on the delivery, and the captured echo, found by it, carries the identity.
 	RFC822MessageID string
 	// FromAddress is the address the message left from, when the transport
 	// reports it; empty keeps the one recorded at staging.
 	FromAddress string
+	// IdentityUnread says why RFC822MessageID is empty after a read-back that
+	// failed. The send itself succeeded either way.
+	IdentityUnread IdentityUnread
 }
+
+// IdentityUnread classifies a failed read-back of a sent message's identity.
+// The zero value means the read-back answered, or none was owed.
+type IdentityUnread string
+
+const (
+	// IdentityUnreadTransient is a throttle, a server fault or a lost
+	// connection: the captured echo can still supply the identity later.
+	IdentityUnreadTransient IdentityUnread = "transient"
+	// IdentityUnreadDenied is a refused read, such as a missing read scope:
+	// no later read of this mailbox will answer either.
+	IdentityUnreadDenied IdentityUnread = "denied"
+)
 
 // InlineImage is one image a message's markup shows by content id.
 type InlineImage struct {

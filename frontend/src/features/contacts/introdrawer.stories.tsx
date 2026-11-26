@@ -65,7 +65,7 @@ export default meta;
 
 type Story = StoryObj<typeof IntroDrawer>;
 
-function drawer(chosen: RouteCandidate | undefined) {
+function drawer(chosen: RouteCandidate | undefined, replacing = false) {
   return () => {
     // The drawer only writes, and only when the reader presses the verb — but
     // the route line reads the session to decide whether the route goes via
@@ -79,6 +79,11 @@ function drawer(chosen: RouteCandidate | undefined) {
           contactId={CONTACT}
           contactName="Dana Buyer"
           route={chosen}
+          replacement={
+            replacing
+              ? { id: "018f3a1b-0000-7000-8000-0000000000a1", version: 2 }
+              : undefined
+          }
           open
           onClose={() => {}}
         />
@@ -101,3 +106,11 @@ export const AskingThroughAColleague: Story = { render: drawer(route) };
  * reader nothing.
  */
 export const WithNoRouteToAskThrough: Story = { render: drawer(undefined) };
+
+export const ReplacingAnUnavailableColleague: Story = {
+  render: drawer(route, true),
+};
+export const ReplacingAnUnavailableColleagueDark: Story = {
+  ...ReplacingAnUnavailableColleague,
+  globals: { theme: "dark" },
+};

@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { useRowSelection } from "./listselection";
 import { ListTable } from "./listtable";
@@ -23,12 +23,14 @@ function PagedList({
   limit,
   selectable,
   body,
+  onRowClick,
 }: Readonly<{
   total: number;
   perRead: number;
   limit?: number;
   selectable?: (row: Row) => boolean;
   body?: ReactNode;
+  onRowClick?: (row: Row) => void;
 }>) {
   const all = testRows(total);
   const [held, setHeld] = useState(perRead);
@@ -44,6 +46,7 @@ function PagedList({
       hasMore={held < total}
       onLoadMore={() => setHeld((now) => Math.min(total, now + perRead))}
       body={body}
+      onRowClick={onRowClick}
       action={
         <button type="button" onClick={() => setNarrowed(!narrowed)}>
           Narrow
@@ -176,4 +179,19 @@ describe("selecting every row of a list", () => {
     rerender(<PagedList total={10} perRead={10} body={<p>Board</p>} />);
     expect(screen.queryByText(/chosen/)).not.toBeInTheDocument();
   });
+});
+
+// On touch the press target around the box is its label (listtable.css), so a
+// press there must select the row and never open it.
+it("selects the row on a press beside the box, and does not open it", async () => {
+  const user = userEvent.setup();
+  const onRowClick = vi.fn();
+  render(<PagedList total={3} perRead={3} onRowClick={onRowClick} />);
+  const box = screen.getByRole("checkbox", { name: "Select Row 02" });
+  const target = box.closest("label.lt-select");
+  if (target === null) throw new Error("the box sits in no .lt-select label");
+  await user.click(target);
+  expect(box).toBeChecked();
+  expect(screen.getByText("1 chosen")).toBeInTheDocument();
+  expect(onRowClick).not.toHaveBeenCalled();
 });

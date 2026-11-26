@@ -19,6 +19,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // takeEmailRequest is the explicit review path for historical or unassigned
@@ -40,8 +42,14 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 	idPos := len(args)
 	args = append(args, s.now())
 	instant := fmt.Sprintf("$%d", len(args))
+	domains, err := s.ownDomainList(ctx, tx)
+	if err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	args = append(args, domains)
+	ownDomains := fmt.Sprintf("$%d", len(args))
 	var pending bool
-	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT coalesce((%s) AND %s, false) FROM activity a WHERE a.id = $%d`, reviewableRequestSQL(instant), occurredday.BegunSQL("a", instant), idPos), args...).Scan(&pending); err != nil {
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT coalesce((%s) AND %s, false) FROM activity a WHERE a.id = $%d`, reviewableRequestSQL(instant, ownDomains), occurredday.BegunSQL("a", instant), idPos), args...).Scan(&pending); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	source, err := readActivityContent(ctx, tx, ids.From[ids.ActivityKind](id), storekit.LiveOnly)
@@ -77,8 +85,9 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 	if in.Subject != nil && strings.TrimSpace(*in.Subject) != "" {
 		request.Subject = in.Subject
 	}
-	request.Body = in.Body
+	request.Body, request.TaskType = in.Body, in.TaskType
 	request.DueAt, request.DueHasTime, request.RemindAt = in.DueAt, in.DueHasTime, in.RemindAt
+	request.DueIntent, request.RemindIntent = in.DueIntent, in.RemindIntent
 	request.CustomFields, request.customColumns, request.customChecked = in.CustomFields, in.customColumns, in.customChecked
 	return s.LogActivityTx(ctx, tx, request)
 }
@@ -117,6 +126,10 @@ func (s *Store) replayRequestTask(ctx context.Context, tx pgx.Tx, replay crmcont
 	return s.restoreRequestTask(ctx, tx, task, pending, userID, in)
 }
 
+// errSeatMayNotHoldPrivateMail refuses a reminder out of private mail to a
+// seat that may not read that mail. A caller answers it as a 403.
+var errSeatMayNotHoldPrivateMail = fmt.Errorf("the assignee may not read this private mail: %w", apperrors.ErrPermissionDenied)
+
 // emailRequestTask is the reply reminder for one request, filed under who
 // asked: "Needs attention" on a contact's page means that contact is waiting
 // for us, and one only copied on the mail is not.
@@ -134,6 +147,19 @@ func emailRequestTask(ctx context.Context, tx pgx.Tx, source crmcontracts.Activi
 	if err != nil {
 		return LogActivityInput{}, err
 	}
+	// A reminder out of private mail is its assignee's alone, so the assignee
+	// must be a seat that may read that mail. The nil owner makes no seat the
+	// thread's owner, so the read gate decides.
+	if !shared {
+		nobody := ids.Nil
+		may, err := auth.SeatMayHoldPrivateWorkTx(ctx, tx, ids.UUID(source.Id), &nobody, seat.UserID)
+		if err != nil {
+			return LogActivityInput{}, err
+		}
+		if !may {
+			return LogActivityInput{}, errSeatMayNotHoldPrivateMail
+		}
+	}
 	return emailRequestTaskInput(source, requesterLinks(filed), seat.UserID, asOf, shared), nil
 }
 
@@ -144,7 +170,7 @@ func emailRequestTask(ctx context.Context, tx pgx.Tx, source crmcontracts.Activi
 func readMailSharedWithWorkspace(ctx context.Context, tx pgx.Tx, message ids.UUID) (bool, error) {
 	var shared bool
 	if err := tx.QueryRow(ctx, `
-		SELECT audience = 'workspace' AND restricted_at IS NULL FROM activity WHERE id = $1`, message).Scan(&shared); err != nil {
+		SELECT `+auth.WorkspaceAudienceSQL("a")+` AND a.restricted_at IS NULL FROM activity a WHERE a.id = $1`, message).Scan(&shared); err != nil {
 		return false, fmt.Errorf("activities: reading who may read a request: %w", err)
 	}
 	return shared, nil
@@ -182,7 +208,8 @@ func readRequestFiling(ctx context.Context, tx pgx.Tx, message ids.UUID, seat pr
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT l.entity_type, %[1]s,
 		       EXISTS (SELECT 1 FROM activity_participant p
-		                WHERE p.activity_id = l.activity_id AND p.role = 'from' AND p.contact_id = l.contact_id),
+		                WHERE p.activity_id = l.activity_id AND p.role = 'from'
+		                  AND `+relstrength.ParticipantNamesSQL("l.contact_id", "p")+`),
 		       EXISTS (SELECT 1 FROM activity_participant p WHERE p.activity_id = l.activity_id AND p.role = 'from')
 		  FROM activity_link l
 		 WHERE l.activity_id = $%[2]d AND %[3]s AND %[4]s
@@ -227,16 +254,19 @@ func requesterLinks(filed requestFiling) []ActivityLinkInput {
 }
 
 func emailRequestTaskInput(source crmcontracts.Activity, links []ActivityLinkInput, userID ids.UUID, asOf time.Time, shared bool) LogActivityInput {
-	subject := "Reply to email"
+	subject := systemtext.Literal("task.reply_to_email")
+	metadata := &systemtext.Message{Subject: systemtext.Sentence("task.reply_to_email")}
 	if source.Subject != nil && strings.TrimSpace(*source.Subject) != "" {
 		subject = *source.Subject
+		metadata.Subject = systemtext.Prose(systemtext.Quote, "")
 	}
 	sourceSystem, sourceID := EmailRequestTaskSource, source.Id.String()
 	messageID, assignee := ids.UUID(source.Id), ids.From[ids.UserKind](userID)
 	in := LogActivityInput{
-		Kind: string(crmcontracts.ActivityKindTask), Subject: &subject, OccurredAt: &asOf, AssigneeID: &assignee,
+		SystemText: metadata,
+		Kind:       string(crmcontracts.ActivityKindTask), Subject: &subject, OccurredAt: &asOf, AssigneeID: &assignee,
 		SourceSystem: &sourceSystem, SourceID: &sourceID, SourceActivityID: &messageID,
-		Source: EmailRequestTaskSource, Origin: OriginSystemRemediation, Links: links,
+		Source: EmailRequestTaskSource, Origin: OriginSystemRemediation, Links: links, continues: &messageID,
 	}
 	if !shared {
 		in.VisibleOnlyTo(userID)

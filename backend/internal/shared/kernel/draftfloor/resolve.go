@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -136,18 +137,28 @@ func (r *Resolver) Now() time.Time {
 // are text to read; and the subject is the weaker of the two, being a line
 // contacts often leave in the sender's language on a reply they wrote in theirs.
 type Written struct {
+	// Chosen is the language the rep picked for this draft. It outranks every
+	// tier below: they asked for it, and no evidence makes that the wrong answer.
+	Chosen textlang.Lang
 	// Addressee is the text the addressee wrote in their own mail, newest
 	// first, as draftcore.AddresseeEvidence gives it. It outranks Stored: it is
 	// the sender's own text with quotes cut, read with today's quote rule.
 	Addressee []string
+	// Greeting is the register a rep set on the addressee. It outranks every
+	// reading of the text, because the rep decided it once for this contact.
+	Greeting greetingregister.Register
 	// Stored is the language recorded on the message, empty when none is.
 	// It outranks the rest of the text: the same message read twice must not
 	// answer two languages because a quoted chain grew underneath it.
 	Stored string
 	// Body is the correspondence itself, quoted history included.
 	Body string
-	// Subject is the fallback text, read only when the body says nothing.
-	Subject      string
+	// Subject is the answered message's own subject, read only when its body
+	// says nothing.
+	Subject string
+	// DraftSubject is the subject the caller wrote for this draft. A language
+	// it names outranks every tier but Chosen: a rep who writes a German
+	// subject to an English contact has decided to write German.
 	DraftSubject string
 	// Thread is the other messages of the conversation, in the order
 	// draftcore.LanguageEvidence gives them: the recipient's own mail first.
@@ -172,12 +183,12 @@ type Written struct {
 // draft unsigned (DRAFT-AC-E-6) — a drafting screen that errors because it
 // could not work out a greeting is worse than a draft the rep edits.
 //
-// The ladder is the addressee's own mail, then stored, then the correspondence (the answered message, then the
-// rest of the thread). Then the draft being rewritten, then the rep's typed
-// purpose, then the rep's own app language, then the installation's language,
-// then English. A purpose too short to clear
-// the detector's bar falls to the rep's app language, which is why that tier
-// sits above the installation's.
+// The ladder is the rep's chosen language, then the subject they wrote for the
+// draft, then the addressee's own mail, then stored. Then the correspondence
+// (the answered message, then the rest of the thread). Then the draft being rewritten, then the rep's typed purpose, then
+// the rep's own app language, then the installation's language, then English.
+// A purpose too short to clear the detector's bar falls to the rep's app
+// language, which is why that tier sits above the installation's.
 func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate.State) Envelope {
 	now := r.Now()
 	name, email := r.actor(ctx)
@@ -190,8 +201,12 @@ func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate
 	// envelope carries a register only for a German draft, so a language
 	// corrected after construction would leave a German register on an English
 	// envelope, or drop one the other way.
-	return NewEnvelopeWithRegister(r.language(ctx, written),
+	envelope := NewEnvelopeWithRegister(r.language(ctx, written),
 		register(written), state, now, name, email)
+	if greetingregister.Valid(written.Greeting) {
+		envelope.GreetingRegister = string(written.Greeting)
+	}
+	return envelope
 }
 
 // evidence is the text a draft's language and register are read from, in the
@@ -205,8 +220,11 @@ func (w Written) evidence() []string {
 	return append(out, w.Rewrite, w.DraftSubject, w.Purpose)
 }
 
-// register is the first du or Sie the evidence shows.
+// register is the du or Sie the rep set on the addressee, else the first one the evidence shows.
 func register(written Written) textlang.Register {
+	if stored := greetingregister.Address(written.Greeting); stored != textlang.RegisterUnknown {
+		return stored
+	}
 	for _, text := range written.evidence() {
 		if found := textlang.DetectRegister(text); found != textlang.RegisterUnknown {
 			return found
@@ -222,6 +240,12 @@ func register(written Written) textlang.Register {
 // would reach the prompt as an instruction to write in a language nothing else
 // in the product can render.
 func (r *Resolver) language(ctx context.Context, written Written) textlang.Lang {
+	if textlang.Known(string(written.Chosen)) {
+		return written.Chosen
+	}
+	if lang := textlang.Detect(written.DraftSubject); lang != textlang.Unknown {
+		return lang
+	}
 	// The stored label sits under the addressee's own text and above the rest:
 	// it was read at capture, possibly under an older quote rule.
 	if lang := textlang.DetectFirst(written.Addressee...); lang != textlang.Unknown {

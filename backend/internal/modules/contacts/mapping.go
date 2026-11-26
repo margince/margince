@@ -3,10 +3,9 @@
 
 package contacts
 
-// Contract request → store input mappings, in ONE place: the HTTP
-// handlers and the SoR provider (the MCP surface's door) both decode the
-// same crm.yaml shapes, and a defaulting rule that lived in only one of
-// them would make the two surfaces silently disagree.
+// Contract request → store input mappings, in one place. The HTTP handlers and
+// the SoR provider (the MCP surface's door) both decode the same crm.yaml
+// shapes. A rule kept in only one of them would make the surfaces disagree.
 
 import (
 	"bytes"
@@ -17,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
@@ -72,65 +72,6 @@ func leadIDsArg(leads *[]openapi_types.UUID) []ids.LeadID {
 		out = append(out, ids.From[ids.LeadKind](ids.UUID(lead)))
 	}
 	return out
-}
-
-// ContactCreationInput keeps request conversion shared by creation and its approval preview.
-func ContactCreationInput(req crmcontracts.CreateContactRequest) (CreateContactInput, error) {
-	return contactCreateInputAdmitting(req, false)
-}
-
-// contactCreateInputFromImporter is ContactCreationInput for a declared importer
-// (auth.DeclaredImporter, asked by the handler): it may stamp the mirror:
-// namespace. provider.go keeps the closed door.
-func contactCreateInputFromImporter(req crmcontracts.CreateContactRequest) (CreateContactInput, error) {
-	return contactCreateInputAdmitting(req, true)
-}
-
-func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer bool) (CreateContactInput, error) {
-	fullName, err := httperr.RequireNonBlank(contactNameColumn, req.FullName)
-	if err != nil {
-		return CreateContactInput{}, err
-	}
-	req.FullName = fullName
-	source, err := httperr.RequireNonBlank(fieldSource, req.Source)
-	if err != nil {
-		return CreateContactInput{}, err
-	}
-	req.Source = source
-	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
-		return CreateContactInput{}, err
-	}
-	author, err := storekit.AdmitSourceAuthor(req.SourceAuthorId, req.SourceAuthorName, req.SourceSystem, importer)
-	if err != nil {
-		return CreateContactInput{}, err
-	}
-	if err := provenance.AdmitSourceID(req.SourceSystem, req.SourceId); err != nil {
-		return CreateContactInput{}, err
-	}
-	in := CreateContactInput{
-		FullName:              req.FullName,
-		FirstName:             req.FirstName,
-		LastName:              req.LastName,
-		Title:                 req.Title,
-		Source:                req.Source,
-		SourceSystem:          req.SourceSystem,
-		SourceID:              req.SourceId,
-		Author:                author,
-		OwnerID:               idArg[ids.UserKind](req.OwnerId),
-		CreatedFromActivityID: (*ids.UUID)(req.CreatedFromActivityId),
-		// The body's extra top-level keys (custom-field values); the
-		// store decides which land (active catalog columns only).
-		CustomFields:   req.AdditionalProperties,
-		ConvertLeadIDs: leadIDsArg(req.ConvertLeadIds),
-	}
-	if req.Social != nil {
-		in.Social = *req.Social
-	}
-	in.Address = req.Address
-	in.Emails = contactEmailInputs(req.Emails)
-	in.Phones = contactPhoneInputs(req.Phones)
-	in.Employer, err = employerChoiceFromRequest(idArg[ids.CompanyKind](req.CompanyId), req.CompanyName, req.Source)
-	return in, err
 }
 
 // contactEmailInputs maps the contract's addresses onto the store's, for both
@@ -214,17 +155,6 @@ func contactVisibilityArg(v *crmcontracts.UpdateContactRequestVisibility) *strin
 	return &s
 }
 
-// companyVisibilityArg is contactVisibilityArg for the other record. Two
-// functions rather than one generic: the wire enums are distinct generated
-// types, and the thing they share is that neither needs translating.
-func companyVisibilityArg(v *crmcontracts.UpdateCompanyRequestVisibility) *string {
-	if v == nil {
-		return nil
-	}
-	s := string(*v)
-	return &s
-}
-
 func contactUpdateInput(req crmcontracts.UpdateContactRequest, ifVersion *int64) UpdateContactInput {
 	in := UpdateContactInput{
 		FullName:       req.FullName,
@@ -236,10 +166,15 @@ func contactUpdateInput(req crmcontracts.UpdateContactRequest, ifVersion *int64)
 		IfVersion:      ifVersion,
 		CustomFields:   req.AdditionalProperties,
 		ConvertLeadIDs: leadIDsArg(req.ConvertLeadIds),
+		LinkedInURL:    req.LinkedinUrl,
 	}
 	if req.RelationshipMark != nil {
 		mark := relationshipmark.Mark(*req.RelationshipMark)
 		in.RelationshipMark = &mark
+	}
+	if req.GreetingRegister != nil {
+		register := greetingregister.Register(*req.GreetingRegister)
+		in.GreetingRegister = &register
 	}
 	if req.Social != nil {
 		in.Social = *req.Social
@@ -248,113 +183,6 @@ func contactUpdateInput(req crmcontracts.UpdateContactRequest, ifVersion *int64)
 	in.Emails = contactEmailInputs(req.Emails)
 	in.Phones = contactPhoneInputs(req.Phones)
 	in.Source = manualSource
-	return in
-}
-
-// CompanyCreationInput keeps request conversion shared by creation and its approval preview.
-func CompanyCreationInput(req crmcontracts.CreateCompanyRequest) (CreateCompanyInput, error) {
-	return companyCreateInputAdmitting(req, false)
-}
-
-// companyCreateInputFromImporter: see contactCreateInputFromImporter.
-func companyCreateInputFromImporter(req crmcontracts.CreateCompanyRequest) (CreateCompanyInput, error) {
-	return companyCreateInputAdmitting(req, true)
-}
-
-func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer bool) (CreateCompanyInput, error) {
-	displayName, err := httperr.RequireNonBlank("display_name", req.DisplayName)
-	if err != nil {
-		return CreateCompanyInput{}, err
-	}
-	req.DisplayName = displayName
-	source, err := httperr.RequireNonBlank(fieldSource, req.Source)
-	if err != nil {
-		return CreateCompanyInput{}, err
-	}
-	req.Source = source
-	if err := provenance.RefuseWireAdmitting(req.Source, req.SourceSystem, importer); err != nil {
-		return CreateCompanyInput{}, err
-	}
-	author, err := storekit.AdmitSourceAuthor(req.SourceAuthorId, req.SourceAuthorName, req.SourceSystem, importer)
-	if err != nil {
-		return CreateCompanyInput{}, err
-	}
-	if err := provenance.AdmitSourceID(req.SourceSystem, req.SourceId); err != nil {
-		return CreateCompanyInput{}, err
-	}
-	in := CreateCompanyInput{
-		DisplayName:     req.DisplayName,
-		LegalName:       req.LegalName,
-		Description:     req.Description,
-		Industry:        req.Industry,
-		Phone:           req.Phone,
-		Email:           emailArg(req.Email),
-		Source:          req.Source,
-		SourceSystem:    req.SourceSystem,
-		SourceID:        req.SourceId,
-		Author:          author,
-		OwnerID:         idArg[ids.UserKind](req.OwnerId),
-		ParentCompanyID: idArg[ids.CompanyKind](req.ParentCompanyId),
-		CustomFields:    req.AdditionalProperties,
-	}
-	in.Address = req.Address
-	if req.SizeBand != nil {
-		band := string(*req.SizeBand)
-		in.SizeBand = &band
-	}
-	if req.Domains != nil {
-		for _, d := range *req.Domains {
-			in.Domains = append(in.Domains, CompanyDomainInput{
-				Domain:    d.Domain,
-				IsPrimary: d.IsPrimary != nil && *d.IsPrimary,
-			})
-		}
-	}
-	return in, nil
-}
-
-func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64) UpdateCompanyInput {
-	in := UpdateCompanyInput{
-		DisplayName:           req.DisplayName,
-		LegalName:             req.LegalName,
-		Description:           req.Description,
-		Industry:              req.Industry,
-		OwnerID:               idArg[ids.UserKind](req.OwnerId),
-		ParentCompanyID:       idArg[ids.CompanyKind](req.ParentCompanyId),
-		AssessAgainstEntityID: idArg[ids.LegalEntityKind](req.AssessAgainstEntityId),
-		IfVersion:             ifVersion,
-		CustomFields:          req.AdditionalProperties,
-		LinkedInURL:           req.LinkedinUrl,
-		Phone:                 req.Phone,
-		Email:                 emailArg(req.Email),
-		Visibility:            companyVisibilityArg(req.Visibility),
-	}
-	in.Address = req.Address
-	if req.SizeBand != nil {
-		band := string(*req.SizeBand)
-		in.SizeBand = &band
-	}
-	if req.Domains != nil {
-		desired := make([]CompanyDomainInput, 0, len(*req.Domains))
-		for _, d := range *req.Domains {
-			desired = append(desired, CompanyDomainInput{
-				Domain:    d.Domain,
-				IsPrimary: d.IsPrimary != nil && *d.IsPrimary,
-			})
-		}
-		in.Domains = &desired
-	}
-	if req.Lifecycle != nil {
-		lifecycle := string(*req.Lifecycle)
-		in.Lifecycle = &lifecycle
-	}
-	if req.RelationshipTypes != nil {
-		desired := make([]string, 0, len(*req.RelationshipTypes))
-		for _, t := range *req.RelationshipTypes {
-			desired = append(desired, string(t))
-		}
-		in.RelationshipTypes = &desired
-	}
 	return in
 }
 

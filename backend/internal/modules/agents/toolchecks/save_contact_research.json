@@ -1,0 +1,9 @@
+{
+  "verb": "save_contact_research",
+  "checks": [
+    "contact.update"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

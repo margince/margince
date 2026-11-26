@@ -1,0 +1,95 @@
+{
+  "scenario": "case129_move_it_to_service",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "104a8cb4b06e19e9",
+    "tools": "814eb3616998a66c",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "1796d51361de08d5",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T05:55:15Z",
+    "graded_commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "graded_at": "2026-11-25T05:55:15Z"
+  },
+  "usage": {
+    "input_tokens": 12,
+    "output_tokens": 1354,
+    "cache_creation_input_tokens": 8968,
+    "cache_read_input_tokens": 437152,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.0932
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_state",
+        "find_records",
+        "list_pipelines",
+        "move_deal_pipeline",
+        "read_workspace",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_state",
+        "find_records",
+        "list_pipelines",
+        "move_deal_pipeline",
+        "read_workspace",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3,
+      "min": 3,
+      "max": 3
+    },
+    "turns": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 223066,
+      "min": 223060,
+      "max": 223072
+    },
+    "output_tokens": {
+      "median": 677,
+      "min": 657,
+      "max": 697
+    },
+    "duration_ms": {
+      "median": 7275.5,
+      "min": 6574,
+      "max": 7977
+    }
+  }
+}

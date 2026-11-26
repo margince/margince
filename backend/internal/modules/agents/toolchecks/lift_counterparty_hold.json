@@ -1,0 +1,7 @@
+{
+  "verb": "lift_counterparty_hold",
+  "checks": [],
+  "takes": [
+    "agent_counterparty_hold"
+  ]
+}

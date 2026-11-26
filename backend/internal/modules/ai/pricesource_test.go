@@ -35,6 +35,7 @@ func TestTheVendorAPIsArePricedFromModelsDevAndTheWireBrokersFromOpenRouter(t *t
 	want := map[string]string{
 		providerGemini: "google", providerGeminiVertex: "google-vertex",
 		providerOpenAI: "openai", providerAnthropic: "anthropic",
+		providerGeminiDecision: "google",
 	}
 	for provider, key := range want {
 		if got, ok := modelsDevKeyFor(provider); !ok || got != key {
@@ -42,7 +43,7 @@ func TestTheVendorAPIsArePricedFromModelsDevAndTheWireBrokersFromOpenRouter(t *t
 		}
 	}
 	if got := modelsDevProviders(); len(got) != len(want) {
-		t.Errorf("models.dev providers = %v, want exactly the four vendor APIs", got)
+		t.Errorf("models.dev providers = %v, want exactly the five vendor APIs", got)
 	}
 	for _, p := range []string{providerOpenAICompatible, providerJevCompatible} {
 		if !brokerPriced(p) {

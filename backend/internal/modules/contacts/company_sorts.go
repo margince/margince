@@ -14,8 +14,8 @@ package contacts
 import (
 	"context"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // orderByPrimaryDomain orders by the host the Website column draws.
@@ -42,7 +42,7 @@ func orderByPrimaryDomain(context.Context, func(any) int) (string, error) {
 // no count and orders by NOTHING: the column is absent for them, and a page
 // ordered by a number they are refused would disclose it through the order.
 func orderByContactCount(ctx context.Context, arg func(any) int) (string, error) {
-	if !auth.ReadGranted(ctx, "contact") || !auth.ReadGranted(ctx, "relationship") {
+	if !contactCountVisible(ctx) {
 		return withheldSortValue, nil
 	}
 	from, err := countedEmploymentFrom(ctx, "rel.company_id = company.id", arg)
@@ -58,20 +58,21 @@ func orderByContactCount(ctx context.Context, arg func(any) int) (string, error)
 //
 // Held by: TestEveryOpenDealCountComesFromTheRollup (backend/internal/modules/contacts/opendealcount_test.go)
 //
-// The as-of date is rollupAsOf(), which the page's own count already uses and
-// which truncates to the day: the sort and the figure beside it cannot land on
-// two different instants.
+// The as-of instant is rollupAsOf(), which the page's own count already uses:
+// the sort and the figure beside it cannot land on two different days.
 //
 // A role without computed_field:read is shown NO count (STATE-4) and orders by
 // nothing — same rule as the contacts column above, for the same reason.
 func orderByOpenDealCount(ctx context.Context, arg func(any) int) (string, error) {
-	if !auth.ReadGranted(ctx, "deal") || !auth.ReadGranted(ctx, "computed_field") {
+	if !pipelineCountsVisible(ctx) {
 		return withheldSortValue, nil
 	}
+	// No open deal means no rollup row; the column prints 0, so it sorts as 0.
 	return storekit.SQLf(
-		`(SELECT pipeline_sort.open_deal_count
-		    FROM company_open_pipeline_rollup($%d) pipeline_sort
-		   WHERE pipeline_sort.company_id = company.id)`, arg(rollupAsOf())), nil
+		`coalesce((SELECT pipeline_sort.open_deal_count
+		    FROM company_open_pipeline_rollup(%s) pipeline_sort
+		   WHERE pipeline_sort.company_id = company.id), 0)`,
+		occurredday.TodaySQL(storekit.SQLf("$%d::timestamptz", arg(rollupAsOf())))), nil
 }
 
 // withheldSortValue is what a column this caller may not see orders by: NULL,

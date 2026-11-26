@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "put_product_translation",
+  "verb": "put_product_translation",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

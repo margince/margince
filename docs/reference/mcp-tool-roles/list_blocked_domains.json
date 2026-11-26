@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "blocked_domains",
+  "verb": "list_blocked_domains",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

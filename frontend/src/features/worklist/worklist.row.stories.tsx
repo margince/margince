@@ -5,15 +5,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Panel } from "../../design-system/panel";
-import { jsonResponse, StoryProviders } from "../../testing/story-utils";
+import { emptyListAnswer, StoryProviders } from "../../testing/story-utils";
 import { WorklistRow } from "./worklist.row";
-// The row's own layout, the same way every surface that mounts these rows picks
-// it up — worklist.tsx, brief.feed.tsx and worklist.hidden.tsx each import it.
-// Without it the story drew the row as a stack of unstyled lines: the rank ran
-// into the kind, the verbs were a single flow with no groups, and the panel the
-// snooze caret opens laid its four lines out as a grid of pills. A story that
-// does not carry the stylesheet is a picture of markup rather than of the
-// screen, which is the one thing it exists to be.
+// The row's own layout, imported as every surface that mounts these rows does,
+// so the story draws the screen and not bare markup.
 import "./worklist.css";
 
 // One row of the queue, standing on its own — the unit worklist.stories.tsx
@@ -54,7 +49,7 @@ function stubRow(readPending: boolean) {
         ? new Promise(() => {})
         : new Response(null, { status: 204 });
     }
-    return jsonResponse({ data: [] });
+    return emptyListAnswer(input);
   }) as typeof fetch;
 }
 
@@ -266,23 +261,22 @@ export const AMeetingWithNobodyToBriefAgainst: Story = {
 //
 // The due moment drawn and "no owner" said out loud. The row's menu is opened on
 // its snooze spans, because a closed menu shows nothing about what it holds.
+const RETROFIT_TASK: WorklistItem = {
+  occurred_precision: "instant",
+  id: "01a05500-0000-7000-8000-0000000000a1",
+  source: "task",
+  category: "tasks",
+  level: 3,
+  consequence: "task_slips",
+  title: "Send the retrofit quote",
+  due_at: "2026-09-02T15:00:00Z",
+  because: [{ kind: "due_today" }, { kind: "unassigned" }],
+  actions: [],
+  dispositions: ["snooze", "not_mine"],
+};
+
 export const ATaskNobodyOwnsBeingPutDown: Story = {
-  args: {
-    ...baseArgs,
-    item: {
-      occurred_precision: "instant",
-      id: "01a05500-0000-7000-8000-0000000000a1",
-      source: "task",
-      category: "tasks",
-      level: 3,
-      consequence: "task_slips",
-      title: "Send the retrofit quote",
-      due_at: "2026-09-02T15:00:00Z",
-      because: [{ kind: "due_today" }, { kind: "unassigned" }],
-      actions: [],
-      dispositions: ["snooze", "not_mine"],
-    },
-  },
+  args: { ...baseArgs, item: RETROFIT_TASK },
   render: (args) => {
     stubRow(false);
     return <WorklistRow {...args} />;
@@ -290,16 +284,32 @@ export const ATaskNobodyOwnsBeingPutDown: Story = {
   play: openTheRowMenu,
 };
 
-// The same row on a phone.
-//
-// The state the old mobile test could not see: above this breakpoint the row is
-// rank, text and verbs on one line, and the verbs never yield width — so at
-// 390px the title column was squeezed to a few characters while three buttons
-// held their full size beside it. Here the rank and its kind lead the line, the
-// work takes the next, and the verbs the one after, at a real target height.
-//
-// Worth a story of its own rather than a note on the desktop one: this is a
-// different layout, and the two are checked by looking at both.
+// A task with a time agreed on another zone's clock. The row reads the time on
+// the reader's clock, then the agreed clock and its zone.
+export const ATaskAgreedInAnotherZone: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      ...RETROFIT_TASK,
+      id: "01a05500-0000-7000-8000-0000000000a2",
+      title: "Call Turbinenbau about the retrofit",
+      due_has_time: true,
+      due_intent: {
+        wall_clock: "2026-09-02T11:00",
+        timezone: "America/New_York",
+      },
+      because: [{ kind: "due_today" }],
+      dispositions: ["snooze"],
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// The same row on a phone, which has a layout of its own. The rank and its kind
+// lead the line, then the work, then the verbs at target height.
 export const ATaskOnAPhone: Story = {
   ...ATaskNobodyOwnsBeingPutDown,
   globals: { viewport: { value: "phone" } },
@@ -496,6 +506,33 @@ export const AnApprovedThingThatDidNotRun: Story = {
   },
 };
 
+// An approval that ran out before its change ran. The server's code puts its
+// English sentence into the reader's words.
+export const AnApprovalThatLapsed: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      occurred_precision: "instant",
+      id: "fa2",
+      source: "failed_approval",
+      category: "system",
+      level: 3,
+      consequence: "task_slips",
+      because: [],
+      actions: ["open"],
+      subject: { type: "deal", id: "deal-nordwind", label: "Nordwind renewal" },
+      title: "Move deal to Won",
+      detail:
+        "Approval expired before execution. Nothing changed. Request a new proposal to try again.",
+      effect_failure_code: "approval_lapsed",
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
 // A source that stopped answering. No verb: restoring a mailbox is an
 // administrator's job on another screen, and a button here would promise a
 // repair this queue cannot make.
@@ -678,6 +715,29 @@ export const AMeetingWithNoOutcomeRecorded: Story = {
       // The seat may answer it, so the row draws Held, Add notes and Cancel.
       actions: ["decide", "cancel"],
       subject: { type: "activity", id: "11111111-1111-7111-8111-111111111111" },
+    },
+  },
+};
+
+/**
+ * A colleague's meeting the reader attended but may not change. It reminds them
+ * that no outcome is recorded, says why they cannot record it, and offers Done.
+ */
+export const AMeetingTheReaderMayOnlyRead: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      ...AMeetingWithNoOutcomeRecorded.args?.item,
+      occurred_precision: "instant",
+      id: "m4",
+      source: "meeting_outcome",
+      category: "meetings",
+      level: 1,
+      consequence: "data_drifts",
+      title: "Quarterly review with Turbinenbau",
+      because: [{ kind: "outcome_unrecorded" }, { kind: "read_only" }],
+      actions: [],
+      dispositions: ["handled"],
     },
   },
 };

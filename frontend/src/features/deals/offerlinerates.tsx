@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Field } from "../../design-system/atoms";
-import { useT } from "../../i18n";
+import { typedNumberFault } from "../../format/decimalinput";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { percentFault } from "./products.fields";
 import "./offers.css";
 
 /**
@@ -14,49 +16,88 @@ import "./offers.css";
  */
 export type LineRates = Readonly<{ discount_pct: string; tax_rate: string }>;
 
+/** A typed discount from 0 to 100 percent, or the reason it is not one. */
+export function discountFault(
+  text: string,
+  locale: Locale,
+  t: Translator,
+): string | undefined {
+  return (
+    typedNumberFault(text, locale, t) ??
+    percentFault(text, locale, t("offer.discountPct"), {
+      min: "0",
+      max: "100",
+    })
+  );
+}
+
+/** A typed tax rate of 0 percent or more, or the reason it is not one. */
+export function taxRateFault(
+  text: string,
+  locale: Locale,
+  t: Translator,
+): string | undefined {
+  return (
+    typedNumberFault(text, locale, t) ??
+    percentFault(text, locale, t("offer.taxRate"), { min: "0" })
+  );
+}
+
 export function NewLineRates<T extends LineRates>({
   value,
   onChange,
+  refused = {},
+  onEdited,
+  testIdPrefix = "new-line",
 }: Readonly<{
   value: T;
   onChange: (update: (prev: T) => T) => void;
+  testIdPrefix?: string;
+  // What the server refused on each rate, until that rate is edited.
+  refused?: Readonly<Partial<Record<keyof LineRates, string>>>;
+  onEdited?: (field: keyof LineRates) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <>
-      <Field label={t("offer.discountPct")}>
+      <Field
+        label={t("offer.discountPct")}
+        error={
+          discountFault(value.discount_pct, locale, t) ?? refused.discount_pct
+        }
+      >
         {(control) => (
           <input
             {...control}
-            data-testid="new-line-discount"
-            type="number"
-            step="0.01"
+            data-testid={`${testIdPrefix}-discount`}
+            inputMode="decimal"
             className="input offers-line-rate"
             value={value.discount_pct}
-            onChange={(event) =>
-              onChange((prev) => ({
-                ...prev,
-                discount_pct: event.target.value,
-              }))
-            }
+            onChange={(event) => {
+              const discount_pct = event.target.value;
+              onChange((prev) => ({ ...prev, discount_pct }));
+              onEdited?.("discount_pct");
+            }}
           />
         )}
       </Field>
-      <Field label={t("offer.taxRate")}>
+      <Field
+        label={t("offer.taxRate")}
+        error={taxRateFault(value.tax_rate, locale, t) ?? refused.tax_rate}
+      >
         {(control) => (
           <input
             {...control}
-            data-testid="new-line-tax"
-            type="number"
-            step="0.01"
+            data-testid={`${testIdPrefix}-tax`}
+            inputMode="decimal"
             className="input offers-line-rate"
             value={value.tax_rate}
-            onChange={(event) =>
-              onChange((prev) => ({
-                ...prev,
-                tax_rate: event.target.value,
-              }))
-            }
+            onChange={(event) => {
+              const tax_rate = event.target.value;
+              onChange((prev) => ({ ...prev, tax_rate }));
+              onEdited?.("tax_rate");
+            }}
           />
         )}
       </Field>

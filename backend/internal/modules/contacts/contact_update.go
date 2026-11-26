@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
@@ -45,8 +46,14 @@ type UpdateContactInput struct {
 	// RelationshipMark marks the contact; clearing it goes through Clear. The
 	// setter is read from the signed-in principal, never from the caller.
 	RelationshipMark *relationshipmark.Mark
+	// GreetingRegister is how a message to the contact opens; clearing it goes
+	// through Clear.
+	GreetingRegister *greetingregister.Register
 	Social           map[string]any
-	Address          *crmcontracts.Address
+	// LinkedInURL is the top-level spelling of Social's linkedin key; a
+	// cleared linkedin_url in Clear removes the link.
+	LinkedInURL *string
+	Address     *crmcontracts.Address
 	// Emails replaces the contact's live addresses when non-nil. nil is "not
 	// supplied" and leaves the stored rows standing, exactly as Social is —
 	// the distinction matters for an import whose file carried no email
@@ -74,28 +81,52 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	active, err := s.activeColumns(ctx, "contact")
-	if err != nil {
-		return crmcontracts.Contact{}, err
-	}
 	var out crmcontracts.Contact
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, "contact")
+		if err != nil {
+			return err
+		}
 		out, err = s.updateContactInTx(ctx, tx, id, in, active)
 		return err
 	})
 	return out, s.AskHolderToShare(ctx, err)
 }
 
-// updateContactInTx is the edit itself, on the caller's transaction: the write
-// check, the patch, the child rows it replaces, and the record of what it did.
-//
-//nolint:cyclop // one edit applies each optional field in turn; splitting it would scatter the single write it records.
+// updateContactInTx is the edit on the caller's transaction, then the contact
+// as it now stands.
 func (s *Store) updateContactInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, in UpdateContactInput, active []fieldcatalog.Column,
 ) (crmcontracts.Contact, error) {
-	var out crmcontracts.Contact
+	edit, err := s.writeContactInTx(ctx, tx, id, in, active)
+	if err != nil {
+		return crmcontracts.Contact{}, err
+	}
+	if !edit.changed {
+		return withContactCreator(ctx, tx, edit.current)
+	}
+	out, err := readContact(ctx, tx, id, storekit.LiveOnly, active)
+	if err != nil {
+		return out, fmt.Errorf("read updated contact: %w", err)
+	}
+	return out, nil
+}
+
+// writeContactInTx is the edit itself, on the caller's transaction. It runs the
+// write check and the patch, replaces the child rows and records what it did.
+// It reads nothing back for a caller.
+//
+//nolint:cyclop // one edit applies each optional field in turn; splitting it would scatter the single write it records.
+//gate:parent-version-door
+func (s *Store) writeContactInTx(
+	ctx context.Context, tx pgx.Tx, id ids.ContactID, in UpdateContactInput, active []fieldcatalog.Column,
+) (recordEdit[crmcontracts.Contact], error) {
+	var out recordEdit[crmcontracts.Contact]
 	if err := auth.EnsureChangeable(ctx, tx, "contact", id.UUID); err != nil {
+		return out, err
+	}
+	in, err := linkedInURLFolded(in)
+	if err != nil {
 		return out, err
 	}
 	if err := s.lockConvertStops(ctx, tx, id, in.ConvertLeadIDs); err != nil {
@@ -114,22 +145,17 @@ func (s *Store) updateContactInTx(
 	}
 	// Before the patch and the lane locks, so a rename through the parts is
 	// patched, locked and re-checked as a full_name edit is.
-	in = updateAsWritten(current, in, active)
-	setter, err := relationshipMarkSetter(ctx, in)
-	if err != nil {
-		return out, err
-	}
-	p, err := buildContactPatch(current, in, setter)
+	in, p, err := contactEditPatch(ctx, current, in, active)
 	if err != nil {
 		return out, err
 	}
 	// The If-Match check comes first. The replace-sets write child rows before the
 	// guarded write could refuse a stale version. A stale version also answers 409
 	// before a refused custom field answers 422.
-	if err := storekit.EnsureIfMatch(ctx, tx, "contact", id.UUID, in.IfVersion); err != nil {
+	if err := storekit.EnsureVersionMatches(current.Version, in.IfVersion); err != nil {
 		return out, err
 	}
-	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+	if err := storekit.SetCustomFieldPatchIn(ctx, tx, p, active, in.CustomFields, current.AdditionalProperties); err != nil {
 		return out, err
 	}
 	if err := admitEditLeadHolders(ctx, tx, id, current, &in); err != nil {
@@ -148,7 +174,7 @@ func (s *Store) updateContactInTx(
 		p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
 	}
 	if p.Empty() {
-		return withContactCreator(ctx, tx, current)
+		return recordEdit[crmcontracts.Contact]{current: current}, nil
 	}
 
 	if err := guardVisibilityWrite(ctx, tx, p, id, current, in.Visibility); err != nil {
@@ -168,13 +194,8 @@ func (s *Store) updateContactInTx(
 	if err := s.carryHistoryIfPublished(ctx, tx, id, current, in); err != nil {
 		return out, err
 	}
-	before, after := contactChangeImages(p, current, in)
-	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "contact", id.UUID, before, after)
-	if err != nil {
-		return out, fmt.Errorf("audit contact update: %w", err)
-	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: after}); err != nil {
-		return out, fmt.Errorf("emit contact.updated: %w", err)
+	if err := recordContactUpdate(ctx, tx, id, p, current, in, setsChanged); err != nil {
+		return out, err
 	}
 	if err := recheckIfEdited(ctx, tx, id, current.FullName, in, setsChanged.emails || setsChanged.phones); err != nil {
 		return out, err
@@ -182,39 +203,69 @@ func (s *Store) updateContactInTx(
 	if err := s.convertEditedLeads(ctx, tx, id, in.converting); err != nil {
 		return out, err
 	}
-	if out, err = readContact(ctx, tx, id, storekit.LiveOnly, active); err != nil {
-		return out, fmt.Errorf("read updated contact: %w", err)
-	}
-	return out, s.followShareOwnerTx(ctx, tx, entityContact, id.UUID, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
+	owner := ownerAfterEdit(p, (*ids.UUID)(current.OwnerId), in.OwnerID)
+	return recordEdit[crmcontracts.Contact]{current: current, changed: true},
+		s.followShareOwnerTx(ctx, tx, entityContact, id.UUID, (*ids.UUID)(current.OwnerId), owner)
 }
 
-// Child sets are separate rows, so their audit images supplement the column patch.
+// recordContactUpdate writes the audit row and the contact.updated event of
+// one edit, in the edit's transaction.
+func recordContactUpdate(
+	ctx context.Context, tx pgx.Tx, id ids.ContactID, p *storekit.Patch, current crmcontracts.Contact,
+	in UpdateContactInput, sets replaceSetsChange,
+) error {
+	before, after := contactChangeImages(p, current, in, sets)
+	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "contact", id.UUID, before, after)
+	if err != nil {
+		return fmt.Errorf("audit contact update: %w", err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: after}); err != nil {
+		return fmt.Errorf("emit contact.updated: %w", err)
+	}
+	return nil
+}
+
+// Child sets are separate rows, so their audit images supplement the column
+// patch. Social is merged, so its images hold only the keys that moved.
 func contactChangeImages(
-	p *storekit.Patch, current crmcontracts.Contact, in UpdateContactInput,
+	p *storekit.Patch, current crmcontracts.Contact, in UpdateContactInput, sets replaceSetsChange,
 ) (before, after map[string]any) {
 	before, after = p.Before(), p.After()
-	if in.Social != nil {
-		before["social"] = current.Social
-		after["social"] = in.Social
+	if in.Social != nil && sets.any {
+		if was, now := socialKeysThatMoved(current.Social, sets.social); len(now) > 0 {
+			before["social"], after["social"] = was, now
+		}
 	}
-	if in.Emails != nil {
-		before["emails"] = current.Emails
-		after["emails"] = in.Emails
+	if sets.emails {
+		recordEmails(before, after, current.Emails, sets.emailRows)
 	}
-	if in.Phones != nil {
-		before["phones"] = current.Phones
-		after["phones"] = in.Phones
+	if sets.phones {
+		recordPhones(before, after, current.Phones, sets.phoneRows)
 	}
 	return before, after
 }
 
-// readContactToEdit reads the row the edit decides on. An edit that moves a name
-// part decides full_name from the stored parts, so it reads them under the row
-// lock. That lock comes first in the lock order (lockorder.go).
+// linkedInURLFolded moves the update's linkedin_url, set or cleared, into its
+// social map, which writes the LinkedIn row.
+func linkedInURLFolded(in UpdateContactInput) (UpdateContactInput, error) {
+	cleared := slices.Contains(in.Clear, linkedinURLField)
+	social, err := socialWithLinkedInURL(in.Social, in.LinkedInURL, cleared)
+	if err != nil {
+		return in, err
+	}
+	in.Social, in.LinkedInURL = social, nil
+	in.Clear = slices.DeleteFunc(slices.Clone(in.Clear), func(field string) bool { return field == linkedinURLField })
+	return in, nil
+}
+
+// readContactToEdit reads the row the edit decides on. A name edit decides from
+// the stored parts, and a set edit records the stored rows as its before image.
+// So both read under the row lock, which comes first in the lock order
+// (lockorder.go).
 func readContactToEdit(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, in UpdateContactInput, active []fieldcatalog.Column,
 ) (crmcontracts.Contact, error) {
-	if movesANamePart(in) {
+	if movesANamePart(in) || in.FullName != nil || in.Emails != nil || in.Phones != nil {
 		if _, err := storekit.LockRow(ctx, tx, "contact", id.UUID, storekit.LiveOnly); err != nil {
 			return crmcontracts.Contact{}, err
 		}
@@ -228,12 +279,68 @@ func movesANamePart(in UpdateContactInput) bool {
 		slices.Contains(in.Clear, columnFirstName) || slices.Contains(in.Clear, columnLastName)
 }
 
+// contactEditPatch reads the edit as written and builds the column patch. It
+// refuses a typed or imported name, or the full name its parts join to, past ContactNameLimit.
+func contactEditPatch(
+	ctx context.Context, current crmcontracts.Contact, in UpdateContactInput, active []fieldcatalog.Column,
+) (UpdateContactInput, *storekit.Patch, error) {
+	in = updateAsWritten(current, in, active)
+	if typedWrite(ctx) || storekit.ImportRunOf(ctx) != nil {
+		if err := checkChangedContactNames(current, in); err != nil {
+			return in, nil, err
+		}
+	}
+	setter, err := relationshipMarkSetter(ctx, in)
+	if err != nil {
+		return in, nil, err
+	}
+	p, err := buildContactPatch(current, in, setter)
+	return in, p, err
+}
+
 // updateAsWritten completes the input with what the request implies: the core
-// fields cleared to NULL, and the display name that follows the name parts.
+// fields cleared to NULL, the name parts a rename drops, and the display name.
 func updateAsWritten(current crmcontracts.Contact, in UpdateContactInput, active []fieldcatalog.Column) UpdateContactInput {
-	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
+	in = withRestatedNamePartsDropped(current, in)
+	in.Clear = append(storekit.CoreFieldClears(in.Clear, active, in.CustomFields), namePartsARenameDrops(current, in)...)
 	in.FullName = displayNameAfter(current, in)
 	return in
+}
+
+// withRestatedNamePartsDropped forgets a supplied name part equal to the stored
+// one: restating a part moves nothing, so a rename still drops it.
+func withRestatedNamePartsDropped(current crmcontracts.Contact, in UpdateContactInput) UpdateContactInput {
+	if in.FirstName != nil && *in.FirstName == derefString(current.FirstName) {
+		in.FirstName = nil
+	}
+	if in.LastName != nil && *in.LastName == derefString(current.LastName) {
+		in.LastName = nil
+	}
+	return in
+}
+
+// namePartsARenameDrops lists each stored name part the new display name no
+// longer holds as a run of its words. A greeting then never reads the name of
+// the contact it was before. A part the update states decides itself.
+func namePartsARenameDrops(current crmcontracts.Contact, in UpdateContactInput) []string {
+	if in.FullName == nil || *in.FullName == current.FullName {
+		return nil
+	}
+	words := nameWords(foldedNameKey(*in.FullName))
+	var dropped []string
+	for _, part := range [...]struct {
+		column string
+		stored *string
+		stated bool
+	}{
+		{columnFirstName, current.FirstName, in.FirstName != nil || slices.Contains(in.Clear, columnFirstName)},
+		{columnLastName, current.LastName, in.LastName != nil || slices.Contains(in.Clear, columnLastName)},
+	} {
+		if name := derefString(part.stored); !part.stated && name != "" && !containsRun(words, nameWords(foldedNameKey(name))) {
+			dropped = append(dropped, part.column)
+		}
+	}
+	return dropped
 }
 
 // displayNameAfter is the full_name an update writes. A display name that was
@@ -292,6 +399,9 @@ func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput, mark
 		return nil, err
 	}
 	if err := patchRelationshipMark(p, current, in, markSetter); err != nil {
+		return nil, err
+	}
+	if err := patchGreetingRegister(p, current, in); err != nil {
 		return nil, err
 	}
 	if err := setAddress(p, current.Address, in.Address, in.Trail); err != nil {

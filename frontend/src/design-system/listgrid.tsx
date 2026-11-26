@@ -12,6 +12,12 @@ import { AppLink } from "./applink";
 import { Checkbox, type useScrollRegion } from "./atoms";
 import type { ListColumn, ListSelection } from "./listcolumn";
 import { useListFocusHandoff } from "./listfocus";
+import {
+  asElement,
+  cellClass,
+  phoneCells,
+  phoneContent,
+} from "./listgrid.phone";
 import { HeaderCell } from "./listheader";
 import { PageSelectBox, type SelectAll } from "./listselection";
 import type { SortControl } from "./listsurface";
@@ -43,7 +49,8 @@ function RowSelect<Row>({
   return (
     <Checkbox
       className="lt-select"
-      label={<span className="sr-only">{selection.label(row)}</span>}
+      label={selection.label(row)}
+      labelHidden
       checked={selection.selected.has(rowKey(row))}
       onChange={() =>
         selection.onChange([row], !selection.selected.has(rowKey(row)))
@@ -71,13 +78,13 @@ function IdentityCell<Row>({
   rowKey,
   rowHref,
   selection,
-  cell,
+  children,
 }: Readonly<{
   row: Row;
   rowKey: (row: Row) => string;
   rowHref?: (row: Row) => string;
   selection?: ListSelection<Row>;
-  cell: (row: Row) => ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <span className="lt-identity-row">
@@ -93,10 +100,10 @@ function IdentityCell<Row>({
           href={rowHref(row)}
           onClick={(event) => event.stopPropagation()}
         >
-          {cell(row)}
+          {children}
         </AppLink>
       ) : (
-        cell(row)
+        children
       )}
     </span>
   );
@@ -133,6 +140,7 @@ export function ListGrid<Row>({
   frozen,
   head,
   dense,
+  phone,
   layout,
   shown,
   sort,
@@ -144,6 +152,8 @@ export function ListGrid<Row>({
   frozen: ReturnType<typeof useFrozenEdge>;
   head: RefObject<HTMLTableElement | null>;
   dense: boolean;
+  /** The rows are phone rows, which `listtable.css` keys on the table. */
+  phone: boolean;
   layout: ColumnLayout & ColumnResize;
   shown: readonly ListColumn<Row>[];
   sort?: SortControl;
@@ -165,7 +175,7 @@ export function ListGrid<Row>({
         ref={head}
         className={`lt-table${dense ? " dense" : ""}${
           layout.resizing ? " is-resizing" : ""
-        }`}
+        }${phone ? " lt-phonerows" : ""}`}
         role="table"
         // A custom property rather than `min-width`: the phone layout drops
         // this floor to lay the rows out as cards, and an inline width wins.
@@ -212,6 +222,8 @@ type RowProps<Row> = Readonly<{
   onRowClick?: (row: Row) => void;
   rowHref?: (row: Row) => string;
   selection?: ListSelection<Row>;
+  /** Phone rows: `shown` is the phone row's columns, and a cell says what `folded` gives. */
+  phone: boolean;
 }>;
 
 /** The body's rows: placeholders while loading, then the page, the problem or the empty line. */
@@ -236,7 +248,8 @@ export function GridBody<Row>({
       {pending &&
         PLACEHOLDER_ROWS.map((placeholder) => (
           <tr key={placeholder} className="lt-loading" role="row">
-            {row.shown.map((column) => (
+            {/* A phone row's placeholder: the name's line and one caption line. */}
+            {(row.phone ? row.shown.slice(0, 2) : row.shown).map((column) => (
               <td key={column.key} role="cell">
                 <span className="skeleton lt-bone" />
               </td>
@@ -274,7 +287,20 @@ function DataRow<Row>({
   onRowClick,
   rowHref,
   selection,
+  phone,
 }: RowProps<Row> & Readonly<{ row: Row }>) {
+  const identity = (column: ListColumn<Row>) => (
+    <td key={column.key} role="cell" className={cellClass(column)}>
+      <IdentityCell
+        row={row}
+        rowKey={rowKey}
+        rowHref={rowHref}
+        selection={selection}
+      >
+        {phone ? asElement(phoneContent(column, row)) : column.cell(row)}
+      </IdentityCell>
+    </td>
+  );
   return (
     <tr
       role="row"
@@ -289,28 +315,23 @@ function DataRow<Row>({
           : undefined
       }
     >
-      {shown.map((column) => (
-        <td
-          key={column.key}
-          role="cell"
-          className={cellClass(column)}
-          // On a phone the rows become cards and the header row is gone, so
-          // each value carries its own label. The identity cell is the heading.
-          data-label={column.fixed ? undefined : column.header}
-        >
-          {column.fixed ? (
-            <IdentityCell
-              row={row}
-              rowKey={rowKey}
-              rowHref={rowHref}
-              selection={selection}
-              cell={column.cell}
-            />
-          ) : (
-            column.cell(row)
+      {phone
+        ? phoneCells(row, shown, identity)
+        : shown.map((column) =>
+            column.fixed ? (
+              identity(column)
+            ) : (
+              <td
+                key={column.key}
+                role="cell"
+                className={cellClass(column)}
+                // A card on a phone has no header row, so each value carries its own label.
+                data-label={column.header}
+              >
+                {column.cell(row)}
+              </td>
+            ),
           )}
-        </td>
-      ))}
       <td className="lt-slack" aria-hidden="true" />
     </tr>
   );
@@ -320,33 +341,40 @@ function DataRow<Row>({
  * The empty line has three states. What narrows the set decides the
  * sentence, and whether it is clearable decides whether Clear is offered.
  * A screen's own scope narrows the set and no button here can clear it.
+ * A caller's `line` replaces both, for a view that names its own emptiness.
  */
 export function EmptyRow({
   unit,
   narrowed,
   filtered,
   onClear,
+  line,
   emptyNote,
 }: Readonly<{
   unit: string;
   narrowed: boolean;
   filtered: boolean;
   onClear: () => void;
+  line?: ReactNode;
   emptyNote?: ReactNode;
 }>) {
   const t = useT();
   return (
     <>
-      {narrowed ? t("table.noMatches", { unit }) : t("table.none", { unit })}
-      {filtered && (
+      {line ?? (
         <>
-          {" "}
-          <ClearFilters onClear={onClear} label={t("table.clearFilters")} />
+          {narrowed
+            ? t("table.noMatches", { unit })
+            : t("table.none", { unit })}
+          {filtered && (
+            <>
+              {" "}
+              <ClearFilters onClear={onClear} label={t("table.clearFilters")} />
+            </>
+          )}
         </>
       )}
-      {/* Under either line, because which emptiness a note explains is the
-          caller's to know. A "Mine" view for a reader who owns nothing is a
-          narrowed list. */}
+      {/* Under either line: the caller knows which emptiness it explains. */}
       {emptyNote && <p className="lt-empty-note">{emptyNote}</p>}
     </>
   );
@@ -363,16 +391,4 @@ function ClearFilters({
       {label}
     </button>
   );
-}
-
-/**
- * Numeric alignment, and the marker the phone layout uses to promote the
- * identity column to the card's heading. Spelled once so th and td agree.
- */
-function cellClass<Row>(column: ListColumn<Row>): string | undefined {
-  const names = [
-    column.numeric ? "lt-num" : column.verbs === "menu" ? "lt-rowmenu" : "",
-    column.fixed ? "lt-identity" : "",
-  ].filter(Boolean);
-  return names.length > 0 ? names.join(" ") : undefined;
 }

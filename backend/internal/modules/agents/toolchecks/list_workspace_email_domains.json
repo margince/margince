@@ -1,0 +1,6 @@
+{
+  "verb": "list_workspace_email_domains",
+  "checks": [
+    "capture_settings.read"
+  ]
+}

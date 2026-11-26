@@ -120,7 +120,11 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:writeClaimStatus":            "every caller holds the claim's row lock and has read its status under it, so no other writer can move the row between the read and this write",
+	"internal/modules/capture:upsertConnection":             "priorGrantTx holds the connection FOR UPDATE in the same transaction before the grant writes it",
+	"internal/modules/chatlinks:SetCard":                    "the card columns are sync state the chat_link version trigger leaves out, and the one writer is the link's flush, which River runs once per link at a time",
 	"internal/modules/capture:storeDeferredOriginalTx":      "names the original of an activity this same transaction inserted; no other writer can hold the row yet",
+	"internal/modules/activities:copyMeetingReadersTx":      "copies a meeting's audience onto its transcript, a derived value nobody edits by hand; every caller holds the transcript's row lock, and a new transcript is not yet visible to any other writer",
 	"internal/modules/consent:assessNoticeSourceTx":         "lockNoticeCase holds this privacy_notice_case FOR UPDATE before the assessment reads or writes it",
 	"internal/modules/consent:ReviewUnverifiedNoticeTx":     "lockNoticeCase holds this privacy_notice_case FOR UPDATE before the source decision is read or changed",
 	"internal/modules/contacts:refreshContactPhoneEvidence": "recheckBatch holds every candidate from lockOpenPairs FOR UPDATE OF d through the evidence refresh in the same transaction",
@@ -129,11 +133,11 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/identity:recordTeamChange":            "the app_user touch runs only for setTeamMemberTx, under lockAuthorization; it writes only updated_at and no domain before-image",
 	"internal/modules/identity:changeUserRoleTx":            "lockAuthorization serializes the role change and the app_user touch in one transaction",
 	"internal/modules/privacy:clearActivityContent":         "terminal erasure empties the activity regardless of concurrent content changes; preserving a competing value would retain the erased content",
+	"internal/modules/activities:decideLinkSuggestion":      "reads the suggestion with FOR UPDATE in the same transaction and writes only after seeing it still pending, so no concurrent decision can slip between the read and the update",
 	"internal/modules/assurance:recordReadThrough": "the pass sets one column on the run row it inserted in the same transaction, " +
 		"under the assurance pass lock, so no other writer can hold that row",
 	"internal/modules/contacts:DisqualifyLead":             "readDisqualifiableLead locks this live lead with storekit.LockRow and checks its optional version pin before the update, in the same leadWrite transaction; the preview shares that reader",
 	"internal/modules/privacy:EraseUntoldLeadTx":           "terminal absolute write: empties the accepted proposal of a website lead whose notice failed, regardless of concurrent state, as the Art. 17 eraser empties a decided approval",
-	"internal/modules/activities:updateActivityInTx":       "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
 	"internal/modules/collections:archiveSavedViewTx":      "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/collections:ArchiveTag":              "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
 	"internal/modules/contacts:absorbCompanyReferences":    "runs under the merge pair lock (storekit.LockPair on both company rows) taken by MergeCompany",
@@ -141,12 +145,11 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/deals:markLadderChanged":             "runs only under its callers' lock on the same pipeline row — lockLadder (FOR NO KEY UPDATE), one hop past what this witness's AST walk follows — and the write is the version bump itself, which no version could guard",
 	"internal/modules/deals:movePipeline":                  "runs only inside ReorderPipelines, under lockCatalog's FOR UPDATE on every live pipeline, taken in id order before any move",
 	"internal/modules/deals:recomputeOfferTotals":          "every caller holds the offer row lock via visibleOfferLocked, except createOfferTx where the offer row was inserted in the same transaction",
-	"internal/modules/privacy:anonymizeLeadTwins":          "terminal absolute write: the same erasure statement as anonymizeSubjectRows, extracted for length — it overwrites the lead twin's PII columns regardless of concurrent state, by design",
 	"internal/modules/privacy:archiveLead":                 "terminal absolute write: the retention sweep archives an over-age unconverted lead regardless of concurrent state, by design; archived_at IS NULL keeps a second pass from restamping it",
-	"internal/modules/webforms:ArchiveForm":                "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived (intake stops at archive)",
+	"internal/modules/webforms:retireForm":                 "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived (intake stops at archive)",
 	"internal/modules/webhooks:ArchiveSubscription":        "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived (delivery stops at archive)",
 	"internal/compose/briefs:writeRunNarrative":            "the run's narrative, written under the FOR UPDATE briefannotate.go takes on that day's run before it composes one, so two passes reaching one rep's morning are ordered by it",
-	"internal/compose/briefs:markItem":                     "lockItemForMark reads the queue item FOR UPDATE and this fills it in, so the state the mark validated is the state it writes over",
+	"internal/compose/briefs:applyBriefMark":               "lockItemForMark reads the queue item FOR UPDATE and this fills it in, so the state the mark validated is the state it writes over",
 	"internal/compose/briefs:MarkUnsnoozed":                "the unsnooze clears what the snooze set, to constants: state, state_at, snoozed_until and the reopen stamp are assigned outright, so two passes waking one item write the same row",
 	"internal/modules/agents/runner:FinishJob":             "the job was claimed by this worker under ClaimDueJobs' FOR UPDATE SKIP LOCKED, so no second worker holds it to finish",
 	"internal/modules/agents/runner:MarkFailed":            "the run belongs to the job this worker claimed under FOR UPDATE SKIP LOCKED, and a run nobody else holds cannot be settled twice",
@@ -155,7 +158,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/consent:ExcuseNoticeCase":            "the excuse path takes the same lockNoticeCase FOR UPDATE before deciding, so the state it validated is the state it writes",
 	"internal/modules/consent:closeOwedCasesTx":            "closes the cases a subject's own reply settles, under the notice case lock the caller took; the statement names the reply as the cause rather than carrying a state it read",
 	"internal/modules/consent:markResolvedTx":              "the submission is held FOR UPDATE by the review that decides it, so the resolution it writes is the one it read",
-	"internal/modules/consent:UpdateDSR":                   "every column coalesces onto the row's own value, so a field this caller did not set keeps what the row holds rather than what this caller last read",
+	"internal/modules/consent:applyDSRUpdateTx":            "every column coalesces onto the row's own value, so a field this caller did not set keeps what the row holds rather than what this caller last read",
 	"internal/modules/contacts:recordSiteReadConfirmation": "the confirmation rides the company lock the scan took before reading what to confirm",
 	"internal/modules/contacts:collapseGroup":              "the re-normalizer locks its grouping FOR UPDATE before deciding which rows collapse (holdsItsGrouping), which is the lock an interleaved import waits on; that lock is why a sweep can no longer delete a row that stopped being a duplicate",
 	"internal/modules/dealrooms:revokeTx":                  "revoked_at = now() on a seat the caller holds, and a seat revoked twice is revoked; the stamp carries no state read beforehand",
@@ -173,7 +176,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/comms:ClearPayloadRef":               "payload_ref = NULL after the vault entry is already destroyed, and one clearing is one clearing; the order is what the file explains",
 	"internal/modules/identity:resetLockoutStreak":         "failed_login_count = 0 and locked_until = NULL on a successful sign-in are constants, and two sign-ins clearing one lockout clear it once",
 	"internal/modules/identity:countFailure":               "every caller reads the streak it folds under its own app_user FOR UPDATE in the same transaction (recordFailedLogin, recordFailedChange, lockSecondFactorStreak), one hop past what this witness's AST walk follows",
-	"internal/modules/identity:Authenticate":               "the idle window rolls forward in SQL from now(), never from a value read into Go, so two requests on one session both move it forward",
 	"internal/modules/integrations:applyOneStored":         "applied_at = now() marks one stored row as applied, and the selector that chose it will not choose it again",
 	"internal/modules/integrations:discardClaims":          "claims_unwritten = true and next_attempt_at = NULL are constants naming what the run could not do, not a state this caller read",
 	"internal/modules/knowledge:replacePage":               "the handbook seeder replaces a page with the file it just read, which is the source of truth rather than a value read from this row",
@@ -185,7 +187,8 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/identity:SaveMyLocale":               "the member writes their own locale under the live-member predicate that keeps a retired seat from writing at all, and the value is what they chose rather than a state read from the row",
 	"internal/modules/knowledge:ArchiveCorpus":             "archived_at = now() on the corpus and, set-based, on its chunks and documents; a corpus archived twice is archived",
 	"internal/modules/knowledge:setReindexing":             "the reindex flag is the value the caller chose rather than one it read, and the liveness predicate beside the id only keeps an archived corpus from being marked",
-	"internal/modules/contacts:touchRevertedContact":       "the aggregate bump after a revert removed a child row. RevertProviderFills holds this contact FOR UPDATE from the top of its transaction — LockRow with IncludeArchived, because the contact may be archived — so the guard is the caller's lock rather than a second one here; re-taking it would be the liveness refusal this function exists to avoid",
+	"internal/modules/contacts:touchChildSetParent":        "the aggregate bump after a child row of the record was written or taken away. The callers hold the row, FOR UPDATE or through the write authority probe of the path that called, and a revert may reach an ARCHIVED contact, so the guard is the caller's lock rather than a second one here",
+	"internal/modules/privacy:redactSignals":               "terminal absolute write: an erasure empties the personal members of a signal whatever a concurrent edit did, as the eraser empties an approval it is destroying",
 	// Both hold the row FOR UPDATE before this UPDATE runs, through
 	// lockActivityForWrite (retentionhold.go) rather than a direct
 	// storekit.LockRow call this witness's AST walk can see: a row a plain
@@ -200,6 +203,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/activities:SetAudience":              "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
 	"internal/modules/activities:RefuseArchiveActivity":    "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above; this self-touch (SET archived_at = archived_at) never commits, since the trigger it deliberately provokes refuses every write to the held row it runs against",
 	"internal/modules/contacts:DemoteLead":                 "the lead is held FOR UPDATE by lockContactThenLead, which takes the contact first and then the lead, one hop past what this witness's AST walk follows",
+	"internal/modules/activities:writeDealMarkTx":          "every caller holds the activity row first: MarkDealLinkTx with a LiveOnly lock and a colleague's mark through lockForFilingChange, so the version touch races nothing; the link row it marks is read FOR UPDATE above it",
 	"internal/modules/activities:finalizeRelinkedActivity": "the row is already held FOR UPDATE by relinkActivityRow, its only caller, from before this function runs — the guard is the caller's lock, held across the whole transaction, not a second one taken here; this witness's AST walk sees neither the caller's lockActivityForWrite (a second hop) nor that this function is only ever reached under it",
 	// This IS a compare-and-set write; what this gate cannot see is the shape it
 	// checks the outcome in. It witnesses RowsAffected on a tx.Exec, and this
@@ -244,7 +248,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// now carry the version the approval was granted against and are no longer
 	// waived here. The entries that remain are types no approval ever pins.
 
-	"internal/modules/automation:Archive":        "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the audit before-image",
+	"internal/modules/automation:archiveRule":    "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the audit before-image",
 	"internal/modules/approvals:recordEffectRan": "absolute transition after the work ran: the single-use redemption already admitted exactly one run, and the mark must land whatever the row looks like now",
 
 	// Writes that run UNDER a lock taken by their caller (or a lock the

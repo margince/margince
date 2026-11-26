@@ -19,14 +19,14 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import {
   DocumentList,
   INGEST_POLL_MS,
   NOT_SEARCHABLE,
   SETS_KEY,
-  shippedRefusal,
 } from "./knowledge.documents";
-import { ReindexingNotice } from "./knowledge.notices";
+import { ReindexingNotice, shippedRefusal } from "./knowledge.notices";
 import "./knowledge.css";
 
 // The document sets a workspace can be asked questions of.
@@ -325,12 +325,23 @@ function NewDocumentSet() {
   return (
     <CreateAction
       label={t("knowledge.new.title")}
+      requires={{ object: "knowledge_corpus", action: "create" }}
       invalidate={SETS_KEY[0]}
       screen="settings"
       stay
       testId="new-document-set"
+      conflict={{
+        field: "name",
+        code: "name_taken",
+        sentence: t("knowledge.new.nameTaken"),
+      }}
       fields={[
-        { key: "name", label: "knowledge.new.name", required: true },
+        {
+          key: "name",
+          label: "knowledge.new.name",
+          required: true,
+          maxLength: TEXT_LIMITS.label,
+        },
         {
           key: "topic_statement",
           label: "knowledge.new.topic",

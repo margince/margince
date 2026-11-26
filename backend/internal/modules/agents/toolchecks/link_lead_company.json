@@ -1,0 +1,12 @@
+{
+  "verb": "link_lead_company",
+  "checks": [
+    "company.read",
+    "lead.update"
+  ],
+  "takes": [
+    "company",
+    "lead",
+    "matched_lead"
+  ]
+}

@@ -22,12 +22,14 @@ import {
   useT,
 } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
-import { problemMessageOf, unwrap } from "../../lib/problem";
 import {
   LEAD_DISQUALIFY_REASONS_KEY,
   type LeadDisqualifyReason,
   useLeadDisqualifyReasons,
-} from "./leadhandling";
+} from "../../lib/leaddisqualifyreasons";
+import { problemMessageOf, unwrap } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
+
 import {
   leadsColumn,
   useRemovalFocus,
@@ -170,7 +172,10 @@ export function LeadDisqualifyReasonsCard() {
   const refusalId = useId();
   const reasons = rowsOf(query.data);
   const write = naming.mode === "rename" ? rename : create;
-  const refused = nameRefusal(write.error, t, "leadReasons.duplicate");
+  const refused = nameRefusal(write.error, t, {
+    label: t("leadReasons.labelField"),
+    duplicate: "leadReasons.duplicate",
+  });
   const open = (next: Naming) => {
     create.reset();
     rename.reset();
@@ -263,6 +268,7 @@ export function LeadDisqualifyReasonsCard() {
         pending={write.isPending}
         problem={refused.problem}
         nameProblem={refused.nameProblem}
+        maxLength={TEXT_LIMITS.label}
         onSave={(label) => {
           if (naming.mode === "rename") {
             rename.mutate({ id: naming.reason.id, label }, done);

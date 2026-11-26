@@ -56,7 +56,7 @@ func TestListingNeverSelectsTheReceivedBody(t *testing.T) {
 	if strings.Contains(inboundColumns, "body,") || strings.HasSuffix(strings.TrimSpace(inboundColumns), "body") {
 		t.Fatalf("the listing projection selects the body itself:\n%s", inboundColumns)
 	}
-	if !strings.Contains(inboundColumns, "octet_length(body)") {
+	if !strings.Contains(inboundColumns, "body_bytes") {
 		t.Fatalf("the listing projection no longer reports the payload's size:\n%s", inboundColumns)
 	}
 }

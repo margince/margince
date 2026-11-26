@@ -202,7 +202,7 @@ func sampleCursor() string {
 	// if it ever did, the fixture would be the thing that is wrong. Panicking
 	// says that where returning an empty token would quietly turn this census
 	// into the vacuous version it exists to avoid.
-	token, err := storekit.EncodeCursor(time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC), ids.NewV7())
+	token, err := storekit.EncodeCursor("audit_log", time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC), ids.NewV7())
 	if err != nil {
 		panic("privacy: the sample cursor will not mint: " + err.Error()) //craft:ignore panic-in-domain test fixture
 	}

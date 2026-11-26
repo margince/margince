@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // maxCorpusSourceBytes bounds one ingested source (≈150k words of plain
@@ -29,7 +30,7 @@ const maxCorpusSourceBytes = 1 << 20
 
 // The contract's character limits on a source's label and reference.
 const (
-	maxSourceLabelChars = 255
+	maxSourceLabelChars = values.TextLineCharacters
 	maxSourceRefChars   = 512
 )
 
@@ -60,7 +61,7 @@ type VoiceCorpusSource struct {
 	CapturedBy       string
 	Version          int64
 	CreatedAt        time.Time
-	UpdatedAt        *time.Time
+	UpdatedAt        time.Time
 	ArchivedAt       *time.Time
 }
 

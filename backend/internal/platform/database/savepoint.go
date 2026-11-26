@@ -29,6 +29,7 @@ func WithSavepoint(ctx context.Context, fn func(context.Context) error) error {
 		if _, undo := tx.Exec(ctx, `ROLLBACK TO SAVEPOINT with_savepoint; RELEASE SAVEPOINT with_savepoint`); undo != nil {
 			return errors.Join(err, fmt.Errorf("pg: rolling back to the savepoint: %w", undo))
 		}
+		Forget(tx, "")
 		return err
 	}
 	if _, err := tx.Exec(ctx, `RELEASE SAVEPOINT with_savepoint`); err != nil {

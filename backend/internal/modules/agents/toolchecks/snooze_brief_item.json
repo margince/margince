@@ -1,0 +1,10 @@
+{
+  "verb": "snooze_brief_item",
+  "checks": [
+    "activity.read",
+    "deal.read"
+  ],
+  "takes": [
+    "brief_item"
+  ]
+}

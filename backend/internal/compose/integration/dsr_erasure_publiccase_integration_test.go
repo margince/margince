@@ -29,7 +29,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -47,7 +49,7 @@ func seedSubmissionBackedErasureCase(t *testing.T, e *Env, contactID ids.UUID) i
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO confirm_token (contact_id, token_hash, delivered_to, expires_at)
 		VALUES ($1, $2, $3, now() + interval '30 days')
-		RETURNING id`, contactID, "erasure-case-"+contactID.String(),
+		RETURNING id`, contactID, storekit.TokenHash(contactID.String()),
 		"subject-"+contactID.String()+"@erasure.test").Scan(&tokenID); err != nil {
 		t.Fatalf("seeding the confirm token: %v", err)
 	}
@@ -82,7 +84,7 @@ func TestFulfillingAnErasureCaseTheSubjectOpenedCompletes(t *testing.T) {
 	contactID := e.SeedContact(t, "Self-Requesting Subject", nil)
 	caseID := seedSubmissionBackedErasureCase(t, e, contactID)
 
-	h := consent.NewHandlers(e.DB()).WithEraser(privacy.NewEraser(e.DB()))
+	h := consent.NewHandlers(e.DB()).WithEraser(privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities))
 
 	done := make(chan int, 1)
 	go func() {

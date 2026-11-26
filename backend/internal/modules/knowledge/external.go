@@ -141,7 +141,7 @@ func (s *Store) UpsertExternal(
 	in.Filename = extension.SafeFilename(in.Filename, 0)
 	media, ok := acceptedType(in.ContentType, in.Filename)
 	if !ok {
-		return none, "", &UnsupportedTypeError{Got: clampEchoedType(media)}
+		return none, "", &UnsupportedTypeError{Kind: refusedKind(media, in.Filename)}
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {

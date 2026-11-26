@@ -20,14 +20,16 @@ import (
 type backfillStart struct {
 	resume            bool
 	internalMailToken string
+	// shared marks a shared mailbox's run, whose trail also announces itself.
+	shared bool
 }
 
 // StartBackfillWithInternalHistory needs both prior administrator approval and the owner's explicit preview.
-func (r *Registry) StartBackfillWithInternalHistory(ctx context.Context, provider string, owner ids.UserID, months int, estimate connector.BackfillEstimate, token string, enqueue EnqueueBackfill) (BackfillRun, error) {
+func (r *Registry) StartBackfillWithInternalHistory(ctx context.Context, mailbox Mailbox, owner ids.UserID, months int, estimate connector.BackfillEstimate, token string, enqueue EnqueueBackfill) (BackfillRun, error) {
 	if token == "" {
 		return BackfillRun{}, apperrors.ErrInvalidArgument
 	}
-	return r.openBackfill(ctx, provider, owner, months, estimate, enqueue, backfillStart{internalMailToken: token})
+	return r.openBackfill(ctx, mailbox, owner, months, estimate, enqueue, backfillStart{internalMailToken: token})
 }
 
 func insertBackfillRunTx(ctx context.Context, tx pgx.Tx, run *BackfillRun, estimate connector.BackfillEstimate, history *internalMailHistoryAuthorization) error {
@@ -57,11 +59,11 @@ func insertBackfillRunTx(ctx context.Context, tx pgx.Tx, run *BackfillRun, estim
 	return err
 }
 
-func auditOpenedBackfillTx(ctx context.Context, tx pgx.Tx, run BackfillRun, history *internalMailHistoryAuthorization, widest *int) error {
+func auditOpenedBackfillTx(ctx context.Context, tx pgx.Tx, run BackfillRun, history *internalMailHistoryAuthorization, widest *int, shared bool) error {
 	before := map[string]any{auditBackfillWindowMonths: widest}
 	after := map[string]any{auditBackfillWindowMonths: run.WindowMonths}
 	if history == nil {
-		return auditLifecycle(ctx, tx, "update", captureConnectionObject, run.ConnectionID, before, after)
+		return auditBackfillTx(ctx, tx, shared, run.ConnectionID, before, after)
 	}
 	after["internal_mail_backfill_id"], after["received_after"], after["received_before"] = run.ID, history.After, history.Before
 	auditID, err := storekit.Audit(ctx, tx, "update", captureConnectionObject, run.ConnectionID, before, after)

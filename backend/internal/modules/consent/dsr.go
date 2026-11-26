@@ -49,8 +49,9 @@ const (
 	// as the field names above, and dsrKindErasure carries the higher stake:
 	// its comparison guards an irreversible scrub, so a typo there skips the
 	// erasure silently and reports the request fulfilled.
-	dsrKindAccess  = "access"
-	dsrKindErasure = "erasure"
+	dsrKindAccess      = "access"
+	dsrKindErasure     = "erasure"
+	dsrKindRestriction = "restriction"
 
 	dsrStatusFulfilled = "fulfilled"
 )
@@ -261,11 +262,16 @@ func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error
 		if out, found, err = agentsOpenCase(ctx, tx, in); err != nil || found {
 			return err
 		}
-		computed, rule, err := s.requestDeadlineTx(ctx, tx, in.Kind, received)
+		if in.AssigneeID != nil {
+			if err := requireCaseAssignee(ctx, tx, in.AssigneeID.UUID, fieldAssigneeID); err != nil {
+				return err
+			}
+		}
+		computed, rule, err := s.requestDeadlineTx(ctx, tx, ruleSubject{}, in.Kind, received)
 		if err != nil {
 			return err
 		}
-		due, overridden, err := dueAtFor(in.DueAt, computed, rule)
+		due, overridden, err := dueAtFor(in.DueAt, received, computed, rule)
 		if err != nil {
 			return err
 		}
@@ -278,7 +284,7 @@ func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "create", "data_subject_request", out.ID, nil, map[string]any{
-			"kind": in.Kind, fieldSubjectRef: in.SubjectRef, fieldReceivedAt: received, fieldDueAt: due,
+			fieldKind: in.Kind, fieldSubjectRef: in.SubjectRef, fieldReceivedAt: received, fieldDueAt: due,
 			"due_rule": rule, "due_overridden": overridden,
 		})
 		return err

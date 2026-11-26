@@ -89,24 +89,20 @@ func AuthorSideOf(direction string, participants []Participant, ownDomains []str
 	if author.UserID != "" {
 		return AuthorSeller
 	}
-	switch domainSideOf(author.Address, ownDomains) {
+	return AddressSide(author.Address, ownDomains)
+}
+
+// AddressSide is the side an author's address puts them on, once no seat
+// claimed them. An own domain is ours, an unlisted own subdomain is unknown.
+func AddressSide(address string, ownDomains []string) AuthorSide {
+	switch domainSideOf(address, ownDomains) {
 	case ownDomain:
 		return AuthorSeller
 	case ownSubdomain:
 		return AuthorUnknown
 	}
-	// An identified author who is neither a seat nor on one of our domains is
-	// the counterparty, direction or no direction.
-	//
-	// A MEETING has no direction by nature — it was neither sent nor
-	// received — so requiring one would make every meeting unattributable and
-	// no event_held criterion could ever be settled by the writer built to
-	// settle it. What identifies the author is the same fact in both cases:
-	// an address we do not own, on a participant who holds no seat.
-	//
-	// This is not the guess the unknown branch above refuses. That one is
-	// reached when nobody is identifiable at all; this one has a named author
-	// and has ruled out both ways of being ours.
+	// A named author who holds no seat and writes from no own domain is the
+	// counterparty, direction or no direction: a meeting has none.
 	return AuthorBuyer
 }
 
@@ -165,12 +161,9 @@ func domainSideOf(address string, ownDomains []string) domainSide {
 }
 
 // TranscriptSourceSystem is the activity.source_system value that marks a body
-// as a recording of a conversation rather than notes about one.
-//
-// Spelled here as well as in the activities module because a module never
-// imports a sibling. The two are one vocabulary and must agree;
-// backend/gates/transcriptmarker_test.go is what fails when they drift.
-const TranscriptSourceSystem = "transcript"
+// as a recording of a conversation rather than notes about one. The kernel
+// spells it once; backend/gates/transcriptmarker_test.go holds every module to it.
+const TranscriptSourceSystem = meetingoutcome.TranscriptSourceSystem
 
 // CountsAsBuyerParticipant reports whether one participant is evidence that
 // somebody from the OTHER side was on the activity. seatDomains are the folded

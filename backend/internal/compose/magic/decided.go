@@ -37,6 +37,9 @@ type DecidedReceipt struct {
 	Kind       string
 	Summary    string
 	OccurredAt time.Time
+	// ListedAt is when the receipt joined the list; zero means OccurredAt. The
+	// lane orders and windows by it.
+	ListedAt time.Time
 	// TargetType is empty when the decision named no record.
 	TargetType string
 	TargetID   ids.UUID
@@ -61,28 +64,28 @@ func (s *Service) WithDecidedReceipts(d DecidedReceipts) *Service {
 // decidedDone reads the decisions and keeps those no drawn line stands for.
 // A seat that may not read approvals keeps its audit lines; the needs-you
 // lane already reports that source as withheld.
-func (s *Service) decidedDone(
+func (s *Service) decidedPage(
 	ctx context.Context, drawn []crmcontracts.MagicLine, from time.Time, limit int,
-) (lines []crmcontracts.MagicLine, floor bool, err error) {
+) (lines []crmcontracts.MagicLine, floor bool, unavailable bool, err error) {
 	if s.decided == nil {
-		return []crmcontracts.MagicLine{}, false, nil
+		return []crmcontracts.MagicLine{}, false, false, nil
 	}
 	// Refilled while overlap with the drawn lines leaves the page short and
 	// the source has more. Stopped at readCap, the lane's total is a floor.
 	for scan := limit; ; scan = min(scan*4, readCap) {
 		decided, more, err := s.decided.DecidedSince(ctx, from, scan)
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return []crmcontracts.MagicLine{}, false, nil
+			return []crmcontracts.MagicLine{}, false, true, nil
 		}
 		if err != nil {
-			return nil, false, err
+			return nil, false, false, err
 		}
 		lines := decidedLines(drawn, decided)
 		if !more || len(lines) >= limit {
-			return lines, false, nil
+			return lines, more, false, nil
 		}
 		if scan >= readCap {
-			return lines, true, nil
+			return lines, true, false, nil
 		}
 	}
 }
@@ -121,7 +124,7 @@ func decidedLine(receipt DecidedReceipt) crmcontracts.MagicLine {
 	line := crmcontracts.MagicLine{
 		Id:         openapi_types.UUID(receipt.ID),
 		ReceiptIds: new([]openapi_types.UUID{openapi_types.UUID(receipt.ID)}),
-		OccurredAt: receipt.OccurredAt,
+		OccurredAt: listedOrOccurred(receipt),
 		Lane:       crmcontracts.MagicLineLaneMagicLaneDone,
 		Summary:    crmcontracts.MagicSentence{Key: sentence, Values: &values},
 		Actor: crmcontracts.MagicActor{
@@ -140,4 +143,12 @@ func decidedLine(receipt DecidedReceipt) crmcontracts.MagicLine {
 	}
 	line.Undo = receipt.Undo
 	return line
+}
+
+// listedOrOccurred is the instant the lane places a receipt at.
+func listedOrOccurred(receipt DecidedReceipt) time.Time {
+	if receipt.ListedAt.IsZero() {
+		return receipt.OccurredAt
+	}
+	return receipt.ListedAt
 }

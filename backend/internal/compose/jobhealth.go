@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/adminadmit"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -27,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // dispatcherKinds answers the untenanted kinds the job-health read admits:
@@ -141,11 +143,10 @@ type jobHealthHandlers struct {
 // dispatchers, which an admin's agent may read as the admin does.
 func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	// Queue depth and retry ladders: what an operator on call needs, and the
-	// same reader the other two System health cards have — so the same ladder
-	// admits all three (adminhealth.go), which is where the ORDER of its rungs
-	// is stated once.
-	if !admitHealthReader(w, r) {
+	// Queue depth and retry ladders: what an operator on call needs. The other
+	// System health cards share this reader, so one ladder admits them all.
+	// compose/adminadmit states the order of its rungs once.
+	if !adminadmit.HealthReader(w, r) {
 		return
 	}
 	wsID, ok := principal.WorkspaceID(ctx)
@@ -182,7 +183,7 @@ func (h jobHealthHandlers) GetJobHealth(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	httperr.WriteJSON(w, http.StatusOK, jobHealthResponse(health, window))
+	httperr.WriteJSON(w, http.StatusOK, jobHealthResponse(ctx, health, window))
 }
 
 // deadWorkBannerReadActor names the entry read this endpoint performs after it
@@ -215,7 +216,7 @@ func deadWorkWindow(ctx context.Context, pool *pgxpool.Pool) (time.Duration, err
 // rendering. A banner that names a number without naming its span asks a reader
 // to guess, and the guess a reader makes is "since forever" — which is the
 // reading this whole change exists to stop.
-func jobHealthResponse(health jobs.Health, window time.Duration) crmcontracts.JobHealth {
+func jobHealthResponse(ctx context.Context, health jobs.Health, window time.Duration) crmcontracts.JobHealth {
 	kinds := make([]crmcontracts.JobKindHealth, 0, len(health.Kinds))
 	for _, k := range health.Kinds {
 		assessment := jobs.AssessHealth(k)
@@ -241,7 +242,7 @@ func jobHealthResponse(health jobs.Health, window time.Duration) crmcontracts.Jo
 		})
 	}
 
-	failures := jobFailuresResponse(health.Failures)
+	failures := jobFailuresResponse(ctx, health.Failures)
 
 	return crmcontracts.JobHealth{
 		GeneratedAt:     time.Now().UTC(),
@@ -251,10 +252,19 @@ func jobHealthResponse(health jobs.Health, window time.Duration) crmcontracts.Jo
 	}
 }
 
-func jobFailuresResponse(rows []jobs.Failure) []crmcontracts.JobFailure {
+func jobFailuresResponse(ctx context.Context, rows []jobs.Failure) []crmcontracts.JobFailure {
 	failures := make([]crmcontracts.JobFailure, 0, len(rows))
 	for _, f := range rows {
 		rendered := renderFailure(f)
+		rendered.Reason = jobs.SubstituteInLanguage(rendered.Reason, systemtext.Locale(ctx))
+		if rendered.Class != nil {
+			detail, ok := jobs.VettedFailure(f.Kind, f.StoredReason)
+			if ok {
+				detail = detail.InLanguage(systemtext.Locale(ctx))
+				rendered.Reason = detail.Sentence
+				rendered.Remedy = &detail.Remedy
+			}
+		}
 		failures = append(failures, crmcontracts.JobFailure{
 			Kind:        f.Kind,
 			State:       crmcontracts.JobFailureState(f.State),

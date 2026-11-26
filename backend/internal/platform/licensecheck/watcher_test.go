@@ -27,7 +27,7 @@ type tokens struct {
 	reads int
 }
 
-func (t *tokens) source() (string, error) {
+func (t *tokens) source(context.Context) (string, error) {
 	t.reads++
 	return t.token, t.err
 }
@@ -36,17 +36,42 @@ func warnLog(into *bytes.Buffer) *slog.Logger {
 	return slog.New(slog.NewTextHandler(into, &slog.HandlerOptions{Level: slog.LevelWarn}))
 }
 
-func TestNewWatcherRefusesARejectedLicense(t *testing.T) {
+func TestRecheckBoundsTheTokenRead(t *testing.T) {
+	t.Parallel()
+	reads := 0
+	source := func(ctx context.Context) (string, error) {
+		reads++
+		if reads == 2 {
+			if _, bounded := ctx.Deadline(); !bounded {
+				return "", errors.New("recheck token read has no deadline")
+			}
+		}
+		return "", nil
+	}
+	w, err := NewWatcher(t.Context(), source, fixedClock(checkedAt), slog.New(slog.DiscardHandler), runtimeenv.Test)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Recheck(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if reads != 2 {
+		t.Fatalf("token reads = %d, want boot and recheck", reads)
+	}
+}
+
+// A refused license starts the role on a rejected posture, which locks it, so a
+// seat sees why instead of finding no server at all.
+func TestNewWatcherStartsOnARejectedLicenseAndHoldsTheVerdict(t *testing.T) {
 	t.Parallel()
 	source := &tokens{token: "not-a-license"}
-	_, err := NewWatcher(context.Background(), source.source, fixedClock(checkedAt), slog.New(slog.DiscardHandler), runtimeenv.Production)
-	if err == nil {
-		t.Fatal("NewWatcher accepted a license the module refuses; the role would serve on a bad license")
+	w, err := NewWatcher(context.Background(), source.source, fixedClock(checkedAt), slog.New(slog.DiscardHandler), runtimeenv.Production)
+	if err != nil {
+		t.Fatalf("NewWatcher refused to start on a rejected license: %v", err)
 	}
-	// The refusal has to name the module that refused: a stale bundled module
-	// and a genuinely bad license look identical to an operator otherwise.
-	if !strings.Contains(err.Error(), ModuleVersion()) {
-		t.Errorf("boot refusal %q does not name the bundled module version %q", err, ModuleVersion())
+	got := w.Posture()
+	if got.State != StateRejected || got.Reason == "" {
+		t.Errorf("posture = %q with reason %q, want %q with the module's reason", got.State, got.Reason, StateRejected)
 	}
 }
 
@@ -92,7 +117,11 @@ func TestRecheckRecordsADegradedPostureAndLogsTheTransition(t *testing.T) {
 	later := checkedAt.Add(48 * time.Hour)
 	source.token = "no-longer-honored"
 	w.now = fixedClock(later)
-	w.Recheck(context.Background())
+	// A refusal is a verdict, not a fault: the re-check worked and found the
+	// license no longer honored, so it reports no error.
+	if err := w.Recheck(context.Background()); err != nil {
+		t.Fatalf("Recheck reported %v for a verdict it reached", err)
+	}
 
 	got := w.Posture()
 	if got.State != StateRejected {
@@ -122,7 +151,9 @@ func TestRecheckReadsTheTokenAgainRatherThanTheOneItBootedWith(t *testing.T) {
 	if source.reads != 1 {
 		t.Fatalf("the boot read the token source %d times, want once", source.reads)
 	}
-	w.Recheck(context.Background())
+	if err := w.Recheck(context.Background()); err != nil {
+		t.Fatalf("Recheck: %v", err)
+	}
 	if source.reads != 2 {
 		t.Errorf("the re-check read the token source %d times in total, want 2 — a replaced token would never be seen",
 			source.reads)
@@ -142,7 +173,11 @@ func TestRecheckKeepsThePostureWhenTheTokenCannotBeRead(t *testing.T) {
 		t.Fatalf("NewWatcher: %v", err)
 	}
 	source.err = errors.New("token file vanished")
-	w.Recheck(context.Background())
+	// The caller hears the fault too. "Check now" in Settings must not report a
+	// fresh check when nothing was re-read.
+	if err := w.Recheck(context.Background()); err == nil || !strings.Contains(err.Error(), "token file vanished") {
+		t.Errorf("Recheck error = %v, want the source's fault", err)
+	}
 
 	if got := w.Posture(); got.State != StateAbsent {
 		t.Errorf("posture = %q, want it to stand at %q", got.State, StateAbsent)
@@ -162,7 +197,9 @@ func TestRecheckSaysNothingWhenTheStateIsUnchanged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWatcher: %v", err)
 	}
-	w.Recheck(context.Background())
+	if err := w.Recheck(context.Background()); err != nil {
+		t.Fatalf("Recheck: %v", err)
+	}
 	if log.Len() != 0 {
 		t.Errorf("an unchanged posture logged %q", log.String())
 	}
@@ -187,7 +224,9 @@ func TestRecheckSurvivesAPanicOnTheWayToAVerdict(t *testing.T) {
 	}
 	w.now = func() time.Time { panic("the runtime came apart") }
 
-	w.Recheck(context.Background())
+	if err := w.Recheck(context.Background()); err == nil || !strings.Contains(err.Error(), "the runtime came apart") {
+		t.Errorf("Recheck error = %v, want the panic reported as a fault", err)
+	}
 
 	if got := w.Posture(); got.State != StateAbsent {
 		t.Errorf("posture = %q, want the last resolved %q", got.State, StateAbsent)

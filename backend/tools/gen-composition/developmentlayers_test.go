@@ -14,7 +14,7 @@ func TestDevelopmentSelectionCoversContractsScreensAndMigrations(t *testing.T) {
 	previous := *includeDevelopment
 	t.Cleanup(func() { *includeDevelopment = previous })
 	root, _ := committedBaseRoot(t)
-	writeTree(t, root, map[string]string{goWorkFile: "go 1.27.3\nuse ./backend\n"})
+	writeTree(t, root, map[string]string{goWorkFile: "go 1.27.4\nuse ./backend\n"})
 	writeUnit(t, root, "demo", map[string]string{
 		"go.mod": unitGoMod("demo"),
 		"demo.go": `package demo
@@ -63,8 +63,8 @@ func New() extension.Extension { return extension.Extension{Name:"demo", Version
 		}{
 			"contract":  {contracts["crm.yaml"], "/ext/demo/ping"},
 			"workspace": {work, "extensions/demo"},
-			"screens":   {extScreensGen(units, nil), "@margince-ext/demo"},
-			"Go wiring": {extensionsGen(units, nil, nil), "example.test/ext/demo"},
+			"screens":   {extScreensGen(units, nil, nil), "@margince-ext/demo"},
+			"Go wiring": {extensionsGen(units, nil, nil, nil), "example.test/ext/demo"},
 		} {
 			if strings.Contains(string(value.content), value.needle) != development {
 				t.Errorf("development=%t artifact=%s carries wrong example selection", development, artifact)

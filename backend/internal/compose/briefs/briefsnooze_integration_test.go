@@ -39,11 +39,11 @@ func TestBriefSnoozeIsOwnerOnlyStampedAndConflictSafe(t *testing.T) {
 
 	// Only the run's owner may snooze: another rep sees not-found.
 	rep2 := b.As(b.Rep2, []ids.UUID{b.Team1}, integration.AdminPerms)
-	if _, err := b.engine.MarkSnoozed(rep2, itemA.ID, values.ReopenOnTime, &until, nil, snoozeAt); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := b.engine.MarkSnoozed(rep2, itemA.ID, values.ReopenOnTime, &until, nil, snoozeAt, nil); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("foreign snooze → %v, want ErrNotFound (existence-hiding)", err)
 	}
 
-	snoozed, err := b.engine.MarkSnoozed(b.repCtx, itemA.ID, values.ReopenOnTime, &until, nil, snoozeAt)
+	snoozed, err := b.engine.MarkSnoozed(b.repCtx, itemA.ID, values.ReopenOnTime, &until, nil, snoozeAt, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestBriefSnoozeIsOwnerOnlyStampedAndConflictSafe(t *testing.T) {
 
 	// An acted item cannot be snoozed — the snooze only defers actionable work.
 	later := until.Add(72 * time.Hour)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, itemA.ID, values.ReopenOnTime, &later, nil, until.Add(2*time.Minute)); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, itemA.ID, values.ReopenOnTime, &later, nil, until.Add(2*time.Minute), nil); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("snooze on an acted item → %v, want ErrConflict", err)
 	}
 
@@ -83,7 +83,7 @@ func TestBriefSnoozeIsOwnerOnlyStampedAndConflictSafe(t *testing.T) {
 }
 
 // briefItemAudits counts the update audit rows one brief item accrued —
-// every snooze, mark, and re-surface must leave exactly one.
+// every snooze and mark leaves one.
 func briefItemAudits(t *testing.T, owner *pgx.Conn, itemID ids.UUID) int {
 	t.Helper()
 	var audits int
@@ -110,7 +110,7 @@ func TestBriefSnoozedItemHidesUntilExpiryThenResurfaces(t *testing.T) {
 	// than by this one. Hours are what a rep snoozes for anyway — "not before
 	// the afternoon" — and the flip this test is about is the same flip.
 	until := briefClock.Add(8 * time.Hour)
-	if _, err := b.engine.MarkSnoozed(b.repCtx, itemA.ID, values.ReopenOnTime, &until, nil, briefClock.Add(time.Hour)); err != nil {
+	if _, err := b.engine.MarkSnoozed(b.repCtx, itemA.ID, values.ReopenOnTime, &until, nil, briefClock.Add(time.Hour), nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -135,8 +135,8 @@ func TestBriefSnoozedItemHidesUntilExpiryThenResurfaces(t *testing.T) {
 		}
 	}
 
-	// After snoozed_until passes, the home read re-surfaces the item as
-	// actionable: state flips back to new on the read itself.
+	// After snoozed_until passes, the home read shows the item as actionable,
+	// judged at read.
 	after := until.Add(time.Hour)
 	resurfaced, err := b.engine.LatestRun(b.repCtx, after)
 	if err != nil {
@@ -153,18 +153,18 @@ func TestBriefSnoozedItemHidesUntilExpiryThenResurfaces(t *testing.T) {
 		t.Fatalf("re-surfaced item = %+v, want a clean actionable state", back)
 	}
 
-	// The flip persists (the next read at the same instant sees it too) and
-	// is audited like every other state change on the item.
+	// The read writes nothing: the row still says snoozed, and the snooze is
+	// the item's only audited change.
 	var state string
 	if err := owner.QueryRow(context.Background(),
 		`SELECT state FROM brief_item WHERE id = $1`, itemA.ID).Scan(&state); err != nil {
 		t.Fatal(err)
 	}
-	if state != briefStateNew {
-		t.Fatalf("persisted state = %q, want new after the re-surface", state)
+	if state != briefStateSnoozed {
+		t.Fatalf("persisted state = %q, want the snooze the read judged and left alone", state)
 	}
-	if audits := briefItemAudits(t, owner, itemA.ID); audits != 2 {
-		t.Fatalf("brief_item audit rows = %d, want 2 (snooze + re-surface)", audits)
+	if audits := briefItemAudits(t, owner, itemA.ID); audits != 1 {
+		t.Fatalf("brief_item audit rows = %d, want 1 (the snooze; a read audits nothing)", audits)
 	}
 
 	// A fresh run after expiry ranks the deal again — re-surfacing needs

@@ -371,9 +371,15 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	// The summary is prose, and several stagers build it out of record text
 	// the agent or an inbound sender could have written. Sanitizing at the
 	// one place every staging passes through means no stager can bypass it.
-	in.Summary = SanitizeSummary(in.Summary)
-	in.SummaryParts = SanitizeSummaryParts(in.SummaryParts)
-	summaryParts, err := marshalSummaryParts(in.SummaryParts)
+	in = prepareSystemSummary(ctx, in)
+	if err := requireKnownTargetType("target type", in.TargetType); err != nil {
+		return ids.ApprovalID{}, err
+	}
+	if err := requireKnownTargetType("co-target type", in.CoTargetType); err != nil {
+		return ids.ApprovalID{}, err
+	}
+
+	summaryParts, err := marshalSystemSummary(ctx, in)
 	if err != nil {
 		return ids.ApprovalID{}, err
 	}
@@ -419,7 +425,7 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 		stagedTargetLabel(ctx, tx, in),
 		nullStr(in.Summary), in.ProposedChange, in.DiffHash, ttlFor(in.Kind, in.TTL).String(),
 		nullUUID(in.BundleID), evidence, decider.member, string(decider.source),
-		nullUUID(conversationOf(ctx, p)), nullStr(pins.context), summaryParts).Scan(&expiresAt); err != nil {
+		nullUUID(principal.ConversationUser(ctx, p)), nullStr(pins.context), summaryParts).Scan(&expiresAt); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	expiresAt = expiresAt.UTC()

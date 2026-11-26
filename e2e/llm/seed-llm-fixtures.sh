@@ -174,6 +174,9 @@ print("")' "$email"
 # worth spending: a row a reader finds in a failing transcript says which lane
 # put it there.
 FIXTURE_SOURCE="seed:llm-fixtures"
+# A deal, offer, project and partner take only one of six channels as source, so
+# their fixture rows name the channel they really came through.
+CHANNEL_SOURCE="api"
 
 # with_source adds FIXTURE_SOURCE to a record's create body that names none,
 # because every record create requires a source.
@@ -185,8 +188,9 @@ with_source() {
   esac
   printf '%s' "$body" | FIXTURE_SOURCE="$FIXTURE_SOURCE" python3 -c 'import json,os,sys
 row=json.load(sys.stdin)
-row.setdefault("source", os.environ["FIXTURE_SOURCE"])
-print(json.dumps(row, ensure_ascii=False))'
+channel = sys.argv[1] in ("/deals", "/projects", "/offers", "/partners")
+row.setdefault("source", "api" if channel else os.environ["FIXTURE_SOURCE"])
+print(json.dumps(row, ensure_ascii=False))' "$path"
 }
 
 create_or_die() {
@@ -652,7 +656,7 @@ else:
   else
     body="$body$(printf '"amount_minor":%s,"currency":"EUR",' "$amount")"
   fi
-  body="$body$(printf '"expected_close_date":"%s","source":"%s"}' "$close_date" "$FIXTURE_SOURCE")"
+  body="$body$(printf '"expected_close_date":"%s","source":"%s"}' "$close_date" "$CHANNEL_SOURCE")"
   create_or_die "/deals" "$body" "$name" >/dev/null
 }
 # THE CLOSE DATES ARE DERIVED, and a fixed offset is what made that necessary.
@@ -778,7 +782,7 @@ else:
     echo "  $name already won"
     return 0
   fi
-  created="$(api POST /deals "$(printf '{"name":"%s","pipeline_id":"%s","stage_id":"%s","owner_id":"%s","amount_minor":%s,"currency":"EUR","expected_close_date":"%s","source":"%s"}'     "$name" "$pipeline" "$stage" "$colleague" "$amount" "$close_date" "$FIXTURE_SOURCE")")"
+  created="$(api POST /deals "$(printf '{"name":"%s","pipeline_id":"%s","stage_id":"%s","owner_id":"%s","amount_minor":%s,"currency":"EUR","expected_close_date":"%s","source":"%s"}'     "$name" "$pipeline" "$stage" "$colleague" "$amount" "$close_date" "$CHANNEL_SOURCE")")"
   id="$(id_of "$created")"
   [[ -n "$id" ]] || { echo "could not create the won deal $name: $created" >&2; exit 1; }
   # purchase_order: the commonest honest answer in a CRM whose paper lives in
@@ -1100,7 +1104,7 @@ else:
     print("")')"
 if [[ -z "$project" ]]; then
   body="$(printf '{"name":"Elbwerk Rollout","company_id":"%s","owner_id":"%s","source":"%s","description":"Austausch der Kälteregelung an zwei Standorten."}' \
-    "$elbwerk" "$me" "$FIXTURE_SOURCE")"
+    "$elbwerk" "$me" "$CHANNEL_SOURCE")"
   project="$(create_or_die "/projects" "$body" "the Elbwerk project")"
 
   # THE PHASE HISTORY is the whole point of the fixture. A project is created in
@@ -1159,10 +1163,10 @@ fi
 
 # --- CASE 43: four fair leads, one of whose stage a human already chose -----
 #
-# All four are created by the admin's own session and none is sent a lifecycle,
+# All four are created by the admin's own session and none is sent a status,
 # so each starts at the column default 'unknown'. The fourth then gets 'target'
 # through a PATCH from the same session, so a human is the last writer of that
-# lifecycle. The agent's change over it applies at once and its answer names the
+# status. The agent's change over it applies at once and its answer names the
 # value it replaced, which is what case 43 asks the assistant to report.
 #
 # Owned by the caller, because these are the caller's own leads.
@@ -1177,10 +1181,10 @@ seed_fair_lead "Kieler Pumpenwerk GmbH" "Pumpentechnik" >/dev/null
 seed_fair_lead "Rhön Hydraulik AG" "Hydraulik" >/dev/null
 seed_fair_lead "Altmark Fördertechnik GmbH" "Fördertechnik" >/dev/null
 emsland="$(seed_fair_lead "Emsland Ventilbau GmbH" "Armaturen")"
-# A repeat still leaves a human as lifecycle's last writer, so a re-run converges.
-code="$(status_of PATCH "/companies/$emsland" '{"lifecycle":"target"}')"
+# A repeat still leaves a human as status's last writer, so a re-run converges.
+code="$(status_of PATCH "/companies/$emsland" '{"status":"target"}')"
 [[ "$code" = "200" ]] || {
-  echo "setting Emsland Ventilbau's lifecycle as a human answered HTTP $code" >&2; exit 1; }
+  echo "setting Emsland Ventilbau's status as a human answered HTTP $code" >&2; exit 1; }
 
 # --- CASES 44-49: the untried action tools ------------------------------------
 #
@@ -1462,7 +1466,7 @@ else:
     print("")')"
 if [[ -z "$goslar" ]]; then
   body="$(printf '{"name":"Leitstand Goslar","company_id":"%s","owner_id":"%s","source":"%s","description":"Neuer Leitstand für das Werk Goslar."}' \
-    "$harzer" "$me" "$FIXTURE_SOURCE")"
+    "$harzer" "$me" "$CHANNEL_SOURCE")"
   goslar="$(create_or_die "/projects" "$body" "the Leitstand Goslar project")"
   body="$(printf '{"company_id":"%s","project_id":"%s","title":"Servicevertrag Leitstand Goslar","contract_number":"HST-2026-014"}' \
     "$harzer" "$goslar")"
@@ -1499,6 +1503,52 @@ if [[ "$(status_of GET "/mail-drafts?anchor_type=contact&anchor_id=$greta")" = "
   [[ "$code" = "200" ]] || { echo "saving the user's own draft to Greta Lindqvist answered HTTP $code" >&2; exit 1; }
 fi
 
+# --- CASE 117: the contacts its setup step needs ------------------------------
+#
+# Only the records. The card reviews and the post-meeting recap are staged by
+# the case's own `setup:` step (e2e/llm/casesetup.py), because a pending review or a
+# recap draft would show in every other case's queue and brief. Nobody else reads
+# these four names.
+husum="$(company_id_by_name "Husumer Windservice GmbH")"
+if [[ -z "$husum" ]]; then
+  body="$(printf '{"display_name":"Husumer Windservice GmbH","owner_id":"%s","industry":"Windenergie"}' "$me")"
+  husum="$(create_or_die "/companies" "$body" "Husumer Windservice GmbH")"
+fi
+feddersen="$(seed_contact "Jannik Feddersen" "jannik.feddersen@husumer-windservice.test" "$me")"
+link_employment "$feddersen" "$husum" "Jannik Feddersen at Husumer Windservice"
+seed_contact "Wiebke Brandstätter" "wiebke.brandstaetter@ostfriesen-kaelte.test" "$me" >/dev/null
+seed_contact "Okko Rademacher" "okko.rademacher@emder-werftbedarf.test" "$me" >/dev/null
+seed_contact "Theda Uphoff" "theda.uphoff@leeraner-moorbau.test" "$me" >/dev/null
+
+# --- CASE 118: a project someone judged at risk, and why ---------------------
+#
+# One human health reading, at risk, with a note. The note is the fact the case
+# asserts: no other record says the cranes slipped, so an answer that names it
+# read the project's current health and not a guess from its tasks.
+kranwerk="$(company_id_by_name "Kranwerk Nord GmbH")"
+if [[ -z "$kranwerk" ]]; then
+  body="$(printf '{"display_name":"Kranwerk Nord GmbH","owner_id":"%s","industry":"Hafentechnik"}' "$me")"
+  kranwerk="$(create_or_die "/companies" "$body" "Kranwerk Nord GmbH")"
+fi
+project="$(api GET "/projects?q=$(url_encode "Hafenkran Retrofit")&limit=50" | python3 -c 'import json,sys
+for row in json.load(sys.stdin).get("data", []):
+    if row.get("name") == "Hafenkran Retrofit":
+        print(row["id"]); break
+else:
+    print("")')"
+if [[ -z "$project" ]]; then
+  body="$(printf '{"name":"Hafenkran Retrofit","company_id":"%s","owner_id":"%s","source":"%s","description":"Steuerung von zwei Hafenkränen erneuern."}' \
+    "$kranwerk" "$me" "$CHANNEL_SOURCE")"
+  project="$(create_or_die "/projects" "$body" "the Hafenkran project")"
+  create_or_die "/projects/$project/advance" '{"to_phase":"pursuing","reason":"Angebot angenommen."}' \
+    "the pursuing entry in the Hafenkran project's history" >/dev/null
+  create_or_die "/projects/$project/advance" '{"to_phase":"delivering","reason":"Montage beauftragt."}' \
+    "the delivering entry in the Hafenkran project's history" >/dev/null
+  create_or_die "/projects/$project/health-assessments" \
+    '{"state":"at_risk","note":"Der Zulieferer hat die Steuerschränke um sechs Wochen verschoben."}' \
+    "the at-risk health reading on the Hafenkran project" >/dev/null
+fi
+
 # --- THE ROSTER IS VERIFIED, not assumed ---------------------------------
 #
 # The seats above are the fixture's most silent failure mode. A seat that stays
@@ -1513,7 +1563,7 @@ roster="$(api GET '/users?limit=100' | python3 -c 'import json,sys
 rows = json.load(sys.stdin).get("data", [])
 print("\n".join(r.get("email","") for r in rows if r.get("status") == "active"))')"
 for seat in sofia.meier@demo.test lena.fischer@demo.test; do
-  printf '%s\n' "$roster" | grep -qx "$seat" || {
+  grep -x "$seat" <<<"$roster" >/dev/null || {
     echo "$seat holds no ACTIVE seat, so list_colleagues will not name them and every case " \
          "that hands work to a colleague fails for the fixture's reason" >&2
     exit 1; }

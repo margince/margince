@@ -66,6 +66,9 @@ type ListContactsInput struct {
 	// an edge, not a column on contact, so this is a link predicate too — see
 	// contactEmployerClause.
 	CompanyID *ids.CompanyID
+	// RelatedTo narrows to the contacts around one contact; see
+	// contactRelatedClause.
+	RelatedTo *ids.ContactID
 	// Membership narrows to one list's members (list_id).
 	Membership storekit.ListMemberFilter
 	// MemberOf is the list a seam caller narrowed to; the provider resolves it
@@ -181,9 +184,10 @@ func contactCommonFilters(in ListContactsInput) listFilters {
 func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmcontracts.Contact, storekit.Page, error) {
 	shared := contactCommonFilters(in)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Contact]{
-		entity:  contactEntity,
-		columns: contactColumns,
-		fields:  contactListFields,
+		entity:    contactEntity,
+		firstPage: in.Cursor == nil || *in.Cursor == "",
+		columns:   contactColumns,
+		fields:    contactListFields,
 		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
 			where, err := shared.clauses(ctx, active, sorted, arg)
 			if err != nil {
@@ -208,6 +212,13 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 			}
 			if employer != "" {
 				where = append(where, employer)
+			}
+			related, err := contactRelatedClause(ctx, in.RelatedTo, arg)
+			if err != nil {
+				return nil, err
+			}
+			if related != "" {
+				where = append(where, related)
 			}
 			return where, nil
 		},

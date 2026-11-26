@@ -1,26 +1,34 @@
+import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
+import { ifMatch, requireVersion } from "../../api/version";
+import { saveRecordEdit } from "../../components/recordedit";
+import { type FieldRecord, rawRecord } from "../../components/recordfieldtypes";
+import { typedAmountText, typedMinorOrNaN } from "../../format/minorunits";
+import type { Locale } from "../../i18n";
+import { commercialMotion, dealPriority } from "../../lib/dealcommercialvalues";
+import { partnerAttribution } from "../../lib/dealcreate";
 import { currencyBeside } from "../../lib/dealcurrency";
-import { commercialMotion, dealPriority } from "./deal360/dealcommercialfields";
+import { unwrap } from "../../lib/problem";
 import type { Deal } from "./deals";
 
 type UpdateDealRequest = components["schemas"]["UpdateDealRequest"];
-
-type CreateDealRequest = components["schemas"]["CreateDealRequest"];
 
 // Missing money stays blank; present figures use their currency's minor-unit scale.
 // This projection seeds both the controls and their update comparison.
 function moneyFieldValue(
   minor: number | null | undefined,
-  currency?: string | null,
+  currency: string | null | undefined,
+  locale: Locale,
 ): string {
-  return minor != null && currency ? String(toMajorUnits(minor, currency)) : "";
+  return minor != null && currency
+    ? typedAmountText(minor, currency, locale)
+    : "";
 }
 
-export function dealEditRecord(deal: Deal): Record<
-  string,
-  string | number | undefined
-> & {
+export function dealEditRecord(
+  deal: Deal,
+  locale: Locale,
+): Record<string, string | number | undefined> & {
   id: string;
   version?: number;
 } {
@@ -28,8 +36,12 @@ export function dealEditRecord(deal: Deal): Record<
     id: deal.id,
     version: deal.version,
     name: deal.name,
-    amount: moneyFieldValue(deal.amount_minor, deal.currency),
-    expected_arr: moneyFieldValue(deal.expected_arr_minor, deal.currency),
+    amount: moneyFieldValue(deal.amount_minor, deal.currency, locale),
+    expected_arr: moneyFieldValue(
+      deal.expected_arr_minor,
+      deal.currency,
+      locale,
+    ),
     currency: deal.currency ?? "",
     owner_id: deal.owner_id ?? "",
     company_id: deal.company_id ?? "",
@@ -65,22 +77,6 @@ export function stringValues(
   return out;
 }
 
-// The attribution the form may send, narrowed to the wire's vocabulary. The
-// wire type is a closed vocabulary, and a free string from a form input is not
-// one until something checks it.
-function partnerAttribution(
-  v: string,
-): UpdateDealRequest["partner_attribution"] {
-  switch (v) {
-    case "sourced":
-      return "sourced";
-    case "influenced":
-      return "influenced";
-    default:
-      return null;
-  }
-}
-
 // Empty sends null, which puts the deal back on its stage's probability. A
 // value that is not a whole percent is not sent; the field refuses it first.
 function winProbability(v: string): UpdateDealRequest["win_probability"] {
@@ -89,6 +85,45 @@ function winProbability(v: string): UpdateDealRequest["win_probability"] {
   return Number.isInteger(percent) && percent >= 0 && percent <= 100
     ? percent
     : undefined;
+}
+
+function dealPriceUpdate(
+  values: Readonly<{
+    currency: string;
+    amount: string;
+    expectedArr: string;
+    previousCurrency: string;
+    locale: Locale;
+  }>,
+  moved: (formKey: string) => boolean,
+): Pick<UpdateDealRequest, "amount_minor" | "expected_arr_minor" | "currency"> {
+  const { currency, amount, expectedArr, previousCurrency, locale } = values;
+  const patch: Pick<
+    UpdateDealRequest,
+    "amount_minor" | "expected_arr_minor" | "currency"
+  > = {};
+  // The money pair travels together whenever either half moves, because the
+  // scale is part of the amount. amount_minor counts the currency's own minor
+  // units (a dong has none, a dinar has three). A currency moving alone
+  // re-denominates the stored figure: 10000 JPY re-saved as EUR becomes 10000
+  // minor EUR (€100). The FX freeze and the forecast history record that price.
+  if (moved("amount") || (moved("currency") && amount)) {
+    patch.amount_minor = amount
+      ? typedMinorOrNaN(amount, currency, locale)
+      : null;
+  }
+  // ARR carries its currency's scale and travels on a currency move, as the
+  // amount does. The code is what says how many minor units the figure counts in.
+  if (moved("expected_arr") || (moved("currency") && expectedArr)) {
+    patch.expected_arr_minor = expectedArr
+      ? typedMinorOrNaN(expectedArr, currency, locale)
+      : null;
+  }
+  const pricedCurrency = currencyBeside(currency, amount, expectedArr);
+  if (pricedCurrency !== (previousCurrency || null)) {
+    patch.currency = pricedCurrency;
+  }
+  return patch;
 }
 
 /**
@@ -116,8 +151,9 @@ function winProbability(v: string): UpdateDealRequest["win_probability"] {
  */
 export function mapDealUpdate(
   values: Record<string, unknown>,
-  seeded: Record<string, unknown> = {},
-  masked: readonly string[] = [],
+  seeded: Record<string, unknown>,
+  masked: readonly string[],
+  locale: Locale,
 ): UpdateDealRequest {
   const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
   const currency = str(values.currency);
@@ -146,26 +182,19 @@ export function mapDealUpdate(
   // A required field: an emptied name is a form the reader has not finished,
   // not an instruction to erase the deal's name.
   onMove("name", "name", () => str(values.name) || undefined);
-  // The money pair travels together whenever either half moves, because the
-  // scale is part of the amount. amount_minor counts the currency's own minor
-  // units (a dong has none, a dinar has three). A currency moving alone
-  // re-denominates the stored figure: 10000 JPY re-saved as EUR becomes 10000
-  // minor EUR (€100). The FX freeze and the forecast history record that price.
-  //
-  // The exception is a deal with no figure at all. Naming a currency there is
-  // half a money value. The server's own pair refusal says so better than an
-  // amount_minor this form would have to invent.
-  if (moved("amount") || (moved("currency") && amount)) {
-    patch.amount_minor = amount ? toMinorUnits(Number(amount), currency) : null;
-  }
-  // ARR carries its currency's scale and travels on a currency move, as the
-  // amount does. The code is what says how many minor units the figure counts in.
-  if (moved("expected_arr") || (moved("currency") && expectedArr)) {
-    patch.expected_arr_minor = expectedArr
-      ? toMinorUnits(Number(expectedArr), currency)
-      : null;
-  }
-  onMove("currency", "currency", () => currency || undefined);
+  Object.assign(
+    patch,
+    dealPriceUpdate(
+      {
+        currency,
+        amount,
+        expectedArr,
+        previousCurrency: str(seeded.currency),
+        locale,
+      },
+      moved,
+    ),
+  );
   onMove("company_id", "company_id", () => str(values.company_id) || null);
   onMove("owner_id", "owner_id", () => str(values.owner_id) || null);
   onMove(
@@ -241,50 +270,37 @@ function withoutMasked(
   return out as UpdateDealRequest;
 }
 
+/** The deal as an editor opens on it: the form's values beside the wire's. */
+export function openDealEdit(deal: Deal, locale: Locale): FieldRecord {
+  return { ...dealEditRecord(deal, locale), original: deal };
+}
+
 /**
- * The create form's values as the deal-birth body.
- *
- * A deal names its partner at birth rather than only through a later edit. The
- * win that pays the partner can land before anybody revisits the record, and
- * commission accrues on a `sourced` attribution alone. Both partner fields
- * travel here, as in the update body. A create that dropped them would report
- * success while the partner was gone.
+ * `opened` comes from `openDealEdit`. A version refusal re-reads the deal and
+ * retries only while the fields this edit touches have not moved.
  */
-export function mapDealCreate(
+export function saveDealEdit(
+  opened: FieldRecord,
   values: Record<string, unknown>,
-  pipelineId: string,
-  // The first code the currency picker offered, sent when the field is empty.
-  defaultCurrency: string,
-): CreateDealRequest {
-  const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
-  const amount = str(values.amount);
-  const expectedArr = str(values.expected_arr);
-  const currency = str(values.currency) || defaultCurrency;
-  return {
-    name: str(values.name),
-    pipeline_id: pipelineId,
-    stage_id: str(values.stage_id),
-    // The UI takes major units; the wire is minor units, at the scale this
-    // currency carries. A dong has none, so a fixed factor of a hundred would
-    // price the deal a hundredfold, and nothing downstream could tell.
-    amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
-    expected_arr_minor: expectedArr
-      ? toMinorUnits(Number(expectedArr), currency)
-      : null,
-    currency: currencyBeside(currency, amount, expectedArr),
-    company_id: str(values.company_id) || null,
-    partner_company_id: str(values.partner_company_id) || null,
-    // The empty option means the caller made no claim, and null is how that
-    // travels. The server then reads a named partner as `sourced`, as the
-    // option says. An attribution naming no partner is refused 422 rather than
-    // defaulted, since there would be nobody to credit.
-    partner_attribution: partnerAttribution(str(values.partner_attribution)),
-    expected_close_date: str(values.expected_close_date) || null,
-    project_id: str(values.project_id) || null,
-    description: str(values.description) || null,
-    commercial_motion: commercialMotion(str(values.commercial_motion)),
-    priority: dealPriority(str(values.priority)),
-    acquisition_source: str(values.acquisition_source) || null,
-    source: "manual",
-  };
+  masked: readonly string[],
+  locale: Locale,
+) {
+  return saveRecordEdit(
+    "deal",
+    rawRecord(opened),
+    mapDealUpdate({ ...opened, ...values }, opened, masked, locale),
+  );
+}
+
+// Pinned to the version the reader saw, so an archive never lands on a deal
+// somebody changed since.
+export async function archiveDeal(deal: Pick<Deal, "id" | "version">) {
+  return unwrap(
+    await api.DELETE("/deals/{id}", {
+      params: {
+        path: { id: deal.id },
+        ...ifMatch(requireVersion(deal.version)),
+      },
+    }),
+  );
 }

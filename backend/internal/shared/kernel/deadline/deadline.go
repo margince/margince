@@ -4,7 +4,11 @@
 // Package deadline answers whether a promised moment has passed.
 package deadline
 
-import "time"
+import (
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+)
 
 // Passed reports whether a due moment is in the past — whether the thing is
 // LATE.
@@ -31,32 +35,56 @@ func Passed(due *time.Time, now time.Time) bool {
 	return due != nil && due.Before(now)
 }
 
-// DaysPast is how many WHOLE days a due moment is behind now, and whether it is
-// behind at all.
-//
-// Whole days ELAPSED, not calendar days crossed. The two differ: a promise made
-// at 23:00 and judged at 01:00 has crossed a calendar day and elapsed two hours,
-// and calling that "a day late" overstates it.
-//
-// Calendar counting needs a timezone to say where a day begins. The
-// installation stores one, but it is not an argument here and this package is
-// stdlib-only by tier — so a caller that means calendar days must count them
-// where that setting is in scope, as the close-date sweep does.
-//
-// NOT `kernel/elapsed`, which counts calendar days in UTC and is the right
-// answer for ITS question. That one measures silence between two moments and is
-// deliberately calendar-based, so its wording can only change when the UTC-day
-// cache key it rides does. This one measures how far past a promise we are,
-// where elapsed time is what a reader means — 23:00 to 01:00 has crossed a
-// calendar day and is not "a day late". Reaching for the wrong one produces a
-// count that is off by one for most of every day.
-//
-// Zero is a real answer: something hours past its date is late by no whole
-// days, which is not the same as not being late. Callers read the bool, never
-// the count, to decide.
-func DaysPast(due *time.Time, now time.Time) (int, bool) {
-	if !Passed(due, now) {
+// DayPassed reports whether the calendar day of a due moment, read in loc, is
+// before today's calendar day in loc. A day-level promise is late only once
+// its whole day is over, so the last fractional second of today still counts.
+func DayPassed(due, now time.Time, loc *time.Location) bool {
+	return due.In(loc).Format(time.DateOnly) < now.In(loc).Format(time.DateOnly)
+}
+
+// WallDayOffset is how many calendar days the chosen date of a task lies from
+// today in loc: negative once it is behind us, 0 on it. The date is read from
+// the wall clock text, not from the instant it resolves to. A reader in another
+// zone than the chooser's therefore counts the same day. It reports false when
+// the text does not start with a date.
+func WallDayOffset(wallClock string, now time.Time, loc *time.Location) (int, bool) {
+	if len(wallClock) < len(time.DateOnly) {
 		return 0, false
 	}
-	return int(now.Sub(*due) / (24 * time.Hour)), true
+	day, err := time.Parse(time.DateOnly, wallClock[:len(time.DateOnly)])
+	if err != nil {
+		return 0, false
+	}
+	noon := time.Date(day.Year(), day.Month(), day.Day(), 12, 0, 0, 0, loc)
+	return elapsed.Days(now, noon, loc), true
+}
+
+// TaskPassed is Passed for a task. A task with a chosen date and no time is
+// late once that date is behind today in loc, whatever instant the date
+// resolves to. Any other task is late by its instant. wallClock is the chosen
+// clock's text, empty when the task has none.
+func TaskPassed(due *time.Time, hasTime bool, wallClock string, now time.Time, loc *time.Location) bool {
+	if due != nil && !hasTime && wallClock != "" {
+		if days, ok := WallDayOffset(wallClock, now, loc); ok {
+			return days < 0
+		}
+	}
+	return Passed(due, now)
+}
+
+// TaskDueOn is the instant a task's lateness and order are judged at. A task
+// with a chosen date and no time is due until the start of the next calendar
+// day in loc. It is judged at the last instant before that start. Any other
+// task, and a nil loc, keep the due instant. storekit.TaskDueOrderSQL spells
+// the same rule.
+func TaskDueOn(due *time.Time, hasTime bool, wallClock string, loc *time.Location) *time.Time {
+	if due == nil || hasTime || wallClock == "" || loc == nil || len(wallClock) < len(time.DateOnly) {
+		return due
+	}
+	day, err := time.Parse(time.DateOnly, wallClock[:len(time.DateOnly)])
+	if err != nil {
+		return due
+	}
+	end := time.Date(day.Year(), day.Month(), day.Day()+1, 0, 0, 0, 0, loc).Add(-time.Nanosecond)
+	return &end
 }

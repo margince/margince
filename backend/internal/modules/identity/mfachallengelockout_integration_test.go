@@ -32,7 +32,7 @@ func TestWrongSecondFactorCodesLockTheAccount(t *testing.T) {
 	// Every guess rides one challenge: the cap is the account's, not the nonce's.
 	jti := freshJti()
 	for attempt := 1; attempt <= lockoutThreshold; attempt++ {
-		if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, jti, "000000"); !errors.Is(err, errBadMFACode) {
+		if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, MFAChallenge{Jti: jti, Epoch: e.memberEpoch(t)}, "000000"); !errors.Is(err, errBadMFACode) {
 			t.Fatalf("wrong code %d: err=%v, want errBadMFACode", attempt, err)
 		}
 	}
@@ -42,14 +42,14 @@ func TestWrongSecondFactorCodesLockTheAccount(t *testing.T) {
 
 	// Locked: even the right code, on a fresh challenge, opens no session.
 	code, _ := totpCodeAt(secret, e.svc.now(), totpDigits)
-	if _, token, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, freshJti(), code); !errors.Is(err, errAccountLocked) || token != "" {
+	if _, token, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, MFAChallenge{Jti: freshJti(), Epoch: e.memberEpoch(t)}, code); !errors.Is(err, errAccountLocked) || token != "" {
 		t.Fatalf("right code while locked: err=%v token=%q, want errAccountLocked and no session", err, token)
 	}
 
 	// Once the lock lapses the right code signs in and clears the streak.
 	e.atInstant(base.Add(lockoutDuration + 2*totpStep))
 	code, _ = totpCodeAt(secret, e.svc.now(), totpDigits)
-	if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, freshJti(), code); err != nil {
+	if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, MFAChallenge{Jti: freshJti(), Epoch: e.memberEpoch(t)}, code); err != nil {
 		t.Fatalf("right code after the lock lapsed: %v", err)
 	}
 	if count, lockedUntil := lockoutColumns(t, e); count != 0 || lockedUntil != nil {
@@ -66,14 +66,14 @@ func TestAMistypedCodeCanBeRetypedOnTheSameChallenge(t *testing.T) {
 	e.atInstant(base.Add(totpStep))
 
 	jti := freshJti()
-	if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, jti, "000000"); !errors.Is(err, errBadMFACode) {
+	if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, MFAChallenge{Jti: jti, Epoch: e.memberEpoch(t)}, "000000"); !errors.Is(err, errBadMFACode) {
 		t.Fatalf("wrong code: err=%v, want errBadMFACode", err)
 	}
 	if count, _ := lockoutColumns(t, e); count != 1 {
 		t.Errorf("failed_login_count after one wrong code = %d, want 1", count)
 	}
 	code, _ := totpCodeAt(secret, e.svc.now(), totpDigits)
-	if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, jti, code); err != nil {
+	if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, MFAChallenge{Jti: jti, Epoch: e.memberEpoch(t)}, code); err != nil {
 		t.Fatalf("right code on the same challenge after a typo: %v", err)
 	}
 }
@@ -91,9 +91,10 @@ func TestConcurrentWrongCodesCannotOutrunTheLockout(t *testing.T) {
 	const burst = 3 * lockoutThreshold
 	results := make(chan error, burst)
 	var wg sync.WaitGroup
+	epoch := e.memberEpoch(t)
 	for range burst {
 		wg.Go(func() {
-			_, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, freshJti(), "000000")
+			_, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, MFAChallenge{Jti: freshJti(), Epoch: epoch}, "000000")
 			results <- err
 		})
 	}

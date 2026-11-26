@@ -67,8 +67,15 @@ type StagedApproval struct {
 	CreatedAt time.Time `json:"created_at"`
 	// ExpiresAt is when the proposal lapses. A lapsed item is not decidable and
 	// reads as expired here before any sweep has run.
-	ExpiresAt      *time.Time       `json:"expires_at,omitempty"`
-	DecidedAt      *time.Time       `json:"decided_at,omitempty"`
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	DecidedAt *time.Time `json:"decided_at,omitempty"`
+	// AwaitingAgent is true on an approved proposal the staging agent has not
+	// yet run. Approving only lets that agent repeat its call, so nothing has
+	// changed until it does.
+	AwaitingAgent bool `json:"awaiting_agent,omitempty"`
+	// EffectFailure is the sentence for an approved decision whose work did not
+	// run. Absent when the work ran or has not been tried.
+	EffectFailure  string           `json:"effect_failure,omitempty"`
 	DecidedBy      *ids.UUID        `json:"decided_by,omitempty"`
 	DiffHash       string           `json:"diff_hash,omitempty"`
 	Evidence       []StagedEvidence `json:"evidence,omitempty"`
@@ -122,9 +129,16 @@ type ApprovalQuery struct {
 	Kind             string
 	TargetEntityType string
 	TargetEntityID   ids.UUID
+	Targets          []ApprovalTarget
 	BundleID         ids.UUID
 	Limit            int
 	Cursor           string
+}
+
+// ApprovalTarget is one record a listing asks about.
+type ApprovalTarget struct {
+	Type string   `json:"type"`
+	ID   ids.UUID `json:"id"`
 }
 
 // ApprovalPage is one page of the queue.
@@ -168,14 +182,15 @@ const listApprovalsToolName = "list_approvals"
 type listApprovalsTool struct{ inbox ApprovalInbox }
 
 type listApprovalsArgs struct {
-	IncludeMuted     bool     `json:"include_muted"`
-	Status           string   `json:"status"`
-	Kind             string   `json:"kind"`
-	TargetEntityType string   `json:"target_entity_type"`
-	TargetEntityID   ids.UUID `json:"target_entity_id"`
-	BundleID         ids.UUID `json:"bundle_id"`
-	Limit            int      `json:"limit"`
-	Cursor           string   `json:"cursor"`
+	IncludeMuted     bool             `json:"include_muted"`
+	Status           string           `json:"status"`
+	Kind             string           `json:"kind"`
+	TargetEntityType string           `json:"target_entity_type"`
+	TargetEntityID   ids.UUID         `json:"target_entity_id"`
+	Targets          []ApprovalTarget `json:"targets"`
+	BundleID         ids.UUID         `json:"bundle_id"`
+	Limit            int              `json:"limit"`
+	Cursor           string           `json:"cursor"`
 }
 
 func (t listApprovalsTool) Spec() mcp.ToolSpec {
@@ -191,6 +206,9 @@ func (t listApprovalsTool) Spec() mcp.ToolSpec {
 			"kind":{"type":"string","description":"One staged action's kind, e.g. advance_deal."},
 			"target_entity_type":{"type":"string","description":"With target_entity_id, the approvals staged against one record."},
 			"target_entity_id":{"type":"string","format":"uuid"},
+			"targets":{"type":"array","maxItems":25,"description":"The approvals staged against any of these records.",
+				"items":{"type":"object","required":["type","id"],"properties":{
+					"type":{"type":"string"},"id":{"type":"string","format":"uuid"}},"additionalProperties":false}},
 			"bundle_id":{"type":"string","format":"uuid","description":"The approvals staged together as one bundle."},
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"next_cursor from a previous page."}},
@@ -214,6 +232,9 @@ func (t listApprovalsTool) Handle(ctx context.Context, in json.RawMessage) (json
 		return nil, &BadArgsError{Field: "target_entity_id", Cause: errors.New(
 			"target_entity_type and target_entity_id name one record together; pass both or neither")}
 	}
+	if err := checkTargets(args); err != nil {
+		return nil, err
+	}
 	// Converted, not copied field by field, so a member added to both is never
 	// dropped on the way.
 	page, err := t.inbox.ListApprovals(ctx, ApprovalQuery(args))
@@ -227,6 +248,31 @@ func (t listApprovalsTool) Handle(ctx context.Context, in json.RawMessage) (json
 		page.Approvals = []StagedApproval{}
 	}
 	return json.Marshal(page)
+}
+
+// maxApprovalTargets is the contract's bound on one listing's records.
+const maxApprovalTargets = 25
+
+// checkTargets refuses a target list a REST client would be refused, so both
+// doors answer one question alike.
+func checkTargets(args listApprovalsArgs) error {
+	if len(args.Targets) == 0 {
+		return nil
+	}
+	if args.TargetEntityType != "" || !args.TargetEntityID.IsZero() {
+		return &BadArgsError{Field: "targets", Cause: errors.New(
+			"targets names records on its own; drop target_entity_type and target_entity_id, or drop targets")}
+	}
+	if len(args.Targets) > maxApprovalTargets {
+		return &BadArgsError{Field: "targets", Cause: fmt.Errorf("name at most %d records", maxApprovalTargets)}
+	}
+	for i, target := range args.Targets {
+		if target.Type == "" || target.ID.IsZero() {
+			return &BadArgsError{Field: fmt.Sprintf("targets[%d]", i), Cause: errors.New(
+				"each target needs both type and id, e.g. {\"type\":\"contact\",\"id\":\"<uuid>\"}")}
+		}
+	}
+	return nil
 }
 
 // --- read_approval (🟢 read) ---

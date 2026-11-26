@@ -1,0 +1,9 @@
+{
+  "verb": "list_automation_runs",
+  "checks": [
+    "automation.read"
+  ],
+  "takes": [
+    "automation"
+  ]
+}

@@ -9,28 +9,18 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import type { components } from "../../api/schema";
-import { mayOwnRecords } from "../../components/assigneepicker";
-import {
-  EntityRef,
-  RosterFailedLine,
-  useRoster,
-  useRosterPartial,
-  useRosterPartialHint,
-} from "../../components/entityref";
+import { EntityRef } from "../../components/entityref";
+import { OwnerPick } from "../../components/ownerpick";
+import type { SectionFlow } from "../../components/sectionedit";
 import { fetchGrants } from "../../components/share.parts";
 import { Badge } from "../../design-system/atoms";
-import { EditableValue } from "../../design-system/editablevalue";
-import {
-  type FieldEditControl,
-  FieldEditDialog,
-} from "../../design-system/fieldeditdialog";
-import { IdentityLine } from "../../design-system/identityline";
-import { Select } from "../../design-system/select";
+import { ReadOnlyValue } from "../../design-system/readonlyvalue";
 import { useT } from "../../i18n";
-import { useCanWrite, useWriteRefusal } from "../../lib/capability";
+import { useCanWrite, useWriteBlock } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
+import { WRITE_BLOCK_REFUSAL } from "../../lib/writerefusal";
 import { LeadCompany } from "./leadcompany";
 import { leadStatusLabel } from "./leadpresentation";
 import type { LeadWriter } from "./leads";
@@ -115,10 +105,9 @@ function LeadSharePill({ lead }: Readonly<{ lead: Lead }>): ReactNode {
 export function LeadPulse({ lead }: Readonly<{ lead: Lead }>): ReactNode {
   const t = useT();
   const label = leadStatusLabel(lead.status);
-  // The same row shape the contact's marks take: pills side by side with a
-  // space between, never stretched across the head.
+  // Bare pills, as the contact's marks are: the head's pill row spaces them.
   return (
-    <IdentityLine separator="space">
+    <>
       {/* Plain, not a state colour: that this is a lead is a kind, not a
           reading. */}
       <Badge>{t("lead.marker")}</Badge>
@@ -126,210 +115,87 @@ export function LeadPulse({ lead }: Readonly<{ lead: Lead }>): ReactNode {
         {label ? t(label) : lead.status}
       </Badge>
       <LeadSharePill lead={lead} />
-    </IdentityLine>
-  );
-}
-
-// How one candidate reads in the assignment list. The viewer reads as "Me": a
-// rep scanning this list looks for themselves, not for their own name among
-// colleagues'. A user with no display name still has to be pickable, so the
-// id stands in rather than rendering a blank row.
-function candidateLabel(
-  entry: Readonly<{ id: string; display_name?: string }>,
-  meId: string | undefined,
-  t: ReturnType<typeof useT>,
-): string {
-  if (entry.id === meId) {
-    return t("lead.assignToMe");
-  }
-  return entry.display_name ?? entry.id;
-}
-
-// The assignee list's four readings, as early returns rather than one chained
-// conditional: a roster still arriving, a roster that failed, a workspace
-// with nobody else in it, and the picker itself.
-function AssigneePicker({
-  field,
-  roster,
-  rosterPartial,
-  candidates,
-  meId,
-}: Readonly<{
-  field: FieldEditControl;
-  roster: ReturnType<typeof useRoster>;
-  rosterPartial: boolean;
-  candidates: readonly Readonly<{ id: string; display_name?: string }>[];
-  meId: string | undefined;
-}>) {
-  const t = useT();
-  if (roster.isPending) {
-    return <span>{t("share.rosterLoading")}</span>;
-  }
-  if (roster.isError) {
-    return <RosterFailedLine kind="user" roster={roster} />;
-  }
-  // "Nobody else" is a claim about the WHOLE workspace, so only a roster read
-  // to its end may make it. Over a walk that stopped early it would report a
-  // lead as unassignable when the colleague to hand it to sits on a page
-  // nothing here read.
-  if (candidates.length === 0 && !rosterPartial) {
-    return <span>{t("lead.assignNobodyElse")}</span>;
-  }
-  const { control, draft, setDraft, saving } = field;
-  return (
-    <Select
-      {...control}
-      placeholder={t("lead.assignChoose")}
-      value={draft}
-      disabled={saving}
-      aria-busy={saving || undefined}
-      options={candidates.map((entry) => ({
-        value: entry.id,
-        label: candidateLabel(entry, meId, t),
-      }))}
-      onChange={setDraft}
-    />
-  );
-}
-
-// Ownership: who holds the lead, and reassignment to any workspace user.
-// The owner reads as a name. EntityRef resolves it by id and falls back to the
-// id only once that read has settled without one. So a reader is never handed
-// a bare uuid while a name is still on its way.
-// Reassignment is a plain owner change. The server audits it and keeps
-// whatever routing decision it overrides. So the only thing this control owes
-// the reader is the list of who they can hand it to.
-function LeadOwner({
-  lead,
-  meId,
-  editable,
-  readOnlyReason,
-  refusedReasonId,
-  onAssign,
-}: Readonly<{
-  lead: Lead;
-  meId: string | undefined;
-  editable: boolean;
-  readOnlyReason?: string;
-  refusedReasonId?: string;
-  onAssign: (ownerId: string, opened: Lead) => Promise<unknown>;
-}>) {
-  const t = useT();
-  const [picking, setPicking] = useState(false);
-  // Save sends the version the reader opened on, never a later refetch's.
-  const [opened, setOpened] = useState(lead);
-  const roster = useRoster("user", picking);
-  const rosterPartial = useRosterPartial("user", picking);
-  const partialHint = useRosterPartialHint(rosterPartial);
-  // Everyone but the current owner, with the viewer first: assigning to
-  // yourself is the common case on a small team.
-  const candidates = (roster.data ?? [])
-    .filter(mayOwnRecords)
-    .filter((entry) => entry.id !== lead.owner_id)
-    .sort((a, b) => {
-      if (a.id === meId) return -1;
-      if (b.id === meId) return 1;
-      return 0;
-    });
-  const label = t("lead.ownerLabel");
-  let owner: ReactNode = t("lead.unassigned");
-  if (lead.owner_id) {
-    owner =
-      lead.owner_id === meId ? (
-        t("lead.ownerYou")
-      ) : (
-        <EntityRef kind="user" id={lead.owner_id} />
-      );
-  }
-  return (
-    <>
-      {editable || picking ? (
-        <EditableValue
-          editLabel={t("inlineChoice.change", { field: label })}
-          onEdit={() => {
-            setOpened(lead);
-            setPicking(true);
-          }}
-        >
-          {owner}
-        </EditableValue>
-      ) : (
-        <span title={readOnlyReason} aria-describedby={refusedReasonId}>
-          {owner}
-        </span>
-      )}
-      {/* The draft starts unpicked: the current owner is no candidate, and
-          Save on no pick is no write. */}
-      <FieldEditDialog
-        open={picking}
-        label={label}
-        value=""
-        hint={partialHint}
-        onClose={() => setPicking(false)}
-        onSave={async (ownerId) => {
-          await onAssign(ownerId, opened);
-        }}
-      >
-        {(field) => (
-          <AssigneePicker
-            field={field}
-            roster={roster}
-            rosterPartial={rosterPartial}
-            candidates={candidates}
-            meId={meId}
-          />
-        )}
-      </FieldEditDialog>
     </>
   );
 }
 
-// The lead's owner, with the control that hands it on.
-//
-// Its own component rather than inline in the header's props, because what
-// makes it pressable is three separate questions and they belong beside each
-// other rather than spread through a JSX attribute list.
-export function LeadOwnerControl({
+/** Who holds the lead. */
+export function LeadOwnerName({ lead }: Readonly<{ lead: Lead }>) {
+  const t = useT();
+  const meId = useMe().data?.user?.id;
+  if (!lead.owner_id) {
+    return t("lead.unassigned");
+  }
+  return lead.owner_id === meId ? (
+    t("lead.ownerYou")
+  ) : (
+    <EntityRef kind="user" id={lead.owner_id} />
+  );
+}
+
+// Not the row's `writable`: an unowned lead is not writable, and its claim is the
+// way out of the unassigned queue. Grant and seat still bind; a closed lead does not move.
+function useOwnerRefusal(lead: Lead, writer: LeadWriter) {
+  const t = useT();
+  const mayAssign = useCanWrite("lead", "update");
+  const block = useWriteBlock("lead");
+  if (lead.archived_at) {
+    return { refused: true, reason: writer.readOnlyReason };
+  }
+  return {
+    refused: !mayAssign,
+    reason: block ? t(WRITE_BLOCK_REFUSAL[block]) : undefined,
+  };
+}
+
+/** The Ownership row's reading, saying why it is fixed for a reader who may not hand it on. */
+export function LeadOwnerReading({
   lead,
   writer,
   terminalReasonId,
-}: Readonly<{
-  lead: Lead;
-  writer: LeadWriter;
-  terminalReasonId: string;
-}>) {
-  const t = useT();
-  const me = useMe();
-  // Assignment asks a DIFFERENT question from editing, so it drops the PER-ROW
-  // half of the editor's answer and keeps the rest. `writable` is false on a
-  // lead nobody owns (the write arm being right), and gating on it would shut
-  // the only door out of the unassigned queue.
-  //
-  // The other two axes still bind. useCanWrite is the object grant AND the
-  // seat ceiling: a read seat, or one holding no `lead.update`, gets no
-  // pressable control, because the server refuses them and a button that only
-  // fails is worse than none. An archived lead is refused too: a terminal
-  // record is nobody's to hand on.
-  const mayAssign = useCanWrite("lead", "update");
-  const assignRefusal = useWriteRefusal("lead", "update", {
-    seat: t("settings.seatRefused"),
-    grant: t("record.actionRefused"),
-  });
-  const refused = Boolean(lead.archived_at) || !mayAssign;
-  const refusal = lead.archived_at
-    ? writer.readOnlyReason
-    : me.data && assignRefusal;
-  const meId = me.data?.user?.id;
+}: Readonly<{ lead: Lead; writer: LeadWriter; terminalReasonId: string }>) {
+  const { reason } = useOwnerRefusal(lead, writer);
   return (
-    <LeadOwner
-      lead={lead}
-      meId={meId}
-      editable={!refused && !writer.patch.isPending && !writer.assigning}
-      readOnlyReason={refusal}
-      refusedReasonId={lead.archived_at ? terminalReasonId : undefined}
-      onAssign={(ownerId, opened) => writer.assign(ownerId, opened, meId)}
-    />
+    <ReadOnlyValue
+      reason={reason || undefined}
+      describedBy={lead.archived_at ? terminalReasonId : undefined}
+    >
+      <LeadOwnerName lead={lead} />
+    </ReadOnlyValue>
   );
+}
+
+/** The owner handover as a flow of the Ownership section, with the claim of an unowned lead. */
+export function useLeadOwnerFlow(
+  lead: Lead,
+  writer: LeadWriter,
+): Readonly<{ flow?: SectionFlow; element: ReactNode }> {
+  const t = useT();
+  const meId = useMe().data?.user?.id;
+  const [open, setOpen] = useState(false);
+  const { refused } = useOwnerRefusal(lead, writer);
+  if (refused) {
+    return { element: null };
+  }
+  return {
+    flow: {
+      label: t("lead.ownerLabel"),
+      reading: <LeadOwnerName lead={lead} />,
+      open: () => setOpen(true),
+    },
+    element: (
+      <OwnerPick
+        opener="caller"
+        open={open}
+        onClose={() => setOpen(false)}
+        record={lead}
+        assign={(ownerId, opened) => writer.assign(ownerId, opened, meId)}
+        invalidate="leads"
+        recordKey="lead"
+        pending={writer.patch.isPending}
+      />
+    ),
+  };
 }
 
 // What moved a system-set Engaged, in the few words the status row has.

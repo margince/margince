@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "record_fields",
+  "verb": "describe_record_fields",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

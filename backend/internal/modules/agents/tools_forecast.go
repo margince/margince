@@ -53,9 +53,10 @@ type forecastReadings struct {
 func (t forecastReadings) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "forecast_readings", Title: "Read the forecast", Version: toolVersionV1,
-		Description:   forecastReadingsCopy.render(),
-		Instead:       forecastReadingsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       forecastReadingsCopy.render(),
+		Instead:           forecastReadingsCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getForecast",
 		InputSchema: schema(`{"type":"object","properties":{
 			"period":{"type":"string","enum":["quarter","month","week"],"description":"The window length. Quarters and months follow the installation's own financial year, which may not start in January; a week runs Monday to Sunday."},
@@ -81,9 +82,9 @@ func (t forecastReadings) Handle(ctx context.Context, in json.RawMessage) (json.
 // ForecastReadings, restated here because the tool surface declares its own
 // output schema.
 //
-// The counts are not decoration. EligibleCount against PricedCount is what a
-// money total does NOT cover, and a model quoting the total without the gap is
-// reporting a partial pipeline as a complete one.
+// EligibleCount against PricedCount is what the open pipeline total does not
+// cover. A model that quotes it without the gap reports a partial pipeline as
+// complete. All four counts describe only open deals due in the period.
 type ForecastReadingsResult struct {
 	PeriodStart string  `json:"period_start"`
 	PeriodEnd   string  `json:"period_end"`
@@ -119,8 +120,10 @@ type ForecastReadingsResult struct {
 	ScopeLimited *bool `json:"scope_limited,omitempty"`
 
 	// CurrentCall is the standing call for this period, when somebody has made
-	// one. Absent means nobody has, which is a real answer.
-	CurrentCall json.RawMessage `json:"current_call,omitempty"`
+	// one. Absent means nobody has, unless CallWithheld says this seat may not
+	// see calls about the population.
+	CurrentCall  json.RawMessage `json:"current_call,omitempty"`
+	CallWithheld bool            `json:"call_withheld,omitempty"`
 
 	// Snapshots are this period's frozen states, newest first — the ids
 	// forecast_movement takes. Empty is a real answer: nothing was frozen.
@@ -138,9 +141,11 @@ type ForecastReadingsResult struct {
 	RangeHighMinor *int64 `json:"range_high_minor,omitempty"`
 	// Contributions are the per-deal rows, present only when asked for.
 	// ContributionsLimited says they hold only the caller's own deals, while
-	// the installation switched off individual performance.
-	Contributions        []ForecastContributionResult `json:"contributions,omitempty"`
-	ContributionsLimited *bool                        `json:"contributions_limited,omitempty"`
+	// the installation switched off individual performance, and
+	// ContributionsLimitedReason is the sentence that says why.
+	Contributions              []ForecastContributionResult `json:"contributions,omitempty"`
+	ContributionsLimited       *bool                        `json:"contributions_limited,omitempty"`
+	ContributionsLimitedReason *string                      `json:"contributions_limited_reason,omitempty"`
 }
 
 // ForecastLandingResult mirrors ForecastLanding on GET /forecast. A manager's
@@ -216,9 +221,10 @@ type forecastMovement struct {
 func (t forecastMovement) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "forecast_movement", Title: "What moved the forecast", Version: toolVersionV1,
-		Description:   forecastMovementCopy.render(),
-		Instead:       forecastMovementCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       forecastMovementCopy.render(),
+		Instead:           forecastMovementCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getForecastMovement",
 		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
 			"from":{"type":"string","format":"uuid","description":"The opening snapshot."},
@@ -285,10 +291,11 @@ type forecastInputChecks struct {
 func (t forecastInputChecks) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "forecast_input_checks", Title: "What the forecast's inputs were checked against",
-		Version:       toolVersionV1,
-		Description:   forecastInputChecksCopy.render(),
-		Instead:       forecastInputChecksCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Version:           toolVersionV1,
+		Description:       forecastInputChecksCopy.render(),
+		Instead:           forecastInputChecksCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "getForecastAssurance",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[ForecastAssuranceResult](),
@@ -362,9 +369,10 @@ type dataCoverage struct {
 func (t dataCoverage) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "data_coverage", Title: "How current the sources are", Version: toolVersionV1,
-		Description:   dataCoverageCopy.render(),
-		Instead:       dataCoverageCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       dataCoverageCopy.render(),
+		Instead:           dataCoverageCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "getDataCoverage",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[DataCoverageResult](),

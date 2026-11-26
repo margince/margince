@@ -18,6 +18,7 @@ path with no cloud, see [enrich-with-a-local-llm.md](enrich-with-a-local-llm.md)
 | `openai` | GPT (its own Responses API: how much it reasons, token use for the prompt cache and for reasoning, image and PDF input) | `OPENAI_API_KEY` | you may set it (default `api.openai.com`) |
 | `gemini` | Gemini (its own `generateContent`: thinking level, signed thinking kept across turns, image and PDF input) | `GEMINI_API_KEY` | you may set it (default `…/v1beta`) |
 | `gemini_vertex` | the same Gemini wire, served by Vertex AI at a `location` you choose. That is where Google runs the call (step 5) | `GEMINI_VERTEX_SA_JSON` (a key for a service account) | **refused**: the host comes from `location` |
+| `azure_openai` | an OpenAI model you deployed in Azure OpenAI. The model is the name you gave the deployment, and the Azure region is where the call runs ([Azure OpenAI](connect-azure-openai.md)) | `AZURE_OPENAI_API_KEY` (the static key of the resource) | **required**, `https://<resource>.openai.azure.com`, no path |
 | `openai_compatible` | the many smaller vendors on the OpenAI wire: Mistral, DeepSeek, Groq, Together, OpenRouter, a gateway you host, … | `OPENAI_COMPATIBLE_API_KEY` | **required** |
 
 A binding names only the provider. **The BYOK key lives in the key vault.** You put it there under
@@ -37,14 +38,13 @@ own. It is the right default for everything that is not Anthropic, OpenAI or Gem
 
 ## 2. Bind a tier
 
-The binding lives in the database. On an installation that is **running and already has a binding**,
-bind a tier under **Settings → AI**. The change works without a restart, within the time the routing
-takes to refresh.
+The binding lives in the database. On a running installation, bind a tier under **Settings → AI**. The change works without a restart,
+within the time the routing takes to refresh. That holds for a role that started with no binding too:
+it refuses AI calls until the first binding is saved, then adopts it.
 
-To save the first binding is the one case that needs a restart after it. A role that started with no
-binding set up no model path. And the watcher that would pick up the change is built from that path. For
-a new installation, declare the binding under `seeds.ai_routing` in `margince.yaml`. The one for a dev
-stack is in `config/margince.dev.yaml`. Then the first start comes up with the binding in place.
+For a new installation you can also declare the binding under `seeds.ai_routing` in `margince.yaml`.
+The one for a dev stack is in `config/margince.dev.yaml`. Then the first start comes up with the
+binding in place.
 
 A seed is used **once**, at the first setup, so a change to it after a database exists does nothing.
 `make dev-fresh` runs the first setup again, and Settings → AI binds again a stack that is already up.
@@ -58,7 +58,7 @@ step 4. The dev default we ship binds **`gemini`** on `cheap_cloud` and `premium
 # variable:
 tiers:
   cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
-  premium:     { provider: gemini, model: gemini-3.5-flash }
+  premium:     { provider: gemini, model: gemini-3.8-flash, thinking_level: low }
 
 # …or any OpenAI-compatible vendor via the generic adapter. It needs a host,
 # set once on the provider (the key comes from OPENAI_COMPATIBLE_API_KEY):
@@ -239,7 +239,7 @@ the region. An EU region pins one country, when that is what you need: `europe-w
 `-west4`, `-west8`, `-west9`, `-west10`, `-west12`, `-north1`, `-north2`, `-central2` or `-southwest1`.
 
 `europe-west2` is London and `europe-west6` is Zürich, both outside the EU. `global` may run the call
-in any country, and `us` is the US. None of those is in the EU.
+in any country, and `us` is the US. None of those is in the EU. `eu_hosted` does not refuse them.
 
 The preset [`config/presets/gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml) binds the chat tiers
 at `eu` and the embeddings lane at `europe-west4`, because `eu` serves no embedding model.
@@ -255,6 +255,33 @@ names the binding it could not check: when Google is down, you can still edit th
 **What this covers.** It covers **the model calls only**. Connectors, enrich work and mail reach their
 own services whatever the profile says. The certification judge (`make e2e-ai` `JUDGE=`) is not checked
 against the profile, because its corpus is not real data.
+
+## 6. The Gemini Decisions API on the decisions lane
+
+`gemini_decision` binds the decisions lane to the Decisions API of Google, which picks one answer from
+a closed set and writes no text. It sends the key of `gemini` (`GEMINI_API_KEY`, or the `gemini` row
+under Providers) and has no row of its own. Its default endpoint is
+`https://generativelanguage.googleapis.com/v1beta/decisions`. A `base_url` replaces it, written as
+the full endpoint URL. Pick it
+on the decision model row under **Model tiers**, or take the `#` off its block in
+[`config/presets/gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml):
+
+```yaml
+decisions: { provider: gemini_decision, model: gemini-decision-1 }
+```
+
+The price sheet holds `gemini-decision-1` at $0.10 per 1,000,000 input tokens, and output is free. An
+upgrade adds that row to a sheet set up before it. The price refresh reads it from models.dev once
+models.dev lists the model, and until then keeps the sheet price.
+
+What it does not cover:
+
+- It is a `v1beta` API of the Gemini Developer API alone. Vertex AI does not serve it.
+- Google runs it in no EU region, so do not bind it under `eu_hosted`. That profile does not refuse
+  it, as it does not refuse `gemini`; `sovereign` refuses it.
+- The three decision sites are certified on `gemini-decision-1`. A bound lane asks every site with a
+  decision form, certified or not. A site falls back to its ladder when the answer does not stand. See
+  [certify-a-decision-site.md](certify-a-decision-site.md).
 
 ## The sovereign profile refuses every cloud provider
 
@@ -313,7 +340,6 @@ the same `http` or `https`. It refuses it when it changes the host, or goes down
 | Log warning `routing saved with a gemini_vertex model unchecked` | The check on save could not run (`unreachable`). Either Margince could not reach Google, or the key does not have `roles/aiplatform.user`, or the project does not have the Vertex AI API. The binding is stored. Fix the role, then pick the model again in Settings to check it. |
 | 422 `… the service-account key was refused by Google … — replace the key under Providers` | To save a Vertex lane asked Google, and Google refused the key: it was revoked, or the account was deleted. Create a new JSON key on the account, and replace the old one. |
 | 422 `the stored gemini_vertex service-account key is not usable` | Margince cannot read the key file it holds. Replace it under Providers (step 5). |
-| 422 `… under profile eu_hosted: gemini_vertex location … is not an EU location` | London, Zürich, `global` and `us` are outside the EU. Choose `eu` or an EU region (step 5), or declare `cloud_frontier`. |
 | Provider badge `Out of credit` (Settings → AI models) | The vendor refused because the account has run out of money or is over its limit: a 402, or a `4xx` whose text says so, such as `credit balance is too low`. Pay into the account at the vendor. Margince checks again within 15 minutes. Work waits in that time, and you pay nothing: not for the first call to the empty account, and not for any later check that failed. |
 | Provider badge `Key rejected` | The vendor answered 401, or a 400 or 403 whose text says the key is not valid. A plain `does not have permission` never counts. Replace the key under Providers (step 5). A **Test** that passes clears the badge at once, and a save clears it within about 30 seconds. |
 | Provider badge `Unreachable` | The host did not answer, or three calls in a row returned a `5xx`. Check the `base_url` and the status of the vendor. Margince checks again after 30 seconds, and waits twice as long each time, up to 5 minutes. |

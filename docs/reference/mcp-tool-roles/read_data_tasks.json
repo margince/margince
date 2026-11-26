@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "data_tasks",
+  "verb": "read_data_tasks",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

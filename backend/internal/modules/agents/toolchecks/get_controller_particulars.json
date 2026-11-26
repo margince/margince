@@ -1,0 +1,6 @@
+{
+  "verb": "get_controller_particulars",
+  "checks": [
+    "installation_settings.read"
+  ]
+}

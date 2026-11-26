@@ -28,9 +28,9 @@ type Connection struct {
 type Customer struct {
 	ExternalID  string
 	DisplayName string
-	// UpdatedAt is the source's own modification stamp, when it keeps one. It
-	// is reported, never used to detect change: a source that touches every
-	// row nightly would otherwise look like one that changed every row.
+	// UpdatedAt is the source's own modification stamp, when it keeps one. The
+	// mirror never uses it to detect change: a source that touches every row
+	// nightly would otherwise look like one that changed every row.
 	UpdatedAt *time.Time
 }
 
@@ -62,7 +62,10 @@ type Invoice struct {
 	// CreditsExternalID names the invoice a credit note reduces. Empty on an
 	// ordinary invoice.
 	CreditsExternalID string
-	UpdatedAt         *time.Time
+	// DunningLevel is how many payment reminders the source has sent for this
+	// invoice, from 0 to 99. Nil when the source does not say.
+	DunningLevel *int
+	UpdatedAt    *time.Time
 }
 
 // Payment is one payment received.
@@ -75,4 +78,11 @@ type Payment struct {
 	Currency          string
 	AmountMinor       int64
 	UpdatedAt         *time.Time
+}
+
+// Document is one invoice as the source renders it, for a reader to open.
+type Document struct {
+	// ContentType is the document's media type. The core serves only a PDF.
+	ContentType string
+	Body        []byte
 }

@@ -79,7 +79,7 @@ func TestMigrationsBuildTheCommittedSchema(t *testing.T) {
 		"with the migration:\n"+
 		"    go test -tags integration ./migrations -run %s -update-catalog\n"+
 		"If it did not, the migration changed more than you think.",
-		catalogGolden, formatDiff(added, removed), t.Name())
+		catalogGolden, formatDiff(added, removed, filepath.Base(catalogGolden)), t.Name())
 }
 
 // catalogProjection is every part catalogParts yields, one per line, sorted.
@@ -129,7 +129,7 @@ func lineDiff(want, got string) (added, removed []string) {
 // handful of lines and all of them are worth reading; one that renames a table
 // changes hundreds, and a test failure that scrolls off the screen is one nobody
 // reads the top of — which is where the count is.
-func formatDiff(added, removed []string) string {
+func formatDiff(added, removed []string, wantLabel string) string {
 	const show = 20
 	var b strings.Builder
 	section := func(label string, lines []string) {
@@ -146,6 +146,6 @@ func formatDiff(added, removed []string) string {
 		}
 	}
 	section("only in the live schema", added)
-	section("only in "+filepath.Base(catalogGolden), removed)
+	section("only in "+wantLabel, removed)
 	return b.String()
 }

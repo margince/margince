@@ -1,0 +1,10 @@
+{
+  "verb": "keep_domain_as_vendor",
+  "checks": [
+    "activity.read",
+    "company.update"
+  ],
+  "takes": [
+    "vendor_question"
+  ]
+}

@@ -126,20 +126,6 @@
   margin-top: 2px; /* ds:ignore optical: sets the glyph on the first text line */
 }
 
-/* step 5 connect */
-
-.imap-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-  text-align: left;
-  max-width: 460px;
-  margin: 0 auto;
-}
-.imap-form .full {
-  grid-column: 1 / -1;
-}
-
 /* spinner (shared inline). The info family, not the brand: a turning ring is
    work still in flight, and drawn in the accent it read as the page's next
    move rather than as a wait. */
@@ -149,7 +135,6 @@
   border: 2.5px solid var(--infoBorder);
   border-top-color: var(--info);
   border-radius: 50%;
-  corner-shape: round;
   animation: obSpin 0.7s linear infinite;
   display: inline-block;
   vertical-align: -3px;
@@ -157,12 +142,6 @@
 @keyframes obSpin {
   to {
     transform: rotate(360deg);
-  }
-}
-
-@media (max-width: 640px) {
-  .imap-form {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -182,7 +161,7 @@
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--bgElevated) 72%, transparent);
+  background: color-mix(in srgb, var(--bgField) 72%, transparent);
 }
 .confirm-origin svg {
   width: 16px;
@@ -311,7 +290,7 @@
   padding: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--bgElevated) 94%, transparent);
+  background: color-mix(in srgb, var(--bgField) 94%, transparent);
   backdrop-filter: blur(10px);
 }
 .mw-confirm-company-row {
@@ -370,7 +349,7 @@
   text-align: left;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
+  background: var(--bgField);
 }
 /* The plate's own two columns, over `.checkfield`'s. Both classes are named so
    this wins whichever order the route split loads the two stylesheets in: the

@@ -38,12 +38,12 @@ func (s *Store) GetCompany(ctx context.Context, id ids.CompanyID, archived store
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	active, err := s.activeColumns(ctx, "company")
-	if err != nil {
-		return crmcontracts.Company{}, err
-	}
 	var out crmcontracts.Company
-	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		active, err := s.activeColumnsIn(ctx, tx, "company")
+		if err != nil {
+			return err
+		}
 		out, err = getCompanyInTx(ctx, tx, id, archived, active)
 		return err
 	})
@@ -77,30 +77,28 @@ func getCompanyInTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	// Sampled ONCE for this read, and handed to both rollup readers below. The
-	// row count and the computed pipeline total are two queries against the
-	// same function, and a clock read separately by each would pick different
-	// FX dates for one response whenever UTC midnight fell between them —
-	// which is the divergence binding the date exists to remove, reappearing
-	// one level down.
+	// Sampled once for this read. The open-deal count and the pipeline total
+	// come from one rollup row read at this date. A response never pairs a
+	// count from one FX day with a total from the next.
 	asOf := rollupAsOf()
-	// The two list-row counts, on the single read too, so the page a row
-	// opens into agrees with the row. Attached here rather than in
-	// readCompany: a write's before-image has no use for them.
-	single := []crmcontracts.Company{out}
-	if err := attachCompanyCounts(ctx, tx, single, asOf); err != nil {
+	// The contact count, on the single read too, so the page a list row opens
+	// into agrees with the row. Attached here rather than in readCompany: a
+	// write's before-image has no use for it.
+	idx := map[openapi_types.UUID]*crmcontracts.Company{out.Id: &out}
+	if err := fillContactCounts(ctx, tx, idx, []ids.UUID{id.UUID}); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("read company counts: %w", err)
 	}
-	out = single[0]
-	// STATE-4: the gate is a pure permission check (no query), so a
-	// caller whose role lacks computed_field:read never pays for the
-	// rollup read below, and out.ComputedFields stays its nil zero
-	// value — omitempty then drops the key entirely on marshal (T1).
-	if auth.ReadGranted(ctx, "computed_field") {
+	// STATE-4: open_deal_count and the computed fields share the list's gate.
+	// The gate is a pure permission check (no query). A caller without both
+	// grants never pays for the rollup read, and both fields stay nil, so
+	// omitempty drops their keys on marshal (T1). With both grants, one rollup
+	// statement feeds both fields.
+	if pipelineCountsVisible(ctx) {
 		open, err := openPipelineRollup(ctx, tx, id, asOf)
 		if err != nil {
 			return crmcontracts.Company{}, fmt.Errorf("read open pipeline rollup: %w", err)
 		}
+		out.OpenDealCount = &open.dealCount
 		rows := companyComputedFields(open)
 		out.ComputedFields = &rows
 	}
@@ -122,17 +120,7 @@ func readCompanyRow(ctx context.Context, tx pgx.Tx, id ids.CompanyID, archived s
 		return crmcontracts.Company{}, err
 	}
 	companies := []crmcontracts.Company{o}
-	// Stamped HERE rather than only in attachCompanyCounts, because every mutation
-	// echo — create, update, archive, restore, the merge survivor — hands the
-	// row back through this function and not through the counts page. Absent
-	// reads as NOT writable, so a missing stamp takes the edit buttons away from
-	// the owner who just saved.
-	if _, err := auth.StampWritable(ctx, tx, "company", companies,
-		func(o crmcontracts.Company) ids.UUID { return ids.UUID(o.Id) },
-		func(o *crmcontracts.Company, may bool) { o.Writable = &may }); err != nil {
-		return crmcontracts.Company{}, err
-	}
-	if err := stampCompaniesArchivable(ctx, tx, companies); err != nil {
+	if err := stampCompanyCapabilities(ctx, tx, companies); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	if err := attachCompanyDomains(ctx, tx, companies); err != nil {
@@ -162,7 +150,7 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var version int64
 	var visibility string
 	var assessAgainst *ids.UUID
-	var sourceSystem, authorName, authorSeatName *string
+	var authorName, authorSeatName *string
 	var authorID *ids.UUID
 
 	dests := []any{
@@ -170,7 +158,7 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
 		&resolvedCountries,
 		&lifecycle, &parentID, &mergedInto, &logoObjectKey, &linkedinURL, &o.Phone, &email, &o.Source, &o.CapturedBy,
-		&sourceSystem, &authorID, &authorName, &authorSeatName,
+		&o.SourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &o.IsAnchor,
 		&o.LastActivityAt, &o.LegalHold, &assessAgainst,
 	}
@@ -189,8 +177,8 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	}
 	o.ParentCompanyId = uuidPtr(parentID)
 	o.MergedIntoId = uuidPtr(mergedInto)
-	lc := crmcontracts.CompanyLifecycle(lifecycle)
-	o.Lifecycle = &lc
+	lc := crmcontracts.CompanyStatus(lifecycle)
+	o.Status = &lc
 	o.LogoUrl = LogoURL(id, logoObjectKey, LogoWide)
 	o.LinkedinUrl = linkedinURL
 	if email != nil {
@@ -202,7 +190,7 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	}
 	o.AddressCountryMismatch = addressCountryMismatch(addr.Country, resolvedCountries)
 	o.Version = &version
-	o.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
-	o.ImportedFrom = provenance.ImportedFrom(sourceSystem)
+	o.Author = sourceAuthorOf(authorID, authorSeatName, authorName, o.SourceSystem)
+	o.ImportedFrom = provenance.ImportedFrom(o.SourceSystem)
 	return o, nil
 }

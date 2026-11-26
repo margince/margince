@@ -1,7 +1,7 @@
 import { Avatar, Badge } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
-import { formatDateAbbrev, formatDateTime } from "../../format/format";
+import { formatDate, formatDateTime } from "../../format/format";
 import { formatRelativeTime } from "../../format/relativetime";
 import { useLocale, useT } from "../../i18n";
 import { valueFor } from "../../lib/labelfor";
@@ -116,7 +116,7 @@ export function MemberActivity({
       {added && (
         <time className="t-caption users-nowrap" dateTime={added}>
           {t("users.addedOn", {
-            date: formatDateAbbrev(added, locale, readerZone),
+            date: formatDate(added, locale, readerZone),
           })}
         </time>
       )}

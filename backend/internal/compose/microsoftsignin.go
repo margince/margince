@@ -54,6 +54,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/oidctoken"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -275,10 +276,10 @@ func isDirectoryID(s string) bool {
 // The list is what an operator wrote down, so the routing authority the browser
 // went through is irrelevant here: a token minted under `common` and carrying
 // an unlisted `tid` is refused exactly like one that arrived any other way.
-func microsoftIssuer(tenants []string) func(oidcClaims) error {
-	return func(c oidcClaims) error {
+func microsoftIssuer(tenants []string) func(oidctoken.Claims) error {
+	return func(c oidctoken.Claims) error {
 		if c.Tid == "" {
-			return fmt.Errorf("%w: no tid", errOIDCRejected)
+			return fmt.Errorf("%w: no tid", oidctoken.ErrRejected)
 		}
 		if !slices.ContainsFunc(tenants, func(id string) bool { return strings.EqualFold(c.Tid, id) }) {
 			// The consumer tenant keeps its own sentence. Somebody who signed
@@ -287,19 +288,19 @@ func microsoftIssuer(tenants []string) func(oidcClaims) error {
 			// installation's directories" sends the first one to ask for an
 			// allowlist entry they do not want.
 			if strings.EqualFold(c.Tid, microsoftConsumerTenant) {
-				return fmt.Errorf("%w: a personal Microsoft account, which this installation does not accept for sign-in", errOIDCRejected)
+				return fmt.Errorf("%w: a personal Microsoft account, which this installation does not accept for sign-in", oidctoken.ErrRejected)
 			}
-			return fmt.Errorf("%w: tid %q is not one of this installation's directories", errOIDCRejected, c.Tid)
+			return fmt.Errorf("%w: tid %q is not one of this installation's directories", oidctoken.ErrRejected, c.Tid)
 		}
 		if !strings.EqualFold(c.Iss, microsoftIdentityHost+c.Tid+"/v2.0") {
-			return fmt.Errorf("%w: iss %q does not name the directory the token claims", errOIDCRejected, c.Iss)
+			return fmt.Errorf("%w: iss %q does not name the directory the token claims", oidctoken.ErrRejected, c.Iss)
 		}
 		return nil
 	}
 }
 
 // microsoftOIDCVerifierAdapter satisfies identity.OIDCVerifier over the shared
-// compose-level oidcTokenVerifier.
+// oidctoken.Verifier.
 //
 // Its own adapter rather than Google's because Microsoft issues NO
 // `email_verified` claim, and defaulting a missing bool to false would refuse
@@ -315,12 +316,12 @@ func microsoftIssuer(tenants []string) func(oidcClaims) error {
 // the token to a client and to directories that are resolved per request,
 // while the verifier beneath is one JWKS cache per authority.
 type microsoftOIDCVerifierAdapter struct {
-	v             *oidcTokenVerifier
-	matchIdentity func(oidcClaims) error
+	v             *oidctoken.Verifier
+	matchIdentity func(oidctoken.Claims) error
 }
 
 func (a microsoftOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (identity.OIDCClaims, error) {
-	claims, err := a.v.verifyAs(ctx, idToken, a.matchIdentity)
+	claims, err := a.v.VerifyAs(ctx, idToken, a.matchIdentity)
 	if err != nil {
 		return identity.OIDCClaims{}, err
 	}
@@ -348,14 +349,14 @@ func microsoftAuthorityURL(tenant, path string) string {
 	return microsoftIdentityHost + tenant + path
 }
 
-// microsoftHostIssuer is the issuer check a verifier is BUILT with: the token
-// must come from Microsoft's identity platform at all. Which directory it must
-// name is decided per flow by microsoftIssuer, since the directories are
-// resolved with the client; this one stays at construction so no verifier
-// exists without an issuer check, as oidcverify.go requires.
-func microsoftHostIssuer(c oidcClaims) error {
+// microsoftHostIssuer is the issuer check a verifier is built with: the token
+// must come from Microsoft's identity platform at all. microsoftIssuer decides
+// per flow which directory it must name, because the directories are resolved
+// with the client. This check stays at construction, so no verifier exists
+// without an issuer check (oidctoken.New requires one).
+func microsoftHostIssuer(c oidctoken.Claims) error {
 	if !strings.HasPrefix(c.Iss, microsoftIdentityHost) {
-		return fmt.Errorf("%w: iss %q is not Microsoft's", errOIDCRejected, c.Iss)
+		return fmt.Errorf("%w: iss %q is not Microsoft's", oidctoken.ErrRejected, c.Iss)
 	}
 	return nil
 }
@@ -373,20 +374,20 @@ type microsoftSignInSource struct {
 	// because a stored app's directory and the environment's need not agree,
 	// and one verifier cannot hold two key endpoints.
 	mu        sync.Mutex
-	verifiers map[string]*oidcTokenVerifier
+	verifiers map[string]*oidctoken.Verifier
 }
 
-func (m *microsoftSignInSource) verifierFor(authority string) *oidcTokenVerifier {
+func (m *microsoftSignInSource) verifierFor(authority string) *oidctoken.Verifier {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if v, ok := m.verifiers[authority]; ok {
 		return v
 	}
 	if m.verifiers == nil {
-		m.verifiers = map[string]*oidcTokenVerifier{}
+		m.verifiers = map[string]*oidctoken.Verifier{}
 	}
-	v := newOIDCVerifier(
-		microsoftAuthorityURL(authority, "/discovery/v2.0/keys"), microsoftHostIssuer, identityResolvedPerRequest,
+	v := oidctoken.New(
+		microsoftAuthorityURL(authority, "/discovery/v2.0/keys"), microsoftHostIssuer, oidctoken.IdentityResolvedPerRequest,
 	)
 	m.verifiers[authority] = v
 	return v

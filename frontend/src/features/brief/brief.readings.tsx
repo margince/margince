@@ -15,7 +15,7 @@ import { pipelineValueDetail } from "../../format/pipelinevalue";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
-import { WORKLIST_FILTER_PARAM } from "../worklist/worklist";
+import { WORKLIST_FILTER_PARAM } from "../../lib/worklistrouting";
 import type { Worklist, WorklistFilter } from "../worklist/worklist.queries";
 import { calendarDay } from "./brief.facts";
 import {
@@ -55,7 +55,7 @@ import {
 // so a calendar read whole showed `3+` because an unrelated lane stopped, and a
 // mark on the exact figures is one a reader learns to discount. Per slot is not
 // guesswork: `counts` carries `more_available` PER CATEGORY, seeded from the
-// bounded SOURCES through `categoryOfSource` (reach.go).
+// bounded SOURCES through `categoryOfSource` (attention/kinds.go).
 
 // Open the worklist on the lane a reading counted.
 //
@@ -284,7 +284,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           })}
           unavailable={t("brief.readings.unavailable.meetings")}
           lane="meetings"
-          standIn={calendarStandIn(calendar, t)}
+          standIn={calendarStandIn(calendar, locale, t)}
         />
         <LaneReading
           scope={day.scope}
@@ -312,13 +312,16 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
         <LaneReading
           scope={day.scope}
           label={t("brief.readings.decisions")}
+          // The Worklist strip's figure, which the server states as the exact
+          // decisions total wherever it has one.
           count={
-            decisionsTotal ??
-            (day.sources_unavailable.some(
+            decisionsTotal === undefined &&
+            day.sources_unavailable.some(
               (entry) => entry.category === DECISIONS || !entry.category,
-            ) && readings.review === 0
+            ) &&
+            readings.review === 0
               ? null
-              : readings.review)
+              : readings.review
           }
           floor={decisionsTotal === undefined && floorOf(DECISIONS)}
           // Only where something IS held up, and how much of it. Otherwise the
@@ -360,34 +363,10 @@ export function BriefReadingsPending() {
   );
 }
 
-// The nearest deadline among the lead rows the page is SHOWING, or none.
-//
-// None in two cases that are one rule: the page cannot see the whole lane, or no
-// row on it names a moment. A cut read is the interesting one — an unshown lead
-// could be due sooner than every one the reader can see, so naming the earliest
-// visible deadline would state a "next" that is not next. The slot falls back to
-// its plain basis line, which is what the meetings slot does with readiness for
-// the same reason.
+// The nearest deadline among every open lead task the read weighed, or none
+// when an unseen one could be sooner. The server decides both.
 function soonestLeadDeadline(day: Worklist): string | null {
-  const entry = day.counts.find((count) => count.category === TASKS);
-  if (entry === undefined) {
-    // No lead was read at all: nothing to be nearest, and nothing missing.
-    return null;
-  }
-  if (entry.shown !== entry.considered || entry.more_available) {
-    return null;
-  }
-  let soonest: string | null = null;
-  for (const item of day.queue) {
-    const at =
-      item.source === "task" && item.subject?.type === "lead"
-        ? (item.due_at ?? undefined)
-        : undefined;
-    if (at !== undefined && (soonest === null || at < soonest)) {
-      soonest = at;
-    }
-  }
-  return soonest;
+  return day.readings.soonest_lead_due ?? null;
 }
 
 // This value describes the same scoped work as the rest of the brief.

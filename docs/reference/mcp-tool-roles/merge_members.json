@@ -1,0 +1,15 @@
+{
+  "tool": "change_state",
+  "action": "merge_member_accounts",
+  "verb": "merge_members",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

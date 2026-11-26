@@ -26,8 +26,14 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+const (
+	employmentStartedPrecisionField = "started_precision"
+	employmentEndedPrecisionField   = "ended_precision"
 )
 
 // EdgeFacts is what deciding a reverse needs to know about the edge itself: what
@@ -79,19 +85,19 @@ func (s *Store) EdgeFactsForReverse(ctx context.Context, tx pgx.Tx, id ids.UUID)
 // record read takes.
 //
 // The verb follows the ENTRY and is not update for both: reversing a `create`
-// archives the link, and the archive above asks delete. Asking update for both
-// lights the button for every seat holding the seeded rep grid, which carries
-// create, read and update on `relationship` and no delete.
+// archives the link, and the archive asks the kind's removal grant. Asking
+// update for both would light the button for an employment edge a seat may not
+// remove.
 //
 // Both grants, because an edge annotates its anchor: without the anchor's write
 // grant an edge write is an RBAC side door onto it, and that is the rule the
 // store's own entry points ask at their own entry.
 func (s *Store) RefuseEdgeWrite(ctx context.Context, kind, entryAction string) error {
-	action, err := edgeReversalGrant(entryAction)
+	actions, err := edgeReversalGrant(kind, entryAction)
 	if err != nil {
 		return err
 	}
-	if err := auth.Require(ctx, "relationship", action); err != nil {
+	if err := auth.RequireAny(ctx, "relationship", actions...); err != nil {
 		return err
 	}
 	anchor, _ := relationshipAnchor(kind)
@@ -102,14 +108,14 @@ func (s *Store) RefuseEdgeWrite(ctx context.Context, kind, entryAction string) e
 // performed under. It reads the same pair ReverseEdge dispatches on, so the
 // authority asked in advance and the write that follows cannot name different
 // verbs for one entry.
-func edgeReversalGrant(entryAction string) (principal.Action, error) {
+func edgeReversalGrant(kind, entryAction string) ([]principal.Action, error) {
 	switch entryAction {
 	case edgeEntryCreate:
-		return principal.ActionDelete, nil
+		return dealseat.RemovalGrants(kind), nil
 	case edgeEntryUpdate:
-		return principal.ActionUpdate, nil
+		return []principal.Action{principal.ActionUpdate}, nil
 	default:
-		return "", unreversibleEdgeAction(entryAction)
+		return nil, unreversibleEdgeAction(entryAction)
 	}
 }
 
@@ -158,8 +164,7 @@ func (s *Store) ReverseEdge(ctx context.Context, in ReverseEdgeInput) error {
 			return err
 		}
 		patch.IfVersion, patch.Evidence = &in.IfVersion, in.Evidence
-		_, err = s.UpdateRelationship(ctx, in.EdgeID, patch)
-		return err
+		return s.reverseRelationshipUpdate(ctx, in, patch)
 	default:
 		return unreversibleEdgeAction(in.Action)
 	}
@@ -185,11 +190,36 @@ func relationshipPatchFromImage(image map[string]any) (UpdateRelationshipInput, 
 	if out.IsCurrentPrimary, err = imageBool(image, "is_current_primary"); err != nil {
 		return UpdateRelationshipInput{}, err
 	}
-	if out.StartedAt, err = imageTime(image, "started_at"); err != nil {
+	if out.StartedAt, err = imageTime(image, wireStartedAt); err != nil {
 		return UpdateRelationshipInput{}, err
 	}
-	if out.EndedAt, err = imageTime(image, "ended_at"); err != nil {
+	if out.EndedAt, err = imageTime(image, wireEndedAt); err != nil {
 		return UpdateRelationshipInput{}, err
+	}
+	for key, target := range map[string]**string{employmentStatusField: &out.EmploymentStatus, employmentStartedPrecisionField: &out.StartedPrecision, employmentEndedPrecisionField: &out.EndedPrecision} {
+		value, err := imageString(image, key)
+		if err != nil {
+			return UpdateRelationshipInput{}, err
+		}
+		*target = value
+	}
+	if value, present := image[relationshipRoleField]; present && value == nil {
+		out.ClearRole = true
+	}
+	if value, present := image[wireStartedAt]; present && value == nil {
+		out.ClearStartedAt = true
+	}
+	if value, present := image[wireEndedAt]; present && value == nil {
+		out.ClearEndedAt = true
+	}
+	if value, present := image[employmentStatusField]; present && value == nil {
+		out.ClearEmploymentStatus = true
+	}
+	if value, present := image[employmentStartedPrecisionField]; present && value == nil {
+		out.ClearStartedPrecision = true
+	}
+	if value, present := image[employmentEndedPrecisionField]; present && value == nil {
+		out.ClearEndedPrecision = true
 	}
 	return out, nil
 }
@@ -257,4 +287,14 @@ func imageTime(image map[string]any, key string) (*time.Time, error) {
 		}
 	}
 	return nil, fmt.Errorf("contacts: edge image %q is not a date: %q", key, *text)
+}
+
+// EdgeFieldCanRestoreNull keeps undo aligned with the relationship patch policy.
+func EdgeFieldCanRestoreNull(field string) bool {
+	switch field {
+	case relationshipRoleField, wireStartedAt, wireEndedAt, employmentStatusField, employmentStartedPrecisionField, employmentEndedPrecisionField:
+		return true
+	default:
+		return false
+	}
 }

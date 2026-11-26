@@ -38,7 +38,7 @@ func refusalName(name string) string {
 // not the contract's, so an archived contract still reads through the deal.
 func EnsureDealContractsShareCompany(ctx context.Context, tx pgx.Tx, dealID ids.DealID, companyID ids.CompanyID) error {
 	rows, err := tx.Query(ctx,
-		`SELECT COALESCE(contract_number, title)
+		`SELECT COALESCE(contract_number, title) || CASE WHEN archived_at IS NOT NULL THEN ' (archived)' ELSE '' END
 		   FROM contract
 		  WHERE deal_id = $1 AND company_id <> $2
 		  ORDER BY created_at, id`,
@@ -76,9 +76,9 @@ type DealContractsCrossCompanyError struct {
 }
 
 func (e *DealContractsCrossCompanyError) Error() string {
-	subject, verb, them, each := "1 contract on this deal", "belongs", "it", "it"
+	subject, verb := "1 contract on this deal", "belongs"
 	if e.Count != 1 {
-		subject, verb, them, each = strconv.Itoa(e.Count)+" contracts on this deal", "belong", "them", "each"
+		subject, verb = strconv.Itoa(e.Count)+" contracts on this deal", "belong"
 	}
 	if len(e.Named) > 0 {
 		names := strings.Join(e.Named, ", ")
@@ -87,10 +87,7 @@ func (e *DealContractsCrossCompanyError) Error() string {
 		}
 		subject += " (" + names + ")"
 	}
-	// No edit changes a contract's company, so only a deal of that company
-	// or a deal with no company can take it.
-	return subject + " " + verb + " to another company. Detach " + them + ", or file " + each +
-		" against a deal of its own company, before changing the company."
+	return subject + " " + verb + " to another company. Archived contracts also count. Ask an administrator to correct the contract links before changing the company."
 }
 
 // FieldFault names company_id, the field the caller sent, so the transport

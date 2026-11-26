@@ -10,79 +10,17 @@ package contracts
 // table name they do not know rather than guessing, so `contract` cannot join
 // them: there is no column for their clauses to test.
 //
-// A contract belongs to a company, not a contact (ADR-0109 §8). It is visible
-// when the deal it came from is visible, and — for the contracts that never ran
-// through a pipeline — when its company is visible. Deriving it rather
-// than copying an owner at creation is what makes a deal reassignment carry its
-// contracts in the same query, instead of leaving the agreement behind with the
-// representative who no longer works the account.
-
 import (
 	"context"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// VisibleClause renders the SQL predicate that admits the contracts this
-// caller may see, for a contract row under the given alias. It returns the
-// empty string for an unbounded caller, exactly as the shared row-scope
-// helpers do, so a caller composes it the same way.
-//
-// Exported because the company overview aggregates contract VALUES, and an
-// aggregate that skips this predicate leaks through its total: a reader learns
-// what a colleague's agreements are worth without ever being able to open one.
-// One spelling, so the list and the headline cannot drift apart.
-//
-// Both arms require a LIVE anchor. An archived deal keeps its foreign key and
-// its grants, so without the filter a contract would stay readable — and
-// mutable — through a record whose own read already answers 404.
-//
-// That requirement is UNCONDITIONAL, and it is stated here rather than left to
-// hold by accident. This used to return NO CLAUSE when both scopes came back
-// empty — bundling the liveness into the narrowing, so a caller who reads every
-// deal and every company would have read contracts on archived anchors
-// that the document-filing gate refuses.
-//
-// That caller does not exist today, and the reason is unrelated to contracts:
-// `company` is owner-private (platform/auth), so its scope clause is never
-// empty and the early return was unreachable. An invariant that survives on a
-// neighbouring table's privacy setting is one a change to that table quietly
-// ends — so liveness is now a property of the anchor rather than of who is
-// asking.
-//
-// The two arms are a disjunction because a contract has one anchor or the
-// other: a contract WITH a deal is judged by that deal, and a contract with no
-// deal is judged by its company. A contract with a deal is deliberately
-// NOT also admitted by its company — the deal is the narrower claim, and
-// widening to the company would hand a caller agreements attached to deals
-// they cannot see.
+// VisibleClause shares the contract anchor policy used by filing and delivery.
 func VisibleClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
-	dealScope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
-	if err != nil {
-		return "", err
-	}
-	companyScope, err := auth.ScopeClauseFor(ctx, companyTable, "o", arg)
-	if err != nil {
-		return "", err
-	}
-	qualified := alias
-	if qualified != "" {
-		qualified += "."
-	}
-
-	return storekit.SQLf(`(
-		(%[1]sdeal_id IS NOT NULL AND EXISTS (
-			SELECT 1 FROM deal d WHERE d.id = %[1]sdeal_id AND d.archived_at IS NULL AND %[2]s))
-		OR (%[1]sdeal_id IS NULL AND EXISTS (
-			SELECT 1 FROM company o WHERE o.id = %[1]scompany_id AND o.archived_at IS NULL AND %[3]s))
-	)`, qualified, trueWhenEmpty(dealScope), trueWhenEmpty(companyScope)), nil
+	return auth.ContractVisibleClause(ctx, alias, arg)
 }
 
-// trueWhenEmpty renders an absent scope clause as a literal truth. One anchor
-// can be unbounded while the other is not — a role may read every company
-// and only its own team's deals — and the arm for the unbounded one still has
-// to say something.
 func trueWhenEmpty(clause string) string {
 	if clause == "" {
 		return "TRUE"

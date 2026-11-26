@@ -15,7 +15,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -61,7 +60,7 @@ func TestErasingAnEmployeeDeletesTheOfferedValuesOfTheirCompany(t *testing.T) {
 	e.WsExec(t, `INSERT INTO relationship (kind,contact_id,company_id,source,captured_by) VALUES ('employment',$1,$2,'manual','human:x')`,
 		contact, ids.MustParse(made.Ref.ID))
 
-	if err := privacy.NewEraser(InstallationDB(e.Pool)).EraseContact(e.Admin(), contact, "subject request"); err != nil {
+	if err := eraserWithGraph(InstallationDB(e.Pool)).EraseContact(e.Admin(), contact, "subject request"); err != nil {
 		t.Fatalf("erasing: %v", err)
 	}
 	left := e.countAsWorkspace(t, `SELECT count(*) FROM company_offered_value WHERE company_id = '`+made.Ref.ID+`'`)

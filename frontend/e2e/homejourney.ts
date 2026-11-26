@@ -1,4 +1,10 @@
-import type { Page, Request, Response, Route } from "@playwright/test";
+import {
+  errors,
+  type Page,
+  type Request,
+  type Response,
+  type Route,
+} from "@playwright/test";
 import { HOME_DAY_TIMING } from "../src/features/brief/elementtiming";
 import {
   JOURNEY_START,
@@ -6,6 +12,10 @@ import {
   journeyMarkName,
   journeyOf,
 } from "../src/lib/journeymarks";
+import {
+  AnswerHistory,
+  type RetainedAnswer,
+} from "../src/testing/homeanswers.judge";
 import {
   type Answer,
   type Frame,
@@ -24,6 +34,17 @@ import {
 const homeRead = (request: Request) =>
   readOf(new URL(request.url()), request.method());
 
+export type HomeRequestObserver = {
+  started(
+    read: HomeRead,
+    journey: string,
+    request: Request,
+    attempt: number,
+  ): void;
+  responded(request: Request, status: number): void;
+  finished(request: Request): void;
+};
+
 /**
  * Every Home answer the page receives, filed under the journey its request
  * belongs to (RequestLedger). A late answer or a retry is never judged as
@@ -34,11 +55,22 @@ export class AnswerLog {
   private readonly owners = new WeakMap<Request, string>();
   private readonly statuses = new WeakMap<Request, number>();
   private answers: { journey: string; answer: Promise<Answer> }[] = [];
+  private readonly history: AnswerHistory;
+  private readonly documents = new WeakMap<Request, number>();
+  private readonly retained = new Map<string, readonly RetainedAnswer[]>();
 
-  constructor(page: Page) {
+  constructor(page: Page, observer?: HomeRequestObserver, reader?: string) {
+    this.history = new AnswerHistory(reader, Date.now);
     page.on("request", (request) => {
+      if (request.isNavigationRequest() && request.frame() === page.mainFrame())
+        this.history.beginDocument();
       const read = homeRead(request);
-      if (read) this.owners.set(request, this.ledger.started(read));
+      if (read) {
+        this.documents.set(request, this.history.documentID());
+        const { journey, attempt } = this.ledger.startedAttempt(read);
+        this.owners.set(request, journey);
+        observer?.started(read, journey, request, attempt);
+      }
     });
     page.on("response", (response) => {
       const request = response.request();
@@ -46,13 +78,25 @@ export class AnswerLog {
       const journey = this.owners.get(request);
       if (!read || journey === undefined) return;
       this.statuses.set(request, response.status());
-      this.answers.push({ journey, answer: answerOf(read, journey, response) });
+      observer?.responded(request, response.status());
+      const answer = answerOf(read, journey, response).then((answer) => {
+        const document = this.documents.get(request);
+        if (document !== undefined && request.frame() === page.mainFrame())
+          this.history.received(answer, document);
+        return answer;
+      });
+      this.answers.push({ journey, answer });
     });
     const finish = (request: Request) => {
       const read = homeRead(request);
       const journey = this.owners.get(request);
-      if (read && journey !== undefined)
+      if (read && journey !== undefined) {
         this.ledger.finished(read, journey, this.statuses.get(request) ?? null);
+        observer?.finished(request);
+        const document = this.documents.get(request);
+        if (request.failure() && document !== undefined)
+          this.history.failed(read, document);
+      }
     };
     page.on("requestfinished", finish);
     page.on("requestfailed", finish);
@@ -64,18 +108,34 @@ export class AnswerLog {
   }
 
   /** Whether `journey` is done: every read in `reads` answered, none due. */
-  async settled(journey: string, reads: readonly HomeRead[]): Promise<boolean> {
+  async settled(
+    journey: string,
+    reads: readonly HomeRead[],
+    retain = false,
+  ): Promise<boolean> {
     if (this.ledger.busy(journey)) return false;
-    const answers = await this.of(journey);
+    const { answers } = await this.observed(journey, retain);
     return reads.every((read) => answers.some((a) => a.read === read));
   }
 
   /** The answers of `journey`, and the end of waiting for any more. */
-  async close(journey: string): Promise<Answer[]> {
+  async close(journey: string, retain = false): Promise<Answer[]> {
+    const { answers, retained } = await this.observed(journey, retain);
     this.ledger.release(journey);
-    const answers = await this.of(journey);
+    this.retained.set(journey, retained);
     this.answers = this.answers.filter((a) => a.journey !== journey);
     return answers;
+  }
+
+  retainedAnswers(journey: string): readonly RetainedAnswer[] {
+    return this.retained.get(journey) ?? [];
+  }
+
+  private async observed(journey: string, retain: boolean) {
+    const answers = await this.of(journey);
+    return retain
+      ? this.history.fill(answers, this.ledger.reads(journey))
+      : { answers, retained: [] };
   }
 
   private of(journey: string): Promise<Answer[]> {
@@ -105,7 +165,14 @@ async function answerOf(
  * made while the refetch is still on the wire. The server does its work at
  * once; only the answer waits.
  */
-export async function holdWorklist(page: Page) {
+export async function holdWorklist(
+  page: Page,
+  intercepted?: (request: Request) => void,
+) {
+  let arrived = () => {};
+  const ready = new Promise<void>((resolve) => {
+    arrived = resolve;
+  });
   let open = () => {};
   const opened = new Promise<void>((resolve) => {
     open = resolve;
@@ -115,6 +182,8 @@ export async function holdWorklist(page: Page) {
   const hold = (route: Route) => {
     const answer = (async () => {
       if (route.request().method() !== "GET") return route.continue();
+      intercepted?.(route.request());
+      arrived();
       const response = await route.fetch();
       await opened;
       return route.fulfill({ response });
@@ -124,6 +193,7 @@ export async function holdWorklist(page: Page) {
   };
   await page.route(matches, hold);
   return {
+    ready,
     // Unrouting first would hand the held answers to the default handler.
     release: async () => {
       open();
@@ -275,16 +345,16 @@ export const DAY_ROOT = `#brief-today[elementtiming="${HOME_DAY_TIMING}"]`;
 export async function recordVitals(page: Page): Promise<void> {
   await page.addInitScript(
     ({ key, activityKey, drainKey, mark, root }) => {
-      const vitals: Vitals = { dayPaints: [], shifts: [], roots: 0 };
+      const vitals: Vitals = {
+        dayPaints: [],
+        shifts: [],
+        roots: 0,
+        lcpMs: null,
+        settled: false,
+      };
       Object.assign(window, { [key]: vitals });
       const touched = () => Reflect.set(window, activityKey, performance.now());
-      // Chrome times a block that fades in only when its fade ends. So the day
-      // and every block around it are drawn without their entrance animation.
-      const still = document.createElement("style");
-      still.textContent = `:is(:has(${root}), ${root}, ${root} *) { animation: none !important; }`;
-      // The document has no root element yet when this script runs.
       new MutationObserver((records) => {
-        if (!still.isConnected) document.documentElement?.append(still);
         for (const record of records) {
           const target =
             record.target instanceof Element
@@ -329,7 +399,26 @@ export async function recordVitals(page: Page): Promise<void> {
       };
       const paints = new PerformanceObserver((list) => take(list.getEntries()));
       paints.observe({ type: "element", buffered: true });
-      Object.assign(window, { [drainKey]: () => take(paints.takeRecords()) });
+      const takeLcp = (entries: PerformanceEntryList) => {
+        for (const entry of entries) {
+          touched();
+          if (Number.isFinite(entry.startTime) && entry.startTime > 0)
+            vitals.lcpMs = entry.startTime;
+        }
+      };
+      const lcp = new PerformanceObserver((list) => takeLcp(list.getEntries()));
+      if (
+        PerformanceObserver.supportedEntryTypes.includes(
+          "largest-contentful-paint",
+        )
+      )
+        lcp.observe({ type: "largest-contentful-paint", buffered: true });
+      Object.assign(window, {
+        [drainKey]: () => {
+          take(paints.takeRecords());
+          takeLcp(lcp.takeRecords());
+        },
+      });
       new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           const value = "value" in entry ? entry.value : undefined;
@@ -394,23 +483,47 @@ export async function settledVitals(
 ): Promise<Vitals> {
   await page
     .waitForFunction(
-      ({ activityKey, finals, quiet }) => {
+      ({ activityKey, finals, quiet, key }) => {
         const done = finals.flatMap((name) =>
           performance.getEntriesByName(name, "mark").map((m) => m.startTime),
         );
         if (done.length === 0) return false;
+        if (
+          document
+            .getAnimations()
+            .some(
+              (animation) =>
+                animation.playState === "running" &&
+                animation.effect !== null &&
+                Number.isFinite(
+                  Number(animation.effect.getComputedTiming().endTime),
+                ),
+            )
+        )
+          return false;
         const changed = Number(Reflect.get(window, activityKey) ?? 0);
-        return performance.now() - Math.max(changed, ...done) >= quiet;
+        if (performance.now() - Math.max(changed, ...done) < quiet)
+          return false;
+        const stored: Vitals | undefined = Reflect.get(window, key);
+        if (stored) stored.settled = true;
+        return true;
       },
       {
         activityKey: ACTIVITY_KEY,
+        key: VITALS_KEY,
         finals: FINAL_MARKS.map(journeyMarkName),
         quiet: DAY_QUIET_MS,
       },
       { timeout },
     )
     // A load that never settles is the judge's to fail, not an error here.
-    .catch(() => undefined);
+    .catch((error: unknown) => {
+      if (!(error instanceof errors.TimeoutError)) throw error;
+    });
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+  );
   return readVitals(page);
 }
 

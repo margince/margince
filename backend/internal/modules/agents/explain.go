@@ -15,7 +15,9 @@ package agents
 // rejected call.
 
 import (
+	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -45,6 +47,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		steppedUp      *StepUpStagedError
 		overQuota      *auth.VolumeExceededError
 		staged         *workflow.StagedApprovalError
+		confirmAsk     *ConfirmInConversationError
 		skew           *apperrors.VersionSkewError
 		areaOff        *auth.AreaOffError
 		archiveRefusal *auth.ArchiveAuthorityError
@@ -81,6 +84,8 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		return "This agent has reached a volume limit for this window that no approval lifts. Stop calling this tool " +
 			"and tell the user what is blocking it; the same call can succeed after the window rolls. (" +
 			overQuota.Error() + ")"
+	case errors.As(err, &confirmAsk):
+		return confirmInConversationExplanation(confirmAsk)
 	case errors.As(err, &staged):
 		// A 🟡 call that reached the inbox, and the branch that says WHAT is
 		// waiting there. The contact answers it — in the CRM, or through this
@@ -90,13 +95,9 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// to read_approval for the sentence tells the user a change is pending
 		// and cannot say which.
 		//
-		// COMPOSED HERE rather than by quoting err.Error(), which is what the
-		// other branches do. The summary carries a caller-chosen field name and
-		// a workspace-authored record label, and this text lands in a transcript
-		// whose later prompts the same run reads — so it is escaped and bounded
-		// on the way out, the same treatment faultExplanation gives every echo.
-		// Quoting the error whole would have carried the unescaped original
-		// beside the escaped copy.
+		// Composed here rather than through refusalDetail. The summary carries a
+		// caller-chosen field name and a workspace-authored record label, so it is
+		// escaped and bounded at workflow.MaxStagedSummary on the way out.
 		return stagedExplanation(staged)
 	case errors.Is(err, errDeclinedInChat):
 		return "The user said no in the chat, so nothing was changed. Do not repeat the call unless they ask again."
@@ -104,7 +105,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		return "This call needs a contact's approval, and a file cannot wait for an approval: the approval would " +
 			"keep the file. Nothing was changed. Do not retry; tell the user to attach the file in the Margince app."
 	case errors.Is(err, errFileKindRefused):
-		return "Margince does not accept this kind of file, so nothing was attached. (" + fileKindDetail(err) +
+		return "Margince does not accept this kind of file, so nothing was attached. (" + refusalDetail(err) +
 			") Do not retry: do not rename it, convert it, pack it into a zip or other archive, or save its " +
 			"contents as a note. Tell the user it was not attached and which kinds are accepted."
 	case errors.Is(err, apperrors.ErrRequiresApproval):
@@ -113,34 +114,28 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// There is no proposal to point at, so the answer says what it can.
 		return "This is a confirm-first (🟡) action: a contact answers it before it runs, and not the " +
 			"credential that proposed it. Nothing was changed. Tell the user it is waiting — list_approvals " +
-			"shows it, read_approval shows what it would do, and they release it in the CRM. (" + err.Error() + ")"
+			"with targets naming this record shows it, and they release it in the CRM. (" + refusalDetail(err) + ")"
 	case errors.As(err, &areaOff):
 		// Its words name the area and where the user turns it on, for the agent to
 		// relay. The scope sentence below would send it elsewhere.
 		_, message := areaOff.MessageFault()
 		return "Refused: " + message + "."
 	case errors.Is(err, apperrors.ErrScopeExceeded):
-		return "The passport this session runs under does not grant the scope this tool needs. (" + err.Error() + ")"
+		return "The passport this session runs under does not grant the scope this tool needs. (" + refusalDetail(err) + ")"
 	case errors.As(err, &archiveRefusal):
-		return "Refused on authority: " + fileKindDetail(err)
+		return "Refused on authority: " + refusalDetail(err)
 	case errors.Is(err, apperrors.ErrPermissionDenied):
-		// Whose bound it was is in the detail, and the summary must not guess:
-		// an agent has the access of the human it acts for AND no more of it than
-		// they lent, so a refusal here is one of those two and a sentence naming
-		// only the first would send a caller to ask for permissions they already
-		// hold.
-		return "Refused on authority: an agent has exactly the access of the human it acts for, and never " +
-			"more of it than they lent this credential. (" + err.Error() + ")"
+		return AuthorityRefusal(err)
 	case errors.Is(err, apperrors.ErrNotFound):
-		return "No such record in this workspace (or it is outside the acting user's row scope). (" + err.Error() + ")"
+		return "No such record in this workspace (or it is outside the acting user's row scope). (" + refusalDetail(err) + ")"
 	case errors.As(err, &skew):
 		// Its words name the remedy, a re-stage or a reload, which the generic retry below contradicts.
 		return echoSafe(skew.Message, MaxFaultDetail)
 	case errors.Is(err, apperrors.ErrVersionSkew):
-		return "The record changed since it was read; re-read it and retry with the new version. (" + err.Error() + ")"
+		return "The record changed since it was read; re-read it and retry with the new version. (" + refusalDetail(err) + ")"
 	case errors.Is(err, apperrors.ErrApprovalTokenInvalid):
 		return "The approval token was not accepted — it may be consumed, expired, or for a different call. " +
-			"Ask for a fresh approval and retry. (" + err.Error() + ")"
+			"Ask for a fresh approval and retry. (" + refusalDetail(err) + ")"
 	case errors.Is(err, apperrors.ErrUnsupportedBySoR):
 		// A DECLARED capability gap (AC-OV-2), not a fault: this workspace's
 		// records live in a system that cannot answer this tool. Saying so —
@@ -149,7 +144,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// a permanent refusal and burn a scheduled run's whole step budget on
 		// it.
 		return "This workspace's system of record cannot serve this tool, and no retry will change that. " +
-			"Do not retry it; use another tool, or tell the user this capability is unavailable here. (" + err.Error() + ")"
+			"Do not retry it; use another tool, or tell the user this capability is unavailable here. (" + refusalDetail(err) + ")"
 	case errors.As(err, &unknownTool):
 		// A name that is not on the surface at all — the model invented it, or
 		// is working from a stale tool list. Saying so discloses nothing: the
@@ -185,6 +180,35 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	}
 }
 
+// Explain is what a scheduled run's model is told about a refused call. It
+// logs a fault the taxonomy does not know against the run's context.
+func (r *Registry) Explain(ctx context.Context, tool string, err error) string {
+	if _, known := httperr.Classify(err); !known {
+		slog.ErrorContext(ctx, "runner: tool call failed", "tool", tool, "err", err)
+	}
+	return RunRefusal(err)
+}
+
+// RunRefusal is a refusal in words a run can act on. That is the taxonomy's code
+// and detail, bounded and escaped as the MCP door bounds them. A fault the
+// taxonomy does not know is one sentence. It names no MCP method and no human.
+func RunRefusal(err error) string {
+	if fault, known := httperr.Classify(err); known {
+		return faultExplanation(fault)
+	}
+	return runFaultAdvice
+}
+
+// AuthorityRefusal is what an agent is told when a gate refused its call. The
+// detail says whose bound it was: the human's own, or what they lent.
+func AuthorityRefusal(err error) string {
+	return "Refused on authority: an agent has exactly the access of the human it acts for, and never " +
+		"more of it than they lent this credential. (" + refusalDetail(err) + ")"
+}
+
+// runFaultAdvice withholds a fault's own words from a run's model.
+const runFaultAdvice = "The tool failed for an internal reason; nothing may have changed."
+
 // internalFaultAdvice is what an agent is told when nothing in the taxonomy
 // recognises the error. Named because it is the one answer on this surface that
 // is unactionable by construction — it withholds the argument the agent could
@@ -211,12 +235,10 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 		return internalFaultAdvice
 	}
 
-	// A classified refusal is not a fault of ours, so it is not logged as
-	// one — except where a sentinel wrapped a driver failure, which is. In
-	// that case Classify has already withheld the driver's text from Detail,
-	// so the operator's half is logged and the agent still sees only the
-	// sentinel's own words.
-	if fault.InfraCause != nil {
+	// A classified refusal is not our fault and is logged as a refusal. A
+	// driver failure answered as a 5xx is ours. Classify has already withheld
+	// the driver's text from Detail either way.
+	if fault.InfraCause != nil && !fault.CallersToFix() {
 		s.log.Error("mcp: tool call failed", "tool", tool, "err", fault.InfraCause)
 	} else {
 		s.log.Warn("mcp: tool call refused", "tool", tool, "code", fault.Code, "err", err)
@@ -228,6 +250,11 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 		return "This installation does not offer what this call needs, so nothing was changed and no argument " +
 			"would change that. (" + explained + ") Do not retry; tell the user it is not available here."
 	}
+	if fault.Code == httperr.CodeAINotConfigured {
+		// Nothing about the call is wrong: the installation has no AI model.
+		return "No AI model is connected to this installation, so nothing was changed and no argument would " +
+			"change that. (" + explained + ") Do not retry; tell the user to connect an AI model under Settings, AI."
+	}
 	if fault.Transient() {
 		return "This tool is temporarily unavailable — nothing was changed. (" + explained + ") " +
 			"The same call can succeed later; wait before retrying, and tell the user if they are waiting on it."
@@ -237,9 +264,9 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 		"rather than a mistake, do not retry: tell the user what is blocking it."
 }
 
-// fileKindDetail is the store's refusal as the classified path renders it, so
+// refusalDetail is the store's refusal as the classified path renders it, so
 // the agent keeps the field code and the list of accepted kinds.
-func fileKindDetail(err error) string {
+func refusalDetail(err error) string {
 	if fault, ok := httperr.Classify(err); ok {
 		return faultExplanation(fault)
 	}
@@ -409,12 +436,16 @@ func stagedExplanation(staged *workflow.StagedApprovalError) string {
 // stagedReleasePath says who answers a staged call. It offers decide_approvals
 // only to a credential that can use it. A relay the engine would refuse is a
 // dead end the caller finds out about one call later.
+//
+// It points at this one proposal by id: a bare list_approvals reads the whole
+// queue, colleagues' work included.
 func stagedReleasePath(staged *workflow.StagedApprovalError) string {
+	readIt := "read_approval with \"staged_action_id\": \"" + staged.ApprovalID.String() + "\" shows it"
 	if staged.ReleasableByCaller {
 		return "This change can be undone, so once the user says yes you can release it yourself with " +
-			"decide_approvals (list_approvals is the same queue), or they can release it in the CRM."
+			"decide_approvals (" + readIt + "), or they can release it in the CRM."
 	}
-	return "It is not yours to answer: the contact releases it in the CRM (list_approvals shows the same queue)."
+	return "It is not yours to answer: the contact releases it in the CRM (" + readIt + ")."
 }
 
 // faultReferenceSuffix names what a refusal left behind, in the one place an
@@ -434,9 +465,14 @@ func stagedReleasePath(staged *workflow.StagedApprovalError) string {
 // AN EMPTY REFERENCE APPENDS NOTHING. Most faults carry none, and a trailing
 // "review:" with nothing after it is worse than silence.
 func faultReferenceSuffix(fault httperr.Fault) string {
-	if len(fault.Details) == 0 {
-		return ""
+	suffix := reviewSuffix(fault)
+	if grant, ok := fault.Details["missing_grant"].(string); ok && grant != "" {
+		suffix += " (missing grant " + echoSafe(grant, maxBadArgsDetail) + "; an admin changes your roles to allow it)"
 	}
+	return suffix
+}
+
+func reviewSuffix(fault httperr.Fault) string {
 	reference, ok := fault.Details["review_id"].(string)
 	if !ok || reference == "" {
 		return ""

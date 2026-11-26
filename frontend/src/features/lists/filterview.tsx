@@ -16,15 +16,12 @@ import { useT } from "../../i18n";
 import { useFilterVocabulary } from "../../lib/filterdata";
 import {
   type ObjectTab,
-  RESOURCE_OF,
-  TAB_LABEL,
+  resourceOf,
   tabOfViewResource,
-  UNIT_LABEL,
+  useTabWords,
 } from "../../lib/filtersaddress";
-import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable } from "../../lib/lists.queries";
 import { problemCodeOf, problemMessageOf } from "../../lib/problem";
-import { navigateReplacing } from "../../lib/router";
 import {
   filterStateFrom,
   filterTreeOf,
@@ -34,6 +31,7 @@ import {
   useSaveView,
 } from "../../lib/savedviews.queries";
 import { type Group, type Node, rootGroup } from "../../lib/segmentpredicate";
+import { useAddressWriters } from "../../lib/urlstate";
 import { useFilterDraft, useFirstAnswer, wireSignature } from "./filterdraft";
 import {
   FilterEditor,
@@ -52,6 +50,7 @@ import { FilterOutcome } from "./filtermatches";
 import { usePlainWords } from "./filterpropose";
 import { type SavedKind, SaveFilterModal, useLandOnSaved } from "./filtersave";
 import { filterSentence, useSentenceWords } from "./filtersentence";
+import { referencedIdsOf } from "./filtersentence.names";
 import { type Reread, useReload } from "./filterview.reload";
 import { DeleteViewAction, RenameViewAction } from "./viewactions";
 import "./filters.css";
@@ -62,17 +61,18 @@ export function OpenedViewPage({
 }: Readonly<{ tab: ObjectTab; viewId: string }>) {
   const t = useT();
   const read = useSavedView(viewId);
-  const vocabulary = useFilterVocabulary(RESOURCE_OF[tab]);
+  const vocabulary = useFilterVocabulary(resourceOf(tab));
   const opened = useFirstAnswer(read);
   const own = opened ? tabOfViewResource(opened.resource) : undefined;
   const elsewhere = own !== undefined && own !== tab;
+  const { navigateReplacing } = useAddressWriters();
   // A view under another record type's address is still that view: the address
   // is put right rather than the view refused, and Back skips the wrong one.
   useEffect(() => {
     if (elsewhere) {
       navigateReplacing({ screen: "filters", id: own, id2: viewId });
     }
-  }, [elsewhere, own, viewId]);
+  }, [elsewhere, own, viewId, navigateReplacing]);
 
   const tree = opened ? openableTree(opened) : null;
   if (read.isError && !opened) {
@@ -193,7 +193,6 @@ function OpenedView({
 }>) {
   const t = useT();
   const toast = useToast();
-  const sentenceWords = useSentenceWords();
   const listsOn = useListsAvailable();
   const { saveQuery } = useSaveView();
   // Advanced only by this page's own writes: a later read that answers a
@@ -203,11 +202,15 @@ function OpenedView({
     baseline: wireSignature(tree),
   }));
   const [draft, dispatch] = useFilterDraft(() => rootGroup(tree));
+  const sentenceWords = useSentenceWords(
+    referencedIdsOf([draft.tree], vocabulary.data?.fields),
+  );
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState<Saving | null>(null);
   const focus = useFoldFocus();
   const onScreen = useOnScreen(draft.tree);
-  const resource = RESOURCE_OF[tab];
+  const resource = resourceOf(tab);
+  const tabWords = useTabWords()(tab);
   const plainWords = usePlainWords({
     resource,
     dispatch,
@@ -271,9 +274,7 @@ function OpenedView({
     <div className="wrap filters-screen">
       <FocusedHead
         title={pin.view.name}
-        facts={t("filters.view.facts", {
-          records: t(labelFor(TAB_LABEL, tab)),
-        })}
+        facts={t("filters.view.facts", { records: tabWords.tab })}
         actions={
           // Held with the rows while a save is out: a rename or delete here
           // would race it on the version it is about to advance.
@@ -355,7 +356,7 @@ function OpenedView({
                 dispatch={dispatch}
                 vocabulary={vocabulary}
                 words={plainWords}
-                records={t(labelFor(UNIT_LABEL, tab))}
+                records={tabWords.unit}
               />
             </div>
           ) : (

@@ -7,7 +7,11 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { overdueFinding } from "./systemhealth.fixtures";
+import {
+  footerFinding,
+  overdueFinding,
+  zoneFinding,
+} from "./systemhealth.fixtures";
 import { FindingPanel } from "./systemhealthfinding";
 
 const meta = {
@@ -26,4 +30,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Overdue: Story = {};
+export const ZoneUnresolved: Story = { args: { finding: zoneFinding } };
+export const FooterIncomplete: Story = { args: { finding: footerFinding } };
 export const Dark: Story = { globals: { theme: "dark" } };

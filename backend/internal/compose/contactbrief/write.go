@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
@@ -27,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // Completer is the model seam: the summarize lane, or nil.
@@ -112,13 +114,42 @@ func briefSystemFor(fence promptfence.Fence, lang string) string {
 // is fenced with a nonce that writer has never seen, so no subject line or
 // quoted sentence can close the span and be read as instruction.
 func BriefRequest(in Input, lang string) model.Request {
+	in = in.inLanguage(lang)
 	fence := promptfence.New()
 	return model.Request{
 		System:         briefSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Show(encodeInput(in)))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       in.subjects(),
+		ResponseSchema: briefSchema(),
 	}
+}
+
+// briefSchema is the reply ParseBrief reads, its record types the ones knownRecords grounds.
+func briefSchema() json.RawMessage {
+	return schema.Must(schema.Record(
+		schema.Field("sentences", schema.Array(schema.Record(
+			schema.Field("text", schema.String()),
+			schema.Field("nature", schema.Enum(slices.Sorted(maps.Keys(knownNature))...)),
+			schema.Field("evidence", schema.Array(schema.Record(
+				schema.Field("entity_type", schema.Enum(citeContact, citeDeal, citeActivity)),
+				schema.Field("entity_id", schema.String()),
+			))),
+		))),
+	))
+}
+
+// subjects are the contact and every activity the input quotes.
+func (in Input) subjects() *model.Subjects {
+	var activities []string
+	for _, c := range in.Claims {
+		activities = append(activities, c.SourceID)
+	}
+	for _, a := range in.Recent {
+		activities = append(activities, a.ID)
+	}
+	return model.SubjectsOf([]string{in.ID}, activities)
 }
 
 // encodeInput renders the assembled relationship as the JSON the prompt reads.
@@ -156,12 +187,15 @@ func shownRefs(in Input) claims.Refs {
 // Write produces the brief. lane may be nil, which is not an error state: it is
 // the deployment saying this role runs no model, and the deterministic floor is
 // the answer.
+//
+// The third return says the lane failed rather than being absent, so the caller
+// does not cache a floor that only a transient outage wrote.
 func Write(
 	ctx context.Context, lane Completer, contactID string, in Input, lang string,
-) ([]Sentence, crmcontracts.WrittenBy, error) {
+) ([]Sentence, crmcontracts.WrittenBy, bool) {
 	floor := Deterministic(contactID, in, lang)
 	if lane == nil {
-		return floor, crmcontracts.WrittenByDeterministic, nil
+		return floor, crmcontracts.WrittenByDeterministic, false
 	}
 	written, err := writeWithModel(ctx, lane, contactID, in, lang)
 	if err != nil {
@@ -169,10 +203,9 @@ func Write(
 		// unavailable, over budget, or answering unparseable JSON must not take
 		// the card down with it: the reader gets the floor, and generated_by
 		// tells them which of the two they are reading.
-		//nolint:nilerr // on_budget_exhausted: degrade — the fallback IS the answer, and generated_by reports it
-		return floor, crmcontracts.WrittenByDeterministic, nil
+		return floor, crmcontracts.WrittenByDeterministic, true
 	}
-	return written, crmcontracts.WrittenByModel, nil
+	return written, crmcontracts.WrittenByModel, false
 }
 
 func writeWithModel(

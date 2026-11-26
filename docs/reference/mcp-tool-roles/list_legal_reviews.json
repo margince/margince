@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "legal_reviews",
+  "verb": "list_legal_reviews",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

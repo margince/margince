@@ -21,6 +21,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/heldreason"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -107,6 +108,9 @@ func (s *Store) FireScheduledSend(ctx context.Context, id ids.UUID, grace time.D
 			out.Held = reason
 			return s.holdInTx(ctx, tx, id, reason)
 		}
+		// The row is the intent a review binds to, so a decision a human
+		// recorded on it before this moment is spent by this send.
+		in.ResumingIntentID = id
 		prepared, err := s.PrepareSend(ctx, origin, in, gate, stager)
 		if err != nil {
 			// A gate refused. That is an answer about the world now, not a
@@ -114,7 +118,7 @@ func (s *Store) FireScheduledSend(ctx context.Context, id ids.UUID, grace time.D
 			// report the refusal for the caller to log.
 			if reason, ok := holdReasonFor(err); ok {
 				out.Held = reason
-				return s.holdInTx(ctx, tx, id, reason)
+				return s.holdRefusalInTx(ctx, tx, id, reason, err, stager)
 			}
 			return err
 		}
@@ -136,16 +140,21 @@ func (s *Store) FireScheduledSend(ctx context.Context, id ids.UUID, grace time.D
 			return err
 		}
 		out.Released, out.Sent = sent, true
-		return nil
+		// A review left live by a reschedule describes a refusal this send
+		// has now answered, so it ends with the message.
+		return s.closeReview(ctx, tx, id, ReviewOutcomeSent)
 	})
 	if err != nil {
 		if deferred != "" {
 			// The send was refused about the world, and the rollback undid the
 			// activity it had already written. Hold now, in a fresh
-			// transaction, under the version this attempt claimed: a rep who
-			// rescheduled since has made a newer decision and HoldScheduledSend
-			// declines on their behalf.
-			if holdErr := s.HoldScheduledSend(ctx, id, deferred, observed); holdErr != nil {
+			// transaction, under the version this attempt claimed. A rep who
+			// rescheduled since has made a newer decision, and the hold declines.
+			// The review rides the same transaction, so it exists only when
+			// this version was held.
+			if holdErr := s.holdObserved(ctx, id, deferred, observed, func(tx pgx.Tx) error {
+				return recordReviewForHoldTx(ctx, tx, stager, err, id)
+			}); holdErr != nil {
 				return FireOutcome{Observed: observed}, errors.Join(err, holdErr)
 			}
 			return FireOutcome{Held: deferred, Observed: observed}, nil
@@ -178,6 +187,13 @@ func (s *Store) FireScheduledSend(ctx context.Context, id ids.UUID, grace time.D
 // there now. A wrongly-held row cannot be repaired by the recovery sweep, which
 // reads only rows still `scheduled`, so the guard has to be right on the way in.
 func (s *Store) HoldScheduledSend(ctx context.Context, id ids.UUID, reason string, observed int64) error {
+	return s.holdObserved(ctx, id, reason, observed, nil)
+}
+
+// holdObserved is HoldScheduledSend with a step that runs in the hold's own
+// transaction, only when the row was actually held. The fire opens its review
+// there, so a declined hold opens none and a failed review undoes the hold.
+func (s *Store) holdObserved(ctx context.Context, id ids.UUID, reason string, observed int64, onHeld func(pgx.Tx) error) error {
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		claimed, found, err := s.claimForFire(ctx, tx, id)
 		if err != nil {
@@ -188,19 +204,28 @@ func (s *Store) HoldScheduledSend(ctx context.Context, id ids.UUID, reason strin
 			// Nothing to hold, and nothing wrong.
 			return nil
 		}
-		if observed == UnobservedVersion {
-			// The row is locked, and holding what is locked cannot race a
-			// reschedule that has not happened yet.
-			return s.holdInTx(ctx, tx, id, reason)
-		}
-		if claimed.RowVersion != observed {
+		if observed != UnobservedVersion && claimed.RowVersion != observed {
 			// Somebody moved it after the attempt read it, or the attempt never
 			// got far enough to see it. Either way the live row is not the one
-			// this verdict was reached about.
+			// this verdict was reached about. An unobserved caller holds what it
+			// has just locked, which cannot race a reschedule.
 			return nil
 		}
-		return s.holdInTx(ctx, tx, id, reason)
+		if err := s.holdInTx(ctx, tx, id, reason); err != nil || onHeld == nil {
+			return err
+		}
+		return onHeld(tx)
 	})
+}
+
+// holdRefusalInTx holds a row a gate refused and opens the review that refusal
+// owes, in one transaction. Only an engine refusal carries a review; every
+// other reason holds alone.
+func (s *Store) holdRefusalInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, reason string, refusal error, stager DeliveryStager) error {
+	if err := s.holdInTx(ctx, tx, id, reason); err != nil {
+		return err
+	}
+	return recordReviewForHoldTx(ctx, tx, stager, refusal, id)
 }
 
 // UnobservedVersion is what a caller passes to HoldScheduledSend when it has
@@ -231,6 +256,8 @@ type claimedSend struct {
 	// the claim saw it. A caller that acts on this row LATER, outside the claim's
 	// transaction, binds to this so it cannot act on a newer intention.
 	RowVersion int64
+	// HeldReason is set only by the held-row read a resume makes.
+	HeldReason string
 }
 
 // replay rebuilds the origin and the message this row froze.
@@ -277,7 +304,7 @@ func (c claimedSend) replay() (SendOrigin, SendEmailInput, error) {
 // there is nothing to fire. The lock is what makes two timers safe.
 func (s *Store) claimForFire(ctx context.Context, tx pgx.Tx, id ids.UUID) (claimedSend, bool, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT scheduled_at, origin_kind, anchor_activity_id,
+		SELECT `+scheduleInstantSQL+`, origin_kind, anchor_activity_id,
 		       origin_links, also_links, payload, payload_version, version, created_at,
 		       coalesce((payload->>'replies_reviewed_at')::timestamptz, created_at)
 		  FROM scheduled_send
@@ -374,7 +401,7 @@ func (s *Store) notifyHeld(ctx context.Context, tx pgx.Tx, id ids.UUID, reason s
 		scheduledAt time.Time
 	)
 	if err := tx.QueryRow(ctx, `
-		SELECT scheduled_by, payload, scheduled_at FROM scheduled_send WHERE id = $1`,
+		SELECT scheduled_by, payload, `+scheduleInstantSQL+` FROM scheduled_send WHERE id = $1`,
 		id).Scan(&scheduledBy, &payloadRaw, &scheduledAt); err != nil {
 		return fmt.Errorf("scheduled send: reading the held message for its rep: %w", err)
 	}
@@ -399,10 +426,14 @@ func (s *Store) notifyHeld(ctx context.Context, tx pgx.Tx, id ids.UUID, reason s
 // the job runner can retry it.
 func holdReasonFor(err error) (string, bool) {
 	var notSendCapable *MailboxNotSendCapableError
+	var notConnected *MailboxNotConnectedError
+	if reason, ok := heldreason.Of(err); ok {
+		return reason, true
+	}
 	switch {
 	case errors.Is(err, apperrors.ErrConsentNotGranted):
 		return HeldConsentWithdrawn, true
-	case errors.As(err, &notSendCapable):
+	case errors.As(err, &notSendCapable), errors.As(err, &notConnected):
 		return HeldSenderInactive, true
 	case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
 		// The scheduler lost the rights they had, or something the message
@@ -410,76 +441,4 @@ func holdReasonFor(err error) (string, bool) {
 		return HeldSendRefused, true
 	}
 	return "", false
-}
-
-// OverdueScheduledSends returns messages whose moment has passed and which are
-// still waiting — the shape a message takes when the job that should have fired
-// it is gone. Why that state exists and what the caller does about it is in
-// compose/scheduledsendrecovery.go, which is the only caller.
-//
-// `olderThan` keeps it off messages that are merely mid-flight: a row due
-// seconds ago is far more likely to have a job about to run than a job that
-// vanished, and re-arming it would race the real one. The claim lock makes that
-// race safe rather than harmful, but a sweep that fights the normal path on
-// every pass is a sweep nobody can read the logs of.
-//
-// There is no workspace predicate, and none is needed: an installation holds
-// exactly one workspace (ADR-0061), so "every row still scheduled and overdue"
-// already means the whole installation's queue. The WHERE clause matches
-// idx_scheduled_send_due (scheduled_at, partial on status = 'scheduled')
-// exactly, so this walks that index in scheduled_at order and stops at the
-// limit rather than scanning the table.
-func (s *Store) OverdueScheduledSends(ctx context.Context, olderThan time.Duration, limit int) ([]ids.UUID, error) {
-	var out []ids.UUID
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT id FROM scheduled_send
-			 WHERE status = 'scheduled' AND scheduled_at < $1
-			 ORDER BY scheduled_at ASC
-			 LIMIT $2`, s.now().Add(-olderThan), limit)
-		if err != nil {
-			return fmt.Errorf("scheduled send: finding messages nothing will wake: %w", err)
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var id ids.UUID
-			if err := rows.Scan(&id); err != nil {
-				return fmt.Errorf("scheduled send: reading an overdue message: %w", err)
-			}
-			out = append(out, id)
-		}
-		return rows.Err()
-	})
-	return out, err
-}
-
-// RearmScheduledSend enqueues a fresh alarm for a message whose own alarm is
-// gone, in one transaction with the claim that proves it is still waiting.
-//
-// It changes NOTHING about the message — not its moment, not its state. The row
-// was always the schedule; what went missing is the thing that wakes it, so this
-// puts that back and the ordinary fire path makes the ordinary decision. A sweep
-// that decided anything itself would be a second send path.
-//
-// Under the claim lock, so a real timer running at the same instant is
-// serialized against this rather than racing it: one of the two enqueues, the
-// other finds the row already handled and does nothing.
-func (s *Store) RearmScheduledSend(ctx context.Context, id ids.UUID, timer ScheduleTimer) error {
-	if timer == nil {
-		return errNoScheduleTimer
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		_, found, err := s.claimForFire(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		if !found {
-			// Sent, cancelled or held while this pass was reading. Nothing to
-			// re-arm, and nothing wrong.
-			return nil
-		}
-		// Due NOW: its moment has already passed, and the fire path is what
-		// decides whether that means send it or hold it as a missed window.
-		return timer.ScheduleTx(ctx, tx, id, s.now())
-	})
 }

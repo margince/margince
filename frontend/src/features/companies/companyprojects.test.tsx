@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { CompanyProjectsPanel } from "./companyprojects";
@@ -28,7 +29,10 @@ function draw(view: Company360 | undefined) {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <CompanyProjectsPanel companyId="o-1" view={view} />
+        <ToastProvider>
+          <CompanyProjectsPanel companyId="o-1" view={view} />
+          <ToastRegion />
+        </ToastProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -93,6 +97,8 @@ describe("the account's projects panel", () => {
       ],
     });
     expect(screen.getByText("Depot fit-out")).toBeTruthy();
+    // The key is drawn as the project pages draw it: a chip, not plain text.
+    expect(screen.getByText("DEP-12").closest(".chip")).not.toBeNull();
   });
 });
 
@@ -182,6 +188,24 @@ describe("starting a project from the account", () => {
         expect.objectContaining({ name: "Depot fit-out", company_id: "o-1" }),
       ]),
     );
+  });
+
+  it("stays on the company, says what was added and opens it on request", async () => {
+    stubServer({ project: ["create", "read"] });
+    window.location.hash = "#/companies/o-1";
+    const user = userEvent.setup();
+    draw(ANSWERED);
+
+    await user.click(
+      await screen.findByRole("button", { name: "New project" }),
+    );
+    await user.type(screen.getByLabelText(/Project name/), "Depot fit-out");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(await screen.findByText("Depot fit-out added")).toBeTruthy();
+    expect(window.location.hash).toBe("#/companies/o-1");
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    expect(window.location.hash).toBe("#/projects/pr-9");
   });
 
   // The projects screen's form and this one are one form, so a column the

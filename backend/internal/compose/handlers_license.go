@@ -13,14 +13,17 @@ package compose
 // belongs where both are already in scope.
 
 import (
+	"context"
 	"net/http"
-	"time"
 
+	"github.com/margince/margince/backend/internal/compose/installtrial"
+	"github.com/margince/margince/backend/internal/compose/licenseentitlement"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type licenseHandlers struct {
@@ -29,18 +32,17 @@ type licenseHandlers struct {
 	// the watcher re-checks while the process runs, so a screen opened on day
 	// thirty reports the license as it stands and not as it booted.
 	posture func() licensecheck.Posture
+	// recheck is the watcher's re-check, set by WithLicenseRecheck.
+	recheck func(context.Context) error
+	// trial is set by WithInstallationTrial; nil reports none.
+	trial *installtrial.Trial
 }
 
 // withPosture adds the license half to a handler that already carries the seat
 // count, and is the ONLY way the entitlement surface is completed.
 //
-// It takes the receiver's store rather than building a second one. The two
-// halves genuinely come from different places — the count from the assembly,
-// because app_user rows exist whether or not a license was configured; the
-// posture from the option, because only that caller has one — and a struct
-// literal restating both would let an edit to either drop the other silently.
-//
-// Held by: TestWithLicensePostureKeepsTheSeatCountItWasGiven, which fails when
+// It adds to the receiver rather than rebuilding it. A literal restating the
+// count and the posture could drop either silently. Held by: TestWithLicensePostureKeepsTheSeatCountItWasGiven, which fails when
 // this rebuilds the struct instead of adding to it.
 func (h licenseHandlers) withPosture(posture func() licensecheck.Posture) licenseHandlers {
 	h.posture = posture
@@ -70,16 +72,60 @@ func (h licenseHandlers) GetLicenseEntitlement(w http.ResponseWriter, r *http.Re
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, toContractLicenseEntitlement(h.posture(), used))
+	h.writeEntitlement(w, r, used)
 }
+
+// writeEntitlement answers the posture as it stands now, with any trial.
+func (h licenseHandlers) writeEntitlement(w http.ResponseWriter, r *http.Request, used int) {
+	trial, err := h.trial.Contract(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := licenseentitlement.Entitlement(h.posture(), used)
+	out.Trial = trial
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// CheckLicenseNow runs the watcher's daily re-check at once and answers the
+// entitlement it resolved. It writes nothing and takes no token, so there is no
+// row to audit. Both gates run before the re-check.
+func (h licenseHandlers) CheckLicenseNow(w http.ResponseWriter, r *http.Request) {
+	if h.seats == nil || h.posture == nil || h.recheck == nil {
+		httperr.NotImplemented(w, r, "CheckLicenseNow")
+		return
+	}
+	ctx := r.Context()
+	if err := auth.RequireHuman(ctx); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if err := auth.Require(ctx, licenseCheckObject, principal.ActionUpdate); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	// The seat count carries the `license` read gate, as on the GET.
+	used, err := h.seats.FullSeatsInUse(ctx)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if err := h.recheck(ctx); err != nil {
+		// Logged by the watcher; the cause can quote a path, so it stays out of the response.
+		httperr.ServiceUnavailable(w, r, "the license could not be re-read; the last result stands — see the server log")
+		return
+	}
+	h.writeEntitlement(w, r, used)
+}
+
+// licenseCheckObject is the grant "Check now" asks for (update; admin and ops).
+// No role holds a `license` write grant, and a re-check changes no license.
+const licenseCheckObject = "installation_settings"
 
 // GetSeatUsage answers the seat count without the entitlement beside it.
 //
-// The posture is not read here at all, and that is the split: this surface
-// exists so a reader who may see capacity is not thereby handed what the
-// installation pays. Its gate is the store's — `seat_usage` rather than
-// `license` — so the two surfaces differ in exactly one thing, which grant
-// opens them.
+// The posture is not read here: a reader who may see capacity is not handed
+// what the installation pays. The store gates it on `seat_usage`.
 func (h licenseHandlers) GetSeatUsage(w http.ResponseWriter, r *http.Request) {
 	if h.seats == nil {
 		httperr.NotImplemented(w, r, "GetSeatUsage")
@@ -98,71 +144,4 @@ func (h licenseHandlers) GetSeatUsage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.SeatUsage{SeatsUsed: used})
-}
-
-// renewalWindow is how long before expiry the surface asks for a renewal.
-//
-// It is the same 90 days the module's grace period runs for, on purpose: an
-// installation is warned for as long before expiry as it keeps working after it.
-// The two are NOT one constant — the module owns its grace and does not report
-// it — so if upstream ever changes that window, this stops matching silently.
-// Asking for a `grace_until` is tracked on issue #1190.
-const renewalWindow = 90 * 24 * time.Hour
-
-// toContractLicenseEntitlement renders one posture and one count onto the wire.
-//
-// The reason a rejection carries is deliberately NOT here. It is the module's
-// text about the installation's own configuration — and the module quotes token
-// content it has not verified — so it belongs in the boot error and the process
-// log, never in a response.
-func toContractLicenseEntitlement(posture licensecheck.Posture, used int) crmcontracts.LicenseEntitlement {
-	out := crmcontracts.LicenseEntitlement{
-		State:     crmcontracts.LicenseEntitlementState(posture.State),
-		SeatsUsed: used,
-		CheckedAt: posture.CheckedAt,
-	}
-	if posture.State == licensecheck.StateValid {
-		holder := toContractLicenseHolder(posture.License, posture.CheckedAt)
-		out.License = &holder
-	}
-	granted, capped := posture.Seats()
-	if !capped {
-		// Absent, never zero. A client rendering a missing cap as 0 would tell an
-		// admin their license permits nobody, and `over_limit` stays false because
-		// there is no limit to be over — not because the installation is inside one.
-		return out
-	}
-	out.SeatsGranted = &granted
-	out.OverLimit = used > granted
-	return out
-}
-
-// toContractLicenseHolder renders who holds the license and how long it lasts.
-//
-// Every optional claim is rendered only when the token carries it. A license
-// issued before those claims existed verifies exactly like any other, and a
-// client should show the rows it has rather than placeholders for the rest.
-//
-// The token never appears here. It is a credential and this response reaches a
-// browser.
-func toContractLicenseHolder(license licensecheck.License, now time.Time) crmcontracts.LicenseHolder {
-	holder := crmcontracts.LicenseHolder{
-		Id:      license.ID,
-		Subject: license.Subject,
-		Expiry:  license.Expiry,
-		InGrace: license.InGrace,
-		// True whenever the license is already on its grace period, so a client
-		// that reads only this one still warns.
-		RenewalDue: license.InGrace || !license.Expiry.After(now.Add(renewalWindow)),
-	}
-	if license.Company != "" {
-		holder.Company = &license.Company
-	}
-	if license.ContactName != "" {
-		holder.ContactName = &license.ContactName
-	}
-	if license.ContactEmail != "" {
-		holder.ContactEmail = &license.ContactEmail
-	}
-	return holder
 }

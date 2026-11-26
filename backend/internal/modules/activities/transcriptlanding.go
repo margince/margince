@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -30,7 +31,7 @@ import (
 // So the landing path starts one too.
 //
 // Three conditions, and each one is load-bearing:
-//   - source_system = 'transcript' is the marker the retention selector and
+//   - source_system transcriptSourceSystem is the marker the retention selector and
 //     the reader both key on. It is what says "this body is a recording of a
 //     conversation" rather than notes about one.
 //   - a body, because there is nothing to read without one.
@@ -56,9 +57,21 @@ func (s *Store) readTranscriptOnLanding(
 	if requestedBy == "" {
 		return nil
 	}
-	_, _, err := s.StartTranscriptReadQueuedTx(ctx, tx,
+	// A savepoint, so a refused enqueue also takes back the read row it follows
+	// and leaves no queued reading with nothing behind it.
+	sp, err := tx.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	_, _, err = s.StartTranscriptReadQueuedTx(ctx, sp,
 		ids.From[ids.ActivityKind](ids.UUID(activity.Id)), requestedBy, s.transcriptEnqueue)
-	return skipARefusedReading(err)
+	if err != nil {
+		if rollbackErr := sp.Rollback(ctx); rollbackErr != nil {
+			return rollbackErr
+		}
+		return skipARefusedReading(err)
+	}
+	return sp.Commit(ctx)
 }
 
 // skipARefusedReading keeps a reading this installation cannot perform from
@@ -77,6 +90,10 @@ func (s *Store) readTranscriptOnLanding(
 // this path does not touch it. Landing only offers one.
 func skipARefusedReading(err error) error {
 	if _, ok := errors.AsType[*TranscriptTooLongError](err); ok {
+		return nil
+	}
+	// No model is connected: the transcript still lands, and nothing is read.
+	if errors.Is(err, httperr.ErrNotConfigured) {
 		return nil
 	}
 	return err

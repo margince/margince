@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/leaddraft"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -38,7 +37,7 @@ import (
 // It rebuilds the service over the SAME composite read wireContact360 built, so
 // the brief's scope stays the caller's own gated read rather than a second one
 // assembled here.
-func WithContactBrief(brain completer, routingVersion string) Option {
+func WithContactBrief(brain completer, routingVersion func() string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		if s.contact360Svc == nil {
 			return
@@ -64,12 +63,7 @@ func WithContactBrief(brain completer, routingVersion string) Option {
 // guarantee stays a dependency rather than a rule somebody remembers.
 func WithContactDraft(brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		svc := contactdraft.NewService(s.contact360Svc, brain).
-			WithCoRecipients(s.contactsStore).
-			WithAboutActivities(activities.NewStore(InstallationDB(pool))).
-			WithEnvelope(draftEnvelope(pool, s.log)).
-			WithEmailSummaries(emailRows(pool)).
-			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
+		svc := s.contactDraft(pool, brain).WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
 		s.firstDrafts.contact = svc
 		s.contactDraftHandlers = contactdraft.NewHandlers(svc)
 	}
@@ -91,13 +85,7 @@ func WithContactDraft(brain completer) Option {
 // identity behind the envelope. Drafting still writes nothing.
 func WithLeadDraft(brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		svc := leaddraft.NewService(
-			s.contactsStore,
-			leadCorrespondence{activities.NewStore(InstallationDB(pool))},
-			brain,
-		).
-			WithEnvelope(draftEnvelope(pool, s.log)).
-			WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
+		svc := s.leadDraft(pool, brain).WithVoice(ai.NewVoiceStore(InstallationDB(pool)), s.log)
 		s.firstDrafts.lead = svc
 		s.leadDraftHandlers = leaddraft.NewHandlers(svc)
 	}

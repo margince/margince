@@ -130,11 +130,8 @@ func eraseChannelIdentities(ctx context.Context, tx pgx.Tx, identities []channel
 			identity.Provider, identity.ChannelUserID); err != nil {
 			return 0, err
 		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO erasure_suppression (kind, value_hash, key_id)
-			VALUES ('channel_identity', $1, $2)
-			ON CONFLICT DO NOTHING`,
-			storekit.ChannelIdentityHash(identity.Provider, identity.ChannelUserID), storekit.SuppressionKeyID()); err != nil {
+		hash := storekit.ChannelIdentityHash(identity.Provider, identity.ChannelUserID)
+		if err := armSuppression(ctx, tx, "channel_identity", []string{hash}, storekit.SuppressionKeyID()); err != nil {
 			return 0, err
 		}
 	}

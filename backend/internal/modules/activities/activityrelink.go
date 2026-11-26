@@ -28,10 +28,18 @@ import (
 func relinkAdmittedRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, column string) (wrote, held bool, err error) {
 	// The relink target is a client-supplied reference (H1), and moving an
 	// activity onto it is an ATTACH: the record it lands on gains the activity.
+	project, err := lockDealRelink(ctx, tx, in)
+	if err != nil {
+		return false, false, err
+	}
 	if err := auth.EnsureAttachTarget(ctx, tx, in.EntityType, in.EntityID); err != nil {
 		return false, false, err
 	}
-	return relinkActivityRow(ctx, tx, id, in, column)
+	wrote, held, err = relinkActivityRow(ctx, tx, id, in, column)
+	if err != nil || !wrote {
+		return wrote, held, err
+	}
+	return wrote, held, fileRelinkedDealProject(ctx, tx, id, project)
 }
 
 // deleteVisibleLinksOfType drops the activity's links of one entity type and
@@ -89,13 +97,26 @@ func deleteVisibleLinksOfType(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 
 // Displaced participants merge by role, user, address and channel account so replacing several
 // linked contacts cannot create duplicate participant rows.
+//
+// A moved row is marked relinked_at. No calendar roster retires it after that,
+// so the organiser's next sync cannot destroy a link a member chose. It keeps
+// its roster seats, so a calendar that lists it still records the guest's answer.
 func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.ActivityID, target ids.UUID, displaced []ids.UUID) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, id.UUID); err != nil {
+		return err
+	}
+	if _, err := storekit.LowercaseOlderParticipantAddresses(ctx, tx, `ap.activity_id = $1`, id); err != nil {
+		return err
+	}
+	if err := unbindDisplacedSenders(ctx, tx, id, target, displaced); err != nil {
+		return err
+	}
 	query, args, targetPos, err := participantRelinkQuery(ctx, id, target, displaced)
 	if err != nil {
 		return err
 	}
 	_, err = tx.Exec(ctx, storekit.SQLf(`WITH planned AS (%s), promoted AS (
-  UPDATE activity_participant ap SET contact_id = $%d
+  UPDATE activity_participant ap SET contact_id = $%d, relinked_at = now(), role = p.role
   FROM planned p WHERE ap.id = p.id AND p.move
   RETURNING ap.id
  ) DELETE FROM activity_participant

@@ -13,6 +13,7 @@ import {
 import { routeHash } from "../../lib/router";
 import { hashWithParams } from "../../lib/urlstate";
 import { heldThreadList } from "../../testing/heldthreads.fixtures";
+import { READS_RECORDS } from "../../testing/mefixture";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import { linkedInReachFixture } from "../../testing/reachfixture";
 import { steppedClock } from "../../testing/steppedclock";
@@ -56,7 +57,7 @@ function serveHeld(
   const asked: URLSearchParams[] = [];
   installFetchStub({
     ...routes,
-    "GET /me": meRoute({}),
+    "GET /me": meRoute(READS_RECORDS),
     "GET /capture/senders": () => jsonResponse({ data: [] }),
     "GET /capture/contacts-awaiting-decision": () => jsonResponse({ data: [] }),
     "GET /me/linkedin-reach": () => jsonResponse(linkedInReachFixture()),
@@ -119,6 +120,10 @@ it("opens the list narrowed to the contact a timeline linked from", async () => 
           )
         : jsonResponse({ status: 503, title: "Unavailable" }, 503),
     {
+      "GET /records/references": () =>
+        jsonResponse({
+          data: [{ id: "contact-one", name: "Lena Brandt", archived: false }],
+        }),
       "GET /contacts/contact-one": () =>
         jsonResponse({ id: "contact-one", full_name: "Lena Brandt" }),
     },
@@ -149,6 +154,13 @@ it("never shows one contact's threads under the next contact's name", async () =
             heldThreadList([thread("t-lena", "Lena's contract", "mail-one")]),
           ),
     {
+      "GET /records/references": () =>
+        jsonResponse({
+          data: [
+            { id: "contact-one", name: "Lena Brandt", archived: false },
+            { id: "contact-two", name: "Sam Okafor", archived: false },
+          ],
+        }),
       "GET /contacts/contact-one": () =>
         jsonResponse({ id: "contact-one", full_name: "Lena Brandt" }),
       "GET /contacts/contact-two": () =>

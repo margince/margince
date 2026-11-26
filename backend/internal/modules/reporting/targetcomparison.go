@@ -11,6 +11,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/goalgap"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -31,8 +32,12 @@ type ForecastOperands struct {
 	LandingMinor int64
 	WonMinor     int64
 	OpenMinor    int64
-	// FxMissing marks totals that a deal with no exchange rate left short.
-	FxMissing bool
+	// FxMissingWon marks a won total that a deal with no exchange rate left
+	// short; no comparison can stand on it.
+	FxMissingWon bool
+	// FxMissingOpen marks an open pipeline short in the same way. The won
+	// total and the target stay valid, so they are still given.
+	FxMissingOpen bool
 	// CallOverPipeline marks a manager-call installation read for one
 	// pipeline: the call covers every pipeline, so it has no landing here.
 	CallOverPipeline bool
@@ -71,6 +76,9 @@ func compareForecast(ctx context.Context, evaluation crmcontracts.ReportingEvalu
 	if refused != nil {
 		return refused
 	}
+	if ops.FxMissingOpen {
+		return withWonAgainstTarget(out, *ops, target)
+	}
 	measure(out, *ops, target)
 	return out
 }
@@ -89,12 +97,22 @@ func refuseForecast(out *crmcontracts.ReportingTargetComparison, evaluation crmc
 		return withStatus(out, crmcontracts.ReportingTargetComparisonStatusColleagueWithheld)
 	case ops.Narrowed:
 		return withStatus(out, crmcontracts.ReportingTargetComparisonStatusPartialVisibility)
-	case ops.FxMissing:
+	case ops.FxMissingWon:
 		return withStatus(out, crmcontracts.ReportingTargetComparisonStatusFxMissing)
 	case ops.CallBelowWon:
 		return withStatus(out, crmcontracts.ReportingTargetComparisonStatusCallBelowWon)
 	}
 	return nil
+}
+
+// withWonAgainstTarget answers fx_missing for an open pipeline short of a
+// rate, and still gives the target and the won total, which it does not touch.
+func withWonAgainstTarget(out *crmcontracts.ReportingTargetComparison, ops ForecastOperands, target crmcontracts.ReportingTarget) *crmcontracts.ReportingTargetComparison {
+	if !fromGoals(target) {
+		out.TargetId, out.TargetRevision = &target.Id, &target.Revision
+	}
+	out.Target, out.Won = money(target.Definition.Value), money(ops.WonMinor)
+	return withStatus(out, crmcontracts.ReportingTargetComparisonStatusFxMissing)
 }
 
 // heldTarget is the target the landing stands against: the one for this
@@ -138,9 +156,11 @@ func withStatus(out *crmcontracts.ReportingTargetComparison, status crmcontracts
 func measure(out *crmcontracts.ReportingTargetComparison, ops ForecastOperands, target crmcontracts.ReportingTarget) {
 	value := target.Definition.Value
 	remaining := max(value-ops.WonMinor, 0)
-	out.TargetId, out.TargetRevision = &target.Id, &target.Revision
+	if !fromGoals(target) {
+		out.TargetId, out.TargetRevision = &target.Id, &target.Revision
+	}
 	out.Target, out.Landing, out.Won = money(value), money(ops.LandingMinor), money(ops.WonMinor)
-	out.Gap, out.Remaining, out.OpenPipeline = money(value-ops.LandingMinor), money(remaining), money(ops.OpenMinor)
+	out.Gap, out.Remaining, out.OpenPipeline = money(goalgap.Of(value, ops.LandingMinor)), money(remaining), money(ops.OpenMinor)
 	out.Status = crmcontracts.ReportingTargetComparisonStatusTargetReached
 	if remaining > 0 {
 		out.Status = crmcontracts.ReportingTargetComparisonStatusCompared

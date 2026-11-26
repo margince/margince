@@ -19,6 +19,9 @@ const (
 	// it, which is the whole point of a mailbox posture — it holds the message
 	// until something judges it.
 	ReasonPosture = "posture"
+	// ReasonSharedMailbox: a shared mailbox set to held brought it in. Its
+	// reader team and the message's own parties read it, nobody else.
+	ReasonSharedMailbox = "shared_mailbox"
 	// ReasonWorkspaceFloor: the WORKSPACE turned mail sharing off. It is not a
 	// mailbox posture and no verdict clears it: an admin decided colleagues do
 	// not read captured mail, and a classifier concluding a thread is ordinary
@@ -86,6 +89,7 @@ const (
 func EveryReason() []string {
 	return []string{
 		ReasonPosture,
+		ReasonSharedMailbox,
 		ReasonWorkspaceFloor,
 		ReasonPendingVerdict,
 		ReasonManual,

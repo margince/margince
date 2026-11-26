@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "apply_legacy_loss_reasons",
+  "verb": "apply_legacy_loss_reasons",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

@@ -160,8 +160,8 @@ func memberWire(f accessFacts, j judgedMember) crmcontracts.RecordAccessMember {
 	// The roster fills roles only in its management view, so a caller outside
 	// it gets none here without a second copy of that decision.
 	if j.member.Roles != nil {
-		roles := slices.Clone(j.member.Roles)
-		out.Roles = &roles
+		roles, names := slices.Clone(j.member.Roles), j.member.RoleNames
+		out.Roles, out.RoleNames = &roles, &names
 	}
 	return out
 }
@@ -198,7 +198,7 @@ func assembleRecordAccess(
 	out.Page = crmcontracts.PageInfo{HasMore: end < len(judged), Total: &total}
 	if out.Page.HasMore {
 		last := judged[end-1].member
-		next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+		next, err := storekit.EncodeCursor("record_access_reasons", last.CreatedAt, last.ID)
 		if err != nil {
 			return crmcontracts.RecordAccess{}, err
 		}
@@ -212,7 +212,7 @@ func pageStart(judged []judgedMember, cursor *string) (int, error) {
 	if cursor == nil || *cursor == "" {
 		return 0, nil
 	}
-	c, err := storekit.DecodeCursor(*cursor)
+	c, err := storekit.DecodeCursor("record_access_reasons", *cursor)
 	if err != nil {
 		return 0, err
 	}

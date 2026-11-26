@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // pageFrom cuts the candidates to what one read carries, starting at the offset
@@ -125,6 +126,8 @@ func keepFiltered(rows []ranked, want crmcontracts.WorklistFilter) []ranked {
 
 func keepsRow(row ranked, want crmcontracts.WorklistFilter) bool {
 	switch want {
+	case crmcontracts.WorklistFilter("website_inquiries"):
+		return row.item.Source == sourceTask && row.item.Kind != nil && *row.item.Kind == provenance.WebsiteInquirySource
 	case crmcontracts.WorklistFilterProspecting:
 		return buildsPipeline(row.item) || row.item.Source == crmcontracts.WorklistItemSourceMeeting || row.item.Source == crmcontracts.WorklistItemSourceMeetingOutcome || row.item.Source == sourceMeetingFollowUp
 	case crmcontracts.WorklistFilterLeads:

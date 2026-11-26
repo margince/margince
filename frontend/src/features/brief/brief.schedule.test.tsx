@@ -1,6 +1,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { formatDateAbbrev, formatTimeOfDay } from "../../format/format";
 import { browserZone } from "../../format/timezone";
@@ -8,13 +14,10 @@ import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meetingRow, readingsDay } from "../../testing/brief.fixtures";
 import type { WorklistItem } from "../worklist/worklist.queries";
-import { SchedulePanel, scheduleIsEmpty } from "./brief.schedule";
+import { SchedulePanel } from "./brief.schedule";
 
-// The two rail panels, and what each of them refuses to claim.
-//
-// Both are CUTS of the one worklist answer the work column is drawn from, so
-// what they are really about is which rows each one owns and what it says on a
-// day with none of them.
+// External meetings is a cut of the one worklist answer the work column is
+// drawn from. It lists the meetings by start, each saying who it is with.
 
 function taskRow(id: string, title: string): WorklistItem {
   return {
@@ -49,22 +52,166 @@ const NEXT = {
   participants: [{ contact_id: "contact-1", full_name: "Anna Weber" }],
 };
 
+// Before the fixtures' default meeting start, 2026-09-03T09:30Z.
+const EARLY = Date.parse("2026-09-03T03:00:00Z");
+
 afterEach(cleanup);
 
 describe("the schedule panel", () => {
-  it("lists the day's meetings in the order the server sent them", () => {
+  it("lays the day's meetings on the line by start, whatever the rank", () => {
     const day = readingsDay({}, [
-      meetingRow("m1", true),
+      { ...meetingRow("m1", true, "2026-09-03T13:00:00Z"), title: "Later" },
       taskRow("t1", "Call Alice back"),
-      meetingRow("m2", false),
+      { ...meetingRow("m2", false, "2026-09-03T09:00:00Z"), title: "Sooner" },
     ]);
-    draw(<SchedulePanel day={day} state="ready" />);
+    draw(<SchedulePanel day={day} state="ready" now={EARLY} />);
 
     const panel = screen.getByRole("region");
-    // The task belongs to the OTHER panel: a rail that listed everything would
-    // be the queue again, in a narrower column.
+    // A task is the queue's: a rail that listed everything would be the queue
+    // again, in a narrower column.
     expect(within(panel).queryByText("Call Alice back")).toBeNull();
-    expect(within(panel).getAllByText(/Weber GmbH/)).toHaveLength(2);
+    const what = Array.from(
+      panel.querySelectorAll(".rail-schedule-what"),
+      (cell) => cell.textContent ?? "",
+    );
+    expect(what).toHaveLength(2);
+    expect(what[0]).toContain("Sooner");
+    expect(what[1]).toContain("Later");
+  });
+
+  // No row claims the reader is free: an internal meeting is not on this
+  // panel, so a gap between two rows is not free time. Only the next meeting
+  // stands on its plate, says how soon it starts and opens its brief.
+  it("sets the next meeting on its plate", () => {
+    const day = readingsDay({}, [
+      { ...meetingRow("m1", true, "2026-09-03T08:00:00Z"), title: "Started" },
+      { ...meetingRow("m2", true, "2026-09-03T10:00:00Z"), title: "Next up" },
+    ]);
+    const prepared: string[] = [];
+    draw(
+      <SchedulePanel
+        day={day}
+        state="ready"
+        now={Date.parse("2026-09-03T09:40:00Z")}
+        onPrepareMeeting={(id) => prepared.push(id)}
+      />,
+    );
+
+    const rows = screen
+      .getByRole("region")
+      .querySelectorAll(".rail-schedule-row");
+    expect(rows).toHaveLength(2);
+    expect(rows[0].textContent).toContain("Started");
+    expect(rows[1].textContent).toContain("in 20 minutes");
+    expect(rows[0].classList.contains("rail-schedule-next")).toBe(false);
+    expect(rows[1].classList.contains("rail-schedule-next")).toBe(true);
+    // Only the next meeting offers a brief, and pressing it asks for that one.
+    const prepare = en["worklist.verb.open_meeting_brief"];
+    expect(within(rows[0] as HTMLElement).queryByText(prepare)).toBeNull();
+    fireEvent.click(
+      within(rows[1] as HTMLElement).getByRole("button", { name: prepare }),
+    );
+    expect(prepared).toEqual(["m2"]);
+  });
+
+  // A meeting's title is what the calendar called it. The row adds the account
+  // and the outside contacts, each a link, and how many more there are.
+  it("names the account and the contacts each meeting is with", () => {
+    const meeting: WorklistItem = {
+      ...meetingRow("m1", true),
+      contact: {
+        id: "c-1",
+        label: "Anna Weber",
+        employer: { company_id: "co-1", company_name: "Weber GmbH" },
+      },
+      room: {
+        participants: [
+          { contact_id: "c-1", full_name: "Anna Weber" },
+          { contact_id: "c-2", full_name: "Ben Ortiz" },
+        ],
+        other_participants: [
+          { kind: "colleague", name: "Rita Rep" },
+          { kind: "address", name: "cfo@weber.example" },
+        ],
+        participants_more: 3,
+      },
+    };
+    draw(
+      <SchedulePanel
+        day={readingsDay({}, [meeting])}
+        state="ready"
+        now={EARLY}
+      />,
+    );
+
+    const panel = screen.getByRole("region");
+    // Colleagues are on every meeting here, so the row leaves them out.
+    const links = within(panel).getAllByRole("link");
+    expect(links.map((link) => link.textContent)).toEqual([
+      "WGWeber GmbH",
+      "AWAnna Weber",
+      "BOBen Ortiz",
+    ]);
+    expect(
+      panel.querySelector(".rail-schedule-attendees")?.textContent,
+    ).toContain("cfo@weber.example and 3 more");
+    expect(panel.textContent).not.toContain("Rita Rep");
+    expect(
+      within(panel)
+        .getByRole("link", { name: "Weber GmbH" })
+        .getAttribute("href"),
+    ).toContain("co-1");
+    expect(
+      within(panel)
+        .getByRole("link", { name: "Ben Ortiz" })
+        .getAttribute("href"),
+    ).toContain("c-2");
+  });
+
+  it("lets every attendee's name wrap inside the panel rather than run past it", () => {
+    draw(
+      <SchedulePanel
+        day={readingsDay({}, [
+          {
+            ...meetingRow("m1", true),
+            contact: {
+              id: "c-1",
+              label: "Anna Weber",
+              employer: { company_id: "co-1", company_name: "Weber GmbH" },
+            },
+          },
+        ])}
+        state="ready"
+        now={EARLY}
+      />,
+    );
+
+    const chips = within(screen.getByRole("region")).getAllByRole("link");
+    expect(chips.map((chip) => chip.classList.contains("chip-wrap"))).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  // A row whose room did not come still names the counterparty the lane chose.
+  it("names the meeting's contact when the row carries no room", () => {
+    const meeting: WorklistItem = {
+      ...meetingRow("m1", true),
+      contact: { id: "c-1", label: "Anna Weber" },
+    };
+    draw(
+      <SchedulePanel
+        day={readingsDay({}, [meeting])}
+        state="ready"
+        now={EARLY}
+      />,
+    );
+
+    expect(
+      within(screen.getByRole("region"))
+        .getByRole("link", { name: "Anna Weber" })
+        .getAttribute("href"),
+    ).toContain("c-1");
   });
 
   // The badge is the panel's reason to exist: a rep scanning the rail for the
@@ -94,11 +241,11 @@ describe("the schedule panel", () => {
       meetingRow("m1", true, "2026-09-03T03:40:00Z"),
       meetingRow("m2", true, "2026-09-03T13:15:00Z"),
     ]);
-    draw(<SchedulePanel day={day} state="ready" />);
+    draw(<SchedulePanel day={day} state="ready" now={EARLY} />);
 
     const times = screen
       .getByRole("region")
-      .querySelectorAll(".rail-schedule-when");
+      .querySelectorAll(".rail-schedule-row .rail-schedule-when");
     expect(Array.from(times, (cell) => cell.textContent)).toEqual([
       formatTimeOfDay("2026-09-03T03:40:00Z", "en", zone),
       formatTimeOfDay("2026-09-03T13:15:00Z", "en", zone),
@@ -109,19 +256,19 @@ describe("the schedule panel", () => {
     expect(times[0].textContent).not.toBe("");
   });
 
-  // A CLEAR DAY IS NOT A PANEL. The header band, the hairline and one grey
-  // sentence stood in the rail beside the panels that had news, and the news
-  // was read last. The rail's quiet panel carries the line instead
-  // (brief.rail.tsx), and `scheduleIsEmpty` is the one predicate both turn on.
-  it("draws nothing at all on a day with no meeting", () => {
-    const { container } = draw(
-      <SchedulePanel day={readingsDay({}, [])} state="ready" />,
-    );
-
-    expect(container.innerHTML).toBe("");
-    expect(scheduleIsEmpty(readingsDay({}, []), "ready")).toBe(true);
+  // A clear day keeps the box and says no external meeting is left, so a
+  // reader never wonders whether the meetings failed to load.
+  it("says the rest of a day with no external meeting is clear", () => {
     const measured = { ...readingsDay({}, []), calendar: "connected" as const };
-    expect(scheduleIsEmpty(measured, "ready")).toBe(true);
+    for (const day of [readingsDay({}, []), measured]) {
+      draw(<SchedulePanel day={day} state="ready" now={EARLY} />);
+      const panel = screen.getByRole("region", {
+        name: en["brief.panel.schedule"],
+      });
+      expect(panel.textContent).toContain(en["brief.schedule.clearRest"]);
+      expect(panel.textContent).not.toContain(en["brief.schedule.more"]);
+      cleanup();
+    }
   });
 
   // A quiet day with a meeting booked further out says when, on the day's own
@@ -143,9 +290,10 @@ describe("the schedule panel", () => {
     );
 
     const panel = screen.getByRole("region");
-    expect(panel.querySelector(".rail-schedule-when")?.textContent).toBe(
-      formatDateAbbrev(NEXT.starts_at, "en", zone),
-    );
+    expect(
+      panel.querySelector(".rail-schedule-row .rail-schedule-when")
+        ?.textContent,
+    ).toBe(formatDateAbbrev(NEXT.starts_at, "en", zone));
     // The title opens the meeting itself, never the deal it is filed on.
     within(panel).getByRole("button", { name: "Weber kickoff" }).click();
     expect(opened).toEqual([NEXT.activity_id]);
@@ -162,7 +310,6 @@ describe("the schedule panel", () => {
         ),
       ),
     ).toBeTruthy();
-    expect(scheduleIsEmpty(day, "ready")).toBe(false);
   });
 
   // A calendar that could not count keeps the panel, says why, and leads to
@@ -178,15 +325,32 @@ describe("the schedule panel", () => {
 
       const panel = screen.getByRole("region");
       expect(panel.textContent).toContain(en[sentence]);
-      expect(panel.querySelector(".rail-schedule-row")).toBeNull();
+      // No meeting row, and no claim about the rest of the day.
+      expect(panel.querySelectorAll(".rail-schedule-row")).toHaveLength(0);
+      expect(panel.textContent).not.toContain(en["brief.schedule.clearRest"]);
       expect(
         within(panel)
           .getByRole("link", { name: en[verb] })
           .getAttribute("href"),
       ).toBe("/#/settings/connections");
-      expect(scheduleIsEmpty(day, "ready")).toBe(false);
     },
   );
+
+  // Today's meeting known to Margince shows under the sentence that says where
+  // the panel's meetings come from when no calendar is connected.
+  it("heads a no-calendar day's meetings with where they come from", () => {
+    const day = {
+      ...readingsDay({}, [{ ...meetingRow("m1", true), title: "Site visit" }]),
+      calendar: "not_connected" as const,
+    };
+    draw(<SchedulePanel day={day} state="ready" />);
+
+    const panel = screen.getByRole("region");
+    const rows = panel.querySelectorAll(".panel-row");
+    expect(rows[0].textContent).toContain(en["brief.schedule.notConnected"]);
+    expect(rows[1].textContent).toContain("Site visit");
+    expect(panel.querySelectorAll(".rail-schedule-row")).toHaveLength(1);
+  });
 
   // A meeting booked by hand is a fact the CRM holds whatever the calendar
   // says, so it follows the sentence instead of hiding behind it.
@@ -217,7 +381,6 @@ describe("the schedule panel", () => {
     expect(
       screen.getByRole("region", { name: en["brief.panel.schedule"] }),
     ).toBeTruthy();
-    expect(scheduleIsEmpty(undefined, "loading")).toBe(false);
   });
 
   // Nor is a read that failed. Same box, and the failure said out loud.
@@ -231,7 +394,7 @@ describe("the schedule panel", () => {
   });
 });
 
-it("separates the next meeting's attendees with one comma each", () => {
+it("lists the next meeting's outside attendees as one sentence", () => {
   const day = {
     ...readingsDay({}, []),
     calendar: "connected" as const,
@@ -245,9 +408,16 @@ it("separates the next meeting's attendees with one comma each", () => {
     },
   };
   draw(<SchedulePanel day={day} state="ready" />);
-  const row = screen.getByRole("region").querySelector(".rail-schedule-what");
-  expect(row?.textContent).toContain("Anna Weber, Ben Ortiz, Rita Rep");
-  expect(row?.textContent).not.toMatch(/,\s*,|,\s*$/);
+  // One element holds names and commas, so they wrap as text, not as items.
+  const attendees = screen
+    .getByRole("region")
+    .querySelector(".rail-schedule-attendees");
+  expect(
+    within(attendees as HTMLElement)
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href")),
+  ).toEqual(["/#/contacts/c-1", "/#/contacts/c-2"]);
+  expect(attendees?.textContent).not.toContain("Rita Rep");
 });
 
 it("opens today's meeting from its title, not the record it is about", () => {

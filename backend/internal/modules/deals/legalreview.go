@@ -18,6 +18,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -28,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
+// A literal, because the table-ownership gate reads the lock calls that name it.
 const legalReviewEntity = "legal_review"
 
 // reviewIDKey names the review in the deal's audit images of a request and a
@@ -48,8 +50,8 @@ const (
 // The bounds the table's CHECKs hold, counted in characters as the contract's
 // maxLength is.
 const (
-	maxReviewNote     = 4000
-	maxReviewComments = 8000
+	maxReviewNote     = values.TextNoteCharacters
+	maxReviewComments = values.TextNoteCharacters
 )
 
 // PacketDocument is one contract, legal or offer document on the deal, as the
@@ -173,7 +175,7 @@ func boundedText(field string, text *string, limit int) error {
 		return nil
 	}
 	return &values.ParseError{
-		Field: field, Code: "too_long",
+		Field: field, Code: "too_long", Max: limit,
 		Message: fmt.Sprintf("%s may be at most %d characters", field, limit),
 	}
 }
@@ -188,12 +190,12 @@ func (s *Store) RequestLegalReview(
 	if err != nil {
 		return out, err
 	}
-	if s.reviewDocs == nil {
-		return out, errors.New("deals: legal review needs a document reader, and none is wired")
+	if s.reviewDocs == nil || s.reviewRecords == nil {
+		return out, errors.New("deals: legal review needs its record readers, and they are not wired")
 	}
-	// Before the transaction: the reader opens its own connection, and one
+	// Before the transaction: the readers open their own connection, and one
 	// opened inside this transaction could deadlock against a lock it holds.
-	docs, err := s.reviewDocs.ReviewDocuments(ctx, dealID.UUID)
+	records, err := s.readPacketRecords(ctx, dealID.UUID)
 	if err != nil {
 		return out, err
 	}
@@ -212,7 +214,7 @@ func (s *Store) RequestLegalReview(
 		if err := checkPreviousReview(ctx, tx, dealID, in.PreviousReviewID); err != nil {
 			return err
 		}
-		packet, err := s.buildReviewPacket(ctx, tx, dealID, docs)
+		packet, err := s.buildReviewPacket(ctx, tx, dealID, records)
 		if err != nil {
 			return err
 		}
@@ -229,9 +231,13 @@ func (s *Store) RequestLegalReview(
 		if err != nil {
 			return fmt.Errorf("audit the legal review request: %w", err)
 		}
-		if err := storekit.EmitPipelinePayload(ctx, tx, auditID,
-			crmcontracts.InternalEventLegalReviewRequested{HasNote: hasNote}); err != nil {
+		if err := storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventLegalReviewRequested{
+			DealId: openapi_types.UUID(dealID.UUID), ReviewId: openapi_types.UUID(id),
+		}); err != nil {
 			return fmt.Errorf("emit legal_review.requested: %w", err)
+		}
+		if err := s.raiseLegalReview(ctx, tx, id, dealID, requester); err != nil {
+			return err
 		}
 		out, err = readReviewSummary(ctx, tx, id)
 		return err
@@ -358,9 +364,13 @@ func (s *Store) WithdrawLegalReview(ctx context.Context, id ids.UUID) (crmcontra
 		if err != nil {
 			return fmt.Errorf("audit the legal review withdrawal: %w", err)
 		}
-		if err := storekit.EmitPipelinePayload(ctx, tx, auditID,
-			crmcontracts.InternalEventLegalReviewWithdrawn{}); err != nil {
+		if err := storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventLegalReviewWithdrawn{
+			DealId: openapi_types.UUID(dealID.UUID), ReviewId: openapi_types.UUID(id),
+		}); err != nil {
 			return fmt.Errorf("emit legal_review.withdrawn: %w", err)
+		}
+		if err := s.settleLegalReview(ctx, tx, id); err != nil {
+			return err
 		}
 		out, err = readReviewSummary(ctx, tx, id)
 		return err

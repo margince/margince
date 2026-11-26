@@ -4,11 +4,12 @@
 // Which rendered page of a list table is on screen, and how many rows a page
 // holds. A new narrowing sends the reader back to page one.
 
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { stable } from "../format/collate";
 
 /**
- * Page sizes the footer offers, as rendered pages. The caller fetches several
- * of them per read (`listFetchLimit`), and the table slices what it holds.
+ * Page sizes the footer offers, as rendered pages. The caller fetches a whole
+ * number of them per read (`listFetchLimit`), and the table slices what it holds.
  *
  * The fetch is always a whole multiple of this, so the two stay in step. A
  * buffer sized on its own once made a list say "1-25 of 50 loaded so far".
@@ -50,7 +51,7 @@ export function narrowingSignature(
     Object.keys(dials.chosen)
       // Byte order, not the reader's: this identity is compared with itself a
       // render ago, so it must be the same string in every locale.
-      .sort((one, other) => (one === other ? 0 : one < other ? -1 : 1))
+      .sort(stable)
       .map((name) => `${name}=${dials.chosen[name]}`)
       .join("&");
   return JSON.stringify([
@@ -67,12 +68,18 @@ export function narrowingSignature(
  * Sends the reader back to page one when the narrowing changes. Page 2 of a
  * new filter, sort or scope holds rows they never asked for.
  *
+ * Not when `keepsPage` says so: a link that changes the narrowing names its page.
+ *
  * Not on arrival: a page read from the address must survive the first render.
  * So the reset compares the signature with the one seeded during the first
  * render. Counting effect runs fails, because StrictMode and late deps run
  * the effect on arrival more than once.
  */
-function useResetOnNarrowing(narrowing: string, toFirstPage: () => void) {
+function useResetOnNarrowing(
+  narrowing: string,
+  toFirstPage: () => void,
+  keepsPage: (() => boolean) | undefined,
+) {
   const narrowedBy = useRef(narrowing);
   // `toFirstPage` is re-made every render and must not re-run the effect;
   // what it does depends only on the signature.
@@ -82,6 +89,9 @@ function useResetOnNarrowing(narrowing: string, toFirstPage: () => void) {
       return;
     }
     narrowedBy.current = narrowing;
+    if (keepsPage?.()) {
+      return;
+    }
     toFirstPage();
     // The page and nothing else. This also fires on the way out, against an
     // address that is no longer the list's, and a scroll offset written then
@@ -132,6 +142,8 @@ export type PagingControl<Row> = Readonly<{
   onLoadMore?: () => void;
   /** False where a body outside the table owns the paging; default true. */
   reachAsked?: boolean;
+  /** True when the page in hand was named with the narrowing, so no reset. */
+  keepsPage?: () => boolean;
 }>;
 
 /** The rows the table slices out, and the pager's state. */
@@ -174,8 +186,7 @@ function usePageState<Row>(control: PagingControl<Row>) {
 
 /**
  * Slices the rows the caller holds into rendered pages. One read carries a
- * whole multiple of `perPage`, so the slices land on page boundaries the
- * reader reaches without a round trip each.
+ * whole multiple of `perPage`, so the slices land on page boundaries.
  */
 export function usePaging<Row>(
   control: PagingControl<Row>,
@@ -186,6 +197,11 @@ export function usePaging<Row>(
   const lastPage = Math.max(1, Math.ceil(control.rows.length / perPage));
   const current = Math.min(page, lastPage);
   const from = (current - 1) * perPage;
+  const { rows } = control;
+  const pageRows = useMemo(
+    () => rows.slice(from, from + perPage),
+    [rows, from, perPage],
+  );
   const [asks, setAsks] = useState(0);
   useReachAskedPage({
     enabled: control.reachAsked !== false,
@@ -197,8 +213,10 @@ export function usePaging<Row>(
     loadMore: () => control.onLoadMore?.(),
     setPage,
   });
-  useResetOnNarrowing(narrowingSignature({ ...narrowing, perPage }), () =>
-    setPage(1),
+  useResetOnNarrowing(
+    narrowingSignature({ ...narrowing, perPage }),
+    () => setPage(1),
+    control.keepsPage,
   );
   const goto = (to: number) => {
     // Stepping past what is loaded is answered by `useReachAskedPage`.
@@ -216,7 +234,7 @@ export function usePaging<Row>(
     current,
     lastPage,
     from,
-    pageRows: control.rows.slice(from, from + perPage),
+    pageRows,
     perPage,
     setPerPage,
     goto,

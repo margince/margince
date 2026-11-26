@@ -12,15 +12,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// redactLeadDeliveries scrubs the deliveries still waiting to go out to a lead
-// that an erasure or a retention action anonymized. Such a delivery is filed
-// under the lead alone, as a lead's opt-out receipt is, and may name an address
-// no contact held. Nothing keyed by a contact reaches it, and unscrubbed it
-// would be sent to the subject the act was asked to forget.
-//
-// A sent delivery is left to the timeline scrubs: what it said is a record of
-// what happened. A waiting one is only an intent, and it is parked here.
-func redactLeadDeliveries(ctx context.Context, tx pgx.Tx, leads []ids.UUID, payloads PayloadPurger) error {
+// redactLeadDeliveries parks and scrubs queued mail whose only subject is an
+// anonymized lead. Sent deliveries remain correspondence under their own
+// retention rules; explicit erasure reaches them through the timeline scrub.
+func redactLeadDeliveries(ctx context.Context, tx pgx.Tx, leads []ids.UUID) error {
 	if len(leads) == 0 {
 		return nil
 	}
@@ -36,5 +31,5 @@ func redactLeadDeliveries(ctx context.Context, tx pgx.Tx, leads []ids.UUID, payl
 	if err != nil {
 		return err
 	}
-	return redactDeliveries(ctx, tx, waiting, erasedName, payloads)
+	return redactDeliveries(ctx, tx, waiting, erasedName)
 }

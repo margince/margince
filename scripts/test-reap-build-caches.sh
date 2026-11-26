@@ -41,7 +41,7 @@ expect() {
 	export DELETED_LOG="$stub_dir/deleted"
 	: >"$DELETED_LOG"
 	set +e
-	out="$(CACHES_TSV="$tsv" REPO=owner/repo "$root/scripts/reap-build-caches.sh" 2>&1)"
+	out="$(CACHES_TSV="$tsv" REPO=owner/repo REF="${REF:-}" "$root/scripts/reap-build-caches.sh" 2>&1)"
 	status=$?
 	set -e
 	deleted="$(paste -sd, - <"$DELETED_LOG")"
@@ -50,19 +50,28 @@ expect() {
 		echo "FAIL: $name"
 		echo "  exit    want $want_exit got $status"
 		echo "  deleted want '$want_deleted' got '$deleted'"
-		printf '  output: %s\n' "$out" | head -5
+		printf '  output: %s\n' "$out" | sed -n 1,5p
 		failures=$((failures + 1))
 	else
 		echo "ok: $name"
 	fi
 }
 
-plain_new=$'2026-08-12T04:00:00Z\t101\tgo-build-plain-Linux-X64-deadbeef-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\t3000000000'
-plain_old=$'2026-08-12T03:00:00Z\t102\tgo-build-plain-Linux-X64-deadbeef-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\t3000000000'
-plain_older=$'2026-08-12T02:00:00Z\t103\tgo-build-plain-Linux-X64-deadbeef-cccccccccccccccccccccccccccccccccccccccc\t3000000000'
-integ=$'2026-08-12T03:30:00Z\t201\tgo-build-integration-Linux-X64-deadbeef-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\t2000000000'
-other_deps=$'2026-08-12T01:00:00Z\t301\tgo-build-plain-Linux-X64-cafe1234-dddddddddddddddddddddddddddddddddddddddd\t3000000000'
-unrelated=$'2026-08-12T03:00:00Z\t401\tnode-cache-Linux-x64-pnpm-abc123\t70000000'
+main=refs/heads/main
+develop=refs/heads/develop
+plain_new=$'2026-08-12T04:00:00Z\t101\t'"$main"$'\tgo-build-plain-Linux-X64-deadbeef-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\t3000000000'
+plain_old=$'2026-08-12T03:00:00Z\t102\t'"$main"$'\tgo-build-plain-Linux-X64-deadbeef-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\t3000000000'
+plain_older=$'2026-08-12T02:00:00Z\t103\t'"$main"$'\tgo-build-plain-Linux-X64-deadbeef-cccccccccccccccccccccccccccccccccccccccc\t3000000000'
+integ=$'2026-08-12T03:30:00Z\t201\t'"$main"$'\tgo-build-integration-Linux-X64-deadbeef-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\t2000000000'
+other_deps=$'2026-08-12T01:00:00Z\t301\t'"$main"$'\tgo-build-plain-Linux-X64-cafe1234-dddddddddddddddddddddddddddddddddddddddd\t3000000000'
+unrelated=$'2026-08-12T03:00:00Z\t401\t'"$main"$'\tnode-cache-Linux-x64-pnpm-abc123\t70000000'
+develop_new=$'2026-08-12T05:00:00Z\t501\t'"$develop"$'\tgo-build-plain-Linux-X64-deadbeef-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\t3000000000'
+frontend_new=$'2026-08-12T04:00:00Z\t601\t'"$main"$'\tfrontend-incremental-Linux-X64-abc123-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\t90000000'
+frontend_old=$'2026-08-12T01:00:00Z\t602\t'"$main"$'\tfrontend-incremental-Linux-X64-abc123-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\t90000000'
+golangci_new=$'2026-08-12T04:00:00Z\t701\t'"$develop"$'\tgolangci-analysis-in-image-Linux-X64-abc123-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\t400000000'
+golangci_old=$'2026-08-12T02:00:00Z\t702\t'"$develop"$'\tgolangci-analysis-in-image-Linux-X64-abc123-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\t400000000'
+golangci_main=$'2026-08-12T01:00:00Z\t703\t'"$main"$'\tgolangci-analysis-in-image-Linux-X64-abc123-cccccccccccccccccccccccccccccccccccccccc\t400000000'
+develop_old=$'2026-08-12T03:45:00Z\t502\t'"$develop"$'\tgo-build-plain-Linux-X64-deadbeef-ffffffffffffffffffffffffffffffffffffffff\t3000000000'
 
 # The newest of a deps-hash group survives; the rest go. Fed oldest-first on
 # purpose — the script must not depend on the order the API happened to use.
@@ -79,12 +88,41 @@ expect "an older deps hash is left alone" 0 "" "$plain_new"$'\n'"$other_deps"
 # Everything that is not a build cache is out of scope entirely.
 expect "non-build caches are never touched" 0 "" "$unrelated"$'\n'"$plain_new"
 
+# Each ref serves readers of its own, so the newest develop entry must not
+# delete main's: pull requests into main and the merge queue restore that one.
+expect "keeps the newest of each ref" 0 "502,102" \
+	"$plain_old"$'\n'"$develop_old"$'\n'"$plain_new"$'\n'"$develop_new"
+
+# The frontend's incremental state is keyed the same way and reaped the same way.
+expect "keeps the newest frontend entry" 0 "602" \
+	"$frontend_old"$'\n'"$frontend_new"$'\n'"$plain_new"
+
+# The golangci analysis cache is keyed the same way, per ref: lint-cache.yml prunes
+# develop's with REF and leaves main's, which is older, alone.
+REF="$develop" expect "keeps the newest golangci entry of the ref" 0 "702" \
+	"$golangci_main"$'\n'"$golangci_old"$'\n'"$golangci_new"$'\n'"$develop_new"
+
+# REF limits the sweep to one ref: main's superseded entry is not this run's to delete.
+REF="$develop" expect "REF leaves other refs alone" 0 "502" \
+	"$plain_old"$'\n'"$develop_old"$'\n'"$plain_new"$'\n'"$develop_new"
+
+# REF naming a ref with no build cache means the writer saved nothing there.
+REF="$develop" expect "REF with no build cache on that ref fails loudly" 1 "" \
+	"$plain_new"$'\n'"$plain_old"
+
+# A frontend entry alone does not stand in for the Go build caches.
+expect "frontend entries alone fail loudly" 1 "" "$frontend_new"
+
+# Without a ref the script cannot tell two branches apart, so it refuses.
+expect "a cache with no ref fails loudly" 1 "" \
+	$'2026-08-12T04:00:00Z\t101\t\tgo-build-plain-Linux-X64-deadbeef-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\t3000000000'
+
 # A read that returned nothing must not pass for a clean sweep.
 expect "an empty listing fails loudly" 1 "" ""
 
 # If the key stops carrying a -<sha> suffix, grouping would silently merge
 # unrelated entries — refuse rather than guess.
-expect "a key shape change fails loudly" 1 "" $'2026-08-12T04:00:00Z\t101\tgo-build-plain\t3000000000'
+expect "a key shape change fails loudly" 1 "" $'2026-08-12T04:00:00Z\t101\trefs/heads/main\tgo-build-plain\t3000000000'
 
 # A listing with caches but no build caches means the prefix moved.
 expect "a missing build-cache prefix fails loudly" 1 "" "$unrelated"

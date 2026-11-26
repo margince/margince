@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 // pathID asserts a contract path id as entity K's id — the widening
@@ -158,19 +159,13 @@ func (h Handlers) RestoreTagApplication(w http.ResponseWriter, r *http.Request, 
 	httperr.WriteJSON(w, http.StatusOK, wireTaggable(restored))
 }
 
-// GetFilterVocabulary answers what a filter may say about one record type.// GetFilterVocabulary answers what a filter may say about one record type.
+// GetFilterVocabulary answers what a filter may say about one record type.
 //
-// The generated wrapper binds `resource` as a plain string and never calls the
-// Valid() it also generates, so an unknown value arrives here rather than being
-// refused at the door. It earns a 422 naming the parameter, like every other
-// enum-valued query parameter in this tree: a bare 404 for `?resource=peron`
-// says neither what went wrong nor what to do.
-//
-// That leaves the 404 below for the case it actually describes — a resource the
-// contract admits and no engine serves. It is unreachable while the two agree
-// (TestEveryResourceTheContractAdmitsHasAnEngine holds them to that), and it is
-// still the right answer if they ever stop: an empty field list would read as
-// "this type has nothing to filter on", which is a different and false statement.
+// `resource` is a core record type or `ext:<unit>:<kind>`. The contract cannot
+// list the second, so it does not close the set. A kind no installed extension
+// declares, or one the caller may not read, answers 404 as the contract says.
+// Any other name no engine serves, such as a typo, earns a 422 naming the
+// parameter, because a bare 404 would not say what to do.
 func (h Handlers) GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params crmcontracts.GetFilterVocabularyParams) {
 	resource := string(params.Resource)
 	fields, ok, err := h.store.FilterVocabulary(r.Context(), resource)
@@ -178,8 +173,13 @@ func (h Handlers) GetFilterVocabulary(w http.ResponseWriter, r *http.Request, pa
 		writeErr(w, r, err)
 		return
 	}
+	if !ok && recordkinds.IsExtensionName(resource) {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
 	if !ok {
-		writeErr(w, r, apperrors.ErrNotFound)
+		httperr.Write(w, r, httperr.Validation("resource", "unknown_resource",
+			"no record type or extension kind has this name; the contract lists the core types, and an extension kind is spelled ext:<unit>:<kind>"))
 		return
 	}
 	data := make([]crmcontracts.FilterVocabularyField, 0, len(fields))
@@ -187,7 +187,7 @@ func (h Handlers) GetFilterVocabulary(w http.ResponseWriter, r *http.Request, pa
 		data = append(data, wireVocabularyField(f))
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.FilterVocabulary{
-		Resource: crmcontracts.FilterVocabularyResource(resource),
+		Resource: resource,
 		Fields:   data,
 	})
 }

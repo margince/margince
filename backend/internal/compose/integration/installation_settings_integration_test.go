@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -373,7 +374,7 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 	// price of a valid closed deal.
 	e.SeedID(t, `
 		INSERT INTO deal (id, name, pipeline_id, stage_id, source, captured_by, amount_minor, currency, fx_rate_to_base, status, closed_at)
-		VALUES ($1, 'Converted deal', $2, $3, 'seed', 'system:test',
+		VALUES ($1, 'Converted deal', $2, $3, 'manual', 'system:test',
 		        100000, 'EUR', 1.0850000000, 'won', now())`,
 		pipeline, stage)
 
@@ -398,11 +399,11 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 	if !got.BaseCurrencyLocked {
 		t.Fatal("the base currency is still reported changeable after a deal froze a rate against it")
 	}
-	if want := (currencylock.Lock{Reason: currencylock.RatesFrozen, Count: 1}); got.BaseCurrencyLock != want {
+	if want := (currencylock.Lock{Reason: currencylock.RatesFrozen, Count: 1}); !reflect.DeepEqual(withoutBreakdown(got.BaseCurrencyLock), want) {
 		t.Errorf("lock = %+v, want %+v", got.BaseCurrencyLock, want)
 	}
-	if !strings.Contains(got.BaseCurrencyLock.Prose(), "1 record") {
-		t.Errorf("lock reason = %q, want it to name how many records converted", got.BaseCurrencyLock.Prose())
+	if prose := got.BaseCurrencyLock.Prose(); !strings.Contains(prose, "1 record(s) (closed deals: 1) have") {
+		t.Errorf("lock reason = %q, want it to name how many records converted, and only the deal", prose)
 	}
 
 	// And the write is refused, as a field fault naming the setting.
@@ -446,12 +447,12 @@ func TestBaseCurrencyFreezesOnASentOfferWithNoClosedDeal(t *testing.T) {
 		VALUES ($1, $2, 'Qualified', 1, 'open', 40)`, pipeline)
 	deal := e.SeedID(t, `
 		INSERT INTO deal (id, name, pipeline_id, stage_id, source, captured_by, amount_minor, currency, status)
-		VALUES ($1, 'Open deal', $2, $3, 'seed', 'system:test', 100000, 'EUR', 'open')`,
+		VALUES ($1, 'Open deal', $2, $3, 'manual', 'system:test', 100000, 'EUR', 'open')`,
 		pipeline, stage)
 	e.SeedID(t, `
 		INSERT INTO offer (id, deal_id, offer_number, currency, status,
 		                   fx_rate_to_base, fx_rate_date, source, captured_by)
-		VALUES ($1, $2, 'A-2026001', 'EUR', 'sent', 1.0850000000, current_date, 'seed', 'system:test')`,
+		VALUES ($1, $2, 'A-2026001', 'EUR', 'sent', 1.0850000000, current_date, 'manual', 'system:test')`,
 		deal)
 
 	// Prove the fixture is the one this test claims: no deal froze anything.
@@ -511,7 +512,7 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 	}
 	// Repairable, so the reason names the repair. A message that only said "no"
 	// would leave an operator with a currency they cannot correct and no idea why.
-	if !strings.Contains(message, "clear the rate sheet") {
+	if !strings.Contains(message, "remove every currency from the rate sheet") {
 		t.Errorf("reason = %q, want it to name the repair", message)
 	}
 
@@ -519,7 +520,7 @@ func TestBaseCurrencyWillNotMoveOutFromUnderAPricedRateSheet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := (currencylock.Lock{Reason: currencylock.RateSheet, Count: 1, BaseCurrency: base.BaseCurrency}); read.BaseCurrencyLock != want {
+	if want := (currencylock.Lock{Reason: currencylock.RateSheet, Count: 1, BaseCurrency: base.BaseCurrency}); !reflect.DeepEqual(withoutBreakdown(read.BaseCurrencyLock), want) {
 		t.Errorf("lock = %+v, want %+v", read.BaseCurrencyLock, want)
 	}
 
@@ -543,23 +544,30 @@ func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
 		VALUES ($1, $2, 'Won', 1, 'won', 100)`, pipeline)
 	deal := e.SeedID(t, `
 		INSERT INTO deal (id, name, pipeline_id, stage_id, source, captured_by, amount_minor, currency, fx_rate_to_base, status, closed_at)
-		VALUES ($1, 'Converted deal', $2, $3, 'seed', 'system:test', 100000, 'EUR', 1.0850000000, 'won', now())`,
+		VALUES ($1, 'Converted deal', $2, $3, 'manual', 'system:test', 100000, 'EUR', 1.0850000000, 'won', now())`,
 		pipeline, stage)
 	e.SeedID(t, `
 		INSERT INTO offer (id, deal_id, offer_number, currency, status, fx_rate_to_base, fx_rate_date, source, captured_by)
-		VALUES ($1, $2, 'A-2026002', 'EUR', 'sent', 1.0850000000, current_date, 'seed', 'system:test')`, deal)
+		VALUES ($1, $2, 'A-2026002', 'EUR', 'sent', 1.0850000000, current_date, 'manual', 'system:test')`, deal)
 	company := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Census GmbH', 'seed', 'system:test')`)
 	e.SeedID(t, `
 		INSERT INTO contract (id, company_id, title, value_minor, currency, status, fx_rate_to_base, fx_rate_date, source, captured_by)
 		VALUES ($1, $2, 'MSA', 4100000, 'EUR', 'active', 1.0850000000, current_date, 'seed', 'system:test')`, company)
 	connection := e.SeedID(t, `
-		INSERT INTO finance_connection (id, provider, credential_ref, source, captured_by)
-		VALUES ($1, 'lexoffice', 'ref', 'seed', 'system:test')`)
+		INSERT INTO finance_connection (id, provider, captured_by)
+		VALUES ($1, 'lexoffice', 'system:test')`)
 	e.SeedID(t, `
-		INSERT INTO finance_invoice (id, connection_id, company_id, external_id, issued_at, status, currency,
+		WITH directory AS (
+		    INSERT INTO finance_external_customer (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
+		    VALUES ($2::uuid, 'cust-census', 'Census GmbH', '', 'seed', 'system:test') RETURNING external_customer_id
+		), link AS (
+		    INSERT INTO finance_customer_link (connection_id, company_id, external_customer_id, captured_by)
+		    SELECT $2::uuid, $3::uuid, external_customer_id, 'system:test' FROM directory RETURNING id
+		)
+		INSERT INTO finance_invoice (id, connection_id, company_id, customer_link_id, external_id, issued_at, status, currency,
 		                             net_minor, gross_minor, fx_rate_to_base, fx_rate_date, sync_hash, source, captured_by)
-		VALUES ($1, $2, $3, 'ext-census', current_date, 'open', 'EUR', 1000, 1190, 1.0850000000, current_date,
-		        'hash', 'lexoffice', 'system:test')`, connection, company)
+		SELECT $1::uuid, $2::uuid, $3::uuid, link.id, 'ext-census', current_date, 'open', 'EUR', 1000, 1190, 1.0850000000,
+		       current_date, 'hash', 'lexoffice', 'system:test' FROM link`, connection, company)
 	e.SeedID(t, `
 		INSERT INTO commission_entry (id, deal_id, partner_company_id, attribution_at_accrual, basis_amount_minor,
 		                              rate_bps, amount_minor, currency, fx_rate_to_base, captured_by)
@@ -569,9 +577,21 @@ func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := (currencylock.Lock{Reason: currencylock.RatesFrozen, Count: 5}); got.BaseCurrencyLock != want {
+	if want := (currencylock.Lock{Reason: currencylock.RatesFrozen, Count: 5}); !reflect.DeepEqual(withoutBreakdown(got.BaseCurrencyLock), want) {
 		t.Errorf("lock = %+v, want one count over all five kinds: %+v", got.BaseCurrencyLock, want)
 	}
+	for _, kind := range []string{"closed deals: 1", "sent offers: 1", "mirrored invoices: 1", "contracts: 1", "commission entries: 1"} {
+		if !strings.Contains(got.BaseCurrencyLock.Prose(), kind) {
+			t.Errorf("lock reason = %q, want it to name %q", got.BaseCurrencyLock.Prose(), kind)
+		}
+	}
+}
+
+// withoutBreakdown is a lock without the per-table counts, so a test can
+// compare the facts it states as a whole.
+func withoutBreakdown(lock currencylock.Lock) currencylock.Lock {
+	lock.Frozen = nil
+	return lock
 }
 
 // A sheet with no stored base still locks the currency. The facts leave the
@@ -597,7 +617,7 @@ func TestARateSheetWithNoStoredBaseLocksWithoutNamingOne(t *testing.T) {
 	if !got.BaseCurrencyLocked {
 		t.Fatal("a priced sheet with no stored base left the currency changeable")
 	}
-	if want := (currencylock.Lock{Reason: currencylock.RateSheet, Count: 2}); got.BaseCurrencyLock != want {
+	if want := (currencylock.Lock{Reason: currencylock.RateSheet, Count: 2}); !reflect.DeepEqual(withoutBreakdown(got.BaseCurrencyLock), want) {
 		t.Errorf("lock = %+v, want %+v", got.BaseCurrencyLock, want)
 	}
 }

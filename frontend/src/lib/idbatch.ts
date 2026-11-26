@@ -9,6 +9,23 @@ export type PageReader<T> = (
   page: readonly string[],
 ) => Promise<ReadonlyMap<string, T>>;
 
+// A batch reads at most this many pages at a time. A batch of 101 to 200 ids
+// then costs one round trip, not two. A big batch never opens every page.
+const PAGES_IN_FLIGHT = 2;
+
+// Counts ended sessions. A batch notes it when it starts, and stops when it
+// changes. The readers are module-scoped and outlive the QueryClient.
+let sessionsEnded = 0;
+
+/**
+ * Ends every batch in flight when the session ends. A page not yet asked is
+ * never asked under the next session's cookie. The callers get an AbortError,
+ * not the answers already read, so no batch spans two sessions.
+ */
+export function endIdBatches(): void {
+  sessionsEnded += 1;
+}
+
 // What one batch came back with. A page's refusal is about the ids ON that
 // page. The answers another page returned are ones the server gave, and one
 // map could only report them as a read that never arrived.
@@ -16,6 +33,13 @@ type Answers<T> = Readonly<{
   found: ReadonlyMap<string, T>;
   failures: ReadonlyMap<string, unknown>;
 }>;
+
+// The ids asked within one tick of one session, and the answer they share.
+type Pending<T> = {
+  readonly session: number;
+  readonly ids: Set<string>;
+  readonly answers: Promise<Answers<T>>;
+};
 
 /**
  * Coalesces every id asked for within one tick into reads of at most
@@ -30,41 +54,47 @@ export function idBatcher<T>(
   pageSize: number,
   readPage: PageReader<T>,
 ): (id: string) => Promise<T | null> {
-  let queued: string[] = [];
-  let batch: Promise<Answers<T>> | null = null;
+  let pending: Pending<T> | null = null;
 
-  async function readAll(ids: readonly string[]): Promise<Answers<T>> {
-    const found = new Map<string, T>();
-    const failures = new Map<string, unknown>();
+  async function readAll(
+    ids: readonly string[],
+    session: number,
+  ): Promise<Answers<T>> {
+    const pages: (readonly string[])[] = [];
     for (let at = 0; at < ids.length; at += pageSize) {
-      const page = ids.slice(at, at + pageSize);
-      const answer = await readOrRefusal(readPage, page);
-      if (answer instanceof Refusal) {
-        for (const id of page) {
-          failures.set(id, answer.cause);
-        }
-      } else {
-        for (const [id, value] of answer) {
-          found.set(id, value);
-        }
-      }
+      pages.push(ids.slice(at, at + pageSize));
     }
-    return { found, failures };
+    const live = () => sessionsEnded === session;
+    const answers = await readPages(readPage, pages, live);
+    if (!live()) {
+      throw new DOMException("The session ended", "AbortError");
+    }
+    return merge(pages, answers);
+  }
+
+  // The session is noted when the batch opens, not when it reads. A sign-out
+  // before the first read then still aborts the batch and asks no page.
+  function open(): Pending<T> {
+    const batch: Pending<T> = {
+      session: sessionsEnded,
+      ids: new Set(),
+      // Opened as a microtask: every component that renders in this tick has
+      // enqueued by the time it runs, and nothing waits on a timer.
+      answers: Promise.resolve().then(() => {
+        if (pending === batch) {
+          pending = null;
+        }
+        return readAll([...batch.ids], batch.session);
+      }),
+    };
+    return batch;
   }
 
   function join(id: string): Promise<Answers<T>> {
-    queued.push(id);
-    if (!batch) {
-      // Opened as a microtask: every component that renders in this tick has
-      // enqueued by the time it runs, and nothing waits on a timer.
-      batch = Promise.resolve().then(() => {
-        const asking = [...new Set(queued)];
-        queued = [];
-        batch = null;
-        return readAll(asking);
-      });
-    }
-    return batch;
+    const batch = pending?.session === sessionsEnded ? pending : open();
+    pending = batch;
+    batch.ids.add(id);
+    return batch.answers;
   }
 
   return async (id) => {
@@ -74,6 +104,51 @@ export function idBatcher<T>(
     }
     return found.get(id) ?? null;
   };
+}
+
+// Each worker asks for its next page only once its last one settles, so one
+// batch has at most PAGES_IN_FLIGHT reads open. No page starts once the
+// session that opened the batch has ended. The cap is per batch: a later
+// batch starts at once and never waits behind an older one. The answers keep
+// page order, so a merge reads the same however the pages finish.
+async function readPages<T>(
+  readPage: PageReader<T>,
+  pages: readonly (readonly string[])[],
+  live: () => boolean,
+): Promise<(ReadonlyMap<string, T> | Refusal)[]> {
+  const answers: (ReadonlyMap<string, T> | Refusal)[] = [];
+  let next = 0;
+  async function worker() {
+    while (next < pages.length && live()) {
+      const at = next;
+      next += 1;
+      answers[at] = await readOrRefusal(readPage, pages[at] ?? []);
+    }
+  }
+  const workers = Math.min(PAGES_IN_FLIGHT, pages.length);
+  await Promise.all(Array.from({ length: workers }, worker));
+  return answers;
+}
+
+function merge<T>(
+  pages: readonly (readonly string[])[],
+  answers: readonly (ReadonlyMap<string, T> | Refusal | undefined)[],
+): Answers<T> {
+  const found = new Map<string, T>();
+  const failures = new Map<string, unknown>();
+  for (const [at, page] of pages.entries()) {
+    const answer = answers[at];
+    if (answer instanceof Refusal) {
+      for (const id of page) {
+        failures.set(id, answer.cause);
+      }
+    } else if (answer) {
+      for (const [id, value] of answer) {
+        found.set(id, value);
+      }
+    }
+  }
+  return { found, failures };
 }
 
 // A page that failed, refused or never answered, is held against its own ids.

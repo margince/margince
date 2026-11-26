@@ -60,7 +60,10 @@ func (a AwaitedReply) sent() occurredday.Moment {
 // followUpRead is the reader's follow-ups, read per request like planRows:
 // read says the source ran, cut that it stopped at its bound.
 type followUpRead struct {
-	rows         []ranked
+	rows []ranked
+	// promises are the reader's tasks derived from these rows' emails that
+	// the planned lane cut (readingFollowUpPromises).
+	promises     []ranked
 	read         bool
 	cut          bool
 	meetingsRead bool
@@ -117,7 +120,7 @@ func (s *Service) readFollowUps(
 ) ([]AwaitedReply, bool, *crmcontracts.WorklistSourceUnavailable) {
 	var rows []AwaitedReply
 	var cut bool
-	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+	err := s.degradable(ctx, source, laneBudget, func(ctx context.Context) error {
 		var err error
 		rows, cut, err = read(ctx, asOf)
 		return err

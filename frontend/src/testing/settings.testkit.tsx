@@ -398,15 +398,19 @@ export const pagesNamed = (...ids: readonly SettingsPageId[]) => [
 // CONTACT's: gating `agents` would regress passport minting for every seat that
 // is not an admin, and a mailbox and a LinkedIn network nobody else can see are
 // not the installation's configuration.
-// The pages that ask for nothing: a reader's own five, and nothing else.
 //
 // `members` and `teams` used to sit here. The roster endpoint still answers any
 // authenticated caller — the share and assignee pickers depend on it — but a
 // directory is not an administration page, so the settings ENTRY follows the
 // `user_admin` and `team_admin` verbs while the safe roster stays open
 // underneath it.
+// Meetings is the one personal page a grant opens: the booking profile is
+// served only to a seat holding activity:create.
+//
+// The pages that ask for nothing: a reader's own five, and About, since the
+// build a seat runs is no one's secret.
 export const UNGATED_IDS = SETTINGS_PAGES.filter(
-  (page) => page.group === "me",
+  (page) => page.requires.kind === "always",
 ).map((page) => page.id) as readonly SettingsPageId[];
 
 // The floor plus the pages a grant opens, in CATALOG order. Concatenating the

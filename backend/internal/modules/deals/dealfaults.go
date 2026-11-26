@@ -17,6 +17,19 @@ func (e *PastCloseDateError) FieldFault() (field, code, message string) {
 	return closeDateField, "close_date_past", e.Error()
 }
 
+// ClosedDealAmountError maps to 422 deal_closed_amount. A won or lost deal's
+// price is what the close froze, so only an open deal loses it.
+type ClosedDealAmountError struct{}
+
+func (e *ClosedDealAmountError) Error() string {
+	return "A won or lost deal keeps its price. Reopen it first to remove it."
+}
+
+// FieldFault refuses clearing the amount of a closed deal.
+func (e *ClosedDealAmountError) FieldFault() (field, code, message string) {
+	return amountField, "deal_closed_amount", e.Error()
+}
+
 // ProbabilityFixedWhenClosedError maps to 422 probability_fixed_when_closed: a
 // won or lost deal's probability is its stage's.
 type ProbabilityFixedWhenClosedError struct{}
@@ -50,6 +63,9 @@ const amountField = "amount_minor"
 
 // stageIDColumn is the deal's stage, as a stage move writes and audits it.
 const stageIDColumn = "stage_id"
+
+// pipelineIDColumn is the deal's pipeline, which only a move between pipelines writes.
+const pipelineIDColumn = "pipeline_id"
 
 // lineItemsField is the field a refusal about a whole set of lines points at.
 const lineItemsField = "line_items"
@@ -87,6 +103,10 @@ const (
 // partnerAttributionField names the wire field both attribution refusals
 // point at.
 const partnerAttributionField = "partner_attribution"
+
+// wonWithoutContractReasonField is why a deal was won with no signed contract,
+// as the wire field and the deal column both name it.
+const wonWithoutContractReasonField = "won_without_contract_reason"
 
 // PartnerAttributionUnpairedError maps to 422: an attribution describes a
 // partner, so a deal that names none has nothing to attribute.

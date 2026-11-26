@@ -228,3 +228,11 @@ func assertSetsEqual(t *testing.T, label string, got, want []string) {
 		}
 	}
 }
+
+func TestEveryStarterTemplateHasALibraryGroup(t *testing.T) {
+	for _, entry := range Catalog() {
+		if !entry.Group.Valid() {
+			t.Errorf("template %s has no valid library group: %q", entry.Key, entry.Group)
+		}
+	}
+}

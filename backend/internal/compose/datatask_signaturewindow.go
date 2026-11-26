@@ -11,18 +11,22 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/salutation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // signatureWindowDataTask takes back signature fields the writer would refuse
-// today. Evidence outside signatureBlock came from a quoted or forwarded mail.
+// today. Evidence outside the sender's own lines came from a quoted or forwarded mail.
 // A number contacts.IsMemberNumber names is a colleague's. A field whose mail
-// is gone, archived or restricted has no source left to stand on.
+// is gone, archived or restricted has no source left to stand on. A read whose
+// name salutation.NameIsContacts refuses was another participant's signature.
 func signatureWindowDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1792842314_signature_fields_outside_the_senders_text", Version: 2,
-		Title: "Taking back contact details read from quoted mail", Requires: []string{introductionValidationMigration},
+		ID: "core/1792842314_signature_fields_outside_the_senders_text", Version: 3,
+		Title: systemtext.Literal("datatask.title.core.1792842314_signature_fields_outside_the_senders_text"), Requires: []string{introductionValidationMigration},
 		Steps: []datatask.Step{{
 			Name: "signature_fields", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
@@ -44,10 +48,14 @@ func retractOutsideSignatureWindowBatch(ctx context.Context, tx pgx.Tx, in datat
 		return datatask.BatchOut{}, err
 	}
 	scanned := make([]ids.UUID, 0, len(page))
-	var quoted, members, unreadable []ids.UUID
+	var quoted, members, unreadable, foreign []ids.UUID
 	memberNumbers := map[ids.ContactID]map[string]bool{}
 	for _, field := range page {
 		scanned = append(scanned, field.ID)
+		if field.NameGiven != "" && !salutation.NameIsContacts(field.NameGiven, field.NameFamily, field.HeaderName, field.Email) {
+			foreign = append(foreign, field.ID)
+			continue
+		}
 		if field.Body == nil {
 			unreadable = append(unreadable, field.ID)
 			continue
@@ -74,6 +82,7 @@ func retractOutsideSignatureWindowBatch(ctx context.Context, tx pgx.Tx, in datat
 		{quoted, "signature read off text the contact did not write in that mail"},
 		{members, "a number a workspace member signs with"},
 		{unreadable, "the mail it was read from is gone, archived or restricted"},
+		{foreign, "signature of another participant of that mail"},
 	} {
 		removed, err := contacts.RetractSignatureFieldsByIDTx(ctx, tx, retraction.fields, retraction.reason)
 		if err != nil {
@@ -98,9 +107,10 @@ func memberNumbersOf(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, se
 }
 
 // evidenceInSignatureWindow is the evidence gate's own test (gateEvidence),
-// asked of the window the pass would show the model today.
+// asked of every line the sender typed. The pass's window moved over time, and a
+// field read inside an older window is still the sender's own statement.
 func evidenceInSignatureWindow(body, evidence string) bool {
-	window := signatureBlock(body)
+	window := textlang.SenderText(body)
 	return evidenceOnPage(window, normalizeEvidence(window), evidence)
 }
 

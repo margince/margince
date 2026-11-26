@@ -9,20 +9,35 @@ import { useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
-import { type CreateField, CreateRecordModal } from "../../components/create";
+import {
+  type CreateConflict,
+  type CreateField,
+  CreateRecordModal,
+} from "../../components/create";
+import { fieldRefusals } from "../../components/create.refusals";
 import { EditAction } from "../../components/edit";
+import {
+  translationFields,
+  translationsFromValues,
+  translationValues,
+} from "../../components/labeltranslations";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useLastSubject } from "../../design-system/presence";
 import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { STAGE_CHANCES_KEY } from "../../lib/activitykeys";
+import { inPositionOrder } from "../../lib/pipelines.queries";
 import {
   isVersionSkew,
   isVersionSkewOf,
+  percentLimit,
   problemMessageOf,
   unwrap,
 } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
+import { winProbabilityFault } from "../../lib/wholenumber";
 
 type Pipeline = components["schemas"]["Pipeline"];
 type Stage = components["schemas"]["Stage"];
@@ -52,14 +67,31 @@ function stageSemantic(v: unknown): Stage["semantic"] {
 function mapStageBody(v: Record<string, unknown>) {
   return {
     name: str(v.name),
+    name_translations: translationsFromValues(STAGE_NAME, v),
     semantic: stageSemantic(v.semantic),
     win_probability: v.win_probability ? Number(str(v.win_probability)) : 0,
   };
 }
 
-function stageFields(t: T): CreateField[] {
+// The form keys the stage's name in further languages travel under.
+const STAGE_NAME = "name";
+
+// `fixedType` is the type a stage must keep because it is its pipeline's only
+// Won or Lost stage; the server refuses the change too.
+function stageFields(
+  t: T,
+  locale: Locale,
+  fixedType?: Stage["semantic"],
+): CreateField[] {
+  const chance = { label: t("stage.winProb"), limit: percentLimit(locale) };
   return [
-    { key: "name", label: "stage.name", required: true },
+    {
+      key: "name",
+      label: "stage.name",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
+    },
+    ...translationFields(STAGE_NAME),
     {
       key: "semantic",
       label: "stage.semantic",
@@ -70,13 +102,43 @@ function stageFields(t: T): CreateField[] {
         { value: "won", label: t("stage.semWon") },
         { value: "lost", label: t("stage.semLost") },
       ],
+      ...(fixedType && {
+        hint: t("stage.lastClosing"),
+        validate: (value: string) =>
+          value === fixedType ? undefined : t("stage.lastClosing"),
+      }),
     },
-    { key: "win_probability", label: "stage.winProb", type: "number" },
+    {
+      key: "win_probability",
+      label: "stage.winProb",
+      type: "number",
+      limit: chance.limit,
+      validate: (value) => winProbabilityFault(value, locale, chance),
+    },
   ];
 }
 
+function stageNameConflict(t: T): CreateConflict {
+  return {
+    field: "name",
+    code: "stage_name_taken",
+    sentence: t("stage.nameTaken"),
+  };
+}
+
+// The closing stages a pipeline cannot do without: the only live one of a kind.
+export function onlyClosingStages(ladder: readonly Stage[]): Set<string> {
+  const only = new Set<string>();
+  for (const kind of ["won", "lost"] as const) {
+    const ofKind = ladder.filter((stage) => stage.semantic === kind);
+    const [sole] = ofKind;
+    if (sole && ofKind.length === 1) only.add(sole.id);
+  }
+  return only;
+}
+
 export function ladderOf(pipeline: Pipeline): Stage[] {
-  return [...(pipeline.stages ?? [])].sort((a, b) => a.position - b.position);
+  return inPositionOrder(pipeline.stages ?? []);
 }
 
 // A new stage is created at the end of the ladder. The server moves an open
@@ -101,17 +163,26 @@ export function StageCreate({
   reason,
 }: Readonly<{ pipeline: Pipeline; reason?: string }>) {
   const t = useT();
+  const { locale } = useLocale();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const fields = stageFields(t, locale);
   const mutation = useMutation({
     mutationFn: createStage,
     onSuccess: () => {
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["pipelines"] });
+      queryClient.invalidateQueries({ queryKey: STAGE_CHANCES_KEY });
       toast.show(t("stage.added"));
     },
   });
+  const refused = fieldRefusals(
+    mutation.error,
+    fields,
+    t,
+    stageNameConflict(t),
+  );
   return (
     <>
       <Button
@@ -126,9 +197,11 @@ export function StageCreate({
         open={open && reason === undefined}
         onClose={() => setOpen(false)}
         title={t("stage.new")}
-        fields={stageFields(t)}
+        fields={fields}
         pending={mutation.isPending}
-        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
+        error={mutation.isError ? refused.rest : null}
+        fieldRefusals={refused.byField}
+        refusedAt={mutation.isError ? mutation.submittedAt : undefined}
         onSubmit={(values) => mutation.mutate({ values, pipeline })}
       />
     </>
@@ -137,8 +210,12 @@ export function StageCreate({
 
 // Invalidating the pipelines re-reads the whole ladder: a save that moves one
 // stage renumbers its siblings, and each sibling's version moves with it.
-function StageEdit({ stage }: Readonly<{ stage: Stage }>) {
+function StageEdit({
+  stage,
+  fixedType,
+}: Readonly<{ stage: Stage; fixedType: boolean }>) {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   return (
     <EditAction<Stage>
@@ -151,10 +228,12 @@ function StageEdit({ stage }: Readonly<{ stage: Stage }>) {
         id: stage.id,
         version: stage.version,
         name: stage.name,
+        ...translationValues(STAGE_NAME, stage.name_translations),
         semantic: stage.semantic,
         win_probability: String(stage.win_probability),
       }}
-      fields={stageFields(t)}
+      fields={stageFields(t, locale, fixedType ? stage.semantic : undefined)}
+      conflict={stageNameConflict(t)}
       update={async (values, _rows, opened) => {
         const answer = await api.PATCH("/stages/{id}", {
           params: {
@@ -177,6 +256,8 @@ function StageEdit({ stage }: Readonly<{ stage: Stage }>) {
 export type StageVerbs = Readonly<{
   writable: boolean;
   canRemove: boolean;
+  /** Ids of the stages that are their pipeline's only Won or only Lost stage. */
+  onlyOfKind: ReadonlySet<string>;
   onAddCriterion: (stage: Stage) => void;
   onRemove: (stage: Stage) => void;
 }>;
@@ -198,7 +279,9 @@ export function StageMenu({
   return (
     <span className="cell-actions">
       <OverflowMenu label={t("table.rowActions", { name: stage.name })}>
-        {verbs.writable && <StageEdit stage={stage} />}
+        {verbs.writable && (
+          <StageEdit stage={stage} fixedType={verbs.onlyOfKind.has(stage.id)} />
+        )}
         {verbs.writable && open && (
           <Button
             aria-haspopup="dialog"
@@ -255,6 +338,7 @@ export function useStageRemoval(
       // The refetched ladder first, then the dialog: closing it hands focus to
       // a row that must already be drawn.
       await queryClient.invalidateQueries({ queryKey: ["pipelines"] });
+      void queryClient.invalidateQueries({ queryKey: STAGE_CHANCES_KEY });
       setRemoving(null);
     },
     // Held pending until the re-read lands, so a second press cannot resend

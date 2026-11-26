@@ -9,7 +9,9 @@ import {
   type OccurredPrecision,
 } from "../format/activitywhen";
 import { calendarDay, dueInstant } from "../format/calendarday";
+import { dueTimeOf } from "../format/timezone";
 import type { EntityKind } from "./entity";
+import type { TaskType } from "./tasktype";
 
 // One drafted entry and the wire body it becomes: the shape the composer holds
 // and the `POST /activities` payload it projects to. The React form that edits
@@ -26,7 +28,8 @@ export function isActivityKind(value: string): value is ActivityDraft["kind"] {
     value === "note" ||
     value === "task" ||
     value === "call" ||
-    value === "meeting"
+    value === "meeting" ||
+    value === "message"
   );
 }
 
@@ -51,7 +54,7 @@ export type ActivityDealSelection = Readonly<{
 
 export type ActivityDraft = {
   dealFiling?: ActivityDealSelection;
-  kind: "note" | "task" | "meeting" | "call";
+  kind: "note" | "task" | "meeting" | "call" | "message";
   subject: string;
   body: string;
   // yyyy-mm-dd from the date input. Its meaning follows the kind: a task's
@@ -66,13 +69,21 @@ export type ActivityDraft = {
   // note or meeting is not held by a colleague — so it only reaches the wire on
   // a task, the same way `day` only becomes a due date there.
   assigneeId: string;
+  // The kind of work a task asks for, which decides its one button. Reaches
+  // the wire on a task only; a follow-up keeps the type its maker reads.
+  taskType: TaskType;
   // How a call ended, "" for no outcome. Reaches the wire on a call only, so a
   // draft switched from Call to Note sends none.
   callOutcome: CallOutcome | "";
+  // The transport a message travelled on, a channel_provider id, "" for none.
+  // Reaches the wire on a message only, which the server requires it for.
+  channelProvider: string;
   sourceActivityId?: string;
   followUp?: TaskDraft;
   // The workspace's custom-field values, as the create body's cf_ keys.
   custom?: Record<string, unknown>;
+  // A model polished the subject or body, so the saved activity reads AI-assisted.
+  aiAssisted?: boolean;
 };
 
 export type TaskDraft = Pick<
@@ -95,14 +106,40 @@ export function taskRequestFields(input: TaskDraft, recordZone: string) {
  * a time also reminds its assignee then, and that rule is the server's, for
  * every writer, so this sends no reminder of its own.
  */
+export function taskDueChoice(
+  dueAt: string | null | undefined,
+  hasTime: boolean | undefined,
+  zone: string,
+  intent?: components["schemas"]["IntentTime"],
+): { day: string; time: string; zone: string } {
+  const chosenZone = intent?.timezone ?? zone;
+  const [day, clock] = intent?.wall_clock.split("T") ?? [];
+  return {
+    day: day ?? (dueAt ? calendarDay(new Date(dueAt), chosenZone) : ""),
+    time: hasTime
+      ? (clock?.split(":").slice(0, 2).join(":") ??
+        (dueAt ? dueTimeOf(dueAt, hasTime, chosenZone) : ""))
+      : "",
+    zone: chosenZone,
+  };
+}
+
 export function taskDueFields(
   day: string,
   time: string,
   recordZone: string,
-): { due_at: string; due_has_time: boolean } {
+): {
+  due_at: string;
+  due_has_time: boolean;
+  due_intent: components["schemas"]["IntentTime"];
+} {
   return {
     due_at: dueInstant(day, recordZone, time),
     due_has_time: time !== "",
+    due_intent: {
+      wall_clock: `${day}T${time || "23:59:59"}`,
+      timezone: recordZone,
+    },
   };
 }
 
@@ -172,11 +209,12 @@ export function activityRequestBody(
   return {
     kind: input.kind,
     source_activity_id: input.sourceActivityId,
-    ...callAndMeetingFields(input),
+    ...kindOnlyFields(input),
     ...occurredFields(input, recordZone),
     ...(input.kind === "task"
       ? {
           ...taskRequestFields(input, recordZone),
+          task_type: input.taskType,
         }
       : {
           subject: input.subject.trim(),
@@ -186,6 +224,12 @@ export function activityRequestBody(
             : {}),
         }),
     ...(isTranscript ? { source_system: "transcript" } : {}),
+    ...(input.aiAssisted && !isTranscript && entityType && entityId
+      ? {
+          ai_assisted: true,
+          ai_assisted_on: { entity_type: entityType, entity_id: entityId },
+        }
+      : {}),
     // Only for the kinds that ask who attended. Switching to a note hides the
     // fields but keeps their picks in state. A note must not be filed against them.
     links:
@@ -207,7 +251,7 @@ export function activityRequestBody(
   };
 }
 
-function callAndMeetingFields(input: ActivityDraft) {
+function kindOnlyFields(input: ActivityDraft) {
   return {
     ...(KINDS_WITH_A_CONTACT.has(input.kind) && input.dealFiling
       ? { deal_filing: input.dealFiling.context }
@@ -215,6 +259,9 @@ function callAndMeetingFields(input: ActivityDraft) {
     // Held: a hand-logged meeting already took place (the date caps at
     // today), and held is what the lead ladder reads as engagement.
     ...(input.kind === "meeting" ? { meeting_status: "held" as const } : {}),
+    ...(input.kind === "message"
+      ? { channel_provider: input.channelProvider }
+      : {}),
     // A call always names its outcome; "No outcome" is an explicit null.
     ...(input.kind === "call"
       ? { call_outcome: input.callOutcome === "" ? null : input.callOutcome }
@@ -251,7 +298,10 @@ const EMPTY_DRAFT: ActivityDraft = {
   time: "",
   asTranscript: false,
   assigneeId: "",
+  // A task a rep files on a record most often asks them to reach out.
+  taskType: "reach_out",
   callOutcome: "",
+  channelProvider: "",
 };
 
 // The record zone keeps the entered day aligned with the stored deadline.
@@ -269,18 +319,26 @@ export function freshDraft(
   return { ...EMPTY_DRAFT, kind, day: todayDay(kind, recordZone) };
 }
 
+/** Whether a kind needs a subject: every kind but a call and a message. */
+export function subjectIsRequired(kind: ActivityDraft["kind"]): boolean {
+  return kind !== "call" && kind !== "message";
+}
+
 /**
  * Whether the draft says what happened. A call does so by its outcome or its
- * body alone; every other kind needs a subject. The server's
- * CheckEntryHasContent holds the same rule for a call.
+ * body alone, a message by its body alone; every other kind needs a subject.
+ * The server's CheckEntryHasContent holds the same rule for a call.
  */
 export function draftSaysSomething(draft: ActivityDraft): boolean {
   if (draft.subject.trim() !== "") {
     return true;
   }
+  if (subjectIsRequired(draft.kind)) {
+    return false;
+  }
   return (
-    draft.kind === "call" &&
-    (draft.callOutcome !== "" || draft.body.trim() !== "")
+    draft.body.trim() !== "" ||
+    (draft.kind === "call" && draft.callOutcome !== "")
   );
 }
 

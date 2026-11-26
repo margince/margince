@@ -13,6 +13,7 @@ import { Heading } from "../design-system/heading";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useCanWrite, useCanWriteRecord } from "../lib/capability";
+import { useHealthScope } from "../lib/healthscope";
 import { throwProblem } from "../lib/problem";
 import { useApplyTag, useRecordTags } from "../lib/tags.queries";
 import {
@@ -104,9 +105,11 @@ export function ContactsTagOffer({
   const [choosing, setChoosing] = useState(false);
   const [request, setRequest] = useState<BulkChangeRequest | null>(null);
   // Tagging a contact writes to the contact. A reader without contact.update
-  // would only meet the bulk change's refusal, so the offer is not made.
+  // would only meet the bulk change's refusal, so the offer is not made. Nor
+  // is it made until a read shows someone works there to tag.
   const mayTagContacts = useCanWrite("contact", "update");
-  if (!mayTagContacts) {
+  const someoneWorksThere = useCompanyHasContacts(companyID, mayTagContacts);
+  if (!mayTagContacts || !someoneWorksThere.data) {
     return null;
   }
   return (
@@ -149,9 +152,10 @@ export function ContactsTagOffer({
 }
 
 function useCompanyRoster(companyID: string, enabled: boolean) {
+  const readerScope = useHealthScope();
   return useQuery({
-    queryKey: ["contacts", "employed-at", companyID],
-    enabled,
+    queryKey: ["contacts", "employed-at", companyID, readerScope ?? ""],
+    enabled: enabled && readerScope !== undefined,
     queryFn: async () => {
       const { data, error } = await api.GET("/contacts", {
         params: { query: { company_id: companyID, limit: ROSTER_LIMIT } },
@@ -160,6 +164,25 @@ function useCompanyRoster(companyID: string, enabled: boolean) {
         return throwProblem(error);
       }
       return { contacts: data.data, truncated: data.page.has_more };
+    },
+  });
+}
+
+// One row answers whether to offer at all. The full roster is read only when
+// the reader presses, so a dismissed offer never pays for it.
+function useCompanyHasContacts(companyID: string, enabled: boolean) {
+  const readerScope = useHealthScope();
+  return useQuery({
+    queryKey: ["contacts", "employed-at", companyID, readerScope ?? "", "any"],
+    enabled: enabled && readerScope !== undefined,
+    queryFn: async () => {
+      const { data, error } = await api.GET("/contacts", {
+        params: { query: { company_id: companyID, limit: 1 } },
+      });
+      if (error || !data) {
+        return throwProblem(error);
+      }
+      return data.data.length > 0;
     },
   });
 }

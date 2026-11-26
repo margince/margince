@@ -2,9 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
-import { KeyCode } from "./keyedname";
 import { NameDialog } from "./namedialog";
 
 // The caller owns the write, so pending and both refusals arrive as props.
@@ -31,13 +30,17 @@ const meta: Meta<typeof NameDialog> = {
 export default meta;
 type Story = StoryObj<typeof NameDialog>;
 
-// Nothing typed yet: the save is refused as a state, not as a write in flight.
+// Nothing typed yet: the save says the name is required and goes to it.
 export const Create: Story = {
-  play: async () => {
+  args: { onSave: fn() },
+  play: async ({ args }) => {
     const dialog = within(await within(document.body).findByRole("dialog"));
-    await expect(
-      dialog.getByRole("button", { name: "Add reason" }),
-    ).toBeDisabled();
+    await userEvent.click(dialog.getByRole("button", { name: "Add reason" }));
+    await waitFor(() =>
+      expect(dialog.getByText("Reason is required.")).toBeVisible(),
+    );
+    await expect(dialog.getByRole("textbox", { name: /Reason/ })).toHaveFocus();
+    await expect(args.onSave).not.toHaveBeenCalled();
   },
 };
 
@@ -47,13 +50,17 @@ export const Rename: Story = {
     title: "Rename reason",
     initial: "Bad timing",
     confirmLabel: "Save name",
+    onSave: fn(),
+    onClose: fn(),
   },
-  play: async () => {
+  play: async ({ args }) => {
     const dialog = within(await within(document.body).findByRole("dialog"));
-    await expect(dialog.getByLabelText("Reason")).toHaveValue("Bad timing");
-    await expect(
-      dialog.getByRole("button", { name: "Save name" }),
-    ).toBeDisabled();
+    await expect(dialog.getByRole("textbox", { name: /Reason/ })).toHaveValue(
+      "Bad timing",
+    );
+    await userEvent.click(dialog.getByRole("button", { name: "Save name" }));
+    await expect(args.onSave).not.toHaveBeenCalled();
+    await expect(args.onClose).toHaveBeenCalled();
   },
 };
 
@@ -77,14 +84,14 @@ export const RenameTitleIsLabel: Story = {
   },
 };
 
-// The raw key sits under the field, the one place it shows, and describes it.
-export const RenameWithKey: Story = {
+// A rename shows a plain line under the field, never the list's internal key.
+export const RenameWithHint: Story = {
   args: {
     title: "Rename field",
     label: "Field name",
     initial: "Fleet size",
     confirmLabel: "Save",
-    hint: <KeyCode code="deal.cf_fleet_size" />,
+    hint: "Existing records keep the old name until you save.",
   },
   play: async () => {
     const dialog = within(await within(document.body).findByRole("dialog"));
@@ -92,14 +99,15 @@ export const RenameWithKey: Story = {
     const described = document.getElementById(
       field.getAttribute("aria-describedby") ?? "",
     );
-    await expect(described?.querySelector("code")).toHaveTextContent(
-      "deal.cf_fleet_size",
+    await expect(described).toHaveTextContent(
+      "Existing records keep the old name until you save.",
     );
+    await expect(described?.querySelector("code")).toBeNull();
   },
 };
 
-export const RenameWithKeyPhone: Story = {
-  ...RenameWithKey,
+export const RenameWithHintPhone: Story = {
+  ...RenameWithHint,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
@@ -127,6 +135,26 @@ export const DuplicateName: Story = {
     await expect(dialog.getByLabelText("Reason")).toHaveAttribute(
       "aria-invalid",
       "true",
+    );
+  },
+};
+
+// The server refused the name as too long.
+export const NameTooLong: Story = {
+  args: {
+    title: "Rename reason",
+    initial: "Went quiet",
+    confirmLabel: "Save name",
+    maxLength: 120,
+    nameProblem: "Reason: at most 120 characters.",
+  },
+  play: async () => {
+    const dialog = within(await within(document.body).findByRole("dialog"));
+    const field = dialog.getByLabelText("Reason");
+    await expect(field).toHaveAttribute("data-character-limit", "120");
+    await userEvent.type(field, " after the demo{Enter}");
+    await expect(field).toHaveAccessibleDescription(
+      "Reason: at most 120 characters.",
     );
   },
 };

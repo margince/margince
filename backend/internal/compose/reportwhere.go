@@ -82,7 +82,7 @@ func buildReportWhere(
 		if err != nil {
 			return nil, "", err
 		}
-		where = append(where, fmt.Sprintf("%s = $%d", expr, arg(value)))
+		where = append(where, filterClause(spec, key, expr, arg(value)))
 	}
 	scoped, err := specScopeClauses(ctx, spec, arg)
 	if err != nil {
@@ -136,6 +136,9 @@ func buildReportWhere(
 // Two writers of one invariant either share a helper or say why they do not.
 // This is the helper.
 func specScopeClauses(ctx context.Context, spec reportSpec, arg func(any) int) ([]string, error) {
+	if spec.overExtensionTable() {
+		return nil, nil
+	}
 	var scope string
 	var err error
 	if spec.activityWalk {
@@ -268,12 +271,20 @@ func namedByReport(spec reportSpec, req reportRequest) referencedColumns {
 		nameScopeVia(spec, field, named)
 	}
 	for field := range req.Filters {
-		if expr, ok := spec.filters[field]; ok {
+		if expr, ok := spec.filters[field]; ok && !valueGatedSet(spec, field) {
 			named[expr] = true
 		}
 		nameScopeVia(spec, field, named)
 	}
 	return named
+}
+
+// valueGatedSet says a filter matches by its own set predicate over a value
+// filterScopes read-gated; its displayed column's scope must not narrow it.
+func valueGatedSet(spec reportSpec, field string) bool {
+	_, set := spec.filterPredicates[field]
+	_, gated := spec.filterScopes[field]
+	return set && gated
 }
 
 // nameScopeVia marks the id column a joined attribute inherits its row scope
@@ -306,7 +317,9 @@ func nameScopeVia(spec reportSpec, field string, named referencedColumns) {
 func namedByDerivation(spec reportSpec, plan derivationPlan) referencedColumns {
 	named := make(referencedColumns, len(plan.preds)+len(plan.groupBy))
 	for _, p := range plan.preds {
-		named[p.expr] = true
+		if p.isNull || !valueGatedSet(spec, p.field) {
+			named[p.expr] = true
+		}
 	}
 	// And what the HEADLINE grouped by, which the handle names even where it
 	// pins no value. A result-level handle explains every cell of one answer at
@@ -345,27 +358,13 @@ func namedByDerivation(spec reportSpec, plan derivationPlan) referencedColumns {
 // "withheld", and folding those deals under a null key would still say that
 // SOME partner brought them.
 //
-// `named` is what bounds it: the columns this query groups by, filters on or
-// returns. A reference the answer never mentions discloses nothing, so
-// excluding its rows buys no privacy and costs correctness — a stage total that
-// drops the deals whose partner is capture-private reports less money than the
-// same reader's own deal list shows them, for a reason nothing on screen
-// states, and its drill-through link then opens more records than the count
-// counted.
+// `named` is what bounds it. A reference the answer never mentions discloses
+// nothing, and excluding its rows would report less than the reader's own list
+// shows. A report names its group-bys and filters; a drill-through also names
+// its output columns, so an explanation cannot out-see the number it explains.
 //
-// The two callers therefore pass different sets, and the difference is the
-// point. A report names its group-bys and its filters. A drill-through puts
-// every dimension on its rows, so it names its output columns as well —
-// an explanation must not out-see the number it explains.
-//
-// This is the ROW-SCOPE obligation only. A reference that also takes the
-// referenced table's OBJECT grant before it may be named at all (the project
-// an activity is filed under) declares that in spec.grants, and the
-// vocabulary gate (reportgrants.go) refuses the plan by name; a row scope
-// clause that renders empty means an unbounded reader of the table and
-// nothing about the grant, which is why the two are asked separately.
-// TestGroupingByPartnerDoesNotNameAPartnerTheCallerCannotOpen pins the
-// partner dimension to the row scope alone.
+// This is the row-scope obligation only. A reference that also owes the
+// referenced table's object grant declares it in spec.grants (reportgrants.go).
 func referenceScopeClauses(
 	ctx context.Context, spec reportSpec, named referencedColumns, arg func(any) int,
 ) ([]string, error) {
@@ -392,4 +391,18 @@ func referenceScopeClauses(
 			column, table, column, scope))
 	}
 	return clauses, nil
+}
+
+// filterClause matches a filter's bound value: through the field's set
+// predicate where the spec declares one, by equality otherwise. The headline
+// and its drill-through both render a filter here, so the two count one set.
+func filterClause(spec reportSpec, key, expr string, pos int) string {
+	ref := fmt.Sprintf("$%d", pos)
+	if template, set := spec.filterPredicates[key]; set {
+		return fmt.Sprintf(template, ref)
+	}
+	if template, listed := spec.listPredicates[key]; listed {
+		return fmt.Sprintf(template, ref)
+	}
+	return expr + " = " + ref
 }

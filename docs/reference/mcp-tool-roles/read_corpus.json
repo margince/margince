@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "corpus",
+  "verb": "read_corpus",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

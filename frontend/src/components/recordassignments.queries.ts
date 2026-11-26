@@ -1,6 +1,8 @@
 import {
+  queryOptions,
   skipToken,
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -8,7 +10,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
 import { throwProblem } from "../lib/problem";
-import { withShippedLabels } from "../lib/shippedlabels";
+import { shippedLabel, withShippedLabels } from "../lib/shippedlabels";
 
 // Who is responsible for a record, and the administered roles they hold it
 // under. The record panel, the settings card and the role picker all read the
@@ -71,11 +73,11 @@ export function assignableRoles(
   );
 }
 
-export function useRecordAssignments(
+function recordAssignmentsQuery(
   recordType: AssignmentRecordType,
   recordId: string | undefined,
 ) {
-  return useQuery({
+  return queryOptions({
     queryKey: recordAssignmentsKey(recordType, recordId ?? ""),
     queryFn: recordId
       ? async () => {
@@ -94,6 +96,75 @@ export function useRecordAssignments(
         }
       : skipToken,
   });
+}
+
+export function useRecordAssignments(
+  recordType: AssignmentRecordType,
+  recordId: string | undefined,
+) {
+  return useQuery(recordAssignmentsQuery(recordType, recordId));
+}
+
+/** A record a piece of work is about, as an assignment can name it. */
+export type AssignedRecord = Readonly<{
+  type: AssignmentRecordType;
+  id: string;
+}>;
+
+const ASSIGNABLE_RECORD_TYPES: readonly AssignmentRecordType[] = [
+  "company",
+  "deal",
+  "project",
+];
+
+/**
+ * The record behind one entity reference, when it is a kind that names
+ * colleagues with roles; nothing for a contact or a lead.
+ */
+export function assignedRecord(
+  type: string | undefined,
+  id: string | undefined,
+): AssignedRecord[] {
+  const kind = ASSIGNABLE_RECORD_TYPES.find((known) => known === type);
+  return kind && id ? [{ type: kind, id }] : [];
+}
+
+/**
+ * The colleagues named on any of these records, each with the roles they hold
+ * there, in the reader's language. Teams and inactive members are left out:
+ * only a colleague can be handed a task. A failed read names nobody, and the
+ * picker keeps its usual order.
+ */
+export function useNamedColleagues(
+  records: readonly AssignedRecord[],
+): ReadonlyMap<string, readonly string[]> {
+  const t = useT();
+  const reads = useQueries({
+    queries: records.map((record) =>
+      recordAssignmentsQuery(record.type, record.id),
+    ),
+  });
+  const named = new Map<string, string[]>();
+  for (const read of reads) {
+    for (const row of read.data ?? []) {
+      if (row.subject_kind !== "user" || row.subject_inactive) {
+        continue;
+      }
+      const role = shippedLabel(
+        {
+          label: row.role_label ?? row.role_key,
+          label_key: row.role_label_key,
+        },
+        t,
+      );
+      const roles = named.get(row.subject_id) ?? [];
+      if (!roles.includes(role)) {
+        roles.push(role);
+      }
+      named.set(row.subject_id, roles);
+    }
+  }
+  return named;
 }
 
 export function useCreateRecordAssignment(

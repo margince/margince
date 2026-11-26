@@ -28,12 +28,12 @@ func (s *Store) GetProject(ctx context.Context, id ids.ProjectID, archived store
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
 		return crmcontracts.Project{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.Project{}, err
-	}
 	var out crmcontracts.Project
-	err = s.Tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		if err := auth.EnsureVisible(ctx, tx, projectObject, id.UUID); err != nil {
 			return err
 		}
@@ -47,10 +47,9 @@ func (s *Store) GetProject(ctx context.Context, id ids.ProjectID, archived store
 	return out, err
 }
 
-// ActiveProjectColumns is the caller-side half of GetProjectTx: a caller that
-// opens the transaction itself reads the catalog BEFORE opening it, then
-// threads the answer in — the same order every store-opened entry point keeps,
-// because the catalog read takes a connection of its own. It takes
+// ActiveProjectColumns is the caller-side half of GetProjectTx. A caller that
+// opens the transaction itself reads this first and threads the answer in.
+// The read takes a connection of its own. It takes
 // project:read, as contacts's ActiveCompanyColumns takes company:read:
 // which columns a record type carries is a fact about that record type.
 func (s *Store) ActiveProjectColumns(ctx context.Context) (CustomColumns, error) {
@@ -145,34 +144,19 @@ func orderByPhase(context.Context, func(any) int) (string, error) {
 	return phaseRank("project"), nil
 }
 
-// orderByReadableCompany orders by the customer's name, and by NOTHING for a
-// company this caller may not read.
+// orderByReadableCompany orders by the name of the company company_id names,
+// and by nothing where the row masks it.
 //
-// Ordering by a value is reading it, so BOTH halves of RBAC bound it. The
-// object grant first: auth.ScopeClauseFor answers row visibility and never
-// asks whether this caller may read companies at all, so a seat holding
-// project.read and no company.read would otherwise have its page arranged
-// by company names it is refused on every other surface.
-//
-// Then the row scope, INSIDE the subquery: a company outside it answers NULL,
-// which the ORDER BY already puts last, and those projects land in the tail
-// together saying nothing about which account they name — the same answer the
-// row gives when it withholds the reference.
+// Ordering by a value is reading it, so it takes the same bounds as the row's
+// company_id. A withheld first customer answers NULL and sorts last; a later
+// visible customer never stands in for it.
 func orderByReadableCompany(ctx context.Context, arg func(any) int) (string, error) {
-	if !auth.ReadGranted(ctx, "company") {
-		// Ordered by nothing: every row sits in the tail and the page falls
-		// back to its tie-breaker.
-		return "NULL::text", nil
-	}
-	scope, err := auth.ScopeClauseFor(ctx, "company", "company_sort", arg)
+	customer, err := auth.ProjectCustomerSQL(ctx, "project.id", arg)
 	if err != nil {
 		return "", err
 	}
-	if scope != "" {
-		scope = " AND " + scope
-	}
 	return `(SELECT company_sort.display_name FROM company company_sort
-	          WHERE company_sort.id = project.` + projectCompanyColumn + scope + `)`, nil
+	          WHERE company_sort.id = ` + customer.Readable + `)`, nil
 }
 
 // ListProjects answers one page under the caller's row scope.
@@ -180,23 +164,32 @@ func (s *Store) ListProjects(ctx context.Context, in ListProjectsInput) ([]crmco
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	pre, err := storekit.BuildListPrelude(ctx, projectObject, projectListFields, active,
-		in.Sort, in.Limit, in.Cursor, in.CustomFilters)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	where, err := appendProjectFilters(ctx, pre.Where(), in, pre.Arg)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-
-	return storekit.RunListPage(ctx, s, pre, projectObject, projectColumns, active, where, scanProjectPage,
-		func(p crmcontracts.Project) (time.Time, ids.UUID) { return p.CreatedAt, ids.UUID(p.Id) },
-		func(tx pgx.Tx, page []crmcontracts.Project) error { return maskProjects(ctx, tx, page) })
+	var (
+		out  []crmcontracts.Project
+		page storekit.Page
+	)
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
+		pre, err := storekit.BuildListPrelude(ctx, projectObject, "projects", projectListFields, active,
+			in.Sort, in.Limit, in.Cursor, in.CustomFilters)
+		if err != nil {
+			return err
+		}
+		where, err := appendProjectFilters(ctx, pre.Where(), in, pre.Arg)
+		if err != nil {
+			return err
+		}
+		out, page, err = storekit.RunListPageTx(ctx, tx, pre, projectObject, projectColumns, active, where, scanProjectPage,
+			func(p crmcontracts.Project) (time.Time, ids.UUID) { return p.CreatedAt, ids.UUID(p.Id) },
+			func(tx pgx.Tx, page []crmcontracts.Project) error {
+				return maskProjects(ctx, tx, page, s.projectCustomers)
+			})
+		return err
+	})
+	return out, page, err
 }
 
 // scanProjectPage drains one list query's rows: each project plus, under a
@@ -229,22 +222,24 @@ func appendProjectFilters(ctx context.Context, where []string, in ListProjectsIn
 	if !in.IncludeArchived {
 		where = append(where, "archived_at IS NULL")
 	}
-	if in.Query != nil && *in.Query != "" {
-		where = append(where, storekit.QuickFindClause(arg(*in.Query), projectQuickFindExpr))
+	if q, ok := storekit.QuickFindQuery(in.Query); ok {
+		where = append(where, storekit.QuickFindClause(arg(q), projectQuickFindExpr))
 	}
 	if in.CompanyID != nil {
-		// A row masks company_id for a role without the company grant, and the
-		// narrowed page would name it.
-		if err := auth.RefuseUnreadableReferenceFilter(ctx, filterCompanyID, "company"); err != nil {
+		// Any of the project's live companies, not the legacy anchor column.
+		// A project is work several companies do together.
+		// Narrowing the list to a partner must show the deliveries that partner is on.
+		// A match discloses the project-company pair.
+		// A caller who may not read the edges is refused the filter, as the company page's project list is.
+		edges, err := auth.ProjectCompanyEdgesSQL(ctx, arg)
+		if err != nil {
 			return nil, err
 		}
-		// ANY of the project's live companies, not the legacy anchor column: a
-		// project is work several companies do together, so narrowing the list
-		// to a partner must show the deliveries that partner is on.
-		where = append(where, storekit.SQLf(
-			`EXISTS (SELECT 1 FROM relationship c WHERE c.kind = 'project_company'`+
-				` AND c.project_id = project.id AND c.company_id = $%d AND c.archived_at IS NULL)`,
-			arg(*in.CompanyID)))
+		if !edges.Readable {
+			return nil, apperrors.ErrPermissionDenied
+		}
+		where = append(where, storekit.SQLf("EXISTS (SELECT 1 %s AND %s = project.id AND %s = $%d)",
+			edges.Source, auth.ProjectEdgeProject, auth.ProjectEdgeCompany, arg(*in.CompanyID)))
 	}
 	ownership, err := storekit.OwnershipClause(in.OwnerID, in.OwnerTeamID, in.Unassigned, arg)
 	if err != nil {

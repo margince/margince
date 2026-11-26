@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { FlatPanelHeads } from "../../design-system/panel";
 import "./analytics.board.css";
 
 /**
@@ -25,7 +26,7 @@ export function AnalyticsBoard({
       <div className="analytics-board-main">{main}</div>
       {rail ? (
         <aside className="analytics-board-rail" aria-label={railLabel}>
-          {rail}
+          <FlatPanelHeads value>{rail}</FlatPanelHeads>
         </aside>
       ) : null}
     </div>
@@ -40,5 +41,9 @@ export function AnalyticsBoard({
 export function AnalyticsSheet({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  return <div className="analytics-sheet">{children}</div>;
+  return (
+    <div className="analytics-sheet">
+      <FlatPanelHeads value>{children}</FlatPanelHeads>
+    </div>
+  );
 }

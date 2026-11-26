@@ -1,0 +1,10 @@
+{
+  "verb": "decide_legal_review",
+  "checks": [
+    "legal_review.read",
+    "legal_review.update"
+  ],
+  "takes": [
+    "colleague_legal_review"
+  ]
+}

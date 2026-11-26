@@ -3,6 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
@@ -21,20 +22,27 @@ afterEach(cleanup);
 
 const noop = () => {};
 
+// The builder asks the server which record kinds exist, so it needs a client.
+const client = () =>
+  new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
 it("narrows a new activity field to the types the admin picks", async () => {
   const user = userEvent.setup();
   const onSubmit = vi.fn();
   render(
-    <LocaleProvider initial="en">
-      <ToastProvider>
-        <FieldBuilder
-          object="activity"
-          pending={false}
-          onSubmit={onSubmit}
-          onCancel={noop}
-        />
-      </ToastProvider>
-    </LocaleProvider>,
+    <QueryClientProvider client={client()}>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <FieldBuilder
+            object="activity"
+            pending={false}
+            error={null}
+            onSubmit={onSubmit}
+            onCancel={noop}
+          />
+        </ToastProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
   );
   await user.type(screen.getByLabelText(/Label/i), "Visit report");
   await toggleOptions(user, screen.getByLabelText(en["cf.activityKinds"]), [
@@ -43,21 +51,25 @@ it("narrows a new activity field to the types the admin picks", async () => {
   await user.click(screen.getByRole("button", { name: "Add field" }));
   expect(onSubmit).toHaveBeenCalledWith(
     expect.objectContaining({ object: "activity", activityKinds: ["meeting"] }),
+    expect.any(Function),
   );
 });
 
 it("asks no types of a field on another object", () => {
   render(
-    <LocaleProvider initial="en">
-      <ToastProvider>
-        <FieldBuilder
-          object="deal"
-          pending={false}
-          onSubmit={noop}
-          onCancel={noop}
-        />
-      </ToastProvider>
-    </LocaleProvider>,
+    <QueryClientProvider client={client()}>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <FieldBuilder
+            object="deal"
+            pending={false}
+            error={null}
+            onSubmit={noop}
+            onCancel={noop}
+          />
+        </ToastProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
   );
   expect(screen.queryByLabelText(en["cf.activityKinds"])).toBeNull();
 });
@@ -81,18 +93,20 @@ it("writes the types a listed activity field shows on", async () => {
     updated_at: "2026-01-01T00:00:00Z",
   };
   render(
-    <LocaleProvider initial="en">
-      <FieldTable
-        object="activity"
-        fields={[visit]}
-        canEdit
-        meUserId="u1"
-        onRename={noop}
-        onArchive={noop}
-        onSetting={noop}
-        onKinds={onKinds}
-      />
-    </LocaleProvider>,
+    <QueryClientProvider client={client()}>
+      <LocaleProvider initial="en">
+        <FieldTable
+          object="activity"
+          fields={[visit]}
+          canEdit
+          meUserId="u1"
+          onRename={noop}
+          onArchive={noop}
+          onSetting={noop}
+          onKinds={onKinds}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
   );
   await toggleOptions(
     user,
@@ -128,18 +142,20 @@ it("shows an email-only field as Email and lets the admin clear it", async () =>
     updated_at: "2026-01-01T00:00:00Z",
   };
   render(
-    <LocaleProvider initial="en">
-      <FieldTable
-        object="activity"
-        fields={[mailed]}
-        canEdit
-        meUserId="u1"
-        onRename={noop}
-        onArchive={noop}
-        onSetting={noop}
-        onKinds={onKinds}
-      />
-    </LocaleProvider>,
+    <QueryClientProvider client={client()}>
+      <LocaleProvider initial="en">
+        <FieldTable
+          object="activity"
+          fields={[mailed]}
+          canEdit
+          meUserId="u1"
+          onRename={noop}
+          onArchive={noop}
+          onSetting={noop}
+          onKinds={onKinds}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
   );
   const control = screen.getByLabelText("Types “Mail category” shows on");
   expect(control).toHaveTextContent("Email");

@@ -6,16 +6,29 @@ import {
 } from "../features/settings/settingsnav";
 import { settingsPageKeywords } from "../features/settings/settingssearch";
 import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { useCompanyContextShown } from "../lib/companycontextreach";
+import { screenEnabled, useHiddenCoreFeatures } from "../lib/corefeatures";
+import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
+import { useReadsTeamProgress } from "../lib/progressreader";
 import { settingsHref } from "../lib/settingsrouting";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
   resolveCustomLabel,
 } from "./custom";
-import { CREATE_ID, NAV } from "./nav";
+import { CREATE_ID, CREATE_SCREENS, NAV, navLabelKey } from "./nav";
 import type { Command } from "./palette";
 import { settingsCommandId } from "./paletteconfiguration";
+
+// Each kind's "New …" label; the commands follow `CREATE_SCREENS`' order.
+const CREATE_LABEL: Readonly<Record<EntityKind, MessageKey>> = {
+  contact: "create.contact",
+  company: "create.company",
+  lead: "create.lead",
+  deal: "action.newDeal",
+  project: "project.new",
+};
 
 export function useBuiltinCommands(): Command[] {
   const t = useT();
@@ -23,10 +36,13 @@ export function useBuiltinCommands(): Command[] {
   const visible = useVisibleSettingsPages();
   const seesCompanyContext = useCompanyContextShown();
   const opensTab = useOpensSettingsTab();
+  const disabled = useHiddenCoreFeatures();
+  const readsTeam = useReadsTeamProgress();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,
-      label: t(item.labelKey),
+      label: t(navLabelKey(item, readsTeam) ?? item.labelKey),
+      icon: item.icon,
       keywords: [item.screen, ...(item.aliases ?? [])],
       type: "screen",
       route: { screen: item.screen },
@@ -39,17 +55,31 @@ export function useBuiltinCommands(): Command[] {
       route: { screen: CUSTOM_SCREEN, id: screen.key },
     }));
     const actions: Command[] = [
-      {
-        id: "action:new-deal",
-        label: t("action.newDeal"),
-        type: "action",
-        route: { screen: "deals", id: CREATE_ID },
-      },
+      ...[...CREATE_SCREENS].flatMap((screen) => {
+        const entity = SCREEN_ENTITY[screen];
+        return entity
+          ? [
+              {
+                id: `action:new-${entity}`,
+                label: t(CREATE_LABEL[entity]),
+                type: "action" as const,
+                route: { screen, id: CREATE_ID },
+              },
+            ]
+          : [];
+      }),
       {
         id: "action:booking",
         label: t("action.booking"),
         type: "action",
         route: { screen: "book" },
+      },
+      {
+        id: "action:shortcuts",
+        label: t("shell.help.shortcuts"),
+        keywords: ["shortcuts", "keyboard", "hotkeys", "help"],
+        type: "action",
+        presses: "shortcuts",
       },
     ];
     const settingsScreens: Command[] = visible.map((page) => ({
@@ -62,7 +92,7 @@ export function useBuiltinCommands(): Command[] {
           ? [t("settings.companyRefresh")]
           : []),
       ],
-      type: "screen",
+      type: "setting",
       route: settingsHref(page.id),
     }));
     const offRailScreens: Command[] = [
@@ -80,6 +110,9 @@ export function useBuiltinCommands(): Command[] {
       ...actions,
       ...offRailScreens,
       ...settingsScreens,
-    ];
-  }, [t, visible, locale, seesCompanyContext, opensTab]);
+    ].filter(
+      (command) =>
+        !command.route || screenEnabled(command.route.screen, disabled),
+    );
+  }, [t, visible, locale, seesCompanyContext, opensTab, disabled, readsTeam]);
 }

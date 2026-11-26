@@ -26,8 +26,10 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // ChampionCover is what one deal's committee says about its champion seat.
@@ -135,19 +137,19 @@ func championSeats(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	dealsPos := arg(dealIDs)
-	rolePos := arg(dealrole.Champion)
 	bound, err := edgeBound(ctx, "r", arg)
 	if err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT r.deal_id,
-		       array_remove(array_agg(r.contact_id) FILTER (WHERE r.role = $%[2]d), NULL)
+		       array_remove(array_agg(r.contact_id) FILTER (WHERE %[6]s = '%[2]s'), NULL)
 		  FROM relationship r
 		  JOIN contact p ON %[4]s
-		 WHERE r.kind = 'deal_stakeholder' AND r.deal_id = ANY($%[1]d) AND r.archived_at IS NULL
+		 WHERE %[5]s AND r.deal_id = ANY($%[1]d)
 		   AND (%[3]s)
-		 GROUP BY r.deal_id`, dealsPos, rolePos, bound, liveContactSeat), args...)
+		 GROUP BY r.deal_id`, dealsPos, dealrole.Champion, bound, liveContactSeat, dealseat.CurrentSQL("r"),
+		dealrole.RecordedSQL("r.role")), args...)
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading the champion seats on a set of deals: %w", err)
 	}
@@ -237,9 +239,9 @@ func withheldSeats(
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT DISTINCT r.deal_id
 		  FROM relationship r
-		 WHERE r.kind = 'deal_stakeholder' AND r.deal_id = ANY($%[1]d) AND r.archived_at IS NULL
+		 WHERE %[4]s AND r.deal_id = ANY($%[1]d)
 		   AND EXISTS (SELECT 1 FROM contact p WHERE %[3]s)
-		   AND NOT (%[2]s)`, dealsPos, admitted, liveContactSeat), args...)
+		   AND NOT (%[2]s)`, dealsPos, admitted, liveContactSeat, dealseat.CurrentSQL("r")), args...)
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading which deals carry a seat this reader may not see: %w", err)
 	}
@@ -259,15 +261,8 @@ func withheldSeats(
 }
 
 // engagedAmong answers which (deal, contact) pairs had a two-way exchange in
-// the window.
-//
-// The engagement test is EngagedStakeholders' — both directions required
-// inside the same window, over the same qualifying activity — asked of a set
-// rather than one deal. Two spellings of "engaged" is how one screen calls a
-// deal single-threaded while another calls it covered, which is the
-// disagreement the single-definition rule in this package's header exists to
-// stop; the shared pieces are healthEngagementWindowDays and
-// healthInteraction, so a change to either moves both readers at once.
+// the window: both directions, over activity that may speak for a deal.
+// EngagedStakeholders asks it of one deal, so both screens share one spelling.
 func engagedAmong(
 	ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, now time.Time,
 ) (map[dealContact]bool, error) {
@@ -285,19 +280,20 @@ func engagedAmong(
 	// in it would be read as a verb and corrupt the statement at runtime.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT DISTINCT r.deal_id, r.contact_id FROM relationship r
-		WHERE r.kind = 'deal_stakeholder' AND r.deal_id = ANY($%[1]d) AND r.archived_at IS NULL
+		WHERE %[6]s AND r.deal_id = ANY($%[1]d)
 		  AND (%[3]s)
 		  AND EXISTS (
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = r.contact_id
 			WHERE %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
-			  AND %[2]s AND a.direction = 'inbound')
+			  AND %[2]s AND %[5]s AND a.direction = 'inbound')
 		  AND EXISTS (
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = r.contact_id
 			WHERE %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
-			  AND %[2]s AND a.direction = 'outbound')`,
-		dealsPos, occurredday.FromSQL("a", fmt.Sprintf("$%d", windowPos)), bound, healthInteraction(fmt.Sprintf("$%d::timestamptz", nowPos))), args...)
+			  AND %[2]s AND %[5]s AND a.direction = 'outbound')`,
+		dealsPos, occurredday.FromSQL("a", fmt.Sprintf("$%d", windowPos)), bound, healthInteraction(fmt.Sprintf("$%d::timestamptz", nowPos)),
+		relstrength.DealEvidenceSQL("a", "r.deal_id"), dealseat.CurrentSQL("r")), args...)
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading engagement across a set of deals: %w", err)
 	}

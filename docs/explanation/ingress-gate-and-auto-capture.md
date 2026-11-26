@@ -207,9 +207,11 @@ Notes on some tiers:
   counts as a decided `real`. The exception is an address that a channel connector stands behind:
   that names a contact, but it is not two-way mail.
 
-**After the transaction commits,** the contacts module creates the contact. This happens outside the
-transaction, so a failure there cannot lose the message. Failures are logged for the daily repair
-job.
+**At the end of the same transaction,** the contacts module creates the contact and files the
+message under it. No reader sees the message before it is filed, so the link does not move the Home
+cache's access fence. The step runs inside a savepoint, so a failure there undoes the contact and
+keeps the message. Failures are logged for the daily repair job. A channel record's contact is
+still created after the commit, in its own transaction.
 
 Creating a contact does **not** create their company. That is a separate question, and the answer
 comes from reading the web site of the domain (AI task `site_triage`).
@@ -559,6 +561,7 @@ Say `acme.com` is a registered own domain, and the client is `dana@client.io`.
 | `ThreadKey` | Starts with the provider name | Two providers can use the same key and merge conversations that have nothing to do with each other |
 | `OccurredAt` | The provider's own time | The timeline is in the order we pulled, not the order things happened |
 | `Raw` | The original payload | You lose the original record |
+| `Activity.AssigneeID` and `Activity.DueAt` | On a `task` and nothing else. `AssigneeID` names a live colleague, and `DueAt` puts the task on their Worklist | Any other kind is refused. An agent seat or a user who is not there is refused and lands nothing. A task with no due date is on nobody's Worklist |
 | `Counterparty.ChannelIdentity` | On a channel record: both parts (provider and account ID), or neither | Half an identity is refused. An empty one lands a message with no way to reply |
 | `Counterparty.Email` on a channel record | Send it every time the provider knows it, and declare `email` in the source's `Merges` | No declaration, no record. No address, and a human already captured from mail becomes a second contact |
 | `Activity.ChannelProvider` | On a `message` and nothing else, naming a channel the unit declared | A record that is not a message but names a transport is a note the reply path would answer on |
@@ -594,6 +597,18 @@ has a right to.
 | What starts the company check | `backend/internal/compose/capturedomaintriage.go` |
 | Job schedules and time limits | `backend/api/jobs.yaml` |
 | A connector to learn from | `extensions/openchannel/` |
+
+In a classified mailbox, captured image files also require a thread verdict. A file name cannot tell whether an image
+holds private details. The text reader cannot read images, so an image it cannot judge stays
+held for its owner to review. Capture does not record whether a stored image was inline.
+
+A reopened thread keeps the message that caused the new question, even while its mailbox is shared
+or held. It stays pending without a model call until the mailbox is classified again.
+
+Capture counts invited members and members who cannot sign in, so imported mail still belongs to the company.
+It does not match new mail to retired members. A revoked invite still counts as a member who cannot sign in.
+That state cannot be told apart from an imported member.
+
 
 ### Other pages
 

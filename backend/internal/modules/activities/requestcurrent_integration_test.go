@@ -19,7 +19,7 @@ func TestCurrentRequestReadAdmitsBeforeLimitingAndRechecksSourceAccess(t *testin
 	e := setupLoad(t)
 	query := ids.NewV7().String()
 	want := seedEmailRequest(t, e, query+" Please send the report", "commitment", OwedVerdictAsksUs)
-	seedEmailRequest(t, e, query+" Thanks for the update", "noise", OwedVerdictInformsUs)
+	seedEmailRequest(t, e, query+" Thanks for the update", "other", OwedVerdictInformsUs)
 	store := storeKnowing(e)
 	at := requestInstant.Add(time.Hour)
 	rows, _, err := store.ListActivities(e.as(), ListActivitiesInput{RequestCurrentAsOf: &at, Query: &query, Limit: new(1)})
@@ -98,7 +98,7 @@ func TestCurrentRequestsKeepEachReadersDispositionAndReplyWake(t *testing.T) {
 		func() error { return store.SetMessageNotMine(reader, request) },
 		func() error { return store.MarkMessageHandled(reader, request) },
 		func() error {
-			return store.SnoozeMessage(reader, request, values.ReopenOnTime, new(at.Add(time.Hour)), nil)
+			return store.SnoozeMessage(reader, request, values.ReopenOnTime, new(at.Add(time.Hour)), nil, nil)
 		},
 	} {
 		if err := judge(); err != nil {
@@ -110,7 +110,7 @@ func TestCurrentRequestsKeepEachReadersDispositionAndReplyWake(t *testing.T) {
 		}
 		assertCurrent(true)
 	}
-	if err := store.SnoozeMessage(reader, request, values.ReopenOnReply, nil, nil); err != nil {
+	if err := store.SnoozeMessage(reader, request, values.ReopenOnReply, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	assertCurrent(false)

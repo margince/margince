@@ -1,0 +1,17 @@
+{
+  "verb": "send_company_email",
+  "checks": [
+    "activity.create",
+    "activity.read",
+    "company.read",
+    "contact.create",
+    "contact.read",
+    "deal.read",
+    "lead.read",
+    "project.read"
+  ],
+  "takes": [
+    "company",
+    "consented_contact"
+  ]
+}

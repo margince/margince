@@ -153,6 +153,10 @@ type ListInput struct {
 	Kind               *string
 	TargetType         *string
 	TargetID           *ids.UUID
+	// Targets narrows to the rows staged against any of these records. It is
+	// read through the per-row decidability probe like the whole inbox, so a
+	// record the caller cannot see adds nothing. Empty means no filter.
+	Targets []ids.Ref
 	// BundleID narrows the read to the proposals ONE act staged together. It
 	// composes with the other filters rather than replacing them, and it does
 	// not relax the per-row decidability probe: a member the caller could not
@@ -196,6 +200,8 @@ type ListInput struct {
 	// failedDecider is FailedForDecider resolved to the acting user;
 	// set by List from the principal, never by a caller.
 	failedDecider *ids.UUID
+	// lapseCutoff is the instant a decision must precede to have lapsed unredeemed.
+	lapseCutoff time.Time
 	// actionableAt is the service clock reading Actionable resolved, so every
 	// batch of one read judges expiry at the same instant.
 	actionableAt *time.Time
@@ -227,6 +233,7 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page,
 			return nil, storekit.Page{}, apperrors.ErrPermissionDenied
 		}
 		in.failedDecider = &p.UserID
+		in.lapseCutoff = s.now().UTC().Add(-redemptionTTL)
 	}
 	// Kept for the in-process seams, which pass their own limit; the HTTP
 	// binder clamps before it gets here.
@@ -363,6 +370,13 @@ func approvalWhere(in ListInput, from *keysetStart, arg func(any) int) string {
 	if in.TargetID != nil {
 		terms = append(terms, fmt.Sprintf("target_entity_id = $%d", arg(*in.TargetID)))
 	}
+	if len(in.Targets) > 0 {
+		pairs := make([]string, len(in.Targets))
+		for i, target := range in.Targets {
+			pairs[i] = fmt.Sprintf("($%d::text, $%d::uuid)", arg(target.Type), arg(target.ID))
+		}
+		terms = append(terms, "(target_entity_type, target_entity_id) IN ("+strings.Join(pairs, ", ")+")")
+	}
 	if in.BundleID != nil {
 		terms = append(terms, fmt.Sprintf("bundle_id = $%d", arg(*in.BundleID)))
 	}
@@ -373,7 +387,7 @@ func approvalWhere(in ListInput, from *keysetStart, arg func(any) int) string {
 		terms = append(terms, fmt.Sprintf("decided_at > $%d", arg(*in.DecidedAfter)))
 	}
 	if in.failedDecider != nil {
-		terms = append(terms, fmt.Sprintf("decided_by = $%d AND %s", arg(*in.failedDecider), stillFailing), noCompletedStageReplacement)
+		terms = append(terms, fmt.Sprintf("decided_by = $%d AND %s", arg(*in.failedDecider), stillFailing(fmt.Sprintf("$%d", arg(in.lapseCutoff)))), noCompletedStageReplacement)
 	}
 	if from != nil {
 		terms = append(terms, fmt.Sprintf("(created_at, id) < ($%d, $%d)", arg(from.createdAt), arg(from.id)))

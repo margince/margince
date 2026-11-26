@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
-	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // introNote is one written note.
@@ -132,18 +131,8 @@ func noteRequest(facts noteFacts) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: noteSchema(),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       model.AboutContacts(facts.subjects...),
 	}
-}
-
-// noteSchema is the shape the model must answer in.
-func noteSchema() json.RawMessage {
-	return schema.Must(schema.Object(
-		map[string]schema.Node{
-			"subject": schema.String(),
-			"body":    schema.String(),
-		},
-		"subject", "body",
-	))
 }
 
 // parseIntroNote reads the reply and refuses what a reader must not be handed.

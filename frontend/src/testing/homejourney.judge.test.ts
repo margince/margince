@@ -24,6 +24,7 @@ import {
   tally,
   type Vitals,
   vitalsP95,
+  vitalsQuantile,
   vitalsReasons,
   withheldSources,
 } from "./homejourney.judge";
@@ -146,10 +147,27 @@ describe("degradedReasons", () => {
       answer({ read: "worklist", body: day({ focus: FOCUS }) }),
     );
     expect(degradedReasons(empty, WORK, READER)).toEqual([
-      "worklist: empty queue for a reader who has work",
       "worklist: no focus item for a reader who has work",
     ]);
     expect(degradedReasons(empty, NONE, READER)).toEqual([]);
+  });
+
+  it("accepts Home's Focus when the full queue is omitted", () => {
+    const home = healthy(
+      answer({ read: "worklist", body: day({ focus: busyDay.focus }) }),
+    );
+    expect(degradedReasons(home, WORK, READER)).toEqual([]);
+  });
+
+  it("rejects a Home answer with no Focus field", () => {
+    const { focus: _focus, ...missing } = busyDay;
+    expect(
+      degradedReasons(
+        healthy(answer({ read: "worklist", body: missing })),
+        WORK,
+        READER,
+      ),
+    ).toContain("worklist: no focus to lead with");
   });
 
   it("names a session answered for somebody else", () => {
@@ -324,7 +342,21 @@ describe("Home's browser vitals", () => {
     dayPaints: DayPaint[],
     shifts: Shift[] = [],
     roots = 1,
-  ): Vitals => ({ dayPaints, shifts, roots });
+  ): Vitals => ({ dayPaints, shifts, roots, lcpMs: 300, settled: true });
+
+  it("keeps LCP separate from the day paint and rejects a missing reading", () => {
+    expect(vitalsReasons([{ ...load([paint(100)]), lcpMs: 1001 }])).toEqual([
+      "LCP p95 1001 ms is over 1000 ms",
+    ]);
+    for (const lcpMs of [null, -1, 0, Number.NaN, Number.POSITIVE_INFINITY])
+      expect(vitalsReasons([{ ...load([paint(100)]), lcpMs }])).toEqual([
+        "load 1: LCP was not measured",
+      ]);
+    expect(vitalsReasons([{ ...load([paint(100)]), settled: false }])).toEqual([
+      "load 1: Home did not settle",
+    ]);
+    expect(vitalsReasons([{ ...load([paint(100)]), lcpMs: 1000 }])).toEqual([]);
+  });
 
   it("takes the day content's largest paint, however early or late", () => {
     expect(dayPaint([paint(100, 50), paint(1_500, 5_000)])?.at).toBe(1_500);
@@ -368,6 +400,20 @@ describe("Home's browser vitals", () => {
     expect(vitalsReasons(loads)).toEqual([
       "day paint p95 1500 ms is over 1000 ms",
     ]);
+  });
+
+  it("in relative mode leaves speed to the comparison but still fails an unmeasured load", () => {
+    const slow = [load([paint(5_000)], [shift(0, 0.5)])];
+    expect(vitalsReasons(slow, "relative")).toEqual([]);
+    expect(vitalsReasons([load([])], "relative")).toEqual([
+      "load 1: Home's day content never painted",
+    ]);
+    expect(vitalsReasons([], "relative")).toEqual(["no load was measured"]);
+  });
+
+  it("takes the median day paint for the comparison", () => {
+    const loads = [400, 500, 900, 1_200, 3_000].map((at) => load([paint(at)]));
+    expect(vitalsQuantile(loads, 0.5).dayPaintMs).toBe(900);
   });
 
   it("sums shifts within one session window and keeps the worst window", () => {

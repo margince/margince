@@ -54,8 +54,8 @@ describe("the controls", () => {
     await readings();
     expect(screen.getByRole("combobox", { name: "Date range" })).toBeVisible();
     expect(screen.queryByRole("combobox", { name: "Pipeline" })).toBeNull();
-    expect(screen.getByText("Pipeline: Sales")).toBeVisible();
-    expect(screen.getByText(/^Closing: /)).toBeVisible();
+    expect(screen.getByText(/Pipeline: Sales/)).toBeVisible();
+    expect(screen.getByText(/Closing: /)).toBeVisible();
     const user = userEvent.setup({ delay: null });
     const filters = screen.getByRole("button", { name: "Filters" });
     expect(filters).toHaveAttribute("aria-expanded", "false");
@@ -110,11 +110,11 @@ describe("the lead and its readings", () => {
     openScenario("wrongTargetScope");
     await readings();
     expect(
-      hero().getByText("Pick one team to compare with a target"),
+      hero().getByText("Pick one team to compare with a goal"),
     ).toBeVisible();
     expect(hero().queryByText(/still to win/)).toBeNull();
     expect(
-      screen.getAllByText("Pick one team to compare with a target"),
+      screen.getAllByText("Pick one team to compare with a goal"),
     ).toHaveLength(1);
   });
 });

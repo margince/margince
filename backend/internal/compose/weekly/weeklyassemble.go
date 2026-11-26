@@ -22,10 +22,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/briefs"
-	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/compose/dayrule"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/reportperiod"
 )
@@ -39,14 +40,10 @@ import (
 const dealLineCap = 20
 
 // WeekStartOf is the Monday of the local week containing now, in the
-// installation's reporting zone.
-//
-// Monday because the review is about a working week and the product's own
-// language says so. Derived through briefs.LocalDayAt rather than a second
-// spelling of the zone lookup: two answers to "what day is it here" is how a
-// Sunday-night job files its work under the wrong week.
+// installation's reporting zone. The job that lists who is due a review counts
+// every rep in one pass, so the week stays on the installation's zone.
 func WeekStartOf(ctx context.Context, tx pgx.Tx, now time.Time) (time.Time, error) {
-	day, _, err := briefs.LocalDayAt(ctx, tx, now)
+	day, _, err := dayrule.DayAt(ctx, tx, occurredday.Combined, ids.Nil, now)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -63,7 +60,7 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return Review{}, false, err
 	}
-	userID, err := reviewUser(ctx)
+	userID, err := auth.OwnSeat(ctx)
 	if err != nil {
 		return Review{}, false, err
 	}
@@ -228,11 +225,11 @@ func (e *Engine) measureWeek(
 // and the conversion are one answer: a DST week is 167 or 169 hours, and
 // adding 7*24h to a start would measure an hour of the wrong week twice a year.
 func localWeekWindow(ctx context.Context, tx pgx.Tx, weekStart time.Time) (time.Time, time.Time, error) {
-	zone, err := identity.TimezoneOf(ctx, tx)
+	zone, err := dayrule.Zone(ctx, tx, occurredday.Combined, ids.Nil)
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
-	return WeekWindow(weekStart, zone)
+	return WeekWindow(weekStart, zone.String())
 }
 
 // WeekWindow interprets the stored week date in its reporting zone, including DST.

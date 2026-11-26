@@ -12,13 +12,70 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "2f7580ef18595532",
+    "tools": "3f10dfc06091d267",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
+    "ran_at": "2026-11-21T22:17:25Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:35:55Z"
+  },
   "usage": {
-    "input_tokens": 61254,
-    "output_tokens": 4730,
+    "input_tokens": 52391,
+    "output_tokens": 4323,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 575360,
+    "cache_read_input_tokens": 567040,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "check_availability",
+        "find_records",
+        "read_context",
+        "read_record",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "check_availability",
+        "find_records",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 14,
+      "min": 14,
+      "max": 14
+    },
+    "refused": {
+      "median": 6.5,
+      "min": 5,
+      "max": 8
+    },
+    "prompt_tokens": {
+      "median": 309715.5,
+      "min": 264276,
+      "max": 355155
+    },
+    "output_tokens": {
+      "median": 2161.5,
+      "min": 1853,
+      "max": 2470
+    }
   }
 }

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Command decisioncertcmd writes internal/modules/ai/decisioncert_gen.go: the
-// table of (task, site, provider, model) the decisions lane may serve, one row
-// per committed decision record that is certified and still describes the
-// decision question this build asks. `make gen` runs it, and `make drift` fails
-// a committed table that disagrees with the records.
+// Command decisioncertcmd writes internal/modules/ai/decisioncert_gen.go, which
+// lists the (task, site, provider, model) rows the decisions lane may serve. It has one row per decision record that is
+// certified and still describes the question this build asks.
+// `make gen` runs it, and `make drift` fails a table that disagrees with the records.
 package main
 
 import (

@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -42,7 +43,7 @@ func (e *dedupeEnv) ensureInput(ctx context.Context, t *testing.T, email, displa
 			INSERT INTO activity_participant (activity_id, role, address, user_id, address_domain_folded)
 			SELECT $1::uuid, 'from', $2::text, NULL::uuid, $4::text
 			UNION ALL SELECT $1::uuid, 'to', lower(u.email), u.id, u.email_domain_folded FROM app_user u WHERE u.id = $3`,
-			activityID, email, e.rep, owndomain.StoredOfAddress(email))
+			activityID, correspondence.Fold(email), e.rep, owndomain.StoredOfAddress(email))
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -232,13 +233,13 @@ func TestEnsureCounterpartyAsksNothingAboutConsumerMail(t *testing.T) {
 	}
 }
 
-func TestEnsureCounterpartyQuarantinesImpersonationSuspects(t *testing.T) {
+func TestEnsureCounterpartyWarnsOfASenderShowingASign(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
 	// A display name embedding an address on a DIFFERENT domain — the
-	// classic spoof tell. The row still lands (hiding suspicious mail
-	// would be worse), but quarantined for the review surface.
+	// classic spoof sign. The row still lands (hiding suspicious mail
+	// would be worse), and wears the warning the contact read serves.
 	res, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t,
 		"boss@spoof.test", "ceo@real-corp.example", "spoof.test"))
 	if err != nil {
@@ -251,7 +252,7 @@ func TestEnsureCounterpartyQuarantinesImpersonationSuspects(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !quarantined {
-		t.Fatal("an embedded-foreign-address display name must land quarantined")
+		t.Fatal("an embedded-foreign-address display name must land with the warning")
 	}
 
 	if _, err := e.store.EnsureCounterparty(ctx, EnsureCounterpartyInput{Email: "  "}); err == nil {

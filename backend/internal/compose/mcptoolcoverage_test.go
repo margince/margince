@@ -33,6 +33,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/compose/mcpe2e"
 )
 
 var updateMCPToolCoverage = flag.Bool("update-mcp-tool-coverage", false,
@@ -52,7 +54,9 @@ const (
 	e2eLLMScenarioDir  = "../../../e2e/llm/scenarios"
 	e2eLLMCriteriaFile = "../../../e2e/llm/criteria.yaml"
 	e2eLLMRecordDir    = "aicert/records/mcp_e2e"
+	e2eLLMRESTDir      = "aicert/records/mcp_e2e_rest"
 	mcpDocsDir         = "../../../docs/reference"
+	repoRoot           = "../../.."
 )
 
 type toolCoverageRow struct {
@@ -77,18 +81,21 @@ type toolCoverageRow struct {
 	// undone that is done.
 	MustCallOneOf []string `json:"required_as_one_of_a_set_by_cases"`
 	MayCall       []string `json:"permitted_in_cases"`
-	Driven        bool     `json:"driven"`
+	// CalledIn are the cases a held run of some model called this tool in. A
+	// case pins the outcome, not the tool, so a tool such a run used is driven.
+	CalledIn []string `json:"called_in_held_runs"`
+	Driven   bool     `json:"driven"`
 	// OneOfASet is the third state as a flag, so a reader of the JSON does not
 	// have to infer it from two empty lists.
 	OneOfASet bool `json:"required_only_as_one_of_a_set"`
-	// GradedBy are the certification tasks whose corpus names this tool. That
-	// lane grades tool SELECTION — which tool a goal should reach for, and
-	// which plausible neighbour it must avoid — and the use-case lane cannot
-	// express it: check.py sees that a name appeared, never whether it was the
-	// right first reach. So a tool no case REQUIRES may still be graded, and a
-	// page that reported the two as one silence would name work undone that is
-	// done, on a different question.
-	GradedBy []string `json:"graded_by_certification_tasks"`
+	// GradedBy are the certification tasks whose corpus expects this tool as the
+	// answer, and NearMissIn those that name it only as a wrong reach. That
+	// lane grades tool selection: which tool a goal should reach for. The
+	// use-case lane cannot express it, because check.py sees that a name
+	// appeared, never whether it was the right first reach. So a tool no case
+	// requires may still be graded elsewhere, on a different question.
+	GradedBy   []string `json:"graded_by_certification_tasks"`
+	NearMissIn []string `json:"near_miss_in_certification_tasks"`
 	// MeasuredByModel is what the lane saw across the cases that require this
 	// tool, PER MODEL. Empty when nothing requires it, or when no run has been
 	// committed. Keyed by model because reliability is a property of the pair:
@@ -155,11 +162,14 @@ type coverageTotals struct {
 	// corpus nevertheless names. It is the difference between "untried" and
 	// "untried by this lane".
 	UndrivenButGraded int `json:"never_driven_but_graded_elsewhere"`
+	// UndrivenNearMissOnly are the never-driven tools that lane names only as
+	// a wrong reach: it checks a model avoids them, never that one can use them.
+	UndrivenNearMissOnly int `json:"never_driven_near_miss_only"`
 }
 
 type caseRow struct {
 	Name string `json:"name"`
-	// Title is the scenario's own first line, the job in a contact's words.
+	// Title is the scenario's `title:` line, the job in a user's words.
 	Title string `json:"title"`
 	File  string `json:"file"`
 	// Passport is the credential the scenario asks the lane to present: empty for
@@ -198,6 +208,16 @@ type caseModelRun struct {
 	// empty on a verdict filed before the lane recorded them.
 	Driver string `json:"driver,omitempty"`
 	Search string `json:"search,omitempty"`
+	// SelfJudged is a judge of the model's own family decided its criteria.
+	SelfJudged bool               `json:"self_judged,omitempty"`
+	Efficiency *mcpe2e.Efficiency `json:"efficiency,omitempty"`
+	Slow       bool               `json:"slow,omitempty"`
+	Regraded   bool               `json:"regraded,omitempty"`
+	// EarlierListing names what changed since the run, per `make e2e-llm-report`.
+	EarlierListing []string `json:"measured_on_an_earlier_listing,omitempty"`
+	// ToolsCalled are the tools a passing run used; the page counts them as
+	// driven where the case held.
+	ToolsCalled []string `json:"-"`
 }
 
 // modelCoverage is the whole lane as ONE model ran it. Driven/never-driven is
@@ -206,11 +226,15 @@ type caseModelRun struct {
 // model is whether the driving SUCCEEDED, and only that is reported per model.
 type modelCoverage struct {
 	Model         string `json:"model"`
+	Name          string `json:"name"`
+	Trust         string `json:"trust"`
 	CasesRecorded int    `json:"cases_with_a_committed_run"`
 	CasesHeld     int    `json:"cases_that_reached_their_bar"`
 	CasesBelowBar int    `json:"cases_below_their_bar"`
-	Runs          int    `json:"runs"`
-	Passed        int    `json:"passed"`
+	// CasesOnEarlierListing counts the cases whose run measured an earlier listing.
+	CasesOnEarlierListing int `json:"cases_measured_on_an_earlier_listing"`
+	Runs                  int `json:"runs"`
+	Passed                int `json:"passed"`
 	// Reliability is Passed/Runs over every committed run. It answers "how often
 	// did this model do the job", which a count of held cases cannot: a case
 	// scraping its bar two runs in three and one passing all three are both held.
@@ -222,6 +246,15 @@ type modelCoverage struct {
 	// of its runs had search degraded to word overlap.
 	Route  string `json:"route"`
 	Search string `json:"search,omitempty"`
+	// SelfJudged is true when a judge of its own family decided any of them.
+	SelfJudged bool `json:"self_judged"`
+	// CallsPerCase and Slow say how directly it finished: scores, never a fail.
+	CallsPerCase string   `json:"calls_per_case"`
+	Slow         []string `json:"slow_cases"`
+	// MedianCalls and MedianTurns are the same medians, bare, for the summary
+	// table; MedianTurns is "-" for a route that reports no turn count.
+	MedianCalls string `json:"median_calls_per_case"`
+	MedianTurns string `json:"median_turns_per_case"`
 }
 
 type mcpToolCoverage struct {
@@ -230,6 +263,9 @@ type mcpToolCoverage struct {
 	// Models is the lane per model that has run it. Empty until a paid sweep is
 	// committed, which the page says outright rather than implying nothing works.
 	Models []modelCoverage `json:"models"`
+	// REST is the same lane through the REST door, which the MCP models above
+	// never include: one assistant's two doors are two different results.
+	REST doorCoverage `json:"rest_door"`
 	// Judges is how well each candidate JUDGE reads the lane's criteria, scored
 	// against human-authored fixtures. It rides on this page rather than its own
 	// because a pass rate and the accuracy of whoever decided it are one fact: a
@@ -246,14 +282,14 @@ type mcpToolCoverage struct {
 	// UnitTools are the agent tools the shipped units contribute, read from
 	// each unit's published manifest.
 	UnitTools []unitTool `json:"unit_tools"`
-	// Agents is Surface B: the scheduled agents and the allowlist each one is
+	// Agents are the night helpers: the scheduled agents and the allowlist each one is
 	// narrowed to. A scheduled run never sees the whole catalog, so reporting
 	// one coverage number over both surfaces reports a menu nobody is served.
 	Agents []agentSurfaceRow `json:"scheduled_agent_surface"`
 }
 
-// agentSurfaceRow is one scheduled agent's declared allowlist — Surface B as
-// the contract states it, not as a run happened to use it.
+// agentSurfaceRow is one night helper's declared allowlist, as the contract
+// states it and not as a run happened to use it.
 type agentSurfaceRow struct {
 	Name  string   `json:"name"`
 	Tools []string `json:"tools"`
@@ -262,7 +298,7 @@ type agentSurfaceRow struct {
 const mcpToolCoverageNote = "Generated by `" + mcpToolCoverageCommand + "`; do not edit by hand. " +
 	"It reads the use-case lane only: the scenarios under e2e/llm/scenarios and the verdicts the " +
 	"lane commits beside them. A tool counts as driven when at least one case requires it " +
-	"(must_call). A case that merely permits a tool (may_call) can pass without ever calling it, " +
+	"(must_call), or a passing run of a case that held called it. A case that merely permits a tool (may_call) can pass without ever calling it, " +
 	"so a permitted tool is not covered. A must_call entry may instead name alternatives (`a|b`, which " +
 	"the lane holds when either was called), and each of those is reported as required as one of a " +
 	"set. " +
@@ -372,16 +408,16 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 	}
 	sort.Slice(agentSurface, func(i, j int) bool { return agentSurface[i].Name < agentSurface[j].Name })
 
-	units, err := extensionTools(extensionsDir)
+	units, err := extensionTools(repoRoot)
 	if err != nil {
-		t.Fatalf("reading the unit manifests under %s: %v", extensionsDir, err)
+		t.Fatalf("reading the composed units' manifests: %v", err)
 	}
 
 	names := make([]string, 0, len(specs))
 	for _, spec := range specs {
 		names = append(names, spec.Name)
 	}
-	graded, err := corpusGradedTools(corpusDir, names)
+	graded, err := corpusGradedTools(corpusDir, names, routes)
 	if err != nil {
 		t.Fatalf("reading the certification corpus at %s: %v", corpusDir, err)
 	}
@@ -399,9 +435,7 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 	judgeEvalHarnessArtifacts.AssertAllMatched(t)
 
 	ran := modelsThatRan(cases)
-	for _, model := range ran {
-		report.Models = append(report.Models, summariseModel(cases, model))
-	}
+	report.Models, report.REST = summariseDoors(t, cases, ran)
 	for _, c := range cases {
 		named, ok := catalog[c.Name]
 		if !ok {
@@ -457,9 +491,11 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 		row.MayCall = permittedCases(cases, spec.Name, routes)
 		row.MustCall = sortedCopy(row.MustCall)
 		row.MustCallOneOf = sortedCopy(row.MustCallOneOf)
-		row.Driven = len(row.MustCall) > 0
+		row.CalledIn = calledInHeldRuns(cases, spec.Name)
+		row.Driven = len(row.MustCall) > 0 || len(row.CalledIn) > 0
 		row.OneOfASet = !row.Driven && len(row.MustCallOneOf) > 0
-		row.GradedBy = graded[spec.Name]
+		row.GradedBy = sortedCopy(graded.expected[spec.Name])
+		row.NearMissIn = sortedCopy(graded.nearMiss[spec.Name])
 		row.MeasuredByModel = map[string]*toolMeasurement{}
 		for _, model := range ran {
 			if m := measureCases(cases, row.MustCall, model); m != nil {
@@ -489,8 +525,11 @@ func TestTheMCPToolCoverageIsPublished(t *testing.T) {
 		}
 		report.Totals.NeverDriven++
 		report.Totals.UndrivenCost += row.Tokens
-		if len(row.GradedBy) > 0 {
+		switch {
+		case len(row.GradedBy) > 0:
 			report.Totals.UndrivenButGraded++
+		case len(row.NearMissIn) > 0:
+			report.Totals.UndrivenNearMissOnly++
 		}
 		if len(row.MayCall) > 0 {
 			report.Totals.PermittedNotDriven++
@@ -582,28 +621,8 @@ var (
 	e2eMustCallDeclared = regexp.MustCompile(`(?m)^must_call:`)
 	e2eToolItem         = regexp.MustCompile(`(?m)^\s*-\s*(\S+)\s*$`)
 	e2eCriterion        = regexp.MustCompile(`\d+`)
-	e2eScenarioTitle    = regexp.MustCompile(`\A# CASE \d+ — (.+?)\.?\n`)
+	e2eScenarioTitle    = regexp.MustCompile(`(?m)^title:[ \t]*(.*?)[ \t]*$`)
 )
-
-// verdictKey is what a committed verdict is filed under. The model is half of
-// it: a pass rate belongs to the model that produced it, and two models that
-// ran the same case have two answers, not one.
-type verdictKey struct {
-	model    string
-	scenario string
-}
-
-type e2eVerdict struct {
-	Scenario string `json:"scenario"`
-	Passed   int    `json:"passed"`
-	Runs     int    `json:"runs"`
-	PassAt   int    `json:"pass_at"`
-	Driver   string `json:"driver"`
-	Search   string `json:"search"`
-	// Model is the folder the verdict was filed under, not a field in it: the
-	// lane names the directory for the model it pinned.
-	Model string `json:"-"`
-}
 
 // readE2ELLMCases reads every use-case scenario and joins it to the verdict the
 // lane committed for it, if one has been.
@@ -613,6 +632,10 @@ type e2eVerdict struct {
 // page that could not tell them apart would be worse than no page.
 func readE2ELLMCases(scenarioDir, recordDir string) ([]caseRow, error) {
 	verdicts, err := readE2ELLMVerdicts(recordDir)
+	if err != nil {
+		return nil, err
+	}
+	earlier, err := earlierListings(recordDir)
 	if err != nil {
 		return nil, err
 	}
@@ -646,59 +669,11 @@ func readE2ELLMCases(scenarioDir, recordDir string) ([]caseRow, error) {
 			}
 		}
 		row.Requires, row.RequiresOneOf = requiredTools(text)
-		row.ByModel = runsFor(verdicts, row.Name)
+		row.ByModel = runsFor(verdicts, earlier, row.Name)
 		cases = append(cases, row)
 	}
 	sort.Slice(cases, func(i, j int) bool { return cases[i].File < cases[j].File })
 	return cases, nil
-}
-
-// readE2ELLMVerdicts reads the committed verdicts. A missing directory is not
-// an error: it means the paid lane has not been run on this checkout, which the
-// page says outright.
-func readE2ELLMVerdicts(dir string) (map[verdictKey]e2eVerdict, error) {
-	out := map[verdictKey]e2eVerdict{}
-	entries, err := os.ReadDir(dir)
-	if os.IsNotExist(err) {
-		return out, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	for _, model := range entries {
-		if !model.IsDir() {
-			continue
-		}
-		files, readErr := os.ReadDir(filepath.Join(dir, model.Name()))
-		if readErr != nil {
-			return nil, readErr
-		}
-		for _, entry := range files {
-			if entry.IsDir() {
-				return nil, fmt.Errorf("%s/%s: a verdict folder may not nest — the model id carried a '/'; "+
-					"file it under E2E_LLM_FOLDER", model.Name(), entry.Name())
-			}
-			if !strings.HasSuffix(entry.Name(), ".json") {
-				continue
-			}
-			body, fileErr := os.ReadFile(filepath.Join(dir, model.Name(), entry.Name()))
-			if fileErr != nil {
-				return nil, fileErr
-			}
-			var v e2eVerdict
-			if decodeErr := json.Unmarshal(body, &v); decodeErr != nil {
-				return nil, fmt.Errorf("%s/%s: %w", model.Name(), entry.Name(), decodeErr)
-			}
-			v.Model = model.Name()
-			// Keyed by MODEL AND SCENARIO. Keying on the scenario alone let the
-			// last model directory read win, so a page could show one model's
-			// pass rate beside another's on the next row and say nothing about
-			// it. Today one model has run; the bug would appear silently on the
-			// day a second one does, which is the worst time to find it.
-			out[verdictKey{model: model.Name(), scenario: v.Scenario}] = v
-		}
-	}
-	return out, nil
 }
 
 // readCriteria returns the catalog keyed by number.
@@ -733,32 +708,6 @@ func readCriteria(path string) (map[string]map[int]criterionRow, error) {
 		}
 	}
 	return out, nil
-}
-
-// runsFor collects each model's result on one scenario, ordered by model name.
-//
-// It replaced a chooser that returned ONE verdict per scenario, picking the
-// lowest model name. That was correct while one model had run and silently
-// wrong the moment a second did: the page would have shown one model's pass
-// rate under a heading that named the case, not the model.
-func runsFor(verdicts map[verdictKey]e2eVerdict, scenario string) []caseModelRun {
-	var out []caseModelRun
-	for key, v := range verdicts {
-		if key.scenario != scenario {
-			continue
-		}
-		out = append(out, caseModelRun{
-			Model:  v.Model,
-			Runs:   v.Runs,
-			Passed: v.Passed,
-			PassAt: v.PassAt,
-			Held:   v.PassAt > 0 && v.Passed >= v.PassAt,
-			Driver: v.Driver,
-			Search: v.Search,
-		})
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Model < out[j].Model })
-	return out
 }
 
 // toolEntriesInBlock reads one tool key in EITHER shape the lane accepts — the
@@ -912,8 +861,9 @@ func modelsThatRan(cases []caseRow) []string {
 
 // summariseModel folds one model's whole lane for the page's top table.
 func summariseModel(cases []caseRow, model string) modelCoverage {
-	summary := modelCoverage{Model: model, BelowBar: []string{}}
+	summary := modelCoverage{Model: model, BelowBar: []string{}, Slow: []string{}}
 	var routes []string
+	var measured []*mcpe2e.Efficiency
 	for _, c := range cases {
 		for _, run := range c.ByModel {
 			if run.Model != model {
@@ -924,8 +874,16 @@ func summariseModel(cases []caseRow, model string) modelCoverage {
 			if run.Search == "lexical" {
 				summary.Search = "lexical"
 			}
+			summary.SelfJudged = summary.SelfJudged || run.SelfJudged
 			summary.Runs += run.Runs
 			summary.Passed += run.Passed
+			if len(run.EarlierListing) > 0 {
+				summary.CasesOnEarlierListing++
+			}
+			measured = append(measured, run.Efficiency)
+			if run.Slow {
+				summary.Slow = append(summary.Slow, c.Name)
+			}
 			if run.Held {
 				summary.CasesHeld++
 				continue
@@ -938,7 +896,11 @@ func summariseModel(cases []caseRow, model string) modelCoverage {
 		summary.Reliability = float64(summary.Passed) / float64(summary.Runs)
 	}
 	sort.Strings(summary.BelowBar)
+	sort.Strings(summary.Slow)
+	summary.CallsPerCase = mcpe2e.CallsPerCase(measured)
+	summary.MedianCalls, summary.MedianTurns = mcpe2e.MedianCalls(measured), mcpe2e.MedianTurns(measured)
 	summary.Route = strings.Join(sortedCopy(routes), " + ")
+	summary.Name, summary.Trust = modelName(model), trustVerdict(summary.CasesHeld, summary.CasesRecorded, len(cases))
 	return summary
 }
 
@@ -994,4 +956,43 @@ func syncMCPToolCoverage(t *testing.T, path string, want []byte, command string)
 	t.Errorf("%s is stale — it no longer matches the served surface and the use-case lane.\n"+
 		"Regenerate with: %s\nand commit the result with the change that moved it.\n%s",
 		path, command, firstMCPInfoDifference(string(got), string(want)))
+}
+
+// verdictKey files a verdict by model too: a pass rate belongs to its model.
+type verdictKey struct {
+	model    string
+	scenario string
+}
+
+// readE2ELLMVerdicts reads the committed verdicts of one tree, keyed by model
+// and scenario. Keyed on the scenario alone, the last model folder read would
+// win, and one model's pass rate would print beside another's.
+func readE2ELLMVerdicts(dir string) (map[verdictKey]mcpe2e.Verdict, error) {
+	verdicts, err := mcpe2e.ReadTree(dir)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[verdictKey]mcpe2e.Verdict, len(verdicts))
+	for _, v := range verdicts {
+		out[verdictKey{model: v.Folder, scenario: v.Scenario}] = v
+	}
+	return out, nil
+}
+
+// runsFor collects each model's result on one scenario, ordered by model name.
+func runsFor(verdicts map[verdictKey]mcpe2e.Verdict, earlier map[verdictKey][]string, scenario string) []caseModelRun {
+	var out []caseModelRun
+	for key, v := range verdicts {
+		if key.scenario != scenario {
+			continue
+		}
+		out = append(out, caseModelRun{
+			Model: v.Folder, Runs: v.Runs, Passed: v.Passed, PassAt: v.PassAt,
+			Held: v.PassAt > 0 && v.Passed >= v.PassAt, Driver: v.Driver, Search: v.Search, SelfJudged: v.SelfJudged,
+			Efficiency: v.Efficiency, Slow: v.Slow, Regraded: v.Stamp.Regraded(), ToolsCalled: v.PassingTools(),
+			EarlierListing: earlier[key],
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Model < out[j].Model })
+	return out
 }

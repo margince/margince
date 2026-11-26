@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -19,8 +20,11 @@ import (
 // EmailRowState keeps obligation and delivery facts in one page-batched read.
 type EmailRowState struct {
 	RequestHasReminder bool
-	Delivery           DeliveryState
-	Move               crmcontracts.EmailSummaryMove
+	// OurReply is ourReplySQL on the row: nil unless we replied after the
+	// request and our reply is still the newest message on its thread.
+	OurReply *crmcontracts.RequestReply
+	Delivery DeliveryState
+	Move     crmcontracts.EmailSummaryMove
 }
 
 // EmailStatesFor reads obligation and delivery after the caller's content
@@ -37,16 +41,32 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	wanted := arg(activityIDs)
-	in, err := moveInputs(ctx, arg, asOf)
+	// Every mail on the rows' threads and each row's reminder share one
+	// content gate. The later mail the move walks is tested against it, and so
+	// is the reminder our reply names.
+	readable, err := auth.ContentReadableActivitiesSQL(ctx, threadNeedSQL(emailStateCandidates)+`
+	 UNION SELECT reminder_row.id FROM `+emailStateCandidates+` c
+	   JOIN activity reminder_row ON reminder_row.source_system = '`+EmailRequestTaskSource+`'
+	    AND reminder_row.source_activity_id = c.id`, arg)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, coalesce(delivery.status, ''), delivery.reason,
+	in, err := moveInputsGatedBy(ctx, tx, arg, asOf, InGatedSetSQL(emailStateReadable, "later"))
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, `WITH `+emailStateCandidates+` AS MATERIALIZED (
+  SELECT a.id, a.thread_key, a.kind, a.channel_provider FROM activity a
+   WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.restricted_at IS NULL),
+`+emailStateReadable+` AS MATERIALIZED (`+readable+`)
+SELECT a.id, coalesce(delivery.status, ''), delivery.reason,
  delivery.sent_at, delivery.bounced_at, delivery.bounce_reason, coalesce(delivery.attachments, '[]'::jsonb),
  `+ControllerSendSQL+`,
- `+moveSQL(in, mailKinds)+`, `+openRequestReminderSQL+`
+ `+moveSQL(in, mailKinds)+`, `+openRequestReminderSQL+`,
+ our_reply.replied_at, our_reply.replied_precision, our_reply.still_asked, our_reply.reminder_id, our_reply.reminder_version, our_reply.by_reader
  FROM activity a LEFT JOIN comms_outbound delivery ON delivery.activity_id = a.id
- WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.restricted_at IS NULL`, args...)
+ LEFT JOIN LATERAL (`+ourReplySQL(in.asOf, InGatedSetSQL(emailStateReadable, "reminder_row"), in.replyByReader)+`) our_reply ON true
+ WHERE a.id IN (SELECT id FROM `+emailStateCandidates+`)`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading email states: %w", err)
 	}
@@ -55,15 +75,26 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf
 	for rows.Next() {
 		var id ids.UUID
 		var state EmailRowState
-		if err := rows.Scan(&id, &state.Delivery.Status, &state.Delivery.Reason, &state.Delivery.SentAt,
+		var reply ourReplyRow
+		if err := rows.Scan(append([]any{
+			&id, &state.Delivery.Status, &state.Delivery.Reason, &state.Delivery.SentAt,
 			&state.Delivery.BouncedAt, &state.Delivery.BounceReason, &state.Delivery.Files,
 			&state.Delivery.Controller, &state.Delivery.FromAddress, &state.Move,
-			&state.RequestHasReminder); err != nil {
+			&state.RequestHasReminder,
+		}, reply.targets()...)...); err != nil {
 			return nil, err
 		}
+		state.OurReply = reply.contract(openapi_types.UUID(id))
 		out[id] = state
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	if err := keepWritableReminders(ctx, tx, out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // moveSQL is whose move the mail on alias a is, as its History badge reads.
@@ -72,9 +103,13 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf
 // the queue and the waiting_reply filter apply (withinWaitingHorizonSQL). Past
 // it the request is no longer current work unless a human kept it, so it reads
 // none. The mail stays on the timeline; none does not mean answered.
+//
+// A request we replied to (ourReplySQL) reads none too, so the badge says
+// what the deal card says. The request itself stays open.
 func moveSQL(in moveBinding, kinds string) string {
-	return `CASE WHEN coalesce(` + owedSQL(in.asOf, neverRelaxed, neverRelaxed, neverRelaxed) + ` AND ` +
-		withinWaitingHorizonSQL(in.asOf, in.horizon) + `, false)
+	return `CASE WHEN coalesce(` + owedSQL(in.asOf, in.ownDomains, neverRelaxed, neverRelaxed, neverRelaxed) + ` AND ` +
+		withinWaitingHorizonSQL(in.asOf, in.horizon) + `
+     AND NOT EXISTS (` + ourReplySQL(in.asOf, "false", "false") + `), false)
    THEN '` + string(crmcontracts.EmailSummaryMoveNeedsReply) + `'
    WHEN coalesce(` + awaitingTheirAnswerSQL(in.asOf, in.sentByReader, in.laterContent, kinds) + `, false)
    THEN '` + string(crmcontracts.EmailSummaryMoveWaitingForThem) + `'
@@ -83,41 +118,60 @@ func moveSQL(in moveBinding, kinds string) string {
 
 // moveBinding is what moveSQL reads, already bound as parameters.
 type moveBinding struct {
-	asOf, sentByReader, laterContent, horizon string
+	asOf, ownDomains, sentByReader, laterContent, horizon string
+	// replyByReader is sentByReaderSQL over the reply row ourReplySQL reads.
+	replyByReader string
 }
 
 // moveInputs binds what moveSQL reads about the reader and the instant. Only
 // the seat stamp counts as the reader's. Their hand-typed addresses live with
 // capture, which a page read cannot reach. Such a mail reads none, never
 // theirs. The horizon is the stored measurement the queue reads, clamped to its
-// ceiling.
-func moveInputs(ctx context.Context, arg func(any) int, asOf time.Time) (moveBinding, error) {
+// ceiling. The own-domain list is the one the Worklist tests senders against.
+func moveInputs(ctx context.Context, tx pgx.Tx, arg func(any) int, asOf time.Time) (moveBinding, error) {
 	laterContent, err := auth.ActivityContentClause(ctx, "later", arg)
 	if err != nil {
 		return moveBinding{}, err
 	}
+	return moveInputsGatedBy(ctx, tx, arg, asOf, laterContent)
+}
+
+// moveInputsGatedBy is moveInputs for a statement that gates the later mail
+// itself, through laterContent over the alias later.
+func moveInputsGatedBy(ctx context.Context, tx pgx.Tx, arg func(any) int, asOf time.Time, laterContent string) (moveBinding, error) {
+	ownDomains, err := bindColleagueDomains(ctx, tx, arg)
+	if err != nil {
+		return moveBinding{}, err
+	}
+	reader, addresses := fmt.Sprintf("$%d", arg(readerOrNobody(ctx))), fmt.Sprintf("$%d", arg([]string{}))
 	return moveBinding{
-		asOf:         fmt.Sprintf("$%d::timestamptz", arg(asOf)),
-		sentByReader: sentByReaderSQL(fmt.Sprintf("$%d", arg(readerOrNobody(ctx))), fmt.Sprintf("$%d", arg([]string{}))),
-		laterContent: laterContent,
-		horizon:      storekit.WaitingHorizonSQL(asOf, arg),
+		asOf:          fmt.Sprintf("$%d::timestamptz", arg(asOf)),
+		ownDomains:    ownDomains,
+		sentByReader:  sentByReaderSQL(reader, addresses),
+		replyByReader: sentByReaderOn("reply_row", reader, addresses),
+		laterContent:  laterContent,
+		horizon:       storekit.WaitingHorizonSQL(asOf, arg),
 	}, nil
 }
 
 // MailMoveColumnSQL is the History badge's move on the activity under alias a
-// as a column. It is NULL when the row is not a mail the reader may read, since
+// as a column. readable names the set MailThreadReadableSQL renders over a's
+// candidates. It is NULL when the row is not a mail the reader may read, since
 // the move is judged from the mail's content.
-func MailMoveColumnSQL(ctx context.Context, arg func(any) int, asOf time.Time) (string, error) {
-	content, err := auth.ActivityContentClause(ctx, "a", arg)
+func MailMoveColumnSQL(ctx context.Context, tx pgx.Tx, arg func(any) int, asOf time.Time, readable string) (string, error) {
+	in, err := moveInputsGatedBy(ctx, tx, arg, asOf, InGatedSetSQL(readable, "later"))
 	if err != nil {
 		return "", err
 	}
-	in, err := moveInputs(ctx, arg, asOf)
-	if err != nil {
-		return "", err
-	}
-	return `CASE WHEN a.kind = 'email' AND a.restricted_at IS NULL AND ` + content + ` THEN ` +
+	return `CASE WHEN a.kind = 'email' AND a.restricted_at IS NULL AND ` + InGatedSetSQL(readable, "a") + ` THEN ` +
 		moveSQL(in, mailKinds) + ` END`, nil
+}
+
+// MailThreadReadableSQL renders the ids the reader may read among the
+// activities in candidates and every mail on their threads, under one content
+// gate. candidates names a set with id, thread_key, kind and channel_provider.
+func MailThreadReadableSQL(ctx context.Context, candidates string, arg func(any) int) (string, error) {
+	return auth.ContentReadableActivitiesSQL(ctx, threadNeedSQL(candidates), arg)
 }
 
 // MailMovesFor reads the History badge's move for each mail among activityIDs.
@@ -131,13 +185,22 @@ func MailMovesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf t
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	wanted := arg(activityIDs)
-	move, err := MailMoveColumnSQL(ctx, arg, asOf)
+	// The mails and every mail on their threads share one content gate, which
+	// the later mail the move walks tests membership in.
+	readable, err := MailThreadReadableSQL(ctx, mailMoveCandidates, arg)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, move FROM (SELECT a.id, `+move+` AS move
- FROM activity a WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`)) a
- WHERE move IS NOT NULL`, args...)
+	in, err := moveInputsGatedBy(ctx, tx, arg, asOf, InGatedSetSQL(mailMoveReadable, "later"))
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, `WITH `+mailMoveCandidates+` AS MATERIALIZED (
+  SELECT a.id, a.thread_key, a.kind, a.channel_provider FROM activity a
+   WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.kind = 'email' AND a.restricted_at IS NULL),
+`+mailMoveReadable+` AS MATERIALIZED (`+readable+`)
+SELECT a.id, `+moveSQL(in, mailKinds)+` FROM activity a
+ WHERE a.id IN (SELECT id FROM `+mailMoveCandidates+`) AND `+InGatedSetSQL(mailMoveReadable, "a"), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading whose move each mail is: %w", err)
 	}
@@ -152,3 +215,17 @@ func MailMovesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf t
 	}
 	return out, rows.Err()
 }
+
+// The sets EmailStatesFor reads: the rows asked about, and the ids among
+// their threads and reminders that the reader may read.
+const (
+	emailStateCandidates = "email_state_candidates"
+	emailStateReadable   = "email_state_readable"
+)
+
+// The sets MailMovesFor reads: the mails asked about, and the ids among them
+// and their threads that the reader may read.
+const (
+	mailMoveCandidates = "mail_move_candidates"
+	mailMoveReadable   = "mail_move_readable"
+)

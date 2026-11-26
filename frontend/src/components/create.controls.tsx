@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import {
   Button,
@@ -39,6 +40,7 @@ function ReferenceControl({
   control,
   value,
   setValue,
+  resolved,
   t,
 }: Readonly<{
   field: CreateField;
@@ -46,6 +48,8 @@ function ReferenceControl({
   control: FieldControl;
   value: string;
   setValue: (next: string) => void;
+  // The record the stored value names, when the field can look it up.
+  resolved?: RecordPickerCandidate | null;
   t: (key: MessageKey) => string;
 }>) {
   const [picked, setPicked] = useState<RecordPickerCandidate | null>(null);
@@ -56,14 +60,12 @@ function ReferenceControl({
   }
   const selected: RecordPickerCandidate | null = !value
     ? null
-    : picked?.id === value
-      ? picked
-      : {
-          id: value,
-          name:
-            field.options?.find((option) => option.value === value)?.label ??
-            value,
-        };
+    : ((picked?.id === value ? picked : resolved) ?? {
+        id: value,
+        name:
+          field.options?.find((option) => option.value === value)?.label ??
+          value,
+      });
   return (
     <>
       <RecordPicker
@@ -86,6 +88,43 @@ function ReferenceControl({
   );
 }
 
+// Looks the stored value's record up before the control names it. A separate
+// component so only a field that can resolve needs a query client.
+function ResolvedReferenceControl(
+  props: Parameters<typeof ReferenceControl>[0] &
+    Readonly<{ resolver: NonNullable<CreateField["resolveSelected"]> }>,
+) {
+  const { resolver, ...rest } = props;
+  const found = useQuery({
+    queryKey: ["field-record", resolver.scope, props.value],
+    enabled: props.value !== "",
+    queryFn: () => resolver.read(props.value),
+  });
+  return <ReferenceControl {...rest} resolved={found.data} />;
+}
+
+function referenceControl(
+  field: CreateField,
+  searchTargets: NonNullable<CreateField["searchTargets"]>,
+  control: FieldControl,
+  value: string,
+  setValue: (next: string) => void,
+  t: (key: MessageKey) => string,
+): ReactNode {
+  const reference = { field, searchTargets, control, value, setValue, t };
+  return field.resolveSelected ? (
+    <ResolvedReferenceControl {...reference} resolver={field.resolveSelected} />
+  ) : (
+    <ReferenceControl {...reference} />
+  );
+}
+
+// The keyboard a number box asks for: a whole number has no decimal sign.
+const TYPED_NUMBER_MODE: Partial<Record<string, "numeric" | "decimal">> = {
+  number: "numeric",
+  decimal: "decimal",
+};
+
 export function fieldControl(
   field: CreateField | SubField,
   control: FieldControl,
@@ -95,17 +134,16 @@ export function fieldControl(
   // The form's current values, for a field whose choices depend on them.
   values: Record<string, string> = {},
 ): ReactNode {
-  if ("searchTargets" in field && field.searchTargets)
-    return (
-      <ReferenceControl
-        field={field}
-        searchTargets={field.searchTargets}
-        control={control}
-        value={value}
-        setValue={setValue}
-        t={t}
-      />
+  if ("searchTargets" in field && field.searchTargets) {
+    return referenceControl(
+      field,
+      field.searchTargets,
+      control,
+      value,
+      setValue,
+      t,
     );
+  }
   if (field.type === "select") {
     // Optional fields can be cleared; preserve a caller's existing empty choice.
     const options =
@@ -157,11 +195,11 @@ export function fieldControl(
   return (
     <TextInput
       {...control}
-      type={field.type ?? "text"}
-      // A bare number input steps by 1, so the browser refuses 14.60 before
-      // any handler sees it. A money field has to say it takes cents.
-      step={field.step}
-      min={field.min}
+      // A number is typed as text, because the record forms set noValidate.
+      // A number box hands over "" for text it cannot read, so a typo would
+      // save as no value. The field's validate reads the text instead.
+      type={field.type === "email" ? "email" : "text"}
+      inputMode={TYPED_NUMBER_MODE[field.type ?? "text"]}
       maxLength={field.maxLength}
       value={value}
       placeholder={field.placeholder}
@@ -177,11 +215,13 @@ export function MultiselectField({
   value,
   setValue,
   labelHidden,
+  error,
 }: Readonly<{
   field: CreateField;
   value: string;
   setValue: (next: string) => void;
   labelHidden?: boolean;
+  error?: string;
 }>) {
   const t = useT();
   return (
@@ -190,6 +230,7 @@ export function MultiselectField({
       labelHidden={labelHidden}
       required={field.required}
       hint={field.hint}
+      error={error}
     >
       {(control) => (
         <MultiSelect

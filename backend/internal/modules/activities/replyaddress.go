@@ -20,6 +20,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -27,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -68,11 +70,16 @@ func (s *Store) ReplyAddressFor(ctx context.Context, id ids.ActivityID, colleagu
 }
 
 // ReplyAddressee is who a reply is delivered to. ContactID is empty unless this
-// caller may read the contact and it is the top-ranked counterparty. So a
-// readable CC never stands in for an unreadable sender.
+// caller may read the contact behind the chosen address. A readable CC never
+// stands in for an unreadable sender. A colleague skipped by domain lets the
+// next counterparty be the addressee, with their own contact.
 type ReplyAddressee struct {
 	Address   string
 	ContactID string
+	// GreetingRegister is the register a rep stored on that contact, empty when
+	// there is no readable contact or none was set. Read here so a draft's
+	// register comes from the contact the mail is delivered to.
+	GreetingRegister greetingregister.Register
 }
 
 // ReplyAddresseeFor answers the single address a reply to this activity is
@@ -102,14 +109,32 @@ type ReplyAddressee struct {
 // A nil predicate treats nobody as a colleague. When every candidate is one,
 // the refusal says so.
 func (s *Store) ReplyAddresseeFor(ctx context.Context, id ids.ActivityID, colleague func(address string) bool) (ReplyAddressee, error) {
+	delivery, err := s.deliveryOf(ctx, id, colleague)
+	return delivery.ReplyAddressee, err
+}
+
+// delivery is the one resolution of who a reply goes to. Counterparty is the
+// readable contact of the first participant who is an outsider. It is set even
+// when they have no address, so a greeting can name a contact whose address is
+// retired.
+type delivery struct {
+	ReplyAddressee
+	Counterparty string
+}
+
+// deliveryOf resolves the delivered-to participant once. Colleagues, by seat or
+// by the own-domain predicate, are skipped the same way for the address, the
+// name and the register.
+func (s *Store) deliveryOf(ctx context.Context, id ids.ActivityID, colleague func(address string) bool) (delivery, error) {
 	// Reaching a contact's address is a contact read, exactly as reaching their
 	// name is: a caller who may read activities but not contacts must not be told
 	// through this door what the contacts surface withholds.
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-		return ReplyAddressee{}, err
+		return delivery{}, err
 	}
 
-	var to ReplyAddressee
+	var to delivery
+	var noAddress error
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The link-walk scope decides whether this caller may see the anchor at
 		// all. Reading a counterparty off an activity they cannot reach would
@@ -118,94 +143,167 @@ func (s *Store) ReplyAddresseeFor(ctx context.Context, id ids.ActivityID, collea
 			return err
 		}
 
-		args := []any{id}
-		scope, err := auth.ScopeClauseFor(ctx, "contact", "p", func(v any) int {
-			args = append(args, v)
-			return len(args)
-		})
+		// Two sources, ranked together rather than tried in sequence. The
+		// participant's own address is preferred over the contact's primary
+		// email because it is the address that actually corresponded. The
+		// contact's primary email is the fallback for a participant recorded by
+		// identity alone.
+		top, err := firstCounterparty(ctx, tx, id, colleague)
 		if err != nil {
 			return err
 		}
-		readable := scope
-		if readable == "" {
-			readable = sqlTrue
+		q, args, err := counterpartyCandidates(ctx, id)
+		if err != nil {
+			return err
 		}
-
-		// Two sources, ranked together rather than tried in sequence. The
-		// participant's OWN address is preferred over the contact's primary
-		// email because it is the address that actually corresponded: a
-		// contact who wrote from a second mailbox gets answered where they
-		// wrote from, which is what a reply means. The contact's primary email
-		// is the fallback for a participant recorded by identity alone.
-		//
-		// The contact row-scope applies only to the arm that reads a contact. A
-		// bare participant address is on the activity the caller already
-		// reached and names no contact row to be scoped against.
-		// The tiebreak columns carry BOTH levels, and they have to. The
-		// participant arm ranks by which participant; the contact-email arm can
-		// return several rows for ONE participant, and those are separated by
-		// is_primary and position — the record's own ordering. Ranking the
-		// second arm on the participant's created_at/id alone leaves every one
-		// of a contact's addresses tied, so "the primary email" becomes whichever
-		// row the planner happened to emit: a personal or long-retired address on
-		// a business thread, chosen by nothing.
-		q := `
-			WITH counterparty AS (
-			     SELECT contact_id, address,
-			            CASE role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END AS rank,
-			            row_number() OVER (ORDER BY CASE role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END,
-			                                        created_at, id) AS ordinal,
-			            created_at, id
-			       FROM activity_participant
-			      WHERE activity_id = $1
-			        AND user_id IS NULL
-			)
-			SELECT addr, addressee FROM (
-			     SELECT c.address AS addr, CASE WHEN c.ordinal = 1 AND EXISTS (
-			                SELECT 1 FROM contact p
-			                 WHERE p.id = c.contact_id AND p.archived_at IS NULL AND (` + readable + `))
-			            THEN c.contact_id END AS addressee, c.rank, 1 AS source,
-			            true AS primary_first, 0 AS position, c.created_at, c.id
-			       FROM counterparty c
-			      WHERE c.address IS NOT NULL AND c.address <> ''
-			     UNION ALL
-			     SELECT e.email AS addr, CASE WHEN c.ordinal = 1 THEN c.contact_id END, c.rank, 2 AS source,
-			            e.is_primary AS primary_first, e.position, c.created_at, c.id
-			       FROM counterparty c
-			       JOIN contact p ON p.id = c.contact_id
-			       JOIN contact_email e ON e.contact_id = p.id AND e.archived_at IS NULL
-			      WHERE c.contact_id IS NOT NULL
-			        AND p.archived_at IS NULL`
-		if scope != "" {
-			q += ` AND (` + scope + `)`
-		}
-		q += `
-			) ranked
-			 ORDER BY rank, source, primary_first DESC, position, created_at, id, addr`
-
 		rows, err := tx.Query(ctx, q, args...)
 		if err != nil {
 			return fmt.Errorf("resolve the address a reply answers: %w", err)
 		}
 		defer rows.Close()
-		to, err = firstOutside(rows, colleague)
+		to.ReplyAddressee, err = firstOutside(rows, colleague, top.participant)
+		rows.Close()
+		to.Counterparty, to.GreetingRegister = top.contact, top.register
+		// No address to answer is an outcome to report beside the counterparty,
+		// not a failure that discards who they are.
+		if _, none := errors.AsType[*NoReplyAddressError](err); none {
+			noAddress, err = err, nil
+		}
 		return err
 	})
 	if err != nil {
-		return ReplyAddressee{}, err
+		return delivery{}, err
 	}
-	return to, nil
+	return to, noAddress
+}
+
+// counterpartyCTE lists the participants a reply could go to: not our own seats,
+// and only rows that stand as a presence on the message.
+func counterpartyCTE() string {
+	return `
+		WITH counterparty AS (
+		     SELECT ap.*, CASE ap.role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END AS rank
+		       FROM activity_participant ap
+		       JOIN activity a ON a.id = ap.activity_id
+		      WHERE ap.activity_id = $1
+		        AND ap.user_id IS NULL
+		        AND ` + auth.ParticipantStandsSQL("ap", "a") + `
+		)`
+}
+
+// counterpartyCandidates ranks the address candidates of an activity's
+// counterparties. The contact row scope is applied here to every arm that reads
+// a contact. The tiebreak columns carry both levels: the participant arm ranks
+// by which participant, and the contact-email arm separates one contact's
+// addresses by is_primary and position.
+func counterpartyCandidates(ctx context.Context, id ids.ActivityID) (string, []any, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return "", nil, err
+	}
+	args := []any{id}
+	scope, err := auth.ScopeClauseFor(ctx, "contact", "p", func(v any) int {
+		args = append(args, v)
+		return len(args)
+	})
+	if err != nil {
+		return "", nil, err
+	}
+	readable := scope
+	if readable == "" {
+		readable = sqlTrue
+	}
+	q := counterpartyCTE() + `
+		SELECT addr, addressee, participant FROM (
+		     SELECT c.address AS addr, CASE WHEN EXISTS (
+		                SELECT 1 FROM contact p
+		                 WHERE p.id = c.contact_id AND p.archived_at IS NULL AND (` + readable + `))
+		            THEN c.contact_id END AS addressee, c.id AS participant, c.rank, 1 AS source,
+		            true AS primary_first, 0 AS position, c.created_at, c.id
+		       FROM counterparty c
+		      WHERE c.address IS NOT NULL AND c.address <> ''
+		     UNION ALL
+		     SELECT e.email AS addr, c.contact_id, c.id AS participant, c.rank, 2 AS source,
+		            e.is_primary AS primary_first, e.position, c.created_at, c.id
+		       FROM counterparty c
+		       JOIN contact p ON p.id = c.contact_id
+		       JOIN contact_email e ON e.contact_id = p.id AND e.archived_at IS NULL
+		      WHERE c.contact_id IS NOT NULL
+		        AND p.archived_at IS NULL`
+	if scope != "" {
+		q += ` AND (` + scope + `)`
+	}
+	q += `
+		) ranked
+		 ORDER BY rank, source, primary_first DESC, position, created_at, id, addr`
+	return q, args, nil
+}
+
+// counterpartyHead is the first participant that is not a colleague.
+type counterpartyHead struct {
+	participant ids.UUID
+	contact     string
+	register    greetingregister.Register
+}
+
+// firstCounterparty finds the first participant, in rank order, that is not a
+// colleague. A participant with no address cannot be judged a colleague, so a
+// copied contact never stands in for them. contact and register are that
+// participant's own when this caller may read the contact.
+func firstCounterparty(ctx context.Context, tx pgx.Tx, id ids.ActivityID, colleague func(address string) bool) (counterpartyHead, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return counterpartyHead{}, err
+	}
+	args := []any{id}
+	scope, err := auth.ScopeClauseFor(ctx, "contact", "r", func(v any) int {
+		args = append(args, v)
+		return len(args)
+	})
+	if err != nil {
+		return counterpartyHead{}, err
+	}
+	readable := scope
+	if readable == "" {
+		readable = sqlTrue
+	}
+	rows, err := tx.Query(ctx, counterpartyCTE()+`
+		SELECT c.id, coalesce(c.address, ''), r.id, coalesce(r.greeting_register, '')
+		  FROM counterparty c
+		  LEFT JOIN contact r ON r.id = c.contact_id AND r.archived_at IS NULL AND (`+readable+`)
+		 ORDER BY c.rank, c.created_at, c.id`, args...)
+	if err != nil {
+		return counterpartyHead{}, fmt.Errorf("resolve who a reply is delivered to: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var head counterpartyHead
+		var contact *ids.UUID
+		var address string
+		if err := rows.Scan(&head.participant, &address, &contact, &head.register); err != nil {
+			return counterpartyHead{}, fmt.Errorf("resolve who a reply is delivered to: %w", err)
+		}
+		if strings.TrimSpace(address) != "" && colleague != nil && colleague(address) {
+			continue
+		}
+		if contact != nil {
+			head.contact = contact.String()
+		} else {
+			head.register = ""
+		}
+		return head, rows.Err()
+	}
+	return counterpartyHead{}, rows.Err()
 }
 
 // firstOutside walks the ranked candidates and answers the first that is not
 // a colleague. No candidate at all is the plain refusal; candidates that are
 // all colleagues is the refusal that names why.
-func firstOutside(rows pgx.Rows, colleague func(address string) bool) (ReplyAddressee, error) {
+func firstOutside(rows pgx.Rows, colleague func(address string) bool, head ids.UUID) (ReplyAddressee, error) {
 	sawColleague := false
 	for rows.Next() {
 		var address string
 		var contact *ids.UUID
-		if err := rows.Scan(&address, &contact); err != nil {
+		var participant ids.UUID
+		if err := rows.Scan(&address, &contact, &participant); err != nil {
 			return ReplyAddressee{}, fmt.Errorf("resolve the address a reply answers: %w", err)
 		}
 		// A row that satisfies the predicate with whitespace is no addressee:
@@ -219,7 +317,7 @@ func firstOutside(rows pgx.Rows, colleague func(address string) bool) (ReplyAddr
 			continue
 		}
 		to := ReplyAddressee{Address: address}
-		if contact != nil {
+		if contact != nil && participant == head {
 			to.ContactID = contact.String()
 		}
 		return to, nil

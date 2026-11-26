@@ -189,8 +189,8 @@ func enqueue(ctx context.Context, rt extension.Runtime, target inboundTarget, re
 		}
 		var landed string
 		err := tx.QueryRow(ctx,
-			`INSERT INTO `+inboundTable+` (endpoint_id, user_id, nonce, body, sent_at)
-			 VALUES ($1::uuid, $2::uuid, $3, $4, $5)
+			`INSERT INTO `+inboundTable+` (endpoint_id, user_id, nonce, body, body_bytes, sent_at)
+			 VALUES ($1::uuid, $2::uuid, $3, $4, octet_length($4::bytea), $5)
 			 ON CONFLICT (endpoint_id, nonce) DO NOTHING
 			 RETURNING id::text`,
 			// The owner comes from the ENDPOINT ROW and never from the payload.

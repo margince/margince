@@ -1,0 +1,9 @@
+{
+  "verb": "get_deal_room_brief",
+  "checks": [
+    "deal_room.read"
+  ],
+  "takes": [
+    "deal_room"
+  ]
+}

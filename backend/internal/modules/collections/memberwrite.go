@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -34,8 +35,8 @@ const (
 
 // The two membership actions (list_member_event_action_check).
 const (
-	memberAdded   = "added"
-	memberRemoved = "removed"
+	memberAdded   = auditentity.ListMemberAdded
+	memberRemoved = auditentity.ListMemberRemoved
 )
 
 const noteField = "note"
@@ -54,9 +55,22 @@ type MemberChange struct {
 
 // ErrAlreadyMember and ErrNotMember are a change that would change nothing.
 var (
-	ErrAlreadyMember = fmt.Errorf("the record is already on this list: %w", apperrors.ErrConflict)
-	ErrNotMember     = fmt.Errorf("the record is not on this list: %w", apperrors.ErrNotFound)
+	ErrAlreadyMember error = &AlreadyMemberError{}
+	ErrNotMember           = fmt.Errorf("the record is not on this list: %w", apperrors.ErrNotFound)
 )
+
+// AlreadyMemberError refuses adding a record a Shortlist already holds. It
+// unwraps to ErrConflict, so it answers 409.
+type AlreadyMemberError struct{}
+
+func (*AlreadyMemberError) Error() string { return "the record is already on this list" }
+
+func (*AlreadyMemberError) Unwrap() error { return apperrors.ErrConflict }
+
+// MessageFault names the clash, so a screen can tell it from an archived list.
+func (e *AlreadyMemberError) MessageFault() (code, message string) {
+	return "already_on_list", e.Error()
+}
 
 // AddMember adds one record to a Shortlist in its own transaction.
 func (s *Store) AddMember(ctx context.Context, listID ids.ListID, change MemberChange) (memberRow, error) {
@@ -219,7 +233,7 @@ func admitShortlistChange(ctx context.Context, tx pgx.Tx, listID ids.ListID, ent
 		return &BadInputError{Field: "list", Reason: "a Live List's members follow its filter; only a Shortlist takes members by hand"}
 	}
 	if entityType != list.EntityType {
-		return &BadInputError{Field: entityTypeField, Reason: "must match the list's entity_type " + list.EntityType}
+		return &BadInputError{Field: entityTypeField, Code: "entity_type_mismatch", Reason: "must match the list's entity_type " + list.EntityType}
 	}
 	return nil
 }

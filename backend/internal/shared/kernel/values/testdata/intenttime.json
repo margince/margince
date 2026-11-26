@@ -1,0 +1,10 @@
+[
+ {"wall":"0001-01-01T00:00","zone":"UTC","instant":"0001-01-01T00:00:00Z"},
+ {"wall":"2026-04-01T09:00","zone":"Asia/Kathmandu","instant":"2026-04-01T03:15:00Z"},
+ {"wall":"2026-03-29T02:30","zone":"Europe/Berlin","instant":"2026-03-29T01:00:00Z"},
+ {"wall":"2026-10-25T02:30","zone":"Europe/Berlin","instant":"2026-10-25T00:30:00Z"},
+ {"wall":"2026-10-04T02:15","zone":"Australia/Lord_Howe","instant":"2026-10-03T15:30:00Z"},
+ {"wall":"2026-04-05T01:45","zone":"Australia/Lord_Howe","instant":"2026-04-04T14:45:00Z"},
+ {"wall":"2011-12-30T12:00","zone":"Pacific/Apia","instant":"2011-12-30T10:00:00Z"},
+ {"wall":"2026-04-01T09:00:01.123456","zone":"UTC","instant":"2026-04-01T09:00:01.123456Z"}
+]

@@ -4,7 +4,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
   boundedLeads,
-  digest,
   NOT_FOUND,
   pipelineRows,
   readingsDay,
@@ -49,7 +48,6 @@ const NOW_DATE = new Date(NOW);
 /** The routes the rail's two reading panels fan out to. */
 const RAIL_ROUTES: RouteMap = {
   "GET /me": meRoute({}),
-  "GET /digest": () => jsonResponse(digest),
   // The readings strip's pipeline card makes two reads of its own: the scope
   // the server names for this reader, and the forecast under it. Both are
   // routed, because installFetchStub's fallback answers a 200 with a list

@@ -39,17 +39,17 @@ const (
 	// ClassBusinessCorrespondence is 1:1 mail: replies, meeting follow-ups,
 	// answers to their own question. Allowed on a qualifying event, no consent
 	// object consulted.
-	ClassBusinessCorrespondence Class = "business_correspondence"
+	ClassBusinessCorrespondence = Class(messaging.PurposeClassBusinessCorrespondence)
 	// ClassTransactional is invoices and account notices — allowed while the
 	// business relationship exists.
-	ClassTransactional Class = "transactional"
+	ClassTransactional = Class(messaging.PurposeClassTransactional)
 	// ClassMarketing is »Werbung« read broadly: newsletters, campaigns, and
 	// feedback requests. Express consent with double-opt-in proof, or the
 	// existing-customer route where the pack grants it.
-	ClassMarketing Class = "marketing"
+	ClassMarketing = Class(messaging.PurposeClassMarketing)
 	// ClassPhoneOutreach is specced and dormant — no call provider is wired.
 	// The purpose exists so the model is complete, not because a path uses it.
-	ClassPhoneOutreach Class = "phone_outreach"
+	ClassPhoneOutreach = Class(messaging.PurposeClassPhoneOutreach)
 )
 
 // Verdict is the effective answer for one contact and one purpose.
@@ -143,6 +143,9 @@ type MarketingContext struct {
 	// SendingEntity is the legal entity the message goes out for. The
 	// existing-customer route counts only a sale that entity made.
 	SendingEntity ids.UUID
+	// OptOut says the recipient's country allows advertising until they refuse.
+	// A refusal on record has already blocked before it is read.
+	OptOut bool
 }
 
 // VerdictForRecipient is the decision. The guard endpoint and the transmit gate
@@ -218,7 +221,7 @@ func verdictFor(ctx context.Context, tx pgx.Tx, contactID string, address *strin
 		return said(Verdict{State: VerdictAllowed, ReasonCode: ReasonContractNotice}), nil
 
 	case ClassBusinessCorrespondence:
-		return correspondenceVerdict(ctx, tx, contactID, address, purpose, since, asOf)
+		return correspondenceVerdict(ctx, tx, contactID, address, purpose, since, asOf, marketing.SendingEntity)
 
 	case ClassPhoneOutreach:
 		// Dormant by decision: the purpose exists so the model is complete. A
@@ -226,7 +229,7 @@ func verdictFor(ctx context.Context, tx pgx.Tx, contactID string, address *strin
 		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonNoCallPath, Code: BlockNoChannel}), nil
 
 	default:
-		return marketingVerdict(ctx, tx, contactID, purpose, marketing)
+		return marketingVerdict(ctx, tx, contactID, address, purpose, marketing)
 	}
 }
 
@@ -247,7 +250,7 @@ func verdictFor(ctx context.Context, tx pgx.Tx, contactID string, address *strin
 // The implied arm below is unchanged and stays second: it is the Art 6(1)(f)
 // reading of a relationship the subject started, and it is what answers for the
 // overwhelming majority of contacts, who never record an answer either way.
-func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, address *string, purpose PurposeRow, since, asOf time.Time) (Verdict, error) {
+func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, address *string, purpose PurposeRow, since, asOf time.Time, entity ids.UUID) (Verdict, error) {
 	// requiresDOI is passed as the purpose declares it rather than as a
 	// constant false. Correspondence does not demand the round trip today, and
 	// hard-coding that here would silently ignore an installation that turned
@@ -265,7 +268,7 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, add
 		// would let the timeline supply what the confirmation did not.
 		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonUnconfirmedDOI, Code: BlockUnconfirmedDOI}), nil
 	}
-	event, source, err := latestQualifyingEvent(ctx, tx, contactID, since, asOf, address)
+	event, source, err := latestQualifyingEvent(ctx, tx, contactID, since, asOf, address, entity)
 	if err != nil {
 		return Verdict{}, err
 	}
@@ -288,7 +291,7 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, add
 // where the pack grants it (existingcustomerroute.go). There is no
 // legitimate-interest escape for marketing email, B2C or B2B, and the product
 // does not offer the toggle.
-func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, marketing MarketingContext) (Verdict, error) {
+func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, address *string, purpose PurposeRow, marketing MarketingContext) (Verdict, error) {
 	state, granted, err := recordedState(ctx, tx, contactID, purpose.ID, purpose.RequiresDOI)
 	if err != nil {
 		return Verdict{}, err
@@ -299,6 +302,9 @@ func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose 
 	if state == string(StateWithdrawn) {
 		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonConsentWithdrawn, Code: BlockWithdrawn}), nil
 	}
+	if marketing.OptOut {
+		return said(Verdict{State: VerdictAllowed, ReasonCode: ReasonOptOutAllowed}), nil
+	}
 	if state == string(StateGranted) && purpose.RequiresDOI {
 		// Granted but never confirmed. The BGH evidence standard is the whole
 		// point of double opt-in, so an unconfirmed grant is not proof and does
@@ -308,7 +314,7 @@ func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose 
 	// A withdrawal returned above, so a customer who once consented and then
 	// withdrew never reaches the route that needs no consent.
 	if marketing.Exception != nil {
-		ground, err := existingCustomerGround(ctx, tx, contactID, purpose.ID, marketing.SendingEntity)
+		ground, err := existingCustomerGround(ctx, tx, contactID, address, purpose.ID, marketing.SendingEntity)
 		if err != nil {
 			return Verdict{}, err
 		}

@@ -3,28 +3,48 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import type { components } from "../../api/schema";
+import { de } from "../../i18n/de";
+import { en } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { AutomationsAdmin } from "./automations";
+import { AutomationsAdmin, type AutomationsView } from "./automations";
 import {
   AUTOMATION_CATALOG,
   configuredAutomations,
 } from "./automations.fixtures";
 
-// The whole automations page: the configured rules, then the starter library,
-// each in a pane of its own.
+// The automations page, one tab at a time: the configured rules, or the
+// starter library.
 
 const meta: Meta = {
-  title: "Settings/AI/Automations/Automations",
+  title: "Settings/Data/Automations/Automations",
   parameters: { layout: "padded" },
 };
 export default meta;
 
 type Story = StoryObj;
+
+const CONFIGURATION_STATES: Readonly<
+  Record<
+    string,
+    Pick<components["schemas"]["Automation"], "setup_state" | "setup_reason">
+  >
+> = {
+  "au-1": { setup_state: "on" },
+  "au-2": { setup_state: "on" },
+  "au-3": {
+    setup_state: "needs_attention",
+    setup_reason: "authorizer_inactive",
+  },
+  "au-4": { setup_state: "on" },
+  "au-5": { setup_state: "needs_setup", setup_reason: "authorizer_missing" },
+  "au-6": { setup_state: "paused" },
+};
 
 const CARD_ROUTES = {
   "GET /me": meRoute({ automation: ["create", "read", "update", "delete"] }),
@@ -39,22 +59,43 @@ const CARD_ROUTES = {
 function Card({
   readOnly = false,
   none = false,
-}: Readonly<{ readOnly?: boolean; none?: boolean }>) {
+  view = "mine",
+  setupStates = false,
+  locale = "en",
+}: Readonly<{
+  readOnly?: boolean;
+  none?: boolean;
+  view?: AutomationsView;
+  setupStates?: boolean;
+  locale?: "en" | "de";
+}>) {
   const routes = none
     ? {
         ...CARD_ROUTES,
         "GET /automations": () =>
           jsonResponse({ data: [], page: { next_cursor: null } }),
       }
-    : CARD_ROUTES;
+    : setupStates
+      ? {
+          ...CARD_ROUTES,
+          "GET /automations": () =>
+            jsonResponse({
+              data: configuredAutomations(Date.now()).map((row) => ({
+                ...row,
+                ...CONFIGURATION_STATES[row.id],
+              })),
+              page: { next_cursor: null },
+            }),
+        }
+      : CARD_ROUTES;
   installFetchStub(
     readOnly
       ? { ...routes, "GET /me": meRoute({ automation: ["read"] }) }
       : routes,
   );
   return (
-    <StoryProviders>
-      <AutomationsAdmin />
+    <StoryProviders locale={locale}>
+      <AutomationsAdmin view={view} />
     </StoryProviders>
   );
 }
@@ -62,7 +103,7 @@ function Card({
 const cardRendered: NonNullable<Story["play"]> = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
   await canvas.findByTestId("automation-au-6");
-  await canvas.findByTestId("template-no_activity_reminder");
+  await canvas.findByRole("columnheader", { name: "Authorized by" });
 };
 
 export const AdminCard: Story = {
@@ -79,7 +120,7 @@ export const AdminCardDark: Story = {
 // Nothing configured yet: the intro and one empty line share one body.
 export const NoneConfigured: Story = {
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByTestId("template-no_activity_reminder");
+    await within(canvasElement).findByText(en["auto.instances.empty"]);
   },
   render: () => <Card none />,
 };
@@ -91,8 +132,23 @@ export const AdminCardPhone: Story = {
   render: () => <Card />,
 };
 
-// The library stays readable without the create grant; its rows stop opening,
-// and the table's switches give way to words.
+export const Library: Story = {
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByTestId("template-no_activity_reminder");
+  },
+  render: () => <Card view="library" />,
+};
+
+// The catalog's names and descriptions in the reader's language, by key.
+export const LibraryInGerman: Story = {
+  play: async ({ canvasElement }) => {
+    const row = await within(canvasElement).findByTestId("template-route_lead");
+    await expect(row).toHaveTextContent(de["auto.template.route_lead.name"]);
+  },
+  render: () => <Card view="library" locale="de" />,
+};
+
+// The library stays readable without the create grant; its rows stop opening.
 export const AdminCardReadOnly: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -101,7 +157,7 @@ export const AdminCardReadOnly: Story = {
       canvas.queryByRole("button", { name: /^Use template/ }),
     ).toBeNull();
   },
-  render: () => <Card readOnly />,
+  render: () => <Card readOnly view="library" />,
 };
 
 export const CreatingFromATemplate: Story = {
@@ -109,10 +165,12 @@ export const CreatingFromATemplate: Story = {
     const user = userEvent.setup();
     const canvas = within(canvasElement);
     const row = await canvas.findByTestId("template-renewal_reminder");
-    await user.click(within(row).getByText("Renewal reminder"));
+    await user.click(
+      within(row).getByText(en["auto.template.renewal_reminder.name"]),
+    );
     await within(canvasElement.ownerDocument.body).findByRole("dialog");
   },
-  render: () => <Card />,
+  render: () => <Card view="library" />,
 };
 
 export const EditingInADialog: Story = {
@@ -128,4 +186,19 @@ export const EditingInADialog: Story = {
     await body.findByRole("dialog");
   },
   render: () => <Card />,
+};
+
+export const ConfigurationStates: Story = {
+  render: () => <Card setupStates />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("Needs setup");
+    await canvas.findByText("Needs attention");
+    await expect(canvas.getAllByText("On").length).toBeGreaterThan(0);
+  },
+};
+
+export const ConfigurationStatesDark: Story = {
+  ...ConfigurationStates,
+  globals: { theme: "dark" },
 };

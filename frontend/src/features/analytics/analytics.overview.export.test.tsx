@@ -34,17 +34,19 @@ afterEach(() => {
 });
 
 const HEADER =
-  "metric,block,label,value,target,comparison,upper,unit,currency,context,coverage,captured_at";
+  "metric,block,label,value,target,comparison,upper,unit,currency,context,coverage,withheld,coverage_reason,captured_at";
 
 // The server's CSV of one evaluation, as reportingCSVRows writes it: the
 // figures, then a row per chart point. A label with a comma is quoted.
 function serverCsv(url: URL): string {
   const rows = [HEADER];
   for (const metric of url.searchParams.getAll("metrics"))
-    rows.push(`${metric},headline,"${metric}, read",1,,,,count,,interval,ok,`);
+    rows.push(
+      `${metric},headline,"${metric}, read",1,,,,count,,interval,ok,false,,`,
+    );
   for (const block of url.searchParams.getAll("blocks"))
     rows.push(
-      `bookings_won,${block},"Point, ${block}",2,,,,count,,interval,ok,`,
+      `bookings_won,${block},"Point, ${block}",2,,,,count,,interval,ok,false,,`,
     );
   return `${rows.join("\n")}\n`;
 }

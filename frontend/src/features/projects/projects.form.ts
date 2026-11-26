@@ -8,7 +8,11 @@ import {
   type ProjectOwnerPicker,
   projectOwnerField,
 } from "../../components/projectownerfield";
+import { PHASE_LABEL } from "../../format/projectphase";
+import { trimServerSpace } from "../../format/servertrim";
 import type { MessageKey } from "../../i18n/en";
+import { faultSentenceFor } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 
 // The project form's vocabulary and transport, with no React in it: what the
 // create and edit dialogs ask, and
@@ -21,6 +25,8 @@ export {
   PHASE_LABEL,
   PROJECT_PHASES,
 } from "../../format/projectphase";
+
+import { characterCount } from "../../lib/charactercount";
 
 type CreateProjectRequest = components["schemas"]["CreateProjectRequest"];
 type UpdateProjectRequest = components["schemas"]["UpdateProjectRequest"];
@@ -39,7 +45,26 @@ export function projectFields(
   }>,
 ): CreateField[] {
   return [
-    { key: "name", label: "project.name", required: true },
+    {
+      key: "name",
+      label: "project.name",
+      required: true,
+      // No `maxLength`: the server trims before it counts, and so does this
+      // refusal, which Save shows on press.
+      validate: (value) =>
+        characterCount(trimServerSpace(value)) > TEXT_LIMITS.label
+          ? faultSentenceFor(
+              {
+                field: "name",
+                code: "too_long",
+                message: "",
+                max: TEXT_LIMITS.label,
+              },
+              t,
+              { name: t("project.name") },
+            )
+          : undefined,
+    },
     ...(opts.mode === "create"
       ? [
           {
@@ -57,7 +82,63 @@ export function projectFields(
       mode: opts.mode,
     }),
     { key: "description", label: "project.description", type: "textarea" },
+    { key: "started_at", label: "project.startDate", type: "date" },
     { key: "target_end_date", label: "project.targetEnd", type: "date" },
+    ...(opts.mode === "edit"
+      ? [
+          {
+            key: "ended_at",
+            label: "project.endDate" as const,
+            type: "date" as const,
+          },
+        ]
+      : []),
+  ];
+}
+
+/** The phases a project may start in; closing needs a project that exists. */
+const START_PHASES = ["initiative", "pursuing", "delivering"] as const;
+
+/**
+ * The create-only fields: the key the server suggests, the starting phase and
+ * the deal the project comes from. `suggestedKey` is the server's preview
+ * (getProjectKeyPreview), so the form never works a key out for itself.
+ */
+export function projectCreateFields(
+  t: (key: MessageKey, vars?: Record<string, string>) => string,
+  opts: Readonly<{
+    suggestedKey: string | undefined;
+    deals: readonly { value: string; label: string }[];
+  }>,
+): CreateField[] {
+  return [
+    {
+      key: "key",
+      label: "project.key",
+      maxLength: 24,
+      placeholder: opts.suggestedKey,
+      hint: opts.suggestedKey
+        ? t("project.keySuggested", { key: opts.suggestedKey })
+        : t("project.keyHint"),
+    },
+    {
+      key: "phase",
+      label: "project.startPhase",
+      type: "select",
+      // Required, so the form opens on Initiative: the phase the server gives
+      // a project created without one.
+      required: true,
+      options: START_PHASES.map((phase) => ({
+        value: phase,
+        label: t(PHASE_LABEL[phase]),
+      })),
+    },
+    {
+      key: "deal_id",
+      label: "project.deal",
+      type: "select",
+      options: [{ value: "", label: t("project.noDeal") }, ...opts.deals],
+    },
   ];
 }
 
@@ -73,7 +154,11 @@ export function mapProjectCreate(
     company_id: str(values.company_id),
     owner_id: str(values.owner_id) || null,
     description: str(values.description) || null,
+    started_at: str(values.started_at) || null,
     target_end_date: str(values.target_end_date) || null,
+    key: str(values.key) || null,
+    phase: (str(values.phase) || null) as CreateProjectRequest["phase"],
+    deal_id: str(values.deal_id) || null,
     source: "manual",
   };
 }
@@ -90,7 +175,9 @@ export function mapProjectUpdate(
     name: str(values.name) || undefined,
     owner_id: str(values.owner_id) || null,
     description: str(values.description) || null,
+    started_at: str(values.started_at) || null,
     target_end_date: str(values.target_end_date) || null,
+    ended_at: str(values.ended_at) || null,
   };
 }
 
@@ -109,6 +196,8 @@ export function projectEditRecord(project: Project): Record<
     key: project.key ?? "",
     owner_id: project.owner_id ?? "",
     description: project.description ?? "",
+    started_at: project.started_at ?? "",
     target_end_date: project.target_end_date ?? "",
+    ended_at: project.ended_at ?? "",
   };
 }

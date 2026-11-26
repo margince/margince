@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/contractterm"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -42,24 +43,11 @@ import (
 func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w packRules) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
 	if subject.Kind != entityContact && category != commsauthz.CategoryReplyToInbound &&
-		category != commsauthz.CategoryRequestedFollowup && category != commsauthz.CategoryPrivacyNotice &&
+		category != commsauthz.CategoryRequestedFollowup && category != commsauthz.CategoryPrecontractQuote &&
+		category != commsauthz.CategoryPrivacyNotice && category != commsauthz.CategoryConsentConfirmation &&
 		category != commsauthz.CategoryOptoutConfirmation {
-		// A LEAD REACHES ONE ARM AND NO OTHER.
-		//
-		// The correspondence arm asks who wrote to us through subjectAskedUs.
-		// wroteToUsWithin matches a lead through its bare address, and
-		// requestOnRecord answers false for a lead without reading a
-		// contact-keyed table.
-		//
-		// The privacy notice is the one link a lead can hold. A website lead
-		// is told by it before anything else is sent.
-		//
-		// A lead's opt-out receipt rests on the lead's own stop, which the
-		// suppression table records against the lead.
-		//
-		// Every other arm reads a record a lead cannot hold. An invoice or
-		// contract hangs off a company, and the record and consent links name
-		// a contact. Those fall through to the lead's own grant.
+		// Leads hold their own requests, captured replies, notice and consent links and stops.
+		// Categories needing company documents or deal stakeholders remain contact-only.
 		return unsupported, nil
 	}
 	// THE NAMED RECORD MUST BE ONE THE CALLER MAY SEE, before it is read.
@@ -93,7 +81,7 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w packRules, unsupported resolution) (resolution, error) {
 	switch category {
 	case commsauthz.CategoryReplyToInbound, commsauthz.CategoryRequestedFollowup:
-		return g.validateRequestedFollowup(ctx, tx, subject, w, category)
+		return g.validateRequestedFollowup(ctx, tx, req, subject, w, category)
 	case commsauthz.CategoryActiveDealFollowup:
 		return validateDealFollowup(ctx, tx, req, subject)
 	case commsauthz.CategoryInvoiceOrPayment:
@@ -104,7 +92,7 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 		return validateQuote(ctx, tx, req, subject)
 	case commsauthz.CategoryRecordConfirmation, commsauthz.CategoryConsentConfirmation,
 		commsauthz.CategoryPrivacyNotice:
-		return validateConfirmation(ctx, tx, subject, category)
+		return validateConfirmation(ctx, tx, req.DeliveryID, subject, category)
 	case commsauthz.CategoryCustomerService, commsauthz.CategoryAccountNotice, commsauthz.CategorySecurityNotice:
 		return validateCustomerNotice(ctx, tx, subject, category)
 	case commsauthz.CategoryOptoutConfirmation:
@@ -122,12 +110,18 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 }
 
 // validateRequestedFollowup answers an unprompted follow-up through
-// subjectAskedUs. A request a rep logged once is not asked for again on every
-// later message.
-func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRules, category commsauthz.Category) (resolution, error) {
+// subjectAskedUs, or through an appointment still to come with the subject,
+// which a message about moving it continues. A request a rep logged once is not
+// asked for again on every later message.
+func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, w packRules, category commsauthz.Category) (resolution, error) {
 	found, err := subjectAskedUs(ctx, tx, subject, w)
 	if err != nil {
 		return resolution{}, err
+	}
+	if !found && subject.Kind == entityContact && category == commsauthz.CategoryRequestedFollowup {
+		if found, err = subjectHasAnAgreedAppointment(ctx, tx, req, subject); err != nil {
+			return resolution{}, err
+		}
 	}
 	if !found {
 		return resolution{
@@ -156,21 +150,45 @@ func subjectAskedUs(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRu
 // repliedOrWasRecorded asks whether the subject wrote to us, or somebody
 // recorded that they asked to hear from us, inside the window.
 //
-// A contact is asked through latestQualifyingEvent, the reader the legacy
-// correspondence verdict uses. So a recorded "requested by the subject" or an
-// in-person exchange supports a composer send, and both readers agree. A lead
-// has no qualifying event, because the table is keyed on contacts. It keeps
-// the authorship test alone, which wroteToUsWithin spells for both kinds.
+// Contacts share the legacy fact reader. Leads use the same recorded-event
+// reader alongside their captured correspondence.
 func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, asOf time.Time, window time.Duration) (bool, error) {
 	since := asOf.Add(-window)
 	if subject.Kind != entityContact {
-		return wroteToUsWithin(ctx, tx, subject, since)
+		found, err := wroteToUsWithin(ctx, tx, subject, since)
+		if err != nil || found {
+			return found, err
+		}
+		sub, known, err := qualifyingSubjectRef(subject)
+		if err != nil || !known {
+			return false, err
+		}
+		entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
+		if err != nil {
+			return false, err
+		}
+		_, found, err = recordedSubjectQualifyingEvent(ctx, tx, sub, since, asOf, &subject.Address, entity)
+		return found, err
 	}
-	_, source, err := latestQualifyingEvent(ctx, tx, subject.ID, since, asOf, &subject.Address)
+	_, source, err := latestQualifyingEvent(ctx, tx, subject.ID, since, asOf, &subject.Address, subject.SendingEntity)
 	if err != nil {
 		return false, err
 	}
 	return source != sourceNone, nil
+}
+
+// subjectHasAnAgreedAppointment asks agreedAppointment for this subject, under
+// the sending company's evidence scope (evidenceEntity).
+func subjectHasAnAgreedAppointment(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (bool, error) {
+	entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
+	if err != nil {
+		return false, err
+	}
+	var named *ids.UUID
+	if !req.Evidence.ActivityID.IsZero() {
+		named = &req.Evidence.ActivityID
+	}
+	return agreedAppointment(ctx, tx, subject.ID, named, time.Now(), entity)
 }
 
 // validateDealFollowup answers a follow-up on a deal the sender picked. It reads
@@ -267,16 +285,32 @@ func documentRecipientSQL(company, deal string) string {
 		                   WHERE b.kind = 'billing_contact' AND b.company_id = ` + company + `
 		                     AND b.archived_at IS NULL)
 		      AND EXISTS (SELECT 1 FROM relationship r JOIN deal d ON d.id = r.deal_id
-		                   WHERE r.kind = 'deal_stakeholder' AND r.deal_id = ` + deal + `
+		                   WHERE ` + dealseat.CurrentSQL("r") + ` AND r.deal_id = ` + deal + `
 		                     AND d.company_id = ` + company + ` AND d.archived_at IS NULL
-		                     AND r.contact_id = $2::uuid AND r.role = ANY($4)
-		                     AND r.ended_at IS NULL AND r.archived_at IS NULL)))`
+		                     AND r.contact_id = $2::uuid AND r.role = ANY($4))))`
 }
 
 // validateCustomerNotice answers service, account and security mail to a
 // customer. A customer is a contact currently employed at a company with a
 // contract in force or a won deal. No inline fact is needed; the record carries the relationship.
 func validateCustomerNotice(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category) (resolution, error) {
+	customer, err := isCustomerTx(ctx, tx, subject.ID)
+	if err != nil {
+		return resolution{}, err
+	}
+	if !customer {
+		return resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}, nil
+	}
+	basis := commsauthz.BasisContract
+	if category == commsauthz.CategorySecurityNotice {
+		basis = commsauthz.BasisVitalOrSecurityInterest
+	}
+	return resolution{Category: category, Basis: basis, Supported: true}, nil
+}
+
+// isCustomerTx answers whether a contact is currently employed at a company
+// with a contract in force or a won deal.
+func isCustomerTx(ctx context.Context, tx pgx.Tx, contactID string) (bool, error) {
 	var customer bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
@@ -289,17 +323,10 @@ func validateCustomerNotice(ctx context.Context, tx pgx.Tx, subject subjectRef, 
 			                   AND `+contractCarriesMailSQL("c")+`)
 			        OR EXISTS (SELECT 1 FROM deal d
 			                    WHERE d.company_id = r.company_id AND d.archived_at IS NULL
-			                      AND d.status = 'won')))`, subject.ID).Scan(&customer); err != nil {
-		return resolution{}, wrapEvidenceRead("whether the recipient works for a customer", err)
+			                      AND d.status = 'won')))`, contactID).Scan(&customer); err != nil {
+		return false, wrapEvidenceRead("whether the recipient works for a customer", err)
 	}
-	if !customer {
-		return resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}, nil
-	}
-	basis := commsauthz.BasisContract
-	if category == commsauthz.CategorySecurityNotice {
-		basis = commsauthz.BasisVitalOrSecurityInterest
-	}
-	return resolution{Category: category, Basis: basis, Supported: true}, nil
+	return customer, nil
 }
 
 // validateQuote answers a requested quote or offer. Either a sent offer on the
@@ -351,10 +378,8 @@ func quoteOnDeal(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject
 			   -- ago is not a quote in progress.
 			   AND d.status = 'open'
 			   AND d.archived_at IS NULL
-			   AND r.kind = 'deal_stakeholder'
+			   AND `+dealseat.CurrentSQL("r")+`
 			   AND r.contact_id = $2::uuid
-			   AND r.ended_at IS NULL
-			   AND r.archived_at IS NULL
 		)`, req.Evidence.DealID)
 }
 
@@ -376,7 +401,7 @@ func wrapEvidenceRead(what string, err error) error {
 // recipient ($2).
 func validateCompanyDocument(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category, basis commsauthz.Basis, query string, named ids.UUID, args ...any) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
-	if named == (ids.UUID{}) {
+	if named == (ids.UUID{}) || subject.Kind != entityContact {
 		// The caller claimed the category and named no record. Nothing to look
 		// at, so nothing supports it.
 		return unsupported, nil
@@ -420,7 +445,7 @@ func refuseUnreadableEvidence(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 		if err := auth.Require(ctx, named.object, principal.ActionRead); err != nil {
 			// The grant refusal becomes a not-found, so naming an id the
 			// caller may not read discloses nothing about whether it exists.
-			return fmt.Errorf("consent: this message names a record that is not available: %w",
+			return fmt.Errorf("this message names a record that is not available: %w",
 				apperrors.ErrNotFound)
 		}
 	}

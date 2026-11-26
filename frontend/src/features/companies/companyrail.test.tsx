@@ -3,9 +3,11 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   emptyPage,
+  jsonResponse,
   renderCards,
   renderRail,
   stub,
@@ -88,10 +90,9 @@ describe("the Overview's Contacts card", () => {
       }),
     });
     const contacts = within(card("Contacts"));
-    expect(contacts.getByRole("link", { name: "Dana Buyer" })).toHaveAttribute(
-      "href",
-      "/#/contacts/p-2",
-    );
+    expect(
+      contacts.getByRole("link", { name: /^DB\s*Dana Buyer$/ }),
+    ).toHaveAttribute("href", "/#/contacts/p-2");
     expect(contacts.getByText("Lena Middle")).toBeInTheDocument();
     expect(contacts.queryByText("Ravi Weak")).toBeNull();
     expect(contacts.getByText("Champion")).toBeInTheDocument();
@@ -178,6 +179,18 @@ describe("the Overview's Contacts card", () => {
     expect(contacts.textContent).not.toMatch(
       /function|toString|constructor|gatekeeper/,
     );
+  });
+
+  it("opens the Contacts tab from a link that promises no add", async () => {
+    stub();
+    const onTab = vi.fn();
+    renderCards({ onTab });
+    const contacts = within(card("Contacts"));
+    expect(contacts.queryByRole("button", { name: /add/i })).toBeNull();
+    await userEvent.click(
+      contacts.getByRole("button", { name: "All contacts" }),
+    );
+    expect(onTab).toHaveBeenCalledWith("contacts");
   });
 });
 
@@ -302,9 +315,69 @@ describe("the details' Way in row", () => {
       }),
     });
     expect(screen.getByText("Way in")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Dana Buyer" })).toHaveAttribute(
-      "href",
-      "/#/contacts/p-2",
-    );
+    expect(
+      screen.getByRole("link", { name: /^DB\s*Dana Buyer$/ }),
+    ).toHaveAttribute("href", "/#/contacts/p-2");
+  });
+});
+
+describe("the company's tags in the left column", () => {
+  it("gives an archived company no Tags row, folded or shown", async () => {
+    stub();
+    const archived = view();
+    renderRail({
+      view: view({
+        company: { ...archived.company, archived_at: "2026-05-01T00:00:00Z" },
+        tags: [{ id: "t-1", name: "Champion", color: "teal" }],
+      }),
+    });
+    const unfold = screen.queryByRole("button", { name: /empty field/i });
+    if (unfold) await userEvent.setup().click(unfold);
+    const about = screen.getByRole("region", {
+      name: en["record.details.about"],
+    });
+    expect(within(about).queryByText(en["tags.panelTitle"])).toBeNull();
+  });
+
+  it("folds an untagged company's Tags row and asks for no tags", () => {
+    stub();
+    renderRail();
+    const about = screen.getByRole("region", {
+      name: en["record.details.about"],
+    });
+    expect(within(about).queryByText(en["tags.panelTitle"])).toBeNull();
+    const asked = vi
+      .mocked(fetch)
+      .mock.calls.map(([input]) => (input instanceof Request ? input.url : ""));
+    expect(asked.filter((url) => url.endsWith("/tags"))).toEqual([]);
+  });
+
+  it("shows the tags it carries and the verb to add one", async () => {
+    stub({
+      "/tags": () =>
+        jsonResponse({
+          data: [
+            {
+              tag_id: "t-1",
+              name: "Champion",
+              color: "teal",
+              archived: false,
+              assigned_at: "2026-03-03T10:00:00Z",
+            },
+          ],
+          withheld: false,
+        }),
+    });
+    renderRail({
+      view: view({ tags: [{ id: "t-1", name: "Champion", color: "teal" }] }),
+    });
+    const about = screen.getByRole("region", {
+      name: en["record.details.about"],
+    });
+    await within(about).findByText("Champion");
+    expect(within(about).getByText(en["tags.panelTitle"])).toBeInTheDocument();
+    expect(
+      within(about).getByRole("button", { name: en["tags.add"] }),
+    ).toBeInTheDocument();
   });
 });

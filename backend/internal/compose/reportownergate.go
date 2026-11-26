@@ -17,7 +17,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"fmt"
 	"maps"
 	"slices"
 
@@ -112,10 +111,8 @@ func requireMeasurableOwnerValue(ctx context.Context, tx pgx.Tx, key string, val
 	}
 	owner, err := ids.Parse(text)
 	if err != nil {
-		// A value that is no id names no seat, so it discloses nobody. The query
-		// refuses it as the caller's mistyped value (422 value_wrong_type), the
-		// answer every other typed column gives.
-		return nil //nolint:nilerr // the bound query answers the malformed value
+		// No id names no seat; the filter's id check refuses it before it binds.
+		return nil //nolint:nilerr // the id check answers the malformed value
 	}
 	return requireMeasurableOwner(ctx, tx, owner)
 }
@@ -189,10 +186,28 @@ func requireMeasurableOwner(ctx context.Context, tx pgx.Tx, owner ids.UUID) erro
 	}
 	_, err := resolveAnalyticsScope(ctx, tx, p, RequestedScope{Kind: ScopeKindOwner, ID: &owner})
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return auth.RefuseRow(ctx, measuredPopulation, fmt.Errorf("that owner's records are outside what you may measure: %w",
-			apperrors.ErrPermissionDenied))
+		return auth.RefuseRow(ctx, measuredPopulation, OwnerNotMeasurableError{})
 	}
 	return err
+}
+
+// OwnerNotMeasurableError refuses an owner filter naming someone the caller
+// may not measure. Its own code, so a board tells it from a refused report.
+type OwnerNotMeasurableError struct{}
+
+func (OwnerNotMeasurableError) Error() string {
+	return "compose: that owner's records are outside what you may measure"
+}
+
+// Is keeps the refusal on the permission sentinel's 403 row.
+func (OwnerNotMeasurableError) Is(target error) bool {
+	return target == apperrors.ErrPermissionDenied
+}
+
+// MessageFault says what the reader can do instead.
+func (OwnerNotMeasurableError) MessageFault() (code, message string) {
+	return "owner_not_measurable", "That owner's records are outside what you may measure. " +
+		"Ask an administrator to widen your reach, or remove the owner filter."
 }
 
 // breaksDownByOwner answers whether a grouping splits the answer per owner.

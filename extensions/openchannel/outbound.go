@@ -39,7 +39,7 @@ const (
 
 // outboundColumns is the listing's projection, and it is also the order
 // scanOutboundAttempt reads.
-const outboundColumns = `id::text, delivery_key, attempt, recipient, outcome,
+const outboundColumns = `id::text, delivery_key, attempt, outcome,
 	coalesce(error_class, ''), created_at`
 
 // outboundAttempt is one recorded attempt as a screen sees it.
@@ -49,9 +49,7 @@ type outboundAttempt struct {
 	// several attempts of one message recognisable as one message.
 	DeliveryKey string `json:"delivery_key"`
 	Attempt     int    `json:"attempt"`
-	// Recipient is the account this connector addressed, as the CRM resolved it.
-	Recipient string `json:"recipient"`
-	Outcome   string `json:"outcome"`
+	Outcome     string `json:"outcome"`
 	// ErrorClass is a class this unit chose, never the receiver's own message:
 	// the address belongs to a member's own system, and what it says about
 	// itself is not this installation's to render.
@@ -133,12 +131,12 @@ func recordAttempt(ctx context.Context, rt extension.Runtime, t transmission, ou
 		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO `+outboundTable+`
-			   (endpoint_id, user_id, delivery_key, attempt, recipient, outcome, error_class)
-			 VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, nullif($7, ''))
+			   (endpoint_id, user_id, delivery_key, attempt, activity_id, outcome, error_class)
+			 VALUES ($1::uuid, $2::uuid, $3, $4, $5::uuid, $6, nullif($7, ''))
 			 ON CONFLICT (endpoint_id, delivery_key, attempt)
 			 DO UPDATE SET outcome = excluded.outcome, error_class = excluded.error_class`,
 			t.target.ID, t.target.UserID, t.msg.IdempotencyKey, t.msg.Attempt,
-			t.msg.Recipient.ChannelUserID, outcome, class.Class); err != nil {
+			t.msg.ActivityID, outcome, class.Class); err != nil {
 			return err
 		}
 		if outcome != outcomeSent || previous == outcomeSent {
@@ -210,7 +208,7 @@ func scanOutboundAttempt(scan func(...any) error) (outboundAttempt, error) {
 		a         outboundAttempt
 		createdAt time.Time
 	)
-	err := scan(&a.ID, &a.DeliveryKey, &a.Attempt, &a.Recipient, &a.Outcome,
+	err := scan(&a.ID, &a.DeliveryKey, &a.Attempt, &a.Outcome,
 		&a.ErrorClass, &createdAt)
 	if err != nil {
 		return outboundAttempt{}, err

@@ -11,7 +11,7 @@ export interface components {
          * @description The closed set of domain event types a webhook subscription may select — every subscribable event across the deal, offer, pipeline/stage, contact/company, lead, activities, consent/privacy, signals, ai voice and identity families. A subscription's event-type filter is validated against this set; an unlisted type cannot be subscribed to.
          * @enum {string}
          */
-        SubscribableEventType: "deal.created" | "deal.owner_changed" | "deal.stage_changed" | "deal.archived" | "deal.updated" | "deal.restored" | "deal.merged" | "deal.erased" | "project.created" | "project.updated" | "project.phase_changed" | "project.health_assessed" | "project.archived" | "list.created" | "list.updated" | "list.archived" | "list.restored" | "list.member_added" | "list.member_removed" | "list.evaluated" | "commission.accrued" | "commission.decided" | "contract.created" | "contract.updated" | "contract.status_changed" | "contract.archived" | "deal_room.opened" | "deal_room.updated" | "deal_room.paused" | "deal_room.resumed" | "deal_room.closed" | "deal_room.archived" | "deal_room.participant_invited" | "deal_room.participant_revoked" | "deal_room.participant_credential_reissued" | "deal_room.comment_posted" | "deal_room.thread_resolved" | "deal_room.decision_recorded" | "offer.created" | "offer.updated" | "offer.sent" | "offer.accepted" | "offer.rejected" | "offer.superseded" | "pipeline.created" | "pipeline.updated" | "pipeline.archived" | "stage.created" | "stage.updated" | "stage.archived" | "contact.created" | "contact.archived" | "contact.merged" | "contact.updated" | "contact.restored" | "conversation_claim.captured" | "conversation_claim.changed" | "company.created" | "company.archived" | "company.merged" | "company.updated" | "company.restored" | "company.erased" | "lead.created" | "lead.disqualified" | "lead.promoted" | "lead.demoted" | "lead.merged" | "lead.sla_breached" | "lead.updated" | "lead_source.changed" | "lead_disqualify_reason.changed" | "activity.captured" | "activity.archived" | "activity.updated" | "attachment.created" | "attachment.updated" | "attachment.archived" | "engagement.reply" | "comms.delivery_bounced" | "notice.created" | "user_delivery.changed" | "forecast.created" | "forecast.assurance_created" | "forecast.exception_resolved" | "forecast.snapshot_created" | "forecast.share_issued" | "forecast.share_revoked" | "weekly_plan.updated" | "weekly_plan.help_requested" | "sales_initiative.updated" | "activity.disposition_recorded" | "activity.marked_handled" | "activity.readiness_recorded" | "relationship_nudge.decided" | "notice.read" | "approval.preference_changed" | "notification.preference_changed" | "intro_request.created" | "intro_request.decided" | "intro_request.completed" | "intro_request.recorded" | "intro_request.replied" | "intro_request.closed" | "consent.changed" | "consent.suppressed" | "consent.suppression_lifted" | "consent.override_recorded" | "consent.override_lifted" | "email_signature.changed" | "user_locale.changed" | "user_timezone.changed" | "user_display_name.changed" | "user_greeting_name.changed" | "linkedin_account.changed" | "linkedin_network.imported" | "linkedin_match.decided" | "retention.applied" | "retention.restricted" | "signal.detected" | "signal.updated" | "signal.resolved" | "voice.profile_created" | "voice.profile_updated" | "voice.profile_archived" | "voice.corpus_changed" | "voice.build_changed" | "voice.version_changed" | "voice.draft_outcome_recorded" | "user.updated" | "user.invited" | "user.activated" | "user.password_link_issued" | "user.mfa_removed" | "user.deactivated" | "user.reactivated" | "role.changed" | "team.changed" | "passport.revoked" | "onboarding.state_changed" | "approval.requested" | "approval.decided" | "approval.failure_acknowledged" | "coldstart.read_back_proposed" | "coldstart.accepted" | "coldstart.rejected" | "audit.appended";
+        SubscribableEventType: "deal.created" | "deal.owner_changed" | "deal.stage_changed" | "deal.archived" | "deal.updated" | "deal.restored" | "deal.merged" | "deal.erased" | "project.created" | "project.updated" | "project.phase_changed" | "project.health_assessed" | "project.archived" | "list.created" | "list.updated" | "list.archived" | "list.restored" | "list.member_added" | "list.member_removed" | "list.evaluated" | "record_link.changed" | "commission.accrued" | "commission.decided" | "contract.created" | "contract.updated" | "contract.status_changed" | "contract.archived" | "deal_room.opened" | "deal_room.updated" | "deal_room.paused" | "deal_room.resumed" | "deal_room.closed" | "deal_room.archived" | "deal_room.participant_invited" | "deal_room.participant_revoked" | "deal_room.participant_credential_reissued" | "deal_room.comment_posted" | "deal_room.thread_resolved" | "deal_room.decision_recorded" | "legal_review.requested" | "legal_review.decided" | "legal_review.withdrawn" | "offer.created" | "offer.updated" | "offer.sent" | "offer.accepted" | "offer.rejected" | "offer.superseded" | "pipeline.created" | "pipeline.updated" | "pipeline.archived" | "stage.created" | "stage.updated" | "stage.archived" | "contact.created" | "contact.archived" | "contact.merged" | "contact.updated" | "contact.restored" | "conversation_claim.captured" | "conversation_claim.changed" | "company.created" | "company.archived" | "company.merged" | "company.updated" | "company.restored" | "company.erased" | "lead.created" | "lead.disqualified" | "lead.promoted" | "lead.demoted" | "lead.merged" | "lead.sla_breached" | "lead.updated" | "lead_source.changed" | "lead_disqualify_reason.changed" | "activity.captured" | "activity.archived" | "activity.updated" | "attachment.created" | "attachment.updated" | "attachment.archived" | "attachment.restored" | "engagement.reply" | "comms.delivery_bounced" | "notice.created" | "user_delivery.changed" | "forecast.created" | "forecast.assurance_created" | "forecast.exception_resolved" | "forecast.snapshot_created" | "forecast.share_issued" | "forecast.share_revoked" | "weekly_plan.updated" | "weekly_plan.help_requested" | "sales_initiative.updated" | "activity.disposition_recorded" | "activity.marked_handled" | "activity.invitation_answered" | "activity.link_suggestion_changed" | "activity.readiness_recorded" | "relationship_nudge.decided" | "notice.read" | "approval.preference_changed" | "notification.preference_changed" | "intro_request.created" | "intro_request.decided" | "intro_request.completed" | "intro_request.recorded" | "intro_request.replied" | "intro_request.closed" | "consent.changed" | "consent.suppressed" | "consent.suppression_lifted" | "consent.override_recorded" | "consent.override_lifted" | "email_signature.changed" | "user_locale.changed" | "user_timezone.changed" | "user_display_name.changed" | "user_greeting_name.changed" | "linkedin_account.changed" | "linkedin_network.imported" | "linkedin_match.decided" | "retention.applied" | "retention.restricted" | "signal.detected" | "signal.updated" | "signal.resolved" | "voice.profile_created" | "voice.profile_updated" | "voice.profile_archived" | "voice.corpus_changed" | "voice.build_changed" | "voice.version_changed" | "voice.draft_outcome_recorded" | "user.updated" | "user.invited" | "user.activated" | "user.password_link_issued" | "user.mfa_removed" | "user.deactivated" | "user.reactivated" | "role.changed" | "team.changed" | "passport.revoked" | "onboarding.state_changed" | "approval.requested" | "approval.decided" | "approval.failure_acknowledged" | "coldstart.read_back_proposed" | "coldstart.accepted" | "coldstart.rejected" | "audit.appended";
         /** @description Who or what caused the event, as exposed publicly. */
         PublicEventActor: {
             /** @description Actor kind (e.g. human, agent, connector). */
@@ -106,6 +106,47 @@ export interface components {
             to_status: string;
             /** @description Why the entry was voided; absent for approve and pay. */
             reason?: string;
+        };
+        /** @description Payload for legal_review.requested: a deal's side asked legal to review the deal. It names the deal and the review and nothing the requester wrote: a receiver reads the note under its own scope. */
+        PublicEventLegalReviewRequested: {
+            /**
+             * Format: uuid
+             * @description The deal under review.
+             */
+            deal_id: string;
+            /**
+             * Format: uuid
+             * @description The review the request opened.
+             */
+            review_id: string;
+        };
+        /** @description Payload for legal_review.decided: legal answered a request. It carries the outcome and none of the reviewer's comments. */
+        PublicEventLegalReviewDecided: {
+            /**
+             * Format: uuid
+             * @description The deal under review.
+             */
+            deal_id: string;
+            /**
+             * Format: uuid
+             * @description The review that was answered.
+             */
+            review_id: string;
+            /** @description approved or changes_needed. */
+            outcome: string;
+        };
+        /** @description Payload for legal_review.withdrawn: the deal's side took back an open request. */
+        PublicEventLegalReviewWithdrawn: {
+            /**
+             * Format: uuid
+             * @description The deal under review.
+             */
+            deal_id: string;
+            /**
+             * Format: uuid
+             * @description The review that was taken back.
+             */
+            review_id: string;
         };
         /**
          * @description Payload for deal_room.opened — a Deal Room was created on a deal. Nothing is
@@ -394,6 +435,15 @@ export interface components {
             /** @description chosen or bulk. */
             reason: string;
         };
+        /** @description Payload for record_link.changed. A typed link was made or removed. The subject is the record the link starts on (deal, company or contact), so only a subscriber who may see that record gets the event. It names the link and its type. It does not name the record on the other end, which that subscriber may not be allowed to see. */
+        PublicEventRecordLinkChanged: {
+            /** Format: uuid */
+            link_id: string;
+            /** @description A core type word, or `ext:<unit>:<type>`. */
+            link_type: string;
+            /** @description One of added or removed. */
+            status: string;
+        };
         /** @description Payload for list.evaluated — a check of a Live List saw records join or leave it. Emitted once per check that saw a change, never per record. It carries no counts: the check sees every record, and a count would tell a subscriber how many records they cannot see. Who joined and left is on the list's history, read under the reader's own row scope. */
         PublicEventListEvaluated: {
             /**
@@ -590,7 +640,7 @@ export interface components {
              */
             valid_until?: string;
         };
-        /** @description Payload for offer.accepted — a sent offer was accepted. The deal's headline amount is synced from this offer's gross in the same transaction (see deal.updated on the paired deal entity). */
+        /** @description Payload for offer.accepted: a sent offer was accepted. The deal's headline amount is synced from this offer's net, the figure without tax, in the same transaction. The paired deal.updated carries that net. This payload still states the offer's own gross. */
         PublicEventOfferAccepted: {
             /**
              * Format: uuid
@@ -823,7 +873,7 @@ export interface components {
         };
         /** @description Payload for company.updated, an open envelope. Eight emit sites carry different shapes. They include a flat column patch, the anchor company save's field delta and the partner extension's nested delta. Others are enrichment and deep-read applies, and a relationship delta. So the payload is a change-set map rather than a fixed field list. */
         PublicEventCompanyUpdated: {
-            /** @description What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form. */
+            /** @description What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site. A column patch carries a flat field → new-value entry. The recompute/routing/relationship sites carry a `{delta: {...}}` sub-object, sometimes with a sibling `source`. Read a key's value as either form. A change to the company's `status` also carries the value under `lifecycle`, the key this version first gave it. `lifecycle` is deprecated; read `status`. */
             changed_fields: {
                 [key: string]: unknown;
             };
@@ -907,6 +957,8 @@ export interface components {
              * @description The first-response deadline that passed.
              */
             deadline: string;
+            /** @description The lead's name at breach time. The escalation names the lead it is about without reading it back. */
+            lead_name?: string;
             /**
              * Format: uuid
              * @description The seat the scan chose for the escalation: the lead's owner while that owner can be handed work, else the intake seat. Delivery asks again, so the task and notice can go to the intake seat instead, or to nobody. Absent when no seat was chosen, so it can differ from `owner_id`.
@@ -920,14 +972,21 @@ export interface components {
                 [key: string]: unknown;
             };
         };
-        /** @description Payload for activity.captured — the first-class capture verb, emitted instead of (never alongside) a generic activity.created (events.md §1). Two emit sites: the direct-log path (activities/activity.go) that sets kind only, and the capture ingestion path (capture/sink.go) that also names its originating source system. */
+        /** @description Payload for activity.captured. This event replaces activity.created. Manual logging includes the activity kind and trusted website receipt details. Connector ingestion includes the source system. */
         PublicEventActivityCaptured: {
+            /**
+             * Format: uuid
+             * @description Reviewed handling policy on the trusted accepted website note; absent on other activity events.
+             */
+            handling_automation_id?: string;
             /** @description The activity kind (email | call | meeting | note | task | message). Decoded by automation/handlers_event.go's post_meeting_recap trigger — this field's JSON key is a binding contract, not just documentation. Since ADR-0107/A158 the kind no longer names a messaging transport: every channel message is `message`, and channel_provider says what carried it. */
             kind: string;
             /** @description Which transport carried the message. Present when kind is `message`, and absent otherwise. Without this field a consumer could not tell a Telegram message from any other. Before ADR-0107 the `kind` field told them that. The envelope is additionalProperties:false, so the field must be named here to be sent at all. */
             channel_provider?: string;
-            /** @description The originating source system (capture ingestion only; absent on a direct log). */
+            /** @description The originating source system for capture ingestion or a trusted website note; absent on other direct logs. */
             source_system?: string;
+            /** @description Canonical accepted website submission key, carried only by a website note. Consumers verify its stored provenance before routing. Contains no submission content. */
+            website_submission_key?: string;
             /** @description True when a data import wrote the event. Absent otherwise. */
             imported?: boolean;
             /**
@@ -998,6 +1057,16 @@ export interface components {
              */
             byte_size?: number | null;
         };
+        /** @description Payload for attachment.restored. An archived file is back in the record's listings, because the source that listed it lists it again. It is the undo of attachment.archived for the same file, not a new file, so a subscriber that counts uploads does not count it twice. It carries the same shape as the other three, with the same omissions. */
+        PublicEventAttachmentRestored: {
+            /** @description The kind of record the file hangs off. */
+            parent_type: string;
+            /**
+             * Format: uuid
+             * @description The record the file hangs off.
+             */
+            parent_id: string;
+        };
         /** @description Payload for activity.archived: an activity was archived. Carries only the import mark, when an import's undo wrote the event. */
         PublicEventActivityArchived: {
             /** @description True when a data import wrote the event. Absent otherwise. */
@@ -1020,6 +1089,18 @@ export interface components {
         };
         /** @description The bounded delta of activity.updated. Each field is carried only when this update touched it. The key set is fixed, so it is typed rather than an open map. */
         PublicEventActivityChangedFields: {
+            /** @description The stored meeting changed from lacking Held status or usable notes to having both. Consumers recheck current content and access before drafting. */
+            meeting_recap_became_ready?: boolean;
+            /**
+             * Format: uuid
+             * @description The reviewed inquiry policy attached to an accepted website note by its internal handler.
+             */
+            handling_automation_id?: string;
+            /**
+             * Format: uuid
+             * @description The accepted source attached to an existing task by its internal handler.
+             */
+            source_activity_id?: string;
             /** @description The activity's new conversation key, when its thread grouping changed. */
             thread_key?: string;
             /** @description A reviewed correction changed the task's source link or cleared a generated deadline; fetch the task through its normal access gate. */
@@ -1086,6 +1167,11 @@ export interface components {
             call_outcome?: "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
             /** @description True when this update removed the call's outcome, so the call has none again and counts as contact as before. */
             call_outcome_cleared?: boolean;
+            /**
+             * @description The task's new type, which decides its one step (absent when this update did not touch it). Task rows only.
+             * @enum {string}
+             */
+            task_type?: "reply" | "reach_out" | "meet" | "review" | "decide" | "do";
             relinked?: components["schemas"]["PublicEventActivityRelinkedRef"];
             /**
              * @description `outbound` when capture learned that a message stored as received was the seat's own sent mail. `inbound` when a copy read as a colleague's sent mail is received mail again, because that colleague's address is not at an own domain. Absent otherwise. The counterparty changes with it; a subscriber that must know re-reads the row.
@@ -1109,6 +1195,17 @@ export interface components {
         };
         /** @description Payload for activity.updated, a bounded delta. The contact, company, deal and lead events carry an open patch instead. UpdateActivity and RelinkActivity together cover a fixed, known set of inner keys. So changed_fields is a typed struct here, not an open map. */
         PublicEventActivityUpdated: {
+            /**
+             * Format: uuid
+             * @description Reviewed handling policy on the trusted accepted website note; absent on other activity events.
+             */
+            handling_automation_id?: string;
+            /** @description Present for a trusted accepted website note whose handling was explicitly reviewed. */
+            kind?: string;
+            /** @description Present only when a trusted website note acquires its reviewed handling policy. */
+            source_system?: string;
+            /** @description Canonical accepted website key; consumers verify the actual stored note and policy. */
+            website_submission_key?: string;
             changed_fields: components["schemas"]["PublicEventActivityChangedFields"];
             /** @description True when a data import wrote the event. Absent otherwise. */
             imported?: boolean;
@@ -1160,12 +1257,12 @@ export interface components {
              */
             deal_id?: string;
         };
-        /** @description Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the seven alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit. */
+        /** @description Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the eight alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit. */
         PublicEventForecastExceptionResolved: {
             /** Format: uuid */
             exception_id: string;
             /** @enum {string} */
-            outcome: "fixed_record" | "added_evidence" | "value_correct" | "not_relevant" | "remind_later" | "reassign" | "condition_cleared";
+            outcome: "fixed_record" | "added_evidence" | "value_correct" | "not_relevant" | "remind_later" | "reassign" | "condition_cleared" | "separate";
             /** Format: uuid */
             actor_user_id: string;
             /**
@@ -1264,6 +1361,26 @@ export interface components {
         PublicEventActivityMarkedHandled: {
             /** Format: uuid */
             activity_id: string;
+        };
+        /** @description Payload for activity.invitation_answered. One reader answered a calendar invitation that came by email, and their own calendar sent the answer to the organizer (activities/calendarinvitation.go). It is that reader's own answer, and the reader is not on the wire. The same press marks the message done for them, announced as activity.marked_handled. */
+        PublicEventActivityInvitationAnswered: {
+            /** Format: uuid */
+            activity_id: string;
+            /** @enum {string} */
+            response: "accepted" | "tentative" | "declined";
+        };
+        /** @description Payload for activity.link_suggestion_changed. An extension proposed a record a message may belong to, or a reader accepted or rejected one (activities/linksuggestion.go). A proposal attaches nothing. Accepting it files the message through the ordinary relink, which announces activity.updated as well. Who decided is on the audit row, not on the wire. */
+        PublicEventActivityLinkSuggestionChanged: {
+            /** Format: uuid */
+            activity_id: string;
+            /** Format: uuid */
+            suggestion_id: string;
+            /** @description One of proposed, accepted or rejected. */
+            status: string;
+            /** @description The kind of record the suggestion names, one of contact, company, deal or project. */
+            target_type: string;
+            /** Format: uuid */
+            target_id: string;
         };
         /** @description Payload for activity.readiness_recorded. One attendee said they are ready for a meeting, or took that back (activities/meetingreadiness.go). It holds for that attendee alone, at the preparation revision they confirmed, and the attendee is not on the wire. A moved start, a new agenda or a changed guest list makes the revision stale without a new event. */
         PublicEventActivityReadinessRecorded: {
@@ -1430,16 +1547,16 @@ export interface components {
             /** @description Whose decision it is, which is what says who may lift it (machine | user | admin | subject). */
             decided_by_level: string;
         };
-        /** @description Payload for consent.override_recorded. A rep recorded a standing vouch that a machine-level refusal for one category may be overruled for this contact (consent/override.go's Allow). It is its own event rather than a consent.changed. An override is neither consent nor a lawful basis. It outranks only a machine-level, non-absolute refusal, and a subject-level stop still wins at the gate regardless of this row. The subject is always a contact, because the write door names that object as a literal. So this is a static entity, and the fan-out gate proves its delivery scope mechanically rather than by hand-ratification. It names what category was vouched for and at which authority. It never names the reason the rep gave. That explanation belongs to the audit trail a rep reviewing the contact reads, and not to every subscriber the event reaches. */
+        /** @description Payload for consent.override_recorded. A merge carried a standing exception onto the surviving contact under a new id (consent/overridecarry.go). No route records a new standing exception, so this event announces a carried copy only. An exception is neither consent nor a lawful basis. It outranks only a machine-level, non-absolute refusal, and a subject-level stop still wins at the gate. It is its own event rather than a consent.changed. The event names the category the exception covers and the authority it was first recorded at. It never names the reason the rep gave, which stays on the row for the audit trail. */
         PublicEventConsentOverrideRecorded: {
             /**
              * Format: uuid
-             * @description Which row was recorded. It is the handle the revoke door takes (POST /contacts/{id}/consent/allow/{overrideId}/revoke). A contact can hold several live vouches at once: one per category, and after a merge more than one for a single category. So a consumer with no id cannot say which of them a later consent.override_lifted describes.
+             * @description Which row the merge wrote. It is the handle the revoke door takes (POST /contacts/{id}/consent/allow/{overrideId}/revoke). A contact can hold several live vouches at once: one per category, and after a merge more than one for a single category. So a consumer with no id cannot say which of them a later consent.override_lifted describes.
              */
             override_id: string;
             /** @description Which category of send this vouch covers. The engine resolves every send to a single category, and the override applies to that one only. */
             category: string;
-            /** @description Whose decision it is (user | admin) — always the recording seat's own authority, never a value the request body could name. */
+            /** @description Whose decision it is (user | admin): the authority of the seat that recorded the original exception. */
             decided_by_level: string;
         };
         /** @description Payload for consent.override_lifted. Somebody with the authority to do so took back a single standing override (consent/override.go's RevokeOverride). That does not mean the refusal now applies again for every category. A contact can carry more than one override, one per category, and revoking one says nothing about the others. A consumer wanting the categories still vouched for reads the contact's live overrides rather than inferring them from this event. One event is emitted per row taken back, and the entity says which. A merge copies a vouch onto the survivor under a new id. It announces the copy with its own consent.override_recorded on the survivor's stream. Revoking the original takes back every copy. Each copy gets its own lifted event on the stream that heard it recorded. A consumer is told about the id it holds rather than one it was never given. The event carries both levels: the one the override was recorded at and the one that revoked it. This is the same pairing consent.suppression_lifted carries, for the same reason. An auditor needs to see that the second was allowed to take back the first, without joining a row that no longer says so. The revoking level needs permission to take back the first, and need not outrank it. A vouch is the one decision an admin may take back from a peer admin. Admin is the top human authority, and nothing higher exists to reach an admin-recorded override. The event never carries the category the override covered or the reason either party gave. The category is what `override_id` lets a reader look up on the still-standing audit trail. The reason belongs to the seats who wrote it, and an event reaches readers neither explanation was given to. */
@@ -1543,7 +1660,7 @@ export interface components {
             /** @description The statutory class that holds it (e.g. commercial_correspondence). No free text and no reason string: the administrator's reason is audit-log material, and a public event is not the place to publish why a named contact decided something about a named record. */
             retention_class?: string;
         };
-        /** @description Payload for retention.applied. A retention or erasure action ran against one record. Four emit sites have four different runtime subjects. The embed-call sweep acts on ai_call. The voice-learning-signal content sweep acts on voice_learning_signal. A workspace's configured retention policy acts on its object type (activity | deal | lead | contact | ai_call_payload). Art. 17 erasure acts on a contact. None is fixed enough for this schema to name, so this is a dynamic-entity event (contract `x-entity-type: dynamic`). The generated EntityType() is unused, and each emit site supplies its own runtime entity type through storekit.EmitEventForEntity. The policy and reason fields are a union across the sites. Both telemetry sweeps set neither, the policy-driven sweep sets only policy, and Art. 17 erasure sets only reason. */
+        /** @description Payload for retention.applied. A retention or erasure action ran against one record. Three emit sites have three different runtime subjects. The voice-learning-signal content sweep acts on voice_learning_signal. A workspace's configured retention policy acts on its object type (activity | deal | lead | contact | ai_call_payload). Art. 17 erasure acts on a contact. None is fixed enough for this schema to name, so this is a dynamic-entity event (contract `x-entity-type: dynamic`). The generated EntityType() is unused, and each emit site supplies its own runtime entity type through storekit.EmitEventForEntity. The policy and reason fields are a union across the sites. The voice sweep sets neither, the policy-driven sweep sets only policy, and Art. 17 erasure sets only reason. */
         PublicEventRetentionApplied: {
             /**
              * @description The action that ran. It is a closed set, so a subscriber can switch on it exhaustively. That is the reason for closing it. An open field leaves a consumer to branch on values nobody defined, or to drop what it does not recognise. A silent drop looks the same as no event. The `retention_policy.action` column carries the same three under a CHECK, and a gate holds the two spellings together. Restriction is no fourth action here. It emits retention.restricted, whose own action is a different closed set.
@@ -2031,22 +2148,24 @@ type ReadonlyArray<T> = [
 ] extends [
     unknown[]
 ] ? Readonly<Exclude<T, undefined>> : Readonly<Exclude<T, undefined>[]>;
-export const subscribableEventTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["SubscribableEventType"]> = ["deal.created", "deal.owner_changed", "deal.stage_changed", "deal.archived", "deal.updated", "deal.restored", "deal.merged", "deal.erased", "project.created", "project.updated", "project.phase_changed", "project.health_assessed", "project.archived", "list.created", "list.updated", "list.archived", "list.restored", "list.member_added", "list.member_removed", "list.evaluated", "commission.accrued", "commission.decided", "contract.created", "contract.updated", "contract.status_changed", "contract.archived", "deal_room.opened", "deal_room.updated", "deal_room.paused", "deal_room.resumed", "deal_room.closed", "deal_room.archived", "deal_room.participant_invited", "deal_room.participant_revoked", "deal_room.participant_credential_reissued", "deal_room.comment_posted", "deal_room.thread_resolved", "deal_room.decision_recorded", "offer.created", "offer.updated", "offer.sent", "offer.accepted", "offer.rejected", "offer.superseded", "pipeline.created", "pipeline.updated", "pipeline.archived", "stage.created", "stage.updated", "stage.archived", "contact.created", "contact.archived", "contact.merged", "contact.updated", "contact.restored", "conversation_claim.captured", "conversation_claim.changed", "company.created", "company.archived", "company.merged", "company.updated", "company.restored", "company.erased", "lead.created", "lead.disqualified", "lead.promoted", "lead.demoted", "lead.merged", "lead.sla_breached", "lead.updated", "lead_source.changed", "lead_disqualify_reason.changed", "activity.captured", "activity.archived", "activity.updated", "attachment.created", "attachment.updated", "attachment.archived", "engagement.reply", "comms.delivery_bounced", "notice.created", "user_delivery.changed", "forecast.created", "forecast.assurance_created", "forecast.exception_resolved", "forecast.snapshot_created", "forecast.share_issued", "forecast.share_revoked", "weekly_plan.updated", "weekly_plan.help_requested", "sales_initiative.updated", "activity.disposition_recorded", "activity.marked_handled", "activity.readiness_recorded", "relationship_nudge.decided", "notice.read", "approval.preference_changed", "notification.preference_changed", "intro_request.created", "intro_request.decided", "intro_request.completed", "intro_request.recorded", "intro_request.replied", "intro_request.closed", "consent.changed", "consent.suppressed", "consent.suppression_lifted", "consent.override_recorded", "consent.override_lifted", "email_signature.changed", "user_locale.changed", "user_timezone.changed", "user_display_name.changed", "user_greeting_name.changed", "linkedin_account.changed", "linkedin_network.imported", "linkedin_match.decided", "retention.applied", "retention.restricted", "signal.detected", "signal.updated", "signal.resolved", "voice.profile_created", "voice.profile_updated", "voice.profile_archived", "voice.corpus_changed", "voice.build_changed", "voice.version_changed", "voice.draft_outcome_recorded", "user.updated", "user.invited", "user.activated", "user.password_link_issued", "user.mfa_removed", "user.deactivated", "user.reactivated", "role.changed", "team.changed", "passport.revoked", "onboarding.state_changed", "approval.requested", "approval.decided", "approval.failure_acknowledged", "coldstart.read_back_proposed", "coldstart.accepted", "coldstart.rejected", "audit.appended"];
+export const subscribableEventTypeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["SubscribableEventType"]> = ["deal.created", "deal.owner_changed", "deal.stage_changed", "deal.archived", "deal.updated", "deal.restored", "deal.merged", "deal.erased", "project.created", "project.updated", "project.phase_changed", "project.health_assessed", "project.archived", "list.created", "list.updated", "list.archived", "list.restored", "list.member_added", "list.member_removed", "list.evaluated", "record_link.changed", "commission.accrued", "commission.decided", "contract.created", "contract.updated", "contract.status_changed", "contract.archived", "deal_room.opened", "deal_room.updated", "deal_room.paused", "deal_room.resumed", "deal_room.closed", "deal_room.archived", "deal_room.participant_invited", "deal_room.participant_revoked", "deal_room.participant_credential_reissued", "deal_room.comment_posted", "deal_room.thread_resolved", "deal_room.decision_recorded", "legal_review.requested", "legal_review.decided", "legal_review.withdrawn", "offer.created", "offer.updated", "offer.sent", "offer.accepted", "offer.rejected", "offer.superseded", "pipeline.created", "pipeline.updated", "pipeline.archived", "stage.created", "stage.updated", "stage.archived", "contact.created", "contact.archived", "contact.merged", "contact.updated", "contact.restored", "conversation_claim.captured", "conversation_claim.changed", "company.created", "company.archived", "company.merged", "company.updated", "company.restored", "company.erased", "lead.created", "lead.disqualified", "lead.promoted", "lead.demoted", "lead.merged", "lead.sla_breached", "lead.updated", "lead_source.changed", "lead_disqualify_reason.changed", "activity.captured", "activity.archived", "activity.updated", "attachment.created", "attachment.updated", "attachment.archived", "attachment.restored", "engagement.reply", "comms.delivery_bounced", "notice.created", "user_delivery.changed", "forecast.created", "forecast.assurance_created", "forecast.exception_resolved", "forecast.snapshot_created", "forecast.share_issued", "forecast.share_revoked", "weekly_plan.updated", "weekly_plan.help_requested", "sales_initiative.updated", "activity.disposition_recorded", "activity.marked_handled", "activity.invitation_answered", "activity.link_suggestion_changed", "activity.readiness_recorded", "relationship_nudge.decided", "notice.read", "approval.preference_changed", "notification.preference_changed", "intro_request.created", "intro_request.decided", "intro_request.completed", "intro_request.recorded", "intro_request.replied", "intro_request.closed", "consent.changed", "consent.suppressed", "consent.suppression_lifted", "consent.override_recorded", "consent.override_lifted", "email_signature.changed", "user_locale.changed", "user_timezone.changed", "user_display_name.changed", "user_greeting_name.changed", "linkedin_account.changed", "linkedin_network.imported", "linkedin_match.decided", "retention.applied", "retention.restricted", "signal.detected", "signal.updated", "signal.resolved", "voice.profile_created", "voice.profile_updated", "voice.profile_archived", "voice.corpus_changed", "voice.build_changed", "voice.version_changed", "voice.draft_outcome_recorded", "user.updated", "user.invited", "user.activated", "user.password_link_issued", "user.mfa_removed", "user.deactivated", "user.reactivated", "role.changed", "team.changed", "passport.revoked", "onboarding.state_changed", "approval.requested", "approval.decided", "approval.failure_acknowledged", "coldstart.read_back_proposed", "coldstart.accepted", "coldstart.rejected", "audit.appended"];
 export const publicEventLeadSourceChangedChangeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventLeadSourceChanged"]["change"]> = ["created", "updated", "deleted"];
 export const publicEventLeadDisqualifyReasonChangedChangeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventLeadDisqualifyReasonChanged"]["change"]> = ["created", "updated", "deleted"];
 export const publicEventActivityChangedFieldsOccurred_precisionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["occurred_precision"]> = ["instant", "day"];
 export const publicEventActivityChangedFieldsMeeting_statusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["meeting_status"]> = ["booked", "held", "no_show", "canceled"];
 export const publicEventActivityChangedFieldsCall_outcomeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["call_outcome"]> = ["reached", "not_reached", "voicemail", "call_back_later", "put_through"];
+export const publicEventActivityChangedFieldsTask_typeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["task_type"]> = ["reply", "reach_out", "meet", "review", "decide", "do"];
 export const publicEventActivityChangedFieldsDirectionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["direction"]> = ["outbound", "inbound"];
 export const publicEventActivityChangedFieldsAudienceValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["audience"]> = ["workspace", "participants", "selected"];
 export const publicEventActivityChangedFieldsCalendar_methodValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["calendar_method"]> = ["PUBLISH", "REQUEST", "REPLY", "ADD", "CANCEL", "REFRESH", "COUNTER", "DECLINECOUNTER"];
 export const publicEventForecastAssuranceCreatedStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastAssuranceCreated"]["status"]> = ["complete", "incomplete"];
 export const publicEventForecastAssuranceCreatedReadinessValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastAssuranceCreated"]["readiness"]> = ["ready", "ready_with_exceptions", "needs_review", "checks_incomplete"];
-export const publicEventForecastExceptionResolvedOutcomeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastExceptionResolved"]["outcome"]> = ["fixed_record", "added_evidence", "value_correct", "not_relevant", "remind_later", "reassign", "condition_cleared"];
+export const publicEventForecastExceptionResolvedOutcomeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastExceptionResolved"]["outcome"]> = ["fixed_record", "added_evidence", "value_correct", "not_relevant", "remind_later", "reassign", "condition_cleared", "separate"];
 export const publicEventForecastSnapshotCreatedTriggerValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastSnapshotCreated"]["trigger"]> = ["daily", "call", "period_close", "recheck"];
 export const publicEventForecastShareIssuedKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastShareIssued"]["kind"]> = ["live", "snapshot"];
 export const publicEventSalesInitiativeUpdatedStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventSalesInitiativeUpdated"]["status"]> = ["draft", "live", "ended"];
 export const publicEventActivityDispositionRecordedDispositionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityDispositionRecorded"]["disposition"]> = ["not_sales", "sales_again", "snoozed", "not_mine", "picked_up"];
+export const publicEventActivityInvitationAnsweredResponseValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityInvitationAnswered"]["response"]> = ["accepted", "tentative", "declined"];
 export const publicEventActivityReadinessRecordedStateValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityReadinessRecorded"]["state"]> = ["ready", "withdrawn"];
 export const publicEventRelationshipNudgeDecidedActionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventRelationshipNudgeDecided"]["action"]> = ["dismissed", "restored"];
 export const publicEventIntroRequestDecidedDecisionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventIntroRequestDecided"]["decision"]> = ["accepted", "name_drop_approved", "suggest_other", "declined"];

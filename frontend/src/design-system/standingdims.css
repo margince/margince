@@ -31,7 +31,6 @@
   inline-size: 8px;
   block-size: 8px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--standing-dim-mark);
 }
 .standing-dim-reading {

@@ -78,7 +78,22 @@ type Handlers struct {
 	stageChances StageChancesFunc
 	// readerRows narrows per-deal rows to what the reader may see one by one.
 	readerRows ReaderRowsFunc
-	now        func() time.Time
+	// goalReadable answers whether the reader may read a team's goal.
+	goalReadable GoalReadableFunc
+	// managerRequests lists the deals sellers asked their manager to look at.
+	managerRequests ManagerRequestsFunc
+	now             func() time.Time
+}
+
+// GoalReadableFunc answers whether the reader may read the goal of scope.
+// Injected, because goals belong to reporting.
+type GoalReadableFunc func(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope) (bool, error)
+
+// WithGoalReadable binds the goal check a focus list's standing passes.
+// Unbound, the focus read refuses rather than show a goal unchecked.
+func (h Handlers) WithGoalReadable(readable GoalReadableFunc) Handlers {
+	h.goalReadable = readable
+	return h
 }
 
 // WithCallBaseline keeps a baseline with every call recorded through these
@@ -166,22 +181,14 @@ func (h Handlers) GetForecast(
 			out.Snapshots = snapshotRefsToWire(refs)
 		}
 
-		// A standing call is an assertion about ONE named population. The
-		// managed-teams reading covers several, so there is no call to look up
-		// — and looking one up under a flattened scope would fetch a different
-		// population's call and print it beside these totals.
-		if scope.Kind == ScopeManagedTeams {
-			return nil
-		}
-		var called *int64
-		call, seen, err := CallSeen(ctx, tx, h.store, mayAssert, period, scope)
+		called, err := StateCall(ctx, tx, h.store, mayAssert, period, scope, &out)
 		if err != nil {
 			return err
 		}
-		if seen {
-			wire := callToWire(call)
-			out.CurrentCall = &wire
-			called = &call.AmountMinor
+		// The managed-teams reading covers several populations, so it has no
+		// one call to land on, and CallSeen withholds one.
+		if scope.Kind == ScopeManagedTeams {
+			return nil
 		}
 		return h.project(ctx, tx, &out, period, scope, readings, called, at, baseCurrency)
 	})
@@ -211,21 +218,6 @@ func MayAssertAbout(ctx context.Context, tx pgx.Tx, resolve ResolveScopeFunc, sc
 	}
 }
 
-// CallSeen is the standing call a seat sees for a resolved population. Its
-// bool is false when the seat may not assert about it, or nobody has called. The
-// forecast endpoint, the forecast_readings tool and the reporting landing all
-// read the call through it, so the three agree on one landing.
-func CallSeen(ctx context.Context, tx pgx.Tx, store *Store, mayAssert bool, period Period, scope Scope) (Call, bool, error) {
-	if !mayAssert || scope.Kind == ScopeManagedTeams {
-		return Call{}, false, nil
-	}
-	call, err := store.CurrentCallTx(ctx, tx, period, scope)
-	if IsNoStandingCall(err) {
-		return Call{}, false, nil
-	}
-	return call, err == nil, err
-}
-
 // project adds where the period lands and whether the pipeline supports it.
 //
 // Separate from GetForecast because it is a second question over the same
@@ -234,7 +226,7 @@ func CallSeen(ctx context.Context, tx pgx.Tx, store *Store, mayAssert bool, peri
 // the reading itself is still true and still worth returning.
 func (h Handlers) project(
 	ctx context.Context, tx pgx.Tx, out *crmcontracts.ForecastReadings,
-	period Period, scope Scope, readings Readings, call *int64,
+	period Period, scope Scope, readings Readings, call SeenCall,
 	asOf time.Time, baseCurrency string,
 ) error {
 	landing, err := LandingFor(ctx, tx, h.measure, readings, call)
@@ -266,7 +258,7 @@ func (h Handlers) project(
 // this installation set. The forecast endpoint and the forecast_readings tool
 // both call it.
 func LandingFor(
-	ctx context.Context, tx pgx.Tx, measure MeasureFunc, readings Readings, call *int64,
+	ctx context.Context, tx pgx.Tx, measure MeasureFunc, readings Readings, call SeenCall,
 ) (crmcontracts.ForecastLanding, error) {
 	set, err := measure(ctx, tx)
 	if err != nil {
@@ -317,13 +309,36 @@ func sufficiencyToWire(in Sufficiency) crmcontracts.ForecastSufficiency {
 		NeededOpenMinor:         &in.NeededOpenMinor,
 		CurrentOpenMinor:        &in.CurrentOpenMinor,
 		CoverageBp:              &in.CoverageBp,
+		ComparableUnpriced:      comparableUnpriced(in.ComparableUnpriced),
 	}
 }
 
+// comparableUnpriced is the median's per-period gaps, absent for a manager call.
+func comparableUnpriced(gaps []int) *[]int {
+	if len(gaps) == 0 {
+		return nil
+	}
+	return &gaps
+}
+
+// requireCalledAmount refuses a call whose body left amount_minor out or sent
+// null. Both decode to 0, and a call of 0 is a real number somebody typed.
+func requireCalledAmount(r *http.Request) error {
+	if amount, _ := httperr.PresentField(r, "amount_minor"); amount == nil {
+		return httperr.Validation("amount_minor", "required",
+			"amount_minor is required: send the amount you expect to close, or 0 for a call of nothing")
+	}
+	return nil
+}
+
 // RecordForecastCall records what somebody believes will close.
-func (h Handlers) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) RecordForecastCall(w http.ResponseWriter, r *http.Request, _ crmcontracts.RecordForecastCallParams) {
 	var body crmcontracts.NewForecastCall
 	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	if err := requireCalledAmount(r); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	scope, err := callScopeFromBody(body)

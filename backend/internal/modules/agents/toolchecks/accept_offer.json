@@ -1,0 +1,12 @@
+{
+  "verb": "accept_offer",
+  "checks": [
+    "company.read",
+    "deal.update",
+    "offer.update"
+  ],
+  "takes": [
+    "offer",
+    "sent_offer"
+  ]
+}

@@ -64,6 +64,11 @@ type ReceiptDetail struct {
 	// Changes is nil when none of the act's audit rows could be read, which
 	// is not an act that moved nothing.
 	Changes *[]crmcontracts.MagicFieldChange
+	// Source is the message the act was read from that this reader may open,
+	// and SourceAt when it happened; zero when there is none.
+	Source          ids.UUID
+	SourceAt        time.Time
+	SourcePrecision crmcontracts.OccurredPrecision
 }
 
 // handledCap bounds one page of receipts.
@@ -80,6 +85,17 @@ func (s *Service) WithReceiptDetails(d ReceiptDetails) *Service {
 	return s
 }
 
+// ReceiptRead retains partial source reads through history pagination.
+type ReceiptRead struct {
+	Receipts    []Receipt
+	Floor       bool
+	Unavailable []crmcontracts.WorklistSourceUnavailable
+}
+
+type receiptStateReader interface {
+	RecentWithState(context.Context, time.Time, time.Time, int) (ReceiptRead, error)
+}
+
 // HandledForYou is what was done, newest first, from the page `cursor` names.
 func (s *Service) HandledForYou(ctx context.Context, cursor *string) (crmcontracts.HandledForYou, error) {
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
@@ -89,7 +105,7 @@ func (s *Service) HandledForYou(ctx context.Context, cursor *string) (crmcontrac
 	if err != nil {
 		return crmcontracts.HandledForYou{}, err
 	}
-	if s.receipts == nil {
+	if s.handledReceipts == nil && s.receipts == nil {
 		// UNBOUND is an empty page, not a refusal, and the difference matters
 		// here. An installation that wires no receipt reader did nothing on
 		// anybody's behalf to report — which is honestly nothing to show,
@@ -106,18 +122,23 @@ func (s *Service) HandledForYou(ctx context.Context, cursor *string) (crmcontrac
 		}
 	}
 	since := position.Since
-	recent, err := s.recentPinned(ctx, since, position)
+	read, err := s.recentPinned(ctx, since, position)
 	if err != nil {
 		return crmcontracts.HandledForYou{}, err
 	}
+	if read.Unavailable == nil {
+		read.Unavailable = []crmcontracts.WorklistSourceUnavailable{}
+	}
+	recent := read.Receipts
 	out := crmcontracts.HandledForYou{
+		CountIsFloor: &read.Floor, SourcesUnavailable: &read.Unavailable,
 		AsOf:      asOf,
 		Since:     &since,
 		Receipts:  make([]crmcontracts.Receipt, 0, handledCap),
-		Truncated: len(recent) > position.Offset+handledCap,
+		Truncated: read.Floor || len(recent) > position.Offset+handledCap,
 	}
 	page := recent[min(position.Offset, len(recent)):min(position.Offset+handledCap, len(recent))]
-	if out.Truncated && position.Offset+len(page) <= maxHandledOffset {
+	if len(recent) > position.Offset+handledCap && position.Offset+len(page) <= maxHandledOffset {
 		next, err := position.after(len(page), recent)
 		if err != nil {
 			return crmcontracts.HandledForYou{}, err
@@ -134,17 +155,28 @@ func (s *Service) HandledForYou(ctx context.Context, cursor *string) (crmcontrac
 // reported, not inferred from a full page. A receipt newer than the pin takes a
 // read slot and is dropped. So a full read that lost rows is read again wider,
 // until it holds that one more or the window ends.
-func (s *Service) recentPinned(ctx context.Context, since time.Time, position handledCursor) ([]Receipt, error) {
+func (s *Service) recentPinned(ctx context.Context, since time.Time, position handledCursor) (ReceiptRead, error) {
+	receipts := s.handledReceipts
+	if receipts == nil {
+		receipts = s.receipts
+	}
 	want := position.Offset + handledCap + 1
 	for limit := want; ; {
-		read, err := s.receipts.Recent(ctx, since, limit)
-		if err != nil {
-			return nil, err
+		var read ReceiptRead
+		var err error
+		if source, ok := receipts.(receiptStateReader); ok {
+			read, err = source.RecentWithState(ctx, since, position.Newest, limit)
+		} else {
+			read.Receipts, err = receipts.Recent(ctx, since, limit)
 		}
-		kept := position.pin(read)
-		dropped := len(read) - len(kept)
-		if len(read) < limit || len(kept) >= want || dropped == 0 {
-			return kept, nil
+		if err != nil {
+			return ReceiptRead{}, err
+		}
+		kept := position.pin(read.Receipts)
+		dropped := len(read.Receipts) - len(kept)
+		if len(read.Receipts) < limit || len(kept) >= want || dropped == 0 {
+			read.Receipts = kept
+			return read, nil
 		}
 		limit += dropped
 	}
@@ -162,46 +194,69 @@ func (s *Service) handledSince(ctx context.Context, asOf time.Time) (time.Time, 
 // drawReceipts renders one page, then names its records and sources under the
 // reader's own grants.
 func (s *Service) drawReceipts(ctx context.Context, page []Receipt, out *crmcontracts.HandledForYou) error {
-	var details []ReceiptDetail
-	if s.receiptDetails != nil && len(page) > 0 {
+	drawn, err := DescribeReceipts(ctx, s.receiptDetails, s.names, page)
+	if err != nil {
+		return err
+	}
+	out.Receipts = append(out.Receipts, drawn...)
+	return nil
+}
+
+// DescribeReceipts draws receipts on the wire with who acted, what moved and
+// the source the reader may open, named under the reader's own grants. Home,
+// the Worklist and a deal's own list draw them here, so one change reads alike
+// on each. Either seam may be nil, and then that part is left out.
+func DescribeReceipts(ctx context.Context, details ReceiptDetails, names Names, page []Receipt) ([]crmcontracts.Receipt, error) {
+	var described []ReceiptDetail
+	if details != nil && len(page) > 0 {
 		var err error
-		if details, err = s.receiptDetails.Describe(ctx, page); err != nil {
-			return err
+		if described, err = details.Describe(ctx, page); err != nil {
+			return nil, err
 		}
 	}
+	out := make([]crmcontracts.Receipt, 0, len(page))
 	subjects := make([]*crmcontracts.AttentionSubject, 0, 2*len(page))
 	for i, receipt := range page {
 		row := WireReceipt(receipt)
-		if i < len(details) {
-			row.Actor, row.Changes = details[i].Actor, details[i].Changes
+		if i < len(described) {
+			row.Actor, row.Changes = described[i].Actor, described[i].Changes
+			if source := described[i].Source; !source.IsZero() {
+				at, precision := described[i].SourceAt, described[i].SourcePrecision
+				row.SourceRecord, row.SourceOccurredAt = subjectOf("activity", source), &at
+				row.SourceOccurredPrecision = &precision
+			}
 		}
-		out.Receipts = append(out.Receipts, row)
-		subjects = append(subjects, row.Subject, row.SourceRecord)
+		out = append(out, row)
+	}
+	for i := range out {
+		subjects = append(subjects, out[i].Subject, out[i].SourceRecord)
 	}
 	// The same label pass the feed runs, so a receipt names its record here
 	// exactly as it does in the feed's done lane.
-	if err := s.labelSubjects(ctx, subjects); err != nil {
-		return err
+	if err := labelSubjectsWith(ctx, names, subjects); err != nil {
+		return nil, err
 	}
 	// A source the reader may not open is left out rather than named. The record
 	// the act was about is the receipt's claim; its source is not.
-	for i := range out.Receipts {
-		if source := out.Receipts[i].SourceRecord; source != nil && source.Label == nil {
-			out.Receipts[i].SourceRecord = nil
+	for i := range out {
+		if source := out[i].SourceRecord; source != nil && source.Label == nil {
+			out[i].SourceRecord, out[i].SourceOccurredAt, out[i].SourceOccurredPrecision = nil, nil, nil
 		}
 	}
-	return nil
+	return out, nil
 }
 
 // WireReceipt is one completed act on the wire.
 func WireReceipt(receipt Receipt) crmcontracts.Receipt {
 	out := crmcontracts.Receipt{
+		CompletedChange: receipt.CompletedChange,
 		Id:              openapi_types.UUID(receipt.ID),
 		Review:          receipt.Review,
 		CloseDateChange: receipt.CloseDateChange,
 		Kind:            receipt.Kind,
 		Summary:         receipt.Summary,
 		SummaryParts:    receipt.SummaryParts,
+		SystemDisplay:   receipt.SystemDisplay,
 		OccurredAt:      receipt.OccurredAt,
 		Headline:        optionalText(receipt.Headline),
 		Reason:          optionalText(receipt.Reason),
@@ -215,6 +270,10 @@ func WireReceipt(receipt Receipt) crmcontracts.Receipt {
 	}
 	if !receipt.SourceActivityID.IsZero() {
 		out.SourceRecord = subjectOf("activity", receipt.SourceActivityID)
+	}
+	if receipt.ReasonKind != "" {
+		kind := crmcontracts.ReceiptReasonKind(receipt.ReasonKind)
+		out.ReasonKind = &kind
 	}
 	if receipt.Source != "" {
 		source := crmcontracts.ReceiptSource(receipt.Source)
@@ -244,4 +303,24 @@ func optionalText(text string) *string {
 		return nil
 	}
 	return &text
+}
+
+// WithHandledReceipts keeps history admission separate from the bounded attention feed.
+func (s *Service) WithHandledReceipts(receipts Receipts) *Service {
+	s.handledReceipts = receipts
+	return s
+}
+
+func (s *Service) done(ctx context.Context, asOf time.Time) ([]crmcontracts.AttentionItem, error) {
+	defer timeStage(ctx, "done_for_you")()
+	since := asOf.Add(-24 * time.Hour)
+	recent, err := s.receipts.Recent(ctx, since, doneCap)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]crmcontracts.AttentionItem, 0, len(recent))
+	for _, receipt := range recent {
+		items = append(items, receiptItem(receipt))
+	}
+	return items, nil
 }

@@ -21,20 +21,25 @@ import (
 // own fault.
 var ErrEmbedLaneFailed = errors.New("ai: the embed lane did not answer")
 
-// Embed routes the embedding lane. Inputs are stripped before egress —
-// the EmbedRequest carries no per-request hook, so the router is the
+// Embed routes the embedding lane. Inputs are masked before egress, because
+// the EmbedRequest carries no per-request hook and the router is the
 // enforcement point here. One provider call is exactly one logical call —
 // the embed lane has no retry ladder to bundle.
 func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
+	if err := r.refuseUnbound(); err != nil {
+		return model.Embeddings{}, err
+	}
 	// One load per call — see binding: a rebind mid-call must not mix an embedder
 	// with another binding's width or provider label.
 	b := r.binding()
 	if _, ok := principal.WorkspaceID(ctx); !ok {
 		return model.Embeddings{}, errors.New("ai: embeddings outside workspace context")
 	}
+	// An input is record text, not a request body, so the stripper reads it on
+	// the text lane.
 	stripped := make([]string, len(req.Inputs))
 	for i, input := range req.Inputs {
-		clean, _, err := r.stripper.Strip(ctx, []byte(input))
+		clean, _, err := r.stripper.StripText(ctx, []byte(input))
 		if err != nil {
 			return model.Embeddings{}, fmt.Errorf("ai: stripping embed input: %w", err)
 		}
@@ -68,7 +73,7 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 		// nothing to trace, and a caller tells a deferral from a failed lane.
 		return model.Embeddings{}, err
 	}
-	trace := Call{Task: TaskEmbeddings, Tier: TierEmbedLane, Kind: callKindEmbedding, CacheOff: r.cacheOff, LatencyMS: r.now().Sub(start).Milliseconds()}
+	trace := Call{Task: TaskEmbeddings, Tier: TierEmbedLane, Kind: callKindEmbedding, LatencyMS: r.now().Sub(start).Milliseconds()}
 	if err == nil {
 		// Stamp the SAME token estimate the meter records below onto the
 		// trace row too — embeddings are input-only (no output, no cache
@@ -88,7 +93,7 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 	if m, ok := b.routeMeta[TierEmbedLane]; ok {
 		trace.Provider, trace.ModelID = m.provider, m.model
 	}
-	trace.ErrorSentinel = classifyError(err)
+	trace.ErrorSentinel = sentinelFor(ctx, err)
 	// model.Embeddings carries no served-model identity (no adapter reports
 	// one for the embed lane today), so this always falls back to the
 	// tier's configured binding.
@@ -106,7 +111,7 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 	// spends the agent's share of it too. A retrieval-heavy agent whose
 	// embeddings were free would be the one shape this counter never sees.
 	r.spendAgentTokens(ctx, trace.TokensIn)
-	if err := r.meter.Record(ctx, Usage{Task: TaskEmbeddings, Tier: TierEmbedLane, TokensIn: trace.TokensIn}); err != nil {
+	if err := r.recordUsage(ctx, Usage{Task: TaskEmbeddings, Tier: TierEmbedLane, TokensIn: trace.TokensIn}); err != nil {
 		return model.Embeddings{}, fmt.Errorf("ai: call served but metering failed: %w", err)
 	}
 	return res, nil

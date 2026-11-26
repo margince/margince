@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 )
 
 func TestErasureReachesTheCaptureTracePayloads(t *testing.T) {
@@ -33,7 +34,7 @@ func TestErasureReachesTheCaptureTracePayloads(t *testing.T) {
 		       (NULL, 'gmail', 'gmail', 'erasure-control', 'tier_ladder', 'captured', 'someone@else.test', 'Unrelated')`,
 		subjectEmail)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contactID, "test"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -76,7 +77,7 @@ func TestErasureReachesAChannelCounterpartysTracePayloads(t *testing.T) {
 		       (NULL, 'telegram', 'telegram', 'chan-control', 'tier_ladder', 'captured', 'Other Contact', 'Unrelated'),
 		       (NULL, 'zalo', 'zalo', 'chan-other-transport', 'tier_ladder', 'captured', 'Selma Subject', 'Unrelated')`)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contactID, "test"); err != nil {
 		t.Fatal(err)
 	}
 

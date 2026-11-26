@@ -23,13 +23,13 @@ import (
 // the principal question once, for all four of these and for the lane.
 type Handlers struct {
 	store *Store
-	mates Teammates
+	reach CoachReach
 }
 
-// NewHandlers binds the transport to its store and to the membership question
-// coaching is gated on.
-func NewHandlers(store *Store, mates Teammates) Handlers {
-	return Handlers{store: store, mates: mates}
+// NewHandlers binds the transport to its store and to the reads coaching is
+// gated on: the membership question, and the deal a next-step notice names.
+func NewHandlers(store *Store, reach CoachReach) Handlers {
+	return Handlers{store: store, reach: reach}
 }
 
 // RaiseNotice records one colleague's coaching nudge to a teammate.
@@ -38,12 +38,14 @@ func (h Handlers) RaiseNotice(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	var note string
+	ask := CoachAsk{Recipient: ids.From[ids.UserKind](ids.UUID(req.RecipientUserId)), Kind: req.Kind}
 	if req.Note != nil {
-		note = *req.Note
+		ask.Note = *req.Note
 	}
-	notice, err := h.store.RaiseCoachNotice(
-		r.Context(), h.mates, ids.From[ids.UserKind](ids.UUID(req.RecipientUserId)), req.Kind, note)
+	if req.DealId != nil {
+		ask.Deal = ids.UUID(*req.DealId)
+	}
+	notice, err := h.store.RaiseCoachNotice(r.Context(), h.reach, ask)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -56,10 +58,11 @@ func (h Handlers) RaiseNotice(w http.ResponseWriter, r *http.Request) {
 // different fact from adding a blank one.
 func noticeWire(n Notice) crmcontracts.Notice {
 	out := crmcontracts.Notice{
-		Id:        openapi_types.UUID(n.ID),
-		Kind:      crmcontracts.NoticeKind(n.Kind),
-		Subject:   n.Subject,
-		CreatedAt: n.CreatedAt,
+		Id:            openapi_types.UUID(n.ID),
+		Kind:          crmcontracts.NoticeKind(n.Kind),
+		Subject:       n.Subject,
+		SystemDisplay: n.SystemDisplay,
+		CreatedAt:     n.CreatedAt,
 	}
 	if n.Body != "" {
 		body := n.Body
@@ -167,13 +170,14 @@ func centrePageWire(page CentrePage) crmcontracts.NotificationPage {
 // from it, so a cast would publish a value the enum does not admit.
 func centreItemWire(item CentreItem) crmcontracts.NotificationItem {
 	out := crmcontracts.NotificationItem{
-		Id:           openapi_types.UUID(item.ID),
-		Kind:         item.Kind,
-		Subject:      item.Subject,
-		CreatedAt:    item.CreatedAt,
-		ReadAt:       item.ReadAt,
-		Origin:       item.Origin,
-		SummaryParts: item.SubjectParts,
+		Id:            openapi_types.UUID(item.ID),
+		Kind:          item.Kind,
+		Subject:       item.Subject,
+		SystemDisplay: item.SystemDisplay,
+		CreatedAt:     item.CreatedAt,
+		ReadAt:        item.ReadAt,
+		Origin:        item.Origin,
+		SummaryParts:  item.SubjectParts,
 	}
 	if item.Body != "" {
 		body := item.Body

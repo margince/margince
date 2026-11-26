@@ -63,8 +63,6 @@ const (
 
 // unlockedLiveWrites records exceptions to holding an erasure-cleared subject.
 var unlockedLiveWrites = gatekit.Waive(map[string]string{
-	"internal/modules/dealrooms:Store.OpenThread": "the SELLER side of a deal-room thread: it builds threadAuthor{userID: &userID}, so every comment it writes carries author_user_id and a NULL author_participant_id. The erasure's delete is keyed on author_participant_id, so no row this function writes is one an erasure clears, and there is no row for a racing erasure to restore. The buyer's own reply path writes the participant author instead, and reaches this census through a different probe helper than the one it walks, so its own race is not answered by this declaration",
-	"internal/modules/dealrooms:Store.Reply":      "the same seller-side author on the reply rather than the opening comment, threadAuthor{userID: &userID} at thread_write.go:382, so the same reasoning holds: author_participant_id is NULL and the erasure's delete cannot name the row",
 
 	"internal/modules/contacts:Store.RecordOfferedValues": "the erasure of an employee deletes a company's offered values by the employment edge, and a feed call racing it can write an offer back. That offer is the feed's own current value for the company and names no subject the erasure was clearing; the company row is the one locked live, and the next feed run would write the same offer",
 })
@@ -185,8 +183,11 @@ func tablesArticle17Deletes(t *testing.T) map[string]bool {
 	tables := map[string]bool{}
 	for _, entry := range packageCallGraph(t, "internal/modules/privacy") {
 		for _, statement := range entry.statements {
-			for _, m := range deleteRe.FindAllStringSubmatch(statement, -1) {
-				tables[m[1]] = true
+			for _, write := range sqlWrites(statement) {
+				if write.verb != "delete" {
+					continue
+				}
+				tables[write.table] = true
 			}
 		}
 	}
@@ -240,9 +241,12 @@ func firstErasureClearedInsert(graph map[string]*graphFunc, name string, erasure
 			return ""
 		}
 		for _, statement := range entry.statements {
-			for _, m := range insertRe.FindAllStringSubmatch(statement, -1) {
-				if erasureClears[m[1]] {
-					return m[1]
+			for _, write := range sqlWrites(statement) {
+				if write.verb != "insert" {
+					continue
+				}
+				if erasureClears[write.table] {
+					return write.table
 				}
 			}
 		}

@@ -15,12 +15,32 @@ import { AcquisitionSourcesCard } from "./acquisitionsources";
 const ADMIN: GrantSpec = { custom_field: ["read", "create", "update"] };
 const READER: GrantSpec = { custom_field: ["read"] };
 
-const CONFLICT = {
+const NAME_TAKEN = {
   type: "about:blank",
   title: "Conflict",
   status: 409,
-  code: "conflict",
-  detail: "conflict",
+  code: "name_taken",
+  detail: "name taken",
+};
+
+const STALE_DETAIL = "The source changed since you opened it.";
+
+const TOO_LONG = {
+  type: "about:blank",
+  title: "Unprocessable Entity",
+  status: 422,
+  code: "validation_error",
+  detail: "the request failed validation",
+  details: {
+    errors: [
+      {
+        field: "label",
+        code: "too_long",
+        message: "at most 120 characters",
+        max: 120,
+      },
+    ],
+  },
 };
 
 function source(key: string, label: string, extra: object = {}) {
@@ -47,10 +67,18 @@ function backend(
   options: Readonly<{
     counted?: boolean;
     refuseWrite?: boolean;
+    refuseLength?: boolean;
+    refuseStale?: boolean;
     denyWrite?: boolean;
   }> = {},
 ) {
-  const { counted = true, refuseWrite = false, denyWrite = false } = options;
+  const {
+    counted = true,
+    refuseWrite = false,
+    refuseLength = false,
+    refuseStale = false,
+    denyWrite = false,
+  } = options;
   return vi.fn(async (request: Request) => {
     const raw = request.method === "GET" ? "" : await request.text();
     calls.push({
@@ -64,9 +92,18 @@ function backend(
     if (request.method !== "GET" && denyWrite) {
       return permissionDenied();
     }
+    if (request.method !== "GET" && refuseStale) {
+      return jsonResponse(
+        { status: 409, code: "conflict", detail: STALE_DETAIL },
+        409,
+      );
+    }
+    if (request.method !== "GET" && refuseLength) {
+      return jsonResponse(TOO_LONG, 422);
+    }
     if (request.method !== "GET") {
       return refuseWrite
-        ? jsonResponse(CONFLICT, 409)
+        ? jsonResponse(NAME_TAKEN, 409)
         : jsonResponse(source("partner", "Partner"));
     }
     const rows = [
@@ -145,7 +182,7 @@ it("renames through the row menu's dialog, starting from the current label", asy
   const dialog = within(await screen.findByRole("dialog"));
   const field = dialog.getByLabelText(en["acqSources.addLabel"]);
   expect(field).toHaveValue("Partner");
-  expect(dialog.getByText("partner").tagName).toBe("CODE");
+  expect(dialog.queryByText("partner")).toBeNull();
   await user.clear(field);
   await user.type(field, "Channel partner{Enter}");
   await waitFor(() =>
@@ -194,6 +231,56 @@ it("says a duplicate name on the field and keeps the dialog open", async () => {
   // A changed name is a new attempt, so the refusal leaves the field.
   await user.type(field, "s");
   expect(dialog.queryByText(en["acqSources.duplicate"])).toBeNull();
+});
+
+it("says a rename to a taken name on the field", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
+  render(<AcquisitionSourcesCard />);
+  await user.click(
+    await screen.findByRole("button", { name: actionsFor("Partner") }),
+  );
+  await user.click(screen.getByRole("button", { name: "Rename" }));
+  const dialog = within(await screen.findByRole("dialog"));
+  const field = dialog.getByLabelText(en["acqSources.addLabel"]);
+  await user.clear(field);
+  await user.type(field, "Existing customer{Enter}");
+  await waitFor(() =>
+    expect(field).toHaveAccessibleDescription(en["acqSources.duplicate"]),
+  );
+  expect(field).toHaveAttribute("aria-invalid", "true");
+});
+
+it("leaves a rename refused for another reason under the form, not on the name", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal("fetch", backend(ADMIN, [], { refuseStale: true }));
+  render(<AcquisitionSourcesCard />);
+  await user.click(
+    await screen.findByRole("button", { name: actionsFor("Partner") }),
+  );
+  await user.click(screen.getByRole("button", { name: "Rename" }));
+  const dialog = within(await screen.findByRole("dialog"));
+  const field = dialog.getByLabelText(en["acqSources.addLabel"]);
+  await user.type(field, " network{Enter}");
+  expect(await dialog.findByText(STALE_DETAIL)).toBeVisible();
+  expect(dialog.queryByText(en["acqSources.duplicate"])).toBeNull();
+  expect(field).not.toHaveAttribute("aria-invalid", "true");
+});
+
+it("says a label the server finds too long on the field, and bounds the box", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal("fetch", backend(ADMIN, [], { refuseLength: true }));
+  render(<AcquisitionSourcesCard />);
+  await user.click(
+    await screen.findByRole("button", { name: en["acqSources.addOpen"] }),
+  );
+  const dialog = within(await screen.findByRole("dialog"));
+  const field = dialog.getByLabelText(en["acqSources.addLabel"]);
+  expect(field).toHaveAttribute("data-character-limit", "120");
+  await user.type(field, "Roadshow{Enter}");
+  await waitFor(() =>
+    expect(field).toHaveAccessibleDescription("Label: at most 120 characters."),
+  );
 });
 
 it("retires a source through its switch, one PATCH", async () => {

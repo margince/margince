@@ -139,6 +139,7 @@ function card(
   return (
     <StoryProviders>
       <DealProductsCard
+        canWrite
         dealId="d-1"
         currency="EUR"
         typedAmount={lines ? null : "€16,500.00"}
@@ -186,7 +187,7 @@ export const EditingTheOffer: Story = {
       within(editor).getByText(/The accepted offer set these products/),
     ).toBeTruthy();
     await expect(
-      within(editor).getByRole("spinbutton", {
+      within(editor).getByRole("textbox", {
         name: "Amount for ERP licence",
       }),
     ).toBeTruthy();

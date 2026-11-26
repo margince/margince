@@ -60,7 +60,7 @@ func (s *Store) PinWorklistRow(ctx context.Context, row WorklistRowRef) error {
 	// assembly of that reader's page.
 	if !crmcontracts.WorklistItemSource(row.Source).Valid() {
 		return fmt.Errorf(
-			"activities: %q is not a lane this queue produces: %w",
+			"%q is not a lane this queue produces: %w",
 			row.Source, apperrors.ErrInvalidArgument)
 	}
 	// And a bounded id. Every row this queue mints names itself in far less
@@ -68,7 +68,7 @@ func (s *Store) PinWorklistRow(ctx context.Context, row WorklistRowRef) error {
 	// under a key nothing will ever match.
 	if row.RowID == "" || len(row.RowID) > maxPinnedRowIDLen {
 		return fmt.Errorf(
-			"activities: a pinned row's id is 1 to %d characters: %w",
+			"a pinned row's id is 1 to %d characters: %w",
 			maxPinnedRowIDLen, apperrors.ErrInvalidArgument)
 	}
 	reader, err := pinReader(ctx)
@@ -81,17 +81,13 @@ func (s *Store) PinWorklistRow(ctx context.Context, row WorklistRowRef) error {
 				return err
 			}
 		}
-		by, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return err
-		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		query := fmt.Sprintf(`
-			INSERT INTO worklist_pin (reader_id, source, row_id, set_by)
-			VALUES ($%[1]d, $%[2]d, $%[3]d, $%[4]d)
+			INSERT INTO worklist_pin (reader_id, source, row_id)
+			VALUES ($%[1]d, $%[2]d, $%[3]d)
 			ON CONFLICT (reader_id, source, row_id) DO NOTHING`,
-			arg(reader), arg(row.Source), arg(row.RowID), arg(by))
+			arg(reader), arg(row.Source), arg(row.RowID))
 		tag, err := tx.Exec(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("activities: pinning a worklist row: %w", err)

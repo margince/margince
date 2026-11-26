@@ -228,7 +228,7 @@ func TestAUserWorksForTheDefaultEntityUntilAssigned(t *testing.T) {
 	if err := e.store.AssignLegalEntityMember(admin, defaultEntity(t, e), user); err != nil {
 		t.Fatalf("move back to the default: %v", err)
 	}
-	if len(carried) != 2 || carried[0] != (EntityJurisdiction{Country: "at"}) || !carried[1].Default {
+	if len(carried) != 2 || carried[0] != (EntityJurisdiction{Jurisdiction: "at"}) || !carried[1].Default {
 		t.Errorf("leaving Vienna for the default carried %+v, want the floor carried from at to the default", carried)
 	}
 	var rows int
@@ -301,6 +301,11 @@ func TestEveryEntityWriteCommitsItsAuditAndItsEvent(t *testing.T) {
 	if _, err := e.store.ArchiveLegalEntity(admin, vienna.ID, nil); err != nil {
 		t.Fatalf("archive: %v", err)
 	}
+	var retained bool
+	if err := e.owner.QueryRow(t.Context(), `SELECT archived_at IS NOT NULL FROM legal_entity WHERE id=@entity`,
+		pgx.StrictNamedArgs{"entity": vienna.ID.UUID}).Scan(&retained); err != nil || !retained {
+		t.Fatalf("retirement must keep the sending company: retained=%v, error=%v", retained, err)
+	}
 	for action, eventType := range map[string]string{
 		"create": "legal_entity.created", "update": "legal_entity.updated", "archive": "legal_entity.archived",
 	} {
@@ -358,8 +363,74 @@ func TestTheDefaultEntityReadsTheAnchorCompany(t *testing.T) {
 	if parse, ok := errors.AsType[*values.ParseError](err); !ok || parse.Code != codeFieldOnCompanyForm {
 		t.Errorf("renaming the default entity answered %v, want %s", err, codeFieldOnCompanyForm)
 	}
-	updated, err := e.store.UpdateLegalEntity(admin, identity.ID, LegalEntityInput{Country: new("de")}, nil)
-	if err != nil || updated.Country == nil || *updated.Country != "de" || updated.DisplayName != "Acme" {
-		t.Errorf("setting the default entity's own country gave %+v (%v), want de beside the anchor's name", updated, err)
+}
+
+// TestAStoredDefaultCountryIsNeverRead: a country stored on the default entity
+// before its country became the installation's is not what any reader sees.
+//
+// Mutation: drop the nil in scanLegalEntity and this fails.
+func TestAStoredDefaultCountryIsNeverRead(t *testing.T) {
+	e := setupPromoteConsent(t)
+	id := defaultEntity(t, e)
+	ctx := context.Background()
+	if _, err := e.owner.Exec(ctx, `UPDATE legal_entity SET country = 'de' WHERE is_default`); err != nil {
+		t.Fatalf("store a country on the default: %v", err)
+	}
+	tx, err := e.owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Errorf("rolling back: %v", err)
+		}
+	}()
+	identity, _, err := ResolveLegalEntity(ctx, tx, id)
+	if err != nil {
+		t.Fatalf("reading the default entity: %v", err)
+	}
+	if identity.Country != nil {
+		t.Errorf("the default entity reads country %q, want none: it follows the installation", *identity.Country)
+	}
+}
+
+// The jurisdiction is stored apart from the address country and refused on the
+// default entity. A change of it carries the floor of the old one.
+func TestAnEntityStoresItsJurisdictionApartFromItsCountry(t *testing.T) {
+	e := setupPromoteConsent(t)
+	admin := actingAs(e, "admin", entityAdmin)
+	created, err := e.store.CreateLegalEntity(admin, LegalEntityInput{
+		DisplayName: new("Paris"), LegalName: new("Paris SAS"), Country: new("fr"), Jurisdiction: new("DE"),
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if *created.Country != "fr" || created.Jurisdiction == nil || *created.Jurisdiction != "de" {
+		t.Errorf("stored country %q and jurisdiction %v, want fr and de", *created.Country, created.Jurisdiction)
+	}
+	_, err = e.store.CreateLegalEntity(admin, LegalEntityInput{
+		DisplayName: new("Lyon"), LegalName: new("Lyon SAS"), Country: new("fr"),
+	})
+	if parse, ok := errors.AsType[*values.ParseError](err); !ok || parse.Code != "invalid_jurisdiction" {
+		t.Errorf("a create whose country no pack covers answered %v, want invalid_jurisdiction", err)
+	}
+	_, err = e.store.UpdateLegalEntity(admin, defaultEntity(t, e), LegalEntityInput{Jurisdiction: new("de")}, nil)
+	if parse, ok := errors.AsType[*values.ParseError](err); !ok || parse.Code != codeFieldOnInstallation {
+		t.Errorf("a jurisdiction on the default entity answered %v, want %s", err, codeFieldOnInstallation)
+	}
+	var carried []EntityJurisdiction
+	e.store.WithFloorCarry(func(_ context.Context, _ pgx.Tx, from, to EntityJurisdiction) error {
+		carried = append(carried, from, to)
+		return nil
+	})
+	if _, err := e.store.UpdateLegalEntity(admin, created.ID, LegalEntityInput{Country: new("be")}, nil); err != nil || len(carried) != 0 {
+		t.Errorf("an address country change answered %v and carried %+v, want no carry", err, carried)
+	}
+	moved, err := e.store.UpdateLegalEntity(admin, created.ID, LegalEntityInput{Jurisdiction: new("at")}, nil)
+	if err != nil {
+		t.Fatalf("change the jurisdiction: %v", err)
+	}
+	if *moved.Jurisdiction != "at" || len(carried) != 2 || carried[0].Jurisdiction != "de" || carried[1].Jurisdiction != "at" {
+		t.Errorf("a jurisdiction change stored %q and carried %+v, want at and a carry from de to at", *moved.Jurisdiction, carried)
 	}
 }

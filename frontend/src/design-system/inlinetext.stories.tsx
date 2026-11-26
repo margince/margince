@@ -33,8 +33,7 @@ function Example({ multiline = false }: { multiline?: boolean }) {
       placeholder="Not set"
       value={value}
       multiline={multiline}
-      type={multiline ? "text" : "number"}
-      step="any"
+      type={multiline ? "text" : "decimal"}
       canEdit
       onSave={async (next) => setValue(next)}
     />
@@ -61,7 +60,7 @@ export const FormattedReading: Story = {
       await canvas.findByRole("button", { name: "Change Budget €48,000.00" }),
     );
     const dialog = await screen.findByRole("dialog", { name: "Budget" });
-    await expect(within(dialog).getByRole("spinbutton")).toHaveValue(48000);
+    await expect(within(dialog).getByRole("textbox")).toHaveValue("48000");
   },
 };
 export const Paragraph: Story = { render: () => <Example multiline /> };
@@ -222,5 +221,24 @@ export const InGridReadOnly: Story = {
   render: () => <GridExample canEdit={false} />,
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).queryByRole("button")).toBeNull();
+  },
+};
+
+// A viewer reads why an empty field is empty instead of "Unset".
+export const EmptyWithReason: Story = {
+  render: () => (
+    <InlineText
+      label="Sales motion"
+      value=""
+      placeholder="Not on their website"
+      emptyText="Not on their website"
+      canEdit={false}
+      onSave={async () => {}}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText("Not on their website"),
+    ).toBeInTheDocument();
   },
 };

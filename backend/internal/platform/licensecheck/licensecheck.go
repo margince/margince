@@ -3,8 +3,8 @@
 
 // Package licensecheck answers what this installation is entitled to, offline.
 //
-// It runs the license-validation WebAssembly module margince-constellation
-// publishes — bundled under module/ byte-for-byte as published — inside a
+// It runs the license-validation WebAssembly module the publisher
+// releases, bundled under module/ byte-for-byte as published, inside a
 // wazero runtime in this process. The module embeds the public keyset it trusts
 // and verifies the operator's token against it with no callout of any kind, so
 // an air-gapped installation proves its entitlement exactly the way a connected
@@ -54,16 +54,16 @@ const (
 )
 
 // The bundled module and the release it came from, installed as a set by the
-// publisher's own tooling in margince-constellation and never by hand — this
-// repository holds the artifact, not the machinery for fetching it.
+// publisher's own tooling and never by hand. This repository holds the artifact,
+// not the machinery for fetching it.
 // module_test.go holds the blob to the recorded digest, so a swapped or truncated
 // one fails the build gate rather than a boot.
 //
 // The file name says nothing about compression on purpose. Upstream's framing is
-// upstream's to change — it moved from gzip to brotli once already — and the host
+// upstream's to change (it moved from gzip to brotli once already). The host
 // reads the format out of the bytes, so a refresh that changes it stays a
-// data-only diff instead of also editing this directive. Which artifact was
-// fetched is recorded in the digest file beside the blob.
+// data-only diff and does not edit this directive. Which artifact was fetched
+// is recorded in the digest file beside the blob.
 var (
 	//go:embed module/licensecheck.wasm.module
 	bundledModule []byte
@@ -80,7 +80,23 @@ const ProductionIssuer = issuer
 // was refused" and "the module that refused it is three releases old" are
 // different problems and an operator can only tell them apart if the boot log
 // names the module.
-func ModuleVersion() string { return strings.TrimSpace(moduleVersion) }
+func ModuleVersion() string {
+	tag, _ := parseModuleVersion(moduleVersion)
+	return tag
+}
+
+// parseModuleVersion splits module/VERSION into the release tag and the digest
+// from its `for <sha256>` line, which names the blob the tag was written for.
+// That line lets a test notice a blob swapped without the tag. The digest is
+// empty when the line is missing or malformed.
+func parseModuleVersion(raw string) (tag, forDigest string) {
+	first, rest, _ := strings.Cut(strings.TrimSpace(raw), "\n")
+	digest, ok := strings.CutPrefix(strings.TrimSpace(rest), "for ")
+	if !ok {
+		return strings.TrimSpace(first), ""
+	}
+	return strings.TrimSpace(first), strings.TrimSpace(digest)
+}
 
 // State is what a check concluded.
 type State string
@@ -138,6 +154,39 @@ type Posture struct {
 	// what it verified, and a projection here would have to change every time
 	// upstream proves one more thing.
 	License License
+	// HeldCeiling is the seat ceiling a posture that is not valid still holds:
+	// the grant of the last valid license this process resolved. Nil when it
+	// saw none, which caps nothing.
+	HeldCeiling *Ceiling
+}
+
+// Ceiling is a seat ceiling. Capped false is a license that caps no seats.
+type Ceiling struct {
+	Seats  int
+	Capped bool
+}
+
+// SeatCeiling reports the ceiling a new seat is held to. A valid license
+// answers its own grant. A refused or removed one keeps the last valid grant,
+// so seats in use keep working and none is added beyond it.
+func (p Posture) SeatCeiling() (int, bool) {
+	if p.State == StateValid {
+		return p.Seats()
+	}
+	if p.HeldCeiling == nil {
+		return 0, false
+	}
+	return p.HeldCeiling.Seats, p.HeldCeiling.Capped
+}
+
+// carryCeiling hands a posture that is not valid the ceiling its predecessor
+// held, so a lapse never lifts the seat limit.
+func carryCeiling(before Posture, after *Posture) {
+	if after.State == StateValid || (before.State != StateValid && before.HeldCeiling == nil) {
+		return
+	}
+	seats, capped := before.SeatCeiling()
+	after.HeldCeiling = &Ceiling{Seats: seats, Capped: capped}
 }
 
 // Seats reports the full-seat count the license grants. ok is false when there
@@ -167,12 +216,10 @@ func (p Posture) Seats() (int, bool) {
 // "now" means here; the module checks expiry against the host's real clock
 // either way, which is the upstream contract and not ours to fake.
 //
-// The error return is reserved for a module that could not RUN — a malformed
-// blob, a trap, a framing nothing could unwrap. That is a fault in this build,
-// not a judgment about the license, and it is separate from the posture so a
-// caller can tell the two apart: a boot refuses on either, while a re-check
-// keeps the verdict it already has rather than reporting a license as refused on
-// the strength of an error nobody's license caused.
+// The error return is reserved for a module that could not RUN. That is a
+// malformed blob, a trap, a framing nothing could unwrap, or a run ctx stopped.
+// None is a judgment about the license, so it stays apart from the posture. A
+// boot refuses on either. A re-check keeps the verdict it already has.
 //
 // An empty token is absent rather than an error: a configured token that cannot
 // be READ is caught where it is read (deployconfig), so by the time a token
@@ -181,6 +228,11 @@ func (p Posture) Seats() (int, bool) {
 // env decides which authorities are honored (see issuers). A production
 // installation makes exactly one call, as it always has.
 func Resolve(ctx context.Context, token string, now time.Time, env runtimeenv.Environment) (Posture, error) {
+	return resolveWith(ctx, bundledModule, token, now, env)
+}
+
+// resolve is Resolve against a given module, so a test can run one that hangs.
+func resolveWith(ctx context.Context, module []byte, token string, now time.Time, env runtimeenv.Environment) (Posture, error) {
 	if strings.TrimSpace(token) == "" {
 		return Posture{State: StateAbsent, CheckedAt: now}, nil
 	}
@@ -189,13 +241,16 @@ func Resolve(ctx context.Context, token string, now time.Time, env runtimeenv.En
 	// "invalid issuer", which sends the operator after the wrong problem.
 	var first Posture
 	for _, authority := range issuers(env) {
-		result, err := check(ctx, bundledModule, authority, product, generation, token)
+		result, err := check(ctx, module, authority, product, generation, token)
 		switch {
 		case errors.Is(err, ErrVerdict):
 			if first.State == "" {
 				first = Posture{State: StateRejected, Reason: sanitizeReason(err.Error()), CheckedAt: now}
 			}
 			continue
+		case errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):
+			return Posture{}, fmt.Errorf("licensecheck: the license check was stopped before the bundled validation module (%s) answered: %w",
+				ModuleVersion(), err)
 		case err != nil:
 			return Posture{}, fmt.Errorf("licensecheck: the bundled validation module (%s) could not run: %s",
 				ModuleVersion(), sanitizeReason(err.Error()))

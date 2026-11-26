@@ -71,7 +71,8 @@ type frozenConversion struct {
 	Amount *int64
 }
 
-// Frozen columns are internal; audit pre-images cannot come from the public deal.
+// The deal carries the rate and its day but never amount_minor_base, so an
+// audit pre-image of all three comes from the row.
 func frozenBefore(ctx context.Context, tx pgx.Tx, id openapi_types.UUID) (frozenConversion, error) {
 	var before frozenConversion
 	args := []any{id}
@@ -163,7 +164,7 @@ func (s *Store) freezeBaseRate(ctx context.Context, tx pgx.Tx, p *storekit.Patch
 func (s *Store) freezeFx(ctx context.Context, tx pgx.Tx,
 	base, currency string, asOf time.Time,
 ) (string, time.Time, error) {
-	tzName, err := s.installation.Timezone(ctx, tx)
+	tzName, err := s.installation.TimezoneApplied(ctx, tx)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("resolve the installation's timezone: %w", err)
 	}
@@ -179,6 +180,7 @@ func (s *Store) freezeFx(ctx context.Context, tx pgx.Tx,
 	err = tx.QueryRow(ctx,
 		`SELECT rate::text FROM fx_rate
 		 WHERE from_currency = $1 AND to_currency = $2 AND rate_date <= $3
+		   AND `+RateVersionSQL("", "")+`
 		 ORDER BY rate_date DESC LIMIT 1`,
 		currency, base, asOfDate).Scan(&rate)
 	if errors.Is(err, pgx.ErrNoRows) {

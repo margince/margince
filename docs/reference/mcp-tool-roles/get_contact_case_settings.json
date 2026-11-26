@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "contact_case_settings",
+  "verb": "get_contact_case_settings",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

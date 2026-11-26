@@ -56,7 +56,7 @@ func waitingReplyEntityClause(entityType string, entityID ids.UUID, arg func(any
 // query's is harmless.
 func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.Time, entityType *string, entityID *ids.UUID, ownDomains, readerAddresses []string, horizonDays int, alsoBeforeTheCap, unjudgedResponses string) (string, error) {
 	instant := arg(asOf)
-	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	content, err := auth.ActivityMessageContentClause(ctx, "a", arg)
 	if err != nil {
 		return "", err
 	}
@@ -108,7 +108,7 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 	}
 	reader := arg(readerOrNobody(ctx))
 	return "a.id IN (SELECT id FROM (" +
-		fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
+		fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, waitingLimitSQL(arg, WaitingScanCap),
 			horizonOrDefault(horizonDays),
 			liveRecord(openDealPredicate, "d"),
 			liveRecord(workingLeadPredicate, "ld"),
@@ -116,12 +116,12 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 			reader,
 			entityClause,
 			neverRelaxed, neverRelaxed,
-			neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
+			neverRelaxed, fmt.Sprintf("$%d", arg(ownDomains)),
 			messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 			fmt.Sprintf("$%d", arg(readerAddresses)),
 			neverRelaxed,
 			noKeyset, bookedDiscover,
-			neverRelaxed, unjudgedResponses, requestTaskDiscover) +
+			neverRelaxed, unjudgedResponses, requestTaskDiscover, noWithheldColumns) +
 		") waiting_thread)", nil
 }
 
@@ -132,11 +132,28 @@ func appendWaitingReplyClause(ctx context.Context, in ListActivitiesInput, arg f
 	if in.WaitingReplyAsOf == nil {
 		return where, nil
 	}
-	clause, err := waitingReplyExistsClause(ctx, arg, *in.WaitingReplyAsOf, in.EntityType, in.EntityID, in.ownDomains, in.readerAddresses, in.horizonDays, "", neverRelaxed)
+	readersOwn := ""
+	if recordWaitingRead(in) {
+		readersOwn = readerResponsibilitySQL(ctx, in, arg)
+	}
+	clause, err := waitingReplyExistsClause(ctx, arg, *in.WaitingReplyAsOf, in.EntityType, in.EntityID, in.ownDomains, in.readerAddresses, in.horizonDays, readersOwn, neverRelaxed)
 	if err != nil {
 		return nil, err
 	}
 	return append(where, clause), nil
+}
+
+// recordWaitingRead is a waiting_reply read narrowed to one record, the read
+// behind a record page's "Just in" line.
+func recordWaitingRead(in ListActivitiesInput) bool {
+	return in.WaitingReplyAsOf != nil && in.EntityType != nil && in.EntityID != nil
+}
+
+// readerResponsibilitySQL hides a colleague's unanswered mail on the record,
+// which is the colleague's next step and never this reader's.
+func readerResponsibilitySQL(ctx context.Context, in ListActivitiesInput, arg func(any) int) string {
+	identities := fmt.Sprintf("$%d::jsonb", arg(in.mailIdentities))
+	return notAColleaguesOwnMailSQL(identities, fmt.Sprintf("$%d::uuid", arg(readerOrNobody(ctx))))
 }
 
 func appendRequestReviewClause(ctx context.Context, in ListActivitiesInput, arg func(any) int, where []string) ([]string, error) {
@@ -148,11 +165,12 @@ func appendRequestReviewClause(ctx context.Context, in ListActivitiesInput, arg 
 		return where, nil
 	}
 	instant := fmt.Sprintf("$%d::timestamptz", arg(*asOf))
-	request := reviewableRequestSQL(instant)
+	ownDomains := fmt.Sprintf("$%d", arg(in.ownDomains))
+	request := reviewableRequestSQL(instant, ownDomains)
 	if in.RequestCurrentAsOf != nil {
 		identities := fmt.Sprintf("$%d::jsonb", arg(in.mailIdentities))
 		horizon := storekit.WaitingHorizonSQL(*asOf, arg)
-		request = currentRequestSQL(instant, horizon, identities, arg)
+		request = currentRequestSQL(instant, ownDomains, horizon, identities, arg)
 	}
 	backContent, err := auth.ActivityContentClause(ctx, "back", arg)
 	if err != nil {
@@ -161,5 +179,8 @@ func appendRequestReviewClause(ctx context.Context, in ListActivitiesInput, arg 
 	wake := messageSnoozeLiftedSQL(instant, backContent)
 	reader := arg(readerOrNobody(ctx))
 	disposition := "NOT " + readerSetAsideSQL(fmt.Sprintf("$%d", reader), wake)
-	return append(where, "("+request+")", occurredday.BegunSQL("a", instant), disposition), nil
+	// A colleague's mail is not a customer waiting, as in the Worklist lane,
+	// unless a human took it on as a request.
+	colleague := "(" + acceptedRequestSQL + " OR NOT " + ownDomainSenderAtSQL("a", ownDomains) + ")"
+	return append(where, "("+request+")", occurredday.BegunSQL("a", instant), disposition, colleague), nil
 }

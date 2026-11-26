@@ -6,7 +6,6 @@
 
 import {
   type QueryClient,
-  type QueryKey,
   useMutation,
   useQuery,
   useQueryClient,
@@ -47,34 +46,75 @@ const POLL_LIVE_MS = 3000;
 // again, and the server's own floor keeps that from costing a model call.
 export const ENSURE_SHARED_MS = 10_000;
 
-// ensuredRecently reports an ensure for this account that succeeded within the
-// shared window.
-function ensuredRecently(client: QueryClient, key: QueryKey): boolean {
-  return client
-    .getMutationCache()
-    .findAll({ mutationKey: key, status: "success" })
-    .some((done) => Date.now() - done.state.submittedAt < ENSURE_SHARED_MS);
+// The open itself, held in the query cache so sign-out drops it with every
+// other read. Its own key: a refresh of the scan must not mark it as unasked.
+function accountOpenKey(companyId: string) {
+  return ["account-scan-open", companyId] as const;
+}
+
+// openAccount sends the ensure for this account, or hands back the one already
+// sent within the window. The answer is the scan as it now stands. The query
+// takes it before anyone waiting on the open hears back.
+function openAccount(
+  client: QueryClient,
+  companyId: string,
+): Promise<AccountScan> {
+  const key = accountScanKey(companyId);
+  return client.fetchQuery({
+    queryKey: accountOpenKey(companyId),
+    staleTime: ENSURE_SHARED_MS,
+    retry: false,
+    queryFn: async ({ signal }) => {
+      const markedBefore = client.getQueryState(key)?.isInvalidated ?? false;
+      const scan = unwrap(
+        await api.POST("/companies/{id}/scan", {
+          params: { path: { id: companyId } },
+          signal,
+        }),
+      );
+      // Aborted when sign-out removed the open: the answer was the last
+      // reader's and must not land in the next one's cache.
+      signal.throwIfAborted();
+      // A change on the record while the open was out marked the scan for a
+      // new read. That read is newer than this answer, so it is left to run.
+      if (!markedBefore && client.getQueryState(key)?.isInvalidated) {
+        return scan;
+      }
+      // A poll still out left before the ensure queued anything. Landing after
+      // it would put "never" over "queued" and stop the poll.
+      await client.cancelQueries({ queryKey: key });
+      signal.throwIfAborted();
+      client.setQueryData(key, scan);
+      return scan;
+    },
+  });
 }
 
 /**
  * useAccountScan asks for the reader's scan of one account and keeps it
  * current while a read runs.
  *
- * The ensure fires once per mount: the server compares the account as this
- * reader sees it against what it stored and answers with the stored findings,
- * the same findings marked stale, or a queued read — so an open costs a
- * model call only when the account moved and the hourly floor has passed.
- * `enabled` is false where the page cannot ask at all — a 360 that has not
- * answered — so nothing is asked for a page that has nothing to show it on.
+ * Each mount opens the account once. Consumers mounting together share one
+ * open, and the read waits for it, then serves the polls and refreshes.
+ * `enabled` is false where the page has nothing to show the scan on.
  */
 export function useAccountScan(
   companyId: string,
   enabled: boolean,
 ): AccountScan | undefined {
   const client = useQueryClient();
+  const open = useMutation({
+    mutationFn: (id: string) => openAccount(client, id),
+  });
+  // This mount's open has its answer, or its refusal, for this account. Until
+  // then a read would assemble the account a second time to say the same.
+  const opened =
+    open.variables === companyId && (open.isSuccess || open.isError);
   const scan = useQuery({
     queryKey: accountScanKey(companyId),
-    enabled,
+    enabled: enabled && opened,
+    // The open's answer is current: read again only to poll, or on a change.
+    staleTime: ENSURE_SHARED_MS,
     queryFn: async () => {
       return unwrap(
         await api.GET("/companies/{id}/scan", {
@@ -85,47 +125,11 @@ export function useAccountScan(
     refetchInterval: (query) =>
       scanIsLive(query.state.data) ? POLL_LIVE_MS : false,
   });
-  const ensure = useMutation({
-    mutationKey: accountScanKey(companyId),
-    mutationFn: async (id: string) => {
-      return unwrap(
-        await api.POST("/companies/{id}/scan", {
-          params: { path: { id } },
-        }),
-      );
-    },
-    // The ensure's answer IS the scan as it now stands, so the query takes it
-    // rather than re-reading what the server just said. The open's own read
-    // is cancelled first: it left before the ensure queued anything, and
-    // landing after it would put "never" over "queued" and stop the poll.
-    onSuccess: async (data) => {
-      await client.cancelQueries({ queryKey: accountScanKey(companyId) });
-      client.setQueryData(accountScanKey(companyId), data);
-    },
-  });
-  const fire = ensure.mutate;
+  const fire = open.mutate;
   useEffect(() => {
-    if (!enabled) {
-      return;
+    if (enabled) {
+      fire(companyId);
     }
-    // One question per account, not per reader: the ensure is the half that
-    // can cost a model call.
-    //
-    // Two consumers mounting together are held by `isMutating`, because
-    // `mutate` registers before the next one's effect runs. One mounting just
-    // after is held by the ensure that settled moments ago.
-    //
-    // Cached scan data does not hold it. The read fills the same key, so a
-    // reader coming back to the account would find an answer and never ask
-    // whether the account moved.
-    const key = accountScanKey(companyId);
-    if (
-      client.isMutating({ mutationKey: key }) > 0 ||
-      ensuredRecently(client, key)
-    ) {
-      return;
-    }
-    fire(companyId);
-  }, [client, enabled, companyId, fire]);
+  }, [enabled, companyId, fire]);
   return scan.data;
 }

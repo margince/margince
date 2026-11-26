@@ -1,17 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
-import { Ban, Check, Mail } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Ban, Check, Download, Mail } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ContactStops } from "../../components/stops";
 import { Badge, Button, Modal, Skeleton } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import type { DetailRow } from "../../design-system/recorddetails";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useProviderLabel } from "../../lib/channelproviders";
-import { unwrap } from "../../lib/problem";
+import { downloadBytes } from "../../lib/download";
+import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { ConfirmDetailsAction, ConsentSection } from "../privacy/consent";
 import { consentPurposeName, consentReason } from "./consentreason";
@@ -20,6 +22,7 @@ import {
   RetractAcquisitionRequest,
   RetractRecordedRequest,
 } from "./retractrequest";
+import { StandingExceptions } from "./standingexceptions";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactConsentGuard = components["schemas"]["ContactConsentGuard"];
@@ -193,12 +196,7 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
   const { locale } = useLocale();
   const zone = useViewerZone();
   const guard = useConsentGuard(view.contact.id, !view.contact.archived_at);
-  const [manage, setManage] = useState(false);
-  // Opened once, mounted from then on. The section reads consent and the
-  // purpose catalogue, and a reader would watch an emptied drawer leave on
-  // close.
-  const [everManaged, setEverManaged] = useState(false);
-  const titleId = useId();
+  const manage = useManageConsent(view);
   const mayWrite = useCanWriteRecord("contact", view.contact);
   const entries = guard.data?.entries ?? [];
   const correspondence = correspondenceOf(entries);
@@ -243,14 +241,10 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
           mayWrite={mayWrite}
         />
         <ContactStops contactId={view.contact.id} />
-        <p>{t("consent.permissionScope")}</p>
-        <Button
-          variant="ghost"
-          onClick={() => {
-            setEverManaged(true);
-            setManage(true);
-          }}
-        >
+        <StandingExceptions key={view.contact.id} contactId={view.contact.id} />
+        <OptOutRecordsDownload contactId={view.contact.id} />
+        <p className="panel-intro">{t("consent.permissionScope")}</p>
+        <Button variant="ghost" onClick={manage.open}>
           {t("consent.manage")}
         </Button>
       </PanelBody>
@@ -263,9 +257,30 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
           !hasEmail ? t("contact.rail.noEmailAddress") : undefined
         }
       />
+      {manage.element}
+    </Panel>
+  );
+}
+
+/** The drawer behind "Manage consent", opened from the consent panel and from
+ *  the left column's Consent section. */
+export function useManageConsent(view: Contact360) {
+  const t = useT();
+  const titleId = useId();
+  const [open, setOpen] = useState(false);
+  // Opened once, mounted from then on. The section reads consent and the
+  // purpose catalogue, and a reader would watch an emptied drawer leave on
+  // close.
+  const [everOpened, setEverOpened] = useState(false);
+  return {
+    open: () => {
+      setEverOpened(true);
+      setOpen(true);
+    },
+    element: (
       <Modal
-        open={manage}
-        onClose={() => setManage(false)}
+        open={open}
+        onClose={() => setOpen(false)}
         labelledBy={titleId}
         intent="drawer"
       >
@@ -274,7 +289,7 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
             {t("consent.manage")}
           </Heading>
         </div>
-        {everManaged && (
+        {everOpened && (
           <ConsentSection
             contactId={view.contact.id}
             contact={view.contact}
@@ -283,6 +298,43 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
           />
         )}
       </Modal>
-    </Panel>
+    ),
+  };
+}
+
+/** The contact's registrations, refusals and opt-out receipts as one file, the
+ *  records an inspector may ask to see. The server decides who may read them. */
+function OptOutRecordsDownload({ contactId }: Readonly<{ contactId: string }>) {
+  const t = useT();
+  const download = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await api.GET(
+        "/contacts/{id}/consent/optout-records",
+        { params: { path: { id } } },
+      );
+      if (error) throwProblem(error);
+      return data;
+    },
+    onSuccess: (records, id) =>
+      downloadBytes(
+        JSON.stringify(records, null, 2),
+        `optout-records-${id}.json`,
+        "application/json",
+      ),
+  });
+  return (
+    <div>
+      <Button
+        variant="ghost"
+        pending={download.isPending}
+        onClick={() => download.mutate(contactId)}
+      >
+        <Download aria-hidden />
+        {t("consent.optOutRecords")}
+      </Button>
+      {download.isError && (
+        <ErrorLine>{problemMessageOf(download.error, t)}</ErrorLine>
+      )}
+    </div>
   );
 }

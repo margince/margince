@@ -4,19 +4,18 @@
 import { AppLink } from "../../design-system/applink";
 import { Disclosure } from "../../design-system/atoms";
 import { PanelBody, PanelGroupHead } from "../../design-system/panel";
-import { providerName } from "../../format/connectorprovider";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import type { Locale } from "../../i18n/locale";
 import { approvalHref } from "../../lib/approvalhref";
 import { approvalKindLabel } from "../../lib/approvalkindlabel";
-import { runOutcomeWord, runReasonWords } from "../../lib/automationrun";
 import { ENTITY, isEntityKind } from "../../lib/entity";
-import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import type { MagicLane, MagicLine } from "../../lib/magic.queries";
+import { lineSentence } from "../../lib/magiccopy";
 import {
   magicByKey,
-  magicSentenceKey,
+  magicConsequenceKey,
   magicUndoReasonKey,
   magicWhyKey,
 } from "../../lib/magickeys";
@@ -38,6 +37,7 @@ export function MagicLaneSection({
   zone,
   byDay,
   fold,
+  note,
 }: Readonly<{
   lane: MagicLane;
   title: string;
@@ -47,6 +47,8 @@ export function MagicLaneSection({
   // The window runs past a day, so a line names its day rather than its hour.
   byDay: boolean;
   fold?: string;
+  /** A caveat on the whole lane, read under its lines. */
+  note?: string;
 }>) {
   const lines = (
     <ul className="magic-lines" aria-label={title}>
@@ -74,10 +76,18 @@ export function MagicLaneSection({
         ) : (
           lines
         )}
+        {note && <p className="t-caption">{note}</p>}
       </PanelBody>
     </>
   );
 }
+
+// A sentence that is a whole clause sets its record off after it as a label.
+// Other lines read as one phrase that runs into their record.
+const SUBJECT_AS_LABEL: ReadonlySet<string> = new Set([
+  "magic.action.automation_troubled",
+  "magic.action.approval_capture_counterparty",
+]);
 
 function MagicLineRow({
   line,
@@ -91,7 +101,6 @@ function MagicLineRow({
   byDay: boolean;
 }>) {
   const t = useT();
-  const sentence = magicSentenceKey(line.summary.key);
   const { locale } = useLocale();
   const detail = lineDetail(line, t, locale);
   return (
@@ -116,13 +125,12 @@ function MagicLineRow({
         </div>
       ) : (
         <p className="magic-line-text">
-          {sentence
-            ? t(sentence, readableValues(line.summary.values, t))
-            : t(
-                line.lane === "needs_you"
-                  ? "magic.approval.reviewChange"
-                  : "magic.undescribed",
-              )}{" "}
+          {lineSentence(line, t)}{" "}
+          {SUBJECT_AS_LABEL.has(line.summary.key) && subjectLabel(line) && (
+            <span className="magic-line-sep" aria-hidden="true">
+              ·
+            </span>
+          )}
           <LineSubject line={line} since={since} />{" "}
           {detail.length > 0 && (
             <span className="t-caption">
@@ -139,32 +147,40 @@ function MagicLineRow({
   );
 }
 
-// Unknown detail keys cannot supply a trustworthy explanation.
-function lineDetail(
-  line: MagicLine,
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-): string[] {
+/**
+ * Who acted, why, and what the reader should know before reaching for an
+ * undo. Unknown detail keys cannot supply a trustworthy explanation.
+ */
+export function lineNotes(line: MagicLine, t: Translator, locale: Locale) {
   const by = line.actor.label ? magicByKey(line.actor.label.key) : null;
   const why = line.reason ? magicWhyKey(line.reason.key) : null;
-  return [
-    by && t(by, line.actor.label?.values),
-    why && t(why, forecastReasonValues(line, locale)),
-    captureCoverage(line, t),
-    noWayBack(line, t),
-  ].filter((part): part is string => Boolean(part));
+  return {
+    by: by ? t(by, line.actor.label?.values) : null,
+    why: why ? t(why, forecastReasonValues(line, locale)) : null,
+    coverage: captureCoverage(line, t),
+    noWayBack: noWayBack(line, t),
+  };
 }
 
+function lineDetail(line: MagicLine, t: Translator, locale: Locale): string[] {
+  const notes = lineNotes(line, t, locale);
+  return [notes.by, notes.why, notes.coverage, notes.noWayBack].filter(
+    (part): part is string => Boolean(part),
+  );
+}
+
+// The only consequences a watching line states as coverage; a skewed response
+// carrying another registered one must not print a sentence about capture.
+const CAPTURE_CONSEQUENCES: ReadonlySet<MessageKey> = new Set<MessageKey>([
+  "magic.consequence.capture_not_collecting",
+  "magic.consequence.capture_may_be_incomplete",
+  "magic.consequence.capture_history_incomplete",
+]);
+
 function captureCoverage(line: MagicLine, t: Translator): string | null {
-  if (line.lane !== "watching") return null;
-  switch (line.consequence) {
-    case "magic.consequence.capture_not_collecting":
-    case "magic.consequence.capture_may_be_incomplete":
-    case "magic.consequence.capture_history_incomplete":
-      return t(line.consequence);
-    default:
-      return null;
-  }
+  const key = line.consequence ? magicConsequenceKey(line.consequence) : null;
+  const states = key !== null && CAPTURE_CONSEQUENCES.has(key);
+  return line.lane === "watching" && key !== null && states ? t(key) : null;
 }
 
 function forecastReasonValues(line: MagicLine, locale: Locale) {
@@ -187,7 +203,7 @@ function forecastReasonValues(line: MagicLine, locale: Locale) {
 // Why a done change to one record cannot be put back, said rather than shown as
 // a greyed control. A line standing for many says it per record inside, and on
 // the other lanes nothing changed, so "nothing to put back" would be noise.
-function noWayBack(line: MagicLine, t: ReturnType<typeof useT>): string | null {
+function noWayBack(line: MagicLine, t: Translator): string | null {
   const entity = line.entity;
   if (line.lane !== "done" || (standsForMany(line) && entity)) {
     return null;
@@ -208,7 +224,7 @@ function noWayBack(line: MagicLine, t: ReturnType<typeof useT>): string | null {
  * A decision waiting has nothing to undo. Its control opens that decision in
  * the drawer over Home, where it is answered.
  */
-function LineUndo({ line }: Readonly<{ line: MagicLine }>) {
+export function LineUndo({ line }: Readonly<{ line: MagicLine }>) {
   const t = useT();
   if (line.lane === "needs_you") {
     return (
@@ -316,7 +332,7 @@ function manySummary({
  * interpolating a record's name into a translated clause is how a sentence
  * ends up ungrammatical in two of three languages.
  */
-function LineSubject({
+export function LineSubject({
   line,
   since,
 }: Readonly<{ line: MagicLine; since: string | undefined }>) {
@@ -395,13 +411,16 @@ function standsForMany(line: MagicLine): boolean {
 /**
  * What to call the record this line is about.
  *
- * The entity's own label first, then the caption the approval was staged under,
- * then the mailbox a connector is failing on. Absent rather than invented: a
- * line naming a record it cannot label still says what happened.
+ * The entity's own label first, then the caption the approval was staged under.
+ * Then the mailbox a connector is failing on, then a failed rule's name. Absent
+ * rather than invented: a line naming a record it cannot label still says what
+ * happened. A sentence never repeats these values, since the subject draws them.
  */
 function subjectLabel(line: MagicLine): string | undefined {
   const values = line.summary.values;
-  return line.entity?.label ?? values?.target ?? values?.account;
+  return (
+    line.entity?.label ?? values?.target ?? values?.account ?? values?.name
+  );
 }
 
 // The record's address, through the entity registry rather than a switch
@@ -415,31 +434,4 @@ function recordHref(line: MagicLine): string | undefined {
     return undefined;
   }
   return routeHash(ENTITY[entity.type].route(entity.id));
-}
-
-// A proposal's kind and a connector's provider arrive as codes, not words.
-function readableValues(
-  values: Readonly<Record<string, string>> | undefined,
-  t: Translator,
-): Record<string, string> | undefined {
-  if (!values) return values;
-  return {
-    ...values,
-    ...(values.kind && { kind: approvalKindLabel(values.kind, t) }),
-    ...(values.fields && { fields: fieldWords(values.fields, t) }),
-    ...(values.provider && { provider: providerName(values.provider, t) }),
-    ...(values.outcome && { outcome: runOutcomeWord(values.outcome, t) }),
-    ...(values.reason_code && {
-      reason: runReasonWords(values.reason_code, t),
-    }),
-  };
-}
-
-// The server names the changed fields by column, with spaces for underscores;
-// each is read as the record page names it.
-function fieldWords(fields: string, t: Translator): string {
-  return fields
-    .split(", ")
-    .map((field) => historyFieldLabel(field.replaceAll(" ", "_"), t))
-    .join(", ");
 }

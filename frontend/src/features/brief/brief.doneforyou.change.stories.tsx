@@ -93,23 +93,23 @@ export const Closure: Story = {
       ),
     ).toBeVisible();
     await expect(
-      await canvas.findByRole("button", { name: "Mark reviewed" }),
+      await canvas.findByRole("button", { name: "Undo" }),
     ).toBeVisible();
   },
 };
 
 export const ClosureDark: Story = { ...Closure, globals: { theme: "dark" } };
 
-/** A change from an earlier day the reader already reviewed. */
-export const Reviewed: Story = {
+/** A change from an earlier day, accepted before Margince stopped asking. */
+export const Accepted: Story = {
   render: () => rows([reviewed]),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByText("Reviewed")).toBeVisible();
     await expect(
-      canvas.queryByRole("button", { name: "Mark reviewed" }),
-    ).toBeNull();
+      await canvas.findByRole("button", { name: "Undo" }),
+    ).toBeVisible();
+    await expect(canvas.queryByText(/review/i)).toBeNull();
   },
 };
 
-export const ReviewedDark: Story = { ...Reviewed, globals: { theme: "dark" } };
+export const AcceptedDark: Story = { ...Accepted, globals: { theme: "dark" } };

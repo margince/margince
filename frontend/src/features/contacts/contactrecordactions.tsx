@@ -9,18 +9,31 @@ import { ifMatch, requireVersion } from "../../api/version";
 import { ArchiveAction } from "../../components/archive";
 import { MergeAction } from "../../components/merge";
 import type { RecordPickerCandidate } from "../../design-system/recordpicker";
+import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
+import { fileListKeys } from "../../lib/attachmentkeys";
 import { unwrap } from "../../lib/problem";
+import { restoreLatestArchive } from "../../lib/recordrestore";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { navigate } from "../../lib/router";
+import { useArchiveRefusal } from "../../lib/writerefusal";
 
 // The contact header's merge and archive commands.
 
 type Contact = components["schemas"]["Contact"];
 
-// Merge-target search (P-2) over the list read. The detail line tells two
-// contacts of one name apart. A field the reader may not see arrives empty,
-// and it is left out with its separator.
+// The detail line that tells two contacts of one name apart, for the picked
+// target and the contact merged away alike. A field the reader may not see
+// arrives empty, and it is left out with its separator.
+export function contactMergeDetail(contact: Contact): string | undefined {
+  return (
+    [contact.employer?.company_name, contact.title, contact.primary_email]
+      .filter(Boolean)
+      .join(" · ") || undefined
+  );
+}
+
+// Merge-target search (P-2) over the list read.
 export async function searchContactsTargets(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
@@ -33,14 +46,7 @@ export async function searchContactsTargets(
     id: candidate.id,
     name: candidate.full_name,
     writable: candidate.writable,
-    detail:
-      [
-        candidate.employer?.company_name,
-        candidate.title,
-        candidate.primary_email,
-      ]
-        .filter(Boolean)
-        .join(" · ") || undefined,
+    detail: contactMergeDetail(candidate),
   }));
 }
 
@@ -59,6 +65,7 @@ export function ContactRecordActions({
   beforeArchive?: ReactNode;
 }>) {
   const t = useT();
+  const archiveRefusal = useArchiveRefusal("contact");
   const id = contact.id;
   // MergeAction/ArchiveAction's own invalidate/recordKey props
   // only reach the LIST cache and this record's own `["contact", id]` read.
@@ -68,6 +75,7 @@ export function ContactRecordActions({
   // ContactPageV2 closes the form over a page still showing what the reader
   // just corrected.
   const queryClient = useQueryClient();
+  const toast = useToast();
   return (
     <>
       <MergeAction
@@ -76,6 +84,7 @@ export function ContactRecordActions({
         label={t("merge.contact")}
         sourceId={contact.id}
         sourceName={contact.full_name}
+        sourceDetail={contactMergeDetail(contact)}
         searchTargets={searchContactsTargets}
         merge={async (targetId) => {
           const data = unwrap(
@@ -93,6 +102,14 @@ export function ContactRecordActions({
           // on either via survivorRoute must not see pre-merge state.
           await invalidateRecord(queryClient, "contact", contact.id);
           await invalidateRecord(queryClient, "contact", targetId);
+          // The source's files and message links move to the survivor.
+          await Promise.all(
+            [contact.id, targetId]
+              .flatMap((id) =>
+                fileListKeys({ entityType: "contact", entityId: id }, "moved"),
+              )
+              .map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+          );
           return data;
         }}
         invalidate="contacts"
@@ -106,7 +123,7 @@ export function ContactRecordActions({
       <ArchiveAction
         requires={{ object: "contact", action: "delete" }}
         archivable={contact.archivable ?? false}
-        refusedReason={t("contact.archiveRefused")}
+        refusedReason={archiveRefusal}
         disabledReasonId={disabledReasonId}
         label={t("record.archive")}
         confirmText={t("record.archiveConfirm")}
@@ -127,7 +144,21 @@ export function ContactRecordActions({
         }}
         invalidate="contacts"
         recordKey="contact"
-        onArchived={() => navigate({ screen: "contacts" })}
+        onArchived={(from) => from.closeOnto({ screen: "contacts" })}
+        undo={async (archived) => {
+          const restored = await restoreLatestArchive(
+            "contact",
+            archived.id,
+            requireVersion(archived.version),
+          );
+          await invalidateRecord(queryClient, "contact", archived.id);
+          await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+          if (restored) {
+            navigate({ screen: "contacts", id: archived.id });
+          } else {
+            toast.show(t("contact.undoArchiveNothing"), { tone: "danger" });
+          }
+        }}
       />
     </>
   );

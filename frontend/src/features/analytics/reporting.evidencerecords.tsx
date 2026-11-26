@@ -31,6 +31,7 @@ const metricDateHeading: Partial<
   stage_age: "reporting.expectedCloseOn",
   leads_qualified: "reporting.qualifiedOn",
   bookings_won: "reporting.closedOn",
+  bookings_mix: "reporting.closedOn",
   meetings_held: "reporting.meetingOn",
   accepted_opportunities: "reporting.acceptedOn",
   leads_created: "reporting.createdOn",
@@ -44,6 +45,10 @@ const metricDateHeading: Partial<
   partner_commission: "reporting.accruedOn",
   stage_conversion: "reporting.enteredOn",
   lead_cohort_outcomes: "reporting.arrivedOn",
+  account_progression: "reporting.arrivedOn",
+  source_quality: "reporting.arrivedOn",
+  introductions_made: "reporting.introductionCountedOn",
+  meetings_booked_for_colleagues: "reporting.bookedOn",
 };
 
 // A cohort member's row carries its days to an outcome, or open so far, where
@@ -51,6 +56,7 @@ const metricDateHeading: Partial<
 const COHORT_METRICS: readonly ReportingEvidenceRef["metric"][] = [
   "stage_conversion",
   "lead_cohort_outcomes",
+  "account_progression",
 ];
 
 // A record's figure is a deal's value unless the metric counts or times it, or

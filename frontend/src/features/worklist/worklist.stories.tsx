@@ -1,7 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { jsonResponse, StoryProviders } from "../../testing/story-utils";
+import {
+  emptyListAnswer,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { WorklistScreen } from "./worklist";
 
 // The ranked queue, in the three readings that matter: a full day, a clear one,
@@ -50,7 +54,7 @@ function stubDay(day: Worklist, board: TeamBoard = aLoadedTeam) {
     if (url.includes("/worklist")) {
       return jsonResponse(day);
     }
-    return jsonResponse({ data: [] });
+    return emptyListAnswer(input);
   }) as typeof fetch;
 }
 
@@ -181,6 +185,7 @@ export const AFullDay: Story = {
           level: 4,
           consequence: "task_slips",
           title: "Confirm the workshop date",
+          task_type: "reach_out",
           because: [{ kind: "due_today" }],
           actions: [],
           contact: {
@@ -252,6 +257,7 @@ export const WorkDueLater: Story = {
           level: 4,
           consequence: "task_slips",
           title: "Send the retrofit quote",
+          task_type: "reach_out",
           due_at: "2026-08-30T16:00:00Z",
           overdue: true,
           due_group: "overdue",
@@ -267,6 +273,7 @@ export const WorkDueLater: Story = {
           level: 4,
           consequence: "task_slips",
           title: "Answer the Weber thread",
+          task_type: "reply",
           due_at: "2026-08-31T16:00:00Z",
           overdue: false,
           due_group: "today",
@@ -282,6 +289,7 @@ export const WorkDueLater: Story = {
           level: 4,
           consequence: "task_slips",
           title: "Call the architect",
+          task_type: "reach_out",
           due_at: "2026-09-01T10:00:00Z",
           overdue: false,
           due_group: "tomorrow",
@@ -297,6 +305,7 @@ export const WorkDueLater: Story = {
           level: 4,
           consequence: "task_slips",
           title: "Prepare the phase-two figures",
+          task_type: "do",
           due_at: "2026-09-04T10:00:00Z",
           overdue: false,
           due_group: "this_week",
@@ -417,6 +426,7 @@ export const ALeadsDay: Story = {
           level: 4,
           consequence: "task_slips",
           title: "Confirm the workshop date",
+          task_type: "reach_out",
           because: [{ kind: "due_today" }],
           actions: [],
         },

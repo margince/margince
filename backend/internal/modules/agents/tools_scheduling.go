@@ -30,9 +30,10 @@ type checkAvailability struct{ comms Comms }
 func (t checkAvailability) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "check_availability", Title: "Check calendar availability", Version: toolVersionV1,
-		Description:   checkAvailabilityCopy.render(),
-		Instead:       checkAvailabilityCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		Description:       checkAvailabilityCopy.render(),
+		Instead:           checkAvailabilityCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		OpenAPIOp: "getAvailability",
 		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
 			"host_user_id":{"type":"string","format":"uuid","description":"Defaults to the acting principal's user"},

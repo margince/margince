@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // capturedAcquisition is the provenance of an acquisition capture wrote: a
@@ -34,20 +35,10 @@ import (
 // writing to us later says nothing about where that address came from.
 var capturedAcquisition = correspondence.CapturedAcquisitionSQL("e")
 
-// contactWroteToUsTx reports that a mail from one of this contact's addresses
-// has been captured.
-//
-// lower(p.address) on the participant side, because that is what the address
-// index covers; contact addresses are stored lowercase.
+// contactWroteToUsTx reports that a mail this contact wrote has been captured.
 func contactWroteToUsTx(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (bool, error) {
 	var wrote bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1 FROM contact_email ce
-		    JOIN activity_participant p
-		      ON lower(p.address) = ce.email AND p.address IS NOT NULL AND p.role = 'from'
-		    JOIN activity a ON a.id = p.activity_id
-		   WHERE ce.contact_id = $1 AND ce.archived_at IS NULL AND`+correspondence.SubjectMailSQL("a")+`)`,
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM `+consent.SubjectMailFromSQL("$1::uuid")+`)`,
 		contactID).Scan(&wrote); err != nil {
 		return false, fmt.Errorf("did this contact write to us: %w", err)
 	}
@@ -85,12 +76,11 @@ func lockAcquisitionsTx(ctx context.Context, tx pgx.Tx, contactID ids.UUID) erro
 // acquisition already there, and does nothing.
 func (n *NoticeCaseOpen) settleWhenSubjectWrote(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT ce.contact_id, a.occurred_at
+		SELECT DISTINCT sender.contact_id, a.occurred_at
 		  FROM activity a
-		  JOIN activity_participant p
-		    ON p.activity_id = a.id AND p.role = 'from' AND p.address IS NOT NULL
-		  JOIN contact_email ce ON ce.email = lower(p.address) AND ce.archived_at IS NULL
-		 WHERE a.id = $1 AND`+correspondence.SubjectMailSQL("a")+` ORDER BY ce.contact_id, a.occurred_at`, activityID)
+		  JOIN activity_participant p ON p.activity_id = a.id AND p.role = 'from'
+		 CROSS JOIN LATERAL `+relstrength.ParticipantContactsSQL("p")+` sender(contact_id)
+		 WHERE a.id = $1 AND`+correspondence.SubjectMailSQL("a")+` ORDER BY sender.contact_id, a.occurred_at`, activityID)
 	if err != nil {
 		return fmt.Errorf("read the contacts this mail came from: %w", err)
 	}

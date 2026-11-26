@@ -3,8 +3,13 @@
 
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
+import { dealStageHistoryKey } from "./activitykeys";
 import { ENTITY_KINDS } from "./entity";
-import { invalidateCompany, recordWriteKeys } from "./recordwritekeys";
+import {
+  invalidateCompany,
+  invalidateRecord,
+  recordWriteKeys,
+} from "./recordwritekeys";
 
 describe("recordWriteKeys", () => {
   it("answers for every record kind the history panel can be opened on", () => {
@@ -21,6 +26,13 @@ describe("recordWriteKeys", () => {
       ["contact360", "p-1"],
       ["contactBrief", "p-1"],
       ["lists", "record", "contact", "p-1"],
+    ]);
+  });
+
+  it("stales the company dossier, whose prose cites the fields a write changes", () => {
+    expect(recordWriteKeys("company", "c-1")).toContainEqual([
+      "company-dossier",
+      "c-1",
     ]);
   });
 
@@ -53,6 +65,27 @@ describe("invalidateCompany", () => {
       expect(staled(["me"])).toBe(stale);
       expect(staled(["company"])).toBe(stale);
       expect(staled(["company", "c-2"])).toBe(false);
+    },
+  );
+});
+
+describe("invalidateRecord", () => {
+  it.each([
+    { stageMove: true, stale: true },
+    { stageMove: false, stale: false },
+  ])(
+    "stales a deal's stage moves only when stageMove is $stageMove",
+    async ({ stageMove, stale }) => {
+      const client = new QueryClient();
+      client.setQueryData(dealStageHistoryKey("d-1"), {});
+      client.setQueryData(dealStageHistoryKey("d-2"), {});
+
+      await invalidateRecord(client, "deal", "d-1", { stageMove });
+
+      const staled = (dealId: string) =>
+        client.getQueryState(dealStageHistoryKey(dealId))?.isInvalidated;
+      expect(staled("d-1")).toBe(stale);
+      expect(staled("d-2")).toBe(false);
     },
   );
 });

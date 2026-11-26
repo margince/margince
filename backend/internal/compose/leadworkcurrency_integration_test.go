@@ -40,7 +40,7 @@ func TestLeadReplyAdviceFollowsTheSourceRatherThanTheImport(t *testing.T) {
 	var due *time.Time
 	var source *ids.UUID
 	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT due_at, source_activity_id FROM activity WHERE source_system=$1 AND source_id=$2`, provenance.LeadRepliedSource, inbound.String()).Scan(&due, &source)
+		return tx.QueryRow(context.Background(), `SELECT due_at, source_activity_id FROM activity WHERE source_system=$1 AND source_id=$2`, provenance.LeadRepliedSource, inbound.String()+":"+lead.String()).Scan(&due, &source)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -51,6 +51,9 @@ func TestLeadReplyAdviceFollowsTheSourceRatherThanTheImport(t *testing.T) {
 	assertCurrentLeadAdvice(t, l, lead, now, 0)
 	assertLeadAdviceOnWorklist(t, l, now, 0)
 	l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "Re: Current enquiry", inReplyTo: "current@prospect.example", at: l.at.Add(2 * time.Minute)}, true)
+	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 1 {
+		t.Fatalf("open qualification tasks=%d, want one", n)
+	}
 	assertCurrentLeadAdvice(t, l, lead, now, 1)
 	assertLeadAdviceOnWorklist(t, l, now, 1)
 	if _, err := l.e.Activities.ArchiveActivity(l.e.Admin(), ids.From[ids.ActivityKind](answer), nil); err != nil {
@@ -79,7 +82,6 @@ func assertCurrentLeadAdvice(t *testing.T, l *leadMailEnv, lead ids.LeadID, now 
 	if len(rows) != want || count != want {
 		t.Fatalf("current advice: rows=%d count=%d want=%d", len(rows), count, want)
 	}
-
 }
 
 func TestLeadReplyAdviceRejectsFutureMailAndSharesLegacyAdmission(t *testing.T) {
@@ -93,8 +95,7 @@ func TestLeadReplyAdviceRejectsFutureMailAndSharesLegacyAdmission(t *testing.T) 
 	source := l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "Legacy source", at: now.AddDate(0, 0, -31)}, true)
 	writer := newLeadWorkTasks(InstallationDB(l.e.Pool), slog.Default())
 	writer.now = func() time.Time { return now }
-	input := writer.repliedTaskInput(lead, source, "Historic qualification", &l.e.Rep2)
-	input.SourceActivityID = nil
+	input := legacyRepliedTaskInput(writer, lead, source, "Historic qualification", &l.e.Rep2)
 	input.DueAt = &now
 	if _, _, err := l.e.Activities.LogActivity(principal.SystemActing(l.e.Admin(), leadRepliedActor), input); err != nil {
 		t.Fatal(err)
@@ -161,8 +162,7 @@ func TestLegacyNotificationDatesAreNotDeadlinesAndHumanDatesSurvive(t *testing.T
 	source := l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "Source", at: l.at}, true)
 	writer := newLeadWorkTasks(InstallationDB(l.e.Pool), slog.Default())
 	writer.now = func() time.Time { return now }
-	in := writer.repliedTaskInput(lead, source, "Choose qualification", &l.e.Rep2)
-	in.SourceActivityID = nil
+	in := legacyRepliedTaskInput(writer, lead, source, "Choose qualification", &l.e.Rep2)
 	in.DueAt = &now
 	task, _, err := l.e.Activities.LogActivity(principal.SystemActing(l.e.Admin(), leadRepliedActor), in)
 	if err != nil {
@@ -200,11 +200,12 @@ func TestUndatedContactArrivalStillReachesItsOwnersWorklist(t *testing.T) {
 	owner := l.e.As(l.e.Rep2, nil, integration.AdminPerms)
 	now := time.Date(2026, 10, 27, 12, 0, 0, 0, time.UTC)
 	tasks := attentionTasks{store: l.e.Activities.WithClock(func() time.Time { return now })}
-	rows, err := tasks.OpenForViewer(owner, now, now.Add(24*time.Hour), 100, attention.TasksMine, ids.Nil, nil)
+	read, err := plannedRead(owner, tasks, now, now.Add(24*time.Hour), false)
+	rows := read.Open
 	if err != nil {
 		t.Fatal(err)
 	}
-	total, err := tasks.CountOpenForViewer(owner, now, now.Add(24*time.Hour), attention.TasksMine, ids.Nil, nil)
+	total, err := tasks.CountOpenForViewer(owner, now, now.Add(24*time.Hour), attention.TasksMine, "", ids.Nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,8 +221,7 @@ func TestAdoptedLegacyLeadAdviceSurvivesItsSourceArchive(t *testing.T) {
 	source := l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "Current source", at: l.at}, true)
 	writer := newLeadWorkTasks(InstallationDB(l.e.Pool), slog.Default())
 	writer.now = func() time.Time { return now }
-	in := writer.repliedTaskInput(lead, source, "Review qualification", &l.e.Rep2)
-	in.SourceActivityID = nil
+	in := legacyRepliedTaskInput(writer, lead, source, "Review qualification", &l.e.Rep2)
 	task, _, err := l.e.Activities.LogActivity(principal.SystemActing(l.e.Admin(), leadRepliedActor), in)
 	if err != nil {
 		t.Fatal(err)
@@ -238,6 +238,29 @@ func TestAdoptedLegacyLeadAdviceSurvivesItsSourceArchive(t *testing.T) {
 	}
 	if _, err := l.e.Activities.ArchiveActivity(l.e.Admin(), ids.From[ids.ActivityKind](source), nil); err != nil {
 		t.Fatal(err)
+	}
+	assertCurrentLeadAdvice(t, l, lead, now, 1)
+	retainedSource := l.e.WsScalar(t, `SELECT coalesce(source_activity_id::text, '') || ':' || source_id
+ FROM activity WHERE id=@id`, pgx.NamedArgs{"id": taskID})
+	next, _, err := l.e.Activities.LogActivity(l.e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: new("New qualification source"), Direction: new("inbound"),
+		OccurredAt: new(l.at.Add(time.Minute)), Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead.UUID}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+		return writer.FileLeadReplyTx(l.e.Admin(), tx, lead, ids.UUID(next.Id))
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 1 {
+		t.Fatalf("new mail duplicated the adopted task: %d", n)
+	}
+	if got := l.e.WsScalar(t, `SELECT coalesce(source_activity_id::text, '') || ':' || source_id
+ FROM activity WHERE id=@id`, pgx.NamedArgs{"id": taskID}); got != retainedSource {
+		t.Fatalf("adopted task source changed from %q to %q", retainedSource, got)
 	}
 	assertCurrentLeadAdvice(t, l, lead, now, 1)
 }
@@ -265,12 +288,15 @@ func TestLeadAdviceFollowsItsSourceAudienceOnEveryRead(t *testing.T) {
 	if before.NextTaskSubject == nil {
 		t.Fatal("fixture has no visible lead task before narrowing")
 	}
+	originalTask := l.e.WsScalar(t, `SELECT a.id::text FROM activity a JOIN activity_link l ON l.activity_id=a.id
+ WHERE l.lead_id=@lead AND a.source_system=@source`, pgx.NamedArgs{"lead": lead, "source": provenance.LeadRepliedSource})
 	if _, err := l.e.Activities.SetAudience(l.e.Admin(), sourceID, activities.SetAudienceInput{Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: l.e.AdminUser}}}); err != nil {
 		t.Fatal(err)
 	}
 	reader := l.e.As(l.e.Rep2, nil, integration.AdminPerms)
 	tasks := attentionTasks{store: l.e.Activities.WithClock(func() time.Time { return now })}
-	rows, err := tasks.OpenForViewer(reader, now, now.Add(24*time.Hour), 100, attention.TasksMine, ids.Nil, nil)
+	read, err := plannedRead(reader, tasks, now, now.Add(24*time.Hour), false)
+	rows := read.Open
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -284,7 +310,32 @@ func TestLeadAdviceFollowsItsSourceAudienceOnEveryRead(t *testing.T) {
 	if card.NextTaskSubject != nil {
 		t.Fatal("lead summary exposed a task derived from private source mail")
 	}
-	next, _, err := l.e.Activities.LogActivity(l.e.Admin(), activities.LogActivityInput{Kind: "email", Subject: new("New shared qualification source"), Direction: new("inbound"), OccurredAt: new(l.at.Add(time.Minute)), Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead.UUID}}})
+	owner := ids.From[ids.UserKind](l.e.AdminUser)
+	if _, err := l.e.Contacts.UpdateLead(l.e.Admin(), lead, contacts.UpdateLeadInput{OwnerID: &owner}); err != nil {
+		t.Fatal(err)
+	}
+	private, _, err := l.e.Activities.LogActivity(l.e.Admin(), activities.LogActivityInput{Kind: "email", Subject: new("New owner's private source"), Direction: new("inbound"), OccurredAt: new(l.at.Add(time.Minute)), Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead.UUID}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	privateID := ids.From[ids.ActivityKind](ids.UUID(private.Id))
+	if _, err := l.e.Activities.SetAudience(l.e.Admin(), privateID, activities.SetAudienceInput{Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: l.e.AdminUser}}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error { return writer.FileLeadReplyTx(l.e.Admin(), tx, lead, privateID.UUID) }); err != nil {
+		t.Fatal(err)
+	}
+	if n := l.e.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id=a.id
+ WHERE l.lead_id=@lead AND a.source_system=@source AND NOT a.is_done AND a.archived_at IS NULL`,
+		pgx.NamedArgs{"lead": lead, "source": provenance.LeadRepliedSource}); n != 1 {
+		t.Fatalf("owner change left %d open qualification tasks, want one", n)
+	}
+	if got := l.e.WsScalar(t, `SELECT id::text || ':' || assignee_id::text || ':' || source_activity_id::text FROM activity WHERE id=@id`,
+		pgx.NamedArgs{"id": ids.MustParse(originalTask)}); got != originalTask+":"+l.e.Rep2.String()+":"+sourceID.String() {
+		t.Fatalf("unreadable replacement changed the existing task: %q", got)
+	}
+	assertLeadAdviceOnWorklist(t, l, now, 0)
+	next, _, err := l.e.Activities.LogActivity(l.e.Admin(), activities.LogActivityInput{Kind: "email", Subject: new("New shared qualification source"), Direction: new("inbound"), OccurredAt: new(l.at.Add(2 * time.Minute)), Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead.UUID}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -292,8 +343,12 @@ func TestLeadAdviceFollowsItsSourceAudienceOnEveryRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertLeadAdviceOnWorklist(t, l, now, 1)
-	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 2 {
-		t.Fatalf("unreadable old advice blocked a new readable source: %d", n)
+	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 1 {
+		t.Fatalf("source refresh left %d qualification tasks, want one", n)
+	}
+	if got := l.e.WsScalar(t, `SELECT id::text || ':' || source_activity_id::text FROM activity WHERE id=@id`,
+		pgx.NamedArgs{"id": ids.MustParse(originalTask)}); got != originalTask+":"+next.Id.String() {
+		t.Fatalf("refreshed task = %q, want the original task on its new shared source", got)
 	}
 }
 
@@ -301,11 +356,12 @@ func assertLeadAdviceOnWorklist(t *testing.T, l *leadMailEnv, now time.Time, wan
 	t.Helper()
 	reader := l.e.As(l.e.Rep2, nil, integration.AdminPerms)
 	tasks := attentionTasks{store: l.e.Activities.WithClock(func() time.Time { return now })}
-	due, err := tasks.OpenForViewer(reader, now, now.Add(24*time.Hour), 100, attention.TasksMine, ids.Nil, nil)
+	read, err := plannedRead(reader, tasks, now, now.Add(24*time.Hour), false)
+	due := read.Open
 	if err != nil {
 		t.Fatal(err)
 	}
-	total, err := tasks.CountOpenForViewer(reader, now, now.Add(24*time.Hour), attention.TasksMine, ids.Nil, nil)
+	total, err := tasks.CountOpenForViewer(reader, now, now.Add(24*time.Hour), attention.TasksMine, "", ids.Nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

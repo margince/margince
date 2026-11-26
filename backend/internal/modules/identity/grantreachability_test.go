@@ -67,7 +67,16 @@ var grantedToNobody = gatekit.Waive(map[string]string{})
 // activity read to a record, whose type linkColumn holds to the link vocabulary.
 // 96: initiatives.visibleRecords takes the record type of a pick or an
 // exclusion, lead or deal, from its two callers.
-const dynamicObjectCeiling = 96
+// 100: the four chatlinks.Store doors take the record a channel carries, deal
+// or project, which recordColumn holds to those two.
+// 101: completed-change omissions follow the same scoped entity catalog as their reader.
+// The real Home/history regression also checks source refusals with no read grants.
+// 102: removing a custom-field choice asks update on the object the field is attached to.
+// 103: a Done for you placement asks read on its parent and child, both literals in
+// magic's placements table.
+// 104: removing a record link asks update on the type the link starts on, which
+// the record link vocabulary holds.
+const dynamicObjectCeiling = 104
 
 // dynamicActionCeiling is the same bound for the OTHER unresolved argument: a
 // call site naming a known object and an action computed at runtime, as

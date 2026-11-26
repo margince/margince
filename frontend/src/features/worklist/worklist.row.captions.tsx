@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { ReactNode } from "react";
 import { AppLink } from "../../design-system/applink";
+import { useRecordHref } from "../../lib/recordhref";
 import {
   briefSubjectLabel,
   contactHref,
@@ -10,7 +12,6 @@ import {
 } from "../../lib/worklistcopy";
 import type { HeldTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
-import { useDrawerDials, withWorklistReturn } from "./worklist.return";
 import type { RowReadings } from "./worklist.row.compact";
 
 // The frame already carries the date; the row retains its evidence and figures.
@@ -28,8 +29,7 @@ export function shapedReadings(
 
 /** How a row links an address inside a Worklist: carrying that list's way back. */
 export function useListed(): (href: string) => string {
-  const drawer = useDrawerDials();
-  return (href) => withWorklistReturn(href, drawer);
+  return useRecordHref();
 }
 
 /**
@@ -97,6 +97,7 @@ export function RowCaptions({
   when,
   facts,
   said,
+  chips,
 }: Readonly<{
   about?: RowReadings["about"];
   host?: string | null;
@@ -104,12 +105,14 @@ export function RowCaptions({
   when: string | null;
   facts: string | null;
   said: readonly string[];
+  chips?: ReactNode;
 }>) {
   return (
     <>
       {said.length > 0 && (
         <p className="worklist-row-because">{said.join(" · ")}</p>
       )}
+      {chips}
       {/* When it starts, or when it is due, FIRST — it is the fact the reasons
           beside it are about: "starting shortly" explains a rank, and this says
           what time. */}

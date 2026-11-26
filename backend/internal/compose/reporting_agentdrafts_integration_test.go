@@ -182,6 +182,42 @@ func TestAnAgentsNewReportIsPrivateToItsHuman(t *testing.T) {
 	}
 }
 
+// An agent's new report publishes no charts. They wait as its draft, nothing
+// is evaluated from the empty published revision, and its human publishes them.
+func TestAnAgentsNewReportHoldsItsChartsAsADraft(t *testing.T) {
+	f := agentDraftsFixture(t)
+	created, err := f.draft(f.agentFor(f.human, t), t, map[string]any{"name": "Prepared by the agent", "selection": f.shorter()})
+	if err != nil {
+		t.Fatalf("the agent could not create a report: %v", err)
+	}
+	if created.Revision != 1 || created.DraftRevision == nil || *created.DraftRevision != 2 || len(created.Selection.Metrics) != 0 {
+		t.Fatalf("the agent's new report publishes revision %d with metrics %v and draft %v, want 1 with none and draft 2",
+			created.Revision, created.Selection.Metrics, created.DraftRevision)
+	}
+	id := ids.UUID(created.Id)
+	revisions, err := f.service.ListReportRevisions(f.human, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if draft := revisions.Data[0]; draft.State != "draft" || !slices.Equal(draft.Selection.Blocks, f.shorter().Blocks) {
+		t.Errorf("the newest revision is %q with charts %v, want the draft holding %v", draft.State, draft.Selection.Blocks, f.shorter().Blocks)
+	}
+	if _, err := f.service.EvaluateReport(f.human, id, nil); !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Errorf("evaluating the report before its draft is published answered %v, want invalid argument", err)
+	}
+	if _, err := f.service.EvaluateReport(f.human, id, created.DraftRevision); err != nil {
+		t.Errorf("the human cannot preview the agent's draft: %v", err)
+	}
+	published, err := f.service.PublishReportDraft(f.human, id, created.Version)
+	if err != nil {
+		t.Fatalf("the human could not publish the agent's draft: %v", err)
+	}
+	if published.Revision != 2 || published.DraftRevision != nil || !slices.Equal(published.Selection.Blocks, f.shorter().Blocks) {
+		t.Errorf("after publishing the report reads revision %d with charts %v and draft %v, want 2 with %v and none",
+			published.Revision, published.Selection.Blocks, published.DraftRevision, f.shorter().Blocks)
+	}
+}
+
 // An agent lent by a rep who may read the report but not edit it is refused,
 // and the report holds no draft afterwards.
 func TestAnAgentActingForAReaderCannotDraft(t *testing.T) {

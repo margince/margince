@@ -16,11 +16,15 @@ package activities
 // waiting.go holds what READS it; this holds what it says.
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
@@ -33,7 +37,7 @@ import (
 func waitingContactRank(contact string) string {
 	return `CASE WHEN ` + contact + ` = sender.contact_id THEN 0
 	   WHEN EXISTS (SELECT 1 FROM contact_email seat_mail
-	         JOIN app_user seat ON lower(seat.email) = lower(seat_mail.email)
+	         JOIN app_user seat ON lower(seat.email) = seat_mail.email
 	        WHERE seat_mail.contact_id = ` + contact + ` AND seat_mail.archived_at IS NULL) THEN 2
 	   ELSE 1 END`
 }
@@ -140,7 +144,10 @@ var waitingSelectSQL = `
 	       -- engaged for one colleague and cold for another.
 	       -- The classifier's answer, or empty when nobody has judged this
 	       -- message. Uncertain intent remains reviewable without claiming priority.
-	       coalesce(a.owed_verdict, ''), coalesce(a.capture_label, ''),
+	       -- An asks_us that does not stand reads as unjudged.
+	       CASE WHEN coalesce(` + storekit.AsksUsClause("a") + `, false) THEN '` + OwedVerdictAsksUs + `'
+	            WHEN a.owed_verdict = '` + OwedVerdictInformsUs + `' THEN '` + OwedVerdictInformsUs + `'
+	            ELSE '' END, coalesce(` + capturekind.SQL("a.capture_label") + `, ''),
 	       -- Whether every header recipient names somebody OTHER than the
 	       -- reader — a thread they can see because it reached their mailbox,
 	       -- addressed to a colleague.
@@ -210,7 +217,10 @@ var waitingSelectSQL = `
 	       coalesce(a.thread_key, ''), coalesce(a.channel_provider, ''),
 	       ` + bookedMeetingSQL("$%[1]d", "%[19]s") + `,
 	       ` + strangerMailSQL + `,
-	       a.sender_is_machine
+	       a.sender_is_machine,
+	       -- Slot 23 is withheldColumns: whether no model will judge a, and who
+	       -- of ours wrote on its thread first.
+	       %[23]s
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	  -- Who wrote. The sender participant is where capture records the address,
@@ -277,7 +287,7 @@ var waitingEligibleFromSQL = `FROM activity a
          AND (request_task.assignee_id = $%[9]d OR $%[9]d = '00000000-0000-0000-0000-000000000000'::uuid
           -- A reminder with the mail's whole reach that this reader can find
           -- stands in for the mail: they see who holds it instead.
-          OR (request_task.audience = 'workspace' AND request_task.restricted_at IS NULL AND (%[22]s))
+          OR (` + auth.WorkspaceAudienceSQL("request_task") + ` AND request_task.restricted_at IS NULL AND (%[22]s))
           OR ` + storekit.HumanWroteActivityClause("request_task") + `))))
 	   AND ` + withinWaitingHorizonSQL("$%[1]d", "%[5]d") + `
 	   -- A SALES link, or it is not this queue's business.
@@ -317,7 +327,7 @@ var waitingEligibleFromSQL = `FROM activity a
 	   -- Matched on the address's domain, and on a subdomain of one of ours, the
 	   -- way the seam's own set does — mail from a departmental host is still
 	   -- from a colleague.
-	   AND (%[13]s OR NOT %[14]s)
+	   AND (%[13]s OR NOT ` + ownDomainSenderAtSQL("a", "%[14]s") + `)
 	   -- Owed a reply at all, before the cap like every rule above. The
 	   -- obvious machine senders go here: two hundred notification threads
 	   -- must not fill the scan and push a real customer past it. The
@@ -325,7 +335,7 @@ var waitingEligibleFromSQL = `FROM activity a
 	   -- newsletter somebody recognised does not arrive as fresh work. Slots 11
 	   -- and 17 relax the not-sales and informs_us judgements for their hidden
 	   -- figures.
-	   AND ` + owedSQL("$%[1]d", "%[11]s", "%[17]s", "%[21]s") + `
+	   AND ` + owedSQL("$%[1]d", "%[14]s", "%[11]s", "%[17]s", "%[21]s") + `
 	   -- Set aside by THIS reader, and only this reader.
 	   --
 	   -- Judged against the row's CURRENT state rather than against what it was
@@ -353,8 +363,28 @@ const waitingGroupSQL = `
 // over the messages before any link is joined, so Postgres stops at the cap.
 // An ARRAY, built once, so the primary key fetches the capped set. As a join
 // or an IN, the planner joined the whole table first and filtered afterwards.
+//
+// The horizon's two arms are capped apart and merged (waitingCappedArmsSQL).
 var waitingRepliesSQL = waitingSelectSQL + `
-	 WHERE a.id = ANY (ARRAY(` + waitingEligibleSQL + `
+	 WHERE a.id = ANY (ARRAY(` + waitingCappedArmsSQL + `))` + waitingGroupSQL + `
+	 ORDER BY a.occurred_at DESC, a.id DESC`
+
+// waitingCappedArmsSQL is the newest eligible messages up to the cap. Its arms
+// are young mail and held requests past the horizon, which no row is in both.
+// Apart, young mail walks the date index newest first and stops at the cap.
+// Together, the `OR` with the held ids needs a bitmap that judges every message.
+// `NOT MATERIALIZED` inlines the eligibility into each arm, so the statement
+// carries its text once.
+var waitingCappedArmsSQL = `WITH eligible AS NOT MATERIALIZED (
+	 SELECT a.id, a.occurred_at, ` + waitingYoungSQL("$%[1]d::timestamptz", "%[5]d") + ` AS young ` + waitingEligibleFromSQL + `)
+	 SELECT capped.id FROM (
+	   (SELECT eligible.id, eligible.occurred_at FROM eligible WHERE eligible.young
+	     ORDER BY eligible.occurred_at DESC, eligible.id DESC LIMIT %[4]s)
+	   UNION ALL
+	   (SELECT eligible.id, eligible.occurred_at FROM eligible
+	     WHERE eligible.id = ANY (` + heldRequestIDsSQL() + `) AND eligible.young IS NOT TRUE
+	     ORDER BY eligible.occurred_at DESC, eligible.id DESC LIMIT %[4]s)
+	 ) capped
 	 -- NEWEST first, which is the opposite of how the rows are then shown.
 	 --
 	 -- The cap has to spend its budget on the rows most likely to matter, and
@@ -372,25 +402,28 @@ var waitingRepliesSQL = waitingSelectSQL + `
 	 -- caller folds conversations and drops sending systems after the cap, so
 	 -- it asks for another page when too much of one went. The cap bounds ONE
 	 -- page; the caller bounds how many it will ask for.
-		 ORDER BY a.occurred_at DESC, a.id DESC
-	 LIMIT %[4]d))` + waitingGroupSQL + `
-	 ORDER BY a.occurred_at DESC, a.id DESC`
+	 ORDER BY capped.occurred_at DESC, capped.id DESC LIMIT %[4]s`
 
-// planEachBind runs a statement carrying waitingRepliesSQL unnamed, so Postgres
-// plans it at each Bind with the values. A reused named statement turns generic
-// after five runs, and the generic plan walks the whole horizon instead of
-// stopping at the cap.
-func planEachBind(args []any) []any {
+func waitingLimitSQL(arg func(any) int, limit int) string {
+	return fmt.Sprintf("$%d", arg(limit))
+}
+
+// Outside a generic-plan snapshot, the waiting walk needs its bound values to
+// stop at the cap. Within one, the stable named statement keeps its plan.
+func planEachBind(ctx context.Context, args []any) []any {
+	if database.GenericPlansEnabled(ctx) {
+		return args
+	}
 	return append([]any{pgx.QueryExecModeDescribeExec}, args...)
 }
 
 // waitingListArgs is planEachBind for the activity list, which carries the walk
 // only when it is filtered to messages waiting for a reply.
-func waitingListArgs(in ListActivitiesInput, args []any) []any {
+func waitingListArgs(ctx context.Context, in ListActivitiesInput, args []any) []any {
 	if in.WaitingReplyAsOf == nil {
 		return args
 	}
-	return planEachBind(args)
+	return planEachBind(ctx, args)
 }
 
 // readerSetAsideSQL is whether one reader has set message `a` aside: marked it
@@ -426,7 +459,7 @@ func readerSetAsideSQL(reader, wake string) string {
 // is itself the disclosure that it arrived.
 func messageSnoozeLiftedSQL(asOf, backContent string) string {
 	return fmt.Sprintf(`(CASE mine.reopen_on
-		WHEN 'time' THEN mine.snoozed_until <= %[1]s
+		WHEN 'time' THEN %[7]s <= %[1]s
 		-- The same thread identity the waiting query matches replies by: key
 		-- alone shares a namespace across kinds and providers, so a crafted
 		-- References header could otherwise lift a snooze on a conversation
@@ -447,5 +480,5 @@ func messageSnoozeLiftedSQL(asOf, backContent string) string {
 			  AND %[4]s)
 		ELSE false
 	END)`, asOf, KindMeeting, backContent, storekit.MeetingIsOverSQL("m", asOf), occurredday.BegunSQL("back", asOf),
-		correspondence.ThreadSQL("back", "a"))
+		correspondence.ThreadSQL("back", "a"), storekit.IntentInstantColumnSQL("mine", "snoozed", "snoozed_until"))
 }

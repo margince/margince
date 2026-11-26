@@ -28,11 +28,10 @@ func (h attentionMeetingHorizon) Calendar(ctx context.Context) (crmcontracts.Rea
 	return readerCalendar(ctx, h.registry)
 }
 
-// NextCustomerMeeting is the meetings lane's own read moved past today. It
-// reads the reader's meetings by the lane's "mine" dials: readable, linked to a
-// customer record they may see, and booked. OpenStatusOnly means no result
-// recorded yet, which for a meeting still ahead is booked or unset. Soonest
-// first, one row.
+// NextCustomerMeeting is the meetings lane's own read moved past today, by the
+// lane's "mine" dials. A meeting is readable, linked to a customer record the
+// reader may see, booked, and has somebody from outside on it. OpenStatusOnly means no result recorded yet, which for a meeting
+// still ahead is booked or unset. Soonest first, one row.
 func (h attentionMeetingHorizon) NextCustomerMeeting(
 	ctx context.Context, window attention.MeetingWindow,
 ) (crmcontracts.Contact360NextMeeting, bool, error) {
@@ -42,7 +41,7 @@ func (h attentionMeetingHorizon) NextCustomerMeeting(
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &window.From, OccurredBefore: &window.Until, DayDates: dayDatesOf(window),
 		Sort: &soonestFirst, Limit: &one,
-		OpenStatusOnly: true, CustomerMeetingsOnly: true, ReadableOnly: true,
+		OpenStatusOnly: true, CustomerMeetingsOnly: true, WithOutsideParty: true, ReadableOnly: true, FactsOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, attention.TasksMine, ids.UUID{}) {
 		return crmcontracts.Contact360NextMeeting{}, false, nil

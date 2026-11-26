@@ -37,27 +37,29 @@ func AdminContext(t *testing.T, e *AppEnv, perms principal.Permissions) context.
 
 // FinishInputCheck records one completed nightly input check by a seat holding
 // perms, through the store's three writers in the order the checker uses them.
+// It reads both sources readiness needs, so "ready" is a verdict the scanner
+// itself could reach.
 func FinishInputCheck(t *testing.T, e *AppEnv, perms principal.Permissions) {
 	t.Helper()
 	admin := AdminContext(t, e, perms)
 	store := assurance.NewStore(compose.InstallationDB(e.DB().Pool()))
 	asOf := clocktest.Now(t).UTC()
 	if err := store.InTx(admin, func(ctx context.Context, tx pgx.Tx) error {
-		run, err := store.StartRun(ctx, tx, asOf, nil)
+		run, err := store.StartRun(ctx, tx, asOf)
 		if err != nil {
 			return err
 		}
-		if err := store.RecordCoverage(ctx, tx, run, assurance.SourceCoverage{
-			Source: "mail", State: assurance.CoverageChecked, CheckedThrough: &asOf,
-		}); err != nil {
-			return err
+		coverage := []assurance.SourceCoverage{
+			{Source: "mail", State: assurance.CoverageChecked, CheckedThrough: &asOf},
+			{Source: "offers", State: assurance.CoverageChecked, CheckedThrough: &asOf},
 		}
-		if err := store.RecordCoverage(ctx, tx, run, assurance.SourceCoverage{
-			Source: "offers", State: assurance.CoverageUnavailable,
-		}); err != nil {
-			return err
+		for _, read := range coverage {
+			if err := store.RecordCoverage(ctx, tx, run, read); err != nil {
+				return err
+			}
 		}
-		return store.FinishRun(ctx, tx, run, 1, 0, 0, assurance.StatusComplete, "ready")
+		ready := assurance.Readiness(coverage, nil, assurance.Config{})
+		return store.FinishRun(ctx, tx, run, assurance.Eligible{Deals: 1}, 0, assurance.StatusComplete, ready)
 	}); err != nil {
 		t.Fatalf("recording a finished input check: %v", err)
 	}
@@ -66,6 +68,12 @@ func FinishInputCheck(t *testing.T, e *AppEnv, perms principal.Permissions) {
 // FreezeAt takes one workspace-wide forecast snapshot of the quarter holding
 // `at`, by a seat holding perms, and answers its id.
 func FreezeAt(t *testing.T, e *AppEnv, perms principal.Permissions, at time.Time) string {
+	t.Helper()
+	return FreezeScopeAt(t, e, perms, forecasting.Scope{Kind: forecasting.ScopeWorkspace}, at)
+}
+
+// FreezeScopeAt is FreezeAt for one population.
+func FreezeScopeAt(t *testing.T, e *AppEnv, perms principal.Permissions, scope forecasting.Scope, at time.Time) string {
 	t.Helper()
 	admin := AdminContext(t, e, perms)
 	store := forecasting.NewStore(compose.InstallationDB(e.DB().Pool()))
@@ -76,7 +84,7 @@ func FreezeAt(t *testing.T, e *AppEnv, perms principal.Permissions, at time.Time
 			return err
 		}
 		id, err = store.TakeSnapshot(admin, tx, forecasting.NewSnapshot{
-			Period: period, Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace},
+			Period: period, Scope: scope,
 			Trigger: forecasting.TriggerRecheck, BaseCurrency: base, TakenAt: at,
 		})
 		return err

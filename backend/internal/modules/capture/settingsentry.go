@@ -146,5 +146,6 @@ func ConfigSettings() []config.Any {
 		AutoEnrich, MailSharing, SharedPostureAllowed, SignatureEnrich,
 		AutoEnrichDailyCap, SiteReadMaxPages, SiteReadMaxMiB, SiteReadWallSeconds,
 		MailSyncIntervalSeconds, ConfidentialityPassCap,
+		VerdictPassCap, ClassifyPassCap, OwedClassifyPassCap,
 	}
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { en } from "./en";
 import {
   catalogs,
@@ -17,6 +18,21 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
+  // A Vietnamese keyboard prints the Ctrl cap in English.
+  "shell.shortcuts.ctrl",
+  // A link's kind is the product's own name, or "Web".
+  "docs.kind.docs",
+  "docs.kind.sheets",
+  "docs.kind.slides",
+  "docs.kind.forms",
+  "docs.kind.drive",
+  "docs.kind.web",
+  "docs.add.urlPlaceholder",
+  // A model setup named only by its vendor's product name.
+  "firstRun.ai.setupTitle.gemini_cloud",
+  "firstRun.ai.setupTitle.anthropic_cloud",
+  // ui-copy-style-vi.md retires the Vietnamese phrase for a best case.
+  "progress.scenario.best",
   // Product and protocol names, an example address and an example header name.
   "webhooks.body.preset.slack",
   "webhooks.body.preset.teams",
@@ -30,6 +46,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Markup with placeholders, which is the same in every language.
   // Only placeholders and punctuation, with no word to translate.
   "compose.aboutWhen",
+  "product.candidatePrice",
+  "sendPermission.recipientLine",
+  "privacynotice.purposeLine",
   "changes.check.outcome",
   "captureConcern.title",
   "companyReach.functionCount",
@@ -38,6 +57,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "signatureTemplate.placeholder",
   "agent.fact.sourceOnProvider",
   "standing.mark.label",
+  "worklist.happened.deal",
+  "contact.chapter.wayInAnswer",
+  "contact.chapter.withDetail",
+  "merge.recordDetail",
+  "explain.col.inCurrency",
   // The promiser and stored summary are values separated by punctuation.
   "magic.action.approval_commitment_task_named",
   "magic.action.approval_commitment_task_summary",
@@ -49,9 +73,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiServing.openRouter",
   "aiServing.openRouterDocs",
   "aiServing.say.raw",
-  // Audit filter examples in the stored spelling the filter matches.
-  "settings.auditActorExample",
-  "settings.auditEntityExample",
   // A file name the server sends, so every catalog shows the same one.
   "import.result.problemsFile",
   // The product's own name, as the agent that made a change.
@@ -88,7 +109,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiProviders.name.anthropic",
   "aiProviders.name.openai",
   "aiProviders.name.gemini",
+  "aiProviders.name.azureOpenai",
+  "aiRouting.azureRegion.placeholder",
   "aiProviders.name.jev",
+  "aiProviders.name.geminiDecision",
   "aiProviders.name.ollama",
   "aiProviders.name.vllm",
   "aiProviderSettings.service.openrouter",
@@ -110,9 +134,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese borrow it as a term of art rather than translating it. The
   // section labels UNDER it are translated normally.
   "nav.analytics",
-  // "Core" is the product's name for the shared codebase, which every catalog
-  // already uses as a term of art (ob.core.*).
-  "shell.coreVersion",
+  // A license's name and a copyright line are legal names, not prose.
+  "about.licenseName",
+  "about.copyright",
   // Two placeholders and a colon. The field name is already translated one
   // level down (factFieldLabelKey) and the value is the page's own word, so
   // there is nothing left in this string for a locale to translate either.
@@ -127,9 +151,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "co.tech.lane.dns",
   // Vietnamese uses "Email" for the noun; German has its own spelling and
   // carries it. Only the vi value matches English, and it is the right word.
-  // Same word, same reason, on the generic record mail box every other page
-  // shares.
-  "recordmail.title",
   // Same word, same reason: the exchange kind on the account's recent list.
   "co.recent.kind.email",
   // And on the record's chronology, for the same reason again.
@@ -161,6 +182,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiRouting.baseUrl.placeholder.gemini",
   "aiRouting.baseUrl.placeholder.anthropic",
   "aiRouting.baseUrl.placeholder.openai",
+  "aiRouting.baseUrl.placeholder.ollama",
+  "aiRouting.baseUrl.placeholder.vllm",
   // A pattern of placeholders with no words in it, and the EU's own
   // abbreviation, which Vietnamese writes the same way.
   "aiRouting.location.option",
@@ -200,9 +223,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "worklist.partial",
   // Brand and provider names: proper nouns, not translated in any locale.
   "connectors.provGcal",
+  "connectors.provGdocs",
   "connectors.provGmail",
   "connectors.provGraph",
   "connectors.provTelegram",
+  "connectors.bot.provDispact",
   "connectors.vendorGoogle",
   "connectors.vendorMicrosoft",
   "ob.s4.provGoogle",
@@ -234,6 +259,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "filters.sentence.ref.pipeline_one",
   "cf.obj.deal",
   "cf.obj.lead",
+  "unit.lead",
   "co.brief.cite.deal",
   "co.brief.cite.lead",
   // The borrowed noun in the singular, which English and Vietnamese spell alike;
@@ -249,6 +275,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "users.handover.deals_one",
   "contracts.renew.deal",
   "contracts.deal",
+  "offer.deal",
+  "legalReview.packDeal",
 
   // A bare percentage, written the same way in Vietnamese.
   "deal.winProbability.band.zero",
@@ -283,8 +311,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "consumerMail.baselinePlaceholder",
   "linkedinImport.profilePlaceholder",
   "ob.conv.linkedin.profilePlaceholder",
-  "ob.s4.imapHostPlaceholder",
-  "ob.s4.imapEmail",
+  "connectors.imapSmtpTls",
+  "connectors.imapSmtpStartTls",
   "ob.conv.clarify.question",
   "ob.conv.clarify.optionDetail",
   "create.linkedin",
@@ -314,6 +342,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // The same loanword, naming the record an approval's evidence came from.
   "decision.evidenceSource.deal",
   "worklist.pane.deal",
+  "worklist.gap.deal",
 
   // "Cc" is the mail header itself, which vi writes as the Latin abbreviation
   // exactly as en does. Translating it would name a field no mail client
@@ -338,12 +367,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // A fixture company name, which a locale would rename into a different company.
   "ob.fieldEg.display_name",
 
-  // Brand names, a protocol's acronym, and the console Google itself names
-  // in English.
+  // Brand names and a protocol's acronym.
   "firstRun.platform.google",
   "firstRun.platform.microsoft",
   "firstRun.platform.imap",
-  "firstRun.google.helpConsole",
 ]);
 
 // Every invariant below derives from `catalogs`, so a locale added to the
@@ -351,18 +378,22 @@ const KEPT_IN_ENGLISH = new Set<string>([
 // hand-maintained locale list is a list that drifts.
 
 function placeholders(message: string): string[] {
-  return [...message.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
+  return [...message.matchAll(/\{(\w+)\}/g)]
+    .map((match) => match[1])
+    .sort(stable);
 }
 
 describe("i18n catalogs", () => {
   it("LOCALES lists exactly the registered catalogs", () => {
-    expect([...LOCALES].sort()).toEqual(Object.keys(catalogs).sort());
+    expect([...LOCALES].sort(stable)).toEqual(
+      Object.keys(catalogs).sort(stable),
+    );
   });
 
   it("every catalog has exact key parity with en", () => {
-    const expected = Object.keys(en).sort();
+    const expected = Object.keys(en).sort(stable);
     for (const [locale, catalog] of Object.entries(catalogs)) {
-      expect(Object.keys(catalog).sort(), locale).toEqual(expected);
+      expect(Object.keys(catalog).sort(stable), locale).toEqual(expected);
     }
   });
 

@@ -86,7 +86,7 @@ describe("a view asks its host to run a declared tool", () => {
     expect(call.target).toBe(HOST);
     expect(call.msg.params).toEqual({
       name: "merge_records",
-      arguments: { source_id: "a" },
+      arguments: { source_id: "a", idempotency_key: expect.any(String) },
     });
 
     deliver(parent.win, HOST, {
@@ -263,5 +263,111 @@ describe("a view asks its host to run a declared tool", () => {
       params: { name: "merge_records", arguments: {} },
     });
     expect(callsSent(parent)).toHaveLength(1);
+  });
+});
+
+describe("a press carries one retry key", () => {
+  const keyOf = (call: Sent) =>
+    (call.msg.params as { arguments: Record<string, unknown> }).arguments
+      .idempotency_key;
+
+  const reply = (parent: { win: Window }, call: Sent, ok: boolean) =>
+    deliver(parent.win, HOST, {
+      jsonrpc: "2.0",
+      id: call.msg.id,
+      result: ok
+        ? { structuredContent: { data: {}, warnings: [] } }
+        : { isError: true, content: [{ type: "text", text: "no" }] },
+    });
+
+  async function ready() {
+    const parent = stubParent();
+    const actions = await load(parent.win);
+    actions.declareActions(["merge_records"]);
+    handshake(parent, { serverTools: {} });
+    return { parent, actions };
+  }
+
+  it("sends a new key for each press once the earlier one landed", async () => {
+    const { parent, actions } = await ready();
+    const first = actions.callServerTool("merge_records", { source_id: "a" });
+    reply(parent, callsSent(parent)[0], true);
+    await first;
+    const second = actions.callServerTool("merge_records", { source_id: "a" });
+    reply(parent, callsSent(parent)[1], true);
+    await second;
+
+    const [one, two] = callsSent(parent).map(keyOf);
+    expect(one).toEqual(expect.any(String));
+    expect(two).not.toBe(one);
+  });
+
+  it("repeats the key when the host stayed silent, so the retry cannot write twice", async () => {
+    vi.useFakeTimers();
+    const { parent, actions } = await ready();
+    const silent = actions.callServerTool("merge_records", { source_id: "a" });
+    await vi.advanceTimersByTimeAsync(actions.CALL_TIMEOUT_MS);
+    expect(await silent).toMatchObject({ ok: false, unknown: true });
+
+    void actions.callServerTool("merge_records", { source_id: "a" });
+    const [first, retry] = callsSent(parent);
+    expect(keyOf(retry)).toBe(keyOf(first));
+  });
+
+  it("sends a new key after the server refused, because the refused key only replays the refusal", async () => {
+    const { parent, actions } = await ready();
+    const refused = actions.callServerTool("merge_records", { source_id: "a" });
+    reply(parent, callsSent(parent)[0], false);
+    await refused;
+    void actions.callServerTool("merge_records", { source_id: "a" });
+
+    const [first, again] = callsSent(parent).map(keyOf);
+    expect(again).not.toBe(first);
+  });
+
+  it("keeps the key when the server says an earlier call still holds it", async () => {
+    const { parent, actions } = await ready();
+    const held = actions.callServerTool("merge_records", { source_id: "a" });
+    deliver(parent.win, HOST, {
+      jsonrpc: "2.0",
+      id: callsSent(parent)[0].msg.id,
+      result: {
+        isError: true,
+        content: [{ type: "text", text: "an earlier call has not finished" }],
+        _meta: { "margince/code": "idempotency_key_in_progress" },
+      },
+    });
+    expect(await held).toMatchObject({ ok: false, unknown: true });
+    void actions.callServerTool("merge_records", { source_id: "a" });
+
+    const [first, again] = callsSent(parent).map(keyOf);
+    expect(again).toBe(first);
+  });
+
+  it("does not let a late answer to an old press drop the key of a newer one", async () => {
+    const { parent, actions } = await ready();
+    const one = actions.callServerTool("merge_records", { source_id: "a" });
+    const two = actions.callServerTool("merge_records", { source_id: "a" });
+    reply(parent, callsSent(parent)[0], true);
+    await one;
+    const third = actions.callServerTool("merge_records", { source_id: "a" });
+    void third;
+    reply(parent, callsSent(parent)[1], true);
+    await two;
+    void actions.callServerTool("merge_records", { source_id: "a" });
+
+    const keys = callsSent(parent).map(keyOf);
+    expect(keys[0]).toBe(keys[1]);
+    expect(keys[2]).not.toBe(keys[0]);
+    expect(keys[3]).toBe(keys[2]);
+  });
+
+  it("gives a different call its own key", async () => {
+    const { parent, actions } = await ready();
+    void actions.callServerTool("merge_records", { source_id: "a" });
+    void actions.callServerTool("merge_records", { source_id: "b" });
+
+    const [a, b] = callsSent(parent).map(keyOf);
+    expect(a).not.toBe(b);
   });
 });

@@ -19,7 +19,7 @@ import {
 } from "../../lib/segmentpredicate";
 import { StoryProviders } from "../../testing/story-utils";
 import { FilterBuilder } from "./filterbuilder";
-import { moneyText } from "./filtersentence";
+import { moneyText } from "./filtersentence.values";
 import { ValueControl } from "./filtervalue";
 
 afterEach(cleanup);
@@ -79,7 +79,7 @@ describe("a money clause", () => {
     fireEvent.change(box, { target: { value: "" } });
     expect(seen.at(-1)).toBe("");
     fireEvent.blur(box);
-    expect(box).toHaveValue(null);
+    expect(box).toHaveValue("");
   });
 
   it("shows the currency it is typed in", () => {

@@ -181,22 +181,11 @@ func (s *Store) RelationshipNudgeState(ctx context.Context, contactID ids.Contac
 		if err := auth.EnsureVisible(ctx, tx, "contact", contactID.UUID); err != nil {
 			return err
 		}
-		var until *time.Time
-		err := tx.QueryRow(ctx, `
-			SELECT dismissed_until FROM relationship_nudge_dismissal
-			 WHERE contact_id = $1 AND reader_id = $2`, contactID, reader).Scan(&until)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
+		states, err := NudgeStatesOf(ctx, tx, reader, []ids.UUID{contactID.UUID}, s.clock())
 		if err != nil {
-			return fmt.Errorf("contacts: reading the reader's nudge choice: %w", err)
+			return err
 		}
-		switch {
-		case until == nil:
-			state.Stopped = true
-		case until.After(s.clock()):
-			state.Until = until
-		}
+		state = states[contactID.UUID]
 		return nil
 	})
 	return state, err
@@ -361,5 +350,41 @@ func NotDismissedClause(ctx context.Context, alias string, at time.Time, arg fun
 		SELECT 1 FROM relationship_nudge_dismissal d
 		 WHERE d.contact_id = %s.contact_id
 		   AND d.reader_id = $%d
-		   AND (d.dismissed_until IS NULL OR d.dismissed_until > $%d))`, alias, arg(reader), arg(at)), nil
+		   AND %s)`, alias, arg(reader), dismissalInForceSQL("d", arg(at))), nil
+}
+
+// dismissalInForceSQL states when a dismissal still holds: it has no end, or
+// its end is after the moment asked about. The lane's clause above and
+// NudgeStatesOf both build on it, so the Worklist and an extension read the
+// same rule.
+func dismissalInForceSQL(alias string, at int) string {
+	return fmt.Sprintf("(%[1]s.dismissed_until IS NULL OR %[1]s.dismissed_until > $%[2]d)", alias, at)
+}
+
+// NudgeStatesOf reads one reader's own choice about each of the contacts, as it
+// stands at the given moment. A contact the reader has not set aside answers
+// the zero state. So does one whose dismissal has run out, and so does one that
+// does not exist, so an id cannot be used to probe. It reads no colleague's choice and
+// nothing else about the contact.
+func NudgeStatesOf(ctx context.Context, tx pgx.Tx, reader ids.UUID, contacts []ids.UUID, at time.Time) (map[ids.UUID]NudgeState, error) {
+	out := make(map[ids.UUID]NudgeState, len(contacts))
+	rows, err := tx.Query(ctx, `
+		SELECT d.contact_id, d.dismissed_until FROM relationship_nudge_dismissal d
+		 WHERE d.reader_id = $1 AND d.contact_id = ANY($2) AND `+dismissalInForceSQL("d", 3),
+		reader, contacts, at)
+	if err != nil {
+		return nil, fmt.Errorf("contacts: reading the reader's nudge choices: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			contact ids.UUID
+			until   *time.Time
+		)
+		if err := rows.Scan(&contact, &until); err != nil {
+			return nil, fmt.Errorf("contacts: reading a nudge choice: %w", err)
+		}
+		out[contact] = NudgeState{Stopped: until == nil, Until: until}
+	}
+	return out, rows.Err()
 }

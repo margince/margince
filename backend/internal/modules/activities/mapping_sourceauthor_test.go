@@ -27,7 +27,7 @@ func TestOnlyTheImporterAdmissionAdmitsAnAuthor(t *testing.T) {
 	}
 	for door, err := range map[string]error{
 		"client door":   errOf(LogActivityInputFrom(body("legacy_crm"))),
-		"reminder door": errOf(logActivityInputAllowingReminderIdentity(body(provenance.NoActivityReminderSource))),
+		"reminder door": errOf(logActivityInputAllowingTaskIdentity(body(provenance.NoActivityReminderSource))),
 	} {
 		var refused *provenance.AuthorError
 		if !errors.As(err, &refused) || refused.Code != "reserved_source_author" {

@@ -25,9 +25,10 @@ const BASE: Contract = {
   version: 1,
   value_basis: "total",
   auto_renew: false,
-  // DERIVED from the dates by the server, not asserted by a human. False here
-  // because this fixture records no term at all.
+  // DERIVED by the server, not asserted by a human. The terms drawn here read
+  // neither reading.
   under_contract: false,
+  term_state: "in_force",
   source: "manual",
   captured_by: "human:u-1",
   created_at: "2026-01-01T00:00:00Z",

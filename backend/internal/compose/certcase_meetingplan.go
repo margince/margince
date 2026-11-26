@@ -105,6 +105,9 @@ type meetingPlanExpectation struct {
 	// ObjectiveAvoids is another deal's topic, which the objective and the
 	// opening must not restate as this meeting's goal.
 	ObjectiveAvoids string `json:"objective_avoids"`
+	// CoachedBranchesMin is how many branches must carry a coach line that
+	// production keeps, so the lead's layer has its own reading to show.
+	CoachedBranchesMin int `json:"coached_branches_min"`
 }
 
 // meetingPlanCases serves the site that prepares a rep for one meeting.
@@ -146,6 +149,7 @@ func (meetingPlanCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 		objectiveIDs:    objectiveIDs,
 		objectiveLabels: want.ObjectiveCitesAny,
 		objectiveAvoids: want.ObjectiveAvoids,
+		coachedMin:      want.CoachedBranchesMin,
 	}, nil
 }
 
@@ -350,6 +354,7 @@ type meetingPlanCase struct {
 	objectiveIDs    []string
 	objectiveLabels []string
 	objectiveAvoids string
+	coachedMin      int
 }
 
 func (c *meetingPlanCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
@@ -389,6 +394,10 @@ func (c *meetingPlanCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			"the plan never names %q, so it would read the same about any account", c.mustName))
 	}
 	wrong = append(wrong, c.objectiveOnTheWrongDeal(plan)...)
+	if coached := meetingbrief.CoachedBranches(plan); coached < c.coachedMin {
+		wrong = append(wrong, fmt.Sprintf(
+			"the plan gives the lead %d coached branch(es), want at least %d", coached, c.coachedMin))
+	}
 	if len(wrong) > 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(wrong, "; ")}
 	}

@@ -15,6 +15,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/importkeys"
+	"github.com/margince/margince/backend/internal/compose/importtextbounds"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -47,7 +49,7 @@ type csvWriters struct {
 	runID      migration.RunID
 	object     string
 	// sourceSystem is the namespace the run files its rows under, from its
-	// source name (importSourceSystem).
+	// source name (importwire.SourceSystem).
 	sourceSystem string
 	// onDuplicate is the run's answer for a row naming a record the estate
 	// already holds: "" or "create" lands it and files a review pair, "skip"
@@ -115,6 +117,11 @@ type csvWriters struct {
 	updated int
 	// predictedNotes is the notes the dry run predicted filed (noteTwinKey).
 	predictedNotes map[string]bool
+	// predictedWarnings are a predicted row's warnings beyond the one predictRow
+	// returns; predictPages reports and clears them.
+	predictedWarnings []migration.SkippedRow
+	// predictedChange files the record a predicted update leaves (rememberRow).
+	predictedChange func(*contacts.Batch)
 }
 
 var _ migration.Writers = (*csvWriters)(nil)
@@ -226,6 +233,7 @@ func (w *csvWriters) ensureOne(ctx context.Context, object string, row migration
 	landed, err := w.ensureRow(ctx, object, row, link.into(typed))
 	if err == nil && !landed.Skipped {
 		landed.Problem = cmp.Or(link.problem, unknownOwner)
+		w.claimRow(row, typed)
 	}
 	return landed, err
 }
@@ -261,40 +269,32 @@ func (w *csvWriters) ensureRow(ctx context.Context, object string, row migration
 		}
 		return w.reconcile(ctx, id, row, typed)
 	}
+	holder, matched, err := w.domainHolderOf(ctx, row)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if matched {
+		return w.landOnDomainHolder(ctx, row, holder, typed)
+	}
 	if expected, reviewed := w.reviewRows[row.ExternalID]; reviewed && expected.TargetID != "" {
 		return migration.EnsureResult{}, apperrors.ErrVersionSkew
 	}
-	// Not a row this importer has landed before — but the estate may hold the
-	// record anyway, and the run says what to do about that. The check runs on
-	// the commit as well as the dry run so the two cannot disagree.
-	//
-	// It runs on BOTH branches of that decision, and it did not always. Asking
-	// only when the run said "skip" made a duplicate that CREATES invisible to
-	// the commit, so a finished report could only ever repeat the prediction —
-	// and the estate moves between the preview and the approval, which is the
-	// whole reason a duplicate count is worth reading. The cost is one
-	// dedupe query per row this importer has not landed before, which is what
-	// the preview already spends on the same rows.
+	why, err := w.newRecordRefusal(ctx, row, typed)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if why.Code != "" {
+		return skippedFor(why), nil
+	}
+	// The estate may hold the record anyway, and the run says what to do. The
+	// check runs on both branches, so the report counts a duplicate that creates.
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
 	if collides && w.onDuplicate == string(crmcontracts.ImportOnDuplicateSkip) {
-		// discloseOnly, so a collision this caller may not see is answered as no
-		// collision — and the row CREATES.
-		//
-		// Skipping it instead is the intuitive choice and it leaks. An opaque
-		// reason hides WHICH company was hit; the outcome still says one was.
-		// "Your row was not created" is an answer to "is this company in your
-		// CRM", and a finished run's report is readable on the import_run grant,
-		// so a caller could probe a colleague's owner-private estate one CSV row
-		// at a time. Wording cannot fix that — only the outcome can.
-		//
-		// What creating costs is a twin of a record the caller cannot see, which
-		// the dedupe review queue picks up like any other and a merge resolves.
-		// What skipping costs is a disclosure that no merge undoes. It also keeps
-		// the preview and the commit answering alike, since the preview is
-		// disclosure-filtered for the same reason.
+		// Only a match the caller can see collides (csvcollision.go), so the
+		// outcome never tells them a record they cannot read exists.
 		_, skipWhy := collisionWordingFor(object)
 		skipped := skippedFor(skipWhy)
 		skipped.Duplicate = true
@@ -340,43 +340,48 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
-	changed, err := changedFields(current, textFields(row.Fields), typed)
+	changed, keptWhy, err := w.landingChanges(ctx, row, current, typed)
 	if err != nil {
 		return migration.EnsureResult{}, err
+	}
+	var kept []migration.SkippedRow
+	if keptWhy.Code != "" {
+		kept = append(kept, migration.SkippedRow{}.Because(keptWhy))
 	}
 	if len(changed) == 0 {
 		// Counted as neither a create nor an update: reporting work that never
 		// happened would inflate both the disposition table and the audit log.
-		return migration.EnsureResult{Unchanged: true}, w.tagExisting(ctx, id, row)
+		return migration.EnsureResult{Unchanged: true, Warnings: kept}, w.tagExisting(ctx, id, row)
 	}
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return skippedFor(cannotEditWhy(w.object)), nil
+	}
+	why, err := w.movedKeyRefusal(ctx, id, row, typed, changed)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if why.Code != "" {
+		return skippedFor(why), nil
 	}
 	// A reviewed plan lands the row inside one shared transaction, so a refused
 	// write is rolled back to here before the row is skipped.
 	if err := database.WithSavepoint(ctx, func(ctx context.Context) error {
 		return w.apply(ctx, id, changed, typed, current, w.provenanceOf(row.ExternalID))
 	}); err != nil {
-		// A corrected file moving an address onto a contact who is not its owner
-		// is one bad row, not a failed run: skip it with the reason and let the
-		// rest of the file land. Unhandled, this error aborts the whole
-		// migration, which is the wrong answer to a typo in a spreadsheet.
+		// A corrected file that moves an address onto another contact has one bad
+		// row. It is skipped with its reason, and the rest of the file lands. A
+		// typo in a spreadsheet must not abort the whole migration.
 		if contacts.IsClaimedEmail(err) {
 			return skippedFor(duplicateEmailWhy), nil
 		}
-		if _, ok := errors.AsType[*contacts.DuplicateDomainError](err); ok {
-			// The company half of the same case: a corrected file moving a domain
-			// onto a company that is not its owner.
-			return skippedFor(domainClaimedWhy), nil
-		}
-		if why, held := leadKeyHeld(err); held {
+		if why, held := importkeys.StoreKeyWhy(err); held {
 			return skippedFor(why), nil
-		}
-		if linkedInClaimed(err) {
-			return skippedFor(linkedInClaimedWhy), nil
 		}
 		if refusedAsErased(err) {
 			return skippedFor(addressErasedWhy), nil
+		}
+		if why, over := importtextbounds.NameTooLong(err); over {
+			return skippedFor(why), nil
 		}
 		return migration.EnsureResult{}, err
 	}
@@ -384,7 +389,7 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		return migration.EnsureResult{}, err
 	}
 	w.updated++
-	return migration.EnsureResult{Disclosure: fmt.Sprintf("row %s: %d field(s) rewritten from the file", row.ExternalID, len(changed))}, nil
+	return migration.EnsureResult{Disclosure: fmt.Sprintf("row %s: %d field(s) rewritten from the file", row.ExternalID, len(changed)), Warnings: kept}, nil
 }
 
 // apply writes the changed fields. `current` is the stored record's JSON, which
@@ -408,8 +413,7 @@ func (w *csvWriters) apply(
 	case migration.ObjectLead:
 		in := leadUpdateFrom(changed, typed)
 		in.IfVersion = w.reviewedVersion(id)
-		_, err := w.contacts.UpdateLead(ctx, ids.From[ids.LeadKind](id), in)
-		return err
+		return w.contacts.ApplyLeadUpdate(ctx, ids.From[ids.LeadKind](id), in)
 	case migration.ObjectCompany:
 		in := companyUpdateFrom(changed, typed)
 		in.IfVersion = w.reviewedVersion(id)
@@ -429,8 +433,7 @@ func (w *csvWriters) apply(
 		if hasDomain {
 			in.Domains = &mergedDomains
 		}
-		_, err = w.contacts.UpdateCompany(ctx, ids.From[ids.CompanyKind](id), in)
-		return err
+		return w.contacts.ApplyCompanyUpdate(ctx, ids.From[ids.CompanyKind](id), in)
 	case migration.ObjectContact:
 		return w.applyContact(ctx, id, contactUpdateFrom(changed, typed), changed, current, source)
 	default:
@@ -445,9 +448,6 @@ func (w *csvWriters) apply(
 //nolint:dupl // createContact has the same SHAPE and not the same job: a
 func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
 	in := companyCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
-	if in.DisplayName == "" {
-		return skippedFor(companyNameEmptyWhy), nil
-	}
 	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
@@ -458,15 +458,8 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed
 		}
 		return ids.UUID(company.Id), nil
 	})
-	if _, ok := errors.AsType[*contacts.DuplicateDomainError](err); ok {
-		// A domain names ONE company across the estate, so a row claiming one
-		// another company already holds is refused by the store — the same shape
-		// a contact's claimed email has. One bad row is a skip with a reason, not
-		// a failed run: the rest of the file still lands.
-		return skippedFor(domainClaimedWhy), nil
-	}
-	if linkedInClaimed(err) {
-		return skippedFor(linkedInClaimedWhy), nil
+	if why, held := importkeys.StoreKeyWhy(err); held {
+		return skippedFor(why), nil
 	}
 	if err != nil {
 		return migration.EnsureResult{}, err

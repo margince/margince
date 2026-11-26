@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 )
 
-func TestMultiselectPreservesChoicesAndRefusesStrandedValues(t *testing.T) {
+func TestMultiselectPreservesChoicesAndRefusesUnknownOnes(t *testing.T) {
 	e := schemaWiredEnv(t)
 	status, field, problem := createCustomField(t, e, integration.AnyMap{
 		"object": "company", "label": "Capabilities", "type": "multiselect", "options": []string{"Fit, scope", "C++", "Other"}, "source": "manual",
@@ -29,9 +29,6 @@ func TestMultiselectPreservesChoicesAndRefusesStrandedValues(t *testing.T) {
 	var result integration.AnyMap
 	if status := e.Call(t, "PATCH", "/v1/companies/"+id, integration.AnyMap{field.ColumnName: []string{"Unknown"}}, nil, &result); status != http.StatusUnprocessableEntity {
 		t.Fatalf("invalid option status %d: %v", status, result)
-	}
-	if status := e.Call(t, "PATCH", "/v1/custom-fields/"+field.ID+"/options", integration.AnyMap{"options": []string{"Other"}}, nil, &result); status != http.StatusConflict {
-		t.Fatalf("stranding options status %d: %v", status, result)
 	}
 	if status := e.Call(t, "GET", "/v1/companies/"+id, nil, nil, &result); status != http.StatusOK {
 		t.Fatal(status)

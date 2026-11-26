@@ -69,10 +69,12 @@ describe("ConsentPurposesCard", () => {
     // same `sent` array — filter for the POST specifically rather than
     // trusting it stayed last.
     const posts = sent.filter((s) => s.key === "POST /consent-purposes");
+    // Monthly unless picked: the subscription question states it.
     expect(posts.at(-1)?.body).toEqual({
       key: "events",
       label: "Events",
       requires_double_opt_in: false,
+      frequency: "monthly",
     });
   });
 
@@ -88,15 +90,17 @@ describe("ConsentPurposesCard", () => {
     ).toBeInTheDocument();
   });
 
-  it("refuses to submit without a key and a label", async () => {
+  it("refuses to submit without a key and a label, and says so on each", async () => {
     stubRoutes();
     render(<ConsentPurposesCard />);
     await userEvent.click(
       await screen.findByRole("button", { name: /add purpose/i }),
     );
-    expect(
+    await userEvent.click(
       screen.getByRole("button", { name: /create purpose/i }),
-    ).toBeDisabled();
+    );
+    expect(await screen.findByText("Key is required.")).toBeInTheDocument();
+    expect(screen.getByText("Label is required.")).toBeInTheDocument();
   });
 
   it("surfaces a create failure inline without losing the typed values", async () => {
@@ -116,7 +120,10 @@ describe("ConsentPurposesCard", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /create purpose/i }),
     );
-    expect(await screen.findByText(/"news": conflict/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(en["privacy.purposeKeyTakenUnnamed"]),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/"news": conflict/)).toBeNull();
     expect(screen.getByLabelText(/key/i)).toHaveValue("news");
   });
 
@@ -218,10 +225,31 @@ describe("PrivacyInboxCard", () => {
     expect(document.querySelectorAll(".dsr-actions button")).toHaveLength(0);
   });
 
-  // Opening a request is a THIRD grant: the POST writes the contact it names, so
-  // consent/dsr.go's CreateDSR asks `contact:update` rather than anything on the
-  // privacy object at all.
-  it("offers no New request to a reader who may work the queue but not write a contact", async () => {
+  // Filing a request is working the queue: consent/dsr.go's CreateDSR asks
+  // `privacy_request:update`. A role that writes contacts and only reads the
+  // queue, as the seeded Ops role does, was offered a form the server refuses.
+  it("offers no New request to a reader who may write a contact but not work the queue", async () => {
+    stubRoutes({
+      "GET /data-subject-requests": () => jsonResponse(DSRS),
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            roles: ["ops"],
+            allow: { privacy_request: ["read"], contact: ["update"] },
+          }),
+        ),
+    });
+    render(<RequestsPanel />);
+
+    // The queue answered, so this is about the missing grant and not about a
+    // card that never rendered.
+    expect(await screen.findByText(/anna@acme.test/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /new request/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers New request to a reader who may work the queue without writing contacts", async () => {
     stubRoutes({
       "GET /data-subject-requests": () => jsonResponse(DSRS),
       "GET /me": () =>
@@ -234,12 +262,9 @@ describe("PrivacyInboxCard", () => {
     });
     render(<RequestsPanel />);
 
-    // The queue answered, so this is about the missing grant and not about a
-    // card that never rendered.
-    expect(await screen.findByText(/anna@acme.test/)).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /new request/i }),
-    ).not.toBeInTheDocument();
+      await screen.findByRole("button", { name: /new request/i }),
+    ).toBeInTheDocument();
   });
 
   // The mirror of both: the full set of grants offers both verbs, so the two
@@ -440,7 +465,7 @@ describe("PrivacyInboxCard", () => {
             // What auth.Require actually sends: the RBAC object and verb
             // wrapped around the sentinel. Internals, not copy — so the screen
             // must show the catalog sentence instead of echoing it.
-            detail: "data_subject_request.update: permission denied",
+            detail: "your role does not grant update on data subject request",
             status: 403,
             code: "permission_denied",
           },
@@ -457,7 +482,9 @@ describe("PrivacyInboxCard", () => {
     expect(
       await screen.findByText(en["common.permissionDenied"]),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/data_subject_request/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/does not grant update on data subject request/i),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/else decided this/i)).not.toBeInTheDocument();
   });
 
@@ -580,7 +607,7 @@ describe("PrivacyInboxCard", () => {
             // What auth.Require actually sends: the RBAC object and verb
             // wrapped around the sentinel. Internals, not copy — so the screen
             // must show the catalog sentence instead of echoing it.
-            detail: "data_subject_request.update: permission denied",
+            detail: "your role does not grant update on data subject request",
             status: 403,
             code: "permission_denied",
           },
@@ -598,7 +625,7 @@ describe("PrivacyInboxCard", () => {
       await within(row).findByText(en["common.permissionDenied"]),
     ).toBeInTheDocument();
     expect(
-      within(row).queryByText(/data_subject_request/i),
+      within(row).queryByText(/does not grant update on data subject request/i),
     ).not.toBeInTheDocument();
   });
 

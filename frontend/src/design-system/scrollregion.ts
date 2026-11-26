@@ -84,6 +84,17 @@ function edgeKey(
   return start ? "start" : "end";
 }
 
+/** A sideways box's own class, with the class of each end it clips. */
+export function clippedClass(base: string, edges: ClippedEdges): string {
+  return [
+    base,
+    edges.start ? "is-clipped-start" : "",
+    edges.end ? "is-clipped-end" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 /**
  * Follows which ends of a sideways box are clipped. It is read again on every
  * render, on a scroll, and on a resize of the box or anything in it.

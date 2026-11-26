@@ -35,11 +35,11 @@ type completer interface {
 	Complete(ctx context.Context, req model.Request) (model.Response, error)
 }
 
-// ModelPath is the wired model surface one process role hands around:
-// each lane is the same router under a task label, so ai-routing.yaml
-// decides the tier per workload, and every lane draws on the
-// seat-derived monthly budget. A lane is named for the ai.Task it rides,
-// so the wiring reads in one vocabulary — the contract's.
+// ModelPath is the wired model surface one process role hands around.
+// Each lane is the same router under a task label, so the routing setting
+// decides the tier per workload. Every lane draws on the seat-derived
+// monthly budget. A lane is named for the ai.Task it rides, so the wiring
+// reads in the contract's vocabulary.
 type ModelPath struct {
 	// router is the assembled model runtime behind every lane below. It is
 	// held so a composition can bind what only IT knows — the per-Passport
@@ -82,9 +82,13 @@ type ModelPath struct {
 	// company-view lane whose absence changes the ANSWER rather than the prose:
 	// its floor abstains, because grading is not a restatement of recorded
 	// values (DOSS-PARAM-7).
-	GrowthFit  completer
-	DraftReply completer // activity-anchored email reply drafting
-	OfferDraft completer // the offer regenerate-from-signal drafting call
+	GrowthFit       completer
+	DraftReply      completer               // activity-anchored email reply drafting
+	Rewrite         completer               // the rewrite verbs over a rep's own words, premium first
+	ExtensionTasks  func(ai.Task) completer // one task a unit declared in api/ai-tasks.yaml, for Runtime.Models
+	ChatSummary     completer               // judges and summarises a linked chat channel's talk
+	ChatTaskReading completer               // reads a filed chat screenshot against its record's open tasks
+	OfferDraft      completer               // the offer regenerate-from-signal drafting call
 	// CaptureClassify is the §2.8 batched mail-label lane (ADR-0063) —
 	// the highest-volume, cheapest task, routed L-S with the C-C solo
 	// re-ask riding the same ladder.
@@ -116,13 +120,7 @@ type ModelPath struct {
 	// classify labels a known contact's mail for attention, this decides
 	// whether a stranger becomes a record at all.
 	CaptureCounterpartyVerdict completer
-	// CaptureConfidentialityVerdict decides what one THREAD is about, so a
-	// classified mailbox can open the ordinary conversations instead of holding
-	// everything. A separate task from CaptureCounterpartyVerdict because it
-	// answers a different question about a different subject: that one decides
-	// whether a stranger becomes a record, this decides whether a colleague may
-	// read a conversation. Its ladder is local-only, so a deployment that binds
-	// no local rung holds every thread rather than sending mail to a cloud.
+	// Separate from sender classification: a known mailbox can still hold a private thread.
 	CaptureConfidentialityVerdict completer
 	// SignalExtract is the SIG-F-3 lane that reads the material events out of
 	// a settled conversation. It is a separate task from CaptureClassify
@@ -199,11 +197,11 @@ type ModelPath struct {
 // SetCompanyContextEnabled applies the operator's ordered task-rollout stage
 // to every lane sharing this path. Task policy remains exhaustive even while
 // injection is disabled.
-func (p *ModelPath) SetCompanyContextEnabled(enabled bool) {
-	if p == nil {
+func (m *ModelPath) SetCompanyContextEnabled(enabled bool) {
+	if m == nil {
 		return
 	}
-	if brain, ok := p.AgentLoop.(agentBrain); ok && brain.companyContext != nil {
+	if brain, ok := m.AgentLoop.(agentBrain); ok && brain.companyContext != nil {
 		brain.companyContext.enabled = enabled
 	}
 }
@@ -221,6 +219,9 @@ func (m ModelPath) RoutingVersion() string {
 	}
 	return m.router.RoutingVersion()
 }
+
+// Bound reports whether the lanes serve a binding; a path with no router does.
+func (m ModelPath) Bound() bool { return m.router == nil || m.router.Bound() }
 
 func (m ModelPath) WithAgentTokenSpend(spend ai.AgentTokenSpender) ModelPath {
 	if m.router != nil {
@@ -249,10 +250,18 @@ func (e *UnservableBindingError) Unwrap() error { return e.Cause }
 // router's ai_call tracing (ai.NewRouter) — the deployment's
 // AI.CapturePayloads posture and the process logger, never a stand-in.
 func NewModelPath(ctx context.Context, cfg ai.RoutingConfig, pool *pgxpool.Pool, capturePayloads bool, log *slog.Logger) (ModelPath, error) {
-	router, err := ai.NewRouter(cfg, ai.NewMeter(InstallationDB(pool)), NewSeatBudget(pool), ai.NewCallMeter(InstallationDB(pool)).WithLogger(log), capturePayloads, log)
-	if err != nil {
-		return ModelPath{}, &UnservableBindingError{Cause: err}
+	meter, calls := ai.NewMeter(InstallationDB(pool)), ai.NewCallMeter(InstallationDB(pool)).WithLogger(log)
+	// No binding yet still gets a Router; the watcher binds it when one is saved.
+	var router *ai.Router
+	if cfg.Unconfigured() {
+		router = ai.NewUnboundRouter(meter, NewSeatBudget(pool), calls, capturePayloads, log)
+	} else {
+		var err error
+		if router, err = ai.NewRouter(cfg, meter, NewSeatBudget(pool), calls, capturePayloads, log); err != nil { //nolint:contextcheck // the provider tracker's drain goroutine owns its own deadline
+			return ModelPath{}, &UnservableBindingError{Cause: err}
+		}
 	}
+	router.WithSubjectRestrictions(subjectRestrictions{pool: pool})
 	if err := seedEmbedBinding(ctx, search.NewStore(InstallationDB(pool)), router, log); err != nil {
 		return ModelPath{}, err
 	}
@@ -316,6 +325,9 @@ func seedEmbedBinding(ctx context.Context, store *search.Store, router *ai.Route
 // a static budget exactly as it would calling the router constructor
 // directly.
 func NewLocalModelPath(cfg ai.RoutingConfig, opts ...ai.LocalOption) (ModelPath, error) {
+	// First, so a caller's own check replaces it: every lane still has to
+	// declare its subjects, as it does in production.
+	opts = append([]ai.LocalOption{ai.WithRestrictionCheck(ai.NoRestrictionData{})}, opts...)
 	router, err := ai.NewLocalRouter(cfg, opts...)
 	if err != nil {
 		return ModelPath{}, err
@@ -347,6 +359,10 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		CorpusAsk:                     brain(ai.TaskCorpusAsk),
 		GrowthFit:                     brain(ai.TaskGrowthFit),
 		DraftReply:                    brain(ai.TaskDraftReply),
+		Rewrite:                       brain(ai.TaskRewrite),
+		ExtensionTasks:                func(task ai.Task) completer { return brain(task) },
+		ChatSummary:                   brain(ai.TaskChatSummary),
+		ChatTaskReading:               brain(ai.TaskChatTaskReading),
 		OfferDraft:                    brain(ai.TaskOfferDraft),
 		CaptureClassify:               brain(ai.TaskCaptureClassify),
 		OwedVerdict:                   brain(ai.TaskOwedVerdict),
@@ -381,7 +397,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 // arch_test.go's TestNoModelClientOutsideTheGate enforces — rather than
 // aicert becoming a second, ungated construction site.
 func NewLocalRouterForCert(cfg ai.RoutingConfig, opts ...ai.LocalOption) (*ai.Router, error) {
-	return ai.NewLocalRouter(cfg, opts...)
+	return ai.NewLocalRouter(cfg, append([]ai.LocalOption{ai.WithoutInteractiveLimits()}, opts...)...)
 }
 
 // Router exposes the model path's underlying router — the same one every model
@@ -390,8 +406,8 @@ func NewLocalRouterForCert(cfg ai.RoutingConfig, opts ...ai.LocalOption) (*ai.Ro
 // CurrentModelForTier resolvers). Nil when no router backs this path (a nil-AgentLoop
 // ModelPath), so a caller wires no priced estimate rather than pricing against an
 // absent ladder.
-func (p ModelPath) Router() *ai.Router {
-	if r, ok := p.AgentLoop.(agentBrain); ok {
+func (m ModelPath) Router() *ai.Router {
+	if r, ok := m.AgentLoop.(agentBrain); ok {
 		return r.router
 	}
 	return nil
@@ -430,33 +446,6 @@ func prepareOrAnnounce(ctx context.Context, router *ai.Router, cc *companyContex
 		return model.Request{}, err
 	}
 	return prepared, nil
-}
-
-// agentBrain adapts the router into the runner's Brain seam: it surfaces
-// the served model identity from RouteInfo as runner.Meta so the
-// Surface-B trace records what answered each step WITHOUT re-calling the
-// model (RUNNER-AC-4). The runner lane is the only consumer that needs
-// this — the direct-call lanes use routerBrain.
-type agentBrain struct {
-	router         *ai.Router
-	companyContext *companyContextProvider
-}
-
-func (b agentBrain) Complete(ctx context.Context, req model.Request) (model.Response, runner.Meta, error) {
-	prepared, err := prepareOrAnnounce(ctx, b.router, b.companyContext, ai.TaskAgentLoop, req)
-	if err != nil {
-		return model.Response{}, runner.Meta{}, err
-	}
-	resp, info, err := b.router.Complete(ctx, ai.TaskAgentLoop, prepared)
-	meta := runner.Meta{ModelID: info.ModelID, Tier: string(info.Tier), Reject: func() { b.router.Reject(info) }}
-	return resp, meta, err
-}
-
-// PromptWindow is the window of the agent loop's own ladder, read fresh on
-// every step so a routing rebind or a budget demotion partway through a run is
-// seen by the step after it rather than at the next restart.
-func (b agentBrain) PromptWindow() int {
-	return b.router.PromptWindow(ai.TaskAgentLoop)
 }
 
 // CompleteValidated exposes the §5.2 structured-output pipeline

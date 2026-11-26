@@ -68,6 +68,8 @@ func (r *unitReader) readIngressSource(elt ast.Expr, ext string) (ingressSource,
 			src.Lands, err = r.readRecordKinds(kv.Value, ext)
 		case "Merges":
 			src.Merges, err = r.readMergeKeys(kv.Value, ext)
+		case "PinnedPosture":
+			src.PinnedPosture, err = r.constValue(kv.Value, ext)
 		default:
 			err = r.errAt(kv, "IngressSource field %s is not derivable by this generator", k.Name)
 		}
@@ -134,5 +136,5 @@ func declaredIngressSource(src ingressSource) extension.IngressSource {
 	for _, key := range src.Merges {
 		merges = append(merges, extension.MergeKey(key))
 	}
-	return extension.IngressSource{System: src.System, Lands: lands, Merges: merges}
+	return extension.IngressSource{System: src.System, Lands: lands, Merges: merges, PinnedPosture: extension.Posture(src.PinnedPosture)}
 }

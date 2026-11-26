@@ -86,22 +86,16 @@ func TestAClosedDealRefusesAProbabilityOfItsOwn(t *testing.T) {
 	if err := e.owner.QueryRow(context.Background(), `SELECT pipeline_id FROM stage WHERE id = $1`, from).Scan(&pipeline); err != nil {
 		t.Fatalf("reading the pipeline: %v", err)
 	}
-	zero := 0
-	lost, err := e.store.CreateStage(e.as(), CreateStageInput{
-		PipelineID: pipeline, Name: "Lost", Position: 9, Semantic: string(SemanticLost), WinProbability: &zero,
-	})
-	if err != nil {
-		t.Fatalf("seeding the lost stage: %v", err)
-	}
+	_, lost := closingStageIDs(t, e, pipeline)
 	reason := "went with a competitor"
 	if _, err := e.store.AdvanceDeal(e.asDealWriter(), deal, AdvanceDealInput{
-		ToStageID: ids.From[ids.StageKind](ids.UUID(lost.Id)), LostReason: &reason,
+		ToStageID: lost, LostReason: &reason,
 	}); err != nil {
 		t.Fatalf("losing the deal: %v", err)
 	}
 
 	set := 40
-	_, err = e.store.UpdateDeal(e.asDealWriter(), deal, UpdateDealInput{WinProbability: &set})
+	_, err := e.store.UpdateDeal(e.asDealWriter(), deal, UpdateDealInput{WinProbability: &set})
 	if _, ok := errors.AsType[*ProbabilityFixedWhenClosedError](err); !ok {
 		t.Fatalf("setting a probability on a lost deal answered %v, want probability_fixed_when_closed", err)
 	}

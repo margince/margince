@@ -44,7 +44,7 @@ func (f *relationshipFixture) reply(t *testing.T, key, root, from, to string, da
 
 func (f *relationshipFixture) awaited(t *testing.T, activity ids.UUID) bool {
 	t.Helper()
-	f.e.WsExec(t, `UPDATE company SET lifecycle = 'customer' WHERE id = $1`, f.company)
+	f.e.WsExec(t, `UPDATE company SET status = 'customer' WHERE id = $1`, f.company)
 	rows, _, err := activities.NewStore(f.e.DB()).AwaitingReplies(f.e.As(f.seat, nil, integration.AdminPerms), f.now)
 	if err != nil {
 		t.Fatal(err)
@@ -123,14 +123,14 @@ func TestAutomaticMailPastTheCapLeavesTheHumanMessageInTheBriefs(t *testing.T) {
 			t.Fatal("the fixture's notices do not fill the page's timeline; the cap is not exercised")
 		}
 	}
-	brief, err := contactbrief.NewService(f.e.Pool, f.contactPages(), nil, "test", func() time.Time { return f.now }).Get(ctx, contactID, true)
+	brief, err := contactbrief.NewService(f.e.Pool, f.contactPages(), nil, func() string { return "test" }, func() time.Time { return f.now }).Get(ctx, contactID, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !citesActivity(brief.Sentences, human) {
 		t.Errorf("the contact brief does not cite the human reply behind the notices: %+v", brief.Sentences)
 	}
-	company, err := companybrief.NewService(f.e.Pool, f.companyPages(), f.e.Contacts, nil, "test", func() time.Time { return f.now }).Get(ctx, companyID, true)
+	company, err := companybrief.NewService(f.e.Pool, f.companyPages(), f.e.Contacts, nil, func() string { return "test" }, func() time.Time { return f.now }).Get(ctx, companyID, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestAutomaticMailPastTheCapLeavesTheHumanMessageInTheBriefs(t *testing.T) {
 	}
 
 	later := f.mail(t, "their-newer-reply", f.contactAddr, f.seatAddr, "", 1)
-	brief, err = contactbrief.NewService(f.e.Pool, f.contactPages(), nil, "test", func() time.Time { return f.now }).Get(ctx, contactID, true)
+	brief, err = contactbrief.NewService(f.e.Pool, f.contactPages(), nil, func() string { return "test" }, func() time.Time { return f.now }).Get(ctx, contactID, true)
 	if err != nil {
 		t.Fatal(err)
 	}

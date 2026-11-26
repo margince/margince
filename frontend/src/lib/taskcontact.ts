@@ -16,7 +16,8 @@ export type TaskContact = Readonly<{
 }>;
 
 // The page's contact when the task links it, else the contact the server named
-// as the task's email target (`email_target`).
+// as the task's email target (`email_target`). Only a mail task has a target, so
+// a call or a meeting is owed to the first contact it is filed on.
 function taskContactId(
   task: Activity | undefined,
   pageContact?: Contact,
@@ -29,7 +30,10 @@ function taskContactId(
     return linked ? pageContact.id : undefined;
   }
   const target = task?.email_target;
-  return target?.entity_type === "contact" ? target.entity_id : undefined;
+  if (target) {
+    return target.entity_type === "contact" ? target.entity_id : undefined;
+  }
+  return task?.links?.find((link) => link.entity_type === "contact")?.entity_id;
 }
 
 export function useTaskContact(

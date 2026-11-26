@@ -108,10 +108,7 @@ func forecastDealsForPipeline(ctx context.Context, tx pgx.Tx, period forecasting
 	if err != nil {
 		return nil, forecasting.Scope{}, false, fmt.Errorf("compose: collecting the forecast's deals: %w", err)
 	}
-	if err := requireNoLoneColleague(ctx, tx, forecastDealGroups(out)); err != nil {
-		return nil, forecasting.Scope{}, false, err
-	}
-	if err := requirePopulationFloor(ctx, tx, resolved); err != nil {
+	if err := requireFlooredTotals(ctx, tx, resolved, forecastDealGroups(out)); err != nil {
 		return nil, forecasting.Scope{}, false, err
 	}
 	return out, forecastScopeFromResolved(resolved), limited, nil
@@ -250,7 +247,7 @@ func forecastScopeFromResolved(resolved ResolvedScope) forecasting.Scope {
 func ForecastPeriodAt(
 	ctx context.Context, tx pgx.Tx, kind forecasting.PeriodKind, at time.Time,
 ) (forecasting.Period, string, error) {
-	zoneName, err := identity.TimezoneOf(ctx, tx)
+	zoneName, err := identity.TimezoneAppliedTx(ctx, tx)
 	if err != nil {
 		return forecasting.Period{}, "", err
 	}
@@ -315,7 +312,8 @@ func ForecastScopeHoldsDeals(ctx context.Context, tx pgx.Tx, scope forecasting.S
 		// A resolved-only kind: asking for the default again re-derives it.
 		requested = RequestedScope{}
 	}
-	return scopeHoldsDeals(ctx, tx, requested, unownedIsExcluded)
+	holds, err := scopeHoldsDeals(ctx, tx, requested, unownedIsExcluded)
+	return holds != nil && *holds, err
 }
 
 // ForecastWritableScope answers the population a caller may ASSERT about, in

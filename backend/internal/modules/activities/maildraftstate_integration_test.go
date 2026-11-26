@@ -116,3 +116,51 @@ func TestAnOlderWriterCannotLeaveEditorStateOnDifferentWords(t *testing.T) {
 		t.Fatalf("an older writer left stale attribution: %+v", got.Content)
 	}
 }
+
+// The language a rep chose for the AI draft comes back with the words, so a
+// reload drafts in it again. A code the product does not write is dropped, and
+// the words still save.
+func TestMailDraftHTTPKeepsTheChosenDraftLanguage(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	h := Handlers{store: draftStore(e)}
+	save := func(anchor MailDraftAnchor, language string) crmcontracts.MailDraft {
+		t.Helper()
+		body := fmt.Sprintf(`{"anchor_type":"activity","anchor_id":%q,"body":"Draft words","editor_state":{"language":%q}}`,
+			anchor.ID.String(), language)
+		response := httptest.NewRecorder()
+		h.SaveMailDraft(response, httptest.NewRequest(http.MethodPut, "/v1/mail-drafts", strings.NewReader(body)).WithContext(ctx),
+			crmcontracts.SaveMailDraftParams{})
+		if response.Code != http.StatusOK {
+			t.Fatalf("saving with language %q answered %d: %s", language, response.Code, response.Body)
+		}
+		var saved crmcontracts.MailDraft
+		if err := json.Unmarshal(response.Body.Bytes(), &saved); err != nil {
+			t.Fatal(err)
+		}
+		return saved
+	}
+
+	chosen := replyAnchor(e.seedAnchor(t, "", ""))
+	save(chosen, "vi")
+	got, err := draftStore(e).GetMailDraft(ctx, chosen)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Content.EditorState.Language == nil || *got.Content.EditorState.Language != crmcontracts.MailDraftEditorStateLanguageVi {
+		t.Fatalf("the saved draft lost the chosen language: %+v", got.Content.EditorState)
+	}
+
+	unknown := replyAnchor(e.seedAnchor(t, "", ""))
+	answered := save(unknown, "fr")
+	if answered.EditorState != nil && answered.EditorState.Language != nil {
+		t.Errorf("an unknown language came back as %q, want it dropped", *answered.EditorState.Language)
+	}
+	got, err = draftStore(e).GetMailDraft(ctx, unknown)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Content.Body != "Draft words" || got.Content.EditorState.Language != nil {
+		t.Fatalf("an unknown language kept %+v with body %q, want the words saved without it", got.Content.EditorState.Language, got.Content.Body)
+	}
+}

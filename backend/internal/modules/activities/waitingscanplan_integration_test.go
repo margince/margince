@@ -12,13 +12,20 @@ package activities
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 )
 
 // explainWithoutSeqScans plans statement on the seeded mailbox plus extra, with
@@ -28,9 +35,11 @@ func explainWithoutSeqScans(t *testing.T, extra, statement string, args ...any) 
 	return explainOnMailbox(t, extra, "SET LOCAL enable_seqscan = off", "EXPLAIN (FORMAT JSON) ", statement, args...)
 }
 
-// explainOnMailbox runs explain over statement on the seeded mailbox plus
-// extra, after the planner setting given.
-func explainOnMailbox(t *testing.T, extra, setting, explain, statement string, args ...any) planNode {
+// onSeededMailbox runs steps in one rolled-back transaction that holds the
+// seeded mailbox. Every seed leaves dead tuples and grows the tables.
+// That moves the planner between a bitmap and an ordered index scan.
+// A test that plans several variants therefore seeds once.
+func onSeededMailbox(t *testing.T, steps func(ctx context.Context, tx pgx.Tx)) {
 	t.Helper()
 	e := setupPromises(t)
 	ctx := context.Background()
@@ -44,6 +53,23 @@ func explainOnMailbox(t *testing.T, extra, setting, explain, statement string, a
 		}
 	}()
 	seedMailbox(ctx, t, tx, busyMailbox)
+	steps(ctx, tx)
+}
+
+// explainVariant plans statement on the seeded mailbox plus extra, after the
+// planner setting given. It then rolls all three back.
+// The next variant starts from the seeded mailbox.
+func explainVariant(ctx context.Context, t *testing.T, tx pgx.Tx, extra, setting, explain, statement string, args ...any) planNode {
+	t.Helper()
+	if _, err := tx.Exec(ctx, "SAVEPOINT plan_variant"); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if _, err := tx.Exec(ctx, "ROLLBACK TO SAVEPOINT plan_variant"); err != nil {
+			t.Errorf("rolling back the plan variant: %v", err)
+		}
+	}()
+	pinNeverAnalyzed(ctx, t, tx)
 	if extra != "" {
 		if _, err := tx.Exec(ctx, extra); err != nil {
 			t.Fatalf("seeding %s: %v", extra, err)
@@ -57,6 +83,36 @@ func explainOnMailbox(t *testing.T, extra, setting, explain, statement string, a
 		t.Fatalf("planning %s: %v", statement, err)
 	}
 	return decodePlan(t, raw)
+}
+
+// explainOnMailbox runs explain over statement on the seeded mailbox plus
+// extra, after the planner setting given.
+func explainOnMailbox(t *testing.T, extra, setting, explain, statement string, args ...any) planNode {
+	t.Helper()
+	var plan planNode
+	onSeededMailbox(t, func(ctx context.Context, tx pgx.Tx) {
+		plan = explainVariant(ctx, t, tx, extra, setting, explain, statement, args...)
+	})
+	return plan
+}
+
+// pinnedTables are the tables pinNeverAnalyzed resets.
+const pinnedTables = "relkind = 'r' AND relnamespace = 'public'::regnamespace"
+
+// pinNeverAnalyzed gives the planner the table sizes of a database nothing has
+// analyzed. Earlier tests in the same process may have left small statistics.
+// Those steer a plan test to a scan the seeded rows do not warrant.
+//
+// The update holds each table's pg_class row until rollback, and an autovacuum
+// pass waits on that row while it holds its table. A later ANALYZE in this
+// transaction then deadlocks with it, so the tables are locked first.
+func pinNeverAnalyzed(ctx context.Context, t *testing.T, tx pgx.Tx) {
+	t.Helper()
+	if _, err := tx.Exec(ctx, `DO $$ BEGIN EXECUTE (SELECT 'LOCK TABLE '||string_agg(oid::regclass::text, ', ' ORDER BY oid)||' IN SHARE UPDATE EXCLUSIVE MODE'
+	  FROM pg_class WHERE `+pinnedTables+`); END $$;
+	UPDATE pg_class SET reltuples = -1, relpages = 0 WHERE `+pinnedTables); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // decodePlan reads the one plan an EXPLAIN (FORMAT JSON) answered.
@@ -82,9 +138,7 @@ func TestTheSalesArmFindsAWorkingLeadByIndexAlone(t *testing.T) {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	arms, err := customerArms(ctx, arg, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"))
+	arms, err := customerArms(ctx, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +148,7 @@ func TestTheSalesArmFindsAWorkingLeadByIndexAlone(t *testing.T) {
 		INSERT INTO lead (full_name, status, source, captured_by)
 		  SELECT 'Lead '||g, 'new', 'manual', 'human:seed' FROM generate_series(1, 5000) g;
 		ANALYZE lead`,
-		`SELECT 1 FROM activity_link sales WHERE `+arms, args...)
+		`SELECT 1 FROM activity_link sales WHERE `+arms)
 	var leadReads, promotedLookups int
 	plan.walk(func(n planNode) {
 		if planCopySuffix.ReplaceAllString(n.Alias, "") == "ld" {
@@ -137,6 +191,42 @@ func TestTheWaitingHorizonReadsAHeldRequestByItsID(t *testing.T) {
 	}
 }
 
+func TestASeatsMailCandidatesUseTimeAndHeldIDIndexes(t *testing.T) {
+	seat := ids.NewV7()
+	statement := `SELECT ` + storekit.DirectMailActivitiesSQL(
+		"jsonb_build_object($1::text, jsonb_build_array($2::text))", "$1::uuid", "$3::timestamptz", heldRequestIDsSQL())
+	// Ten team addresses share the inbound mail, and the 90-day window holds a
+	// quarter of it: an empty window prices every path the same. ANALYZE fixes
+	// the statistics, so earlier tests in the shared database cannot move the plan.
+	plan := explainOnMailbox(t, `
+		UPDATE activity_participant p SET address = 'rep'||i.g % 10||'@work.test'
+		  FROM mailbox_inbound i WHERE p.activity_id = i.id AND p.role = 'to' AND i.g % 10 <> 0;
+		ANALYZE`,
+		"SET LOCAL enable_seqscan = off; SET LOCAL plan_cache_mode = force_generic_plan",
+		"EXPLAIN (ANALYZE, FORMAT JSON) ", statement, seat.String(), "seat@work.test", clocktest.Now(t).AddDate(0, 0, -90))
+	var recentByTime, heldByID int
+	var recentRows float64
+	var reads []string
+	plan.walk(func(n planNode) {
+		if strings.Contains(n.IndexName, "participant") && strings.Contains(n.IndexCond, "domain_evidence_at >=") {
+			recentByTime++
+			recentRows += n.ActualRows
+		}
+		if strings.Contains(n.IndexName, "participant") && strings.Contains(n.IndexCond, "activity_id =") {
+			heldByID++
+		}
+		if n.IndexName != "" {
+			reads = append(reads, n.IndexName+" "+n.IndexCond)
+		}
+	})
+	if recentRows == 0 {
+		t.Error("the time-bound recipient lookup read no rows; the mailbox must exercise the recent-mail arm")
+	}
+	if recentByTime == 0 || heldByID == 0 {
+		t.Errorf("seat mail plan misses a time-bound or held-id participant lookup (recent=%d held=%d): %v", recentByTime, heldByID, reads)
+	}
+}
+
 // Old mail never reaches a per-message subquery: the horizon is a cheap
 // top-level test, and Postgres runs it first. The probe stands in for the
 // subqueries a full waiting scan carries.
@@ -161,5 +251,131 @@ func TestTheWaitingHorizonRunsBeforeAnyPerMessageSubquery(t *testing.T) {
 	}
 	if probed > kept {
 		t.Errorf("the per-message probe ran %v times for %v messages inside the horizon: mail past the horizon is judged by every subquery before its age", probed, kept)
+	}
+}
+
+// The page reads young mail newest first and stops near its cap, under the
+// generic plan the Worklist reuses. The probe stands in for the per-message
+// rules, so the times it ran are the messages the page judged. A message at
+// the index's raw bound can still fail its day test, so the bound is loose.
+// The page order must not depend on the planner choosing incremental sorting.
+func TestThePageScanJudgesNoMoreYoungMailThanItsCap(t *testing.T) {
+	const pageCap = 3
+	eligible := waitingPlanProbeFromSQL
+	if carried := strings.Count(waitingCappedArmsSQL, waitingEligibleFromSQL); carried != 1 {
+		t.Fatalf("the page carries the eligibility %d times, want once for both arms", carried)
+	}
+	onSeededMailbox(t, func(ctx context.Context, tx pgx.Tx) {
+		probed := func(t *testing.T, statement, incremental, extra string) (float64, float64, string) {
+			t.Helper()
+			args := []any{clocktest.Now(t)}
+			instant := len(args)
+			limit := waitingLimitSQL(func(value any) int {
+				args = append(args, value)
+				return len(args)
+			}, pageCap) + "::int"
+			plan := explainVariant(ctx, t, tx, extra, "SET LOCAL plan_cache_mode = force_generic_plan; SET LOCAL max_parallel_workers_per_gather = 0; SET LOCAL enable_incremental_sort = "+incremental,
+				"EXPLAIN (ANALYZE, FORMAT JSON) ", fmt.Sprintf(statement, instant, nil, nil, limit, 30), args...)
+			judged, read := waitingPlanWork(plan)
+			return judged, read, activityPaths(plan)
+		}
+		// An unordered control scan exposes a short fixture even when an index could stop early.
+		whole, _, _ := probed(t, `SELECT a.id `+eligible+` ORDER BY a.occurred_at DESC, a.id DESC LIMIT %[4]s`, "on",
+			"SET LOCAL enable_indexscan = off; SET LOCAL enable_bitmapscan = off")
+		if whole <= 4*pageCap {
+			t.Fatalf("one scan over the horizon judged %v messages: the mailbox holds too little young mail to show a cap of %d", whole, pageCap)
+		}
+		for _, incremental := range []string{"on", "off"} {
+			for _, fixture := range []struct{ name, extra string }{
+				{"unanalyzed", ""},
+				{"analyzed", "ANALYZE activity, activity_participant"},
+				{"held", waitingPlanHeldMailSQL},
+				{"held_analyzed", waitingPlanHeldMailSQL + "ANALYZE activity, activity_participant"},
+			} {
+				t.Run("incremental_"+incremental+"/"+fixture.name, func(t *testing.T) {
+					split, read, paths := probed(t, strings.ReplaceAll(waitingCappedArmsSQL, waitingEligibleFromSQL, eligible), incremental, fixture.extra)
+					if split > 2*pageCap || read > 2*pageCap {
+						t.Errorf("the page judged %v and read %v messages for cap %d (whole scan %v); it read activity by %s", split, read, pageCap, whole, paths)
+					}
+				})
+			}
+		}
+	})
+}
+
+// The marked-sender check runs once per walked mail. Planned as a join, a
+// generic plan that expects one mail scans every participant for each one.
+func TestTheMarkedSenderCheckLooksUpEachMailByItsID(t *testing.T) {
+	statement := `SELECT a.id FROM activity a
+		WHERE a.kind = 'email' AND a.direction = 'inbound' AND a.archived_at IS NULL
+		  AND ` + relationshipmark.SenderMayRaiseWorkSQL("a") + `
+		ORDER BY a.occurred_at DESC, a.id DESC LIMIT $1`
+	plan := explainOnMailbox(t, "", "SET LOCAL plan_cache_mode = force_generic_plan",
+		"EXPLAIN (FORMAT JSON) ", statement, 3)
+	var reads []planNode
+	plan.walk(func(n planNode) {
+		if n.Alias == "marked_sender" {
+			reads = append(reads, n)
+		}
+	})
+	if len(reads) == 0 {
+		t.Fatal("the plan never reads marked_sender, so this test checks nothing")
+	}
+	for _, read := range reads {
+		if read.NodeType == "Seq Scan" {
+			t.Errorf("marked_sender is read by a sequential scan, once per walked mail, instead of by the mail's id")
+		}
+	}
+}
+
+// An autovacuum pass may analyze a table while a plan test holds its pins.
+// That pass queues behind the pinned tables, so the test's own ANALYZE
+// finishes without a deadlock.
+func TestAConcurrentAnalyzeQueuesBehindThePins(t *testing.T) {
+	e := setupPromises(t)
+	ctx := context.Background()
+	racer, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := racer.Close(context.Background()); err != nil {
+			t.Errorf("closing the racing connection: %v", err)
+		}
+	})
+	tx, err := e.owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pinNeverAnalyzed(ctx, t, tx)
+	var holder int32
+	if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&holder); err != nil {
+		t.Fatal(err)
+	}
+	racerErr := make(chan error, 1)
+	returned := make(chan struct{})
+	go func() {
+		_, err := racer.Exec(ctx, `ANALYZE activity`)
+		racerErr <- err
+		close(returned)
+	}()
+	// Runs before the racer's connection closes, so a failed check never
+	// leaves its ANALYZE waiting on pins nobody releases.
+	t.Cleanup(func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back the pins: %v", err)
+		}
+		<-returned
+	})
+	testdb.AwaitQueuedBehind(t, tx, holder, 1, returned, "the concurrent ANALYZE")
+	_, ownErr := tx.Exec(ctx, `ANALYZE`)
+	if err := tx.Rollback(ctx); err != nil {
+		t.Fatalf("rolling back the pins: %v", err)
+	}
+	if ownErr != nil {
+		t.Errorf("the test's ANALYZE failed beside a concurrent one: %v", ownErr)
+	}
+	if err := <-racerErr; err != nil {
+		t.Errorf("the concurrent ANALYZE failed beside the test's: %v", err)
 	}
 }

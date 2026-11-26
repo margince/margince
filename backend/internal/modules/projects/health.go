@@ -38,7 +38,7 @@ const (
 	healthObject      = "project_health_assessment"
 	healthStateColumn = "state"
 	healthNoteColumn  = "note"
-	healthMaxNote     = 4000
+	healthMaxNote     = values.TextNoteCharacters
 )
 
 // RecordHealthInput is an appended judgement.
@@ -265,10 +265,7 @@ func checkHealthJudgement(
 		}
 	}
 	trimmed := trimmedOrNil(note)
-	// RUNES, not bytes. The contract's maxLength and the SQL length() both count
-	// characters, so counting bytes here refuses a note those two accept — a
-	// 3,000-character German or Vietnamese note is well inside both limits and
-	// over 4,000 bytes.
+	// Characters, not bytes, as the contract and the column count them.
 	if trimmed != nil && utf8.RuneCountInString(*trimmed) > healthMaxNote {
 		return nil, &values.ParseError{
 			Field: healthNoteColumn, Code: "note_too_long",

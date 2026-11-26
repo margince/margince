@@ -12,8 +12,15 @@
 // All but `today` are pure and take their zone (or the reader's own wall clock)
 // as input, so nothing here has to be tested against the machine's own zone.
 
-import type { ISODate } from "./datepattern";
-import { DAY_MS, endOfDayInZone, instantAtWallClock } from "./timezone";
+import type { components } from "../api/schema";
+import { type ISODate, isISODate } from "./datepattern";
+import { pinnedDateTimeFormat } from "./formatters";
+import {
+  DAY_MS,
+  endOfDayInZone,
+  instantAtWallClock,
+  wallClockTime,
+} from "./timezone";
 
 // The calendar day an instant falls on, in a named IANA zone, as `yyyy-mm-dd` so
 // two of them compare as strings without a second parse.
@@ -23,23 +30,13 @@ import { DAY_MS, endOfDayInZone, instantAtWallClock } from "./timezone";
 // which is the whole reason this string is comparable — a locale's date format is
 // data, it varies with the runtime's ICU, and a bucketing rule that reads
 // "yesterday" because a format changed under it would be invisible.
-// One formatter per zone: constructing an Intl.DateTimeFormat is the expensive
-// part, and a task list asks this question once per row.
-const dayFormatters = new Map<string, Intl.DateTimeFormat>();
-
 function dayFormatter(zone: string): Intl.DateTimeFormat {
-  const cached = dayFormatters.get(zone);
-  if (cached) {
-    return cached;
-  }
-  const made = new Intl.DateTimeFormat("en-CA", {
+  return pinnedDateTimeFormat("en-CA", {
     timeZone: zone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   });
-  dayFormatters.set(zone, made);
-  return made;
 }
 
 /**
@@ -80,7 +77,7 @@ function daysIn(year: number, month: number): number {
   return [4, 6, 9, 11].includes(month) ? 30 : 31;
 }
 
-export function calendarDay(at: Date, zone: string): string {
+export function calendarDay(at: Date, zone: string): ISODate {
   const parts = new Map(
     dayFormatter(zone)
       .formatToParts(at)
@@ -97,7 +94,10 @@ export function calendarDay(at: Date, zone: string): string {
     // itself and quietly bucket every task into one day.
     throw new Error(`no calendar day for zone ${zone}`);
   }
-  return `${year}-${month}-${day}`;
+  const result = `${year.padStart(4, "0")}-${month}-${day}`;
+  if (!isISODate(result))
+    throw new RangeError(`invalid calendar day for zone ${zone}`);
+  return result;
 }
 
 // Whether two instants share a day on `zone`'s wall clock. Asked in the zone
@@ -107,11 +107,42 @@ export function sameCalendarDay(a: Date, b: Date, zone: string): boolean {
   return calendarDay(a, zone) === calendarDay(b, zone);
 }
 
+export function shiftCalendarDay(day: string, days: number): ISODate {
+  if (!isRealCalendarDay(day))
+    throw new RangeError(`not a calendar day: ${day}`);
+  const carrier = new Date(`${day}T12:00:00Z`);
+  carrier.setUTCDate(carrier.getUTCDate() + days);
+  const shifted = carrier.toISOString().slice(0, 10);
+  if (!isISODate(shifted)) throw new RangeError(`no calendar day ${shifted}`);
+  return shifted;
+}
+
 // The day it is now in `zone`, for a form whose date box opens on it and
 // refuses anything earlier. The zone is the one the form's server counts its
 // days in, so the floor the form offers is a day the server takes.
 export function todayIn(zone: string): string {
   return calendarDay(new Date(), zone);
+}
+
+// The days a task's due date may fall on: one day inside the server's window
+// of ten years back and ten ahead. A day the box accepts is then never one
+// the server refuses at that day's clock time.
+export const DUE_YEARS_BACK = 10;
+export const DUE_YEARS_AHEAD = 10;
+
+export function dueDayBounds(zone: string): { min: ISODate; max: ISODate } {
+  const today = todayIn(zone);
+  // Year arithmetic on the day itself. A 29 February with no twin rolls on to
+  // 1 March, as the server's time.AddDate does.
+  const yearsFrom = (years: number, nudge: number) => {
+    const day = `${Number(today.slice(0, 4)) + years}${today.slice(4)}`;
+    const real = isRealCalendarDay(day) ? day : `${day.slice(0, 5)}03-01`;
+    return shiftCalendarDay(real, nudge);
+  };
+  return {
+    min: yearsFrom(-DUE_YEARS_BACK, 1),
+    max: yearsFrom(DUE_YEARS_AHEAD, -1),
+  };
 }
 
 // The calendar MONTH an instant falls in, in a named IANA zone, as `yyyy-mm`.
@@ -177,22 +208,10 @@ export function dueInstant(day: string, zone: string, time = ""): string {
   return new Date(Math.floor(lastMs / 1000) * 1000).toISOString();
 }
 
-// The wall-clock value a `datetime-local` input shows for an instant, in the
-// reader's OWN zone, as the `yyyy-mm-ddThh:mm` that control accepts.
-//
-// It is the exact inverse of the composer's `scheduleFields`, which reads such a
-// value back by handing it to `new Date(...)` and so resolves it against the
-// browser's zone. The pair has to agree: a reschedule form seeded from a
-// differently-zoned reading would open on a moment an hour off the one it is
-// about to resubmit, and the reader would move a message they never moved.
-//
-// Assembled from the local getters rather than by slicing an ISO string.
-// `toISOString()` is UTC, so west of UTC that would seed the picker with
-// yesterday's date and an evening send would read as due the day before.
-export function localDateTimeValue(utcIso: string): string {
+// Local controls need the chosen zone when reopening a saved local-time intent.
+export function localDateTimeValue(utcIso: string, zone: string): string {
   const at = new Date(utcIso);
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${isoDay(at)}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+  return `${calendarDay(at, zone)}T${wallClockTime(at.getTime(), zone)}`;
 }
 
 /** The day a `Date` falls on in the reader's own zone, as `YYYY-MM-DD`. */
@@ -244,4 +263,38 @@ export function isoWeekBefore(day: string): number {
   return isoWeekOf(
     `${before.getUTCFullYear()}-${pad(before.getUTCMonth() + 1)}-${pad(before.getUTCDate())}`,
   );
+}
+
+/**
+ * The zone whose calendar counts a task's due day. A task with only a date
+ * reads on the company's, the calendar the Worklist groups it by, so every page
+ * calls it overdue together. A task with a time, or one a read does not say,
+ * reads on the reader's own clock.
+ */
+export function taskDueZone(
+  hasTime: boolean | undefined,
+  readerZone: string,
+  companyZone: string,
+): string {
+  return hasTime === false ? companyZone : readerZone;
+}
+
+/**
+ * The instant to read a task's due day from, in `zone`. A task with a date and
+ * no time is due on the date its chosen clock names. It returns that day's end
+ * in `zone`, so every reader prints and counts the chosen date. A timed task,
+ * or one with no chosen clock, keeps its own instant.
+ *
+ * Mirrors the backend's deadline.WallDayOffset; both tests read
+ * deadline/testdata/pickedday.json.
+ */
+export function taskDueOnDay(
+  dueAt: string,
+  hasTime: boolean | undefined,
+  intent: components["schemas"]["IntentTime"] | null | undefined,
+  zone: string,
+): string {
+  if (hasTime === true || !intent) return dueAt;
+  const day = intent.wall_clock.slice(0, 10);
+  return isRealCalendarDay(day) ? dueInstant(day, zone) : dueAt;
 }

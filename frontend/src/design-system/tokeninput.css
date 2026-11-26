@@ -78,7 +78,6 @@
   align-items: center;
   padding-inline: var(--space-2) 0;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgChip);
   color: var(--textPrimary);
   /* One step down from the field's own type: a token is a value inside a
@@ -88,6 +87,13 @@
      running out over the controls beside the field. */
   max-inline-size: 100%;
   min-inline-size: 0;
+}
+
+/* A value the host marked for the reader's attention: the warning tint and
+   hairline, so the mark reads in both themes without a second colour. */
+.token-marked {
+  background: var(--warningBg);
+  box-shadow: inset 0 0 0 1px var(--warningBorder);
 }
 
 /* A known recipient's token opens on their avatar, brought down to sit inside

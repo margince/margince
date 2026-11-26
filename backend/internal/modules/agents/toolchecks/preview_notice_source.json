@@ -1,0 +1,9 @@
+{
+  "verb": "preview_notice_source",
+  "checks": [
+    "privacy_request.read"
+  ],
+  "takes": [
+    "notice_case_review"
+  ]
+}

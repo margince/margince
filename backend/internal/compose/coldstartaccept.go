@@ -20,6 +20,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/duequestion"
+	"github.com/margince/margince/backend/internal/compose/editaccess"
+	"github.com/margince/margince/backend/internal/compose/employerchange"
+	"github.com/margince/margince/backend/internal/compose/proposalstage"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -38,7 +42,7 @@ func approvalsHandlersWithEffects(
 	pool *pgxpool.Pool, volume approvals.VolumeReleaser, log *slog.Logger,
 ) (approvals.Handlers, *siteLeadNoticeLane) {
 	notices := newSiteLeadNoticeLane()
-	return approvals.NewHandlers(approvalsServiceTelling(pool, notices).WithVolumeReleaser(volume).WithLogger(log)), notices
+	return approvals.NewHandlers(approvalsServiceTelling(pool, notices).WithVolumeReleaser(volume).WithLogger(log)).WithSettings(StoredConfig(pool)).WithLocks(loadedLocks), notices
 }
 
 // NewApprovalsServiceWithEffects wires the decision effects used by automatic
@@ -70,38 +74,38 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))
 	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc, store))
 	svc.WithPrecheck(linkedInMatchKind, linkedInMatchPrecheck(store))
-	// Both halves, like the held message above and for the same reason: the
-	// subject of this card is a row that is already sitting in a state, and a
-	// card whose buttons only dismissed it would report a decision the record
-	// never heard.
+	// Both halves, like the held message above. The card's subject already sits
+	// in a state, which a card that only dismissed it would leave unheard.
 	svc.WithDeclinedEffect(linkedInMatchKind, linkedInMatchDeclineEffect(store))
 	svc.WithEffect(lifecycleProposalKind, lifecycleAcceptEffect(svc, store, time.Now))
 	svc.WithEffect(vcardCreateKind, vcardCreateAcceptEffect(svc,
 		newContactsStore(InstallationDB(pool)).WithShareRequests(contactShareRequests(pool))))
 	svc.WithEffect(contactShareKind, contactShareAcceptEffect(svc, identity.NewServiceFor(InstallationDB(pool))))
+	editaccess.Register(svc, InstallationDB(pool), identity.NewServiceFor(InstallationDB(pool)))
 	// Both halves: the colleague who asked is told how their request ended.
 	transfers := newOwnershipTransfers(pool)
 	svc.WithEffect(ownershipTransferKind, ownershipTransferAcceptEffect(svc, transfers))
 	svc.WithPrecheck(ownershipTransferKind, transfers.transferPrecheck())
 	svc.WithDeclinedEffect(ownershipTransferKind, declineTransferEffect())
 	svc.WithPrecheck(vcardCreateKind, vcardCreatePrecheck())
-	// A held message is the one kind with BOTH halves registered, because its
-	// subject is already waiting: Accept re-arms it, Reject abandons it, and a
-	// card whose buttons only dismissed it would report a decision the message
-	// never heard (#1312, ADR-0104 §5).
+	// A held message registers both halves, because its subject is already
+	// waiting. Accept re-arms it and Reject abandons it; a dismissal alone would
+	// report a decision the message never heard.
 	if sendStore, timer, ok := heldSendActors(pool); ok {
 		svc.WithEffect(heldScheduledSendKind, heldAcceptEffect(svc, sendStore, timer))
 		svc.WithDeclinedEffect(heldScheduledSendKind, heldDeclineEffect(sendStore))
 	}
-	// The provider is rebuilt exactly as workflows.go builds the one an
-	// automation writes through: a released reassignment must reach the same
-	// record surface reassigning a single record does.
+	// The provider is rebuilt as workflows.go builds the one an automation
+	// writes through, so a released reassignment reaches the same record surface.
 	svc.WithEffect(string(workflow.ActionAssignOwner), assignOwnerReleaseEffect(svc,
 		NewProvider(pool), InstallationDB(pool)))
 	svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(svc, deals.NewStore(InstallationDB(pool), DealsInstallation())))
-	svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(svc, activities.NewStore(InstallationDB(pool))))
-	svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck())
+	proposalstage.Register(svc, InstallationDB(pool), deals.NewStore(InstallationDB(pool), DealsInstallation()))
+	svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(svc, activities.NewStore(InstallationDB(pool)), time.Now))
+	svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck(InstallationDB(pool), time.Now))
 	commitmentTasks := activities.NewStore(InstallationDB(pool))
+	duequestion.Register(svc, InstallationDB(pool), commitmentTasks, time.Now)
+	employerchange.Register(svc, store)
 	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc, commitmentTasks, newContactsStore(InstallationDB(pool))))
 	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(InstallationDB(pool), commitmentTasks))
 	svc.WithDeclinedEffect(CommitmentTaskKind, commitmentTaskDeclineEffect())
@@ -115,8 +119,8 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 // sweep is a worker job — and a hook registered only on the deciding one
 // would be absent exactly where the expiry happens.
 func expiringApprovalsService(pool *pgxpool.Pool) *approvals.Service {
-	return NewApprovalsService(InstallationDB(pool)).
-		WithExpiredEffect(ownershipTransferKind, expireTransferEffect())
+	return editaccess.RegisterExpiry(NewApprovalsService(InstallationDB(pool)).
+		WithExpiredEffect(ownershipTransferKind, expireTransferEffect()))
 }
 
 // coldstartAcceptEffect builds the approvals.ApprovedEffect compose

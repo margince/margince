@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+import { wallClockIntent } from "../src/format/timezone";
 import { de } from "../src/i18n/de";
 import {
   bookingConnection,
@@ -11,6 +12,11 @@ import { copy } from "./copy";
 import { contact360 } from "./mockapi/records";
 import { mockApi } from "./seed";
 import { openedAt } from "./waits";
+
+// A chosen time is sent with the wall clock of the zone the browser runs in.
+async function pageZone(page: Page): Promise<string> {
+  return page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+}
 
 test.beforeEach(async ({ page, context }) => {
   await mockApi(context);
@@ -168,8 +174,10 @@ test("connected calendar setup keeps the draft, then sends and cancels an invita
   await expect(
     settings.getByRole("combobox", { name: de["scheduling.provider"] }),
   ).toHaveCount(0);
+  // The connected calendar is offered as the answer, so the bar asks to keep
+  // it and claims no edit.
   const saveCalendar = settings
-    .getByRole("region", { name: de["saveBar.unsaved"] })
+    .getByRole("region", { name: de["saveBar.offered"] })
     .getByRole("button", { name: de["saveBar.save"], exact: true });
   await saveCalendar.click();
   await expect(saveCalendar).toHaveCount(0);
@@ -200,6 +208,7 @@ test("connected calendar setup keeps the draft, then sends and cancels an invita
     location: "",
     video_call: true,
     ...bookingSlots[0],
+    start_intent: wallClockIntent(bookingSlots[0].start, await pageZone(page)),
   });
   await page.getByRole("button", { name: de["scheduling.cancel"] }).click();
   await page
@@ -310,7 +319,15 @@ test("guest reschedules only after confirming the replacement time", async ({
     de["scheduling.rescheduling"],
   );
   expect(changes).toEqual([
-    { action: "reschedule", version: 1, ...bookingSlots[1] },
+    {
+      action: "reschedule",
+      version: 1,
+      ...bookingSlots[1],
+      start_intent: wallClockIntent(
+        bookingSlots[1].start,
+        await pageZone(page),
+      ),
+    },
   ]);
 });
 
@@ -479,8 +496,9 @@ test("calendar setup enables booking with the existing Account name", async ({
     exact: true,
   });
   await expect(accept).toBeDisabled();
+  // The one writable calendar is offered as the answer, not typed in.
   const saveCalendar = page
-    .getByRole("region", { name: de["saveBar.unsaved"] })
+    .getByRole("region", { name: de["saveBar.offered"] })
     .getByRole("button", { name: de["saveBar.save"], exact: true });
   await saveCalendar.click();
   await expect(saveCalendar).toHaveCount(0);

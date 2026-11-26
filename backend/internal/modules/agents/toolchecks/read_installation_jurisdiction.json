@@ -1,0 +1,6 @@
+{
+  "verb": "read_installation_jurisdiction",
+  "checks": [
+    "installation_settings.read"
+  ]
+}

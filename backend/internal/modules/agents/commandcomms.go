@@ -23,7 +23,9 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -104,6 +106,7 @@ func (r *sendEmailResolver) Subject(ctx context.Context, cmd SendEmailCommand) (
 		TargetID:      cmd.ActivityID,
 		TargetVersion: &rec.Version,
 		Summary:       describeSend(summaryIn(ctx, r.language), cmd),
+		SystemText:    &systemtext.Message{Subject: sendComponent(cmd)},
 	}, nil
 }
 
@@ -133,11 +136,7 @@ func (r *sendEmailResolver) Guards(ctx context.Context, cmd SendEmailCommand) er
 // describeSend is the one line the inbox shows for a mail send: who it
 // reaches, cc included, and what it says it is about.
 func describeSend(said summaryCopy, cmd SendEmailCommand) string {
-	summary := fmt.Sprintf(said.sendEmail, strings.Join(cmd.To, ", "))
-	if len(cmd.Cc) > 0 {
-		summary += fmt.Sprintf(said.cc, strings.Join(cmd.Cc, ", "))
-	}
-	return summary + fmt.Sprintf(said.sendSubject, cmd.Subject)
+	return systemtext.Canonical(sendComponent(cmd), said.lang)
 }
 
 // SendMessageCommand is one channel reply, whichever door asked for it.
@@ -186,7 +185,8 @@ func (r *sendMessageResolver) Subject(ctx context.Context, cmd SendMessageComman
 		TargetType:    string(datasource.EntityActivity),
 		TargetID:      cmd.ActivityID,
 		TargetVersion: &rec.Version,
-		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).sendMessage, cmd.Body),
+		SystemText:    &systemtext.Message{Subject: systemtext.Sentence("agent.sendMessage", systemtext.Text(systemtext.Inline(cmd.Body)))},
+		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).sendMessage, systemtext.Inline(cmd.Body)),
 	}, nil
 }
 
@@ -220,6 +220,7 @@ func (r *sendMessageResolver) Guards(ctx context.Context, cmd SendMessageCommand
 	var anchor struct {
 		Kind            string `json:"kind"`
 		ChannelProvider string `json:"channel_provider"`
+		ThreadKey       string `json:"thread_key"`
 	}
 	if err := json.Unmarshal(rec.Fields, &anchor); err != nil {
 		return fmt.Errorf("crmagents: activity %s read back with unreadable fields: %w", cmd.ActivityID, err)
@@ -230,6 +231,11 @@ func (r *sendMessageResolver) Guards(ctx context.Context, cmd SendMessageCommand
 				cmd.ActivityID, anchor.Kind),
 			Guidance: "reply on the channel the conversation was held on",
 		}
+	}
+	// A linked business account's chat is read here and answered in the
+	// provider's app. The send refuses it at execution, which costs the approval.
+	if err := connector.RefuseCaptureOnlyThread(anchor.ChannelProvider, anchor.ThreadKey); err != nil {
+		return &BadArgsError{Cause: err, Guidance: "reply in the provider's own app, since this conversation belongs to a linked business account"}
 	}
 	// Refused HERE rather than at execution, and the timing is the point: this
 	// runs before staging, and staging costs the human the one-shot approval

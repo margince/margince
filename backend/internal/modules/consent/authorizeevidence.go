@@ -18,7 +18,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -32,8 +34,9 @@ import (
 // compared against a contact column and quietly match nothing — a refusal that
 // looks exactly like an absent relationship.
 type subjectRef struct {
-	Kind string
-	ID   string
+	SendingEntity ids.UUID
+	Kind          string
+	ID            string
 	// Address is the mailbox the message is going to. A thread participant is
 	// recorded by contact OR by bare address, so an address that never resolved
 	// to a record can still be shown to have been on the thread.
@@ -49,7 +52,7 @@ type subjectRef struct {
 	ChannelProvider string
 	ChannelUserID   string
 	// Country is the recipient's country as the decision resolved it once,
-	// before deciding (recipientCountries).
+	// before deciding (resolveRecipientCountries).
 	Country RecipientCountry
 }
 
@@ -81,10 +84,37 @@ func recipientSubjectAddress(r connector.Recipient) (address, channelProvider, c
 // correspondence, and treating it as such would let anyone create a lawful
 // basis for writing to a third party by putting them in Cc.
 func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subject subjectRef) (bool, error) {
+	return subjectWroteInto(ctx, tx, anchor, subject, false)
+}
+
+// subjectWroteTheAnchor is repliesToTheSubject asked of the anchor message
+// alone: whether the subject wrote the very mail a reply answers. Its sender
+// must be authenticated too, because a forged From: is all it would take to
+// put a pitch in the contact's mouth. The thread question keeps its own
+// reach: channel messages carry no sender authentication.
+func subjectWroteTheAnchor(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subject subjectRef) (bool, error) {
+	if anchor.IsZero() {
+		return false, nil
+	}
+	return subjectWroteInto(ctx, tx, anchor, subject, true)
+}
+
+func subjectWroteInto(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subject subjectRef, anchorOnly bool) (bool, error) {
+	entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
+	if err != nil {
+		return false, err
+	}
+	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, anchor, anchorOnly, entity}
+	entityArg := storekit.SQLf("$%d", len(args))
+	visible, err := activityEvidenceSQL(ctx, entityArg, &args)
+	if err != nil {
+		return false, err
+	}
 	var found bool
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		WITH anchor AS (
 			SELECT thread_key FROM activity WHERE id = $6 AND archived_at IS NULL
+			   AND NOT starts_with(thread_key, '`+correspondence.HandLoggedThreadPrefix+`')
 		)
 		SELECT EXISTS (
 			SELECT 1
@@ -94,11 +124,13 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.direction = 'inbound'
 			   AND a.archived_at IS NULL
+			   AND (NOT $7 OR (a.id = $6 AND `+correspondence.AuthenticatedInboundSQL("a")+`))
 			   -- Authorship, from the shared spelling: the subject WROTE into
 			   -- this thread, and a recipient who was merely copied has
 			   -- initiated nothing.
+			   AND `+visible+`
 			   AND `+authorIsTheSubject+`
-		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, anchor).Scan(&found)
+		)`, args...).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read the thread this message answers: %w", err)
 	}
@@ -129,11 +161,21 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 // staging still transmits after its anchor is archived, which is the intended
 // reading — the thread's evidence is what the basis rests on, not the anchor.
 func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject subjectRef) (bool, error) {
-	if threadKey == "" {
+	if threadKey == "" || correspondence.IsHandLoggedThread(threadKey) {
 		return false, nil
 	}
+	entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
+	if err != nil {
+		return false, err
+	}
+	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, threadKey, entity}
+	entityArg := storekit.SQLf("$%d", len(args))
+	visible, err := activityEvidenceSQL(ctx, entityArg, &args)
+	if err != nil {
+		return false, err
+	}
 	var found bool
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1
 			  FROM activity a
@@ -141,8 +183,9 @@ func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject s
 			 WHERE a.direction = 'inbound'
 			   AND a.archived_at IS NULL
 			   AND a.thread_key = $6
+			   AND `+visible+`
 			   AND `+authorIsTheSubject+`
-		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, threadKey).Scan(&found)
+		)`, args...).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read the thread this message answers: %w", err)
 	}
@@ -188,17 +231,32 @@ func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 	if req.AnchorActivityID != (ids.UUID{}) {
 		threadKey = threadKeyOf(ctx, tx, req.AnchorActivityID)
 	}
-	if threadKey == "" {
+	if threadKey == "" || correspondence.IsHandLoggedThread(threadKey) {
 		return false, nil
 	}
+	entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
+	if err != nil {
+		return false, err
+	}
+	args := []any{subject.Address, threadKey, entity}
+	entityArg := storekit.SQLf("$%d", len(args))
+	args = append(args, threadKey)
+	threadFilter := storekit.SQLf("$%d", len(args))
+	readable, err := readableEvidenceSQL(ctx, "SELECT id FROM activity WHERE thread_key="+threadFilter, &args)
+	if err != nil {
+		return false, err
+	}
+	visible := activityEntitySQL("a", entityArg) + " AND a.id IN (SELECT id FROM readable_evidence)"
+	ours := activityEntitySQL("ours", entityArg) + " AND ours.id IN (SELECT id FROM readable_evidence)"
 	var found bool
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, readable+`
 		SELECT EXISTS (
 			SELECT 1
 			  FROM activity a
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.thread_key = $2
 			   AND a.archived_at IS NULL
+			   AND `+visible+`
 			   AND `+correspondence.AuthenticatedInboundSQL("a")+`
 			   AND p.role IN ('to', 'cc')
 			   AND $1 <> '' AND lower(p.address) = lower($1)
@@ -213,10 +271,11 @@ func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 			         JOIN activity_participant op ON op.activity_id = ours.id
 			        WHERE `+correspondence.ConversationSQL("ours", "a")+`
 			          AND `+correspondence.OurOutboundSQL("ours")+`
+			          AND `+ours+`
 			          AND ours.captured_by LIKE 'connector:%'
 			          AND op.role = 'from'
 			          AND op.user_id IS NOT NULL)
-		)`, subject.Address, threadKey).Scan(&found)
+		)`, args...).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read whether the recipient was copied on this thread: %w", err)
 	}
@@ -239,8 +298,18 @@ func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 // Two writers of one invariant either share a helper or say why they do not —
 // this is the helper.
 func wroteToUsWithin(ctx context.Context, tx pgx.Tx, subject subjectRef, since time.Time) (bool, error) {
+	entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
+	if err != nil {
+		return false, err
+	}
+	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, since, entity}
+	entityArg := storekit.SQLf("$%d", len(args))
+	visible, err := activityEvidenceSQL(ctx, entityArg, &args)
+	if err != nil {
+		return false, err
+	}
 	var found bool
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1
 			  FROM activity a
@@ -248,8 +317,9 @@ func wroteToUsWithin(ctx context.Context, tx pgx.Tx, subject subjectRef, since t
 			 WHERE a.direction = 'inbound'
 			   AND a.archived_at IS NULL
 			   AND `+occurredday.FromSQL("a", "$6")+`
+			   AND `+visible+`
 			   AND `+authorIsTheSubject+`
-		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, since).Scan(&found)
+		)`, args...).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read what this contact sent us: %w", err)
 	}
@@ -257,7 +327,8 @@ func wroteToUsWithin(ctx context.Context, tx pgx.Tx, subject subjectRef, since t
 }
 
 // authorIsTheSubject is the ONE spelling of "this recipient wrote this
-// message", shared by the thread arm and the window arm.
+// message", shared by the thread arm, the window arm and the derived
+// qualifying event (inboundQualifyingEvent).
 //
 // Held by: TestBeingCopiedOnAThreadIsNotWritingIntoIt (authorizeresolve_integration_test.go)
 // and TestAFiledActivityIsNotSomethingTheContactWrote (authorizevalidators_integration_test.go)
@@ -285,8 +356,10 @@ const authorIsTheSubject = `(p.role = 'from' AND ` + participantIsTheSubject + `
 // the role. The participant row p names this recipient by record, by bare
 // address or by channel account. copiedOnThisMatter does not read it, because
 // a relink can repoint the record. Same placeholders as authorIsTheSubject.
+// A recipient with no record carries an empty ID, which must not reach a uuid
+// cast.
 const participantIsTheSubject = `(
-			            ($1 = 'contact' AND p.contact_id = $2::uuid)
+			            ($1 = 'contact' AND p.contact_id = NULLIF($2::text, '')::uuid)
 			         OR ($3 <> '' AND p.contact_id IS NULL AND lower(p.address) = lower($3))
 			         OR ($5 <> '' AND p.contact_id IS NULL AND p.channel_user_id = $5 AND a.channel_provider = $4)
 			       )`
@@ -323,170 +396,9 @@ func liveDealInLinks(ctx context.Context, tx pgx.Tx, links []ids.UUID, subject s
 }
 
 // liveStakeholderSQL is "deal d is open and the contact bound to $2 is a
-// current stakeholder on it, through relationship r".
-//
-// It reads both end markers on the edge, and they are different facts.
-// ended_at is a business date somebody types. archived_at is how the edge is
-// removed: every delete and every cascade (contact archive, merge, deal archive)
-// writes archived_at and leaves ended_at alone. With only ended_at, a
-// stakeholder removed from the deal would keep supporting mail about it.
-const liveStakeholderSQL = `d.status = 'open'
+// current stakeholder on it, through relationship r". An archived edge and an
+// edge whose End day has arrived both stop supporting mail about the deal.
+var liveStakeholderSQL = `d.status = 'open'
 			   AND d.archived_at IS NULL
-			   AND r.kind = 'deal_stakeholder'
-			   AND r.contact_id = $2::uuid
-			   AND r.ended_at IS NULL
-			   AND r.archived_at IS NULL`
-
-// requestedNegotiation reports whether one of these deals is a negotiation the
-// recipient asked for. The deal is open and the recipient a current
-// stakeholder. The record shows them asking about that same deal. A deal we created is no permission,
-// and a request about one deal does not carry another.
-//
-// Asking about the deal is one of three things, none bounded by age while the
-// deal is open, and none dated in the future:
-//   - mail they wrote that a connector captured and whose sender was
-//     authenticated, or a captured meeting they took part in
-//     (capturedMeetingSQL), filed on the deal. A hand-typed activity is not;
-//   - a request recorded by hand that names the deal (about_deal_id), which is
-//     also where a rep's confirmation from the review form lands, so it is
-//     asked once and reused;
-//   - the acquisition request the contact came in with, when it cites the deal.
-//
-// The two request arms count a request a merge carried over only for its own
-// addresses (requestCoversSQL).
-func requestedNegotiation(ctx context.Context, tx pgx.Tx, deals []ids.UUID, subject subjectRef) (bool, error) {
-	if len(deals) == 0 || subject.Kind != entityContact {
-		return false, nil
-	}
-	var found bool
-	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1
-			  FROM deal d
-			  JOIN relationship r ON r.deal_id = d.id
-			 WHERE d.id = ANY($6)
-			   AND `+liveStakeholderSQL+`
-			   AND (
-			     EXISTS (
-			       SELECT 1
-			         FROM activity_link l
-			         JOIN activity a ON a.id = l.activity_id
-			         JOIN activity_participant p ON p.activity_id = a.id
-			        WHERE l.entity_type = 'deal' AND l.deal_id = d.id
-			          AND a.archived_at IS NULL
-			          AND ((`+correspondence.AuthenticatedInboundSQL("a")+` AND `+authorIsTheSubject+`)
-			               OR (`+capturedMeetingSQL("$10")+` AND `+participantIsTheSubject+`)))
-			  OR EXISTS (
-			       SELECT 1 FROM consent_qualifying_event q
-			        WHERE q.contact_id = $2::uuid
-			          AND q.about_deal_id = d.id
-			          AND q.kind = ANY($7::text[])
-			          AND q.occurred_at <= $9
-			          AND q.retracted_at IS NULL
-			          AND `+requestCoversSQL("q.recorded_for_addresses", "$3")+`)
-			  OR EXISTS (
-			       SELECT 1 FROM contact_acquisition_evidence e
-			        WHERE e.contact_id = $2::uuid
-			          AND e.source_entity_type = 'deal' AND e.source_entity_id = d.id
-			          AND e.kind = ANY($8::text[])
-			          AND coalesce(e.occurred_at, e.captured_at) <= $9
-			          AND e.request_retracted_at IS NULL
-			          AND `+requestCoversSQL("e.recorded_for_addresses", "$3")+`))
-		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID,
-		deals, handRecordedRequestKinds, followupRequests.acquisitionKinds,
-		time.Now().Add(clockSkewAllowance), time.Now()).Scan(&found)
-	if err != nil {
-		return false, fmt.Errorf("consent: read whether the contact asked about this deal: %w", err)
-	}
-	return found, nil
-}
-
-// handRecordedRequestKinds are the hand-recorded exchanges a deal follow-up
-// reads: the contact asking, or the rep meeting them about it.
-var handRecordedRequestKinds = []string{KindRequestedBySubject, kindInPerson}
-
-// requestScope names which records count as a request for one kind of message.
-type requestScope struct {
-	acquisitionKinds []string
-	eventKinds       []string
-	// quoteOnly keeps only events whose request was for a quote.
-	quoteOnly bool
-	// perDeal keeps only requests about the deal asked about, or naming no
-	// deal. A request about another deal is not this message's request.
-	perDeal bool
-}
-
-// followupRequests and quoteRequests are the two scopes the validators read.
-// Permission given in person, a callback asked for and a form enquiry support a
-// follow-up. Only a request for a quote or meeting supports a quote.
-var (
-	followupRequests = requestScope{
-		acquisitionKinds: []string{"requested_quote_or_meeting", "in_person_permission"},
-		eventKinds:       []string{KindRequestedBySubject, KindInquiry},
-	}
-	quoteRequests = requestScope{
-		acquisitionKinds: []string{"requested_quote_or_meeting"},
-		eventKinds:       []string{KindRequestedBySubject},
-		quoteOnly:        true,
-		perDeal:          true,
-	}
-)
-
-// requestOnRecord reports whether the record holds this contact asking to hear
-// from us, within scope. That is a request a rep recorded, a form enquiry, or
-// acquisition evidence of a request.
-//
-// A request carried over by a merge covers only the addresses of the record it
-// was made on (requestCoversSQL).
-//
-// No age limit: a request covers the follow-up at the agreed timing. A stop or
-// a retraction ends it (RetractQualifyingEvent, and the acquisition request's
-// own retraction). occurred_at is caller-stated, so a future date does not count.
-func requestOnRecord(ctx context.Context, tx pgx.Tx, subject subjectRef, scope requestScope) (bool, error) {
-	_, found, err := latestRequest(ctx, tx, subject, scope, ids.UUID{})
-	return found, err
-}
-
-// latestRequest is requestOnRecord with the date of the newest request in
-// scope, which a quote puts against a marketing objection. A perDeal scope
-// reads only requests about deal, or naming no deal; a zero deal reads only
-// the ones naming none. So a newer request for one quote does not lift an
-// objection for another quote's deal.
-func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope requestScope, deal ids.UUID) (time.Time, bool, error) {
-	if subject.Kind != entityContact {
-		// Both tables are keyed on contact_id; a lead holds neither.
-		return time.Time{}, false, nil
-	}
-	var newest *time.Time
-	err := tx.QueryRow(ctx, `
-		SELECT max(asked_at) FROM (
-			SELECT coalesce(e.occurred_at, e.captured_at) AS asked_at
-			  FROM contact_acquisition_evidence e
-			 WHERE e.contact_id = $1::uuid
-			   AND e.kind = ANY($4::text[])
-			   AND coalesce(e.occurred_at, e.captured_at) <= $2
-			   AND e.request_retracted_at IS NULL
-			   AND (NOT $6 OR e.source_entity_type IS DISTINCT FROM 'deal'
-			        OR e.source_entity_id = $7::uuid)
-			   AND `+requestCoversSQL("e.recorded_for_addresses", "$8")+`
-			UNION ALL
-			SELECT q.occurred_at
-			  FROM consent_qualifying_event q
-			 WHERE q.contact_id = $1::uuid
-			   AND q.kind = ANY($3::text[])
-			   AND q.occurred_at <= $2
-			   AND q.retracted_at IS NULL
-			   AND (q.asks_for_quote OR NOT $5)
-			   AND (NOT $6 OR q.about_deal_id IS NULL OR q.about_deal_id = $7::uuid)
-			   AND `+requestCoversSQL("q.recorded_for_addresses", "$8")+`
-		) requests`, subject.ID, time.Now().Add(clockSkewAllowance),
-		scope.eventKinds, scope.acquisitionKinds, scope.quoteOnly, scope.perDeal, zeroUUIDAsNull(deal),
-		subject.Address).Scan(&newest)
-	if err != nil {
-		return time.Time{}, false, fmt.Errorf("consent: read what this contact asked for: %w", err)
-	}
-	if newest == nil {
-		return time.Time{}, false, nil
-	}
-	return *newest, true, nil
-}
+			   AND ` + dealseat.CurrentSQL("r") + `
+			   AND r.contact_id = $2::uuid`

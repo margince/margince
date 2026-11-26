@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -28,29 +29,36 @@ import (
 //   - OpenRouter's catalogue is public, so listing proves nothing about a key;
 //     GET /api/v1/key is its authenticated no-cost read, and its catalogue —
 //     asked for every output modality, or Jev is left out — is the list.
+//   - Google's Decisions API answers a bad key with 400, as all of Gemini does,
+//     so its key is asked of GET /v1beta/models beside it: authenticated and
+//     free. Google documents one decision model, and that is the list.
 //   - Any other server is asked the decision POST with an empty body: a 401/403
 //     is a refused key, and a 400 says only that it answered without refusing —
 //     an unconfirmed pass. No model is named, so nothing is billed.
 
-// decisionHost is which of those three a decision endpoint is.
+// decisionHost is which of those four a decision endpoint is.
 type decisionHost int
 
 const (
 	decisionHostWire decisionHost = iota
 	decisionHostTypeSafe
 	decisionHostOpenRouter
+	decisionHostGoogle
 )
 
 // decisionHostFor classifies an endpoint. `jev_compatible` on OpenRouter is
-// recognised by host, by the same predicate its routing preferences use; `jev`
-// is TypeSafe's API by contract, so whatever host it is pointed at is read as
-// serving TypeSafe's routes, and its key goes to no other route.
+// recognised by host, by the same predicate its routing preferences use.
+// `jev` is TypeSafe's API by contract, so its key goes to TypeSafe's routes on
+// whatever host it is pointed at. Google's dialect is Google's API the same way.
 func decisionHostFor(provider, endpoint string) decisionHost {
 	if provider == providerJevCompatible && IsOpenRouterHost(endpoint) {
 		return decisionHostOpenRouter
 	}
 	if provider == providerJev {
 		return decisionHostTypeSafe
+	}
+	if d, _ := providerByName(provider); d.decisionDialect == dialectGemini {
+		return decisionHostGoogle
 	}
 	return decisionHostWire
 }
@@ -85,12 +93,6 @@ func splitEndpoint(endpoint string) (origin, path string, err error) {
 		return "", "", fmt.Errorf("ai: decision endpoint %q is not a URL", endpoint)
 	}
 	return parsed.Scheme + "://" + parsed.Host, parsed.Path, nil
-}
-
-func (c *decisionClient) authorize(r *http.Request) {
-	if c.apiKey != "" {
-		r.Header.Set("Authorization", "Bearer "+c.apiKey)
-	}
 }
 
 // typeSafeModels lists TypeSafe's served names. The API lists aliases
@@ -169,6 +171,24 @@ func (c *decisionClient) openRouterDecisionModels(ctx context.Context) ([]model.
 	return models, nil
 }
 
+// googleKeyCheck reads Google's model list with the key. It is listed under the
+// gemini vendor, whose refusal the key test reads by its API_KEY_INVALID code.
+func (c *decisionClient) googleKeyCheck(ctx context.Context) error {
+	endpoint, err := originURL(c.url, "/v1beta/models?pageSize=1")
+	if err != nil {
+		return err
+	}
+	_, err = getListBody(ctx, c.http, geminiListVendor, endpoint, signedBy(c.authorize))
+	return err
+}
+
+// googleDecisionModels is the one model Google documents. Whether its
+// /v1beta/models names it is unconfirmed, and a list without it would hide the
+// model the lane binds.
+func googleDecisionModels() []model.Info {
+	return []model.Info{{ID: geminiDecisionModel, Lane: model.LaneDecisions}}
+}
+
 // wireProbe sends the decision POST an empty body. A 401/403 is a refused key;
 // a 400 or 422 means the server answered and did not refuse it — which is all
 // the wire can prove, since a server may validate the body before the key, and
@@ -180,7 +200,7 @@ func (c *decisionClient) wireProbe(ctx context.Context) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	c.authorize(req)
-	resp, err := noRedirect(c.http).Do(req)
+	resp, err := netguard.NoRedirect(c.http).Do(req)
 	if err != nil {
 		return fmt.Errorf("ai: decision probe: %w", err)
 	}
@@ -207,6 +227,8 @@ func (c *decisionClient) decisionModels(ctx context.Context, provider string) ([
 	case decisionHostOpenRouter:
 		models, err := c.openRouterDecisionModels(ctx)
 		return models, true, err
+	case decisionHostGoogle:
+		return googleDecisionModels(), true, nil
 	default:
 		return nil, false, nil
 	}
@@ -221,6 +243,8 @@ func (c *decisionClient) probeKey(ctx context.Context, provider string) (count i
 		return len(models), err == nil, err
 	case decisionHostOpenRouter:
 		return 0, false, c.openRouterKeyCheck(ctx)
+	case decisionHostGoogle:
+		return 0, false, c.googleKeyCheck(ctx)
 	default:
 		return 0, false, c.wireProbe(ctx)
 	}

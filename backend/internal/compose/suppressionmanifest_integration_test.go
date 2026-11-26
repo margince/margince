@@ -21,7 +21,7 @@ import (
 // replay would claim to cover erasures the list no longer holds.
 func TestAnExportFromARestoredListNeverMovesTheManifestBack(t *testing.T) {
 	e := integration.Setup(t)
-	eraser := privacy.NewEraser(InstallationDB(e.Pool)).WithBlobstore(blobstore.NewMemory())
+	eraser := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(blobstore.NewMemory())
 	older := time.Date(2026, 1, 5, 9, 0, 0, 0, time.UTC)
 	newer := time.Date(2026, 3, 9, 14, 30, 0, 0, time.UTC)
 	seedSuppressionAt(t, "frueher@betroffene.example", older)

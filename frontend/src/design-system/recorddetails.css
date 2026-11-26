@@ -1,18 +1,17 @@
-/* RecordDetails: flat groups under the record's head. A group is a small
-   grey label over a flat `FactList`, parted from the next by a hairline;
-   nothing is boxed but the footnote. */
+/* RecordDetails: each group is a pane one step up the ladder, a bold label over
+   a flat `FactList`. The footnote shares the shape; "Show more" stays bare. */
 
 .recorddetails {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
   min-inline-size: 0;
 }
-/* Space alone read as one long list; the rule says where a group ends. */
-.recorddetails-group + .recorddetails-group,
-.recorddetails-foot {
-  padding-block-start: var(--space-4);
-  border-block-start: 1px solid var(--borderSubtle);
+.recorddetails-group,
+.recorddetails-note {
+  padding: var(--space-3);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-md);
 }
 .recorddetails-group {
   display: flex;
@@ -20,12 +19,42 @@
   gap: var(--space-1);
   min-inline-size: 0;
 }
-/* Scoped under the group so it outranks the heading's own size rule. */
-.recorddetails-group > .recorddetails-label.heading {
+.recorddetails-labelline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   margin-block-end: var(--space-1);
+}
+.recorddetails-labelline:last-child {
+  margin-block-end: 0;
+}
+/* Scoped under the line so it outranks the heading's own size rule. */
+.recorddetails-labelline > .recorddetails-label.heading {
   font: var(--fontBodySmall);
-  font-weight: var(--fontWeightMedium);
-  color: var(--textSecondary);
+  font-weight: var(--fontWeightBold);
+}
+.recorddetails-labelline > .btn.recorddetails-edit {
+  margin-inline-start: auto;
+  padding-block: 0;
+  font: var(--fontBodySmall);
+}
+/* A thumb gets a 44px target from a layer that draws nothing, so the line keeps its height.
+   Below, it stops at the first row (the line's margin and the group's gap); the rest goes above. */
+.recorddetails-edit {
+  position: relative;
+}
+.recorddetails-edit::before {
+  content: "";
+  position: absolute;
+  inset-inline: calc((100% - max(44px, 100%)) / 2);
+  inset-block-end: calc(-2 * var(--space-1));
+  block-size: max(44px, 100%);
+  pointer-events: none;
+}
+@media (pointer: coarse) {
+  .recorddetails-edit::before {
+    pointer-events: auto;
+  }
 }
 .recorddetails-foot > .btn.recorddetails-toggle {
   padding-inline: 0;
@@ -33,16 +62,28 @@
 .recorddetails-toggle[aria-expanded="true"] > svg {
   transform: rotate(180deg);
 }
-/* A value's copy glyph is quiet like the chat glyph (callaction.css), and
-   takes no room until the pointer or focus is on its row, so at rest the
-   value has the whole column. */
+/* An edit pill keeps the row's own height below its value, so it never reaches
+   into the next row's pill. */
+.recorddetails .editable-value {
+  margin-block-end: 0;
+}
+/* A pencil's touch layer reaches a step past it; its row keeps that step free. */
+@media (pointer: coarse) {
+  .recorddetails .factlist-row:has(.editable-value-edit) {
+    padding-block: var(--space-2);
+  }
+}
+/* An address and its copy glyph share a line as wide as the address, so a
+   mark after them sits beside it when the column has room, else under it. */
+.recorddetails .contactlink-copyable {
+  display: inline-flex;
+  max-inline-size: 100%;
+  vertical-align: top;
+}
+/* A value's copy glyph (quiet in clipboardcopy.css) takes no room until the
+   pointer or focus is on its row, so at rest the value has the whole column. */
 .recorddetails .copy-action {
   display: inline-flex;
-}
-.recorddetails .copy-action .btn-icon:not(:hover, :focus-visible) {
-  border-color: transparent;
-  background: transparent;
-  color: var(--textSecondary);
 }
 @media (hover: hover) {
   .recorddetails .factlist-row:not(:hover, :focus-within) .copy-action {
@@ -52,10 +93,20 @@
 }
 .recorddetails-note {
   margin: 0;
-  padding: var(--space-3) var(--padCard);
-  border: 1px solid var(--groundEdge);
-  border-radius: var(--r-control);
   font: var(--fontBodySmall);
   color: var(--textPrimary);
   text-wrap: pretty;
+}
+/* The ask for edit access under the access row, a hairline below the facts. */
+.recorddetails-access {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+.recorddetails-access:not(:has(*)) {
+  display: none;
 }

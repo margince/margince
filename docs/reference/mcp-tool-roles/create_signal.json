@@ -1,0 +1,15 @@
+{
+  "tool": "change_attention",
+  "action": "create_signal",
+  "verb": "create_signal",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

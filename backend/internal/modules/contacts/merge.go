@@ -17,12 +17,13 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 // The §1.3 two-record merge (features/01, data-model §3.2): A→B relinks
@@ -66,6 +67,8 @@ const (
 	auditKeyRelinkedPhones        = "relinked_phones"
 	auditKeyRelinkedRelationships = "relinked_relationships"
 	auditKeyRelinkedActivityLinks = "relinked_activity_links"
+	// The single slots the merged-away contact won by a reviewer's preference.
+	auditKeyPreferred = "preferred_slots"
 )
 
 // filledColumns names the columns a merge filled on the survivor, for the
@@ -82,38 +85,6 @@ func heldNothing(filled map[string]any) map[string]any {
 		before[column] = nil
 	}
 	return before
-}
-
-// MergeSelfError maps to 422: a record cannot merge into itself.
-type MergeSelfError struct{}
-
-func (e *MergeSelfError) Error() string { return "source and target of a merge must differ" }
-
-// FieldFault refuses a merge whose source and target are the same record.
-func (e *MergeSelfError) FieldFault() (field, code, message string) {
-	return "target_id", "merge_self", e.Error()
-}
-
-// AlreadyMergedError maps to 409: the source was already merged away; the
-// pointer names where it went.
-type AlreadyMergedError struct {
-	Kind   string
-	IntoID ids.UUID
-}
-
-func (e *AlreadyMergedError) Error() string { return e.Kind + " is already merged" }
-
-// MergedTargetError maps to 422: the chosen survivor is itself archived
-// or merged away — nothing can merge INTO a dead record.
-type MergedTargetError struct{ Kind string }
-
-func (e *MergedTargetError) Error() string {
-	return "merge target " + e.Kind + " is archived; the survivor must be live"
-}
-
-// FieldFault refuses merging INTO a record that was itself already merged away.
-func (e *MergedTargetError) FieldFault() (field, code, message string) {
-	return "target_id", "merged_target", e.Error()
 }
 
 // relinkCounts is the event payload's accounting (events.md §contact.merged):
@@ -145,16 +116,15 @@ func (s *Store) MergeContact(ctx context.Context, sourceID, targetID ids.Contact
 		return crmcontracts.Contact{}, err
 	}
 	if sourceID == targetID {
-		return crmcontracts.Contact{}, &MergeSelfError{}
+		return crmcontracts.Contact{}, &recordmerge.MergeSelfError{}
 	}
 
-	active, err := s.activeColumns(ctx, contactEntity)
-	if err != nil {
-		return crmcontracts.Contact{}, err
-	}
 	var out crmcontracts.Contact
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, contactEntity)
+		if err != nil {
+			return err
+		}
 		out, err = s.mergeContactTx(ctx, tx, sourceID, targetID, ifVersion, active)
 		return err
 	})
@@ -168,34 +138,45 @@ func (s *Store) MergeContact(ctx context.Context, sourceID, targetID ids.Contact
 // concurrent merge(target→elsewhere) could archive the survivor
 // mid-merge, leaving relinked children pointing at a dead record.
 func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, ifVersion *int64, active []fieldcatalog.Column) (crmcontracts.Contact, error) {
-	out, _, err := s.mergeContactCarryingTx(ctx, tx, sourceID, targetID, ifVersion, active)
+	out, _, err := s.mergeContactCarryingTx(ctx, tx, sourceID, targetID, ifVersion, active, nil)
 	return out, err
 }
 
 // mergeContactCarryingTx is mergeContactTx answering what it did about the
-// merged-away contact's owner, for a caller that reports it.
-func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, ifVersion *int64, active []fieldcatalog.Column) (crmcontracts.Contact, *authz.OwnerAccessCarry, error) {
+// merged-away contact's owner, for a caller that reports it. prefer names the
+// member that wins each single slot (mergeprecedence.go).
+func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, ifVersion *int64,
+	active []fieldcatalog.Column, prefer MergePreference,
+) (crmcontracts.Contact, *authz.OwnerAccessCarry, error) {
 	// BEFORE LockPair, because recording a stop takes consent's lock and then
 	// reads the contact row. Locking the rows first and reaching for consent's
 	// lock later (inside carryStopsTx, below) inverts the order between the two
 	// transactions and deadlocks — see StopCarrier.LockStopsTx.
-	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier,
-		commsauthz.ContactStopSubject(sourceID),
-		commsauthz.ContactStopSubject(targetID)); err != nil {
+	if err := s.lockMergeSubjects(ctx, tx, []ids.UUID{sourceID.UUID, targetID.UUID}); err != nil {
+		return crmcontracts.Contact{}, nil, err
+	}
+	if err := screenPairMerge(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
 	_, tgtLock, err := storekit.LockPair(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID)
+	err = recordmerge.MissingIsConflict(err)
 	if err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
 	if ctx, err = admitDuplicatePairMerge(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
-	src, tgt, err := mergePair(ctx, tx, contactEntity, sourceID, targetID, ifVersion, readContactMergeState)
+	if err := s.refuseMergeWithDependents(ctx, tx, extdecl.Contact, sourceID.UUID); err != nil {
+		return crmcontracts.Contact{}, nil, err
+	}
+	src, tgt, err := recordmerge.Pair(ctx, tx, contactEntity, sourceID, targetID, ifVersion, readContactMergeState)
 	if err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
 	if err := s.bindRequestsToTheirAddressesTx(ctx, tx, sourceID, targetID); err != nil {
+		return crmcontracts.Contact{}, nil, err
+	}
+	if err := yieldPreferredSlots(ctx, tx, sourceID, targetID, prefer); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
 	counts, err := relinkContactReferences(ctx, tx, sourceID, targetID)
@@ -214,16 +195,11 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 	if err := moveDedupeCandidates(ctx, tx, entityContact, sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
-	p := buildSurvivorshipPatch(tgt, src)
-	if !p.Empty() {
-		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {
-			return crmcontracts.Contact{}, nil, fmt.Errorf("apply survivorship fill: %w", err)
-		}
+	if err := settleContactMerge(ctx, tx, tgtLock, buildSurvivorshipPatch(tgt, src, sourceID, prefer),
+		sourceID, targetID, counts, prefer.wonBy(sourceID)); err != nil {
+		return crmcontracts.Contact{}, nil, err
 	}
-	if err := archiveMergedAway(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
-		return crmcontracts.Contact{}, nil, fmt.Errorf("retire merged-away contact: %w", err)
-	}
-	if err := auditContactMerge(ctx, tx, sourceID, targetID, counts, p); err != nil {
+	if err := carryImpersonationWarningTx(ctx, tx, sourceID, targetID); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
 	out, err := readContact(ctx, tx, targetID, storekit.LiveOnly, active)
@@ -233,8 +209,31 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 	return out, carry, nil
 }
 
+// settleContactMerge applies the survivorship patch, retires the merged-away
+// contact and audits the merge.
+//
+//gate:parent-version-door
+func settleContactMerge(ctx context.Context, tx pgx.Tx, tgtLock storekit.RowLock, p *storekit.Patch,
+	sourceID, targetID ids.ContactID, counts relinkCounts, won []string,
+) error {
+	if !p.Empty() {
+		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {
+			return fmt.Errorf("apply survivorship fill: %w", err)
+		}
+	} else if err := storekit.TouchLocked(ctx, tx, tgtLock); err != nil {
+		return fmt.Errorf("move the survivor's version: %w", err)
+	}
+	if err := carryKeptProvenance(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID, p.After()); err != nil {
+		return err
+	}
+	if err := recordmerge.ArchiveMergedAway(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
+		return fmt.Errorf("retire merged-away contact: %w", err)
+	}
+	return auditContactMerge(ctx, tx, sourceID, targetID, counts, p, won)
+}
+
 // auditContactMerge records the merge on both rows and emits contact.merged.
-func auditContactMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, counts relinkCounts, p *storekit.Patch) error {
+func auditContactMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, counts relinkCounts, p *storekit.Patch, won []string) error {
 	auditID, err := storekit.Audit(ctx, tx, "merge", contactEntity, sourceID.UUID,
 		map[string]any{auditKeyMergedInto: nil},
 		map[string]any{
@@ -256,6 +255,9 @@ func auditContactMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Co
 	after := map[string]any{
 		auditKeyMergedFrom: sourceID.UUID, auditKeyRelinkedEmails: counts.Emails, auditKeyRelinkedPhones: counts.Phones,
 		auditKeyRelinkedRelationships: counts.Relationships, auditKeyRelinkedActivityLinks: counts.ActivityLinks,
+	}
+	if len(won) > 0 {
+		after[auditKeyPreferred] = won
 	}
 	maps.Copy(before, p.Before())
 	maps.Copy(after, p.After())
@@ -283,6 +285,9 @@ func (s *Store) carryContactSatellitesTx(ctx context.Context, tx pgx.Tx, sourceI
 		{"consent links", func() error { return s.carryConsentSatellitesTx(ctx, tx, from, to) }},
 		{"introduction asks", func() error { return s.carryIntrosTx(ctx, tx, sourceID, targetID) }},
 		{"grants", func() error { return s.carryGrantsTx(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID) }},
+		{"resolved signals", func() error {
+			return s.carrySignalResolutionsTx(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID)
+		}},
 	}
 	for _, step := range steps {
 		if err := step.run(); err != nil {
@@ -308,20 +313,6 @@ func contactMergedPayload(sourceID, targetID ids.ContactID, counts relinkCounts)
 			ActivityLinks: counts.ActivityLinks,
 		},
 	}
-}
-
-// buildSurvivorshipPatch folds A's values onto B fill-only: B never loses
-// what it already holds; only its empty fields take A's non-empty values.
-func buildSurvivorshipPatch(target, source crmcontracts.Contact) *storekit.Patch {
-	p := storekit.NewPatch()
-	fillString(p, columnFirstName, target.FirstName, source.FirstName)
-	fillString(p, columnLastName, target.LastName, source.LastName)
-	fillString(p, "title", target.Title, source.Title)
-	if target.ConvertedFromLeadId == nil && source.ConvertedFromLeadId != nil {
-		p.Set("converted_from_lead_id", nil, ids.UUID(*source.ConvertedFromLeadId))
-	}
-	fillMergeAddress(p, target.Address, source.Address)
-	return p
 }
 
 func relinkContactEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) (int64, error) {
@@ -363,45 +354,6 @@ func relinkWorksWithEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids
 		mergeWorksWithSource, args)
 }
 
-// relinkLinkRows re-homes the pure link tables (activity_link,
-// list_member, taggable): a link the survivor already holds stands, and the
-// retired copy is dropped. activity_link has no provenance; the list note is
-// kept, and the earlier adder or tagger of a duplicate is not.
-func relinkLinkRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID) (int64, error) {
-	column, source, duplicate, err := mergeActivityPredicates(entityType)
-	if err != nil {
-		return 0, err
-	}
-	args := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, recordKindParam: entityType}
-	if _, err := tx.Exec(ctx, `DELETE FROM activity_link a
- WHERE `+source+` AND `+duplicate, args); err != nil {
-		return 0, err
-	}
-	tag, err := tx.Exec(ctx, `UPDATE activity_link a SET `+column+` = @target WHERE `+source, args)
-	if err != nil {
-		return 0, err
-	}
-	relinked := tag.RowsAffected()
-
-	// Spelled out per table: the company-merge coverage census reads these
-	// statements, and a table name assembled at runtime is invisible to it.
-	for _, stmt := range []string{
-		`UPDATE list_member b SET note = a.note FROM list_member a
- WHERE ` + mergeMembershipSource + ` AND ` + mergeMembershipTarget + ` AND b.list_id = a.list_id AND ` + mergeListNoteFill,
-		`DELETE FROM list_member a
- WHERE ` + mergeMembershipSource + ` AND ` + mergeListDuplicate,
-		`UPDATE list_member a SET entity_id = @target WHERE ` + mergeMembershipSource,
-		`DELETE FROM taggable a
- WHERE ` + mergeMembershipSource + ` AND ` + mergeTagDuplicate,
-		`UPDATE taggable a SET entity_id = @target WHERE ` + mergeMembershipSource,
-	} {
-		if _, err := tx.Exec(ctx, stmt, args); err != nil {
-			return 0, err
-		}
-	}
-	return relinked, nil
-}
-
 // mergeConsent carries the merged-away contact's consent onto the survivor
 // (consentcarry.go). The contact merge re-homes the proof rows with the state:
 // the delivery gate reads the double-opt-in proof off the live record.
@@ -411,23 +363,6 @@ func mergeConsent(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Contact
 		return err
 	}
 	return carryConsent(ctx, tx, consentCarryContactMerge, sourceID.UUID, targetID.UUID, by)
-}
-
-// archiveMergedAway retires the source row: archived + the redirect
-// pointer, in one statement so a concurrent merge of the same source
-// loses the race instead of double-writing.
-func archiveMergedAway(ctx context.Context, tx pgx.Tx, table string, sourceID, targetID ids.UUID) error {
-	tag, err := tx.Exec(ctx,
-		`UPDATE `+table+` SET archived_at = $3, merged_into_id = $2
-		 WHERE id = $1 AND archived_at IS NULL`,
-		sourceID, targetID, time.Now().UTC())
-	if err != nil {
-		return err
-	}
-	if tag.RowsAffected() == 0 {
-		return apperrors.ErrConflict
-	}
-	return nil
 }
 
 // fillString sets a nullable text column from the source only when the

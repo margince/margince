@@ -77,7 +77,7 @@ func contactKeys(emails []ContactEmailInput, social map[string]any) storekit.Ide
 
 // linkedInIdentity is the profile URL a social map names, in the spelling
 // contactSocialInputs stores. A handle that is not a readable profile URL is
-// stored as typed and names nobody, so it is no key.
+// refused by that writer, so it is no key.
 func linkedInIdentity(social map[string]any) (string, bool) {
 	rows, err := contactSocialInputs(social)
 	if err != nil {

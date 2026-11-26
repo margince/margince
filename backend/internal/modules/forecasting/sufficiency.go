@@ -57,6 +57,9 @@ const (
 	// AbsenceInsufficientBasis means neither a call nor four completed periods.
 	// There is nothing honest to compare the pipeline against.
 	AbsenceInsufficientBasis SufficiencyAbsence = "insufficient_basis"
+	// AbsenceCallWithheld means fewer than four completed periods, and a call
+	// this reader may not see. It does not say whether a call exists.
+	AbsenceCallWithheld SufficiencyAbsence = "call_withheld"
 	// AbsenceInsufficientHistory means fewer than twenty closed deals, so no
 	// conversion rate is worth dividing by.
 	AbsenceInsufficientHistory SufficiencyAbsence = "insufficient_history"
@@ -85,6 +88,9 @@ type Sufficiency struct {
 	// ratio without this package choosing a rounding for them. Zero needed is
 	// full coverage rather than a division by zero.
 	CoverageBp int64
+	// ComparableUnpriced is, for a historical median, the won deals each of
+	// its comparable periods leaves out. Empty for any other basis.
+	ComparableUnpriced []int
 }
 
 // ConversionHistory is what the sufficiency read needs from outside itself.
@@ -101,17 +107,23 @@ type ConversionHistory struct {
 	// ComparableWon is the actual Won of completed comparable periods, newest
 	// first. Four are needed for a median.
 	ComparableWon []int64
+	// ComparableUnpriced is, per period of ComparableWon, how many won deals
+	// its total leaves out for want of an amount or an exchange rate.
+	ComparableUnpriced []int
 }
 
 // AssessSufficiency answers whether the open pipeline supports the reference.
 //
-// call is the current manager call, or nil. It OUTRANKS history: a manager who
-// has written a number down has said what this period is for, and a median of
-// what happened before is the fallback for when nobody has.
+// call is the current manager call this reader sees. It OUTRANKS history. A
+// manager who wrote a number down has said what this period is for. A median
+// of past periods is the fallback for when nobody has.
 func AssessSufficiency(
-	readings Readings, history ConversionHistory, call *int64,
+	readings Readings, history ConversionHistory, call SeenCall,
 ) (Sufficiency, error) {
-	basis, reference, ok := referenceLanding(history, call)
+	basis, reference, ok := referenceLanding(history, call.Amount)
+	if !ok && call.Withheld {
+		return Sufficiency{Absent: AbsenceCallWithheld}, nil
+	}
 	if !ok {
 		return Sufficiency{Absent: AbsenceInsufficientBasis}, nil
 	}
@@ -149,6 +161,9 @@ func AssessSufficiency(
 		RemainingToSupportMinor: remaining,
 		NeededOpenMinor:         needed,
 		CurrentOpenMinor:        readings.OpenMinor,
+	}
+	if basis == BasisHistoricalMedian {
+		out.ComparableUnpriced = history.ComparableUnpriced[:min(len(history.ComparableUnpriced), comparablePeriods)]
 	}
 	if needed == 0 {
 		// Nothing needed is covered, whatever is open. Reported as full rather

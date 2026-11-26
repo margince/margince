@@ -150,7 +150,7 @@ func (e *qualifyingEnv) attendedMeeting(t *testing.T, offset time.Duration, capt
 // attendedMeetingAt plants a captured meeting the subject was in at a stated
 // instant, read as a day entry when day is set. The time is the fixture's,
 // never the database's now(), so a test can read it on a clock of its own.
-func (e *qualifyingEnv) attendedMeetingAt(t *testing.T, at time.Time, day bool) {
+func (e *qualifyingEnv) attendedMeetingAt(t *testing.T, at time.Time, day bool) ids.UUID {
 	t.Helper()
 	precision := "instant"
 	if day {
@@ -170,6 +170,7 @@ func (e *qualifyingEnv) attendedMeetingAt(t *testing.T, at time.Time, day bool) 
 	}); err != nil {
 		t.Fatalf("planting a meeting at %s: %v", at, err)
 	}
+	return id
 }
 
 // The ordinary case, spelled out at the call sites: a calendar the mailbox owner
@@ -203,6 +204,44 @@ func TestAMeetingThatHappenedMakesCorrespondenceLawful(t *testing.T) {
 	if got.Qualifying == nil || got.Qualifying.Kind != KindMeeting {
 		t.Fatalf("qualifying event %+v, want a %s — the basis has to name the meeting it was read "+
 			"from, or nothing can be stamped for Art 5(2)", got.Qualifying, KindMeeting)
+	}
+}
+
+// relinkedMeeting plants a captured meeting the subject was never in: a member
+// relinked somebody else's attendee row onto them. The row carries relinked_at,
+// so it is the member's edit, not the calendar's record of who attended.
+func (e *qualifyingEnv) relinkedMeeting(t *testing.T, offset time.Duration) {
+	t.Helper()
+	id := ids.NewV7()
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity (id, kind, source, occurred_at, captured_by, meeting_status, counterparty_email)
+			VALUES ($1, 'meeting', 'gcal', now() + $2::interval, $3, NULLIF($4, ''), NULLIF($5, ''))`,
+			id, fmt.Sprintf("%d seconds", int(offset.Seconds())), capturedMeeting, noAcceptanceState, namesNobody); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, contact_id, role, relinked_at)
+			VALUES ($1, $2, 'attendee', now())`, id, e.contact)
+		return err
+	}); err != nil {
+		t.Fatalf("planting a relinked meeting at %s: %v", offset, err)
+	}
+}
+
+// A meeting the subject was relinked onto is no qualifying ground. The attendee
+// row is a member's edit, not the calendar's record that the contact attended.
+//
+// Mutation: drop the `p.relinked_at IS NULL` guard from meetingQualifyingEvent
+// and this fails, the verdict allowed on a meeting the contact never sat in.
+func TestARelinkedMeetingParticipantIsNoGround(t *testing.T) {
+	e := setupQualifying(t)
+
+	e.relinkedMeeting(t, -24*time.Hour)
+
+	if got := e.verdict(t); got.State == VerdictAllowed {
+		t.Fatalf("verdict %q for a meeting the contact was relinked onto, want not allowed — a "+
+			"member's edit is not evidence the contact attended", got.State)
 	}
 }
 
@@ -308,15 +347,15 @@ func TestAMeetingIsJudgedOnTheVerdictsClock(t *testing.T) {
 	}
 }
 
-// A meeting stamped as evidence while it was still ahead, as the send path once
-// did, does not count until its time is reached.
+// A retained stamp for a future meeting follows the actual meeting time.
 func TestAMeetingStampedBeforeItHappensCountsOnlyOnceItIsPast(t *testing.T) {
 	e := setupQualifying(t)
 	meetsAt := clocktest.Now(t).Add(time.Hour)
+	meeting := e.attendedMeetingAt(t, meetsAt, false)
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		return stampQualifyingEvent(e.ctx, tx, e.contact.String(), QualifyingEvent{
 			Kind: KindMeeting, OccurredAt: meetsAt,
-			SourceEntityType: "activity", SourceEntityID: ids.NewV7().String(),
+			SourceEntityType: "activity", SourceEntityID: meeting.String(),
 		}, sourceKindDerived, "user:"+e.user.String())
 	}); err != nil {
 		t.Fatalf("stamping the meeting: %v", err)
@@ -357,5 +396,48 @@ func TestSomebodyWithNoMeetingIsStillRefused(t *testing.T) {
 	if got := e.verdict(t); got.State == VerdictAllowed {
 		t.Fatalf("verdict %q (%s) for somebody with nothing on the record, want not allowed — "+
 			"default-deny is the whole posture", got.State, got.Reason)
+	}
+}
+
+// Capture stores a received mail's sender by bare address. The derived arm reads
+// it through the shared author rule. The message is then a request from the
+// recipient at that address, and from no other address on the contact.
+func TestASenderAddressOnAFiledMessageIsTheRecipientsRequest(t *testing.T) {
+	e := setupQualifying(t)
+	const sender = "pat.quinn@orchardline.example"
+	id, now := ids.NewV7(), clocktest.Now(t)
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity (id, kind, direction, source, occurred_at, captured_by)
+			VALUES ($1, 'email', 'inbound', 'gmail', $2, 'connector:gmail:x')`, id, now.Add(-time.Hour)); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, id, e.contact); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'from')`, id, sender)
+		return err
+	}); err != nil {
+		t.Fatalf("planting a captured mail filed under the contact: %v", err)
+	}
+	derivedFor := func(address string) eventSource {
+		var source eventSource
+		if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+			var err error
+			_, source, err = latestQualifyingEvent(e.ctx, tx, e.contact.String(),
+				now.Add(-defaultReplyWindow), now, &address, ids.Nil)
+			return err
+		}); err != nil {
+			t.Fatalf("reading the qualifying event for %s: %v", address, err)
+		}
+		return source
+	}
+	if got := derivedFor(sender); got != sourceDerived {
+		t.Errorf("the mail from %s is source %d for that address, want derived", sender, got)
+	}
+	if got := derivedFor("pat.private@orchardline.example"); got != sourceNone {
+		t.Errorf("the mail from %s counts for another address of the contact (source %d)", sender, got)
 	}
 }

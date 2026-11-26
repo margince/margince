@@ -25,7 +25,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -47,16 +46,10 @@ func (s *Store) SummaryFor(
 		State:     crmcontracts.FinanceSummaryStateNoConnection,
 	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		// The account itself is row-scoped, and a finance grant is not a
-		// licence to learn that a company exists: an account the caller
-		// cannot see answers 404 before any figure is read.
-		//
-		// EnsureVisible alone is not enough. Under row_scope=all it skips the
-		// query entirely — correctly, since everything is visible — so an id
-		// naming no company would come back as a summary of the
-		// workspace's provider rather than a 404. The existence probe is what
-		// makes a made-up id answer the same way a hidden one does.
-		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
+		// A finance grant is not a licence to learn that a company exists, nor
+		// to read a ledger the caller does not own. Either answers 404 before
+		// any figure is read, as a made-up id does.
+		if err := ensureLedgerVisible(ctx, tx, companyID.UUID, false); err != nil {
 			return err
 		}
 		lifecycle, err := companyLifecycle(ctx, tx, companyID)
@@ -82,6 +75,9 @@ func (s *Store) SummaryFor(
 			return nil
 		}
 		out.Provider = &conn.provider
+		option := s.sourceOption(conn.provider)
+		out.InvoiceDocuments = &option.Documents
+		out.ProviderName = option.readerName()
 		out.LastSyncedAt = conn.lastSuccessAt
 		linked, err := companyIsLinked(ctx, tx, companyID, conn.id)
 		if err != nil {
@@ -115,6 +111,7 @@ type connection struct {
 	id            ids.UUID
 	provider      string
 	status        string
+	createdAt     time.Time
 	lastSuccessAt *time.Time
 }
 
@@ -127,11 +124,11 @@ type connection struct {
 // `no_connection` renders it.
 func readConnection(ctx context.Context, tx pgx.Tx) (conn connection, found bool, err error) {
 	err = tx.QueryRow(ctx, `
-		SELECT id, provider, status, last_success_at
+		SELECT id, provider, status, created_at, last_success_at
 		  FROM finance_connection
 		 WHERE archived_at IS NULL AND status <> 'disconnected'
 		 ORDER BY created_at DESC
-		 LIMIT 1`).Scan(&conn.id, &conn.provider, &conn.status, &conn.lastSuccessAt)
+		 LIMIT 1`).Scan(&conn.id, &conn.provider, &conn.status, &conn.createdAt, &conn.lastSuccessAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return connection{}, false, nil
 	}
@@ -169,6 +166,10 @@ func companyIsLinked(
 // action about a customer who is not one.
 const lifecycleFormerCustomer = "former_customer"
 
+func collectsFrom(lifecycle string) bool {
+	return lifecycle != lifecycleFormerCustomer
+}
+
 // companyLifecycle answers where the account stands, and answers the id that
 // names nobody with the same 404 a hidden account gets. Existence-hiding cuts
 // both ways: a caller must not be able to tell "no such account" from "not
@@ -181,7 +182,7 @@ const lifecycleFormerCustomer = "former_customer"
 func companyLifecycle(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (string, error) {
 	var lifecycle string
 	err := tx.QueryRow(ctx, `
-		SELECT lifecycle FROM company WHERE id = $1 AND archived_at IS NULL`,
+		SELECT status FROM company WHERE id = $1 AND archived_at IS NULL`,
 		companyID).Scan(&lifecycle)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", apperrors.ErrNotFound
@@ -270,8 +271,8 @@ func (s *Store) fillFigures(
 		// figure nobody can state a window for, which is the same "cannot be
 		// honestly computed" this card already answers with absence rather than
 		// a zero.
-		if lifecycle != lifecycleFormerCustomer {
-			out.Overdue = money(open.OverdueMinorBase, currency)
+		if collectsFrom(lifecycle) {
+			fillOverdue(open, currency, out)
 		}
 	}
 	// Below the sample floor the answer is "not enough settled invoices to
@@ -330,7 +331,7 @@ func (s *Store) fillRecent(
 ) error {
 	rows, err := tx.Query(ctx, `
 		SELECT id, number, issued_at, due_at, fully_paid_at, status, currency,
-		       gross_minor, open_minor
+		       gross_minor, credited_minor, open_minor
 		  FROM finance_invoice
 		 WHERE company_id = $1 AND connection_id = $2 AND archived_at IS NULL
 		 ORDER BY issued_at DESC, id DESC
@@ -372,12 +373,14 @@ func scanRecentInvoice(rows pgx.Rows, now time.Time) (crmcontracts.FinanceInvoic
 		status   string
 		currency string
 		gross    int64
+		credited int64
 		open     int64
 	)
 	if err := rows.Scan(&id, &number, &issued, &due, &paid, &status,
-		&currency, &gross, &open); err != nil {
+		&currency, &gross, &credited, &open); err != nil {
 		return crmcontracts.FinanceInvoice{}, fmt.Errorf("scan invoice: %w", err)
 	}
+	status = statusAsOf(status, gross, credited, open, due, now)
 	out := crmcontracts.FinanceInvoice{
 		Id:         openapi_types.UUID(id),
 		Number:     number,
@@ -396,7 +399,7 @@ func scanRecentInvoice(rows pgx.Rows, now time.Time) (crmcontracts.FinanceInvoic
 		OpenMinorBase: open,
 	}); ok {
 		out.DaysLate = &late
-	} else if open > 0 && deadline.Passed(due, now) {
+	} else if open > 0 && pastDue(due, now) {
 		// Still open and past due: lateness is measured against today rather
 		// than against a settlement that has not happened.
 		running := daysBetween(*due, now)
@@ -416,7 +419,7 @@ func (s *Store) readInvoices(
 	rows, err := tx.Query(ctx, `
 		SELECT status, issued_at, due_at, fully_paid_at, currency,
 		       net_minor, credited_minor, open_minor, fx_rate_to_base,
-		       credits_invoice_id IS NOT NULL, disputed_at IS NOT NULL
+		       credits_invoice_id IS NOT NULL, disputed_at IS NOT NULL, dunning_level
 		  FROM finance_invoice
 		 WHERE company_id = $1 AND connection_id = $2 AND archived_at IS NULL
 		 ORDER BY issued_at ASC, id ASC`, companyID, connectionID)
@@ -430,7 +433,7 @@ func (s *Store) readInvoices(
 		inv := &stored.invoice
 		if err := rows.Scan(&inv.Status, &inv.IssuedOn, &inv.DueOn, &inv.FullyPaidAt,
 			&stored.currency, &stored.netMinor, &stored.creditedMinor, &stored.openMinor,
-			&stored.rate, &inv.CreditsInvoice, &inv.Disputed); err != nil {
+			&stored.rate, &inv.CreditsInvoice, &inv.Disputed, &inv.DunningLevel); err != nil {
 			return nil, fmt.Errorf("scan invoice: %w", err)
 		}
 		converted, err := stored.inBase(base, s.rates.ToBase)

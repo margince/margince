@@ -9,6 +9,7 @@ import { jsonResponse, stubWithSession } from "../testing/story-utils";
 import {
   AddRelationshipAction,
   counterpartyRef,
+  dateRange,
   edgeOptions,
   endpointBody,
   kindLabelFor,
@@ -246,11 +247,19 @@ describe("adding a relationship", () => {
 
     await user.click(screen.getByTestId("add-relationship"));
     const dialog = within(screen.getByRole("dialog"));
-    await user.type(dialog.getByPlaceholderText("Search…"), "acme");
+    await user.type(
+      dialog.getByRole("searchbox", {
+        name: translate("en", "search.kind.company"),
+      }),
+      "acme",
+    );
     act(() => {
       vi.advanceTimersByTime(250);
     });
     await user.click(await dialog.findByRole("button", { name: "Acme Corp" }));
+    expect(
+      dialog.getByText("Add an employment link to Acme Corp."),
+    ).toBeTruthy();
     await user.click(dialog.getByRole("button", { name: /^Choose date/ }));
     await user.click(
       await screen.findByRole("button", { name: "Monday, 2 March 2026" }),
@@ -313,7 +322,9 @@ describe("adding a relationship", () => {
       await user.type(role, retype);
     }
     await user.type(
-      dialog.getByPlaceholderText(translate(locale, "merge.searchPlaceholder")),
+      dialog.getByRole("searchbox", {
+        name: translate(locale, "search.kind.contact"),
+      }),
       "mai",
     );
     act(() => {
@@ -353,4 +364,28 @@ describe("adding a relationship", () => {
     const posted = await seatMaiAsChampion("Người ủng hộ nội bộ");
     expect(posted[0]).toMatchObject({ role: "Người ủng hộ nội bộ" });
   });
+
+  it("names the search by the kind it picks and marks it required", async () => {
+    stubWithSession({}, { relationship: ["read", "create"] });
+    const user = userEvent.setup();
+    renderWithQueryClient(<AddRelationshipAction scope={dealScope} />);
+    await user.click(screen.getByTestId("add-relationship"));
+    const search = within(screen.getByRole("dialog")).getByRole("searchbox", {
+      name: /^Contact/,
+    });
+    expect(search.getAttribute("aria-required")).toBe("true");
+  });
+});
+
+it("uses the shared current-role rule on the company list", () => {
+  const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
+  expect(
+    dateRange(baseRel({ employment_status: "former" }), t, "en", "UTC", "UTC"),
+  ).toBe("Former");
+  expect(
+    dateRange(baseRel({ employment_status: "unknown" }), t, "en", "UTC", "UTC"),
+  ).toBe("");
+  expect(
+    dateRange(baseRel({ employment_status: "current" }), t, "en", "UTC", "UTC"),
+  ).toBe("Current");
 });

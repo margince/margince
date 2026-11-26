@@ -5,91 +5,84 @@
 Every AI task this product declares, and whether the text it reads can reach a
 provider outside the installation. Generated from `backend/api/ai-tasks.yaml`.
 
-A task can make any of these three promises without the others:
-
-- **Local-only (enforced)**: the task declares `local_only`, so its prompt is served
-  only by a provider running on this installation, under every AI profile. At
-  call time every rung bound to a hosted provider is dropped from the task's
-  ladder, and a task left with no local rung is refused rather than sent out.
-  This is the column that answers "can this text leave".
-- **Local-only ladder**: the task's ladder names only local tiers (`local_small`,
-  `local_large`). Whether its text stays local depends on the AI profile; see
-  [Reading this against a data-protection question](#reading-this-against-a-data-protection-question).
-- **Prompt not retained**: the task declares `no_payload`, so its prompt is never
-  written to `ai_call_payload` whatever the deployment's capture posture says.
+The **Local-tier ladder** column names capability classes, not a guarantee
+about where text goes. The operator chooses the provider behind each tier.
+**Prompt not retained** means the task declares `no_payload` and its prompt is
+never written to `ai_call_payload`.
 
 The **Decision model** column is where else a task's text can go. A task that
 declares a decision form may be answered first by the deployment's decision
 model (the `decisions:` lane of the routing config, bound like the embeddings lane)
-once that model is certified for the task's site. The lane's provider may be a
+when bound. The lane's provider may be a
 cloud one. So for an ordinary decision task the text reaches wherever the lane
-is bound, even when the task's own ladder is bound locally. A task that also
-declares `local_only` is asked only by a local decision provider; bound to a cloud
-one, the lane skips it and the ladder answers. A task marked "none" is never
+is bound, even when the task's own ladder is bound locally. A task marked "none" is never
 sent to a decision model. Under `sovereign` the lane must be a local provider on an
 endpoint the installation controls.
 
 A task with none of these sends its text to whichever provider the operator
 bound for its ladder's rungs, and may retain the prompt for debugging.
 
-| Task | Ladder | Local-only ladder | Prompt not retained | Local-only (enforced) | Decision model | Status |
-| --- | --- | --- | --- | --- | --- | --- |
-| `account_scan` | `cheap_cloud` → `premium` | no | yes | no | none | shipped |
-| `agent_loop` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
-| `brief_ranking` | `premium` → `cheap_cloud` | no | no | no | none | shipped |
-| `capture_classify` | `local_small` → `cheap_cloud` | no | yes | no | none | shipped |
-| `capture_confidentiality_verdict` | `local_small` | yes | yes | yes | only a local decision provider | shipped |
-| `capture_counterparty_verdict` | `local_small` | yes | yes | yes | only a local decision provider | shipped |
-| `cert_judge` | `premium` → `cheap_cloud` | no | no | no | none | shipped |
-| `cold_start` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
-| `corpus_ask` | `premium` | no | no | no | none | shipped |
-| `deal_health` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
-| `deal_verdict` | `local_small` → `cheap_cloud` | no | yes | no | none | shipped |
-| `document_extract` | `premium` | no | yes | no | none | shipped |
-| `draft_reply` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
-| `enrich` | `local_small` → `cheap_cloud` | no | no | no | none | shipped |
-| `growth_fit` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
-| `nl_search` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
-| `offer_draft` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
-| `owed_verdict` | `local_small` → `cheap_cloud` | no | yes | no | none | shipped |
-| `propose_roles` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
-| `rate_extract` | `premium` → `cheap_cloud` | no | no | no | none | shipped |
-| `reader_rendering` | `cheap_cloud` → `premium` | no | yes | no | none | shipped |
-| `report_interpret` | `premium` → `cheap_cloud` | no | yes | no | none | shipped |
-| `report_setup` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
-| `request_settlement` | `local_small` → `cheap_cloud` | no | yes | no | none | shipped |
-| `signal_extract` | `frontier` | no | yes | no | none | shipped |
-| `site_extract` | `premium` | no | no | no | none | shipped |
-| `site_fact_extract` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
-| `site_triage` | `cheap_cloud` → `premium` | no | no | no | the bound decision model | shipped |
-| `stage_evidence_extract` | `cheap_cloud` → `premium` | no | yes | no | none | shipped |
-| `summarize` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
-| `tag_suggest` | `local_small` → `cheap_cloud` | no | yes | no | none | shipped |
-| `transcript` | `cheap_cloud` → `premium` | no | no | no | none | planned |
-| `transcript_propose` | `premium` | no | no | no | none | shipped |
-| `voice_build` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
-| `weekly_learnings` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
-| `weekly_review` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
+| Task | Ladder | Local-tier ladder | Prompt not retained | Decision model | Status |
+| --- | --- | --- | --- | --- | --- |
+| `account_scan` | `cheap_cloud` → `premium` | no | yes | none | shipped |
+| `agent_loop` | `cheap_cloud` → `premium` | no | no | none | shipped |
+| `brief_ranking` | `premium` → `cheap_cloud` | no | no | none | shipped |
+| `capture_classify` | `local_small` → `cheap_cloud` | no | yes | none | shipped |
+| `capture_confidentiality_verdict` | `local_small` | yes | yes | the bound decision model | shipped |
+| `capture_counterparty_verdict` | `local_small` | yes | yes | the bound decision model | shipped |
+| `cert_judge` | `premium` → `cheap_cloud` | no | no | none | shipped |
+| `chat_summary` | `cheap_cloud` → `premium` | no | yes | none | shipped |
+| `chat_task_reading` | `local_small` → `cheap_cloud` | no | yes | none | shipped |
+| `cold_start` | `cheap_cloud` → `premium` | no | no | none | shipped |
+| `corpus_ask` | `premium` | no | no | none | shipped |
+| `deal_health` | `cheap_cloud` → `premium` | no | no | none | shipped |
+| `deal_verdict` | `local_small` → `cheap_cloud` | no | yes | none | shipped |
+| `document_extract` | `premium` | no | yes | none | shipped |
+| `draft_reply` | `cheap_cloud` → `premium` | no | no | none | shipped |
+| `enrich` | `local_small` → `cheap_cloud` | no | no | none | shipped |
+| `growth_fit` | `cheap_cloud` → `premium` | no | no | none | shipped |
+| `nl_search` | `cheap_cloud` → `premium` | no | no | none | shipped |
+| `offer_draft` | `cheap_cloud` → `premium` | no | no | none | shipped |
+| `owed_verdict` | `local_small` → `cheap_cloud` | no | yes | none | shipped |
+| `propose_roles` | `cheap_cloud` → `premium` | no | no | none | shipped |
+| `rate_extract` | `premium` → `cheap_cloud` | no | no | none | shipped |
+| `reader_rendering` | `cheap_cloud` → `premium` | no | yes | none | shipped |
+| `report_interpret` | `premium` → `cheap_cloud` | no | yes | none | shipped |
+| `report_setup` | `cheap_cloud` → `premium` | no | no | none | shipped |
+| `request_settlement` | `local_small` → `cheap_cloud` | no | yes | none | shipped |
+| `rewrite` | `premium` → `cheap_cloud` | no | no | none | shipped |
+| `signal_extract` | `frontier` | no | yes | none | shipped |
+| `site_extract` | `premium` | no | no | none | shipped |
+| `site_fact_extract` | `cheap_cloud` → `premium` | no | no | none | shipped |
+| `site_triage` | `cheap_cloud` → `premium` | no | no | the bound decision model | shipped |
+| `stage_evidence_extract` | `cheap_cloud` → `premium` | no | yes | none | shipped |
+| `summarize` | `cheap_cloud` → `premium` | no | no | none | shipped |
+| `tag_suggest` | `local_small` → `cheap_cloud` | no | yes | none | shipped |
+| `transcript` | `cheap_cloud` → `premium` | no | no | none | planned |
+| `transcript_propose` | `premium` | no | no | none | shipped |
+| `voice_build` | `cheap_cloud` → `premium` | no | no | none | shipped |
+| `weekly_learnings` | `cheap_cloud` → `premium` | no | no | none | shipped |
+| `weekly_review` | `cheap_cloud` → `premium` | no | no | none | shipped |
+| `embed` | `embed` | no | yes | none | shipped |
 
 ## Reading this against a data-protection question
 
-"Does our mail leave the building?" is answered for the tasks that read mail
-(`capture_classify`, `capture_counterparty_verdict` and `capture_confidentiality_verdict`) by the **Local-only (enforced)** column. The last
-two decide whether a sender or a thread is private, so sending their text to a
-hosted provider would defeat the check. Both declare `local_only`: their prompt
-reaches no hosted provider under any profile, and no decision provider the
-registry does not mark local either.
+Mail-reading tasks send text to the providers configured for their ladder and
+any bound decision lane. The `sovereign` profile refuses cloud providers.
+
+The `embed` row is the search index, not a task. It sends each indexed
+record's text, a mail's subject and body among them, to the bound embeddings
+provider, and keeps none of it in `ai_call_payload`.
 
 `voice_build` reads mail too, but only a user's own sent mail, and only after that
 user chose **Learn from sent mail** on their Writing voice page. Its text then goes
 where the task's ladder in the table sends it.
 
-The **Local-only ladder** column names the ladder's tiers and does not say what
-a deployment binds them to. Those tiers are size classes, and for a task that
-does not declare `local_only` the AI profile decides:
+The **Local-tier ladder** column names the ladder's tiers and does not say what
+a deployment binds them to. Those tiers are size classes. The AI profile decides:
 
 - Under `sovereign`, validation refuses a cloud binding for either local tier, so
-  a local-only ladder stays on the machine.
+  a local-tier ladder stays on the machine.
 - Under `eu_hosted` or `cloud_frontier`, an admin's own binding can point `local_small` or `local_large` at
   a hosted provider, and the task then leaves the machine.
 
@@ -125,7 +118,9 @@ a processing record can be written from the rows marked yes.
 | the customer's own webhook endpoint | yes | whatever the subscribed event carries, which is the customer's own record data | the subscription itself; deleting it stops the delivery |
 | the identity provider's published key set | no |  | the identity provider binding |
 | the mailbox provider (IMAP) | yes | the mailbox credential and the folders it reads | the mailbox connection; removing it stops the sync |
-| the provider an installed extension unit calls | yes | whatever that unit sends its provider, which can include the deals and colleagues' details its manifest lists under system_reads | removing the unit from the installation |
+| the provider an installed extension unit calls | yes | whatever that unit sends its provider, which can include the deals and colleagues' details its manifest lists under system_reads, and the captured mail its manifest lists under mail_hooks | removing the unit from the installation |
+| the publishers of the law texts the messaging policy packs cite | no |  | no installation makes this call: the policy-refresh tool sends it when a release is prepared |
+| the team's own Dispact install | yes | linked deal and project names, stages, close dates, owner names and emails, the subjects of activities shared with the whole workspace, and the emails of members invited to a new channel | Settings → Integrations: disconnecting the Dispact bot stops every call; unlinking a record stops posts for it |
 | this installation's own public address | no |  | not optional: it is how the installation learns whether it is reachable |
 
 A row here is what the installation can do. Most of these are inert until an administrator supplies a credential or turns a setting on, and

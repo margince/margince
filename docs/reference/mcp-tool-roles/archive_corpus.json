@@ -1,0 +1,15 @@
+{
+  "tool": "change_capture",
+  "action": "archive_corpus",
+  "verb": "archive_corpus",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

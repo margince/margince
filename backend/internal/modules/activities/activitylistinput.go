@@ -21,10 +21,21 @@ import (
 // transport, and the record the activities hang off.
 type ListActivitiesInput struct {
 	InteractionsAsOf *time.Time
-	mailIdentities   map[string][]string
+	// ClockDirection with DirectionClockAsOf keeps the rows that move the
+	// "they last wrote" or "we last wrote" clock in that direction.
+	// relstrength.DirectionClockSQL is the rule, as on the account.
+	ClockDirection     string
+	DirectionClockAsOf *time.Time
+	mailIdentities     map[string][]string
+	// countOnly builds the filter for a count: no sort, so no sort arguments.
+	countOnly bool
+	// foldBounds replaces the collapsed fold's bounds; a test reads the
+	// unbounded fold with []int{0} to compare it with the bounded one.
+	foldBounds []int
 	// onlyID narrows a read to one row, so a caller can ask whether this list
 	// returns it without a second spelling of the list's clauses.
 	onlyID *ids.ActivityID
+	IDs    []ids.ActivityID
 	Cursor *string
 	Limit  *int
 	// Sort is the caller's order, validated against activitySortFields. Nil
@@ -44,7 +55,9 @@ type ListActivitiesInput struct {
 	// CallOutcome narrows to calls that ended this way.
 	CallOutcome *string
 	// SourceSystem narrows to rows one connector wrote, such as website forms.
-	SourceSystem *string
+	SourceIDs     []string
+	SourceSystem  *string
+	WebsiteFormID *ids.UUID
 	// AnswersThem keeps only rows that answer the other side (answersThemSQL).
 	AnswersThem bool
 	EntityType  *string
@@ -138,6 +151,20 @@ type ListActivitiesInput struct {
 	// caller then discards, so a full page of a colleague's held meetings hides
 	// the reader's own meeting sitting behind them.
 	ReadableOnly bool
+	// CollapseSeatCopies shows one row per email that several colleagues'
+	// mailboxes each hold a copy of (seatcopies.go), before the page is cut.
+	CollapseSeatCopies bool
+	// FactsOnly reads the rows as facts for a reader that draws none of them.
+	// Each row keeps its mail facts and summary. Its links, creators, write
+	// affordances, commitment admissions, offered email and custom values are
+	// not read.
+	FactsOnly bool
+	// LinkedFactsOnly is FactsOnly with each row's links, for a reader that
+	// draws a row from its own columns and the records it is filed under.
+	LinkedFactsOnly bool
+	// WithoutCopiesOf leaves out, on a collapsed page, the row that stands for
+	// this activity or any mailbox copy of it, whatever filter the copy passes.
+	WithoutCopiesOf *ids.UUID
 	// WithinProjectID narrows to one body of work, EXCLUDING what belongs to
 	// another project and keeping what belongs to none.
 	//
@@ -158,6 +185,10 @@ type ListActivitiesInput struct {
 	// WrittenByHuman keeps only rows a human wrote (relstrength.WrittenByHumanSQL),
 	// before the limit, for a reader of correspondence such as a brief.
 	WrittenByHuman bool
+	// PartyContactID keeps only the rows this contact is a party to
+	// (ContactIsPartySQL), before the limit, for a draft written to them.
+	// Nil leaves the read unnarrowed.
+	PartyContactID *ids.ContactID
 	// OccurredAfter / OccurredBefore bound the timeline to a range: the
 	// lower end inclusive, the upper end exclusive, so a calendar day is
 	// [day 00:00, next day 00:00) with no double-counting at midnight.
@@ -228,12 +259,16 @@ type ListActivitiesInput struct {
 	// the rows that qualify, which means the test belongs here.
 	//
 	// A task with no due date is excluded: it is agreed work, but it is not
-	// work for a given instant, and a queue that promised today's list would be
-	// lying if it carried the undated backlog too.
+	// work for a given instant. Paired with OpenAndDueAfter, the later window
+	// carries that undated backlog instead.
 	OpenAndDueBy *time.Time
+	// DayZone is the IANA zone a chosen due date is judged in. Empty is the
+	// installation's zone. Only a member's own list sets it (dayrule).
+	DayZone string
 	// IncludeEmailRequests adds undated captured requests and undated commitments
 	// to the execution queue, not overdue counts.
-	IncludeEmailRequests bool
+	IncludeEmailRequests    bool
+	IncludeWebsiteInquiries bool
 	// OpenAndDueAfter narrows the same read to work due LATER than an instant,
 	// and is paired with OpenAndDueBy to ask for one window.
 	//

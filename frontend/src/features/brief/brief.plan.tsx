@@ -4,13 +4,8 @@
 import { SquareCheck } from "lucide-react";
 import { useState } from "react";
 import { EntityRef } from "../../components/entityref";
-import {
-  Badge,
-  Button,
-  Checkbox,
-  Field,
-  TextInput,
-} from "../../design-system/atoms";
+import { Badge, Button, Checkbox, TextInput } from "../../design-system/atoms";
+import { FieldEditDialog } from "../../design-system/fieldeditdialog";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { isoDay, middayInstant } from "../../format/calendarday";
@@ -374,38 +369,6 @@ function HelpExchange({
   const t = useT();
   const ask = useAskForHelp();
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(commitment.help_requested ?? "");
-
-  if (editing) {
-    return (
-      <div className="plan-help">
-        <Field label={t("plan.help.label")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={draft}
-              maxLength={2000}
-              onChange={(event) => setDraft(event.target.value)}
-            />
-          )}
-        </Field>
-        <Button
-          onClick={() => {
-            ask.mutate(
-              { id: commitment.id, helpRequested: draft },
-              { onSuccess: () => setEditing(false) },
-            );
-          }}
-          pending={ask.isPending}
-        >
-          {t("plan.help.send")}
-        </Button>
-        <Button variant="ghost" onClick={() => setEditing(false)}>
-          {t("plan.help.cancel")}
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <div className="plan-help">
@@ -429,6 +392,25 @@ function HelpExchange({
           {commitment.help_requested ? t("plan.help.edit") : t("plan.help.ask")}
         </Button>
       )}
+      <FieldEditDialog
+        open={editing}
+        label={t("plan.help.label")}
+        value={commitment.help_requested ?? ""}
+        onClose={() => setEditing(false)}
+        onSave={(next) =>
+          ask.mutateAsync({ id: commitment.id, helpRequested: next })
+        }
+      >
+        {({ control, draft, setDraft, saving }) => (
+          <TextInput
+            {...control}
+            value={draft}
+            maxLength={2000}
+            readOnly={saving}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+        )}
+      </FieldEditDialog>
     </div>
   );
 }

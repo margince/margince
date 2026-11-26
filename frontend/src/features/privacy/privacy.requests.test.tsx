@@ -62,7 +62,11 @@ function json(body: unknown, status = 200) {
 
 type Patched = { path: string; body: unknown };
 
-function stub(create?: () => Response, patched: Patched[] = []) {
+function stub(
+  create?: () => Response,
+  patched: Patched[] = [],
+  answer: () => Response = () => json(NAMED),
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -74,7 +78,7 @@ function stub(create?: () => Response, patched: Patched[] = []) {
           ? await request.json()
           : JSON.parse(String(init?.body));
         patched.push({ path: url.pathname, body });
-        return json(NAMED);
+        return answer();
       }
       if (url.pathname.endsWith("/users")) {
         return json({
@@ -195,6 +199,34 @@ describe("the subject-request table", () => {
     expect(within(filter).queryByText("in progress")).toBeNull();
   });
 
+  it("says on Open request that the subject is required, and sends nothing", async () => {
+    const create = vi.fn(() => json(NAMED, 201));
+    stub(create);
+    render();
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: en["privacy.newRequest"] }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await pickOption(
+      user,
+      within(dialog).getByLabelText(en["privacy.kind"]),
+      en["privacy.kindRectify"],
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: en["privacy.openRequest"] }),
+    );
+
+    expect(
+      within(dialog).getByText(`${en["privacy.subjectRef"]} is required.`),
+    ).toBeInTheDocument();
+    expect(document.activeElement).toBe(
+      within(dialog).getByLabelText(`${en["privacy.subjectRef"]} *`),
+    );
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it("puts a refused due date beside its field", async () => {
     stub(() =>
       json(
@@ -221,15 +253,19 @@ describe("the subject-request table", () => {
     await pickOption(
       user,
       within(dialog).getByLabelText(en["privacy.kind"]),
-      en["privacy.kindAccess"],
+      en["privacy.kindRectify"],
     );
     await user.type(
-      within(dialog).getByLabelText(en["privacy.subjectRef"]),
+      within(dialog).getByLabelText(`${en["privacy.subjectRef"]} *`),
       "anna@acme.test",
     );
     await within(dialog).findByText(en["jurisdiction.rule.gdpr"], {
       exact: false,
     });
+    await user.type(
+      within(dialog).getByLabelText(en["privacy.receivedAt"]),
+      "2026-09-01",
+    );
     const due = within(dialog).getByLabelText(en["privacy.earlierDue"]);
     await user.type(due, "2026-09-30");
     await user.click(
@@ -325,6 +361,30 @@ it("shows the retained proof on a closed request", async () => {
   expect(screen.getByText(en["privacy.proofErasureChanges"])).toBeVisible();
 });
 
+it("counts no erasure changes on a fulfilled access request", async () => {
+  stub();
+  renderDrawer({
+    ...NAMED,
+    kind: "access",
+    status: "fulfilled",
+    proof: {
+      request_number: "DSR-2026-0043",
+      request_kind: "access",
+      result: "fulfilled",
+      identity_check: "id_document",
+      requester_email: "subject@demo.test",
+      received_at: "2026-07-01T00:00:00Z",
+      answered_at: "2026-07-12T10:00:00Z",
+      keep_until: "2030-01-01T00:00:00Z",
+      erased_counts: {},
+      erased_counts_known: true,
+      erased_uncounted: [],
+    },
+  });
+  expect(await screen.findByText("DSR-2026-0043")).toBeVisible();
+  expect(screen.queryByText(en["privacy.proofErasureChanges"])).toBeNull();
+});
+
 it("prefills the identity check for a request opened through its confirm link", async () => {
   stub();
   renderDrawer({ ...NAMED, kind: "access", identity_verified: true });
@@ -336,4 +396,93 @@ it("prefills the identity check for a request opened through its confirm link", 
     screen.getByRole("combobox", { name: en["privacy.identityCheck"] })
       .textContent,
   ).toContain(en["privacy.identityCheck.confirm_link"]);
+});
+
+describe("closing a request with the requester's address", () => {
+  const ACCESS: DataSubjectRequest = {
+    ...NAMED,
+    kind: "access",
+    identity_verified: true,
+  };
+  const notEmail = `Enter an email address for ${en["privacy.requesterEmail"]}.`;
+
+  async function closeWith(address: string) {
+    const user = userEvent.setup();
+    await user.type(
+      await screen.findByRole("textbox", { name: en["privacy.resolution"] }),
+      "Sent the export.",
+    );
+    const email = screen.getByRole("textbox", {
+      name: en["privacy.requesterEmail"],
+    });
+    await user.type(email, address);
+    await user.click(
+      screen.getByRole("button", { name: en["privacy.fulfil"] }),
+    );
+    return { user, email };
+  }
+
+  it("refuses an address that is not one on its field, before sending", async () => {
+    const patched: Patched[] = [];
+    stub(undefined, patched);
+    renderDrawer(ACCESS);
+
+    const { user, email } = await closeWith("not-an-email");
+
+    expect(await screen.findByText(notEmail)).toBeVisible();
+    expect(email).toHaveAttribute("aria-invalid", "true");
+    await waitFor(() => expect(email).toHaveFocus());
+    expect(patched).toHaveLength(0);
+
+    await user.type(email, "@acme.test");
+    expect(screen.queryByText(notEmail)).toBeNull();
+    expect(email).not.toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("sends an address the server takes, an apostrophe in it included", async () => {
+    const patched: Patched[] = [];
+    stub(undefined, patched);
+    renderDrawer(ACCESS);
+
+    await closeWith("o'brien@example.com");
+
+    await waitFor(() => expect(patched).toHaveLength(1));
+    expect(patched[0]?.body).toMatchObject({
+      requester_email: "o'brien@example.com",
+    });
+    expect(screen.queryByText(notEmail)).toBeNull();
+  });
+
+  it("puts the server's refusal of the address on its field, once", async () => {
+    const patched: Patched[] = [];
+    stub(undefined, patched, () =>
+      json(
+        {
+          title: "Unprocessable Entity",
+          status: 422,
+          code: "validation_error",
+          detail:
+            "`requester_email` must be an email address but the value sent was not accepted",
+          details: {
+            errors: [
+              {
+                field: "requester_email",
+                code: "email_malformed",
+                message: "`requester_email` must be an email address",
+              },
+            ],
+          },
+        },
+        422,
+      ),
+    );
+    renderDrawer(ACCESS);
+
+    const { email } = await closeWith("asker@acme.test");
+
+    await waitFor(() => expect(patched).toHaveLength(1));
+    expect(await screen.findAllByText(notEmail)).toHaveLength(1);
+    expect(email).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText(/requester_email/)).toBeNull();
+  });
 });

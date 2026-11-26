@@ -10,13 +10,9 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import {
-  ApprovalDetailModal,
-  DecideOutcome,
-  editableSeed,
-  editableStrings,
-  StagedEditor,
-} from "./approvaleditor";
+import { ApprovalDetailModal } from "./approvaldetail";
+import { DecideOutcome, editableSeed, StagedEditor } from "./approvaleditor";
+import { editableStrings } from "./approvalkind";
 
 // The two slots a decision row hands out: the dialog that reads the WHOLE
 // proposal, and the inline editor that rewrites the part of it this

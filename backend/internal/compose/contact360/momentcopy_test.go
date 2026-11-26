@@ -4,12 +4,14 @@
 package contact360
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	contracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -109,17 +111,17 @@ func momentFacts(moment contracts.ContactMoment) contracts.ContactMoment {
 }
 
 func TestUnknownContactRoleDoesNotBecomeARecordedRoleInTranslation(t *testing.T) {
-	for _, language := range []string{"de", "vi"} {
+	for _, language := range []string{"en", "de", "vi"} {
 		said := momentCopyFor(language)
-		for _, role := range []*string{nil, new(""), new("  "), new("economic_buyer")} {
+		label := dealrole.Label(dealrole.EconomicBuyer, language)
+		for _, role := range []*string{nil, new(""), new("  "), new("contact"), new("Key contact"), new("economic_buyer"), new(" Economic_Buyer")} {
 			got := said.recordedSeat(role)
-			recorded := "erfasste Rolle"
-			if language == "vi" {
-				recorded = "được ghi nhận"
+			known := role != nil && dealrole.Recorded(*role) != ""
+			if known && got != fmt.Sprintf(said.Say(momentWords.RecordedRole), label) {
+				t.Errorf("%s lost the translated role: %q", language, got)
 			}
-			wantRecorded := role != nil && strings.TrimSpace(*role) != ""
-			if strings.Contains(got, recorded) != wantRecorded {
-				t.Fatalf("%s inferred or lost role: %s", language, got)
+			if !known && got != said.Say(momentWords.Stakeholder) {
+				t.Errorf("%s named a typed role: %q", language, got)
 			}
 		}
 	}
@@ -161,6 +163,27 @@ func TestAnUndatedDayTaskUsesItsOwnDate(t *testing.T) {
 	said.zone = time.FixedZone("UTC+14", 14*60*60)
 	if got := said.openPromiseWhyNow(now, task); !strings.Contains(got, "2026-08-03") {
 		t.Fatalf("a day task logged on 3 Aug reads %q", got)
+	}
+}
+
+// 23:00 and 01:00 in Bangkok share a UTC date. Only the record zone makes it tomorrow.
+func TestADeadlineAfterMidnightIsDueTomorrowInTheRecordZone(t *testing.T) {
+	bangkok := time.FixedZone("UTC+7", 7*60*60)
+	lateEvening := time.Date(2026, 8, 4, 23, 0, 0, 0, bangkok)
+	tomorrowMorning := time.Date(2026, 8, 5, 1, 0, 0, 0, bangkok)
+	task := contracts.Activity{Kind: "task", OccurredAt: now, DueAt: &tomorrowMorning}
+	claim := contracts.ConversationClaim{DueAt: &tomorrowMorning}
+	for _, tc := range []struct{ lang, want string }{
+		{"en", "Due tomorrow."}, {"de", "Morgen fällig."}, {"vi", "Đến hạn ngày mai."},
+	} {
+		said := momentCopyFor(tc.lang)
+		said.zone = bangkok
+		if got := said.openPromiseWhyNow(lateEvening, task); got != tc.want {
+			t.Errorf("%s task: %q, want %q", tc.lang, got, tc.want)
+		}
+		if got := said.openClaimWhyNow(lateEvening, claim); got != tc.want {
+			t.Errorf("%s claim: %q, want %q", tc.lang, got, tc.want)
+		}
 	}
 }
 

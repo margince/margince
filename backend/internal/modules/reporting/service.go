@@ -48,6 +48,9 @@ type Fact struct {
 	// Reopened marks an entry made straight from a won or lost close.
 	Entry    string `json:"entry,omitempty"`
 	Reopened bool   `json:"reopened,omitempty"`
+	// ViaID is the lead a company fact was derived from. A reader sees the
+	// company fact only where they may also see that lead.
+	ViaID *ids.UUID `json:"via_id,omitempty"`
 }
 
 // SetEvidenceDate keeps a display date out of event and privacy buckets.
@@ -76,6 +79,7 @@ type Evaluation struct {
 
 // Evaluator shares calculations across transport and publication boundaries.
 type Evaluator interface {
+	FeaturesAvailable(context.Context, crmcontracts.ReportingSelection) bool
 	ProjectFrozen(crmcontracts.ReportingEvaluation, []Fact) (crmcontracts.ReportingEvaluation, error)
 	Catalog(context.Context, textlang.Lang) (crmcontracts.ReportingCatalog, error)
 	Evaluate(context.Context, pgx.Tx, crmcontracts.ReportingSelection, crmcontracts.ReportingFramework, time.Time) (Evaluation, error)
@@ -103,10 +107,11 @@ type Authority interface {
 	// published about its population, so it needs the strict tier rule that a
 	// read of the totals does not.
 	AssertedScope(context.Context, pgx.Tx, crmcontracts.ReportingScope) (crmcontracts.ReportingScope, error)
-	// Visible narrows frozen facts to what the reader may see today. The
-	// context is the one they were captured under; a population the
-	// small-group floor holds back today shows none of them.
-	Visible(context.Context, pgx.Tx, crmcontracts.ReportingContext, []Fact) ([]Fact, bool, error)
+	// Visible narrows frozen facts to what the reader may see today, owners
+	// being their measurable owners. The context is the one they were
+	// captured under; a population the small-group floor holds back today
+	// shows none of them.
+	Visible(context.Context, pgx.Tx, MeasurableOwners, crmcontracts.ReportingContext, []Fact) ([]Fact, bool, error)
 }
 
 // MeasurableOwners is whose figures a reader may see one by one.

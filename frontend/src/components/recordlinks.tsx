@@ -7,10 +7,23 @@
 // Each name is `EntityRef`, so a record the reader may not resolve degrades
 // here the same way it does everywhere else in the product.
 
-import { Fragment } from "react";
+import {
+  FolderKanban,
+  Handshake,
+  type LucideIcon,
+  UserPlus,
+} from "lucide-react";
+import { Fragment, type ReactNode } from "react";
 
 import type { components } from "../api/schema";
+import { Avatar } from "../design-system/avatar";
+import { Chip } from "../design-system/readings";
+import { recordEnabled, useHiddenCoreFeatures } from "../lib/corefeatures";
+import { ENTITY } from "../lib/entity";
+import { valueFor } from "../lib/labelfor";
+import { routeHash } from "../lib/router";
 import { EntityRef } from "./entityref";
+import { useEntityName } from "./entityref.queries";
 
 type ActivityLink = components["schemas"]["ActivityLink"];
 
@@ -51,12 +64,16 @@ export function RecordLinks({
   links,
   newTab = false,
 }: Readonly<{ links: readonly ActivityLink[]; newTab?: boolean }>) {
-  if (links.length === 0) {
+  const disabled = useHiddenCoreFeatures();
+  const available = links.filter((link) =>
+    recordEnabled(link.entity_type, disabled),
+  );
+  if (available.length === 0) {
     return null;
   }
   return (
     <>
-      {links.map((link, index) => (
+      {available.map((link, index) => (
         <Fragment key={`${link.entity_type}:${link.entity_id}`}>
           {index > 0 && ", "}
           <EntityRef
@@ -67,5 +84,81 @@ export function RecordLinks({
         </Fragment>
       ))}
     </>
+  );
+}
+
+/**
+ * The mark a record chip carries for a kind with no face. A contact or a
+ * company is drawn as its Avatar instead, so it has no entry here.
+ */
+export const RECORD_CHIP_ICONS: Partial<
+  Record<ActivityLink["entity_type"], LucideIcon>
+> = {
+  deal: Handshake,
+  lead: UserPlus,
+  project: FolderKanban,
+};
+
+/**
+ * The links as a row of chips, the way a Home card names who and what a task
+ * is with. Each chip opens its record in place.
+ */
+export function RecordLinkChips({
+  links,
+}: Readonly<{ links: readonly ActivityLink[] }>) {
+  const disabled = useHiddenCoreFeatures();
+  return links
+    .filter((link) => recordEnabled(link.entity_type, disabled))
+    .map((link) => (
+      <RecordLinkChip
+        key={`${link.entity_type}:${link.entity_id}`}
+        link={link}
+      />
+    ));
+}
+
+/**
+ * One record as a chip: its face, or the icon of a kind with none, then its
+ * name. A long name wraps inside a phone's row.
+ */
+export function RecordMarkChip({
+  id,
+  name,
+  icon,
+  href,
+  children = name,
+}: Readonly<{
+  id: string;
+  name: string;
+  icon?: LucideIcon;
+  href?: string;
+  children?: ReactNode;
+}>) {
+  const mark = icon ? { icon } : { lead: <Avatar name={name} identity={id} /> };
+  return (
+    <Chip dense wrap appHref={href} {...mark}>
+      {children}
+    </Chip>
+  );
+}
+
+function RecordLinkChip({ link }: Readonly<{ link: ActivityLink }>) {
+  const { entity_type: kind, entity_id: id } = link;
+  const { name } = useEntityName(kind, id);
+  const icon = RECORD_CHIP_ICONS[kind];
+  const entity = valueFor(ENTITY, kind, null);
+  // Only a resolved name is a link; until then the chip says what the read
+  // knows, the way every other reference to a record does.
+  return name && entity ? (
+    <RecordMarkChip
+      id={id}
+      name={name}
+      icon={icon}
+      href={routeHash(entity.route(id))}
+    />
+  ) : (
+    <RecordMarkChip id={id} name={name ?? id} icon={icon}>
+      <EntityRef kind={kind} id={id} asText />
+    </RecordMarkChip>
   );
 }

@@ -9,9 +9,8 @@ import type { ActivityWhenFormatter } from "../format/activitywhen";
 import { useT } from "../i18n";
 import { Button } from "./atoms";
 import { EmailEnvelope, emailDetailKey } from "./emailmessage";
-import { EmailText } from "./emailtext";
+import { EmailReading } from "./emailtext";
 import { Heading } from "./heading";
-import { ReaderRendering } from "./readerrendering";
 import { SurfaceState } from "./surfacestate";
 import "./sourceemailpanel.css";
 
@@ -162,12 +161,12 @@ function SourceEmailBody({
         <p className="sourceemail__subject">{subject}</p>
         <EmailEnvelope presentation={presentation} formatWhen={formatWhen} />
       </div>
-      <ReaderRendering
+      <EmailReading
         activityId={presentation.id}
         language={presentation.language}
-      >
-        <EmailText body={presentation.body ?? ""} />
-      </ReaderRendering>
+        body={presentation.body}
+        subject={presentation.summary.subject}
+      />
       {onOpenThread && (
         <Button variant="ghost" aria-haspopup="dialog" onClick={onOpenThread}>
           {t("timeline.group.openThread")}

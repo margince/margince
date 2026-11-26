@@ -6,7 +6,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { browserZone, startOfDayInZone } from "../../format/timezone";
+import { formatDateTime } from "../../format/format";
+import {
+  browserZone,
+  startOfDayInZone,
+  wallClockIntent,
+} from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { BookingReschedule } from "./booking-reschedule";
 
@@ -17,11 +22,13 @@ afterEach(() => {
 });
 
 // Every window the guest asked for, as the `from` of each availability read.
-function stubAvailability(): string[] {
+function stubAvailability(
+  slots: readonly { start: string; end: string }[] = [],
+): string[] {
   const asked: string[] = [];
   vi.stubGlobal("fetch", async (request: Request) => {
     asked.push(new URL(request.url).searchParams.get("from") ?? "");
-    return new Response(JSON.stringify({ slots: [], truncated: false }), {
+    return new Response(JSON.stringify({ slots, truncated: false }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -29,7 +36,7 @@ function stubAvailability(): string[] {
   return asked;
 }
 
-function renderReschedule() {
+function renderReschedule(onSelect: (slot: unknown) => void = () => undefined) {
   render(
     <QueryClientProvider
       client={
@@ -37,11 +44,7 @@ function renderReschedule() {
       }
     >
       <LocaleProvider initial="en">
-        <BookingReschedule
-          token="guest"
-          pending={false}
-          onSelect={() => undefined}
-        />
+        <BookingReschedule token="guest" pending={false} onSelect={onSelect} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -83,4 +86,23 @@ it("keeps the day it shows when the box is cleared", async () => {
   expect(startingDate().value).toBe(shown);
   expect(shown).not.toBe("");
   expect(asked).toHaveLength(1);
+});
+
+it("sends the chosen time with the local clock and zone it was picked in", async () => {
+  const slot = { start: "2026-10-08T08:00:00Z", end: "2026-10-08T08:30:00Z" };
+  stubAvailability([slot]);
+  const chosen: unknown[] = [];
+  const user = userEvent.setup();
+  renderReschedule((picked) => chosen.push(picked));
+
+  await user.click(
+    await screen.findByRole("button", {
+      name: formatDateTime(slot.start, "en", browserZone()),
+    }),
+  );
+  await user.click(screen.getByRole("button", { name: "Confirm new time" }));
+
+  expect(chosen).toEqual([
+    { ...slot, start_intent: wallClockIntent(slot.start, browserZone()) },
+  ]);
 });

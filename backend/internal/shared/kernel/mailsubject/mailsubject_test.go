@@ -50,3 +50,46 @@ func TestNoPrefixIsBothAReplyAndAForward(t *testing.T) {
 		}
 	}
 }
+
+// Topic strips reply and forward prefixes alike, stacked and in any case, and
+// nothing a sender wrote after them.
+func TestTopicStripsRepliesAndForwards(t *testing.T) {
+	cases := map[string]string{
+		"Re: Termin und Angebot":      "termin und angebot",
+		"WG: AW:  Termin und Angebot": "termin und angebot",
+		"fwd:Re: Termin":              "termin",
+		"Termin":                      "termin",
+		"Re: Termin, unser Angebot":   "termin, unser angebot",
+		"Angebot Re: Termin":          "angebot re: termin",
+		"FW: Re: Termin":              "termin",
+	}
+	for subject, want := range cases {
+		if got := mailsubject.Topic(subject); got != want {
+			t.Errorf("Topic(%q) = %q, want %q", subject, got, want)
+		}
+	}
+}
+
+// A subject forwards when its outermost prefix does. An answer to a forward is
+// a reply, and a word that only starts like a prefix is the subject.
+func TestIsForwardReadsTheOutermostPrefix(t *testing.T) {
+	cases := map[string]bool{
+		"WG: Angebot":       true,
+		"  fwd:Angebot":     true,
+		"FW : Angebot":      true,
+		"\u00a0WG: Angebot": true,
+		"\u2003WG: Angebot": false,
+		"Fwd: Re: Angebot":  true,
+		"Re: Fwd: Angebot":  false,
+		"AW: WG: Angebot":   false,
+		"Forward planning":  false,
+		"Fwdx: Angebot":     false,
+		"Angebot WG: Lager": false,
+		"":                  false,
+	}
+	for subject, want := range cases {
+		if got := mailsubject.IsForward(subject); got != want {
+			t.Errorf("IsForward(%q) = %t, want %t", subject, got, want)
+		}
+	}
+}

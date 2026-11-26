@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -26,7 +27,7 @@ const commitmentRecipientsKey = "recipient_refs"
 func validateCommitmentRecipients(refs []string, parties []commitmentParty) string {
 	seen := map[string]bool{}
 	for _, ref := range refs {
-		party, found := referencedPromiser(ref, parties)
+		party, found := commitmentparty.Referenced(ref, parties)
 		if !found || party.Contact == nil || seen[ref] {
 			return "a promise's recipients must be distinct verified contact participants"
 		}
@@ -45,7 +46,7 @@ func attributeCommitmentRecipients(c *Commitment, refs []string, parties []commi
 	}
 	c.PromisedTo = nil
 	for _, ref := range refs {
-		party, found := referencedPromiser(ref, parties)
+		party, found := commitmentparty.Referenced(ref, parties)
 		if !found || party.Contact == nil {
 			continue
 		}
@@ -108,7 +109,7 @@ func (d *CommitmentDispatcher) reconcileTaskRecipients(ctx context.Context, tx p
 		return CommitmentRemembered, ids.Nil, err
 	}
 	if mutable.IsZero() {
-		proposal := CommitmentTaskProposal{SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party, Quote: c.Quote, Locator: c.Locator, SeatID: target.Assignee, PromiserSeatID: c.Seat, ClaimIDs: claims, Body: c.Body, PrivateTo: c.PrivateTo, ExistingTaskID: &target.ID}
+		proposal := CommitmentTaskProposal{SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party, Quote: c.Quote, SystemText: c.SystemText, Locator: c.Locator, SeatID: target.Assignee, PromiserSeatID: c.Seat, ClaimIDs: claims, Body: c.Body, PrivateTo: c.PrivateTo, ExistingTaskID: &target.ID}
 		asked, _, err := d.pendingProposalAskedOf(ctx, tx, c, &proposal)
 		if err != nil {
 			return CommitmentRemembered, ids.Nil, err
@@ -124,7 +125,7 @@ func (d *CommitmentDispatcher) reconcileTaskRecipients(ctx context.Context, tx p
 }
 
 func (d *CommitmentDispatcher) reconcilePendingRecipients(ctx context.Context, tx pgx.Tx, c Commitment, held approvals.Offer, bundleID ids.UUID, late bool) (CommitmentOutcome, ids.UUID, error) {
-	if !held.Pending() || c.Theirs != nil || c.Meaning.withheldOutcome() != "" || len(commitmentRecipients(c)) == 0 {
+	if !held.Pending() || c.Theirs != nil || c.withheldOutcome() != "" || len(commitmentRecipients(c)) == 0 {
 		return CommitmentRemembered, ids.Nil, nil
 	}
 	var proposal CommitmentTaskProposal
@@ -188,5 +189,5 @@ func (d *CommitmentDispatcher) recipientTaskTarget(ctx context.Context, tx pgx.T
 }
 
 func canReconcileTaskRecipients(c Commitment, reason activities.CommitmentAdmissionReason) bool {
-	return reason == activities.CommitmentCurrent && c.Meaning.withheldOutcome() == "" && !c.NeedsConfirmation && len(commitmentRecipients(c)) > 0
+	return reason == activities.CommitmentCurrent && c.withheldOutcome() == "" && !c.NeedsConfirmation && len(commitmentRecipients(c)) > 0
 }

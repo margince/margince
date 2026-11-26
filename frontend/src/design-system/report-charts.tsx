@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
-import { Button, Disclosure, TableScroll } from "./atoms";
+import { Button, TableScroll } from "./atoms";
 import "./report-charts.css";
 
 import type { ChartProps, GroupedBarsProps } from "./report-charts.model";
@@ -13,6 +13,7 @@ import {
   niceTop,
   readingScale,
 } from "./report-charts.model";
+import { ChartTableDoor } from "./report-charts.tabledoor";
 
 export type { ChartReading } from "./report-charts.model";
 
@@ -30,7 +31,7 @@ export function ReadingTable({
     secondary?: "comparisonAmount" | "targetAmount" | "upperAmount";
   }>) {
   return (
-    <Disclosure className="report-chart-data" summary={dataLabel}>
+    <ChartTableDoor summary={dataLabel}>
       <TableScroll className="report-chart-table-scroll" label={label}>
         <table>
           <caption className="sr-only">{label}</caption>
@@ -65,7 +66,7 @@ export function ReadingTable({
           </tbody>
         </table>
       </TableScroll>
-    </Disclosure>
+    </ChartTableDoor>
   );
 }
 
@@ -278,6 +279,7 @@ export function BulletChart({
           <li key={reading.key}>
             <Button
               variant="link"
+              align="start"
               className="report-chart-row"
               data-tone={reading.tone}
               onClick={() => onSelect?.(reading.key)}
@@ -351,6 +353,7 @@ export function RangeChart({
           <li key={reading.key}>
             <Button
               variant="link"
+              align="start"
               className="report-chart-row"
               onClick={() => onSelect?.(reading.key)}
               disabled={!onSelect}

@@ -16,6 +16,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/coachdeal"
+	"github.com/margince/margince/backend/internal/compose/legalreviewdesk"
+	"github.com/margince/margince/backend/internal/compose/legalreviewrecords"
+	"github.com/margince/margince/backend/internal/compose/vacuumhealth"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -24,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/assignments"
 	"github.com/margince/margince/backend/internal/modules/assurance"
-	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/commissions"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -39,6 +42,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/recordlinks"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
@@ -61,7 +65,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 		WithSuggestionEffects(dealSuggestionEffects{}).
 		WithSettings(StoredConfig(pool)).
 		WithLocks(loadedLocks).
-		WithLegalReviewDocuments(legalReviewDocuments{store: activities.NewStore(InstallationDB(pool))})
+		WithLegalReviewDocuments(legalReviewDocuments{store: activities.NewStore(InstallationDB(pool))}).
+		WithLegalReviewDesk(legalreviewdesk.Desk{Approvals: NewApprovalsService(InstallationDB(pool)), Notices: notices.NewStore(InstallationDB(pool))}).
+		WithLegalReviewRecords(legalreviewrecords.New(contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), activities.NewStore(InstallationDB(pool))))
 	// Bootstrap happens at boot from deployment configuration
 	// (EnsureInstallation, A107/ADR-0061) — the HTTP surface only ever
 	// serves the already-bound singleton company.
@@ -74,7 +80,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	identitySvc := identity.NewService(pool).
 		WithConfig(StoredConfig(pool)).
 		WithRequireSSO(authPolicy.SSOEnforced).
-		WithRequireMFA(authPolicy.MFARequired).
+		WithAdmissionSettings(authPolicy.AdmissionSettings).
 		WithGroupRoleMap(authPolicy.GroupRoleMap).
 		WithMailCapture(mailCaptureSeam{})
 	// The standing-grant edge: identity mints the credential, agents/runner
@@ -102,7 +108,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 		opt(&srv, pool)
 	}
 	srv.applySendPath(pool)
+	srv.publishCoreFeatures()
 	srv.publishListsAvailability(pool)
+	srv.customfieldsHandlers = srv.WithChoiceRemovers(CustomFieldChoiceRemovers())
 	srv.authHandlers = srv.WithAnalyticsStartup(srv.analyticsStartup)
 	// After the lists switch, so /me probes list_id through the resolvers the deal and lead lists hold.
 	srv.authHandlers = srv.WithRefusedDealFilters(srv.RefusedListFilters).WithRefusedLeadFilters(srv.RefusedLeadFilters)
@@ -159,18 +167,29 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// decided rather than on whichever proxy the request happened to arrive by.
 	//
 	// instrument.HTTP wraps everything inside the panic guard. A unit's HTTP
-	// hook therefore sees no correlation id or principal on the context.
+	// hook therefore sees no principal on the context.
 	// r.RemoteAddr is still the proxy (before ResolveClientIP). The body is
 	// not yet capped (before LimitBodies).
-	return originalStorageHTTP(pool, srv.blob, httpserver.RecoverPanics(log, instrument.HTTP(
+	// TraceContract sits outside the panic guard, so every /v1 answer (its 500
+	// and a mux redirect included) carries X-Request-Id and an access line.
+	return originalStorageHTTP(pool, srv.blob, httpserver.TraceContract(log, httpserver.RecoverPanics(log, instrument.HTTP(
 		httpserver.ResolveClientIP(srv.trustedProxies,
 			httpserver.LimitBodies(ceiling,
-				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux)))))))
+				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux))))))))
 }
 
 // newServer assembles the module handler sets. Every cross-module edge is
 // injected here, or in the assembly step this calls for it
 // (serverassembly.go) — never as a sibling import (ADR-0054).
+// NewPrivacyHandlers wires every seam the privacy surface needs at construction.
+func NewPrivacyHandlers(pool *pgxpool.Pool) privacy.Handlers {
+	return privacy.NewHandlers(InstallationDB(pool), StoredConfig(pool)).WithLocks(loadedLocks).
+		WithCountry(identity.CountryForDecision).WithExtensions(ExtensionData()).
+		WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).
+		WithLegalHoldWriter(NewLegalHoldSeam(pool)).WithEdgeInvalidator(search.RecomputeEdgesForActivities).
+		WithRecordLabeler(newAttentionNames(InstallationDB(pool)))
+}
+
 func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH dealsHandlers) Server {
 	// The compiled-in ceilings, taken from the deployment-config defaults rather
 	// than restated here: one place resolves a default, so no composition can
@@ -220,7 +239,9 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		captureHealthHandlers:         captureHealthHandlers{pool: pool, now: utcNow},
 		extensionIngestHealthHandlers: extensionIngestHealthHandlers{pool: pool, now: utcNow},
 		automaticWorkHandlers:         automaticWorkHandlers{pool: pool, now: utcNow},
+		Endpoint:                      vacuumhealth.NewEndpoint(pool, utcNow),
 		extensionSettingsHandlers:     extensionSettingsHandlers{store: NewSettingsStore(pool)},
+		extensionsHandlers:            extensionsHandlers{pool: pool},
 		recoveryHealthHandlers: recoveryHealthHandlers{
 			ledger: continuity.NewStore(InstallationDB(pool)),
 			now:    func() time.Time { return time.Now().UTC() },
@@ -251,11 +272,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// the purger above is not: a role that forgot it would answer 404 to a
 		// controller placing a litigation hold, which reads as "no such record"
 		// rather than as "this installation cannot hold one".
-		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), StoredConfig(pool)).WithLocks(loadedLocks).
-			WithCountry(identity.CountryForDecision).
-			WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).
-			WithLegalHoldWriter(NewLegalHoldSeam(pool)).
-			WithRecordLabeler(newAttentionNames(InstallationDB(pool))),
+		privacyHandlers: NewPrivacyHandlers(pool),
 		// The fieldcatalog seam lets renewal_reminder's preview validate a
 		// draft/stored (object, date_field) pair against the workspace's own
 		// live custom-field catalog before ever building SQL around it — the
@@ -265,9 +282,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// the API server holds no engine otherwise. It carries no background
 		// loop — nothing here starts dispatching; the handler drives one run
 		// through it on demand, exactly as the time scan drives one on a tick.
-		automationHandlers: automation.NewHandlers(InstallationDB(pool)).
-			WithFieldCatalog(customfields.NewService(pool, nil)).
-			WithRetryEngine(NewWorkflowEngine(InstallationDB(pool))),
+		automationHandlers: newAutomationHandlers(pool),
 		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)).WithLocks(loadedLocks).
 			WithVoiceKnownSpeakers(voiceKnownSpeakers(pool)).WithVoiceSentMail(voiceSentMail(pool)),
 		// The names seam is the WEB surface's: a reader reading "explain this
@@ -278,7 +293,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		},
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
-		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, newContactsStore(InstallationDB(pool)))),
+		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, newContactsStore(InstallationDB(pool))).WithWinChances(chances.WinChances)),
 		// The membership seam decides which team's week a lead may open: the
 		// team id arrives from the request, and nothing on the row narrows it
 		// to the reader.
@@ -287,8 +302,9 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// be about the same seven days, and weekly owns that answer. A module
 		// may not import compose, so it takes the function.
 		weeklyPlanHandlers: weeklyplan.NewHandlers(
-			weeklyPlanStore(pool), func() time.Time { return time.Now().UTC() },
+			WeeklyPlanStore(pool), func() time.Time { return time.Now().UTC() },
 		),
+		recordLinksHandlers: recordlinks.NewHandlers(recordlinks.NewStore(InstallationDB(pool))),
 		// The forecast owns its arithmetic and nothing about deals, so the deal
 		// rows and the fiscal window arrive as seams. Row scope is applied in
 		// ForecastDeals, where the caller's authority already sits.
@@ -297,7 +313,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		assuranceHandlers: assurance.NewHandlers(
 			assurance.NewStore(InstallationDB(pool)).WithSignalDecision(DecideAssuranceSignal), AssuranceExceptionsIn,
 			func() time.Time { return time.Now().UTC() },
-		),
+		).WithRun(assuranceRun(pool)),
 		// One assembler, shared with the test that drives this handler: the
 		// tab greys out a route the duplicate guard would refuse, so the rep
 		// learns the door is taken before writing the ask rather than from the
@@ -314,12 +330,10 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// api role's WithSchemaPool rebuilds this over the real pool.
 		customfieldsHandlers: customfields.NewHandlers(pool, nil),
 		module:               knowledge.NewHandlers(InstallationDB(pool)).WithUploadLimit(limits.KnowledgeDocument),
-		// The personal agent-activity read. Plain time.Now, NOT time.Now().UTC():
-		// the store bounds "today" at midnight in the clock's own location, and a
-		// UTC clock would name the wrong day on a non-UTC installation for the
-		// hours either side of local midnight.
+		// Plain time.Now, not UTC: the store bounds "today" at midnight in the
+		// clock's location, so a UTC clock names the wrong day near midnight.
 		aiActivityHandlers: aiactivity.NewHandlers(aiactivity.NewStore(InstallationDB(pool)), time.Now),
-		noticesHandlers:    notices.NewHandlers(notices.NewStore(InstallationDB(pool)), newTeammatesSeam(pool)),
+		noticesHandlers:    notices.NewHandlers(notices.NewStore(InstallationDB(pool)), coachdeal.Reach(newTeammatesSeam(pool), pool, deals.NewStore(InstallationDB(pool), DealsInstallation()))),
 		assignmentHandlers: assignments.NewHandlers(assignments.NewStore(InstallationDB(pool))),
 		// One clock, passed to both halves: the store stamps when each move
 		// happened and the transport works out when an unanswered ask goes
@@ -330,7 +344,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// works wherever the readings do. An attachment that has never been read
 		// simply has no grounded field to accept, and the accept says so.
 		accept: NewExtractionAccept(pool),
-		file:   NewChatCaptureFile(pool),
+		file:   NewChatCaptureFile(pool, nil),
 		// A review joins two modules' halves, so the seam is constructed here
 		// rather than either module owning the other.
 		reviews:    NewOutcomeReviews(pool),

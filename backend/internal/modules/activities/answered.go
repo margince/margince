@@ -11,15 +11,13 @@ package activities
 
 import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-func answeredSQL(inbound, until string) string { return storekit.AnsweredSQL(inbound, until) }
-func answeredReadableSQL(inbound, until, readable string) string {
-	return storekit.AnsweredReadableSQL(inbound, until, readable)
-}
+func answeredSQL(inbound, until string) string  { return storekit.AnsweredSQL(inbound, until) }
+func answerIDsSQL(inbound, until string) string { return storekit.AnswerIDsSQL(inbound, until) }
 func offThreadAnswersSQL(inbound, until string) string {
 	return storekit.OffThreadAnswersSQL(inbound, until)
 }
@@ -48,27 +46,62 @@ func normalisedSubject(column string) string        { return storekit.Normalised
 // must remain judgeable without appearing as an obligation.
 //
 // The newer-inbound walk names its kinds for the index, as answerArms does.
-func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOwed string) string {
+//
+// Whether a human took the request is read once per message, as req.accepted.
+// Each rule asks it, and every copy of that EXISTS was its own subplan. The
+// rules sit inside `OR` groups, which Postgres runs as subplans in any case.
+// `OFFSET 0` keeps the select from being folded back into each reference.
+func owedSQL(asOf, ownDomains, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOwed string) string {
 	return `(NOT ` + ImportedHistorySQL + ` AND ` + requestOpenSQL + `
- AND (` + capturedReplyAdmissionSQL(unjudgedResponseStillOwed, informsStillOwed) + `)
 	 AND (` + dismissedStillOwed + ` OR ` + notDismissedSQL + `)
+	 AND EXISTS (SELECT 1 FROM (SELECT ` + acceptedRequestSQL + ` AS accepted OFFSET 0) req
+	 WHERE ` + owedRulesSQL(asOf, ownDomains, informsStillOwed, unjudgedResponseStillOwed, "req.accepted") + `))`
+}
+
+// owedRulesSQL is the part of owedSQL that reads the verdict and the thread.
+// accepted is a boolean saying a human took the request. ownDomains is the
+// bound own-domain list invitationNeverOwedSQL reads.
+func owedRulesSQL(asOf, ownDomains, informsStillOwed, unjudgedResponseStillOwed, accepted string) string {
+	return `(` + capturedReplyAdmissionSQL(unjudgedResponseStillOwed, informsStillOwed, accepted) + `)
 	 AND (` + informsStillOwed + ` OR a.owed_verdict IS DISTINCT FROM '` + OwedVerdictInformsUs + `'
-	   OR ` + acceptedRequestSQL + `)
-	 AND ((` + confirmedRequestSQL + `) OR NOT ` + machineSenderSQL + `)
-	 AND (` + acceptedRequestSQL + ` OR NOT a.bulk_mail_attested)
-	 AND ((` + confirmedRequestSQL + `) OR NOT ` + calendarCopySQL + `
+	   OR ` + accepted + `)
+	 AND ((` + confirmedRequestOf(accepted) + `) OR NOT ` + machineSenderSQL + `)
+	 AND (` + accepted + ` OR NOT a.bulk_mail_attested)
+	 AND (` + accepted + ` OR NOT ` + invitationNeverOwedSQL(asOf, ownDomains) + `)
+	 AND ((` + confirmedRequestOf(accepted) + `) OR NOT ` + calendarCopySQL + `
 	   OR (` + unjudgedResponseStillOwed + ` AND a.owed_verdict IS NULL))
-	 AND ((` + requestIntentSQL + `)
-	   OR (NOT EXISTS (SELECT 1 FROM activity newer
-	         WHERE newer.thread_key = a.thread_key
+	 AND ((` + requestIntentOf(accepted) + `)
+	   OR (` + notSettledBySQL(asOf) + `
+	       AND NOT EXISTS (SELECT 1 FROM activity newer WHERE ` + newerInboundSQL(asOf) + `)
+	       AND NOT ` + answeredSQL("a", asOf) + `))`
+}
+
+// newerInboundSQL is a message under alias newer that came in after the inbound
+// row under alias a, on its thread, and has begun by asOf.
+func newerInboundSQL(asOf string) string {
+	return inboundOnThreadSQL(asOf) + `
+	           AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id)`
+}
+
+// inboundOnThreadSQL is a message under alias newer that came in on the thread
+// of the inbound row under alias a and has begun by asOf.
+func inboundOnThreadSQL(asOf string) string {
+	return `newer.thread_key = a.thread_key
 	           AND newer.kind = a.kind
 	           AND newer.kind IN ('email', 'message')
 	           AND newer.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	           AND newer.direction = 'inbound'
 	           AND newer.archived_at IS NULL
-	           AND ` + occurredday.BegunSQL("newer", asOf) + `
-	           AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id))
-	       AND NOT ` + answeredSQL("a", asOf) + `)))`
+	           AND ` + occurredday.BegunSQL("newer", asOf)
+}
+
+// notSettledBySQL keeps the inbound row under alias a unless its kept stamp
+// says a same-thread fact settled it by asOf. Only the stamping job writes the
+// stamp, from the two thread arms below, so the cheap test answers what the
+// full clause would. A restricted row may not be written, so its stamp is not
+// read.
+func notSettledBySQL(asOf string) string {
+	return `(a.reply_settled_at IS NULL OR a.reply_settled_at > ` + asOf + ` OR a.restricted_at IS NOT NULL)`
 }
 
 // machineSenderSQL is true when the message came from an address no human
@@ -83,12 +116,10 @@ const machineSenderSQL = `EXISTS (
 
 // Captured mail needs an intent judgment before it becomes somebody's work.
 // The classifier still reads pending mail; a human can explicitly keep noise.
-// A machine verdict stands only while the mail was read in full; a human's
-// acceptance or reviewed verdict stands on its own.
-func capturedReplyAdmissionSQL(classifying, reviewingInformational string) string {
-	human := heldRequestSQL() + ` OR (a.owed_verdict = 'asks_us' AND ` + humanReviewedOwedSQL("a") + `)`
-	return `(` + classifying + ` OR (` + reviewingInformational + ` AND a.owed_verdict = 'informs_us') OR (` + human + `) OR (
-   a.capture_label IS DISTINCT FROM 'noise'
-   AND (NOT starts_with(a.captured_by, '` + string(principal.PrincipalConnector) + `:') OR ` + acceptedRequestSQL + `
-     OR (a.owed_verdict = 'asks_us' AND ` + provenance.MailBodyCompleteSQL("a") + `))))`
+// An asks_us verdict admits by the same rule as automatic personal work.
+func capturedReplyAdmissionSQL(classifying, reviewingInformational, accepted string) string {
+	return `(` + classifying + ` OR (` + reviewingInformational + ` AND a.owed_verdict = 'informs_us') OR ` + heldRequestSQL() + `
+ OR (` + storekit.AutomaticRequestIntentClause("a") + `) OR (
+   ` + capturekind.SQL("a.capture_label") + ` IS DISTINCT FROM 'other'
+   AND (NOT starts_with(a.captured_by, '` + string(principal.PrincipalConnector) + `:') OR ` + accepted + `)))`
 }

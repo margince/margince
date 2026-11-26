@@ -98,36 +98,16 @@ func companyReadQuestionFixture() companyReadMessageFixture {
 	return fixture
 }
 
-func companyReadFixtureJSON(t *testing.T, f companyReadMessageFixture) json.RawMessage {
-	t.Helper()
-	raw, err := json.Marshal(f)
-	if err != nil {
-		t.Fatalf("encoding the fixture: %v", err)
-	}
-	return raw
-}
-
-// companyReadExpectationJSON is what the corpus asserts, encoded as the corpus
-// will carry it — beside the fixture, never inside it.
-func companyReadExpectationJSON(t *testing.T, kind string, changes map[string]string) json.RawMessage {
-	t.Helper()
-	raw, err := json.Marshal(companyConversationExpectation{Kind: kind, Changes: changes})
-	if err != nil {
-		t.Fatalf("encoding the expectation: %v", err)
-	}
-	return raw
-}
-
 func companyReadCorrectionExpectation(t *testing.T) json.RawMessage {
 	t.Helper()
-	return companyReadExpectationJSON(t, "correction", map[string]string{"legal_name": "Acme Robotics GmbH"})
+	return companyConversationExpectationJSON(t, "correction", map[string]string{"legal_name": "Acme Robotics GmbH"})
 }
 
 func runCompanyReadCase(
 	t *testing.T, fixture companyReadMessageFixture, expected json.RawMessage, reply string,
 ) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
-	prepared, err := companyReadMessageCases{}.Prepare(companyReadFixtureJSON(t, fixture), expected)
+	prepared, err := companyReadMessageCases{}.Prepare(fixtureJSON(t, fixture), expected)
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -188,7 +168,7 @@ func TestCompanyReadMessageCaseReportsWhatTheGateRefused(t *testing.T) {
 			// anything but the fixture it sent would accept this one too.
 			name:       "the accepted correction, answered to a question",
 			fixture:    companyReadQuestionFixture(),
-			expected:   companyReadExpectationJSON(t, "answer", nil),
+			expected:   companyConversationExpectationJSON(t, "answer", nil),
 			reply:      companyReadCorrectionReply,
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: `proposes "legal_name" without an administrator change request`,
@@ -487,7 +467,7 @@ func TestCompanyReadMessageCaseReplaysTheConversationItWasGiven(t *testing.T) {
 // assertion.
 func TestCompanyReadMessageFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(companyReadFixtureJSON(t, companyReadCorrectionFixture()), &fields); err != nil {
+	if err := json.Unmarshal(fixtureJSON(t, companyReadCorrectionFixture()), &fields); err != nil {
 		t.Fatalf("decoding the fixture: %v", err)
 	}
 	given := map[string]bool{"message": true, "history": true, "evidence": true}

@@ -110,7 +110,7 @@ func (t *edgeTargets) apply(ctx context.Context, tx pgx.Tx) error {
 	if err != nil {
 		return err
 	}
-	if err := recomputeContactPairs(ctx, tx, t.contactPairs, missingContacts); err != nil {
+	if err := recomputeContactPairs(ctx, tx, t.contactPairs, missingContacts, false); err != nil {
 		return err
 	}
 
@@ -129,7 +129,7 @@ func (t *edgeTargets) apply(ctx context.Context, tx pgx.Tx) error {
 	if err != nil {
 		return err
 	}
-	if err := recomputePairs(ctx, tx, t.pairs, missingInteractions); err != nil {
+	if err := recomputePairs(ctx, tx, t.pairs, missingInteractions, false); err != nil {
 		return err
 	}
 

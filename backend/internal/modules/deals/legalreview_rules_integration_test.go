@@ -120,7 +120,7 @@ func TestAGatedStageReorderedBehindADealHoldsIt(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Contract, the gated stage, now comes first; the deal sits after it.
-	if _, err := e.store.ReorderStages(e.as(), pipelineID, []ids.UUID{third.UUID, first.UUID, second.UUID}, nil); err != nil {
+	if _, err := e.store.ReorderStages(e.as(), pipelineID, append([]ids.UUID{third.UUID, first.UUID, second.UUID}, closingStageUUIDs(t, e.owner, pipelineID)...), nil); err != nil {
 		t.Fatalf("reordering the stages: %v", err)
 	}
 	refusedFor(t, e.advance(dealID, laterStage(t, e, pipelineID)), "")
@@ -255,7 +255,7 @@ func TestAnAdvanceWaitsForAnAmountChangeInFlight(t *testing.T) {
 	}
 	done := make(chan error, 1)
 	go func() { done <- e.advance(dealID, toID) }()
-	waitForALockWaiter(t, e)
+	waitForALockWaiter(t, e.configEnv)
 	if err := writer.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -266,8 +266,8 @@ func TestAnAdvanceWaitsForAnAmountChangeInFlight(t *testing.T) {
 }
 
 // waitForALockWaiter returns once some backend waits on a row lock, which is
-// the advance blocked on the writer. It fails rather than waiting forever.
-func waitForALockWaiter(t *testing.T, e *reviewEnv) {
+// the transaction under test blocked on another. It fails rather than waiting forever.
+func waitForALockWaiter(t *testing.T, e *configEnv) {
 	t.Helper()
 	// Bounded by tries rather than a clock: each try is a round trip.
 	for range 20000 {
@@ -281,7 +281,7 @@ func waitForALockWaiter(t *testing.T, e *reviewEnv) {
 			return
 		}
 	}
-	t.Fatal("the advance never waited on the deal row the writer holds")
+	t.Fatal("no transaction ever waited on a row lock another holds")
 }
 
 // A reviewer who may see less than the requester reads less of the pack. Not
@@ -384,16 +384,10 @@ func TestALostDealReopenedPastTheGateNeedsLegal(t *testing.T) {
 	if err := e.owner.QueryRow(t.Context(), `SELECT pipeline_id FROM stage WHERE id = $1`, contract).Scan(&pipelineID); err != nil {
 		t.Fatal(err)
 	}
-	zero := 0
-	lost, err := e.store.CreateStage(e.as(), CreateStageInput{
-		PipelineID: pipelineID, Name: "Lost", Position: 3, Semantic: string(SemanticLost), WinProbability: &zero,
-	})
-	if err != nil {
-		t.Fatalf("seeding a lost stage: %v", err)
-	}
+	_, lost := closingStageIDs(t, e.configEnv, pipelineID)
 	reason := "budget cut"
 	if _, err := e.store.AdvanceDeal(e.asRequester(), dealID, AdvanceDealInput{
-		ToStageID: ids.From[ids.StageKind](ids.UUID(lost.Id)), LostReason: &reason, LostReasonCode: new("other"),
+		ToStageID: lost, LostReason: &reason, LostReasonCode: new("other"),
 	}); err != nil {
 		t.Fatalf("losing the deal: %v", err)
 	}

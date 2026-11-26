@@ -18,7 +18,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -33,7 +32,7 @@ const resurrectedAddress = "geloescht@betroffene.example"
 // erased. The list is the standing instruction, so the pass takes them again.
 func TestASubjectBroughtBackAfterErasureIsErasedAgain(t *testing.T) {
 	e := integration.Setup(t)
-	eraser := privacy.NewEraser(InstallationDB(e.Pool))
+	eraser := eraserWithGraph(InstallationDB(e.Pool))
 
 	// The erasure happened, and its suppression outlived the row — which is
 	// what a restore to a point AFTER the erasure leaves behind.
@@ -60,7 +59,7 @@ func TestReapplyingSuppressionsTakesNothingFromAHealthyInstallation(t *testing.T
 	e := integration.Setup(t)
 	untouched := seedContactWithEmail(t, e, "Die Kundin", "kundin@partner.example")
 
-	took, err := privacy.NewEraser(InstallationDB(e.Pool)).ReapplySuppressions(e.Admin())
+	took, err := eraserWithGraph(InstallationDB(e.Pool)).ReapplySuppressions(e.Admin())
 	if err != nil {
 		t.Fatalf("ReapplySuppressions: %v", err)
 	}
@@ -79,7 +78,7 @@ func TestASuppressionWithNoLiveSubjectIsNotAFinding(t *testing.T) {
 	e := integration.Setup(t)
 	seedSuppressedEmail(t, "niemand@nirgends.example")
 
-	took, err := privacy.NewEraser(InstallationDB(e.Pool)).ReapplySuppressions(e.Admin())
+	took, err := eraserWithGraph(InstallationDB(e.Pool)).ReapplySuppressions(e.Admin())
 	if err != nil {
 		t.Fatalf("ReapplySuppressions: %v", err)
 	}
@@ -109,7 +108,7 @@ func TestTheMatchFollowsTheErasersOwnNormalization(t *testing.T) {
 	// ...and the resurrection arrived in another the column permits.
 	resurrected := seedContactWithEmail(t, e, "Die Betroffene", "  geloescht@betroffene.example  ")
 
-	took, err := privacy.NewEraser(InstallationDB(e.Pool)).ReapplySuppressions(e.Admin())
+	took, err := eraserWithGraph(InstallationDB(e.Pool)).ReapplySuppressions(e.Admin())
 	if err != nil {
 		t.Fatalf("ReapplySuppressions: %v", err)
 	}
@@ -165,7 +164,7 @@ func TestReapplyingSuppressionsRefusesACallerWhoMayNotErase(t *testing.T) {
 	seedSuppressedEmail(t, resurrectedAddress)
 	resurrected := seedContactWithEmail(t, e, "Die Betroffene", resurrectedAddress)
 
-	_, err := privacy.NewEraser(InstallationDB(e.Pool)).
+	_, err := eraserWithGraph(InstallationDB(e.Pool)).
 		ReapplySuppressions(e.As(e.Rep1, nil, integration.AccountRepPerms))
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("err = %v, want the contact gate to refuse a seat that may not erase", err)
@@ -188,7 +187,7 @@ func TestAHeldSubjectDoesNotStopTheOthersBeingTakenAgain(t *testing.T) {
 	takeable := seedContactWithEmail(t, e, "Die Zweite", "zweite@betroffene.example")
 	placeLegalHold(t, held)
 
-	took, err := privacy.NewEraser(InstallationDB(e.Pool)).ReapplySuppressions(e.Admin())
+	took, err := eraserWithGraph(InstallationDB(e.Pool)).ReapplySuppressions(e.Admin())
 	// The refusal travels back rather than being swallowed: the count says
 	// what was done and the error says what could not be.
 	if !errors.Is(err, apperrors.ErrConflict) {
@@ -221,7 +220,7 @@ func placeLegalHold(t *testing.T, contact ids.UUID) {
 func TestAJournalledSuppressionSurvivesTheListRollingBack(t *testing.T) {
 	e := integration.Setup(t)
 	store := blobstore.NewMemory()
-	eraser := privacy.NewEraser(InstallationDB(e.Pool)).WithBlobstore(store)
+	eraser := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(store)
 
 	// Before the backup: the subject was erased and the list exported.
 	seedSuppressedEmail(t, resurrectedAddress)
@@ -255,7 +254,7 @@ func TestAJournalledSuppressionSurvivesTheListRollingBack(t *testing.T) {
 func TestTheExportedListNeverCarriesTheIdentifierItself(t *testing.T) {
 	e := integration.Setup(t)
 	store := blobstore.NewMemory()
-	eraser := privacy.NewEraser(InstallationDB(e.Pool)).WithBlobstore(store)
+	eraser := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(store)
 	seedSuppressedEmail(t, resurrectedAddress)
 
 	if _, err := eraser.ExportSuppressions(e.Admin()); err != nil {
@@ -286,7 +285,7 @@ func TestTheExportedListNeverCarriesTheIdentifierItself(t *testing.T) {
 func TestExportingTheListTwiceIsIdempotent(t *testing.T) {
 	e := integration.Setup(t)
 	store := blobstore.NewMemory()
-	eraser := privacy.NewEraser(InstallationDB(e.Pool)).WithBlobstore(store)
+	eraser := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(store)
 	seedSuppressedEmail(t, resurrectedAddress)
 
 	first, err := eraser.ExportSuppressions(e.Admin())
@@ -307,7 +306,7 @@ func TestExportingTheListTwiceIsIdempotent(t *testing.T) {
 // it having run before a backup.
 func TestExportingWithoutAnObjectStoreSaysSo(t *testing.T) {
 	e := integration.Setup(t)
-	if _, err := privacy.NewEraser(InstallationDB(e.Pool)).ExportSuppressions(e.Admin()); err == nil {
+	if _, err := eraserWithGraph(InstallationDB(e.Pool)).ExportSuppressions(e.Admin()); err == nil {
 		t.Fatal("an export with nowhere to write reported success")
 	}
 }
@@ -343,7 +342,7 @@ func (f failingBlobs) Health(context.Context) error                      { retur
 func TestAnUnreachableJournalIsNotAnAnswerThatNobodyWasErased(t *testing.T) {
 	e := integration.Setup(t)
 	outage := errors.New("the object store is unreachable")
-	eraser := privacy.NewEraser(InstallationDB(e.Pool)).WithBlobstore(failingBlobs{err: outage})
+	eraser := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(failingBlobs{err: outage})
 
 	// A live subject the database's own list does not name, so the pass has to
 	// ask the journal about them — and the journal cannot answer.
@@ -365,7 +364,7 @@ func TestAnUnreachableJournalIsNotAnAnswerThatNobodyWasErased(t *testing.T) {
 func TestAnExportThatCannotWriteSaysSo(t *testing.T) {
 	e := integration.Setup(t)
 	seedSuppressedEmail(t, resurrectedAddress)
-	eraser := privacy.NewEraser(InstallationDB(e.Pool)).
+	eraser := eraserWithGraph(InstallationDB(e.Pool)).
 		WithBlobstore(failingBlobs{err: errors.New("the object store is full")})
 
 	if _, err := eraser.ExportSuppressions(e.Admin()); err == nil {
@@ -378,7 +377,7 @@ func TestAnExportThatCannotWriteSaysSo(t *testing.T) {
 func TestASubjectWithTwoSuppressedAddressesIsTakenOnce(t *testing.T) {
 	e := integration.Setup(t)
 	store := blobstore.NewMemory()
-	eraser := privacy.NewEraser(InstallationDB(e.Pool)).WithBlobstore(store)
+	eraser := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(store)
 
 	const second = "zweite@betroffene.example"
 	seedSuppressedEmail(t, resurrectedAddress)

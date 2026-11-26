@@ -49,7 +49,7 @@ func TestTheSetupProposalResolvesTheCatalogTheReaderMaySee(t *testing.T) {
 	if lane.calls != 1 {
 		t.Fatalf("the lane was asked %d times", lane.calls)
 	}
-	listed, err := newInitiativeStore(e.Pool).List(ctx, nil)
+	listed, err := NewInitiativeStore(e.Pool).List(ctx, nil)
 	if err != nil {
 		t.Fatalf("listing initiatives: %v", err)
 	}

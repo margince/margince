@@ -12,12 +12,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -135,6 +133,10 @@ func readBody(w http.ResponseWriter, r *http.Request) (json.RawMessage, error) {
 //
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func decodeRaw(r *http.Request, raw json.RawMessage, into any, owned func(string) bool, closed bool) error {
+	if datasource.HasMalformedText(raw) {
+		return Validation("body", "malformed_json",
+			"the request body must be valid UTF-8 without unpaired surrogate escapes; resend it as UTF-8 text")
+	}
 	if datasource.HasCustomFieldMap(into) {
 		return decodeCustomFieldBody(r, raw, into, owned)
 	}
@@ -238,24 +240,7 @@ func PresentField(r *http.Request, name string) (value json.RawMessage, present 
 //
 //craft:ignore naked-any mirror of Decode's seam target
 func bodyDecodeRefusal(r *http.Request, raw json.RawMessage, into any, err error) error {
-	// A target's own unmarshaler may refuse a key (the lead patch does).
-	if unknown, ok := errors.AsType[*datasource.UnknownFieldError](err); ok {
-		return Validation("body", "unknown_field", unknown.Error())
-	}
-	if refusal := datasource.LocalizeFieldFault(raw, into, err, bodyProbe); refusal != nil {
-		detail, withheld := fieldShapeDetail(refusal)
-		if withheld {
-			slog.WarnContext(r.Context(), "unnamed request-body field decode failure",
-				"method", r.Method, "path", loggedPath(r), "field", refusal.Field, "err", err)
-		}
-		return Validation("body", "malformed_json", detail)
-	}
-	safe, withheld := SafeDecodeError(err)
-	if withheld {
-		slog.WarnContext(r.Context(), "unnamed request-body decode failure",
-			"method", r.Method, "path", loggedPath(r), "err", err)
-	}
-	return Validation("body", "malformed_json", safe.Error())
+	return undecodedRefusal(r.Context(), r.Method, loggedPath(r), "body", raw, into, err)
 }
 
 // bodyProbe is the decoder Decode itself runs, so a localization probe asks the
@@ -359,7 +344,7 @@ func (d Download) WriteHeaders(w http.ResponseWriter) {
 		if d.Inline {
 			disposition = "inline"
 		}
-		w.Header().Set("Content-Disposition", fmt.Sprintf("%s; filename=%q", disposition, d.Filename))
+		w.Header().Set("Content-Disposition", disposition+dispositionFilename(d.Filename))
 	}
 	if d.Size > 0 {
 		w.Header().Set("Content-Length", strconv.FormatInt(d.Size, 10))
@@ -392,70 +377,6 @@ func StreamObject(w http.ResponseWriter, r *http.Request, obj StreamedObject, lo
 	if _, err := io.Copy(w, obj.Body); err != nil {
 		slog.WarnContext(r.Context(), "streaming object download", "object", logLabel, "err", err)
 	}
-}
-
-// IfMatchVersion reads the optional If-Match row version (data-model
-// §1.3a: a bare integer, not a quoted ETag). Malformed input is a client
-// error, not last-write-wins.
-func IfMatchVersion(w http.ResponseWriter, r *http.Request) (*int64, bool) {
-	raw := r.Header.Get("If-Match")
-	if raw == "" {
-		return nil, true
-	}
-	v, err := strconv.ParseInt(raw, 10, 64)
-	if err != nil || v < 1 {
-		Write(w, r, Validation("If-Match", "malformed_if_match", "If-Match carries the last-seen integer version"))
-		return nil, false
-	}
-	return &v, true
-}
-
-// IfNoneMatchHit reports whether r's If-None-Match already names etag (a
-// quoted strong validator, e.g. `"abc123"`), so a caller can answer 304
-// before doing the work a fresh response would need. Per RFC 9110 §13.1.2 the
-// header is a comma-separated list, "*" matches anything, and comparison is
-// WEAK — a proxy that adds a `W/` prefix to this server's own strong tag must
-// still be recognised, or every hop that does that silently pays for the full
-// response this header exists to let it skip. The list is split respecting
-// quoting, not on every comma: a comma is a legal byte inside a quoted
-// etag-value, so a naive split could cut a single candidate in two and miss
-// it, or the request could carry several header lines (Go's Header.Values,
-// each itself comma-separated in the same way).
-func IfNoneMatchHit(r *http.Request, etag string) bool {
-	for _, line := range r.Header.Values("If-None-Match") {
-		for _, candidate := range splitUnquoted(line, ',') {
-			candidate = strings.TrimSpace(candidate)
-			if candidate == "*" {
-				return true
-			}
-			if strings.TrimPrefix(candidate, "W/") == etag {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// splitUnquoted splits s on sep, except where sep falls inside a
-// double-quoted span — the shape an ETag list needs, since RFC 9110's
-// etag-value allows a comma as one of its own bytes.
-func splitUnquoted(s string, sep byte) []string {
-	var parts []string
-	inQuotes := false
-	start := 0
-	for i := 0; i < len(s); i++ {
-		switch s[i] {
-		case '"':
-			inQuotes = !inQuotes
-		case sep:
-			if !inQuotes {
-				parts = append(parts, s[start:i])
-				start = i + 1
-			}
-		}
-	}
-	parts = append(parts, s[start:])
-	return parts
 }
 
 // RequireSent refuses a body that left out a field the contract makes required

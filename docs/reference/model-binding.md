@@ -46,8 +46,10 @@ when it builds the adapter, and names what is missing.
 | `openai` | `OPENAI_API_KEY` | can be skipped (default `api.openai.com`) | BYOK cloud, its own Responses API |
 | `gemini` | `GEMINI_API_KEY` | can be skipped (default `generativelanguage.googleapis.com/v1beta`) | BYOK cloud, its own `generateContent` |
 | `gemini_vertex` | `GEMINI_VERTEX_SA_JSON` (the JSON of the key file of the service account) | **refused**: the host comes from `location` | BYOK cloud, the `gemini` wire served by Vertex AI; **`location` required** |
+| `azure_openai` | `AZURE_OPENAI_API_KEY` (the static key of the resource) | **required**, `https://<resource>.openai.azure.com`; **`location` required** | BYOK cloud, the OpenAI wire on an Azure OpenAI resource; the model is the deployment name |
 | `jev` | `TYPESAFE_API_KEY` | can be skipped (default `https://api.typesafe.ai/v1/systemone`, the full endpoint) | decisions lane only; the TypeSafe API |
 | `jev_compatible` | `JEV_COMPATIBLE_API_KEY` (**not needed**: sent when stored, never asked for) | **required**, the full endpoint | decisions lane only; any server on the Jev wire: OpenRouter (`https://openrouter.ai/api/alpha/decisions`, key = your OpenRouter key) or a server you run on your own (`http://127.0.0.1:8767/v1/systemone`, most often with no key) |
+| `gemini_decision` | `GEMINI_API_KEY`, the key of `gemini` | can be skipped (default `https://generativelanguage.googleapis.com/v1beta/decisions`, the full endpoint) | decisions lane only; the Decisions API of Google, on the Gemini Developer API alone, with no EU region |
 
 `base_url` and `location` belong to the provider, set once under `providers:`. That is
 `providers.<name>.base_url`, `providers.gemini_vertex.location`, and for an OpenRouter host
@@ -69,8 +71,11 @@ written; it adds nothing.
 `https://api.mistral.ai/v1` and `https://api.mistral.ai` reach the same place. `gemini` is the other
 way round: its default base keeps the `/v1beta` part, and the paths are written from that version.
 
-`location` belongs to `gemini_vertex` only. It is set on the provider (and may be set again on
-`embeddings:`), and refused on every other provider.
+`location` belongs to `gemini_vertex` and `azure_openai` only. It is set on the provider (and may be
+set again on `embeddings:`), and refused on every other provider. On `azure_openai` it is the Azure region
+of the resource, such as `swedencentral`. A region the build does not list (`azureRegionCountries`) is
+refused on every profile, and `eu_hosted` also refuses a listed region outside the EU. The rest of this
+list is about `gemini_vertex`.
 
 - It names the Vertex AI location that serves the call and works on the prompt: `eu`, `us`,
   `global`, or a region such as `europe-west4`. The API host comes from it, so Margince accepts no

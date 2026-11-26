@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, within } from "storybook/test";
+import { expect, fireEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -61,3 +61,23 @@ export const Pdf: Story = {
   },
 };
 export const PdfDark: Story = { ...Pdf, globals: { theme: "dark" } };
+
+// A dropped file the server would refuse is named at once, and never held.
+export const RefusedAsDropped: Story = {
+  render: Pdf.render,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // A browser builds a DragEvent only from a real DataTransfer.
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(
+      new File(["MZ"], "setup.exe", { type: "application/x-msdownload" }),
+    );
+    fireEvent(
+      await canvas.findByLabelText("Attach files"),
+      new DragEvent("drop", { dataTransfer, bubbles: true, cancelable: true }),
+    );
+    await expect(
+      await canvas.findByText(/^setup\.exe was not added\./),
+    ).toBeVisible();
+  },
+};

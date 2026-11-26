@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
-import { EmailText } from "./emailtext";
+import { EmailReading, EmailText } from "./emailtext";
 
 const meta = {
   title: "Components/Text and data display/Email text",
@@ -17,11 +17,15 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Paragraphs: Story = {
-  args: { body: "Hello Ada,\n\nCan we meet on Tuesday?\n\nBest regards\nSam" },
+  args: {
+    body: "Hello Ada,\n\nCan we meet on Tuesday?\n\nBest regards\nSam",
+    subject: "Meeting",
+  },
 };
 export const QuotedHistory: Story = {
   args: {
     body: "Tuesday works.\n\nOn Monday Ada wrote:\n> Can we meet on Tuesday?",
+    subject: "Re: Meeting",
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -31,5 +35,37 @@ export const QuotedHistory: Story = {
     if (summary) await userEvent.click(summary);
     await expect(summary).toHaveAttribute("aria-expanded", "true");
     await expect(canvas.getByText(/Can we meet on Tuesday/)).toBeVisible();
+  },
+};
+
+// An Outlook forward has no forward line, so only its subject keeps the
+// forwarded mail in the message.
+export const OutlookForward: Story = {
+  args: {
+    body: "FYI\n\nFrom: Ada\nSent: Monday\nTo: Sam\n\nCan we meet on Tuesday?",
+    subject: "FW: Meeting",
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText(/Can we meet on Tuesday/)).toBeVisible();
+    await expect(canvas.queryByText("Show quoted history")).toBeNull();
+  },
+};
+export const NoText: Story = {
+  args: { body: "", subject: null },
+  render: () => (
+    <EmailReading
+      activityId="01a05500-0000-7000-8000-0000000000a1"
+      language={null}
+      body=""
+      subject={null}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("This message has no text.")).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", { name: "Show in my language" }),
+    ).toBeNull();
   },
 };

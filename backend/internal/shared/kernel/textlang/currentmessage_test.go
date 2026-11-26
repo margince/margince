@@ -45,3 +45,19 @@ func TestCurrentMessageKeepsWordsBelowATemplateDivider(t *testing.T) {
 		t.Fatalf("template lost current words: %q", got)
 	}
 }
+
+func TestCurrentMessageStopsAtAnAttributionLine(t *testing.T) {
+	for _, attribution := range []string{
+		"On Mon, 10 Nov 2026 at 09:00, Anna Berg <anna@example.test> wrote:",
+		"Am 10.11.2026 um 09:00 schrieb Anna Berg <anna@example.test>:",
+		"Vào Th 2, 10 thg 11, 2026 vào lúc 09:00 Anna Berg <anna@example.test> đã viết:",
+	} {
+		t.Run(attribution, func(t *testing.T) {
+			reply := "Thanks, we will wait for your answer."
+			body := reply + "\n\n" + attribution + "\nWe will not go ahead with this project."
+			if got := textlang.CurrentMessage(body); got != reply {
+				t.Fatalf("current words = %q, want %q", got, reply)
+			}
+		})
+	}
+}

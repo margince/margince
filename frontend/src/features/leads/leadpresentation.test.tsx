@@ -15,6 +15,7 @@ import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
+import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { LeadBoard, StatusBadge, scoreTone } from "./leadpresentation";
 
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
@@ -37,6 +38,10 @@ function renderBoardWithClient(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(
+    ["me"],
+    meFixture({ rowScope: "all", allow: READS_RECORDS }),
+  );
   const invalidated: unknown[] = [];
   const real = client.invalidateQueries.bind(client);
   client.invalidateQueries = ((filters?: { queryKey?: unknown }) => {
@@ -210,7 +215,7 @@ describe("lead work-board presentation", () => {
     expect(screen.queryByRole("link")).toBeNull();
   });
 
-  it("says where an unclassified lead came from as not set, and never prints how the row was written", () => {
+  it("names no origin for an unclassified lead, and never prints how the row was written", () => {
     renderBoard(
       <LeadBoard
         query={UNNARROWED_LIST_QUERY}
@@ -228,7 +233,8 @@ describe("lead work-board presentation", () => {
       />,
     );
 
-    expect(screen.getByText("Not set")).toBeTruthy();
+    expect(screen.getByText("Jonas Petersen")).toBeTruthy();
+    expect(screen.queryByText("Not set")).toBeNull();
     expect(screen.queryByText(/mirror|pipedrive|imported/i)).toBeNull();
   });
 

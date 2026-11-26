@@ -4,6 +4,7 @@
 import { useIsMutating, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
 import { holdsEveryWord, searchWords } from "../../format/collate";
+import { LICENSE_ENTITLEMENT_KEY } from "../../lib/license-posture";
 import { readMemberPage } from "../../lib/memberpages";
 
 export type User = components["schemas"]["User"];
@@ -88,6 +89,6 @@ export function useMemberRefresh() {
       qc.invalidateQueries({ queryKey: ["me"] }),
       // Settings › Seats reads the seat count from its own endpoint.
       qc.invalidateQueries({ queryKey: ["installation-seat-usage"] }),
-      qc.invalidateQueries({ queryKey: ["installation-license"] }),
+      qc.invalidateQueries({ queryKey: LICENSE_ENTITLEMENT_KEY }),
     ]);
 }

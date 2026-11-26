@@ -1,13 +1,41 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { LocaleProvider } from "../i18n";
 import { ProblemError } from "../lib/problem";
-import { ProjectLinks, type ProjectLinksAdapter } from "./projectlinks";
+import {
+  ProjectLinks,
+  type ProjectLinksAdapter,
+  RemoveLinkMenu,
+} from "./projectlinks";
 
 afterEach(cleanup);
+
+// The dialog's own confirm, not the section's verb of the same name behind it.
+function confirmAttach() {
+  return within(screen.getByRole("dialog")).getByRole("button", {
+    name: "Attach project",
+  });
+}
+
+// The row's verb: its overflow menu, named for the record, then Remove.
+async function openRemove(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+) {
+  await user.click(
+    screen.getByRole("button", { name: `More actions for ${name}` }),
+  );
+  await user.click(screen.getByRole("button", { name: "Remove" }));
+}
 
 function draw(adapter: Partial<ProjectLinksAdapter> = {}, bare = false) {
   const full: ProjectLinksAdapter = {
@@ -96,6 +124,11 @@ describe("ProjectLinks", () => {
     );
     await user.click(await screen.findByText("Warehouse rollout · WR-1"));
 
+    // The pick only selects: the role is still the reader's to choose, so
+    // nothing is written until the confirm.
+    expect(attach).not.toHaveBeenCalled();
+    await user.click(confirmAttach());
+
     // With a role picked, the attach carries it — the section never guesses a
     // role, because attaching re-roles an edge that already exists.
     await waitFor(() => expect(attach).toHaveBeenCalledWith("p9", "customer"));
@@ -104,6 +137,34 @@ describe("ProjectLinks", () => {
         screen.queryByRole("searchbox", { name: /Search projects/ }),
       ).toBeNull(),
     );
+  });
+
+  it("writes the role chosen after the pick, and confirms nothing unpicked", async () => {
+    const user = userEvent.setup();
+    const attach = vi.fn(async () => undefined);
+    draw({
+      search: async () => [{ id: "p9", name: "Warehouse rollout" }],
+      roles: [
+        { value: "customer", label: "Customer" },
+        { value: "partner", label: "Partner" },
+      ],
+      attach,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Attach project" }));
+    expect(confirmAttach().hasAttribute("disabled")).toBe(true);
+    await user.type(
+      screen.getByRole("searchbox", { name: /Search projects/ }),
+      "ware",
+    );
+    await user.click(await screen.findByText("Warehouse rollout"));
+    expect(confirmAttach().hasAttribute("disabled")).toBe(false);
+
+    await user.click(screen.getByRole("combobox", { name: "As" }));
+    await user.click(await screen.findByRole("option", { name: "Partner" }));
+    await user.click(confirmAttach());
+
+    await waitFor(() => expect(attach).toHaveBeenCalledWith("p9", "partner"));
   });
 
   it("keeps the dialog open and shows what the server refused", async () => {
@@ -129,6 +190,7 @@ describe("ProjectLinks", () => {
       "ware",
     );
     await user.click(await screen.findByText("Warehouse rollout"));
+    await user.click(confirmAttach());
 
     // The refusal is the one moment the reader most needs to see what they
     // asked for, so the dialog stays.
@@ -162,18 +224,19 @@ describe("ProjectLinks", () => {
       "ware",
     );
     await user.click(await screen.findByText("Warehouse rollout"));
+    await user.click(confirmAttach());
     expect(await screen.findByText("not found")).toBeTruthy();
     await user.keyboard("{Escape}");
 
-    await user.click(
-      screen.getByRole("button", { name: "Detach ERP rollout" }),
-    );
+    await openRemove(user, "ERP rollout");
     expect(screen.getByText(/Only its link to this record ends/)).toBeTruthy();
     expect(screen.queryByText("not found")).toBeNull();
 
     // And the other way round: a refused detach says nothing to the next
     // attach.
-    await user.click(screen.getByRole("button", { name: "Detach project" }));
+    await user.click(
+      screen.getByRole("button", { name: "Remove from project" }),
+    );
     expect(await screen.findByText("not found")).toBeTruthy();
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "Attach project" }));
@@ -188,15 +251,15 @@ describe("ProjectLinks", () => {
     const detach = vi.fn(async () => undefined);
     draw({ linked: [{ project_id: "p1", name: "ERP rollout" }], detach });
 
-    await user.click(
-      screen.getByRole("button", { name: "Detach ERP rollout" }),
-    );
+    await openRemove(user, "ERP rollout");
     expect(screen.getByText(/Only its link to this record ends/)).toBeTruthy();
     expect(detach).not.toHaveBeenCalled();
 
     // The confirm's own verb is distinct from the row's, so a reader — and a
     // screen reader — can tell the ask from the act.
-    await user.click(screen.getByRole("button", { name: "Detach project" }));
+    await user.click(
+      screen.getByRole("button", { name: "Remove from project" }),
+    );
     await waitFor(() => expect(detach).toHaveBeenCalledWith("p1"));
   });
 
@@ -210,7 +273,7 @@ describe("ProjectLinks", () => {
     for (const verb of [
       "New project",
       "Attach project",
-      "Detach ERP rollout",
+      "More actions for ERP rollout",
     ]) {
       expect(screen.queryByRole("button", { name: verb })).toBeNull();
     }
@@ -240,6 +303,7 @@ describe("ProjectLinks", () => {
       "ware",
     );
     await user.click(await screen.findByText("Warehouse rollout"));
+    await user.click(confirmAttach());
 
     // Escape while the write is in flight would lose the refusal it is about
     // to return, and the reader would see nothing at all.
@@ -286,11 +350,11 @@ describe("ProjectLinks", () => {
     // name, which is what a screen reader announces.
     expect(screen.getByRole("button", { name: "Attach company" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Attach project" })).toBeNull();
-    await user.click(
-      screen.getByRole("button", { name: "Detach Beta Systeme" }),
-    );
+    await openRemove(user, "Beta Systeme");
     expect(screen.getByRole("button", { name: "Remove company" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Detach project" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Remove from project" }),
+    ).toBeNull();
   });
 
   // The disclosure this section used to make. A reader who may see a company
@@ -314,6 +378,7 @@ describe("ProjectLinks", () => {
       "ware",
     );
     await user.click(await screen.findByText("Warehouse rollout"));
+    await user.click(confirmAttach());
 
     expect(await screen.findByText(/do not have permission/)).toBeTruthy();
     expect(screen.queryByText(/company\.link_project/)).toBeNull();
@@ -334,5 +399,54 @@ describe("ProjectLinks", () => {
 
     draw({ linked, card, detach, readOnly: true });
     expect(screen.getByText("Netcare:fixed")).toBeTruthy();
+  });
+
+  it("draws the key the caller hands it beside the name", () => {
+    draw({
+      linked: [
+        {
+          project_id: "p1",
+          name: "ERP rollout",
+          key: <span data-testid="caller-key">ERP-1</span>,
+        },
+      ],
+    });
+    expect(screen.getByTestId("caller-key").textContent).toBe("ERP-1");
+  });
+
+  // Each row's menu is reached from the keyboard alone, and Escape puts the
+  // reader back on its trigger without removing anything.
+  it("opens the row's menu from the keyboard and closes it on Escape", async () => {
+    const user = userEvent.setup();
+    const detach = vi.fn(async () => undefined);
+    draw({ linked: [{ project_id: "p1", name: "ERP rollout" }], detach });
+
+    const trigger = screen.getByRole("button", {
+      name: "More actions for ERP rollout",
+    });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Remove" })).toBeTruthy();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+    expect(detach).not.toHaveBeenCalled();
+  });
+});
+
+describe("RemoveLinkMenu", () => {
+  it("names its menu for the record, or generically when it has no name", () => {
+    render(
+      <LocaleProvider initial="en">
+        <RemoveLinkMenu name="Brandt Automotive GmbH" onRemove={() => {}} />
+        <RemoveLinkMenu name={null} onRemove={() => {}} />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByRole("button", {
+        name: "More actions for Brandt Automotive GmbH",
+      }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "More actions" })).toBeTruthy();
   });
 });

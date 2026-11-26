@@ -24,7 +24,8 @@ func TestTheAccountReachAdmitsEachArmWithinItsBounds(t *testing.T) {
 			VALUES ($1, $2, 'seed', 'system')`, company, "Reach "+company.String())
 	}
 	employee, joinedLater, leaver := ids.NewV7(), ids.NewV7(), ids.NewV7()
-	for _, contact := range []ids.UUID{employee, joinedLater, leaver} {
+	marked, archived := ids.NewV7(), ids.NewV7()
+	for _, contact := range []ids.UUID{employee, joinedLater, leaver, marked, archived} {
 		e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)
 			VALUES ($1, $2, 'seed', 'system')`, contact, "Reach "+contact.String())
 	}
@@ -34,11 +35,17 @@ func TestTheAccountReachAdmitsEachArmWithinItsBounds(t *testing.T) {
 		VALUES ($1, 'employment', $2, $3, current_date, 'seed', 'system')`, ids.NewV7(), joinedLater, account)
 	e.exec(t, `INSERT INTO relationship (id, kind, contact_id, company_id, employment_status, source, captured_by)
 		VALUES ($1, 'employment', $2, $3, 'former', 'seed', 'system')`, ids.NewV7(), leaver, account)
+	e.exec(t, `UPDATE contact SET relationship_mark = 'vendor_marketing', relationship_mark_set_by = 'system'
+		WHERE id = $1`, marked)
+	e.exec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+		VALUES ('employment', $1, $2, 'seed', 'system')`, marked, account)
+	e.exec(t, `INSERT INTO relationship (kind, contact_id, company_id, archived_at, source, captured_by)
+		VALUES ('employment', $1, $2, now(), 'seed', 'system')`, archived, account)
 	pipeline, stage, deal := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Pipeline "+pipeline.String())
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
 	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, company_id, source, captured_by)
-		VALUES ($1, 'Reach deal', 'open', $2, $3, $4, $5, 'seed', 'system')`, deal, e.rep, pipeline, stage, account)
+		VALUES ($1, 'Reach deal', 'open', $2, $3, $4, $5, 'manual', 'system')`, deal, e.rep, pipeline, stage, account)
 
 	mail := func(subject string) ids.UUID {
 		id := ids.NewV7()
@@ -65,7 +72,10 @@ func TestTheAccountReachAdmitsEachArmWithinItsBounds(t *testing.T) {
 	copied(copiedBeforeJoining, joinedLater)
 	copied(leaverCopied, leaver)
 	link(otherAccount, "company", elsewhere)
-	refused := []ids.UUID{beforeTheyJoined, copiedBeforeJoining, leaverCopied, otherAccount}
+	markedCopied, archivedCopied := mail("marked"), mail("archived")
+	copied(markedCopied, marked)
+	copied(archivedCopied, archived)
+	refused := []ids.UUID{beforeTheyJoined, copiedBeforeJoining, leaverCopied, otherAccount, markedCopied, archivedCopied}
 
 	want := map[ids.UUID]bool{filed: true, onDeal: true, aboutEmployee: true, employeeCopied: true}
 	reads := map[string]map[ids.UUID]bool{

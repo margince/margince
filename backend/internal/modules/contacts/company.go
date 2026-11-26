@@ -12,8 +12,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -63,17 +65,17 @@ func (s *Store) CreateCompany(ctx context.Context, in CreateCompanyInput) (crmco
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	// The store-opened path reads the catalog through the unexported helper,
-	// not ActiveCompanyColumns: that one takes company:read on the
-	// caller's behalf, and a seat may hold create without it.
-	active, err := s.activeColumns(ctx, "company")
-	if err != nil {
-		return crmcontracts.Company{}, err
-	}
-
 	var out crmcontracts.Company
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+		// Not ActiveCompanyColumns, which takes company:read on the caller's
+		// behalf. A seat may hold create without it.
+		active, err := s.activeColumnsIn(ctx, tx, "company")
+		if err != nil {
+			return err
+		}
+		if err = s.refuseConsumerCompanyDomains(ctx, tx, ids.CompanyID{}, in.Domains); err != nil {
+			return err
+		}
 		out, err = createCompanyInTx(ctx, tx, in, by, active)
 		if err != nil {
 			return err
@@ -134,6 +136,11 @@ func (s *Store) geocodeANewCompany(ctx context.Context, tx pgx.Tx,
 // resolution. It answers the attribution the write shape stamps.
 // Both entry points call it, so neither can drift from the other's validation.
 func (s *Store) readyCompanyCreate(ctx context.Context, in *CreateCompanyInput) (string, error) {
+	if typedWrite(ctx) {
+		if err := httperr.RequireWithin(companyNameColumn, in.DisplayName, values.TextLabelCharacters); err != nil {
+			return "", err
+		}
+	}
 	if err := checkCompanyDescription(in.Description); err != nil {
 		return "", err
 	}

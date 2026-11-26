@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import {
   act,
   cleanup,
@@ -18,6 +19,8 @@ import {
 } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
 import { openFilterValues } from "../../testing/listquery.testkit";
+import { openViewStep } from "../../testing/listview.testkit";
+import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
 import { CompaniesScreen } from "./companies";
 import { render } from "./companies.testkit";
 
@@ -28,6 +31,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   window.location.hash = "";
+  localStorage.clear();
 });
 
 describe("CompaniesScreen — search/sort/pagination (P-14)", () => {
@@ -90,7 +94,7 @@ describe("CompaniesScreen — what an account is to us", () => {
         data: [
           {
             ...company,
-            lifecycle: "prospect",
+            status: "prospect",
             relationship_types: ["partner", "supplier"],
           },
         ],
@@ -112,6 +116,45 @@ describe("CompaniesScreen — what an account is to us", () => {
     // And the two columns stay distinct: an account can be a Partner sitting
     // at Prospect.
     expect(screen.getByText("Prospect")).toBeTruthy();
+  });
+
+  it("names an extension's type by its declared label and offers it as a filter", async () => {
+    const user = userEvent.setup();
+    const { urls } = stubFetch(
+      async () =>
+        jsonResponse({
+          data: [
+            {
+              ...company,
+              relationship_types: ["supplier"],
+              extension_relationship_types: ["ext:acme:reseller"],
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      {
+        companyTypes: [
+          { value: "ext:acme:reseller", label: "Reseller", unit: "acme" },
+        ],
+      },
+    );
+    render(<CompaniesScreen />);
+    await waitFor(() => expect(screen.getByText("Reseller")).toBeTruthy());
+    expect(screen.getByText("Supplier")).toBeTruthy();
+    expect(screen.queryByText("ext:acme:reseller")).toBeNull();
+
+    const values = await openFilterValues(user, "Relationship type");
+    await user.click(within(values).getByRole("radio", { name: "Reseller" }));
+    await waitFor(() =>
+      expect(
+        urls.some(
+          (url) =>
+            new URL(url, window.location.origin).searchParams.get(
+              "extension_relationship_type",
+            ) === "ext:acme:reseller",
+        ),
+      ).toBe(true),
+    );
   });
 
   it("leaves the cell empty when the account carries none", async () => {
@@ -169,6 +212,12 @@ describe("CompaniesScreen — whose account each row is", () => {
 });
 
 describe("CompaniesScreen — how many work here, how many deals are open", () => {
+  async function showContacts() {
+    const user = userEvent.setup();
+    const step = within(await openViewStep(user, "Columns"));
+    await user.click(step.getByRole("checkbox", { name: "Contacts" }));
+  }
+
   it("shows both counts, zero included", async () => {
     stubFetch(async () =>
       jsonResponse({
@@ -186,6 +235,7 @@ describe("CompaniesScreen — how many work here, how many deals are open", () =
       }),
     );
     render(<CompaniesScreen />);
+    await showContacts();
     const first = (await screen.findByText("Brandt Automotive GmbH")).closest(
       "tr",
     );
@@ -210,6 +260,7 @@ describe("CompaniesScreen — how many work here, how many deals are open", () =
       }),
     );
     render(<CompaniesScreen />);
+    await showContacts();
     const row = (await screen.findByText("Brandt Automotive GmbH")).closest(
       "tr",
     );
@@ -218,6 +269,37 @@ describe("CompaniesScreen — how many work here, how many deals are open", () =
     }
     expect(within(row).getByText("3")).toBeTruthy();
     expect(within(row).queryByText("0")).toBeNull();
+  });
+});
+
+describe("CompaniesScreen — default columns", () => {
+  it("draws the columns a 1440px window fits and offers the rest under View", async () => {
+    const user = userEvent.setup();
+    stubFetch(async () =>
+      jsonResponse({
+        data: [company],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<CompaniesScreen />);
+    await screen.findByText("Brandt Automotive GmbH");
+    expect(
+      within(screen.getByRole("table"))
+        .getAllByRole("columnheader")
+        .map((cell) => cell.textContent),
+    ).toEqual([
+      "Select every row on this pageCompany",
+      "Open deals",
+      "Lifecycle",
+      "Relationship type",
+      "Owner",
+      "Last activity",
+      "Created",
+    ]);
+    const step = within(await openViewStep(user, "Columns"));
+    for (const offered of ["Description", "Tags", "Website", "Contacts"]) {
+      expect(step.getByRole("checkbox", { name: offered })).not.toBeChecked();
+    }
   });
 });
 
@@ -278,7 +360,7 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
     await user.click(screen.getByRole("button", { name: "Customers" }));
 
     await waitFor(() =>
-      expect(urls.some((url) => url.includes("lifecycle=customer"))).toBe(true),
+      expect(urls.some((url) => url.includes("status=customer"))).toBe(true),
     );
   });
 
@@ -288,7 +370,7 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
     render(<CompaniesScreen />);
     await waitFor(() => expect(urls.length).toBeGreaterThan(0));
 
-    const values = await openFilterValues(user, "Employees");
+    const values = await openFilterValues(user, "Company size");
     await user.click(
       within(values).getByRole("radio", { name: "51–200 employees" }),
     );
@@ -315,9 +397,8 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
     const user = userEvent.setup();
     const { urls } = stubFetch(async () => emptyPage());
     render(<CompaniesScreen />);
-    // One read carries several rendered pages, so the limit is a multiple of
-    // the footer's size and never the size itself — that is what lets the
-    // pager offer page 2 before the reader has asked for it.
+    // One read carries two rendered pages, so the limit is a multiple of
+    // the footer's size. That lets the pager offer page 2 with no wait.
     await waitFor(() =>
       expect(
         urls.some((url) => url.includes(`limit=${listFetchLimit(25)}`)),
@@ -368,7 +449,7 @@ describe("CompaniesScreen — rich create (P-15)", () => {
     );
     await pickOption(
       user,
-      screen.getByLabelText("Employees"),
+      screen.getByLabelText("Company size"),
       "11–50 employees",
     );
     await user.click(screen.getByText("Add domain"));
@@ -431,5 +512,44 @@ describe("CompaniesScreen — dedupe view-existing link (P-16)", () => {
     );
     await user.click(screen.getByText("View existing record"));
     expect(window.location.hash).toBe("#/companies/01X");
+  });
+});
+
+describe("CompaniesScreen — a row on a phone", () => {
+  function listCompanies(rows: readonly (typeof company)[]) {
+    stubFetch(async () =>
+      jsonResponse({
+        data: rows,
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<CompaniesScreen />);
+  }
+
+  it("ends the name's line in the lifecycle and puts the website's host under it", async () => {
+    stubWindowWidth(390);
+    listCompanies([
+      {
+        ...company,
+        status: "customer",
+        website_url: "https://www.brandt.example/de",
+        description: "Fleet retrofits",
+      },
+    ]);
+    const row = await phoneRowOf("Brandt Automotive GmbH");
+    expect(row.end).toEqual(["Customer"]);
+    expect(row.caption).toEqual(["brandt.example"]);
+    expect(
+      within(row.row).queryByRole("link", { name: "brandt.example" }),
+    ).toBeNull();
+    expect(row.row).not.toHaveTextContent("Fleet retrofits");
+  });
+
+  it("leaves out a lifecycle nobody set and a website nobody recorded", async () => {
+    stubWindowWidth(390);
+    listCompanies([{ ...company, status: "unknown", website_url: null }]);
+    const row = await phoneRowOf("Brandt Automotive GmbH");
+    expect(row.end).toEqual([]);
+    expect(row.caption).toEqual([]);
   });
 });

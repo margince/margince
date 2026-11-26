@@ -4,6 +4,7 @@
 import { useId, useState } from "react";
 import { ConnectAiTool } from "../../../components/connect-ai-tool";
 import { OvernightGrantChoice } from "../../../components/overnight-grant-choice";
+import { profileUrlLabel } from "../../../components/profileurl";
 import { ActionRow } from "../../../design-system/actionrow";
 import {
   Badge,
@@ -20,9 +21,10 @@ import { Row } from "../../../design-system/stack";
 import { useT } from "../../../i18n";
 import { useConnectorState } from "../../../lib/connector-state";
 import { liveConnection, usePassports } from "../../../lib/passports.queries";
+import { useLinkedInAccount } from "../../../lib/use-linkedin-account";
 
-// What the connect step offers beside the mailbox, in either state: the
-// overnight brief, the LinkedIn profile and an AI tool. None gates the step.
+// Beside the mailbox: LinkedIn, an AI tool, and the overnight brief once a
+// mailbox is connected, the only state that records its answer. None gates.
 //
 // LinkedIn is not a connection here. Nothing is authorized and nothing syncs.
 // The member records which profile their imported network is attributed to.
@@ -40,13 +42,16 @@ export type AlsoWorthDoingProps = Readonly<{
    *  so rather than blocking: the question is askable again in Settings. */
   overnightFailed: boolean;
   linkedinStatus: LinkedinStatus;
-  onLinkedinSave: (profileUrl: string) => void;
+  /** Saves the profile; `onSaved` runs once it is stored. */
+  onLinkedinSave: (profileUrl: string, onSaved: () => void) => void;
   onLinkedinSkip: () => void;
   linkedinPending: boolean;
   linkedinError: string | null;
 }>;
 
-export function AlsoWorthDoing(props: AlsoWorthDoingProps) {
+export function AlsoWorthDoing(
+  props: AlsoWorthDoingProps & Readonly<{ mailConnected: boolean }>,
+) {
   const t = useT();
   return (
     <Panel title={t("ob.conv.connect.alsoTitle")}>
@@ -56,11 +61,13 @@ export function AlsoWorthDoing(props: AlsoWorthDoingProps) {
           {/* Asked on the step rather than in the ask, because a real OAuth
               allow leaves the page entirely: a switch flipped inside the ask
               would not survive the redirect back. */}
-          <OvernightGrantChoice
-            checked={props.wantsOvernight}
-            onChange={props.onWantsOvernightChange}
-            failed={props.overnightFailed}
-          />
+          {props.mailConnected && (
+            <OvernightGrantChoice
+              checked={props.wantsOvernight}
+              onChange={props.onWantsOvernightChange}
+              failed={props.overnightFailed}
+            />
+          )}
           <LinkedinRow {...props} />
           <AiToolRow />
         </SettingList>
@@ -126,11 +133,17 @@ function LinkedinRow({
   const t = useT();
   const [open, setOpen] = useState(false);
   const titleId = useId();
-  const description = {
-    pending: t("ob.conv.linkedin.cardBody"),
-    saved: t("ob.conv.connect.linkedinSaved"),
-    skipped: t("ob.conv.connect.linkedinSkippedNote"),
-  }[status];
+  // The stored profile outlives this tab's answer: after a reload the row
+  // still shows it, and it stays changeable for the whole step.
+  const stored = useLinkedInAccount().data?.profile_url ?? "";
+  const description =
+    stored === ""
+      ? {
+          pending: t("ob.conv.linkedin.cardBody"),
+          saved: t("ob.conv.connect.linkedinSaved"),
+          skipped: t("ob.conv.connect.linkedinSkippedNote"),
+        }[status]
+      : profileUrlLabel(stored);
 
   return (
     <>
@@ -144,7 +157,11 @@ function LinkedinRow({
         }
         description={description}
         control={
-          status === "pending" ? (
+          stored !== "" ? (
+            <Button variant="ghost" onClick={() => setOpen(true)}>
+              {t("ob.conv.connect.linkedinChange")}
+            </Button>
+          ) : status === "pending" ? (
             <Button variant="ghost" onClick={() => setOpen(true)}>
               {t("ob.conv.connect.linkedinAdd")}
             </Button>
@@ -156,7 +173,7 @@ function LinkedinRow({
         }
       />
       <Modal
-        open={open && status === "pending"}
+        open={open}
         // X, Escape and the backdrop all resolve to this one handler. Guarding it here
         // keeps every dismissal from racing the save: a PUT landing after the reader
         // backed out would save against a closed ask.
@@ -172,13 +189,21 @@ function LinkedinRow({
           {t("ob.conv.linkedin.dialogHeadline")}
         </Heading>
         <LinkedinPanel
-          // A failed save stays on screen so `error` is seen and retried; a
-          // successful one closes the dialog by flipping `status` to "saved".
-          onSave={onLinkedinSave}
-          onSkip={() => {
-            onLinkedinSkip();
-            setOpen(false);
-          }}
+          initial={stored}
+          // A failed save stays on screen so `error` is seen and retried.
+          onSave={(profileUrl) =>
+            onLinkedinSave(profileUrl, () => setOpen(false))
+          }
+          // Changing a stored profile is not the question of whether to add
+          // one, so it offers no skip.
+          onSkip={
+            stored === ""
+              ? () => {
+                  onLinkedinSkip();
+                  setOpen(false);
+                }
+              : undefined
+          }
           pending={pending}
           error={error}
         />
@@ -191,18 +216,23 @@ function LinkedinRow({
 // nothing is being granted. The address is written to the member's own account
 // and read only by the import that attributes their network.
 function LinkedinPanel({
+  initial,
   onSave,
   onSkip,
   pending,
   error,
 }: Readonly<{
+  initial: string;
   onSave: (profileUrl: string) => void;
-  onSkip: () => void;
+  onSkip?: () => void;
   pending: boolean;
   error: string | null;
 }>) {
   const t = useT();
-  const [profile, setProfile] = useState("");
+  // The stored profile until the reader types, as the Settings row does, so a
+  // late account read fills the field and never replaces an edit.
+  const [draft, setDraft] = useState<string | null>(null);
+  const profile = draft ?? initial;
   const trimmed = profile.trim();
 
   return (
@@ -216,7 +246,7 @@ function LinkedinPanel({
               inputMode="url"
               placeholder={t("ob.conv.linkedin.profilePlaceholder")}
               value={profile}
-              onChange={(event) => setProfile(event.target.value)}
+              onChange={(event) => setDraft(event.target.value)}
             />
           )}
         </Field>
@@ -239,9 +269,11 @@ function LinkedinPanel({
       >
         {/* Skipping and saving answer the same question, so they cannot both
             be in flight: a skip landing mid-save leaves two answers stored. */}
-        <Button variant="ghost" disabled={pending} onClick={onSkip}>
-          {t("ob.conv.linkedin.skip")}
-        </Button>
+        {onSkip && (
+          <Button variant="ghost" disabled={pending} onClick={onSkip}>
+            {t("ob.conv.linkedin.skip")}
+          </Button>
+        )}
       </ActionRow>
     </>
   );

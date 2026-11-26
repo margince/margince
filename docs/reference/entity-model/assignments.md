@@ -59,6 +59,8 @@ The 2 tables owned by `assignments`, as the migrations build them. [Back to the 
 **Triggers**
 
 - `record_assignment_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.user_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('user_id')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"source":20000}')`
 - `trg_record_assignment_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## record_role
@@ -94,8 +96,11 @@ The 2 tables owned by `assignments`, as the migrations build them. [Back to the 
 **Indexes**
 
 - `record_role_key_key`: `unique, btree (key)`
+- `record_role_label_once`: `unique, btree (lower(btrim(label)))`
 - `record_role_pkey`: `unique, btree (id)`
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "label": 120, "record_types": 20000, "shipped_label": 120, "assignee_kinds": 20000, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"assignee_kinds":20000,"key":20000,"label":120,"record_types":20000,"shipped_label":120,"shipped_label_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "record_types": 20000, "shipped_label": 120, "assignee_kinds": 20000, "shipped_label_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"assignee_kinds":20000,"key":20000,"label":120,"record_types":20000,"shipped_label":120,"shipped_label_key":20000}')`
 - `trg_record_role_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`

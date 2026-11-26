@@ -37,12 +37,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/heldreason"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -61,6 +63,7 @@ const (
 // LiveInstruction is a decision that can still be spent, read under the lock
 // that will spend it.
 type LiveInstruction struct {
+	Refusals []RefusedRecipient
 	ID       ids.UUID
 	ReviewID ids.UUID
 	IntentID ids.UUID
@@ -68,9 +71,11 @@ type LiveInstruction struct {
 	// Empty on a decision written before this was recorded, and an absent
 	// fingerprint is nothing to disagree with rather than a mismatch.
 	Acknowledged []byte
+	Scope        string
 	// GivenByAdmin says an admin gave the exception, so it may answer a refusal
 	// only an admin may (DecisionSet.ExceptionMayAnswer).
 	GivenByAdmin bool
+	DirectedAt   time.Time
 }
 
 // InstructionStaleError refuses an instruction that no longer describes the
@@ -85,6 +90,16 @@ type LiveInstruction struct {
 type InstructionStaleError struct {
 	Why string
 }
+
+// ErrNothingHeld answers a decision on a review refused before its message
+// could be kept, so there is nothing to send.
+var ErrNothingHeld error = &InstructionStaleError{
+	Why: "this review holds no message to send; it was refused before the message could be kept",
+}
+
+// HeldReason stops a scheduled message with a refusal the sender can read and
+// answer in its review, where it would otherwise fail its job.
+func (e *InstructionStaleError) HeldReason() string { return heldreason.SendRefused }
 
 func (e *InstructionStaleError) Error() string {
 	return "the decision to send this message no longer describes it: " + e.Why
@@ -107,26 +122,22 @@ func (e *InstructionStaleError) FieldFault() (field, code, message string) {
 //
 // A zero id means no live decision, which is the ordinary case for every
 // message in the installation and is not an error.
-// ONE CLOCK DECIDES. The window is asked of the DATABASE rather than of this
-// process, because the other side of the same question — whether a standing
-// decision can still be spent (standingdecision.go) — is asked there. Two
-// clocks would disagree at the boundary and under skew: the door would say
-// reusable, consumption would find nothing live, and the caller would get a
-// generic consent refusal instead of the sentence saying their decision has
-// expired.
+// Age requires the current execution check rather than a second human
+// acknowledgement. The recorded decision and its dates remain unchanged.
 func liveInstructionForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) (LiveInstruction, error) {
 	var out LiveInstruction
 	err := tx.QueryRow(ctx, `
-		SELECT i.id, i.review_id, r.delivery_intent_id, i.acknowledged_wording, i.given_by_admin
+		SELECT i.id, i.review_id, r.delivery_intent_id,
+		       coalesce(i.corrected_wording, i.acknowledged_wording),
+		       i.given_by_admin, r.refusals, coalesce(i.acknowledged_scope, ''), i.directed_at
 		  FROM communication_instruction i
 		  JOIN communication_review r ON r.id = i.review_id
 		 WHERE r.delivery_intent_id = $1
 		   AND i.status = 'directed'
-		   AND i.valid_until > now()
 		 ORDER BY i.directed_at DESC
 		 LIMIT 1
 		   FOR UPDATE OF i`, intentID).
-		Scan(&out.ID, &out.ReviewID, &out.IntentID, &out.Acknowledged, &out.GivenByAdmin)
+		Scan(&out.ID, &out.ReviewID, &out.IntentID, &out.Acknowledged, &out.GivenByAdmin, &out.Refusals, &out.Scope, &out.DirectedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return LiveInstruction{}, nil
 	}
@@ -163,6 +174,15 @@ func consumeInstructionTx(
 			Why: "the message has been edited since it was acknowledged",
 		}
 	}
+	if inst.Scope != "" {
+		message, err := instructionMessageTx(ctx, tx, inst.IntentID)
+		if err != nil {
+			return err
+		}
+		if !message.Known || message.Scope != inst.Scope {
+			return &InstructionStaleError{Why: "the recipients, sender or purpose changed; approve this message again"}
+		}
+	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE communication_instruction
 		   SET status = 'consumed', consumed_at = now(), delivery_id = $2
@@ -175,7 +195,7 @@ func consumeInstructionTx(
 		// supposed to prevent. Refusing is the safe direction: a send that
 		// cannot record its own authority must not go.
 		return fmt.Errorf(
-			"consent: the decision was no longer live when the message was staged: %w",
+			"the decision was no longer live when the message was staged: %w",
 			apperrors.ErrConflict)
 	}
 	// THE REVIEW IS FINISHED, because the message it was about has gone.
@@ -207,34 +227,6 @@ func consumeInstructionTx(
 		return err
 	}
 	return nil
-}
-
-// acknowledgedWordingTx answers the fingerprint of the message this review
-// holds — what the human was looking at when they acknowledged.
-//
-// NOT FOUND IS NOT A FAULT, and this is the one place that judgement matters.
-// A review whose held message has been cancelled or emptied — by an erasure, or
-// by a rep who resumed it another way — has no wording to compare. Inventing a
-// mismatch there would refuse a send for a reason nobody can act on; the
-// caller treats an absent fingerprint as nothing to disagree with, exactly as
-// the staging-to-transmit check does (authorizecontent.go).
-func acknowledgedWordingTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) ([32]byte, bool, error) {
-	if intentID.IsZero() {
-		return [32]byte{}, false, nil
-	}
-	var subject, body, htmlBody string
-	err := tx.QueryRow(ctx, `
-		SELECT coalesce(payload->>'subject', ''),
-		       coalesce(payload->>'body', ''),
-		       coalesce(payload->>'html_body', '')
-		  FROM scheduled_send WHERE id = $1`, intentID).Scan(&subject, &body, &htmlBody)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return [32]byte{}, false, nil
-	}
-	if err != nil {
-		return [32]byte{}, false, fmt.Errorf("consent: reading the message that was acknowledged: %w", err)
-	}
-	return SendingDigest(subject, body, htmlBody), true, nil
 }
 
 // AuthorizeDirectedExecutionTx asks whether a refused message may go out anyway
@@ -278,6 +270,15 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 	if !set.ExceptionMayAnswer(inst.GivenByAdmin) {
 		return ids.UUID{}, nil
 	}
+	if answers, err := instructionStillAnswers(ctx, tx, inst.Refusals, inst.DirectedAt, set); err != nil || !answers {
+		return ids.UUID{}, err
+	}
+	if err := instructionScopeStillFits(ctx, tx, inst.Refusals, set); err != nil {
+		if _, stale := errors.AsType[*InstructionStaleError](err); stale {
+			return ids.UUID{}, nil
+		}
+		return ids.UUID{}, err
+	}
 	if err := consumeInstructionTx(ctx, tx, inst, deliveryID, wording); err != nil {
 		return ids.UUID{}, err
 	}
@@ -286,12 +287,8 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 
 // HeldMessageForReview answers which held message a review is about.
 //
-// NOT SCOPED TO THE INITIATOR, unlike ReviewForInitiator beside it, and the
-// difference is the whole point of a reviewer path: directing a send is
-// precisely the act of somebody OTHER than the sender deciding. Scoping this to
-// the seat that pressed Send would make every review directable only by the
-// human who was already refused — which is the one human the design does not
-// rely on.
+// Not scoped to the initiator, unlike ReviewForInitiator beside it. A colleague
+// who may read the review is refused by name later (directableReview.admits).
 //
 // WHAT IT DISCLOSES IS AN ID AND NOTHING ELSE. No address, no subject, no
 // reason: a caller learns that this review holds a message, which is what they
@@ -303,7 +300,7 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 func (s *Store) HeldMessageForReview(ctx context.Context, reviewID ids.UUID) (ids.UUID, error) {
 	// The same door DirectSend uses. A connector holds the granting user's
 	// communication_exception:create and would learn which reviews exist.
-	if err := requireAUserOrTheirAgent(ctx); err != nil {
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
 		return ids.UUID{}, err
 	}
 	// CREATE here, not read: this lookup exists to serve DIRECTING a send, and

@@ -1,0 +1,9 @@
+{
+  "verb": "list_legal_entity_members",
+  "checks": [
+    "legal_entity.read"
+  ],
+  "takes": [
+    "legal_entity"
+  ]
+}

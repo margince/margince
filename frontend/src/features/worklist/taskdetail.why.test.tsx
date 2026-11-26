@@ -2,9 +2,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, expect, test } from "vitest";
 import { en } from "../../i18n/en";
+import { OpenSourceProvider } from "../../lib/opensource";
 import {
   installFetchStub,
   jsonResponse,
@@ -46,25 +53,31 @@ const ROW: WorklistItem = {
   actions: ["complete", "snooze"],
 };
 
-function openTask(task: Record<string, unknown>, item?: WorklistItem) {
+function openTask(
+  task: Record<string, unknown>,
+  item?: WorklistItem,
+  openSource: (id: string) => void = () => {},
+) {
   installFetchStub({
     "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
     "GET /activities/task-1": () => jsonResponse(task),
   });
   return render(
     <StoryProviders>
-      <TaskDetailModal
-        activityId="task-1"
-        item={item}
-        readOnly={false}
-        onClose={() => {}}
-        update={
-          {
-            mutate: () => {},
-            isPending: false,
-          } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
-        }
-      />
+      <OpenSourceProvider openSource={openSource}>
+        <TaskDetailModal
+          activityId="task-1"
+          item={item}
+          readOnly={false}
+          onClose={() => {}}
+          update={
+            {
+              mutate: () => {},
+              isPending: false,
+            } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
+          }
+        />
+      </OpenSourceProvider>
     </StoryProviders>,
   );
 }
@@ -127,6 +140,29 @@ test("a task a colleague typed claims no automation", async () => {
   ).toBeNull();
 });
 
+// The row's due day is the event, so its "due today" is not said a second time.
+test("a dated task says when it fell due, once", async () => {
+  openTask(QUIET_REMINDER, {
+    ...ROW,
+    due_at: "2026-09-10T21:59:59Z",
+    overdue: true,
+    because: [{ kind: "overdue" }, { kind: "unassigned" }],
+  });
+
+  expect(
+    await screen.findByText(/^It was due on .* and is still open\.$/),
+  ).toBeTruthy();
+  const reasons = screen.getByRole("list", {
+    name: en["worklist.why.reasons"],
+  });
+  expect(
+    within(reasons)
+      .getAllByRole("listitem")
+      .map((reason) => reason.textContent),
+  ).toEqual([en["worklist.because.unassigned"]]);
+  expect(screen.getByText(en["worklist.consequence.task_slips"])).toBeTruthy();
+});
+
 test("a task opened from a record page has no list to explain it", async () => {
   openTask(QUIET_REMINDER);
 
@@ -137,8 +173,52 @@ test("a task opened from a record page has no list to explain it", async () => {
 test("a row with no reasons still says what it asks", async () => {
   openTask(QUIET_REMINDER, { ...ROW, because: [], consequence: "none" });
 
-  expect(await screen.findByText(en["worklist.ask.task"])).toBeTruthy();
+  expect(await screen.findByText(en["worklist.todo.task"])).toBeTruthy();
   expect(
     screen.queryByRole("list", { name: en["worklist.why.reasons"] }),
   ).toBeNull();
+});
+
+const REQUEST_REMINDER = {
+  ...QUIET_REMINDER,
+  subject: "Please send the offer",
+  source_system: "email_request",
+};
+
+test("a reminder Margince cannot check says so and opens our last reply", async () => {
+  const opened: string[] = [];
+  openTask(
+    REQUEST_REMINDER,
+    {
+      ...ROW,
+      request_check: {
+        state: "text_not_checked",
+        our_last_reply: {
+          activity_id: "reply-1",
+          occurred_at: "2026-09-05T10:00:00Z",
+          occurred_precision: "day",
+        },
+      },
+    },
+    (id) => opened.push(id),
+  );
+
+  expect(
+    await screen.findByText(en["worklist.ask.task_unchecked"]),
+  ).toBeTruthy();
+  expect(screen.queryByText(en["worklist.ask.task"])).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /^Latest reply sent: / }));
+  expect(opened).toEqual(["reply-1"]);
+});
+
+test("a reminder Margince cannot check names no reply the reader cannot open", async () => {
+  openTask(REQUEST_REMINDER, {
+    ...ROW,
+    request_check: { state: "text_not_checked" },
+  });
+
+  expect(
+    await screen.findByText(en["worklist.ask.task_unchecked"]),
+  ).toBeTruthy();
+  expect(screen.queryByText(/^Latest reply sent: /)).toBeNull();
 });

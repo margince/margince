@@ -1,0 +1,9 @@
+{
+  "verb": "update_tag",
+  "checks": [
+    "tag.update"
+  ],
+  "takes": [
+    "tag"
+  ]
+}

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { en } from "../../i18n/en";
+import type { TaskType } from "../../lib/tasktype";
 import {
   failedApprovalRow,
   legacyStalledRow,
@@ -18,6 +19,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { expectTextFits } from "../../testing/unbrokentext";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { Triage } from "./brief.focus";
 
@@ -168,7 +170,21 @@ const callBack: WorklistItem = {
   contact: { id: "c-alice", label: "Alice Brandt" },
 };
 
-function callBackPanel(primaryEmail: string | null) {
+type TypedTask = Readonly<{
+  type: TaskType;
+  title?: string;
+  primaryEmail?: string | null;
+  extra?: Record<string, unknown>;
+  routes?: Parameters<typeof installFetchStub>[0];
+}>;
+
+function typedPanel({
+  type,
+  title = callBack.title,
+  primaryEmail = "alice@brandt.example",
+  extra = {},
+  routes = {},
+}: TypedTask) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({ activity: ["read"] }, { roles: ["rep"] }),
@@ -176,16 +192,23 @@ function callBackPanel(primaryEmail: string | null) {
         jsonResponse({
           id: "call-back",
           kind: "task",
-          subject: callBack.title,
+          subject: title,
           occurred_at: "2026-09-08T09:00:00Z",
           is_done: false,
+          task_type: type,
           source_activity_id: "call-1",
           links: [{ entity_type: "contact", entity_id: "c-alice" }],
-          email_target: {
-            entity_type: "contact",
-            entity_id: "c-alice",
-            ...(primaryEmail ? {} : { refusal: "no_address" }),
-          },
+          // The server names a mail target for a mail task only.
+          ...(type === "reach_out" || type === "reply"
+            ? {
+                email_target: {
+                  entity_type: "contact",
+                  entity_id: "c-alice",
+                  ...(primaryEmail ? {} : { refusal: "no_address" }),
+                },
+              }
+            : {}),
+          ...extra,
         }),
       "GET /activities/call-1": () =>
         jsonResponse({
@@ -201,37 +224,100 @@ function callBackPanel(primaryEmail: string | null) {
           primary_email: primaryEmail,
           phones: [{ id: "ph-1", phone: "+491517654321", is_primary: true }],
         }),
+      ...routes,
     });
     return (
       <StoryProviders>
-        <Chosen rows={[callBack, taskRow("one", "Call the buyer")]} start={0} />
+        <Chosen
+          rows={[{ ...callBack, title }, taskRow("one", "Call the buyer")]}
+          start={0}
+        />
       </StoryProviders>
     );
   };
 }
 
-/** A task read out of a call, in hand: Call and Email beside Show details,
-    and the contact linked once, in the card's head. */
-export const TaskFromCallInHand: Story = {
-  render: callBackPanel("alice@brandt.example"),
+/** A reply to a call in hand: the number to copy, a filled Call, Done
+    outlined, and Next task at the end of the title. */
+export const CallTaskInHand: Story = {
+  render: typedPanel({ type: "reply", extra: { reply_channel: "call" } }),
   play: async ({ canvasElement }) => {
     const card = await focusedCard(canvasElement);
-    await card.findByRole("link", { name: en["record.verb.call"] });
+    await card.findByRole("button", { name: en["task.next.copyNumber"] });
     await expect(
-      card.getByRole("link", { name: en["record.verb.email"] }),
+      card.getByRole("link", { name: en["record.verb.call"] }),
     ).toBeTruthy();
   },
 };
+export const CallTaskInHandDark: Story = {
+  ...CallTaskInHand,
+  globals: { theme: "dark" },
+};
 
-/** The same task to a contact with no address: Email refused, and the reason
-    one line under every verb on the card. */
-export const TaskFromCallNoAddressInHand: Story = {
-  render: callBackPanel(null),
+/** Reach out to a contact with no address: Email refused, the reason one
+    line under every verb, and Call is the filled verb. */
+export const ReachOutNoAddressInHand: Story = {
+  render: typedPanel({ type: "reach_out", primaryEmail: null }),
   play: async ({ canvasElement }) => {
     const card = await focusedCard(canvasElement);
-    await card.findByRole("link", { name: en["record.verb.call"] });
-    await expect(card.getByText(en["task.next.noAddress"])).toBeTruthy();
+    await card.findByText(en["task.next.noAddress"]);
   },
+};
+
+const offeredDeal = (id: string, name: string, amount: number) => () =>
+  jsonResponse({
+    id,
+    name,
+    status: "open",
+    amount_minor: amount,
+    currency: "EUR",
+    expected_close_date: "2026-12-15",
+  });
+
+/** A deal question in hand: the deals as cards, then Link email thread to deal. */
+/** Reach out on a promise made by mail: Email leads, and Call waits in the
+    menu rather than standing beside it. */
+export const ReachOutAfterMailInHand: Story = {
+  render: typedPanel({ type: "reach_out", extra: { reply_channel: "email" } }),
+  play: async ({ canvasElement }) => {
+    const card = await focusedCard(canvasElement);
+    await card.findByRole("link", { name: en["record.verb.email"] });
+    await expect(
+      card.queryByRole("link", { name: en["record.verb.call"] }),
+    ).toBeNull();
+  },
+};
+export const ReachOutAfterMailInHandDark: Story = {
+  ...ReachOutAfterMailInHand,
+  globals: { theme: "dark" },
+};
+
+export const DecideTaskInHand: Story = {
+  render: typedPanel({
+    type: "decide",
+    title: "Which deal is the Nordwind mail about?",
+    extra: {
+      source_system: "which_deal",
+      raw: { offered_deal_ids: ["d-1", "d-2"] },
+    },
+    routes: {
+      "GET /deals/d-1": offeredDeal("d-1", "Nordwind renewal 2027", 42_000_000),
+      "GET /deals/d-2": offeredDeal("d-2", "Nordwind pilot", 8_500_000),
+    },
+  }),
+  play: async ({ canvasElement }) => {
+    const card = await focusedCard(canvasElement);
+    await card.findByRole("radio", { name: /renewal 2027/ });
+  },
+};
+export const DecideTaskInHandDark: Story = {
+  ...DecideTaskInHand,
+  globals: { theme: "dark" },
+};
+
+/** A task to do: no step of its own, so Done is the filled button. */
+export const DoTaskInHand: Story = {
+  render: typedPanel({ type: "do", title: "Print the signed contract" }),
 };
 
 /** The last row of a short day: the one before it is listed under the card. */
@@ -308,9 +394,46 @@ export const LegacyStalledDeal: Story = {
       card.getByRole("link", { name: en["deal.openDeal"] }),
     ).toBeTruthy();
     await expect(card.queryByText("Why first?")).toBeNull();
+    // Mark handled is folded into the card's menu, drawn outside the card.
     await expect(
-      card.getByRole("button", { name: en["brief.act"] }),
+      card.queryByRole("button", { name: en["brief.act"] }),
+    ).toBeNull();
+    await userEvent.click(
+      card.getByRole("button", { name: /More actions for Acme Expansion/ }),
+    );
+    await expect(
+      await within(canvasElement.ownerDocument.body).findByRole("button", {
+        name: en["brief.act"],
+      }),
     ).toBeTruthy();
+  },
+};
+
+/** A deal closing soon: the card says so first, and keeps its verbs on one line. */
+export const ClosingSoonDeal: Story = {
+  render: panel([
+    {
+      ...legacyStalledRow(),
+      kind: "closing_soon",
+      because: [{ kind: "closing_soon" }, { kind: "no_next_step" }],
+    },
+    detailedDeal(),
+  ]),
+  play: async ({ canvasElement }) => {
+    const card = await focusedCard(canvasElement);
+    await expect(
+      card.getByText(en["worklist.ask.brief.closing_soon"]),
+    ).toBeTruthy();
+    await expect(
+      card.queryByText(en["worklist.because.closing_soon"]),
+    ).toBeNull();
+    await expect(
+      card.getByRole("link", { name: en["deal.openDeal"] }),
+    ).toBeTruthy();
+    // Mark handled, Snooze and Dismiss wait in the card's menu.
+    await expect(
+      card.queryByRole("button", { name: en["brief.dismiss"] }),
+    ).toBeNull();
   },
 };
 
@@ -366,7 +489,9 @@ export const RecordedNextStepGap: Story = {
   play: async ({ canvasElement }) => {
     const card = await focusedCard(canvasElement);
     await waitFor(() =>
-      expect(card.getByText(en["worklist.because.no_next_step"])).toBeVisible(),
+      expect(
+        card.getByText(en["worklist.ask.brief.no_next_step"]),
+      ).toBeVisible(),
     );
     await expect(
       card.getByRole("link", { name: en["deal.openDeal"] }),
@@ -408,4 +533,60 @@ export const LongTaskTitlePhoneDark: Story = {
   ...LongTaskTitlePhone,
   tags: ["uat-phone"],
   globals: { theme: "dark" },
+};
+
+const LONG_CONTACT = "Maximilian Konstantinopoulou-Wertheimer";
+
+/** A contact's long name breaks inside its chip and stays on the card. */
+export const LongContactNamePhone: Story = {
+  tags: ["uat-phone"],
+  globals: { viewport: { value: "phone" } },
+  render: panel([
+    {
+      ...taskRow("call-max", "Call back about the renewal"),
+      contact: { id: "c-max", label: LONG_CONTACT },
+    },
+  ]),
+  play: async ({ canvasElement }) => {
+    const card = canvasElement.querySelector(".brief-triage-frame > article");
+    const chip = within(canvasElement)
+      .getAllByText(LONG_CONTACT)
+      .map((name) => name.closest(".chip"))
+      .find((found) => found !== null);
+    if (!card || !chip) throw new Error("the contact has no chip on the card");
+    await expectTextFits(chip, card.getBoundingClientRect());
+  },
+};
+
+/**
+ * A colleague's meeting the reader attended but may not change. The card is a
+ * reminder that no outcome is recorded, says why, and offers Done.
+ */
+export const AMeetingTheReaderMayOnlyRead: Story = {
+  render: panel([
+    {
+      ...taskRow("held-demo", "Second demo for the document system"),
+      source: "meeting_outcome",
+      category: "meetings",
+      consequence: "data_drifts",
+      occurred_at: "2026-09-03T07:00:00Z",
+      because: [{ kind: "outcome_unrecorded" }, { kind: "read_only" }],
+      actions: [],
+      dispositions: ["handled"],
+    },
+    ...aDay(),
+  ]),
+  play: async ({ canvasElement }) => {
+    const card = await focusedCard(canvasElement);
+    await expect(
+      await card.findByText(
+        "No outcome yet for Second demo for the document system",
+      ),
+    ).toBeTruthy();
+    await expect(
+      card.getByRole("button", {
+        name: en["worklist.disposition.verb.handled"],
+      }),
+    ).toBeTruthy();
+  },
 };

@@ -126,7 +126,7 @@ func wordStarts(runes []rune, i int) bool {
 func readViewThrough(door *viewDoor) agents.ViewReader {
 	return func(ctx context.Context, view agents.ReadView, path map[string]string, query url.Values) (json.RawMessage, error) {
 		if door == nil || door.api == nil {
-			return nil, fmt.Errorf("read_view: views are served by the API process: %w", apperrors.ErrUnsupportedBySoR)
+			return nil, fmt.Errorf("views are served by the API process: %w", apperrors.ErrUnsupportedBySoR)
 		}
 		// Here as well as at the route, because the route's 403 reaches the tool
 		// as a bare refusal and this one names the area.
@@ -294,7 +294,7 @@ func viewAnswer(res *http.Response) (json.RawMessage, error) {
 			return nil, notOfferedHere(problem.Detail)
 		}
 		if !detailed {
-			return nil, fmt.Errorf("read_view: the route answered %d: %w", res.StatusCode, apperrors.ErrInvalidArgument)
+			return nil, fmt.Errorf("the view's route answered HTTP %d: %w", res.StatusCode, apperrors.ErrInvalidArgument)
 		}
 		return nil, httperr.Validation("view", problem.Code, problem.Detail)
 	}

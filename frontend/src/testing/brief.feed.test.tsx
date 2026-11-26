@@ -6,6 +6,8 @@ import { ToastProvider } from "../design-system/toast";
 import { BriefFeed } from "../features/brief/brief.feed";
 import { BriefGlance } from "../features/brief/brief.glance";
 import { WorklistRow } from "../features/worklist/worklist.row";
+import { formatTimeOfDay } from "../format/format.dates";
+import { browserZone } from "../format/timezone";
 import { en } from "../i18n/en";
 import {
   failedApprovalRow,
@@ -63,7 +65,7 @@ it("renders the server focus even when the queue page contains different rows", 
   // card under it, in the server's order, and the band counts them all.
   expect(
     [...container.querySelectorAll(".worklist-row-title")].map(
-      (row) => row.textContent,
+      (row) => row.firstChild?.textContent,
     ),
   ).toEqual([rows[0].title]);
   expect(
@@ -87,7 +89,7 @@ it("opens a waiting card where it stands when it is pressed", async () => {
   await user.click(queuedCard(container, /Call buyer 2/));
   expect(
     [...container.querySelectorAll(".worklist-row-title")].map(
-      (row) => row.textContent,
+      (row) => row.firstChild?.textContent,
     ),
   ).toEqual([rows[2].title]);
   // The pressed card is gone, so focus lands on the card it opened.
@@ -137,6 +139,19 @@ it("shows dates and does not repeat the ranking comparator", () => {
   expect(screen.queryByText(/Above the next/)).toBeNull();
 });
 
+it("says the reader is caught up, and when Margince last looked, on a complete clear read", () => {
+  stubApi({});
+  const day = readingsDay({}, []);
+  render(<BriefFeed day={day} state="ready" />);
+  expect(
+    screen.getByRole("heading", { name: en["brief.feed.caughtUp"] }),
+  ).toBeTruthy();
+  const time = formatTimeOfDay(day.as_of, "en", browserZone());
+  expect(
+    screen.getByText(new RegExp(`Margince checked at ${time}`)),
+  ).toBeTruthy();
+});
+
 it("does not claim an empty agenda when a source failed", () => {
   stubApi({});
   const day = readingsDay({}, []);
@@ -144,15 +159,31 @@ it("does not claim an empty agenda when a source failed", () => {
     { source: "task", reason: "failed", category: "tasks" },
   ];
   render(<BriefFeed day={day} state="ready" />);
-  expect(screen.queryByText(en["brief.feed.clear"])).toBeNull();
+  expect(screen.queryByText(en["brief.feed.caughtUp"])).toBeNull();
   // The sentence stands in the section.
   expect(
     screen.getByText(en["brief.feed.incomplete"]).closest("#brief-today"),
   ).not.toBeNull();
 });
 
-it("keeps approvals in the agenda and offers their review action", () => {
-  stubApi({});
+it("keeps approvals in the agenda and offers their review action", async () => {
+  stubApi({
+    "GET /approvals/a": () =>
+      new Response(
+        JSON.stringify({
+          id: "a",
+          kind: "deal_follow_up",
+          status: "pending",
+          proposed_by: "agent:overnight",
+          created_at: "2026-11-09T10:06:30Z",
+          proposed_change: {
+            subject: "Follow up on Acme",
+            due_date: "2026-11-12",
+          },
+        }),
+        { headers: { "content-type": "application/json" } },
+      ),
+  });
   const row = {
     ...taskRow("a", "Approve the buyer email"),
     source: "approval" as const,
@@ -166,6 +197,8 @@ it("keeps approvals in the agenda and offers their review action", () => {
   expect(
     inHand(container).getByRole("button", { name: en["worklist.verb.decide"] }),
   ).toBeTruthy();
+  // The card in hand shows what the decision would do.
+  expect(await inHand(container).findByText("Follow up on Acme")).toBeTruthy();
 });
 
 it.each([false, true])(
@@ -202,7 +235,7 @@ it.each([false, true])(
   },
 );
 
-it("leads the row in hand's one line with the agent's move, and ends it with its menu", () => {
+it("starts the row in hand's line with its details, then the agent's move, and ends it with its menu", () => {
   stubApi({});
   const { container } = render(
     <BriefFeed
@@ -217,17 +250,17 @@ it("leads the row in hand's one line with the agent's move, and ends it with its
       .querySelector(".worklist-row-acts")
       ?.querySelectorAll("button, a") ?? []),
   ];
-  // The card is finished on its answer, so the answer opens the line. Then the
-  // way into what the row is about and Done; the row's menu, holding the other
-  // set-asides, closes it.
+  // The way into what the row is about is drawn first, so it comes first in
+  // the page too. Then the card's answer and Done; the row's menu, holding the
+  // other set-asides, closes it.
   const draft = lead.getByRole("link", {
     name: en["worklist.verb.draft_reply_now"],
   });
   expect(draft.className).toContain("btn-ai");
-  expect(line.at(0)).toBe(draft);
-  expect(line.at(1)).toBe(
+  expect(line.at(0)).toBe(
     lead.getByRole("button", { name: en["brief.focus.context"] }),
   );
+  expect(line.at(1)).toBe(draft);
   expect(line.at(-2)).toBe(
     lead.getByRole("button", { name: en["worklist.disposition.verb.handled"] }),
   );
@@ -251,7 +284,7 @@ it("names why the row in hand is first, whose it is, and its inbox", () => {
     <BriefFeed day={readingsDay({}, [row])} state="ready" />,
   );
   const head = container.querySelector(".brief-triage-lead-head");
-  expect(head?.querySelector(".brief-task-status")?.textContent).toBe(
+  expect(head?.querySelector(".task-meta-status")?.textContent).toBe(
     "Customer waiting",
   );
   expect(head?.textContent).toContain(en["visibility.team"]);
@@ -428,7 +461,8 @@ it.each([true, false])(
 
 it.each(["stalled", "closing_soon", "opportunity"])(
   "leads a legacy %s brief item with its deal instead of inventing an action",
-  (kind) => {
+  async (kind) => {
+    const user = userEvent.setup();
     stubApi({});
     const row = { ...legacyStalledRow(), kind };
     const { container } = render(
@@ -442,12 +476,17 @@ it.each(["stalled", "closing_soon", "opportunity"])(
     expect(container.querySelector(".worklist-row-context")).toBeNull();
     expect(card.getAllByText("Acme Expansion")).toHaveLength(1);
     expect(container.querySelector(".worklist-row-verdict")).toBeNull();
-    expect(card.getByRole("button", { name: en["brief.act"] })).toBeTruthy();
+    // Mark handled waits in the card's menu, which opens outside the card.
+    expect(card.queryByRole("button", { name: en["brief.act"] })).toBeNull();
+    await user.click(card.getByRole("button", { name: /Acme Expansion/ }));
+    expect(
+      await screen.findByRole("button", { name: en["brief.act"] }),
+    ).toBeTruthy();
     expect(
       card
         .getByRole("link", { name: en["deal.openDeal"] })
         .getAttribute("href"),
-    ).toBe("/#/deals/deal-expansion");
+    ).toBe("/#/deals/deal-expansion?from=worklist");
   },
 );
 
@@ -666,7 +705,7 @@ it("waits for the day in the card's own frame", () => {
   expect(screen.getByText(en["brief.feed.loading"])).toBeTruthy();
 });
 
-it("holds the opening sentence's line while the day is read, and only then", () => {
+it("holds the opening sentence's line while the day is read, and its room after", () => {
   stubApi({});
   const now = new Date(2026, 6, 5, 9, 30, 0);
   const glance = (pending: boolean) =>
@@ -688,4 +727,8 @@ it("holds the opening sentence's line while the day is read, and only then", () 
   // A day that failed to load says nothing rather than holding a grey line.
   const failed = glance(false);
   expect(failed.container.querySelector(".glance-sentence-pending")).toBeNull();
+  // The line's room stays, empty, so the page under it does not move up.
+  const hold = failed.container.querySelector(".glance-sentence-hold");
+  expect(hold?.getAttribute("aria-hidden")).toBe("true");
+  expect(hold?.textContent).toBe("");
 });

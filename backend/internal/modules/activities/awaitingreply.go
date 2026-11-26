@@ -92,16 +92,10 @@ func (s *Store) AwaitingReplies(ctx context.Context, asOf time.Time) ([]Awaiting
 // customerArms renders the "is this a customer" test, one arm per kind of
 // record. An arm over a kind the reader may not read is FALSE. Whether a deal
 // is open is the deal's business, and a reminder must not disclose it.
-func customerArms(ctx context.Context, arg func(any) int, openDeal, workingLead string) (string, error) {
-	// Bound only once an arm uses it: Postgres refuses a parameter the
-	// statement never reads.
-	engaged := ""
-	engagedLifecycle := func() string {
-		if engaged == "" {
-			engaged = fmt.Sprintf("$%d", arg(values.EngagedLifecycles()))
-		}
-		return engaged
-	}
+func customerArms(ctx context.Context, openDeal, workingLead string) (string, error) {
+	// A literal list, because this read reuses generic plans, which cannot see a
+	// bound value.
+	engaged := values.EngagedLifecycleSQLList()
 	arms := []struct {
 		objects []string
 		sql     func() string
@@ -109,14 +103,14 @@ func customerArms(ctx context.Context, arg func(any) int, openDeal, workingLead 
 		{[]string{"company"}, func() string {
 			return `EXISTS (SELECT 1 FROM company co
 		    WHERE co.id = sales.company_id AND co.archived_at IS NULL
-		      AND co.lifecycle = ANY(` + engagedLifecycle() + `))`
+		      AND co.status IN (` + engaged + `))`
 		}},
 		{[]string{"company", "relationship"}, func() string {
 			return `EXISTS (SELECT 1 FROM relationship job
 		    JOIN company co ON co.id = job.company_id
 		    WHERE job.contact_id = sales.contact_id AND job.kind = 'employment'
 		      AND ` + employment.IsCurrentSQL("job.ended_at") + ` AND co.archived_at IS NULL
-		      AND co.lifecycle = ANY(` + engagedLifecycle() + `))`
+		      AND co.status IN (` + engaged + `))`
 		}},
 		{[]string{"lead"}, func() string {
 			return `EXISTS (SELECT 1 FROM lead ld
@@ -190,12 +184,17 @@ func followUpGatesFor(ctx context.Context, arg func(any) int, need string) (foll
 	if g.links == "" {
 		g.links = scopeUnbounded
 	}
-	g.customer, err = customerArms(ctx, arg, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"))
+	g.customer, err = customerArms(ctx, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"))
 	return g, err
 }
 
-func followUpReadableSQL(alias string) string {
-	return alias + ".id IN (SELECT id FROM " + followUpReadable + ")"
+func followUpReadableSQL(alias string) string { return InGatedSetSQL(followUpReadable, alias) }
+
+// InGatedSetSQL tests the activity under alias against set, a statement's one
+// gated set of readable ids. Postgres plans each copy of the content gate, and
+// a pooled connection keeps that memory, so an alias tests membership instead.
+func InGatedSetSQL(set, alias string) string {
+	return alias + ".id IN (SELECT id FROM " + set + ")"
 }
 
 // followUpStatement puts the candidates and the one gated set before body.
@@ -292,10 +291,15 @@ func awaitingTheirAnswerSQL(asOf, sentByReader, laterContent, kinds string) stri
 // the reader's addresses. A seat row the legacy backfill guessed for bare
 // mail does not stand (auth.ParticipantStandsSQL), so its seat owes no reply.
 func sentByReaderSQL(reader, addresses string) string {
+	return sentByReaderOn("a", reader, addresses)
+}
+
+// sentByReaderOn is sentByReaderSQL for the mail under alias.
+func sentByReaderOn(alias, reader, addresses string) string {
 	return `EXISTS (SELECT 1 FROM activity_participant me
-	   WHERE me.activity_id = a.id AND me.role = 'from'
+	   WHERE me.activity_id = ` + alias + `.id AND me.role = 'from'
 	     AND (me.user_id = ` + reader + ` OR lower(me.address) = ANY(` + addresses + `::text[]))
-	     AND ` + auth.ParticipantStandsSQL("me", "a") + `)`
+	     AND ` + auth.ParticipantStandsSQL("me", alias) + `)`
 }
 
 // awaitingCandidatesSQL is the mail the follow-up lane may report: what the
@@ -373,9 +377,26 @@ var awaitingRepliesSQL = `
 	   -- record with an open deal or a lead being worked.
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[11]s)
 	   AND NOT ` + readerSetAsideSQL("$%[9]d", "%[10]s") + `
+	   AND NOT ` + promiseKeptSQL("$%[9]d") + `
 	 GROUP BY a.id, a.subject, a.occurred_at
 	 ORDER BY a.occurred_at DESC, a.id DESC
 	 LIMIT %[12]d`
+
+// promiseKeptSQL is true when the reader completed a task derived from the
+// mail on alias a and has none of them open. The task stood for the follow-up
+// on the worklist, so completing it completes the reminder too.
+func promiseKeptSQL(reader string) string {
+	derived := `SELECT 1 FROM activity promise
+	    WHERE promise.source_activity_id = a.id AND promise.kind = 'task' AND ` + readersPromiseSQL("promise", reader)
+	return `(EXISTS (` + derived + ` AND promise.is_done) AND NOT EXISTS (` + derived + ` AND NOT promise.is_done))`
+}
+
+// readersPromiseSQL is a live row the reader holds. A task matched to a mail
+// by its source_activity_id is then that mail's promise. The Worklist fold
+// (attention.ownPromise) takes a task by the same terms.
+func readersPromiseSQL(alias, reader string) string {
+	return alias + `.archived_at IS NULL AND ` + alias + `.assignee_id = ` + reader
+}
 
 // threadNeedSQL names each of candidates and the live rows on its thread. A
 // statement gates that set once when its later-message and snooze-lift tests

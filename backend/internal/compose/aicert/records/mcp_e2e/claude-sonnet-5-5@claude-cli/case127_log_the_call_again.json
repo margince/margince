@@ -1,0 +1,95 @@
+{
+  "scenario": "case127_log_the_call_again",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "door": "mcp",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "fd4b4e669e10b9ec",
+    "tools": "edab0e046786575e",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T05:43:46Z",
+    "graded_commit": "e78e69d3f41bf45bbc08207d2d75a94ae33d19f4",
+    "graded_at": "2026-11-25T11:02:00Z"
+  },
+  "usage": {
+    "input_tokens": 14,
+    "output_tokens": 1323,
+    "cache_creation_input_tokens": 9153,
+    "cache_read_input_tokens": 511036,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.101
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "read_context",
+        "read_record",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "read_context",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3.5,
+      "min": 3,
+      "max": 4
+    },
+    "turns": {
+      "median": 4.5,
+      "min": 4,
+      "max": 5
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 260101.5,
+      "min": 221955,
+      "max": 298248
+    },
+    "output_tokens": {
+      "median": 661.5,
+      "min": 598,
+      "max": 725
+    },
+    "duration_ms": {
+      "median": 7943,
+      "min": 7418,
+      "max": 8468
+    }
+  }
+}

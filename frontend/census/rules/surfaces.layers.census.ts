@@ -27,6 +27,7 @@ import {
   written,
 } from "../../scripts/lib/surface-sheets";
 import { themes } from "../../src/design-system/tokens-testing";
+import { stable } from "../../src/format/collate";
 import type { CensusFile, CensusRule } from "../tree";
 
 function customValues(rules: readonly Rule[]): Map<string, string[]> {
@@ -108,7 +109,7 @@ export function underlayHosts(rules: readonly Rule[]): string[] {
       );
     })
     .map((alternative) => alternative.replace(STATE, ""));
-  return [...new Set([...stacked, ...painted])].sort();
+  return [...new Set([...stacked, ...painted])].sort(stable);
 }
 
 /** Each knockout fill that is not opaque in some theme, or the lack of any. */

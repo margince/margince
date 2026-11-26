@@ -8,6 +8,7 @@ import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { worklistKey } from "../../lib/workkeys";
 import { useSetAside } from "../records/record360";
 
 // The verbs of a promise card that asks whether our last email kept it. The
@@ -17,6 +18,7 @@ import { useSetAside } from "../records/record360";
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMoment = components["schemas"]["ContactMoment"];
 type MayBeDone = components["schemas"]["ContactMomentMayBeDone"];
+type MomentDone = components["schemas"]["ContactMomentDone"];
 
 export function MayBeDoneVerbs({
   moment,
@@ -119,4 +121,59 @@ export function useMomentSetAside(contactId: string) {
       queryClient.invalidateQueries({ queryKey: ["contact360", contactId] }),
     idOf: (moment) => moment.claim_key,
   });
+}
+
+// Done on the card that waits for their reply: "I need no answer to this
+// message". It is the Worklist's Done on that message, so the card and the
+// Worklist row leave together. A new message either way brings both back.
+export function useMomentDone(contactId: string) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  return useSetAside<MomentDone>({
+    setAside: async (done) => {
+      unwrap(
+        await api.PUT("/activities/{id}/disposition", {
+          params: { path: { id: done.activity_id } },
+          body: { disposition: "handled" },
+        }),
+        t,
+      );
+    },
+    restore: async (done) => {
+      unwrap(
+        await api.DELETE("/activities/{id}/disposition", {
+          params: { path: { id: done.activity_id }, query: { scope: "mine" } },
+        }),
+        t,
+      );
+    },
+    refresh: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["contact360", contactId] }),
+        queryClient.invalidateQueries({ queryKey: worklistKey }),
+      ]),
+    idOf: (done) => done.activity_id,
+    removed: t("contact.moment.doneToast"),
+  });
+}
+
+/** The Done verb, drawn only where the server said a press changes something. */
+export function MomentDoneVerb({
+  done,
+  contactId,
+}: Readonly<{ done: MomentDone; contactId: string }>) {
+  const t = useT();
+  const write = useMomentDone(contactId);
+  const press = write.deferOf(done);
+  return (
+    <>
+      <span className="today-verb">
+        <Button variant="ghost" onClick={press.onDefer} pending={press.pending}>
+          <CheckSquare aria-hidden="true" />
+          {t("worklist.disposition.verb.handled")}
+        </Button>
+      </span>
+      {write.failure && <ErrorLine error={write.failure} inline />}
+    </>
+  );
 }

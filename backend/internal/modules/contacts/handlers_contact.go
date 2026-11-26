@@ -84,6 +84,7 @@ func (h Handlers) ListContacts(w http.ResponseWriter, r *http.Request, params cr
 	in.Unassigned = params.Unassigned
 	in.SharedWithMe = params.SharedWithMe
 	in.CompanyID = idArg[ids.CompanyKind](params.CompanyId)
+	in.RelatedTo = idArg[ids.ContactKind](params.RelatedTo)
 	if params.ListId != nil {
 		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId, contactEntity); err != nil {
 			writeStoreErr(w, r, err)
@@ -135,7 +136,7 @@ func (h Handlers) CreateContact(w http.ResponseWriter, r *http.Request, _ crmcon
 // handler split across two packages for the sake of a multipart form would put
 // half of one endpoint where nobody looks for it. The ceiling the parse runs
 // under is granted to this route in compose.uploadCeilings.
-func (h Handlers) ImportVCards(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) ImportVCards(w http.ResponseWriter, r *http.Request, params crmcontracts.ImportVCardsParams) {
 	// THE GRANTS, BEFORE THE BYTES, and both of them because the import needs
 	// both: it creates the contacts no card matches and updates the ones a card
 	// does. The store asks for the pair and keeps asking — but it asks after
@@ -183,7 +184,7 @@ func (h Handlers) ImportVCards(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, httperr.Validation("file", "unreadable", err.Error()))
 		return
 	}
-	results, err := h.store.ImportVCards(r.Context(), entries)
+	results, err := h.importCards(r.Context(), entries, params.CompanyId)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -192,6 +193,15 @@ func (h Handlers) ImportVCards(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.VCardImportReport{
 		Results: toContractVCardResults(results),
 	})
+}
+
+// importCards writes the cards, for the company the optional `company_id` names
+// when the import comes from that company's Contacts tab.
+func (h Handlers) importCards(ctx context.Context, entries []VCardEntry, company *openapi_types.UUID) ([]VCardResult, error) {
+	if company == nil {
+		return h.store.ImportVCards(ctx, entries)
+	}
+	return h.store.ImportVCardsToCompany(ctx, entries, ids.From[ids.CompanyKind](ids.UUID(*company)))
 }
 
 // stageVCardReviews turns each near-match the import refused to create into a
@@ -404,6 +414,20 @@ func (h Handlers) DismissRelationshipNudge(w http.ResponseWriter, r *http.Reques
 // Wire-only; the store owns the rules.
 func (h Handlers) RetractAcquisitionRequest(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	if err := h.store.RetractAcquisitionRequest(r.Context(), pathID[ids.ContactKind](id)); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ClearContactImpersonationWarning serves POST /contacts/{id}/impersonation-warning/clear.
+// Wire-only; the store owns the rules.
+func (h Handlers) ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.ClearContactImpersonationWarningJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := h.store.ClearImpersonationWarning(r.Context(), pathID[ids.ContactKind](id), req.DetectedAt); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}

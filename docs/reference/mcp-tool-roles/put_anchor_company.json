@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "save_own_company",
+  "verb": "put_anchor_company",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

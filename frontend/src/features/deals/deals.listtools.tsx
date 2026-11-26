@@ -9,7 +9,6 @@ import { searchCompanies } from "../../components/filterreference";
 import {
   type FilterSpec,
   isNarrowed,
-  LIST_PAGE_SIZES,
   type ListQuery,
   listPageOf,
   listQueryFromParams,
@@ -32,7 +31,6 @@ import {
 } from "../../lib/dealranges";
 import {
   DEAL_SCREEN_DIALS,
-  type DealFilters,
   PIPELINE_PARAM,
   VIEW_PARAM,
 } from "../../lib/deals.queries";
@@ -47,7 +45,9 @@ import { dealSurfaceChips } from "./deal360/dealfilterchips";
 import { DealBulkBar } from "./dealbulk";
 import { admittedDealFilters, useAppliedCompanyName } from "./dealdials";
 import type { Deal, Pipeline, Stage } from "./deals";
+import { DEAL_LIST_OPENING, dealFiltersOf } from "./deals.opening";
 import { dealRangeChips } from "./deals.rangefilters";
+import { useLinkTypes } from "./recordlinks.queries";
 
 // Bespoke selects for the filters whose option labels are runtime strings
 // (pipeline/stage/company names). A chip's option label is a MessageKey, so
@@ -197,19 +197,6 @@ export function useDealScreenDials({
   pipelines,
 }: Readonly<{ pipelines?: Pipeline[] }>) {
   const [params, setParams] = useUrlParams();
-  const opening = useMemo<ListQuery>(
-    () => ({
-      q: "",
-      sort: "",
-      includeArchived: false,
-      filters: {},
-      // The deal list reads its own fixed page (the board is capped at 100 and
-      // documented as such). So this is the shape's default, not a dial the
-      // footer offers.
-      perPage: LIST_PAGE_SIZES[0],
-    }),
-    [],
-  );
   const baseCurrency = useInstallationSettings().data?.base_currency;
   const readsCompanies = useCan("company", "read");
   const refused = useMe().data?.authorization?.refused_deal_filters;
@@ -225,7 +212,7 @@ export function useDealScreenDials({
   const { query, refusedDials } = useMemo(() => {
     const read = listQueryFromParams(
       withoutScreenDials(params, DEAL_SCREEN_DIALS),
-      opening,
+      DEAL_LIST_OPENING,
       true,
     );
     const admitted = admittedDealFilters(read.filters);
@@ -241,7 +228,7 @@ export function useDealScreenDials({
       query: filters === read.filters ? read : { ...read, filters },
       refusedDials: heldRefusedDials(admitted, roleRefused),
     };
-  }, [params, opening, withheld, readsCompanies, refused]);
+  }, [params, withheld, readsCompanies, refused]);
   const setQuery = (update: SetStateAction<ListQuery>) => {
     const live = currentParams();
     const next =
@@ -249,7 +236,7 @@ export function useDealScreenDials({
         ? update(
             listQueryFromParams(
               withoutScreenDials(live, DEAL_SCREEN_DIALS),
-              opening,
+              DEAL_LIST_OPENING,
               true,
             ),
           )
@@ -261,7 +248,10 @@ export function useDealScreenDials({
         // the address from the query alone would drop the page from a link a
         // reader was sent. A narrowing write still resets it: the table's own
         // reset fires next.
-        withListPage(paramsFromListQuery(next, opening), listPageOf(live)),
+        withListPage(
+          paramsFromListQuery(next, DEAL_LIST_OPENING),
+          listPageOf(live),
+        ),
         live,
         DEAL_SCREEN_DIALS,
       ),
@@ -272,13 +262,7 @@ export function useDealScreenDials({
   const effectivePipeline: Pipeline | undefined =
     pipelines?.find((p) => p.id === pipelineId) ??
     defaultPipelineOf(pipelines ?? []);
-  const dealFilters: DealFilters = {
-    pipelineId: effectivePipeline?.id ?? "",
-    q: query.q,
-    sort: query.sort,
-    includeArchived: query.includeArchived,
-    filters: query.filters,
-  };
+  const dealFilters = dealFiltersOf(effectivePipeline, query);
 
   const view: "board" | "table" =
     params.get(VIEW_PARAM) === "table" ? "table" : "board";
@@ -332,16 +316,7 @@ export function dealRowSelection({
           <DealBulkBar
             deals={chosen.selectedRows}
             stages={stages}
-            // The rows that went through leave the selection. The ones that
-            // refused stay in it, named, so the reader can retry them once
-            // the list has refetched their versions.
-            onDone={(outcomes) =>
-              chosen.replace(
-                outcomes
-                  .filter((outcome) => outcome.error)
-                  .map((outcome) => outcome.id),
-              )
-            }
+            onDone={chosen.clear}
           />
         ),
       };
@@ -420,6 +395,7 @@ export function useDealChips({
     withheld.has("company_id") ? undefined : query.filters.company_id,
   );
   const leading = useLeadingCurrencies();
+  const linkTypes = useLinkTypes().data;
   const offered = (chip: { key: string }) => !withheld.has(chip.key);
   const everyDealChip = dealFilterChips(stages, t, companyName);
   const rangeOf = (held: ReadonlySet<string>) =>
@@ -435,6 +411,7 @@ export function useDealChips({
       partnerOptions,
       partnerApplied,
       acquisitionSources,
+      linkTypes,
       retiredSuffix: t("deal.acquisitionRetired"),
     });
   return {

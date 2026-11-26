@@ -157,10 +157,14 @@
    are. The transparent border on every tab holds the row's height steady, so
    moving between tabs does not shift the content under them. */
 .recordtabs-tab {
+  --recordtabs-pad-start: var(--space-3);
+  --recordtabs-pad-end: var(--space-3);
+  position: relative;
   display: inline-flex;
   align-items: baseline;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-3);
+  padding-block: var(--space-3);
+  padding-inline: var(--recordtabs-pad-start) var(--recordtabs-pad-end);
   border: 0;
   border-block-end: 2px solid transparent;
   background: none;
@@ -177,17 +181,32 @@
 }
 
 .recordtabs-tab:first-child {
-  padding-inline-start: 0;
+  --recordtabs-pad-start: 0px;
 }
 
 .recordtabs-tab:hover {
   color: var(--textPrimary);
 }
 
+/* The ring stands a step clear of the words whatever the tab's padding; the
+   strip's padding, paid back by its margin, is that room at either end. */
+.recordtabs-strip {
+  padding-inline: var(--space-2);
+  margin-inline: calc(-1 * var(--space-2));
+}
 .recordtabs-tab:focus-visible {
+  outline: var(--focus-ring-forced);
+}
+.recordtabs-tab:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(var(--recordtabs-pad-start) - var(--space-2));
+  inset-inline-end: calc(var(--recordtabs-pad-end) - var(--space-2));
   outline: var(--focus-ring);
   outline-offset: -2px;
   border-radius: var(--r-sm);
+  pointer-events: none;
 }
 
 /* The ink's own colour underlines the tab in view, for the reason a pressed
@@ -212,11 +231,14 @@
 
 /* One underline that travels to the tab a reader picks, so the eye follows
    the move. Anchored in CSS: no script measures the tabs, and a browser
-   without anchor positioning keeps each tab's own underline above. */
+   without anchor positioning keeps each tab's own underline above. It is
+   placed by its start and its width, so a strip that changes width does not
+   stretch it on the way. */
 @supports (anchor-name: --a) and
   (anchor-scope: all) and
   (position-anchor: --a) and
-  (inset-inline-start: anchor(start)) {
+  (inset-inline-start: anchor(start)) and
+  (inline-size: anchor-size(width)) {
   .recordtabs-strip {
     anchor-scope: --recordtabs-open;
   }
@@ -230,16 +252,15 @@
     position: absolute;
     position-anchor: --recordtabs-open;
     inset-inline-start: anchor(start);
-    inset-inline-end: anchor(end);
+    inline-size: anchor-size(width);
     inset-block-end: anchor(bottom);
     block-size: 2px;
     border-radius: var(--r-full);
-    corner-shape: round;
     background: var(--textPrimary);
     pointer-events: none;
     transition:
       inset-inline-start var(--dur-move) var(--ease-out),
-      inset-inline-end var(--dur-move) var(--ease-out);
+      inline-size var(--dur-move) var(--ease-out);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -256,7 +277,6 @@
   inline-size: 5px;
   block-size: 5px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accent);
 }
 
@@ -265,11 +285,14 @@
    the tabs scroll sideways and never reads as one more tab. */
 .recordtabs-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
 }
+/* No basis, so the row wraps only when the strip's least width, set where it
+   is measured, and the trailing control do not fit side by side. */
 .recordtabs-strip {
-  flex: 1 1 auto;
+  flex: 1 1 0;
 }
 /* A lone label has no tab to scroll to, and squeezed beside the trailing
    control it became a scroll box with nothing a keyboard can reach. So it
@@ -289,4 +312,38 @@
 .recordtabs-trailing {
   flex: none;
   margin-inline-start: auto;
+}
+
+/* The tabs the row has no room for fold behind "More", drawn as one more tab
+   with its chevron after the word. Idle, it is laid out but unseen, so the
+   strip can measure the room it would take. */
+.recordtabs-more {
+  display: inline-flex;
+  flex: none;
+}
+.recordtabs-more[data-idle] {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+.recordtabs-more .overflow-menu-labelled {
+  flex-direction: row-reverse;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 0;
+  border-block-end: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--fontWeightMedium);
+}
+.recordtabs-more .overflow-menu-labelled:hover {
+  border-block-end-color: var(--borderStrong);
+}
+/* Inside the box, as a tab's: the strip scrolls, so it clips a ring outside. */
+.recordtabs-more .overflow-menu-labelled:focus-visible {
+  outline-offset: -2px;
+  border-radius: var(--r-sm);
 }

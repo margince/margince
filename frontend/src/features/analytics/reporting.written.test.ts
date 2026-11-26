@@ -40,6 +40,8 @@ const won: Metric = {
   value: 30_000,
   target: 100_000,
   target_actual: 50_000,
+  target_delta: -50_000,
+  attainment: 50,
   coverage: { status: "ok", withheld: false },
   evidence: { metric: "bookings_won", context_id: "interval" },
 };
@@ -53,10 +55,19 @@ const open: Metric = {
   evidence: { metric: "open_pipeline", context_id: "state" },
 };
 
+// The share is the server's, here not the 50% the two actuals would give.
+it("states the share the server measured", () => {
+  const [, target] = writtenSummary(
+    withMetrics([{ ...won, attainment: 40 }]),
+    english,
+  );
+  expect(target).toMatch(/40% reached/);
+});
+
 it("states the period's sales and the target's own actual separately", () => {
   const [sales, target] = writtenSummary(withMetrics([won]), english);
   expect(sales).toMatch(/^Won in .+: €300\.$/);
-  expect(target).toMatch(/^Target for .+: €1,000, 50% reached with €500\.$/);
+  expect(target).toMatch(/^Goal for .+: €1,000, 50% reached with €500\.$/);
 });
 
 it("dates the forecast and the open pipeline to the day they were read", () => {

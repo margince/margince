@@ -1,0 +1,10 @@
+{
+  "verb": "set_activity_disposition",
+  "checks": [
+    "activity.read"
+  ],
+  "takes": [
+    "activity",
+    "inbound_email"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "verb": "dismiss_contact_moment",
+  "checks": [
+    "contact.read"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

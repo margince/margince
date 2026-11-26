@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "deal_room_brief",
+  "verb": "get_deal_room_brief",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

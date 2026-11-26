@@ -2,17 +2,21 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { CalendarPlus, FileText } from "lucide-react";
-import { useId, useRef } from "react";
+import { useCallback, useId, useMemo, useRef } from "react";
 import type { components } from "../../api/schema";
 import type { ActivityGate } from "../../components/activitygate";
 import { ExtensionEntries } from "../../components/extensionentries";
 import { LogActivityAction } from "../../components/logactivity.action";
 import { searchCompanyContacts } from "../../components/meetingattendees";
 import { Button } from "../../design-system/atoms";
-import { VerbWord } from "../../design-system/iconaction";
-import { ListPopover } from "../../design-system/listpopover";
+import { tipText, VerbWord } from "../../design-system/iconaction";
+import {
+  ListPopover,
+  type ListPopoverOption,
+} from "../../design-system/listpopover";
 import { useT } from "../../i18n";
 import { navigate } from "../../lib/router";
+import { useShortcut } from "../../lib/shortcuts";
 import { ComposeModal } from "../mail/compose";
 import { EmailVerb } from "../records/recordemail";
 
@@ -25,6 +29,7 @@ import { EmailVerb } from "../records/recordemail";
 // new deal, a new project born on it) rather than the header's.
 
 type Company = components["schemas"]["Company"];
+type Company360 = components["schemas"]["Company360"];
 
 // Which of LogActivityAction's two forms the drawer opens on: log what
 // happened, or set what happens next. The page owns it, not two separate
@@ -34,6 +39,28 @@ type Company = components["schemas"]["Company"];
 // logs from the card and one who logs from the header meet one drawer.
 export type ActivityDrawer = "log" | "task" | null;
 
+// The sentences the strip states itself. An archive the page states is the
+// page's sentence, so only its id reaches here.
+function stripRefusals(
+  t: ReturnType<typeof useT>,
+  state: Readonly<{
+    archived: boolean;
+    pageStatesArchive: boolean;
+    activityRefusalKey: ActivityGate["refusalKey"];
+  }>,
+): Readonly<{
+  ownArchived?: string;
+  activityRefusal?: string;
+}> {
+  if (state.archived) {
+    return state.pageStatesArchive
+      ? {}
+      : { ownArchived: t("record.archivedReadOnly") };
+  }
+  const key = state.activityRefusalKey;
+  return key ? { activityRefusal: t(key) } : {};
+}
+
 export function CompanyHeaderActions({
   company,
   composerOpen,
@@ -42,8 +69,12 @@ export function CompanyHeaderActions({
   onDrawer,
   archivedReasonId,
   activity,
+  view,
 }: Readonly<{
   company: Company;
+  // The 360 the page already holds: its ranked roster is what Book a meeting
+  // opens on, so the reader picks a contact without recalling a name.
+  view?: Company360;
   // The composer's open state belongs to the PAGE, not to this strip: the
   // drawer opens into the right rail's column, so the rail has to know it is
   // open in order to stand down.
@@ -65,21 +96,35 @@ export function CompanyHeaderActions({
   const ownReasonId = useId();
   const reasonId = archivedReasonId ?? ownReasonId;
   const archived = company.archived_at ? reasonId : undefined;
-  // Independent of `archived`: a live record a seat may not write to is
-  // refused for this reason, not that one.
-  const bookRefusedId = useId();
   const logRefused = archived ?? activity.refusedId;
+  const { ownArchived, activityRefusal } = stripRefusals(t, {
+    archived: archived !== undefined,
+    pageStatesArchive: archivedReasonId !== undefined,
+    activityRefusalKey: activity.refusalKey,
+  });
+  const logRefusal = ownArchived ?? activityRefusal;
   const logPending = !archived && activity.pending;
+  const logOpen = !logPending && !logRefused;
+  const logKeys = useShortcut(
+    "record.logActivity",
+    () => onDrawer("log"),
+    logOpen,
+  );
+  const writeKeys = useShortcut(
+    "record.writeEmail",
+    () => onComposerOpen(true),
+    logOpen,
+  );
   return (
     <>
-      {archived && !archivedReasonId && (
+      {ownArchived && (
         <p className="t-caption" id={ownReasonId}>
-          {t("record.archivedReadOnly")}
+          {ownArchived}
         </p>
       )}
-      {!archived && activity.refusedId && (
+      {activityRefusal && (
         <p className="t-caption" id={activity.sentenceId}>
-          {t("record.logActivityRefused")}
+          {activityRefusal}
         </p>
       )}
       <CompanyWriteEmail
@@ -87,24 +132,24 @@ export function CompanyHeaderActions({
         open={composerOpen}
         onOpen={onComposerOpen}
         disabledReasonId={logRefused}
+        reasonTip={logRefusal}
         disabled={logPending}
+        keyShortcuts={writeKeys}
       />
       <CompanyBookMeeting
         companyId={company.id}
+        view={view}
         allowed={!logPending && !logRefused}
         pending={logPending}
-        reasonId={archived ?? (activity.pending ? undefined : bookRefusedId)}
+        reasonId={logRefused}
+        reasonTip={logRefusal}
       />
-      {!archived && activity.refusedId && (
-        <p className="t-caption" id={bookRefusedId}>
-          {t("scheduling.bookRefused")}
-        </p>
-      )}
       <Button
         disabled={logPending}
         reasonId={logRefused}
-        title={t("log.title")}
+        title={tipText(t("log.title"), logRefusal)}
         onClick={() => onDrawer("log")}
+        aria-keyshortcuts={logKeys}
       >
         <FileText aria-hidden="true" />
         <VerbWord word={t("record.verb.log")} label={t("log.title")} />
@@ -127,21 +172,62 @@ export function CompanyHeaderActions({
   );
 }
 
+// How many contacts the booking picker opens on. Past these, typing searches
+// every contact the company has.
+const OPENING_CONTACTS = 5;
+
+// The contacts the picker opens on: the best route in first, then the 360's
+// own ranking by relationship strength. Undefined while the 360 is unread.
+export function openingContacts(
+  view: Company360 | undefined,
+): readonly ListPopoverOption[] | undefined {
+  const roster = view?.contacts?.data;
+  if (!roster) {
+    return undefined;
+  }
+  const wayIn = view?.strength?.contributor_contact_id;
+  const isWayIn = (row: (typeof roster)[number]) =>
+    Number(row.contact_id === wayIn);
+  return [...roster]
+    .sort((a, b) => isWayIn(b) - isWayIn(a))
+    .slice(0, OPENING_CONTACTS)
+    .map((row) => ({
+      id: row.contact_id,
+      name: row.full_name,
+      hint: row.title ?? row.provider_title ?? undefined,
+    }));
+}
+
 // CompanyBookMeeting books with a contact, so the account first asks which
 // one, then hands over to that contact's own booking screen. The picker is
 // drawn only once `/me` allows it, so a refusal that lands late also closes it.
 function CompanyBookMeeting({
   companyId,
+  view,
   allowed,
   pending,
   reasonId,
+  reasonTip,
 }: Readonly<{
   companyId: string;
+  view?: Company360;
   allowed: boolean;
   pending: boolean;
   reasonId?: string;
+  /** The sentence `reasonId` names, for the verb's tooltip. */
+  reasonTip?: string;
 }>) {
   const t = useT();
+  const opening = useMemo(() => openingContacts(view), [view]);
+  // An empty box answers from the roster in hand; before the 360 lands it
+  // asks the server for the company's contacts instead.
+  const search = useCallback(
+    (term: string) =>
+      term === "" && opening
+        ? Promise.resolve(opening)
+        : searchCompanyContacts(companyId, term),
+    [companyId, opening],
+  );
   const face = (
     <>
       <CalendarPlus aria-hidden="true" />
@@ -157,7 +243,10 @@ function CompanyBookMeeting({
         variant="ghost"
         disabled={pending}
         reasonId={reasonId}
-        title={t("scheduling.bookContact")}
+        title={tipText(
+          t("scheduling.bookContact"),
+          reasonId ? reasonTip : undefined,
+        )}
       >
         {face}
       </Button>
@@ -168,7 +257,8 @@ function CompanyBookMeeting({
       label={face}
       title={t("scheduling.bookContact")}
       searchLabel={t("scheduling.bookPickContact")}
-      search={(term) => searchCompanyContacts(companyId, term)}
+      search={search}
+      listOnOpen
       onPick={(contact, done) => {
         done();
         navigate({ screen: "book", id: `contact-${contact.id}` });
@@ -186,13 +276,17 @@ function CompanyWriteEmail({
   open,
   onOpen,
   disabledReasonId,
+  reasonTip,
   disabled,
+  keyShortcuts,
 }: Readonly<{
   company: Company;
   open: boolean;
   onOpen: (open: boolean) => void;
   disabledReasonId?: string;
+  reasonTip?: string;
   disabled?: boolean;
+  keyShortcuts?: string;
 }>) {
   // Whether the verb has ever been pressed. `open` belongs to the page, so
   // this is the composer's own memory of having been asked for.
@@ -207,6 +301,8 @@ function CompanyWriteEmail({
       <EmailVerb
         disabled={disabled}
         reasonId={disabledReasonId}
+        reasonTip={reasonTip}
+        keyShortcuts={keyShortcuts}
         onClick={() => onOpen(true)}
       />
       {/* Not drawn until the verb has been pressed once, and mounted from

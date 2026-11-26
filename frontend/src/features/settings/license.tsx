@@ -1,6 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { TrialNotice } from "../../components/trialcontact";
+import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { CellStack } from "../../design-system/cellstack";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
@@ -8,18 +11,23 @@ import { QueryGate } from "../../design-system/querystates";
 import { Meter } from "../../design-system/readings";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
+import { useNow } from "../../format/now";
 import { type Locale, useLocale, useT } from "../../i18n";
-import { useCan } from "../../lib/capability";
-import { useLicenseEntitlement } from "../../lib/license-posture";
-import { throwProblem } from "../../lib/problem";
+import { useCan, useCanWrite } from "../../lib/capability";
+import {
+  LICENSE_ENTITLEMENT_KEY,
+  trialStandingOf,
+  useLicenseEntitlement,
+} from "../../lib/license-posture";
+import { logUnexpectedError, throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import "./license.css";
 import { LicenseHolderCard } from "./licenseholder";
 
 // The entitlement surface: what the license grants, and how many seats are using
-// it. Read-only, because there is nothing here to write — the token is resolved
-// from the deployment file at boot, so an operator changes their entitlement by
-// changing the deployment, not by typing into a form.
+// it. Nothing here writes the token: an operator changes the entitlement by
+// changing the deployment. "Check now" only makes the api read that token again
+// at once, instead of at its next daily check.
 //
 // Four states the server distinguishes, and the reading has to as well:
 //
@@ -27,7 +35,8 @@ import { LicenseHolderCard } from "./licenseholder";
 //   valid, with no seat count  a license that caps nothing: a count, no bar
 //   absent                     no license configured; nothing to measure against
 //   rejected                   asked and told no — a fault with a repair behind
-//                              it, which `absent` is not
+//                              it, which `absent` is not. Its seats stay held
+//                              to the last valid grant, which the server sends
 //
 // The middle case is why `seats_granted` is nullable rather than zero, and why
 // the reading says "no limit" instead of a number: a meter filled against a
@@ -94,6 +103,9 @@ export function LicenseCard() {
   const answered = !me.isPending && !me.isError;
   const query = useLicenseEntitlement(answered && canReadLicense);
   const seats = useSeatUsage(answered && !canReadLicense);
+  // The server gates the re-check on installation settings, which admin and ops
+  // may change.
+  const canCheck = useCanWrite("installation_settings", "update");
 
   // Nothing is known about this reader, so neither branch may claim to be
   // their answer. The gate below renders the /me failure and its retry.
@@ -127,7 +139,10 @@ export function LicenseCard() {
           {entitlement.license && (
             <LicenseHolderCard holder={entitlement.license} />
           )}
-          <LicenseReading entitlement={entitlement} />
+          <LicenseReading
+            entitlement={entitlement}
+            action={canCheck ? <LicenseCheck /> : undefined}
+          />
         </>
       )}
     </QueryGate>
@@ -182,11 +197,71 @@ export function SeatUsageReading({
   );
 }
 
+/**
+ * "Check now": the api reads the deployment's license token again at once.
+ *
+ * The answer is the entitlement itself, so it replaces the shared query's data.
+ * The banner, the agent rail and this card then all show the new posture, and
+ * /me says again whether the trial still locks the app.
+ */
+export function useLicenseCheck() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      unwrap(await api.POST("/installation/license/check")),
+    onSuccess: (entitlement) => {
+      queryClient.setQueryData(LICENSE_ENTITLEMENT_KEY, entitlement);
+      queryClient
+        .invalidateQueries({ queryKey: ["me"], exact: true })
+        .catch(logUnexpectedError);
+    },
+  });
+}
+
+/** What the last check came to. One line for any failure: the server's detail
+ * is English text and names nothing an admin can fix from here. */
+export function LicenseCheckResult({
+  check,
+}: Readonly<{ check: ReturnType<typeof useLicenseCheck> }>) {
+  const t = useT();
+  if (!check.isSuccess && !check.isError) {
+    return null;
+  }
+  return (
+    <span className="t-caption" role="status">
+      {check.isError ? t("license.check.failed") : t("license.check.done")}
+    </span>
+  );
+}
+
+/** "Check now" as a settings row lays it out: the button, then why and what came of it. */
+export function LicenseCheck() {
+  const t = useT();
+  const check = useLicenseCheck();
+  return (
+    <CellStack>
+      <span>
+        <Button
+          variant="ghost"
+          onClick={() => check.mutate()}
+          pending={check.isPending}
+        >
+          {t("license.check.button")}
+        </Button>
+      </span>
+      <span className="t-caption">{t("license.check.hint")}</span>
+      <LicenseCheckResult check={check} />
+    </CellStack>
+  );
+}
+
 export function LicenseReading({
   entitlement,
-}: Readonly<{ entitlement: LicenseEntitlement }>) {
+  action,
+}: Readonly<{ entitlement: LicenseEntitlement; action?: ReactNode }>) {
   const t = useT();
   const { locale } = useLocale();
+  const now = useNow(60_000);
   const granted = entitlement.seats_granted;
   const capped = granted !== undefined && granted !== null;
   // The callout and the seat row both name the grant. One spelling keeps them
@@ -221,11 +296,17 @@ export function LicenseReading({
               {t("license.refused.body")}
             </Callout>
           )}
-          {entitlement.state === "absent" && (
-            <Callout kind="standing" title={t("license.absent.title")}>
-              {t("license.absent.body")}
-            </Callout>
-          )}
+          {entitlement.state === "absent" &&
+            (entitlement.trial ? (
+              <TrialNotice
+                standing={trialStandingOf(entitlement.trial, now)}
+                seatsUsed={entitlement.seats_used}
+              />
+            ) : (
+              <Callout kind="standing" title={t("license.absent.title")}>
+                {t("license.absent.body")}
+              </Callout>
+            ))}
           {entitlement.over_limit && (
             // `live` overrides the silence `standing` derives. A breach is true on
             // render and still interrupts, because the admin has to act on it.
@@ -272,6 +353,7 @@ export function LicenseReading({
         }
         over={entitlement.over_limit === true}
       />
+      {action && <PanelBody>{action}</PanelBody>}
     </Panel>
   );
 }

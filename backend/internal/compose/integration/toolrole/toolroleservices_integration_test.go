@@ -72,6 +72,7 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 	}
 	vault := keyvault.NewMemory()
 	calendar := apptest.NewBookingProvider(sweepGmail{next: http.DefaultTransport})
+	sweepCalendar = calendar
 	previous := http.DefaultTransport
 	http.DefaultTransport = calendar
 	t.Cleanup(func() { http.DefaultTransport = previous })
@@ -84,7 +85,8 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 	// The channel surface takes its vault from WithKeyvault, so it is composed first.
 	d := apptest.SetupTwoDoors(t, slug, append([]compose.Option{
 		compose.WithBlobstore(sweepBlobs), compose.WithRouteChecksRecordedForTest(releases.note), compose.WithTrustedProxies(loopback),
-		compose.WithCardPhotoReader(cardReads.DocumentExtract), compose.WithVoiceBuildEnqueue(jobs), compose.WithChannelSurface(), compose.WithKeyvault(vault), compose.WithGmailCapture(compose.GmailConfig{
+		compose.WithCardPhotoReader(cardReads.DocumentExtract), compose.WithVoiceBuildEnqueue(jobs), compose.WithChannelSurface(), compose.WithKeyvault(vault),
+		compose.WithChatLinks(jobs, true, sweepLane{reply: sweepChatSummaryReply}), compose.WithGmailCapture(compose.GmailConfig{
 			ClientID: "calendar-fixture", ClientSecret: "calendar-fixture",
 			StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: "https://mail.example.test",
 		}, compose.CaptureConfig{}), compose.WithCaptureBackfill(jobs),
@@ -114,9 +116,9 @@ func sendCapableMailbox(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(t.Context(), `
-			INSERT INTO capture_connection (provider, user_id, scopes, status, auth, provider_scopes)
-			VALUES ('gmail', $1, '{}', 'connected', $2, $3)
-			ON CONFLICT (user_id, provider) DO UPDATE SET status = 'connected',
+			INSERT INTO capture_connection (provider, user_id, status, auth, provider_scopes)
+			VALUES ('gmail', $1, 'connected', $2, $3)
+			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL DO UPDATE SET status = 'connected',
 				provider_scopes = capture_connection.provider_scopes || EXCLUDED.provider_scopes`,
 			apptest.SessionUserID(t, e), []byte(`{"refresh_token":"r","granted":[]}`), []string{apptest.GmailReadonlyScope, apptest.GmailSendScope})
 		return err
@@ -161,6 +163,10 @@ func callThroughApproval(t *testing.T, e *apptest.AppEnv, client *apptest.MCPCli
 // sweepEmbedder is the embedding lane of the last sweep app, which a seed's
 // reindex worker embeds with.
 var sweepEmbedder search.Embedder
+
+// sweepCalendar is the Google calendar of the last sweep app, which an
+// invitation's seed puts the invited event on.
+var sweepCalendar *apptest.BookingProvider
 
 // sweepVoiceModel is the model the last sweep app's voice builds are worked on.
 var sweepVoiceModel compose.ModelPath

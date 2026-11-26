@@ -42,13 +42,13 @@ func seedFigures(t *testing.T) figuresFixture {
 	decision := func(sentinel string, terminal bool) Call {
 		return Call{
 			Kind: callKindDecision, Task: task, Tier: TierDecideLane, Provider: providerJevCompatible, ModelID: "typesafe/jev-1.13",
-			RequestFingerprint: "fp-" + ids.NewV7().String(), ErrorSentinel: sentinel, IsTerminal: terminal, LatencyMS: 900,
+			ErrorSentinel: sentinel, IsTerminal: terminal, LatencyMS: 900,
 		}
 	}
 	ladder := func(sentinel, reason string) Call {
 		c := Call{
 			Kind: callKindCompletion, Task: task, Tier: TierCheapCloud, Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b",
-			RequestFingerprint: "fp-" + ids.NewV7().String(), ErrorSentinel: sentinel, AttemptReason: reason, Attempt: 2, IsTerminal: true, LatencyMS: 4000,
+			ErrorSentinel: sentinel, AttemptReason: reason, Attempt: 2, IsTerminal: true, LatencyMS: 4000,
 		}
 		if sentinel == "" {
 			c.TokensIn, c.TokensOut = 1000, 500
@@ -78,7 +78,7 @@ func seedFigures(t *testing.T) figuresFixture {
 	}
 	if err := meter.Record(ctx, []Call{{
 		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: callKindCompletion, Task: task,
-		Tier: TierCheapCloud, Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b", RequestFingerprint: "fp-cached", CacheHit: true,
+		Tier: TierCheapCloud, Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b", CacheHit: true,
 	}}); err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestCallStatsCountsFailuresTimeoutsAndCost(t *testing.T) {
 func TestTaskFlowCountsTheUnansweredLogicalCall(t *testing.T) {
 	f := seedFigures(t)
 
-	flow, err := f.reader.TaskFlow(f.ctx, f.task, 7*24*time.Hour)
+	flow, err := f.reader.TaskFlow(f.ctx, f.task, TaskLadder(f.task), 7*24*time.Hour)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestAnEmptyWindowReturnsNoRows(t *testing.T) {
 	if err != nil || rows == nil || len(rows) != 0 {
 		t.Fatalf("rows = %+v (%v), want an empty list", rows, err)
 	}
-	flow, err := f.reader.TaskFlow(f.ctx, f.task, 30*24*time.Hour)
+	flow, err := f.reader.TaskFlow(f.ctx, f.task, TaskLadder(f.task), 30*24*time.Hour)
 	if err != nil || flow.Total != 0 || flow.Unanswered != 0 || len(flow.Steps) != 0 {
 		t.Fatalf("flow = %+v (%v), want nothing", flow, err)
 	}
@@ -181,7 +181,7 @@ func TestARefusedLadderIsUnansweredInTheFlowButNoProviderFailure(t *testing.T) {
 	attempt := func(n int, tier Tier, reason, sentinel string) Call {
 		return Call{
 			LogicalCallID: logical, Attempt: n, IsTerminal: n == 3, Kind: callKindCompletion, Task: task,
-			Tier: tier, Provider: "test", ModelID: "test-" + string(tier), RequestFingerprint: "fp-" + ids.NewV7().String(),
+			Tier: tier, Provider: "test", ModelID: "test-" + string(tier),
 			AttemptReason: reason, ErrorSentinel: sentinel,
 		}
 	}
@@ -194,7 +194,7 @@ func TestARefusedLadderIsUnansweredInTheFlowButNoProviderFailure(t *testing.T) {
 	}
 	reader, reading := NewCallReadStore(env.dbFor(ws)), diagnosticsReader(ws)
 
-	flow, err := reader.TaskFlow(reading, task, 7*24*time.Hour)
+	flow, err := reader.TaskFlow(reading, task, TaskLadder(task), 7*24*time.Hour)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,5 +215,31 @@ func TestARefusedLadderIsUnansweredInTheFlowButNoProviderFailure(t *testing.T) {
 	}
 	if len(rows) != 1 || rows[0].Calls != 3 || rows[0].Failed != 0 {
 		t.Errorf("call figures = %+v, want 3 attempts and no provider failure", rows)
+	}
+}
+
+// A caller that stopped waiting is a call, and not a failure of its provider.
+func TestCallStatsLeaveACanceledCallOutOfTheFailures(t *testing.T) {
+	env := setupRateStore(t)
+	ctx := context.Background()
+	ws, ctx := env.seedWorkspace(ctx, t)
+	db := env.dbFor(ws)
+	task := Task("canceled_" + ids.NewV7().String()[:8])
+	for _, sentinel := range []string{sentinelCanceled, sentinelProviderError} {
+		if err := NewCallMeter(db).Record(ctx, []Call{{
+			Kind: callKindCompletion, Task: task, Tier: TierCheapCloud, Provider: providerOpenAICompatible,
+			ModelID:       "openai/gpt-oss-120b",
+			ErrorSentinel: sentinel, IsTerminal: true, LogicalCallID: ids.NewV7(),
+		}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rows, err := NewCallReadStore(db).CallStats(diagnosticsReader(ws),
+		CallStatsQuery{Window: 24 * time.Hour, GroupBy: GroupByProvider, Filter: CallStatsFilter{Task: task}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Calls != 2 || rows[0].Failed != 1 {
+		t.Fatalf("figures = %+v, want 2 calls and the provider error alone as a failure", rows)
 	}
 }

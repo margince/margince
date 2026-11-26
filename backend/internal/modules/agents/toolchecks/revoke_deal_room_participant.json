@@ -1,0 +1,10 @@
+{
+  "verb": "revoke_deal_room_participant",
+  "checks": [
+    "deal_room.update"
+  ],
+  "takes": [
+    "deal_room",
+    "room_participant"
+  ]
+}

@@ -3,6 +3,7 @@ import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import "@testing-library/jest-dom/vitest";
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -38,6 +39,30 @@ afterEach(() => {
   vi.restoreAllMocks();
   window.location.hash = "";
 });
+it("names a blank report name on the save press and sends nothing", async () => {
+  const user = userEvent.setup({ delay: null });
+  const write = vi.fn(() => jsonResponse(reportingStoryReport));
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "POST /analytics/reports": write,
+  });
+  render(
+    <StoryProviders>
+      <SaveReportingDialog
+        selection={reportingStoryEvaluation.selection}
+        onClose={() => {}}
+        onSaved={() => {}}
+      />
+    </StoryProviders>,
+  );
+  const name = await screen.findByRole("textbox", { name: "Report name" });
+  const save = screen.getByRole("button", { name: "Save report" });
+  expect(save).toBeEnabled();
+  await user.click(save);
+  expect(name).toHaveAccessibleDescription("This field is required.");
+  expect(write).not.toHaveBeenCalled();
+});
+
 it("saves the full selected graph layout and context", async () => {
   const user = userEvent.setup({ delay: null });
   const saved = vi.fn();
@@ -81,7 +106,40 @@ it("saves the full selected graph layout and context", async () => {
         layout: layoutOf(reportingStoryEvaluation.selection),
       },
     }),
+    expect.any(URL),
   );
+});
+it("stores a report once when its form is submitted twice before the answer", async () => {
+  const user = userEvent.setup({ delay: null });
+  let answer: (response: Response) => void = () => {};
+  const write = vi.fn(
+    () => new Promise<Response>((resolve) => (answer = resolve)),
+  );
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "POST /analytics/reports": write,
+  });
+  render(
+    <StoryProviders>
+      <SaveReportingDialog
+        selection={reportingStoryEvaluation.selection}
+        onClose={() => {}}
+        onSaved={() => {}}
+      />
+    </StoryProviders>,
+  );
+  await user.type(
+    await screen.findByRole("textbox", { name: "Report name" }),
+    "Friday review",
+  );
+  const form = screen
+    .getByRole("textbox", { name: "Report name" })
+    .closest("form");
+  if (!form) throw new Error("the dialog has no form");
+  fireEvent.submit(form);
+  fireEvent.submit(form);
+  await waitFor(() => expect(write).toHaveBeenCalledOnce());
+  answer(jsonResponse(reportingStoryReport));
 });
 it("draws a saved layout's sections under their titles", async () => {
   const laidOutEvaluation = {
@@ -238,10 +296,14 @@ it("opens keyboard-selected evidence with its receipt and restores focus", async
     </StoryProviders>,
   );
   await screen.findByRole("heading", { name: "Sales won over time" });
-  const point = container.querySelector<HTMLButtonElement>(
-    ".report-chart-point",
-  );
-  if (!point) throw new Error("No chart observation");
+  // The chart body is lazy, so it can draw after the heading.
+  const point = await waitFor(() => {
+    const found = container.querySelector<HTMLButtonElement>(
+      ".report-chart-point",
+    );
+    if (!found) throw new Error("No chart observation");
+    return found;
+  });
   point.focus();
   await user.keyboard("{Enter}");
   const drawer = await screen.findByRole("dialog");
@@ -340,7 +402,7 @@ it("carries the date range across tabs and keeps the sales pipeline", async () =
   await pickOption(
     user,
     screen.getByRole("combobox", { name: "Date range" }),
-    "Last month",
+    "Last completed month",
   );
   await user.click(screen.getByRole("button", { name: "Performance" }));
   expect(
@@ -348,7 +410,7 @@ it("carries the date range across tabs and keeps the sales pipeline", async () =
   ).toHaveTextContent("Sales");
   expect(
     screen.getByRole("combobox", { name: "Date range" }),
-  ).toHaveTextContent("Last month");
+  ).toHaveTextContent("Last completed month");
 });
 
 it("requires confirmation before archiving and explains the schedule effect", async () => {
@@ -401,7 +463,7 @@ it("restores the selected period and close window after reopening performance", 
   await pickOption(
     user,
     await screen.findByRole("combobox", { name: "Date range" }),
-    "Last month",
+    "Last completed month",
   );
   await pickOption(
     user,
@@ -416,7 +478,7 @@ it("restores the selected period and close window after reopening performance", 
   );
   expect(
     await screen.findByRole("combobox", { name: "Date range" }),
-  ).toHaveTextContent("Last month");
+  ).toHaveTextContent("Last completed month");
   expect(
     screen.getByRole("combobox", { name: "Expected close window" }),
   ).toHaveTextContent("Fiscal quarter");
@@ -463,6 +525,7 @@ it("labels a frozen pipeline drill-down with its historical state date", async (
       />
     </StoryProviders>,
   );
-  expect(screen.getByText("10/01/2025, 13:00")).toBeVisible();
+  // The drawer is lazy, so it may still be loading when no earlier case drew it.
+  expect(await screen.findByText("10/01/2025, 13:00")).toBeVisible();
   expect(screen.queryByText("Open pipeline today")).not.toBeInTheDocument();
 });

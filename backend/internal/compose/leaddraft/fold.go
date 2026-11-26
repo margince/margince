@@ -9,6 +9,7 @@ package leaddraft
 // says which lead field answers which of its questions.
 
 import (
+	"slices"
 	"strings"
 	"time"
 
@@ -123,9 +124,11 @@ func lastEachWay(rows []crmcontracts.Activity) (inbound, outbound time.Time) {
 //
 // Held by: TestTheConversationStateReadsTheSameTwoInstants
 // (backend/internal/compose/leaddraft/fold_test.go)
-func ConversationState(activities []crmcontracts.Activity, now time.Time, zone *time.Location) convstate.State {
+//
+// logged carries the newest logged touch read past the bounded timeline.
+func ConversationState(activities []crmcontracts.Activity, now time.Time, zone *time.Location, logged ...crmcontracts.Activity) convstate.State {
 	inbound, outbound := lastEachWay(activities)
-	return draftcore.ClassifyWithLogged(now, zone, inbound, outbound, activities)
+	return draftcore.ClassifyWithLogged(now, zone, inbound, outbound, append(slices.Clone(activities), logged...))
 }
 
 func deref(s *string) string {

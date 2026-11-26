@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { lastEmailAgo } from "../testing/dealmail";
+import { Button } from "./button";
 import { DealCard } from "./dealcard";
 import { EmailReference } from "./emailreference";
 import { Eyebrow } from "./eyebrow";
@@ -37,14 +38,32 @@ function boardDeal(extra?: Partial<BoardDeal>): BoardDeal {
   };
 }
 
-// Each state a card can be in, at the board's own column width: the slots stay
-// level from card to card, and only a card that needs the reader carries
-// colour. Every card is handed the verbs the deals board would give it, so an
-// archived one gets the summary alone.
+// Each state a card can be in, at the board's column width. Its slots stay
+// level card to card, and only a card that needs the reader carries colour.
+const menu = (
+  <>
+    <Button>Move to Proposal</Button>
+    <Button>Move to stage</Button>
+    <Button>Mark won</Button>
+    <Button>Deal summary</Button>
+    <Button>Copy link</Button>
+    <Button variant="danger">Archive deal</Button>
+  </>
+);
 const verbs = {
   onSummary: () => undefined,
   onEmail: () => undefined,
   onAddTask: () => undefined,
+  menu,
+};
+const archivedVerbs = {
+  onSummary: verbs.onSummary,
+  menu: (
+    <>
+      <Button>Deal summary</Button>
+      <Button>Copy link</Button>
+    </>
+  ),
 };
 const states: { label: string; deal: BoardDeal }[] = [
   {
@@ -52,6 +71,7 @@ const states: { label: string; deal: BoardDeal }[] = [
     deal: boardDeal({
       name: "ERP connector, phase 2",
       closeDate: "2027-03-14",
+      probabilityPct: 40,
       owner: { id: "u-2", name: "Jonas Ritter" },
       lastEmail: lastEmailAgo(2 * DAY_MS, "inbound"),
     }),
@@ -61,6 +81,7 @@ const states: { label: string; deal: BoardDeal }[] = [
     deal: boardDeal({
       name: "deal-de-lumenhealth-x-gradion-dataplatform-migration-2026",
       valueMinor: 12_500_000,
+      probabilityPct: 85,
       lastEmail: lastEmailAgo(5 * DAY_MS, "outbound"),
     }),
   },
@@ -75,6 +96,7 @@ const states: { label: string; deal: BoardDeal }[] = [
       measuredAt: Date.parse("2026-09-15T12:00:00Z"),
       closeDate: "2027-04-30",
       closeDateProvisional: true,
+      probabilityPct: 10,
       lastEmail: lastEmailAgo(23 * DAY_MS, "outbound"),
     }),
   },
@@ -112,7 +134,7 @@ const states: { label: string; deal: BoardDeal }[] = [
   },
   {
     label: "Unpriced, unmailed",
-    deal: boardDeal({ valueMinor: null, currency: null }),
+    deal: boardDeal({ valueMinor: null, currency: null, probabilityPct: 0 }),
   },
   { label: "Staged", deal: boardDeal({ staged: true }) },
   { label: "Archived", deal: boardDeal({ archived: true }) },
@@ -135,7 +157,7 @@ function StatesColumn() {
             deal={{ ...deal, id: label }}
             href="#/deals/d2"
             zone="Europe/Berlin"
-            actions={deal.archived ? { onSummary: verbs.onSummary } : verbs}
+            actions={deal.archived ? archivedVerbs : verbs}
           />
         </div>
       ))}
@@ -197,6 +219,77 @@ export const BoardCardMailFlyout: StoryObj = {
       expect(document.body.querySelector(".popover-panel")).toBeInTheDocument(),
     );
   },
+};
+
+// A name past its two lines: focus on the link shows the whole of it in a tip.
+const LONG_NAME =
+  "Group-wide ERP connector rollout for the northern distribution centres, phase two of three, incl. data migration";
+
+export const BoardCardLongNameTip: StoryObj = {
+  render: () => (
+    <div style={{ width: 300, maxWidth: "100%", paddingTop: "var(--space-8)" }}>
+      <DealCard
+        deal={boardDeal({
+          name: LONG_NAME,
+          closeDate: "2026-09-30",
+          owner: { id: "u-2", name: "Jonas Ritter" },
+        })}
+        href="#/deals/d2"
+        zone="Europe/Berlin"
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    within(canvasElement).getByRole("link", { name: LONG_NAME }).focus();
+    await waitFor(() =>
+      expect(
+        within(canvasElement.ownerDocument.body).getByRole("tooltip"),
+      ).toHaveTextContent(LONG_NAME),
+    );
+  },
+};
+
+// The card's menu open: the card keeps its focus ring and lifts on a firmer
+// edge while the panel, portalled beside it, holds focus.
+function MenuCard() {
+  return (
+    <div style={{ width: 300, maxWidth: "100%" }}>
+      <DealCard
+        deal={boardDeal({
+          closeDate: "2027-03-14",
+          probabilityPct: 40,
+          owner: { id: "u-2", name: "Jonas Ritter" },
+          lastEmail: lastEmailAgo(2 * DAY_MS, "inbound"),
+        })}
+        href="#/deals/d2"
+        zone="Europe/Berlin"
+        actions={verbs}
+      />
+    </div>
+  );
+}
+
+const openMenu: StoryObj["play"] = async ({ canvasElement }) => {
+  const trigger = within(canvasElement).getByRole("button", {
+    name: "More actions for Fabrikam expansion",
+  });
+  await userEvent.click(trigger);
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    within(canvasElement.ownerDocument.body).getByRole("button", {
+      name: "Move to stage",
+    }),
+  ).toBeVisible();
+};
+
+export const BoardCardMenuOpen: StoryObj = {
+  render: () => <MenuCard />,
+  play: openMenu,
+};
+export const BoardCardMenuOpenDark: StoryObj = {
+  globals: { theme: "dark" },
+  render: () => <MenuCard />,
+  play: openMenu,
 };
 
 export const CalendarAgeAgreement: StoryObj = {

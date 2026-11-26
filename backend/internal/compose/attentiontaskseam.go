@@ -13,12 +13,15 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -29,8 +32,11 @@ import (
 // attentionTasks reads open tasks through the activities store. A task is an
 // activity of kind `task`, so this is the same read the task queue makes.
 type attentionTasks struct {
+	work   *inquiryWork
 	store  *activities.Store
 	claims *contacts.Store
+	// db reads the may-be-done question. Nil asks none.
+	db *database.DB
 }
 
 // openTasksDueBy is the ONE narrowing the lane's page and its count share.
@@ -47,10 +53,13 @@ type attentionTasks struct {
 // The false answer means "no reader to answer for", which is a page of nothing
 // rather than a refusal.
 func openTasksDueBy(
-	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
+	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, zone string, owner ids.UUID, team []ids.UUID,
 ) (activities.ListActivitiesInput, bool) {
+	// A task row is drawn from its own columns and its links (taskFromActivity),
+	// so the page skips the enrichment an activity list shows.
 	in := activities.ListActivitiesInput{
-		OpenAndDueBy: &until, IncludeEmailRequests: true, WorklistAsOf: &asOf, ReadableOnly: true, TeamQueueOf: team,
+		OpenAndDueBy: &until, IncludeEmailRequests: true, IncludeWebsiteInquiries: true, WorklistAsOf: &asOf, ReadableOnly: true, TeamQueueOf: team,
+		LinkedFactsOnly: true, DayZone: zone,
 	}
 	switch scope {
 	case attention.TasksMine:
@@ -82,37 +91,95 @@ func openTasksDueBy(
 	return in, true
 }
 
-func (t attentionTasks) OpenForViewer(
-	ctx context.Context, asOf, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
-) ([]attention.Task, error) {
-	// The store answers "open and due by then" itself, so the limit bounds the
-	// rows that QUALIFY. This used to read ten times the lane and narrow
-	// afterwards, which put the bound on the wrong set: a pile of completed
-	// tasks filled the scan, the overdue promise underneath never reached the
-	// reader, and the day rendered clear while the work was still there.
-	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner, team)
-	if !ok {
-		return nil, nil
+// PlannedForViewer reads the planned lane's windows, then enriches every task
+// they hold in one pass. A reminded task can also be due today; it is enriched
+// once and appears in both lists. Each window's limit bounds the rows that
+// qualify, because the store answers "open and due by then" itself.
+func (t attentionTasks) PlannedForViewer(ctx context.Context, ask attention.PlannedAsk) (attention.PlannedTasks, error) {
+	w := ask.Window
+	var day, upcoming, reminders []crmcontracts.Activity
+	if in, ok := openTasksDueBy(ctx, w.AsOf, w.Until, w.Scope, w.Zone, w.Owner, w.Team); ok {
+		in.Limit = &ask.DayLimit
+		var err error
+		if day, err = t.listOpenTasks(ctx, in); err != nil {
+			return attention.PlannedTasks{}, err
+		}
 	}
-	in.Limit = &limit
-	rows, err := t.listOpenTasks(ctx, in)
+	if in, ok := openTasksDueBy(ctx, w.AsOf, ask.Horizon, w.Scope, w.Zone, w.Owner, w.Team); ok {
+		in.OpenAndDueAfter, in.Limit = &w.Until, &ask.UpcomingLimit
+		var err error
+		if upcoming, err = t.listOpenTasks(ctx, in); err != nil {
+			return attention.PlannedTasks{}, err
+		}
+	}
+	if ask.Reminders {
+		var err error
+		if reminders, err = t.dueReminders(ctx, w.AsOf); err != nil {
+			return attention.PlannedTasks{}, err
+		}
+	}
+	enriched, err := t.asTasks(ctx, distinctActivities(day, upcoming, reminders), w.Scope, w.AsOf)
 	if err != nil {
-		return nil, err
+		return attention.PlannedTasks{}, err
 	}
-	return t.asTasks(ctx, rows, scope, asOf)
+	byID := make(map[ids.UUID]attention.Task, len(enriched))
+	for _, task := range enriched {
+		byID[task.ID] = task
+	}
+	pick := func(rows []crmcontracts.Activity) []attention.Task {
+		tasks := make([]attention.Task, 0, len(rows))
+		for _, row := range rows {
+			tasks = append(tasks, byID[ids.UUID(row.Id)])
+		}
+		return tasks
+	}
+	return attention.PlannedTasks{Open: pick(day), Upcoming: pick(upcoming), Reminders: pick(reminders)}, nil
+}
+
+// distinctActivities lists each activity of the windows once, in order.
+func distinctActivities(windows ...[]crmcontracts.Activity) []crmcontracts.Activity {
+	seen := map[openapi_types.UUID]bool{}
+	var out []crmcontracts.Activity
+	for _, window := range windows {
+		for _, row := range window {
+			if !seen[row.Id] {
+				seen[row.Id] = true
+				out = append(out, row)
+			}
+		}
+	}
+	return out
 }
 
 // asTasks carries a window's rows across as tasks. Each carries the reminder
 // its scope may show, and a flag where the reader may not change it.
-func (t attentionTasks) asTasks(
+func (t attentionTasks) asTasks(ctx context.Context, rows []crmcontracts.Activity, scope attention.TaskScope, asOf time.Time) ([]attention.Task, error) {
+	tasks, err := t.taskRows(ctx, rows, scope, asOf)
+	if err != nil {
+		return nil, err
+	}
+	return t.markReadOnly(ctx, tasks, asOf)
+}
+
+func (t attentionTasks) taskRows(
 	ctx context.Context, rows []crmcontracts.Activity, scope attention.TaskScope, asOf time.Time,
 ) ([]attention.Task, error) {
+	var inquiryFacts map[ids.UUID]*crmcontracts.WebsiteInquiryWork
+	if t.work != nil {
+		var err error
+		inquiryFacts, err = t.work.ForTasks(ctx, rows)
+		if err != nil {
+			return nil, err
+		}
+	}
 	tasks := make([]attention.Task, 0, len(rows))
 	reader := reminderReaderFor(ctx, scope)
 	for _, row := range rows {
-		tasks = append(tasks, taskFromActivity(row, reader, asOf))
+		task := taskFromActivity(row, reader, asOf)
+		task.Inquiry = inquiryFacts[ids.UUID(row.Id)]
+		tasks = append(tasks, task)
 	}
-	return t.markReadOnly(ctx, tasks, asOf)
+	return tasks, nil
 }
 
 // listOpenTasks reads one window of open tasks with each statement's generic
@@ -129,32 +196,10 @@ func (t attentionTasks) listOpenTasks(ctx context.Context, in activities.ListAct
 	return rows, err
 }
 
-// UpcomingForViewer reads the work due after the day's end, to a horizon.
-//
-// Same narrowing as OpenForViewer — the scope arms are openTasksDueBy's, so a
-// colleague's tasks cannot leak into a personal lane through the newer read —
-// and the window is closed at both ends in the QUERY, so the limit bounds rows
-// that qualify rather than a wider set narrowed afterwards.
-func (t attentionTasks) UpcomingForViewer(
-	ctx context.Context, asOf, from, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
-) ([]attention.Task, error) {
-	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner, team)
-	if !ok {
-		return nil, nil
-	}
-	in.OpenAndDueAfter = &from
-	in.Limit = &limit
-	rows, err := t.listOpenTasks(ctx, in)
-	if err != nil {
-		return nil, err
-	}
-	return t.asTasks(ctx, rows, scope, asOf)
-}
-
 // CountTasks counts a later task window whole, under the lane's own
 // narrowing (openTasksDueBy), without the reader's due reminders.
 func (t attentionTasks) CountTasks(ctx context.Context, window attention.TaskWindow) (int, error) {
-	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Zone, window.Owner, window.Team)
 	if !ok {
 		return 0, nil
 	}
@@ -169,7 +214,7 @@ func (t attentionTasks) CountTasks(ctx context.Context, window attention.TaskWin
 func (t attentionTasks) TasksAfter(
 	ctx context.Context, window attention.TaskWindow, after string, limit int,
 ) ([]attention.Positioned[attention.Task], bool, error) {
-	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Zone, window.Owner, window.Team)
 	if !ok {
 		return nil, false, nil
 	}
@@ -203,27 +248,54 @@ func (t attentionTasks) TasksAfter(
 }
 
 // TasksOnDeals reads every open task of the window filed under any of these
-// deals, under the lane's own narrowing (openTasksDueBy). The service judges
-// which of them stand in for their deal.
-func (t attentionTasks) TasksOnDeals(
-	ctx context.Context, window attention.TaskWindow, deals []ids.UUID,
+// deals. The service judges which of them stand in for their deal.
+func (t attentionTasks) TasksOnDeals(ctx context.Context, window attention.TaskWindow, deals []ids.UUID) ([]attention.Task, error) {
+	if len(deals) == 0 {
+		return nil, nil
+	}
+	return t.everyTask(ctx, window, activities.ListActivitiesInput{LinkedToDeals: deals}, t.taskRows)
+}
+
+// FollowUpPromises names the reader's own open tasks derived from these emails.
+func (t attentionTasks) FollowUpPromises(ctx context.Context, emails []ids.UUID) ([]activities.FollowUpPromise, error) {
+	return t.store.FollowUpPromises(ctx, emails)
+}
+
+// TasksIn reads these tasks of the window, drawn as the planned lane draws them.
+func (t attentionTasks) TasksIn(ctx context.Context, window attention.TaskWindow, tasks []ids.UUID) ([]attention.Task, error) {
+	if len(tasks) == 0 {
+		return nil, nil
+	}
+	named := activities.ListActivitiesInput{}
+	for _, task := range tasks {
+		named.IDs = append(named.IDs, ids.From[ids.ActivityKind](task))
+	}
+	return t.everyTask(ctx, window, named, t.asTasks)
+}
+
+// everyTask reads every open task of the window that among's ids or deals
+// keep, under the lane's own narrowing (openTasksDueBy), each drawn by draw.
+func (t attentionTasks) everyTask(
+	ctx context.Context, window attention.TaskWindow, among activities.ListActivitiesInput,
+	draw func(context.Context, []crmcontracts.Activity, attention.TaskScope, time.Time) ([]attention.Task, error),
 ) ([]attention.Task, error) {
-	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
-	if !ok || len(deals) == 0 {
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Zone, window.Owner, window.Team)
+	if !ok {
 		return nil, nil
 	}
 	page := reminderPage
-	in.LinkedToDeals, in.Limit = deals, &page
-	reader := reminderReaderFor(ctx, window.Scope)
+	in.IDs, in.LinkedToDeals, in.Limit = among.IDs, among.LinkedToDeals, &page
 	var tasks []attention.Task
 	for {
 		rows, next, err := t.listTaskPage(ctx, in)
 		if err != nil {
 			return nil, err
 		}
-		for _, row := range rows {
-			tasks = append(tasks, taskFromActivity(row, reader, window.AsOf))
+		pageTasks, err := draw(ctx, rows, window.Scope, window.AsOf)
+		if err != nil {
+			return nil, err
 		}
+		tasks = append(tasks, pageTasks...)
 		if !next.HasMore {
 			return tasks, nil
 		}
@@ -231,27 +303,24 @@ func (t attentionTasks) TasksOnDeals(
 	}
 }
 
-// RemindersForViewer reads every due reminder of the reader's through the
-// store's reminder_due filter, the same read GET /v1/activities?reminder_due=true
-// makes, following its cursor. All of them, because the badge counts all.
-func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) ([]attention.Task, error) {
-	reader := activities.ReminderReader(ctx)
-	if reader.IsZero() {
+// dueReminders reads every due reminder of the reader's through the store's
+// reminder_due filter, the same read GET /v1/activities?reminder_due=true makes,
+// following its cursor. All of them, because the badge counts all.
+func (t attentionTasks) dueReminders(ctx context.Context, asOf time.Time) ([]crmcontracts.Activity, error) {
+	if activities.ReminderReader(ctx).IsZero() {
 		return nil, nil
 	}
-	var due []attention.Task
+	var due []crmcontracts.Activity
 	page := reminderPage
-	in := activities.ListActivitiesInput{RemindersDue: true, AsOf: &asOf, Limit: &page, ReadableOnly: true}
+	in := activities.ListActivitiesInput{RemindersDue: true, AsOf: &asOf, Limit: &page, ReadableOnly: true, LinkedFactsOnly: true}
 	for {
 		rows, next, err := t.listTaskPage(ctx, in)
 		if err != nil {
 			return nil, err
 		}
-		for _, row := range rows {
-			due = append(due, taskFromActivity(row, reader, asOf))
-		}
+		due = append(due, rows...)
 		if !next.HasMore {
-			return t.markReadOnly(ctx, due, asOf)
+			return due, nil
 		}
 		in.Cursor = &next.NextCursor
 	}
@@ -285,25 +354,44 @@ func reminderReaderFor(ctx context.Context, scope attention.TaskScope) ids.UUID 
 	return activities.ReminderReader(ctx)
 }
 
-// markReadOnly flags the tasks the reader may see and not change, asked of the
-// whole page in one read.
+// markReadOnly flags the tasks the reader may see and not change. It also marks
+// the request reminders Margince cannot check. Each fact is one read for the
+// whole page, keyed on its ids, so the generic plans are reused
+// (database.ReuseGenericPlans).
 func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
+	if len(tasks) == 0 {
+		return tasks, nil
+	}
 	named := make([]ids.UUID, len(tasks))
 	for i, task := range tasks {
 		named[i] = task.ID
 	}
-	writable, err := t.store.WritableTasks(ctx, named)
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		writable, err := t.store.WritableTasks(ctx, named)
+		if err != nil {
+			return err
+		}
+		unchecked, err := t.store.UncheckableRequestReminders(ctx, attention.Sourced(tasks), asOf)
+		if err != nil {
+			return err
+		}
+		for i := range tasks {
+			tasks[i].ReadOnly = !writable[tasks[i].ID]
+			inquiry := tasks[i].Inquiry
+			if inquiry != nil && inquiry.CanTake != nil && *inquiry.CanTake && tasks[i].ReadOnly && (tasks[i].LinkType != entityLead || inquiry.RecordOwnerId != nil) {
+				inquiry.CanTake = new(false)
+			}
+			if check, ok := unchecked[tasks[i].ID]; ok {
+				tasks[i].RequestCheck = &check
+			}
+		}
+		tasks, err = t.withRecipients(ctx, tasks, named)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
-	for i := range tasks {
-		tasks[i].ReadOnly = !writable[tasks[i].ID]
-	}
-	tasks, err = t.withRecipients(ctx, tasks, named)
-	if err != nil {
-		return nil, err
-	}
-	return tasks, nil
+	return t.withMayBeDone(ctx, tasks, asOf)
 }
 
 func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Task, named []ids.UUID) ([]attention.Task, error) {
@@ -329,6 +417,39 @@ func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Ta
 	}
 	for i := range tasks {
 		tasks[i].Recipients = recipients[tasks[i].ID]
+	}
+	return tasks, nil
+}
+
+// withMayBeDone asks of each promise task whether our later mail on its thread
+// to a recipient kept it. The company page asks through the same seam
+// (momentaction.AskTasksDone).
+func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
+	// A user or their agent answers the question, so automatic work reading the
+	// queue sees the plain row.
+	if answers := auth.Allows(ctx, "activity", principal.ActionRead) && auth.RequireHumanOrItsAgent(ctx) == nil; t.db == nil || !answers {
+		return tasks, nil
+	}
+	candidates := attention.DoneCandidates(tasks)
+	if len(candidates) == 0 {
+		return tasks, nil
+	}
+	var asked map[ids.UUID]crmcontracts.WorklistMayBeDone
+	err := t.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		asked, err = momentaction.AskTasksDone(ctx, tx, candidates, asOf)
+		return err
+	})
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return tasks, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	for i := range tasks {
+		if question, ok := asked[tasks[i].ID]; ok {
+			tasks[i].MayBeDone = &question
+		}
 	}
 	return tasks, nil
 }

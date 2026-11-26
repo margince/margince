@@ -1,0 +1,11 @@
+{
+  "verb": "replace_deal_products",
+  "checks": [
+    "deal.read",
+    "deal.update",
+    "product.read"
+  ],
+  "takes": [
+    "deal"
+  ]
+}

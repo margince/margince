@@ -104,6 +104,7 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 		`INSERT INTO custom_field (object, slug, label, type, column_name, created_by)
 		 VALUES ('contact', 'private_note', 'Private note', 'text', 'cf_private_note', $1)`, user)
 	mustExec(ctx, t, tx, `UPDATE contact SET cf_private_note = 'lives on Hauptstrasse' WHERE id = $1`, contact)
+	mustExec(ctx, t, tx, `UPDATE contact SET greeting_register = 'formal' WHERE id = $1`, contact)
 
 	// An introduction one colleague asked another for, about the subject. Two seats
 	// because intro_request_distinct_seats refuses a requester who is also the
@@ -121,6 +122,9 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 		        'Hedda runs platform and owns the budget',
 		        'Hedda asked us not to contact her employer', now() + interval '3 days',
 		        $4)`, contact, user, introducer, "user:"+user.String())
+
+	_, review := seedReviewedDeal(ctx, t, tx, contact.UUID)
+	mustExec(ctx, t, tx, `UPDATE legal_review SET note = 'Hedda Subject wants clause nine changed' WHERE id = $1`, review)
 
 	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{}); err != nil {
 		t.Fatalf("anonymizing: %v", err)
@@ -140,6 +144,10 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 			describing)
 	}
 
+	if reviewNote, _, _ := reviewText(ctx, t, tx, review); reviewNote == nil || *reviewNote != "Erased wants clause nine changed" {
+		t.Errorf("legal review note = %v after the anonymize, want the name redacted and the clause kept", reviewNote)
+	}
+
 	var pending int
 	if err := tx.QueryRow(ctx,
 		`SELECT count(*) FROM capture_pending_counterparty WHERE email = $1`, subjectEmail).Scan(&pending); err != nil {
@@ -148,6 +156,15 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 	if pending != 0 {
 		t.Errorf("%d pending-counterparty row(s) still name %s — the key a later capture would "+
 			"re-match the subject on survived the action that stopped naming them", pending, subjectEmail)
+	}
+
+	var register *string
+	if err := tx.QueryRow(ctx,
+		`SELECT greeting_register FROM contact WHERE id = $1`, contact).Scan(&register); err != nil {
+		t.Fatal(err)
+	}
+	if register != nil {
+		t.Errorf("the greeting register %q survived the anonymize of the contact it was chosen for", *register)
 	}
 
 	var note *string

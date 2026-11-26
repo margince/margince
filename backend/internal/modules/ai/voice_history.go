@@ -39,7 +39,7 @@ type VoiceProfileDelta struct {
 	AvoidRulesRemoved    int
 	RegisterRulesRemoved int
 	CreatedAt            time.Time
-	UpdatedAt            *time.Time
+	UpdatedAt            time.Time
 	ArchivedAt           *time.Time
 }
 
@@ -94,7 +94,7 @@ func (s *VoiceStore) ListDeltas(ctx context.Context, profileID ids.UUID, cursor 
 	args := []any{profileID}
 	where := "voice_profile_id = $1 AND archived_at IS NULL"
 	if cursor != nil && *cursor != "" {
-		decoded, err := storekit.DecodeCursor(*cursor)
+		decoded, err := storekit.DecodeCursor("voice_history", *cursor)
 		if err != nil {
 			return VoiceProfileDeltaPage{}, err
 		}
@@ -130,7 +130,7 @@ func (s *VoiceStore) ListDeltas(ctx context.Context, profileID ids.UUID, cursor 
 	if len(page.Items) > n {
 		page.Items = page.Items[:n]
 		last := page.Items[len(page.Items)-1]
-		next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+		next, err := storekit.EncodeCursor("voice_history", last.CreatedAt, last.ID)
 		if err != nil {
 			return VoiceProfileDeltaPage{}, err
 		}

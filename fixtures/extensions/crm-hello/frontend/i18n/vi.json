@@ -1,4 +1,5 @@
 {
+  "extCrmHello.captureReason.kept_core_answer": "Giữ nguyên câu trả lời của lõi",
   "extCrmHello.panel": "crm-hello thấy giao dịch {deal}.",
   "extCrmHello.sub": "Tiện ích kiểm tra của tầng. Không có gì để cài đặt.",
   "extCrmHello.title": "crm-hello"

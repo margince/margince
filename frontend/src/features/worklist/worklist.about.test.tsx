@@ -52,11 +52,9 @@ it("links the record a message row is about", async () => {
   renderWorklist();
 
   // The pane beside the queue names her too; the row's own link is the one
-  // in its facts line.
+  // in its chip line.
   await screen.findAllByRole("link", { name: "Sonya Beck" });
-  expect(
-    document.querySelector(".worklist-row-about a")?.getAttribute("href"),
-  ).toBe(
+  expect(document.querySelector(".task-meta a")?.getAttribute("href")).toBe(
     "/r/contacts/01a05500-0000-7000-8000-000000000009#/contacts/01a05500-0000-7000-8000-000000000009",
   );
 });
@@ -107,9 +105,7 @@ it("names the sender behind a deal-filed thread, and which side wrote last", asy
   renderWorklist();
 
   await screen.findAllByRole("link", { name: "Sonya Beck" });
-  expect(
-    document.querySelector(".worklist-row-about a")?.getAttribute("href"),
-  ).toBe(
+  expect(document.querySelector(".task-meta a")?.getAttribute("href")).toBe(
     "/r/contacts/01a05500-0000-7000-8000-000000000009#/contacts/01a05500-0000-7000-8000-000000000009",
   );
   const touch = document.querySelector(".worklist-row-touch");
@@ -215,7 +211,7 @@ it("says which side wrote last on a row about an account", async () => {
   );
   renderWorklist();
 
-  await screen.findByText("Send the renewal terms · Turbinenbau GmbH");
+  await screen.findByText("Send the renewal terms");
   const touch = document.querySelector(".worklist-row-touch");
   expect(touch?.textContent).toContain("Last from this company Never");
   expect(touch?.textContent).toContain("Last to this company");
@@ -227,7 +223,7 @@ it("claims no moments for an account whose activity was withheld", async () => {
   stub(accountTask({ id: ACCOUNT }));
   renderWorklist();
 
-  await screen.findByText("Send the renewal terms · Turbinenbau GmbH");
+  await screen.findByText("Send the renewal terms");
   expect(document.querySelector(".worklist-row-touch")).toBeNull();
 });
 
@@ -262,4 +258,54 @@ it("prefers the contact's moments to the account's on a row naming both", async 
   expect(touch).not.toContain("this company");
   expect(touch).not.toContain("14/07/2026");
   expect(touch).not.toContain("28/08/2026");
+});
+
+// A follow-up on mail the rep sent says whom it went to and their company.
+// Two rows with one subject can then be told apart without opening either.
+it("names the recipient of a follow-up and their company", async () => {
+  const contact = "01a05500-0000-7000-8000-0000000000c1";
+  stub(
+    day({
+      queue: [
+        row({
+          id: "w-followup",
+          source: "awaiting_reply",
+          category: "tasks",
+          title: "Re: Great to meet you",
+          because: [{ kind: "you_wrote_last" }],
+          contact: {
+            id: contact,
+            label: "Contact A",
+            employer: {
+              company_id: "01a05500-0000-7000-8000-0000000000c2",
+              company_name: "Company A",
+            },
+          },
+          email_summary: {
+            activity_id: "mail-sent",
+            subject: "Re: Great to meet you",
+            occurred_at: "2026-09-03T16:46:00Z",
+            occurred_precision: "instant",
+            direction: "outbound",
+            counterparty: "Contact A",
+            counterparty_contact_id: contact,
+            attachment_count: 0,
+            move: "waiting_for_them",
+            display_status: "team",
+            version: 1,
+          },
+        }),
+      ],
+      summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
+    }),
+  );
+  renderWorklist();
+
+  expect(
+    (await screen.findAllByText("Sent to Contact A")).length,
+  ).toBeGreaterThan(0);
+  const about = [...document.querySelectorAll(".task-meta a .chip-label")].map(
+    (link) => link.textContent,
+  );
+  expect(about).toEqual(["Contact A", "Company A"]);
 });

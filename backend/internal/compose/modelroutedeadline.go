@@ -4,7 +4,6 @@
 package compose
 
 import (
-	"context"
 	"net/http"
 	"strings"
 	"time"
@@ -51,8 +50,11 @@ var modelRouteSuffixes = []string{
 	"/regenerate",
 	"/filters/propose",
 	"/reader-rendering",
+	"/rewrites",
 	"/analytics/assessment",
 	"/analytics/setup-proposal",
+	"/analytics/progress/summary",
+	"/proposed-months",
 }
 
 // The routes whose last segment is a word other routes also end in. A suffix
@@ -95,17 +97,16 @@ var modelRoutePatterns = []string{
 // 16, so a few abandoned reads hold the pool against requests that are still
 // answerable.
 //
-// It cuts nothing that was going to be delivered, because the bound is the one
-// the response already ran under. Nor is it a new class of event for a handler
-// to survive: r.Context() is ALREADY cancelled when the client disconnects,
-// which is this same cancellation on a different trigger. A path that must
-// finish regardless says so with context.WithoutCancel and a budget of its own
-// — the idiom this tree uses in thirty-eight places, keyvault's detached
-// cleanup and compose's logo reclaim among them.
+// It cuts little that was going to be delivered. The bound is the one the
+// response already ran under, less the grace. Nor is it a new class of event
+// for a handler to survive. r.Context() is ALREADY cancelled when the client
+// disconnects, which is this same cancellation on a different trigger. A path
+// that must finish regardless says so with context.WithoutCancel and a budget
+// of its own. Keyvault's detached cleanup and compose's logo reclaim do so.
 //
-// No grace is subtracted to leave room for an error body: at that instant the
-// response deadline has passed and the write fails whatever the handler says,
-// so a shorter context would stop the work earlier and buy a 504 nobody reads.
+// The context ends httpserver.AnswerGrace before the write deadline. A handler
+// stopped at the write deadline itself could write nothing, and its caller got a
+// closed socket instead of a 503 it can retry.
 func boundByResponseDeadline(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !callsAModel(r.URL.Path) {
@@ -129,11 +130,11 @@ func boundByResponseDeadline(next http.Handler) http.Handler {
 	})
 }
 
-// serveWithin runs the handler under a context that ends when its response
-// deadline does. One helper for both arms, so the two can never name different
-// figures from the ones their own responses run under.
+// serveWithin runs the handler under a context that ends just before its
+// response deadline does. One helper for both arms, so the two can never name
+// different figures from the ones their own responses run under.
 func serveWithin(w http.ResponseWriter, r *http.Request, next http.Handler, within time.Duration) {
-	ctx, cancel := context.WithTimeout(r.Context(), within)
+	ctx, cancel := httpserver.WithinResponseDeadline(r.Context(), within)
 	defer cancel()
 	next.ServeHTTP(w, r.WithContext(ctx))
 }

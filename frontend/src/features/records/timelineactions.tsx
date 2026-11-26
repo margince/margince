@@ -25,6 +25,7 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { OverflowMenu } from "../../design-system/overflowmenu";
 import { useT } from "../../i18n";
 import { entityTimelineKeys, taskWriteKeys } from "../../lib/activitykeys";
+import { fileListKeys } from "../../lib/attachmentkeys";
 import { useMessageAudience } from "../../lib/audienceservice";
 import { useCanWriteRecord } from "../../lib/capability";
 import { captureReviewTarget } from "../../lib/capturereview";
@@ -49,7 +50,8 @@ import {
   RelinkModal,
 } from "../mail/compose";
 import { ActivityFilesAction } from "./activityfiles";
-import { DealDeclineAction } from "./dealdecline";
+import { audienceWords } from "./audiencewords";
+import { DealRelevanceAction, DealRelevanceBadge } from "./dealdecline";
 import { MoveButton } from "./movebutton";
 import { ProjectFilingAction } from "./projectfiling";
 
@@ -104,6 +106,7 @@ export function RowAnswerActions({
         contactId={contactId}
         contact={contact}
         contentWithheld={activity.content_state === "withheld"}
+        invitation={activity.email_summary?.calendar_invitation}
       />
       {activity.invitation_status && activity.content_state !== "withheld" && (
         <Button
@@ -134,6 +137,9 @@ export function TimelineActions(props: RowVerbProps) {
   return (
     <>
       <RowAnswerActions {...props} />
+      {entityType === "deal" && (
+        <DealRelevanceBadge activity={activity} dealId={entityId} />
+      )}
       {entityType === "contact" && (
         <HeldMailLink activity={activity} contactId={entityId} />
       )}
@@ -150,10 +156,10 @@ export function TimelineActions(props: RowVerbProps) {
           entityType={entityType}
           entityId={entityId}
         />
-        {/* An email on a deal's timeline may have been filed there by
-            capture alone, so this is where a reader says it is not. */}
-        {entityType === "deal" && activity.kind === "email" && (
-          <DealDeclineAction activity={activity} dealId={entityId} />
+        {/* A row on a deal's timeline may have been filed there by capture
+            or an import alone, so this is where a reader says it is not. */}
+        {entityType === "deal" && activity.kind !== "task" && (
+          <DealRelevanceAction activity={activity} dealId={entityId} />
         )}
         {/* Every row on a project's timeline is filed under that project, so
             this is the one surface where taking the filing back is always
@@ -226,7 +232,8 @@ function RelinkAction({
 }
 
 // ActivityArchiveAction takes one row off the History. The server says per row
-// whether this reader may: a delete grant, or a note or task they wrote.
+// whether this reader may: a delete grant, or a note, task, call or meeting they
+// logged by hand. A meeting a live invitation holds is archivable by no one.
 function ActivityArchiveAction({
   activity,
   entityType,
@@ -241,7 +248,11 @@ function ActivityArchiveAction({
     <ArchiveAction
       requires={{ object: "activity", action: "delete" }}
       archivable={activity.archivable ?? false}
-      refusedReason={t("activity.archiveRefused")}
+      refusedReason={t(
+        activity.calendar_managed
+          ? "activity.archiveCalendarManaged"
+          : "activity.archiveRefused",
+      )}
       label={t("activity.archive")}
       confirmText={t("activity.archiveConfirm")}
       archivedMessage={t("activity.archiveDone")}
@@ -255,7 +266,14 @@ function ActivityArchiveAction({
           }),
         )
       }
-      invalidate={entityTimelineKeys(entityType, entityId)}
+      invalidate={[
+        ...entityTimelineKeys(entityType, entityId),
+        // An archived activity's files leave every Documents list.
+        ...fileListKeys(
+          { entityType: "activity", entityId: activity.id },
+          "removed",
+        ),
+      ]}
       recordKey="activity"
       onArchived={() => undefined}
     />
@@ -349,6 +367,7 @@ export function AudienceAction({
   if (activity.captured_by.startsWith("connector:") && !internal) {
     return null;
   }
+  const words = audienceWords(activity.kind);
   return (
     <>
       <Button
@@ -362,7 +381,7 @@ export function AudienceAction({
       <ConfirmModal
         open={open}
         onClose={() => setOpen(false)}
-        title={t("compose.audienceTitle")}
+        title={t(words.title)}
         intent="form"
         confirmLabel={t("compose.audienceConfirm")}
         confirmDisabled={
@@ -382,13 +401,13 @@ export function AudienceAction({
       >
         <div className="compose-fields">
           <ChoiceList
-            legend={t("compose.audienceLegend")}
+            legend={t(words.legend)}
             value={choice}
             onChange={setChoice}
             choices={messageAudienceChoices(internal).map((value) => ({
               value,
               label: t(labelFor(AUDIENCE_LABEL, value)),
-              description: t(labelFor(AUDIENCE_HINT, value)),
+              description: t(labelFor(words.hints ?? AUDIENCE_HINT, value)),
             }))}
           />
           {/* The picker only where the choice needs one. A limited-to-nobody
@@ -403,7 +422,7 @@ export function AudienceAction({
             />
           )}
           <p className="t-caption">
-            {t(internal ? "internalMail.shareNote" : "compose.audienceNote")}
+            {t(internal ? "internalMail.shareNote" : words.scope)}
           </p>
         </div>
       </ConfirmModal>

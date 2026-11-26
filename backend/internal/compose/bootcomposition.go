@@ -14,6 +14,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/extensionprivacy"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -37,6 +39,9 @@ func RecordComposition(
 	if err := ObserveExtensionInventory(ctx, pool, log, exts); err != nil {
 		return fmt.Errorf("compose: recording the composed extension set: %w", err)
 	}
+	if err := VerifyExtensionPrivacy(ctx, pool, exts); err != nil {
+		return fmt.Errorf("compose: checking the extensions' privacy declarations: %w", err)
+	}
 	if err := ReconcileChannelProviders(ctx, pool); err != nil {
 		return fmt.Errorf("compose: registering this binary's channel vocabulary: %w", err)
 	}
@@ -47,4 +52,17 @@ func RecordComposition(
 		return fmt.Errorf("compose: making the units' service members: %w", err)
 	}
 	return nil
+}
+
+// ExtensionData is the registry every eraser, export and merge store outside a test is handed.
+func ExtensionData() extprivacy.Registry { return extensionprivacy.Registry(ComposedExtensions()) }
+
+// VerifyExtensionPrivacy checks the units' declarations at boot (extensionprivacy.Verify).
+func VerifyExtensionPrivacy(ctx context.Context, pool *pgxpool.Pool, exts []extension.Extension) error {
+	return extensionprivacy.Verify(ctx, pool, exts, extensionprivacy.Ledger{
+		Scope: func(ctx context.Context) (context.Context, bool, error) {
+			return bootLedgerScope(ctx, pool, "system:extension-privacy")
+		},
+		Lock: bootLedgerLock, Installation: installationMarker,
+	})
 }

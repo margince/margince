@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
+import { useDealStakeholderOffer } from "../../components/dealstakeholderoffer";
 import { Checkbox } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { emailDetailKey } from "../../design-system/emailmessage";
@@ -11,6 +12,7 @@ import {
 } from "../../design-system/recordpicker";
 import { useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
+import { fileListKeys } from "../../lib/attachmentkeys";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { type RelinkKind, useRecordTargets } from "../../lib/recordtargets";
 
@@ -80,6 +82,7 @@ export function RelinkModal({
   const [target, setTarget] = useState<RecordPickerCandidate | null>(null);
   const [replace, setReplace] = useState(false);
   const [wholeThread, setWholeThread] = useState(false);
+  const stakeholders = useDealStakeholderOffer();
 
   // What the confirm decided arrives as the mutation's VARIABLE — ALL of it,
   // including which activity and which conversation, because a mixture is worse
@@ -150,8 +153,15 @@ export function RelinkModal({
         }),
       );
     },
-    onSuccess: () => {
-      for (const queryKey of entityTimelineKeys(entityType, entityId)) {
+    onSuccess: async (_moved, { activityId, target }) => {
+      // The message's files move with its links.
+      for (const queryKey of [
+        ...entityTimelineKeys(entityType, entityId),
+        ...fileListKeys(
+          { entityType: "activity", entityId: activityId },
+          "moved",
+        ),
+      ]) {
         queryClient.invalidateQueries({ queryKey });
       }
       // A relink is exactly the write that changes where a reply files, and the
@@ -162,10 +172,16 @@ export function RelinkModal({
       // The email drawer can still be open behind this dialog, naming the
       // records the message was filed under before the move.
       queryClient.invalidateQueries({ queryKey: emailDetailKey(activityId) });
+      // A mail filed on a deal by hand is the moment to seat its contacts there.
+      if (kindOf(target.id) === "deal") {
+        await stakeholders.offer(activityId, target.id, onClose);
+        return;
+      }
       onClose();
     },
   });
 
+  if (stakeholders.asking) return stakeholders.element;
   return (
     <ConfirmModal
       open={open}

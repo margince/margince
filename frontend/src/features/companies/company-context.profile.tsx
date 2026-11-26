@@ -19,14 +19,17 @@ import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { WriteRefused } from "../../design-system/querystates";
-import { useT } from "../../i18n";
+import { type FieldFaults, useFieldFaults } from "../../design-system/savepage";
+import { type Locale, useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { coldFieldLabel } from "../../lib/coldfieldlabels";
 import {
-  companySaveMessage,
+  COMPANY_NAME_MAX,
+  companyRefusal,
   storeCompany,
 } from "../../lib/installationcompany";
-import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
+import { fromHere } from "../../lib/navigatefrom";
+import { fieldCheckSentence, unwrap } from "../../lib/problem";
 import type { CompanyInput } from "./company-context";
 import { PROFILE_GROUPS } from "./companycontextfacts";
 
@@ -55,19 +58,20 @@ const MULTILINE_FIELDS = new Set<keyof CompanyInput>([
 // same semantic minimum, without exposing the five-step experience.
 export function ManualCompanySetup() {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<CompanyInput>(EMPTY_COMPANY_INPUT);
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const save = useMutation({
-    mutationFn: async () => {
-      return unwrap(
-        await api.PUT("/company", {
-          body: trimCompanyInput(form),
-        }),
-      );
+    mutationFn: async (body: CompanyInput) => {
+      return unwrap(await api.PUT("/company", { body }));
     },
-    onSuccess: (profile) => {
+    onError: (error) => faults.show(companyRefusal(error, t).byField),
+    onMutate: fromHere,
+    // Replacing: the first-run form is spent once the profile exists.
+    onSuccess: (profile, _vars, from) => {
       storeCompany(queryClient, profile);
-      navigate({ screen: "home" });
+      from.navigateReplacing({ screen: "home" });
     },
   });
   return (
@@ -85,8 +89,14 @@ export function ManualCompanySetup() {
         actions={
           <Button
             variant="primary"
-            disabled={!requiredComplete(form) || save.isPending}
-            onClick={() => save.mutate()}
+            pending={save.isPending}
+            onClick={() => {
+              if (faults.show(missingCompanyFields(form, t, locale))) {
+                save.reset();
+                return;
+              }
+              save.mutate(trimCompanyInput(form));
+            }}
           >
             {t("settings.companyCreateWorkspace")} <ArrowRight aria-hidden />
           </Button>
@@ -95,36 +105,21 @@ export function ManualCompanySetup() {
         <PanelBody className="form-stack">
           <Eyebrow>{t("settings.companyManualKicker")}</Eyebrow>
           <p>{t("settings.companyManualSub")}</p>
-          {(["display_name", "offer_summary", "icp"] as const).map((field) => (
-            <Field key={field} label={coldFieldLabel(field, t)}>
-              {(control) =>
-                field === "display_name" ? (
-                  <TextInput
-                    {...control}
-                    value={String(form[field] ?? "")}
-                    onChange={(event) =>
-                      setForm({ ...form, [field]: event.target.value })
-                    }
-                  />
-                ) : (
-                  <Textarea
-                    {...control}
-                    rows={4}
-                    value={String(form[field] ?? "")}
-                    onChange={(event) =>
-                      setForm({ ...form, [field]: event.target.value })
-                    }
-                  />
-                )
-              }
-            </Field>
-          ))}
-          {save.isError && (
-            <WriteRefused
-              titleKey="settings.companySaveFailed"
-              message={companySaveMessage(save.error, t)}
-            />
-          )}
+          <div className="form-stack" ref={faultsRoot}>
+            {REQUIRED_FIELDS.map((field) => (
+              <CompanyFieldInput
+                key={field}
+                field={field}
+                form={form}
+                faults={faults}
+                onChange={setForm}
+              />
+            ))}
+          </div>
+          <WriteRefused
+            titleKey="settings.companySaveFailed"
+            message={companyRefusal(save.error, t).rest}
+          />
         </PanelBody>
       </Panel>
     </div>
@@ -140,6 +135,8 @@ export function CompanyProfileDialog({
   focus,
   pending,
   error,
+  refusedAt,
+  dirty,
   onChange,
   onClose,
   onSubmit,
@@ -148,14 +145,26 @@ export function CompanyProfileDialog({
   /** Which row's Edit was pressed, and so where focus lands. */
   focus: keyof CompanyInput;
   pending: boolean;
-  error: string | null;
+  /** The refused save, and when it was sent, so each refusal is shown once. */
+  error: unknown;
+  refusedAt: number | undefined;
+  dirty: boolean;
   onChange: (next: CompanyInput) => void;
+  /** Discards the draft. Cancel calls it at once; the X, Escape and the backdrop ask first. */
   onClose: () => void;
   onSubmit: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const titleId = useId();
   const formId = useId();
+  const [faults, faultsRoot] = useFieldFaults();
+  const refused = companyRefusal(error, t);
+  const [refusalShown, setRefusalShown] = useState<number>();
+  if (refusedAt !== refusalShown) {
+    setRefusalShown(refusedAt);
+    faults.show(refusedAt === undefined ? new Map() : refused.byField);
+  }
   // Not `autoFocus`: the a11y lint refuses it. A callback, because the field
   // it lands on is an input for some rows and a textarea for others.
   const asked = useRef<HTMLElement | null>(null);
@@ -166,7 +175,13 @@ export function CompanyProfileDialog({
     asked.current?.focus();
   }, []);
   return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy={titleId}
+      intent="drawer"
+      unsaved={dirty}
+    >
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2">
           {t("settings.companyContextTitle")}
@@ -175,10 +190,15 @@ export function CompanyProfileDialog({
       <DrawerBody>
         <form
           id={formId}
+          ref={faultsRoot}
           className="form-stack"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            onSubmit();
+            if (pending) return;
+            if (!faults.show(missingCompanyFields(form, t, locale))) {
+              onSubmit();
+            }
           }}
         >
           {/* The site the read starts from, above the statements a read would
@@ -186,6 +206,7 @@ export function CompanyProfileDialog({
           <CompanyFieldInput
             field="website"
             form={form}
+            faults={faults}
             asked={focus === "website" ? capture : undefined}
             onChange={onChange}
           />
@@ -197,18 +218,17 @@ export function CompanyProfileDialog({
                   key={field}
                   field={field}
                   form={form}
+                  faults={faults}
                   asked={focus === field ? capture : undefined}
                   onChange={onChange}
                 />
               ))}
             </div>
           ))}
-          {error !== null && (
-            <WriteRefused
-              titleKey="settings.companySaveFailed"
-              message={error}
-            />
-          )}
+          <WriteRefused
+            titleKey="settings.companySaveFailed"
+            message={refused.rest}
+          />
         </form>
       </DrawerBody>
       <DrawerFoot className="actions">
@@ -219,7 +239,6 @@ export function CompanyProfileDialog({
           type="submit"
           form={formId}
           variant="primary"
-          disabled={!pending && !requiredComplete(form)}
           pending={pending}
           busyLabel={t("common.saving")}
         >
@@ -234,11 +253,13 @@ export function CompanyProfileDialog({
 function CompanyFieldInput({
   field,
   form,
+  faults,
   asked,
   onChange,
 }: Readonly<{
   field: keyof CompanyInput;
   form: CompanyInput;
+  faults: Pick<FieldFaults, "of" | "edited">;
   /** Set on the one field whose Edit opened this dialog, so focus lands there. */
   asked?: (node: HTMLElement | null) => void;
   onChange: (next: CompanyInput) => void;
@@ -249,8 +270,12 @@ function CompanyFieldInput({
     field === "website"
       ? t("settings.companyWebsite")
       : coldFieldLabel(field, t);
+  const change = (next: string) => {
+    onChange({ ...form, [field]: next });
+    faults.edited(field);
+  };
   return (
-    <Field label={label}>
+    <Field label={label} required={isRequired(field)} error={faults.of(field)}>
       {(control) =>
         MULTILINE_FIELDS.has(field) ? (
           <Textarea
@@ -258,18 +283,15 @@ function CompanyFieldInput({
             ref={asked}
             rows={3}
             value={value}
-            onChange={(event) =>
-              onChange({ ...form, [field]: event.target.value })
-            }
+            onChange={(event) => change(event.target.value)}
           />
         ) : (
           <TextInput
             {...control}
             ref={asked}
+            maxLength={field === "display_name" ? COMPANY_NAME_MAX : undefined}
             value={value}
-            onChange={(event) =>
-              onChange({ ...form, [field]: event.target.value })
-            }
+            onChange={(event) => change(event.target.value)}
           />
         )
       }
@@ -277,9 +299,29 @@ function CompanyFieldInput({
   );
 }
 
-function requiredComplete(form: CompanyInput): boolean {
-  return [form.display_name, form.offer_summary, form.icp].every(
-    (value) => String(value ?? "").trim() !== "",
+// The semantic minimum a company profile needs before it is saved.
+const REQUIRED_FIELDS = ["display_name", "offer_summary", "icp"] as const;
+
+const REQUIRED_SET: ReadonlySet<keyof CompanyInput> = new Set<
+  keyof CompanyInput
+>(REQUIRED_FIELDS);
+
+function isRequired(field: keyof CompanyInput): boolean {
+  return REQUIRED_SET.has(field);
+}
+
+function missingCompanyFields(
+  form: CompanyInput,
+  t: (key: MessageKey) => string,
+  locale: Locale,
+): ReadonlyMap<string, string> {
+  return new Map(
+    REQUIRED_FIELDS.filter(
+      (field) => String(form[field] ?? "").trim() === "",
+    ).map((field) => [
+      field,
+      fieldCheckSentence("required", locale, coldFieldLabel(field, t)),
+    ]),
   );
 }
 

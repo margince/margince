@@ -44,10 +44,11 @@ import (
 // A hand-logged meeting is untouched: nothing captured it, so this function
 // never runs for it and it stays workspace-readable like the note it is.
 func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, kind string, decision counterpartyDecision, derivedLinks int) error {
-	if decision.create || len(rec.Links) > 0 || derivedLinks > 0 {
+	// A shared mailbox's mail keeps the audience its reader team reads it under.
+	if decision.create || decision.linkOnly || len(rec.Links) > 0 || derivedLinks > 0 {
 		return nil
 	}
-	if decision.traceOutcome != TraceCaptured && decision.traceOutcome != TraceSuppressed {
+	if decision.traceOutcome != TraceCaptured && decision.traceOutcome != TraceSuppressed && !decision.notesMail {
 		return nil
 	}
 	// The row was inserted in this transaction, so the only way it is not
@@ -88,6 +89,9 @@ func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, re
 // gives it: a later link does not open it, as it does a message that only named
 // nobody.
 func linkLessReason(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, kind string, decision counterpartyDecision) (string, error) {
+	if decision.notesMail {
+		return audienceReasonNoRecord, nil
+	}
 	if decision.traceReason != traceReasonNoCounterparty {
 		return audienceReasonNoRecord, nil
 	}
@@ -119,6 +123,8 @@ const audienceParticipants = "participants"
 const (
 	// The mailbox asked for it, and a verdict on the thread can clear it.
 	audienceReasonPosture = "posture"
+	// A held shared mailbox: its reader team and the message's parties read it.
+	audienceReasonSharedMailbox = "shared_mailbox"
 	// Nothing has judged the thread yet.
 	audienceReasonPendingVerdict = "pending_verdict"
 	// The message is filed under no record at all, because something JUDGED

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { Suspense, useId, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, Modal } from "../../design-system/atoms";
@@ -15,12 +15,19 @@ import {
 } from "../../design-system/surfacestate";
 import { formatBytes } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { activityFilesKey } from "../../lib/activitykeys";
+import { lazy } from "../../i18n/lazy";
+import { activityFilesKey } from "../../lib/attachmentkeys";
+import { fileChipTarget } from "../../lib/attachmentlink";
 import { useCanWriteRecord } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
-import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import "./activityfiles.css";
+
+// Fetched on the first press: Home reaches this list, and its cold load
+// should not wait for a dialog few readers open.
+const AddDocumentDialog = lazy(async () => ({
+  default: (await import("../../components/adddocument")).AddDocumentDialog,
+}));
 
 // The files filed on one activity: what a rep handed over in a meeting or
 // attached when logging a call. The upload is the record libraries' own
@@ -50,6 +57,7 @@ export function ActivityFiles({
   const t = useT();
   const { locale } = useLocale();
   const [adding, setAdding] = useState(false);
+  const [opened, setOpened] = useState(false);
   const permitted = useCanWriteRecord("activity", { writable });
   const answered = useMe().data?.authorization !== undefined;
   const query = useInfiniteQuery({
@@ -96,7 +104,7 @@ export function ActivityFiles({
           {files.map((file) => (
             <FileChip
               key={file.id}
-              href={`/v1/attachments/${file.id}`}
+              {...fileChipTarget(file)}
               filename={file.filename}
               size={
                 file.byte_size == null
@@ -117,15 +125,24 @@ export function ActivityFiles({
             reason={
               answered && !permitted ? t("docs.add.errRefused") : undefined
             }
-            onClick={() => setAdding(true)}
+            onClick={() => {
+              setAdding(true);
+              setOpened(true);
+            }}
           >
             {t("docs.add.action")}
           </Button>
-          <AddDocumentDialog
-            anchor={{ record: "activity", id: activityId }}
-            open={adding}
-            onClose={() => setAdding(false)}
-          />
+          {/* Kept mounted once opened, so an upload that outlives a close
+              still refreshes this list. */}
+          {opened && (
+            <Suspense fallback={null}>
+              <AddDocumentDialog
+                anchor={{ record: "activity", id: activityId }}
+                open={adding}
+                onClose={() => setAdding(false)}
+              />
+            </Suspense>
+          )}
         </>
       )}
     </div>

@@ -9,6 +9,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
+	"github.com/margince/margince/backend/internal/compose/dealscout"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -39,7 +41,7 @@ func opportunityBuyer(event extractedEvent, thread settledThread) (*ids.UUID, st
 			if _, quoted := evidenceSpan(textlang.CurrentMessage(message.Body), event.Quote); !quoted || event.Quote == "" {
 				return nil, commercialRoleUnknown
 			}
-			party, verified := referencedPromiser(event.BuyerRef, message.Parties)
+			party, verified := commitmentparty.Referenced(event.BuyerRef, message.Parties)
 			if verified && party.Contact != nil {
 				return party.Contact, commercialRoleBuyer
 			}
@@ -71,7 +73,7 @@ func opportunityCompany(ctx context.Context, tx pgx.Tx, buyer *ids.UUID, source 
  JOIN activity source ON source.id = $%d
  JOIN company buyer_company ON buyer_company.id = employer.company_id
   AND buyer_company.archived_at IS NULL AND NOT buyer_company.is_anchor
- WHERE employer.contact_id = $%d AND `+buyerEmployment("employer", "source"), arg(source), arg(*buyer))
+ WHERE employer.contact_id = $%d AND `+dealscout.BuyerEmployment("employer", "source"), arg(source), arg(*buyer))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return ids.Nil, err

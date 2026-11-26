@@ -1,0 +1,14 @@
+{
+  "tool": "change_my_settings",
+  "action": "save_locale",
+  "verb": "save_my_locale",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

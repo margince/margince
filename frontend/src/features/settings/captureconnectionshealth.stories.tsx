@@ -31,6 +31,16 @@ export const Stalled: Story = {
         last_success_at: "2026-10-01T09:00:00Z",
       },
     ],
+    shared: [
+      {
+        connection_id: "0190b7a2-0000-7000-8000-000000000003",
+        provider: "imap",
+        account_label: "sales@example.test",
+        concern: "connection_error",
+        since: "2026-10-01T09:00:00Z",
+        last_success_at: null,
+      },
+    ],
   },
 };
 export const Empty: Story = { args: { zone: browserZone(), rows: [] } };

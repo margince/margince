@@ -17,9 +17,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/certlog"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/dnsread"
 	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -78,6 +80,12 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	// The deal topic check rides the classify lane: capture asks it before it
 	// files a mail on a deal it only suggests.
 	cfg.captureConfig.DealTopicBrain = modelPath.CaptureClassify
+	// Meeting notes a sync lands queue their reading here, where syncs run.
+	notesReading, err := compose.MeetingNotesReading(logger)
+	if err != nil {
+		return nil, err
+	}
+	cfg.captureConfig.TranscriptEnqueue = notesReading
 	captureReg := compose.CaptureSyncRegistry(pool, vault, compose.GmailConfig{
 		ClientID:     cfg.gmailClientID,
 		ClientSecret: cfg.gmailClientSecret,
@@ -102,21 +110,10 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	// already nil where none is configured, and it is the same value
 	// startRunnerLane passes — so the two bindings are idempotent.
 	compose.BindExtensionRuntime(pool, vault)
-	// The capture pipeline a unit's ingress lands through, bound in the same
-	// breath and on the same terms. THIS role is the one that matters: a record
-	// is ingested by unattended work only — a job tick or a subscription
-	// delivery — and both of those run here. A worker that bound the runtime
-	// and not this would serve every other capability and answer
-	// errIngressUnwired to the one capability a connector unit exists for.
-	//
-	// It takes cfg.captureConfig, which is the same deployment config the sweep
-	// registry above is built from, blob store included: a unit's captured
-	// message and a mailbox's then reach one set of suppression lists and one
-	// attachment store rather than two that drift.
+	// The capture pipeline a unit's ingress lands through. Units ingest only from
+	// job ticks and subscription deliveries, and both run in this role. It shares
+	// cfg.captureConfig with the sweep registry, so both reach one attachment store.
 	compose.BindExtensionCapture(pool, cfg.captureConfig)
-	// The object store a unit's filed documents are kept in; the same one the
-	// knowledge ingest reads them back from.
-	compose.BindExtensionKnowledge(lanes.blob)
 
 	// A failed read starts the worker on the defaults rather than not at all:
 	// the watch below reads again every minute and moves what differs.
@@ -125,7 +122,12 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 		logger.WarnContext(ctx, "schedules: could not read the schedule settings at boot; starting on the defaults until the next check", "err", err)
 		schedules = compose.DefaultSchedules()
 	}
-	runner, err := newJobRunner(pool, logger, cfg, schedules, captureReg, watchCfg, vault, lanes, modelPath, weeklyMail)
+	if lastRuns, err := compose.ReadLastRuns(ctx, pool); err != nil {
+		logger.WarnContext(ctx, "schedules: could not read when each pass last ran; every pass runs at start", "err", err)
+	} else {
+		schedules.CatchUpFrom(lastRuns)
+	}
+	runner, err := newJobRunner(ctx, pool, logger, cfg, schedules, captureReg, watchCfg, vault, lanes, modelPath, weeklyMail)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +203,7 @@ func stopJobRunner(ctx context.Context, lane jobLane, logger *slog.Logger, drain
 // deployment condition that turns it on — or the omission that honestly leaves
 // it off. One declaration, so no lane can be enabled by one boot phase and
 // starved by another.
-func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, schedules *compose.ScheduleBook, captureReg *capture.Registry, watchCfg compose.GmailWatchConfig, vault keyvault.Vault, lanes workerLanes, modelPath compose.ModelPath, weeklyMail compose.WeeklyMailConfig) (*jobs.Runner, error) {
+func newJobRunner(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, schedules *compose.ScheduleBook, captureReg *capture.Registry, watchCfg compose.GmailWatchConfig, vault keyvault.Vault, lanes workerLanes, modelPath compose.ModelPath, weeklyMail compose.WeeklyMailConfig) (*jobs.Runner, error) {
 	// Firing a scheduled message stages its delivery and enqueues the dispatch
 	// job, through the SAME machinery an immediate send uses. Insert-only, like
 	// the api's: this role works what it inserts, and a stager built on the
@@ -211,8 +213,12 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, sch
 		return nil, err
 	}
 	return compose.NewJobRunner(pool, logger, compose.JobRunnerConfig{
-		ListsEnabled:  cfg.listsEnabled,
-		DataTasksPace: cfg.dataTasksPace,
+		Paused:                workPause(ctx),
+		ModelBound:            modelPath.Bound,
+		ListsEnabled:          cfg.listsEnabled,
+		DisabledCoreFeatures:  config.Val(cfg.settings, ps.CoreFeaturesDisabled),
+		DataTasksPace:         cfg.dataTasksPace,
+		UnusedClientRetention: config.Val(cfg.settings, ps.MCPUnusedClientRetention),
 		// Every setting-driven schedule, read once here and kept current by
 		// the watch startJobRunner starts.
 		Schedules: schedules,
@@ -283,6 +289,8 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, sch
 		SettlementBrain:      modelPath.RequestSettlement,
 		DealVerdictBrain:     modelPath.DealVerdict,
 		TagSuggestBrain:      modelPath.TagSuggest,
+		ChatSummaryBrain:     modelPath.ChatSummary,
+		ChatPushMarks:        lanes.pushMarks,
 		VerdictBrain:         modelPath.CaptureCounterpartyVerdict,
 		ConfidentialityBrain: modelPath.CaptureConfidentialityVerdict,
 		EnrichBrain:          modelPath.Enrich,
@@ -327,7 +335,8 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, sch
 		// the company's logo out of the site it just crawled and stores the
 		// normalized bytes here. Nil (no blobstore configured) leaves every
 		// company on its monogram — the read itself is unaffected.
-		Blobstore: lanes.blob,
+		Blobstore:        lanes.blob,
+		JournalBlobstore: lanes.journal,
 		// An import commit reads its upload from the same store, under the
 		// upload's own cap.
 		ImportUploadCap: cfg.csvImportCap,

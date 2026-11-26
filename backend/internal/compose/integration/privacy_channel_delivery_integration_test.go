@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -141,7 +142,7 @@ func TestErasureRedactsAChannelDeliveryWithoutBreakingItsShape(t *testing.T) {
 	sent := seedChannelDelivery(t, e, "9 years", "the agreed price was 4200 EUR", "sent", contact)
 	pending := seedChannelDelivery(t, e, "9 years", "still queued when they asked to be forgotten", "pending", contact)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contact, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 

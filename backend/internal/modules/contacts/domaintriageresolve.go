@@ -138,7 +138,7 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 		in.ReadID = *prior.SiteReadID
 	}
 	if prior.PendingReason == PendingForwardedIdentity && in.Status == DomainCompany && in.CompanyID == nil {
-		return ResolveDomainTriageResult{}, fmt.Errorf("contacts: forwarded identity needs an explicit company match: %w", apperrors.ErrConflict)
+		return ResolveDomainTriageResult{}, fmt.Errorf("a forwarded identity needs an explicit company match: %w", apperrors.ErrConflict)
 	}
 	if prior.Settled() {
 		// Already answered. A worker that resolved this and then died before
@@ -193,7 +193,7 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 		// pending so the question keeps its place in their queue.
 		return ResolveDomainTriageResult{}, nil
 	}
-	if res.EdgesPlanted, err = plantDomainEmployment(ctx, tx, in.Domain, *res.CompanyID); err != nil {
+	if res.EdgesPlanted, err = s.plantDomainEmploymentAndAsk(ctx, tx, in.Domain, *res.CompanyID); err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
 	if len(in.Fields) > 0 || len(in.Facts) > 0 {
@@ -276,6 +276,9 @@ func (s *Store) adoptOrCreateTriagedCompany(ctx context.Context, tx pgx.Tx, in R
 		if err != nil || held {
 			return ResolveDomainTriageResult{}, err
 		}
+	}
+	if held, err := withholdForeignSite(ctx, tx, in, match); err != nil || held {
+		return ResolveDomainTriageResult{}, err
 	}
 
 	companyID, err := createCompany(ctx, tx, match, CompanySpec{
@@ -388,7 +391,7 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, compan
 	// the change the trail exists to explain, and the bus is how the surfaces
 	// that count a company's contacts learn to recount.
 	for _, one := range made {
-		if err := auditCapturedEmployment(ctx, tx, one.edge, one.contact, companyID, relationshipOriginCapture); err != nil {
+		if err := auditCapturedEmployment(ctx, tx, one.edge, one.contact, companyID, relationshipOriginCapture, ""); err != nil {
 			return 0, err
 		}
 		if err := fileEmployerTwins(ctx, tx, one.contact, by); err != nil {

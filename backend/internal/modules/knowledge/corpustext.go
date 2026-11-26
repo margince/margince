@@ -3,13 +3,23 @@
 
 package knowledge
 
-import "github.com/margince/margince/backend/internal/platform/httperr"
+import (
+	"context"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
 
 // The contract's caps on a corpus's text, in characters.
 const (
-	maxCorpusName        = 200
-	maxCorpusTopic       = 500
-	maxCorpusDescription = 2000
+	maxCorpusName        = values.TextLabelCharacters
+	maxCorpusTopic       = values.TextLineCharacters
+	maxCorpusDescription = values.TextNoteCharacters
 	maxAskQuestion       = 1000
 )
 
@@ -30,4 +40,27 @@ func requireCorpusText(field, raw string, limit int) (string, error) {
 		return "", err
 	}
 	return text, httperr.RequireWithin(field, text, limit)
+}
+
+// corpusNameIndex holds one live name across the sets users make, compared
+// trimmed and case-folded. The shipped set stands outside it.
+const (
+	corpusNameIndex = "knowledge_corpus_name_once"
+	corpusEntry     = "a document set"
+)
+
+// refuseShippedCorpusName refuses a name the live shipped set holds. For the
+// shipped set it refuses any live set's name. The index leaves that pair out.
+func refuseShippedCorpusName(ctx context.Context, tx pgx.Tx, id ids.UUID, shipped bool, name string) error {
+	var held bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM knowledge_corpus
+		  WHERE archived_at IS NULL AND id <> $1 AND (managed_source IS NOT NULL OR $3)
+		    AND lower(btrim(name)) = lower(btrim($2)))`, id, name, shipped).Scan(&held); err != nil {
+		return fmt.Errorf("check the shipped document set's name: %w", err)
+	}
+	if held {
+		return &storekit.NameTakenError{Entry: corpusEntry, Name: name}
+	}
+	return nil
 }

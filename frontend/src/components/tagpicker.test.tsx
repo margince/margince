@@ -392,16 +392,21 @@ describe("the add-tag picker", () => {
     ).toHaveValue("Spring campaign");
   });
 
-  it("offers no Shortlist to a seat that may not make one", async () => {
+  // Lists are on, so only a missing grant keeps the Shortlist away: the way
+  // out both creates a Shortlist and adds the record to it.
+  it.each([
+    ["may only read lists", ["read"]],
+    ["may create a Shortlist but not add to it", ["read", "create"]],
+    ["may add to a Shortlist but not create one", ["read", "update"]],
+  ] as const)("offers no Shortlist to a seat that %s", async (_, list) => {
     const user = userEvent.setup();
     mount({
       routes: {
-        // Lists are on, so only the missing grant keeps the Shortlist away.
         "GET /me": () =>
           jsonResponse(
             meFixture({
               roles: ["rep"],
-              allow: { tag: ["read"], list: ["read"] },
+              allow: { tag: ["read"], list },
               settingsAvailability: { lists: true },
             }),
           ),

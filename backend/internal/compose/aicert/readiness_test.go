@@ -10,6 +10,9 @@ package aicert_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -104,7 +107,7 @@ func TestALegacyRecordSaysItCanNameNoScenario(t *testing.T) {
 // longer exists.
 func TestADroppedScenarioIsNeitherStaleNorCoverage(t *testing.T) {
 	rec := aicert.Record{
-		Task: "rate_extract", Provider: "gemini", ServedModel: "gemini-3.5-flash", EnvClass: "eu_hosted",
+		Task: "rate_extract", Provider: "gemini", ServedModel: "gemini-3.5-flash", EnvClass: "eu_hosted", WireRule: ai.WireRule("gemini"),
 		PromptVersion: "p-old", Runs: 6, Passed: 6, Verdict: aicert.VerdictCertified,
 		Scenarios: []aicert.ScenarioRecord{
 			{Scenario: "fx_retired", Site: "fx", Stamp: "s-retired", Verdict: aicert.VerdictCertified, Runs: 3, Passed: 3, ReportedAccepted: 3},
@@ -154,6 +157,79 @@ func TestTheNamedScenariosAreOrdered(t *testing.T) {
 		if strings.Join(got, ",") != strings.Join(want, ",") {
 			t.Fatalf("the moved scenarios came back as %v, want them sorted as %v", got, want)
 		}
+	}
+}
+
+// A new judge moves scores on its own. So a record another judge graded is stale
+// until this build's judge grades it. The exception is a candidate of the judge's
+// own family, which another judge must grade.
+func TestARecordAnotherJudgeGradedIsStale(t *testing.T) {
+	stamped := func(served, judge string) aicert.Record {
+		return aicert.Record{
+			Task: "rate_extract", Provider: "gemini", ServedModel: served, EnvClass: "eu_hosted", WireRule: ai.WireRule("gemini"),
+			PromptVersion: "p", JudgeServedModel: judge, Runs: 3, Passed: 3, Verdict: aicert.VerdictCertified,
+			Scenarios: []aicert.ScenarioRecord{{Scenario: "fx_one", Site: "fx", Stamp: "s", Runs: 3, Passed: 3}},
+		}
+	}
+	perSite := map[string]map[string]string{"rate_extract/fx": {"fx_one": "s"}}
+	for _, tc := range []struct {
+		name, served, judge, want string
+	}{
+		{"graded by this build's judge", "gemini-3.5-flash", aicert.DefaultJudgeModel, aicert.StatusCurrent},
+		{"graded by an older judge", "gemini-3.5-flash", "claude-sonnet-4-6", aicert.StatusStale},
+		{"graded by no judge", "gemini-3.5-flash", "", aicert.StatusCurrent},
+		{"a Claude candidate graded by another family", "anthropic/claude-sonnet-4.6", "gemini-3.1-flash-lite", aicert.StatusCurrent},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rows, _ := aicert.Readiness(aicert.Census{Sites: []aitasks.Site{fxSite}},
+				map[string]string{"rate_extract": "p"}, perSite, []aicert.Record{stamped(tc.served, tc.judge)})
+			row := fxRow(t, rows)
+			if row.Status() != tc.want {
+				t.Fatalf("status = %q, want %q", row.Status(), tc.want)
+			}
+			reason := row.Standing.Reason()
+			if tc.want == aicert.StatusStale && (!strings.Contains(reason, tc.judge) || strings.Contains(reason, "scenario")) {
+				t.Errorf("the reason does not name the judge alone: %q", reason)
+			}
+		})
+	}
+}
+
+// A record measured through another wire translation than the provider's now
+// was answering a request this build no longer sends, so it reads stale.
+func TestARecordMeasuredThroughAnotherWireIsStale(t *testing.T) {
+	rec := aicert.Record{
+		Task: "rate_extract", Provider: "gemini", ServedModel: "gemini-3.5-flash", EnvClass: "eu_hosted",
+		PromptVersion: "p", Runs: 3, Passed: 3, Verdict: aicert.VerdictCertified,
+		Scenarios: []aicert.ScenarioRecord{{Scenario: "fx_one", Site: "fx", Stamp: "s", Runs: 3, Passed: 3}},
+	}
+	perSite := map[string]map[string]string{"rate_extract/fx": {"fx_one": "s"}}
+	read := func(rec aicert.Record) aicert.ReadinessRow {
+		rows, _ := aicert.Readiness(aicert.Census{Sites: []aitasks.Site{fxSite}},
+			map[string]string{"rate_extract": "p"}, perSite, []aicert.Record{rec})
+		return fxRow(t, rows)
+	}
+	if row := read(rec); row.Status() != aicert.StatusStale || !strings.Contains(row.Standing.Reason(), "wire") {
+		t.Errorf("a record from before the wire rule reads %q (%q), want stale naming the wire", row.Status(), row.Standing.Reason())
+	}
+	rec.WireRule = ai.WireRule(rec.Provider)
+	if row := read(rec); row.Status() != aicert.StatusCurrent {
+		t.Errorf("a record under the current wire rule reads %q, want current", row.Status())
+	}
+}
+
+// The judge a record must name is the one `make e2e-ai` grades with by default.
+func TestTheDefaultJudgeIsTheOneTheLaneRunsWith(t *testing.T) {
+	makefile, err := os.ReadFile(filepath.Join("..", "..", "..", "Makefile"))
+	if err != nil {
+		t.Fatalf("reading backend/Makefile: %v", err)
+	}
+	line := regexp.MustCompile(`(?m)^AICERT_DEFAULT_JUDGE\s*:=\s*\S+:(\S+)\s*$`).FindSubmatch(makefile)
+	if line == nil {
+		t.Fatal("backend/Makefile declares no `AICERT_DEFAULT_JUDGE := <provider>:<model>`")
+	}
+	if got := string(line[1]); got != aicert.DefaultJudgeModel {
+		t.Errorf("the lane grades with %s and aicert.DefaultJudgeModel says %s", got, aicert.DefaultJudgeModel)
 	}
 }
 

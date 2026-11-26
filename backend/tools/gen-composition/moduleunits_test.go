@@ -123,6 +123,10 @@ replace github.com/margince/margince/composition => ./not-composed-yet
 	if len(got) != len(want) || got["crm"] != want["crm"] || got["notes"] != want["notes"] {
 		t.Fatalf("units = %v, want %v: not the indirect library, not core, not the unrequired folder", got, want)
 	}
+	index, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(fetchedUnitsIndex)))
+	if err != nil || string(index) != "crm | example.test/acme/crm/v2@v2.1.0\n" {
+		t.Errorf("fetched-units index = %q, %v; want only the downloaded unit", index, err)
+	}
 	copied, err := os.ReadFile(filepath.Join(got["crm"], "go.mod"))
 	if err != nil {
 		t.Fatal(err)
@@ -150,18 +154,6 @@ func TestTwoRequirementsWithOneUnitNameAreRefused(t *testing.T) {
 	writeTree(t, root, map[string]string{"instance/go.mod": "module i\n\nrequire (\n\ta.test/crm v1.0.0\n\tb.test/crm v1.0.0\n)\n"})
 	if _, err := scanExtensions(root); err == nil || !strings.Contains(err.Error(), `both the unit "crm"`) {
 		t.Fatalf("err = %v, want the two crm units refused", err)
-	}
-}
-
-func TestTheUnitNameIsTheModulePathsLastElement(t *testing.T) {
-	for modPath, want := range map[string]string{
-		"github.com/acme/margince-crm":     "margince-crm",
-		"github.com/acme/crm/v2":           "crm",
-		"example.com/acme/addons/greeting": "greeting",
-	} {
-		if got := unitNameFromModulePath(modPath); got != want {
-			t.Errorf("unitNameFromModulePath(%q) = %q, want %q", modPath, got, want)
-		}
 	}
 }
 
@@ -195,7 +187,7 @@ func TestCoreInstanceTurnsOnExactlyTheUnitsUnderExtensions(t *testing.T) {
 	}
 	var required []string
 	for _, u := range units {
-		dir, err := filepath.Abs(u.dir)
+		dir, err := filepath.Abs(u.Dir)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -260,41 +252,6 @@ func TestADownloadedUnitClaimingAnotherModulePathIsRefused(t *testing.T) {
 	})
 	if _, err := scanExtensions(root); err == nil || !strings.Contains(err.Error(), `declares module "github.com/google/uuid"`) {
 		t.Fatalf("err = %v, want the impostor module refused", err)
-	}
-}
-
-func TestTheInstanceReplacesAreAppliedLikeGoApplies(t *testing.T) {
-	root := t.TempDir()
-	writeTree(t, root, map[string]string{"instance/go.mod": `module i
-
-require (
-	example.test/crm v1.2.0
-	example.test/notes v1.0.0
-	example.test/tasks v1.0.0
-)
-
-replace example.test/crm v1.2.0 => example.test/crm-fork v1.2.1
-
-replace example.test/notes v0.9.0 => ./notes
-
-replace example.test/tasks => ./tasks
-`})
-	units, err := instanceUnits(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	got := map[string]unitSource{}
-	for _, u := range units {
-		got[u.name] = u
-	}
-	if u := got["crm"]; !u.fetched || u.download != "example.test/crm-fork@v1.2.1" {
-		t.Errorf("crm = %+v, want the fork's version fetched, as the version-specific replace says", u)
-	}
-	if u := got["notes"]; !u.fetched || u.download != "example.test/notes@v1.0.0" {
-		t.Errorf("notes = %+v, want v1.0.0 fetched: the replace names v0.9.0, which is not the one required", u)
-	}
-	if u := got["tasks"]; u.fetched || u.dir != filepath.Join(root, "instance", "tasks") {
-		t.Errorf("tasks = %+v, want the folder the every-version replace names", u)
 	}
 }
 

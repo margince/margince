@@ -22,13 +22,13 @@ func sweptRep(t testing.TB, op parityOperation, verbs map[string]int, in parityI
 		return false, "", "", false
 	}
 	if !recorded {
-		t.Errorf("%s %s: the role sweep measured %s and toolchecks.json has no row for it, so the sweep wrote half its answer",
+		t.Errorf("%s %s: the role sweep measured %s and toolchecks/ has no file for it, so the sweep wrote half its answer",
 			op.Method, op.Path, op.Verb)
 	}
 	for _, check := range checks {
 		if grant, lacked := repLacks(in.roles, check); lacked {
 			if measured {
-				t.Errorf("%s %s: toolchecks.json says %s needs %s, which the rep lacks, and the role sweep measured the rep "+
+				t.Errorf("%s %s: toolchecks/ says %s needs %s, which the rep lacks, and the role sweep measured the rep "+
 					"running it. Run the sweep again; one of its files is stale.", op.Method, op.Path, op.Verb, check)
 			}
 			return measured, decidedMeasured, grant, true
@@ -69,7 +69,7 @@ func grantOfCheck(check string) (grant string, judged bool) {
 // sweptChecks reads the checks table the role sweep writes.
 func sweptChecks(t *testing.T) map[string][]string {
 	t.Helper()
-	table := readSweepFile[toolChecksFile](t, toolChecksTable)
+	table := readToolChecks(t)
 	out := map[string][]string{}
 	for verb, row := range table.Verbs {
 		out[verb] = row.Checks

@@ -53,6 +53,6 @@ func NewDeliveryClient(dial DialFunc, tlsConfig *tls.Config) *http.Client {
 		// A redirect is never followed. Go would turn the POST into a GET with
 		// no body, and carry custom headers to a host nobody named. The 3xx is
 		// recorded as the failed attempt it is.
-		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+		CheckRedirect: netguard.RefuseRedirect,
 	}
 }

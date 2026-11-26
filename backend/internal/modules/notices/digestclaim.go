@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
@@ -250,8 +251,10 @@ func (s *Store) ClaimDigestRunTx(ctx context.Context, tx pgx.Tx, user ids.UserID
 	claim := func() error {
 		tag, txErr := tx.Exec(ctx, `
 			INSERT INTO notification_digest_run (user_id, digest_date)
-			VALUES ($1, $2)
-			ON CONFLICT DO NOTHING`, user, day)
+			SELECT $1::uuid, $2::date
+			 WHERE NOT EXISTS (SELECT 1 FROM notification_digest_run r
+			        WHERE r.user_id = $1 AND r.mail_attempted_at > now() - $3::interval)
+			ON CONFLICT DO NOTHING`, user, day, occurredday.EditionGap)
 		if txErr != nil {
 			return fmt.Errorf("claiming the day: %w", txErr)
 		}
@@ -323,7 +326,7 @@ func (s *Store) DigestBody(ctx context.Context, user ids.UserID, w Window) ([]No
 	}
 	if seat != user.UUID {
 		return nil, fmt.Errorf(
-			"notices: a morning digest is read under its own recipient's authority: %w",
+			"a morning digest is read under its own recipient's authority: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	var batched []Notice
@@ -386,7 +389,7 @@ func unreadInWindow(ctx context.Context, tx pgx.Tx, user ids.UserID, w Window) (
 	window := digestWindowSQL(arg(w.from()), arg(w.Morning))
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT notice.id, notice.kind, notice.subject, notice.body,
-		       notice.target_type, notice.target_id, notice.created_at, notice.origin, coalesce(notice.dedupe_key,'')
+		       notice.target_type, notice.target_id, notice.created_at, notice.origin, coalesce(notice.dedupe_key,''), notice.system_text
 		  FROM notice
 		 WHERE notice.recipient_user_id = $%d
 		   AND %s
@@ -404,7 +407,7 @@ func unreadInWindow(ctx context.Context, tx pgx.Tx, user ids.UserID, w Window) (
 		var targetType *string
 		var targetID *ids.UUID
 		if scanErr := rows.Scan(&n.ID, &n.Kind, &n.Subject, &n.Body,
-			&targetType, &targetID, &n.CreatedAt, &n.Origin, &noticeKey); scanErr != nil {
+			&targetType, &targetID, &n.CreatedAt, &n.Origin, &noticeKey, &n.SystemText); scanErr != nil {
 			return nil, scanErr
 		}
 		if targetType != nil && targetID != nil {
@@ -414,6 +417,7 @@ func unreadInWindow(ctx context.Context, tx pgx.Tx, user ids.UserID, w Window) (
 			typed := ids.From[ids.ApprovalKind](approval)
 			n.ApprovalID = &typed
 		}
+		n.Target = resolvedNoticeTarget(n.Target, n.Kind, n.SystemText)
 		held = append(held, n)
 	}
 	return held, rows.Err()

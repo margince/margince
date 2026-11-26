@@ -37,7 +37,7 @@ func TestRelinkPreservesDistinctChatAccountsInTheSameRole(t *testing.T) {
 	}
 	moved := map[string]bool{}
 	for _, participant := range preview[0].Participants {
-		if participant.ChannelUserID == nil && (participant.Role != "from" || !participant.Move || participant.ContactID != contactIDs[0]) {
+		if participant.ChannelUserID == nil && (participant.Role != "cc" || !participant.Move || participant.ContactID != contactIDs[0]) {
 			t.Fatalf("sender effect: %+v", participant)
 		}
 		if participant.ChannelUserID != nil {

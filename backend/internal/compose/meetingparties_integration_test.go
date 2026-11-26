@@ -155,6 +155,7 @@ func TestAMeetingNamesOnlyACustomerTheReaderMaySee(t *testing.T) {
 		t.Fatalf("making the colleague's buyer private: %v", err)
 	}
 	visible := partiesContact(t, e, "Blair Shared", ids.UUID{}, nil)
+	e.ShareForWriting(t, "contact", visible, "team", e.Team1, e.Team2)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AccountRepPerms)
 	joint := partiesMeeting(owner, t, e, "Joint call", hidden, visible)
 
@@ -397,7 +398,7 @@ func TestAColleaguesContactOnTheOwnDomainIsNeverAMeetingsContact(t *testing.T) {
 }
 
 // A meeting with only a colleague's address on it leaves the lane. The same
-// meeting with a customer on it stays and names them.
+// meeting with a customer on it stays, names them and carries its room.
 func TestAMeetingAmongColleaguesLeavesKeepMomentum(t *testing.T) {
 	e := integration.Setup(t)
 	trustOwnDomain(t, e)
@@ -405,7 +406,7 @@ func TestAMeetingAmongColleaguesLeavesKeepMomentum(t *testing.T) {
 	internal := bookedMeeting(t, e, "Team sync",
 		map[string]ids.UUID{"dev@" + colleagueTestDomain: {}})
 	external := bookedMeeting(t, e, "Pricing review",
-		map[string]ids.UUID{"dev@" + colleagueTestDomain: {}, "ines@customer.test": customer})
+		map[string]ids.UUID{"dev@" + colleagueTestDomain: {}, "ines@customer.test": customer, "cfo@customer.test": {}})
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	day := readJourneyDay(rep, t, e)
@@ -418,6 +419,19 @@ func TestAMeetingAmongColleaguesLeavesKeepMomentum(t *testing.T) {
 	}
 	if row.Contact == nil || ids.UUID(row.Contact.Id) != customer {
 		t.Errorf("the customer meeting names %+v, want the customer %v", row.Contact, customer)
+	}
+	// Its room names the customer, the own-domain address as a colleague, and
+	// the outside address as an address.
+	if row.Room == nil || len(row.Room.Participants) != 1 || ids.UUID(row.Room.Participants[0].ContactId) != customer {
+		t.Fatalf("room = %+v, want the customer %v by name", row.Room, customer)
+	}
+	if row.Room.OtherParticipants == nil {
+		t.Fatal("the room names nobody but contacts")
+	}
+	for _, other := range *row.Room.OtherParticipants {
+		if outside := other.Name == "cfo@customer.test"; outside != (other.Kind == crmcontracts.MeetingOtherParticipantKindAddress) {
+			t.Errorf("other participant %+v: only the outside address is an address", other)
+		}
 	}
 }
 

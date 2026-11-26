@@ -11,7 +11,9 @@ import (
 	"strings"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Why an action was not applied. The deal-row recheck adds its own
@@ -75,7 +77,7 @@ func decideOne(in Input, state State, action Action, rates Rates) (Decision, err
 	newest := newestCited(in, action.Cited)
 	change := deals.VerdictChange{
 		Correction: correction, NewestCitedAt: newest,
-		Evidence: map[string]any{"basis": action.Reason, "cited_activity_ids": action.Cited},
+		Evidence: map[string]any{"basis": action.Reason, deals.CitedActivitiesEvidenceKey: action.Cited},
 	}
 	drop := func(why string) (Decision, error) { return Decision{Action: action, Outcome: why}, nil }
 	switch {
@@ -132,11 +134,13 @@ func decideProbability(in Input, state State, action Action, change *deals.Verdi
 	if in.Probability == action.Probability {
 		return DroppedUnchanged
 	}
-	// Lowering is free. A raise stops at the stage's own probability, so no
-	// mail can talk a deal above what its stage says.
+	if action.Probability < in.Probability && !buyerQuoteFound(in, action.Cited, action.QuotedWords) {
+		return DroppedQuoteNotFound
+	}
 	if action.Probability > raiseCeiling(in) {
 		return DroppedAboveStage
 	}
+	change.Evidence["quoted_words"] = action.QuotedWords
 	change.Probability = action.Probability
 	return ""
 }
@@ -192,6 +196,19 @@ func quoteFound(in Input, cited []string, quote string) bool {
 		}
 	}
 	return false
+}
+
+func buyerQuoteFound(in Input, cited []string, quote string) bool {
+	var buyer Input
+	for _, activity := range in.Activities {
+		if activity.Kind != string(crmcontracts.ActivityKindEmail) || activity.Direction != string(crmcontracts.ActivityDirectionInbound) || activity.FromOurSide {
+			continue
+		}
+		activity.Subject = ""
+		activity.Body = textlang.OwnWords(activity.Body)
+		buyer.Activities = append(buyer.Activities, activity)
+	}
+	return quoteFound(buyer, cited, quote)
 }
 
 func normalize(text string) string {

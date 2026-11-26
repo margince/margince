@@ -28,7 +28,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -73,7 +72,7 @@ func TestAnErasureTombstonesTheAttachmentsItPurged(t *testing.T) {
 	// The eraser refuses to delete an attachment row whose object it cannot
 	// purge, so the bytes never outlive their only key. An in-memory store is
 	// the boundary stood in for; what is under test is the tombstone.
-	if err := privacy.NewEraser(InstallationDB(e.Pool)).WithBlobstore(blobstore.NewMemory()).
+	if err := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(blobstore.NewMemory()).
 		EraseContact(e.Admin(), contact, "subject request"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
@@ -113,7 +112,7 @@ func TestAnErasureDeletesAWithheldFileWithoutAnObjectStore(t *testing.T) {
 		t.Fatalf("the fixture holds %d withheld rows, want 1", n)
 	}
 
-	if err := privacy.NewEraser(InstallationDB(e.Pool)).
+	if err := eraserWithGraph(InstallationDB(e.Pool)).
 		EraseContact(e.Admin(), contact, "subject request"); err != nil {
 		t.Fatalf("EraseContact with a withheld file and no object store: %v", err)
 	}

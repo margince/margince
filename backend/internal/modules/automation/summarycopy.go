@@ -12,6 +12,7 @@ package automation
 import (
 	"context"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
@@ -32,19 +33,19 @@ type summaryCopy struct {
 // textlang.Shipped and ask this map directly.
 var summaryByLang = map[textlang.Lang]summaryCopy{
 	textlang.English: {
-		confirmation: "Confirmation requested: %s",
-		stagedAction: "automation wants to %s on %s %s",
-		heldDraft:    "an automation drafted a reply to %s — read it before it goes",
+		confirmation: systemtext.Copy("automation.confirmation", textlang.English),
+		stagedAction: systemtext.Copy("automation.stagedAction", textlang.English),
+		heldDraft:    systemtext.Copy("automation.heldDraft", textlang.English),
 	},
 	textlang.German: {
-		confirmation: "Bestätigung erbeten: %s",
-		stagedAction: "Eine Automatisierung möchte %s für %s %s ausführen",
-		heldDraft:    "Eine Automatisierung hat eine Antwort an %s entworfen. Lies sie, bevor sie versendet wird.",
+		confirmation: systemtext.Copy("automation.confirmation", textlang.German),
+		stagedAction: systemtext.Copy("automation.stagedAction", textlang.German),
+		heldDraft:    systemtext.Copy("automation.heldDraft", textlang.German),
 	},
 	textlang.Vietnamese: {
-		confirmation: "Yêu cầu xác nhận: %s",
-		stagedAction: "Một tự động hóa muốn thực hiện %s trên %s %s",
-		heldDraft:    "Một tự động hóa đã soạn thư trả lời gửi %s, hãy đọc trước khi thư được gửi đi.",
+		confirmation: systemtext.Copy("automation.confirmation", textlang.Vietnamese),
+		stagedAction: systemtext.Copy("automation.stagedAction", textlang.Vietnamese),
+		heldDraft:    systemtext.Copy("automation.heldDraft", textlang.Vietnamese),
 	},
 }
 

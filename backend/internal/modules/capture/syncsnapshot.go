@@ -22,7 +22,7 @@ type syncSnapshot struct {
 }
 
 func (s syncSnapshot) args() pgx.NamedArgs {
-	return pgx.NamedArgs{"id": s.id, "generation": s.generation, "revision": s.revision, "prior": cursorJSON(s.prior)}
+	return pgx.NamedArgs{"id": s.id, argGeneration: s.generation, "revision": s.revision, "prior": cursorJSON(s.prior)}
 }
 
 func cursorJSON(cursor connector.Cursor) []byte {

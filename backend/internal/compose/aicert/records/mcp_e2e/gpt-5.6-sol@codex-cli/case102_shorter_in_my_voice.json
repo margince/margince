@@ -11,13 +11,70 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "410b4006f0c290a9",
+    "tools": "0200c28776ed7f6a",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T17:06:55Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:34:45Z"
+  },
   "usage": {
-    "input_tokens": 41835,
-    "output_tokens": 1680,
+    "input_tokens": 45858,
+    "output_tokens": 1554,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 359296,
+    "cache_read_input_tokens": 291840,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_my_settings",
+        "create_voice_profile",
+        "describe_router_actions",
+        "read_workspace",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_my_settings",
+        "create_voice_profile",
+        "describe_router_actions",
+        "list_voice_profiles",
+        "read_workspace",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 6,
+      "min": 5,
+      "max": 7
+    },
+    "refused": {
+      "median": 2,
+      "min": 2,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 168849,
+      "min": 168231,
+      "max": 169467
+    },
+    "output_tokens": {
+      "median": 777,
+      "min": 622,
+      "max": 932
+    }
   }
 }

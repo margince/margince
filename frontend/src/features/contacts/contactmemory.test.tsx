@@ -277,6 +277,14 @@ describe("the What was said card", () => {
     expect(screen.queryByRole("button", { name: "Call prep" })).toBeNull();
   });
 
+  it("draws a note's words as they render, without their markdown", () => {
+    renderCard(
+      viewWith([{ ...noteRow, body: "> Wants **fleet** numbers.\n> Soon." }]),
+    );
+
+    expect(screen.getByText("Wants fleet numbers. Soon.")).toBeTruthy();
+  });
+
   it("discloses nothing from a withheld message", () => {
     renderCard(
       viewWith([
@@ -542,6 +550,23 @@ describe("Call on a logged call", () => {
 
     expect(screen.getByText("Call prep")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
+  });
+
+  it("titles a call logged with no subject by how it ended", () => {
+    renderCard(
+      viewWith([
+        { ...callRow, subject: null, body: null, call_outcome: "reached" },
+      ]),
+    );
+
+    expect(screen.getByText("Reached")).toBeTruthy();
+  });
+
+  it("says how a call with a subject ended beside its kind", () => {
+    renderCard(viewWith([{ ...callRow, call_outcome: "voicemail" }]));
+
+    expect(screen.getByText("Called about the renewal")).toBeTruthy();
+    expect(screen.getByText(/Call · Left a voicemail · /)).toBeTruthy();
   });
 
   it("offers no Call when the contact has no phone", () => {

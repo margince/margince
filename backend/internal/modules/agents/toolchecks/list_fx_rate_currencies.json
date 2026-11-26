@@ -1,0 +1,6 @@
+{
+  "verb": "list_fx_rate_currencies",
+  "checks": [
+    "deal.read"
+  ]
+}

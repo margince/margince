@@ -1,0 +1,9 @@
+{
+  "verb": "dismiss_deal_move",
+  "checks": [
+    "deal.read"
+  ],
+  "takes": [
+    "deal"
+  ]
+}

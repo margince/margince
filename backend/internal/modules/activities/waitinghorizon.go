@@ -171,11 +171,7 @@ func (s *Store) refreshWaitingHorizonTx(ctx context.Context, tx pgx.Tx, asOf tim
 	if err != nil {
 		return 0, err
 	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_waiting_horizon (horizon_days, measured_at) VALUES ($1, $2)
-		ON CONFLICT (singleton) DO UPDATE
-		   SET horizon_days = EXCLUDED.horizon_days, measured_at = EXCLUDED.measured_at`,
-		days, asOf); err != nil {
+	if err := storekit.StoreWaitingHorizonTx(ctx, tx, days, asOf); err != nil {
 		return 0, fmt.Errorf("activities: storing the waiting horizon: %w", err)
 	}
 	return days, nil
@@ -242,7 +238,7 @@ func (s *Store) waitingHorizonStatement(ctx context.Context, tx pgx.Tx, asOf tim
 		scopeUnbounded,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
-		ownDomainSenderSQL("inbound", arg(ownDomains)),
+		fmt.Sprintf("$%d", arg(ownDomains)),
 		slowPercentile,
 		sampleClause(sample, arg))
 	return query, args, nil
@@ -258,7 +254,7 @@ func sampleClause(sample int, arg func(any) int) string {
 }
 
 // sampledMessages keeps the first messages firstResponseSQL judges by a hash of
-// their id, after every filter. limit is the placeholder of the sample size.
+// their id, before response-time invitation eligibility. limit binds the sample size.
 func sampledMessages(limit int) string {
 	return fmt.Sprintf(`ORDER BY md5(inbound.id::text) LIMIT $%d`, limit)
 }

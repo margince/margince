@@ -18,8 +18,8 @@ import {
   datePattern,
   formatISODate,
   type ISODate,
-  parseTypedDate,
   patternPlaceholder,
+  readTypedDate,
 } from "../format/datepattern";
 import { useDateTimePreferences } from "../format/preferences";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -33,6 +33,7 @@ import { useDialogFocus } from "./dialogfocus";
 import { ErrorLine } from "./errorline";
 import { firstRefusedControl } from "./formvalidity";
 import { IconAction } from "./iconaction";
+import { useTopLayer } from "./toplayer";
 import "./dateinput.css";
 
 export {
@@ -300,6 +301,7 @@ function DatePopup({
 }>) {
   const t = useT();
   const panel = useRef<HTMLDivElement | null>(null);
+  useTopLayer(panel, true);
   const [month, setMonth] = useState(() => dateOf(selected || today));
   const at = useAnchoredToTrigger(true, anchor, panel, "end");
   useDismissOnOutsidePress(true, onClose, anchor, panel);
@@ -318,6 +320,7 @@ function DatePopup({
   return createPortal(
     <div
       ref={panel}
+      popover="manual"
       id={id}
       role="dialog"
       aria-modal="true"
@@ -419,14 +422,15 @@ function readTyped(
   if (text.trim() === "") {
     return { day: "" };
   }
-  const day = parseTypedDate(text, pattern);
-  if (day === null) {
+  const read = readTypedDate(text, pattern);
+  if ("refused" in read) {
     return {
-      problem: t("calendar.invalidDate", {
-        pattern: placeholderOf(pattern, t),
-      }),
+      problem:
+        read.refused === "noSuchDay"
+          ? t("calendar.noSuchDay", { date: text.trim() })
+          : t("calendar.invalidDate", { pattern: placeholderOf(pattern, t) }),
     };
   }
-  const refused = refusal(day);
-  return refused === undefined ? { day } : { problem: refused };
+  const refused = refusal(read.day);
+  return refused === undefined ? { day: read.day } : { problem: refused };
 }

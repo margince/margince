@@ -23,6 +23,8 @@ var tableOwners = map[string]string{
 	"report_definition_revision":     "internal/modules/reporting",
 	"sales_target":                   "internal/modules/reporting",
 	"sales_target_revision":          "internal/modules/reporting",
+	"sales_goal_plan":                "internal/modules/reporting",
+	"sales_goal_plan_revision":       "internal/modules/reporting",
 	"report_schedule":                "internal/modules/reporting",
 	"report_execution":               "internal/modules/reporting",
 	"report_edition":                 "internal/modules/reporting",
@@ -124,9 +126,8 @@ var tableOwners = map[string]string{
 	// What a mail domain is allowed to create. It governs COMPANY
 	// creation, which contacts owns, so the verdict lives with the records it
 	// authorizes rather than with the capture path that asks the question.
-	"company_domain_disposition":     "internal/modules/contacts",
-	"company_domain_question_reader": "internal/modules/contacts",
-	"site_read":                      "internal/modules/contacts",
+	"company_domain_disposition": "internal/modules/contacts",
+	"site_read":                  "internal/modules/contacts",
 	// DH-DDL-1: the pair verdicts live with the ONE dedupe implementation.
 	"dedupe_candidate":  "internal/modules/contacts",
 	"dedupe_scan_state": "internal/modules/contacts",
@@ -138,8 +139,6 @@ var tableOwners = map[string]string{
 	"stage":                     "internal/modules/deals",
 	"stage_exit_criterion":      "internal/modules/deals",
 	"deal_stage_evidence":       "internal/modules/deals",
-	"stage_progression_outcome": "internal/modules/deals",
-	"stage_progression_policy":  "internal/modules/deals",
 	"deal_stage_history":        "internal/modules/deals",
 	"deal_acquisition_source":   "internal/modules/deals",
 	"deal_loss_reason":          "internal/modules/deals",
@@ -185,21 +184,22 @@ var tableOwners = map[string]string{
 	// modules/projects/doc.go. This entry is what makes that a rule rather than
 	// a layout: a statement writing either table from any other package fails
 	// TestEveryPackageOnlyWritesTablesItOwns.
-	"project":                   "internal/modules/projects",
-	"project_phase_history":     "internal/modules/projects",
-	"fx_rate":                   "internal/modules/deals",
-	"product":                   "internal/modules/deals",
-	"tax_rate":                  "internal/modules/deals",
-	"product_translation":       "internal/modules/deals",
-	"offer":                     "internal/modules/deals",
-	"offer_line_item":           "internal/modules/deals",
-	"deal_product":              "internal/modules/deals",
-	"deal_line_item":            "internal/modules/deals",
-	"sales_initiative":          "internal/modules/initiatives",
-	"sales_initiative_revision": "internal/modules/initiatives",
-	"sales_initiative_member":   "internal/modules/initiatives",
-	"sales_initiative_baseline": "internal/modules/initiatives",
-	"offer_template":            "internal/modules/deals",
+	"project":                    "internal/modules/projects",
+	"project_phase_history":      "internal/modules/projects",
+	"fx_rate":                    "internal/modules/deals",
+	"product":                    "internal/modules/deals",
+	"tax_rate":                   "internal/modules/deals",
+	"product_translation":        "internal/modules/deals",
+	"offer":                      "internal/modules/deals",
+	"offer_line_item":            "internal/modules/deals",
+	"deal_product":               "internal/modules/deals",
+	"deal_line_item":             "internal/modules/deals",
+	"sales_initiative":           "internal/modules/initiatives",
+	"sales_initiative_revision":  "internal/modules/initiatives",
+	"sales_initiative_member":    "internal/modules/initiatives",
+	"sales_initiative_baseline":  "internal/modules/initiatives",
+	"sales_initiative_enrolment": "internal/modules/initiatives",
+	"offer_template":             "internal/modules/deals",
 	// activities
 	"activity":              "internal/modules/activities",
 	"transcript_read":       "internal/modules/activities",
@@ -225,10 +225,6 @@ var tableOwners = map[string]string{
 	// Its candidates are owedSQL, which this module owns, so the marker is here
 	// rather than beside the compose-owned markers of the meeting passes.
 	"activity_calendar_method_backfill": "internal/modules/activities",
-	// The waiting horizon the worker pass measured, one row for the installation.
-	// The queue's own predicates are what read it, and they live in this module.
-	"activity_waiting_horizon":   "internal/modules/activities",
-	"activity_clock_refold_mark": "internal/modules/activities",
 	// The external identities one message answers to — its RFC Message-ID, its
 	// calendar occurrence. It hangs off `activity` and decides which row a
 	// second provider's copy of a message resolves to, so it belongs to the
@@ -236,6 +232,7 @@ var tableOwners = map[string]string{
 	"activity_identity":        "internal/modules/activities",
 	"activity_mail_reference":  "internal/modules/activities",
 	"activity_sales_state":     "internal/modules/activities",
+	"activity_link_suggestion": "internal/modules/activities",
 	"activity_reader_state":    "internal/modules/activities",
 	"activity_review_template": "internal/modules/activities",
 	"activity_review_response": "internal/modules/activities",
@@ -272,7 +269,6 @@ var tableOwners = map[string]string{
 	// table from all of them through platform's helper — which is why the helper, and
 	// the table with it, sit below every module rather than inside one.
 	"stored_object_intent":     "internal/platform/storedobjects",
-	"data_task_run_history":    "internal/platform/datatask",
 	"data_task_review":         "internal/platform/datatask",
 	"data_task_run":            "internal/platform/datatask",
 	"deal_document_hide":       "internal/modules/activities",
@@ -301,6 +297,7 @@ var tableOwners = map[string]string{
 	"consent_text_version":             "internal/modules/consent",
 	"communication_decision":           "internal/modules/consent",
 	"communication_basis":              "internal/modules/consent",
+	"lawful_basis_confirmation":        "internal/modules/consent",
 	"communication_review":             "internal/modules/consent",
 	"communication_instruction":        "internal/modules/consent",
 	"communication_override":           "internal/modules/consent",
@@ -338,13 +335,11 @@ var tableOwners = map[string]string{
 	"capture_alias_sighting":           "internal/modules/capture",
 	"capture_alias_refused":            "internal/modules/capture",
 	"capture_owner_identity_withdrawn": "internal/modules/capture",
-	"capture_party_admission_cursor":   "internal/modules/capture",
 	"capture_party_source_replay":      "internal/modules/capture",
 	"capture_party_source":             "internal/modules/capture",
 	"capture_import":                   "internal/modules/capture",
 	"capture_thread_verdict":           "internal/modules/capture",
 	"capture_counterparty_hold":        "internal/modules/capture",
-	"capture_digest":                   "internal/modules/capture",
 	"capture_auto_enrich_state":        "internal/modules/capture",
 	"capture_pending_counterparty":     "internal/modules/capture",
 	"capture_auto_enrich_budget":       "internal/modules/capture",
@@ -354,9 +349,7 @@ var tableOwners = map[string]string{
 	"capture_test_mailbox_sent": "internal/modules/capture",
 	// One receipt per repair pass per workspace turn — bookkeeping about a
 	// pass rather than a record fact, not audited; pruned to a history.
-	"capture_sweep_run":             "internal/modules/capture",
-	"capture_answered_sweep_cursor": "internal/modules/capture",
-	"deal_authorship_sweep_cursor":  "internal/modules/deals",
+	"capture_sweep_run": "internal/modules/capture",
 	// What the pipeline decided about each message, for 24 hours. Written by
 	// the sink alone; compose reads it and sweeps it, and the verdict engine
 	// writes nothing here — its answers live in the disposition ledger and are
@@ -369,6 +362,10 @@ var tableOwners = map[string]string{
 	// status. It is a connection, so it sits with capture_connection under the
 	// ONE connector.Sink rather than with the identities it delivers.
 	"channel_connection": "internal/modules/capture",
+	// A deal's or project's chat channel, and the ledger of what was posted
+	// there.
+	"chat_link":      "internal/modules/chatlinks",
+	"chat_post_item": "internal/modules/chatlinks",
 	// The installation-settings table (ADR-0090/A135). Owned by the platform
 	// mechanism rather than by any module, which is the point: a setting's
 	// MEANING belongs to the module that declares its entry, but no module
@@ -490,7 +487,7 @@ var tableOwners = map[string]string{
 	// extension port, before any module is reached.
 	"extension_ingest_refusal": "internal/compose",
 	// Where a unit's bulk load stopped, written by the extension port.
-	"extension_ingest_position": "internal/compose",
+	"extension_ingest_position": "internal/compose/extingress",
 	"idempotency_key":           "internal/compose",
 	// A bulk change and the user's confirmation of one. compose owns both
 	// because the change spans three record types in two modules, and the
@@ -540,11 +537,11 @@ var tableOwners = map[string]string{
 	"forecast_capture_status":         "internal/modules/forecasting",
 	"forecast_snapshot":               "internal/modules/forecasting",
 	"forecast_contribution":           "internal/modules/forecasting",
+	"record_link":                     "internal/modules/recordlinks",
 	"weekly_plan":                     "internal/modules/weeklyplan",
 	"weekly_plan_commitment":          "internal/modules/weeklyplan",
 	"weekly_review_deal":              "internal/compose/weekly",
 	"weekly_review_outlook":           "internal/compose/weekly",
-	"weekly_review_movement":          "internal/compose/weekly",
 	"weekly_review_driver":            "internal/compose/weekly",
 	"weekly_review_scorecard":         "internal/compose/weekly",
 	"weekly_review_learning":          "internal/compose/weekly",
@@ -580,22 +577,9 @@ var tableOwners = map[string]string{
 	// The rep's own "not this, not now" on a suggestion: per user, keyed on
 	// the evidence it fired on. Same ruling — view state, no audit row.
 	"suggestion_dismissal": "internal/compose/company360",
-	// The account brief's per-user cache: derived content, regenerable at
-	// any time, readable by nobody but its own user. Same ruling.
-	"company_brief":      "internal/compose/companybrief",
-	"company_dossier":    "internal/compose/companydossier",
-	"company_growth_fit": "internal/compose/companydossier",
 	// The account scan's per-user row: the last findings the model read for
 	// this reader, and the job carrier of the read in flight. Same ruling.
-	"company_scan": "internal/compose/companyscan",
-	// The relationship brief's per-user cache — the contact-side sibling of
-	// company_brief, and the same ruling for the same reasons.
-	"contact_brief": "internal/compose/contactbrief",
-	// The deal status card's per-user cache — the deal-side sibling of the
-	// two above, and the same ruling: derived content, regenerable from the
-	// records at any time, readable by nobody but the user it was written
-	// for.
-	"deal_status_card":    "internal/compose/dealstatus",
+	"company_scan":        "internal/compose/companyscan",
 	"deal_move_dismissal": "internal/compose/dealstatus",
 	// The reader's own "not this, not now" on the page's one moment, held
 	// against the evidence it fired on so it re-arms when that evidence moves
@@ -620,6 +604,12 @@ var tableOwners = map[string]string{
 	"event_outbox":     storekitOwned,
 	"field_provenance": storekitOwned,
 	"system_log":       storekitOwned,
+	// The bookkeeping rows of the background passes. A module reaches its row
+	// through the storekit readers and writers, with a shape of its own.
+	"installation_state": storekitOwned,
+	// One reader's generated summaries of a company, a contact or a deal:
+	// derived content, rebuilt from the record, read by no other reader.
+	"generated_summary": generatedSummaryStoreDir,
 }
 
 // sqlTarget is one write a literal performs: which table, by which verb, and

@@ -18,6 +18,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// The further legal entities these suites describe follow the at pack.
+func init() { integration.RegisterEntityLawPack("at") }
+
 // The account page's timeline reads through the activity list, so it carries
 // the custom-field values the list does.
 func TestTheCompanyTimelineCarriesActivityCustomFieldValues(t *testing.T) {

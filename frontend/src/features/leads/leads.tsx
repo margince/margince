@@ -6,23 +6,24 @@ import {
   LatestInboundLine,
   useLatestInbound,
 } from "../../components/latestinbound";
+import { ViewOnly } from "../../components/viewonly";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { useRecordTimeline } from "../../design-system/recordtimeline";
 import { RecordView } from "../../design-system/recordview";
 import { useToast } from "../../design-system/toast";
-import { leadIdentityName } from "../../format/leadname";
 import { useT } from "../../i18n";
 import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
-import { scrollPageToTop } from "../../lib/reveal";
-import { useUrlParams } from "../../lib/urlstate";
+import { useAddressWriters, useUrlParams } from "../../lib/urlstate";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { leadBand } from "./leadband";
-import { LeadDetails, useFieldSave } from "./leaddetails";
+import { LeadDetails } from "./leaddetails";
+import { useLeadRenameSave } from "./leadedit";
 import { LeadPulse, LeadSubtitle } from "./leadheader";
 import { LeadHistoryTab, LeadLatestInbound } from "./leadhistory";
+import { leadIdentityName } from "./leadname";
 import { LeadDealsTab } from "./leadraillinks";
 import "./leads.css";
 
@@ -44,11 +45,11 @@ export type Lead = components["schemas"]["Lead"];
 
 export type UpdateLeadRequest = components["schemas"]["UpdateLeadRequest"];
 
+import { RecordGone } from "../../components/recordgone";
 import { leadKey, leadWriteKeys } from "../../lib/leadkeys";
 import type { RecordTabId } from "../../lib/recordtaborder";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useAddressedTab } from "../records/recordtab";
-import { WorklistReturnLink } from "../worklist/worklist.return";
 
 /**
  * The shared write, as the panels that call it see it: the mutation's STATE
@@ -127,11 +128,18 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
   // A link from a surface that met this lead while creating a contact opens
   // the Qualify dialog, so the reader converts in one step.
   const [params] = useUrlParams();
-  const [dialog, setDialog] = useState<"qualify" | "disqualify" | null>(() =>
+  const [pressed, setPressed] = useState<"qualify" | "disqualify" | null>(null);
+  const addressed =
     params.get(ACTION_PARAM) === QUALIFY_ACTION && !lead.archived_at
       ? "qualify"
-      : null,
-  );
+      : null;
+  const dialog = pressed ?? addressed;
+  const { replaceDial } = useAddressWriters();
+  // The address goes with it, or Back would reopen what the reader closed.
+  const closeDialog = () => {
+    setPressed(null);
+    replaceDial(ACTION_PARAM, undefined);
+  };
   // What the last qualify did, said once: the contact and, when one was
   // opened, the deal. The page stays (ADR-0119) and the outcome panel below
   // carries the links on, so this is the confirmation rather than the record —
@@ -154,11 +162,10 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
   // mode).
   const [composing, setComposing] = useState(false);
   const latest = useLatestInbound("lead", lead.id);
-  const saveField = useFieldSave(lead);
+  const rename = useLeadRenameSave(lead);
 
   return (
     <RecordView
-      back={<WorklistReturnLink />}
       aside={
         <LeadDetails
           lead={lead}
@@ -172,13 +179,23 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         value: lead.full_name ?? "",
         canEdit: !writer.readOnly,
         readOnlyReason: writer.readOnlyReason,
-        onSave: saveField("full_name", true),
+        onSave: rename,
       }}
       identity={lead.id}
       nameBadge={<LeadSubtitle lead={lead} />}
       // A reader has to know this is a prospect and not a contact before they
       // read anything else about them.
-      pulse={<LeadPulse lead={lead} />}
+      pulse={
+        <>
+          <LeadPulse lead={lead} />
+          <ViewOnly
+            kind="lead"
+            record={lead}
+            name={leadIdentityName(lead) || t("lead.unnamed")}
+            reasonId={terminalReasonId}
+          />
+        </>
+      }
       latest={
         tab !== "overview" && (
           <LatestInboundLine
@@ -194,8 +211,8 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
           writer={writer}
           terminalReasonId={terminalReasonId}
           refusedReasonId={writer.readOnly ? terminalReasonId : undefined}
-          onQualify={() => setDialog("qualify")}
-          onDisqualify={() => setDialog("disqualify")}
+          onQualify={() => setPressed("qualify")}
+          onDisqualify={() => setPressed("disqualify")}
           onLogged={refreshAfterTouch}
           emailOpen={composing}
           onEmailOpenChange={setComposing}
@@ -205,7 +222,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
       // default for a prospect. A lead carries no workspace location of its
       // own to prefer over where the reader is.
       zone={readerZone}
-      band={leadBand({ lead, writer, reasonId: terminalReasonId, t })}
+      band={leadBand({ writer })}
       // The same strip every record in the product carries. It is a place a reader
       // navigates, drawn as a rule with the open body underlined, rather than
       // a pill that offers a setting.
@@ -213,10 +230,8 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         <RecordTabs
           options={LEAD_TABS}
           value={tab}
-          onChange={(next) => {
-            setTab(next);
-            scrollPageToTop();
-          }}
+          onChange={setTab}
+          keepPlace
           labels={{
             overview: t("tab.overview"),
             deals: t("tab.deals"),
@@ -243,8 +258,8 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
             thread={threadQuery}
             asOf={asOf}
             onOpenEmail={setOpenEmail}
-            onQualify={() => setDialog("qualify")}
-            onDisqualify={() => setDialog("disqualify")}
+            onQualify={() => setPressed("qualify")}
+            onDisqualify={() => setPressed("disqualify")}
           />
         </LeadLatestInbound>
       )}
@@ -252,16 +267,16 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         <LeadDealsTab
           lead={lead}
           writer={writer}
-          onQualify={() => setDialog("qualify")}
+          onQualify={() => setPressed("qualify")}
           reasonId={writer.readOnly ? terminalReasonId : undefined}
         />
       )}
       <LeadDialogs
         lead={lead}
         dialog={dialog}
-        onClose={() => setDialog(null)}
+        onClose={closeDialog}
         onQualified={(done) => {
-          setDialog(null);
+          closeDialog();
           toast.show(done);
         }}
       />
@@ -283,9 +298,10 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const leadQuery = useQuery({
     queryKey: leadKey(id),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       return unwrap(
         await api.GET("/leads/{id}", {
+          signal,
           params: { path: { id } },
         }),
       );
@@ -294,7 +310,11 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
 
   return (
     <div className="wrap lead-surface">
-      <QueryGate query={leadQuery} pendingLabel={t("nav.leads")}>
+      <QueryGate
+        query={leadQuery}
+        pendingLabel={t("nav.leads")}
+        gone={<RecordGone kind="lead" />}
+      >
         {(lead) => (
           // Keyed by lead: every piece of page state below — the open dialog,
           // the tab, a half-typed score override — is about THIS lead, and

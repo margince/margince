@@ -1,0 +1,15 @@
+{
+  "tool": "change_activities",
+  "action": "task",
+  "verb": "create_task",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

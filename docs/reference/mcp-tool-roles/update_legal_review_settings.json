@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "update_legal_review_settings",
+  "verb": "update_legal_review_settings",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

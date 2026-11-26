@@ -19,19 +19,19 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// ChangeBundle holds the changes Margince made to one deal that its owner has
-// neither accepted nor undone.
+// ChangeBundle holds the changes Margince made to one deal in the last
+// changeListWindow that its owner has not undone.
 type ChangeBundle struct {
 	DealID   ids.DealID
 	DealName string
 	Version  int64
 	// AuditLogIDs name the changes the list shows, newest first: the order an
 	// Undo takes them back in. UndoableAuditLogIDs is the part of them Undo
-	// can still take back; the rest were edited since and stay listed for
-	// blockedChangeWindow.
+	// can still take back; the rest were edited since.
 	AuditLogIDs         []ids.UUID
 	UndoableAuditLogIDs []ids.UUID
 	Kinds               []string
@@ -55,9 +55,10 @@ type ChangeSummary struct {
 	Truncated bool
 }
 
-// blockedChangeWindow is how long a change edited since stays on the list
-// it can no longer be undone from. After it, the deal's history keeps it.
-const blockedChangeWindow = 14 * 24 * time.Hour
+// changeListWindow is how long a change stays on the list. Nobody is asked to
+// sign a change off, so age is what retires it; the deal's history keeps it,
+// with its Undo.
+const changeListWindow = 7 * 24 * time.Hour
 
 // bundleCap bounds the rows of one summary. The counts come from SQL over
 // every changed deal, so a cut list still reports the true total.
@@ -72,9 +73,10 @@ func kindCountColumns(arg func(any) int, kinds ...string) string {
 	return out.String()
 }
 
-// PendingChangesOwnedBy reads every change Margince made to the reader's own
-// deals that they have not accepted or undone, one bundle per deal. A since
-// keeps only the changes made from then on.
+// PendingChangesOwnedBy reads the changes Margince made to the reader's own
+// deals in the last changeListWindow that they have not undone, one bundle per
+// deal. A since keeps only the changes made from then on. A change accepted
+// through the deprecated accept route stays off the list.
 func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (ChangeSummary, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return ChangeSummary{}, err
@@ -93,7 +95,7 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		heldPos, ownerPos, basePos, capPos := arg(heldCorrections), arg(actor.UserID), arg(base), arg(bundleCap+1)
-		sincePos, stagePos, blockedFromPos := arg(since), arg(stageCorrectionKinds), arg(s.clock().Add(-blockedChangeWindow))
+		sincePos, stagePos, listedFromPos := arg(since), arg(stageCorrectionKinds), arg(s.clock().Add(-changeListWindow))
 		counts := kindCountColumns(arg, CloseLostCorrection, VerdictCloseDateCorrection, VerdictAmountCorrection,
 			VerdictProbabilityCorrection, VerdictStageMoveCorrection, DealOpenCorrection, DealReviveCorrection)
 		scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
@@ -105,36 +107,35 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 			where = " AND " + scope
 		}
 		value, err := auth.MaskedExpressionSQL(ctx, maskObject, "amount_minor", "d",
-			BaseValueSQL("CURRENT_DATE", fmt.Sprintf("$%d", basePos), "d"), arg)
+			BaseValueSQL("now()", fmt.Sprintf("$%d", basePos), "d"), arg)
 		if err != nil {
 			return err
 		}
 		query := storekit.SQLf(`
 			WITH waiting AS (
-			  SELECT c.deal_id, c.audit_log_id, c.correction, c.applied_at,
+			  SELECT c.deal_id, c.audit_log_id, c.correction, c.applied_at, `+correctionListedSQL+` AS listed_at,
 			         (%s AND %s) AS undoable
 			    FROM deal_correction c
 			    JOIN deal d ON d.id = c.deal_id
 			    JOIN audit_log a ON a.id = c.audit_log_id AND a.entity_type = 'deal' AND a.entity_id = c.deal_id
 			   WHERE c.correction = ANY($%d) AND c.accepted_at IS NULL AND c.reversed_at IS NULL
-			     AND ($%d::timestamptz IS NULL OR c.applied_at >= $%d)
+			     AND ($%d::timestamptz IS NULL OR `+correctionListedSQL+` >= $%d) AND `+correctionListedSQL+` >= $%d
 			     AND d.owner_id = $%d AND d.archived_at IS NULL%s),
 			bundle AS (
 			  SELECT w.deal_id,
 			         array_agg(w.audit_log_id ORDER BY w.applied_at DESC, w.audit_log_id DESC) AS audits,
 			         coalesce(array_agg(w.audit_log_id ORDER BY w.applied_at DESC, w.audit_log_id DESC) FILTER (WHERE w.undoable), '{}') AS undoable,
 			         array_agg(DISTINCT w.correction) AS kinds,
-			         max(w.applied_at) AS latest
+			         max(w.listed_at) AS latest
 			    FROM waiting w
-			   WHERE w.undoable OR w.applied_at >= $%d
 			   GROUP BY w.deal_id)
 			SELECT b.deal_id, d.name, d.version, b.audits, b.undoable, b.kinds, b.latest, %s,
 			       count(*) OVER (), count(*) FILTER (WHERE cardinality(b.undoable) > 0) OVER ()%s
 			  FROM bundle b JOIN deal d ON d.id = b.deal_id
 			 ORDER BY 8 DESC NULLS LAST, b.latest DESC, b.deal_id
 			 LIMIT $%d`,
-			correctionFieldsStillAppliedSQL("to_jsonb(d)"), correctionStageStillNewestSQL(stagePos),
-			heldPos, sincePos, sincePos, ownerPos, where, blockedFromPos, value, counts, capPos)
+			correctionFieldsUntouchedSQL(), correctionStageStillNewestSQL(stagePos),
+			heldPos, sincePos, sincePos, listedFromPos, ownerPos, where, value, counts, capPos)
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("deals: reading the changes Margince made: %w", err)
@@ -171,16 +172,25 @@ type ChangeCursor struct {
 	AuditLogID ids.UUID
 }
 
+// DealChangeFilter narrows a deal's changes to the ones a page is about. It
+// names the change that wrote one stage move, the changes History notes
+// report, or changes of given correction kinds. The zero value narrows nothing.
+type DealChangeFilter struct {
+	StageHistoryID *ids.UUID
+	NoteActivityID []ids.UUID
+	Kinds          []string
+}
+
 // DealChanges reads every change Margince made to one deal, newest first and
 // paged, whether accepted, undone or still open. It answers 404 for a deal
 // the reader may not see.
-func (s *Store) DealChanges(ctx context.Context, dealID ids.DealID, after *ChangeCursor, limit int) ([]CorrectionReceipt, bool, error) {
+func (s *Store) DealChanges(ctx context.Context, dealID ids.DealID, after *ChangeCursor, limit int, only DealChangeFilter) ([]CorrectionReceipt, bool, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return nil, false, err
 	}
 	var out []CorrectionReceipt
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, dealTable, dealID.UUID); err != nil {
+		if err := auth.EnsureVisibleExisting(ctx, tx, dealTable, dealID.UUID); err != nil {
 			return err
 		}
 		args := []any{dealID}
@@ -190,6 +200,15 @@ func (s *Store) DealChanges(ctx context.Context, dealID ids.DealID, after *Chang
 			return err
 		}
 		query += " WHERE c.deal_id = $1"
+		if only.StageHistoryID != nil {
+			query += storekit.SQLf(" AND c.stage_history_id = $%d", arg(*only.StageHistoryID))
+		}
+		if len(only.NoteActivityID) > 0 {
+			query += storekit.SQLf(" AND c.note_activity_id = ANY($%d)", arg(only.NoteActivityID))
+		}
+		if len(only.Kinds) > 0 {
+			query += storekit.SQLf(" AND c.correction = ANY($%d)", arg(only.Kinds))
+		}
 		if after != nil {
 			query += storekit.SQLf(" AND (c.applied_at, c.audit_log_id) < ($%d, $%d)", arg(after.AppliedAt), arg(after.AuditLogID))
 		}
@@ -219,6 +238,10 @@ type TeamChangeGroup struct {
 	// ValueBaseMinor sums the changed deals' value in the base currency over
 	// the deals that have one.
 	ValueBaseMinor int64
+	// ValueNoAmount, ValueNoRate and ValueMissingCurrencies say which changed
+	// deals that sum leaves out, and why.
+	ValueNoAmount, ValueNoRate int
+	ValueMissingCurrencies     string
 	// ValueMovedBaseMinor sums the size of each deal's net move in this kind.
 	ValueMovedBaseMinor int64
 	// Unvalued counts the deals whose move could not be valued.
@@ -265,35 +288,7 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 			}
 			return where, err
 		}
-		var countArgs []any
-		countArg := func(v any) int { countArgs = append(countArgs, v); return len(countArgs) }
-		where, err := filter(countArg)
-		if err != nil {
-			return err
-		}
-		value, err := auth.MaskedExpressionSQL(ctx, maskObject, "amount_minor", "d",
-			BaseValueSQL("CURRENT_DATE", fmt.Sprintf("$%d", countArg(base)), "d"), countArg)
-		if err != nil {
-			return err
-		}
-		// One row per deal and kind first, so a deal changed twice in one kind
-		// counts and sums once. A value the reader's mask withholds adds nothing.
-		groups, err := tx.Query(ctx, storekit.SQLf(`
-			SELECT owner_id, correction, count(*), count(*) FILTER (WHERE undone), coalesce(sum(value), 0)::bigint
-			  FROM (SELECT d.owner_id, c.correction, c.deal_id,
-			               bool_or(c.reversed_at IS NOT NULL) AS undone, max(%s) AS value
-			          FROM deal_correction c JOIN deal d ON d.id = c.deal_id%s
-			         GROUP BY d.owner_id, c.correction, c.deal_id) per_deal
-			 GROUP BY owner_id, correction
-			 ORDER BY owner_id, correction`, value, where), countArgs...)
-		if err != nil {
-			return fmt.Errorf("deals: counting the team's changes: %w", err)
-		}
-		out.Groups, err = pgx.CollectRows(groups, func(row pgx.CollectableRow) (TeamChangeGroup, error) {
-			var g TeamChangeGroup
-			return g, row.Scan(&g.OwnerID, &g.Kind, &g.Deals, &g.Undone, &g.ValueBaseMinor)
-		})
-		if err != nil {
+		if out.Groups, err = s.teamChangeGroups(ctx, tx, base, filter); err != nil {
 			return err
 		}
 		var rowArgs []any
@@ -302,7 +297,8 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 		if err != nil {
 			return err
 		}
-		if where, err = filter(rowArg); err != nil {
+		where, err := filter(rowArg)
+		if err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx, selected+where+
@@ -324,6 +320,58 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 	return out, nil
 }
 
+// teamChangeGroups counts, per owner and kind, the changed deals and what they
+// are worth in the base currency, with the deals that value leaves out.
+func (s *Store) teamChangeGroups(
+	ctx context.Context, tx pgx.Tx, base string, filter func(func(any) int) (string, error),
+) ([]TeamChangeGroup, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	var countArgs []any
+	countArg := func(v any) int { countArgs = append(countArgs, v); return len(countArgs) }
+	where, err := filter(countArg)
+	if err != nil {
+		return nil, err
+	}
+	value, err := auth.MaskedExpressionSQL(ctx, maskObject, "amount_minor", "d",
+		BaseValueSQL("now()", fmt.Sprintf("$%d", countArg(base)), "d"), countArg)
+	if err != nil {
+		return nil, err
+	}
+	amount, err := auth.MaskedColumnSQL(ctx, maskObject, "amount_minor", "d", "amount_minor", countArg)
+	if err != nil {
+		return nil, err
+	}
+	currency, err := auth.MaskedColumnSQL(ctx, maskObject, "currency", "d", "currency", countArg)
+	if err != nil {
+		return nil, err
+	}
+	// One row per deal and kind first, so a deal changed twice in one kind
+	// counts and sums once. A value the reader's mask withholds adds nothing.
+	groups, err := tx.Query(ctx, storekit.SQLf(`
+		SELECT owner_id, correction, count(*), count(*) FILTER (WHERE undone), coalesce(sum(value), 0)::bigint, %s
+		  FROM (SELECT d.owner_id, c.correction, c.deal_id,
+		               bool_or(c.reversed_at IS NOT NULL) AS undone, max(%s) AS value,
+		               max(%s) AS amount, max(%s) AS currency
+		          FROM deal_correction c JOIN deal d ON d.id = c.deal_id%s
+		         GROUP BY d.owner_id, c.correction, c.deal_id) per_deal
+		 GROUP BY owner_id, correction
+		 ORDER BY owner_id, correction`, moneytotal.CoverageSQL("value", "amount", "currency"), value, amount, currency, where), countArgs...)
+	if err != nil {
+		return nil, fmt.Errorf("deals: counting the team's changes: %w", err)
+	}
+	return pgx.CollectRows(groups, func(row pgx.CollectableRow) (TeamChangeGroup, error) {
+		var g TeamChangeGroup
+		var missing *string
+		err := row.Scan(&g.OwnerID, &g.Kind, &g.Deals, &g.Undone, &g.ValueBaseMinor, &g.ValueNoAmount, &g.ValueNoRate, &missing)
+		if missing != nil {
+			g.ValueMissingCurrencies = *missing
+		}
+		return g, err
+	})
+}
+
 // ReaderOf is the human reading, whom a reason may reach. An agent, even one
 // acting for that human, and a caller with no seat read none.
 func ReaderOf(ctx context.Context) ids.UUID {
@@ -343,7 +391,7 @@ func PendingChangesFingerprintTx(ctx context.Context, tx pgx.Tx, owner ids.UUID,
 		return 0, err
 	}
 	const changes = `FROM deal_correction c JOIN deal d ON d.id = c.deal_id
-		WHERE c.correction = ANY($1) AND c.applied_at >= $2 AND d.owner_id = $3`
+		WHERE c.correction = ANY($1) AND ` + correctionListedSQL + ` >= $2 AND d.owner_id = $3`
 	if lock {
 		if _, err := tx.Exec(ctx, `SELECT 1 `+changes+` FOR SHARE OF c`, heldCorrections, since, owner); err != nil {
 			return 0, fmt.Errorf("deals: holding the changes a morning counts: %w", err)

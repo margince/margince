@@ -147,3 +147,38 @@ export const UnfinishedDealsPhone: Story = {
   ...UnfinishedDeals,
   tags: ["uat-phone"],
 };
+
+/**
+ * A remembered run after a reload: the counts and the unfinished deals stand
+ * until the reader clears them, then the Undo comes back.
+ */
+export const Remembered: Story = {
+  render: () => {
+    stubWithSession(
+      { "POST /deal-corrections/undo": () => jsonResponse(ANSWER) },
+      { deal: ["read", "update"] },
+    );
+    return (
+      <StoryProviders>
+        <BundleUndo
+          bundles={BUNDLES}
+          label="Undo changes on 4 deals"
+          remember
+        />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Undo changes on 4 deals" }),
+    );
+    const clear = await canvas.findByRole("button", {
+      name: "Clear this result",
+    });
+    await userEvent.click(clear);
+    await expect(
+      await canvas.findByRole("button", { name: "Undo changes on 4 deals" }),
+    ).toBeVisible();
+  },
+};

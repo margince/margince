@@ -20,7 +20,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -191,7 +190,7 @@ func TestTheReconcileSweepRetractsContactsANoiseVerdictAlreadyCovered(t *testing
 	seedSettledRowFor(t, e, "nachbarin@privat.example", capture.PendingStatusNoise,
 		capture.KindPersonal, e.Rep2)
 
-	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, contacts.NewStore(InstallationDB(e.Pool)))
+	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool)
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
 	}
@@ -376,7 +375,7 @@ func TestTheReconcileSweepRetractsAContactAPrivateThreadEarnedAfterItsVerdict(t 
 	seedOpenThreadMail(t, e, "thread-geschaeft", both, "Angebot")
 	keeps := seedCapturedContact(t, e, both)
 
-	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, contacts.NewStore(InstallationDB(e.Pool)))
+	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool)
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
 	}

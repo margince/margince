@@ -1,26 +1,17 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/automations/approvalrow.tsx frontend/src/features/automations/approvaldrawer.tsx frontend/src/features/automations/approvaleditor.tsx frontend/src/features/automations/approval-preferences.tsx frontend/src/features/settings/autonomy-settings.tsx backend/internal/modules/approvals/decide.go backend/internal/modules/approvals/expiry.go backend/internal/modules/approvals/authority.go frontend/src/features/records/handoverrequest.tsx frontend/src/features/records/handoveroffer.tsx backend/internal/compose/ownershiptransfer.go backend/internal/compose/ownershipoffer.go backend/internal/compose/approvalpreviewsight.go -->
+<!-- describes: frontend/src/features/automations/approvalrow.tsx frontend/src/design-system/decisionhead.tsx frontend/src/features/automations/approvaldrawer.tsx frontend/src/features/automations/approvaleditor.tsx frontend/src/features/automations/approvaldetail.tsx frontend/src/features/automations/approval-preferences.tsx frontend/src/features/settings/autonomy-settings.tsx backend/internal/modules/approvals/decide.go backend/internal/modules/approvals/expiry.go backend/internal/modules/approvals/authority.go frontend/src/components/handoverrequest.tsx frontend/src/components/editaccessrequest.tsx frontend/src/features/records/handoveroffer.tsx backend/internal/compose/editaccess/editaccess.go backend/internal/compose/ownershiptransfer.go backend/internal/compose/ownershipoffer.go backend/internal/compose/approvalpreviewsight.go -->
 # Approvals
 
-An approval in Margince is a change an agent proposed but was not allowed to
-make on its own. The agent does not do it. It writes down what it means to do
-and puts it before a human, who accepts, edits or rejects it. The product
-calls the waiting items **Approvals**.
+An approval in Margince is a change an agent proposed but was not allowed to make on its own. The agent does not do it. It writes down what it means to do and puts it before a human, who accepts, edits or rejects it. The product calls the waiting items **Approvals**.
 
 ## Reading a commercial change
 
-A deal-stage, owner or company-lifecycle proposal shows the record and the values before and after
-the change. Owners and stages have names. **Review authority** explains why you can answer it.
-A deal win also names its effects on linked correspondence and eligible delivery projects.
-**Set when applied** means Margince records that value when the change takes effect.
+A deal-stage, owner or company-lifecycle proposal shows the record and the values before and after the change. Owners and stages have names. **Review authority** explains why you can answer it.
+A deal win also names its effects on linked correspondence and eligible delivery projects. **Set when applied** means Margince records that value when the change takes effect.
 
-Source evidence appears when it is available. A linked proposal remains a separate decision. If the record changed or the full change cannot be shown, you cannot approve it.
-Request a new proposal with current context, or reject the old one.
+Under its title, a card says why it exists: an agent's own stated reason, or for a drafted reply, when the last message came. Source evidence appears when it is available. A linked proposal remains a separate decision. If the record changed or the full change cannot be shown, you cannot approve it. Request a new proposal with current context, or reject the old one.
 
-Every agent proposal shows what the agent's own run will do, read with the agent's access. If that run
-touches or names a record you cannot open, the card shows none of the plan. It says that "A colleague who can
-see them must decide it," and you cannot approve it. Fields your role hides stay hidden on the card. A proposal
-that Margince itself or a colleague made shows what it will do when you approve it, read with your access.
+Every agent proposal shows what the agent's own run will do, read with the agent's access. If that run touches or names a record you cannot open, the card shows none of the plan. It says that "A colleague who can see them must decide it," and you cannot approve it. Fields your role hides stay hidden on the card. A proposal that Margince itself or a colleague made shows what it will do when you approve it, read with your access.
 
 The approval email and an agent's approval read use the card's detail labels and value words.
 They also carry its conflicts, files and import rows.
@@ -48,22 +39,23 @@ or a list of fields does not tell you what you are confirming.
 ## Answering approvals
 
 ### How do I approve an action in Margince?
-To approve a proposed change in Margince, open **Home** and show the **Worklist**. Find the approval row and choose **Decide**, then **Accept**.
+To approve a proposed change in Margince, open **Home** and show the **Worklist**. Find the approval row and choose **Decide**, then **Approve**. The open card on **Home** shows the proposal too, and its **View details** answers it.
 1. Open **Home** and choose **Show Worklist** if it is hidden.
-2. Set **Work type** to **Approvals** to see only approvals.
+2. Open the **Decisions** tab to see only approvals.
 3. On the row, choose **Decide**. The **Your decision** panel opens.
-4. Read the proposal and its evidence, then choose **Accept**.
+4. Read the proposal and its evidence, then choose **Approve** (**Approve email** for an email).
 
 If it edited a record, the **Applied** message offers **Undo on record** to reverse it from the record's history; a sent email has no undo.
+When an agent asked to run the change itself, approving only lets that agent run it. The message then reads "Approved. Waiting for the agent to run it." and offers no undo, because nothing has changed yet.
 A new contact, company or deal can be taken back with **Undo** on its "Created" entry in the record's history, which archives it.
 Also called: confirm, accept, sign off, OK an agent action.
 
 ### Where are my approvals?
 Margince has no approvals inbox of its own. Approvals waiting on you appear in three places:
-1. **Home → Worklist**: each approval is a row with **Decide**; set **Work type** to **Approvals** to filter.
+1. **Home → Worklist**: each approval is a row with **Decide**, under the **Decisions** tab.
 2. The agent panel (**Open agent panel**), in its **Approvals** section.
 3. On a company page, **Pending approvals**, with **Review {count} pending**; a deal page shows **Awaiting approval**.
-When nothing waits, the Worklist says "Nothing is waiting on you."
+When nothing is due today but decisions wait, **Today** says so and opens **Decisions**. When no decision waits, **Decisions** says "No decisions waiting for you."
 Also called: approval queue, pending decisions, inbox, to review.
 
 ### How do I edit a proposal before approving it?
@@ -91,7 +83,7 @@ Press **Acknowledge** to take the row off your list. If the same change fails ag
 Also called: approval failed, approved but nothing happened, retry an approval.
 
 ### Who approves agent actions?
-An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change. You only see approvals whose target you can see and whose effect you could carry out. No agent may approve a proposal staged for somebody else, or a send it proposed itself. An administrator has no override past their own permissions.
+An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change. You only see approvals whose target you can see and whose effect you could carry out. No agent may approve a proposal staged for somebody else, or a send it proposed itself. An agent running on a schedule, with nobody watching, approves nothing, and every message it would send waits for you. An administrator has no override past their own permissions. In a chat with your AI assistant, it asks you there instead, unless the change cannot be undone.
 
 Two kinds are the exception. Only the colleague who made a promise read from mail or a meeting may answer it. Only the colleague whose mailbox a new sender wrote to may answer **Add contact from mail**.
 Also called: approver, who signs off, permission to approve.
@@ -118,8 +110,17 @@ To keep such a promise yourself, press **I’ll take this** beside it on the con
 The email for such a request names the deal or company and the mail or meeting it came from. It also names who made the promise, quotes their words, and says why you are asked.
 Also called: commitment, promise task, promised by, who owns this promise, take over a promise.
 
+### How do I ask a colleague for edit access to their record?
+To change a contact, company, lead, deal or project a colleague owns, press **Ask … for edit access**, which names the owner. It is in the **View only** chip under the record's name, and under **Access** in the record's **Ownership** details.
+The request waits on the owner's **Worklist** for 7 days. Only the owner can answer it, and their agent can decline it but not accept it.
+
+If the owner approves, the record is shared with you for writing, and the owner stays its owner. A notice tells you when the owner approves or declines and when the request runs out. After a decline the same owner is not asked again; if the record changes owner, you can ask the new one. **Withdraw edit access request** in the same place takes it back.
+
+You can ask only on a seat that can edit records, for a record you can see but not change. A record nobody owns and a closed lead offer no request. If the owner has left, ask an administrator.
+Also called: request write access, ask to edit, edit rights on a colleague's lead.
+
 ### How do I ask a colleague to hand over a contact or company?
-To ask a colleague for a contact or company they own, open the record and press the access chip under its name. Then press **Ask … to hand it over**, which names the owner.
+To ask a colleague for a contact or company they own, open the record and press the **View only** chip under its name. Then press **Ask … to hand it over**, which names the owner.
 The request waits as an approval on the owner's **Worklist** for 7 days. Only the owner can answer it, and their agent can decline it but not accept it.
 
 If the owner accepts, the record is yours. A company brings the owner's open deals on it. A contact brings the owner's open deals on which it is the only contact and that name no company. Either brings the owner's open tasks filed under it alone. Everything else stays with the owner, and the notice says how many deals and tasks stayed.
@@ -141,12 +142,13 @@ Only the owner can offer a record. A manager who does not own it changes the own
 Also called: give away a record, hand over an account, offer a contact, reassign to a colleague.
 
 ### How do I stop Margince making automatic changes?
-To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI assistants**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
+<!-- opens: settings/agents -->
+To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI assistants**. Under **Your agent**, turn off the matching switch on the **Automatic changes** card. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval. An administrator can stop all automatic changes with **Automatic changes for everyone**; your own switches stay as you set them.
 Also called: autopilot, auto-apply, stop the AI editing my records.
 
 ### How do I hide a kind of proposal from my own queue?
-Open **Settings → AI assistants**, then **For developers**, then **Agent rules**, then
-**Personal approval mutes**.
+<!-- opens: settings/agents -->
+Open **Settings → AI assistants**. Under **Your agent**, find the **Personal approval mutes** card.
 Turn on a kind to hide it from your own queue. Other readers keep their proposals, and nobody has accepted or rejected anything.
 
 Both hiding and showing a kind turn off your automatic changes for that kind. Showing it again does not restore an old automatic choice.
@@ -161,7 +163,7 @@ Yes. To undo a change the AI or an agent made in Margince, press **Undo** on its
    That is **History** → **Changes** on a contact, lead or deal, and **More actions** → **Full history** on a company.
 Only a human can undo; an agent cannot.
 
-Margince may open, reopen, move or close a deal, or change its close date, amount or probability. Those changes also show on the deal's **Overview** under **Changes by Margince**. They are listed newest first, with the reason, **Mark reviewed** and **Undo**. The card stays after the change leaves Home, and a change you marked reviewed keeps its **Undo** there. Only the deal's owner reads the reason; a colleague sees what changed. **Undo** answers in words:
+Margince may open, reopen, move or close a deal, or change its close date, amount or probability. Those changes also show on the deal's **Overview** under **Changes by Margince**. They are listed newest first, with the reason and **Undo**. The card stays after the change leaves Home, and each change keeps its **Undo** there. Only the deal's owner reads the reason; a colleague sees what changed. **Undo** answers in words:
 - After a close: "Undone. Add a note on why this deal is still alive, or Margince will close it again at the next check."
 - After a reopen: "Closed as lost again, with its earlier reason. Margince reopens it only if newer buying evidence arrives."
 - After any other change: "Undone. Margince will not change the amount again until something new happens on this deal."
@@ -197,8 +199,7 @@ for which actions wait by default.
 - Fold one tag into another · Create a contact from a card
 
 **Selling**
-- Move a deal forward · Move a deal to the next stage · Correct a close date
-- Add a follow-up on a deal
+- Move a deal forward · Move a deal to the next stage · Correct a close date · Move the deal to the proposal stage
 - Promote a lead · Disqualify a lead · Reverse a lead promotion
 - Move a project to its next phase
 
@@ -207,8 +208,8 @@ for which actions wait by default.
 - Review a drafted email · Release a stopped message
 - Book a meeting
 
-**Review refused email** shows only on older approvals in your history. Margince no longer
-raises it.
+**Review refused email** and **Add a follow-up on a deal** show only on older approvals in your
+history. Margince no longer raises them; it [adds the follow-up task itself](what-the-ai-does.md#what-happens-when-a-deal-has-no-next-step).
 
 **Filing**
 - Refile an activity · Refile a conversation · Refile several activities
@@ -234,11 +235,10 @@ probabilities**, **Stage moves**, **New deals**, **Reopened deals**,
 **Company names** and **Lifecycle stages**. They land
 under **Handled for you** on the Worklist rather than as an approval.
 
-This is set per seat, and it is **on by default**. The switches
-are at **Settings → AI assistants**, on the **Agent rules** tab under **For developers**. The **Automatic
-changes** card says: "Each switch
-lets one kind of change run without your review. It applies to your work, not
-the whole team."
+This is set per seat, and it is **on by default**. The switches are at
+**Settings → AI assistants**, under **Your agent**. The **Automatic changes**
+card says: "Each switch lets one kind of change run without your review. It
+applies to your work, not the whole team."
 
 Each switch shows how you have answered that kind of proposal so far.
 It reads: "So far: {clean} approved as proposed, {edited} approved after edits, {rejected}
@@ -248,11 +248,11 @@ changes says nothing about mail you send out.
 Turning a switch off sends that kind back to your approvals, where the rest of
 this page applies.
 
-## Deciding: accept, edit or reject
+## Deciding: approve, edit or reject
 
 An approval has three answers.
 
-**Accept.** Margince applies the change and records it in the audit log. When
+**Approve.** Margince applies the change and records it in the audit log. When
 it changed a record, the message that appears offers **Undo on
 record**, which opens that record's history to reverse it. A kind that sends
 mail or names no record has nothing to put back, so it offers no undo. A new
@@ -375,13 +375,13 @@ yourself.
    - You decide the "{count} next steps awaiting review" yourself.
    - "Sent to {name} to confirm" waits in that colleague's Worklist, not yours.
    - A reading that found nothing says "Transcript read in full. No next steps found."
-7. Go to **Home → Worklist** and set **Work type** to **Approvals**.
+7. Go to **Home → Worklist** and open the **Decisions** tab.
    A full queue can hide a new proposal, so look for the subject you chose in step 3.
 8. Choose **Decide** and open the evidence. It shows the transcript lines the
    proposal was read from, word for word.
    Read them before you answer. A proposal is a reading of what somebody said,
    and the lines are how you check it.
-9. **Accept** to create the task, or **Reject**. An accepted proposal becomes an
+9. **Create task** to create the task, or **Reject**. An accepted proposal becomes an
    ordinary task on the contact and on their company.
 
 It does not send anything or create tasks without your approval. Reading the
@@ -391,8 +391,8 @@ transcript proposes next steps; accepting a proposal is what creates its task.
 
 Staged items show up where the work is:
 
-- **Home → Worklist**, filtered by **Work type → Approvals**. When nothing waits
-  it says "Nothing is waiting on you."
+- **Home → Worklist**, under the **Decisions** tab. When no decision waits it
+  says "No decisions waiting for you."
 - The agent panel's **Approvals** section.
 - A company page's **Pending approvals** card, and a deal page's **Awaiting
   approval** panel.

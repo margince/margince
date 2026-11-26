@@ -238,7 +238,7 @@ func (s RestoreSeam) decide(ctx context.Context, row AuditRow) (map[string]json.
 	// The evaluator has already refused an image that cannot be spelled in
 	// full, so anything unspellable here would be a disagreement between the
 	// two rather than a state to handle.
-	patch, _, err := filterImage(row.EntityType, row.Before)
+	patch, _, err := filterImage(row.EntityType, row.Before, row.After)
 	if err != nil {
 		return nil, err
 	}

@@ -83,11 +83,14 @@ class Transcript:
             self._cost = (self._cost or 0.0) + usage["cost"]
 
     def finish(self, is_error, text, turns):
+        """`turns` is the model's requests, or None when the driver reports no
+        such count; then the key is absent, so efficiency never reads a guess."""
         event = {
             "type": "result", "subtype": "error" if is_error else "success",
-            "is_error": is_error, "result": text, "num_turns": turns,
-            "total_cost_usd": self._cost,
+            "is_error": is_error, "result": text, "total_cost_usd": self._cost,
         }
+        if turns is not None:
+            event["num_turns"] = turns
         if self._measured:
             event["usage"] = dict(self._usage)
         self._emit(event)
@@ -126,7 +129,9 @@ def _codex_result_text(entry):
     text = "\n".join(
         block.get("text", "") for block in result.get("content") or () if block.get("type") == "text"
     )
-    return text, bool(result.get("isError"))
+    # codex drops the server's isError and marks the item failed instead,
+    # keeping the result, so a refused call reads as one only by its status.
+    return text, bool(result.get("isError")) or entry.get("status") == "failed"
 
 
 def _codex_item(out, entry):
@@ -200,7 +205,9 @@ def from_codex(lines, path, model, driver, offered):
         if not finished:
             out.finish(True, "HARNESS: codex stopped before its turn completed", 0)
             return 3
-        out.finish(False, answer, 1)
+        # codex exec counts the whole conversation as one turn and reports no
+        # count of model requests, so the run's turns are left unmeasured.
+        out.finish(False, answer, None)
         return 0
 
 
@@ -209,37 +216,31 @@ def from_codex(lines, path, model, driver, offered):
 # agy keeps under its own home, then calls it through call_mcp_tool. Any other
 # tool stops the run, so a Gemini verdict never rests on a file or web read.
 _AGY_RESOURCE_HELPERS = {"list_resources", "read_resource"}
-_AGY_SCHEMA_DIR = f"/mcp/{SERVER}/"
-# A long tool result is not put in the model's context: agy writes it to this
-# file of the conversation and the model reads it back.
-_AGY_SPILL = re.compile(r"/\.gemini/antigravity-cli/brain/([^/]+)/\.system_generated/steps/\d+/[a-z0-9_]+\.txt$")
 
 
-# The run's own folder holds nothing but the agent file, so a look into it
-# reads no answer; a look anywhere else stops the run.
+# A look may stay inside the run's own folder, which holds only the agent file,
+# and inside the run's agy home (clean.agy_home), which holds only what this run
+# wrote: tool schemas and long results agy kept out of the stream. A look
+# anywhere else, the home's keychain link included, stops the run.
 _AGY_LOOKS = {"read_file", "view_file", "list_dir", "find_by_name", "grep_search"}
 
 
-def _inside(workspace, params):
+def _agy_inside(roots, params):
     paths = [os.path.realpath(v) for v in params.values() if isinstance(v, str) and v.startswith("/")]
-    root = os.path.realpath(workspace) if workspace else ""
-    return bool(root and paths) and all(p == root or p.startswith(root + os.sep) for p in paths)
+    tops = [os.path.realpath(root) for root in roots if root]
+    return bool(tops and paths) and all(any(p == top or p.startswith(top + os.sep) for top in tops) for p in paths)
 
 
-def _agy_tool(out, step, conversation, workspace=""):
+def _agy_tool(out, step, conversation, workspace="", home=""):
     """Write one finished agy tool step; return why the run must stop, or ""."""
     name = step.get("tool_name")
     info = step.get("tool_info") or {}
     params = info.get("parameters") or {}
-    path = str(params.get("Path") or "")
-    if name in _AGY_LOOKS and _inside(workspace, params):
+    if name in _AGY_LOOKS and _agy_inside((workspace, home), params):
         return ""
-    if name == "read_file" and _AGY_SCHEMA_DIR in path:
-        return ""
-    spill = _AGY_SPILL.search(os.path.realpath(path)) if path else None
-    # Every step of this conversation is one the lane allows, since any other
-    # stops the run, so a file agy spilled for it holds nothing from outside.
-    if name == "read_file" and spill and conversation and spill.group(1) == conversation:
+    # A look that ended in an error read nothing, as a failed outside call below
+    # reached nothing; Gemini sometimes mangles the path of a schema file it reads.
+    if name in _AGY_LOOKS and step.get("state") == "ERROR":
         return ""
     if name in _AGY_RESOURCE_HELPERS and params.get("ServerName") == SERVER:
         return ""
@@ -254,11 +255,23 @@ def _agy_tool(out, step, conversation, workspace=""):
         if step.get("state") == "ERROR":
             text, is_error = str((info.get("error") or {}).get("message") or "the call failed"), True
         else:
-            text, is_error = str(info.get("output") or ""), False
+            text, is_error = str(info.get("output") or "") or _agy_spilled(home, conversation, step.get("step_index")), False
         out.tool_results([(call_id, text, is_error)])
         return ""
-    target = params.get("ServerName") or params.get("Path") or ""
+    # The arguments say what the model went outside for, which is the whole of
+    # the diagnosis when the prompt left something unclear.
+    target = params.get("ServerName") or params.get("Path") or json.dumps(params, ensure_ascii=False)[:300]
     return f"agy used a tool outside the lane's MCP server: {name} {target}".strip()
+
+
+def _agy_spilled(home, conversation, step_index):
+    """The long result agy kept out of the stream, read from the file it wrote."""
+    path = os.path.join(home, ".gemini", "antigravity-cli", "brain", conversation, ".system_generated",
+                        "steps", str(step_index), "output.txt")
+    if not home or not conversation or not os.path.isfile(path):
+        return ""
+    with open(path, encoding="utf-8", errors="replace") as handle:
+        return handle.read()
 
 
 def _agy_usage(usage):
@@ -273,13 +286,13 @@ def _agy_usage(usage):
     }
 
 
-def from_agy(lines, path, model, driver, offered, workspace=""):
+def from_agy(lines, path, model, driver, offered, workspace="", home=""):
     """Write an `agy -p --output-format stream-json` run as a transcript: 0 when it ran, 3 when not.
 
     agy's init lists its whole tool registry, not what the model was offered, so
     `offered` is the lane's own tools/list over the same passport.
     """
-    texts, conversation, result = {}, "", None
+    texts, conversation, result, responses = {}, "", None, set()
     with Transcript(path) as out:
         out.init(model, driver, "cli-default", "listed-by-lane", offered)
         for line in lines:
@@ -294,13 +307,15 @@ def from_agy(lines, path, model, driver, offered, workspace=""):
             conversation = conversation or event.get("conversation_id") or step.get("conversation_id") or ""
             kind, state = step.get("step_type"), step.get("state")
             if kind == "agent_response":
+                if state == "DONE":
+                    responses.add(step.get("step_index"))
                 texts[step.get("step_index")] = texts.get(step.get("step_index"), "") + (step.get("text_delta") or "")
                 # A step with no text is the model thinking before a tool call;
                 # the call itself is written as its own turn.
                 if state == "DONE" and texts.get(step.get("step_index")):
                     out.assistant(texts.pop(step.get("step_index")))
             elif step.get("tool_name") and state in ("DONE", "ERROR"):
-                stop = _agy_tool(out, step, conversation, workspace)
+                stop = _agy_tool(out, step, conversation, workspace, home)
                 if stop:
                     out.finish(True, f"HARNESS: {stop}", 0)
                     return 3
@@ -315,5 +330,7 @@ def from_agy(lines, path, model, driver, offered, workspace=""):
             out.finish(True, f"HARNESS: agy: {result.get('error') or result.get('status')}", 0)
             return 3
         out.add_usage(_agy_usage(result.get("usage") or {}))
-        out.finish(False, result.get("response") or "", result.get("num_turns") or 1)
+        # agy's num_turns counts the user's prompts; each finished agent
+        # response is one model request, the measure the other drivers give.
+        out.finish(False, result.get("response") or "", len(responses))
         return 0

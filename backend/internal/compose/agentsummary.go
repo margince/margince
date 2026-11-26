@@ -37,7 +37,9 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // summaryFieldLimit bounds how many body fields a summary enumerates. A
@@ -166,35 +168,31 @@ func createdUnder(r *http.Request) string {
 // a route with no verb has nothing better to say, and the old shape is at least
 // unambiguous to whoever has to debug it.
 func actPhrase(said approvalSummaryCopy, pol agentPolicy, method, path string) string {
+	phrase, _ := actParts(said, pol, method, path)
+	return phrase
+}
+
+func actParts(said approvalSummaryCopy, pol agentPolicy, method, path string) (string, *systemtext.Component) {
 	acts := said.acts
 	if pol.Tool == "" {
-		return fmt.Sprintf("%s (%s %s)", pol.Op, method, path)
+		return fmt.Sprintf("%s (%s %s)", pol.Op, method, path), nil
 	}
-	// Some verbs cover two acts a reader must tell apart: `enrich` is both a
-	// one-page read and a whole-site crawl. Only the operation tells them apart,
-	// so a phrase named for it wins.
-	if phrase, named := acts.operations[pol.Op]; named {
-		return phrase
+	if phrase, known := acts.operations[pol.Op]; known {
+		return phrase, systemtext.Sentence("act.operations." + pol.Op)
 	}
 	verb := strings.ReplaceAll(pol.Tool, "_", " ")
-	// Only the GENERIC verbs need the record type to mean anything: "update
-	// record" says nothing until it says which. Every other verb already names
-	// its own object — "send email" told against `activity` would read as
-	// "Send email: activity", which is worse than the verb alone.
 	if pol.RecordType == "" || !genericVerbs[pol.Tool] {
 		if phrase, known := acts.verbs[pol.Tool]; known {
-			return phrase
+			return phrase, systemtext.Sentence("act.verbs." + pol.Tool)
 		}
-		return upperFirst(verb)
+		return upperFirst(verb), nil
 	}
-	// The record noun is the tool door's own (agents.RecordNoun), so a translated
-	// card names a record type as the tool door does; English alone differs, the
-	// tool door printing the wire type and this door reading it aloud.
 	noun := agents.RecordNoun(said.lang, string(pol.RecordType))
-	if frame, framed := acts.recordFrames[pol.Tool]; framed {
-		return fmt.Sprintf(frame, noun)
+	if frame, known := acts.recordFrames[pol.Tool]; known {
+		component := systemtext.Sentence("act.frames."+pol.Tool, systemtext.Reference("public_noun."+string(pol.RecordType), agents.RecordNoun(textlang.English, string(pol.RecordType))))
+		return fmt.Sprintf(frame, noun), component
 	}
-	return fmt.Sprintf("%s %s", upperFirst(verb), noun)
+	return fmt.Sprintf("%s %s", upperFirst(verb), noun), nil
 }
 
 // opPhrases names the acts whose VERB is not enough to tell them apart.
@@ -203,16 +201,7 @@ func actPhrase(said approvalSummaryCopy, pol agentPolicy, method, path string) s
 // the contract declares and what the policy carries, and a route pattern would
 // be a second spelling of it. Held by TestNoTwoStageableActsShareAHeadline,
 // which fails when a new pair collides.
-var opPhrases = map[string]string{
-	opScrapeCompany:          "Read this company's website",
-	opDeepReadCompany:        "Read this company's whole site",
-	opTechnicalEnrichCompany: "Look up what this company publicly runs",
-	// "Merge tags" alone reads as reversible, which this is not, and the head is
-	// the half a triaging approver reads first. This head is the fallback line,
-	// used when the resolver has none. It cannot name the routed tag, the word
-	// being RETIRED, so it says what the act costs instead.
-	opMergeTags: "Fold one tag into another and release its name",
-}
+var opPhrases = systemtext.ActWords(textlang.English, "operations")
 
 // The operations whose headline this file names.
 //
@@ -310,4 +299,15 @@ func summaryValue(said approvalSummaryCopy, raw json.RawMessage) string {
 
 func truncateValue(s string) string {
 	return textcut.BytesMarked(s, summaryValueLimit, "…")
+}
+
+func stagedSentenceMetadata(info agents.StageInfo, parts crmcontracts.ApprovalSummaryParts, said approvalSummaryCopy, pol agentPolicy, r *http.Request) *systemtext.Message {
+	if parts.Sentence != info.Summary {
+		_, component := actParts(said, pol, r.Method, r.URL.Path)
+		if component == nil {
+			return nil
+		}
+		return &systemtext.Message{Subject: component}
+	}
+	return info.SystemText
 }

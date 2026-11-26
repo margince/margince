@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "roles",
+  "verb": "list_roles",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

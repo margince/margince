@@ -89,6 +89,10 @@ each audit row it writes on another record carries `released_by_approval_id` in 
 approval's own rows are the decision and carry no link. That link is how a receipt finds the values
 its approval moved.
 
+An agent tool call runs under `storekit.WithStatedReason`, so each audit row it writes carries the
+reason the agent gave as `stated_reason` in `evidence`. **Done for you** shows that reason as the
+line's why.
+
 **Safe updates.** A by-id UPDATE of a row with a version never uses an `UPDATE` alone; it goes
 through `storekit.Patch`:
 
@@ -136,6 +140,25 @@ The background task uses each earlier proof as its last entry to erase. Its new 
 payload erasure on that proof, so later allowed edits keep their values and history.
 A task for linked copies names one audit row. Its proof keeps the domain boundary fixed.
 It removes the first request audit entry's private values last, after that entry has guided the other changes.
+
+**The credential repair.** A password that reached a mail before the masking rules sits in the
+audit images of every edit to that mail. No live writer reaches it.
+`storekit.MaskRecordAuditImagesTx` masks it there.
+
+The trigger admits that change only while `margince.audit_credential_mask` is set. The same
+transaction must first write a system `update` row for that record. That row has no images and
+carries the flag `audit_credentials_masked`.
+
+The trigger also limits the change to the record types the masking
+rules reach. Nothing outside `before` and `after` may move, and an image keeps its keys and shape.
+Each string it changes must be the old string with spans replaced by the mask marker. A mail under a
+statutory hold keeps its trail.
+The trigger is in [the repair's migration](../../backend/migrations/core/1794348833_the_credential_repair_may_rewrite_an_audit_image.up.sql).
+
+**Growth.** The table keeps every row for good. No retention rule deletes a row or removes its
+personal values because the row is old. No job passes the guard that stops rows from changing. A row is about 600 bytes with
+its indexes, one for each change to a record. An operator who needs the disk space copies old rows to
+storage outside the product.
 
 The actor columns mirror the envelope's `Actor` (see *The envelope*): the same kinds of actor. A
 fitness test keeps the two in step, so a new kind cannot reach the bus and break the mirror.
@@ -274,7 +297,7 @@ time reports it.
 | `cg:notice-case-open` | open, and later end, the case for what the installation owes a contact it learned of without asking them | **live** |
 | `cg:approval-notify` | on `approval.requested`, put the card in the queue of the one member it names | **live** (worker) |
 | `cg:approval-notice-retract` | on a decided or timed-out card, take back the lines it put in other seats' queues | **live** |
-| `cg:overnight-agent` | on `approval.decided`, start again the waiting Surface-B run with the human's answer | **live** (worker; only when a model is set up) |
+| `cg:overnight-agent` | on `approval.decided`, start again the waiting run of a night helper with the human's answer | **live** (worker; only when a model is set up) |
 | `cg:workflows` | start the workflow engine on matching events | **live** (worker) |
 | `cg:webhooks` | send subscribed events to outbound endpoints | **live** (the relay inside the API) |
 | `cg:capture` | (reserved) | declared, no subscriber |
@@ -312,6 +335,22 @@ to keep events. The stream is capped by a count (`MAXLEN ~`), not by a time, so 
 rate an event can stay longer. A consumer that takes it back after its dedupe entry timed out runs the
 handler again, and the key layer makes that run do nothing.
 
+A group may declare the event types its handler acts on (`Group.Types`). The subscriber acks every
+other entry before `Dedupe` runs, in one `XACK` for each read, so such an entry leaves no mark. The
+handler tests its input against the same set. `TestEveryHandlerIgnoresTheTypesItsGroupLeavesOut` in
+`backend/gates/consumergrouptypes_test.go` feeds each handler every type its group leaves out. A
+group with no list gets every type on its streams.
+
+An event can name a record that is gone by the time a handler reads it. Clearing all data from the
+admin page can leave such an event behind, and so can a delete. A handler that finds its record
+missing returns `events.ErrUnactionable`, never a plain error. The subscriber acks that entry once,
+with one ERROR log. A plain error leaves the entry pending, so it comes back on every pass.
+
+An archived record is not a missing one. Some work is still owed once the record is restored, such
+as commission on a won deal. For that work the handler reads the archived row. A handler never keeps
+an entry pending until a restore, because a record can stay archived for good.
+`events.UnactionableIfGone` turns a store's `ErrNotFound` into `ErrUnactionable`.
+
 ---
 
 ## 6. Correlation & causation (the trace)
@@ -319,10 +358,10 @@ handler again, and the key layer makes that run do nothing.
 The `Trace` on every envelope lets you build one request or run back up as a single story:
 
 - **`correlation_id`** groups every event that one request or run starts. The HTTP middleware makes it
-  **once** per HTTP request (`internal/platform/httpserver/chassis.go`:
-  `principal.WithCorrelationID(r.Context(), ids.NewV7())`), and once per agent run
-  (`compose/runnerservice.go`). A background job that emits events must bind its own, since `Emit`
-  fails without one. It binds it together with the actor, through
+  **once** per HTTP request (`internal/platform/httpserver/chassis.go`) and returns it in `X-Request-Id`
+  ([trace-a-request.md](../how-to/trace-a-request.md)). It ignores a client-supplied value. Each agent run binds one too (`compose/runnerservice.go`).
+  A background job that emits events must bind its own, since `Emit` fails without one.
+  It binds it together with the actor, through
   `principal.SystemActing(ctx, "system:<pass>")`.
 
   The pass names itself, so a reader can tell its audit rows from those of other passes. The two go
@@ -380,15 +419,10 @@ It gives two things, and the second one counts more:
   that closed between lane 3 and lane 11 shows in one and not the other, and nothing on the response
   says so.
 
-**The snapshot is read-write, because these reads write.** The brief lane shows again what a user
-put off, once its time comes, and it records the open as it reads. Under a read-only snapshot each
-such write would have to open its own transaction, which it can only do *while the snapshot is
-still held*. Every request would then hold two connections from the pool at once.
-
-At `MaxConns` 16, that many readers at once wait on each other for one more connection, which
-breaks one transaction per request. Joined, those
-writes go with the page: committed with the built day, or not at all. That is also the right
-reading of them, because a brief whose page never showed is not opened.
+**The brief lane writes nothing.** A snooze whose time has come is judged at the time of the
+read, and no row is changed. The open is recorded only by `GET /v1/brief` and the
+`read_brief` tool, in a transaction of their own once the brief is handed over. The snapshot is
+still opened read-write, because one lane locks the base-currency row inside it.
 
 **`Detached` keeps a failing call off the page.** It is for a call that must not take
 the page down with it when it fails. A joined statement that fails puts the shared transaction in an error state. A caller that

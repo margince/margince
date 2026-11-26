@@ -125,6 +125,23 @@ func TestANamedTypeTheCallerCannotReadIsRefused(t *testing.T) {
 	}
 }
 
+func TestExcludedIdsReachTheEngineAndABadOneIsRefused(t *testing.T) {
+	skip := ids.NewV7()
+	engine := &rankingProbe{}
+	if _, err := searchRecordsOver(nil, engine).Handle(searchReader("contact"),
+		json.RawMessage(`{"q":"Acme","exclude_ids":["`+skip.String()+`"]}`)); err != nil {
+		t.Fatal(err)
+	}
+	if got := engine.asked.Exclude; len(got) != 1 || got[0] != skip {
+		t.Errorf("the engine was asked to exclude %v, want [%v]", got, skip)
+	}
+	_, err := searchRecordsOver(nil, &rankingProbe{}).Handle(searchReader("contact"),
+		json.RawMessage(`{"q":"Acme","exclude_ids":["not-an-id"]}`))
+	if badArgs, ok := errors.AsType[*BadArgsError](err); !ok || badArgs.Field != "exclude_ids" {
+		t.Errorf("a malformed id → %v, want a refusal of exclude_ids", err)
+	}
+}
+
 func TestTheArgumentsReachTheEngine(t *testing.T) {
 	perType := 3
 	for _, tc := range []struct {
@@ -299,5 +316,20 @@ func TestANearMatchIsReadBackAndANoteSaysItIsNoMatch(t *testing.T) {
 	}
 	if strings.Contains(string(raw), "Gone Kowalczyk") {
 		t.Errorf("an unreadable near match leaked: %s", raw)
+	}
+}
+
+func TestATypeThatRanOutOfTimeLowersCoverage(t *testing.T) {
+	engine := &rankingProbe{page: RecordSearchPage{TypesWithMore: []string{}, TypesTimedOut: []string{"activity"}}}
+	raw, err := searchRecordsOver(nil, engine).Handle(searchReader(), json.RawMessage(`{"q":"Acme","per_type":2}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := searchedPage(t, raw)
+	if page.Coverage != CoveragePartialDegraded || !hasNote(page.Notes, CodeTypesTimedOut) || len(page.Notes) != 1 {
+		t.Errorf("coverage %q with notes %+v, want partial_degraded and one types_timed_out note", page.Coverage, page.Notes)
+	}
+	if page.TypesTimedOut == nil || len(*page.TypesTimedOut) != 1 || (*page.TypesTimedOut)[0] != "activity" {
+		t.Errorf("types_timed_out = %v, want [activity]", page.TypesTimedOut)
 	}
 }

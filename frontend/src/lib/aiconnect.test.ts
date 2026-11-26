@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { type Locale, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -6,11 +7,11 @@ import {
   AI_PLACES,
   AI_PLANS,
   AI_TOOLS,
-  adminGuide,
   CLI_PATHS,
   CONNECT_PATHS,
   connectPath,
 } from "./aiconnect";
+import { adminGuide } from "./aiconnectguide";
 
 const URL_FROM_SERVER = "https://crm.acme.test/mcp";
 const translatorFor =
@@ -34,7 +35,7 @@ describe("AI connect paths", () => {
     const unavailable = Object.entries(CONNECT_PATHS).filter(
       ([, path]) => path.unavailable !== undefined,
     );
-    expect(unavailable.map(([id]) => id).sort()).toEqual(["copilot-own"]);
+    expect(unavailable.map(([id]) => id).sort(stable)).toEqual(["copilot-own"]);
     for (const [, path] of unavailable) {
       expect(path.steps).toEqual([]);
       expect(path.admin).toBeUndefined();
@@ -42,7 +43,7 @@ describe("AI connect paths", () => {
     }
   });
 
-  it("gives every available path one to three steps for the reader", () => {
+  it("gives every available path two to four steps for the reader", () => {
     for (const path of Object.values(CONNECT_PATHS)) {
       if (path.unavailable === undefined) {
         expect(path.steps.length).toBeGreaterThanOrEqual(1);
@@ -55,7 +56,7 @@ describe("AI connect paths", () => {
     const pasting = Object.entries(CONNECT_PATHS).filter(
       ([, path]) => path.pasteAfter !== undefined,
     );
-    expect(pasting.map(([id]) => id).sort()).toEqual([
+    expect(pasting.map(([id]) => id).sort(stable)).toEqual([
       "chatgpt-own",
       "claude-own",
       "gemini-own",
@@ -76,6 +77,7 @@ describe("AI connect paths", () => {
       "antigravity.google",
       "visualstudio.com",
       "cursor.com",
+      "proton.me",
     ];
     const links = [
       ...Object.values(CONNECT_PATHS).map((path) => path.help),
@@ -105,6 +107,7 @@ describe("AI connect paths", () => {
       "visual-studio",
       "cursor",
       "antigravity",
+      "lumo",
     ]);
     expect(copies).toEqual([
       [
@@ -119,14 +122,15 @@ describe("AI connect paths", () => {
       [
         '{ "mcpServers": { "margince": { "serverUrl": "https://crm.acme.test/mcp" } } }',
       ],
+      [],
     ]);
   });
 
-  it("gives every local tool something to copy, and one to three steps", () => {
+  it("gives every local tool something to copy, and two to four steps", () => {
     for (const path of CLI_PATHS) {
       expect(path.steps.some((step) => step.copy !== undefined)).toBe(true);
       expect(path.steps.length).toBeGreaterThanOrEqual(2);
-      expect(path.steps.length).toBeLessThanOrEqual(3);
+      expect(path.steps.length).toBeLessThanOrEqual(4);
     }
   });
 });
@@ -141,9 +145,9 @@ describe("which AI, and where", () => {
     const locals = routes.flatMap((place) =>
       place.route.kind === "local" ? [place.route.cli] : [],
     );
-    expect([...new Set(apps)].sort()).toEqual([...AI_TOOLS].sort());
-    expect([...new Set(locals)].sort()).toEqual(
-      CLI_PATHS.map((path) => path.id).sort(),
+    expect([...new Set(apps)].sort(stable)).toEqual([...AI_TOOLS].sort(stable));
+    expect([...new Set(locals)].sort(stable)).toEqual(
+      CLI_PATHS.map((path) => path.id).sort(stable),
     );
   });
 
@@ -165,6 +169,7 @@ describe("which AI, and where", () => {
         copilot: ["app:copilot", "local:vscode", "local:visual-studio"],
         gemini: ["app:gemini", "local:antigravity"],
         cursor: ["local:cursor"],
+        lumo: ["local:lumo"],
         other: [],
       },
     );

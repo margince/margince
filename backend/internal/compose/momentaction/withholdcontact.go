@@ -12,13 +12,14 @@ import (
 
 // WithholdContact adds the contact's attach rights to the shared action gate.
 func WithholdContact(ctx context.Context, language string, moment *crmcontracts.ContactMoment, attachable bool) {
-	Withhold(ctx, language, moment)
+	Withhold(ctx, language, "contact", moment)
 	if attachable {
 		return
 	}
 	reason := langcopy.For(language).Say(blockedWords.ReadOnlyContact)
 	block := func(action *crmcontracts.ContactMomentAction) {
-		if action.Destination == nil {
+		// Dialing writes nothing, so a read-only contact can still be called.
+		if action.Destination == nil || action.Kind == crmcontracts.ContactMomentActionKindCall {
 			return
 		}
 		switch action.Destination.Surface {

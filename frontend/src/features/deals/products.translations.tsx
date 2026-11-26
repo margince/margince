@@ -16,6 +16,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 
 type Product = components["schemas"]["Product"];
 type Translation = components["schemas"]["ProductTranslation"];
@@ -137,7 +138,7 @@ export function ProductTranslationsDialog({
               <TextInput
                 {...control}
                 required
-                maxLength={500}
+                maxLength={TEXT_LIMITS.label}
                 value={draft.name}
                 onChange={(event) => set("name")(event.target.value)}
               />
@@ -148,7 +149,7 @@ export function ProductTranslationsDialog({
               <Textarea
                 {...control}
                 rows={3}
-                maxLength={4000}
+                maxLength={TEXT_LIMITS.document}
                 value={draft.description}
                 onChange={(event) => set("description")(event.target.value)}
               />

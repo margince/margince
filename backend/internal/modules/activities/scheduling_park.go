@@ -29,6 +29,9 @@ import (
 const (
 	attentionDeliveryFailed       = string(crmcontracts.MeetingInvitationAttentionReasonDeliveryFailed)
 	attentionCalendarDisconnected = string(crmcontracts.MeetingInvitationAttentionReasonCalendarDisconnected)
+	// AttentionReminderRefused is the notice a host gets when the send rules
+	// stop their meeting reminder. It is a notice only, never a parked state.
+	AttentionReminderRefused = "reminder_refused"
 )
 
 // InvitationAttention tells a host that an invitation of theirs waits for them,
@@ -50,6 +53,10 @@ func calendarAuthFailure(err error) bool {
 	if errors.Is(err, connector.ErrAuthRejected) {
 		return true
 	}
+	return isCalendarNotConnected(err)
+}
+
+func isCalendarNotConnected(err error) bool {
 	refusal, ok := errors.AsType[*SchedulingArgumentError](err)
 	return ok && *refusal == calendarNotConnected
 }

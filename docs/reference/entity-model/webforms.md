@@ -6,7 +6,7 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 
 ## web_form
 
-23 columns · primary key `(id)` · referenced by 1 foreign key
+25 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -17,8 +17,10 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 | `consent_wording` | `text` |  | The consent wording the form shows, written on each lead's timeline as evidence. |
 | `field_map` | `jsonb`, default `'{}'::jsonb` | yes | The sender's field names mapped to lead fields, for names the defaults do not already read. |
 | `form_key` | `text` | yes | The last segment of the intake address. |
+| `handling_automation_id` | `uuid` |  | Reviewed inquiry policy. |
+| `handling_cutover_at` | `timestamp with time zone` |  | When the handling reference last changed; completed submissions retain their original handling. |
 | `lead_origin` | `text` |  | The `/lead-origins` key every lead from this form carries. |
-| `name` | `text` | yes | At most 200 characters. |
+| `name` | `text` | yes |  |
 | `owner_id` | `uuid` |  | Who owns the leads this form creates; null leaves them in the unassigned queue. |
 | `privacy_notice` | `text` |  | The privacy notice the form shows under it at the point of collection, such as what the details are used for. |
 | `privacy_notice_url` | `text` |  | The https address of the privacy policy the notice links to. |
@@ -38,6 +40,7 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `handling_automation_id` | `automation` | the parent cannot be deleted while this row points at it |
 | `lead_origin` | `lead_origin` | deleting the parent keeps this row and clears the link |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `product_id` | `product` | the parent cannot be deleted while this row points at it |
@@ -49,7 +52,7 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 - `web_form_field_map_object`: `CHECK ((jsonb_typeof(field_map) = 'object'))`
 - `web_form_form_key_key`: `UNIQUE (form_key)`
 - `web_form_key_shape`: `CHECK ((form_key ~ '^[A-Za-z0-9_-]{16,64}$'))`
-- `web_form_name_present`: `CHECK (((length(btrim(name)) > 0) AND (length(name) <= 200)))`
+- `web_form_name_present`: `CHECK ((length(btrim(name)) > 0))`
 - `web_form_privacy_notice_bounded`: `CHECK (((privacy_notice IS NULL) OR (length(privacy_notice) <= 500)))`
 - `web_form_privacy_notice_url_https`: `CHECK (((privacy_notice_url IS NULL) OR ((privacy_notice_url ~* '^https://[^/?#:@][^/?#@]*([/?#]|$)') AND (length(privacy_notice_url) <= 2000))))`
 - `web_form_redirect_https`: `CHECK (((redirect_url IS NULL) OR (redirect_url ~ '^https://')))`
@@ -63,11 +66,14 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 - `idx_web_form_lead_origin`: `btree (lead_origin) WHERE (lead_origin IS NOT NULL)`
 - `idx_web_form_owner`: `btree (owner_id) WHERE (owner_id IS NOT NULL)`
 - `web_form_form_key_key`: `unique, btree (form_key)`
+- `web_form_handling_automation`: `unique, btree (handling_automation_id) WHERE (handling_automation_id IS NOT NULL)`
 - `web_form_pkey`: `unique, btree (id)`
 - `web_form_product_idx`: `btree (product_id) WHERE (product_id IS NOT NULL)`
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "state": 20000, "sender": 20000, "form_key": 20000, "secret_ref": 20000, "captured_by": 20000, "lead_origin": 20000, "redirect_url": 20000, "privacy_notice": 500, "allowed_origins": 20000, "consent_wording": 2000, "success_message": 500, "consent_policy_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"allowed_origins":20000,"captured_by":20000,"consent_policy_version":20000,"consent_wording":2000,"form_key":20000,"lead_origin":20000,"name":120,"privacy_notice":500,"redirect_url":20000,"secret_ref":20000,"sender":20000,"state":20000,"success_message":500}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "state": 20000, "sender": 20000, "form_key": 20000, "secret_ref": 20000, "captured_by": 20000, "lead_origin": 20000, "redirect_url": 20000, "privacy_notice": 500, "allowed_origins": 20000, "consent_wording": 2000, "success_message": 500, "consent_policy_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"allowed_origins":20000,"captured_by":20000,"consent_policy_version":20000,"consent_wording":2000,"form_key":20000,"lead_origin":20000,"name":120,"privacy_notice":500,"redirect_url":20000,"secret_ref":20000,"sender":20000,"state":20000,"success_message":500}')`
 - `trg_web_form_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 - `web_form_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state = 'active')))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 

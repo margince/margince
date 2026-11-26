@@ -10,6 +10,7 @@ import {
   StoryProviders,
 } from "../testing/story-utils";
 import { MeetingOutcome } from "./meetingoutcome";
+import { MeetingOutcomeDialog } from "./meetingoutcome.dialog";
 
 // Canceling writes at once; saying how a meeting went opens the composer bound to it.
 
@@ -38,7 +39,9 @@ const CAPTURED_MEETING = {
 function stubRoutes(meeting: unknown = CAPTURED_MEETING): void {
   installFetchStub({
     "GET /me": () =>
-      jsonResponse(meFixture({ allow: { activity: ["read", "update"] } })),
+      jsonResponse(
+        meFixture({ allow: { activity: ["read", "update", "create"] } }),
+      ),
     [`GET /activities/${MEETING_ID}`]: () => jsonResponse(meeting),
     [`PATCH /activities/${MEETING_ID}`]: () =>
       jsonResponse({ ...CAPTURED_MEETING, version: 4 }),
@@ -116,6 +119,59 @@ export const ComposerOpen: Story = {
   play: openComposer,
 };
 
+export const NotesDialogDirect: Story = {
+  render: () => {
+    stubRoutes();
+    return (
+      <StoryProviders>
+        <MeetingOutcomeDialog
+          id={MEETING_ID}
+          title="Discovery call with Turbinenbau"
+          invalidateKeys={[]}
+          mode="edit"
+          onClose={() => undefined}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
+/** "It happened": the notes above the next step, seeded from the meeting. */
+export const HeldDialog: Story = {
+  render: () => {
+    stubRoutes();
+    return (
+      <StoryProviders>
+        <MeetingOutcomeDialog
+          id={MEETING_ID}
+          title="Discovery call with Turbinenbau"
+          invalidateKeys={[]}
+          mode="held"
+          onClose={() => undefined}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
+/** "Edit notes" on a meeting already held: the notes alone. */
+export const HeldNotesDialog: Story = {
+  render: () => {
+    stubRoutes({ ...CAPTURED_MEETING, meeting_status: "held" });
+    return (
+      <StoryProviders>
+        <MeetingOutcomeDialog
+          id={MEETING_ID}
+          title="Discovery call with Turbinenbau"
+          invalidateKeys={[]}
+          mode="notes"
+          onClose={() => undefined}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
 /**
  * A MEETING THAT CARRIES NO NOTES, which is the ordinary case for one booked
  * from a bare calendar invitation: the body box stands empty and the reader
@@ -177,4 +233,29 @@ export const CalendarManaged: Story = {
     ).not.toBeInTheDocument();
     await openComposer?.(context);
   },
+};
+
+export const HeldNextStep: Story = {
+  ...ThreeVerbs,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", {
+        name: "It happened: Discovery call with Turbinenbau",
+      }),
+    );
+    const dialog = await within(document.body).findByRole("dialog");
+    await userEvent.click(
+      within(dialog).getByRole("checkbox", { name: "Add a follow-up task" }),
+    );
+    await userEvent.type(
+      within(dialog).getByRole("textbox", { name: "Next step" }),
+      "Send revised quote",
+    );
+  },
+};
+
+export const HeldNextStepDark: Story = {
+  ...HeldNextStep,
+  globals: { theme: "dark" },
 };

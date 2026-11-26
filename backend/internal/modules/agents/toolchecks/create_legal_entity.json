@@ -1,0 +1,6 @@
+{
+  "verb": "create_legal_entity",
+  "checks": [
+    "legal_entity.create"
+  ]
+}

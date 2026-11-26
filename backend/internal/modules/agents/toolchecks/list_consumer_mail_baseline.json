@@ -1,0 +1,6 @@
+{
+  "verb": "list_consumer_mail_baseline",
+  "checks": [
+    "capture_settings.read"
+  ]
+}

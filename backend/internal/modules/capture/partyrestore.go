@@ -31,7 +31,7 @@ func RestorePartySourceTx(ctx context.Context, tx pgx.Tx, in PartySourceOriginal
 	var attested bool
 	err := tx.QueryRow(ctx, `SELECT a.counterparty_outbound_attested FROM activity a
  WHERE a.id=@activity AND split_part(a.captured_by,':',2)=@provider
- AND `+auth.ConnectorSeatSQL("a")+`=@owner FOR SHARE`, pgx.NamedArgs{partyActivityArg: in.Activity, partyProviderArg: in.Provider, "owner": in.User.String()}).Scan(&attested)
+ AND `+auth.ConnectorSeatSQL("a")+`=@owner FOR SHARE`, pgx.NamedArgs{partyActivityArg: in.Activity, sqlArgProvider: in.Provider, "owner": in.User.String()}).Scan(&attested)
 	if err != nil {
 		return err
 	}
@@ -55,6 +55,6 @@ func MarkPartySourceReplayedTx(ctx context.Context, tx pgx.Tx, activity ids.Acti
 }
 
 func markPartySourceKnownTx(ctx context.Context, tx pgx.Tx, activity ids.ActivityID, outcome string) error {
-	_, err := tx.Exec(ctx, `INSERT INTO capture_party_source_replay(activity_id,outcome) VALUES(@activity,@outcome) ON CONFLICT(activity_id) DO NOTHING`, pgx.NamedArgs{partyActivityArg: activity, "outcome": outcome})
+	_, err := tx.Exec(ctx, `INSERT INTO capture_party_source_replay(activity_id,outcome) VALUES(@activity,@outcome) ON CONFLICT(activity_id) DO NOTHING`, pgx.NamedArgs{partyActivityArg: activity, fieldOutcome: outcome})
 	return err
 }

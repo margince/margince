@@ -17,6 +17,7 @@ import {
   type LocaleEntry,
   listedUnitCopy,
 } from "../../scripts/lib/locale-catalogs";
+import { stable } from "../../src/format/collate";
 import { en } from "../../src/i18n/en";
 import {
   type CensusRule,
@@ -186,7 +187,7 @@ const REFLEXIVE = word("(?:chính|tự|một) mình", "giu");
 const SENTENCE_OPENS = /(?:[.?:]\s|\n|[“(]|\}\s)$/;
 
 function placeholderSet(value: string): string {
-  return (value.match(/\{\w+\}/g) ?? []).sort().join();
+  return (value.match(/\{\w+\}/g) ?? []).sort(stable).join();
 }
 
 function lettersOf(value: string): string {
@@ -202,7 +203,7 @@ export type Voices = Readonly<{
   agentSpeaks: string;
   controllerSpeaks: string;
   spokenByTheReader: ReadonlySet<string>;
-  spokenByTheReaderPrefix: string;
+  spokenByTheReaderPrefixes: readonly string[];
   readByAnOutsider: readonly string[];
   serverWorded: ReadonlySet<string>;
 }>;
@@ -213,16 +214,14 @@ function voicesIn(tree: CensusTree): Voices {
     agentSpeaks: declaredString(gate, "AGENT_SPEAKS_PREFIX"),
     controllerSpeaks: declaredString(gate, "CONTROLLER_SPEAKS_PREFIX"),
     spokenByTheReader: new Set(declaredStrings(gate, "SPOKEN_BY_THE_READER")),
-    spokenByTheReaderPrefix: declaredString(
+    spokenByTheReaderPrefixes: declaredStrings(
       gate,
-      "SPOKEN_BY_THE_READER_PREFIX",
+      "SPOKEN_BY_THE_READER_PREFIXES",
     ),
-    // German's Sie families, plus the public booking form a guest fills in,
-    // which Vietnamese alone addresses as an outsider.
-    readByAnOutsider: [
-      ...declaredStrings(parsedAt(tree, germanCatalogs), "READ_BY_AN_OUTSIDER"),
-      "book.",
-    ],
+    readByAnOutsider: declaredStrings(
+      parsedAt(tree, germanCatalogs),
+      "READ_BY_AN_OUTSIDER",
+    ),
     serverWorded: serverWordedKeys(),
   };
 }
@@ -238,7 +237,7 @@ export function copyFindings(
   const ordinary = keptCompounds(cells, retired);
   const spokenByTheReader = (key: string) =>
     voices.spokenByTheReader.has(key) ||
-    key.startsWith(voices.spokenByTheReaderPrefix);
+    voices.spokenByTheReaderPrefixes.some((prefix) => key.startsWith(prefix));
   const readByAnOutsider = (key: string) =>
     voices.readByAnOutsider.some((prefix) => key.startsWith(prefix));
   const catalogOf = (source: string): Catalog =>

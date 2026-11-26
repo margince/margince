@@ -127,8 +127,14 @@ export function usePortalPanelFocus({
       if (active !== stops[stops.length - 1]) {
         return;
       }
+      // With no stop after the trigger, the browser's own Tab runs from it.
+      const next = besideTheTrigger(trigger.current, panel.current);
+      if (!next) {
+        trigger.current?.focus();
+        return;
+      }
       event.preventDefault();
-      afterTheTrigger(trigger.current, panel.current)?.focus();
+      next.focus();
     },
     [panel, trigger],
   );
@@ -147,7 +153,7 @@ function insideADialog(trigger: HTMLElement | null): boolean {
   return trigger?.closest('[role="dialog"][aria-modal="true"]') != null;
 }
 
-function stopsIn(panel: HTMLElement | null): HTMLElement[] {
+export function stopsIn(panel: HTMLElement | null): HTMLElement[] {
   return panel ? [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)] : [];
 }
 
@@ -157,16 +163,21 @@ function stopsIn(panel: HTMLElement | null): HTMLElement[] {
 // The panel's own stops are excluded: it sits at the body, usually after
 // everything else, so a walk that counted them would send a reader from the end
 // of the panel back into its own beginning.
-function afterTheTrigger(
+export function besideTheTrigger(
   trigger: HTMLElement | null,
   panel: HTMLElement | null,
+  step: 1 | -1 = 1,
 ): HTMLElement | null {
   if (!trigger) {
     return null;
   }
-  const page = [
-    ...trigger.ownerDocument.body.querySelectorAll<HTMLElement>(FOCUSABLE),
-  ].filter((stop) => !panel?.contains(stop));
+  const dialog = trigger.closest<HTMLElement>(
+    '[role="dialog"][aria-modal="true"]',
+  );
+  const root = dialog ?? trigger.ownerDocument.body;
+  const page = [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
+    (stop) => !panel?.contains(stop),
+  );
   const here = page.indexOf(trigger);
   // A trigger the walk cannot find is one that is itself unfocusable — a
   // `disabled` attribute arriving with the panel still up. Nothing follows it
@@ -174,5 +185,9 @@ function afterTheTrigger(
   if (here < 0) {
     return null;
   }
-  return page[here + 1] ?? null;
+  return (
+    page[here + step] ??
+    (dialog ? page[step === 1 ? 0 : page.length - 1] : null) ??
+    null
+  );
 }

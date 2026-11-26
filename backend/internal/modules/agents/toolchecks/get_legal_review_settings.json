@@ -1,0 +1,6 @@
+{
+  "verb": "get_legal_review_settings",
+  "checks": [
+    "installation_settings.read"
+  ]
+}

@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/capturehealth"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/commissions"
@@ -55,7 +56,7 @@ func NewProviderFor(db *database.DB) *Provider {
 	return &Provider{
 		// The fieldcatalog seam mirrors the HTTP wiring (server.go): the
 		// MCP surface's record verbs carry cf_* values too.
-		contacts: withContactMergeCarriers(db, contacts.NewProvider(db)).
+		contacts: withContactMergeCarriers(db, contacts.NewProvider(db).WithConsumerMail(capture.MatcherTx)).
 			WithDealOpener(leadDealOpener{deals: deals.NewStore(db, DealsInstallation())}).
 			WithFieldCatalog(customfields.NewService(pool, nil)).
 			WithShareRequests(contactShareRequests(pool)).
@@ -63,7 +64,7 @@ func NewProviderFor(db *database.DB) *Provider {
 			WithInstallationRenamer(installationRenamer(pool)),
 		deals:       deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
 		projects:    projects.ProviderOver(ProjectsStoreOver(db)),
-		activities:  activities.NewProvider(InstallationDB(pool)).WithIdentityProver(capture.ProvedUnambiguouslyTx).WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).WithTaskRecommendation(taskRecommendationReader(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).WithRecordZone(installationZoneTx),
+		activities:  activities.NewProvider(InstallationDB(pool)).WithMeetingNotesAccess(capturehealth.MeetingNotesAccess{}).WithIdentityProver(capture.ProvedUnambiguouslyTx).WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).WithTaskRecommendation(taskRecommendationReader(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).WithRecordZone(installationZoneTx).WithLeadQualifyTasks(newLeadWorkTasks(db, slog.Default())),
 		commissions: commissions.NewProvider(db),
 		dealRooms:   dealrooms.NewProvider(db),
 		reports:     newReportEngine(pool),

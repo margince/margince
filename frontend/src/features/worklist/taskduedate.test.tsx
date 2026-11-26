@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The picker can also move a deadline to a specific day.
+// The picker moves a deadline to a specific day and time, sent together by
+// its Move button.
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -14,7 +15,11 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TaskQuickActions, useTaskUpdate } from "../../components/taskactions";
+import {
+  TaskDueDatePick,
+  TaskQuickActions,
+  useTaskUpdate,
+} from "../../components/taskactions";
 import { LocaleProvider } from "../../i18n";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 
@@ -35,8 +40,13 @@ const DUE_AT = "2026-09-01T21:59:59.000Z";
 
 let sent: unknown[] = [];
 
+// The reader's now: a week before the task is due, so the days picked below
+// lie ahead of it.
+const NOW = new Date("2026-08-25T08:00:00Z");
+
 beforeEach(() => {
   sent = [];
+  vi.setSystemTime(NOW);
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -68,15 +78,18 @@ const TASK_VERSION = 3;
 function renderVerbs(dueAt?: string | null, dueHasTime = false) {
   function Harness() {
     const update = useTaskUpdate([["tasks"]]);
+    const task = {
+      activityId: TASK,
+      version: TASK_VERSION,
+      dueAt,
+      dueHasTime,
+      update,
+    };
     return (
-      <TaskQuickActions
-        activityId={TASK}
-        version={TASK_VERSION}
-        dueAt={dueAt}
-        dueHasTime={dueHasTime}
-        update={update}
-        showDuePicker
-      />
+      <>
+        <TaskQuickActions {...task} />
+        <TaskDueDatePick {...task} />
+      </>
     );
   }
   const client = new QueryClient({
@@ -120,6 +133,7 @@ function renderDefaults(dueAt?: string | null) {
 
 const picker = () =>
   screen.getByRole<HTMLInputElement>("textbox", { name: "Move to" });
+const moveButton = () => screen.getByRole("button", { name: /^Move/ });
 
 describe("moving a task to a named day", () => {
   it("sends the day picked on the calendar as the task's due date", async () => {
@@ -129,6 +143,8 @@ describe("moving a task to a named day", () => {
     await user.click(
       await screen.findByRole("button", { name: "Tuesday, 15 September 2026" }),
     );
+    expect(sent).toHaveLength(0);
+    await user.click(moveButton());
 
     await waitFor(() => expect(sent).toHaveLength(1));
     // The END of the picked day on the RECORD's clock, so a task due "the
@@ -144,8 +160,9 @@ describe("moving a task to a named day", () => {
     renderVerbs(DUE_AT);
     await user.tripleClick(picker());
     await user.keyboard("15/09/2026");
-    expect(sent).toHaveLength(0);
     await user.keyboard("{Enter}");
+    expect(sent).toHaveLength(0);
+    await user.click(moveButton());
 
     await waitFor(() => expect(sent).toHaveLength(1));
     const body = sent[0] as { due_at: string };
@@ -197,6 +214,7 @@ describe("moving a task to a callback time", () => {
     renderVerbs(DUE_AT);
     expect(timeBox().value).toBe("");
     await user.type(timeBox(), "15:00{Enter}");
+    await user.click(moveButton());
 
     await waitFor(() => expect(sent).toHaveLength(1));
     // 15:00 on 1 September on the record's clock, summer time in Berlin.
@@ -205,6 +223,7 @@ describe("moving a task to a callback time", () => {
     expect(sent[0]).toEqual({
       due_at: "2026-09-01T13:00:00.000Z",
       due_has_time: true,
+      due_intent: { wall_clock: "2026-09-01T15:00", timezone: "Europe/Berlin" },
     });
   });
 
@@ -216,11 +235,13 @@ describe("moving a task to a callback time", () => {
     await user.click(
       await screen.findByRole("button", { name: "Tuesday, 15 September 2026" }),
     );
+    await user.click(moveButton());
 
     await waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]).toEqual({
       due_at: "2026-09-15T13:00:00.000Z",
       due_has_time: true,
+      due_intent: { wall_clock: "2026-09-15T15:00", timezone: "Europe/Berlin" },
     });
   });
 
@@ -229,10 +250,61 @@ describe("moving a task to a callback time", () => {
     renderVerbs("2026-09-01T13:00:00.000Z", true);
     await user.clear(timeBox());
     await user.keyboard("{Enter}");
+    await user.click(moveButton());
 
     await waitFor(() => expect(sent).toHaveLength(1));
     // The server ends a reminder that sat on the old hour.
-    expect(sent[0]).toEqual({ due_at: DUE_AT, due_has_time: false });
+    expect(sent[0]).toEqual({
+      due_at: DUE_AT,
+      due_has_time: false,
+      due_intent: {
+        wall_clock: "2026-09-01T23:59:59",
+        timezone: "Europe/Berlin",
+      },
+    });
+  });
+
+  it("sends a new day and a new time in one write", async () => {
+    const user = userEvent.setup();
+    renderVerbs(DUE_AT);
+    await user.tripleClick(picker());
+    await user.keyboard("01/11/2026");
+    await user.tab();
+    await user.type(timeBox(), "07:15");
+    await user.tab();
+    expect(sent).toHaveLength(0);
+    await user.click(moveButton());
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toEqual({
+      due_at: "2026-11-01T06:15:00.000Z",
+      due_has_time: true,
+      due_intent: { wall_clock: "2026-11-01T07:15", timezone: "Europe/Berlin" },
+    });
+  });
+
+  it("says the task is already due then when Move is pressed with nothing changed, and sends nothing", async () => {
+    const user = userEvent.setup();
+    renderVerbs(DUE_AT);
+    await user.click(moveButton());
+
+    expect(
+      screen.getByText(
+        "The task is already due then. Pick another day or time.",
+      ),
+    ).toBeTruthy();
+    expect(picker().getAttribute("aria-invalid")).toBe("true");
+    expect(sent).toHaveLength(0);
+  });
+
+  it("asks for a day when Move is pressed on an undated task", async () => {
+    const user = userEvent.setup();
+    renderVerbs(null);
+    await user.click(moveButton());
+
+    expect(picker().getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByText(/Move to is required/)).toBeTruthy();
+    expect(sent).toHaveLength(0);
   });
 
   it("waits for a day on an undated task", () => {
@@ -258,5 +330,34 @@ it("snoozes to tomorrow after midnight passes with the task still open", async (
   expect(sent[0]).toMatchObject({
     due_at: "2026-09-03T13:00:00.000Z",
     due_has_time: true,
+  });
+});
+
+describe("moving a task to a day already past", () => {
+  it("warns under the fields and asks to move anyway, without a second question", async () => {
+    const user = userEvent.setup();
+    renderVerbs(DUE_AT);
+    await user.tripleClick(picker());
+    await user.keyboard("20/08/2026{Enter}");
+
+    expect(screen.getByText("Date in the past")).toBeTruthy();
+    expect(
+      screen.getByText("Moving the task to this date makes it overdue."),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Move anyway" }));
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({ due_at: "2026-08-20T21:59:59.000Z" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("reads today as not yet past when the task is due by its day", async () => {
+    const user = userEvent.setup();
+    renderVerbs(DUE_AT);
+    await user.tripleClick(picker());
+    await user.keyboard("25/08/2026{Enter}");
+
+    expect(screen.getByRole("button", { name: "Move" })).toBeTruthy();
+    expect(screen.queryByText("Date in the past")).toBeNull();
   });
 });

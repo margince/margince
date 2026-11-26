@@ -12,11 +12,13 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -148,4 +150,63 @@ func (e *dedupeEnv) countInWorkspace(ctx context.Context, t *testing.T, query st
 		t.Fatalf("counting rows: %v", err)
 	}
 	return n
+}
+
+// The insert writes the account scope, and the scoped unique index arbitrates it.
+// Until the older (provider, channel_user_id) index is dropped, one user id binds
+// once across scopes, so only a collision in the same scope is asserted.
+func TestAnIdentityIsBoundOncePerAccountScope(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	first := e.seedContact(ctx, t, "First Scope", []string{"first@scope.test"}, nil)
+	other := e.seedContact(ctx, t, "Same Scope", []string{"same@scope.test"}, nil)
+	const user = "770601"
+	inFirst := connector.ChannelIdentity{Provider: telegramProvider, AccountScope: "880001", ChannelUserID: user}
+
+	if bound := e.bindIdentity(ctx, t, first, inFirst); bound != first {
+		t.Fatalf("the first bind returned %s, want %s", bound, first)
+	}
+	if bound := e.bindIdentity(ctx, t, other, inFirst); bound != first {
+		t.Fatalf("a second bind in the same scope returned %s, want the incumbent %s", bound, first)
+	}
+	if n := e.countInWorkspace(ctx, t,
+		`SELECT count(*) FROM contact_channel_identity WHERE channel_user_id = $1 AND account_scope = $2 AND archived_at IS NULL`,
+		user, inFirst.AccountScope); n != 1 {
+		t.Fatalf("%d live bindings in the scope, want 1: the insert must write account_scope", n)
+	}
+	if n := e.countInWorkspace(ctx, t,
+		`SELECT count(*) FROM pg_indexes WHERE indexname = 'uq_contact_channel_identity_scoped'`); n != 1 {
+		t.Fatalf("the scoped unique index is missing")
+	}
+	resolved, err := e.resolveOrCreateContactForIdentity(ctx, "Resolver", inFirst)
+	if err != nil || resolved != first {
+		t.Fatalf("resolving the user in the scope = %s, %v, want %s", resolved, err, first)
+	}
+}
+
+// The older (provider, channel_user_id) index still refuses a second scope for one
+// user id. The bind reports that as ErrChannelIdentityInOtherScope and neither
+// raises a unique violation nor hands back the other scope's contact.
+func TestAnIdentityBoundInAnotherScopeIsRefusedAsAConflict(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	first := e.seedContact(ctx, t, "Scope Holder", []string{"holder@scope.test"}, nil)
+	other := e.seedContact(ctx, t, "Scope Visitor", []string{"visitor@scope.test"}, nil)
+	const user = "770602"
+	if bound := e.bindIdentity(ctx, t, first, connector.ChannelIdentity{Provider: telegramProvider, AccountScope: "880002", ChannelUserID: user}); bound != first {
+		t.Fatalf("the first bind returned %s, want %s", bound, first)
+	}
+
+	err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := ResolveOrCreateChannelIdentity(ctx, tx, other,
+			connector.ChannelIdentity{Provider: telegramProvider, AccountScope: "880003", ChannelUserID: user})
+		return err
+	})
+	if !errors.Is(err, ErrChannelIdentityInOtherScope) || !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("binding the user in a second scope = %v, want ErrChannelIdentityInOtherScope as a conflict", err)
+	}
+	if n := e.countInWorkspace(ctx, t,
+		`SELECT count(*) FROM contact_channel_identity WHERE channel_user_id = $1 AND archived_at IS NULL`, user); n != 1 {
+		t.Fatalf("%d live bindings, want the first scope's alone", n)
+	}
 }

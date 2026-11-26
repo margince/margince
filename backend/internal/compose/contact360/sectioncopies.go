@@ -1,0 +1,70 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contact360
+
+import (
+	"context"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+)
+
+// sectionQuery is one section statement. A collapsed one selects
+// activities.SeatCopyColumns after the projection.
+type sectionQuery struct {
+	sql       string
+	args      []any
+	collapsed bool
+	// bounded says the fold read only the newest candidates.
+	bounded bool
+}
+
+// readSection runs a section read, caps it at sectionCap and finishes the rows
+// the way /activities does, the links of every copy included. A third result
+// of true means a bounded fold left the page short. The rows are then not
+// finished, and the caller reads again under a wider bound.
+func readSection(ctx context.Context, tx pgx.Tx, q sectionQuery, columns activities.CustomColumns, now time.Time) ([]crmcontracts.Activity, bool, bool, error) {
+	rows, err := tx.Query(ctx, q.sql, q.args...)
+	if err != nil {
+		return nil, false, false, err
+	}
+	defer rows.Close()
+	out := make([]crmcontracts.Activity, 0, sectionCap+1)
+	var copies []activities.SeatCopies
+	for rows.Next() {
+		if !q.collapsed {
+			a, err := activities.ScanActivityRow(ctx, rows)
+			if err != nil {
+				return nil, false, false, err
+			}
+			out = append(out, a)
+			continue
+		}
+		a, group, err := activities.ScanSeatCopyRow(ctx, rows)
+		if err != nil {
+			return nil, false, false, err
+		}
+		out, copies = append(out, a), append(copies, group)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, false, err
+	}
+	if q.bounded && connector.FoldIncomplete(len(out), sectionCap+1, activities.FoldedInFull(copies)) {
+		return nil, false, true, nil
+	}
+	hasMore := len(out) > sectionCap
+	if hasMore {
+		out = out[:sectionCap]
+	}
+	// After the cap, so the statements count the rows this page returns rather
+	// than the extra one read to detect hasMore.
+	if err := activities.FinishActivityRows(ctx, tx, columns, out, now); err != nil {
+		return nil, false, false, err
+	}
+	return out, hasMore, false, activities.AttachCopyLinks(ctx, tx, out, copies)
+}

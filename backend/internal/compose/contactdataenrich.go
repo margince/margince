@@ -69,7 +69,7 @@ func NewContactDataEnrich(pool *pgxpool.Pool, runs provider.RunService, log *slo
 // Redelivery is free: the bus is at-least-once, and QueueRun's live-run index
 // returns the existing run rather than buying the same answer twice.
 func (g *ContactDataEnrich) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if g.runs == nil || env.Type != contactCreatedEvent {
+	if !events.ContactDataTypes.Has(env.Type) || g.runs == nil {
 		return nil
 	}
 	if env.Entity.ID == ids.Nil || env.Entity.Type != string(recordTypeContact) {
@@ -88,7 +88,10 @@ func (g *ContactDataEnrich) HandleEvent(ctx context.Context, env events.Envelope
 		ContactID: env.Entity.ID.String(),
 		Trigger:   trigger,
 	})
-	return g.swallowConfiguration(err)
+	// QueueRun answers ErrNotFound for a contact that is gone or archived. An
+	// archived contact is frozen (an erasure archives one), so neither is owed
+	// a lookup later.
+	return events.UnactionableIfGone(g.swallowConfiguration(err), "contact", env.Entity.ID)
 }
 
 // triggerFor decides which toggle this arrival is governed by, from WHO

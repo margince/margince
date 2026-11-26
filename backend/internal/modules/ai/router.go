@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -57,6 +58,10 @@ func sameRoute(a, b routeMeta) bool { return a.provider != "" && a == b }
 // before the call, and every call lands in the meter. This is the one
 // place routing policy lives — callers never pick a model.
 type Router struct {
+	// restrictions answers whether a request's subjects are restricted; nil
+	// refuses every honouring call that names one.
+	restrictions         model.SubjectRestrictions
+	restrictionsRequired bool
 	// bound is the current binding. Load it once per call — see the type's
 	// comment for why a second load mid-call is a correctness bug, not a
 	// performance one.
@@ -70,21 +75,25 @@ type Router struct {
 	// (MCP-SESS-COST). Nil in every role that serves no inbound agent.
 	agentSpend      AgentTokenSpender
 	budget          BudgetPolicy
-	stripper        model.SecretStripper
+	stripper        textStripper
 	cache           *resultCache
 	calls           callStore
 	capturePayloads bool
-	log             *slog.Logger
-	metrics         *callMetrics
-	now             func() time.Time
+	// captureWhole lifts the row caps off the capture; only a DB-less trace sets it.
+	captureWhole bool
+	log          *slog.Logger
+	metrics      *callMetrics
+	now          func() time.Time
 	// cacheOff disables the §6 result cache entirely (ai.WithoutResultCache):
 	// the cert lane and scripted repeat-call tests need every call to reach
 	// the model, not collapse onto a cached answer.
 	cacheOff bool
-	// decisionCertified answers whether the decisions lane may serve one site:
-	// the generated certification table, except on the certification lane's
-	// own DB-less router (WithEveryDecisionCertified).
-	decisionCertified func(DecisionCertKey) bool
+	// unlimited sends every task at CallCeiling with no walk bound
+	// (ai.WithoutInteractiveLimits), for a lane that measures latency.
+	unlimited bool
+	// tryDeadline replaces context.WithTimeout for one try, so a test can read
+	// the timeout a try was given without a real clock.
+	tryDeadline func(context.Context, time.Duration) (context.Context, context.CancelFunc)
 	// overrides is the admin's per-task thinking level and deadlines
 	// (ai.task_overrides), republished by the routing watcher.
 	overrides atomic.Pointer[TaskOverrides]
@@ -126,8 +135,19 @@ func NewRouter(cfg RoutingConfig, meter *Meter, budget BudgetPolicy, calls callS
 	}
 	meta := embedInclusiveMeta(cfg)
 	router := assembleRouter(clients, embedder, cfg.Profile, meter, budget, calls, meta, capturePayloads, log)
+	router.restrictionsRequired = true
 	router.install(router.binding().withConfig(cfg, decisions))
 	return router, nil
+}
+
+// NewUnboundRouter builds a Router that serves no tier yet. A role that boots
+// before anyone has bound a model holds this one, so the routing watcher can
+// bind it later. Every call on it is refused like a task with no bound tier.
+func NewUnboundRouter(meter *Meter, budget BudgetPolicy, calls callStore, capturePayloads bool, log *slog.Logger) *Router {
+	router := assembleRouter(nil, nil, "", meter, budget, calls, nil, capturePayloads, log)
+	router.restrictionsRequired = true
+	router.install(binding{public: NewPublicProfile("unconfigured", RoutingConfig{})})
+	return router
 }
 
 // assembleRouter is the seam unit tests inject fakes through.
@@ -138,7 +158,7 @@ func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profil
 	r := &Router{
 		meter:           meter,
 		budget:          budget,
-		stripper:        NewSecretStripper(),
+		stripper:        secretStripper{},
 		cache:           newResultCache(resultCacheTTL),
 		calls:           calls,
 		capturePayloads: capturePayloads,
@@ -147,9 +167,8 @@ func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profil
 		// coldStartOptions and offerDraftOptions each mint their own Router
 		// over the same routing config, and /metrics must report one honest
 		// total across both, rendered exactly once.
-		metrics:           sharedCallMetrics,
-		now:               time.Now,
-		decisionCertified: decisionIsCertified,
+		metrics: sharedCallMetrics,
+		now:     time.Now,
 	}
 	r.install(binding{clients: clients, embedder: embedder, profile: profile, routeMeta: meta})
 	return r
@@ -159,9 +178,21 @@ func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profil
 // the resolved tier's binding supplies it. It is exactly one logical
 // call — mint, attempt, flush.
 func (r *Router) Complete(ctx context.Context, task Task, req model.Request) (model.Response, RouteInfo, error) {
-	ladder, ok := taskLadders[task]
+	if err := r.refuseUnbound(); err != nil {
+		return model.Response{}, RouteInfo{}, err
+	}
+	ladder, ok := r.binding().ladder(task)
 	if !ok {
 		return model.Response{}, RouteInfo{}, fmt.Errorf("ai: unknown task %q", task)
+	}
+	if err := r.admitSubjects(ctx, task, req); err != nil {
+		return model.Response{}, RouteInfo{}, err
+	}
+	if pin := tierPinOf(ctx); pin != "" {
+		if !slices.Contains(ladder, Tier(pin)) {
+			return model.Response{}, RouteInfo{}, fmt.Errorf("ai: task %s has no %q tier", task, pin)
+		}
+		ladder = []Tier{Tier(pin)}
 	}
 	return r.serveCompletion(ctx, task, ladder, req)
 }
@@ -179,14 +210,10 @@ func (r *Router) serveCompletion(ctx context.Context, task Task, ladder []Tier, 
 	// survivable when it began announcing a start, because the start is
 	// committed durable state that only this flush closes.
 	//
-	// The binding is loaded HERE and not carried out of serveAttempt, so a
-	// rebind during the call files the trace under the configuration current at
-	// flush rather than the one that served it. That is pre-existing and
-	// unchanged by this defer — serveAttempt owns its own `b` and does not
-	// publish it — but the comment that used to sit here claimed the opposite,
-	// and a false claim about which configuration a trace names is worse than
-	// the gap it hid.
-	defer func() { r.flushDetached(ctx, r.binding(), lc) }()
+	// The binding is read here, at the start, as CompleteStructured does. A
+	// rebind during the call then files the trace under the binding the call
+	// started on, not the one current at flush.
+	defer r.flushDetached(ctx, r.binding(), lc)
 	return r.serveAttempt(ctx, lc, task, ladder, req, "")
 }
 
@@ -218,14 +245,12 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	if req.SecretStripper == nil {
 		req.SecretStripper = r.stripper
 	}
-	// Wrapped HERE, which is the one place a request's stripper is settled —
-	// so what it removed reaches the trace row without four adapters each
-	// having to thread a report back, and a fifth records its strips by
-	// existing. striprecorder.go says why that matters.
-	strips := newStripRecorder(req.SecretStripper)
-	req.SecretStripper = strips
 	req = r.withTaskThinking(lc, task, req)
 	key, keyErr := cacheKey(wsID, task, req)
+	if pin := tierPinOf(ctx); keyErr == nil && pin != "" {
+		// A pinned rung answers differently from the whole ladder.
+		key += "|tier=" + pin
+	}
 	if keyErr == nil {
 		// The site's own defect, found with the key's: before any provider.
 		req, keyErr = withSiteThinking(req, task)
@@ -242,14 +267,11 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	// with no tenant there is no row to write and no occurrence to
 	// announce.
 	start := r.now()
-	trace := r.newAttemptTrace(ctx, task, key, reason, req)
+	trace := newAttemptTrace(ctx, task, reason, req)
 	defer func() {
 		if refusedUncalled(err) {
 			return
 		}
-		// BEFORE finalize, which is what buffers the row: a field set after it
-		// would be written to a copy nobody reads.
-		trace.SecretsRemoved, trace.SecretKinds = strips.report()
 		r.finalizeAttempt(ctx, b, lc, &trace, req, resp, err, start)
 	}()
 	if budgetErr != nil {
@@ -270,7 +292,7 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 		// Degraded still says the band demoted it.
 		trace.AttemptReason = attemptReasonBudgetDegrade
 	}
-	ladder = servableLadder(b, task, ladder)
+	ladder = servableLadder(b, ladder)
 
 	// The rail's opening line. It sits HERE and not higher — announceRailStartOnce
 	// says why.
@@ -318,34 +340,9 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 		fmt.Errorf("%w: no bound tier can serve %s in profile %s", ErrAllTiersFailed, task, b.profile)
 }
 
-// servableLadder is the ladder a call over b may actually walk, remapped for
-// the sovereign profile. Profile and clients come from the one binding
-// snapshot, so no ladder mixes two loads. serveAttempt walks it and Decide
-// peeks the cache against it, so both read the same ladder when asking which
-// cached answer would serve.
-//
-// A rung is narrowed out only when localOnlyAdmits refuses it — currently
-// never, per #6396: the tier a task's ladder names is a capability class the
-// deployment binds, and local_small is bound to a hosted provider by most
-// shipped configs, so refusing there took the task off those deployments
-// entirely. Whether that is the right trade is the open question on #3351;
-// reading the same predicate the decision lane reads means restoring it is
-// one edit, not two.
-func servableLadder(b *binding, task Task, ladder []Tier) []Tier {
+func servableLadder(b *binding, ladder []Tier) []Tier {
 	_, hasLarge := b.clients[TierLocalLarge]
-	ladder = profileLadder(b.profile, hasLarge, ladder)
-	if !LocalOnly(task) {
-		return ladder
-	}
-	out := make([]Tier, 0, len(ladder))
-	for _, tier := range ladder {
-		m := b.routeMeta[tier]
-		isLocal := DecisionsConfig{Provider: m.provider, Model: m.model, BaseURL: m.baseURL}.isLocal()
-		if localOnlyAdmits(task, isLocal) {
-			out = append(out, tier)
-		}
-	}
-	return out
+	return profileLadder(b.profile, hasLarge, ladder)
 }
 
 // Reject is the caller's verdict that the answer info describes is unusable,

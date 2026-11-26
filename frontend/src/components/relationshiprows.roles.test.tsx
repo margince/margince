@@ -31,6 +31,7 @@ function seat(role: string, kind: RoleKind = "deal_stakeholder") {
     ...(kind === "project_stakeholder" ? { project_id: PROJECT } : {}),
     contact_id: CONTACT,
     role,
+    can_archive: true,
     is_current_primary: false,
     source: "manual",
     captured_by: "human:u-1",
@@ -193,6 +194,53 @@ describe("editing an employment role from a company", () => {
     async (title) => {
       const { patched } = await editSeat("en", "Engineer", title, "employment");
       expect(patched).toMatchObject({ role: title });
+    },
+  );
+});
+
+describe("the row dialogs", () => {
+  it.each([
+    ["deal_stakeholder", "Edit stakeholder", "Remove stakeholder?"],
+    ["employment", "Edit relationship", "Remove relationship?"],
+  ] as const)(
+    "name what a %s row's edit and removal act on",
+    async (kind, editTitle, removeTitle) => {
+      stubWithSession(
+        {
+          "GET /relationships": () =>
+            jsonResponse({
+              data: [seat("champion", kind)],
+              page: { next_cursor: null },
+            }),
+          [`GET /contacts/${CONTACT}`]: () =>
+            jsonResponse({ id: CONTACT, full_name: "Mai Trần" }),
+        },
+        { relationship: ["read", "create", "update", "delete"] },
+      );
+      const user = userEvent.setup();
+      renderWithQueryClient(
+        <RelationshipsTab
+          scope={
+            kind === "deal_stakeholder"
+              ? { deal_id: DEAL }
+              : { company_id: COMPANY }
+          }
+        />,
+      );
+      await user.click(await screen.findByTestId("edit-record"));
+      expect(
+        within(await screen.findByRole("dialog")).getByRole("heading", {
+          name: editTitle,
+        }),
+      ).toBeTruthy();
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      await user.click(screen.getByTestId("remove-relationship"));
+      expect(
+        within(await screen.findByRole("dialog")).getByRole("heading", {
+          name: removeTitle,
+        }),
+      ).toBeTruthy();
     },
   );
 });

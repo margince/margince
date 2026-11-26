@@ -17,6 +17,7 @@ vi.mock("@composition/copy", () => ({
     en: { "extDispactConnector.title": "Dispact" },
     de: { "extDispactConnector.title": "Dispact DE" },
   },
+  extensionOverrides: {},
 }));
 
 // The registry is the ONE place the SPA learns what an installation composed.
@@ -39,6 +40,7 @@ vi.mock("@composition/copy", () => ({
 const NOTES: ExtensionDescriptor = {
   name: "notes",
   title: "",
+  summary: "",
   secretScope: "workspace",
   panels: [],
   verbs: [
@@ -139,6 +141,7 @@ describe("placing a unit by its declared secret scope", () => {
   const DISPACT: ExtensionDescriptor = {
     name: "dispact-connector",
     title: "extDispactConnector.title",
+    summary: "",
     secretScope: "user",
     panels: [],
     verbs: [],
@@ -148,6 +151,7 @@ describe("placing a unit by its declared secret scope", () => {
   const YOGI: ExtensionDescriptor = {
     name: "yogi",
     title: "",
+    summary: "",
     secretScope: "",
     panels: [],
     verbs: [],
@@ -193,6 +197,7 @@ describe("naming a unit", () => {
   const DISPACT: ExtensionDescriptor = {
     name: "dispact-connector",
     title: "extDispactConnector.title",
+    summary: "",
     secretScope: "user",
     panels: [],
     verbs: [],

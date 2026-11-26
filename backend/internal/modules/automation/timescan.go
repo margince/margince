@@ -183,7 +183,7 @@ func (s *TimeScanner) ScanWorkspace(ctx context.Context, wsID ids.UUID) error {
 		name := h.Spec().Name
 		if daysFor, ok := activityScanHandlers[name]; ok {
 			for _, inst := range instances[name] {
-				if err := scanInstanceCandidates(wsCtx, s.scan, h, inst, wsID, now, s.engine.runOne, daysFor); err != nil {
+				if err := s.scanActivityInstance(wsCtx, h, inst, wsID, now, daysFor); err != nil {
 					return fmt.Errorf("%s instance %s: %w", name, inst.id, err)
 				}
 			}
@@ -191,7 +191,7 @@ func (s *TimeScanner) ScanWorkspace(ctx context.Context, wsID ids.UUID) error {
 		}
 		if paramsFor, ok := dateFieldScanHandlers[name]; ok {
 			for _, inst := range instances[name] {
-				if err := scanDateFieldInstanceCandidates(wsCtx, s.dateScan, h, inst, wsID, now, s.engine.runOne, paramsFor); err != nil {
+				if err := s.scanDateInstance(wsCtx, h, inst, wsID, now, paramsFor); err != nil {
 					return fmt.Errorf("%s instance %s: %w", name, inst.id, err)
 				}
 			}
@@ -226,6 +226,12 @@ func scanInstanceCandidates(
 	if err != nil {
 		return fmt.Errorf("scanning stale entities: %w", err)
 	}
+	return runActivityCandidates(ctx, h, inst, wsID, now, run, candidates)
+}
+
+func runActivityCandidates(ctx context.Context, h workflow.Handler, inst automationInstance, wsID ids.UUID, now time.Time,
+	run func(context.Context, workflow.Handler, workflow.Event) error, candidates []EntityAnchor,
+) error {
 	for _, cand := range candidates {
 		ev, err := buildActivityAnchorEvent(wsID, now, inst, cand)
 		if err != nil {

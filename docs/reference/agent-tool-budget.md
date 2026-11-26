@@ -15,32 +15,33 @@ anything. This page shows what each declared agent pays, how much room that leav
 what to check before adding a tool. Each tool's own cost is the Prompt tokens column of
 [mcp-info.md](mcp-info.md#index).
 
-The heaviest menu is `overnight_at_risk_sweep`: 6576 of the window's 32768 tokens per step (20%).
+The heaviest menu is `overnight_at_risk_sweep`: 6722 of the window's 32768 tokens per step (20%).
 
 ## The declared agents
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 48 | 2131 | 1617 | 4340 | 13% | 18870 | 0 | 5 |
-| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3436 | 2548 | 6576 | 20% | 16634 | 4 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 39726 |  |  | 121% |  |  |  |
+| `morning_brief` | 5 | 5 of 48 | 2048 | 1646 | 4424 | 13% | 11960 | 0 | 4 |
+| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3363 | 2629 | 6722 | 20% | 9662 | 4 | 5 |
+| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 53796 |  |  | 164% |  |  |  |
 
 ### `morning_brief`
 
 ```text
 Prepare the existing Morning Brief of the user this run acts for. First call read_brief. Its items
-are the queue already ranked for them; do not assemble a workspace-wide list. Read the evidence for
-those items, then call annotate_brief with one concise narrative and grounded findings: why each
-item matters, what changed and the next move. An item with a previous_rank was already on this queue
-on the run's previous_local_day: say what has changed since then rather than reporting it as new. An
-item without one may simply not have ranked that day, so do not call it new either. Use each
-returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the
-existing order. If there are no items, finish without inventing a brief. A tool refusal means the
-findings were not saved: correct it before claiming completion.
+are the queue already ranked for them; do not assemble a workspace-wide list. Read every record an
+item cites in its evidence_ids, its activities as well as its deal, then call annotate_brief ONCE,
+with one concise narrative and a grounded finding for every item in that same call: why it matters,
+what changed and the next move. An item with a previous_rank was already on this queue on the run's
+previous_local_day: say what has changed since then rather than reporting it as new. An item without
+one may simply not have ranked that day, so do not call it new either. Use each returned item_id
+unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If
+there are no items, finish without inventing a brief. A tool refusal means the findings were not
+saved: correct it before claiming completion.
 ```
 
-Attaches 5 tools and pays 4340 tokens on every step (2131 listing, 1617 step schema), leaving
-18870 of its budget and 28428 tokens of the
+Attaches 5 tools and pays 4424 tokens on every step (2048 listing, 1646 step schema), leaving
+11960 of its budget and 28344 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -57,13 +58,15 @@ gone quiet, or missing next steps. First call whats_slipping_this_week: in this 
 the at-risk deals your member owns. Each other member's run sweeps that member's deals, and a deal
 whose owner has not granted this sweep is swept by nobody, so do not read or log on a deal outside
 that list. A deal the retrieved context mentions is one example, not the sweep, so do not read or
-log on it before that list. Then read each listed deal and log ONE note activity per at-risk deal
-summarizing the risk and the evidence (cite the records you read). Do not advance stages, send
-anything, or archive anything.
+log on it before that list. Then read each listed deal, call catch_me_up_on on it and read_record
+each recent touch it lists, and log ONE note activity per at-risk deal, linked to that deal (links:
+[{entity_type: deal, entity_id: <its deal_id>}]). Its subject names the risk in a few words; its
+body states the finding and the evidence (cite the records you read). A note without a body is
+refused. Do not advance stages, send anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 6576 tokens on every step (3436 listing, 2548 step schema), leaving
-16634 of its budget and 26192 tokens of the
+Attaches 7 tools and pays 6722 tokens on every step (3363 listing, 2629 step schema), leaving
+9662 of its budget and 26046 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -97,7 +100,7 @@ the site's `tools:` are the only tools that run is offered. Read the numbers bel
 before adding one.
 
 The window is 32768 tokens. What an agent's step pays before its transcript (the frame,
-the listing and the step schema) may take 23210 of them (17/24).
+the listing and the step schema) may take 16384 of them (1/2).
 
 ## No run is offered the whole catalog
 
@@ -119,7 +122,7 @@ listing budget above; whether each attached tool is one its goal needs is a revi
 judgement. An MCP client connecting from outside is served the whole catalog by
 `tools/list`, but that is its own agent's window rather than a run of this engine.
 
-Before any tool is listed the frame itself costs **592 tokens**: the output contract,
+Before any tool is listed the frame itself costs **730 tokens**: the output contract,
 the rules and the prompt fence. It is shown here because moving a rule from each
 tool's schema into the frame costs one sentence per run instead of one per tool.
 It is part of every agent's per-step figure below, so a frame that grows a paragraph
@@ -142,7 +145,7 @@ menu. Lowering it is not always an improvement either: a tool its goal needs rai
 this count whenever its copy names a neighbour.
 
 **Temptation weight** sums, over an agent's tools, how many of that agent's own
-certification scenarios (of 6 in the corpus) name the tool as the wrong reach. Each
+certification scenarios (of 8 in the corpus) name the tool as the wrong reach. Each
 scenario certifies one scheduled agent's window (its goal and its tools), so a near
 miss is a tool that run can see and reach for.
 

@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -351,7 +352,7 @@ func TestAnErasedMembersNoteLeavesNoCopyAndItsRemovalCannotComeBack(t *testing.T
 		t.Fatalf("the removal kept the note on %d event rows, want 1", kept)
 	}
 
-	if err := privacy.NewEraser(f.e.DB()).EraseContact(f.e.Admin(), contact, "subject request"); err != nil {
+	if err := privacy.NewEraser(f.e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(f.e.Admin(), contact, "subject request"); err != nil {
 		t.Fatalf("erasing the member: %v", err)
 	}
 	if held := f.e.WsCount(t, copies, memberNote); held != 0 {
@@ -396,7 +397,7 @@ func TestATagRemovalCannotComeBackOnceItsRecordIsErased(t *testing.T) {
 	tag := f.tag(t, "Erased Record")
 	contact := f.taggedByRep(t, tag, "Erased Tagged Subject")
 	removal := f.removeTag(f.e.Admin(), t, tag, contact)
-	if err := privacy.NewEraser(f.e.DB()).EraseContact(f.e.Admin(), contact, "subject request"); err != nil {
+	if err := privacy.NewEraser(f.e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(f.e.Admin(), contact, "subject request"); err != nil {
 		t.Fatalf("erasing the record: %v", err)
 	}
 	if _, err := f.store.RestoreTagRemoval(f.e.Admin(), tag, removal); !errors.Is(err, apperrors.ErrNotFound) {

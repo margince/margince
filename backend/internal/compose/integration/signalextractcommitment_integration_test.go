@@ -77,6 +77,10 @@ func TestACustomersEmailedPromiseIsWatchedNotTasked(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM signal WHERE kind = 'commitment_made'`); n != 1 {
 		t.Errorf("want the account's commitment signal kept for Deal Scout, got %d", n)
 	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task' AND status = 'pending'
+		AND requested_decider_id = $1 AND proposed_change ? 'follow_up_of'`, e.Rep1); n != 1 {
+		t.Errorf("want one follow-up for the mailbox owner, got %d", n)
+	}
 	// The company page counts it, for a reader whose scope reaches everything.
 	var open int
 	var complete bool
@@ -86,6 +90,27 @@ func TestACustomersEmailedPromiseIsWatchedNotTasked(t *testing.T) {
 		return err
 	}); err != nil || open != 1 || !complete {
 		t.Errorf("the account counts %d open commitment(s), complete=%v, err=%v; want 1 and complete", open, complete, err)
+	}
+}
+
+// A customer's promise in mail no member owns is watched, and nobody is
+// asked to follow it up in their place.
+func TestACustomersPromiseInMailNobodyOwnsAsksNobodyToFollowItUp(t *testing.T) {
+	e := Setup(t)
+	e.Contacts.SetClock(func() time.Time { return extractClock })
+	ines := employeeOf(t, e, e.SeedCompany(t, "Acme", &e.Rep1), "Ines Huber")
+	message := captureCommitmentMessage(t, e, ines, "thread-volumes", "Volumes", "Thanks. "+pricingPromise, "inbound",
+		extractClock.Add(-48*time.Hour))
+	party(t, message, "from", nil, &ines)
+	e.WsExec(t, `UPDATE activity SET captured_by = 'connector:gmail' WHERE id = $1`, message)
+
+	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, "contact:"+ines.String(), pricingPromise, "2026-06-05")})
+
+	if n := e.WsCount(t, `SELECT count(*) FROM conversation_claim WHERE kind = 'commitment_theirs' AND contact_id = $1`, ines); n != 1 {
+		t.Fatalf("want the customer's promise filed once on them, got %d claims", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); n != 0 {
+		t.Errorf("mail nobody owns staged %d follow-up(s)", n)
 	}
 }
 
@@ -220,42 +245,14 @@ func TestAnOldSignalReadElsewhereIsSettledEmpty(t *testing.T) {
 	party(t, earlier, "from", &e.Rep1, nil)
 	cited := captureCommitmentMessage(t, e, ines, "thread-elsewhere", "Re: Pricing", "Thanks, noted.", "inbound",
 		extractClock.Add(-72*time.Hour))
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
-			Kind: "commitment_made", CompanyID: company, Summary: "Pricing promised.",
-			Severity: "info", Fingerprint: "legacy-" + cited.String(),
-			Evidence: []signals.DerivedEvidence{{Snippet: "Pricing promised.", ActivityID: cited}},
-		}, extractClock.Add(-72*time.Hour))
-		return err
-	}); err != nil {
-		t.Fatalf("seed the old signal: %v", err)
-	}
-	brain := &scriptedBrain{reply: commitmentReply(t, earlier, "seat:"+e.Rep1.String(), pricingPromise, "")}
-	if pass := extractPassStats(t, e, brain); pass.Converted != 1 {
-		t.Fatalf("the pass converted %d old signals, want the one", pass.Converted)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM conversation_claim WHERE source_activity_id = $1`, cited); n != 0 {
-		t.Errorf("a commitment found on another message was filed against the cited one %d time(s)", n)
-	}
-}
-
-// A commitment signal a human filed is theirs, and the conversion leaves it.
-func TestAHumanFiledCommitmentSignalIsNotConverted(t *testing.T) {
-	e := Setup(t)
-	company := e.SeedCompany(t, "Acme", &e.Rep1)
-	ines := employeeOf(t, e, company, "Ines Huber")
-	cited := captureCommitmentMessage(t, e, ines, "thread-filed", "Pricing", "Hi Ines, "+pricingPromise, "outbound",
-		extractClock.Add(-72*time.Hour))
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
-			Kind: "commitment_made", CompanyID: company, Summary: "Pricing promised.",
-			Severity: "info", Fingerprint: "filed-" + cited.String(), Source: "manual",
-			Evidence: []signals.DerivedEvidence{{Snippet: "Pricing promised.", ActivityID: cited}},
-		}, extractClock.Add(-72*time.Hour))
-		return err
-	}); err != nil {
-		t.Fatalf("seed the filed signal: %v", err)
-	}
+	seedSignalRow(t, OwnerConn(t), `INSERT INTO signal
+		(id, kind, source_channel, entity_type, entity_id, resolved_company_id, resolution_state, severity,
+		 summary, evidence, detected_at, source, captured_by)
+		VALUES ($1, 'commitment_made', 'derived', 'company', '`+company.String()+`', '`+company.String()+`',
+		        'resolved', 'info', 'Pricing promised.',
+		        jsonb_build_array(jsonb_build_object('source_type', 'activity', 'source_id', '`+cited.String()+`',
+		                                             'snippet', 'Pricing promised.')),
+		        now(), 'manual', 'human:x')`)
 	if pass := extractPassStats(t, e, &scriptedBrain{reply: `{"events":[]}`}); pass.Converted != 0 {
 		t.Errorf("the pass converted %d signal(s) a human filed", pass.Converted)
 	}
@@ -417,7 +414,7 @@ func commitmentMailAddress(t *testing.T, e *Env, contact ids.UUID) string {
 func captureCommitmentMessage(t *testing.T, e *Env, contact ids.UUID, key, subject, body, direction string, at time.Time, recipients ...commitmentMailRecipient) ids.UUID {
 	t.Helper()
 	owner, buyer := "rep@workspace.example", commitmentMailAddress(t, e, contact)
-	e.WsExec(t, `INSERT INTO capture_connection (user_id,provider,status,credential_ref,account_label) VALUES ($1,'gmail','connected','vault:test',$2) ON CONFLICT (user_id,provider) DO UPDATE SET account_label=$2`, e.Rep1, owner)
+	e.WsExec(t, `INSERT INTO capture_connection (user_id,provider,status,credential_ref,account_label) VALUES ($1,'gmail','connected','vault:test',$2) ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL DO UPDATE SET account_label=$2`, e.Rep1, owner)
 	from, to := buyer, owner
 	if direction == "outbound" {
 		from, to = owner, buyer

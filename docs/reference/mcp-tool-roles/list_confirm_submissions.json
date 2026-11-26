@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "confirm_submissions",
+  "verb": "list_confirm_submissions",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

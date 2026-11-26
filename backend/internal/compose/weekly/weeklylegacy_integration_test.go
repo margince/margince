@@ -30,8 +30,9 @@ func TestAWeekFrozenUnderTheQualifiedForecastIsReadBackWhole(t *testing.T) {
 		`UPDATE weekly_review_outlook SET forward_measure = 'qualified_likely' WHERE weekly_review_id = $1`,
 		// The frozen 300 to 420 landing carried two retired bars; the bars the
 		// stub froze sum to 120, so the retired ones net to nothing.
-		`INSERT INTO weekly_review_movement (weekly_review_id, period_kind, bar, delta_minor)
-		 VALUES ($1, 'quarter', 'excluded', -2500), ($1, 'quarter', 'not_checked', 2500)`,
+		`UPDATE weekly_review SET outlook_movement = outlook_movement ||
+		 '[{"period_kind":"quarter","bar":"excluded","delta_minor":-2500},
+		   {"period_kind":"quarter","bar":"not_checked","delta_minor":2500}]'::jsonb WHERE id = $1`,
 	} {
 		if _, err := owner.Exec(ctx, sql, written.ID); err != nil {
 			t.Fatal(err)

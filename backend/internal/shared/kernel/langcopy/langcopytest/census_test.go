@@ -116,6 +116,42 @@ func TestCensusReportsAnAddedPlaceholder(t *testing.T) {
 	}
 }
 
+func TestCensusReportsGoQuoting(t *testing.T) {
+	t.Parallel()
+	type table struct{ Named langcopy.Phrase }
+	bad := table{Named: langcopy.Phrase{En: "Move %s", De: "%q voranbringen", Vi: "Thúc đẩy %s"}}
+	s := run(func(r reporter) { Census(r, bad) })
+	if !reports(s.errors, "Named with %q") {
+		t.Fatalf("a German sentence quoting with %%q was not reported: %v", s.errors)
+	}
+}
+
+func TestCensusReportsAnIndexedGoQuote(t *testing.T) {
+	t.Parallel()
+	type table struct{ Named langcopy.Phrase }
+	bad := table{Named: langcopy.Phrase{En: "Move “%[1]s”", De: "%[1]q voranbringen", Vi: "Thúc đẩy “%[1]s”"}}
+	s := run(func(r reporter) { Census(r, bad) })
+	if !reports(s.errors, "Named with %q") {
+		t.Fatalf("an indexed %%[1]q was not reported: %v", s.errors)
+	}
+}
+
+func TestCensusReportsAValueQuotedInAnotherLanguagesMarks(t *testing.T) {
+	t.Parallel()
+	type table struct{ Named langcopy.Phrase }
+	bad := table{Named: langcopy.Phrase{En: "Move “%s”", De: "“%s” voranbringen", Vi: "Thúc đẩy \"%s\""}}
+	s := run(func(r reporter) { Census(r, bad) })
+	for _, want := range []string{"de quotes a value in Named with “…”", `vi quotes a value in Named with "…"`} {
+		if !reports(s.errors, want) {
+			t.Errorf("%q was not reported: %v", want, s.errors)
+		}
+	}
+	good := table{Named: langcopy.Phrase{En: "Move “%s”", De: "„%s“ voranbringen", Vi: "Thúc đẩy “%s”"}}
+	if s := run(func(r reporter) { Census(r, good) }); len(s.errors) != 0 {
+		t.Errorf("each language's own marks were reported: %v", s.errors)
+	}
+}
+
 func TestCensusNamesABadEntryInAMapField(t *testing.T) {
 	t.Parallel()
 	type table struct{ Items map[string]langcopy.Phrase }
@@ -223,5 +259,32 @@ func TestCensusAndNoCountPassOnWellFormedTables(t *testing.T) {
 	singulars := map[string]langcopy.Phrase{"OneThing": {En: "one thing", De: "ein Ding", Vi: "một thứ"}}
 	if s := run(func(r reporter) { NoCount(r, singulars) }); len(s.errors) != 0 {
 		t.Fatalf("a well-formed singular reported %v", s.errors)
+	}
+}
+
+func TestIndexedPlaceholdersCannotDisappearFromTheCensus(t *testing.T) {
+	got := Placeholders("Give %[2]s to %[1]s; progress %02d%%")
+	want := []string{"%[2]s", "%[1]s", "%d", "%%"}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("indexed or padded placeholders disappeared: %v", got)
+	}
+}
+
+func TestGermanStyleFailsEachMechanicalBreak(t *testing.T) {
+	t.Parallel()
+	for name, german := range map[string]string{
+		"dash":      "zu wenige Kontakte — der Deal hängt an einem Kontakt",
+		"semicolon": "Von der Website gelesen; die Bestätigung übernimmt den Wert",
+		"sie":       "Diese Nachricht dürfen Sie nicht lesen.",
+		"ihnen":     "Manches ist Ihnen nicht sichtbar.",
+	} {
+		table := map[string]langcopy.Phrase{name: {En: "x", De: german, Vi: "x"}}
+		if s := run(func(r reporter) { GermanStyle(r, table) }); len(s.errors) == 0 {
+			t.Errorf("%s: %q passed", name, german)
+		}
+	}
+	fine := map[string]langcopy.Phrase{"fine": {En: "x", De: "Sie haben geantwortet. Die Nachricht ist für dich sichtbar.", Vi: "x"}}
+	if s := run(func(r reporter) { GermanStyle(r, fine) }); len(s.errors) != 0 || s.fatal != "" {
+		t.Errorf("a sentence opening with Sie as they failed: %v %s", s.errors, s.fatal)
 	}
 }

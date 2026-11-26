@@ -16,14 +16,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// replaceSetsChange is what a save's replace-sets changed: anything at all,
-// which bumps the version, and the identifiers, which re-run the duplicate check.
+// replaceSetsChange is what a save's replace-sets changed. Any change bumps the
+// version. A changed identifier re-runs the duplicate check. The sets as they
+// now stand are the audit row's after image, in the shape of its before image.
 type replaceSetsChange struct {
 	any, emails, phones bool
+	social              *map[string]any
+	emailRows           *[]crmcontracts.ContactEmail
+	phoneRows           *[]crmcontracts.ContactPhone
 }
 
-// applyContactReplaceSets lands the social, email and phone replace-sets in a
-// savepoint and reports what they changed in what the contact holds.
+// applyContactReplaceSets lands the social merge and the email and phone
+// replace-sets in a savepoint and reports what they changed in what the contact holds.
 //
 // The forms send every set on every save, so a save of an untouched contact
 // carries them all. A set equal to the stored rows is rolled back and leaves
@@ -61,9 +65,21 @@ func replaceContactSetsAndCompare(
 		return replaceSetsChange{}, fmt.Errorf("read the contact after its replace-sets: %w", err)
 	}
 	_, differs := storekit.ChangedColumns(contactSetsImage(current), contactSetsImage(after))
-	_, emails := differs["emails"]
-	_, phones := differs["phones"]
-	return replaceSetsChange{any: len(differs) > 0, emails: emails, phones: phones}, nil
+	emails, phones := setsThisEditRecords(differs, in)
+	return replaceSetsChange{
+		any: len(differs) > 0, emails: emails, phones: phones,
+		social: after.Social, emailRows: after.Emails, phoneRows: after.Phones,
+	}, nil
+}
+
+// setsThisEditRecords keeps a differing set only where the update supplied it,
+// so a row another writer changed is never recorded, or undone, as this edit's.
+//
+//craft:ignore naked-any differs is storekit.ChangedColumns' schemaless column map
+func setsThisEditRecords(differs map[string]any, in UpdateContactInput) (emails, phones bool) {
+	_, emails = differs["emails"]
+	_, phones = differs["phones"]
+	return emails && in.Emails != nil, phones && in.Phones != nil
 }
 
 // replaceContactSets writes each set the update carries. It takes the write
@@ -78,7 +94,7 @@ func replaceContactSets(ctx context.Context, tx pgx.Tx, id ids.ContactID, in Upd
 		return err
 	}
 	if in.Social != nil {
-		if err := replaceContactSocial(ctx, tx, workspaceID(ctx), id, in.Social, in.converting); err != nil {
+		if err := writeContactSocial(ctx, tx, workspaceID(ctx), id, in.Social, in.converting); err != nil {
 			return err
 		}
 	}

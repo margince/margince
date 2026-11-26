@@ -1,5 +1,6 @@
 import type { QueryKey } from "@tanstack/react-query";
 import type { EntityKind } from "./entity";
+import { LISTS_KEY } from "./listkeys";
 
 // Which cached reads render a record's timeline. Writing an activity has to
 // invalidate ALL of them, and they are not the same set for every record kind:
@@ -18,6 +19,20 @@ export const timelineBaseKey = (
   entityType: EntityKind,
   entityId: string,
 ): QueryKey => ["activities", entityType, entityId];
+
+/** The newest reading of one transcript, and the summary it shows. */
+export const transcriptReadLatestKey = (activityId: string): QueryKey => [
+  "transcript-read-latest",
+  activityId,
+];
+
+/**
+ * Whether a key is a transcript's newest reading. It carries words drawn from
+ * the transcript, which an erasure deletes on the server while a page is open.
+ */
+export function isTranscriptReadingRead(key: QueryKey): boolean {
+  return key.length === 2 && key[0] === "transcript-read-latest";
+}
 
 /**
  * Whether a key is a record's timeline read, under any filters or page.
@@ -57,6 +72,7 @@ export function entityTimelineKeys(
       DEAL_COVERAGE_KEY,
       ["company-coverage"],
       ...EVERY_COMPANY_TIMELINE,
+      ...EVERY_PROJECT_TIMELINE,
     );
   }
   return keys;
@@ -113,6 +129,12 @@ export const dealOutcomeReviewsKey = (dealId: string): QueryKey => [
   "outcome-reviews",
 ];
 
+// The deal's stage moves, which the ladder and Days in stage count from.
+export const dealStageHistoryKey = (dealId: string): QueryKey => [
+  "deal-stage-history",
+  dealId,
+];
+
 // Which cached reads a write to the DEAL RECORD itself invalidates — a stage
 // advance, an amount, a close date. Spelled once here so a new writer picks up
 // the derived reads by using the helper rather than by remembering them.
@@ -122,6 +144,12 @@ export function dealRecordKeys(dealId: string): QueryKey[] {
     dealOutcomeReviewsKey(dealId),
     ...derivedRecordKeys("deal", dealId),
   ];
+}
+
+// The reads a write that can move the deal's stage invalidates: the record's,
+// and its stage moves. An edit that moves no stage leaves those unread.
+export function dealStageMoveKeys(dealId: string): QueryKey[] {
+  return [...dealRecordKeys(dealId), dealStageHistoryKey(dealId)];
 }
 
 // The reads written FROM a record, by the key its own page reads it under.
@@ -138,7 +166,7 @@ export function derivedRecordKeys(
 // judges the record's fields, so any write to them can move a membership.
 // Every list read sits under ["lists"], which a list write invalidates whole.
 export const recordListsKey = (recordType: string, recordId: string) =>
-  ["lists", "record", recordType, recordId] as const;
+  [LISTS_KEY, "record", recordType, recordId] as const;
 
 // A deal's COVERAGE is written from its stakeholder edges: the rail's seats,
 // the committee map and the risk chips all read GET /deals/{id}/coverage, and
@@ -148,6 +176,10 @@ export const recordListsKey = (recordType: string, recordId: string) =>
 // stakeholder is seated from the contact's page as readily as from the deal's.
 export const DEAL_COVERAGE_KEY: QueryKey = ["deal-coverage"];
 
+// The chance the forecast uses for each open stage. A stage's typed chance is
+// one of its inputs, so every stage write makes it stale.
+export const STAGE_CHANCES_KEY: QueryKey = ["forecast", "stage-chances"];
+
 const DERIVED_FROM_RECORD: Record<string, (id: string) => QueryKey[]> = {
   deal: (id) => [DEAL_STATUS_KEY(id), recordListsKey("deal", id)],
   contact: (id) => [recordListsKey("contact", id)],
@@ -156,6 +188,7 @@ const DERIVED_FROM_RECORD: Record<string, (id: string) => QueryKey[]> = {
   // Keyed on the relationship's own id nowhere: what goes stale is the deal the
   // edge names, and the edit form knows only the edge. The prefix covers it.
   relationship: () => [DEAL_COVERAGE_KEY],
+  stage: () => [STAGE_CHANCES_KEY],
 };
 
 // What a logged activity makes stale: the record's timeline, or its task reads.
@@ -180,6 +213,14 @@ export function loggedActivityKeys(
 const EVERY_COMPANY_TIMELINE: QueryKey[] = [
   ["activities", "company"],
   ["company360"],
+];
+
+// An activity filed on a deal is filed on the deal's project too, and the
+// writer knows the deal, not the project. The 360 key leads with the project
+// id, so only the ["project"] prefix reaches it.
+const EVERY_PROJECT_TIMELINE: QueryKey[] = [
+  ["activities", "project"],
+  ["project"],
 ];
 
 export const TASK_QUEUE_KEY: QueryKey = ["tasks"];
@@ -236,7 +277,11 @@ const SHAPE_ID = "\u0000id";
 // and the canonical email read itself — a drawer's thread-member page can carry
 // a message the reader did not open and did not change.
 function messageBearingShapes(): unknown[][] {
-  const shapes: unknown[][] = [["activities"], ["email-presentation"]];
+  const shapes: unknown[][] = [
+    ["activities"],
+    ["email-presentation"],
+    ["transcript-read-latest"],
+  ];
   for (const seed of Object.values(TIMELINE_SEED_KEYS)) {
     shapes.push(seed(SHAPE_ID) as unknown[]);
   }
@@ -278,6 +323,11 @@ function matchesShape(
 
 // ── The record's own read ───────────────────────────────────────────────────
 
+/** A project's own row, archived or not. Under the ["project", id] prefix, so
+ *  a write to the project refreshes it with the 360. */
+export const projectRowKey = (projectId: string) =>
+  ["project", projectId, "row"] as const;
+
 // The deal's record read. It is NOT in TIMELINE_SEED_KEYS because the deal's
 // seed is the status card; what carries the
 // deal's own fields is this.
@@ -307,9 +357,13 @@ export function isRecordRead(key: QueryKey): boolean {
   // every minute, and a reviews list that did not would leave the two halves of
   // one comparison on different clocks.
   shapes.push(dealOutcomeReviewsKey(SHAPE_ID) as unknown[]);
-  // The row is what says a contact or company was archived. The 360 then only
-  // answers 404, so a page re-reading the 360 alone could never learn why.
-  shapes.push(["contact", SHAPE_ID], ["company", SHAPE_ID]);
+  // The row is what says a record was archived, and what says it was restored.
+  // The 360 then only answers 404, so re-reading the 360 alone learns neither.
+  shapes.push(
+    ["contact", SHAPE_ID],
+    ["company", SHAPE_ID],
+    [...projectRowKey(SHAPE_ID)],
+  );
   return shapes.some((shape) => matchesShape(key as unknown[], shape, false));
 }
 
@@ -331,17 +385,3 @@ export const CLAIM_SETTLED_KEYS: readonly QueryKey[] = [
 
 export const activityFollowUpsKey = (sourceId: string) =>
   ["activities", "followups", sourceId] as const;
-
-/** One activity's own file list. */
-export const activityFilesKey = (activityId: string) =>
-  ["attachments", "activity", activityId] as const;
-
-/** What a file landing on an activity leaves stale. A deal's Files and a
- *  company's library list linked activities' files too. Which records is not
- *  known here, so those reads refresh by prefix. */
-export const activityFileStaleKeys = (activityId: string): QueryKey[] => [
-  activityFilesKey(activityId),
-  ["deal-documents"],
-  ["deal-attachments"],
-  ["companyDocuments"],
-];

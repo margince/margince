@@ -1,10 +1,10 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/scheduling_preview.go backend/internal/compose/publicbookingpreview.go backend/internal/modules/activities/scheduling_alias.go backend/internal/modules/activities/scheduling_used.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go backend/internal/modules/activities/meetingoutcomestart.go frontend/src/components/meetingoutcome.tsx -->
+<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/scheduling_preview.go backend/internal/compose/publicbookingpreview.go backend/internal/modules/activities/scheduling_alias.go backend/internal/modules/activities/scheduling_used.go backend/internal/modules/activities/scheduling_teamlinks.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go backend/internal/modules/activities/meetingoutcomestart.go frontend/src/components/meetingoutcome.tsx frontend/src/components/recordmeetings.tsx -->
 # Meetings and booking
 
 Meetings and booking in Margince covers how a contact books time with you, and what happens to the invitation after that. You set your hours, calendars and booking link in **Settings → Meetings**; see [Your own settings](your-own-settings.md#meetings) for that set-up.
 
-There are three ways to set up a meeting with a contact. You can offer two or three times, send an invitation for a time you agreed, or share a personal link. **My booking link**, in the account menu, is a fourth way that needs no contact.
+There are three ways to set up a meeting with a contact. You can offer two or three times, send an invitation for a time you agreed, or share a personal link. **My booking link**, in the account menu, is a fourth way that needs no contact. Until you create the link, that row reads **Set up my booking link**.
 
 ### How do I send a meeting invitation to a contact?
 To send a calendar invitation in Margince, open the contact's **Meetings** tab, choose **Book a meeting**, and pick the time you agreed.
@@ -44,9 +44,12 @@ A move to a new start clears **It happened** or **No-show**, so the meeting asks
 Also called: reschedule, change the time, postpone a meeting.
 
 ### How do I record what came of a meeting?
-A meeting that took place takes one press: **It happened** on its Worklist row, under
-**How did it go?**. A customer meeting that has started with no outcome also shows **It happened**
-and **Add notes** on the contact's **Meetings** tab and on the timeline. To say more, or to record a
+For a meeting that took place, press **It happened** on its Worklist row, under
+**How did it go?**. Write what was said under **Notes**. Add a follow-up task with its
+subject and due date, then press **Log**. Or press **Skip next step** to record the outcome and notes alone.
+
+A customer meeting that has started with no outcome also shows **It happened**
+and **Add notes** on the timeline. The **Meetings** tab of the contact or company shows them too. To say more, or to record a
 no-show, press **Add notes**:
 1. Pick **It happened** or **No-show** and write what was said. Change any of your company's own fields
    for meetings here too.
@@ -58,7 +61,24 @@ wait for the meeting to start. A meeting with a date but no time waits until tha
 
 Press **Did not happen** on the row for a meeting that did not take place; it is recorded as canceled.
 A meeting with a Margince invitation takes only **It happened** or **No-show**, because its notes and date follow the invitation.
+
+A held meeting shows **Add notes** on the timeline and the **Meetings** tab, or **Edit notes** when it has some.
+Write the notes the next day if you need to, then press **Log**. Anyone who may change the meeting can do this.
+A meeting with a Margince invitation does not offer them.
+
+A meeting whose subject only arranges how you get somewhere, such as "Airport drop-off" or "Flug nach Hamburg", does not ask for an outcome. It still asks when it is on a deal, lead or project.
+
+A colleague's meeting that you were in but cannot change shows as **No outcome yet for** the meeting. Its host records the outcome. Press **Done** to take it off your list.
 Also called: mark a meeting held, meeting outcome, no-show, meeting happened.
+
+### Where do my Google Meet notes and transcripts go?
+Margince links the notes and transcript that Google Meet adds to a calendar event to that meeting in Margince. Google adds them after the call, so they appear after the next calendar sync. A file someone attached to the event by hand is not linked. The history of the meeting shows **Meeting notes linked from the calendar**.
+Also called: Gemini notes, meeting recording, Meet transcript, call notes.
+
+### How do I see every meeting with a company?
+To see a company's meetings in Margince, open the company's **Meetings** tab. It lists every meeting filed under the company, its deals or the contacts who work there.
+The next meeting leads, with who is in it and **Prepare brief**. **Upcoming** lists the meetings after it, and **Held** the ones already past, newest first. To book a meeting, open the contact on the **Contacts** tab and use their **Meetings** tab.
+Also called: account meetings, company calendar.
 
 ### How do I cancel a meeting?
 To cancel a Margince meeting, open it from its line on the timeline and choose **Cancel meeting**. Confirm "Cancel this meeting and notify the attendee?".
@@ -89,11 +109,13 @@ Also called: meeting reminder, remind the guest, notification before a call.
 
 Queued means Margince asked your mailbox to send it, not that it reached the guest. Margince sends a reminder only within 15 minutes of its time, so one it missed shows as not sent. A cancelled meeting gets no reminder. The reminder follows the same email rules as any mail you send: a contact who may not get email gets none.
 
+If those rules stop a reminder, Margince does not send it later, because the meeting may change before then. You get a notification that says why. Most often the footer has no company address. An admin adds it under **Settings → Company profile**. You can send it from there once the details are filled in.
+
 ## What counts as busy
 
 Your free times in Margince are your bookable hours minus everything your calendars show as busy. Busy means anything booked in the calendar for new meetings, and in your other calendars that block time. Internal meetings, private events, time you blocked to work alone, and all-day events marked busy all count. None of them becomes a record in Margince, and guests never see their titles, guests or text.
 
-Open times start every 15 minutes in your time zone. Guests can choose the time zone they see times in.
+Open times start every 15 minutes in your time zone. Guests can choose the time zone they see times in. An invite you send or a meeting you move keeps the local time you picked. That holds even if the time zone's clock rules change later.
 
 If Margince cannot read a calendar it needs, it shows no times at all, rather than times that may be wrong. A search with no times says why: past your booking horizon, or inside your notice.
 
@@ -111,11 +133,33 @@ A short address belongs to one booking page at a time. Margince refuses one that
 
 When you change or remove your short address, the old one stops working at once. Margince asks first. You can take your old address back at any time. Nobody else can ever take it, so guests who kept it never reach someone else's page. **Replace address** ends the short address too, and you can choose it again after.
 
+### How do I offer times when several colleagues are free?
+<!-- opens: settings/meetings -->
+To offer only times when you and your colleagues are all free in Margince, open Settings → **Meetings** and make a team link under **Team links**.
+1. Under **New team link with**, choose a colleague. Only colleagues with a connected calendar are offered. The new link gets its own address.
+   Its name, such as "Meet Ada and Grace", is the meeting title guests see.
+2. To name more colleagues, use **Add a colleague** on that link. You can name up to five on one link.
+3. Each colleague gets a notice in the app and an email. Both say who named them on which team link, and open their own **Meetings** settings. There they see your link under **Colleagues' links that name you**, and choose **Confirm**. The email follows their setting for **Approvals waiting on you**.
+4. Once all have confirmed, the team link shows **Takes bookings**. Choose **Copy link** on it to share it.
+Also called: team booking link, group booking link, shared free time.
+
+Your personal booking link stays as it is: it always offers only your own free times. You can keep several team links beside it, each with its own colleagues and address. A team link uses the calendar and the booking settings of your personal link. That includes how long a meeting takes and the notice it needs.
+
+Each time must fall in the working hours of every colleague, read in that colleague's own time zone.
+
+A booking lands as one meeting in your calendar, and every colleague is invited to it. Margince checks each colleague's calendar again when the guest books. A time a colleague filled since the guest opened the page is refused, and the guest picks another. A time booked through your team link also counts as taken on each colleague's own booking page. Nothing else about a colleague's own link changes. Guests never see a colleague's calendar names, event titles or other guests.
+
+A team link takes bookings only while every colleague on it is ready. A ready colleague has confirmed, is still on the link and in the workspace, and has a calendar Margince can read. Each colleague's row shows where they stand.
+
+Only you change your team link. A colleague on it can choose **Leave** at any time. Remove them from the list to take bookings again. **Delete link** stops the team link's address. Meetings already booked through it stay, and your personal link does not change.
+
 ## What your guest sees
 
 The Margince booking page shows your name from **Settings → Account**, and the name and logo of the company you work for. An Admin sets that company under **Legal entities**. Unless an Admin sets one, that is your company profile. A company with no logo shows its name only. When new meetings get a video call, it names the video app: Google Meet or Microsoft Teams. Guests never see which calendar provider you use, your calendar names, or other guests.
 
-Your booking link has the form `https://<your Margince address>/book/<code>`. With a short address it is `/book/<your short address>`, and the long form still works. A short address works in capital or small letters. A link in the old form, with `/#/book/` in it, still opens the same page. The page and the guest's own meeting page do not promote Margince. The browser tab names you: "Book a meeting with" and your name.
+Your booking link has the form `https://<your Margince address>/book/<code>`. With a short address it is `/book/<your short address>`, and the long form still works. A short address works in capital or small letters. A link in the old form, with `/#/book/` in it, still opens the same page.
+
+The page and the guest's own meeting page do not promote Margince. The browser tab names you: "Book a meeting with" and your name. The tab shows the company logo when there is one.
 
 When you paste the link into chat or email, the preview card shows your name and the company name. It also shows the meeting title and how long the meeting takes. It shows the company logo when there is one. Without a logo the card is text only.
 
@@ -123,9 +167,11 @@ A paused page gives a card that names nobody. A replaced or unknown address give
 
 If your account is suspended or removed, your page and your short address stop working. Nobody else can take your short address, so it never leads to someone else's page.
 
-A page is paused when **Accept bookings** is off. It is also paused when your calendar cannot take bookings: none is set, it is read-only, or it is disconnected. A guest who opens a paused page reads that you are not taking bookings through it right now. The page names you and shows nothing else: no free times, no meeting details. **My booking link** in the account menu shows **Paused** while it is. A personal link you sent stays open while your calendar can take its booking, even when **Accept bookings** is off.
+A page is paused when **Accept bookings** is off. It is also paused when your calendar cannot take bookings: none is set, it is read-only, or it is disconnected. A team link is also paused until every colleague on it has confirmed and has a calendar Margince can read.
 
-Home shows you one card while your page is paused by its calendar, so you can fix it. It shows the card only when **Accept bookings** is on and the page was used: somebody booked through it, or you copied its link. The card names the reason and opens your booking settings.
+A guest who opens a paused page reads that you are not taking bookings through it right now. The page names you and shows nothing else: no free times, no meeting details. **My booking link** in the account menu shows **Paused** while it is. A personal link you sent stays open while your calendar can take its booking, even when **Accept bookings** is off.
+
+Home shows you a card while your page is paused by its calendar, so you can fix it. It shows one more for each team link paused by a colleague on it. Home shows a card only for a page that is on and was used. Your personal page is used once somebody booked through it or you copied its link. A team link counts as used from the start. The card names the reason and opens your booking settings.
 
 Turning off **Accept bookings** stops new bookings on your public page. Personal links you already sent keep working until they run out. **Replace address** stops the old public address once you confirm, but guests keep the private links that let them change their own meetings.
 
@@ -134,6 +180,18 @@ Every calendar invitation carries a private link that lets the guest move or can
 What a guest writes in **What would you like to discuss?** on your booking page stays in Margince. It shows on the meeting in the contact's **History** tab, and not on the meeting page. The calendar invitation leaves it out. The invitation holds your **Meeting title** and **Location or meeting link**, any video link, and the guest's private link.
 
 A guest gives consent to the meeting separately from any marketing consent, and does not have to give marketing consent to book.
+
+### Someone whose data was erased wants to come back
+Send them the return page of a booking page. No other page in Margince links to it, so they need the address from you.
+1. Copy the code from a booking link: the part after `/book/`. A short address works too.
+2. Send them `https://<your Margince address>/#/book/<code>/return`.
+3. They enter their name and the email address that was erased, and choose **Send me the link**.
+4. The page always says "Check your inbox", whatever address they typed. It never tells anyone whether an address was erased.
+5. If the address was erased, Margince mails it a link that works for one day. They open it and choose **Store my details again**. Only then is the address stored again.
+
+One address gets at most one link a day. A second request on the same day gets the same answer and sends nothing. A link that was used already or has expired asks them to request a new one on the same return page.
+
+Also called: undo an erasure, unblock an erased address, store a contact again.
 
 ## When the calendar adds no video call
 

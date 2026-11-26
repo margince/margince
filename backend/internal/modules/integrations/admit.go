@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
@@ -44,6 +45,7 @@ type admittedConnection struct {
 // does not meet. Nobody is at the screen to weigh the spend.
 var (
 	ErrAgentNeedsDailyLimit         = errors.New("integrations: an agent buys contact details only under a daily run limit; ask an administrator to set one on the connection")
+	ErrSubjectRestricted            = errors.New("integrations: the contact is under a restriction of processing (GDPR Art. 18), so no provider is asked about them until it is lifted")
 	ErrConnectionNotHealthyForAgent = errors.New("integrations: the provider connection is out of credits, rate limited, failing or holds a key the provider refused, so an agent does not buy from it now")
 )
 
@@ -73,8 +75,15 @@ func (s *Store) notAdmitted(ctx context.Context, tx pgx.Tx, name string, byAgent
 	return provider.ErrNotConnected
 }
 
-func (s *Store) admit(ctx context.Context, tx pgx.Tx, name string, trigger provider.Trigger) (admittedConnection, error) {
+func (s *Store) admit(ctx context.Context, tx pgx.Tx, name string, trigger provider.Trigger, contactID string) (admittedConnection, error) {
 	var c admittedConnection
+	restricted, err := contactRestricted(ctx, tx, contactID)
+	if err != nil {
+		return admittedConnection{}, err
+	}
+	if restricted {
+		return admittedConnection{}, ErrSubjectRestricted
+	}
 	// A MANUAL run is admitted on a degraded connection; an automatic one is
 	// not. The two are different questions.
 	//
@@ -96,7 +105,7 @@ func (s *Store) admit(ctx context.Context, tx pgx.Tx, name string, trigger provi
 	if !trigger.Automatic() && !byAgent {
 		statuses = append(statuses, "rate_limited", "insufficient_credits", "provider_error")
 	}
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT id::text, version, execution_epoch, mode, automatic_individual_create,
 		       automatic_import, categories, refresh_after_days, daily_run_limit
 		  FROM provider_connection
@@ -154,4 +163,14 @@ func IsTriggerNotAdmitted(err error) bool {
 	// an automatic run nothing it may spend on, which is a configuration
 	// working rather than a failure to log.
 	return errors.Is(err, errTriggerNotAdmitted) || errors.Is(err, ErrNothingFreeToBuy)
+}
+
+// contactRestricted answers whether a run's subject is under a restriction of
+// processing (GDPR Art. 18).
+func contactRestricted(ctx context.Context, tx pgx.Tx, contactID string) (bool, error) {
+	var restricted bool
+	if err := tx.QueryRow(ctx, `SELECT `+auth.ContactRestrictedSQL("$1::uuid"), contactID).Scan(&restricted); err != nil {
+		return false, fmt.Errorf("integrations: reading whether the contact is restricted: %w", err)
+	}
+	return restricted, nil
 }

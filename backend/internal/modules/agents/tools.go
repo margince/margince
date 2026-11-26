@@ -85,7 +85,7 @@ type DealTaskSettler interface {
 // declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
 func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, consumerMail ConsumerMail, duplicates OpenDuplicatesFor, tagOffer TagOfferFor) {
-	r.Register(readRecord{p: p, name: r.seats})
+	r.Register(readRecord{p: p, name: r.seats, sidecars: r.recordSidecars})
 	r.Register(createRecord{p: p, duplicates: duplicates, tagOffer: tagOffer, language: r.language, words: r.changeWords})
 	r.Register(updateRecord{p: p, language: r.language, words: r.changeWords})
 	r.Register(logActivity{p: p})
@@ -164,8 +164,9 @@ func listResult(ctx context.Context, name SeatNamer, res datasource.SearchResult
 // --- read_record (🟢 read) ---
 
 type readRecord struct {
-	p    datasource.SystemOfRecordProvider
-	name SeatNamer
+	p        datasource.SystemOfRecordProvider
+	name     SeatNamer
+	sidecars RecordSidecarsFor
 }
 
 func (t readRecord) Spec() mcp.ToolSpec {
@@ -179,7 +180,7 @@ func (t readRecord) Spec() mcp.ToolSpec {
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","partner","product","offer_template","offer","commission","deal_room"],"description":"partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record."},
 			"id":{"type":"string","format":"uuid"}},
 			"additionalProperties":false}`),
-		OutputSchema: schemaFor[recordWithOwner](),
+		OutputSchema: schemaFor[readRecordResult](),
 	}
 }
 
@@ -195,7 +196,11 @@ func (t readRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMes
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(withOwners(ctx, t.name, []wireRecord{newWireRecord(ctx, rec)})[0])
+	out, err := withSidecars(ctx, t.sidecars, withOwners(ctx, t.name, []wireRecord{newWireRecord(ctx, rec)})[0])
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(out)
 }
 
 // --- create_record (🟢 write, reversible) ---
@@ -225,7 +230,7 @@ func (t createRecord) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["record_type","fields"],"properties":{
 			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer","deal_room"]},
 			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `},
-			"offer_tag":{"type":"string","maxLength":64,"description":"A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing."},
+			"offer_tag":{"type":"string","maxLength":64,"description":"A tag word the user said fits this record, such as the event they met at. It offers the tag to the user and applies nothing, so send it also when the user wants to decide on the tag themselves."},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		UnkeyedArguments: recordFieldsUnkeyed(),
@@ -265,7 +270,7 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	}
 	return marshalResult(createdRecord{
 		wireRecord:          rec,
-		Changes:             t.words.describeCreate(ctx, summaryIn(ctx, t.language).lang, args.Fields, rec.Fields),
+		Changes:             t.words.describeCreate(ctx, summaryIn(ctx, t.language).lang, args.RecordType, args.Fields, rec.Fields),
 		DuplicateCandidates: t.reportCreateDuplicates(ctx, args.RecordType, args.Fields, ref.ID, filed.IDs()),
 		TagOffer:            t.offerTag(ctx, args.RecordType, args.OfferTag),
 	}, nil)
@@ -361,9 +366,10 @@ type logActivity struct {
 func (t logActivity) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "log_activity", Title: "Log an activity", Version: toolVersionV1,
-		Description:   logActivityCopy.render(),
-		Instead:       logActivityCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		Description:       logActivityCopy.render(),
+		Instead:           logActivityCopy.Instead,
+		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		Unlisted:  true,
 		OpenAPIOp: "logActivity",
 		// The two vocabularies are SPLICED from the contract, never spelled
@@ -391,13 +397,13 @@ func (t logActivity) Spec() mcp.ToolSpec {
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
-				"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES because filing there marks commercial correspondence. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect."},
+				"description":"Every record this was about, ALL OF THEM in this call: adding one AFTERWARDS is a second write. ` + ProjectLinkRefused + ` A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing."},
 			"attendee_user_ids":{"type":"array","maxItems":25,"items":{"type":"string","format":"uuid"},
 				"description":"Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused."},
 			"source_activity_id":{"type":"string","format":"uuid","description":` + followUpSourceDescription + `},
 			"follow_up_task":` + string(argumentSchemaFor[crmcontracts.ActivityFollowUpTask](timestampRule)) + `,
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
-			"patternProperties":{"^cf_[a-z0-9_]+$":{"description":"An activity custom field, by its cf_ key from describe_vocabulary. A key no active activity field names is refused."}},
+			"patternProperties":{"^cf_[a-z0-9_]+$":{"description":"An activity custom field, by its cf_ key: the column_name read_view lists with view custom_fields and object activity. A key no active activity field names is refused."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),
 	}

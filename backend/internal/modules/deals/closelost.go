@@ -50,11 +50,19 @@ type CloseLostInput struct {
 	ReasonCode string
 	// Reason is the one line the deal's lost_reason and the owner's receipt show.
 	Reason string
+	// SourceActivityID is the message the close was judged on, zero for a
+	// close on silence. The receipt links it to readers who may open it.
+	SourceActivityID ids.UUID
+	// HoldEvidence locks the rows StillDue reads, before the deal row lock.
+	// Their writers lock the activity first and the deal after, so the close
+	// takes its locks in that order too.
+	HoldEvidence func(ctx context.Context, tx pgx.Tx) error
 	// StillDue asks again, under the deal row lock, whether the deal should
 	// close. The evidence it reads is not this module's.
 	StillDue func(ctx context.Context, tx pgx.Tx) (bool, error)
-	// Record writes the entry on the deal's timeline, in the close's transaction.
-	Record func(ctx context.Context, tx pgx.Tx, correction ids.UUID) error
+	// Record writes the entry on the deal's timeline, in the close's transaction,
+	// and answers the id of the note it wrote.
+	Record func(ctx context.Context, tx pgx.Tx) (ids.UUID, error)
 	// AsOwner binds the owner's agent as of the close's transaction, so a
 	// role change or suspension that committed before the close stops it.
 	AsOwner OwnerAuthorityTx
@@ -67,18 +75,22 @@ func (s *Store) CloseAsLost(ctx context.Context, in CloseLostInput) (bool, error
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return false, err
 	}
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return false, err
-	}
 	var closed bool
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		actor, ok, err := actAsOwnerNow(ctx, tx, in.AsOwner, requireDealUpdate)
-		if err != nil || !ok {
+	// A lock cycle with a writer that took the deal before its activity is
+	// retried, and the close re-reads everything.
+	err := storekit.RetryLockCycles(ctx, func() error {
+		return s.Tx(ctx, func(tx pgx.Tx) error {
+			active, err := s.activeColumnsIn(ctx, tx)
+			if err != nil {
+				return err
+			}
+			actor, ok, err := actAsOwnerNow(ctx, tx, in.AsOwner, requireDealUpdate)
+			if err != nil || !ok {
+				return err
+			}
+			closed, err = s.closeAsLostTx(actor, tx, in, active)
 			return err
-		}
-		closed, err = s.closeAsLostTx(actor, tx, in, active)
-		return err
+		})
 	})
 	return closed, err
 }
@@ -93,12 +105,16 @@ func (s *Store) closeAsLostTx(ctx context.Context, tx pgx.Tx, in CloseLostInput,
 		return false, err
 	}
 	reason := in.Reason
+	evidence := map[string]any{
+		basisKey: in.Reason, basisOwnerKey: in.Owner.String(), CorrectionKindEvidenceKey: CloseLostCorrection,
+	}
+	if !in.SourceActivityID.IsZero() {
+		evidence[CitedActivitiesEvidenceKey] = []string{in.SourceActivityID.String()}
+	}
 	// The target is a lost stage, so the move claims no win.
 	moved, err := s.advanceOnTx(ctx, tx, in.DealID, AdvanceDealInput{
 		ToStageID: lost, LostReason: &reason, LostReasonCode: code, WonWithoutContractReason: nil,
-		auditEvidence: map[string]any{
-			basisKey: in.Reason, basisOwnerKey: in.Owner.String(), CorrectionKindEvidenceKey: CloseLostCorrection,
-		},
+		auditEvidence: evidence,
 	}, active)
 	if err != nil {
 		return false, err
@@ -107,7 +123,11 @@ func (s *Store) closeAsLostTx(ctx context.Context, tx pgx.Tx, in CloseLostInput,
 	if err != nil {
 		return false, err
 	}
-	if err := in.Record(ctx, tx, correction); err != nil {
+	note, err := in.Record(ctx, tx)
+	if err != nil {
+		return false, err
+	}
+	if err := linkCorrectionNote(ctx, tx, []ids.UUID{correction}, note); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -120,6 +140,9 @@ const CorrectionKindEvidenceKey = "margince_change"
 // closeStillDue locks the deal and re-asks every condition the decision rested
 // on. The decision and this write are separate transactions.
 func (s *Store) closeStillDue(ctx context.Context, tx pgx.Tx, in CloseLostInput) (bool, error) {
+	if err := in.HoldEvidence(ctx, tx); err != nil {
+		return false, err
+	}
 	if _, err := storekit.LockRow(ctx, tx, dealTable, in.DealID.UUID, storekit.LiveOnly); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return false, nil
@@ -213,7 +236,7 @@ func (s *Store) revertStageCorrection(
 		return err
 	}
 	history := *c.StageHistoryID
-	reopened, err := s.advanceOnTx(ctx, tx, c.DealID, AdvanceDealInput{
+	_, err = s.advanceOnTx(ctx, tx, c.DealID, AdvanceDealInput{
 		ToStageID: from, ReversalOf: &history, auditEvidence: evidence,
 		// The deal goes back to the open stage it left, so the move claims no win.
 		WonWithoutContractReason: nil,
@@ -228,7 +251,7 @@ func (s *Store) revertStageCorrection(
 	if err != nil {
 		return err
 	}
-	stamped, err := markReversed(ctx, tx, c.ID, reopened.AuditLogID, by)
+	stamped, err := markReversed(ctx, tx, c.ID, by)
 	if err != nil {
 		return err
 	}

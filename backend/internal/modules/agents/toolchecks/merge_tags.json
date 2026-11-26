@@ -1,0 +1,9 @@
+{
+  "verb": "merge_tags",
+  "checks": [
+    "tag.update"
+  ],
+  "takes": [
+    "tag"
+  ]
+}

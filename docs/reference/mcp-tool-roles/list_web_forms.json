@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "web_forms",
+  "verb": "list_web_forms",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

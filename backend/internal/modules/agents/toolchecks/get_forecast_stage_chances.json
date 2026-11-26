@@ -1,0 +1,7 @@
+{
+  "verb": "get_forecast_stage_chances",
+  "checks": [
+    "forecast.read",
+    "installation_settings.read"
+  ]
+}

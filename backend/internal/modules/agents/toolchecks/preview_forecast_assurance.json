@@ -1,0 +1,11 @@
+{
+  "verb": "preview_forecast_assurance",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "forecast.create",
+    "forecast.read",
+    "installation_settings.read",
+    "signal.read"
+  ]
+}

@@ -1,13 +1,12 @@
 import { type ReactNode, useId, useState } from "react";
 import { Button } from "../../design-system/atoms";
-import { formatDateTime } from "../../format/format";
+import { formatDateTimeAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
-import { historyValue } from "../../lib/historyvalues";
 import { useViewerZone } from "../../lib/viewerzone";
 import { entryFieldChanges } from "./history.logic";
-import { HistoryFieldDiff } from "./historyfielddiff";
+import { HistoryFieldDiff, HistoryFieldValue } from "./historyfielddiff";
 import { netChanges, type PairRow } from "./historyreversal";
 import "./history.css";
 
@@ -70,12 +69,13 @@ function SettledFace({
           <li key={change.field} className="entry-field">
             <span>{historyFieldLabel(change.field, t)}</span>
             <span>
-              {historyValue(
-                change.field,
-                change.newValue,
-                values,
-                change.newPrecision,
-              ) ?? t("history.cleared")}
+              <HistoryFieldValue
+                field={change.field}
+                value={change.newValue}
+                precision={change.newPrecision}
+                values={values}
+                cleared={t("history.cleared")}
+              />
             </span>
           </li>
         ))}
@@ -123,10 +123,15 @@ function ResidualFace({
 export function ReversalPairRow({
   row,
   currency,
+  redo,
   children,
 }: Readonly<{
   row: PairRow;
   currency: string | null | undefined;
+  // The pair's one verb: a line that says "undone" has one useful next
+  // step. It sits on the face, open or folded, so the expanded rows below
+  // carry no second copy of it.
+  redo?: ReactNode;
   // The two rows whole, built by the caller from the same row component every
   // other entry uses. Passed in rather than rendered here so the expansion is
   // the ordinary history row — its own actor, time, diff and verb — and not a
@@ -149,25 +154,25 @@ export function ReversalPairRow({
         <span className="tl-meta">
           {/* The REVERSAL's time: the pair sits where its newest member sits,
               so nothing appears to have happened earlier than it did. */}
-          <span>{formatDateTime(row.atIso, locale, readerZone)}</span>
+          <span>{formatDateTimeAbbrev(row.atIso, locale, readerZone)}</span>
         </span>
         {row.whollyUndone ? (
           <SettledFace row={row} currency={currency} />
         ) : (
           <ResidualFace row={row} currency={currency} />
         )}
-        {/* The only control on the collapsed face, and it writes nothing. Two
-            changes with opposite intents have no honest single label, so the
-            verbs live on the rows they belong to, inside. */}
-        <Button
-          variant="ghost"
-          className="reversal-toggle"
-          aria-expanded={open}
-          aria-controls={open ? regionId : undefined}
-          onClick={() => setOpen((was) => !was)}
-        >
-          {t(open ? "history.reversal.collapse" : "history.reversal.expand")}
-        </Button>
+        <span className="reversal-actions">
+          {redo}
+          {/* Writes nothing: it only shows the two audit rows behind the line. */}
+          <Button
+            variant="ghost"
+            aria-expanded={open}
+            aria-controls={open ? regionId : undefined}
+            onClick={() => setOpen((was) => !was)}
+          >
+            {t(open ? "history.reversal.collapse" : "history.reversal.expand")}
+          </Button>
+        </span>
         {open && (
           <ul
             id={regionId}

@@ -1,0 +1,7 @@
+{
+  "verb": "create_lead_source",
+  "checks": [
+    "custom_field.create",
+    "lead.read"
+  ]
+}

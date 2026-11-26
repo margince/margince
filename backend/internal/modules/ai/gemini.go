@@ -188,6 +188,9 @@ func (c *geminiClient) Complete(ctx context.Context, req model.Request) (model.R
 	}
 	resp := spent
 	resp.Text = text.String()
+	if len(req.ResponseSchema) > 0 {
+		resp.Text = GeminiDropPaddedNulls(req.ResponseSchema, resp.Text)
+	}
 	resp.ServedModel = out.ModelVersion
 	resp.FinishReason = geminiFinishReason(finish)
 	if len(signatures) > 0 {
@@ -198,8 +201,16 @@ func (c *geminiClient) Complete(ctx context.Context, req model.Request) (model.R
 	return resp, nil
 }
 
+// errGeminiSchemaStream refuses a schema-constrained stream. Gemini is sent the
+// schema's optional fields as required and nullable. Only a whole reply can have
+// the padded nulls taken back out (geministrict.go).
+var errGeminiSchemaStream = errors.New("ai: gemini: a request with a response schema completes and is not streamed")
+
 //nolint:ireturn // model.Client.Stream returns the port's TokenStream interface by contract
 func (c *geminiClient) Stream(ctx context.Context, req model.Request) (model.TokenStream, error) {
+	if len(req.ResponseSchema) > 0 {
+		return nil, errGeminiSchemaStream
+	}
 	body, err := c.generate(ctx, req, true)
 	if err != nil {
 		return nil, err
@@ -215,24 +226,20 @@ func (c *geminiClient) Embed(ctx context.Context, req model.EmbedRequest) (model
 	if embedModel == "" {
 		embedModel = geminiEmbedModel
 	}
-	// One call per input, so a large retrieval batch is N sequential
-	// round-trips.
-	vectors := make([][]float32, 0, len(req.Inputs))
+	vectors, err := c.embedInputs(ctx, embedModel, req.Inputs, req.Dimensions)
+	if err != nil {
+		return model.Embeddings{}, err
+	}
 	dims := 0
-	for _, input := range req.Inputs {
-		values, err := c.embedOne(ctx, embedModel, input, req.Dimensions)
-		if err != nil {
-			return model.Embeddings{}, err
-		}
-		// Every vector must share one width — the store ranks against a fixed
+	for i, values := range vectors {
+		// Every vector must share one width. The store ranks against a fixed
 		// column, so a ragged batch (model/version skew) is a hard error, not a
 		// silently-advertised max.
-		if len(vectors) == 0 {
+		if i == 0 {
 			dims = len(values)
 		} else if len(values) != dims {
 			return model.Embeddings{}, fmt.Errorf("ai: gemini: embedding width skew: got %d, expected %d", len(values), dims)
 		}
-		vectors = append(vectors, values)
 	}
 	return model.Embeddings{Vectors: vectors, Dims: dims}, nil
 }
@@ -315,6 +322,11 @@ func (c *geminiClient) generate(ctx context.Context, req model.Request, stream b
 		wire.SystemInstruction = &geminiContent{Parts: []geminiPart{{Text: req.System}}}
 	}
 	wire.GenerationConfig = geminiGenerationConfig(req, genModel, opts)
+	if format := wire.GenerationConfig.ResponseFormat; format != nil {
+		if strict, err := GeminiStrictSchema(req.ResponseSchema); err == nil {
+			format.Text.Schema = strict
+		}
+	}
 
 	method := "generateContent"
 	query := ""

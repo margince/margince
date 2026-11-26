@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/platform/providerhealthstore"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -166,7 +167,11 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	}
 	// Before the runner lane: an offer a Surface-B run changes reclaims its
 	// retired rendering from this store.
-	lanes.blob = blob
+	if err := lanes.bindStores(laneCtx, cfg.settings, blob, stdout); err != nil {
+		return lanes, err
+	}
+	// What a unit's Models and Objects reach on a job tick or a bus delivery.
+	compose.BindExtensionModels(modelPath.ExtensionTasks)
 	laneCtx = originalstore.Bind(laneCtx, compose.InstallationDB(pool), blob)
 	lanes.ctx = laneCtx
 
@@ -174,6 +179,7 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 		return lanes, err
 	}
 	startProjectionLanes(laneCtx, pool, rdb, modelPath, lanes.background, lanes.inserter, logger, stdout)
+	startChatLinkSync(laneCtx, pool, rdb, vault, lanes.inserter, cfg.posture, lanes.background, logger, stdout)
 	// Said out loud for the reason the api says it: each role reads its own
 	// --config, so an unarmed worker beside an armed api is a purge whose cache
 	// flush never reaches this process.
@@ -277,15 +283,7 @@ func startResetLane(ctx context.Context, allowed bool, rdb *redis.Client, modelP
 		return
 	}
 	flush := resetFlush(modelPath)
-	background.Go(func() {
-		// The filter is ctx.Err() rather than the returned error, so a shutdown
-		// cancellation is the ONLY quiet case — the dead-subscription sentinel
-		// stays loud, because nothing will flush this role's caches again
-		// until it restarts.
-		if err := events.SubscribeReset(ctx, rdb, logger, flush); err != nil && ctx.Err() == nil {
-			logger.Error("data reset: the control channel stopped; this process serves stale caches until it restarts", "err", err)
-		}
-	})
+	background.Go(func() { events.SubscribeReset(ctx, rdb, logger, flush) })
 }
 
 // startRunnerLane builds the Surface-B runner and starts the subscriber that
@@ -332,7 +330,7 @@ func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 	// which is already nil on a deployment that configured none.
 	compose.BindExtensionRuntime(pool, vault)
 	runnerSvc := compose.NewRunnerService(pool, modelPath.AgentLoop, modelPath.DraftReply, grounding, logger, send,
-		compose.WithRunnerLists(cfg.listsEnabled), compose.WithRunnerBlobstore(lanes.blob))
+		compose.WithRunnerLists(cfg.listsEnabled), compose.WithRunnerDisabledCoreFeatures(config.Val(cfg.settings, ps.CoreFeaturesDisabled)), compose.WithRunnerBlobstore(lanes.blob))
 	_, _ = fmt.Fprintln(stdout, "worker resuming approved Surface-B runs (cg:overnight-agent)")
 	lanes.runner = runnerSvc
 	lanes.background.Go(func() { runResumeSubscriber(ctx, rdb, runnerSvc, logger) })
@@ -346,7 +344,14 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	if modelPath.Embedder != nil {
 		gen := search.NewEmbedGen(search.NewStore(compose.InstallationDB(pool)), modelPath.Embedder)
 		_, _ = fmt.Fprintln(stdout, "worker maintaining retrieval embeddings")
-		background.Go(func() { runSubscriber(ctx, rdb, "cg:context-graph", gen.HandleEvent, logger, 0) })
+		// Quiet until a model is bound: an unbound embed lane refuses every event.
+		embed := func(ctx context.Context, env kevents.Envelope) error {
+			if !modelPath.Bound() {
+				return nil
+			}
+			return gen.HandleEvent(ctx, env)
+		}
+		background.Go(func() { runSubscriber(ctx, rdb, "cg:context-graph", embed, logger, 0) })
 	}
 	// The interaction-edge projection (ADR-0078). Unlike embeddings it needs no
 	// model, so it runs on every worker rather than only where a provider is
@@ -458,7 +463,7 @@ func startWebhookLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool,
 // Lane shutdown is not this function's job: run() defers the one join.
 func relayUntilSignal(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, stdout io.Writer) {
 	_, _ = fmt.Fprintf(stdout, "worker relaying outbox events to %s\n", cfg.redisAddr)
-	events.NewRelay(pool, rdb, logger).Run(ctx)
+	events.NewRelay(pool, rdb, logger).WithPause(workPause(ctx)).Run(ctx)
 }
 
 // backfillConnectorCredentials migrates any legacy capture_connection rows

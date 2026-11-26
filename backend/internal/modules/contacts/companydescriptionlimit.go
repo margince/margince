@@ -23,6 +23,9 @@ func (e *CompanyDescriptionTooLongError) FieldFault() (field, code, message stri
 	return columnDescription, "too_long", e.Error()
 }
 
+// FieldMax is the description's limit.
+func (e *CompanyDescriptionTooLongError) FieldMax() int { return CompanyDescriptionMax }
+
 // checkCompanyDescription is the one place create and update refuse a
 // description the column would refuse.
 func checkCompanyDescription(description *string) error {

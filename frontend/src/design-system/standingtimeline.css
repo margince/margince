@@ -99,7 +99,6 @@
   inset-inline-start: 0;
   block-size: 3px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accent);
 }
 .standing-timeline-spine.is-waiting {
@@ -122,7 +121,6 @@
   inline-size: 12px;
   block-size: 12px;
   border-radius: var(--r-full);
-  corner-shape: round;
   transform: translate(-50%, -50%);
   background: var(--accent);
 }
@@ -144,6 +142,41 @@
 }
 .standing-timeline-dot.is-end {
   box-shadow: inset 0 0 0 2.5px var(--textPrimary);
+}
+
+/* A deal's result: a pole up from the spine with a pennant on top, in the
+   spine's green for won and grey for lost, standing on a dot of that tone. */
+.standing-timeline-flag {
+  --standing-timeline-flag-tone: var(--accent);
+  position: absolute;
+  inset-block-start: calc(var(--standing-timeline-spine-y) - 64px);
+  block-size: 64px;
+  border-inline-start: 2px solid var(--standing-timeline-flag-tone);
+  transform: translateX(-1px);
+}
+.standing-timeline-flag[data-outcome="lost"] {
+  --standing-timeline-flag-tone: var(--textSecondary);
+}
+.standing-timeline-flag::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: 20px;
+  block-size: 14px;
+  background: var(--standing-timeline-flag-tone);
+  clip-path: polygon(0 0, 100% 0, 72% 50%, 100% 100%, 0 100%);
+}
+.standing-timeline-flag::after {
+  content: "";
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: -1px;
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: var(--r-full);
+  background: var(--standing-timeline-flag-tone);
+  transform: translate(-50%, 50%);
 }
 
 /* A label on row 2 or 3 hangs from its dot on a thin lead line. */
@@ -193,9 +226,8 @@
   block-size: var(--space-6);
   padding-inline: var(--space-3);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--textPrimary);
-  color: var(--bgElevated);
+  color: var(--textInverse);
   font: var(--fontHeadingXXSmall);
   white-space: nowrap;
 }
@@ -254,7 +286,6 @@
   padding: 0;
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
   color: var(--textSecondary);
   cursor: pointer;
@@ -290,7 +321,6 @@
   inline-size: 12px;
   block-size: 12px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accent);
   color: var(--textOnAccentControl);
 }
@@ -306,9 +336,8 @@
   min-inline-size: 14px;
   padding-inline: 3px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--textPrimary);
-  color: var(--bgElevated);
+  color: var(--textInverse);
   font: var(--fontBodySmall);
   text-align: center;
 }

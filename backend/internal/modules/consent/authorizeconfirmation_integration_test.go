@@ -137,7 +137,7 @@ func plantNarrowObjection(t *testing.T, e *resolveEnv, contact ids.ContactID) {
 
 // TestANarrowObjectionStillOwesTheSubjectLevelAcknowledgement pins the
 // EXISTS's deliberate blindness to purpose_id: a marketing_objection scoped to
-// one newsletter is still a marketing_objection, and Decree 91 Art. 16 owes an
+// one newsletter is still a marketing_objection, and Decree 91/2020 Art. 20 owes an
 // acknowledgement of THAT REFUSAL regardless of which newsletter it named. A
 // reader that started matching on purpose (rowPurpose equals the send's
 // resolved purpose, the rule applySuppression uses to BIND a send) would
@@ -198,8 +198,8 @@ func withdrawThroughThePress(t *testing.T, e *resolveEnv, key string, class Clas
 }
 
 // TestAWithdrawnMarketingPurposeOwesAnAcknowledgement. An unsubscribe press
-// withdraws a marketing purpose and records no suppression, and Decree 91
-// Art. 16 owes it an acknowledgement all the same.
+// withdraws a marketing purpose and records no suppression, and Decree 91/2020
+// Art. 20 owes it an acknowledgement all the same.
 func TestAWithdrawnMarketingPurposeOwesAnAcknowledgement(t *testing.T) {
 	e := setupResolve(t)
 	withdrawThroughThePress(t, e, "press-newsletter", ClassMarketing)
@@ -291,5 +291,24 @@ func TestALeadWithNoStandingRefusalOwesNoAcknowledgement(t *testing.T) {
 				t.Errorf("%s resolved supported for a lead's opt-out acknowledgement", name)
 			}
 		})
+	}
+}
+
+// A live restriction is evidence for the notice of its lift alone. An ordinary
+// privacy notice to a restricted contact still needs its own live link.
+func TestARestrictionIsNoEvidenceForAnOrdinaryPrivacyNotice(t *testing.T) {
+	e := setupResolve(t)
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
+		VALUES ($1, $2, 'test', 'human:x', $3)`,
+		e.contact, kindProcessingRestriction, string(commsauthz.LevelSubject)); err != nil {
+		t.Fatalf("planting the restriction: %v", err)
+	}
+
+	got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryPrivacyNotice, DeliveryID: ids.NewV7()})
+
+	if got.Supported {
+		t.Fatal("a privacy notice with no link was supported by the contact's restriction; only the " +
+			"notice of the restriction's lift may rest on it")
 	}
 }

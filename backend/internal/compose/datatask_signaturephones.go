@@ -12,12 +12,13 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 func signaturePhonesDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1793267775_signature_phones_without_evidence", Version: 2,
-		Title: "Taking back signature numbers without evidence", Requires: []string{introductionValidationMigration},
+		Title: systemtext.Literal("datatask.title.core.1793267775_signature_phones_without_evidence"), Requires: []string{introductionValidationMigration},
 		Steps: []datatask.Step{{
 			Name: "signature_phones", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

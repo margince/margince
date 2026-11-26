@@ -4,6 +4,8 @@ export type RefusalSurface = Readonly<{
   recordable?: boolean;
   /** The message's own reason for contact can be picked. */
   picksReason?: boolean;
+  /** The message was sent with no reason for contact of its own. */
+  unclaimed?: boolean;
 }>;
 
 /**
@@ -13,6 +15,7 @@ export type RefusalSurface = Readonly<{
 export type RefusalKind =
   | "missingContext"
   | "missingEvidence"
+  | "missingFooter"
   | "missingPermission"
   | "restricted";
 
@@ -35,10 +38,13 @@ export function refusalKindOf(
     case "claim_contradicts_resolution":
     case "legacy_transactional_unevidenced":
       return "missingContext";
+    case "footer_incomplete":
+      return "missingFooter";
     case "no_marketing_consent":
     case "unconfirmed_double_opt_in":
     case "marketing_consent_required":
     case "marketing_permission_required":
+    case "lawful_basis_unconfirmed":
       return "missingPermission";
     default:
       return "restricted";
@@ -64,6 +70,10 @@ export function sendPermissionReasonKey(
       return "sendPermission.reason.askedUsToStop" as const;
     case "hard_bounce":
       return "sendPermission.reason.bounced" as const;
+    case "subject_label_missing":
+      return "sendPermission.reason.subjectLabelMissing" as const;
+    case "subject_labels_conflict":
+      return "sendPermission.reason.subjectLabelsConflict" as const;
     case "frequency_cap_reached":
       return "sendPermission.reason.tooMany" as const;
     case "opted_out_after_request":
@@ -76,9 +86,13 @@ export function sendPermissionReasonKey(
       return "sendPermission.reason.ambiguous" as const;
     case "unconfirmed_double_opt_in":
       return "sendPermission.reason.unconfirmed" as const;
+    case "footer_incomplete":
+      return "sendPermission.reason.footerIncomplete" as const;
+    case "lawful_basis_unconfirmed":
+      return "sendPermission.reason.lawfulBasisUnconfirmed" as const;
     case "no_compatible_evidence":
       return dealFollowup
-        ? ("sendPermission.reason.chooseDeal" as const)
+        ? ("sendPermission.reason.dealFact" as const)
         : recordable
           ? ("sendPermission.unprovenHint" as const)
           : ("sendPermission.unprovenRefuses" as const);
@@ -103,4 +117,20 @@ export function sendPermissionReasonKey(
     default:
       return "sendPermission.reason.other" as const;
   }
+}
+
+// With no reason given, the purpose the engine could not place is the missing
+// reason itself, not one the message named. Every other refusal reads as
+// sendPermissionReasonKey words it.
+export function refusalSentenceKey(
+  reason: string | undefined,
+  surface: RefusalSurface = {},
+  category?: string,
+) {
+  if (reason === "unknown_purpose" && surface.unclaimed) {
+    return surface.picksReason
+      ? ("sendPermission.reason.noReason" as const)
+      : ("sendPermission.reason.noReasonFact" as const);
+  }
+  return sendPermissionReasonKey(reason, surface, category);
 }

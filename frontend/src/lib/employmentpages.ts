@@ -20,9 +20,14 @@ export function nextEmploymentCursor(page: Page): string | undefined {
   return page.next_cursor;
 }
 
-export async function readEmploymentPage(contactId: string, cursor: string) {
+export async function readEmploymentPage(
+  contactId: string,
+  cursor: string,
+  signal?: AbortSignal,
+) {
   const data = unwrap(
     await api.GET("/relationships", {
+      signal,
       params: {
         query: { contact_id: contactId, kind: "employment", cursor, limit: 50 },
       },
@@ -52,6 +57,7 @@ export async function readEmploymentPage(contactId: string, cursor: string) {
 export async function currentEmployerCompanyIds(
   client: QueryClient,
   contactId: string,
+  zone: string,
 ): Promise<string[] | undefined> {
   const view = await client.fetchQuery(contact360Query(contactId));
   if (!view.employments) return undefined;
@@ -66,5 +72,11 @@ export async function currentEmployerCompanyIds(
     roles.push(...page.roles);
     cursor = nextEmploymentCursor(page.page);
   }
-  return [...new Set(roles.filter(stillHeld).map((role) => role.company_id))];
+  return [
+    ...new Set(
+      roles
+        .filter((role) => stillHeld(role, zone))
+        .map((role) => role.company_id),
+    ),
+  ];
 }

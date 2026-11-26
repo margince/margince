@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -42,8 +43,8 @@ func appendEntityLinkClauses(in ListActivitiesInput, arg func(any) int, where []
 }
 
 func entityLinkFilter(in ListActivitiesInput, arg func(any) int) (where []string, err error) {
-	column := linkColumn(*in.EntityType)
-	if column == "" {
+	target, ok := linkTargetOf(*in.EntityType)
+	if !ok {
 		return nil, &InvalidLinkTypeError{EntityType: *in.EntityType}
 	}
 	if *in.EntityType == string(datasource.RecordCompany) {
@@ -61,10 +62,8 @@ func entityLinkFilter(in ListActivitiesInput, arg func(any) int) (where []string
 	// row, and the keyset tuple — which names `created_at` and `id` alone,
 	// since every other list it serves reads one table — is ambiguous the
 	// moment activity_link, which carries both, is in the FROM list.
-	return []string{sprintf(
-		`EXISTS (SELECT 1 FROM activity_link al
-		          WHERE al.activity_id = a.id AND al.entity_type = $%d AND al.%s = $%d)`,
-		arg(*in.EntityType), column, arg(*in.EntityID))}, nil
+	return []string{"EXISTS (SELECT 1 FROM activity_link al WHERE al.activity_id = a.id AND " +
+		target.linkedSQL("al", arg(*in.EntityID)) + ")"}, nil
 }
 
 // listActivitiesFilter builds the timeline query's join, WHERE terms and
@@ -79,16 +78,18 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 
 	// The sort FIRST: it may bind parameters of its own and the cursor clause
 	// below is rendered from it, so both count through one counter.
-	sorted, err = timelineSort(ctx, in, arg)
-	if err != nil {
-		return nil, "", nil, nil, err
+	// A count has no ORDER BY, so binding the sort's parameters would leave
+	// arguments the statement never mentions, which Postgres refuses.
+	if !in.countOnly {
+		if sorted, err = timelineSort(ctx, in, arg); err != nil {
+			return nil, "", nil, nil, err
+		}
 	}
 
-	// The timeline is DISCOVER-gated: a row reachable through a record the
-	// caller may read is listed, and whether its content comes with it is the
-	// audience's call, answered per row (content_state). The free text of a
-	// limited conversation is blanked by the scan, never selected into the
-	// response.
+	// The timeline is DISCOVER-gated: a row reachable through a readable record
+	// is listed. Whether its content comes with it is the audience's call, per
+	// row (content_state). A limited conversation's body and raw come back NULL
+	// from SQL, and the scan blanks its other free text.
 	//
 	// Composed HERE rather than in a helper of its own, and the reason is a
 	// gate rather than taste: restrictedreaders_test.go reads the declaration
@@ -104,9 +105,13 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 		// so a limited row is simply not there.
 		gate = auth.ActivityContentClause
 	}
-	scope, err := gate(ctx, "a", arg)
-	if err != nil {
-		return nil, "", nil, nil, err
+	// A waiting read lists only ids its waiting set content-gated already, so a
+	// gate here would be a second copy for Postgres to plan.
+	scope, impliedByWaiting := "", in.WaitingReplyAsOf != nil
+	if !impliedByWaiting {
+		if scope, err = gate(ctx, "a", arg); err != nil {
+			return nil, "", nil, nil, err
+		}
 	}
 	if scope != "" {
 		where = append(where, scope)
@@ -119,7 +124,7 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 			return nil, "", nil, nil, err
 		}
 	}
-	reminders, err := dueRemindersArm(ctx, in, scope != "", arg)
+	reminders, err := dueRemindersArm(ctx, in, scope != "" || impliedByWaiting, arg)
 	if err != nil {
 		return nil, "", nil, nil, err
 	}
@@ -137,9 +142,6 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	}
 	if in.WithinProjectID != nil {
 		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))
-	}
-	if in.WrittenByHuman {
-		where = append(where, relstrength.WrittenByHumanSQL("a"))
 	}
 	if in.ConversationAsOf != nil {
 		where = append(where, relstrength.HappenedByNowSQL("a", fmt.Sprintf("$%d", arg(*in.ConversationAsOf))))
@@ -188,6 +190,9 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 	if !in.IncludeArchived {
 		where = append(where, activityLive)
 	}
+	if in.PartyContactID != nil {
+		where = append(where, ContactIsPartySQL(sprintf("$%d", arg(*in.PartyContactID))))
+	}
 	if in.SourceActivityID != nil {
 		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id = $%d", arg(*in.SourceActivityID)))
 	}
@@ -204,8 +209,17 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 	if in.ChannelProvider != nil {
 		where = append(where, sprintf("a.channel_provider = $%d", arg(*in.ChannelProvider)))
 	}
+	if in.WebsiteFormID != nil {
+		where = append(where, sprintf("a.kind = 'note' AND a.source_system = $%d AND a.source_id LIKE $%d", arg(provenance.WebFormSource), arg(in.WebsiteFormID.String()+":%")))
+	}
+	if len(in.SourceIDs) != 0 {
+		where = append(where, sprintf("a.source_id = ANY($%d::text[])", arg(in.SourceIDs)))
+	}
 	if in.SourceSystem != nil {
 		where = append(where, sprintf("a.source_system = $%d", arg(*in.SourceSystem)))
+	}
+	if in.WrittenByHuman {
+		where = append(where, relstrength.WrittenByHumanSQL("a"))
 	}
 	if in.AnswersThem {
 		answeredAt := "now()"
@@ -213,6 +227,9 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 			answeredAt = fmt.Sprintf("$%d", arg(*in.AsOf))
 		}
 		where = append(where, answersThemSQL(answeredAt))
+	}
+	if len(in.IDs) != 0 {
+		where = append(where, sprintf("a.id = ANY($%d::uuid[])", arg(in.IDs)))
 	}
 	if in.onlyID != nil {
 		where = append(where, sprintf("a.id = $%d", arg(*in.onlyID)))
@@ -281,7 +298,7 @@ func timelineKeyset(in ListActivitiesInput, sorted *storekit.ListSort, arg func(
 	if in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil {
 		return "", errRequestReviewWithCursor
 	}
-	return sorted.KeysetClause(*in.Cursor, arg)
+	return sorted.KeysetClause("activities", *in.Cursor, arg)
 }
 
 // activityRowClauses narrows on columns of the activity row itself: the
@@ -295,6 +312,10 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 	var where []string
 	if in.InteractionsAsOf != nil {
 		where = append(where, relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d", arg(*in.InteractionsAsOf))))
+	}
+	if in.DirectionClockAsOf != nil && in.ClockDirection != "" {
+		where = append(where, relstrength.DirectionClockSQL("a", fmt.Sprintf("$%d", arg(*in.DirectionClockAsOf))),
+			sprintf("a.direction = $%d", arg(in.ClockDirection)))
 	}
 	if in.ThreadKey != nil && *in.ThreadKey != "" {
 		where = append(where, sprintf("a.thread_key = $%d", arg(*in.ThreadKey)))
@@ -353,8 +374,8 @@ func occurredWindowClauses(in ListActivitiesInput, arg func(any) int) []string {
 // with the answer blanked.
 func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
-		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil ||
-		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.CustomFilters) > 0
+		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil || in.WebsiteFormID != nil ||
+		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.SourceIDs) > 0 || len(in.CustomFilters) > 0
 }
 
 // kindPredicate spells known kinds as literals, so a generic plan keeps the

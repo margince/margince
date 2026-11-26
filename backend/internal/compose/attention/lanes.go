@@ -8,6 +8,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -22,9 +23,10 @@ import (
 // Approvals is the staged-proposal queue, read through its owning service.
 // CountPending is separate because the lane is bounded and the count is not: a
 // reader with forty decisions is told forty, then shown the nine worth a sitting.
+// ListWire says whether its page holds every pending row, which is then the count.
 type Approvals interface {
 	PendingInScope(ctx context.Context, in ApprovalQuery, named []ids.ApprovalID) (map[ids.ApprovalID]bool, error)
-	ListWire(ctx context.Context, in ApprovalQuery) ([]crmcontracts.Approval, error)
+	ListWire(ctx context.Context, in ApprovalQuery) (rows []crmcontracts.Approval, complete bool, err error)
 	CountPending(ctx context.Context, in ApprovalQuery) (int, error)
 }
 
@@ -69,11 +71,11 @@ type ApprovalQuery struct {
 // every morning. An id the reader may not see is simply ABSENT from the answer,
 // which is what its refusal meant.
 //
-// OpenCandidates answers UP TO its limit and says nothing about what it left:
-// the dedupe queue pages, and its own page maximum is smaller than the census
-// this lane reads to. So CountOpen is what says whether the lane finished, and
-// unseen.go reads the two together — a page judged by its own length reported a
-// complete day over every pair past the first one.
+// OpenCandidates answers up to its limit and, beside it, how many pairs the
+// reader may see in all, from the same statement. The queue pages, and its page
+// maximum is smaller than the census this lane reads to. So the count says
+// whether the lane finished, and unseen.go reads the two together. A page
+// judged by its own length reported a complete day over every pair past it.
 //
 // DecidableSubset asks the OTHER question about the same records: not whether
 // this reader may see them, but whether they could change them. Settling a pair
@@ -81,8 +83,7 @@ type ApprovalQuery struct {
 // side's write authority has no verb to be offered — and the card is where they
 // should learn that, rather than from a refusal after the press.
 type Duplicates interface {
-	OpenCandidates(ctx context.Context, limit int) ([]DuplicatePair, error)
-	CountOpen(ctx context.Context) (int, error)
+	OpenCandidates(ctx context.Context, limit int, owners *storekit.OwnerSet) ([]DuplicatePair, int, error)
 	DescribeMany(ctx context.Context, entityType string, rowIDs []ids.UUID) (map[ids.UUID]RecordFace, error)
 	DecidableSubset(ctx context.Context, entityType string, rowIDs []ids.UUID) (map[ids.UUID]bool, error)
 	// SettleablePairs asks the PAIR's own question, which authority cannot:
@@ -94,6 +95,9 @@ type Duplicates interface {
 	SettleablePairs(ctx context.Context, pairs []DuplicatePair) (map[ids.UUID]bool, error)
 }
 
+// PairOwners narrows the duplicate pairs to those the owners decide; nil is every pair.
+type PairOwners = storekit.OwnerSet
+
 // DuplicatePair is one open candidate: the pair, and what the detector saw.
 type DuplicatePair struct {
 	ID         ids.UUID
@@ -102,6 +106,8 @@ type DuplicatePair struct {
 	LeftID     ids.UUID
 	RightID    ids.UUID
 	Evidence   []FieldComparison
+	// Owners are the live owners of the two records.
+	Owners []ids.UUID
 }
 
 // FieldComparison is one row of the detection-time snapshot.
@@ -148,41 +154,59 @@ const (
 // with a colleague's rows and hide the reader's own overdue task. The team argument is TaskWindow.Team: the seats a
 // team view keeps, plus unassigned work. Nil reads the scope unnarrowed.
 type Tasks interface {
-	OpenForViewer(ctx context.Context, asOf, until time.Time, limit int, scope TaskScope, owner ids.UUID, team []ids.UUID) ([]Task, error)
+	// PlannedForViewer answers the planned lane's reads under one narrowing,
+	// with each task enriched once across them.
+	PlannedForViewer(ctx context.Context, ask PlannedAsk) (PlannedTasks, error)
 	// CountOpenForViewer answers how many there ARE under the same narrowing,
 	// which is not the page length: the lane is capped at a dozen, so a badge
 	// showing the cap tells a reader with thirteen that they have twelve, and
 	// there is no second page to reach the thirteenth by.
-	CountOpenForViewer(ctx context.Context, asOf, until time.Time, scope TaskScope, owner ids.UUID, team []ids.UUID) (int, error)
-	// UpcomingForViewer answers the work due AFTER the day's end, up to a
-	// horizon, under the same narrowing.
-	//
-	// A second read rather than a wider one, because the two allocations must
-	// not compete: a full day's backlog would fill a shared limit before a
-	// single upcoming row was reached, and the reader who most needs next
-	// week's deadline is exactly the one who would never see it.
-	UpcomingForViewer(ctx context.Context, asOf, from, until time.Time, limit int, scope TaskScope, owner ids.UUID, team []ids.UUID) ([]Task, error)
-	// RemindersForViewer answers every one of the reader's tasks whose reminder
-	// is due, latest reminder first. Not under the day's cap, which orders by
-	// due date, and not under any cap, because the lane's count counts them all.
-	RemindersForViewer(ctx context.Context, asOf time.Time) ([]Task, error)
+	CountOpenForViewer(ctx context.Context, asOf, until time.Time, scope TaskScope, zone string, owner ids.UUID, team []ids.UUID) (int, error)
+}
+
+// PlannedAsk is the planned lane's question. The day's work is due by
+// Window.Until, and the work after it is due by Horizon. They are two bounded
+// reads, so a full day's backlog cannot fill the limit before an upcoming row.
+// Reminders asks for every due reminder of the reader's own, uncapped, because
+// the lane's count counts them all.
+type PlannedAsk struct {
+	Window                  TaskWindow
+	Horizon                 time.Time
+	DayLimit, UpcomingLimit int
+	Reminders               bool
+}
+
+// PlannedTasks answers a PlannedAsk, one list per read.
+type PlannedTasks struct {
+	Open, Upcoming, Reminders []Task
 }
 
 // Task is one piece of agreed work.
 type Task struct {
+	Inquiry          *crmcontracts.WebsiteInquiryWork
+	WebsiteInquiry   bool
+	SystemDisplay    *crmcontracts.SystemDisplay
 	SourceActivityID *ids.UUID
 	Recipients       []crmcontracts.WorklistPromiseRecipient
 	// Commitment marks a task written for a promise read out of a message.
 	Commitment bool
 	// MayBeDone is the question whether our later mail kept the promise, set
 	// when one asks it (momentaction.DoneKey).
-	MayBeDone              *crmcontracts.WorklistMayBeDone
+	MayBeDone *crmcontracts.WorklistMayBeDone
+	// RequestCheck says why a reminder taken from a request will not close by
+	// itself, set when Margince cannot check whether it was answered.
+	RequestCheck           *crmcontracts.TaskRequestCheck
 	LeadResponseEscalation bool
 	ID                     ids.UUID
 	Subject                string
-	DueAt                  *time.Time
+	// Why is the reason its maker gave for the task, nil when they gave none.
+	Why   *crmcontracts.WorkGrounds
+	DueAt *time.Time
 	// DueHasTime is true when DueAt names an agreed time of day.
 	DueHasTime bool
+	DueIntent  *crmcontracts.IntentTime
+	// TaskType is the kind of work the task asks for, as the task reads it.
+	TaskType *crmcontracts.TaskType
 	// The record this task was raised for, when it names one. A follow-up task
 	// says "Follow up with the new lead" and nothing else, so without the link
 	// the row is a sentence the reader cannot act on: the lane knows which lead
@@ -209,6 +233,9 @@ type Task struct {
 	ReadOnly bool
 	// ReminderDue says the reader is the assignee and the reminder came due.
 	ReminderDue bool
+	// later says the later window read this task. Undated there, it is agreed
+	// work nobody dated, which waits after the dated upcoming work.
+	later bool
 }
 
 // Receipts is what the system did on its own, most recent first.
@@ -231,6 +258,7 @@ type FailedEffect struct {
 	// Sentence is the server's own line about what did not run, written for
 	// the reader when the failure was recorded.
 	Sentence string
+	Code     *string // the sentence as Approval.effect_failure_code, when it has one
 	FailedAt time.Time
 	// The record the decision was about; empty TargetType when it named none,
 	// and the card offers `open` only when it did.
@@ -310,7 +338,10 @@ type Briefing interface {
 	// reply, and judging freshness by generated_at would hide exactly the replies
 	// a rep most wants to see. Zero when no run exists, which is why `ran` is a
 	// separate answer: absent is not the same as false.
-	Queue(ctx context.Context) (entries []BriefEntry, ran bool, asOf time.Time, err error)
+	//
+	// now is the read's own instant, so snoozes are judged at the as_of the
+	// rest of the page carries.
+	Queue(ctx context.Context, now time.Time) (entries []BriefEntry, ran bool, asOf time.Time, err error)
 }
 
 // BriefEntry is one UNANSWERED queue entry: what it is about, and where it
@@ -325,9 +356,10 @@ type Briefing interface {
 // entries. The brief owns what its states mean and what each spells; a copy of
 // that vocabulary here would be a second place to keep it right.
 type BriefEntry struct {
-	ID     ids.UUID
-	DealID ids.UUID
-	Rank   int
+	Snoozed bool
+	ID      ids.UUID
+	DealID  ids.UUID
+	Rank    int
 	// Composite is the night's own score for this deal, between 0 and 1, and
 	// what ranksteps.go's `opportunity` step breaks a tie by.
 	Composite float64
@@ -400,7 +432,8 @@ type Commitment struct {
 // same refusal shape Names uses: the row keeps its name and loses its figures,
 // and the id still travels because naming the deal was the producer's claim.
 type DealFacts interface {
-	Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]DealFigures, error)
+	// zone is the day rule's zone for this page. Nil is the installation's.
+	Figures(ctx context.Context, dealIDs []ids.UUID, zone *time.Location) (map[ids.UUID]DealFigures, error)
 }
 
 // DealFigures is what a card needs to state a deal's commercial case: what it
@@ -435,12 +468,13 @@ type Notices interface {
 
 // UnreadNotice is one line still waiting to be seen.
 type UnreadNotice struct {
-	ApprovalID *ids.ApprovalID
-	Origin     *crmcontracts.NoticeOrigin
-	ID         ids.UUID
-	Kind       string
-	Subject    string
-	Body       string
+	SystemDisplay *crmcontracts.SystemDisplay
+	ApprovalID    *ids.ApprovalID
+	Origin        *crmcontracts.NoticeOrigin
+	ID            ids.UUID
+	Kind          string
+	Subject       string
+	Body          string
 	// Target names the record the notice is about, when it names one. Empty
 	// type means it names none — a capture backlog, a coach's word — and the
 	// row then carries no subject, which is what it carried before any notice

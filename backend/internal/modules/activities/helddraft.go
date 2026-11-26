@@ -31,10 +31,10 @@ func discardHeldDraftTx(ctx context.Context, tx pgx.Tx, held claimedSend, origin
 		   AND to_addresses = @recipients::text[]
 		   AND cc_addresses = @cc::text[] AND bcc_addresses = @bcc::text[]
 		 ORDER BY id LIMIT 1 FOR UPDATE`, pgx.NamedArgs{
-		"author": held.ScheduledBy, "types": types, "anchors": anchors,
-		"subject": in.Subject, "body": in.Body, "recipients": addressLine(in.Recipients),
-		"html": in.HTMLBody, "held_at": held.CreatedAt,
-		"cc": addressLine(in.Cc), "bcc": addressLine(in.Bcc),
+		argAuthor: held.ScheduledBy, "types": types, "anchors": anchors,
+		fieldSubject: in.Subject, fieldBody: in.Body, "recipients": addressLine(in.Recipients),
+		argHTML: in.HTMLBody, "held_at": held.CreatedAt,
+		"cc": addressLine(in.Cc), fieldBcc: addressLine(in.Bcc),
 	}).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil

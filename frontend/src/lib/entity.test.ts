@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { ENTITY, ENTITY_KINDS, recordRoute, SCREEN_ENTITY } from "./entity";
 
 describe("ENTITY registry", () => {
@@ -10,7 +11,7 @@ describe("ENTITY registry", () => {
       "lead",
       "project",
     ]);
-    expect(Object.keys(ENTITY).sort()).toEqual([
+    expect(Object.keys(ENTITY).sort(stable)).toEqual([
       "company",
       "contact",
       "deal",

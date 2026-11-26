@@ -1,0 +1,10 @@
+{
+  "verb": "advance_project_phase",
+  "checks": [
+    "project.update",
+    "relationship.read"
+  ],
+  "takes": [
+    "project"
+  ]
+}

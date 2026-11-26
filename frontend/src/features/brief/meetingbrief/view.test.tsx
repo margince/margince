@@ -323,7 +323,7 @@ describe("the coaching layer", () => {
     }
   });
 
-  it("gives the lead the branches the rep's own plan carries", () => {
+  it("gives the lead the coach's reading of each branch", () => {
     mount({ kind: "ready", brief: briefManager });
     expect(screen.getByText("Possible outcomes")).toBeTruthy();
     expect(screen.getByText("It becomes a price negotiation")).toBeTruthy();

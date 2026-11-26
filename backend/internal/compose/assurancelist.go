@@ -28,6 +28,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/assurancefloor"
+	"github.com/margince/margince/backend/internal/compose/assurancepair"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -66,7 +68,33 @@ func AssuranceExceptionsIn(
 	if err := reportingDimensionContext(ctx, tx, selection, &frame); err != nil {
 		return nil, err
 	}
-	return assuranceExceptionsWith(ctx, tx, nil, requested, 0, nil, frame)
+	found, err := assuranceExceptionsWith(ctx, tx, nil, requested, 0, nil, frame)
+	if err != nil {
+		return nil, err
+	}
+	return found, requireFlooredFindings(ctx, tx, requested, found)
+}
+
+// requireFlooredFindings holds the list's groups and totals to the floor while
+// the switch is off. Those are each type's count, its exposure per currency,
+// and the whole list. With no scope named the list covers every deal the
+// reader may read, so it is judged by its contributors, as a company total is.
+func requireFlooredFindings(ctx context.Context, tx pgx.Tx, requested *RequestedScope, found []assurance.Exception) error {
+	allowed, err := individualPerformance(ctx, tx)
+	if err != nil || allowed {
+		return err
+	}
+	resolved := ResolvedScope{Kind: ScopeKindWorkspace}
+	if requested != nil {
+		if resolved, err = ResolveAnalyticsScope(ctx, tx, *requested); err != nil {
+			return err
+		}
+	}
+	groups, err := assurancefloor.ListGroups(ctx, tx, populationMembers, found)
+	if err != nil {
+		return err
+	}
+	return requireFlooredTotals(ctx, tx, resolved, groups)
 }
 
 // TeamAssuranceExceptions reads the open findings on deals the members own
@@ -165,7 +193,7 @@ func assuranceDealExceptionsOwnedBy(
 		WHERE e.status = 'open' AND e.subject_kind = 'deal' AND d.archived_at IS NULL
 		  AND %s
 		ORDER BY `+findingRank+`, e.id`+bound,
-		exceptionSelect(money), findingPricedJoin(money.affected), scopeClause)
+		exceptionSelect(money), findingPricedJoin(money), scopeClause)
 
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
@@ -173,14 +201,19 @@ func assuranceDealExceptionsOwnedBy(
 	}
 	defer rows.Close()
 
-	return pgx.CollectRows(rows, scanLabelledException)
+	found, err := pgx.CollectRows(rows, scanLabelledException)
+	if err != nil {
+		return nil, err
+	}
+	return assurancepair.WithholdHidden(ctx, tx, found)
 }
 
-// findingPricedJoin renames a finding's amount, rendered as affected, to the
-// columns the deal conversion reads, as alias `fa`. Every statement that orders
-// by findingRank joins it, so a masked amount ranks as the null its reader sees.
-func findingPricedJoin(affected string) string {
-	return `CROSS JOIN LATERAL (SELECT ` + affected + ` AS amount_minor, e.currency,
+// findingPricedJoin renames a finding's amount and currency, as rendered, to
+// the columns the deal conversion reads, as alias `fa`. Every statement that
+// orders by findingRank joins it, so masked money ranks as the null its reader
+// sees.
+func findingPricedJoin(money findingMoney) string {
+	return `CROSS JOIN LATERAL (SELECT ` + money.affected + ` AS amount_minor, ` + money.currency + ` AS currency,
 	                           NULL::bigint AS amount_minor_base) fa`
 }
 
@@ -188,25 +221,31 @@ func findingPricedJoin(affected string) string {
 // amount in the base currency at today's rate. Amounts in different currencies
 // compare as money, and one with no rate sorts after every priced one.
 var findingRank = `CASE e.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
-	` + deals.BaseValueSQL("CURRENT_DATE", installationBaseCurrencySQL, "fa") + ` DESC NULLS LAST,
+	` + deals.BaseValueSQL("now()", installationBaseCurrencySQL, "fa") + ` DESC NULLS LAST,
 	e.last_seen_at DESC`
 
-// findingMoney is how a statement renders the three columns of a finding that
-// carry the deal's money: affected_minor, and the claim and observed slots.
-type findingMoney struct{ affected, claim, observed string }
+// findingMoney is how a statement renders the columns of a finding that carry
+// the deal's money: affected_minor, its currency, and the claim and observed
+// slots.
+type findingMoney struct{ affected, currency, claim, observed string }
 
 // rawFindingMoney is the bare columns, for the system-principal bundler.
-var rawFindingMoney = findingMoney{affected: "e.affected_minor", claim: "e.claim", observed: "e.observed"}
+var rawFindingMoney = findingMoney{affected: "e.affected_minor", currency: "e.currency", claim: "e.claim", observed: "e.observed"}
 
-// maskedFindingMoney renders those columns under the caller's mask on
-// deal.amount_minor, over the deal joined as `d`. affected is affected_minor
-// already rendered so, since it is the deal's amount or its gap to an offer or
-// contract on every type. The slots carry money only on
-// assurance.DealAmountTypes, so the dates and categories the other types quote
-// stay readable.
+// maskedFindingMoney renders those columns under the caller's masks over the
+// deal joined as `d`. affected arrives rendered under the amount mask. The
+// currency answers to the currency mask, which an amount mask also withholds.
+// The slots carry money only on assurance.DealAmountTypes, so the dates and
+// categories the other types quote stay readable.
 func maskedFindingMoney(ctx context.Context, affected string, arg func(any) int) (findingMoney, error) {
+	currency, err := auth.MaskedExpressionSQL(ctx, tableDeal, "currency", "d", rawFindingMoney.currency, arg)
+	if err != nil {
+		return findingMoney{}, err
+	}
 	if affected == rawFindingMoney.affected {
-		return rawFindingMoney, nil
+		money := rawFindingMoney
+		money.currency = currency
+		return money, nil
 	}
 	moneyTypes := arg(assurance.DealAmountTypes())
 	slots := []string{rawFindingMoney.claim, rawFindingMoney.observed}
@@ -217,7 +256,7 @@ func maskedFindingMoney(ctx context.Context, affected string, arg func(any) int)
 		}
 		slots[i] = fmt.Sprintf("CASE WHEN e.type = ANY($%d) THEN %s ELSE %s END", moneyTypes, masked, column)
 	}
-	return findingMoney{affected: affected, claim: slots[0], observed: slots[1]}, nil
+	return findingMoney{affected: affected, currency: currency, claim: slots[0], observed: slots[1]}, nil
 }
 
 // exceptionSelect is the select list every read of a finding shares, aliased
@@ -225,7 +264,7 @@ func maskedFindingMoney(ctx context.Context, affected string, arg func(any) int)
 // reader moves with it, or the scan reads a currency into a status.
 func exceptionSelect(money findingMoney) string {
 	return `e.id, e.type, e.subject_kind, e.subject_id, e.severity,
-	       ` + money.affected + `, e.currency, e.owner_id, e.status,
+	       ` + money.affected + `, ` + money.currency + `, e.owner_id, e.status,
 	       ` + money.claim + `, ` + money.observed + `, e.first_seen_at, e.last_seen_at`
 }
 

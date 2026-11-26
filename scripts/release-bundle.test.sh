@@ -23,7 +23,7 @@ fail() {
 # plant <arch>: one platform folder, laid out as the Dockerfile's bundle stage.
 plant() {
 	local dir="$work/bundle/linux_$1"
-	mkdir -p "$dir/bin" "$dir/web" "$dir/deploy/server" "$dir/config"
+	mkdir -p "$dir/bin" "$dir/web" "$dir/deploy/server" "$dir/config" "$dir/licenses"
 	for program in margince-api margince-worker margince-migrate; do
 		printf '#!/bin/sh\necho %s-%s\n' "$program" "$1" >"$dir/bin/$program"
 	done
@@ -33,6 +33,7 @@ plant() {
 	cp "$SCRIPT_DIR/../config/margince.example.yaml" "$dir/config/"
 	cp "$SCRIPT_DIR/../.env.example" "$dir/margince.env.example"
 	echo 'Business Source License 1.1' >"$dir/LICENSE"
+	echo 'Third-party notices' >"$dir/licenses/THIRD-PARTY-NOTICES.txt"
 }
 
 pack() {
@@ -56,8 +57,8 @@ for arch in amd64 arm64; do
 	mkdir -p "$work/unpacked"
 	tar -xzf "$tarball" -C "$work/unpacked"
 	top="$work/unpacked/margince-v1.2.0-linux-$arch"
-	if [[ "$(cat "$top/VERSION" 2>/dev/null)" != $'version=v1.2.0\nrevision=4e1b736eb' ]]; then
-		fail "linux/$arch VERSION does not name the release and the revision, so the files alone cannot say which release they are"
+	if [[ "$(cat "$top/VERSION" 2>/dev/null)" != 1.2.0 || "$(cat "$top/REVISION" 2>/dev/null)" != 4e1b736eb ]]; then
+		fail "linux/$arch VERSION and REVISION do not name the release and the revision, so the files alone cannot say which release they are"
 	fi
 	if [[ "$("$top/bin/margince-api" 2>/dev/null)" != "margince-api-$arch" ]]; then
 		fail "linux/$arch carries another platform's api, or one that is not executable"
@@ -98,6 +99,15 @@ if pack; then
 	fail "a bundle without margince.env.example was packed, and the install has no settings to start from"
 elif ! grep -q 'margince.env.example' "$work/out"; then
 	fail "the refusal does not name the missing template: $(cat "$work/out")"
+fi
+
+# --- a bundle without the third-party notices --------------------------------
+plant arm64
+rm "$work/bundle/linux_arm64/licenses/THIRD-PARTY-NOTICES.txt"
+if pack; then
+	fail "a bundle without the third-party notices was packed, and its Go dependencies ship without their licence texts"
+elif ! grep -q 'licenses/THIRD-PARTY-NOTICES.txt' "$work/out"; then
+	fail "the refusal does not name the missing notices: $(cat "$work/out")"
 fi
 
 if [[ "$FAILURES" -gt 0 ]]; then

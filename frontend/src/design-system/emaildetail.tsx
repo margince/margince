@@ -10,10 +10,11 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { Badge, Modal } from "./atoms";
 import { DrawerBody, DrawerHead } from "./drawerbands";
-import { moveLabel } from "./emailentry";
+import { InvitationStarts, moveLabel } from "./emailentry";
 import { emailDetailKey, readEmailPresentation } from "./emailmessage";
 import { EmailThread, threadOrder } from "./emailthread";
 import { Heading } from "./heading";
+import { MeetingChange } from "./meetingchange";
 import type { DrawerSpan } from "./modal";
 import { SurfaceState } from "./surfacestate";
 import "./emaildetail.css";
@@ -237,6 +238,7 @@ function ThreadFacts({
   const shown = threadOrder(presentation).length;
   const count = formatNumber(shown, locale);
   const move = moveLabel(presentation.summary, false);
+  const invitation = presentation.summary.calendar_invitation;
   // A thread with more pages than the read carried is counted as what is shown.
   const counted = plural(
     presentation.thread?.next_cursor
@@ -245,23 +247,40 @@ function ThreadFacts({
     shown,
     { count },
   );
+  const change = presentation.summary.calendar_change;
   return (
-    <p className="emaildetail__facts t-caption">
-      {move && (
-        <Badge
-          tone={
-            presentation.summary.move === "needs_reply" ? "warning" : undefined
-          }
-        >
-          {t(move)}
-        </Badge>
+    <>
+      {change && (
+        <MeetingChange
+          change={change}
+          fallbackTitle={presentation.summary.subject ?? ""}
+        />
       )}
-      <span>{counted}</span>
-      {renderRecords && presentation.links.length > 0 && (
-        <span className="emaildetail__filed">
-          {t("email.detail.filedUnder")} {renderRecords(presentation)}
-        </span>
-      )}
-    </p>
+      <p className="emaildetail__facts t-caption">
+        {invitation && (
+          <>
+            <Badge tone="info">{t("email.invitation.badge")}</Badge>
+            <InvitationStarts invitation={invitation} />
+          </>
+        )}
+        {move && (
+          <Badge
+            tone={
+              presentation.summary.move === "needs_reply"
+                ? "warning"
+                : undefined
+            }
+          >
+            {t(move)}
+          </Badge>
+        )}
+        <span>{counted}</span>
+        {renderRecords && presentation.links.length > 0 && (
+          <span className="emaildetail__filed">
+            {t("email.detail.filedUnder")} {renderRecords(presentation)}
+          </span>
+        )}
+      </p>
+    </>
   );
 }

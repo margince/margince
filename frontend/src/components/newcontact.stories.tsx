@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   emptyPage,
   installFetchStub,
@@ -18,7 +18,11 @@ import { NewContactAction } from "./newcontact";
 
 const HOLDER_ID = "01930000-0000-7000-8000-0000000000o2";
 
-function form(company?: HomeCompany, holder = "Nordlicht Logistik AG") {
+function form(
+  company?: HomeCompany,
+  holder = "Nordlicht Logistik AG",
+  listCreate?: { open: boolean },
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({ contact: ["read", "create"] }),
@@ -34,7 +38,7 @@ function form(company?: HomeCompany, holder = "Nordlicht Logistik AG") {
     });
     return (
       <StoryProviders>
-        <NewContactAction company={company} />
+        <NewContactAction company={company} listCreate={listCreate} />
       </StoryProviders>
     );
   };
@@ -117,3 +121,39 @@ export const OnCompanyPage: Story = {
   }),
   play: open,
 };
+
+// The Contacts list's own create: its address opens it, and its button names `C`.
+export const OpenedByItsAddress: Story = {
+  render: form(undefined, undefined, { open: true }),
+  play: async () => {
+    const body = within(document.body);
+    const dialog = await body.findByRole("dialog", { name: "New contact" });
+    // The overlay fades in from transparent, so visible is a state it reaches.
+    await waitFor(() => expect(dialog).toBeVisible());
+    await expect(
+      body.getByRole("button", { name: "New contact", hidden: true }),
+    ).toHaveAttribute("aria-keyshortcuts", "c");
+  },
+};
+
+export const NameOnly: Story = {
+  render: form(),
+  play: async (context: Canvas) => {
+    const user = userEvent.setup();
+    await openWith(user, context);
+    const body = within(document.body);
+    await user.type(await body.findByLabelText("Full name *"), "Dana Buyer");
+    await expect(
+      body.getByText("Add at least one email, phone or LinkedIn URL."),
+    ).toBeVisible();
+    await user.click(body.getByRole("button", { name: "Create" }));
+    await expect(document.activeElement).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    await expect(document.activeElement).toHaveAccessibleDescription(
+      expect.stringContaining("Add at least one email, phone or LinkedIn URL."),
+    );
+  },
+};
+export const NameOnlyDark: Story = { ...NameOnly, globals: { theme: "dark" } };

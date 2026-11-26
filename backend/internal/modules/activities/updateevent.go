@@ -15,6 +15,10 @@ import (
 // then never reads a day's stored noon as an hour.
 func activityUpdatedChangedFields(in UpdateActivityInput, current crmcontracts.Activity) crmcontracts.PublicEventActivityChangedFields {
 	var fields crmcontracts.PublicEventActivityChangedFields
+	if in.sourceActivityID != nil {
+		source := openapi_types.UUID(*in.sourceActivityID)
+		fields.SourceActivityId = &source
+	}
 	if in.Subject != nil {
 		fields.Subject = in.Subject
 	}
@@ -53,6 +57,10 @@ func activityUpdatedChangedFields(in UpdateActivityInput, current crmcontracts.A
 		status := crmcontracts.PublicEventActivityChangedFieldsMeetingStatus(*in.MeetingStatus)
 		fields.MeetingStatus = &status
 	}
+	// A cleared status is a change too: the meeting is unanswered again.
+	if in.clears(auditFieldMeetingStatus) && current.MeetingStatus != nil {
+		fields.MeetingStatusCleared = new(true)
+	}
 	if in.CallOutcome != nil {
 		outcome := crmcontracts.PublicEventActivityChangedFieldsCallOutcome(*in.CallOutcome)
 		fields.CallOutcome = &outcome
@@ -61,6 +69,10 @@ func activityUpdatedChangedFields(in UpdateActivityInput, current crmcontracts.A
 	// which counts as contact again.
 	if in.clears(fieldCallOutcome) && current.CallOutcome != nil {
 		fields.CallOutcomeCleared = new(true)
+	}
+	if in.TaskType != nil {
+		taskType := crmcontracts.PublicEventActivityChangedFieldsTaskType(*in.TaskType)
+		fields.TaskType = &taskType
 	}
 	return fields
 }

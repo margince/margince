@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -13,9 +14,11 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ABSENT } from "../../format/absent";
 import { LocaleProvider } from "../../i18n";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { openFilterValues } from "../../testing/listquery.testkit";
+import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
 import { COMPANY, project } from "../../testing/projects.fixtures";
 import { ProjectsScreen } from "./projects";
 import { projectsBackend } from "./projects.testing";
@@ -54,15 +57,22 @@ describe("ProjectsScreen", () => {
           key: null,
           phase: "delivering",
           owner_id: null,
+          last_activity_at: null,
         }),
       ],
     });
     render(<ProjectsScreen />);
     expect(await screen.findByText("CRM rollout")).toBeTruthy();
+    // An empty cell carries the same mark as an empty Company cell.
+    const fleet = screen.getByRole("link", { name: /Fleet retrofit/ });
+    expect(fleet.closest("tr")?.textContent).toContain(ABSENT);
+    // The tab and the phase say one word for one fact.
+    expect(screen.getAllByText("Delivering").length).toBeGreaterThan(1);
+    expect(screen.queryByText("In delivery")).toBeNull();
     expect(screen.getByText("ACME-CRM")).toBeTruthy();
     expect(screen.getByText("Fleet retrofit")).toBeTruthy();
     expect(screen.getByText("Initiative")).toBeTruthy();
-    expect(screen.getByText("Delivering")).toBeTruthy();
+    expect(fleet.closest("tr")?.textContent).toContain("Delivering");
     expect(await screen.findAllByText("Brandt Automotive")).toHaveLength(2);
     expect(screen.getByText("Unassigned")).toBeTruthy();
     // The row is a link to the project's own page.
@@ -221,18 +231,34 @@ describe("ProjectsScreen", () => {
     ).toEqual(["Projects"]);
   });
 
-  it("posts a create with no key, because the server mints it", async () => {
+  it("shows the server's key and posts the chosen key, phase and deal", async () => {
     const user = userEvent.setup();
     let posted: unknown = null;
+    const previewed: string[] = [];
     projectsBackend({
       projects: [],
       respond: async (url, method, request) => {
-        if (method === "POST" && url.endsWith("/projects")) {
+        const read = new URL(url);
+        if (method === "POST" && read.pathname === "/v1/projects") {
           posted = JSON.parse(await request.text());
           return jsonResponse(project({ id: "pr-new" }), 201);
         }
+        // The suggestion is the server's: the form shows what it answers.
+        if (read.pathname === "/v1/projects/key-preview") {
+          previewed.push(read.searchParams.get("name") ?? "");
+          return jsonResponse({ key: "CR" });
+        }
+        if (
+          read.pathname === "/v1/deals" &&
+          read.searchParams.get("company_id") === FAR_COMPANY.id &&
+          read.searchParams.get("status") === "open"
+        ) {
+          return jsonResponse({
+            data: [{ id: "d-1", name: "Wendt renewal", project_id: null }],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
         // The company sits past any first page: only a search reaches it.
-        const read = new URL(url);
         if (read.pathname === "/v1/companies" && read.searchParams.get("q")) {
           return jsonResponse({
             data: read.searchParams.get("q") === "Wendt" ? [FAR_COMPANY] : [],
@@ -245,10 +271,9 @@ describe("ProjectsScreen", () => {
     render(<ProjectsScreen />);
     await user.click(await screen.findByTestId("new-record"));
     await user.type(screen.getByLabelText("Project name *"), "CRM rollout");
-
-    // The dialog asks for no key at all: a caller-chosen key is a subject-line
-    // matcher a caller can get wrong, so the server mints it from the name.
-    expect(screen.queryByLabelText("Key")).toBeNull();
+    await screen.findByText(/Leave empty to use CR\./);
+    expect(previewed).toContain("CRM rollout");
+    await user.type(screen.getByLabelText("Key"), "crm");
 
     await user.type(screen.getByLabelText("Company *"), "Wendt");
     await user.click(
@@ -257,6 +282,21 @@ describe("ProjectsScreen", () => {
     // The pick is named by the candidate it came from, not by its bare id.
     expect(screen.getByText("Wendt Logistik")).toBeTruthy();
     expect(screen.queryByText(FAR_COMPANY.id)).toBeNull();
+    // The form opens on the phase the server would give a project anyway.
+    const phase = screen.getByRole("combobox", { name: /Starting phase/ });
+    expect(phase.textContent).toContain("Initiative");
+    await user.click(phase);
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: "Pursuing",
+      }),
+    );
+    await user.click(screen.getByRole("combobox", { name: "Deal" }));
+    await user.click(
+      await within(screen.getByRole("listbox")).findByRole("option", {
+        name: "Wendt renewal",
+      }),
+    );
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(posted).toBeTruthy());
@@ -265,9 +305,82 @@ describe("ProjectsScreen", () => {
       company_id: FAR_COMPANY.id,
       owner_id: null,
       description: null,
+      started_at: null,
       target_end_date: null,
+      key: "crm",
+      phase: "pursuing",
+      deal_id: "d-1",
       source: "manual",
     });
     expect(window.location.hash).toBe("#/projects/pr-new");
+  });
+});
+
+describe("ProjectsScreen — the customer column", () => {
+  it("says a hidden customer is hidden and a missing one is a dash", async () => {
+    projectsBackend({
+      projects: [
+        project({
+          id: "pr-1",
+          name: "Hidden one",
+          company_id: null,
+          masked_fields: ["company_id"],
+        }),
+        project({ id: "pr-2", name: "Bare one", company_id: null }),
+      ],
+    });
+    render(<ProjectsScreen />);
+    await screen.findByText("Hidden one");
+    expect(screen.getAllByTestId("project-company-withheld")).toHaveLength(1);
+    expect(screen.getAllByTestId("project-company-none")).toHaveLength(1);
+  });
+
+  it("names a hidden customer on a phone row and draws nothing for a missing one", async () => {
+    stubWindowWidth(390);
+    projectsBackend({
+      projects: [
+        project({
+          id: "pr-1",
+          name: "Hidden one",
+          company_id: null,
+          masked_fields: ["company_id"],
+        }),
+      ],
+    });
+    render(<ProjectsScreen />);
+    const row = await phoneRowOf("Hidden one");
+    expect(row.caption).toEqual(["Hidden for your role"]);
+  });
+});
+
+describe("ProjectsScreen — a row on a phone", () => {
+  it("ends the name's line in the phase and names the customer under it", async () => {
+    stubWindowWidth(390);
+    projectsBackend({
+      projects: [
+        project({ id: "pr-1", name: "CRM rollout", phase: "delivering" }),
+      ],
+    });
+    render(<ProjectsScreen />);
+    await screen.findByText("Brandt Automotive");
+    const row = await phoneRowOf("CRM rollout");
+    expect(row.end).toEqual(["Delivering"]);
+    expect(row.caption).toEqual(["Brandt Automotive"]);
+    expect(
+      screen.queryByRole("link", { name: "Brandt Automotive" }),
+    ).toBeNull();
+  });
+
+  it("draws no line two for a project with no customer", async () => {
+    stubWindowWidth(390);
+    projectsBackend({
+      projects: [
+        project({ id: "pr-1", name: "CRM rollout", company_id: null }),
+      ],
+    });
+    render(<ProjectsScreen />);
+    const row = await phoneRowOf("CRM rollout");
+    expect(row.caption).toEqual([]);
+    expect(row.row).not.toHaveTextContent("—");
   });
 });

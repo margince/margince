@@ -7,6 +7,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { stable } from "../format/collate";
 import { verticalPlacement } from "./anchored";
 import {
   Checkbox,
@@ -439,6 +440,16 @@ it("names a Checkbox by its label, and the label text toggles it", async () => {
   expect((box as HTMLInputElement).checked).toBe(true);
 });
 
+it("keeps an inline Checkbox named when its label is visually hidden", () => {
+  render(<Checkbox label="Select this row" labelHidden />);
+  expect(
+    screen.getByRole("checkbox", { name: "Select this row" }),
+  ).toBeDefined();
+  expect(
+    screen.getByText("Select this row").classList.contains("sr-only"),
+  ).toBe(true);
+});
+
 // Radios group by `name`, which the atom must forward untouched — drop it and
 // every option becomes independently selectable, which looks like working UI
 // until two are on at once.
@@ -468,7 +479,7 @@ it("keeps Radios sharing a name mutually exclusive", async () => {
 it("merges a caller's className with the atom's own", () => {
   render(<Textarea aria-label="Body" className="compose-body" />);
 
-  expect([...screen.getByLabelText("Body").classList].sort()).toEqual([
+  expect([...screen.getByLabelText("Body").classList].sort(stable)).toEqual([
     "compose-body",
     "textarea",
   ]);
@@ -610,6 +621,83 @@ it("draws no mark when no option carries one", () => {
   );
   expect(container.querySelectorAll(".segmented-mark").length).toBe(0);
 });
+
+// A refused option stays in view and points at the one sentence saying why.
+it("refuses only the options told to, each described by the shared reason", () => {
+  render(
+    <>
+      <SegmentedControl
+        options={TABS}
+        value="overview"
+        onChange={() => undefined}
+        labels={TAB_LABELS}
+        refused={{ research: true }}
+        reasonId="why"
+      />
+      <p id="why">Not yet</p>
+    </>,
+  );
+  const refused = screen.getByRole("button", { name: "Data and tools" });
+  const open = screen.getByRole("button", { name: "Overview" });
+  expect(refused).toHaveProperty("disabled", true);
+  expect(refused.getAttribute("aria-describedby")).toBe("why");
+  expect(refused.hasAttribute("data-refused")).toBe(true);
+  expect(open).toHaveProperty("disabled", false);
+  expect(open.hasAttribute("aria-describedby")).toBe(false);
+  expect(open.hasAttribute("data-refused")).toBe(false);
+});
+
+// A busy strip waits as a whole: only the options told to are refused.
+it("keeps the refusal to the refused options on a busy strip", () => {
+  render(
+    <SegmentedControl
+      options={TABS}
+      value="overview"
+      onChange={() => undefined}
+      labels={TAB_LABELS}
+      busy="overview"
+      refused={{ research: true }}
+      reasonId="why"
+    />,
+  );
+  const waiting = screen.getByRole("button", { name: "Overview" });
+  const refused = screen.getByRole("button", { name: "Data and tools" });
+  expect(waiting.hasAttribute("data-refused")).toBe(false);
+  expect(waiting.hasAttribute("aria-describedby")).toBe(false);
+  expect(refused.hasAttribute("data-refused")).toBe(true);
+  expect(refused.getAttribute("aria-describedby")).toBe("why");
+});
+
+// The mark lets a wrapped strip's segments fill each row; a strip on one row
+// keeps its segments at their own widths.
+it.each([
+  [30, true],
+  [0, false],
+])(
+  "marks the strip as wrapped when its last option sits %ipx lower",
+  (lastTop, wrapped) => {
+    const tops = vi
+      .spyOn(HTMLElement.prototype, "offsetTop", "get")
+      .mockImplementation(function (this: HTMLElement) {
+        return this.textContent === "Data and tools" ? lastTop : 0;
+      });
+    try {
+      const { container } = render(
+        <SegmentedControl
+          options={TABS}
+          value="overview"
+          onChange={() => undefined}
+          labels={TAB_LABELS}
+        />,
+      );
+      expect(
+        container.querySelector(".segmented")?.hasAttribute("data-wrapped"),
+      ).toBe(wrapped);
+    } finally {
+      tops.mockRestore();
+    }
+  },
+);
 
 // `delayMs` is for a surface that re-reads as a reader types. Without it a
 // placeholder flashes on every keystroke, reporting work that was already done

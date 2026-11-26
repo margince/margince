@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, waitFor, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { Button } from "./atoms";
 import { RecordTabs } from "./recordtabs";
@@ -38,7 +38,7 @@ const LABELS: Record<Body, string> = {
 };
 
 // Live, so the underline can be judged moving to the tab the reader picked.
-function Live(props: Readonly<{ initial: Body }>) {
+function Live(props: Readonly<{ initial: Body; keepPlace?: boolean }>) {
   const [value, setValue] = useState<Body>(props.initial);
   return (
     <RecordTabs
@@ -46,6 +46,7 @@ function Live(props: Readonly<{ initial: Body }>) {
       options={["overview", "contacts", "activity", "brief"]}
       value={value}
       onChange={setValue}
+      keepPlace={props.keepPlace}
       labels={LABELS}
       counts={{ contacts: 10, activity: 27 }}
       marks={{ brief: true }}
@@ -65,6 +66,31 @@ export const Mixed: Story = {
 // figure any more than it requires one on the row above.
 export const SelectedTabHasNoCount: Story = {
   render: () => <Live initial="brief" />,
+};
+
+// A count the tab name does not explain carries a label.
+export const LabelledCounts: Story = {
+  render: () => (
+    <RecordTabs
+      label="Files to map"
+      options={["contacts", "activity"]}
+      value="contacts"
+      onChange={() => undefined}
+      labels={LABELS}
+      counts={{ contacts: 3, activity: 1 }}
+      countLabels={{
+        contacts: "3 columns not imported",
+        activity: "1 column not imported",
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole("button", {
+        name: /^Contacts\s*, 3 columns not imported$/,
+      }),
+    ).toBeVisible();
+  },
 };
 
 // A record read in ONE body. The lone tab is a LABEL for the page the reader
@@ -130,10 +156,9 @@ export const WithTrailingControl: Story = {
   ),
 };
 
-// Analytics' own tabs at 390px: more than the phone holds. The far end fades
-// over the cut tab to say more follow. The start has nothing scrolled past it
-// yet, so it does not fade.
-export const ScrollsAtPhoneWidth: Story = {
+// A trailing control too wide to leave room for the open tab and More beside
+// it. It wraps under the strip, so the strip keeps a row of its own to fold in.
+export const FoldsAboveAWideTrailingControl: Story = {
   tags: ["uat-phone"],
   parameters: { layout: "fullscreen" },
   globals: { viewport: { value: "phone" } },
@@ -142,6 +167,47 @@ export const ScrollsAtPhoneWidth: Story = {
       label="Analytics"
       options={["performance", "outcomes", "delivery", "pipeline", "team"]}
       value="performance"
+      onChange={() => undefined}
+      labels={ANALYTICS_LABELS}
+      trailing={
+        <>
+          <Button>Reports</Button>
+          <Button>Setup and sharing</Button>
+        </>
+      }
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() =>
+      expect(
+        canvas.getByRole("button", { name: "More sections" }),
+      ).toBeVisible(),
+    );
+    const strip = canvasElement.querySelector(".recordtabs-strip");
+    if (!(strip instanceof HTMLElement)) throw new Error("no tab strip drawn");
+    await waitFor(() =>
+      expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth),
+    );
+    const reports = canvas.getByRole("button", { name: "Reports" });
+    await expect(reports.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      strip.getBoundingClientRect().bottom,
+    );
+  },
+};
+
+// Analytics' own tabs at 390px: more than the phone holds. The tabs after the
+// last one that fits fold behind More, and the open tab stays on the row even
+// when it comes last.
+export const FoldsAtPhoneWidth: Story = {
+  tags: ["uat-phone"],
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  render: () => (
+    <RecordTabs
+      label="Analytics"
+      options={["performance", "outcomes", "delivery", "pipeline", "team"]}
+      value="team"
       onChange={() => undefined}
       labels={{
         performance: "Performance",
@@ -153,10 +219,123 @@ export const ScrollsAtPhoneWidth: Story = {
     />
   ),
   play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() =>
+      expect(
+        canvas.getByRole("button", { name: "More sections" }),
+      ).toBeVisible(),
+    );
+    await expect(canvas.getByRole("button", { name: "Team" })).toBeVisible();
     const strip = canvasElement.querySelector(".recordtabs-strip");
     if (!(strip instanceof HTMLElement)) throw new Error("no tab strip drawn");
-    await expect(strip.scrollWidth).toBeGreaterThan(strip.clientWidth);
-    await waitFor(() => expect(strip).toHaveClass("is-clipped-end"));
-    await expect(strip).not.toHaveClass("is-clipped-start");
+    // The strip's scroll width settles a few frames after More shows.
+    await waitFor(() =>
+      expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth),
+    );
   },
 };
+
+const ANALYTICS_LABELS = {
+  performance: "Performance",
+  outcomes: "My outcomes",
+  delivery: "Delivery",
+  pipeline: "Pipeline",
+  team: "Team",
+};
+
+// The folded tabs as the menu lists them, opened from "More".
+export const MoreMenuOpen: Story = {
+  tags: ["uat-phone"],
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  render: () => (
+    <RecordTabs
+      label="Analytics"
+      options={["performance", "outcomes", "delivery", "pipeline", "team"]}
+      value="performance"
+      onChange={() => undefined}
+      labels={ANALYTICS_LABELS}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const more = await within(canvasElement).findByRole("button", {
+      name: "More sections",
+    });
+    await waitFor(() => expect(more).toBeVisible());
+    await userEvent.click(more);
+    const page = within(canvasElement.ownerDocument.body);
+    await expect(
+      await page.findByRole("button", { name: "Team" }),
+    ).toBeVisible();
+  },
+};
+
+// The row narrows until tabs fold, then widens until they all return.
+export const FoldsAndReturnsWithWidth: Story = {
+  render: () => (
+    <div data-testid="frame" style={{ inlineSize: "100%" }}>
+      <RecordTabs
+        label="Analytics"
+        options={["performance", "outcomes", "delivery", "pipeline", "team"]}
+        value="team"
+        onChange={() => undefined}
+        labels={ANALYTICS_LABELS}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const frame = canvas.getByTestId("frame");
+    frame.style.inlineSize = "260px";
+    await waitFor(() =>
+      expect(
+        canvas.getByRole("button", { name: "More sections" }),
+      ).toBeVisible(),
+    );
+    frame.style.inlineSize = "100%";
+    // Performance leads the row and never folds, so the wait is on a tab
+    // that did fold coming back.
+    await waitFor(() =>
+      expect(canvas.getByRole("button", { name: "Pipeline" })).toBeVisible(),
+    );
+    await waitFor(() =>
+      expect(
+        canvas.queryByRole("button", { name: "More sections" }),
+      ).toBeNull(),
+    );
+  },
+};
+
+// A keyboard reader can press a tab while the strip is out of view. The pane
+// then scrolls up just far enough to show the strip, and no further.
+export const PressedOutOfView: Story = {
+  render: () => <InPane />,
+  play: async ({ canvasElement }) => {
+    const pane = within(canvasElement).getByTestId("pane");
+    const row = canvasElement.querySelector(".recordtabs-row");
+    if (!(row instanceof HTMLElement)) throw new Error("no tab strip drawn");
+    const stripTop = () =>
+      row.getBoundingClientRect().top - pane.getBoundingClientRect().top;
+    pane.scrollTop += stripTop() + 200;
+    await waitFor(() => expect(stripTop()).toBeLessThan(-150));
+    within(canvasElement)
+      .getByRole("button", { name: /Activity/ })
+      .click();
+    await waitFor(() => expect(Math.abs(stripTop())).toBeLessThanOrEqual(1));
+    await expect(pane.scrollTop).toBeGreaterThan(0);
+  },
+};
+
+function InPane() {
+  return (
+    <div
+      data-testid="pane"
+      className="scroll"
+      style={{ display: "block", blockSize: "24rem", overflowY: "auto" }}
+    >
+      <div style={{ blockSize: "16rem" }}>Record header</div>
+      <Live initial="overview" keepPlace />
+      <div style={{ blockSize: "60rem" }}>Tab body</div>
+    </div>
+  );
+}

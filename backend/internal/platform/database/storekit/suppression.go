@@ -61,6 +61,8 @@ func EscapeLikeSQL(expr string) string {
 // Naming the guarantee matters here more than most places: this is an
 // erasure gate, and the expensive mistake is a later reader assuming
 // something narrower already scoped it.
+//
+// A row the subject lifted no longer refuses the address.
 func EmailSuppressed(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	suppressed, err := SuppressedEmails(ctx, tx, []string{email})
 	return suppressed[strings.ToLower(strings.TrimSpace(email))], err
@@ -72,8 +74,8 @@ func SuppressedEmails(ctx context.Context, tx pgx.Tx, emails []string) (map[stri
 	if len(emails) == 0 {
 		return result, nil
 	}
-	args := []any{SuppressionForms(EmailLookups(emails...)...)}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT value_hash FROM erasure_suppression WHERE kind='email' AND value_hash=ANY($%d::text[])`, len(args)), args...)
+	args := []any{EmailSuppressionForms(emails...)}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT value_hash FROM erasure_suppression WHERE kind='email' AND value_hash=ANY($%d::text[]) AND lifted_at IS NULL`, len(args)), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,13 +89,19 @@ func SuppressedEmails(ctx context.Context, tx pgx.Tx, emails []string) (map[stri
 	}
 	// An address erased in one spelling of its domain is erased in the other.
 	for _, email := range emails {
-		for _, form := range SuppressionForms(EmailLookups(email)...) {
+		for _, form := range EmailSuppressionForms(email) {
 			if held[form] {
 				result[strings.ToLower(strings.TrimSpace(email))] = true
 			}
 		}
 	}
 	return result, nil
+}
+
+// EmailSuppressionForms answers the hashes the erasure list holds addresses
+// under: each spelling of the domain, keyed and unkeyed.
+func EmailSuppressionForms(emails ...string) []string {
+	return SuppressionForms(EmailLookups(emails...)...)
 }
 
 // ErasedIdentifierCode is the contract's machine code for a write refused
@@ -195,7 +203,7 @@ func channelIdentityValue(provider, channelUserID string) string {
 func ChannelIdentitySuppressed(ctx context.Context, tx pgx.Tx, provider, channelUserID string) (bool, error) {
 	var suppressed bool
 	err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM erasure_suppression WHERE kind = 'channel_identity' AND value_hash = ANY($1))`,
+		`SELECT EXISTS (SELECT 1 FROM erasure_suppression WHERE kind = 'channel_identity' AND value_hash = ANY($1) AND lifted_at IS NULL)`,
 		ChannelIdentityForms(provider, channelUserID)).Scan(&suppressed)
 	return suppressed, err
 }
@@ -272,6 +280,19 @@ func LockChannelIdentities(ctx context.Context, tx pgx.Tx, keys []ChannelIdentit
 // ordering nobody chose. Hashing both into a single sorted, deduplicated set
 // makes that impossible to express.
 func LockSubjectKeys(ctx context.Context, tx pgx.Tx, keys []ChannelIdentityKey, emails []string) error {
+	for _, hash := range SubjectLockKeys(keys, emails) {
+		if _, err := tx.Exec(ctx, `
+			SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+			hash); err != nil {
+			return fmt.Errorf("storekit: locking a subject identifier against a concurrent erasure: %w", err)
+		}
+	}
+	return nil
+}
+
+// SubjectLockKeys keeps session readers and transaction writers in the same
+// identifier namespace, including both supported spellings of an address.
+func SubjectLockKeys(keys []ChannelIdentityKey, emails []string) []string {
 	hashes := make([]string, 0, len(keys)+len(emails))
 	// The unkeyed digest, so the lock never depends on which key is bound.
 	for _, key := range keys {
@@ -282,14 +303,7 @@ func LockSubjectKeys(ctx context.Context, tx pgx.Tx, keys []ChannelIdentityKey, 
 		hashes = append(hashes, identifierDigest(email), identifierDigest(mailidentity.FoldAddress(email)))
 	}
 	slices.Sort(hashes)
-	for _, hash := range slices.Compact(hashes) {
-		if _, err := tx.Exec(ctx, `
-			SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
-			hash); err != nil {
-			return fmt.Errorf("storekit: locking a subject identifier against a concurrent erasure: %w", err)
-		}
-	}
-	return nil
+	return slices.Compact(hashes)
 }
 
 // LockTranscriptBody serialises a reading of one activity's transcript against

@@ -96,31 +96,29 @@ func TestClassifyPayloadFidelity(t *testing.T) {
 		wantErr bool
 	}{
 		"exact set passes": {
-			results: []classifyResult{ok(a, "commitment", 0.9), ok(b, "noise", 0.8)},
+			results: []classifyResult{ok(a, "commitment", 0.9), ok(b, "other", 0.8)},
 		},
 		"a missing id fails": {
 			results: []classifyResult{ok(a, "meeting", 0.9)},
 			wantErr: true,
 		},
 		"an unrequested id fails": {
-			results: []classifyResult{ok(a, "noise", 0.9), ok(b, "noise", 0.9), ok("m3", "noise", 0.9)},
+			results: []classifyResult{ok(a, "other", 0.9), ok(b, "other", 0.9), ok("m3", "other", 0.9)},
 			wantErr: true,
 		},
 		"the activity id in place of its ref fails": {
-			results: []classifyResult{ok(batch[0].ID.String(), "noise", 0.9), ok(b, "noise", 0.9)},
+			results: []classifyResult{ok(batch[0].ID.String(), "other", 0.9), ok(b, "other", 0.9)},
 			wantErr: true,
 		},
 		"a duplicated id fails": {
-			results: []classifyResult{ok(a, "noise", 0.9), ok(a, "noise", 0.9)},
+			results: []classifyResult{ok(a, "other", 0.9), ok(a, "other", 0.9)},
 			wantErr: true,
 		},
-		"an out-of-vocabulary label fails": {
-			results: []classifyResult{ok(a, "spam", 0.9), ok(b, "noise", 0.9)},
-			wantErr: true,
+		"an out-of-vocabulary label does not fail the reply": {
+			results: []classifyResult{ok(a, "spam", 0.9), ok(b, "other", 0.9)},
 		},
-		"an out-of-range confidence fails": {
-			results: []classifyResult{ok(a, "noise", 1.2), ok(b, "noise", 0.9)},
-			wantErr: true,
+		"an out-of-range confidence does not fail the reply": {
+			results: []classifyResult{ok(a, "other", 1.2), ok(b, "other", 0.9)},
 		},
 	}
 	for name, tc := range cases {
@@ -142,10 +140,7 @@ func TestClassifyValidationMessagesDoNotEchoUnboundedModelText(t *testing.T) {
 
 	for name, msg := range map[string]string{
 		"an unrequested id": validateClassifyPayload(classifyPayload{
-			Results: []classifyResult{{ID: flood, Label: "noise", Confidence: 0.9}},
-		}, batch),
-		"an out-of-vocabulary label": validateClassifyPayload(classifyPayload{
-			Results: []classifyResult{{ID: "m1", Label: flood, Confidence: 0.9}},
+			Results: []classifyResult{{ID: flood, Label: "other", Confidence: 0.9}},
 		}, batch),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -166,7 +161,7 @@ func TestClassifyValidationMessagesDoNotEchoUnboundedModelText(t *testing.T) {
 // of the three still fails the schema.
 func TestAnAbsentReplyVerdictIsSpelledNull(t *testing.T) {
 	outbound := unlabeledMessage{ID: ids.NewV7()}
-	answer := `{"results":[{"id":"m1","label":"noise","confidence":0.9,"reply":null}]}`
+	answer := `{"results":[{"id":"m1","label":"other","confidence":0.9,"reply":null}]}`
 	if err := schema.ValidateJSON(classifySchema([]string{"m1"}), answer); err != nil {
 		t.Fatalf("the schema refused a null reply: %v", err)
 	}
@@ -174,7 +169,7 @@ func TestAnAbsentReplyVerdictIsSpelledNull(t *testing.T) {
 		t.Fatalf("the site refused a null reply on an outbound message: %v", err)
 	}
 	for name, reply := range map[string]string{"an invented verdict": `"maybe"`, "an omitted key": ""} {
-		body := `{"id":"` + outbound.ID.String() + `","label":"noise","confidence":0.9`
+		body := `{"id":"` + outbound.ID.String() + `","label":"other","confidence":0.9`
 		if reply != "" {
 			body += `,"reply":` + reply
 		}
@@ -189,7 +184,7 @@ func TestAnAbsentReplyVerdictIsSpelledNull(t *testing.T) {
 func TestAClassifyRefReadsBackToItsActivity(t *testing.T) {
 	t.Parallel()
 	batch := []unlabeledMessage{{ID: ids.NewV7()}, {ID: ids.NewV7()}}
-	got := resolveClassifyRefs([]classifyResult{{ID: "m2", Label: "noise"}, {ID: "m1", Label: "meeting"}}, batch)
+	got := resolveClassifyRefs([]classifyResult{{ID: "m2", Label: "other"}, {ID: "m1", Label: "meeting"}}, batch)
 	if len(got) != 2 || got[0].ID != batch[1].ID.String() || got[1].ID != batch[0].ID.String() {
 		t.Fatalf("resolved = %+v, want m2 and m1 read back to the second and first activity", got)
 	}

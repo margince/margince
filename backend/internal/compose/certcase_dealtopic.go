@@ -106,7 +106,7 @@ type dealTopicCase struct {
 // shape re-ask. A case that did so would certify the answer a model gives
 // after being told to try again.
 func (c *dealTopicCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
-	req := dealTopicRequest(c.in)
+	req := dealTopicRequest(c.in, model.AboutNoContact("certification corpus"))
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {

@@ -33,7 +33,7 @@ func TestEveryProducerStatesAnOwner(t *testing.T) {
 	rows = append(rows, relationshipCandidates(dayOfEveryLane())...)
 	planService := meetingPrepService(nil).WithWeeklyPlans(planWorkStub{entries: []PlanWork{{ID: ids.NewV7(), OwnerID: readerOf(meetingPrepReader()), Label: "Prepare proposal", DueAt: rankInstant}}})
 	planService.taskScope = TasksMine
-	planRows, missing := planService.readingPlan(meetingPrepReader(), scopeMine, rankInstant)
+	planRows, missing := planService.readingPlan(meetingPrepReader(), rankInstant)
 	if missing != nil {
 		t.Fatalf("plan source: %+v", missing)
 	}
@@ -260,7 +260,7 @@ func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
 	rows = append(rows, relationshipCandidates(dayOfEveryLane())...)
 	planService := meetingPrepService(nil).WithWeeklyPlans(planWorkStub{entries: []PlanWork{{ID: ids.NewV7(), OwnerID: readerOf(meetingPrepReader()), Label: "Prepare proposal", DueAt: rankInstant}}})
 	planService.taskScope = TasksMine
-	planRows, missing := planService.readingPlan(meetingPrepReader(), scopeMine, rankInstant)
+	planRows, missing := planService.readingPlan(meetingPrepReader(), rankInstant)
 	if missing != nil {
 		t.Fatalf("plan source: %+v", missing)
 	}

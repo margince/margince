@@ -11,13 +11,63 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "b1519291c1be3c4c",
+    "tools": "e058307808328b33",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "0fbb56525a64e3a0d67dce27557b9284616654eb",
+    "ran_at": "2026-11-22T04:26:13Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:42Z"
+  },
   "usage": {
-    "input_tokens": 40802,
-    "output_tokens": 1325,
+    "input_tokens": 23145,
+    "output_tokens": 664,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 289152,
+    "cache_read_input_tokens": 101120,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_attention",
+        "mark_all_notices_read"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_attention",
+        "mark_all_notices_read"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 2,
+      "min": 2,
+      "max": 2
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 62132.5,
+      "min": 62095,
+      "max": 62170
+    },
+    "output_tokens": {
+      "median": 332,
+      "min": 301,
+      "max": 363
+    }
   }
 }

@@ -1,3 +1,5 @@
+import { GeneratedText } from "../../design-system/generatedtext";
+import { displayedBody, displayedSubject } from "../../lib/systemdisplay";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -5,13 +7,14 @@ import { Fragment, type ReactNode, useId, useState } from "react";
 import type { components } from "../../api/schema";
 import {
   useCustomFieldDisplay,
+  useCustomFieldLabel,
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EntityRef } from "../../components/entityref";
 import { mostSpecificFirst, RecordLinks } from "../../components/recordlinks";
 import { TaskDetailDialog, useTaskUpdate } from "../../components/taskactions";
 import { writtenAsMarkdown } from "../../design-system/activitytimeline";
-import { Badge, Modal } from "../../design-system/atoms";
+import { Badge, Button, Modal } from "../../design-system/atoms";
 import { CommitmentReview } from "../../design-system/commitmentreview";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Eyebrow } from "../../design-system/eyebrow";
@@ -19,27 +22,37 @@ import { Heading } from "../../design-system/heading";
 import { NoteMarkdown } from "../../design-system/markdown";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { TIMELINE_KIND_LABEL } from "../../design-system/timelineentry";
+import {
+  AiAssistedFlag,
+  TIMELINE_KIND_LABEL,
+} from "../../design-system/timelineentry";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
 import { formatActivityWhen } from "../../format/activitywhen";
-import { formatDue, formatNumber } from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { formatDue } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
 import { activityFollowUpsKey, TASK_QUEUE_KEY } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
 import { callOutcomeLabel } from "../../lib/calloutcome";
 import { useCanWrite } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { problemCodeOf } from "../../lib/problem";
+import { navigate } from "../../lib/router";
+import { settingsHref } from "../../lib/settingsrouting";
 import { ActivityFiles } from "../records/activityfiles";
 import { ActivityFollowUps } from "../records/activityfollowups";
 import { worklistKey } from "../worklist/worklist.queries";
+import {
+  AttendeesLine,
+  answersOf,
+  colleaguesOf,
+  PartyLine,
+  ResponseBadge,
+} from "./activitydrawer.parties";
 import { WebFormSubmission } from "./webformsubmission";
 import "../../design-system/emaildetail.css";
 
 type Activity = components["schemas"]["Activity"];
 type ActivityLink = components["schemas"]["ActivityLink"];
-type MeetingGuest = components["schemas"]["MeetingGuest"];
-type MeetingResponse = components["schemas"]["MeetingResponse"];
 
 // The kinds whose linked contacts were in the room. On a note or a task a
 // linked contact is what the entry is about, so it is filed, not attending.
@@ -58,15 +71,17 @@ export function OpenActivityDrawer({
   zone,
   onClose,
   activity,
+  activityIsLive = false,
   about,
 }: Readonly<{
   activityId: string | null;
   /** The record's timezone, which the page owns. */
   zone: string;
   onClose: () => void;
-  /** The answer of a live read the host already holds, so the drawer does not
-   *  read the activity a second time. Absent, the drawer reads it. */
+  /** Initial row while the drawer obtains the current read. */
   activity?: Activity;
+  /** The host keeps this row under a live read while the drawer is open. */
+  activityIsLive?: boolean;
   /** What the host opened it for, drawn above the activity: a worklist row
    *  says what it asks of the reader. */
   about?: ReactNode;
@@ -85,6 +100,7 @@ export function OpenActivityDrawer({
       zone={zone}
       onClose={onClose}
       given={activity?.id === shown ? activity : undefined}
+      givenIsLive={activityIsLive}
       about={about}
     />
   );
@@ -96,6 +112,7 @@ function ActivityDetail({
   zone,
   onClose,
   given,
+  givenIsLive,
   about,
 }: Readonly<{
   activityId: string;
@@ -103,13 +120,17 @@ function ActivityDetail({
   zone: string;
   onClose: () => void;
   given?: Activity;
+  givenIsLive: boolean;
   about?: ReactNode;
 }>) {
   const t = useT();
   const titleId = useId();
   // Read while closing too, so the panel keeps its words as it animates out.
-  const read = useActivity(activityId, given === undefined);
-  const activity = given ?? read.data;
+  const read = useActivity(
+    activityId,
+    given === undefined || (given.kind === "meeting" && !givenIsLive),
+  );
+  const activity = activityForDrawer(given, read.data, read.isError);
   const unavailable = ["not_found", "permission_denied"].includes(
     problemCodeOf(read.error) ?? "",
   );
@@ -122,11 +143,22 @@ function ActivityDetail({
     >
       <DrawerHead>
         {activity?.archived_at && <Badge>{t("record.archived")}</Badge>}
+        <AiAssistedFlag entry={{ aiAssisted: activity?.ai_assisted }} />
         {activity && (
           <Eyebrow>{t(labelFor(TIMELINE_KIND_LABEL, activity.kind))}</Eyebrow>
         )}
         <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {activityTitle(activity, t)}
+          {activity ? (
+            <GeneratedText
+              activityId={activity.id}
+              display={activity.system_display}
+              inline
+            >
+              {activityTitle(activity, t)}
+            </GeneratedText>
+          ) : (
+            activityTitle(activity, t)
+          )}
         </Heading>
       </DrawerHead>
       <DrawerBody>
@@ -191,20 +223,17 @@ function ActivityBody({
             locale,
             zone,
           )}
-          {activity.kind === "task" && activity.due_at && (
-            <>
-              {" "}
-              ·{" "}
-              {t("co.next.due", {
-                when: formatDue(
-                  activity.due_at,
-                  activity.due_has_time,
-                  locale,
-                  zone,
-                ),
-              })}
-            </>
-          )}
+          {activity.kind === "task" &&
+            activity.due_at &&
+            ` · ${t("co.next.due", {
+              when: formatDue(
+                activity.due_at,
+                activity.due_has_time,
+                locale,
+                zone,
+                activity.due_intent,
+              ),
+            })}`}
           <CallOutcomeNote activity={activity} />{" "}
           {activity.is_done && (
             <Badge tone="success">{t("tasks.isDone")}</Badge>
@@ -239,6 +268,7 @@ function ActivityBody({
         <>
           <Panel title={t("files.title")}>
             <PanelBody>
+              <MeetingNotesHint concern={activity.meeting_notes_connection} />
               <ActivityFiles
                 activityId={activity.id}
                 writable={activity.writable ?? false}
@@ -259,8 +289,7 @@ function ActivityBody({
               readOnly={!canUpdate || Boolean(activity.archived_at)}
               update={update}
               onClose={() => setOpened(null)}
-              // The follow-up's source is this activity, already open under
-              // it, so opening it returns there.
+              // The follow-up's source is this activity, already open under it.
               openerFor={(ref) =>
                 ref.id === activity.id ? () => setOpened(null) : undefined
               }
@@ -283,118 +312,15 @@ function ActivityBody({
 function CustomFieldLines({ activity }: Readonly<{ activity: Activity }>) {
   const { fields } = useObjectCustomFields("activity", "record");
   const display = useCustomFieldDisplay();
+  const fieldLabel = useCustomFieldLabel();
   return fields.map((field) => {
     const shown = display(field, activity[field.column_name]);
     return shown === null ? null : (
-      <PartyLine key={field.column_name} label={field.label}>
+      <PartyLine key={field.column_name} label={fieldLabel(field)}>
         {shown}
       </PartyLine>
     );
   });
-}
-
-// The host first, then every other colleague the read names, each once.
-// The contacts a meeting is filed under, then the guests no visible link shows.
-function AttendeesLine({
-  attendees,
-  guests,
-  answers,
-  leftOut = 0,
-}: Readonly<{
-  attendees: readonly ActivityLink[];
-  guests: readonly MeetingGuest[];
-  answers: ReadonlyMap<string, MeetingResponse>;
-  leftOut?: number;
-}>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  if (attendees.length + guests.length === 0) {
-    return null;
-  }
-  return (
-    <PartyLine label={t("activity.detail.attendees")}>
-      {attendees.map((link, index) => (
-        <Fragment key={link.entity_id}>
-          {index > 0 && ", "}
-          <EntityRef kind="contact" id={link.entity_id} newTab />
-          <ResponseBadge response={answers.get(`contact:${link.entity_id}`)} />
-        </Fragment>
-      ))}
-      {guests.map((guest, index) => (
-        <Fragment key={guest.contact_id ?? guest.address}>
-          {attendees.length + index > 0 && ", "}
-          {guest.contact_id ? (
-            <EntityRef kind="contact" id={guest.contact_id} newTab />
-          ) : (
-            <span title={guest.address}>
-              {guest.display_name || guest.address}
-            </span>
-          )}
-          <ResponseBadge response={guest.response} />
-        </Fragment>
-      ))}
-      {leftOut > 0 && (
-        <>
-          {" "}
-          {plural("activity.detail.guestsLeftOut", leftOut, {
-            count: formatNumber(leftOut, locale),
-          })}
-        </>
-      )}
-    </PartyLine>
-  );
-}
-
-// An accepted answer shows nothing: being on the list already says it.
-function ResponseBadge({
-  response,
-}: Readonly<{ response: MeetingResponse | undefined }>) {
-  const t = useT();
-  switch (response) {
-    case "declined":
-      return (
-        <>
-          {" "}
-          <Badge tone="danger">{t("activity.detail.response.declined")}</Badge>
-        </>
-      );
-    case "tentative":
-      return (
-        <>
-          {" "}
-          <Badge tone="warning">
-            {t("activity.detail.response.tentative")}
-          </Badge>
-        </>
-      );
-    case "needs_action":
-      return (
-        <>
-          {" "}
-          <Badge>{t("activity.detail.response.needsAction")}</Badge>
-        </>
-      );
-    default:
-      return null;
-  }
-}
-
-function answersOf(activity: Activity): Map<string, MeetingResponse> {
-  const answers = new Map<string, MeetingResponse>();
-  for (const answer of activity.attendee_responses ?? []) {
-    if (answer.user_id) {
-      answers.set(`user:${answer.user_id}`, answer.response);
-    } else if (answer.contact_id) {
-      answers.set(`contact:${answer.contact_id}`, answer.response);
-    }
-  }
-  return answers;
-}
-
-function colleaguesOf(activity: Activity): string[] {
-  const seats = [activity.host_user_id, ...(activity.colleague_ids ?? [])];
-  return [...new Set(seats.filter((id): id is string => Boolean(id)))];
 }
 
 function withheldOrBody(
@@ -418,7 +344,7 @@ function withheldOrBody(
   if (activity.web_form) {
     return <WebFormSubmission sent={activity.web_form} filed={filed} />;
   }
-  const body = activity.body?.trim();
+  const body = displayedBody(activity)?.trim();
   if (!body) {
     return null;
   }
@@ -430,23 +356,24 @@ function withheldOrBody(
   });
   return markdown ? (
     <div className="t-body">
-      <NoteMarkdown source={body} />
+      <GeneratedText
+        activityId={activity.id}
+        display={activity.system_display}
+        part="body"
+        renderText={(text) => <NoteMarkdown source={text} />}
+      >
+        <NoteMarkdown source={body} />
+      </GeneratedText>
     </div>
   ) : (
     <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
-      {body}
-    </p>
-  );
-}
-
-function PartyLine({
-  label,
-  children,
-}: Readonly<{ label: string; children: ReactNode }>) {
-  return (
-    <p className="emaildetail__party">
-      <span className="emaildetail__partyLabel">{label}</span>
-      {children}
+      <GeneratedText
+        activityId={activity.id}
+        display={activity.system_display}
+        part="body"
+      >
+        {body}
+      </GeneratedText>
     </p>
   );
 }
@@ -458,7 +385,8 @@ function activityTitle(
   if (!activity) return t("activity.detail.none");
   if (activity.content_state === "withheld") return t("timeline.withheld");
   return (
-    activity.subject?.trim() || t(labelFor(TIMELINE_KIND_LABEL, activity.kind))
+    displayedSubject(activity)?.trim() ||
+    t(labelFor(TIMELINE_KIND_LABEL, activity.kind))
   );
 }
 
@@ -469,4 +397,35 @@ function CallOutcomeNote({
   const t = useT();
   const label = callOutcomeLabel(activity, t);
   return label ? <> · {label}</> : null;
+}
+
+function MeetingNotesHint({
+  concern,
+}: Readonly<{ concern: Activity["meeting_notes_connection"] }>) {
+  const t = useT();
+  if (!concern) return null;
+  const message =
+    concern === "notes_account_mismatch"
+      ? "activity.notes.otherAccount"
+      : "activity.notes.connectHint";
+  return (
+    <div>
+      <p>{t(message)}</p>
+      <Button
+        variant="link"
+        onClick={() => navigate(settingsHref("connections"))}
+      >
+        {t("connectors.notes.connect")}
+      </Button>
+    </div>
+  );
+}
+
+function activityForDrawer(
+  given: Activity | undefined,
+  fresh: Activity | undefined,
+  failed: boolean,
+): Activity | undefined {
+  if (given?.kind === "meeting") return failed ? undefined : (fresh ?? given);
+  return given ?? fresh;
 }

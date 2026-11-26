@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // DisclosureLine is one obligation and the words that meet it. Mirrors
@@ -31,6 +32,8 @@ import (
 // Held by: TestTheDisclosureLineAgreesAcrossTheSeam
 // (backend/gates/disclosureseam_test.go)
 type DisclosureLine struct {
+	MissingLanguage string
+	MissingMeans    []string
 	// Kind is the obligation a pack declared.
 	Kind string
 	// Text is what the message must carry, empty when the installation has not
@@ -49,40 +52,14 @@ type DisclosureLine struct {
 func (d DisclosureLine) Missing() bool { return strings.TrimSpace(d.Text) == "" }
 
 // unmeetable answers which obligations apply and cannot be met.
-func unmeetable(lines []DisclosureLine) []string {
-	var out []string
+func unmeetable(lines []DisclosureLine) []commsauthz.FooterFinding {
+	var out []commsauthz.FooterFinding
 	for _, line := range lines {
 		if line.Missing() {
-			out = append(out, line.Kind)
+			out = append(out, commsauthz.FooterFinding{Kind: line.Kind, Language: line.MissingLanguage, MissingMeans: line.MissingMeans})
 		}
 	}
 	return out
-}
-
-// UndisclosableError refuses a send whose jurisdiction demands a line the
-// installation has never stated.
-//
-// THE SEND FAILS rather than shipping short, and that is the whole point of
-// separating "missing" from "not owed". Leaving the line out of the body is
-// correct — a message reading "unknown" where its controller's name belongs
-// discloses nothing — but leaving it out AND sending anyway hands a recipient a
-// message that is missing something the law required, with nobody told. The
-// operator can answer this in seconds by stating the particular; a regulator
-// reading the sent message cannot.
-//
-// It maps to 422 with the fix in the message, like the shared-token refusal
-// above it: the caller states the particulars and re-issues the send.
-type UndisclosableError struct{ Kinds []string }
-
-func (e *UndisclosableError) Error() string {
-	return "this message owes a disclosure the workspace has not stated (" +
-		strings.Join(e.Kinds, ", ") +
-		") — state the controller particulars in privacy settings, then send again"
-}
-
-// FieldFault names the settings the operator has to fill in.
-func (e *UndisclosableError) FieldFault() (field, code, message string) {
-	return fieldBody, "undisclosable_obligation", e.Error()
 }
 
 // DisclosureResolver answers what a message of this category must disclose.
@@ -100,9 +77,11 @@ type DisclosureResolver interface {
 	// DisclosuresFor answers one line per obligation the category carries for
 	// these recipients, whose countries pick the marketing obligations. The
 	// sending legal entity picks the data-protection ones and names the
-	// controller; zero is the one the sender works for now. An empty answer
-	// means nothing is owed here.
-	DisclosuresFor(ctx context.Context, category string, recipients []string, entity ids.UUID) ([]DisclosureLine, error)
+	// controller; zero is the one the sender works for now. language is the
+	// message's, which picks the stated translation of each particular. An
+	// empty answer means nothing is owed here. countries are the ones the
+	// sender stated for this message, which come before the record's.
+	DisclosuresFor(ctx context.Context, category string, recipients []string, countries []commsauthz.CountryOverride, entity ids.UUID, language string) ([]DisclosureLine, error)
 }
 
 // WithDisclosures wires the resolver onto the send path.
@@ -120,20 +99,7 @@ func (h Handlers) WithDisclosures(r DisclosureResolver) Handlers {
 	return h
 }
 
-// appendDisclosures puts the obligations this message owes at the bottom of it.
-//
-// It renders only what the installation can actually say. A line reported
-// MISSING is left out of the body rather than printed as a gap: a message
-// carrying the word "unknown" where its controller's name belongs discloses
-// nothing and looks like a defect to the recipient.
-//
-// THE GAP IS NOT SWALLOWED HERE. Leaving it out of the body is a rendering
-// decision and nothing else; deliverability asks unmeetable() the same question
-// and refuses the send, because a message that quietly ships without a line its
-// jurisdiction demands is the failure this whole file exists to close.
-//
-// Returns the body UNCHANGED when nothing is owed, so a send with no applicable
-// pack is byte-identical to what it was before this existed.
+// appendDisclosures omits unavailable text; the assessment records those gaps.
 func appendDisclosures(body string, lines []DisclosureLine) string {
 	stated := make([]string, 0, len(lines))
 	for _, line := range lines {
@@ -179,9 +145,9 @@ func htmlDisclosures(lines []DisclosureLine) string {
 // resolver owns the vocabulary and answers what an unrecognised category owes,
 // which for the packs that exist is the obligations binding every first
 // contact.
-func (s *Store) disclosuresFor(ctx context.Context, category string, recipients []string, entity ids.UUID) ([]DisclosureLine, error) {
+func (s *Store) disclosuresFor(ctx context.Context, category string, recipients []string, countries []commsauthz.CountryOverride, entity ids.UUID, language string) ([]DisclosureLine, error) {
 	if s.disclosures == nil {
 		return nil, nil
 	}
-	return s.disclosures.DisclosuresFor(ctx, category, recipients, entity)
+	return s.disclosures.DisclosuresFor(ctx, category, recipients, countries, entity, language)
 }

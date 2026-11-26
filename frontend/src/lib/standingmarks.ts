@@ -3,26 +3,17 @@
 
 import type { components } from "../api/schema";
 import type { TimelineMark } from "../design-system/standingtimeline";
+import { ACTIVITY_KIND_LABEL } from "../design-system/timelineentry";
 import { activityDay, activityHasHappened } from "../format/activitywhen";
 import { formatDayMonth } from "../format/format.dates";
 import type { Locale, Translator } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { labelFor } from "./labelfor";
 import { authorName, correspondenceSide } from "./messagevoice";
 
 type Activity = components["schemas"]["Activity"];
 
-const KIND_WORD: Readonly<Record<Activity["kind"], MessageKey>> = {
-  email: "timeline.kind.email",
-  call: "timeline.kind.call",
-  meeting: "timeline.kind.meeting",
-  note: "timeline.kind.note",
-  task: "timeline.kind.task",
-  message: "timeline.kind.message",
-};
-
 // A meeting that never took place, or has not yet, is no logged item.
-const NOT_HELD = new Set(["booked", "canceled", "no_show"]);
+export const NOT_HELD = new Set(["booked", "canceled", "no_show"]);
 
 /**
  * The logged items and messages a record's page already loaded, as the marks
@@ -57,7 +48,7 @@ export function activityMarks(
         activityHasHappened(row, asOf, record),
     )
     .map((row): TimelineMark => {
-      const what = t(labelFor(KIND_WORD, row.kind));
+      const what = t(labelFor(ACTIVITY_KIND_LABEL, row.kind));
       return {
         key: row.id,
         at: row.occurred_at,

@@ -22,11 +22,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
+	"github.com/margince/margince/backend/internal/modules/capture/gdocs"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
@@ -164,21 +166,29 @@ func (a graphAppAuthorizer) Refresh(
 
 // newGmailAuthorizer builds the mail connector's per-call authorizer: the
 // environment's app where there is one, the stored app otherwise.
+//
+// Its clients share one token cache, so a mailbox reuses its access token for
+// the token's lifetime. A stored app builds a new client per call.
 func newGmailAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer {
+	tokens := oauthflow.NewTokenCache(time.Now, memberMailboxTokenLimit)
 	var env googleconn.Authorizer
 	if c.canSync() {
-		env = newGmailOAuth(c)
+		env = newGmailOAuth(c, tokens)
 	}
 	return googleAppAuthorizer{
 		resolve: resolve,
 		env:     env,
 		build: func(app capture.ConnectorApp) googleconn.Authorizer {
 			return gmail.NewOAuth(gmail.OAuthConfig{
-				ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, Scopes: gmailScopes,
+				ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, Scopes: gmailScopes, Tokens: tokens,
 			})
 		},
 	}
 }
+
+// memberMailboxTokenLimit bounds a process's cache of member mailbox tokens.
+// A token is a few kilobytes, and an evicted one costs a single extra redemption.
+const memberMailboxTokenLimit = 4096
 
 // newGcalAuthorizer is the calendar half of Gmail's app, on its own client so no mail scope accretes into its grant.
 func newGcalAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer {
@@ -195,6 +205,21 @@ func newGcalAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer {
 	}
 }
 
+// newGdocsAuthorizer is the Google Docs half of the same Google app.
+func newGdocsAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer {
+	var env googleconn.Authorizer
+	if c.canSync() {
+		env = newGdocsOAuth(c)
+	}
+	return googleAppAuthorizer{
+		resolve: resolve,
+		env:     env,
+		build: func(app capture.ConnectorApp) googleconn.Authorizer {
+			return gdocs.NewOAuth(gdocs.OAuthConfig{ClientID: app.ClientID, ClientSecret: app.ClientSecretRef})
+		},
+	}
+}
+
 // newGraphAuthorizer is the Outlook MAIL half of the installation's Entra app.
 //
 // The stored app carries its own tenant, which the environment's does not
@@ -202,9 +227,10 @@ func newGcalAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer {
 // app, and reading the deployment's --graph-tenant over it would authorize a
 // directory they deliberately excluded.
 func newGraphAuthorizer(resolve appResolver, g GraphConfig) graphAppAuthorizer {
+	tokens := oauthflow.NewTokenCache(time.Now, memberMailboxTokenLimit)
 	var env graph.Authorizer
 	if g.canSync() {
-		env = newGraphOAuth(g)
+		env = newGraphOAuth(g, tokens)
 	}
 	return graphAppAuthorizer{
 		resolve: resolve,
@@ -212,7 +238,7 @@ func newGraphAuthorizer(resolve appResolver, g GraphConfig) graphAppAuthorizer {
 		build: func(app capture.ConnectorApp) graph.Authorizer {
 			return graph.NewOAuth(graph.OAuthConfig{
 				ClientID: app.ClientID, ClientSecret: app.ClientSecretRef,
-				Tenant: app.Tenant, Scopes: graphScopes,
+				Tenant: app.Tenant, Scopes: graphScopes, Tokens: tokens,
 			})
 		},
 	}

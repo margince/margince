@@ -13,6 +13,9 @@ import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { WriteToHost } from "../settings/writetohost";
+
+export { loadComposer } from "../settings/writetohost";
+
 import { SIGNAL_CATALOG } from "./leadsignals.fixture";
 
 // Edit, Share and Disqualify live behind the header's overflow trigger, whose
@@ -21,6 +24,27 @@ export async function openLeadActions(
   user: Pick<UserEvent, "click"> = userEvent,
 ) {
   await user.click(await screen.findByRole("button", { name: "More actions" }));
+}
+
+// A details section changes through its Edit, which opens a dialog named for it.
+export async function editSection(
+  user: Pick<UserEvent, "click">,
+  section: string,
+): Promise<HTMLElement> {
+  await user.click(
+    await screen.findByRole("button", { name: `Edit ${section}` }),
+  );
+  return screen.findByRole("dialog", { name: section });
+}
+
+// The value a details row reads, found by its term.
+export async function detailValue(term: string): Promise<HTMLElement> {
+  const label = await screen.findByText(term, { selector: "dt" });
+  const value = label.nextElementSibling;
+  if (!(value instanceof HTMLElement)) {
+    throw new Error(`no value beside the term ${term}`);
+  }
+  return value;
 }
 
 // The seven shipped lead origins GET /lead-origins serves on a fresh install.
@@ -60,10 +84,11 @@ export function render(
   client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   }),
+  locale: "en" | "de" = "en",
 ): RenderResult {
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
+      <LocaleProvider initial={locale}>
         {/* The region is the shell's in the running app (`main.tsx`); a suite whose
           subject is what a write says mounts it the same way. */}
         <ToastProvider>
@@ -206,7 +231,7 @@ export function stubFetchWithMe(
   // The reader's own mail connections, which the shell reads for every page.
   // They decide whether the lead's address is the composer's or their mail
   // client's. None, unless a suite about writing to the lead says so.
-  connectors: unknown = { data: [] },
+  connectors: unknown = NO_CONNECTORS,
   // The settings surfaces this installation offers, for a suite about a card
   // that draws only where one is on (the lists card).
   settingsAvailability: Partial<
@@ -288,3 +313,5 @@ export function stubFetchWithMe(
   );
   return { urls };
 }
+
+const NO_CONNECTORS = { data: [] };

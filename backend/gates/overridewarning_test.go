@@ -50,6 +50,8 @@ const overrideWarningFile = "internal/modules/consent/overridewarning.go"
 var warningDigests = map[string]string{
 	"override-v1": "de2de8c051f8eed3177d2583e13ef5f72d77d0db20d4f32b27ddea0e6d494379",
 	"override-v2": "8807f8c1106d22c1445c92a2d5247b0cdf02a8eb1346f93847a55e6588e052e4",
+	"inline-v1":   "aee3010cd0cad981697a98d967b381312bd6f19b41aebf6df964dd513a2af7e3",
+	"inline-v2":   "baded5d5043e8443b8b4beae228ed174de7fb598fbb1c639427a8941d82fd781",
 }
 
 func TestTheOverrideWarningTextMatchesItsVersion(t *testing.T) {
@@ -75,7 +77,15 @@ func TestTheOverrideWarningTextMatchesItsVersion(t *testing.T) {
 
 	// A retired version keeps its words, so a record naming it can be read
 	// back with what its director was shown.
-	if got := digestOf(retiredWarning(t)); got != warningDigests["override-v1"] {
+	// The composer's short warning is served beside the current one, so its
+	// version is pinned to its words the same way.
+	inline := namedConstant(t, "InlineWarningVersion")
+	if got := digestOf(namedConstant(t, "inlineWarningText")); got != warningDigests[inline] {
+		t.Errorf("the warning text for %q changed and the version did not, or the version is not "+
+			"pinned.\n\n\twas:  %s\n\tnow:  %s", inline, warningDigests[inline], got)
+	}
+
+	if got := digestOf(namedConstant(t, "overrideWarningTextV1")); got != warningDigests["override-v1"] {
 		t.Errorf("the words override-v1 named changed: every instruction naming it now claims "+
 			"somebody read text nobody was shown.\n\n\twas:  %s\n\tnow:  %s", warningDigests["override-v1"], got)
 	}
@@ -137,8 +147,8 @@ func servedWarning(t *testing.T) (version, text string) {
 	return version, text
 }
 
-// retiredWarning reads the override-v1 text out of the source.
-func retiredWarning(t *testing.T) string {
+// namedConstant reads one string constant out of the source.
+func namedConstant(t *testing.T, name string) string {
 	t.Helper()
 	parsed, err := gatekit.ParseFile(overrideWarningFile, parser.ParseComments)
 	if err != nil {
@@ -151,12 +161,12 @@ func retiredWarning(t *testing.T) string {
 		}
 		for _, spec := range general.Specs {
 			value, ok := spec.(*ast.ValueSpec)
-			if ok && len(value.Names) == 1 && len(value.Values) == 1 && value.Names[0].Name == "overrideWarningTextV1" {
+			if ok && len(value.Names) == 1 && len(value.Values) == 1 && value.Names[0].Name == name {
 				return constantString(t, value.Values[0])
 			}
 		}
 	}
-	t.Fatalf("%s declares no overrideWarningTextV1, so a v1 record cannot be read back", overrideWarningFile)
+	t.Fatalf("%s declares no %s, so the words it names cannot be checked", overrideWarningFile, name)
 	return ""
 }
 

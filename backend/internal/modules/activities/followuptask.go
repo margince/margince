@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -31,19 +32,25 @@ func followUpFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 	if req.SourceActivityId != nil {
 		in.SourceActivityID = new(ids.UUID(*req.SourceActivityId))
 	}
+	if err := recordedMeetingFrom(req, in); err != nil {
+		return err
+	}
 	if req.FollowUpTask == nil {
 		return nil
 	}
-	task := req.FollowUpTask
-	followUp, err := TaskInputFrom(crmcontracts.CreateTaskRequest{
-		Subject: task.Subject, Body: task.Body, DueAt: task.DueAt, DueHasTime: task.DueHasTime,
-		AssigneeId: task.AssigneeId, Source: req.Source,
-	})
+	followUp, err := followUpTaskInput(*req.FollowUpTask, req.Source)
 	if err != nil {
 		return err
 	}
 	in.FollowUpTask = &followUp
 	return nil
+}
+
+func followUpTaskInput(task crmcontracts.ActivityFollowUpTask, source string) (LogActivityInput, error) {
+	return TaskInputFrom(crmcontracts.CreateTaskRequest{
+		Subject: task.Subject, Body: task.Body, DueAt: task.DueAt, DueHasTime: task.DueHasTime, DueIntent: task.DueIntent,
+		AssigneeId: task.AssigneeId, Source: source,
+	})
 }
 
 func validateFollowUpShape(in LogActivityInput) error {
@@ -125,8 +132,14 @@ func prepareFollowUpSource(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 // prepareLoggedActivity settles the input before anything reads it: the text a
 // row of its kind stores, its follow-up source and its duration.
 func prepareLoggedActivity(ctx context.Context, tx pgx.Tx, in *LogActivityInput) error {
+	if err := in.admitPickedTimes(); err != nil {
+		return err
+	}
 	maskTextOfKind(crmcontracts.ActivityKind(in.Kind), &in.Subject, &in.Body)
 	if err := admitLoggedPrecision(in); err != nil {
+		return err
+	}
+	if err := checkLoggedSender(*in); err != nil {
 		return err
 	}
 	if err := prepareFollowUpSource(ctx, tx, in); err != nil {
@@ -134,6 +147,11 @@ func prepareLoggedActivity(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 	}
 	if err := admitTaskTime(in); err != nil {
 		return err
+	}
+	if !in.confirmedDue {
+		if err := checkDueWindow(in.DueAt, orWallClock(in.recordedAt)); err != nil {
+			return err
+		}
 	}
 	if err := validateActivityDuration(in.DurationSeconds); err != nil {
 		return err
@@ -143,4 +161,31 @@ func prepareLoggedActivity(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 		keys = append(keys, *in.SourceID)
 	}
 	return storekit.LockThreadKeysTx(ctx, tx, keys...)
+}
+
+func preparePatchedTaskSource(ctx context.Context, tx pgx.Tx, current crmcontracts.Activity, in UpdateActivityInput) error {
+	if in.sourceActivityID == nil || in.recordsMeeting {
+		return nil
+	}
+	return prepareFollowUpSource(ctx, tx, &LogActivityInput{Kind: string(current.Kind), SourceActivityID: in.sourceActivityID, AssigneeID: in.AssigneeID})
+}
+
+func admitOutcomeFollowUp(ctx context.Context, current crmcontracts.Activity, in UpdateActivityInput) error {
+	if current.Kind != crmcontracts.ActivityKindMeeting || in.MeetingStatus == nil || *in.MeetingStatus != meetingoutcome.Held {
+		return &followUpFieldError{Field: "follow_up_task", Message: "Add a next step while marking a meeting held."}
+	}
+	if current.MeetingStatus != nil && string(*current.MeetingStatus) == meetingoutcome.Held {
+		return &followUpFieldError{Field: "follow_up_task", Message: "This meeting is already held. Add another task from the meeting instead."}
+	}
+	return auth.Require(ctx, "activity", principal.ActionCreate)
+}
+
+func (s *Store) writeOutcomeFollowUp(ctx context.Context, tx pgx.Tx, meeting crmcontracts.Activity, task crmcontracts.ActivityFollowUpTask) error {
+	followUp, err := followUpTaskInput(task, "manual")
+	if err != nil {
+		return err
+	}
+	followUp.SourceActivityID = new(ids.UUID(meeting.Id))
+	_, _, err = s.logActivityAndReadTranscript(ctx, tx, followUp)
+	return err
 }

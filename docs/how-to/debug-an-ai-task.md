@@ -44,7 +44,7 @@ and `degrade_to` reaches rungs that the ladder never names.
 For example, the ladder of `draft_reply` is `[cheap_cloud, premium]`, and `cheap_cloud` degrades to
 `local_small`. So a model bound at `local_small` can end up serving `draft_reply`.
 `ai.ServableTiers(task)` is the full set: the ladder, plus every rung `degrade_to` reaches, step by step,
-with the ladder rungs first. `ai.LeadingTier(task)` is the first rung: what serves when nothing has failed.
+with the ladder rungs first. The first rung of `RoutingConfig.Ladder(task)` is what serves when nothing has failed.
 To ask which of your bound models could answer a task, use the full set. The ladder by itself gives too
 small an answer.
 
@@ -195,12 +195,12 @@ reads a green probe as more than it covered.
 **Scope** (`aitasks.ScopeOf`, also in `make e2e-ai-report`):
 
 - `full_invocation`: the whole production call path (`rate_extract/*`, `site_extract/profile`,
-  `draft_reply/reply`, `enrich/signature`, `offer_draft/draft`, `voice_build/*`, …).
+  `draft_reply/reply`, `enrich/signature`, `offer_draft/draft`, `voice_build/*`, `capture_classify/classify`,
+  `capture_counterparty_verdict/verdict`, …).
 - `single_turn`: the fixture fills the chat up to one point, and one reply is graded. That is each
   `agent_loop` site, which is one scheduled agent graded on its own goal and tools. It is also each
   `cold_start` site with more than one turn.
-- `single_call`: one of the many calls the site makes (`capture_classify/classify`,
-  `capture_counterparty_verdict/verdict`).
+- `single_call`: one of the many calls the site makes (`cert_judge/judge`, `cold_start/field_extract`).
 
 **Company context is never built**, because the lane has no database. It is declared for `agent_loop`,
 `draft_reply`, `offer_draft` and `summarize`. For those sites you probe without part of the real prompt,

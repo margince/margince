@@ -11,15 +11,9 @@ import "./cardboundary.css";
 
 // CardBoundary contains ONE card's render failure inside that card.
 //
-// The app-level boundary (app/errorboundary.tsx) is the floor, not the whole
-// story: it catches the throw, but by then the whole routed shell has unmounted
-// and the reader is looking at a single apology where a page used to be — the
-// navigation rail included, so the one thing they could have done next (go
-// somewhere else) went with it. A page assembled from a dozen independent reads
-// has a dozen ways to throw, and every one of them costs the reader the page.
-//
-// This boundary keeps its own place. The card that failed says so and offers a
-// retry; the eleven beside it, and the rail, never learn anything happened.
+// The screen boundary (app/errorboundary.tsx) catches the throw too, but it
+// replaces the whole screen. This one replaces only the failed card, which
+// offers a retry while the cards beside it keep working.
 //
 // It never shows the thrown error's text, for the same reason the app-level one
 // does not: a render throw is a defect in this app, not a message from the
@@ -59,6 +53,7 @@ type BoundaryProps = Readonly<{
   retryLabel: string;
   children: ReactNode;
   fallback?: ReactNode;
+  reloadsOn?: (error: unknown) => boolean;
 }>;
 type BoundaryState = Readonly<{ failed: boolean; error?: unknown }>;
 
@@ -74,6 +69,12 @@ class CardRenderBoundary extends Component<BoundaryProps, BoundaryState> {
 
   private readonly retry = () => {
     if (retryStaleChunk(this.state.error)) return;
+    // Not reloadForNewBuild: its guard stops automatic reload loops, and a
+    // pressed Retry must always reload.
+    if (this.props.reloadsOn?.(this.state.error)) {
+      window.location.reload();
+      return;
+    }
     // The cache is reset BEFORE the re-render: a query that threw keeps its
     // failed result, so a boundary that only cleared its own state would hand
     // the same error straight back and the button would do nothing visible.
@@ -110,7 +111,14 @@ class CardRenderBoundary extends Component<BoundaryProps, BoundaryState> {
 export function CardBoundary({
   children,
   fallback,
-}: Readonly<{ children: ReactNode; fallback?: ReactNode }>) {
+  reloadsOn,
+}: Readonly<{
+  children: ReactNode;
+  fallback?: ReactNode;
+  /** The failures Retry answers with a page reload, such as an import the
+   *  browser refused: it keeps a refused module, so drawing again fails again. */
+  reloadsOn?: (error: unknown) => boolean;
+}>) {
   const t = useT();
   return (
     <QueryErrorResetBoundary>
@@ -120,6 +128,7 @@ export function CardBoundary({
             resetLocaleFailures();
             reset();
           }}
+          reloadsOn={reloadsOn}
           fallback={fallback}
           title={t("card.errorTitle")}
           retryLabel={t("card.errorRetry")}

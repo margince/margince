@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // resolution is what the engine concluded a message is, and why.
@@ -63,6 +64,12 @@ type resolution struct {
 	// recorded request alone, and RequestedAt is that request's date.
 	MarketingStopsBind bool
 	RequestedAt        time.Time
+	// BasisMissing says the recipient's pack has no legitimate-interest basis
+	// and the record holds no basis that pack accepts for this use.
+	BasisMissing bool
+	// ReadAsOffer says the authored words made an offer and nothing on record
+	// carried it, so the verdict asks about marketing whatever was claimed.
+	ReadAsOffer bool
 }
 
 // resolveCategory works out what this message is for one recipient.
@@ -79,6 +86,11 @@ type resolution struct {
 //  3. The claimed category, where the claim is one the caller may make and the
 //     evidence bears out.
 //  4. The legacy purpose class, mapped conservatively.
+//
+// An authored offer (Evidence.AuthoredOffer) skips arm 1: a reply into a thread
+// does not make a new offer correspondence. The live deal and a claim other than
+// a reply are asked as usual, then a quote the subject asked for. Otherwise the
+// message is marketing, and the consent verdict decides.
 //
 // Nothing here consults the caller's word before the record. A claim is
 // evidence about intent and never about lawfulness, so it is checked against
@@ -108,6 +120,9 @@ func (g *Gate) repliedIntoThisConversation(ctx context.Context, tx pgx.Tx, req c
 }
 
 func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
+	if req.Evidence.AuthoredOffer {
+		return g.resolveOffer(ctx, tx, req, subject)
+	}
 	replied, err := g.repliedIntoThisConversation(ctx, tx, req, subject)
 	if err != nil {
 		return resolution{}, err
@@ -130,18 +145,41 @@ func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 			Supported: true,
 		}, nil
 	}
-	live, err := requestedNegotiation(ctx, tx, req.Links, subject)
-	if err != nil {
-		return resolution{}, err
-	}
-	if live {
-		return resolution{
-			Category:  commsauthz.CategoryActiveDealFollowup,
-			Basis:     commsauthz.BasisLegitimateInterests,
-			Supported: true,
-		}, nil
+	if live, err := g.resolveLiveDeal(ctx, tx, req, subject); err != nil || live.Supported {
+		return live, err
 	}
 	return g.resolveFromClaimAndPurpose(ctx, tx, req, subject)
+}
+
+// resolveLiveDeal is arm 2: a live deal the recipient is a stakeholder on.
+func (g *Gate) resolveLiveDeal(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
+	live, err := requestedNegotiation(ctx, tx, req.Links, subject)
+	if err != nil || !live {
+		return resolution{}, err
+	}
+	return resolution{
+		Category:  commsauthz.CategoryActiveDealFollowup,
+		Basis:     commsauthz.BasisLegitimateInterests,
+		Supported: true,
+	}, nil
+}
+
+// resolveOffer resolves a message whose authored words make an offer, in the
+// order resolveCategory names for one.
+func (g *Gate) resolveOffer(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
+	if live, err := g.resolveLiveDeal(ctx, tx, req, subject); err != nil || live.Supported {
+		return live, err
+	}
+	if req.Context != "" && req.Context != commsauthz.CategoryReplyToInbound {
+		return g.resolveFromClaimAndPurpose(ctx, tx, req, subject)
+	}
+	quote, err := g.validate(ctx, tx, req, subject, commsauthz.CategoryPrecontractQuote, packRulesFor(subject.Country))
+	if err != nil || quote.Supported {
+		return quote, err
+	}
+	offer := resolutionForClass(ClassMarketing)
+	offer.ReadAsOffer = true
+	return offer, nil
 }
 
 // resolveFromClaimAndPurpose is the fallback when no thread and no live deal
@@ -167,7 +205,7 @@ func (g *Gate) resolveFromClaimAndPurpose(ctx context.Context, tx pgx.Tx, req co
 				Reason:    commsauthz.ReasonUnknownPurpose,
 			}, nil
 		}
-		return g.validate(ctx, tx, req, subject, req.Context, packRulesFor(subject.Country))
+		return g.validateFamily(ctx, tx, req, subject)
 	}
 	purpose, defined, err := purposeRowFor(ctx, tx, req.LegacyPurposeKey)
 	if err != nil {
@@ -181,6 +219,46 @@ func (g *Gate) resolveFromClaimAndPurpose(ctx context.Context, tx pgx.Tx, req co
 		}, nil
 	}
 	return resolutionForClass(purpose.Class), nil
+}
+
+// claimFamilies are the categories one answer in the composer stands for. The
+// first of each is the broad answer a rep gives: "they asked for it" or
+// "existing customer". Which narrower category the record bears out is the
+// engine's to find. A narrow claim never widens: an invoice claim with no
+// invoice stays an unsupported invoice claim.
+var claimFamilies = [][]commsauthz.Category{
+	{commsauthz.CategoryRequestedFollowup, commsauthz.CategoryPrecontractQuote},
+	{commsauthz.CategoryCustomerService, commsauthz.CategoryInvoiceOrPayment, commsauthz.CategoryContractNotice, commsauthz.CategoryAccountNotice},
+}
+
+// validateFamily validates the claim, then, for a broad claim, each narrower
+// member of its family in order, and answers the first the record bears out.
+// With none, it answers the claim's own refusal, so the review names what the
+// rep claimed.
+func (g *Gate) validateFamily(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
+	rules := packRulesFor(subject.Country)
+	claimed, err := g.validate(ctx, tx, req, subject, req.Context, rules)
+	if err != nil || claimed.Supported {
+		return claimed, err
+	}
+	for _, narrower := range narrowerThan(req.Context) {
+		found, err := g.validate(ctx, tx, req, subject, narrower, rules)
+		if err != nil || found.Supported {
+			return found, err
+		}
+	}
+	return claimed, nil
+}
+
+// narrowerThan answers the narrower members of the family a broad claim heads,
+// and nothing for any other claim.
+func narrowerThan(claim commsauthz.Category) []commsauthz.Category {
+	for _, family := range claimFamilies {
+		if family[0] == claim {
+			return family[1:]
+		}
+	}
+	return nil
 }
 
 // resolutionForClass maps the legacy purpose class conservatively.
@@ -270,7 +348,8 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 		if claimed != nil {
 			out.category = commsauthz.Category(*claimed)
 		}
-		out.evidence = evidenceFrom(evidence)
+		out.evidence = evidenceFrom(evidence, address)
+		out.sender = stagedSenderFrom(evidence)
 		if entity != nil {
 			out.entity = *entity
 		}
@@ -295,7 +374,7 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 // The thread key and the links both come from the delivery rather than the
 // claim, because they describe the message and not one recipient of it.
 func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, claims map[string]stagedClaim, threadKey string, links []ids.UUID) commsauthz.Request {
-	staged := claims[decisionRecipientKey(r)]
+	staged := stagedClaimOf(claims, r)
 	// The purpose staging judged, held against the delivery's own key: two
 	// keys that disagree reach CanonicalPurpose and are refused there.
 	purposeKey, deliveryKey := staged.purposeKey, ""
@@ -306,6 +385,7 @@ func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, cla
 	}
 	return commsauthz.Request{
 		Recipients:       []connector.Recipient{r},
+		DeliveryID:       req.DeliveryID,
 		Context:          staged.category,
 		LegacyPurposeKey: purposeKey,
 		MarketingPurpose: deliveryKey,
@@ -341,12 +421,17 @@ func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, cla
 // silently starved every channel reply of thread evidence at transmit — the
 // exact "stages clean, parks at send" shape closing the purpose-key escape
 // hatch was supposed to fix, just moved one phase later.
+//
+// A reply on a new topic is filed under its own key, and its delivery names the
+// message it answers. That message's current key is the conversation staging
+// asked about, so transmit asks it too, after any merge.
 func deliveryThreadKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (string, error) {
 	var key *string
 	err := tx.QueryRow(ctx, `
-		SELECT a.thread_key
+		SELECT coalesce(answered.thread_key, a.thread_key)
 		  FROM comms_outbound o
 		  JOIN activity a ON a.id = o.activity_id
+		  LEFT JOIN activity answered ON answered.id = o.answers_activity_id
 		 WHERE o.id = $1 AND `+auth.ActivityExternalEvidenceClause("a"), deliveryID).Scan(&key)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The delivery (or its activity) is gone, or the activity is held under
@@ -406,4 +491,7 @@ type stagedClaim struct {
 	purposeKey string
 	// dataProtection is the country the staged footer was rendered under.
 	dataProtection *string
+	// sender is the sending entity's country staging judged under, empty for
+	// a row staged before it was recorded.
+	sender jurisdiction.Code
 }

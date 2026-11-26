@@ -78,3 +78,36 @@ func briefSnoozeLiftedSQL(deal, condition, ref, setDown, asOf string) string {
 		ELSE false
 	END)`, condition, deal, setDown, occurredday.HappenedSQL("a", asOf), ref, activities.KindMeeting, storekit.MeetingIsOverSQL("m", asOf))
 }
+
+// briefSnoozedSQL is whether the brief_item aliased bi is set aside at asOf.
+// It is judged at read like overdue: a snooze that no longer holds reads as not
+// snoozed, and no read rewrites the row.
+func briefSnoozedSQL(asOf string) string {
+	return "(bi.state = 'snoozed' AND " + briefSnoozeHoldsSQL("bi", asOf) + ")"
+}
+
+// NextSnoozeEndSQL is the earliest instant after asOf at which one of user's
+// time snoozes ends, or NULL. Nothing is written when a snooze runs out, so an
+// answer that hid a snoozed item must not be served past it.
+func NextSnoozeEndSQL(user, asOf string) string {
+	return fmt.Sprintf(`(SELECT min(`+storekit.IntentInstantColumnSQL("bi", "snoozed", "snoozed_until")+`) FROM brief_item bi
+		JOIN brief_run br ON br.id = bi.brief_run_id
+		WHERE br.user_id = %s AND bi.reopen_on = 'time' AND %s)`, user, briefSnoozedSQL(asOf))
+}
+
+// LiftedSnoozesDigestSQL is a digest of user's reply and meeting snoozes that
+// have lifted by asOf, or NULL when none has. A lift writes nothing, so a
+// changed digest is the only sign that an answer which hid the item is behind.
+// It reads every snooze the user ever set, the same set as SnoozedDeals. That
+// keeps a cache hit cheaper than a miss, which reads the queue itself.
+func LiftedSnoozesDigestSQL(user, asOf string) string {
+	return fmt.Sprintf(`(SELECT decode(md5(string_agg(bi.id::text, ',' ORDER BY bi.id)), 'hex') FROM brief_item bi
+		JOIN brief_run br ON br.id = bi.brief_run_id
+		WHERE br.user_id = %s AND bi.state = 'snoozed' AND bi.reopen_on <> 'time' AND NOT %s)`,
+		user, briefSnoozeHoldsSQL("bi", asOf))
+}
+
+func briefSnoozeHoldsSQL(item, asOf string) string {
+	return fmt.Sprintf("(CASE WHEN %s.reopen_on = 'time' THEN %s > %s ELSE NOT %s END)",
+		item, storekit.IntentInstantColumnSQL(item, "snoozed", "snoozed_until"), asOf, briefSnoozeLiftedSQL(item+".deal_id", item+".reopen_on", item+".reopen_ref", item+".state_at", asOf))
+}

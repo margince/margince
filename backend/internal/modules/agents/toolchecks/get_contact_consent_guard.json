@@ -1,0 +1,9 @@
+{
+  "verb": "get_contact_consent_guard",
+  "checks": [
+    "contact.read"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

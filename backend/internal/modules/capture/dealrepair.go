@@ -78,6 +78,13 @@ type DealRepair struct {
 	Authority  authz.Resolver
 	Filer      DealFiler
 	Check      DealTopicCheck
+	// Hooks are the extension hooks the rule decides with. The zero value is none.
+	Hooks MailHooks
+	// Ask raises "Which deal?" for the refile passes; the data task leaves it nil.
+	Ask AskWhichDeal
+	// AdmitClosed reads candidates with one closed deal admitted, for filing
+	// mail on a deal Margince closed for silence.
+	AdmitClosed func(deal ids.UUID) DealCandidates
 }
 
 // BatchTx repairs one page of mail. A second run changes nothing, because
@@ -205,7 +212,7 @@ func (r DealRepair) asMailbox(
 	if err := tx.QueryRow(ctx, `SELECT captured_by FROM activity WHERE id = $1 AND archived_at IS NULL AND restricted_at IS NULL`, mail).Scan(&capturedBy); err != nil {
 		return "", fmt.Errorf("capture: reading who captured a mail: %w", err)
 	}
-	rows, err := tx.Query(ctx, `SELECT DISTINCT user_id FROM capture_import WHERE activity_id = $1 ORDER BY user_id`, mail)
+	rows, err := tx.Query(ctx, `SELECT DISTINCT user_id FROM capture_import WHERE activity_id = $1 AND user_id IS NOT NULL ORDER BY user_id`, mail)
 	if err != nil {
 		return "", fmt.Errorf("capture: reading the mailboxes a mail came from: %w", err)
 	}
@@ -226,7 +233,7 @@ func (r DealRepair) asMailbox(
 		if err != nil {
 			return "", err
 		}
-		f := dealFiling{decider: acting, writer: ctx, filer: r.Filer, evidence: map[string]any{"reason": reason, "decided_as": seat}}
+		f := dealFiling{decider: acting, writer: ctx, filer: r.Filer, hooks: r.Hooks, evidence: map[string]any{"reason": reason, "decided_as": seat}}
 		decided, err := decide(f)
 		if err != nil || decided.Changed() || decided == DealMachineConfirmed || decided == dealTopicPending {
 			return decided, err
@@ -245,21 +252,31 @@ func recheckMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current id
 	if live, err := lockForDeal(f.writer, tx, mail); err != nil || !live {
 		return DealNone, err
 	}
-	facts, err := readDealFacts(f.decider, tx, mail, true)
+	facts, err := readDealFacts(f.decider, tx, mail, true, f.hooks)
 	if err != nil || facts.outcome != "" {
 		return facts.outcome, err
 	}
-	verdict, err := decideDeal(f.decider, tx, facts, candidates)
+	verdict, err := decideDeal(f.decider, tx, facts, candidates, f.hooks)
 	if err != nil {
 		return "", err
+	}
+	if verdict.Outcome == DealHookFailed {
+		return DealHookFailed, recordFiling(f.writer, tx, mail, verdict, "")
 	}
 	if verdict.Outcome == DealLinked && verdict.Deal == current {
 		return DealMachineConfirmed, nil
 	}
-	if verdict.Basis.NeedsTopicCheck() {
+	// A hook's `none` is the unit's ruling, not a suggestion waiting for a topic
+	// check, so it may take the link back. A narrowed question is still one.
+	ruled := verdict.Outcome != DealAmbiguous && len(hookChanges(verdict.Hooks)) > 0
+	if verdict.Basis.NeedsTopicCheck() && !ruled {
 		return DealNone, nil
 	}
-	return replaceMachineDeal(f, tx, mail, current, verdict, candidates)
+	outcome, err := replaceMachineDeal(f, tx, mail, current, verdict, candidates)
+	if err != nil {
+		return outcome, err
+	}
+	return outcome, recordRepairFiling(f.writer, tx, mail, verdict, outcome)
 }
 
 // replaceMachineDeal takes the rule's old link back and writes the deal the
@@ -273,7 +290,7 @@ func replaceMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current id
 			return "", err
 		}
 	}
-	retracted, err := retractMachineDealLink(f, tx, mail, current)
+	retracted, err := retractMachineDealLink(f, tx, mail, current, verdict.Hooks)
 	if err != nil || !retracted {
 		return DealNotWritable, err
 	}

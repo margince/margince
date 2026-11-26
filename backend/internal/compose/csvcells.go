@@ -13,15 +13,15 @@ import (
 	"maps"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
-	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/compose/importtextbounds"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -301,6 +301,9 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 	if problem := emailCellProblem(object, fields); problem != nil {
 		return problem
 	}
+	if target, value, why, refused := importtextbounds.Refusal(object, fields); refused {
+		return problemOf(target, value, why)
+	}
 	if object == migration.ObjectContact || object == migration.ObjectLead {
 		return nil
 	}
@@ -309,13 +312,9 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 	}
 	// parseCompanyDomains refuses a domain its parser cannot read before the write.
 	if domain := strings.TrimSpace(fields[fieldDomain]); domain != "" {
-		if _, err := values.ParseDomain(domain); err != nil {
+		if _, err := owndomain.ParseDomain(domain); err != nil {
 			return problemOf(fieldDomain, fields[fieldDomain], migration.Why(migration.ReasonNotADomain, "value", domain))
 		}
-	}
-	if length := utf8.RuneCountInString(fields[descriptionField]); length > contacts.CompanyDescriptionMax {
-		return problemOf(descriptionField, fields[descriptionField], migration.Why(migration.ReasonDescriptionTooLong,
-			"length", strconv.Itoa(length), "max", strconv.Itoa(contacts.CompanyDescriptionMax)))
 	}
 	band := strings.TrimSpace(fields[fieldSizeBand])
 	if band == "" || importableSizeBands[band] {

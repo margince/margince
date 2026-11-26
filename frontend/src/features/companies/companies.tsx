@@ -7,12 +7,13 @@ import {
   RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
 } from "../../components/companylookups";
+import { RecordGone } from "../../components/recordgone";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { useT } from "../../i18n";
 import { COMPANY_TABS, type CompanyTab } from "../../lib/companytab";
+import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { unwrap } from "../../lib/problem";
-import { scrollPageToTop } from "../../lib/reveal";
 import { useAddressedTab } from "../records/recordtab";
 import { CompanyPage } from "./companies.page";
 import { useAcknowledgeCompanyView, useCompany360 } from "./company360";
@@ -123,7 +124,7 @@ function companyTabsFor(
   // Finance is absent exactly where its card is absent, on FIN-AC-3's own list
   // — an account nobody has ever invoiced has no money to report, and a tab
   // that opens onto nothing is worse than one that is not there.
-  if (!hasFinance(company.lifecycle) && tab !== "finance") {
+  if (!hasFinance(company.status) && tab !== "finance") {
     drop.add("finance");
   }
   // An archived account's refused tabs would open onto nothing too.
@@ -149,9 +150,10 @@ export function CompanyScreen({ id }: Readonly<{ id: string }>) {
   // whatever the composite is doing.
   const companyQuery = useQuery({
     queryKey: ["company", id],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       return unwrap(
         await api.GET("/companies/{id}", {
+          signal,
           params: { path: { id } },
         }),
       );
@@ -167,7 +169,11 @@ export function CompanyScreen({ id }: Readonly<{ id: string }>) {
   return (
     <div className="wrap">
       <DomainContactsArrival key={id} companyId={id} />
-      <QueryGate query={companyQuery} pendingLabel={t("nav.companies")}>
+      <QueryGate
+        query={companyQuery}
+        pendingLabel={t("nav.companies")}
+        gone={<RecordGone kind="company" />}
+      >
         {(company) => (
           <CompanyRecord
             company={company}
@@ -199,9 +205,16 @@ function CompanyRecord({
   t: ReturnType<typeof useT>;
 }>) {
   const archived = Boolean(company.archived_at);
-  const tab = useShownCompanyTab(company.id, archived, addressed);
+  const disabled = useHiddenCoreFeatures();
+  const enabledTab = (tab: CompanyTab) =>
+    (tab !== "contacts" || !disabled.includes("contacts")) &&
+    (tab !== "deals" ||
+      !disabled.includes("deals") ||
+      !disabled.includes("projects"));
+  const shown = useShownCompanyTab(company.id, archived, addressed);
+  const tab = enabledTab(shown) ? shown : "overview";
   const assembled = archived ? undefined : view.data;
-  const visibleTabs = companyTabsFor(company, tab);
+  const visibleTabs = companyTabsFor(company, tab).filter(enabledTab);
   const tabs = (
     // A test id rather than a class: journeys walk the page's own tab strip,
     // and nothing draws this wrapper.
@@ -209,10 +222,8 @@ function CompanyRecord({
       <RecordTabs
         options={visibleTabs}
         value={tab}
-        onChange={(next) => {
-          onTab(next);
-          scrollPageToTop();
-        }}
+        onChange={onTab}
+        keepPlace
         counts={companyTabCounts(assembled)}
         labels={{
           // "360", not the shared "Overview": this tab is the account's
@@ -228,6 +239,7 @@ function CompanyRecord({
           // rename a tab that did not change. This label now also names the
           // lead's own Deals & projects tab, which reads the same two things.
           deals: t("tab.dealsProjects"),
+          meetings: t("tab.meetings"),
           tasks: t("tab.tasks"),
           timeline: t("tab.timeline"),
           // The tab's own key rather than `finance.title`, which the card

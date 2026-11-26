@@ -13,6 +13,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -20,8 +21,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // runBlocked and runSkipped are one word in both vocabularies: the stored status
@@ -34,12 +37,15 @@ const (
 // runStatusRequiresApproval is the stored status of a run an approval holds.
 const runStatusRequiresApproval = "requires_approval"
 
+// runStatusApplied is the stored status of a run whose effects were written.
+const runStatusApplied = "applied"
+
 // runStatusByOutcome maps the contract's outcome vocabulary onto the
 // workflow_run.status set (the two differ where the wire says what the
 // user sees — "fired", "queued_for_approval" — and the row says what the
 // engine did).
 var runStatusByOutcome = map[string]string{
-	"fired":               "applied",
+	"fired":               runStatusApplied,
 	runStatusFailed:       runStatusFailed,
 	runBlocked:            runBlocked,
 	runSkipped:            runSkipped,
@@ -49,7 +55,7 @@ var runStatusByOutcome = map[string]string{
 // runOutcomeByStatus is the inverse mapping; the status CHECK constraint
 // (migration 0061) closes the domain, so the map is total over stored rows.
 var runOutcomeByStatus = map[string]string{
-	"applied":                 "fired",
+	runStatusApplied:          "fired",
 	runStatusFailed:           runStatusFailed,
 	runBlocked:                runBlocked,
 	runSkipped:                runSkipped,
@@ -105,11 +111,13 @@ const (
 type AutomationRunRecord struct {
 	ID           ids.UUID
 	Status       string
-	Planned      json.RawMessage
-	Applied      json.RawMessage
+	Planned      []workflow.Action // decoded from workflow_run.planned by decodeRunTrace
+	Applied      []workflow.Action
 	Detail       *string // the reason decoded from workflow_run.detail (jsonb, rundetail.go): why for failed/blocked/skipped; nil for a clean applied run
 	TriggerEvent ids.UUID
-	Tier         string // the parent automation's tier — the tier that fired
+	TriggerType  string  // the rule's trigger: an event type, or a clock scan
+	ToStageName  *string // a stage move's destination, while its event is on record
+	Tier         string  // the parent automation's RuleTier
 	CreatedAt    time.Time
 }
 
@@ -123,6 +131,42 @@ type AutomationRunPage struct {
 	Items      []AutomationRunRecord
 	NextCursor string
 	HasMore    bool
+}
+
+// scanRunRecord reads one workflow_run row of a run-history page.
+func scanRunRecord(rows pgx.Rows, action, trigger string) (AutomationRunRecord, error) {
+	rec := AutomationRunRecord{Tier: RuleTier(action), TriggerType: trigger}
+	var rawPlanned, rawApplied, rawDetail []byte
+	err := rows.Scan(&rec.ID, &rec.Status, &rawPlanned, &rawApplied,
+		&rawDetail, &rec.TriggerEvent, &rec.CreatedAt, &rec.ToStageName)
+	if err != nil {
+		return AutomationRunRecord{}, err
+	}
+	// A malformed detail or trace surfaces as a read failure, never as a
+	// silently empty reason or action list.
+	if rec.Detail, err = decodeRunDetail(rawDetail); err != nil {
+		return AutomationRunRecord{}, err
+	}
+	if rec.Planned, err = decodeRunTrace("planned", rawPlanned); err != nil {
+		return AutomationRunRecord{}, err
+	}
+	if rec.Applied, err = decodeRunTrace("applied", rawApplied); err != nil {
+		return AutomationRunRecord{}, err
+	}
+	return rec, nil
+}
+
+// decodeRunTrace reads a run's planned or applied actions. A run that never
+// recorded the trace stores NULL, which reads as no actions.
+func decodeRunTrace(column string, raw []byte) ([]workflow.Action, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var actions []workflow.Action
+	if err := json.Unmarshal(raw, &actions); err != nil {
+		return nil, fmt.Errorf("automation: workflow_run.%s: %w", column, err)
+	}
+	return actions, nil
 }
 
 // ListRuns pages one automation's run history, newest first, optionally
@@ -147,9 +191,9 @@ func (s *AutomationStore) ListRuns(ctx context.Context, id ids.AutomationID, cur
 
 	var page AutomationRunPage
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var key, tier string
-		err := tx.QueryRow(ctx,
-			`SELECT key, tier FROM automation WHERE id = $1 AND archived_at IS NULL`, id).Scan(&key, &tier)
+		var key, action, trigger string
+		err := tx.QueryRow(ctx, `SELECT key, coalesce(action->>'kind', ''), coalesce(trigger->>'event_type', '')
+			FROM automation WHERE id = $1 AND archived_at IS NULL`, id).Scan(&key, &action, &trigger)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -164,7 +208,7 @@ func (s *AutomationStore) ListRuns(ctx context.Context, id ids.AutomationID, cur
 			where += " AND status = $3"
 		}
 		if cursor != nil && *cursor != "" {
-			c, err := storekit.DecodeCursor(*cursor)
+			c, err := storekit.DecodeCursor("automation_runs", *cursor)
 			if err != nil {
 				return err
 			}
@@ -172,7 +216,9 @@ func (s *AutomationStore) ListRuns(ctx context.Context, id ids.AutomationID, cur
 			where += storekit.SQLf(" AND (created_at, id) < ($%d, $%d)", len(args)-1, len(args))
 		}
 		rows, err := tx.Query(ctx, storekit.SQLf(`
-			SELECT id, status, planned, applied, detail, trigger_event, created_at
+			SELECT id, status, planned, applied, detail, trigger_event, created_at,
+			  (SELECT o.envelope->'payload'->>'to_stage_name' FROM event_outbox o
+			    WHERE `+kevents.OutboxEventIDSQL("o")+` = workflow_run.trigger_event::text LIMIT 1)
 			FROM workflow_run WHERE %s
 			ORDER BY created_at DESC, id DESC LIMIT %d`, where, n+1), args...)
 		if err != nil {
@@ -180,16 +226,8 @@ func (s *AutomationStore) ListRuns(ctx context.Context, id ids.AutomationID, cur
 		}
 		defer rows.Close()
 		for rows.Next() {
-			rec := AutomationRunRecord{Tier: tier}
-			var rawDetail []byte
-			if err := rows.Scan(&rec.ID, &rec.Status, &rec.Planned, &rec.Applied,
-				&rawDetail, &rec.TriggerEvent, &rec.CreatedAt); err != nil {
-				return err
-			}
-			// A backfilled row and a freshly-written one decode through the
-			// SAME reader (rundetail.go) — a malformed detail must surface
-			// as a read failure, never as a silently empty reason.
-			if rec.Detail, err = decodeRunDetail(rawDetail); err != nil {
+			rec, err := scanRunRecord(rows, action, trigger)
+			if err != nil {
 				return err
 			}
 			page.Items = append(page.Items, rec)
@@ -202,7 +240,7 @@ func (s *AutomationStore) ListRuns(ctx context.Context, id ids.AutomationID, cur
 	if len(page.Items) > n {
 		page.Items = page.Items[:n]
 		last := page.Items[len(page.Items)-1]
-		next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+		next, err := storekit.EncodeCursor("automation_runs", last.CreatedAt, last.ID)
 		if err != nil {
 			return AutomationRunPage{}, err
 		}

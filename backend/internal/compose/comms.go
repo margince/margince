@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarbacking"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -115,7 +116,11 @@ func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 	if err != nil {
 		return "", "", err
 	}
-	subject, body := c.store.FloorDraft(ctx, anchor, activity)
+	own, err := c.own.Colleagues(ctx)
+	if err != nil {
+		return "", "", fmt.Errorf("compose: reading who counts as a colleague: %w", err)
+	}
+	subject, body, _ := c.store.FloorDraft(ctx, anchor, activity, textlang.Unknown, own.Covers)
 	return subject, body, nil
 }
 
@@ -161,7 +166,7 @@ func (c commsAdapter) send(
 	// a record this installation no longer holds is not one to file a send
 	// against, and the staging gate that already said so ran before the
 	// approval waited in somebody's inbox (comms_soraut.go).
-	sched, err := agentSchedule(in)
+	sched, err := activities.ParseToolSchedule(in.ScheduledAt, in.ScheduledTZ, in.ScheduledIntent)
 	if err != nil {
 		return agents.SendEmailResult{}, err
 	}
@@ -188,32 +193,11 @@ func (c commsAdapter) send(
 		return agents.SendEmailResult{
 			ScheduledSendID: out.Scheduled.ID,
 			ScheduledAt:     out.Scheduled.ScheduledAt.Format(time.RFC3339),
+			ScheduledIntent: out.Scheduled.IntentWire(),
 			Status:          sendScheduled,
 		}, nil
 	}
 	return agents.SendEmailResult{ActivityID: ids.UUID(out.Activity.Id), Status: sendAccepted}, nil
-}
-
-// agentSchedule reads a tool call's optional scheduling fields.
-//
-// The instant is parsed HERE rather than passed as a string, so a malformed one
-// is refused before anything is staged for a human to approve — an approver
-// should never be shown a message whose moment the server cannot read.
-func agentSchedule(in agents.SendEmailArgs) (*activities.SendSchedule, error) {
-	if in.ScheduledAt == "" && in.ScheduledTZ == "" {
-		return nil, nil //nolint:nilnil // "send now" IS the answer for an optional schedule, not a missing value.
-	}
-	if in.ScheduledAt == "" {
-		return nil, &activities.InvalidScheduleError{Field: activities.FieldScheduledAt, Reason: "is required when a zone is given"}
-	}
-	if in.ScheduledTZ == "" {
-		return nil, &activities.InvalidScheduleError{Field: activities.FieldScheduledTZ, Reason: "is required when a moment is given"}
-	}
-	at, err := time.Parse(time.RFC3339, in.ScheduledAt)
-	if err != nil {
-		return nil, &activities.InvalidScheduleError{Field: activities.FieldScheduledAt, Reason: "is not an RFC3339 instant"}
-	}
-	return &activities.SendSchedule{At: at, TZ: in.ScheduledTZ}, nil
 }
 
 // SendMessage replies on a captured channel conversation through the SAME

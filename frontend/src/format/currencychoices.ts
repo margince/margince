@@ -2,7 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** Never empty: a form opens on the first code and sends it for an empty field. */
+import type { Locale } from "../i18n";
 import { isAssignedCurrency } from "./assignedcurrencies";
+import { holdsEveryWord, searchWords } from "./collate";
+import { displayNames } from "./formatters";
 
 export type LeadingCurrencies = readonly [string, ...string[]];
 
@@ -40,15 +43,45 @@ export function currencyCodes(
 }
 
 /**
- * The options of a currency `<Select>`. A code is its own label: an ISO 4217
- * code is not copy, so there is nothing to translate.
+ * The options of a currency `<Select>`. With a `locale`, each code is followed
+ * by its name in the reader's language ("VND – Vietnamese dong"). A reader who
+ * knows the money and not its code can then find it. Without one, a code is
+ * its own label.
  */
 export function currencyOptions(
   leading: LeadingCurrencies,
   current?: string | null,
+  locale?: Locale,
 ): { value: string; label: string }[] {
+  const named = locale ? currencyNamer(locale) : null;
   return currencyCodes(leading, current).map((code) => ({
     value: code,
-    label: code,
+    label: named ? named(code) : code,
   }));
+}
+
+function currencyNamer(locale: Locale): (code: string) => string {
+  const table = displayNames(locale, { type: "currency" });
+  return (code) => {
+    const name = table.of(code);
+    // The table answers a code it does not know with the code itself.
+    return name && name !== code ? `${code} – ${name}` : code;
+  };
+}
+
+/**
+ * A search over currency options for a searched picker: every typed word must
+ * appear in the code or the name. An empty term lists them all, in order.
+ */
+export function searchCurrencies(
+  options: readonly { value: string; label: string }[],
+): (term: string) => Promise<{ id: string; name: string }[]> {
+  return (term) => {
+    const words = searchWords(term);
+    return Promise.resolve(
+      options
+        .filter((option) => holdsEveryWord(words, [option.label]))
+        .map((option) => ({ id: option.value, name: option.label })),
+    );
+  };
 }

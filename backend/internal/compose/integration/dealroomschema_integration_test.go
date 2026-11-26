@@ -21,7 +21,6 @@ package integration
 import (
 	"fmt"
 	"net/http"
-	"sort"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -132,56 +131,31 @@ func TestASecondRoomOnALiveDealIsRefusedAsAlreadyOpen(t *testing.T) {
 	}
 }
 
-// The mapping from "unique violation" to "already open" is only honest while
-// ONE unique index can refuse an insert into deal_room.
-//
-// createRoomTx cannot tell which constraint bit it, so a second one added later
-// would make every refusal it causes say "this deal already has an active Deal
-// Room" — a sentence naming a cause that is not the cause, telling the caller
-// to archive a room that would not help. Asked of the catalog rather than the
-// migration text, because what binds is what the database has.
-func TestTheActiveRoomIndexIsTheOnlyUniqueRefusalACreateCanMean(t *testing.T) {
+// createRoomTx and SetExpiry say "already open" only when the exclusion of
+// that name fires, so the name is what binds. Asked of the catalog rather than
+// the migration text, because what binds is what the database has.
+func TestTheOneOpenRoomRuleIsTheExclusionTheStoreNames(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Room Indexes", "ada@rooms.test", "Ada Admin")
 
-	rows, err := e.Owner.Query(t.Context(),
-		`SELECT i.relname
-		   FROM pg_index x
-		   JOIN pg_class i ON i.oid = x.indexrelid
-		   JOIN pg_class c ON c.oid = x.indrelid
-		  WHERE c.relname = 'deal_room' AND x.indisunique`)
-	if err != nil {
-		t.Fatalf("reading deal_room's unique indexes: %v", err)
+	var kind string
+	if err := e.Owner.QueryRow(t.Context(),
+		`SELECT c.contype::text FROM pg_constraint c
+		  WHERE c.conrelid = 'deal_room'::regclass AND c.conname = 'deal_room_one_open_room_per_deal'`).Scan(&kind); err != nil {
+		t.Fatalf("reading the one-open-room rule: %v", err)
 	}
-	defer rows.Close()
-	var found []string
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			t.Fatalf("scanning an index name: %v", err)
-		}
-		found = append(found, name)
+	if kind != "x" {
+		t.Fatalf("deal_room_one_open_room_per_deal is constraint type %q, want an exclusion", kind)
 	}
-	if err := rows.Err(); err != nil {
-		t.Fatalf("reading deal_room's unique indexes: %v", err)
+	var uniques int
+	if err := e.Owner.QueryRow(t.Context(),
+		`SELECT count(*) FROM pg_index x
+		  WHERE x.indrelid = 'deal_room'::regclass AND x.indisunique AND NOT x.indisprimary`).Scan(&uniques); err != nil {
+		t.Fatalf("counting deal_room's unique indexes: %v", err)
 	}
-	sort.Strings(found)
-
-	// The primary key cannot be the one: the writer generates the id, so an
-	// insert tripping it is a collision no caller can act on.
-	want := []string{"deal_room_pkey", "uq_deal_room_active"}
-	if len(found) != len(want) {
-		t.Fatalf("deal_room carries %d unique index(es), %v, and this test is written for %v.\n"+
-			"A new one makes createRoomTx's storekit.IsUniqueViolation → errRoomAlreadyOpen mapping "+
-			"name the wrong cause: the refusal would tell a caller to archive a room that is not the "+
-			"problem. Either map the constraint by name, or add the index here having decided that "+
-			"\"already open\" is still the true thing to say.", len(found), found, want)
-	}
-	for i, name := range want {
-		if found[i] != name {
-			t.Errorf("deal_room's unique indexes are %v, want %v", found, want)
-			break
-		}
+	if uniques != 0 {
+		t.Errorf("deal_room carries %d unique index(es) besides its key. The one-open-room rule "+
+			"is the exclusion now; a second rule here would refuse a room the store calls free.", uniques)
 	}
 }
 

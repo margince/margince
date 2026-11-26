@@ -316,7 +316,7 @@ describe("voice build", () => {
       { type: "COMPANY_CONFIRMED" },
       { type: "BASIS_DONE" },
       { type: "INVITE_ACCEPTED" },
-      { type: "BUILD_STARTED", buildId: "b1" },
+      { type: "BUILD_STARTED", buildId: "b1", profileId: "profile-1" },
     ]);
   const built = (status: "succeeded" | "failed" | "deferred") =>
     run(
@@ -349,7 +349,7 @@ describe("voice build", () => {
 
   it("ignores stage and terminal events from a superseded build across a retry", () => {
     const retried = run(
-      [{ type: "BUILD_STARTED", buildId: "b2" }],
+      [{ type: "BUILD_STARTED", buildId: "b2", profileId: "profile-1" }],
       built("failed"),
     );
     expect(retried).toMatchObject({
@@ -378,16 +378,25 @@ describe("voice build", () => {
     const retried = conversationReducer(failed, {
       type: "BUILD_STARTED",
       buildId: "b2",
+      profileId: "profile-1",
     });
     expect(retried.phase).toBe("vo.building");
 
     const succeeded = built("succeeded");
     expect(
-      conversationReducer(succeeded, { type: "BUILD_STARTED", buildId: "b2" }),
+      conversationReducer(succeeded, {
+        type: "BUILD_STARTED",
+        buildId: "b2",
+        profileId: "profile-1",
+      }),
     ).toBe(succeeded);
     const deferred = built("deferred");
     expect(
-      conversationReducer(deferred, { type: "BUILD_STARTED", buildId: "b2" }),
+      conversationReducer(deferred, {
+        type: "BUILD_STARTED",
+        buildId: "b2",
+        profileId: "profile-1",
+      }),
     ).toBe(deferred);
   });
 

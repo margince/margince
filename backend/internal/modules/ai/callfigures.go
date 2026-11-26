@@ -99,7 +99,7 @@ func (s *CallReadStore) CallStats(ctx context.Context, q CallStatsQuery) ([]Call
 		return nil, invalidAt("group", "must be one of provider, model, served_model, served_provider, tier, task")
 	}
 	from, to := rateFallbacks()
-	args := []any{s.now().Add(-q.Window), answeredSentinels}
+	args := []any{s.now().Add(-q.Window), nonFailureSentinels}
 	failed := failedAttemptSQL("ac", len(args))
 	args = append(args, from, to)
 	rate := pricedRate("ac", len(args)-1, len(args))
@@ -184,9 +184,9 @@ type TaskFlow struct {
 }
 
 // TaskFlow reads task's route over the window: the decision step first, then
-// each tier in ladder order. Unanswered counts the logical calls whose last
+// each tier in order, the ladder the router walks for task. Unanswered counts the logical calls whose last
 // attempt served the caller nothing, a refused or withheld answer included.
-func (s *CallReadStore) TaskFlow(ctx context.Context, task Task, window time.Duration) (TaskFlow, error) {
+func (s *CallReadStore) TaskFlow(ctx context.Context, task Task, order []Tier, window time.Duration) (TaskFlow, error) {
 	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
 		return TaskFlow{}, err
 	}
@@ -202,7 +202,7 @@ func (s *CallReadStore) TaskFlow(ctx context.Context, task Task, window time.Dur
 			args...).Scan(&flow.Total, &flow.Unanswered); err != nil {
 			return err
 		}
-		steps, err := s.flowSteps(ctx, tx, task, args, failed)
+		steps, err := s.flowSteps(ctx, tx, order, args, failed)
 		flow.Steps = steps
 		return err
 	})
@@ -214,7 +214,7 @@ func (s *CallReadStore) TaskFlow(ctx context.Context, task Task, window time.Dur
 
 // flowSteps reads with TaskFlow's arguments: $1 task, $2 since, and the served
 // sentinels that failed binds.
-func (s *CallReadStore) flowSteps(ctx context.Context, tx pgx.Tx, task Task, args []any, failed string) ([]FlowStep, error) {
+func (s *CallReadStore) flowSteps(ctx context.Context, tx pgx.Tx, order []Tier, args []any, failed string) ([]FlowStep, error) {
 	found, err := tx.Query(ctx, `
 		WITH attempts AS (
 		  SELECT ac.kind = 'decision' AS decision, ac.tier, ac.provider, ac.model_id, ac.latency_ms, ac.is_terminal,
@@ -257,18 +257,18 @@ func (s *CallReadStore) flowSteps(ctx context.Context, tx pgx.Tx, task Task, arg
 	if err := found.Err(); err != nil {
 		return nil, err
 	}
-	slices.SortStableFunc(steps, func(a, b FlowStep) int { return routeOrder(task, a) - routeOrder(task, b) })
+	slices.SortStableFunc(steps, func(a, b FlowStep) int { return routeOrder(order, a) - routeOrder(order, b) })
 	return steps, nil
 }
 
 // routeOrder places a step in the order the router tries them: the decision
-// model, then the ladder's rungs, then any tier the ladder no longer names.
-func routeOrder(task Task, step FlowStep) int {
+// model, then order's rungs, then any tier order no longer names.
+func routeOrder(order []Tier, step FlowStep) int {
 	if step.Decision {
 		return -1
 	}
-	if i := slices.Index(taskLadders[task], step.Tier); i >= 0 {
+	if i := slices.Index(order, step.Tier); i >= 0 {
 		return i
 	}
-	return len(taskLadders[task])
+	return len(order)
 }

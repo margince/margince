@@ -80,7 +80,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await expect(
     page
       .getByRole("region", { name: "Phasenverlauf" })
-      .getByText(/Lars Brandt hat das Projekt angelegt/),
+      .getByText(/Lars Brandt hat das Projekt erstellt/),
   ).toBeVisible();
   // A new project has filed no documents, and its standing says so.
   await expect(
@@ -92,7 +92,9 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await page.goto("/#/deals/d-fleet");
   await page.getByRole("button", { name: "Weitere Aktionen" }).click();
   await page.getByRole("button", { name: "Details bearbeiten" }).click();
-  await page.getByRole("button", { name: /^Unternehmen ändern/ }).click();
+  await page
+    .getByRole("button", { name: /^Feld „Unternehmen“ ändern/ })
+    .click();
   const group = page.getByRole("dialog", { name: "Unternehmen", exact: true });
   await choose(
     page,
@@ -120,7 +122,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // Through the head's own verb: the deal page carries no standing log form,
   // because a form open on every read asks for a note nobody came to write.
   await page
-    .getByRole("button", { name: "Aktivität erfassen", exact: true })
+    .getByRole("button", { name: "Notiz, Aktivität erfassen", exact: true })
     .click();
   // Inside the dialog, and exactly: the head's own verb is still on the page
   // behind it, and "Erfassen" matches "Aktivität erfassen" as a substring.
@@ -178,6 +180,10 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     .getByRole("button", { name: "Won" })
     .click();
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
+  // The dialog says before the win what it does to the deal's project.
+  await expect(
+    page.getByText("Damit wechselt auch Brandt ERP zu In Umsetzung."),
+  ).toBeVisible();
   // No contract is on the deal, so the dialog asks how it was won on opening.
   // The one Confirm that follows is the win.
   await choose(
@@ -200,6 +206,13 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await expect(page).toHaveURL(/#\/projects\/pr-new-1$/);
   await expect(current).toContainText("In Umsetzung");
   await expect(visit(page, "In Umsetzung")).toBeVisible();
+  // Its history row names the win that moved it, linking to the deal.
+  await expect(
+    visit(page, "In Umsetzung").getByText(/Deal Fleet retrofit gewonnen/),
+  ).toBeVisible();
+  await expect(
+    visit(page, "In Umsetzung").getByRole("link", { name: "Fleet retrofit" }),
+  ).toHaveAttribute("href", /#\/deals\/d-fleet$/);
   // And the deal is listed on the project with its won status.
   await expect(
     page.getByRole("button", { name: "Fleet retrofit" }),
@@ -258,14 +271,24 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     page.getByText("Erweiterung wird neu verhandelt.", { exact: false }),
   ).toBeVisible();
 
-  // 7. Close with a reason. The close button stays disabled until a reason
-  // is typed, and the reason is what the history shows afterwards.
-  await phase.getByRole("button", { name: "Abgeschlossen" }).click();
+  // 7. Close with a reason. A close with no reason is refused on the reason
+  // field, and the reason is what the history shows afterwards.
+  // The way out reads as the verb it is, as the dialog's heading does.
+  await phase.getByRole("button", { name: "Projekt abschließen" }).click();
   await expect(
-    page.getByRole("heading", { name: "Wechsel zu Abgeschlossen" }),
+    page.getByRole("heading", { name: "Projekt abschließen" }),
   ).toBeVisible();
-  const close = page.getByRole("button", { name: "Projekt abschließen" });
-  await expect(close).toBeDisabled();
+  const close = page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Projekt abschließen" });
+  await close.click();
+  await expect(page.getByTestId("project-advance-reason")).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
+  await expect(
+    page.getByRole("heading", { name: "Projekt abschließen" }),
+  ).toBeVisible();
   await page
     .getByTestId("project-advance-reason")
     .fill("Go-live abgenommen, Hypercare an den Support übergeben.");

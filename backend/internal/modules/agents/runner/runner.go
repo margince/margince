@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -39,6 +40,9 @@ type Invoker interface {
 	// tools an observation may be attributed to, which is about what already
 	// happened rather than what may be chosen next — see sourceVocabulary.
 	Specs() []mcp.ToolSpec
+	// Explain is what the run's model is told about a refused call. A fault no
+	// taxonomy recognises is one fixed sentence.
+	Explain(ctx context.Context, tool string, err error) string
 }
 
 // Meta names the model identity a completion was served with — the
@@ -94,6 +98,7 @@ type Result struct {
 	Steps        []Step
 	StepsUsed    int
 	OutputTokens int
+	calls        []Call
 }
 
 // NothingToJudge is the result of a run closed before its first model call,
@@ -146,6 +151,9 @@ type Pending struct {
 	TranscriptVersion int
 	StepsUsed         int
 	OutputTokens      int
+	// Calls carries what the job's outcome check has read so far, so a resumed
+	// run is judged on its whole history. Empty for a job with no check.
+	Calls []Call `json:"calls,omitempty"`
 }
 
 // neutralisedObservations is the current transcript version: every observation
@@ -166,6 +174,7 @@ func New(tools Invoker, brain Brain) *Runner {
 // Run executes a fresh job until terminal answer, suspension, or a
 // budget guarantee fires.
 func (r *Runner) Run(ctx context.Context, job Job) (Result, error) {
+	ctx = principal.WithUnattended(ctx)
 	if len(job.Tools) == 0 {
 		return r.degrade(Result{}, unscopedJobReason), nil
 	}
@@ -192,6 +201,7 @@ type Decision struct {
 // silently changed under an approved diff). Rejected: the refusal is
 // observed and the model re-plans without that action.
 func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, error) {
+	ctx = principal.WithUnattended(ctx)
 	if len(job.Tools) == 0 {
 		return r.degrade(Result{StepsUsed: dec.Pending.StepsUsed, OutputTokens: dec.Pending.OutputTokens},
 			unscopedJobReason), nil
@@ -211,7 +221,7 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 	if err != nil {
 		return Result{}, err
 	}
-	carried := Result{StepsUsed: dec.Pending.StepsUsed, OutputTokens: dec.Pending.OutputTokens}
+	carried := Result{StepsUsed: dec.Pending.StepsUsed, OutputTokens: dec.Pending.OutputTokens, calls: dec.Pending.Calls}
 
 	if !dec.Approved {
 		win.observeThen(dec.Pending.Tool, "", "the human REJECTED this proposed action; re-plan without it")
@@ -237,7 +247,7 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 	// the same posture Resume already takes when the passport died while
 	// the run was parked.
 	out, err := r.invokePermitted(ctx, job, dec.Pending.Tool, args)
-	observation := string(out)
+	observation, recorded := string(out), string(out)
 	admission := "executed"
 	if err != nil {
 		// Version skew, expiry, or any other redemption failure is an
@@ -245,8 +255,11 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 		// state (a re-staging is a fresh human decision). The step records
 		// "refused" — replay must never claim a mutation that the gate did
 		// not apply.
-		observation = "approved action could not be applied: " + err.Error()
+		observation = "approved action could not be applied: " + r.refusalText(ctx, dec.Pending.Tool, err)
+		recorded = "approved action could not be applied: " + err.Error()
 		admission = AdmissionRefused
+	} else {
+		carried.recordCall(job, dec.Pending.Tool, dec.Pending.Args, out)
 	}
 	win.observe(dec.Pending.Tool, observation)
 	// The approved staged call redeems here with no fresh model completion —
@@ -254,7 +267,7 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 	// suspension, so this redemption step leaves ModelID/Tier empty and
 	// tokens zero rather than re-attributing a call that never happened.
 	carried.Steps = append(carried.Steps, Step{
-		Tool: dec.Pending.Tool, Args: dec.Pending.Args, Observation: truncate(observation),
+		Tool: dec.Pending.Tool, Args: dec.Pending.Args, Observation: truncate(recorded),
 		Admission: admission,
 	})
 	return r.loop(ctx, job, win, carried)
@@ -311,6 +324,13 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 		retry.accepted()
 
 		if step.Final != nil {
+			refused, err := refuseFinal(job, win, acc.calls, meta)
+			if err != nil {
+				return Result{}, err
+			}
+			if refused {
+				continue
+			}
 			acc.Outcome = OutcomeCompleted
 			acc.Final = step.Final
 			return acc, nil
@@ -328,6 +348,7 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 			// decision it was woken for.
 			out, err = r.retryWithApproval(ctx, job, step, staged.ApprovalID)
 			if err == nil {
+				acc.recordCall(job, step.Tool, step.Args, out)
 				win.observe(step.Tool, string(out))
 				acc.Steps = append(acc.Steps, Step{
 					Tool: step.Tool, Args: step.Args, Observation: truncate(string(out)),
@@ -339,7 +360,7 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 			// The release did not hold after all — the decision lapsed, the
 			// target moved, the passport died. That is a refusal the model can
 			// re-plan around, not a run to park on an id nothing will resume.
-			acc.Steps = append(acc.Steps, observeRefusal(win, step, err, meta, resp))
+			acc.Steps = append(acc.Steps, observeRefusal(win, step, r.refusalText(ctx, step.Tool, err), err, meta, resp))
 		case errors.As(err, &staged):
 			// 🟡 mid-loop: the proposal is durably staged; suspend, never
 			// block (§5). The snapshot makes the run resumable.
@@ -349,8 +370,9 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 			// back as observations — the model learns it cannot do that
 			// and re-plans; agent ≤ human holds without the loop knowing
 			// the policy.
-			acc.Steps = append(acc.Steps, observeRefusal(win, step, err, meta, resp))
+			acc.Steps = append(acc.Steps, observeRefusal(win, step, r.refusalText(ctx, step.Tool, err), err, meta, resp))
 		default:
+			acc.recordCall(job, step.Tool, step.Args, out)
 			win.observe(step.Tool, string(out))
 			acc.Steps = append(acc.Steps, Step{
 				Tool: step.Tool, Args: step.Args, Observation: truncate(string(out)),
@@ -380,6 +402,7 @@ func suspend(acc Result, approvalID ids.ApprovalID, step modelStep, win *window,
 		TranscriptVersion: neutralisedObservations,
 		StepsUsed:         acc.StepsUsed,
 		OutputTokens:      acc.OutputTokens,
+		Calls:             acc.calls,
 	}
 	return acc
 }

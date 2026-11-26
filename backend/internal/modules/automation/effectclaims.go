@@ -41,8 +41,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -123,6 +128,31 @@ func (s *EffectClaimStore) Confirm(ctx context.Context, handler, occurrenceKey, 
 	})
 }
 
+// StageOnce commits the approval and its occurrence claim together.
+func (s *EffectClaimStore) StageOnce(ctx context.Context, handler, occurrence, fingerprint string, stage func(context.Context) (ids.ApprovalID, error)) (ids.ApprovalID, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return ids.ApprovalID{}, err
+	}
+	var id ids.ApprovalID
+	err := storekit.RetryLockCycles(ctx, func() error {
+		return database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
+			claimed, err := s.Claim(bound, handler, occurrence, fingerprint)
+			if err != nil {
+				return err
+			}
+			if !claimed {
+				return workflow.Declined("a draft already exists for this meeting")
+			}
+			id, err = stage(bound)
+			if err != nil {
+				return err
+			}
+			return s.Confirm(bound, handler, occurrence, fingerprint)
+		})
+	})
+	return id, err
+}
+
 // applyCreate writes one record, claim-first: an engine-stamped effect
 // (eff.Handler set — engine_run.go stamps it before Apply) takes the
 // effect-level claim so the IDENTICAL create from a sibling instance's
@@ -172,11 +202,20 @@ func applyCreate(ctx context.Context, ex Executors, eff workflow.Effect, action 
 	if action.Kind == workflow.ActionCreateTask {
 		entity = datasource.EntityActivity
 	}
-	_, createErr = ex.Provider.Create(ctx, datasource.CreateInput{
+	// A record table holds source to the fixed channels. An activity keeps the
+	// engine's own word, which its readers select on.
+	source := systemSource
+	if entity != datasource.EntityActivity {
+		source = provenance.RecordSourceAutomation
+	}
+	created, createErr := ex.Provider.Create(systemtext.WithMessage(ctx, action.SystemText), datasource.CreateInput{
 		EntityType: entity,
 		Fields:     action.Args,
-		Source:     systemSource,
+		Source:     source,
 	})
+	if createErr == nil && created.ID != ids.Nil {
+		action.Created = &created
+	}
 	return action, nil, createErr
 }
 

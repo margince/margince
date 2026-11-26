@@ -2,7 +2,9 @@ import type { components } from "../../api/schema";
 
 export {
   loadedQueue,
+  useForecastFocus,
   useHandledForYou,
+  useHomeDay,
   useTeamBoard,
   useTeamExceptions,
   useWorklist,
@@ -64,6 +66,10 @@ export type WorklistDisposition = NonNullable<
 export type ReopenCondition = components["schemas"]["ReopenCondition"];
 
 export type TeamBoard = components["schemas"]["TeamBoard"];
+
+export type ForecastFocus = components["schemas"]["ForecastFocus"];
+
+export type ForecastFocusDeal = components["schemas"]["ForecastFocusDeal"];
 
 export type TeamExceptions = components["schemas"]["TeamExceptions"];
 

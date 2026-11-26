@@ -1,0 +1,86 @@
+{
+  "scenario": "case104_mark_it_seen",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "5713fa9fdd1d5e62",
+    "tools": "78c10b6ad249fb24",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T07:40:28Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T07:40:28Z"
+  },
+  "usage": {
+    "input_tokens": 42061,
+    "output_tokens": 6410,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 77852,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "acknowledge_company_view",
+        "change_attention",
+        "find_records",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "acknowledge_company_view",
+        "change_attention",
+        "find_records",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3,
+      "min": 3,
+      "max": 3
+    },
+    "turns": {
+      "median": 5,
+      "min": 5,
+      "max": 5
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 59956.5,
+      "min": 59809,
+      "max": 60104
+    },
+    "output_tokens": {
+      "median": 3205,
+      "min": 3160,
+      "max": 3250
+    }
+  }
+}

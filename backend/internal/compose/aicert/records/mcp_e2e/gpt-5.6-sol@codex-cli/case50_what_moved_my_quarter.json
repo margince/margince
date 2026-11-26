@@ -13,13 +13,77 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "c97895e7354e597e",
+    "tools": "7dda97412143352f",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "0fbb56525a64e3a0d67dce27557b9284616654eb",
+    "ran_at": "2026-11-22T03:57:54Z",
+    "graded_commit": "c7d8c959b7e859b9765ae0637afffe55d0de36a2",
+    "graded_at": "2026-11-22T14:06:24Z"
+  },
   "usage": {
-    "input_tokens": 59770,
-    "output_tokens": 4368,
+    "input_tokens": 73554,
+    "output_tokens": 3743,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 604544,
+    "cache_read_input_tokens": 492032,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "forecast_movement",
+        "forecast_readings",
+        "get_field_history",
+        "read_context",
+        "read_details",
+        "read_forecast",
+        "read_record"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "forecast_movement",
+        "forecast_readings",
+        "get_record_history",
+        "read_attention",
+        "read_context",
+        "read_forecast",
+        "read_record",
+        "read_workspace",
+        "whats_slipping_this_week"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 10.5,
+      "min": 8,
+      "max": 13
+    },
+    "refused": {
+      "median": 2,
+      "min": 0,
+      "max": 4
+    },
+    "prompt_tokens": {
+      "median": 282793,
+      "min": 273332,
+      "max": 292254
+    },
+    "output_tokens": {
+      "median": 1871.5,
+      "min": 1861,
+      "max": 1882
+    }
   }
 }

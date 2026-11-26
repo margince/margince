@@ -23,7 +23,7 @@ func TestEveryImportTargetHasAGuide(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, target := range targets {
-			if _, ok := guideFor(object, target); !ok {
+			if _, ok := importguide.For(object, target); !ok {
 				t.Errorf("%s.%s has no guide; the screen would show an empty popover", object, target)
 			}
 		}
@@ -87,6 +87,20 @@ func TestTheFormatNamesEachFileSoAnUploadDetectsIt(t *testing.T) {
 		if got := migration.DetectObject(file.File); got != string(file.Object) {
 			t.Errorf("%s is detected as %q, want %s", file.File, got, file.Object)
 		}
+		// The key columns are what partMappingFrom takes: any one alone, none refused.
+		keys := *file.KeyColumns
+		for _, key := range append(slices.Clone(keys), csvTargetAuthor) {
+			_, err := partMappingFrom(string(file.Object), map[string]string{"key": key}, nil, importCatalog{})
+			if (err == nil) != slices.Contains(keys, key) {
+				t.Errorf("%s with only %s: err %v, key columns %v", file.File, key, err, keys)
+			}
+		}
+	}
+	// A deal needs its stage, and a deal or activity row its ref.
+	for _, needed := range [][2]string{{"deal", dealTargetStage}, {"deal", csvTargetRef}, {"activity", csvTargetRef}} {
+		if !columnOf(t, f, crmcontracts.ImportObject(needed[0]), needed[1]).RequiredOnNewRow {
+			t.Errorf("%s.%s is not marked needed on a new row", needed[0], needed[1])
+		}
 	}
 	if f.SizeLimitMb != 10 || len(f.KeyRules) != len(importguide.KeyRules) {
 		t.Errorf("size %d, %d key rules; want 10 and %d", f.SizeLimitMb, len(f.KeyRules), len(importguide.KeyRules))
@@ -99,7 +113,7 @@ func TestACoreColumnIsItsTargetWithNoHeaderLabelAndAFieldLabelInTheCallersLangua
 		t.Fatal(err)
 	}
 	name := columnOf(t, f, crmcontracts.ImportObjectCompany, fieldDisplayName)
-	if name.Label != nil || name.FieldLabel == nil || *name.FieldLabel != "Firmenname" || name.Custom || !name.RequiredOnNewRow ||
+	if name.Label != nil || name.FieldLabel == nil || *name.FieldLabel != "Unternehmensname" || name.Custom || !name.RequiredOnNewRow ||
 		name.Description != importguide.Columns["company.display_name"].Description.De {
 		t.Fatalf("display_name = %+v, want the German company guide and field label, no header label, needed on a new row", name)
 	}

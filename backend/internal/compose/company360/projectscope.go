@@ -7,6 +7,7 @@ package company360
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -25,6 +26,26 @@ func (o AssembleOptions) projectScope(arg func(any) int) string {
 		return ""
 	}
 	return " AND " + activities.ActivityWithinProject(arg(*o.ProjectID))
+}
+
+// partyScope narrows an activity read to the rows the draft's recipient is a
+// party to (activities.ContactIsPartySQL), or nothing when no recipient is set.
+func (o AssembleOptions) partyScope(arg func(any) int) string {
+	if o.PartyContactID == nil {
+		return ""
+	}
+	return " AND " + activities.ContactIsPartySQL(fmt.Sprintf("$%d", arg(*o.PartyContactID)))
+}
+
+// recipientTaskScope keeps the open tasks filed under the draft's recipient. A
+// task has no parties, and one filed only on the company or a deal may be a
+// colleague's matter.
+func (o AssembleOptions) recipientTaskScope(arg func(any) int) string {
+	if o.PartyContactID == nil {
+		return ""
+	}
+	return fmt.Sprintf(` AND EXISTS (SELECT 1 FROM activity_link rl
+		WHERE rl.activity_id = a.id AND rl.entity_type = 'contact' AND rl.contact_id = $%d)`, arg(*o.PartyContactID))
 }
 
 // admit gates the narrowing and reports it. The scope is a read of the

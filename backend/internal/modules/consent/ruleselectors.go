@@ -8,13 +8,16 @@ package consent
 // Marketing rules (consent or an exception, the advertising ceiling, the
 // advertising label, the objection route) follow the recipient's country. Data
 // protection (who the controller is, who answers about the data, request
-// deadlines) follows the country of the sending legal entity. Each recipient of
-// a message is put to the marketing selector on their own.
+// deadlines) follows the country of the sending legal entity. The lawful basis
+// a message needs answers to both laws, and the stricter wins. The recipient's
+// law reaches them where they are. The sender's binds the sender wherever the
+// recipient is. Each recipient of a message is put to the selectors on their own.
 //
-// A recipient's country comes from the record and nothing else. An email
-// domain, the sender's country or the most permissive pack never stands in
-// for it. A recipient with no usable country, or one whose country no pack
-// covers, gets the baseline: no pack obligations. Marketing still needs
+// A recipient's country comes from the record, unless the sender stated or
+// cleared it for this one message. An email domain, the sender's country or
+// the most permissive pack never stands in for it. A recipient with no usable
+// country, or one whose country no pack covers, gets the baseline: no pack
+// obligations. Marketing still needs
 // consent, which the verdict asks everywhere. The send path adds the
 // unsubscribe surface whatever the country.
 
@@ -29,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
@@ -39,6 +43,11 @@ type CountrySource string
 
 // The sources, in the order the selector asks them.
 const (
+	// CountryFromSender is a country the sender stated for this message.
+	CountryFromSender CountrySource = "sender_override"
+	// CountryClearedBySender is a country the sender removed for this message:
+	// the baseline, even when the record states one.
+	CountryClearedBySender CountrySource = "sender_cleared"
 	// CountryFromContactAddress is the contact's own postal address.
 	CountryFromContactAddress CountrySource = "contact_address"
 	// CountryFromEmployerAddress is the address of the contact's current
@@ -49,11 +58,61 @@ const (
 	CountryFromLeadCompany CountrySource = "lead_company_address"
 )
 
+// statedCountry is the sender's statement about one recipient, if any. A
+// stated code that is not a country is no statement, so the record answers.
+func statedCountry(overrides []commsauthz.CountryOverride, r connector.Recipient) (RecipientCountry, bool) {
+	if r.Channel != nil {
+		return RecipientCountry{}, false
+	}
+	stated, ok := commsauthz.CountryOverrideFor(overrides, r.Email)
+	if !ok {
+		return RecipientCountry{}, false
+	}
+	return statedCountryOf(stated)
+}
+
+// statedCountryOf reads one statement, whoever it is about.
+func statedCountryOf(stated commsauthz.CountryOverride) (RecipientCountry, bool) {
+	if stated.Cleared() {
+		return RecipientCountry{Source: CountryClearedBySender}, true
+	}
+	code := jurisdiction.Code(strings.ToLower(strings.TrimSpace(stated.Country)))
+	if code.Validate() != nil {
+		return RecipientCountry{}, false
+	}
+	return RecipientCountry{Code: code, Source: CountryFromSender}, true
+}
+
+// recipientCountryStated is the marketing selector for an address on a
+// message: the sender's statement first, then the record.
+func recipientCountryStated(ctx context.Context, tx pgx.Tx, r connector.Recipient, overrides []commsauthz.CountryOverride) (RecipientCountry, error) {
+	if stated, ok := statedCountry(overrides, r); ok {
+		return stated, nil
+	}
+	return recipientCountryOf(ctx, tx, r)
+}
+
 // RecipientCountry is the marketing selector's answer for one recipient. The
 // zero value means the record states no usable country.
 type RecipientCountry struct {
 	Code   jurisdiction.Code
 	Source CountrySource
+	// Sender is the data-protection country of the legal entity the message
+	// goes out for. Its pack's data-protection rules bind beside Code's. Empty
+	// where no send is being judged, and then only the recipient's pack binds.
+	Sender jurisdiction.Code
+}
+
+// dataProtectionCodes are the countries whose data-protection rules bind a
+// message to this recipient: their own, then the sender's when it differs.
+// applicableRules folds them into the stricter answer for the lawful basis and
+// the evidence windows.
+func (c RecipientCountry) dataProtectionCodes() []jurisdiction.Code {
+	codes := []jurisdiction.Code{c.Code}
+	if c.Sender != "" && c.Sender != c.Code {
+		codes = append(codes, c.Sender)
+	}
+	return codes
 }
 
 // Known reports whether the record stated a country.
@@ -103,14 +162,14 @@ func subjectOfRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient) (
 	return ruleSubject{Kind: entityLead, ID: leadID}, nil
 }
 
-// recipientCountries resolves every recipient's country once, before any of
+// resolveRecipientCountries resolves every recipient's country once, before any of
 // them is decided. The cap lock, the verdict, the cap count and the recorded
 // stamp all read this one answer. So a record edited mid-send cannot make one
 // step judge under a pack another step did not.
-func recipientCountries(ctx context.Context, tx pgx.Tx, recipients []connector.Recipient) ([]RecipientCountry, error) {
+func (s *Store) resolveRecipientCountries(ctx context.Context, tx pgx.Tx, recipients []connector.Recipient, requestFor func(connector.Recipient) commsauthz.Request) ([]RecipientCountry, error) {
 	out := make([]RecipientCountry, 0, len(recipients))
 	for _, r := range recipients {
-		country, err := recipientCountryOf(ctx, tx, r)
+		country, err := s.recipientRequestCountry(ctx, tx, r, requestFor(r))
 		if err != nil {
 			return nil, err
 		}
@@ -219,10 +278,9 @@ func codeOf(column *string) jurisdiction.Code {
 	return jurisdiction.Code(*column)
 }
 
-// dataProtectionCountryTx is the data-protection selector: the country of the
-// legal entity the message goes out for. The default entity, a further entity
-// with no country, and the zero entity take the installation's country, so an
-// installation with one entity configures nothing.
+// dataProtectionCountryTx is the data-protection selector: the jurisdiction of
+// the legal entity the message goes out for. The default entity, a further
+// entity with none, and the zero entity take the installation's country.
 //
 // That fallback reads installation.country, which is MachineryApplied: this runs
 // under whatever principal is sending, and a rep or a worker holds no
@@ -236,8 +294,8 @@ func (s *Store) dataProtectionCountryTx(ctx context.Context, tx pgx.Tx, entity i
 }
 
 func (s *Store) dataProtectionCountryOf(ctx context.Context, tx pgx.Tx, entity sendingEntityFacts) (jurisdiction.Code, error) {
-	if entity.further() && entity.country != "" {
-		return jurisdiction.Code(entity.country), nil
+	if entity.further() && entity.jurisdiction != "" {
+		return jurisdiction.Code(entity.jurisdiction), nil
 	}
 	return s.defaultEntityCountry(ctx, tx)
 }

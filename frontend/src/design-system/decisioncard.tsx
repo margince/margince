@@ -21,6 +21,7 @@ import type { ConfidenceLevel, Provenance } from "./trust";
 import "./decisioncard.css";
 
 import {
+  ApprovalGrounds,
   cardName,
   type DecisionCardLabels,
   type DecisionCompactWords,
@@ -338,6 +339,7 @@ export function DecisionCard({
             <Popover label={dense.detail} className="dcard-detail">
               {/* The sentence that says WHY, which the line gave up to stay
                   one line. It leads here for the same reason it led the card. */}
+              <ApprovalGrounds approval={approval} />
               {named && summarySentence(approval) && (
                 <p className="approval-why">{summarySentence(approval)}</p>
               )}
@@ -358,6 +360,41 @@ export function DecisionCard({
       {notice}
       {children}
     </article>
+  );
+}
+
+/**
+ * What a proposal would do, without the decision around it: the card's body on
+ * the staged ground. For a surface that asks the question and answers it in
+ * the card. Nothing when the payload says nothing.
+ */
+export function DecisionProposal({
+  approval,
+  labels,
+  display = [],
+  className,
+}: Readonly<{
+  approval: DecisionApproval;
+  labels: DecisionCardLabels;
+  display?: readonly DecisionDisplay[];
+  className?: string;
+}>) {
+  const payload = readPayload(approval, "row", display);
+  if (!payload.hasContent) return null;
+  return (
+    <div
+      className={["staging-card dcard-proposal", className ?? ""]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <DecisionContent
+        draft={payload.draft}
+        diffs={payload.diffs}
+        lead={payload.lead}
+        rest={payload.rest}
+        labels={labels}
+      />
+    </div>
   );
 }
 

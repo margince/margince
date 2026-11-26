@@ -6,6 +6,7 @@ import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { en } from "../../i18n/en";
+import { setSingleKeyShortcutsOn } from "../../lib/shortcuts";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -26,6 +27,7 @@ export function accountStory(
     const me = meFixture({ roles });
     installFetchStub({
       "GET /me": () => jsonResponse({ ...me, user: { ...me.user, ...user } }),
+      "GET /me/sessions": () => jsonResponse({ sessions: [] }),
       ...routes,
     });
     return (
@@ -59,6 +61,14 @@ export const Rep: Story = { render: accountStory(["rep"]) };
 export const AdminDark: Story = {
   globals: { theme: "dark" },
   render: accountStory(["admin"]),
+};
+
+// The reader turned single-key shortcuts off for this browser.
+export const SingleKeysOff: Story = {
+  render: () => {
+    setSingleKeyShortcutsOn(false);
+    return accountStory(["rep"])();
+  },
 };
 
 export const RepPhone: Story = {
@@ -103,4 +113,34 @@ export const LanguageRefusedPhone: Story = {
   ...LanguageRefused,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+const PHONE_AGENT =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
+const LAPTOP_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+
+// This browser is marked and has no button; the phone can be signed out.
+export const SignedInDevices: Story = {
+  render: accountStory(["rep"], {
+    "GET /me/sessions": () =>
+      jsonResponse({
+        sessions: [
+          {
+            id: "00000000-0000-4000-8000-0000000000a1",
+            user_agent: LAPTOP_AGENT,
+            signed_in_at: "2026-11-01T08:00:00Z",
+            last_active_at: "2026-11-02T09:30:00Z",
+            current: true,
+          },
+          {
+            id: "00000000-0000-4000-8000-0000000000a2",
+            user_agent: PHONE_AGENT,
+            signed_in_at: "2026-10-20T18:10:00Z",
+            last_active_at: "2026-10-30T07:45:00Z",
+            current: false,
+          },
+        ],
+      }),
+  }),
 };

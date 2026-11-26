@@ -6,6 +6,8 @@ package relstrength
 import (
 	"slices"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // interactionKinds is the closed set of activity kinds that represent a real
@@ -109,12 +111,17 @@ func InteractionKindSQLGroup() string {
 // this to fail. The two prefixes keep the spaces apart, because a thread_key is
 // free text from a provider and could otherwise equal a uuid rendered as text.
 //
+// A captured email counts once per Message-ID. Each colleague whose mailbox
+// held it keeps a row of their own, and one mail is still one exchange.
+//
 // alias is the statement's alias for `activity`, always a compile-time literal
 // at the call site as the other renderers here require.
 func InteractionUnitSQL(alias string) string {
 	return "CASE WHEN " + alias + ".kind = 'message'" +
 		" THEN 'conversation-day:' || coalesce(" + alias + ".thread_key, " + alias + ".id::text)" +
 		" || ':' || (" + alias + ".occurred_at AT TIME ZONE 'UTC')::date" +
+		" WHEN " + alias + ".kind = 'email' AND " + connector.SharedMailKeySQL(alias) + " IS NOT NULL" +
+		" THEN 'message:' || " + connector.SharedMailKeySQL(alias) +
 		" ELSE 'activity:' || " + alias + ".id::text END"
 }
 

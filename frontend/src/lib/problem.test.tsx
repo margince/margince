@@ -2,6 +2,7 @@
 import { cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { translate } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { ConnectivityError } from "./connectivity";
 import {
   EmptySuccessError,
@@ -11,10 +12,13 @@ import {
   problemExistingId,
   problemFieldErrors,
   problemFieldErrorsOf,
+  problemFieldSentencesOf,
   problemMessage,
   problemMessageOf,
+  refusalSentences,
   throwProblem,
   unwrap,
+  writeMayHaveLanded,
 } from "./problem";
 
 const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
@@ -94,20 +98,20 @@ describe("problemMessage", () => {
   });
 
   // The gate's own wrapping, which is the other real producer of this code. Its
-  // detail names the admission spec and the resolver state. Those are the
-  // authority model's internals, not a sentence for a reader. So the copy
-  // stands in for this one too, and none of it reaches the screen.
+  // detail names the tool and the authority model's state, which an agent can
+  // act on and a reader of this screen cannot. So the copy stands in for this
+  // one too, and none of it reaches the screen.
   it("stands in for the admission gate's detail, and shows none of it", () => {
     const message = problemMessage(
       {
         code: "permission_denied",
         detail:
-          "gate: deal.advance: no authority resolver composed: permission denied",
+          "deal.advance cannot run here, because this server cannot check whose authority a call carries: permission denied",
       },
       t,
     );
     expect(message).toBe(t("common.permissionDenied"));
-    expect(message).not.toContain("resolver");
+    expect(message).not.toContain("deal.advance");
   });
 
   // The wrapped form of the same sentinel, which `auth.Require` sends for every
@@ -118,12 +122,12 @@ describe("problemMessage", () => {
     const message = problemMessage(
       {
         code: "permission_denied",
-        detail: "contact.update: permission denied",
+        detail: "your role does not grant update on contact",
       },
       t,
     );
     expect(message).toBe(t("common.permissionDenied"));
-    expect(message).not.toContain("contact.update");
+    expect(message).not.toContain("your role does not grant update on contact");
   });
 
   it("keeps the server detail when no translator is given", () => {
@@ -141,7 +145,7 @@ describe("problemMessage", () => {
     ).toBe("permission denied");
   });
 
-  it("keeps the server detail for an unrelated code even with a translator", () => {
+  it("keeps an unknown English API detail for an English reader", () => {
     expect(
       problemMessage({ code: "conflict", detail: "name already taken" }, t),
     ).toBe("name already taken");
@@ -319,7 +323,7 @@ describe("isConsentNotGranted", () => {
 // bug in a handler states our internals in wording nobody wrote for a user. At
 // the point of rendering the two look alike unless the type is checked here.
 describe("problemMessageOf", () => {
-  it("shows the server's own detail when the failure carries a problem", () => {
+  it("keeps English problem detail for the English reader", () => {
     expect(
       problemMessageOf(new ProblemError({ detail: "email taken" }), t),
     ).toBe("email taken");
@@ -349,7 +353,7 @@ describe("problemMessageOf", () => {
     }
   });
 
-  it("keeps the server's words whenever the body carries any", () => {
+  it("keeps an English server title for the English reader", () => {
     // The line above must not become a way to lose a real detail. A body with
     // a detail, or with only a title, still speaks for itself. A blank detail
     // is not words and would render an empty error state, so the reader gets
@@ -400,6 +404,51 @@ describe("problemMessageOf", () => {
       const line = problemMessageOf(refusal, (key) => translate(locale, key));
       expect(line).toBe(translate(locale, "deals.winEvidenceRequired"));
       expect(line).not.toContain("purchase_order");
+    }
+  });
+
+  it("says in the reader's language the next step the legal review state asks for", () => {
+    const serverSentence =
+      "this stage needs legal's approval, and the review is still waiting for an answer";
+    const refusal = (params?: Record<string, string>) =>
+      new ProblemError({
+        code: "validation_error",
+        status: 422,
+        detail: "validation failed",
+        details: {
+          errors: [
+            {
+              field: "to_stage_id",
+              code: "legal_review_required",
+              message: serverSentence,
+              ...(params ? { params } : null),
+            },
+          ],
+        },
+      });
+    const cases: [Record<string, string> | undefined, MessageKey][] = [
+      [{ review_state: "none" }, "legalReview.advanceRefused"],
+      [{ review_state: "pending" }, "legalReview.advanceRefused.pending"],
+      [
+        { review_state: "changes_needed" },
+        "legalReview.advanceRefused.changesNeeded",
+      ],
+      [
+        { review_state: "terms_changed" },
+        "legalReview.advanceRefused.termsChanged",
+      ],
+      // An older server names no state, and a newer one may name an unknown one.
+      [undefined, "legalReview.advanceRefused"],
+      [{ review_state: "escalated" }, "legalReview.advanceRefused"],
+    ];
+    for (const [params, key] of cases) {
+      for (const locale of ["en", "de", "vi"] as const) {
+        const line = problemMessageOf(refusal(params), (k) =>
+          translate(locale, k),
+        );
+        expect(line).toBe(translate(locale, key));
+        expect(line).not.toBe(serverSentence);
+      }
     }
   });
 
@@ -532,5 +581,339 @@ describe("a success that carried no body", () => {
         EmptySuccessError,
       );
     }
+  });
+});
+
+for (const locale of ["de", "vi"] as const) {
+  it(`keeps unknown English API detail out of ${locale} reader copy`, () => {
+    const local = Object.assign(
+      (key: Parameters<typeof translate>[1]) => translate(locale, key),
+      { locale },
+    );
+    const problem = {
+      code: "unmapped",
+      detail: "An English diagnostic",
+      title: "Server failure",
+    };
+    expect(problemMessage(problem, local)).toBe(local("common.errorNoCause"));
+    expect(problemMessageOf(new ProblemError(problem), local)).toBe(
+      local("common.errorNoCause"),
+    );
+  });
+}
+
+describe("a field refusal read in the reader's language", () => {
+  const german = Object.assign(
+    (key: Parameters<typeof translate>[1]) => translate("de", key),
+    { locale: "de" as const },
+  );
+  const refusal = (fault: Record<string, unknown>) =>
+    new ProblemError({
+      status: 422,
+      code: "validation_error",
+      detail: "an English sentence from the server",
+      details: { errors: [fault] },
+    });
+
+  it("never says no cause was reported when the server named a field and a code", () => {
+    const line = problemMessageOf(
+      refusal({ field: "note", code: "not_a_known_code", message: "bad note" }),
+      german,
+    );
+    expect(line).toBe(german("common.fieldInvalid"));
+    expect(line).not.toBe(german("common.errorNoCause"));
+  });
+
+  it("names the field and its limit, with the number in the reader's grouping", () => {
+    const line = problemMessageOf(
+      refusal({
+        field: "html",
+        code: "too_long",
+        message: "html is too long",
+        max: 10000,
+      }),
+      german,
+      undefined,
+      { html: "HTML-Signatur" },
+    );
+    expect(line).toBe("HTML-Signatur: höchstens 10.000 Zeichen.");
+  });
+
+  it("says the limit without a field name when the screen has no label for it", () => {
+    const line = problemMessageOf(
+      refusal({ field: "html", code: "too_long", message: "x", max: 2000 }),
+      german,
+    );
+    expect(line).toBe("Dieser Wert darf höchstens 2.000 Zeichen haben.");
+  });
+
+  it("says too long, without a number, for a server that sends no limit", () => {
+    const line = problemMessageOf(
+      refusal({ field: "html", code: "too_long", message: "x" }),
+      german,
+    );
+    expect(line).toBe(german("common.valueTooLong"));
+  });
+
+  it("gives an English reader the same catalog copy for a length refusal", () => {
+    const english = Object.assign(t, { locale: "en" as const });
+    const line = problemMessageOf(
+      refusal({ field: "html", code: "too_long", message: "x", max: 2000 }),
+      english,
+    );
+    expect(line).toBe("This value is at most 2,000 characters.");
+  });
+
+  it("words the callout and the line under the field the same way", () => {
+    const error = refusal({
+      field: "note",
+      code: "not_a_known_code",
+      message: "bad note",
+    });
+    expect(problemFieldSentencesOf(error, "de").get("note")).toBe(
+      problemMessageOf(error, german),
+    );
+  });
+
+  it("still says no cause was reported for a body with no field and no known code", () => {
+    expect(
+      problemMessageOf(
+        new ProblemError({ status: 500, code: "internal", detail: "x" }),
+        german,
+      ),
+    ).toBe(german("common.errorNoCause"));
+  });
+});
+
+describe("refusalSentences", () => {
+  const english = Object.assign(t, { locale: "en" as const });
+  const fieldRefusal = (...faults: Record<string, unknown>[]) =>
+    new ProblemError({
+      status: 422,
+      code: "validation_error",
+      detail: "an English sentence from the server",
+      details: { errors: faults },
+    });
+
+  it("puts each fault the form shows on its field and leaves the foot empty", () => {
+    const { byField, rest } = refusalSentences(
+      fieldRefusal({ field: "name", code: "required", message: "x" }),
+      english,
+      { name: "Name" },
+    );
+    expect(byField.get("name")).toBe("Name is required.");
+    expect(rest).toBeNull();
+  });
+
+  it("keeps a fault on a field the form does not show for the foot", () => {
+    const { byField, rest } = refusalSentences(
+      fieldRefusal(
+        { field: "name", code: "required", message: "x" },
+        {
+          field: "pipeline_id",
+          code: "invalid_uuid",
+          message: "pipeline_id must be a UUID",
+        },
+      ),
+      english,
+      { name: "Name" },
+    );
+    expect(byField.get("name")).toBe("Name is required.");
+    expect(rest).toBe("Check this value and try again.");
+  });
+
+  it("keeps the server's sentence at the foot when it names no wire key", () => {
+    const { rest } = refusalSentences(
+      fieldRefusal(
+        { field: "name", code: "required", message: "x" },
+        {
+          field: "close_from",
+          code: "range_inverted",
+          message: "The range starts after it ends.",
+        },
+      ),
+      english,
+      { name: "Name" },
+    );
+    expect(rest).toBe("The range starts after it ends.");
+  });
+
+  it.each([
+    ["beside a field the form shows", { name: "Name" }],
+    ["with no field the form shows", {}],
+  ])("says every fault on a field the form does not show, %s", (_, labels) => {
+    const { rest } = refusalSentences(
+      fieldRefusal(
+        { field: "name", code: "required", message: "x" },
+        {
+          field: "close_from",
+          code: "range_inverted",
+          message: "Starts late.",
+        },
+        { field: "close_to", code: "range_inverted", message: "Ends early." },
+      ),
+      english,
+      labels,
+    );
+    expect(rest).toContain("Starts late.");
+    expect(rest).toContain("Ends early.");
+  });
+
+  it("words a fieldless refusal of a known code in that code's copy", () => {
+    const { rest } = refusalSentences(
+      new ProblemError({ status: 403, code: "permission_denied", detail: "x" }),
+      english,
+      {},
+    );
+    expect(rest).toBe(t("common.permissionDenied"));
+  });
+
+  it("words that foot fault in German, where no server sentence is shown", () => {
+    const german = Object.assign(
+      (key: Parameters<typeof translate>[1]) => translate("de", key),
+      { locale: "de" as const },
+    );
+    const { rest } = refusalSentences(
+      fieldRefusal(
+        { field: "name", code: "required", message: "x" },
+        { field: "pipeline_id", code: "invalid_uuid", message: "x" },
+      ),
+      german,
+      { name: "Name" },
+    );
+    expect(rest).toBe(german("common.fieldInvalid"));
+  });
+
+  it("puts a conflict on the form's unique field, in the form's words", () => {
+    const { byField, rest } = refusalSentences(
+      new ProblemError({
+        status: 409,
+        code: "conflict",
+        detail: "x: conflict",
+      }),
+      english,
+      { name: "Name" },
+      { conflict: { field: "name", sentence: t("tags.nameTaken") } },
+    );
+    expect(byField.get("name")).toBe("A tag with this name already exists.");
+    expect(rest).toBeNull();
+  });
+
+  it("puts a conflict of the form's own code on its field, and no other", () => {
+    const clash = (code: string) =>
+      new ProblemError({ status: 409, code, detail: "an API sentence" });
+    const options = {
+      conflict: {
+        field: "name",
+        sentence: t("pipeline.nameTaken"),
+        code: "pipeline_name_taken",
+      },
+    };
+    expect(
+      refusalSentences(
+        clash("pipeline_name_taken"),
+        english,
+        {},
+        options,
+      ).byField.get("name"),
+    ).toBe(t("pipeline.nameTaken"));
+    const plain = refusalSentences(clash("conflict"), english, {}, options);
+    expect(plain.byField.size).toBe(0);
+    expect(plain.rest).toBe("an API sentence");
+  });
+
+  it("says a refusal with no field at the foot", () => {
+    const { byField, rest } = refusalSentences(
+      new ProblemError({ status: 403, code: "permission_denied", detail: "x" }),
+      english,
+      { name: "Name" },
+    );
+    expect(byField.size).toBe(0);
+    expect(rest).toBe(t("common.permissionDenied"));
+  });
+
+  it("says nothing before a write is fieldRefusal", () => {
+    expect(refusalSentences(null, english, {})).toEqual({
+      byField: new Map(),
+      rest: null,
+    });
+  });
+});
+
+describe("the refusals a screen words itself", () => {
+  const codeRefusal = (code: string) =>
+    new ProblemError({ status: 409, code, detail: "an API sentence" });
+  for (const [code, key] of [
+    ["email_taken", "users.emailTaken"],
+    ["removed_member_email", "users.removedEmail"],
+    ["deal_room_document_already_present", "room.docs.alreadyPresent"],
+  ] as const) {
+    for (const locale of ["en", "de", "vi"] as const) {
+      it(`words ${code} in ${locale}`, () => {
+        const reader = Object.assign(
+          (k: Parameters<typeof translate>[1]) => translate(locale, k),
+          { locale },
+        );
+        expect(problemMessageOf(codeRefusal(code), reader)).toBe(
+          translate(locale, key),
+        );
+      });
+    }
+  }
+
+  it("tells a reader of a lapsed offer where its date is changed", () => {
+    const lapsed = new ProblemError({
+      status: 422,
+      code: "validation_error",
+      detail:
+        "the offer was valid until 2026-11-15; regenerate it with a later date",
+      details: {
+        errors: [
+          {
+            field: "valid_until",
+            code: "offer_lapsed",
+            message:
+              "the offer was valid until 2026-11-15; regenerate it with a later date",
+          },
+        ],
+      },
+    });
+    for (const locale of ["en", "de", "vi"] as const) {
+      const reader = Object.assign(
+        (k: Parameters<typeof translate>[1]) => translate(locale, k),
+        { locale },
+      );
+      expect(problemMessageOf(lapsed, reader)).toBe(
+        translate(locale, "offer.lapsed"),
+      );
+    }
+    expect(problemMessageOf(lapsed, t)).toContain("Edit header");
+  });
+});
+
+describe("writeMayHaveLanded", () => {
+  const cut = (unsent: boolean) =>
+    new ConnectivityError(
+      "unreachable",
+      new Request("https://test.local/v1/users", { method: "POST" }),
+      new TypeError("Failed to fetch"),
+      unsent,
+    );
+
+  it("counts a server failure, an empty success and a cut connection as maybe saved", () => {
+    expect(writeMayHaveLanded(new ProblemError({ status: 500 }))).toBe(true);
+    expect(writeMayHaveLanded(new ProblemError({ status: 504 }))).toBe(true);
+    expect(writeMayHaveLanded(new EmptySuccessError(201))).toBe(true);
+    expect(writeMayHaveLanded(cut(false))).toBe(true);
+  });
+
+  it("counts a refusal and a write never sent as not saved", () => {
+    expect(
+      writeMayHaveLanded(
+        new ProblemError({ status: 409, code: "email_taken" }),
+      ),
+    ).toBe(false);
+    expect(writeMayHaveLanded(cut(true))).toBe(false);
+    expect(writeMayHaveLanded(new Error("bug"))).toBe(false);
   });
 });

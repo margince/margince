@@ -116,7 +116,7 @@ func (q *queueEnv) stageAConfirmFirstCall(t *testing.T, invoke func(tool, args s
 	var company struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": name, "domains": []AnyMap{{"domain": "example.com", "is_primary": true}}}, nil, &company); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": name, "domains": []AnyMap{{"domain": "example.test", "is_primary": true}}}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 	_, err := invoke("enrich", `{"company_id":"`+company.ID+`"}`)
@@ -285,13 +285,13 @@ func TestAReadOnlyPassportSeesTheQueueAndCannotAnswerIt(t *testing.T) {
 }
 
 // A passport does what its holder could do unaided. Relinking an activity onto
-// a contact, a company, a deal or a project costs no human decision. Automatic
-// work with no passport behind it is refused a PROJECT destination, because
-// filing under a project marks the activity as commercial correspondence.
+// a contact, a company or a deal costs no human decision. Filing under a
+// project marks the activity as commercial correspondence. On a passport it
+// waits for a human, and automatic work with no passport behind it is refused.
 //
 // Each attach after a logged meeting once staged a card the app would never
 // have asked for, which is the shape this holds against.
-func TestAnAgentOnAPassportRelinksWithoutAskingWhileAutomaticWorkIsRefusedAProject(t *testing.T) {
+func TestAnAgentOnAPassportRelinksWithoutAskingExceptToAProject(t *testing.T) {
 	q := setupQueue(t)
 	token := q.mintPassport(t, "relinking agent", "read", "write")
 	invoke := q.invoker(t, token)
@@ -300,7 +300,7 @@ func TestAnAgentOnAPassportRelinksWithoutAskingWhileAutomaticWorkIsRefusedAProje
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Relink Subject"}, nil, &contact); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Relink Subject"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
 	var company struct {
@@ -357,10 +357,11 @@ func TestAnAgentOnAPassportRelinksWithoutAskingWhileAutomaticWorkIsRefusedAProje
 		})
 	}
 
-	t.Run("a project is filed at once on a passport", func(t *testing.T) {
-		if _, err := invoke("relink_activity", `{"activity_id":"`+activity.ID+
-			`","entity_type":"project","entity_id":"`+project.ID+`"}`); err != nil {
-			t.Fatalf("relinking to a project on a passport → %v, want it filed at once", err)
+	t.Run("a project waits for a human on a passport", func(t *testing.T) {
+		_, err := invoke("relink_activity", `{"activity_id":"`+activity.ID+
+			`","entity_type":"project","entity_id":"`+project.ID+`"}`)
+		if _, staged := errors.AsType[*workflow.StagedApprovalError](err); !staged {
+			t.Fatalf("relinking to a project on a passport → %v, want it staged for a human", err)
 		}
 	})
 

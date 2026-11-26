@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import type { MarginceCoreState } from "./margince-core";
 import { BEHAVIOUR, FEED_INGEST, still } from "./margince-core-motion";
 
@@ -17,7 +18,9 @@ const STATES: readonly MarginceCoreState[] = [
 
 describe("the Core's motion table", () => {
   it("covers exactly the five states of the closed vocabulary, no more", () => {
-    expect(Object.keys(BEHAVIOUR).sort()).toEqual([...STATES].sort());
+    expect(Object.keys(BEHAVIOUR).sort(stable)).toEqual(
+      [...STATES].sort(stable),
+    );
   });
 
   it("gives every state a distinct motion signature", () => {

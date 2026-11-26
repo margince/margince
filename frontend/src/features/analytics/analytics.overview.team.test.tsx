@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { forgetSeat } from "../../lib/storage";
 import { jsonResponse } from "../../testing/story-utils";
 import { outlookFor } from "./analytics.assessment.fixtures";
+import { upcomingWindow } from "./analytics.overview.routes.fixtures";
 import {
   metric,
   openOverview as open,
@@ -431,10 +432,7 @@ describe("Team prospecting", () => {
           scope: TEAM,
           workflow: "handoff",
           upcoming_meetings: 2,
-          upcoming_window: {
-            start_at: "2026-09-21T09:00:00Z",
-            end_at: "2026-10-05T09:00:00Z",
-          },
+          upcoming_window: upcomingWindow("2026-09-21T09:00:00Z"),
         }),
     });
     expect(
@@ -488,7 +486,10 @@ describe("Team prospecting", () => {
     ).toBe(false);
   });
 
+  // The reason is the server's sentence, the one a chart withheld by the same
+  // floor carries. One no copy holds proves the page words none itself.
   it("withholds the figures a lone colleague makes up", async () => {
+    const reason = "The server's one sentence for the small-group floor.";
     open(TEAM_ADDRESS, teamEvaluation, {
       template: "sdr",
       // Offered and answered, so only the withheld team keeps it away.
@@ -496,6 +497,7 @@ describe("Team prospecting", () => {
       team: served(
         teamReview({
           withheld: true,
+          withheld_reason: reason,
           handoffs: undefined,
           meetings: undefined,
           members: [],
@@ -503,11 +505,7 @@ describe("Team prospecting", () => {
         }),
       ),
     });
-    expect(
-      await screen.findByText(
-        /taking another team’s total from it would leave fewer than two/,
-      ),
-    ).toBeVisible();
+    expect(await screen.findByText(reason)).toBeVisible();
     expect(
       screen.queryByRole("region", { name: "Where the team stands" }),
     ).toBeNull();

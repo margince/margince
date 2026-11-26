@@ -83,7 +83,7 @@ export const SearchAndView: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      await canvas.findByRole("searchbox", { name: "Search" }),
+      await canvas.findByRole("combobox", { name: "Search" }),
     ).toBeVisible();
     await expect(canvas.getByRole("button", { name: "View" })).toBeVisible();
   },

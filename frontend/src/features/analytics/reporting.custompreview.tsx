@@ -3,7 +3,6 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "../../api/client";
 import { AppLink } from "../../design-system/applink";
 import { Badge, Button, EmptyState } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -12,15 +11,16 @@ import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
-import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
+import { fromHere } from "../../lib/navigatefrom";
 import { useViewerId } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ReportingCharts } from "./reporting.charts";
+import { useCreateReport } from "./reporting.create";
 import {
   type CustomReportDraft,
   CustomReportDrawer,
+  forgetCustomReport,
   heldCustomReport,
 } from "./reporting.custombuilder";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
@@ -68,23 +68,28 @@ function HeldPreview({
   const contextKey = JSON.stringify(draft.selection);
   const { evidence, openEvidence, closeEvidence } =
     useSelectionEvidence(contextKey);
+  const createReport = useCreateReport();
   const save = useMutation({
     mutationFn: async (saved: CustomReportDraft) =>
-      unwrap(
-        await api.POST("/analytics/reports", {
-          body: {
-            name: saved.name,
-            description: saved.description,
-            audience: saved.audience,
-            audience_team_id:
-              saved.audience === "team" ? saved.selection.scope.id : undefined,
-            selection: saved.selection,
-          },
-        }),
-      ),
-    onSuccess: async (report) => {
+      createReport({
+        name: saved.name,
+        description: saved.description,
+        audience: saved.audience,
+        audience_team_id:
+          saved.audience === "team" ? saved.selection.scope.id : undefined,
+        selection: saved.selection,
+      }),
+    onMutate: fromHere,
+    onSuccess: async (report, _saved, from) => {
       await client.invalidateQueries({ queryKey: ["reporting-reports"] });
-      navigate({ screen: "analytics", id: "reports", id2: report.id });
+      from.navigateReplacing({
+        screen: "analytics",
+        id: "reports",
+        id2: report.id,
+      });
+      // The preview is spent: an address that reopens it must not offer a
+      // second Save.
+      forgetCustomReport();
     },
   });
   return (

@@ -18,12 +18,22 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/suggestionlanes"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -31,7 +41,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// sentStatements records every statement a pool sends.
 type sentStatements struct{ sql []string }
 
 func (s *sentStatements) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
@@ -41,12 +50,23 @@ func (s *sentStatements) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data 
 
 func (*sentStatements) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
 
+// A snapshot sends its session statements inside batches, so the census reads
+// a batch's statements as well.
+func (*sentStatements) TraceBatchStart(ctx context.Context, _ *pgx.Conn, _ pgx.TraceBatchStartData) context.Context {
+	return ctx
+}
+
+func (s *sentStatements) TraceBatchQuery(_ context.Context, _ *pgx.Conn, data pgx.TraceBatchQueryData) {
+	s.sql = append(s.sql, data.SQL)
+}
+
+func (*sentStatements) TraceBatchEnd(context.Context, *pgx.Conn, pgx.TraceBatchEndData) {}
+
 // predicateSpelling strips what a partial-index predicate says besides its
 // columns: literals, casts, null tests (of a column or a call) and calls. A
 // bound strict comparison proves the null test, so the generic plan keeps it.
 var predicateSpelling = regexp.MustCompile(`'(?:[^']|'')*'|::\w+(?:\[\])?|\b\w+\s*\([^()]*\)\s+IS\s+(?:NOT\s+)?NULL\b|\b\w+\s+IS\s+(?:NOT\s+)?NULL\b|\b\w+\s*\(`)
 
-// predicateWords are the SQL words left in a predicate once predicateSpelling ran.
 var predicateWords = map[string]bool{
 	"and": true, "or": true, "not": true, "any": true, "array": true,
 	"is": true, "distinct": true, "from": true, "true": true, "false": true, "in": true, "null": true,
@@ -111,23 +131,35 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 		t.Fatal(err)
 	}
 	seedPlannedMeeting(t, e, contact, at.Add(time.Hour))
-	store := activities.NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS)))
+	db := database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS))
+	store := activities.NewStore(db)
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	engine := briefs.NewBriefEngine(pool, contacts.NewStore(db))
+	if _, err := engine.SnapshotRun(reader, at); err != nil {
+		t.Fatalf("taking the rep's brief run: %v", err)
+	}
 	if err := database.WithWorkspaceSnapshot(reader, pool, func(ctx context.Context) error {
-		if _, err := emailSummariesReusingPlans(ctx, store, []ids.UUID{ids.UUID(mail.Id)}); err != nil {
+		if _, err := emailSummariesReusingPlans(ctx, store, []ids.UUID{ids.UUID(mail.Id)}, at); err != nil {
 			return err
 		}
-		if _, err := (attentionTasks{store: store}).RemindersForViewer(ctx, at); err != nil {
+		if _, err := plannedRead(ctx, attentionTasks{store: store}, at, at, true); err != nil {
 			return err
 		}
 		if _, _, err := (attentionAwaiting{store: store}).AwaitingReplies(ctx, at); err != nil {
 			return err
 		}
-		advice := attentionDealMoves{cards: newDealStatusService(pool, func() time.Time { return at })}
+		cards := newDealStatusService(pool, func() time.Time { return at })
+		advice := attentionDealMoves{cards: cards}
 		if _, err := advice.CurrentMoves(ctx, []ids.UUID{deal}); err != nil {
 			return err
 		}
-		if err := readSuggestionLanes(ctx, database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS))); err != nil {
+		if _, err := cards.ReadFacts(ctx, ids.From[ids.DealKind](deal)); err != nil {
+			return err
+		}
+		if err := readSuggestionLanes(ctx, db, deal); err != nil {
+			return err
+		}
+		if err := readPlannedOnceLanes(ctx, plannedOnceLanes{db: db, pool: pool, engine: engine}, deal, ids.UUID(mail.Id), at); err != nil {
 			return err
 		}
 		if err := readMeetingLanes(ctx, store, at, e.Rep1); err != nil {
@@ -142,6 +174,23 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	}); err != nil {
 		t.Fatalf("running the reads: %v", err)
 	}
+	inbound, quote := "inbound", "Could you send the quote?"
+	account := ids.From[ids.CompanyKind](e.SeedEmployedAccount(t, contact, e.Rep1, pipeline, open, activities.LogActivityInput{
+		Kind:    "email",
+		Subject: &subject, Body: &quote, Direction: &inbound, OccurredAt: &at, Source: "manual", EmailFrom: "buyer@customer.test", EmailTo: []string{"rep@ourco.test"},
+	}))
+	page := company360.NewService(pool, e.Contacts, e.Deals, e.Projects, approvals.NewService(e.DB()), func() time.Time { return at })
+	if _, err := page.Assemble(reader, account); err != nil {
+		t.Fatalf("opening the account page: %v", err)
+	}
+	contactPage := contact360.NewService(pool, e.Contacts, e.Deals, e.Projects,
+		consent.NewStore(InstallationDB(pool)),
+		comms.NewStore(InstallationDB(pool), func() time.Time { return at }, activities.NewStore(InstallationDB(pool))),
+		ai.NewFeedbackStore(InstallationDB(pool)), func() time.Time { return at }).
+		WithActivityFields(activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)))
+	if _, err := contactPage.Assemble(reader, ids.From[ids.ContactKind](contact)); err != nil {
+		t.Fatalf("opening the contact page: %v", err)
+	}
 	sent.sql = append(sent.sql, capturedPartyPlanStatements(t, e, pool)...)
 	boundIndexedColumn := boundIndexedColumns(t, e.Pool)
 	for _, bad := range []string{"WHERE a.kind = $3", "AND p.role IN ($2", "AND m.status = ANY($7)", "AND a.is_done = $4"} {
@@ -154,7 +203,9 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	}
 	for _, held := range []string{
 		"FROM activity_commitment_admission d", "FROM deal_suggestion s", "FROM tag_suggestion s",
-		"a.meeting_status IS NULL OR a.meeting_status = 'booked'",
+		"FROM brief_item bi", "r.kind = 'deal_stakeholder' AND r.contact_id", "'deal_stakeholder'", "wd.source = 'domain_question'", "task_claims AS MATERIALIZED",
+		"a.meeting_status IS NULL OR a.meeting_status = 'booked'", "NOT (a.captured_by = 'system'",
+		"al.entity_type = 'deal'",
 	} {
 		if !slices.ContainsFunc(sent.sql, func(sql string) bool { return strings.Contains(sql, held) }) {
 			t.Fatalf("no statement %s was sent, so the check does not hold that read", held)
@@ -167,26 +218,134 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	}
 }
 
-// readSuggestionLanes runs the needs_you lane's four suggestion reads through
-// the seams that reuse their plans.
-func readSuggestionLanes(ctx context.Context, db *database.DB) error {
-	dealSuggestions := attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}
-	if _, err := dealSuggestions.OpenSuggestions(ctx, nil, 10); err != nil {
+func TestAWholeWorklistReadReusesPlansWithoutBindingPartialIndexPredicates(t *testing.T) {
+	e := integration.Setup(t)
+	sent := &sentStatements{}
+	config := e.Pool.Config()
+	config.ConnConfig.Tracer = sent
+	pool, err := testdb.OwnPoolFromConfig(t.Context(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	feed := newAttentionService(pool, approvals.NewService(e.DB()), func() time.Time { return clocktest.Now(t) })
+	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	for _, view := range []string{"today", "decisions", "system"} {
+		for _, scope := range []string{"mine", "team", "unassigned", "all"} {
+			if _, err := feed.WorklistView(reader, view, scope, "all", ids.Nil, 25, ""); err != nil {
+				t.Fatalf("%s/%s: %v", view, scope, err)
+			}
+		}
+	}
+	var waitingPrepared, waitingGeneric int64
+	var statementBytes int64
+	idle := pool.AcquireAllIdle(t.Context())
+	if len(idle) == 0 {
+		t.Fatal("no connection returned to the pool after the Worklist reads")
+	}
+	defer func() {
+		for _, conn := range idle {
+			conn.Release()
+		}
+	}()
+	for i, conn := range idle {
+		var prepared, generic, sqlBytes int64
+		err = conn.QueryRow(t.Context(), `SELECT count(*), COALESCE(sum(generic_plans), 0)
+			FROM pg_prepared_statements
+			WHERE strpos(statement, 'a.id = ANY (ARRAY(SELECT a.id FROM activity a') > 0`).Scan(&prepared, &generic)
+		if err == nil {
+			err = conn.QueryRow(t.Context(), `SELECT COALESCE(sum(length(statement)), 0) FROM pg_prepared_statements`).Scan(&sqlBytes)
+		}
+		if err != nil {
+			t.Fatalf("measuring kept plans: %v", err)
+		}
+		t.Logf("connection %d: waiting prepared=%d, generic executions=%d, prepared SQL=%d bytes", i, prepared, generic, sqlBytes)
+		waitingPrepared += prepared
+		waitingGeneric += generic
+		statementBytes += sqlBytes
+	}
+	t.Logf("%d connections after 12 Worklist reads: waiting prepared=%d, generic executions=%d, prepared SQL=%d bytes", len(idle), waitingPrepared, waitingGeneric, statementBytes)
+	if waitingPrepared == 0 || waitingGeneric == 0 {
+		t.Fatalf("waiting statements have no kept generic plan: prepared=%d generic executions=%d", waitingPrepared, waitingGeneric)
+	}
+	boundIndexedColumn := boundIndexedColumns(t, e.Pool)
+	forced, custom, generic, noticeCustom := false, false, false, false
+	for _, sql := range sent.sql {
+		if strings.Contains(sql, "set_config('plan_cache_mode', 'force_generic_plan'") {
+			forced, generic = true, true
+		}
+		if strings.Contains(sql, "set_config('plan_cache_mode', 'force_custom_plan'") {
+			custom, generic = true, false
+		}
+		if custom && strings.HasPrefix(sql, "SELECT set_config('plan_cache_mode', $1") {
+			// The notice's custom-plan call restores the Worklist's generic mode.
+			generic = true
+		}
+		if strings.Contains(sql, "n.state IN (") && !generic {
+			noticeCustom = true
+		}
+		if found := boundIndexedColumn.FindString(sql); generic && found != "" {
+			t.Errorf("a worklist statement under generic plans binds %q; spell it as a literal or use a custom plan:\n%s", found, sql)
+		}
+	}
+	if !forced || !custom || !noticeCustom || len(sent.sql) < 240 {
+		t.Fatalf("worklist sent %d statements, generic=%t custom=%t notice custom=%t; the census did not reach the assembled read", len(sent.sql), forced, custom, noticeCustom)
+	}
+}
+
+type plannedOnceLanes struct {
+	db     *database.DB
+	pool   *pgxpool.Pool
+	engine *briefs.BriefEngine
+}
+
+func readPlannedOnceLanes(ctx context.Context, lanes plannedOnceLanes, deal, task ids.UUID, at time.Time) error {
+	store := activities.NewStore(lanes.db)
+	claims := contacts.NewStore(lanes.db)
+	if _, err := (attentionTasks{store: store, claims: claims}).markReadOnly(ctx, []attention.Task{{ID: task}}, at); err != nil {
+		return err
+	}
+	if _, err := (attentionDomainQuestions{store: claims}).OpenDomainQuestions(ctx); err != nil {
+		return err
+	}
+	if _, err := (attentionAtRisk{pool: lanes.pool}).championCover(ctx, []agents.SlippingDeal{{DealID: deal}}, at); err != nil {
+		return err
+	}
+	briefing := attentionBriefing{engine: lanes.engine, figures: attentionDealFacts{store: deals.NewStore(lanes.db, DealsInstallation())}}
+	_, _, _, err := briefing.Queue(ctx, at)
+	return err
+}
+
+func readSuggestionLanes(ctx context.Context, db *database.DB, positionID ids.UUID) error {
+	dealSuggestions := suggestionlanes.Deals{Store: deals.NewStore(db, DealsInstallation())}
+	if _, _, err := dealSuggestions.OpenSuggestions(ctx, nil, 10); err != nil {
 		return err
 	}
 	if _, err := dealSuggestions.CountOpen(ctx, nil); err != nil {
 		return err
 	}
-	tagSuggestions := attentionTagSuggestions{store: collections.NewStore(db)}
+	position, err := deals.SuggestionPositionAfter(time.Unix(0, 0), positionID)
+	if err != nil {
+		return err
+	}
+	if _, _, err := dealSuggestions.SuggestionsAfter(ctx, nil, position, 10); err != nil {
+		return err
+	}
+	tagSuggestions := suggestionlanes.Tags{Store: collections.NewStore(db)}
 	if _, err := tagSuggestions.OpenTagSuggestions(ctx, 10); err != nil {
 		return err
 	}
-	_, err := tagSuggestions.CountOpenTagSuggestions(ctx)
+	if _, err := tagSuggestions.CountOpenTagSuggestions(ctx); err != nil {
+		return err
+	}
+	position, err = collections.TagSuggestionPositionAfter(time.Unix(0, 0), positionID)
+	if err != nil {
+		return err
+	}
+	_, _, err = tagSuggestions.TagSuggestionsAfter(ctx, position, 10)
 	return err
 }
 
-// seedPlannedMeeting books a meeting with the contact at the given start, so the
-// meeting lanes read a row and finish it.
 func seedPlannedMeeting(t *testing.T, e *integration.Env, contact ids.UUID, startsAt time.Time) {
 	t.Helper()
 	subject, status := "Kick-off", "booked"
@@ -198,8 +357,6 @@ func seedPlannedMeeting(t *testing.T, e *integration.Env, contact ids.UUID, star
 	}
 }
 
-// readMeetingLanes runs the meetings lanes' reads through the seams that reuse
-// their plans, under every scope a lane can be asked for.
 func readMeetingLanes(ctx context.Context, store *activities.Store, at time.Time, owner ids.UUID) error {
 	window := attention.MeetingWindow{From: at.Add(-24 * time.Hour), Until: at.Add(12 * time.Hour), DaysFrom: at, DaysUntil: at.AddDate(0, 0, 1)}
 	for _, scope := range []attention.TaskScope{attention.TasksVisible, attention.TasksMine, attention.TasksUnassigned, attention.TasksOwnedBy} {

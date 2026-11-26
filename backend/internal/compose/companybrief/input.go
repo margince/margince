@@ -17,6 +17,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -27,10 +28,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneynotation"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // floorVersion is bumped by hand when the DETERMINISTIC floor's wording
@@ -88,6 +89,12 @@ type Input struct {
 	// relation to whatever the open deals are priced in, so it must never be
 	// labelled with theirs.
 	WonCurrency string `json:"won_currency,omitempty"`
+	// OpenPipelineMinor is the card's open total in the workspace base
+	// currency, which only the grounding check reads: the prompt never carries
+	// it. Zero with no currency when the card shows none.
+	OpenPipelineMinor    int64  `json:"-"`
+	OpenPipelineCurrency string `json:"-"`
+	lang                 textlang.Lang
 	// LostCount is nil when the reader cannot see deals: a zero there would
 	// tell the writer a fact about the section it was told to stay silent on.
 	LostCount *int     `json:"lost_count,omitempty"`
@@ -170,28 +177,13 @@ type DealIn struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Stage string `json:"stage,omitempty"`
-	// Amount is the MAJOR-unit figure, rendered — "180000.00", not the
-	// 18000000 the column holds. The prompt carried minor units and said
-	// nothing about it, so the model read a 180,000 EUR deal as eighteen
-	// million and wrote that onto a customer-facing screen whose own card,
-	// two inches above, said 180,000.
-	//
-	// Rendered here rather than divided at the point of use, because /100 is
-	// wrong too: a zero-decimal currency has no minor unit, so dividing
-	// understates ¥18,000,000 by a hundred. values.MajorUnits carries the
-	// ISO-4217 table both this and the offer-draft price check read.
-	// AmountMinor is the exact integer, and it is what the package does
-	// ARITHMETIC on: the deterministic fallback sums open deals, and summing
-	// rendered decimal strings would reintroduce the rounding a minor-unit
-	// integer exists to prevent.
-	//
-	// It does not reach the model. MarshalJSON renders `amount` from it, so
-	// the figure the model reads is DERIVED from the integer at the moment it
-	// is written rather than stored beside it — two spellings of one number
-	// that a caller can set independently are two numbers.
+	// AmountMinor is the exact integer the fallback sums. It never reaches
+	// the model: MarshalJSON derives the major-unit `amount` from it.
 	AmountMinor int64  `json:"-"`
 	Currency    string `json:"currency,omitempty"`
 	Stalled     bool   `json:"stalled"`
+	// lang is the brief's language, which decides the digit marks of amount.
+	lang textlang.Lang
 }
 
 // ActIn is one recent timeline item as the brief reads it.
@@ -247,7 +239,7 @@ func (d DealIn) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		wire
 		Amount string `json:"amount,omitempty"`
-	}{wire: wire(d), Amount: renderedAmount(d.AmountMinor, d.Currency)})
+	}{wire: wire(d), Amount: renderedAmount(d.AmountMinor, d.Currency, d.lang)})
 }
 
 // MarshalJSON renders the won-to-date total for the reason DealIn's does: it
@@ -257,22 +249,19 @@ func (in Input) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		wire
 		WonLifetime string `json:"won_lifetime,omitempty"`
-	}{wire: wire(in), WonLifetime: renderedAmount(in.WonLifetime, in.WonCurrency)})
+	}{wire: wire(in), WonLifetime: renderedAmount(in.WonLifetime, in.WonCurrency, in.lang)})
 }
 
-// renderedAmount is the one rendering both use.
+// renderedAmount is the one rendering both use. A figure with no currency is
+// left out, since its scale is a guess; a priced zero is shown.
 //
-// An amount with no currency renders as nothing: a figure printed without its
-// code is a number whose scale the reader has to guess, which is the defect
-// rather than a lesser form of it. A ZERO amount with a currency renders as
-// "0.00" and is shown — nothing forbids a zero-priced deal, the paired-nullness
-// CHECK admits it, and suppressing it would make a deal somebody deliberately
-// priced at nothing read exactly like one nobody has priced at all.
-func renderedAmount(minor int64, currency string) string {
+// The model copies the figure, so its digits are grouped the way the brief's
+// language writes them.
+func renderedAmount(minor int64, currency string, lang textlang.Lang) string {
 	if currency == "" {
 		return ""
 	}
-	return values.MajorUnits(minor, currency)
+	return moneynotation.Grouped(minor, currency, lang)
 }
 
 // briefInputActivities bounds how much of the timeline the brief reads. A
@@ -306,6 +295,7 @@ func FromView(view crmcontracts.Company360) Input {
 		}
 	}
 	foldDeals(view, &in)
+	foldOpenPipeline(view, &in)
 	foldTasks(view, &in)
 	foldCommitments(view, &in)
 	foldOpenWorkGaps(view, &in)
@@ -317,32 +307,6 @@ func FromView(view crmcontracts.Company360) Input {
 		}
 	}
 	return in
-}
-
-func foldDeals(view crmcontracts.Company360, in *Input) {
-	if view.Deals == nil {
-		return
-	}
-	lost := view.Deals.LostCount
-	in.LostCount = &lost
-	if view.Deals.WonLifetime.AmountMinor != nil && view.Deals.WonLifetime.Currency != nil {
-		in.WonCurrency = *view.Deals.WonLifetime.Currency
-		in.WonLifetime = *view.Deals.WonLifetime.AmountMinor
-	}
-	for _, deal := range view.Deals.Data {
-		d := DealIn{ID: deal.DealId.String(), Name: deal.Name, Stalled: deal.Stalled}
-		if deal.StageName != nil {
-			d.Stage = *deal.StageName
-		}
-		// Both halves or neither: a figure with no currency cannot be rendered
-		// into major units at all, and one printed without its code is a number
-		// whose scale the reader has to guess — which is the whole defect.
-		if deal.Amount != nil && deal.Amount.AmountMinor != nil && deal.Amount.Currency != nil {
-			d.Currency = *deal.Amount.Currency
-			d.AmountMinor = *deal.Amount.AmountMinor
-		}
-		in.OpenDeals = append(in.OpenDeals, d)
-	}
 }
 
 func foldTasks(view crmcontracts.Company360, in *Input) {
@@ -493,8 +457,14 @@ func profileValue(raw string) string {
 	return textcut.Runes(value, briefProfileValueMax-1) + "…"
 }
 
-// WordedIn words the industry code in the language the brief is written in.
+// WordedIn words the industry code and the amounts in the language the brief
+// is written in.
 func (in Input) WordedIn(lang string) Input {
 	in.Industry = contacts.IndustryWords(in.Industry, textlang.Lang(lang))
+	in.lang = textlang.Lang(lang)
+	in.OpenDeals = slices.Clone(in.OpenDeals)
+	for i := range in.OpenDeals {
+		in.OpenDeals[i].lang = in.lang
+	}
 	return in
 }

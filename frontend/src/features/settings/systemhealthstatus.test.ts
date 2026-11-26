@@ -2,7 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { expect, it } from "vitest";
-import { healthReport, overdueFinding } from "./systemhealth.fixtures";
+import {
+  healthReport,
+  overdueFinding,
+  unplacedSource,
+} from "./systemhealth.fixtures";
 import { healthTone } from "./systemhealthstatus";
 
 it("uses the same failure severity for findings and source readings", () => {
@@ -39,4 +43,11 @@ it("requires a verified available clear check for green", () => {
   );
   expect(healthTone({ ...source, condition: "processing" })).toBe("default");
   expect(healthTone({ ...source, availability: "failed" })).toBe("danger");
+});
+
+it("draws an information reading neutral, never green", () => {
+  expect(healthTone(unplacedSource)).toBe("default");
+  expect(healthTone({ ...unplacedSource, availability: "failed" })).toBe(
+    "danger",
+  );
 });

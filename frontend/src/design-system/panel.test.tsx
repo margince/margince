@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   BAND_GEOMETRY,
@@ -14,6 +15,9 @@ import {
   titleRules,
   titleTypeRules,
 } from "../../census/rules/panel.census";
+import { stable } from "../format/collate";
+import { LocaleProvider } from "../i18n";
+import { TOUCH_TARGET_PX } from "../testing/css";
 import { EmptyState } from "./atoms";
 import { PANEL_TONES, Panel, PanelBody, PanelIntro } from "./panel";
 
@@ -28,6 +32,45 @@ function panelCss(): string {
 function tokensCss(): string {
   return readFileSync(join(here, "tokens.css"), "utf8");
 }
+
+// The "?" beside a title explains the section to a reader who has never met
+// it, by pointer and by keyboard alike.
+describe("a panel's help", () => {
+  it("shows what the section is for on focus, and hides it on Escape", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider initial="en">
+        <Panel title="Growth fit" help="How well this company fits.">
+          <PanelBody>Strong fit</PanelBody>
+        </Panel>
+      </LocaleProvider>,
+    );
+    const region = screen.getByRole("region", { name: "Growth fit" });
+    const mark = within(region).getByRole("button", {
+      name: "About this section",
+    });
+    // The title still names the region alone.
+    expect(within(region).getByRole("heading").textContent).toBe("Growth fit");
+
+    await user.tab();
+    expect(document.activeElement).toBe(mark);
+    expect(screen.getByRole("tooltip").textContent).toContain(
+      "How well this company fits.",
+    );
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("draws no mark without help", () => {
+    render(
+      <Panel title="Consent">
+        <PanelBody>Outbound is default-deny per purpose.</PanelBody>
+      </Panel>,
+    );
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+});
 
 // A page of zones is a page of landmarks, and the title is what names each of
 // them: a reader jumping by region hears the same word a sighted reader scans
@@ -301,10 +344,6 @@ function tokenValue(name: string): string {
   return (declared?.[1] ?? "").trim();
 }
 
-// The coarse-pointer floor every touch target stands at (`.segmented button`,
-// `.stat-card-open`); no token carries it.
-const TOUCH_TARGET_PX = 44;
-
 // A px value from tokens.css, followed through `var()` to the number.
 function tokenPx(name: string): number {
   const value = tokenValue(name);
@@ -505,7 +544,7 @@ describe("a panel tone tints the head band and never reshapes it", () => {
 describe("the pane insets the state arm it has no body to wrap", () => {
   it("pays that inset at its own role, on a bare child of the panel", () => {
     const inset = stateArmRoleInsets(panelCss());
-    expect([...inset.map((rule) => rule.selector)].sort()).toEqual([
+    expect([...inset.map((rule) => rule.selector)].sort(stable)).toEqual([
       ".panel > .empty",
       ".panel > .pending",
       '.panel > [role="alert"] > .empty',

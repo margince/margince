@@ -76,7 +76,7 @@ func gmailOptions(cfg apiConfig, capCfg compose.CaptureConfig, pool *pgxpool.Poo
 	case gmailCfg.TransportMountable() && vault != nil:
 		_, _ = fmt.Fprintln(stdout, "api google capture transport mounted; no Google app in the environment — Settings supplies one, or /connectors/gmail/* answers 501")
 	case cfg.gmailClientID != "":
-		_, _ = fmt.Fprintln(stdout, "api gmail capture connector configured but INCOMPLETE — needs --connector-state-key (>=32B) and --public-base-url; surface stays 501")
+		_, _ = fmt.Fprintln(stdout, "api gmail capture connector configured but INCOMPLETE — needs --connector-state-key (>=32B) or the vault root key, and --public-base-url; surface stays 501")
 	}
 	return opts, nil
 }

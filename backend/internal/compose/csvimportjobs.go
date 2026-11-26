@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -166,10 +167,11 @@ type importSliceWork func(ctx context.Context, slice importSlice) (bool, error)
 // importSlicer is what a commit slice and an undo slice share. That is the
 // actor, the run's write lock, the claim, and the record of a stopped slice.
 type importSlicer struct {
-	pool   *pgxpool.Pool
-	actors storedActor
-	log    *slog.Logger
-	now    func() time.Time
+	features corefeatures.Availability
+	pool     *pgxpool.Pool
+	actors   storedActor
+	log      *slog.Logger
+	now      func() time.Time
 }
 
 func newImportSlicer(pool *pgxpool.Pool, log *slog.Logger) importSlicer {
@@ -179,6 +181,7 @@ func newImportSlicer(pool *pgxpool.Pool, log *slog.Logger) importSlicer {
 // slice runs one slice of the attempt args names. A panic fails the attempt
 // with its cause, because the engine records only the failures it returns.
 func (s importSlicer) slice(ctx context.Context, args importJobArgs, work importSliceWork) (result importSliceResult, err error) {
+	ctx = s.features.Context(ctx)
 	db, err := workspaceJobDB(s.pool, args)
 	if err != nil {
 		return importSliceResult{}, err
@@ -192,7 +195,7 @@ func (s importSlicer) slice(ctx context.Context, args importJobArgs, work import
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			panicked := fmt.Errorf("%s panicked: %v", args.Kind(), recovered)
-			result, err = s.stop(system, runs, lease, panicked, migration.StopCause(lease.Status, panicked))
+			result, err = s.stop(system, runs, lease, panicked, panicked)
 		}
 	}()
 	actorCtx, trace, err := s.actAs(ctx, system, runs, lease)
@@ -278,19 +281,20 @@ func (s importSlicer) settle(
 	case errors.Is(ctx.Err(), context.Canceled):
 		return s.yield(system, runs, lease)
 	case errors.Is(ctx.Err(), context.DeadlineExceeded):
-		return s.stop(system, runs, lease, err, migration.StopCause(lease.Status, ctx.Err()))
+		return s.stop(system, runs, lease, err, ctx.Err())
 	}
-	return s.stop(system, runs, lease, err, migration.StopCause(lease.Status, err))
+	return s.stop(system, runs, lease, err, err)
 }
 
-// stop writes why the attempt stopped, on a context of its own: the slice's may
-// be what ended. A newer attempt owning the run is no stop to record or log.
+// stop writes why the attempt stopped, worded from why, on a context of its
+// own: the slice's may be what ended. A newer attempt owning the run is no stop
+// to record or log.
 func (s importSlicer) stop(
-	system context.Context, runs *migration.RunStore, lease migration.Lease, stopped error, cause string,
+	system context.Context, runs *migration.RunStore, lease migration.Lease, stopped, why error,
 ) (importSliceResult, error) {
 	stopCtx, cancel := context.WithTimeout(context.WithoutCancel(system), importStopFlushTimeout)
 	defer cancel()
-	err := runs.FailLease(stopCtx, lease, cause)
+	err := runs.FailLease(stopCtx, lease, why)
 	if errors.Is(err, migration.ErrSuperseded) {
 		return importSliceResult{}, nil
 	}
@@ -302,6 +306,7 @@ func (s importSlicer) stop(
 // rather than leaving it queued.
 func addImportJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
 	slicer := newImportSlicer(pool, log)
+	slicer.features = corefeatures.New(cfg.DisabledCoreFeatures)
 	addDeclaredWorker[ImportValidateArgs](reg, &importValidateWorker{slicer: slicer, blobs: cfg.Blobstore, uploadCap: cfg.ImportUploadCap, readBudget: cfg.ImportTestReadBudget})
 	addDeclaredWorker[ImportCommitArgs](reg, &importCommitWorker{slicer: slicer, blobs: cfg.Blobstore, uploadCap: cfg.ImportUploadCap})
 	addDeclaredWorker[ImportUndoArgs](reg, &importUndoWorker{slicer: slicer})

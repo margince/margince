@@ -2,23 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
+import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
-import {
-  DateInput,
-  type ISODate,
-  isoOrBlank,
-} from "../../design-system/dateinput";
+import { isoOrBlank } from "../../design-system/dateinput";
 import { Popover } from "../../design-system/popover";
-import {
-  type ClockTime,
-  clockOrBlank,
-  TimeInput,
-} from "../../design-system/timeinput";
+import { clockOrBlank } from "../../design-system/timeinput";
 import { localDateTimeValue } from "../../format/calendarday";
 import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
 import { scheduleFields, schedulePresets } from "./composeschedule";
+import { MomentFields, messageZone, useMomentChoice } from "./scheduledmoment";
 import type { ScheduledSend } from "./scheduledqueue";
 
 /** The write: the row's identity and version travel with the new moment. */
@@ -28,6 +22,7 @@ export type Move = Readonly<{
   at: string;
   /** The zone to store; the reader's own when absent. */
   tz?: string;
+  intent?: components["schemas"]["IntentTime"];
 }>;
 
 /**
@@ -53,14 +48,19 @@ export function RescheduleMenu({
   const t = useT();
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
-  const [day, setDay] = useState<ISODate | "">("");
-  const [time, setTime] = useState<ClockTime | "">("");
-  // Empty or unparseable yields neither field, and the wire requires both. The
-  // button refuses rather than sending half a schedule the server would 422.
-  const fields = scheduleFields(day && time ? `${day}T${time}` : "");
+  const choiceZone = messageZone(send, readerZone);
+  // The button refuses half a moment or a past one, which the server would 422.
+  const choice = useMomentChoice(choiceZone, now);
 
-  const move = (at: string) => {
-    onMove({ id: send.id, version: send.version, at });
+  const move = (chosen: ReturnType<typeof scheduleFields>) => {
+    if (chosen.scheduled_at === undefined) return;
+    onMove({
+      id: send.id,
+      version: send.version,
+      at: chosen.scheduled_at,
+      tz: chosen.scheduled_tz,
+      intent: chosen.scheduled_intent,
+    });
     setOpen(false);
   };
 
@@ -72,11 +72,12 @@ export function RescheduleMenu({
       open={open}
       onOpenChange={(next) => {
         if (next) {
-          const [shownDay, shownTime] = localDateTimeValue(
-            send.scheduled_at,
+          const [shownDay, shownTime] = (
+            send.scheduled_intent?.wall_clock ??
+            localDateTimeValue(send.scheduled_at, choiceZone)
           ).split("T");
-          setDay(isoOrBlank(shownDay));
-          setTime(clockOrBlank(shownTime));
+          choice.setDay(isoOrBlank(shownDay));
+          choice.setTime(clockOrBlank(shownTime));
         }
         setOpen(next);
       }}
@@ -91,11 +92,19 @@ export function RescheduleMenu({
       }
     >
       <div className="scheduledsends-presets">
-        {schedulePresets(now).map((preset) => (
+        {schedulePresets(now, choiceZone).map((preset) => (
           <Button
             key={preset.key}
             variant="ghost"
-            onClick={() => move(preset.at.toISOString())}
+            onClick={() =>
+              move(
+                scheduleFields(
+                  localDateTimeValue(preset.at.toISOString(), choiceZone),
+                  undefined,
+                  choiceZone,
+                ),
+              )
+            }
           >
             <span>{t(preset.key)}</span>
             <span className="t-caption">
@@ -105,22 +114,18 @@ export function RescheduleMenu({
         ))}
       </div>
       <div className="scheduledsends-custom">
-        <DateInput
-          aria-label={t("sched.moveToDay", { subject: send.subject })}
-          value={day}
-          onChange={(event) => setDay(event.target.value)}
-        />
-        <TimeInput
-          aria-label={t("sched.moveToTime", { subject: send.subject })}
-          value={time}
-          onChange={(event) => setTime(event.target.value)}
+        <MomentFields
+          choice={choice}
+          dayLabel={t("sched.moveToDay", { subject: send.subject })}
+          timeLabel={t("sched.moveToTime", { subject: send.subject })}
         />
         <Button
           variant="primary"
-          disabled={fields.scheduled_at === undefined}
+          disabled={!choice.ready}
+          reason={choice.past ? t("compose.schedulePast") : undefined}
           pending={pending}
           onClick={() => {
-            if (fields.scheduled_at !== undefined) move(fields.scheduled_at);
+            if (choice.ready) move(choice.fields);
           }}
         >
           {t("sched.moveSave")}

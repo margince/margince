@@ -38,7 +38,11 @@ afterEach(() => {
 });
 
 const wrap = (ui: React.ReactNode) =>
-  render(<LocaleProvider initial="en">{ui}</LocaleProvider>);
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">{ui}</LocaleProvider>
+    </QueryClientProvider>,
+  );
 
 type CustomField = components["schemas"]["CustomField"];
 
@@ -93,6 +97,30 @@ describe("FieldTable", () => {
     expect(screen.queryByText("deal.cf_renewal_date")).toBeNull();
     expect(screen.getByText(/Date/)).toBeInTheDocument();
     expect(screen.getByText("You")).toBeInTheDocument();
+  });
+
+  it("names a record field's type, and a type this build does not know by its own name", () => {
+    wrap(
+      <FieldTable
+        object="deal"
+        fields={[
+          field({ id: "f-record", label: "Visit", type: "record" }),
+          field({
+            id: "f-newer",
+            label: "Newer",
+            type: "geopoint" as CustomField["type"],
+          }),
+        ]}
+        canEdit
+        meUserId="u1"
+        onRename={() => {}}
+        onArchive={() => {}}
+        onKinds={() => {}}
+        onSetting={() => {}}
+      />,
+    );
+    expect(screen.getByText(en["cf.type.record"])).toBeInTheDocument();
+    expect(screen.getByText("geopoint")).toBeInTheDocument();
   });
 
   it("offers a live field's verbs in its row menu", async () => {
@@ -361,7 +389,11 @@ describe("CustomFieldsAdmin", () => {
     renderAdmin();
     const dialog = await openBuilder();
     await userEvent.type(dialog.getByLabelText(/^Label/i), "Deal size");
-    await userEvent.click(dialog.getByRole("button", { name: /^Number$/i }));
+    await pickOption(
+      userEvent.setup(),
+      dialog.getByRole("combobox", { name: "Type" }),
+      "Number",
+    );
     await userEvent.click(dialog.getByRole("button", { name: "Add field" }));
     await waitFor(() =>
       expect(calls.some((call) => call.method === "POST")).toBe(true),
@@ -482,7 +514,11 @@ describe("CustomFieldsAdmin", () => {
     );
     const dialog = await openBuilder();
     await userEvent.type(dialog.getByLabelText(/^Label/i), "Doomed field");
-    await userEvent.click(dialog.getByRole("button", { name: /^Number$/i }));
+    await pickOption(
+      userEvent.setup(),
+      dialog.getByRole("combobox", { name: "Type" }),
+      "Number",
+    );
     await userEvent.click(dialog.getByRole("button", { name: "Add field" }));
     // The POST is attempted…
     await waitFor(() =>
@@ -619,7 +655,7 @@ describe("CustomFieldsAdmin", () => {
     const menu = await openFieldMenu("Renewal date");
     await userEvent.click(menu.getByRole("button", { name: en["cf.edit"] }));
     const input = screen.getByLabelText(/New label/i);
-    expect(screen.getByText("deal.cf_renewal_date").tagName).toBe("CODE");
+    expect(screen.queryByText("deal.cf_renewal_date")).toBeNull();
     await userEvent.clear(input);
     await userEvent.type(input, "Contract end date");
     await userEvent.click(screen.getByRole("button", { name: /Save/i }));
@@ -629,6 +665,49 @@ describe("CustomFieldsAdmin", () => {
     const patch = calls.find((call) => call.method === "PATCH");
     expect(patch?.url).toContain("/custom-fields/d1");
     expect(patch?.body).toMatchObject({ label: "Contract end date" });
+  });
+
+  it("says a label the server finds too long on the rename field", async () => {
+    const served = customFieldsBackend(
+      [field({ id: "d1", label: "Renewal date" })],
+      [],
+      [],
+    );
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) =>
+      input instanceof Request && input.method === "PATCH"
+        ? jsonResponse(
+            {
+              status: 422,
+              code: "validation_error",
+              detail: "the request failed validation",
+              details: {
+                errors: [
+                  {
+                    field: "label",
+                    code: "too_long",
+                    message: "at most 120 characters",
+                    max: 120,
+                  },
+                ],
+              },
+            },
+            422,
+          )
+        : served(input),
+    );
+    const user = userEvent.setup();
+    renderAdmin();
+    const menu = await openFieldMenu("Renewal date");
+    await user.click(menu.getByRole("button", { name: en["cf.edit"] }));
+    const input = screen.getByLabelText(/New label/i);
+    expect(input).toHaveAttribute("data-character-limit", "120");
+    await user.type(input, " for renewals");
+    await user.click(screen.getByRole("button", { name: /Save/i }));
+    await waitFor(() =>
+      expect(input).toHaveAccessibleDescription(
+        "New label: at most 120 characters.",
+      ),
+    );
   });
 });
 

@@ -18,6 +18,7 @@ var shapeBlindFields = gatekit.Waive(map[string]string{
 	"SecretStripper":        "hygiene over the outbound payload, the same on every run",
 	"ContextBytes":          "trace metadata of the context block ContextFingerprint already digests",
 	"ContextTokensEstimate": "trace metadata of the context block ContextFingerprint already digests",
+	"Subjects":              "admission metadata the Router reads before any provider; never sent",
 })
 
 // Every model.Request field either moves the shape or is named above with a

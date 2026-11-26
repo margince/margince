@@ -20,6 +20,7 @@ import { MeetingCalendarCard } from "./meeting-calendar";
 import { GuestViewCard } from "./meeting-guest-view";
 import { BookingLinksCard } from "./meeting-links";
 import { MeetingSetupCard } from "./meeting-setup";
+import { TeamLinksCard, TeamRequestsCard } from "./meeting-team";
 import { useWorkingHours } from "./working-hours";
 
 type Profile = components["schemas"]["SchedulingProfile"];
@@ -109,6 +110,8 @@ function MeetingCards({
         />
       )}
       <BookingLinksCard profile={profile} />
+      {profile.slug && <TeamLinksCard hostName={profile.host_name ?? ""} />}
+      <TeamRequestsCard />
       <MeetingCalendarCard profile={profile} />
     </>
   );

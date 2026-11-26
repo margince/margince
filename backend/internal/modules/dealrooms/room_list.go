@@ -46,8 +46,14 @@ type ListRoomsInput struct {
 // A field left out is refused with sort_field_not_allowed, which is an honest
 // answer; silently falling back to another order is not.
 var roomSortFields = map[string]storekit.SortField{
-	"title":      storekit.Column(fieldcatalog.TypeText),
-	"state":      storekit.Column(fieldcatalog.TypeText),
+	"title": storekit.Column(fieldcatalog.TypeText),
+	// The state a reader sees, which the end date can change between two
+	// pages. A room that expires mid-walk can be skipped or repeated; that is
+	// accepted. The cursor field is renamed so a cursor from the stored-column
+	// order is refused.
+	"state": {Kind: fieldcatalog.TypeText, CursorField: "state_read", Expr: func(context.Context, func(any) int) (string, error) {
+		return roomStateSQL, nil
+	}},
 	"expires_at": storekit.Column(storekit.KindTimestamp),
 	"closed_at":  storekit.Column(storekit.KindTimestamp),
 	"created_at": storekit.Column(storekit.KindTimestamp),
@@ -72,7 +78,7 @@ func (s *Store) ListRooms(ctx context.Context, in ListRoomsInput) ([]crmcontract
 		// Answered here as well as by id, because the room screen reads its
 		// room from the LIST — a field only GetRoom filled would be absent
 		// exactly where the button that needs it is drawn.
-		return StampPreviewAvailable(ctx, tx, out)
+		return stampCapabilities(ctx, tx, out)
 	})
 	return out, page, err
 }
@@ -105,7 +111,7 @@ func roomPage(ctx context.Context, tx pgx.Tx, in ListRoomsInput) ([]crmcontracts
 		where = append(where, storekit.SQLf("r.deal_id = $%d", arg(in.DealID)))
 	}
 	if in.State != nil {
-		where = append(where, storekit.SQLf("r.state = $%d", arg(*in.State)))
+		where = append(where, storekit.SQLf("(%s) = $%d", roomStateSQL, arg(*in.State)))
 	}
 	if in.ParticipantEmail != nil {
 		where = append(where, storekit.SQLf(
@@ -117,7 +123,7 @@ func roomPage(ctx context.Context, tx pgx.Tx, in ListRoomsInput) ([]crmcontracts
 		// Through the sort's own keyset, which refuses a token minted under a
 		// different ordering rather than resuming on an axis this page is not
 		// ordered by.
-		keyset, err := sorted.KeysetClause(*in.Cursor, arg)
+		keyset, err := sorted.KeysetClause("deal_rooms", *in.Cursor, arg)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
@@ -152,7 +158,7 @@ func roomPage(ctx context.Context, tx pgx.Tx, in ListRoomsInput) ([]crmcontracts
 	if len(out) > size {
 		out = out[:size]
 		createdAt, id := roomKey(out[size-1])
-		next, err := sorted.EncodePageCursor(cursorKeys[size-1], createdAt, id)
+		next, err := sorted.EncodePageCursor("deal_rooms", cursorKeys[size-1], createdAt, id)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}

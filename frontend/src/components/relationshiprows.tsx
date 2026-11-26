@@ -14,14 +14,16 @@ import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { DataTable } from "../design-system/datatable";
+import { DataTable, type DataTableColumn } from "../design-system/datatable";
 import { ErrorLine } from "../design-system/errorline";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
+import { useEmploymentZone } from "../lib/employmentcurrency";
 import { unwrap } from "../lib/problem";
+import { useViewerZone } from "../lib/viewerzone";
 import { EditAction } from "./edit";
 import "../design-system/querystates.css";
 import { EntityRef } from "./entityref";
@@ -37,11 +39,32 @@ import {
   type Relationship,
   type RelationshipScope,
   relationshipEditFields,
+  roleEditable,
   roleSent,
   roleShown,
   scopeCopy,
   scopeQueryKey,
 } from "./relationships";
+import { dateRangeParts, RANGE_DASH } from "./relationships.edges";
+
+// Each date is held whole, since an ISO date breaks at its hyphens, so the
+// range breaks only after its dash.
+export function DateRangeText({
+  start,
+  end,
+}: Readonly<{ start: string; end: string }>) {
+  if (!start || !end) {
+    return start || end ? (
+      <span className="relationshiprows-date">{start || end}</span>
+    ) : null;
+  }
+  return (
+    <>
+      <span className="relationshiprows-date">{`${start} ${RANGE_DASH}`}</span>{" "}
+      <span className="relationshiprows-date">{end}</span>
+    </>
+  );
+}
 
 /**
  * RelationshipsTab is the edges of one record, as a panel that names itself.
@@ -116,13 +139,19 @@ export function RelationshipRows({
   const t = useT();
   const queryClient = useQueryClient();
   const copy = scopeCopy(scope);
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  const employmentZone = useEmploymentZone();
+  const datesOf = (rel: Relationship) =>
+    dateRange(rel, t, locale, zone, employmentZone);
   // The object half of each verb's gate, asked as the server asks it
   // (relationship:create on an add, :update on an edit, :delete on a
   // removal). A verb the role holds no grant for is withheld outright — there
   // is no fact about the record to report — where the anchor's refusal above
   // keeps the verb and says why.
   const canUpdate = useCanWrite("relationship", "update");
-  const canDelete = useCanWrite("relationship", "delete");
+  // The server answers per edge, by the rule the archive itself applies.
+  const mayRemove = (rel: Relationship) => rel.can_archive === true;
   const query = useQuery({
     queryKey: scopeQueryKey(scope),
     queryFn: () => fetchRelationships(scope),
@@ -178,14 +207,16 @@ export function RelationshipRows({
       ...(extra
         ? [{ key: "extra", term: extra.label, value: extra.render(rel) }]
         : []),
-      { key: "dates", term: t("rel.dates"), value: dateRange(rel, t) },
+      { key: "dates", term: t("rel.dates"), value: datesOf(rel) },
     ];
   };
 
   // ONE spelling of this edge's verbs, for both shapes of row: the table's
   // trailing cell and the stacked block's foot. Two copies would be two
   // versions of a hard DELETE the day either one is touched.
-  const verbsFor = (rel: Relationship) => (
+  const verbsFor = (rel: Relationship) =>
+    canUpdate || mayRemove(rel) ? verbBar(rel) : null;
+  const verbBar = (rel: Relationship) => (
     <div
       className={
         stacked
@@ -196,13 +227,13 @@ export function RelationshipRows({
       {canUpdate && (
         <EditAction
           disabledReasonId={refusedReasonId}
-          label={t("record.edit")}
+          label={t(copy.edit)}
           savedMessage={t("rel.saveDone")}
           fields={relationshipEditFields}
           record={{
             id: rel.id,
             version: rel.version,
-            role: roleShown(rel, t),
+            role: roleEditable(rel, t),
             stored_role: rel.role ?? "",
             started_at: rel.started_at ?? "",
             ended_at: rel.ended_at ?? "",
@@ -236,7 +267,7 @@ export function RelationshipRows({
           recordKey="relationship"
         />
       )}
-      {canDelete && (
+      {mayRemove(rel) && (
         <Button
           variant="danger"
           reasonId={refusedReasonId}
@@ -252,7 +283,7 @@ export function RelationshipRows({
   // The table's columns, named once outside the render callback: built inline,
   // the callback carried every column's own branching as well as the choice of
   // shape, and read as one function doing two jobs.
-  const columns = [
+  const columns: DataTableColumn<Relationship>[] = [
     ...(copy.singleKind
       ? []
       : [
@@ -272,6 +303,7 @@ export function RelationshipRows({
     {
       key: "counterparty",
       header: t("rel.counterparty"),
+      fold: "title",
       render: (rel: Relationship) => {
         const ref = counterpartyRef(rel, scope);
         return ref ? <EntityRef kind={ref.kind} id={ref.id} /> : <span>—</span>;
@@ -289,11 +321,17 @@ export function RelationshipRows({
     {
       key: "dates",
       header: t("rel.dates"),
-      render: (rel: Relationship) => dateRange(rel, t),
+      render: (rel: Relationship) => (
+        <DateRangeText
+          {...dateRangeParts(rel, t, locale, zone, employmentZone)}
+        />
+      ),
     },
     {
       key: "actions",
-      header: "",
+      header: t("table.actions"),
+      headerHidden: true,
+      fold: "end",
       render: verbsFor,
     },
   ];
@@ -324,6 +362,7 @@ export function RelationshipRows({
           }
           return (
             <DataTable
+              fold
               label={t(copy.title)}
               columns={columns}
               rows={rows}
@@ -340,7 +379,7 @@ export function RelationshipRows({
           setRemoving(null);
           remove.reset();
         }}
-        title={t("rel.remove")}
+        title={t(copy.remove)}
         confirmLabel={t("rel.remove")}
         confirmVariant="danger"
         onConfirm={() => {

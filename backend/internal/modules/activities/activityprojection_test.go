@@ -24,12 +24,16 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // epoch anchors the timestamp sentinels. Each column gets epoch plus its own
@@ -78,6 +82,10 @@ func (r *sentinelRow) Scan(dest ...any) error {
 func (r *sentinelRow) fill(dest any, name string, index int) {
 	r.t.Helper()
 	switch d := dest.(type) {
+	case **systemtext.Message:
+		*d = nil
+	case **crmcontracts.IntentTime:
+		*d = &crmcontracts.IntentTime{WallClock: name, Timezone: name}
 	case *string:
 		*d = name
 	case **string:
@@ -161,7 +169,7 @@ func TestEveryProjectedColumnLandsInItsOwnField(t *testing.T) {
 	for _, flip := range []bool{false, true} {
 		t.Run(map[bool]string{false: "as declared", true: "with the booleans reversed"}[flip], func(t *testing.T) {
 			row := &sentinelRow{t: t, names: names, flip: flip, last: index["content_available"]}
-			got, err := scanActivity(row)
+			got, err := scanActivity(context.Background(), row)
 			if err != nil {
 				t.Fatalf("scanActivity: %v", err)
 			}
@@ -208,7 +216,7 @@ func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]
 	assertString(t, "a.direction", stringOf(got.Direction))
 	assertString(t, "a.meeting_status", stringOf(got.MeetingStatus))
 	assertString(t, "a.call_outcome", stringOf(got.CallOutcome))
-	assertString(t, "a.capture_label", stringOf(got.CaptureLabel))
+	assertString(t, capturekind.SQL("a.capture_label"), stringOf(got.CaptureLabel))
 	assertString(t, "a.audience", stringOf(got.Audience))
 	// Served for mail only, and the sentinel row's kind is not mail.
 	if got.BodyCompleteness != nil {
@@ -224,9 +232,9 @@ func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]
 		column string
 		got    *time.Time
 	}{
-		{"a.occurred_at", &got.OccurredAt},
+		{occurredday.BookedStartSQL("a"), &got.OccurredAt},
 		{storekit.TaskDueSQL("a"), got.DueAt},
-		{"a.remind_at", got.RemindAt},
+		{storekit.IntentInstantSQL("a", "remind"), got.RemindAt},
 		{"a.done_at", got.DoneAt},
 		{"a.created_at", &got.CreatedAt},
 		{"a.updated_at", &got.UpdatedAt},
@@ -239,6 +247,19 @@ func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]
 		if at := epoch.Add(time.Duration(index[want.column]) * time.Hour); !want.got.Equal(at) {
 			t.Errorf("%s holds %v, want %v — two timestamp destinations are transposed",
 				want.column, want.got, at)
+		}
+	}
+
+	for _, want := range []struct {
+		column string
+		got    *crmcontracts.IntentTime
+	}{
+		{storekit.IntentWireSQL("a", "due"), got.DueIntent},
+		{storekit.IntentWireSQL("a", "remind"), got.RemindIntent},
+		{storekit.IntentWireSQL("a", "meeting"), got.MeetingIntent},
+	} {
+		if want.got == nil || want.got.WallClock != want.column {
+			t.Errorf("%s landed in a field holding %+v", want.column, want.got)
 		}
 	}
 
@@ -284,13 +305,15 @@ func boolFor(at int) bool {
 	return seen%2 == 0
 }
 
-// isBoolColumn names the projection's boolean columns. A list, because the
-// destination's type is only knowable at scan time and this has to answer
-// before one exists.
+// The projection itself supplies the destination types, including derived state columns.
 func isBoolColumn(sql string) bool {
-	switch sql {
-	case "a.is_done", "a.bulk_mail_attested", "a.due_has_time", "":
-		return true
+	for _, column := range activityProjection {
+		if column.sql == sql {
+			switch column.into(&activityScan{}).(type) {
+			case *bool, **bool:
+				return true
+			}
+		}
 	}
 	return false
 }
@@ -342,7 +365,8 @@ func stringOf[T ~string](v *T) *string {
 // arity error somewhere else, at a call site that has nothing to do with the
 // omission.
 func TestTheSelectListAndTheScanAgreeOnLength(t *testing.T) {
-	columns, err := activityColumns(principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem}), "coalesce(a.audience = 'workspace', false)", func(any) int { return 1 })
+	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem})
+	columns, err := activityColumns(ctx, "coalesce(a.audience = 'workspace', false)", func(any) int { return 1 })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -368,13 +392,24 @@ func TestTheSelectListAndTheScanAgreeOnLength(t *testing.T) {
 		}
 	}
 	// And each declared column is actually in it, so a rename cannot keep the
-	// count while selecting something else.
+	// count while selecting something else. The reply channel is substituted per
+	// query with the caller's audience on the source, so its gated form is what
+	// the list names.
+	sourceAudience, err := auth.ActivitySourceAudienceArm(ctx, "s", func(any) int { return 1 })
+	if err != nil {
+		t.Fatal(err)
+	}
+	replyChannel := storekit.ReplyChannelSQL("a", "")
 	for _, c := range activityProjection {
 		if c.sql == "" {
 			continue
 		}
-		if !strings.Contains(columns, c.sql) {
-			t.Errorf("the projection declares %s and the select list does not name it", c.sql)
+		want := c.sql
+		if c.sql == replyChannel {
+			want = storekit.ReplyChannelSQL("a", sourceAudience)
+		}
+		if !strings.Contains(columns, want) {
+			t.Errorf("the projection declares %s and the select list does not name it", want)
 		}
 	}
 	if !strings.HasSuffix(columns, "AS content_available") {
@@ -438,7 +473,7 @@ func TestAWithheldRowCarriesNoAudienceReason(t *testing.T) {
 	for i, c := range activityProjection {
 		names[i] = c.sql
 	}
-	got, err := scanActivity(&withheldRow{t: t, names: names})
+	got, err := scanActivity(context.Background(), &withheldRow{t: t, names: names})
 	if err != nil {
 		t.Fatalf("scanActivity: %v", err)
 	}
@@ -500,7 +535,7 @@ func TestImportedFromFollowsTheContentAudience(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			scan := activityScan{contentAvailable: tc.available}
 			scan.a.SourceSystem = &system
-			got := scan.record()
+			got := scan.record(context.Background())
 			if (got.ImportedFrom != nil) != tc.wantName {
 				t.Fatalf("imported_from = %v, present want %v", got.ImportedFrom, tc.wantName)
 			}
@@ -526,7 +561,7 @@ func TestBodyCompletenessIsServedOnlyWithAMailBody(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			scan := activityScan{contentAvailable: tc.available, kind: tc.kind, bodyCompleteness: "partial"}
 			scan.a.Body = tc.body
-			got := scan.record()
+			got := scan.record(context.Background())
 			if served := got.BodyCompleteness != nil; served != tc.want {
 				t.Fatalf("body_completeness served = %v, want %v", served, tc.want)
 			}
@@ -559,7 +594,7 @@ func TestAutomaticKindFollowsTheContentAudience(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.scan.contentAvailable = tc.available
-			got := tc.scan.record().AutomaticKind
+			got := tc.scan.record(context.Background()).AutomaticKind
 			if tc.want == "" {
 				if got != nil {
 					t.Fatalf("automatic_kind = %s on a row the reader may not open", *got)
@@ -588,7 +623,7 @@ func TestEveryAutomaticKindIsAContractValue(t *testing.T) {
 func TestATaskSaysWhetherItsDueDateHasATime(t *testing.T) {
 	for _, want := range []bool{true, false} {
 		scan := activityScan{contentAvailable: true, kind: "task", dueHasTime: want}
-		got := scan.record()
+		got := scan.record(context.Background())
 		if got.DueHasTime == nil || *got.DueHasTime != want {
 			t.Errorf("a task scanned with due_has_time %t reads %v", want, got.DueHasTime)
 		}

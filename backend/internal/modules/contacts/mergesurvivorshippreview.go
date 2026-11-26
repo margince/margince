@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
@@ -104,16 +105,16 @@ func (s *Store) PreviewMergeSurvivorship(ctx context.Context, kind string, sourc
 
 func readMergeSurvivorship(ctx context.Context, tx pgx.Tx, kind string, source, target ids.UUID) (MergeSurvivorship, error) {
 	if kind == contactEntity {
-		src, tgt, err := mergePair(ctx, tx, kind, ids.From[ids.ContactKind](source), ids.From[ids.ContactKind](target), nil, readContactMergeState)
+		src, tgt, err := recordmerge.Pair(ctx, tx, kind, ids.From[ids.ContactKind](source), ids.From[ids.ContactKind](target), nil, readContactMergeState)
 		if err != nil {
 			return MergeSurvivorship{}, err
 		}
 		if src.Version == nil || tgt.Version == nil {
 			return MergeSurvivorship{}, apperrors.ErrInvalidArgument
 		}
-		return MergeSurvivorship{Fields: buildSurvivorshipPatch(tgt, src).After(), SourceVersion: int64(*src.Version), TargetVersion: int64(*tgt.Version)}, nil
+		return MergeSurvivorship{Fields: buildSurvivorshipPatch(tgt, src, ids.From[ids.ContactKind](source), nil).After(), SourceVersion: int64(*src.Version), TargetVersion: int64(*tgt.Version)}, nil
 	}
-	src, tgt, err := mergePair(ctx, tx, kind, ids.From[ids.CompanyKind](source), ids.From[ids.CompanyKind](target), nil, readCompanyMergeState)
+	src, tgt, err := recordmerge.Pair(ctx, tx, kind, ids.From[ids.CompanyKind](source), ids.From[ids.CompanyKind](target), nil, readCompanyMergeState)
 	if err != nil {
 		return MergeSurvivorship{}, err
 	}
@@ -133,7 +134,13 @@ func companyMergeAllowed(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.
 	if err := refuseIfAnchor(ctx, tx, targetID, "target_id", "nothing can be merged into it. Archive the duplicate instead, and edit this one on the company page"); err != nil {
 		return err
 	}
-	return refuseWhenBothCarryProjects(ctx, tx, sourceID, targetID)
+	if err := refuseWhenBothCarryProjects(ctx, tx, sourceID, targetID); err != nil {
+		return err
+	}
+	if err := refuseCrossCompanyContracts(ctx, tx, sourceID, targetID); err != nil {
+		return err
+	}
+	return refuseUnlinkedLedgerRows(ctx, tx, sourceID)
 }
 
 func (s *Store) previewMergeScope(ctx context.Context, tx pgx.Tx, kind string, source, target ids.UUID, out *MergeSurvivorship) error {

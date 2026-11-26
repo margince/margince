@@ -63,9 +63,14 @@ type SchedulingArgumentError struct {
 	Field   string
 	Code    string
 	Message string
+	// Max is the limit a too_long refusal names.
+	Max int
 }
 
 func (e *SchedulingArgumentError) Error() string { return e.Field + ": " + e.Message }
+
+// FieldMax is the limit the refusal names; zero states none.
+func (e *SchedulingArgumentError) FieldMax() int { return e.Max }
 
 // FieldFault names the argument, the code, and what to fix — one mapping for
 // every surface.
@@ -115,7 +120,7 @@ var (
 	// it is to already know it exists. The account send refuses an unlinked
 	// message for the same reason and in the same words.
 	errBookingLinksEmpty = &SchedulingArgumentError{
-		Field: "links", Code: codeRequired,
+		Field: fieldLinks, Code: codeRequired,
 		Message: "`links` needs at least one entry: name the contact, company, deal, lead or " +
 			"project the meeting is about — one attached to nothing appears on no timeline",
 	}

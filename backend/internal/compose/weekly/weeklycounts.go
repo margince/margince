@@ -18,9 +18,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -55,7 +57,7 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 	if err != nil {
 		return Counts{}, err
 	}
-	dealScope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	dealScope, err := standingDealScope(ctx, arg)
 	if err != nil {
 		return Counts{}, err
 	}
@@ -71,17 +73,18 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 	var c Counts
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
         WITH tasks AS (
-          SELECT `+storekit.TaskDueSQL("a")+` AS due_at, %[6]s AS completed_at FROM activity a
+          SELECT `+storekit.TaskDueFromSQL("a", "$%[1]d")+` AND `+storekit.TaskDueBeforeSQL("a", "$%[2]d")+` AS due_in_week,
+                 `+storekit.TaskDueBeforeSQL("a", "$%[2]d")+` AS due_by_end, %[6]s AS completed_at FROM activity a
            WHERE a.kind='task' AND a.archived_at IS NULL AND (a.is_done OR %[7]s)
              AND a.created_at < $%[2]d AND a.assignee_id=$%[3]d AND (%[4]s)
-             AND ((`+storekit.TaskDueSQL("a")+` >= $%[1]d AND `+storekit.TaskDueSQL("a")+` < $%[2]d)
-               OR a.done_at >= $%[1]d OR (`+storekit.TaskDueSQL("a")+` < $%[2]d AND NOT a.is_done)
+             AND ((`+storekit.TaskDueFromSQL("a", "$%[1]d")+` AND `+storekit.TaskDueBeforeSQL("a", "$%[2]d")+`)
+               OR a.done_at >= $%[1]d OR (`+storekit.TaskDueBeforeSQL("a", "$%[2]d")+` AND NOT a.is_done)
                OR a.updated_at >= $%[2]d))
         SELECT
           (SELECT count(*) FROM tasks WHERE completed_at >= $%[1]d AND completed_at < $%[2]d),
-          (SELECT count(*) FROM tasks WHERE due_at >= $%[1]d AND due_at < $%[2]d),
-          (SELECT count(*) FROM tasks WHERE due_at >= $%[1]d AND due_at < $%[2]d AND completed_at < $%[2]d),
-          (SELECT count(*) FROM tasks WHERE due_at < $%[2]d AND (completed_at IS NULL OR completed_at >= $%[2]d)),
+          (SELECT count(*) FROM tasks WHERE due_in_week),
+          (SELECT count(*) FROM tasks WHERE due_in_week AND completed_at < $%[2]d),
+          (SELECT count(*) FROM tasks WHERE due_by_end AND (completed_at IS NULL OR completed_at >= $%[2]d)),
 		  -- Moved EXCLUDES deals that closed this week. The stage change that
 		  -- closed a deal is the same event as the win, and counting both tells
 		  -- the rep one thing twice — and the deal lines below already exclude
@@ -218,7 +221,9 @@ func countWeekLeads(
 // Only tasks created from the meeting before the week closed count.
 //
 // meetingIsTheirsSQL is "this meeting is that rep's" for the weekly figures:
-// the meeting credit rule analytics counts by, over alias `m`. Filing a
+// the meeting credit rule analytics counts by, over the alias the caller names.
+// The caller says which held transition it reads, so a week already read keeps
+// the guests the meeting was held with. Filing a
 // meeting, importing a copy, or an invitation nobody accepted credits nobody.
 // A meeting two reps attended is in both their weeks: both spent the time.
 //
@@ -228,9 +233,13 @@ func countWeekLeads(
 // still holds the time.
 //
 // Held by: TestTheMeetingAttributionHasOneSpelling (meetingattribution_test.go)
-func meetingIsTheirsSQL(seat string) string {
-	return storekit.MeetingCreditSQL("m", seat)
+func meetingIsTheirsSQL(credit storekit.HeldCredit, meeting, seat string) string {
+	return credit.CreditsSQL(meeting, seat)
 }
+
+// transitionCredit reads the history row h as the transition a funnel counts.
+// A meeting is then credited as it stood at that change.
+var transitionCredit = storekit.HeldCredit{Legacy: "h.host_id_at_change IS NULL", Host: "h.host_id_at_change", Kept: "h.credited_seats_at_change"}
 
 // NextStepTaskSQL is NextStepTaskAtSQL for the meeting as it reads today.
 func NextStepTaskSQL(task, meeting string) string {
@@ -264,11 +273,10 @@ func countWeekMeetings(
 	// database's would otherwise miss a transition and fall back to the date
 	// somebody edited the meeting to.
 	transition := storekit.MeetingHeldAsOfSQL("m", "'infinity'::timestamptz", activities.ReversedCancellationSQL)
-	scope, err := auth.ActivityContentClause(ctx, "m", arg)
-	if err != nil {
-		return 0, 0, err
-	}
-	taskScope, err := auth.ActivityContentClause(ctx, "task", arg)
+	// Both counts read the same meetings and the second adds their tasks, so
+	// one content gate over both sets answers every row either count tests.
+	readable, err := auth.ContentReadableActivitiesSQL(ctx,
+		"SELECT id FROM held_meeting UNION ALL SELECT id FROM next_step", arg)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -284,20 +292,30 @@ func countWeekMeetings(
 		" OR (" + transition.UnknownDay + " AND (" +
 		occurredday.WithinAtSQL(transition.Start, "'instant'", "$%[1]d", "$%[2]d") + " OR " +
 		occurredday.WithinAtSQL(transition.Start, "'day'", "$%[1]d", "$%[2]d") + ")))"
-	heldByRep := `m.kind = 'meeting' AND m.archived_at IS NULL
-		      AND ` + status + ` = '` + meetingoutcome.Held + `'
-		      AND ` + meetingIsTheirsSQL("$%[3]d") + `
-		      AND ` + within + `
-		      AND (%[4]s)`
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
+		WITH held_meeting AS MATERIALIZED (
+		  SELECT m.id, `+transition.Began+` AS began
+		    FROM activity m `+transition.Join+`
+		   WHERE m.kind = 'meeting' AND m.archived_at IS NULL
+		     AND `+status+` = '`+meetingoutcome.Held+`'
+		     AND `+meetingIsTheirsSQL(storekit.AsOfHeldCredit(transition.Legacy), "m", "$%[3]d")+`
+		     AND `+within+`),
+		next_step AS MATERIALIZED (
+		  SELECT task.id, held_meeting.id AS meeting_id
+		    FROM held_meeting JOIN activity task ON %[5]s
+		   WHERE task.created_at < $%[2]d),
+		readable_activity AS MATERIALIZED (%[4]s)
 		SELECT
-		  (SELECT count(*) FROM activity m `+transition.Join+` WHERE `+heldByRep+`),
-		  (SELECT count(*) FROM activity m `+transition.Join+` WHERE `+heldByRep+`
+		  (SELECT count(*) FROM held_meeting hm
+		    WHERE hm.id IN (SELECT id FROM readable_activity)),
+		  (SELECT count(*) FROM held_meeting hm
+		    WHERE hm.id IN (SELECT id FROM readable_activity)
 		      AND EXISTS (
-		        SELECT 1 FROM activity task
-		         WHERE %[6]s
-		           AND task.created_at < $%[2]d AND (%[5]s)))`,
-		startPos, endPos, hostPos, scope, taskScope, NextStepTaskAtSQL("task", "m", transition.Began)), args...).
+		        SELECT 1 FROM next_step ns
+		         WHERE ns.meeting_id = hm.id
+		           AND ns.id IN (SELECT id FROM readable_activity)))`,
+		startPos, endPos, hostPos, readable,
+		NextStepTaskAtSQL("task", "held_meeting", "held_meeting.began")), args...).
 		Scan(&held, &withNextStep)
 	if err != nil {
 		return 0, 0, fmt.Errorf("weekly: counting the week's meetings: %w", err)
@@ -318,7 +336,7 @@ func readWeekDeals(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos, capPos := arg(start), arg(end), arg(userID), arg(dealLineCap)
-	dealScope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	dealScope, err := standingDealScope(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -332,6 +350,10 @@ func readWeekDeals(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 	if err != nil {
 		return nil, err
 	}
+	// Frozen in the record language, as the team review is, so the snapshot
+	// does not depend on which path wrote it first.
+	language := string(identity.BaseLanguageForRecord(ctx, tx))
+	stageName := labeltranslation.SQLIn(language, "s.name", "s.name_translations", arg)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH closed AS (
 			SELECT d.id, d.name, d.status AS outcome, NULL::text AS to_stage,
@@ -342,7 +364,7 @@ func readWeekDeals(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 			   AND d.owner_id = $%[3]d AND (%[5]s)
 		), moved AS (
 			SELECT DISTINCT ON (h.deal_id)
-			       d.id, d.name, 'moved'::text AS outcome, s.name AS to_stage,
+			       d.id, d.name, 'moved'::text AS outcome, %[7]s AS to_stage,
 			       NULL::bigint AS amount_minor, NULL::text AS currency,
 			       h.changed_at AS at
 			  FROM deal_stage_history h
@@ -362,7 +384,7 @@ func readWeekDeals(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 		  FROM (SELECT * FROM closed UNION ALL SELECT * FROM moved) lines
 		 ORDER BY (outcome = 'moved'), at DESC, id
 		 LIMIT $%[4]d`,
-		startPos, endPos, userPos, capPos, dealScope, amountSQL), args...)
+		startPos, endPos, userPos, capPos, dealScope, amountSQL, stageName), args...)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: reading the week's deals: %w", err)
 	}

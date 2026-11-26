@@ -6,7 +6,7 @@ import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { isMailbox } from "../../format/connectorprovider";
-import { useConnectors } from "../../lib/connectors";
+import { mailboxParams, useConnectors } from "../../lib/connectors";
 import { throwProblem } from "../../lib/problem";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
@@ -57,7 +57,7 @@ export function useContainers(
 ) {
   return useQueries({
     queries: mailboxes.map((mailbox) => ({
-      queryKey: ["connector-containers", mailbox.provider],
+      queryKey: ["connector-containers", mailbox.id],
       enabled,
       // One round trip per opening of the dialog, not per keystroke.
       staleTime: 60_000,
@@ -65,7 +65,7 @@ export function useContainers(
       queryFn: async () => {
         const { data, error, response } = await api.GET(
           "/connectors/{provider}/containers",
-          { params: { path: { provider: mailbox.provider } } },
+          { params: mailboxParams(mailbox) },
         );
         if (response.status === 404 || response.status === 501) {
           return { containers: [] };
@@ -82,9 +82,10 @@ export function useContainers(
 /**
  * Every connected mailbox's folders as one list of options.
  *
- * The value stays provider-qualified, so two mailboxes that both call a folder
- * "Archive" remain two different rules; the label carries the account only
- * when there is more than one mailbox to tell apart.
+ * The value names the mailbox and the provider-qualified folder (folderRule
+ * reads it back), so two mailboxes that both call a folder "Archive" remain two
+ * rules. The label carries the account only when there is more than one
+ * mailbox to tell apart.
  */
 export function useFolderOptions(enabled: boolean) {
   const {
@@ -94,9 +95,10 @@ export function useFolderOptions(enabled: boolean) {
   } = useMailboxes(enabled);
   const containers = useContainers(mailboxes, enabled);
   return {
+    mailboxCount: mailboxes.length,
     options: mailboxes.flatMap((mailbox, index) =>
       (containers[index]?.data?.containers ?? []).map((container) => ({
-        value: `${mailbox.provider}:${container.id}`,
+        value: `${mailbox.id}/${mailbox.provider}:${container.id}`,
         label:
           mailboxes.length > 1
             ? `${mailbox.account_label ?? mailbox.provider} — ${container.name}`
@@ -133,11 +135,18 @@ export function usePurgeExclusion() {
     mutationFn: async (input: {
       id: string;
       preview: boolean;
+      // The counts the preview showed; the server destroys nothing if they moved.
+      expected?: PurgeOutcome;
     }): Promise<PurgeOutcome> => {
       const { data, error } = await api.POST("/capture/exclusions/{id}/purge", {
         params: {
           path: { id: input.id },
-          query: { preview: input.preview },
+          query: {
+            preview: input.preview,
+            expect_destroyed: input.expected?.destroyed,
+            expect_released: input.expected?.released,
+            expect_anonymised: input.expected?.anonymised,
+          },
         },
       });
       if (error || !data) {
@@ -155,4 +164,15 @@ export function usePurgeExclusion() {
       }
     },
   });
+}
+
+/** The rule a folder option stands for: the mailbox it was listed from and
+ *  the provider-qualified folder. A mailbox id holds no slash, so the first
+ *  one separates the two even when an IMAP folder name holds more. */
+export function folderRule(option: string): {
+  connection_id: string;
+  value: string;
+} {
+  const cut = option.indexOf("/");
+  return { connection_id: option.slice(0, cut), value: option.slice(cut + 1) };
 }

@@ -94,16 +94,10 @@ func finishDealForCaller(ctx context.Context, tx pgx.Tx, d crmcontracts.Deal) (c
 // write authority, and which references the page's rows point at.
 func maskDeals(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error {
 	dealID := func(d crmcontracts.Deal) ids.UUID { return ids.UUID(d.Id) }
-	// ONE statement answers which rows of the page the caller could change, and
-	// both consumers read it: the wire flag a client draws its edit affordances
-	// from, and the masks conditioned on write authority. Asking twice would be
-	// two round trips for one question, and two answers that can disagree.
-	writable, err := auth.StampWritable(ctx, tx, dealTable, deals, dealID,
-		func(d *crmcontracts.Deal, may bool) { d.Writable = &may })
+	writable, err := auth.StampRecordAffordances(ctx, tx, auth.DealArchive, deals, dealID,
+		func(d *crmcontracts.Deal, may bool) { d.Writable = &may },
+		func(d *crmcontracts.Deal, may bool) { d.Archivable = &may })
 	if err != nil {
-		return err
-	}
-	if err := stampDealsArchivable(ctx, tx, deals); err != nil {
 		return err
 	}
 	extra, err := unreadableReferences(ctx, tx, deals)
@@ -113,23 +107,6 @@ func maskDeals(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error 
 	return auth.ApplyFieldMasks(ctx, tx, maskObject, deals, dealID, dealWithholders,
 		func(d *crmcontracts.Deal, names []string) { d.MaskedFields = &names },
 		extra, writable)
-}
-
-// stampDealsArchivable sets Archivable from auth.ArchivableSubset, which asks
-// the row write gate itself, so a delete holder without update is answered too.
-func stampDealsArchivable(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error {
-	named := make([]ids.UUID, len(deals))
-	for i := range deals {
-		named[i] = ids.UUID(deals[i].Id)
-	}
-	archivable, err := auth.ArchivableSubset(ctx, tx, auth.DealArchive, named)
-	if err != nil {
-		return err
-	}
-	for i := range deals {
-		deals[i].Archivable = new(archivable[named[i]])
-	}
-	return nil
 }
 
 // unreadableReferences answers, for each row of the page, which of a deal's

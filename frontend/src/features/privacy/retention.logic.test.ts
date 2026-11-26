@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../../format/collate";
 import { ProblemError } from "../../lib/problem";
 import type { RetentionAction, RetentionScope } from "./retention.logic";
 import {
@@ -13,6 +14,7 @@ import {
   policyEffect,
   RETENTION_ACTIONS,
   RETENTION_SCOPES,
+  retainDaysFault,
   SCOPE_LABEL_KEYS,
   scopeLabelKey,
 } from "./retention.logic";
@@ -86,7 +88,7 @@ describe("the authorable vocabulary", () => {
   // whose option has no words — the catalogue keys are exhaustive by type, so
   // this proves the mapping is total at runtime too.
   it("labels every scope and every action", () => {
-    expect(RETENTION_SCOPES).toHaveLength(10);
+    expect(RETENTION_SCOPES).toHaveLength(11);
     for (const scope of RETENTION_SCOPES) {
       expect(scopeLabelKey(scope)).toMatch(/^retention\.scope/);
     }
@@ -132,6 +134,19 @@ describe("parseRetainDays", () => {
     expect(parseRetainDays("-30")).toBeNull();
     expect(parseRetainDays("30.5")).toBeNull();
     expect(parseRetainDays("thirty")).toBeNull();
+    expect(parseRetainDays("36501")).toBeNull();
+    expect(parseRetainDays("99999999999")).toBeNull();
+  });
+
+  it("says the window's bounds once one is typed past them", () => {
+    expect(parseRetainDays("36500")).toBe(36500);
+    expect(retainDaysFault("", "en", "Window in days")).toBeUndefined();
+    expect(retainDaysFault("99999999999", "en", "Window in days")).toBe(
+      "Window in days must be from 1 to 36,500.",
+    );
+    expect(retainDaysFault("30.5", "en", "Window in days")).toBe(
+      "Enter a whole number for Window in days.",
+    );
   });
 });
 
@@ -147,14 +162,14 @@ describe("the authorable scope list and the contract enum", () => {
   it("offers every scope the contract admits, exactly once", () => {
     const offered = [...RETENTION_SCOPES];
     const admitted = Object.keys(SCOPE_LABEL_KEYS) as RetentionScope[];
-    expect([...offered].sort()).toEqual([...admitted].sort());
+    expect([...offered].sort(stable)).toEqual([...admitted].sort(stable));
     expect(new Set(offered).size).toBe(offered.length);
   });
 
   it("offers every action the contract admits, exactly once", () => {
     const offered = [...RETENTION_ACTIONS];
     const admitted = Object.keys(ACTION_LABEL_KEYS) as RetentionAction[];
-    expect([...offered].sort()).toEqual([...admitted].sort());
+    expect([...offered].sort(stable)).toEqual([...admitted].sort(stable));
     expect(new Set(offered).size).toBe(offered.length);
   });
 });

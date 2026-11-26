@@ -61,3 +61,5 @@ The 1 table owned by `commissions`, as the migrations build them. [Back to the e
 **Triggers**
 
 - `commission_entry_touch`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "captured_by": 20000, "void_reason": 2000, "attribution_at_accrual": 20000, "margin_tier_at_accrual": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"attribution_at_accrual":20000,"captured_by":20000,"margin_tier_at_accrual":20000,"status":20000,"void_reason":2000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "captured_by": 20000, "void_reason": 2000, "attribution_at_accrual": 20000, "margin_tier_at_accrual": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"attribution_at_accrual":20000,"captured_by":20000,"margin_tier_at_accrual":20000,"status":20000,"void_reason":2000}')`

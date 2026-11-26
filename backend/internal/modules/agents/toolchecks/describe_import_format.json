@@ -1,0 +1,7 @@
+{
+  "verb": "describe_import_format",
+  "checks": [
+    "custom_field.read",
+    "import_run.read"
+  ]
+}

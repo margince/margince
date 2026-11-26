@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The verbs one row of the day offers, on one line: Done where the row offers
-// it, then the lane's answer, then the row's menu. So the answer and the menu
-// stand at one x down the queue; in a card the answer leads.
-// The menu holds the rest, most used first: the snooze, a way to the record,
-// the pin, the hand-off, then the hand-backs.
+// The main answer and menu align across rows.
+// Less common actions stay in the menu.
 
 import { Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -13,8 +10,6 @@ import { AppLink } from "../../design-system/applink";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { faceClass } from "../../design-system/button";
 import { ErrorLine } from "../../design-system/errorline";
-import { useToast } from "../../design-system/toast";
-import { useTooltip } from "../../design-system/tooltip";
 import {
   atRegionVolume,
   QuietVerbs,
@@ -23,6 +18,9 @@ import {
 import { useT } from "../../i18n";
 import { useCurrentMove } from "../../lib/currentmove";
 import { opensElsewhere } from "../../lib/linkclick";
+import { type Departure, fromHere } from "../../lib/navigatefrom";
+import { parseHash } from "../../lib/router";
+import { parseParams } from "../../lib/urlstate";
 import { useFoldedViewport } from "../../lib/viewport";
 import {
   moveHref,
@@ -37,8 +35,8 @@ import {
   useRowPutDown,
 } from "./worklist.dispositions";
 import { ReassignForm } from "./worklist.manager";
-import { isPinned } from "./worklist.pinmark";
-import { usePinRow, type WorklistItem } from "./worklist.queries";
+import { PinLine } from "./worklist.pinline";
+import type { WorklistItem } from "./worklist.queries";
 import { replyIsTheMove } from "./worklist.reply";
 import { TakeVerb } from "./worklist.take";
 
@@ -54,6 +52,8 @@ export function RowActs({
   onReview,
   onOpenEmail,
   context,
+  verbs,
+  menu,
   framed,
   titled,
 }: Readonly<{
@@ -66,17 +66,18 @@ export function RowActs({
   allowPin?: boolean;
   /** The lane's one call to action, drawn last before the menu. */
   primary?: ReactNode;
-  /**
-   * The lane's verbs of equal weight, drawn before Done. None of them is the
-   * row's answer. Promoting one would tell a reader that "Held" is the expected
-   * outcome of a meeting that may have been cancelled.
-   */
+  /** The lane's verbs of equal weight, drawn before Done. None is the row's
+   *  answer: a promoted "Held" would call a cancelled meeting held. */
   equals?: ReactNode;
   /** Where a grouped row is reviewed, on the surface that has a filter. */
   onReview?: () => void;
   onOpenEmail?: (id: string) => void;
   /** The way into what the row is about, where the surface has one; first. */
   context?: ReactNode;
+  /** The surface's own verbs, after the answer on a card. */
+  verbs?: ReactNode;
+  /** Lines the surface puts first in the menu, such as other ways to call. */
+  menu?: ReactNode;
   /** A card around this row already names and links its record. */
   framed?: boolean;
   /** The row's title already links the record the row is about. */
@@ -100,11 +101,7 @@ export function RowActs({
     (way) => way !== lead && !(linked && way.destination === href),
   );
   const pins = allowPin && !item.batch;
-  // Only a task carries an assignee, and a group row names no single activity.
-  // The server withholds Done from a task the reader may not change, and the
-  // hand-off's write would be refused there the same way.
-  const handsOff =
-    item.source === "task" && !item.batch && item.actions.includes("complete");
+  const handsOff = handsOffTask(item);
   // One write for Done and the menu's lines, so the two cannot write twice.
   const write = useRowPutDown(item);
   const putsDown = write.offered.some(
@@ -118,12 +115,20 @@ export function RowActs({
       onOpenEmail={onOpenEmail}
     />
   );
-  const others = (
+  // A card keeps one line of verbs: its answer, Done and the way on. The
+  // lane's equal verbs and the take are folded into the menu there.
+  const folds = foldsEquals(item, equals, framed);
+  const equalVerbs = (
     <>
-      {context}
-      {reviews && onReview && <BatchVerb onReview={onReview} />}
       {equals}
       <TakeVerb item={item} />
+    </>
+  );
+  const others = (
+    <>
+      {verbs}
+      {reviews && onReview && <BatchVerb onReview={onReview} />}
+      {!folds && equalVerbs}
       <DoneVerb write={write} />
     </>
   );
@@ -131,6 +136,7 @@ export function RowActs({
   // leads there. Down the queue it stands last, at one x on every row.
   return (
     <div className="worklist-row-acts">
+      {context}
       {framed ? (
         <>
           {answer}
@@ -142,8 +148,12 @@ export function RowActs({
           {answer}
         </>
       )}
-      {(ways.length > 0 || pins || handsOff || putsDown) && (
+      {[menu, ways.length > 0, pins, handsOff, putsDown, folds].some(
+        Boolean,
+      ) && (
         <OverflowMenu label={t("worklist.rowMenu", { title })}>
+          {menu}
+          {folds && equalVerbs}
           <PutDownLines write={write} />
           {ways.map(({ action, destination }) => (
             <AppLink
@@ -156,9 +166,7 @@ export function RowActs({
           ))}
           {pins && <PinLine item={item} />}
           {handsOff && (
-            <Button variant="ghost" onClick={() => setHandingOff(true)}>
-              {t("worklist.manager.reassign")}
-            </Button>
+            <HandOffLine item={item} onHandOff={() => setHandingOff(true)} />
           )}
           <HandBackLines write={write} />
         </OverflowMenu>
@@ -177,6 +185,42 @@ export function RowActs({
   );
 }
 
+// Only a task carries an assignee, and a group row names no single activity.
+// The server withholds Done from a task the reader may not change, and the
+// hand-off's write would be refused there the same way.
+function handsOffTask(item: WorklistItem): boolean {
+  return (
+    item.source === "task" && !item.batch && item.actions.includes("complete")
+  );
+}
+
+/** The menu line that opens the hand-off form, in the words of what it moves. */
+function HandOffLine({
+  item,
+  onHandOff,
+}: Readonly<{ item: WorklistItem; onHandOff: () => void }>) {
+  const t = useT();
+  return (
+    <Button variant="ghost" onClick={onHandOff}>
+      {t(
+        item.kind === "website_inquiry"
+          ? "inquiry.assignment.assign"
+          : "worklist.manager.reassign",
+      )}
+    </Button>
+  );
+}
+
+/** Whether a card folds the lane's equal verbs and the take into its menu. */
+function foldsEquals(
+  item: WorklistItem,
+  equals: ReactNode,
+  framed: boolean | undefined,
+): boolean {
+  if (framed !== true) return false;
+  return equals !== undefined || item.actions.includes("take");
+}
+
 /** The row's answer: the prepared move, the verb a page reaches, the lane's. */
 function RowAnswer({
   item,
@@ -190,6 +234,7 @@ function RowAnswer({
   onOpenEmail?: (id: string) => void;
 }>) {
   const t = useT();
+  const quiet = useQuietVerbs();
   return (
     <>
       {!item.batch && <PreparedMove item={item} onOpenEmail={onOpenEmail} />}
@@ -202,7 +247,7 @@ function RowAnswer({
         !primary &&
         !moveHref(item) &&
         subjectHref(item) && (
-          <AppLink className={NAVIGATING_VERB} href={subjectHref(item)}>
+          <AppLink className={reviewVerb(quiet)} href={subjectHref(item)}>
             {t("deal.openDeal")}
           </AppLink>
         )}
@@ -263,15 +308,15 @@ function PreparedMove({
 }: Readonly<{ item: WorklistItem; onOpenEmail?: (id: string) => void }>) {
   const t = useT();
   const quiet = useQuietVerbs();
-  const check = useCurrentMove<{ activityId: string } | { href: string }>(
-    (target) => {
-      if ("activityId" in target) {
-        onOpenEmail?.(target.activityId);
-      } else {
-        globalThis.location.assign(target.href);
-      }
-    },
-  );
+  const check = useCurrentMove<
+    { activityId: string } | { href: string; from: Departure }
+  >((target) => {
+    if ("activityId" in target) {
+      onOpenEmail?.(target.activityId);
+    } else {
+      target.from.navigate(parseHash(target.href), parseParams(target.href));
+    }
+  });
   if (replyIsTheMove(item)) {
     return null;
   }
@@ -282,6 +327,7 @@ function PreparedMove({
       <>
         <Button
           variant="ghost"
+          reason={item.move?.blocked_reason}
           pending={check.isPending}
           onClick={() =>
             check.mutate({
@@ -300,6 +346,15 @@ function PreparedMove({
   if (!move) {
     return null;
   }
+  // A refused verb is no link: it is drawn as the button it would be, with why.
+  const refused = item.move?.blocked_reason;
+  if (refused !== undefined) {
+    return (
+      <Button variant="ghost" reason={refused}>
+        {moveLabel(item, t)}
+      </Button>
+    );
+  }
   const modelWrites =
     moveOpensComposer(item) || item.move?.action === "open_meeting_brief";
   return (
@@ -314,7 +369,7 @@ function PreparedMove({
           if (!receipt || opensElsewhere(event)) return;
           event.preventDefault();
           if (check.isPending) return;
-          check.mutate({ receipt, operand: { href: move } });
+          check.mutate({ receipt, operand: { href: move, from: fromHere() } });
         }}
       >
         {modelWrites && <Sparkles aria-hidden="true" />}
@@ -360,6 +415,11 @@ const NAVIGATING_VERB = "btn btn-ghost";
 // card in hand, outlined in a list.
 function preparedVerb(quiet: boolean): string {
   return `btn ${faceClass(atRegionVolume("ai", quiet))}`;
+}
+// Reviewing the deal is what a brief item asks, so it is the card's filled
+// verb and outlined down the queue.
+function reviewVerb(quiet: boolean): string {
+  return `btn ${faceClass(atRegionVolume("primary", quiet))}`;
 }
 
 // Where each verb lives. A total map over the ones this page can route, so a
@@ -438,51 +498,3 @@ const VERB_LABEL: Record<
   // here because the map is total over the contract's actions.
   undo: (t) => t("history.undo.action"),
 };
-
-// The reader's own override: this row leads their day, whatever the ranking
-// chose. It reads the row's own `pinned` reason to know which way to go. A
-// local flag would disagree with the page once the reader pinned elsewhere.
-// RowActs offers no pin on a batch row. Its id is minted by the fold and will
-// not exist under that key on the next read.
-function PinLine({ item }: Readonly<{ item: WorklistItem }>) {
-  const t = useT();
-  const toast = useToast();
-  const pin = usePinRow();
-  const pinned = isPinned(item);
-  // What the word cannot say: whose order it changes and for how long. Per
-  // state, so Unpin never describes itself as keeping the row on top.
-  const { ref, trigger, tip } = useTooltip<HTMLButtonElement>(
-    t(pinned ? "worklist.verb.unpinHint" : "worklist.verb.pinHint"),
-  );
-  return (
-    // A verb rather than a switch, so the menu closes on it. The row shows
-    // the pin beside its name (`PinnedMark`).
-    <Button
-      variant="ghost"
-      ref={ref}
-      {...trigger}
-      pending={pin.isPending}
-      onClick={() =>
-        pin.mutate(
-          { source: item.source, rowId: item.id, pinned },
-          {
-            // A refused write otherwise leaves the row where it was with
-            // nothing said, so the reader is told nothing and sees nothing.
-            onError: () =>
-              toast.show(
-                t(
-                  pinned
-                    ? "worklist.verb.unpinFailed"
-                    : "worklist.verb.pinFailed",
-                ),
-                { tone: "danger" },
-              ),
-          },
-        )
-      }
-    >
-      {t(pinned ? "worklist.verb.unpin" : "worklist.verb.pin")}
-      {tip}
-    </Button>
-  );
-}

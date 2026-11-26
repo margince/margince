@@ -1,0 +1,13 @@
+{
+  "verb": "record_introduction",
+  "checks": [
+    "contact.read",
+    "introduction.create",
+    "introduction.read"
+  ],
+  "takes": [
+    "contact",
+    "me",
+    "user"
+  ]
+}

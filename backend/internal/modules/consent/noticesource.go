@@ -24,6 +24,7 @@ const fieldObtainedAt = "obtained_at"
 
 // SourceAssessment keeps a human decision separate from the original acquisition evidence.
 type SourceAssessment struct {
+	meeting          *faceToFaceMeeting
 	Kind             string
 	Timezone         string
 	ObtainedAt       *time.Time
@@ -84,7 +85,11 @@ func (s *Store) AssessNoticeSource(ctx context.Context, id ids.UUID, in SourceAs
 		if note == "" && in.SelectedEvidence != nil {
 			note = in.SelectedEvidence.Kind + ":" + in.SelectedEvidence.ID.String()
 		}
-		return s.recordFaceToFaceTx(ctx, tx, out.ContactID, faceToFaceMeeting{note: note, met: *in.ObtainedAt})
+		meeting := faceToFaceMeeting{note: note, met: *in.ObtainedAt}
+		if in.meeting != nil {
+			meeting = *in.meeting
+		}
+		return s.recordFaceToFaceTx(ctx, tx, out.ContactID, meeting)
 	})
 	return out, err
 }

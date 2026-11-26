@@ -1,0 +1,15 @@
+{
+  "tool": "change_compliance",
+  "action": "resolve_confirm_submission",
+  "verb": "resolve_confirm_submission",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

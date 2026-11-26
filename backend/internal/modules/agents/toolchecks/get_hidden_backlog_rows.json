@@ -1,0 +1,9 @@
+{
+  "verb": "get_hidden_backlog_rows",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "scope:team"
+  ]
+}

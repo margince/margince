@@ -1,46 +1,87 @@
-/* RecordView: two cards in a row. The details card is a
-   fixed 340px and stays in view as the page scrolls; the sheet takes the
-   rest up to 920px and may shrink to nothing, so the row never scrolls
+/* RecordView: two columns in a row, drawn as cards on a phone. The details
+   column is a fixed 340px and scrolls with the page; the sheet takes the
+   rest and may shrink to nothing, so the row never scrolls
    sideways. Under 900px of row the details card takes the full width above
-   the sheet and scrolls with the page. */
+   the sheet. */
 
 .record-split {
   container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  max-inline-size: 1320px;
-  margin-inline: auto;
 }
 .record-split-row {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  gap: var(--gapPanes);
+  gap: var(--space-6) var(--gapPanes);
 }
 
 .record-split-details {
   flex: 0 0 340px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
-  padding: var(--padPane);
 }
 .record-split-sheet {
   flex: 1 1 0;
-  max-inline-size: 920px;
   overflow: hidden;
 }
 
-/* The head: mark and name, one fact per line, the pills, the verbs. A rule
-   under it runs across the card's padding to its edges. */
+/* Above a phone the record lies open on the content card. Its panes rest on no
+   shadow, and only a level-2 pane, whose ground the ladder names, keeps its edge. */
+@media (width > 700px) {
+  .record-split
+    :is(
+      .panel,
+      .card,
+      .lt,
+      .stat-strip,
+      .stat-card,
+      .recorddetails-group,
+      .recorddetails-note,
+      .record-card,
+      .company-card,
+      .reachcard
+    ) {
+    box-shadow: none;
+  }
+  .record-split
+    :is(
+      .panel,
+      .card,
+      .lt,
+      .stat-strip[data-density="plate"],
+      .recorddetails-group
+    )
+    :is(
+      .panel,
+      .card,
+      .lt,
+      .stat-card,
+      .record-card,
+      .company-card,
+      .reachcard
+    ) {
+    border-color: transparent;
+  }
+  /* Room for a focus ring on content that stands on the sheet's edge, and for
+     the tab strip that reaches past it (recordtabs.css). */
+  .record-split-sheet {
+    overflow: clip;
+    overflow-clip-margin: var(--space-2);
+  }
+  .record-split-feed {
+    --sectionRuleInset: var(--padPanel);
+  }
+}
+
+/* The head: mark and name, one fact per line, the pills, the verbs, with a
+   rule under it from edge to edge of the column. */
 .record-split-head {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding-block-end: var(--space-5);
-  margin-inline: calc(-1 * var(--padPane));
-  padding-inline: var(--padPane);
+  padding: 0 0 var(--padPane);
   border-block-end: 1px solid var(--borderSubtle);
 }
 .record-split-identity {
@@ -85,11 +126,15 @@
   line-clamp: 3;
   overflow: hidden;
 }
+.record-split-lines:empty {
+  display: none;
+}
 .record-split-lines {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   min-inline-size: 0;
+  overflow-wrap: anywhere;
   color: var(--textSecondary);
 }
 .record-split-pills {
@@ -152,16 +197,7 @@
 }
 .record-split-verbs
   > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
-  ~ :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)::before,
-.record-split-verbs
-  > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
-  ~ *
-  > .btn-with-reason:has(> .t-caption)
-  > .btn::before,
-.record-split-verbs
-  > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
-  ~ .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary))
-  > .btn::before {
+  ~ :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)::before {
   content: "";
   position: absolute;
   inset-inline-start: 0;
@@ -188,6 +224,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* A tile names its verb in words, so a refused one swaps its glyph for the
+   lock, as a labelled button does, instead of a corner lock. */
+.record-split-verbs .btn > .btn-lock {
+  position: static;
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
+  padding: 0;
+  background: none;
+  color: inherit;
+}
+.record-split-verbs .btn > .btn-lock + svg {
+  display: none;
+}
 /* The filled verb sits inset in the bar, with the same room to the bar's edge
    as to the tiles under it, so it never presses against the border. */
 .record-split-verbs:has(> .btn-primary, > .btn-with-reason > .btn-primary) {
@@ -211,41 +260,6 @@
   align-self: stretch;
   justify-content: center;
 }
-/* A tile's refusal is a sentence too wide for the tile: it runs along the
-   bar's foot, in room the bar keeps for it. */
-.record-split-verbs:has(> * > .btn-with-reason > .t-caption),
-.record-split-verbs:has(> .btn-with-reason > .btn:not(.btn-primary)) {
-  position: relative;
-  padding-block-end: calc(var(--space-2) + 2lh);
-}
-.record-split-verbs > * > .btn-with-reason > .t-caption,
-.record-split-verbs > .btn-with-reason:not(:has(> .btn-primary)) > .t-caption {
-  position: absolute;
-  inset-inline: var(--space-2);
-  inset-block-end: var(--space-1);
-}
-/* A positioned tile would hold the sentence to its own width. So the tile that
-   states one stays static, and its button fills it and draws the hairline. */
-.record-split-verbs > :has(> .btn-with-reason > .t-caption),
-.record-split-verbs
-  > .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary)) {
-  position: static;
-}
-.record-split-verbs
-  > :not(.btn-primary, .btn-with-reason:has(> .btn-primary), p)
-  ~ :is(
-    :has(> .btn-with-reason > .t-caption),
-    .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary))
-  )::before {
-  content: none;
-}
-.record-split-verbs > * > .btn-with-reason:has(> .t-caption) > .btn,
-.record-split-verbs
-  > .btn-with-reason:has(> .t-caption):not(:has(> .btn-primary))
-  > .btn {
-  position: relative;
-  align-self: stretch;
-}
 .record-split-verbs > p {
   flex-basis: 100%;
   order: 1;
@@ -253,8 +267,7 @@
 }
 
 .record-split-tabs {
-  padding: var(--space-3) var(--space-6) 0;
-  border-block-end: 1px solid var(--borderSubtle);
+  padding: 0;
 }
 /* The strip is as wide as the sheet it sits in. The page's breakout (a strip
    as wide as the work column) would run it past the sheet's edge, where the
@@ -274,8 +287,9 @@
   gap: var(--space-5);
 }
 .record-split-tabs .recordtabs-tab {
+  --recordtabs-pad-start: 0px;
+  --recordtabs-pad-end: 0px;
   gap: var(--space-1);
-  padding-inline: 0;
   color: var(--textSecondary);
 }
 .record-split-tabs .recordtabs-tab[aria-pressed="true"],
@@ -288,7 +302,6 @@
   min-inline-size: 0;
   padding: 0 var(--space-1);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgInset);
   color: var(--textSecondary);
   font: var(--fontBodySmall);
@@ -311,14 +324,6 @@
 @container (min-width: 901px) and (max-width: 1100px) {
   .record-split-details {
     flex-basis: 316px;
-    padding-inline: var(--space-4);
-  }
-  .record-split-head {
-    margin-inline: calc(-1 * var(--space-4));
-    padding-inline: var(--space-4);
-  }
-  .record-split-tabs {
-    padding-inline: var(--space-5);
   }
   .record-split-tabs .recordtabs-strip {
     gap: var(--space-3);
@@ -340,8 +345,8 @@
 .record-split-feed {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-6) var(--space-6) var(--space-8);
+  gap: var(--gapCards);
+  padding: var(--space-6) 0 var(--space-8);
   min-inline-size: 0;
 }
 .record-split-feed > .record-band {
@@ -354,9 +359,6 @@
   }
   .record-split-row > .record-split-details {
     flex-basis: auto;
-    position: static;
-    max-block-size: none;
-    overflow-y: visible;
   }
   .record-split-sheet {
     flex-basis: auto;
@@ -368,24 +370,98 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     align-items: start;
-    gap: var(--space-6) var(--space-8);
+    gap: var(--space-3);
   }
-  .record-split-details .recorddetails > .recorddetails-toggle,
+  .record-split-details .recorddetails > .recorddetails-foot,
   .record-split-details .recorddetails > .recorddetails-note {
     grid-column: 1 / -1;
   }
-  .record-split-details .recorddetails > .recorddetails-toggle {
+  .record-split-details .recorddetails > .recorddetails-foot {
     justify-self: start;
   }
 }
-/* The first tab stands over the feed's first card, so the two insets move
-   together. */
+/* Only on a phone are the two columns cards, so only there does content stand
+   in from an edge; the first tab and the feed's first card move together. */
 @media (max-width: 700px) {
+  .record-split .page-pane {
+    background-color: var(--ground);
+    border: 1px solid var(--groundEdge);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-rest);
+  }
+  .record-split-head {
+    padding: var(--padPane);
+  }
   .record-split-tabs {
-    padding-inline: var(--padPane);
+    padding: var(--space-3) var(--padPane) 0;
   }
   .record-split-feed {
     padding: var(--padPane);
+  }
+}
+/* A phone shows one block at a time, so every tab keeps one rhythm: the card
+   gap between blocks, a smaller step from a heading to the card it heads. */
+@media (max-width: 700px) {
+  .record-split-feed :is(.record-stack, .chapters) {
+    gap: var(--gapCards);
+  }
+  .record-split-feed .chapter {
+    gap: var(--space-3);
+  }
+  .record-split-feed .timeline-header {
+    margin-block: var(--space-3);
+  }
+  .record-split-feed .record-timeline:not(:first-child) {
+    margin-block-start: 0;
+  }
+}
+/* On a phone the head is one centred block: mark, name and facts close as one
+   identity, then the pills and the verbs one step further each. */
+@media (max-width: 700px) {
+  .record-split-head {
+    align-items: center;
+    gap: 0;
+    text-align: center;
+  }
+  .record-split-head > * + * {
+    margin-block-start: var(--space-3);
+  }
+  .record-split-head > .record-split-identity + .record-split-lines {
+    margin-block-start: var(--space-2);
+  }
+  .record-split-head > .record-split-lines + .record-split-lines {
+    margin-block-start: var(--space-1);
+  }
+  .record-split-head > .record-split-verbs {
+    align-self: stretch;
+  }
+  .record-split-identity {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .record-split-identity > :is(.record-split-name, .record-split-rename) {
+    flex: none;
+    max-inline-size: 100%;
+  }
+  .record-split-lines {
+    align-items: center;
+  }
+  .record-split-pills {
+    justify-content: center;
+  }
+  /* The pencil and its gap trail the name; the same room before it centres the name. */
+  .record-split-rename .editable-value {
+    max-inline-size: 100%;
+    margin-inline-start: 0;
+    padding-inline-start: calc(1lh + 3 * var(--space-1));
+    text-align: center;
+  }
+}
+/* The visibility mark's 44px touch box spills into the space around its row,
+   so the pill keeps the head's step instead of floating in a band of air. */
+@media (max-width: 700px) and (pointer: coarse) {
+  .record-split-pills > button:has(> .visibility-opens) {
+    margin-block: calc(-1 * var(--space-2));
   }
 }
 

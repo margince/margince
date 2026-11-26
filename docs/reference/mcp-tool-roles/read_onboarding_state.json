@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "onboarding_state",
+  "verb": "read_onboarding_state",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

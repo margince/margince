@@ -2,9 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { ChevronDown } from "lucide-react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { Button, Modal, OverflowMenu } from "./atoms";
 import { Heading } from "./heading";
+import { ListPopover } from "./listpopover";
+import { useCloseOverflowMenu } from "./overflowmenu";
 
 // The panel hangs off the trigger's end, so the trigger sits at the right edge
 // with the height it drops into reserved.
@@ -51,14 +54,15 @@ export const Closed: Story = {
   ),
 };
 
-// Every item shape one menu holds: a label that wraps, a SET row it does not
-// close under, a refused row, and the destructive verb.
+// Every item shape one menu holds: a label that wraps, a refused row and the
+// destructive verb. A SET row, a switch the reader may flip with others, keeps
+// the menu open.
 export const Open: Story = {
   render: () => (
     <OverflowMenu label="More actions">
       <Button>Email everyone on this account</Button>
       <Button>Merge with…</Button>
-      <Button aria-expanded="true">Runs</Button>
+      <Button aria-pressed="true">Show archived items</Button>
       <Button>
         Set up the partner programme for this account and its subsidiaries
       </Button>
@@ -67,6 +71,28 @@ export const Open: Story = {
     </OverflowMenu>
   ),
   play: openPanel,
+};
+
+// A `button` face: a worded dropdown beside other buttons, its chevron last.
+export const ButtonFace: Story = {
+  render: () => (
+    <OverflowMenu
+      label="Setup"
+      text="Setup"
+      face="button"
+      icon={<ChevronDown aria-hidden="true" />}
+    >
+      <Button>Targets</Button>
+      <Button>Metric definitions</Button>
+      <Button>Sales goals</Button>
+    </OverflowMenu>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Setup" }),
+    );
+    await screen.findByRole("button", { name: "Metric definitions" });
+  },
 };
 
 // A pending item leads with its busy mark, and every other label keeps the
@@ -80,6 +106,42 @@ export const WithAnItemInFlight: Story = {
     </OverflowMenu>
   ),
   play: openPanel,
+};
+
+// A phone on its side caps the panel, which scrolls. A `busyLabel` or `reason`
+// puts its button in a wrapper, and every row still keeps the 24px WCAG target.
+export const CappedByAShortWindow: Story = {
+  render: () => (
+    <OverflowMenu label="More actions">
+      <Button>Edit</Button>
+      <Button>Merge with…</Button>
+      <Button>Share</Button>
+      <Button>Full history</Button>
+      <Button busyLabel="Saving…">Change close date</Button>
+      <Button busyLabel="Saving…">Change owner</Button>
+      <Button reason="An archived deal takes no writes.">Change amount</Button>
+      <Button>Move to stage</Button>
+      <Button>Mark won</Button>
+      <Button>Mark lost</Button>
+      <Button>Export</Button>
+      <Button variant="danger">Archive</Button>
+    </OverflowMenu>
+  ),
+  globals: { viewport: { value: "phoneOnItsSide" } },
+  tags: ["uat-phone-on-its-side"],
+  play: async (context) => {
+    await openPanel?.(context);
+    const panel = screen
+      .getByRole("button", { name: "Edit" })
+      .closest(".overflow-menu-items");
+    await expect(panel?.scrollHeight).toBeGreaterThan(panel?.clientHeight ?? 0);
+    for (const name of ["Change close date", "Change owner", "Change amount"]) {
+      const row = screen.getByRole("button", { name });
+      await expect(row.getBoundingClientRect().height).toBeGreaterThanOrEqual(
+        24,
+      );
+    }
+  },
 };
 
 // Inside a drawer the panel opens over the drawer, where a pointer reaches it.
@@ -115,4 +177,49 @@ export const InsideADrawerPhone: Story = {
   ...InsideADrawer,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+// A pick in a list an item opened closes the menu too (`useCloseOverflowMenu`).
+function MoveToStage() {
+  const closeMenu = useCloseOverflowMenu();
+  return (
+    <ListPopover
+      label="Move to stage"
+      title="Move to stage"
+      searchLabel="Pick a stage"
+      options={[
+        { id: "qualified", name: "Qualified" },
+        { id: "proposal", name: "Proposal" },
+        { id: "won", name: "Won" },
+      ]}
+      selected="qualified"
+      onPick={(_stage, done) => {
+        done();
+        closeMenu();
+      }}
+    />
+  );
+}
+
+export const WithAPickInANestedList: Story = {
+  render: () => (
+    <OverflowMenu label="More actions">
+      <MoveToStage />
+      <Button>Merge with…</Button>
+      <Button variant="danger">Archive</Button>
+    </OverflowMenu>
+  ),
+  play: async ({ canvasElement }) => {
+    const trigger = await within(canvasElement).findByRole("button", {
+      name: "More actions",
+    });
+    await userEvent.click(trigger);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Move to stage" }),
+    );
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(await screen.findByRole("option", { name: "Won" }));
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await expect(trigger).toHaveFocus();
+  },
 };

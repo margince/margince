@@ -275,7 +275,15 @@
   place-items: center;
   z-index: 50;
 }
+/* Every dialog and drawer is drawn on the page card's ground: its rung is pinned
+   in the ladder. */
+/* The box takes focus only when it holds nothing else to land on. It is not a
+   control, so it draws no ring; the first Tab reaches the close door, which does. */
+.modal:focus {
+  outline: none;
+}
 .modal {
+  background-color: var(--ground);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
   padding: 22px;
@@ -335,6 +343,39 @@
   padding-inline-end: calc(
     var(--modal-corner, var(--controlHeight)) +
     var(--space-4)
+  );
+  min-block-size: var(--modal-close-reason-clearance, 0);
+}
+/* A title with a mark: the line clears the corner, and the mark follows the
+   title's last word instead of the padding the corner rule gives a heading.
+   The line keeps the title's own space below it. */
+.modal > .drawer-head > .drawer-head-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline-end: calc(
+    var(--modal-corner, var(--controlHeight)) +
+    var(--space-4)
+  );
+}
+.modal > .drawer-head > .drawer-head-line:has(> .modal-title) {
+  margin-bottom: var(--space-3);
+}
+.modal
+  > .drawer-head
+  > .drawer-head-line
+  > :is(h1, h2, h3, .modal-title):first-child {
+  margin-block: 0;
+  padding-inline-end: 0;
+}
+/* A close control with a reason hangs up to two caption lines under the
+   button, so the first line of content starts below them. */
+.modal:has(> .modal-close .btn-with-reason) {
+  --modal-close-reason-clearance: calc(
+    var(--controlHeight) +
+    var(--space-1) +
+    var(--space-8)
   );
 }
 /* An expandable drawer has Expand beside the X, and its title clears both. A
@@ -399,21 +440,14 @@
   }
 }
 
-/* The right-anchored drawer, anchored to the trailing edge so the record
-   behind stays legible as context.
-
-   The drawer FLOATS rather than being welded to the edge: one --space-4 gap on
-   its three outer sides, so the scrim runs all the way round it and the record
-   behind reads as a page the drawer is sitting ON rather than a page it has
-   been cut out of. The gap is paid by the overlay, which already spans the
-   viewport — a margin on the drawer itself would have to be subtracted from
-   every height and width rule below, four of them, each a chance to disagree. */
+/* The trailing-edge drawer floats one --cardInset clear of the window, so it
+   sits on the record behind; the overlay pays the gap, not each size rule. */
 .overlay-right {
   place-items: stretch end;
-  padding: var(--space-4);
+  padding: var(--cardInset);
 }
 .modal-drawer {
-  width: min(var(--drawerWidth), calc(100vw - var(--space-4) * 2));
+  width: min(var(--drawerWidth), calc(100vw - var(--cardInset) * 2));
   /* The glass less the gap it floats in, as a LENGTH, and it has to be one.
      `height: 100%` is 100% of the overlay's grid row, and that row is
      auto-sized: it stretches to the TALLER of the viewport and the drawer's own
@@ -422,10 +456,9 @@
      glass — where the clip below put it permanently out of reach, because the
      scrolling band inside had been given nothing to scroll. A percentage cannot
      bound a box whose own content is what sizes the thing it is a percentage
-     OF. The `--space-4` here is the same gap `.overlay-right` pays as padding
-     above; the two are one measurement and have to move together. */
-  height: calc(100dvh - var(--space-4) * 2);
-  max-height: calc(100dvh - var(--space-4) * 2);
+     OF. */
+  height: calc(100dvh - var(--cardInset) * 2);
+  max-height: calc(100dvh - var(--cardInset) * 2);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
   padding: var(--space-5);
@@ -444,6 +477,7 @@
   flex-direction: column;
 }
 .modal-drawer:has(> .drawer-head) > .drawer-body {
+  position: relative;
   flex: 1;
   min-block-size: 0;
   overflow-y: auto;
@@ -456,7 +490,7 @@
 /* The READING drawer: its bands are sticky so close and commit stay in reach
    however long the body runs. */
 .modal-drawer-wide {
-  width: min(var(--drawerReadingWidth), calc(100vw - var(--space-4) * 2));
+  width: min(var(--drawerReadingWidth), calc(100vw - var(--cardInset) * 2));
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -465,7 +499,7 @@
    intent's width. After the intents' widths, which it replaces, and before the
    phone sheet, which replaces it. */
 .modal-drawer-window {
-  width: min(var(--drawerWindowWidth), calc(100vw - var(--space-4) * 2));
+  width: min(var(--drawerWindowWidth), calc(100vw - var(--cardInset) * 2));
 }
 /* In a dialog the stack's gap is the only space between its rows; a row's own
    margin would add to it. Declared before `.modal .actions`, so its margin wins. */
@@ -523,6 +557,7 @@
       :has(> .form-stack:not(.drawer-body) + .actions)
     )
     > .form-stack:where(:not(.drawer-body)) {
+    position: relative;
     flex: 0 1 auto;
     min-block-size: 0;
     overflow-y: auto;
@@ -679,16 +714,16 @@
     transform: scale(0.98);
   }
 }
-/* Past its own trailing edge AND past the gap it floats in, or the last
-   --space-4 of the drawer sits on the glass before it has started to move. */
+/* Past its own trailing edge AND past the gap it floats in, or the drawer's
+   last strip sits on the glass before it has started to move. */
 @keyframes drawer-arrive {
   from {
-    transform: translateX(calc(100% + var(--space-4)));
+    transform: translateX(calc(100% + var(--cardInset)));
   }
 }
 @keyframes drawer-leave {
   to {
-    transform: translateX(calc(100% + var(--space-4)));
+    transform: translateX(calc(100% + var(--cardInset)));
   }
 }
 
@@ -739,7 +774,7 @@
 .actions-split > .btn:last-child {
   border-start-start-radius: 0;
   border-end-start-radius: 0;
-  border-inline-start: 1px solid var(--bgElevated);
+  border-inline-start: 1px solid var(--bgField);
   padding-inline: var(--space-2);
 }
 
@@ -753,11 +788,13 @@
 .modal .actions:has(.btn-with-reason) > .actions-pair {
   align-items: flex-start;
 }
-.modal .actions .btn-with-reason {
+.modal .actions .btn-with-reason,
+.modal-close .btn-with-reason {
   align-items: flex-end;
   max-inline-size: 24ch;
 }
-.modal .actions .btn-with-reason > .t-caption {
+.modal .actions .btn-with-reason > .t-caption,
+.modal-close .btn-with-reason > .t-caption {
   text-align: end;
 }
 
@@ -781,6 +818,12 @@
      `anywhere`, not `break-word`: only it lowers the min-content size, so a
      flex or grid parent can shrink instead of being pushed off the page. */
   overflow-wrap: anywhere;
+}
+/* In a table a name keeps its words whole: an auto-sized column takes the
+   cell's min-content, and `anywhere` drops it to one letter. A table too wide
+   for its box scrolls; a folded row caps the name at the row's width. */
+.table td .entity-link {
+  overflow-wrap: break-word;
 }
 .entity-link:hover {
   text-decoration: underline;
@@ -818,13 +861,13 @@
   border: 1px solid var(--groundEdge);
   margin: 0;
   display: inline-flex;
-  /* An unwrapped inline-flex does not shrink: it sets its own minimum width and
-     pushes whatever contains it. The company record's tab strip is seven
-     options — measured 543px inside a 374px column at 390px, which is the whole
-     of that page's horizontal overflow, and the record page is the one every
-     other surface is meant to look like. A closed option set is exactly the
-     thing that CAN take a second line, so it does. */
+  /* A second row only once the words themselves cannot share one: a strip on
+     two rows reads as two controls. */
   flex-wrap: wrap;
+  /* A set size, so a host that stretches its children cannot pull the track
+     past its options. Each row of a wrapped strip fills it, by the rule below. */
+  inline-size: fit-content;
+  max-inline-size: 100%;
   background: var(--bgChip);
   color: var(--textPrimary);
   border-radius: var(--r-sm);
@@ -839,7 +882,13 @@
      chip and the mark are laid on the word's line rather than under it, and
      `align-items` is what holds all three on one centre line. */
   display: inline-flex;
+  /* Not an `auto` basis: a narrow row would then shrink each segment in
+     proportion to its label rather than equally. */
+  flex: 1 1 0;
+  max-inline-size: max-content;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   /* Transparent, so an unpressed option is read on the TRACK's --bgChip and
      takes the chip's ink accordingly. The pressed one below lifts onto its own
      --bgElevated and answers to that instead. */
@@ -850,13 +899,10 @@
   /* Unselectable, for `.checkfield`'s reason. */
   user-select: none;
 }
-/* A phone is where the strip wraps: each line's options then share its width,
-   so no option sits alone on a half-empty line. */
-@media (max-width: 720px) {
-  .segmented button {
-    flex: 1 1 auto;
-    justify-content: center;
-  }
+/* Every segment on a wrapped row stops at its cap, so the row would end short
+   of the track. The component marks a strip once it wraps. */
+.segmented[data-wrapped] button {
+  max-inline-size: none;
 }
 .segmented button:hover:where(:not(:disabled)) {
   background: var(--groundHover);
@@ -878,9 +924,9 @@
   display: inline-block;
   width: 5px;
   height: 5px;
+  flex-shrink: 0;
   margin-left: 5px;
   border-radius: 50%;
-  corner-shape: round;
   background: var(--accent);
 }
 /* Keyboard focus reads an accent-token ring (matches .input/.textarea) rather
@@ -972,13 +1018,21 @@
   text-align: start;
 }
 
+/* Not `display: flex`: a cap stands inside a sentence (kbd.stories.tsx), and a
+   block box would break the line around it. */
 .kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--space-5);
+  height: var(--space-5);
+  padding: 0 var(--space-1);
+  font: var(--fontKeycap);
   background: var(--bgChip);
   color: var(--textPrimary);
   border: 1px solid var(--borderStrong);
   border-bottom-width: 2px;
   border-radius: var(--r-xs);
-  padding: 1px 5px;
 }
 
 /* The section's head: its title, and the verbs that act on it at the far end.
@@ -1077,8 +1131,8 @@
 }
 .recordpicker-option {
   width: 100%;
-  text-align: left;
-  /* The name with its detail line beneath it, both from the left edge. */
+  text-align: start;
+  /* The name with its detail line beneath it, both from the start edge. */
   flex-direction: column;
   align-items: flex-start;
   gap: 0;
@@ -1215,9 +1269,12 @@ span.error-line {
   justify-content: flex-end;
 }
 
-/* A dialog's own heading, where the content has no SectionHeader of its own. */
+/* A dialog's own heading, where the content has no SectionHeader of its own.
+   A title can be data, such as a role name with no space in it, so it breaks
+   anywhere rather than running under the close control. */
 .modal-title {
   margin-bottom: var(--space-3);
+  overflow-wrap: anywhere;
 }
 
 /* Group divider inside a form (create.form.tsx RecordFormBody): sets custom fields
@@ -1245,7 +1302,7 @@ span.error-line {
 .input {
   font: inherit;
   color: inherit;
-  background: var(--bgElevated);
+  background: var(--bgField);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-control);
   padding: var(--inputPaddingY) var(--inputPaddingX);
@@ -1370,7 +1427,7 @@ span.error-line {
      than the bare one under it in the same form is the same field twice. */
   padding-inline: var(--inputPaddingX);
   min-block-size: var(--inputHeight);
-  background: var(--bgElevated);
+  background: var(--bgField);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-well);
@@ -1570,6 +1627,7 @@ span.error-line {
 .input-icon-flush .input {
   border: 0;
   background: transparent;
+  box-shadow: none;
   border-radius: 0;
   height: auto;
   padding: 0 0 0 24px;
@@ -1597,7 +1655,7 @@ span.error-line {
 .textarea {
   font: inherit;
   color: inherit;
-  background: var(--bgElevated);
+  background: var(--bgField);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   /* The field's own insets, so a textarea and the input above it start their
@@ -1750,6 +1808,8 @@ span.error-line {
   width: 14px;
   height: 14px;
   flex: none;
+  /* Centred on the summary's first line, also where a summary aligns to start. */
+  margin-block: calc((1lh - 14px) / 2);
 }
 .disclosure-body {
   margin-top: var(--space-3);
@@ -1832,7 +1892,6 @@ span.error-line {
   padding-inline: var(--space-2) var(--space-3);
   gap: var(--space-1);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
 }
 .overflow-menu-labelled[aria-busy="true"] > svg:not(.busy-mark) {
@@ -1863,8 +1922,13 @@ span.error-line {
   z-index: 35;
   /* The menu anatomy's floor (tokens.css; the note on `.lt-menu` in
      listtable.css is where it is spelled out), not a width of this panel's own:
-     a menu that states its own is the second answer this token replaced. */
-  min-inline-size: var(--menuMinInlineSize, 250px);
+     a menu that states its own is the second answer this token replaced. It
+     gives way to the viewport term of the ceiling below, which it would
+     otherwise win over. */
+  min-inline-size: min(
+    var(--menuMinInlineSize, 250px),
+    calc(100vw - 2 * var(--space-3))
+  );
   /* On a 390px screen, or at high zoom, a menu that only states a minimum
      grows the page instead of itself: the panel goes off the right edge and
      takes its actions with it. The desktop ceiling is the OTHER half of the
@@ -2122,6 +2186,24 @@ span.error-line {
 ) {
   color: var(--textSecondary);
 }
+/* The same words in a strip folded to rows (statstrip.css, 40rem): a word set
+   at the figure's size outweighed every number beside it. */
+@container (max-width: 40rem) {
+  .stat-strip .stat-card-narrow-row > .stat-card-value[data-word] {
+    font: var(--fontBodyLarge);
+    font-weight: var(--fontWeightMedium);
+  }
+  .stat-strip
+    .stat-card-narrow-row
+    > .stat-card-value[data-word]:not(
+      .stat-card-success,
+      .stat-card-info,
+      .stat-card-warning,
+      .stat-card-danger
+    ) {
+    color: var(--textSecondary);
+  }
+}
 .stat-strip[data-lead] .stat-card-basis::before {
   font: var(--fontHeadingXXSmall);
 }
@@ -2320,10 +2402,11 @@ span.error-line {
 }
 /* The ring goes round the CARD, because the card is what the press lands on.
    Around the words alone it drew a keyboard reader a target an inch from the
-   one their Enter would hit. */
+   one their Enter would hit. Inside its edge: a sheet or strip that clips at
+   the card's edge would cut a ring drawn outside it. */
 .stat-card:has(.stat-card-open:focus-visible) {
   outline: var(--focus-ring);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 /* And the words take the TRANSPARENT ring, which is what pairs with the card's:
    the platform's own outline would otherwise draw a second, off-palette box
@@ -2375,7 +2458,6 @@ span.error-line {
   display: block;
   block-size: 4px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgHover);
   overflow: hidden;
 }
@@ -2484,6 +2566,11 @@ span.error-line {
    telling the reader what is choosable. */
 .segmented button:disabled {
   cursor: not-allowed;
+}
+/* A refused option is struck through, as the calendar draws a refused day. It
+   keeps the track's ink, the one the contrast gate measures on --bgChip. */
+.segmented button[data-refused] {
+  text-decoration: line-through;
 }
 
 /* The two chip-shaped links, and the disclosure and table rows beside them. All

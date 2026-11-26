@@ -15,7 +15,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const sessionLeaseCleanupTimeout = 5 * time.Second
+// ErrSessionBudgetBusy is capacity pressure, so callers postpone without failing work.
+var ErrSessionBudgetBusy = errors.New("pg: the session lease budget is busy")
+
+// SessionLeaseCleanupTimeout bounds cleanup after the execution was canceled.
+const SessionLeaseCleanupTimeout = 5 * time.Second
 
 type (
 	sessionBudgetKey struct{}
@@ -148,8 +152,12 @@ func (l *SessionLease) releaseKey(ctx context.Context, key sessionKey) error {
 }
 
 func (l *SessionLease) discard(ctx context.Context) {
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), sessionLeaseCleanupTimeout)
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), SessionLeaseCleanupTimeout)
 	defer cancel()
+	l.discardBounded(ctx)
+}
+
+func (l *SessionLease) discardBounded(ctx context.Context) {
 	conn := l.conn.Hijack()
 	l.conn = nil
 	if err := conn.Close(ctx); err != nil {
@@ -179,12 +187,12 @@ func (l *SessionLease) Close(ctx context.Context) {
 	if l.conn == nil {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), sessionLeaseCleanupTimeout)
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), SessionLeaseCleanupTimeout)
 	defer cancel()
 	for _, key := range slices.Backward(l.keys) {
 		if err := l.releaseKey(ctx, key); err != nil {
 			l.log.WarnContext(ctx, "releasing a session lease; closing its connection", "err", err)
-			l.discard(ctx)
+			l.discardBounded(ctx)
 			return
 		}
 	}

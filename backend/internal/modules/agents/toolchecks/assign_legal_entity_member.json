@@ -1,0 +1,11 @@
+{
+  "verb": "assign_legal_entity_member",
+  "checks": [
+    "legal_entity.update",
+    "user_admin.update"
+  ],
+  "takes": [
+    "legal_entity",
+    "user"
+  ]
+}

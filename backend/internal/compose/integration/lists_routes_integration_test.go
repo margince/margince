@@ -11,6 +11,7 @@ package integration
 // lists, the company page and the export each narrowed to a list.
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -51,8 +52,8 @@ func mustCall(t *testing.T, e *apptest.AppEnv, method, path string, body any, wa
 func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
 	e, _ := listsApp(t, true)
 	var a, b, company AnyMap
-	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Route Alpha"}, http.StatusCreated, &a)
-	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Route Beta"}, http.StatusCreated, &b)
+	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Route Alpha"}, http.StatusCreated, &a)
+	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Route Beta"}, http.StatusCreated, &b)
 	mustCall(t, e, "POST", "/v1/companies", AnyMap{"display_name": "Route Account", "source": "manual"}, http.StatusCreated, &company)
 
 	var live, short listWire
@@ -72,9 +73,15 @@ func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
 	mustCall(t, e, "POST", "/v1/lists/"+live.ID+"/members", AnyMap{
 		"entity_type": "contact", "entity_id": a["id"],
 	}, http.StatusUnprocessableEntity, nil)
+	var twice, archived struct {
+		Code string `json:"code"`
+	}
 	mustCall(t, e, "POST", "/v1/lists/"+short.ID+"/members", AnyMap{
 		"entity_type": "contact", "entity_id": a["id"],
-	}, http.StatusConflict, nil)
+	}, http.StatusConflict, &twice)
+	if twice.Code != "already_on_list" {
+		t.Fatalf("a record added twice answered code %q, want already_on_list", twice.Code)
+	}
 	mustCall(t, e, "POST", "/v1/lists/"+short.ID+"/members", AnyMap{
 		"entity_type": "company", "entity_id": company["id"],
 	}, http.StatusUnprocessableEntity, nil)
@@ -82,19 +89,24 @@ func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
 		"entity_type": "contact", "entity_id": a["id"],
 	}, http.StatusNotFound, nil)
 
-	// Members page by page, of both kinds.
+	// Members page by page, of both kinds. A cursor continues only the list
+	// that minted it.
+	minted := map[string]string{}
 	for _, id := range []string{short.ID, live.ID} {
 		var first, second pageWire
 		mustCall(t, e, "GET", "/v1/lists/"+id+"/members?limit=1", nil, http.StatusOK, &first)
 		if len(first.Data) != 1 || !first.Page.HasMore || first.Page.NextCursor == nil {
 			t.Fatalf("list %s first page = %+v, want one member and a cursor", id, first)
 		}
+		minted[id] = *first.Page.NextCursor
 		mustCall(t, e, "GET", "/v1/lists/"+id+"/members?limit=1&cursor="+*first.Page.NextCursor, nil, http.StatusOK, &second)
 		if len(second.Data) != 1 || second.Data[0]["entity_id"] == first.Data[0]["entity_id"] {
 			t.Fatalf("list %s second page = %+v", id, second)
 		}
 	}
 	mustCall(t, e, "GET", "/v1/lists/"+short.ID+"/members?cursor=not-a-cursor", nil, http.StatusUnprocessableEntity, nil)
+	mustCall(t, e, "GET", "/v1/lists/"+short.ID+"/members?cursor="+minted[live.ID], nil, http.StatusUnprocessableEntity, nil)
+	mustCall(t, e, "GET", "/v1/lists/"+live.ID+"/members?cursor="+minted[short.ID], nil, http.StatusUnprocessableEntity, nil)
 
 	// Why, for both kinds.
 	var liveWhy, chosenWhy AnyMap
@@ -138,7 +150,10 @@ func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
 	mustCall(t, e, "DELETE", "/v1/lists/"+short.ID, nil, http.StatusOK, nil)
 	mustCall(t, e, "POST", "/v1/lists/"+short.ID+"/members", AnyMap{
 		"entity_type": "contact", "entity_id": b["id"],
-	}, http.StatusConflict, nil)
+	}, http.StatusConflict, &archived)
+	if archived.Code != "conflict" {
+		t.Fatalf("an add to an archived list answered code %q, want the plain conflict", archived.Code)
+	}
 	mustCall(t, e, "POST", "/v1/lists/"+short.ID+"/restore", nil, http.StatusOK, nil)
 	mustCall(t, e, "POST", "/v1/lists/"+short.ID+"/restore", nil, http.StatusConflict, nil)
 
@@ -214,7 +229,7 @@ func TestACompanysShortlistsAndTheOtherRecordListsNarrowByList(t *testing.T) {
 func TestTheAgentsListModesAnswerAsTheRoutesDo(t *testing.T) {
 	e, agent := listsApp(t, true)
 	var contact AnyMap
-	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Agent Pick"}, http.StatusCreated, &contact)
+	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Agent Pick"}, http.StatusCreated, &contact)
 	var created struct {
 		Result listWire `json:"result"`
 	}
@@ -259,5 +274,50 @@ func TestTheAgentsListModesAnswerAsTheRoutesDo(t *testing.T) {
 		for _, call := range calls {
 			agent.CallRefused(t, tool, call)
 		}
+	}
+}
+
+// An agent pages a filter preview with the cursor each page answers, and the
+// pages hold every match once. A cursor read under another filter is refused.
+func TestAnAgentPagesAFilterPreview(t *testing.T) {
+	e, agent := listsApp(t, true)
+	for i := range 3 {
+		mustCall(t, e, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": fmt.Sprintf("Preview Page %d", i)}, http.StatusCreated, nil)
+	}
+	definition := map[string]any{"field": "name", "op": "contains", "value": "Preview Page"}
+	seen := map[string]bool{}
+	cursor := ""
+	for page := range 5 {
+		call := map[string]any{"mode": "preview", "entity_type": "contact", "definition": definition, "limit": 1}
+		if cursor != "" {
+			call["cursor"] = cursor
+		}
+		var got struct {
+			Result struct {
+				Rows       []map[string]any `json:"rows"`
+				Truncated  bool             `json:"truncated"`
+				NextCursor *string          `json:"next_cursor"`
+			} `json:"result"`
+		}
+		agent.CallOK(t, "read_lists", call).JSON(t, &got)
+		if got.Result.Truncated != (got.Result.NextCursor != nil) {
+			t.Fatalf("page %d truncated=%v with next_cursor %v; the two must agree", page, got.Result.Truncated, got.Result.NextCursor)
+		}
+		for _, row := range got.Result.Rows {
+			seen[fmt.Sprint(row["id"])] = true
+		}
+		if got.Result.NextCursor == nil {
+			break
+		}
+		if cursor == "" {
+			agent.CallRefused(t, "read_lists", map[string]any{
+				"mode": "preview", "entity_type": "contact", "limit": 1, "cursor": *got.Result.NextCursor,
+				"definition": map[string]any{"field": "name", "op": "contains", "value": "Another"},
+			})
+		}
+		cursor = *got.Result.NextCursor
+	}
+	if len(seen) != 3 {
+		t.Fatalf("the pages held %d distinct matches, want all 3: %v", len(seen), seen)
 	}
 }

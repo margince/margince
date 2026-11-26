@@ -77,12 +77,14 @@ func newSQLCensus(dir string) (*sqlCensus, error) {
 	return &sqlCensus{seed: maphash.MakeSeed(), seen: map[censusKey]bool{}, out: out}, nil
 }
 
-// record runs inside a statementTracer hook, so three frames up is the pgx call
-// the product made. A nil census records nothing.
+// The size guard stays live without file capture, so latency runs avoid the
+// cost of resolving stacks and writing SQL.
 func (c *sqlCensus) record(sql string) {
+	observeStatementSize(sql)
 	if c == nil || len(sql) < CensusMinBytes {
 		return
 	}
+	// The tracer calls record inside its hook; three frames reach the pgx call.
 	var pcs [64]uintptr
 	n := runtime.Callers(3, pcs[:])
 	// Raw program counters and an in-memory hash key the pair. Resolving frames

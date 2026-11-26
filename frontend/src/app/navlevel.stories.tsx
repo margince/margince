@@ -23,6 +23,8 @@ import { useNavTip } from "./navtip";
 // the way the shell hands them.
 
 const RESTING = { collapsed: false, tip: null, onTip: () => {} };
+// The `.app` grid gives the rail its width, as it does in the product.
+const frame = (collapsed: boolean) => (collapsed ? "app" : "app railexpanded");
 const COLLAPSED = { collapsed: true, tip: null, onTip: () => {} };
 
 // The one section the app publishes is settings, and it is assembled from live
@@ -67,16 +69,18 @@ function level(
 ) {
   return () => (
     <StoryProviders>
-      <nav className={state.collapsed ? "rail collapsed" : "rail expanded"}>
-        <NavLevelView
-          level={which}
-          parent={parent}
-          counts={counts}
-          state={state}
-          onSelect={() => {}}
-          onWalkUp={() => {}}
-        />
-      </nav>
+      <div className={frame(state.collapsed)}>
+        <nav className={state.collapsed ? "rail collapsed" : "rail expanded"}>
+          <NavLevelView
+            level={which}
+            parent={parent}
+            counts={counts}
+            state={state}
+            onSelect={() => {}}
+            onWalkUp={() => {}}
+          />
+        </nav>
+      </div>
     </StoryProviders>
   );
 }
@@ -105,15 +109,17 @@ export const WithCounts: Story = {
 export const WithCountsGerman: Story = {
   render: () => (
     <StoryProviders locale="de">
-      <nav className="rail expanded">
-        <NavLevelView
-          level={primary}
-          counts={{ tasks: 1204, inbox: 12 }}
-          state={RESTING}
-          onSelect={() => {}}
-          onWalkUp={() => {}}
-        />
-      </nav>
+      <div className={frame(false)}>
+        <nav className="rail expanded">
+          <NavLevelView
+            level={primary}
+            counts={{ tasks: 1204, inbox: 12 }}
+            state={RESTING}
+            onSelect={() => {}}
+            onWalkUp={() => {}}
+          />
+        </nav>
+      </div>
     </StoryProviders>
   ),
 };
@@ -127,27 +133,33 @@ export const Collapsed: Story = {
   render: level(primary, COLLAPSED, { tasks: 1204, inbox: 12 }),
 };
 
-function LiveCollapsedRail({
+function LiveRail({
   which,
-}: Readonly<{ which: (typeof settings)[number] }>) {
+  collapsed = true,
+}: Readonly<{ which: (typeof settings)[number]; collapsed?: boolean }>) {
   const nav = useRef<HTMLElement | null>(null);
-  const state = useNavTip(true, nav);
+  const state = useNavTip(collapsed, nav);
   return (
     <StoryProviders>
-      <nav ref={nav} className="rail collapsed">
-        <NavLevelView
-          level={which}
-          state={state}
-          onSelect={() => {}}
-          onWalkUp={() => {}}
-        />
-      </nav>
+      <div className={frame(collapsed)}>
+        <nav
+          ref={nav}
+          className={collapsed ? "rail collapsed" : "rail expanded"}
+        >
+          <NavLevelView
+            level={which}
+            state={state}
+            onSelect={() => {}}
+            onWalkUp={() => {}}
+          />
+        </nav>
+      </div>
     </StoryProviders>
   );
 }
 
 export const CollapsedTipEscape: Story = {
-  render: () => <LiveCollapsedRail which={primary} />,
+  render: () => <LiveRail which={primary} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const [row] = canvas.getAllByRole("link");
@@ -160,6 +172,32 @@ export const CollapsedTipEscape: Story = {
     await userEvent.keyboard("{Escape}");
 
     await waitFor(() => expect(canvas.queryByRole("tooltip")).toBeNull());
+  },
+};
+
+/** An expanded row's tip says only its go-to keys: the label is already there. */
+export const GoToTip: Story = {
+  render: () => <LiveRail which={primary} collapsed={false} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    canvas.getByRole("link", { name: "Contacts" }).focus();
+    await waitFor(() =>
+      expect(canvas.getByRole("tooltip")).toHaveTextContent("G then C"),
+    );
+  },
+};
+
+/** Collapsed, the tip carries the label and the keys. */
+export const CollapsedGoToTip: Story = {
+  render: () => <LiveRail which={primary} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    canvas.getByRole("link", { name: "Contacts" }).focus();
+    await waitFor(() =>
+      expect(canvas.getByRole("tooltip")).toHaveTextContent(
+        "Contacts · G then C",
+      ),
+    );
   },
 };
 

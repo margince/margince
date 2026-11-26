@@ -31,6 +31,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/activitywhen"
+	"github.com/margince/margince/backend/internal/compose/momentaction"
 	"github.com/margince/margince/backend/internal/compose/receiptcopy"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -102,6 +103,7 @@ func (a *assembly) readSuggestions() error {
 	if err != nil {
 		return err
 	}
+	momentaction.MarkRefusedSuggestions(a.ctx, found)
 	a.out.Suggestions = &found
 	// Set together with the list, so the count is absent exactly when the section
 	// is. A zero on a section this read never computed would state "no further
@@ -118,7 +120,7 @@ func (a *assembly) readSuggestions() error {
 // decision rather than a consequence of how the blocks are arranged:
 //
 //  1. no_reply — a contact is waiting on us. Nothing else on the card is someone
-//     else's time.
+//     else's time. gone_dormant follows it: an account gone quiet as a whole.
 //  2. stalled_deal, longest idle first — money that has stopped moving.
 //  3. no_next_step — a gap in the plan, which the two above usually imply
 //     anyway, so it is the one worth losing when the card is full.
@@ -159,6 +161,7 @@ func candidateSuggestions(
 	if in.timeline && in.hasNewest {
 		found = appendIf(found, said.staleThread(companyID, now, in.loc, in.newest))
 	}
+	found = appendIf(found, goneDormantSuggestion(companyID, in))
 	if in.pipeline {
 		found = append(found, said.stalledDealSuggestions(in.open.Stalled)...)
 		if in.timeline {
@@ -244,16 +247,18 @@ func setAddTask(out *crmcontracts.Company360Suggestion, step nextStep) {
 //
 //nolint:staticcheck // ST1003: the field names mirror the oapi-codegen type this must assign to
 func NewSuggestionAction(kind crmcontracts.Company360SuggestionActionKind) *struct {
-	ActivityId *openapi_types.UUID                         `json:"activity_id,omitempty"`
-	DealId     *openapi_types.UUID                         `json:"deal_id,omitempty"`
-	Kind       crmcontracts.Company360SuggestionActionKind `json:"kind"`
-	Task       *crmcontracts.CreateTaskRequest             `json:"task,omitempty"`
+	ActivityId    *openapi_types.UUID                         `json:"activity_id,omitempty"`
+	BlockedReason *string                                     `json:"blocked_reason,omitempty"`
+	DealId        *openapi_types.UUID                         `json:"deal_id,omitempty"`
+	Kind          crmcontracts.Company360SuggestionActionKind `json:"kind"`
+	Task          *crmcontracts.CreateTaskRequest             `json:"task,omitempty"`
 } {
 	action := new(struct {
-		ActivityId *openapi_types.UUID                         `json:"activity_id,omitempty"`
-		DealId     *openapi_types.UUID                         `json:"deal_id,omitempty"`
-		Kind       crmcontracts.Company360SuggestionActionKind `json:"kind"`
-		Task       *crmcontracts.CreateTaskRequest             `json:"task,omitempty"`
+		ActivityId    *openapi_types.UUID                         `json:"activity_id,omitempty"`
+		BlockedReason *string                                     `json:"blocked_reason,omitempty"`
+		DealId        *openapi_types.UUID                         `json:"deal_id,omitempty"`
+		Kind          crmcontracts.Company360SuggestionActionKind `json:"kind"`
+		Task          *crmcontracts.CreateTaskRequest             `json:"task,omitempty"`
 	})
 	action.Kind = kind
 	return action

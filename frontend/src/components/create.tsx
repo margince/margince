@@ -5,22 +5,26 @@ export {
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useIdempotencyKey } from "../api/idempotencykey";
+import { awaitArrival } from "../design-system/arrivalfocus";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
-import {
-  ProblemError,
-  problemExistingId,
-  problemMessageOf,
-} from "../lib/problem";
+import type { RequiredGrant } from "../lib/capability";
+import { binding, shortcutTip } from "../lib/keymap";
+import { leaveCreateForm } from "../lib/listreturn";
+import { fromHere } from "../lib/navigatefrom";
+import { ProblemError, problemExistingId } from "../lib/problem";
 import { navigate, type Route, type Screen } from "../lib/router";
+import { useShortcutAria } from "../lib/shortcuts";
+import { useAddressWriters } from "../lib/urlstate";
+import { useActionRefusal, useMeSettled } from "../lib/writerefusal";
 import { catalogOfScreen, useSettledOpen } from "./create.dialog";
 import "./create.css";
 import "../design-system/querystates.css";
 
 // The shared create-record form: each screen declares its fields and keeps its
-// transport. The server validates: a 422's detail renders verbatim, unreworded.
+// transport. A refusal stands on the field it names, in the reader's words.
 import {
   type CreateField,
   type FormRows,
@@ -28,16 +32,19 @@ import {
   usePublishedValues,
 } from "./create.fields";
 import { RecordFormBody } from "./create.form";
-import { fieldRefusals } from "./create.refusals";
+import { type CreateConflict, fieldRefusals } from "./create.refusals";
 
 export { fieldControl } from "./create.controls";
 export {
+  answerless,
   type CreateField,
   type CreateFieldOption,
+  dayOutOfRange,
   type FormRow,
   type FormRows,
   fieldLabel,
   fieldOptions,
+  inlineTextKind,
   keepUnsubmitted,
   type SubField,
   submittedValues,
@@ -45,6 +52,7 @@ export {
   visibleFields,
 } from "./create.fields";
 export { RecordFormBody, SUBMIT_COPY, type SubmitIntent } from "./create.form";
+export type { CreateConflict } from "./create.refusals";
 
 // The rail's WROTE head for a create here (agentrail-copy.ts). Only the three
 // kinds a salesperson creates by hand have one; others leave the ticker silent.
@@ -77,7 +85,9 @@ export function useCreateRecord<Created extends { id: string }>({
   create: CreateTransport<Created>;
   invalidate: string;
   screen: Screen;
-  onDone: () => void;
+  // `session` is the form opening the save came from, so a caller can tell a
+  // late answer for a form already closed.
+  onDone: (session: number) => void;
   // The created record, for a caller that reports what landed. Runs before
   // onDone, so a caller can name the record in a toast while the form it came
   // from is still the thing on screen.
@@ -103,14 +113,22 @@ export function useCreateRecord<Created extends { id: string }>({
       values: Record<string, string>;
       rows: FormRows;
       idempotencyKey: string;
+      session: number;
       extra?: Record<string, unknown>;
     }) => create(values, rows, idempotencyKey, extra),
-    onSuccess: (created) => {
+    onMutate: fromHere,
+    onSuccess: (created, { session }, from) => {
+      // Asked before onDone, which may close the form's own address.
+      const opens = !stay && from.stillHere();
       queryClient.invalidateQueries({ queryKey: [invalidate] });
       onCreated?.(created);
-      onDone();
-      if (!stay) {
-        navigate({ screen, id: created.id });
+      onDone(session);
+      if (opens) {
+        // Focus is not on the new record's page, so its name takes it once
+        // that page mounts (design-system/arrivalfocus.ts).
+        const page = { screen, id: created.id };
+        awaitArrival(page);
+        navigate(page);
       }
     },
   });
@@ -125,7 +143,7 @@ export function CreateAction<Created extends { id: string }>({
   create,
   invalidate,
   screen,
-  startOpen = false,
+  listCreate,
   resolveExisting,
   stay = false,
   aboutId,
@@ -133,24 +151,36 @@ export function CreateAction<Created extends { id: string }>({
   onCreated,
   onValuesChange,
   testId,
-  reason,
+  requires,
+  refusedReason,
+  refusalId,
   link,
   refusalNotice,
+  conflict,
 }: Readonly<{
   label: string;
   fields: CreateField[];
+  // See CreateConflict.
+  conflict?: CreateConflict;
   // Draws the verb as a card's text link. See NewRecordButton.
   link?: boolean;
-  // Why this reader may not create, drawn beside the refused button. The verb
-  // stays visible, because a hidden create reads as "there is nothing to add".
-  reason?: string;
+  // The grant the create asks. Required, so no create opens a form its save
+  // would refuse: a seat without it sees the verb refused with the reason. The
+  // verb stays visible, because a hidden create reads as "there is nothing to
+  // add".
+  requires: RequiredGrant;
+  // A refusal the caller knows beside the grant, with its own sentence; it
+  // refuses the verb whatever the grant says.
+  refusedReason?: string;
+  // The id of a sentence already on the page saying why, for a header where
+  // several verbs are refused by one fact.
+  refusalId?: string;
   // The form's live answers, for a screen whose field list depends on them —
   // a dependent picker whose options only the server can narrow. See
   // usePublishedValues.
   onValuesChange?: (values: Record<string, string>) => void;
-  // The key is one per open dialog and per record. A repeat of the same save
-  // carries it, so a double press answers the first record. A POST that takes
-  // no Idempotency-Key ignores it.
+  // One key per attempt, renewed once the record exists or the dialog reopens.
+  // A double press answers the first record; a resend with `extra` takes a new key.
   create: CreateTransport<Created>;
   // A refusal this screen answers with its own verbs, or null for the
   // ordinary error line. `resend` sends the last submit again with `extra`.
@@ -161,7 +191,8 @@ export function CreateAction<Created extends { id: string }>({
   ) => ReactNode | null;
   invalidate: string;
   screen: Screen;
-  startOpen?: boolean;
+  // A list's form is its address `#/<screen>/new`, so closing it leaves that address.
+  listCreate?: Readonly<{ open: boolean }>;
   // `keepOpen` makes one save "saved, next" for capture in a run: the modal
   // empties, not closes. It implies `stay`: opening the record would end a run.
   keepOpen?: boolean;
@@ -182,39 +213,79 @@ export function CreateAction<Created extends { id: string }>({
   resolveExisting?: (code: string, id: string) => Route;
 }>) {
   const t = useT();
-  const [creating, setCreating] = useState(startOpen);
+  const grantRefusal = useActionRefusal(requires);
+  const refusal = refusedReason ?? grantRefusal;
+  const refused = refusal !== undefined;
+  const reason = refusalId === undefined ? refusal : undefined;
+  // No form opens before /me has settled: what it says decides the refusal.
+  const settled = useMeSettled();
+  const [creating, setCreating] = useState(listCreate?.open ?? false);
+  if (creating && refused) {
+    setCreating(false);
+  }
+  const writers = useAddressWriters();
+  // A refused create at its list's own address leaves it, as Cancel would,
+  // so the address does not keep promising a form.
+  const refusedAtAddress = refused && listCreate?.open === true;
+  useEffect(() => {
+    if (refusedAtAddress) {
+      leaveCreateForm(screen, writers);
+    }
+  }, [refusedAtAddress, screen, writers]);
   const shown = useSettledOpen(creating, catalogOfScreen(screen));
   // Counts this session's saves, which empties the form between them. Not a
   // boolean: two saves in a row must read as two distinct clears.
   const [saved, setSaved] = useState(0);
   const { key: idempotencyKey, renew } = useIdempotencyKey();
+  // Which opening of the form is on screen. A save that answers after its
+  // form was closed, or closed and opened again, must not close the new one.
+  const opening = useRef(0);
   const mutation = useCreateRecord({
     create,
     invalidate,
     screen,
     stay: stay || keepOpen,
     aboutId,
-    onDone: () => {
+    onDone: (session) => {
+      if (session !== opening.current) {
+        return;
+      }
       renew();
       if (keepOpen) {
         setSaved((n) => n + 1);
         return;
       }
-      setCreating(false);
+      close();
     },
     onCreated,
   });
+  function close() {
+    opening.current += 1;
+    setCreating(false);
+    if (listCreate) {
+      leaveCreateForm(screen, writers);
+    }
+  }
   const existing =
     mutation.error instanceof ProblemError
       ? problemExistingId(mutation.error.problem)
       : null;
-  const refused = fieldRefusals(mutation.error, fields, t);
+  const fieldRefused = fieldRefusals(
+    mutation.error,
+    fields,
+    t,
+    conflict,
+    mutation.variables?.values,
+  );
   const notice = mutation.isError
     ? refusalNotice?.(
         mutation.error,
         (extra) => {
           const last = mutation.variables;
-          if (last) mutation.mutate({ ...last, extra });
+          // Another body under the spent key is refused by the server.
+          if (last) {
+            mutation.mutate({ ...last, extra, idempotencyKey: renew() });
+          }
         },
         mutation.isPending,
       )
@@ -225,34 +296,43 @@ export function CreateAction<Created extends { id: string }>({
         label={label}
         onClick={() => {
           renew();
+          opening.current += 1;
+          // A refusal from an earlier opening is about words no longer there.
+          mutation.reset();
           setCreating(true);
         }}
         testId={testId}
         pending={creating && !shown}
         reason={reason}
+        reasonId={refused ? refusalId : undefined}
         link={link}
+        opensOnCreateKey={listCreate !== undefined}
       />
       <CreateRecordModal
         // A refusal that lands while the dialog is open closes it. A verb the
         // reader may no longer take must not stay one press from the server.
-        open={shown && reason === undefined}
-        onClose={() => setCreating(false)}
+        open={shown && settled && !refused}
+        onClose={close}
         title={label}
         fields={fields}
         pending={mutation.isPending}
         error={
-          mutation.isError && !refused.allPlaced
-            ? problemMessageOf(mutation.error, t)
-            : null
+          mutation.isError && !fieldRefused.allPlaced ? fieldRefused.rest : null
         }
-        fieldRefusals={refused.byField}
+        fieldRefusals={fieldRefused.byField}
+        refusedAt={mutation.isError ? mutation.submittedAt : undefined}
         existing={existing}
         resolveExisting={resolveExisting}
         notice={notice}
         resetToken={saved}
         onValuesChange={onValuesChange}
         onSubmit={(values, rows) =>
-          mutation.mutate({ values, rows: rows ?? {}, idempotencyKey })
+          mutation.mutate({
+            values,
+            rows: rows ?? {},
+            idempotencyKey,
+            session: opening.current,
+          })
         }
       />
     </>
@@ -265,7 +345,9 @@ export function NewRecordButton({
   testId = "new-record",
   pending,
   reason,
+  reasonId,
   link,
+  opensOnCreateKey = false,
 }: Readonly<{
   label: string;
   onClick: () => void;
@@ -276,14 +358,26 @@ export function NewRecordButton({
   testId?: string;
   pending?: boolean;
   reason?: string;
+  reasonId?: string;
+  opensOnCreateKey?: boolean;
 }>) {
+  const createKey = useShortcutAria("create");
+  const t = useT();
+  const keyShortcut = opensOnCreateKey ? createKey : undefined;
   return (
     <Button
       onClick={onClick}
       data-testid={testId}
       pending={pending}
       reason={reason}
+      reasonId={reasonId}
       variant={link ? "link" : undefined}
+      aria-keyshortcuts={keyShortcut}
+      title={
+        keyShortcut === undefined
+          ? undefined
+          : shortcutTip(label, binding("create").keys, t)
+      }
     >
       {link ? (
         label
@@ -304,6 +398,7 @@ export function CreateRecordModal({
   pending,
   error,
   fieldRefusals,
+  refusedAt,
   existing,
   resolveExisting,
   notice,
@@ -318,6 +413,7 @@ export function CreateRecordModal({
   pending: boolean;
   error: string | null;
   fieldRefusals?: ReadonlyMap<string, string>;
+  refusedAt?: number;
   existing?: { id: string; code: string } | null;
   resolveExisting?: (code: string, id: string) => Route;
   notice?: ReactNode;
@@ -373,6 +469,7 @@ export function CreateRecordModal({
       pending={pending}
       error={error}
       fieldRefusals={fieldRefusals}
+      refusedAt={refusedAt}
       existing={existing}
       resolveExisting={resolveExisting}
       notice={notice}
@@ -382,6 +479,7 @@ export function CreateRecordModal({
       }}
       onClose={onClose}
       intent="create"
+      resetToken={resetToken}
     />
   );
 }

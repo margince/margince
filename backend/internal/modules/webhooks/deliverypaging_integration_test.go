@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -44,6 +46,11 @@ func (e *contractVisEnv) seedDeliveries(t *testing.T, n int) (ids.UUID, []ids.UU
 		sub, e.user); err != nil {
 		t.Fatalf("seeding the subscription: %v", err)
 	}
+	t.Cleanup(func() {
+		if _, err := e.owner.Exec(context.Background(), `UPDATE webhook_subscription SET state='paused' WHERE id=@subscription`, pgx.StrictNamedArgs{"subscription": sub}); err != nil {
+			t.Errorf("pausing the fixture subscription: %v", err)
+		}
+	})
 	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
 	ordered := make([]ids.UUID, 0, n)
 	for i := range n {

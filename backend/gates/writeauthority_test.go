@@ -37,15 +37,12 @@ package gates
 //     a `read` share anyway — a gate that accepted it would read green over the
 //     defect it exists for.
 //
-// One probe family is deliberately outside the census, and the absence is not
-// an oversight: auth.EnsureLinkTarget and its attach-direction twin
-// auth.EnsureAttachTarget. They ask whether the caller may put this record in a
-// row — name a parent company, file an activity onto it, add a list member —
-// and "add" is not one authority: naming a record you can see from a row of
-// your own needs read, while hanging a child row onto somebody else's record
-// needs a share that is not read-only. Neither is write authority over the
-// record, which is what this census is about, so a site holding one of them is
-// not thereby a site holding this.
+// One probe family is outside the census: auth.EnsureLinkTarget and its
+// attach-direction twin auth.EnsureAttachTarget. They ask whether the caller
+// may put this record in a row. Naming a record you can see from your own row
+// needs read. Hanging a child row onto a record needs write authority over it,
+// which EnsureAttachTarget asks. Which callers of the read
+// probe may stay on it is attachauthority_test.go's census, not this one.
 //
 // The LIST predicates (auth.ScopeClauseFor, auth.VisiblePredicate) are IN the
 // census, and that is a correction rather than a flourish. A first draft left
@@ -100,16 +97,29 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
-	"internal/modules/activities:DeclineDeal":              "a decline changes the activity, behind its own write probe in lockForFilingChange. The deal only names what the message is not about and nothing on it changes; the visibility probe hides a deal the caller cannot see",
+	"internal/modules/contacts:memberMayReadTx":               "Asks whether some member of a shared mailbox's reader team may see the contact or lead before the mail is filed under it. Filing shared mail where its readers can find it is a read decision about the mail, and the record itself does not change.",
+	"internal/modules/contacts:visibleCompanyDomainsTx":       "Asks whether the caller may see an employer before the import test run reads its domains for the duplicate check. It decides what the batch is told, and no company changes.",
+	"internal/modules/contacts:ownerSeesCompanies":            "Asks whether the contact's OWNER may open the two companies an employer question names, so the card never shows them a name they could not read. It narrows what is staged; the accept writes through EnsureLinkTarget and the relationship writers, and no company changes.",
+	"internal/modules/capture:companyOfDomainTx":              "names the company a domain belongs to in a refusal, and only when the caller may read it. The write is a capture list entry; no company changes.",
+	"internal/modules/activities:ownCompanyTestScopes":        "Read scopes classify a meeting counterparty; the only possible mutation is on the activity. No company is changed.",
+	"internal/modules/activities:readableContactScope":        "Read scopes classify visible meeting participants. The outcome writer gates the activity separately and changes no contact.",
+	"internal/modules/activities:withReadablePreviewSubjects": "Decides which recipients' records a send preview may name. The preview commits nothing, and no contact or lead changes; the send itself is gated at staging.",
+
+	"internal/modules/contacts:LockInquiryLeadTx":          "holds the lead or contact a website inquiry names while its task is assigned, so the record and task lock in one order. Nothing on the record changes here; a lead owner change is gated in the assignment plan by auth.EnsureClaimable or auth.EnsureAssignable, and the visibility probe hides a record the caller cannot see",
+	"internal/modules/contacts:LockInquiryContactTx":       "holds the lead or contact a website inquiry names while its task is assigned, so the record and task lock in one order. Nothing on the record changes here; a lead owner change is gated in the assignment plan by auth.EnsureClaimable or auth.EnsureAssignable, and the visibility probe hides a record the caller cannot see",
+	"internal/modules/introductions:prepareAskRouteTx":     "the introduction writer names the contact and intermediary but changes neither. Create and Replace both write intro_request; the contact probes enforce disclosure, not authority to change either contact",
 	"internal/modules/activities:offeredDeals":             "reads which deals a deal question offered, to decline them on the message. Nothing on a deal changes; the scope only leaves out a deal the caller cannot see",
+	"internal/modules/commissions:accrueTx":                "the accrual references the deal and the partner company on a new ledger row and changes neither. The probe admits an archived row, because a win archived before it is priced still earns, and it answers ErrNotFound only for a row that no longer exists. The only caller is the system accrual consumer",
 	"internal/modules/activities:RecentTaskCompletions":    "Reads completion receipts and visible contact names; it changes no record. WritableTasks separately controls the offered Undo.",
 	"internal/modules/privacy:sarRetainedCopySections":     "This pure subject-export query builder uses read predicates only in SELECT subqueries over the subject contact and lead twins. It performs no database writes, even when a notice caller builds its sections inside a write transaction. Domain mutations retain their own write gates.",
 	"internal/modules/consent:holdReviewedContact":         "a source review writes the notice case, not the contact. When the answer records a meeting on the contact it takes auth.HoldWritableLive instead; this visibility probe only hides a contact the reviewer cannot see",
 	"internal/modules/consent:sourceContactReadable":       "resolves the evidence a reviewer picks for a notice case. The row that changes is the notice case, behind the privacy-request gate; nothing on the contact changes",
+	"internal/modules/consent:requireNoticeSourceRead":     "the contact page's source reads (NoticeSourceReviewsTx, ConfirmedNoticeSourceTx) write nothing. requireDSRAdmin takes its action as a parameter, so this walk reads the privacy_request admission as a possible write",
+	"internal/modules/contacts:refuseParentBelow":          "reads the chosen parent's ancestors only to word the refusal of a cycle, and writes none of them. The edited company is gated by auth.EnsureChangeable in readCompanyToEdit",
 	"internal/modules/initiatives:visibleRecords":          "narrows a pick or an exclusion to the records the caller may read. The row that changes is the initiative's, behind its own update gate and row scope; no lead or deal row changes",
 	"internal/modules/initiatives:carriedDeals":            "a read: the deals promoted from member leads, under the reader's own row scope; no lead or deal row changes",
 	"internal/modules/initiatives:memberRead":              "a read: the member list after a write, under the reader's own row scope. Nothing is written on a lead or deal",
-	"internal/modules/contacts:TransferRequestableTx":      "asks whether a colleague may ASK for a record they cannot change; it writes nothing on the record, and the move on accept passes auth.EnsureWritableLive as the owner",
+	"internal/modules/contacts:OwnerAskableTx":             "asks whether a colleague may ASK about a record they cannot change; it writes nothing on the record. A handover's move passes auth.EnsureWritableLive as the owner on accept, and an edit access share passes auth.EnsureCanGrant as the owner",
 	"internal/modules/deals:pendingMappingsOf":             "narrows which lost deals a mapping count or apply page reads to those the operator may see. Each write then asks auth.EnsureWritable on the deal (writeMappedLossReason) and skips one the operator may not write",
 	"internal/modules/deals:ListLegacyLossReasons":         "a read: the custom_field update gate names who may decide a mapping, and the deal scope clause narrows which lost deals' notes the list counts and shows. Nothing is written",
 	"internal/modules/contacts:attachToSettledVerdict":     "checks visibility of a concurrently settled employer before writing an inferred employment edge; no company row changes",
@@ -120,6 +130,11 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:ensureCompanyAndEmployment": "checks whether a domain-matched company may be named before attaching a contact. It changes no company row; the inferred edge uses the capture employment writer and its existing contact and seat locks",
 
 	"internal/modules/contacts:contactHoldsRefusal":            "asks whether the caller may SEE the contact that already holds a refused lead's key, so the 409 names it only to a caller who may read it. It changes no contact: the write it answers is the lead's, and that write is refused",
+	"internal/modules/activities:mayDecide":                    "asks whether the caller may SEE the target the suggestion names, because the answer names it and a target the caller cannot read is a suggestion they cannot decide. It changes no target: the decision writes one suggestion row, after EnsureActivityWritable has asked for write authority over the message it belongs to. The queue read asks the same, to list only rows the caller may decide.",
+	"internal/modules/activities:visibleTargetName":            "names a suggestion's target only when the caller may read it, for the queue read and the decision's answer. It changes no target; the decision's own gate is mayDecide.",
+	"internal/modules/recordlinks:mayRemove":                   "asks whether the caller may SEE the record a link ends on, which decides whether the link is the caller's to know of. It changes no record on that end: the delete removes one link row, after the record the link starts on passed EnsureWritable. The list read asks the same to set removable.",
+	"internal/modules/recordlinks:List":                        "the list read's own row gate on the record whose links it reads. It changes nothing; the gate reaches it because the read also answers removable through mayRemove.",
+	"internal/modules/recordlinks:nameOtherEnd":                "decides whether a listed link's other end is the caller's to see, so the read leaves out a link to a record they cannot open. It changes no record.",
 	"internal/modules/contacts:liveVisibleCompanies":           "the reader row scope over companies, which decides which company the lead's domain or name matches for this reader: the offer on a lead read, and the re-check under the link's lock that the requested company is still that match. It changes no company: the link writes only the lead's company_id",
 	"internal/modules/contacts:scopeOrAllRows":                 "reached from the partner stage list's write echo, where it narrows which partners the returned count includes to those the caller may see. It changes no company or partner row",
 	"internal/modules/contacts:linkLeadCompanyTx":              "asks whether the caller may SEE the company a lead is linked to, before any lock. It changes no company: the one write is the lead's company_id, and ensureLinkableCompany asks EnsureLinkTarget again under the lock",
@@ -179,7 +194,6 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	"internal/modules/weeklyplan:ensureLinkVisible": "the record a commitment is ABOUT. That row is written NOTHING — the mutation is a new weekly_plan_commitment, gated by weekly_plan:update and resolved from the caller so it can only ever be their own week — and the probe decides one thing: whether this rep may NAME that record on their plan. Naming is a read, the same ruling introductions:Create makes above: requiring write authority over a contact before a rep may commit to CALLING them would mean a rep could only promise things about records they own, which is the opposite of what a plan is for. The liveness half is load-bearing and tested: a commitment must not go on naming a contact erasure anonymized in place",
 	"internal/modules/introductions:Record":         "the contact a recorded introduction is ABOUT. The row is not written — the mutation is a new intro_request, gated by introduction:create and by the caller being one of the two colleagues — and the probe decides one thing: whether this rep may NAME that contact. Naming is a read, the same ruling introductions:Create makes. The liveness half is load-bearing and tested: a recorded introduction must not name a contact that is archived",
 	"internal/modules/introductions:load":           "the contact of a RECORDED introduction read by a colleague who is not one of its two parties. Nothing about the contact changes; the writers load feeds (Decide, Complete, Cancel) refuse a recorded row with a conflict and write nothing. Anyone who can read the contact can read the recorded fact, so the read probe is the right one",
-	"internal/modules/introductions:Create":         "the contact an ask is ABOUT, and the intermediary it routes through. Neither row is written — the mutation is a new intro_request, gated by introduction:create — and both probes decide one thing: whether this rep may NAME that contact to a colleague. Naming is a read, so the read probe is the right one; requiring write authority over a contact before you may ask a colleague about them would mean a rep could only request introductions to contacts they own, which is the opposite of what the surface is for. The liveness half is load-bearing and tested: an ask must not name a contact erasure anonymized in place",
 
 	"internal/modules/consent:ensureWithdrawalCredentialForSendTx": "the recipient of a marketing send, probed for the one thing this door is for: may this caller be given a link that STOPS that contact's mail. It names nobody — bindWithdrawalSubject resolves the subject from the ADDRESS the message is going to — and the send is already authorized against that recipient by the consent gate and by the activity it creates, so the probe asserts no new authority over a record the mail is reaching anyway. Requiring write authority here refused the mint for every sender without contact:update, an agent holding activity:create + contact:read among them, and refusing it does not stop the message: it ships with no working List-Unsubscribe URL, which is worse for the subject than the share this admits. The authority is also strictly less than the SIBLING mint on this same path takes: PreferenceTokenForEmail asks contact:read and this same visible probe for a credential that reads a consent state, withdraws AND grants, where this one can only stop mail. The door that lets a caller NAME a subject is EnsureWithdrawalCredentialTx beside it, and that one keeps contact:update and the writable probe — a read share is not authority to mint somebody's opt-out. Unexported, so the weaker probe cannot be reached by naming a subject. The liveness half is load-bearing and tested: LockSubjectLive holds the row so a mint racing an Art. 17 erasure cannot write a fresh capability, carrying the plaintext address, for a subject just certified erased",
 	"internal/modules/capture:findLeadCollision":                   "the captured lead's incumbent probe, and its answer is to SKIP: an incumbent the granting human cannot see is neither merged into nor written around, so the record is refused and the address left for someone with the scope to act. Nothing is written to that lead on this path — the merge a human may later confirm goes through the approvals engine, which takes its own authority. Widening to write authority would turn a colleague's read share into a reason to capture a SECOND lead for the same address, forking the record across scopes, which is the outcome the skip exists to prevent",
@@ -190,10 +204,9 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:readAnchorForComparison":  "the site-read comparison's CURRENT-STATE read, rendered beside the proposed one for a human to judge. The confirmation that may follow writes through resolveOrCreateAnchor, which takes the write-authority probe itself",
 	"internal/modules/deals:visibleOffer":                "the READ spelling of the offer's deal-derived row scope, shared by the offer list and the single read. Its write-authority spelling is writableOffer, which calls this and then takes auth.EnsureWritable on the same deal; visibleOfferLocked adds the row lock on top for the edits that linearize. Every offer WRITE — the patch, the line edits, the lifecycle moves and the render — resolves its row through one of those two, never through this",
 	"internal/modules/dealrooms:dealScopeClause":         "the READ spelling of a Deal Room's deal-derived row scope, shared by the single read, the list page and the release page — a room carries no owner of its own, so its visibility IS its deal's. Every path that changes a room resolves it through this read and then calls one of the two deal probes on the same deal — ensureDealWritable (auth.EnsureWritableLive) for anything that hands access out, ensureDealRetractable (auth.EnsureRetractable) for revoking a seat, pausing, closing or ending the room — before writing anything",
-	"internal/modules/commissions:entriesOfVisibleDeals": "the READ spelling of a commission entry's deal-derived row scope, rendered for the ledger page, the summary and the single read through VisibleClause and for the void through RetractableClause. It decides only whether a row may be SEEN: both paths that change one — Decide and ReverseForDeal — resolve the row through one of those two and then take WritableEntriesForDeal (auth.EnsureWritableLive) to approve or pay, or RetractableEntriesForDeal (auth.EnsureRetractable) to void, before writing anything",
+	"internal/modules/commissions:entriesOfVisibleDeals": "the READ spelling of a commission entry's deal-derived row scope, rendered for the ledger page, the summary and the single read through VisibleClause and for the void and the accrual's read-back through RetractableClause. It decides only whether a row may be SEEN: both paths that change one — Decide and ReverseForDeal — resolve the row through one of those two and then take WritableEntriesForDeal (auth.EnsureWritableLive) to approve or pay, or RetractableEntriesForDeal (auth.EnsureRetractable) to void, before writing anything",
 	"internal/modules/contacts:employerScope":            "the employer stamped on every contact a read returns, and the expression the contacts list orders by, and the bought-employment marks on the same read, flagged only because a mutation hands back the record it wrote. The company is written NOTHING — the probe decides whether this caller may be SHOWN the account their contact works at — and the contact row that IS being changed takes its own authority at the entry: contact:create on the create path, auth.EnsureWritable on the update. Narrowing it to write authority would blank the employer for a reader entitled to see the company but not to change it, which is most readers",
-	"internal/modules/contacts:CompaniesOnProjectTx":     "a READ: it lists the companies on a project and returns them, and every path that CHANGES the edges — SetProjectCompany, RemoveProjectCompany — takes auth.EnsureWritableLive on the project before it writes anything. This clause decides only which companies a reader may be SHOWN, so narrowing it to write authority would hide companies from a reader entitled to see them",
-	"internal/modules/privacy:AssembleSAR":               "an Art. 15 export is a READ, and read authority is the whole of what a read needs. It is flagged only because assembling a SAR records the request it answers; its Art. 17 sibling, which destroys rather than reads, uses auth.EnsureWritableForSubjectRights",
+	"internal/modules/privacy:AssembleSARWithExtensions": "an Art. 15 export is a READ, and read authority is the whole of what a read needs. It is flagged only because assembling a SAR records the request it answers; its Art. 17 sibling, which destroys rather than reads, uses auth.EnsureWritableForSubjectRights",
 
 	// Writes that touch a shareable record's machinery without changing the
 	// record, or anything a share can speak about.
@@ -212,7 +225,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	// imported connection — and probes the record only to decide which ones may
 	// be touched or named.
 	"internal/modules/activities:visibleRelinkPredicate": "clears an activity's links to records the caller can see, so a relink cannot silently drop an edge to a record they cannot; what it deletes is the LINK row, and its own comment already states the one bit that escapes",
-	"internal/modules/activities:participantRelinkQuery": "moves activity_participant rows from the displaced contacts to the relink target; the row written is the participant edge, never the contact",
+	"internal/modules/activities:displacedRowsSQL":       "moves activity_participant rows from the displaced contacts to the relink target; the row written is the participant edge, never the contact",
 	// The one waiver here that is a LIMIT OF THE EXTRACTOR rather than a claim
 	// about what the probe decides, and it is spelled that way on purpose.
 	//
@@ -230,11 +243,10 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	// attachment paths grow a third arm, revisit this rather than extend it.
 	"internal/modules/activities:visibleParentClause":           "the document library's per-row visibility clause, reached from a write path only by ensureInDealDocuments — the hide's membership probe, asking whether the file is in THIS caller's view of the deal's Files area at all. It only ever NARROWS (a miss is 404), and the record being changed is the deal's listing, gated on its own way in by auth.EnsureWritable(deal) in setDealDocumentHidden before the probe runs",
 	"internal/modules/activities:ensureAttachmentParentVisible": "the READ half of a pair whose caller picks between them by action: principal.ActionRead takes this one, everything else takes ensureAttachmentParentWritable. A write reaches it only through deniedChange, after the write is already refused, to choose 403 over 404; it never admits a write. The extractor sees the function, not the arm",
-	"internal/modules/capture:threadDeals":                      "the deal rule's row predicate on the deals our own mail in a thread is filed under, narrowing which deal a captured reply may be FILED UNDER. The deal is referenced, never changed: the link it writes is gated on activity:update and auth.EnsureLinkTarget in linkActivityToDeal, the same read-share reasoning as projectScopeClause",
+	"internal/modules/capture:conversationDeals":                "the deal rule's row predicate on the deals other mail of the conversation is filed under, narrowing which deal a captured reply may be FILED UNDER. The deal is referenced, never changed: the link it writes is gated on activity:update and auth.EnsureLinkTarget in linkActivityToDeal, the same read-share reasoning as projectScopeClause",
 	"internal/modules/capture:projectScopeClause":               "the project-attribution ladder's row predicate, narrowing which projects a captured message may be FILED UNDER. Read authority is the whole of what it needs: the project is referenced, never changed — the rows written are the activity_link edge and the activity's own version bump, and both are gated on activity:update in linkActivityToProject. A `read` share on a project is exactly the authority to see mail land on it, so requiring write here would refuse a filing to the colleague the project was deliberately shared with",
 
 	// Read predicates whose mutating callers take the write probe elsewhere.
-	"internal/modules/contracts:VisibleClause":           "the contracts module's READ predicate, shared by the list, the single read and the company-value rollup. A contract owns no owner_id and inherits its whole row scope from its anchor, so this one clause used to stand in front of every mutation too; the patch, archive, status change, cancellation and renewal now go through writableContract, which takes auth.EnsureWritable on that same anchor",
 	"internal/modules/contacts:applySiteContactFieldsTx": "the probe this gate sees is on the COMPANY whose published site was read, and reading it is all this does: the company is the page's subject, never the record that changes. What changes is the CONTACT, and it now takes auth.EnsureWritableLive on its own id immediately after the employment-edge match resolves it — the Live spelling because both callers are system principals, for whom the plain probe returns nil on an empty clause and would gate nothing",
 })
 
@@ -287,10 +299,6 @@ var mutationMarkers = map[string]bool{
 	"ApplyWithVersion": true, "ApplyGuarded": true, "ApplyLocked": true,
 	"LockRow": true, "LockPair": true,
 }
-
-// mutatingActions are the grants whose holder is asking to CHANGE the record.
-// ActionCreate is absent: a create has no row yet for a grant to widen.
-var mutatingActions = map[string]bool{"ActionUpdate": true, "ActionDelete": true}
 
 // probeSite is one record-authority probe: where it is, what it names, and
 // which spelling it used.
@@ -588,6 +596,12 @@ func indexWriteAuthorityCall(call *ast.CallExpr, info *writeAuthorityFn, tables 
 			recordAuthCall(fun.Sel.Name, call, info, tables, consts, at, src)
 			return
 		}
+		// recordmerge.Pair takes EnsureWritable on the source and WritableBy on
+		// the target before it reads either end. A merge reaching it holds the
+		// write probe on the table named in its third argument.
+		if pkg, isPkg := fun.X.(*ast.Ident); isPkg && pkg.Name == "recordmerge" && fun.Sel.Name == "Pair" {
+			recordAuthCall("EnsureWritable", call, info, tables, consts, at, src)
+		}
 		if mutationMarkers[fun.Sel.Name] {
 			info.mutates = true
 			if table, ok := patchTargetTable(fun.Sel.Name, call, consts); ok && tables[table] {
@@ -605,7 +619,8 @@ func recordAuthCall(spelling string, call *ast.CallExpr, info *writeAuthorityFn,
 ) {
 	if spelling == "Require" && len(call.Args) == 3 {
 		object, _ := resolveTableArg(call.Args[1], consts)
-		if action, ok := call.Args[2].(*ast.SelectorExpr); ok && mutatingActions[action.Sel.Name] {
+		action, literal := call.Args[2].(*ast.SelectorExpr)
+		if !literal || (action.Sel.Name != "ActionRead" && action.Sel.Name != "ActionCreate") {
 			info.requires[object] = true
 		}
 		return
@@ -694,8 +709,7 @@ func patchTargetTable(spelling string, call *ast.CallExpr, consts map[string]str
 // "add a row that hangs off the record" paths that are deliberately outside it.
 //
 // INSERT is deliberately absent. A create has no row yet for a grant to widen
-// or an owner to hold, which is the same reason mutatingActions omits
-// ActionCreate; a create is gated by its object grant alone.
+// or an owner to hold. A create is gated by its object grant alone.
 //
 // The scan runs over the WHOLE literal rather than its first word, because a
 // statement in this tree routinely starts on the line after the backtick.

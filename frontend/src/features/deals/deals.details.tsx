@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { ExtensionPanels } from "../../components/extensionpanels";
 import { RecordCustomFields } from "../../components/recordcustomfields";
 import { RecordFields } from "../../components/recordfields";
 import { RecordTeam } from "../../components/recordteam";
@@ -12,7 +13,6 @@ import { RecordListsPanel } from "../records/recordlists";
 import { DealRecordRows } from "./deal360/dealheaderfacts";
 import { useDealEdit } from "./dealedit";
 import type { Deal, Stage } from "./deals";
-import { ExtensionPanels } from "./extensionpanels";
 
 export function DealDetails({
   deal,

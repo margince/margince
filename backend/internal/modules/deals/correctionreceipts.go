@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -40,6 +41,9 @@ type CorrectionReceipt struct {
 	EstimateBasis *CorrectionEstimateBasis
 	Basis         string
 	AppliedAt     time.Time
+	// ListedAt is when the correction last joined the owner's list: the close
+	// instant, or the later instant it was offered back. Lists order by it.
+	ListedAt time.Time
 	// Reversed reports that somebody already put this back. The row stays on
 	// the lane saying so, rather than vanishing and leaving the reader
 	// wondering whether their Undo landed.
@@ -67,6 +71,15 @@ type CorrectionReceipt struct {
 	// StageProbability is the probability the deal took with the stage it
 	// was moved to.
 	StageProbability *int
+	// ReasonKind is CorrectionReasonKind of the row: a rule, an inference,
+	// or "" when the row cannot say.
+	ReasonKind string
+	// CitedActivities are the activities the evidence names, none where the
+	// reader may not read the evidence.
+	CitedActivities []ids.UUID
+	// CitedMoments are when those activities happened as the change was
+	// written; empty for a change written before they were recorded.
+	CitedMoments map[ids.UUID]CitedMoment
 }
 
 // heldCorrections stay on Home until their owner accepts or undoes them.
@@ -121,14 +134,14 @@ func (s *Store) RecentCorrectionsOwnedBy(
 		}
 		query := selected + storekit.SQLf(`
 			 -- A close as lost and a verdict change stay until the owner accepts or undoes them.
-			 WHERE (c.applied_at >= $%d
+			 WHERE (`+correctionListedSQL+` >= $%d
 			        OR (c.correction = ANY($%d) AND c.accepted_at IS NULL AND c.reversed_at IS NULL))
 			   AND d.owner_id = $%d
 			   AND d.archived_at IS NULL`, sincePos, heldPos, ownerPos)
 		if scope != "" {
 			query += storekit.SQLf(" AND %s", scope)
 		}
-		query += storekit.SQLf(" ORDER BY c.applied_at DESC LIMIT $%d", limitPos)
+		query += storekit.SQLf(" ORDER BY "+correctionListedSQL+" DESC LIMIT $%d", limitPos)
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("deals: reading last night's corrections: %w", err)
@@ -144,9 +157,10 @@ func (s *Store) RecentCorrectionsOwnedBy(
 
 func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
 	var row CorrectionReceipt
+	var lostCode *string
 	if err := rows.Scan(&row.DealID, &row.DealName, &row.AuditLogID,
-		&row.Fields, &row.Basis, &row.AppliedAt, &row.Reversed,
-		&row.Version, &row.BeforeClose, &row.AfterClose, &row.Evidence,
+		&row.Fields, &row.Basis, &row.AppliedAt, &row.ListedAt, &row.Reversed,
+		&row.Version, &row.BeforeClose, &row.AfterClose, &lostCode, &row.Evidence,
 		&row.ActorType, &row.ActorID, &row.OnBehalfOf, &row.Correction,
 		&row.BeforeAmount, &row.AfterAmount, &row.BeforeProbability, &row.AfterProbability,
 		&row.Currency, &row.OwnerID, &row.FromStage, &row.ToStage,
@@ -154,6 +168,9 @@ func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
 		return row, err
 	}
 	row.EstimateBasis = correctionEstimateBasis(row.Evidence)
+	row.ReasonKind = CorrectionReasonKind(row.Correction, lostCode)
+	row.CitedActivities = citedActivities(row.Evidence)
+	row.CitedMoments = citedMoments(row.Evidence)
 	return row, nil
 }
 
@@ -178,7 +195,7 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 	if err != nil {
 		return "", err
 	}
-	stageBefore, stageAfter := correctionStageNamesSQL(ctx)
+	stageBefore, stageAfter := correctionStageNamesSQL(ctx, arg)
 	return storekit.SQLf(`
 			SELECT c.deal_id, d.name, c.audit_log_id, c.fields,
 			       -- The reason, only for the seat whose grants composed it.
@@ -199,8 +216,9 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 			       CASE WHEN %[1]s AND (%[4]s OR c.correction <> $%[5]d)
 			            THEN coalesce(a.evidence->>'basis', '')
 			            ELSE '' END,
-			       c.applied_at,
+			       c.applied_at, `+correctionListedSQL+`,
 			       c.reversed_at IS NOT NULL, d.version, a.before->>'expected_close_date', a.after->>'expected_close_date',
+			       a.after->>'lost_reason_code',
 			       -- A masked amount takes every key that states it out of the
 			       -- evidence: the customer's words, the figure and the rate.
 			       CASE WHEN NOT %[1]s THEN '{}'::jsonb
@@ -226,13 +244,14 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 // correctionStageNamesSQL names the stages a correction moved between, only
 // for a reader who may read pipelines: StageLabels holds stage names to the
 // same grant.
-func correctionStageNamesSQL(ctx context.Context) (before, after string) {
+func correctionStageNamesSQL(ctx context.Context, arg func(any) int) (before, after string) {
 	if !auth.Allows(ctx, "pipeline", principal.ActionRead) {
 		const hidden = "NULL::text"
 		return hidden, hidden
 	}
-	return "(SELECT st.name FROM stage st WHERE st.id::text = a.before->>'stage_id')",
-		"(SELECT st.name FROM stage st WHERE st.id::text = a.after->>'stage_id')"
+	name := labeltranslation.SQL(ctx, "st.name", "st.name_translations", arg)
+	return "(SELECT " + name + " FROM stage st WHERE st.id::text = a.before->>'stage_id')",
+		"(SELECT " + name + " FROM stage st WHERE st.id::text = a.after->>'stage_id')"
 }
 
 // BasisReadableSQL is when the reader at readerPos may read why Margince did

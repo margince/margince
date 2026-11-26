@@ -29,6 +29,8 @@ type EmployerChoice struct {
 	Source      string
 	// Domains help match an employer and are written only when creating one.
 	Domains []CompanyDomainInput
+	// Industry is written only when creating one: a matched company keeps its own.
+	Industry *string
 }
 
 // EmployerAttached is what attachEmployerTx wrote.
@@ -130,7 +132,7 @@ func (s *Store) resolveNamedEmployer(ctx context.Context, tx pgx.Tx, choice Empl
 	if found != nil {
 		return *found, false, nil
 	}
-	company, err := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{DisplayName: strings.TrimSpace(deref(choice.CompanyName)), Domains: choice.Domains, Source: choice.Source}, CustomColumns{})
+	company, err := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{DisplayName: strings.TrimSpace(deref(choice.CompanyName)), Domains: choice.Domains, Industry: choice.Industry, Source: choice.Source}, CustomColumns{})
 	if err != nil {
 		return ids.CompanyID{}, false, err
 	}

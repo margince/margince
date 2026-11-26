@@ -48,6 +48,9 @@ const FIELD: Role = {
   },
 };
 
+// What the server offers: the audit log is read-only.
+const VERBS = { audit_log: ["read"] } as const;
+
 type Seat = Readonly<{ role?: Role; canUpdate?: boolean }>;
 
 function Body({
@@ -61,6 +64,7 @@ function Body({
       role={role}
       directory={[role]}
       units={units}
+      verbs={VERBS}
       canUpdate={canUpdate}
       canWiden
       writes={writes}
@@ -188,6 +192,62 @@ describe("RoleDetail permission grid", () => {
     );
   });
 
+  it("draws no switch for a verb the object does not offer", () => {
+    render();
+    expect(
+      screen.getByRole("switch", {
+        name: "Allow Field sales to Read Audit log",
+      }),
+    ).toBeTruthy();
+    for (const verb of ["Create", "Update", "Delete"]) {
+      expect(
+        screen.queryByRole("switch", {
+          name: `Allow Field sales to ${verb} Audit log`,
+        }),
+      ).toBeNull();
+    }
+  });
+
+  it("turns Read on with a write verb, and the writes off with Read", async () => {
+    const user = userEvent.setup();
+    const calls: { url: string; body: unknown }[] = [];
+    const full = { read: true, create: true, update: true, delete: true };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        calls.push({ url: new URL(req.url).pathname, body: await req.json() });
+        return new Response(JSON.stringify({ ...FIELD, version: 8 }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+    render([NOTES], {
+      role: { ...FIELD, objects: { ...FIELD.objects, deal: full } },
+    });
+    await user.click(
+      screen.getByRole("switch", { name: "Allow Field sales to Read Deals" }),
+    );
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        url: "/v1/roles/custom_field_sales/objects/deal",
+        body: NONE,
+      }),
+    );
+    await user.click(
+      screen.getByRole("switch", {
+        name: "Allow Field sales to Update Contacts",
+      }),
+    );
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        url: "/v1/roles/custom_field_sales/objects/contact",
+        body: { ...NONE, read: true, update: true },
+      }),
+    );
+  });
+
   it("says once above the grid why a reader who may only read changes nothing, and on every switch", () => {
     render([NOTES], { canUpdate: false });
     const said = screen
@@ -209,5 +269,40 @@ describe("RoleDetail permission grid", () => {
     for (const control of screen.getAllByRole("switch", { name: /^Allow / })) {
       expect(description(control)).toContain(en["roles.archivedReadOnly"]);
     }
+  });
+});
+
+describe("RoleDetail rename", () => {
+  it("says a taken name on the name field and bounds the box", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              status: 409,
+              code: "role_name_taken",
+              detail:
+                "another role already has this name; choose a different one",
+            }),
+            {
+              status: 409,
+              headers: { "Content-Type": "application/problem+json" },
+            },
+          ),
+      ),
+    );
+    render();
+    await user.click(screen.getByRole("button", { name: en["roles.rename"] }));
+    const field = await screen.findByRole("textbox", {
+      name: en["roles.nameLabel"],
+    });
+    expect(field.getAttribute("data-character-limit")).toBe("120");
+    await user.clear(field);
+    await user.type(field, "Inside sales{Enter}");
+    await waitFor(() =>
+      expect(description(field)).toContain(en["roles.refusal.nameTaken"]),
+    );
   });
 });

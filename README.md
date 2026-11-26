@@ -20,11 +20,22 @@ Margince is source-available, not open source. [LICENSING.md](LICENSING.md) expl
 
 The [handbook](docs/handbook/README.md) explains the app for the teams who use it. It has no code.
 
-To run your own copy, start with [docs/how-to/deploy-margince.md](docs/how-to/deploy-margince.md).
+## Run your own copy
 
-## Run it on your machine
+Get a release and start it with Docker Compose, as
+[docs/how-to/run-with-docker-compose.md](docs/how-to/run-with-docker-compose.md) says. Without a
+license token it runs a 14-day trial. From a copy of this repository, `make prod` builds the
+images here and starts the same stack on your machine. To run it on servers of your own, start with
+[docs/how-to/deploy-margince.md](docs/how-to/deploy-margince.md).
+
+## Run it from the source
+
+This is the stack for working on the code. It runs in `dev` mode: it has no trial and skips checks
+a real install must pass, so do not use it for real work.
 
 You need Go 1.27 or later, Docker with Compose, `jq`, `golangci-lint`, Node 24 and pnpm.
+On Windows, work in WSL, as
+[docs/how-to/set-up-windows-wsl-development.md](docs/how-to/set-up-windows-wsl-development.md) says.
 
 1. Install the tools and the git hooks once: `make install`.
 2. Start the stack: `make dev`. It starts Postgres, Redis, the API and the web app, then returns.
@@ -69,6 +80,8 @@ disagree.
 Each AI task can use a model on your own machines (Ollama or vLLM) or a cloud provider. A task that uses
 a cloud provider sends the text it reads to that provider. The `sovereign` profile refuses every cloud
 provider. [docs/reference/ai-egress.md](docs/reference/ai-egress.md) lists, for each task, what can leave.
+Each model and each AI tool a user can connect has a test score in
+[docs/reference/which-ai-you-can-use.md](docs/reference/which-ai-you-can-use.md).
 
 ## What is not here yet
 
@@ -78,6 +91,8 @@ provider. [docs/reference/ai-egress.md](docs/reference/ai-egress.md) lists, for 
 
 Open work is in [GitHub issues](https://github.com/margince/margince/issues), and past releases are on the
 [releases page](https://github.com/margince/margince/releases).
+
+Who decides what, and the plan for what comes next, are in [MAINTAINERS.md](MAINTAINERS.md).
 
 ## Security
 
@@ -93,15 +108,12 @@ Margince is source-available under the Business Source License 1.1 ([LICENSE](LI
 public. You may read, run and change it. [LICENSING.md](LICENSING.md) explains the license, and why you
 accept [CLA.md](CLA.md) to send code.
 
-- You may use it free in production for your own company, up to 3 seats. The limit is for all your
-  installations and the companies you own or that own you. A seat is a named user. AI agents and
-  service accounts are not seats.
+- Production use needs a subscription from Gradion.
 - To host it as a service for other companies, you need a hosting partner agreement with Gradion.
 - Each release becomes Apache 2.0 no later than two years after it ships.
 
-Outside `dev` and `test` mode, the server needs a license token from Gradion to start, even for one
-seat. For up to 3 seats, ask for a free token with the
-[free license form](https://dist.margince.com/free-license). It lasts one year. If this blocks you, please say so
-in an issue.
+Without a license token, a production install runs a 14-day trial and then stops working until a token is
+set up. To ask for a token, use the [contact form](https://margince.com/contact/). If this blocks you, please
+say so in an issue.
 
 Prices are on [margince.com](https://margince.com). Margince is built by [Gradion](https://gradion.com).

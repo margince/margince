@@ -22,6 +22,27 @@
   overflow: hidden;
 }
 
+/* Above phone width a list page IS the content card: the surface fills it edge
+   to edge and the card's edge is its only edge. */
+@media (width > 700px) {
+  .scroll:has(> .wrap > .lt) {
+    --scrollPadTop: 0px;
+    scrollbar-gutter: auto;
+  }
+  .scroll > .wrap:has(> .lt) {
+    padding: 0;
+  }
+  .scroll > .wrap > .lt {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  /* What stands beside the surface, a notice over it, keeps the page's inset. */
+  .scroll > .wrap:has(> .lt) > :not(.lt) {
+    margin: var(--pageGapTop) var(--pageGutter) 0;
+  }
+}
+
 /* ---- header: views, count, primary action ---- */
 
 /* The row wraps, and what gives way first is the count (`.lt-count`): the tabs
@@ -67,7 +88,6 @@
   background: transparent;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--r-full);
-  corner-shape: round;
   cursor: pointer;
 }
 .lt-vtab:hover {
@@ -153,10 +173,9 @@
   gap: var(--space-2);
   padding: 0 var(--space-3);
   min-block-size: var(--controlHeight);
-  background: var(--bgElevated);
+  background: var(--bgField);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .lt-search:focus-within {
   border-color: var(--accent);
@@ -192,7 +211,6 @@
 .lt-tools input.input {
   width: auto;
   border-radius: var(--r-full);
-  corner-shape: round;
   border-color: var(--borderSubtle);
 }
 
@@ -204,7 +222,6 @@
  * control answering the question of its own height twice. */
 .lt-tools .btn {
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 
 /* EVERY CARET ON THIS SURFACE, at one size: the product's other carets are
@@ -231,7 +248,6 @@
   inline-size: 6px;
   block-size: 6px;
   border-radius: 50%;
-  corner-shape: round;
   background: currentColor;
 }
 
@@ -326,9 +342,10 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-/* Save view and Manage views share the footer's width, on a phone as above. */
+/* Each button grows from its label's width, and wraps below when both do not
+   fit. Not a zero basis: an even split lets a long label run past its button. */
 .lt-vfoot > .btn {
-  flex: 1 1 0;
+  flex: 1 1 auto;
 }
 /* A Save view with nothing to save draws nothing, and its rule goes too. */
 .lt-vfoot:empty {
@@ -355,10 +372,9 @@
    * than being clipped by it, and `align-items: stretch` still hands whatever
    * the row ends up at to each segment. */
   min-block-size: var(--controlHeight);
-  background: var(--bgElevated);
+  background: var(--bgField);
   border: 1px solid var(--accentMed);
   border-radius: var(--r-full);
-  corner-shape: round;
   /* NOT clipped: the row hosts the popups for its own condition, value and
    * delete steps, and a pill that clips its contents clips those too — they
    * open inside it and are simply never seen. The end segments carry the
@@ -368,12 +384,10 @@
 .lt-frow > :first-child {
   border-top-left-radius: var(--r-full);
   border-bottom-left-radius: var(--r-full);
-  corner-shape: round;
 }
 .lt-frow-more {
   border-top-right-radius: var(--r-full);
   border-bottom-right-radius: var(--r-full);
-  corner-shape: round;
 }
 
 .lt-frow-attr {
@@ -719,6 +733,32 @@
   .lt-views::-webkit-scrollbar {
     display: none;
   }
+  /* An end that hides tabs fades, as the record tab strip's does (recordtabs.css). */
+  .lt-views {
+    --lt-views-fade-from: 90deg;
+    --lt-views-fade-start: 0px;
+    --lt-views-fade-end: 0px;
+    scroll-padding-inline: var(--space-8);
+    mask-image: linear-gradient(
+      var(--lt-views-fade-from),
+      transparent,
+      black var(--lt-views-fade-start),
+      black calc(100% - var(--lt-views-fade-end)),
+      transparent
+    );
+  }
+  .lt-views:dir(rtl) {
+    --lt-views-fade-from: 270deg;
+  }
+  .lt-views:not(.is-clipped-start, .is-clipped-end) {
+    mask-image: none;
+  }
+  .lt-views.is-clipped-start {
+    --lt-views-fade-start: var(--space-8);
+  }
+  .lt-views.is-clipped-end {
+    --lt-views-fade-end: var(--space-8);
+  }
   .lt-vtab {
     flex: 0 0 auto;
     white-space: nowrap;
@@ -744,15 +784,17 @@
   min-height: 0;
   position: relative;
   overflow: auto;
-  /* The column widths are computed from this box's clientWidth, and with
-   * classic (non-overlay) scrollbars a vertical bar takes part of that width.
-   * Without a reserved gutter the two feed each other: widths → horizontal
-   * bar → less height → vertical bar → less width → new widths → no bar …
-   * until React gives up with "Maximum update depth exceeded" and the list is
-   * an error plate. Reserving the gutter makes the width independent of
-   * whether the bar is showing. Overlay scrollbars reserve nothing, so the
-   * default macOS look is unchanged. */
-  scrollbar-gutter: stable;
+  /* No reserved gutter: a gutter with no bar in it leaves every row rule short
+   * of the card's edge. The width flip a classic bar causes is refused in
+   * `widthWorthAdopting`. */
+}
+
+/* Not inherited: it changes with every width the table takes, and a change to
+   an inherited property restyles every cell. */
+@property --lt-floor {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
 }
 
 /* The table is as wide as its columns need, not as wide as the viewport. Widening
@@ -848,9 +890,9 @@
   padding: var(--space-2) var(--space-3);
   background: var(--ground);
   border-bottom: 1px solid var(--borderSubtle);
-  /* A label longer than its column wraps, and the column keeps its width. */
+  /* A label wraps between its words; the column's floor holds its longest one.
+     A column dragged narrower still hyphenates where the language allows. */
   hyphens: auto;
-  overflow-wrap: anywhere;
 }
 
 /* A 44px row: enough that two rows cannot be mistaken for one, which is the
@@ -912,7 +954,6 @@
   display: block;
   height: 10px;
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .lt-loading td {
   border-bottom: 1px solid var(--borderSubtle);
@@ -985,7 +1026,7 @@
 
 /*
  * The frozen edge's shadow: one element, sticking to the left of the scrolling
- * body and spanning its visible height, so the shade runs unbroken down the
+ * body and spanning the visible rows, so the shade runs unbroken down the
  * column instead of restarting at every row.
  *
  * It only shows once columns have actually slid under the edge — at rest there
@@ -1264,10 +1305,21 @@
  * the one control in the footer sitting on a different inset from every other
  * trigger in the product. */
 .lt-perpage .select-control {
-  background: var(--bgElevated);
+  background: var(--bgField);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
   cursor: pointer;
+}
+
+/* A list fills the viewport, so its pager sits where a toast lands. While a list
+ * is on screen the toast stands above the pager's row, leaving the pages usable. */
+:root:has(.lt-foot) .toast-region {
+  --lt-foot-height: calc(var(--controlHeight) + 2 * var(--space-3));
+  bottom: calc(
+    var(--stickyBottomInset) +
+    var(--lt-foot-height) +
+    var(--space-4)
+  );
 }
 
 /* One page and nothing more to fetch: the pager has nothing to say, but it keeps
@@ -1276,18 +1328,10 @@
   visibility: hidden;
 }
 
-/* ---- phone: rows become cards ---- */
+/* ---- phone: rows become cards, or phone rows ---- */
 
-/*
- * A phone list is read to FIND a record and act on it, not to compare values
- * across rows, so the row stops being a row: each one becomes a card with the
- * identity as its heading and every remaining field as a labelled line. That
- * shows the whole record without a horizontal scrollbar hiding half of it, and
- * without dropping columns the reader might have needed.
- *
- * The table element keeps its markup and its explicit roles, so what changes
- * here is the layout, not the semantics.
- */
+/* A list that gives a column a `phone` place draws phone rows (`.lt-phonerows`): the
+ * name's line and a caption under the name. Any other list stacks each row as a labelled card. */
 @media (max-width: 720px) {
   .lt-table,
   .lt-table thead,
@@ -1322,7 +1366,7 @@
   }
 
   /* A card has vertical room, so its values wrap instead of being clipped. */
-  .lt-table td {
+  .lt-table:where(:not(.lt-phonerows)) td {
     display: flex;
     align-items: baseline;
     gap: var(--space-3);
@@ -1334,7 +1378,7 @@
   }
   /* A block takes `block-size` as a height, not as a table cell's floor, and a
    * value that wraps past it runs over the field below. */
-  .lt-table:not(.dense) td {
+  .lt-table:where(:not(.lt-phonerows)):not(.dense) td {
     block-size: auto;
     min-block-size: var(--lt-row-h);
   }
@@ -1343,21 +1387,23 @@
    * holds the grid together, but in a card it would read as a missing answer to
    * a question nobody asked. A cell renderer may wrap nothing in an element, so
    * a cell counts as empty when nothing in it holds text or draws itself. Bare
-   * text (the empty list's own line) counts as content. */
-  .lt-table
-  td:is(:empty, :not(:has(:not(:empty), img, svg, input)):has(> :empty)) {
+   * text (the empty list's own line) counts as content. A loading row's bone
+   * is a placeholder, not a missing answer, so it keeps its cells. */
+  .lt-table:where(:not(.lt-phonerows))
+    tr:not(.lt-loading)
+    > td:is(:empty, :not(:has(:not(:empty), img, svg, input)):has(> :empty)) {
     display: none;
   }
 
   /* The value beside a label shrinks to the card and breaks a long run, such as
    * an e-mail address, rather than running past the card's edge. */
-  .lt-table td > * {
+  .lt-table:where(:not(.lt-phonerows)) td > * {
     min-width: 0;
     overflow-wrap: anywhere;
   }
 
   /* The field name, taken from the column header the card no longer shows. */
-  .lt-table td::before {
+  .lt-table:where(:not(.lt-phonerows)) td::before {
     content: attr(data-label);
     flex: 0 0 38%;
   }
@@ -1365,54 +1411,172 @@
   /* The identity cell is the card's heading: no label, full width, and it reads
    * as the thing you tapped rather than as one field among several.
    *
-   * Nothing is frozen in a stack — there is no sideways scroll for a cell to
-   * slide under — so the desktop column's chrome comes off here. Its opaque
-   * ground was still being painted over the card's translucent one, which put a
-   * patch of a slightly different white behind every card's title. */
-  .lt-table td.lt-identity {
+   * A stack scrolls nothing sideways, so nothing is frozen and the desktop
+   * column's chrome comes off here. */
+  .lt-table:where(:not(.lt-phonerows)) td.lt-identity {
     display: block;
     position: static;
     background: none;
     padding-bottom: var(--space-2);
     color: var(--textPrimary);
   }
-  .lt-table td.lt-identity::before {
+  .lt-table:where(:not(.lt-phonerows)) td.lt-identity::before {
     content: none;
   }
 
   /* The heading wraps like the card's other values; a run with no break stays
    * inside the card. */
-  .lt-table td.lt-identity .avatar-row > :not(.avatar, .badge) {
+  .lt-table:where(:not(.lt-phonerows))
+    td.lt-identity
+    .avatar-row
+    > :not(.avatar, .badge) {
     white-space: normal;
     overflow: visible;
     overflow-wrap: anywhere;
   }
 
   /* A number in a stack belongs beside its label, not against the far edge. */
-  .lt-table td.lt-num {
+  .lt-table:where(:not(.lt-phonerows)) td.lt-num {
     text-align: left;
   }
 
   /* The "…" sits beside the card's heading rather than on a labelled line. */
-  .lt-table tbody tr:has(> td.lt-rowmenu) {
+  .lt-table:where(:not(.lt-phonerows)) tbody tr:has(> td.lt-rowmenu) {
     position: relative;
   }
-  .lt-table tbody td.lt-rowmenu {
+  .lt-table:where(:not(.lt-phonerows)) tbody td.lt-rowmenu {
     position: absolute;
     top: var(--space-2);
     right: var(--space-2);
     padding: 0;
   }
-  .lt-table td.lt-rowmenu::before {
+  .lt-table:where(:not(.lt-phonerows)) td.lt-rowmenu::before {
     content: none;
   }
-  .lt-table tr:has(> td.lt-rowmenu) td.lt-identity {
+  .lt-table:where(:not(.lt-phonerows)) tr:has(> td.lt-rowmenu) td.lt-identity {
     padding-right: calc(var(--controlHeight) + var(--space-2));
   }
 
   /* Cards are already tight; the density control governs the desktop grid. */
-  .lt-table.dense td {
+  .lt-table:where(:not(.lt-phonerows)).dense td {
     padding: var(--space-1) 0;
+  }
+
+  .lt-table.lt-phonerows td {
+    block-size: auto;
+    padding: 0;
+    border-bottom: 0;
+    text-align: left;
+    white-space: normal;
+    overflow: visible;
+  }
+  .lt-table.lt-phonerows.dense tbody tr {
+    padding-block: var(--space-2);
+  }
+  .lt-table.lt-phonerows .lt-empty td {
+    padding-block: var(--space-3);
+  }
+  .lt-table.lt-phonerows tr.lt-loading > td + td {
+    inline-size: 60%;
+    margin-block-start: var(--space-2);
+  }
+  .lt-table.lt-phonerows .lt-slack {
+    display: none;
+  }
+
+  /* The box, the mark and the name are tracks of the row, so the caption under
+   * them starts where the name does, whatever leads it. */
+  .lt-table.lt-phonerows tbody tr:not(.lt-loading, .lt-empty) {
+    display: grid;
+    grid-template-columns:
+      [box] auto [mark] auto [name] minmax(0, max-content) [badge] auto
+      [fill] minmax(0, 1fr) [end] auto [menu] auto;
+    align-items: center;
+  }
+  .lt-table.lt-phonerows td.lt-identity,
+  .lt-table.lt-phonerows tbody tr:hover td.lt-identity {
+    grid-column: box / fill;
+    grid-row: 1;
+    display: grid;
+    grid-template-columns: subgrid;
+    align-items: center;
+    position: static;
+    background: none;
+    color: var(--textPrimary);
+  }
+  .lt-table.lt-phonerows .lt-identity-row,
+  .lt-table.lt-phonerows .lt-identity-row > .lt-cellink > .avatar-row {
+    display: contents;
+  }
+  .lt-table.lt-phonerows .lt-identity-row > .lt-select {
+    grid-column: box;
+  }
+  .lt-table.lt-phonerows .lt-identity-row > :not(.lt-select) {
+    grid-column: name / fill;
+  }
+  .lt-table.lt-phonerows
+    .lt-identity-row
+    > :is(.avatar-row, :has(> .avatar-row)) {
+    grid-column: mark / fill;
+    display: grid;
+    grid-template-columns: subgrid;
+    gap: 0;
+    align-items: center;
+  }
+  .lt-table.lt-phonerows td.lt-identity .avatar-row > * {
+    grid-row: 1;
+    grid-column: name;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+  }
+  .lt-table.lt-phonerows td.lt-identity .avatar-row > .avatar {
+    grid-column: mark;
+    margin-inline-end: var(--space-2);
+  }
+  .lt-table.lt-phonerows td.lt-identity .avatar-row > .badge {
+    grid-column: badge;
+    margin-inline-start: var(--space-2);
+  }
+
+  .lt-table.lt-phonerows td:is([data-phone="end"], .lt-rowmenu) {
+    grid-row: 1;
+    margin-inline-start: var(--space-2);
+  }
+  .lt-table.lt-phonerows td[data-phone="end"] {
+    grid-column: end;
+  }
+  .lt-table.lt-phonerows td.lt-rowmenu {
+    grid-column: menu;
+  }
+  .lt-table.lt-phonerows td[data-phone="caption"] {
+    position: relative;
+    grid-column: name / -1;
+    grid-row: 2;
+    margin-block-start: var(--space-1);
+    font: var(--fontBodySmall);
+    color: var(--textSecondary);
+    overflow-wrap: anywhere;
+  }
+  .lt-table.lt-phonerows .lt-fact .avatar-row {
+    display: inline-flex;
+    vertical-align: middle;
+  }
+  /* DataTable's rule: a cell that renders nothing takes no place, its label and
+   * dot with it, and a caption with no fact left is not drawn. */
+  .lt-table.lt-phonerows td[data-phone="end"]:empty,
+  .lt-table.lt-phonerows .lt-fact:empty,
+  .lt-table.lt-phonerows .sr-only:has(+ .lt-fact:empty),
+  .lt-table.lt-phonerows
+    td[data-phone="caption"]:not(:has(.lt-fact:not(:empty))) {
+    display: none;
+  }
+  /* The dot ends a fact another follows, as a timeline head's does, so a wrapped
+   * line never opens on one; a screen reader hears the facts' labels instead. */
+  .lt-table.lt-phonerows
+  .lt-fact:not(:empty):has(~ .lt-fact:not(:empty))::after {
+    content: "·" / "";
+    margin-inline-start: var(--space-1);
   }
 
   /* Cards are read by scrolling down past the toolbar, so the page scrolls and
@@ -1617,6 +1781,23 @@
 .lt-select {
   margin-inline-end: var(--space-3);
 }
+/* On a phone a press that misses the box lands on the row and opens the
+   record, so a thumb gets a 44px target from a layer of the label that draws
+   nothing. It ends where the name's link starts, across the gap above. */
+@media (pointer: coarse) {
+  .lt-select {
+    position: relative;
+  }
+  .lt-select::before {
+    content: "";
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: calc(-1 * var(--space-3));
+    inline-size: 44px;
+    block-size: 44px;
+    translate: 0 -50%;
+  }
+}
 
 .lt-bulkbar {
   display: flex;
@@ -1626,8 +1807,16 @@
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
+  background: var(--bgField);
   margin-bottom: var(--space-2);
+}
+
+/* A picker is one item beside its verb. At `.input`'s full width each one took
+ * a line of its own and the bar stacked into rows above the table. */
+.lt-bulkbar .select-control {
+  flex: 0 0 auto;
+  inline-size: auto;
+  min-inline-size: 9rem;
 }
 
 /* Select all and Clear sit at the bar's far end, apart from the verbs. */
@@ -1723,11 +1912,6 @@
 .panel > .lt :is(.lt-head, .lt-caption, .lt-tools, .lt-agg, .lt-foot),
 .panel > .lt > :is(p, .lt-emptyline) {
   padding-inline: var(--padPanel);
-}
-/* Sized by its rows, so no vertical bar can come and the gutter kept for one
-   would leave the table short of the pane's end edge. */
-.panel > .lt .lt-scroll {
-  scrollbar-gutter: auto;
 }
 .panel > .lt .lt-table :is(th, td) {
   border-right: 0;

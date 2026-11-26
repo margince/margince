@@ -14,10 +14,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -65,7 +67,7 @@ func validateEventEvidence(event extractedEvent, thread settledThread) string {
 			return msg
 		}
 		if event.PromiserRef != "" {
-			if _, found := referencedPromiser(event.PromiserRef, message.Parties); !found {
+			if _, found := commitmentparty.Referenced(event.PromiserRef, message.Parties); !found {
 				return "a commitment names a promiser outside its verified message participants"
 			}
 		}
@@ -177,14 +179,16 @@ func (x *SignalExtractor) emailCommitment(
 	// Who may read the conversation is asked again here, in the transaction
 	// that files: the reading ran outside it, and a conversation made private
 	// in between must not be filed as a shared one.
-	company, privateTo, offered, err := threadReaderNow(ctx, tx, thread.Key)
+	reader, err := threadReaderNow(ctx, tx, thread.Key)
 	if err != nil {
 		return Commitment{}, false, err
 	}
-	if !offered {
+	// A promise in routine-private mail stays with that mail: only an
+	// explicit request is ever kept from it.
+	if !reader.offered || !reader.everyMessageOpen {
 		return Commitment{}, false, apperrors.ErrNotFound
 	}
-	thread.CompanyID, thread.PrivateTo = company, privateTo
+	thread.CompanyID, thread.PrivateTo = reader.company, reader.privateTo
 	parties, err := x.messages.PartiesOf(extractorContext(ctx, signalScanActor), tx, cited)
 	if err != nil {
 		return Commitment{}, false, err
@@ -223,13 +227,16 @@ func (x *SignalExtractor) emailCommitment(
 		return Commitment{}, false, err
 	}
 	c.NeedsConfirmation = message.Direction != connector.DirectionOutbound || !commitmentPartyHasRole(verified, promiser, commitmentSenderRole)
-	c.Body = fmt.Sprintf("Promiser: %s. Commitment in the email %q, sent %s.", c.Party, message.Subject, message.At.Format(time.DateOnly))
+	explanation := systemtext.Sentence("commitment.explanation", systemtext.Text(c.Party), systemtext.Text(message.Subject), systemtext.Date(message.At.Format(time.DateOnly)))
+	c.SystemText = &systemtext.Message{Version: 1, Subject: systemtext.Prose(systemtext.Generated, ""), Body: explanation}
+	c.Body = systemtext.Canonical(explanation, textlang.English)
 	c.Span = span
 	c.Locator = commitmentLocator(cited, kind, party, span)
 	if promisedOnAnothersPrivateThread(c) {
 		// The model sums up a window of messages, and the promiser may open only
 		// the one they wrote. Their own sentence is all the task may say.
 		c.Summary = span
+		c.SystemText.Subject = systemtext.Prose(systemtext.Quote, "")
 	}
 	return x.withRestatedCommitment(ctx, tx, thread, event, c)
 }

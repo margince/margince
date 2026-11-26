@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -31,6 +32,10 @@ func (mailCaptureSeam) LiveMailboxesTx(ctx context.Context, tx pgx.Tx, userIDs [
 
 func (mailCaptureSeam) RecheckSeatsTx(ctx context.Context, tx pgx.Tx, userIDs []ids.UUID) error {
 	return capture.RecheckMembersTx(ctx, tx, userIDs)
+}
+
+func (mailCaptureSeam) SharedMailboxesReadByTx(ctx context.Context, tx pgx.Tx, team ids.UUID) ([]string, error) {
+	return capture.SharedMailboxesReadByTx(ctx, tx, team)
 }
 
 type memberManager struct{ service *identity.Service }
@@ -61,8 +66,10 @@ func (s Server) MergeMembers(w http.ResponseWriter, r *http.Request, id crmcontr
 	serveToolCommand(w, r, s.toolRegistry.Invoke, "merge_members", reservedArgs{params.IdempotencyKey, params.XApprovalToken}, pathArgument{memberSourceArgument, id.String()})
 }
 
-// PreviewMemberRetirement exposes the same dependency preview as the agent tool.
+// PreviewMemberRetirement exposes the same dependency preview as the agent tool,
+// its records linked on the origin the MCP door links them on.
 func (s Server) PreviewMemberRetirement(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.PreviewMemberRetirementParams) {
+	r = r.WithContext(agents.WithRecordLinks(r.Context(), s.mcpAllowedOrigin))
 	serveTool(w, r, s.toolRegistry.Invoke, "preview_member_retirement", struct {
 		SourceID crmcontracts.Id  `json:"source_id"`
 		TargetID *crmcontracts.Id `json:"to_user_id,omitempty"`

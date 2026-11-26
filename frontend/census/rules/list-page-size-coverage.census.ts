@@ -13,7 +13,12 @@
 // day it is written.
 
 import { basename } from "node:path";
-import type { CensusFile, CensusRule } from "../tree";
+import type { CensusFile, CensusRule, CensusTree } from "../tree";
+import {
+  fromSrc,
+  listFetcherBody,
+  treeModules,
+} from "./list-sort-claim-coverage.census";
 import { screenCorpus } from "./screenfiles.census";
 
 // Calls the wrapper rather than declaring it: listquery.tsx owns no fetcher.
@@ -26,8 +31,10 @@ const readsAList = (file: CensusFile) =>
  * the same screen caps itself, so the fetcher is found by the `cursor` beside
  * its limit, which no other read carries.
  */
-export function pageSizeFindings(file: CensusFile): string[] {
-  const fetcher = file.text.match(
+export function pageSizeFindings(file: CensusFile, tree: CensusTree): string[] {
+  const body =
+    listFetcherBody(fromSrc(file), file.text, treeModules(tree)) ?? file.text;
+  const fetcher = body.match(
     /cursor: cursor \|\| undefined,\s*\n\s*limit: ([^,\n]+),/,
   );
   if (!fetcher) {

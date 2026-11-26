@@ -22,6 +22,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/readerlocale"
+	"github.com/margince/margince/backend/internal/compose/requesttask"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -30,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
@@ -64,7 +67,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// to remove.
 	registry := registryWithGate(InstallationDB(pool), gate, srv.replyDrafter, srv.send,
 		companyEnricher{}, srv.retrievalEmbedder, nil, importsFor(&srv),
-		meetingBriefReader(srv.meetingBriefSvc), srv.log, registryFeatures{lists: srv.listsEnabled},
+		meetingBriefReader(srv.meetingBriefSvc), srv.log, registryFeatures{coreFeatures: srv.coreFeatures, lists: srv.listsEnabled},
 		agents.WithVolumeCharger(srv.volumeMeter))
 	// The ADR-0055 admission layer and the MCP tool surface share one
 	// provider seam: agentGate's StageResolver reads exactly what the MCP
@@ -80,12 +83,14 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 		// Innermost, so it sees the handler's own status.
 		forgetHomeOnWrite(srv.homeCache, srv.log),
 		agentGate(registry, staging, provider, provider, importsFor(&srv), tagSeam(pool), leadDisqualifier{store: newContactsStore(InstallationDB(pool))}, sendStore(pool, srv.send), gate),
-		idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)), deals.NewStore(InstallationDB(pool), DealsInstallation()), InstallationDB(pool)), schedulingReplayRestore(sendStore(pool, srv.send))),
+		idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)), deals.NewStore(InstallationDB(pool), DealsInstallation()), srv.reportMetrics, InstallationDB(pool)), schedulingReplayRestore(sendStore(pool, srv.send))),
 		// Outermost, so the measurement covers the admission gate and the
 		// idempotency replay: a refusal that cost a database read is a slow
 		// answer worth seeing. The wrapper applies it after chi has matched,
 		// which is what lets chiRoutePattern answer.
+		coreFeatureGate(srv.coreFeatures),
 		srv.httpMetrics.Measure(chiRoutePattern),
+		httpserver.NoteRoute(chiRoutePattern),
 	)
 }
 
@@ -112,7 +117,7 @@ func chiRoutePattern(r *http.Request) string {
 // retires the replay promise for that route silently instead of loudly.
 func replayProbes(
 	approvalsSvc *approvals.Service, contractsStore *contracts.Store, dealRoomsStore *dealrooms.Store,
-	dealsStore *deals.Store, db *database.DB,
+	dealsStore *deals.Store, reports *reporting.Service, db *database.DB,
 ) map[string]replayProbe {
 	return map[string]replayProbe{
 		// A Deal Room's visibility is its parent deal's, which only its own
@@ -146,6 +151,11 @@ func replayProbes(
 			_, err := dealsStore.GetSuggestion(ctx, id)
 			return err
 		},
+		// A plan answer carries the seller's draft and history, which the
+		// reporting module alone decides who may read.
+		probeSalesGoalPlan: func(ctx context.Context, owner ids.UUID) error {
+			return reports.GoalPlanVisible(ctx, owner)
+		},
 	}
 }
 
@@ -168,7 +178,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// configures one.
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", httpserver.Healthz)
-	mux.HandleFunc("/readyz", httpserver.Readyz(srv.aiStateOrDefault(), srv.readyzEmbedState(), srv.readinessChecks(pool.Ping,
+	mux.HandleFunc("/readyz", httpserver.Readyz(srv.aiStateOrDefault, srv.readyzEmbedState(), srv.readinessChecks(pool.Ping,
 		func(ctx context.Context) error { return AssertRuntimeRole(ctx, pool) }, SchemaAtHead(pool))...))
 	// The claim surface, beside the probes rather than under /v1: the session
 	// middleware fronting /v1 resolves the singleton company first and
@@ -200,11 +210,12 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// operational mux instead would win the longest-pattern match against
 	// "/v1/" and serve without a session. See extensionEdge.
 	publicEdge := publicInstrument(ComposedExtensions(), newPublicInstrumentLimiter())(
-		publicForms(srv.webFormsHandlers, newPublicFormLimiters())(
+		publicForms(srv.webFormsHandlers)(
 			publicConfirm(newPublicConfirmLimiters())(
-				publicPreferences(consent.NewStore(InstallationDB(pool)), newPublicPreferenceLimiters())(
+				publicPreferences(consent.NewStore(InstallationDB(pool)).
+					WithRequestTasks(requesttask.Writer{Tasks: activities.NewStore(InstallationDB(pool))}), newPublicPreferenceLimiters())(
 					publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters(), srv)(
-						publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters())(
+						publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters(), httpserver.ConfiguredOrigin(srv.send.PublicBaseURL))(
 							extensionEdge(srv, log)(api),
 						),
 					),
@@ -218,15 +229,13 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// shared/kernel/capabilitypath, not named at each mount. The booking
 	// page's slug is on that list because it is the only admission check on a
 	// route that writes.
-	// boundByResponseDeadline sits OUTSIDE the handler chain because a
-	// write deadline has to be set before anything starts writing — including
-	// the access log's own wrapper, which is what holds the ResponseWriter the
-	// controller reaches through.
+	// boundByResponseDeadline sits outside the chain: a write deadline must be
+	// set before anything writes. The access recorder passes it on via Unwrap.
 	if srv.routesForTest != nil {
 		publicEdge = srv.routesForTest(publicEdge)
 	}
-	mux.Handle("/v1/", boundByResponseDeadline(httpserver.Correlate(
-		httpserver.AccessLog(log, publicRecordPreviews(srv, identitySvc)(authH.Middleware(publicEdge))))))
+	mux.Handle("/v1/", boundByResponseDeadline(
+		privateUnlessStated(publicRecordPreviews(srv, identitySvc)(authH.Middleware(readerlocale.Middleware(pool)(publicEdge))))))
 	// The remote MCP connector, mounted as ONE group behind the deployment
 	// gate: the A2 transport, the A2 authorization server (ADR-0013) and
 	// both discovery documents. They belong together because RFC 9728
@@ -238,11 +247,10 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// gate signal: with the connector off none of these routes is
 	// registered, so the mux's own 404 answers all of them identically and
 	// nothing tells a prober which gate is closed.
-	if mcp := srv.mcpHandler(pool, identitySvc, log); mcp != nil {
-		// ONE set of limiters for the whole group: the transport and the
-		// authorization server are two halves of one internet-facing surface,
-		// and a second construction would give each its own private ceilings.
-		mcpLimits := newMCPLimiters()
+	// One set of limiters serves the transport and the authorization server.
+	// They are one surface, so a second set would split its ceilings.
+	mcpLimits := newMCPLimiters()
+	if mcp := srv.mcpHandler(pool, identitySvc, log, mcpLimits); mcp != nil {
 		mux.Handle("/mcp", httpserver.Correlate(httpserver.AccessLog(log, mcpEdge(mcp, mcpLimits, srv.mcpAllowedOrigin))))
 		// The AS endpoints live outside the generated resource surface but
 		// behind the same workspace and session middleware (whose one exemption
@@ -414,6 +422,7 @@ func WithUploadLimits(limits UploadLimits) Option {
 		s.knowledgeHandlers = knowledgeWithUploadLimit(s.knowledgeHandlers, limits.KnowledgeDocument)
 		s.uploadLimit = limits.CSVImport
 		s.maxUploadBytes = limits.Attachment
+		s.maxKnowledgeDocumentBytes = limits.KnowledgeDocument
 	}
 }
 

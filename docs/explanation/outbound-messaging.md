@@ -1,11 +1,9 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/comms/dispatcher.go backend/internal/modules/comms/store.go backend/internal/modules/comms/storechannel.go backend/internal/modules/comms/gates.go backend/internal/modules/comms/sendseam.go backend/internal/modules/comms/policy.go backend/internal/modules/activities/email.go backend/internal/modules/activities/channelsend.go -->
+<!-- describes: backend/internal/modules/comms/dispatcher.go backend/internal/modules/comms/store.go backend/internal/modules/comms/storechannel.go backend/internal/modules/comms/gates.go backend/internal/modules/comms/transmit.go backend/internal/modules/comms/handoff.go backend/internal/modules/consent/transmitpermit.go backend/internal/platform/database/sessionlease.go backend/internal/modules/comms/sendseam.go backend/internal/modules/comms/policy.go backend/internal/modules/activities/email.go backend/internal/modules/activities/channelsend.go -->
 # Outbound messaging: the delivery work behind a sent message
 
-`internal/modules/comms` is how Margince sends a message out. It holds the durable record of what was
-staged to go. It holds the rules that decide whether it may go now, and the dispatcher that hands it to
-a provider. Read it beside [capture-connectors.md](capture-connectors.md): capture is the governed way
-in, and comms is what happens when a rep, or a governed agent, answers.
+`internal/modules/comms` holds each staged delivery, checks whether it may go, and hands it to a provider.
+[capture-connectors.md](capture-connectors.md) describes how messages come in.
 
 For the short version see [reference/modules.md](../reference/modules.md). To connect a transport and
 send something, see [how-to/connect-a-mailbox.md](../how-to/connect-a-mailbox.md) or
@@ -108,7 +106,7 @@ token:
 
 | Value | Provider | Meaning |
 |---|---|---|
-| `SendsWithScope` | `gmail` | The grant must carry `.../auth/gmail.send`; a connection without it parks with `"reconnect it to enable sending"`. |
+| `SendsWithScope` | `gmail`, `graph`, `imap` | The grant must carry the provider's send scope (`.../auth/gmail.send`, `Mail.Send`, `urn:margince:imap:send`); a connection without it parks with `"reconnect it to enable sending"`. An IMAP connection holds its scope only when its owner turned sending on and the SMTP login passed. |
 | `SendsWithoutScope` | `telegram` | The credential **is** the whole authority. A bot token carries no OAuth grant, so there is nothing to check it against. |
 | `CannotSend` | anything else | Nothing on this installation sends for it. It is the zero value, so a provider nobody answered for refuses instead of sending. |
 
@@ -225,8 +223,9 @@ the text lands. Both write a row per recipient into `communication_decision`.
 The answer is no by default, and an allow rests on evidence, never on a purpose key the caller
 supplies. The engine resolves a kind from what the send is: the thread it answers, the invoice it is
 about, the template it uses. It then checks what that kind requires. A reply is allowed because this
-recipient is on the thread the subject opened. An invoice goes to the company's billing contact,
-or to the buyer on the deal when the company has none.
+recipient is on the thread the subject opened. An offer in the words or file names the sender wrote
+(`consent/authoredoffer.go`) needs a live deal, a requested quote or marketing consent instead.
+An invoice goes to the company's billing contact, or to the deal's buyer when the company has none.
 
 A marketing mail still needs consent, and there a `requires_double_opt_in` purpose needs a confirmed
 `consent_event`. A send whose kind nothing supports is `review`, never a silent pass.
@@ -234,18 +233,17 @@ A marketing mail still needs consent, and there a `requires_double_opt_in` purpo
 The engine must tell an **answer** (park: a human can do something about it) from a **fault** (retry:
 the question could not be asked). Reading one as the other silently loses good mail.
 
-The rest of the engine is in
-[privacy-and-consent.md](privacy-and-consent.md#the-authorization-engine-consent). It covers consent
-revoked by kind, and `communication_suppression`. It covers the messages that still reach a subject
+The rest of the engine is in [privacy-and-consent.md](privacy-and-consent.md#the-authorization-engine-consent).
+It covers consent revoked by kind, and `communication_suppression`. It covers the messages that still reach a subject
 whose data use is limited (`security_notice`, `privacy_notice`, `optout_confirmation`). And it covers
 the modes for turning it on step by step (`consent.authorization_modes`, `observe`, `warn`). A fixed
 set of reason codes (`absoluteDenials` in `commsauthz`) refuses in every mode.
 
-A rep can also record the counter to a stop. `communication_override` is a standing exception, per
-kind, that says a machine "no", made for missing evidence, may be turned off for one contact. It reaches only a
-machine answer outside the fixed set, so a "no" the subject decided still wins. An exception names one
-kind, so it reaches only an answer that resolved one. An `unknown_purpose` "no" is outside the fixed
-set and still out of reach.
+A standing exception on file, one per kind in `communication_override`, turns off a machine "no" made
+for missing evidence for one contact. No route records a new one. It reaches only a machine answer
+outside the fixed set, so a "no" the subject decided still wins. An exception names one kind, so it
+reaches only an answer that resolved one. An `unknown_purpose` "no" is outside the fixed set and still
+out of reach.
 
 The request named a key the engine does not know, so no kind resolved for
 an exception to name. Sending again with a known purpose fixes that case.
@@ -262,14 +260,14 @@ Merging them into one would put an endpoint that takes only POST behind a link r
 
 | Where | URL | Who clicks it |
 |---|---|---|
-| `List-Unsubscribe` header | `{base}/v1/public/preferences/{token}/unsubscribe?purpose=` | a mailbox provider, by POST, with no human |
-| Visible `Unsubscribe` link | `{base}/#/unsubscribe/{token}/{purpose}?lang=` | the recipient, who gets a page that asks before it does anything |
+| `List-Unsubscribe` header | `{base}/v1/public/preferences/{token}/unsubscribe[?purpose=]` | a mailbox provider, by POST, with no human |
+| Visible `Unsubscribe` link | `{base}/#/unsubscribe/{token}[/{purpose}]?lang=` | the recipient, who gets a page that asks before it does anything |
 | Visible `Manage preferences` link | `{base}/#/preferences/{token}?lang=` | the recipient, who gets every purpose |
 
 `activities.unsubscribeLinksFor` builds all three. So the header, both visible links, and the copy on
 the timeline with the token removed cannot name different tokens, purposes or languages. The two
-visible links are routes after a `#`. The SPA already serves its public pages that way. And the token
-stays out of ordinary web server access logs until the page calls the API with it.
+visible links are routes after a `#`, which keeps the token out of web server access logs. A link names
+only a live marketing purpose. Any other key gets a link for all marketing, and its press stops that.
 
 The human page never revokes consent when it opens. Mail scanners and link checkers follow links in a
 mailbox with nobody there. That is the same reason RFC 8058 makes the machine endpoint take only POST.
@@ -278,16 +276,16 @@ The text at the end of the mail uses the language of the message above it. That 
 the body, then the subject, then the installation's own language, then English. Nothing records the
 recipient's own choice. The pages a link opens carry a language switch, which is the way back.
 
-### Agents send on their own authority
+### Human approval for agent sends
 
 All three send operations (`sendEmail`, `sendCompanyEmail`, `sendMessage`) declare
 `tier: auto_execute` and `scope: send` in the contract's `x-mcp-tool` extension. The gate for agent
 actions (`auth.Gate.Admit`) checks that scope before the request reaches the handler. A passport
 without `send` is refused there, and nothing is staged for a human to approve.
 
-A passport with `send` acts on the seat, grants and row scope of the human who gave it. So an agent
-can send only what that human could send in the app. See
-[authorization.md](authorization.md#what-a-passport-is).
+A passport with `send` acts on its granting human's seat, grants and row scope. A direct human instruction counts as approval.
+A connected client must ask before sending without one; send scope alone does not approve messages.
+The runner marks work with nobody there; `auth.TierFor` stages each send, even after a run resumes. See [authorization.md](authorization.md#what-a-passport-is).
 
 ### Pace: the policies that wait
 
@@ -348,6 +346,27 @@ the second delivery of the job send again. A provider identity that does not hav
 could carry is **recorded, never used**. Every failure comes down to one result: *receipt recorded,
 one duplicate timeline row*, with a `comms_identity_reconcile_failed` note in `system_log` for the
 operator.
+
+### When the read-back fails
+
+The connector reads the sent copy back to learn the identity the provider set. That read can fail
+after the send worked. `connector.SendReceipt.IdentityUnread` says how, and the send still counts as
+sent:
+
+- **Denied** (a refused read, such as a missing read scope): no later read answers either.
+  `RecordSent` writes a `comms_identity_reconcile_failed` note with the reason `read_denied`.
+- **Transient** (a rate limit, a server fault, a lost connection): the captured copy of the message
+  carries the identity. `RecordSent` looks for that copy by the provider's message id
+  (`capture.EchoIdentityTx`) and moves the send onto it, as for a read-back that answered.
+
+The copy can also come after the receipt, which is the usual order. The capture sink then calls
+`comms.Store.AdoptEchoIdentityTx` in its own transaction, before it writes anything. That moves the
+seat's send onto the copy's identity, so the copy lands on the send as a replay. It looks only at the
+seat's own deliveries, by seat, provider and provider message id.
+
+Both sides first take one lock on that seat, provider and message id
+(`storekit.LockSentEchoKey`). Whichever comes second sees what the first committed. Nothing is sent
+again, and no table or job is added: the mailbox's normal sync delivers the copy.
 
 `thread_key` moves only when it was the same as the message's own identity. The first message of a
 conversation moves onto the identity others will reply to. The thread key of a **reply** belongs to the
@@ -446,8 +465,8 @@ capture asks how a record names its human:
 - **`shapeChannel`** → channel = the identity's own **provider** (`telegram`), and the contact resolved
   from `contact_channel_identity`. The provider *is* the channel kind there.
 
-A missing contact is not a fault. The step that creates contacts runs after the capture transaction
-commits. So a sender who writes for the first time has no contact yet, on either channel kind.
+A missing contact is not a fault. The step that creates contacts runs after this one, later in the
+capture. So a sender who writes for the first time has no contact yet, on either channel kind.
 
 The
 wrong shapes return their own error values instead of a silent miss. One is a record that names its
@@ -546,6 +565,14 @@ sending.
 - **It is decided twice and recorded both times.** Staging refuses what may never go. The send step
   catches what changed while the message waited: revoked consent, a block, a bounce for good, an edit
   to the text.
+- **Stops share the send fence.** The final permission read holds shared subject and address locks.
+  A stop that commits first blocks the send; a stop during the provider call waits for release.
+  The handoff and release deadlines leave time for the stop to commit. Credential refresh, lookup
+  of an earlier send and receipt reads stay outside this fence.
+
+  A timed-out send has an unknown outcome and is never retried. A lost lease is logged: the database and provider cannot commit
+  together, and accepted mail may reach its reader later. Receipt writes follow release, so their
+  time differs from the time the provider accepted the message.
 - **Receipt before ledger.** A message the provider accepted may never end up recorded as not sent.
 - **Park only on an answer**, never on a failure to get one.
 - **A seam that cannot find a past send** marks the row as sending first, and never tries an unknown

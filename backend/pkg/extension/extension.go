@@ -44,9 +44,12 @@
 //     SQL verbs stay for the unit's OWN tables, which is what they were always
 //     the right shape for.
 //
-//     What remains unstable is their REACH: a unit's SQL runs on the shared
-//     application role today, and narrowing it to a per-unit database role
-//     (issue #628) is a change every unit's SQL feels. And Record is OFFERED,
+//     A unit's SQL reaches its own tables only: it runs as a database role
+//     that holds nothing on the core's tables, and a statement naming one is
+//     refused with ErrCoreTableRefused. That is the direction for a unit from
+//     outside the first-party set as well: verbs only, no raw SQL on core
+//     tables, and no database role per unit. What remains unstable is the reach
+//     BETWEEN units, which one shared role still leaves open. And Record is OFFERED,
 //     not enforced — a unit may still write its tables and record nothing — so
 //     a later release that makes recording mandatory would be felt by any unit
 //     that had not adopted it.
@@ -74,17 +77,16 @@
 package extension
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"regexp"
 	"strings"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/margince/margince/backend/pkg/extension/compliancedocs"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
+	"github.com/margince/margince/backend/pkg/extension/privacy"
+	"github.com/margince/margince/backend/pkg/extension/reach"
 	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
@@ -92,7 +94,7 @@ import (
 // prose lives on Name. The generator (tools/gen-composition) validates
 // through this same method, so scan-time acceptance can never drift from
 // boot-time validation.
-var nameGrammar = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+var nameGrammar = regexp.MustCompile(`^` + unitNamePart + `$`)
 
 // maxNameLength bounds the unit name's SHARE of PostgreSQL's 63-byte
 // identifier budget — a longer name would be silently TRUNCATED there,
@@ -164,63 +166,6 @@ func (n Name) Namespace() (string, error) {
 	return NamespacePrefix + strings.ReplaceAll(string(n), "-", "_"), nil
 }
 
-// Version is the extension's own version string, expected stable for an
-// unchanged unit: the boot inventory records it and logs a change. It
-// carries no authority (operator decisions bind to digests,
-// never to a version string).
-type Version string
-
-// Validate requires a non-empty, single-line printable string — the
-// inventory writes it into system_log verbatim, so control characters
-// and whitespace framing have no honest reading there.
-func (v Version) Validate() error {
-	if v == "" {
-		return errors.New("extension version is empty — the boot inventory records it")
-	}
-	if strings.TrimSpace(string(v)) != string(v) {
-		return fmt.Errorf("extension version %q carries surrounding whitespace", string(v))
-	}
-	for _, r := range v {
-		if !unicode.IsPrint(r) {
-			return fmt.Errorf("extension version %q carries a non-printable character", string(v))
-		}
-	}
-	return nil
-}
-
-// Description is one operator-facing sentence saying what the unit is for.
-//
-// Required, because the screen that grants a unit's permissions lists every
-// composed unit by name — and a name alone leaves an admin deciding what to
-// grant to something called "de". The author of the unit is the only party who
-// knows the answer, so the declaration is where it has to come from.
-type Description string
-
-// Validate requires a non-empty, single-line printable sentence. The
-// Extensions settings page shows it to an operator as written.
-func (d Description) Validate() error {
-	if strings.TrimSpace(string(d)) == "" {
-		return errors.New("extension description is empty — the access screen lists the unit by it")
-	}
-	if strings.TrimSpace(string(d)) != string(d) {
-		return fmt.Errorf("extension description %q carries surrounding whitespace", string(d))
-	}
-	for _, r := range d {
-		if !unicode.IsPrint(r) {
-			return fmt.Errorf("extension description %q carries a non-printable character", string(d))
-		}
-	}
-	// Runes, not bytes: a German or Vietnamese sentence is well inside the
-	// bound and well past it in UTF-8, and the message says "characters".
-	if n := utf8.RuneCountInString(string(d)); n > maxDescriptionLength {
-		return fmt.Errorf("extension description is %d characters — one sentence, capped at %d", n, maxDescriptionLength)
-	}
-	return nil
-}
-
-// One sentence, not a manual: the screen gives it one line under the unit name.
-const maxDescriptionLength = 200
-
 // Extension is one installed unit's declaration.
 type Extension struct {
 	Name    Name
@@ -251,6 +196,18 @@ type Extension struct {
 	// unit's own Jurisdictions.
 	SubjectRights []subjectrights.Rules
 
+	// Reach declares the unit's tables holding a core company, contact or lead
+	// id. The core's merge moves those columns onto the survivor, and its Art.
+	// 17 erasure clears the columns a table lists. Every name is the unit's own
+	// `ext_<namespace>_` table; the boot refuses any other.
+	Reach []reach.Table
+
+	// Privacy declares, for every table the unit owns, which core record its
+	// rows belong to, which columns are personal data and the retention class.
+	// The boot refuses a unit whose schema holds a table this leaves out. It
+	// refuses a changed declaration that kept its Version.
+	Privacy []privacy.Table
+
 	// Documents are the compliance documents the unit ships for its
 	// jurisdictions. The admin page serves the selected jurisdiction's set.
 	Documents []compliancedocs.Document
@@ -272,6 +229,35 @@ type Extension struct {
 	// unit name one would undo the axis split from outside the core.
 	Channels []Channel
 
+	// CompanyTypes are the company types this unit adds beside core's own. A
+	// unit sets them only on a company, under its own name, through
+	// Core.Companies().SetExtensionTypes; a type no unit declared is refused.
+	CompanyTypes []CompanyType
+
+	// RecordKinds are the kinds of record this unit adds beside core's own,
+	// stored as `ext:<unit>:<kind>`. Core treats each as a real record in links,
+	// tags, lists and the audit log, under rights that default to deny.
+	RecordKinds []RecordKindDeclaration
+
+	// LinkTypes are the ways this unit says two core records relate, stored as
+	// `ext:<unit>:<type>`. A link of one is made through core's links, under the
+	// rights of both records it joins.
+	LinkTypes []LinkType
+
+	// ReportCounts are the named numbers this unit adds to Reports.
+	// They are data: core builds the query, so a unit cannot register one that
+	// skips row scope, field masks or the group floor.
+	ReportCounts []ReportCount
+
+	// ReportBreakdowns are counts split by one field, added to Reports.
+	// They are data too, and core builds the only query that reads the field.
+	ReportBreakdowns []ReportBreakdown
+
+	// SignalTypes are the kinds of signal this unit adds beside core's own,
+	// each with an evidence layout declared as data. The unit files them
+	// through Core.Signals().Create.
+	SignalTypes []SignalTypeDeclaration
+
 	// FinanceSources are the accounting systems this unit can read into the
 	// core's finance mirror. Read only: nothing on the surface writes back to
 	// an accounting system. A provider may be supplied by one unit only.
@@ -288,17 +274,19 @@ type Extension struct {
 	// operator which secrets a unit expects before it ever runs.
 	Secrets []SecretsRequest
 
+	// MailHooks are the two mail-capture hooks. The manifest names them,
+	// because each reads the subject, addresses and text of captured mail.
+	MailHooks MailHooks
 	// Jobs are the scheduled background jobs the unit contributes: named
 	// cadenced passes that fan out over the fleet, one workspace per tick.
 	// Like a Tool this carries BEHAVIOR only — the cadence, wall clocks,
 	// queue and attempt cap are MECHANICS and live in the unit's
 	// api/jobs.yaml fragment, reaching the process as a JobDeclaration.
 	//
-	// A job is not a tool with a timer, and the difference is who is there
-	// when it runs: nobody. That is why the job seam refuses a confirm-first
-	// tier outright (a confirmation nobody can ever give) and refuses an
-	// outbound scope (autonomous outbound authority on a clock), where the
-	// served-tool seam refuses the same two shapes for weaker reasons.
+	// A job is not a tool with a timer: nobody is there when it runs. So the
+	// job seam refuses a confirm-first tier outright (a confirmation nobody can
+	// ever give) and an outbound scope (autonomous outbound authority on a
+	// clock). The served-tool seam refuses both shapes for weaker reasons.
 	Jobs []Job
 
 	// Subscriptions are the events the unit reacts to: named listeners over the
@@ -369,6 +357,8 @@ type Extension struct {
 	// reads without opening its source.
 	SystemReads []SystemRead
 
+	// Needs are the core capabilities the unit uses, with a reason each (see need.go).
+	Needs []Need
 	// Migrations is the unit's SQL schema layer: a read-only filesystem
 	// holding the MigrationsDir directory of NNNN_name.up.sql/.down.sql
 	// pairs, which a unit supplies with `//go:embed migrations`. A unit
@@ -436,6 +426,8 @@ type Extension struct {
 	// Panels are the unit's components drawn inline on core pages, such as a
 	// deal page's side column. See Panel.
 	Panels []Panel
+	// App is the unit's own screen in the home side drawer. Nil means none.
+	App *App
 
 	// Instrumentation observes the whole process and the browser: logs,
 	// requests, jobs, panics, errors and navigation. See Instrumentation.

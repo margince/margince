@@ -7,8 +7,12 @@ import { useT } from "../i18n";
 import type { ListColumn } from "./listcolumn";
 import { nextSortValue, type SortControl } from "./listsurface";
 
-/** Narrow enough to tuck a column away, wide enough to still read a header. */
-const MIN_COLUMN_WIDTH = 72;
+/**
+ * The narrowest a dragged column gets. An identity cell's logo and badge fit at
+ * this width and the label ends in an ellipsis. Any narrower cut the badge at
+ * the cell edge.
+ */
+export const MIN_COLUMN_WIDTH = 96;
 
 /**
  * A column header. Sortable only when the column names a server sort field,

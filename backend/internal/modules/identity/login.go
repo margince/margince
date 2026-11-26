@@ -72,7 +72,7 @@ func (s *Service) Login(ctx context.Context, email, plaintext, device string) (I
 		if err := s.enforceSignInPolicy(ctx, tx, id, sso); err != nil {
 			return err
 		}
-		if err := insertSession(ctx, tx, account.UserID, tokenHash); err != nil {
+		if err := insertSession(ctx, tx, account.UserID, tokenHash, false); err != nil {
 			return err
 		}
 		if err := auditLogin(ctx, tx, account.UserID, "password login"); err != nil {
@@ -116,7 +116,7 @@ func (s *Service) Login(ctx context.Context, email, plaintext, device string) (I
 		// Password verified; a second factor is owed. The id carries the user the
 		// challenge must bind to — populated before the gate rolled the tx back —
 		// but no session token: that waits for /auth/mfa.
-		return id, LoginSession{}, errMFARequired
+		return id, LoginSession{}, err
 	}
 	if err != nil {
 		return Identity{}, LoginSession{}, err
@@ -155,11 +155,12 @@ func (s *Service) enforceSignInPolicy(ctx context.Context, tx pgx.Tx, id Identit
 		return nil
 	}
 	mfaConfirmed, err := hasConfirmedMFA(ctx, tx, id.UserID)
+	if err != nil || !mfaConfirmed {
+		return err
+	}
+	owed, err := s.challengeFor(ctx, tx, id.UserID)
 	if err != nil {
 		return err
 	}
-	if mfaConfirmed {
-		return errMFARequired
-	}
-	return nil
+	return owed
 }

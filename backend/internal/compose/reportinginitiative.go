@@ -105,24 +105,7 @@ func loadInitiativeMembership(ctx context.Context, tx pgx.Tx, store *initiatives
 	if out.baseline, err = readInitiativeBaseline(ctx, tx, id); err != nil {
 		return nil, err
 	}
-	// Sourcing is read off the lead table, so a reader without the lead grant
-	// sees the pipeline without that origin.
-	if out.launch.IsZero() || !auth.ReadGranted(ctx, "lead") {
-		return out, nil
-	}
-	b := &reportingBindings{}
-	leadScope, err := auth.ScopeClauseFor(ctx, "lead", "l", b.arg)
-	if err != nil {
-		return nil, err
-	}
-	if leadScope == "" {
-		leadScope = "TRUE"
-	}
-	rows, err := tx.Query(ctx, `SELECT DISTINCT l.qualified_deal_id FROM lead l WHERE l.id = ANY(`+b.add(out.leads)+`) AND l.qualified_deal_id = ANY(`+b.add(out.deals)+`) AND l.promoted_at >= `+b.add(out.launch)+` AND `+leadScope, b.values...)
-	if err != nil {
-		return nil, fmt.Errorf("read the sourced deals: %w", err)
-	}
-	out.sourced, err = pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	out.sourced, err = initiatives.SourcedDealsTx(ctx, tx, id, membership)
 	return out, err
 }
 
@@ -166,7 +149,7 @@ func initiativeMemberSQL(ctx context.Context, b *reportingBindings, alias string
 var reportingInitiativeOriginLabels = map[string]langcopy.Phrase{
 	"existing":      {En: "Existing at launch", De: "Beim Start vorhanden", Vi: "Có sẵn khi khởi động"},
 	"sourced":       {En: "Sourced by the initiative", De: "Durch die Initiative gewonnen", Vi: "Do sáng kiến mang về"},
-	"created_after": {En: "Created after launch", De: "Nach dem Start angelegt", Vi: "Tạo sau khi khởi động"},
+	"created_after": {En: "Created after launch", De: "Nach dem Start erstellt", Vi: "Tạo sau khi khởi động"},
 	"added_after":   {En: "Added after launch", De: "Nach dem Start hinzugefügt", Vi: "Thêm sau khi khởi động"},
 }
 

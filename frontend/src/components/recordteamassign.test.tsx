@@ -228,3 +228,23 @@ it("keeps an existing invited holder editable without offering them as a new cho
     role_id: "r1",
   });
 });
+
+it("says who and which role are required on Assign, and sends nothing", async () => {
+  const seen: URL[] = [];
+  stubFetch(seen);
+  render(
+    <RecordTeamAssign
+      open
+      onClose={() => {}}
+      recordType="deal"
+      recordId={RECORD_ID}
+    />,
+  );
+  await userEvent.click(await screen.findByRole("button", { name: "Assign" }));
+  expect(screen.getByText("Who is required.")).toBeTruthy();
+  expect(screen.getByText("Role is required.")).toBeTruthy();
+  expect(document.activeElement).toBe(
+    screen.getByPlaceholderText("Find a colleague"),
+  );
+  expect(seen.some((url) => url.pathname.includes("assignments"))).toBe(false);
+});

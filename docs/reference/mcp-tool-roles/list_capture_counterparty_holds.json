@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "counterparty_holds",
+  "verb": "list_capture_counterparty_holds",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

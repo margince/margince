@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../../i18n/en";
 import { view as liveView } from "../../testing/contactpage.testkit";
+import { recordNamesRoutes } from "../../testing/recordnames.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -17,6 +18,9 @@ import {
   refusedRead,
 } from "./contactarchived.fixtures";
 import { ContactPageV2 } from "./contactpage";
+
+// The verb shows "Meet", so its name starts with the word a speech user says.
+const MEET_NAME = `${en["record.verb.meet"]}, ${en["contact.action.meetings"]}`;
 
 afterEach(cleanup);
 
@@ -64,9 +68,29 @@ describe("the contact page on an archived row", () => {
       expect(control.hasAttribute("disabled")).toBe(true);
       expect(control.getAttribute("aria-describedby")).toBe(reason.id);
     }
-    expect(screen.queryByText(en["record.logActivityRefused"])).toBeNull();
+    expect(screen.queryByText(en["record.roleReadsOnly"])).toBeNull();
     expect(screen.queryByText(en["contact.page.notOpened"])).toBeNull();
     expect(asked).toEqual([]);
+  });
+
+  it("links the contact it was merged into", async () => {
+    mount({
+      ...archivedContactRoutes(),
+      "GET /contacts/p-1": () =>
+        jsonResponse({ ...archivedContact, merged_into_id: "p-2" }),
+      ...recordNamesRoutes({ contact: { "p-2": "Kept Contact" } }),
+    });
+
+    const link = await screen.findByRole("link", { name: "Kept Contact" });
+    expect(link.getAttribute("href")).toMatch(/#\/contacts\/p-2$/);
+    // One sentence after the archived one, not a second line of its own.
+    const reason = screen.getByText(en["contact.rail.archivedReadOnly"]);
+    expect(reason.parentElement?.textContent).toBe(
+      `${en["contact.rail.archivedReadOnly"]} ${en["history.field.merged_into_id"]} Kept Contact.`,
+    );
+    expect(screen.getAllByRole("link", { name: "Kept Contact" })).toHaveLength(
+      1,
+    );
   });
 
   it("refuses the write verbs in the header and in the menu", async () => {
@@ -78,10 +102,7 @@ describe("the contact page on an archived row", () => {
       expect(control.hasAttribute("disabled")).toBe(true);
       expect(control.getAttribute("aria-describedby")).toContain(reason.id);
     };
-    for (const verb of [
-      en["contact.action.write"],
-      en["contact.action.meetings"],
-    ]) {
+    for (const verb of [en["contact.action.write"], MEET_NAME]) {
       refused(screen.getByRole("button", { name: verb }));
     }
     await user.click(

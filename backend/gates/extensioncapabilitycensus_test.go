@@ -59,8 +59,8 @@ const (
 	// composerDir owns the layer constants — which subdirectory of a unit
 	// holds its contract fragments, its SQL and its screen.
 	composerDir = "tools/gen-composition"
-	// tierDir is the enabled set. Presence under it IS the enablement, so
-	// what it holds is what "live" means here.
+	// tierDir holds every unit this tree ships. A require in instance/go.mod,
+	// not presence here, turns one on, so the census reads each unit a build could compose.
 	tierDir = "../extensions"
 	// ciWorkflow is the workflow whose extension lane stages fixtures.
 	ciWorkflow = "../.github/workflows/ci.yml"

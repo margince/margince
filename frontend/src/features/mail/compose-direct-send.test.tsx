@@ -4,22 +4,29 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { entityTimelineKeys } from "../../lib/activitykeys";
-import { ComposeModal } from "./compose";
 import {
   fillSendableForm,
+  installComposeClock,
   jsonResponse,
+  pressSend,
   problemResponse,
   render,
   stubRoutes,
 } from "./compose.testkit";
 import { draftKey } from "./composesaveddraftcalls";
+import { ComposeWindow } from "./composewindow";
 
 // A message sent past its refusal as a recorded exception is a sent message.
 // The composer closes the way a normal send closes it, so nothing on screen
 // invites a second send of mail that has gone.
+
+const INLINE_WARNING = {
+  version: "inline-v2",
+  text: "Why send this one message anyway?",
+};
 
 const REVIEW = {
   id: "r-1",
@@ -27,11 +34,11 @@ const REVIEW = {
   kind: "single",
   reason_code: "no_compatible_evidence",
   refusals: [],
-  warning: {
-    version: "override-v2",
-    text: "The send check still blocks this message.",
-  },
+  warning: INLINE_WARNING,
+  warnings: [INLINE_WARNING],
 };
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -40,7 +47,15 @@ afterEach(() => {
 });
 
 describe("sending with a recorded exception", () => {
-  it("closes the composer once the exception has sent the message", async () => {
+  it.each([
+    "no_compatible_evidence",
+    "subject_request",
+    "marketing_objection",
+    "processing_restricted",
+    "consent_withdrawn",
+    "opted_out_after_request",
+  ])("sends one message with an acknowledged reason for %s", async (reason) => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const saved = {
       id: "md-1",
       anchor_type: "contact",
@@ -72,7 +87,21 @@ describe("sending with a recorded exception", () => {
           },
           409,
         ),
-      "GET /communication-reviews/r-1": () => jsonResponse(REVIEW),
+      "GET /communication-reviews/r-1": () =>
+        jsonResponse({
+          ...REVIEW,
+          reason_code: reason,
+          assessment_revision: "current-warnings",
+          refusals: [
+            {
+              address: "anna@example.test",
+              reason_code: reason,
+              can_be_overruled: true,
+              country: "vn",
+              country_source: "sender_override",
+            },
+          ],
+        }),
       "POST /communication-reviews/r-1/direct-send": () =>
         jsonResponse({ id: "act-9" }),
     });
@@ -81,7 +110,7 @@ describe("sending with a recorded exception", () => {
     function Composer() {
       const [open, setOpen] = useState(true);
       return (
-        <ComposeModal
+        <ComposeWindow
           entityType="contact"
           entityId="c-1"
           contactId="c-1"
@@ -103,26 +132,17 @@ describe("sending with a recorded exception", () => {
     const timelineKeys = entityTimelineKeys("contact", "c-1");
     for (const key of timelineKeys) queryClient.setQueryData(key, []);
     await screen.findByText("Saved draft restored");
-    await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await fillSendableForm(user);
+    await pressSend(user);
 
-    await userEvent.click(
-      await screen.findByRole("button", {
-        name: "Send with a recorded exception",
-      }),
-    );
-    await userEvent.click(await screen.findByRole("checkbox"));
-    await userEvent.type(
-      screen.getByLabelText("Explanation"),
+    await user.type(
+      await screen.findByLabelText(/Why send this one message anyway\?/),
       "They asked for it on the phone.",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Record the exception and send" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Send anyway" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.getByText("Sent as a recorded exception.")).toBeTruthy();
+    expect(screen.getByText("Queued as a recorded exception.")).toBeTruthy();
     expect(
       queryClient.getQueryData(draftKey({ type: "contact", id: "c-1" })),
     ).toBeNull();
@@ -135,6 +155,16 @@ describe("sending with a recorded exception", () => {
       mail_draft_id: saved.id,
     });
     expect(sent.filter((s) => s.key === "POST /emails")).toHaveLength(1);
+    expect(
+      sent.find((s) => s.key === "POST /communication-reviews/r-1/direct-send")
+        ?.body,
+    ).toMatchObject({
+      assessment_revision: "current-warnings",
+      warning_version: "inline-v2",
+      acknowledged: true,
+      explanation: "They asked for it on the phone.",
+      shown_reasons: [reason],
+    });
     expect(
       sent.filter(
         (s) => s.key === "POST /communication-reviews/r-1/direct-send",

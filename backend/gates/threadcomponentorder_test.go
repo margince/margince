@@ -73,10 +73,8 @@ func (o *threadGuardOrder) readCalls(name string, fn *ast.FuncDecl, aliases map[
 		if !ok {
 			return true
 		}
-		called := ""
+		called := localFunctionCall(fn, call.Fun, nil)
 		switch fun := call.Fun.(type) {
-		case *ast.Ident:
-			called = fun.Name
 		case *ast.SelectorExpr:
 			base, ok := fun.X.(*ast.Ident)
 			if !ok {
@@ -86,9 +84,6 @@ func (o *threadGuardOrder) readCalls(name string, fn *ast.FuncDecl, aliases map[
 				if o.guards[name] == 0 || call.Pos() < o.guards[name] {
 					o.guards[name] = call.Pos()
 				}
-			}
-			if base.Name == receiverVarName(fn) {
-				called = scrubKey(receiverTypeName(fn), fun.Sel.Name)
 			}
 		}
 		if called != "" {

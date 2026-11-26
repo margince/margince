@@ -107,7 +107,7 @@ func TestARoundRenewsTheSubscriptionItAlreadyHasRatherThanAddingOne(t *testing.T
 	var created, renewed int
 	srv := subscriptionStub(t, subscriptionStubState{
 		existing: []subscription{{
-			ID: "sub-1", Resource: messagesResource,
+			ID: "sub-1", Resource: "/me/messages",
 			NotificationURL: "https://api.example/webhooks/graph?token=t",
 		}},
 		onCreate: func() { created++ },
@@ -149,7 +149,7 @@ func TestASubscriptionForADifferentURLIsNotAdopted(t *testing.T) {
 	var created, renewed int
 	srv := subscriptionStub(t, subscriptionStubState{
 		existing: []subscription{{
-			ID: "sub-old", Resource: messagesResource,
+			ID: "sub-old", Resource: "/me/messages",
 			NotificationURL: "https://api.example/webhooks/graph?token=ROTATED",
 		}},
 		onCreate: func() { created++ },
@@ -173,7 +173,7 @@ func TestARenewalOfAVanishedSubscriptionCreatesANewOne(t *testing.T) {
 	var created int
 	srv := subscriptionStub(t, subscriptionStubState{
 		existing: []subscription{{
-			ID: "sub-gone", Resource: messagesResource,
+			ID: "sub-gone", Resource: "/me/messages",
 			NotificationURL: "https://api.example/webhooks/graph?token=t",
 		}},
 		renewStatus: http.StatusNotFound,
@@ -280,7 +280,7 @@ func TestASubscriptionIsFoundOnAPageAfterTheFirst(t *testing.T) {
 		}
 		if r.URL.Query().Get("$skiptoken") == "p2" {
 			writeJSON(w, map[string]any{"value": []subscription{{
-				ID: "sub-ours", Resource: messagesResource,
+				ID: "sub-ours", Resource: "/me/messages",
 				NotificationURL: "https://api.example/webhooks/graph?token=t",
 			}}})
 			return
@@ -322,7 +322,7 @@ func TestARenewalCannotBeAimedByAProviderSuppliedID(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/subscriptions", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, map[string]any{"value": []subscription{{
-			ID: "../../me/messages", Resource: messagesResource,
+			ID: "../../me/messages", Resource: "/me/messages",
 			NotificationURL: "https://api.example/webhooks/graph?token=t",
 		}}})
 	})

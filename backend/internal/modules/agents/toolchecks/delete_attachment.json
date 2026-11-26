@@ -1,0 +1,9 @@
+{
+  "verb": "delete_attachment",
+  "checks": [
+    "company.update"
+  ],
+  "takes": [
+    "attachment"
+  ]
+}

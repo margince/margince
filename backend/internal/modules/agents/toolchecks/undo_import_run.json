@@ -1,0 +1,12 @@
+{
+  "verb": "undo_import_run",
+  "checks": [
+    "company.create",
+    "custom_field.read",
+    "import_run.read",
+    "import_run.update"
+  ],
+  "takes": [
+    "complete_import_run"
+  ]
+}

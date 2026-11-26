@@ -44,7 +44,13 @@
 // parameter from the component that read it — never by importing the fallback
 // below, which is a different value that only happens to agree.
 
-import { isRealCalendarDay } from "./calendarday";
+import type { Locale } from "../i18n";
+import { isRealCalendarDay, shiftCalendarDay } from "./calendarday";
+import {
+  dateTimeFormat,
+  pinnedDateTimeFormat,
+  zonelessDateTimeFormat,
+} from "./formatters";
 
 // The zone a record's dates are read in when the installation's own answer is
 // missing. It is only the last resort. `useCompanyZone` in
@@ -84,7 +90,7 @@ export function assertIanaZone(zone: string): void {
   }
   // Intl rejects unknown names: constructing with the zone throws a RangeError
   // that propagates. format() forces the value to be consumed.
-  new Intl.DateTimeFormat("en-US", { timeZone: zone }).format();
+  pinnedDateTimeFormat("en-US", { timeZone: zone }).format();
   checkedZones.add(zone);
 }
 
@@ -121,19 +127,44 @@ export function isRenderableZone(zone: string): boolean {
  * what the rest of the product says.
  */
 export function zoneNameAndOffset(
-  locale: string,
+  locale: Locale,
   at: Date,
   zone?: string,
 ): string {
   // A zone the formatters refuse is shown as stored, not dropped.
   if (zone !== undefined && !isRenderableZone(zone)) return zone;
   const named = (style: "long" | "shortOffset") =>
-    new Intl.DateTimeFormat(locale, { timeZone: zone, timeZoneName: style })
+    (zone === undefined
+      ? zonelessDateTimeFormat(locale, { timeZoneName: style })
+      : dateTimeFormat(locale, { timeZone: zone, timeZoneName: style })
+    )
       .formatToParts(at)
       .find((piece) => piece.type === "timeZoneName")?.value ?? "";
   return [named("long"), named("shortOffset").replace("GMT", "UTC")]
     .filter(Boolean)
     .join(" · ");
+}
+
+/** The zone a wire instant was read on, named and offset in the reader's language. */
+export function zoneLabelAt(at: string, zone: string, locale: Locale): string {
+  return zoneNameAndOffset(locale, new Date(at), zone);
+}
+
+// A zone's name in every season, "Central European Time", in the reader's
+// language. `at` picks the era, since a zone's rules change over the years.
+export function zoneNameAllYear(
+  at: string,
+  zone: string,
+  locale: Locale,
+): string {
+  if (!isRenderableZone(zone)) return zone;
+  const name = dateTimeFormat(locale, {
+    timeZone: zone,
+    timeZoneName: "longGeneric",
+  })
+    .formatToParts(new Date(at))
+    .find((piece) => piece.type === "timeZoneName")?.value;
+  return name?.replace("GMT", "UTC") ?? zone;
 }
 
 // A function, so a change of zone is read on the next call. A runtime that
@@ -147,7 +178,7 @@ export function browserZone(): string {
 // Read to the second: Intl never reports a fraction.
 function wallClockMs(utcMs: number, zone: string): number {
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
+    pinnedDateTimeFormat("en-US", {
       timeZone: zone,
       hourCycle: "h23",
       year: "numeric",
@@ -209,7 +240,7 @@ function instantInZone(
 // offset is what is in question at the moments this is asked about.
 export function dayInZone(utcMs: number, zone: string): string {
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
+    pinnedDateTimeFormat("en-US", {
       timeZone: zone,
       year: "numeric",
       month: "2-digit",
@@ -303,12 +334,35 @@ export function dueTimeOf(
   return wallClockTime(at, zone);
 }
 
+/**
+ * The local date and time `zone` shows at the instant `at`, with the zone.
+ * A chosen time is sent in this shape, so the server keeps that clock.
+ */
+export function wallClockIntent(
+  at: string,
+  zone: string,
+): { wall_clock: string; timezone: string } {
+  const ms = Date.parse(at);
+  return {
+    wall_clock: `${dayInZone(ms, zone)}T${wallClockTime(ms, zone, "millisecond")}`,
+    timezone: zone,
+  };
+}
+
 /** `HH:MM` on `zone`'s wall clock at the instant `at`. */
-export function wallClockTime(at: number, zone: string): string {
+export function wallClockTime(
+  at: number,
+  zone: string,
+  precision: "minute" | "millisecond" = "minute",
+): string {
   const timeOfDay = ((wallClockMs(at, zone) % DAY_MS) + DAY_MS) % DAY_MS;
   const minutes = Math.floor(timeOfDay / 60_000);
   const pad = (value: number) => String(value).padStart(2, "0");
-  return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+  const clock = `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+  if (precision === "minute") return clock;
+  const second = Math.floor(timeOfDay / 1000) % 60;
+  const fraction = String(new Date(at).getUTCMilliseconds()).padStart(3, "0");
+  return `${clock}:${pad(second)}.${fraction}`;
 }
 
 /**
@@ -400,12 +454,7 @@ export function startOfDayInZone(
   zone: string,
   daysLater = 0,
 ): string {
-  const [year = Number.NaN, month = Number.NaN, day = Number.NaN] = dateOnly
-    .split("-")
-    .map(Number);
-  const shifted = new Date(Date.UTC(year, month - 1, day + daysLater))
-    .toISOString()
-    .slice(0, 10);
+  const shifted = shiftCalendarDay(dateOnly, daysLater);
   return new Date(startOfDayInstant(shifted, zone)).toISOString();
 }
 
@@ -414,44 +463,4 @@ export function endOfDayInZone(dateOnly: string, zone: string): string {
   return new Date(
     instantInZone(dateOnly, zone, 23, 59, 59) + 999,
   ).toISOString();
-}
-
-/** City-first labels keep typeahead useful; values remain IANA identifiers. */
-export function timezoneOptions(locale: string, selected: string, at: Date) {
-  const zones = new Set([
-    UTC_ZONE,
-    browserZone(),
-    ...(typeof Intl.supportedValuesOf === "function"
-      ? Intl.supportedValuesOf("timeZone")
-      : []),
-    ...(selected ? [selected] : []),
-  ]);
-  const collator = new Intl.Collator(locale);
-  return Array.from(zones, (zone) => timezoneOption(locale, zone, at)).sort(
-    (left, right) => collator.compare(left.label, right.label),
-  );
-}
-
-export function timezoneOption(locale: string, zone: string, at: Date) {
-  return { value: zone, label: timezoneOptionLabel(locale, zone, at) };
-}
-
-function timezoneOptionLabel(locale: string, zone: string, at: Date): string {
-  if (zone === UTC_ZONE) return UTC_ZONE;
-  const parts = zone.replaceAll("_", " ").split("/");
-  const city = parts.pop() ?? zone;
-  const place = parts.length ? `${city} (${parts.join(" / ")})` : city;
-  try {
-    const offset = new Intl.DateTimeFormat(locale, {
-      timeZone: zone,
-      timeZoneName: "shortOffset",
-    })
-      .formatToParts(at)
-      .find((part) => part.type === "timeZoneName")?.value;
-    return offset ? `${place} · ${offset.replace("GMT", "UTC")}` : place;
-  } catch (error) {
-    if (!(error instanceof RangeError)) throw error;
-    // Preserve a saved zone when the browser's timezone database is older.
-    return place;
-  }
 }

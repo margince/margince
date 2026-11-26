@@ -180,10 +180,9 @@ type ActIn struct {
 	// onboarding sequence, anything answered in place — subjects alone carry no
 	// information at all, so the model fills the gap with plausible invention.
 	//
-	// It is what the message SAYS, not a claim about who wrote it. An activity
-	// reaches an account through activity_link and the employment walk, both of
-	// which record what a message concerns rather than who authored it, and the
-	// 360 carries no participants — so authorship is not knowable here.
+	// ViewOptions keeps only rows the recipient is a party to, so a colleague's
+	// mail is never here. The recipient may only have been copied, so the
+	// prompt answers a snippet without attributing it.
 	Snippet string `json:"snippet,omitempty"`
 }
 
@@ -266,7 +265,7 @@ func findProject(view crmcontracts.Company360, projectID ids.ProjectID) (Project
 		}
 		return projectFact(project, view), nil
 	}
-	return ProjectIn{}, fieldError("project_id", "that project is not on this account, or you cannot see it")
+	return ProjectIn{}, fieldError("project_id", "that project is not at this company, or you cannot see it")
 }
 
 // projectFact is the one project as the draft reads it. The open-commitment
@@ -338,12 +337,13 @@ func foldCommitment(view crmcontracts.Company360) *TaskIn {
 // first touch. That is the conservative end of the axis and the right answer
 // here: a caller who cannot see the history has no basis for a draft that
 // refers to it.
-func ConversationState(view crmcontracts.Company360, now time.Time, zone *time.Location) convstate.State {
+// logged carries the newest logged touch read past the timeline page.
+func ConversationState(view crmcontracts.Company360, now time.Time, zone *time.Location, logged ...crmcontracts.Activity) convstate.State {
 	var activities []crmcontracts.Activity
 	if view.Activities != nil {
 		activities = view.Activities.Data
 	}
-	return draftcore.ClassifyWithLogged(now, zone, instant(view.LastInboundAt), instant(view.LastOutboundAt), activities)
+	return draftcore.ClassifyWithLogged(now, zone, instant(view.LastInboundAt), instant(view.LastOutboundAt), append(activities, logged...))
 }
 
 // instant reads one optional stamp, treating an absent one as never.
@@ -408,7 +408,7 @@ func findContact(
 		}
 	}
 	return crmcontracts.Company360Contact{}, fieldError("contact_id",
-		"that contact is not a contact you can see on this account")
+		"that contact is not a contact you can see at this company")
 }
 
 // findDeal resolves the named deal the same way. The caller checks for an
@@ -434,7 +434,7 @@ func findDeal(view crmcontracts.Company360, dealID string) (DealIn, error) {
 		}
 		return out, nil
 	}
-	return DealIn{}, fieldError("deal_id", "that deal is not open on this account, or you cannot see it")
+	return DealIn{}, fieldError("deal_id", "that deal is not open at this company, or you cannot see it")
 }
 
 // String is the debug rendering, never the prompt payload — the prompt sends

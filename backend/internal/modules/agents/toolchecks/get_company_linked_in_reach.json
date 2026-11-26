@@ -1,0 +1,9 @@
+{
+  "verb": "get_company_linked_in_reach",
+  "checks": [
+    "company.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

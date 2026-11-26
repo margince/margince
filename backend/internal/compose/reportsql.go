@@ -21,11 +21,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -60,6 +61,10 @@ type reportFrame struct {
 	// Held by: TestAReportIsLabelledWithTheInstantItWasComputedAt
 	// (backend/gates/reportasof_test.go)
 	AsOf time.Time
+	// RatesAt is the revision of the rate sheet the answer was computed from.
+	// A handle carries it, so a drill-through reads the rate versions that
+	// headline read, whatever the sheet says by then.
+	RatesAt time.Time
 }
 
 // readReportFrame reads the three installation settings that place a number.
@@ -71,7 +76,7 @@ type reportFrame struct {
 func readReportFrame(ctx context.Context, tx pgx.Tx) (reportFrame, error) {
 	var frame reportFrame
 	var err error
-	if frame.Timezone, err = identity.TimezoneOf(ctx, tx); err != nil {
+	if frame.Timezone, err = identity.TimezoneAppliedTx(ctx, tx); err != nil {
 		return reportFrame{}, err
 	}
 	if frame.BaseCurrency, err = identity.BaseCurrencyOf(ctx, tx); err != nil {
@@ -85,6 +90,9 @@ func readReportFrame(ctx context.Context, tx pgx.Tx) (reportFrame, error) {
 	// this frame converts at one instant even when they run milliseconds apart.
 	if err = tx.QueryRow(ctx, `SELECT now()`).Scan(&frame.AsOf); err != nil {
 		return reportFrame{}, fmt.Errorf("compose: reading the report's as-of: %w", err)
+	}
+	if frame.RatesAt, err = deals.RateSheetRevision(ctx, tx); err != nil {
+		return reportFrame{}, err
 	}
 	return frame, nil
 }
@@ -182,7 +190,7 @@ func reportScopeHoldsDeals(ctx context.Context, tx pgx.Tx, spec reportSpec, requ
 	if err != nil {
 		return nil, err
 	}
-	return &holds, nil
+	return holds, nil
 }
 
 // withReportSnapshot runs one report read in one `REPEATABLE READ` snapshot, so
@@ -238,29 +246,20 @@ func scanReportRows(pgRows pgx.Rows, columns []string) ([]map[string]any, error)
 	// "unknown". Normalized here so no transport can put null on the wire —
 	// reportOutcome.Rows is marshalled straight through on the tool surface.
 	rows := []map[string]any{}
+	// Instants, as report rows have always been: the report screens and the model read them so.
+	reader := rowvalue.NewInstantReader()
 	for pgRows.Next() {
-		values, err := pgRows.Values()
+		values, err := reader.Values(pgRows)
 		if err != nil {
 			return nil, err
 		}
 		row := make(map[string]any, len(columns))
 		for i, col := range columns {
-			row[col] = wireValue(values[i])
+			row[col] = rowvalue.Document(values[i])
 		}
 		rows = append(rows, row)
 	}
 	return rows, pgRows.Err()
-}
-
-// wireValue renders driver-native values JSON-friendly: uuids as their
-// canonical string, not a 16-byte array.
-//
-//craft:ignore naked-any report rows are schemaless by design — values arrive driver-native and leave JSON-wire-shaped
-func wireValue(v any) any {
-	if raw, ok := v.([16]byte); ok {
-		return ids.UUID(raw).String()
-	}
-	return v
 }
 
 // quoteIdent admits caller-chosen aggregate aliases into the SQL text safely:
@@ -294,6 +293,10 @@ const (
 	// weighted by. It is the forecast's chance in use, or the typed one while
 	// self-correction is off (forecastchancetable.go).
 	reportChanceToken = "<<forecast-chance:t,s>>"
+	// reportDealChanceToken stands in for the same chance of a deal aliased t
+	// where the statement joins no stage. The win_probability dimension and
+	// bands read it, so a report groups by the number a deal shows.
+	reportDealChanceToken = "<<forecast-chance:t>>"
 	// reportBaseCurrencyToken stands in for the installation base currency's
 	// bind position.
 	reportBaseCurrencyToken = "<<installation-base-currency>>"
@@ -327,6 +330,9 @@ const (
 	// reportAsOfToken stands in for the instant the answer is true at — the
 	// date an open deal's exchange rate is looked up on or before.
 	reportAsOfToken = "<<report-as-of>>" //nolint:gosec // an SQL placeholder the engine substitutes, not a credential
+	// reportRatesAtToken stands in for the instant whose rate sheet a
+	// drill-through reads. NULL reads the current sheet.
+	reportRatesAtToken = "<<report-rates-at>>" //nolint:gosec // an SQL placeholder the engine substitutes, not a credential
 )
 
 // bindReportTokens substitutes every token the assembled statement carries
@@ -362,6 +368,12 @@ func bindReportTokens(
 	bindValue(reportBaseCurrencyToken, frame.BaseCurrency)
 	bindValue(reportFiscalStartMonthToken, frame.FiscalYearStartMonth)
 	bindValue(reportAsOfToken, frame.AsOf)
+	// A frame built without reading the sheet reads the current rates.
+	if frame.RatesAt.IsZero() {
+		bindValue(reportRatesAtToken, nil)
+	} else {
+		bindValue(reportRatesAtToken, frame.RatesAt)
+	}
 	bindScope := func(token string, resolve func() (string, error)) error {
 		if !strings.Contains(sql, token) {
 			return nil
@@ -378,8 +390,14 @@ func bindReportTokens(
 		return nil
 	}
 	if err := bindScope(reportChanceToken, func() (string, error) {
-		table, err := readForecastChanceTable(ctx, tx, frame.AsOf)
-		return table.sqlExpr("t", "s", arg), err
+		table, err := chances.ReadTable(ctx, tx, frame.AsOf)
+		return table.SQLExpr("t", "s", arg), err
+	}); err != nil {
+		return "", nil, err
+	}
+	if err := bindScope(reportDealChanceToken, func() (string, error) {
+		table, err := chances.ReadTable(ctx, tx, frame.AsOf)
+		return table.ScalarSQL("t", arg), err
 	}); err != nil {
 		return "", nil, err
 	}

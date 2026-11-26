@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { stable } from "../../format/collate";
 import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
@@ -91,7 +96,7 @@ export function useSystemHealth(enabled: boolean) {
             ?.read,
       )
       .map((source) => source.permission)
-      .sort();
+      .sort(stable);
     const denialKey = JSON.stringify([scope, mismatches]);
     if (reconciledDenial.current !== denialKey) {
       reconciledDenial.current = denialKey;
@@ -114,6 +119,9 @@ export function useJobHistory(
   return useQuery({
     queryKey: ["job-health-history", scope, filters, cursor],
     enabled: visible && scope !== undefined,
+    // The filters stay on screen, the pill just pressed keeps its focus, while
+    // the next page loads.
+    placeholderData: keepPreviousData,
     retry: 2,
     queryFn: async ({ signal }) => {
       const report = unwrap(

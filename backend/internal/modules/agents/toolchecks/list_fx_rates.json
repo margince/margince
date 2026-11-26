@@ -1,0 +1,7 @@
+{
+  "verb": "list_fx_rates",
+  "checks": [
+    "fx_rate.read",
+    "installation_settings.read"
+  ]
+}

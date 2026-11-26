@@ -12,6 +12,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -24,7 +25,7 @@ func readStages(ctx context.Context, tx pgx.Tx, where string, args []any) ([]crm
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT s.id, s.pipeline_id, s.name, s.position, s.semantic, s.win_probability,
+		SELECT s.id, s.pipeline_id, s.name, s.name_translations, s.position, s.semantic, s.win_probability,
 		       s.created_at, s.updated_at, s.archived_at, s.version,
 		       crit.required, crit.optional, `+dealCount+`
 		  FROM stage s
@@ -58,7 +59,8 @@ func scanStage(rows pgx.Rows) (crmcontracts.Stage, error) {
 	var stageID, pipelineID ids.UUID
 	var version crmcontracts.RowVersion
 	var criteria crmcontracts.StageExitCriteriaCounts
-	err := rows.Scan(&stageID, &pipelineID, &out.Name, &out.Position, &out.Semantic, &out.WinProbability,
+	var translations map[string]string
+	err := rows.Scan(&stageID, &pipelineID, &out.Name, &translations, &out.Position, &out.Semantic, &out.WinProbability,
 		&out.CreatedAt, &out.UpdatedAt, &out.ArchivedAt, &version,
 		&criteria.Required, &criteria.Optional, &out.DealCount)
 	if err != nil {
@@ -68,6 +70,7 @@ func scanStage(rows pgx.Rows) (crmcontracts.Stage, error) {
 	out.PipelineId = openapi_types.UUID(pipelineID)
 	out.Version = &version
 	out.ExitCriteria = &criteria
+	out.NameTranslations = labeltranslation.ToWire(translations)
 	return out, nil
 }
 

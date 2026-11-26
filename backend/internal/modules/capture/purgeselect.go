@@ -108,11 +108,11 @@ const underAnOpenRequest = `EXISTS (
 		    SELECT 1 FROM data_subject_request d
 		     WHERE d.status IN ('open', 'in_progress')
 		       AND EXISTS (SELECT 1 FROM contact_email ce
-		                    WHERE (lower(ce.email) = lower(a.counterparty_email)
+		                    WHERE (ce.email = lower(a.counterparty_email)
 		                           OR EXISTS (SELECT 1 FROM activity_participant ap
 		                                       WHERE ap.activity_id = a.id
 		                                         AND ap.address IS NOT NULL
-		                                         AND lower(ap.address) = lower(ce.email)))
+		                                         AND lower(ap.address) = ce.email))
 		                      AND ce.contact_id = ANY (ARRAY[
 		                           d.contact_id,
 		                           CASE WHEN d.subject_ref COLLATE "C" ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
@@ -299,6 +299,9 @@ func workspaceMatchClause(kind, value string) (string, []any) {
 // mailbox stop bringing this correspondent in, and a colleague who received the
 // same message keeps their own copy of the answer.
 func ReleaseImportTx(ctx context.Context, tx pgx.Tx, activityID, user ids.UUID) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM capture_import WHERE activity_id = $1 AND user_id = $2`, activityID, user); err != nil {
 		return fmt.Errorf("capture: releasing a seat's import of a shared message: %w", err)
@@ -322,6 +325,9 @@ func ReleaseImportTx(ctx context.Context, tx pgx.Tx, activityID, user ids.UUID) 
 // Keyed on the activity alone, which is what makes it right here and wrong for
 // the seat arm: there is no surviving copy to keep a claim on.
 func ReleaseEveryImportTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM capture_import WHERE activity_id = $1`, activityID); err != nil {
 		return fmt.Errorf("capture: releasing every import of a destroyed message: %w", err)
@@ -381,7 +387,7 @@ func SelectPurgeableContactsTx(
 		   AND EXISTS (
 		     SELECT 1 FROM activity a
 		       JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
-		      WHERE lower(a.counterparty_email) = lower(pe.email))
+		      WHERE lower(a.counterparty_email) = pe.email)
 		   AND NOT EXISTS (
 		     SELECT 1 FROM contact_email other
 		      WHERE other.contact_id = p.id AND other.archived_at IS NULL
@@ -398,13 +404,13 @@ func SelectPurgeableContactsTx(
 		   AND NOT EXISTS (
 		     SELECT 1 FROM capture_import mine
 		       JOIN activity ma ON ma.id = mine.activity_id
-		      WHERE lower(ma.counterparty_email) = lower(pe.email)
-		        AND mine.user_id <> $1)
+		      WHERE lower(ma.counterparty_email) = pe.email
+		        AND mine.user_id IS DISTINCT FROM $1)
 		   -- Mail the purge keeps (a hold, the statutory floor, an open request)
 		   -- still needs its sender on file, so the contact stays with it.
 		   AND NOT EXISTS (
 		     SELECT 1 FROM contact_email ke
-		       JOIN activity a ON lower(a.counterparty_email) = lower(ke.email)
+		       JOIN activity a ON lower(a.counterparty_email) = ke.email
 		      WHERE ke.contact_id = p.id
 		        AND (`+withheldReason(shielded, floor.shieldedAs())+`) <> '')
 		 ORDER BY p.id`, args...)

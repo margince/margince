@@ -62,7 +62,7 @@ func (a *httpAPI) ListFolders(ctx context.Context, accessToken string) ([]connec
 		depth  int
 	}
 	q := url.Values{paramSelect: {"id,displayName,childFolderCount"}, "$top": {"100"}}
-	queue := []pending{{url: a.base + "/me/mailFolders?" + q.Encode()}}
+	queue := []pending{{url: a.root() + "/mailFolders?" + q.Encode()}}
 
 	var out []connector.NamedContainer
 	// Set where the walk gives up on a branch rather than finishes it: a child
@@ -95,7 +95,7 @@ func (a *httpAPI) ListFolders(ctx context.Context, accessToken string) ([]connec
 			}
 			if f.ChildFolderCount > 0 && cur.depth < folderDepthLimit {
 				queue = append(queue, pending{
-					url:    a.base + "/me/mailFolders/" + url.PathEscape(f.ID) + "/childFolders?" + q.Encode(),
+					url:    a.root() + "/mailFolders/" + url.PathEscape(f.ID) + "/childFolders?" + q.Encode(),
 					prefix: qualified + "/",
 					depth:  cur.depth + 1,
 				})
@@ -107,7 +107,7 @@ func (a *httpAPI) ListFolders(ctx context.Context, accessToken string) ([]connec
 		// The same origin check every stored Graph link gets: a nextLink is a
 		// URL the provider chose, and following one off-origin would send this
 		// mailbox's token somewhere Microsoft did not.
-		if err := a.sameAPIOrigin(page.NextLink); err != nil {
+		if err := a.sameMailbox(page.NextLink); err != nil {
 			return nil, false, err
 		}
 		// The next page of the SAME level, so it keeps this level's prefix and

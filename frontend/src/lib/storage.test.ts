@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stable } from "../format/collate";
 import {
   forgetSeat,
   readStored,
@@ -44,7 +45,7 @@ function storedNames(storage: Storage): string[] {
     storage.key(index),
   )
     .filter((name) => name !== null)
-    .sort();
+    .sort(stable);
 }
 
 describe("a stored value", () => {
@@ -101,33 +102,39 @@ describe("a stored value", () => {
       ),
     ).toEqual([
       "margince.palette.recents",
-      "margince.home.swipeSeen",
       "margince.locale",
       "margince.theme",
       "margince.sidebarCollapsed",
       "margince.pageAside.collapsed",
       "margince.edgeLight",
+      "margince.shortcuts.singleKey",
       "margince.worklist.drawerWide",
       "margince.documents.view",
       "margince.table.widths.v2.*",
       "margince.table.order.*",
+      "margince.table.hidden.*",
+      "margince.table.dense.*",
       "margince.agent.faults-seen",
-      "margince.brief.introShown",
       "margince.leads.segregationNoteDismissed",
       "margince.latestInbound.noticed:*",
       "margince.first-run.platform-declined:*",
+      "margince.first-run.ai-declined:*",
       "ob.connect.oauthAttempt",
       "ob.connect.overnightChoice",
       "margince.signin.returnRoute",
-      "margince.room.session",
       "margince.staleBuildReloadedAt",
       "margince.setup.reminderHidden",
+      "margince.setup.permissionsSeen:*",
+      "margince.changes.lastBulkUndo",
       "margince.taskReminders.shown",
       "margince.aiReveal.seen",
       "margince.analytics.overviewView",
       "margince.analytics.overview:*",
       "margince.analytics.overviewTab:*",
       "margince.session.seen",
+      "margince.onboarding.complete:*",
+      "margince.trial.noticeHiddenOn",
+      "margince.installHint",
     ]);
   });
 });
@@ -159,9 +166,9 @@ describe("a browser that refuses storage", () => {
   it("answers absent in a runtime with no Web Storage at all", () => {
     vi.stubGlobal("sessionStorage", undefined);
 
-    expect(readStored(STORAGE_KEYS.buyerRoomSession)).toBeNull();
+    expect(readStored(STORAGE_KEYS.signInReturnRoute)).toBeNull();
     expect(() =>
-      writeStored(STORAGE_KEYS.buyerRoomSession, "mdrs_token"),
+      writeStored(STORAGE_KEYS.signInReturnRoute, "#/deals"),
     ).not.toThrow();
   });
 });
@@ -197,14 +204,17 @@ describe("forgetting a seat", () => {
     forgetSeat();
 
     expect(storedNames(localStorage)).toEqual(
-      [...survivingNames("local"), "another.app.key"].sort(),
+      [...survivingNames("local"), "another.app.key"].sort(stable),
     );
     expect(storedNames(sessionStorage)).toEqual(
-      survivingNames("session").sort(),
+      survivingNames("session").sort(stable),
     );
     expect(readStored(STORAGE_KEYS.theme)).toBe("kept");
     expect(readStored(STORAGE_KEYS.faultsSeen)).toBeNull();
-    expect(readStored(STORAGE_KEYS.buyerRoomSession)).toBeNull();
+    expect(readStored(STORAGE_KEYS.signInReturnRoute)).toBeNull();
+    expect(
+      readStored({ family: STORAGE_KEYS.onboardingComplete, member: "first" }),
+    ).toBeNull();
     // Named by its account, so the next reader cannot inherit it.
     expect(
       readStored({ family: STORAGE_KEYS.platformDeclined, member: "first" }),
@@ -220,7 +230,7 @@ describe("forgetting a seat", () => {
     forgetSeat();
 
     expect(storedNames(sessionStorage)).toEqual(
-      survivingNames("session").sort(),
+      survivingNames("session").sort(stable),
     );
   });
 });

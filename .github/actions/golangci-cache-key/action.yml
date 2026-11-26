@@ -1,11 +1,11 @@
 name: golangci-cache-key
 description: >-
   Hand back the key of golangci-lint's analysis cache, so the ci lane that reads
-  it and the scheduled main job that writes it spell the key in one place.
+  it and the main and develop jobs that write it spell the key in one place.
 
 outputs:
   key:
-    description: The primary key, ending in the commit SHA so cache-warm can save a new entry for each main commit.
+    description: The primary key, ending in the commit SHA so each writer can save a new entry for the commit it read.
     value: ${{ steps.key.outputs.key }}
   restore-keys:
     description: The prefix that matches the newest entry with the same dependencies and lint config.

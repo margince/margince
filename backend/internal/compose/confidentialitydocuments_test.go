@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -56,7 +57,9 @@ func salarySheet(t *testing.T) []byte {
 
 func readerOver(files map[ids.UUID]storedFile) (*threadDocuments, *fakeAttachments) {
 	fake := &fakeAttachments{files: files}
-	return &threadDocuments{files: fake, pdf: processPDFReader, slots: make(chan struct{}, 1)}, fake
+	return &threadDocuments{
+		files: fake, pdf: processPDFReader, slots: make(chan struct{}, 1), fileBudget: confidentialityDocumentTimeout,
+	}, fake
 }
 
 func TestAThreadsSalarySheetReachesThePromptInsideTheFence(t *testing.T) {
@@ -194,5 +197,64 @@ func TestUnreadIdentityAndMedicalFilesDoNotChooseThePrivacyKind(t *testing.T) {
 		if !hasUnreadNamedFile(row, capture.NamedAsPrivate) {
 			t.Errorf("%s could be opened unread", name)
 		}
+	}
+}
+
+func TestAnImageCannotBecomeAReadableMarkupExcerpt(t *testing.T) {
+	for _, c := range []struct{ filename, mediaType string }{
+		{"diagram.svg", "image/svg+xml"},
+		{"diagram.SVG", "application/octet-stream"},
+		{"document.bin", "IMAGE/SVG+XML; charset=UTF-8"},
+	} {
+		t.Run(c.filename+c.mediaType, func(t *testing.T) {
+			doc := capture.ThreadDocument{Filename: c.filename}
+			raw := []byte(`<svg xmlns="http://www.w3.org/2000/svg"><text>Demo picture</text></svg>`)
+			if err := (&threadDocuments{}).excerpt(context.Background(), &doc, raw, c.mediaType); err != nil {
+				t.Fatal(err)
+			}
+			if !doc.Unreadable || doc.Excerpt != "" {
+				t.Fatalf("image treated as text: unreadable=%v excerpt=%q", doc.Unreadable, doc.Excerpt)
+			}
+		})
+	}
+}
+
+func TestAnImageNeedsNoObjectFetchWithoutAnImageReader(t *testing.T) {
+	files := &fakeAttachments{}
+	reader := &threadDocuments{files: files, slots: make(chan struct{}, 1)}
+	doc := capture.ThreadDocument{AttachmentID: ids.NewV7(), Filename: "diagram.svg", ContentType: "image/svg+xml", ByteSize: 100}
+	if err := reader.readOne(context.Background(), &doc, newDocumentPass()); err != nil {
+		t.Fatal(err)
+	}
+	if !doc.Unreadable || len(files.fetched) != 0 {
+		t.Fatalf("image read: unreadable=%v fetched=%d", doc.Unreadable, len(files.fetched))
+	}
+}
+
+// compilingPDFEngine is a pdftext.Reader whose first compile outlasts any parse
+// budget: a Read before Start waits out the caller's deadline.
+type compilingPDFEngine struct{ started bool }
+
+func (e *compilingPDFEngine) Start() error {
+	e.started = true
+	return nil
+}
+
+func (e *compilingPDFEngine) Read(ctx context.Context, _ []byte, _ int) (string, error) {
+	if !e.started {
+		<-ctx.Done()
+		return "", ctx.Err()
+	}
+	return "Anna Berger\nWork Experience\nEducation", nil
+}
+
+func TestACompilingPDFEngineDoesNotSpendTheFilesParseBudget(t *testing.T) {
+	reader := &threadDocuments{pdf: &compilingPDFEngine{}, fileBudget: time.Millisecond}
+	doc := capture.ThreadDocument{Filename: "anna-berger.pdf"}
+	if err := reader.excerpt(context.Background(), &doc, []byte("%PDF-1.4"), documentPDFMIME); err != nil {
+		t.Fatal(err)
+	}
+	if doc.Unreadable || !doc.Personnel {
+		t.Fatalf("a CV behind a cold engine: unreadable=%v personnel=%v, want read as personnel", doc.Unreadable, doc.Personnel)
 	}
 }

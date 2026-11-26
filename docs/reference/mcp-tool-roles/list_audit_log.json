@@ -1,0 +1,19 @@
+{
+  "tool": "read_workspace",
+  "action": "audit_log",
+  "verb": "list_audit_log",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

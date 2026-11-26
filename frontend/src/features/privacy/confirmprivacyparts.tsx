@@ -29,7 +29,7 @@ export const BASIS_LABEL: Readonly<
   legal_obligation: "privacynotice.basis.legalObligation",
   vital_or_security_interest: "privacynotice.basis.vitalOrSecurity",
   existing_customer_exception: "privacynotice.basis.existingCustomer",
-  vn_subject_agreement: "privacynotice.basis.vnAgreement",
+  none: "privacynotice.basis.none",
 };
 
 const CATEGORY_LABEL: Readonly<
@@ -66,6 +66,11 @@ const SCOPE_LABEL: Partial<Record<Retention["scope"], MessageKey>> = {
   "lead/unconverted": "privacynotice.retention.scope.leadUnconverted",
 };
 
+const AFTER_UNIT = {
+  "retention.keepYears": "privacynotice.retention.afterYears",
+  "retention.keepDays": "privacynotice.retention.afterDays",
+} as const;
+
 const ACTION_LABEL: Readonly<Record<Retention["action"], MessageKey>> = {
   archive: "privacynotice.retention.archive",
   anonymize: "privacynotice.retention.anonymize",
@@ -85,8 +90,10 @@ export function ControllerCard({
       <Heading size="large" className="t-h3">
         {t("privacynotice.controller.title")}
       </Heading>
-      {controller.identity ? (
-        <p className="t-body confirm-lines">{controller.identity}</p>
+      {controller.identity || controller.legal_name ? (
+        <p className="t-body confirm-lines">
+          {controller.identity ?? controller.legal_name}
+        </p>
       ) : null}
       {controller.privacy_contact ? (
         <p className="t-body">
@@ -134,17 +141,20 @@ export function HeldCard({ card }: Readonly<{ card: PrivacyInformationPage }>) {
   );
 }
 
-/** The retention rules that act on the reader's data, then the rest. */
+/** The retention rules that act on the reader's data, then the rest. The
+ * archive names the installation's stated purpose, or the default one. */
 export function RetentionCard({
   retention,
-}: Readonly<{ retention: readonly Retention[] }>) {
+  archivePurpose,
+}: Readonly<{ retention: readonly Retention[]; archivePurpose?: string }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  // The window reads as the retention settings screen shows it.
+  // The window is counted as the retention settings screen counts it, in the
+  // case "after …" takes (German "nach 3 Jahren").
   const windowOf = (days: number) => {
     const window = keepFor(days);
-    return plural(window.unit, window.count, {
+    return plural(AFTER_UNIT[window.unit], window.count, {
       count: formatNumber(window.count, locale),
     });
   };
@@ -167,6 +177,8 @@ export function RetentionCard({
               {t(labelFor(ACTION_LABEL, rule.action), {
                 scope: t(scope),
                 days: windowOf(rule.retain_days),
+                purpose:
+                  archivePurpose ?? t("privacynotice.retention.archivePurpose"),
               })}
             </li>
           ))}

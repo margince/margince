@@ -1,0 +1,11 @@
+{
+  "verb": "launch_sales_initiative",
+  "checks": [
+    "deal.read",
+    "sales_initiative.update"
+  ],
+  "takes": [
+    "initiative",
+    "staffed_initiative"
+  ]
+}

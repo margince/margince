@@ -10,9 +10,9 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { keyTestReasonKey } from "../../components/ai-provider-key-test";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { keyTestReasonKey } from "./ai-provider-key-test";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 
 // The Test button on a provider row: the server asks the vendor with the key
@@ -278,8 +278,9 @@ describe("testing a provider key", () => {
     expect(await within(row).findByText("Test failed")).toBeTruthy();
 
     await user.click(within(row).getByRole("button", { name: /^replace$/i }));
-    await user.type(within(row).getByPlaceholderText(/paste/i), "sk-new");
-    await user.click(within(row).getByRole("button", { name: /save key/i }));
+    const entry = await screen.findByRole("dialog", { name: /api key/i });
+    await user.type(within(entry).getByPlaceholderText(/paste/i), "sk-new");
+    await user.click(within(entry).getByRole("button", { name: /save key/i }));
 
     await waitFor(() =>
       expect(within(row).queryByText("Test failed")).toBeNull(),

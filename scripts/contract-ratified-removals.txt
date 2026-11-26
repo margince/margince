@@ -1,0 +1,3 @@
+# METHOD /v1/path reason: operations a maintainer ratified removing without a
+# published deprecation notice. Every other removal still needs one.
+POST /v1/contacts/{id}/consent/allow ratified-2026-11-11-no-stable-release-ever-served-the-standing-override

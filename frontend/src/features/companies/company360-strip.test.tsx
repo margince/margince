@@ -33,7 +33,7 @@ const company: components["schemas"]["Company"] = {
 };
 
 const customer: StateStripSection = {
-  account: { lifecycle: "customer", relationship_types: ["customer"] },
+  account: { status: "customer", relationship_types: ["customer"] },
   commercial: {
     open_count: 1,
     stalled_count: 0,
@@ -47,7 +47,7 @@ const customer: StateStripSection = {
 
 const prospect: StateStripSection = {
   ...customer,
-  account: { lifecycle: "prospect", relationship_types: [] },
+  account: { status: "prospect", relationship_types: [] },
 };
 
 function view(overrides: Partial<Company360> = {}): Company360 {
@@ -156,7 +156,7 @@ describe("the figures under How it stands", () => {
         view({
           state_strip: {
             ...customer,
-            account: { ...customer.account, lifecycle },
+            account: { ...customer.account, status: lifecycle },
           },
         }),
       );
@@ -343,7 +343,7 @@ function door(label: string): HTMLElement {
 }
 
 describe("a figure offers the tab it is a figure of", () => {
-  it("sends the reader to history, finance and deals from their own doors", async () => {
+  it("sends the reader to meetings, history, finance and deals from their own doors", async () => {
     const opened: CompanyTab[] = [];
     await renderFigures(view(), (tab) => opened.push(tab));
 
@@ -356,7 +356,7 @@ describe("a figure offers the tab it is a figure of", () => {
       await userEvent.click(door(label));
     }
 
-    expect(opened).toEqual(["timeline", "timeline", "finance", "deals"]);
+    expect(opened).toEqual(["meetings", "timeline", "finance", "deals"]);
   });
 
   it("draws no door when the caller has nowhere to send them", async () => {

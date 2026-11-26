@@ -5,183 +5,125 @@
 // entity kind, keyed and cached), as opposed to the components that render
 // them, which stay in entityref.tsx.
 
-import { skipToken, useQuery } from "@tanstack/react-query";
+import { type UseQueryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { leadIdentityName } from "../format/leadname";
 import type { EntityKind } from "../lib/entity";
 import { idBatcher } from "../lib/idbatch";
-import { ProblemError, throwProblem } from "../lib/problem";
+import { unwrap } from "../lib/problem";
 
-/**
- * What a read that carried no name is allowed to mean.
- *
- * A 404 is an ANSWER: the record is gone, or row-scope hides its existence from
- * this reader (the API hides a row it may not see rather than admitting it),
- * and no amount of waiting or asking again will produce a name. That is the
- * settled reading the id fallback exists for.
- *
- * Every other failure (a 403 on the object, a 5xx, a dropped connection) is a
- * read that never arrived, and it THROWS so react-query holds it as an error.
- * Flattened to null it would be indistinguishable from the answer above, and
- * the two say opposite things about whether this is worth asking again.
- */
-function unnamedOrThrow(error: unknown, response: Response): null {
-  if (response.status === 404) {
-    return null;
-  }
-  throwProblem(error);
-}
+const REFERENCE_IDS_PER_READ = 100;
 
-// The company list's own `id` bound.
-const COMPANY_IDS_PER_READ = 100;
-
-// A report, the deals table and a project list name many companies at once,
-// so every company named within one tick shares one list read. It asks for
-// what `GET /companies/{id}` answers, archived rows and our own company too.
-// A company the reader may not see is left out, which reads as a 404 did.
 export type EntityReference = {
   name: string | null;
   archived: boolean;
   logo?: string | null;
 };
-const companyNameOf = idBatcher<EntityReference>(
-  COMPANY_IDS_PER_READ,
-  async (page) => {
-    const { data, error } = await api.GET("/companies", {
-      params: {
-        query: {
-          id: [...page],
-          limit: page.length,
-          include_archived: true,
-          include_anchor: true,
-        },
-      },
-    });
-    if (error) {
-      throw new ProblemError(error);
-    }
+
+function referenceReader(kind: EntityKind) {
+  return idBatcher<EntityReference>(REFERENCE_IDS_PER_READ, async (page) => {
+    const data = unwrap(
+      await api.GET("/records/references", {
+        params: { query: { kind, id: [...page] } },
+      }),
+    );
     return new Map(
-      data.data.map((company) => [
-        company.id,
+      data.data.map((reference) => [
+        reference.id,
         {
-          name: company.display_name ?? null,
-          archived: Boolean(company.archived_at),
-          logo: company.logo_url,
+          name: reference.name,
+          archived: reference.archived,
+          ...(kind === "company" ? { logo: reference.logo } : {}),
         },
       ]),
     );
-  },
-);
+  });
+}
 
-// Each entity endpoint names its display field differently. Missing names
-// resolve to null because React Query rejects undefined query results.
 const NAME_READERS: Record<
   EntityKind,
-  (id: string, signal?: AbortSignal) => Promise<EntityReference | null>
+  (id: string) => Promise<EntityReference | null>
 > = {
-  contact: async (id, signal) => {
-    const { data, error, response } = await api.GET("/contacts/{id}", {
-      params: { path: { id } },
-      signal,
-    });
-    if (error) return unnamedOrThrow(error, response);
-    return {
-      name: data.full_name ?? null,
-      archived: Boolean(data.archived_at),
-    };
-  },
-  company: (id) => companyNameOf(id),
-  lead: async (id, signal) => {
-    const { data, error, response } = await api.GET("/leads/{id}", {
-      params: { path: { id } },
-      signal,
-    });
-    if (error) return unnamedOrThrow(error, response);
-    return {
-      name: leadIdentityName(data) || null,
-      archived: Boolean(data.archived_at),
-    };
-  },
-  project: async (id, signal) => {
-    const { data, error, response } = await api.GET("/projects/{id}", {
-      params: { path: { id } },
-      signal,
-    });
-    if (error) return unnamedOrThrow(error, response);
-    return { name: data.name ?? null, archived: Boolean(data.archived_at) };
-  },
-  deal: async (id, signal) => {
-    const { data, error, response } = await api.GET("/deals/{id}", {
-      params: { path: { id } },
-      signal,
-    });
-    if (error) return unnamedOrThrow(error, response);
-    return { name: data.name ?? null, archived: Boolean(data.archived_at) };
-  },
+  contact: referenceReader("contact"),
+  company: referenceReader("company"),
+  lead: referenceReader("lead"),
+  project: referenceReader("project"),
+  deal: referenceReader("deal"),
 };
-
-export function fetchEntityName(
-  kind: EntityKind,
-  id: string,
-): Promise<string | null> {
-  return NAME_READERS[kind](id).then((reference) => reference?.name ?? null);
-}
 
 export async function fetchEntityReference(
   kind: EntityKind,
   id: string,
-  signal: AbortSignal,
+  signal?: AbortSignal,
 ): Promise<EntityReference | null> {
-  signal.throwIfAborted();
-  const reference = await NAME_READERS[kind](id, signal);
-  signal.throwIfAborted();
+  signal?.throwIfAborted();
+  const reference = await NAME_READERS[kind](id);
+  signal?.throwIfAborted();
   return reference;
 }
 
-/**
- * The query every reader of one record's name shares: the same key, reader and
- * freshness, so a name one surface read costs another nothing.
- *
- * A batched read does not retry on its own. Each retry would open its own
- * window after the batch closed, one request per name. The name is asked again
- * on the next invalidation instead.
- */
-export function entityNameQuery(kind: EntityKind, id: string) {
+// Every reader caches the reference, so a settled answer keeps a record it
+// left out (null) apart from a record that carries no name.
+export function entityNameQuery(
+  kind: Exclude<EntityKind, "company">,
+  id: string,
+) {
   return {
     queryKey: [kind, ENTITY_NAME_KEY, id],
-    queryFn: () => fetchEntityName(kind, id),
+    // Other observers share this batch; retain its answer after unmount.
+    queryFn: () => fetchEntityReference(kind, id),
     // References change rarely relative to the pages that render them; a short
     // cache keeps a 360 from re-fetching the same name on every hover/refetch.
     staleTime: 60_000,
-    ...(kind === "company" ? { retry: false } : {}),
+    retry: false,
   } as const;
 }
 
-/**
- * The segment that marks a query as one record's display name.
- *
- * Named because two readers key on it: the reads below, and the data layer,
- * which brings every mounted name back after a successful write
- * (app/queryclient.ts). A write can rename its record, and the trail at the top
- * of the window is naming it. Held apart by a literal in two files, a rename
- * would have gone on showing the old name until the reader reloaded.
- */
+// Retrying a failed batch here would send a separate request for each record.
+export function companyReferenceQuery(id: string) {
+  return {
+    queryKey: ["company", ENTITY_NAME_KEY, id, "reference"],
+    // The batch serves other observers too; keep its answer after unmount.
+    queryFn: () => NAME_READERS.company(id),
+    staleTime: 60_000,
+    retry: false,
+  } as const;
+}
+
+/** What one answer says about an id: its name, and whether it held the record. */
+export type NameAnswer = Readonly<{ name: string | null; found: boolean }>;
+
+// A cached string is a name written straight into the cache.
+function answerOf(value: EntityReference | string | null): NameAnswer {
+  if (value === null) {
+    return { name: null, found: false };
+  }
+  return { name: typeof value === "string" ? value : value.name, found: true };
+}
+
+function nameReadQuery(
+  kind: EntityKind,
+  id: string,
+): UseQueryOptions<EntityReference | string | null, Error> {
+  return kind === "company"
+    ? companyReferenceQuery(id)
+    : entityNameQuery(kind, id);
+}
+
+export function entityNameObserverQuery(
+  kind: EntityKind,
+  id: string,
+): UseQueryOptions<EntityReference | string | null, Error, string | null> {
+  return {
+    ...nameReadQuery(kind, id),
+    select: (value) => answerOf(value).name,
+  };
+}
+
+// Shared with mutation invalidation so renames refresh every mounted label.
 export const ENTITY_NAME_KEY = "ref";
 
-/**
- * The three readings of a reference the page cannot put a name to.
- *
- * `pending` is a read that has not answered yet, and it is allowed to say so.
- * `unnamed` is a read that answered and carried no name: a record with a blank
- * display field, or one the API will not admit exists (see `unnamedOrThrow`);
- * there the id is what is left, and on the surfaces that keep this fallback
- * (an audit row, a history entry, a record the reader may not open) it is the
- * one traceable fact, so it stays. `failed` is a read that never arrived, and
- * it may not borrow either spelling: painting the id while the name is still on
- * its way is how a record page came to show a uuid for a moment on every load,
- * and painting it for a 403 or a 500 states as settled fact a question nothing
- * answered.
- */
+// Pending and failed reads cannot establish that a name is absent.
+// Only a settled omission may display the record ID as its fallback.
 export type NameReading = "pending" | "failed" | "unnamed";
 
 export function readingOf(
@@ -208,26 +150,32 @@ export function usableName(name: string | null | undefined): string | null {
 
 // The resolved display name only, sharing EntityRef's exact cache entry so
 // nothing is fetched twice. Exported for chrome that wants the name as plain
-// text rather than as EntityRef's navigating button: the breadcrumb names the
-// record you are already looking at, so linking it would go nowhere.
+// text, not as EntityRef's navigating button. The browser tab names the record
+// already on screen, so a link there would go nowhere.
 export function useEntityName(
   kind: EntityKind,
   id: string | null | undefined,
-): { name: string | null; reading: NameReading; fetching: boolean } {
-  const query = useQuery({
-    ...entityNameQuery(kind, id ?? ""),
-    queryKey: [kind, ENTITY_NAME_KEY, id],
-    queryFn: id ? () => fetchEntityName(kind, id) : skipToken,
+): {
+  name: string | null;
+  reading: NameReading;
+  absent: boolean;
+  fetching: boolean;
+} {
+  const query = useQuery<EntityReference | string | null, Error, NameAnswer>({
+    ...nameReadQuery(kind, id ?? ""),
+    select: answerOf,
+    enabled: Boolean(id),
   });
   // The reading travels with the name, because a caller handed only `null`
   // cannot tell a name that is still coming from one that will never come, and
   // every caller that has had to guess has guessed the id.
   //
-  // `fetching` is true while a read is under way or paused, cached answer or
-  // not. A cached "no name" can be replaced by the read still coming.
+  // `absent`: a settled answer left the record out. `fetching` is true while a
+  // read is under way or paused, since a cached "no name" can still change.
   return {
-    name: usableName(query.data),
+    name: usableName(query.data?.name),
     reading: readingOf(query),
+    absent: query.data?.found === false,
     fetching: query.fetchStatus !== "idle",
   };
 }

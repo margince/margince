@@ -1,17 +1,29 @@
 /** @vitest-environment happy-dom */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { useActivityGate } from "../../components/activitygate";
+import { useActivityGate, writableTarget } from "../../components/activitygate";
+import { SEARCH_DEBOUNCE_MS } from "../../design-system/debouncedsearch";
+import { armHoverIntent } from "../../design-system/hoverintent-testing";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { routeHash } from "../../lib/router";
+import { useShortcutDispatcher } from "../../lib/shortcuts";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
+import { company360 } from "../../testing/company.fixtures";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { CompanyActionBadges } from "./companyheader";
 import {
@@ -19,16 +31,20 @@ import {
   CompanyHeaderActions,
 } from "./companyheaderactions";
 
+// The verb shows "Meet", so its name starts with the word a speech user says.
+const BOOK_NAME = `${en["record.verb.meet"]}, ${en["scheduling.bookContact"]}`;
+
 // The account header's Email and Log strip, and the menu's Add task. The strip
 // is icon-first like every other record header's action strip.
 
 type Company = components["schemas"]["Company"];
+type Company360 = components["schemas"]["Company360"];
 
 const COMPANY: Company = {
   writable: true,
   id: "o-1",
   display_name: "Brandt Automotive GmbH",
-  lifecycle: "customer",
+  status: "customer",
   owner_id: "u-owner",
   captured_by: "human:u-author",
   source: "manual",
@@ -40,6 +56,45 @@ const COMPANY: Company = {
 afterEach(() => {
   vi.unstubAllGlobals();
 });
+
+function rosterRow(
+  id: string,
+  name: string,
+  score: number,
+): components["schemas"]["Company360Contact"] {
+  return {
+    contact_id: id,
+    full_name: name,
+    attachable: true,
+    strength: {
+      score,
+      bucket: "moderate",
+      factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
+    },
+    deal_roles: [],
+    consent: {},
+  };
+}
+
+// Two contacts, the 360's ranking putting Mara first while the account's
+// best route in runs through Jonas.
+const TWO_CONTACTS: Company360 = {
+  ...company360,
+  contacts: {
+    data: [
+      rosterRow("c-mara", "Mara Lenz", 40),
+      rosterRow("c-jonas", "Jonas Keller", 35),
+    ],
+    page: { has_more: false, next_cursor: null },
+  },
+  strength: {
+    score: 60,
+    bucket: "moderate",
+    contact_count: 2,
+    contributor_contact_id: "c-jonas",
+    factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
+  },
+};
 
 // /me answering exactly `allow`, and nothing else, for a grant read with no
 // `authorization` shape beyond it: `useCanWrite` would deny regardless of
@@ -106,21 +161,33 @@ function renderInApp(ui: ReactNode) {
 // open/close wiring rather than a state this test would otherwise own itself.
 // The strip and its menu read one gate, as on the page; Add task is a row of
 // the menu.
-function ActionsHost() {
+function ActionsHost({
+  company = COMPANY,
+  view,
+  onComposerOpen = () => undefined,
+  filesOnto,
+}: Readonly<{
+  company?: Company;
+  view?: Company360;
+  onComposerOpen?: (open: boolean) => void;
+  // The row the activity files onto, where the test asks the server's answer.
+  filesOnto?: Company;
+}>) {
   const [drawer, setDrawer] = useState<ActivityDrawer>(null);
-  const activity = useActivityGate();
+  const activity = useActivityGate("company", writableTarget(filesOnto));
   return (
     <>
       <CompanyHeaderActions
-        company={COMPANY}
+        company={company}
         composerOpen={false}
-        onComposerOpen={() => undefined}
+        onComposerOpen={onComposerOpen}
         drawer={drawer}
         onDrawer={setDrawer}
         activity={activity}
+        view={view}
       />
       <CompanyActionBadges
-        company={COMPANY}
+        company={company}
         activity={activity}
         onAddTask={() => setDrawer("task")}
         onOpenHistory={() => undefined}
@@ -162,6 +229,40 @@ describe("Log activity and Add task, gated on the create grant", () => {
     );
   });
 
+  it("names each refusal in its verb's tooltip or title, outside its description", async () => {
+    stubGrants({});
+    const user = userEvent.setup();
+    armHoverIntent();
+    renderActions();
+    const why = en["record.roleReadsOnly"];
+
+    const log = await screen.findByRole("button", { name: "Log activity" });
+    const email = screen.getByRole("button", {
+      name: en["contact.action.email"],
+    });
+    await waitFor(() =>
+      expect(log.getAttribute("title")).toBe(`${en["log.title"]}. ${why}`),
+    );
+    expect(email.getAttribute("aria-describedby")).toBe(
+      log.getAttribute("aria-describedby"),
+    );
+    const book = screen.getByRole("button", {
+      name: BOOK_NAME,
+    });
+    expect(book.getAttribute("title")).toBe(
+      `${en["scheduling.bookContact"]}. ${en["record.roleReadsOnly"]}`,
+    );
+
+    const host = email.closest(".icon-action");
+    if (!(host instanceof HTMLElement)) {
+      throw new Error("the Email verb lost its tooltip host");
+    }
+    await user.hover(host);
+    expect((await screen.findByRole("tooltip")).textContent).toBe(
+      `${en["contact.action.email"]}. ${why}`,
+    );
+  });
+
   it("refuses both without the grant, over one shared sentence", async () => {
     stubGrants({});
     const user = userEvent.setup();
@@ -175,7 +276,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     expect(describedBy).toBeTruthy();
     expect(task.getAttribute("aria-describedby")).toBe(describedBy);
     expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
-      "You do not have permission to log activities on this record.",
+      en["record.roleReadsOnly"],
     );
 
     // Both refused for the SAME reason, so the reader reads it once: pressing
@@ -184,15 +285,50 @@ describe("Log activity and Add task, gated on the create grant", () => {
     await user.click(log);
     expect(screen.queryByRole("dialog")).toBeNull();
 
-    // Booking needs the same grant, and says so in the booking screen's words.
+    // Booking needs the same grant, so it names the role too.
     const book = screen.getByRole("button", {
-      name: en["scheduling.bookContact"],
+      name: BOOK_NAME,
     });
     expect(book.hasAttribute("disabled")).toBe(true);
     expect(
       document.getElementById(book.getAttribute("aria-describedby") ?? "")
         ?.textContent,
-    ).toBe(en["scheduling.bookRefused"]);
+    ).toBe(en["record.roleReadsOnly"]);
+  });
+
+  it("gives Book the row's sentence for a writing role on somebody else's company", async () => {
+    stubGrants({ activity: ["create"], company: ["read", "update"] });
+    const notTheirs = { ...COMPANY, writable: false };
+    renderInApp(<ActionsHost company={notTheirs} filesOnto={notTheirs} />);
+
+    const book = await screen.findByRole("button", { name: BOOK_NAME });
+    await waitFor(() =>
+      expect(
+        document.getElementById(book.getAttribute("aria-describedby") ?? "")
+          ?.textContent,
+      ).toBe(en["record.attachRefused"]),
+    );
+    const log = screen.getByRole("button", { name: "Log activity" });
+    expect(log.getAttribute("aria-describedby")).toBe(
+      book.getAttribute("aria-describedby"),
+    );
+  });
+
+  it("names the missing action, not the role, for a role that may change the company", async () => {
+    stubGrants({ activity: ["read"], company: ["read", "update"] });
+    renderInApp(<ActionsHost filesOnto={COMPANY} />);
+
+    const log = await screen.findByRole("button", { name: "Log activity" });
+    await waitFor(() =>
+      expect(
+        document.getElementById(log.getAttribute("aria-describedby") ?? "")
+          ?.textContent,
+      ).toBe(en["record.actionRefused"]),
+    );
+    const book = screen.getByRole("button", { name: BOOK_NAME });
+    expect(book.getAttribute("aria-describedby")).toBe(
+      log.getAttribute("aria-describedby"),
+    );
   });
 
   it("presses both, with the grant", async () => {
@@ -221,13 +357,11 @@ describe("Log activity and Add task, gated on the create grant", () => {
     expect(log.hasAttribute("disabled")).toBe(true);
     expect(task.hasAttribute("disabled")).toBe(true);
     expect(
-      screen
-        .getByRole("button", { name: en["scheduling.bookContact"] })
-        .hasAttribute("disabled"),
+      screen.getByRole("button", { name: BOOK_NAME }).hasAttribute("disabled"),
     ).toBe(true);
     expect(
       screen.queryByText(
-        "You do not have permission to log activities on this record.",
+        "Your role can only read. Ask an administrator for another role.",
       ),
     ).toBeNull();
 
@@ -272,7 +406,7 @@ it("draws the bar's verbs in the design's order with their short words", async (
   const log = await screen.findByRole("button", { name: en["log.title"] });
   expect(log.querySelector(".verb-word")?.textContent).toBe("Log");
   const book = screen.getByRole("button", {
-    name: en["scheduling.bookContact"],
+    name: BOOK_NAME,
   });
   // Meet stands with Email, ahead of the two that record.
   expect(
@@ -333,7 +467,8 @@ describe("Add task writes only tasks", () => {
     expect(within(drawer).queryByLabelText(en["log.kind"])).toBeNull();
     const due = within(drawer).getByLabelText("Due date");
     await user.clear(due);
-    await user.type(due, "16/03/2099");
+    const year = new Date().getFullYear() + 1;
+    await user.type(due, `16/03/${year}`);
     await user.type(within(drawer).getByLabelText("Subject *"), "Demo prep");
     await user.click(within(drawer).getByRole("button", { name: "Add task" }));
 
@@ -345,7 +480,7 @@ describe("Add task writes only tasks", () => {
     });
     expect(posted[0]?.body).toHaveProperty(
       "due_at",
-      expect.stringMatching(/^2099-03-1[56]T/),
+      expect.stringMatching(new RegExp(`^${year}-03-1[56]T`)),
     );
   });
 
@@ -369,6 +504,7 @@ describe("Add task writes only tasks", () => {
 describe("Book a meeting from the account", () => {
   afterEach(() => {
     globalThis.location.hash = "";
+    vi.useRealTimers();
   });
 
   it("asks which of the account's contacts, then opens that contact's booking screen", async () => {
@@ -379,8 +515,7 @@ describe("Book a meeting from the account", () => {
 
     // The picker is drawn once `/me` allows it; before that the face is a
     // disabled stand-in.
-    const book = () =>
-      screen.getByRole("button", { name: en["scheduling.bookContact"] });
+    const book = () => screen.getByRole("button", { name: BOOK_NAME });
     await waitFor(() => expect(book().hasAttribute("disabled")).toBe(false));
     await user.click(book());
     await user.type(
@@ -400,5 +535,121 @@ describe("Book a meeting from the account", () => {
       url.pathname.endsWith("/contacts"),
     );
     expect(contactsAsked?.searchParams.get("company_id")).toBe(COMPANY.id);
+  });
+
+  it("opens on the account's contacts, the best route in first, before a word is typed", async () => {
+    const read: URL[] = [];
+    stubWritableAccount({ posted: [], read });
+    renderInApp(<ActionsHost view={TWO_CONTACTS} />);
+
+    const book = () => screen.getByRole("button", { name: BOOK_NAME });
+    await waitFor(() => expect(book().hasAttribute("disabled")).toBe(false));
+    vi.useFakeTimers();
+    fireEvent.click(book());
+    await act(() => vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS));
+
+    const listed = screen.getAllByRole("option");
+    expect(listed.map((row) => row.textContent)).toEqual([
+      expect.stringContaining("Jonas Keller"),
+      expect.stringContaining("Mara Lenz"),
+    ]);
+    // The roster in hand answers the empty box; the server is not asked.
+    expect(read.some((url) => url.pathname.endsWith("/contacts"))).toBe(false);
+
+    fireEvent.click(listed[0]);
+    expect(globalThis.location.hash).toBe(
+      routeHash({ screen: "book", id: "contact-c-jonas" }),
+    );
+  });
+});
+
+describe("the record keys", () => {
+  it.each([
+    ["n", en["log.title"]],
+    ["t", en["log.addTask"]],
+  ])("open on %s the drawer its verb opens: %s", async (key, verb) => {
+    stubGrants({ activity: ["create"] });
+    const user = userEvent.setup();
+    renderHook(() => useShortcutDispatcher());
+    renderActions();
+    const log = await screen.findByRole("button", { name: en["log.title"] });
+    await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
+
+    await user.keyboard(key);
+    const drawer = await screen.findByRole("dialog");
+    expect(within(drawer).getByRole("heading", { name: verb })).toBeTruthy();
+  });
+
+  it("open the composer on M, and name their keys on the verbs", async () => {
+    stubGrants({ activity: ["create"] });
+    const user = userEvent.setup();
+    renderHook(() => useShortcutDispatcher());
+    const onComposerOpen = vi.fn();
+    renderInApp(<ActionsHost onComposerOpen={onComposerOpen} />);
+    const log = await screen.findByRole("button", { name: en["log.title"] });
+    await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
+    expect(log.getAttribute("aria-keyshortcuts")).toBe("n");
+    expect(
+      screen
+        .getByRole("button", { name: en["contact.action.email"] })
+        .getAttribute("aria-keyshortcuts"),
+    ).toBe("m");
+
+    await user.keyboard("m");
+    expect(onComposerOpen).toHaveBeenCalledWith(true);
+    expect((await findAddTask(user)).getAttribute("aria-keyshortcuts")).toBe(
+      "t",
+    );
+  });
+
+  it("do nothing for a seat that may not log", async () => {
+    stubGrants({});
+    const user = userEvent.setup();
+    renderHook(() => useShortcutDispatcher());
+    const onComposerOpen = vi.fn();
+    renderInApp(<ActionsHost onComposerOpen={onComposerOpen} />);
+    await screen.findAllByText(en["record.roleReadsOnly"]);
+
+    await user.keyboard("ntm");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(onComposerOpen).not.toHaveBeenCalled();
+  });
+
+  it("do nothing on an archived account", async () => {
+    stubGrants({ activity: ["create"] });
+    const user = userEvent.setup();
+    renderHook(() => useShortcutDispatcher());
+    const onComposerOpen = vi.fn();
+    renderInApp(
+      <ActionsHost
+        company={{ ...COMPANY, archived_at: "2026-06-02T08:00:00Z" }}
+        onComposerOpen={onComposerOpen}
+      />,
+    );
+    await screen.findByText(en["record.archivedReadOnly"]);
+
+    await user.keyboard("ntm");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(onComposerOpen).not.toHaveBeenCalled();
+  });
+
+  it("name no key on an archived account's verbs, since no key presses them", async () => {
+    stubGrants({ activity: ["create"] });
+    const user = userEvent.setup();
+    renderInApp(
+      <ActionsHost
+        company={{ ...COMPANY, archived_at: "2026-06-02T08:00:00Z" }}
+      />,
+    );
+    await screen.findByText(en["record.archivedReadOnly"]);
+
+    const verbs = [
+      screen.getByRole("button", { name: en["log.title"] }),
+      screen.getByRole("button", { name: en["contact.action.email"] }),
+      await findAddTask(user),
+    ];
+    for (const verb of verbs) {
+      expect(verb.hasAttribute("aria-keyshortcuts")).toBe(false);
+    }
   });
 });

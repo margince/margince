@@ -417,6 +417,50 @@ func TestSendSucceedsWithNoIdentityWhenTheReadBackFails(t *testing.T) {
 	}
 }
 
+// A failed read-back still reports a sent message, and says what kind of
+// failure it was. A rate limit or a server fault can be recovered from the
+// captured echo; a refused read cannot.
+func TestAFailedReadBackIsClassifiedAndTheSendStillSucceeds(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		status int
+		body   string
+		want   connector.IdentityUnread
+	}{
+		{"throttled", http.StatusTooManyRequests, `{"error":{"errors":[{"reason":"rateLimitExceeded"}]}}`, connector.IdentityUnreadTransient},
+		{"throttled with a 403", http.StatusForbidden, `{"error":{"errors":[{"reason":"userRateLimitExceeded"}]}}`, connector.IdentityUnreadTransient},
+		{"server fault", http.StatusInternalServerError, `{}`, connector.IdentityUnreadTransient},
+		{"read refused", http.StatusForbidden, `{"error":{"errors":[{"reason":"insufficientPermissions"}]}}`, connector.IdentityUnreadDenied},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method == http.MethodPost {
+					if _, err := w.Write([]byte(`{"id":"gmsg1"}`)); err != nil {
+						t.Errorf("write send response: %v", err)
+					}
+					return
+				}
+				w.WriteHeader(tc.status)
+				if _, err := w.Write([]byte(tc.body)); err != nil {
+					t.Errorf("write read-back refusal: %v", err)
+				}
+			}))
+			defer srv.Close()
+
+			got, err := sendOne(t, srv)
+			if err != nil {
+				t.Fatalf("Send returned an error after the message was already transmitted: %v", err)
+			}
+			if got.ProviderMessageID != "gmsg1" || got.RFC822MessageID != "" {
+				t.Fatalf("receipt = %+v, want the provider id and no identity", got)
+			}
+			if got.IdentityUnread != tc.want {
+				t.Errorf("IdentityUnread = %q, want %q", got.IdentityUnread, tc.want)
+			}
+		})
+	}
+}
+
 // The read-back is a response from somebody else's server, and what it yields
 // is adopted as this message's natural key, its thread key and a log field. So
 // an answer that is not a shape a message could carry must be reported as NO

@@ -22,6 +22,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
+const (
+	renderSubject = "subject"
+	renderBody    = "body"
+)
+
 // Activities is the content read a rendering is made from. It answers
 // ErrNotFound for a row whose words the caller may not read.
 type Activities interface {
@@ -61,15 +66,20 @@ func (s *Service) WithLane(lane Completer) *Service {
 // Render shows one activity in the reader's language. locale is the language
 // the client asked for, nil for the reader's own.
 func (s *Service) Render(ctx context.Context, id ids.ActivityID, locale *string) (crmcontracts.ActivityReaderRendering, error) {
+	return s.RenderPart(ctx, id, locale, nil, nil)
+}
+
+// RenderPart admits automatic prose rendering only for a verified source component.
+func (s *Service) RenderPart(ctx context.Context, id ids.ActivityID, locale, part *string, expected *int64) (crmcontracts.ActivityReaderRendering, error) {
 	// A reading aid for the member at the screen; an agent reads the original.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return crmcontracts.ActivityReaderRendering{}, err
 	}
-	activity, err := s.activities.GetActivityContent(ctx, id, storekit.LiveOnly)
+	activity, err := s.loadSelection(ctx, id, part, expected)
 	if err != nil {
 		return crmcontracts.ActivityReaderRendering{}, err
 	}
-	in, err := s.input(ctx, activity, locale)
+	in, err := s.input(ctx, selectedActivity(activity, part), locale)
 	if err != nil {
 		return crmcontracts.ActivityReaderRendering{}, err
 	}
@@ -83,6 +93,14 @@ func (s *Service) Render(ctx context.Context, id ids.ActivityID, locale *string)
 		SourceLanguage: sourceLanguage(in.Source),
 		TargetLanguage: crmcontracts.ActivityReaderRenderingTargetLanguage(in.Target),
 		GeneratedAt:    s.now().UTC(),
+	}
+	if activity.Version != nil {
+		version := int64(*activity.Version)
+		out.SourceVersion = &version
+	}
+	if part != nil {
+		selected := crmcontracts.ActivityReaderRenderingPart(*part)
+		out.Part = &selected
 	}
 	if in.Source == in.Target {
 		return unchanged(out, in), nil
@@ -108,7 +126,7 @@ func (s *Service) Render(ctx context.Context, id ids.ActivityID, locale *string)
 	if err != nil {
 		return crmcontracts.ActivityReaderRendering{}, fmt.Errorf("%w: %w", ai.ErrOutputRejected, err)
 	}
-	if err := s.stillReadable(ctx, activity); err != nil {
+	if err := s.stillReadable(ctx, activity, part); err != nil {
 		return crmcontracts.ActivityReaderRendering{}, err
 	}
 	out.ModelUsed = &res.ServedModel
@@ -117,6 +135,28 @@ func (s *Service) Render(ctx context.Context, id ids.ActivityID, locale *string)
 	}
 	out.Subject, out.Body = present(reply.Subject), present(reply.Body)
 	return out, nil
+}
+
+func (s *Service) loadSelection(ctx context.Context, id ids.ActivityID, part *string, expected *int64) (crmcontracts.Activity, error) {
+	activity, err := s.activities.GetActivityContent(ctx, id, storekit.LiveOnly)
+	if err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if expected != nil && (activity.Version == nil || int64(*activity.Version) != *expected) {
+		return crmcontracts.Activity{}, apperrors.ErrVersionSkew
+	}
+	if part != nil {
+		if expected == nil {
+			return crmcontracts.Activity{}, apperrors.ErrVersionSkew
+		}
+		if *part != renderSubject && *part != renderBody {
+			return crmcontracts.Activity{}, apperrors.ErrNotFound
+		}
+		if !generatedPart(activity, *part) {
+			return crmcontracts.Activity{}, apperrors.ErrNotFound
+		}
+	}
+	return activity, nil
 }
 
 // input is the text a reader sees and the two languages, or ErrNotFound for a
@@ -144,7 +184,7 @@ func (s *Service) input(ctx context.Context, activity crmcontracts.Activity, loc
 // caller lost, archived or held meanwhile, or whose words changed, answers
 // ErrNotFound. Else the rendering would show text the caller may no longer
 // read, or words nobody wrote.
-func (s *Service) stillReadable(ctx context.Context, before crmcontracts.Activity) error {
+func (s *Service) stillReadable(ctx context.Context, before crmcontracts.Activity, part *string) error {
 	after, err := s.activities.GetActivityContent(ctx, ids.From[ids.ActivityKind](ids.UUID(before.Id)), storekit.LiveOnly)
 	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 		return apperrors.ErrNotFound
@@ -153,7 +193,7 @@ func (s *Service) stillReadable(ctx context.Context, before crmcontracts.Activit
 		return err
 	}
 	withheld := after.ContentState != nil && *after.ContentState == crmcontracts.ActivityContentStateWithheld
-	if withheld || deref(after.Subject) != deref(before.Subject) || deref(after.Body) != deref(before.Body) ||
+	if withheld || (part != nil && !generatedPart(after, *part)) || deref(after.Subject) != deref(before.Subject) || deref(after.Body) != deref(before.Body) ||
 		!sameVersion(after.Version, before.Version) {
 		return apperrors.ErrNotFound
 	}
@@ -189,7 +229,7 @@ func (s *Service) target(ctx context.Context, locale *string) textlang.Lang {
 func rendersKind(kind crmcontracts.ActivityKind) bool {
 	switch kind {
 	case crmcontracts.ActivityKindNote, crmcontracts.ActivityKindEmail,
-		crmcontracts.ActivityKindMeeting, crmcontracts.ActivityKindCall:
+		crmcontracts.ActivityKindMeeting, crmcontracts.ActivityKindCall, crmcontracts.ActivityKindTask:
 		return true
 	default:
 		return false
@@ -225,4 +265,29 @@ func deref(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+func generatedPart(activity crmcontracts.Activity, part string) bool {
+	if activity.SystemDisplay == nil || activity.SystemDisplay.GeneratedParts == nil {
+		return false
+	}
+	for _, known := range *activity.SystemDisplay.GeneratedParts {
+		if string(known) == part {
+			return true
+		}
+	}
+	return false
+}
+
+func selectedActivity(activity crmcontracts.Activity, part *string) crmcontracts.Activity {
+	if part == nil {
+		return activity
+	}
+	if *part == renderSubject {
+		activity.Body = nil
+	} else {
+		activity.Subject = nil
+	}
+	activity.Language = nil
+	return activity
 }

@@ -12,18 +12,18 @@ import {
   useSoleProjectDefault,
 } from "../../design-system/projectpicker";
 import { useThreadProject } from "../../lib/activityfiling";
+import { addressKey } from "../../lib/addresskey";
+import { relatedContactsQuery } from "../../lib/contact.queries";
+import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
+import { useMe } from "../../lib/session";
 import { useCompany360 } from "../companies/company360";
 import { useContact360 } from "../contacts/contact360";
-import {
-  stripSubjectTag,
-  subjectTag,
-  useProjectRecord,
-  withSubjectTag,
-} from "../projects/projectrecord";
+import { useProjectRecord } from "../projects/projectrecord";
 import { recipientSuggestions } from "./composehead";
 import { deadRecipientsAmong } from "./composereachability";
 import type { RelinkKind } from "./composerelink";
+import { stripSubjectTag, subjectTag, withSubjectTag } from "./subjecttag";
 
 // A project record as the one row its own picker offers. `liveProjects` still
 // filters it, so a closed project gets no picker. Nothing is offered while the
@@ -54,9 +54,10 @@ function useAnchorProject(
     // The deal page's own key, so the composer costs no request there and
     // cannot disagree with the page behind it.
     queryKey: ["deal", entityId],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       return unwrap(
         await api.GET("/deals/{id}", {
+          signal,
           params: { path: { id: entityId } },
         }),
       );
@@ -280,7 +281,7 @@ export function contactsByAddress(
     address: string | null | undefined,
     owner: { id: string; attachable: boolean },
   ) => {
-    const key = address?.trim().toLowerCase();
+    const key = address ? addressKey(address) : undefined;
     const held = key ? owners.get(key) : undefined;
     if (key && (!held || (owner.attachable && !held.attachable))) {
       owners.set(key, owner);
@@ -301,7 +302,7 @@ export function contactsByAddress(
       attachable: member.attachable,
     });
   }
-  return (address) => owners.get(address.trim().toLowerCase())?.id;
+  return (address) => owners.get(addressKey(address))?.id;
 }
 
 /**
@@ -342,11 +343,19 @@ export function useAccountRecipient(
   const startedFrom = contacts.find(
     (contact) => contact.contact_id === started.contactId,
   );
+  const offeredAddress =
+    started.recordAddress ?? startedFrom?.primary_email ?? undefined;
+  // The started contact's address may still be on its way off the account.
+  const offerPending =
+    started.recordAddress === undefined &&
+    started.contactId !== undefined &&
+    company.isLoading;
   return {
     recipientId,
     contactIds,
-    offeredAddress:
-      started.recordAddress ?? startedFrom?.primary_email ?? undefined,
+    offeredAddress,
+    // No address is offered into To, and none is still being read.
+    nothingOffered: !offeredAddress && !offerPending,
     // An account with no contact leaves the draft nobody to write for.
     noContacts: company.isSuccess && contacts.length === 0,
   };
@@ -407,8 +416,16 @@ export function useComposeRecords({
     recipientContact ?? "",
     open && recipientContact != null,
   );
+  // Suggestions only, like the roster: the To field still takes any address.
+  const readerScope = useHealthScope();
+  const related = useQuery({
+    ...relatedContactsQuery(recipientContact, readerScope ?? ""),
+    enabled: open && recipientContact != null && readerScope !== undefined,
+  });
   // roster-failure: suggestions only; the To field still takes any address.
-  const colleagues = useRoster("user", open && !isChannelReply);
+  const mailing = open && !isChannelReply;
+  const colleagues = useRoster("user", mailing);
+  const senderAddress = useMe(mailing).data?.user.email;
   const anchorProject = useAnchorProject(entityType, entityId);
   // A project page's message is about that project, read as a record so the
   // picker names it the way the page does.
@@ -445,19 +462,17 @@ export function useComposeRecords({
       entityType === "contact"
         ? contact.data?.contact?.full_name
         : anchorCompany.data?.company?.display_name,
-    contactOf: contactsByAddress(contact.data, anchorCompany.data),
     reachableProjects,
     projectFiling,
     // Addresses known not to arrive, warned under the fields.
     deadRecipients: deadRecipientsAmong(contact.data, [...addressed]),
-    // The contact first, then the account's roster, then the workspace's
-    // members. The reads already run (the members' cache entry is shared with
-    // the anchor lookup), so the offer costs no request of its own.
-    recipients: recipientSuggestions(
-      contact.data,
-      anchorCompany.data,
-      colleagues.data,
-    ),
+    recipients: recipientSuggestions({
+      contact: contact.data,
+      related: related.data,
+      company: anchorCompany.data,
+      colleagues: colleagues.data,
+      senderAddress,
+    }),
   };
 }
 

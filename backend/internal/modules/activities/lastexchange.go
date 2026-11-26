@@ -5,18 +5,28 @@ package activities
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // WhoseMove is who answers an exchange next. A mail's History badge move
 // decides when the reader may read the mail; otherwise its direction does.
-func WhoseMove(move *crmcontracts.EmailSummaryMove, direction string) crmcontracts.LastExchangeWhoseMove {
+//
+// earlierOwed overrides both for our own outbound mail: the correspondent's
+// newest earlier mail still reads needs_reply, so this row did not answer it
+// (EarlierMailOwed). The record then says the move is ours, as that badge does.
+func WhoseMove(move *crmcontracts.EmailSummaryMove, direction string, earlierOwed bool) crmcontracts.LastExchangeWhoseMove {
+	if earlierOwed && direction == string(crmcontracts.ActivityDirectionOutbound) {
+		return crmcontracts.LastExchangeWhoseMoveUs
+	}
 	if move != nil {
 		switch *move {
 		case crmcontracts.EmailSummaryMoveWaitingForThem:
@@ -59,7 +69,115 @@ func (s *Store) lastExchange(
 	if row.Direction != nil {
 		direction = string(*row.Direction)
 	}
-	return &crmcontracts.LastExchange{Activity: row, WhoseMove: WhoseMove(move, direction)}, nil
+	owed, err := EarlierMailOwed(ctx, tx, ids.UUID(row.Id), now)
+	if err != nil {
+		return nil, err
+	}
+	return &crmcontracts.LastExchange{Activity: row, WhoseMove: WhoseMove(move, direction, owed)}, nil
+}
+
+// lastWrote reads the record's newest human-written message in one direction
+// over every row the reader may open, by the clock the account's header uses.
+// Only mail and chat count, and a withheld row is out before the page is cut.
+// SQL decides the direction and the human-written test. WroteItOurSide then
+// decides whose pen it was on the projected row, so a colleague's mail that
+// arrives inbound is not theirs. Nil when there is none.
+func (s *Store) lastWrote(
+	ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, direction crmcontracts.ActivityDirection,
+	now time.Time, columns CustomColumns,
+) (*crmcontracts.Activity, error) {
+	in := ListActivitiesInput{
+		EntityType: &entityType, EntityID: &entityID, ClockDirection: string(direction), DirectionClockAsOf: &now,
+		AsOf: &now, Columns: columns, ReadableOnly: true,
+		Kinds: []string{string(crmcontracts.ActivityKindEmail), string(crmcontracts.ActivityKindMessage)},
+	}
+	size := lastWroteBatch
+	for {
+		in.Limit = &size
+		rows, page, err := s.ListActivitiesIn(ctx, tx, in)
+		if err != nil {
+			return nil, err
+		}
+		for i := range rows {
+			ours, known := WroteItOurSide(rows[i])
+			if known && ours == (direction == crmcontracts.ActivityDirectionOutbound) {
+				return &rows[i], nil
+			}
+		}
+		if !page.HasMore {
+			return nil, nil //nolint:nilnil // no such message is an absent field on the wire
+		}
+		in.Cursor = &page.NextCursor
+	}
+}
+
+// lastWroteBatch is how many rows one read of lastWrote takes. A colleague's
+// copies are the common rows it walks past, so one read usually decides.
+const lastWroteBatch = 20
+
+// earlierInboundMailSQL keeps the live inbound mail the row aliased their that
+// the row aliased ours comes after. It asks the answer rule, so a reply logged
+// on the mail's date follows it.
+var earlierInboundMailSQL = `their.kind = 'email' AND their.direction = 'inbound'
+		     AND their.archived_at IS NULL
+		     AND ` + occurredday.AnswersSQL("ours", "their") + `
+		     `
+
+// EarlierMailOwed reports whether our outbound mail left its correspondent's
+// newest earlier mail reading needs_reply on its History badge. A reply logged
+// by hand, off the mail's thread and unattested, answers nothing by the answer
+// rule, so that mail is still owed after it. A call or a meeting is not asked:
+// a voicemail we left puts the move with them, whatever the badge says.
+//
+// The correspondent is the row's counterparty address when it has one. A mail
+// with an address may be filed under contacts it was only copied to. So only a
+// row with no address, as a hand-logged mail often is, is matched by a contact
+// it is filed under. The newest earlier mail is chosen among those the reader may
+// open, so a mail kept from them can neither decide nor hide the move.
+func EarlierMailOwed(ctx context.Context, tx pgx.Tx, activityID ids.UUID, now time.Time) (bool, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	ours := arg(activityID)
+	readable, err := auth.ActivityContentClause(ctx, "their", arg)
+	if err != nil {
+		return false, err
+	}
+	var earlier ids.UUID
+	// One indexed probe per way of naming the correspondent. A single join on
+	// the address or a linked contact reads every inbound mail in the workspace.
+	// The content gate is applied once, over the candidates both probes found.
+	err = tx.QueryRow(ctx, fmt.Sprintf(`
+		WITH found AS (
+		  SELECT their.id
+		    FROM activity ours
+		    JOIN activity their ON their.counterparty_email = ours.counterparty_email
+		   WHERE ours.id = $%[1]d AND ours.kind = 'email' AND ours.direction = 'outbound'
+		     AND `+earlierInboundMailSQL+`
+		  UNION
+		  SELECT their.id
+		    FROM activity ours
+		    JOIN activity_link ourl ON ourl.activity_id = ours.id AND ourl.contact_id IS NOT NULL
+		    JOIN activity_link theirs ON theirs.contact_id = ourl.contact_id
+		    JOIN activity their ON their.id = theirs.activity_id
+		   WHERE ours.id = $%[1]d AND ours.kind = 'email' AND ours.direction = 'outbound'
+		     AND ours.counterparty_email IS NULL
+		     AND `+earlierInboundMailSQL+`)
+		SELECT their.id FROM found JOIN activity their ON their.id = found.id
+		 WHERE %[2]s
+		 ORDER BY their.occurred_at DESC, their.id DESC
+		 LIMIT 1`, ours, readable), args...).Scan(&earlier)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("activities: reading the mail an outbound row follows: %w", err)
+	}
+	moves, err := MailMovesFor(ctx, tx, []ids.UUID{earlier}, now)
+	if err != nil {
+		return false, err
+	}
+	move, ok := moves[earlier]
+	return ok && move == crmcontracts.EmailSummaryMoveNeedsReply, nil
 }
 
 // newestTied reads the rows at the newest stored instant in the timeline's order, at most NewestTiedCap.

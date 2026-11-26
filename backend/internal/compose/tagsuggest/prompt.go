@@ -99,7 +99,9 @@ func newText(item Item) string {
 	if item.Kind != string(crmcontracts.ActivityKindEmail) {
 		return item.Body
 	}
-	return activities.SplitEmailBody(item.Body).Main
+	// Read as a reply even under a forward subject: the digest item was sampled
+	// on that reading.
+	return activities.SplitEmailBody(item.Body, "").Main
 }
 
 // Fixed in every field so the digest is a property of the code, never of a

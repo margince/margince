@@ -326,3 +326,34 @@ func mustWrite(t *testing.T, path, body string) {
 		t.Fatalf("writing %s: %v", path, err)
 	}
 }
+
+// An installation with a vault needs no second secret for the connector state,
+// and a key the operator sets is used as given.
+func TestTheConnectorStateKeyFallsBackToTheVaultRootKey(t *testing.T) {
+	t.Parallel()
+	rootKey := "MARGINCE_KEYVAULT_ROOT_KEY=" + strings.Repeat("A", 43) + "="
+	dsnEnv := "MARGINCE_DSN=" + testDSN
+	load := func(environ ...string) string {
+		t.Helper()
+		cfg, _, err := loadAPIConfig(nil, append([]string{dsnEnv}, environ...))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg.connectorStateKey
+	}
+
+	if got := load(); got != "" {
+		t.Errorf("no vault and no key: got %d bytes, want none", len(got))
+	}
+	derived := load(rootKey)
+	if len(derived) < 32 {
+		t.Fatalf("derived key is %d bytes, want at least 32", len(derived))
+	}
+	if again := load(rootKey); again != derived {
+		t.Error("two boots with one root key derived different keys")
+	}
+	configured := strings.Repeat("k", 32)
+	if got := load(rootKey, "MARGINCE_CONNECTOR_STATE_KEY="+configured); got != configured {
+		t.Error("a configured key was replaced by the derived one")
+	}
+}

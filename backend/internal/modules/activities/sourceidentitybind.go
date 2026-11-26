@@ -6,11 +6,13 @@ package activities
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -55,7 +57,7 @@ func boundToKnownMessage(ctx context.Context, tx pgx.Tx, in LogActivityInput) (c
 	}
 	stated := append([]string{in.EmailFrom}, in.EmailTo...)
 	stated = append(stated, in.EmailCc...)
-	incumbent, found, err := bindableIdentityUnder(ctx, tx, kind, key, in.identityProver, stated)
+	incumbent, found, err := bindableIdentityUnder(ctx, tx, kind, key, in.identityProver, stated, in.Author.AuthorID)
 	if err != nil || !found {
 		return crmcontracts.Activity{}, false, err
 	}
@@ -170,7 +172,7 @@ func attachImportedIdentityLinks(ctx context.Context, tx pgx.Tx, bound crmcontra
 	}
 	// Ownership was proved before binding; each destination still needs the importer's attach authority.
 	binding := principal.SystemActing(ctx, "system:import-identity-links")
-	for _, link := range missing {
+	for _, link := range projectLinksFirst(missing) {
 		if _, err := RelinkActivityInTx(binding, tx, ids.From[ids.ActivityKind](ids.UUID(bound.Id)), RelinkActivityInput{EntityType: link.EntityType, EntityID: link.EntityID}); err != nil {
 			return err
 		}
@@ -207,4 +209,29 @@ func importNamesIncumbentSeat(ctx context.Context, tx pgx.Tx, incumbent ids.Acti
 		}
 	}
 	return false, nil
+}
+
+// importAuthorHoldsMeeting answers whether the incumbent meeting came from the
+// calendar or the hand of the seat a declared importer names as the author.
+// Only a declared importer may state an author (provenance.AdmitSourceAuthor),
+// and the importer must already be able to change the meeting. So the bind,
+// which may move its status and file it under more records, grants nothing new.
+func importAuthorHoldsMeeting(ctx context.Context, tx pgx.Tx, incumbent ids.ActivityID, author ids.UUID) (bool, error) {
+	var stamp string
+	args := schedulingArgs{}
+	err := tx.QueryRow(ctx, `SELECT captured_by FROM activity WHERE archived_at IS NULL AND restricted_at IS NULL AND id=`+args.add(incumbent), args...).Scan(&stamp)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("activities: reading who holds a meeting: %w", err)
+	}
+	if actingHumanOf(stamp) != author.String() {
+		return false, nil
+	}
+	err = auth.EnsureActivityWritableIn(ctx, tx, incumbent.UUID, true)
+	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return false, nil
+	}
+	return err == nil, err
 }

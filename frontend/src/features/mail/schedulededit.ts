@@ -5,7 +5,10 @@ import { paragraphsFrom } from "../../design-system/richtext";
 import { localDateTimeValue } from "../../format/calendarday";
 import type { CommunicationContext } from "../../lib/compose-context";
 import { RELINK_KINDS, type RelinkKind } from "../../lib/recordtargets";
+import { distinctAddressLines } from "./composeaddresslist";
 import type { ChosenFile } from "./composeattachments";
+import type { RecipientCountry } from "./composecountries";
+import { type ScheduleFields, scheduleSourceOf } from "./composeschedule";
 import type { ScheduledSend } from "./scheduledqueue";
 
 /** What the composer opens with when a scheduled message is edited. */
@@ -23,9 +26,11 @@ export type EditSeed = Readonly<{
   /** The voice draft the words came from; empty when none. */
   draftRef: string;
   sendAt: string;
+  sendSchedule?: ScheduleFields;
   context: CommunicationContext | "";
   dealId: string;
   projectId: string;
+  recipientCountries?: readonly RecipientCountry[];
 }>;
 
 const isRelinkKind = (type: string): type is RelinkKind =>
@@ -90,9 +95,12 @@ export function editSeedOf(
   return {
     anchor: { type: anchor.entity_type, id: anchor.entity_id },
     replyTo: send.anchor_activity_id ?? "",
-    to: send.to,
-    cc: send.cc ?? [],
-    bcc: send.bcc ?? [],
+    ...distinctAddressLines({
+      to: send.to,
+      cc: send.cc ?? [],
+      bcc: send.bcc ?? [],
+    }),
+    recipientCountries: send.recipient_countries,
     subject: send.subject,
     body: send.body ?? "",
     html: send.html_body ?? paragraphsFrom(send.body ?? ""),
@@ -102,7 +110,10 @@ export function editSeedOf(
       byteSize: file.byte_size,
     })),
     draftRef: send.draft_ref ?? "",
-    sendAt: localDateTimeValue(send.scheduled_at),
+    sendAt:
+      send.scheduled_intent?.wall_clock ??
+      localDateTimeValue(send.scheduled_at, send.scheduled_tz),
+    sendSchedule: scheduleSourceOf(send),
     context: send.communication_context ?? "",
     dealId: idOf("deal"),
     projectId: idOf("project"),

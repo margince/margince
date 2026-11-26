@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -62,29 +61,11 @@ func Read(ctx context.Context, ref Reference) (payload []byte, err error) {
 	return payload, nil
 }
 
-// Delete refuses references outside the bound installation's original namespace.
-func Delete(ctx context.Context, ref Reference) error {
-	s, err := serviceOf(ctx)
-	if err != nil {
-		return err
-	}
-	ctx, err = s.workspaceContext(ctx)
-	if err != nil {
-		return err
-	}
-	if err := validate(ctx, ref); err != nil {
-		return err
-	}
-	ctx, cancel := context.WithTimeout(ctx, objectTimeout)
-	defer cancel()
-	if err := s.blob.Delete(ctx, ref.Key); err != nil {
-		return fmt.Errorf("delete provider original: %w", err)
-	}
-	return nil
-}
-
-// PurgeReturned destroys objects before the caller commits its DELETE RETURNING.
-func PurgeReturned(ctx context.Context, rows pgx.Rows) (records, objects int64, err error) {
+// CountReturned counts the rows a DELETE ... RETURNING payload_object removed,
+// and the objects among them. It deletes no object. The raw_capture trigger
+// queues each key on the caller's transaction, and the stored-object reap
+// deletes the bytes after commit. So a rolled-back delete keeps them.
+func CountReturned(rows pgx.Rows) (records, objects int64, err error) {
 	defer rows.Close()
 	for rows.Next() {
 		var metadata []byte
@@ -92,17 +73,9 @@ func PurgeReturned(ctx context.Context, rows pgx.Rows) (records, objects int64, 
 			return 0, 0, err
 		}
 		records++
-		if len(metadata) == 0 {
-			continue
+		if len(metadata) > 0 {
+			objects++
 		}
-		var ref Reference
-		if err := json.Unmarshal(metadata, &ref); err != nil {
-			return 0, 0, fmt.Errorf("read provider original reference: %w", err)
-		}
-		if err := Delete(ctx, ref); err != nil {
-			return 0, 0, err
-		}
-		objects++
 	}
 	if err := rows.Err(); err != nil {
 		return 0, 0, err

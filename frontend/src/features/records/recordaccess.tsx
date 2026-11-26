@@ -26,14 +26,15 @@ import { useToast } from "../../design-system/toast";
 import { VisibilityBadge } from "../../design-system/visibility";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useRecordWriteRefusal } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
+import { fromHere } from "../../lib/navigatefrom";
+import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { invalidateRecord, recordWriteKeys } from "../../lib/recordwritekeys";
-import { navigate, navigateReplacing } from "../../lib/router";
+import { invalidateRecord } from "../../lib/recordwritekeys";
+import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
+import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { HandoverOffer } from "./handoveroffer";
-import { HandoverRequest } from "./handoverrequest";
 import "./recordaccess.css";
 
 // The shape both records share, which is all this component reads. Spelled
@@ -49,6 +50,12 @@ type AccessibleRecord = Readonly<{
 }>;
 
 type Audience = "workspace" | "owner";
+
+// The chip names the audience in the words of the choice that sets it.
+const AUDIENCE_WORD = {
+  owner: "recordAccess.option.owner",
+  workspace: "recordAccess.option.workspace",
+} as const satisfies Record<Audience, MessageKey>;
 
 // Which record this is, which decides the endpoint, the cache key and the
 // sentences. A closed union rather than a string: a typo would otherwise
@@ -69,8 +76,6 @@ const COPY = {
     published: "recordAccess.contact.published",
     madePrivate: "recordAccess.contact.madePrivate",
     leftYourAccess: "recordAccess.contact.leftYourAccess",
-    archived: "contact.rail.archivedReadOnly",
-    notYours: "contact.notYoursToChange",
   },
   company: {
     title: "recordAccess.company.title",
@@ -81,14 +86,8 @@ const COPY = {
     published: "recordAccess.company.published",
     madePrivate: "recordAccess.company.madePrivate",
     leftYourAccess: "recordAccess.company.leftYourAccess",
-    archived: "record.archivedReadOnly",
-    notYours: "record.notYoursToChange",
   },
 } as const satisfies Record<RecordKind, Record<string, MessageKey>>;
-
-// The list a reader lands on once a write has taken the record out of their
-// reach, which is where archiving one already takes them.
-const LIST = { contact: "contacts", company: "companies" } as const;
 
 /**
  * Who may read the record, as a chip that opens the answer and the switch.
@@ -109,13 +108,11 @@ export function RecordAccess({
   const copy = COPY[kind];
   // The page's own write rule (grant, seat, row, archive) rather than the
   // row's `writable` alone, which offered a read seat a switch it cannot use.
-  const refusal = useRecordWriteRefusal(kind, record, {
-    archived: t(copy.archived),
-    notYours: t(copy.notYours),
-  });
+  const refusal = useKindWriteRefusal(kind, record);
   const sentence = useAudienceSentence(kind, record);
   const viewerId = useViewerId();
   const failure = (error: unknown) => problemMessageOf(error, t);
+  const leaveIfOutOfReach = useLeaveIfOutOfReach(kind);
   const setVisibility = useMutation({
     // Every value the write needs is a VARIABLE, never a closure over the
     // render that drew the control: a click landing between the commit and the
@@ -145,16 +142,12 @@ export function RecordAccess({
       toast.show(failure(error), { tone: "danger" });
       await invalidateRecord(queryClient, kind, id);
     },
-    onSuccess: async (_, { id, visibility, mayLoseAccess }) => {
-      if (mayLoseAccess && (await gone(kind, id))) {
-        toast.show(t(copy.leftYourAccess));
-        // Replacing, and forgetting the record's reads: Back must not return
-        // the reader to a page drawn from a cache the server now refuses.
-        navigateReplacing({ screen: LIST[kind] });
-        for (const queryKey of recordWriteKeys(kind, id)) {
-          queryClient.removeQueries({ queryKey });
-        }
-        await queryClient.invalidateQueries({ queryKey: [LIST[kind]] });
+    onMutate: fromHere,
+    onSuccess: async (_, { id, visibility, mayLoseAccess }, from) => {
+      if (
+        mayLoseAccess &&
+        (await leaveIfOutOfReach(id, t(copy.leftYourAccess), from))
+      ) {
         return;
       }
       toast.show(
@@ -180,6 +173,7 @@ export function RecordAccess({
           <span className="sr-only">{t(copy.title)}: </span>
           <VisibilityBadge
             state={current === "owner" ? "private" : "workspace"}
+            label={t(AUDIENCE_WORD[current])}
             opens
           />
         </>
@@ -187,12 +181,9 @@ export function RecordAccess({
     >
       <div className="record-access-panel">
         <p>{sentence}</p>
-        {refusal ? (
-          <>
-            <p className="t-caption">{refusal}</p>
-            <HandoverRequest kind={kind} record={record} />
-          </>
-        ) : (
+        {/* A reader who may not change the record finds why, and the asks,
+            behind the head's View only pill. */}
+        {!refusal && (
           <>
             <AudienceSwitch
               legend={t(copy.title)}
@@ -207,7 +198,7 @@ export function RecordAccess({
                   id,
                   version: record.version,
                   visibility,
-                  mayLoseAccess: visibility === "owner" && ownerId !== viewerId,
+                  mayLoseAccess: mayLeaveReach(visibility, ownerId, viewerId),
                 })
               }
             />
@@ -275,7 +266,7 @@ function AudienceSwitch({
         choices={[
           {
             value: "owner",
-            label: t("recordAccess.option.owner"),
+            label: t(AUDIENCE_WORD.owner),
             description: t(OWNER_HINT[owner]),
             // The server refuses owner-only on a record nobody owns: no seat
             // could read it.
@@ -283,7 +274,7 @@ function AudienceSwitch({
           },
           {
             value: "workspace",
-            label: t("recordAccess.option.workspace"),
+            label: t(AUDIENCE_WORD.workspace),
           },
         ]}
         onChange={setPicked}
@@ -333,16 +324,6 @@ const OWNER_HINT = {
 // A probe that fails is NOT an answer of gone: the write landed, and a throw
 // here would turn its success into a refusal. The page's own refetch then
 // reports whatever the network is doing.
-async function gone(kind: RecordKind, id: string): Promise<boolean> {
-  const path = kind === "contact" ? "/contacts/{id}" : "/companies/{id}";
-  try {
-    const { response } = await api.GET(path, { params: { path: { id } } });
-    return response.status === 404;
-  } catch {
-    return false;
-  }
-}
-
 // Who may read the record, true for THIS reader. A private record open in
 // front of anyone but its owner is open because it was shared with them or
 // their team (an administrator's role does not lift owner-privacy), so the

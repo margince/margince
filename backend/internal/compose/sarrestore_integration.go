@@ -32,7 +32,7 @@ import (
 func AssembleSARForTest(
 	ctx context.Context, db *database.DB, blob blobstore.Store, contactID ids.UUID,
 ) ([]byte, error) {
-	return newSubjectAccessAssembler(db).withBlobstore(blob).AssemblePackage(ctx, contactID)
+	return newSubjectAccessAssembler(db, ExtensionData()).withBlobstore(blob).AssemblePackage(ctx, contactID)
 }
 
 // ExportedRawCapturePayloadsForTest returns the raw_capture payloads the export

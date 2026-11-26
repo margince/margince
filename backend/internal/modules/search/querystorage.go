@@ -109,6 +109,8 @@ type storage struct {
 	// the contract's, and a vocabulary nobody checked is not a place to
 	// execute from.
 	unfiltered bool
+	// children are the record's fields held in child tables (querychildfields.go).
+	children map[string]childField
 }
 
 // unfilteredStorage is the no-schema pass-through.
@@ -171,7 +173,11 @@ func (s *schemaReads) of(ctx context.Context, entity string) (*storage, error) {
 	if !ok {
 		return nil, fmt.Errorf("search: %q is not a searchable record type", entity)
 	}
-	return s.ofTable(ctx, table)
+	stored, err := s.ofTable(ctx, table)
+	if err != nil {
+		return nil, err
+	}
+	return stored.withChildren(entity), nil
 }
 
 // ofTable answers one TABLE's storage, for the reads that are not about a
@@ -201,7 +207,11 @@ func storageFor(ctx context.Context, reader ColumnReader, entity string) (*stora
 	if !ok {
 		return nil, fmt.Errorf("search: %q is not a searchable record type", entity)
 	}
-	return storageOf(ctx, reader, table)
+	stored, err := storageOf(ctx, reader, table)
+	if err != nil {
+		return nil, err
+	}
+	return stored.withChildren(entity), nil
 }
 
 // storageOf reads one table's columns through the seam, or the unfiltered
@@ -228,6 +238,9 @@ func storageOf(ctx context.Context, reader ColumnReader, table string) (*storage
 func (s *storage) answers(field Field) bool {
 	if s.unfiltered || field.Kind == KindGeo {
 		return true
+	}
+	if child, held := s.child(field.Name); held {
+		return child.kind == field.Kind
 	}
 	_, ok := s.locate(field)
 	return ok

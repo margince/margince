@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "voice_corpus_sources",
+  "verb": "list_voice_corpus_sources",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

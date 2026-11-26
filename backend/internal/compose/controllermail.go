@@ -31,10 +31,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -83,7 +86,7 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 	if !ok {
 		return ids.UUID{}, errors.New("compose: staging a controller delivery outside workspace context")
 	}
-	mail, err := presentControllerMailTx(ctx, tx, in.Rendered)
+	mail, err := presentControllerMailTx(ctx, tx, in.Rendered, in.Entity)
 	if err != nil {
 		return ids.UUID{}, err
 	}
@@ -94,11 +97,12 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 	readable := strings.ReplaceAll(body, comms.LinkPlaceholder, mailcopy.For(in.Rendered.Language).SentLinkMarker)
 	outbound := string(crmcontracts.ActivityDirectionOutbound)
 	activity, _, err := q.activities.LogActivityTx(ctx, tx, activities.SentRecord(activities.LogActivityInput{
-		Kind:      string(crmcontracts.ActivityKindEmail),
-		Subject:   &subject,
-		Body:      &readable,
-		Direction: &outbound,
-		Source:    systemActor,
+		SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, ""), Body: systemtext.Prose(systemtext.Quote, "")},
+		Kind:       string(crmcontracts.ActivityKindEmail),
+		Subject:    &subject,
+		Body:       &readable,
+		Direction:  &outbound,
+		Source:     systemActor,
 		// The installation writing to somebody about its own obligations is not
 		// that contact engaging, so it stays out of every last_activity_at.
 		Origin: activities.OriginSystemNotice,
@@ -119,9 +123,11 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		PayloadRef:       in.LinkRef,
 		PayloadExpiresAt: controllerExpiry(in.ExpiresAt),
 		DueAt:            in.DueAt,
+		KeptUntil:        in.KeptUntil,
 		LinkID:           in.LinkID,
 		FromAddress:      q.from,
 		InlineLogoKey:    mail.logoKey,
+		StagedAt:         in.StagedAt,
 	}, q.templates)
 	if err != nil {
 		return ids.UUID{}, err
@@ -154,7 +160,7 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 // preview shows the same From, subject and text, and refuses what staging
 // would refuse.
 func (q controllerMailQueue) PresentConfirmationTx(ctx context.Context, tx pgx.Tx, in consent.ConfirmationSend) (consent.PresentedMail, error) {
-	mail, err := presentControllerMailTx(ctx, tx, in.Rendered)
+	mail, err := presentControllerMailTx(ctx, tx, in.Rendered, in.Entity)
 	if err != nil {
 		return consent.PresentedMail{}, err
 	}
@@ -181,9 +187,11 @@ func stagingRequest(in consent.ConfirmationSend, body string) commsauthz.Request
 		Recipients: []connector.Recipient{{Email: in.Recipient}},
 		Context:    in.Category,
 		Evidence:   commsauthz.Evidence{LeadID: in.LeadID.UUID},
-		Subject:    in.Rendered.Subject,
-		Body:       body,
-		HTMLBody:   in.Rendered.HTMLBody,
+		// The record's entity, so the decision is judged under its law.
+		SendingEntity: in.Entity,
+		Subject:       in.Rendered.Subject,
+		Body:          body,
+		HTMLBody:      in.Rendered.HTMLBody,
 	}
 }
 
@@ -200,14 +208,13 @@ type presentedControllerMail struct {
 
 // presentControllerMailTx adds the brand the installation's mail is sent
 // under. The HTML alternative is headed by the logo or the name.
-func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Rendered) (presentedControllerMail, error) {
+func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Rendered, entity ids.UUID) (presentedControllerMail, error) {
 	mail := presentedControllerMail{rendered: rendered, body: rendered.Body}
 	if rendered.Language == "" && rendered.HTMLBody == "" {
 		return mail, nil
 	}
-	// The same name and logo product mail is headed by (mailletterhead.go).
 	// The logo is read at send; one gone by then leaves the name.
-	brand, key, err := letterheadNameTx(ctx, tx)
+	brand, key, err := controllerLetterheadTx(ctx, tx, entity)
 	if err != nil {
 		return presentedControllerMail{}, err
 	}
@@ -220,6 +227,28 @@ func presentControllerMailTx(ctx context.Context, tx pgx.Tx, rendered consent.Re
 		mail.body = brand + "\n\n" + mail.body
 	}
 	return mail, nil
+}
+
+// controllerLetterheadTx is the name and logo a controller mail is headed by.
+// The stated legal name heads it, so it agrees with "This message is from".
+// Refusing instead would withhold a notice the law owes over a branding setting.
+func controllerLetterheadTx(ctx context.Context, tx pgx.Tx, entity ids.UUID) (string, string, error) {
+	if further, name, key, err := contacts.FurtherEntityLetterheadTx(ctx, tx, entity); err != nil || further {
+		return name, key, err
+	}
+	brand, key, err := letterheadNameTx(ctx, tx)
+	if err != nil {
+		return "", "", err
+	}
+	identity, err := config.StoredApplyTx(ctx, tx, loadedConfig(), consent.ControllerIdentity)
+	if err != nil {
+		return "", "", err
+	}
+	legal := strings.TrimSpace(identity.LegalName)
+	if legal == "" || strings.EqualFold(legal, strings.TrimSpace(brand)) {
+		return brand, key, nil
+	}
+	return legal, "", nil
 }
 
 // controllerMailSubject files the notice under the record it was sent to: the

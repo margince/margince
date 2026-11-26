@@ -45,6 +45,7 @@ const CONTRACT = {
   signed_on: "2025-10-09",
   status: "active",
   under_contract: true,
+  term_state: "in_force",
   auto_renew: false,
   source: "manual",
   captured_by: "human:u-1",
@@ -315,5 +316,21 @@ export const SaveRefused: Story = {
       "This agreement changed while you were editing it.",
     );
     await waitFor(() => expect(body.scrollTop).toBeGreaterThan(0));
+  },
+};
+
+// A notice period below zero, refused on its field in the server's words.
+export const NoticePeriodRefused: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": SESSION });
+    return (
+      <StoryProviders>
+        <ContractForm companyId="o-1" open onClose={() => {}} />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await userEvent.type(await screen.findByLabelText(/^Notice period/), "-1");
+    await screen.findByText("Notice period (days) must be at least 0.");
   },
 };

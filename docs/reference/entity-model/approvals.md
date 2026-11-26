@@ -62,12 +62,14 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `approval_co_target_entity_type_check`: `CHECK (((co_target_entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant', 'list', 'signal', 'saved_view', 'tag', 'custom_field', 'webhook_subscription', 'import_run', 'report_definition', 'app_user', 'user_admin', 'team', 'record_grant', 'data_subject_request', 'fx_rate', 'ai_model_rate', 'legal_review', 'brief', 'stage'])) OR (co_target_entity_type ~ '^ext_[a-z0-9]+(_[a-z0-9]+)*$')))`
 - `approval_co_target_whole`: `CHECK ((((co_target_entity_type IS NULL) AND (co_target_entity_id IS NULL) AND (co_target_version IS NULL)) OR ((co_target_entity_type IS NOT NULL) AND (co_target_entity_id IS NOT NULL) AND (co_target_version IS NOT NULL))))`
 - `approval_decided`: `CHECK ((((status = 'pending') AND (decided_at IS NULL)) OR (status = 'expired') OR ((status = ANY (ARRAY['approved', 'rejected'])) AND (decided_at IS NOT NULL))))`
 - `approval_effect_failure_is_stated`: `CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL)))`
 - `approval_pending_names_decider`: `CHECK (((status <> 'pending') OR ((requested_decider_id IS NOT NULL) AND (requested_decider_source IS NOT NULL))))`
 - `approval_requested_decider_source_check`: `CHECK ((requested_decider_source = ANY (ARRAY['payload_owner', 'on_behalf_of', 'stager', 'record_owner'])))`
 - `approval_status_check`: `CHECK ((status = ANY (ARRAY['pending', 'approved', 'rejected', 'expired'])))`
+- `approval_target_entity_type_check`: `CHECK (((target_entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant', 'list', 'signal', 'saved_view', 'tag', 'custom_field', 'webhook_subscription', 'import_run', 'report_definition', 'app_user', 'user_admin', 'team', 'record_grant', 'data_subject_request', 'fx_rate', 'ai_model_rate', 'legal_review', 'brief', 'stage'])) OR (target_entity_type ~ '^ext_[a-z0-9]+(_[a-z0-9]+)*$')))`
 - `approval_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
@@ -82,6 +84,8 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `approval_requested_decider_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.requested_decider_id IS NOT NULL) AND (new.status = 'pending'))) EXECUTE FUNCTION refuse_retired_member_work('requested_decider_id')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "status": 20000, "summary": 500, "diff_hash": 20000, "proposed_by": 20000, "target_label": 120, "context_digest": 20000, "effect_failure": 20000, "decision_reason": 2000, "target_entity_type": 20000, "co_target_entity_type": 20000, "requested_decider_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"co_target_entity_type":20000,"context_digest":20000,"decision_reason":2000,"diff_hash":20000,"effect_failure":20000,"kind":20000,"proposed_by":20000,"requested_decider_source":20000,"status":20000,"summary":500,"target_entity_type":20000,"target_label":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "status": 20000, "summary": 500, "diff_hash": 20000, "proposed_by": 20000, "target_label": 120, "context_digest": 20000, "effect_failure": 20000, "decision_reason": 2000, "target_entity_type": 20000, "co_target_entity_type": 20000, "requested_decider_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"co_target_entity_type":20000,"context_digest":20000,"decision_reason":2000,"diff_hash":20000,"effect_failure":20000,"kind":20000,"proposed_by":20000,"requested_decider_source":20000,"status":20000,"summary":500,"target_entity_type":20000,"target_label":120}')`
 - `trg_approval_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## approval_autonomy_policy
@@ -125,6 +129,8 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"mode": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"mode":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mode": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"mode":20000}')`
 - `trg_approval_autonomy_policy_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## approval_preference
@@ -146,3 +152,8 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `approval_preference_pkey`: `unique, btree (user_id, kind)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')`

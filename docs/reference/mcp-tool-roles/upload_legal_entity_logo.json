@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "upload_legal_entity_logo",
+  "verb": "upload_legal_entity_logo",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

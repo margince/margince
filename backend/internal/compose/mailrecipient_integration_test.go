@@ -276,7 +276,7 @@ func TestProductionHelpAndPartialWeekPreviews(t *testing.T) {
 	// A week already closed: the meeting row's created_at is the database's now(),
 	// after the week, so its occurred_at alone sets the partial boundary.
 	start := previewWeek(t).AddDate(0, 0, -21)
-	plan := weeklyPlanStore(e.Pool)
+	plan := WeeklyPlanStore(e.Pool)
 	commitment, err := plan.AddCommitment(e.repCtx, start, weeklyplan.NewCommitment{Label: "Northstar renewal", DueOn: &start})
 	if err != nil {
 		t.Fatal(err)
@@ -402,11 +402,11 @@ func TestProductionControllerStagingPreviews(t *testing.T) {
 		if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact), ""); err != nil {
 			t.Fatal(err)
 		}
-		purpose, err := lane.store.CreatePurpose(lane.e.Admin(), "marketing_email", "Product news", true)
+		purpose, err := lane.store.CreatePurpose(lane.e.Admin(), "marketing_email", "Product news", true, "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := lane.store.IssueConsentLink(lane.ctx, ids.From[ids.ContactKind](lane.contact), purpose.ID, ""); err != nil {
+		if _, err := lane.store.IssueConsentLink(lane.ctx, ids.From[ids.ContactKind](lane.contact), purpose.ID, "", ""); err != nil {
 			t.Fatal(err)
 		}
 		rows, err := lane.e.Pool.Query(lane.ctx, "SELECT subject,body,html_body FROM comms_outbound WHERE sender_kind='controller' ORDER BY subject")

@@ -1,0 +1,87 @@
+/* A team's frozen week, read as the personal report is: cards on one stack. */
+#brief-team-weekly {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+}
+
+/* A date field is as wide as a date, not as the column it stands in. */
+.teamweekly-pick {
+  max-width: 16rem;
+}
+
+/* The verdict, the summary and what the agenda holds: one stack, one interval. */
+.teamweekly-reading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.teamweekly-headline,
+.teamweekly-summary,
+.teamweekly-coverage,
+.teamweekly-agenda-summary {
+  margin: 0;
+}
+
+.teamweekly-headline,
+.teamweekly-summary {
+  color: var(--textPrimary);
+}
+
+/* One row per dimension: name, bar, count. The name and count size to
+   themselves, so every bar starts and ends at one x. */
+.teamweekly-movement {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.teamweekly-movement-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.teamweekly-movement-name {
+  flex: 0 0 9rem;
+}
+
+.teamweekly-movement-row > .meterbar {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.teamweekly-movement-count {
+  flex: 0 0 auto;
+  min-width: 3ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* An agenda item, a coverage horizon: words that wrap as one line. */
+.teamweekly-row,
+.teamweekly-agenda-item,
+.teamweekly-agenda-focus {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.teamweekly-row,
+.teamweekly-agenda-item {
+  width: 100%;
+}
+
+.teamweekly-agenda-ordinal {
+  font-variant-numeric: tabular-nums;
+}
+
+.teamweekly-agenda-funnel {
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  width: 100%;
+  color: var(--textSecondary);
+}

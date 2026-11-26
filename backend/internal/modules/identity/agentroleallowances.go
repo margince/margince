@@ -32,6 +32,11 @@ const adminRoleKey = "admin"
 // to send more mail.
 var AdminAllowancePreset = agentvolume.Limits{Calls: 20000, Writes: 2000}
 
+// UnpacedRoles are the roles whose agents have no per-minute pacing on the MCP
+// edge. An Admin's large task may call as fast as it needs; its window
+// allowance still bounds how much it does.
+var UnpacedRoles = []string{adminRoleKey}
+
 // allowanceCounts pairs each governed count with its role setting, in the
 // order allowanceValues holds the installation counts.
 var allowanceCounts = []struct {

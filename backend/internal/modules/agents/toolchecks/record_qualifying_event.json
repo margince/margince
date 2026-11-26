@@ -1,0 +1,9 @@
+{
+  "verb": "record_qualifying_event",
+  "checks": [
+    "contact.update"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

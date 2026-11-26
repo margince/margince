@@ -68,8 +68,22 @@ export const AutomaticReminderFromRow: Story = {
           version: 1,
           source_system: "no_activity_reminder",
           captured_by: "system:automation",
-          links: [{ entity_type: "company", entity_id: "o-1" }],
+          links: [
+            { entity_type: "company", entity_id: "o-1" },
+            { entity_type: "contact", entity_id: "c-1" },
+            { entity_type: "deal", entity_id: "deal-1" },
+          ],
         }),
+      // The records it is filed under, named so their chips can be read.
+      "GET /companies": () =>
+        jsonResponse({
+          data: [{ id: "o-1", display_name: "Brandt Automotive" }],
+          next_cursor: null,
+        }),
+      "GET /contacts/c-1": () =>
+        jsonResponse({ id: "c-1", full_name: "Alice Brandt" }),
+      "GET /deals/deal-1": () =>
+        jsonResponse({ id: "deal-1", name: "Brandt renewal 2027" }),
     });
     return (
       <StoryProviders>

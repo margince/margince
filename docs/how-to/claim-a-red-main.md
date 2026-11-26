@@ -13,6 +13,16 @@ the first session lands its fix in any case.
 The claim is a **draft pull request** with the label `claim: main-red`. One command finds it, and it
 exists before the fix does.
 
+## Leave it to the watcher
+
+The team runs a watcher that looks for a red `main`, claims it and fixes it. So when `main` is red,
+leave it alone. Do not look into it, and do not open a fix. Carry on with your own work, and
+look again when you are ready to merge.
+
+Claim it yourself only when you must. That is when a red stops your merge, and 30 minutes after it
+first showed, no claim names its tests. Then the rest of this page is how you claim it. The watcher
+claims the same way, so you find its claim with the same command.
+
 ## Before you look into a failure that is not yours
 
 ```sh

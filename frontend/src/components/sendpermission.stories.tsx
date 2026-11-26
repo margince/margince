@@ -156,3 +156,18 @@ export const MarketingPermissionMissingPhone: Story = {
   ...MarketingPermissionMissing,
   tags: ["uat-phone"],
 };
+
+export const MissingEvidenceAndFooter: Story = {
+  render: () => (
+    <SendPermission
+      namesRecipients
+      preview={refused({
+        can_be_overruled: true,
+        footer_findings: [
+          { kind: "objection_route", language: "", missing_means: [] },
+          { kind: "public_opt_out_link", language: "", missing_means: [] },
+        ],
+      })}
+    />
+  ),
+};

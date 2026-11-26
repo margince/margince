@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MONEY_ABSENT } from "../format/format";
+import { type Translator, translate } from "../i18n";
 import type { CustomField } from "./customfields.form";
 import {
   customFieldDisplay,
@@ -12,7 +13,7 @@ import {
 } from "./customfields.form";
 
 const BOOL_LABELS = { yes: "Yes", no: "No" };
-const TOO_PRECISE = (currency: string) => `Finer than ${currency}`;
+const T: Translator = (key, params) => translate("en", key, params);
 
 // A minimal active CustomField for one object; only the fields the form
 // derivation reads are set — the rest is filler the helpers never touch.
@@ -109,7 +110,7 @@ describe("customFieldToFormField", () => {
         type: "date",
       }),
       BOOL_LABELS,
-      TOO_PRECISE,
+      T,
     );
     expect(field.key).toBe("cf_renewal_date");
     expect(field.labelText).toBe("Renewal date");
@@ -118,18 +119,74 @@ describe("customFieldToFormField", () => {
     expect(field.required).toBeFalsy();
   });
 
-  it("maps number to a number control", () => {
+  it("refuses a day the server cannot store before sending, naming the bounds", () => {
+    const field = customFieldToFormField(
+      cf({
+        label: "Renewal date",
+        column_name: "cf_renewal_date",
+        type: "date",
+      }),
+      BOOL_LABELS,
+      T,
+    );
+    expect(field.validate?.("9999-12-31")).toMatch(
+      /^Renewal date must be from .*0001 to .*9999\.$/,
+    );
+    expect(field.validate?.("2026-03-01")).toBeUndefined();
+    expect(field.validate?.("")).toBeUndefined();
+  });
+
+  it("names the label and options in the reader's language, keeping stored values", () => {
+    const services = cf({
+      label: "Services",
+      type: "picklist",
+      options: ["Consulting", "Support"],
+      label_translations: { vi: "Dịch vụ" },
+      option_translations: { Consulting: { vi: "Tư vấn" } },
+    });
+    const vi = customFieldToFormField(services, BOOL_LABELS, T, "vi");
+    expect(vi.labelText).toBe("Dịch vụ");
+    expect(vi.options).toEqual([
+      { value: "Consulting", label: "Tư vấn" },
+      { value: "Support", label: "Support" },
+    ]);
+    const viReading = customFieldDisplay(services, "Consulting", {
+      locale: "vi",
+      boolLabels: BOOL_LABELS,
+    });
+    expect(viReading).toBe("Tư vấn");
+    const en = customFieldToFormField(services, BOOL_LABELS, T, "en");
+    expect(en.labelText).toBe("Services");
+    expect(en.options?.[0]).toEqual({
+      value: "Consulting",
+      label: "Consulting",
+    });
+  });
+
+  it("maps number to a decimal text control", () => {
     expect(
-      customFieldToFormField(cf({ type: "number" }), BOOL_LABELS, TOO_PRECISE)
-        .type,
-    ).toBe("number");
+      customFieldToFormField(cf({ type: "number" }), BOOL_LABELS, T).type,
+    ).toBe("decimal");
+  });
+
+  // German groups thousands with a dot, so "1.500" reads two ways and is
+  // refused; one comma is the decimal sign, and the store gets a dot.
+  it("reads a number field the German way", () => {
+    const score = cf({ type: "number", column_name: "cf_score" });
+    const field = customFieldToFormField(score, BOOL_LABELS, T, "de");
+    expect(field.toInput?.("42.5")).toBe("42,5");
+    expect(field.validate?.("12,5")).toBeUndefined();
+    expect(field.validate?.("1.500")).toBe("Enter the number as 1500 or 1,5.");
+    expect(customFieldsToBody({ cf_score: "12,5" }, [score], "de")).toEqual({
+      cf_score: "12.5",
+    });
   });
 
   it("renders a picklist as a select of its options", () => {
     const field = customFieldToFormField(
       cf({ type: "picklist", options: ["Direct", "Reseller", "Tender"] }),
       BOOL_LABELS,
-      TOO_PRECISE,
+      T,
     );
     expect(field.type).toBe("select");
     expect(field.options).toEqual([
@@ -139,11 +196,35 @@ describe("customFieldToFormField", () => {
     ]);
   });
 
+  it("renders a record field as a text control that keeps the record id", () => {
+    const record = cf({ type: "record", options: ["ext:alpha:visit"] });
+    expect(customFieldToFormField(record, BOOL_LABELS, T).type).toBe("text");
+    expect(customFieldsToBody({ cf_field: " 0f9e " }, [record], "en")).toEqual({
+      cf_field: "0f9e",
+    });
+  });
+
+  it("refuses a url value the server would refuse, and takes a web address", () => {
+    const field = customFieldToFormField(cf({ type: "url" }), BOOL_LABELS, T);
+    expect(field.type).toBe("text");
+    for (const refused of [
+      "javascript:alert(1)",
+      "data:text/html,x",
+      "example.com/offer",
+    ]) {
+      expect(field.validate?.(refused), refused).toBe(
+        "Enter a web address that starts with http:// or https://.",
+      );
+    }
+    expect(field.validate?.("HTTP://EXAMPLE.COM/offer")).toBeUndefined();
+    expect(field.validate?.("")).toBeUndefined();
+  });
+
   it("renders a boolean as a Yes/No select using the supplied labels", () => {
     const field = customFieldToFormField(
       cf({ type: "boolean" }),
       BOOL_LABELS,
-      TOO_PRECISE,
+      T,
     );
     expect(field.type).toBe("select");
     expect(field.options).toEqual([
@@ -152,15 +233,15 @@ describe("customFieldToFormField", () => {
     ]);
   });
 
-  it("renders currency as a number control whose toInput shows major units", () => {
+  it("renders currency as a decimal text control whose toInput shows major units", () => {
     const field = customFieldToFormField(
       cf({ type: "currency", currency: "EUR" }),
       BOOL_LABELS,
-      TOO_PRECISE,
+      T,
     );
-    expect(field.type).toBe("number");
+    expect(field.type).toBe("decimal");
     // stored as bigint minor units; the form edits major units.
-    expect(field.toInput?.(1250)).toBe("12.5");
+    expect(field.toInput?.(1250)).toBe("12.50");
     expect(field.toInput?.(null)).toBe("");
     expect(field.toInput?.(undefined)).toBe("");
   });
@@ -169,18 +250,22 @@ describe("customFieldToFormField", () => {
     const euro = customFieldToFormField(
       cf({ type: "currency", currency: "EUR" }),
       BOOL_LABELS,
-      TOO_PRECISE,
+      T,
     );
     const yen = customFieldToFormField(
       cf({ type: "currency", currency: "JPY" }),
       BOOL_LABELS,
-      TOO_PRECISE,
+      T,
     );
     expect(euro.validate?.("12.34")).toBeUndefined();
     expect(euro.validate?.("")).toBeUndefined();
-    expect(euro.validate?.("12.345")).toBe("Finer than EUR");
+    expect(euro.validate?.("12.345")).toBe(
+      "This amount has more decimals than EUR allows.",
+    );
     expect(yen.validate?.("12")).toBeUndefined();
-    expect(yen.validate?.("12.5")).toBe("Finer than JPY");
+    expect(yen.validate?.("12.5")).toBe(
+      "This amount has more decimals than JPY allows.",
+    );
   });
 });
 
@@ -188,7 +273,7 @@ describe("customFieldsToBody", () => {
   const fields = [
     cf({ type: "text", column_name: "cf_note" }),
     cf({ type: "number", column_name: "cf_score" }),
-    cf({ type: "currency", column_name: "cf_ceiling" }),
+    cf({ type: "currency", column_name: "cf_ceiling", currency: "EUR" }),
     cf({ type: "boolean", column_name: "cf_active" }),
     cf({ type: "date", column_name: "cf_due" }),
   ];
@@ -203,6 +288,7 @@ describe("customFieldsToBody", () => {
         cf_due: "2026-01-01",
       },
       fields,
+      "en",
     );
     expect(body).toEqual({
       cf_note: "hello",
@@ -223,6 +309,7 @@ describe("customFieldsToBody", () => {
         cf_due: "",
       },
       fields,
+      "en",
     );
     expect(body).toEqual({
       cf_note: null,
@@ -350,7 +437,7 @@ describe("customFieldsToPatch", () => {
   it("says nothing about a field the contact left alone", () => {
     const seeded = { cf_priority: "", cf_renewal: "2026-09-01" };
 
-    const body = customFieldsToPatch({ ...seeded }, seeded, fields);
+    const body = customFieldsToPatch({ ...seeded }, seeded, fields, "en");
 
     expect(body).toEqual({});
   });
@@ -363,6 +450,7 @@ describe("customFieldsToPatch", () => {
       { ...seeded, cf_renewal: "2026-09-01" },
       seeded,
       fields,
+      "en",
     );
 
     expect(Object.keys(body)).toEqual(["cf_renewal"]);
@@ -374,6 +462,7 @@ describe("customFieldsToPatch", () => {
       { cf_priority: "", cf_renewal: "2026-09-01" },
       { cf_priority: "high", cf_renewal: "2026-09-01" },
       fields,
+      "en",
     );
 
     expect(Object.keys(body)).toEqual(["cf_priority"]);
@@ -392,11 +481,21 @@ describe("customFieldsToPatch", () => {
     });
 
     expect(
-      customFieldsToPatch({ cf_budget: "12.5" }, { cf_budget: 1250 }, [budget]),
+      customFieldsToPatch(
+        { cf_budget: "12.5" },
+        { cf_budget: 1250 },
+        [budget],
+        "en",
+      ),
     ).toEqual({});
     // And a real edit still travels, back in minor units.
     expect(
-      customFieldsToPatch({ cf_budget: "20" }, { cf_budget: 1250 }, [budget]),
+      customFieldsToPatch(
+        { cf_budget: "20" },
+        { cf_budget: 1250 },
+        [budget],
+        "en",
+      ),
     ).toEqual({ cf_budget: 2000 });
   });
 
@@ -412,9 +511,12 @@ describe("customFieldsToPatch", () => {
     });
 
     expect(
-      customFieldsToPatch({ cf_budget_vnd: "1250" }, { cf_budget_vnd: 1250 }, [
-        dong,
-      ]),
+      customFieldsToPatch(
+        { cf_budget_vnd: "1250" },
+        { cf_budget_vnd: 1250 },
+        [dong],
+        "en",
+      ),
     ).toEqual({});
   });
 
@@ -424,9 +526,12 @@ describe("customFieldsToPatch", () => {
   it("reads a non-string stored value in the form's own spelling", () => {
     const count = cf({ id: "cf-3", column_name: "cf_count", type: "number" });
 
-    const body = customFieldsToPatch({ cf_count: "12" }, { cf_count: 12 }, [
-      count,
-    ]);
+    const body = customFieldsToPatch(
+      { cf_count: "12" },
+      { cf_count: 12 },
+      [count],
+      "en",
+    );
 
     expect(body).toEqual({});
   });
@@ -438,21 +543,27 @@ it("round-trips multiple choices with punctuation and distinguishes unchanged fr
     options: ["Fit, scope", "C++"],
     column_name: "cf_choices",
   });
-  const control = customFieldToFormField(field, BOOL_LABELS, TOO_PRECISE);
+  const control = customFieldToFormField(field, BOOL_LABELS, T);
   const selected = ["Fit, scope", "C++"];
   const input = control.toInput?.(selected);
   expect(input).toBe(JSON.stringify(selected));
-  expect(customFieldsToBody({ cf_choices: input }, [field])).toEqual({
+  expect(customFieldsToBody({ cf_choices: input }, [field], "en")).toEqual({
     cf_choices: selected,
   });
   expect(
-    customFieldsToPatch({ cf_choices: input }, { cf_choices: selected }, [
-      field,
-    ]),
+    customFieldsToPatch(
+      { cf_choices: input },
+      { cf_choices: selected },
+      [field],
+      "en",
+    ),
   ).toEqual({});
   expect(
-    customFieldsToPatch({ cf_choices: "[]" }, { cf_choices: selected }, [
-      field,
-    ]),
+    customFieldsToPatch(
+      { cf_choices: "[]" },
+      { cf_choices: selected },
+      [field],
+      "en",
+    ),
   ).toEqual({ cf_choices: [] });
 });

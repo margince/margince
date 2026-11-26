@@ -1,19 +1,30 @@
 /** @vitest-environment happy-dom */
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { pickOption } from "../../design-system/select-testing";
-import { draftButton } from "../../testing/composedraft.testkit";
-import { ComposeModal } from "./compose";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  ASYNC_UTIL_TIMEOUT_MS,
+  SLOWEST_MEASURED_TEST_MS,
+} from "../../../vitest.budget";
+import { pickOption } from "../../design-system/select-testing";
+import { draftButton, pressDraft } from "../../testing/composedraft.testkit";
+import {
+  installComposeClock,
   jsonResponse,
   pickWhy,
   render,
   stubRoutes,
   WHY_LABEL,
+  waitForSendReady,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // The project a reply files under, and the key it carries in the subject.
+
+const EIGHT_WAITS_TEST_MS =
+  ASYNC_UTIL_TIMEOUT_MS * 8 + SLOWEST_MEASURED_TEST_MS;
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -78,7 +89,7 @@ describe("the project a reply files under", () => {
 
   const openReply = async () => {
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="deal"
         entityId="d-1"
@@ -90,6 +101,7 @@ describe("the project a reply files under", () => {
   };
 
   it("offers the company's projects and defaults to the thread's own", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     replyBackend(
       [
         { entity_type: "deal", entity_id: "d-1" },
@@ -109,7 +121,7 @@ describe("the project a reply files under", () => {
       expect(picker.textContent).toContain("ERP rollout Acme"),
     );
     // Both of the company's projects are on offer, plus None.
-    await userEvent.setup().click(picker);
+    await user.click(picker);
     expect(
       (await screen.findAllByRole("option")).map((o) => o.textContent),
     ).toEqual([
@@ -117,7 +129,7 @@ describe("the project a reply files under", () => {
       "ERP-27 · ERP rollout Acme",
       "N2P-1 · Netcare 2 project",
     ]);
-    await userEvent.setup().keyboard("{Escape}");
+    await user.keyboard("{Escape}");
     // And the tag is already in the subject. Nothing explains it, because the
     // field shows it.
     await waitFor(() => expect(subject().value).toBe("[ERP-27]"));
@@ -141,7 +153,7 @@ describe("the project a reply files under", () => {
   });
 
   it("takes the tag out when the rep picks None, and puts another one in", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     replyBackend(
       [{ entity_type: "deal", entity_id: "d-1" }],
       [
@@ -177,7 +189,7 @@ describe("the project a reply files under", () => {
   });
 
   it("keeps the tag when the rep types a subject over it", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     replyBackend(
       [{ entity_type: "deal", entity_id: "d-1" }],
       [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],
@@ -197,7 +209,7 @@ describe("the project a reply files under", () => {
   });
 
   it("puts the tag back when the subject loses it, while a project is chosen", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     replyBackend(
       [{ entity_type: "deal", entity_id: "d-1" }],
       [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],
@@ -239,7 +251,7 @@ describe("the project a reply files under", () => {
   });
 
   it("shows the key switch on while a project is chosen, and none without one", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     replyBackend(
       [{ entity_type: "deal", entity_id: "d-1" }],
       [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],
@@ -256,8 +268,11 @@ describe("the project a reply files under", () => {
     );
   });
 
-  it("keeps the tag out once turned off, through a draft and a retype", async () => {
-    const user = userEvent.setup();
+  // Eight default waits in sequence, so it states its own ceiling.
+  it("keeps the tag out once turned off, through a draft and a retype", {
+    timeout: EIGHT_WAITS_TEST_MS,
+  }, async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = replyBackend(
       [{ entity_type: "deal", entity_id: "d-1" }],
       [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],
@@ -274,7 +289,7 @@ describe("the project a reply files under", () => {
     await user.click(await screen.findByRole("switch", { name: KEY_SWITCH }));
     await waitFor(() => expect(subject().value).toBe(""));
 
-    await user.click(draftButton());
+    await pressDraft(user);
     await waitFor(() =>
       expect(
         sent.some((s) => s.key === "POST /activities/act-1/draft-email"),
@@ -293,7 +308,8 @@ describe("the project a reply files under", () => {
 
     await user.type(screen.getByLabelText("To"), "kunde@netcare.test");
     await user.tab();
-    await pickWhy(WHY_LABEL.requestedFollowup);
+    await pickWhy(user, WHY_LABEL.requestedFollowup);
+    await waitForSendReady();
     await user.click(screen.getByRole("button", { name: /^Send$/ }));
     await waitFor(() =>
       expect(
@@ -344,7 +360,7 @@ describe("the project a reply files under", () => {
   ])(
     "restored %s, then %s picked, leaves %s",
     async (saved, pick, after, on) => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       replyBackend(
         [{ entity_type: "deal", entity_id: "d-1" }],
         [
@@ -382,7 +398,7 @@ describe("the project a reply files under", () => {
   ])(
     "restored %s, then %s picked before its project loads, leaves %s",
     async (saved, pick, after, on) => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       let release: (() => void) | undefined;
       const held = new Promise<void>((resolve) => {
         release = resolve;
@@ -477,7 +493,7 @@ describe("the project a reply files under", () => {
       on: "false",
     },
   ])("restored $saved, then $path", async ({ saved, steps, on }) => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     replyBackend(
       [{ entity_type: "deal", entity_id: "d-1" }],
       [
@@ -549,7 +565,7 @@ describe("the project a reply files under", () => {
   });
 
   it("puts the tag back when the switch is turned on again", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     replyBackend(
       [{ entity_type: "deal", entity_id: "d-1" }],
       [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],

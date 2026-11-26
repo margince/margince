@@ -6,11 +6,15 @@ package config
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 )
 
 // refEnv is the ${env:NAME} reference kind.
 const refEnv = "env"
+
+// refFile is the ${file:PATH} reference kind.
+const refFile = "file"
 
 // refNone declares a secret absent. It uses the reference grammar so it can
 // never be mistaken for a password: a secret refuses every literal.
@@ -33,15 +37,9 @@ func resolveRef(text string, readFile func(string) ([]byte, error), getenv func(
 		return text, "", false, nil
 	}
 	switch kind {
-	case "file":
-		raw, err := readFile(arg)
-		if err != nil {
-			return "", arg, true, fmt.Errorf("cannot read secret file %s", arg)
-		}
-		if len(raw) > SecretFileLimit {
-			return "", arg, true, fmt.Errorf("secret file %s is %d bytes, more than a secret holds (limit %d); check the path", arg, len(raw), SecretFileLimit)
-		}
-		return refused(strings.TrimSuffix(string(raw), "\n"), arg)
+	case refFile:
+		value, err := readSecretFrom(arg, readFile)
+		return value, arg, true, err
 	case refEnv:
 		v, set := getenv(arg)
 		if !set {
@@ -50,6 +48,28 @@ func resolveRef(text string, readFile func(string) ([]byte, error), getenv func(
 		return refused(v, "")
 	}
 	return text, "", false, nil
+}
+
+// ReadSecretFile reads a secret from the file at path with the rules a
+// ${file:path} reference follows. It is for a setting that names its secret by
+// path, so both spellings of one secret read the same bytes the same way.
+func ReadSecretFile(path string) (string, error) {
+	return readSecretFrom(path, os.ReadFile)
+}
+
+// readSecretFrom drops one trailing newline, refuses a file over
+// SecretFileLimit and refuses the absence marker. The size is checked on the
+// bytes read, so a file growing between a check and the read cannot pass.
+func readSecretFrom(path string, readFile func(string) ([]byte, error)) (string, error) {
+	raw, err := readFile(path)
+	if err != nil {
+		return "", fmt.Errorf("cannot read secret file %s", path)
+	}
+	if len(raw) > SecretFileLimit {
+		return "", fmt.Errorf("secret file %s is %d bytes, more than a secret holds (limit %d); check the path", path, len(raw), SecretFileLimit)
+	}
+	value, _, _, err := refused(strings.TrimSuffix(string(raw), "\n"), path)
+	return value, err
 }
 
 // parseRef splits ${kind:arg}. Text of any other shape is no reference.

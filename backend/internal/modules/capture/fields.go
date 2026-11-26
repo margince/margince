@@ -7,7 +7,9 @@ import (
 	"math"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/calendarevent"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // The typed Fields payloads a NormalizedRecord carries (the port keeps
@@ -49,6 +51,15 @@ type ActivityFields struct {
 	// CalendarMethod is that part's RFC 5546 METHOD, or "" when none is known.
 	// REPLY, COUNTER and DECLINECOUNTER answer an invitation rather than ask.
 	CalendarMethod string
+	// CalendarUID names the event that part is about, so an answer to an
+	// invitation reaches the same event the calendar connector captured.
+	CalendarUID string
+	// CalendarEvent is what that part says of the event, so a later send can
+	// be read against an earlier one. Nil when no part names an event.
+	CalendarEvent *calendarevent.Event
+	// CalendarSend names the one provider send this mail is a per-guest copy
+	// of, or "" (mailmap.calendarSend). The copies are captured as one activity.
+	CalendarSend string
 	// BodyCompleteness says how much of a mail's text the parser decoded. Zero
 	// for anything not parsed from a mail, which is stored as complete.
 	BodyCompleteness BodyCompleteness
@@ -66,6 +77,18 @@ type ActivityFields struct {
 	// received (asSentByColleagueTx), stored as activity.invitation_sender. It
 	// names an author only: no participant row, so it grants no reading.
 	InvitationFromSeat ids.UUID
+	// forwardedFrom is the original a seat forwarded to their own address
+	// (readForwardToSelfTx). Unexported so only the sink can state it: the
+	// ladder files the message under its sender as the seat's own choice.
+	forwardedFrom *connector.ForwardedOriginal
+	// forwardThread is the original's thread, whose verdicts judge the forward.
+	forwardThread string
+
+	// AssigneeID and DueAt are the task a unit filed for a colleague; zero for
+	// every other record. They are stored as the task's own columns, so the
+	// assignee's Worklist shows it.
+	AssigneeID ids.UUID
+	DueAt      time.Time
 
 	// Envelope is what the mail parser read about addressing and links; nil
 	// for anything not parsed from a mail, and for list mail.
@@ -75,6 +98,17 @@ type ActivityFields struct {
 	// MeetingDocuments are the notes and transcripts the provider attached to a
 	// meeting (meetingmap.NotesDocuments); empty for anything else.
 	MeetingDocuments []MeetingDocument
+	// MeetingDocumentsListed says MeetingDocuments is the whole list, so a
+	// recorded document missing from it was taken off the meeting.
+	MeetingDocumentsListed bool
+
+	// memberOwned says the connection that carried this chat message is one
+	// member's own account. Unexported so only FileChatMessage derives it, from
+	// the authenticated binding.
+	memberOwned bool
+	// pinnedPosture is the posture the member-owned source declared. Unexported
+	// for the reason memberOwned is.
+	pinnedPosture string
 
 	// judged is what the sink concluded from Envelope. Unexported so no
 	// connector can state the conclusion for it.

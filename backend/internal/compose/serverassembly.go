@@ -20,8 +20,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/capturehealth"
+	"github.com/margince/margince/backend/internal/compose/draftcontent"
+	"github.com/margince/margince/backend/internal/compose/employerchange"
+	"github.com/margince/margince/backend/internal/compose/erasurereturn"
+	"github.com/margince/margince/backend/internal/compose/goalproposal"
 	"github.com/margince/margince/backend/internal/compose/homecache"
+	"github.com/margince/margince/backend/internal/compose/hostauthority"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	"github.com/margince/margince/backend/internal/compose/managermove"
+	"github.com/margince/margince/backend/internal/compose/partnersteps"
+	"github.com/margince/margince/backend/internal/compose/requesttask"
+	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -41,20 +51,22 @@ import (
 // newContactsHandlers builds the contact/company/lead transport with the
 // seams compose owns for it.
 //
-// The fieldcatalog seam: customfields' catalog read makes the
-// workspace's active cf_* columns ride contact/company
-// payloads (values only — the schema-change engine stays behind
-// WithSchemaPool; ActiveColumns needs none of it).
-// The match stager is injected here because approvals is a sibling of
-// contacts and a module never imports one: compose is where that edge is
-// made, as it is for every other cross-module dependency.
+// The fieldcatalog seam: customfields' catalog read makes the workspace's
+// active cf_* columns ride contact/company payloads (values only; the
+// schema-change engine stays behind WithSchemaPool).
+// The match stager and the employer-change proposer are injected here because
+// approvals is a sibling of contacts and a module never imports one.
 //
 // The lead settings write through the installation settings store, and the
-// qualify dialog's "also open a deal" rides the deals store through the
-// contacts→deals edge (leadDealOpener) — both injected here for the same
-// ADR-0054 reason as the stager.
+// qualify dialog's "also open a deal" rides the deals store (leadDealOpener).
 func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 	return withContactMergeCarriers(InstallationDB(pool), contacts.NewHandlers(InstallationDB(pool))).
+		WithPrivacyReviewer(identity.NewServiceFor(InstallationDB(pool))).
+		WithRetainedSignaturePreview(func(source string) (string, error) {
+			markup, _, err := activities.SignatureMarkup(source)
+			return markup, err
+		}).
+		WithSignatureImages(sharedSignaturePreviewImages()).
 		WithFloorCarry(EntityFloorCarry(pool)).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithMatchStager(linkedInMatchStager(pool)).
@@ -65,24 +77,34 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}).
 		WithShareRequests(contactShareRequests(pool)).
 		WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
+		WithPartnerNextSteps(partnersteps.New(activities.NewStore(InstallationDB(pool)))).
 		WithInstallationRenamer(installationRenamer(pool)).
-		WithConsumerMail(capture.MatcherTx)
+		WithConsumerMail(capture.MatcherTx).WithEmployerChangeProposer(employerchange.Proposer{DB: InstallationDB(pool), Inbox: approvalsInbox{}})
+}
+
+// newBookerContacts is the contact path a public booking resolves its booker
+// through; rewireConfirmationLane rebuilds the booking edge with the same one.
+func newBookerContacts(pool *pgxpool.Pool) hostauthority.BookerContacts {
+	return hostauthority.BookerContacts{Store: newContactsStore(InstallationDB(pool)), Seats: identity.NewService(pool)}
 }
 
 // newActivitiesHandlers builds the timeline transport over the sibling
 // modules its inbound and outbound edges need.
 func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	gate := consentGateFor(pool)
-	return activities.NewHandlers(InstallationDB(pool)).WithIdentityProver(capture.ProvedUnambiguouslyTx).
+	return activities.NewHandlers(InstallationDB(pool)).WithMeetingNotesAccess(capturehealth.MeetingNotesAccess{}).WithIdentityProver(capture.ProvedUnambiguouslyTx).
 		WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).
 		WithTaskRecommendation(taskRecommendationReader(pool)).
+		WithInquiryAssignment(newInquiryAssignment(InstallationDB(pool))).
 		WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
+		WithTeamRequestNotice(teamRequestNotice{}).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithRecordZone(installationZoneTx).
 		WithSettings(StoredConfig(pool)).
 		WithLocks(loadedLocks).
 		WithConsent(gate).
 		WithSendPreview(gate).
+		WithSignatureImages(sharedSignaturePreviewImages()).
 		// The SAME seam the check_availability tool reads, so the two doors
 		// answer one question one way: whether a window was read off the host's
 		// own diary or derived from this CRM's records.
@@ -91,7 +113,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// The public booking capture seams (feedback/14): contacts is the
 		// idempotent-on-email contact path, consent records the
 		// passthrough — both injected here, never sibling imports.
-		WithPublicBooking(newContactsStore(InstallationDB(pool)), bookingConsentAdapter{
+		WithPublicBooking(newBookerContacts(pool), bookingConsentAdapter{
 			store: consent.NewStore(InstallationDB(pool)),
 		}).
 		// The RFC 8058 unsubscribe linker (B-E11.32): consent mints the
@@ -99,12 +121,10 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		WithUnsubscribe(preferenceLinkAdapter{store: consent.NewStore(InstallationDB(pool))}).
 		// The disclosures a jurisdiction demands, put into the body that owes
 		// them. See compose/disclosurefooter.go.
-		WithDisclosures(disclosureAdapter{store: consent.NewStore(InstallationDB(pool)).
-			// WITH THE COUNTRY READER, which decides which pack applies. A bare
-			// store answers no country, so applicableRules finds no pack and
-			// every message silently owes nothing — the failure this seam
-			// exists to end, arriving through the wiring instead.
-			WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))}).
+		WithDisclosures(newDisclosureAdapter(InstallationDB(pool))).
+		// The advertising content rules a draft is checked against while it
+		// is written. See compose/draftcontent.
+		WithDraftContent(draftcontent.Adapter{Store: consent.NewStore(InstallationDB(pool))}).
 		// The sender's own sign-off (core 0235). contacts owns the row because
 		// it owns the contact the seat belongs to; activities appends it because
 		// it owns the one send. The edge is injected here rather than imported,
@@ -128,6 +148,12 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 // Capture identities share the waiting scan's transaction snapshot.
 type ownDomainReader struct{ store *capture.OwnDomainStore }
 
+// init binds the own-domain list for the activities reads that have no store.
+// The History mail badge then tests a colleague's invitation as the Worklist does.
+func init() {
+	activities.UseColleagueDomains(capture.TrustedColleagueDomainsTx)
+}
+
 func (o ownDomainReader) Domains(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	return o.store.ColleagueDomainsTx(ctx, tx)
 }
@@ -150,13 +176,13 @@ func (o ownDomainReader) ReaderAddresses(
 // needing one gate per independently-built store.
 func NewCollectionsStore(pool *pgxpool.Pool) *collections.Store {
 	return collections.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).
-		WithLiveSteward(identity.LiveMemberSQL("u")).WithDealAmount(dealWorthTodaySQL).WithBaseCurrency(identity.BaseCurrencyOf).
+		WithLiveSteward(identity.LiveMemberSQL("u")).WithDealAmount(dealWorthTodaySQL).WithWinChance(chances.WinChanceSQLNow).WithBaseCurrency(identity.BaseCurrencyOf).
 		WithRuleUses(ruleUsesOf(pool))
 }
 
 // dealWorthTodaySQL is what the filter builder's deal amount compares: the
 // forecast's base value, priced at today's rate for an open deal.
-var dealWorthTodaySQL = deals.BaseValueSQL("CURRENT_DATE", installationBaseCurrencySQL, "t")
+var dealWorthTodaySQL = deals.BaseValueSQL("now()", installationBaseCurrencySQL, "t")
 
 // installationBaseCurrencySQL reads the reporting currency inside the filter's
 // own statement, which the segment engine compiles without a Go-side bind.
@@ -172,10 +198,22 @@ func newCollectionsHandlers(pool *pgxpool.Pool) collectionsHandlers {
 	return collections.NewHandlers(NewCollectionsStore(pool))
 }
 
+// newErasureReturnHandlers builds the return door with the booking page's own
+// contacts store and purpose, so a returned subject is stored as a booker is.
+func newErasureReturnHandlers(pool *pgxpool.Pool) erasureReturnHandlers {
+	db := InstallationDB(pool)
+	consentStore := consent.NewStore(db)
+	bookingPurpose := func(ctx context.Context) (ids.UUID, error) {
+		return bookingConsentAdapter{store: consentStore}.ScopedPurpose(ctx, nil)
+	}
+	return erasurereturn.NewHandlers(pool, db, newContactsStore(db), consentStore, bookingPurpose)
+}
+
 // wireSurfaces binds the handler sets built after the literal, each over a
 // dependency the literal had to build first.
 func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 	s.dataTaskHandlers = dataTaskHandlers{pool: pool}
+	s.erasureReturnHandlers = newErasureReturnHandlers(pool)
 	s.wireStagedSurfaces(pool)
 	s.wireAnalyticsSurface(pool)
 	s.wireCaptureSettingsSurface(pool, log)
@@ -217,8 +255,9 @@ func newForecastHandlers(pool *pgxpool.Pool, now func() time.Time) forecasting.H
 		newForecastStoreFor(pool),
 		ForecastAssemble, ForecastPeriodAt, ForecastWritableScope,
 		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals, now,
-	).WithCallBaseline(ForecastCallBaseline).WithStageChances(ForecastStageChances).
-		WithReaderRows(ForecastReaderContributions)
+	).WithCallBaseline(ForecastCallBaseline).WithStageChances(chances.StageChances).
+		WithReaderRows(ForecastReaderContributions).WithGoalReadable(newReportingService(pool, now).GoalReadable).
+		WithManagerRequests(managermove.Requests(deals.NewStore(InstallationDB(pool), DealsInstallation())))
 }
 
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
@@ -239,6 +278,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	)
+	s.salesProgressReading = salesprogress.Reading{DB: InstallationDB(pool), Reports: reportingService, Deals: deals.NewStore(InstallationDB(pool), DealsInstallation()), Forecast: progressForecast(newForecastStoreFor(pool))}
 	s.sdrSummaryHandlers = newSdrSummaryHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	).withTargets(reportingService)
@@ -274,16 +314,17 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger
 	s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, log, s.priceCatalogues))
 	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool), budgetFullUsers, aiDeferredWork(pool))}
 	s.ownDomainHandlers = ownDomainHandlers{
-		store:    capture.NewOwnDomainStore(InstallationDB(pool)),
+		store:    capture.NewOwnDomainStore(InstallationDB(pool)).WithRemoved(queueStageEvidenceReread),
 		evidence: deals.NewStore(InstallationDB(pool), DealsInstallation()), log: log,
 	}
 	// The installation's own identity and reporting basis (ADR-0090/A135):
 	// name, reporting zone, base currency — the last of which locks once a
 	// deal has converted against it (ADR-0085 §7).
 	s.installationSettingsHandlers = installationSettingsHandlers{
-		store:          NewInstallationSettingsFor(pool),
-		pool:           pool,
-		maxUploadBytes: s.uploadLimits.Attachment,
+		store:                     NewInstallationSettingsFor(pool),
+		pool:                      pool,
+		maxUploadBytes:            s.uploadLimits.Attachment,
+		maxKnowledgeDocumentBytes: s.uploadLimits.KnowledgeDocument,
 	}
 	// The workspace's own consumer-mail list (CAP-PARAM-5): the surviving
 	// domain control, and the only way an operator corrects a shipped
@@ -352,8 +393,7 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 	}
 }
 
-// newConsentHandlers binds the consent surface to the four edges it cannot
-// reach for itself.
+// newConsentHandlers binds consent to the owners of its outside dependencies.
 //
 // DSR fulfillment executes privacy's erase path, and the subject-access export
 // assembles rows from every module that holds them — injected here so consent
@@ -371,11 +411,14 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 // confirmation lane's all-three-or-none rule.
 func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 	return consent.NewHandlers(InstallationDB(pool)).
-		WithEraser(ComposedEraser(pool, nil, nil)).
+		WithEntityNames(consentEntityName).
+		WithEraser(ComposedEraser(pool, nil)).
 		// Wired with or without a mail lane. A receipt owed where no lane can
 		// send it is one the privacy operators must hear about.
 		WithMissedReceipts(receiptAlarm{db: InstallationDB(pool)}).
-		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
+		// A request under a pack with deadlines of its own becomes a dated task.
+		WithRequestTasks(requesttask.Writer{Tasks: activities.NewStore(InstallationDB(pool))}).
+		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool), ExtensionData())).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)
 		})).
@@ -398,4 +441,18 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 
 func (o ownDomainReader) MailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error) {
 	return o.store.MailSeatIdentitiesSQL(ctx, tx, bind)
+}
+
+// salesProgressReading names the Progress handlers as the inventory embeds them.
+type salesProgressReading = salesprogress.Reading
+
+// goalProposalHandlers names the Sales goals proposal the same way.
+type goalProposalHandlers = goalproposal.Handlers
+
+// progressSummaryHandlers names the Progress summary the same way.
+type progressSummaryHandlers = salesprogress.SummaryHandlers
+
+// newGoalProposals reads a seller's closed revenue as Progress does.
+func (s *Server) newGoalProposals() goalProposalHandlers {
+	return goalproposal.Handlers{Progress: s.salesProgressReading, Now: time.Now}
 }

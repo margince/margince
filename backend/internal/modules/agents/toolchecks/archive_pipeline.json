@@ -1,0 +1,9 @@
+{
+  "verb": "archive_pipeline",
+  "checks": [
+    "pipeline.delete"
+  ],
+  "takes": [
+    "pipeline"
+  ]
+}

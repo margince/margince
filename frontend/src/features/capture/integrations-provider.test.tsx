@@ -266,7 +266,7 @@ describe("ProviderCard write posture", () => {
     "offers every write to the seat that pays the provider",
     async () => {
       const user = userEvent.setup();
-      await renderAs(ME_OPERATOR);
+      const fetch = await renderAs(ME_OPERATOR);
 
       // Without this arm the test above would pass on a card that renders no
       // controls for anybody.
@@ -279,10 +279,16 @@ describe("ProviderCard write posture", () => {
       expect(screen.queryByLabelText(KEY_FIELD)).toBeNull();
       await user.click(connect);
       expect(screen.getByLabelText(KEY_FIELD)).toBeTruthy();
-      // And the confirm is refused until the field it needs is filled, so an
-      // empty dialog cannot POST an empty key.
+      // An empty dialog cannot POST an empty key: the confirm says the key is
+      // required and moves focus to it.
       const confirms = screen.getAllByRole("button", { name: CONNECT });
-      expect(confirms[confirms.length - 1].hasAttribute("disabled")).toBe(true);
+      await user.click(confirms[confirms.length - 1]);
+      expect(screen.getByText("API key is required.")).toBeTruthy();
+      expect(document.activeElement).toBe(screen.getByLabelText(KEY_FIELD));
+      const posted = fetch.mock.calls.filter(
+        ([input]) => input instanceof Request && input.method === "POST",
+      );
+      expect(posted).toHaveLength(0);
       await user.keyboard("{Escape}");
 
       await openDestructiveMenu(user);

@@ -16,7 +16,7 @@ func deleteRawOriginalsTx(ctx context.Context, tx pgx.Tx, where string, args ...
 	if err != nil {
 		return 0, err
 	}
-	records, objects, err := originalstore.PurgeReturned(ctx, rows)
+	records, objects, err := originalstore.CountReturned(rows)
 	if err == nil && objects > 0 {
 		destroyedOutside(tx, armRawOriginalObject)
 	}

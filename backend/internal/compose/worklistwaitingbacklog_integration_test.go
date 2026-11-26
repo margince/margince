@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -248,9 +249,15 @@ func walkWorklist(
 // cursor names.
 func frozenTop(t *testing.T, e *integration.Env, token string) map[string]bool {
 	t.Helper()
+	// storekit.EncodeSigned appends a dot and a MAC to the opaque body. The
+	// server checks the MAC, so this reads only the body.
+	body, _, signed := strings.Cut(token, ".")
+	if !signed {
+		t.Fatalf("the worklist cursor %q carries no signature", token)
+	}
 	cursor, err := storekit.DecodeOpaque[struct {
 		Snapshot ids.UUID `json:"s"`
-	}](token)
+	}](body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -341,7 +348,7 @@ func assertTailOrder(t *testing.T, served []servedRow, frozen map[string]bool) {
 func (w *waitingBacklog) assertTailIsTheFold(t *testing.T) {
 	r := w.r
 	ctx := w.seat(r.e.Rep1)
-	seam := attentionWaiting{store: activities.NewStore(r.e.DB()), now: func() time.Time { return r.now }}
+	seam := attentionWaiting{store: activities.NewStore(r.e.DB())}
 	owner := r.e.Rep1
 	narrow := attention.WaitingFor{Owner: &owner}
 	var scanned []activities.WaitingReply
@@ -408,7 +415,7 @@ func TestNoTailPositionNamesAMessageTheReaderCannotRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := r.e.As(r.e.Rep1, []ids.UUID{r.e.Team1}, integration.AdminPerms)
-	seam := attentionWaiting{store: activities.NewStore(r.e.DB()), now: func() time.Time { return r.now }}
+	seam := attentionWaiting{store: activities.NewStore(r.e.DB())}
 	narrow := attention.WaitingFor{Team: true, Seats: []ids.UUID{r.e.Rep1, r.e.Rep2}}
 	scanned, err := seam.store.WaitingRepliesNarrowedBefore(ctx, r.now, activities.WaitingPosition{}, waitingNarrow(narrow))
 	if err != nil {
@@ -488,7 +495,7 @@ func assertLastTask(t *testing.T, served []servedRow, id string) {
 }
 
 // assertDoneTakesACardOff holds that Done on a waiting card past the lane's
-// scan succeeds, and the card leaves the reader's next walk. The Done check
+// scan succeeds, the card leaves the reader's next walk, and a second Done succeeds. The Done check
 // finds it through the tail's own cards, on a walk of its own, so it runs alone.
 func (w *waitingBacklog) assertDoneTakesACardOff(t *testing.T) {
 	r := w.r
@@ -512,5 +519,10 @@ func (w *waitingBacklog) assertDoneTakesACardOff(t *testing.T) {
 		if row.id == card {
 			t.Fatal("the card marked done was served again")
 		}
+	}
+	// A second tab still draws the card. Its Done finds the card off the list
+	// already, which is what it asked for.
+	if err := svc.MarkRowsDone(ctx, []attention.RowRef{{Source: string(crmcontracts.WorklistItemSourceCustomerWaiting), RowID: card}}); err != nil {
+		t.Fatalf("a second Done on the waiting card answered %v, want success", err)
 	}
 }

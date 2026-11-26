@@ -12,7 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -113,13 +113,12 @@ func (s *Store) UpdateLead(ctx context.Context, id ids.LeadID, in UpdateLeadInpu
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	active, err := s.activeColumns(ctx, "lead")
-	if err != nil {
-		return crmcontracts.Lead{}, err
-	}
 	var out crmcontracts.Lead
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, "lead")
+		if err != nil {
+			return err
+		}
 		out, err = s.updateLeadInTx(ctx, tx, id, in, active)
 		return err
 	})
@@ -188,12 +187,12 @@ func (s *Store) FillEmptyLeadFieldsTx(ctx context.Context, tx pgx.Tx, id ids.Lea
 	if patch.FullName == nil && patch.CompanyName == nil && patch.Title == nil {
 		return nil
 	}
-	_, err = s.updateLeadInTx(ctx, tx, id, patch, active.cols)
+	_, err = s.lockAndWriteLeadInTx(ctx, tx, id, patch, active.cols)
 	return err
 }
 
-// emptyFieldPatch is the sparse patch: a captured value for every field the
-// lead lacks, and nothing for the rest.
+// emptyFieldPatch is the sparse patch: a captured value, cut to its column's
+// limit, for every field the lead lacks, and nothing for the rest.
 //
 // Email is deliberately absent. It is the lead's dedupe key and the reason this
 // collision was detected at all, so the incumbent necessarily has one — a
@@ -201,103 +200,106 @@ func (s *Store) FillEmptyLeadFieldsTx(ctx context.Context, tx pgx.Tx, id ids.Lea
 // question rather than a blank to fill.
 func emptyFieldPatch(current crmcontracts.Lead, in CapturedLeadFields) UpdateLeadInput {
 	var patch UpdateLeadInput
-	if name := strings.TrimSpace(in.FullName); name != "" && blank(current.FullName) {
+	if name := textbounds.Fit("public.lead.full_name", strings.TrimSpace(in.FullName)); name != "" && blank(current.FullName) {
 		patch.FullName = &name
 	}
-	if in.CompanyName != "" && blank(current.CompanyName) {
-		patch.CompanyName = &in.CompanyName
+	if company := textbounds.Fit("public.lead.company_name", in.CompanyName); company != "" && blank(current.CompanyName) {
+		patch.CompanyName = &company
 	}
-	if in.Title != "" && blank(current.Title) {
-		patch.Title = &in.Title
+	if title := textbounds.Fit("public.lead.title", in.Title); title != "" && blank(current.Title) {
+		patch.Title = &title
 	}
 	return patch
 }
 
 func blank(value *string) bool { return value == nil || *value == "" }
 
-// updateLeadInTx runs the visibility gate, the sparse-patch fold, the write
-// shape, and the cleared-override recompute for one lead update inside the
-// caller's transaction. active names the workspace's custom-field columns
-// (fetched before the tx opened).
-//
-//nolint:cyclop // one edit applies each optional field in turn, as updateContactInTx does.
+// updateLeadInTx is the lead update on the caller's transaction, then the lead
+// as it now stands.
 func (s *Store) updateLeadInTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in UpdateLeadInput, active []fieldcatalog.Column) (crmcontracts.Lead, error) {
-	if err := ensureLeadUpdateAuthority(ctx, tx, id, in); err != nil {
-		return crmcontracts.Lead{}, err
+	edit, err := s.lockAndWriteLeadInTx(ctx, tx, id, in, active)
+	if err != nil || !edit.changed {
+		return edit.current, err
 	}
-	// The lock comes before the read, so the before image is what the write
-	// replaces. A recompute landing in between would otherwise move
-	// score_computed under a clear that already captured the old value.
-	lock, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.LiveOnly)
-	if err != nil {
-		return crmcontracts.Lead{}, err
-	}
+	return readLead(ctx, tx, id, storekit.LiveOnly, active)
+}
+
+// writeLeadInTx runs the sparse-patch fold, the write shape, and the
+// cleared-override recompute for one lead update. The caller holds the lead row
+// locked and checked its update authority. It reads nothing back for a caller.
+//
+//nolint:cyclop // one edit applies each optional field in turn, as writeContactInTx does.
+func (s *Store) writeLeadInTx(
+	ctx context.Context, tx pgx.Tx, lock storekit.RowLock, in UpdateLeadInput, active []fieldcatalog.Column,
+) (recordEdit[crmcontracts.Lead], error) {
+	var none recordEdit[crmcontracts.Lead]
+	id := ids.From[ids.LeadKind](lock.ID())
 	current, err := readLead(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	// Checked here and not only by the write: a patch that turns out empty
 	// returns early, and a stale If-Match must still answer 409 then.
-	if err := storekit.EnsureIfMatch(ctx, tx, "lead", id.UUID, in.IfVersion); err != nil {
-		return crmcontracts.Lead{}, err
+	if err := storekit.EnsureVersionMatches(current.Version, in.IfVersion); err != nil {
+		return none, err
 	}
 	in, err = admitLeadReferences(ctx, tx, current, in)
 	if err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 	p, resumeRecompute, err := buildLeadPatch(current, in)
 	if err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := setLeadPartner(ctx, tx, p, current, in); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := refuseContactHeldLeadEdit(ctx, tx, current, in); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := refuseErasedLeadEmail(ctx, tx, current, in); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
-	if err := stampHumanFirstResponse(ctx, p, current, in); err != nil {
-		return crmcontracts.Lead{}, err
+	if err := stampHumanFirstResponse(ctx, tx, p, current, in); err != nil {
+		return none, err
 	}
 	if err := stampStatusSetBy(ctx, p, current, in); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
-	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
-		return crmcontracts.Lead{}, err
+	if err := storekit.SetCustomFieldPatchIn(ctx, tx, p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+		return none, err
 	}
 	if err := unlinkUnnamedCompany(ctx, tx, id, current.CompanyName, current.CandidateCompanyKey, p); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if p.Empty() {
-		return current, nil
+		return recordEdit[crmcontracts.Lead]{current: current}, nil
 	}
 	rescore, err := stageLeadRescore(ctx, tx, id, current, p, resumeRecompute)
 	if err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 		if mapped, ok := leadUniqueViolation(err, in.Email); ok {
-			return crmcontracts.Lead{}, mapped
+			return none, mapped
 		}
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "lead", id.UUID, p.Before(), p.After())
 	if err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventLeadUpdated{ChangedFields: p.After()}); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := s.reviewTouchedLeadIdentity(ctx, tx, id, p); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
 	if err := recordRescoreHistory(ctx, tx, id, in, rescore); err != nil {
-		return crmcontracts.Lead{}, err
+		return none, err
 	}
-	return readLead(ctx, tx, id, storekit.LiveOnly, active)
+	return recordEdit[crmcontracts.Lead]{current: current, changed: true}, nil
 }
 
 // admitLeadReferences checks the project and origin a patch names, and
@@ -380,7 +382,7 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 		return nil, false, err
 	}
 	if in.FullName != nil {
-		name, err := httperr.RequireNonBlank("full_name", *in.FullName)
+		name, err := requireLeadName(*in.FullName)
 		if err != nil {
 			return nil, false, err
 		}

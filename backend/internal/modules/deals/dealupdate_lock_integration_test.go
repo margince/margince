@@ -13,32 +13,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// waitUntilBlockedBy returns once a backend waits on a lock held by blocker,
-// so the competing commit happens only after the writer reached its lock.
-func waitUntilBlockedBy(ctx context.Context, t *testing.T, e *configEnv, blocker int) {
-	t.Helper()
-	for ctx.Err() == nil {
-		if _, err := e.owner.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-			t.Fatalf("clearing the activity snapshot: %v", err)
-		}
-		var waiting bool
-		if err := e.owner.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE $1 = ANY (pg_blocking_pids(pid)))`, blocker,
-		).Scan(&waiting); err != nil {
-			t.Fatalf("looking for a writer blocked by the reassignment: %v", err)
-		}
-		if waiting {
-			return
-		}
-	}
-	t.Fatal("no writer ever blocked on the reassigning transaction")
-}
 
 // asFormerOwner holds every deal verb over the caller's own deals only.
 func (e *configEnv) asFormerOwner() context.Context {
@@ -69,7 +50,8 @@ func seedOwnedDeal(t *testing.T, e *configEnv) (deal ids.DealID, from, to ids.St
 	}
 	owner := ids.From[ids.UserKind](e.admin)
 	created, err := e.store.CreateDeal(e.asDealWriter(), CreateDealInput{
-		Name: "Contested", PipelineID: pipeline, StageID: from, OwnerID: &owner, OwnerExact: true,
+		Source: "manual",
+		Name:   "Contested", PipelineID: pipeline, StageID: from, OwnerID: &owner, OwnerExact: true,
 	})
 	if err != nil {
 		t.Fatalf("seeding the deal: %v", err)
@@ -108,8 +90,12 @@ func refusedAfterReassignment(t *testing.T, e *configEnv, deal ids.DealID, write
 	}
 
 	done := make(chan error, 1)
-	go func() { done <- write(e.asFormerOwner()) }()
-	waitUntilBlockedBy(ctx, t, e, blocker)
+	racer := make(chan struct{})
+	go func() {
+		done <- write(e.asFormerOwner())
+		close(racer)
+	}()
+	testdb.AwaitQueuedBehind(t, e.owner, int32(blocker), 1, racer, "the competing write")
 	if err := reassign.Commit(ctx); err != nil {
 		t.Fatalf("committing the reassignment: %v", err)
 	}
@@ -223,10 +209,11 @@ func TestARestoreRacingAReassignmentIsRefusedForTheFormerOwner(t *testing.T) {
 func seedCorrection(t *testing.T, e *configEnv, deal ids.DealID) ids.UUID {
 	t.Helper()
 	var correction ids.UUID
+	closes := clocktest.Now(t).AddDate(1, 0, 0).Format(time.DateOnly)
 	err := e.store.Tx(e.asDealWriter(), func(tx pgx.Tx) error {
 		ctx := e.asDealWriter()
 		patch := storekit.NewPatch()
-		patch.Set("expected_close_date", nil, "2031-01-02")
+		patch.Set("expected_close_date", nil, closes)
 		if err := applyDealPatchGuarded(ctx, tx, deal, patch, nil); err != nil {
 			return err
 		}

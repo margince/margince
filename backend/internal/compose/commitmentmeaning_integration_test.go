@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -106,7 +105,7 @@ func TestCommitmentMeaningControlsTheRealWriterAndSurvivesReplay(t *testing.T) {
 			}
 			subject := e.SeedContact(t, "Message participant", &e.Rep1)
 			integration.LinkActivity(t, integration.OwnerConn(t), sourceID, "contact", subject)
-			if err := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
+			if err := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
 				t.Fatal(err)
 			}
 			if got := e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission WHERE source_activity_id=$1 AND meaning IS NOT NULL`, sourceID); got != 0 {

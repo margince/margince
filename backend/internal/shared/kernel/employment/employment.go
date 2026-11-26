@@ -39,7 +39,8 @@ var employmentEndColumn = regexp.MustCompile(`^(?:[A-Za-z_][A-Za-z_0-9]*\.)?ende
 // IsCurrentSQL treats a future departure as a notice period: the contact still works there.
 // A departure day that has arrived is already over, so ending employment today
 // removes it from current-employer views immediately. Postgres owns the clock
-// because every server-side reader evaluates this rule in its transaction.
+// because every server-side reader evaluates this rule in its transaction. The
+// day is the installation's, the zone the picked departure day belongs to.
 // Expression callers provide status and precision explicitly; only a plain
 // ended_at column (optionally qualified) derives its sibling columns.
 // IsCurrentSQL combines assertion and date evidence. A former or unknown
@@ -61,8 +62,15 @@ func IsCurrentSQL(date string, asserted ...string) string {
 	if len(asserted) > 1 {
 		precision = asserted[1]
 	}
-	end := sqlf("CASE WHEN %s = 'month' THEN (date_trunc('month', %s::date) + interval '1 month')::date ELSE %s END", precision, date, date)
-	return sqlf("(coalesce(%s, 'current') = 'current' AND (%s IS NULL OR %s > current_date))", status, date, end)
+	end := EndDaySQL(date, precision)
+	return sqlf("(coalesce(%s, 'current') = 'current' AND (%s IS NULL OR %s > %s))", status, date, end, occurredday.TodaySQL("now()"))
+}
+
+// EndDaySQL is the first day an employment is no longer current. That is the
+// departure day itself, or the first day of the next month for month precision.
+// IsCurrentSQL holds while that day is still ahead.
+func EndDaySQL(date, precision string) string {
+	return sqlf("CASE WHEN %s = 'month' THEN (date_trunc('month', %s::date) + interval '1 month')::date ELSE %s END", precision, date, date)
 }
 
 // CurrentMembershipSQL is a live employment edge that still belongs to its contact.
@@ -95,6 +103,16 @@ func CurrentPrimarySQL(alias string) string {
 		prefix = alias + "."
 	}
 	return sqlf("%sis_current_primary AND %s", prefix, IsCurrentSQL(prefix+"ended_at"))
+}
+
+// LiveCurrentPrimarySQL is the contact's current employer: the edge holding the
+// primary slot, read only while it has not ended.
+func LiveCurrentPrimarySQL(alias string) string {
+	prefix := ""
+	if alias != "" {
+		prefix = alias + "."
+	}
+	return CurrentPrimarySlotSQL(alias) + " AND " + IsCurrentSQL(prefix+"ended_at")
 }
 
 // LiveSlotSQL is the THIRD question, and the one uq_rel_employment

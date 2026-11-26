@@ -83,6 +83,9 @@ func lockedSurfaces() []lockedSurface {
 			{method: http.MethodPatch, path: "/v1/installation/settings", body: map[string]any{"send_rate_limit": 8}},
 			{method: http.MethodPut, path: "/v1/company", body: renamed},
 		}},
+		{"/autonomy", "/v1/autonomy", []lockedWrite{
+			{method: http.MethodPut, path: "/v1/autonomy/installation", body: map[string]any{"enabled": false}},
+		}},
 		{"/installation/oauth-apps/{provider}", "/v1/installation/oauth-apps/google", []lockedWrite{
 			{method: http.MethodPut, path: "/v1/installation/oauth-apps/google", body: crmcontracts.ConnectorAppInput{ClientId: "another.apps.googleusercontent.com", ClientSecret: &secret}},
 			{method: http.MethodDelete, path: "/v1/installation/oauth-apps/google"},
@@ -100,9 +103,17 @@ func (r rawJSON) MarshalJSON() ([]byte, error) { return []byte(r), nil }
 // capture save through a loop variable. The census fails when one gains a surface.
 var unsurfaced = []string{
 	"consent.authorization_modes",
+	"contacts.dormancy_days",
+	"contacts.dormancy_follow_up_enabled",
 	"deals.stage_autopilot_enabled",
 	"deals.maintenance_writes_enabled",
 	"deals.silent_close_days",
+}
+
+// unlockedOwnWrites are writes on a locked surface's own path that change no
+// stored setting, so no lock can refuse them.
+var unlockedOwnWrites = []string{
+	"PATCH /autonomy", // the reader's own mode for one kind
 }
 
 // censusValues are boot values for the stored settings that declare no
@@ -230,6 +241,9 @@ func TestEverySettingsResponseReportsItsLocks(t *testing.T) {
 	for _, s := range surfaces {
 		covered = append(covered, s.contractPath)
 		for _, method := range []string{http.MethodPut, http.MethodPatch, http.MethodDelete} {
+			if slices.Contains(unlockedOwnWrites, method+" "+s.contractPath) {
+				continue
+			}
 			if doc.Paths.Value(s.contractPath).GetOperation(method) != nil && !declaresTheLock(doc, method, s.contractPath) {
 				t.Errorf("%s %s writes a locked setting and declares no %s 409", method, s.contractPath, lockedCode)
 			}

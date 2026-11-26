@@ -12,13 +12,14 @@
   align-items: center;
 }
 
-/* The count sits above the glyph's shoulder and covers under a third of it.
-   It only PLACES the badge; the badge draws itself. `pointer-events: none` so
+/* The count is centred on the glyph's top-right corner, so a wider count grows
+   to both sides instead of over the glyph. It only PLACES the badge; the badge draws itself. `pointer-events: none` so
    the figure is part of the target rather than a second one inside it. */
 .notifbell-count {
   position: absolute;
   top: calc(var(--space-2) * -1);
-  right: -2px;
+  left: calc(50% + var(--controlIcon) / 2);
+  transform: translateX(-50%);
   pointer-events: none;
 }
 
@@ -26,7 +27,7 @@
    rather than the trigger's, inside the gutter on both sides on a phone.
    Above the bar (20) because it hangs out of it, below the modal overlay (50),
    which may legitimately cover the whole chrome. */
-.notifbell-loose {
+.notifbell-loose.topbar-popover {
   z-index: 25;
   width: min(380px, calc(100vw - 2 * var(--pageGutter)));
   /* The history is longer than the screen. The panel keeps its head in view and
@@ -38,7 +39,7 @@
 }
 /* A phone gives the list the whole width between the gutters. */
 @media (max-width: 700px) {
-  .notifbell-loose {
+  .notifbell-loose.topbar-popover {
     left: var(--pageGutter);
     width: auto;
   }

@@ -36,15 +36,6 @@
 [extend]
 useDefault = true
 
-# The generated preview catalog records source digests for drift checks.
-[[allowlists]]
-description = "Source file SHA-256 digests in the generated preview catalog"
-targetRules = ["generic-api-key"]
-condition = "AND"
-regexTarget = "match"
-paths = ['''(^|/)backend/internal/modules/agents/previewcatalog_gen\.json$''']
-regexes = ['''[a-zA-Z0-9_./-]+\.tsx?":"[a-f0-9]{64}"''']
-
 # Tests and Storybook stories hold fabricated fixtures — stand-in passports and
 # approval tokens, demo ids, and deliberately malformed URLs. The credentialed
 # URLs in the fetch-policy tests are the clearest case: they exist so the code
@@ -85,3 +76,13 @@ targetRules = ["linkedin-client-id"]
 condition = "AND"
 paths = ['''frontend/src/features/onboarding/onboarding-conversation/connect-also\.tsx$''']
 regexes = ['''^LinkedinStatus$''']
+
+# A catalog ACL line names a table (`extension_secret`) and a grant string, not a key.
+# Unanchored: the detector's match starts on the line before.
+[[allowlists]]
+description = "Table ACL lines in the generated schema catalog"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = ['''backend/migrations/testdata/head_catalog\.txt$''']
+regexes = ['''public\.[a-z0-9_]+ acl=''']

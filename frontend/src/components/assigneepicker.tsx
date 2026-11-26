@@ -4,17 +4,26 @@
 import type { components } from "../api/schema";
 import { Field } from "../design-system/atoms";
 import { Select } from "../design-system/select";
-import { useT } from "../i18n";
+import { forReader } from "../format/collate";
+import { type Locale, useLocale, useT } from "../i18n";
 import {
   RosterFailedLine,
   useRoster,
   useRosterPartial,
   useRosterPartialHint,
 } from "./entityref";
+import {
+  type AssignedRecord,
+  useNamedColleagues,
+} from "./recordassignments.queries";
 import { useEveryMember } from "./roster";
 
-/** A workspace user as a picker option. */
-export type UserOption = { value: string; label: string };
+/** A workspace user as a picker option; a long list's filter also reads the email. */
+export type UserOption = {
+  value: string;
+  label: string;
+  keywords?: readonly string[];
+};
 
 /**
  * Picker options with the roster read behind them, so a picker can say when
@@ -33,22 +42,41 @@ type MemberStatus = components["schemas"]["User"]["status"];
  * seat that can write. An entry without the answer is offered, and the write
  * decides.
  */
-export function mayOwnRecords(entry: RosterEntry): boolean {
+function mayOwnRecords(entry: RosterEntry): boolean {
   if (!("display_name" in entry) || entry.is_agent) {
     return false;
   }
   return entry.can_own_records !== false;
 }
 
+export function userOption(entry: {
+  id: string;
+  display_name?: string;
+  email?: string;
+}): UserOption {
+  return entry.display_name !== undefined
+    ? {
+        value: entry.id,
+        label: entry.display_name,
+        keywords: entry.email ? [entry.email] : [],
+      }
+    : { value: entry.id, label: entry.id };
+}
+
+// By name, in the order the owner filter of a list uses, so one colleague sits
+// in one place in every list of colleagues.
 function ownerOptions(
   roster: ReturnType<typeof useRoster>,
   admits: (entry: RosterEntry) => boolean,
+  locale: Locale,
 ): UserOptions {
-  const options = (roster.data ?? []).filter(admits).map((entry) => ({
-    value: entry.id,
-    label: "display_name" in entry ? entry.display_name : entry.id,
-  }));
-  return { options, roster };
+  return {
+    options: (roster.data ?? [])
+      .filter(admits)
+      .map(userOption)
+      .sort((a, b) => forReader(a.label, b.label, locale)),
+    roster,
+  };
 }
 
 /**
@@ -56,7 +84,8 @@ function ownerOptions(
  * this, and so does a website form's owner of new leads.
  */
 export function useRecordOwnerOptions(enabled = true): UserOptions {
-  return ownerOptions(useRoster("user", enabled), mayOwnRecords);
+  const { locale } = useLocale();
+  return ownerOptions(useRoster("user", enabled), mayOwnRecords, locale);
 }
 
 /**
@@ -64,12 +93,14 @@ export function useRecordOwnerOptions(enabled = true): UserOptions {
  * and lies inside the reader's own write scope, as the server answers it.
  */
 export function useRunAsOwnerOptions(enabled = true): UserOptions {
+  const { locale } = useLocale();
   return ownerOptions(
     useRoster("user", enabled),
     (entry) =>
       mayOwnRecords(entry) &&
       "display_name" in entry &&
       entry.assignable !== false,
+    locale,
   );
 }
 
@@ -98,7 +129,7 @@ export function useMemberFilterOptions(enabled: boolean) {
     const suffix = STATUS_SUFFIX[entry.status];
     return [
       {
-        value: entry.id,
+        ...userOption(entry),
         label: suffix
           ? t(suffix, { name: entry.display_name })
           : entry.display_name,
@@ -111,6 +142,22 @@ export function useMemberFilterOptions(enabled: boolean) {
     failed: walk.isError,
     partial: walk.data?.partial === true,
   };
+}
+
+/**
+ * The viewer first, under `you`, then every other member by name: how the
+ * owner dial and the filter builder both list who may own a record.
+ */
+export function youThenByName(
+  members: readonly UserOption[],
+  viewerId: string | undefined,
+  you: string,
+  locale: Locale,
+): UserOption[] {
+  const others = members
+    .filter((member) => member.value !== viewerId)
+    .sort((a, b) => forReader(a.label, b.label, locale));
+  return viewerId ? [{ value: viewerId, label: you }, ...others] : others;
 }
 
 /**
@@ -130,20 +177,45 @@ export function useMemberFilterOptions(enabled: boolean) {
  * list — a composer whose assignee picker only applies to a task has no reason
  * to walk `/users` while a note is being written.
  */
-export function useAssignableUserOptions(enabled = true): UserOptions {
+export function useAssignableUserOptions(
+  enabled = true,
+  records: readonly AssignedRecord[] = NO_RECORDS,
+): UserOptions {
   const roster = useRoster("user", enabled);
+  const named = useNamedColleagues(enabled ? records : NO_RECORDS);
   const options = (roster.data ?? [])
     .filter((entry) => !("is_agent" in entry && entry.is_agent))
-    .map((entry) => ({
-      value: entry.id,
-      label: ("display_name" in entry ? entry.display_name : null) ?? entry.id,
-    }));
-  return { options, roster };
+    .map(userOption);
+  return { options: namedColleaguesFirst(options, named), roster };
+}
+
+const NO_RECORDS: readonly AssignedRecord[] = [];
+
+/**
+ * The colleagues named on the record first, each labelled with the roles they
+ * hold there, then everyone else in roster order. The role is a label only:
+ * nothing is chosen for the reader, and no role limits who may be picked.
+ */
+export function namedColleaguesFirst(
+  options: readonly UserOption[],
+  named: ReadonlyMap<string, readonly string[]>,
+): UserOption[] {
+  const first: UserOption[] = [];
+  const rest: UserOption[] = [];
+  for (const option of options) {
+    const roles = named.get(option.value);
+    if (roles) {
+      first.push({ ...option, label: `${option.label} · ${roles.join(", ")}` });
+    } else {
+      rest.push(option);
+    }
+  }
+  return [...first, ...rest];
 }
 
 /**
  * The assignee picker for a task being written: the workspace's contacts, less
- * agent seats, plus a leading "Unassigned".
+ * agent seats, plus a leading "Me". A task that names nobody goes to its writer.
  *
  * Renders nothing while `active` is false, and its roster walk is deferred to
  * that same flag — a note or meeting is not held by a colleague, so neither the
@@ -156,13 +228,16 @@ export function TaskAssigneeField({
   active,
   value,
   onChange,
+  records,
 }: Readonly<{
   active: boolean;
   value: string;
   onChange: (next: string) => void;
+  /** The records the task is about; colleagues named on them come first. */
+  records?: readonly AssignedRecord[];
 }>) {
   const t = useT();
-  const { options, roster } = useAssignableUserOptions(active);
+  const { options, roster } = useAssignableUserOptions(active, records);
   const partialHint = useRosterPartialHint(useRosterPartial("user", active));
   if (!active) {
     return null;
@@ -173,7 +248,7 @@ export function TaskAssigneeField({
         {(control) => (
           <Select
             {...control}
-            options={[{ value: "", label: t("log.unassigned") }, ...options]}
+            options={[{ value: "", label: t("log.assigneeMe") }, ...options]}
             value={value}
             onChange={onChange}
           />

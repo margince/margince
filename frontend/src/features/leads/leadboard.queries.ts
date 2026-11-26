@@ -5,8 +5,9 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { ListQuery } from "../../components/listquery";
 import type { MessageKey } from "../../i18n/en";
+import { useHealthScope } from "../../lib/healthscope";
 import { LEAD_STATUS_COUNTS_KEY, leadTerminalKey } from "../../lib/leadkeys";
-import { throwProblem, unwrap } from "../../lib/problem";
+import { isOwnerNotMeasurable, throwProblem, unwrap } from "../../lib/problem";
 import type { Lead } from "./leadpresentation";
 import { leadsQueryParams } from "./leads.list.queries";
 
@@ -70,7 +71,7 @@ export function terminalCountsWithheldBecause(
 }
 
 // The one reason the server decides: an owner dial naming somebody whose
-// counts this reader may not measure answers 403.
+// counts this reader may not measure answers owner_not_measurable.
 export function terminalCountsRefusedBecause(
   counts: Map<string, number> | null | undefined,
 ): MessageKey | undefined {
@@ -95,11 +96,16 @@ export function leadStatusReportFilters(
 // mutation refreshes the terminal figures with the cards.
 export function useLeadStatusCounts(query: ListQuery) {
   const filters = leadStatusReportFilters(query);
+  // Counts over the rows one reader scope may see.
+  const readerScope = useHealthScope();
   return useQuery({
-    queryKey: [...LEAD_STATUS_COUNTS_KEY, filters],
-    enabled: terminalCountsWithheldBecause(query) === undefined,
-    queryFn: async (): Promise<Map<string, number> | null> => {
-      const { data, error, response } = await api.POST("/reports/{report}", {
+    queryKey: [...LEAD_STATUS_COUNTS_KEY, readerScope ?? "", filters],
+    enabled:
+      readerScope !== undefined &&
+      terminalCountsWithheldBecause(query) === undefined,
+    queryFn: async ({ signal }): Promise<Map<string, number> | null> => {
+      const { data, error } = await api.POST("/reports/{report}", {
+        signal,
         params: { path: { report: "leads-by-status" } },
         body: {
           group_by: ["status"],
@@ -108,8 +114,8 @@ export function useLeadStatusCounts(query: ListQuery) {
         },
       });
       if (error) {
-        // Only an owner dial meets the owner gate; any other 403 is a failure.
-        if (response.status === 403 && filters.owner_id) return null;
+        // Only the owner gate's own code is an owner refusal; any other 403 is a failure.
+        if (isOwnerNotMeasurable(error)) return null;
         throwProblem(error);
       }
       const counts = new Map<string, number>();
@@ -126,12 +132,15 @@ export function useLeadStatusCounts(query: ListQuery) {
 }
 
 // The /leads query for one terminal column: the list's dials, held to that
-// status and widened to the archived rows every terminal lead is.
+// status, which reads the archived rows every terminal lead is.
 export function terminalLeadsQueryParams(
   query: ListQuery,
   status: Lead["status"],
 ) {
-  return { ...leadsQueryParams(query), status, include_archived: true };
+  return leadsQueryParams({
+    ...query,
+    filters: { ...query.filters, status },
+  });
 }
 
 // The leads in one terminal column, read only while it is open. A status dial
@@ -143,15 +152,26 @@ export function useTerminalLeads(
 ) {
   const params = terminalLeadsQueryParams(query, status);
   const dialStatus = query.filters.status;
+  const readerScope = useHealthScope();
   return useInfiniteQuery({
     // The dial's own status, which `params` overwrites, keeps an excluded
-    // column off the cached rows of an unfiltered one.
-    queryKey: [...leadTerminalKey(status), params, dialStatus ?? null],
-    enabled: enabled && (!dialStatus || dialStatus === status),
+    // column off the cached rows of an unfiltered one. The reader scope keeps
+    // rows read under old grants off the column.
+    queryKey: [
+      ...leadTerminalKey(status),
+      readerScope ?? "",
+      params,
+      dialStatus ?? null,
+    ],
+    enabled:
+      enabled &&
+      readerScope !== undefined &&
+      (!dialStatus || dialStatus === status),
     initialPageParam: null as string | null,
-    queryFn: async ({ pageParam }) => {
+    queryFn: async ({ pageParam, signal }) => {
       return unwrap(
         await api.GET("/leads", {
+          signal,
           params: {
             query: { ...params, limit: 50, cursor: pageParam ?? undefined },
           },

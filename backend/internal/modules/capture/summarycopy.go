@@ -14,6 +14,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -31,13 +32,13 @@ type summaryCopy struct {
 // textlang.Shipped and ask this map directly.
 var summaryByLang = map[textlang.Lang]summaryCopy{
 	textlang.English: {
-		duplicateLead: "Captured %s/%s duplicates an existing lead",
+		duplicateLead: systemtext.Copy("capture.duplicateLead", textlang.English),
 	},
 	textlang.German: {
-		duplicateLead: "Der erfasste Datensatz %s/%s ist ein Duplikat eines bestehenden Leads",
+		duplicateLead: systemtext.Copy("capture.duplicateLead", textlang.German),
 	},
 	textlang.Vietnamese: {
-		duplicateLead: "Bản ghi thu thập %s/%s trùng với một lead hiện có",
+		duplicateLead: systemtext.Copy("capture.duplicateLead", textlang.Vietnamese),
 	},
 }
 

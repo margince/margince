@@ -1,0 +1,10 @@
+{
+  "verb": "add_team_member",
+  "checks": [
+    "team_admin.update"
+  ],
+  "takes": [
+    "team",
+    "user"
+  ]
+}

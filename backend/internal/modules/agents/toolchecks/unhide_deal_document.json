@@ -1,0 +1,15 @@
+{
+  "verb": "unhide_deal_document",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "deal.update",
+    "project.read"
+  ],
+  "takes": [
+    "deal",
+    "deal_attachment"
+  ]
+}

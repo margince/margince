@@ -1,0 +1,12 @@
+{
+  "verb": "create_intro_request",
+  "checks": [
+    "contact.read",
+    "introduction.create",
+    "introduction.read"
+  ],
+  "takes": [
+    "contact",
+    "user"
+  ]
+}

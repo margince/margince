@@ -6,7 +6,10 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { FollowUpSettingsCard } from "./followupsettings";
+import {
+  FollowUpSettingsCard,
+  PrivateMailRequestsCard,
+} from "./followupsettings";
 
 const ADMIN: GrantSpec = { installation_settings: ["read", "update"] };
 const READER: GrantSpec = { installation_settings: ["read"] };
@@ -113,5 +116,37 @@ describe("FollowUpSettingsCard", () => {
       ).toBeTruthy(),
     );
     expect(days.disabled).toBe(true);
+  });
+});
+
+describe("PrivateMailRequestsCard", () => {
+  it("turns off sharing quotation requests on its own, leaving the reading switch alone", async () => {
+    const calls: Call[] = [];
+    vi.stubGlobal("fetch", backend(ADMIN, calls));
+    render(
+      <Providers>
+        <PrivateMailRequestsCard />
+      </Providers>,
+    );
+    const share = await screen.findByTestId(
+      "share-private-quote-requests-switch",
+    );
+    await waitFor(() =>
+      expect(share.getAttribute("aria-disabled")).not.toBe("true"),
+    );
+    await userEvent.click(share);
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (c) =>
+            c.method === "PATCH" &&
+            JSON.stringify(c.body) ===
+              JSON.stringify({
+                follow_up_after_days: 2,
+                share_private_quote_requests: false,
+              }),
+        ),
+      ).toBe(true),
+    );
   });
 });

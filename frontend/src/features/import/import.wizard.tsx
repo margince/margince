@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect, useId, useRef } from "react";
+import { type RefObject, useEffect, useId, useRef } from "react";
 import { useUnsavedGuard } from "../../components/unsaved";
 import { AppLink } from "../../design-system/applink";
 import { useArrivalFocus } from "../../design-system/arrivalfocus";
@@ -11,24 +11,25 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { RecordBack } from "../../design-system/recordview";
 import { StageLadder } from "../../design-system/stageladder";
+import { SurfaceState } from "../../design-system/surfacestate";
 import { useLocale, useT } from "../../i18n";
 import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 import { FilesStep, ImportDropzone } from "./import.files";
-import { ImportRefusal } from "./import.notices";
+import { ImportRefusal, useRunStopSentence } from "./import.notices";
 import { ImportPresetTarget } from "./import.preset";
 import { ImportProgress, ImportResult } from "./import.result";
 import { TestRunStep } from "./import.testrun";
 import { runHref } from "./importaddress";
-import {
-  takeHandedOverUpload,
-  uploadObjectFor,
-  type WizardStep,
-} from "./importflow";
+import { takeHandedOverUpload, type WizardStep } from "./importflow";
 import { MapStep } from "./importmapping";
 import { useImportFormat, useRecentImports, wroteNothing } from "./importrun";
 import type { ImportFormat, ImportRun } from "./importtypes";
-import { type ImportWizardState, useImportWizard } from "./importwizard";
+import {
+  firstUpload,
+  type ImportWizardState,
+  useImportWizard,
+} from "./importwizard";
 
 const STEPS: readonly WizardStep[] = [
   "upload",
@@ -39,10 +40,20 @@ const STEPS: readonly WizardStep[] = [
   "result",
 ];
 
-function stagedHint(wizard: ImportWizardState) {
-  return wizard.step === "result"
-    ? "import.step.hintDone"
-    : "import.step.hintStaged";
+// Why the files and the map are fixed, for a run that is staged or finished.
+// A run stopped, cancelled or still importing gets no hint, as neither holds.
+function fixedHint(status: ImportRun["status"] | undefined) {
+  switch (status) {
+    case "validating":
+    case "awaiting_approval":
+      return "import.step.hintStaged";
+    case "complete":
+    case "undoing":
+    case "undone":
+      return "import.step.hintDone";
+    default:
+      return null;
+  }
 }
 
 /** The run flow's page: it owns the flow's state and draws the flow. */
@@ -68,12 +79,7 @@ export function ImportWizardPage() {
     const file = handedOver.current;
     handedOver.current = null;
     if (file) {
-      upload.mutate({
-        file,
-        object: uploadObjectFor(file.name, format.data, presetObject),
-        recent: recent.data,
-        retype: false,
-      });
+      upload.mutate(firstUpload(file, format.data, recent.data, presetObject));
     }
   }, [format.data, recent.data, upload, presetObject]);
   return <ImportWizard wizard={wizard} />;
@@ -92,6 +98,10 @@ export function ImportWizard({
   const title = useArrivalFocus<HTMLSpanElement>();
   const hintId = useId();
   const here = STEPS.indexOf(wizard.step);
+  if (wizard.missing) return <MissingRun title={title} />;
+  const hint = wizard.editable
+    ? "import.step.hint"
+    : fixedHint(wizard.run.data?.status);
   return (
     <div className="import-wizard">
       <RecordBack
@@ -101,11 +111,7 @@ export function ImportWizard({
       <StageLadder
         wrap
         label={t("import.step.label")}
-        hint={
-          <span id={hintId}>
-            {wizard.editable ? t("import.step.hint") : t(stagedHint(wizard))}
-          </span>
-        }
+        hint={hint ? <span id={hintId}>{t(hint)}</span> : undefined}
         steps={STEPS.map((step, index) => {
           const back =
             index < here &&
@@ -119,7 +125,7 @@ export function ImportWizard({
             onPick: () => {
               if (step === "files" || step === "map") wizard.goTo(step);
             },
-            reasonId: back ? undefined : hintId,
+            reasonId: back || !hint ? undefined : hintId,
           };
         })}
       />
@@ -140,7 +146,7 @@ export function ImportWizard({
       ) : null}
       <Panel
         title={
-          <span ref={title} tabIndex={-1}>
+          <span ref={title} tabIndex={-1} className="arrival-focus">
             {t(`import.step.title.${wizard.step}`)}
           </span>
         }
@@ -156,6 +162,39 @@ export function ImportWizard({
               <StepBody wizard={wizard} format={format.data} />
             ) : null}
           </QueryStates>
+        </PanelBody>
+      </Panel>
+    </div>
+  );
+}
+
+// A run address that names no run the reader can open. No step applies and a
+// retry cannot help, so the way out is the link back to Data import.
+function MissingRun({
+  title,
+}: Readonly<{ title: RefObject<HTMLSpanElement | null> }>) {
+  const t = useT();
+  return (
+    <div className="import-wizard">
+      <RecordBack
+        href={routeHash(settingsHref("import"))}
+        label={t("import.back")}
+      />
+      <Panel
+        title={
+          <span ref={title} tabIndex={-1} className="arrival-focus">
+            {t("import.missing.title")}
+          </span>
+        }
+      >
+        <PanelBody>
+          <SurfaceState
+            state="empty"
+            emptyLabel={t("import.missing.body")}
+            loadingLabel={t("common.loading")}
+          >
+            {null}
+          </SurfaceState>
         </PanelBody>
       </Panel>
     </div>
@@ -203,6 +242,7 @@ function ClosedRun({
   run,
 }: Readonly<{ wizard: ImportWizardState; run: ImportRun }>) {
   const t = useT();
+  const stopped = useRunStopSentence(run);
   const cancelled = run.status === "cancelled";
   const newer = run.superseded_by;
   const title = newer
@@ -225,7 +265,7 @@ function ClosedRun({
         )
       }
     >
-      {cancelled ? undefined : (run.error ?? t("import.closed.stopped"))}
+      {cancelled ? undefined : (stopped ?? t("import.closed.stopped"))}
     </Callout>
   );
 }
@@ -243,16 +283,14 @@ function UploadStep({
         sizeLimitMb={format.size_limit_mb}
         csvOnly={wizard.presetContact !== null}
         onPick={(file) =>
-          upload.mutate({
-            file,
-            object: uploadObjectFor(
-              file.name,
+          upload.mutate(
+            firstUpload(
+              file,
               format,
+              recent.data,
               wizard.presetContact ? "activity" : undefined,
             ),
-            recent: recent.data,
-            retype: false,
-          })
+          )
         }
       />
       {upload.isPending ? (

@@ -19,12 +19,23 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 func (s *RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	// The stop lock first, the order a stop writer takes it in.
 	if err := storekit.LockStopKey(ctx, tx, id.String()); err != nil {
+		return err
+	}
+	if err := storekit.LockSubjectsStopAddresses(ctx, tx, id); err != nil {
+		return err
+	}
+	if err := refuseIfOptOutKeptNow(ctx, tx, "lead_id", id); err != nil {
+		return err
+	}
+	if _, err := deleteLinkedOriginalsTx(ctx, tx, "lead_id", id); err != nil {
 		return err
 	}
 	// BEFORE the UPDATE below nulls it: a suppression is detached onto the
@@ -93,14 +104,18 @@ func (s *RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.
 	// First the mail still waiting to go to the lead, an opt-out receipt among
 	// it, and the notices saying such a receipt is missing. Both name the lead
 	// the UPDATE above has just made nameless.
-	var payloads PayloadPurger
+	var extensions extprivacy.Registry
 	if s.eraser != nil {
-		payloads = s.eraser.payloads
+		extensions = s.eraser.extensions
 	}
-	if err := redactLeadDeliveries(ctx, tx, []ids.UUID{id}, payloads); err != nil {
+	if err := redactLeadDeliveries(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
 	}
 	if err := retractReceiptNotices(ctx, tx, ids.UUID{}, []ids.UUID{id}, theClockRanOut.collateralReason, theClockRanOut.cause); err != nil {
+		return err
+	}
+	if err := clearExtensionRows(ctx, tx, extensions, theClockRanOut.collateralReason, theClockRanOut.cause,
+		map[extdecl.RecordKind][]ids.UUID{extdecl.Lead: {id}}); err != nil {
 		return err
 	}
 	return clearLeadCommunicationRecord(ctx, tx, id, address)
@@ -113,6 +128,10 @@ func (s *RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.
 // clearCommunicationRecord would mean one function branching on a subject kind
 // its callers already know.
 func clearLeadCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, address *string) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM consent_qualifying_event WHERE lead_id = @id`, pgx.StrictNamedArgs{"id": id}); err != nil {
+		return fmt.Errorf("clear the lead's recorded exchanges: %w", err)
+	}
+
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM communication_basis WHERE lead_id = $1`, id); err != nil {
 		return fmt.Errorf("clear the lead's communication bases: %w", err)
@@ -155,6 +174,12 @@ func clearLeadCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, a
 // it leaves a nameless row behind because consent evidence and objections are
 // kept against it, and a nameless row is no use to anyone selling.
 func (*RetentionService) archiveLead(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	if err := storekit.LockStopKey(ctx, tx, id.String()); err != nil {
+		return err
+	}
+	if err := refuseIfOptOutKeptNow(ctx, tx, "lead_id", id); err != nil {
+		return err
+	}
 	_, err := tx.Exec(ctx, `UPDATE lead SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`, id)
 	return err
 }

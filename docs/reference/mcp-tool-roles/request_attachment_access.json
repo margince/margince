@@ -1,0 +1,15 @@
+{
+  "tool": "change_activities",
+  "action": "request_document_access",
+  "verb": "request_attachment_access",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

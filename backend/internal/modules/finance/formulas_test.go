@@ -202,17 +202,82 @@ func TestOpenBalanceSeparatesWhatIsOverdueFromWhatIsMerelyOwed(t *testing.T) {
 	}
 }
 
+// The warning names the most reminders sent on an overdue invoice. A count on
+// an invoice not yet due, or on none at all, says nothing about lateness.
+func TestTheHighestReminderComesFromAnOverdueInvoice(t *testing.T) {
+	asOf := on(t, "2026-08-09")
+	one, three, five := 1, 3, 5
+	out := OpenBalanceAt([]Invoice{
+		{Status: "open", OpenMinorBase: 1000, DueOn: new(on(t, "2026-07-01")), DunningLevel: &one},
+		{Status: "open", OpenMinorBase: 1000, DueOn: new(on(t, "2026-07-15")), DunningLevel: &three},
+		{Status: "open", OpenMinorBase: 1000, DueOn: new(on(t, "2026-07-20"))},
+		{Status: "open", OpenMinorBase: 1000, DueOn: new(on(t, "2026-09-01")), DunningLevel: &five},
+	}, asOf)
+	if out.HighestDunningLevel == nil || *out.HighestDunningLevel != 3 {
+		t.Fatalf("highest dunning level %v, want 3", out.HighestDunningLevel)
+	}
+	if none := OpenBalanceAt([]Invoice{
+		{Status: "open", OpenMinorBase: 1000, DueOn: new(on(t, "2026-07-01"))},
+	}, asOf); none.HighestDunningLevel != nil {
+		t.Fatalf("no invoice states a level, yet the roll-up reads %d", *none.HighestDunningLevel)
+	}
+}
+
+// A due date is a whole day. An invoice is owed but not late at any hour of it,
+// and late from the next day.
+func TestAnInvoiceIsNotOverdueOnItsDueDate(t *testing.T) {
+	due := on(t, "2026-11-11")
+	owed := []Invoice{{Status: "open", OpenMinorBase: 61900, DueOn: &due}}
+
+	for _, asOf := range []time.Time{due.Add(time.Second), due.Add(23*time.Hour + 59*time.Minute)} {
+		if out := OpenBalanceAt(owed, asOf); out.OverdueMinorBase != 0 || out.OpenMinorBase != 61900 {
+			t.Errorf("at %s: open %d, overdue %d; want 61900 open and nothing overdue",
+				asOf.Format(time.TimeOnly), out.OpenMinorBase, out.OverdueMinorBase)
+		}
+	}
+	if out := OpenBalanceAt(owed, due.AddDate(0, 0, 1)); out.OverdueMinorBase != 61900 {
+		t.Errorf("the day after: overdue %d, want 61900", out.OverdueMinorBase)
+	}
+}
+
 // A disputed invoice is genuinely owed and genuinely contested. Counting it as
 // open is right; describing it only as overdue would call a disagreement a
 // payment failure.
 func TestADisputedInvoiceStillCountsAsOwed(t *testing.T) {
 	asOf := on(t, "2026-08-09")
+	three := 3
 	out := OpenBalanceAt([]Invoice{
-		{Status: "disputed", OpenMinorBase: 500000, DueOn: new(on(t, "2026-07-01")), Disputed: true},
+		{Status: "disputed", OpenMinorBase: 500000, DueOn: new(on(t, "2026-07-01")), Disputed: true, DunningLevel: &three},
 	}, asOf)
 
 	if out.OpenMinorBase != 500000 {
 		t.Fatalf("open = %d, want 500000 — a disputed invoice is still owed", out.OpenMinorBase)
+	}
+	if out.OverdueMinorBase != 0 || out.OverdueCount != 0 || out.OldestOverdueDays != 0 || out.HighestDunningLevel != nil {
+		t.Fatalf("a disputed invoice reads as overdue: %d across %d, oldest %d days, dunning %v",
+			out.OverdueMinorBase, out.OverdueCount, out.OldestOverdueDays, out.HighestDunningLevel)
+	}
+}
+
+// Beside a late undisputed invoice, a disputed one adds to the open balance
+// and to none of the overdue figures.
+func TestADisputedInvoiceLeavesTheOverdueFiguresToTheRest(t *testing.T) {
+	asOf := on(t, "2026-08-09")
+	one, five := 1, 5
+	out := OpenBalanceAt([]Invoice{
+		{Status: "disputed", OpenMinorBase: 500000, DueOn: new(on(t, "2026-05-01")), Disputed: true, DunningLevel: &five},
+		{Status: "open", OpenMinorBase: 120000, DueOn: new(on(t, "2026-07-30")), DunningLevel: &one},
+	}, asOf)
+
+	if out.OpenMinorBase != 620000 {
+		t.Fatalf("open = %d, want 620000", out.OpenMinorBase)
+	}
+	if out.OverdueMinorBase != 120000 || out.OverdueCount != 1 || out.OldestOverdueDays != 10 {
+		t.Fatalf("overdue %d across %d, oldest %d days; want 120000 across 1, oldest 10",
+			out.OverdueMinorBase, out.OverdueCount, out.OldestOverdueDays)
+	}
+	if out.HighestDunningLevel == nil || *out.HighestDunningLevel != 1 {
+		t.Fatalf("dunning level %v, want 1 from the undisputed invoice", out.HighestDunningLevel)
 	}
 }
 

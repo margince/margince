@@ -10,6 +10,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"slices"
 	"time"
 
@@ -20,6 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 const evidenceReasonKey = "reason"
@@ -38,6 +41,7 @@ const evidenceReasonKey = "reason"
 func updateActivityInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in UpdateActivityInput,
 ) (crmcontracts.Activity, error) {
+	in.spellClearedBody()
 	current, held, err := admitActivityPatch(ctx, tx, id, &in)
 	if err == nil {
 		err = checkCustomValues(string(current.Kind), in.customColumns, in.CustomFields)
@@ -48,50 +52,24 @@ func updateActivityInTx(
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	if !held && in.FollowUpTask != nil {
+		if err := admitOutcomeFollowUp(ctx, current, in); err != nil {
+			return crmcontracts.Activity{}, err
+		}
+	}
 	// A held row still reaches the UPDATE, whose trigger owes the 423.
 	if !held && in.changesNothing(current) {
 		return current, nil
 	}
-	// Every placeholder is derived from the argument slice rather than
-	// typed. Nothing checks that a hand-written $N still names the value a
-	// caller appends, and this statement's list has grown twice.
-	args := []any{}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	row := arg(id)
-	// done_at moves with is_done (the activity_done_at CHECK): completion
-	// stamps the moment and reopening clears it, so the flag is bound once and
-	// read three times.
-	done := arg(in.IsDone)
-	query := fmt.Sprintf(`
-		UPDATE activity SET
-		  subject = coalesce($%[2]d, subject),
-		  body = coalesce($%[3]d, body),
-		  occurred_at = coalesce($%[4]d, occurred_at),
-		  due_at = CASE WHEN $%[11]d THEN NULL ELSE coalesce($%[5]d, due_at) END,
-		  remind_at = CASE WHEN $%[12]d THEN NULL ELSE coalesce($%[6]d, remind_at) END,
-		  due_has_time = CASE WHEN $%[11]d THEN false ELSE coalesce($%[17]d, due_has_time) END,
-		  assignee_id = CASE WHEN $%[13]d THEN NULL ELSE coalesce($%[7]d, assignee_id) END,
-		  is_done = coalesce($%[8]d, is_done),
-		  meeting_status = coalesce($%[9]d, meeting_status),
-		  call_outcome = CASE WHEN $%[19]d THEN NULL ELSE coalesce($%[18]d, call_outcome) END,
-		  duration_seconds = coalesce($%[10]d, duration_seconds),
-		  occurred_precision = coalesce($%[14]d, occurred_precision),
-		  -- The language was READ from the text, so an edit to the text reads
-		  -- it again, from the words as they now stand.
-		  language = CASE
-		    WHEN $%[3]d IS NOT NULL OR $%[2]d IS NOT NULL THEN $%[15]d
-		    ELSE language END,
-		  done_at = CASE
-		    WHEN $%[8]d IS TRUE AND NOT is_done THEN now()
-		    WHEN $%[8]d IS FALSE THEN NULL
-		    ELSE done_at END%[16]s
-		WHERE id = $%[1]d`,
-		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt),
-		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
-		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
-		arg(in.OccurredPrecision), arg(relabelledLanguage(current, in)),
-		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)))
-	if _, err := tx.Exec(ctx, query, args...); err != nil {
+	var originalSystemText *systemtext.Message
+	textWrite := in.Subject != nil || in.Body != nil
+	if textWrite {
+		originalSystemText, err = readSystemTextForMutation(ctx, tx, id)
+		if err != nil {
+			return crmcontracts.Activity{}, err
+		}
+	}
+	if err := applyActivityPatch(ctx, tx, id, in, current); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	// Read back BEFORE auditing: done_at is stamped by the statement above
@@ -110,19 +88,32 @@ func updateActivityInTx(
 	if err := recordMeetingTransition(ctx, tx, meetingTransition{
 		RecordedAt: in.recordedAt,
 		ActivityID: id,
-		Status:     changedMeetingStatus(current, out),
+		Status:     in.transitionStatus(current, out),
 		Scheduled:  scheduledAs(out.OccurredAt, string(out.OccurredPrecision)),
 	}); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	before, after := storekit.ChangedColumns(customFieldImage(activityColumnImage(current), current, in.customColumns),
 		customFieldImage(activityColumnImage(out), out, in.customColumns))
+	if textWrite {
+		updatedSystemText, err := readSystemTextForMutation(ctx, tx, id)
+		if err != nil {
+			return crmcontracts.Activity{}, err
+		}
+		if !reflect.DeepEqual(originalSystemText, updatedSystemText) {
+			before["system_text"] = originalSystemText
+			after["system_text"] = updatedSystemText
+		}
+	}
 	precisionBesideTime(before, after, current, out)
 	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "activity", id.UUID, before, after)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	updated := crmcontracts.PublicEventActivityUpdated{ChangedFields: activityUpdatedChangedFields(in, current)}
+	if !meetingReadyForRecap(current) && meetingReadyForRecap(out) {
+		updated.ChangedFields.MeetingRecapBecameReady = new(true)
+	}
 	updated.Imported, updated.ImportRunId = storekit.ImportMark(ctx)
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, updated); err != nil {
 		return crmcontracts.Activity{}, err
@@ -169,8 +160,12 @@ func admitActivityPatch(
 	// held skips this: activity_refuse_restricted_mutation refuses every write
 	// to a held row regardless of version, so it owes 423, not a 409 inviting a
 	// retry the row can never accept.
-	if !held && in.IfVersion != nil && current.Version != nil && int64(*current.Version) != *in.IfVersion {
+	if !held && in.IfVersion != nil && current.Version != nil && int64(*current.Version) != *in.IfVersion &&
+		!in.asksOnlyForTheDoneItHolds(current) {
 		return crmcontracts.Activity{}, held, apperrors.ErrVersionSkew
+	}
+	if err := in.admitPickedTimes(string(current.Kind)); err != nil {
+		return crmcontracts.Activity{}, held, err
 	}
 	if err := renormalizeTranscriptPatch(current, in); err != nil {
 		return crmcontracts.Activity{}, held, err
@@ -203,7 +198,7 @@ func admitActivityPatch(
 	// row under retention hold owes 423 whatever else is wrong with the
 	// request, and answering 422 first would invite the caller to fix the
 	// field and try again against a row that will refuse them either way.
-	if !held && in.MeetingStatus != nil && current.Kind != crmcontracts.ActivityKindMeeting {
+	if !held && (in.MeetingStatus != nil || in.clears(auditFieldMeetingStatus)) && current.Kind != crmcontracts.ActivityKindMeeting {
 		return crmcontracts.Activity{}, held, &MeetingStatusKindError{Kind: string(current.Kind)}
 	}
 	if !held {
@@ -222,15 +217,7 @@ func admitActivityPatch(
 		}
 	}
 	if !held {
-		if err := checkTaskFieldsKind(string(current.Kind), taskFields{in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone}); err != nil {
-			return crmcontracts.Activity{}, held, err
-		}
-		if err := in.admitPatchTime(current.Kind); err != nil {
-			return crmcontracts.Activity{}, held, err
-		}
-	}
-	if !held {
-		if err := validateActivityDuration(in.DurationSeconds); err != nil {
+		if err := admitPatchedFields(ctx, tx, current, in); err != nil {
 			return crmcontracts.Activity{}, held, err
 		}
 	}
@@ -410,4 +397,104 @@ func clearableActivityColumns(current crmcontracts.Activity) map[string]storekit
 func (in UpdateActivityInput) clearsDeclared(field string, current crmcontracts.Activity) bool {
 	_, declared := clearableActivityColumns(current)[field]
 	return declared && in.clears(field)
+}
+
+func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in UpdateActivityInput, current crmcontracts.Activity) error {
+	// Every placeholder is derived from the argument slice rather than
+	// typed. Nothing checks that a hand-written $N still names the value a
+	// caller appends, and this statement's list has grown twice.
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	row := arg(id)
+	// done_at moves with is_done (the activity_done_at CHECK): completion
+	// stamps the moment and reopening clears it, so the flag is bound once and
+	// read three times.
+	done := arg(in.IsDone)
+	query := fmt.Sprintf(`
+		UPDATE activity SET
+		  subject = coalesce($%[2]d, subject),
+		  body = CASE WHEN $%[3]d::text IS NULL THEN body ELSE nullif($%[3]d::text, '') END,
+		  body_own_end = CASE WHEN $%[3]d::text IS NULL AND $%[2]d::text IS NULL THEN body_own_end ELSE $%[30]d::int END,
+		  occurred_at = coalesce($%[4]d, occurred_at),
+		  due_at = CASE WHEN $%[11]d THEN NULL ELSE coalesce($%[5]d, due_at) END,
+		  remind_at = CASE WHEN $%[12]d THEN NULL ELSE coalesce($%[6]d, remind_at) END,
+		  due_has_time = CASE WHEN $%[11]d THEN false ELSE coalesce($%[17]d, due_has_time) END,
+		  assignee_id = CASE WHEN $%[13]d THEN NULL ELSE coalesce($%[7]d, assignee_id) END,
+		  is_done = coalesce($%[8]d, is_done),
+		  meeting_status = CASE WHEN $%[29]d THEN NULL ELSE coalesce($%[9]d, meeting_status) END,
+		  call_outcome = CASE WHEN $%[19]d THEN NULL ELSE coalesce($%[18]d, call_outcome) END,
+		  task_type = coalesce($%[27]d, task_type),
+		  ai_assisted = ai_assisted OR coalesce($%[28]d, false),
+		  duration_seconds = coalesce($%[10]d, duration_seconds),
+		  source_activity_id = coalesce($%[20]d, source_activity_id),
+		  occurred_precision = coalesce($%[14]d, occurred_precision),
+		  -- The language was READ from the text, so an edit to the text reads
+		  -- it again, from the words as they now stand.
+		  language = CASE
+		    WHEN $%[3]d IS NOT NULL OR $%[2]d IS NOT NULL THEN $%[15]d
+		    ELSE language END, `+declineStampsClearedWhen(patchChangesTextSQL)+`,
+		  due_wall = coalesce($%[21]d::text::timestamp, due_wall),
+		  due_zone = coalesce($%[22]d, due_zone),
+		  remind_wall = coalesce($%[23]d::text::timestamp, remind_wall),
+		  remind_zone = coalesce($%[24]d, remind_zone),
+		  meeting_wall = CASE WHEN $%[14]d = 'day' THEN NULL ELSE coalesce($%[25]d::text::timestamp, meeting_wall) END,
+		  meeting_zone = CASE WHEN $%[14]d = 'day' THEN NULL ELSE coalesce($%[26]d, meeting_zone) END,
+		  done_at = CASE
+		    WHEN $%[8]d IS TRUE AND NOT is_done THEN now()
+		    WHEN $%[8]d IS FALSE THEN NULL
+		    ELSE done_at END%[16]s
+		WHERE id = $%[1]d AND (archived_at IS NULL OR restricted_at IS NOT NULL)`,
+		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt), arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
+		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
+		arg(in.OccurredPrecision), arg(relabelledLanguage(current, in)),
+		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)), arg(in.sourceActivityID),
+		arg(pickedWall(in.DueIntent)), arg(pickedZone(in.DueIntent)), arg(pickedWall(in.RemindIntent)), arg(pickedZone(in.RemindIntent)), arg(pickedWall(in.MeetingIntent)), arg(pickedZone(in.MeetingIntent)),
+		arg(in.TaskType), arg(in.AIAssisted), arg(in.clears(auditFieldMeetingStatus)), arg(patchedOwnEnd(current, in)))
+	query += fmt.Sprintf(" AND version = $%d", arg(current.Version))
+	result, err := tx.Exec(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return apperrors.ErrVersionSkew
+	}
+
+	return nil
+}
+
+// A replay that changes meeting status takes the ordinary audited update path.
+func replayMovedTheMeeting(
+	ctx context.Context, tx pgx.Tx, replay crmcontracts.Activity, in LogActivityInput,
+) (crmcontracts.Activity, error) {
+	if in.MeetingStatus == nil || *in.MeetingStatus == meetingStatusString(replay.MeetingStatus) {
+		return replay, nil
+	}
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	return updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(replay.Id)), UpdateActivityInput{
+		recordedAt:    in.recordedAt,
+		MeetingStatus: in.MeetingStatus,
+	})
+}
+
+// admitPatchedFields checks what a patch of an unheld activity sets: its task
+// source, its task fields and type, its time and its duration.
+func admitPatchedFields(ctx context.Context, tx pgx.Tx, current crmcontracts.Activity, in *UpdateActivityInput) error {
+	if err := preparePatchedTaskSource(ctx, tx, current, *in); err != nil {
+		return err
+	}
+	if err := checkTaskFieldsKind(string(current.Kind), taskFields{in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone}); err != nil {
+		return err
+	}
+	if err := checkTaskTypeKind(string(current.Kind), in.TaskType); err != nil {
+		return err
+	}
+	if err := in.admitPatchTime(current.Kind); err != nil {
+		return err
+	}
+	if err := in.admitPatchDueWindow(ctx, tx, current); err != nil {
+		return err
+	}
+	return validateActivityDuration(in.DurationSeconds)
 }

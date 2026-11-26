@@ -1,0 +1,41 @@
+package ignoredanswer
+
+import (
+	"net/http"
+
+	"example.test/auth"
+	"example.test/httperr"
+)
+
+type Handlers struct{}
+
+func (h Handlers) GetAfterADroppedAnswer(w http.ResponseWriter, r *http.Request) {
+	auth.IndividualPerformanceOf(r.Context())
+	httperr.WriteJSON(w, http.StatusOK, []int{1})
+}
+
+func (h Handlers) GetAfterABlankAnswer(w http.ResponseWriter, r *http.Request) {
+	_, _ = auth.IndividualPerformanceOf(r.Context())
+	httperr.WriteJSON(w, http.StatusOK, []int{1})
+}
+
+func (h Handlers) GetAfterAnUnreadAnswer(w http.ResponseWriter, r *http.Request) {
+	allowed, _ := auth.IndividualPerformanceOf(r.Context())
+	httperr.WriteJSON(w, http.StatusOK, []bool{allowed})
+}
+
+// An error that carries the check checks nothing when it is dropped.
+func (h Handlers) GetAfterADroppedRefusal(w http.ResponseWriter, r *http.Request) {
+	auth.Require(r.Context())
+	httperr.WriteJSON(w, http.StatusOK, []int{1})
+}
+
+// The way past a refusal that only a bound switch reaches holds no answer
+// when nothing bound it.
+func (h Handlers) GetUnlessBoundOff(w http.ResponseWriter, r *http.Request) {
+	if allowed, bound := auth.IndividualPerformanceOf(r.Context()); bound && !allowed {
+		httperr.Write(w, r, auth.OffError{})
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, []int{1})
+}

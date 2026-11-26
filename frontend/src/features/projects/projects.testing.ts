@@ -4,7 +4,7 @@
 import { type Mock, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { emptyPage, jsonResponse } from "../../testing/company.fixtures";
-import { meFixture } from "../../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { COMPANY, project, project360 } from "../../testing/projects.fixtures";
 
 type Project = components["schemas"]["Project"];
@@ -56,6 +56,7 @@ function quietDefault(
       jsonResponse(
         meFixture({
           allow: {
+            ...READS_RECORDS,
             project: ["read", "create", "update", "delete"],
             deal: ["read", "create"],
             activity: ["read", "create", "update"],
@@ -63,6 +64,31 @@ function quietDefault(
           },
         }),
       ),
+    "/v1/records/references": () => {
+      const url = new URL(request.url);
+      const ids = url.searchParams.getAll("id");
+      const kind = url.searchParams.get("kind");
+      const identities =
+        kind === "company"
+          ? [
+              {
+                id: COMPANY.id,
+                name: COMPANY.display_name,
+                archived: false,
+                logo: null,
+              },
+            ]
+          : kind === "project"
+            ? rows.map((row) => ({
+                id: row.id,
+                name: row.name,
+                archived: Boolean(row.archived_at),
+              }))
+            : [];
+      return jsonResponse({
+        data: identities.filter((row) => ids.includes(row.id)),
+      });
+    },
     "/v1/companies": () => jsonResponse({ data: [COMPANY], page: listPage }),
     [`/v1/companies/${COMPANY.id}`]: () => jsonResponse(COMPANY),
     "/v1/projects": () => jsonResponse({ data: rows, page: listPage }),

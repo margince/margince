@@ -13,9 +13,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 type Store struct {
@@ -130,6 +132,9 @@ type Hit struct {
 	WorksAt *Employer
 	// LogoURL is set on a `company` hit wearing a logo, when a reader is bound.
 	LogoURL *string
+	// Standing is set on a contact, company, deal, lead or project hit the
+	// caller may read: what a result list shows beside the name.
+	Standing *crmcontracts.SearchHitStanding
 }
 
 type Page struct {
@@ -139,6 +144,9 @@ type Page struct {
 	// TypesWithMore is non-nil on a grouped page alone: the types that matched
 	// more hits than PerType let it carry, in searchBranches order.
 	TypesWithMore []string
+	// TypesTimedOut is non-nil on a grouped page alone: the types the time
+	// budget stopped, which hold no hits here, in the order of TypesWithMore.
+	TypesTimedOut []string
 	// NearMatches is set only when NearMatches was asked for and a plain first
 	// page found nothing: names spelt close to the query, never hits.
 	NearMatches []NearMatch
@@ -165,6 +173,17 @@ type Input struct {
 	// NearMatches asks an empty first page to offer close names. Anchor
 	// resolution and retrieval leave it unset: they must never resolve to a guess.
 	NearMatches bool
+	// WithExtensions adds every declared extension kind to the types a search
+	// naming none covers. Only GET /v1/search asks: a kind named in Types is
+	// searched either way, and the other lanes keep their core types.
+	WithExtensions bool
+	// Typeahead leaves messages out while the word being typed is under four
+	// letters, unless the request names messages alone. Only a human's typeahead
+	// box asks; the results page and search_records rank messages from the
+	// first letter.
+	Typeahead bool
+	// Exclude drops these records, of any type, before ranking and counting.
+	Exclude []ids.UUID
 }
 
 // maxQueryWords bounds the words one query may hold. The employer arm binds a
@@ -188,14 +207,12 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			"q holds %d words and a search takes at most %d; keep the words that name what you are looking for",
 			words, maxQueryWords)}
 	}
-	types := in.Types
-	if len(types) == 0 {
-		for _, b := range searchBranches {
-			types = append(types, b.entity)
-		}
+	types := requestedTypes(ctx, in)
+	if in.Typeahead && !namesOnlyMail(in.Types) && fragmentTooShortForMail(query) {
+		types = slices.DeleteFunc(slices.Clone(types), func(t string) bool { return t == entityActivity })
 	}
 	for _, t := range types {
-		if !knownEntity(t) {
+		if !knownEntity(ctx, t) {
 			return Page{}, &BadQueryError{Field: "types", Reason: fmt.Sprintf("unknown type %q", t)}
 		}
 	}
@@ -215,26 +232,20 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 	}
 
 	var page Page
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.db.Read(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		if grouped, isGrouped := shape.(groupedShape); isGrouped {
+			var err error
+			page, err = s.groupedPage(ctx, tx, in, query, types, grouped)
+			return err
+		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 
-		headPos, tailPos, hasFragment := bindTypedQuery(query, arg)
-		identifierPos := bindIdentifier(query, arg)
-		branches, err := admittedBranchSQL(ctx, types, headPos, tailPos, hasFragment, identifierPos, addressAssociation(in.AddressCompanies), arg)
+		statement, err := rankedStatement(ctx, in, query, types, shape, arg)
 		if err != nil {
 			return err
 		}
-		if in.WithEmployees && slices.Contains(types, entityContact) && !carriesOperators(query) {
-			arm, armErr := employerArmSQL(ctx, query, headPos, tailPos, hasFragment, identifierPos, arg)
-			if armErr != nil {
-				return armErr
-			}
-			if arm != "" {
-				branches = append(branches, arm)
-			}
-		}
-		if len(branches) == 0 {
+		if statement == "" {
 			// Every requested type was denied by object RBAC: an empty
 			// page, not an error — search discloses nothing the entity
 			// lists would not. Still the shape asked for, so a grouped
@@ -242,25 +253,46 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			page = shape.page(nil)
 			return nil
 		}
-		hits, err := rank(ctx, tx, shape.statement(branches, withinClause(in.Within, arg), arg), args)
+		hits, err := rank(ctx, tx, statement, args)
 		if err != nil {
 			return err
 		}
 		page = shape.page(hits)
-		if wantsNearMatches(in, query, page) {
-			if page.NearMatches, err = nearMatches(ctx, tx, types, query); err != nil {
-				return err
-			}
-		}
-		if err := noteCaptureWithheld(ctx, tx, types); err != nil {
-			return err
-		}
-		return s.decorate(ctx, tx, page.Hits)
+		return s.finishPage(ctx, tx, in, query, types, &page, time.Time{})
 	})
 	if err != nil {
 		return Page{}, err
 	}
 	return page, nil
+}
+
+// rankedStatement renders the one statement a search ranks with, binding its
+// values through arg. It is empty when object RBAC admits none of the types.
+func rankedStatement(ctx context.Context, in Input, query string, types []string, shape pageShape, arg func(any) int) (string, error) {
+	branches, err := searchUnion(ctx, in, query, types, arg)
+	if err != nil || len(branches) == 0 {
+		return "", err
+	}
+	bound := slices.DeleteFunc([]string{withinClause(in.Within, arg), excludeClause(in.Exclude, arg)},
+		func(clause string) bool { return clause == "" })
+	return shape.statement(branches, strings.Join(bound, " AND "), arg), nil
+}
+
+// finishPage adds what follows the ranking: near matches, the capture-withheld
+// note and the hit decoration. answered is the types whose ranking finished.
+// A type that ran out of time is not read again here. deadline is the page's,
+// zero on a ranked page.
+func (s *Store) finishPage(ctx context.Context, tx pgx.Tx, in Input, query string, answered []string, page *Page, deadline time.Time) error {
+	if wantsNearMatches(in, query, *page) {
+		var err error
+		if page.NearMatches, err = nearMatchesBefore(ctx, tx, deadline, answered, query); err != nil {
+			return err
+		}
+	}
+	if err := noteCaptureWithheld(ctx, tx, answered); err != nil {
+		return err
+	}
+	return s.decorate(ctx, tx, page.Hits)
 }
 
 func rank(ctx context.Context, tx pgx.Tx, statement string, args []any) ([]Hit, error) {
@@ -306,73 +338,6 @@ func withinClause(within []ids.UUID, arg func(any) int) string {
 		return ""
 	}
 	return fmt.Sprintf("id = ANY($%d)", arg(within))
-}
-
-type addressAssociation bool
-
-// admittedBranchSQL builds one ranked SELECT per requested-and-admitted
-// entity type. A hit is a read twice over: object RBAC first (a role
-// without contact.read gets no contact hits — search must not out-see the
-// entity lists), then the row scope.
-func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int, hasFragment bool,
-	identifierPos identifierBinder, addressCompanies addressAssociation, arg func(any) int,
-) ([]string, error) {
-	var branches []string
-	for _, branch := range searchBranches {
-		if !slices.Contains(types, branch.entity) {
-			continue
-		}
-		scope, admitted, err := branchScope(ctx, branch, "t", arg)
-		if err != nil {
-			return nil, err
-		}
-		if !admitted {
-			continue
-		}
-		// What this branch matches and how it scores live with the expressions
-		// in typedquery.go — including the parse configurations each entity
-		// uses and the rule that only the fragment widens.
-		tsquery := matchExpression(branch.entity, headPos, tailPos, hasFragment)
-
-		snippet, err := branch.excerpt(ctx, arg)
-		if err != nil {
-			return nil, err
-		}
-		where := branch.ownMatch("t", tsquery, identifierPos) + " AND t.archived_at IS NULL"
-		if narrowing := branch.narrowing("t"); narrowing != "" {
-			where += " AND " + narrowing
-		}
-		if scope != "" {
-			where += " AND " + scope
-		}
-		score := branch.ownScore("t", scoreExpression(branch.entity, "t", headPos, tailPos, hasFragment), identifierPos)
-		if branch.entity == entityCompany && addressCompanies {
-			associated := sqlFalse
-			if identifierPos.addressPrefix {
-				match, err := companyAddressMatch(ctx, "t", identifierPos.position(false), arg)
-				if err != nil {
-					return nil, err
-				}
-				associated = match
-			}
-			candidates := fmt.Sprintf("t.id=ANY(ARRAY(SELECT lexical.id FROM company lexical WHERE lexical.search_tsv @@ %s UNION SELECT identified.id FROM company identified WHERE %s UNION SELECT t.id FROM company t WHERE %s))",
-				tsquery, branch.identifier.MatchSQL(identifierPos.position(true), "identified.id"), associated)
-			where = candidates + " AND t.archived_at IS NULL AND " + conjunction(branch.narrowing("t"), scope)
-			score = fmt.Sprintf("(%s + %d * (%s)::int)", score, companyAssociationScore, associated)
-		}
-		source := fmt.Sprintf("%s t WHERE %s", branch.table, where)
-		if branch.rankSample > 0 {
-			source = fmt.Sprintf("(SELECT t.* FROM %s LIMIT $%d) t", source, arg(branch.rankSample))
-		}
-		branches = append(branches, fmt.Sprintf(
-			`SELECT '%s'::text AS rtype, t.id, %s AS title, %s AS snippet,
-			        %s::float8 AS score, %s, %s AS identifier_match
-			 FROM %s`,
-			branch.entity, branch.title, snippet,
-			score,
-			noEmployer, branch.identifierEvidence("t", identifierPos), source))
-	}
-	return branches, nil
 }
 
 // BadQueryError maps to a 422 at the transport. Field names WHICH query input
@@ -424,17 +389,11 @@ func rankingFault(ctx context.Context, err error) error {
 // and narrowing the query is the reader's move — which is what an actionable
 // fault is supposed to say.
 //
-// Not a partial page either. This operation has no member to carry "these hits
-// are what fitted" — unlike the agent query surface, whose Coverage says so —
-// and returning the rows that happened to rank before the ceiling would present
-// an arbitrary prefix of a ranking as the ranking.
-// It WRAPS the database error rather than replacing it, and that is what keeps
-// the other reader of this statement working. The agent query surface wants the
-// same spent ceiling as a DEGRADED ANSWER — rows dropped, a note, a coverage
-// verdict saying the plan was abandoned — and it recognises one by asking
-// storekit.IsQueryCanceled. A fault that hid the SQLSTATE would turn that
-// surface's honest partial answer into an error, which is the opposite of what
-// #1847 built it for.
+// Not a partial list either: a ranking cut short would present an arbitrary
+// prefix as the ranking. A grouped page names each stopped type in
+// types_timed_out instead.
+// It WRAPS the database error. The agent query surface reads the SQLSTATE with
+// storekit.IsQueryCanceled and answers a degraded plan.
 type QueryTooBroadError struct{ Err error }
 
 func (e *QueryTooBroadError) Error() string {
@@ -451,7 +410,13 @@ func (e *QueryTooBroadError) FieldFault() (field, code, message string) {
 		"add another word, or narrow it by record type"
 }
 
-func knownEntity(t string) bool {
+// knownEntity is a core searchable type or an extension kind the caller can
+// read. A removed kind and an unreadable one are both unknown.
+func knownEntity(ctx context.Context, t string) bool {
+	if recordkinds.IsExtensionName(t) {
+		_, readable := auth.ReadableKind(ctx, t)
+		return readable
+	}
 	for _, b := range searchBranches {
 		if b.entity == t {
 			return true

@@ -20,8 +20,6 @@ package consent
 import (
 	"context"
 	"errors"
-	"fmt"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -230,11 +228,7 @@ func subjectTakesAGrantTx(ctx context.Context, tx pgx.Tx, sub subject) (bool, er
 // case. The key is the contact, so two DIFFERENT subjects never wait for each
 // other.
 func lockOneSubjectsConsent(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
-	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))`, contactID); err != nil {
-		return fmt.Errorf("consent: taking the subject's consent lock: %w", err)
-	}
-	return nil
+	return lockSubjectSuppressions(ctx, tx, contactID.UUID)
 }
 
 // lockPressSubject takes the consent lock of the contact a public link was
@@ -276,20 +270,7 @@ func (s *Store) PublicWithdrawAll(
 			return err
 		}
 		changed, err = s.withdrawPurposesTx(ctx, tx, contactID, purposeKeys)
-		if err != nil {
-			return err
-		}
-		// The press for one purpose is the unsubscribe link every marketing
-		// send carries, so it owes the same acknowledgement as the unnamed one.
-		// Only a marketing purpose is a refusal of advertising.
-		marketing, err := withdrawableMarketingPurposeKeysTx(ctx, tx)
-		if err != nil {
-			return err
-		}
-		refused := slices.DeleteFunc(slices.Clone(changed), func(key string) bool {
-			return !slices.Contains(marketing, key)
-		})
-		return s.acknowledgeWithdrawalTx(ctx, tx, contactID, refused)
+		return err
 	})
 	if err != nil {
 		return nil, err
@@ -350,15 +331,7 @@ func (s *Store) PublicStopAllMarketing(
 			return err
 		}
 		changed, err = s.withdrawPurposesTx(ctx, tx, contactID, keys)
-		if err != nil {
-			return err
-		}
-		// THE ACKNOWLEDGEMENT THIS PRESS OWES, where a pack owes one. This is
-		// the ordinary refusal of advertising — the suppression door beside it
-		// is what a rep records and what the stronger public stop writes — so
-		// acknowledging only that one would answer the rarer act and stay
-		// silent on the common one.
-		return s.acknowledgeWithdrawalTx(ctx, tx, contactID, changed)
+		return err
 	})
 	if err != nil {
 		return nil, err
@@ -410,34 +383,45 @@ func (s *Store) withdrawPurposesTx(
 	var changed []string
 	for _, key := range purposeKeys {
 		key = normalizedPurposeKey(key)
-		if LockedPurpose(key) {
-			return nil, &ValidationError{
-				Field:  fieldKeyPurpose,
-				Reason: "transactional consent is locked and cannot be withdrawn",
-			}
-		}
 		purposeID, err := purposeByKeyTx(ctx, tx, key)
 		if err != nil {
 			return nil, err
 		}
-		source := sourcePreferenceCenter
-		in := RecordInput{
-			ContactID: contactID,
-			PurposeID: purposeID,
-			NewState:  string(StateWithdrawn),
-			Source:    &source,
-		}
-		sub, state, err := admitRecord(ctx, in)
+		moved, err := s.withdrawPurposeTx(ctx, tx, contactID, purposeID, key)
 		if err != nil {
 			return nil, err
 		}
-		out, err := s.recordAdmittedTx(ctx, tx, in, sub, state)
-		if err != nil {
-			return nil, err
-		}
-		if out.Changed {
+		if moved {
 			changed = append(changed, key)
 		}
 	}
 	return changed, nil
+}
+
+// withdrawPurposeTx records one withdrawal and says whether it changed the state.
+func (s *Store) withdrawPurposeTx(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, purposeID ids.PurposeID, key string,
+) (bool, error) {
+	if LockedPurpose(key) {
+		return false, &ValidationError{
+			Field:  fieldKeyPurpose,
+			Reason: "transactional consent is locked and cannot be withdrawn",
+		}
+	}
+	source := sourcePreferenceCenter
+	in := RecordInput{
+		ContactID: contactID,
+		PurposeID: purposeID,
+		NewState:  string(StateWithdrawn),
+		Source:    &source,
+	}
+	sub, state, err := admitRecord(ctx, in)
+	if err != nil {
+		return false, err
+	}
+	out, err := s.recordAdmittedTx(ctx, tx, in, sub, state)
+	if err != nil {
+		return false, err
+	}
+	return out.Changed, nil
 }

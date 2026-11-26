@@ -61,10 +61,13 @@ describe("the container kind", () => {
     // The provider-qualified TOKEN is stored, never the display name: a
     // rename must not silently re-point a rule. And the scope is the
     // reader's own, because a label means nothing in anybody else's mailbox.
+    // It names the mailbox it was picked from: the same id is another label
+    // in the reader's other mailbox.
     expect(posted?.body).toMatchObject({
       kind: "container",
       value: "gmail:Label_7",
       scope: "user",
+      connection_id: "conn-1",
     });
   });
 
@@ -108,6 +111,44 @@ describe("the container kind", () => {
 
     expect(
       await screen.findByText(en["captureExclusions.noContainers"]),
+    ).toBeTruthy();
+  });
+
+  it("asks to connect a mailbox when none is connected, and titles the dialog by kind", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backend(CAPTURE_EDITOR, undefined, "gcal");
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <CaptureExclusionsCard />
+      </Providers>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("ex@partner.test")).toBeTruthy(),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["captureExclusions.addOpen"] }),
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: en["captureExclusions.title.address"],
+      }),
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", {
+        name: en["captureExclusions.kind.container"],
+      }),
+    );
+
+    expect(
+      await screen.findByText(en["captureExclusions.noMailbox"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["captureExclusions.noContainers"])).toBeNull();
+    expect(
+      screen.getByRole("heading", {
+        name: en["captureExclusions.title.container"],
+      }),
     ).toBeTruthy();
   });
 

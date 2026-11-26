@@ -7,7 +7,7 @@
 #
 # This repo's seam is internal/shared/ports/jurisdiction (the Tier-0 port,
 # aliasing the published pkg/extension/jurisdiction contract); the packs
-# themselves live OUTSIDE core as stable-tier extensions (extensions/de, the
+# themselves live OUTSIDE core as stable-tier extensions (extensions/eu, the
 # ADR-0120 pilot), which this gate does not scan — an extension is
 # jurisdiction-specific by design. Everything else under internal/ is core and
 # must stay country-neutral. Generated contract code (*_gen.go / *.gen.go) and
@@ -20,13 +20,8 @@
 # the part it cannot see, which is the one way a census must not fail.
 # Migrations are scanned too, with SQL's own comment marker understood.
 #
-# KNOWN LEAK, NOT CAUGHT BY THE PATTERNS BELOW: the communication basis
-# vocabulary carries 'vn_subject_agreement' and 'existing_customer_exception' —
-# in core Go (internal/shared/ports/commsauthz/decision.go) and in two CHECK
-# constraints of shipped migration 1788407500. Core must stay country-neutral,
-# so that is a real violation. Whether the vocabulary should carry per-pack
-# values is a product decision about the engine and not one a grep settles;
-# it is filed as issue #4733, not argued here.
+# The communication basis vocabulary is held country-neutral by a different
+# gate (backend/gates/commsbasisnocountry_test.go), not by the patterns below.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."

@@ -41,6 +41,14 @@ type loadEnv struct {
 
 func setupLoad(t *testing.T) *loadEnv {
 	t.Helper()
+	emptyDatabase(t)
+	return joinLoad(t)
+}
+
+// joinLoad adds a second workspace beside the one the test already seeded,
+// whose rows stay in place.
+func joinLoad(t *testing.T) *loadEnv {
+	t.Helper()
 	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
 	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
 	if ownerDSN == "" || appDSN == "" {
@@ -192,7 +200,7 @@ func TestADealOnTheThreadDoesNotOverrideTheMailRecipient(t *testing.T) {
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`,
 		stage, pipeline)
 	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, company_id, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'Zeta renewal', 'open', $2, $3, $4, $5, 'seed', 'system')`,
+		VALUES ($1, 'Zeta renewal', 'open', $2, $3, $4, $5, 'manual', 'system')`,
 		deal, e.other, company, pipeline, stage)
 
 	activity := e.seedWait(t, "Contract question", "contact_id", contact)
@@ -286,10 +294,10 @@ func TestAWaitNamesItsRecordWithoutBorrowingEitherOwner(t *testing.T) {
 		firstDeal, secondDeal = secondDeal, firstDeal
 	}
 	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'First by id', 'open', $2, $3, $4, 'seed', 'system')`,
+		VALUES ($1, 'First by id', 'open', $2, $3, $4, 'manual', 'system')`,
 		firstDeal, secondOwner, pipeline, stage)
 	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'Second by id', 'open', $2, $3, $4, 'seed', 'system')`,
+		VALUES ($1, 'Second by id', 'open', $2, $3, $4, 'manual', 'system')`,
 		secondDeal, firstOwner, pipeline, stage)
 
 	activity := e.seedWait(t, "Which deal is this about", "deal_id", firstDeal)

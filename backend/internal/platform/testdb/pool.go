@@ -188,6 +188,12 @@ func Pool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 // itself, so the flag is false while the schema is perfectly ready — refusing
 // there would refuse working suites for a hazard they do not have.
 func OwnPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
+	return OwnPoolWith(ctx, dsn, nil)
+}
+
+// OwnPoolWith is OwnPool with tune applied to the config before the pool
+// opens, for a suite that meters or reshapes the connections it dials.
+func OwnPoolWith(ctx context.Context, dsn string, tune func(*pgxpool.Config)) (*pgxpool.Pool, error) {
 	tuned, err := withTestPoolParams(dsn)
 	if err != nil {
 		return nil, err
@@ -203,6 +209,9 @@ func OwnPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	cfg, err := database.PoolConfig(tuned)
 	if err != nil {
 		return nil, err
+	}
+	if tune != nil {
+		tune(cfg)
 	}
 	pool, err := OwnPoolFromConfig(ctx, cfg)
 	if err != nil {

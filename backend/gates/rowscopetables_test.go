@@ -69,8 +69,8 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureReadable":     {argument: 2},
 	"EnsureChangeable":   {argument: 2},
 	"EnsureLinkTarget":   {argument: 2},
-	// The attach direction's probe opens with EnsureLinkTarget and narrows the
-	// share arm, so it bounds a reference at least as tightly.
+	// The attach direction's probe opens with EnsureLinkTarget and adds write
+	// authority, so it bounds a reference at least as tightly.
 	"EnsureAttachTarget": {argument: 2},
 	"VisibleTo":          {argument: 2},
 	"VisibleSubset":      {argument: 2},
@@ -82,6 +82,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 
 	"ActivityDiscoverClause":           {table: "activity"},
 	"ActivityContentClause":            {table: "activity"},
+	"ActivityMessageContentClause":     {table: "activity"},
 	"EnsureActivityVisible":            {table: "activity"},
 	"EnsureActivityVisibleLive":        {table: "activity"},
 	"EnsureActivityContentVisible":     {table: "activity"},
@@ -103,6 +104,11 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureRelationshipVisible": {endpoints: true},
 	"EdgeReadScope":             {endpoints: true},
 	"RelationshipVisibleSubset": {endpoints: true},
+	// The project-company builders bound the edge and the company it names.
+	// Only the company is a reference a read hands back.
+	"ProjectCompanyPredicates": {table: "company"},
+	"ProjectCustomerSQL":       {table: "company"},
+	"ProjectCompanyEdgesSQL":   {table: "company"},
 }
 
 // scopeSpelling is one spelling's table: fixed, read off an argument, or the
@@ -610,7 +616,8 @@ const (
 	// find the contact ids held by a live lead's historical or identity links.
 	// The data task runs as the system principal over the workspace. A unique id
 	// goes only into promoteLeadTx, which locks both records and rechecks the
-	// promotion; several ids leave the lead untouched. No id reaches a caller.
+	// promotion. Several ids leave the lead untouched and go to the duplicate
+	// review. No id reaches a caller.
 	//
 	// 145-146: contacts.retractUnsupportedPhones reads contact ids to lock and
 	// audit unsupported signature numbers. Its caller requires the system actor;
@@ -664,5 +671,27 @@ const (
 	// Also counted: contacts.holdCohortActivities locks the activities a cohort
 	// repair may write before it locks the contact. The ids bound that repair's
 	// writes inside its transaction, and none is returned to a caller.
-	modulesTierUnscopedCeiling = 163
+	//
+	// 164–165: chatlinks.linkedRecords and chatlinks.AdoptProject read the
+	// project of a deal whose chat channel is being written. linkedRecords runs
+	// after auth.HoldWritableLive on that deal. AdoptProject runs only under the
+	// chat engine's system principal. Each project id is stored on the link,
+	// never returned to a caller.
+	//
+	// 166: forecasting.FocusLists reads the deal ids of a team's stored focus
+	// list. Each list passes the store's SnapshotLens, which compose binds and
+	// which applies the deal row scope, as it does for SnapshotSide.
+	//
+	// 167: contacts.CompaniesWhoseEmploymentEndedTx reads the company ids of
+	// employments that ended, as the system principal (auth.RequireSystem). The
+	// clock refold job takes them and returns nothing to a caller.
+	//
+	// 168: contacts.autoMove reads the contact id of a claim it moves as the
+	// system principal (auth.RequireSystem in the sweep's entry points). The id
+	// goes to the claim's audit row and is returned to no caller.
+	//
+	// 169: forecasting.addTeamStandings reads a team freeze's deal ids and hands
+	// them to the snapshot lens before any caller sees one. The lens applies the
+	// reader's deal row scope and the team's assertion check, as FocusLists does.
+	modulesTierUnscopedCeiling = 169
 )

@@ -15,7 +15,7 @@ import (
 // restore an obsolete allowance or replay a finished request.
 func AIBudgetResumeTrigger(runner *jobs.Runner) func(context.Context, events.Envelope) error {
 	return func(ctx context.Context, env events.Envelope) error {
-		if env.Type != "ai_budget.updated" {
+		if !events.AIBudgetResumeTypes.Has(env.Type) {
 			return nil
 		}
 		return runner.Enqueue(ctx, AIBudgetResumeArgs{}, nil)

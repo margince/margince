@@ -4,13 +4,24 @@
 package compose
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
+	"github.com/margince/margince/backend/internal/compose/meetingprofile"
+	"github.com/margince/margince/backend/internal/compose/promisekept"
+	"github.com/margince/margince/backend/internal/compose/transcriptaudience"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
+	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // addDatabaseOnlySweepJobs registers every periodic pass that needs nothing but
@@ -40,11 +51,15 @@ import (
 // The verdict pass is the one exception: it reads through verdictBrain, a model
 // lane. Unset, the close-date sweep still runs and its verdict step does nothing.
 func addDatabaseOnlySweepJobs(
-	reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, briefMail BriefMailConfig, verdictBrain, topicBrain completer,
+	reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, briefMail BriefMailConfig, verdictBrain, topicBrain completer, disabled []string,
 ) {
 	addDeclaredWorker[CapturedDealRefileArgs](reg, newCapturedDealRefileWorker(pool, topicBrain))
 	addDeclaredWorker[CapturedDealRefileSweepArgs](reg, &capturedDealRefileSweepWorker{pool: pool, now: time.Now})
-	addDeclaredWorker[ReportScheduleSweepArgs](reg, &reportScheduleSweepWorker{pool: pool, now: time.Now})
+	addDeclaredWorker[MeetingProfileRetractSweepArgs](reg, meetingProfileRetractWorker{meetingprofile.Sweep{Pool: pool}})
+	addDeclaredWorker[TranscriptAudienceSweepArgs](reg, transcriptAudienceWorker{transcriptaudience.Sweep{Pool: pool}})
+	addDeclaredWorker[PromiseKeptSweepArgs](reg, promiseKeptWorker{NewPromiseKeptSweep(pool)})
+	addDeclaredWorker[InitiativeEnrolmentSweepArgs](reg, initiativeEnrolmentSweepWorker{initiativeenrolment.Sweep{Store: NewInitiativeStore(pool), Pool: pool}})
+	addDeclaredWorker[ReportScheduleSweepArgs](reg, &reportScheduleSweepWorker{pool: pool, now: time.Now, features: corefeatures.New(disabled)})
 	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{
 		pool: pool, corrector: NewCloseDateCorrector(pool, log), closer: newSilentDealCloser(pool, log),
 		verdict: newDealVerdictPass(pool, verdictBrain, log),
@@ -75,6 +90,7 @@ func addDatabaseOnlySweepJobs(
 		sweeper: NewAgentTaskRetentionSweeper(pool, log), identity: identity.NewService(pool),
 	})
 	addDeclaredWorker[ApprovalNoticeReconcileArgs](reg, newApprovalNoticeReconcileWorker(pool))
+	addDeclaredWorker[ApprovalOwnerNoticeArgs](reg, &approvalOwnerNoticeWorker{pool: pool, now: time.Now})
 	addDeclaredWorker[ApprovalExpiryArgs](reg, &approvalExpiryWorker{
 		pool: pool, identity: identity.NewService(pool), log: log,
 	})
@@ -95,4 +111,74 @@ func addDatabaseOnlySweepJobs(
 	addDeclaredWorker[WaitingHorizonRefreshArgs](reg, newWaitingHorizonRefreshWorker(pool, log))
 	addDeclaredWorker[EvidenceAuthorshipArgs](reg, newEvidenceAuthorshipWorker(pool, log))
 	addBriefGenerateJobs(reg, pool, log, briefMail)
+}
+
+// PromiseKeptSweepArgs schedules one pass of promisekept.Sweep.
+type PromiseKeptSweepArgs struct{}
+
+// Kind keeps the persisted River job identity stable.
+func (PromiseKeptSweepArgs) Kind() string { return "promise_kept_sweep" }
+
+// FleetWide keeps tenant work inside the per-workspace sweep.
+func (PromiseKeptSweepArgs) FleetWide() {}
+
+type promiseKeptWorker struct{ promisekept.Sweep }
+
+// NewPromiseKeptSweep wires the sweep to the one rule that names a promise's owner.
+func NewPromiseKeptSweep(pool *pgxpool.Pool) promisekept.Sweep {
+	askedOf := func(ctx context.Context, tx pgx.Tx, source ids.UUID, seat *ids.UUID) (ids.UUID, error) {
+		asked, _, err := commitmentAskedOf(ctx, tx, Commitment{SourceActivityID: source, Seat: seat})
+		return asked, err
+	}
+	return promisekept.Sweep{Pool: pool, Store: contacts.NewStore(InstallationDB(pool)), AskedOf: askedOf}
+}
+
+func (w promiseKeptWorker) Work(ctx context.Context, _ *river.Job[PromiseKeptSweepArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.Pool, w.Workspace))
+}
+
+// InitiativeEnrolmentSweepArgs is the fleet job that dates sales initiative membership.
+type InitiativeEnrolmentSweepArgs struct{}
+
+// Kind keeps the persisted River job identity stable.
+func (InitiativeEnrolmentSweepArgs) Kind() string { return "initiative_enrolment_sweep" }
+
+// FleetWide keeps tenant work inside the per-workspace sweep.
+func (InitiativeEnrolmentSweepArgs) FleetWide() {}
+
+// MeetingProfileRetractSweepArgs schedules one pass of meetingprofile.Sweep.
+type MeetingProfileRetractSweepArgs struct{}
+
+// Kind keeps the persisted River job identity stable.
+func (MeetingProfileRetractSweepArgs) Kind() string { return "meeting_profile_retract_sweep" }
+
+// FleetWide keeps tenant work inside the per-workspace sweep.
+func (MeetingProfileRetractSweepArgs) FleetWide() {}
+
+type meetingProfileRetractWorker struct{ meetingprofile.Sweep }
+
+func (w meetingProfileRetractWorker) Work(ctx context.Context, _ *river.Job[MeetingProfileRetractSweepArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.Pool, w.Workspace))
+}
+
+// TranscriptAudienceSweepArgs schedules one pass of transcriptaudience.Sweep.
+type TranscriptAudienceSweepArgs struct{}
+
+// Kind keeps the persisted River job identity stable.
+func (TranscriptAudienceSweepArgs) Kind() string { return "transcript_audience_sweep" }
+
+// FleetWide keeps tenant work inside the per-workspace sweep.
+func (TranscriptAudienceSweepArgs) FleetWide() {}
+
+type transcriptAudienceWorker struct{ transcriptaudience.Sweep }
+
+func (w transcriptAudienceWorker) Work(ctx context.Context, _ *river.Job[TranscriptAudienceSweepArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.Pool, w.Workspace))
+}
+
+// initiativeEnrolmentSweepWorker hands each workspace to initiativeenrolment.Sweep.
+type initiativeEnrolmentSweepWorker struct{ initiativeenrolment.Sweep }
+
+func (w initiativeEnrolmentSweepWorker) Work(ctx context.Context, _ *river.Job[InitiativeEnrolmentSweepArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.Pool, w.Workspace))
 }

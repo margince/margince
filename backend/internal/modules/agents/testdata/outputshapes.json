@@ -1083,6 +1083,10 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "stage_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
                     "tagged": {
                       "type": "boolean"
                     },
@@ -1108,6 +1112,10 @@
                       "type": "boolean"
                     },
                     "owner_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "stage_id": {
                       "type": "string",
                       "format": "uuid"
                     },
@@ -3016,6 +3024,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "awaiting_agent": {
+            "type": "boolean"
+          },
           "bundle_id": {
             "type": "string",
             "format": "uuid"
@@ -3169,6 +3180,9 @@
             }
           },
           "diff_hash": {
+            "type": "string"
+          },
+          "effect_failure": {
             "type": "string"
           },
           "effects": {
@@ -3625,6 +3639,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "awaiting_agent": {
+                  "type": "boolean"
+                },
                 "bundle_id": {
                   "type": "string",
                   "format": "uuid"
@@ -3778,6 +3795,9 @@
                   }
                 },
                 "diff_hash": {
+                  "type": "string"
+                },
+                "effect_failure": {
                   "type": "string"
                 },
                 "effects": {
@@ -4589,6 +4609,12 @@
                     "file": {
                       "type": "string"
                     },
+                    "key_columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
                     "object": {
                       "type": "string"
                     }
@@ -5223,10 +5249,17 @@
         "type": "object",
         "required": [
           "router",
-          "actions"
+          "actions",
+          "how_to_call"
         ],
         "properties": {
           "router": {
+            "type": "string"
+          },
+          "ask_user_first_means": {
+            "type": "string"
+          },
+          "how_to_call": {
             "type": "string"
           },
           "actions": {
@@ -5257,7 +5290,31 @@
                 "query": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "type"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "required": {
+                        "type": "boolean"
+                      },
+                      "enum": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "format": {
+                        "type": "string"
+                      }
+                    }
                   }
                 },
                 "if_version": {
@@ -5712,6 +5769,9 @@
           "body": {
             "type": "string"
           },
+          "communication_context": {
+            "type": "string"
+          },
           "in_reply_to_activity_id": {
             "type": "string",
             "format": "uuid"
@@ -6052,6 +6112,23 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "close_interval": {
+                "type": "object",
+                "properties": {
+                  "end_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "start_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "end_at",
+                  "start_at"
+                ]
               },
               "close_window": {
                 "type": "string"
@@ -6746,6 +6823,9 @@
           "base_currency": {
             "type": "string"
           },
+          "call_withheld": {
+            "type": "boolean"
+          },
           "confirmed_date_count": {
             "type": "integer"
           },
@@ -6847,6 +6927,9 @@
           },
           "contributions_limited": {
             "type": "boolean"
+          },
+          "contributions_limited_reason": {
+            "type": "string"
           },
           "coverage_note": {
             "type": "string"
@@ -7486,6 +7569,21 @@
             "type": "string",
             "format": "date-time"
           },
+          "start_intent": {
+            "type": "object",
+            "properties": {
+              "timezone": {
+                "type": "string"
+              },
+              "wall_clock": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timezone",
+              "wall_clock"
+            ]
+          },
           "status": {
             "type": "string"
           },
@@ -7604,6 +7702,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "awaiting_agent": {
+                  "type": "boolean"
+                },
                 "bundle_id": {
                   "type": "string",
                   "format": "uuid"
@@ -7757,6 +7858,9 @@
                   }
                 },
                 "diff_hash": {
+                  "type": "string"
+                },
+                "effect_failure": {
                   "type": "string"
                 },
                 "effects": {
@@ -10803,6 +10907,21 @@
                 "due_has_time": {
                   "type": "boolean"
                 },
+                "due_intent": {
+                  "type": "object",
+                  "properties": {
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "wall_clock": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "timezone",
+                    "wall_clock"
+                  ]
+                },
                 "quote": {
                   "type": "string"
                 },
@@ -11469,6 +11588,53 @@
               "type": "string"
             }
           },
+          "blocking_records": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "blocker": {
+                  "type": "string"
+                },
+                "records": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "web_url": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name"
+                    ]
+                  }
+                },
+                "total": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "visible": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "blocker",
+                "records",
+                "total",
+                "visible"
+              ]
+            }
+          },
           "consequences": {
             "type": "array",
             "items": {
@@ -11498,7 +11664,19 @@
                 "type": "integer",
                 "minimum": 0
               },
+              "mail_draft": {
+                "type": "integer",
+                "minimum": 0
+              },
               "project": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "record_assignment": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sdr_handoff": {
                 "type": "integer",
                 "minimum": 0
               },
@@ -11517,7 +11695,10 @@
               "deal",
               "lead",
               "list",
+              "mail_draft",
               "project",
+              "record_assignment",
+              "sdr_handoff",
               "task",
               "webhook"
             ]
@@ -12273,6 +12454,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "awaiting_agent": {
+            "type": "boolean"
+          },
           "bundle_id": {
             "type": "string",
             "format": "uuid"
@@ -12426,6 +12610,9 @@
             }
           },
           "diff_hash": {
+            "type": "string"
+          },
+          "effect_failure": {
             "type": "string"
           },
           "effects": {
@@ -12926,6 +13113,21 @@
                 "due_has_time": {
                   "type": "boolean"
                 },
+                "due_intent": {
+                  "properties": {
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "wall_clock": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "timezone",
+                    "wall_clock"
+                  ],
+                  "type": "object"
+                },
                 "quote": {
                   "type": "string"
                 },
@@ -13259,6 +13461,21 @@
                 "reopen_ref": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "snoozed_intent": {
+                  "type": "object",
+                  "properties": {
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "wall_clock": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "timezone",
+                    "wall_clock"
+                  ]
                 },
                 "snoozed_until": {
                   "type": "string",
@@ -14199,6 +14416,21 @@
                   "format": "uuid",
                   "type": "string"
                 },
+                "snoozed_intent": {
+                  "properties": {
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "wall_clock": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "timezone",
+                    "wall_clock"
+                  ],
+                  "type": "object"
+                },
                 "snoozed_until": {
                   "format": "date-time",
                   "type": "string"
@@ -14458,6 +14690,9 @@
             },
             "type": "array"
           },
+          "call_withheld": {
+            "type": "boolean"
+          },
           "closing_minor": {
             "type": "integer"
           },
@@ -14562,6 +14797,9 @@
           },
           "contributions_limited": {
             "type": "boolean"
+          },
+          "contributions_limited_reason": {
+            "type": "string"
           },
           "coverage_note": {
             "type": "string"
@@ -15650,6 +15888,21 @@
                     "due_has_time": {
                       "type": "boolean"
                     },
+                    "due_intent": {
+                      "type": "object",
+                      "properties": {
+                        "timezone": {
+                          "type": "string"
+                        },
+                        "wall_clock": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "timezone",
+                        "wall_clock"
+                      ]
+                    },
                     "quote": {
                       "type": "string"
                     },
@@ -15733,6 +15986,9 @@
                     "status": {
                       "type": "string"
                     },
+                    "term_state": {
+                      "type": "string"
+                    },
                     "title": {
                       "type": "string"
                     },
@@ -15748,6 +16004,7 @@
                     "contract_number",
                     "currency",
                     "status",
+                    "term_state",
                     "title",
                     "under_contract"
                   ]
@@ -15866,6 +16123,37 @@
               "unattributed_nearby"
             ]
           },
+          "health": {
+            "type": "object",
+            "properties": {
+              "assessed_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "assessment_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "author": {
+                "type": "string"
+              },
+              "judged": {
+                "type": "boolean"
+              },
+              "note": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "judged"
+            ]
+          },
           "phase_history": {
             "type": "object",
             "properties": {
@@ -15896,6 +16184,24 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "cause": {
+                      "type": "object",
+                      "properties": {
+                        "deal_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "deal_name": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ]
+                    },
                     "changed_at": {
                       "type": "string",
                       "format": "date-time"
@@ -16171,6 +16477,40 @@
       "data": {
         "type": "object",
         "properties": {
+          "facts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "confirmed": {
+                  "type": "boolean"
+                },
+                "fact_key": {
+                  "type": "string"
+                },
+                "field": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "category",
+                "confirmed",
+                "fact_key",
+                "field",
+                "source",
+                "value"
+              ]
+            }
+          },
           "fields": {
             "type": "object"
           },
@@ -16196,6 +16536,32 @@
               "id",
               "is_you"
             ]
+          },
+          "profile_fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "confirmed": {
+                  "type": "boolean"
+                },
+                "field": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "confirmed",
+                "field",
+                "source",
+                "value"
+              ]
+            }
           },
           "record_type": {
             "type": "string"
@@ -17204,6 +17570,21 @@
                 "due_has_time": {
                   "type": "boolean"
                 },
+                "due_intent": {
+                  "type": "object",
+                  "properties": {
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "wall_clock": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "timezone",
+                    "wall_clock"
+                  ]
+                },
                 "quote": {
                   "type": "string"
                 },
@@ -17900,6 +18281,12 @@
               ]
             }
           },
+          "types_timed_out": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "types_with_more": {
             "type": "array",
             "items": {
@@ -18274,6 +18661,21 @@
           "scheduled_at": {
             "type": "string"
           },
+          "scheduled_intent": {
+            "type": "object",
+            "properties": {
+              "timezone": {
+                "type": "string"
+              },
+              "wall_clock": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timezone",
+              "wall_clock"
+            ]
+          },
           "scheduled_send_id": {
             "type": "string",
             "format": "uuid"
@@ -18379,6 +18781,21 @@
           },
           "scheduled_at": {
             "type": "string"
+          },
+          "scheduled_intent": {
+            "type": "object",
+            "properties": {
+              "timezone": {
+                "type": "string"
+              },
+              "wall_clock": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timezone",
+              "wall_clock"
+            ]
           },
           "scheduled_send_id": {
             "type": "string",

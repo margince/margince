@@ -1,0 +1,83 @@
+{
+  "scenario": "case103_stop_telling_me",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "5534c8a5db93ea0d",
+    "tools": "9dabbb105e703649",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T07:41:45Z",
+    "graded_commit": "e78e69d3f41bf45bbc08207d2d75a94ae33d19f4",
+    "graded_at": "2026-11-25T11:02:17Z"
+  },
+  "usage": {
+    "input_tokens": 37625,
+    "output_tokens": 5292,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 51843,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "list_notification_preferences",
+        "read_my_brief_delivery",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "list_notification_preferences",
+        "read_workspace"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 1.5,
+      "min": 1,
+      "max": 2
+    },
+    "turns": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 44734,
+      "min": 40360,
+      "max": 49108
+    },
+    "output_tokens": {
+      "median": 2646,
+      "min": 2219,
+      "max": 3073
+    }
+  }
+}

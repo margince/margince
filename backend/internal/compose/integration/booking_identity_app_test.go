@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestBookingPageUsesTheCurrentAccountName(t *testing.T) {
@@ -33,7 +34,7 @@ func TestBookingPageUsesTheCurrentAccountName(t *testing.T) {
 	}
 	for _, tc := range []struct{ name, expected string }{
 		{"Renamed account", "Renamed account"},
-		{strings.Repeat("名", 255), strings.Repeat("名", 199) + "…"},
+		{strings.Repeat("名", values.TextLabelCharacters), strings.Repeat("名", values.TextLabelCharacters)},
 	} {
 		if status := e.Call(t, "PUT", "/v1/me/display-name", AnyMap{"display_name": tc.name}, nil, nil); status != http.StatusOK {
 			t.Fatalf("rename: %d", status)

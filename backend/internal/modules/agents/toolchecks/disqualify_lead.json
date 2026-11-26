@@ -1,0 +1,9 @@
+{
+  "verb": "disqualify_lead",
+  "checks": [
+    "lead.delete"
+  ],
+  "takes": [
+    "lead"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "domain_questions",
+  "verb": "list_domain_questions",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

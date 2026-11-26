@@ -6,6 +6,7 @@ package contacts
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -13,15 +14,20 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func (s *Store) linkEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact ids.ContactID, company ids.CompanyID, e employmentEvidence, capturedBy string) (*ids.UUID, string, error) {
+	if err := auth.HoldWritableLive(ctx, tx, contactEntity, contact.UUID); err != nil {
+		return nil, "", err
+	}
 	args := []any{contact}
 	contactPos := len(args)
 	args = append(args, company)
 	companyPos := len(args)
-	rows, err := tx.Query(ctx, storekit.SQLf(`SELECT %s FROM relationship WHERE contact_id=$%d AND company_id=$%d AND kind='employment' ORDER BY id`, relationshipColumns, contactPos, companyPos), args...)
+	rows, err := tx.Query(ctx, storekit.SQLf(`SELECT %s FROM relationship WHERE contact_id=$%d AND company_id=$%d AND kind='employment' ORDER BY id FOR UPDATE`, relationshipColumns, contactPos, companyPos), args...)
 	if err != nil {
 		return nil, "", err
 	}
@@ -33,11 +39,25 @@ func (s *Store) linkEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact id
 	_, started := preciseEmploymentDate(e.Started)
 	_, ended := preciseEmploymentDate(e.Ended)
 	matched, state := matchEmploymentEpisode(relationships, e, started, ended)
+	mayEnd := false
+	if state == employmentNeedsReview && started != nil && e.validDateRange() && undatedEndAt(relationships, *started) {
+		if mayEnd, err = mayEndUndatedTx(ctx, tx, relationships); err != nil {
+			return nil, "", err
+		}
+	}
+	if mayEnd {
+		// A dated current role is newer than an undated one at the same
+		// company: the older one ends where the new one starts.
+		if err := s.endUndatedEmploymentsTx(ctx, tx, relationships, *started, employmentPrecision(e.Started), e, capturedBy); err != nil {
+			return nil, "", err
+		}
+		state = ""
+	}
 	if state != "" {
 		return matched, state, nil
 	}
 	if !e.validDateRange() {
-		return nil, "needs_review", nil
+		return nil, employmentNeedsReview, nil
 	}
 	primary := false
 	primaryChoice := &primary
@@ -48,6 +68,7 @@ func (s *Store) linkEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact id
 		Kind: employmentKind, ContactID: &contact, CompanyID: &company,
 		Role: &e.Role, IsCurrentPrimary: primaryChoice, StartedAt: started, EndedAt: ended, EmploymentStatus: &e.Status,
 		StartedPrecision: employmentPrecision(e.Started), EndedPrecision: employmentPrecision(e.Ended), Source: e.provider,
+		Evidence: map[string]any{auditKeyProvider: e.provider, employmentRunField: e.runID, "episode_key": e.key},
 	}, capturedBy)
 	if err != nil {
 		return nil, "", err
@@ -133,7 +154,7 @@ func matchEmploymentEpisode(relationships []relationshipRow, e employmentEvidenc
 		}
 	}
 	if competingCurrent {
-		return nil, "needs_review"
+		return nil, employmentNeedsReview
 	}
 	return nil, ""
 }
@@ -144,4 +165,63 @@ func undatedCurrentEmployment(r relationshipRow) bool {
 
 func compatibleCurrentHistory(r relationshipRow, sameRole bool, started, ended *time.Time) bool {
 	return sameRole && (started == nil || r.StartedAt == nil) && ended == nil && undatedCurrentEmployment(r)
+}
+
+// endUndatedEmploymentsTx closes each undated current employment as former,
+// ending at the start of the newer episode e reports. Each close is an
+// ordinary audited relationship edit, so it can be edited back.
+func (s *Store) endUndatedEmploymentsTx(
+	ctx context.Context, tx pgx.Tx, relationships []relationshipRow, start time.Time, precision *string, e employmentEvidence, capturedBy string,
+) error {
+	former := employmentFormer
+	for _, r := range relationships {
+		if !undatedCurrentEmployment(r) {
+			continue
+		}
+		if _, err := s.updateRelationshipInTx(ctx, tx, r.ID, UpdateRelationshipInput{
+			EmploymentStatus: &former, EndedAt: &start, EndedPrecision: precision,
+			Evidence: map[string]any{auditKeyProvider: e.provider, employmentRunField: e.runID, "superseded_by_episode": e.key, "replacement_claim": e.claimID.String(), "replacement_episode": e.key},
+		}, capturedBy); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// undatedEndAt reports whether every undated current employment began before
+// start, so ending each there keeps its dates in order.
+func undatedEndAt(relationships []relationshipRow, start time.Time) bool {
+	for _, r := range relationships {
+		if undatedCurrentEmployment(r) && r.StartedAt != nil && !r.StartedAt.Before(start) {
+			return false
+		}
+	}
+	return true
+}
+
+// mayEndUndatedTx reports whether this import may end the undated current
+// rows itself. The caller must hold relationship:update, and no user may have
+// set any such row's status or dates. Otherwise the pair stays for review.
+func mayEndUndatedTx(ctx context.Context, tx pgx.Tx, relationships []relationshipRow) (bool, error) {
+	if err := auth.Require(ctx, "relationship", principal.ActionUpdate); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return false, nil
+		}
+		return false, err
+	}
+	for _, r := range relationships {
+		if !undatedCurrentEmployment(r) {
+			continue
+		}
+		var human bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM audit_log decided
+			 WHERE decided.entity_type = 'relationship' AND decided.entity_id = $1 AND decided.actor_type IN ('human','agent')
+			   AND (decided.after ?| ARRAY['employment_status', 'started_at', 'ended_at']))`, r.ID).Scan(&human); err != nil {
+			return false, fmt.Errorf("contacts: reading who set an employment's dates: %w", err)
+		}
+		if human {
+			return false, nil
+		}
+	}
+	return true, nil
 }

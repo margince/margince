@@ -134,7 +134,6 @@ both
 bound
 box
 branch
-breadcrumb
 break
 bridge
 brief
@@ -1021,7 +1020,6 @@ run
 rung
 runtime
 safe
-safer
 safest
 said
 sale
@@ -1160,7 +1158,6 @@ such
 suffixed
 suggestion
 summary
-superellipse
 superuser
 supplies
 support

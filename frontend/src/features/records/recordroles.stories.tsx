@@ -73,8 +73,9 @@ const DUPLICATE = {
   type: "about:blank",
   title: "Conflict",
   status: 409,
-  code: "conflict",
-  detail: "conflict",
+  code: "name_taken",
+  detail:
+    'a record role called "Technical contact" already exists; choose a different name',
 };
 
 function story(
@@ -159,7 +160,7 @@ export const DuplicateRole: Story = {
     );
     const page = within(canvasElement.ownerDocument.body);
     const dialog = within(await page.findByRole("dialog"));
-    await userEvent.type(dialog.getByLabelText("Name"), "Sales engineer");
+    await userEvent.type(dialog.getByLabelText(/^Name/), "Sales engineer");
     await userEvent.click(dialog.getByRole("checkbox", { name: "Deal" }));
     await userEvent.click(dialog.getByRole("checkbox", { name: "Colleague" }));
     await userEvent.click(dialog.getByRole("button", { name: "Add role" }));

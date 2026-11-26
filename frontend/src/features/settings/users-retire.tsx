@@ -6,11 +6,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { api } from "../../api/client";
 import { Button, Field } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { QueryStates } from "../../design-system/querystates";
 import { RecordPicker } from "../../design-system/recordpicker";
 import { useToast } from "../../design-system/toast";
-import { useT } from "../../i18n";
+import { usePlural, useT } from "../../i18n";
 import {
   memberRetirementBlocker,
   memberRetirementConsequence,
@@ -86,6 +87,8 @@ export function RetireMember({
       await preview.refetch();
     },
   });
+  // The merge dialog names a duplicate; the removal names the member.
+  const addressLabel = merge ? "users.mergeSource" : "users.retirement.address";
   const owned = preview.data?.owned;
   const counts = owned
     ? [
@@ -99,11 +102,10 @@ export function RetireMember({
         [t("users.work.alerts"), preview.data?.signal_count ?? 0],
       ]
     : [];
-  const ready =
-    preview.isSuccess &&
-    !preview.isFetching &&
-    preview.data.blockers.length === 0 &&
-    (!merge || target !== "");
+  // A blocker is said in the callout at the top, so the hold is explained. A
+  // merge with no survivor picked is one: the preview names it.
+  const blocked = Boolean(preview.data?.blockers.length);
+  const settled = preview.isSuccess && !preview.isFetching && !blocked;
   return (
     <ConfirmModal
       open
@@ -114,16 +116,18 @@ export function RetireMember({
       confirmLabel={t(merge ? "users.merge" : "users.remove")}
       confirmVariant="danger"
       pending={retire.isPending}
-      confirmDisabled={!ready}
+      confirmDisabled={!settled}
       error={retire.error ? problemMessageOf(retire.error, t) : null}
       onConfirm={() => {
-        if (ready) retire.mutate({ target, token: preview.data.token });
+        if (settled) retire.mutate({ target, token: preview.data.token });
       }}
       returnFocusTo={() =>
         document.getElementById(memberAnchorId(member.id)) ??
         document.querySelector<HTMLInputElement>('input[type="search"]')
       }
     >
+      {/* First, so the reason the confirm is held is the first thing read. */}
+      <RetirementBlockers blockers={preview.data?.blockers} />
       <p>{t(merge ? "users.mergeBody" : "users.removeBody")}</p>
       <RetirementTarget
         memberId={member.id}
@@ -148,16 +152,9 @@ export function RetireMember({
           </ul>
         </div>
       )}
-      {preview.data?.blockers.length ? (
-        <ul>
-          {preview.data.blockers.map((blocker) => (
-            <li key={blocker}>{memberRetirementBlocker(blocker, t)}</li>
-          ))}
-        </ul>
-      ) : null}
       {merge && <p>{t("users.visibleWorkNote")}</p>}
       <p className="users-retirement-address">
-        {t("users.mergeSource")}: {preview.data?.source_email ?? member.email}
+        {t(addressLabel)}: {preview.data?.source_email ?? member.email}
       </p>
       {preview.data?.survivor_email && (
         <p className="users-retirement-address">
@@ -168,6 +165,28 @@ export function RetireMember({
         <p key={code}>{memberRetirementConsequence(code, t)}</p>
       ))}
     </ConfirmModal>
+  );
+}
+
+// What holds the confirm, read before anything else in the dialog.
+function RetirementBlockers({
+  blockers,
+}: Readonly<{ blockers: readonly string[] | undefined }>) {
+  const t = useT();
+  const plural = usePlural();
+  if (!blockers?.length) return null;
+  return (
+    <Callout
+      tone="warning"
+      kind="standing"
+      title={plural("users.retirement.blocked", blockers.length)}
+    >
+      <ul>
+        {blockers.map((blocker) => (
+          <li key={blocker}>{memberRetirementBlocker(blocker, t)}</li>
+        ))}
+      </ul>
+    </Callout>
   );
 }
 

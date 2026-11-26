@@ -145,28 +145,8 @@ func readQuietSide(ctx context.Context, tx pgx.Tx, dealID ids.DealID, direction,
 	if err != nil {
 		return QuietSide{}, false, err
 	}
-	// ORDER BY occurred_at DESC LIMIT 1 rather than a FILTERed max(): the row
-	// is what carries the counterparty, and idx_activity_direction serves this
-	// shape directly.
-	//
-	// The discover clause carries the availability test (a retention-held row is
-	// unavailable to every reader), so it is not spelled a second time here.
-	//
-	// It is a Sprintf ARGUMENT rather than concatenated into the format string:
-	// a `%` ever appearing in it would otherwise be read as a verb and corrupt
-	// the statement at runtime with nothing to catch it.
-	//
-	// The counterparty is named only when there is exactly ONE participant in
-	// that role. A message to four contacts has no single contact the silence
-	// belongs to, and picking one — by id order or any other arbitrary rule —
-	// would print a name the reader can check and find misleading. Group
-	// correspondence therefore reports its dates with no name attached, which is
-	// the true answer.
-	//
-	// The count is over EVERY participant in the role, not only the matched
-	// ones. An address that never resolved to a contact is still somebody on the
-	// thread, so counting matches alone would read "one contact plus three
-	// unknown addresses" as a private exchange and name them for it.
+	// The ordered direction index finds the row that carries the counterparty.
+	// Count every participant: unresolved addresses still make this group mail.
 	var side QuietSide
 	var contactID *ids.UUID
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
@@ -178,10 +158,10 @@ func readQuietSide(ctx context.Context, tx pgx.Tx, dealID ids.DealID, direction,
 		                 WHERE every.activity_id = a.id AND every.role = $%[3]d) = 1)
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $%[1]d
-		WHERE a.archived_at IS NULL AND %[4]s AND %[5]s AND %[6]s AND a.direction = $%[2]d
+		WHERE a.archived_at IS NULL AND %[4]s AND %[5]s AND %[6]s AND %[8]s AND a.direction = $%[2]d
 		ORDER BY a.occurred_at DESC, %[7]s, a.id DESC
 		LIMIT 1`, dealPos, directionPos, rolePos, scope, healthInteraction("now()"),
-		relstrength.ExternalActivityCountsSQL("a", "now()"), tie), args...).
+		relstrength.ExternalActivityCountsSQL("a", "now()"), tie, relstrength.DealEvidenceSQL("a", "l.deal_id")), args...).
 		Scan(&side.At, &side.DateOnly, &side.Kind, &contactID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QuietSide{}, false, nil

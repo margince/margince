@@ -13,16 +13,14 @@ package identity
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -227,21 +225,9 @@ func (s *Service) GetUser(ctx context.Context, actor Identity, userID ids.UserID
 	}
 	var u userRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		row, scanErr := scanUser(tx.QueryRow(ctx, getUserQuery, true, userID))
-		if errors.Is(scanErr, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
-		if scanErr != nil {
-			return scanErr
-		}
-		rows := []userRow{row}
-		grants, err := loadGrantsFor(ctx, tx, rowIDs(rows))
-		if err != nil {
-			return err
-		}
-		withholdActivity(ctx, &actor, rows, grants)
-		u = rows[0]
-		return nil
+		var err error
+		u, err = readMemberTx(ctx, tx, actor, userID)
+		return err
 	})
 	return u, err
 }
@@ -273,6 +259,7 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 		plain, filtered = listUsersInvitedQuery, listUsersInvitedFilteredQuery
 	}
 	rows, page, err := listRosterPage(ctx, s.db, in.Q, in.Cursor, in.Limit, rosterQuery[userRow]{
+		scope:     "users",
 		plain:     plain,
 		filtered:  filtered,
 		leadArgs:  []any{mayManage},
@@ -334,11 +321,13 @@ type RosterPage struct {
 }
 
 // ListTeamsInput narrows and pages the team list; Q is a case-insensitive
-// match over the team name (nil or empty = every team).
+// match over the team name (nil or empty = every team). IncludeArchived adds
+// the archived teams, which only a team administrator may list.
 type ListTeamsInput struct {
-	Q      *string
-	Cursor *string
-	Limit  *int
+	Q               *string
+	Cursor          *string
+	Limit           *int
+	IncludeArchived bool
 }
 
 type teamRow struct {
@@ -346,42 +335,43 @@ type teamRow struct {
 	Name        string
 	MemberCount int
 	CreatedAt   time.Time
+	ArchivedAt  *time.Time
 }
 
-// teamColumns is the roster team SELECT list: the active-member count
-// joins app_user so a suspended/deactivated seat's membership row never
-// inflates the count (mirrors the active-only gate on ListUsers).
-const teamColumns = `t.id, t.name, COUNT(u.id) AS member_count, t.created_at`
+// teamMemberCountSQL counts a team's active and invited human seats, so the count
+// agrees with the Members page. Suspended and deactivated seats never count.
+// It reads the team as `t`.
+var teamMemberCountSQL = `(SELECT count(*) FROM team_membership tm
+	   JOIN app_user u ON u.id = tm.user_id AND ` + TeamSeatSQL("u") + `
+	  WHERE tm.team_id = t.id)`
 
-var teamFromJoin = `
-	FROM team t
-	LEFT JOIN team_membership tm ON tm.team_id = t.id
-	LEFT JOIN app_user u ON u.id = tm.user_id AND ` + LiveMemberSQL("u") + ``
+var teamColumns = `t.id, t.name, ` + teamMemberCountSQL + ` AS member_count, t.created_at, t.archived_at`
 
 var listTeamsQuery = `
-	SELECT ` + teamColumns + teamFromJoin + `
-	WHERE t.archived_at IS NULL
-	  AND ($1::timestamptz IS NULL OR (t.created_at, t.id) > ($1, $2))
-	GROUP BY t.id
-	ORDER BY t.created_at, t.id
-	LIMIT $3`
-
-var listTeamsFilteredQuery = `
-	SELECT ` + teamColumns + teamFromJoin + `
-	WHERE t.archived_at IS NULL AND f_unaccent(t.name) ILIKE f_unaccent($1)
+	SELECT ` + teamColumns + `
+	FROM team t
+	WHERE ($1::boolean OR t.archived_at IS NULL)
 	  AND ($2::timestamptz IS NULL OR (t.created_at, t.id) > ($2, $3))
-	GROUP BY t.id
 	ORDER BY t.created_at, t.id
 	LIMIT $4`
 
+var listTeamsFilteredQuery = `
+	SELECT ` + teamColumns + `
+	FROM team t
+	WHERE ($1::boolean OR t.archived_at IS NULL) AND f_unaccent(t.name) ILIKE f_unaccent($2)
+	  AND ($3::timestamptz IS NULL OR (t.created_at, t.id) > ($3, $4))
+	ORDER BY t.created_at, t.id
+	LIMIT $5`
+
 func scanTeam(r pgx.Row) (teamRow, error) {
 	var tm teamRow
-	err := r.Scan(&tm.ID, &tm.Name, &tm.MemberCount, &tm.CreatedAt)
+	err := r.Scan(&tm.ID, &tm.Name, &tm.MemberCount, &tm.CreatedAt, &tm.ArchivedAt)
 	return tm, err
 }
 
-// ListTeams returns one keyset page of the installation's active teams, with
-// each team's active-membership count, optionally filtered by in.Q.
+// ListTeams returns one keyset page of the installation's teams, with each
+// team's active-and-invited membership count, optionally filtered by in.Q.
+// Archived teams are listed only when asked for, so an admin can restore one.
 //
 // No workspace predicate anywhere in it: ADR-0091 §8 phase D has taken the
 // tenant column off team and, with this slice, off app_user too. The member
@@ -390,9 +380,16 @@ func (s *Service) ListTeams(ctx context.Context, in ListTeamsInput) ([]teamRow, 
 	if err := auth.RequireMember(ctx); err != nil {
 		return nil, storekit.Page{}, err
 	}
+	if in.IncludeArchived {
+		if err := auth.Require(ctx, objectTeamAdmin, principal.ActionRead); err != nil {
+			return nil, storekit.Page{}, err
+		}
+	}
 	return listRosterPage(ctx, s.db, in.Q, in.Cursor, in.Limit, rosterQuery[teamRow]{
+		scope:     "teams",
 		plain:     listTeamsQuery,
 		filtered:  listTeamsFilteredQuery,
+		leadArgs:  []any{in.IncludeArchived},
 		scan:      scanTeam,
 		cursorKey: func(tm teamRow) (time.Time, ids.UUID) { return tm.CreatedAt, tm.ID },
 	})
@@ -408,11 +405,11 @@ type rosterCursor struct {
 	id        *ids.UUID
 }
 
-func decodeRosterCursor(token *string) (rosterCursor, error) {
+func decodeRosterCursor(scope string, token *string) (rosterCursor, error) {
 	if token == nil || *token == "" {
 		return rosterCursor{}, nil
 	}
-	c, err := storekit.DecodeCursor(*token)
+	c, err := storekit.DecodeCursor(scope, *token)
 	if err != nil {
 		return rosterCursor{}, err
 	}
@@ -425,6 +422,9 @@ func decodeRosterCursor(token *string) (rosterCursor, error) {
 // fixed query strings (unfiltered + q-filtered), the row scanner, and the
 // keyset-cursor extractor.
 type rosterQuery[T userRow | teamRow] struct {
+	// scope names the list in the cursors it mints, so a user cursor never
+	// continues the team list.
+	scope    string
 	plain    string
 	filtered string
 	// leadArgs bind BEFORE the pager's own cursor/limit args, so a row type
@@ -447,7 +447,7 @@ func listRosterPage[T userRow | teamRow](
 	spec rosterQuery[T],
 ) ([]T, storekit.Page, error) {
 	limit := storekit.ClampLimit(limitIn)
-	after, err := decodeRosterCursor(cursor)
+	after, err := decodeRosterCursor(spec.scope, cursor)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
@@ -484,7 +484,7 @@ func listRosterPage[T userRow | teamRow](
 	}
 	pageRows = pageRows[:limit]
 	createdAt, id := spec.cursorKey(pageRows[len(pageRows)-1])
-	next, err := storekit.EncodeCursor(createdAt, id)
+	next, err := storekit.EncodeCursor(spec.scope, createdAt, id)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}

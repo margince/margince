@@ -1,0 +1,9 @@
+{
+  "verb": "preview_import",
+  "checks": [
+    "custom_field.read",
+    "import_run.create",
+    "import_run.read",
+    "import_run.update"
+  ]
+}

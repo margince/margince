@@ -24,8 +24,8 @@ func (r *Registry) Listed(spec mcp.ToolSpec) mcp.ToolSpec {
 // ListedSpecs returns the registered specs with each listed one worded as the
 // external listing words it, for a catalog that mirrors tools/list.
 func (r *Registry) ListedSpecs() []mcp.ToolSpec {
-	words := r.lister()
-	specs := r.Specs()
+	specs := r.availableSpecs(r.Specs())
+	words := listerOf(specs)
 	for i, spec := range specs {
 		if !spec.Unlisted {
 			specs[i] = words.listed(spec)
@@ -41,7 +41,7 @@ type lister struct {
 	verbs *regexp.Regexp
 }
 
-func (r *Registry) lister() lister { return listerOf(r.Specs()) }
+func (r *Registry) lister() lister { return listerOf(r.availableSpecs(r.Specs())) }
 
 // listerOf rewords by the router actions specs offer.
 func listerOf(specs []mcp.ToolSpec) lister {

@@ -14,6 +14,7 @@ lane reads 3 as a harness stop: such a run is never scored.
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -108,7 +109,7 @@ def _loop(model, session, out):
 # Code mode stays on: it is the path codex's MCP calls take, and without it the
 # server attaches with none of its tools callable.
 _CODEX_OFF = (
-    "shell_tool", "unified_exec", "view_image", "multi_agent", "apps", "browser_use",
+    "shell_tool", "unified_exec", "view_image", "multi_agent", "collaboration_modes", "apps", "browser_use",
     "browser_use_external", "computer_use", "sleep_tool", "tool_suggest", "skill_search",
     "image_generation", "goals", "plugins", "hooks", "memories",
 )
@@ -219,7 +220,7 @@ def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
     workspace file is within reach of a tool that slips through.
     """
     driver = f"{route.candidate}:{route.via}"
-    # agy names the effort in the model id (gemini-3.8-flash-high), so an effort
+    # agy names the effort in the model id (gemini-4-hydrogen-high), so an effort
     # set apart from it would be filed under a label the run never used.
     if route.effort != candidates.table()[route.candidate]["effort"]:
         print(f"the agy route takes its effort from the model id; set E2E_LLM_MODEL to that "
@@ -234,7 +235,7 @@ def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
             out.finish(True, f"HARNESS: {fault}", 0)
         print(fault, file=sys.stderr)
         return HARNESS
-    with tempfile.TemporaryDirectory(prefix="e2e-llm-agy.") as workspace:
+    with tempfile.TemporaryDirectory(prefix="e2e-llm-agy.") as workspace, clean.agy_home() as home:
         agents = os.path.join(workspace, ".agents", "agents")
         os.makedirs(agents)
         with open(os.path.join(agents, "margince-e2e-llm.md"), "w", encoding="utf-8") as handle:
@@ -246,13 +247,16 @@ def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
         ]
         try:
             done = subprocess.run(argv, cwd=workspace, stdin=subprocess.DEVNULL, capture_output=True,
-                                  text=True, timeout=timeout + AGY_GRACE, check=False)
+                                  text=True, timeout=timeout + AGY_GRACE, check=False,
+                                  env={**os.environ, "HOME": home})
             lines, stderr, exited = done.stdout.splitlines(), done.stderr, done.returncode
         except subprocess.TimeoutExpired as expired:
             partial = expired.stdout or b""
             lines = (partial.decode("utf-8", "replace") if isinstance(partial, bytes) else partial).splitlines()
             stderr, exited = f"agy overran its {timeout}s wall clock and was killed", "killed"
-    code = transcript.from_agy(lines, out_path, route.model, driver, [t["name"] for t in tools], workspace)
+        # Inside the home's lifetime: a long result is read back from the file agy spilled there.
+        code = transcript.from_agy(lines, out_path, route.model, driver, [t["name"] for t in tools],
+                                   workspace, home)
     # A non-zero exit, or a kill at the wall clock, is a program failure
     # whatever the stream says.
     if exited:
@@ -260,6 +264,58 @@ def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
     if code:
         print(stderr.strip()[-2000:], file=sys.stderr)
     return code
+
+
+# The Agent SDK host: the claude binary the CLI route runs, under a program
+# that answers the server's questions in the chat from the scenario's script.
+SDK_RUNNER_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sdk-runner")
+
+
+def sdk_argv(route, mcp_url, token_env, prompt_file, replies_file, out_path, cwd, claude, flags):
+    """The runner's command line, with clean.py's launch flags passed on to claude.
+
+    The passport travels by the name of its variable; the runner writes it to a
+    file only this user can read.
+    """
+    return [
+        "node", os.path.join(SDK_RUNNER_DIR, "src", "run.ts"),
+        "--model", route.model, "--mcp-url", mcp_url, "--token-env", token_env,
+        "--server", transcript.SERVER, "--prompt-file", prompt_file, "--replies-file", replies_file,
+        "--out", out_path, "--cwd", cwd, "--claude", claude, "--max-turns", str(MAX_TURNS),
+        # `=` keeps a flag-shaped or empty value from being read as an option.
+        *(f"--claude-arg={flag}" for flag in flags),
+    ]
+
+
+def run_sdk(route, mcp_url, token_env, prompt_file, scenario, out_path):
+    """Drive one prompt through the Agent SDK runner, which writes the transcript itself.
+
+    It starts claude as clean.py starts the CLI route, so the two differ only
+    in the host: this one answers each question from the scenario's
+    `elicitation:` entries and records the question and the answer. Like the
+    CLI route it has no wall clock, only the turn cap.
+    """
+    # claude takes no effort flag on the CLI route either, so another effort
+    # would be filed under a label the run never used.
+    if route.effort != candidates.table()[route.candidate]["effort"]:
+        print(f"the SDK route runs claude at its own effort; it cannot run at {route.effort!r}", file=sys.stderr)
+        return HARNESS
+    claude = shutil.which("claude")
+    if not claude:
+        print("the claude CLI is not on PATH; the SDK route runs that binary", file=sys.stderr)
+        return HARNESS
+    if not os.path.isdir(os.path.join(SDK_RUNNER_DIR, "node_modules", "@anthropic-ai", "claude-agent-sdk")):
+        print("the SDK runner is not installed; scripts/e2e-llm.sh installs it and checks its "
+              "pins and registry signatures before it boots (E2E_LLM_VIA=sdk)", file=sys.stderr)
+        return HARNESS
+    entries = check.parse_scenario(scenario).get("elicitation", []) if scenario else []
+    with tempfile.TemporaryDirectory(prefix="e2e-llm-sdk.") as scratch, clean.claude_launch() as (flags, env, empty):
+        replies_file = os.path.join(scratch, "replies.json")
+        with open(replies_file, "w", encoding="utf-8") as handle:
+            json.dump(check.elicitation_replies(entries), handle)
+        argv = sdk_argv(route, mcp_url, token_env, prompt_file, replies_file, out_path, empty, claude, flags)
+        done = subprocess.run(argv, env=env, stdin=subprocess.DEVNULL, check=False)
+    return HARNESS if done.returncode else 0
 
 
 def main():
@@ -273,6 +329,7 @@ def main():
     parser.add_argument("--token-env", required=True, help="the variable holding the MCP passport")
     parser.add_argument("--prompt-file", required=True)
     parser.add_argument("--out", required=True)
+    parser.add_argument("--scenario", default="", help="the scenario file, for the SDK route's scripted answers")
     parser.add_argument("--rest-skill-dir", default="", help="the REST door: the skill the candidate reads")
     parser.add_argument("--rest-base", default="", help="the REST door: the stack's /v1")
     args = parser.parse_args()
@@ -292,6 +349,11 @@ def main():
         if rest:
             os.environ["MARGINCE_REST_TOKEN"] = os.environ.get(args.token_env, "")
         return run_codex(route, args.mcp_url, args.token_env, prompt, args.out, rest=rest)
+    if route.wire == "claude-sdk":
+        if args.rest_skill_dir:
+            print("the SDK route has no REST door", file=sys.stderr)
+            return HARNESS
+        return run_sdk(route, args.mcp_url, args.token_env, args.prompt_file, args.scenario, args.out)
     if route.wire == "agy-cli":
         if args.rest_skill_dir:
             print("the agy route has no REST door", file=sys.stderr)

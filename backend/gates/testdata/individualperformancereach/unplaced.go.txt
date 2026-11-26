@@ -1,0 +1,27 @@
+package unplaced
+
+import (
+	"net/http"
+
+	"example.test/auth"
+	"example.test/httperr"
+)
+
+type Handlers struct{}
+
+func (h Handlers) GetPlacedReport(w http.ResponseWriter, r *http.Request) {
+	if err := auth.Require(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, []int{1})
+}
+
+// Added beside the placed report, under a path no family names.
+func (h Handlers) GetBrandNew(w http.ResponseWriter, r *http.Request) {
+	httperr.WriteJSON(w, http.StatusOK, []int{2})
+}
+
+func (h Handlers) ListContacts(w http.ResponseWriter, r *http.Request) {
+	httperr.WriteJSON(w, http.StatusOK, []string{"a contact"})
+}

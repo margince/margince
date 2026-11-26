@@ -125,7 +125,10 @@ func TestAnAttendedCanReadAnswersOnlyItsHumanCallerAboutThemselves(t *testing.T)
 // composeReader composes the dealmirror unit declaring reads for this test.
 func composeReader(t *testing.T, reads ...extension.SystemRead) {
 	t.Helper()
-	setComposedExtensions([]extension.Extension{{Name: "dealmirror", Version: "1.0.0", SystemReads: reads}})
+	setComposedExtensions([]extension.Extension{{
+		Name: "dealmirror", Version: "1.0.0", SystemReads: reads,
+		Secrets: []extension.SecretsRequest{{Key: "token", Scope: extension.SecretScopeUser}},
+	}})
 	t.Cleanup(func() { setComposedExtensions(nil) })
 }
 
@@ -160,7 +163,10 @@ func TestTheBootRefusesASystemReadNoGroupNames(t *testing.T) {
 			t.Errorf("%s: the boot accepted %v", name, reads)
 		}
 	}
-	every := []extension.SystemRead{extension.SystemReadDeals, extension.SystemReadAuthority, extension.SystemReadDirectory}
+	every := []extension.SystemRead{
+		extension.SystemReadDeals, extension.SystemReadAuthority, extension.SystemReadDirectory, extension.SystemReadActivities,
+		extension.SystemReadSetAside,
+	}
 	if err := preflightSystemReads(extension.Extension{Name: "dealmirror", SystemReads: every}); err != nil {
 		t.Errorf("the boot refused every published read: %v", err)
 	}

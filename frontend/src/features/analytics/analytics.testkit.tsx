@@ -21,6 +21,7 @@ import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
+import { REPORT_SCHEMA } from "./analytics.questions.testkit";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
 
 function jsonResponse(body: unknown, status = 200) {
@@ -79,6 +80,8 @@ export type ReportsStubOpts = {
   contextStatus?: number;
   // A seat that may also read deals, for the views that probe them.
   dealRead?: boolean;
+  // The seat may open a company, so a row naming one is a link.
+  companyRead?: boolean;
 };
 
 // The rows one report answers with.
@@ -124,6 +127,7 @@ function meAnswer(opts: ReportsStubOpts) {
       reporting_framework: ["read"],
       data_coverage: granted ? ["read"] : [],
       ...(opts.dealRead ? { deal: ["read"] } : {}),
+      ...(opts.companyRead ? { company: ["read"] } : {}),
     },
   });
 }
@@ -258,6 +262,10 @@ const ROUTES: readonly Route[] = [
     answer: (_asked, opts) => jsonResponse(meAnswer(opts)),
   },
   {
+    when: ({ url }) => url.includes("/analytics/schema"),
+    answer: () => jsonResponse(REPORT_SCHEMA),
+  },
+  {
     when: ({ url }) => url.includes("/analytics/coverage"),
     answer: (_asked, opts) => coverageAnswer(opts),
   },
@@ -307,7 +315,7 @@ export function reportsStub(opts: ReportsStubOpts = {}) {
     );
     const reportingRoute = reportingStoryRoutes()[`${asked.method} ${path}`];
     return reportingRoute
-      ? reportingRoute(undefined)
+      ? reportingRoute(undefined, new URL(asked.url, "http://localhost"))
       : jsonResponse({ data: [], page: { next_cursor: null } });
   });
 }

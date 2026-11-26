@@ -6,7 +6,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { UNROUTED_WARNING } from "../src/testing/unrouted-session.ts";
+import { stable } from "./lib/stable.mjs";
 import { FAILURE_EVENTS, outcomeErrors } from "./lib/story-outcome.mjs";
+import { unroutedHints } from "./lib/uat-page.mjs";
 import { startupModules } from "./lib/uat-entry.mjs";
 import {
   baseRefFor,
@@ -285,7 +288,7 @@ describe("drainInOrder", () => {
       () => "recovered",
     );
     expect(overlaps).toEqual([]);
-    expect([...used].sort()).toEqual(["a", "b", "c"]);
+    expect([...used].sort(stable)).toEqual(["a", "b", "c"]);
   });
 
   it("with one lane, runs items strictly in order", async () => {
@@ -331,6 +334,26 @@ describe("drainInOrder", () => {
 });
 
 const quiet = Object.fromEntries(FAILURE_EVENTS.map((event) => [event, null]));
+
+describe("unroutedHints", () => {
+  it("names each route the stub answered with an empty list, once", () => {
+    const [hint] = unroutedHints([
+      `${UNROUTED_WARNING} GET /worklist`,
+      "something else",
+      `${UNROUTED_WARNING} GET /worklist`,
+      `${UNROUTED_WARNING} GET /activities/email-1`,
+    ]);
+
+    expect(hint).toContain(
+      "GET /worklist, GET /activities/email-1 with an empty list",
+    );
+    expect(hint).toContain("add the route");
+  });
+
+  it("says nothing when the stub guessed nothing", () => {
+    expect(unroutedHints(["Warning: unrelated"])).toEqual([]);
+  });
+});
 
 describe("outcomeErrors", () => {
   it("passes a story whose channel reported no failure", () => {
@@ -490,7 +513,7 @@ it("includes committed, staged, unstaged and new stories before commit", () => {
     const includingDeleted = changesSince(git, base, { includeDeleted: true });
     expect(includingDeleted).toContain("frontend/.storybook/preview.tsx");
     expect(scopeFor([], includingDeleted)).toBe("all");
-    expect(changesSince(git, base).sort()).toEqual([
+    expect(changesSince(git, base).sort(stable)).toEqual([
       "committed.tsx",
       "new.stories.tsx",
       "staged.tsx",

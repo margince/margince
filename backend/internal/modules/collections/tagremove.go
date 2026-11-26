@@ -83,7 +83,7 @@ func requireTagRemoval(ctx context.Context, entityType string, entityID ids.UUID
 	if err := auth.Require(ctx, "tag", principal.ActionRead); err != nil {
 		return err
 	}
-	if !memberEntityTables[entityType] {
+	if !acceptsEntityType(entityType) {
 		return &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
 	}
 	return auth.Require(ctx, entityType, principal.ActionUpdate)

@@ -1,12 +1,16 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
+import { AddDocumentDialog } from "../../components/adddocument";
 import {
   AttachmentGrid,
   AttachmentTile,
   CATEGORY_LABELS,
+  categoryCuts,
 } from "../../components/attachmenttile";
+import { ChatCapture } from "../../components/chatcapture";
+import { FileVerbs } from "../../components/filerowverbs";
 import { Button } from "../../design-system/atoms";
 import { FilterPills } from "../../design-system/filterpills";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -16,10 +20,11 @@ import {
   SurfaceState,
 } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
+import { useCanWriteRecord } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
-import { AddDocumentDialog } from "../voice-knowledge/adddocument";
-import { ContactChatCapture } from "./contactchatcapture";
 import "./contact360.css";
+import { contactFilesKey } from "../../lib/attachmentkeys";
 
 // The contact's own files: unlike the sibling tabs in contacttabs.tsx, this one
 // is not a read of the 360 composite — the 360 does not carry attachments —
@@ -39,18 +44,13 @@ type Category = NonNullable<Attachment["category"]>;
 // recognise a contact that has been busy, and the rest is one button away.
 const PAGE_LIMIT = 20;
 
-// The cuts always offered, and the two a contact's files seldom carry, which
-// join the row only when a file does.
+// The cuts always offered; a category a contact's files seldom carry joins
+// the row only when a file does.
 const STEADY_CUTS: readonly Category[] = [
   "offer",
   "legal",
   "email_attachment",
   "other",
-];
-const RARE_CUTS: readonly Category[] = [
-  "message_attachment",
-  "contract",
-  "link",
 ];
 
 /**
@@ -61,7 +61,7 @@ const RARE_CUTS: readonly Category[] = [
  */
 export function useContactFiles(contactId: string) {
   const query = useInfiniteQuery({
-    queryKey: ["attachments", "contact", contactId],
+    queryKey: contactFilesKey(contactId),
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
       return unwrap(
@@ -101,10 +101,14 @@ function filesState(
 export function ContactFilesTab({
   contactId,
   contactName,
+  writable,
   refusedReasonId,
   onOpenEmail,
 }: Readonly<{
   contactId: string;
+  // The contact's own `writable`: Edit and Delete on a file run through the
+  // contact's write gate, like the upload.
+  writable?: boolean;
   // Named in the warning when a pasted chat shows someone else.
   contactName: string;
   /** Opens a mail in the page's drawer, from the line naming a file's mail. */
@@ -119,6 +123,9 @@ export function ContactFilesTab({
   const [adding, setAdding] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [category, setCategory] = useState<Category | "">("");
+  const mayWrite = useCanWriteRecord("contact", { writable });
+  const listRegion = useRef<HTMLDivElement | null>(null);
+  const focusLanding = useCallback(() => listRegion.current, []);
   const { query, files, hasMore } = useContactFiles(contactId);
   const state = filesState(query, files.length, hasMore);
   const shown = category
@@ -128,9 +135,8 @@ export function ContactFilesTab({
   return (
     <div className="record-stack">
       {capturing && (
-        <ContactChatCapture
-          contactId={contactId}
-          contactName={contactName}
+        <ChatCapture
+          record={{ type: "contact", id: contactId, name: contactName }}
           onClose={() => setCapturing(false)}
         />
       )}
@@ -176,7 +182,14 @@ export function ContactFilesTab({
           </PanelBody>
         )}
         {shown.length > 0 && (
-          <FilesGrid files={shown} onOpenEmail={onOpenEmail} />
+          <div ref={listRegion} tabIndex={-1}>
+            <FilesGrid
+              files={shown}
+              mayWrite={mayWrite}
+              focusLanding={focusLanding}
+              onOpenEmail={onOpenEmail}
+            />
+          </div>
         )}
         {state !== "ready" || shown.length === 0 ? (
           <PanelBody>
@@ -217,7 +230,7 @@ function FileCuts({
   const t = useT();
   const countOf = (key: Category) =>
     files.filter((file) => file.category === key).length;
-  const cuts = [...STEADY_CUTS, ...RARE_CUTS.filter((key) => countOf(key) > 0)];
+  const cuts = categoryCuts(files, STEADY_CUTS, value);
   return (
     <FilterPills
       label={t("docs.filterLabel")}
@@ -231,7 +244,7 @@ function FileCuts({
         },
         ...cuts.map((key) => ({
           value: key,
-          label: t(CATEGORY_LABELS[key]),
+          label: t(labelFor(CATEGORY_LABELS, key)),
           count: complete ? countOf(key) : undefined,
         })),
       ]}
@@ -243,9 +256,13 @@ function FileCuts({
 // the title if somebody gave it one, else the filename.
 function FilesGrid({
   files,
+  mayWrite,
+  focusLanding,
   onOpenEmail,
 }: Readonly<{
   files: readonly Attachment[];
+  mayWrite: boolean;
+  focusLanding: () => HTMLElement | null;
   onOpenEmail?: (activityId: string) => void;
 }>) {
   return (
@@ -253,7 +270,15 @@ function FilesGrid({
       <AttachmentGrid>
         {files.map((file) => (
           <li key={file.id}>
-            <AttachmentTile file={file} onOpenEmail={onOpenEmail} />
+            <AttachmentTile
+              file={file}
+              onOpenEmail={onOpenEmail}
+              verbs={
+                mayWrite && (
+                  <FileVerbs file={file} focusLanding={focusLanding} />
+                )
+              }
+            />
           </li>
         ))}
       </AttachmentGrid>

@@ -17,7 +17,7 @@ import {
   ProposedNextSteps,
   type SuggestionAction,
 } from "./company360";
-import { NewDealAction } from "./companyactions";
+import { CompanyNewDealAction } from "./companyactions";
 import { CompanyContractState, CompanyLastOffer } from "./companycommercial";
 import { CompanyProjectsPanel } from "./companyprojects";
 import { CompanyTasksFinds } from "./companytasksfinds";
@@ -167,7 +167,7 @@ function CompanyDealsTab({
     <DealsCard
       view={view}
       actions={
-        <NewDealAction
+        <CompanyNewDealAction
           companyId={company.id}
           companyName={company.display_name}
         />
@@ -240,6 +240,7 @@ function CompanyTasksTab({
         renderTick={(step) => (
           <TaskCompleteCheck
             activityId={step.activity_id}
+            subject={step.subject}
             version={step.version}
             update={update}
           />
@@ -250,6 +251,7 @@ function CompanyTasksTab({
             version={step.version}
             dueAt={step.due_at}
             dueHasTime={step.due_has_time}
+            dueIntent={step.due_intent}
             update={update}
             showComplete={false}
           />

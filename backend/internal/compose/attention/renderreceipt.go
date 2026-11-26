@@ -34,14 +34,15 @@ func receiptItem(receipt Receipt) crmcontracts.AttentionItem {
 		actions = append(actions, actionOpen)
 	}
 	item := crmcontracts.AttentionItem{
-		Id:           receipt.ID.String(),
-		Source:       crmcontracts.AttentionItemSource("approval"),
-		Kind:         &kind,
-		Title:        &summary,
-		SummaryParts: receipt.SummaryParts,
-		Subject:      subject,
-		OccurredAt:   &occurred,
-		Actions:      actions,
+		Id:            receipt.ID.String(),
+		Source:        crmcontracts.AttentionItemSource("approval"),
+		Kind:          &kind,
+		Title:         &summary,
+		SummaryParts:  receipt.SummaryParts,
+		SystemDisplay: receipt.SystemDisplay,
+		Subject:       subject,
+		OccurredAt:    &occurred,
+		Actions:       actions,
 	}
 	// A change made with nobody asked carries the way back.
 	//

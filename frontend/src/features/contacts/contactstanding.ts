@@ -12,7 +12,9 @@ import {
 } from "../../i18n";
 import { bucketLabel } from "../../lib/bucketlabel";
 import { valueFor } from "../../lib/labelfor";
+import { dueOnDay } from "../../lib/standingpeeks";
 import { omitted } from "./contact360";
+import { lastTaskBeforeCap, owedPromises } from "./contactpromises";
 import { directionSentence } from "./contactrail";
 import { changeSentence } from "./relationshipchange";
 
@@ -158,34 +160,47 @@ export function contactDims(
   view: Contact360,
   t: Translator,
   locale: Locale,
+  words?: Readonly<{ zone: string; companyZone?: string }>,
 ): StandingDim[] {
   return [
-    promisesDim(view, t, locale),
+    promisesDim(view, t, locale, words),
     exchangeDim(view, t, locale),
     reachDim(view, t, locale),
   ].filter((dim): dim is StandingDim => dim !== null);
 }
 
-// `claims` returns every open promise of ours uncapped, so the count is whole.
 function promisesDim(
   view: Contact360,
   t: Translator,
   locale: Locale,
+  words?: Readonly<{ zone: string; companyZone?: string }>,
 ): StandingDim | null {
-  if (omitted(view, "claims")) {
+  const open = owedPromises(view, t, words);
+  if (!open) {
     return null;
   }
   const asOf = Date.parse(view.as_of);
-  const open = (view.claims ?? []).filter(
-    (claim) => claim.kind === "commitment_ours" && claim.status === "open",
-  );
   const overdue = open.filter(
-    (claim) =>
-      claim.due_at != null && daysPast(Date.parse(claim.due_at), asOf).late,
+    (owed) => owed.due != null && daysPast(Date.parse(owed.due), asOf).late,
   );
   const label = t("contact.standing.dim.promises");
-  const count = (base: PluralBase, n: number) =>
-    translatePlural(locale, base, n, { count: formatNumber(n, locale) });
+  // Colleague-filed tasks past the cap make a count a floor. One more overdue
+  // task can hide there only if the last listed task is overdue itself.
+  const last = lastTaskBeforeCap(view);
+  const lastLate =
+    last?.due_at != null &&
+    daysPast(
+      Date.parse(
+        words
+          ? dueOnDay(words, last.due_at, last.due_has_time, last.due_intent).at
+          : last.due_at,
+      ),
+      asOf,
+    ).late;
+  const count = (base: PluralBase, n: number, floor: boolean) =>
+    translatePlural(locale, base, n, {
+      count: `${formatNumber(n, locale)}${floor ? "+" : ""}`,
+    });
   if (open.length === 0) {
     return {
       key: "promises",
@@ -194,13 +209,13 @@ function promisesDim(
       tone: "neutral",
     };
   }
-  const named = (overdue[0] ?? open[0])?.body;
+  const named = (overdue[0] ?? open[0])?.title;
   if (overdue.length > 0) {
     return {
       key: "promises",
       label,
-      value: count("standing.overdue", overdue.length),
-      sub: [count("standing.ofOpen", open.length), named]
+      value: count("standing.overdue", overdue.length, lastLate),
+      sub: [count("standing.ofOpen", open.length, last != null), named]
         .filter(Boolean)
         .join(" · "),
       tone: "danger",
@@ -209,7 +224,7 @@ function promisesDim(
   return {
     key: "promises",
     label,
-    value: count("standing.open", open.length),
+    value: count("standing.open", open.length, last != null),
     sub: named,
     tone: "success",
   };

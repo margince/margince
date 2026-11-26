@@ -2,10 +2,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
+import {
+  UnsavedExits,
+  UnsavedGuard,
+  useUnsavedGuard,
+} from "../components/unsaved";
 import { memoryStorage } from "../testing/appharness";
 import { ignoreSearch, newClient, renderWith } from "../testing/shellharness";
 import { Shell } from "./shell";
@@ -50,13 +57,90 @@ describe("Sign-out (AS-1)", () => {
     renderWith(client, <Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
     expect(client.getQueryData(["me"])).toBeTruthy();
     // Sign-out lives inside the account menu, so it takes opening first.
-    await user.click(screen.getByRole("button", { name: /Account$/ }));
+    await user.click(screen.getByRole("button", { name: /account$/i }));
     await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
     // POST fired and the ["me"] entry lost its data, so the auth gate
     // re-probes → 401 → login. This bites if useLogout's onSuccess stops
     // calling resetToSignedOut (lib/session.ts).
     await waitFor(() => expect(loggedOut).toBe(true));
     await waitFor(() => expect(client.getQueryData(["me"])).toBeUndefined());
+  });
+
+  it("asks before it ends a session with an unsaved edit on the page", async () => {
+    const user = userEvent.setup();
+    let loggedOut = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        loggedOut ||= url.endsWith("/v1/auth/logout");
+        return new Response(null, { status: 404 });
+      }),
+    );
+    const client = newClient();
+    client.setQueryData(["me"], { user: { id: "u1", email: "ada@acme.test" } });
+    window.location.hash = "#/settings/account";
+    renderWith(
+      client,
+      <UnsavedExits>
+        <Shell onOpenSearch={ignoreSearch}>
+          <UnsavedGuard address="account" onKeep={() => undefined}>
+            {() => <GreetingDraft />}
+          </UnsavedGuard>
+        </Shell>
+      </UnsavedExits>,
+    );
+    await user.type(screen.getByRole("textbox", { name: "Greeting" }), "Ada");
+    await user.click(screen.getByRole("button", { name: /account$/i }));
+    await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
+
+    await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
+    expect(loggedOut).toBe(false);
+  });
+
+  it("shows a refused sign-out once the reader discarded the edit for it", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/v1/auth/logout")) {
+          return new Response(
+            JSON.stringify({ status: 503, code: "service_unavailable" }),
+            {
+              status: 503,
+              headers: { "Content-Type": "application/problem+json" },
+            },
+          );
+        }
+        return new Response(null, { status: 404 });
+      }),
+    );
+    const client = newClient();
+    client.setQueryData(["me"], { user: { id: "u1", email: "ada@acme.test" } });
+    window.location.hash = "#/settings/account";
+    renderWith(
+      client,
+      <UnsavedExits>
+        <Shell onOpenSearch={ignoreSearch}>
+          <UnsavedGuard address="account" onKeep={() => undefined}>
+            {() => <GreetingDraft />}
+          </UnsavedGuard>
+        </Shell>
+      </UnsavedExits>,
+    );
+    await user.type(screen.getByRole("textbox", { name: "Greeting" }), "Ada");
+    await user.click(screen.getByRole("button", { name: /account$/i }));
+    await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
+    const question = await screen.findByRole("dialog", {
+      name: "Discard unsaved changes?",
+    });
+    await user.click(
+      within(question).getByRole("button", { name: "Discard changes" }),
+    );
+
+    expect(await screen.findByText("Sign-out failed")).toBeVisible();
+    expect(client.getQueryData(["me"])).toBeTruthy();
   });
 
   // queryClient.clear() alone empties the cache but does NOT force a mounted
@@ -103,7 +187,7 @@ describe("Sign-out (AS-1)", () => {
 
     // Authenticated: the chrome (and its account menu) is on screen. Boot may
     // probe more than once; what this test owns is the probe sign-out causes.
-    const account = await screen.findByRole("button", { name: /Account$/ });
+    const account = await screen.findByRole("button", { name: /account$/i });
     expect(meCalls).toBeGreaterThanOrEqual(1);
     const probesBeforeSignOut = meCalls;
 
@@ -120,3 +204,15 @@ describe("Sign-out (AS-1)", () => {
     expect(meCalls).toBeGreaterThan(probesBeforeSignOut);
   });
 });
+
+function GreetingDraft() {
+  const [typed, setTyped] = useState("");
+  useUnsavedGuard(typed !== "");
+  return (
+    <input
+      aria-label="Greeting"
+      value={typed}
+      onChange={(event) => setTyped(event.target.value)}
+    />
+  );
+}

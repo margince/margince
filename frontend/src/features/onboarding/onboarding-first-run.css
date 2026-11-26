@@ -22,6 +22,10 @@
    not read as a container either: it read as a stray line, with the tinted
    strip under the button looking like a band attached to nothing. */
 .ob-fr-form .panel {
+  /* Transparent over its host, so what it holds reads the host's rung. */
+  --ground: inherit;
+  --groundEdge: inherit;
+  --groundSeam: inherit;
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -57,16 +61,4 @@
    this installation has agreed to is the ordinary case. */
 .ai-rate-proposed {
   color: var(--aiText);
-}
-
-/* The platform step's fold: the console steps as a numbered list, indented to
-   the sheet's own gutter, with their notes under them. */
-.ob-fr-help {
-  margin: 0;
-  padding-inline-start: var(--space-5);
-  display: grid;
-  gap: var(--space-2);
-}
-.ob-fr-help-note {
-  margin: 0;
 }

@@ -36,7 +36,7 @@ func TestAGhostedSignalCountsCalendarDaysInTheInstallationZone(t *testing.T) {
 	now := time.Date(2026, 9, 16, 1, 0, 0, 0, zone)
 
 	company := e.SeedCompany(t, "Zone Ghost Co", nil)
-	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, company)
+	e.WsExec(t, `UPDATE company SET status = 'opportunity' WHERE id = $1`, company)
 	contact := employedAt(t, e, company, "Zoe Ghost")
 	logMail(t, e, contact, "inbound", wrote.AddDate(0, 0, -5))
 	logMail(t, e, contact, "outbound", wrote)
@@ -73,7 +73,7 @@ func TestAGhostedSignalCountsADayMailFromItsDate(t *testing.T) {
 	now := time.Date(2026, 9, 16, 9, 0, 0, 0, zone)
 
 	company := e.SeedCompany(t, "Day Ghost Co", nil)
-	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, company)
+	e.WsExec(t, `UPDATE company SET status = 'opportunity' WHERE id = $1`, company)
 	contact := employedAt(t, e, company, "Dana Ghost")
 	logMail(t, e, contact, "inbound", dated.AddDate(0, 0, -5))
 	subject, outbound := "Proposal", "outbound"
@@ -104,11 +104,10 @@ func TestAGhostedSignalCountsADayMailFromItsDate(t *testing.T) {
 	}
 }
 
-// The digest and the signal are two readers of one quiet project. A project
-// untouched since 22:00 local, judged at 01:00 local 45 calendar days later,
-// is 44 days and three hours quiet by the clock. Both count 45; the signal
-// records it on its audit row and says the rule's threshold.
-func TestTheDigestAndTheSignalCountAQuietProjectInTheSameCalendarDays(t *testing.T) {
+// A project untouched since 22:00 local, judged at 01:00 local 45 calendar
+// days later, is 44 days and three hours quiet by the clock. The signal counts
+// 45, records it on its audit row and says the rule's threshold.
+func TestTheSignalCountsAQuietProjectInCalendarDays(t *testing.T) {
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Asia/Ho_Chi_Minh"'::jsonb WHERE key = 'installation.timezone'`)
 	zone, err := time.LoadLocation("Asia/Ho_Chi_Minh")
@@ -131,24 +130,6 @@ func TestTheDigestAndTheSignalCountAQuietProjectInTheSameCalendarDays(t *testing
 	now := time.Date(2026, 10, 16, 1, 0, 0, 0, zone)
 	e.WsExec(t, `UPDATE project SET created_at = $2 WHERE id = $1`, project, quietSince)
 
-	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
-		Objects:  map[string]principal.ObjectGrant{"project": {Read: true}},
-		RowScope: principal.RowScopeTeam,
-	})
-	var digestDays int
-	if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
-		quiet, err := digestQuietProjects(reader, tx, now)
-		if err != nil {
-			return err
-		}
-		if len(quiet) != 1 {
-			return fmt.Errorf("digest lists %d quiet projects, want 1", len(quiet))
-		}
-		digestDays = quiet[0].DaysQuiet
-		return nil
-	}); err != nil {
-		t.Fatal(err)
-	}
 	ctx := principal.SystemActing(e.Admin(), signalScanActor)
 	var summary string
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -159,9 +140,6 @@ func TestTheDigestAndTheSignalCountAQuietProjectInTheSameCalendarDays(t *testing
 			project, kindProjectGoneQuiet).Scan(&summary)
 	}); err != nil {
 		t.Fatal(err)
-	}
-	if digestDays != 45 {
-		t.Errorf("digest days_quiet = %d, want 45", digestDays)
 	}
 	if want := fmt.Sprintf(signalSummaryCopyFor(textlang.English).projectQuiet, "ERP rollout", projects.DefaultProjectQuietDays); summary != want {
 		t.Errorf("signal summary = %q, want %q", summary, want)
@@ -192,7 +170,7 @@ func TestALaterScanKeepsOneGhostedSignalWhoseSummaryStillHolds(t *testing.T) {
 	e := integration.Setup(t)
 	wrote := time.Date(2026, 9, 1, 10, 0, 0, 0, time.UTC)
 	company := e.SeedCompany(t, "Later Ghost Co", nil)
-	e.WsExec(t, `UPDATE company SET lifecycle = 'opportunity' WHERE id = $1`, company)
+	e.WsExec(t, `UPDATE company SET status = 'opportunity' WHERE id = $1`, company)
 	contact := employedAt(t, e, company, "Lee Ghost")
 	logMail(t, e, contact, "inbound", wrote.AddDate(0, 0, -5))
 	logMail(t, e, contact, "outbound", wrote)

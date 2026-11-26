@@ -16,7 +16,11 @@ package contacts
 // This gate never touches `nameSimilarity`, which is pinned by PO-PARAM-JW-1 and
 // shared with contact and lead dedupe, where the character metric is right.
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/namematch"
+)
 
 // companyNameStopwords are the words a company name shares with its whole market:
 // present in many names, evidence of identity in none. They are REMOVED from a
@@ -138,7 +142,13 @@ const companyFuzzyTokenLengthSlack = 1
 // removed. A word is dropped for being generic, never for being short: a filter
 // on length threw away "3M", whose two characters ARE the company.
 func distinctiveCompanyTokens(name string) []string {
-	fields := strings.FieldsFunc(companyNameForMatching(name), nameWordSeparators)
+	return distinctiveTokensOf(companyNameForMatching(name))
+}
+
+// distinctiveTokensOf is distinctiveCompanyTokens of a name already in its
+// matching form.
+func distinctiveTokensOf(matching string) []string {
+	fields := strings.FieldsFunc(matching, nameWordSeparators)
 	out := make([]string, 0, min(len(fields), companyGateTokenBudget))
 	for i, token := range fields {
 		// An article that would leave a ONE-WORD name is not an article: "Việt
@@ -189,17 +199,14 @@ func sameCompanyToken(a, b string) bool {
 	if max(lenA, lenB)-min(lenA, lenB) > companyFuzzyTokenLengthSlack {
 		return false
 	}
-	return jaroWinkler(a, b) >= companyFuzzyTokenSimilarity
+	return namematch.JaroWinkler(a, b) >= companyFuzzyTokenSimilarity
 }
 
-// squashedCompanyName is the name with its word separators removed, so that where a
-// writer put the space does not decide identity: "Health Care" and "Healthcare"
-// are one company, and so are "Digital Ocean" and "DigitalOcean".
-//
-// It merges that difference and nothing else — "Health Care" and "Medical Care"
-// stay apart, because removing spaces does not make different words equal.
-func squashedCompanyName(name string) string {
-	return strings.Join(strings.FieldsFunc(companyNameForMatching(name), nameWordSeparators), "")
+// squashedOf is a matching form with its word separators removed. Where a
+// writer put the space does not decide identity: "Health Care" and
+// "Healthcare" are one company. "Health Care" and "Medical Care" stay apart.
+func squashedOf(matching string) string {
+	return strings.Join(strings.FieldsFunc(matching, nameWordSeparators), "")
 }
 
 // sharesADistinctiveWord is the gate itself: may these two names be scored?
@@ -209,33 +216,24 @@ func squashedCompanyName(name string) string {
 // "Digital Ocean". The TOKEN PASS then asks whether they share a word that means
 // something.
 func sharesADistinctiveWord(a, b string) bool {
-	// An EMPTY squashed name is not a match with another empty one: two names
-	// made entirely of punctuation have said nothing about being one company.
-	if squashed := squashedCompanyName(a); squashed != "" && squashed == squashedCompanyName(b) {
+	return formsShareADistinctiveWord(companyNameFormsOf(a), companyNameFormsOf(b))
+}
+
+// formsShareADistinctiveWord is the gate over names already in their forms.
+// An empty squashed name matches nothing, and neither does a name of no words.
+func formsShareADistinctiveWord(a, b companyNameForms) bool {
+	if a.squashed != "" && a.squashed == b.squashed {
 		return true
 	}
-	left, right := distinctiveCompanyTokens(a), distinctiveCompanyTokens(b)
-	_, leftMarket := matchingFormOf(a)
-	_, rightMarket := matchingFormOf(b)
-	// A name that reduced to NOTHING shares no word and stops here: a Vietnamese
-	// name of only its legal form and trade vocabulary strips to empty
-	// (companynameforms.go), and two such names have said nothing.
-	shared := sharedTokenCount(left, right)
+	shared := sharedTokenCount(a.tokens, b.tokens)
 	if shared == 0 {
 		return false
 	}
-	// ONE SHARED WORD IS NOT ALWAYS ENOUGH, and this is asked only of a syllabic
-	// market. Vietnamese builds a brand from two or three syllables drawn from a
-	// small pool — measured over 30 brands, "nam" and "viet" appear in 6 each —
-	// so "Hòa Bình" and "Hòa Phát" share "hoa" and are two different companies.
-	// English brands are built from rare words, where one is nearly the whole of
-	// the evidence and demanding more loses "Amazon AWS" against "Amazon Web
-	// Services".
-	//
-	// EITHER side declaring the market is enough: a company does not stop being
-	// Vietnamese when someone types its bare brand.
-	if isSyllabicMarket(leftMarket) || isSyllabicMarket(rightMarket) {
-		return 2*shared > min(len(left), len(right))
+	// In a syllabic market one shared word is not enough. Vietnamese brands
+	// draw on a small pool of syllables: "Hòa Bình" and "Hòa Phát" are two
+	// companies. Either side declaring the market decides.
+	if a.syllabic || b.syllabic {
+		return 2*shared > min(len(a.tokens), len(b.tokens))
 	}
 	return true
 }

@@ -6,7 +6,9 @@ package auth
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -31,6 +33,10 @@ func withoutRecorder(ctx context.Context) context.Context {
 // probe is Require recording nothing. A branch uses it, because its refusal is
 // not the call's answer, and a recorded check hides a tool from its lacker.
 func probe(ctx context.Context, object string, action principal.Action) error {
+	object, err := gateObject(object)
+	if err != nil {
+		return err
+	}
 	return probeCheck(ctx, Check{Object: object, Actions: []principal.Action{action}})
 }
 
@@ -40,10 +46,16 @@ func probeCheck(ctx context.Context, c Check) error {
 		return err
 	}
 	if p.Type == principal.PrincipalBuyer {
-		return refuseBuyer(p, c.String())
+		return refuseBuyer(p)
+	}
+	// A kind the installation switched off is refused whatever the role holds,
+	// so it names no grant: adding one would not lift it.
+	if !corefeatures.FromContext(ctx).RecordEnabled(c.Object) {
+		return fmt.Errorf("this installation has switched off %s records: %w",
+			strings.ReplaceAll(c.Object, "_", " "), apperrors.ErrPermissionDenied)
 	}
 	if !c.HeldBy(p) {
-		return fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied)
+		return refuseGrant(c)
 	}
 	return nil
 }

@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "legacy_loss_reasons",
+  "verb": "list_legacy_loss_reasons",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

@@ -1,9 +1,12 @@
 # CASE 111 — An admin's questions about the installation are reads: the job page,
 # the AI routing and the audit trail are three topics of read_workspace, and none
 # of them reaches a write. Which model the installation runs stays the user's to
-# change, so no settings call is made. The trail's content moves with the run, so
-# the case holds the choice of topic and not what the trail says.
+# change, so no settings call is made. The job states, the routed models and the
+# trail all move with the stack and the run, so no fixed fact can hold the
+# answer. Each topic read is the only source of its answer, so the reads stand
+# for it.
 name: case111_how_is_the_workspace_doing
+title: How is the workspace doing?
 criteria: [1, 2, 3]
 writes: true
 
@@ -22,6 +25,9 @@ must_call_with:
 
 must_not_call_with:
   - change_settings~.
+  # The AI call traces ask for the user's yes first, and the routing question
+  # does not need them.
+  - 'read_workspace~"topic": "ai_calls?"'
 
 may_call:
   - whoami

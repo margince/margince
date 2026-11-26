@@ -18,24 +18,23 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Eraser executes the shared erase path both the DSR surface and the
 // retention engine's 'erase' action ride.
 type Eraser struct {
+	invalidateEdges EdgeInvalidator
 	// db binds the installation's workspace itself (ADR-0091 §9 step 3).
 	db *database.DB
-	// blob purges the subject's attachment objects (Art. 17 reaches the
-	// bytes, not only the row). nil in a deployment with no object store —
-	// where no upload path could have stored an object either.
+	// blob is the object store the erased attachments' bytes live in. The
+	// erasure queues their keys for the stored-object reap and deletes no
+	// object itself. nil in a deployment with no object store.
 	blob blobstore.Store
-	// payloads destroys the one-time link material behind a controller
-	// delivery. Like blob it is nil where no such material could exist, and
-	// like blob the purge happens BEFORE the rows that reference it: the
-	// reference lives in the row, so clearing the row first would orphan a live
-	// confirmation link with no key left to find it.
-	payloads PayloadPurger
+	// journal is a separate store for the suppression journal, so a restore of
+	// blob never rolls it back. nil keeps the journal in blob.
+	journal blobstore.Store
 	// purgeRawCaptures destroys the provider original behind an activity whose
 	// text this eraser destroys.
 	//
@@ -47,6 +46,18 @@ type Eraser struct {
 	purgeRawCaptures RawCapturePurger
 	// country selects the jurisdiction whose correspondence floor binds.
 	country CountryReader
+	// extensions holds the personal-data declarations of the extension tables
+	// this eraser clears. The zero value declares none.
+	extensions extprivacy.Registry
+}
+
+// WithExtensions returns an eraser that also clears the extension tables the
+// registry declares. Every eraser built outside a test carries it;
+// TestEveryProductionEraserCarriesTheExtensionRegistry holds that.
+func (e *Eraser) WithExtensions(r extprivacy.Registry) *Eraser {
+	clone := *e
+	clone.extensions = r
+	return &clone
 }
 
 // NewEraser binds the erasure pass to the installation's pool.
@@ -69,14 +80,6 @@ func (e *Eraser) WithRawCapturePurger(purge RawCapturePurger) *Eraser {
 	return &clone
 }
 
-// WithPayloadVault returns an eraser that also destroys the one-time link
-// material behind the subject's controller deliveries.
-func (e *Eraser) WithPayloadVault(p PayloadPurger) *Eraser {
-	clone := *e
-	clone.payloads = p
-	return &clone
-}
-
 // WithBlobstore returns an eraser that also purges attachment objects.
 // Compose passes the object store so erasure reaches the bytes behind the
 // attachment rows it deletes.
@@ -84,6 +87,25 @@ func (e *Eraser) WithBlobstore(blob blobstore.Store) *Eraser {
 	clone := *e
 	clone.blob = blob
 	return &clone
+}
+
+// WithJournalStore returns an eraser that keeps the suppression journal in
+// journal instead of the attachment store. A nil journal changes nothing.
+func (e *Eraser) WithJournalStore(journal blobstore.Store) *Eraser {
+	clone := *e
+	clone.journal = journal
+	return &clone
+}
+
+// journalStore is where the export writes and the replay reads the journal.
+// Every journal access goes through it, so the two never disagree.
+//
+//nolint:ireturn // the store seam is an interface by design.
+func (e *Eraser) journalStore() blobstore.Store {
+	if e.journal != nil {
+		return e.journal
+	}
+	return e.blob
 }
 
 func requireErasableContact(ctx context.Context, tx pgx.Tx, subject ids.ContactID) error {

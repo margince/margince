@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
+import { TaskTerms } from "../../components/taskassignee";
 import { activityTimeline } from "../../design-system/activitytimeline";
 import { EmptyState, PendingBody } from "../../design-system/atoms";
 import { FilterPills } from "../../design-system/filterpills";
@@ -18,6 +19,7 @@ import {
   TIMELINE_FILTERS,
   type TimelineFilter,
 } from "../../lib/timelinefilter";
+import { extensionTimeline, useExtensionHistory } from "./extensionhistory";
 import { changeTimeline, useFieldHistory } from "./history";
 
 // A record's History, for every record page. All is what was said: threads,
@@ -126,6 +128,7 @@ export function useRecordChronology({
   kind,
   recordId,
   filter,
+  enabled = true,
   changesInPanel = false,
   activities,
   activitiesHaveMore,
@@ -137,6 +140,7 @@ export function useRecordChronology({
   kind: EntityKind;
   recordId: string;
   filter: TimelineFilter;
+  enabled?: boolean;
   // True where the page draws Changes with RecordHistoryTab, which reads and
   // pages its own feed. A second read here would fetch rows nobody sees.
   changesInPanel?: boolean;
@@ -167,32 +171,52 @@ export function useRecordChronology({
   const viewerId = useViewerId();
   // Only the Changes cut reads the change feed. The kind, word and date dials
   // narrow the exchanges, so they never hide a change.
-  const wantsChanges = !readsExchangesOnly(filter) && !changesInPanel;
+  const wantsChanges =
+    enabled && !readsExchangesOnly(filter) && !changesInPanel;
   const changes = useFieldHistory(kind, recordId, { enabled: wantsChanges });
   // `page.data ?? []`: a 200 with no body is a shape the contract permits, and
   // flattening it would hand the mapper below an `undefined` row.
-  const changeRows =
-    changes.data?.pages.flatMap((page) => page.data ?? []) ?? [];
+  const changeRows = enabled
+    ? (changes.data?.pages.flatMap((page) => page.data ?? []) ?? [])
+    : [];
+  const byId = new Map(activities.map((activity) => [activity.id, activity]));
   // The contacts on each exchange, named through the resolver the change rows
   // use for their stored ids. Both cuts then name a contact the same way.
+  const nameOf = values.nameOf;
   const activityEntries = activityTimeline(
     activities,
     viewerId,
     renderActions,
-    values.nameOf
-      ? {
-          nameOf: (entityType, entityId) =>
-            entityType === "contact" ? values.nameOf?.(entityId) : undefined,
-          t,
-          locale: values.locale,
-        }
-      : undefined,
-  ).map((entry) =>
+    {
+      nameOf: nameOf
+        ? (entityType, entityId) =>
+            entityType === "contact" ? nameOf(entityId) : undefined
+        : undefined,
+      t,
+      locale: values.locale,
+    },
+  ).map((entry) => {
+    const activity = byId.get(entry.id);
     // Only an email has a drawer to open, and only when the caller has one to
     // open it in.
-    onOpenEmail && entry.emailSummary
-      ? { ...entry, onOpenEmail: () => onOpenEmail(entry.id) }
-      : entry,
+    const opened =
+      onOpenEmail && entry.emailSummary
+        ? { ...entry, onOpenEmail: () => onOpenEmail(entry.id) }
+        : entry;
+    // A done task's past due day beside Completed would read as missed.
+    return entry.kind === "task" && activity && !activity.is_done
+      ? { ...opened, terms: <TaskTerms task={activity} /> }
+      : opened;
+  });
+  // What installed extensions add rides with the exchanges: the Changes cut is
+  // the record's own edits and stays that.
+  const extensionHistory = useExtensionHistory(
+    kind,
+    recordId,
+    enabled && readsExchangesOnly(filter),
+  );
+  const extensionEntries = extensionTimeline(
+    enabled ? (extensionHistory.data?.data ?? []) : [],
   );
   // historyFieldLabel, not coldFieldLabel: changeRows is the same
   // FieldHistoryEntry feed the Changes tab renders, and COLD_FIELD_LABELS
@@ -208,7 +232,11 @@ export function useRecordChronology({
   if (readsExchangesOnly(filter)) {
     // The renderer, not this hook, narrows these rows to threads.
     return {
-      entries: activityEntries,
+      entries: mergeNewestFirst(
+        activityEntries,
+        extensionEntries,
+        activitiesHaveMore,
+      ),
       // A capped list that says nothing reads as the whole history: a reader
       // at the oldest of 25 rows takes it for the day the relationship began.
       truncated: activitiesHaveMore,
@@ -228,6 +256,30 @@ export function useRecordChronology({
     readsChanges: wantsChanges,
     activities: undefined,
   };
+}
+
+/**
+ * mergeNewestFirst places each extra entry before the first older one, so the
+ * activities keep the order the server gave them. While the activity feed has
+ * a next page, an extra older than the oldest loaded activity waits. Shown
+ * now, it would sit above activities not loaded yet.
+ */
+function mergeNewestFirst(
+  base: TimelineEntry[],
+  extra: TimelineEntry[],
+  baseHasMore: boolean,
+): TimelineEntry[] {
+  const merged = [...base];
+  const oldest = Date.parse(base.at(-1)?.atIso ?? "") || 0;
+  for (const entry of extra) {
+    const at = Date.parse(entry.atIso);
+    if (baseHasMore && at < oldest) {
+      continue;
+    }
+    const next = merged.findIndex((row) => Date.parse(row.atIso) < at);
+    merged.splice(next < 0 ? merged.length : next, 0, entry);
+  }
+  return merged;
 }
 
 /**
@@ -317,6 +369,9 @@ export function chronologyNotice(
     assembled: boolean;
     // The record's read named the activities as hidden from this reader.
     withheld?: boolean;
+    // A kind, word or date narrows the read, so an empty list says nothing
+    // about the record itself.
+    filtered?: boolean;
   },
   t: ReturnType<typeof useT>,
 ): ReactNode {
@@ -348,6 +403,9 @@ export function chronologyNotice(
   }
   if (chronology.entries.length > 0) {
     return undefined;
+  }
+  if (filter !== "changes" && exchanges.filtered) {
+    return <EmptyState>{t("chronology.filteredEmpty")}</EmptyState>;
   }
   // An empty All is an empty record, and the caller's own sentence says what
   // would land here and how. Only the Changes cut has a fact of its own.

@@ -12,6 +12,8 @@ package activities
 import (
 	"context"
 	"errors"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -37,7 +39,10 @@ func (s *Store) GetActivity(ctx context.Context, id ids.ActivityID, archived sto
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
 		out, err = readActivityAt(ctx, tx, id, archived, s.now())
-		return err
+		if err != nil {
+			return err
+		}
+		return s.stampMeetingNotesConnection(ctx, tx, &out)
 	})
 	if err != nil {
 		return out, err
@@ -55,6 +60,9 @@ func (s *Store) GetActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	if err != nil {
 		return out, err
 	}
+	if err := s.stampMeetingNotesConnection(ctx, tx, &out); err != nil {
+		return out, err
+	}
 	return out, withCustomValuesOf(ctx, tx, active.cols, &out)
 }
 
@@ -69,7 +77,7 @@ func (s *Store) GetActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 // subject of the issue behind this.
 var activitySortFields = map[string]storekit.SortField{
 	"occurred_at": storekit.Column(storekit.KindTimestamp),
-	"due_at":      {Kind: storekit.KindTimestamp, CursorField: "task_due_v2", Expr: func(context.Context, func(any) int) (string, error) { return storekit.TaskDueSQL("a"), nil }},
+	"due_at":      {Kind: storekit.KindTimestamp, CursorField: "task_due_v3", Expr: func(context.Context, func(any) int) (string, error) { return storekit.TaskDueOrderSQL("a"), nil }},
 	"created_at":  storekit.Column(storekit.KindTimestamp),
 	"updated_at":  storekit.Column(storekit.KindTimestamp),
 	"remind_at":   storekit.Column(storekit.KindTimestamp),
@@ -95,7 +103,7 @@ const (
 // tie-breaker. ListSort carries one, deliberately — a keyset cursor over two
 // sort keys is a different machine — so this arm keeps its order, refuses a
 // caller's sort outright rather than ignoring it, and hands out no cursor.
-const requestPriorityOrder = " ORDER BY (a.owed_verdict = 'asks_us') DESC NULLS LAST, a.occurred_at DESC, a.id DESC"
+var requestPriorityOrder = " ORDER BY coalesce(" + storekit.AsksUsClause("a") + ", false) DESC, a.occurred_at DESC, a.id DESC"
 
 // TimelineCursor mints the token the activity list continues from, for a
 // SECTION that paged the same rows itself.
@@ -118,7 +126,7 @@ func TimelineCursor(ctx context.Context, last crmcontracts.Activity) (string, er
 		return "", err
 	}
 	key := last.OccurredAt.Format(time.RFC3339Nano)
-	return sorted.EncodePageCursor(&key, last.CreatedAt, ids.UUID(last.Id))
+	return sorted.EncodePageCursor("activities", &key, last.CreatedAt, ids.UUID(last.Id))
 }
 
 // timelineSort resolves the order one read runs in: the caller's spec where
@@ -131,7 +139,7 @@ func timelineSort(ctx context.Context, in ListActivitiesInput, arg func(any) int
 				Message: "the request queue is ordered by what is owed and when it arrived, and cannot be re-ordered",
 			}
 		}
-		return storekit.ParseListSort(ctx, in.Sort, activitySortFields, arg)
+		return storekit.ParseListSort(ctx, in.Sort, activitySortFieldsIn(in.DayZone), arg)
 	}
 	spec := defaultTimelineSort
 	switch {
@@ -140,7 +148,7 @@ func timelineSort(ctx context.Context, in ListActivitiesInput, arg func(any) int
 	case in.OpenAndDueBy != nil || in.OpenAndDueAfter != nil:
 		spec = dueQueueSort
 	}
-	return storekit.ParseListSort(ctx, &spec, activitySortFields, arg)
+	return storekit.ParseListSort(ctx, &spec, activitySortFieldsIn(in.DayZone), arg)
 }
 
 // errRequestReviewWithCursor is refused rather than built into SQL, and it is
@@ -164,11 +172,10 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 	asReminderQueue(ctx, &in)
 	var activities []crmcontracts.Activity
 	var page storekit.Page
-	var err error
-	if in.Columns, err = s.ActiveActivityColumns(ctx); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		if in.Columns, err = s.activityColumnsIn(ctx, tx); err != nil {
+			return err
+		}
 		activities, page, err = s.ListActivitiesIn(ctx, tx, in)
 		return err
 	})
@@ -290,15 +297,17 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	//
 	// The hold says no principal reads restricted content.
 	content := "(" + audience + ") AND " + auth.ActivityAvailableClause("a")
+	// The id filter names only a, so it runs at a's scan, before the decision.
+	from, content := ActivityContentFrom("activity a", content)
 	columns, err := activityColumns(ctx, content, arg)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	q := `SELECT ` + columns + ` FROM activity a WHERE a.id = $1`
+	q := `SELECT ` + columns + ` FROM ` + from + ` WHERE a.id = $1`
 	if archived == storekit.LiveOnly {
 		q += ` AND a.archived_at IS NULL`
 	}
-	a, err := scanActivity(tx.QueryRow(ctx, q, args...))
+	a, err := scanActivity(ctx, tx.QueryRow(ctx, q, args...))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Activity{}, apperrors.ErrNotFound
 	}
@@ -329,16 +338,20 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 // target is out of scope is dropped, so links[] answers "what this is about,
 // as far as you can see".
 func AttachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activity) error {
-	if len(activities) == 0 {
+	owner := make(map[ids.UUID]int, len(activities))
+	for i, a := range activities {
+		owner[ids.UUID(a.Id)] = i
+	}
+	return attachLinksFrom(ctx, tx, activities, owner, false)
+}
+
+// attachLinksFrom appends the readable links of every activity id in owner to
+// the row it maps to. union drops a link to a record that row already names.
+func attachLinksFrom(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activity, owner map[ids.UUID]int, union bool) error {
+	if len(owner) == 0 {
 		return nil
 	}
-	activityIDs := make([]ids.UUID, len(activities))
-	byID := make(map[ids.UUID]int, len(activities))
-	for i, a := range activities {
-		activityIDs[i] = ids.UUID(a.Id)
-		byID[ids.UUID(a.Id)] = i
-	}
-	args := []any{activityIDs}
+	args := []any{slices.Collect(maps.Keys(owner))}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	visible, err := auth.LinkTargetReadableClause(ctx, "al", arg)
 	if err != nil {
@@ -348,7 +361,7 @@ func AttachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activ
 		visible = "TRUE"
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT al.id, al.activity_id, al.entity_type, `+linkIDCoalesceQualified("al")+`
+		SELECT al.id, al.activity_id, al.entity_type, `+linkIDCoalesceQualified("al")+`, al.deal_relevance, al.relevance_source
 		FROM activity_link al
 		WHERE al.activity_id = ANY($1) AND `+visible+`
 		ORDER BY al.activity_id, al.entity_type, al.id`, args...)
@@ -359,36 +372,45 @@ func AttachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activ
 	for rows.Next() {
 		var linkID, activityID, entityID ids.UUID
 		var entityType string
-		if err := rows.Scan(&linkID, &activityID, &entityType, &entityID); err != nil {
+		var relevance *crmcontracts.ActivityLinkDealRelevance
+		var source *crmcontracts.ActivityLinkRelevanceSource
+		if err := rows.Scan(&linkID, &activityID, &entityType, &entityID, &relevance, &source); err != nil {
 			return err
 		}
-		i, ok := byID[activityID]
+		i, ok := owner[activityID]
 		if !ok {
 			continue
 		}
 		link := crmcontracts.ActivityLink{
-			Id:         (*openapi_types.UUID)(&linkID),
-			ActivityId: (*openapi_types.UUID)(&activityID),
-			EntityType: crmcontracts.ActivityLinkEntityType(entityType),
-			EntityId:   openapi_types.UUID(entityID),
+			Id:              (*openapi_types.UUID)(&linkID),
+			ActivityId:      (*openapi_types.UUID)(&activityID),
+			EntityType:      crmcontracts.ActivityLinkEntityType(entityType),
+			EntityId:        openapi_types.UUID(entityID),
+			DealRelevance:   relevance,
+			RelevanceSource: source,
 		}
 		if activities[i].Links == nil {
 			activities[i].Links = &[]crmcontracts.ActivityLink{}
+		}
+		if union && slices.ContainsFunc(*activities[i].Links, func(l crmcontracts.ActivityLink) bool {
+			return l.EntityType == link.EntityType && l.EntityId == link.EntityId
+		}) {
+			continue
 		}
 		*activities[i].Links = append(*activities[i].Links, link)
 	}
 	return rows.Err()
 }
 
-// scanActivityPage scans one row of a sorted page: the projection every reader
-// of an activity takes, and the sort's cursor key where the sort appends one.
-func scanActivityPage(row pgx.Row, sorted *storekit.ListSort) (crmcontracts.Activity, *string, error) {
+// scanActivityPage scans one row of a sorted page. It reads the projection every
+// activity reader takes, the sort's cursor key when there is one, then after.
+func scanActivityPage(ctx context.Context, row pgx.Row, sorted *storekit.ListSort, after ...any) (crmcontracts.Activity, *string, error) {
 	var key *string
 	var dest []any
 	if sorted.CursorKeySuffix() != "" {
 		dest = append(dest, &key)
 	}
-	out, err := scanActivity(storekit.TrailingColumns{Row: row, Dest: dest})
+	out, err := scanActivity(ctx, storekit.TrailingColumns{Row: row, Dest: append(dest, after...)})
 	return out, key, err
 }
 
@@ -398,12 +420,12 @@ func scanActivityPage(row pgx.Row, sorted *storekit.ListSort) (crmcontracts.Acti
 // a column added or moved carries its own destination with it — the transposed
 // scan that used to be possible among the string-ish neighbours has no second
 // list to disagree with.
-func scanActivity(row pgx.Row) (crmcontracts.Activity, error) {
+func scanActivity(ctx context.Context, row pgx.Row) (crmcontracts.Activity, error) {
 	var s activityScan
 	if err := row.Scan(activityScanTargets(&s)...); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	return s.record(), nil
+	return s.record(ctx), nil
 }
 
 // CountActivities answers how many rows the SAME narrowing matches, with no
@@ -426,45 +448,40 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 	}
 	asReminderQueue(ctx, &in)
 	var total int
-	var err error
-	if len(in.CustomFilters) > 0 {
-		if in.Columns, err = s.ActiveActivityColumns(ctx); err != nil {
-			return 0, err
-		}
-	}
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
 		if err := requireActivityListScope(ctx, tx, in); err != nil {
 			return err
 		}
 		var err error
+		if len(in.CustomFilters) > 0 {
+			if in.Columns, err = s.activityColumnsIn(ctx, tx); err != nil {
+				return err
+			}
+		}
 		if in.readerAddresses, err = s.readerAddressList(ctx, tx, readerOrNobody(ctx)); err != nil {
 			return err
 		}
 		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
 			return err
 		}
-		if in.mailIdentities, err = currentTaskMailIdentities(ctx, tx, in); err != nil {
+		if in.mailIdentities, err = listMailSeatIdentities(ctx, tx, in); err != nil {
 			return err
 		}
-		if in.WithOutsideParty {
+		if in.WithOutsideParty || in.AwaitingOutcomeAsOf != nil {
 			in.outsideParty = outsidePartyClause(ctx, tx)
 		}
+		in.countOnly = true
 		where, content, _, args, err := listActivitiesFilter(ctx, in)
 		if err != nil {
 			return err
 		}
-		columns, err := activityColumns(ctx, content, func(v any) int { args = append(args, v); return len(args) })
-		if err != nil {
-			return err
-		}
-		// The list's own projection, counted. Not `count(*)` over the join
-		// directly: the content clauses put placeholders in the SELECT list, and
-		// a statement that binds an argument it never mentions is one Postgres
-		// refuses outright ("could not determine data type of parameter"). The
-		// planner reads the wrapper for what it is.
+		columns := activityCountColumns(content)
+		// The decision column binds the placeholders the filter rendered for it.
+		// Postgres refuses a statement with an unmentioned argument ("could not
+		// determine data type of parameter").
 		return tx.QueryRow(ctx,
 			`SELECT count(*) FROM (SELECT `+columns+
-				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(in, args)...).Scan(&total)
+				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(ctx, in, args)...).Scan(&total)
 	})
 	return total, err
 }

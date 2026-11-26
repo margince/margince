@@ -20,35 +20,25 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/dealfiler"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // whichDealActor is the system identity the question task is written under.
 const whichDealActor = "system:capture-which-deal"
-
-var (
-	whichDealSubject = langcopy.Phrase{
-		En: "Which deal is this about?",
-		De: "Um welchen Deal geht es hier?",
-		Vi: "Thư này thuộc về thương vụ nào?",
-	}
-	whichDealBody = langcopy.Phrase{
-		En: "Several open deals fit this mail, so Margince filed it on none of them. Open the mail and use Relink to put it on the right deal, or choose None of these deals.",
-		De: "Mehrere offene Deals passen zu dieser Mail, deshalb hat Margince sie keinem zugeordnet. Öffnen Sie die Mail und ordnen Sie sie mit Neu verknüpfen dem richtigen Deal zu, oder wählen Sie Keiner dieser Deals.",
-		Vi: "Nhiều thương vụ đang mở phù hợp với thư này, nên Margince chưa gắn thư vào thương vụ nào. Hãy mở thư và dùng Liên kết lại để gắn vào đúng thương vụ, hoặc chọn Không thuộc deal nào.",
-	}
-)
 
 // whichDealAsker writes the question as a task through the activities store.
 // The deals it offers are recorded on the task, so "none of them" declines
@@ -59,9 +49,20 @@ type whichDealAsker struct {
 	now   func() time.Time
 }
 
+// newWhichDealAsker is the one asker capture and the refile passes share, so
+// both raise the same question. now is the clock that decides which mail is
+// current.
+func newWhichDealAsker(pool *pgxpool.Pool, now func() time.Time) whichDealAsker {
+	return whichDealAsker{
+		tasks: activities.NewStore(InstallationDB(pool)),
+		deals: deals.NewStore(InstallationDB(pool), DealsInstallation()),
+		now:   now,
+	}
+}
+
 // offeredDeals reads the open deals a question offers, from the deals module.
 type offeredDeals interface {
-	OfferedDeals(ctx context.Context, tx pgx.Tx, projectID, companyID ids.UUID) ([]ids.UUID, error)
+	OfferedDeals(ctx context.Context, tx pgx.Tx, projectID, companyID ids.UUID, stakeholders []ids.UUID) ([]ids.UUID, error)
 }
 
 // Ask raises the question at most once per thread. The task is keyed on the
@@ -79,7 +80,7 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 	args := []any{q.ActivityID}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	query := `
-		SELECT coalesce(nullif(a.thread_key, ''), a.id::text), a.audience = 'workspace'
+		SELECT coalesce(nullif(a.thread_key, ''), a.id::text), ` + auth.WorkspaceAudienceSQL("a") + `
 		  FROM activity a WHERE a.id = $1 AND a.restricted_at IS NULL AND a.archived_at IS NULL
 		   AND ` + storekit.CurrentSourceMailClause("a.id", a.now(), arg)
 	err = tx.QueryRow(ctx, query, args...).Scan(&thread, &shared)
@@ -97,10 +98,11 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 	// seat too. A sender reusing another mailbox's root cannot use up this
 	// seat's question.
 	sum := sha256.Sum256([]byte(seat.String() + "\x00" + thread))
-	key, subject, body := hex.EncodeToString(sum[:]), whichDealSubject.In(lang), whichDealBody.In(lang)
+	key, subject, body := hex.EncodeToString(sum[:]), systemtext.Copy("capture.which_deal_subject", lang), systemtext.Copy("capture.which_deal_body", lang)
 	source, mail, assignee := provenance.WhichDealSource, q.ActivityID.UUID, ids.From[ids.UserKind](seat)
 	in := activities.LogActivityInput{
 		Kind: string(crmcontracts.ActivityKindTask), Subject: &subject, Body: &body,
+		SystemText:   &systemtext.Message{Subject: systemtext.Sentence("capture.which_deal_subject"), Body: systemtext.Sentence("capture.which_deal_body")},
 		SourceSystem: &source, SourceID: &key, Source: source, SourceActivityID: &mail,
 		AssigneeID: &assignee, Origin: activities.OriginSystemRemediation,
 	}
@@ -112,7 +114,7 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 			in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: string(record.kind), EntityID: record.id})
 		}
 	}
-	offered, err := a.deals.OfferedDeals(ctx, tx, q.ProjectID, q.CompanyID)
+	offered, err := a.deals.OfferedDeals(ctx, tx, q.ProjectID, q.CompanyID, q.StakeholderIDs)
 	if err != nil {
 		return err
 	}
@@ -128,6 +130,7 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 }
 
 // respondent is the one colleague the mail names as responsible, or zero.
+// Mail only a shared mailbox captured goes to its work owner.
 //
 // Only rows the mailbox confirms count, never an address the sender typed. The
 // seat imported the mail. It sent the mail with the provider attesting it, or
@@ -148,10 +151,16 @@ func (a whichDealAsker) respondent(ctx context.Context, tx pgx.Tx, mail ids.UUID
 		return ids.Nil, fmt.Errorf("compose: reading who a deal question is for: %w", err)
 	}
 	seats, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil || len(seats) != 1 {
+	if err != nil || len(seats) > 1 {
 		return ids.Nil, err
 	}
-	seat, nobody := seats[0], ids.Nil
+	var seat ids.UUID
+	if len(seats) == 1 {
+		seat = seats[0]
+	} else if seat, err = storekit.SharedMailWorkOwnerTx(ctx, tx, mail, false); err != nil || seat.IsZero() {
+		return ids.Nil, err
+	}
+	nobody := ids.Nil
 	may, err := auth.SeatMayHoldPrivateWorkTx(ctx, tx, mail, &nobody, seat)
 	if err != nil || !may {
 		return ids.Nil, err
@@ -179,29 +188,5 @@ func seatLanguage(ctx context.Context, tx pgx.Tx, seat ids.UUID) (textlang.Lang,
 	return textlang.Lang(base), nil
 }
 
-// ActivityDealFiler is capture.DealFiler over the activities module, which
-// owns activity_link and the relink event. Capture and its repair write
-// through it.
-type ActivityDealFiler struct{}
-
-// FileOnDealIfUnfiled is activities.FileOnDealIfUnfiledTx.
-func (ActivityDealFiler) FileOnDealIfUnfiled(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any,
-) (landed, filed bool, err error) {
-	outcome, err := activities.FileOnDealIfUnfiledTx(ctx, tx, id, deal, evidence)
-	return outcome == activities.DealFilingLanded, outcome == activities.DealFilingAlreadyFiled, err
-}
-
-// StampDealTopic is activities.StampDealTopicCheckedTx. A held or archived
-// mail keeps no memo, and needs none: no pass files it.
-func (ActivityDealFiler) StampDealTopic(ctx context.Context, tx pgx.Tx, id ids.ActivityID, digest string) error {
-	_, err := activities.StampDealTopicCheckedTx(ctx, tx, id, digest)
-	return err
-}
-
-// RetractMachineDeal is activities.RetractMachineDealTx.
-func (ActivityDealFiler) RetractMachineDeal(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any,
-) (bool, error) {
-	return activities.RetractMachineDealTx(ctx, tx, id, deal, evidence)
-}
+// ActivityDealFiler is capture.DealFiler over the activities module (dealfiler.Activities).
+type ActivityDealFiler = dealfiler.Activities

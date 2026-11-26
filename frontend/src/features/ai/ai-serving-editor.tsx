@@ -18,6 +18,7 @@ import {
 import { formatNumber, identifierNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { providerName } from "../../lib/ai-provider-names";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { OPENROUTER_ROUTING_DOCS } from "./ai-openrouter-settings";
 import { isOpenRouter } from "./ai-provider-links";
@@ -35,13 +36,25 @@ type ServingValue = components["schemas"]["AiOpenRouterRouting"];
 type Preview = components["schemas"]["AiRoutingPreview"];
 
 /** Why the Serving section shows no editor, or null when it does. */
-export type ServingBlocked = "decisions" | "provider" | "host" | null;
+export type ServingBlocked =
+  | "decisions"
+  | "decisionsDirect"
+  | "provider"
+  | "host"
+  | null;
 
 export function servingBlocked(
   value: SliceValue,
   routing: Routing,
 ): ServingBlocked {
-  if (value.kind === "decisions") return "decisions";
+  // Only a jev_compatible binding reaches OpenRouter's decisions endpoint; the
+  // other decision providers serve the model themselves.
+  if (value.kind === "decisions") {
+    const provider = value.binding?.provider;
+    return provider && provider !== "jev_compatible"
+      ? "decisionsDirect"
+      : "decisions";
+  }
   if (value.binding.provider !== "openai_compatible") return "provider";
   return laneBrokered(value.binding, routing) ? null : "host";
 }
@@ -195,7 +208,7 @@ export function ServingSection({
       ) : (
         <p className="t-caption ai-serving-note">
           {t(BLOCKED_NOTE[blocked ?? "provider"], {
-            provider: value.binding?.provider ?? "",
+            provider: providerName(value.binding?.provider ?? "", t),
           })}
         </p>
       )}
@@ -205,6 +218,7 @@ export function ServingSection({
 
 const BLOCKED_NOTE = {
   decisions: "aiServing.blocked.decisions",
+  decisionsDirect: "aiServing.blocked.decisionsDirect",
   provider: "aiServing.blocked.provider",
   host: "aiServing.blocked.host",
 } as const;

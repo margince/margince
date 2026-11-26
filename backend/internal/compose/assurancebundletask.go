@@ -20,43 +20,16 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
-
-// bundleTaskSubject is what a rep reads on their list.
-//
-// The count and nothing else, because the findings themselves render on the
-// deal — three surfaces already show them, and a body listing them here would
-// go stale the moment one of them cleared. The deal is named by the task's LINK
-// rather than in this string: the list renders the record beside the subject, so
-// putting the name in both spells it twice, and the copy in the text is the one
-// nothing keeps current.
-func bundleTaskSubject(lang textlang.Lang, findings int) string {
-	said := langcopy.For(string(lang))
-	if findings == 1 {
-		return said.Say(bundleTaskWords.One)
-	}
-	return fmt.Sprintf(said.Say(bundleTaskWords.Many), findings)
-}
-
-var bundleTaskWords = struct{ One, Many langcopy.Phrase }{
-	One: langcopy.Phrase{
-		En: "1 forecast input needs attention",
-		De: "1 Angabe zur Prognose muss geprüft werden",
-		Vi: "1 đầu vào dự báo cần xem lại",
-	},
-	Many: langcopy.Phrase{
-		En: "%d forecast inputs need attention",
-		De: "%d Angaben zur Prognose müssen geprüft werden",
-		Vi: "%d đầu vào dự báo cần xem lại",
-	},
-}
 
 // bundleTaskLanguage is the assignee's own language, else the installation's,
 // so the task reads in the words of whoever it lands with.
@@ -144,8 +117,7 @@ func mintBundleTask(
 		in.AssigneeID = &assignee
 	}
 
-	findings := len(subject.findings)
-	task, err := writeBundleTask(ctx, deps, in, findings)
+	task, err := writeBundleTask(ctx, deps, in, subject.findings)
 	if err == nil {
 		return task, nil
 	}
@@ -153,18 +125,15 @@ func mintBundleTask(
 	// A SEAT THAT CANNOT HOLD WORK COSTS THE TASK ITS ASSIGNEE, NOT ITS
 	// EXISTENCE.
 	//
-	// owner_id is a snapshot the scan took, and nothing revalidates it: a rep
-	// who has left the company still owns their open deals, and
-	// ensureAssigneeCanHoldWork refuses a seat that is deactivated, archived or
-	// an agent. Losing the task there would mean the deals of everyone who left
-	// silently stop being checked — the one population most likely to be
-	// carrying findings nobody is watching. Unassigned is where taskAssignee
-	// itself puts work nobody can be given, so this lands in the same queue.
+	// owner_id is a snapshot the scan took, and nothing revalidates it. A rep
+	// who has left still owns their open deals, and the task door refuses them.
+	// Losing the task would stop checking the deals of everyone who left.
+	// Unassigned is where taskAssignee puts work nobody can be given.
 	if in.AssigneeID == nil || !unassignableSeat(err) {
 		return ids.UUID{}, fmt.Errorf("compose: minting the task: %w", err)
 	}
 	in.AssigneeID = nil
-	task, err = writeBundleTask(ctx, deps, in, findings)
+	task, err = writeBundleTask(ctx, deps, in, subject.findings)
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("compose: minting the task unassigned: %w", err)
 	}
@@ -181,20 +150,18 @@ func runTaskKey(subject subjectFindings, runID ids.UUID) string {
 // unassignableSeat reports whether the refusal was about WHO the task was aimed
 // at rather than about the task.
 //
-// The two shapes ensureAssigneeCanHoldWork answers with, and only those: a seat
-// that is missing, inactive or archived is ErrNotFound — deliberately
-// indistinguishable from a guessed id — and an agent seat is AgentAssigneeError.
+// The task door answers every seat it refuses with auth.AssigneeNotAllowedError.
 // Anything else is a real failure and must not be retried into a task nobody is
 // asked to do.
 func unassignableSeat(err error) bool {
-	var agent *activities.AgentAssigneeError
-	return errors.Is(err, apperrors.ErrNotFound) || errors.As(err, &agent)
+	_, refused := errors.AsType[*auth.AssigneeNotAllowedError](err)
+	return refused
 }
 
 // writeBundleTask mints the activity in the bundling store's transaction,
 // worded for the seat it is assigned to.
 func writeBundleTask(
-	ctx context.Context, deps bundleDeps, in activities.LogActivityInput, findings int,
+	ctx context.Context, deps bundleDeps, in activities.LogActivityInput, findings []assurance.Exception,
 ) (ids.UUID, error) {
 	var task ids.UUID
 	err := deps.bundles.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
@@ -202,8 +169,16 @@ func writeBundleTask(
 		if err != nil {
 			return err
 		}
-		line := bundleTaskSubject(lang, findings)
+		subject := assurance.TaskSubject(len(findings))
+		line, err := subject.Render(lang)
+		if err != nil {
+			return err
+		}
 		in.Subject = &line
+		in.SystemText = &systemtext.Message{Version: 1, Subject: subject}
+		if err := in.SayWhy(assurance.TaskReason(findings), lang); err != nil {
+			return err
+		}
 		created, _, err := deps.activities.LogActivityTx(ctx, tx, in)
 		if err != nil {
 			return err

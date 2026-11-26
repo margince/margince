@@ -40,6 +40,25 @@ declare const __MARGINCE_CORE_VERSION__: string;
  */
 export const CORE_RELEASE: string = __MARGINCE_CORE_VERSION__;
 
+declare const __MARGINCE_BUILD_REVISION__: string;
+
+/**
+ * BUILD_REVISION is the commit this bundle was built from; empty or "dev" when
+ * nothing stamped it.
+ */
+export const BUILD_REVISION: string = __MARGINCE_BUILD_REVISION__;
+
+const SHORT_REVISION_LENGTH = 7;
+
+/** undefined for an absent, empty or "dev" revision. */
+export function shortRevision(
+  revision: string | undefined,
+): string | undefined {
+  return comparableRelease(revision)
+    ? revision?.slice(0, SHORT_REVISION_LENGTH)
+    : undefined;
+}
+
 /**
  * UNKNOWN mirrors buildinfo.Unknown: the value a plain `docker build` stamps
  * when no release was named. Empty means the same thing — nothing stamped it at

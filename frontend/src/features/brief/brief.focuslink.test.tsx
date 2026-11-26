@@ -31,11 +31,14 @@ it("opens the named row beside the day, and closing clears the address", async (
   render(<BriefScreen />);
 
   const dialog = await screen.findByRole("dialog");
+  // Named as its card is, so the drawer says which row it opened.
   expect(
-    within(dialog).getByRole("heading", { name: en["brief.focus.context"] }),
+    within(dialog).getByRole("heading", { name: /quarterly review/ }),
   ).toBeTruthy();
   // m2 is the prepared meeting; only m1 carries the unprepared reason.
-  expect(dialog.textContent).toContain(en["worklist.ask.meeting"]);
+  await waitFor(() =>
+    expect(dialog.textContent).toContain(en["worklist.todo.meeting"]),
+  );
   expect(dialog.textContent).not.toContain(
     en["worklist.because.meeting_unprepared"],
   );
@@ -55,4 +58,21 @@ it("opens nothing for a row the day no longer lists, and clears the address", as
   ).not.toHaveLength(0);
   expect(screen.queryByRole("dialog")).toBeNull();
   await waitFor(() => expect(window.location.hash).not.toContain("focus="));
+});
+
+it("reads the whole queue when the address names a row, so a row outside Focus opens", async () => {
+  window.location.hash = "#/home?focus=meeting-m2";
+  const shapes: (string | null)[] = [];
+  stubApi({
+    "GET /worklist": (_body, query) => {
+      shapes.push(query.get("shape"));
+      return jsonResponse(
+        readingsDay({}, [meetingRow("m1", false), meetingRow("m2", true)]),
+      );
+    },
+  });
+  render(<BriefScreen />);
+
+  await screen.findByRole("dialog");
+  expect(shapes).not.toContain("home");
 });

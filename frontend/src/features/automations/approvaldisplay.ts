@@ -10,8 +10,16 @@ import {
   commercialPreviewDisplay,
   stagedDealMove,
 } from "../../lib/approvalpreview";
-import { humanizeKind } from "./approvalkind";
-import { commitmentResponsibility, madeByRow } from "./approvalresponsibility";
+import {
+  CONTACT_EMPLOYER_DISPLAY,
+  textRow,
+} from "./approvaldisplay.employerchange";
+import { displayValue } from "./approvaldisplay.value";
+import {
+  commitmentResponsibility,
+  followUpDoerRow,
+  madeByRow,
+} from "./approvalresponsibility";
 
 // Typed proposals expose declared business facts; raw-argument kinds retain their fields.
 export type {
@@ -30,11 +38,6 @@ const CLOSE_DATE_FLAGS = {
   unrealistic_soon: "approval.field.closeDateFlag.unrealistic_soon",
   unrealistic_stale: "approval.field.closeDateFlag.unrealistic_stale",
 } as const satisfies Readonly<Record<string, MessageKey>>;
-
-// A field whose value is already a word, under its caption.
-function textRow(field: string, label: MessageKey): DisplayField {
-  return { field, label, as: "text" };
-}
 
 export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
   {
@@ -113,8 +116,7 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
         as: "text",
       },
     ],
-    // Is this address a contact worth keeping? The address and who it belongs to
-    // are the question; the disposition, owner and activity ids are plumbing.
+    // Is this address a contact worth keeping? Address and owner are the question.
     capture_counterparty: [
       { field: "display_name", label: "approval.field.name", as: "text" },
       { field: "email", label: "approval.field.email", as: "text" },
@@ -122,16 +124,19 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
     ],
     // A colleague's request: the summary names who asked and what it moves.
     contact_share: [],
-    ownership_transfer: [textRow("note", "approval.field.note")],
-    // Two records that look like one contact. The names are the comparison; the
-    // position and the title beside them are what "Use as job title" weighs.
-    linkedin_match: [
-      textRow("connection_name", "approval.field.connection_name"),
-      textRow("connection_company", "approval.field.connection_company"),
-      textRow("connection_position", "approval.field.connection_position"),
-      textRow("contact_name", "approval.field.contact_name"),
-      textRow("contact_title", "approval.field.contact_title"),
+    edit_access: [],
+    legal_review_request: [],
+    task_due_date: [
+      { field: "summary", label: "approval.field.step", as: "text" },
+      { field: "due_date", label: "approval.field.due_date", as: "date" },
     ],
+    ownership_transfer: [textRow("note", "approval.field.note")],
+    // The summary already says which stage the deal would move to; the skipped
+    // stages are the part a reader has to weigh before saying yes.
+    deal_proposal_stage: [
+      textRow("skipped_stage_names", "approval.field.skipped_stages"),
+    ],
+    ...CONTACT_EMPLOYER_DISPLAY,
     // A message that was scheduled and then stopped. Why it stopped is the whole
     // question, and the SUMMARY already carries that sentence: the server maps
     // the reason code to prose in one place (compose/scheduledsendheld.go,
@@ -194,10 +199,12 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       // so there is nothing to compare it against and nothing to fill.
       { field: "Email", label: "approval.field.email", as: "text" },
     ],
-    // A follow-up the overnight pass drafted. Its subject and body already
-    // render as a draft on the card, so only the date it proposes is left.
+    // The task the overnight pass would add. Its subject and body are a task's
+    // title and note, not a message, so they are captioned as such.
     deal_follow_up: [
+      textRow("subject", "approval.field.task"),
       { field: "due_date", label: "approval.field.due_date", as: "date" },
+      { field: "body", label: "approval.field.note", as: "prose" },
     ],
     // A rename read off the company's own site. The old and new names render as
     // an old→new comparison already; the normalization key is internal.
@@ -296,54 +303,6 @@ export function displayFields(kind: string): readonly DisplayField[] {
 }
 
 /**
- * One declared field against one payload, ready for the card to draw.
- *
- * Returns null for a field the payload does not carry, which is ordinary
- * rather than exceptional: `previous_close_date` is absent on a deal that
- * never had one, and `expected_prior_rate` on the first rate ever recorded.
- * The card drops those rather than printing an empty row, so the reader sees
- * what is true instead of a blank where a fact would be.
- */
-function displayValue(
-  entry: DisplayField,
-  raw: unknown,
-  t: Translator,
-  formatDay: (value: string) => string,
-): string | null {
-  if (raw === null || raw === undefined) {
-    return null;
-  }
-  if (entry.as === "enum") {
-    // A list or a single code, both spelled the same way on the wire across
-    // kinds: `flags` is an array, `reason` is one string.
-    const codes = Array.isArray(raw) ? raw : [raw];
-    const words = codes.flatMap((code) => {
-      if (typeof code !== "string" || code === "") {
-        return [];
-      }
-      const key = entry.optionLabels?.[code];
-      // An unmapped code degrades to its own words rather than vanishing. A
-      // finding the server raised and the card silently dropped would tell the
-      // reader less than an unpolished word does.
-      return [key ? t(key) : humanizeKind(code)];
-    });
-    return words.length > 0 ? words.join(", ") : null;
-  }
-  if (typeof raw !== "string") {
-    // Numbers reach the reader as their own digits; anything structured is not
-    // a value this tier can caption, so it is left out rather than JSON-dumped
-    // under a label that would then be lying about what it introduces.
-    return typeof raw === "number" || typeof raw === "boolean"
-      ? String(raw)
-      : null;
-  }
-  if (raw.trim() === "") {
-    return null;
-  }
-  return entry.as === "date" ? formatDay(raw) : raw;
-}
-
-/**
  * What this proposal shows, resolved into the reader's language: finished
  * strings rather than a policy to interpret. Which fields a kind shows is the
  * product's vocabulary, and a design-system primitive that looked it up would
@@ -407,6 +366,13 @@ export function resolveDisplay(
       value: t("approval.commitment.notFulfilled"),
       lead: undefined,
     });
+    if (change.tentative === true)
+      resolved.push({
+        field: "promise_strength",
+        label: t("approval.commitment.strength"),
+        value: t("approval.commitment.tentative"),
+        lead: undefined,
+      });
   }
   const byField = new Map(resolved.map((entry) => [entry.field, entry]));
   const fields =
@@ -415,7 +381,7 @@ export function resolveDisplay(
           ...resolved.filter((entry) => entry.field !== "party"),
           ...commitmentResponsibility(change, names, t, assigneeInactive),
         ]
-      : resolved;
+      : [...resolved, ...followUpDoerRow(change, names, t)];
   if (requestedDecider) {
     fields.push({
       field: "requested_decider",

@@ -44,8 +44,8 @@ func TestARepairNeverLeavesAReminderOnAClearedDeadline(t *testing.T) {
 	}
 	writer := newLeadWorkTasks(InstallationDB(e.Pool), slog.Default())
 	writer.now = func() time.Time { return now }
-	in := writer.repliedTaskInput(ids.From[ids.LeadKind](ids.UUID(lead.Id)), ids.UUID(source.Id), "Review the enquiry", &e.Rep2)
-	in.SourceActivityID, in.DueAt, in.RemindAt = nil, &now, &now
+	in := legacyRepliedTaskInput(writer, ids.From[ids.LeadKind](ids.UUID(lead.Id)), ids.UUID(source.Id), "Review the enquiry", &e.Rep2)
+	in.DueAt, in.RemindAt = &now, &now
 	created, _, err := e.Activities.LogActivity(principal.SystemActing(e.Admin(), leadRepliedActor), in)
 	if err != nil {
 		t.Fatal(err)

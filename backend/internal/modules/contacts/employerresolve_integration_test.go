@@ -234,3 +234,23 @@ func TestMissingCompanyGrantRollsBackWorkContact(t *testing.T) {
 		t.Fatal("contact survived refused employer resolution")
 	}
 }
+
+// A primary employment whose end date has passed names no employer. A deal
+// opened at promotion is then not filed under the company the contact left.
+func TestALapsedPrimaryEmploymentIsNoCurrentEmployer(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.editorCtx()
+	fx := e.seedFlipFixture(ctx, t, "Jon Rask", "Rask Former", "Rask Unused")
+	edge := e.employEnding(ctx, t, fx.contact, fx.first, true, monthStart(ctx, t, e), "month")
+	e.lapsePrimary(ctx, t, edge.ID)
+
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		employer, err := currentEmployerID(ctx, tx, fx.contact)
+		if employer != nil {
+			t.Errorf("the current employer is %v, whose employment ended", *employer)
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -3,20 +3,18 @@ import {
   type RenderResult,
   render as rtlRender,
   screen,
+  waitFor,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import type { UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { vi } from "vitest";
+import { onTestFinished, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import { meFixture } from "../../testing/mefixture";
-import {
-  allowedPreview,
-  isPreviewDoor,
-  previewedAddresses,
-} from "../../testing/sendpermission.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // The composer's "why are you writing?" dial is found by name, not by role
 // alone. To, Cc and Bcc are comboboxes too, so a bare role query matches four
@@ -49,10 +47,10 @@ export function problemResponse(body: unknown, status: number) {
 
 export function render(
   ui: ReactNode,
-): RenderResult & { queryClient: QueryClient } {
-  const client = new QueryClient({
+  client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  });
+  }),
+): RenderResult & { queryClient: QueryClient } {
   // The client is returned so a test can re-render against the same cache. A
   // fresh one would empty it, which is the opposite of the stale-entry case.
   return {
@@ -63,6 +61,21 @@ export function render(
     ),
     queryClient: client,
   };
+}
+
+// A reply to act-1 on contact p-1, the composer the draft and refusal suites
+// open.
+export function renderComposer(onClose = vi.fn()) {
+  render(
+    <ComposeWindow
+      activityId="act-1"
+      entityType="contact"
+      entityId="p-1"
+      open
+      onClose={onClose}
+    />,
+  );
+  return onClose;
 }
 
 // Two purposes, because the send rules differ by purpose: transactional is the
@@ -163,16 +176,28 @@ export function stubRoutes(
       sent.push({ key, body, headers, query: url.searchParams });
       const override = overrides[key];
       if (override) return override();
+      if (
+        key === "PUT /mail-drafts" &&
+        typeof body === "object" &&
+        body !== null
+      ) {
+        return jsonResponse({
+          ...body,
+          id: "draft-test",
+          version: 1,
+          agent_drafted: false,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        });
+      }
       if (key === "GET /me") {
         return jsonResponse(
           meFixture({ allow: { activity: ["read", "create", "update"] } }),
         );
       }
+      if (key === "GET /connectors") return jsonResponse(CONNECTED_ROSTER);
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
       if (key === "GET /voice-profiles") return jsonResponse(NO_VOICE_PROFILE);
-      if (isPreviewDoor(url.pathname)) {
-        return jsonResponse(allowedPreview(previewedAddresses(body)));
-      }
       return jsonResponse({});
     }),
   );
@@ -198,16 +223,14 @@ export const activity202: Activity = {
 // the categories the engine reasons about, not consent purposes. The record
 // decides what is allowed, and a key a rep picked never did.
 export const WHY_LABEL = {
-  requestedFollowup: "Follow-up they requested",
+  requestedFollowup: "They asked for it",
   marketing: "Marketing",
 } as const;
 
-// The composer has one dropdown, so a pick needs nothing but the label.
-// `pickOption` takes a userEvent session, which the bare direct API is not.
-// So it gets a fresh one, as every bare `userEvent.*` call here does inside.
-export function pickWhy(label: string) {
+// The reason dropdown is found by its name, so a pick needs only the label.
+export function pickWhy(user: UserEvent, label: string) {
   return pickOption(
-    userEvent.setup(),
+    user,
     screen.getByRole("combobox", { name: WHY_ASK }),
     label,
   );
@@ -219,23 +242,79 @@ export function pickWhy(label: string) {
 // message. No anchor read is stubbed, so the composer has nothing to derive
 // from and asks. A suite whose subject is a reply stubs the anchor instead, and
 // the question never appears. Asking there is the defect fillReplyForm catches.
-export async function fillSendableForm() {
-  await userEvent.type(screen.getByLabelText("To"), "a@x.com");
-  await userEvent.tab();
-  await userEvent.type(screen.getByLabelText("Subject"), "Hi there");
+export async function fillSendableForm(user: UserEvent) {
+  await user.type(screen.getByLabelText("To"), "a@x.com");
+  await user.tab();
+  await user.type(screen.getByLabelText("Subject"), "Hi there");
   writeMessage("Body", "Body content");
-  await pickWhy(WHY_LABEL.requestedFollowup);
+  await pickWhy(user, WHY_LABEL.requestedFollowup);
 }
 
 // The threads the composer offers sit in a menu behind the bar above the
 // fields. Finds one by name, opening the menu first when it is shut.
-export async function findThreadChoice(name: string | RegExp) {
+export async function findThreadChoice(user: UserEvent, name: string | RegExp) {
   const shown = screen.queryByRole("button", { name });
   if (shown) {
     return shown;
   }
-  await userEvent.click(
+  await user.click(
     await screen.findByRole("button", { name: /(Continue a thread|Change)$/ }),
   );
   return screen.findByRole("button", { name });
+}
+
+// The one rewrite route the composer's verbs and Polish wording share.
+export const REWRITE_ROUTE = "POST /rewrites";
+
+// A rewrite's answer: the body only, since an email's subject is the rep's.
+export function rewrittenBody(body: string, language = "en") {
+  return jsonResponse({
+    subject: "",
+    body,
+    language,
+    ai_disclosure: "Drafted with AI assistance. Review before sending.",
+  });
+}
+
+// Every suite that presses Send through this kit calls this in a beforeEach, and
+// drives its session with `advanceTimers: vi.advanceTimersByTime`. The clock
+// still moves 1 ms per real 1 ms. Testing Library drains each wait on a
+// setTimeout(0) it steps only through a `jest` global. Nothing else steps the
+// composer's autosave or sign-off timers.
+export function installComposeClock() {
+  vi.useFakeTimers({
+    shouldAdvanceTime: true,
+    advanceTimeDelta: 1,
+    toFake: ["setTimeout", "clearTimeout"],
+  });
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+}
+
+// The foot's own button of this name, once it can be pressed. A menu entry of
+// the same name is not it.
+export function footSendButton(name = "Send") {
+  return waitFor(() => {
+    const found = screen
+      .queryAllByRole("button", { name })
+      .find((button) => !button.closest(".compose-sendmenu"));
+    if (!found || found.hasAttribute("disabled")) {
+      throw new Error(`${name} is not ready`);
+    }
+    return found;
+  });
+}
+
+export async function waitForSendReady() {
+  await footSendButton();
+}
+
+// Presses Send as a reader does, who sees the button free before pressing it.
+export async function pressSend(user: UserEvent, name = "Send") {
+  await user.click(await footSendButton(name));
+}
+
+export function footScheduleConfirm() {
+  return footSendButton("Schedule send");
 }

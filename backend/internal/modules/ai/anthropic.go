@@ -39,9 +39,9 @@ type anthropicClient struct {
 const anthropicAPIVersion = "2023-06-01"
 
 type anthropicWire struct {
-	Model     string `json:"model"`
-	MaxTokens int    `json:"max_tokens"`
-	System    string `json:"system,omitempty"`
+	Model     string                 `json:"model"`
+	MaxTokens int                    `json:"max_tokens"`
+	System    []anthropicSystemBlock `json:"system,omitempty"`
 	// Messages is this adapter's own message type rather than a shared one:
 	// only here does a turn's body become an array of Anthropic content blocks
 	// once it carries an image (anthropicparts.go).
@@ -53,9 +53,10 @@ type anthropicWire struct {
 }
 
 type anthropicToolWire struct {
-	Name        string          `json:"name"`
-	Description string          `json:"description,omitempty"`
-	InputSchema json.RawMessage `json:"input_schema"`
+	Name         string                 `json:"name"`
+	Description  string                 `json:"description,omitempty"`
+	InputSchema  json.RawMessage        `json:"input_schema"`
+	CacheControl *anthropicCacheControl `json:"cache_control,omitempty"`
 }
 
 // anthropicOutputConfig / anthropicResponseFormat carry Anthropic's native
@@ -66,12 +67,26 @@ type anthropicToolWire struct {
 // changes. Sent only when the request carries a schema, and only in the form
 // the decoder can hold (anthropicschema.go).
 type anthropicOutputConfig struct {
+	Effort string                   `json:"effort,omitempty"`
 	Format *anthropicResponseFormat `json:"format,omitempty"`
 }
 
 type anthropicResponseFormat struct {
 	Type   string          `json:"type"`
 	Schema json.RawMessage `json:"schema"`
+}
+
+// anthropicOutputConfigFor is the output_config to send, nil when it would be
+// empty: one object carries both the effort and the format.
+func anthropicOutputConfigFor(effort string, schema json.RawMessage) *anthropicOutputConfig {
+	if effort == "" && len(schema) == 0 {
+		return nil
+	}
+	cfg := &anthropicOutputConfig{Effort: effort}
+	if len(schema) > 0 {
+		cfg.Format = &anthropicResponseFormat{Type: jsonSchemaFormatType, Schema: schema}
+	}
+	return cfg
 }
 
 // streamedCompleteThreshold is the MaxTokens above which Complete rides
@@ -81,23 +96,13 @@ type anthropicResponseFormat struct {
 // simple wire.
 const streamedCompleteThreshold = 8192
 
-// Complete fits the response schema once, before either wire is chosen, and
-// reports the downgrade that fit cost on whatever the call returns — the
-// Response, or the error of a call that failed after its request was sent,
-// whose record still says what was sent.
+// Complete fits the response schema once, before either wire is chosen.
 func (c *anthropicClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
-	schema, downgrade := anthropicOutputSchema(req.ResponseSchema)
-	ctx, attempt := trackHTTPAttempt(ctx)
-	var (
-		resp model.Response
-		err  error
-	)
+	schema := anthropicOutputSchema(req.ResponseSchema)
 	if req.MaxTokens > streamedCompleteThreshold {
-		resp, err = c.completeStreamed(ctx, req, schema)
-	} else {
-		resp, err = c.completePlain(ctx, req, schema)
+		return c.completeStreamed(ctx, req, schema)
 	}
-	return reportSchemaDowngrade(resp, err, downgrade, attempt)
+	return c.completePlain(ctx, req, schema)
 }
 
 func (c *anthropicClient) completePlain(ctx context.Context, req model.Request, schema json.RawMessage) (model.Response, error) {
@@ -249,10 +254,7 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 }
 
 func (c *anthropicClient) Stream(ctx context.Context, req model.Request) (model.TokenStream, error) {
-	// A stream has no Response to report a schema downgrade on, and no caller
-	// that sends a schema down it.
-	schema, _ := anthropicOutputSchema(req.ResponseSchema)
-	body, err := c.postStream(ctx, req, schema)
+	body, err := c.postStream(ctx, req, anthropicOutputSchema(req.ResponseSchema))
 	if err != nil {
 		return nil, err
 	}
@@ -302,7 +304,7 @@ func (c *anthropicClient) send(ctx context.Context, req model.Request, schema js
 	wire := anthropicWire{
 		Model:     req.Model,
 		MaxTokens: req.MaxTokens,
-		System:    req.System,
+		System:    anthropicSystem(req.System),
 		Messages:  anthropicMessages(req.Messages, req.Attachments),
 		Stream:    stream,
 	}
@@ -320,11 +322,10 @@ func (c *anthropicClient) send(ctx context.Context, req model.Request, schema js
 			Name: tool.Name, Description: tool.Description, InputSchema: tool.InputSchema,
 		})
 	}
-	if len(schema) > 0 {
-		wire.OutputConfig = &anthropicOutputConfig{
-			Format: &anthropicResponseFormat{Type: jsonSchemaFormatType, Schema: schema},
-		}
+	if n := len(wire.Tools); n > 0 {
+		wire.Tools[n-1].CacheControl = anthropicCacheable
 	}
+	wire.OutputConfig = anthropicOutputConfigFor(anthropicEffortFor(wire.Model, req.ThinkingLevel), schema)
 	payload, _, err := SendablePayload(ctx, wire, req.SecretStripper)
 	if err != nil {
 		return nil, err
@@ -336,7 +337,7 @@ func (c *anthropicClient) send(ctx context.Context, req model.Request, schema js
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("X-Api-Key", c.apiKey)
 	httpReq.Header.Set("Anthropic-Version", anthropicAPIVersion)
-	resp, err := sendModelRequest(c.http, httpReq)
+	resp, err := c.http.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("ai: anthropic: %w", err)
 	}

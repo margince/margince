@@ -9,6 +9,7 @@ package collections
 
 import (
 	"context"
+	"slices"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -23,13 +24,14 @@ func (s *Store) ListsPage(ctx context.Context, filter ListFilter) (crmcontracts.
 	if err != nil {
 		return crmcontracts.ListListResponse{}, err
 	}
-	summaries := make([]*listSummary, 0, len(lists))
-	for _, l := range lists {
-		summary, err := s.summarize(ctx, l)
-		if err != nil {
-			return crmcontracts.ListListResponse{}, err
-		}
-		summaries = append(summaries, &summary)
+	// A list over a declared kind this reader may not read is left out, as the
+	// kind is from the kind directory. A refusal would close the whole page.
+	lists = slices.DeleteFunc(lists, func(l listRow) bool {
+		return !kindRemoved(l.EntityType) && kindUnavailable(ctx, l.EntityType)
+	})
+	summaries, err := s.summarize(ctx, lists)
+	if err != nil {
+		return crmcontracts.ListListResponse{}, err
 	}
 	if err := s.observedFor(ctx, summaries); err != nil {
 		return crmcontracts.ListListResponse{}, err
@@ -52,11 +54,12 @@ func (s *Store) ListView(ctx context.Context, id ids.ListID) (crmcontracts.List,
 
 // view summarizes a list row the caller just read or wrote.
 func (s *Store) view(ctx context.Context, l listRow) (crmcontracts.List, error) {
-	summary, err := s.summarize(ctx, l)
+	summaries, err := s.summarize(ctx, []listRow{l})
 	if err != nil {
 		return crmcontracts.List{}, err
 	}
-	if err := s.observedFor(ctx, []*listSummary{&summary}); err != nil {
+	summary := summaries[0]
+	if err := s.observedFor(ctx, summaries); err != nil {
 		return crmcontracts.List{}, err
 	}
 	if summary.Joined, err = s.joinedSinceVisit(ctx, l); err != nil {
@@ -72,7 +75,7 @@ func (s *Store) view(ctx context.Context, l listRow) (crmcontracts.List, error) 
 	if summary.Dependencies, err = s.Dependencies(ctx, l.ID); err != nil {
 		return crmcontracts.List{}, err
 	}
-	return wireList(summary), nil
+	return wireList(*summary), nil
 }
 
 // CreateListView makes a list and answers it.
@@ -198,13 +201,14 @@ func (s *Store) HistoryPage(ctx context.Context, id ids.ListID, limit int, curso
 func wireList(l listSummary) crmcontracts.List {
 	out := crmcontracts.List{
 		Id: openapi_types.UUID(l.ID.UUID), Name: l.Name, Purpose: l.Purpose,
-		EntityType: crmcontracts.ListEntityType(l.EntityType), ListType: crmcontracts.ListListType(l.ListType),
+		EntityType: l.EntityType, ListType: crmcontracts.ListListType(l.ListType),
 		Sharing: crmcontracts.ListSharing(l.Sharing), Version: l.Version,
 		OwnerId: userUUID(l.OwnerID), StewardId: userUUID(l.StewardID), StewardName: l.StewardName,
 		VisibleCount: l.VisibleCount, Health: crmcontracts.ListHealth(l.Health), CanEdit: l.CanEdit,
 		CreatedAt: &l.CreatedAt, UpdatedAt: &l.UpdatedAt, ArchivedAt: l.ArchivedAt,
 	}
-	if len(l.Definition) > 0 {
+	// A removed kind's filter names fields no reader can read any more.
+	if len(l.Definition) > 0 && l.Health != healthUnavailable {
 		out.Definition = &l.Definition
 	}
 	if len(l.RetiredFields) > 0 {
@@ -286,7 +290,7 @@ func userUUID(id *ids.UserID) *openapi_types.UUID {
 func wireMember(m memberRow) crmcontracts.ListMember {
 	out := crmcontracts.ListMember{
 		Id: openapi_types.UUID(m.ID), ListId: openapi_types.UUID(m.ListID.UUID),
-		EntityType: crmcontracts.ListMemberEntityType(m.EntityType), EntityId: openapi_types.UUID(m.EntityID),
+		EntityType: m.EntityType, EntityId: openapi_types.UUID(m.EntityID),
 		AddedBy: &m.AddedBy, Note: m.Note,
 	}
 	// A computed Live List member carries no added-at instant; only a
@@ -329,8 +333,9 @@ func wireVerdict(n storekit.ExplainNode) crmcontracts.ListClauseVerdict {
 func wireHistory(e HistoryEntry, names map[string]string) crmcontracts.ListHistoryEntry {
 	out := crmcontracts.ListHistoryEntry{
 		Id: openapi_types.UUID(e.ID), Kind: crmcontracts.ListHistoryEntryKind(e.Kind),
-		OccurredAt: e.OccurredAt, Actor: e.Actor, EntityType: e.EntityType, Note: e.Note,
+		OccurredAt: e.OccurredAt, Actor: e.Actor, EntityType: e.EntityType, EntityName: e.EntityName, Note: e.Note,
 		DefinitionVersion: e.DefinitionVersion, Version: e.Version, Name: e.Name, Sharing: e.Sharing,
+		PreviousName: e.PreviousName,
 	}
 	if name, ok := names[e.Actor]; ok {
 		out.ActorName = &name
@@ -345,6 +350,16 @@ func wireHistory(e HistoryEntry, names map[string]string) crmcontracts.ListHisto
 	}
 	if e.Definition != nil {
 		out.Definition = &e.Definition
+	}
+	if e.PreviousDefinition != nil {
+		out.PreviousDefinition = &e.PreviousDefinition
+	}
+	if e.Changes != nil {
+		changes := make([]crmcontracts.ListHistoryEntryChanges, 0, len(e.Changes))
+		for _, change := range e.Changes {
+			changes = append(changes, crmcontracts.ListHistoryEntryChanges(change))
+		}
+		out.Changes = &changes
 	}
 	return out
 }

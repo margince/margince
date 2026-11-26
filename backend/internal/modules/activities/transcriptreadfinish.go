@@ -65,6 +65,11 @@ func (s *Store) checkTranscriptOutcome(ctx context.Context, outcome TranscriptRe
 	if outcome.Detail == "" && (outcome.Status == TranscriptReadFailed || len(outcome.ProposalIDs) == 0) {
 		return errors.New("activities: a failed or empty transcript read must say why, or its result cannot be told from a broken one")
 	}
+	if outcome.Facts != nil && outcome.Facts.Summary != nil {
+		if msg := outcome.Facts.Summary.Fault(outcome.LineCount); msg != "" {
+			return fmt.Errorf("activities: a transcript summary may not be written: %s", msg)
+		}
+	}
 	return nil
 }
 
@@ -102,7 +107,7 @@ func finishTranscriptReadTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, out
 	// progress rather than a field a contact edited, and nothing would ever
 	// be restored to it.
 	if _, err := storekit.AuditEvent(ctx, tx, "update", "transcript_read", readID, map[string]any{
-		"status": outcome.Status, "proposals": len(proposals),
+		fieldStatus: outcome.Status, "proposals": len(proposals),
 	}); err != nil {
 		return fmt.Errorf("audit transcript read finish: %w", err)
 	}

@@ -60,9 +60,9 @@ func releaseHeldOriginalTx(
 }
 
 // releaseHeldOriginalForScopedKeyTx is the record a seat-scoped original is
-// stored from. A held-back original reaches that path unfiltered. So a private
-// message's file bytes come out here, as storeOriginalTx takes them out of the
-// shared one.
+// stored from. A held-back original reaches that path unfiltered. So a
+// withholding message's file bytes come out here, as storeOriginalTx takes them
+// out of the shared one.
 func releaseHeldOriginalForScopedKeyTx(
 	ctx context.Context, tx pgx.Tx, scoped connector.NormalizedRecord,
 ) (connector.NormalizedRecord, error) {
@@ -71,7 +71,7 @@ func releaseHeldOriginalForScopedKeyTx(
 		return scoped, nil
 	}
 	held.pending = false
-	return withholdPrivateOriginalTx(ctx, tx, scoped)
+	return withholdOriginalPartsTx(ctx, tx, scoped)
 }
 
 // keepPartsAndOriginal stores a new activity's files, then its held-back

@@ -81,3 +81,16 @@ func (h outcomeReviewHandlers) UpdateActivityReviewTemplate(w http.ResponseWrite
 	}
 	httperr.WriteJSON(w, http.StatusOK, result)
 }
+
+func (h outcomeReviewHandlers) CreateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateActivityReviewTemplateParams) {
+	var req crmcontracts.CreateActivityReviewTemplateRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	result, err := h.activities.CreateReviewTemplate(r.Context(), req)
+	if err != nil {
+		writeOutcomeReviewErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusCreated, result)
+}

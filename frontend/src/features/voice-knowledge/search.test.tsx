@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { meFixture } from "../../testing/mefixture";
 import { SearchScreen } from "./search";
 
 afterEach(() => {
@@ -30,6 +31,7 @@ const render = (ui: ReactNode) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
@@ -245,7 +247,7 @@ describe("SearchScreen", () => {
     expect(screen.getByText(/Dana at Acme/)).toBeTruthy();
     // A contact is a record card, named straight from the search result (no
     // per-hit record fetch), whose name links to the record's 360.
-    const hitLink = screen.getByRole("link", { name: "Dana Buyer" });
+    const hitLink = screen.getByRole("link", { name: /^DB\s*Dana Buyer$/ });
     expect(hitLink.getAttribute("href")).toBe("/#/contacts/p1");
     expect(hitLink.className).toContain("record-card-open");
   });
@@ -356,6 +358,44 @@ describe("SearchScreen", () => {
     render(<SearchScreen q="zzz" />);
     await waitFor(() => expect(screen.getByText(/No matches/)).toBeTruthy());
   });
+  it("shows the hits and one line for a type that ran out of time", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [{ type: "company", id: "o1", title: "Acme GmbH" }],
+          page: { next_cursor: null, has_more: false },
+          types_with_more: [],
+          types_timed_out: ["activity"],
+        }),
+      ),
+    );
+    render(<SearchScreen q="acme" />);
+    expect(await screen.findByText("Acme GmbH")).toBeTruthy();
+    expect(
+      screen.getByText(/Emails and activities could not be searched/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/No matches/)).toBeNull();
+  });
+
+  it("leaves out No matches when nothing else was found and a type ran out of time", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+          types_timed_out: ["activity"],
+        }),
+      ),
+    );
+    render(<SearchScreen q="acme" />);
+    expect(
+      await screen.findByText(/Emails and activities could not be searched/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/No matches/)).toBeNull();
+  });
+
   // Finding the WORD is the step before finding the records carrying it, so a
   // tag hit has to be openable. It shipped as plain text — the group rendered,
   // and the result was a dead end.
@@ -763,7 +803,7 @@ describe("SearchScreen — grouped by what each hit is", () => {
     render(<SearchScreen q="rennsteig" />);
 
     expect(
-      await screen.findByRole("heading", { name: "Activities" }),
+      await screen.findByRole("heading", { name: "Emails and activities" }),
     ).toBeTruthy();
     const offers = screen.getAllByRole("button", { name: /^Show all/ });
     expect(offers.map((button) => button.getAttribute("aria-label"))).toEqual([
@@ -772,7 +812,7 @@ describe("SearchScreen — grouped by what each hit is", () => {
   });
 
   // The activity pill narrows to the emails AND the calls and notes beside
-  // them, so it says both rather than reading as the Activities heading.
+  // them, and its name matches the group heading.
   it("names the activity pill for everything it narrows to", () => {
     vi.stubGlobal(
       "fetch",
@@ -845,7 +885,9 @@ describe("SearchScreen — a company and the contacts who work there", () => {
     );
     const { container } = render(<SearchScreen q="acme" />);
 
-    const open = await screen.findByRole("link", { name: "Acme GmbH" });
+    const open = await screen.findByRole("link", {
+      name: /^(AG\s*)?Acme GmbH$/,
+    });
     expect(open.getAttribute("href")).toBe("/#/companies/o1");
     expect(open.closest(".record-card")).toBeTruthy();
     expect(
@@ -861,7 +903,7 @@ describe("SearchScreen — a company and the contacts who work there", () => {
       ]),
     );
     const { container } = render(<SearchScreen q="acme" />);
-    await screen.findByRole("link", { name: "Acme GmbH" });
+    await screen.findByRole("link", { name: /^AG\s*Acme GmbH$/ });
     expect(hitRow(container).querySelector(".avatar-img")).toBeNull();
     expect(hitRow(container).querySelector(".avatar")?.textContent).toBe("AG");
   });
@@ -882,14 +924,16 @@ describe("SearchScreen — a company and the contacts who work there", () => {
     );
     render(<SearchScreen q="acme" />);
 
-    const jonas = await screen.findByRole("link", { name: "Jonas Weiß" });
+    const jonas = await screen.findByRole("link", {
+      name: /^JW\s*Jonas Weiß$/,
+    });
     expect(jonas.getAttribute("href")).toBe("/#/contacts/p1");
     const card = jonas.closest(".record-card");
     expect(card?.querySelector(".record-card-position")?.textContent).toBe(
       "Works at Acme GmbH",
     );
     // A contact the word matched by its own name needs no reason given.
-    const own = screen.getByRole("link", { name: "Acme Mustermann" });
+    const own = screen.getByRole("link", { name: /^AM\s*Acme Mustermann$/ });
     expect(own.closest(".record-card")?.textContent).not.toContain("Works at");
     expect(screen.getAllByText(/^Works at/)).toHaveLength(1);
   });

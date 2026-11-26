@@ -9,8 +9,9 @@ import {
   type SettingsPage,
   type SettingsPageId,
 } from "../../lib/settingscatalog";
+import { AGENT_RULES_SUBPAGE, settingsHref } from "../../lib/settingsrouting";
 import type { SettingName } from "./configurationentries";
-import { settingsSearch } from "./settingssearch";
+import { settingsSearch, settingsSearchRoute } from "./settingssearch";
 
 const t = (key: MessageKey) => translate("en", key);
 const de = (key: MessageKey) => translate("de", key);
@@ -32,6 +33,11 @@ function ids(
 }
 
 describe("settingsSearch", () => {
+  it("finds About Margince by version and by commit", () => {
+    expect(ids("version")).toContain("about");
+    expect(ids("commit")).toContain("about");
+  });
+
   it("finds a page by its own name", () => {
     expect(ids("audit")).toContain("audit");
   });
@@ -92,6 +98,21 @@ describe("settingsSearch", () => {
     const activity = settingsSearch("capture activity", ALL, t);
     expect(activity[0]?.page.id).toBe("connections");
     expect(activity[0]?.tab).toBe("activity");
+  });
+
+  // Agent rules has an address under AI assistants, and a hit on it opens there;
+  // the reader's own switches stand on the page itself.
+  it("opens Agent rules at its own address, and Automatic changes on the page", () => {
+    const rules = settingsSearch("agent rules", ALL, t)[0];
+    expect(rules?.page.id).toBe("agents");
+    expect(rules && settingsSearchRoute(rules)).toEqual(
+      settingsHref("agents", AGENT_RULES_SUBPAGE),
+    );
+    const tiers = settingsSearch("autonomy tiers", ALL, t)[0];
+    expect(tiers?.tab).toBe(AGENT_RULES_SUBPAGE);
+    const own = settingsSearch("automatic changes", ALL, t)[0];
+    expect(own?.page.id).toBe("agents");
+    expect(own && settingsSearchRoute(own)).toEqual(settingsHref("agents"));
   });
 
   // Two pages can each honestly answer one word, and picking one would make the
@@ -221,6 +242,28 @@ describe("settingsSearch over the settings a page draws", () => {
     expect(sectionHits).toEqual(
       expect.arrayContaining(["notifications", "system-health"]),
     );
+  });
+
+  // Configuration and Website forms each draw a panel under their own name.
+  it.each([
+    ["Configuration", "configuration"],
+    ["Website forms", "web-forms"],
+  ] as const)(
+    "keeps the group under %p, the page's own full name",
+    (query, page) => {
+      const hit = settingsSearch(query, ALL, t).find(
+        (candidate) => candidate.page.id === page,
+      );
+      expect(hit?.group).toBeDefined();
+      expect(hit?.section).toBeUndefined();
+    },
+  );
+
+  it("finds Your agent on the agents page", () => {
+    const hit = settingsSearch("your agent", ALL, t).find(
+      (candidate) => candidate.page.id === "agents",
+    );
+    expect(hit?.section).toBe(t("aiAccess.yourAgent.title"));
   });
 
   it("names no setting when an alias already matched", () => {

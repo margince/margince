@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -74,6 +76,12 @@ func VoiceBuildWorkerForTest(pool *pgxpool.Pool, path ModelPath) (river.Worker[V
 	return worker, governedInto(reg, &worker)
 }
 
+// FreezeForecastsForTest runs the daily forecast freeze once, at now, over
+// every live workspace.
+func FreezeForecastsForTest(ctx context.Context, pool *pgxpool.Pool, now func() time.Time) error {
+	return (&forecastSnapshotSweepWorker{pool: pool, now: now, log: slog.New(slog.DiscardHandler)}).Work(ctx, nil)
+}
+
 // WithImportJobWorkersForTest fills into with the import workers over the
 // object store and upload cap of the server it composes. Passed last, it reads
 // what every earlier option set.
@@ -82,6 +90,13 @@ func WithImportJobWorkersForTest(into *ImportJobWorkers, failed *error) Option {
 		*into, *failed = ImportJobWorkersForTest(pool, JobRunnerConfig{
 			Blobstore: s.blobs, ImportUploadCap: s.uploadLimit,
 		})
+	}
+}
+
+// WithHomeRefreshSettlerForTest lets the harness drain reads before resetting their database.
+func WithHomeRefreshSettlerForTest(into *func()) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		*into = s.homeCache.Settle
 	}
 }
 
@@ -104,8 +119,8 @@ func WithToolChecksRecordedForTest(sink func(verb string, call auth.RecordedCall
 	}
 }
 
-// WithRouteChecksRecordedForTest hands sink, after each signed-in /v1 request,
-// its method and path and what the gates noted of its caller.
+// WithRouteChecksRecordedForTest hands sink, after each /v1 request, signed in
+// or anonymous, its method and path and what the gates noted of its caller.
 func WithRouteChecksRecordedForTest(sink func(method, path string, call auth.RecordedCall)) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.routesForTest = func(next http.Handler) http.Handler {
@@ -132,3 +147,6 @@ func governedInto[T river.JobArgs](reg *jobRegistry, into *river.Worker[T]) erro
 	*into = jobs.Govern[T](work, spec)
 	return nil
 }
+
+// ForecastStoreForTest is the forecasting store as the server builds it, lens included.
+func ForecastStoreForTest(pool *pgxpool.Pool) *forecasting.Store { return newForecastStoreFor(pool) }

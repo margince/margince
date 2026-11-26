@@ -3,6 +3,7 @@
 
 import {
   ChevronDown,
+  Eye,
   EyeOff,
   Lock,
   type LucideIcon,
@@ -25,10 +26,9 @@ import "./visibility.css";
 // named, not yours) and a word that names it — so the state reads the same on
 // a row, in a drawer header and beside a contact.
 //
-// It is a fact, not a status, which is why it is not a `Badge`: `Badge`'s
-// tones say whether something is going well, and a message limited to its
-// participants is a message working exactly as intended. Only `withheld` takes
-// a tone, because it is the one state about the READER rather than the thing.
+// It is a fact, not a status, so it is not a `Badge`: a tone says whether
+// something goes well. `withheld` and `viewOnly` describe the reader; only
+// `withheld` takes a tone, since it hides content.
 
 /**
  * The closed vocabulary. `team` is what a MAIL row means — everyone the linked
@@ -48,7 +48,8 @@ export type Visibility =
   | "participants"
   | "selected"
   | "private"
-  | "withheld";
+  | "withheld"
+  | "viewOnly";
 
 const WORD: Record<Visibility, MessageKey> = {
   team: "visibility.team",
@@ -57,6 +58,7 @@ const WORD: Record<Visibility, MessageKey> = {
   selected: "visibility.selected",
   private: "visibility.private",
   withheld: "visibility.withheld",
+  viewOnly: "viewOnly.pill",
 };
 
 // `Lock` twice on purpose: "participants" and "private" are both a sealed
@@ -71,6 +73,7 @@ const ICON: Record<Visibility, LucideIcon> = {
   selected: UserRoundCheck,
   private: Lock,
   withheld: EyeOff,
+  viewOnly: Eye,
 };
 
 // Three looks for six states. Open is outlined and quiet: the sheet's own
@@ -92,7 +95,14 @@ function look(state: Visibility): string {
 export function VisibilityBadge({
   state,
   opens = false,
-}: Readonly<{ state: Visibility; opens?: boolean }>) {
+  label,
+}: Readonly<{
+  state: Visibility;
+  opens?: boolean;
+  // The word a control behind the mark uses for this state, so the mark and
+  // the choice that set it read the same.
+  label?: string;
+}>) {
   const t = useT();
   const Icon = ICON[state];
   return (
@@ -100,7 +110,7 @@ export function VisibilityBadge({
       className={`visibility${look(state)}${opens ? " visibility-opens" : ""}`}
     >
       <Icon aria-hidden="true" />
-      {t(WORD[state])}
+      {label ?? t(WORD[state])}
       {opens && <ChevronDown aria-hidden="true" />}
     </span>
   );

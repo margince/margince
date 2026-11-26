@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"maps"
+	"strings"
 	"testing"
 	"time"
 
@@ -372,5 +373,96 @@ func TestEmploymentImportRetractionWaitsForTheFinalProvider(t *testing.T) {
 		}); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+// A newer, dated current role at a company ends the older undated one there.
+// The contact holds one current role, and the older one reads as former.
+func TestEmploymentImportEndsTheOlderUndatedRoleAtTheSameCompany(t *testing.T) {
+	e := Setup(t)
+	store := contacts.NewStore(e.DB())
+	subject := seedMergeSubject(t, e, "Role change")
+	contact := ids.From[ids.ContactKind](subject)
+	company, err := store.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Role Co", Source: "manual", Domains: []contacts.CompanyDomainInput{{Domain: "role-change.example", IsPrimary: true}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+	current, roleA := "current", "Role A"
+	older, err := store.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contact, CompanyID: &companyID, Role: &roleA, EmploymentStatus: &current, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	employmentPurchase(t, e, subject, []provider.Claim{{Key: provider.ClaimCurrentEmployment, Value: []byte(
+		`{"company_name":"Role Co","company_domain":"role-change.example","job_title":"Role B","started_at":"2026-05"}`)}})
+	report, err := store.ApplyEmploymentImport(e.Admin(), contact, crmcontracts.EmploymentImportRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(report.Items) != 1 || report.Items[0].State != "linked" {
+		t.Fatalf("report = %+v, want the new role linked, not left for review", report.Items)
+	}
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		var status string
+		var ended *time.Time
+		if err := tx.QueryRow(context.Background(), `SELECT employment_status, ended_at FROM relationship WHERE id = $1`, older.ID).Scan(&status, &ended); err != nil {
+			return err
+		}
+		if status != "former" || ended == nil || ended.Format("2006-01") != "2026-05" {
+			t.Errorf("the older role is %s, ended %v; want former, ended where the new role starts", status, ended)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// An apply of evidence already linked answers OK, so the caller cannot tell it
+// from one that did something. changed says which. A resolve or dismiss of
+// evidence that created an employment names that employment and how to end it.
+// The evidence has no say over the edge.
+func TestEmploymentImportSaysWhenItChangedNothingAndWhyALinkedRoleStays(t *testing.T) {
+	e := Setup(t)
+	store := contacts.NewStore(e.DB())
+	subject := seedMergeSubject(t, e, "Linked evidence")
+	contact := ids.From[ids.ContactKind](subject)
+	employmentPurchase(t, e, subject, []provider.Claim{{Key: provider.ClaimCurrentEmployment, Value: []byte(`{"company_name":"Linked Co","company_domain":"linked-evidence.example","job_title":"Lead"}`)}})
+
+	first, err := store.ApplyEmploymentImport(e.Admin(), contact, crmcontracts.EmploymentImportRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Changed == nil || !*first.Changed {
+		t.Fatalf("the first apply created an employment and said changed=%v", first.Changed)
+	}
+	again, err := store.ApplyEmploymentImport(e.Admin(), contact, crmcontracts.EmploymentImportRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.Changed == nil || *again.Changed {
+		t.Fatalf("a replay that moved nothing said changed=%v", again.Changed)
+	}
+
+	if len(first.Items) != 1 || first.Items[0].State != "linked" || first.Items[0].RelationshipId == nil {
+		t.Fatalf("the first apply linked %+v, want one linked item with an employment", first.Items)
+	}
+	item := first.Items[0]
+	for _, action := range []crmcontracts.EmploymentImportRequestAction{crmcontracts.EmploymentImportRequestActionDismiss, crmcontracts.EmploymentImportRequestActionResolve} {
+		_, err = store.ApplyEmploymentImport(e.Admin(), contact, crmcontracts.EmploymentImportRequest{Action: &action, Key: &item.Key})
+		var skew *apperrors.VersionSkewError
+		if !errors.As(err, &skew) || !errors.Is(err, apperrors.ErrVersionSkew) {
+			t.Fatalf("%s of linked evidence answered %v, want a version-skew refusal with a message", action, err)
+		}
+		for _, says := range []string{item.RelationshipId.String(), "employment_status=former", "archive"} {
+			if !strings.Contains(skew.Message, says) {
+				t.Errorf("the %s refusal %q does not say %q", action, skew.Message, says)
+			}
+		}
+	}
+	preview, err := store.PreviewEmploymentImport(e.Admin(), contact)
+	if err != nil || preview.Items[0].State != "linked" {
+		t.Fatalf("a refused dismiss left the evidence %+v, %v; want it still linked", preview.Items, err)
 	}
 }

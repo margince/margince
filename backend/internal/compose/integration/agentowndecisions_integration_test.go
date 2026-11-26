@@ -160,27 +160,35 @@ func automationKeyed(t *testing.T, d *twoDoors, key string) automationRow {
 	return automationRow{}
 }
 
-// The rules the product starts with tell owners what happened, agents' acts too.
-// An agent cannot quiet one. The user still can.
+// An agent cannot retune or remove an unreviewed starter. A user reviews it first.
 func TestAnAgentCannotQuietASeededRule(t *testing.T) {
 	d := newTwoDoors(t, "agent-seeded-rule", "read", "write")
 	rule := automationKeyed(t, d, "stage_change_notify")
-	if rule.Status != "enabled" {
-		t.Fatalf("the seeded rule starts %q", rule.Status)
+	if rule.Status != "paused" {
+		t.Fatalf("the unreviewed rule starts %q", rule.Status)
 	}
-	refusal := d.toolRefused(t, "change_settings", map[string]any{"action": "update_automation", "id": rule.ID, "if_version": rule.Version, "request_body": AnyMap{"status": "paused"}})
+	stages := apptest.DefaultPipeline(t, d.e)
+	params := AnyMap{"pipeline_id": stages.PipelineID, "stage_ids": []string{stages.Open}}
+	refusal := d.toolRefused(t, "change_settings", map[string]any{"action": "update_automation", "id": rule.ID, "if_version": rule.Version, "request_body": AnyMap{"params": params}})
 	if !strings.Contains(refusal, "seeded") {
-		t.Errorf("pausing answered %q", refusal)
+		t.Errorf("retuning answered %q", refusal)
 	}
 	refusal = d.toolRefused(t, "change_settings", map[string]any{"action": "archive_automation", "id": rule.ID})
 	if !strings.Contains(refusal, "seeded") {
 		t.Errorf("archiving answered %q", refusal)
 	}
-	if got := automationKeyed(t, d, "stage_change_notify"); got.Status != "enabled" {
-		t.Errorf("the rule now reads %q", got.Status)
+	if got := automationKeyed(t, d, "stage_change_notify"); got.Status != "paused" || got.Version != rule.Version {
+		t.Errorf("the unreviewed rule changed: %+v", got)
 	}
-	if status := d.e.Call(t, "PATCH", "/v1/automations/"+rule.ID, AnyMap{"status": "paused"}, withIfMatch(nil, rule.Version), nil); status != http.StatusOK {
-		t.Errorf("the user pausing their rule → %d", status)
+	if status := d.e.Call(t, "PATCH", "/v1/automations/"+rule.ID, AnyMap{"status": "enabled", "params": params}, withIfMatch(nil, rule.Version), nil); status != http.StatusOK {
+		t.Fatalf("the user reviewing the rule: %d", status)
+	}
+	reviewed := automationKeyed(t, d, "stage_change_notify")
+	if reviewed.Status != "enabled" {
+		t.Fatalf("the reviewed rule is %q", reviewed.Status)
+	}
+	if status := d.e.Call(t, "PATCH", "/v1/automations/"+rule.ID, AnyMap{"status": "paused"}, withIfMatch(nil, reviewed.Version), nil); status != http.StatusOK {
+		t.Errorf("the user pausing their rule: %d", status)
 	}
 }
 
@@ -270,7 +278,8 @@ func TestATimeZoneAnAgentSetsHoldsAndNamesIt(t *testing.T) {
 	}
 	for _, source := range []string{"chosen", "browser"} {
 		refusal := d.toolRefused(t, "change_my_settings", map[string]any{"action": "save_timezone", "request_body": AnyMap{"timezone": "Asia/Tokyo", "source": source}})
-		if !strings.Contains(refusal, "an agent does not choose") {
+		// The agent is told the value to send, not sent to ask for a grant.
+		if !strings.Contains(refusal, "call again with source agent") || strings.Contains(refusal, "Refused on authority") {
 			t.Errorf("sending source %s answered %q", source, refusal)
 		}
 	}
@@ -342,66 +351,11 @@ func TestASignalAnAgentResolvesDoesNotNameTheUser(t *testing.T) {
 	if resolvedBy != nil || !isAgentStamp(capturedBy) {
 		t.Errorf("the outcome reads resolved_by %v, captured_by %q", resolvedBy, capturedBy)
 	}
-}
-
-// A transition trusted to move deals by itself judges a move by its stage's
-// criteria and by which stage comes next. An agent cannot change either under it.
-func TestAnAgentReshapesNoLadderATransitionIsTrustedOn(t *testing.T) {
-	d := newTwoDoors(t, "agent-trusted-ladder", "read", "write")
-	var pipeline struct {
-		ID     string `json:"id"`
-		Stages []struct {
-			ID       string `json:"id"`
-			Name     string `json:"name"`
-			Position int    `json:"position"`
-		} `json:"stages"`
-		Version int64 `json:"version"`
+	// The tool does not offer the kind, and a body that sets it anyway is refused at the door.
+	refusal := d.toolRefused(t, "change_attention", map[string]any{"action": "update_signal", "id": signal.ID, "request_body": AnyMap{"kind": "risk"}})
+	if !strings.Contains(refusal, "only a human may set kind") {
+		t.Errorf("an agent moving the kind answered %q, want the human-only refusal", refusal)
 	}
-	if status := d.e.Call(t, "POST", "/v1/pipelines", AnyMap{"name": "Trusted", "stages": []AnyMap{
-		{"name": "One", "position": 1, "semantic": "open"},
-		{"name": "Two", "position": 2, "semantic": "open"},
-		{"name": "Three", "position": 3, "semantic": "open"},
-		{"name": "Won", "position": 4, "semantic": "won"},
-	}}, nil, &pipeline); status != http.StatusCreated {
-		t.Fatalf("creating the pipeline → %d", status)
-	}
-	stage := func(name string) string {
-		for _, s := range pipeline.Stages {
-			if s.Name == name {
-				return s.ID
-			}
-		}
-		t.Fatalf("no stage %s", name)
-		return ""
-	}
-	var criterion struct {
-		ID      string `json:"id"`
-		Version int64  `json:"version"`
-	}
-	if status := d.e.Call(t, "POST", "/v1/stages/"+stage("One")+"/exit-criteria", AnyMap{"key": "budget", "label": "Budget known", "kind": "custom", "required": true}, nil, &criterion); status != http.StatusCreated {
-		t.Fatalf("adding the criterion → %d", status)
-	}
-	order := []string{stage("One"), stage("Three"), stage("Two"), stage("Won")}
-	calls := map[string]map[string]any{
-		"archiving a criterion": {"action": "archive_exit_criterion", "id": stage("One"), "criterion_id": criterion.ID},
-		"making it optional":    {"action": "update_exit_criterion", "id": stage("One"), "criterion_id": criterion.ID, "request_body": AnyMap{"required": false}},
-		"reordering the stages": {"action": "reorder_stages", "id": pipeline.ID, "request_body": AnyMap{"stage_ids": order}},
-		"moving a stage":        {"action": "update_stage", "id": stage("Two"), "request_body": AnyMap{"position": 9}},
-		"removing a stage":      {"action": "archive_stage", "id": stage("Two")},
-		"adding a stage":        {"action": "create_stage", "request_body": AnyMap{"pipeline_id": pipeline.ID, "name": "Inserted", "position": 8}},
-		"adding a criterion":    {"action": "create_exit_criterion", "id": stage("Two"), "request_body": AnyMap{"key": "extra", "label": "Extra", "kind": "custom", "required": true}},
-	}
-	trustTransition(t, d, pipeline.ID, stage("One"), stage("Three"))
-	for name, args := range calls {
-		refusal := d.toolRefused(t, "change_settings", args)
-		if !strings.Contains(refusal, "trusted") {
-			t.Errorf("%s answered %q", name, refusal)
-		}
-	}
-	if _, err := d.e.Owner.Exec(t.Context(), `UPDATE stage_progression_policy SET mode = 'propose' WHERE pipeline_id = $1`, pipeline.ID); err != nil {
-		t.Fatalf("taking the trust back: %v", err)
-	}
-	settingsAct(t, d, "update_exit_criterion", map[string]any{"id": stage("One"), "criterion_id": criterion.ID, "request_body": AnyMap{"required": false}})
 }
 
 // A captured call holds what was sent to a model and what came back, which reach
@@ -410,8 +364,8 @@ func TestAnAgentReadsAnAICallWithoutItsPayload(t *testing.T) {
 	d := newTwoDoors(t, "agent-ai-call", "read", "write")
 	var call string
 	if err := d.e.Owner.QueryRow(t.Context(), `
-		INSERT INTO ai_call (task, tier, provider, model_id, request_fingerprint, logical_call_id)
-		VALUES ('cold_start', 'cheap_cloud', 'anthropic', 'a-model', 'print', gen_random_uuid()) RETURNING id::text`).Scan(&call); err != nil {
+		INSERT INTO ai_call (task, tier, provider, model_id, logical_call_id)
+		VALUES ('cold_start', 'cheap_cloud', 'anthropic', 'a-model', gen_random_uuid()) RETURNING id::text`).Scan(&call); err != nil {
 		t.Fatalf("seeding the call: %v", err)
 	}
 	if _, err := d.e.Owner.Exec(t.Context(), `
@@ -430,39 +384,4 @@ func TestAnAgentReadsAnAICallWithoutItsPayload(t *testing.T) {
 	if !strings.Contains(got, "a-model") {
 		t.Errorf("the agent read nothing of the call: %s", got)
 	}
-}
-
-// trustTransition seeds the row directly because no route writes this table any more,
-// and a row enabled while one did still holds its ladder still.
-func trustTransition(t *testing.T, d *twoDoors, pipeline, from, to string) {
-	t.Helper()
-	if _, err := d.e.Owner.Exec(t.Context(), `
-		INSERT INTO stage_progression_policy (pipeline_id, from_stage_id, to_stage_id, mode)
-		VALUES ($1, $2, $3, 'auto')`, pipeline, from, to); err != nil {
-		t.Fatalf("trusting the transition: %v", err)
-	}
-}
-
-// A transition whose stage was removed moves no deal, so it leaves the ladder free.
-func TestAnAgentReshapesALadderOnceItsTrustedStageIsGone(t *testing.T) {
-	d := newTwoDoors(t, "agent-trust-gone", "read", "write")
-	var pipeline struct {
-		ID     string `json:"id"`
-		Stages []struct {
-			ID   string `json:"id"`
-			Name string `json:"name"`
-		} `json:"stages"`
-	}
-	if status := d.e.Call(t, "POST", "/v1/pipelines", AnyMap{"name": "Gone", "stages": []AnyMap{
-		{"name": "One", "position": 1, "semantic": "open"},
-		{"name": "Two", "position": 2, "semantic": "open"},
-		{"name": "Won", "position": 3, "semantic": "won"},
-	}}, nil, &pipeline); status != http.StatusCreated {
-		t.Fatalf("creating the pipeline → %d", status)
-	}
-	trustTransition(t, d, pipeline.ID, pipeline.Stages[0].ID, pipeline.Stages[1].ID)
-	if status := d.e.Call(t, "DELETE", "/v1/stages/"+pipeline.Stages[1].ID, nil, nil, nil); status >= 300 {
-		t.Fatalf("removing the stage → %d", status)
-	}
-	settingsAct(t, d, "create_stage", map[string]any{"request_body": AnyMap{"pipeline_id": pipeline.ID, "name": "Three", "position": 7}})
 }

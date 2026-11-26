@@ -16,6 +16,7 @@ package integration
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
 	"sync"
@@ -251,8 +252,8 @@ func TestAnUnopenableVaultNamesItselfRatherThanReportingNoLicense(t *testing.T) 
 
 	// A different vault is what a rotated or dropped root key looks like from
 	// here: the ref is recorded and refers to nothing this process can open.
-	lost := compose.SealedLicenseTokenSource(sealCtx(), e.Pool, differentVault(t, e), licenseConfig(t, ""), log)
-	_, err := lost()
+	lost := compose.SealedLicenseTokenSource(e.Pool, differentVault(t, e), licenseConfig(t, ""), log)
+	_, err := lost(sealCtx())
 	if err == nil {
 		t.Fatal("a vault that cannot open the sealed license reported no license at all")
 	}
@@ -260,6 +261,17 @@ func TestAnUnopenableVaultNamesItselfRatherThanReportingNoLicense(t *testing.T) 
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the refusal %q does not name %q", err, want)
 		}
+	}
+}
+
+func TestTheSealedLicenseSourceUsesTheCurrentReadContext(t *testing.T) {
+	e := Setup(t)
+	source := compose.SealedLicenseTokenSource(e.Pool, realVault(t, e), licenseConfig(t, ""), slog.New(slog.DiscardHandler))
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	_, err := source(ctx)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("a cancelled license read returned %v, want context cancellation", err)
 	}
 }
 

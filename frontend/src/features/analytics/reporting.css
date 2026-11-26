@@ -2,6 +2,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
   gap: var(--gapCards);
+  column-gap: var(--gapPanes);
   /* Two charts sharing a row stand as tall as the taller one, so the row ends
      on one line instead of a ragged edge. */
   align-items: stretch;
@@ -38,9 +39,13 @@
 .reporting-toolbar > * {
   min-width: 8rem;
 }
-/* A date field holds its box and picker: 8rem would let them spill past it. */
-.reporting-toolbar > .field:has(.date-input) {
+/* A date field holds its box and picker: 8rem would let them spill past it.
+   A month field holds its month and year on one line for the same reason. */
+.reporting-toolbar > .field:has(.date-input, .month-input) {
   min-width: min-content;
+}
+.reporting-toolbar .month-input {
+  flex-wrap: nowrap;
 }
 /* A toolbar whose verbs the reader may not use renders nothing, and its margin
    would still open a gap in the page. */
@@ -53,6 +58,12 @@
   align-items: start;
   gap: var(--space-5);
   margin-bottom: var(--space-5);
+}
+/* The name is the author's text and may be one unbroken run; it gives way to
+   the actions instead of pushing them off the row. */
+.reporting-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 /* The author's line breaks are kept; a long purpose wraps at reading width. */
 .reporting-description {
@@ -248,7 +259,11 @@
   display: grid;
   gap: var(--space-3);
 }
-.reporting-library-body > .segmented,
 .reporting-library-body > .btn {
   justify-self: start;
+}
+/* The foot's slot for the chart's table door lays the door out as one of the
+   foot's own items. */
+.reporting-table-slot {
+  display: contents;
 }

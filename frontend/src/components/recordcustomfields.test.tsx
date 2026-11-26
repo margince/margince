@@ -85,8 +85,8 @@ it.each(["company", "contact", "deal", "lead"] as const)(
       WIKI,
     );
     await user.click(change);
-    const amount = screen.getByRole("spinbutton", { name: "Annual budget" });
-    expect((amount as HTMLInputElement).value).toBe("48000");
+    const amount = screen.getByRole("textbox", { name: "Annual budget" });
+    expect((amount as HTMLInputElement).value).toBe("48000.00");
     await user.clear(amount);
     await user.type(amount, "48000.5");
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -137,7 +137,7 @@ it("reads and edits a zero-decimal currency in whole units", async () => {
     name: "Change Annual budget JP¥48,000",
   });
   await user.click(change);
-  const amount = screen.getByRole("spinbutton", { name: "Annual budget" });
+  const amount = screen.getByRole("textbox", { name: "Annual budget" });
   expect((amount as HTMLInputElement).value).toBe("48000");
   await user.clear(amount);
   await user.type(amount, "48001");
@@ -157,7 +157,7 @@ it.each([
     await user.click(
       await screen.findByRole("button", { name: /^Change Annual budget/ }),
     );
-    const amount = screen.getByRole("spinbutton", { name: "Annual budget" });
+    const amount = screen.getByRole("textbox", { name: "Annual budget" });
     await user.clear(amount);
     await user.type(amount, typed);
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -182,10 +182,9 @@ it("keeps a link in place and pauses its edit while another field saves", async 
   await user.click(
     await screen.findByRole("button", { name: /^Change Annual budget/ }),
   );
-  await user.type(
-    screen.getByRole("spinbutton", { name: "Annual budget" }),
-    "1",
-  );
+  const amount = screen.getByRole("textbox", { name: "Annual budget" });
+  await user.clear(amount);
+  await user.type(amount, "48001");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(sent).toHaveLength(1));
   expect(
@@ -316,4 +315,90 @@ it("clears an existing value and never offers a masked field for editing", async
   expect(screen.getByText("Hidden").nextElementSibling?.textContent).toBe(
     "Not shown",
   );
+});
+
+const LEDGER = "ext:finance-demo:ledger_account";
+const ACCOUNT_ID = "0f9e7d6c-1111-4222-8333-444455556666";
+const OTHER_ID = "1a2b3c4d-5555-4666-8777-888899990000";
+const ledgerRef = {
+  ...customFieldFixture,
+  id: "f5",
+  label: "Ledger ref",
+  slug: "ledger_ref",
+  type: "record" as const,
+  options: [LEDGER],
+  column_name: "cf_ledger_ref",
+};
+
+function ledgerRoutes(sent: unknown[]) {
+  const previews: unknown[] = [];
+  installFetchStub({
+    "GET /me": meRoute(
+      { contact: ["read", "update"] as const },
+      { seat: "full" },
+    ),
+    "GET /custom-fields": () =>
+      jsonResponse({ data: [ledgerRef], page: { has_more: false } }),
+    "GET /record-kinds": () =>
+      jsonResponse({
+        data: [
+          {
+            name: LEDGER,
+            unit: "finance-demo",
+            kind: "ledger_account",
+            display_name: "Ledger account",
+            fields: [
+              { name: "account_code", label: "Account code" },
+              { name: "name", label: "Name" },
+            ],
+            natural_key: ["account_code"],
+            delete_policy: "archive_only",
+            actions: ["read"],
+          },
+        ],
+      }),
+    "POST /filters/preview": (body) => {
+      previews.push(body);
+      return jsonResponse({
+        resource: LEDGER,
+        match_count: 1,
+        columns: ["id", "account_code", "name"],
+        rows: [
+          { id: ACCOUNT_ID, account_code: "4711", name: "Receivables" },
+          { id: OTHER_ID, account_code: "4712", name: "Payables" },
+        ],
+        truncated: false,
+      });
+    },
+    "PATCH /contacts/record1": async (body) => {
+      sent.push(body);
+      return jsonResponse({ id: "record1", version: 2 });
+    },
+  });
+  return previews;
+}
+
+it("names the record a Pick a record field holds, and picks another by search", async () => {
+  const user = userEvent.setup();
+  const sent: unknown[] = [];
+  const previews = ledgerRoutes(sent);
+  renderDetails("contact", { cf_ledger_ref: ACCOUNT_ID });
+
+  expect(await screen.findByText("Receivables")).toBeTruthy();
+  expect(previews).toContainEqual({
+    resource: LEDGER,
+    filter: { field: "id", op: "eq", value: ACCOUNT_ID },
+    limit: 10,
+  });
+
+  await user.click(screen.getByRole("button", { name: /Change Ledger ref/ }));
+  await user.type(screen.getByRole("searchbox"), "pay");
+  await user.click(await screen.findByRole("button", { name: /Payables/ }));
+  expect(previews).toContainEqual({
+    resource: LEDGER,
+    filter: { field: "name", op: "contains", value: "pay" },
+    limit: 10,
+  });
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(sent).toEqual([{ cf_ledger_ref: OTHER_ID }]));
 });

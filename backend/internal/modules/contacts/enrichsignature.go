@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -40,10 +41,10 @@ const enrichSource = "capture_enrich"
 // enrichCapturedBy is the acting identity on enrichment rows.
 const enrichCapturedBy = "agent:enrich"
 
-// SignatureField is one gated, evidence-carrying extraction. phone may appear
-// once per number the signature lists; every other field appears once.
+// SignatureField is one gated, evidence-carrying extraction. phone and email
+// may appear once per number or address listed; every other field appears once.
 type SignatureField struct {
-	Name       string // title | phone | role | linkedin | company_name | address | website
+	Name       string // title | phone | role | linkedin | company_name | address | website | email
 	Value      string
 	Evidence   string // verbatim snippet — the caller's gate already verified it
 	Confidence float64
@@ -67,6 +68,9 @@ type SignatureField struct {
 type SignatureApplyResult struct {
 	Applied int // fields (one per phone number) this statement was newer than
 	Skipped int // fields answered later than this, unreadable, or ruled on by a human
+	// SourceLimited is set when the source mail was narrowed, archived or
+	// erased before the fields could land.
+	SourceLimited bool
 }
 
 // ApplySignatureFields lands one contact's gated signature fields in one
@@ -179,6 +183,7 @@ func (s *Store) applySignature(ctx context.Context, contactID ids.ContactID, sou
 		}
 		if sourceLimited {
 			res.Skipped += len(fields)
+			res.SourceLimited = true
 			return nil
 		}
 		// The corrections, re-read INSIDE this transaction. The caller supplies
@@ -194,8 +199,23 @@ func (s *Store) applySignature(ctx context.Context, contactID ids.ContactID, sou
 		if err != nil {
 			return err
 		}
+		details, err := applySignatureDetailsTx(ctx, tx, contactID, sourceActivity, sourceRef, observedAt, fields, corrected, &res)
+		if err != nil {
+			return err
+		}
+		appliedFields = append(appliedFields, details...)
 		if len(appliedFields) == 0 {
 			return nil
+		}
+		if slices.Contains(appliedFields, fieldTitle) {
+			if err := s.roleFromSignatureTitleTx(ctx, tx, contactID, sourceRef); err != nil {
+				return err
+			}
+		}
+		if i := slices.IndexFunc(fields, isCompanyName); i >= 0 && slices.Contains(appliedFields, fieldCompanyName) {
+			if err := s.offerSignatureEmployerTx(ctx, tx, contactID, sourceActivity, fields[i]); err != nil {
+				return err
+			}
 		}
 		before, after := signatureImages(appliedFields)
 		// The write shape: the enrichment is a contact mutation, so the
@@ -234,7 +254,7 @@ func (s *Store) applySignature(ctx context.Context, contactID ids.ContactID, sou
 func signatureSourceLimitedTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceActivity ids.UUID, defaultEnabled bool) (limited bool, observedAt time.Time, err error) {
 	if _, err := tx.Exec(ctx, `
 		SELECT 1 FROM capture_connection cc, activity a
-		 WHERE a.id = $1 AND `+capturingMailboxSQL("a")+` FOR SHARE OF cc`, sourceActivity); err != nil {
+		 WHERE a.id = $1 AND a.restricted_at IS NULL AND `+storekit.CapturingMailboxSQL("cc", "a")+` FOR SHARE OF cc`, sourceActivity); err != nil {
 		return false, observedAt, fmt.Errorf("contacts: holding the signature's mailbox: %w", err)
 	}
 	if err := tx.QueryRow(ctx, `
@@ -290,15 +310,29 @@ func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactI
 			res.Skipped++
 			continue
 		}
-		if f.Name == fieldPhone {
-			// A signature lists several numbers, and they are applied as one
-			// set below.
+		// A signature lists several numbers, applied as one set below. Its
+		// further addresses reach past the contact, and applySignatureDetailsTx lands them.
+		switch f.Name {
+		case fieldPhone:
 			numbers = append(numbers, f)
 			continue
+		case fieldEmail:
+			continue
+		case fieldAddress:
+			// A line the snippet does not print is the model's, not the contact's.
+			if !quotesValue(f.Evidence, f.Value) {
+				res.Skipped++
+				continue
+			}
 		}
 		outcome, err := s.applySignatureField(ctx, tx, contactID, sourceRef, observedAt, f)
 		if err != nil {
 			return nil, nil, err
+		}
+		if f.Name == fieldAddress && (outcome.landed() || outcome == observedRestated) {
+			if _, err := addSignatureSupportTx(ctx, tx, contactID, fieldAddress, "", strings.TrimSpace(f.Value), sourceRef, f.Evidence); err != nil {
+				return nil, nil, err
+			}
 		}
 		if !outcome.landed() {
 			res.Skipped++
@@ -321,6 +355,11 @@ func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactI
 	res.Skipped += len(numbers) - landed
 	if landed > 0 {
 		appliedFields = append(appliedFields, fieldPhone)
+	}
+	if slices.Contains(appliedFields, fieldAddress) {
+		if err := fillSignatureAddressTx(ctx, tx, contactID, signatureValue(fields, fieldAddress)); err != nil {
+			return nil, nil, err
+		}
 	}
 	return appliedFields, confirmed, nil
 }
@@ -364,8 +403,8 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, contactID id
 	if value == "" {
 		return observedSkipped, nil
 	}
-	// The contact's own dated statement, applied by the writer both this pass
-	// and the card import share, which records the evidence row that keeps the
+	// The contact's own dated statement, applied by the writer this pass shares
+	// with the card import. That writer records the evidence row, which keeps the
 	// value auditable back to the verbatim signature line.
 	outcome, err := applyObservedField(ctx, tx, contactID, observedField{
 		Field: f.Name, Value: value, Evidence: f.Evidence, SourceRef: sourceRef,
@@ -427,59 +466,6 @@ func revokeSignatureEvidence(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 		WHERE contact_id = $1 AND field = $2 AND source = $3`,
 		contactID, field, enrichSource); err != nil {
 		return fmt.Errorf("contacts: withdrawing unapplied signature evidence (%s): %w", field, err)
-	}
-	return nil
-}
-
-// MarkSignatureRead advances the read watermark to THIS mail, whatever the read
-// yielded. It is what stops a contact whose signature states nothing the pass
-// wants from being re-read — and re-billed — every night: they return as a
-// candidate only when mail NEWER than the watermark arrives.
-//
-// The watermark is the message's own occurred_at and it only moves forward
-// (GREATEST): a cursor that could rewind would reopen the contact as soon as the
-// mail it names is archived, or whenever two workers finished out of order.
-//
-// Bookkeeping, not a domain mutation, so it carries no audit or outbox row — the
-// same posture as the capture auto-enrich cursor. Deliberately outside the apply
-// transaction too: losing the watermark after a successful apply costs one
-// repeated read whose evidence rows are all first-verdict-wins inserts, so the
-// repeat changes nothing.
-//
-// historyDepth is how many of the contact's newest readable mails the pass may
-// read per new mail. The legacy repair reopens only watermarks without one.
-func (s *Store) MarkSignatureRead(ctx context.Context, contactID ids.ContactID, activityID ids.UUID, historyDepth int, version SignatureWork) error {
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// occurred_at is read from the activity rather than taken from the
-		// caller: the watermark and the candidate query must compare the same
-		// number, and only one of them can be the row itself.
-		generation, snapshot := version.Generation, version.Snapshot
-		args := []any{contactID, activityID, historyDepth, generation, snapshot}
-		tag, err := tx.Exec(ctx, fmt.Sprintf(`
-            INSERT INTO contact_signature_enrich_state AS st (contact_id, activity_id, last_activity_at, history_depth,read_snapshot)
-            SELECT $%[1]d, a.id, a.occurred_at, $%[3]d,NULLIF($%[5]d::text,'')::pg_snapshot FROM activity a
-			 WHERE a.id = $%[2]d AND a.restricted_at IS NULL
-			ON CONFLICT (contact_id) DO UPDATE
-			SET activity_id = CASE WHEN `+signatureAfterWatermarkSQL("EXCLUDED.last_activity_at", "EXCLUDED.activity_id")+` THEN EXCLUDED.activity_id ELSE st.activity_id END,
-			    last_activity_at = GREATEST(st.last_activity_at,
-			                                EXCLUDED.last_activity_at),
-			    history_depth = EXCLUDED.history_depth,
-			    attempted_at = now(),
-                read_snapshot=COALESCE(EXCLUDED.read_snapshot,st.read_snapshot)
-            WHERE st.requested_generation<=$%[4]d::bigint`, len(args)-4, len(args)-3, len(args)-2, len(args)-1, len(args)), args...)
-		if err != nil {
-			return err
-		}
-		if tag.RowsAffected() == 0 {
-			// The activity is gone (erased, archived away) between the candidate
-			// query and here. Nothing to watermark against; the next pass reads
-			// whatever mail this contact has now.
-			return nil
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("contacts: recording the signature read: %w", err)
 	}
 	return nil
 }

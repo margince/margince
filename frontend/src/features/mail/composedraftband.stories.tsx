@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { RefreshCw, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { expect, screen } from "storybook/test";
 import type { components } from "../../api/schema";
 import { IconAction } from "../../design-system/iconaction";
@@ -12,6 +12,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { DraftBand, RewriteRow } from "./composedraftband";
+import type { DraftProvenance } from "./composedraftcall";
 // The drawer's own sheet: `.compose-band-body` and `.compose-rewrite` are
 // reached BY CLASS, and a story's module graph stops short of compose.tsx,
 // which loads it.
@@ -19,14 +20,10 @@ import "./compose.css";
 
 // Provenance stays visible above the controls that request another draft.
 
-type EmailDraft = components["schemas"]["EmailDraft"];
 type DraftReason = components["schemas"]["AccountDraftReason"];
 type Maturity = components["schemas"]["VoiceProfile"]["maturity"];
 
-type Provenance = Pick<
-  EmailDraft,
-  "ai_generated" | "ai_disclosure" | "voice_profile_version" | "voice_degraded"
->;
+type Provenance = DraftProvenance;
 
 const WROTE_IT: Provenance = {
   ai_generated: true,
@@ -114,9 +111,43 @@ export const MachineWroteItDark: Story = {
   render: band(WROTE_IT, "building"),
 };
 
-// The four rewrites sit beside the disclosure over the machine's own untouched
-// words. They are offered only while the body is still what the model wrote,
-// which is the caller's condition. These two frames are the row's own states.
+const TEMPLATE: Provenance = {
+  ai_generated: false,
+  ai_disclosure: null,
+  voice_profile_version: null,
+  voice_degraded: false,
+  generated_by: "deterministic",
+};
+
+/** No model wrote these words: the server's template did, without the
+ *  purpose. The band says so in place of the disclosure, and offers no rewrites. */
+export const TemplateDraft: Story = {
+  render: () => {
+    viewerRoutes();
+    return (
+      <StoryProviders>
+        <DraftBand
+          provenance={TEMPLATE}
+          maturity={undefined}
+          reasons={[...REASONS]}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await expect(
+      await screen.findByText("AI could not write this draft"),
+    ).toBeVisible();
+  },
+};
+
+export const TemplateDraftDark: Story = {
+  ...TemplateDraft,
+  globals: { theme: "dark" },
+};
+
+// The rewrites sit beside the disclosure, and stand over any body on screen,
+// whoever wrote it. These three frames are the row's own states.
 
 /** Ready: one press each, and each is an instruction for ONE call. */
 export const RewritesReady: Story = {
@@ -135,6 +166,23 @@ export const RewritesBarred: Story = {
       <RewriteRow onRewrite={() => {}} disabled />
     </StoryProviders>
   ),
+};
+
+/** A body the rep formatted: a plain-text revision would drop the links, so
+ *  the row stays and says why it cannot act. */
+export const RewritesRefused: Story = {
+  render: () => (
+    <StoryProviders>
+      <RewriteRow
+        onRewrite={() => {}}
+        disabled={false}
+        refusal="Rewrites work on plain text. Remove the formatting and links to use them."
+      />
+    </StoryProviders>
+  ),
+  play: async () => {
+    await expect(screen.getByRole("button", { name: "Polish" })).toBeDisabled();
+  },
 };
 
 export const Dark: Story = {
@@ -161,11 +209,6 @@ function everyAction() {
             actions={
               <>
                 <RewriteRow onRewrite={() => {}} disabled={false} />
-                <IconAction
-                  label="Change the ask"
-                  icon={<RefreshCw aria-hidden="true" />}
-                  onClick={() => {}}
-                />
                 <IconAction
                   label="Discard draft"
                   icon={<RotateCcw aria-hidden="true" />}

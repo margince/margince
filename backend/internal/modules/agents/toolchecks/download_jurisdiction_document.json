@@ -1,0 +1,6 @@
+{
+  "verb": "download_jurisdiction_document",
+  "checks": [
+    "installation_settings.read"
+  ]
+}

@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { api } from "../../api/client";
+import { useExitAsking } from "../../components/unsaved";
 import {
   Avatar,
   Badge,
@@ -14,12 +15,14 @@ import { describedByIds } from "../../design-system/describedby";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { IdentityFact, IdentityLine } from "../../design-system/identityline";
+import { useJumpTo } from "../../design-system/jumpbar";
+import { LanguageSelect } from "../../design-system/languageselect";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { RoleBadge } from "../../design-system/rbac";
 import { useSaveDraft } from "../../design-system/savepage";
-import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
+import { Switch } from "../../design-system/switch";
 import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { type Toast, useToast } from "../../design-system/toast";
 import {
@@ -33,12 +36,20 @@ import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useInstallState } from "../../lib/pwa";
 import { useLogout, useMe } from "../../lib/session";
 import {
+  ACCOUNT_FOCUS_PARAM,
+  ACCOUNT_LANGUAGE_SECTION,
+} from "../../lib/setup-checklist";
+import {
+  setSingleKeyShortcutsOn,
+  useSingleKeyShortcuts,
+} from "../../lib/shortcuts";
+import {
   setThemeChoice,
   THEME_CHOICES,
   THEME_LABEL_KEYS,
-  type ThemeChoice,
   useThemeChoice,
 } from "../../lib/theme";
+import { useAddressWriters, useUrlParams } from "../../lib/urlstate";
 import { useSaveMyTimezone, useViewerZone } from "../../lib/viewerzone";
 import { MfaSettingRow } from "../sign-in/mfacard";
 import { PasswordSettingRow } from "../sign-in/passwordcard";
@@ -46,6 +57,7 @@ import { reloadReaderLanguageReads } from "./languagereads";
 import { ProfilePictureRow } from "./profilepicture";
 import { NameSettingRows, useAccountNames } from "./settings-names";
 import { SignatureSettingRow } from "./settingssignaturerow";
+import { SignedInDevicesPanel } from "./signeddevices";
 import { InstallSettingRow } from "./thisdevice";
 
 // The Account page as task cards, each one job a reader comes here to do. They
@@ -60,6 +72,7 @@ export function AccountSettings() {
     <>
       <ProfilePanel toast={toast} />
       <SignInPanel />
+      <SignedInDevicesPanel />
       <LanguagePanel />
       <BrowserPanel />
     </>
@@ -69,7 +82,7 @@ export function AccountSettings() {
 function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
   const t = useT();
   const query = useMe();
-  const names = useAccountNames(toast);
+  const names = useAccountNames();
   return (
     <Panel title={t("account.profileCard")}>
       <PanelBody>
@@ -90,7 +103,11 @@ function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
                     {me.user.display_name || me.user.email}
                   </Heading>
                   {me.roles.map((role) => (
-                    <RoleBadge key={role} roleKey={role} />
+                    <RoleBadge
+                      key={role}
+                      roleKey={role}
+                      name={me.role_names?.[role]}
+                    />
                   ))}
                 </div>
                 <IdentityLine>
@@ -119,6 +136,7 @@ function SignInPanel() {
   const t = useT();
   const me = useMe();
   const logout = useLogout();
+  const askFirst = useExitAsking();
   const email = me.data?.user.email;
   return (
     <Panel title={t("account.signInCard")}>
@@ -134,7 +152,7 @@ function SignInPanel() {
             <Button
               variant="ghost"
               disabled={logout.isPending}
-              onClick={() => logout.mutate()}
+              onClick={() => askFirst(() => logout.mutate())}
             >
               {t("auth.signOut")}
             </Button>
@@ -145,15 +163,32 @@ function SignInPanel() {
   );
 }
 
+// The setup checklist's language and time zone steps land here, with the card
+// scrolled into view. The dial is cleared so the same step moves focus again.
+function useSetupFocus() {
+  const [params] = useUrlParams();
+  const jump = useJumpTo();
+  const { replaceDial } = useAddressWriters();
+  const asked = params.get(ACCOUNT_FOCUS_PARAM) === ACCOUNT_LANGUAGE_SECTION;
+  useEffect(() => {
+    if (!asked) return;
+    jump(ACCOUNT_LANGUAGE_SECTION);
+    replaceDial(ACCOUNT_FOCUS_PARAM, undefined);
+  }, [asked, jump, replaceDial]);
+}
+
 function LanguagePanel() {
   const t = useT();
+  useSetupFocus();
   return (
-    <Panel title={t("account.languageCard")}>
-      <SettingList bleed="settings">
-        <LanguageSettingRow />
-        <TimeZoneSettingRow />
-      </SettingList>
-    </Panel>
+    <div id={ACCOUNT_LANGUAGE_SECTION} tabIndex={-1}>
+      <Panel title={t("account.languageCard")}>
+        <SettingList bleed="settings">
+          <LanguageSettingRow />
+          <TimeZoneSettingRow />
+        </SettingList>
+      </Panel>
+    </div>
   );
 }
 
@@ -167,6 +202,7 @@ function BrowserPanel() {
     <Panel title={t("account.browserCard")}>
       <SettingList bleed="settings">
         <AppearanceSettingRow />
+        <SingleKeyShortcutsRow />
         <InstallSettingRow install={install} />
       </SettingList>
     </Panel>
@@ -195,6 +231,9 @@ function LanguageSettingRow() {
   });
   const refusalId = useId();
   const shown = draft ?? locale;
+  // Absent means the account never chose, so the language on screen is a guess.
+  // Choosing it again makes no draft, so it gets a one-click keep.
+  const unchosen = useMe().data?.user.locale === undefined;
   useSaveDraft({
     dirty: shown !== locale,
     save: () => remember.mutateAsync(shown),
@@ -209,28 +248,26 @@ function LanguageSettingRow() {
       description={t("account.languageHelp")}
       control={(control) => (
         <div className="form-stack settingrow-measure">
-          <Select
+          <LanguageSelect
             {...control}
             aria-describedby={describedByIds(
               control["aria-describedby"],
               remember.isError && refusalId,
             )}
             className="settingrow-measure"
+            languages={LOCALES}
             value={shown}
-            // Narrowed through the list the options were built from, so the
-            // answer is a Locale with no assertion.
-            onChange={(next) => {
-              const picked = LOCALES.find((option) => option === next);
-              if (picked) setDraft(picked);
-            }}
-            // Each language name is in its own language, so each carries `lang`
-            // (WCAG 2.2 AA 3.1.2); a locale code is already a BCP 47 subtag.
-            options={LOCALES.map((option) => ({
-              value: option,
-              label: t(localeNameKey(option)),
-              lang: option,
-            }))}
+            onChange={setDraft}
           />
+          {unchosen && draft === null && (
+            <Button
+              variant="ghost"
+              disabled={remember.isPending}
+              onClick={() => remember.mutate(locale)}
+            >
+              {t("account.keepChoice", { value: t(localeNameKey(locale)) })}
+            </Button>
+          )}
           {/* The bar carries the summary; this names the field it is about. */}
           <ErrorLine id={refusalId}>
             {remember.isError ? problemMessageOf(remember.error, t) : null}
@@ -252,6 +289,7 @@ function TimeZoneSettingRow() {
   return (
     <TimeZoneSettingControl
       stored={me.data.user.timezone ?? readerZone}
+      chosen={me.data.user.timezone_chosen === true}
       setByAgent={Boolean(me.data.user.timezone_set_by)}
     />
   );
@@ -259,8 +297,9 @@ function TimeZoneSettingRow() {
 
 function TimeZoneSettingControl({
   stored,
+  chosen,
   setByAgent,
-}: Readonly<{ stored: string; setByAgent: boolean }>) {
+}: Readonly<{ stored: string; chosen: boolean; setByAgent: boolean }>) {
   const t = useT();
   const save = useSaveMyTimezone();
   const [draft, setDraft] = useState<string | null>(null);
@@ -293,6 +332,17 @@ function TimeZoneSettingControl({
             value={shown}
             onChange={setDraft}
           />
+          {!chosen && draft === null && (
+            <Button
+              variant="ghost"
+              disabled={save.isPending}
+              onClick={() =>
+                save.mutate({ timezone: stored, source: "chosen" })
+              }
+            >
+              {t("account.keepChoice", { value: stored })}
+            </Button>
+          )}
           {setByAgent && (
             <Badge tone="ai">{t("account.timezoneSetByAgent")}</Badge>
           )}
@@ -308,22 +358,12 @@ function TimeZoneSettingControl({
 /**
  * The appearance choice, here as well as in the account menu.
  *
- * Both read `useThemeChoice` and write `setThemeChoice`. This row holds its pick
- * as a draft and paints it only on Save, so the menu never shows an unsaved theme.
+ * Both read `useThemeChoice` and write `setThemeChoice` on the click, so the two
+ * never show different themes and this row stays out of the page's save bar.
  */
 function AppearanceSettingRow() {
   const t = useT();
   const choice = useThemeChoice();
-  const [draft, setDraft] = useState<ThemeChoice | null>(null);
-  const shown = draft ?? choice;
-  useSaveDraft({
-    dirty: shown !== choice,
-    save: async () => {
-      setThemeChoice(shown);
-      setDraft(null);
-    },
-    discard: () => setDraft(null),
-  });
   const labels = {
     light: t(THEME_LABEL_KEYS.light),
     dark: t(THEME_LABEL_KEYS.dark),
@@ -337,11 +377,33 @@ function AppearanceSettingRow() {
         <SegmentedControl
           label={t("settings.appearance")}
           options={THEME_CHOICES}
-          value={shown}
+          value={choice}
           labels={labels}
-          onChange={setDraft}
+          onChange={setThemeChoice}
         />
       }
+    />
+  );
+}
+
+// A Switch writes when turned, so this row stays out of the page's save bar.
+function SingleKeyShortcutsRow() {
+  const t = useT();
+  const on = useSingleKeyShortcuts();
+  return (
+    <SettingRow
+      label={t("account.singleKeyShortcuts")}
+      description={t("account.singleKeyShortcutsHelp")}
+      control={(control) => (
+        <Switch
+          describedBy={control["aria-describedby"]}
+          label={t("account.singleKeyShortcuts")}
+          labelHidden
+          checked={on}
+          testId="single-key-shortcuts-switch"
+          onChange={setSingleKeyShortcutsOn}
+        />
+      )}
     />
   );
 }

@@ -98,6 +98,20 @@ export function RolesReadout({
         </span>
       );
     }),
+    // Fixed by the build per role, so the readout shows it and the form does not.
+    {
+      key: "pacing",
+      header: t("agentAllowances.roles.col.pacing"),
+      align: "end",
+      render: (role) =>
+        role.paced_per_minute ? (
+          <span className="t-num">
+            {formatNumber(allowances.mcp_calls_per_minute, locale)}
+          </span>
+        ) : (
+          t("agentAllowances.roles.unpaced")
+        ),
+    },
   ];
   return (
     <>

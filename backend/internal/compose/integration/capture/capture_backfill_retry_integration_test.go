@@ -71,7 +71,7 @@ func startFlakyBackfill(t *testing.T, e *integration.SearchEnv, faults []error) 
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -151,7 +151,7 @@ func TestABackfillPageWhoseJobContextDiedNeverWedgesTheRun(t *testing.T) {
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -204,7 +204,7 @@ func TestABackfillPageWhoseJobContextDiedNeverWedgesTheRun(t *testing.T) {
 	}
 	// The assertion that matters: uq_capture_backfill_live is not holding the
 	// connection hostage, so the human can import again without an operator.
-	if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing); err != nil {
+	if _, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing); err != nil {
 		t.Fatalf("a fresh import is blocked by the run that failed: %v", err)
 	}
 }
@@ -233,5 +233,50 @@ func TestBackfillEndsOnAFaultNoRetryCanFix(t *testing.T) {
 	}
 	if errClass == nil || *errClass != "auth" {
 		t.Fatalf("last_error_class = %v, want auth", errClass)
+	}
+}
+
+// failingMessageConnector serves pages in which one message was refused by the
+// capture and walked past, as a connector reports it in BackfillPageResult.Failed.
+type failingMessageConnector struct{ *pagedConnector }
+
+func (f *failingMessageConnector) BackfillPage(ctx context.Context, auth connector.Auth, after time.Time, token string, sink connector.Sink) (connector.BackfillPageResult, error) {
+	res, err := f.pagedConnector.BackfillPage(ctx, auth, after, token, sink)
+	res.Skipped, res.Failed = 0, 1
+	return res, err
+}
+
+// A page with one refused message among good ones commits: the failure is
+// counted, the good messages stay counted, and the cursor moves on.
+func TestBackfillPageWithARefusedMessageCommitsAndMovesOn(t *testing.T) {
+	e := integration.SetupSearch(t)
+	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
+	registry.Register(&failingMessageConnector{&pagedConnector{messages: 25, pageSize: 10}})
+	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	run, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
+	if err != nil {
+		t.Fatalf("StartBackfill: %v", err)
+	}
+
+	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	if done, _, _, err := registry.RunBackfillStep(wsCtx, run.ID); err != nil || done {
+		t.Fatalf("the page: done=%v err=%v, want a committed page of a live run", done, err)
+	}
+	status, failures, _, cursor := readBackfillRetryState(t, e, run.ID)
+	if status != "running" || failures != 0 || len(cursor) == 0 {
+		t.Fatalf("status=%s consecutive_failures=%d cursor=%q, want running/0/advanced", status, failures, cursor)
+	}
+	_, scanned, captured, _ := readBackfillRow(t, e, run.ID)
+	var failed int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(e.Admin(), `SELECT failed FROM capture_backfill WHERE id = $1`, run.ID).Scan(&failed)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if scanned != 10 || captured != 9 || failed != 1 {
+		t.Fatalf("scanned=%d captured=%d failed=%d, want 10/9/1", scanned, captured, failed)
 	}
 }

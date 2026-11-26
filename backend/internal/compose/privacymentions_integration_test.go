@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -56,7 +55,7 @@ func TestContactErasureScrubsUnlinkedNoteMentionsAndKeepsHoldsAndLinkedNotes(t *
 		e.WsExec(t, `INSERT INTO embedding(entity_type,entity_id,embedding,chunk_hash,model) VALUES('activity',$1,'[0,1,0]'::vector,'note-copy','test')`, id)
 		e.WsExec(t, `INSERT INTO field_provenance(object_type,object_id,field_name,source,captured_by,evidence_ref) VALUES('activity',$1,'body','manual','system:test','Anna Berg')`, id)
 	}
-	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB()))
+	eraser := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB()))
 	if err := eraser.EraseContact(e.Admin(), ids.UUID(contact.Id), "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +106,7 @@ func TestContactErasureLeavesAmbiguousOneWordNameMentionsForReview(t *testing.T)
 	e.WsExec(t, `INSERT INTO role_assignment(user_id,role_id) SELECT $1,id FROM role WHERE key='admin' ON CONFLICT DO NOTHING`, e.AdminUser)
 	contact := e.SeedContact(t, "Anna", nil)
 	note := logMentionNote(t, e, "Follow Anna", "Anna spoke to Joanna.")
-	if err := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), contact, "Subject requested erasure"); err != nil {
+	if err := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), contact, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM notice WHERE kind='privacy_review_required' AND target_type='activity' AND target_id=$1 AND recipient_user_id=$2`, note, e.AdminUser); n != 1 {
@@ -132,7 +131,7 @@ func TestContactErasureFlagsRetainedDescriptionsSignaturesAndUploadedText(t *tes
 	e.WsExec(t, `INSERT INTO knowledge_corpus(id,name,topic_statement,captured_by) VALUES($1,'Review files','Uploaded reference','system:test')`, corpus)
 	e.WsExec(t, `INSERT INTO knowledge_document(id,corpus_id,filename,content_type,byte_size,storage_key,checksum,captured_by) VALUES($1,$2,'reference.pdf','application/pdf',123,'retained-reference','test-checksum','system:test')`, document, corpus)
 	e.WsExec(t, `INSERT INTO knowledge_chunk(id,corpus_id,document_id,chunk_ix,text,chunk_hash) VALUES($1,$2,$3,0,'Anna Berg is mentioned in the uploaded file','test-chunk')`, chunk, corpus, document)
-	if err := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
+	if err := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.WsScalar(t, `SELECT description FROM company WHERE id=$1`, company.Id); got != "Anna Berg is mentioned here" {
@@ -170,7 +169,7 @@ func TestContactErasureMatchesPunctuationAndUnicodeNamesAsWholeNames(t *testing.
 			subject := e.SeedContact(t, name, nil)
 			note := logMentionNote(t, e, "Review ("+name+")", "Keep context")
 			longer := logMentionNote(t, e, "x"+name+"x", "Keep context")
-			if err := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
+			if err := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
 				t.Fatal(err)
 			}
 			if got := e.WsScalar(t, `SELECT subject FROM activity WHERE id=$1`, note); got != "Review (Erased)" {

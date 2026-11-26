@@ -1,0 +1,6 @@
+{
+  "verb": "resolve_entities",
+  "checks": [
+    "company.read"
+  ]
+}

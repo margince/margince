@@ -18,13 +18,16 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // StageInput describes one refused 🟡 call to hold for decision.
 type StageInput struct {
-	Kind           string // the tool name, e.g. advance_deal
-	ProposedChange json.RawMessage
-	DiffHash       string
+	EffectSystemText *systemtext.Message
+	SystemText       *systemtext.Message
+	Kind             string // the tool name, e.g. advance_deal
+	ProposedChange   json.RawMessage
+	DiffHash         string
 	// TargetType + TargetID are the polymorphic reference to the staged
 	// action's target (any entity kind); the id stays untyped because the
 	// pair is the discriminated reference, not one entity's typed id.
@@ -47,6 +50,9 @@ type StageInput struct {
 	Summary      string
 	// SummaryParts is Summary taken apart, nil when Summary is a sentence alone.
 	SummaryParts *crmcontracts.ApprovalSummaryParts
+	// Why is what prompted the proposal, naming the record and the fact. The
+	// card leads with it.
+	Why Grounds
 	// TargetLabel names the target when its table has no name to read, such as
 	// a captured message offered as a new contact. Nil reads the name from the
 	// target row, which is what every named record does.

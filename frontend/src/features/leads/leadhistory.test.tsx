@@ -1,10 +1,17 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider, translate } from "../../i18n";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { LeadHistoryTab } from "./leadhistory";
@@ -83,12 +90,16 @@ describe("LeadHistoryTab", () => {
     withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);
 
     expect(await screen.findByText("Fleet renewal")).toBeTruthy();
+    const cuts = screen.getByRole("combobox", { name: "Timeline filter" });
+    expect(cuts.textContent).toBe("All");
+    const user = userEvent.setup();
+    await user.click(cuts);
     expect(
-      screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed"),
-    ).toBe("true");
-    for (const cut of ["Email", "Meetings", "Calls", "Notes", "Changes"]) {
-      expect(screen.getByRole("button", { name: cut })).toBeTruthy();
-    }
+      within(await screen.findByRole("listbox"))
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["All", "Email", "Meetings", "Calls", "Notes", "Changes"]);
+    await user.keyboard("{Escape}");
     // The search and date row waits behind its toggle.
     expect(screen.queryByLabelText("Activity kind")).toBeNull();
   });
@@ -118,14 +129,11 @@ describe("LeadHistoryTab", () => {
     withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);
 
     await screen.findByText("Fleet renewal");
-    await userEvent.click(screen.getByRole("button", { name: "Calls" }));
+    const cuts = screen.getByRole("combobox", { name: "Timeline filter" });
+    await pickOption(userEvent.setup(), cuts, "Calls");
 
     await waitFor(() => expect(kinds).toContainEqual(["call"]));
-    expect(
-      screen
-        .getByRole("button", { name: "Calls" })
-        .getAttribute("aria-pressed"),
-    ).toBe("true");
+    expect(cuts.textContent).toBe("Calls");
   });
 
   it("opens the search and date row from its toggle", async () => {
@@ -164,7 +172,11 @@ describe("LeadHistoryTab", () => {
     withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);
 
     await screen.findByText("Fleet renewal");
-    await userEvent.click(screen.getByRole("button", { name: "Changes" }));
+    await pickOption(
+      userEvent.setup(),
+      screen.getByRole("combobox", { name: "Timeline filter" }),
+      "Changes",
+    );
 
     await waitFor(() => expect(screen.getByText(CHANGE_LINE)).toBeTruthy());
     expect(screen.queryByText("Fleet renewal")).toBeNull();
@@ -173,6 +185,30 @@ describe("LeadHistoryTab", () => {
     expect(screen.queryByLabelText("Activity kind")).toBeNull();
     // The panel this swaps in carries its own by-change / by-field switch.
     expect(screen.getByRole("button", { name: "By field" })).toBeTruthy();
+  });
+
+  it("offers Capture a chat on a lead the reader may change, and opens the panel", async () => {
+    stubWithSession(
+      {},
+      { lead: ["read", "update"], activity: ["read", "create"] },
+    );
+    withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Capture a chat" }),
+    );
+    expect(await screen.findByLabelText("Screenshot")).toBeTruthy();
+  });
+
+  it("withholds Capture a chat from a reader who may not change the lead", async () => {
+    stubWithSession({}, { lead: ["read"] });
+    withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);
+
+    expect(
+      await screen.findByText("No activity logged on this lead yet."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Capture a chat" })).toBeNull();
   });
 
   it("says there is nothing yet rather than drawing an empty list silently", async () => {

@@ -1,0 +1,11 @@
+{
+  "verb": "reopen_lead",
+  "checks": [
+    "lead.delete",
+    "lead.update"
+  ],
+  "takes": [
+    "disqualified_lead",
+    "lead"
+  ]
+}

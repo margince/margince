@@ -1,12 +1,19 @@
 import { type ReactNode, useState } from "react";
+import { Badge } from "../../design-system/atoms";
 import { Panel } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import type { WorklistView } from "../../lib/worklistviews";
+import {
+  bandSections,
+  canReportEmptyBands,
+  unbandedRows,
+} from "./worklist.bands";
 import { pickFor, type WorklistPicks } from "./worklist.bulkdone";
 import { reviewView } from "./worklist.destinations";
 import { DomainReview, DomainReviewLauncher } from "./worklist.domainreview";
 import { hasPane } from "./worklist.pane";
-import type { WorklistItem } from "./worklist.queries";
+import type { Worklist, WorklistItem } from "./worklist.queries";
+import { QueueBand } from "./worklist.queuebands";
 import { WorklistRow } from "./worklist.row";
 import { rowIdentity } from "./worklist.rowidentity";
 
@@ -140,11 +147,13 @@ export function ViewPanel({
   view,
   items,
   rows,
+  select,
   children,
 }: Readonly<{
   view: Exclude<WorklistView, "today">;
   items: readonly WorklistItem[];
   rows: RowContext;
+  select?: ReactNode;
   children?: ReactNode;
 }>) {
   const t = useT();
@@ -153,9 +162,75 @@ export function ViewPanel({
     return launcher ?? null;
   }
   return (
-    <Panel title={t(`worklist.view.${view}`)} actions={launcher}>
+    <Panel
+      title={t(`worklist.view.${view}`)}
+      titleAction={
+        <>
+          {launcher}
+          {select}
+        </>
+      }
+    >
       <QueueRows items={items} {...rows} />
       {children}
+    </Panel>
+  );
+}
+
+// Today's rows under the server's band headings. Select is one of the head's
+// actions, so the head lays it out beside the badge and wraps them.
+export function TodayPanel({
+  day,
+  items,
+  hasMore,
+  rows,
+  select,
+}: Readonly<{
+  day: Worklist;
+  items: readonly WorklistItem[];
+  hasMore: boolean;
+  rows: RowContext;
+  select: ReactNode;
+}>) {
+  const t = useT();
+  return (
+    <Panel
+      // Indigo, the band the Brief's Focus panel wears and a
+      // record's "what needs you today" pane before it. These rows
+      // are the agent's reading of the day: what it ranked and what
+      // it prepared. Indigo is the one claim the product makes about
+      // who did that. The same panel is drawn on this page and in
+      // the queue drawer, so the claim reads the same in both.
+      tone="ai"
+      title={t("worklist.queue")}
+      titleAction={
+        <>
+          <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+          {select}
+        </>
+      }
+    >
+      {/* The headings come from the SERVER's band list, in its draw
+      order, rather than from the rows — which is the only way a
+      band holding nothing can say so. Ranks are still counted over
+      the whole queue, so a row's number is its place on the page
+      and not its place within its heading. */}
+      {bandSections(day, items).map((section, at, all) => (
+        <QueueBand
+          // The band and how often it opened before, which a
+          // row leaving the run does not change.
+          key={`${section.band}:${all.slice(0, at).filter((earlier) => earlier.band === section.band).length}`}
+          section={section}
+          canReportEmpty={canReportEmptyBands(hasMore)}
+          rows={QueueRows}
+          rowProps={rows}
+        />
+      ))}
+      {/* Rows an older server sent with no band. Real work, drawn under
+      no heading rather than dropped to keep the sections tidy. */}
+      {unbandedRows(items).length > 0 && (
+        <QueueRows items={unbandedRows(items)} {...rows} />
+      )}
     </Panel>
   );
 }

@@ -8,7 +8,6 @@ package meetingmap
 // decoder states what was attached, and this decides what counts.
 
 import (
-	"regexp"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -26,25 +25,20 @@ type Document struct {
 const googleDocMimeType = "application/vnd.google-apps.document"
 
 // notesTitleSuffixes are the endings Google gives the notes and transcript
-// documents it writes for a meeting, per language. Google titles them
-// "<meeting> - <date> - Notes by Gemini" and "<meeting> - Transcript". An
-// agenda attached by hand carries no such ending, so it is not read.
-//
-// Vietnamese is not listed until its exact titles are known; a document with an
-// unknown title is simply not matched.
+// documents it writes for a meeting, in the organizer's account language.
+// Google titles them "<meeting> - <date> - Notes by Gemini" and
+// "<meeting> - Transcript". An agenda attached by hand carries no such ending,
+// so it is not read. A language not listed here is never matched.
 var notesTitleSuffixes = []struct {
 	suffix string
 	kind   string
 }{
 	{"notes by gemini", capture.MeetingDocumentNotes},
 	{"notizen von gemini", capture.MeetingDocumentNotes},
+	{"ghi chú của gemini", capture.MeetingDocumentNotes},
 	{"transcript", capture.MeetingDocumentTranscript},
 	{"transkript", capture.MeetingDocumentTranscript}, //nolint:misspell // German: Google's title for a transcript
 }
-
-// driveFileID is the shape of a Drive file id. Anything else is refused, so
-// the document address built from it cannot point anywhere but at that file.
-var driveFileID = regexp.MustCompile(`^[A-Za-z0-9_-]{10,200}$`)
 
 // maxMeetingDocuments bounds the notes rows one meeting writes. Google writes
 // one notes document and one transcript per meeting; a longer list is not theirs.
@@ -70,7 +64,7 @@ func NotesDocuments(ev Event, owner string) []capture.MeetingDocument {
 	seen := map[string]bool{}
 	for _, doc := range ev.Documents {
 		id := strings.TrimSpace(doc.FileID)
-		if doc.MimeType != googleDocMimeType || !driveFileID.MatchString(id) || seen[id] {
+		if doc.MimeType != googleDocMimeType || !capture.IsDriveFileID(id) || seen[id] {
 			continue
 		}
 		kind := notesKindOf(doc.Title)

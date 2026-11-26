@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -24,6 +25,11 @@ import (
 // predicate engine is looked up by, plus the canonical predicate tree — or,
 // for a Shortlist, the narrowing to its chosen members instead.
 type FilterSource struct {
+	// Name is what the source is called on screen: the view's or list's name,
+	// empty for an inline filter.
+	Name string
+	// Sort is the sort the list screen applies to a saved view, empty otherwise.
+	Sort      string
 	Resource  string
 	Predicate storekit.Predicate
 	Members   storekit.ListMemberFilter
@@ -82,7 +88,7 @@ func (s *Store) SavedViewFilterSource(ctx context.Context, id ids.SavedViewID) (
 	if err != nil {
 		return FilterSource{}, fmt.Errorf("stored filter state for saved view %s: %w", id, err)
 	}
-	return FilterSource{Resource: resource, Predicate: pred}, nil
+	return FilterSource{Name: view.Name, Sort: viewSortOf(view.Query), Resource: resource, Predicate: pred}, nil
 }
 
 // ListFilterSource resolves a list to its export filter. It reads the list
@@ -94,13 +100,29 @@ func (s *Store) ListFilterSource(ctx context.Context, id ids.ListID) (FilterSour
 	if err != nil {
 		return FilterSource{}, err
 	}
+	if kindRemoved(list.EntityType) {
+		return FilterSource{}, &BadInputError{Field: listIDField, Reason: "the records of this list are unavailable"}
+	}
+	if kindUnavailable(ctx, list.EntityType) {
+		return FilterSource{}, apperrors.ErrPermissionDenied
+	}
 	if list.ListType != listTypeDynamic {
 		members, err := s.MemberFilter(ctx, list.ID.UUID, list.EntityType)
-		return FilterSource{Resource: list.EntityType, Members: members}, err
+		return FilterSource{Name: list.Name, Resource: list.EntityType, Members: members}, err
 	}
 	pred, err := predicateFromDefinition(list.Definition)
 	if err != nil {
 		return FilterSource{}, fmt.Errorf("stored definition for list %s: %w", id, err)
 	}
-	return FilterSource{Resource: list.EntityType, Predicate: pred}, nil
+	return FilterSource{Name: list.Name, Resource: list.EntityType, Predicate: pred}, nil
+}
+
+// viewSortOf is the sort spec the list screen stored under the view's list state.
+func viewSortOf(query map[string]any) string {
+	state, ok := query["list"].(map[string]any)
+	if !ok {
+		return ""
+	}
+	sort, _ := state["sort"].(string)
+	return sort
 }

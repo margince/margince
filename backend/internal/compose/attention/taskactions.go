@@ -5,16 +5,18 @@ package attention
 
 import crmcontracts "github.com/margince/margince/backend/internal/contracts"
 
-// taskActions is what a task row offers. Every verb PATCHes the task, so a
-// reader who may not change it is offered none.
+// taskActions offers the changes permitted for this task. Claiming its unowned
+// lead can make an inquiry task writable in the same transaction.
 func taskActions(task Task) []crmcontracts.AttentionItemActions {
-	if task.ReadOnly {
-		return []crmcontracts.AttentionItemActions{}
+	actions := []crmcontracts.AttentionItemActions{}
+	if !task.ReadOnly {
+		actions = append(actions, "complete", "snooze")
 	}
-	actions := []crmcontracts.AttentionItemActions{"complete", "snooze"}
-	// Offered on every scope the task appears in: nobody holding it is a fact
-	// about the task, not about the page reading it.
-	if task.AssigneeID == nil {
+	if task.WebsiteInquiry {
+		if task.Inquiry != nil && task.Inquiry.CanTake != nil && *task.Inquiry.CanTake {
+			actions = append(actions, "take")
+		}
+	} else if !task.ReadOnly && task.AssigneeID == nil {
 		actions = append(actions, "take")
 	}
 	return actions

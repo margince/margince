@@ -56,7 +56,7 @@ func unknownRecordType() error {
 // caller must be able to see the record itself. Out of scope reads as not
 // found, so asking for the assignments of a record you cannot open never
 // confirms that the record exists.
-func ensureParentReadable(ctx context.Context, tx pgx.Tx, rt crmcontracts.AssignmentRecordType, id ids.UUID) error {
+func ensureParentReadable(ctx context.Context, tx pgx.Tx, rt crmcontracts.AssignmentRecordType, id ids.UUID, live bool) error {
 	// BOTH halves, in this order. auth.Require answers "may this caller read
 	// records of this kind at all", and EnsureVisible answers "is THIS row one
 	// of theirs" — row scope alone admits a caller holding no read permission
@@ -71,15 +71,24 @@ func ensureParentReadable(ctx context.Context, tx pgx.Tx, rt crmcontracts.Assign
 		if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 			return err
 		}
+		if live {
+			return auth.EnsureVisibleLive(ctx, tx, "company", id)
+		}
 		return auth.EnsureVisibleExisting(ctx, tx, "company", id)
 	case crmcontracts.AssignmentRecordTypeDeal:
 		if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 			return err
 		}
+		if live {
+			return auth.EnsureVisibleLive(ctx, tx, "deal", id)
+		}
 		return auth.EnsureVisibleExisting(ctx, tx, "deal", id)
 	case crmcontracts.AssignmentRecordTypeProject:
 		if err := auth.Require(ctx, "project", principal.ActionRead); err != nil {
 			return err
+		}
+		if live {
+			return auth.EnsureVisibleLive(ctx, tx, "project", id)
 		}
 		return auth.EnsureVisibleExisting(ctx, tx, "project", id)
 	}

@@ -18,6 +18,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/readerlocale"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -25,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 const publicBookingPrefix = "/v1/public/booking/"
@@ -131,12 +134,13 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 				return
 			}
 			ctx := principal.WithWorkspaceID(r.Context(), wsID.UUID)
+			ctx = systemtext.WithLocale(ctx, readerlocale.Anonymous(r))
 			ctx = principal.WithActor(ctx, principal.Principal{
 				Type: principal.PrincipalSystem,
 				ID:   "system:public_booking",
 			})
 			if preview {
-				srv.GetPublicBookingPreview(w, r.WithContext(ctx), slug)
+				srv.GetPublicBookingPreview(w, r.WithContext(ctx), slug, crmcontracts.GetPublicBookingPreviewParams{L: linkLength(r.URL.Query())})
 				return
 			}
 			next.ServeHTTP(w, r.WithContext(ctx))

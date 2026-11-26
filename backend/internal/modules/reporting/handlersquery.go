@@ -179,6 +179,17 @@ func SelectionFromQuery(q url.Values, opening OpeningSelection) (crmcontracts.Re
 		}
 		selection.Interval = &crmcontracts.ReportingWindow{StartAt: start, EndAt: end}
 	}
+	if q.Has("close_start_at") || q.Has("close_end_at") {
+		start, err := time.Parse(time.RFC3339Nano, q.Get("close_start_at"))
+		if err != nil {
+			return selection, invalid("choose a valid expected-close start")
+		}
+		end, err := time.Parse(time.RFC3339Nano, q.Get("close_end_at"))
+		if err != nil {
+			return selection, invalid("choose a valid expected-close end")
+		}
+		selection.CloseInterval = &crmcontracts.ReportingWindow{StartAt: start, EndAt: end}
+	}
 	chooseMembers(q, &selection)
 	return selection, nil
 }

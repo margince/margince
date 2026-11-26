@@ -1,7 +1,7 @@
 name: go-build-cache
 description: >-
   Restore the shared Go build cache for one build flavor, and hand back the key
-  a main-branch job uses to refresh it.
+  a writer on main or develop uses to refresh it.
 
 # Why this exists: actions/setup-go caches ~/.cache/go-build under a key that
 # hashes only go.sum, so the entry is written ONCE and then every later run logs
@@ -43,7 +43,9 @@ inputs:
   flavor:
     description: >-
       Which set of compiled artifacts this job produces, and therefore which
-      cache it shares. `plain` is the untagged build/vet/lint/unit compile;
+      cache it shares. `plain` is the untagged build/vet/unit compile;
+      `lint` is what backend-lint loads (vet's untagged compile and golangci's
+      tagged one), written by lint-cache.yml after each push to main or develop;
       `integration` is the `-tags=integration -cover -coverpkg=./...` compile
       the lane's build job does. They are separate keys because a build tag and coverage
       instrumentation both change the package builds themselves — only the

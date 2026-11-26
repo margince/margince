@@ -18,11 +18,15 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/dispactapp"
+	"github.com/margince/margince/backend/internal/compose/gmailsignature"
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/network"
 	"github.com/margince/margince/backend/internal/compose/roombrief"
+	"github.com/margince/margince/backend/internal/compose/unroutedmail"
+	"github.com/margince/margince/backend/internal/compose/vacuumhealth"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -60,6 +64,7 @@ type Server struct {
 	bulkHandlers
 	companyContactShareHandlers
 	handoverHandlers
+	handoffHandlers
 	searchHandlers
 	consentHandlers
 	directedSendHandlers
@@ -70,23 +75,16 @@ type Server struct {
 	voiceHandlers
 	reportHandlers
 	briefs.Handlers
-	// The weekly retrospective. Named rather than embedded because
-	// briefs.Handlers already claims the unqualified name, and because the
-	// weekly is deliberately its OWN aggregate — a weekly row on brief_run
-	// would become "the latest brief" to the reader that decides the next
-	// morning's overnight window.
+	// The weekly retrospective, named because briefs.Handlers claims the name.
+	// It is its own aggregate: on brief_run it would read as the latest brief.
 	weeklyHandlers weekly.Handlers
-	// The day's one surface, assembled across approvals, dedupe and tasks.
-	// Named rather than embedded: briefs.Handlers already claims the
-	// unqualified name.
+	// The day's one surface across approvals, dedupe and tasks. Named: briefs.Handlers claims the name.
 	attentionHandlers attention.Handlers
 	magicHandlers     magic.Handlers
-	// magicService is held so wireReversal can bind the undo judge to the SAME
-	// restore seam the reversal route uses: one judgment for offer and refusal.
+	// magicService binds the undo judge to the reversal route's restore seam.
 	magicService *magic.Service
 	homeCache    *homecache.Cache // Home's cached answers; forgetHomeOnWrite ends a writer's own answers
-	// The relationship-graph reads (ADR-0078): who knows this contact, and
-	// how a deal is covered.
+	// The relationship-graph reads (ADR-0078): who knows this contact, and how a deal is covered.
 	network.Reads
 	coldstartHandlers
 	companyHandlers
@@ -101,6 +99,7 @@ type Server struct {
 	documentReadHandlers
 	scrapeHandlers
 	connectorHandlers
+	gmailsignature.ImportHandlers
 	backfillHandlers
 	aiRoutingHandlers
 	aiAdminHandlers
@@ -117,15 +116,19 @@ type Server struct {
 	captureSenderHandlers
 	captureExclusionHandlers
 	captureOwnerIdentityHandlers
+	unroutedmail.Endpoints
 	captureCounterpartyHoldHandlers
 	conversationSuggestionHandlers
 	claimHandlers
+	recordReferenceHandlers
 	marginceChangeHandlers
 	ownershipRequestHandlers
 	dealCommitmentHandlers
 	promiseTakeOverHandlers
 	importHandlers
 	channelHandlers
+	chatLinkHandlers
+	chatEventHandlers
 	traceHandlers
 	pipelineTraceHandlers
 	filteredExportHandlers
@@ -148,11 +151,13 @@ type Server struct {
 	dataResetHandlers
 	jobHealthHandlers
 	dataTaskHandlers
+	erasureReturnHandlers
 	captureHealthHandlers
 	extensionIngestHealthHandlers
 	recoveryHealthHandlers
+	vacuumhealth.Endpoint
 	automaticWorkHandlers
-	// Extension inventory, settings, transports: stateless, embedded as the zero value.
+	// Extension inventory, settings, transports.
 	extensionsHandlers
 	extensionSettingsHandlers
 	channelProvidersHandlers
@@ -164,6 +169,7 @@ type Server struct {
 	dealStatusHandlers
 	roomBriefHandlers
 	readerRenderingHandlers
+	rewriteHandlers
 	contactResearchHandlers
 	contactDraftHandlers
 	leadDraftHandlers
@@ -174,10 +180,8 @@ type Server struct {
 	financeHandlers
 	integrationsHandlers
 	knowledgeHandlers
-	// The personal agent-activity read: what the scheduled agent is doing for
-	// the caller now, and what it settled for them today. It lives in compose
-	// because it reads the agents module's run tables without importing a
-	// sibling of its own.
+	// The caller's agent-activity read, in compose because it reads the agents
+	// module's run tables without importing a sibling of its own.
 	aiActivityHandlers
 	// The notices transport: the reader's own centre and the settling of it,
 	// their per-class delivery settings, and one coach raising a notice. The
@@ -187,9 +191,9 @@ type Server struct {
 	// under. Its authority is the parent record's own, so it wires no
 	// permission of its own.
 	assignmentHandlers
-	// The week ahead: the rep's own plan, and the one write their lead has on
-	// it. The week just gone is weeklyHandlers, which shares no table with it.
+	// The week ahead: the rep's own plan. The week just gone is weeklyHandlers.
 	weeklyPlanHandlers
+	recordLinksHandlers
 	forecastHandlers
 	// The share routes. In compose rather than in forecasting because
 	// analytics_share is a compose-owned table and the recompute a snapshot
@@ -204,14 +208,14 @@ type Server struct {
 	reportSetupHandlers
 	accountCoverageHandlers
 	analyticsContextHandlers
+	salesProgressReading
 	sdrSummaryHandlers
 	assuranceHandlers
 	// The check a human starts: the preview of a first pass, and the pass
 	// itself. In compose because a pass is assembled from the deals and
 	// coverage seams, which assurance owns nothing of.
 	assuranceRunHandlers
-	// The introductions transport: one rep asking a colleague to open a door,
-	// the colleague's bounded answer, and what came of it.
+	// Introductions: one rep asks a colleague to open a door, and what came of it.
 	introductionHandlers
 	initiativeHandlers
 
@@ -227,9 +231,8 @@ type Server struct {
 	// is configured — the route is absent otherwise, never open.
 	gmailPush http.Handler
 
-	// graphPush is the Microsoft Graph change-notification webhook (the same
-	// chassis), injected by WithGraphPush only when a notification token is
-	// configured — the route is absent otherwise, never open.
+	// graphPush is the Microsoft Graph change-notification webhook on the same chassis. WithGraphPush
+	// injects it only when a notification token is configured; otherwise the route is absent.
 	graphPush http.Handler
 
 	// mcpConnectorEnabled is the connector's deployment gate (WithMCPConnector): transport, authorization
@@ -246,19 +249,17 @@ type Server struct {
 	// challenge points at. WithMCPResource sets both from --public-base-url,
 	// never from a request header a caller controls.
 	mcpResource, mcpAllowedOrigin string
-	// mcpInputStateKey signs the questions a tool asks in the chat.
-	mcpInputStateKey string
+	// mcpDoor is what the /mcp door carries beside the registry.
+	mcpDoor mcpDoorSettings
+	// dispactCalls checks the Dispact app's call tokens on /mcp; nil serves none.
+	dispactCalls *dispactapp.Edge
+	// chatPulls queues a chat_pull for a Dispact notice; WithChatLinks sets it.
+	chatPulls *jobs.Runner
 
-	// metricsToken gates /metrics, injected by WithMetricsToken from the
-	// deployment's --metrics-token. Empty — the default — configures no
-	// credential, and with metricsOpen unset the exposition then refuses every
-	// scrape: unlike /healthz and /readyz this endpoint discloses the route
-	// catalogue and per-workspace job-runtime telemetry (queue depth, which
-	// connectors are configured). A token set here is checked over plain HTTP
-	// — this process terminates no TLS — so it authenticates a scraper across a
-	// trusted hop, the one the session cookie already takes, and is not a
-	// credential to carry over an untrusted network. See gateMetrics in
-	// routes.go.
+	// metricsToken gates /metrics, from --metrics-token. Empty refuses every
+	// scrape unless metricsOpen is set, because the exposition names routes and
+	// per-workspace job telemetry. It is checked over plain HTTP, so it holds
+	// only across a trusted hop (gateMetrics in routes.go).
 	metricsToken string
 	// trustedProxies are the direct peers whose X-Forwarded-* headers this process
 	// believes, from WithTrustedProxies. The zero value trusts nobody.
@@ -413,7 +414,7 @@ type Server struct {
 	// and /metrics still reports the single honest total exactly once.
 	// Both binaries set it unconditionally; nil is the tests-only path.
 	aiMetrics func(io.Writer)
-	aiState   string // the /readyz AI line (aistate.go); never a readiness gate
+	aiState   func() string // the /readyz AI line (aistate.go); never a readiness gate
 
 	// licensePosture answers this installation's entitlement at scrape time,
 	// set by WithLicensePosture. A function rather than a value because the
@@ -491,8 +492,7 @@ type Server struct {
 
 	// views is the router read_view runs through, shared by every Server copy.
 	views *viewDoor
-	// listsEnabled is the deployment's lists.enabled (WithListsEnabled).
-	listsEnabled bool
+	coreFeatureSettings
 
 	// securityTxt is the rendered web.security_txt (WithSecurityTxt); empty
 	// leaves /.well-known/security.txt unmounted.

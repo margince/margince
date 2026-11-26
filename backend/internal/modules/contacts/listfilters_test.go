@@ -25,14 +25,16 @@ func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 	owner := ids.NewV7().String()
 	assertEveryFilterNarrows(t, "contact", contactListFilters, withListControls(map[string]string{
 		"owner_id": owner, "tag_id": ids.NewV7().String(), "tag_mode": "all", "company_id": ids.NewV7().String(),
-		"relationship_mark": "vendor_marketing", "shared_with_me": "true",
+		"related_to": ids.NewV7().String(), "relationship_mark": "vendor_marketing", "shared_with_me": "true",
 	}))
 	assertEveryFilterNarrows(t, "company", companyListFilters, withListControls(map[string]string{
-		"domain": "kaercher-technik.example", "lifecycle": "customer", "owner_id": owner,
-		"relationship_type": "partner", "tag_id": ids.NewV7().String(), "tag_mode": "none",
+		"domain": "kaercher-technik.example", "status": "customer", "owner_id": owner,
+		"relationship_type": "partner", "extension_relationship_type": "ext:acme:reseller",
+		"tag_id": ids.NewV7().String(), "tag_mode": "none",
 		"industry": "payments", "size_band": "51-200", "include_anchor": "true",
 		"source_system": "acme-erp", "source_id": "C-1",
 		"partner_kind": "referral", "partner_stage": "contract_signed", "partner_stage_meaning": "active",
+		"dormancy": "dormant",
 	}))
 	assertEveryFilterNarrows(t, "partner", partnerListFilters, map[string]string{
 		"partner_kind": "referral", "partner_role": "hosting", "relationship_stage": "ready",
@@ -63,12 +65,12 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 	}{
 		{datasource.EntityContact, []string{
 			"ai_written", "captured_by_kind", "company_id", "include_archived", "list_id", "owner_id",
-			"owner_team_id", "relationship_mark", "shared_with_me", "sort", "tag_id", "tag_mode", "unassigned",
+			"owner_team_id", "related_to", "relationship_mark", "shared_with_me", "sort", "tag_id", "tag_mode", "unassigned",
 		}},
 		{datasource.EntityCompany, []string{
-			"ai_written", "captured_by_kind", "domain", "include_anchor", "include_archived", "industry", "lifecycle", "list_id",
+			"ai_written", "captured_by_kind", "domain", "dormancy", "extension_relationship_type", "include_anchor", "include_archived", "industry", "list_id",
 			"owner_id", "owner_team_id", "partner_kind", "partner_stage", "partner_stage_meaning", "relationship_type",
-			"size_band", "sort", "source_id", "source_system", "tag_id", "tag_mode", "unassigned",
+			"size_band", "sort", "source_id", "source_system", "status", "tag_id", "tag_mode", "unassigned",
 		}},
 		{datasource.EntityPartner, []string{
 			"cert_status", "partner_kind", "partner_role", "relationship_stage", "sort", "stage_meaning",

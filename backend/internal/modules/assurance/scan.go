@@ -30,6 +30,7 @@ type Scanner struct {
 	store    *Store
 	signals  SignalSubjectsFunc
 	calls    CallSubjectsFunc
+	pairs    PairSubjectsFunc
 	subjects SubjectsFunc
 	// dealSubjects reads one deal, for a pass queued because it changed.
 	dealSubjects DealSubjectsFunc
@@ -72,7 +73,11 @@ type walked struct {
 	// makes the census assert x == x and leaves a loop that broke early looking
 	// complete.
 	eligible int
-	raised   []raised
+	// owners are the eligible deals' owners and signalOwners the eligible
+	// signals', one per subject.
+	owners       []string
+	signalOwners []string
+	raised       []raised
 	// seen are the logical keys of this walk's findings, and deals are the ids
 	// it visited. Together they are what absence stands on: a finding whose key
 	// is missing from a walk that visited its deal has no condition left.
@@ -97,19 +102,29 @@ func (w walked) findings() []Finding {
 	return out
 }
 
+// contributions are the seats behind this walk's figures.
+func (w walked) contributions() Contributions {
+	out := Contributions{DealOwners: w.owners, Raised: make([]Contribution, 0, len(w.raised))}
+	for _, r := range w.raised {
+		out.Raised = append(out.Raised, Contribution{Finding: r.finding, Owner: r.owner})
+	}
+	return out
+}
+
 // askEveryRule asks every rule of every subject, once, and writes nothing.
 //
 // A rule whose sources were not read tonight is not asked. Its finding would be
 // a claim about what nobody looked at: an unread mailbox shows silence on every
-// deal.
+// deal. Nor is a rule the deal's viability decision answered otherwise.
 func askEveryRule(now time.Time, subjects []Subject, cfg Config, coverage []SourceCoverage) walked {
 	var out walked
 	askable := sourcesRead(coverage)
 	for _, subject := range subjects {
 		out.deals = append(out.deals, subject.DealID)
+		out.owners = append(out.owners, subject.Owner)
 		out.eligible++
 		for _, rule := range Rules() {
-			if !askable(rule) {
+			if !askable(rule) || answeredOtherwise(rule, subject) {
 				continue
 			}
 			found := rule.Ask(now, subject, cfg)
@@ -129,8 +144,7 @@ func askEveryRule(now time.Time, subjects []Subject, cfg Config, coverage []Sour
 // incomplete and its readiness `checks_incomplete` — it does not make the run
 // absent. Refusing would produce no record in exactly the case this pass exists
 // to report, and the brief waiting on it would run without ever learning why.
-// requestedBy names the seat that asked, and nil is the nightly cadence.
-func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) (Result, error) {
+func (s *Scanner) Scan(ctx context.Context, now time.Time) (Result, error) {
 	var out Result
 	err := s.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		// ONE pass at a time, and the lock is the whole reason a human may ask
@@ -147,7 +161,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 		if err := storekit.LockWriteIdentity(ctx, tx, "assurance", "pass"); err != nil {
 			return err
 		}
-		runID, err := s.store.StartRun(ctx, tx, now, requestedBy)
+		runID, err := s.store.StartRun(ctx, tx, now)
 		if err != nil {
 			return err
 		}
@@ -178,7 +192,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 			// which is the night worth reporting.
 			out.Status = StatusIncomplete
 			out.Readiness = ReadinessChecksIncomplete
-			return s.store.FinishRun(ctx, tx, runID, 0, 0, 0, out.Status, out.Readiness)
+			return s.store.FinishRun(ctx, tx, runID, Eligible{}, 0, out.Status, out.Readiness)
 		}
 
 		pass := askEveryRule(now, subjects, s.cfg, coverage)
@@ -186,10 +200,13 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 		if err == nil {
 			err = s.askCalls(ctx, tx, now, &pass)
 		}
+		if err == nil {
+			err = s.askPairs(ctx, tx, now, nil, &pass)
+		}
 		if err != nil {
 			out.Status = StatusIncomplete
 			out.Readiness = ReadinessChecksIncomplete
-			return s.store.FinishRun(ctx, tx, runID, pass.eligible, 0, 0, out.Status, out.Readiness)
+			return s.store.FinishRun(ctx, tx, runID, Eligible{Deals: pass.eligible, DealOwners: pass.owners}, 0, out.Status, out.Readiness)
 		}
 		out.EligibleDeals = pass.eligible
 		out.Findings = len(pass.raised)
@@ -198,7 +215,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 				return err
 			}
 		}
-		if err := s.store.RecordReceipts(ctx, tx, runID, now, s.cfg.ReceiptLifetime, subjects); err != nil {
+		if err := s.store.RecordReceipts(ctx, tx, runID, subjects); err != nil {
 			return err
 		}
 		// Which findings THIS run saw, before the clearing below removes the
@@ -229,6 +246,16 @@ func (s *Scanner) closeAbsent(ctx context.Context, tx pgx.Tx, coverage []SourceC
 		return err
 	}
 	out.Cleared = cleared
+	if s.pairs != nil {
+		// Pair findings are not a rule's, so clearableTypes never names them,
+		// and a one-deal pass that never read the pairs must not close them.
+		// Only a full pass that read them says a pair is gone.
+		pairs, err := s.store.CloseCleared(ctx, tx, []string{TypeDuplicateMotion}, pass.deals, pass.seen)
+		if err != nil {
+			return err
+		}
+		out.Cleared += pairs
+	}
 	for _, sweep := range []struct {
 		wired bool
 		fn    func(context.Context, pgx.Tx, []string) (int64, error)
@@ -266,8 +293,8 @@ func (s *Scanner) conclude(
 			return err
 		}
 	}
-	return s.store.FinishRun(ctx, tx, runID, out.EligibleDeals, out.EligibleSignals, out.Cleared,
-		out.Status, out.Readiness)
+	eligible := Eligible{Deals: out.EligibleDeals, Signals: out.EligibleSignals, DealOwners: pass.owners, SignalOwners: pass.signalOwners}
+	return s.store.FinishRun(ctx, tx, runID, eligible, out.Cleared, out.Status, out.Readiness)
 }
 
 // clearableTypes names the rule types whose findings tonight's pass may close

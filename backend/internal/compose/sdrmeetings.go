@@ -37,7 +37,7 @@ const upcomingDays = 14
 // upcomingWindow runs from at to midnight at the start of the fourteenth day
 // after today, in the reporting zone.
 func upcomingWindow(ctx context.Context, tx pgx.Tx, at time.Time) (crmcontracts.SdrUpcomingWindow, error) {
-	name, err := identity.TimezoneOf(ctx, tx)
+	name, err := identity.TimezoneAppliedTx(ctx, tx)
 	if err != nil {
 		return crmcontracts.SdrUpcomingWindow{}, err
 	}
@@ -84,7 +84,7 @@ func (h sdrSummaryHandlers) ListSdrUpcomingMeetings(w http.ResponseWriter, r *ht
 	if params.ScopeKind != nil {
 		requested.Kind = string(*params.ScopeKind)
 	}
-	limit, after, err := sdrPageDials(params.Limit, params.Cursor)
+	limit, after, err := sdrPageDials("sdr_meetings", params.Limit, params.Cursor)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -145,7 +145,7 @@ func requestedWindow(ctx context.Context, tx pgx.Tx, start, end *time.Time, pagi
 }
 
 // sdrPageDials reads the page size and cursor every SDR summary list takes.
-func sdrPageDials(requested *int, cursor *string) (int, *storekit.Cursor, error) {
+func sdrPageDials(scope string, requested *int, cursor *string) (int, *storekit.Cursor, error) {
 	limit := sdrHandoffPageDefault
 	if requested != nil {
 		limit = *requested
@@ -156,7 +156,7 @@ func sdrPageDials(requested *int, cursor *string) (int, *storekit.Cursor, error)
 	if cursor == nil || *cursor == "" {
 		return limit, nil, nil
 	}
-	position, err := storekit.DecodeCursor(*cursor)
+	position, err := storekit.DecodeCursor(scope, *cursor)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -193,7 +193,7 @@ func readUpcomingMeetingPage(ctx context.Context, tx pgx.Tx, requested Requested
 	}
 	out = out[:limit]
 	last := out[limit-1]
-	next, err := storekit.EncodeCursor(last.StartsAt, ids.UUID(last.Id))
+	next, err := storekit.EncodeCursor("sdr_meetings", last.StartsAt, ids.UUID(last.Id))
 	if err != nil {
 		return nil, nil, err
 	}

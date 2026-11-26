@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/assurancefloor"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -32,7 +33,7 @@ func TestUnlinkedSignalFindingSurvivesReplayAndHonorsAResolution(t *testing.T) {
 	store := assurance.NewStore(InstallationDB(e.Pool))
 	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig()).WithSignalSubjects(AssuranceSignalSubjects)
 	for range 2 {
-		result, err := scanner.Scan(e.system(), e.now, nil)
+		result, err := scanner.Scan(e.system(), e.now)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -47,7 +48,7 @@ func TestUnlinkedSignalFindingSurvivesReplayAndHonorsAResolution(t *testing.T) {
 	if err := store.Resolve(e.signalReader(), found[0].ID, assurance.Resolution{Outcome: assurance.OutcomeAddedEvidence, Reason: "This request was already handled"}, e.now); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := scanner.Scan(e.system(), e.now, nil); err != nil {
+	if _, err := scanner.Scan(e.system(), e.now); err != nil {
 		t.Fatal(err)
 	}
 	if got := readSignalFindings(e.signalReader(), t, e); len(got) != 0 {
@@ -85,7 +86,7 @@ func TestLinkingOneBuyingSignalLeavesAnotherRequestAtTheCompanyOpen(t *testing.T
 	second := e.signal(t, "new_opportunity", company, otherSource, e.now, ids.Nil, otherBuyer)
 	store := assurance.NewStore(InstallationDB(e.Pool)).WithSignalDecision(DecideAssuranceSignal)
 	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig()).WithSignalSubjects(AssuranceSignalSubjects)
-	if _, err := scanner.Scan(e.system(), e.now, nil); err != nil {
+	if _, err := scanner.Scan(e.system(), e.now); err != nil {
 		t.Fatal(err)
 	}
 	found := readSignalFindings(e.signalReader(), t, e)
@@ -105,7 +106,7 @@ func TestLinkingOneBuyingSignalLeavesAnotherRequestAtTheCompanyOpen(t *testing.T
 			}
 		}
 	}
-	if _, err := scanner.Scan(e.system(), e.now, nil); err != nil {
+	if _, err := scanner.Scan(e.system(), e.now); err != nil {
 		t.Fatal(err)
 	}
 	remaining := readSignalFindings(e.signalReader(), t, e)
@@ -124,7 +125,7 @@ func TestSignalAnswerDoesNotRequireDecidingAProposalTheReaderCannotSee(t *testin
 	e.pass(t)
 	store := assurance.NewStore(InstallationDB(e.Pool)).WithSignalDecision(DecideAssuranceSignal)
 	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig()).WithSignalSubjects(AssuranceSignalSubjects)
-	if _, err := scanner.Scan(e.system(), e.now, nil); err != nil {
+	if _, err := scanner.Scan(e.system(), e.now); err != nil {
 		t.Fatal(err)
 	}
 	perms := integration.AdminWithSignals
@@ -165,7 +166,7 @@ func TestSignalAnswerDoesNotRequireDecidingAProposalTheReaderCannotSee(t *testin
 	if count := e.stored(t, company, deals.SuggestionOpen); count != 0 {
 		t.Fatalf("unsupported proposals=%d, want none", count)
 	}
-	if _, err := scanner.Scan(e.system(), e.now, nil); err != nil {
+	if _, err := scanner.Scan(e.system(), e.now); err != nil {
 		t.Fatal(err)
 	}
 	if remaining := readSignalFindings(reader, t, e); len(remaining) != 0 {
@@ -180,7 +181,7 @@ func TestFilingASignalRequiresPermissionToLinkAllOfItsEvidence(t *testing.T) {
 	signal := e.signal(t, "new_opportunity", company, source, e.now, ids.Nil, buyer)
 	store := assurance.NewStore(InstallationDB(e.Pool)).WithSignalDecision(DecideAssuranceSignal)
 	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig()).WithSignalSubjects(AssuranceSignalSubjects)
-	if _, err := scanner.Scan(e.system(), e.now, nil); err != nil {
+	if _, err := scanner.Scan(e.system(), e.now); err != nil {
 		t.Fatal(err)
 	}
 	found := readSignalFindings(e.signalReader(), t, e)
@@ -221,7 +222,7 @@ func TestAnUnreadableSignalCensusCannotClearFindingsOrClaimACompletePreview(t *t
 	e.signal(t, "new_opportunity", company, source, e.now, ids.Nil, buyer)
 	store := assurance.NewStore(InstallationDB(e.Pool))
 	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig()).WithSignalSubjects(AssuranceSignalSubjects)
-	if _, err := scanner.Scan(e.system(), e.now, nil); err != nil {
+	if _, err := scanner.Scan(e.system(), e.now); err != nil {
 		t.Fatal(err)
 	}
 	for _, object := range []string{"company", "signal", "activity"} {
@@ -230,14 +231,14 @@ func TestAnUnreadableSignalCensusCannotClearFindingsOrClaimACompletePreview(t *t
 			perms.Objects = maps.Clone(perms.Objects)
 			delete(perms.Objects, object)
 			reader := e.As(e.AdminUser, nil, perms)
-			preview, err := scanner.Preview(reader, e.now)
+			preview, err := scanner.Preview(reader, e.now, assurancefloor.Preview(requireNoLoneColleague, populationMembers))
 			if err != nil {
 				t.Fatal(err)
 			}
 			if len(preview.Counts) != 0 || preview.Readiness != assurance.ReadinessChecksIncomplete {
 				t.Fatalf("unreadable preview=%+v", preview)
 			}
-			run, err := scanner.Scan(reader, e.now, nil)
+			run, err := scanner.Scan(reader, e.now)
 			if err != nil {
 				t.Fatal(err)
 			}

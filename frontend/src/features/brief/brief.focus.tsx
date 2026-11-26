@@ -4,23 +4,27 @@
 // The focus panel's body: the day's rows as cards, the one in hand opened.
 // The panel's head, states and foot are in brief.feed.tsx.
 
+import { ArrowRight } from "lucide-react";
 import { useRef } from "react";
+import { TaskMeta } from "../../components/taskmeta";
 import {
-  TaskNextSteps,
   TaskNextStepsPending,
+  useTaskNextSteps,
 } from "../../components/tasknextsteps";
 import { Button, Card } from "../../design-system/atoms";
+import { useFocusHandoff } from "../../design-system/focushandoff";
 import { Heading } from "../../design-system/heading";
 import { useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
+import { taskTypeOf } from "../../lib/tasktype";
 import { briefContextTitle } from "../../lib/worklistcopy";
-import { useWriteTo } from "../../lib/writeto";
+import { emailNamesRow } from "../../lib/worklistemailrow";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { OneRowWrite, useRowDone, WorklistRow } from "../worklist/worklist.row";
 import { useListed } from "../worklist/worklist.row.captions";
-import { TaskCard, TaskMeta, TaskTick, taskName } from "./brief.taskcard";
+import { TaskCard, TaskTick, taskName } from "./brief.taskcard";
 
 import "./brief.feed.css";
 import { identity } from "./brief.focuslink";
@@ -44,12 +48,20 @@ export function Triage({
   const { locale } = useLocale();
   const viewer = useMe(false).data?.user;
   const listed = useListed();
-  const writeTo = useWriteTo();
-  // A press removes the pressed button from the list. Focus follows it onto
-  // the card it brought in hand; a first render takes no focus.
+  // A press removes the pressed button, and a finished task takes its card
+  // away. Either way focus moves onto the card now in hand. A first render
+  // takes no focus.
   const pressed = useRef(false);
+  const held = useRef<string | null>(null);
   const takeFocus = (frame: HTMLDivElement | null) => {
-    if (frame && pressed.current) {
+    if (!frame) return;
+    const key = identity(lead);
+    const replaced = held.current !== null && held.current !== key;
+    held.current = key;
+    if (
+      pressed.current ||
+      (replaced && document.activeElement === document.body)
+    ) {
       pressed.current = false;
       frame.focus();
     }
@@ -59,33 +71,69 @@ export function Triage({
   const taskRead = useActivity(lead.id, isTask);
   const task = taskRead.data;
   const taskPending = isTask && taskRead.isPending;
-  // The drafted mail is the card's one filled verb, so Done steps back. A
-  // refused draft still draws its AI button, with the reason under it.
-  const target = task?.email_target;
-  const drafts = Boolean(target && (writeTo || target.refusal));
+  // The type's own step is the card's one filled verb, so Done steps back.
+  // A refused draft still draws its AI button, with the reason under it.
+  const step = useTaskNextSteps(task, false);
+  // Until the task and its contact are read, Done's weight is a guess, so its
+  // place is held rather than drawn filled and then quieted.
+  const weighing = taskPending || step.pending;
+  // Next steps past a task without answering it; past the last it wraps.
+  // It sits at the title's end, apart from the verbs that answer the task.
+  const next = rows.length > 1 ? rows[(at + 1) % rows.length] : undefined;
+  const nextLink = next && (
+    <Button
+      variant="link"
+      className="brief-triage-next"
+      onClick={() => {
+        pressed.current = true;
+        onChoose(next);
+      }}
+    >
+      {t("brief.focus.next")} <ArrowRight aria-hidden />
+    </Button>
+  );
+  // Every row opens on what it asks and why it is here, first on the line.
+  const details = onContext && (
+    <Button
+      variant="ghost"
+      className="brief-triage-details"
+      onClick={() => onContext(lead)}
+    >
+      {t("brief.focus.context")}
+    </Button>
+  );
+  // The type's step stands beside Done: it is the task's next step.
   const cardVerbs =
-    onContext || task || taskPending ? (
+    task || taskPending ? (
       <>
-        {/* The drafted mail stands beside Done, ahead of the way to read
-            more: it is the task's next step, the details are about it. */}
         {taskPending && <TaskNextStepsPending />}
-        {task && <TaskNextSteps task={task} offerOpen={false} />}
-        {/* Every row opens on what it asks and why it is here. */}
-        {onContext && (
-          <Button
-            variant="ghost"
-            className="brief-triage-details"
-            onClick={() => onContext(lead)}
-          >
-            {t("brief.focus.context")}
-          </Button>
-        )}
+        {step.steps}
       </>
     ) : undefined;
   // The open card says what to do, then its chips, then the deal's figures.
   // With no line of its own from the producer, the row's ask is its line.
   const told = Boolean(briefContextTitle(lead) || lead.detail);
   const inbox = lead.email_summary?.display_status;
+  // The chips are read after the name, so they follow it in the page too. They
+  // sit in the head after a message's own title, or else under the row's title.
+  const head = (
+    <div className="brief-triage-lead-head">
+      {emailNamesRow(lead) && (
+        <div className="brief-triage-title">
+          <Heading size="small" as="h3">
+            {taskName(lead, viewer, t, locale)}
+          </Heading>
+          {nextLink}
+        </div>
+      )}
+      <TaskMeta item={lead} link={listed} taskType={task && taskTypeOf(task)} />
+      {inbox && (
+        <p className="t-caption brief-triage-facts">
+          {t(`visibility.${inbox}`)}
+        </p>
+      )}
+    </div>
+  );
   // Every row of the day is a card in the server's order, and the one in hand
   // opens where it stands. An ordered list, so the order reaches a screen
   // reader as the claim it is.
@@ -108,19 +156,7 @@ export function Triage({
                 >
                   <LeadTick item={lead} />
                   <div className="brief-triage-body">
-                    <div className="brief-triage-lead-head">
-                      {lead.email_summary && (
-                        <Heading size="small" as="h3">
-                          {taskName(lead, viewer, t, locale)}
-                        </Heading>
-                      )}
-                      <TaskMeta item={lead} link={listed} />
-                      {inbox && (
-                        <p className="t-caption brief-triage-facts">
-                          {t(`visibility.${inbox}`)}
-                        </p>
-                      )}
-                    </div>
+                    {emailNamesRow(lead) && head}
                     <WorklistRow
                       // Personal ordering is the queue's, not the focus projection's.
                       allowPin={false}
@@ -134,8 +170,13 @@ export function Triage({
                           new Map([["filter", lead.category]]),
                         )
                       }
-                      context={cardVerbs}
-                      quiet={drafts}
+                      context={details}
+                      verbs={cardVerbs}
+                      menu={step.others}
+                      titleEnd={emailNamesRow(lead) ? undefined : nextLink}
+                      underTitle={emailNamesRow(lead) ? undefined : head}
+                      quiet={step.fills}
+                      answerPending={weighing}
                       // The card around this row says whose it is, why it is
                       // here and where it stands in the day, each once.
                       framed
@@ -146,15 +187,14 @@ export function Triage({
             </div>
           </li>
         ) : (
-          <li key={identity(item)}>
-            <QueuedCard
-              item={item}
-              onOpen={() => {
-                pressed.current = true;
-                onChoose(item);
-              }}
-            />
-          </li>
+          <QueuedCard
+            key={identity(item)}
+            item={item}
+            onOpen={() => {
+              pressed.current = true;
+              onChoose(item);
+            }}
+          />
         ),
       )}
     </ol>
@@ -166,7 +206,23 @@ function QueuedCard({
   item,
   onOpen,
 }: Readonly<{ item: WorklistItem; onOpen: () => void }>) {
-  return <TaskCard item={item} onOpen={onOpen} rowDone={useRowDone(item)} />;
+  // Done from its own tick, the card leaves holding focus. The card that takes
+  // its place takes it, or the one before it at the end.
+  const card = useRef<HTMLLIElement>(null);
+  useFocusHandoff(card, () => {
+    const after = card.current?.nextElementSibling;
+    const before = card.current?.previousElementSibling;
+    return (
+      (after ?? before)?.querySelector<HTMLElement>(
+        ".brief-triage-frame, .brief-task-open",
+      ) ?? null
+    );
+  });
+  return (
+    <li ref={card}>
+      <TaskCard item={item} onOpen={onOpen} rowDone={useRowDone(item)} />
+    </li>
+  );
 }
 
 /** The tick on the card in hand, sharing the one write its row's verbs use. */

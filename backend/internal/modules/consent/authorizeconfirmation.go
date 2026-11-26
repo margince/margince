@@ -24,6 +24,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -40,14 +42,13 @@ import (
 // installation owes them, so it cannot rest on a permission they have not given
 // yet. A consent confirmation is the same shape — the mail that ASKS for
 // consent cannot itself require consent, or no one could ever be asked.
-func validateConfirmation(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category) (resolution, error) {
+func validateConfirmation(ctx context.Context, tx pgx.Tx, delivery ids.UUID, subject subjectRef, category commsauthz.Category) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
-	// A lead holds one kind of link, the privacy notice a website lead is sent;
-	// the table refuses any other kind for one. Both columns are compile-time
-	// literals.
+	// A lead holds two kinds of link: the privacy notice and the consent
+	// question. The table refuses any other kind. Both columns are literals.
 	column := subjectColumnContact
 	switch {
-	case subject.Kind == entityLead && category == commsauthz.CategoryPrivacyNotice:
+	case subject.Kind == entityLead && (category == commsauthz.CategoryPrivacyNotice || category == commsauthz.CategoryConsentConfirmation):
 		column = subjectColumnLead
 	case subject.Kind != entityContact:
 		return unsupported, nil
@@ -55,6 +56,15 @@ func validateConfirmation(ctx context.Context, tx pgx.Tx, subject subjectRef, ca
 	kind, ok := confirmKindFor(category)
 	if !ok {
 		return unsupported, nil
+	}
+	// The notice of a restriction's lift (GDPR Art. 18(3)) carries no link: the
+	// contact's live restriction is its evidence, and for that template alone.
+	restricted, args := "false", []any{subject.ID, kind}
+	if column == subjectColumnContact && category == commsauthz.CategoryPrivacyNotice {
+		args = append(args, delivery)
+		restricted = `(EXISTS (SELECT 1 FROM comms_outbound lift
+		    WHERE lift.id = $3 AND lift.template_key = '` + TemplateRestrictionLift + `') AND ` +
+			auth.ContactRestrictedSQL("$1::uuid") + `)`
 	}
 	var live bool
 	if err := tx.QueryRow(ctx, fmt.Sprintf(`
@@ -64,7 +74,7 @@ func validateConfirmation(ctx context.Context, tx pgx.Tx, subject subjectRef, ca
 		      AND kind = $2
 		      AND consumed_at IS NULL
 		      AND expires_at > now()
-		)`, column), subject.ID, kind).Scan(&live); err != nil {
+		) OR %s`, column, restricted), args...).Scan(&live); err != nil {
 		return resolution{}, fmt.Errorf("consent: reading the confirmation link: %w", err)
 	}
 	if !live {
@@ -133,6 +143,9 @@ func validateOptOutAcknowledgement(
 	default:
 		return unsupported, nil
 	}
+	// Under a pack that follows the recipient, a restriction and a withdrawal
+	// of any purpose are answered too, by the request receipt.
+	_, recipientBound := recipientDataProtection(subject.Country.Code)
 	// KIND ONLY, DELIBERATELY NOT purpose_id. A narrow marketing_objection
 	// (communication_suppression.purpose_id set to one newsletter) still keeps
 	// kind = 'marketing_objection', so this EXISTS already matches it — an
@@ -140,7 +153,7 @@ func validateOptOutAcknowledgement(
 	// acknowledgement is subject-level ("we received your opt-out"), not
 	// purpose-level ("we received your opt-out of THIS newsletter"). Filtering
 	// by purpose here would refuse the acknowledgement a narrow objection
-	// equally owes, under-serving the subject Art. 16 exists to protect.
+	// equally owes, under-serving the subject Decree 91/2020 Art. 20 exists to protect.
 	var standing bool
 	// An unsubscribe press writes no suppression, only marketing withdrawals.
 	// So a standing marketing-class withdrawal is evidence too; no other class is.
@@ -156,9 +169,9 @@ func validateOptOutAcknowledgement(
 		    WHERE cc.contact_id = $1
 		      AND cc.state = 'withdrawn'
 		      AND cp.archived_at IS NULL
-		      AND cp.class = ANY($3)
-		)`, subject.ID, acknowledgeableKinds(),
-		classesCovering(commsauthz.CategoryMarketing)).Scan(&standing); err != nil {
+		      AND (cp.class = ANY($3) OR $4)
+		)`, subject.ID, receiptEvidenceKinds(recipientBound),
+		classesCovering(commsauthz.CategoryMarketing), recipientBound).Scan(&standing); err != nil {
 		return resolution{}, fmt.Errorf("consent: reading the stop this would acknowledge: %w", err)
 	}
 	if !standing {

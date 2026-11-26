@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/heldreason"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -38,6 +39,9 @@ const (
 	FieldScheduledAt = "scheduled_at"
 	FieldScheduledTZ = "scheduled_tz"
 )
+
+// fieldScheduledIntent is the audit key of the chosen local send time.
+const fieldScheduledIntent = "scheduled_intent"
 
 // ScheduleTimer wakes a scheduled send when it comes due. It is the seam
 // between the decision to defer, which this module owns, and the job runner,
@@ -95,11 +99,11 @@ const (
 	// ReviewOutcomeCancelled is a message nobody will send.
 	ReviewOutcomeCancelled ReviewOutcome = "cancelled"
 	// ReviewOutcomeSent is a held message resumed and allowed by the engine.
-	//
-	// It consumes no instruction, so it never reached the directed path's own
-	// closer — the message went and the review stayed live. This is the one
-	// outcome of the four that records a delivery.
+	// It consumes no instruction, so the directed path's closer never ran.
 	ReviewOutcomeSent ReviewOutcome = "sent"
+	// ReviewOutcomeMoved is a message moved to a new moment. It closes only a
+	// review nobody has decided yet.
+	ReviewOutcomeMoved ReviewOutcome = "moved"
 )
 
 // HeldNotifier puts a stopped message in front of the human who scheduled it.
@@ -118,10 +122,9 @@ const (
 // far worse than a quiet stop.
 type HeldNotifier interface {
 	NotifyHeldInTx(ctx context.Context, tx pgx.Tx, in HeldNotice) error
-	// ResolveHeldInTx clears the item once the rep has answered it. Rescheduling
-	// or cancelling IS the answer, and an item outliving it asks the same
-	// question twice.
-	ResolveHeldInTx(ctx context.Context, tx pgx.Tx, scheduledSendID ids.UUID) error
+	// ResolveHeldInTx clears the item once the message is answered, saying how.
+	// An item outliving the answer asks the same question twice.
+	ResolveHeldInTx(ctx context.Context, tx pgx.Tx, scheduledSendID ids.UUID, how HeldResolution) error
 }
 
 // HeldNotice is one stopped message as the rep needs to see it: whose it is,
@@ -134,12 +137,12 @@ type HeldNotice struct {
 	ScheduledAt     time.Time
 }
 
-// SendSchedule is a caller's request to defer a send. At is absolute; TZ is the
-// IANA zone the human picked it in, kept so the choice can be re-rendered and
-// audited (ADR-0104 §7).
+// SendSchedule retains a chosen local time. Without Intent, At and TZ carry
+// a legacy instant whose original local choice cannot be recovered.
 type SendSchedule struct {
-	At time.Time
-	TZ string
+	At     time.Time
+	TZ     string
+	Intent *values.IntentTime
 }
 
 // scheduledPayload is the frozen message, versioned because these rows outlive
@@ -159,6 +162,7 @@ type ScheduledSend struct {
 	ID              ids.UUID
 	Status          string
 	ScheduledAt     time.Time
+	ScheduledWall   *time.Time
 	ScheduledTZ     string
 	OriginKind      string
 	Anchor          ids.ActivityID
@@ -170,11 +174,10 @@ type ScheduledSend struct {
 	ScheduledBy     ids.UUID
 	ActivityID      ids.UUID
 	HeldReason      string
-	// ReviewID is the review standing over this message's refusal, when one
-	// does. Zero on every message nobody refused — and on a held row whose
-	// review has since been answered, which is a row a rep can only cancel or
-	// reschedule now.
-	ReviewID ids.UUID
+	// ReviewID is the live review over this message's refusal, or zero, and
+	// ReviewActions what the caller may do about it.
+	ReviewID      ids.UUID
+	ReviewActions []string
 	// Links are the records an account-started message files itself under,
 	// frozen at composition. Empty on a reply, whose records come from its
 	// anchor; the ones a reply adds beyond those travel in also_links and are
@@ -217,7 +220,7 @@ const (
 // Hold reasons. Each names what a human has to decide about, because "held" on
 // its own tells a rep nothing they can act on.
 const (
-	HeldConsentWithdrawn = "consent_withdrawn"
+	HeldConsentWithdrawn = heldreason.ConsentWithdrawn
 	HeldSenderInactive   = "sender_inactive"
 	// HeldPassportRevoked is its own reason rather than sender_inactive: the
 	// human is fine, and telling them their account is inactive would send them
@@ -226,7 +229,7 @@ const (
 	HeldPassportRevoked = "passport_revoked"
 	HeldMissedWindow    = "missed_window"
 	HeldTimerExhausted  = "timer_exhausted"
-	HeldSendRefused     = "send_refused"
+	HeldSendRefused     = heldreason.SendRefused
 	HeldFollowupSettled = "followup_settled"
 	HeldMeetingCanceled = "meeting_canceled"
 )
@@ -274,6 +277,13 @@ func (s *Store) SendOrSchedule(
 	stager DeliveryStager,
 	timer ScheduleTimer,
 ) (SendOutcome, error) {
+	if sched != nil {
+		normalized, err := normalizeSchedule(*sched)
+		if err != nil {
+			return SendOutcome{}, err
+		}
+		sched = &normalized
+	}
 	if sched == nil || !sched.At.After(s.now()) {
 		sent, err := s.SendEmail(ctx, origin, in, gate, stager)
 		if err != nil {
@@ -306,6 +316,11 @@ func (s *Store) scheduleSend(
 	if timer == nil {
 		return ScheduledSend{}, errNoScheduleTimer
 	}
+	normalized, err := normalizeSchedule(sched)
+	if err != nil {
+		return ScheduledSend{}, err
+	}
+	sched = normalized
 	if err := validateSchedule(sched, s.now()); err != nil {
 		return ScheduledSend{}, err
 	}
@@ -342,24 +357,29 @@ func (s *Store) scheduleSend(
 		// The row's stamps come back from the insert, so the answer to a
 		// scheduling carries the times a later read of the same row shows.
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO scheduled_send
-			  (id, status, scheduled_at, scheduled_tz,
-			   origin_kind, anchor_activity_id, origin_links, also_links,
-			   payload, payload_version, scheduled_by, principal_kind,
-			   agent_actor_id, agent_passport_id, agent_on_behalf_of)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-			RETURNING created_at, updated_at`,
-			row.ID, row.Status, row.ScheduledAt, row.ScheduledTZ,
-			row.OriginKind, nullableAnchor(origin), originLinks, alsoLinks,
-			payload, payloadVersionCurrent, row.ScheduledBy, principalKind(actor),
-			prov.ActorID, prov.PassportID, prov.OnBehalfOf,
-		).Scan(&row.CreatedAt, &row.UpdatedAt); err != nil {
+ INSERT INTO scheduled_send
+  (id,status,scheduled_at,scheduled_tz,scheduled_wall,
+   origin_kind,anchor_activity_id,origin_links,also_links,
+   payload,payload_version,scheduled_by,principal_kind,
+   agent_actor_id,agent_passport_id,agent_on_behalf_of)
+ SELECT @id,@status,planned.instant,COALESCE(planned.timezone,@zone),planned.wall_time,
+  @origin,@anchor,@origin_links::jsonb,@also_links::jsonb,
+  @payload::jsonb,@payload_version,@seat,@principal,
+  @agent_actor,@passport,@on_behalf
+ FROM public.update_intent_time(NULL,NULL,NULL,@wall::text::timestamp,@zone,@at) AS planned
+ RETURNING created_at,updated_at,scheduled_wall,scheduled_at`, pgx.NamedArgs{
+			"id": row.ID, "status": row.Status, "at": row.ScheduledAt, argZone: row.ScheduledTZ, argWall: sched.wallClock(),
+			"origin": row.OriginKind, "anchor": nullableAnchor(origin), "origin_links": originLinks, "also_links": alsoLinks,
+			"payload": payload, "payload_version": payloadVersionCurrent, argSeat: row.ScheduledBy, "principal": principalKind(actor),
+			"agent_actor": prov.ActorID, "passport": prov.PassportID, "on_behalf": prov.OnBehalfOf,
+		}).Scan(&row.CreatedAt, &row.UpdatedAt, &row.ScheduledWall, &row.ScheduledAt); err != nil {
 			return fmt.Errorf("scheduled send: recording the intention: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "schedule", "scheduled_send", row.ID, nil, map[string]any{
-			FieldScheduledAt: row.ScheduledAt,
-			FieldScheduledTZ: row.ScheduledTZ,
-			"subject":        row.Subject,
+			FieldScheduledAt:     row.ScheduledAt,
+			FieldScheduledTZ:     row.ScheduledTZ,
+			fieldScheduledIntent: row.IntentWire(),
+			fieldSubject:         row.Subject,
 		}); err != nil {
 			return err
 		}
@@ -372,26 +392,6 @@ func (s *Store) scheduleSend(
 		return ScheduledSend{}, err
 	}
 	return row, nil
-}
-
-// validateSchedule refuses a due moment the server will not honour.
-func validateSchedule(sched SendSchedule, now time.Time) error {
-	if sched.TZ == "" {
-		return &InvalidScheduleError{Field: FieldScheduledTZ, Reason: "is required when scheduling a send"}
-	}
-	// A zone NAME, never a numeric offset, which would freeze the DST rules of
-	// the day it was written (AC-DS-TZ4). "Local" is the server's zone, so it
-	// is refused, and so is a name with spaces around it.
-	if err := values.ZoneName(sched.TZ); err != nil {
-		return &InvalidScheduleError{Field: FieldScheduledTZ, Reason: "is not an IANA time zone name"}
-	}
-	if sched.At.Sub(now) > scheduleCeiling {
-		return &InvalidScheduleError{
-			Field:  FieldScheduledAt,
-			Reason: fmt.Sprintf("is further ahead than the %d-day scheduling limit", int(scheduleCeiling.Hours()/24)),
-		}
-	}
-	return nil
 }
 
 var (

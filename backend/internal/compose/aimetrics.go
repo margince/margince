@@ -7,6 +7,9 @@ import (
 	"io"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/margince/margince/backend/internal/compose/homecache"
+	"github.com/margince/margince/backend/internal/compose/sendmetrics"
 )
 
 // WithAIMetrics sets this role's /metrics AI renderer.
@@ -47,4 +50,6 @@ func (s Server) writeMetricsSections(w io.Writer) {
 	s.writeAuthzSection(w)
 	s.writeAgentVolumeSection(w)
 	s.writeWorklistStageSection(w)
+	homecache.WriteMetrics(w)
+	sendmetrics.WriteProcessMetrics(w)
 }

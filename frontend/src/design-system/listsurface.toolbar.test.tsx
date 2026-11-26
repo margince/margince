@@ -103,7 +103,7 @@ it("holds a search and one View button, and nothing else", () => {
   render(<Surface />);
 
   const tools = screen
-    .getByRole("searchbox", { name: "Search" })
+    .getByRole("combobox", { name: "Search" })
     .closest(".lt-tools");
   if (!(tools instanceof HTMLElement)) throw new Error("no toolbar");
   expect(within(tools).getAllByRole("button")).toHaveLength(1);
@@ -225,7 +225,7 @@ it("applies a picked value, returns to its row, and stands the filter under the 
   ).toHaveFocus();
   const applied = screen.getByRole("group", { name: "Status: Open" });
   expect(
-    precedes(screen.getByRole("searchbox", { name: "Search" }), applied),
+    precedes(screen.getByRole("combobox", { name: "Search" }), applied),
   ).toBe(true);
   // Adding lives in the panel: the row of applied filters offers no "+".
   expect(screen.queryByRole("button", { name: "Add filter" })).toBeNull();

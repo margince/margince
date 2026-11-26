@@ -62,9 +62,9 @@ const contactEmailExpr = `(SELECT ce.email FROM contact_email ce
 var contactEmployerLink = "EXISTS (SELECT 1 FROM relationship rel WHERE rel.contact_id = t.id" +
 	" AND " + employment.CurrentMembershipSQL("rel") + " AND %s)"
 
-// contactEmployerField is withheld until bindEmployerScope admits the caller:
-// an edge discloses a contact and a company as a pair, which neither record's
-// grant covers, so the leaf reads nothing on anybody's behalf by default.
+// contactEmployerField is withheld until bindEdgeScope admits the caller. An
+// edge discloses a contact and a company as a pair, which neither record's
+// grant covers. By default the leaf reads nothing on anybody's behalf.
 var contactEmployerField = storekit.Field{
 	Expr: "rel.company_id", Type: storekit.FieldID, References: storekit.RefCompany,
 	Link: contactEmployerLink, Withheld: true,
@@ -141,6 +141,15 @@ func (s *Store) WithDealAmount(expr string) *Store {
 	return s
 }
 
+// WithWinChance injects the win chance of every deal as a SQL expression. A
+// filter on the deal's win probability reads it. So a saved list, its count and
+// its export select deals by the number each deal shows. Unset, the filter reads
+// the stored probability.
+func (s *Store) WithWinChance(render func(ctx context.Context, tx pgx.Tx, deal string, arg func(any) int) (string, error)) *Store {
+	s.winChance = render
+	return s
+}
+
 // WithBaseCurrency injects the reader of the installation's base currency,
 // which a core money field is counted in. identity owns the setting.
 func (s *Store) WithBaseCurrency(read func(ctx context.Context, tx pgx.Tx) (string, error)) *Store {
@@ -187,8 +196,11 @@ var maskedAs = map[string]map[string][]string{
 // field compiles to FALSE rather than to its comparison, so neither a count, a
 // membership nor a why can hand back a value the record read withholds.
 func withholdFromCaller(ctx context.Context, resource string, fields map[string]storekit.Field) {
-	if employer, ok := fields[companyIDField]; ok && resource == typeContact {
-		fields[companyIDField] = bindEmployerScope(ctx, employer)
+	if company, ok := fields[companyIDField]; ok && resource == typeContact {
+		fields[companyIDField] = bindEdgeScope(ctx, company, "rel")
+	}
+	if company, ok := fields[companyIDField]; ok && resource == projectEntity {
+		fields[companyIDField] = bindEdgeScope(ctx, company, "c")
 	}
 	if tag, ok := fields[tagFilterField]; ok && tagWordsWithheld(ctx) {
 		tag.Withheld = true
@@ -216,16 +228,17 @@ func maskedForCaller(ctx context.Context, object, field string) bool {
 	return err != nil || masked
 }
 
-// bindEmployerScope admits the employer leaf for a caller who may read edges,
-// bounded to the edges they may read — the gate the contact list's employer
-// filter takes. A caller refused the edge keeps the field, withheld.
-func bindEmployerScope(ctx context.Context, field storekit.Field) storekit.Field {
-	if auth.EdgeReadAdmitted(ctx) != nil {
+// bindEdgeScope admits a company-naming edge leaf for a caller who may read
+// edges and companies. It is bounded to the edges they may read on alias, as
+// the contact employer and project company list filters are. A caller refused
+// either keeps the field, withheld.
+func bindEdgeScope(ctx context.Context, field storekit.Field, alias string) storekit.Field {
+	if auth.EdgeReadAdmitted(ctx) != nil || !auth.ReadGranted(ctx, "company") {
 		return field
 	}
 	field.Withheld = false
 	field.LinkScope = func(arg func(any) int) (string, error) {
-		return auth.EdgeReadScope(ctx, "rel", arg)
+		return auth.EdgeReadScope(ctx, alias, arg)
 	}
 	return field
 }

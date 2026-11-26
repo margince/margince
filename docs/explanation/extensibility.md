@@ -1,16 +1,16 @@
 <!-- prose:plain -->
-<!-- describes: backend/pkg/extension backend/internal/compose/extensions.go backend/internal/compose/extingress.go backend/internal/compose/extensiontools.go backend/internal/compose/channelprovider.go backend/internal/compose/extledger.go backend/tools/gen-composition scripts/check-pkg-freeze.sh -->
+<!-- describes: backend/pkg/extension backend/internal/compose/extensions.go backend/internal/compose/extingress.go backend/internal/compose/extensiontools.go backend/internal/compose/channelprovider.go backend/internal/compose/extledger.go backend/internal/compose/unitsql backend/tools/gen-composition scripts/check-pkg-freeze.sh -->
 # Extensibility: the extension tier
 
-The *extension tier* is how a small, closed add-on comes into this product without a change to any file
-the core owns. A unit is one named folder with a version under `extensions/<name>/`. It is its own Go
-module, it reaches the core through one small public surface, and the build composes it in. The plain
-tree, with no add-ons of its own, ships three units:
+The *extension tier* is how a small, closed add-on comes into this product without a change to any file the core owns. A unit is
+one named folder with a version under `extensions/<name>/`. It is its own Go module, it reaches the core through one small public
+surface, and the build composes it in. The plain tree, with no add-ons of its own, ships four units:
 
 | Unit | What it is |
 |---|---|
-| `extensions/de` | The German jurisdiction pack: the legal floors on retention and the outbound messaging rules |
-| `extensions/vn` | The Vietnamese jurisdiction pack: the advertising-mail rules, and no retention floor |
+| `extensions/eu` | The packs of the 27 EU member states: each one's outbound messaging rules on a shared EU layer, and the German legal floors on retention |
+| `extensions/apac` | The packs of `au`, `cn`, `hk`, `id`, `in`, `jp`, `kr`, `my`, `nz`, `ph`, `sg`, `th`, `tw` and `vn`: each one's outbound messaging rules, the request deadlines of `vn`, and no retention floor |
+| `extensions/us` | The pack of `us`: its outbound messaging rules, the first with opt-out advertising, and its retention floor for accounting records |
 | `extensions/openchannel` | The reference unit. It uses every capability the tier has: its own tables, governed agent tools, an inbound edge with no sign-in that checks a signature, a job that empties a queue, a subscription, ingress with a merge key, a transport it carries replies out on, and its own screen |
 
 Read this page for the whole tier. To *build* a unit, go to [how-to/add-an-extension.md](../how-to/add-an-extension.md).
@@ -59,8 +59,7 @@ whatever it does.
 
 The fitness tests hold the rest of the surface. Units are trusted code that runs in the role process; see
 [what the tier does not guard against](#what-the-tier-does-not-guard-against). Extensibility costs a new
-build. In return, the build proves that a composed product is wired the same way the core is, or it
-fails.
+build. In return, the build proves a composed product is wired the same way as the core, or fails.
 
 ## Principles
 
@@ -121,6 +120,7 @@ already exists:
 | `Secrets` | The secret keys the unit will use, by name and scope. It is a request; it grants nothing |
 | `OAuthApps` | Vendors whose sign-in the core runs for an admin. The core keeps the tokens and gives the unit a live access token through `Runtime.OAuthAccessToken` |
 | `Migrations` | The SQL schema layer the unit owns, built into the binary instead of read from the tree |
+| `Reach` | The unit's own tables whose columns hold a core company, contact, lead or deal id. The core's merge moves those columns onto the record that stays, and its erasure clears the columns a table lists. Core never names the unit's tables in its own SQL |
 | `Entries` | Buttons on core screens that open the unit's screen. The unit names a slot, a label key, an icon and an RBAC object, and the core draws and places the button |
 | `Instrumentation` | Watches the whole process: the root log handler, every request, each job and extension delivery, and each panic the core catches. In the browser it sees errors and screen changes. It may serve an edge with no sign-in at `/v1/public/instrument/<unit>/`. It names no vendor. The core logs and skips a `Start` that fails or panics, and a hook that panics. A `Start` that never returns still holds up boot, and an `HTTP` wrapper that panics fails that request |
 
@@ -168,8 +168,7 @@ first run at boot.
 ### 3. The composition build: `gen-composition`
 
 The core never imports an extension module. Instead `tools/gen-composition` scans `extensions/` and
-writes out `build/composition/`. It runs as `make composition`, and every build and test lane depends on
-it.
+writes `build/composition/`. It runs as `make composition`, and every build and test lane needs it.
 
 `build/composition/` is the one folder, kept out of git, for files that depend on the installation. It
 holds the composed `go.work` and a **composition Go module** whose generated `Extensions()` returns the
@@ -213,6 +212,7 @@ the harm could go before turning the unit on:
 | `entries` | `Entries` | Which core screens offer a way into the unit, and the object a reader needs `read` on to see it |
 | `oauth_apps` | `OAuthApps` | Which vendors an admin is sent to, the scopes asked for, and the token URL that receives the client secret |
 | `instrumentation` | `Instrumentation` | Which of its three parts the unit has: `start` (a backend part), `browser` (the named export the SPA calls) and `edge` (a session-less path under `/v1/public/instrument/<unit>/`) |
+| `mail_hooks` | `MailHooks` | Which mail-capture hooks it sets, what of each captured mail they read, and the reasons its answers may give |
 
 The `extension.Extension` value the unit returns, and every field the manifest derives, must be written
 out in full in the source. A field the generate step does not know fails it, with the place in the file.
@@ -322,7 +322,7 @@ name to show, and would otherwise refuse it by stopping the boot that composed t
 
 The core stays free of any one jurisdiction. A fitness gate (`check-no-jurisdiction.sh`) scans the core
 source written by hand for names that belong to one jurisdiction, and fails the build on a match. Germany
-lives in `extensions/de`, which declares the legal **retention floors** of GoBD and AO:
+lives in `extensions/eu`, which declares the legal **retention floors** of GoBD and AO:
 
 - business mail, calls, meetings and messages with outside parties, 6 years;
 - accounting records (*Buchungsbelege*), the 8-year class of §147 AO, as changed in 2025.
@@ -349,10 +349,8 @@ checked against the full budget for names, so a name a unit takes today stays go
   `make check-ext-migrations` proves it. It applies the migrations of the unit as a new role with limited
   rights, against a database it drops after, and reads the catalog again.
 
-  At run time there is no such role. `cmd/migrate` runs one owner connection with no `SET ROLE`, and
-  every unit shares the one app role in production. So what keeps the tables of one unit apart from
-  another is the gate on SQL scope, which reads the AST (`extensionsqlscope_test.go`). No database right
-  separates them.
+  At run time a unit's SQL runs as one shared role, `ext_runtime`, with no role per unit. So only the gate
+  on SQL scope (`extensionsqlscope_test.go`) keeps the tables of one unit apart from another.
 - **Its own HTTP surface**: `/v1/ext/<name>/…`, declared as operations in an `api/` contract fragment.
   `build/composition/api/crm.yaml` merges the core contract and the fragment of every unit.
 - **Its own governed tools**: an `x-mcp-tool` verb on a declared operation. It is served through the same
@@ -456,8 +454,8 @@ checked against the full budget for names, so a name a unit takes today stays go
   workspace. It would be the same message from a different sender, with nothing different on screen.
 
 - **An accounting source to read**: a `FinanceSource` declares a provider and three read functions:
-  `Check`, `Customers` and `InvoicesFor`. The core ships no source of its own. The demo source is the
-  unit `extensions/finance-demo`, and a real accounting system is one more unit of the same shape.
+  `Check`, `Customers` and `InvoicesFor`. An optional `InvoiceDocument` returns an invoice's PDF.
+  The core ships no source of its own. The demo source is the unit `extensions/finance-demo`, and a real accounting system is one more unit of the same shape.
 
   The core owns everything that is the same for every vendor. An admin connects a source and links its
   customers to companies on the **Integrations** settings page. The sync, the mirror and the figures on
@@ -509,16 +507,17 @@ or trusted in some other way**, compiled into the same process. Every check on t
 guard against *errors*. It turns a query that reads the wrong tenant, or a missing scope, into a failure
 that nobody can miss. None of it is a sandbox against a unit that means harm:
 
-- Go code in the same process can read the root key of the keyvault from the settings the process starts
-  with;
+- Go code in the same process can read the root key of the keyvault from the settings the process starts with;
 - nothing in the database limits the SQL of a unit to one workspace;
-- every handler runs as the shared `margince_app` role. That role holds DML on core tables, on the tables
-  of every *other* unit, and on `extension_secret`.
+- the SQL of every handler runs as one shared role, `ext_runtime`, which reaches the tables of every unit;
+- `ext_runtime` guards against errors by trusted first-party units, not against unit code that means harm.
+  One statement can switch back to the login role and run a query string, and the check after it does not see
+  that. The gate on SQL scope refuses such statements in the source.
 
-A database role for each unit is the one change that would make any of this enforced instead of agreed.
-Even then, the reach from inside the process stays. It is not planned while every unit is first-party;
-[issue 628](https://github.com/margince/margince/issues/628) records that decision.
-`backend/pkg/extension/runtime.go` carries the same statement at the seam itself.
+The database refuses a unit's SQL on core tables, `extension_secret` included. A unit reaches core records
+through `Tx.Core()`, the read calls and `Ingest`. That is verbs only, the direction for a unit from outside
+the first-party set too. A separate database login for each unit would make the role a wall
+([issue 628](https://github.com/margince/margince/issues/628), closed until an outside unit is planned).
 
 ## The guards, read from the tree
 
@@ -530,20 +529,23 @@ The fitness tests and `scripts/` checks guard the tier, so the promises cannot d
 | The surface mark exists only under `pkg/`, so nothing adds to the allowlist from any other place | `backend/gates/extensions_arch_test.go` |
 | The composed set is wired only at the role `main.go` files, and each required role wires it | `backend/gates/extensions_arch_test.go` |
 | The plain composition gives the committed stub again, with no change at all | `make check-composition` |
-| The public surface keeps working for code built against it (advisory before the first release tag, enforced after) | `scripts/check-pkg-freeze.sh` |
+| The public surface keeps working for code built against it (advisory before the first release tag, enforced after), and each exported name has a caller in this tree or a written reason | `scripts/check-pkg-freeze.sh`, `backend/gates/extensionexportuse_test.go` |
 | The core stays free of any one jurisdiction | `scripts/check-no-jurisdiction.sh` |
 | No unit table carries a workspace column, row-level security or a policy, and none touches anything in `public` | `make check-ext-migrations` (applies the migrations of each unit as a new role with limited rights) |
 | Every unit table grants the runtime role `SELECT, INSERT, UPDATE, DELETE` and no other set; a table that grants *nothing* would answer `permission denied` at the first call | `make check-ext-migrations` |
 | The SQL of a unit names only the `ext.ext_<name>_…` tables of that unit. This is the half of the shared role reach above that guards against errors. It reads through the string constants a table name is written with | `backend/gates/extensionsqlscope_test.go` |
+| The SQL of a unit reaches no core table. Each statement of `Tx` runs as `ext_runtime`, and the database refuses a core table with `ErrCoreTableRefused`; the core's records are reached through `Tx.Core()` | `internal/compose/unitsql`, `unitsql_integration_test.go` |
 | A write by a unit to a core record goes through the write path of the product: the live RBAC of the caller, the row-scope check on the subject, the audit row, the outbox event. It carries the name of the unit under an evidence member the core sets and no caller may supply | `extension.Tx.Core()` (`internal/compose/extcore.go`), `storekit.withExtensionAttribution` |
-| A scheduled run and a bus delivery write no core record at all: both run with no caller, and a core write is checked against the permissions of the caller | `internal/compose/extcore.go` (`refuseUnattended`), `extsubscribe_test.go`, `extledger_integration_test.go` |
+| A scheduled run and a bus delivery write no core record at all: both run with no caller, and a core write is checked against the permissions of the caller. A notice from a bus delivery is the one exception: it acts as the unit's service member or as a member who connected the unit and has not left, and is refused with neither | `internal/compose/extcore.go` (`refuseUnattended`), `extnotice.go` (`refuseWithoutActor`), `extnoticeactor_integration_test.go`, `extsubscribe_test.go`, `extledger_integration_test.go` |
 | The ledger row of a unit names a table in the namespace of that unit, and its event a verb in that namespace. The namespace comes from the call, so neither is a string a unit can write | `internal/compose/extledger.go`, `extledger_test.go` |
 | A write by a unit to its own tables records both its ledger row and its event, or neither: the same write shape the core holds itself to, in one call that cannot be half made | `extension.Tx.Record`, `backend/gates/writeshape_test.go`, `extledger_integration_test.go` |
 | A unit lands a record only where an operator can see that it does: `source_system` is derived from a declared ingress source, so a typing error is refused, not a second source namespace | `internal/compose/extingress.go` (`declaredIngress`), `internal/compose/extensions.go` (`preflightIngress`) |
 | An ingest runs on the live authority of the named member, and only for a member who holds one of the user-scoped secrets of that unit now. So a unit cannot work as a colleague who never asked it to | `internal/compose/extingressauthority.go`, `extingress_integration_test.go` |
 | An ingest is refused from a call that has a caller, and from inside a transaction the unit holds. On a pool of one, the second would otherwise wait with no end | `internal/compose/extingress.go`, `extingress_test.go`, `extingress_integration_test.go` |
-| An address may be offered as identity evidence only by a source that declared the key. The gate refuses it and names who asked. The admission check of capture holds it for every other caller of the pipeline | `internal/compose/extingress.go` (`refuseUndeclaredMergeKey`), `internal/modules/capture/sinkchannel.go` (`admitCounterpartyKeys`) |
-| The public record type cannot fall behind the capture shape of the core without anyone seeing: every field is copied, or skipped with its reason | `internal/compose/extingressdrift_test.go` |
+| An address may be offered as identity evidence only by a source that declared the key. The gate refuses it and names who asked. The admission check of capture holds it for every other caller of the pipeline | `internal/compose/extingress/mapping.go` (`RefuseUndeclaredMergeKey`), `internal/modules/capture/sinkchannel.go` (`admitCounterpartyKeys`) |
+| The public record type cannot fall behind the capture shape of the core without anyone seeing: every field is copied, or skipped with its reason | `internal/compose/extingress/drift_test.go` |
+| A chat message of a unit files through `capture.FileChatMessage`, as every chat network does. A source that pins a posture (`classified` or `held`, never `shared`) files each message under it, as the mail of that member. The audience then follows the contact as it does for mail | `internal/compose/extingress/chat.go`, `internal/modules/capture/chatmessage.go`, `internal/modules/capture/chatseat.go`, `internal/compose/integration/capture/capture_sdkchat_integration_test.go` |
+| A message filed on a contact or lead the member chose is checked on the live rights of that member. One they cannot see answers as one that does not exist, stores nothing and stops no other record of the batch. A member-owned source keeps one saved place per member, and a stale writer is refused with `ErrPositionConflict` | `internal/compose/extingress/subject.go`, `internal/compose/extingress/position.go`, `internal/compose/extsdkchat_integration_test.go` |
 | A unit may file a message on a transport it declared and on no other, and no other kind may name a transport at all. A record that claims a path it did not take is one the reply path would answer on | `internal/compose/extingress.go` (`refuseUndeclaredTransport`) |
 | A unit may bind a counterparty identity only under a provider it supplies. Otherwise it could put an account it controls on the contact record of someone else, and take the next reply of that contact | `internal/compose/extingress.go` (`refuseUnitIdentity`) |
 | A unit cannot take over the name of a core channel provider. The check step at boot, where both sets exist, catches the same name in both and fails the boot. It does not send the replies of that provider through the unit | `internal/compose/channelprovider.go` |
@@ -592,7 +594,7 @@ fixture units under `fixtures/extensions/` (`crm-hello`, the smallest unit that 
 | The composition generate step | `backend/tools/gen-composition/` |
 | The committed plain stub (and its `replace` in `backend/go.mod`) | `composition/extensions_gen.go` |
 | The `GOWORK` switch every build lane carries | `backend/Makefile` (`GOWORK_COMPOSED`) |
-| The first-party German pack | `extensions/de/de.go` |
+| The first-party German pack | `extensions/eu/de.go` |
 | The reference unit (every capability but a finance source), and its served tools | `extensions/openchannel/openchannel.go`, `endpoint.go` |
 | Its connector half: ingress, merge key, transport | `extensions/openchannel/drain.go`, `record.go`, `send.go` |
 | Its inbound edge with no sign-in | `extensions/openchannel/inbound.go` |
@@ -608,12 +610,10 @@ fixture units under `fixtures/extensions/` (`crm-hello`, the smallest unit that 
 - [how-to/add-an-extension.md](../how-to/add-an-extension.md): build and ship a unit, step by step.
 - [privacy-and-consent.md](privacy-and-consent.md): the retention engine that reads a pack.
 - [composition-layer.md](composition-layer.md): how `compose` boots and wires the composed set.
-- [agent-surface.md](agent-surface.md): the registry and admission gate a served extension tool goes
-  through.
+- [agent-surface.md](agent-surface.md): the registry and admission gate a served tool goes through.
 - [ingress-gate-and-auto-capture.md](ingress-gate-and-auto-capture.md): what the core does with a record
   a unit lands, with the merge-key declaration and the channel path.
-- [outbound-messaging.md](outbound-messaging.md): the reply path that ends at the `Channel.Send` of a
-  unit.
+- [outbound-messaging.md](outbound-messaging.md): the reply path that ends at a unit's `Channel.Send`.
 - [frontend-architecture.md](frontend-architecture.md): the SPA that the frontend part of an extension
   adds to.
 - [reference/make-targets.md](../reference/make-targets.md): `composition`, `check-composition`,

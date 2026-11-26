@@ -166,7 +166,17 @@ export function ScheduledSendsScreen() {
         <QueueSkewNotice message={skew} onReload={() => void query.refetch()} />
       )}
       <WriteRefused titleKey="sched.writeFailed" message={writeError} />
-      <QueryStates query={query} pendingLabel={t("nav.scheduled")}>
+      {/* A refresh that failed keeps the queue it had: the minute's poll must
+          not swap the rows for an error. Only a first read failing is one. */}
+      <QueryStates
+        query={{
+          isPending: query.isPending,
+          isError: query.isLoadingError,
+          error: query.error,
+          refetch: query.refetch,
+        }}
+        pendingLabel={t("nav.scheduled")}
+      >
         {query.data && query.data.length === 0 ? (
           <EmptyQueue />
         ) : (

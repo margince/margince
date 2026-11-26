@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -37,14 +38,10 @@ func (s *Sink) subjectThreadKeyTx(ctx context.Context, tx pgx.Tx, rec connector.
 		rec.ThreadKey == "" || seat == ids.Nil {
 		return rec.ThreadKey, nil
 	}
-	own := strings.TrimSuffix(strings.TrimPrefix(rec.NaturalKey.SourceID, "<"), ">")
-	var stored, taken bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM activity WHERE source_system = $1 AND source_id = $2)
-		    OR EXISTS (SELECT 1 FROM activity_identity WHERE identity_kind = $3 AND identity_key = $4),
-		       EXISTS (SELECT 1 FROM activity WHERE thread_key = $4)`,
-		connector.EmailSourceSystem, rec.NaturalKey.SourceID, s.mailIdentityKind, own).Scan(&stored, &taken); err != nil {
-		return "", fmt.Errorf("capture: reading whether a reply is already stored: %w", err)
+	own := ownThreadKey(rec)
+	stored, taken, err := s.mailHeldTx(ctx, tx, rec)
+	if err != nil {
+		return "", err
 	}
 	if stored {
 		return rec.ThreadKey, nil
@@ -70,7 +67,25 @@ func (s *Sink) subjectThreadKeyTx(ctx context.Context, tx pgx.Tx, rec connector.
 	if !differs || taken {
 		return parentKey, nil
 	}
-	return own, carryThreadVerdictsTx(ctx, tx, parentKey, own)
+	return own, CarryThreadVerdictsTx(ctx, tx, parentKey, own)
+}
+
+// ownThreadKey is the conversation key a mail would open: its own Message-ID.
+func ownThreadKey(rec connector.NormalizedRecord) string {
+	return strings.TrimSuffix(strings.TrimPrefix(rec.NaturalKey.SourceID, "<"), ">")
+}
+
+// mailHeldTx reports whether a mail is stored already, under its key or its
+// mail identity, and whether another mail's thread already carries its own key.
+func (s *Sink) mailHeldTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (stored, taken bool, err error) {
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM activity WHERE source_system = $1 AND source_id = $2)
+		    OR EXISTS (SELECT 1 FROM activity_identity WHERE identity_kind = $3 AND identity_key = $4),
+		       EXISTS (SELECT 1 FROM activity WHERE thread_key = $4)`,
+		connector.EmailSourceSystem, rec.NaturalKey.SourceID, s.mailIdentityKind, ownThreadKey(rec)).Scan(&stored, &taken); err != nil {
+		return false, false, fmt.Errorf("capture: reading whether a mail is already stored: %w", err)
+	}
+	return stored, taken, nil
 }
 
 // heldParentTx answers the conversation of the message a reply names as its parent, and
@@ -90,7 +105,7 @@ func (s *Sink) heldParentTx(
 		}
 	}
 	err = tx.QueryRow(ctx, `
-		SELECT a.thread_key, mail_topics_differ(a.subject, $4)
+		SELECT a.thread_key, `+mailsubject.TopicsDifferSQL("a.subject", "$4")+`
 		  FROM activity a
 		 WHERE a.id = ANY($1::uuid[]) AND a.archived_at IS NULL AND a.thread_key <> ''
 		   AND (a.id = ANY($2::uuid[]) OR EXISTS (SELECT 1 FROM capture_import ci
@@ -106,10 +121,10 @@ func (s *Sink) heldParentTx(
 	return key, differs, true, nil
 }
 
-// carryThreadVerdictsTx gives a split conversation every seat's settled verdict on the
+// CarryThreadVerdictsTx gives a split conversation every seat's settled verdict on the
 // one it left, before the reply's audience is decided. A pending question is not
 // carried: it names the old conversation's message, and the new one opens its own.
-func carryThreadVerdictsTx(ctx context.Context, tx pgx.Tx, from, to string) error {
+func CarryThreadVerdictsTx(ctx context.Context, tx pgx.Tx, from, to string) error {
 	if err := storekit.LockThreadKeysTx(ctx, tx, from, to); err != nil {
 		return err
 	}
@@ -124,8 +139,4 @@ func carryThreadVerdictsTx(ctx context.Context, tx pgx.Tx, from, to string) erro
 		return fmt.Errorf("capture: carrying thread verdicts to a split conversation: %w", err)
 	}
 	return nil
-}
-
-func sameTopicSQL(alias, other string) string {
-	return "NOT mail_topics_differ(" + alias + ".subject, " + other + ".subject)"
 }

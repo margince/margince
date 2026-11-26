@@ -1,9 +1,4 @@
-import {
-  type QueryClient,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -13,16 +8,20 @@ import { CellStack } from "../../design-system/cellstack";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
-import { RowOpen } from "../../design-system/rowopen";
 import { useToast } from "../../design-system/toast";
 import { useTruncationTooltip } from "../../design-system/tooltip";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { throwProblem, unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
-import { kindLabel, SENDERS_KEY } from "./capture-senderquery";
+import {
+  invalidateSenderLists,
+  kindLabel,
+  putSenderDecision,
+  SENDERS_KEY,
+  type SenderAnswer,
+} from "./capture-senderquery";
 import "./capture-senders.css";
 
 // What the classifier decided about each sender this mailbox brought in, and
@@ -38,7 +37,6 @@ import "./capture-senders.css";
 // itself private.
 
 type SenderDecision = components["schemas"]["CaptureSenderDecision"];
-type AwaitingContact = components["schemas"]["CaptureAwaitingContact"];
 
 // The classifier's vocabulary, in the reader's words. A kind absent from the
 // map is one the server learned to say and this screen has not.
@@ -47,21 +45,6 @@ type AwaitingContact = components["schemas"]["CaptureAwaitingContact"];
 // colour is never the only signal.
 const admitted = new Set(["contact", "role_mailbox", "company_sender"]);
 
-const AWAITING_KEY = ["capture-contacts-awaiting-decision"] as const;
-
-// A decision on a sender also settles the contacts that waited on it.
-function invalidateSenderLists(queryClient: QueryClient) {
-  queryClient.invalidateQueries({ queryKey: SENDERS_KEY });
-  queryClient.invalidateQueries({ queryKey: AWAITING_KEY });
-  for (const key of [
-    "held-threads",
-    "capture-health",
-    "system-health",
-    "worklist",
-  ])
-    queryClient.invalidateQueries({ queryKey: [key] });
-}
-
 export function useSenders() {
   return useQuery({
     queryKey: SENDERS_KEY,
@@ -69,25 +52,6 @@ export function useSenders() {
       const { data, error, response } = await api.GET("/capture/senders", {
         params: { query: { limit: 1 } },
       });
-      if (error || !response.ok) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-}
-
-// The contacts this seat's mail created that stay visible to them alone until
-// a sender decision is reached — the set the admin capture-health card counts
-// for this mailbox. Its own read: a contact whose address never reached the
-// senders list above is waiting too, and that list cannot show it.
-export function useAwaitingDecision() {
-  return useQuery({
-    queryKey: AWAITING_KEY,
-    queryFn: async () => {
-      const { data, error, response } = await api.GET(
-        "/capture/contacts-awaiting-decision",
-      );
       if (error || !response.ok) {
         throwProblem(error);
       }
@@ -105,17 +69,8 @@ function useSetDecision() {
     // belongs to the committed render, and a mutationFn reading render state
     // would answer with the previous one (frontend/AGENTS.md,
     // mutation-variable-coverage).
-    mutationFn: async (vars: {
-      address: string;
-      decision: "business" | "keep_out";
-    }) => {
-      unwrap(
-        await api.PUT("/capture/senders/{address}/decision", {
-          params: { path: { address: vars.address } },
-          body: { decision: vars.decision },
-        }),
-      );
-    },
+    mutationFn: (vars: { address: string; decision: SenderAnswer }) =>
+      putSenderDecision(vars.address, vars.decision),
     onSuccess: () => {
       invalidateSenderLists(queryClient);
       toast.show(t("settings.saved"));
@@ -337,74 +292,6 @@ function SenderMenu({
         )}
       </OverflowMenu>
     </span>
-  );
-}
-
-/** Contacts only the reader can see until their sender is decided. */
-export function AwaitingContacts({
-  rows,
-}: Readonly<{ rows: AwaitingContact[] }>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const zone = useViewerZone();
-  const name = (row: AwaitingContact) =>
-    row.display_name ?? row.emails[0] ?? null;
-  const open = (row: AwaitingContact) =>
-    navigate({ screen: "contacts", id: row.contact_id });
-  const openLabel = (row: AwaitingContact) => {
-    const named = name(row);
-    return named
-      ? t("senders.waiting.openNamed", { name: named })
-      : t("senders.waiting.openUnnamed");
-  };
-  return (
-    <DataTable<AwaitingContact>
-      fold
-      label={t("senders.waiting.title")}
-      rows={rows}
-      rowKey={(row) => row.contact_id}
-      onRowClick={open}
-      columns={[
-        {
-          key: "contact",
-          header: t("senders.waiting.colContact"),
-          render: (row) => (
-            <CellStack>
-              <EntityRef
-                kind="contact"
-                id={row.contact_id}
-                name={name(row)}
-                asText
-              />
-              {row.emails.length > 0 && (
-                <span className="t-caption capture-senders-address">
-                  {row.emails[0]}
-                  {row.emails.length > 1 &&
-                    ` ${plural("senders.waiting.moreAddresses", row.emails.length - 1, { count: formatNumber(row.emails.length - 1, locale) })}`}
-                </span>
-              )}
-            </CellStack>
-          ),
-        },
-        {
-          key: "since",
-          header: t("senders.waiting.colSince"),
-          align: "end",
-          render: (row) => formatDate(row.captured_at, locale, zone),
-        },
-        {
-          key: "open",
-          header: t("table.actions"),
-          headerHidden: true,
-          align: "end",
-          fold: "end",
-          render: (row) => (
-            <RowOpen label={openLabel(row)} onOpen={() => open(row)} />
-          ),
-        },
-      ]}
-    />
   );
 }
 

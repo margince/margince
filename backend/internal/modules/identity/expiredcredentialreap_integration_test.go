@@ -43,29 +43,29 @@ func TestOnlyADeadCredentialIsReaped(t *testing.T) {
 			name:  "a revoked session, its deadlines still ahead",
 			table: "session",
 			cols:  "user_id, token_hash, idle_expires_at, expires_at, revoked_at",
-			dead:  "$1, 'reap-dead', now() + interval '1 day', now() + interval '1 day', now()",
-			live:  "$1, 'reap-live', now() + interval '1 day', now() + interval '1 day', NULL",
+			dead:  "$1, encode(sha256('reap-dead'), 'hex'), now() + interval '1 day', now() + interval '1 day', now()",
+			live:  "$1, encode(sha256('reap-live'), 'hex'), now() + interval '1 day', now() + interval '1 day', NULL",
 		},
 		{
 			name:  "a session idle past its window, absolute deadline ahead",
 			table: "session",
 			cols:  "user_id, token_hash, idle_expires_at, expires_at",
-			dead:  "$1, 'reap-idle-dead', now() - interval '1 minute', now() + interval '1 day'",
-			live:  "$1, 'reap-idle-live', now() + interval '1 day', now() + interval '1 day'",
+			dead:  "$1, encode(sha256('reap-idle-dead'), 'hex'), now() - interval '1 minute', now() + interval '1 day'",
+			live:  "$1, encode(sha256('reap-idle-live'), 'hex'), now() + interval '1 day', now() + interval '1 day'",
 		},
 		{
 			name:  "an invite already used, expiry ahead",
 			table: "auth_token",
 			cols:  "user_id, purpose, token_hash, expires_at, used_at",
-			dead:  "$1, 'invite', 'reap-dead', now() + interval '1 day', now()",
-			live:  "$1, 'invite', 'reap-live', now() + interval '1 day', NULL",
+			dead:  "$1, 'invite', encode(sha256('reap-dead'), 'hex'), now() + interval '1 day', now()",
+			live:  "$1, 'invite', encode(sha256('reap-live'), 'hex'), now() + interval '1 day', NULL",
 		},
 		{
 			name:  "a consumed setup token, which carries no expiry at all",
 			table: "setup_token",
 			cols:  "token_hash, consumed_at",
-			dead:  "'reap-dead', now()",
-			live:  "'reap-live', NULL",
+			dead:  "encode(sha256('reap-dead'), 'hex'), now()",
+			live:  "encode(sha256('reap-live'), 'hex'), NULL",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -103,7 +103,7 @@ func TestOnlyADeadCredentialIsReaped(t *testing.T) {
 				"SELECT token_hash FROM "+tc.table).Scan(&survivor); err != nil {
 				t.Fatalf("reading the survivor: %v", err)
 			}
-			if survivor == "" || survivor[len(survivor)-4:] != "live" {
+			if survivor != hashToken("reap-live") && survivor != hashToken("reap-idle-live") {
 				t.Errorf("the row that survived is %q, which is the one the rule calls dead", survivor)
 			}
 		})
@@ -125,8 +125,8 @@ func TestTheReapKeepsAMembersLastActivity(t *testing.T) {
 	last := time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO session (user_id, token_hash, idle_expires_at, expires_at, revoked_at, last_seen_at)
-		 VALUES ($1, 'reap-older', now() + interval '1 day', now() + interval '1 day', now(), $2::timestamptz - interval '1 hour'),
-		        ($1, 'reap-latest', now() - interval '1 minute', now() + interval '1 day', now(), $2)`,
+		 VALUES ($1, encode(sha256('reap-older'), 'hex'), now() + interval '1 day', now() + interval '1 day', now(), $2::timestamptz - interval '1 hour'),
+		        ($1, encode(sha256('reap-latest'), 'hex'), now() - interval '1 minute', now() + interval '1 day', now(), $2)`,
 		user, last); err != nil {
 		t.Fatalf("seeding two dead sessions: %v", err)
 	}
@@ -144,7 +144,7 @@ func TestTheReapKeepsAMembersLastActivity(t *testing.T) {
 	// A later reap of an older session never moves it back.
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO session (user_id, token_hash, idle_expires_at, expires_at, revoked_at, last_seen_at)
-		 VALUES ($1, 'reap-stale', now() + interval '1 day', now() + interval '1 day', now(), $2::timestamptz - interval '1 day')`,
+		 VALUES ($1, encode(sha256('reap-stale'), 'hex'), now() + interval '1 day', now() + interval '1 day', now(), $2::timestamptz - interval '1 day')`,
 		user, last); err != nil {
 		t.Fatalf("seeding a stale dead session: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestTheSessionReapPassesAMemberAnotherWriteHolds(t *testing.T) {
 	last := time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)
 	if _, err := seed.Exec(ctx,
 		`INSERT INTO session (user_id, token_hash, idle_expires_at, expires_at, revoked_at, last_seen_at)
-		 VALUES ($1, 'reap-held', now() + interval '1 day', now() + interval '1 day', now(), $2)`,
+		 VALUES ($1, encode(sha256('reap-held'), 'hex'), now() + interval '1 day', now() + interval '1 day', now(), $2)`,
 		user, last); err != nil {
 		t.Fatalf("seeding a dead session: %v", err)
 	}
@@ -313,12 +313,12 @@ func TestAFailedReapRefusesTheCredential(t *testing.T) {
 	// swallowed the error.
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO session (user_id, token_hash, idle_expires_at, expires_at, revoked_at)
-		 VALUES ($1, 'refused-dead', now() + interval '1 day', now() + interval '1 day', now())`,
+		 VALUES ($1, encode(sha256('refused-dead'), 'hex'), now() + interval '1 day', now() + interval '1 day', now())`,
 		user); err != nil {
 		t.Fatalf("seeding the row the reap must remove: %v", err)
 	}
 
-	if err := insertSession(ctx, tx, ids.From[ids.UserKind](mustParseUUID(t, user)), "refused-live"); err == nil {
+	if err := insertSession(ctx, tx, ids.From[ids.UserKind](mustParseUUID(t, user)), hashToken("refused-live"), false); err == nil {
 		t.Error("the session was minted though its reap could not run")
 	}
 }
@@ -336,7 +336,7 @@ func refuseSessionDeletes(ctx context.Context, t *testing.T, pool interface {
 		`CREATE OR REPLACE FUNCTION refuse_session_deletes() RETURNS trigger AS $$
 		 BEGIN RAISE EXCEPTION 'this session refuses deletion'; END $$ LANGUAGE plpgsql`,
 		`CREATE TRIGGER trg_refuse_session_deletes BEFORE DELETE ON session
-		 FOR EACH ROW WHEN (OLD.token_hash = 'refused-dead')
+		 FOR EACH ROW WHEN (OLD.token_hash = encode(sha256('refused-dead'), 'hex'))
 		 EXECUTE FUNCTION refuse_session_deletes()`,
 	} {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
@@ -376,7 +376,7 @@ func TestAFailedSetupTokenReapRefusesTheToken(t *testing.T) {
 	// refusal is reached. Without it the delete matches nothing and this would
 	// pass over a reap that never ran.
 	if _, err := pool.Exec(ctx,
-		`INSERT INTO setup_token (token_hash, consumed_at) VALUES ('refused-setup', now())`); err != nil {
+		`INSERT INTO setup_token (token_hash, consumed_at) VALUES (encode(sha256('refused-setup'), 'hex'), now())`); err != nil {
 		t.Fatalf("seeding the row the reap must remove: %v", err)
 	}
 	refuseSetupTokenDeletes(ctx, t, owner)
@@ -395,7 +395,7 @@ func refuseSetupTokenDeletes(ctx context.Context, t *testing.T, owner interface 
 		`CREATE OR REPLACE FUNCTION refuse_setup_token_deletes() RETURNS trigger AS $$
 		 BEGIN RAISE EXCEPTION 'this setup token refuses deletion'; END $$ LANGUAGE plpgsql`,
 		`CREATE TRIGGER trg_refuse_setup_token_deletes BEFORE DELETE ON setup_token
-		 FOR EACH ROW WHEN (OLD.token_hash = 'refused-setup')
+		 FOR EACH ROW WHEN (OLD.token_hash = encode(sha256('refused-setup'), 'hex'))
 		 EXECUTE FUNCTION refuse_setup_token_deletes()`,
 	} {
 		if _, err := owner.Exec(ctx, stmt); err != nil {

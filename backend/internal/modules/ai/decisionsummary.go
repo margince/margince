@@ -40,11 +40,12 @@ type decisionSummaryGroup struct {
 // logical calls that consulted the decision lane: a decision row was written,
 // or the ladder's attempt carries a decision reason — the second alone when the
 // lane refused before sending anything. Grouping by logical call first is what
-// counts a decision that errored, and the ladder that says so, once.
+// counts a decision that errored, and the ladder that says so, once. A terminal
+// decision decided only when it carries no sentinel: a canceled one did not.
 const decisionSummaryQuery = `
 	WITH consulted AS (
 		SELECT task,
-		       bool_or(kind = $3 AND is_terminal) AS decided,
+		       bool_or(kind = $3 AND is_terminal AND NULLIF(error_sentinel, '') IS NULL) AS decided,
 		       min(attempt_reason) FILTER (WHERE kind <> $3 AND attempt_reason = ANY($4)) AS reason
 		FROM ai_call
 		WHERE occurred_at >= $1 AND occurred_at < $2

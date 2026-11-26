@@ -60,7 +60,9 @@ func (s *Service) DismissSuggestion(
 		return err
 	}
 	now := s.now().UTC()
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	var done doneAsk
+	var isDone bool
+	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// Anything that names a record is gated: dismissing advice about an
 		// account the caller cannot read would confirm it exists.
 		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
@@ -81,6 +83,10 @@ func (s *Service) DismissSuggestion(
 			if err := activities.RequireProjectScope(ctx, tx, *within); err != nil {
 				return err
 			}
+		}
+		// Not yet to Done? is kept where the contact page keeps it.
+		if done, isDone, err = s.doneQuestionWith(ctx, tx, companyID, now, within, fingerprint); err != nil || isDone {
+			return err
 		}
 		raises, err := s.raisesSuggestion(ctx, tx, companyID, now, fingerprint, within)
 		if err != nil {
@@ -106,6 +112,10 @@ func (s *Service) DismissSuggestion(
 		}
 		return nil
 	})
+	if err != nil || !isDone {
+		return err
+	}
+	return s.answerDone(ctx, done, true)
 }
 
 // RestoreSuggestion clears this colleague's dismissal of one fingerprint on this
@@ -122,7 +132,9 @@ func (s *Service) RestoreSuggestion(ctx context.Context, companyID ids.CompanyID
 	if err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	var done doneAsk
+	var isDone bool
+	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err
 		}
@@ -130,7 +142,11 @@ func (s *Service) RestoreSuggestion(ctx context.Context, companyID ids.CompanyID
 			return httperr.Validation("fingerprint", "malformed",
 				"restore a suggestion by the fingerprint it was dismissed with, unchanged")
 		}
-		_, err := tx.Exec(ctx, `
+		var err error
+		if done, isDone, err = s.doneQuestionWith(ctx, tx, companyID, s.now().UTC(), nil, fingerprint); err != nil || isDone {
+			return err
+		}
+		_, err = tx.Exec(ctx, `
 			DELETE FROM suggestion_dismissal
 			WHERE user_id = $1 AND company_id = $2 AND fingerprint = $3`,
 			userID, companyID, fingerprint)
@@ -139,6 +155,10 @@ func (s *Service) RestoreSuggestion(ctx context.Context, companyID ids.CompanyID
 		}
 		return nil
 	})
+	if err != nil || !isDone {
+		return err
+	}
+	return s.answerDone(ctx, done, false)
 }
 
 // raisesSuggestion reports whether this account currently raises the suggestion

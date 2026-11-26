@@ -18,11 +18,15 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/contactresearch"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/erasurereturn"
 	"github.com/margince/margince/backend/internal/compose/leaddraft"
+	"github.com/margince/margince/backend/internal/compose/loggedtouch"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
+	"github.com/margince/margince/backend/internal/compose/memberhandoff"
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
 	"github.com/margince/margince/backend/internal/compose/project360"
 	"github.com/margince/margince/backend/internal/compose/readerrendering"
+	"github.com/margince/margince/backend/internal/compose/recordreferences"
 	"github.com/margince/margince/backend/internal/compose/roombrief"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -32,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/commissions"
 	"github.com/margince/margince/backend/internal/modules/comms"
@@ -49,6 +54,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/recordlinks"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/webforms"
@@ -62,6 +68,8 @@ import (
 type (
 	authHandlers            = identity.Handlers
 	channelHandlers         = capture.ChannelHandlers
+	chatLinkHandlers        = chatlinks.Handlers
+	chatEventHandlers       = chatlinks.EventHandlers
 	traceHandlers           = capture.TraceHandlers
 	pipelineTraceHandlers   = pipelinetrace.Handlers
 	contactsHandlers        = contacts.Handlers
@@ -74,6 +82,7 @@ type (
 	approvalsHandlers       = approvals.Handlers
 	searchHandlers          = search.Handlers
 	consentHandlers         = consent.Handlers
+	handoffHandlers         = memberhandoff.Handlers
 	collectionsHandlers     = collections.Handlers
 	signalsHandlers         = signals.Handlers
 	privacyHandlers         = privacy.Handlers
@@ -82,7 +91,9 @@ type (
 	customfieldsHandlers    = customfields.Handlers
 	webhooksHandlers        = webhooks.Handlers
 	webFormsHandlers        = webforms.Handlers
+	recordReferenceHandlers = recordreferences.Handlers
 	company360Handlers      = company360.Handlers
+	erasureReturnHandlers   = erasurereturn.Handlers
 	contact360Handlers      = contact360.Handlers
 	project360Handlers      = project360.Handlers
 	contactBriefHandlers    = contactbrief.Handlers
@@ -99,6 +110,7 @@ type (
 	aiActivityHandlers      = aiactivity.Handlers
 	noticesHandlers         = notices.Handlers
 	weeklyPlanHandlers      = weeklyplan.Handlers
+	recordLinksHandlers     = recordlinks.Handlers
 	forecastHandlers        = forecasting.Handlers
 	assuranceHandlers       = assurance.Handlers
 	introductionHandlers    = introductions.Handlers
@@ -112,7 +124,8 @@ type (
 // rather than how each piece is built.
 func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	s.contact360Svc = contact360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), consent.NewStore(InstallationDB(pool)), comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))), ai.NewFeedbackStore(InstallationDB(pool)), time.Now).WithMailCoverage(mailCaptureCoverageReader(InstallationDB(pool))).
-		WithActivityFields(activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)))
+		WithActivityFields(activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))).
+		WithMessageDone(activities.NewStore(InstallationDB(pool)).WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))}))
 	s.contact360Handlers = contact360.NewHandlers(s.contact360Svc)
 	// The relationship brief is assembled from the SAME composite read the page
 	// serves, so the two cannot disagree about what this caller may see. The
@@ -120,7 +133,7 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	// that wires none serves the deterministic floor and says so in
 	// generated_by, rather than 501-ing on a workspace without a model.
 	s.contactBriefHandlers = contactbrief.NewHandlers(
-		contactbrief.NewService(pool, s.contact360Svc, nil, "", time.Now).
+		contactbrief.NewService(pool, s.contact360Svc, nil, nil, time.Now).
 			WithEmailSummaries(emailRows(pool)),
 	)
 	// The pre-meeting brief shares that composite read and adds the claim
@@ -145,6 +158,7 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	s.roomBriefSvc = newRoomBriefService(pool)
 	s.roomBriefHandlers = roombrief.NewHandlers(s.roomBriefSvc)
 	s.readerRenderingHandlers = readerrendering.NewHandlers(newReaderRenderingService(pool))
+	s.rewriteHandlers = newRewriteHandlers(pool, nil)
 	// No provider is registered, which is the supported configuration rather
 	// than a gap: the surface answers "not connected" and writes nothing
 	// (ADR-0096 D4). Connecting one later is a provider implementation.
@@ -155,17 +169,12 @@ func (s *Server) wireContact360(pool *pgxpool.Pool) {
 	// it needs no pool of its own. Nil lane here for the same reason as the
 	// brief's: WithContactDraft binds the api role's, and without it the endpoint
 	// answers from its deterministic floor rather than 501-ing.
-	s.firstDrafts.contact = contactdraft.NewService(s.contact360Svc, nil).
-		WithCoRecipients(s.contactsStore).
-		WithAboutActivities(activities.NewStore(InstallationDB(pool))).
-		WithEmailSummaries(emailRows(pool)).
-		WithEnvelope(draftEnvelope(pool, s.log))
+	s.firstDrafts.contact = s.contactDraft(pool, nil)
 	s.contactDraftHandlers = contactdraft.NewHandlers(s.firstDrafts.contact)
 	// The lead-side draft, on the same terms: nil lane, so a deployment with no
 	// model answers from contactdraft's deterministic floor rather than 501-ing,
 	// and WithLeadDraft binds the api role's lane.
-	s.firstDrafts.lead = leaddraft.NewService(s.contactsStore, leadCorrespondence{activities.NewStore(InstallationDB(pool))}, nil).
-		WithEnvelope(draftEnvelope(pool, s.log))
+	s.firstDrafts.lead = s.leadDraft(pool, nil)
 	s.leadDraftHandlers = leaddraft.NewHandlers(s.firstDrafts.lead)
 }
 
@@ -185,4 +194,25 @@ func (s *Server) wireProject360(pool *pgxpool.Pool) {
 		time.Now,
 	)
 	s.project360Handlers = project360.NewHandlers(svc)
+}
+
+// Each drafter is built here once. Its model-free floor and the lane an option
+// binds then read the same sources.
+func (s *Server) accountDraft(pool *pgxpool.Pool, brain completer) *accountdraft.Service {
+	return accountdraft.NewService(s.company360Svc, brain).WithEnvelope(draftEnvelope(pool, s.log)).
+		WithLoggedTouches(loggedtouch.Reader{Store: activities.NewStore(InstallationDB(pool))}).
+		WithEmailSummaries(emailRows(pool)).WithDossier(s.companyDossierSvc)
+}
+
+func (s *Server) contactDraft(pool *pgxpool.Pool, brain completer) *contactdraft.Service {
+	return contactdraft.NewService(s.contact360Svc, brain).WithCoRecipients(s.contactsStore).
+		WithAboutActivities(activities.NewStore(InstallationDB(pool))).
+		WithLoggedTouches(loggedtouch.Reader{Store: activities.NewStore(InstallationDB(pool))}).
+		WithEmailSummaries(emailRows(pool)).WithEnvelope(draftEnvelope(pool, s.log))
+}
+
+func (s *Server) leadDraft(pool *pgxpool.Pool, brain completer) *leaddraft.Service {
+	return leaddraft.NewService(s.contactsStore, leadCorrespondence{activities.NewStore(InstallationDB(pool))}, brain).
+		WithLoggedTouches(loggedtouch.Reader{Store: activities.NewStore(InstallationDB(pool))}).
+		WithEnvelope(draftEnvelope(pool, s.log))
 }

@@ -7,7 +7,14 @@ import {
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
-import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
+import { dayOutOfRange } from "../../components/create";
+import {
+  Button,
+  Field,
+  Modal,
+  Textarea,
+  TextInput,
+} from "../../design-system/atoms";
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
@@ -16,10 +23,14 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { todayIn } from "../../format/calendarday";
+import { useLocale, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
+import { useHealthScope } from "../../lib/healthscope";
 import { useLegalEntities } from "../../lib/legalentities.queries";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { refusalSentences, unwrap } from "../../lib/problem";
 import type { Offer, OfferTemplate } from "./offers";
 import { OfferCurrencyField } from "./offers.currencyfield";
 
@@ -37,9 +48,11 @@ async function searchCompanyCandidates(
   }));
 }
 
-function useOfferTemplates() {
+export function useOfferTemplates(enabled = true) {
+  const readerScope = useHealthScope();
   return useQuery({
-    queryKey: ["offer-templates-all"],
+    queryKey: ["offer-templates-all", readerScope ?? ""],
+    enabled: enabled && readerScope !== undefined,
     queryFn: async () => {
       const data = unwrap(
         await api.GET("/offer-templates", {
@@ -99,9 +112,12 @@ export function EditOfferHeaderModal({
   offer,
 }: Readonly<{ open: boolean; onClose: () => void; offer: Offer }>) {
   const t = useT();
+  const { locale } = useLocale();
   const headingId = useId();
   const queryClient = useQueryClient();
   const templatesQuery = useOfferTemplates();
+  // Send refuses a day before the installation's today, so entry does too.
+  const today = isoOrBlank(todayIn(useCompanyZone())) || undefined;
   const [values, setValues] = useState<HeaderEditValues>({
     currency: offer.currency,
     buyer_company_id: offer.buyer_company_id ?? null,
@@ -137,8 +153,35 @@ export function EditOfferHeaderModal({
     wasOpen.current = open;
   }, [open, offer, setBuyerCompanyOverride]);
 
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const labels = {
+    currency: t("offer.currency"),
+    valid_until: t("offer.validUntil"),
+    template_id: t("offer.template"),
+    legal_entity_id: t("offer.legalEntity"),
+    language: t("offer.language"),
+    intro_text: t("offer.introText"),
+    terms_text: t("offer.termsText"),
+  };
+  const change = (patch: Partial<HeaderEditValues>) => {
+    setValues((prev) => ({ ...prev, ...patch }));
+    for (const field of Object.keys(patch)) faults.edited(field);
+  };
+  const close = () => {
+    mutation.reset();
+    faults.show(new Map());
+    onClose();
+  };
+  const validUntilFault = dayOutOfRange(
+    values.valid_until,
+    locale,
+    labels.valid_until,
+  );
+
   const mutation = useMutation({
-    mutationFn: async (input: HeaderEditValues) => {
+    mutationFn: async (
+      input: HeaderEditValues & Readonly<{ savedValidUntil: string }>,
+    ) => {
       return unwrap(
         await api.PATCH("/offers/{id}", {
           params: {
@@ -148,7 +191,11 @@ export function EditOfferHeaderModal({
           body: {
             currency: input.currency,
             buyer_company_id: input.buyer_company_id,
-            valid_until: input.valid_until || null,
+            // Sent only when changed: a saved day that has since passed is
+            // left alone, and a typed one is held to today or later.
+            ...(input.valid_until === input.savedValidUntil
+              ? {}
+              : { valid_until: input.valid_until || null }),
             template_id: input.template_id,
             // Sent only when the reader picked one: an offer from before
             // offers named an entity keeps naming none until somebody does.
@@ -174,31 +221,32 @@ export function EditOfferHeaderModal({
   });
 
   const errorMessage = mutation.isError
-    ? problemMessageOf(mutation.error, t)
+    ? refusalSentences(mutation.error, t, labels).rest
     : null;
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
+    <Modal open={open} onClose={close} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("offer.edit")}
       </Heading>
-      <div className="form-stack">
+      <div ref={faultsRoot} className="form-stack">
         <OfferCurrencyField
           value={values.currency}
           lineItems={offer.line_items}
-          onChange={(currency) => setValues((prev) => ({ ...prev, currency }))}
+          onChange={(currency) => change({ currency })}
+          error={faults.of("currency")}
         />
-        <Field label={t("offer.validUntil")}>
+        <Field
+          label={labels.valid_until}
+          error={validUntilFault ?? faults.of("valid_until")}
+        >
           {(control) => (
             <DateInput
               {...control}
+              min={today}
+              today={today}
               value={isoOrBlank(values.valid_until)}
-              onChange={(event) =>
-                setValues((prev) => ({
-                  ...prev,
-                  valid_until: event.target.value,
-                }))
-              }
+              onChange={(event) => change({ valid_until: event.target.value })}
             />
           )}
         </Field>
@@ -210,10 +258,7 @@ export function EditOfferHeaderModal({
             selected={buyerCompany}
             onPick={(candidate) => {
               setBuyerCompanyOverride(candidate);
-              setValues((prev) => ({
-                ...prev,
-                buyer_company_id: candidate.id,
-              }));
+              change({ buyer_company_id: candidate.id });
             }}
           />
           {buyerCompany && (
@@ -222,14 +267,12 @@ export function EditOfferHeaderModal({
             </p>
           )}
         </div>
-        <Field label={t("offer.template")}>
+        <Field label={labels.template_id} error={faults.of("template_id")}>
           {(control) => (
             <Select
               {...control}
               value={values.template_id ?? ""}
-              onChange={(value) =>
-                setValues((prev) => ({ ...prev, template_id: value || null }))
-              }
+              onChange={(value) => change({ template_id: value || null })}
               // The dash is a real option for "no template", not the select's
               // placeholder. A placeholder only stands in for an unset value,
               // and an offer that picked a template must be able to drop it.
@@ -246,62 +289,65 @@ export function EditOfferHeaderModal({
           )}
         </Field>
         <OfferEntityField
+          error={faults.of("legal_entity_id")}
           value={values.legal_entity_id}
-          onChange={(legal_entity_id) =>
-            setValues((prev) => ({ ...prev, legal_entity_id }))
-          }
+          onChange={(legal_entity_id) => change({ legal_entity_id })}
         />
-        <Field label={t("offer.language")} hint={t("offer.languageHint")}>
+        <Field
+          label={labels.language}
+          hint={t("offer.languageHint")}
+          error={faults.of("language")}
+        >
           {(control) => (
             <TextInput
               {...control}
               maxLength={2}
               value={values.language}
-              onChange={(event) =>
-                setValues((prev) => ({ ...prev, language: event.target.value }))
-              }
+              onChange={(event) => change({ language: event.target.value })}
             />
           )}
         </Field>
-        <Field label={t("offer.introText")}>
+        <Field label={labels.intro_text} error={faults.of("intro_text")}>
           {(control) => (
-            <TextInput
+            <Textarea
               {...control}
+              grow
               value={values.intro_text}
-              onChange={(event) =>
-                setValues((prev) => ({
-                  ...prev,
-                  intro_text: event.target.value,
-                }))
-              }
+              onChange={(event) => change({ intro_text: event.target.value })}
             />
           )}
         </Field>
-        <Field label={t("offer.termsText")}>
+        <Field label={labels.terms_text} error={faults.of("terms_text")}>
           {(control) => (
-            <TextInput
+            <Textarea
               {...control}
+              grow
               value={values.terms_text}
-              onChange={(event) =>
-                setValues((prev) => ({
-                  ...prev,
-                  terms_text: event.target.value,
-                }))
-              }
+              onChange={(event) => change({ terms_text: event.target.value })}
             />
           )}
         </Field>
         {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
       </div>
       <div className="actions">
-        <Button onClick={onClose}>{t("deals.cancel")}</Button>
+        <Button onClick={close}>{t("deals.cancel")}</Button>
         <Button
           variant="primary"
-          disabled={mutation.isPending}
+          pending={mutation.isPending}
           onClick={(event) => {
-            if (!refuseUnreadableField(event.currentTarget)) {
-              mutation.mutate(values);
+            if (refuseUnreadableField(event.currentTarget)) return;
+            if (validUntilFault) {
+              faults.show(new Map([["valid_until", validUntilFault]]));
+              return;
             }
+            const savedValidUntil = offer.valid_until ?? "";
+            mutation.mutate(
+              { ...values, savedValidUntil },
+              {
+                onError: (error) =>
+                  faults.show(refusalSentences(error, t, labels).byField),
+              },
+            );
           }}
         >
           {t("record.save")}
@@ -316,7 +362,12 @@ export function EditOfferHeaderModal({
 function OfferEntityField({
   value,
   onChange,
-}: Readonly<{ value: string | null; onChange: (id: string) => void }>) {
+  error,
+}: Readonly<{
+  value: string | null;
+  onChange: (id: string) => void;
+  error?: string;
+}>) {
   const t = useT();
   const entities = useLegalEntities().data ?? [];
   if (entities.length < 2) {
@@ -324,7 +375,11 @@ function OfferEntityField({
   }
   const fallback = entities.find((entity) => entity.is_default);
   return (
-    <Field label={t("offer.legalEntity")} hint={t("offer.legalEntityHint")}>
+    <Field
+      label={t("offer.legalEntity")}
+      hint={t("offer.legalEntityHint")}
+      error={error}
+    >
       {(control) => (
         <Select
           {...control}

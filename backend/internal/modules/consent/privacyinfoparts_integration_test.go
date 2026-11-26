@@ -7,6 +7,7 @@ package consent
 
 import (
 	"context"
+	"reflect"
 	"slices"
 	"testing"
 )
@@ -42,7 +43,7 @@ func TestThePrivacyPageNamesTheControllerTheInstallationStated(t *testing.T) {
 	stateParticulars(t, e, stated)
 
 	info := noticeFor(t, e, ConfirmRef{ContactID: e.contact})
-	if info.Controller != stated {
+	if !reflect.DeepEqual(info.Controller, stated) {
 		t.Errorf("the page names controller %+v, want the stated particulars %+v", info.Controller, stated)
 	}
 }
@@ -74,12 +75,36 @@ func TestThePageNamesOnlyTheUsesOnRecordWithTheirRecordedBasis(t *testing.T) {
 	}
 }
 
+// An unwired reader names no categories and no retention, and still names
+// the business correspondence purpose every page owes.
 func TestAnUnwiredReaderDisclosesNothingItCannotBack(t *testing.T) {
 	e := setupChannelConsent(t)
 
 	info := noticeFor(t, e, ConfirmRef{ContactID: e.contact})
-	if len(info.Purposes)+len(info.DataCategories)+len(info.Retention) != 0 {
-		t.Errorf("an unwired page claims purposes %v, categories %v, retention %v",
-			info.Purposes, info.DataCategories, info.Retention)
+	if len(info.DataCategories)+len(info.Retention) != 0 {
+		t.Errorf("an unwired page claims categories %v, retention %v", info.DataCategories, info.Retention)
+	}
+	if !slices.Equal(info.PurposeKeys, []string{PurposeBusinessCorrespondence}) ||
+		!slices.Equal(info.PurposeBases, []string{"legitimate_interests"}) {
+		t.Errorf("an unwired page names purposes %v on %v, want business correspondence on legitimate interests",
+			info.PurposeKeys, info.PurposeBases)
+	}
+}
+
+// A stored row that still holds the retired agreement is shown as the consent
+// it records. The page and the API output both show it, never "no basis".
+func TestAStoredRetiredAgreementIsShownAsConsent(t *testing.T) {
+	e := setupChannelConsent(t)
+	e.store = e.store.WithNoticeHeldReader(&fixedHeld{held: NoticeHeld{
+		Uses: []NoticeUse{{PurposeKey: "business_correspondence", Basis: "vn_subject_agreement"}},
+	}})
+
+	info := noticeFor(t, e, ConfirmRef{ContactID: e.contact})
+	if !slices.Equal(info.PurposeBases, []string{"consent"}) {
+		t.Fatalf("the page names %v, want the agreement shown as consent", info.PurposeBases)
+	}
+	wire := wirePrivacyInformation(info)
+	if len(wire.PurposeBases) != 1 || string(wire.PurposeBases[0]) != "consent" {
+		t.Errorf("the API output names %v, want [consent]", wire.PurposeBases)
 	}
 }

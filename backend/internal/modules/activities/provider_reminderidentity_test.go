@@ -31,7 +31,7 @@ func reminderCreate(system string) crmcontracts.CreateActivityRequest {
 // the identity outright would refuse every reminder the engine ever writes.
 func TestTheEngineMayStampItsOwnReminderIdentity(t *testing.T) {
 	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem, ID: "system"})
-	for _, source := range []string{provenance.NoActivityReminderSource, provenance.CheckInCadenceSource} {
+	for _, source := range provenance.EngineTaskSources() {
 		in, err := logInputForPrincipal(ctx, reminderCreate(source))
 		if err != nil {
 			t.Fatalf("[%s] the engine could not stamp its own reminder identity: %v", source, err)
@@ -50,7 +50,7 @@ func TestTheEngineMayStampItsOwnReminderIdentity(t *testing.T) {
 func TestTheProviderRefusesAReminderIdentityFromAnOrdinaryCaller(t *testing.T) {
 	provider := &Provider{}
 	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent, ID: "a-1"})
-	for _, source := range []string{provenance.NoActivityReminderSource, provenance.CheckInCadenceSource} {
+	for _, source := range provenance.EngineTaskSources() {
 		_, err := provider.Create(ctx, datasource.CreateInput{
 			Source:     "manual",
 			EntityType: datasource.EntityActivity,
@@ -93,7 +93,7 @@ func TestAnOrdinaryCallerMayNotStampAReminderIdentity(t *testing.T) {
 		principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent, ID: "a-1"}),
 		principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalConnector, ID: "c-1"}),
 	} {
-		for _, source := range []string{provenance.NoActivityReminderSource, provenance.CheckInCadenceSource} {
+		for _, source := range provenance.EngineTaskSources() {
 			_, err := logInputForPrincipal(ctx, reminderCreate(source))
 			if _, ok := errors.AsType[*provenance.ReservedError](err); !ok {
 				t.Fatalf("[%s] err = %v, want ReservedError — a caller able to write this identity can suppress the reminder", source, err)
@@ -138,5 +138,21 @@ func TestTheProviderSeamDoesNotOpenTheImporterNamespace(t *testing.T) {
 	}
 	if refused.Field != "source_system" {
 		t.Errorf("refusal names %q, want source_system", refused.Field)
+	}
+}
+
+// A chat summary's key is the chat engine's alone. A caller who could plant a
+// note under it would hide the real summary, or pass off a fake one.
+func TestNoCallerMayPlantANoteUnderAChatSummaryKey(t *testing.T) {
+	for _, ctx := range []context.Context{
+		principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, ID: "u-1"}),
+		principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent, ID: "a-1"}),
+		principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem, ID: "system"}),
+	} {
+		planted := reminderCreate(provenance.ChatSummarySource)
+		planted.Kind, planted.SourceId = "note", new("acme:1")
+		if _, err := logInputForPrincipal(ctx, planted); err == nil {
+			t.Fatal("a note under a chat summary key was admitted; it would stand in for the real summary")
+		}
 	}
 }

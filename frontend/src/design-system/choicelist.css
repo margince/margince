@@ -30,6 +30,13 @@
 .choicelist-row > .choicelist-legend {
   flex-basis: 100%;
 }
+/* The coarse-pointer floor, as `.segmented button` takes it. `.checkfield`
+   centres a one-line answer in the taller row. */
+@media (pointer: coarse) {
+  :is(.choicelist-stack, .choicelist-row) .choicelist-choice {
+    min-height: 44px;
+  }
+}
 
 /* The question reads as a field label, because that is what it is — the same
    weight and colour as `.field > label`, so a question and a labelled input in
@@ -90,7 +97,7 @@
      elevated fill keeps a live plate from reading as a greyed-out one. */
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
+  background: var(--bgField);
   transition:
     border-color var(--dur-move) var(--ease-out),
     box-shadow var(--dur-move) var(--ease-out);
@@ -189,7 +196,7 @@
   padding: var(--space-3);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
+  background: var(--bgField);
   box-shadow: var(--shadow-rest);
   transition:
     border-color var(--dur-move) var(--ease-out),
@@ -251,7 +258,6 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  corner-shape: round;
   background: var(--accent);
   color: var(--textOnAccentControl);
   opacity: 0;

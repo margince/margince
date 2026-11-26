@@ -14,10 +14,12 @@ import {
 } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Heading } from "../../design-system/heading";
-import { useT } from "../../i18n";
+import { useFieldFaults } from "../../design-system/savepage";
+import { useLocale, useT } from "../../i18n";
 import { statusLabel, statusTone } from "../../lib/connector-status";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
 import "../../design-system/querystates.css";
+import { BOT_COPY, type BotProvider } from "./botcopy";
 
 // The Telegram connector: one bot connects for the WHOLE workspace, not
 // per-user — there is no OAuth handshake, so first-connect is the same "paste a
@@ -29,16 +31,27 @@ import "../../design-system/querystates.css";
 // channel identity binding survive the rotation instead of a
 // disconnect-reconnect cycle that would discard them. This one form serves both
 // first-connect (no `connection` prop) and that in-place edit (a `connection`
-// prop supplies the id PATCH targets).
+// prop supplies the id PATCH targets). A self-hosted provider (Dispact) adds
+// its chat's address on first connect; a token rotation keeps the address.
+// Dispact also takes an optional events secret, on connect and on rotation;
+// left empty on a rotation, the saved one stays.
 
 type ChannelConnection = components["schemas"]["ChannelConnection"];
 
-export function TelegramConnectForm({
+type BotCredentials = Readonly<{
+  token: string;
+  address: string;
+  eventsSecret: string;
+}>;
+
+export function BotConnectForm({
+  provider = "telegram",
   open,
   onClose,
   connection,
   onConnected,
 }: Readonly<{
+  provider?: BotProvider;
   open: boolean;
   onClose: () => void;
   // Present only when replacing an existing connection's token; absent for
@@ -52,21 +65,45 @@ export function TelegramConnectForm({
   const formId = useId();
   const queryClient = useQueryClient();
   const [botToken, setBotToken] = useState("");
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults();
+  const labels = {
+    address: t("connectors.bot.dispactAddress"),
+    token: t("connectors.telegramBotToken"),
+  };
+  const [address, setAddress] = useState("");
+  const [eventsSecret, setEventsSecret] = useState("");
+  const copy = BOT_COPY[provider];
+  // Only a new Dispact binding names its chat; the server refuses an address
+  // for Telegram, and a token rotation takes the token alone.
+  const asksAddress = provider === "dispact" && !connection;
+  // Only Dispact pushes signed notices; the server refuses a secret for Telegram.
+  const asksEventsSecret = provider === "dispact";
 
   const connect = useMutation({
-    mutationFn: async (token: string): Promise<ChannelConnection> => {
+    mutationFn: async ({
+      token,
+      address: chatAddress,
+      eventsSecret: secret,
+    }: BotCredentials): Promise<ChannelConnection> => {
+      const withSecret = secret ? { eventsSecret: secret } : {};
       if (connection) {
         return unwrap(
           await api.PATCH("/channel-connections/{id}", {
             params: { path: { id: connection.id } },
-            body: { botToken: token },
+            body: { botToken: token, ...withSecret },
           }),
           t,
         );
       }
       return unwrap(
         await api.POST("/channel-connections", {
-          body: { provider: "telegram", botToken: token },
+          body: {
+            provider,
+            botToken: token,
+            ...(chatAddress ? { address: chatAddress } : {}),
+            ...withSecret,
+          },
         }),
         t,
       );
@@ -77,11 +114,13 @@ export function TelegramConnectForm({
       // GET /channel-connections drive whatever it shows next.
       queryClient.invalidateQueries({ queryKey: ["channel-connections"] });
       setBotToken("");
+      setEventsSecret("");
     },
     onError: () => {
       // The token is never retained after a failed submit — the same
       // posture the IMAP form holds for its secret.
       setBotToken("");
+      setEventsSecret("");
     },
   });
 
@@ -91,16 +130,18 @@ export function TelegramConnectForm({
   // admin meets on the next rotation — a bot username and a Done button,
   // with no way back to the token field.
   const { reset: resetConnect } = connect;
+  const clearFaults = faults.show;
   const wasOpen = useRef(false);
   useEffect(() => {
     if (open && !wasOpen.current) {
       setBotToken("");
+      setAddress("");
+      setEventsSecret("");
       resetConnect();
+      clearFaults(new Map());
     }
     wasOpen.current = open;
-  }, [open, resetConnect]);
-
-  const ready = botToken.trim() !== "";
+  }, [open, resetConnect, clearFaults]);
   // RFC 7807 `detail` carries the actionable reason (e.g. which of the two
   // conflicts a 409 is — this bot is bound elsewhere, or this workspace already
   // has one) — surfaced verbatim rather than flattened into a generic "failed
@@ -113,9 +154,7 @@ export function TelegramConnectForm({
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
-        {connection
-          ? t("connectors.telegramEditTitle")
-          : t("connectors.telegramModalTitle")}
+        {connection ? t("connectors.telegramEditTitle") : t(copy.modalTitle)}
       </Heading>
       {resolved ? (
         <>
@@ -147,13 +186,25 @@ export function TelegramConnectForm({
         <>
           <form
             id={formId}
+            ref={faultsRoot}
             className="form-stack"
+            noValidate
             onSubmit={(event) => {
               event.preventDefault();
-              if (!ready || connect.isPending) {
+              const blank = blankRequired(locale, {
+                ...(asksAddress
+                  ? { address: [labels.address, address] as const }
+                  : {}),
+                token: [labels.token, botToken],
+              });
+              if (faults.show(blank) || connect.isPending) {
                 return;
               }
-              connect.mutate(botToken.trim());
+              connect.mutate({
+                token: botToken.trim(),
+                address: asksAddress ? address.trim() : "",
+                eventsSecret: asksEventsSecret ? eventsSecret.trim() : "",
+              });
             }}
           >
             {/* A parked binding still reads as parked while its token is replaced. */}
@@ -164,10 +215,32 @@ export function TelegramConnectForm({
                 </Badge>
               </div>
             )}
+            {asksAddress && (
+              <Field
+                label={labels.address}
+                required
+                hint={t("connectors.bot.dispactAddressHint")}
+                error={faults.of("address")}
+              >
+                {(control) => (
+                  <TextInput
+                    {...control}
+                    type="url"
+                    autoComplete="off"
+                    value={address}
+                    onChange={(event) => {
+                      setAddress(event.target.value);
+                      faults.edited("address");
+                    }}
+                  />
+                )}
+              </Field>
+            )}
             <Field
-              label={t("connectors.telegramBotToken")}
+              label={labels.token}
               required
-              hint={t("connectors.telegramBotTokenHint")}
+              hint={t(copy.tokenHint)}
+              error={faults.of("token")}
             >
               {(control) => (
                 <TextInput
@@ -175,10 +248,20 @@ export function TelegramConnectForm({
                   type="password"
                   autoComplete="off"
                   value={botToken}
-                  onChange={(event) => setBotToken(event.target.value)}
+                  onChange={(event) => {
+                    setBotToken(event.target.value);
+                    faults.edited("token");
+                  }}
                 />
               )}
             </Field>
+            {asksEventsSecret && (
+              <EventsSecretField
+                value={eventsSecret}
+                onChange={setEventsSecret}
+                keepsSaved={connection?.eventsSecretSet === true}
+              />
+            )}
             {errorMessage && (
               <Callout
                 tone="danger"
@@ -201,7 +284,6 @@ export function TelegramConnectForm({
               variant="primary"
               type="submit"
               form={formId}
-              disabled={!connect.isPending && !ready}
               pending={connect.isPending}
               busyLabel={t("create.saving")}
             >
@@ -213,5 +295,39 @@ export function TelegramConnectForm({
         </>
       )}
     </Modal>
+  );
+}
+
+// The optional Dispact events secret. On a rotation an empty field keeps the
+// saved secret, so the hint says so once one is saved.
+function EventsSecretField({
+  value,
+  onChange,
+  keepsSaved,
+}: Readonly<{
+  value: string;
+  onChange: (value: string) => void;
+  keepsSaved: boolean;
+}>) {
+  const t = useT();
+  return (
+    <Field
+      label={t("connectors.bot.eventsSecret")}
+      hint={t(
+        keepsSaved
+          ? "connectors.bot.eventsSecretKeepHint"
+          : "connectors.bot.eventsSecretHint",
+      )}
+    >
+      {(control) => (
+        <TextInput
+          {...control}
+          type="password"
+          autoComplete="off"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
+    </Field>
   );
 }

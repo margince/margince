@@ -98,7 +98,7 @@ func ReadSharedSnapshot(
 		  COALESCE(sum(c.base_minor)     FILTER (WHERE c.in_evidence AND %[1]s), 0),
 		  COALESCE(sum(c.base_minor)     FILTER (WHERE c.in_open AND %[1]s), 0),
 		  COALESCE(sum(c.weighted_minor) FILTER (WHERE c.in_open AND %[1]s), 0),
-		  count(*) FILTER (WHERE %[1]s),
+		  count(*) FILTER (WHERE c.in_open AND %[1]s),
 		  -- PRICED is amount_minor. CONVERTED is base_minor, and the deal priced
 		  -- in a currency no rate reached is the one population they differ on —
 		  -- the population fx_missing_count names two lines below. Counting
@@ -109,9 +109,9 @@ func ReadSharedSnapshot(
 		  -- aggregate under a per-recipient FILTER that never loads them. The two
 		  -- are held equal by TestASharedSnapshotCountsPricingRatherThanConversion,
 		  -- which asserts this recompute against the row Compute stored.
-		  count(*) FILTER (WHERE c.amount_minor IS NOT NULL AND %[1]s),
-		  count(*) FILTER (WHERE NOT c.close_provisional AND %[1]s),
-		  count(*) FILTER (WHERE c.exclusion_reason = 'fx_missing' AND %[1]s),
+		  count(*) FILTER (WHERE c.in_open AND c.amount_minor IS NOT NULL AND %[1]s),
+		  count(*) FILTER (WHERE c.in_open AND NOT c.close_provisional AND %[1]s),
+		  count(*) FILTER (WHERE c.in_open AND c.exclusion_reason = 'fx_missing' AND %[1]s),
 		  -- Whether anything was kept back, asked of THIS snapshot rather than
 		  -- inferred from a clause existing. A recipient whose row scope happens
 		  -- to cover every deal in the frozen state had nothing withheld, and

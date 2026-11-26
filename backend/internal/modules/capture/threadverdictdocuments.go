@@ -6,6 +6,7 @@ package capture
 import (
 	"context"
 	"fmt"
+	"mime"
 	"path"
 	"slices"
 	"strings"
@@ -55,10 +56,17 @@ func IsThreadDocument(filename, contentType string) bool {
 	bare, _, _ := strings.Cut(contentType, ";")
 	bare = strings.ToLower(strings.TrimSpace(bare))
 	if slices.Contains(doctext.OfficeExtensions, ext) || slices.Contains(doctext.TextExtensions, ext) ||
-		bare == "application/zip" || slices.Contains(doctext.OfficeTypes, bare) {
+		bare == "application/zip" || slices.Contains(doctext.OfficeTypes, bare) ||
+		IsThreadImage(filename, contentType) {
 		return true
 	}
 	return ext == "" && slices.Contains(doctext.TextTypes, bare)
+}
+
+// IsThreadImage keeps markup from vouching for what an image depicts.
+func IsThreadImage(filename, contentType string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(contentType)), "image/") ||
+		strings.HasPrefix(mime.TypeByExtension(strings.ToLower(path.Ext(filename))), "image/")
 }
 
 // storedFilesSQL is a JSON list of the stored, live files on the message

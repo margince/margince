@@ -73,13 +73,20 @@ func refuseAgentOverDraft(ctx context.Context, report crmcontracts.ReportingRepo
 }
 
 // DraftNewReport creates a report only its author sees, whatever audience the
-// input names, so a new report starts as private as a draft does.
+// input names. Its charts wait as a draft until an editor publishes them.
 func (s *Service) DraftNewReport(ctx context.Context, in crmcontracts.ReportingReportInput) (crmcontracts.ReportingReport, error) {
 	if err := requireDraftWrite(ctx, principal.ActionCreate); err != nil {
 		return crmcontracts.ReportingReport{}, err
 	}
 	in.Audience, in.AudienceTeamId = reportingPrivate, nil
-	return s.insertReport(ctx, in)
+	return s.insertReport(ctx, in, true)
+}
+
+// withoutCharts is the revision a drafted report publishes first: the draft's
+// scope and period with no metric, so nothing is shown until an editor publishes.
+func withoutCharts(selection crmcontracts.ReportingSelection) crmcontracts.ReportingSelection {
+	selection.Metrics, selection.Blocks, selection.Layout = []crmcontracts.ReportingMetricID{}, []crmcontracts.ReportingBlockKind{}, nil
+	return selection
 }
 
 // SaveReportDraft stores the next revision as a draft only editors see. A

@@ -4,51 +4,24 @@
 import type { components } from "../../api/schema";
 import type { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { labelFor, UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
+import { UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
 
 type T = ReturnType<typeof useT>;
 
-// The rung the decision lane stamps on its calls (decidetrace.go). Not a tier
-// of the ladder: the task contract never declares it, so it is spelled here
-// once and every screen that meets it in a health or usage row imports it.
-export const DECIDE_RUNG = "decide";
+// How a task runs, as /ai/status sends it. A mode this build cannot name is
+// shown as sent.
+const MODE_NAMES = {
+  interactive: "aiTasks.mode.interactive",
+  background: "aiTasks.mode.background",
+  embedding: "aiTasks.mode.embedding",
+} as const satisfies Record<string, MessageKey>;
 
-// Cheapest first. Typed by the task contract's enum, so a tier it grows
-// without a name here fails the typecheck.
-export type Tier = components["schemas"]["AssistantConfiguredModel"]["tier"];
-
-const TIER_NAMES = {
-  local_small: "aiTier.local_small",
-  cheap_cloud: "aiTier.cheap_cloud",
-  premium: "aiTier.premium",
-  frontier: "aiTier.frontier",
-  local_large: "aiTier.local_large",
-} as const satisfies Record<Tier, MessageKey>;
-
-// The lanes bound beside the ladder, under their routing keys and the rungs
-// their calls are stamped with (embedlane.go, decidetrace.go).
-const LANE_NAMES: Readonly<Record<string, MessageKey>> = {
-  embeddings: "aiTier.embeddings",
-  embed: "aiTier.embeddings",
-  decisions: "aiTier.decide",
-  [DECIDE_RUNG]: "aiTier.decide",
-};
-
-function isTier(key: string): key is Tier {
-  return Object.hasOwn(TIER_NAMES, key);
+function isMode(mode: string): mode is keyof typeof MODE_NAMES {
+  return Object.hasOwn(MODE_NAMES, mode);
 }
 
-export const TIER_ORDER: readonly Tier[] =
-  Object.keys(TIER_NAMES).filter(isTier);
-
-export function tierLabel(tier: string, t: T): string {
-  if (isTier(tier)) return t(labelFor(TIER_NAMES, tier));
-  const lane = LANE_NAMES[tier];
-  return lane ? t(lane) : tier;
-}
-
-export function tierRank(tier: string): number {
-  return isTier(tier) ? TIER_ORDER.indexOf(tier) : TIER_ORDER.length;
+export function executionModeLabel(mode: string, t: T): string {
+  return isMode(mode) ? t(MODE_NAMES[mode]) : mode;
 }
 
 type CodeWords = Readonly<{
@@ -82,6 +55,11 @@ const CALL_CODES: Readonly<Record<string, CodeWords>> = {
   timeout: {
     name: "aicalls.sentinel.timeout",
     phrase: "aiOutcome.gaveUp.timeout",
+  },
+  canceled: {
+    name: "aicalls.sentinel.canceled",
+    phrase: "aiOutcome.gaveUp.canceled",
+    warns: true,
   },
   output_withheld: {
     name: "aicalls.sentinel.output_withheld",
@@ -167,10 +145,9 @@ export function attemptReasonLabel(reason: string, t: T): string {
       return t("aicalls.reason.decision_off_enum");
     case "decision_state_too_large":
       return t("aicalls.reason.decision_state_too_large");
+    // Only on rows stored before the lane stopped reading certification.
     case "decision_uncertified":
       return t("aicalls.reason.decision_uncertified");
-    case "decision_local_only":
-      return t("aicalls.reason.decision_local_only");
     case "provider_error":
       return t("aicalls.reason.provider_error");
     case "schema_invalid":
@@ -195,10 +172,6 @@ export function decisionSkipLabel(reason: SkipReason, t: T): string {
   switch (reason) {
     case "unbound":
       return t("aiAdmin.decisionSkip.unbound");
-    case "uncertified":
-      return t("aiAdmin.decisionSkip.uncertified");
-    case "local_only":
-      return t("aiAdmin.decisionSkip.local_only");
     default:
       return t(UNKNOWN_VALUE_LABEL);
   }

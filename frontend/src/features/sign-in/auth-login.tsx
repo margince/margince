@@ -4,9 +4,12 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { AuthCardTitle, type AuthPhase } from "../../components/auth-core";
 import { Button, Field, TextInput } from "../../design-system/atoms";
+import { firstRefusedControl } from "../../design-system/formvalidity";
 import { usePasswordReveal } from "../../design-system/passwordreveal";
+import { useFieldFaults } from "../../design-system/savepage";
 import { useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useAddressWriters } from "../../lib/urlstate";
 import {
   type OidcProviders,
   ProviderButtons,
@@ -43,9 +46,15 @@ export function LoginForm({
   onChallenge: (challenge: string) => void;
 }>) {
   const t = useT();
+  const writers = useAddressWriters();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [capsLock, setCapsLock] = useState(false);
+  // Set by a press that found a field missing or malformed, cleared by a press
+  // that sends. The form validates itself so the words follow the page's
+  // language; a browser bubble speaks the browser's.
+  const [attempted, setAttempted] = useState(false);
+  const [emailMalformed, setEmailMalformed] = useState(false);
   const reveal = usePasswordReveal({
     show: t("auth.showPassword"),
     hide: t("auth.hidePassword"),
@@ -85,7 +94,7 @@ export function LoginForm({
       return null;
     },
     onSuccess: (pending) =>
-      pending ? onChallenge(pending.challenge) : landSignedIn(onPhase),
+      pending ? onChallenge(pending.challenge) : landSignedIn(onPhase, writers),
     onError: (error) => {
       onPhase("error");
       if (error instanceof LoginError && error.failure === "credentials") {
@@ -100,16 +109,38 @@ export function LoginForm({
   });
 
   const ready = email.trim() !== "" && password !== "";
-  const submit = (event: FormEvent) => {
+  const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (ready && !login.isPending) {
+    // The browser's own email rule, read from the control: what it refused
+    // before the form turned native validation off, it still refuses.
+    const malformed = emailRef.current?.validity.typeMismatch === true;
+    if (!ready || malformed) {
+      setAttempted(true);
+      setEmailMalformed(malformed);
+      const refused = firstRefusedControl(event.currentTarget);
+      if (refused instanceof HTMLElement) {
+        refused.focus();
+      }
+      return;
+    }
+    if (!login.isPending) {
+      // A refused credential empties the password, which is not a missing one.
+      setAttempted(false);
       onPhase("signing-in");
       login.mutate();
     }
   };
+  let emailError: string | undefined;
+  if (attempted && email.trim() === "") {
+    emailError = t("auth.emailMissing");
+  } else if (attempted && emailMalformed) {
+    emailError = t("auth.emailMalformed");
+  }
+  const passwordError =
+    attempted && password === "" ? t("auth.passwordMissing") : undefined;
 
   return (
-    <form className="auth-card" onSubmit={submit}>
+    <form className="auth-card" onSubmit={submit} noValidate>
       {/* The page says its name once. The greeting beside this form is the
           page's h1, so the form's own title and sub-line would repeat it in a
           larger voice than the sentence they follow. Both stay in the
@@ -132,7 +163,11 @@ export function LoginForm({
           ADR-0076 binds the WCAG rules unamended, so where the picture and
           WCAG disagree, WCAG wins. */}
       <div className="auth-fields">
-        <Field label={t("auth.email")} icon={<Mail aria-hidden />}>
+        <Field
+          label={t("auth.email")}
+          icon={<Mail aria-hidden />}
+          error={emailError}
+        >
           {(control) => (
             <TextInput
               {...control}
@@ -154,7 +189,10 @@ export function LoginForm({
               spellCheck={false}
               placeholder={t("auth.emailPlaceholder")}
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setEmailMalformed(false);
+              }}
             />
           )}
         </Field>
@@ -163,11 +201,12 @@ export function LoginForm({
           icon={<Lock aria-hidden />}
           labelEnd={
             resetAvailable ? (
-              <button type="button" className="auth-link" onClick={onForgot}>
+              <Button type="button" variant="link" onClick={onForgot}>
                 {t("auth.forgotLink")}
-              </button>
+              </Button>
             ) : undefined
           }
+          error={passwordError}
           hint={capsLock ? t("auth.capsLock") : undefined}
           // Announced when it appears, not only when focus arrives. Caps lock
           // is pressed while typing. A warning heard only after leaving and
@@ -201,8 +240,8 @@ export function LoginForm({
       )}
       <div className="auth-actions">
         {/* Refuses the press only while a request is in flight. An empty
-            field is answered by native validation on the inputs, not by a pale
-            control with nothing to say.
+            field is answered under the field itself, not by a pale control
+            with nothing to say.
 
             `pending`, not `disabled`: the label stays "Sign in" the whole way
             through, because renaming a control mid-press makes a screen reader
@@ -217,6 +256,9 @@ export function LoginForm({
         >
           {t("auth.signIn")}
         </Button>
+        {/* Where no forgot-password flow exists, the remedy is an admin's
+            set-password link, and a reader who never sees the advice has none. */}
+        {!resetAvailable && <p className="t-sub">{t("auth.forgotAskAdmin")}</p>}
       </div>
     </form>
   );
@@ -228,6 +270,8 @@ export function ForgotForm({
 }: Readonly<{ onSent: (email: string) => void; onBack: () => void }>) {
   const t = useT();
   const [email, setEmail] = useState("");
+  const [faults, faultsRoot] = useFieldFaults();
+  const emailRef = useRef<HTMLInputElement>(null);
 
   const request = useMutation({
     mutationFn: async () => {
@@ -237,26 +281,36 @@ export function ForgotForm({
     onSuccess: () => onSent(email.trim()),
   });
 
-  const ready = email.trim() !== "";
+  // The same sentences as the sign-in card the reader came from.
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (ready && !request.isPending) {
+    const found = new Map<string, string>();
+    if (email.trim() === "") found.set("email", t("auth.emailMissing"));
+    else if (emailRef.current?.validity.typeMismatch === true) {
+      found.set("email", t("auth.emailMalformed"));
+    }
+    if (!faults.show(found) && !request.isPending) {
       request.mutate();
     }
   };
 
   return (
-    <form className="auth-card" onSubmit={submit}>
+    <form className="auth-card" ref={faultsRoot} onSubmit={submit} noValidate>
       <AuthCardTitle>{t("auth.forgotTitle")}</AuthCardTitle>
       <p>{t("auth.forgotSub")}</p>
       <div className="auth-fields">
         {/* Same icon as the sign-in card's email field. Without it the text
             starts 22px further left than on the screen the user just came from,
             and the two cards stop looking like one surface. */}
-        <Field label={t("auth.email")} icon={<Mail aria-hidden />}>
+        <Field
+          label={t("auth.email")}
+          icon={<Mail aria-hidden />}
+          error={faults.of("email")}
+        >
           {(control) => (
             <TextInput
               {...control}
+              ref={emailRef}
               type="email"
               required
               name="email"
@@ -270,7 +324,10 @@ export function ForgotForm({
               spellCheck={false}
               placeholder={t("auth.emailPlaceholder")}
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                faults.edited("email");
+              }}
             />
           )}
         </Field>
@@ -279,16 +336,12 @@ export function ForgotForm({
         <ErrorNote message={problemMessageOf(request.error, t)} />
       )}
       <div className="auth-actions">
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={!ready || request.isPending}
-        >
+        <Button type="submit" variant="primary" pending={request.isPending}>
           {t("auth.sendResetLink")}
         </Button>
-        <button type="button" className="auth-link" onClick={onBack}>
+        <Button type="button" variant="link" onClick={onBack}>
           {t("auth.backToLogin")}
-        </button>
+        </Button>
       </div>
     </form>
   );

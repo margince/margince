@@ -16,8 +16,15 @@ import {
 import {
   clauseWords,
   filterSentence,
+  operatorKey,
   type SentenceWords,
 } from "./filtersentence";
+import { referencedIdsOf } from "./filtersentence.names";
+
+const TAG = enCatalog["filters.field.tag"];
+const INCLUDE = enCatalog["filters.op.include"];
+const NOT_INCLUDE = enCatalog["filters.op.notInclude"];
+const INCLUDE_ANY = enCatalog["filters.op.includeAny"];
 
 // The one place a filter becomes words, so these read like the sentences a
 // reader sees under a Live List and on a saved view, clause by clause.
@@ -65,12 +72,26 @@ const FIELDS: VocabularyField[] = [
     custom: false,
     references: "app_user",
   },
+  {
+    name: "company_id",
+    type: "id",
+    operators: ["in", "eq"],
+    custom: false,
+    references: "company",
+  },
+  {
+    name: "team_id",
+    type: "id",
+    operators: ["in"],
+    custom: false,
+    references: "team",
+  },
   { name: "email", type: "text", operators: ["exists"], custom: false },
   { name: "city", type: "text", operators: ["eq"], custom: false },
   {
     name: "tag",
     type: "id",
-    operators: ["eq", "neq", "in"],
+    operators: ["eq", "neq", "in", "exists"],
     custom: false,
     references: "tag",
   },
@@ -264,10 +285,12 @@ describe("a filter read as one sentence", () => {
     };
     const tagged = (value: string | string[]) =>
       read(newGroup("and", [newLeaf("tag", "in", value)]), named);
-    expect(tagged(["t-a", "t-b"])).toBe('Tag is any of "Wanted", "Other"');
-    expect(tagged(["t-a", "t-unknown"])).toBe("Tag is any of 2 tags");
+    expect(tagged(["t-a", "t-b"])).toBe(
+      `${TAG} ${INCLUDE_ANY} "Wanted", "Other"`,
+    );
+    expect(tagged(["t-a", "t-unknown"])).toBe(`${TAG} ${INCLUDE_ANY} 2 tags`);
     expect(read(newGroup("and", [newLeaf("tag", "eq", "t-a")]), named)).toBe(
-      'Tag is "Wanted"',
+      `${TAG} ${INCLUDE} "Wanted"`,
     );
   });
 
@@ -275,15 +298,15 @@ describe("a filter read as one sentence", () => {
     const retiring = { ...en, retiredTags: new Set(["t-old", "t-gone"]) };
     const tagged = (op: "eq" | "neq" | "in", value: string | string[]) =>
       read(newGroup("and", [newLeaf("tag", op, value)]), retiring);
-    expect(tagged("eq", "t-old")).toBe("Tag is 1 archived tag");
-    expect(tagged("neq", "t-old")).toBe("Tag is not 1 archived tag");
+    expect(tagged("eq", "t-old")).toBe(`${TAG} ${INCLUDE} 1 archived tag`);
+    expect(tagged("neq", "t-old")).toBe(`${TAG} ${NOT_INCLUDE} 1 archived tag`);
     expect(tagged("in", ["t-old", "t-gone"])).toBe(
-      "Tag is any of 2 archived tags",
+      `${TAG} ${INCLUDE_ANY} 2 archived tags`,
     );
     expect(tagged("in", ["t-live", "t-old", "t-new"])).toBe(
-      "Tag is any of 3 tags, 1 archived",
+      `${TAG} ${INCLUDE_ANY} 3 tags, 1 archived`,
     );
-    expect(tagged("eq", "t-live")).toBe("Tag is 1 tag");
+    expect(tagged("eq", "t-live")).toBe(`${TAG} ${INCLUDE} 1 tag`);
     // Beside an "or", the clause is one way in among others, not the group's answer.
     expect(
       read(
@@ -293,7 +316,7 @@ describe("a filter read as one sentence", () => {
         ]),
         retiring,
       ),
-    ).toBe("City is Berlin or Tag is 1 archived tag");
+    ).toBe(`City is Berlin or ${TAG} ${INCLUDE} 1 archived tag`);
 
     const note = enCatalog["filters.sentence.retiredTagNote"];
     for (const [op, operand] of [
@@ -314,7 +337,7 @@ describe("a filter read as one sentence", () => {
     ).toBeUndefined();
     // Words that know of no retired tag count every id as a tag.
     expect(read(newGroup("and", [newLeaf("tag", "eq", "t-old")]))).toBe(
-      "Tag is 1 tag",
+      `${TAG} ${INCLUDE} 1 tag`,
     );
     expect(
       read(newGroup("and", [newLeaf("tag", "eq", "t-old")]), {
@@ -322,6 +345,51 @@ describe("a filter read as one sentence", () => {
         retiredTags: retiring.retiredTags,
       }),
     ).toMatch(/ 1 archiviertes Tag$/);
+  });
+
+  it("reads a tag clause as what the set includes, in the picker and the sentence", () => {
+    const tagField = FIELDS.find((field) => field.name === "tag");
+    expect(enCatalog[operatorKey("eq", tagField)]).toBe(INCLUDE);
+    expect(enCatalog[operatorKey("eq", undefined)]).toBe(
+      enCatalog["filters.op.eq"],
+    );
+    const german = {
+      ...wordsIn("de"),
+      tagNames: new Map([
+        ["t-a", "Wanted"],
+        ["t-b", "Other"],
+      ]),
+    };
+    const deTag = de["filters.field.tag"];
+    expect(read(newGroup("and", [newLeaf("tag", "eq", "t-a")]), german)).toBe(
+      `${deTag} ${de["filters.op.include"]} "Wanted"`,
+    );
+    expect(
+      read(newGroup("and", [newLeaf("tag", "in", ["t-a", "t-c"])]), german),
+    ).toBe(`${deTag} ${de["filters.op.includeAny"]} 2 Tags`);
+    expect(read(newGroup("and", [newLeaf("tag", "in", ["t-a"])]), german)).toBe(
+      `${deTag} ${de["filters.op.include"]} "Wanted"`,
+    );
+  });
+
+  it("reads whether a record has tags as what its set includes", () => {
+    const tagField = FIELDS.find((field) => field.name === "tag");
+    expect(enCatalog[operatorKey("exists", tagField)]).toBe(
+      enCatalog["filters.op.includeSomeOrNone"],
+    );
+    for (const [locale, catalog] of [
+      ["en", enCatalog],
+      ["de", de],
+    ] as const) {
+      const tag = catalog["filters.field.tag"];
+      const has = (operand: boolean) =>
+        read(
+          newGroup("and", [newLeaf("tag", "exists", operand)]),
+          wordsIn(locale),
+        );
+      expect(has(true)).toBe(`${tag} ${catalog["filters.op.includeSome"]}`);
+      expect(has(false)).toBe(`${tag} ${catalog["filters.op.includeNone"]}`);
+    }
   });
 
   it("counts ids in German with no article that must agree with the noun", () => {
@@ -356,6 +424,21 @@ describe("a filter read as one sentence", () => {
     expect(filterSentence(newGroup("and"), undefined, en)).toBe("");
   });
 
+  it("names a custom field by its catalog label, and by its column until the catalog answers", () => {
+    const tier: VocabularyField = {
+      name: "cf_loyalty_tier",
+      type: "text",
+      operators: ["eq"],
+      custom: true,
+    };
+    const clause = newGroup("and", [newLeaf("cf_loyalty_tier", "eq", "gold")]);
+
+    expect(
+      filterSentence(clause, [{ ...tier, label: "Loyalty Tier" }], en),
+    ).toBe("Loyalty Tier is gold");
+    expect(filterSentence(clause, [tier], en)).toBe("loyalty tier is gold");
+  });
+
   it("reads a stored single clause, which decodes to a bare leaf", () => {
     const stored = decode({ field: "city", op: "eq", value: "Berlin" });
     if (stored === null) {
@@ -378,5 +461,57 @@ describe("a filter read as one sentence", () => {
       ].join(" "),
     );
     expect(german).not.toMatch(/\b(is|and|days|ago)\b/);
+  });
+});
+
+describe("record references in a sentence", () => {
+  const named = {
+    ...en,
+    recordNames: new Map([
+      ["co-1", "Demo GmbH"],
+      ["u1", "Alice Meyer"],
+      ["tm-1", "Sales DACH"],
+    ]),
+  };
+
+  it.each([
+    [newLeaf("company_id", "eq", "co-1"), "Company is Demo GmbH"],
+    [newLeaf("owner_id", "in", ["u1"]), "Owner is Alice Meyer"],
+    [newLeaf("team_id", "in", ["tm-1"]), "team id is Sales DACH"],
+  ])("names the record a %#th clause points at", (leaf, sentence) => {
+    expect(read(newGroup("and", [leaf]), named)).toBe(sentence);
+  });
+
+  it("counts the records while any one has no name yet", () => {
+    expect(
+      read(
+        newGroup("and", [newLeaf("company_id", "in", ["co-1", "co-2"])]),
+        named,
+      ),
+    ).toBe("Company is any of 2 companies");
+    expect(read(newGroup("and", [newLeaf("company_id", "eq", "co-1")]))).toBe(
+      "Company is 1 company",
+    );
+  });
+
+  it("finds the ids to name in every clause of every tree, once each", () => {
+    const first = newGroup("and", [
+      newLeaf("company_id", "in", ["co-1", "co-2"]),
+      newLeaf("owner_id", "in", ["u1"]),
+    ]);
+    const second = newGroup("or", [
+      newLeaf("company_id", "eq", "co-1"),
+      newLeaf("team_id", "in", ["tm-1"]),
+      newLeaf("stage_id", "in", ["s1"]),
+    ]);
+    expect(referencedIdsOf([first, second], FIELDS)).toEqual({
+      company: ["co-1", "co-2"],
+      app_user: ["u1"],
+      team: ["tm-1"],
+      stage: ["s1"],
+      pipeline: [],
+      project: [],
+      product: [],
+    });
   });
 });

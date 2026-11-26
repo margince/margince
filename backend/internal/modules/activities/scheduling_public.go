@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 
@@ -33,9 +32,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
-// BookingPage is the slug's resolution: which workspace, whose calendar.
+// BookingPage is the slug's resolution: whose calendar, and which of the
+// host's pages, their personal page or one of their team links.
 type BookingPage struct {
 	HostUserID ids.UserID
+	ID         ids.UUID
+	TeamLink   bool
 }
 
 // ResolveBookingPage answers the slug→host lookup the public middleware runs
@@ -50,11 +52,11 @@ func (s *Store) ResolveBookingPage(ctx context.Context, slug string) (BookingPag
 	var page BookingPage
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx,
-			`SELECT p.host_user_id FROM booking_page p JOIN app_user u ON u.id = p.host_user_id
+			`SELECT p.host_user_id, p.id, p.team_link FROM booking_page p JOIN app_user u ON u.id = p.host_user_id
    WHERE p.revoked_at IS NULL AND `+workforce.LiveMemberSQL("u")+`
    AND (p.slug = $1 OR p.id = (SELECT a.booking_page_id FROM booking_alias a
      WHERE a.alias = lower($1) AND a.retired_at IS NULL AND a.host_user_id = p.host_user_id))`,
-			slug).Scan(&page.HostUserID)
+			slug).Scan(&page.HostUserID, &page.ID, &page.TeamLink)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -66,13 +68,21 @@ func (s *Store) ResolveBookingPage(ctx context.Context, slug string) (BookingPag
 	return page, nil
 }
 
+// publicBookingSource is the source a record written by the public booking door carries.
+const publicBookingSource = "public_booking"
+
 // ContactEnsurer is the contacts seam of the public capture path (compose
 // injects it — activities never imports a sibling).
 type ContactEnsurer interface {
 	// EnsureBookerByEmail answers the contact holding the address, or the live
 	// lead holding it when no contact does. It creates a contact only when
-	// neither does. One of the two ids is set.
-	EnsureBookerByEmail(ctx context.Context, fullName, email, source string, erasure storekit.ErasureAdmission) (ids.UUID, ids.LeadID, error)
+	// neither does. One of the two ids is set, and created says the contact
+	// is new. host is the booking page's host, who owns a contact it creates.
+	EnsureBookerByEmail(ctx context.Context, host ids.UserID, fullName, email, source string, erasure storekit.ErasureAdmission) (contact ids.UUID, lead ids.LeadID, created bool, err error)
+	// FillBookerGaps gives an existing booker the host as owner and their
+	// domain's company where the contact has none, with the host's own
+	// authority. It runs only after that authority over the contact is confirmed.
+	FillBookerGaps(ctx context.Context, contact ids.UUID, host ids.UserID, source string) error
 }
 
 // BookingConsent is the CaptureConsent passthrough: the purpose and the
@@ -126,6 +136,9 @@ type BookingMarketing struct {
 	// authenticated booking names a linked contact rather than typing an email,
 	// so there is no second address for the two to disagree about.
 	TickedFrom string
+	// AskedBySubject is true when the contact ticked the box on the public
+	// page, and false when a signed-in user's booking asked on their behalf.
+	AskedBySubject bool
 }
 
 // requestedPurpose is the purpose id a form NAMED, or nothing. The contract's
@@ -178,8 +191,8 @@ type ConsentCapturer interface {
 	// booking on somebody's behalf is not that somebody initiating contact.
 	RecordBookingInquiry(ctx context.Context, contactID, activityID ids.UUID) error
 	// CaptureLeadBookingConsent records the operational grant for a booker who
-	// is a live lead. A newsletter tick is not asked about: its confirmation
-	// link is minted against a contact's own address, and a lead has none.
+	// is a live lead. A newsletter tick is asked about through the lead's own
+	// address, by the same confirmation link a contact gets.
 	CaptureLeadBookingConsent(ctx context.Context, leadID ids.LeadID, consent BookingConsent) (MarketingOutcome, error)
 }
 
@@ -194,12 +207,12 @@ type MarketingOutcome string
 const (
 	// MarketingNotRequested is a form that carried no tick, or an unticked box.
 	MarketingNotRequested MarketingOutcome = "not_requested"
-	// MarketingPendingConfirmation is the ordinary success: the question was
-	// mailed and the grant waits on the subject answering it.
+	// MarketingPendingConfirmation answers every accepted tick on the public
+	// form, mailed or not, so the answer reveals nothing about the address.
 	MarketingPendingConfirmation MarketingOutcome = "pending_confirmation"
-	// MarketingNotAsked is a question this installation could not put: no live
-	// mailbox on the record, a purpose archived since the form was published,
-	// or a mail lane that refused it. The booking stands either way.
+	// MarketingNotAsked is a question this installation could not put, such as
+	// one with no mail lane. A signed-in user's refused ask reports it too.
+	// The booking stands in every case.
 	MarketingNotAsked MarketingOutcome = "not_asked"
 )
 
@@ -220,7 +233,7 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 		httperr.Write(w, r, err)
 		return
 	}
-	profile, ok := h.openBookingPage(w, r, page)
+	profile, team, ok := h.openBookingPage(w, r, page)
 	if !ok {
 		return
 	}
@@ -228,14 +241,28 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 		httperr.Write(w, r, httperr.Validation("duration_minutes", "duration", "Choose the duration offered by this booking page"))
 		return
 	}
-	profile = bookingLength(profile, params.L)
-	duration := time.Duration(profile.DurationMinutes) * time.Minute
-	slots, truncated, err := h.store.ReliableAvailability(r.Context(), page.HostUserID, params.From, params.To, duration)
+	profile, err = chosenLength(profile, params.L)
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
+		return
+	}
+	duration := time.Duration(profile.DurationMinutes) * time.Minute
+	slots, truncated, err := h.store.PageAvailability(r.Context(), page.HostUserID, team, params.From, params.To, duration)
+	if err != nil {
+		writeGuestAvailabilityErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{"slots": slots, "truncated": truncated})
+}
+
+// writeGuestAvailabilityErr answers a guest's availability read. A host with no
+// calendar reads as a paused page, so the guest learns nothing of the host's setup.
+func writeGuestAvailabilityErr(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, errNoCalendarToRead) {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	writeStoreErr(w, r, err)
 }
 
 // bookingRequestIsWritable refuses a request before anything is written.
@@ -316,11 +343,15 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		writePublicInvitation(w, *recovered, intent.Marketing)
 		return
 	}
-	if _, err := h.store.validateInvitationTime(r.Context(), page.HostUserID, req.Start, req.End); err != nil {
+	if err := h.store.validatePageTime(r.Context(), page.HostUserID, open.team, req.Start, req.End); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	profile = bookingLength(profile, params.L)
+	profile, err = chosenLength(profile, params.L)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	if req.End.Sub(req.Start) != time.Duration(profile.DurationMinutes)*time.Minute {
 		httperr.Write(w, r, httperr.Validation("end", "duration", "Choose a time offered by this booking page"))
 		return
@@ -346,7 +377,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 }
 
 func (h Handlers) bookPublicMeetingForBooker(w http.ResponseWriter, r *http.Request, page BookingPage, req crmcontracts.BookPublicMeetingJSONRequestBody, bookingConsent BookingConsent, intent *publicBookingIntent, length *int) {
-	contactID, leadID, ok := h.ensureBooker(w, r, req)
+	contactID, leadID, created, ok := h.ensureBooker(w, r, page.HostUserID, req)
 	if !ok {
 		return
 	}
@@ -357,6 +388,14 @@ func (h Handlers) bookPublicMeetingForBooker(w http.ResponseWriter, r *http.Requ
 	if err := h.store.calendar.CheckRecipient(r.Context(), page.HostUserID, contactID, string(req.Booker.Email)); err != nil {
 		writeStoreErr(w, r, err)
 		return
+	}
+	// A created contact already has what the fill would give it, and a second
+	// pass would ask an unclaimed domain's question again.
+	if !created {
+		if err := h.publicContacts.FillBookerGaps(r.Context(), contactID, page.HostUserID, publicBookingSource); err != nil {
+			writeStoreErr(w, r, err)
+			return
+		}
 	}
 	marketingOutcome, err := h.publicConsent.CaptureBookingConsent(r.Context(), contactID, bookingConsent)
 	if err != nil {
@@ -369,18 +408,18 @@ func (h Handlers) bookPublicMeetingForBooker(w http.ResponseWriter, r *http.Requ
 
 // ensureBooker is the contact or the live lead the booking lands on, or the
 // refusal written.
-func (h Handlers) ensureBooker(w http.ResponseWriter, r *http.Request, req crmcontracts.BookPublicMeetingJSONRequestBody) (ids.UUID, ids.LeadID, bool) {
-	contactID, leadID, err := h.publicContacts.EnsureBookerByEmail(r.Context(), req.Booker.Name, string(req.Booker.Email), "public_booking", storekit.AdmitSelfBooking)
+func (h Handlers) ensureBooker(w http.ResponseWriter, r *http.Request, host ids.UserID, req crmcontracts.BookPublicMeetingJSONRequestBody) (contact ids.UUID, lead ids.LeadID, created, ok bool) {
+	contactID, leadID, created, err := h.publicContacts.EnsureBookerByEmail(r.Context(), host, req.Booker.Name, string(req.Booker.Email), publicBookingSource, storekit.AdmitSelfBooking)
 	if badValue, ok := errors.AsType[*values.ParseError](err); ok {
 		// The contacts store names its own field; this form's address is booker.email.
 		httperr.Write(w, r, httperr.Validation("booker.email", badValue.Code, badValue.Message))
-		return ids.Nil, ids.LeadID{}, false
+		return ids.Nil, ids.LeadID{}, false, false
 	}
 	if err != nil {
 		writeStoreErr(w, r, err)
-		return ids.Nil, ids.LeadID{}, false
+		return ids.Nil, ids.LeadID{}, false, false
 	}
-	return contactID, leadID, true
+	return contactID, leadID, created, true
 }
 
 // bookPublicMeetingForLead files the meeting on the live lead. The lead's
@@ -415,7 +454,7 @@ func (h Handlers) bookPublicMeetingForLead(w http.ResponseWriter, r *http.Reques
 // way to name one: a parameter of that type would have to restate the whole
 // literal, field tags included.
 func (h Handlers) admitBookingMarketing(w http.ResponseWriter, r *http.Request, c crmcontracts.CaptureConsent, tickedFrom string) (*BookingMarketing, bool) {
-	marketing, err := prepareBookingMarketing(r.Context(), c, tickedFrom, h.publicConsent)
+	marketing, err := prepareBookingMarketing(r.Context(), c, tickedFrom, true, h.publicConsent)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return nil, false
@@ -446,11 +485,4 @@ func (h Handlers) captureBookingConsent(w http.ResponseWriter, r *http.Request, 
 		return false
 	}
 	return true
-}
-
-func bookingLength(profile crmcontracts.SchedulingProfile, requested *int) crmcontracts.SchedulingProfile {
-	if requested != nil && (profile.DurationMinutes == *requested || (profile.OfferedLengths != nil && slices.Contains(*profile.OfferedLengths, *requested))) {
-		profile.DurationMinutes = *requested
-	}
-	return profile
 }

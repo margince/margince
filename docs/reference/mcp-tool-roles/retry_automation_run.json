@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "retry_automation_run",
+  "verb": "retry_automation_run",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

@@ -12,12 +12,14 @@ const meta: Meta<typeof PaletteRow> = {
   render: (args) => (
     <LocaleProvider initial="en">
       <div className="palette-list">
-        <PaletteRow {...args} />
+        <div role="listbox" aria-label="Command palette">
+          <PaletteRow {...args} />
+        </div>
       </div>
     </LocaleProvider>
   ),
   args: {
-    previous: undefined,
+    id: "palette-option-0",
     selected: false,
     onRun: fn(),
     command: {
@@ -45,3 +47,14 @@ export const Recent: Story = {};
 export const RecentDark: Story = { globals: { theme: "dark" } };
 export const Selected: Story = { args: { selected: true } };
 export const SelectedDark: Story = { ...Selected, globals: { theme: "dark" } };
+export const Setting: Story = {
+  args: {
+    command: {
+      id: "screen:settings-deals",
+      label: "Deals",
+      type: "setting",
+      route: { screen: "settings", id: "deals" },
+    },
+  },
+};
+export const SettingDark: Story = { ...Setting, globals: { theme: "dark" } };

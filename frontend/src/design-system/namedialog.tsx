@@ -2,25 +2,52 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { useLocale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemCodeOf, problemMessageOf } from "../lib/problem";
+import { blankRequired, refusalSentences } from "../lib/problem";
 import { Field, TextInput } from "./atoms";
 import { ConfirmModal } from "./confirmmodal";
 import { useSinglePress } from "./presslatch";
+import { useFieldFaults } from "./savepage";
 
 /** A refused name write, split the way `NameDialog` draws it. */
 export function nameRefusal(
   error: unknown,
   t: (key: MessageKey) => string,
-  duplicate: MessageKey,
+  words: Readonly<{
+    /** The field's label, which a too-long refusal names. */
+    label: string;
+    duplicate: MessageKey;
+    /** The code of the 409 that means the name is taken; `name_taken` by default. */
+    code?: string;
+  }>,
 ): { problem: string | null; nameProblem: string | null } {
-  if (error === null || error === undefined) {
-    return { problem: null, nameProblem: null };
-  }
-  return problemCodeOf(error) === "conflict"
-    ? { problem: null, nameProblem: t(duplicate) }
-    : { problem: problemMessageOf(error, t), nameProblem: null };
+  const refused = refusalSentences(
+    error,
+    t,
+    { [NAME_FIELD]: words.label, [LABEL_FIELD]: words.label },
+    {
+      conflict: {
+        field: NAME_FIELD,
+        sentence: t(words.duplicate),
+        code: words.code ?? NAME_TAKEN,
+      },
+    },
+  );
+  return {
+    problem: refused.rest,
+    nameProblem:
+      refused.byField.get(NAME_FIELD) ??
+      refused.byField.get(LABEL_FIELD) ??
+      null,
+  };
 }
+
+// Not `conflict`: a stale version answers that too, and says nothing of the name.
+const NAME_TAKEN = "name_taken";
+const NAME_FIELD = "name";
+// Some lists send their name on the wire as `label`.
+const LABEL_FIELD = "label";
 
 // A refused name stays on its field only while the field still holds it, so
 // an edit clears the refusal without a second round trip.
@@ -50,6 +77,7 @@ export function NameDialog({
   pending = false,
   problem,
   nameProblem,
+  maxLength,
   onSave,
   onDirtyChange,
 }: Readonly<{
@@ -57,7 +85,7 @@ export function NameDialog({
   onClose: () => void;
   title: string;
   label: string;
-  /** The name a rename starts from; an unchanged name cannot be saved. */
+  /** The name a rename starts from; saving it unchanged only closes. */
   initial?: string;
   placeholder?: string;
   /** A line under the field, such as the raw key a rename keeps (`KeyCode`). */
@@ -68,11 +96,15 @@ export function NameDialog({
   problem?: string | null;
   /** The refused name itself (a duplicate), drawn on the field until it changes. */
   nameProblem?: string | null;
+  /** The most characters the name may hold, the bound the server refuses past. */
+  maxLength?: number;
   /** The trimmed name. The caller closes the dialog once the write lands. */
   onSave: (name: string) => void;
   onDirtyChange?: (dirty: boolean) => void;
 }>) {
+  const { locale } = useLocale();
   const [draft, setDraft] = useState(initial);
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const name = draft.trim();
   const { refusedName, markSent, forget } = useRefusedName(name, nameProblem);
   const [wasOpen, setWasOpen] = useState(open);
@@ -81,6 +113,7 @@ export function NameDialog({
     if (open) {
       setDraft(initial);
       forget();
+      faults.show(new Map());
     }
   }
   const unsaved = name !== initial.trim();
@@ -89,9 +122,19 @@ export function NameDialog({
     onDirtyChange?.(dirty);
   }, [dirty, onDirtyChange]);
   const singlePress = useSinglePress(pending);
-  const ready = name !== "" && name !== initial.trim() && !refusedName;
+  // An empty name says so on the field. A refused one is already on it. An
+  // unchanged one has nothing to store, so Save then only closes.
   const save = () => {
-    if (!ready || pending) return;
+    const blank = blankRequired(locale, { [NAME_FIELD]: [label, draft] });
+    if (pending || faults.show(blank)) return;
+    if (refusedName) {
+      faults.show(new Map([[NAME_FIELD, refusedName]]));
+      return;
+    }
+    if (!unsaved) {
+      onClose();
+      return;
+    }
     markSent();
     onSave(name);
   };
@@ -102,7 +145,7 @@ export function NameDialog({
       title={title}
       intent="form"
       confirmLabel={confirmLabel}
-      confirmDisabled={!ready}
+      bodyRef={faultsRoot}
       pending={pending}
       error={problem}
       unsaved={unsaved}
@@ -119,14 +162,18 @@ export function NameDialog({
           label={label}
           labelHidden={label === title}
           hint={hint}
-          error={refusedName}
+          error={refusedName ?? faults.of(NAME_FIELD)}
         >
           {(control) => (
             <TextInput
               {...control}
               value={draft}
               placeholder={placeholder}
-              onChange={(event) => setDraft(event.target.value)}
+              maxLength={maxLength}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                faults.edited(NAME_FIELD);
+              }}
             />
           )}
         </Field>

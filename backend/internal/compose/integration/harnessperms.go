@@ -47,6 +47,8 @@ const (
 	objDeal     = "deal"
 	objCompany  = "company"
 	objPipeline = "pipeline"
+	objLead     = "lead"
+	objProject  = "project"
 	// objRelationship gates the EDGE — an employment or a stakeholder seat.
 	// Every seeded role holds read on it (identity/internal/policy.go: crud for
 	// admin, management, manager and ops, create+read+update for rep, read for
@@ -171,6 +173,10 @@ var (
 			// mirrored here so the fixture matches production rather than a
 			// narrower admin that would make a suite pass for the wrong reason.
 			"contract": {Create: true, Read: true, Update: true, Delete: true},
+			// Every seeded role holds introductions (migration
+			// 1788230541_an_introduction_is_a_grant_of_its_own), and a contact
+			// merge preview asks for it before it looks for asks to carry.
+			"introduction": {Create: true, Read: true, Update: true},
 			// The legal entities the installation trades as, which admin describes.
 			"legal_entity": {Create: true, Read: true, Update: true, Delete: true},
 			"lead":         {Create: true, Read: true, Update: true, Delete: true},
@@ -319,4 +325,23 @@ func withoutGovernance(objects map[string]principal.ObjectGrant) map[string]prin
 		delete(out, object)
 	}
 	return out
+}
+
+// ReadingOnly cuts perms to its read grants, so the actor sees every row perms
+// sees and may change none. ReadOnlyPerms is narrower: it mirrors the seeded role.
+func ReadingOnly(perms principal.Permissions) principal.Permissions {
+	objects := make(map[string]principal.ObjectGrant, len(perms.Objects))
+	for object, grant := range perms.Objects {
+		objects[object] = principal.ObjectGrant{Read: grant.Read}
+	}
+	perms.Objects = objects
+	return perms
+}
+
+// ActivityReadOnly takes the activity write grants out of perms, so the actor
+// still sees and changes every row perms reaches and may write no activity.
+func ActivityReadOnly(perms principal.Permissions) principal.Permissions {
+	perms.Objects = maps.Clone(perms.Objects)
+	perms.Objects["activity"] = principal.ObjectGrant{Read: true}
+	return perms
 }

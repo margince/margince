@@ -23,6 +23,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/compose/dealcoverage"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -48,15 +49,23 @@ type marginceChangeHandlers struct {
 	}
 	seatNames *identity.Service
 	now       func() time.Time
+	// details and names describe a deal's changes as Done for you does.
+	details attention.ReceiptDetails
+	names   attention.Names
 }
 
 func newMarginceChangeHandlers(pool *pgxpool.Pool) marginceChangeHandlers {
+	now := func() time.Time { return time.Now().UTC() }
+	names := newAttentionNames(InstallationDB(pool))
 	return marginceChangeHandlers{
 		pool:      pool,
 		deals:     deals.NewStore(InstallationDB(pool), DealsInstallation()),
 		teammates: newTeammatesSeam(pool),
 		seatNames: identity.NewService(pool),
-		now:       func() time.Time { return time.Now().UTC() },
+		now:       now,
+		// A deal's changes cite no staged approval, so no approvals service.
+		details: attentionReceiptDetails{magic: newMagicService(pool, nil, now), names: names},
+		names:   names,
 	}
 }
 
@@ -90,12 +99,12 @@ func (h marginceChangeHandlers) GetPendingMarginceChanges(w http.ResponseWriter,
 // ListDealMarginceChanges answers one page of a deal's changes, drawn as the
 // receipts Home shows.
 func (h marginceChangeHandlers) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ListDealMarginceChangesParams) {
-	after, ok := decodeChangeCursor(params.Cursor)
+	only, after, ok := dealChangeFilter(params)
 	if !ok {
 		httperr.Write(w, r, httperr.Validation("cursor", "invalid_cursor", "start again from the first page"))
 		return
 	}
-	rows, more, err := h.deals.DealChanges(r.Context(), ids.From[ids.DealKind](ids.UUID(id)), after, dealChangesPage)
+	rows, more, err := h.deals.DealChanges(r.Context(), ids.From[ids.DealKind](ids.UUID(id)), after, dealChangesPage, only)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -118,6 +127,26 @@ func (h marginceChangeHandlers) ListDealMarginceChanges(w http.ResponseWriter, r
 		out.NextCursor = &next
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// dealChangeFilter reads the narrowing a client asked the deal's list for, and
+// the cursor the next page of that narrowed list starts after. It reports false
+// for a cursor this server did not mint.
+func dealChangeFilter(params crmcontracts.ListDealMarginceChangesParams) (deals.DealChangeFilter, *deals.ChangeCursor, bool) {
+	after, ok := decodeChangeCursor(params.Cursor)
+	var only deals.DealChangeFilter
+	if params.StageHistoryId != nil {
+		only.StageHistoryID = new(ids.UUID(*params.StageHistoryId))
+	}
+	if params.NoteActivityId != nil {
+		for _, note := range *params.NoteActivityId {
+			only.NoteActivityID = append(only.NoteActivityID, ids.UUID(note))
+		}
+	}
+	if params.ChangeKind != nil {
+		only.Kinds = *params.ChangeKind
+	}
+	return only, after, ok
 }
 
 // GetTeamMarginceChanges answers what Margince changed on the caller's team's
@@ -159,8 +188,11 @@ func (h marginceChangeHandlers) GetTeamMarginceChanges(w http.ResponseWriter, r 
 		return
 	}
 	for _, g := range report.Groups {
+		gaps := dealcoverage.Counts{NoValue: int64(g.ValueNoAmount), NoRate: int64(g.ValueNoRate), Currencies: &g.ValueMissingCurrencies}
+		coverage := gaps.Wire("value_base_minor")
 		out.Groups = append(out.Groups, crmcontracts.TeamMarginceChangeGroup{
-			OwnerId: openapi_types.UUID(g.OwnerID), OwnerName: names[g.OwnerID], Kind: g.Kind,
+			ValueCoverage: &coverage,
+			OwnerId:       openapi_types.UUID(g.OwnerID), OwnerName: names[g.OwnerID], Kind: g.Kind,
 			Deals: g.Deals, Undone: g.Undone, ValueBaseMinor: g.ValueBaseMinor, ValueMovedBaseMinor: g.ValueMovedBaseMinor,
 			Unvalued: g.Unvalued,
 		})
@@ -230,15 +262,15 @@ func (h marginceChangeHandlers) changeReceipts(ctx context.Context, rows []deals
 	if err != nil {
 		return nil, err
 	}
-	out := make([]crmcontracts.Receipt, 0, len(rows))
+	receipts := make([]attention.Receipt, 0, len(rows))
 	for _, row := range rows {
-		receipt := correctionReceipt(row)
+		receipt := attention.CorrectionReceipt(row)
 		if review, ok := reviews[deals.AppliedChangeKey{DealID: row.DealID, ChangeID: row.AuditLogID}]; ok {
 			receipt.Review = &review
 		}
-		out = append(out, attention.WireReceipt(receipt))
+		receipts = append(receipts, receipt)
 	}
-	return out, nil
+	return attention.DescribeReceipts(ctx, h.details, h.names, receipts)
 }
 
 // UndoMarginceChanges takes back the named changes, deal by deal.

@@ -14,8 +14,10 @@ import { DateInput, type ISODate } from "../design-system/dateinput";
 import { Heading } from "../design-system/heading";
 import { RecordPicker } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
+import { dealStatusLabel } from "../format/dealstatus";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useEmploymentZone } from "../lib/employmentcurrency";
 import { currentEmployerCompanyIds } from "../lib/employmentpages";
 import { isOption } from "../lib/options";
 import { ProblemError, unwrap } from "../lib/problem";
@@ -31,7 +33,7 @@ import { type Candidate, searchByEntity } from "../lib/relationshipcandidates";
 import { KIND_LABELS } from "../lib/relationshipkinds";
 import { SEARCH_HIT_KIND_KEY } from "../lib/searchkinds";
 import type { CreateField } from "./create";
-import { entityNameQuery } from "./entityref.queries";
+import { companyReferenceQuery } from "./entityref.queries";
 import "../design-system/querystates.css";
 import { ErrorLine } from "../design-system/errorline";
 import { refuseUnreadableField } from "../design-system/formvalidity";
@@ -93,6 +95,19 @@ const ROLE_VOCABULARY: Partial<Record<Relationship["kind"], RoleVocabulary>> = {
   billing_contact: BILLING_ROLES,
 };
 
+// The sentence that confirms a pick, one per kind. Each kind's word takes its
+// own article and case, so one template with the kind spliced in cannot read.
+const ADD_SENTENCE: Record<CreatableRelationshipKind, MessageKey> = {
+  employment: "rel.addConfirm.employment",
+  deal_stakeholder: "rel.addConfirm.dealStakeholder",
+  project_stakeholder: "rel.addConfirm.projectStakeholder",
+  partner_of: "rel.addConfirm.partnerOf",
+  referred_by: "rel.addConfirm.referredBy",
+  co_sell_with: "rel.addConfirm.coSellWith",
+  works_with: "rel.addConfirm.worksWith",
+  billing_contact: "rel.addConfirm.billingContact",
+};
+
 export function roleShown(
   rel: Pick<Relationship, "kind" | "role">,
   t: (key: MessageKey) => string,
@@ -102,6 +117,17 @@ export function roleShown(
   }
   const vocabulary = ROLE_VOCABULARY[rel.kind];
   return vocabulary ? vocabulary.label(rel.role, t) : rel.role;
+}
+
+/**
+ * The role an edit form opens with. A typed role has no label but is the
+ * editor's own text, so it opens as stored, with spaces for underscores.
+ */
+export function roleEditable(
+  rel: Pick<Relationship, "kind" | "role">,
+  t: (key: MessageKey) => string,
+): string {
+  return roleShown(rel, t) || (rel.role ?? "").replace(/_/g, " ");
 }
 
 /** The role a form sends for `typed`; `offered` holds the role it opened with. */
@@ -124,10 +150,10 @@ async function withCompanyCaption(
 ): Promise<Candidate> {
   if (!candidate.companyId) return candidate;
   try {
-    const name = await client.fetchQuery(
-      entityNameQuery("company", candidate.companyId),
+    const reference = await client.fetchQuery(
+      companyReferenceQuery(candidate.companyId),
     );
-    return { ...candidate, detail: name ?? undefined };
+    return { ...candidate, detail: reference?.name ?? undefined };
   } catch {
     // Company captions must not withhold readable deal choices.
     return { ...candidate, detail: failedName };
@@ -162,6 +188,7 @@ export function AddRelationshipAction({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
+  const employmentZone = useEmploymentZone();
   const headingId = useId();
   const all = edgeOptions(scope);
   const options = only
@@ -201,7 +228,11 @@ export function AddRelationshipAction({
       if (entity === "deal" && contactId) {
         let employers: string[] | undefined;
         try {
-          employers = await currentEmployerCompanyIds(queryClient, contactId);
+          employers = await currentEmployerCompanyIds(
+            queryClient,
+            contactId,
+            employmentZone,
+          );
         } catch {
           employers = undefined;
         }
@@ -212,17 +243,33 @@ export function AddRelationshipAction({
       const candidates = await searchByEntity(entity, query, companyIds);
       if (entity !== "deal") return candidates;
       return Promise.all(
-        candidates.map((candidate) =>
-          withCompanyCaption(queryClient, candidate, nameLoadFailed),
-        ),
+        candidates.map(async (candidate) => {
+          const named = await withCompanyCaption(
+            queryClient,
+            candidate,
+            nameLoadFailed,
+          );
+          const status =
+            candidate.dealStatus && candidate.dealStatus !== "open"
+              ? dealStatusLabel(candidate.dealStatus)
+              : undefined;
+          return status
+            ? {
+                ...named,
+                detail: [named.detail, t(status)].filter(Boolean).join(" · "),
+              }
+            : named;
+        }),
       );
     },
     [
       contactId,
+      employmentZone,
       entity,
       queryClient,
       nameLoadFailed,
       employerUnavailableMessage,
+      t,
     ],
   );
 
@@ -312,20 +359,24 @@ export function AddRelationshipAction({
           )}
           {/* The counterparty comes before Role and Started: a reader picks
               WHAT they are linking to before describing the edge, and the
-              caption names the kind being searched rather than a generic
+              label names the kind being searched rather than a generic
               "other side", reusing the same singular each search result
               screen already carries for its own kind. */}
-          <p className="t-caption">{t(SEARCH_HIT_KIND_KEY[entity])}</p>
-          <RecordPicker
-            key={kind}
-            label={t("merge.searchPlaceholder")}
-            searchTargets={searchTargets}
-            searchOnFocus={entity === "deal"}
-            selected={target}
-            onPick={setTarget}
-            onSearchChange={() => setTarget(null)}
-            disabled={mutation.isPending}
-          />
+          <Field label={t(SEARCH_HIT_KIND_KEY[entity])} required>
+            {(control) => (
+              <RecordPicker
+                {...control}
+                key={kind}
+                placeholder={t("merge.searchPlaceholder")}
+                searchTargets={searchTargets}
+                searchOnFocus={entity === "deal"}
+                selected={target}
+                onPick={setTarget}
+                onSearchChange={() => setTarget(null)}
+                disabled={mutation.isPending}
+              />
+            )}
+          </Field>
           <Field label={t("rel.role")}>
             {(control) => (
               <TextInput
@@ -344,14 +395,7 @@ export function AddRelationshipAction({
               />
             )}
           </Field>
-          {target && (
-            <p>
-              {t("rel.addConfirm", {
-                target: target.name,
-                kind: t(labelFor(KIND_LABELS, kind)),
-              })}
-            </p>
-          )}
+          {target && <p>{t(ADD_SENTENCE[kind], { target: target.name })}</p>}
           <ErrorLine error={mutation.error} />
         </div>
         <div className="actions">

@@ -25,7 +25,7 @@ const QUIET_ROW = {
   category: "relationships" as const,
   level: 3,
   consequence: "data_drifts" as const,
-  title: "Mai Tran · quiet for 60 days",
+  title: "Mai Tran",
   occurred_precision: "instant" as const,
   because: [],
   actions: [],
@@ -36,7 +36,7 @@ const DELIVERY_ROW = {
   category: "system" as const,
   level: 2,
   consequence: "customer_never_received" as const,
-  title: "A message to Globex bounced",
+  title: "Order confirmation",
   occurred_precision: "instant" as const,
   because: [],
   actions: [],
@@ -128,9 +128,11 @@ it("offers a Quiet relationships pill with its count, and pressing it asks the s
   });
   await user.click(pill);
   await waitFor(() => expect(asked).toContain("relationships"));
-  expect(await screen.findByText("Mai Tran · quiet for 60 days")).toBeTruthy();
+  expect(
+    await screen.findByText("No recent contact with Mai Tran"),
+  ).toBeTruthy();
   await waitFor(() =>
-    expect(screen.queryByText("A message to Globex bounced")).toBeNull(),
+    expect(screen.queryByText("Bounced: Order confirmation")).toBeNull(),
   );
 });
 
@@ -144,8 +146,8 @@ it("keeps upkeep under System, without the quiet relationship", async () => {
     }),
   );
   await waitFor(() => expect(asked).toContain("system"));
-  expect(await screen.findByText("A message to Globex bounced")).toBeTruthy();
+  expect(await screen.findByText("Bounced: Order confirmation")).toBeTruthy();
   await waitFor(() =>
-    expect(screen.queryByText("Mai Tran · quiet for 60 days")).toBeNull(),
+    expect(screen.queryByText("No recent contact with Mai Tran")).toBeNull(),
   );
 });

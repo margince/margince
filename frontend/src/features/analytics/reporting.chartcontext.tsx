@@ -1,4 +1,5 @@
 import { Info } from "lucide-react";
+import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { Popover } from "../../design-system/popover";
 import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
@@ -10,6 +11,8 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { scopeName } from "./analytics.context";
+import { useProgressDoor } from "./progress.links";
 import {
   type ReportingChart,
   type ReportingEvaluation,
@@ -77,8 +80,12 @@ export function ChartDetails({
   const { timezone, currency } = evaluation.context;
   return (
     <div className="reporting-details">
+      {/* An empty period is a fact about the period, not a fault in the
+          reading, so it carries no warning tone. */}
       {chart.coverage.status !== "ok" && (
-        <Badge tone="warning">
+        <Badge
+          tone={chart.coverage.status === "no_data" ? "default" : "warning"}
+        >
           {t(`reporting.status.${chart.coverage.status}`)}
         </Badge>
       )}
@@ -93,7 +100,7 @@ export function ChartDetails({
         }
       >
         <p>
-          {evaluation.context.scope.label} · {timezone}
+          {scopeName(evaluation.context.scope, t)} · {timezone}
         </p>
         <p>
           {formatDateTime(
@@ -201,7 +208,7 @@ function contextPeriod(
               ? "reporting.currentPipeline"
               : "reporting.currentState",
           )
-      : evaluation.context.scope.label;
+      : (scopeName(evaluation.context.scope, t) ?? undefined);
 }
 
 // Whom an owner chart credits. The rules differ by metric, and a ranking
@@ -244,8 +251,19 @@ function OwnerAttainmentNotes({
   const elapsed = target
     ? elapsedShare(target, evaluation.context.evaluated_at)
     : null;
+  // Sales won against goals is what Progress reads, member by member.
+  const progress = useProgressDoor(evaluation.context.scope);
+  const door =
+    !captured && target && chart.metric === "bookings_won"
+      ? progress
+      : undefined;
   return (
     <>
+      {door && (
+        <AppLink href={door.href} className="t-caption">
+          {t(door.label)}
+        </AppLink>
+      )}
       {credit && <span className="t-caption">{t(credit)}</span>}
       {elapsed != null && (
         <span className="t-caption">

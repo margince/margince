@@ -92,6 +92,9 @@ type aiCertBinding struct {
 	Runs         int              `json:"runs"`
 	Passed       int              `json:"passed"`
 	Reliability  *float64         `json:"reliability"`
+	// ReliabilityInterval travels with every Reliability so a reader of the
+	// JSON compares intervals, not points. Null when there were no runs.
+	ReliabilityInterval *aicert.ReliabilityInterval `json:"reliability_interval"`
 	// SlowestP95MS is the highest p95 of any record folded here, never a mean of
 	// them: percentiles do not average, and a mean of p95s is a figure nothing
 	// measured.
@@ -103,6 +106,9 @@ type aiCertBands struct {
 	Certified         int `json:"certified"`
 	SupportedDegraded int `json:"supported_degraded"`
 	NotSupported      int `json:"not_supported"`
+	// TooFewRuns counts sites right on every case with too few runs to grade
+	// alone (aicert.SiteTooFewRuns); a preset's task grade never reads it.
+	TooFewRuns int `json:"too_few_runs"`
 }
 
 // aiCertSite is one shipped invocation site: what it is scored against, how
@@ -127,10 +133,13 @@ type aiCertSite struct {
 }
 
 type aiCertPick struct {
-	Binding     aiCertBindingRef `json:"binding"`
-	Band        string           `json:"band"`
-	Reliability *float64         `json:"reliability"`
-	State       string           `json:"state"`
+	Binding             aiCertBindingRef            `json:"binding"`
+	Band                string                      `json:"band"`
+	Runs                int                         `json:"runs"`
+	Passed              int                         `json:"passed"`
+	Reliability         *float64                    `json:"reliability"`
+	ReliabilityInterval *aicert.ReliabilityInterval `json:"reliability_interval"`
+	State               string                      `json:"state"`
 }
 
 type aiCertScenario struct {
@@ -150,17 +159,21 @@ type aiCertRecord struct {
 	Binding aiCertBindingRef `json:"binding"`
 	State   string           `json:"state"`
 	Band    string           `json:"band"`
+	// Judge is the model that scored the record's answers, empty where every
+	// case was checked mechanically: two judges' scores are not one scale.
+	Judge string `json:"judge,omitempty"`
 	// ScenariosMeasured is null for a record written before per-scenario stamps,
 	// which can only be judged whole. Zero would claim it measured nothing.
-	ScenariosMeasured *int           `json:"scenarios_measured"`
-	ScenariosTotal    int            `json:"scenarios_total"`
-	Runs              int            `json:"runs"`
-	Passed            int            `json:"passed"`
-	Reliability       *float64       `json:"reliability"`
-	LatencyP50MS      *int64         `json:"latency_p50_ms"`
-	LatencyP95MS      *int64         `json:"latency_p95_ms"`
-	Reported          aiCertOutcomes `json:"reported"`
-	StaleReason       string         `json:"stale_reason"`
+	ScenariosMeasured   *int                        `json:"scenarios_measured"`
+	ScenariosTotal      int                         `json:"scenarios_total"`
+	Runs                int                         `json:"runs"`
+	Passed              int                         `json:"passed"`
+	Reliability         *float64                    `json:"reliability"`
+	ReliabilityInterval *aicert.ReliabilityInterval `json:"reliability_interval"`
+	LatencyP50MS        *int64                      `json:"latency_p50_ms"`
+	LatencyP95MS        *int64                      `json:"latency_p95_ms"`
+	Reported            aiCertOutcomes              `json:"reported"`
+	StaleReason         string                      `json:"stale_reason"`
 	// StaleCause is the same finding a reader can filter on: which half of the
 	// stamp moved, rather than a sentence they have to parse. A tool asking
 	// "which records went stale because the PRODUCT changed" is asking about
@@ -199,14 +212,14 @@ const unclaimedReason = "it names no scenario of any site its task ships, so no 
 // as the census yielded them — so a reader diffing two regenerations sees what
 // moved rather than where a map walk landed.
 func buildAICertDoc(rows []aicert.ReadinessRow, unclaimed []aicert.Record,
-	corpus []aicert.Scenario, records []aicert.Record,
+	corpus []aicert.Scenario, records []aicert.Record, contextOwed map[string]bool,
 ) aiCertDoc {
 	scenarios := scenariosBySite(corpus)
 	tasks, byTask := aiCertTaskGroups(rows)
 	doc := aiCertDoc{Bindings: foldAICertBindings(rows), Sites: []aiCertSite{}, Unclaimed: []aiCertUnclaimed{}}
 	for _, task := range tasks {
 		for _, siteKey := range siteKeysOf(byTask[task]) {
-			doc.Sites = append(doc.Sites, buildAICertSite(siteKey, byTask[task], scenarios[siteKey]))
+			doc.Sites = append(doc.Sites, buildAICertSite(siteKey, byTask[task], scenarios[siteKey], contextOwed[task]))
 		}
 	}
 	for _, rec := range unclaimed {
@@ -237,7 +250,7 @@ func buildAICertDoc(rows []aicert.ReadinessRow, unclaimed []aicert.Record,
 	return doc
 }
 
-func buildAICertSite(siteKey string, taskRows []aicert.ReadinessRow, cases []aicert.Scenario) aiCertSite {
+func buildAICertSite(siteKey string, taskRows []aicert.ReadinessRow, cases []aicert.Scenario, contextOwed bool) aiCertSite {
 	var mine []aicert.ReadinessRow
 	for _, row := range taskRows {
 		if row.SiteKey() == siteKey {
@@ -258,7 +271,9 @@ func buildAICertSite(siteKey string, taskRows []aicert.ReadinessRow, cases []aic
 		if !row.Certified {
 			continue
 		}
-		site.MissingContextScopes = foldContextScopes(site.MissingContextScopes, row.Record)
+		if contextOwed {
+			site.MissingContextScopes = foldContextScopes(site.MissingContextScopes, row.Record)
+		}
 		site.Records = append(site.Records, buildAICertRecord(row, len(site.Scenarios)))
 	}
 	site.Recommended = pickAICertRecord(site.Records)
@@ -271,10 +286,11 @@ func buildAICertSite(siteKey string, taskRows []aicert.ReadinessRow, cases []aic
 // test cases three fields above the list of them.
 func buildAICertRecord(row aicert.ReadinessRow, siteScenarios int) aiCertRecord {
 	rec := aiCertRecord{
-		Binding: bindingRefOf(row.Record), State: row.Status(), Band: row.Tally.Verdict,
+		Binding: bindingRefOf(row.Record), State: row.Status(), Band: row.Tally.Verdict, Judge: row.Record.JudgeServedModel,
 		ScenariosTotal: siteScenarios, Runs: row.Tally.Runs, Passed: row.Tally.Passed,
-		Reliability:  ratio(row.Tally.Passed, row.Tally.Runs),
-		LatencyP50MS: measuredMS(row.Record.LatencyP50), LatencyP95MS: measuredMS(row.Record.LatencyP95),
+		Reliability:         ratio(row.Tally.Passed, row.Tally.Runs),
+		ReliabilityInterval: aicert.ReliabilityIntervalOf(row.Tally.Passed, row.Tally.Runs),
+		LatencyP50MS:        measuredMS(row.Record.LatencyP50), LatencyP95MS: measuredMS(row.Record.LatencyP95),
 		Reported: aiCertOutcomes{
 			Accepted: row.Tally.ReportedAccepted, WrongAnswer: row.Tally.ReportedWrongAnswer,
 			Invalid: row.Tally.ReportedInvalid, Abstained: row.Tally.ReportedAbstained,
@@ -331,7 +347,8 @@ func pickAICertRecord(records []aiCertRecord) *aiCertPick {
 		return nil
 	}
 	return &aiCertPick{
-		Binding: best.Binding, Band: best.Band, Reliability: best.Reliability, State: best.State,
+		Binding: best.Binding, Band: best.Band, Runs: best.Runs, Passed: best.Passed,
+		Reliability: best.Reliability, ReliabilityInterval: best.ReliabilityInterval, State: best.State,
 	}
 }
 
@@ -403,6 +420,7 @@ func foldAICertBindings(rows []aicert.ReadinessRow) []aiCertBinding {
 		fold := byKey[key]
 		fold.Sites = len(sites[key])
 		fold.Reliability = ratio(fold.Passed, fold.Runs)
+		fold.ReliabilityInterval = aicert.ReliabilityIntervalOf(fold.Passed, fold.Runs)
 		out = append(out, *fold)
 	}
 	return out
@@ -424,6 +442,8 @@ func countAICertSiteInto(fold *aiCertBinding, row aicert.ReadinessRow) {
 		fold.Bands.SupportedDegraded++
 	case aicert.VerdictNotSupported:
 		fold.Bands.NotSupported++
+	case aicert.SiteTooFewRuns:
+		fold.Bands.TooFewRuns++
 	}
 	fold.Runs += row.Tally.Runs
 	fold.Passed += row.Tally.Passed

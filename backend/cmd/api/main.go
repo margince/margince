@@ -20,6 +20,7 @@ import (
 	"slices"
 	"strings"
 	"syscall"
+	"time"
 	// Embedded tzdata: workspace timezones must resolve on scratch
 	// containers that ship no zoneinfo.
 	_ "time/tzdata"
@@ -35,11 +36,11 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func main() {
@@ -81,7 +82,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// snapshot serves registration and the boot inventory below, so both
 	// observe the same declarations.
 	extensions := composition.Extensions()
-	if err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs()); err != nil {
+	if err := registerExtensions(extensions); err != nil {
 		return err
 	}
 
@@ -122,8 +123,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	captureCfg := captureConfig(cfg, logger)
-	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureCfg, pool, vault, logger, stdout, license)
+	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureConfig(cfg, logger), pool, vault, logger, stdout, license)
 	if err != nil {
 		return err
 	}
@@ -151,9 +151,9 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// the role that serves agent principals, so leaving it fail-closed would
 	// refuse every agent read an api with Redis configured could count.
 	volumeMeter := newVolumeMeter(rdb, pool)
-	opts = append(opts, agentVolumeOptions(volumeMeter)...)
+	opts = append(opts, redisSurfaceOptions(rdb, volumeMeter)...)
 
-	relayOpts, stopRelay, err := inlineRelayLane(ctx, cfg, pool, logger, stdout)
+	relayOpts, stopRelay, err := inlineRelayLane(ctx, cfg, pool, license, logger, stdout)
 	if err != nil {
 		return err
 	}
@@ -171,12 +171,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	opts = append(opts, slices.Concat(modelOpts, settingOptions(cfg, logger))...)
 
-	viewOpts, stopViewRefresh, err := mcpAppViewsLane(ctx, cfg, logger)
+	doorOpts, stopDoorLanes, err := mcpDoorLanes(ctx, cfg, logger)
 	if err != nil {
 		return err
 	}
-	defer stopViewRefresh()
-	opts = append(opts, viewOpts...)
+	defer stopDoorLanes()
+	opts = append(opts, doorOpts...)
 
 	apiHandler := compose.New(pool, logger, opts...)
 	// Only now: the flush it listens with is captured while the options run.
@@ -186,40 +186,6 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// neither serves a binding the installation has replaced (compose/routingwatcher).
 	go compose.NewRoutingWatcher(pool, modelPath, compose.RoutingKeys(cfg.settings), logger).Run(ctx)
 	return serveUntilSignal(ctx, cfg, apiHandler, stdout)
-}
-
-// openInstallation opens what this role reaches the installation THROUGH: the
-// database pool, and the one key vault every phase below reads secrets from.
-//
-// Together because the vault is a table in that pool, and apart from every
-// phase that uses them because both are settled before any phase runs. The pool
-// is already proven to connect as the role it must — boot.go carries why that
-// check belongs with the pool's own construction.
-//
-// The vault is resolved ONCE, here, and handed down — the license this
-// installation may have sealed, the connector-credential surface, the outbound
-// relay password each used to resolve their own, so one deployment fact was
-// read three times. A nil vault IS an unconfigured deployment; keyvault.ForRole
-// carries why nothing downstream is handed a flag beside it.
-//
-// The caller owns closing the pool it gets back. A vault that refuses the boot
-// closes it here instead, because there is no pool to return alongside an error.
-//
-//nolint:ireturn // the vault seam has two providers behind one Vault; returning the interface is the design, and this only carries what ForRole handed back.
-func openInstallation(ctx context.Context, cfg apiConfig) (*pgxpool.Pool, keyvault.Vault, error) {
-	pool, err := boundPool(ctx, cfg.dsn)
-	if err != nil {
-		return nil, nil, err
-	}
-	vault, err := keyvault.ForRole(ctx, "api", pool, cfg.settings)
-	if err == nil {
-		err = storekit.RefuseForeignSuppressionKey(ctx, pool)
-	}
-	if err != nil {
-		pool.Close()
-		return nil, nil, err
-	}
-	return pool, vault, nil
 }
 
 // validatePublicBaseURL refuses a base URL the connector cannot be reached at.
@@ -294,10 +260,20 @@ func validateBareOrigin(flagName, raw string) error {
 // nothing was opened.
 func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.CaptureConfig, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger, stdout io.Writer, license *licensecheck.Watcher) ([]compose.Option, *pgxpool.Pool, func(), error) {
 	var opts []compose.Option
+	// A sync this role runs, such as the first one after a connect, may land
+	// meeting notes, so their reading is queued here too.
+	notesReading, err := compose.MeetingNotesReading(logger)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	capCfg.TranscriptEnqueue = notesReading
 	// The posture bindInstallation resolved, read at scrape time rather than
 	// copied in: a license lapses on a calendar, and the watcher behind this
 	// function is still re-checking while the process serves.
 	opts = append(opts, compose.WithLicensePosture(license.Posture))
+	// "Check now" in Settings runs the same re-check the daily loop does.
+	opts = append(opts, compose.WithLicenseRecheck(license.Recheck))
+	opts = append(opts, compose.WithInstallationTrial(cfg.posture, license.Posture, time.Now))
 	// Record the deployment's capture suppression-list config first, so the
 	// registry rebuilds in WithKeyvault/WithGraphCapture apply it too — not just
 	// the Gmail path WithGmailCapture threads it into (ADR-0072).
@@ -457,7 +433,6 @@ func blobstoreOptions(ctx context.Context, settings *config.Config, stdout io.Wr
 		return nil, nil
 	}
 	_, _ = fmt.Fprintln(stdout, "api attachments enabled (blobstore configured)")
-	compose.BindExtensionKnowledge(blob)
 	return []compose.Option{compose.WithBlobstore(blob)}, nil
 }
 
@@ -488,4 +463,14 @@ func schemaPoolOptions(ctx context.Context, schemaDSN string, stdout io.Writer) 
 	}
 	_, _ = fmt.Fprintln(stdout, "api custom-field schema changes enabled (schema pool configured)")
 	return []compose.Option{compose.WithSchemaPool(pool)}, pool, pool.Close, nil
+}
+
+// registerExtensions registers the units' verbs and jobs, then their AI tasks.
+// The tasks join the router's tables before the model path is resolved, so
+// Settings lists them and the budget counts them.
+func registerExtensions(extensions []extension.Extension) error {
+	if err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs()); err != nil {
+		return err
+	}
+	return compose.RegisterExtensionAITasks(extensions, composition.AITasks())
 }

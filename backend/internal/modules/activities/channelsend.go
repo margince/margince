@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -209,8 +210,7 @@ func (e *ChannelRecipientError) Code() string {
 // record they may not read.
 //
 // Recipient resolution precedes the consent gate because the gate is asked about
-// the recipient: default-deny cannot answer about a subject nobody has named
-// yet, and a gate handed an empty list refuses nobody.
+// the recipient, and a gate handed an empty list refuses nobody.
 func (s *Store) SendMessage(ctx context.Context, anchorID ids.ActivityID, in SendMessageInput, gate ConsentGate, stager ChannelDeliveryStager) (crmcontracts.Activity, error) {
 	anchor, err := s.GetActivity(ctx, anchorID, storekit.LiveOnly)
 	if err != nil {
@@ -343,11 +343,9 @@ func (s *Store) channelProviderOf(ctx context.Context, anchorID ids.ActivityID) 
 func (s *Store) resolveConversation(ctx context.Context, anchorID ids.ActivityID, provider string) (channelConversation, error) {
 	var out channelConversation
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		// The probe is repeated rather than inherited from the caller's earlier
-		// read: what this returns is the conversation's own counterparty, and
-		// anything that reads a record carries the row-scope gate — an
-		// out-of-scope anchor reads as ErrNotFound, the answer a missing one
-		// gives.
+		// The probe is repeated, not inherited from the caller's earlier read.
+		// This returns the conversation's counterparty, so an out-of-scope anchor
+		// reads as ErrNotFound.
 		if err := auth.EnsureActivityContentVisible(ctx, tx, anchorID.UUID); err != nil {
 			return err
 		}
@@ -356,6 +354,9 @@ func (s *Store) resolveConversation(ctx context.Context, anchorID ids.ActivityID
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apperrors.ErrNotFound
 			}
+			return err
+		}
+		if err := connector.RefuseCaptureOnlyThread(provider, out.threadKey); err != nil {
 			return err
 		}
 		reachable, err := s.reachableOnConversation(ctx, tx, anchorID, provider)
@@ -429,6 +430,7 @@ type outboundChannelMessage struct {
 func (m outboundChannelMessage) activity() LogActivityInput {
 	direction := "outbound"
 	return SentRecord(LogActivityInput{
+		SystemText: &systemtext.Message{Body: systemtext.Prose(systemtext.Quote, "")},
 		// The two axes, stated separately (ADR-0107/A158). The reply IS a
 		// message; what carries it is the anchor's own transport. Capture's
 		// reply-match reads the PAIR — kind to separate mail from channel,
@@ -482,15 +484,17 @@ func (m outboundChannelMessage) delivery(activityID ids.ActivityID) ChannelDeliv
 		// The recipient the conversation resolved to, which a caller never
 		// named and cannot substitute.
 		Authorization: commsauthz.Request{
-			Recipients:       []connector.Recipient{{Channel: &m.conversation.recipient}},
-			Context:          m.in.Context,
-			LegacyPurposeKey: m.in.ConsentPurpose,
-			MarketingPurpose: m.in.MarketingPurpose,
-			OperatorReason:   m.in.OperatorReason,
-			Evidence:         m.evidence(),
-			AnchorActivityID: m.anchorID.UUID,
-			Links:            linkedRecordIDs(m.links),
-			Body:             m.in.Body,
+			Recipients:        []connector.Recipient{{Channel: &m.conversation.recipient}},
+			Context:           m.in.Context,
+			LegacyPurposeKey:  m.in.ConsentPurpose,
+			MarketingPurpose:  m.in.MarketingPurpose,
+			OperatorReason:    m.in.OperatorReason,
+			Evidence:          m.evidence(),
+			AnchorActivityID:  m.anchorID.UUID,
+			Links:             linkedRecordIDs(m.links),
+			Body:              m.in.Body,
+			AuthoredBody:      m.in.Body,
+			AuthoredFileNames: fileNames(m.files),
 		},
 	}
 }

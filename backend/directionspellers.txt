@@ -29,9 +29,8 @@
 internal/compose/briefs/briefsnoozelift.go
 internal/compose/capturewhichdeal.go
 internal/compose/company360/roleproposalwrite.go
-internal/compose/datatask_leadmail.go
 internal/compose/datatask_senderauth.go
-internal/compose/dealscoutsql.go
+internal/compose/dealscout/sql.go
 internal/compose/introadvance.go
 internal/compose/network/intronote.go
 internal/compose/ownsentmailrepair.go
@@ -44,7 +43,6 @@ internal/modules/activities/deliveryreportrepair.go
 internal/modules/activities/emailparties.go
 internal/modules/activities/latestinbound.go
 internal/modules/activities/machinesender.go
-internal/modules/activities/messageidentity.go
 internal/modules/activities/owedreview.go
 internal/modules/activities/owedverdict.go
 internal/modules/activities/participantbackfill.go
@@ -62,7 +60,6 @@ internal/modules/capture/heldmailtask.go
 internal/modules/capture/noisemailscope.go
 internal/modules/capture/pendingclaim.go
 internal/modules/capture/purgepersonal.go
-internal/modules/capture/sinkpersonalparts.go
 internal/modules/capture/sinkreply.go
 internal/modules/consent/authorizeevidence.go
 internal/modules/consent/qualifyingground.go
@@ -73,7 +70,6 @@ internal/modules/contacts/ensureactivity.go
 internal/modules/contacts/initialsrepair.go
 internal/modules/contacts/leadslaworkflow.go
 internal/modules/deals/championcover.go
-internal/modules/deals/engagement.go
 internal/modules/deals/evidenceauthorship.go
 internal/modules/privacy/sarjudgements.go
 internal/platform/auth/leadinquiry.go

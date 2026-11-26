@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AutomationsAdmin } from "./automations";
 import { paramFields } from "./automations.params";
@@ -77,6 +78,7 @@ type CustomField = components["schemas"]["CustomField"];
 
 const renewalReminderSchema = {
   type: "object",
+  required: ["object", "date_field", "days_before", "recipient"],
   properties: {
     date_field: {
       type: "string",
@@ -93,6 +95,7 @@ const renewalReminderSchema = {
       enum: ["contact", "company", "deal", "lead", "project"],
       description: "Which record type owns the watched date field.",
     },
+    recipient: { type: "string", enum: ["record_owner", "authorizer"] },
     recurs_yearly: {
       type: "boolean",
       default: false,
@@ -199,15 +202,35 @@ function renewalBackend(calls: Recorded[]) {
 describe("renewal_reminder's schema-driven params (GH-706)", () => {
   it("paramFields reads days_before/object/recurs_yearly, gives date_field its own picker kind, and object its enum options", () => {
     expect(paramFields(renewalReminderSchema)).toEqual([
-      { key: "date_field", kind: "date_field", initial: "" },
-      { key: "days_before", kind: "integer", min: 1, max: 365, initial: "30" },
+      { key: "date_field", kind: "date_field", required: true, initial: "" },
+      {
+        key: "days_before",
+        kind: "integer",
+        min: 1,
+        max: 365,
+        required: true,
+        initial: "30",
+      },
       {
         key: "object",
         kind: "enum",
+        required: true,
         initial: "",
         options: ["contact", "company", "deal", "lead", "project"],
       },
-      { key: "recurs_yearly", kind: "boolean", initial: "false" },
+      {
+        key: "recipient",
+        kind: "enum",
+        required: true,
+        initial: "",
+        options: ["record_owner", "authorizer"],
+      },
+      {
+        key: "recurs_yearly",
+        kind: "boolean",
+        required: false,
+        initial: "false",
+      },
     ]);
   });
 
@@ -215,22 +238,28 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     vi.stubGlobal("fetch", renewalBackend([]));
     render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
-      expect(screen.getByText("Renewal reminder")).toBeTruthy(),
+      expect(
+        screen.getByText(en["auto.template.renewal_reminder.name"]),
+      ).toBeTruthy(),
     );
     await openCreateDialog();
 
     // recurs_yearly: a checkbox, not a spinbutton or free-text box, and it
     // starts at the schema's own default (false, i.e. unchecked).
-    const recurring = screen.getByRole("checkbox", { name: "recurs_yearly" });
+    const recurring = screen.getByRole("checkbox", {
+      name: "Repeat each year",
+    });
     expect(recurring).not.toBeChecked();
 
     // object is a combobox sourced from the schema's own enum, and date_field
     // is a combobox (the Select control) too. Neither is a native <select> or
     // a textbox a typo could break. days_before stays an ordinary spinbutton.
-    expect(screen.getByRole("combobox", { name: "object" })).toBeTruthy();
-    expect(screen.getByRole("combobox", { name: "date_field" })).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "Record type" })).toBeTruthy();
     expect(
-      screen.getByRole("spinbutton", { name: "days_before" }),
+      screen.getByRole("combobox", { name: "Renewal date field" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("spinbutton", { name: "Days before the renewal" }),
     ).toBeTruthy();
   });
 
@@ -238,24 +267,26 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     vi.stubGlobal("fetch", renewalBackend([]));
     render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
-      expect(screen.getByText("Renewal reminder")).toBeTruthy(),
+      expect(
+        screen.getByText(en["auto.template.renewal_reminder.name"]),
+      ).toBeTruthy(),
     );
     await openCreateDialog();
 
     // No object chosen yet: disabled, with the reason stated rather than a
     // silently broken empty control.
-    expect(screen.getByRole("combobox", { name: "date_field" })).toBeDisabled();
     expect(
-      screen.getByText("Choose an object first to list its date fields."),
-    ).toBeTruthy();
+      screen.getByRole("combobox", { name: "Renewal date field" }),
+    ).toBeDisabled();
+    expect(screen.getByText(en["auto.dateField.needsObject"])).toBeTruthy();
 
     await pickOption(
       userEvent.setup(),
-      screen.getByRole("combobox", { name: "object" }),
-      "contact",
+      screen.getByRole("combobox", { name: "Record type" }),
+      "Contact",
     );
 
-    const picker = screen.getByRole("combobox", { name: "date_field" });
+    const picker = screen.getByRole("combobox", { name: "Renewal date field" });
     await waitFor(() => expect(picker).not.toBeDisabled());
 
     // Only the active, date-typed field reaches the list. The retired one and
@@ -296,17 +327,19 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     );
     render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
-      expect(screen.getByText("Renewal reminder")).toBeTruthy(),
+      expect(
+        screen.getByText(en["auto.template.renewal_reminder.name"]),
+      ).toBeTruthy(),
     );
     await openCreateDialog();
 
     await pickOption(
       userEvent.setup(),
-      screen.getByRole("combobox", { name: "object" }),
-      "contact",
+      screen.getByRole("combobox", { name: "Record type" }),
+      "Contact",
     );
 
-    const picker = screen.getByRole("combobox", { name: "date_field" });
+    const picker = screen.getByRole("combobox", { name: "Renewal date field" });
     await waitFor(() => expect(picker).toBeDisabled());
     expect(screen.getByText("Could not load date fields. Retry.")).toBeTruthy();
   });
@@ -316,27 +349,34 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     vi.stubGlobal("fetch", renewalBackend(calls));
     render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
-      expect(screen.getByText("Renewal reminder")).toBeTruthy(),
+      expect(
+        screen.getByText(en["auto.template.renewal_reminder.name"]),
+      ).toBeTruthy(),
     );
     await openCreateDialog();
 
     await pickOption(
       userEvent.setup(),
-      screen.getByRole("combobox", { name: "object" }),
-      "contact",
+      screen.getByRole("combobox", { name: "Record type" }),
+      "Contact",
     );
     await waitFor(() =>
       expect(
-        screen.getByRole("combobox", { name: "date_field" }),
+        screen.getByRole("combobox", { name: "Renewal date field" }),
       ).not.toBeDisabled(),
     );
     await pickOption(
       userEvent.setup(),
-      screen.getByRole("combobox", { name: "date_field" }),
+      screen.getByRole("combobox", { name: "Renewal date field" }),
       "Birthday",
     );
     await userEvent.click(
-      screen.getByRole("checkbox", { name: "recurs_yearly" }),
+      screen.getByRole("checkbox", { name: "Repeat each year" }),
+    );
+    await pickOption(
+      userEvent.setup(),
+      screen.getByRole("combobox", { name: en["auto.renewal.recipient"] }),
+      "The person authorizing this automation",
     );
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
 
@@ -348,7 +388,92 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
         date_field: "cf_birthday",
         recurs_yearly: true,
         days_before: 30,
+        recipient: "authorizer",
       },
     });
   });
+
+  it("keeps Create refused, and says why, until a renewal date field is chosen", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", renewalBackend([]));
+    render(<AutomationsAdmin view="library" />);
+    const dialog = within(await openRenewalDialog());
+    const create = dialog.getByRole("button", { name: "Create" });
+    expect(create).toBeDisabled();
+    expect(dialog.getByText(en["auto.needs.dateField"])).toBeVisible();
+
+    await pickOption(
+      user,
+      dialog.getByRole("combobox", { name: "Record type" }),
+      "Deal",
+    );
+    const way = await dialog.findByRole("link", {
+      name: en["auto.dateField.place"],
+    });
+    expect(way.getAttribute("href")).toMatch(/#\/settings\/records$/);
+    expect(way.parentElement).toHaveTextContent(
+      "This record type has no date field yet. Add one in Settings → Records and fields.",
+    );
+    expect(create).toBeDisabled();
+  });
+
+  it("puts a server refusal of one parameter under that parameter's field", async () => {
+    const user = userEvent.setup();
+    const backend = renewalBackend([]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = input instanceof Request ? input : null;
+        if ((request?.method ?? init?.method) === "POST") {
+          return jsonResponse(
+            {
+              title: "Unprocessable",
+              status: 422,
+              code: "validation_error",
+              details: {
+                errors: [
+                  {
+                    field: "params.date_field",
+                    code: "invalid",
+                    message: "must not be empty",
+                  },
+                ],
+              },
+            },
+            422,
+          );
+        }
+        return backend(input, init);
+      }),
+    );
+    render(<AutomationsAdmin view="library" />);
+    const dialog = within(await openRenewalDialog());
+    await pickOption(
+      user,
+      dialog.getByRole("combobox", { name: "Record type" }),
+      "Contact",
+    );
+    const dateField = dialog.getByRole("combobox", {
+      name: "Renewal date field",
+    });
+    await waitFor(() => expect(dateField).not.toBeDisabled());
+    await pickOption(user, dateField, "Birthday");
+    await pickOption(
+      user,
+      dialog.getByRole("combobox", { name: en["auto.renewal.recipient"] }),
+      en["auto.renewal.recordOwner"],
+    );
+    await user.click(dialog.getByRole("button", { name: "Create" }));
+
+    const refusal = await dialog.findByText("Must not be empty.");
+    expect(refusal.id).toBe(
+      dateField.getAttribute("aria-describedby")?.split(" ")[0],
+    );
+    expect(dialog.getAllByRole("alert")).toHaveLength(1);
+  });
 });
+
+async function openRenewalDialog(): Promise<HTMLElement> {
+  await screen.findByText(en["auto.template.renewal_reminder.name"]);
+  return openCreateDialog();
+}

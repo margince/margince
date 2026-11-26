@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -59,6 +60,7 @@ func (r setStakeholderResolver) Subject(ctx context.Context, cmd SetStakeholderC
 	return StageInfo{
 		TargetType: projectRecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.setStakeholder", systemtext.Text(fmt.Sprint(cmd.ID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).setStakeholder, cmd.ID),
 	}, nil
 }
@@ -104,6 +106,7 @@ func (r removeStakeholderResolver) Subject(ctx context.Context, cmd RemoveStakeh
 	return StageInfo{
 		TargetType: projectRecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.removeStakeholder", systemtext.Text(fmt.Sprint(cmd.ContactID)), systemtext.Text(fmt.Sprint(cmd.ID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).removeStakeholder, cmd.ContactID, cmd.ID),
 	}, nil
 }
@@ -147,6 +150,7 @@ func (r setCompanyResolver) Subject(ctx context.Context, cmd SetCompanyCommand) 
 	return StageInfo{
 		TargetType: projectRecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.setCompany", systemtext.Text(fmt.Sprint(cmd.ID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).setCompany, cmd.ID),
 	}, nil
 }
@@ -186,6 +190,7 @@ func (r removeCompanyResolver) Subject(ctx context.Context, cmd RemoveCompanyCom
 	return StageInfo{
 		TargetType: projectRecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.removeCompany", systemtext.Text(fmt.Sprint(cmd.CompanyID)), systemtext.Text(fmt.Sprint(cmd.ID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).removeCompany, cmd.CompanyID, cmd.ID),
 	}, nil
 }

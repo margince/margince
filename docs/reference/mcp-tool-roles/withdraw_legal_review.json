@@ -1,0 +1,15 @@
+{
+  "tool": "change_state",
+  "action": "withdraw_legal_review",
+  "verb": "withdraw_legal_review",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

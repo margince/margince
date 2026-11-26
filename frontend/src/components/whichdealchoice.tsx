@@ -1,0 +1,239 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import {
+  useIsMutating,
+  useMutation,
+  useQueries,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { Handshake } from "lucide-react";
+import { useRef, useState } from "react";
+import { api } from "../api/client";
+import { intentKeys } from "../api/idempotencykey";
+import type { components } from "../api/schema";
+import { Button, Skeleton } from "../design-system/atoms";
+import { type Choice, ChoiceList } from "../design-system/choicelist";
+import { ErrorLine } from "../design-system/errorline";
+import { useToast } from "../design-system/toast";
+import {
+  formatDayMonthNearYear,
+  formatMoneyWhole,
+  MONEY_ABSENT,
+} from "../format/format";
+import { formatMoneyOrWord } from "../format/moneyword";
+import { type Translator, useLocale, useT } from "../i18n";
+import { TASK_QUEUE_KEY } from "../lib/activitykeys";
+import { fileListKeys } from "../lib/attachmentkeys";
+import { problemStatus, unwrap } from "../lib/problem";
+import { useViewerZone } from "../lib/viewerzone";
+import { worklistKey } from "../lib/workkeys";
+import { useDealStakeholderOffer } from "./dealstakeholderoffer";
+import {
+  WHICH_DEAL_SOURCE,
+  WhichDealDecline,
+  whichDealKey,
+} from "./whichdealdecline";
+import "./whichdealchoice.css";
+
+type Activity = components["schemas"]["Activity"];
+type Deal = components["schemas"]["Deal"];
+
+/** The deals the question offered, as capture stored them on the task. */
+function offeredDeals(task: Activity): string[] {
+  const offered = task.raw?.offered_deal_ids;
+  return Array.isArray(offered)
+    ? offered.filter((id): id is string => typeof id === "string")
+    : [];
+}
+
+/** Whether the task still asks which deal its mail is about. */
+export function asksWhichDeal(task: Activity): boolean {
+  return (
+    task.source_system === WHICH_DEAL_SOURCE &&
+    Boolean(task.source_activity_id) &&
+    !task.is_done &&
+    offeredDeals(task).length > 0
+  );
+}
+
+/**
+ * The deal question as a choice. Each deal the mail may be about is a card
+ * with its value and close date, then comes Link email thread to deal. Filing
+ * the thread on a deal answers the question, so the task leaves the list.
+ */
+export function WhichDealChoice({ task }: Readonly<{ task: Activity }>) {
+  const t = useT();
+  const [picked, setPicked] = useState("");
+  const mail = task.source_activity_id;
+  const offered = offeredDeals(task);
+  const deals = useQueries({
+    queries: offered.map((id) => ({
+      queryKey: ["deal", id],
+      queryFn: async ({ signal }: { signal: AbortSignal }) =>
+        unwrap(
+          await api.GET("/deals/{id}", {
+            signal,
+            params: { path: { id } },
+          }),
+        ),
+    })),
+  });
+  const stakeholders = useDealStakeholderOffer();
+  const file = useFileOnDeal(task.id, stakeholders.offer);
+  const choices = useDealChoices(
+    deals.flatMap((read) => (read.data ? [read.data] : [])),
+  );
+  const answering = useIsMutating({ mutationKey: whichDealKey(task.id) }) > 0;
+  // A deal that closed since it was picked is no longer a card to file on.
+  const choice = choices.find((option) => option.value === picked)?.value;
+  // The offer outlives the question it follows, until it is answered.
+  if (stakeholders.asking) return stakeholders.element;
+  if (!mail || !asksWhichDeal(task)) return null;
+  // A deal gone or out of reach (404) is no choice; any other failure leaves
+  // the question unanswerable until a retry reads every deal offered.
+  const failed = deals.filter(
+    (read) => read.isError && problemStatus(read.error) !== 404,
+  );
+  if (failed.length > 0) {
+    return (
+      <ErrorLine
+        error={failed[0]?.error}
+        inline
+        actions={
+          <Button
+            variant="link"
+            onClick={() => {
+              for (const read of failed) void read.refetch();
+            }}
+          >
+            {t("common.retry")}
+          </Button>
+        }
+      />
+    );
+  }
+  if (deals.some((read) => read.isPending)) {
+    return <Skeleton width="100%" height="4rem" />;
+  }
+  return (
+    <div className="which-deal-choice">
+      {choices.length > 0 && (
+        <ChoiceList
+          legend={t("tasks.whichDeal.legend")}
+          hideLegend
+          layout="cards"
+          value={picked}
+          onChange={setPicked}
+          choices={choices}
+        />
+      )}
+      <div className="which-deal-verbs">
+        {choices.length > 0 && (
+          <Button
+            variant="primary"
+            disabled={!choice || answering}
+            onClick={() => choice && file.mutate({ mail, deal: choice })}
+          >
+            {t("tasks.whichDeal.file")}
+          </Button>
+        )}
+        <WhichDealDecline task={task} />
+      </div>
+      {file.isError && <ErrorLine error={file.error} inline />}
+    </div>
+  );
+}
+
+function useDealChoices(deals: readonly Deal[]): Choice<string>[] {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  return deals
+    .filter((deal) => deal.status === "open")
+    .map((deal) => ({
+      value: deal.id,
+      label: deal.name,
+      mark: <Handshake aria-hidden="true" />,
+      description: dealFacts(deal, t, locale, zone),
+    }));
+}
+
+function dealFacts(
+  deal: Deal,
+  t: Translator,
+  locale: Parameters<typeof formatMoneyOrWord>[2],
+  zone: string,
+): string {
+  const facts = [
+    formatMoneyOrWord(
+      deal.amount_minor,
+      deal.currency,
+      locale,
+      MONEY_ABSENT,
+      formatMoneyWhole,
+    ),
+  ];
+  if (deal.expected_close_date) {
+    facts.push(
+      t("deal.closes", {
+        date: formatDayMonthNearYear(
+          deal.expected_close_date,
+          locale,
+          zone,
+          new Date(),
+        ),
+      }),
+    );
+  }
+  return facts.join(" · ");
+}
+
+function useFileOnDeal(
+  taskId: string,
+  offerStakeholders: ReturnType<typeof useDealStakeholderOffer>["offer"],
+) {
+  const t = useT();
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const keyed = useRef(intentKeys());
+  return useMutation({
+    mutationKey: whichDealKey(taskId),
+    mutationFn: async ({ mail, deal }: { mail: string; deal: string }) => {
+      const body = {
+        activity_id: mail,
+        entity_type: "deal" as const,
+        entity_id: deal,
+        replace_existing_of_type: false,
+      };
+      return unwrap(
+        await keyed.current(body, (key) =>
+          api.POST("/activities/relink-thread", {
+            params: { header: { "Idempotency-Key": key } },
+            body,
+          }),
+        ),
+        t,
+      );
+    },
+    onSuccess: async (_filed, { mail, deal }) => {
+      toast.show(t("tasks.whichDeal.filed"));
+      // The thread's files now show on the deal it was filed under. The
+      // question leaves the list only once the offer is answered, so the
+      // offer is not taken down with it.
+      const refresh = () =>
+        Promise.all(
+          [
+            ["activity", taskId],
+            TASK_QUEUE_KEY,
+            worklistKey,
+            ...fileListKeys(
+              { entityType: "activity", entityId: mail },
+              "moved",
+            ),
+          ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+        );
+      await offerStakeholders(mail, deal, refresh);
+    },
+  });
+}

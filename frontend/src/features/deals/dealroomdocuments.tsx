@@ -4,16 +4,24 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
+import { AddDocumentDialog } from "../../components/adddocument";
 import { Button, Field } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { unwrap } from "../../lib/problem";
-import { AddDocumentDialog } from "../voice-knowledge/adddocument";
+import { attachmentTitle } from "../../lib/attachmentlink";
+import {
+  blankRequired,
+  type FieldLabels,
+  problemCodeOf,
+  refusalSentences,
+  unwrap,
+} from "../../lib/problem";
 import { roomBriefKey } from "./dealroombrief.key";
-import { roomDocumentsKey } from "./dealroomdocuments.key";
 import "./dealroomdocuments.css";
+import { dealFilesKey, roomDocumentsKey } from "../../lib/attachmentkeys";
 
 // The seller's verbs on a Deal Room's documents: which of the deal's files the
 // buyer gets to read, under which of the four fixed groups. The board that
@@ -28,6 +36,8 @@ import "./dealroomdocuments.css";
 // screen to go — the upload existed one tab away and nothing said so.
 
 type DealRoom = components["schemas"]["DealRoom"];
+
+const ALREADY_PRESENT = "deal_room_document_already_present";
 
 // The four groups are machine keys on the wire; these are their names.
 export const DOCUMENT_GROUPS: readonly {
@@ -61,13 +71,14 @@ export function AddDocument({
   refusal,
 }: Readonly<{ room: DealRoom; refusal: string | undefined }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [attachmentId, setAttachmentId] = useState("");
   const [group, setGroup] = useState(DOCUMENT_GROUPS[0]?.key ?? "");
   const [uploading, setUploading] = useState(false);
   // The deal's Files area — uploads and the files its emails carried, hidden
   // ones excluded — is what a room may share; the server refuses anything else.
   const files = useQuery({
-    queryKey: ["deal-documents", room.deal_id, false],
+    queryKey: [...dealFilesKey(room.deal_id), false],
     enabled: refusal === undefined,
     queryFn: async () => {
       return unwrap(
@@ -78,54 +89,80 @@ export function AddDocument({
     },
   });
   const add = useAddDocument(room.id);
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   if (refusal !== undefined) {
     return <p>{refusal}</p>;
   }
+  const labels = {
+    attachment_id: t("room.docs.fileLabel"),
+    group_key: t("room.docs.groupLabel"),
+  };
+  const refused = addRefusal(add.error, labels, t);
   const options = (files.data?.data ?? []).map((doc) => ({
     value: doc.attachment.id,
-    label: doc.attachment.title || doc.attachment.filename,
+    label: attachmentTitle(doc.attachment),
   }));
   return (
     <>
-      <Field label={t("room.docs.fileLabel")} hint={t("room.docs.fileHint")}>
-        {(control) => (
-          <Select
-            id={control.id}
-            options={options}
-            value={attachmentId}
-            onChange={setAttachmentId}
-            placeholder={
-              options.length === 0
-                ? t("room.docs.noFiles")
-                : t("room.docs.pickFile")
-            }
-            disabled={options.length === 0}
-          />
-        )}
-      </Field>
-      <Field label={t("room.docs.groupLabel")}>
-        {(control) => (
-          <Select
-            id={control.id}
-            options={DOCUMENT_GROUPS.map((g) => ({
-              value: g.key,
-              label: t(g.labelKey),
-            }))}
-            value={group}
-            onChange={setGroup}
-          />
-        )}
-      </Field>
+      <div ref={faultsRoot} className="form-stack">
+        <Field
+          label={labels.attachment_id}
+          hint={t("room.docs.fileHint")}
+          required
+          error={faults.of("attachment_id")}
+        >
+          {(control) => (
+            <Select
+              {...control}
+              options={options}
+              value={attachmentId}
+              onChange={(next) => {
+                setAttachmentId(next);
+                faults.edited("attachment_id");
+              }}
+              placeholder={
+                options.length === 0
+                  ? t("room.docs.noFiles")
+                  : t("room.docs.pickFile")
+              }
+              disabled={options.length === 0}
+            />
+          )}
+        </Field>
+        <Field label={labels.group_key} error={faults.of("group_key")}>
+          {(control) => (
+            <Select
+              {...control}
+              options={DOCUMENT_GROUPS.map((g) => ({
+                value: g.key,
+                label: t(g.labelKey),
+              }))}
+              value={group}
+              onChange={(next) => {
+                setGroup(next);
+                faults.edited("group_key");
+              }}
+            />
+          )}
+        </Field>
+      </div>
       <div className="card-actions">
         <Button
-          disabled={attachmentId === ""}
           pending={add.isPending}
-          onClick={() =>
+          onClick={() => {
+            const blank = blankRequired(locale, {
+              attachment_id: [labels.attachment_id, attachmentId],
+            });
+            if (faults.show(blank)) return;
             add.mutate(
               { attachmentId, group },
-              { onSuccess: () => setAttachmentId("") },
-            )
-          }
+              {
+                onSuccess: () => setAttachmentId(""),
+                onError: (error) =>
+                  faults.show(addRefusal(error, labels, t).byField),
+              },
+            );
+          }}
         >
           {t("room.docs.add")}
         </Button>
@@ -145,9 +182,22 @@ export function AddDocument({
         onClose={() => setUploading(false)}
       />
       <p className="t-caption">{t("room.editorial")}</p>
-      <ErrorLine error={add.error} />
+      {refused.foot ? <ErrorLine>{refused.foot}</ErrorLine> : null}
     </>
   );
+}
+
+// The file already in the room is the file picked, so that refusal stands on
+// the file field rather than at the foot.
+function addRefusal(
+  error: unknown,
+  labels: FieldLabels,
+  t: Translator,
+): { byField: ReadonlyMap<string, string>; foot: string | null } {
+  const answer = refusalSentences(error, t, labels);
+  return problemCodeOf(error) === ALREADY_PRESENT && answer.rest
+    ? { byField: new Map([["attachment_id", answer.rest]]), foot: null }
+    : { byField: answer.byField, foot: answer.rest };
 }
 
 function useAddDocument(roomId: string) {

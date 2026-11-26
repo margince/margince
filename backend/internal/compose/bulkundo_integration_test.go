@@ -21,7 +21,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -242,7 +241,7 @@ func TestAnUndoLeavesAnErasedContactArchived(t *testing.T) {
 		t.Fatalf("Execute: %v", err)
 	}
 	erased := seeded[0].item.Id
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), ids.UUID(erased), "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), ids.UUID(erased), "subject request"); err != nil {
 		t.Fatalf("erasing the archived contact: %v", err)
 	}
 

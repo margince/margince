@@ -7,6 +7,7 @@ import { Badge } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { sectionState } from "../../design-system/surfacestate";
+import { taskDueOnDay, taskDueZone } from "../../format/calendarday";
 import { calendarDaysUntil } from "../../format/daysuntil";
 import { formatNumber } from "../../format/format";
 import { formatDueCompact } from "../../format/format.dates";
@@ -14,6 +15,7 @@ import { calendarLateness } from "../../format/lateness";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import "./companytabs.css";
+import { useCompanyZone } from "../../lib/companyzone";
 import { useViewerZone } from "../../lib/viewerzone";
 import "./company360.css";
 
@@ -26,6 +28,7 @@ type Cells = {
   plural: ReturnType<typeof usePlural>;
   locale: Locale;
   zone: string;
+  companyZone: string;
   asOf: string;
   onOpenTask?: (step: NextStep) => void;
   renderTick?: (step: NextStep) => ReactNode;
@@ -54,6 +57,7 @@ export function CompanyTaskTable({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
+  const companyZone = useCompanyZone();
   const steps = view.next_steps?.data ?? [];
   const state = sectionState(
     view,
@@ -67,6 +71,7 @@ export function CompanyTaskTable({
     plural,
     locale,
     zone,
+    companyZone,
     asOf: view.as_of,
     onOpenTask,
     renderTick,
@@ -112,7 +117,13 @@ function taskColumns(cells: Cells): DataTableColumn<NextStep>[] {
       header: t("co.next.col.due"),
       render: (step) =>
         step.due_at
-          ? formatDueCompact(step.due_at, step.due_has_time, locale, zone)
+          ? formatDueCompact(
+              step.due_at,
+              step.due_has_time,
+              locale,
+              zone,
+              step.due_intent,
+            )
           : "",
     },
     {
@@ -193,12 +204,19 @@ function TaskStanding({
   step,
   cells,
 }: Readonly<{ step: NextStep; cells: Cells }>) {
-  const { t, plural, locale, zone, asOf } = cells;
+  const { t, plural, locale, asOf } = cells;
   if (!step.due_at) {
     return <Badge>{t("co.next.undated")}</Badge>;
   }
+  const zone = taskDueZone(step.due_has_time, cells.zone, cells.companyZone);
+  const due = taskDueOnDay(
+    step.due_at,
+    step.due_has_time,
+    step.due_intent,
+    zone,
+  );
   if (step.overdue) {
-    const late = calendarLateness(step.due_at, asOf, zone).days;
+    const late = calendarLateness(due, asOf, zone).days;
     return (
       <Badge tone="danger">
         {late === 0
@@ -209,7 +227,7 @@ function TaskStanding({
       </Badge>
     );
   }
-  const ahead = calendarDaysUntil(step.due_at, zone, new Date(asOf));
+  const ahead = calendarDaysUntil(due, zone, new Date(asOf));
   return (
     <Badge>
       {ahead <= 0

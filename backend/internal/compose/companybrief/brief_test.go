@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // briefCompanyID is the account every fixture here is about.
@@ -260,9 +261,9 @@ func TestWriteFallsBackRatherThanFailing(t *testing.T) {
 		"lane answering prose": nonsenseLane{},
 	} {
 		t.Run(name, func(t *testing.T) {
-			sections, by, err := Write(context.Background(), lane, companyID, in, string(textlang.English))
-			if err != nil {
-				t.Fatalf("write: %v", err)
+			sections, by, laneFailed := Write(context.Background(), lane, companyID, in, string(textlang.English))
+			if laneFailed != (lane != nil) {
+				t.Errorf("laneFailed = %v; only a configured lane that failed may keep its floor out of the cache", laneFailed)
 			}
 			if by != "deterministic" {
 				t.Errorf("generated_by = %q, want deterministic — the reader must know which wrote it", by)
@@ -481,9 +482,9 @@ func TestModelBriefKeepsWhatItGroundsAndDropsWhatItDoesNot(t *testing.T) {
 			{"text":"This account is a poor fit.","nature":"assessment","evidence":[{"entity_type":"company","entity_id":"`+briefCompanyID+`"}]}]}
 	]}`)}
 
-	written, by, err := Write(context.Background(), lane, briefCompanyID, in, string(textlang.English))
-	if err != nil {
-		t.Fatalf("Write: %v", err)
+	written, by, laneFailed := Write(context.Background(), lane, briefCompanyID, in, string(textlang.English))
+	if laneFailed {
+		t.Fatal("a lane that answered was reported as failed")
 	}
 	if by != crmcontracts.WrittenByModel {
 		t.Fatalf("generated_by = %q, want the model path", by)
@@ -601,12 +602,12 @@ func TestAssembleFailsRatherThanCachingABriefThatLostItsCompanyHalf(t *testing.T
 		view:    fixedAssembler{view: crmcontracts.Company360{}},
 		profile: failingProfile{err: boom},
 	}
-	if _, _, err := s.assemble(context.Background(), ids.CompanyID{}, true, nil); !errors.Is(err, boom) {
+	if _, _, err := s.assemble(context.Background(), ids.CompanyID{}, true, nil, "en"); !errors.Is(err, boom) {
 		t.Fatalf("assemble err = %v, want the profile read's own failure", err)
 	}
 	// A prepared question never reads it, so a broken profile store must not
 	// take the three answers down with the brief.
-	if _, _, err := s.assemble(context.Background(), ids.CompanyID{}, false, nil); err != nil {
+	if _, _, err := s.assemble(context.Background(), ids.CompanyID{}, false, nil, "en"); err != nil {
 		t.Fatalf("assemble without the profile = %v, want it not to read the store at all", err)
 	}
 }
@@ -658,5 +659,26 @@ func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testin
 	if len(sections) != 1 || len(sections[0].Sentences) != 1 ||
 		sections[0].Sentences[0].Text != "Send them the retrofit proposal for signature once legal finishes its review." {
 		t.Fatalf("kept %+v, want only the move addressed to the reader", sections)
+	}
+}
+
+// The brief request sends the shape ParseBriefSections reads, and that shape admits a reply it keeps.
+func TestTheBriefRequestSendsTheShapeItsParserReads(t *testing.T) {
+	in := inputFixture()
+	req := BriefRequest(in, string(textlang.English))
+	if len(req.ResponseSchema) == 0 {
+		t.Fatal("the brief request carries no response schema, so a decoder may write any shape")
+	}
+	good := `{"sections":[{"kind":"health","sentences":[{"text":"The retrofit deal has stalled.","nature":"fact",` +
+		`"evidence":[{"entity_type":"deal","entity_id":"d1"}]}]}]}`
+	if kept, err := ParseBriefSections(good, briefCompanyID, in); err != nil || len(kept) != 1 {
+		t.Fatalf("the parser kept %d sections of the well-formed reply (%v), want 1", len(kept), err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, good); err != nil {
+		t.Errorf("the schema refuses a reply the parser keeps: %v", err)
+	}
+	fact := strings.Replace(good, `"entity_type":"deal"`, `"entity_type":"fact"`, 1)
+	if err := schema.ValidateJSON(req.ResponseSchema, fact); err == nil {
+		t.Error("the schema admits a fact citation, which the brief's input never carries to ground")
 	}
 }

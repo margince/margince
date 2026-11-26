@@ -19,10 +19,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dealcoverage"
+	"github.com/margince/margince/backend/internal/compose/winchance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -31,7 +34,7 @@ import (
 // Two years, because it must span enough completed periods to be a rate while
 // staying inside the business the installation is running now. A rate from four
 // years ago describes a company that no longer exists.
-const conversionWindowYears = 2
+const conversionWindowYears = winchance.EvidenceWindowYears
 
 // ForecastConversionHistory reads the conversion evidence a sufficiency answer
 // rests on.
@@ -47,7 +50,7 @@ func ForecastConversionHistory(
 	if err != nil {
 		return forecasting.ConversionHistory{}, err
 	}
-	series, err := forecastComparableWon(ctx, tx, period, scope, asOf, baseCurrency)
+	series, gaps, err := forecastComparableWon(ctx, tx, period, scope, asOf, baseCurrency)
 	if err != nil {
 		return forecasting.ConversionHistory{}, err
 	}
@@ -55,6 +58,7 @@ func ForecastConversionHistory(
 		ClosedDeals:          closed,
 		BlendedWonPerReached: blended,
 		ComparableWon:        series,
+		ComparableUnpriced:   gaps,
 	}, nil
 }
 
@@ -118,8 +122,9 @@ func forecastConversionRate(
 func forecastComparableWon(
 	ctx context.Context, tx pgx.Tx, period forecasting.Period, scope forecasting.Scope,
 	asOf time.Time, baseCurrency string,
-) ([]int64, error) {
+) ([]int64, []int, error) {
 	out := make([]int64, 0, forecasting.ComparablePeriodsNeeded())
+	var gaps []int
 	window := period
 	for range forecasting.ComparablePeriodsNeeded() {
 		previous, ok := forecasting.PrecedingPeriod(window)
@@ -127,29 +132,35 @@ func forecastComparableWon(
 			// A period whose predecessor cannot be cut is where the series
 			// stops. Returning what was found lets the module decide there are
 			// too few, which is the one place that bar is spelled.
-			return out, nil
+			return out, gaps, nil
 		}
-		won, err := forecastWonInWindow(ctx, tx, previous, scope, asOf, baseCurrency)
+		won, gap, converted, err := forecastWonInWindow(ctx, tx, previous, scope, asOf, baseCurrency)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		out = append(out, won)
+		// A period where nothing converts has no total, so it is left out of
+		// the series and never read as a period that won nothing.
+		if converted {
+			out, gaps = append(out, won), append(gaps, gap)
+		}
 		window = previous
 	}
-	return out, nil
+	return out, gaps, nil
 }
 
-// forecastWonInWindow totals the money actually won inside one window.
+// forecastWonInWindow totals the money actually won inside one window that
+// converts, and counts the won deals it leaves out. converted is false when
+// the window holds won deals and none of them converts.
 func forecastWonInWindow(
 	ctx context.Context, tx pgx.Tx, period forecasting.Period, scope forecasting.Scope,
 	asOf time.Time, baseCurrency string,
-) (int64, error) {
+) (won int64, unpriced int, converted bool, err error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 
 	scopeClause, populationClause, err := forecastHistoryClauses(ctx, tx, scope, arg)
 	if err != nil {
-		return 0, err
+		return 0, 0, false, err
 	}
 	// Converted at the SAME instant as the current reading rather than at each
 	// window's own close, so the series compares money on one scale. A median of
@@ -165,14 +176,14 @@ func forecastWonInWindow(
 	// the fold and this statement composes it rather than the column.
 	maskClause, masked, err := auth.MaskExcludedClause(ctx, tableDeal, "amount_minor", "d", arg)
 	if err != nil {
-		return 0, err
+		return 0, 0, false, err
 	}
 	summable := sqlUnnarrowed
 	if masked {
 		summable = maskClause
 	}
 	sql := fmt.Sprintf(`
-		SELECT COALESCE(sum(%[1]s) FILTER (WHERE %[6]s), 0)
+		SELECT %[8]s, count(*) FILTER (WHERE %[6]s AND (%[9]s OR %[10]s))
 		FROM deal d
 		WHERE d.archived_at IS NULL
 		  AND d.status = 'won'
@@ -182,13 +193,18 @@ func forecastWonInWindow(
 		  AND %[7]s`,
 		baseValue,
 		arg(period.Zone.String()), arg(period.StartDate), arg(period.EndDate),
-		scopeClause, summable, populationClause)
+		scopeClause, summable, populationClause,
+		moneytotal.FinalizeBaseTotalSQL("sum("+baseValue+") FILTER (WHERE "+summable+")", "count(*) FILTER (WHERE "+summable+")"),
+		dealcoverage.NoValueSQL("d"), dealcoverage.NoRateSQL("d", baseValue))
 
-	var won int64
-	if err := tx.QueryRow(ctx, sql, args...).Scan(&won); err != nil {
-		return 0, fmt.Errorf("compose: reading a comparable period's won total: %w", err)
+	var total *int64
+	if err := tx.QueryRow(ctx, sql, args...).Scan(&total, &unpriced); err != nil {
+		return 0, 0, false, fmt.Errorf("compose: reading a comparable period's won total: %w", err)
 	}
-	return won, nil
+	if total == nil {
+		return 0, unpriced, false, nil
+	}
+	return *total, unpriced, true, nil
 }
 
 // forecastHistoryClauses applies the caller's row scope and the resolved

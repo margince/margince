@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // signatureTitleHistoryDataTask reopens the contacts the one-mail signature
@@ -24,7 +25,7 @@ import (
 func signatureTitleHistoryDataTask(pool *pgxpool.Pool) datatask.Task {
 	return datatask.Task{
 		ID: "core/1792799323_signature_title_history", Version: 1,
-		Title: "Reading older mail for contacts without a job title", Requires: []string{"core/1792799323"},
+		Title: systemtext.Literal("datatask.title.core.1792799323_signature_title_history"), Requires: []string{"core/1792799323"},
 		Steps: []datatask.Step{{
 			Name: "reopen_untitled_signature_reads", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{Reason: "contacts.MarkSignatureRead writes the same read watermark without an audit"},

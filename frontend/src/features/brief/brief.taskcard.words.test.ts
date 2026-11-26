@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { expect, it } from "vitest";
+import { cardWhen } from "../../components/taskmeta";
 import { translate, translatePlural, type Words } from "../../i18n";
 import type { WorklistItem } from "../../lib/worklisttypes";
 import { taskRow, waitingEmailRow } from "../../testing/brief.fixtures";
-import { cardWhen, taskName } from "./brief.taskcard";
+import { taskName } from "./brief.taskcard";
 
 const english: Words = {
   t: (key, params) => translate("en", key, params),
@@ -33,6 +34,25 @@ it("dates a waiting message by when it arrived", () => {
   expect(cardWhen(waitingEmailRow(), english, "UTC", "UTC", now)).toMatch(
     /^3 Sept, /,
   );
+});
+
+it("dates a promise carrying its email by the promise's due day", () => {
+  const now = new Date("2026-09-13T09:00:00Z");
+  const promise: WorklistItem = {
+    ...taskRow("task-1", "Send Sonya the revised pricing"),
+    due_at: "2026-09-15T10:00:00Z",
+    email_summary: waitingEmailRow().email_summary,
+  };
+  expect(cardWhen(promise, english, "UTC", "UTC", now)).toBe(
+    cardWhen(
+      { ...promise, email_summary: undefined },
+      english,
+      "UTC",
+      "UTC",
+      now,
+    ),
+  );
+  expect(cardWhen(promise, english, "UTC", "UTC", now)).not.toMatch(/^3 Sept/);
 });
 
 it("names a reply after the sender, not another contact on the message", () => {

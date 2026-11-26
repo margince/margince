@@ -20,6 +20,7 @@ import { SystemHealthPage } from "./settings.systemhealth";
 import {
   attentionReport,
   healthReport,
+  informationReport,
   overdueFinding,
   stoppedMailReport,
 } from "./systemhealth.fixtures";
@@ -65,6 +66,21 @@ export const Narrow: Story = {
   render: story(attentionReport),
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+export const UnplacedChanges: Story = {
+  render: story(informationReport),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const group = await canvas.findByRole("list", { name: "For information" });
+    await expect(
+      within(group).getByText("Changes Home leaves out"),
+    ).toBeVisible();
+    await expect(
+      within(canvas.getByRole("list", { name: "Passing" })).queryByText(
+        "Changes Home leaves out",
+      ),
+    ).toBeNull();
+  },
 };
 export const SourceFailed: Story = {
   render: story({
@@ -125,10 +141,10 @@ export const PartialCapture: Story = {
   }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByText("All checks"));
-    await expect(canvas.getByText(/Mail capture/)).toHaveTextContent(
-      "No capture action needed in checked categories",
-    );
+    await canvas.findByRole("heading", { name: "All checks" });
+    await expect(
+      canvas.getByText(/Mail capture/, { selector: ".disclosure-label" }),
+    ).toHaveTextContent("No capture action needed in checked categories");
   },
 };
 

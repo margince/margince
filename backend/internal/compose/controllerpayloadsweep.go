@@ -31,6 +31,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -65,20 +66,41 @@ type controllerPayloadSweepWorker struct {
 	// material does, and a second spelling of that resolution is a second answer
 	// to "whose vault is this".
 	vault controllerPayloads
-	alarm receiptAlarm
-	clock func() time.Time
-	log   *slog.Logger
+	// meetings destroys the vault links that erased invitations and proposals
+	// still name. It runs here because this job is registered on every worker
+	// that has a vault, where the meeting delivery job needs a calendar.
+	meetings *activities.Store
+	alarm    receiptAlarm
+	// restrictions ends a restriction whose lift notice went out while the
+	// receipt's own effect did not apply.
+	restrictions *consent.Store
+	clock        func() time.Time
+	log          *slog.Logger
 }
 
 func newControllerPayloadSweepWorker(
 	idsvc *identity.Service,
 	store *comms.Store,
 	vault controllerPayloads,
+	meetings *activities.Store,
 	alarm receiptAlarm,
+	restrictions *consent.Store,
 	log *slog.Logger,
 ) *controllerPayloadSweepWorker {
 	return &controllerPayloadSweepWorker{
-		identity: idsvc, store: store, vault: vault, alarm: alarm, clock: time.Now, log: log,
+		identity: idsvc, store: store, vault: vault, meetings: meetings, alarm: alarm, restrictions: restrictions, clock: time.Now, log: log,
+	}
+}
+
+// liftSentRestrictions ends each restriction whose lift notice was sent. Best
+// effort, like the receipts above: a failure is logged and the next pass retries.
+func (w *controllerPayloadSweepWorker) liftSentRestrictions(ctx context.Context) {
+	lifted, err := w.restrictions.LiftSentRestrictions(ctx)
+	if err != nil {
+		w.log.ErrorContext(ctx, "reading restrictions whose lift notice was sent failed", "err", err)
+	}
+	if lifted > 0 {
+		w.log.WarnContext(ctx, "restrictions whose lift notice was sent were ended by the sweep", "count", lifted)
 	}
 }
 
@@ -100,10 +122,43 @@ func (w *controllerPayloadSweepWorker) alarmMissedReceipts(ctx context.Context) 
 	if failed := w.alarm.raiseOverdue(ctx, w.store, now, overdue); failed > 0 {
 		w.log.ErrorContext(ctx, "overdue controller receipts could not be raised to the privacy operators", "count", failed)
 	}
+	w.raiseOwedReceipts(ctx, now)
 	if err := w.alarm.settleSent(ctx, w.store); err != nil {
 		return fmt.Errorf("settling missed-receipt notices: %w", err)
 	}
 	return nil
+}
+
+// raiseOwedReceipts raises again each missed receipt whose alarm failed, and
+// reports the ones that left the window unraised. Both are best effort. A
+// failed read is logged and retried next pass, so it never holds back the
+// destruction of expired material that follows.
+func (w *controllerPayloadSweepWorker) raiseOwedReceipts(ctx context.Context, now time.Time) {
+	failed, err := w.alarm.raiseOwed(ctx, now, controllerPayloadSweepBatch, controllerPayloadSweepCap)
+	if err != nil {
+		w.log.ErrorContext(ctx, "reading the missed controller receipts still owed failed", "err", err)
+	}
+	if failed > 0 {
+		w.log.ErrorContext(ctx, "missed controller receipts still could not be raised to the privacy operators", "count", failed)
+	}
+	agedOut, err := w.alarm.agedOut(ctx, now)
+	if err != nil {
+		w.log.ErrorContext(ctx, "counting the missed controller receipts no sweep raised failed", "err", err)
+	}
+	if agedOut > 0 {
+		w.log.ErrorContext(ctx, "missed controller receipts were never raised and are no longer retried", "count", agedOut)
+	}
+}
+
+// destroyErasedMeetingLinks is best effort like the passes above it: a refused
+// delete leaves the reference in its row, and the next cadence retries it.
+func (w *controllerPayloadSweepWorker) destroyErasedMeetingLinks(ctx context.Context) {
+	if w.vault.v == nil {
+		return
+	}
+	if err := w.meetings.DestroyErasedLinks(ctx); err != nil {
+		w.log.ErrorContext(ctx, "destroying the link secrets of erased meetings failed", "err", err)
+	}
 }
 
 func (w *controllerPayloadSweepWorker) Work(ctx context.Context, _ *river.Job[ControllerPayloadSweepArgs]) error {
@@ -116,6 +171,8 @@ func (w *controllerPayloadSweepWorker) Work(ctx context.Context, _ *river.Job[Co
 	if err := w.alarmMissedReceipts(ctx); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
+	w.liftSentRestrictions(ctx)
+	w.destroyErasedMeetingLinks(ctx)
 
 	// Paged past what this run already attempted, so a batch that will never
 	// delete costs one batch rather than the whole backlog: without it the same
@@ -198,27 +255,18 @@ func (w *controllerPayloadSweepWorker) retire(ctx context.Context, id ids.UUID) 
 	return w.store.ClearPayloadRef(ctx, id)
 }
 
-// addControllerPayloadSweepJob registers the pass and its cadence.
-//
-// Gated on exactly what jobs.yaml declares — SendRegistry and SendDelivery,
-// what the controller lane itself needs — and NOT additionally on the vault.
-// The declaration is the contract the job census reads, and a guard demanding
-// more than it says makes this kind declared-but-unregistered: the census fails,
-// and a role that ticked its dispatcher would queue rows nothing can claim.
-//
-// A missing vault is handled where it can be said honestly, in the worker: the
-// pass reads first and then reports the count it cannot destroy, rather than
-// returning early and reporting nothing.
+// addControllerPayloadSweepJob registers the pass and its cadence on every
+// worker. No half of it calls the send lane, and the missed-receipt half must
+// run where no mail can go out. A missing vault is reported by the worker.
 func addControllerPayloadSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
-	if cfg.SendRegistry == nil || cfg.SendDelivery == nil {
-		return nil
-	}
 	db := InstallationDB(pool)
 	worker := newControllerPayloadSweepWorker(
 		identity.NewService(pool),
 		comms.NewStore(db, time.Now, activities.NewStore(db)),
 		controllerPayloads{v: cfg.ControllerVault},
+		activities.NewStore(db).WithMeetingVault(cfg.ControllerVault),
 		receiptAlarm{db: db},
+		consent.NewStore(db),
 		log)
 	addDeclaredWorker[ControllerPayloadSweepArgs](reg, worker)
 	return periodicFor(cfg, ControllerPayloadSweepArgs{})

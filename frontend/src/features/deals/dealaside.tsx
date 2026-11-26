@@ -2,17 +2,20 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { RecordListsActions } from "../../components/addtoshortlist";
 import { useEmployerSummary } from "../../components/contactemployersummary";
 import {
   customFieldHref,
   useCustomFieldDisplay,
   useObjectCustomFields,
 } from "../../components/customfields.form";
-import { EntityRef, useEntityName } from "../../components/entityref";
-import { type RailEdit, RailField } from "../../components/railfield";
+import { EntityRef } from "../../components/entityref";
+import { type SectionLock, useSectionEdit } from "../../components/sectionedit";
+import { useTagsFlow, useTagsRow } from "../../components/tagsflow";
 import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { OffsiteLink } from "../../design-system/offsitelink";
+import { ProbabilityRing } from "../../design-system/probabilityring";
 import { provenanceLabel } from "../../design-system/provenance";
 import { provenanceOf, withCreator } from "../../design-system/provenanceof";
 import { FieldGuard } from "../../design-system/rbac";
@@ -29,21 +32,23 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { closeDayOf } from "../../lib/closeday";
+import { customFieldLabel } from "../../lib/customfields.logic";
 import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useMemberName } from "../../lib/membernames";
 import { routeHash } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
-import { useRecordTags } from "../../lib/tags.queries";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   MOTION_OPTIONS,
   PRIORITY_OPTIONS,
 } from "./deal360/dealcommercialfields";
 import { useDealEdit } from "./dealedit";
-import { probabilityWords } from "./dealprobability";
+import { DealPartner } from "./dealpartner";
+import { ProbabilityHint } from "./dealprobabilityhint";
 import type { Deal, Stage } from "./deals";
 import "./deal360/deal360.css";
+import { useViewOnlyAccess } from "../../components/viewonly";
 
 type AsideProps = Readonly<{
   deal: Deal;
@@ -63,7 +68,7 @@ export function DealAside(props: AsideProps) {
   return listsOn ? (
     <DealAsideWithLists {...props} />
   ) : (
-    <DealAsideBody {...props} lists={[]} />
+    <DealAsideBody {...props} />
   );
 }
 
@@ -76,7 +81,7 @@ function DealAsideBody({
   deal,
   stages,
   lists,
-}: AsideProps & Readonly<{ lists: readonly { id: string; name: string }[] }>) {
+}: AsideProps & Readonly<{ lists?: readonly { id: string; name: string }[] }>) {
   const t = useT();
   const { locale } = useLocale();
   const viewerId = useViewerId();
@@ -86,21 +91,24 @@ function DealAsideBody({
     t,
     locale,
     zone: useViewerZone(),
-    row: rowMaker(deal.masked_fields ?? [], t, edit),
-    viewerId,
+    row: rowMaker(deal.masked_fields ?? [], t),
+    canEdit: edit.canEdit,
   };
+  const tagRows = useTagsRow("deal", deal);
+  const change = useSectionEdits(deal, edit, locale, tagRows.length > 0);
   const owner = useMemberName(deal.owner_id).data;
+  const access = useViewOnlyAccess("deal", deal);
   const cf = useObjectCustomFields("deal");
   const display = useCustomFieldDisplay();
   const reads = {
     viewerId,
     sources: useAcquisitionSources().data ?? [],
-    tags: useRecordTags("deal", deal.id, !deal.archived_at).data,
   };
   const sections: DetailSection[] = [
     {
       key: "about",
       label: t("record.details.about"),
+      edit: change.about,
       rows: [
         ...aboutRows(facts, stages),
         // A custom field with a value is an About row; an empty one folds
@@ -111,7 +119,7 @@ function DealAsideBody({
           const href = value ? customFieldHref(value) : null;
           return {
             key: field.column_name,
-            term: field.label,
+            term: customFieldLabel(field, locale),
             value: href ? (
               <OffsiteLink href={href}>{value}</OffsiteLink>
             ) : (
@@ -123,12 +131,17 @@ function DealAsideBody({
       ],
     },
     {
+      key: "value",
+      label: t("deals.amount"),
+      edit: change.value,
+      rows: valueRows(facts),
+    },
+    {
       key: "ownership",
       label: t("record.details.ownership"),
+      edit: change.ownership,
       rows: [
-        facts.row("owner", "list.owner", owner, "owner_id", {
-          keys: ["owner_id"],
-        }),
+        facts.row("owner", "list.owner", owner, "owner_id"),
         {
           key: "partner",
           term: t("deal.aside.partner"),
@@ -139,27 +152,106 @@ function DealAsideBody({
     {
       key: "registration",
       label: t("record.registration"),
-      rows: registrationRows(facts, reads),
+      edit: change.registration,
+      rows: [...registrationRows(facts, reads), ...tagRows],
     },
-    ...listSection(lists, t),
+    ...(lists ? [listSection(deal.id, lists, t)] : []),
   ];
   return (
-    <RecordDetails
-      sections={sections}
-      footnote={t("deal.details.closingFootnote")}
-    />
+    <>
+      <RecordDetails
+        sections={sections}
+        footnote={t("deal.details.closingFootnote")}
+        access={access}
+      />
+      {change.element}
+    </>
   );
 }
 
-// The fields a row changes, and its value as text when it is edited alone.
-type RowChange = Readonly<{ keys: readonly string[]; text?: string }>;
+const MONEY_KEYS = ["amount", "expected_arr", "currency"] as const;
+
+// A closed deal shows the day it closed and the stage's probability, so
+// neither is offered.
+function useSectionEdits(
+  deal: Deal,
+  edit: DealEdit,
+  locale: Locale,
+  tagged: boolean,
+) {
+  const t = useT();
+  const tags = useTagsFlow("deal", deal);
+  const closed = deal.status === "won" || deal.status === "lost";
+  const about = useSectionEdit(edit, {
+    label: t("record.details.about"),
+    keys: [
+      ...(closed ? [] : ["expected_close_date", "win_probability"]),
+      "wait_until",
+      "commercial_motion",
+      "priority",
+    ],
+  });
+  const value = useSectionEdit(edit, {
+    label: t("deals.amount"),
+    keys: MONEY_KEYS,
+    readOnly: moneyLocks(deal, edit, locale, t("record.notShown")),
+  });
+  const ownership = useSectionEdit(edit, {
+    label: t("record.details.ownership"),
+    keys: ["owner_id"],
+  });
+  const registration = useSectionEdit(edit, {
+    label: t("record.registration"),
+    keys: ["acquisition_source", ...(tagged ? ["tags"] : [])],
+    flows: tags.flow && { tags: tags.flow },
+  });
+  return {
+    about: about.edit,
+    value: value.edit,
+    ownership: ownership.edit,
+    registration: registration.edit,
+    element: (
+      <>
+        {about.element}
+        {value.element}
+        {ownership.element}
+        {registration.element}
+        {tags.element}
+      </>
+    ),
+  };
+}
+
+type DealEdit = ReturnType<typeof useDealEdit>;
+
+// A locked figure reads in its currency, as its row does, never as a bare number.
+// Each figure is in its currency's minor units, so nothing changes while any part is withheld.
+function moneyLocks(
+  deal: Deal,
+  edit: DealEdit,
+  locale: Locale,
+  notShown: string,
+): Record<string, SectionLock> {
+  const masked = edit.maskedFields.length > 0;
+  const figures: Record<string, string | null> = {
+    amount: money(deal.amount_minor, deal.currency, locale),
+    expected_arr: money(deal.expected_arr_minor, deal.currency, locale),
+  };
+  return Object.fromEntries(
+    MONEY_KEYS.flatMap((key) => {
+      const reason = masked ? notShown : edit.readOnlyFields?.[key];
+      if (!reason) return [];
+      return [[key, { reason, reading: figures[key] ?? undefined }]];
+    }),
+  );
+}
 
 type RowMaker = (
   key: string,
   term: MessageKey,
   value: ReactNode,
   maskKey?: string,
-  change?: RowChange,
+  beside?: ReactNode,
 ) => DetailRow;
 
 type Facts = Readonly<{
@@ -168,17 +260,12 @@ type Facts = Readonly<{
   locale: Locale;
   zone: string;
   row: RowMaker;
-  viewerId: string | undefined;
+  canEdit: boolean;
 }>;
 
-// A field the reader may not see says so; one nobody filled folds away. A row
-// that names its fields opens their edit, empty or not.
-function rowMaker(
-  masked: readonly string[],
-  t: Translator,
-  edit: RailEdit,
-): RowMaker {
-  return (key, term, value, maskKey = key, change = undefined) => {
+// A field the reader may not see says so; one nobody filled folds away.
+function rowMaker(masked: readonly string[], t: Translator): RowMaker {
+  return (key, term, value, maskKey = key, beside = undefined) => {
     if (masked.includes(maskKey)) {
       return { key, term: t(term), value: <FieldGuard mode="masked" /> };
     }
@@ -187,14 +274,11 @@ function rowMaker(
     return {
       key,
       term: t(term),
-      value: change ? (
-        <RailField
-          edit={edit}
-          keys={change.keys}
-          label={t(term)}
-          reading={reading}
-          text={change.text}
-        />
+      value: beside ? (
+        <>
+          {reading}
+          {beside}
+        </>
       ) : (
         reading
       ),
@@ -213,27 +297,48 @@ function money(
     : formatMoneyWhole(amountMinor, currency, locale);
 }
 
-function probabilityReading(facts: Facts): string | null {
-  const { deal, t, locale, viewerId } = facts;
-  const words = probabilityWords(deal, t, locale, viewerId);
-  return words
-    ? [words.value, words.source, words.stage].filter(Boolean).join(" · ")
-    : null;
+// The figure as a ring. Its source and the stage's figure live in the reason
+// beside it, so the row fits one line.
+function probabilityReading(deal: Deal): ReactNode {
+  return deal.win_probability == null ? null : (
+    <ProbabilityRing percent={deal.win_probability} value />
+  );
 }
 
 function day(value: string | null | undefined, facts: Facts) {
   return value ? formatDateAbbrev(value, facts.locale, facts.zone) : null;
 }
 
+function valueRows({ deal, locale, row }: Facts): DetailRow[] {
+  return [
+    row(
+      "value",
+      "deals.amount",
+      money(deal.amount_minor, deal.currency, locale),
+      "amount_minor",
+    ),
+    row(
+      "expected_arr",
+      "deal.expectedArr",
+      money(deal.expected_arr_minor, deal.currency, locale),
+      "expected_arr_minor",
+    ),
+  ];
+}
+
 function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
-  const { deal, t, locale, row } = facts;
-  // Both figures share their currency, so either opens the money together.
-  const moneyKeys = deal.arr_source_offer_id
-    ? ["expected_arr", "currency"]
-    : ["amount", "expected_arr", "currency"];
-  // An offer sets the ARR and currency, so the amount then changes alone.
-  const valueKeys = deal.arr_source_offer_id ? ["amount"] : moneyKeys;
-  const dayText = (value: string | null | undefined) => day(value, facts) ?? "";
+  const { deal, t, row } = facts;
+  const stageName = stages.find((stage) => stage.id === deal.stage_id)?.name;
+  const closed = deal.status === "won" || deal.status === "lost";
+  const probabilityHint = (
+    <span className="deal-aside-why">
+      <ProbabilityHint
+        deal={deal}
+        stageName={stageName}
+        editable={facts.canEdit && !closed}
+      />
+    </span>
+  );
   const account: DetailRow =
     deal.company_id && !deal.masked_fields?.includes("company_id")
       ? {
@@ -245,65 +350,32 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
       : row("account", "deal.aside.account", null, "company_id");
   return [
     account,
-    row(
-      "value",
-      "deals.amount",
-      money(deal.amount_minor, deal.currency, locale),
-      "amount_minor",
-      { keys: valueKeys },
-    ),
-    row(
-      "expected_arr",
-      "deal.expectedArr",
-      money(deal.expected_arr_minor, deal.currency, locale),
-      "expected_arr_minor",
-      { keys: moneyKeys },
-    ),
-    row(
-      "stage",
-      "deals.stage",
-      stages.find((stage) => stage.id === deal.stage_id)?.name,
-    ),
+    row("stage", "deals.stage", stageName),
     row(
       "close",
-      "deal.standing.close",
+      // An open deal's day is the forecast field the create form names.
+      closed ? "deal.standing.close" : "deals.close",
       day(closeDayOf(deal), facts),
       "expected_close_date",
-      // A closed deal shows the day it closed, which is not the forecast field.
-      deal.status === "won" || deal.status === "lost"
-        ? undefined
-        : { keys: ["expected_close_date"], text: dayText(closeDayOf(deal)) },
     ),
     row(
       "probability",
       "deal.winProbability",
-      probabilityReading(facts),
+      probabilityReading(deal),
       "win_probability",
-      // A closed deal's stage fixes its probability.
-      deal.status === "won" || deal.status === "lost"
-        ? undefined
-        : { keys: ["win_probability"] },
+      probabilityHint,
     ),
-    row(
-      "wait_until",
-      "deal.waitUntil",
-      day(deal.wait_until, facts),
-      "wait_until",
-      { keys: ["wait_until"], text: dayText(deal.wait_until) },
-    ),
+    row("wait_until", "deal.waitUntil", day(deal.wait_until, facts)),
     row(
       "motion",
       "deal.motion",
       optionLabel(MOTION_OPTIONS, deal.commercial_motion, t),
       "commercial_motion",
-      { keys: ["commercial_motion"] },
     ),
     row(
       "priority",
       "deal.priority",
       optionLabel(PRIORITY_OPTIONS, deal.priority, t),
-      "priority",
-      { keys: ["priority"] },
     ),
   ];
 }
@@ -313,12 +385,9 @@ function registrationRows(
   reads: Readonly<{
     viewerId: string | undefined;
     sources: readonly { key: string; label: string }[];
-    tags: ReturnType<typeof useRecordTags>["data"];
   }>,
 ): DetailRow[] {
   const { deal, t, row } = facts;
-  const tags =
-    reads.tags && !reads.tags.withheld ? (reads.tags.data ?? []) : [];
   const source = deal.acquisition_source;
   return [
     row(
@@ -345,49 +414,9 @@ function registrationRows(
       source &&
         (reads.sources.find((one) => one.key === source)?.label ?? source),
       "acquisition_source",
-      { keys: ["acquisition_source"] },
     ),
     row("created", "list.created", day(deal.created_at, facts)),
-    row(
-      "tags",
-      "tags.panelTitle",
-      tags.length > 0 ? (
-        <span className="deal-aside-chips">
-          {tags.map((tag) => (
-            <Badge key={tag.tag_id}>{tag.name}</Badge>
-          ))}
-        </span>
-      ) : null,
-    ),
   ];
-}
-
-// The partner and what it did: a sourced deal earns commission, an influenced
-// one does not, so the two must not read alike. No partner is an answer.
-function DealPartner({ deal }: Readonly<{ deal: Deal }>) {
-  const t = useT();
-  const name = useEntityName("company", deal.partner_company_id).name;
-  if (deal.masked_fields?.includes("partner_company_id")) {
-    return <FieldGuard mode="masked" />;
-  }
-  if (!deal.partner_company_id) {
-    return <>{t("deal.aside.partnerNone")}</>;
-  }
-  const role =
-    deal.partner_attribution === "sourced"
-      ? t("deal.attributionSourced")
-      : deal.partner_attribution === "influenced"
-        ? t("deal.attributionInfluenced")
-        : undefined;
-  return (
-    <AppLink
-      className="deal-aside-link"
-      href={routeHash({ screen: "companies", id: deal.partner_company_id })}
-      title={role}
-    >
-      {[name ?? t("field.unset"), role].filter(Boolean).join(" · ")}
-    </AppLink>
-  );
 }
 
 // A stored option in the reader's words; one this build does not list reads
@@ -405,31 +434,32 @@ function optionLabel(
 }
 
 function listSection(
+  dealId: string,
   lists: readonly { id: string; name: string }[],
   t: Translator,
-): DetailSection[] {
-  if (lists.length === 0) {
-    return [];
-  }
-  return [
-    {
-      key: "lists",
-      label: t("lists.record.title"),
-      children: (
-        <span className="deal-aside-chips">
-          {lists.map((list) => (
-            <AppLink
-              key={list.id}
-              className="deal-aside-chip"
-              href={routeHash({ screen: "lists", id: list.id })}
-            >
-              {list.name}
-            </AppLink>
-          ))}
-        </span>
-      ),
-    },
-  ];
+): DetailSection {
+  return {
+    key: "lists",
+    label: t("lists.record.title"),
+    children: (
+      <>
+        {lists.length > 0 && (
+          <span className="deal-aside-chips">
+            {lists.map((list) => (
+              <AppLink
+                key={list.id}
+                className="deal-aside-chip"
+                href={routeHash({ screen: "lists", id: list.id })}
+              >
+                {list.name}
+              </AppLink>
+            ))}
+          </span>
+        )}
+        <RecordListsActions entityType="deal" entityId={dealId} />
+      </>
+    ),
+  };
 }
 
 // The account is the same card as a contact in Way in. Mark and name are one
@@ -439,8 +469,8 @@ function DealAccount({ companyId }: Readonly<{ companyId: string }>) {
   const company = useEmployerSummary(companyId).data;
   const name = company?.display_name;
   const stage =
-    company?.lifecycle && company.lifecycle !== "unknown"
-      ? t(labelFor(LIFECYCLE_LABELS, company.lifecycle))
+    company?.status && company.status !== "unknown"
+      ? t(labelFor(LIFECYCLE_LABELS, company.status))
       : undefined;
   const facts = [
     stage,

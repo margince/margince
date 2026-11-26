@@ -22,6 +22,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -48,18 +49,21 @@ import (
 // to: a decline stands only against the prompt that was declined.
 func ClassifyBacklogPredicate(rulesetParam string) string {
 	return `capture_label IS NULL
-	  AND captured_by LIKE 'connector:%' AND kind = 'email'
+	  AND captured_by LIKE 'connector:%' AND kind IN (` + classifiedKindsSQL() + `)
 	  AND archived_at IS NULL
 	  -- A limited message is not labelled. The label is derived from the
 	  -- message's subject and body and shown on a worklist the message's own
 	  -- audience does not bound, so labelling one is that message's content on
 	  -- the screen of a colleague excluded from it. audiencerescope clears the
 	  -- label of a row that narrows after it was labelled.
-	  AND audience = 'workspace'
+	  AND ` + auth.WorkspaceAudienceSQL("activity") + `
 	  -- A row under a statutory hold is out of reach of every ordinary read
 	  -- path (A165/ADR-0114 §2), and the label pass is a model call over its
 	  -- text — precisely the further processing the hold bars.
 	  AND restricted_at IS NULL
+	  -- Nor is mail on which a contact restricted under GDPR Art. 18 writes or
+	  -- reads: it rejoins the backlog once the restriction is lifted.
+	  AND NOT ` + auth.ActivityRestrictedSQL("activity.id") + `
 	  -- Every rung declined to label it under THIS prompt
 	  -- (MarkCaptureLabelDeclined): asking again would be refused again, and
 	  -- paid for on every tick. A decline under an older prompt is re-offered.
@@ -81,16 +85,19 @@ type PipelineFacts struct {
 	// link-less connector activity is precisely what "not linked yet" means.
 	HasContactLink bool
 
+	// Kind is the activity kind. The material-events rung reads it, because
+	// that pass reads mail only while the attention pass also reads chat.
+	Kind string
+
 	// CaptureLabel is the attention label, empty when unlabelled.
 	CaptureLabel string
 
 	// ClassifyEligible is the shared predicate's own answer for this row.
 	ClassifyEligible bool
 
-	// ClassifyReason names WHY it is ineligible, and is empty when it is
-	// eligible or already labelled. Four honest answers, not one: telling a
-	// member "the classifier reads email only" about an archived email would be
-	// a wrong why, which is worse than no why at all.
+	// ClassifyReason names why it is ineligible, and is empty when it is
+	// eligible or already labelled. One reason per exclusion: "does not read
+	// this transport" about an archived email would be a wrong why.
 	ClassifyReason pipelinetrace.Reason
 
 	// ThreadKey is the conversation this message belongs to, empty when it has
@@ -139,7 +146,7 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID, classifyRule
 			  kind,
 			  captured_by,
 			  archived_at IS NOT NULL,
-			  audience <> 'workspace',
+			  `+"NOT ("+auth.WorkspaceAudienceSQL("activity")+")"+`,
 			  NOT `+captureLabelDecline.offeredSQL("", "$3")+`,
 			  EXISTS (SELECT 1 FROM capture_pending_counterparty p
 			           WHERE p.email = activity.counterparty_email
@@ -157,6 +164,7 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID, classifyRule
 		if threadKey != nil {
 			out.ThreadKey = *threadKey
 		}
+		out.Kind = kind
 		out.ClassifyEligible = eligible
 		out.ClassifyReason = classifyReason(classifySubject{
 			label: out.CaptureLabel, kind: kind, capturedBy: capturedBy,
@@ -171,10 +179,23 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID, classifyRule
 	return out, nil
 }
 
-// kindEmail is the ONE transport the attention classifier reads. Spelled once
-// because the predicate, the exclusion rule and the test all name it, and three
-// literals drift the day a second transport is admitted.
+// classifiedKinds are the activity kinds the attention classifier reads: mail
+// and connector-captured chat. The backlog predicate and the exclusion rule
+// both read this one list; idx_activity_unlabeled is built over the same kinds.
+var classifiedKinds = []string{kindEmail, KindMessage}
+
+// kindEmail is the mail kind, spelled once for this package.
 const kindEmail = "email"
+
+// classifiedKindsSQL renders classifiedKinds as the SQL list the predicate
+// tests. Each member is a compile-time literal.
+func classifiedKindsSQL() string {
+	quoted := make([]string, len(classifiedKinds))
+	for i, kind := range classifiedKinds {
+		quoted[i] = "'" + kind + "'"
+	}
+	return strings.Join(quoted, ", ")
+}
 
 // classifySubject is the row as the exclusion rules see it. A struct rather than
 // five parameters because two of them are booleans, and a call site reading
@@ -202,7 +223,7 @@ func classifyReason(in classifySubject) pipelinetrace.Reason {
 		return ""
 	case !isConnectorCaptured(in.capturedBy):
 		return pipelinetrace.ReasonNotConnectorCaptured
-	case in.kind != kindEmail:
+	case !slices.Contains(classifiedKinds, in.kind):
 		return pipelinetrace.ReasonTransportNotRead
 	case in.archived:
 		return pipelinetrace.ReasonArchived

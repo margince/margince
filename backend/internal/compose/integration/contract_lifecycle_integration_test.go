@@ -111,6 +111,46 @@ func TestUnderContractTakesTheEarlierOfTermEndAndCancellation(t *testing.T) {
 	}
 }
 
+// An active agreement is out of contract both before its term starts and after
+// it ends. The term state tells the two apart, so a screen never shows an
+// agreement that starts next month as one that has run out.
+func TestTermStateTellsANotYetStartedAgreementFromAnEndedOne(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Acme", nil)
+	cases := []struct {
+		title      string
+		starts     int
+		ends       int
+		inContract bool
+		want       crmcontracts.ContractTermState
+	}{
+		{"Starts next month", 30, 400, false, crmcontracts.ContractTermStateNotStarted},
+		{"Runs today", -30, 300, true, crmcontracts.ContractTermStateInForce},
+		{"Ended last month", -400, -30, false, crmcontracts.ContractTermStateEnded},
+	}
+	for _, tc := range cases {
+		starts, ends := daysFromToday(tc.starts), daysFromToday(tc.ends)
+		created, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
+			CompanyID: ids.From[ids.CompanyKind](company), Title: tc.title,
+			ValueBasis: contracts.BasisTotal, StartsOn: &starts, EndsOn: &ends, Source: "manual",
+		})
+		if err != nil {
+			t.Fatalf("%s: creating: %v", tc.title, err)
+		}
+		id := ids.From[ids.ContractKind](ids.UUID(created.Id))
+		active, err := e.Contracts.ChangeStatus(e.Admin(), id, contracts.StatusActive, nil)
+		if err != nil {
+			t.Fatalf("%s: activating: %v", tc.title, err)
+		}
+		if active.UnderContract == nil || *active.UnderContract != tc.inContract {
+			t.Errorf("%s: under_contract = %v, want %v", tc.title, active.UnderContract, tc.inContract)
+		}
+		if active.TermState == nil || *active.TermState != tc.want {
+			t.Errorf("%s: term_state = %v, want %s", tc.title, active.TermState, tc.want)
+		}
+	}
+}
+
 // anActiveContract seeds the predecessor every renewal case needs: a live
 // agreement on a named company, activated so it can be renewed at all.
 //
@@ -295,7 +335,8 @@ func TestARenewalSuccessorKeepsTheDealItNames(t *testing.T) {
 	pipeline, open, _ := DealFixture(t, e)
 	companyID := ids.From[ids.CompanyKind](company)
 	renewal, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "Acme renewal 2027", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
+		Source: "manual",
+		Name:   "Acme renewal 2027", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -334,7 +375,8 @@ func TestARenewalCannotNameAnotherCompanysDeal(t *testing.T) {
 	pipeline, open, _ := DealFixture(t, e)
 	theirCompanyID := ids.From[ids.CompanyKind](theirs)
 	elsewhere, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "Globex renewal", PipelineID: pipeline, StageID: open, CompanyID: &theirCompanyID,
+		Source: "manual",
+		Name:   "Globex renewal", PipelineID: pipeline, StageID: open, CompanyID: &theirCompanyID,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -446,7 +488,8 @@ func TestAContractAttachesToADealThatNamesNoCompany(t *testing.T) {
 	pipeline, open, _ := DealFixture(t, e)
 
 	unattached, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "Inbound, company unknown", PipelineID: pipeline, StageID: open,
+		Source: "manual",
+		Name:   "Inbound, company unknown", PipelineID: pipeline, StageID: open,
 	})
 	if err != nil {
 		t.Fatalf("creating a deal with no company: %v", err)
@@ -476,7 +519,8 @@ func TestAContractAttachesToADealThatNamesNoCompany(t *testing.T) {
 	elsewhere := e.SeedCompany(t, "Contoso", nil)
 	elsewhereID := ids.From[ids.CompanyKind](elsewhere)
 	otherDeal, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "Contoso expansion", PipelineID: pipeline, StageID: open, CompanyID: &elsewhereID,
+		Source: "manual",
+		Name:   "Contoso expansion", PipelineID: pipeline, StageID: open, CompanyID: &elsewhereID,
 	})
 	if err != nil {
 		t.Fatal(err)

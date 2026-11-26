@@ -7,20 +7,33 @@ counted, how the count differs by role, and what an agent is told when it stops.
 What an agent may do at all is in
 [Agents, passports and what they may do](agents-and-passports.md).
 
+### How do I change how much an agent may do?
+<!-- opens: settings/usage -->
+To change an agent's allowance in Margince, open **Settings → AI usage**, then **Agent limits**, and press **Edit allowances** on **Agent passport allowances**. Change the values for the whole installation, or for one role under **By role**, and press **Save**. **Use defaults** goes back to the starting values.
+Also called: agent limit, rate limit, quota, raise an agent's allowance, agent calls per day.
+
 ## Allowances per window
 
 Each passport gets an allowance per window: changes made, calls that go out,
 and total calls. Every call counts once, a read too. A long list is still one
 call. By default the window is 24 hours, and the allowances are 200
 changes, 20 calls that go out and 1,000 calls in total. An administrator
-changes them under **Settings › AI usage › Agent passport allowances**: press
+changes them under **Settings → AI usage → Agent limits**, on **Agent passport allowances**: press
 **Edit allowances**, change the values, and press **Save**. One more count shows
 how many AI tokens the agent used; it is only for you to see, and limits
 nothing.
 
+A call goes out when it sends something outside Margince, such as a mail or a
+question to a data provider. AI work that stays inside Margince, such as
+refreshing a brief, counts as a change instead.
+
 A connected app's passports share one allowance: a renewed passport goes on
 counting where the last one stopped. MCP tool calls and API calls count against
 the same allowance. Your own work in the browser is never counted.
+
+The scheduled agents in Margince, such as the morning brief, are not counted
+either, even when they run on a passport. Each run has its own limit on steps
+and on the tools its agent may use.
 
 ## Allowances by role
 
@@ -72,10 +85,13 @@ total and stop.
 
 When an agent is stopped, it is told which limit stopped it, the limit and when
 the window resets. Over the API the answer is a `429` with a `Retry-After`
-header. The per-minute limits of an MCP connection are separate, short pauses,
-the same for every role. If Margince cannot read the count for a moment, the
-agent is refused with a `503` and asked to try again in a few seconds. That is
-no limit, and the agent has used nothing more.
+header. If Margince cannot read the count for a moment, the agent is refused
+with a `503` and asked to try again in a few seconds. That is no limit, and the
+agent has used nothing more.
+
+The per-minute limits of an MCP connection are separate, short pauses. An agent
+of a user with the Admin role has no per-minute limit on tool calls. Every other
+role has one, and the settings show it for each role.
 
 Only whoever approved the connection can answer a request to widen it. Nobody
 else can, an administrator or the owner of the company included. An agent's

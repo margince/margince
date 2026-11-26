@@ -27,6 +27,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -72,6 +73,7 @@ func (r *promoteLeadResolver) Subject(ctx context.Context, cmd PromoteLeadComman
 		TargetType:    string(datasource.EntityLead),
 		TargetID:      cmd.LeadID,
 		TargetVersion: &rec.Version,
+		SystemText:    &systemtext.Message{Subject: systemtext.Sentence("agent.promoteLead", systemtext.Label(fmt.Sprint(recordLabel(rec))), systemtext.Text(fmt.Sprint(cmd.Trigger)))},
 		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).promoteLead, recordLabel(rec), cmd.Trigger),
 	}, nil
 }
@@ -162,6 +164,7 @@ func (r *disqualifyLeadResolver) Subject(ctx context.Context, cmd DisqualifyLead
 		TargetType:    string(datasource.EntityLead),
 		TargetID:      cmd.LeadID,
 		TargetVersion: &rec.Version,
+		SystemText:    &systemtext.Message{Subject: systemtext.Sentence("agent.disqualifyLead", systemtext.Label(fmt.Sprint(recordLabel(rec))))},
 		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).disqualifyLead, recordLabel(rec)),
 	}, nil
 }
@@ -213,6 +216,7 @@ func (r *demoteLeadResolver) Subject(ctx context.Context, cmd DemoteLeadCommand)
 		TargetType:    string(datasource.EntityLead),
 		TargetID:      cmd.LeadID,
 		TargetVersion: &rec.Version,
+		SystemText:    &systemtext.Message{Subject: systemtext.Sentence("agent.demoteLead", systemtext.Label(fmt.Sprint(recordLabel(rec))))},
 		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).demoteLead, recordLabel(rec)),
 	}, nil
 }
@@ -294,6 +298,7 @@ func (r *advanceProjectPhaseResolver) Subject(ctx context.Context, cmd AdvancePr
 		TargetType:    string(datasource.EntityProject),
 		TargetID:      cmd.ProjectID,
 		TargetVersion: &rec.Version,
+		SystemText:    &systemtext.Message{Subject: systemtext.Sentence("agent.projectPhase", systemtext.Label(fmt.Sprint(recordLabel(rec))), systemtext.Text(fmt.Sprint(cmd.ToPhase)))},
 		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).projectPhase, recordLabel(rec), cmd.ToPhase),
 	}, nil
 }
@@ -409,13 +414,15 @@ func (r *advanceDealResolver) Subject(ctx context.Context, cmd AdvanceDealComman
 	if err != nil {
 		return StageInfo{}, err
 	}
+	summary, component := dealMoveSummary(ctx, summaryIn(ctx, r.language), r.stages, rec, semantic)
 	return StageInfo{
 		TargetType:    string(datasource.EntityDeal),
 		TargetID:      cmd.DealID,
 		TargetVersion: &rec.Version,
 		CoTargetType:  "stage",
 		CoTargetID:    cmd.ToStageID,
-		Summary:       dealMoveSummary(ctx, summaryIn(ctx, r.language), r.stages, rec, semantic),
+		Summary:       summary,
+		SystemText:    &systemtext.Message{Subject: component},
 	}, nil
 }
 

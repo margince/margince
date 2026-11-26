@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "capture_trace_pipeline",
+  "verb": "read_capture_trace_pipeline",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

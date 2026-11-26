@@ -19,10 +19,12 @@
   gap: var(--space-2);
 }
 
-/* The search box takes what is left of the line; the kind and the dates are
+/* The search box takes what is left of the line, and never less than its
+ * placeholder needs in the longest locale; the kind and the dates are
  * sized by their own content. */
 .timeline-filters-row .input-icon {
-  flex: 1 1 10rem;
+  flex: 1 1 14rem;
+  min-inline-size: min(14rem, 100%);
 }
 
 /* The kind dial is sized to its own words. `.input` is a full-width field by

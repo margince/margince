@@ -83,20 +83,9 @@ func sitePageFactsCatalogID(t *testing.T, contains string) string {
 	return sitePageFactsSnippetID(t, crmcontracts.SiteReadPageKindServices, sitePageFactsText, contains)
 }
 
-// sitePageFactsJSON encodes a fixture or an expectation as the corpus carries
-// them: two documents side by side, never one nested in the other.
-func sitePageFactsJSON[T any](t *testing.T, v T) json.RawMessage {
-	t.Helper()
-	raw, err := json.Marshal(v)
-	if err != nil {
-		t.Fatalf("encoding %T: %v", v, err)
-	}
-	return raw
-}
-
 func sitePageFactsFixtureJSON(t *testing.T, kind crmcontracts.SiteReadPageKind, text string) json.RawMessage {
 	t.Helper()
-	return sitePageFactsJSON(t, sitePageFactsFixture{URL: sitePageFactsURL, Kind: kind, Text: text})
+	return fixtureJSON(t, sitePageFactsFixture{URL: sitePageFactsURL, Kind: kind, Text: text})
 }
 
 func sitePageFactsCatalogFixture(t *testing.T) json.RawMessage {
@@ -106,7 +95,7 @@ func sitePageFactsCatalogFixture(t *testing.T) json.RawMessage {
 
 func runSitePageFactsCase(t *testing.T, fixture json.RawMessage, want map[string]string, reply string) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
-	prepared, err := sitePageFactsCases{}.Prepare(fixture, sitePageFactsJSON(t, want))
+	prepared, err := sitePageFactsCases{}.Prepare(fixture, fixtureJSON(t, want))
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}

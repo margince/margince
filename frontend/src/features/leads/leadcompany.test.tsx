@@ -11,12 +11,13 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { ENTITY_NAME_KEY } from "../../components/entityref.queries";
+import { companyReferenceQuery } from "../../components/entityref.queries";
 import { LocaleProvider } from "../../i18n";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   LeadCompany,
+  LeadCompanyName,
   useLeadCompanyName,
   useLeadCompanyNameReading,
 } from "./leadcompany";
@@ -114,6 +115,11 @@ describe("LeadCompany", () => {
     const posted = stubServer();
     render(<LeadCompany lead={{ ...lead, company_match: match }} />);
     expect(screen.getByText("Nordwind Logistik")).toBeTruthy();
+    expect(
+      screen.queryByText(
+        "No company linked yet. Qualifying links or creates it.",
+      ),
+    ).toBeNull();
     fireEvent.click(
       screen.getByRole("button", { name: "Link to Nordwind Logistik GmbH" }),
     );
@@ -171,12 +177,55 @@ describe("LeadCompany", () => {
     ).toBeTruthy();
   });
 
-  it("shows the typed name alone when no company matches", () => {
+  it("keeps the compact company name free of qualifying guidance", () => {
     stubServer();
     render(<LeadCompany lead={lead} />);
     expect(screen.getByText("Nordwind Logistik")).toBeTruthy();
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
+    expect(
+      screen.queryByText(
+        "No company linked yet. Qualifying links or creates it.",
+      ),
+    ).toBeNull();
+  });
+
+  it("says beside the typed name that qualifying links or creates the company", () => {
+    stubServer();
+    render(<LeadCompany lead={lead} nameShown />);
+    expect(
+      screen.getByText(
+        "No company linked yet. Qualifying links or creates it.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says nothing about adding a company to a lead that can no longer be qualified", () => {
+    stubServer();
+    for (const over of [
+      { status: "promoted" as const },
+      { status: "disqualified" as const },
+      { archived_at: "2026-09-01T00:00:00Z" },
+      { writable: false },
+    ]) {
+      cleanup();
+      render(<LeadCompany lead={{ ...lead, ...over }} nameShown />);
+      expect(
+        screen.queryByText(
+          "No company linked yet. Qualifying links or creates it.",
+        ),
+      ).toBeNull();
+    }
+  });
+
+  it("says nothing about a missing record once a company matches", () => {
+    stubServer();
+    render(<LeadCompany lead={{ ...lead, company_match: match }} nameShown />);
+    expect(
+      screen.queryByText(
+        "No company linked yet. Qualifying links or creates it.",
+      ),
+    ).toBeNull();
   });
 
   it("offers no link to a reader who may not change the lead", () => {
@@ -194,6 +243,35 @@ describe("LeadCompany", () => {
       lead: ["read"],
     });
     expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+describe("LeadCompanyName", () => {
+  it("reads a company the reader may not see as if the lead were not linked", async () => {
+    stubServer();
+    render(<LeadCompanyName lead={{ ...lead, company_id: "c-hidden" }} />);
+    expect(await screen.findByText("Nordwind Logistik")).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("reads the typed name for a reader without company read, and asks nothing", () => {
+    const fetched = vi.fn(async () => new Response(null, { status: 403 }));
+    vi.stubGlobal("fetch", fetched);
+    render(<LeadCompanyName lead={{ ...lead, company_id: "c-7" }} />, {
+      lead: ["read"],
+    });
+    expect(screen.getByText("Nordwind Logistik")).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(fetched).not.toHaveBeenCalled();
+  });
+
+  it("names a company the reader may see by its own name", async () => {
+    stubServer();
+    render(<LeadCompanyName lead={{ ...lead, company_id: "c-7" }} />);
+    expect(
+      await screen.findByRole("link", { name: "Nordwind Holding SE" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Nordwind Logistik")).toBeNull();
   });
 });
 
@@ -255,7 +333,7 @@ describe("useLeadCompanyNameReading", () => {
     );
     // An earlier read answered with no name, long enough ago to be read again.
     render(<Reading of={{ ...lead, company_id: "c-7" }} />, LINK_GRANTS, (c) =>
-      c.setQueryData(["company", ENTITY_NAME_KEY, "c-7"], null, {
+      c.setQueryData(companyReferenceQuery("c-7").queryKey, null, {
         updatedAt: 0,
       }),
     );

@@ -3,14 +3,17 @@
 
 // A filter operand's control, shared by the Filters and Analytics builders.
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import { SegmentedControl, TextInput } from "../../design-system/atoms";
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
+import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
-import { TokenInput } from "../../design-system/tokeninput";
+import { formatNumber } from "../../format/format";
 import { INDUSTRY_FIELD, industryWords } from "../../format/industry";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import "./filterbuilder.css";
+import { youThenByName } from "../../components/assigneepicker";
 import { RosterPartialNote } from "../../components/entityref";
 import {
   boundedReference,
@@ -18,12 +21,17 @@ import {
   useReferenceOptions,
 } from "../../components/filterreference";
 import type { VocabularyField } from "../../lib/filterdata";
+import { valueFor } from "../../lib/labelfor";
 import {
   type FilterOp,
   isRelativeDate,
   type LeafValue,
+  MAX_DAYS_AGO,
 } from "../../lib/segmentpredicate";
+import { useMe } from "../../lib/session";
+import { existsKeys } from "./filtersentence";
 import { MoneyControl } from "./filtervalue.money";
+import { ListValue, NumberValue } from "./filtervalue.number";
 import { RadiusValue } from "./filtervalue.radius";
 import {
   ChosenRecords,
@@ -42,6 +50,7 @@ export function ValueControl({
   type,
   references,
   options,
+  optionLabels,
   op,
   value,
   onChange,
@@ -54,6 +63,8 @@ export function ValueControl({
   references: Reference | undefined;
   /** A picklist's allowed values, when the vocabulary carried them. */
   options: readonly string[] | undefined;
+  /** The reader's names for some of those values; a value without one reads as itself. */
+  optionLabels?: Readonly<Record<string, string>>;
   /** The currency a money field counts minor units of, when it is known. */
   currency?: string;
   op: FilterOp;
@@ -68,11 +79,12 @@ export function ValueControl({
   if (op === "exists") {
     // `exists` carries its own boolean, and the two readings ARE the question
     // rather than an operand: "has a value" or "is empty".
+    const readings = existsKeys({ references });
     return (
       <BooleanValue
         value={value}
         onChange={onChange}
-        labels={{ true: t("filters.hasValue"), false: t("filters.isEmpty") }}
+        labels={{ true: t(readings.true), false: t(readings.false) }}
         label={t("filters.existsLabel")}
       />
     );
@@ -80,13 +92,8 @@ export function ValueControl({
   if (op === "within_radius") {
     return <RadiusValue value={value} onChange={onChange} label={name} />;
   }
-  // A REFERENCE IS ANSWERED BEFORE THE OPERATOR IS, and the order is the whole
-  // point. `in` used to win, so every id field's list was a free-text token box
-  // — a uuid typed wrong there compiles, matches nothing, and reads as a
-  // settled "no rows" exactly as the single case did. The list operator changes
-  // how many records are named, not whether they are chosen.
-  // `exists` has already returned above, so every operator reaching here takes
-  // an operand and a reference answers all of them.
+  // Before `in`: a uuid typed into a token box matches nothing and reads as a
+  // settled "no rows". `in` changes how many records are named, not how.
   if (references !== undefined) {
     return (
       <ReferenceValue
@@ -114,11 +121,11 @@ export function ValueControl({
   }
   if (op === "in") {
     return (
-      <TokenInput
-        values={Array.isArray(value) ? value.map(String) : []}
-        onChange={(next) => onChange(next)}
-        aria-label={label ?? t("filters.values")}
-        placeholder={t("filters.addValue")}
+      <ListValue
+        type={type}
+        value={value}
+        onChange={onChange}
+        label={label ?? t("filters.values")}
       />
     );
   }
@@ -133,7 +140,10 @@ export function ValueControl({
       <Select
         options={options.map((option) => ({
           value: option,
-          label: field === INDUSTRY_FIELD ? industryWords(t, option) : option,
+          label:
+            field === INDUSTRY_FIELD
+              ? industryWords(t, option)
+              : (optionLabels?.[option] ?? option),
         }))}
         value={typeof value === "string" ? value : ""}
         onChange={onChange}
@@ -147,13 +157,27 @@ export function ValueControl({
   );
 }
 
+/** What an empty picker asks for, named by the kind of record it lists. */
+const PICK_PROMPTS: Readonly<Record<Reference, MessageKey>> = {
+  tag: "filters.pickTag",
+  app_user: "filters.pickOwner",
+  team: "filters.pickTeam",
+  company: "filters.pickCompany",
+  pipeline: "filters.pickPipeline",
+  stage: "filters.pickStage",
+  project: "filters.pickProject",
+  product: "filters.pickProduct",
+};
+
+function pickPrompt(reference: Reference): MessageKey {
+  return valueFor(PICK_PROMPTS, reference, "filters.pickValue");
+}
+
 /**
  * An id comparison as the RECORDS it names, whether it names one or a list.
  *
- * Which control depends on the target and not on the operator: a set this
- * module can read whole is a list to pick from, and the one that cannot be —
- * companies, as many as the workspace has customers — is searched. `many`
- * only decides whether picking replaces the value or appends to it.
+ * Which control depends on the target (`boundedReference`), not on the
+ * operator. `many` only decides whether picking replaces the value or appends.
  */
 function ReferenceValue({
   reference,
@@ -170,6 +194,7 @@ function ReferenceValue({
   value: LeafValue;
   onChange: (next: LeafValue) => void;
 }>) {
+  const t = useT();
   if (boundedReference(reference)) {
     return (
       <RecordValue
@@ -188,6 +213,7 @@ function ReferenceValue({
       value={value}
       onChange={onChange}
       label={label}
+      placeholder={t(pickPrompt(reference))}
     />
   );
 }
@@ -195,10 +221,7 @@ function ReferenceValue({
 /**
  * An id comparison as the RECORD it names, not its uuid.
  *
- * Only for a target the options module can enumerate. A company reference
- * falls through to the plain box, because a workspace's accounts are as many as
- * its customers and a dropdown cannot hold them — the async picker that case
- * needs is its own change, and a half-filled list would be worse than a box.
+ * A member list starts with the reader.
  *
  * A stored id whose record is gone still shows: Select renders its placeholder
  * for a value matching no option, so the clause reads as needing attention
@@ -213,16 +236,23 @@ function RecordValue({
   label,
 }: Readonly<{
   label?: string;
-  reference: Reference | undefined;
+  reference: Reference;
   type: VocabularyField["type"];
   many: boolean;
   value: LeafValue;
   onChange: (next: LeafValue) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const noteId = useId();
+  const viewerId = useMe().data?.user.id;
   const name = label ?? t("filters.value");
-  const { options, loading, failed, partial } = useReferenceOptions(reference);
+  const read = useReferenceOptions(reference);
+  const { loading, failed, partial } = read;
+  const options =
+    reference === "app_user"
+      ? youThenByName(read.options, viewerId, t("filters.you"), locale)
+      : read.options;
   const ids = chosenIDs(value);
   // A read that failed falls back to the plain box rather than to an empty
   // dropdown. An empty list would tell the reader this workspace has no such
@@ -259,7 +289,7 @@ function RecordValue({
         onChange={(next) => onChange(many ? [...ids, String(next)] : next)}
         disabled={loading}
         placeholder={
-          loading ? t("filters.loadingRecords") : t("filters.pickRecord")
+          loading ? t("filters.loadingRecords") : t(pickPrompt(reference))
         }
         aria-label={name}
         aria-describedby={partial ? noteId : undefined}
@@ -344,7 +374,9 @@ function ScalarValue({
       />
     );
   }
-  const numeric = type === "number" || type === "currency";
+  if (type === "number" || type === "currency") {
+    return <NumberValue value={value} onChange={onChange} label={label} />;
+  }
   return (
     <input
       className="input"
@@ -353,32 +385,10 @@ function ScalarValue({
           ? String(value)
           : ""
       }
-      onChange={(event) =>
-        onChange(
-          numeric ? numberOrText(event.target.value) : event.target.value,
-        )
-      }
+      onChange={(event) => onChange(event.target.value)}
       aria-label={label}
-      inputMode={numeric ? "decimal" : undefined}
     />
   );
-}
-
-/**
- * A numeric field's operand as a number when it is one, and as the raw text
- * otherwise.
- *
- * Half-typed input is the reason: "-" and "1." are neither valid numbers nor
- * mistakes, and coercing them to 0 or NaN would either move the count or refuse a
- * clause somebody is still typing. Leaving the text alone lets `isComplete` hold
- * the preview until the value is a number the engine will accept.
- */
-function numberOrText(raw: string): LeafValue {
-  if (raw === "") {
-    return "";
-  }
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : raw;
 }
 
 /** The two ways a date operand is written: a calendar day, or a count back. */
@@ -402,36 +412,88 @@ function DateValue({
   onChange: (next: LeafValue) => void;
 }>) {
   const t = useT();
-  const mode = isRelativeDate(value) ? "ago" : "on";
+  const { locale } = useLocale();
+  const faultId = useId();
+  // The count as typed in "days ago" mode, null in date mode. The tree holds ""
+  // while a count is being corrected, and "" names no mode.
+  const [days, setDays] = useState(() => daysTextOf(value));
+  // A change the tree made without this row, such as Discard, replaces it.
+  const [seen, setSeen] = useState<LeafValue>(value);
+  if (seen !== value) {
+    setSeen(value);
+    if (!holds(days, value)) {
+      setDays(daysTextOf(value));
+    }
+  }
+  const invalid =
+    days !== null && days.trim() !== "" && !isRelativeDate(daysOperand(days));
   return (
-    <span className="filter-date-value">
-      <SegmentedControl
-        options={DATE_MODES}
-        value={mode}
-        onChange={(next) => onChange(next === "ago" ? { days_ago: 0 } : "")}
-        labels={{ on: t("filters.date.on"), ago: t("filters.date.daysAgo") }}
-        label={t("filters.date.mode")}
-      />
-      {isRelativeDate(value) ? (
-        <input
-          className="input"
-          inputMode="numeric"
-          value={String(value.days_ago)}
-          onChange={(event) => {
-            const days = Number(event.target.value);
-            onChange({
-              days_ago: Number.isInteger(days) && days >= 0 ? days : 0,
-            });
+    <div className="filter-value">
+      <span className="filter-date-value">
+        <SegmentedControl
+          options={DATE_MODES}
+          value={days === null ? "on" : "ago"}
+          onChange={(next) => {
+            const operand = next === "ago" ? { days_ago: 0 } : "";
+            setDays(daysTextOf(operand));
+            onChange(operand);
           }}
-          aria-label={t("filters.date.daysAgoCount", { field: label })}
+          labels={{ on: t("filters.date.on"), ago: t("filters.date.daysAgo") }}
+          label={t("filters.date.mode")}
         />
-      ) : (
-        <DateInput
-          value={typeof value === "string" ? isoOrBlank(value) : ""}
-          onChange={(event) => onChange(event.target.value)}
-          aria-label={label}
-        />
+        {days === null ? (
+          <DateInput
+            value={typeof value === "string" ? isoOrBlank(value) : ""}
+            onChange={(event) => onChange(event.target.value)}
+            aria-label={label}
+          />
+        ) : (
+          <TextInput
+            inputMode="numeric"
+            value={days}
+            onChange={(event) => {
+              setDays(event.target.value);
+              onChange(daysOperand(event.target.value));
+            }}
+            aria-label={t("filters.date.daysAgoCount", { field: label })}
+            aria-invalid={invalid ? true : undefined}
+            aria-describedby={invalid ? faultId : undefined}
+          />
+        )}
+      </span>
+      {invalid && (
+        <ErrorLine id={faultId}>
+          {t("filters.date.daysAgoInvalid", {
+            max: formatNumber(MAX_DAYS_AGO, locale),
+          })}
+        </ErrorLine>
       )}
-    </span>
+    </div>
   );
+}
+
+function daysTextOf(value: LeafValue): string | null {
+  return isRelativeDate(value) ? String(value.days_ago) : null;
+}
+
+/**
+ * The count as an operand, or "" while the text is not one. Not the text
+ * itself: a non-empty string passes as an `eq` operand and the count would run.
+ */
+function daysOperand(text: string): LeafValue {
+  const trimmed = text.trim();
+  const operand = { days_ago: Number(trimmed) };
+  return /^\d+$/.test(trimmed) && isRelativeDate(operand) ? operand : "";
+}
+
+/** Whether the row as held already shows this value. */
+function holds(days: string | null, value: LeafValue): boolean {
+  if (days === null) {
+    return !isRelativeDate(value);
+  }
+  const typed = daysOperand(days);
+  if (isRelativeDate(typed)) {
+    return isRelativeDate(value) && value.days_ago === typed.days_ago;
+  }
+  return value === typed;
 }

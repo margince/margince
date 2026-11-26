@@ -89,15 +89,6 @@ func replyDraftScript(replies []string) *sequencedBrainStub {
 	return &sequencedBrainStub{responses: responses}
 }
 
-func replyDraftFixtureJSON(t *testing.T, f replyDraftFixture) json.RawMessage {
-	t.Helper()
-	raw, err := json.Marshal(f)
-	if err != nil {
-		t.Fatalf("encoding the fixture: %v", err)
-	}
-	return raw
-}
-
 func replyDraftExpectationJSON(t *testing.T, register string) json.RawMessage {
 	t.Helper()
 	raw, err := json.Marshal(register)
@@ -112,7 +103,7 @@ func runReplyDraftCase(
 ) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
 	prepared, err := replyDraftCases{}.Prepare(
-		replyDraftFixtureJSON(t, fixture), replyDraftExpectationJSON(t, register))
+		fixtureJSON(t, fixture), replyDraftExpectationJSON(t, register))
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -412,7 +403,9 @@ func assertReplyDraftMatchesProduction(t *testing.T, tc replyDraftParityCase) {
 		t.Fatalf("reading the fixture's voice state: %v", err)
 	}
 	script := replyDraftScript(tc.replies)
-	draft, version, _, productionErr := replyDrafter{brain: script}.completeVoiced(
+	// The model path prepares every call with the installation's company context
+	// before it reaches a model, so production is driven through the same provider.
+	draft, version, _, productionErr := replyDrafter{brain: certContextBrain{task: ai.TaskDraftReply, next: script}}.completeVoiced(
 		context.Background(), ids.NewV7(), tc.fixture.Activity, voice)
 
 	outcome, trace := runReplyDraftCase(t, tc.fixture, tc.register, tc.replies)

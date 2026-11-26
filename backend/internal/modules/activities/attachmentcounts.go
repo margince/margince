@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -90,4 +91,46 @@ func emailIDsOf(page []crmcontracts.Activity) []ids.UUID {
 		out = append(out, ids.UUID(page[i].Id))
 	}
 	return out
+}
+
+// AttachmentNamesFor reads wire files, never uploads added to a message later.
+// A sent delivery's snapshot survives later changes to its source documents.
+func AttachmentNamesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map[ids.UUID][]string, error) {
+	out := map[ids.UUID][]string{}
+	if len(activityIDs) == 0 {
+		return out, nil
+	}
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return nil, err
+	}
+	idsPosition := arg(activityIDs)
+	rows, err := tx.Query(ctx, `SELECT a.id, delivery.id IS NOT NULL, coalesce(delivery.attachments, '[]'::jsonb),
+ ARRAY(SELECT at.filename FROM attachment at WHERE at.entity_type='activity' AND at.entity_id=a.id
+ AND at.archived_at IS NULL AND at.captured_by LIKE 'connector:%' AND `+arrivedWithMessage("at")+` ORDER BY at.filename,at.id)
+ FROM activity a LEFT JOIN comms_outbound delivery ON delivery.activity_id=a.id AND delivery.status='sent'
+ WHERE a.id=ANY($`+fmt.Sprint(idsPosition)+`) AND `+content, args...)
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading the files carried by messages: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		var sent bool
+		var files []OutboundFile
+		var names []string
+		if err := rows.Scan(&id, &sent, &files, &names); err != nil {
+			return nil, err
+		}
+		if sent {
+			names = make([]string, len(files))
+			for i, file := range files {
+				names[i] = file.Filename
+			}
+		}
+		out[id] = names
+	}
+	return out, rows.Err()
 }

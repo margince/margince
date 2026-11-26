@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
@@ -45,6 +46,7 @@ type Registry struct {
 	// mailbox import may reach, or 0 for none. See backfillcap.go.
 	maxBackfillMonths int
 	backfillLimit     int
+	backfillPageDelay time.Duration
 	backfillHeld      bool
 	// vault seals and resolves a connection's credential bundle. The row
 	// carries an opaque credential_ref, never the credential bytes; the vault
@@ -64,14 +66,6 @@ type Registry struct {
 	// ownershipWatch is how often a running page checks it still owns its
 	// execution (backfillwatch.go).
 	ownershipWatch time.Duration
-
-	// digestProjects answers the morning digest's projects section
-	// (digestprojects.go); nil builds a digest without one.
-	digestProjects DigestProjectsSource
-
-	// digestReview answers what is waiting for the digest's reader
-	// (digestreview.go); nil leaves those counts at zero.
-	digestReview DigestReviewSource
 }
 
 // NewRegistry builds the connector registry over the pool, the capture Sink,
@@ -223,12 +217,13 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) error {
 	var (
 		name          string
-		grantedBy     ids.UserID
+		grantedBy     *ids.UserID
 		credentialRef *string
 		authBytes     []byte
 		cursor        []byte
 		generation    int
 		revision      int64
+		heldAnchor    *time.Time
 	)
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		// 'error' is syncable by design (ADR-0063): the daily probe of a
@@ -236,12 +231,13 @@ func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) er
 		// is what flips the row back to connected. Only 'disconnected' and
 		// 'reauth_required' park a connection.
 		return tx.QueryRow(ctx, `
-			SELECT provider, user_id, credential_ref, auth, sync_cursor, generation, sync_revision FROM capture_connection
-			WHERE id = $1 AND status IN ('connected','error')`, connectionID).
-			Scan(&name, &grantedBy, &credentialRef, &authBytes, &cursor, &generation, &revision)
+			SELECT provider, user_id, credential_ref, auth, sync_cursor, generation, sync_revision, sync_anchor
+			  FROM capture_connection c WHERE id = $1 AND status IN ('connected','error')
+			   AND (user_id IS NOT NULL OR `+sharedMailboxLiveSQL+`)`, connectionID).
+			Scan(&name, &grantedBy, &credentialRef, &authBytes, &cursor, &generation, &revision, &heldAnchor)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("capture: connection %s: %w", connectionID, apperrors.ErrNotFound)
+		return fmt.Errorf("the connection is gone, or was never yours to reach: %w", apperrors.ErrNotFound)
 	}
 	if err != nil {
 		return err
@@ -254,14 +250,14 @@ func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) er
 	// The connector principal is built before credential resolution so every
 	// failure past this point records into the scheduling state under an
 	// actor-bearing context (the sidecar's system_log line needs one).
-	runCtx, err := r.connectorContext(ctx, name, grantedBy)
+	runCtx, err := r.runContext(ctx, name, grantedBy, connectionID)
 	if err != nil {
 		return err
 	}
 	// Before the credential and the provider: a member who may no longer
 	// capture costs the provider nothing and parks under its own class.
 	runCtx = withMailboxConnection(runCtx, connectionID, generation)
-	auth, err := r.syncCredential(runCtx, credentialRef, authBytes)
+	c, auth, err := r.runCredential(runCtx, c, grantedBy, credentialRef, authBytes)
 	if err != nil {
 		if recErr := r.recordSyncFailure(runCtx, snapshot, credentialRef, err); recErr != nil {
 			return errors.Join(err, recErr)
@@ -300,12 +296,18 @@ func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) er
 	// Where a first pull starts, held so a retry reads the same point. A
 	// connector with no bounded first pull answers the zero time and takes
 	// the plain Sync below.
-	from, err := r.syncStart(ctx, connectionID, generation, c.Descriptor(), connector.Cursor(cursor), r.now())
+	from, err := r.syncStart(ctx, &snapshot, heldAnchor, c.Descriptor(), r.now())
 	if err != nil {
-		return err
+		return quietIfSuperseded(ctx, err, connectionID, name)
 	}
 	runCtx, tally := withDeliveryTally(runCtx)
-	next, syncErr := syncFrom(runCtx, syncer, auth, connector.Cursor(cursor), from, r.sink)
+	runCtx, checkpoints := r.withSyncCheckpoints(runCtx, snapshot)
+	next, syncErr := syncFrom(runCtx, syncer, auth, snapshot.prior, from, r.sink)
+	// A checkpoint moved the fence on; what follows writes behind the new one.
+	snapshot = checkpoints.snapshot
+	if errors.Is(syncErr, errSyncSuperseded) {
+		return quietIfSuperseded(ctx, syncErr, connectionID, name)
+	}
 	if syncErr != nil {
 		// A transient failure never kills the connection (ADR-0063): the
 		// state machine classifies, backs off, degrades to a daily probe at
@@ -323,7 +325,6 @@ func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) er
 		// An older snapshot cannot replace the newer cursor or health verdict.
 		slog.InfoContext(ctx, "capture: sync superseded — its cursor and health were not recorded",
 			"connection_id", connectionID, "provider", name)
-		return nil
 	}
 	return nil
 }
@@ -423,13 +424,14 @@ func seedDomainOfAddressTx(ctx context.Context, tx pgx.Tx, address string) error
 	// (TrustedOwnDomainsTx). Writing
 	// the answer down would mean a domain that stopped being ours went on
 	// suppressing mail forever.
-	if _, err := tx.Exec(ctx, `
+	seeded, err := tx.Exec(ctx, `
 		INSERT INTO workspace_email_domain (domain, source, verified)
 		VALUES ($1, 'mailbox', false)
-		ON CONFLICT (domain) DO NOTHING`, domain); err != nil {
+		ON CONFLICT (domain) DO NOTHING`, domain)
+	if err != nil {
 		return fmt.Errorf("capture: seeding workspace email domain: %w", err)
 	}
-	return nil
+	return storekit.CaptureFactsChangedBy(ctx, tx, seeded)
 }
 
 // resolveCredential turns a stored connection's credential into the opaque
@@ -472,7 +474,7 @@ func (r *Registry) connector(name string) (connector.Connector, error) {
 	defer r.mu.RUnlock()
 	c, ok := r.connectors[name]
 	if !ok {
-		return nil, fmt.Errorf("capture: connector %q is not compiled in: %w", name, apperrors.ErrNotFound)
+		return nil, fmt.Errorf("the connector %q is not part of this installation: %w", name, apperrors.ErrNotFound)
 	}
 	return c, nil
 }

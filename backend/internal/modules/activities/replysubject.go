@@ -29,5 +29,32 @@ func ReplySubject(kind crmcontracts.ActivityKind, topic, fallback string) string
 	return "Re: " + topic
 }
 
+// IsReplySubjectOf reports whether subject is topic as a reply carries it, with
+// or without Re:. The composer prefills that subject, so it is the thread's
+// history and not words the rep wrote.
+func IsReplySubjectOf(subject, topic string) bool {
+	email := crmcontracts.ActivityKindEmail
+	return strings.EqualFold(ReplySubject(email, untagged(subject), ""), ReplySubject(email, untagged(topic), ""))
+}
+
+// untagged drops every [...] group and evens the spacing. The composer sends a
+// subject with its project tags cut, so the answered subject is compared the
+// same way. A comparison needs no rule for which group is a key.
+func untagged(subject string) string {
+	var kept strings.Builder
+	depth := 0
+	for _, r := range subject {
+		switch {
+		case r == '[':
+			depth++
+		case r == ']' && depth > 0:
+			depth--
+		case depth == 0:
+			kept.WriteRune(r)
+		}
+	}
+	return strings.Join(strings.Fields(kept.String()), " ")
+}
+
 // ECMAScript also treats the byte-order mark as whitespace.
 func subjectSpace(r rune) bool { return unicode.IsSpace(r) || r == '\uFEFF' }

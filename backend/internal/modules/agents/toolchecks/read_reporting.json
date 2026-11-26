@@ -1,0 +1,6 @@
+{
+  "verb": "read_reporting",
+  "checks": [
+    "report_definition.read"
+  ]
+}

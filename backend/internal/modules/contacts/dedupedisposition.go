@@ -86,11 +86,10 @@ func (s *Store) DisposeDedupeCandidate(ctx context.Context, id ids.UUID, disposi
 		}
 	case dispositionNotDuplicate:
 		// Per arm, not before the switch. The merge arm takes its own
-		// write-authority probe through mergePair, with an asymmetry this one
-		// does not share: mergePair answers a BARE CONFLICT for a target the
-		// caller cannot change, deliberately, so the refusal names no record
-		// the caller has not already been handed. A probe out here would
-		// pre-empt that with 403 and change a refusal this fix is not about.
+		// write-authority probe through recordmerge.Pair. Pair answers a bare
+		// conflict for a target the caller cannot see. So its refusal names no
+		// record the caller has not already been handed. A probe out here would
+		// pre-empt that with a 403.
 		if err := s.writePairDecision(ctx, row, func(ctx context.Context, tx pgx.Tx) error {
 			return setDedupeDispositionTx(ctx, tx, row.ID, dispositionNotDuplicate, actor.UserID)
 		}); err != nil {
@@ -131,15 +130,15 @@ func (s *Store) disposeMerge(ctx context.Context, id ids.UUID, row DedupeCandida
 	if err := auth.Require(ctx, row.EntityType, principal.ActionUpdate); err != nil {
 		return err
 	}
-	active, err := s.activeColumns(ctx, row.EntityType)
-	if err != nil {
-		return err
-	}
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, row.EntityType)
+		if err != nil {
+			return err
+		}
 		// A company merge takes the name lock before the pair row, the order
 		// every company write keeps: a domain claim holding the name lock while
 		// it files this same pair would otherwise wait on the row this merge
@@ -239,7 +238,7 @@ func reopenDedupeCandidateTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error 
 	err := tx.QueryRow(ctx, `
 		SELECT disposition FROM dedupe_candidate WHERE id = $1 FOR UPDATE`, id).Scan(&was)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("contacts: re-opening dedupe candidate %s: %w", id, apperrors.ErrNotFound)
+		return fmt.Errorf("the duplicate candidate to re-open is gone: %w", apperrors.ErrNotFound)
 	}
 	if err != nil {
 		return fmt.Errorf("contacts: reading the disposition to lift: %w", err)
@@ -279,7 +278,7 @@ func (s *Store) UndoDedupeDisposition(ctx context.Context, id ids.UUID) (DedupeC
 	}
 	switch row.Disposition {
 	case dispositionOpen:
-		return DedupeCandidateRow{}, fmt.Errorf("contacts: candidate is already open: %w", apperrors.ErrConflict)
+		return DedupeCandidateRow{}, fmt.Errorf("the duplicate candidate is already open: %w", apperrors.ErrConflict)
 	case dispositionMerged:
 		return DedupeCandidateRow{}, ErrNotUndoable
 	}

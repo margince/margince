@@ -1,0 +1,9 @@
+{
+  "verb": "record_lead_qualifying_event",
+  "checks": [
+    "lead.update"
+  ],
+  "takes": [
+    "lead"
+  ]
+}

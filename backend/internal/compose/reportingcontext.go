@@ -38,7 +38,7 @@ func (b *reportingBindings) add(value any) string { return fmt.Sprintf("$%d", b.
 func reportingCalendar(ctx context.Context, tx pgx.Tx) (reporting.Calendar, error) {
 	var out reporting.Calendar
 	var err error
-	out.Timezone, err = identity.TimezoneOf(ctx, tx)
+	out.Timezone, err = identity.TimezoneAppliedTx(ctx, tx)
 	if err != nil {
 		return out, err
 	}
@@ -51,7 +51,7 @@ func reportingCalendar(ctx context.Context, tx pgx.Tx) (reporting.Calendar, erro
 }
 
 func errUnsupportedCloseWindow() error {
-	return fmt.Errorf("choose a supported expected-close window, all_open or fiscal_quarter: %w", apperrors.ErrInvalidArgument)
+	return fmt.Errorf("choose a supported expected-close window, all_open, fiscal_quarter or custom: %w", apperrors.ErrInvalidArgument)
 }
 
 func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, framework crmcontracts.ReportingFramework, owners reporting.MeasurableOwners, at time.Time) (crmcontracts.ReportingContext, error) {
@@ -74,7 +74,7 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 	if err != nil {
 		return out, err
 	}
-	out.ScopeHoldsDeals = &holds
+	out.ScopeHoldsDeals = holds
 	if err := reportingPipeline(ctx, tx, selection.PipelineId); err != nil {
 		return out, err
 	}
@@ -96,9 +96,15 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 	}
 	out.Horizon = &horizon
 	switch selection.CloseWindow {
-	case "all_open":
-	case "fiscal_quarter":
+	case crmcontracts.ReportingSelectionCloseWindowAllOpen:
+	case crmcontracts.ReportingSelectionCloseWindowFiscalQuarter:
 		closeWindow, err := reporting.TargetWindow(crmcontracts.ReportingWindow{StartAt: at, EndAt: at.Add(time.Nanosecond)}, "fiscal_quarter", calendar)
+		if err != nil {
+			return out, err
+		}
+		out.CloseInterval = &closeWindow
+	case crmcontracts.ReportingSelectionCloseWindowCustom:
+		closeWindow, err := reporting.CustomCloseWindow(selection.CloseInterval)
 		if err != nil {
 			return out, err
 		}
@@ -145,10 +151,15 @@ func reportingMemberStrings(frame crmcontracts.ReportingContext) []string {
 
 func newReportingService(pool *pgxpool.Pool, now func() time.Time) *reporting.Service {
 	db := InstallationDB(pool)
-	return reporting.NewService(db, metricEvaluator{forecast: newForecastStore(db), initiatives: newInitiativeStore(pool)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now).
+	return reporting.NewService(db, metricEvaluator{forecast: newForecastStore(db), initiatives: NewInitiativeStore(pool)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now).
 		WithBaseLanguage(identity.BaseLanguageForRecord).
 		WithReaderLanguage(identity.ReaderLanguageForRecord).
 		WithQuestions(reportingQuestions{floor: analyticsquery.DefaultFloor, names: newAttentionNames(db)})
+}
+
+// ReportingServiceFor is the engine the report routes run, for compose subpackage tests.
+func ReportingServiceFor(pool *pgxpool.Pool, now func() time.Time) *reporting.Service {
+	return newReportingService(pool, now)
 }
 
 // measurableMemberIDs narrows a scope's members to the owners the reader may

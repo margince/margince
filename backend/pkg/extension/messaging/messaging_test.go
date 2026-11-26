@@ -35,6 +35,30 @@ func TestTheZeroRuleSetGrantsNothing(t *testing.T) {
 // An unguarded exception is worse than no exception: it looks lawful, it
 // appears in the manifest as a declared rule, and every advertising message it
 // touches goes out having satisfied a condition set that is empty.
+// A pack that states no mode keeps requiring consent, and the mode has two
+// values the engine knows.
+func TestTheMarketingModeDefaultsToOptInAndRefusesAnUnknownValue(t *testing.T) {
+	var r Rules
+	if r.MarketingMode.OptOut() {
+		t.Error("the zero rule set allows advertising until a refusal")
+	}
+	valid := Rules{Jurisdiction: "aa", Version: 1}
+	for _, mode := range []MarketingMode{"", MarketingOptIn, MarketingOptOut} {
+		valid.MarketingMode = mode
+		if err := valid.Validate(); err != nil {
+			t.Errorf("mode %q refused: %v", mode, err)
+		}
+	}
+	valid.MarketingMode = "opt_sideways"
+	if err := valid.Validate(); err == nil {
+		t.Error("an unknown mode was accepted")
+	}
+	valid.MarketingMode, valid.ConsentOnly = MarketingOptOut, true
+	if err := valid.Validate(); err == nil {
+		t.Error("opt-out together with consent-only was accepted")
+	}
+}
+
 func TestAnExceptionMustNameAtLeastOneCondition(t *testing.T) {
 	err := MarketingException{Kind: ExistingCustomer}.Validate()
 	if err == nil {
@@ -147,5 +171,71 @@ func TestANegativeWindowIsRefused(t *testing.T) {
 func TestAMalformedJurisdictionIsRefused(t *testing.T) {
 	if err := (Rules{Jurisdiction: "DE", Version: 1}).Validate(); err == nil {
 		t.Error("an upper-case jurisdiction code was accepted")
+	}
+}
+
+// A means the engine cannot recognise in text would be an obligation no
+// stated particular could ever meet.
+func TestADisclosureMeansMustBeOneTheEngineRecognises(t *testing.T) {
+	if err := (Disclosure{Kind: ObjectionRoute, Means: []ContactMeans{"fax"}}).Validate(); err == nil {
+		t.Error("a means nothing recognises was accepted")
+	}
+	if err := (Disclosure{Kind: ObjectionRoute, Means: []ContactMeans{MeansWeb, MeansEmail, MeansPhone}}).Validate(); err != nil {
+		t.Errorf("the three recognised means were refused: %v", err)
+	}
+}
+
+func TestAClaimWordMustMatchSomethingAndNotEverything(t *testing.T) {
+	for _, c := range []struct {
+		words []string
+		ok    bool
+	}{
+		{[]string{"tốt nhất"}, true},
+		{[]string{""}, false},
+		{[]string{" nhất"}, false},
+	} {
+		r := Rules{Jurisdiction: "zz", Version: 1, ClaimsNeedProof: c.words}
+		if err := r.Validate(); (err == nil) != c.ok {
+			t.Errorf("Validate(%q) = %v, want ok=%v", c.words, err, c.ok)
+		}
+	}
+}
+
+func TestADisclosureLanguageNeedsARecipientBoundLawAndACode(t *testing.T) {
+	for _, c := range []struct {
+		rules Rules
+		ok    bool
+	}{
+		{Rules{Jurisdiction: "zz", Version: 1, DisclosureLanguage: "vi"}, false},
+		{Rules{Jurisdiction: "zz", Version: 1, DataProtectionFollowsRecipient: true, DisclosureLanguage: "VI"}, false},
+		{Rules{Jurisdiction: "zz", Version: 1, DataProtectionFollowsRecipient: true, DisclosureLanguage: "vie"}, false},
+		{Rules{Jurisdiction: "zz", Version: 1, DataProtectionFollowsRecipient: true, DisclosureLanguage: "vi"}, true},
+	} {
+		if err := c.rules.Validate(); (err == nil) != c.ok {
+			t.Errorf("Validate(%q, follows=%v) = %v, want ok=%v",
+				c.rules.DisclosureLanguage, c.rules.DataProtectionFollowsRecipient, err, c.ok)
+		}
+	}
+}
+
+// Only a class the core knows may be named for the request rule, and only
+// beside the rule itself.
+func TestTheRequestRuleNamesKnownClasses(t *testing.T) {
+	narrow := Rules{
+		Jurisdiction: "zz", Version: 1, ConsentConfirmationNeedsRequest: true,
+		ConsentRequestFirstFor: []PurposeClass{PurposeClassMarketing},
+	}
+	if err := narrow.Validate(); err != nil {
+		t.Errorf("a known class was refused: %v", err)
+	}
+	unknown := narrow
+	unknown.ConsentRequestFirstFor = []PurposeClass{"newsletter"}
+	if unknown.Validate() == nil {
+		t.Error("a class the core does not know was accepted")
+	}
+	orphan := narrow
+	orphan.ConsentConfirmationNeedsRequest = false
+	if orphan.Validate() == nil {
+		t.Error("classes named for a rule the pack does not declare were accepted")
 	}
 }

@@ -20,9 +20,11 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+	"github.com/margince/margince/backend/internal/shared/kernel/signature"
 )
 
 type Handlers struct {
@@ -62,6 +64,9 @@ type Handlers struct {
 	// tightLogos is the legacy keys this process has seen need no crop, shared
 	// across With* copies for the same reason as the map above.
 	tightLogos *tightLogoKeys
+	// signatureImages draws a retained signature preview's https images; nil
+	// leaves them as addresses the app's page will not load.
+	signatureImages signature.PreviewImages
 }
 
 // NewHandlers builds the module's HTTP surface over a workspace-bound handle.
@@ -125,7 +130,7 @@ func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 // WithFieldCatalog wires the workspace custom-field catalog into the
 // transport's store (see Store.WithFieldCatalog); compose injects
 // modules/customfields' Service here.
-func (h Handlers) WithFieldCatalog(catalog fieldcatalog.Reader) Handlers {
+func (h Handlers) WithFieldCatalog(catalog storekit.FieldCatalog) Handlers {
 	h.store = h.store.WithFieldCatalog(catalog)
 	return h
 }
@@ -163,6 +168,13 @@ func (h Handlers) WithStopCarrier(carrier StopCarrier) Handlers {
 // satellitecarry.go.
 func (h Handlers) WithSatelliteCarriers(consent ConsentSatelliteCarrier, intros IntroCarrier) Handlers {
 	h.store = h.store.WithSatelliteCarriers(consent, intros)
+	return h
+}
+
+// WithExtensions wires the extension tables the merge routes check for
+// dependents (mergedependents.go).
+func (h Handlers) WithExtensions(r extprivacy.Registry) Handlers {
+	h.store = h.store.WithExtensions(r)
 	return h
 }
 
@@ -310,17 +322,7 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		})
 		return
 	}
-	if alreadyMerged, ok := errors.AsType[*AlreadyMergedError](err); ok {
-		e := &httperr.DetailedError{
-			Status: http.StatusConflict, Code: "already_merged", Detail: alreadyMerged.Error(),
-		}
-		// The redirect pointer lives on the source row the caller just proved
-		// they can address, so echoing it discloses nothing new (the
-		// AlreadyPromoted precedent).
-		if !alreadyMerged.IntoID.IsZero() {
-			e.Details = map[string]any{auditKeyMergedInto: alreadyMerged.IntoID.String()}
-		}
-		httperr.Write(w, r, e)
+	if recordmerge.WriteAlreadyMerged(w, r, err) {
 		return
 	}
 	httperr.Write(w, r, err)

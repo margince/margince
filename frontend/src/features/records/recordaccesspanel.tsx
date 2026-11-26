@@ -13,7 +13,11 @@
 // outside member administration is shown every colleague judged without their
 // teams, and a count of the colleagues a team adds.
 
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  useInfiniteQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { type ReactNode, useEffect } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -27,7 +31,7 @@ import {
 } from "../../design-system/panel";
 import { LoadMoreButton, QueryGate } from "../../design-system/querystates";
 import { RoleBadge } from "../../design-system/rbac";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor, UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
@@ -51,6 +55,36 @@ export function recordAccessKey(kind: AccessKind, id: string) {
 
 // One page as wide as the contract allows; a larger company loads more.
 const PAGE = 200;
+
+function recordAccessQuery(kind: AccessKind, id: string) {
+  return infiniteQueryOptions({
+    queryKey: recordAccessKey(kind, id),
+    initialPageParam: FIRST_PAGE,
+    queryFn: ({ pageParam }) => fetchAccess(kind, id, pageParam),
+    getNextPageParam: (last) => last.page.next_cursor ?? null,
+  });
+}
+
+/**
+ * The record's owner, as the access answer names it. It is undefined until
+ * that answer is in, after a failed read too, and null where it names none or
+ * is not asked. It observes the panel's read, whose Retry also answers this.
+ */
+export function useRecordOwnerId(
+  kind: string,
+  id: string,
+  enabled: boolean,
+): string | null | undefined {
+  const accessKind = isAccessKind(kind) ? kind : undefined;
+  const asked = enabled && accessKind !== undefined;
+  const query = useInfiniteQuery({
+    ...recordAccessQuery(accessKind ?? "contact", id),
+    enabled: asked,
+  });
+  if (!asked) return null;
+  const answer = query.data?.pages[0];
+  return answer ? (answer.owner_id ?? null) : undefined;
+}
 
 async function fetchAccess(
   kind: AccessKind,
@@ -134,7 +168,7 @@ function MemberRow({
         </span>
       </div>
       {member.roles?.map((role) => (
-        <RoleBadge key={role} roleKey={role} />
+        <RoleBadge key={role} roleKey={role} name={member.role_names?.[role]} />
       ))}
       {member.can_change && (
         <Badge tone="accent">{t("whoCanSee.canChange")}</Badge>
@@ -170,6 +204,17 @@ function YouLine({
 
 // The first page carries the counts and the reader's own line; every loaded
 // page adds its rows.
+// The answer has one row per member, but its pages are read at different times,
+// so a member can land on two of them. The later page is the newer reading, so
+// its row wins, in the place the member first appeared.
+function oncePerMember(rows: readonly Member[]): Member[] {
+  const byMember = new Map<string, Member>();
+  for (const row of rows) {
+    byMember.set(row.user_id, row);
+  }
+  return [...byMember.values()];
+}
+
 function AccessBody({
   pages,
   kind,
@@ -187,7 +232,7 @@ function AccessBody({
   const count = (n: number) => ({ count: formatNumber(n, locale) });
   const [answer] = pages;
   if (answer === undefined) return null;
-  const rows = pages.flatMap((page) => page.data);
+  const rows = oncePerMember(pages.flatMap((page) => page.data));
   const byGroup = (group: Group) => rows.filter((m) => m.group === group);
   const everyone = byGroup("everyone");
   return (
@@ -274,12 +319,7 @@ export function WhoCanSeePanel({
   const { locale } = useLocale();
   const zone = useViewerZone();
   const queryClient = useQueryClient();
-  const query = useInfiniteQuery({
-    queryKey: recordAccessKey(kind, recordId),
-    initialPageParam: FIRST_PAGE,
-    queryFn: ({ pageParam }) => fetchAccess(kind, recordId, pageParam),
-    getNextPageParam: (last) => last.page.next_cursor ?? null,
-  });
+  const query = useInfiniteQuery(recordAccessQuery(kind, recordId));
   // Armed again after every read and counted from it, so a read that came back
   // before the lapse (the same refresh_at) still schedules the next one.
   const refreshAt = query.data?.pages[0]?.refresh_at;
@@ -301,7 +341,7 @@ export function WhoCanSeePanel({
 
   const words: ReasonWords = {
     t,
-    date: (iso) => formatDate(iso, locale, zone),
+    date: (iso) => formatDateAbbrev(iso, locale, zone),
   };
   return (
     <Panel title={t("whoCanSee.title")}>

@@ -46,7 +46,7 @@ func (s *Service) MembersOfTeam(ctx context.Context, team ids.UUID) ([]TeamMembe
 		limitParam := fmt.Sprintf("$%d", len(args))
 		rows, err := tx.Query(ctx, `SELECT u.id, u.display_name, u.email, u.status = 'invited'
    FROM team_membership m JOIN team t ON t.id = m.team_id AND t.archived_at IS NULL
-   JOIN app_user u ON u.id = m.user_id AND NOT u.is_agent AND `+ActivatableMemberSQL("u")+`
+   JOIN app_user u ON u.id = m.user_id AND `+TeamSeatSQL("u")+`
    WHERE m.team_id = `+teamParam+` ORDER BY u.display_name, u.id LIMIT `+limitParam, args...)
 		if err != nil {
 			return err

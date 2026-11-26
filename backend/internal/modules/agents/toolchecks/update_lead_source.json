@@ -1,0 +1,10 @@
+{
+  "verb": "update_lead_source",
+  "checks": [
+    "custom_field.update",
+    "lead.read"
+  ],
+  "takes": [
+    "lead_source"
+  ]
+}

@@ -3,8 +3,12 @@ import { describe, expect, it } from "vitest";
 import { reloadReaderLanguageReads } from "./languagereads";
 
 const READS: readonly (readonly unknown[])[] = [
-  ["contact360", "c-1"],
+  ["analytics-account-coverage", "team", "t-1", "accounts"],
+  ["analytics-schema"],
+  ["company-graph", "co-1"],
   ["company360", "co-1"],
+  ["contact-graph", "c-1"],
+  ["contact360", "c-1"],
   ["reporting-catalog"],
   ["reporting-evaluation", { period: "this_month" }],
   ["reporting-live", "r-1", "published"],

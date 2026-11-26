@@ -4,11 +4,16 @@
 package programsettings
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // The margince.yaml switches a program reads at boot. They carry no flag: a
@@ -21,6 +26,10 @@ var (
 	CapturePayloads = config.Define(config.Spec[bool]{
 		Key: "ai.capture_payloads", Env: "MARGINCE_AI_CAPTURE_PAYLOADS", Type: config.Bool, Default: config.Some(false), Roles: both,
 		Doc: "Keep each AI call's request and answer in ai_call_payload, aged by its retention policy; set it on the api and the worker together.",
+	})
+	MCPCallLog = config.Define(config.Spec[string]{
+		Key: "mcp.call_log", Env: "MARGINCE_MCP_CALL_LOG", Type: config.String, Roles: apiOnly,
+		Doc: "Dev and debugging only, refused in production: a file the api adds one JSON line to for each /mcp call, with caller, tool, arguments, outcome and answer, secrets stripped. It holds personal data, and nothing caps or ages it; unset writes none.",
 	})
 	MCPConnector = config.Define(config.Spec[bool]{
 		Key: "mcp.connector_enabled", Env: "MARGINCE_MCP_CONNECTOR_ENABLED", Type: config.Bool, Default: config.Some(false), Roles: apiOnly,
@@ -37,9 +46,27 @@ var (
 		Key: "mcp.client_registration.metadata_document", Env: "MARGINCE_MCP_CLIENT_REGISTRATION_METADATA_DOCUMENT", Type: config.Bool, Default: config.Some(true), Roles: apiOnly,
 		Doc: "Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings > AI tool access says.",
 	})
+	// The bounds on clients that made themselves, by registration or a metadata
+	// document, and that no consent has used. They set how many may exist and
+	// how long one is kept.
+	MCPUnusedClientLimit = config.Define(config.Spec[int]{
+		Key: "mcp.client_registration.unused_limit", Env: "MARGINCE_MCP_CLIENT_REGISTRATION_UNUSED_LIMIT", Type: config.Int,
+		Default: config.Some(identity.DefaultUnusedDynamicClientCap), Validate: atLeastOne, Roles: apiOnly,
+		Doc: "Most clients that AI tools made themselves (at /oauth/register or by a metadata document) and that no sign-in has used yet; a new one past it removes the oldest such client.",
+	})
+	MCPUnusedClientRetention = config.Define(config.Spec[time.Duration]{
+		Key: "mcp.client_registration.unused_retention", Env: "MARGINCE_MCP_CLIENT_REGISTRATION_UNUSED_RETENTION", Type: config.Duration,
+		Default: config.Some(identity.DefaultUnusedDynamicClientRetention), Validate: positiveWindow, Roles: workerOnly,
+		Doc: "How long a client an AI tool made itself, and that no sign-in has used, is kept before the hourly sweep deletes it.",
+	})
 	AnalyticsPerformance = config.Define(config.Spec[bool]{
 		Key: "analytics.performance_enabled", Env: "MARGINCE_ANALYTICS_PERFORMANCE_ENABLED", Type: config.Bool, Default: config.Some(false), Roles: both,
 		Doc: "Ignored; kept so existing files load.",
+	})
+	CoreFeaturesDisabled = config.Define(config.Spec[[]string]{
+		Key: "features.disabled", Type: config.List(config.String), Default: config.Some([]string{}), Roles: both,
+		Validate: corefeatures.ValidateDisabled,
+		Doc:      "Main-menu features to turn off; their pages and API and agent calls are not available, and their data is kept.",
 	})
 	ListsEnabled = config.Define(config.Spec[bool]{
 		Key: "lists.enabled", Env: "MARGINCE_LISTS_ENABLED", Type: config.Bool, Default: config.Some(true), Roles: both,
@@ -87,7 +114,27 @@ func distinctCurrencies(codes []string) error {
 	return nil
 }
 
+// CallLogFault refuses mcp.call_log in production. Its file holds personal data
+// that no retention policy or erasure reaches, and nothing caps its size.
+func CallLogFault(c *config.Config, posture runtimeenv.Environment) error {
+	path, origin := config.ValWithSource(c, MCPCallLog)
+	if path == "" || posture != runtimeenv.Production {
+		return nil
+	}
+	return fmt.Errorf("mcp.call_log from %s is for dev and debugging only, and %s is production: unset it",
+		origin, runtimeenv.EnvVar)
+}
+
 // FileSettings lists the margince.yaml switches above.
 func FileSettings() []config.Any {
-	return []config.Any{PasswordLogin, CapturePayloads, MCPConnector, MCPDynamicRegistration, MCPMetadataDocument, AnalyticsPerformance, ListsEnabled, AllowDataReset, AllowTestMailbox, RatesFxSource, RatesFxCurrencies}
+	return []config.Any{PasswordLogin, CapturePayloads, MCPCallLog, MCPConnector, MCPDynamicRegistration, MCPMetadataDocument, MCPUnusedClientLimit, MCPUnusedClientRetention, AnalyticsPerformance, CoreFeaturesDisabled, ListsEnabled, AllowDataReset, AllowTestMailbox, RatesFxSource, RatesFxCurrencies}
+}
+
+// atLeastOne refuses a limit that would refuse every registration: an install
+// that wants none turns mcp.client_registration.dynamic off instead.
+func atLeastOne(value int) error {
+	if value < 1 {
+		return errors.New("must be at least 1")
+	}
+	return nil
 }

@@ -24,13 +24,13 @@ var announcedBy = map[string]struct{ family, why string }{
 		"messages arrive, and those are activity events"},
 	"activity_link":        {"activity", "linking an activity is announced as activity.updated"},
 	"activity_participant": {"activity", "a participant's answer is written with its activity"},
-	"activity_waiting_horizon": {"", "a measured number of days that bounds how old a wait may be; it moves " +
-		"for every deal at once and the next run reads it"},
+	"installation_state": {"", "the waiting horizon, a measured number of days that bounds how old a wait may be; " +
+		"it moves for every deal at once and the next run reads it"},
 	"capture_thread_verdict": {"", "a held thread hides a signal's evidence, and every read of the findings " +
 		"checks the cited message's visibility again"},
-	"capture_import": {"", "which mail connections delivered a deal's mail; a first import comes with its " +
-		"activity.captured, a later mailbox delivering the same message emits no event, and the viability " +
-		"fingerprint carries the set so a receipt read before it changed is stale"},
+	"capture_import": {"", "which mail connections delivered a deal's mail; a first import comes with its activity.captured, " +
+		"a later mailbox delivering the same message emits no event, and the viability fingerprint carries the set so a receipt read before it changed is stale"},
+	"comms_outbound": {"comms", "a returned send is comms.delivery_bounced; a parked or pending send was written with its activity's own event, read on the next run"},
 	"contact_email": {"", "the address a contact writes from; adding one moves no deal until mail " +
 		"from it arrives, which is an activity event"},
 	"import_run": {"", "tells an imported task edit from a human one; a finished import run does not change"},

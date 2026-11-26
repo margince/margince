@@ -11,7 +11,10 @@ import { pagerSlots } from "./listtable.paging";
 import { columns, render, testRows } from "./listtable.testkit";
 import { pickOption } from "./select-testing";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 // A header whose verbs fold into one menu must behave like the row of verbs it
 // replaced. By default the menu defers its children to the first open. That is
@@ -21,7 +24,7 @@ afterEach(cleanup);
 // opened nothing, and pressing the menu then opened a form nobody asked for.
 function MountReporter({ onMount }: Readonly<{ onMount: () => void }>) {
   // A verb that does its work at MOUNT, which is the shape `CreateAction`'s
-  // `startOpen` has: read once in `useState`, so a late mount reads it late.
+  // `listCreate.open` has: read once in `useState`, so a late mount reads it late.
   useEffect(() => {
     onMount();
   }, [onMount]);
@@ -103,6 +106,33 @@ describe("the page's name in the header", () => {
   });
 });
 
+// The reason for a refused verb sits under the head, so the head keeps one row
+// and the verb names the reason as its description.
+describe("a refused head action", () => {
+  it("says why under the head, and the refused verb is described by it", () => {
+    const { container } = render(
+      <ListTable
+        title="Companies"
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        refusal={{ id: "why-refused", text: "Your seat is read-only." }}
+        action={
+          <button type="button" disabled aria-describedby="why-refused">
+            New company
+          </button>
+        }
+      />,
+    );
+    const why = screen.getByText("Your seat is read-only.");
+    expect(container.querySelector(".lt-head")?.contains(why)).toBe(false);
+    expect(
+      screen.getByRole("button", { name: "New company" }),
+    ).toHaveAccessibleDescription("Your seat is read-only.");
+  });
+});
+
 describe("a folded header's verbs are live", () => {
   function stubNarrowViewport() {
     vi.stubGlobal("matchMedia", (query: string) => ({
@@ -134,7 +164,6 @@ describe("a folded header's verbs are live", () => {
     // button being visible, because the fold sets `hidden` on it. Visibility is
     // the wrong question and would pass on a dead control.
     expect(mounted).toHaveBeenCalledTimes(1);
-    vi.unstubAllGlobals();
   });
 });
 
@@ -549,62 +578,49 @@ describe("empty state", () => {
     ).toBeTruthy();
   });
 
+  const ownerChips: readonly ListChip[] = [
+    {
+      key: "owner_id",
+      label: "Owner",
+      allLabel: "Any owner",
+      options: [{ value: "u-9", label: "Me" }],
+    },
+  ];
+
   it("names it under the no-matches copy too, since a narrowing can be the cause", () => {
-    // The case the prop was written for is a narrowed one: a "Mine" view for a
-    // reader who owns nothing. Drawn only over the unnarrowed line, that note
-    // never appeared at all. The caller knows which emptiness a note explains.
-    // A caller whose note would blame the data source for the reader's own dial
-    // passes none.
     render(
       <ListTable
         rows={[]}
         columns={columns}
         rowKey={(row) => row.id}
         unit="rows"
-        emptyNote="You own no rows."
-        chips={[
-          {
-            key: "owner_id",
-            label: "Owner",
-            allLabel: "Any owner",
-            options: [{ value: "u-9", label: "Me" }],
-          },
-        ]}
+        emptyNote="Your role cannot narrow this list by Owner."
+        chips={ownerChips}
         chosen={{ owner_id: "u-9" }}
       />,
     );
     expect(screen.getByText("No rows match these filters.")).toBeTruthy();
-    expect(screen.getByText("You own no rows.")).toBeTruthy();
-    // Two different offers: one undoes every narrowing, the screen's own note
-    // usually undoes one.
+    expect(
+      screen.getByText("Your role cannot narrow this list by Owner."),
+    ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Clear filters" })).toBeTruthy();
   });
-});
 
-describe("phone card layout hooks", () => {
-  it("labels every non-identity cell with its column header, and leaves the identity cell and table roles intact", () => {
+  it("puts a caller's empty line in place of the no-matches copy and its Clear", () => {
     render(
       <ListTable
-        rows={testRows(1)}
+        rows={[]}
         columns={columns}
         rowKey={(row) => row.id}
         unit="rows"
+        emptyLine="You own no rows."
+        chips={ownerChips}
+        chosen={{ owner_id: "u-9" }}
       />,
     );
-
-    expect(screen.getByRole("table")).toBeTruthy();
-    const [headerRow, dataRow] = screen.getAllByRole("row");
-    expect(within(headerRow).getAllByRole("columnheader")).toHaveLength(
-      columns.length,
-    );
-
-    const cells = within(dataRow).getAllByRole("cell");
-    expect(cells).toHaveLength(columns.length);
-    const [identity, value, note, region] = cells;
-    expect(identity.hasAttribute("data-label")).toBe(false);
-    expect(value.getAttribute("data-label")).toBe("Value");
-    expect(note.getAttribute("data-label")).toBe("Note");
-    expect(region.getAttribute("data-label")).toBe("Region");
+    expect(screen.getByText("You own no rows.")).toBeTruthy();
+    expect(screen.queryByText(/match these filters/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
   });
 });
 

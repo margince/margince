@@ -1,0 +1,9 @@
+{
+  "verb": "who_knows",
+  "checks": [
+    "contact.read"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

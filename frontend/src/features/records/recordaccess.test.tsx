@@ -57,6 +57,7 @@ const mayWrite: Seat = {
 };
 
 const NAMES = { data: [{ id: "u-owner", display_name: "Mira Voss" }] };
+const CANDIDATES = { data: [{ id: "u-rep-two", display_name: "Rep Two" }] };
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -102,6 +103,8 @@ function stub(
       sent.push(key);
       if (key === "GET /me") return me(seat);
       if (key === "GET /users/names") return json(options.names ?? NAMES);
+      if (key === "GET /records/contact/p-1/ownership-offer/candidates")
+        return json(CANDIDATES);
       if (options.gone && method === "GET")
         return json({ status: 404, title: "Not found" }, 404);
       if (options.probeFails && key === "GET /contacts/p-1")
@@ -194,9 +197,9 @@ describe("RecordAccess — the chip", () => {
     stub();
     drawContact({ ...base, visibility: "workspace", writable: true });
     const control = await chip();
-    // "Shared" and not "Team": the column has no team value, and the answer
-    // behind this chip says everyone in the company can see the record.
-    expect(control.textContent).toContain("Shared");
+    // The chip says what the panel's choice says, so the two cannot be read
+    // as different settings.
+    expect(control.textContent).toContain(en["recordAccess.option.workspace"]);
     expect(control.getAttribute("aria-expanded")).toBe("false");
     expect(screen.queryByRole("radio")).toBeNull();
     expect(screen.queryByText(en["recordAccess.manage"])).toBeNull();
@@ -211,7 +214,7 @@ describe("RecordAccess — the chip", () => {
       owner_id: "u-owner",
     });
     const control = await chip();
-    expect(control.textContent).toContain(en["visibility.private"]);
+    expect(control.textContent).toContain(en["recordAccess.option.owner"]);
     expect(control.textContent).not.toMatch(/only you/i);
   });
 
@@ -246,6 +249,38 @@ describe("RecordAccess — the chip", () => {
     stub();
     drawContact({ ...base, writable: true });
     expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+describe("RecordAccess — handing the record over", () => {
+  it("keeps the panel and the colleague a mouse picks in the hand-over list", async () => {
+    const user = userEvent.setup();
+    stub();
+    drawContact({
+      ...base,
+      visibility: "owner",
+      writable: true,
+      owner_id: "u1",
+    });
+    const panel = await open(user);
+    await user.click(
+      await within(panel).findByRole("button", { name: en["handover.offer"] }),
+    );
+    await user.click(
+      within(panel).getByRole("combobox", { name: en["handover.offerTo"] }),
+    );
+
+    await user.click(await screen.findByRole("option", { name: "Rep Two" }));
+
+    expect(
+      within(panel).getByRole("combobox", { name: en["handover.offerTo"] })
+        .textContent,
+    ).toContain("Rep Two");
+    expect(
+      within(panel)
+        .getByRole("button", { name: en["handover.offerSend"] })
+        .hasAttribute("disabled"),
+    ).toBe(false);
   });
 });
 
@@ -426,7 +461,9 @@ describe("RecordAccess — the switch", () => {
     const panel = await open(user);
     await choose(user, panel, "workspace");
     expect(await within(panel).findByRole("alert")).toBeTruthy();
-    expect((await chip()).textContent).toContain(en["visibility.private"]);
+    expect((await chip()).textContent).toContain(
+      en["recordAccess.option.owner"],
+    );
     // The unsaved answer stays, so Save can try it again.
     expect(radio(panel, "workspace")).toHaveProperty("checked", true);
     expect(saveButton(panel).hasAttribute("disabled")).toBe(false);
@@ -641,6 +678,37 @@ describe("RecordAccess — what the owner's answer costs", () => {
     expect(client.getQueryData(["contact360", "p-1"])).toBeUndefined();
   });
 
+  it("leaves a reader who moved on during the write where they are", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/contacts/p-1";
+    let release: () => void = () => undefined;
+    stub({
+      gone: true,
+      hold: new Promise((resolve) => {
+        release = resolve;
+      }),
+    });
+    const client = new QueryClient();
+    client.setQueryData(["contact360", "p-1"], { contact: base });
+    drawContact(
+      {
+        ...base,
+        visibility: "workspace",
+        writable: true,
+        owner_id: "u-owner",
+      },
+      client,
+    );
+    const panel = await open(user);
+    await choose(user, panel, "owner");
+    history.replaceState(null, "", "#/deals/d-1");
+    release();
+    expect(
+      await screen.findByText(en["recordAccess.contact.leftYourAccess"]),
+    ).toBeTruthy();
+    expect(window.location.hash).toBe("#/deals/d-1");
+  });
+
   it("calls a write that landed a success when the check after it fails", async () => {
     const user = userEvent.setup();
     window.location.hash = "#/contacts/p-1";
@@ -694,13 +762,13 @@ describe("RecordAccess — a reader who may not change it", () => {
         seat_type: "full",
         objects: { contact: { read: true, update: false } },
       },
-      en["contact.notYoursToChange"],
+      en["record.roleReadsOnly"],
     ],
     [
       "a read seat",
       { writable: true, owner_id: "u1" },
       { ...mayWrite, seat_type: "read" },
-      en["contact.notYoursToChange"],
+      en["record.roleReadsOnly"],
     ],
     [
       "an archived contact",
@@ -709,16 +777,18 @@ describe("RecordAccess — a reader who may not change it", () => {
       en["contact.rail.archivedReadOnly"],
     ],
   ])(
-    "says why instead of offering the switch: %s",
+    "offers no switch, and leaves why to the View only pill: %s",
     async (_, row, seat, why) => {
       const user = userEvent.setup();
       stub({ seat });
       drawContact({ ...base, visibility: "workspace", ...row });
       const panel = await open(user);
-      // The page's own sentence for its other writes, so the header cannot give
-      // a reason the page beside it does not.
-      expect(await within(panel).findByText(why)).toBeTruthy();
+      await within(panel).findByRole("button", {
+        name: en["recordAccess.manage"],
+      });
       expect(within(panel).queryByRole("radio")).toBeNull();
+      // The head's View only pill states the refusal, once for the page.
+      expect(within(panel).queryByText(why)).toBeNull();
       // The way to the full answer stays; only the switch goes.
       expect(
         within(panel).getByRole("button", { name: en["recordAccess.manage"] }),
@@ -790,7 +860,7 @@ describe("RecordAccess — a company", () => {
     ).toBeNull();
   });
 
-  it("gives the company page's own refusal on a company not theirs", async () => {
+  it("offers no switch on a company not theirs, and no second refusal", async () => {
     const user = userEvent.setup();
     stub();
     drawCompany({
@@ -801,9 +871,12 @@ describe("RecordAccess — a company", () => {
     });
     const panel = await open(user, "company");
     expect(
-      await within(panel).findByText(en["record.notYoursToChange"]),
+      await within(panel).findByRole("button", {
+        name: en["recordAccess.manage"],
+      }),
     ).toBeTruthy();
     expect(within(panel).queryByRole("radio")).toBeNull();
+    expect(within(panel).queryByText(en["record.notYoursToChange"])).toBeNull();
   });
 
   it("draws nothing at all when the server sent no visibility", () => {
@@ -851,12 +924,14 @@ describe("RecordAccess — a company", () => {
     const panel = await open(user, "company");
     await choose(user, panel, "workspace");
     await waitFor(async () =>
-      expect((await chip("company")).textContent).toContain("Shared"),
+      expect((await chip("company")).textContent).toContain(
+        en["recordAccess.option.workspace"],
+      ),
     );
     await choose(user, panel, "owner");
     await waitFor(async () =>
       expect((await chip("company")).textContent).toContain(
-        en["visibility.private"],
+        en["recordAccess.option.owner"],
       ),
     );
     expect(writes).toEqual([

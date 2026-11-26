@@ -15,9 +15,9 @@ import { primaryPhone } from "../../format/contacturi";
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
+import { dealRoleLabel } from "../../lib/recordlabels";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
-import { buyingRoleLabel } from "../companies/companycontacts/summary";
 
 type Contact = components["schemas"]["Contact"];
 
@@ -28,6 +28,7 @@ export function ContactFacts({
   buyingRole,
 }: Readonly<{ contact: Contact; buyingRole?: string | null }>): ReactNode {
   const t = useT();
+  const role = dealRoleLabel(buyingRole ?? "", t);
   const { locale } = useLocale();
   const zone = useViewerZone();
   const ownerName = useMemberName(contact.owner_id);
@@ -89,11 +90,7 @@ export function ContactFacts({
           t("contact.page.ownerUnassigned"),
         )}
       </Fact>
-      {buyingRole && (
-        <Fact label={t("contact.page.buyingRole")}>
-          {buyingRoleLabel(buyingRole, t)}
-        </Fact>
-      )}
+      {role && <Fact label={t("contact.page.buyingRole")}>{role}</Fact>}
       <Fact label={t("list.created")}>
         {formatDateAbbrev(contact.created_at, locale, zone)}
       </Fact>
@@ -106,8 +103,8 @@ export function ContactFacts({
 
 /**
  * Who wrote the contact, as a provenance pill. The pill names the kind of
- * source. The popover behind it answers which one, which for a mailbox capture
- * is a message id no reader should have to scan past.
+ * source. The popover behind it names the channel and, for a capture, the
+ * connector it was read from.
  */
 export function ContactSource({ contact }: Readonly<{ contact: Contact }>) {
   const t = useT();
@@ -130,6 +127,9 @@ export function ContactSource({ contact }: Readonly<{ contact: Contact }>) {
       }
     >
       <p className="t-body">{contact.source || t("trust.sourceUnknown")}</p>
+      {contact.source_system && contact.imported_from == null ? (
+        <p className="t-body">{contact.source_system}</p>
+      ) : null}
       {/* Said, not linked: `activity` has no 360 route by design, so there is
           no page to send a reader to. Saying a record was read says more than
           the source stamp alone, which names the door and not the evidence. */}

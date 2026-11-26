@@ -153,7 +153,7 @@ func TestAPendingMeetIsReadUntilSettledWithinABoundAndNeverFailsTheDelivery(t *t
 
 func TestARecoveredGoogleReceiptCarriesItsMeetLink(t *testing.T) {
 	in := videoAppointment(true, "")
-	calendar := &videoCalendar{read: scheduledEvent{ID: "0123456789abcdef0123456789abcdef", Status: "confirmed", VideoURL: meetLink, Start: eventTime{in.Start}, End: eventTime{in.End}}}
+	calendar := &videoCalendar{read: scheduledEvent{ID: "0123456789abcdef0123456789abcdef", Status: "confirmed", VideoURL: meetLink, Start: eventTime{At: in.Start}, End: eventTime{At: in.End}}}
 	receipt, err := calendar.serve(t).Lookup(context.Background(), "token", in)
 	if err != nil || receipt == nil || receipt.VideoURL != meetLink {
 		t.Fatalf("receipt = %+v, err = %v", receipt, err)

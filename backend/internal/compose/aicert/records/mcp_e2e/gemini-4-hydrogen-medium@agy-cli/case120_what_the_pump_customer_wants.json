@@ -1,0 +1,118 @@
+{
+  "scenario": "case120_what_the_pump_customer_wants",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "8b19d429855ee029",
+    "tools": "a5b3c4827df3eb5b",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T07:54:09Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T07:54:09Z"
+  },
+  "usage": {
+    "input_tokens": 126421,
+    "output_tokens": 17724,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 113769,
+    "runs_measured": 3,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": false,
+      "tools": [
+        "at_risk_relationships",
+        "catch_me_up_on",
+        "find_records",
+        "list_approvals",
+        "list_records",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "review_commitments",
+        "search_records",
+        "whats_slipping_this_week",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "at_risk_relationships",
+        "catch_me_up_on",
+        "find_records",
+        "list_approvals",
+        "list_records",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "review_commitments",
+        "search_records",
+        "whats_slipping_this_week",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "at_risk_relationships",
+        "catch_me_up_on",
+        "find_records",
+        "list_approvals",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "review_commitments",
+        "search_records",
+        "whats_slipping_this_week",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 3,
+    "calls": {
+      "median": 13,
+      "min": 13,
+      "max": 16
+    },
+    "turns": {
+      "median": 6,
+      "min": 5,
+      "max": 6
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 77635,
+      "min": 73208,
+      "max": 89347
+    },
+    "output_tokens": {
+      "median": 6017,
+      "min": 5305,
+      "max": 6402
+    }
+  }
+}

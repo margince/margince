@@ -21,6 +21,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // The job names used more than once below.
@@ -70,6 +71,9 @@ var bookkeepingFields = map[string]bool{
 // describe answers what an admitted audit row means to a reader, and whether it
 // means anything at all.
 func describe(e entry) (description, bool) {
+	if e.ParentType != nil {
+		return describePlaced(e)
+	}
 	if e.Action != actionUpdate {
 		meaning, ok := meaningOf(e.Action)
 		if !ok {
@@ -78,6 +82,11 @@ func describe(e entry) (description, bool) {
 		key, ok := meaning.sentenceFor(e.EntityType)
 		if !ok {
 			return description{}, false
+		}
+		if e.ActivityKind != nil {
+			if byKind, named := activityKindSentences[e.Action][*e.ActivityKind]; named {
+				key = byKind
+			}
 		}
 		return description{summary: crmcontracts.MagicSentence{Key: key}}, true
 	}
@@ -186,6 +195,10 @@ func reasonFromEvidence(evidence, after map[string]any) *crmcontracts.MagicSente
 		return &crmcontracts.MagicSentence{Key: whySiteUnnamed}
 	case "capture_enrich":
 		return &crmcontracts.MagicSentence{Key: "magic.why.signature"}
+	}
+	if why, ok := evidence[storekit.EvidenceKeyStatedReason].(string); ok && strings.TrimSpace(why) != "" {
+		values := map[string]string{"why": strings.TrimSpace(why)}
+		return &crmcontracts.MagicSentence{Key: "magic.why.stated", Values: &values}
 	}
 	return nil
 }

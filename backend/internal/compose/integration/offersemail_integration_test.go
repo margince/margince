@@ -144,6 +144,15 @@ func TestOffersEmailAndTheFilledToAreOneAnswer(t *testing.T) {
 			t.Error("the contact page says the row offers no email")
 		}
 	})
+	t.Run("an answer the product filed for a request", func(t *testing.T) {
+		fritz := s.contactAt(t, "Fritz Lang", "fritz@buyer.test")
+		request, row := s.writtenAbout(t, "note", fritz), s.writtenAbout(t, "task", fritz)
+		s.WsExec(t, `UPDATE activity SET origin = 'system_remediation', source_system = 'email_request', source_id = id::text,
+			source_activity_id = $2 WHERE id = $1`, row, request)
+		if offers, to := s.offeredOnEveryRead(t, row); !offers || to != "fritz@buyer.test" {
+			t.Errorf("offers_email = %v, To = %q; want true and fritz@buyer.test", offers, to)
+		}
+	})
 	refused := []struct {
 		name string
 		row  func(t *testing.T) ids.UUID
@@ -163,7 +172,17 @@ func TestOffersEmailAndTheFilledToAreOneAnswer(t *testing.T) {
 		{"an address at our own domain", func(t *testing.T) ids.UUID {
 			return s.writtenAbout(t, "call", s.contactAt(t, "Ines Berg", "ines@"+ownDomain))
 		}},
-		{"a task the product filed", func(t *testing.T) ids.UUID {
+		{"an internal task the product filed", func(t *testing.T) ids.UUID {
+			row := s.writtenAbout(t, "task", s.contactAt(t, "Emil Roth", "emil@buyer.test"))
+			s.WsExec(t, `UPDATE activity SET origin = 'system_remediation', source_system = 'assurance', source_id = id::text WHERE id = $1`, row)
+			return row
+		}},
+		{"a lead's qualification for its owner to review", func(t *testing.T) ids.UUID {
+			row := s.writtenAbout(t, "task", s.contactAt(t, "Jonas Weber", "jonas@buyer.test"))
+			s.WsExec(t, `UPDATE activity SET origin = 'system_remediation', source_system = 'lead_replied', source_id = id::text WHERE id = $1`, row)
+			return row
+		}},
+		{"a notice the product filed", func(t *testing.T) ids.UUID {
 			row := s.writtenAbout(t, "task", s.contactAt(t, "Dana Vogt", "dana@buyer.test"))
 			s.WsExec(t, `UPDATE activity SET origin = 'system_notice' WHERE id = $1`, row)
 			return row

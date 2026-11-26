@@ -16,6 +16,7 @@ import (
 
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -102,10 +103,10 @@ func TestARefusedTestRunReturnsToDraftWithItsReason(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the run: %v", err)
 	}
-	want, _ := httperr.Classify(importProblem(blobstore.ErrNotFound))
-	if run.Status != migration.StatusPending || run.Error != want.Detail || run.Progress != nil {
-		t.Fatalf("run = %s with %q and progress %+v, want pending with the refusal's reason %q",
-			run.Status, run.Error, run.Progress, want.Detail)
+	want, _ := httperr.Classify(importwire.Problem(blobstore.ErrNotFound))
+	if run.Status != migration.StatusPending || run.Error != want.Detail || run.Progress != nil || run.ErrorRefusal != nil {
+		t.Fatalf("run = %s with %q, refusal %+v and progress %+v, want pending with the refusal's reason %q and no code",
+			run.Status, run.Error, run.ErrorRefusal, run.Progress, want.Detail)
 	}
 }
 
@@ -131,6 +132,9 @@ func TestUploadCreatesADraftAndRefusesOversizeWithoutARun(t *testing.T) {
 	if !errors.As(err, &refusal) || len(refusal.Fields) != 1 || refusal.Fields[0].Code != "too_many_rows" ||
 		!strings.Contains(refusal.Detail, fmt.Sprint(importRowCap+1)) {
 		t.Fatalf("err = %v, want the row-cap refusal naming the file's row count", err)
+	}
+	if refused := refusal.Fields[0]; refused.Max != importRowCap || refused.Params["rows"] != fmt.Sprint(importRowCap+1) {
+		t.Fatalf("refusal = %+v, want the cap as max and the file's row count as params.rows", refused)
 	}
 	if listed, _, err := migration.NewRunStore(e.DB()).ListStaged(importAdmin(e), "", 10, migration.ViewAll); err != nil || len(listed) != 1 {
 		t.Fatalf("runs = %+v (%v), want only the first upload's draft", listed, err)

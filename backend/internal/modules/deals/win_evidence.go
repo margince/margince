@@ -62,7 +62,7 @@ func (e *WinEvidenceMissingError) Error() string {
 // refusal reaches a client as an opaque 500 — a rule the product enforces and
 // cannot explain, which teaches a caller to retry rather than to answer.
 func (e *WinEvidenceMissingError) FieldFault() (field, code, message string) {
-	return "won_without_contract_reason", "win_evidence_required", e.Error()
+	return wonWithoutContractReasonField, "win_evidence_required", e.Error()
 }
 
 // InvalidWonReasonError reports a reason outside the closed vocabulary.
@@ -73,7 +73,7 @@ func (e *InvalidWonReasonError) Error() string {
 }
 
 func (e *InvalidWonReasonError) FieldFault() (field, code, message string) {
-	return "won_without_contract_reason", "invalid_enum", e.Error()
+	return wonWithoutContractReasonField, "invalid_enum", e.Error()
 }
 
 // WonReasonDetailRequiredError reports "other" with nothing after it.
@@ -100,6 +100,9 @@ func (e *WonReasonDetailTooLongError) Error() string {
 func (e *WonReasonDetailTooLongError) FieldFault() (field, code, message string) {
 	return "won_without_contract_detail", "too_long", e.Error()
 }
+
+// FieldMax is the detail's limit.
+func (e *WonReasonDetailTooLongError) FieldMax() int { return maxWonReasonDetail }
 
 // maxWonReasonDetail is the contract's `maxLength` on this field, applied here
 // because nothing else does.
@@ -190,9 +193,10 @@ func ensureDetailWithinBound(detail *string) error {
 // signedAgreementFrom is the gate's one question, named so a test can read it.
 // The advance asks it under a lock (evidenceQuery) and the client's read asks
 // it without one (readEvidenceQuery). Both embed this text.
-const signedAgreementFrom = `
+var signedAgreementFrom = `
 			FROM contract c
 			JOIN attachment a ON a.contract_id = c.id
+            JOIN deal d ON d.id = c.deal_id AND ` + auth.ContractDealMatchesSQL("c", "d") + `
 			WHERE c.deal_id = $1
 			  AND c.archived_at IS NULL
 			  AND c.status <> 'draft'
@@ -203,7 +207,7 @@ const signedAgreementFrom = `
 
 // evidenceQuery is the advance's question: it locks what it finds, because the
 // check and the write share a transaction.
-const evidenceQuery = `
+var evidenceQuery = `
 		SELECT EXISTS (
 			SELECT 1` + signedAgreementFrom + `
 			FOR SHARE OF c, a
@@ -211,7 +215,7 @@ const evidenceQuery = `
 
 // readEvidenceQuery is the same question for a reader that writes nothing.
 // It takes no lock, because showing a form must not hold up an archive.
-const readEvidenceQuery = `
+var readEvidenceQuery = `
 		SELECT EXISTS (
 			SELECT 1` + signedAgreementFrom + `
 		)`

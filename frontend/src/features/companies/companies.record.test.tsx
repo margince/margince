@@ -86,6 +86,19 @@ const rollup = {
 describe("CompanyScreen — Relationships tab (P-5)", () => {
   it("shows an Overview/Relationships tab bar and lists relationships by company_id", async () => {
     stubFetch(async (url) => {
+      const asked = new URL(url);
+      if (
+        asked.pathname === "/v1/records/references" &&
+        asked.searchParams.get("kind") === "contact"
+      ) {
+        return jsonResponse({
+          data: asked.searchParams
+            .getAll("id")
+            .flatMap((id) =>
+              id === "p-1" ? [{ id, name: null, archived: false }] : [],
+            ),
+        });
+      }
       if (url.includes("/relationships") && url.includes("company_id=o-1")) {
         return jsonResponse({
           data: [employmentRel],
@@ -102,7 +115,7 @@ describe("CompanyScreen — Relationships tab (P-5)", () => {
 
     await waitFor(() => expect(screen.getByText("Employment")).toBeTruthy());
     expect(screen.getByText("cto")).toBeTruthy();
-    expect(screen.getByText("p-1")).toBeTruthy();
+    expect(await screen.findByText("p-1")).toBeTruthy();
   });
 
   it("adding a relationship from the company side POSTs company_id + the picked contact_id", async () => {
@@ -133,7 +146,10 @@ describe("CompanyScreen — Relationships tab (P-5)", () => {
     );
     await userEvent.click(screen.getByTestId("add-relationship"));
 
-    await userEvent.type(screen.getByPlaceholderText("Search…"), "anna");
+    await userEvent.type(
+      screen.getByRole("searchbox", { name: "Contact" }),
+      "anna",
+    );
     vi.useFakeTimers();
     try {
       act(() => {
@@ -170,8 +186,8 @@ describe("CompanyScreen — hierarchy roll-up in the rail (P-7)", () => {
     render(<CompanyScreen id="o-1" />);
     await openProfile();
 
-    await waitFor(() => expect(screen.getByText("€48,000.00")).toBeTruthy());
-    expect(screen.getByText("€12,000.00")).toBeTruthy();
+    await waitFor(() => expect(screen.getByText("€48,000")).toBeTruthy());
+    expect(screen.getByText("€12,000")).toBeTruthy();
     expect(screen.getByText("12")).toBeTruthy();
     expect(screen.getByText("3")).toBeTruthy();
   });
@@ -201,7 +217,7 @@ describe("CompanyScreen — hierarchy roll-up in the rail (P-7)", () => {
         ),
       ).toBeTruthy(),
     );
-    expect(screen.queryByText("€0.00")).toBeNull();
+    expect(screen.queryByText("€0")).toBeNull();
   });
 
   it.each([
@@ -241,6 +257,21 @@ describe("CompanyScreen — the account pulse line (P-4)", () => {
       async (url) => {
         if (url.includes("/activities")) {
           return jsonResponse({ data: [] });
+        }
+        const asked = new URL(url);
+        if (
+          asked.pathname === "/v1/records/references" &&
+          asked.searchParams.get("kind") === "contact"
+        ) {
+          return jsonResponse({
+            data: asked.searchParams
+              .getAll("id")
+              .flatMap((id) =>
+                id === "p-1"
+                  ? [{ id, name: "Dana Buyer", archived: false }]
+                  : [],
+              ),
+          });
         }
         if (url.includes("/contacts/p-1")) {
           return jsonResponse({
@@ -363,7 +394,7 @@ describe("CompanyScreen — relationship kinds by scope (P-5)", () => {
     expect(within(kinds).queryByText("Deal stakeholder")).toBeNull();
     await user.click(within(kinds).getByRole("option", { name: "Partner of" }));
 
-    await user.type(screen.getByPlaceholderText("Search…"), "acme");
+    await user.type(screen.getByRole("searchbox", { name: "Company" }), "acme");
     vi.useFakeTimers();
     try {
       act(() => {
@@ -508,6 +539,49 @@ describe("CompanyScreen — the record's history", () => {
     // with no second rendering of the audit rows. It has no restore control:
     // put-back lives on Full history (the header's overflow menu) only.
     expect(within(timeline).queryByRole("button", { name: "Undo" })).toBeNull();
+  });
+});
+
+describe("CompanyScreen — History requests", () => {
+  it("reuses the pending overview page when History opens", async () => {
+    const { fetchMock, urls } = stubFetch(companyBackstop);
+    let finishOverview: ((response: Response) => void) | undefined;
+    const overview = new Promise<Response>((resolve) => {
+      finishOverview = resolve;
+    });
+    vi.stubGlobal("fetch", (request: Request) => {
+      if (new URL(request.url).pathname.endsWith("/360")) return overview;
+      return fetchMock(request);
+    });
+
+    render(<CompanyScreen id="o-1" />);
+    await screen.findByRole("button", { name: /^History/ });
+    const listReads = () =>
+      urls.filter((url) => new URL(url).pathname.endsWith("/activities"));
+    expect(listReads()).toEqual([]);
+    await openHistory();
+    expect(await screen.findByText("Loading change history…")).toBeTruthy();
+    expect(listReads()).toEqual([]);
+
+    if (!finishOverview) throw new Error("Overview response is unresolved");
+    finishOverview(
+      jsonResponse({
+        ...company360,
+        activities: {
+          data: [
+            {
+              id: "seeded-note",
+              kind: "note",
+              subject: "Seeded activity",
+              occurred_at: "2026-06-01T08:30:00Z",
+            },
+          ],
+          page: { has_more: false },
+        },
+      }),
+    );
+    expect(await screen.findByText("Seeded activity")).toBeTruthy();
+    expect(listReads()).toEqual([]);
   });
 });
 

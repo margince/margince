@@ -34,12 +34,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
+const filterExtensionRelationshipType = "extension_relationship_type"
+
 // The filter names this module answers, spelled once each. They are wire names
 // — a caller's query parameter — which is why they are not the column
 // constants they happen to match today.
 const (
 	filterOwnerID          = "owner_id"
-	filterLifecycle        = "lifecycle"
 	filterRelationshipType = "relationship_type"
 	filterStatus           = "status"
 	filterTag              = "tag_id"
@@ -65,6 +66,7 @@ const (
 	filterAiWritten           = "ai_written"
 	filterIndustry            = "industry"
 	filterSizeBand            = "size_band"
+	filterDormancy            = "dormancy"
 	filterSource              = "source"
 	filterOrigin              = "origin"
 	filterSLAState            = "sla_state"
@@ -74,6 +76,7 @@ const (
 	filterSourceID            = "source_id"
 	filterRelationshipMark    = "relationship_mark"
 	filterPartnerAccepted     = "partner_accepted"
+	filterRelatedTo           = "related_to"
 )
 
 var contactListFilters = storekit.FilterSet[ListContactsInput]{
@@ -86,6 +89,7 @@ var contactListFilters = storekit.FilterSet[ListContactsInput]{
 	filterUnassigned:       storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.Unassigned = v }),
 	filterSharedWithMe:     storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.SharedWithMe = v }),
 	filterCompanyID:        storekit.FilterID(func(in *ListContactsInput, id *ids.CompanyID) { in.CompanyID = id }),
+	filterRelatedTo:        storekit.FilterID(func(in *ListContactsInput, id *ids.ContactID) { in.RelatedTo = id }),
 	filterIncludeArchived:  storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.IncludeArchived = *v }),
 	filterSort:             storekit.FilterWord(func(in *ListContactsInput, v *string) { in.Sort = v }),
 	filterCapturedByKind:   storekit.FilterWord(func(in *ListContactsInput, v *string) { in.CapturedByKind = v }),
@@ -112,10 +116,12 @@ var companyListFilters = storekit.FilterSet[ListCompaniesInput]{
 	filterIndustry:        storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Industry = v }),
 	filterSizeBand:        storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.SizeBand = v }),
 	filterDomain:          storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Domain = v }),
-	filterLifecycle:       storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Lifecycle = v }),
+	filterStatus:          storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Status = v }),
 	filterOwnerID:         storekit.FilterID(func(in *ListCompaniesInput, id *ids.UserID) { in.OwnerID = id }),
 	filterRelationshipType: storekit.FilterWord(
 		func(in *ListCompaniesInput, v *string) { in.RelationshipType = v }),
+	filterExtensionRelationshipType: storekit.FilterWord(
+		func(in *ListCompaniesInput, v *string) { in.ExtensionRelationshipType = v }),
 	filterSourceSystem: storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.SourceSystem = v }),
 	filterSourceID:     storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.SourceID = v }),
 	filterTag:          storekit.FilterIDList[ids.TagKind](func(in *ListCompaniesInput, v []ids.UUID) { in.TagIDs = v }),
@@ -125,6 +131,7 @@ var companyListFilters = storekit.FilterSet[ListCompaniesInput]{
 	filterPartnerKind:         storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Partner.Kind = v }),
 	filterPartnerStage:        storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Partner.Stage = v }),
 	filterPartnerStageMeaning: storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Partner.Meaning = v }),
+	filterDormancy:            storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Dormancy = v }),
 }
 
 // Partner lists by kind, stage, stage meaning and certification, the dials GET

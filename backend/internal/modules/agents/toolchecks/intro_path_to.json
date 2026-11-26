@@ -1,0 +1,11 @@
+{
+  "verb": "intro_path_to",
+  "checks": [
+    "company.read",
+    "contact.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

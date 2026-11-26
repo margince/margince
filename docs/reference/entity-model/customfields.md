@@ -6,7 +6,7 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 
 ## custom_field
 
-17 columns · primary key `(id)` · referenced by 0 foreign keys
+19 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -16,7 +16,9 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 | `created_by` | `uuid` | yes | Points at `app_user.id`. |
 | `currency` | `currency_code` |  | ISO-4217 currency code; present when `type=currency`, null otherwise. |
 | `label` | `text` | yes | Display label; a rename changes it, and never the slug or column_name. |
+| `label_translations` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `object` | `text` | yes | The existing core object this field is added to. |
+| `option_translations` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `options` | `jsonb` |  | Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise. |
 | `reportable` | `boolean`, default `false` | yes | Whether reports may group and filter by this field. |
 | `show_in_create` | `boolean`, default `true` | yes | Whether the field is offered in the create dialog of its object. |
@@ -37,10 +39,11 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 **Rules**
 
 - `custom_field_activity_kinds_check`: `CHECK (((activity_kinds IS NULL) OR ((object = 'activity') AND (cardinality(activity_kinds) > 0))))`
+- `custom_field_activity_kinds_vocabulary`: `CHECK ((activity_kinds <@ ARRAY['call', 'email', 'meeting', 'message', 'note', 'task']))`
 - `custom_field_object_check`: `CHECK ((object = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'contract'])))`
 - `custom_field_reportable_type_check`: `CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal', 'company'])) AND (type = ANY (ARRAY['picklist', 'boolean'])))))`
 - `custom_field_status_check`: `CHECK ((status = ANY (ARRAY['active', 'retired'])))`
-- `custom_field_type_check`: `CHECK ((type = ANY (ARRAY['text', 'number', 'date', 'currency', 'picklist', 'multiselect', 'boolean'])))`
+- `custom_field_type_check`: `CHECK ((type = ANY (ARRAY['text', 'number', 'date', 'currency', 'picklist', 'multiselect', 'boolean', 'record', 'url'])))`
 - `custom_field_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
@@ -48,8 +51,10 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 - `custom_field_pkey`: `unique, btree (id)`
 - `idx_custom_field_object`: `btree (object, status)`
 - `uq_custom_field_column`: `unique, btree (object, column_name)`
-- `uq_custom_field_slug`: `unique, btree (object, slug)`
+- `uq_custom_field_slug`: `unique, btree (object, slug) WHERE (status <> 'retired')`
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"slug": 20000, "type": 20000, "label": 120, "object": 20000, "status": 20000, "column_name": 120, "activity_kinds": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"activity_kinds":20000,"column_name":120,"label":120,"object":20000,"slug":20000,"status":20000,"type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"slug": 20000, "type": 20000, "label": 120, "object": 20000, "status": 20000, "column_name": 120, "activity_kinds": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"activity_kinds":20000,"column_name":120,"label":120,"object":20000,"slug":20000,"status":20000,"type":20000}')`
 - `trg_custom_field_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`

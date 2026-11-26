@@ -64,7 +64,35 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 		"how they say so. A VALIDATE would fail on every installation with meeting history. The " +
 		"precision data task fills in only the rows the noon repair's audit proves; the rest stay " +
 		"unknown on purpose, and the rule binds every row written since",
+	"finance_invoice.finance_invoice_names_its_customer_link": unnamedCustomerLink,
+	"company.company_source_check":                            unlistedRecordSource,
+	"contact.contact_source_check":                            unlistedRecordSource,
+	"deal.deal_source_check":                                  unlistedRecordSource,
+	"offer.offer_source_check":                                unlistedRecordSource,
+	"project.project_source_check":                            unlistedRecordSource,
+	"signal.signal_source_check":                              unlistedRecordSource,
+	"finance_payment.finance_payment_names_its_customer_link": unnamedCustomerLink,
+	"activity_participant.activity_participant_address_is_canonical": "" +
+		"rows written before the check hold the address as typed, and the participant address data " +
+		"task lowercases them after the migrations ran. A VALIDATE would fail the upgrade of an " +
+		"installation whose task has not finished, and no migration may wait for a data task. The " +
+		"check binds every row written since; validating it needs a minimum upgrade-from release " +
+		"that guarantees the task ran",
 })
+
+// unlistedRecordSource is the cost shared by the source checks whose older rows
+// a data task corrects.
+const unlistedRecordSource = "" +
+	"rows written before the list hold other words, and the source data task moves them after the " +
+	"migrations ran. A VALIDATE would fail the upgrade of an installation whose task has not finished, " +
+	"and no migration may wait for a data task. The check binds every row written since; validating " +
+	"it needs a minimum upgrade-from release that guarantees the task ran"
+
+// unnamedCustomerLink is the cost shared by the two mirrored tables' link checks.
+const unnamedCustomerLink = "" +
+	"a row mirrored before rows named their customer link may name none, when its connection never " +
+	"mapped its company. A VALIDATE would fail the upgrade on such an installation, and the maintainers " +
+	"decided those rows stay as they are. The rule binds every row the sync writes or rewrites"
 
 // polymorphicBranchKey is the one cost shared by every key generated from a
 // polymorphic pair that had none before.

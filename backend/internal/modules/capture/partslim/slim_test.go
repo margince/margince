@@ -169,9 +169,9 @@ func TestStripStoredPartsSkipsAPartItCannotLocate(t *testing.T) {
 	}
 }
 
-// The same attachment twice cannot be told apart by its bytes, so neither copy
-// is touched. Refusing is the only safe answer: splicing the first occurrence
-// would leave the second behind under a stanza that claims both.
+// Two copies of an attachment with only one part named for them cannot be told
+// apart, so neither is touched. Splicing the first would leave the second
+// behind under a stanza that claims both.
 func TestStripStoredPartsSkipsAnAttachmentSentTwice(t *testing.T) {
 	pdf := attachmentBody(7)
 	one := messageWith(pdf)

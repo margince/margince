@@ -173,3 +173,66 @@ func TestADraftAboutATaskOnALeadIsAddressedToTheLead(t *testing.T) {
 		t.Errorf("a task on a lead drafts to %v, want lena@prospect.test", got)
 	}
 }
+
+// dealOf seeds a deal at company with these stakeholders, and links a task to it.
+func (s *standingEnv) dealOf(t *testing.T, company *activities.ActivityLinkInput, stakeholders ...activities.ActivityLinkInput) activities.ActivityLinkInput {
+	t.Helper()
+	deal := s.SeedDeal(t, "Expansion", s.pipeline, s.stage, &s.Rep1)
+	if company != nil {
+		s.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, company.EntityID)
+	}
+	for _, contact := range stakeholders {
+		s.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
+			VALUES ('deal_stakeholder', $1, $2, 'champion', 'manual', 'human:x')`, contact.EntityID, deal)
+	}
+	return activities.ActivityLinkInput{EntityType: "deal", EntityID: deal}
+}
+
+func (s *standingEnv) worksAt(t *testing.T, contact, company activities.ActivityLinkInput) {
+	t.Helper()
+	s.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+		VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact.EntityID, company.EntityID)
+}
+
+// A task filed on a deal, or on several contacts, writes to the one record
+// they name. That is the deal's one stakeholder, else its company, else the
+// company the contacts share.
+func TestATaskOnADealOrOnContactsWritesToTheOneRecordTheyName(t *testing.T) {
+	s := setupStanding(t)
+	anna, ben := s.contactAt(t, "Anna Weber", "anna@buyer.test"), s.contactAt(t, "Ben Kraus", "ben@buyer.test")
+	acme, globex := s.companyLink(t, "Acme"), s.companyLink(t, "Globex")
+	s.worksAt(t, anna, acme)
+	s.worksAt(t, ben, acme)
+	cara := s.contactAt(t, "Cara Lind", "cara@other.test")
+	s.worksAt(t, cara, globex)
+	dana := s.contactAt(t, "Dana Roth", "dana@freelance.test")
+	contact, company := crmcontracts.ActivityEmailTargetEntityTypeContact, crmcontracts.ActivityEmailTargetEntityTypeCompany
+	for _, tc := range []struct {
+		name  string
+		links []activities.ActivityLinkInput
+		kind  crmcontracts.ActivityEmailTargetEntityType
+		id    ids.UUID
+		to    string
+	}{
+		{"a deal with one stakeholder", []activities.ActivityLinkInput{s.dealOf(t, &acme, anna)}, contact, anna.EntityID, "anna@buyer.test"},
+		{"a deal with two stakeholders", []activities.ActivityLinkInput{s.dealOf(t, &acme, anna, ben)}, company, acme.EntityID, ""},
+		{"a deal with no stakeholder", []activities.ActivityLinkInput{s.dealOf(t, &globex)}, company, globex.EntityID, ""},
+		{"two contacts at one company", []activities.ActivityLinkInput{anna, ben}, company, acme.EntityID, ""},
+		{"two contacts, one of them employed", []activities.ActivityLinkInput{anna, dana}, "", ids.UUID{}, ""},
+		{"two contacts at two companies", []activities.ActivityLinkInput{anna, cara}, "", ids.UUID{}, ""},
+		{"a deal with neither", []activities.ActivityLinkInput{s.dealOf(t, nil)}, "", ids.UUID{}, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			target, offers, to := s.targetOf(t, s.writtenAbout(t, "task", tc.links...))
+			if tc.kind == "" {
+				if target != nil || offers {
+					t.Errorf("target = %+v, offers %v; want none", target, offers)
+				}
+				return
+			}
+			if target == nil || target.EntityType != tc.kind || ids.UUID(target.EntityId) != tc.id || to != tc.to {
+				t.Errorf("target = %+v, To %q; want %s %s, To %q", target, to, tc.kind, tc.id, tc.to)
+			}
+		})
+	}
+}

@@ -51,4 +51,41 @@ describe("toBoardDeal", () => {
   it("leaves a deal nobody mailed about without a mail line", () => {
     expect(toBoardDeal(deal({}), noCompany).lastEmail).toBeNull();
   });
+
+  it("carries an open deal's win probability", () => {
+    const card = toBoardDeal(deal({ win_probability: 40 }), noCompany);
+    expect(card.probabilityPct).toBe(40);
+  });
+
+  // A won or lost deal's stage fixes it at 100 or 0, which the column says.
+  it("states no probability on a closed deal", () => {
+    const card = toBoardDeal(
+      deal({ status: "won", win_probability: 100 }),
+      noCompany,
+    );
+    expect(card.probabilityPct).toBeNull();
+  });
+
+  // The forecast says nothing once the deal is decided; the day it closed does.
+  it("dates a closed deal by the day it closed, not its forecast", () => {
+    const card = toBoardDeal(
+      deal({
+        status: "lost",
+        closed_at: "2026-11-16T10:00:00Z",
+        expected_close_date: "2026-12-31",
+      }),
+      noCompany,
+    );
+    expect(card.closedAt).toBe("2026-11-16T10:00:00Z");
+    expect(card.closeDate).toBeNull();
+  });
+
+  it("dates an open deal by its forecast", () => {
+    const card = toBoardDeal(
+      deal({ expected_close_date: "2026-12-31" }),
+      noCompany,
+    );
+    expect(card.closeDate).toBe("2026-12-31");
+    expect(card.closedAt).toBeUndefined();
+  });
 });

@@ -21,10 +21,8 @@ test("AC-leads-list: a row names its owner and opens the lead's own page", async
   // The owner column answers "whose lead is this" — the same column the
   // contacts and company lists carry, never "typed by a person".
   await expect(row).toContainText("Lena Fischer");
-  // The link's accessible name also carries the company, while the row's
-  // selection checkbox carries the same contact's name. Role plus a
-  // start-anchored name selects the route without coupling to the company.
-  await row.getByRole("link", { name: /^Jonas Petersen/ }).click();
+  // The link's name leads with the monogram the chip prints (WCAG 2.5.3).
+  await row.getByRole("link", { name: /^JP\s*Jonas Petersen/ }).click();
   await expect(page).toHaveURL(/#\/leads\/l-1$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "Jonas Petersen" }),
@@ -86,4 +84,23 @@ test("AC-leaddetail-qualify: the dialog says what qualifying will do and why, th
     .click();
   await expect(page).toHaveURL(/#\/leads\/l-1$/);
   await expect(page.getByText(/ist jetzt ein Kontakt:/)).toBeVisible();
+});
+
+test("AC-leads-board-fits: every stage of the board shows in a 1440px window", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/#/leads?view=board");
+  const board = page.locator(".board");
+  const disqualified = page.locator('[data-stage="disqualified"]');
+  await expect(disqualified).toBeVisible();
+  // The two terminal stages fold to a turned head, so the three open stages
+  // and both folds fit without scrolling the board sideways.
+  const fits = () =>
+    board.evaluate((node) => node.scrollWidth <= node.clientWidth);
+  expect(await fits()).toBe(true);
+  // Opened, a fold is a whole stage and the board brings it into view.
+  await disqualified.locator(".board-col-head").click();
+  await expect(disqualified).toHaveAttribute("class", /^board-col$/);
+  await expect(disqualified).toBeInViewport({ ratio: 1 });
 });

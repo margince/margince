@@ -28,8 +28,8 @@ type pausedMemberInspection struct {
 	release   chan struct{}
 }
 
-func (p pausedMemberInspection) Inspect(ctx context.Context, tx pgx.Tx, source ids.UUID, lock bool) (identity.MemberWorkInspection, error) {
-	result, err := p.MemberWork.Inspect(ctx, tx, source, lock)
+func (p pausedMemberInspection) Inspect(ctx context.Context, tx pgx.Tx, source ids.UUID, target *ids.UUID, lock bool) (identity.MemberWorkInspection, error) {
+	result, err := p.MemberWork.Inspect(ctx, tx, source, target, lock)
 	close(p.inspected)
 	select {
 	case <-p.release:
@@ -120,13 +120,8 @@ func TestAConcurrentTaskAssignmentCannotLeaveWorkOnARetiredMember(t *testing.T) 
 }
 
 func memberWriteRaceRefusal(err error) bool {
-	// Not found is the merge having won: a retired seat cannot hold work.
-	// seatHoldingWork answers that as not found, so a caller cannot tell it
-	// from a guessed id. TestATaskCannotBeAssignedToARetiredMember pins the
-	// same refusal without a race.
-	if errors.Is(err, apperrors.ErrNotFound) {
-		return true
-	}
+	// The seat refusal is the merge having won: a retired seat cannot hold
+	// work. TestATaskCannotBeAssignedToARetiredMember pins it without a race.
 	if _, ok := errors.AsType[*auth.AssigneeNotAllowedError](err); ok {
 		return true
 	}

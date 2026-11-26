@@ -1,12 +1,12 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/activities/dealdecline.go frontend/src/features/records/dealdecline.tsx frontend/src/components/whichdealdecline.tsx backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/modules/capture/dealtopic.go backend/internal/modules/capture/dealrecheck.go backend/internal/compose/capturedealtopic.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go frontend/src/features/worklist/worklist.domainquestion.tsx frontend/src/features/worklist/worklist.domainreview.tsx backend/internal/modules/contacts/domainquestioncontext.go -->
+<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/stakeholderbackfill.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/activities/dealdecline.go frontend/src/features/records/dealdecline.tsx frontend/src/components/whichdealdecline.tsx backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/modules/capture/dealtopic.go backend/internal/modules/capture/dealrecheck.go backend/internal/compose/capturedealtopic.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go backend/internal/modules/activities/sendthreading.go frontend/src/features/worklist/worklist.domainquestion.tsx frontend/src/features/worklist/worklist.domainreview.tsx backend/internal/modules/contacts/domainquestioncontext.go frontend/src/components/dealstakeholderoffer.tsx -->
 # Capture: how conversations get into Margince
 
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part of Margince that connects to your mailbox, your calendar and your chat. It files what arrives against the right contacts, their companies and projects. Connecting a mailbox or calendar, and importing your older mail, is its own page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
 
 ### How does email get into Margince?
 Email gets into Margince through a mailbox you connect at **Settings → Connections**: Gmail, Outlook or an IMAP mailbox. On each sync, capture reads new mail and files it on the timelines of the contacts on it.
-There is no address to forward to and no step to copy and paste. Mail between colleagues is not stored by default.
+There is no shared address to forward to and no step to copy and paste. Mail between colleagues is not stored by default. Forward a customer's email to your connected address to file it on their timeline as your own, never as a reply.
 
 An admin can choose sources for [internal mail about work](who-can-see-an-email.md#mail-between-colleagues). Other mail follows the usual rules, and senders judged to be newsletters, automated tools or spam create no contact.
 For older mail, choose **Import older email** in the account's menu; to see what happened to one message, open **Settings → Connections → Activity**.
@@ -134,7 +134,7 @@ Below a confidence of 0.7, the sender is asked about once more on its own. If it
 is still below, it stays unsure. There is no task or approval to clear.
 A low score costs one more question; it never deletes anything by mistake.
 
-Open **Settings** → **Capture activity** → **Sender decisions** to find a sender
+Open **Settings** → **Connections** → **Activity** → **Sender decisions** to find a sender
 and correct a decision. Search by address, name or domain, or choose **My overrides**.
 You can mark a sender as business, exclude them, or withdraw your own override.
 Withdrawing an override does not restore mail already destroyed. Leaving an unsure
@@ -151,8 +151,10 @@ filling it".
 Margince puts a captured email on a deal by itself only when one deal, and no other, fits it:
 
 1. **The project.** An email filed under a project goes on that project's one open deal. If the project has no open deal, or several, the email goes on no deal. The company's deals are not asked.
-2. **Your thread.** Your own sent email in the thread is on a deal. The reply goes on that deal if it is the reply's company's deal.
-3. **The company.** If neither fits, the company's one open deal is suggested. With several open deals, a stakeholder on only one of them suggests it. An AI check reads the email and files it only when it is fully sure it is about that deal. Without an AI answer, the email waits for a later pass.
+2. **A deal a colleague chose.** A colleague or an agent put an earlier email of the conversation on an open deal by hand. The reply goes on that deal, whatever company its contacts work at. A partner on a deal at the customer is the common case. If they chose two different deals, the reply goes on neither. A choice that was taken back, or marked **Not about this deal**, no longer counts.
+3. **Your thread.** Your own sent email in the thread is on a deal. The reply goes on that deal if it is the reply's company's deal.
+4. **The company.** If none of these fits, the company's one open deal is suggested. With several open deals, a stakeholder on only one of them suggests it. An AI check reads the email and files it only when it is fully sure it is about that deal. Without an AI answer, the email waits for a later pass.
+5. **A stakeholder at another company.** If the company has no open deal, a seat on one open deal at another company suggests it. The AI check applies as in step 4. The contact must have sent the email, with the mail server confirming it, or a colleague wrote to them. A contact only on Cc files nothing.
 
 An email stays on no deal when nothing picks one of several open deals, or the AI check is not sure. It also stays off when its contacts work at two companies, or when a colleague said it is not about the deal that fits. An email already on a deal keeps it, and a deal you chose by hand is never changed.
 
@@ -162,27 +164,24 @@ That is the colleague who sent the email, or the one colleague it was addressed 
 
 To answer, use **Relink** on any email of that conversation and pick the deal. The other emails of the conversation with the same contact go on that deal too, with the promises read from them. An email already on a deal keeps it. The task is then done. If it is about none of them, choose **None of these deals** on the task. Margince then never files that conversation on those deals.
 
-To take an email off a deal it is not about, choose **Not about this deal** in its **More actions** menu on the deal's timeline. Margince never files it on that deal again by itself; other deals can still fit it, and **Relink** still files it on any record. A project link that came with that deal comes off too, unless its retention rules keep it. This holds when an agent declines the deal for you as well.
+To say an email or a meeting is not about a deal, choose **Not about this deal** under **More actions** on its row. It stays on the deal with that mark, and no longer counts as activity on the deal. Margince never files it on that deal again, or moves it to another deal, by itself; **Relink** still files it on any record. A project link that came with that deal comes off too, unless its retention rules keep it. **About this deal** takes the mark back. This holds when an agent marks the deal for you as well.
 
 Meetings use the same contact and company rules. They never follow an email thread or ask you to choose a deal. If several deals fit, the meeting stays off them.
 
 Margince checks recent mail and meetings again when a deal opens or changes company, a lead becomes a contact, or a contact's employer changes. A guest found later is checked too. These checks run in the background and ask nobody. Existing deal links stay where you put them.
 
-An hourly pass picks up work left behind; it uses the same waiting horizon as other automatic work. It also checks, once, the deal links Margince suggested on mail of the last 90 days before the AI check existed. A link the AI says is not about its deal comes off.
+An hourly pass picks up work left behind; it uses the same waiting horizon as other automatic work. It also checks, once, the deal links Margince suggested on mail of the last 90 days before the AI check existed. A link the AI says is not about its deal comes off. Once, it also files older mail of a deal's stakeholders, from the last `deals.silent_close_days` days, by the rules above. That includes a deal Margince closed in that time. Mail inside the waiting horizon may ask the question above; older mail asks nobody.
 
-An email only its participants can read still appears on the deal's timeline. It does not change the deal's last activity date.
-
+An email only its participants can read still appears on the deal's timeline. It moves the deal's last activity date by its date alone, so the deal does not read as stalled. The deal's last email and stakeholder engagement ignore it, as do contact and company dates.
 To put an email on a deal yourself, [use **Relink**](#how-do-i-move-an-email-to-the-right-contact-or-deal).
 
 ## How a message finds its project
 
-If you use projects, a captured message is filed against one by three fixed
-rules, and the first match wins. No AI model is used in any of them.
+If you use projects, a captured message is filed against one by three fixed rules, and the first match wins. No AI model is used in any of them.
 
 **1. The conversation.** A reply to a thread already filed goes under the same project. Matching stays within one channel, so an email cannot be filed under a chat conversation.
 
-**2. The deal.** A message already linked to a deal is filed under that deal's
-project.
+**2. The deal.** A message already linked to a deal is filed under that deal's project.
 
 **3. The key in the subject.** Every project gets a short key. A subject
 carrying `[ERP-27]` is filed under that project. The brackets are required. `ERP-27`
@@ -190,11 +189,9 @@ alone does not count, so a project with the key `RE` does not match every
 reply in your mailbox.
 
 A message may point two ways: two different keys in one subject, or two deals
-in two different projects. Then that rule files nothing, and the next one is
-tried.
+in two different projects. Then that rule files nothing, and the next one is tried.
 
-If nothing matches, nothing happens: no link, and no question raised. Margince
-does not file by guessing. Every rule above is either a true match or
+If nothing matches, nothing happens: no link, and no question raised. Margince does not file by guessing. Every rule above is either a true match or
 confirmed by a human.
 
 A message that arrives before its project exists is not filed again later on
@@ -241,7 +238,7 @@ Also called: email history, correspondence, all mails with a customer.
 ### What counts as one email thread?
 A reply starts a new conversation only when its subject shares no word with the message it answers. Tags in brackets, reply prefixes, marks, capital letters and words such as "the" do not count. "Signature requested" and "Signature completed" stay together. A reply stays with its parent when either subject has no words left. A conversation you kept private stays private under its new subject.
 
-Margince splits a reply this way when the message it answers is already in Margince. Older mail from a mailbox you connect later can stay in one conversation. Ask whoever runs your Margince to split it.
+A reply you send from Margince follows the same rule. It goes out as a new email, so your recipient sees a new conversation too. Margince splits a reply this way when the message it answers is already in Margince. Older mail from a mailbox you connect later can stay in one conversation. Ask whoever runs your Margince to split it.
 Also called: thread split, new subject, separate conversation.
 
 ### How do I read a whole email thread?
@@ -250,12 +247,14 @@ To read a whole thread in Margince, press an email on the **History** tab. The t
 2. Press the "to …" line under a sender to see the whole envelope and where it is filed.
 3. At the foot, **Reply** answers in the thread, and **Forward** starts a new email with the message in it. **More actions** holds **File under another record…**.
 
-**Reply** and **Forward** open the composer at the bottom of the page. The thread comes back when you close the composer, and after a reply it says "Sent and added to this thread." A forward does not carry the message's files.
+**Reply** and **Forward** open the composer at the bottom of the page. The thread comes back when you close the composer, and after a reply it says "Sent and added to this thread." A forward does not carry the message's files. A forward keeps its own saved draft, apart from a reply and from a new email to the same contact.
 Also called: open an email, read a conversation, forward an email.
 
 ### How do I move an email to the right contact or deal?
 To move a captured email that was filed on the wrong record, choose **Relink** on it in the timeline. Search for the right contact, company, deal, lead or project.
 Tick **Replace existing link** to replace it instead of adding a second link, and choose **Relink**. Tick **Move rest of thread** to move the whole conversation.
+
+After you put an email on a deal, Margince asks whether to add the email's outside contacts who are not yet stakeholders on the deal. Colleagues are not listed. Untick anyone who is not part of the deal and choose **Add to deal**, or choose **Not now**. As stakeholders, their next new conversation goes on the deal by itself. The question does not show when everyone on the email is already on the deal.
 Also called: email on the wrong deal, refile an email, change which deal an email belongs to, remove an email from a deal.
 
 ## What capture refuses to do
@@ -273,15 +272,15 @@ Everything else in the folder capture reads does arrive: newsletters, personal
 mail, and the Gmail Promotions and Social categories. They are handled after
 capture, as *What happens to one message* describes.
 
-**Deleting in your own mailbox can reach Margince.** If you
-delete a captured message in Gmail or Outlook, Margince notices and acts on it.
-What happens then depends on who else has it:
+**Deleting in your own mailbox can reach Margince.** If you delete a captured message in Gmail or Outlook, Margince notices and acts on it.
+
+In Gmail, the message must be deleted for good. In Outlook, it must be hard-deleted: Shift+Delete, or Delete and then empty Deleted Items. Margince then waits 10 days, and a message you recover in that time stays. Outlook keeps it for 14 days, but if you recover it after day 10, the copy in Margince is already gone. Moving a message to another folder or to the archive never deletes it here. What happens then depends on who else has it:
 
 | Case | What happens |
 |---|---|
 | Nobody else imported it | Deleted here too: text, the provider's original, attachments, and everything worked out from it |
 | A colleague also imported it | Kept. Their copy is theirs, and what you delete does not reach their timeline |
-| It is commercial correspondence inside its retention window, or an erasure request is still open about it | Kept, and the reason is recorded |
+| It is restricted or on legal hold, it is commercial correspondence inside its retention window, or an open privacy request names a sender or recipient | Kept, and the reason is recorded |
 
 The last row matters most. A business letter (Handelsbrief) cannot be deleted
 this way while the law requires keeping it, no matter how you delete it at the
@@ -340,8 +339,8 @@ It applies from the next message; captured mail stays. **Whole company** rules b
 Also called: block a sender, ignore a domain, blacklist, do not log.
 
 ### How do I tell Margince a sender is business, or exclude one?
-To correct what Margince decided about a sender, open **Settings → Connections → Activity** and find the address in **Senders**. In its **…** (**Actions**) menu, choose **Mark as business** to let it back in, or **Exclude** to hide its mail for good.
-1. Open **Settings**, then **Connections**, then **Activity**, and go down to **Senders**.
+To correct what Margince decided about a sender, open **Settings → Connections → Activity** and find the address in **Sender decisions**. In its **…** (**Actions**) menu, choose **Mark as business** to let it back in, or **Exclude** to hide its mail for good.
+1. Open **Settings**, then **Connections**, then **Activity**, and go down to **Sender decisions**.
 2. Find the address; the **Decision** column shows what was decided. **Contact** opens the contact that holds the address. **Messages** counts your stored mail with it. **Last seen** is when the newest of those arrived or went out.
 3. Open its **…** (**Actions**) menu and choose **Mark as business**, or choose **Exclude** and confirm **Exclude and destroy**.
 **Exclude** creates no contact and destroys the mail that sender sent into your mailbox; copies a colleague imported stay theirs. Margince still receives their later mail, but hides and destroys it, so it never shows. **Capture exclusions** work earlier: they stop new mail before it is stored. What Margince sorts by itself never writes over a decision you make.
@@ -355,7 +354,7 @@ mail internal. Adding one cannot be taken back for mail already skipped: "Mail s
 registered is never offered again by any mailbox."
 
 **Your other addresses** (Settings → Connections): an address you send as, a private domain you
-read, an address you forward from. Mail between them is not captured and never creates a contact.
+read, an address you forward from. Mail between them is not captured, unless it forwards a customer's email to your connected mailbox.
 Private to you. Removing one takes effect at once, and **Undo** on the notice puts it back. Removing
 an address Margince found also stops Margince finding it again.
 
@@ -374,24 +373,24 @@ back in asks the company question again.
 **Company questions** (Worklist → Decisions): Margince asks which company a contact works for when
 it cannot tell. The row names the contact and says why. The website could not be read, named no
 company, sent you on to another website, or looks like a mail provider. Hidden contacts are counted,
-never named. Margince suggests a company only when one company you can see fits, and no second one. **Confirm
-company** makes it the company of the contacts on the domain; contacts at another company keep theirs.
+never named. Margince suggests a company only when one company you can see fits, and no second one.
+**Confirm** with its name links that company; contacts at another company keep theirs.
 
-**Choose another** opens the question with a company search and **Create company**. **Not now** puts
-it off until new mail arrives. **Stop capturing in your mailboxes** stops saving mail from the domain.
+**Choose another** opens one row per answer: search, **Create company**, read the site again, or
+**Not now**. **Stop capturing in your mailboxes** is there and in the row's **⋯** menu.
 
-**Senders** (Settings → Connections → Activity): every address that came in through your mailbox, and
+**Sender decisions** (Settings → Connections → Activity): every address that came in through your mailbox, and
 what Margince decided about each. That is a contact, a role mailbox, an
 automated tool, a newsletter, an advisor, or personal. You can change any of them.
 
-**Mark as business** lets a sender back in; **Exclude** destroys their mail, also what they send
-later ([how](#how-do-i-tell-margince-a-sender-is-business-or-exclude-one)). **Waiting on a decision**, under the
-list, names the contacts only you see until their sender is decided. An administrator sees only
-how many there are.
+**Mark as business** lets a sender back in; **Exclude** destroys their mail, also what they send later
+([how](#how-do-i-tell-margince-a-sender-is-business-or-exclude-one)). **Waiting on a decision**, under the list, names the contacts
+only you see until their sender is decided. Each says if it waits on Margince or on you. Decide the sender there, or remove the
+contact, which archives it and keeps its mail. Mail and meetings from before the removal do not create it again. An administrator sees only how many there are.
 
-**Held threads** (Settings → Connections → Activity): the threads your mailbox is holding
-back right now, with the reason and the outside addresses on each. **Share with
-the team** releases one.
+**Mail not shared with the team** (Settings → Connections → Activity) lists the threads your mailbox holds
+back now. Each shows the reason and its outside addresses. No action is needed. To share one,
+search for it and choose **Preview and change sharing**.
 
 Three settings decide who may read captured mail. **Mail visibility** is in
 each mailbox's settings in Settings → Connections. **Private correspondence** is on a

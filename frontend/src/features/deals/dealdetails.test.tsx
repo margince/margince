@@ -112,7 +112,7 @@ it("locks offer-derived ARR and currency while permitting an amount correction",
   });
   await user.click(await screen.findByRole("button", { name: CHANGE_VALUE }));
   const dialog = await valueDialog();
-  const input = within(dialog).getByRole("spinbutton", { name: "Value" });
+  const input = within(dialog).getByRole("textbox", { name: "Value" });
   const save = within(dialog).getByRole("button", { name: "Save" });
   // Enter in the field saves in a browser, since Save submits the field's own
   // form; happy-dom has no implicit submission to press it with.
@@ -179,5 +179,9 @@ it("shows why a company change is refused while the deal's contracts name anothe
     await within(dialog).findByRole("button", { name: /Contoso/ }),
   );
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
-  expect(await within(dialog).findByText(refusal)).toBeTruthy();
+  expect(
+    await within(dialog).findByText(
+      "This deal has contracts belonging to another company. Archived contracts also count. Ask an administrator to correct the contract links before changing the company.",
+    ),
+  ).toBeTruthy();
 });

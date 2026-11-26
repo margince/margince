@@ -40,7 +40,7 @@ const (
 // movement with its own bucket: a number that moved because the rules changed
 // must not be reported as the business moving. Bump it when a reading's
 // membership or arithmetic changes.
-const DefinitionVersion = "forecast_v5"
+const DefinitionVersion = "forecast_v7"
 
 // Column and payload keys shared by the insert and the audit payload. Named
 // rather than repeated, because a key written in two places can come to be
@@ -70,18 +70,19 @@ type NewSnapshot struct {
 	// ForwardMeasure is the measure the installation was set to build its
 	// landing from when this was taken. Empty stores NULL: not recorded.
 	ForwardMeasure ForwardMeasure
-	// SelfCorrecting, EvidenceCutoff and RiskSignalsVersion are the basis the
-	// chances stood on. A nil SelfCorrecting stores NULL: not recorded.
+	// SelfCorrecting and RiskSignalsVersion are the basis the chances stood
+	// on. A nil SelfCorrecting stores NULL: not recorded.
 	SelfCorrecting     *bool
-	EvidenceCutoff     *time.Time
 	RiskSignalsVersion string
+	// FocusGoal is the team's goal for the period. With one, the snapshot
+	// ranks the deals that close the gap to the landing it freezes.
+	FocusGoal *int64
 }
 
 // StampChances records on a snapshot the basis its readings' chances stood on.
 // Every snapshot writer calls it with the assembly its readings came from.
 func (s *NewSnapshot) StampChances(from Assembly) {
 	s.SelfCorrecting = new(from.SelfCorrecting)
-	s.EvidenceCutoff = new(from.EvidenceCutoff)
 	s.RiskSignalsVersion = from.RiskSignalsVersion
 }
 
@@ -112,12 +113,13 @@ func (s *Store) TakeSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot) (id
 	if err != nil {
 		return ids.Nil, err
 	}
-	id, err := s.insertSnapshot(ctx, tx, in, landing, capturedBy)
+	focus := focusOf(in, landing)
+	id, err := s.insertSnapshot(ctx, tx, in, landing, focus, capturedBy)
 	if err != nil {
 		return ids.Nil, err
 	}
 
-	if err := s.writeContributions(ctx, tx, id, in.Readings.Contributions, capturedBy); err != nil {
+	if err := s.writeContributions(ctx, tx, id, in.Readings.Contributions, focus, capturedBy); err != nil {
 		return ids.Nil, err
 	}
 
@@ -167,7 +169,7 @@ func (s *Store) TakeSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot) (id
 // thousands of deals and a round trip each would make the nightly run's cost
 // the network's rather than the database's.
 func (s *Store) writeContributions(
-	ctx context.Context, tx pgx.Tx, snapshotID ids.UUID, rows []Contribution, capturedBy string,
+	ctx context.Context, tx pgx.Tx, snapshotID ids.UUID, rows []Contribution, focus *FocusList, capturedBy string,
 ) error {
 	if len(rows) == 0 {
 		// A period with no deals is a real answer. The snapshot stands with no
@@ -183,6 +185,7 @@ func (s *Store) writeContributions(
 			"in_won", "in_evidence", "in_open", "in_lost", "exclusion_reason",
 			"audit_id", "approval_id", "captured_by",
 			"typed_probability", "evidence_n", "risk_signals", "risk_signal_facts", "risk_effect",
+			"focus_rank", "focus_reason",
 		},
 		pgx.CopyFromSlice(len(rows), func(i int) ([]any, error) {
 			row := rows[i]
@@ -214,6 +217,10 @@ func (s *Store) writeContributions(
 			if err != nil {
 				return nil, fmt.Errorf("forecasting: contribution %d: %w", i, err)
 			}
+			rank, reason, err := focusColumns(focus, row.DealID)
+			if err != nil {
+				return nil, fmt.Errorf("forecasting: contribution %d: %w", i, err)
+			}
 			return []any{
 				snapshotID, dealID, nullableID(row.Owner), row.AmountMinor,
 				currency, row.BaseMinor, nil, nil,
@@ -223,6 +230,7 @@ func (s *Store) writeContributions(
 				nullIfEmpty(row.ExclusionReason),
 				row.AuditID, row.ApprovalID, capturedBy,
 				row.TypedProbability, row.EvidenceN, SignalCodes(row.Signals), facts, row.Effect,
+				rank, reason,
 			}, nil
 		}))
 	if err != nil {
@@ -417,7 +425,7 @@ func (s *Store) MovementTx(
 			Message: "a movement compares two readings in the same base currency",
 		}
 	}
-	return Classify(reading, opening, closing), nil
+	return s.attributed(ctx, tx, opening, closing, Classify(reading, opening, closing))
 }
 
 func sameID(a, b *ids.UUID) bool {
@@ -434,7 +442,8 @@ const ContributionSelect = `SELECT c.deal_id, c.owner_id, c.amount_minor, c.curr
 		c.effective_close_date, c.close_provisional, c.probability_source, c.stage_probability,
 		c.weighted_minor, c.in_won, c.in_evidence, c.in_open, c.in_lost,
 		c.exclusion_reason, c.audit_id, c.approval_id,
-		c.stage_id, c.typed_probability, c.evidence_n, c.risk_signal_facts, c.risk_effect
+		c.stage_id, c.typed_probability, c.evidence_n, c.risk_signal_facts, c.risk_effect,
+		c.focus_rank, c.focus_reason
 		FROM forecast_contribution c`
 
 // CollectContribution scans one row read with ContributionSelect.
@@ -446,14 +455,20 @@ func CollectContribution(row pgx.CollectableRow) (Contribution, error) {
 	var probability *int
 	var weighted *int64
 	var stage *ids.UUID
-	var facts []byte
+	var facts, focusReason []byte
+	var focusRank *int
 	err := row.Scan(&dealID, &owner, &c.AmountMinor, &currency, &c.BaseMinor,
 		&c.EffectiveClose, &c.CloseProvisional, &source, &probability,
 		&weighted, &c.InWon, &c.InEvidence, &c.InOpen, &c.InLost,
 		&exclusion, &c.AuditID, &c.ApprovalID,
-		&stage, &c.TypedProbability, &c.EvidenceN, &facts, &c.Effect)
+		&stage, &c.TypedProbability, &c.EvidenceN, &facts, &c.Effect,
+		&focusRank, &focusReason)
 	if err == nil && facts != nil {
 		err = json.Unmarshal(facts, &c.Signals)
+	}
+	if err == nil && focusRank != nil {
+		c.Focus = &Focus{Rank: *focusRank}
+		err = json.Unmarshal(focusReason, &c.Focus.Reason)
 	}
 	if stage != nil {
 		c.StageID = stage.String()

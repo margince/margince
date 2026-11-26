@@ -5,6 +5,7 @@ package connector
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -21,6 +22,17 @@ type CalendarScheduler interface {
 	CalendarSave(context.Context, Auth, CalendarAppointment) (CalendarReceipt, error)
 	CalendarCancel(context.Context, Auth, string, string) error
 }
+
+// CalendarResponder answers an event the connection's owner was invited to,
+// on their own calendar, which tells the organizer. A connector that can
+// schedule may still not answer, so this is a capability of its own.
+type CalendarResponder interface {
+	CalendarRespond(ctx context.Context, auth Auth, uid, response string) error
+}
+
+// ErrCalendarEventMissing is a calendar with no event of the invitation's UID,
+// or with one that does not list its owner as a guest.
+var ErrCalendarEventMissing = errors.New("calendar: the invited event is not on this calendar")
 
 // CalendarInterval exposes occupancy without event titles or attendee identities.
 type CalendarInterval struct {
@@ -58,7 +70,11 @@ type CalendarAppointment struct {
 	Location    string    `json:"Location"`
 	Start       time.Time `json:"Start"`
 	End         time.Time `json:"End"`
-	Attendees   []string  `json:"Attendees"`
+	// StartWall and StartZone are the host's chosen local start; both are
+	// empty when the booking named only an instant.
+	StartWall string   `json:"StartWall,omitempty"`
+	StartZone string   `json:"StartZone,omitempty"`
+	Attendees []string `json:"Attendees"`
 	// Roster says, for every address in Attendees, what it resolved to when the
 	// host booked it. Empty on an appointment written before bookings carried
 	// more than one attendee; such an appointment holds its one invitee only.

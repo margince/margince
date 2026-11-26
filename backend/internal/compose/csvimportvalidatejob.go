@@ -17,6 +17,7 @@ import (
 
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -163,11 +164,11 @@ func testRunRefusal(err error) error {
 			return err
 		}
 	}
-	fault, ok := httperr.Classify(importProblem(err))
+	fault, ok := httperr.Classify(importwire.Problem(err))
 	if !ok || fault.Status >= http.StatusInternalServerError {
 		return err
 	}
-	return migration.RunStop{Cause: fault.Detail, Err: err}
+	return importwire.StopOf(fault, err)
 }
 
 // testRunProgress records how far a test run has matched its rows against the

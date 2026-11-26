@@ -15,7 +15,7 @@ import (
 )
 
 // strictHomeCohort is one row and seat the strict Home lane must find
-// measured, with its budget. holds names the top-level field every timed
+// measured, with its budget. holds names the field path every timed
 // answer must fill, where the corpus gives that seat data. "" allows empty.
 type strictHomeCohort struct {
 	requirement, row, seat string
@@ -34,7 +34,7 @@ var strictHomeCohorts = []strictHomeCohort{
 	{"R02", "worklist", "rep", 750 * time.Millisecond, "queue"},
 	{"R02", "worklist", "manager", 750 * time.Millisecond, ""},
 	{"R02", "worklist_team", "manager", time.Second, "queue"},
-	{"R02", "home_worklist", "rep", 750 * time.Millisecond, "queue"},
+	{"R02", "home_worklist", "rep", 750 * time.Millisecond, "focus.items"},
 	{"R02", "home_worklist", "manager", 750 * time.Millisecond, ""},
 	{"R09", "app_shell_approvals", "rep", 100 * time.Millisecond, "count"},
 	{"R09", "app_shell_approvals", "manager", 100 * time.Millisecond, "count"},
@@ -64,13 +64,17 @@ func strictHolds(row, seat string) string {
 // holdsData reports whether a JSON object's field is present and carries
 // something: a non-empty list, an object, or a non-null value.
 func holdsData(body []byte, field string) bool {
-	var object map[string]json.RawMessage
-	if json.Unmarshal(body, &object) != nil {
-		return false
-	}
-	value, ok := object[field]
-	if !ok || string(value) == "null" {
-		return false
+	value := json.RawMessage(body)
+	for name := range strings.SplitSeq(field, ".") {
+		var object map[string]json.RawMessage
+		if json.Unmarshal(value, &object) != nil {
+			return false
+		}
+		var ok bool
+		value, ok = object[name]
+		if !ok || string(value) == "null" {
+			return false
+		}
 	}
 	var list []json.RawMessage
 	if json.Unmarshal(value, &list) == nil {
@@ -244,6 +248,9 @@ func TestHoldsDataReadsTheNamedFieldNotTheEnvelope(t *testing.T) {
 		want        bool
 	}{
 		{emptyQueue, "queue", false},
+		{`{"queue":[],"focus":{"items":[{"id":"task"}]}}`, strictHolds("home_worklist", "rep"), true},
+		{`{"queue":[],"focus":{"items":[]}}`, strictHolds("home_worklist", "rep"), false},
+		{`{"queue":[],"focus":null}`, strictHolds("home_worklist", "rep"), false},
 		{`{"queue":[{"id":"a"}],"summary":{}}`, "queue", true},
 		{`{"done":[],"needs_you":[],"totals":{"done":0}}`, "done", false},
 		{`{"currency":"USD","computed_at":"2026-10-29T00:00:00Z"}`, "cost_est_minor", false},

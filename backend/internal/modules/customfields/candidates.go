@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -93,16 +94,15 @@ func (s *Service) DateFieldCandidates(ctx context.Context, object, column string
 		limit = minDateFieldCandidatesLimit
 	}
 
-	quotedTable := quoteIdentifier(object)
 	quotedCol := quoteIdentifier(column)
 
 	var rows []dateFieldRow
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var qErr error
 		if recurring {
-			rows, qErr = queryRecurringCandidates(ctx, tx, quotedTable, quotedCol, from, to, limit)
+			rows, qErr = queryRecurringCandidates(ctx, tx, object, quotedCol, from, to, limit)
 		} else {
-			rows, qErr = queryLiteralCandidates(ctx, tx, quotedTable, quotedCol, from, to, limit)
+			rows, qErr = queryLiteralCandidates(ctx, tx, object, quotedCol, from, to, limit)
 		}
 		return qErr
 	})
@@ -152,10 +152,7 @@ type dateFieldRow struct {
 // otherwise-identical bounds. quotedTable/quotedCol are already
 // validated identifiers (DateFieldCandidates), safe to format directly.
 func queryLiteralCandidates(ctx context.Context, tx pgx.Tx, quotedTable, quotedCol string, from, to time.Time, limit int) ([]dateFieldRow, error) {
-	query := fmt.Sprintf(
-		`SELECT id, %[1]s FROM %[2]s WHERE archived_at IS NULL AND %[1]s BETWEEN $1 AND $2 ORDER BY %[1]s, id LIMIT $3`,
-		quotedCol, quotedTable)
-	return scanDateFieldRows(ctx, tx, query, limit, from.Format(time.DateOnly), to.Format(time.DateOnly))
+	return queryDateCandidates(ctx, tx, quotedTable, quotedCol, from, to, false, limit)
 }
 
 // queryRecurringCandidates is the yearly-recurrence shape: compares the
@@ -171,17 +168,22 @@ func queryLiteralCandidates(ctx context.Context, tx pgx.Tx, quotedTable, quotedC
 // fromMMDD == toMMDD, giving the full-year case the "match everything"
 // answer it needs without a separate special case.
 func queryRecurringCandidates(ctx context.Context, tx pgx.Tx, quotedTable, quotedCol string, from, to time.Time, limit int) ([]dateFieldRow, error) {
-	fromMMDD := from.Format("0102")
-	toMMDD := to.Format("0102")
-	var predicate string
-	if fromMMDD < toMMDD {
-		predicate = fmt.Sprintf(`to_char(%[1]s,'MMDD') BETWEEN $1 AND $2`, quotedCol)
-	} else {
-		predicate = fmt.Sprintf(`(to_char(%[1]s,'MMDD') >= $1 OR to_char(%[1]s,'MMDD') <= $2)`, quotedCol)
+	return queryDateCandidates(ctx, tx, quotedTable, quotedCol, from, to, true, limit)
+}
+
+func queryDateCandidates(ctx context.Context, tx pgx.Tx, table, column string, from, to time.Time, recurring bool, limit int) ([]dateFieldRow, error) {
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	where := storekit.DateWindowSQL(column, from, to, recurring, arg)
+	scope, err := auth.ScopeClauseFor(ctx, table, "t", arg)
+	if err != nil {
+		return nil, err
 	}
-	query := fmt.Sprintf(`SELECT id, %[1]s FROM %[2]s WHERE archived_at IS NULL AND %[3]s ORDER BY %[1]s, id LIMIT $3`,
-		quotedCol, quotedTable, predicate)
-	return scanDateFieldRows(ctx, tx, query, limit, fromMMDD, toMMDD)
+	if scope != "" {
+		where += " AND " + scope
+	}
+	query := fmt.Sprintf(`SELECT t.id, %s FROM %s t WHERE t.archived_at IS NULL AND %s ORDER BY %s, t.id LIMIT $%d`, column, quoteIdentifier(table), where, column, arg(limit))
+	return scanDateFieldRows(ctx, tx, query, args...)
 }
 
 // scanDateFieldRows runs query (already built with validated identifiers
@@ -191,8 +193,8 @@ func queryRecurringCandidates(ctx context.Context, tx pgx.Tx, quotedTable, quote
 // the recurring shape — with limit always bound last as $3, since every
 // candidate query shares that same LIMIT position regardless of what its
 // own predicate binds.
-func scanDateFieldRows(ctx context.Context, tx pgx.Tx, query string, limit int, args ...any) ([]dateFieldRow, error) {
-	rows, err := tx.Query(ctx, query, append(args, limit)...)
+func scanDateFieldRows(ctx context.Context, tx pgx.Tx, query string, args ...any) ([]dateFieldRow, error) {
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -231,14 +233,5 @@ func scanDateFieldRows(ctx context.Context, tx pgx.Tx, query string, limit int, 
 // leap-day field specially, and inventing behaviour nobody asked for is
 // its own kind of bug.
 func projectOccurrence(month time.Month, day int, from, to time.Time) time.Time {
-	fromMMDD := from.Format("0102")
-	toMMDD := to.Format("0102")
-	if fromMMDD < toMMDD {
-		return time.Date(to.Year(), month, day, 0, 0, 0, 0, to.Location())
-	}
-	candMMDD := fmt.Sprintf("%02d%02d", int(month), day)
-	if candMMDD >= fromMMDD {
-		return time.Date(from.Year(), month, day, 0, 0, 0, 0, from.Location())
-	}
-	return time.Date(to.Year(), month, day, 0, 0, 0, 0, to.Location())
+	return fieldcatalog.ProjectAnnualOccurrence(month, day, from, to)
 }

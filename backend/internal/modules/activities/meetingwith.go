@@ -134,8 +134,8 @@ func orUnbounded(clause string) string {
 }
 
 // colleagueParticipantSQL holds when participant row ap is a colleague. The
-// invited address decides: it is on a trusted own domain, is a live member's
-// login, or is a mailbox proved for a seat. A row with no address falls back
+// invited address decides. It is on a trusted own domain, is a live or invited
+// member's login, or is a mailbox proved for a seat. A row with no address falls back
 // to its contact's live addresses, read through contactScope on alias cs.
 // provedIdentities is the binding storekit.ProvedMailSeatIdentitiesSQL wrote;
 // empty leaves that arm out. A row whose domain fold is missing is outside.
@@ -157,15 +157,13 @@ func colleagueParticipantSQL(provedIdentities, contactScope string) string {
 	               WHERE ce.contact_id = ap.contact_id AND ce.archived_at IS NULL
 	                 AND (EXISTS (SELECT 1 FROM (%[1]s) own_domain(domain) WHERE %[5]s)
 	                   OR EXISTS (SELECT 1 FROM app_user u WHERE %[3]s AND %[6]s)))))`,
-		auth.TrustedOwnDomainsFoldedSQL, ownAddress, workforce.LiveMemberSQL("u"), seatAddress, ownContact, seatContact, contactScope)
+		auth.TrustedOwnDomainsFoldedSQL, ownAddress, workforce.ActivatableMemberSQL("u"), seatAddress, ownContact, seatContact, contactScope)
 }
 
 // Unknown guests keep a meeting in the customer lane; known resources cannot establish an outside party.
 // Contact evidence is scoped to the reader.
 var outsidePartySQL = `((NOT EXISTS (SELECT 1 FROM activity_participant roster
-     WHERE roster.activity_id = a.id AND roster.address IS NOT NULL)
- AND NOT EXISTS (SELECT 1 FROM activity_participant ap
-     WHERE ap.activity_id = a.id AND %[1]s))
+     WHERE roster.activity_id = a.id AND roster.user_id IS NULL))
  OR EXISTS (SELECT 1 FROM activity_participant ap
      WHERE ap.activity_id = a.id AND ap.user_id IS NULL AND NOT %[1]s AND NOT %[2]s
        AND NOT EXISTS (SELECT 1 FROM relationship emp

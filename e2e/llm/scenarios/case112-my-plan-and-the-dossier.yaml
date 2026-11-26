@@ -2,6 +2,7 @@
 # Reading them starts no plan and refreshes no dossier: a refresh would spend the
 # enrich scope, and the user asked only to be told.
 name: case112_my_plan_and_the_dossier
+title: My week's plan and the company dossier
 criteria: [1]
 writes: false
 
@@ -9,13 +10,6 @@ prompt: |
   What is on my weekly plan right now, and what does the dossier say about
   Nordholz Anlagenbau GmbH? Only tell me. Change nothing and do not create
   anything new.
-
-must_call:
-  - read_details
-
-must_call_with:
-  - read_details.action=dossier
-  - read_details.action=weekly_plan
 
 may_call:
   - find_records
@@ -26,14 +20,36 @@ may_call:
   - read_attention
   - read_workspace
   - whoami
+  - read_details
 
 must_not_call_with:
   - run_research~.
   - change_attention~.
 
+# The admin has started no plan this week, and no research has filled the dossier.
+# Its one section states the industry from the company's own fields, so "empty"
+# and "only the record's own fields" are both true. Both facts come only from
+# the reads, so the answer must carry both.
 must_mention:
   - "Nordholz"
   - "(?i)\bplan\b"
+  # "Weekly plan: none is saved" says it with the plan first. The none must be
+  # the plan's own, so "plan: 3 calls; dossier: empty" and "plan has nothing
+  # overdue" are not it. A "not started" is the plan's when no clause break and
+  # no dossier stand between them; the plan may be a heading on the line above.
+  - "(?i)\bno\b[^.]{0,40}\bplan\b|\b(?:do|does)(?: not|n['’]t) have (?:a |any )?(?:\w+ )?plan\b|\bplan\b(?:(?!dossier)[^.;,]){0,60}?(?:\bnot|n['’]t) (?:yet )?(?:been )?(?:started|begun|opened)|(?:^|[.;,\n])(?:(?!dossier)[^.;,\n])*?(?:\bnot|n['’]t) (?:yet )?(?:been )?(?:started|begun|opened)(?:(?!dossier)[^.;,]){0,40}?\bplan\b|\bplan\b(?:\s*:\s*(?:none|nothing|empty)\b|\s+is\s+(?:currently\s+)?empty\b|\s+(?:has|holds|contains)\s+nothing\s*(?:[.;,\n]|$|(?:on|in) it\b|yet\b))"
+
+# The dossier read answers a stub built from the record's own fields, so "empty",
+# "thin" and "built from the record, not by research" are all true of it.
+judge:
+  - "Criterion 1. The answer says the Nordholz Anlagenbau GmbH dossier holds no research yet: that it is empty, or only built from the company record's own fields (such as its industry). Answer no if it reports research findings about the company, or says a dossier was refreshed or created."
+
+# What the dossier holds is one industry line. An answer that reports anything a
+# research run would have found invented it. A negation covers only the word or
+# list right after it, so "no products or competitors" is not a claim, and
+# "no research yet, but 40 plants" is.
+must_not_mention:
+  - "(?i)dossier\b(?:(?=((?:\b(?:no|nothing|without|none)\b|(?:\bnot|n['’]t)\b)\s*(?:(?:yet|list|lists|say|says|mention|mentions|include|includes|hold|holds|have|has|contain|contains|name|names|show|shows)\s+)?(?:any\s+)?(?:\b(?:revenue|turnover|employees|headcount|founded|headquarter\w*|competitors?|plants?|factor(?:y|ies)|subsidiar(?:y|ies)|customers?|products?|news|funding)\b(?:\s*,\s*(?:or\s+|and\s+|nor\s+)?\b(?:revenue|turnover|employees|headcount|founded|headquarter\w*|competitors?|plants?|factor(?:y|ies)|subsidiar(?:y|ies)|customers?|products?|news|funding)\b|\s+(?:or|and|nor)\s+\b(?:revenue|turnover|employees|headcount|founded|headquarter\w*|competitors?|plants?|factor(?:y|ies)|subsidiar(?:y|ies)|customers?|products?|news|funding)\b)*|\w+)))\1|(?!(?:\b(?:no|nothing|without|none)\b|(?:\bnot|n['’]t)\b))[^.\n]){0,120}?\b(?:revenue|turnover|employees|headcount|founded|headquarter\w*|competitors?|plants?|factor(?:y|ies)|subsidiar(?:y|ies)|customers?|products?|news|funding)\b"
 
 runs: 3
 pass_at: 2

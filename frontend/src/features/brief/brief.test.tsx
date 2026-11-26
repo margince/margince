@@ -89,7 +89,7 @@ it("an approval-only morning stays actionable, and reviewing it sends no decisio
     ).toBeTruthy(),
   );
   expect(writes(calls)).toEqual([]);
-  expect(screen.queryByText(en["brief.feed.clear"])).toBeNull();
+  expect(screen.queryByText(en["brief.feed.caughtUp"])).toBeNull();
 });
 
 it("opens a bundle's effects together from the ranked row", async () => {

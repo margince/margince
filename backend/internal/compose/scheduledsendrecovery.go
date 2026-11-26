@@ -110,10 +110,9 @@ func (w *scheduledSendRecoveryWorker) Work(ctx context.Context, _ *river.Job[Sch
 	return nil
 }
 
-// rearm enqueues the alarm this message lost, due now: its moment has already
-// passed, so the fire path decides immediately what to do about that — including
-// holding it as a missed window, which is the honest outcome for a message an
-// outage carried past its time.
+// rearm enqueues the alarm this message lost. Its moment has already passed, so
+// the alarm runs at once and the fire path decides what that means. A message
+// an outage carried past its window is held as a missed window.
 func (w *scheduledSendRecoveryWorker) rearm(ctx context.Context, id ids.UUID) error {
 	return w.store.RearmScheduledSend(ctx, id, w.timer)
 }
@@ -122,9 +121,7 @@ func (w *scheduledSendRecoveryWorker) rearm(ctx context.Context, id ids.UUID) er
 //
 // Gated on exactly what the comms_scheduled_send worker is gated on, because
 // that worker is what this pass enqueues into. A role holding only one of the
-// two would run the sweep and file alarms nothing consumes — and ScheduledSendArgs
-// carries no UniqueOpts, so they would accumulate in river_job every quarter
-// hour rather than collapsing.
+// two would run the sweep and file alarms nothing consumes.
 func addScheduledSendRecoveryJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
 	if cfg.SendRegistry == nil || cfg.SendDelivery == nil {
 		return nil

@@ -24,7 +24,7 @@ func knowledgeRuntime(unit string, deps extensionRuntimeBinding) *callRuntime {
 
 // A unit the core keeps no corpus for is told so, by name, whatever it sends.
 func TestAUnitWithNoCorpusCannotFileADocument(t *testing.T) {
-	rt := knowledgeRuntime("openchannel", extensionRuntimeBinding{pool: &pgxpool.Pool{}, knowledgeBlob: blobstore.NewMemory()})
+	rt := knowledgeRuntime("openchannel", extensionRuntimeBinding{pool: &pgxpool.Pool{}, blob: blobstore.NewMemory()})
 	_, err := rt.Knowledge().UpsertDocument(context.Background(), extension.KnowledgeDocument{ExternalID: "x"})
 	if !errors.Is(err, extension.ErrNoKnowledge) {
 		t.Fatalf("got %v, want ErrNoKnowledge", err)
@@ -60,7 +60,7 @@ func TestTheStoresRefusalsReachTheUnitInPublishedWords(t *testing.T) {
 		want error
 	}{
 		"busy":        {&knowledge.IngestBusyError{Filename: "a"}, extension.ErrKnowledgeBusy},
-		"unsupported": {&knowledge.UnsupportedTypeError{Got: "application/pdf"}, extension.ErrInvalid},
+		"unsupported": {&knowledge.UnsupportedTypeError{Kind: "PDF"}, extension.ErrInvalid},
 		"duplicate":   {&knowledge.AlreadyFiledError{}, extension.ErrInvalid},
 		"full":        {&knowledge.CorpusFullError{Have: 1, Adding: 2, Ceiling: 2}, extension.ErrInvalid},
 	} {

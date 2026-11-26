@@ -261,16 +261,15 @@ test.describe("the Brief — page shape", () => {
     );
   });
 
-  // The weekly has no rail, since every rail panel is about today. A grid track
-  // stays when its item is gone, so the width is measured, not the class.
-  test("gives the weekly the whole width", async ({ page }) => {
+  test("fills the weekly main pane beside its optional rail", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await openWeekly(page);
     await expectShellRendered(page);
 
-    await expect(page.locator(".brief-rail")).toHaveCount(0);
     const fill = await page
-      .locator(".page-pane.brief-weekly-page > .brief-report")
+      .locator(".brief-weekly-page > .brief-main > .brief-report")
       .evaluate((report) => {
         const pane = report.parentElement;
         if (!pane) throw new Error("the weekly report stands on no pane");
@@ -284,7 +283,7 @@ test.describe("the Brief — page shape", () => {
           inner: pane.clientWidth - inset,
         };
       });
-    expect(fill.inset).toBeGreaterThan(0);
+    expect(fill.inset).toBeGreaterThanOrEqual(0);
     expect(Math.abs(fill.report - fill.inner)).toBeLessThan(1);
     const pane = await page.locator(".brief-weekly-page").boundingBox();
     const header = await page.locator(GLANCE).boundingBox();
@@ -305,6 +304,7 @@ test.describe("the Brief — page shape", () => {
 
     await page.getByRole("button", { name: copy("brief.view.weekly") }).click();
     await expect(page.locator("#brief-weekly")).toBeVisible();
+    await settled(page);
     const after = await dial.boundingBox();
     if (!before || !after) throw new Error("the view dial has no box");
     expect(

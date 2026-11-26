@@ -10,10 +10,12 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { noteHistoryEntry } from "../lib/historydepth";
+import type { Departure } from "../lib/navigatefrom";
 import { throwProblem } from "../lib/problem";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { jsonResponse } from "../testing/story-utils";
@@ -193,10 +195,8 @@ describe("ArchiveAction", () => {
 
   it("says what went, once it has gone", async () => {
     const user = userEvent.setup();
-    // An archive is destructive and the contract has no restore endpoint, so
-    // the closing dialog was the whole of what a reader got — and a dialog
-    // closing is dismissal, not confirmation. It names the record because
-    // "Archived." beside a list of twenty is a sentence about nothing.
+    // A dialog closing is dismissal, not confirmation. It names the record
+    // because "Archived." beside a list of twenty is a sentence about nothing.
     render(
       <ArchiveAction
         label="Archive contact"
@@ -219,5 +219,144 @@ describe("ArchiveAction", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(
       "“Jana Brandt” archived",
     );
+  });
+
+  describe("leaving the archived record", () => {
+    // What a record page passes: close the record onto its list.
+    const toList = (from: Departure) => from.closeOnto({ screen: "contacts" });
+
+    function archiveContact(archive: () => Promise<{ id: string }>) {
+      render(
+        <ArchiveAction
+          label="Archive contact"
+          confirmText="There is no undo control."
+          archive={archive}
+          invalidate="contacts"
+          recordKey="contact"
+          archivedMessage="Contact archived."
+          onArchived={toList}
+          requires={{ object: "contact", action: "delete" }}
+        />,
+      );
+    }
+
+    async function confirm() {
+      const user = userEvent.setup();
+      await user.click(screen.getByTestId("archive-record"));
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: /^Archive/,
+        }),
+      );
+    }
+
+    it("puts the list in the place of a record opened from elsewhere", async () => {
+      globalThis.history.replaceState(null, "", "#/contacts/c-1");
+      const entries = globalThis.history.length;
+      archiveContact(() => Promise.resolve({ id: "c-1" }));
+      await confirm();
+
+      expect(await screen.findByRole("status")).toHaveTextContent(
+        "Contact archived.",
+      );
+      expect(globalThis.location.hash).toBe("#/contacts");
+      expect(globalThis.history.length).toBe(entries);
+    });
+
+    it("leaves a reader who moved on before it finished where they are", async () => {
+      globalThis.history.replaceState(null, "", "#/contacts/c-1");
+      let finish: (archived: { id: string }) => void = () => undefined;
+      archiveContact(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      );
+      await confirm();
+      globalThis.history.replaceState(null, "", "#/deals/d-1");
+      finish({ id: "c-1" });
+
+      expect(await screen.findByRole("status")).toHaveTextContent(
+        "Contact archived.",
+      );
+      expect(globalThis.location.hash).toBe("#/deals/d-1");
+    });
+
+    it("goes back to the list it was opened from, filter and all", async () => {
+      globalThis.history.replaceState(null, "", "#/contacts?owner=me");
+      noteHistoryEntry("start");
+      globalThis.history.pushState(null, "", "#/contacts/c-1");
+      noteHistoryEntry("moved");
+      const go = vi
+        .spyOn(globalThis.history, "go")
+        .mockImplementation(() => undefined);
+      archiveContact(() => Promise.resolve({ id: "c-1" }));
+      await confirm();
+
+      expect(await screen.findByRole("status")).toHaveTextContent(
+        "Contact archived.",
+      );
+      expect(go.mock.calls).toEqual([[-1]]);
+      go.mockRestore();
+    });
+  });
+
+  it("takes the archive back from its confirmation, when the screen can", async () => {
+    const user = userEvent.setup();
+    const undone: { id: string }[] = [];
+    render(
+      <ArchiveAction
+        label="Archive contact"
+        confirmText="You can bring it back from its history."
+        archive={() => Promise.resolve({ id: "p-1" })}
+        invalidate="contacts"
+        recordKey="contact"
+        archivedMessage="“Jana Brandt” archived"
+        onArchived={() => undefined}
+        undo={async (archived) => {
+          undone.push(archived);
+        }}
+        requires={{ object: "contact", action: "delete" }}
+      />,
+    );
+    await user.click(screen.getByTestId("archive-record"));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["common.undo"] }),
+    );
+
+    expect(undone).toEqual([{ id: "p-1" }]);
+  });
+
+  it("says why an undo from the confirmation was refused", async () => {
+    const user = userEvent.setup();
+    render(
+      <ArchiveAction
+        label="Archive contact"
+        confirmText="You can bring it back from its history."
+        archive={() => Promise.resolve({ id: "p-1" })}
+        invalidate="contacts"
+        recordKey="contact"
+        archivedMessage="“Jana Brandt” archived"
+        onArchived={() => undefined}
+        undo={async () => throwProblem({ detail: "the record changed since" })}
+        requires={{ object: "contact", action: "delete" }}
+      />,
+    );
+    await user.click(screen.getByTestId("archive-record"));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["common.undo"] }),
+    );
+
+    expect(await screen.findByText("the record changed since")).toBeTruthy();
   });
 });

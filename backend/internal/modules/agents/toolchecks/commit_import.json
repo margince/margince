@@ -1,0 +1,12 @@
+{
+  "verb": "commit_import",
+  "checks": [
+    "company.create",
+    "custom_field.read",
+    "import_run.read",
+    "import_run.update"
+  ],
+  "takes": [
+    "import_run"
+  ]
+}

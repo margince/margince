@@ -18,6 +18,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/briefevidence"
+	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -72,6 +73,7 @@ func (s *Service) wire(
 	if err := briefevidence.Attach(ctx, s.emailRows, briefevidence.FromSuggestions(findings)); err != nil {
 		return crmcontracts.CompanyScan{}, err
 	}
+	momentaction.MarkRefusedSuggestions(ctx, findings)
 	out := crmcontracts.CompanyScan{
 		CompanyId:       openapi_types.UUID(companyID.UUID),
 		State:           crmcontracts.CompanyScanStateNever,

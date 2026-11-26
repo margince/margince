@@ -1,0 +1,6 @@
+{
+  "verb": "create_record_role",
+  "checks": [
+    "custom_field.create"
+  ]
+}

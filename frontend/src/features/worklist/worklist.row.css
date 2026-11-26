@@ -22,18 +22,13 @@
   background: var(--groundHover);
 }
 
-/* Three columns a reader runs down as three lists: the rank, the KIND of work,
-   and the work itself — which takes the whole rest of the row. The kind column
-   is fixed so the titles beside it start at one x whatever the kind says, which
-   is what lets the eye read the kinds alone and then the titles alone. The
-   verbs are NOT a fourth column here: seven controls beside the work took the
-   width and left the subject, the snippet and the reasons a strip that wrapped
-   every line. They sit under the work, one wrapping line, and so does anything
-   else the row carries after it — a decision drawn inside the row, an answer. */
+/* Two columns: the rank, then the work, whose chip line names its kind. The
+   verbs sit under the work, one wrapping line, with anything the row carries
+   after them: seven controls beside the work left it a strip that wrapped. */
 .worklist-row {
   align-items: flex-start;
   display: grid;
-  grid-template-columns: auto var(--worklist-kind-w, 7.5rem) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   column-gap: var(--space-4);
   row-gap: var(--space-2);
 }
@@ -42,8 +37,8 @@
    rather than one `:nth-child`, because the wide shape below moves ONLY the
    verbs and needs a selector of equal weight to do it. */
 .worklist-row > .worklist-row-acts,
-.worklist-row > :nth-child(n + 5) {
-  grid-column: 3 / -1;
+.worklist-row > :nth-child(n + 4) {
+  grid-column: 2 / -1;
 }
 
 /* THE RULE BETWEEN TWO ROWS, put back at the boundary it belongs to.
@@ -99,12 +94,11 @@
   .worklist-row {
     grid-template-columns:
       auto
-      var(--worklist-kind-w, 7.5rem)
       minmax(0, 1fr)
       fit-content(var(--worklist-acts-w, 32rem));
   }
   .worklist-row > .worklist-row-acts {
-    grid-column: 4;
+    grid-column: 3;
   }
 }
 
@@ -131,23 +125,15 @@
    No interval above it: the badge's own 20px box and the title's 21px line box
    put the two texts on the same centre, which is what "beside the title" means
    to a reader running down the column. */
+/* The kind badge is `nowrap`, and a kind in another language or a named
+   condition can be longer than the track. The badge ends its label in an
+   ellipsis rather than wrapping, because a reader runs DOWN the column and a
+   second line breaks the scan; the cell's `title` holds the full kind. */
 .worklist-row-kind {
+  display: flex;
+  align-items: flex-start;
   min-width: 0;
-}
-
-/* A named condition is longer than a category word and the badge is `nowrap`,
-   so it ran out of its cell and under the title. Clipped, never wrapped — see
-   `eyebrowClass` for why the column cannot grow a second line. */
-.worklist-row-kind-named {
   overflow: hidden;
-}
-
-.worklist-row-kind-named > * {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
 }
 
 .worklist-row-text {
@@ -173,9 +159,11 @@
   min-width: 0;
 }
 
-.worklist-row-facts-line > * + *::before {
-  content: "·";
-  margin-inline-end: var(--space-2);
+/* The dot ends the fact before it, as a timeline head's does (composed.css),
+   so a line that wraps never opens on a dot; a screen reader hears no dot. */
+.worklist-row-facts-line > :has(+ *)::after {
+  content: "·" / "";
+  margin-inline-start: var(--space-2);
 }
 
 .worklist-row-title {
@@ -184,6 +172,21 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   margin: 0;
+}
+/* A queue row is named as Home's task card is: the card's title type, in ink. */
+.worklist-row:has(.task-meta) .worklist-row-title {
+  font: var(--fontHeadingXSmall);
+}
+.worklist-row:has(.task-meta)
+  .worklist-row-title
+  > :is(.entity-link, .btn-valuelabel) {
+  font: inherit;
+  color: var(--textPrimary);
+}
+.worklist-row:has(.task-meta)
+  .worklist-row-title
+  > :is(.entity-link, .btn-valuelabel):hover {
+  color: var(--accentText);
 }
 /* A flex item's floor is its content's width, which would hold a long
    headline wider than the card. */
@@ -326,7 +329,12 @@
      gesture's own box stands between the row and its children, so a child
      selector would reach them on the rows that carry no judgement and miss
      every row that does. These two classes exist nowhere else. */
-  .worklist-row-text,
+  /* The work stands beside its rank, as a Home card's stands beside its tick;
+     the verbs take the line under it. */
+  .worklist-row-text {
+    flex: 1 1 0;
+    min-width: 0;
+  }
   .worklist-row-acts {
     flex: 1 1 100%;
     min-width: 0;
@@ -355,6 +363,11 @@
   .worklist-row .link-button {
     min-block-size: 44px;
   }
+  /* A chipped row's name keeps that target but not its height: the 20px line
+     reaches a step and a half each way, so the name stays level with the rank. */
+  .worklist-row:has(.task-meta) .worklist-row-title > .btn-valuelabel {
+    margin-block: calc(-1 * var(--space-3));
+  }
 }
 
 .worklist-promise-recipients {
@@ -379,4 +392,9 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+/* What the row is about reads as Home's card line: body type, second ink. */
+.worklist-row:has(.task-meta) :is(.worklist-row-detail, .worklist-row-because) {
+  font: var(--fontBody);
+  color: var(--textSecondary);
 }

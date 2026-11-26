@@ -23,11 +23,17 @@ fixture:
       talk through what you do? Tuesday or Thursday morning both work here.
 expect:
   outcome: accepted
-  answer: [commitment, noise, meeting]
+  answer: [commitment, other, meeting]
   rubric: >
+    The candidate output is the harness's record of the run, not one reply.
+    "replies" holds each raw reply in the order the pass asked, and "messages"
+    holds what the pass stored for each message. That wrapper is the harness's,
+    so never score it as a format fault; each reply inside it is the model's.
+    A message answered under the 0.7 floor is re-asked alone, so a second reply
+    is that re-ask and not a contradiction.
     Three messages in one call, one per label, deliberately ordered so a
     transposition is visible: a purchase order promised this afternoon
-    (commitment), a holiday autoresponder on the SAME subject line (noise), and a
+    (commitment), a holiday autoresponder on the SAME subject line (other), and a
     request for twenty minutes with two offered mornings (meeting).
     Score high only if all three labels are right AND each is attached to its own
     message. The second message shares its subject with the first, which is the

@@ -3,13 +3,18 @@ import type { QueryClient, QueryKey } from "@tanstack/react-query";
 export const worklistKey = ["worklist"] as const;
 export const magicKey = ["magic"] as const;
 export const briefKey = ["brief"] as const;
-export const digestKey = ["digest"] as const;
 // The reader's own set-aside or stop on a quiet contact. The Worklist writes
 // it and the contact page reads it, so both features key on this one prefix.
 export const nudgeDismissalKey = ["nudge-dismissal"] as const;
 // Every cached contact duplicate case. A case is read off its pairs, so a pair
 // decision anywhere makes all of them stale.
 export const contactCasesKey = ["contact-case"] as const;
+// Every cached read of the open duplicate pairs one company is in. A pair
+// decision or a merge anywhere makes all of them stale.
+export const companyPairsKey = ["company-pairs"] as const;
+// Every cached page of data-subject requests. A request names its subject's
+// label, so a contact merge stales it as well as the privacy screen's writes.
+export const dsrsKey = ["dsrs"] as const;
 
 export async function invalidateHandledChange(
   client: QueryClient,

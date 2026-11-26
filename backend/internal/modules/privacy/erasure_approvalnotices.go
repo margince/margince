@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/noticekeys"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // Lock the source first so notification fan-out cannot restore a copy after erasure.
@@ -32,11 +33,11 @@ func eraseApprovalNoticesMatching(ctx context.Context, tx pgx.Tx, reason, cause,
 		return nil
 	}
 	rows, err = tx.Query(ctx, `UPDATE notice
- SET subject = 'Proposal removed', body = '', origin = NULL, email_error = NULL, retracted_at = coalesce(retracted_at, now())
+ SET subject = 'Proposal removed', body = '', system_text = @system_text, origin = NULL, email_error = NULL, retracted_at = coalesce(retracted_at, now())
  WHERE dedupe_key = ANY(@keys)
    AND (subject IS DISTINCT FROM 'Proposal removed' OR body <> '' OR origin IS NOT NULL
-        OR email_error IS NOT NULL OR retracted_at IS NULL)
- RETURNING id`, pgx.StrictNamedArgs{"keys": keys})
+        OR email_error IS NOT NULL OR retracted_at IS NULL OR system_text IS DISTINCT FROM @system_text::jsonb)
+ RETURNING id`, pgx.StrictNamedArgs{"keys": keys, "system_text": systemtext.BoundLiteral("core.proposal_removed", "Proposal removed")})
 	if err != nil {
 		return fmt.Errorf("privacy: erasing copied approval notices: %w", err)
 	}

@@ -1,0 +1,7 @@
+{
+  "verb": "create_lead_disqualify_reason",
+  "checks": [
+    "custom_field.create",
+    "lead.read"
+  ]
+}

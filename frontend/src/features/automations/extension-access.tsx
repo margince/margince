@@ -16,7 +16,6 @@ import {
   type QueryLike,
   QueryStates,
 } from "../../design-system/querystates";
-import { INTL_LOCALE } from "../../format/format";
 import { objectLabel } from "../../format/rbacobjects";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanMutate } from "../../lib/capability";
@@ -34,6 +33,7 @@ import {
 import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import "./extension-access.css";
+import { listFormat } from "../../format/formatters";
 import {
   EXTENSIONS_KEY,
   type ExtensionUnit,
@@ -43,6 +43,7 @@ import {
   ROLES_KEY,
   type Role,
   useRoles,
+  useRoleVerbs,
   useSetRoleGrant,
 } from "../../lib/roles.queries";
 import {
@@ -50,8 +51,10 @@ import {
   type GrantMatrixRow,
   type GrantMatrixSection,
   grantOf,
+  nextGrant,
 } from "../settings/grantmatrix";
-import { UnitGovernance } from "./extension-governance";
+import { UnitGovernance, UnitSetup } from "./extension-governance";
+import { borrowedFacts, bringsCount } from "./extension-needs";
 
 // Extension access (settings → Extensions): what the composed extension tier
 // brought into this installation, and who may use it.
@@ -222,24 +225,13 @@ function UnitCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  // Two sources say which units exist and they can disagree. The inventory
-  // above is what /extensions answered — what the RUNNING BINARY composed —
-  // while `#/ext/<name>` can only resolve what the SPA's generated registry
-  // was built with. A bundle older than the binary lists a unit here whose
-  // page App.tsx's ExtensionRoute would answer with its (deliberate, honest)
-  // not-found card.
-  //
-  // So the link is rendered from the registry, never from the API's list. And
-  // when the registry misses, the miss is SAID rather than silently omitted:
-  // "this unit has no page" and "the page exists but this bundle predates it"
-  // are different facts, and an operator hunting a missing screen has to be
-  // able to tell them apart — an absent link would leave them debugging the
-  // grants below instead of the deploy.
+  // The inventory is what the running binary composed; `#/ext/<name>` resolves
+  // only what this bundle's registry holds. So the link comes from the registry,
+  // and a unit the registry misses is said, not silently left out.
   // How much this unit contributes at all. A jurisdiction pack contributes
   // none of the three: it supplies policy the core consults and registers no
   // object, route or job, which is a complete answer rather than an empty card.
-  const brings =
-    unit.rbac_objects.length + unit.routes.length + unit.jobs.length;
+  const brings = bringsCount(unit);
   const descriptor = findExtension(unit.name);
   // A descriptor is not a page. `de` has one and publishes NO operations, so
   // the generic fallback App.tsx renders for a unit without its own screen
@@ -287,6 +279,7 @@ function UnitCard({
     >
       <PanelBody className="ext-unit-body">
         <p>{unit.description}</p>
+        <UnitSetup missing={unit.setup_missing} />
         {/* Said only where the two registries disagree: a unit the running
             binary composed whose descriptor this bundle does not carry is a
             version skew, not a unit that simply has no page. */}
@@ -316,7 +309,7 @@ function UnitCard({
             title={t("extAccess.nobodyReadsTitle")}
           >
             {t("extAccess.nobodyReads", {
-              object: new Intl.ListFormat(INTL_LOCALE[locale], {
+              object: listFormat(locale, {
                 style: "long",
                 type: "conjunction",
               }).format(unread.map((object) => objectLabel(unit.name, object))),
@@ -390,8 +383,7 @@ function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
         {
           key: "routes",
           term: t("extAccess.brings.routes"),
-          // One entry per method and path: a DELETE must not hide behind the
-          // GET on the same path.
+          // One entry per method and path, so a DELETE never hides behind a GET.
           value: list(
             unit.routes.map((route) => `${route.method} ${route.path}`),
           ),
@@ -401,6 +393,7 @@ function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
           term: t("extAccess.brings.jobs"),
           value: list(unit.jobs),
         },
+        ...borrowedFacts(unit, t),
       ]}
     />
   );
@@ -420,6 +413,7 @@ function UnitMatrix({
 }>) {
   const t = useT();
   const setGrant = useSetRoleGrant();
+  const verbs = useRoleVerbs(true).data;
   const badges = roleBadges(roles, t);
   // Only a ProblemError carries a server code, so a rejected fetch can never be
   // mistaken for a concurrent edit.
@@ -433,11 +427,13 @@ function UnitMatrix({
       title: label,
       rows: roles.map((role): GrantMatrixRow => {
         const grant = grantOf(role, object);
+        const offered = verbs?.[object];
         return {
           key: role.key,
           name: role.name,
           badge: badges.get(role.key),
           grant,
+          verbs: offered,
           cellLabel: (action) =>
             t("extAccess.cell", {
               role: role.name,
@@ -453,7 +449,7 @@ function UnitMatrix({
             setGrant.mutate({
               roleKey: role.key,
               object,
-              grant: { ...grant, [action]: next },
+              grant: nextGrant(grant, action, next, offered),
               // The version this cell was read from: the server compares against
               // what the operator saw.
               version: role.version,

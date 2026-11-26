@@ -17,16 +17,17 @@ import (
 
 type recordLinksKey struct{}
 
-// withRecordLinks binds the origin evidence links are built on. An empty origin
-// binds nothing, and evidence then carries no link.
-func withRecordLinks(ctx context.Context, origin string) context.Context {
+// WithRecordLinks binds the origin record links are built on, in evidence and in
+// an answer that names records. An empty origin binds nothing, so nothing links.
+func WithRecordLinks(ctx context.Context, origin string) context.Context {
 	if origin == "" {
 		return ctx
 	}
 	return context.WithValue(ctx, recordLinksKey{}, origin)
 }
 
-func recordLinkOrigin(ctx context.Context) string {
+// RecordLinkOrigin is the origin WithRecordLinks bound, or empty.
+func RecordLinkOrigin(ctx context.Context) string {
 	if origin, ok := ctx.Value(recordLinksKey{}).(string); ok {
 		return origin
 	}
@@ -92,11 +93,9 @@ func addDisplays(node any, inherited string) bool {
 		if currency != "" {
 			added = addPairDisplays(typed, currency)
 		}
-		if base, ok := typed[values.ConvertedCurrency].(string); ok && base != "" {
-			inherited = base
-		} else if own, ok := typed[values.AmountCurrency].(string); ok && own != "" {
-			inherited = ""
-		}
+		converted, _ := typed[values.ConvertedCurrency].(string)
+		own, _ := typed[values.AmountCurrency].(string)
+		inherited = values.CurrencyBelow(converted, own, inherited)
 		for _, child := range typed {
 			added = addDisplays(child, inherited) || added
 		}

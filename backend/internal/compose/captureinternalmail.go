@@ -36,7 +36,7 @@ func contractInternalMailSettings(s *capture.InternalMailSettings) *crmcontracts
 	}
 	for i, source := range s.Policy.Sources {
 		out.Sources[i] = crmcontracts.InternalMailSource{
-			ConnectionId: openapi_types.UUID(source.ConnectionID), Containers: source.Containers, OwnerUserId: openapi_types.UUID(source.OwnerUserID),
+			ConnectionId: openapi_types.UUID(source.ConnectionID), Containers: source.Containers, OwnerUserId: (*openapi_types.UUID)(source.OwnerUserID),
 			Provider: source.Provider, Generation: source.Generation, EnrolledAt: source.EnrolledAt, EnrolledBy: source.EnrolledBy,
 		}
 	}
@@ -47,7 +47,7 @@ func contractInternalMailSettings(s *capture.InternalMailSettings) *crmcontracts
 	}
 	for i, source := range s.AvailableSources {
 		out.AvailableSources[i] = crmcontracts.InternalMailSourceOption{
-			ConnectionId: openapi_types.UUID(source.ConnectionID), OwnerUserId: openapi_types.UUID(source.OwnerUserID), Provider: source.Provider,
+			ConnectionId: openapi_types.UUID(source.ConnectionID), OwnerUserId: (*openapi_types.UUID)(source.OwnerUserID), Provider: source.Provider,
 			Generation: source.Generation, AccountLabel: source.AccountLabel, OwnerName: source.OwnerName,
 		}
 	}

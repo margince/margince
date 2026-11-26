@@ -25,8 +25,8 @@ type ProviderSettings struct {
 	// thinking) stays on each tier: two models behind one broker need different
 	// answers.
 	Upstream *OpenRouterRouting `yaml:"upstream" json:"upstream,omitempty"`
-	// Location is the Vertex AI location a gemini_vertex provider is served
-	// from, which is where Google processes the call for every lane on it.
+	// Location is the Vertex AI location or Azure region a provider is served
+	// from. The vendor processes the call there for every lane on it.
 	Location string `yaml:"location" json:"location,omitempty"`
 }
 
@@ -203,6 +203,11 @@ func (cfg RoutingConfig) canonical() RoutingConfig {
 	return cfg.liftLaneProviderFields(slog.New(slog.DiscardHandler))
 }
 
+// StoredShape is the document in the shape the presets ship in. Each provider
+// holds its host and pins, and no lane repeats them. A caller that builds a
+// config lane by lane writes it this way before serving it.
+func StoredShape(cfg RoutingConfig) RoutingConfig { return cfg.canonical() }
+
 // validateProviderEntries holds each provider entry to its shape. An entry no
 // lane binds gets only these checks, so an admin can set a host before binding
 // it; a bound host is left to the lane rules, which name the lane and the
@@ -236,10 +241,15 @@ func validateProviderEntry(name string, settings ProviderSettings, bound bool) e
 	if err := validateUnboundHost(name, settings.BaseURL, bound); err != nil {
 		return err
 	}
-	if settings.Location != "" && name != providerGeminiVertex {
-		return fmt.Errorf("ai: routing config: providers: %s: `location` names a Vertex AI location and only gemini_vertex is served from one; remove it", name)
+	if name == providerAzureOpenAI {
+		if err := validateAzureEntry(settings); err != nil {
+			return err
+		}
 	}
-	if settings.Location != "" && !vertexLocationShape.MatchString(settings.Location) {
+	if settings.Location != "" && name != providerGeminiVertex && name != providerAzureOpenAI {
+		return fmt.Errorf("ai: routing config: providers: %s: `location` names a Vertex AI location or an Azure region, and only gemini_vertex and azure_openai are served from one; remove it", name)
+	}
+	if settings.Location != "" && name == providerGeminiVertex && !vertexLocationShape.MatchString(settings.Location) {
 		return fmt.Errorf("ai: routing config: providers: %s: location must be eu, us, global, or a region such as europe-west4", name)
 	}
 	upstream := settings.Upstream

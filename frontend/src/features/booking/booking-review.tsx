@@ -17,11 +17,12 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { RecordPicker } from "../../design-system/recordpicker";
 import { Switch } from "../../design-system/switch";
 import { formatDateTime, formatNumber } from "../../format/format";
+import { wallClockIntent } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { proposalEmailBody } from "../../lib/booking-proposal-message";
+import { fromHere } from "../../lib/navigatefrom";
 import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import { refreshContactMeetings } from "../contacts/contactmeetings.waiting";
 import { ComposeModal } from "../mail/compose";
 import { useBookingIntent } from "./booking-common";
@@ -145,7 +146,7 @@ export function BookingReview({
           onPick={(contact) => onEdit({ contact })}
           searchTargets={searchContacts}
         />
-        <Field label={t("book.attendee")}>
+        <Field label={t("scheduling.attendeeEmail")}>
           {(control) => (
             <TextInput
               {...control}
@@ -211,7 +212,15 @@ export function BookingReview({
           <InviteSend
             label={cta}
             disabled={!ready || picks.length < 1}
-            request={picks[0] ? { ...shared, ...picks[0] } : undefined}
+            request={
+              picks[0]
+                ? {
+                    ...shared,
+                    ...picks[0],
+                    start_intent: wallClockIntent(picks[0].start, zone),
+                  }
+                : undefined
+            }
           />
         ) : (
           <ProposalSend
@@ -331,9 +340,11 @@ function InviteSend({
         }),
       );
     },
-    onSuccess: async (value, body) => {
+    onMutate: fromHere,
+    // Replacing: Back to the sent form would offer to send it again.
+    onSuccess: async (value, body, from) => {
       await refreshContactMeetings(client, body.contact_id);
-      navigate({ screen: "book", id: `meeting-${value.id}` });
+      from.navigateReplacing({ screen: "book", id: `meeting-${value.id}` });
     },
   });
   return (

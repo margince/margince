@@ -8,11 +8,13 @@ import {
   within,
 } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { formatMoney } from "../../format/format";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { pretendReaderZone } from "../../testing/readerzone.testkit";
 
 type CommissionEntry = components["schemas"]["CommissionEntry"];
 
@@ -26,6 +28,9 @@ import {
 // The commission panel on a partner's company page: what the margin tier one
 // card up has actually produced. A tier shown without the money it earned is a
 // number nobody can check, which is the whole reason this panel exists.
+
+// The ledger prints days in the reader's zone, so the suite names it.
+beforeEach(() => pretendReaderZone(UTC_ZONE));
 
 afterEach(() => {
   cleanup();
@@ -126,6 +131,8 @@ describe("the commission panel", () => {
     // 20% of a €1,000 deal, read per cell: asserting the row as one string
     // would pass just as happily with the earned and basis figures swapped.
     // The deal leads, because an entry's first question is "on what?".
+    // The day it was written rides under the deal, not in a column of its own.
+    expect(cells[0]).toContain("01/08/2026");
     expect(cells[1]).toBe("€200.00");
     // The rate is the tier a human agreed to, not the basis points stored.
     expect(cells[2]).toBe("20%");
@@ -141,6 +148,21 @@ describe("the commission panel", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (
+          url.pathname === "/v1/records/references" &&
+          url.searchParams.get("kind") === "deal"
+        ) {
+          return Response.json({
+            data: url.searchParams
+              .getAll("id")
+              .flatMap((id) =>
+                id === "d-1"
+                  ? [{ id, name: "Northgate rollout", archived: false }]
+                  : [],
+              ),
+          });
+        }
         const body = request.url.includes("/deals/")
           ? { id: "d-1", name: "Northgate rollout" }
           : { data: [accrued], page: { has_more: false } };
@@ -181,7 +203,38 @@ describe("the commission panel", () => {
     const rows = [...ledger.querySelectorAll("tbody tr")];
 
     expect(rows).toHaveLength(2);
-    expect(rows[1]?.textContent).toContain("Reversed");
+    expect(rows[1]?.textContent).toContain(en["commission.status.reversal"]);
+  });
+
+  it("draws a reversal as a negative offsetting line with its date and reason", async () => {
+    stubCommissions([
+      {
+        ...accrued,
+        id: "c-2",
+        status: "void",
+        reversal_of: "c-1",
+        void_reason: "the deal was reopened",
+        created_at: "2026-09-15T10:00:00Z",
+      },
+      { ...accrued, status: "void", void_reason: "the deal was reopened" },
+    ]);
+
+    render(<PartnerCommissions companyId="o-1" />);
+    const ledger = await screen.findByTestId("commission-ledger");
+    const [reversal, original] = [...ledger.querySelectorAll("tbody tr")];
+
+    const earned = formatMoney(20000, "EUR", "en");
+    expect(reversal?.textContent).toContain(formatMoney(-20000, "EUR", "en"));
+    expect(reversal?.textContent).toContain(en["commission.status.reversal"]);
+    expect(reversal?.textContent).toContain("the deal was reopened");
+    expect(reversal?.textContent).toContain("15/09/2026");
+    expect(original?.textContent).toContain(earned);
+    expect(original?.textContent).not.toContain(
+      formatMoney(-20000, "EUR", "en"),
+    );
+    expect(original?.textContent).toContain(en["commission.status.void"]);
+    expect(original?.textContent).toContain("01/08/2026");
+    expect(original?.textContent).not.toContain("the deal was reopened");
   });
 
   // Reading page one and stopping would under-report what a partner earned,

@@ -27,15 +27,21 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 
 - `embed_store_binding_pkey`: `unique, btree (singleton)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "populated_identity": 20000, "reembedding_identity": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"populated_identity":20000,"reembedding_identity":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "populated_identity": 20000, "reembedding_identity": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"populated_identity":20000,"reembedding_identity":20000,"status":20000}')`
+
 ## embedding
 
-7 columns · primary key `(entity_type, entity_id, chunk_ix)` · referenced by 0 foreign keys
+8 columns · primary key `(entity_type, entity_id, chunk_ix)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `chunk_hash` | `text` | yes |  |
 | `chunk_ix` | `integer`, default `0` | yes |  |
-| `embedding` | `vector` | yes |  |
+| `embedding` | `vector` |  |  |
+| `embedding_half` | `halfvec` |  |  |
 | `entity_id` | `uuid` | yes |  |
 | `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `activity`, `project` and 11 more. |
 | `model` | `text` | yes |  |
@@ -44,18 +50,23 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 **Rules**
 
 - `embedding_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant'])))`
+- `embedding_holds_one_vector`: `CHECK ((num_nonnulls(embedding, embedding_half) = 1))`
 
 **Indexes**
 
 - `embedding_pkey`: `unique, btree (entity_type, entity_id, chunk_ix)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"model": 20000, "chunk_hash": 20000, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"chunk_hash":20000,"entity_type":20000,"model":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"model": 20000, "chunk_hash": 20000, "entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"chunk_hash":20000,"entity_type":20000,"model":20000}')`
+
 ## graph_contact_edge
 
-10 columns · primary key `(contact_a, contact_b)` · referenced by 0 foreign keys
+9 columns · primary key `(contact_a, contact_b)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `computed_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `contact_a` | `uuid` | yes |  |
 | `contact_b` | `uuid` | yes |  |
 | `count_90d` | `integer`, default `0` | yes |  |
@@ -86,11 +97,10 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 
 ## graph_interaction_edge
 
-18 columns · primary key `(user_id, contact_id)` · referenced by 0 foreign keys
+17 columns · primary key `(user_id, contact_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `computed_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `count_90d` | `integer`, default `0` | yes |  |
 | `count_total` | `integer`, default `0` | yes |  |

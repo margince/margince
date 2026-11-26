@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/tagsuggest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -64,6 +65,7 @@ func tagSuggestRequest(tags []collections.SuggestibleTag, items []tagsuggest.Ite
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: tagSuggestSchema(tagSuggestItemIDs(items), tagSuggestTagIDs(tags)),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       model.AboutActivities(tagSuggestActivities(items)...),
 	}
 }
 
@@ -151,4 +153,12 @@ func tagSuggestItemIDs(items []tagsuggest.Item) []string {
 // tagSuggestTagIDs is the tag refs one call lists.
 func tagSuggestTagIDs(tags []collections.SuggestibleTag) []string {
 	return tagsuggest.TagRefs(tags).All()
+}
+
+func tagSuggestActivities(items []tagsuggest.Item) []ids.UUID {
+	out := make([]ids.UUID, len(items))
+	for i, item := range items {
+		out[i] = item.ID
+	}
+	return out
 }

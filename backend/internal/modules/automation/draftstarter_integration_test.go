@@ -69,3 +69,57 @@ func TestEnablingADraftStarterClaimsItsOwnerOnce(t *testing.T) {
 		t.Fatalf("ownership was audited %d times, want once", count)
 	}
 }
+
+func TestAStageNoticeStartsPausedAndRequiresStageSelectionBeforeEnabling(t *testing.T) {
+	fx := setupAutomationDB(t)
+	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
+	ctx := fx.humanCtx(fx.rep1, principal.RowScopeAll)
+	if err := db.Tx(ctx, func(tx pgx.Tx) error { return SeedStarterAutomationsTx(ctx, tx) }); err != nil {
+		t.Fatal(err)
+	}
+	var id ids.AutomationID
+	var enabled bool
+	if err := fx.owner.QueryRow(ctx, "SELECT id, enabled FROM automation WHERE key='stage_change_notify'").Scan(&id, &enabled); err != nil {
+		t.Fatal(err)
+	}
+	if enabled {
+		t.Fatal("the notice started without a selected population")
+	}
+	store := NewAutomationStore(db)
+	read, err := store.Get(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if read.Configuration == nil || read.Configuration.State != "needs_setup" {
+		t.Fatalf("configuration=%+v", read.Configuration)
+	}
+	_, err = store.Update(ctx, id, UpdateAutomationInput{Enabled: new(true)})
+	var fault *ParamError
+	if !errors.As(err, &fault) || fault.Field != "params.pipeline_id" {
+		t.Fatalf("enable without setup = %v", err)
+	}
+}
+
+func TestSeedingEnablesAStarterOnlyWhenItsSetupIsComplete(t *testing.T) {
+	fx := setupAutomationDB(t)
+	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
+	ctx := fx.humanCtx(fx.rep1, principal.RowScopeAll)
+	if err := db.Tx(ctx, func(tx pgx.Tx) error { return SeedStarterAutomationsTx(ctx, tx) }); err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range Catalog() {
+		if !entry.Seeded {
+			continue
+		}
+		var enabled bool
+		if err := fx.owner.QueryRow(ctx, "SELECT enabled FROM automation WHERE key = $1", entry.Key).Scan(&enabled); err != nil {
+			t.Fatalf("%s: %v", entry.Key, err)
+		}
+		if want := seededEnabled(entry); enabled != want {
+			t.Errorf("%s stored enabled=%v, want %v", entry.Key, enabled, want)
+		}
+		if entry.Key == renewalReminderName && enabled {
+			t.Error("the renewal starter has no record type or date field, so it must be stored paused")
+		}
+	}
+}

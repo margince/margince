@@ -81,6 +81,7 @@ it holds, and three of the reasons are structural:
 - **One shared runtime role.** Every handler runs as `margince_app`, which holds DML on core tables, on
   every unit's `ext_<name>_*` tables, and on `extension_secret`. Within one tenant, the unit wall exists
   at the port (the `Secrets` interface cannot express another namespace) and not in the database.
+  Later note: `Runtime.Tx` now runs a unit's SQL as `ext_runtime`, which holds no core table.
 
 Issue #628 (a per-unit database role) is the one change that would move any of this from convention to
 enforcement. Even then it bounds only the database; the in-process root-key reach is inherent and would
@@ -455,6 +456,7 @@ tree-wide trap: an owner connection has `BYPASSRLS`, so any RLS assertion made o
   rewrite or delete unit B's rows and `vault_ref`s within a workspace. The namespace wall is real at the
   port and absent in the database. This is the worst combination on the branch. It sits inside the
   boundary §2.0 concedes, and the runtime docs say so, along with the missing core-table wall.
+  Later note: `Runtime.Tx` now runs a unit's SQL as `ext_runtime`, which holds no core table.
 
 ### 4.3 Migrations, ownership, and RLS
 
@@ -495,10 +497,9 @@ resolved at real deployment; this design states the invariant and makes a violat
 
 *Consequence to accept:* `--schema-dsn` exists so the app can run customfields runtime DDL as owner.
 Under this invariant the app cannot hold it. Those two operations either move behind a process that
-legitimately holds it, or answer their generated `501`. `WithSchemaPool`'s doc already calls `501` the
-correct posture for a role that runs no runtime DDL. The decision is filed as #651 rather than made here,
-because it is a product-posture call about a core module, and the tier does not depend on the outcome. The pointer is
-recorded in `WithSchemaPool`'s doc, where the decision will land.
+legitimately holds it, or answer their generated `501`. The decision keeps the `501`: with no schema
+pool mounted, the two operations answer `501` and stay in the API, so adding a custom field stays one
+call for an admin. `WithSchemaPool`'s doc states the decision.
 
 *Residual:* the owner DSN is one of several secrets readable with `os.Getenv` in an extension-bearing
 process. `MARGINCE_KEYVAULT_ROOT_KEY`, blobstore keys and BYOK model keys are in the same class. Process
@@ -984,14 +985,14 @@ delivered design. Secret access is audited in `system_log` (§4.2), which is a d
 
 ## 9. Open
 
-Nothing blocks the tier's own machinery. As of 2026-10-04 only #651 remains open; #627, #628, #656,
-#657, #658 and #670 are closed. The table keeps what each issue covered at the time of the build:
+Nothing blocks the tier's own machinery. #627, #628, #651, #656, #657, #658 and #670 are
+closed. The table keeps what each issue covered at the time of the build:
 
 | Issue | What |
 |---|---|
 | #627 (closed) | `Runtime.Tx` bypasses the overlay-mode datasource routing. Debt, with a comment at the point of risk |
 | #628 (closed) | No per-unit runtime database role: the containment wall is RLS plus the tenant GUC, not grants. The umbrella issue for the gap in §4.3, the non-purge in §2.2, and the bypassable port wall in §4.2. It was the one change that would move any of them from convention to enforcement |
-| #651 (open) | `customfields`' two runtime-DDL operations need a `--schema-dsn` posture under the role-separation invariant. Shipped as a filed issue rather than code, by decision: it is a product-posture call about a core module, and the tier does not depend on the outcome. `AssertRuntimeRole` is independent and already shipped. The pointer is recorded in `WithSchemaPool`'s doc |
+| #651 (closed) | `customfields`' two runtime-DDL operations need a `--schema-dsn` posture under the role-separation invariant. Decided: they answer their generated `501` when no schema pool is mounted. `AssertRuntimeRole` is independent and already shipped. `WithSchemaPool`'s doc states the decision |
 | #656 (closed) | No product path creates an agent seat, so no extension scheduled job can run on a fresh installation. Mitigated to skip-and-gauge (§4.4); the seat itself is a product decision |
 | #657 (closed) | An extension route answers 500 on malformed arguments and on legitimate runtime states; the surface needs a small set of published refusal classes. Scoped to three classes (§4.0) |
 | #658 (closed) | A composed binary is READY against a database whose extension migrations were never applied. Could not be written without widening the runtime role (§4.3) |

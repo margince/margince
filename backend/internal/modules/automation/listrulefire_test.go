@@ -22,6 +22,7 @@ import (
 // scriptedLists answers from fixed lists and fixed refusals, and records the
 // Shortlist additions it was asked for.
 type scriptedLists struct {
+	imported  *bool
 	lists     map[ids.UUID]ListRef
 	changes   []ListChange
 	total     int
@@ -39,7 +40,10 @@ func (s scriptedLists) Find(_ context.Context, id ids.UUID) (ListRef, error) {
 	return l, nil
 }
 
-func (s scriptedLists) ObservedChanges(context.Context, ids.UUID, int64, time.Time, []string, int) ([]ListChange, int, error) {
+func (s scriptedLists) ObservedChanges(_ context.Context, _ ids.UUID, _ int64, _ time.Time, _ []string, _ int, imported ...bool) ([]ListChange, int, error) {
+	if s.imported != nil {
+		*s.imported = len(imported) == 0 || imported[0]
+	}
 	return s.changes, s.total, s.observed
 }
 
@@ -259,8 +263,26 @@ func TestAListRuleNeedsListsTheInstallationOffers(t *testing.T) {
 	if err := (&AutomationStore{}).validateRefs(context.Background(), entry, map[string]any{}); !errors.As(err, &param) || param.Field != "key" {
 		t.Fatalf("a list rule with lists switched off answered %v, want a refusal on the key", err)
 	}
-	_, _, err := resolvePreviewRecipe(context.Background(), nil, Automation{Key: listNotifyName}, AutomationPreviewInput{}, time.Now())
-	if !errors.As(err, &param) || !strings.Contains(param.Reason, "check runs") {
-		t.Fatalf("previewing a list rule answered %v, want the documented gap", err)
+	preview, _, err := resolvePreviewRecipe(context.Background(), nil, Automation{Key: listNotifyName}, AutomationPreviewInput{}, time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC))
+	if err != nil || !preview.eventOnly {
+		t.Fatalf("list preview = %+v, %v; want future events without a historical count", preview, err)
+	}
+}
+
+func TestListRulesPreserveLegacyImportPolicyUntilReviewed(t *testing.T) {
+	for _, mode := range []string{"legacy", "skip imports", "include imports"} {
+		t.Run(mode, func(t *testing.T) {
+			f := newListFixture()
+			seen := mode != "include imports"
+			f.lists.imported = &seen
+			params := map[string]any{}
+			if mode != "legacy" {
+				params[paramIncludeImportedChanges] = mode == "include imports"
+			}
+			_, _, err := f.rule(ActionTypeNotify, f.lists).expand(context.Background(), &fakeAuthzResolver{}, f.event(t, params, currentCheck()))
+			if err != nil || seen != (mode != "skip imports") {
+				t.Fatalf("import policy = %v, %v", seen, err)
+			}
+		})
 	}
 }

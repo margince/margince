@@ -16,11 +16,10 @@ package gates
 // other inside a single goroutine — a deadlock Postgres cannot detect and will
 // not break, because it sees two unrelated sessions waiting.
 //
-// The rule is not new; it is written on the acquirer that breaks it most often.
-// The custom-field catalog read documents "callers fetch BEFORE opening their
-// write/read transaction (never inside it — a nested pool acquire under load is
-// a deadlock shape)". Deriving the obligation from the tree is what makes a
-// seam written next month inherit it instead of re-deciding it.
+// The custom-field catalog's pool read (ActiveColumns) is the acquirer that
+// broke it most often; code inside a transaction reads it with ActiveColumnsIn.
+// Deriving the obligation from the tree is what makes a seam written next month
+// inherit it instead of re-deciding it.
 //
 // Two things bound what this can prove, and both are why the pool-of-one suite
 // in compose/integration exists beside it: the gate catches the class across
@@ -57,16 +56,15 @@ import (
 // function must have made before it was handed the transaction, or delegated
 // to a caller that did.
 var connectionAcquirers = map[string]string{
-	"Acquire":          "takes a connection straight from the pool",
-	"Begin":            "opens a transaction on a pool, which takes a connection to hold it",
-	"BeginTx":          "opens a transaction on a pool, which takes a connection to hold it",
-	"Tx":               "opens a transaction on the bound handle (database.DB.Tx)",
-	"tx":               "opens a transaction through the store's own helper over database.DB.Tx",
-	"WithWorkspaceTx":  "opens a workspace-bound transaction",
-	"WithInfraTx":      "opens an unbound infrastructure transaction",
-	"activeColumns":    "reads the custom-field catalog, which opens a transaction of its own",
-	"activeColumnsFor": "reads the custom-field catalog, which opens a transaction of its own",
-	"ActiveColumns":    "reads the custom-field catalog through the fieldcatalog seam, which opens a transaction of its own",
+	"Acquire":         "takes a connection straight from the pool",
+	"Begin":           "opens a transaction on a pool, which takes a connection to hold it",
+	"BeginTx":         "opens a transaction on a pool, which takes a connection to hold it",
+	"Tx":              "opens a transaction on the bound handle (database.DB.Tx)",
+	"tx":              "opens a transaction through the store's own helper over database.DB.Tx",
+	"WithWorkspaceTx": "opens a workspace-bound transaction",
+	"WithInfraTx":     "opens an unbound infrastructure transaction",
+	"activeColumns":   "reads the custom-field catalog, which opens a transaction of its own",
+	"ActiveColumns":   "reads the custom-field catalog through the fieldcatalog seam, which opens a transaction of its own",
 	// The stores' own catalog reads, which a composite calls by name. They
 	// exist precisely so the answer can be fetched above a transaction, so
 	// calling one from inside a borrowed transaction reinstates the defect
@@ -169,9 +167,12 @@ type txBorrowing struct {
 	declares map[string]bool
 }
 
-// promotedTx is the heldTx entry for an EMBEDDED pgx.Tx, which has no field
-// name to spell: its methods are promoted onto the receiver.
+// promotedTx is the heldTx entry for an EMBEDDED pgx.Tx. Its methods are
+// promoted onto the receiver, and its field is spelled embeddedTxField.
 const promotedTx = ""
+
+// embeddedTxField is the name Go gives an embedded pgx.Tx field: its type's.
+const embeddedTxField = "Tx"
 
 // promotedTxMethods are the acquirer names that belong to pgx.Tx ITSELF, so a
 // call on a receiver embedding one is the borrowed handle rather than a method
@@ -530,6 +531,9 @@ func (b txBorrowing) isHeldTxField(sel *ast.SelectorExpr) bool {
 	base, ok := sel.X.(*ast.Ident)
 	if !ok || b.recv == "" || base.Name != b.recv {
 		return false
+	}
+	if b.embedsTx() && sel.Sel.Name == embeddedTxField {
+		return true
 	}
 	return slices.Contains(b.heldTx, sel.Sel.Name)
 }
@@ -968,6 +972,18 @@ func (c core) Nested(ctx context.Context) error {
 `
 	// The declaring method is judged on its own body, which takes a connection.
 	assertHeldTxGateReads(t, shadowed, "core.Begin", "Acquire")
+	// The embedded field spelled by name is the held transaction, so its Begin
+	// is the savepoint.
+	const delegated = fixtureImports + `
+type core struct {
+	pgx.Tx
+}
+
+func (c core) Begin(ctx context.Context) (pgx.Tx, error) {
+	return c.Tx.Begin(ctx)
+}
+`
+	assertHeldTxGateReads(t, delegated, "core.Begin")
 	// And its CALLER's `c.Begin(…)` is that method rather than a savepoint, so
 	// the promoted exemption does not apply to it either.
 	assertHeldTxGateReads(t, shadowed, "core.Nested", "Begin")

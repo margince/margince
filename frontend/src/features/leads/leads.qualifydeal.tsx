@@ -5,9 +5,19 @@ import { type Choice, ChoiceList } from "../../design-system/choicelist";
 import { Select } from "../../design-system/select";
 import { formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { inPositionOrder } from "../../lib/pipelines.queries";
+import {
+  type FieldLabel,
+  faultSentenceFor,
+  problemFieldErrorsOf,
+  problemMessageOf,
+} from "../../lib/problem";
 
 type Deal = components["schemas"]["Deal"];
 type Preview = components["schemas"]["PromoteLeadPreview"];
+type PromoteLeadRequest = components["schemas"]["PromoteLeadRequest"];
+type Pipeline = components["schemas"]["Pipeline"];
 export type QualificationDealChoice =
   | "new"
   | "none"
@@ -137,7 +147,7 @@ export function ExistingQualificationDeal({
 export function qualificationConfirmState(
   deal: ReturnType<typeof qualificationDealState>,
   preview: { isPending: boolean; isFetching: boolean },
-  amount: { amountInvalid: boolean; amountWaitsForCurrency: boolean },
+  amount: { amountInvalid: boolean },
   // nameSettling: the deal would be named after a company name still being read.
   name: { nameSettling: boolean },
 ) {
@@ -147,10 +157,7 @@ export function qualificationConfirmState(
       preview.isPending ||
       preview.isFetching ||
       deal.invalidSelection ||
-      (deal.withDeal &&
-        (amount.amountInvalid ||
-          amount.amountWaitsForCurrency ||
-          name.nameSettling)) ||
+      (deal.withDeal && (amount.amountInvalid || name.nameSettling)) ||
       (Boolean(deal.selectedDeal) && preview.isFetching),
   };
 }
@@ -165,4 +172,63 @@ function qualificationConfirmLabel(
   if (existing) return "lead.qualify.confirmExisting";
   if (create) return "lead.qualify.confirmWithDeal";
   return "lead.qualify.confirm";
+}
+
+// dealBlock is the wire's deal request from the dialog's fields. The money
+// pair holds from birth: an amount only travels with the currency, and no
+// amount travels as no money at all.
+export function dealBlock(input: {
+  pipelineId: string | undefined;
+  stageId: string | undefined;
+  name: string;
+  amountMinor: number | null;
+  currency: string | undefined;
+}): NonNullable<PromoteLeadRequest["deal"]> {
+  const priced = input.amountMinor !== null && input.currency;
+  return {
+    pipeline_id: input.pipelineId ?? null,
+    stage_id: input.stageId ?? null,
+    name: input.name.trim() || null,
+    amount_minor: priced ? input.amountMinor : null,
+    currency: priced ? (input.currency ?? null) : null,
+  };
+}
+
+// qualifyRefusals splits a failed promotion: a refusal of the amount stands
+// under the field, and the foot of the dialog keeps everything else.
+export function qualifyRefusals(
+  error: unknown,
+  t: (key: MessageKey) => string,
+  amountLabel: FieldLabel,
+) {
+  const faults = problemFieldErrorsOf(error);
+  const amount = faults.find((fault) => fault.field === "amount_minor");
+  return {
+    amount:
+      amount && faultSentenceFor(amount, t, { amount_minor: amountLabel }),
+    foot:
+      amount && faults.length === 1 ? undefined : problemMessageOf(error, t),
+  };
+}
+
+// The sentence under the amount, and whether the box's own state holds the
+// confirm back. Text the box refuses names its reason under the box itself.
+export function amountRefusal(
+  amount: { amountMinor: number | null; refused: boolean },
+  server: string | undefined,
+  t: ReturnType<typeof useT>,
+) {
+  if (amount.refused) {
+    return { local: true, sentence: undefined };
+  }
+  if (amount.amountMinor !== null && amount.amountMinor < 0) {
+    return { local: true, sentence: t("create.amountNegative") };
+  }
+  return { local: false, sentence: server };
+}
+
+export function openStagesOf(pipeline: Pipeline | undefined) {
+  return inPositionOrder(
+    (pipeline?.stages ?? []).filter((stage) => stage.semantic === "open"),
+  );
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -108,18 +109,21 @@ func actingCaptureRefusal(ctx context.Context) error {
 // syncCredential is the credential a sync or backfill page runs with, asked
 // only once the member behind runCtx may still capture.
 func (r *Registry) syncCredential(runCtx context.Context, credentialRef *string, authBytes []byte) (connector.Auth, error) {
-	if err := actingCaptureRefusal(runCtx); err != nil {
-		return nil, err
+	if _, shared := sharedMailboxOf(runCtx); !shared {
+		if err := actingCaptureRefusal(runCtx); err != nil {
+			return nil, err
+		}
 	}
 	return r.resolveCredential(runCtx, credentialRef, authBytes)
 }
 
 // mailboxRunKey marks a context the registry built for one mailbox sync, page or
-// push. Its writes ask CaptureRefusal again inside their own transaction.
+// push. Its writes ask CaptureRefusal again inside their own transaction, and
+// its transactions share one copy of the workspace facts mail is judged by.
 type mailboxRunKey struct{}
 
 func asMailboxRun(ctx context.Context) context.Context {
-	return context.WithValue(ctx, mailboxRunKey{}, true)
+	return storekit.WithCaptureFactsRun(context.WithValue(ctx, mailboxRunKey{}, true))
 }
 
 type mailboxConnectionKey struct{}
@@ -144,8 +148,7 @@ func withAuthority(ctx context.Context, rbac authz.RBAC, seat principal.SeatType
 	if !ok {
 		return ctx, apperrors.ErrPermissionDenied
 	}
-	actor.Permissions, actor.TeamIDs, actor.SeatType = rbac.Permissions, rbac.TeamIDs, seat
-	return principal.WithActor(ctx, actor), nil
+	return principal.WithActor(ctx, authz.WithAuthority(actor, rbac, seat)), nil
 }
 
 // captureAllowedTx asks CaptureRefusal of the member's authority as of tx. A
@@ -186,6 +189,25 @@ func (s *Sink) mailboxRunAllowedTx(ctx context.Context, tx pgx.Tx) (context.Cont
 			return ctx, err
 		}
 	}
+	if shared, ok := sharedMailboxOf(ctx); ok {
+		if err := sharedMailboxAllowedTx(ctx, tx, shared); err != nil {
+			return ctx, err
+		}
+		ctx, err := s.backupOwnerActingTx(ctx, tx, shared)
+		if err != nil {
+			return ctx, err
+		}
+		return ctx, storekit.HoldCaptureFactsTx(ctx, tx)
+	}
 	_, owner := capturePrincipal(ctx)
-	return s.captureAllowedTx(ctx, tx, owner)
+	if owner.IsZero() {
+		return ctx, &RoleCannotCaptureError{Missing: seatMissing}
+	}
+	ctx, err := s.captureAllowedTx(ctx, tx, owner)
+	if err != nil {
+		return ctx, err
+	}
+	// After the authorization lock, never before: a role change holds that
+	// lock while it waits for the facts lock.
+	return ctx, storekit.HoldCaptureFactsTx(ctx, tx)
 }

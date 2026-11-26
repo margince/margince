@@ -9,6 +9,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -18,30 +19,26 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
-// DriveControllerPayloadSweepForTest runs one pass of the sweep.
+// DriveControllerPayloadSweepForTest runs one pass of the worker that the job
+// wiring registers without send wiring. Every caller fails if that registration goes.
 //
-// It builds the REAL worker rather than reimplementing its loop, and takes no
-// workspace: the worker resolves the installation itself, and a helper that
-// supplied one would prove the helper works while production resolved nothing.
-//
-// `now` is the clock the pass reads expiry against, so a test can place material
-// on either side of it without sleeping.
-//
-// opts reach the comms store, so a test can shrink the receipt page.
+// `now` is the clock the pass reads expiry against, and opts reach the comms
+// store so a test can shrink the receipt page.
 func DriveControllerPayloadSweepForTest(
 	ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, now time.Time, opts ...comms.StoreOption,
 ) error {
-	db := InstallationDB(pool)
-	worker := newControllerPayloadSweepWorker(
-		identity.NewService(pool),
-		comms.NewStore(db, time.Now, activities.NewStore(db), opts...),
-		controllerPayloads{v: vault},
-		receiptAlarm{db: db},
-		slog.New(slog.DiscardHandler))
+	reg, _ := wireJobs(pool, slog.New(slog.DiscardHandler), JobRunnerConfig{ControllerVault: vault})
+	worker, wired := reg.wired[ControllerPayloadSweepArgs{}.Kind()].worker.(*controllerPayloadSweepWorker)
+	if !wired {
+		return errors.New("a worker without send wiring does not register comms_controller_payload_sweep")
+	}
+	if len(opts) > 0 {
+		db := InstallationDB(pool)
+		worker.store = comms.NewStore(db, time.Now, activities.NewStore(db), opts...)
+	}
 	worker.clock = func() time.Time { return now }
 	return worker.Work(ctx, &river.Job[ControllerPayloadSweepArgs]{
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 1},

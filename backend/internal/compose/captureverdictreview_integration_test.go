@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/capturehealth"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -394,7 +395,7 @@ func TestASenderQuestionWhoseMailboxOwnerLeftIsStagedForNobody(t *testing.T) {
 func assertSenderReviewCount(t *testing.T, e *integration.Env, owner ids.UUID, want int) {
 	t.Helper()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		owners, err := captureOwnerReviews(e.Admin(), tx)
+		owners, err := capturehealth.OwnerReviews(e.Admin(), tx)
 		if err != nil {
 			return err
 		}

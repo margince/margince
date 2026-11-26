@@ -14,6 +14,7 @@ package attention
 
 import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
@@ -43,8 +44,12 @@ import (
 // a lane which never ran is simply absent from it. Reading the floor flag from
 // `bounds` alone therefore states exact figures over work nobody looked at, which
 // is the one direction these numbers must never fail in.
+//
+// The changed figure counts `drawn` rows the view's changed page shows, so the
+// badge never counts an upcoming row its own link leaves out.
 func readingsOf(
 	considered, drawn []ranked,
+	view string,
 	bounds map[crmcontracts.WorklistItemSource]bool,
 	unread []crmcontracts.WorklistSourceUnavailable,
 ) crmcontracts.WorklistReadings {
@@ -55,7 +60,7 @@ func readingsOf(
 	// an amount for is not a deal worth nothing, and counting it as nothing
 	// reports a safer pipeline than the one that exists.
 	for _, row := range drawn {
-		if keepsRow(row, filterChangedSinceBrief) {
+		if shownIn(row.item.Category, view, string(filterChangedSinceBrief)) && keepsRow(row, filterChangedSinceBrief) {
 			out.ChangedSinceBrief++
 		}
 	}
@@ -85,19 +90,8 @@ func readingsOf(
 			// draws them as one row. The strip says how much work there is; the
 			// queue says how much reading it costs.
 			//
-			// A row this reader cannot settle is not their decision. ANY verb is
-			// the test, because the producers already resolved authority to
-			// decide whether to offer one: a duplicate pair leaves duplicateItem
-			// with verbs only where the reader could write BOTH records, and an
-			// approval carries its verbs only where the inbox admits them.
-			// Counting the rest tells somebody a contact is waiting on an answer
-			// they are not able to give.
-			//
-			// Any verb rather than a SETTLING one, and the difference is a case
-			// this count was once short by: two companies each carrying live
-			// projects can never be merged by anybody, and the pair is still the
-			// reader's to dismiss as not-a-duplicate. It arrives here carrying
-			// that verb alone, and asking for a merge would drop it.
+			// A row this reader cannot settle is not their decision, and the
+			// category total skips it by the same test (readerSettles).
 			if !readerSettles(row.item) {
 				continue
 			}
@@ -144,6 +138,7 @@ func readingsOf(
 			out.RevenueCurrency = &currency
 		}
 	}
+	out.SoonestLeadDue = soonestLeadDue(considered, bounds, unread)
 	// A lane that never answered makes every figure a floor just as surely as one
 	// that answered to its cap — more so, since nobody knows what it held. This
 	// arm is FIRST because it is the one a reader loses silently: a refused lane
@@ -164,6 +159,36 @@ func readingsOf(
 		}
 	}
 	return out
+}
+
+// soonestLeadDue is when the nearest task on a lead is due, over every task
+// weighed. A task lane read to its bound, or not read, may hold one due sooner,
+// so then there is no answer.
+func soonestLeadDue(
+	considered []ranked, bounds map[crmcontracts.WorklistItemSource]bool, unread []crmcontracts.WorklistSourceUnavailable,
+) *time.Time {
+	for source, bounded := range bounds {
+		if bounded && categoryOfSource(source) == crmcontracts.WorklistItemCategoryTasks {
+			return nil
+		}
+	}
+	for _, missing := range unread {
+		if categoryOfSource(crmcontracts.WorklistItemSource(missing.Source)) == crmcontracts.WorklistItemCategoryTasks {
+			return nil
+		}
+	}
+	var soonest *time.Time
+	for _, row := range considered {
+		task := row.item
+		if task.Source != sourceTask || task.Category != crmcontracts.WorklistItemCategoryTasks || task.Subject == nil ||
+			task.Subject.Type != crmcontracts.AttentionSubjectTypeLead || task.DueAt == nil {
+			continue
+		}
+		if soonest == nil || task.DueAt.Compare(*soonest) < 0 {
+			soonest = task.DueAt
+		}
+	}
+	return soonest
 }
 
 // hidesRows is whether any unread source is a lane. A side read that failed
@@ -195,10 +220,28 @@ func unpricedDeals(rows []ranked) int {
 	return count
 }
 
-// readerSettles reports whether a decisions row is this reader's to settle. A
-// verb says so for a row the queue settles in place. A contact case carries no
-// verb, because it settles in its own review. Its lane raises it only for the
-// members' owners, so it counts, as the exact category total counts it.
+// readerSettles reports whether a decisions row is this reader's to settle.
+// The decisions total and the review figure both count by it. An approval
+// counts while its preview is stale or blocked: the reader can refresh it.
+//
+// Another row counts where it carries any verb, as its producer resolved
+// authority. A pair the reader may only look at waits on someone else.
+//
+// A contact case carries no verb and still counts. Its lane raises it only for
+// the owners of its members, and each settles it in the case's own review. So
+// it waits on this reader, as a stale approval does.
 func readerSettles(item crmcontracts.WorklistItem) bool {
-	return item.ContactCase != nil || len(item.Actions) > 0
+	return item.Source == crmcontracts.WorklistItemSourceApproval || item.ContactCase != nil || len(item.Actions) > 0
+}
+
+// withDecisionsTotal states the review figure as the decisions category's exact
+// total where one is stated, so Home and the Worklist strip read one number.
+// Without one, the count over the rows read stands, under the strip's floor.
+func withDecisionsTotal(readings crmcontracts.WorklistReadings, counts []crmcontracts.WorklistCount) crmcontracts.WorklistReadings {
+	for _, count := range counts {
+		if count.Category == crmcontracts.WorklistCountCategory(categoryDecisions) && count.Total != nil {
+			readings.Review = *count.Total
+		}
+	}
+	return readings
 }

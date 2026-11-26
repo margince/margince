@@ -6,9 +6,16 @@ import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { useFieldFaults } from "../../design-system/savepage";
 import { formatDateAbbrev } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { type Locale, useLocale, useT } from "../../i18n";
+import { emailFault } from "../../lib/emailshape";
+import {
+  fieldCheckSentence,
+  problemMessageOf,
+  refusalSentences,
+  unwrap,
+} from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import type {
   Capability,
@@ -59,17 +66,46 @@ function IssuedLink({ issued }: Readonly<{ issued: Issued }>) {
   );
 }
 
+type Invitee = Readonly<{ full_name: string; email: string }>;
+
+// What the form refuses before sending, by wire field, in the server's words.
+function inviteeChecks(
+  invitee: Invitee,
+  labels: Invitee,
+  locale: Locale,
+): Partial<Record<keyof Invitee, string>> {
+  const required = (label: string) =>
+    fieldCheckSentence("required", locale, label);
+  const malformed = emailFault(invitee.email, locale, labels.email);
+  return {
+    ...(invitee.full_name === ""
+      ? { full_name: required(labels.full_name) }
+      : null),
+    ...(invitee.email === ""
+      ? { email: required(labels.email) }
+      : malformed
+        ? { email: malformed }
+        : null),
+  };
+}
+
 export function InviteDialog({
   room,
   open,
   onClose,
 }: Readonly<{ room: DealRoom; open: boolean; onClose: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [capability, setCapability] = useState<Capability>("comment");
   const [issued, setIssued] = useState<Issued | null>(null);
+  const labels: Invitee = {
+    full_name: t("access.nameLabel"),
+    email: t("access.emailLabel"),
+  };
   const invite = useMutation({
     mutationFn: async (input: {
       name: string;
@@ -98,14 +134,30 @@ export function InviteDialog({
         setIssued(data);
       }
     },
+    onError: (error) => {
+      faults.show(refusalSentences(error, t, labels).byField);
+    },
   });
   const close = () => {
     setIssued(null);
     setName("");
     setEmail("");
     setCapability("comment");
+    faults.show(new Map());
     invite.reset();
     onClose();
+  };
+  const send = () => {
+    const invitee = { full_name: name.trim(), email: email.trim() };
+    const found = inviteeChecks(invitee, labels, locale);
+    if (faults.show(new Map(Object.entries(found)))) {
+      return;
+    }
+    invite.mutate({
+      name: invitee.full_name,
+      email: invitee.email,
+      capability,
+    });
   };
   return (
     <ConfirmModal
@@ -117,40 +169,44 @@ export function InviteDialog({
           : t("access.inviteTitle")
       }
       confirmLabel={issued ? t("access.done") : t("access.inviteConfirm")}
-      confirmDisabled={!issued && (name.trim() === "" || email.trim() === "")}
+      bodyRef={faultsRoot}
       pending={invite.isPending}
-      error={invite.isError ? problemMessageOf(invite.error, t) : null}
-      onConfirm={() =>
-        issued
-          ? close()
-          : invite.mutate({
-              name: name.trim(),
-              email: email.trim(),
-              capability,
-            })
+      error={
+        invite.isError ? refusalSentences(invite.error, t, labels).rest : null
       }
+      onConfirm={() => (issued ? close() : send())}
       intent="form"
     >
       {issued ? (
         <IssuedLink issued={issued} />
       ) : (
         <>
-          <Field label={t("access.nameLabel")} required>
+          <Field
+            label={labels.full_name}
+            required
+            error={faults.of("full_name")}
+          >
             {(control) => (
               <TextInput
                 {...control}
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  faults.edited("full_name");
+                }}
               />
             )}
           </Field>
-          <Field label={t("access.emailLabel")} required>
+          <Field label={labels.email} required error={faults.of("email")}>
             {(control) => (
               <TextInput
                 {...control}
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  faults.edited("email");
+                }}
               />
             )}
           </Field>
@@ -257,10 +313,14 @@ export function RevokeDialog({
       onClose();
     },
   });
+  const close = () => {
+    revoke.reset();
+    onClose();
+  };
   return (
     <ConfirmModal
       open={open}
-      onClose={onClose}
+      onClose={close}
       title={t("access.revokeTitle", { name: participant.full_name })}
       confirmLabel={t("access.revoke")}
       confirmVariant="danger"
@@ -310,10 +370,15 @@ export function CapabilityDialog({
       onClose();
     },
   });
+  const close = () => {
+    change.reset();
+    setCapability(participant.capability);
+    onClose();
+  };
   return (
     <ConfirmModal
       open={open}
-      onClose={onClose}
+      onClose={close}
       title={t("access.changeCapabilityTitle", { name: participant.full_name })}
       intent="form"
       confirmLabel={t("access.save")}

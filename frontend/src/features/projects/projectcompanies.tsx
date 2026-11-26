@@ -17,12 +17,13 @@ import {
   useEmployerSummary,
 } from "../../components/contactemployersummary";
 import { AppLink } from "../../design-system/applink";
-import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
+import { Badge } from "../../design-system/atoms";
 import { CompanyCard } from "../../design-system/companycard";
 import {
   type LinkedProject,
   ProjectLinks,
   type ProjectLinksAdapter,
+  RemoveLinkMenu,
 } from "../../design-system/projectlinks";
 import type { RecordPickerCandidate } from "../../design-system/recordpicker";
 import { useLocale, useT } from "../../i18n";
@@ -51,8 +52,11 @@ export function ProjectCompanies({
   const settled = () => {
     // The key the project page actually reads under (project360.tsx), not a
     // guess: a mismatch leaves the section showing the state before the write.
-    queryClient.invalidateQueries({ queryKey: project360Key(projectId) });
-    queryClient.invalidateQueries({ queryKey: ["company360"] });
+    // Returned, so the mutation stays pending until the page is read again.
+    return Promise.all([
+      queryClient.invalidateQueries({ queryKey: project360Key(projectId) }),
+      queryClient.invalidateQueries({ queryKey: ["company360"] }),
+    ]);
   };
 
   const attach = useMutation({
@@ -99,8 +103,13 @@ export function ProjectCompanies({
       };
     }),
     readOnly,
+    // A project keeps at least one company and the server refuses the last
+    // detach, so the only company's card offers no verb to be refused.
     card: (company, onDetach) => (
-      <ProjectCompanyCard company={company} onDetach={onDetach} />
+      <ProjectCompanyCard
+        company={company}
+        onDetach={(companies ?? []).length > 1 ? onDetach : undefined}
+      />
     ),
     allowsMany: true,
     search: searchCompanies,
@@ -157,19 +166,7 @@ function ProjectCompanyCard({
           : null
       }
       actions={
-        onDetach && (
-          <OverflowMenu label={t("record.moreActions")}>
-            <Button
-              variant="danger"
-              onClick={onDetach}
-              // Five identical "Detach" items cannot say which company each
-              // one takes off.
-              aria-label={t("projectLinks.detachNamed", { name: company.name })}
-            >
-              {t("projectLinks.detach")}
-            </Button>
-          </OverflowMenu>
-        )
+        onDetach && <RemoveLinkMenu name={company.name} onRemove={onDetach} />
       }
     />
   );

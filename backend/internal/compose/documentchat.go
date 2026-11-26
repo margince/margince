@@ -64,7 +64,9 @@ func chatCaptureReading(img model.Attachment) ai.ImageReading {
 }
 
 func chatCaptureRequest(src documentSource) model.Request {
-	return ai.ImageRequest(chatCaptureReading(src.Part), src.Part)
+	req := ai.ImageRequest(chatCaptureReading(src.Part), src.Part)
+	req.Subjects = documentSubjects(src.Parent)
+	return req
 }
 
 func chatCaptureQuestion() documentQuestion {
@@ -87,13 +89,21 @@ func chatCaptureQuestion() documentQuestion {
 		settle:       func(fields []extraction.ExtractedField) []extraction.ExtractedField { return fields },
 		request:      chatCaptureRequest,
 		noneGrounded: chatWords.NoChat,
+		refused:      chatWords.Refused,
 	}
 }
 
-var chatWords = struct{ NoChat langcopy.Phrase }{
+// The chat panel offers no second reading, only the field to type the chat
+// into, so its phrases point there.
+var chatWords = struct{ NoChat, Refused langcopy.Phrase }{
 	NoChat: langcopy.Phrase{
-		En: "this screenshot shows no chat clearly enough to copy it; type what was said instead",
+		En: "This screenshot shows no chat clearly enough to copy it. Type what was said instead.",
 		De: "Auf diesem Screenshot ist kein Chat deutlich genug zu lesen. Gib das Gesagte selbst ein.",
 		Vi: "Ảnh chụp màn hình này không hiển thị đủ rõ cuộc trò chuyện để sao chép; hãy tự nhập nội dung.",
+	},
+	Refused: langcopy.Phrase{
+		En: "The model's reading of this screenshot could not be used. Type what was said instead.",
+		De: "Das Leseergebnis des Modells konnte nicht verwendet werden. Gib das Gesagte selbst ein.",
+		Vi: "Không sử dụng được kết quả đọc ảnh chụp màn hình của mô hình; hãy tự nhập nội dung.",
 	},
 }

@@ -41,3 +41,14 @@ func (u Userinfo) Picture(ctx context.Context, accessToken string) (string, erro
 	}
 	return out.Picture, nil
 }
+
+// Email answers the account's address. It needs the userinfo.email scope.
+func (u Userinfo) Email(ctx context.Context, accessToken string) (string, error) {
+	var out struct {
+		Email string `json:"email"`
+	}
+	if _, err := Get(ctx, u.client, u.base, accessToken, "/userinfo", nil, &out); err != nil {
+		return "", err
+	}
+	return out.Email, nil
+}

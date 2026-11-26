@@ -100,6 +100,10 @@ const (
 	// change the record, so the button is honest rather than a 403 waiting to
 	// happen.
 	ReasonNotWritableByCaller Reason = "not_writable_by_caller"
+	// ReasonRestoreArchiverRequired means the caller may edit the record but
+	// holds no delete, and someone else archived it. Only they or a manager
+	// may bring it back.
+	ReasonRestoreArchiverRequired Reason = "restore_archiver_required"
 	// ReasonLaterCompanyChange means a technical lookup's company or facts were
 	// written after it, a same-value refresh included. Its snapshot no longer
 	// describes the rows, so putting it back would overwrite that later work.
@@ -126,6 +130,7 @@ var Reasons = []Reason{
 	ReasonNoBeforeImage,
 	ReasonRecordArchived,
 	ReasonNotWritableByCaller,
+	ReasonRestoreArchiverRequired,
 	ReasonAlreadyUndone,
 	ReasonEdgeRelinkUnsupported,
 	ReasonSuperseded,
@@ -264,7 +269,7 @@ func (e Evaluator) Evaluate(ctx context.Context, tx pgx.Tx, row AuditRow, mode M
 	if !servesRecordType(row.EntityType) {
 		return refuse(ReasonUnsupportedRecordType, row.EntityType), nil
 	}
-	patch, unspellable, err := filterImage(row.EntityType, row.Before)
+	patch, unspellable, err := filterImage(row.EntityType, row.Before, row.After)
 	if err != nil {
 		return Undoability{}, err
 	}

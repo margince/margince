@@ -64,6 +64,9 @@ type LiveCheck struct {
 	Entered int
 	Left    int
 	Err     error
+	// KindRemoved says an invalid check found no unit declaring the list's
+	// kind, so the rules on it pause as unavailable rather than invalid.
+	KindRemoved bool
 }
 
 // CheckLiveLists checks the Live Lists checked longest ago, up to the pass's
@@ -88,10 +91,13 @@ func (s *Store) CheckLiveLists(ctx context.Context, now func() time.Time) ([]Liv
 	return out, nil
 }
 
-// invalidFilter says the stored filter can no longer be evaluated: it does not
-// decode, or it names what the vocabulary no longer holds.
+// invalidFilter says the stored filter can no longer be evaluated. It does not
+// decode, it names what the vocabulary no longer holds, or no unit declares its
+// record kind any more. The last good check stays the snapshot, so a unit
+// composed again does not report every member as gone.
 func invalidFilter(err error) bool {
-	return errors.As(err, new(*storekit.PredicateError)) || errors.Is(err, errNotAFilterTree)
+	return errors.As(err, new(*storekit.PredicateError)) || errors.Is(err, errNotAFilterTree) ||
+		errors.Is(err, errKindRemoved)
 }
 
 // dueLiveLists reads the live, non-archived Live Lists, never-checked first
@@ -121,7 +127,7 @@ func (s *Store) checkLiveList(ctx context.Context, l listRow, at time.Time) (Liv
 	if !invalidFilter(err) {
 		return check, err
 	}
-	check = LiveCheck{ListID: l.ID, Outcome: CheckInvalid}
+	check = LiveCheck{ListID: l.ID, Outcome: CheckInvalid, KindRemoved: errors.Is(err, errKindRemoved)}
 	return check, s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return writeCheckpoint(ctx, tx, l, at, check, nil)
 	})
@@ -148,7 +154,7 @@ func (s *Store) compareLiveList(ctx context.Context, l listRow, at time.Time) (L
 			return writeCheckpoint(ctx, tx, l, at, check, nil)
 		}
 		check.Outcome = CheckComplete
-		return s.compareSnapshot(ctx, tx, l, matched, at, &check)
+		return s.compareSnapshot(ctx, tx, l, engine.Table, matched, at, &check)
 	})
 	return check, err
 }
@@ -176,7 +182,7 @@ func matchAll(ctx context.Context, tx pgx.Tx, engine storekit.Query, pred storek
 // and replaces the held members. The first complete check only takes the
 // snapshot: a list that existed before anyone watched it has no changes to
 // report, only members.
-func (s *Store) compareSnapshot(ctx context.Context, tx pgx.Tx, l listRow, matched []ids.UUID, at time.Time, check *LiveCheck) error {
+func (s *Store) compareSnapshot(ctx context.Context, tx pgx.Tx, l listRow, table string, matched []ids.UUID, at time.Time, check *LiveCheck) error {
 	prior, held, err := readSnapshotVersion(ctx, tx, l.ID)
 	if err != nil {
 		return err
@@ -199,7 +205,7 @@ func (s *Store) compareSnapshot(ctx context.Context, tx pgx.Tx, l listRow, match
 	if err != nil {
 		return err
 	}
-	if err := lockChangedRecords(ctx, tx, l.EntityType, came, gone); err != nil {
+	if err := lockChangedRecords(ctx, tx, table, came, gone); err != nil {
 		return err
 	}
 	args := pgx.StrictNamedArgs{
@@ -212,11 +218,6 @@ func (s *Store) compareSnapshot(ctx context.Context, tx pgx.Tx, l listRow, match
 	args["changed"], args[entityTypeField] = came, l.EntityType
 	if err := tx.QueryRow(ctx, enterStatement, args).Scan(&check.Entered); err != nil {
 		return fmt.Errorf("record who entered: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `UPDATE list_live_member SET definition_version = @version
-		WHERE list_id = @list_id AND definition_version <> @version`,
-		pgx.StrictNamedArgs{listIDField: l.ID, versionField: l.Version}); err != nil {
-		return err
 	}
 	if !held {
 		check.Entered, check.Left = 0, 0
@@ -261,16 +262,17 @@ func nonNil(set []ids.UUID) []ids.UUID {
 
 // lockChangedRecords takes a share lock on every record about to be written
 // as entered or left. Erasure updates the record before it clears the list
-// rows, so either it waits for this check and then clears what it wrote, or
-// it got there first and this REPEATABLE READ check fails on the lock instead
-// of writing an erased record back.
-func lockChangedRecords(ctx context.Context, tx pgx.Tx, entityType string, came, gone []ids.UUID) error {
+// rows. Either it waits for this check and clears what it wrote, or it got
+// there first and this `REPEATABLE READ` check fails on the lock. An erased
+// record is never written back. The table is the engine's own, already quoted:
+// a core type's literal or an extension kind's declared table.
+func lockChangedRecords(ctx context.Context, tx pgx.Tx, table string, came, gone []ids.UUID) error {
 	if len(came)+len(gone) == 0 {
 		return nil
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(
 		`SELECT e.id FROM %s e WHERE e.id = ANY(@came) OR e.id = ANY(@gone) ORDER BY e.id FOR SHARE`,
-		pgx.Identifier{entityType}.Sanitize()), pgx.StrictNamedArgs{"came": came, "gone": gone})
+		table), pgx.StrictNamedArgs{"came": came, "gone": gone})
 	if err != nil {
 		return err
 	}
@@ -278,26 +280,33 @@ func lockChangedRecords(ctx context.Context, tx pgx.Tx, entityType string, came,
 	return err
 }
 
+// An import's batch is durable proof even after its published events are purged.
+const importedChangeSQL = `EXISTS (
+ SELECT 1 FROM audit_log a JOIN import_run r ON r.id=a.batch_id
+ WHERE a.entity_type=c.entity_type AND a.entity_id=c.entity_id
+ AND a.occurred_at > coalesce((SELECT evaluated_at FROM list_evaluation WHERE list_id=@list_id), '-infinity')
+ AND a.occurred_at <= @at)`
+
 // leaveStatement drops the held members the filter no longer selects and,
 // past the first check, records each as having left.
 const leaveStatement = `WITH gone AS (
 		DELETE FROM list_live_member s WHERE s.list_id = @list_id AND s.entity_id = ANY(@changed::uuid[])
 		RETURNING s.entity_type, s.entity_id),
 	logged AS (
-		INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor, occurred_at, definition_version)
-		SELECT @list_id, g.entity_type, g.entity_id, 'left', @reason, @actor, @at, @version FROM gone g WHERE @record::boolean)
+		INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor, occurred_at, definition_version, imported)
+		SELECT @list_id, c.entity_type, c.entity_id, 'left', @reason, @actor, @at, @version, ` + importedChangeSQL + ` FROM gone c WHERE @record::boolean)
 	SELECT count(*) FROM gone`
 
 // enterStatement holds the members the filter newly selects and, past the
 // first check, records each as having entered.
 const enterStatement = `WITH came AS (
-		INSERT INTO list_live_member (list_id, entity_type, entity_id, member_since, definition_version)
-		SELECT @list_id, @entity_type, m.id, @at, @version FROM unnest(@changed::uuid[]) AS m(id)
+		INSERT INTO list_live_member (list_id, entity_type, entity_id, member_since)
+		SELECT @list_id, @entity_type, m.id, @at FROM unnest(@changed::uuid[]) AS m(id)
 		ON CONFLICT (list_id, entity_id) DO NOTHING
 		RETURNING entity_type, entity_id),
 	logged AS (
-		INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor, occurred_at, definition_version)
-		SELECT @list_id, c.entity_type, c.entity_id, 'entered', @reason, @actor, @at, @version FROM came c WHERE @record::boolean)
+		INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor, occurred_at, definition_version, imported)
+		SELECT @list_id, c.entity_type, c.entity_id, 'entered', @reason, @actor, @at, @version, ` + importedChangeSQL + ` FROM came c WHERE @record::boolean)
 	SELECT count(*) FROM came`
 
 // readSnapshotVersion answers the version the held members were taken under;
@@ -334,16 +343,12 @@ func filterChangedSince(ctx context.Context, tx pgx.Tx, l listRow, version int64
 // last complete one when this one held no members.
 func writeCheckpoint(ctx context.Context, tx pgx.Tx, l listRow, at time.Time, check LiveCheck, snapshot *int64) error {
 	_, err := tx.Exec(ctx, `
-		INSERT INTO list_evaluation (list_id, definition_version, evaluated_at, member_count, outcome, snapshot_version)
-		VALUES (@list_id, @version, @at, @members, @outcome, @snapshot)
-		ON CONFLICT (list_id) DO UPDATE SET definition_version = EXCLUDED.definition_version,
-			evaluated_at = EXCLUDED.evaluated_at, member_count = EXCLUDED.member_count,
+		INSERT INTO list_evaluation (list_id, evaluated_at, outcome, snapshot_version)
+		VALUES (@list_id, @at, @outcome, @snapshot)
+		ON CONFLICT (list_id) DO UPDATE SET evaluated_at = EXCLUDED.evaluated_at,
 			outcome = EXCLUDED.outcome,
 			snapshot_version = COALESCE(EXCLUDED.snapshot_version, list_evaluation.snapshot_version)`,
-		pgx.StrictNamedArgs{
-			listIDField: l.ID, versionField: l.Version, "at": at, "members": check.Members,
-			"outcome": check.Outcome, "snapshot": snapshot,
-		})
+		pgx.StrictNamedArgs{listIDField: l.ID, "at": at, "outcome": check.Outcome, "snapshot": snapshot})
 	return err
 }
 

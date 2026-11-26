@@ -1,4 +1,4 @@
-<!-- describes: backend/internal/compose/attention backend/internal/compose/worklistsnap backend/internal/modules/activities/waiting.go backend/internal/modules/activities/waitingcards.go backend/internal/modules/activities/awaitingreply.go -->
+<!-- describes: backend/internal/compose/suggestionlanes backend/internal/compose/attention backend/internal/compose/worklistsnap backend/internal/modules/activities/waiting.go backend/internal/modules/activities/waitingcards.go backend/internal/modules/activities/awaitingreply.go -->
 # Worklist source census
 
 Every source `GET /v1/worklist` admits, with the store that reads it, the bound that cuts it, how it narrows to
@@ -20,19 +20,21 @@ that can remove or merge a source's rows.
 | D | `relationshipChoices` (`relationshipchoices.go`) | Moves `relationship_decay` rows out of the queue unless pinned; drops one whose contact is already on another row |
 | E | `foldBriefIntoRisk` (`briefdedupe.go`) | Merges a `brief_item` onto the row about the same deal |
 | F | `dropDone` (`done.go`) | Drops rows the reader marked done that have not come back |
+| F2 | `foldFollowUpsIntoPromises` (`followuppromise.go`) | Puts an `awaiting_reply` row onto the reader's own earliest-due open task derived from its email, and drops the reminder. That task counts under `tasks` even when it is due later |
 | G | `foldAndRepin` and `foldRoutineDecisionsBounded` (`batches.go`, `pins.go`) | Folds routine decisions and system incidents into `batch` rows at `batchFloor` = 3 members; skipped for `filter=decisions` and `filter=system` |
 | H | `keepFiltered` (`page.go`) | Applies the `filter` value |
 | I | `markCrowding` (`crowding.go`) | Marks rows past the lead of one source; removes none |
 
-The page counts two populations. `considered` is the rows left after step F, before folding, filtering and
+The page counts two populations. `considered` is the rows left after step F2, before folding, filtering and
 crowding; `summary`, `readings` and the considered half of `counts` and `reach` read it. `shown` is what is left
 after steps G and H and the page cut. No source count query feeds them, with two exceptions. `needs_you` carries
 the stores' own totals for approvals, duplicate pairs and suggestions (`decisionsToDepth` in `feed.go`). A
-category's `total` uses the exact counts in `exactSources` (`totals.go`): approvals, the task source's two
-windows (`backlog.go`).
+category's `total` uses the exact counts in `exactSources` (`totals.go`): approvals, deal and tag suggestions,
+the task source's two windows (`backlog.go`).
 
 Below the ranked rows, `backlogtail.go` continues each cut source it can from its own keyset, merged by one order
-(`backlogmerge.go`). Today those are the task, `customer_waiting`, `deal_at_risk` and `approval` sources.
+(`backlogmerge.go`). Today those are the task, `customer_waiting`, `deal_at_risk`, `approval`, `deal_suggestion`
+and `tag_suggestion` sources.
 
 ## Sources: store, bound and scope
 
@@ -71,31 +73,34 @@ cases, pairs, approvals and both suggestion kinds.
 "Order", "continue" and "count" ask whether the owning store can, in SQL today, order the admitted population,
 resume it after a position, and count it.
 
-Step F applies only to the sources in `doneInPlace` (`done.go`) and to `customer_waiting`. The others leave through
-a verb of their own: a task is completed, a decision is decided.
+Step F applies only to the kinds that set `done_in_place` in `backend/api/worklist-kinds.yaml`. The others leave
+through a verb of their own: a task is completed, a decision is decided.
 
 | Source | Steps that remove or merge its rows | Order | Continue | Count |
 |---|---|---|---|---|
-| `task` | A, C, H | Yes, by due date | Yes; continued below the ranked rows | Yes, both windows, in every scope (see below) |
+| `task` | A, C, F2, H | Yes, by due date | Yes; continued below the ranked rows | Yes, both windows, in every scope (see below) |
 | `meeting` | A, C, F, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `meeting_outcome` | A, C, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `brief_item` | A, C, E, H | Rank in Go | No | No; the run ranks its items in Go, and step E merges them onto other rows |
 | `deal_at_risk` | A, B, C, E (absorbs), F, H | Yes, by expected close | Yes; continued below the ranked rows | No; step B does not fit the first page (see below) |
 | `customer_waiting` | Seam drops machine senders and folds threads; then A, B, C (twice), F, H. The tail runs the fold in SQL | Yes, by arrival | Yes; continued below the ranked rows | No; it does not fit the first page (see below) |
-| `awaiting_reply`, `meeting_follow_up` | A, C, F, H | Yes | No | No; step F |
+| `awaiting_reply` | A, C, F, F2, H | Yes | No | No; step F |
+| `meeting_follow_up` | A, C, F, H | Yes | No | No; step F |
 | `weekly_commitment` | A, C, H | Go | No | Not needed: the lane has no bound, so its rows are its total |
 | `approval` | A, C, G, H | Yes, newest staged first | Yes; continued below the ranked rows | Yes, `CountPending`; not on a team page, which judges by a roster the count does not share |
 | `dedupe_candidate` | A, C, G, H | Yes | Yes | No total; its cut is judged with `contact_case`'s against one count (see below) |
 | `contact_case` | A, C, F, G, H | Ranked in Go | Opaque cursor | No total; step F |
-| `deal_suggestion` | A, C, H | Yes | Yes | `CountOpenSuggestions` exists; no total until the source joins the tail (see below) |
-| `tag_suggestion` | A, C, H | Yes | No | `CountOpenTagSuggestions` exists; no total until the source joins the tail (see below) |
+| `deal_suggestion` | A, C, H | Yes, newest first | Yes; continued below the ranked rows | Yes, `CountOpenSuggestions` (see below) |
+| `tag_suggestion` | A, C, H | Yes, newest first | Yes; continued below the ranked rows | Yes, `CountOpenTagSuggestions` (see below) |
 | `relationship_decay` | A, C, D, H | Candidates only | No | No; step D and the lane's cut rank candidates in Go |
 | `introduction_request` | A, C, F, H | Yes | No | No; step F |
 | `domain_question` | A, C, F, G, H | Yes | Yes, `DomainQuestionsForOwner` | No; step F |
 | System sources | A, C, F, G (incidents), H | Yes | No | No; see [System sources](#system-sources) |
 
 The task source's admitted population is counted in SQL on a first page, only for a window its lane cut. Today's
-window is the planned lane's own count; the later window is `CountTasks`. A team page reads, counts and continues
+window is the planned lane's own count; the later window is `CountTasks`. When a window is cut,
+`TasksAfter`, narrowed by `TaskWindow.DerivedFrom`, reads the open tasks derived from the follow-up reminders' emails, so step F2 meets each
+task on the first page and the tail does not show it again. A team page reads, counts and continues
 its tasks through one roster arm (`TeamQueueOf` in `modules/activities`), so the lane's cap is spent on the rows step
 C keeps. On the `make bench-worklist-backlog` data, with 16,169 open tasks on one team, the roster count of today's
 window took 38 ms, against 69 ms for the count of every readable task it replaces. The later window's count took
@@ -133,10 +138,13 @@ The `deal_at_risk` source is read on below the ranked rows to its end, in every 
 
 - Step B: `DealsWaiting` (`compose/attentionwaitingseam.go`) asks which deals a waiting card names. It runs the
   waiting tail's own card statement over the messages filed under the batch's deals
-  (`WaitingCardsOnDeals` in `modules/activities/waitingcards.go`), under the page's waiting narrowing. The ranked
-  rows keep step B over the waiting lane's own scan. When that scan was cut, a ranked deal whose customer's card
-  lies past it is still shown as at risk, and the card comes later in the tail. Asking `DealsWaiting` for the ranked
-  deals closes that gap, but made the first page 10% slower at p50 on a team page and 3% on a seat's own page.
+  (`WaitingCardsOnDeals` in `modules/activities/waitingcards.go`), under the page's waiting narrowing. That read
+  starts from the deals' links, so its cost follows the mail filed under the deals asked.
+- Step B on the ranked rows asks the same read (`dealsWaitingPastTheScan` in `attention/backlogrisk.go`). It runs
+  only when the waiting lane's scan was cut. It asks only for the lane's at-risk deals that no scanned card names.
+  A deal whose customer's card lies past the scan is then not shown at risk, and its card comes in the tail.
+  On `make bench-worklist-backlog` at 10,000 per seat, a seat's first page took 775 ms at p50 against 774 ms
+  without this check. A team's first page took 690 ms against 712 ms.
 - Step E: a tail row carries no brief item. A deal that a brief row or a waiting card above already names is left
   out of the tail (`dealsReported` in `attention/backlogrisk.go`).
 - Step B for tasks: `TasksOnDeals` (`compose/attentiontaskseam.go`) reads the open tasks filed under the batch's
@@ -155,11 +163,13 @@ deal; real mail on deals makes it cost more, up to the waiting count's own 850 m
 5%, and about 100 ms warm is more than that. The category stays a floor when a sweep is cut, and scrolling reaches
 every deal.
 
-The deal and tag suggestion sources stay a floor until they join the tail. Their stores count them under the list's
-own predicate (`CountOpenSuggestions`, `CountOpenTagSuggestions`), and `needs_you` carries those counts. Their rows
-name no owner, offer no Done and are never folded (`batchKeyOf` groups neither), so the count matches every row a
-scope keeps. But the decision lane stops at `batchScanDepth` rows, and scrolling ends there. A total past that would
-name suggestions the list cannot reach.
+The deal and tag suggestion sources state exact totals. Their stores count them under the list's own predicate
+(`CountOpenSuggestions`, `CountOpenTagSuggestions`), and `needs_you` carries those counts. A deal suggestion's store
+narrows to the scope's owners, the tag lane is read only where a scope keeps unowned rows, and neither offers Done or
+is folded (`batchKeyOf` groups neither). So the count matches every row a scope keeps. The decision lane stops at
+`batchScanDepth` rows, and the tail goes on with each store's own keyset from the last suggestion the lane kept
+(`backlogsuggestion.go`), so scrolling reaches every suggestion counted. Unbound, a cut suggestion lane stays a
+floor.
 
 The other sources run steps in Go that a count would need:
 
@@ -180,9 +190,9 @@ Their categories stay a floor when their lane is cut, and scrolling ends at the 
 
 ## System sources
 
-`categoryOfSource` in `reach.go` files every source it does not name under `system` (`categorySystem` in
-`batches.go`). Ownership depends on the classifier. Among the rows `classifySystem` draws, `systemRowOwner` in
-`classifydelivery.go` makes `notice`, `capture_health` and `booking_health` the reader's and the rest unowned, so step C drops
+`backend/api/worklist-kinds.yaml` files these sources under `system`. Ownership depends on the classifier. Among the
+rows `classifySystem` draws, `systemRowOwner` in `classifydelivery.go` makes a kind whose catalog `owner` allows
+`the_reader` the reader's: `notice`, `capture_health` and `booking_health`. The rest are unowned, so step C drops
 those from `mine`. `bounce`, `undelivered` and `failed_approval` are the reader's. `dsr` and `notice_case` belong
 to their assignee (`classifylegal.go`).
 
@@ -208,9 +218,8 @@ No system source states an exact total. Each one's reason:
   count of it exists yet. The `system` category would state a total only when every other system source was read
   whole too.
 
-`categoryOfSource` also files `domain_question`, `awaiting_reply`, `meeting_follow_up` and `batch` under `system`,
-while their classifiers give the rows `decisions`, `tasks`, `meetings`, and `decisions` or `system`. `counts` and
-`sources_unavailable` for those sources therefore name the wrong category.
+A `batch` row takes its members' category, `decisions` or `system`. The catalog files `batch` under `system`, the
+category `counts` and `sources_unavailable` name when a fold reports itself short.
 
 ## Filter values
 
@@ -234,7 +243,7 @@ answers 422 for a filter from another view. The cursor binds the view through `a
 
 | Work | Read | Bound | Owner narrowing |
 |---|---|---|---|
-| Tasks due after today | `UpcomingForViewer` in `compose/attentiontaskseam.go` | `upcomingCap` = 6, within `upcomingHorizonDays` = 14 | The `task` arms |
+| Tasks due after today | `PlannedForViewer` in `compose/attentiontaskseam.go` | `upcomingCap` = 6, within `upcomingHorizonDays` = 14 | The `task` arms |
 | Tasks due later than that | Not read | None | None |
 | Undated tasks | Only in the due-now read, and only for `storekit.UndatedTaskSources()`; every other undated task is never read (`modules/activities/taskwindow.go`) | `plannedCap` = 12 | The `task` arms |
 | Weekly plan commitments | `compose/attentionplanseam.go` keeps only those due by end of today; undated and later ones are skipped | None | As `weekly_commitment` |

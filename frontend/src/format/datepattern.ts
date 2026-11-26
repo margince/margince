@@ -3,7 +3,7 @@
 
 import type { Locale } from "../i18n";
 import { isRealCalendarDay } from "./calendarday";
-import { INTL_LOCALE } from "./intllocale";
+import { zonelessDateTimeFormat } from "./formatters";
 import {
   type DateFormat,
   type DatePart,
@@ -34,7 +34,7 @@ export function datePattern(locale: Locale, format: DateFormat): DatePattern {
 }
 
 function localePattern(locale: Locale): DatePattern {
-  const parts = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  const parts = zonelessDateTimeFormat(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -72,17 +72,19 @@ export function patternPlaceholder(
 }
 
 /**
- * A typed day as `YYYY-MM-DD`, or null. A four-digit first part is read year
- * first whatever the pattern, so a pasted ISO date keeps its meaning. A year
- * below 1000 is a typo the instant writers cannot carry, so it reads as none.
+ * A typed day as `YYYY-MM-DD`, or why it names none: text not in a date's
+ * shape, or a well-formed day the calendar does not have (31.02.2026). A
+ * four-digit first part is read year first whatever the pattern, so a pasted
+ * ISO date keeps its meaning. A year below 1000 is a typo the instant writers
+ * cannot carry, so it reads as no date.
  */
-export function parseTypedDate(
+export function readTypedDate(
   text: string,
   pattern: DatePattern,
-): ISODate | null {
+): Readonly<{ day: ISODate }> | Readonly<{ refused: "shape" | "noSuchDay" }> {
   const match = /^(\d{1,4})([./-])(\d{1,2})\2(\d{1,4})$/.exec(text.trim());
   if (!match) {
-    return null;
+    return { refused: "shape" };
   }
   const groups = [match[1], match[3], match[4]];
   const order: DatePattern["order"] =
@@ -99,8 +101,19 @@ export function parseTypedDate(
     !day ||
     day.length > 2
   ) {
-    return null;
+    return { refused: "shape" };
+  }
+  // A month past 12 or a day past 31 is a misread order or a typo, not a day
+  // the calendar happens to lack.
+  if (!inRange(Number(month), 1, 12) || !inRange(Number(day), 1, 31)) {
+    return { refused: "shape" };
   }
   const iso = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  return isISODate(iso) && isRealCalendarDay(iso) ? iso : null;
+  return isISODate(iso) && isRealCalendarDay(iso)
+    ? { day: iso }
+    : { refused: "noSuchDay" };
+}
+
+function inRange(value: number, low: number, high: number): boolean {
+  return value >= low && value <= high;
 }

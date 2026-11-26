@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import * as nodeCrypto from "node:crypto";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -202,6 +204,19 @@ describe("WebFormsCard", () => {
     expect(await screen.findByText("Waiting for its secret")).toBeTruthy();
   });
 
+  it("names the form in the heading of its Archive dialog", async () => {
+    vi.stubGlobal("fetch", backendFor(OPERATOR, [contactForm]).fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+    await user.click(await screen.findByTestId("archive-record"));
+    expect(
+      await screen.findByRole("heading", { name: "Archive Contact page?" }),
+    ).toBeTruthy();
+  });
+
   it("offers no write control to a role without the integrations grants", async () => {
     vi.stubGlobal("fetch", backendFor({}, [contactForm]).fetch);
     render(<WebFormsCard />);
@@ -271,7 +286,15 @@ describe("WebFormsCard", () => {
     const backend = backendFor(OPERATOR, [], {
       "GET /v1/products": () =>
         jsonResponse({
-          data: [{ id: "p-suite", name: "Suite" }],
+          data: [
+            {
+              id: "p-suite",
+              name: "Suite",
+              unit: "month",
+              unit_price_minor: 9_900,
+              currency: "EUR",
+            },
+          ],
           page: { next_cursor: null, has_more: false },
         }),
       "POST /v1/web-forms": () =>
@@ -341,6 +364,45 @@ describe("WebFormsCard", () => {
     render(<WebFormsCard />);
     expect(await screen.findByText(/^Last post /)).toBeTruthy();
     expect(screen.getByText("No post recorded yet")).toBeTruthy();
+  });
+
+  it("tells the admin when the intake refuses posts, and why", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, [
+        {
+          ...contactForm,
+          intake: { state: "throttled", since: "2026-10-30T09:02:00Z" },
+        },
+        {
+          ...contactForm,
+          id: "wf-2",
+          name: "Demo page",
+          intake: { state: "blocked", until: "2026-10-30T09:30:00Z" },
+        },
+        {
+          ...contactForm,
+          id: "wf-3",
+          name: "Event page",
+          intake: { state: "paused_all", until: "2026-10-30T09:30:00Z" },
+        },
+      ]).fetch,
+    );
+    render(<WebFormsCard />);
+    expect(
+      await screen.findByText(/^Throttled since .+, too many submissions$/),
+    ).toBeTruthy();
+    expect(screen.getByText(/^Blocked until /)).toBeTruthy();
+    expect(
+      screen.getByText("Paused for all forms: too much traffic"),
+    ).toBeTruthy();
+  });
+
+  it("says nothing about the intake while it takes posts as usual", async () => {
+    vi.stubGlobal("fetch", backendFor(OPERATOR, [contactForm]).fetch);
+    render(<WebFormsCard />);
+    expect(await screen.findByText("Contact page")).toBeTruthy();
+    expect(screen.queryByTestId("web-form-intake")).toBeNull();
   });
 
   it("says nothing about posts when the server does not report them", async () => {
@@ -426,6 +488,46 @@ describe("WebFormsCard", () => {
     );
     expect(backend.sent[0]?.body).not.toHaveProperty("allowed_origins");
     expect(screen.getByText(/destroys the only copy/)).toBeTruthy();
+  });
+
+  it("asks before Escape closes a minted secret nobody copied", async () => {
+    const created = {
+      ...contactForm,
+      sender: "server",
+      allowed_origins: [],
+      signing_secret: "mwf_minted",
+    };
+    const backend = backendFor(OPERATOR, [], {
+      "POST /v1/web-forms": () => jsonResponse(created, 201),
+    });
+    vi.stubGlobal("fetch", backend.fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("new-web-form"));
+    await user.type(screen.getByLabelText(/^Name/), "Demo request");
+    await user.click(screen.getByRole("radio", { name: /Website server/ }));
+    await user.click(screen.getByTestId("save-web-form"));
+    await screen.findByTestId("web-form-secret");
+
+    await user.keyboard("{Escape}");
+    const question = await screen.findByRole("dialog", {
+      name: en["unsaved.title"],
+    });
+    expect(question.textContent).toContain(en["webForms.setup.leaveWarning"]);
+    await user.click(
+      within(question).getByRole("button", { name: en["create.cancel"] }),
+    );
+    expect(screen.getByTestId("web-form-secret").textContent).toBe(
+      "mwf_minted",
+    );
+
+    await user.keyboard("{Escape}");
+    await user.click(
+      await screen.findByRole("button", { name: en["unsaved.discard"] }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByTestId("web-form-secret")).toBeNull(),
+    );
   });
 
   it("sets a Tally form up with no secret to bring, and says where each value goes", async () => {
@@ -575,9 +677,9 @@ describe("WebFormsCard actions", () => {
     await user.type(screen.getByLabelText(/^Thank-you page/), "x");
     await user.click(screen.getByTestId("save-web-form"));
 
-    expect(await screen.findByText("must be an https address")).toBeTruthy();
+    expect(await screen.findByText("Must be an https address.")).toBeTruthy();
     await user.type(screen.getByLabelText(/^Thank-you page/), "y");
-    expect(screen.queryByText("must be an https address")).toBeNull();
+    expect(screen.queryByText("Must be an https address.")).toBeNull();
   });
 });
 
@@ -679,5 +781,40 @@ describe("web form snippets", () => {
     );
     expect(code).toContain("process.env.MARGINCE_FORM_SECRET");
     expect(code).not.toContain("mwf_");
+  });
+
+  it("sends a server lead again, freshly signed, while the form is busy", async () => {
+    const module = serverSnippet({ ...contactForm, sender: "server" }, url)
+      .replace('import crypto from "node:crypto";', "")
+      .replace("export async function", "async function");
+    const statuses = [503, 503, 202];
+    const fetch = vi.fn(
+      async (_url: string, _init: { headers: Record<string, string> }) =>
+        new Response(null, { status: statuses.shift() }),
+    );
+    const sendLead = new Function(
+      "crypto",
+      "fetch",
+      "process",
+      "setTimeout",
+      `${module}\nreturn sendLead;`,
+    )(
+      nodeCrypto,
+      fetch,
+      { env: { MARGINCE_FORM_SECRET: "s3cret" } },
+      (resume: () => void) => resume(),
+    ) as (fields: object) => Promise<void>;
+
+    await sendLead({ email: "lead@example.com" });
+    expect(fetch).toHaveBeenCalledTimes(3);
+    const nonces = fetch.mock.calls.map(
+      ([, init]) => init.headers["X-Margince-Nonce"],
+    );
+    expect(new Set(nonces).size).toBe(3);
+
+    statuses.push(503, 503, 503);
+    await expect(sendLead({ email: "lead@example.com" })).rejects.toThrow(
+      "Margince refused the lead: 503",
+    );
   });
 });

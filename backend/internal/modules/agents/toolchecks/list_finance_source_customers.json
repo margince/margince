@@ -1,0 +1,6 @@
+{
+  "verb": "list_finance_source_customers",
+  "checks": [
+    "integrations.read"
+  ]
+}

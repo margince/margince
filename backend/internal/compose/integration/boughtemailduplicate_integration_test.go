@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
@@ -130,9 +131,8 @@ func waitForBoughtWaiters(t *testing.T, e *Env, pid, n int) {
 	}
 }
 
-// countBoughtWaiters counts the backends in this test database, other than
-// pid, that wait on a lock. It holds a connection only for the probe, and
-// clears the statistics snapshot on that connection first.
+// countBoughtWaiters counts the backends queued behind pid, directly or behind
+// one that is. It holds a connection only for the probe.
 func countBoughtWaiters(ctx context.Context, t *testing.T, e *Env, pid int) int {
 	t.Helper()
 	conn, err := e.Pool.Acquire(ctx)
@@ -140,16 +140,11 @@ func countBoughtWaiters(ctx context.Context, t *testing.T, e *Env, pid int) int 
 		t.Fatalf("acquiring the probe connection: %v", err)
 	}
 	defer conn.Release()
-	if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-		t.Fatalf("clearing the statistics snapshot: %v", err)
+	queued, err := testdb.QueuedBehind(ctx, conn, int32(pid))
+	if err != nil {
+		t.Fatalf("probing the lock queue: %v", err)
 	}
-	var waiting int
-	if err := conn.QueryRow(ctx,
-		`SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND cardinality(pg_blocking_pids(pid)) > 0
-		   AND pid <> $1`, pid).Scan(&waiting); err != nil {
-		t.Fatalf("probing for waiters: %v", err)
-	}
-	return waiting
+	return queued
 }
 
 func isDeadlock(err error) bool {

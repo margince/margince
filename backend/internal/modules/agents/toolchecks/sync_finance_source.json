@@ -1,0 +1,6 @@
+{
+  "verb": "sync_finance_source",
+  "checks": [
+    "integrations.update"
+  ]
+}

@@ -2,9 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
+import { en } from "../../i18n/en";
 import type { Receipt } from "../../lib/handled";
 import { OpenSourceProvider } from "../../lib/opensource";
+import { line, receipt } from "../../testing/magic.fixtures";
 import {
   jsonResponse,
   StoryProviders,
@@ -12,6 +15,8 @@ import {
 } from "../../testing/story-utils";
 import { automaticStageReceipt } from "../../testing/worklist.receiptreview.fixtures";
 import { DoneForYou } from "./brief.doneforyou";
+import { ChangeRow } from "./brief.doneforyou.change";
+import { DealCard } from "./brief.doneforyou.deal";
 import "./brief.css";
 
 const meta: Meta<typeof DoneForYou> = {
@@ -53,6 +58,59 @@ const REVIEW = {
   can_accept: true,
   writable: true,
 };
+
+// Win probability moved three times in four days: the newest two wait, and
+// the oldest was replaced by them before anyone looked.
+const probability = (before: number | null, after: number) => [
+  { field: "probability", type: "number" as const, before, after },
+];
+const FLIP_FLOP: Receipt[] = [
+  change(
+    4,
+    "Straight X platform rollout",
+    'Changed the win probability on "Straight X platform rollout": 50% → 0%',
+    {
+      kind: "deal_probability",
+      reason:
+        "The customer confirmed the board rejected the project and they are closing the deal on their side.",
+      changes: probability(50, 0),
+      review: { ...REVIEW, kind: "probability" },
+    },
+    0,
+  ),
+  change(
+    4,
+    "Straight X platform rollout",
+    'Changed the win probability on "Straight X platform rollout": 0% → 50%',
+    {
+      kind: "deal_probability",
+      reason:
+        "The customer is actively using the tool and working on improvements with us.",
+      occurred_at: "2026-09-12T09:05:00Z",
+      changes: probability(0, 50),
+      review: { ...REVIEW, kind: "probability" },
+    },
+    1,
+  ),
+  change(
+    4,
+    "Straight X platform rollout",
+    'Changed the win probability on "Straight X platform rollout": the stage\'s → 0%',
+    {
+      kind: "deal_probability",
+      reason: "The client's board rejected the implementation.",
+      occurred_at: "2026-09-09T06:40:00Z",
+      changes: probability(null, 0),
+      review: {
+        ...REVIEW,
+        kind: "probability",
+        can_accept: false,
+        can_undo: false,
+      },
+    },
+    2,
+  ),
+];
 
 const RECEIPTS: Receipt[] = [
   change(
@@ -131,35 +189,16 @@ function pending(receipts: readonly Receipt[]) {
   };
 }
 
-// Accepting a change answers as the server does: the receipt reads as
-// reviewed, and the deal's pending list no longer names it.
-function stub(initial: readonly Receipt[]) {
-  const accepted = new Set<string>();
-  const current = () =>
-    initial.map((r) =>
-      accepted.has(r.id) && r.review
-        ? { ...r, review: { ...r.review, accepted: true } }
-        : r,
-    );
-  const accepts = Object.fromEntries(
-    initial.map((r) => [
-      `POST /deals/${r.subject?.id}/applied-changes/${r.id}/accept`,
-      () => {
-        accepted.add(r.id);
-        return new Response(null, { status: 204 });
-      },
-    ]),
-  );
+function stub(receipts: readonly Receipt[]) {
   stubWithSession(
     {
-      ...accepts,
       "GET /worklist/handled": () =>
         jsonResponse({
           as_of: "2026-09-13T08:00:00Z",
-          receipts: current(),
+          receipts,
           truncated: false,
         }),
-      "GET /deal-corrections/pending": () => jsonResponse(pending(current())),
+      "GET /deal-corrections/pending": () => jsonResponse(pending(receipts)),
       "GET /magic": () =>
         jsonResponse({
           since: "2026-09-12T18:00:00Z",
@@ -176,41 +215,60 @@ function stub(initial: readonly Receipt[]) {
 }
 
 /**
- * Three deals: a quote, a long name, and a deal with two changes, one already
- * reviewed. The server no longer lists the reviewed one, so it does not wait
- * here. Marking the other reviewed keeps its row, now saying so.
+ * Four deals. One probability moved back and forth, with one change
+ * replaced. Then a quote, a long name, and a deal with one change accepted
+ * before Margince stopped asking. A short preview stands under the section heading.
  */
 export const ChangedDeals: Story = {
   render: () => {
-    stub(RECEIPTS);
+    stub([...FLIP_FLOP, ...RECEIPTS]);
     return (
       <StoryProviders>
         <OpenSourceProvider openSource={() => undefined}>
-          <DoneForYou completed={null} />
+          <DoneForYou completed={() => null} />
         </OpenSourceProvider>
       </StoryProviders>
     );
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const first = (
+      await canvas.findByRole("link", { name: "Straight X platform rollout" })
+    ).closest("summary");
+    if (!first) throw new Error("no deal preview");
+    await expect(first).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(first);
     await expect(
-      await canvas.findByText(
-        "The buyer confirmed the project was cancelled after the budget was withdrawn.",
-      ),
-    ).toBeTruthy();
-    const row = (
-      await canvas.findByText("The latest quote names a higher total.")
+      await canvas.findByText(en["brief.changes.superseded"]),
+    ).toBeVisible();
+    const card = (
+      await canvas.findByRole("link", { name: "Straight X platform rollout" })
     ).closest("li");
-    if (!(row instanceof HTMLElement)) throw new Error("no row for the amount");
-    await userEvent.click(
-      await within(row).findByRole("button", { name: "Mark reviewed" }),
-    );
-    await expect(await within(row).findByText("Reviewed")).toBeVisible();
+    if (!(card instanceof HTMLElement)) throw new Error("no card");
+    // The deal's verbs wait on the session's grants, which land after the list.
+    await expect(
+      (await within(card).findAllByRole("button", { name: /Undo/ })).length,
+    ).toBeGreaterThan(0);
+    await expect(canvas.queryByText(/review/i)).toBeNull();
   },
 };
 
+/** The same deals on a phone: steps take the width, verbs go full width. */
+export const ChangedDealsPhone: Story = {
+  render: () => {
+    stub([...FLIP_FLOP, ...RECEIPTS]);
+    return (
+      <StoryProviders>
+        <DoneForYou completed={() => null} />
+      </StoryProviders>
+    );
+  },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
 /** More than five deals: the preview stops at five and the drawer holds all. */
-export const ReviewAllDrawer: Story = {
+export const AllChangesDrawer: Story = {
   render: () => {
     stub(
       Array.from({ length: 7 }, (_, i) =>
@@ -221,14 +279,14 @@ export const ReviewAllDrawer: Story = {
     );
     return (
       <StoryProviders>
-        <DoneForYou completed={null} />
+        <DoneForYou completed={() => null} />
       </StoryProviders>
     );
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Review all 7 deals" }),
+      await canvas.findByRole("button", { name: "See all 7 deals" }),
     );
   },
 };
@@ -243,7 +301,130 @@ export const NoReasonRecorded: Story = {
     ]);
     return (
       <StoryProviders>
-        <DoneForYou completed={null} />
+        <DoneForYou completed={() => null} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const LongPreview: Story = {
+  render: () => {
+    stub([
+      change(
+        1,
+        "Acme renewal",
+        `Changed the amount on "Acme renewal": ${"The updated scope includes delivery, training and support across the regional teams. ".repeat(12)}`,
+        {
+          kind: "deal_amount",
+        },
+      ),
+    ]);
+    return (
+      <StoryProviders>
+        <DoneForYou completed={() => null} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const head = (
+      await canvas.findByRole("link", { name: "Acme renewal" })
+    ).closest("summary");
+    const preview = canvasElement.querySelector(".brief-done-preview");
+    if (!(preview instanceof HTMLElement)) throw new Error("no change preview");
+    await expect(head).toHaveAttribute("aria-expanded", "false");
+    await expect(getComputedStyle(preview).webkitLineClamp).toBe("2");
+    await expect(preview.scrollHeight).toBeGreaterThan(preview.clientHeight);
+  },
+};
+
+export const LongPreviewPhone: Story = {
+  ...LongPreview,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+export const OnlySmallChanges: Story = {
+  render: () => {
+    stub([]);
+    stubWithSession(
+      {
+        "GET /deal-corrections/pending": () => jsonResponse(pending([])),
+        "GET /worklist/handled": () =>
+          jsonResponse({
+            as_of: "2026-09-13T08:00:00Z",
+            receipts: [],
+            truncated: false,
+          }),
+        "GET /magic": () =>
+          jsonResponse(
+            receipt({
+              done: [
+                line({ summary: { key: "magic.action.create_activity" } }),
+              ],
+            }),
+          ),
+      },
+      {},
+    );
+    return (
+      <StoryProviders>
+        <DoneForYou completed={() => null} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const preview = await canvas.findByText("Saved email or meeting");
+    await expect(preview.previousElementSibling).toHaveClass("brief-done-band");
+  },
+};
+
+export const OnlySmallChangesPhone: Story = {
+  ...OnlySmallChanges,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+export const ClosedDeal: Story = {
+  render: () => {
+    stub([]);
+    const [open, onOpen] = useState(false);
+    return (
+      <StoryProviders>
+        <ul className="brief-done-deals">
+          <DealCard
+            group={{
+              dealId: deal(1),
+              name: "Acme — ERP implementation",
+              receipts: RECEIPTS.slice(0, 1),
+              unloaded: 0,
+            }}
+            bundle={undefined}
+            currency="EUR"
+            open={open}
+            onOpen={onOpen}
+            asOf="2026-09-13T08:00:00Z"
+            onSettled={() => undefined}
+          />
+        </ul>
+      </StoryProviders>
+    );
+  },
+};
+
+export const ChangeStep: Story = {
+  render: () => {
+    stub([]);
+    return (
+      <StoryProviders>
+        <ol className="brief-done-changes">
+          <ChangeRow
+            receipt={automaticStageReceipt}
+            asOf="2026-09-13T08:00:00Z"
+            onSettled={() => undefined}
+          />
+        </ol>
       </StoryProviders>
     );
   },

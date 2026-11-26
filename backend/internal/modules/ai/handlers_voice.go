@@ -12,7 +12,6 @@ import (
 	"errors"
 	"net/http"
 	"strings"
-	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -47,9 +46,9 @@ type Handlers struct {
 	// no vault, which is why the routes answer 503 rather than panicking.
 	providerKeys *ProviderKeyStore
 	// publicProfile is the minimal anonymous login-presence view. NewHandlers
-	// starts honest-unconfigured; the API composition root replaces it from
-	// the same routing decision that builds the model path.
-	publicProfile PublicProfile
+	// starts unconfigured; the API composition root replaces it with a read of
+	// the binding the model path serves.
+	publicProfile func() PublicProfile
 	// priceSync is the engine behind the refresh route and /ai/price-sync. Nil on a
 	// role that composed none, which answers 501.
 	priceSync *PriceSync
@@ -60,6 +59,9 @@ type Handlers struct {
 	// so a rebind moves the rows with it. Nil on a role that resolved no model
 	// path, where every attempt stays on its tier.
 	boundModels func() map[Tier]ModelRef
+	// ladderOf is the order the router walks a task's rungs in now. Nil on a
+	// role that resolved no model path, which reads the contract's order.
+	ladderOf func(Task) []Tier
 }
 
 // NewHandlers wires the module's stores onto one pool; budget is the
@@ -73,7 +75,7 @@ func NewHandlers(db *database.DB, budget BudgetPolicy) Handlers {
 		calls: NewCallReadStore(db), rates: NewRateStore(db),
 		feedback:      NewFeedbackStore(db),
 		providers:     sharedProviderHealth,
-		publicProfile: NewPublicProfile("unconfigured", RoutingConfig{}),
+		publicProfile: func() PublicProfile { return NewPublicProfile("unconfigured", RoutingConfig{}) },
 	}
 }
 
@@ -338,10 +340,6 @@ func (h Handlers) wireVoiceProfile(ctx context.Context, p VoiceProfile) (crmcont
 	voiceProfileMD := p.VoiceProfileMD
 	maturity := crmcontracts.VoiceProfileMaturity(summary.Maturity)
 	qualityBand := crmcontracts.VoiceProfileQualityBand(summary.QualityBand)
-	updatedAt := p.CreatedAt
-	if p.UpdatedAt != nil {
-		updatedAt = *p.UpdatedAt
-	}
 	wire := crmcontracts.VoiceProfile{
 		Id:                       openapi_types.UUID(p.ID),
 		Status:                   crmcontracts.VoiceProfileStatus(p.Status),
@@ -359,7 +357,7 @@ func (h Handlers) wireVoiceProfile(ctx context.Context, p VoiceProfile) (crmcont
 		CapturedBy:               &p.CapturedBy,
 		Version:                  version,
 		CreatedAt:                p.CreatedAt,
-		UpdatedAt:                updatedAt,
+		UpdatedAt:                p.UpdatedAt,
 		ArchivedAt:               p.ArchivedAt,
 	}
 	if view.LatestBuild != nil {
@@ -402,7 +400,7 @@ func wireVoiceSource(s VoiceCorpusSource) crmcontracts.VoiceCorpusSource {
 		CapturedBy:       &s.CapturedBy,
 		Version:          int(s.Version),
 		CreatedAt:        s.CreatedAt,
-		UpdatedAt:        updatedAt(s.CreatedAt, s.UpdatedAt),
+		UpdatedAt:        s.UpdatedAt,
 		ArchivedAt:       s.ArchivedAt,
 	}
 }
@@ -416,13 +414,6 @@ func wireCorpusSummary(sum CorpusSummary) crmcontracts.VoiceCorpusSummary {
 		RegisterWords: sum.RegisterWords,
 		SourceCount:   sum.SourceCount,
 	}
-}
-
-func updatedAt(created time.Time, updated *time.Time) time.Time {
-	if updated != nil {
-		return *updated
-	}
-	return created
 }
 
 // sourceWithSummary is the ingest/patch response pair: the touched

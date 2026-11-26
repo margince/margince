@@ -54,12 +54,15 @@ func settingsTables(settings []setting) string {
 }
 
 func tableRow(s setting) string {
-	flagCell := emptyCell
+	envCell, flagCell := emptyCell, emptyCell
+	if s.Env() != "" {
+		envCell = codeSpan(s.Env())
+	}
 	if s.Flag() != "" {
 		flagCell = codeSpan("--" + s.Flag())
 	}
 	cells := []string{
-		codeSpan(s.Key()), codeSpan(s.Env()), flagCell, typeCell(s), defaultCell(s),
+		codeSpan(s.Key()), envCell, flagCell, typeCell(s), defaultCell(s),
 		programNames(s.programs), cellText(docText(s.Doc())),
 	}
 	return "| " + strings.Join(cells, " | ") + " |\n"
@@ -72,11 +75,11 @@ func typeCell(s setting) string {
 	cell := codeSpan(s.TypeName())
 	switch lo, hi := s.shape.Min, s.shape.Max; {
 	case lo != "" && hi != "":
-		cell += fmt.Sprintf(", %s to %s", cellText(lo), cellText(hi))
+		cell += fmt.Sprintf(", %s to %s", codeSpan(lo), codeSpan(hi))
 	case lo != "":
-		cell += ", at least " + cellText(lo)
+		cell += ", at least " + codeSpan(lo)
 	case hi != "":
-		cell += ", at most " + cellText(hi)
+		cell += ", at most " + codeSpan(hi)
 	}
 	if s.Secret() {
 		cell += ", secret"

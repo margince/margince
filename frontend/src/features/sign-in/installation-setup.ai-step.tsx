@@ -1,10 +1,17 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import type { components } from "../../api/schema";
+import {
+  keyTestReasonKey,
+  useTestProviderKey,
+} from "../../components/ai-provider-key-test";
 import { DEFAULT_VERTEX_LOCATION } from "../../components/vertex-location";
 import { Button, Field } from "../../design-system/atoms";
 import { ComboBox } from "../../design-system/combobox";
+import { FactList } from "../../design-system/factlist";
+import { Checkbox } from "../../design-system/field";
 import { StageActions } from "../../design-system/onboarding-stage";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { Select } from "../../design-system/select";
 import { serviceAccountProblem } from "../../design-system/serviceaccountkeyfield";
 import { useLocale, useT } from "../../i18n";
@@ -16,12 +23,18 @@ import {
   type VendorCatalogue,
   vendorSuggestions,
 } from "../../lib/ai-models";
+import { tierLabel, tierRank } from "../../lib/ai-tier-label";
+import { MODEL_SETUPS } from "../../lib/modelsetups.gen";
 import {
   SETUP_PROVIDER_IDS,
   SETUP_PROVIDERS,
+  type SetupProvider,
   type SetupProviderId,
 } from "../../lib/setup-providers";
-import { useSetProviderKey } from "../ai/ai-provider-key-hooks";
+import {
+  useRemoveProviderKey,
+  useSetProviderKey,
+} from "../ai/ai-provider-key-hooks";
 import { ModelRatePlate } from "./ai-rates";
 import {
   AiKeyFields,
@@ -30,6 +43,7 @@ import {
 } from "./installation-setup.ai-key";
 import { AiBindRefused } from "./installation-setup.notices";
 import { StepNeeds } from "./installation-setup.platform";
+import { MODEL_SETUP_TITLES } from "./modelsetup-titles";
 
 /**
  * A step's form, telling the stage above it when a write is in flight.
@@ -82,14 +96,41 @@ function chatListNote(
   return t("firstRun.ai.rankedHint", { rankedBy: vendor.rankedBy });
 }
 
-/** The AI step: one vendor, one key, the two models it will serve. */
+type KeyTestResult = components["schemas"]["AiProviderKeyTestResult"];
+
+/**
+ * What a key test that did not pass says about the key. A refusal means the key
+ * is wrong. These three mean the vendor could not be asked, which says nothing
+ * about the key, so the reader may go on regardless.
+ */
+const INCONCLUSIVE_KEY_TESTS = new Set<string | undefined>([
+  "rate_limited",
+  "unreachable",
+  "no_endpoint",
+]);
+
+/**
+ * The AI step: one vendor, one key, the two models it will serve.
+ * First run asks it on the stage. Settings asks the same form while nothing is
+ * bound, so a reader who skipped it comes back to one form.
+ */
 export function AiStep({
   onBusy,
   onIgnite,
+  onDecline,
+  verb = "firstRun.continue",
+  panel,
 }: Readonly<{
   onBusy: (busy: boolean) => void;
-  /** Both writes landed, for the vendor named. The stage takes it from here. */
+  /** Both writes landed, for the vendor named. The caller takes it from here. */
   onIgnite: (vendor: string) => void;
+  /** The way past for a reader with no key at hand; absent where there is
+   *  nothing to skip to. */
+  onDecline?: () => void;
+  verb?: MessageKey;
+  /** Set off the stage: the form is a titled settings panel that carries its
+   *  own actions, since there is no rail to put them on. */
+  panel?: Readonly<{ title: string; intro: string }>;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -99,13 +140,21 @@ export function AiStep({
   const [location, setLocation] = useState(
     preset.location ?? DEFAULT_VERTEX_LOCATION,
   );
-  // Why the pasted key file cannot be sent, set by a press on Continue.
+  // Why the key cannot be used: a key file that is not JSON, or the vendor's
+  // answer to the key test. Set by a press on Continue.
   const [keyRefusal, setKeyRefusal] = useState<MessageKey | undefined>();
   const keyFile = preset.credential === "service_account";
   const [chatModel, setChatModel] = useState(preset.chatModel);
+  // The graded preset by default; one model on every tier only when asked for.
+  const [oneModel, setOneModel] = useState(false);
   const [embedModel, setEmbedModel] = useState(preset.embedModel);
   const saveKey = useSetProviderKey();
   const bind = useBindModels();
+  const testKey = useTestProviderKey();
+  const removeKey = useRemoveProviderKey();
+  // Set once a key test could not reach a verdict: the next press goes on
+  // without asking the vendor again.
+  const [connectAnyway, setConnectAnyway] = useState(false);
   // What this installation can already price. On a fresh install that is the
   // seeded sheet. So the two fields open with the vendor's own family in them,
   // not with one id and no way to learn a second.
@@ -127,13 +176,18 @@ export function AiStep({
       setApiKey("");
     }
     setKeyRefusal(undefined);
+    setConnectAnyway(false);
     setLocation(SETUP_PROVIDERS[next].location ?? DEFAULT_VERTEX_LOCATION);
     setChoice(next);
     setChatModel(SETUP_PROVIDERS[next].chatModel);
     setEmbedModel(SETUP_PROVIDERS[next].embedModel);
   };
 
-  const busy = saveKey.isPending || bind.isPending;
+  const busy =
+    saveKey.isPending ||
+    testKey.isPending ||
+    removeKey.isPending ||
+    bind.isPending;
   // What the binding cannot do without, by the label the field wears. So the
   // rail names the same thing the field marks once Continue is pressed early.
   const missing = [
@@ -141,7 +195,7 @@ export function AiStep({
       apiKey.trim() === "",
       keyFile ? t("serviceAccountKey.label") : t("firstRun.ai.key"),
     ],
-    [chatModel.trim() === "", t("firstRun.ai.chatModel")],
+    [oneModel && chatModel.trim() === "", t("firstRun.ai.chatModel")],
     [embedModel.trim() === "", t("firstRun.ai.embedModel")],
   ]
     .filter((need): need is [true, string] => need[0] === true)
@@ -149,9 +203,10 @@ export function AiStep({
   const ready = missing.length === 0;
   const [attempted, setAttempted] = useState(false);
 
-  // The key first, then the binding. A binding whose vendor has no key reads as
-  // configured and fails on its first real call. A key with no binding is just
-  // a key, and the next attempt completes it.
+  // The key first, then the vendor is asked whether it works, then the binding.
+  // A binding whose vendor has no key, or a key it refuses, reads as configured
+  // and fails on its first real call. A key with no binding is just a key, and
+  // the next attempt completes it.
   //
   // Chained through callbacks rather than awaited: mutateAsync rejects, and a
   // rejection nobody handles is an unhandled promise. The field is cleared only after
@@ -159,6 +214,48 @@ export function AiStep({
   // failed binding. `ready` stays false, Continue stays disabled, and a reload
   // restores that state. The only way on would be to re-paste a key the server
   // already holds.
+  const bindModels = () => {
+    bind.mutate(
+      {
+        provider: preset.provider,
+        baseUrl: preset.baseUrl,
+        location: preset.location ? location : undefined,
+        embedLocation: preset.embedLocation,
+        profile: preset.profile,
+        setup: oneModel ? undefined : preset.setup,
+        chatModel: chatModel.trim(),
+        embedModel: embedModel.trim(),
+      },
+      {
+        onSuccess: () => {
+          // Both landed, so the field has done its job and this is the
+          // only copy of the key the app was holding.
+          setApiKey("");
+          // And the screen becomes the ignition. Nothing is refetched
+          // yet: see `useBindModels` for why the reader, not the query,
+          // decides when this step is over.
+          onIgnite(preset.label);
+        },
+      },
+    );
+  };
+
+  // A refused key is taken out again, so no tier can be routed to it and the
+  // vault holds nothing the vendor turned down. An unanswered test keeps it.
+  const judgeKey = (result: KeyTestResult | undefined) => {
+    if (result?.ok) {
+      bindModels();
+      return;
+    }
+    const reason = result?.reason ?? "unreachable";
+    setKeyRefusal(keyTestReasonKey(preset.provider, reason));
+    if (INCONCLUSIVE_KEY_TESTS.has(reason)) {
+      setConnectAnyway(true);
+      return;
+    }
+    removeKey.mutate({ provider: preset.provider });
+  };
+
   const submit = () => {
     // Pressable whatever is filled in. The press turns the missing fields red
     // and names them on the rail, so no grey button leaves the reader guessing.
@@ -173,6 +270,9 @@ export function AiStep({
     }
     saveKey.reset();
     bind.reset();
+    testKey.reset();
+    removeKey.reset();
+    setKeyRefusal(undefined);
     saveKey.mutate(
       {
         provider: preset.provider,
@@ -184,26 +284,15 @@ export function AiStep({
         // that may fail would otherwise keep it there; the field keeps its own.
         onSuccess: () => {
           saveKey.reset();
-          bind.mutate(
+          if (connectAnyway) {
+            bindModels();
+            return;
+          }
+          testKey.mutate(
+            { provider: preset.provider },
             {
-              provider: preset.provider,
-              baseUrl: preset.baseUrl,
-              location: preset.location ? location : undefined,
-              embedLocation: preset.embedLocation,
-              profile: preset.profile,
-              chatModel: chatModel.trim(),
-              embedModel: embedModel.trim(),
-            },
-            {
-              onSuccess: () => {
-                // Both landed, so the field has done its job and this is the
-                // only copy of the key the app was holding.
-                setApiKey("");
-                // And the screen becomes the ignition. Nothing is refetched
-                // yet: see `useBindModels` for why the reader, not the query,
-                // decides when this step is over.
-                onIgnite(preset.label);
-              },
+              onSuccess: judgeKey,
+              onError: () => judgeKey(undefined),
             },
           );
         },
@@ -211,21 +300,31 @@ export function AiStep({
     );
   };
 
+  // On the stage the verb goes on its rail, which stays in view while a long
+  // board scrolls. In Settings it is the panel's own action band.
+  const actions = (
+    <>
+      <StepNeeds attempted={attempted} missing={missing} />
+      {onDecline && (
+        <Button variant="ghost" onClick={onDecline} disabled={busy}>
+          {t("firstRun.ai.skip")}
+        </Button>
+      )}
+      <Button variant="primary" pending={busy} onClick={submit}>
+        {t(connectAnyway ? "firstRun.ai.connectAnyway" : verb)}
+      </Button>
+    </>
+  );
+
   return (
     <StepForm busy={busy} onBusy={onBusy}>
-      {/* The verb goes on the stage's rail rather than as the last thing in
-          the stack of questions: a button that shares the fields' spacing reads
-          as one more field, and one at the end of a long board is one the
-          reader has scrolled away from. */}
-      <StageActions>
-        <StepNeeds attempted={attempted} missing={missing} />
-        <Button variant="primary" pending={busy} onClick={submit}>
-          {t("firstRun.continue")}
-        </Button>
-      </StageActions>
-      <Panel>
-        <PanelBody>
-          <AiBindRefused keyError={saveKey.error} bindError={bind.error} />
+      <Panel title={panel?.title} actions={panel && actions}>
+        <PanelBody className="form-stack">
+          {panel && <PanelIntro>{panel.intro}</PanelIntro>}
+          <AiBindRefused
+            keyError={saveKey.error ?? removeKey.error}
+            bindError={bind.error}
+          />
           <Field label={t("firstRun.ai.provider")}>
             {(control) => (
               <Select
@@ -257,44 +356,53 @@ export function AiStep({
             disabled={busy}
             onSecret={(next) => {
               setKeyRefusal(undefined);
+              setConnectAnyway(false);
               setApiKey(next);
             }}
             onLocation={setLocation}
           />
-          {/* Both fields offer what the sheet can price for the chosen vendor,
-            in the lane that field binds — and take anything typed, because the
-            server accepts any id its vendor serves and the whole point of the
-            preset below is that it is a starting point. */}
-          <Field
-            label={t("firstRun.ai.chatModel")}
-            hint={`${t("firstRun.ai.modelHint")} ${chatListNote(t, vendor.data)}`.trim()}
-          >
-            {(control) => (
-              <ComboBox
-                {...control}
-                value={chatModel}
-                // The sheet first, then what the vendor is serving today. The
-                // sheet's rows are the ones this installation can already price.
-                // The live rows answer a different question: what else is there.
-                suggestions={[
-                  ...suggestionsFor(
-                    catalogue.data,
-                    preset.provider,
-                    "chat",
-                    locale,
-                  ),
-                  ...vendorSuggestions(
-                    vendor.data,
-                    catalogue.data,
-                    preset.provider,
-                    locale,
-                  ),
-                ]}
-                disabled={busy}
-                onChange={setChatModel}
-              />
-            )}
-          </Field>
+          <SetupTiers preset={preset} hidden={oneModel} />
+          <Checkbox
+            label={t("firstRun.ai.oneModel")}
+            checked={oneModel}
+            disabled={busy}
+            onChange={(e) => setOneModel(e.target.checked)}
+          />
+          {/* Both model fields offer what the sheet can price for the chosen
+            vendor, in the lane that field binds, and take anything typed,
+            because the server accepts any id its vendor serves. */}
+          {oneModel && (
+            <Field
+              label={t("firstRun.ai.chatModel")}
+              hint={`${t("firstRun.ai.modelHint")} ${chatListNote(t, vendor.data)}`.trim()}
+            >
+              {(control) => (
+                <ComboBox
+                  {...control}
+                  value={chatModel}
+                  // The sheet first, then what the vendor is serving today. The
+                  // sheet's rows are the ones this installation can already price.
+                  // The live rows answer a different question: what else is there.
+                  suggestions={[
+                    ...suggestionsFor(
+                      catalogue.data,
+                      preset.provider,
+                      "chat",
+                      locale,
+                    ),
+                    ...vendorSuggestions(
+                      vendor.data,
+                      catalogue.data,
+                      preset.provider,
+                      locale,
+                    ),
+                  ]}
+                  disabled={busy}
+                  onChange={setChatModel}
+                />
+              )}
+            </Field>
+          )}
           <Field label={t("firstRun.ai.embedModel")}>
             {(control) => (
               <ComboBox
@@ -320,12 +428,51 @@ export function AiStep({
             catalogue={catalogue.data}
             vendor={vendor.data}
             provider={preset.provider}
-            chatModel={chatModel}
+            // The graded setup binds a model per tier, each listed above with
+            // its tier; the plate prices the one model only when one is chosen.
+            chatModel={oneModel ? chatModel : ""}
             embedModel={embedModel}
             locale={locale}
           />
         </PanelBody>
       </Panel>
+      {panel === undefined && <StageActions>{actions}</StageActions>}
     </StepForm>
+  );
+}
+
+/**
+ * The graded preset's models, tier by tier, which onboarding binds unless the
+ * reader asks for one model on every tier.
+ */
+function SetupTiers({
+  preset,
+  hidden,
+}: Readonly<{ preset: SetupProvider; hidden: boolean }>) {
+  const t = useT();
+  if (hidden) {
+    return null;
+  }
+  const setup = MODEL_SETUPS[preset.setup];
+  const tiers = Object.entries(setup.routing.tiers).sort(
+    ([a], [b]) => tierRank(a) - tierRank(b),
+  );
+  return (
+    <Field
+      label={t("firstRun.ai.setup", {
+        setup: t(MODEL_SETUP_TITLES[preset.setup]),
+      })}
+      hint={t("firstRun.ai.setupHint")}
+    >
+      {() => (
+        <FactList
+          facts={tiers.map(([tier, binding]) => ({
+            key: tier,
+            term: tierLabel(tier, t),
+            value: binding.model,
+          }))}
+        />
+      )}
+    </Field>
   );
 }

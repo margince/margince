@@ -1,0 +1,8 @@
+{
+  "verb": "create_task",
+  "checks": [
+    "activity.create",
+    "activity.read",
+    "relationship.read"
+  ]
+}

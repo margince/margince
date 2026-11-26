@@ -2,13 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { AddDocumentDialog } from "../../components/adddocument";
 import {
   AttachmentGrid,
   AttachmentTile,
 } from "../../components/attachmenttile";
-import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
-import { ConfirmModal } from "../../design-system/confirmmodal";
-import { useFocusHandoff } from "../../design-system/focushandoff";
+import { ChatCapture } from "../../components/chatcapture";
+import { FileVerbs } from "../../components/filerowverbs";
+import { Badge, Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
   type SectionState,
@@ -16,10 +17,9 @@ import {
 } from "../../design-system/surfacestate";
 import { undoAction, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
+import { dealFilesKey, dealHideKeys } from "../../lib/attachmentkeys";
 import { useCanWriteRecord } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { AddDocumentDialog } from "../voice-knowledge/adddocument";
-import { ROOM_DOCUMENTS_PREFIX } from "./dealroomdocuments.key";
 
 // The deal's Files area: what a rep uploaded on the deal, and what arrived
 // with the messages linked to it. The second half is why this exists — an
@@ -39,7 +39,7 @@ type DealDocument = components["schemas"]["DealDocument"];
 const PAGE_LIMIT = 100;
 
 export function dealDocumentsKey(dealId: string, includeHidden: boolean) {
-  return ["deal-documents", dealId, includeHidden] as const;
+  return [...dealFilesKey(dealId), includeHidden] as const;
 }
 
 // The deal's files, one read for the tab and for the count on its label, so
@@ -76,6 +76,7 @@ export function DealFiles({
   // deal and refused the upload once the bytes were chosen.
   const mayWrite = useCanWriteRecord("deal", deal);
   const [adding, setAdding] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const listRegion = useRef<HTMLDivElement | null>(null);
   const focusLanding = useCallback(() => listRegion.current, []);
@@ -92,49 +93,66 @@ export function DealFiles({
   }
 
   return (
-    <Panel
-      title={t("files.title")}
-      titleAction={
-        mayWrite ? (
-          <Button onClick={() => setAdding(true)}>
-            {t("docs.add.action")}
+    <>
+      {capturing && (
+        <ChatCapture
+          record={{ type: "deal", id: dealId, name: deal.name }}
+          onClose={() => setCapturing(false)}
+        />
+      )}
+      <Panel
+        title={t("files.title")}
+        titleAction={
+          mayWrite ? (
+            <>
+              <Button
+                variant="ai"
+                disabled={capturing}
+                onClick={() => setCapturing(true)}
+              >
+                {t("chatCapture.action")}
+              </Button>
+              <Button onClick={() => setAdding(true)}>
+                {t("docs.add.action")}
+              </Button>
+            </>
+          ) : undefined
+        }
+        footer={
+          <Button variant="ghost" onClick={() => setShowHidden((s) => !s)}>
+            {showHidden ? t("files.hideHidden") : t("files.showHidden")}
           </Button>
-        ) : undefined
-      }
-      footer={
-        <Button variant="ghost" onClick={() => setShowHidden((s) => !s)}>
-          {showHidden ? t("files.hideHidden") : t("files.showHidden")}
-        </Button>
-      }
-    >
-      <AddDocumentDialog
-        anchor={{ record: "deal", id: dealId }}
-        open={adding}
-        onClose={() => setAdding(false)}
-      />
-      <PanelBody>
-        <div ref={listRegion} tabIndex={-1}>
-          <SurfaceState
-            loadingLabel={t("files.title")}
-            state={state}
-            emptyLabel={t("files.empty")}
-            detail={
-              state === "failed"
-                ? { onRetry: () => void query.refetch() }
-                : undefined
-            }
-          >
-            <FilesGrid
-              dealId={dealId}
-              files={files}
-              mayWrite={mayWrite}
-              focusLanding={focusLanding}
-              onOpenEmail={onOpenEmail}
-            />
-          </SurfaceState>
-        </div>
-      </PanelBody>
-    </Panel>
+        }
+      >
+        <AddDocumentDialog
+          anchor={{ record: "deal", id: dealId }}
+          open={adding}
+          onClose={() => setAdding(false)}
+        />
+        <PanelBody>
+          <div ref={listRegion} tabIndex={-1}>
+            <SurfaceState
+              loadingLabel={t("files.title")}
+              state={state}
+              emptyLabel={t("files.empty")}
+              detail={
+                state === "failed"
+                  ? { onRetry: () => void query.refetch() }
+                  : undefined
+              }
+            >
+              <FilesGrid
+                dealId={dealId}
+                files={files}
+                mayWrite={mayWrite}
+                focusLanding={focusLanding}
+                onOpenEmail={onOpenEmail}
+              />
+            </SurfaceState>
+          </div>
+        </PanelBody>
+      </Panel>
+    </>
   );
 }
 
@@ -175,9 +193,9 @@ function FilesGrid({
             verbs={
               mayWrite && (
                 <FileVerbs
-                  dealId={dealId}
-                  doc={doc}
+                  file={doc.attachment}
                   focusLanding={focusLanding}
+                  extra={<HideItems dealId={dealId} doc={doc} />}
                 />
               )
             }
@@ -188,123 +206,43 @@ function FilesGrid({
   );
 }
 
-// A row's menu and the delete it asks about first. The landing takes focus
-// when the row the menu stood in goes away.
-function FileVerbs({
+// The deal-only verbs of a captured file: the deal stops listing it, and the
+// file stays on its message. A hide runs at once with an Undo.
+function HideItems({
   dealId,
   doc,
-  focusLanding,
-}: Readonly<{
-  dealId: string;
-  doc: DealDocument;
-  focusLanding: () => HTMLElement | null;
-}>) {
+}: Readonly<{ dealId: string; doc: DealDocument }>) {
   const t = useT();
-  const file = doc.attachment;
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const verbs = useFileVerbs(dealId, file.id);
-  const side = useRef<HTMLSpanElement | null>(null);
-  // A ref, not state: the dialog reads it as it closes, before a re-render.
-  const deleted = useRef(false);
-  useFocusHandoff(side, focusLanding);
+  const { hide, unhide } = useHideVerbs(dealId, doc.attachment.id);
+  if (doc.attachment.entity_type !== "activity") return null;
+  const hidden = doc.hidden;
+  const verb = hidden ? unhide : hide;
   return (
-    <span className="cell-actions" ref={side}>
-      <FileMenu
-        doc={doc}
-        hide={verbs.hide}
-        unhide={verbs.unhide}
-        onDelete={() => {
-          deleted.current = false;
-          setConfirmingDelete(true);
-        }}
-      />
-      <ConfirmModal
-        open={confirmingDelete}
-        onClose={() => setConfirmingDelete(false)}
-        returnFocusTo={() => (deleted.current ? focusLanding() : null)}
-        title={t("files.deleteTitle", { name: file.filename })}
-        confirmLabel={t("files.delete")}
-        confirmVariant="danger"
-        pending={verbs.remove.isPending}
-        error={
-          verbs.remove.isError ? problemMessageOf(verbs.remove.error, t) : null
-        }
-        onConfirm={() =>
-          verbs.remove.mutate(undefined, {
-            onSuccess: () => {
-              deleted.current = true;
-              setConfirmingDelete(false);
-            },
-          })
-        }
-      >
-        <p>{t("files.deleteBody")}</p>
-      </ConfirmModal>
-    </span>
-  );
-}
-
-// The row's verbs: a captured file can be hidden or shown again, an upload
-// deleted. The menu is its own component so the row stays readable.
-function FileMenu({
-  doc,
-  hide,
-  unhide,
-  onDelete,
-}: Readonly<{
-  doc: DealDocument;
-  hide: ReturnType<typeof useFileVerbs>["hide"];
-  unhide: ReturnType<typeof useFileVerbs>["unhide"];
-  onDelete: () => void;
-}>) {
-  const t = useT();
-  const captured = doc.attachment.entity_type === "activity";
-  return (
-    <OverflowMenu
-      label={t("table.rowActions", { name: doc.attachment.filename })}
+    <Button
+      variant="ghost"
+      pending={verb.isPending}
+      onClick={() => verb.mutate()}
     >
-      {captured && !doc.hidden ? (
-        <Button
-          variant="ghost"
-          pending={hide.isPending}
-          onClick={() => hide.mutate()}
-        >
-          {t("files.hide")}
-        </Button>
-      ) : null}
-      {captured && doc.hidden ? (
-        <Button
-          variant="ghost"
-          pending={unhide.isPending}
-          onClick={() => unhide.mutate()}
-        >
-          {t("files.unhide")}
-        </Button>
-      ) : null}
-      {!captured ? (
-        <Button variant="ghost" onClick={onDelete}>
-          {t("files.delete")}
-        </Button>
-      ) : null}
-    </OverflowMenu>
+      {t(hidden ? "files.unhide" : "files.hide")}
+    </Button>
   );
 }
 
-// The three writes a row offers. Each refreshes both views of the area (with
-// and without hidden rows), since a hide moves a row from one to the other.
-function useFileVerbs(dealId: string, attachmentId: string) {
+// Each write refreshes both views of the area (with and without hidden rows),
+// since a hide moves a row from one to the other.
+function useHideVerbs(dealId: string, attachmentId: string) {
   const t = useT();
   const toast = useToast();
   const queryClient = useQueryClient();
-  // Both keys of the deal's files: this area's own and the Deal Room picker's,
-  // so a delete here leaves no ghost there. The room's own list goes too,
-  // because it says whether each entry still reaches the buyer.
+  // A hide or unhide moves the row within this deal. That changes its area,
+  // the Deal Room picker (same key, without hidden rows), and the rooms that
+  // say whether each entry still reaches the buyer.
   const refresh = () =>
-    Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["deal-documents", dealId] }),
-      queryClient.invalidateQueries({ queryKey: ["deal-attachments", dealId] }),
-      queryClient.invalidateQueries({ queryKey: ROOM_DOCUMENTS_PREFIX }),
-    ]);
+    Promise.all(
+      dealHideKeys(dealId).map((queryKey) =>
+        queryClient.invalidateQueries({ queryKey }),
+      ),
+    );
   // A refused hide or Undo has no dialog, and the row has no error slot.
   const sayRefused = (error: Error) =>
     toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
@@ -341,16 +279,5 @@ function useFileVerbs(dealId: string, attachmentId: string) {
       toast.show(t("dealfiles.unhidden"));
     },
   });
-  const remove = useMutation({
-    mutationFn: async () => {
-      unwrap(
-        await api.DELETE("/attachments/{id}", {
-          params: { path: { id: attachmentId } },
-        }),
-        t,
-      );
-    },
-    onSuccess: refresh,
-  });
-  return { hide, unhide, remove };
+  return { hide, unhide };
 }

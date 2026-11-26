@@ -28,7 +28,7 @@ import {
   useRowHandoff,
   useUndoableRemoval,
 } from "../../lib/undoableremoval";
-import { useFolderOptions } from "./capture-exclusions.queries";
+import { folderRule, useFolderOptions } from "./capture-exclusions.queries";
 import { PurgeDialog } from "./capture-purge-dialog";
 import { captureValueMessage } from "./capturevalue";
 import "./capture-exclusions.css";
@@ -66,7 +66,12 @@ function useExclusions() {
   });
 }
 
-type ExclusionBody = { scope: Scope; kind: Kind; value: string };
+type ExclusionBody = {
+  scope: Scope;
+  kind: Kind;
+  value: string;
+  connection_id?: string;
+};
 
 // Without an outcome it is the dialog's add. With one it is an Undo putting a
 // removed rule back, which says so in its own words.
@@ -99,7 +104,12 @@ function useRemoveExclusion(outcome: MutationOutcome<ExclusionBody | null>) {
           params: { path: { id: rule.id } },
         }),
       );
-      return { scope: rule.scope, kind: rule.kind, value: rule.value };
+      return {
+        scope: rule.scope,
+        kind: rule.kind,
+        value: rule.value,
+        connection_id: rule.connection_id ?? undefined,
+      };
     },
     onError: outcome.onError,
     onSuccess: (removed) => {
@@ -343,7 +353,7 @@ function ExcludeDialog({
   return (
     <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
-        {t("captureExclusions.addLabel")}
+        {t(`captureExclusions.title.${kind}`)}
       </Heading>
       <form
         id={formId}
@@ -354,7 +364,9 @@ function ExcludeDialog({
             return;
           }
           add.mutate(
-            { scope: effectiveScope, kind, value },
+            kind === "container"
+              ? { scope: effectiveScope, kind, ...folderRule(value) }
+              : { scope: effectiveScope, kind, value },
             { onSuccess: onClose },
           );
         }}
@@ -398,7 +410,7 @@ function ExcludeDialog({
           </Field>
         ) : (
           <Field
-            label={t("captureExclusions.addLabel")}
+            label={t(`captureExclusions.field.${kind}`)}
             labelHidden
             hint={t("captureExclusions.notRetroactive")}
           >
@@ -434,7 +446,13 @@ function ExcludeDialog({
           !folders.isPending &&
           !folders.isError &&
           folders.options.length === 0 && (
-            <p>{t("captureExclusions.noContainers")}</p>
+            <p>
+              {t(
+                folders.mailboxCount === 0
+                  ? "captureExclusions.noMailbox"
+                  : "captureExclusions.noContainers",
+              )}
+            </p>
           )}
         {/* A list that stopped short is still worth showing, and saying so is
             what keeps a missing folder from reading as a folder that does not

@@ -13,8 +13,9 @@
 # any lane finished. After each batch the lane runs again on what is left.
 # A subscription limit makes it wait and go on. A case that stops the harness
 # waits until the others have run, since the lane runs a batch in file order
-# and stops at the first such case; once only it is left, a batch that
-# finishes nothing twice stops the lane, so that you read the log.
+# and stops at the first such case; once only such cases are left, they run
+# one per batch, and when every one of them has had a batch that finished
+# nothing, the lane stops, so that you read the log.
 #
 # Run each lane from its own worktree: a worktree owns one dev stack, and two
 # lanes building in one would race. Lanes share the Postgres, Redis and object
@@ -49,12 +50,23 @@ done
 finished() {
   local tree verdict
   for tree in $worktrees; do
-    verdict="$tree/backend/internal/compose/aicert/records/mcp_e2e/$folder/$1.json"
+    # E2E_LLM_VERDICTS moves a lane's verdicts out of the records tree, and the
+    # sweep must look where the lane wrote.
+    verdict="${E2E_LLM_VERDICTS:-$tree/backend/internal/compose/aicert/records/mcp_e2e/$folder}/$1.json"
     # GNU stat reads -f as file-system mode and prints "?", so -c goes first.
     [[ -f "$verdict" && $(stat -c %Y "$verdict" 2>/dev/null || stat -f %m "$verdict") -ge $since ]] && return 0
   done
   return 1
 }
+
+# What the sweep measures is worked out once, before the first batch, and every
+# batch files it. A batch that worked it out again would compile the compose
+# test package once a batch.
+# shellcheck source=scripts/lib-e2e-llm-stamp.sh
+. "$root/scripts/lib-e2e-llm-stamp.sh"
+export E2E_LLM_STAMP_DIR="$logs/$slug.stamp"
+rm -rf "$E2E_LLM_STAMP_DIR"
+e2e_llm_stamp "$root" "${E2E_LLM_DOOR:-mcp}" "$E2E_LLM_STAMP_DIR" || exit 1
 
 stalled=0
 waits=0
@@ -70,7 +82,10 @@ while :; do
   fi
   run=()
   for name in "${left[@]}"; do [[ " ${deferred[*]-} " == *" $name "* ]] || run+=("$name"); done
-  [[ ${#run[@]} -eq 0 ]] && run=("${left[@]}")
+  # Once only stopped cases are left, one runs per batch, in turn: a batch
+  # runs in file order and ends at the first stop, so a case that always stops
+  # would otherwise keep every case after it from running.
+  [[ ${#run[@]} -eq 0 ]] && run=("${left[$((batch % ${#left[@]}))]}")
   batch=$((batch + 1))
   log="$logs/$slug.batch$batch.log"
   echo "BATCH $slug #$batch: ${#run[@]} cases, log $log"
@@ -79,9 +94,9 @@ while :; do
   stopped="$(grep -m1 -oE '^HARNESS: case[0-9]+_[a-z0-9_]+' "$log" | cut -d' ' -f2)"
   limited=0
   # Only the harness block names a limit; a case's own answer may say "unavailable".
-  sed -n '/^HARNESS:/,/Nothing was scored/p' "$log" \
-    | grep -qE 'out of credits|usage limit|rate limit|[Qq]uota reached|RESOURCE_EXHAUSTED|UNAVAILABLE|code 503|answered HTTP 429' \
-    && limited=1
+  harness_block="$(sed -n '/^HARNESS:/,/Nothing was scored/p' "$log")"
+  grep -qE 'out of credits|usage limit|rate limit|hit your [0-9a-z-]* ?limit|[Qq]uota reached|RESOURCE_EXHAUSTED|UNAVAILABLE|code 503|answered HTTP 429' \
+    <<<"$harness_block" && limited=1
   if [[ $limited -eq 1 ]]; then
     waits=$((waits + 1))
     if [[ $waits -gt $max_waits ]]; then
@@ -113,7 +128,10 @@ while :; do
   fi
   stalled=$((stalled + 1))
   echo "NO PROGRESS $slug ($stalled): $(grep -m1 '^HARNESS' "$log")"
-  if [[ $stalled -ge 2 ]]; then
+  # Every case left gets its turn before the lane gives up, since only stopped
+  # cases rotate one per batch and the one that would finish may be last.
+  limit=$((${#left[@]} > 2 ? ${#left[@]} : 2))
+  if [[ $stalled -ge $limit ]]; then
     echo "LANE STOPPED $slug: read $log" >&2
     exit 1
   fi

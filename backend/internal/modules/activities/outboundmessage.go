@@ -13,8 +13,11 @@ package activities
 // both projections in one place is what keeps that difference deliberate.
 
 import (
+	"strings"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -61,13 +64,29 @@ type outboundMessage struct {
 	// — including a colleague's IMAP when we sent over Gmail, which used to be
 	// a second timeline row nothing could fold.
 	provider string
+	// connection is the sender's mailbox of provider the send goes out from.
+	connection ids.UUID
+}
+
+// redactedMeetingLink stands in for a guest's management link in the copy the
+// workspace records. The link alone cancels or moves the host's meeting
+// through the public door. The row is served to every seat that may read mail.
+const redactedMeetingLink = "meeting-link-redacted"
+
+// withholdingFromRecord keeps secret in the delivery and out of the timeline
+// row, the way the footer's preference token is kept.
+func (p PreparedSend) withholdingFromRecord(secret string) PreparedSend {
+	if secret != "" {
+		p.message.recordedBody = strings.ReplaceAll(p.message.recordedBody, secret, redactedMeetingLink)
+	}
+	return p
 }
 
 // htmlAlternativeNote marks a timeline row whose message also went out as
 // markup. A fixed sentence rather than the markup itself: the row is served to
 // every seat holding activity:read and rendering a sender's HTML there would
 // put caller-supplied markup into our own document.
-const htmlAlternativeNote = "This message was also sent as HTML."
+var htmlAlternativeNote = systemtext.Literal("activity.html_alternative")
 
 // activity is the timeline row the send commits.
 func (m outboundMessage) activity(chain threading) LogActivityInput {
@@ -89,15 +108,19 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 		recorded += "\n\n[" + htmlAlternativeNote + "]"
 	}
 	return SentRecord(LogActivityInput{
-		Kind:         "email",
-		Subject:      &m.in.Subject,
-		Body:         &recorded,
-		Direction:    &direction,
-		Links:        m.links,
-		Source:       sourceManual,
-		SourceSystem: &sourceSystem,
-		SourceID:     &m.messageID,
-		ThreadKey:    chain.threadKey,
+		correspondenceEntity: m.in.SendingEntity,
+		statedCountries:      m.statedCountries(),
+		SystemText:           outboundMessageText(m.recordedBody, m.htmlBody != ""),
+		Kind:                 "email",
+		Subject:              &m.in.Subject,
+		Body:                 &recorded,
+		Direction:            &direction,
+		Links:                m.links,
+		continues:            chain.continues,
+		Source:               sourceManual,
+		SourceSystem:         &sourceSystem,
+		SourceID:             &m.messageID,
+		ThreadKey:            chain.threadKey,
 		// This row IS the sent copy — its natural key is the one the provider's
 		// echo carries, so the echo's upsert will find it and write nothing.
 		// The correspondence evidence the echo used to bring therefore has to
@@ -133,6 +156,7 @@ func (m outboundMessage) delivery(activityID ids.UUID, chain threading, origin S
 	return DeliveryRequest{
 		ActivityID:     ids.From[ids.ActivityKind](activityID),
 		Provider:       m.provider,
+		ConnectionID:   m.connection,
 		MessageID:      m.messageID,
 		Recipients:     m.to,
 		Cc:             m.in.Cc,
@@ -157,6 +181,8 @@ func (m outboundMessage) delivery(activityID ids.UUID, chain threading, origin S
 		InReplyTo:       chain.inReplyTo,
 		References:      chain.references,
 		ThreadKey:       chain.threadKey,
+		SplitFromThread: chain.splitFrom,
+		AnswersActivity: chain.answers,
 		ListUnsubscribe: m.listUnsubscribe,
 	}
 }
@@ -182,10 +208,14 @@ func (m outboundMessage) authorization(origin SendOrigin) commsauthz.Request {
 		// continuing a thread the subject started is a reply whether or not the
 		// caller thought to say so. Zero on an account-started send, which is
 		// exactly what tells the engine there is no thread to lean on.
-		AnchorActivityID: origin.anchor.UUID,
-		Links:            linkedRecordIDs(m.links),
-		Subject:          m.in.Subject,
-		Body:             m.body,
+		AnchorActivityID:  origin.anchor.UUID,
+		Links:             linkedRecordIDs(m.links),
+		Subject:           m.in.Subject,
+		Body:              m.body,
+		AuthoredSubject:   m.in.Subject,
+		AuthoredBody:      m.in.Body,
+		AuthoredHTML:      m.in.HTMLBody,
+		AuthoredFileNames: fileNames(m.files),
 		// The markup alternative travels with the plain one: both are the
 		// message, and the fingerprint stamped from this request is what the
 		// transmit phase later compares the wire against.
@@ -212,12 +242,31 @@ func (m outboundMessage) evidence(origin SendOrigin) commsauthz.Evidence {
 	return e
 }
 
+// statedCountries keeps the sender's statements about addresses this message
+// carries; an entry about any other address decides nothing and is not named.
+func (m outboundMessage) statedCountries() []commsauthz.CountryOverride {
+	var out []commsauthz.CountryOverride
+	for _, addr := range m.in.Recipients {
+		out = append(out, commsauthz.CountryOverridesFor(m.in.Evidence.RecipientCountries, addr)...)
+	}
+	return out
+}
+
 // linkedRecordIDs names the records this message is filed under, which is where
 // a deal, an invoice or a contract validator looks when the caller named none.
 func linkedRecordIDs(links []ActivityLinkInput) []ids.UUID {
 	out := make([]ids.UUID, 0, len(links))
 	for _, l := range links {
 		out = append(out, l.EntityID)
+	}
+	return out
+}
+
+// fileNames are the names of the files a message carries.
+func fileNames(files []OutboundFile) []string {
+	out := make([]string, 0, len(files))
+	for _, f := range files {
+		out = append(out, f.Filename)
 	}
 	return out
 }

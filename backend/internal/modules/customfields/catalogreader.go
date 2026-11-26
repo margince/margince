@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -65,12 +66,15 @@ func (s *Service) FilterableColumns(ctx context.Context, object string) ([]field
 // Runs no auth.Require: the opt-in is what published the label and options, and
 // the reporting surface that asks gates the object itself.
 func ReportableColumnsIn(ctx context.Context, tx pgx.Tx, object string) ([]fieldcatalog.ReportableColumn, error) {
+	args := []any{object, statusActive}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	label := labeltranslation.SQL(ctx, "label", "label_translations", arg)
 	rows, err := tx.Query(ctx,
-		`SELECT column_name, type, COALESCE(options, '[]'::jsonb), label
+		`SELECT column_name, type, COALESCE(options, '[]'::jsonb), `+label+`, option_translations
 		   FROM custom_field
 		  WHERE object = $1 AND status = $2 AND reportable
 		  ORDER BY column_name`,
-		object, statusActive)
+		args...)
 	if err != nil {
 		return nil, fmt.Errorf("customfields: reading reportable columns: %w", err)
 	}
@@ -80,13 +84,15 @@ func ReportableColumnsIn(ctx context.Context, tx pgx.Tx, object string) ([]field
 		var (
 			c          fieldcatalog.ReportableColumn
 			optionsRaw []byte
+			named      map[string]map[string]string
 		)
-		if err := rows.Scan(&c.Name, &c.Type, &optionsRaw, &c.Label); err != nil {
+		if err := rows.Scan(&c.Name, &c.Type, &optionsRaw, &c.Label, &named); err != nil {
 			return nil, fmt.Errorf("customfields: reading reportable columns: %w", err)
 		}
 		if c.Options, err = unmarshalOptions(optionsRaw); err != nil {
 			return nil, err
 		}
+		c.OptionLabels = labeltranslation.OptionLabels(labeltranslation.ReaderLanguage(ctx), c.Options, named)
 		cols = append(cols, c)
 	}
 	return cols, rows.Err()
@@ -111,8 +117,27 @@ func (s *Service) queryColumns(ctx context.Context, whereTail string, args ...an
 // ActiveColumnsIn is ActiveColumns on a transaction the caller already holds,
 // for a caller that cannot take a second connection from inside it. Same
 // answer, same lack of a gate of its own.
+//
+// It reads once per object per transaction. A catalog write in the same
+// transaction drops the remembered answer through forgetActiveColumns.
 func ActiveColumnsIn(ctx context.Context, tx pgx.Tx, object string) ([]fieldcatalog.Column, error) {
-	return queryColumnsIn(ctx, tx, "AND status = $2 ORDER BY column_name", object, statusActive)
+	return database.Remember(tx, activeColumnsMemo+object, func() ([]fieldcatalog.Column, error) {
+		return queryColumnsIn(ctx, tx, "AND status = $2 ORDER BY column_name", object, statusActive)
+	})
+}
+
+// ActiveColumnsIn is the package's ActiveColumnsIn as the record stores' port
+// (storekit.FieldCatalog) spells it.
+func (s *Service) ActiveColumnsIn(ctx context.Context, tx pgx.Tx, object string) ([]fieldcatalog.Column, error) {
+	return ActiveColumnsIn(ctx, tx, object)
+}
+
+const activeColumnsMemo = "customfields.active-columns:"
+
+// forgetActiveColumns is what every write to an object's catalog rows calls in
+// its transaction, so a record write after it there reads the new catalog.
+func forgetActiveColumns(tx pgx.Tx, object string) {
+	database.Forget(tx, activeColumnsMemo+object)
 }
 
 func queryColumnsIn(ctx context.Context, tx pgx.Tx, whereTail string, args ...any) ([]fieldcatalog.Column, error) {

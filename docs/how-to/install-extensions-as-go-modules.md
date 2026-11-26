@@ -2,14 +2,14 @@
 # Install extensions as Go modules
 
 `instance/go.mod` decides what a tree turns on. In this repository it is core's own instance. A client keeps
-the same file in its own repository, with released versions in place of local folders.
+the same file in its own repository, with core at one commit in place of local folders.
 
 ## The instance's `go.mod`
 
 ```text
 module example.com/acme-margince
 
-go 1.27.3
+go 1.27.4
 
 tool github.com/margince/margince/backend/tools/gen-composition
 
@@ -24,12 +24,17 @@ require (
 replace example.com/acme-margince/addons/notes => ./addons/notes
 ```
 
-- **Core is three requires at one version.** `github.com/margince/margince` carries the web app, the scripts and
+- **Core is three requires at one commit.** `github.com/margince/margince` carries the web app, the scripts and
   `go.work`; `backend` the server; `backend/tools` this composer, which the `tool` line runs. Composing refuses
-  them at different commits. Write them with two commands (`-tool` applies to every argument):
-  `go get -tool github.com/margince/margince/backend/tools/gen-composition@<v>`, then
-  `go get github.com/margince/margince@<v> github.com/margince/margince/backend@<v>`. Go marks the three
-  `// indirect`, since no package of the instance imports them; that is expected.
+  them at different commits.
+- **Name the commit, not a release tag.** A tag such as `v1.0.0` is a version of the first module only.
+  `backend` and `backend/tools` have no version of that name. For a release, the commit is
+  `git rev-parse v1.0.0^{commit}`. Write the three with two commands (`-tool` applies to every argument):
+  `go get -tool github.com/margince/margince/backend/tools/gen-composition@<commit>`, then
+  `go get github.com/margince/margince@<commit> github.com/margince/margince/backend@<commit>`.
+- **A tagged commit has two kinds of version.** Go writes the first module as the tag, and the other two as
+  `v0.0.0-<date>-<commit>`. Composing reads the commit of each from the module proxy, so that pair passes. Go
+  marks the three `// indirect`, since no package of the instance imports them; that is expected.
 - **Each other line in `require` is an extension**, apart from the lines marked `// indirect`. Nothing else
   turns one on. A folder under `extensions/` that `go.mod` does not list stays off.
 - **The name of an extension** is the last part of its module path, without a `/v2`-style version:

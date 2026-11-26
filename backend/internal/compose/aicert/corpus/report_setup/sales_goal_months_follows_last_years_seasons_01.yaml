@@ -1,0 +1,33 @@
+name: sales_goal_months_follows_last_years_seasons
+task: report_setup
+site: sales_goal_months
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+# The plan year has not begun and no yearly goal is given. Last year closed
+# most in September and October and least in June and July. The proposal
+# follows that pattern at about last year's level.
+fixture:
+  year: 2027
+  currency: EUR
+  today: "2026-11-12"
+  closed_revenue:
+    - {year: 2027, months: [null, null, null, null, null, null, null, null, null, null, null, null]}
+    - {year: 2026, months: [10000, 10000, 12000, 12000, 8000, 6000, 6000, 8000, 20000, 24000, null, null]}
+expect:
+  outcome: accepted
+  answer:
+    above: [9, 10]
+    below: [6, 7]
+    total_min: 120000
+    total_max: 200000
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the twelve months follow last year's seasons. September and
+    October must each get a larger goal than June and July, and the year must
+    add up to between 120,000 and 200,000: about the level of the ten months
+    that closed, carried over twelve. The reason must name the pattern in
+    plain words with no figure in it. An even spread, a year far above what
+    closed, or a month set to zero because it has not ended fails the scenario.

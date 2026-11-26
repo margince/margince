@@ -1,0 +1,9 @@
+{
+  "verb": "list_corpus_documents",
+  "checks": [
+    "knowledge_document.read"
+  ],
+  "takes": [
+    "corpus"
+  ]
+}

@@ -56,6 +56,9 @@ type Service struct {
 	// activities reads the activity custom-field catalog. Nil leaves the
 	// timeline rows without their custom-field values.
 	activities *activities.Store
+	// messages answers whether this reader may mark our last message done.
+	// Nil offers no Done and hides no card for it.
+	messages *activities.Store
 }
 
 // NewService binds the composite read to its module stores. now is the
@@ -97,6 +100,13 @@ func (s *Service) WithActivityFields(store *activities.Store) *Service {
 	return s
 }
 
+// WithMessageDone lets the waiting cards offer Done and honour one, through the
+// store whose writer takes it.
+func (s *Service) WithMessageDone(store *activities.Store) *Service {
+	s.messages = store
+	return s
+}
+
 // activityColumns reads the timeline's custom-field columns. The catalog opens
 // a connection of its own, so this runs before the page's transaction.
 func (s *Service) activityColumns(ctx context.Context) (activities.CustomColumns, error) {
@@ -126,6 +136,10 @@ type AssembleOptions struct {
 	// (relstrength.WrittenByHumanSQL) before its cap, for the briefs and
 	// drafts. The page itself keeps every record.
 	WrittenByHumanOnly bool
+	// PartyOnly narrows the recent timeline to rows the contact is a party to
+	// (activities.ContactIsPartySQL) before its cap, for a draft written to them.
+	// A link alone files a colleague's mail here too.
+	PartyOnly bool
 	// AsOf is the instant LastTouchFor measures from: an activity dated after
 	// it has not happened yet. Zero reads the database's own now(), which is
 	// what the page wants. A reader with its own clock, the quiet lane, passes
@@ -193,20 +207,11 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 			out.Scope = &wired
 		}
 
-		for _, section := range s.sections(contactID, now, opts) {
-			if err := section.read(ctx, tx, &out); err != nil {
-				// A section the caller may not read is named, not returned
-				// empty. Any other failure is the whole read's failure —
-				// half a record page is worse than an error, because the
-				// reader cannot tell which half is missing.
-				if errors.Is(err, apperrors.ErrPermissionDenied) {
-					out.SectionsOmitted = append(out.SectionsOmitted, section.name)
-					continue
-				}
-				return fmt.Errorf("contact 360 section %q: %w", section.name, err)
-			}
-		}
-		return nil
+		// Each section's statement carries tens of kilobytes of row scope and
+		// plans longer than it runs, so the sections keep their generic plans.
+		return database.ReuseGenericPlansTx(ctx, tx, func() error {
+			return s.readSections(ctx, tx, contactID, now, opts, &out)
+		})
 	})
 	if err != nil {
 		return crmcontracts.Contact360{}, err
@@ -220,6 +225,22 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 		out.MailCoverage = &coverage
 	}
 	return out, nil
+}
+
+// readSections runs every section in order. A section the caller may not read
+// is named, not returned empty. Any other failure fails the whole read, because
+// a reader of half a page cannot tell which half is missing.
+func (s *Service) readSections(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, opts AssembleOptions, out *crmcontracts.Contact360) error {
+	for _, section := range s.sections(contactID, now, opts) {
+		if err := section.read(ctx, tx, out); err != nil {
+			if errors.Is(err, apperrors.ErrPermissionDenied) {
+				out.SectionsOmitted = append(out.SectionsOmitted, section.name)
+				continue
+			}
+			return fmt.Errorf("contact 360 section %q: %w", section.name, err)
+		}
+	}
+	return nil
 }
 
 // section is one independently-authorized part of the page.

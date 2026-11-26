@@ -88,7 +88,7 @@ func (a *httpAPI) Inspect(ctx context.Context, token, calendar, event string) (c
 //nolint:nilnil // Absence is distinct from provider failure.
 func (a *httpAPI) lookupRequest(ctx context.Context, token string, in connector.CalendarAppointment) (*scheduledEvent, error) {
 	// Request ids originate in Margince, never in guest input.
-	query := url.Values{"$filter": {"singleValueExtendedProperties/Any(ep: ep/id eq '" + meetingRequestProperty + "' and ep/value eq '" + in.RequestID + "')"}, "$top": {"2"}}
+	query := url.Values{"$filter": {"singleValueExtendedProperties/Any(ep: ep/id eq '" + meetingRequestProperty + "' and ep/value eq '" + in.RequestID + "')"}, topParam: {"2"}}
 	var result struct {
 		Events []scheduledEvent `json:"value"`
 		Next   string           `json:"@odata.nextLink"`

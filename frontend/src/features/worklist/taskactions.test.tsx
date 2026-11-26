@@ -18,32 +18,23 @@ import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { useMe } from "../../lib/session";
-import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { meFixture } from "../../testing/mefixture";
 import { SourceHost } from "../../testing/sourcehost";
 import {
   installFetchStub,
   jsonResponse,
-  meRoute,
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
+import { openTask, taskAllow, taskMe } from "./taskdetail.testkit";
 import { TaskDetailModal } from "./taskdetailmodal";
 
 afterEach(cleanup);
 
-// The provenance sentence and the way back to the record behind it.
-//
-// A task read out of a meeting says so in words — "committed to this in the
-// meeting transcript (line 6)" — and for as long as that sentence was all it
-// carried, the only route to the meeting was the record's history tab and a
-// search for its exact subject. These hold the link, and hold that a task
-// nobody read out of anything does not offer one.
-
 function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
+    "GET /me": taskMe("update"),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -75,32 +66,8 @@ function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
   });
 }
 
-// The reader's zone is named, so the due day and hour do not move with the
-// machine the suite runs on.
-const READER_ZONE = "Europe/Berlin";
-
-function openTask() {
-  return render(
-    <StoryProviders>
-      <SourceHost>
-        <ViewerZoneProvider zone={READER_ZONE}>
-          <TaskDetailModal
-            activityId="task-1"
-            readOnly={false}
-            onClose={() => {}}
-            update={
-              {
-                mutate: () => {},
-                isPending: false,
-              } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
-            }
-          />
-        </ViewerZoneProvider>
-      </SourceHost>
-    </StoryProviders>,
-  );
-}
-
+// A task read out of a meeting links to that meeting. A task nobody read out
+// of anything offers no such link.
 test("a task read out of a meeting opens that meeting", async () => {
   const user = userEvent.setup();
   stubTask("meeting-9");
@@ -113,73 +80,6 @@ test("a task read out of a meeting opens that meeting", async () => {
   await waitFor(() => {
     expect(screen.getByText("Akeneo — Vergleichsblatt")).not.toBeNull();
   });
-});
-
-test("a task logged with its date alone says when without a time", async () => {
-  installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
-    "GET /activities/task-1": () =>
-      jsonResponse({
-        id: "task-1",
-        kind: "task",
-        subject: "Send the signed order",
-        occurred_at: "2026-09-08T10:00:00Z",
-        occurred_precision: "day",
-        is_done: false,
-        captured_by: "human:u-1",
-      }),
-  });
-  openTask();
-
-  const logged = await screen.findByText(new RegExp(`^${en["tasks.logged"]}`));
-  expect(logged.textContent).toMatch(/08\/09\/2026/);
-  expect(logged.textContent).not.toMatch(/\d{1,2}:\d{2}/);
-});
-
-// The record zone here is the fallback, Berlin. The flag decides whether the
-// caption carries a time; the clock reading does not.
-function stubDue(dueAt: string, dueHasTime: boolean) {
-  installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }),
-    "GET /activities/task-1": () =>
-      jsonResponse({
-        id: "task-1",
-        kind: "task",
-        subject: "Call back the buyer",
-        due_at: dueAt,
-        due_has_time: dueHasTime,
-        occurred_at: "2026-09-08T10:00:00Z",
-        is_done: false,
-        captured_by: "human:u-1",
-      }),
-  });
-}
-
-test("a task with a callback time says when it is due to the hour", async () => {
-  stubDue("2026-09-11T13:00:00Z", true);
-  openTask();
-
-  const due = await screen.findByText(/^Due /);
-  expect(due.textContent).toMatch(/11\/09\/2026/);
-  expect(due.textContent).toMatch(/15:00/);
-});
-
-test("a task due by its day says the date alone, whatever its stored hour", async () => {
-  stubDue("2026-09-11T13:00:00Z", false);
-  openTask();
-
-  const due = await screen.findByText(/^Due /);
-  expect(due.textContent).toMatch(/11\/09\/2026/);
-  expect(due.textContent).not.toMatch(/\d{1,2}:\d{2}/);
-});
-
-test("a task due by the end of its day says the date alone", async () => {
-  stubDue("2026-09-11T21:59:59Z", false);
-  openTask();
-
-  const due = await screen.findByText(/^Due /);
-  expect(due.textContent).toMatch(/11\/09\/2026/);
-  expect(due.textContent).not.toMatch(/\d{1,2}:\d{2}/);
 });
 
 test("a task nobody read out of a meeting offers no way back", async () => {
@@ -200,7 +100,7 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
   // sitting in `data`. Rendering that beside the error is what this holds.
   let refused = false;
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
+    "GET /me": taskMe("update"),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -247,7 +147,7 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
 
 test("a source that cannot be read says so instead of disappearing", async () => {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
+    "GET /me": taskMe("update"),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -273,7 +173,7 @@ test("a source that cannot be read says so instead of disappearing", async () =>
 // the same presentation endpoint the panel asks.
 function stubEmailRequest(parties: Record<string, unknown> = {}) {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
+    "GET /me": taskMe("update"),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -431,55 +331,7 @@ test("a task a colleague typed carries no AI mark", async () => {
   expect(screen.queryByText("AI-assisted")).toBeNull();
 });
 
-// The record a task is filed under, named and reachable from the panel.
-
-function stubFiledTask(links: { entity_type: string; entity_id: string }[]) {
-  installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
-    "GET /activities/task-1": () =>
-      jsonResponse({
-        id: "task-1",
-        kind: "task",
-        writable: true,
-        subject: "Send the renewal paperwork",
-        occurred_at: "2026-09-08T09:00:00Z",
-        is_done: false,
-        links,
-      }),
-    "GET /deals/deal-1": () =>
-      jsonResponse({ id: "deal-1", name: "Brandt renewal 2027" }),
-    "GET /companies": () =>
-      jsonResponse({
-        data: [{ id: "co-1", display_name: "Brandt Automotive" }],
-        next_cursor: null,
-      }),
-  });
-}
-
-test("a task filed under a deal and its company names the deal first", async () => {
-  // The company first on the wire, so the order on screen is the panel's own.
-  stubFiledTask([
-    { entity_type: "company", entity_id: "co-1" },
-    { entity_type: "deal", entity_id: "deal-1" },
-  ]);
-  openTask();
-
-  const deal = await screen.findByRole("link", { name: "Brandt renewal 2027" });
-  await screen.findByRole("link", { name: "Brandt Automotive" });
-  const names = screen.getAllByRole("link").map((link) => link.textContent);
-  expect(names).toEqual(["Brandt renewal 2027", "Brandt Automotive"]);
-  // Opened in place: following the record is leaving the panel for it.
-  expect(deal.getAttribute("href")).toBe("/#/deals/deal-1");
-  expect(deal.getAttribute("target")).toBeNull();
-});
-
-test("a task filed under nothing names no record", async () => {
-  stubFiledTask([]);
-  openTask();
-
-  await screen.findByText(/^Logged/);
-  expect(screen.queryByRole("link")).toBeNull();
-});
+// The records a task is filed under, as chips that open them from the panel.
 
 // What the rep does next about the contact a task is owed to.
 
@@ -492,6 +344,10 @@ const ALICE = {
 };
 
 type NextStepsCase = Readonly<{
+  /** A reply to a call answers by phone; reach out offers mail and phone. */
+  taskType?: "reach_out" | "reply_by_call";
+  /** The server names a mail target; by default only for reach out. */
+  mailTarget?: boolean;
   source?: Record<string, unknown> | null;
   contact?: Record<string, unknown>;
   links?: { entity_type: string; entity_id: string }[];
@@ -517,6 +373,8 @@ function serverTarget(
 }
 
 function stubNextSteps({
+  taskType = "reach_out",
+  mailTarget = taskType === "reach_out",
   source = { kind: "call", content_state: "available" },
   contact = ALICE,
   links = [{ entity_type: "contact", entity_id: "c-1" }],
@@ -525,7 +383,7 @@ function stubNextSteps({
   routes = {},
 }: NextStepsCase = {}) {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
+    "GET /me": taskMe("update"),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -535,8 +393,12 @@ function stubNextSteps({
         occurred_at: "2026-09-08T09:00:00Z",
         is_done: isDone,
         source_activity_id: source ? "src-1" : null,
+        ...(taskType === "reach_out"
+          ? { task_type: "reach_out" }
+          : { task_type: "reply", reply_channel: "call" }),
         links,
-        email_target: serverTarget(links, contact),
+        // The server names a mail target for a mail task only.
+        email_target: mailTarget ? serverTarget(links, contact) : undefined,
       }),
     "GET /activities/src-1": () =>
       jsonResponse({
@@ -594,20 +456,18 @@ const describedBy = (control: HTMLElement) =>
 const openContact = () =>
   screen.queryByRole("link", { name: en["task.next.openContact"] });
 
-test("a task from a call offers Call, Draft email and Open contact", async () => {
+test("reach out offers Draft email, Open contact and an outlined Call", async () => {
   const user = userEvent.setup();
   const writeTo = vi.fn();
   stubNextSteps();
   openTaskWith({ writeTo });
 
-  const dial = await screen.findByRole("link", {
-    name: en["record.verb.call"],
+  const draft = await screen.findByRole("button", {
+    name: en["task.next.draftEmail"],
   });
-  expect(dial.getAttribute("href")).toBe("tel:+49301234567");
   expect(openContact()?.getAttribute("href")).toBe("/#/contacts/c-1");
-  await user.click(
-    screen.getByRole("button", { name: en["task.next.draftEmail"] }),
-  );
+  expect(call()?.classList.contains("btn-primary")).toBe(false);
+  await user.click(draft);
   // The task steers the draft, so the mail is about what was owed.
   expect(writeTo).toHaveBeenCalledWith({
     entityType: "contact",
@@ -627,8 +487,9 @@ test("with no composer to open, Email hands the address to the mail client", asy
   expect(email.getAttribute("href")).toBe("mailto:alice@example.com");
 });
 
-test("Call dials the primary number, not the first one listed", async () => {
+test("a call task dials the primary number, not the first one listed", async () => {
   stubNextSteps({
+    taskType: "reply_by_call",
     contact: {
       ...ALICE,
       phones: [
@@ -643,34 +504,102 @@ test("Call dials the primary number, not the first one listed", async () => {
     name: en["record.verb.call"],
   });
   expect(dial.getAttribute("href")).toBe("tel:+491517654321");
+  expect(
+    screen.queryByRole("link", { name: en["record.verb.email"] }),
+  ).toBeNull();
+});
+
+// With no composer, Call fills once the contact's number is read, so Done
+// waits for that read rather than showing filled and then stepping back.
+test("a reach out draws Done only once its contact is read", async () => {
+  let landContact: ((response: Response) => void) | undefined;
+  stubNextSteps({
+    routes: {
+      "GET /contacts/c-1": () =>
+        new Promise<Response>((land) => {
+          landContact = land;
+        }),
+    },
+  });
+  openTaskWith();
+
+  await vi.waitFor(() => expect(landContact).toBeDefined());
+  expect(
+    screen.queryByRole("button", { name: en["tasks.complete"] }),
+  ).toBeNull();
+
+  landContact?.(jsonResponse(ALICE));
+  const done = await screen.findByRole("button", {
+    name: en["tasks.complete"],
+  });
+  expect(done.classList.contains("btn-primary")).toBe(false);
+});
+
+test("a reply to a call keeps Email beside Call in its details", async () => {
+  stubNextSteps({ taskType: "reply_by_call", mailTarget: true });
+  openTaskWith();
+
+  const dial = await screen.findByRole("link", {
+    name: en["record.verb.call"],
+  });
+  expect(dial.classList.contains("btn-primary")).toBe(true);
+  const email = await screen.findByRole("link", {
+    name: en["record.verb.email"],
+  });
+  expect(email.classList.contains("btn-primary")).toBe(false);
+  expect(
+    dial.compareDocumentPosition(email) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
 });
 
 test.each([
   ["typed by hand", null],
   ["read out of a note", { kind: "note", content_state: "available" }],
   ["read out of a withheld call", { kind: "call", content_state: "withheld" }],
-])("a task %s offers Call, Email and Open contact", async (_, source) => {
-  stubNextSteps({ source });
+])("a call task %s offers Call", async (_, source) => {
+  stubNextSteps({ taskType: "reply_by_call", source });
   openTaskWith();
 
-  await waitFor(() => expect(openContact()).not.toBeNull());
   // Source visibility does not change the contact's callable number.
+  await waitFor(() => expect(call()).not.toBeNull());
   if (source?.content_state === "withheld") {
     await screen.findByText(en["email.detail.withheldReason"]);
   } else if (source) {
     await screen.findByRole("button", { name: "Open original" });
   }
-  expect(
-    screen.getByRole("link", { name: en["record.verb.email"] }),
-  ).toBeTruthy();
   expect(call()?.getAttribute("href")).toBe("tel:+49301234567");
 });
 
-test("a contact with no phone gets no Call", async () => {
-  stubNextSteps({ contact: { ...ALICE, phones: [] } });
+/** Waits until the contact was read and the step stopped waiting on it, so a
+ *  missing Call is the settled answer, not the pending one. */
+async function contactSettled(read: () => boolean) {
+  await waitFor(() => expect(read()).toBe(true));
+  await waitFor(() =>
+    expect(document.querySelector(".task-next-pending")).toBeNull(),
+  );
+}
+
+function countedContact(contact: Record<string, unknown>) {
+  let read = false;
+  return {
+    read: () => read,
+    route: () => {
+      read = true;
+      return jsonResponse(contact);
+    },
+  };
+}
+
+test("a call task whose contact has no phone gets no Call", async () => {
+  const contact = countedContact({ ...ALICE, phones: [] });
+  stubNextSteps({
+    taskType: "reply_by_call",
+    routes: { "GET /contacts/c-1": contact.route },
+  });
   openTaskWith();
 
-  await waitFor(() => expect(openContact()).not.toBeNull());
+  await screen.findByRole("button", { name: "Open original" });
+  await contactSettled(contact.read);
   expect(call()).toBeNull();
 });
 
@@ -683,10 +612,9 @@ test("a contact with no address gets Draft email refused with the reason", async
   });
   expect(email.hasAttribute("disabled")).toBe(true);
   expect(describedBy(email)).toBe(en["task.next.noAddress"]);
-  expect(call()).not.toBeNull();
 });
 
-test("an archived contact gets no Call and a refused Draft email, and can still be opened", async () => {
+test("an archived contact gets a refused Draft email, and can still be opened", async () => {
   stubNextSteps({
     contact: { ...ALICE, archived_at: "2026-09-01T00:00:00Z" },
   });
@@ -698,7 +626,27 @@ test("an archived contact gets no Call and a refused Draft email, and can still 
   expect(email.hasAttribute("disabled")).toBe(true);
   expect(describedBy(email)).toBe(en["contact.rail.archivedReadOnly"]);
   expect(openContact()).not.toBeNull();
+});
+
+test("an archived contact gets no Call on a call task", async () => {
+  const contact = countedContact({
+    ...ALICE,
+    archived_at: "2026-09-01T00:00:00Z",
+  });
+  // The mail target was named before the archive, so only the read knows.
+  stubNextSteps({
+    taskType: "reply_by_call",
+    mailTarget: true,
+    routes: { "GET /contacts/c-1": contact.route },
+  });
+  openTaskWith();
+
+  await screen.findByRole("button", { name: "Open original" });
+  await contactSettled(contact.read);
   expect(call()).toBeNull();
+  expect(
+    screen.queryByRole("link", { name: en["record.verb.email"] }),
+  ).toBeNull();
 });
 
 test("a refused Draft email is said once, after every verb in the row", async () => {
@@ -710,22 +658,13 @@ test("a refused Draft email is said once, after every verb in the row", async ()
   });
   const reasons = screen.getAllByText(en["task.next.noAddress"]);
   expect(reasons).toHaveLength(1);
-  const row = email.closest(".form-actions");
+  const row = email.closest(".task-detail-actions");
   expect(reasons[0]?.parentElement).toBe(row);
   expect(row?.lastElementChild).toBe(reasons[0]);
 });
 
-test.each([
-  ["no record", []],
-  [
-    "two contacts",
-    [
-      { entity_type: "contact", entity_id: "c-1" },
-      { entity_type: "contact", entity_id: "c-2" },
-    ],
-  ],
-])("a task linking %s offers no next steps", async (_, links) => {
-  stubNextSteps({ links });
+test("a task linking no record offers no next steps", async () => {
+  stubNextSteps({ links: [] });
   openTaskWith();
 
   await screen.findByText(/^Logged/);
@@ -737,9 +676,27 @@ test.each([
   expect(call()).toBeNull();
 });
 
+// Mail to two contacts has no one recipient, but a call goes to the first.
+test("reach out on two contacts drafts no mail and calls the first", async () => {
+  stubNextSteps({
+    links: [
+      { entity_type: "contact", entity_id: "c-1" },
+      { entity_type: "contact", entity_id: "c-2" },
+    ],
+  });
+  openTaskWith();
+
+  const dial = await screen.findByRole("link", {
+    name: en["record.verb.call"],
+  });
+  expect(dial.getAttribute("href")).toBe("tel:+49301234567");
+  expect(dial.classList.contains("btn-primary")).toBe(true);
+  expect(screen.queryByText(en["task.next.draftEmail"])).toBeNull();
+});
+
 test("a contact that stops being readable takes its verbs with it", async () => {
   let refused = false;
-  stubNextSteps({ contactRefused: () => refused });
+  stubNextSteps({ taskType: "reply_by_call", contactRefused: () => refused });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -765,27 +722,25 @@ test("a contact that stops being readable takes its verbs with it", async () => 
   refused = true;
   await client.refetchQueries({ queryKey: ["contact", "c-1"] });
 
-  await waitFor(() => expect(openContact()).toBeNull());
-  expect(call()).toBeNull();
+  await waitFor(() => expect(call()).toBeNull());
 });
 
 test.each([
   ["a done task", { isDone: true }, {}],
   ["a read-only dialog", {}, { readOnly: true }],
 ])("%s still offers the next steps", async (_, task, dialog) => {
-  stubNextSteps(task);
+  stubNextSteps({ ...task, taskType: "reply_by_call" });
   openTaskWith(dialog);
 
   expect(
     await screen.findByRole("link", { name: en["record.verb.call"] }),
   ).toBeTruthy();
-  expect(openContact()).not.toBeNull();
   expect(screen.queryByRole("button", { name: en["tasks.snooze"] })).toBeNull();
 });
 
 // The task, its call source and its contact already cached when the dialog opens.
 function openWarm({ isDone = false, readOnly = false } = {}) {
-  stubNextSteps({ isDone });
+  stubNextSteps({ isDone, taskType: "reply_by_call" });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -798,12 +753,13 @@ function openWarm({ isDone = false, readOnly = false } = {}) {
     is_done: isDone,
     source_activity_id: "src-1",
     writable: true,
+    task_type: "reply",
+    reply_channel: "call",
     links: [{ entity_type: "contact", entity_id: "c-1" }],
-    email_target: { entity_type: "contact", entity_id: "c-1" },
   });
   client.setQueryData(
     ["me"],
-    meFixture({ allow: { activity: ["read", "update"] }, seat: "full" }),
+    meFixture({ allow: taskAllow("update"), seat: "full" }),
   );
   client.setQueryData(["activity", "src-1"], {
     id: "src-1",
@@ -891,8 +847,9 @@ test("Call logs the call inside the dialog, on the task's contact, and leaves th
   const posted: unknown[] = [];
   const patched: unknown[] = [];
   stubNextSteps({
+    taskType: "reply_by_call",
     routes: {
-      "GET /me": meRoute({ activity: ["read", "create"] }, { seat: "full" }),
+      "GET /me": taskMe("create"),
       "POST /activities": (body) => {
         posted.push(body);
         return jsonResponse({ id: "a-9", kind: "call" }, 201);

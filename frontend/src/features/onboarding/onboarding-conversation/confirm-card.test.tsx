@@ -18,6 +18,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { Avatar } from "../../../design-system/atoms";
+import { stable } from "../../../format/collate";
 import { LocaleProvider } from "../../../i18n";
 import { EMPTY_DRAFT } from "../onboarding";
 import { CompanyConfirmCard } from "./confirm-card";
@@ -258,7 +259,7 @@ describe("a field the read did not return", () => {
     const omitted = [...document.querySelectorAll(".ob-triage-omitted")].map(
       (notice) => notice.closest("li")?.id,
     );
-    expect(omitted.sort()).toEqual([
+    expect(omitted.sort((a, b) => stable(String(a), String(b)))).toEqual([
       "ob-triage-row-legal_name",
       "ob-triage-row-register_number",
       "ob-triage-row-register_vat",

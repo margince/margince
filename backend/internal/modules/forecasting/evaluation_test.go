@@ -200,7 +200,7 @@ func TestEveryExcludedVintageIsCountedUnderItsReason(t *testing.T) {
 	pending := c.vintage("q3", [2]time.Time{c.q3Start, c.day(269)}, 190, 0, 10_00, 50_00, 0, 0)
 	pending.Outcome = nil
 	oldRules := c.vintage("old", c.q1, 20, 0, 0, 0, 0, 0)
-	oldRules.Definition = "forecast_v1"
+	oldRules.Definition = "forecast_v5"
 	erased := c.vintage("erased", c.q1, 30, 0, 0, 0, 0, 0)
 	erased.Rows = 0
 	unconverted := c.vintage("fx", c.q1, 40, 0, 0, 0, 0, 0)

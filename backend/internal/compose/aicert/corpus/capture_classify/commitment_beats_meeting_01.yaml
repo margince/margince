@@ -17,6 +17,12 @@ expect:
   outcome: accepted
   answer: [commitment]
   rubric: >
+    The candidate output is the harness's record of the run, not one reply.
+    "replies" holds each raw reply in the order the pass asked, and "messages"
+    holds what the pass stored for each message. That wrapper is the harness's,
+    so never score it as a format fault; each reply inside it is the model's.
+    A message answered under the 0.7 floor is re-asked alone, so a second reply
+    is that re-ask and not a contradiction.
     This message is genuinely BOTH: a promise with a date ("signed change
     request on Monday morning") and a scheduling request with offered times
     ("half an hour Wednesday after 2pm"). It exists to make the documented
@@ -27,7 +33,7 @@ expect:
     the middle rather than at the floor — a model that answered "meeting" here
     read the mail correctly and applied the rule wrongly, which wants a different
     fix from a model that cannot read the mail.
-    "noise" scores lowest: it drops both an obligation and a scheduling request
+    "other" scores lowest: it drops both an obligation and a scheduling request
     from a single message.
     This is the only scenario in this site's corpus where the tie-break decides
     the answer, so it is the only place a model that ignores that sentence of the

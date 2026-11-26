@@ -1,0 +1,7 @@
+{
+  "verb": "upload_company_logo",
+  "checks": [
+    "admin",
+    "company.update"
+  ]
+}

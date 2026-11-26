@@ -1,0 +1,11 @@
+{
+  "verb": "refresh_offer_from_deal",
+  "checks": [
+    "company.read",
+    "offer.update"
+  ],
+  "takes": [
+    "offer",
+    "offer_from_lines"
+  ]
+}

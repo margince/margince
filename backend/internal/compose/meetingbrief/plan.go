@@ -70,8 +70,11 @@ type Question struct {
 
 // Scenario is what the meeting may turn into.
 type Scenario struct {
-	Label    string
-	Play     string
+	Label string
+	Play  string
+	// Coach is the lead's reading of the branch: what to watch and what to ask
+	// the rep. Only the model writes it; a stock branch has none.
+	Coach    string
 	Evidence []Evidence
 }
 
@@ -108,7 +111,7 @@ func DeterministicPlan(in Input, ranked *rankedClaims) Plan {
 		Objective: objectiveFor(in, typ, ranked),
 		Opening:   openingFor(in, typ),
 		TopRisk:   topRiskFor(in, ranked),
-		Arc:       briefCopyFor(in.Language).arcSentences(arc),
+		Arc:       in.words().arcSentences(arc),
 		Advance:   advanceFor(in, typ),
 		Scenarios: scenariosFor(in, typ),
 		Unknowns:  unknowns,

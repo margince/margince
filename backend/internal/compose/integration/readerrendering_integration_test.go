@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/readerrendering"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -159,7 +160,7 @@ func TestATextTheCallerMayNotReadIsNotFoundAndNeverReachesTheModel(t *testing.T)
 func TestAMessageHeldUnderARetentionObligationIsNotFound(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject, which holds the mail: %v", err)
 	}
 	lane := &renderingLane{}

@@ -23,11 +23,15 @@
 // pair is, and clearing it changes neither record. Guarding both on `merge` is
 // what left such a pair on the page as a question nobody could answer here.
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { ContactCaseReview } from "../../components/contactcase";
+import { EvidenceLine } from "../../components/contactcase.evidence";
+import { type MergeSide, mergeSentence } from "../../components/merge.sentence";
+import { AppLink } from "../../design-system/applink";
 import { Button, Card } from "../../design-system/atoms";
-import { useToast } from "../../design-system/toast";
-import { formatNumber } from "../../format/format";
+import { ConfirmModal } from "../../design-system/confirmmodal";
+import { undoAction, useToast } from "../../design-system/toast";
+import { formatDate, formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
@@ -35,51 +39,78 @@ import {
   type PairDisposition,
   pairDecisionFailure,
   useDedupeDisposition,
+  useDedupeUndo,
 } from "../../lib/dedupe.queries";
+import { recordRoute } from "../../lib/entity";
+import { routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 // The review's own sheet: the two columns, the recessed cards and the trailing
 // line of verbs. It travels with the component because two hosts draw it.
 import "./worklist.pair.css";
 import type { WorklistItem } from "./worklist.queries";
 
-/**
- * The pair, and the verbs that answer it.
- *
- * Drawn only where the server sent the payload. A row that arrives without it
- * is one whose reader may not see both sides, and the lane already withheld
- * every verb for exactly that reason — so there is nothing here to draw and
- * no decision to offer.
- *
- * Each verb is drawn only where the server OFFERED that verb, and they are
- * asked for separately. Deciding a pair either way archives or rewrites
- * records, so both belong to whoever could change both — the owner, or a
- * workspace-wide seat — and the merge needs one thing more, which is a pair
- * the merge would actually take. A reader without the authority still sees the
- * pair, because knowing a duplicate is waiting is not the same as being able
- * to settle it, and is told who can. Rendering the buttons for everybody is
- * what produced a control that refused every press a rep made on a colleague's
- * records, then advised trying again.
- */
+type PairSide = NonNullable<WorklistItem["pair"]>["left"];
+type Describe = (iso: string) => string;
+
+// Two same-name records are told apart by the first of these that differs:
+// detail or creation day, creation minute, ID tail, whole ID. A step
+// is taken only while the two still read alike. `step` names the one that told.
+type Told = Readonly<{
+  lines: readonly [string | undefined, string | undefined];
+  step: number;
+}>;
+
+const MINUTE_STEP = 1;
+const ID_STEP = 2;
+
+function sideDetails(
+  pair: NonNullable<WorklistItem["pair"]>,
+  created: Readonly<{ day: Describe; minute: Describe }>,
+): Told {
+  const { left, right } = pair;
+  if (left.label !== right.label) {
+    return { lines: [left.detail, right.detail], step: 0 };
+  }
+  const steps: ((side: PairSide) => string | undefined)[] = [
+    (side) =>
+      side.detail ||
+      (side.created_at ? created.day(side.created_at) : undefined),
+    (side) => (side.created_at ? created.minute(side.created_at) : undefined),
+    (side) => side.id.slice(-6),
+    (side) => side.id,
+  ];
+  let told: Told = { lines: [undefined, undefined], step: 0 };
+  for (const [step, describe] of steps.entries()) {
+    told = { lines: [describe(left), describe(right)], step };
+    if (told.lines[0] !== told.lines[1]) {
+      break;
+    }
+  }
+  return told;
+}
+
 // keepLabel is what the Keep button is CALLED, which is not always what it says.
 //
-// The visible text names the record. When the pair's two records share a name —
-// and an identical name is one of the things that makes two records look like
-// duplicates in the first place — that leaves two buttons over an irreversible
-// merge with one accessible name between them.
-//
-// So the side's own detail joins the name where they collide. The visible text
-// stays the prefix of the spoken one, which is what keeps the two from coming
-// apart for somebody reading the screen and hearing it at once.
+// Where the two names collide, the side's distinguishing line joins the
+// accessible name, so two buttons over an irreversible merge never share one.
+// The visible text stays its prefix, so the spoken and seen names agree.
 function keepLabel(
   pair: NonNullable<WorklistItem["pair"]>,
-  side: NonNullable<WorklistItem["pair"]>["left"],
+  side: MergeSide,
   t: ReturnType<typeof useT>,
 ): string {
-  const visible = t("worklist.pair.keep", { name: side.label });
+  const visible = t("worklist.pair.keep", { name: side.name });
   if (pair.left.label !== pair.right.label || !side.detail) {
     return visible;
   }
   return `${visible} — ${side.detail}`;
 }
+
+// The two names are the cards' own titles, so a name match repeats them.
+const TITLE_FIELDS: ReadonlySet<string> = new Set([
+  "display_name",
+  "full_name",
+]);
 
 const FAILURE_MESSAGES = {
   refused: "worklist.pair.refused",
@@ -87,12 +118,26 @@ const FAILURE_MESSAGES = {
   failed: "worklist.pair.failed",
 } as const satisfies Record<PairDecisionFailure, MessageKey>;
 
+/**
+ * The pair, and the verbs that answer it.
+ *
+ * A row without the payload is one whose reader may not see both sides. The
+ * lane withheld its verbs for that reason, so nothing is drawn here.
+ *
+ * Each verb is drawn only where the server offered it. Deciding a pair archives
+ * or rewrites records, so it belongs to whoever could change both: the owner or
+ * a workspace-wide seat. The merge also needs a pair it would take. A reader
+ * without that authority still sees the pair, and is told who can settle it.
+ */
 export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const { locale } = useLocale();
+  const zone = useViewerZone();
   const toast = useToast();
   const decide = useDedupeDisposition();
+  const undo = useDedupeUndo();
   const [reviewing, setReviewing] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
   const pair = item.pair;
   if (!pair) {
     return null;
@@ -100,32 +145,74 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const mayMerge = item.actions?.includes("merge") ?? false;
   // Two contacts merge only through the review, where the reader ticks both
   // and sees the preview. Keep opens it on the contact they chose to keep.
-  const reviewed = item.subject?.type === "contact";
+  const reviewed = item.kind === "contact";
   const mayDismiss = item.actions?.includes("dismiss") ?? false;
-  const answer = (disposition: PairDisposition, winnerId?: string) =>
-    decide.mutate(
-      { id: item.id, disposition, winnerId },
-      {
-        // A refused decision leaves the row exactly as an unpressed one looks.
-        // Without this the reader believes the pair is settled and it is not.
-        onError: (error) => {
-          const failure = pairDecisionFailure(error);
-          // The two REASONED refusals stay until the reader dismisses them;
-          // only the unexplained failure withdraws itself.
-          //
-          // Neither of the first two is retryable, and both say something a
-          // reader has to act on somewhere else — hand the pair to an admin,
-          // or reload to see where it stands. A sentence like that shown for
-          // three and a half seconds is a sentence the reader is invited to
-          // miss, and the press that follows fails identically. "Try again"
-          // is the only one of the three that means it.
-          toast.show(t(FAILURE_MESSAGES[failure]), {
-            tone: "danger",
-            sticky: failure !== "failed",
-          });
-        },
-      },
+  const created = (iso: string) =>
+    t("worklist.pair.created", { date: formatDate(iso, locale, zone) });
+  const told = sideDetails(pair, {
+    day: created,
+    minute: (iso) =>
+      t("worklist.pair.created", { date: formatDateTime(iso, locale, zone) }),
+  });
+  const toldOf = (side: PairSide) =>
+    told.lines[side.id === pair.left.id ? 0 : 1];
+  const named = (side: PairSide): MergeSide => ({
+    name: side.label,
+    detail: toldOf(side),
+  });
+  // The kept side and the side a merge into it archives.
+  const merging = (keptId: string) =>
+    keptId === pair.left.id
+      ? { kept: named(pair.left), archived: named(pair.right) }
+      : { kept: named(pair.right), archived: named(pair.left) };
+  // A refused decision leaves the row as an unpressed one looks.
+  // Without this the reader believes the pair is settled and it is not.
+  const refused = (error: unknown) => {
+    const failure = pairDecisionFailure(error);
+    // The two REASONED refusals stay until the reader dismisses them; they say
+    // something to act on elsewhere, and only "Retry" is worth a second press.
+    toast.show(t(FAILURE_MESSAGES[failure]), {
+      tone: "danger",
+      sticky: failure !== "failed",
+    });
+  };
+  const answer = (
+    disposition: PairDisposition,
+    winnerId: string | undefined,
+    settled: () => void,
+  ) =>
+    // The promise rather than mutate's own callbacks: a settled pair leaves
+    // the list, and the row's unmount would swallow the message saying so.
+    decide
+      .mutateAsync({
+        id: item.id,
+        disposition,
+        winnerId,
+        companyIds:
+          item.kind === "company" ? [pair.left.id, pair.right.id] : undefined,
+      })
+      .then(settled, refused);
+  const merge = (keptId: string) => {
+    const { kept, archived } = merging(keptId);
+    answer("merge", keptId, () => {
+      setConfirming(null);
+      toast.show(mergeSentence(t, "merge.done", archived, kept));
+    });
+  };
+  // Saying they differ changes neither record, so it takes no question and
+  // has one clean way back.
+  const dismiss = () =>
+    answer("not_a_duplicate", undefined, () =>
+      toast.show(t("worklist.pair.dismissed"), {
+        action: undoAction(t("common.undo"), () =>
+          undo.mutateAsync({ id: item.id }).catch(refused),
+        ),
+      }),
     );
+  const confirmed = confirming ? merging(confirming) : null;
+  const evidence = pair.evidence.filter(
+    (line) => !TITLE_FIELDS.has(line.field),
+  );
   return (
     <div className="worklist-pair-review">
       {reviewing && (
@@ -134,6 +221,28 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
           open
           onClose={() => setReviewing(null)}
         />
+      )}
+      {/* A merge archives a record for good, so it is asked as the record
+          menu's Merge asks it, naming both sides. */}
+      {confirming && confirmed && (
+        <ConfirmModal
+          open
+          onClose={() => setConfirming(null)}
+          title={t("worklist.pair.keep", { name: confirmed.kept.name })}
+          confirmLabel={t("merge.submit")}
+          confirmVariant="danger"
+          pending={decide.isPending}
+          onConfirm={() => merge(confirming)}
+        >
+          <p>
+            {mergeSentence(
+              t,
+              "merge.confirm",
+              confirmed.archived,
+              confirmed.kept,
+            )}
+          </p>
+        </ConfirmModal>
       )}
       {/* THE QUESTION, as the block's lead line. What follows it is the two
           records it is about and the one answer that is about neither.
@@ -149,59 +258,44 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
             : "worklist.pair.ask",
         )}
       </p>
+      {evidence.length > 0 && (
+        <ul className="worklist-pair-evidence">
+          {evidence.map((line) => (
+            <EvidenceLine
+              key={`${line.field}-${line.signal}`}
+              evidence={line}
+            />
+          ))}
+        </ul>
+      )}
       <ul className="worklist-pair-cards">
         {[pair.left, pair.right].map((side) => (
-          // ONE CANDIDATE, on the catalog's recessed card. `Card inset` rather
-          // than `PanelPlate`, which the catalog reserves for context and says
-          // so in as many words — "it holds context, never a control" — and
-          // each of these cards carries the verb that keeps its record.
-          // A list ITEM, so the two stay one list of two: the card is the
-          // chrome and the `<ul>` is still what says there are two of them.
-          <Card as="li" inset key={side.id} className="worklist-pair-card">
-            <span>{side.label}</span>
-            {side.detail && <span className="t-caption">{side.detail}</span>}
-            {/* The reader's best single signal for which side is the real
-                one, where the record type carries such a count. */}
-            {side.related_count !== undefined && (
-              <span className="t-caption">
-                {t("worklist.pair.related", {
-                  count: formatNumber(side.related_count, locale),
-                })}
-              </span>
-            )}
-            {/* The RECORD'S OWN NAME in the verb, not "Keep this one" twice.
-                Two identically named buttons over an irreversible merge leave
-                a reader who is not looking at the layout — a screen reader,
-                a keyboard walking the controls — no way to tell which record
-                they are about to archive.
-
-                Which is exactly what a pair whose two records share a name
-                left them with, and that pair is not the rare case: an
-                identical name is one of the things that MAKES two records
-                look like duplicates. So where the labels collide the side's
-                own detail — the line the card already draws under the name —
-                joins the accessible name. The visible text is unchanged and
-                is still its prefix, so the spoken name and the seen one do
-                not come apart. */}
+          <PairSideCard
+            key={side.id}
+            side={side}
+            kind={item.kind}
+            created={created}
+            told={told.step >= MINUTE_STEP ? toldOf(side) : undefined}
+            byId={told.step >= ID_STEP}
+          >
+            {/* At the card's own FOOT, on its trailing edge: the verb belongs
+                to the record above it. It NAMES that record, so a reader who
+                is not looking at the layout knows which one they keep. */}
             {mayMerge && (!pair.keep_id || pair.keep_id === side.id) && (
-              // At the card's own FOOT, on its trailing edge: the verb belongs
-              // to the record above it, and `.card-actions` is the catalog's
-              // trailing row for exactly that — the air above the verbs rides
-              // on the row rather than on whatever body the card has.
               <div className="card-actions">
                 <Button
                   variant="primary"
                   pending={decide.isPending}
-                  aria-label={keepLabel(pair, side, t)}
+                  aria-label={keepLabel(pair, named(side), t)}
                   onClick={() =>
-                    reviewed ? setReviewing(side.id) : answer("merge", side.id)
+                    reviewed ? setReviewing(side.id) : setConfirming(side.id)
                   }
                 >
                   {t("worklist.pair.keep", { name: side.label })}
                 </Button>
               </div>
             )}
-          </Card>
+          </PairSideCard>
         ))}
       </ul>
       {mayDismiss && (
@@ -214,11 +308,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
         // still ghost: the pair being unmergeable is not a reason to press
         // harder for the answer that says it was never a pair.
         <div className="worklist-pair-actions">
-          <Button
-            variant="ghost"
-            pending={decide.isPending}
-            onClick={() => answer("not_a_duplicate")}
-          >
+          <Button variant="ghost" pending={decide.isPending} onClick={dismiss}>
             {t("worklist.pair.notDuplicate")}
           </Button>
         </div>
@@ -232,5 +322,58 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
         </p>
       )}
     </div>
+  );
+}
+
+// One candidate, on the catalog's recessed card: `Card inset` rather than
+// `PanelPlate`, which holds context and never a control. A list item, so the
+// two stay one list of two.
+function PairSideCard({
+  side,
+  kind,
+  created,
+  told,
+  byId,
+  children,
+}: Readonly<{
+  side: PairSide;
+  kind: string | undefined;
+  created: Describe;
+  // Shown where the creation day alone reads the same on both cards: the
+  // creation minute in its place, or the ID beside it.
+  told: string | undefined;
+  byId: boolean;
+  children: ReactNode;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const route = recordRoute(kind, side.id);
+  return (
+    <Card as="li" inset className="worklist-pair-card">
+      {route ? (
+        <AppLink href={routeHash(route)}>{side.label}</AppLink>
+      ) : (
+        <span>{side.label}</span>
+      )}
+      {side.detail && <span className="t-caption">{side.detail}</span>}
+      {told && !byId ? (
+        <span className="t-caption">{told}</span>
+      ) : (
+        side.created_at && (
+          <span className="t-caption">{created(side.created_at)}</span>
+        )
+      )}
+      {told && byId && <span className="t-caption">{told}</span>}
+      {/* The reader's best single signal for which side is the real one,
+          where the record type carries such a count. */}
+      {side.related_count !== undefined && (
+        <span className="t-caption">
+          {t("worklist.pair.related", {
+            count: formatNumber(side.related_count, locale),
+          })}
+        </span>
+      )}
+      {children}
+    </Card>
   );
 }

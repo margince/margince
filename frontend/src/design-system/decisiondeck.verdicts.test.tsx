@@ -4,6 +4,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stable } from "../format/collate";
 import { PRINTABLE_KEYS } from "../testing/keys";
 import type { DecisionDeckItem } from "./decisiondeck";
 import {
@@ -77,7 +78,7 @@ describe("the deck's keys", () => {
       DECK_UNSTAGE_KEY,
       DECK_UNSTAGE_KEY.toUpperCase(),
     ];
-    expect(claimedKeys().sort()).toEqual(listed.sort());
+    expect(claimedKeys().sort(stable)).toEqual(listed.sort(stable));
   });
 
   it("reads every verdict from the table", () => {

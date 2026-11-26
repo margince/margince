@@ -48,20 +48,44 @@ type countingTracer struct {
 }
 
 func (t *countingTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
-	sql := strings.TrimSpace(strings.ToUpper(data.SQL))
-	if strings.HasPrefix(sql, "BEGIN") || strings.HasPrefix(sql, "COMMIT") ||
-		strings.HasPrefix(sql, "ROLLBACK") || strings.HasPrefix(sql, "SELECT SET_CONFIG") {
-		return ctx
+	t.counted(data.SQL, data.Args)
+	return ctx
+}
+
+// A read snapshot sends some statements inside batches, so a batch's
+// statements count too. Its session statements are plumbing, as BEGIN is.
+func (*countingTracer) TraceBatchStart(ctx context.Context, _ *pgx.Conn, _ pgx.TraceBatchStartData) context.Context {
+	return ctx
+}
+
+func (t *countingTracer) TraceBatchQuery(_ context.Context, _ *pgx.Conn, data pgx.TraceBatchQueryData) {
+	t.counted(data.SQL, data.Args)
+}
+
+func (*countingTracer) TraceBatchEnd(context.Context, *pgx.Conn, pgx.TraceBatchEndData) {}
+
+// sessionPlumbing are the prefixes of the transaction and session statements
+// every read pays, whatever it reads.
+var sessionPlumbing = []string{
+	"BEGIN", "COMMIT", "ROLLBACK", "SELECT SET_CONFIG", "SAVEPOINT", "RELEASE SAVEPOINT",
+	"SELECT CURRENT_SETTING", "WITH PREVIOUS AS MATERIALIZED (SELECT CURRENT_SETTING",
+}
+
+func (t *countingTracer) counted(statement string, args []any) {
+	sql := strings.TrimSpace(strings.ToUpper(statement))
+	for _, plumbing := range sessionPlumbing {
+		if strings.HasPrefix(sql, plumbing) {
+			return
+		}
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.count++
-	for _, arg := range data.Args {
+	for _, arg := range args {
 		if key, ok := arg.(string); ok && key == identity.BaseLanguage.Key() {
 			t.languageReads++
 		}
 	}
-	return ctx
 }
 
 func (t *countingTracer) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
@@ -131,22 +155,37 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 			"the composite read must be flat in the size of the account, or it is the round-trip stack it replaced",
 			largeCost, smallCost)
 	}
-	// Every timeline page reads commitment admission evidence in one batch.
-	// Beyond the equality above the budget covers one language read and one
-	// zone read. It adds two commitment reads, theirs and its completeness
-	// count. It adds one read for next steps outside the caller's row scope.
-	// It adds one party read for the timeline page's authors, one statement
-	// for the whole page, which the equality above holds flat. One separate
-	// read counts all pending proposals beyond the displayed page. One more
-	// names who created the company, which its rail shows. The commitment
-	// evidence read switches to its generic plan first, which is one more
-	// statement and spares a plan of the gate on every page.
-	const budget = 60
+	// Every timeline page reads commitment admission evidence in one batch. Beyond the
+	// equality above the budget covers one language read and one zone read. It adds two
+	// commitment reads, theirs and its completeness count. It adds one read for next steps
+	// outside the caller's row scope. It adds one party read for the timeline page's
+	// authors, one statement for the whole page, which the equality above holds flat. One
+	// separate read counts all pending proposals beyond the displayed page. One more names
+	// who created the company, which its rail shows. The commitment evidence read switches
+	// to its generic plan first, which is one more statement and spares a plan of the gate
+	// on every page. The clock here is a past instant the stored strength dates cannot
+	// answer. So strength reads the stored row and then the history's dates and the
+	// window's counts. The single-thread threshold is read from the reporting framework's
+	// own table.
+	const budget = 63
 	if tracer.languageReads != 2 {
 		t.Errorf("two assemblies read base language %d times, want once each", tracer.languageReads)
 	}
 	if smallCost > budget {
 		t.Errorf("one 360 issued %d queries, budget is %d", smallCost, budget)
+	}
+	// At the present the strength fold reads the dates each contact stores.
+	// The page then spends fewer statements than at a past instant.
+	present := company360svc.NewService(pool, contacts.NewStore(traced),
+		deals.NewStore(traced, installseam.Deals()), integration.ProjectsStore(traced),
+		approvals.NewService(traced), time.Now)
+	before = tracer.total()
+	if _, err := present.Assemble(ctx, large); err != nil {
+		t.Fatalf("assemble the large account at the present: %v", err)
+	}
+	if presentCost := tracer.total() - before; presentCost >= largeCost {
+		t.Errorf("assembling at the present cost %d queries, at a past instant %d: the stored strength dates were not read",
+			presentCost, largeCost)
 	}
 }
 

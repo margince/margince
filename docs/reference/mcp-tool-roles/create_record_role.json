@@ -1,0 +1,15 @@
+{
+  "tool": "change_access",
+  "action": "create_record_role",
+  "verb": "create_record_role",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

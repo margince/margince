@@ -1,23 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Overflow-menu gate: an item in a menu is a line of words.
+// Overflow-menu gate: an item in a menu is a line of words, never a glyph.
+// A seldom-used verb's glyph is a guess; the menu line has room for its words.
+// Icon-only lives outside the menu: `IconAction` in design-system/README.md.
 //
-// The menu holds the verbs a reader seldom wants, whose glyphs nobody has
-// learnt. An envelope reads at once; a rotating arrow is a guess. The menu line
-// is where such a verb has room to explain itself, and a glyph on it explains
-// nothing.
-//
-// So every item in any `OverflowMenu` carries words and no glyph. Icon-only
-// belongs outside the menu, and only where the glyph is the verb (mail, phone,
-// calendar). That is the contract of `IconAction` in design-system/README.md.
-//
-// This gate sees a lucide glyph, a raw `<svg>`, or a `*Icon` component inside
-// an `<OverflowMenu>`, in the file that writes it.
-//
-// It cannot see past a component boundary. A menu whose child is
-// `<ArchiveAction />` reads as empty here, and the glyph could be inside. Each
-// menu's screen has a story, and `make fe-uat` draws it, which covers that case.
+// It reads every wrapper that passes its children into an `<OverflowMenu>`, but
+// not an item's own component (`<ArchiveAction />`), which its story covers.
 
 import ts from "typescript";
 import { parseSource } from "../../scripts/lib/source-tree";
@@ -103,13 +92,108 @@ function glyphReason(tag: string, glyphs: ReadonlySet<string>): string {
 
 type Finding = Readonly<{ file: string; line: number; why: string }>;
 
+type ModuleText = Readonly<{ path: string; text: string }>;
+
+type ComponentFunction =
+  | ts.FunctionDeclaration
+  | ts.ArrowFunction
+  | ts.FunctionExpression;
+
+type Component = Readonly<{ name: string; fn: ComponentFunction }>;
+
+function componentsOf(source: ts.SourceFile): Component[] {
+  const found: Component[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isFunctionDeclaration(node) && node.name) {
+      found.push({ name: node.name.text, fn: node });
+    }
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer &&
+      (ts.isArrowFunction(node.initializer) ||
+        ts.isFunctionExpression(node.initializer))
+    ) {
+      found.push({ name: node.name.text, fn: node.initializer });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return found;
+}
+
+/** The names a component reads its children by: `children`, and any rename. */
+function childrenNames(fn: ComponentFunction): Set<string> {
+  const names = new Set(["children"]);
+  const props = fn.parameters[0]?.name;
+  if (props && ts.isObjectBindingPattern(props)) {
+    for (const element of props.elements) {
+      const key = element.propertyName ?? element.name;
+      if (
+        ts.isIdentifier(key) &&
+        key.text === "children" &&
+        ts.isIdentifier(element.name)
+      ) {
+        names.add(element.name.text);
+      }
+    }
+  }
+  return names;
+}
+
+function rendersChildrenInto(
+  component: Component,
+  source: ts.SourceFile,
+  menus: ReadonlySet<string>,
+): boolean {
+  const names = childrenNames(component.fn);
+  const passed = (node: ts.Node): boolean =>
+    (ts.isIdentifier(node) && names.has(node.text)) ||
+    (ts.isPropertyAccessExpression(node) && node.name.text === "children") ||
+    ts.forEachChild(node, passed) === true;
+  const inMenu = (node: ts.Node): boolean =>
+    (ts.isJsxElement(node) &&
+      menus.has(tagOf(node, source)) &&
+      node.children.some(passed)) ||
+    ts.forEachChild(node, inMenu) === true;
+  return component.fn.body !== undefined && inMenu(component.fn.body);
+}
+
+/** The menu's tag and every component that renders its children into it,
+ *  wrappers of wrappers included, read from the modules so none is missed. */
+export function menuTags(modules: readonly ModuleText[]): Set<string> {
+  const components = modules.flatMap((module) => {
+    const source = parseSource(module.path, module.text);
+    return componentsOf(source).map((component) => ({ component, source }));
+  });
+  const menus = new Set([MENU]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const { component, source } of components) {
+      if (
+        !menus.has(component.name) &&
+        rendersChildrenInto(component, source, menus)
+      ) {
+        menus.add(component.name);
+        grew = true;
+      }
+    }
+  }
+  return menus;
+}
+
 /**
  * Every glyph written inside an overflow menu in one file.
  *
  * Taken as text, not read from the path, so the planted cases run the same
  * function the tree does.
  */
-export function glyphsInMenus(file: string, text: string): Finding[] {
+export function glyphsInMenus(
+  file: string,
+  text: string,
+  menus: ReadonlySet<string> = new Set([MENU]),
+): Finding[] {
   const source = parseSource(file, text);
   const glyphs = glyphImports(source);
   const findings: Finding[] = [];
@@ -128,7 +212,7 @@ export function glyphsInMenus(file: string, text: string): Finding[] {
   };
 
   const visit = (node: ts.Node) => {
-    if (ts.isJsxElement(node) && tagOf(node, source) === MENU) {
+    if (ts.isJsxElement(node) && menus.has(tagOf(node, source))) {
       // The children only: the menu's trigger draws the ellipsis, the one glyph that
       // is the control itself.
       for (const child of node.children) {
@@ -162,10 +246,14 @@ export const rule: CensusRule = {
       ? []
       : [`no <${MENU}> was found anywhere under src/ — the detector is dark`]),
   ],
-  visit: (file) =>
-    glyphsInMenus(file.path, file.text).map(
-      (finding) => `${file.rel}:${finding.line}: ${finding.why}`,
-    ),
+  across: (corpus) => {
+    const menus = menuTags(corpus);
+    return corpus.flatMap((file) =>
+      glyphsInMenus(file.path, file.text, menus).map(
+        (finding) => `${file.rel}:${finding.line}: ${finding.why}`,
+      ),
+    );
+  },
   advice:
     `Items in an overflow menu carry words, not glyphs. Drop the glyph and ` +
     `keep the label; a verb that needs a glyph to be understood needs a ` +

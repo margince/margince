@@ -49,6 +49,8 @@ func (p *preflightEnv) theyWrite(t *testing.T, mail inbound) ids.UUID {
 		"From: Consented Buyer <buyer@preflight.test>",
 		"To: " + mailbox,
 		"Subject: Re: Next steps",
+		"In-Reply-To: <inquiry@preflight.test>",
+		"References: <inquiry@preflight.test>",
 		"Date: " + mail.dated.UTC().Format(time.RFC1123Z),
 		"Message-ID: <reply-" + mail.dated.Format("20060102150405") + "@preflight.test>",
 		"Content-Type: text/plain; charset=utf-8",
@@ -148,7 +150,7 @@ func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			p := setupPreflight(t)
 			p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
-			id := p.scheduleClaiming(t, tc.claim)
+			id := p.scheduleClaimingAt(t, tc.claim, "/v1/emails")
 
 			p.theyWrite(t, tc.mail(clocktest.Now(t).UTC().Add(time.Second)))
 			p.makeDue(t, id)
@@ -207,5 +209,26 @@ func checkScheduledReplyThread(t *testing.T, sameThread bool) {
 
 	if status, reason := p.scheduledStatus(t, id); (reason == activities.HeldRecipientReplied) != sameThread {
 		t.Fatalf("same thread %v: status %q, reason %q", sameThread, status, reason)
+	}
+}
+
+// A follow-up that answers a hand-logged mail listens as a new message does:
+// captured mail never joins the thread a hand-logged mail starts.
+//
+// Mutation: drop the IsHandLoggedThread test from pursuitPausedByReply, and the
+// follow-up is sent over the reply.
+func TestAFollowUpAnsweringAHandLoggedMailIsPausedByAReply(t *testing.T) {
+	p := setupPreflight(t)
+	p.activityID = logConsentInbound(t, p.AppEnv, p.contactID)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
+	id := p.scheduleClaiming(t, AnyMap{"communication_context": "active_deal_followup"})
+
+	after := clocktest.Now(t).UTC().Add(time.Second)
+	p.theyWrite(t, inbound{dated: after, arrived: after, authenticated: true})
+	p.makeDue(t, id)
+	p.fire(t, id)
+
+	if status, reason := p.scheduledStatus(t, id); status != activities.ScheduledStatusHeld || reason != activities.HeldRecipientReplied {
+		t.Fatalf("status %q reason %q, want held because the recipient replied", status, reason)
 	}
 }

@@ -117,7 +117,7 @@ func noiseMailDestroyable(window time.Duration, floor StatutoryFloor, args []any
 		   AND (NOT p.machine OR (p.resolved_at IS NOT NULL AND a.bulk_mail_attested))
 		   AND a.archived_at IS NOT NULL
 		   AND a.archived_at <= now() - ` + quoteInterval(window) + `
-		   AND (a.subject IS NOT NULL OR a.body IS NOT NULL OR a.raw IS NOT NULL
+		   AND (a.subject IS NOT NULL OR a.body IS NOT NULL OR a.raw IS NOT NULL OR a.calendar_event IS NOT NULL
 		        OR EXISTS (
 		          SELECT 1 FROM raw_capture r
 		           WHERE r.source_system = a.source_system AND r.source_id = a.source_id))

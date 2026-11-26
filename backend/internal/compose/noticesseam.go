@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -46,12 +47,13 @@ func (n noticesNotifier) Notify(
 	ctx context.Context, recipient ids.UUID, subject, body string, target datasource.EntityRef, dedupe string, origin *crmcontracts.NoticeOrigin,
 ) error {
 	_, err := n.store.Create(ctx, notices.NewNotice{
-		Recipient: ids.From[ids.UserKind](recipient),
-		Kind:      noticeKindAutomation,
-		Origin:    origin,
-		DedupeKey: dedupe,
-		Subject:   subject,
-		Body:      body,
+		SystemText: systemtext.MessageIn(ctx),
+		Recipient:  ids.From[ids.UserKind](recipient),
+		Kind:       noticeKindAutomation,
+		Origin:     origin,
+		DedupeKey:  dedupe,
+		Subject:    subject,
+		Body:       body,
 		// A firing that named no record writes no target: the zero EntityRef
 		// carries an empty type, and Target.Named() is what the store asks.
 		Target: notices.Target{Type: string(target.Type), ID: target.ID},
@@ -65,12 +67,13 @@ func (n noticesNotifier) NotifyTx(
 	ctx context.Context, tx pgx.Tx, recipient ids.UUID, subject, body string, target datasource.EntityRef, dedupe string,
 ) error {
 	_, err := n.store.CreateTx(ctx, tx, notices.NewNotice{
-		Recipient: ids.From[ids.UserKind](recipient),
-		Kind:      noticeKindAutomation,
-		DedupeKey: dedupe,
-		Subject:   subject,
-		Body:      body,
-		Target:    notices.Target{Type: string(target.Type), ID: target.ID},
+		SystemText: systemtext.MessageIn(ctx),
+		Recipient:  ids.From[ids.UserKind](recipient),
+		Kind:       noticeKindAutomation,
+		DedupeKey:  dedupe,
+		Subject:    subject,
+		Body:       body,
+		Target:     notices.Target{Type: string(target.Type), ID: target.ID},
 	})
 	return err
 }
@@ -91,10 +94,11 @@ func NewBacklogStallNotifier(
 		// speaks the installation's language in both places.
 		words := mailcopy.For(identity.BaseLanguageForPrompt(ctx, pool))
 		_, err := store.Create(ctx, notices.NewNotice{
-			Recipient: ids.From[ids.UserKind](seat),
-			Kind:      noticeKindCaptureBacklog,
-			Subject:   words.NoticeBacklogSubject,
-			Body:      fmt.Sprintf(words.NoticeBacklogBody, waiting),
+			Recipient:  ids.From[ids.UserKind](seat),
+			Kind:       noticeKindCaptureBacklog,
+			SystemText: &systemtext.Message{Subject: systemtext.Sentence("notice.NoticeBacklogSubject"), Body: systemtext.Sentence("notice.NoticeBacklogBody", systemtext.Count(int64(waiting)))},
+			Subject:    words.NoticeBacklogSubject,
+			Body:       fmt.Sprintf(words.NoticeBacklogBody, waiting),
 			DedupeKey: fmt.Sprintf("capture_backlog_stalled:%s:%s",
 				seat, clock().UTC().Format(time.DateOnly)),
 		})

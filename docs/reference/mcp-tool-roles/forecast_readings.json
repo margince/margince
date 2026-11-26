@@ -1,0 +1,14 @@
+{
+  "tool": "read_forecast",
+  "action": "readings",
+  "verb": "forecast_readings",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

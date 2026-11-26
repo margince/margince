@@ -133,6 +133,11 @@ export const ACCEPTED = new Map<string, string>([
       "--controlHeight square inside it (app/topbar.css)",
   ],
   [
+    ".oauthconsent-form .oauthconsent-actions .btn",
+    "the consent screen's row of CTAs from 701px stands at --controlHeight " +
+      "for a mouse and takes the coarse-pointer 44px floor",
+  ],
+  [
     ".segmented button",
     "a segment takes the coarse-pointer 44px floor; the strip is --controlHeight " +
       "for a mouse, which is what makes it read as one control",
@@ -188,7 +193,7 @@ export const ACCEPTED = new Map<string, string>([
   // Doors and targets. A full-width action owes every pointer 44px, above the
   // control height rather than a second answer to it.
   [
-    ".auth-actions .btn",
+    ".auth-actions .btn:not(.btn-link)",
     "the sign-in door: full width, its own 44+ floor, for the reason " +
       ".btn-federated beside it carries one",
   ],
@@ -228,7 +233,10 @@ export const ACCEPTED = new Map<string, string>([
       "and its summary need",
   ],
   ["stat-card", "a card: the strip's tile, and the tile filling its cell"],
-  ["arhit", "the agent orb's hit area, sized to the orb rather than to a verb"],
+  [
+    "arhit",
+    "the agent's rail row: its line and its spend, two lines beside the orb",
+  ],
   ["fdz", "a drop ZONE is an area to aim at, not a control"],
   ["fdz-input", "the invisible file input covering that zone"],
   ["filterpill", "chip-shaped, and the chip is its own rung on the toolbar"],

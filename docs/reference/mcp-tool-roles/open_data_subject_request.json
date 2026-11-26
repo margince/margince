@@ -1,0 +1,15 @@
+{
+  "tool": "change_compliance",
+  "action": "open_data_subject_request",
+  "verb": "open_data_subject_request",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

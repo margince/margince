@@ -1,0 +1,38 @@
+name: a_chat_line_is_labelled_on_its_own_and_judged_no_reply
+task: capture_classify
+site: classify
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  - channel: openchannel
+    inbound: true
+    body: Are you free at 8:00 PM Monday?
+  - channel: openchannel
+    inbound: true
+    body: No, Monday does not work. Could we do Tuesday at 10 instead?
+expect:
+  outcome: accepted
+  answer:
+    - meeting
+    - meeting
+  rubric: >
+    The candidate output is the harness's record of the run, not one reply.
+    "replies" holds each raw reply in the order the pass asked, and "messages"
+    holds what the pass stored for each message. That wrapper is the harness's,
+    so never score it as a format fault; each reply inside it is the model's.
+    A message answered under the 0.7 floor is re-asked alone, so a second reply
+    is that re-ask and not a contradiction.
+    Two chat messages, each one line of a conversation the model does not see,
+    with a channel line and no subject. The first asks for a time, so it is
+    "meeting"; "other" is the failure this scenario exists to catch, because
+    a chat line treated as mail with no subject reads as saying nothing. The
+    second turns down one slot and offers another: still "meeting". Its "no"
+    refuses Monday, not the deal, and the prompt asks for no reply verdict on
+    any chat message, so null is right and "negative" is the worst answer,
+    since a negative verdict can close the customer's deal as lost. The pass
+    stores no reply verdict for a chat line, so the replies the model gave are
+    the only place that failure can show: score them.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

@@ -68,6 +68,8 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// A contract's asserted status moved — the same shape as a deal's stage
 		// and a project's phase, one noun further along.
 		"status_changed": true,
+		// An extension proposed a record for a message, or a reader decided one.
+		"link_suggestion_changed": true,
 		// A lead's first-response deadline passed unanswered (formulas §18.2).
 		"sla_breached": true,
 		// A reading of how a project is going was appended to its history.
@@ -151,6 +153,10 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// One attendee's readiness for a meeting; "recorded" alone would not say
 		// what was recorded on a stream that also carries edits.
 		"readiness_recorded": true,
+		// One reader answered a calendar invitation that came by email.
+		// "answered" alone would not say what was answered on a stream that
+		// also carries the reader's replies.
+		"invitation_answered": true,
 		// Same shape and the same reason: "requested" alone would not say what
 		// was asked for, and a weekly plan's stream also carries its ordinary
 		// updates — the distinction is the point of the type, because this is
@@ -322,6 +328,8 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 			"gw:events:crm:deal", "gw:events:crm:identity",
 		},
 		"cg:commitment-settle": {"gw:events:crm:activity", "gw:events:crm:contact"},
+		// What happens on a deal or project, posted into its linked chat channel.
+		"cg:chat-links": {"gw:events:crm:activity", "gw:events:crm:contact", "gw:events:crm:deal"},
 		// The AI-activity projection (ai_task_run). Its own group, and the only
 		// group on the aitask stream: a projection backlog must not be able to
 		// stall a consumer that spends money or moves a record.
@@ -348,7 +356,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 
 	groups := Groups()
 	if len(groups) != len(want) {
-		t.Fatalf("Groups() returned %d groups, want %d — the core groups the catalog defines, the outbound-webhook fan-out, the interaction-edge projection, the LinkedIn ghost matcher, the licensed-provider enrichment consumer, the audience-rescope corrector, the voice-copy recheck, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the commitment-settle consumer, the signature-enrich trigger, the introduction reply consumer, the deterministic stage-evidence writers, the stage-progression outcome ledger, the approval-pending fan-out, and the assurance freshness marker", len(groups), len(want))
+		t.Fatalf("Groups() returned %d groups, want %d — the core groups the catalog defines, the outbound-webhook fan-out, the interaction-edge projection, the LinkedIn ghost matcher, the licensed-provider enrichment consumer, the audience-rescope corrector, the voice-copy recheck, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the chat channel links, the commitment-settle consumer, the signature-enrich trigger, the introduction reply consumer, the deterministic stage-evidence writers, the stage-progression outcome ledger, the approval-pending fan-out, and the assurance freshness marker", len(groups), len(want))
 	}
 	for _, g := range groups {
 		if !reflect.DeepEqual(g.Streams, want[g.Name]) {

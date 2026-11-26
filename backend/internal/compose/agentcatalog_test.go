@@ -11,6 +11,8 @@ package compose
 // path never reads proves nothing about production.
 
 import (
+	"flag"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -221,5 +223,34 @@ func TestEveryAgentLoopToolRunsWithoutApproval(t *testing.T) {
 	}
 	if attached == 0 {
 		t.Fatal("api/ai-tasks.yaml attaches no agent tool, so this gate checked nothing")
+	}
+}
+
+var updateInaccessibleTools = flag.Bool("update-inaccessible-tools", false, "rewrite testdata/inaccessible-tools.txt")
+
+// testdata/inaccessible-tools.txt holds each declared tool no tools/list, router
+// or internal AI task reaches. `make check` prints them as warnings.
+func TestTheInaccessibleToolsAreListed(t *testing.T) {
+	registry, reached := NewRegistry(nil, SendPath{}), []string{}
+	for _, task := range ai.AllTasks() {
+		for _, agent := range ai.AgentsFor(task) {
+			reached = append(reached, agent.Tools...)
+		}
+	}
+	for _, spec := range registry.Specs() {
+		targets, _ := registry.RouteTargets(spec.Name)
+		reached = append(reached, targets...)
+	}
+	var listed strings.Builder // an empty registry reads stale against the committed list
+	for _, spec := range registry.Specs() {
+		if spec.Unlisted && !spec.Gated && !slices.Contains(reached, spec.Name) {
+			listed.WriteString(spec.Name + "\n")
+		}
+	}
+	if *updateInaccessibleTools && os.WriteFile("testdata/inaccessible-tools.txt", []byte(listed.String()), 0o600) != nil {
+		t.Fatal("the list could not be written")
+	}
+	if committed, err := os.ReadFile("testdata/inaccessible-tools.txt"); err != nil || string(committed) != listed.String() {
+		t.Errorf("testdata/inaccessible-tools.txt is stale (%v), want:\n%s(go test ./internal/compose/ -run TestTheInaccessibleToolsAreListed -update-inaccessible-tools)", err, listed.String())
 	}
 }

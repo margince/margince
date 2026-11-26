@@ -15,6 +15,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The contract bounds a report name in characters. An accented name that fits
@@ -27,11 +28,11 @@ func TestAReportNameLimitCountsCharactersNotBytes(t *testing.T) {
 		})
 		return err
 	}
-	if err := create(strings.Repeat("é", 160)); err != nil {
-		t.Fatalf("160 characters (320 bytes) refused: %v", err)
+	if err := create(strings.Repeat("é", values.TextLabelCharacters)); err != nil {
+		t.Fatalf("a name at the label limit, in two-byte characters, was refused: %v", err)
 	}
-	if err := create(strings.Repeat("é", 161)); !errors.Is(err, apperrors.ErrInvalidArgument) {
-		t.Fatalf("161 characters answered %v, want an invalid-argument refusal", err)
+	if err := create(strings.Repeat("é", values.TextLabelCharacters+1)); !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Fatalf("a name one character past the label limit answered %v, want an invalid-argument refusal", err)
 	}
 	if err := create("\u200b"); !errors.Is(err, apperrors.ErrInvalidArgument) {
 		t.Fatalf("an invisible name answered %v, want an invalid-argument refusal", err)

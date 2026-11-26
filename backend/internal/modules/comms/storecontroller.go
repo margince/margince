@@ -50,6 +50,9 @@ type StageControllerInput struct {
 	PayloadRef       string
 	PayloadExpiresAt *time.Time
 	DueAt            *time.Time
+	// KeptUntil keeps the delivery out of every retention policy's reach until
+	// then. Nil sets no floor.
+	KeptUntil *time.Time
 	// LinkID is the confirm_token this message carries, when it carries one.
 	LinkID ids.UUID
 	// FromAddress is the relay's sender address at staging; "" records none.
@@ -57,6 +60,9 @@ type StageControllerInput struct {
 	// InlineLogoKey is the stored company logo HTMLBody's letterhead shows,
 	// empty when the letterhead is the name alone.
 	InlineLogoKey string
+	// StagedAt is the row's created_at when the caller ordered it against
+	// other rows on the database clock; zero takes the store's clock.
+	StagedAt time.Time
 }
 
 // ControllerTemplates answers whether a template key and version are
@@ -116,10 +122,14 @@ func (s *Store) StageControllerTx(ctx context.Context, tx pgx.Tx, in StageContro
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("comms: encoding the attachment snapshot: %w", err)
 	}
+	stagedAt := in.StagedAt
+	if stagedAt.IsZero() {
+		stagedAt = s.now()
+	}
 	id := ids.NewV7()
-	args := []any{id, in.ActivityID, ProviderOperatorRelay, in.MessageID, recipients, empty, empty, in.Subject, in.Body, in.HTMLBody, empty, "pending", s.now().UTC(), files, "controller", in.TemplateKey, in.TemplateVersion, nullableText(in.PayloadRef), in.PayloadExpiresAt, nullableID(in.LinkID), in.DueAt, nullableText(in.FromAddress), nullableText(in.InlineLogoKey)}
+	args := []any{id, in.ActivityID, ProviderOperatorRelay, in.MessageID, recipients, empty, empty, in.Subject, in.Body, in.HTMLBody, empty, "pending", stagedAt.UTC(), files, "controller", in.TemplateKey, in.TemplateVersion, nullableText(in.PayloadRef), in.PayloadExpiresAt, nullableID(in.LinkID), in.DueAt, nullableText(in.FromAddress), nullableText(in.InlineLogoKey), in.KeptUntil}
 	query := `INSERT INTO comms_outbound
- (id,activity_id,provider,message_id,recipients,cc,bcc,subject,body,html_body,references_chain,status,created_at,attachments,sender_kind,template_key,template_version,payload_ref,payload_expires_at,link_id,delivery_due_at,from_address,inline_logo_key)
+ (id,activity_id,provider,message_id,recipients,cc,bcc,subject,body,html_body,references_chain,status,created_at,attachments,sender_kind,template_key,template_version,payload_ref,payload_expires_at,link_id,delivery_due_at,from_address,inline_logo_key,kept_until)
  VALUES (` + storekit.Placeholders(args) + `)`
 	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		if storekit.IsUniqueViolation(err) {

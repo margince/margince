@@ -44,7 +44,6 @@ var preservedResetTables = map[string]bool{
 	"report_projection_fence": true,
 	"home_read_fence":         true,
 	"data_task_run":           true,
-	"data_task_run_history":   true,
 	// Seeded by its migration; mail captured after a reset is past it anyway.
 	"activity_own_sent_mail_repair_cutoff": true,
 	// consent_text_version is the controller's published wording, which a surviving
@@ -126,29 +125,11 @@ var preservedResetTables = map[string]bool{
 	// It is still cleared by a reset — `activity` is swept, and the cascade takes
 	// the evidence with it. Preserved here means "not a target", never "kept".
 	"activity_retention_evidence": true,
-	// A directed-send decision (migration 1789048392): the record of who
-	// overrode a refusal, when, and under what reason. Its own trigger refuses
-	// EVERY delete unconditionally ("a communication instruction is the record
-	// of a decision and is never deleted") — unlike activity_retention_evidence
-	// above, there is no row-conditional carve-out for a cascade to pass
-	// through, so this is the audit_log/system_log shape, not that one.
-	//
-	// Not yet reachable in practice: nothing seeds a communication_instruction
-	// row today, so the sweep has never actually met one. The obligation this
-	// leaves standing, for THIS path only: communication_review references
-	// this table with ON DELETE CASCADE, and that cascade would hit the same
-	// unconditional refusal the direct DELETE above does — sweeping
-	// communication_review will abort on the first row once an instruction is
-	// ever attached to one, because this path runs as the application role
-	// and cannot disable the trigger the way scripts/seed-reset.sql's own
-	// replica-mode session can (that script clears the same orphan risk with
-	// its own explicit DELETE, the same way it already does for
-	// activity_retention_evidence). Filed as margince#5287 (needs a product
-	// decision: whether a directed-send decision should outlive a reset the
-	// way this table's own preservation already says, in which case
-	// communication_review needs the same preservation, or whether the reset
-	// is entitled to clear it, in which case the trigger needs the
-	// row-conditional shape activity_retention_evidence's own guard has).
+	// A directed-send decision, on the same footing as activity_retention_evidence
+	// above. The row goes only with the review it decided, through the FK's
+	// CASCADE, and its guard refuses every other delete. `communication_review`
+	// is swept, so a reset clears these rows. Preserved here means "not a
+	// target", never "kept". What a reset keeps of the decision is its audit_log row.
 	"communication_instruction": true,
 	// A project's health history (migration 1789170100), on the same footing
 	// as activity_retention_evidence above: the row goes only with the
@@ -259,10 +240,10 @@ func clearWorkspaceOutbox(ctx context.Context, tx pgx.Tx) error {
 // streams are purged are re-published seconds later into streams that were just
 // emptied, and a subscriber then works events against rows the sweep is deleting.
 //
-// It narrows the window rather than closing it. The relay claims a batch FOR
-// UPDATE SKIP LOCKED, so this DELETE waits on whatever is in flight — but that
-// batch has already XADDed, and rows any concurrent request commits afterwards
-// still reach the bus. The residual is one relay batch wide, not seconds wide.
+// It narrows the window rather than closing it. An event a request commits
+// after this DELETE and before the sweep survives the reset and names a row the
+// sweep deletes. Its consumers answer events.ErrUnactionable for the missing
+// record, so the subscriber acks it once instead of retrying it forever.
 //
 // Running in its own transaction has a price the sweep's did not: a reset that
 // fails later has already dropped this workspace's staged events, and they are

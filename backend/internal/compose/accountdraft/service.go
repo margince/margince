@@ -18,11 +18,13 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/company360"
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -50,6 +52,8 @@ type Request struct {
 	Intent    string
 	// RewriteOf is the draft the composer is showing; empty is a first draft.
 	RewriteOf string
+	// Language is the language the caller chose, Unknown to read it from the account.
+	Language textlang.Lang
 	// Envelope is the correspondence this draft opens: the language it must be
 	// written in, the current time, and who is writing it. Resolved by the
 	// service, never by the model.
@@ -87,6 +91,14 @@ type Service struct {
 	// no pool and no transaction of its own, so the reader is injected rather
 	// than built here.
 	emailRows briefevidence.Reader
+	// loggedTouches reads the newest note or past meeting past the timeline page.
+	loggedTouches draftcore.LoggedTouchReader
+}
+
+// WithLoggedTouches binds the read of the newest logged touch on the account.
+func (s *Service) WithLoggedTouches(reader draftcore.LoggedTouchReader) *Service {
+	s.loggedTouches = reader
+	return s
 }
 
 // WithEmailSummaries binds the reader that opens a cited message, so a reason
@@ -143,14 +155,32 @@ func (s *Service) WithEnvelope(resolver *draftfloor.Resolver) *Service {
 // account we have corresponded with for a year that we are writing for the
 // first time, which is as false as the "just following up" this program set out
 // to remove, only in the other direction.
-func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Company360, req Request) draftfloor.Envelope {
+func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Company360, req Request) (draftfloor.Envelope, error) {
 	// The account's own correspondence, already bounded and scoped by the view.
 	// No stored language: an account history is many messages, and the language
 	// of whichever one sorted first is not the language of the exchange.
 	zone := s.envelope.Zone(ctx)
+	// The recipient's own notes and meetings, as the view keeps the rows they are a party to.
+	recipient, err := ids.ParseAs[ids.ContactKind](req.ContactID)
+	if err != nil {
+		return draftfloor.Envelope{}, err
+	}
+	logged, err := draftcore.WithNewestLogged(ctx, s.loggedTouches,
+		draftcore.LoggedOn{RecordType: "contact", ID: recipient.UUID, ProjectID: req.ProjectID}, s.envelope.Now(), nil)
+	if err != nil {
+		return draftfloor.Envelope{}, err
+	}
+	// An unreadable roster leaves no register, and the draft reads the thread.
+	var stored greetingregister.Register
+	if addressee, err := findContact(view, req.ContactID); err == nil {
+		stored = greetingregister.Of(addressee.GreetingRegister)
+	}
 	return s.envelope.Resolve(ctx,
-		draftfloor.Written{Thread: languageEvidence(view, s.envelope.Now(), zone), Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject},
-		ConversationState(view, s.envelope.Now(), zone)).InZone(zone)
+		draftfloor.Written{
+			Chosen: req.Language, Greeting: stored, Thread: languageEvidence(view, s.envelope.Now(), zone),
+			Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject,
+		},
+		ConversationState(view, s.envelope.Now(), zone, logged...)).InZone(zone), nil
 }
 
 // NewService binds the draft to the composite read it is grounded in and the
@@ -158,6 +188,24 @@ func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Company360,
 // model, and the deterministic floor is the answer.
 func NewService(view Assembler, lane Completer) *Service {
 	return &Service{view: view, lane: lane, envelope: draftfloor.NewResolver()}
+}
+
+// ViewOptions is the 360 read one draft is folded from. The timeline and the
+// last-touch dates keep only rows the recipient is a party to, and the open
+// tasks only theirs. The timeline also keeps only rows a human wrote.
+//
+// The recipient narrowing is a privacy rule. A colleague's mail to us
+// from the same company is not the recipient's conversation. A folded item does
+// not say who wrote it, so the model cannot keep it out by itself.
+func ViewOptions(req Request) (company360.AssembleOptions, error) {
+	recipient, err := ids.ParseAs[ids.ContactKind](req.ContactID)
+	if err != nil {
+		return company360.AssembleOptions{}, fieldError("contact_id",
+			"that contact is not a contact you can see at this company")
+	}
+	return company360.AssembleOptions{
+		ProjectID: req.ProjectID, WrittenByHumanOnly: true, PartyContactID: &recipient,
+	}, nil
 }
 
 // Draft writes one email, and names the records it was written from so a
@@ -174,11 +222,17 @@ func (s *Service) Draft(
 	// account they cannot read refuses before a word is written, a contact
 	// or deal they cannot see is not in the view to be found, and a project
 	// they cannot see refuses the scoped read itself (activities.RequireProjectScope).
-	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{ProjectID: req.ProjectID, WrittenByHumanOnly: true})
+	opts, err := ViewOptions(req)
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
-	req.Envelope = s.envelopeFor(ctx, view, req)
+	view, err := s.view.AssembleScoped(ctx, companyID, opts)
+	if err != nil {
+		return crmcontracts.CompanyEmailDraft{}, nil, err
+	}
+	if req.Envelope, err = s.envelopeFor(ctx, view, req); err != nil {
+		return crmcontracts.CompanyEmailDraft{}, nil, err
+	}
 	in, err := FromView(view, req)
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
@@ -230,6 +284,7 @@ func wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang strin
 		out.To = &to
 	}
 	out.AiDisclosure = draftfloor.AIProvenanceNoticeFor(aiWritten, textlang.Lang(lang))
+	out.Language = draftfloor.Reported[crmcontracts.CompanyEmailDraftLanguage](textlang.Lang(lang))
 	return out
 }
 

@@ -1,0 +1,9 @@
+{
+  "verb": "annotate_brief",
+  "checks": [
+    "deal.read"
+  ],
+  "takes": [
+    "brief_item"
+  ]
+}

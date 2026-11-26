@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -48,7 +49,7 @@ func (m refusingMailbox) SendEmail(context.Context, connector.Auth, connector.Em
 	return connector.SendReceipt{}, nil
 }
 
-func (m refusingMailbox) Resolve(context.Context, ids.UserID, string) (connector.EmailSender, connector.Auth, []string, error) {
+func (m refusingMailbox) Resolve(context.Context, ids.UserID, string, *ids.UUID) (connector.EmailSender, connector.Auth, []string, error) {
 	return m, connector.Auth{}, nil, nil
 }
 
@@ -69,7 +70,7 @@ func TestErasingASubjectNeutralizesTheirQueuedSend(t *testing.T) {
 	queued := seedDelivery(t, e, "9 years", "Queued for the subject",
 		"the words still waiting to go out", "pending", mailRecipientEmail, contact)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contact, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 

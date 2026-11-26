@@ -11,13 +11,81 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": true,
+  "stamp": {
+    "scenario": "0cfb69b78546b245",
+    "tools": "9755aa7563478025",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "1796d51361de08d5",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T05:36:39Z",
+    "graded_commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "graded_at": "2026-11-25T05:36:39Z"
+  },
   "usage": {
-    "input_tokens": 22,
-    "output_tokens": 3788,
-    "cache_creation_input_tokens": 10270,
-    "cache_read_input_tokens": 714625,
+    "input_tokens": 18,
+    "output_tokens": 2728,
+    "cache_creation_input_tokens": 84875,
+    "cache_read_input_tokens": 620511,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1505
+    "cost_usd": 0.4289
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "list_records",
+        "read_record"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "list_records",
+        "read_deal_lines",
+        "read_details",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 7,
+      "min": 6,
+      "max": 8
+    },
+    "turns": {
+      "median": 8,
+      "min": 7,
+      "max": 9
+    },
+    "refused": {
+      "median": 2.5,
+      "min": 2,
+      "max": 3
+    },
+    "prompt_tokens": {
+      "median": 352702,
+      "min": 312436,
+      "max": 392968
+    },
+    "output_tokens": {
+      "median": 1364,
+      "min": 1191,
+      "max": 1537
+    },
+    "duration_ms": {
+      "median": 13223.5,
+      "min": 10402,
+      "max": 16045
+    }
   }
 }

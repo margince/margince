@@ -1,0 +1,7 @@
+{
+  "verb": "log_activity",
+  "checks": [
+    "activity.create",
+    "activity.read"
+  ]
+}

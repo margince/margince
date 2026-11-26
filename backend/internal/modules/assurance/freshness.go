@@ -55,8 +55,7 @@ func (s *Store) MarkInputsChanged(ctx context.Context, tx pgx.Tx, subjects []Cha
 		  FROM unnest($1::text[], $2::uuid[]) AS changed(kind, subject_id)
 		ON CONFLICT (subject_kind, subject_id) DO UPDATE
 		SET generation = GREATEST(assurance_input_change.generation, EXCLUDED.generation),
-		    changed_at = now(),
-		    updated_at = now()`, kinds, subjectIDs); err != nil {
+		    changed_at = now()`, kinds, subjectIDs); err != nil {
 		return fmt.Errorf("assurance: recording which inputs changed: %w", err)
 	}
 	return nil
@@ -130,6 +129,10 @@ type Freshness struct {
 	WorkspaceChanged bool
 	// FirstChangedAt is the oldest unread change, nil when there is none.
 	FirstChangedAt *time.Time
+	// ChangedDealOwners and ChangedSignalOwners are the seats behind the two
+	// counts.
+	ChangedDealOwners   []ids.UUID
+	ChangedSignalOwners []ids.UUID
 }
 
 // OutOfDate reports whether any input moved after the reading.
@@ -148,13 +151,19 @@ func readFreshness(ctx context.Context, tx pgx.Tx) (Freshness, error) {
 	}
 	out := Freshness{Known: true}
 	if err := tx.QueryRow(ctx, `
-		SELECT count(*) FILTER (WHERE subject_kind = 'deal'),
-		       count(*) FILTER (WHERE subject_kind = 'signal'),
-		       coalesce(bool_or(subject_kind = 'workspace'), false),
-		       min(changed_at)
-		  FROM assurance_input_change
-		 WHERE generation > $1`, generation).
-		Scan(&out.ChangedDeals, &out.ChangedSignals, &out.WorkspaceChanged, &out.FirstChangedAt); err != nil {
+		SELECT count(*) FILTER (WHERE c.subject_kind = 'deal'),
+		       count(*) FILTER (WHERE c.subject_kind = 'signal'),
+		       coalesce(bool_or(c.subject_kind = 'workspace'), false),
+		       min(c.changed_at),
+		       coalesce(array_agg(DISTINCT d.owner_id) FILTER (WHERE d.owner_id IS NOT NULL), '{}'),
+		       coalesce(array_agg(DISTINCT co.owner_id) FILTER (WHERE co.owner_id IS NOT NULL), '{}')
+		  FROM assurance_input_change c
+		  LEFT JOIN deal d ON c.subject_kind = 'deal' AND d.id = c.subject_id
+		  LEFT JOIN signal s ON c.subject_kind = 'signal' AND s.id = c.subject_id
+		  LEFT JOIN company co ON co.id = s.resolved_company_id
+		 WHERE c.generation > $1`, generation).
+		Scan(&out.ChangedDeals, &out.ChangedSignals, &out.WorkspaceChanged, &out.FirstChangedAt,
+			&out.ChangedDealOwners, &out.ChangedSignalOwners); err != nil {
 		return Freshness{}, fmt.Errorf("assurance: reading what changed since the check: %w", err)
 	}
 	return out, nil

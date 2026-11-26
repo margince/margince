@@ -3,23 +3,27 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { CommunicationStatus } from "../design-system/communicationstatus";
+import { Row } from "../design-system/stack";
+import { footerFindingsText } from "../format/footerfindings";
 import { formatNumber } from "../format/format";
 import {
   type RefusalKind,
-  sendPermissionReasonKey,
+  type RefusalSurface,
+  refusalSentenceKey,
 } from "../format/sendpermissionreason";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
-  decidingRefusal,
   previewStatus,
   type RefusedRecipient,
-  refusalOf,
   refusedStatus,
   remedyCategoryOf,
   type SendStatus,
 } from "../lib/sendstatus";
+import { CitedLaws } from "./citedlaw";
+import { lawsOf } from "./citedprovisions";
+import { CountryQuestion } from "./countryquestion";
+import { LawfulBasisCallout } from "./lawfulbasiswarning";
 
 // What the engine decided about this message, said where the rep is writing it.
 //
@@ -34,7 +38,7 @@ import {
 // nobody may lift invites a support ticket and teaches reps that the product
 // argues with them.
 //
-// Name what is missing. "Choose the deal for this follow-up" and "she
+// Name what is missing. "This follow-up has no open deal" and "she
 // asked us to stop" are different sentences and must never blur into "no
 // consent". A refusal that does not say whose it is reads as arbitrary.
 
@@ -87,14 +91,12 @@ export function decidingRecipient(
   // a deny is recorded and the send still goes. Drawing the verdict would talk
   // a rep out of lawful mail.
   const refusing = preview.recipients.filter((r) => r.would_refuse);
-  // The same rule picks the deciding refusal after a refused Send.
-  const refusals = refusing.map(refusalOf);
-  const deciding = decidingRefusal(refusals);
-  const recipient = deciding && refusing[refusals.indexOf(deciding)];
+  // The server ranks refusals, so the first is the deciding one, as it is
+  // after a refused Send.
+  const recipient = refusing[0];
   if (!recipient) return { state: "allowed" };
-  // `can_be_overruled` and not `decided_by`, because the two disagree: a dead
-  // mailbox and a rolling frequency cap are the engine's own reading, and
-  // absolute. Absent means the server did not say, which is not a yes.
+  // `can_be_overruled` and not `decided_by`: a frequency cap is the engine's
+  // own reading, yet one message may pass it with a reason. Absent is not a yes.
   return {
     state: recipient.can_be_overruled ? "unproven" : "refused",
     recipient,
@@ -118,8 +120,7 @@ type Answer = Readonly<{
 
 /**
  * The one status a surface draws for the message: the refused Send when there
- * is one, else the preview. SendPermission and SendMark both read this, so the
- * mark beside Send never says ready while the body explains a refusal.
+ * is one, else the preview.
  */
 export function sendStatus({
   preview,
@@ -131,10 +132,26 @@ export function sendStatus({
   return previewStatus({ preview, asking, unanswered });
 }
 
+/**
+ * A refusal a recorded reason can pass reads as a warning. One nothing lifts,
+ * such as the recipient's own stop, reads as a danger, under "Message cannot be sent".
+ */
+function calloutLook(kind: RefusalKind, overrulable: boolean) {
+  const hardStop = kind === "restricted" && !overrulable;
+  const title: MessageKey =
+    kind === "restricted" && !hardStop
+      ? "sendPermission.stopWithReason"
+      : TITLE[kind];
+  return hardStop
+    ? { tone: "danger" as const, icon: ShieldAlert, title }
+    : { tone: "warning" as const, icon: ShieldQuestion, title };
+}
+
 const TITLE: Record<RefusalKind, MessageKey> = {
   missingContext: "sendPermission.missingContext",
   missingEvidence: "sendPermission.unproven",
   missingPermission: "sendPermission.missingPermission",
+  missingFooter: "sendPermission.footer.title",
   restricted: "sendPermission.refused",
 };
 
@@ -147,16 +164,7 @@ const TITLE: Record<RefusalKind, MessageKey> = {
  * grown by accident, and two spellings of a consent surface means one screen
  * tells a rep they may send while another says they may not, about one message.
  */
-export function SendPermission({
-  preview,
-  unanswered = false,
-  asking = false,
-  refusal,
-  onOverride,
-  override,
-  picksReason = false,
-  namesRecipients = false,
-}: Readonly<{
+type SendPermissionProps = Readonly<{
   preview: Preview | undefined;
   /**
    * The question is in flight. Drawn rather than left silent, because silence
@@ -184,13 +192,48 @@ export function SendPermission({
   override?: ReactNode;
   /** The surface also draws the message's own reason-for-contact pick. */
   picksReason?: boolean;
+  /** The message was checked with no reason for contact of its own. */
+  unclaimed?: boolean;
   /** The viewer wrote every address, so the refused one may be named. */
   namesRecipients?: boolean;
-}>) {
+  /**
+   * Given where Send waits for the answer, so a failed check is asked again
+   * here rather than by a press that cannot be made.
+   */
+  onRecheck?: () => void;
+}>;
+
+/**
+ * The engine's answer for this message, and the warning a recipient with no
+ * lawful basis on record owes. The warning stands even when the message may go.
+ */
+export function SendPermission(props: SendPermissionProps) {
+  return (
+    <>
+      <LawfulBasisCallout preview={props.preview} />
+      <CountryQuestion preview={props.preview} />
+      <PermissionNotice {...props} />
+    </>
+  );
+}
+
+function PermissionNotice({
+  preview,
+  unanswered = false,
+  asking = false,
+  refusal,
+  onOverride,
+  override,
+  picksReason = false,
+  unclaimed = false,
+  namesRecipients = false,
+  onRecheck,
+}: SendPermissionProps) {
   const t = useT();
+  const { locale } = useLocale();
   const status = sendStatus({ preview, asking, unanswered, refusal });
   if (status.kind === "unavailable") {
-    return <p role="status">{t("sendPermission.unanswered")}</p>;
+    return <UncheckedNotice onRecheck={onRecheck} />;
   }
   if (status.kind === "checking") {
     return <p role="status">{t("sendPermission.checking")}</p>;
@@ -207,38 +250,120 @@ export function SendPermission({
         <Button onClick={onOverride}>{t("sendPermission.sayWhy")}</Button>
       ) : undefined))
     : undefined;
-  const surface = { recordable: Boolean(control), picksReason };
-  const deciding = status.deciding;
+  const surface = { recordable: Boolean(control), picksReason, unclaimed };
+  const look = calloutLook(
+    status.kind,
+    status.deciding?.canBeOverruled === true,
+  );
   return (
     <Callout
-      tone={status.kind === "restricted" ? "danger" : "warning"}
+      tone={look.tone}
       kind={refusal ? "outcome" : "standing"}
       // `status` while the rep writes, so one who does not hear the answer
       // does not meet it at the Send button. A refused Send is an alert.
       live={refusal ? "alert" : "status"}
-      icon={status.kind === "restricted" ? ShieldAlert : ShieldQuestion}
-      title={t(TITLE[status.kind])}
+      icon={look.icon}
+      title={t(look.title)}
       actions={control ?? refusal?.remedies}
     >
-      {/* The hint says what the rep can DO, so it changes with what is on
-          offer: with the control, how to answer; without it, what happens if
-          the message goes as it stands. */}
-      <p>
-        {t(
-          sendPermissionReasonKey(
-            deciding?.reasonCode,
-            surface,
-            deciding && remedyCategoryOf(deciding),
-          ),
-        )}
-      </p>
-      <AffectedRecipients status={status} named={namesRecipients} />
+      {status.refused.some((item) => item.footerFindings?.length) ? (
+        <p>
+          {footerFindingsText(
+            [
+              ...new Set(
+                status.refused.flatMap((item) => item.footerFindings ?? []),
+              ),
+            ],
+            t,
+            locale,
+          )}
+        </p>
+      ) : null}
+      <CitedLawsOf refused={status.refused} />
+      <RefusalDetail
+        status={status}
+        named={namesRecipients}
+        surface={surface}
+      />
     </Callout>
   );
 }
 
-// Which recipients the explanation is about. A message to several recipients
-// must not read as if one recipient's refusal were everybody's.
+// The law each refusal and its footer findings cite, after the facts.
+function CitedLawsOf({
+  refused,
+}: Readonly<{ refused: readonly RefusedRecipient[] }>) {
+  const provisions = refused.flatMap((item) => [
+    ...lawsOf(item),
+    ...(item.footerFindings ?? []).flatMap(lawsOf),
+  ]);
+  if (!provisions.some(Boolean)) return null;
+  return (
+    <p>
+      <CitedLaws provisions={provisions} />
+    </p>
+  );
+}
+
+// A check that did not complete. Where Send waits on it, it is asked again here.
+function UncheckedNotice({ onRecheck }: Readonly<{ onRecheck?: () => void }>) {
+  const t = useT();
+  if (!onRecheck) {
+    return <p role="status">{t("sendPermission.unanswered")}</p>;
+  }
+  return (
+    <Row>
+      <p role="status">{t("sendPermission.unansweredHeld")}</p>
+      <Button onClick={onRecheck}>{t("sendPermission.recheck")}</Button>
+    </Row>
+  );
+}
+
+// What the refusal means and whom it is about. The hint names the rep's next
+// step, so it follows what is on offer. With the control it says how to answer.
+// Without it, it says what happens if the message goes as it stands.
+// When several recipients the viewer wrote are refused, each gets its own line,
+// so one refusal never reads as everybody's.
+function RefusalDetail({
+  status,
+  named,
+  surface,
+}: Readonly<{
+  status: SendStatus;
+  named: boolean;
+  surface: RefusalSurface;
+}>) {
+  const t = useT();
+  const hintFor = (refused: RefusedRecipient | undefined) =>
+    t(
+      refusalSentenceKey(
+        refused?.reasonCode,
+        surface,
+        refused && remedyCategoryOf(refused),
+      ),
+    );
+  if (named && status.refused.length > 1) {
+    return (
+      <ul className="t-caption">
+        {status.refused.map((refused) => (
+          <li key={refused.address}>
+            {t("sendPermission.recipientLine", {
+              address: refused.address,
+              reason: hintFor(refused),
+            })}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  return (
+    <>
+      <p>{hintFor(status.deciding)}</p>
+      <AffectedRecipients status={status} named={named} />
+    </>
+  );
+}
+
 function AffectedRecipients({
   status,
   named,
@@ -246,17 +371,10 @@ function AffectedRecipients({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const others = status.refusing - 1;
   if (named && status.deciding) {
-    const address = status.deciding.address;
     return (
       <p className="t-caption">
-        {others > 0
-          ? plural("sendPermission.appliesToAndMore", others, {
-              address,
-              count: formatNumber(others, locale),
-            })
-          : t("sendPermission.appliesTo", { address })}
+        {t("sendPermission.appliesTo", { address: status.deciding.address })}
       </p>
     );
   }
@@ -271,52 +389,4 @@ function AffectedRecipients({
     );
   }
   return null;
-}
-
-/**
- * SendMark is the quiet half of the answer: a mark that says the engine has
- * looked and found nothing wrong.
- *
- * SendPermission draws a Callout for the states a rep has to act on and
- * NOTHING for the state they do not. That silence was deliberate — the
- * overwhelming majority of sends are allowed and none should cost attention —
- * but it is also what the composer showed while it was still asking, and before
- * anybody had asked at all. Three situations, one blank space, and no way to
- * tell "checked and fine" from "not asked yet".
- *
- * So the allowed state gets a mark and the other two keep their Callout: this
- * renders beside the Send button, where the decision is made, and the Callout
- * stays in the body where an explanation belongs. A rep who never looks at the
- * mark loses nothing, which is the test a quiet signal has to pass.
- *
- * It draws NOTHING when there is no question yet. A mark over an empty form
- * would claim an answer about a message nobody has addressed.
- */
-export function SendMark({
-  preview,
-  asking = false,
-  unanswered = false,
-  refusal,
-  blocked = false,
-}: Answer &
-  Readonly<{
-    /** Something the surface knows will stop the send, such as an empty field. */
-    blocked?: boolean;
-  }>) {
-  const t = useT();
-  const { kind } = sendStatus({ preview, asking, unanswered, refusal });
-  // Every other state is the Callout's: a sentence a rep has to read does not
-  // belong in a glyph beside a button. A blocked form makes no passed claim.
-  if (kind !== "checking" && (kind !== "ready" || blocked)) return null;
-  const label = t(
-    kind === "checking" ? "sendPermission.checking" : "sendPermission.ready",
-  );
-  return (
-    <CommunicationStatus
-      state={kind}
-      scope="current_message"
-      label={label}
-      name={`${t("sendPermission.markName")}: ${label}`}
-    />
-  );
 }

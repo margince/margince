@@ -9,6 +9,7 @@ import {
 import { contactFirstName } from "./contactfirstname";
 import { ContactHowItStands } from "./contacthowitstands";
 import { ContactMemory } from "./contactmemory";
+import { ContactOpenTasks } from "./contactopentasks";
 import { ContactToday } from "./contacttoday";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -46,7 +47,8 @@ export function ContactOverview({
         onOpenTasks={openQueue}
         onAddTask={onAddTask}
       />
-      <ContactHowItStands view={view} />
+      <ContactOpenTasks view={view} onAllTasks={openQueue} />
+      <ContactHowItStands view={view} onOpenTab={onOpenTab} />
       <div className="pe-overview-grid">
         <div className="pe-overview-column">
           <ContactCommitmentsCard

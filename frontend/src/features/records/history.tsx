@@ -1,7 +1,10 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { SegmentedControl } from "../../design-system/atoms";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import type { EntityKind } from "../../lib/entity";
+import { invalidateRecord } from "../../lib/recordwritekeys";
 
 // The record-level entry point (B-EP09.x): a SegmentedControl toggling
 // between the plain-language change list and the per-field diff timeline —
@@ -12,11 +15,8 @@ import type { EntityKind } from "../../lib/entity";
 // here because "./history" is the name every record screen already reaches
 // for, and a split that renamed the door would touch six screens to say
 // nothing.
-export {
-  RecordHistory,
-  type RecordRestore,
-  useRecordHistory,
-} from "./historyentries";
+export { useRecordHistory } from "../../lib/recordhistory";
+export { RecordHistory, type RecordRestore } from "./historyentries";
 export {
   changeTimeline,
   FieldHistoryTimeline,
@@ -85,5 +85,34 @@ export function RecordHistoryTab({
         <FieldHistoryTimeline kind={kind} id={id} currency={currency} />
       )}
     </div>
+  );
+}
+
+// An archived record's page body: its whole history, with the restore that
+// undoes the archive.
+export function ArchivedRecordHistory({
+  kind,
+  id,
+  version,
+}: Readonly<{
+  kind: EntityKind;
+  id: string;
+  version: RecordRestore["version"];
+}>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  return (
+    <Panel title={t("record.fullHistory")}>
+      <PanelBody>
+        <RecordHistoryTab
+          kind={kind}
+          id={id}
+          restore={{
+            version,
+            onRestored: () => invalidateRecord(queryClient, kind, id),
+          }}
+        />
+      </PanelBody>
+    </Panel>
   );
 }

@@ -143,7 +143,7 @@ func TestAnUndatedAcceptedFollowUpShowsWithTheReadersTasks(t *testing.T) {
 	if err != nil || !created || task.DueAt != nil {
 		t.Fatalf("accepting the suggestion: created=%t due=%v err=%v, want one undated task", created, task.DueAt, err)
 	}
-	in, ok := openTasksDueBy(reader, at, at.Add(24*time.Hour), attention.TasksMine, ids.UUID{}, nil)
+	in, ok := openTasksDueBy(reader, at, at.Add(24*time.Hour), attention.TasksMine, "", ids.UUID{}, nil)
 	if !ok {
 		t.Fatal("no reader to answer for")
 	}

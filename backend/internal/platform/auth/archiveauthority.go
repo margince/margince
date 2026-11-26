@@ -36,10 +36,14 @@ func liveWrites(table string) func(context.Context, pgx.Tx, principal.Principal,
 		if err != nil {
 			return nil, err
 		}
-		for id := range archived {
-			delete(writable, id)
-		}
+		excludeArchived(writable, archived)
 		return writable, nil
+	}
+}
+
+func excludeArchived(writable, archived map[ids.UUID]bool) {
+	for id := range archived {
+		delete(writable, id)
 	}
 }
 
@@ -47,10 +51,13 @@ func activityWrites(ctx context.Context, tx pgx.Tx, _ principal.Principal, rowID
 	return ActivityWritableSubset(ctx, tx, rowIDs)
 }
 
-// ActivityArchive admits the author of a hand-logged note or task. Captured
-// correspondence and a colleague's notes keep needing activity.delete.
+// ActivityArchive admits the author of a note, task, call or meeting logged by
+// hand that no provider import backs. Sent mail and messages are what a
+// customer received, so they, captured rows and a colleague's entries keep
+// needing activity.delete.
 var ActivityArchive = ArchiveRule{object: "activity", table: "activity", writable: activityWrites, own: func(alias string, me int, arg func(any) int) string {
-	return fmt.Sprintf(`(%[1]s.kind IN ('note', 'task') AND %[1]s.source = $%[2]d AND %[3]s)`,
+	return fmt.Sprintf(`(%[1]s.kind IN ('note', 'task', 'call', 'meeting') AND %[1]s.source = $%[2]d
+	  AND NOT EXISTS (SELECT 1 FROM capture_import imported WHERE imported.activity_id = %[1]s.id) AND %[3]s)`,
 		alias, arg(provenance.RecordSourceManual), ActivityAuthorSQL(alias, me, arg))
 }}
 
@@ -99,8 +106,12 @@ func ArchiveRuleFor(table string) (ArchiveRule, bool) {
 // RequireArchiveGrant is the up-front half of EnsureArchivable: it refuses a
 // caller who could archive no row of the table at all, before a transaction.
 func RequireArchiveGrant(ctx context.Context, r ArchiveRule) error {
-	return RequireAny(ctx, r.object, principal.ActionDelete, principal.ActionUpdate)
+	return RequireAny(ctx, r.object, archiveGrant...)
 }
+
+// archiveGrant is what an archive rule admits up front: delete, or update
+// for the row arm the rule asks later.
+var archiveGrant = []principal.Action{principal.ActionDelete, principal.ActionUpdate}
 
 // EnsureArchivable admits the archive of one row under r. It answers the
 // object grant and the row's own arm only. The caller still asks the row write
@@ -136,13 +147,25 @@ func ArchivableSubset(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []id
 	if err != nil {
 		return nil, err
 	}
-	canDelete := Allows(ctx, r.object, principal.ActionDelete)
-	if !seatAdmitsWrites(p) || len(rowIDs) == 0 || (!canDelete && !Allows(ctx, r.object, principal.ActionUpdate)) {
+	admitted, canDelete := archiveAdmission(ctx, p, r)
+	if !admitted || len(rowIDs) == 0 {
 		return map[ids.UUID]bool{}, nil
 	}
 	writable, err := r.writable(ctx, tx, p, rowIDs)
-	if err != nil || canDelete {
-		return writable, err
+	if err != nil {
+		return nil, err
+	}
+	return archivableFromLive(ctx, tx, r, writable, canDelete)
+}
+
+func archiveAdmission(ctx context.Context, p principal.Principal, r ArchiveRule) (admitted, canDelete bool) {
+	canDelete = Allows(ctx, r.object, principal.ActionDelete)
+	return seatAdmitsWrites(p) && (canDelete || Allows(ctx, r.object, principal.ActionUpdate)), canDelete
+}
+
+func archivableFromLive(ctx context.Context, tx pgx.Tx, r ArchiveRule, writable map[ids.UUID]bool, canDelete bool) (map[ids.UUID]bool, error) {
+	if canDelete {
+		return writable, nil
 	}
 	candidates := make([]ids.UUID, 0, len(writable))
 	for id, may := range writable {

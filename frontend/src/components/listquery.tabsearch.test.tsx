@@ -13,6 +13,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import {
   LIST_PAGE_SIZES,
   type ListPage,
@@ -76,6 +77,7 @@ function mount(
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">

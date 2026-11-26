@@ -19,8 +19,14 @@ import (
 
 // UpdateActivityInput is a sparse activity edit. A nil field stays as stored.
 type UpdateActivityInput struct {
+	FollowUpTask       *crmcontracts.ActivityFollowUpTask
+	DueIntent          *crmcontracts.IntentTime
+	RemindIntent       *crmcontracts.IntentTime
+	MeetingIntent      *crmcontracts.IntentTime
 	DealFiling         *crmcontracts.ActivityDealFiling
 	recordedAt         *time.Time
+	sourceActivityID   *ids.UUID
+	recordsMeeting     bool
 	calendarSettlement bool
 	// recordZone dates a stored instant made a day; the store sets it (WithRecordZone).
 	recordZone RecordZone
@@ -37,6 +43,10 @@ type UpdateActivityInput struct {
 	// DueHasTime says whether DueAt names a time of day. Sent only with DueAt;
 	// a DueAt without it is a day (admitPatchTime).
 	DueHasTime *bool
+	// TaskType retypes a task; refused on another kind.
+	TaskType *crmcontracts.TaskType
+	// AIAssisted true marks the words as AI-assisted; the mark is never lifted.
+	AIAssisted *bool
 	RemindAt   *time.Time
 	AssigneeID *ids.UserID
 	IsDone     *bool
@@ -53,6 +63,11 @@ type UpdateActivityInput struct {
 	// are the active fields they are checked and written against.
 	CustomFields  map[string]any
 	customColumns []fieldcatalog.Column
+	// doneAtAnyVersion lets a caller's Done land on a task already done at any
+	// version. A machine completion leaves it off: its skew says it did not flip the task.
+	doneAtAnyVersion bool
+	// confirmedDue admits a due date outside the window that a human kept when asked.
+	confirmedDue bool
 }
 
 // UpdateActivity keeps an authorized edit and its audit in one transaction.
@@ -60,17 +75,26 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	at := s.now()
-	in.recordedAt, in.recordZone = &at, s.recordZone
-	if err := s.readPatchColumns(ctx, &in); err != nil {
+	if err := refuseMarkByMachine(ctx, in.AIAssisted != nil && *in.AIAssisted); err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	at := s.now()
+	in.recordedAt, in.recordZone = &at, s.recordZone
 	var out crmcontracts.Activity
 	err := s.txRetryingLockCycles(ctx, pgx.ReadCommitted, func(tx pgx.Tx) error {
+		if err := s.readPatchColumns(ctx, tx, &in); err != nil {
+			return err
+		}
 		var err error
 		out, err = updateActivityInTx(ctx, tx, id, in)
 		if err == nil {
 			out, err = s.fileUpdatedActivity(ctx, tx, out, in)
+		}
+		if err == nil && in.MeetingStatus != nil {
+			err = s.askLeadsToQualifyTx(ctx, tx, out)
+		}
+		if err == nil && in.FollowUpTask != nil {
+			err = s.writeOutcomeFollowUp(ctx, tx, out, *in.FollowUpTask)
 		}
 		return err
 	})
@@ -99,12 +123,16 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 // never a withheld one with its subject and body nulled out.
 func activityColumnImage(a crmcontracts.Activity) map[string]any {
 	return map[string]any{
-		"subject":              derefOrNil(a.Subject),
+		fieldSubject:           derefOrNil(a.Subject),
 		fieldBody:              derefOrNil(a.Body),
 		auditFieldOccurredAt:   a.OccurredAt,
 		fieldOccurredPrecision: string(a.OccurredPrecision),
 		fieldDurationSeconds:   derefOrNil(a.DurationSeconds),
 		"due_at":               derefOrNil(a.DueAt),
+		"due_intent":           derefOrNil(a.DueIntent),
+		"remind_intent":        derefOrNil(a.RemindIntent),
+		fieldMeetingIntent:     derefOrNil(a.MeetingIntent),
+		"source_activity_id":   derefOrNil(a.SourceActivityId),
 		fieldDueHasTime:        derefOrNil(a.DueHasTime),
 		"remind_at":            derefOrNil(a.RemindAt),
 		"assignee_id":          derefOrNil(a.AssigneeId),
@@ -117,6 +145,8 @@ func activityColumnImage(a crmcontracts.Activity) map[string]any {
 		"meeting_status": derefOrNil(a.MeetingStatus),
 		// How a call ended: writable on the patch, so the diff must see it.
 		fieldCallOutcome: derefOrNil(a.CallOutcome),
+		fieldTaskType:    derefOrNil(a.TaskType),
+		fieldAIAssisted:  derefOrNil(a.AiAssisted),
 	}
 }
 

@@ -1,11 +1,14 @@
 # CASE 91 — Adding a stage shapes the pipeline. It moves no deal, so it is change_settings and not change_state.
 name: case91_add_a_review_stage
+title: Add a review stage to the pipeline
 criteria: [1]
 writes: true
 
 prompt: |
   We now run a security review on every deal. Add a stage called Security review to the sales pipeline, right after Qualified.
 
+# No end-state form reads a pipeline's stages, so the new stage is held on the
+# call that creates it.
 must_call:
   - change_settings
 
@@ -16,6 +19,8 @@ must_call_matching:
   - 'change_settings~Security review'
 
 must_not_call_with:
+  - move_deal_pipeline~.
+  - create_activity_review_template~.
   - change_state~.
   - progress_deal~.
 

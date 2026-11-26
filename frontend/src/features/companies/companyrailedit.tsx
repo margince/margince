@@ -1,26 +1,26 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useCallback, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 import type { components } from "../../api/schema";
 import {
-  ADDRESS_FIELDS,
   addressFrom,
   companyEditFields,
   mapCompanyUpdate,
   searchCompanyTargets,
 } from "../../components/companyform";
-import type { CreateField, FormRows } from "../../components/create";
-import { joinMultiselectValue } from "../../components/create";
-import { EditRecordModal } from "../../components/edit";
+import {
+  type CreateField,
+  joinMultiselectValue,
+} from "../../components/create";
 import { prefillRowsFromRecord } from "../../components/edit.prefill";
 import { useEntityName } from "../../components/entityref";
+import type { RailEdit } from "../../components/railfield";
 import { saveRecordEdit } from "../../components/recordedit";
-import { EditableValue } from "../../design-system/editablevalue";
+import { type FieldRecord, rawRecord } from "../../components/recordfieldtypes";
 import { useLocale, useT } from "../../i18n";
-import type { Locale } from "../../i18n/locale";
-import { problemMessageOf } from "../../lib/problem";
+import { useIndustryOptions } from "../../lib/industryoptions";
 import { invalidateCompany } from "../../lib/recordwritekeys";
 
 type Company = components["schemas"]["Company"];
@@ -41,54 +41,64 @@ export function useCompanyFieldSave(company: Company) {
   );
 }
 
-// The fields a details row edits in the record's edit form, not a one-field
-// dialog. Each is several inputs (an address, a set of domains) or a search.
-export type CompoundField =
-  | "address"
-  | "domains"
-  | "parent_company_id"
-  | "relationship_types";
-
-function compoundFields(
-  which: CompoundField,
-  company: Company,
-  parentName: string | undefined,
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-): CreateField[] {
-  if (which === "address") {
-    return ADDRESS_FIELDS;
-  }
-  if (which === "parent_company_id") {
-    return [
-      {
-        key: "parent_company_id",
-        label: "history.field.parent_company_id",
-        searchTargets: async (q: string) =>
-          (await searchCompanyTargets(q)).filter(
-            (candidate) => candidate.id !== company.id,
-          ),
-        options: company.parent_company_id
-          ? [
-              {
-                value: company.parent_company_id,
-                label: parentName ?? company.parent_company_id,
-              },
-            ]
-          : [],
-      },
-    ];
-  }
-  return companyEditFields([], false, t, locale).filter(
-    (field) => field.key === which,
-  );
+/** The account's own fields. The owner is not one: it changes through `useCompanyOwnerFlow`. */
+export function useCompanyEdit(company: Company, canEdit: boolean): RailEdit {
+  const t = useT();
+  const { locale } = useLocale();
+  const industries = useIndustryOptions(company.industry);
+  const parent = useEntityName("company", company.parent_company_id);
+  const fields = companyEditFields(
+    [],
+    false,
+    t,
+    locale,
+    company.address?.country,
+  ).flatMap((field): CreateField[] => {
+    if (field.key === "owner_id") return [];
+    if (field.key === "industry") return [{ ...field, options: industries }];
+    // The wire may omit the stage, and a required blank would hold every
+    // other About field hostage to it.
+    if (field.key === "status")
+      return [{ ...field, required: Boolean(company.status) }];
+    return [field];
+  });
+  return {
+    kind: "company",
+    canEdit,
+    record: fieldRecord(company),
+    fields: [...fields, parentField(company, parent.name ?? undefined)],
+    save: (values, rows, opened) =>
+      saveRecordEdit(
+        "company",
+        rawRecord(opened),
+        mapCompanyUpdate(values, rows, openedDomains(opened)),
+      ),
+  };
 }
 
-function fieldRecord(company: Company) {
+function parentField(company: Company, parentName: string | undefined) {
   return {
+    key: "parent_company_id",
+    label: "history.field.parent_company_id",
+    searchTargets: async (q: string) =>
+      (await searchCompanyTargets(q)).filter(
+        (candidate) => candidate.id !== company.id,
+      ),
+    options: company.parent_company_id
+      ? [
+          {
+            value: company.parent_company_id,
+            label: parentName ?? company.parent_company_id,
+          },
+        ]
+      : [],
+  } satisfies CreateField;
+}
+
+function fieldRecord(company: Company): FieldRecord {
+  return {
+    ...company,
     original: company,
-    id: company.id,
-    version: company.version,
     parent_company_id: company.parent_company_id ?? "",
     relationship_types: joinMultiselectValue(company.relationship_types ?? []),
     ...addressFrom(company.address),
@@ -99,95 +109,14 @@ function fieldRecord(company: Company) {
   };
 }
 
-/**
- * A details value that opens a small form: the reading as the trigger, the
- * company's own edit dialog for just that field behind it.
- */
-export function CompoundFieldValue({
-  company,
-  which,
-  label,
-  reading,
-  link,
-  canEdit,
-  readOnlyReason,
-}: Readonly<{
-  company: Company;
-  which: CompoundField;
-  label: string;
-  // What the row shows at rest; absent reads as "Not set".
-  reading?: ReactNode;
-  // The reading is itself a link, which keeps its own action.
-  link?: boolean;
-  canEdit: boolean;
-  readOnlyReason?: string;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const [open, setOpen] = useState(false);
-  const save = useCompanyFieldSave(company);
-  const parent = useEntityName("company", company.parent_company_id);
-  const mutation = useMutation({
-    mutationFn: async ({
-      values,
-      rows,
-      opened,
-    }: {
-      values: Record<string, string>;
-      rows: FormRows;
-      opened: Record<string, unknown>;
-    }) => {
-      const current = prefillRowsFromRecord(
-        [{ key: "domains", type: "repeatable" }],
-        opened,
-      ).domains;
-      await save(
-        mapCompanyUpdate(
-          values,
-          rows,
-          (current ?? []).map((domain) => ({
-            domain: domain.domain ?? "",
-            is_primary: domain.is_primary === "true",
-          })),
-        ),
-      );
-    },
-    onSuccess: () => setOpen(false),
-  });
-  if (!canEdit) {
-    return <span title={readOnlyReason}>{reading ?? t("field.unset")}</span>;
-  }
-  return (
-    <>
-      <EditableValue
-        editLabel={t("inlineChoice.change", { field: label })}
-        placeholder={t("field.unset")}
-        link={link && Boolean(reading)}
-        onEdit={() => {
-          mutation.reset();
-          setOpen(true);
-        }}
-      >
-        {reading}
-      </EditableValue>
-      <EditRecordModal
-        open={open}
-        onClose={() => setOpen(false)}
-        title={label}
-        fields={compoundFields(
-          which,
-          company,
-          parent.name ?? undefined,
-          t,
-          locale,
-        )}
-        record={fieldRecord(company)}
-        pending={mutation.isPending}
-        error={mutation.error ? problemMessageOf(mutation.error, t) : null}
-        onSubmit={(values, rows, opened) =>
-          mutation.mutate({ values, rows: rows ?? {}, opened })
-        }
-      />
-    </>
-  );
+// The domains a save is a replace-set against: the ones the form opened on.
+function openedDomains(opened: FieldRecord) {
+  const rows = prefillRowsFromRecord(
+    [{ key: "domains", type: "repeatable" }],
+    opened,
+  ).domains;
+  return (rows ?? []).map((domain) => ({
+    domain: domain.domain ?? "",
+    is_primary: domain.is_primary === "true",
+  }));
 }

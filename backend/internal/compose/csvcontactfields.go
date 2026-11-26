@@ -106,11 +106,12 @@ func withoutDisagreeingFullName(fields map[string]string) map[string]string {
 }
 
 // withNamePartsOverStoredEmail gives a record still named by its own address the
-// name the row's parts spell. The address is the last rung of contactFullName, a
-// name nobody chose. The store protects anything that is not a join of the stored
-// parts, so the row has to send this one.
+// name its parts spell. The address is the last rung of contactFullName, a name
+// nobody chose. The store protects anything that is not a join of the stored
+// parts, so the row has to send this one. A part the row leaves out keeps its
+// stored value, so a row naming only the first name keeps the last.
 func withNamePartsOverStoredEmail(current map[string]json.RawMessage, fields map[string]string) map[string]string {
-	joined := contacts.JoinNameParts(fields["first_name"], fields["last_name"])
+	joined := contacts.JoinNameParts(namePart(current, fields, "first_name"), namePart(current, fields, "last_name"))
 	stored := textOf(current[fieldFullName])
 	if joined == "" || stored == "" || !strings.EqualFold(stored, textOf(storedPrimaryEmail(current))) {
 		return fields
@@ -118,6 +119,15 @@ func withNamePartsOverStoredEmail(current map[string]json.RawMessage, fields map
 	out := maps.Clone(fields)
 	out[fieldFullName] = joined
 	return out
+}
+
+// namePart is the row's value for a name part. A row that leaves the part out
+// or blank keeps the stored one, as an update does.
+func namePart(current map[string]json.RawMessage, fields map[string]string, part string) string {
+	if value := fields[part]; strings.TrimSpace(value) != "" {
+		return value
+	}
+	return textOf(current[part])
 }
 
 // joinedNameParts is "first last" when the row states both parts, else "".
@@ -200,28 +210,10 @@ func phonesMergedOnto(current []byte, mapped []contacts.ContactPhoneInput) ([]co
 		}
 		merged = append(merged, contacts.ContactPhoneInput{
 			Phone: held.Phone, PhoneType: held.PhoneType,
-			IsPrimary: held.IsPrimary && held.PhoneType != mapped[0].PhoneType,
+			IsPrimary: false,
 			Position:  len(merged) + 1,
 		})
 	}
-	return merged, true, nil
-}
-
-// socialMergedOnto lays the file's handles over the stored ones, because the
-// store replaces the whole social set it is given.
-func socialMergedOnto(current []byte, mapped map[string]any) (map[string]any, bool, error) {
-	if len(mapped) == 0 {
-		return nil, false, nil
-	}
-	var record struct {
-		Social map[string]any `json:"social"`
-	}
-	if err := json.Unmarshal(current, &record); err != nil {
-		return nil, false, fmt.Errorf("import: reading the stored social links: %w", err)
-	}
-	merged := make(map[string]any, len(record.Social)+len(mapped))
-	maps.Copy(merged, record.Social)
-	maps.Copy(merged, mapped)
 	return merged, true, nil
 }
 
@@ -240,9 +232,19 @@ func storedPrimaryPhone(current map[string]json.RawMessage) json.RawMessage {
 		return nil
 	}
 	for _, row := range rows {
-		if row.IsPrimary && row.PhoneType == contactPhoneTypeWork {
+		if row.PhoneType == contactPhoneTypeWork {
 			return encodedText(row.Phone)
 		}
+	}
+	// A contact whose only numbers are mobile or home still has one to show,
+	// so an export of it uploads as the same.
+	for _, row := range rows {
+		if row.IsPrimary {
+			return encodedText(row.Phone)
+		}
+	}
+	if len(rows) > 0 {
+		return encodedText(rows[0].Phone)
 	}
 	return nil
 }
@@ -278,11 +280,8 @@ func encodedText(text string) json.RawMessage {
 // file's address becomes the primary WORK address; every stored address it did
 // not name is carried through.
 //
-// Only same-type rows are demoted. uq_contact_email_primary allows one primary
-// per (contact_id, email_type), not one per contact — so clearing the flag on
-// every retained row would strip a contact's primary PERSONAL address because
-// the file named a work one, which is data the import was never given and had
-// no business changing.
+// Every retained row is demoted: uq_contact_email_primary allows one primary
+// per contact, and the file's address takes it.
 //
 // The bool reports whether the file carried an email at all. False means leave
 // the contact's addresses alone rather than send an empty set, which
@@ -315,10 +314,7 @@ func emailsMergedOnto(current []byte, mapped []contacts.ContactEmailInput) ([]co
 		}
 		merged = append(merged, contacts.ContactEmailInput{
 			Email: held.Email, EmailType: kind,
-			// Demoted only if it competes with the incoming address for the
-			// same type's primary slot. A primary personal address keeps its
-			// flag when the file named a work one.
-			IsPrimary:              held.IsPrimary && kind != mapped[0].EmailType,
+			IsPrimary:              false,
 			Position:               len(merged) + 1,
 			VouchedNotCorresponded: true,
 		})
@@ -354,9 +350,8 @@ func storedPrimaryEmail(current map[string]json.RawMessage) json.RawMessage {
 	}
 	// The primary WORK address, because that is what contactEmailsFrom writes and
 	// so the only row the file's column can be compared against. A contact may
-	// hold a primary personal address at the same time — the slot is per type —
-	// and matching on is_primary alone would let row order decide which one the
-	// comparison sees, reporting an update whenever it picked the other.
+	// hold a personal address as its primary, and matching on is_primary alone
+	// would compare the file against that one.
 	var chosen string
 	for _, row := range rows {
 		if row.IsPrimary && row.EmailType == contactEmailTypeWork {

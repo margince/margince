@@ -21,6 +21,7 @@ cd "$ROOT"
 # shellcheck source=scripts/lib-testdb.sh
 source "$ROOT/scripts/lib-testdb.sh"
 resolve_it_timeout
+resolve_test_shuffle
 # The Redis address the fixtures need. Reached through `make test-it` it arrives
 # from backend/Makefile; run directly — which the usage block above invites — it
 # did not, and every Redis-using test in the package failed naming Redis.
@@ -56,6 +57,8 @@ make_clone "$db"
 census="$(mktemp -d)"
 trap 'st=$?; rm -rf "$census"; if ! drop_clone "$db"; then echo "FAIL: clone db $db was not dropped — leaked on the test cluster" >&2; if [[ "$st" -eq 0 ]]; then st=1; fi; fi; exit "$st"' EXIT
 
+prepare_test_extension_manifest "$census"
+
 run_flag=()
 [[ -n "$RUN" ]] && run_flag=(-run "$RUN")
 echo "test-integration-one: backend $rel ${RUN:+(-run $RUN) }(db=$db)"
@@ -69,7 +72,7 @@ echo "test-integration-one: backend $rel ${RUN:+(-run $RUN) }(db=$db)"
        MARGINCE_TEST_BLOBSTORE_BUCKET="$(bucket_for one)" \
        MARGINCE_TEST_REDIS="$MARGINCE_TEST_REDIS" \
        MARGINCE_TEST_REDIS_DB="$MARGINCE_TEST_REDIS_DB" \
-    go test -p 1 -tags="${IT_TAGS:-integration}" -v -count=1 -timeout="$IT_TIMEOUT" "${run_flag[@]+"${run_flag[@]}"}" "$rel" ${IT_ARGS:+$IT_ARGS} )
+    go test -p 1 -tags="${IT_TAGS:-integration}" -v -count=1 -timeout="$IT_TIMEOUT" ${IT_SHUFFLE:+"$IT_SHUFFLE"} "${run_flag[@]+"${run_flag[@]}"}" "$rel" ${IT_ARGS:+$IT_ARGS} )
 # A package that opened no pool wrote no census, and has no statement to check.
 if compgen -G "$census/census-*.jsonl" > /dev/null; then
   check_repeated_gates "$census" "$census/repeated-gates.txt"

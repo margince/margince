@@ -1,0 +1,14 @@
+package nofigure
+
+import (
+	"net/http"
+
+	"example.test/auth"
+)
+
+type Handlers struct{}
+
+func (h Handlers) GetNothingItCanSee(w http.ResponseWriter, r *http.Request) {
+	auth.Require(r.Context())
+	w.WriteHeader(http.StatusNoContent)
+}

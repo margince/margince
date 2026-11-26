@@ -8,16 +8,21 @@
 import { useState } from "react";
 import { Button, Field, Textarea, TextInput } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
-import { useT } from "../../i18n";
+import { useFieldFaults } from "../../design-system/savepage";
+import { useLocale, useT } from "../../i18n";
 import { type List, useUpdateList } from "../../lib/lists.queries";
-import { problemMessageOf } from "../../lib/problem";
+import { blankRequired, problemMessageOf } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { ownedByReader } from "./library";
 import { ListRuleUses, ruleUsesOf } from "./listrules";
 import { type ListAudience, ListAudienceFields } from "./listsharing";
 
 export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [open, setOpen] = useState(false);
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const nameLabel = t("lists.name");
   const [name, setName] = useState(list.name);
   const [purpose, setPurpose] = useState(list.purpose ?? "");
   const [audience, setAudience] = useState<ListAudience>(audienceOf(list));
@@ -37,6 +42,7 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
     setAudience(audienceOf(list));
     setStarted(audienceOf(list));
     setVersion(list.version);
+    faults.show(new Map());
     setOpen(true);
   };
   return (
@@ -48,10 +54,13 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
         intent="form"
         title={t("lists.settingsTitle")}
         confirmLabel={t("lists.save")}
-        confirmDisabled={name.trim() === ""}
+        bodyRef={faultsRoot}
         pending={update.isPending}
         error={update.isError ? problemMessageOf(update.error, t) : null}
-        onConfirm={() =>
+        onConfirm={() => {
+          if (faults.show(blankRequired(locale, { name: [nameLabel, name] }))) {
+            return;
+          }
           update.mutate(
             {
               id: list.id,
@@ -62,15 +71,18 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
               teamId: teamChanged ? audience.teamId : undefined,
             },
             { onSuccess: () => setOpen(false) },
-          )
-        }
+          );
+        }}
       >
-        <Field label={t("lists.name")}>
+        <Field label={nameLabel} required error={faults.of("name")}>
           {(control) => (
             <TextInput
               {...control}
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => {
+                setName(event.target.value);
+                faults.edited("name");
+              }}
             />
           )}
         </Field>
@@ -86,7 +98,8 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
         <ListAudienceFields
           value={audience}
           onChange={setAudience}
-          ownerIsReader={list.owner_id === me.data?.user.id}
+          ownerIsReader={ownedByReader(list, me.data?.user.id)}
+          openedWith={started.sharing}
         />
         <ListRuleUses
           rules={ruleUsesOf(list)}

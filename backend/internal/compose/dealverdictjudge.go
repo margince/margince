@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -74,7 +76,7 @@ func (p dealVerdictPass) judge(ctx context.Context, c verdictCandidate, night ve
 	if err != nil {
 		return fmt.Errorf("compose: the deal verdict answer: %w", err)
 	}
-	decisions, err := p.decide(ctx, read, payload, night.today)
+	decisions, err := p.decide(ctx, read, payload, night.at)
 	if err != nil {
 		return err
 	}
@@ -106,7 +108,7 @@ func (r txRates) For(currency string) (deals.FXRate, bool, error) {
 }
 
 func (p dealVerdictPass) decide(
-	ctx context.Context, read dealVerdictRead, payload dealverdict.Payload, today time.Time,
+	ctx context.Context, read dealVerdictRead, payload dealverdict.Payload, at time.Time,
 ) ([]dealverdict.Decision, error) {
 	var decisions []dealverdict.Decision
 	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
@@ -115,7 +117,7 @@ func (p dealVerdictPass) decide(
 			return err
 		}
 		decisions, err = dealverdict.Decide(read.in, read.state, payload,
-			txRates{ctx: ctx, tx: tx, rates: deals.NewFXRates(base, today)})
+			txRates{ctx: ctx, tx: tx, rates: deals.NewFXRates(base, at)})
 		return err
 	})
 	return decisions, err
@@ -169,11 +171,12 @@ func (p dealVerdictPass) applyAsOwner(
 		EvidenceHolds: func(ctx context.Context, tx pgx.Tx) (bool, error) {
 			return verdictEvidenceHolds(ctx, tx, c, read, changes)
 		},
-		Record: func(ctx context.Context, tx pgx.Tx, applied []deals.VerdictChange) error {
-			if err := p.recordOnTimeline(ctx, tx, c, read, applied); err != nil {
-				return err
+		Record: func(ctx context.Context, tx pgx.Tx, applied []deals.VerdictChange) (ids.UUID, error) {
+			note, err := p.recordOnTimeline(ctx, tx, c, read, applied)
+			if err != nil {
+				return ids.Nil, err
 			}
-			return tx.QueryRow(ctx, `SELECT `+dealVerdictChecksumSQL()+` FROM deal d WHERE d.id = $1`, c.deal).
+			return note, tx.QueryRow(ctx, `SELECT `+dealVerdictChecksumSQL()+` FROM deal d WHERE d.id = $1`, c.deal).
 				Scan(&written)
 		},
 		AsOwner: func(ctx context.Context, tx pgx.Tx) (context.Context, error) {
@@ -194,38 +197,55 @@ func (p dealVerdictPass) applyAsOwner(
 // origin keeps it out of every recency clock and out of the next verdict.
 func (p dealVerdictPass) recordOnTimeline(
 	ctx context.Context, tx pgx.Tx, c verdictCandidate, read dealVerdictRead, applied []deals.VerdictChange,
-) error {
-	subject := "Margince updated this deal"
+) (ids.UUID, error) {
+	subject := systemtext.Literal("deal.updated")
 	lines := make([]string, 0, len(applied))
+	var components []*systemtext.Component
+	offset := 0
 	for _, change := range applied {
-		lines = append(lines, verdictChangeLine(change, read.state.Seen)+": "+fmt.Sprint(change.Evidence["basis"]))
+		prefix := verdictChangeLine(change, read.state.Seen) + ": "
+		basis := fmt.Sprint(change.Evidence["basis"])
+		lines = append(lines, prefix+basis)
+		components = append(components, systemtext.Sentence("deal.verdict_basis", systemtext.Nested(verdictChangeComponent(change, read.state.Seen)), systemtext.Excerpt(offset+utf8.RuneCountInString(prefix), utf8.RuneCountInString(basis))))
+		offset += utf8.RuneCountInString(prefix+basis) + 1
 	}
-	body := strings.Join(lines, "\n") + "\nUndo any of these from Home."
-	_, _, err := p.notes.LogActivityTx(ctx, tx, activities.LogActivityInput{
-		Kind: string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
+	body := strings.Join(lines, "\n") + "\n" + systemtext.Literal("deal.verdict_undo")
+	var metadata *systemtext.Component
+	if len(components) > 0 {
+		components = append(components, systemtext.Sentence("deal.verdict_undo"))
+		metadata = systemtext.Sequence(components[0], components[1:]...)
+		metadata.Layout = "lines"
+	}
+	note, _, err := p.notes.LogActivityTx(ctx, tx, activities.LogActivityInput{
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.updated"), Body: metadata},
+		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
 		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: c.deal}},
 	})
 	if err != nil {
-		return fmt.Errorf("compose: writing the verdict on the deal's timeline: %w", err)
+		return ids.Nil, fmt.Errorf("compose: writing the verdict on the deal's timeline: %w", err)
 	}
-	return nil
+	return ids.UUID(note.Id), nil
 }
 
 // verdictChangeLine names one change in plain words.
 func verdictChangeLine(change deals.VerdictChange, seen deals.VerdictValues) string {
+	return systemtext.Canonical(verdictChangeComponent(change, seen), "")
+}
+
+func verdictChangeComponent(change deals.VerdictChange, seen deals.VerdictValues) *systemtext.Component {
 	switch change.Correction {
 	case deals.VerdictCloseDateCorrection:
-		return "Close date set to " + change.CloseDate.Format(time.DateOnly)
+		return systemtext.Sentence("deal.verdict_date", systemtext.Date(change.CloseDate.Format(time.DateOnly)))
 	case deals.VerdictStageMoveCorrection:
-		return fmt.Sprintf("Moved to %v", change.Evidence["to_stage"])
+		return systemtext.Sentence("deal.verdict_stage", systemtext.Text(fmt.Sprint(change.Evidence["to_stage"])))
 	case deals.VerdictAmountCorrection:
 		currency := change.Currency
 		if seen.Currency != nil {
 			currency = *seen.Currency
 		}
-		return "Amount set to " + values.MajorUnits(change.AmountMinor, currency) + " " + currency
+		return systemtext.Sentence("deal.verdict_amount", systemtext.Text(values.MajorUnits(change.AmountMinor, currency)), systemtext.Text(currency))
 	default:
-		return fmt.Sprintf("Win probability set to %d%%", change.Probability)
+		return systemtext.Sentence("deal.verdict_probability", systemtext.Count(int64(change.Probability)))
 	}
 }
 
@@ -250,7 +270,7 @@ func (p dealVerdictPass) record(
 	}
 	return database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		verdict := assurance.DealVerdict{
-			DealID: c.deal, BasisDigest: c.digest, PromptVersion: dealverdict.PromptVersion,
+			DealID: c.deal, BasisDigest: c.digest,
 			AssessedAt: p.now(), Actions: encoded,
 		}
 		verdict.InputChecksum = assessed

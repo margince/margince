@@ -160,8 +160,8 @@ func (e *sendOutcomeEnv) seedDraft(t *testing.T, opts draftOptions) draftFixture
 	if err := e.owner.QueryRow(ctx, `
 		INSERT INTO voice_learning_signal
 		  (voice_profile_id, draft_ref_hash, outcome, generated_original,
-		   retention_until, content_erased_at, archived_at, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft', $8) RETURNING id`,
+		   retention_until, content_erased_at, archived_at, captured_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
 		profile, hash[:], outcome, generated, draftRetentionUntil,
 		erasedAt, archivedAt, "human:"+profileOwner.String()).Scan(&signal); err != nil {
 		t.Fatal(err)
@@ -251,7 +251,8 @@ type signalRow struct {
 	qualifiesAsSource bool
 	retentionUntil    time.Time
 	version           int64
-	updatedAt         *time.Time
+	createdAt         time.Time
+	updatedAt         time.Time
 }
 
 func (e *sendOutcomeEnv) readSignal(t *testing.T, id ids.UUID) signalRow {
@@ -259,10 +260,10 @@ func (e *sendOutcomeEnv) readSignal(t *testing.T, id ids.UUID) signalRow {
 	var row signalRow
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT outcome, similarity::double precision, final_text, final_captured_by,
-		       qualifies_as_source, retention_until, version, updated_at
+		       qualifies_as_source, retention_until, version, created_at, updated_at
 		FROM voice_learning_signal WHERE id = $1`, id).Scan(
 		&row.outcome, &row.similarity, &row.finalText, &row.finalCapturedBy,
-		&row.qualifiesAsSource, &row.retentionUntil, &row.version, &row.updatedAt,
+		&row.qualifiesAsSource, &row.retentionUntil, &row.version, &row.createdAt, &row.updatedAt,
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +278,7 @@ func (e *sendOutcomeEnv) assertUntouched(t *testing.T, f draftFixture) {
 	if row.outcome != voiceOutcomeDrafted {
 		t.Errorf("outcome = %q, want %q — the refused send decided the signal anyway", row.outcome, voiceOutcomeDrafted)
 	}
-	if row.version != 1 || row.updatedAt != nil {
+	if row.version != 1 || !row.updatedAt.Equal(row.createdAt) {
 		t.Errorf("version = %d, updated_at = %v — the refused send wrote the row", row.version, row.updatedAt)
 	}
 	if row.similarity != nil || row.finalCapturedBy != nil || row.finalText != nil {
@@ -369,7 +370,7 @@ func TestRecordSendOutcomeAcceptsAnUneditedSend(t *testing.T) {
 	if row.version != 2 {
 		t.Errorf("version = %d, want 2", row.version)
 	}
-	if row.updatedAt == nil || !row.updatedAt.Equal(sendOutcomeClock) {
+	if !row.updatedAt.Equal(sendOutcomeClock) {
 		t.Errorf("updated_at = %v, want the injected clock %s", row.updatedAt, sendOutcomeClock)
 	}
 	if got := env.countAudits(t, f.signal); got != 1 {

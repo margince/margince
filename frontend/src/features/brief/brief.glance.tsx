@@ -214,10 +214,17 @@ export function BriefGlance({
   // Small facts over the title, the title, then the day in one sentence; the
   // view's dial stands at the end of the head.
   return (
-    <header className="glance arrive" data-testid="brief-glance">
+    <header className="glance" data-testid="brief-glance">
       <div className="glance-head">
         <div className="glance-facts t-caption">
           <GlanceWhen view={view} now={now} week={week} />
+          {view === "morning" && day?.served_stale && (
+            <p>
+              <Badge tone="default" live>
+                {t("brief.updating")}
+              </Badge>
+            </p>
+          )}
           {briefedAt && (
             <p>
               <Badge tone="ai">
@@ -272,6 +279,8 @@ function GlanceOpening({
         {t(sentence.key, sentence.values)}
       </p>
     );
+  // The morning keeps the line whether or not a sentence lands. A day with no
+  // sentence would otherwise pull the whole page up a line once it is read.
   if (view === "morning")
     return pending ? (
       <div
@@ -280,7 +289,9 @@ function GlanceOpening({
       >
         <Skeleton width="6ch" />
       </div>
-    ) : null;
+    ) : (
+      <div className="glance-sentence-hold" aria-hidden="true" />
+    );
   return <p className="glance-sentence">{t("brief.glance.introWeekly")}</p>;
 }
 

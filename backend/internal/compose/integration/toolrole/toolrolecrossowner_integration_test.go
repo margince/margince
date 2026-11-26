@@ -81,6 +81,7 @@ func colleagueAnswers(t *testing.T, admin *apptest.AppEnv, seat roleSeat, owned 
 			before = ownedRecordStates(t, admin, pool.taken)
 			got = clients[n/toolRoleCallsPerPassport].Call(t, call.verb, args)
 		})
+		holdNoBusyForm(t, call.verb, got)
 		if got.IsError && isBudgetRefusal(got.Text) {
 			t.Fatalf("%s as %s spent the call budget, so the rest would read as measured: %s", call.verb, seat.role.Key, got.Text)
 		}

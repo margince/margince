@@ -21,10 +21,12 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 // MergeCompany merges company source→target and returns the
@@ -41,16 +43,15 @@ func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.Company
 		return crmcontracts.Company{}, err
 	}
 	if sourceID == targetID {
-		return crmcontracts.Company{}, &MergeSelfError{}
-	}
-	active, err := s.activeColumns(ctx, "company")
-	if err != nil {
-		return crmcontracts.Company{}, err
+		return crmcontracts.Company{}, &recordmerge.MergeSelfError{}
 	}
 
 	var out crmcontracts.Company
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, "company")
+		if err != nil {
+			return err
+		}
 		out, err = s.mergeCompanyTx(ctx, tx, sourceID, targetID, ifVersion, active)
 		return err
 	})
@@ -79,18 +80,25 @@ func (s *Store) mergeCompanyTx(
 	// The pair lock keeps BOTH endpoints held to commit: without it a
 	// concurrent merge(target→elsewhere) archives the survivor
 	// mid-merge and the relinked children point at a dead record.
+	if err := screenPairMerge(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	_, tgtLock, err := storekit.LockPair(ctx, tx, "company", sourceID.UUID, targetID.UUID)
+	err = recordmerge.MissingIsConflict(err)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
 	if ctx, err = admitDuplicatePairMerge(ctx, tx, entityCompany, sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	src, tgt, err := mergePair(ctx, tx, "company", sourceID, targetID, ifVersion, readCompanyMergeState)
+	src, tgt, err := recordmerge.Pair(ctx, tx, "company", sourceID, targetID, ifVersion, readCompanyMergeState)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
 	if err := companyMergeAllowed(ctx, tx, sourceID, targetID); err != nil {
+		return crmcontracts.Company{}, err
+	}
+	if err := s.refuseMergeWithDependents(ctx, tx, extdecl.Company, sourceID.UUID); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	employersBefore, err := primaryEmployersOf(ctx, tx, sourceID)
@@ -104,7 +112,10 @@ func (s *Store) mergeCompanyTx(
 	if err := s.carryGrantsTx(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("carry the merged-away company's grants: %w", err)
 	}
-	if err := archiveMergedAway(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
+	if err := s.carrySignalResolutionsTx(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("carry the signals resolved to the merged-away company: %w", err)
+	}
+	if err := recordmerge.ArchiveMergedAway(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("retire merged-away company: %w", err)
 	}
 	filled, err := fillCompanySurvivorship(ctx, tx, src, tgt, targetIsPartner, tgtLock)
@@ -152,10 +163,13 @@ func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, sourceID, targetI
 		sourceID.UUID, targetID.UUID); err != nil {
 		return false, fmt.Errorf("relink domains: %w", err)
 	}
+	if err := storekit.OwnCompanyDomainsChanged(ctx, tx, sourceID.UUID, targetID.UUID); err != nil {
+		return false, err
+	}
 	if err := relinkCompanyEdges(ctx, tx, sourceID, targetID); err != nil {
 		return false, fmt.Errorf("relink relationships: %w", err)
 	}
-	if _, err := relinkLinkRows(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
+	if _, err := recordmerge.RelinkLinkRows(ctx, tx, "company", sourceID.UUID, targetID.UUID); err != nil {
 		return false, fmt.Errorf("relink activity/list/tag rows: %w", err)
 	}
 	// The survivor ends up with the UNION of both companies' relationship
@@ -176,6 +190,8 @@ func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, sourceID, targetI
 // A merged-away partner would otherwise leave the survivor holding the
 // extension row with nothing saying it is a partner, which is exactly the
 // half-state the enforced invariant exists to make impossible.
+//
+//gate:parent-version-door
 func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontracts.Company, targetIsPartner bool, tgtLock storekit.RowLock) (map[string]any, error) {
 	p := buildCompanySurvivorshipPatch(tgt, src)
 	if targetIsPartner {
@@ -188,6 +204,8 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {
 			return nil, fmt.Errorf("apply survivorship fill: %w", err)
 		}
+	} else if err := storekit.TouchLocked(ctx, tx, tgtLock); err != nil {
+		return nil, fmt.Errorf("move the survivor's version: %w", err)
 	}
 	// An inherited value arrives with its author still attached. Without this
 	// the survivor holds a sentence that field_provenance says nobody wrote, and
@@ -248,11 +266,6 @@ func absorbCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 		`UPDATE project SET company_id = $2 WHERE company_id = $1`,
 		`UPDATE deal SET company_id = $2 WHERE company_id = $1`,
 		`UPDATE deal SET partner_company_id = $2 WHERE partner_company_id = $1`,
-		// The document library's account pointer. It is a denormalized READ
-		// path, so nothing else moves it — and a file left pointing at the
-		// dissolved company is filed under a record that no longer exists,
-		// which reads to a user as the contract having vanished.
-		`UPDATE attachment SET company_id = $2 WHERE company_id = $1`,
 	} {
 		if _, err := tx.Exec(ctx, stmt, sourceID, targetID); err != nil {
 			return false, fmt.Errorf("repoint project and deal attributions: %w", err)
@@ -352,7 +365,7 @@ func readCompanyMergeState(ctx context.Context, tx pgx.Tx, id ids.CompanyID) (cr
 // (backend/internal/compose/integration/projectmerge_integration_test.go)
 const liveProjectEdge = `FROM relationship c
 		  JOIN project p ON p.id = c.project_id AND p.archived_at IS NULL
-		 WHERE c.kind = 'project_company' AND c.archived_at IS NULL`
+		 WHERE c.kind = '` + ProjectCompanyKind + `' AND c.archived_at IS NULL`
 
 // refuseWhenBothCarryProjects enforces PROJ-LIFE-4's ask. Two companies
 // that each hold live bodies of work may, once merged, be running the same

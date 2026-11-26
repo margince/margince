@@ -9,8 +9,9 @@ import { useEffect } from "react";
 import { PendingBody } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { fallbackTitleOf, filtersAddressOf } from "../../lib/filtersaddress";
-import { navigateReplacing } from "../../lib/router";
+import { useRecordKindDirectory } from "../../lib/recordkinds";
 import { useMe } from "../../lib/session";
+import { useAddressWriters } from "../../lib/urlstate";
 import { FocusedPending } from "./filterhead";
 import { ListFilterPage } from "./filterlistedit";
 import { FilterPage } from "./filterpage";
@@ -25,13 +26,15 @@ export function FiltersScreen({
 }: Readonly<{ id?: string; list?: string; view?: string }>) {
   const t = useT();
   const me = useMe();
-  // `#/lists` names no list, and the lists a reader can find live in the
-  // library's Shared group. A redirect, so Back never lands here again.
+  const directory = useRecordKindDirectory().data?.data ?? [];
+  const { navigateReplacing } = useAddressWriters();
+  // `#/lists` names no list, and every list a reader can find is in the
+  // library. A redirect, so Back never lands here again.
   useEffect(() => {
     if (list === "") {
       navigateReplacing({ screen: "filters", id: "lists" });
     }
-  }, [list]);
+  }, [list, navigateReplacing]);
   if (list === "") {
     return null;
   }
@@ -47,7 +50,7 @@ export function FiltersScreen({
     if (address.kind !== "library") {
       return (
         <FocusedPending
-          title={t(fallbackTitleOf(address))}
+          title={fallbackTitleOf(address, t, directory)}
           label={t("common.loading")}
         />
       );

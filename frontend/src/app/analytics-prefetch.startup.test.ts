@@ -10,6 +10,7 @@ import {
   COMPANY_CONTEXT_ON,
   INSTALLATION_SETTINGS,
 } from "../features/settings/settingspages.fixtures";
+import { stable } from "../format/collate";
 import { companyContextCapabilitiesOptions } from "../lib/companycontextreach";
 import { pipelinesOptions } from "../lib/pipelines.queries";
 import { SESSION_STALE_MS, sessionOptions } from "../lib/session";
@@ -137,7 +138,7 @@ it("keeps newer cache data and does not make an old session snapshot fresh", asy
   expect(
     client.getQueryState(analyticsContextOptions.queryKey)?.dataUpdatedAt,
   ).toBe(now - 1_000);
-  expect(requested.map((url) => url.pathname).sort()).toEqual([
+  expect(requested.map((url) => url.pathname).sort(stable)).toEqual([
     "/v1/analytics/framework",
     "/v1/analytics/metrics",
     "/v1/company/context/capabilities",

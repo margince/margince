@@ -7,6 +7,8 @@ import { expect, userEvent, waitFor, within } from "storybook/test";
 import { CallAction } from "../design-system/callaction";
 import { en } from "../i18n/en";
 import { useMe } from "../lib/session";
+import { READS_RECORDS } from "../testing/mefixture";
+import { recordNamesRoutes } from "../testing/recordnames.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -28,7 +30,11 @@ const DANA = { entityType: "contact", entityId: "p-1" } as const;
 
 function stubSeat() {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["create"] }, { seat: "full" }),
+    ...recordNamesRoutes({ contact: { "p-1": "Dana Buyer" } }),
+    "GET /me": meRoute(
+      { ...READS_RECORDS, activity: ["create"] },
+      { seat: "full" },
+    ),
     "GET /contacts/p-1": () =>
       jsonResponse({ id: "p-1", full_name: "Dana Buyer" }),
   });

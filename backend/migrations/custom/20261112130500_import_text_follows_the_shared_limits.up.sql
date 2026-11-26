@@ -1,0 +1,9 @@
+SET LOCAL lock_timeout = '2s';
+CREATE TRIGGER "text_bound_insert" AFTER INSERT ON "public"."import_record_map" FOR EACH ROW
+WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), NULL, '{"external_id":20000,"object":20000,"origin":20000,"source_system":20000}')) EXECUTE FUNCTION public.refuse_oversized_text('{"external_id":20000,"object":20000,"origin":20000,"source_system":20000}');
+CREATE TRIGGER "text_bound_update" AFTER UPDATE ON "public"."import_record_map" FOR EACH ROW
+WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), to_jsonb(OLD), '{"external_id":20000,"object":20000,"origin":20000,"source_system":20000}')) EXECUTE FUNCTION public.refuse_oversized_text('{"external_id":20000,"object":20000,"origin":20000,"source_system":20000}');
+CREATE TRIGGER "text_bound_insert" AFTER INSERT ON "public"."import_run" FOR EACH ROW
+WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), NULL, '{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source":20000,"source_ref":20000,"status":20000}')) EXECUTE FUNCTION public.refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source":20000,"source_ref":20000,"status":20000}');
+CREATE TRIGGER "text_bound_update" AFTER UPDATE ON "public"."import_run" FOR EACH ROW
+WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), to_jsonb(OLD), '{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source":20000,"source_ref":20000,"status":20000}')) EXECUTE FUNCTION public.refuse_oversized_text('{"approved_by":20000,"captured_by":20000,"connector":20000,"draft_step":20000,"error":20000,"job_status":20000,"phase":20000,"phase_object":20000,"source":20000,"source_ref":20000,"status":20000}');

@@ -11,6 +11,7 @@ import (
 	"slices"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // The draftcore.Input contract: what the shared writer needs of a folded
@@ -34,6 +35,9 @@ func (in Input) WrittenInto() draftfloor.Envelope { return in.Envelope }
 
 // Steering is the caller's own words.
 func (in Input) Steering() string { return in.Intent }
+
+// Revises is whether the salesperson is changing a draft already on screen.
+func (in Input) Revises() bool { return in.RewriteOf != "" }
 
 // GreetingNames are the two names a greeting-line repair looks for. Both,
 // because the register decides which one opens the message.
@@ -69,4 +73,25 @@ func coAddresses(others []CoRecipientIn) []string {
 		out = append(out, other.Email)
 	}
 	return out
+}
+
+// Subjects are the recipients, by id and address, and every activity the
+// payload quotes.
+func (in Input) Subjects() *model.Subjects {
+	var activities []string
+	if in.About != nil {
+		activities = append(activities, in.About.ID)
+	}
+	for _, a := range in.Recent {
+		activities = append(activities, a.ID)
+	}
+	for _, c := range in.Claims {
+		activities = append(activities, c.SourceID)
+	}
+	if in.Meeting != nil {
+		activities = append(activities, in.Meeting.ActivityID)
+	}
+	about := model.SubjectsOf([]string{in.Recipient.ID}, activities)
+	about.Addresses = in.Addresses()
+	return about
 }

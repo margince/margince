@@ -44,6 +44,9 @@ ONLY=" ${SCENARIO:-} "
 #                      instructions. The comparable route, filed under the model.
 #                      cli — `claude -p`, `codex exec` or `agy -p`, each with its own system
 #                      prompt and tools, filed apart under <model>@<cli>.
+#                      sdk — the same claude binary under the Agent SDK, which
+#                      answers the server's questions in the chat from the
+#                      scenario's `elicitation:` entries; filed under <model>@claude-sdk.
 #                                                                (default api)
 #   E2E_LLM_MODEL      a different model, or
 #   E2E_LLM_EFFORT     a different effort ('reasoning low|medium|high'), measured
@@ -52,10 +55,6 @@ ONLY=" ${SCENARIO:-} "
 #   E2E_LLM_VERDICTS   write the verdicts to this directory INSTEAD of the
 #                      committed records tree — a run that sets it publishes
 #                      nothing.
-#
-# The verdicts under claude-opus-5/ were measured over the claude CLI before
-# routes existed, and those before 2026-08-27 on claude-fable-5 because nothing
-# pinned the model then: neither is a baseline for a bridge number.
 CANDIDATE="${E2E_LLM_CANDIDATE:-claude}"
 VIA="${E2E_LLM_VIA:-api}"
 # THE DOOR the assistant works through. mcp (the default) offers the product's own
@@ -98,6 +97,12 @@ fi
 
 command -v python3 >/dev/null || { echo "python3 is required to read the scenarios" >&2; exit 1; }
 
+# The whole corpus is linted before the stack boots: an unknown key, a pattern
+# that does not compile, a writes:, passport: or setup: value the lane cannot
+# act on. A typo in the last scenario would otherwise stop the lane after every
+# earlier case was paid for, or switch a check off without a word.
+python3 "$ROOT/e2e/llm/scenariolint.py" "$SCENARIO_DIR"/*.yaml || exit 1
+
 # A name SCENARIO lists that no scenario carries would run nothing for it and
 # report the sweep as complete, so every listed name is matched before a boot.
 if [[ -n "${ONLY// /}" ]]; then
@@ -120,13 +125,48 @@ eval "$ROUTE"
 VERDICT_TREE=mcp_e2e
 [[ "$DOOR" = rest ]] && VERDICT_TREE=mcp_e2e_rest
 VERDICT_DIR="${E2E_LLM_VERDICTS:-$ROOT/backend/internal/compose/aicert/records/$VERDICT_TREE/$FOLDER}"
+# A word-overlap search measures a harder tool than a run by hand, so its
+# verdicts never land in the published records, where they would replace ones
+# made by meaning. The page refuses a folder that mixes the two as well.
+if [[ "${E2E_LLM_ALLOW_LEXICAL:-0}" = "1" && -z "${E2E_LLM_VERDICTS:-}" ]]; then
+  echo "E2E_LLM_ALLOW_LEXICAL=1 needs E2E_LLM_VERDICTS: a lexical verdict is never filed in the records tree" >&2
+  exit 1
+fi
 SYSTEM_PROMPT=mcp-instructions
-[[ "$VIA" = cli ]] && SYSTEM_PROMPT=cli-default
-SELF_JUDGED=false
-[[ "$CANDIDATE" = claude ]] && SELF_JUDGED=true
+[[ "$VIA" = cli || "$VIA" = sdk ]] && SYSTEM_PROMPT=cli-default
+# A judge of the candidate's own family grades its own kind, which the page shows.
+SELF_JUDGED="$(cd "$ROOT/e2e/llm" && python3 -c 'import sys, judge
+print(str(judge.family(judge.pinned_model()) == sys.argv[1]).lower())' "$CANDIDATE")"
 
-if [[ "$WIRE" = claude-cli || "$E2E_LLM_JUDGE_VIA" = cli ]]; then
+if [[ "$WIRE" = claude-cli || "$WIRE" = claude-sdk || "$E2E_LLM_JUDGE_VIA" = cli ]]; then
   command -v claude >/dev/null || { echo "the claude CLI is not on PATH" >&2; exit 1; }
+fi
+# The runner is no workspace member and has no lockfile, which would put the
+# Agent SDK in the source SBOM. So before every SDK lane: an install whose
+# versions are not package.json's pins is made again, the registry signatures
+# are checked each time (a tree that fails them is removed, so the next lane
+# installs anew), and the runner's own self-check runs against what is installed.
+if [[ "$WIRE" = claude-sdk ]]; then
+  command -v node >/dev/null || { echo "node is not on PATH; the SDK route runs e2e/llm/sdk-runner" >&2; exit 1; }
+  runner_dir="$ROOT/e2e/llm/sdk-runner"
+  if ! (cd "$runner_dir" && node -e 'const pkg = require("./package.json");
+const pins = { ...pkg.dependencies, ...pkg.devDependencies };
+for (const [name, pin] of Object.entries(pins)) {
+  let have = "";
+  try { have = require(`./node_modules/${name}/package.json`).version; } catch {}
+  if (have !== pin) process.exit(1);
+}'); then
+    rm -rf "$runner_dir/node_modules"
+    (cd "$runner_dir" && npm install --no-package-lock --ignore-scripts --no-audit --no-fund >/dev/null) ||
+      { echo "the SDK runner did not install" >&2; exit 1; }
+  fi
+  if ! (cd "$runner_dir" && npm audit signatures >/dev/null); then
+    rm -rf "$runner_dir/node_modules"
+    echo "a registry signature of the SDK runner's packages did not verify; the install was removed" >&2
+    exit 1
+  fi
+  (cd "$runner_dir" && npm run -s selfcheck >/dev/null) ||
+    { echo "the SDK runner's self-check failed: cd $runner_dir && npm run selfcheck" >&2; exit 1; }
 fi
 if [[ "$WIRE" = codex-cli ]]; then
   command -v codex >/dev/null || { echo "the codex CLI is not on PATH" >&2; exit 1; }
@@ -165,6 +205,19 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# THE STAMP SAYS WHAT EACH VERDICT MEASURED: the scenario, the copy of the tools
+# it names, the instructions, the judge and the grading harness, read from
+# committed files by the generator `make e2e-llm-report` uses. A sweep works it
+# out once and hands it over in E2E_LLM_STAMP_DIR; a lone run works it out here.
+# shellcheck source=scripts/lib-e2e-llm-stamp.sh
+. "$ROOT/scripts/lib-e2e-llm-stamp.sh"
+STAMP_DIR="${E2E_LLM_STAMP_DIR:-$WORK/stamp}"
+if [[ ! -s "$STAMP_DIR/stamps.json" || ! -s "$STAMP_DIR/commit" ]]; then
+  echo "==> stamping what this run measures"
+  e2e_llm_stamp "$ROOT" "$DOOR" "$STAMP_DIR" || exit 1
+fi
+COMMIT="$(cat "$STAMP_DIR/commit")"
+
 # --- the stack ---------------------------------------------------------------
 #
 # One boot here, one seed, one passport — and then a restored DATABASE before
@@ -181,6 +234,12 @@ trap cleanup EXIT
 # free to assert the absence of something — which the ordering could not
 # otherwise support, since scenarios are driven in the order the glob below
 # yields, filename order and not case number, with case10 second and case9 last.
+# THE SERVER'S OWN RECORD of each /mcp call (mcp.call_log). run_once cuts each
+# run's lines beside its transcript, and the checker grades the calls from them
+# (e2e/llm/calllog.py). A file outlives the restore before every run.
+CALL_LOG="$WORK/mcp-calls.jsonl"
+export MARGINCE_MCP_CALL_LOG="$CALL_LOG"
+
 echo "==> booting the $SLUG stack (never :8080)"
 # A previous run that was interrupted leaves its api holding :18081, and
 # dev-fresh refuses rather than attaching to the wrong stack. Stopping this
@@ -216,9 +275,11 @@ seed_everything
 
 # --- the credential the assistant presents -----------------------------------
 #
-# A passport, minted the production way over REST. It skips OAuth, which is
-# what makes this lane runnable without a tunnel: the assistant is a local
-# process talking to a local stack.
+# A passport connected the way an AI client connects one, through OAuth
+# (e2e/llm/oauthconnect.py). The lane plays the browser's half of the consent
+# with a seat's session, so no tunnel or browser is needed. A passport minted
+# over REST has no connection, and a call that waits for its own user would then
+# stage instead of asking the user in the conversation, as a chat client is asked.
 COOKIES="$WORK/cookies"
 MCP_CONFIG="$WORK/mcp.json"
 
@@ -240,11 +301,11 @@ MCP_CONFIG="$WORK/mcp.json"
 # name nobody would hand-wire, and the guard in run_once catches the next cause.
 MCP_SERVER=margince_e2e_llm
 
-# mint_passport signs in and writes the MCP config.
+# connect_passports signs in and writes the MCP config.
 #
 # It runs ONCE, and what makes that safe is that the snapshot below is taken
-# after it: the passport row is inside the template, so every restore hands the
-# assistant back the same working credential.
+# after it: the passport and connection rows are inside the template, so every
+# restore hands the assistant back the same working credential.
 #
 # It could not be once while the reset was a `dev-fresh`, and the failure was
 # expensive to read. That rebuild dropped the database and the passport row with
@@ -255,7 +316,7 @@ MCP_SERVER=margince_e2e_llm
 # guard in run_once now catches that shape whatever causes it.
 #
 # It also runs AFTER seeding, because the seed lifts the admin's first-login
-# hold, and a passport cannot be minted by an account that is still held.
+# hold, and an account that is still held cannot consent to a connection.
 # write_mcp_config points the claude CLI at the stack where it is NOW. Every
 # restart below re-asks for the stack's address and calls this again: a stop
 # releases the port claim, and the stack may come back on another one.
@@ -290,15 +351,24 @@ zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$WORK/skill.zip" "$WORK/s
 }
 
 # use_passport points the assistant at the narrow credential (read, write), the
-# wide one (adds draft and send) or the research one (adds enrich). A scenario
-# asks for another with `passport: wide` or `passport: research`; every other
-# case is measured exactly as before, because a send tool offered to a case that
-# never asked for one is a different experiment.
+# wide one (adds draft and send), the research one (adds enrich), the rep one
+# (read, write, for a seat with the rep role) or the readonly one (read only). A
+# scenario asks for another with `passport:`; every other case is measured
+# exactly as before, because a send tool offered to a case that never asked for
+# one is a different experiment.
+#
+# READER_PASSPORT reads the end state. It is the admin's own unless the case's
+# passport already is: a rep's or a read-only credential sees less than the
+# world the case holds, and a read it cannot make is not the model's failure.
 use_passport() {
+  READER_PASSPORT="$PASSPORT_NARROW"
   case "$1" in
-    wide) PASSPORT="$PASSPORT_WIDE" ;;
-    research) PASSPORT="$PASSPORT_RESEARCH" ;;
-    *) PASSPORT="$PASSPORT_NARROW" ;;
+    wide) PASSPORT="$PASSPORT_WIDE"; READER_PASSPORT="$PASSPORT_WIDE" ;;
+    research) PASSPORT="$PASSPORT_RESEARCH"; READER_PASSPORT="$PASSPORT_RESEARCH" ;;
+    rep) PASSPORT="$PASSPORT_REP" ;;
+    readonly) PASSPORT="$PASSPORT_READONLY" ;;
+    "") PASSPORT="$PASSPORT_NARROW" ;;
+    *) echo "HARNESS: no passport is named '$1'; check.py PASSPORTS lists the names" >&2; exit 2 ;;
   esac
   write_mcp_config
 }
@@ -312,31 +382,39 @@ restart_stack() {
   write_mcp_config
 }
 
-mint_passport() {
+# connect_with SESSION_JAR CLIENT_NAME SCOPE... prints the token of a passport
+# connected for the seat signed in to that jar; when the handshake fails it names
+# the step on stderr and exits 1.
+connect_with() {
+  python3 "$ROOT/e2e/llm/oauthconnect.py" "$APP_BASE" "$@"
+}
+
+# THE REP IS LENA FISCHER, a seeded seat with the rep role whose row scope is
+# her own records. Every seeded deal is Sofia Meier's, so a write on one is a
+# write on a colleague's record, which the rep role refuses.
+REP_EMAIL=lena.fischer@demo.test
+
+# EVERY PASSPORT IS CONNECTED. A user reaches Margince from a chat client, and
+# every chat client connects through OAuth; a minted passport is a script's. So
+# the narrow, wide, research, read-only and rep passports are all measured as a
+# user in a conversation, and a call that waits for its own user asks that user
+# in the chat on each of them. casesetup.py still mints one where a case needs a
+# call an earlier credential staged.
+connect_passports() {
   curl -sS -c "$COOKIES" -X POST -H 'Content-Type: application/json' \
     -d '{"email":"admin@demo.test","password":"demo-password-123"}' \
     "$APP_BASE/v1/auth/login" >/dev/null
 
-  PASSPORT="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' \
-    -d '{"label":"e2e-llm","scopes":["read","write"]}' \
-    "$APP_BASE/v1/passports" | python3 -c 'import json,sys
-try: print(json.load(sys.stdin).get("token",""))
-except Exception: print("")')"
-  [[ -n "$PASSPORT" ]] || { echo "could not mint a passport" >&2; exit 1; }
-
-  PASSPORT_NARROW="$PASSPORT"
-  PASSPORT_WIDE="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' \
-    -d '{"label":"e2e-llm-send","scopes":["read","write","draft","send"]}' \
-    "$APP_BASE/v1/passports" | python3 -c 'import json,sys
-try: print(json.load(sys.stdin).get("token",""))
-except Exception: print("")')"
-  [[ -n "$PASSPORT_WIDE" ]] || { echo "could not mint the draft+send passport" >&2; exit 1; }
-  PASSPORT_RESEARCH="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' \
-    -d '{"label":"e2e-llm-research","scopes":["read","write","enrich"]}' \
-    "$APP_BASE/v1/passports" | python3 -c 'import json,sys
-try: print(json.load(sys.stdin).get("token",""))
-except Exception: print("")')"
-  [[ -n "$PASSPORT_RESEARCH" ]] || { echo "could not mint the enrich passport" >&2; exit 1; }
+  PASSPORT_NARROW="$(connect_with "$COOKIES" e2e-llm read write)" || exit 1
+  PASSPORT="$PASSPORT_NARROW"
+  PASSPORT_WIDE="$(connect_with "$COOKIES" e2e-llm-send read write draft send)" || exit 1
+  PASSPORT_RESEARCH="$(connect_with "$COOKIES" e2e-llm-research read write enrich)" || exit 1
+  PASSPORT_READONLY="$(connect_with "$COOKIES" e2e-llm-readonly read)" || exit 1
+  # The seed sets every colleague's password to this one.
+  curl -sS -c "$WORK/rep.cookies" -X POST -H 'Content-Type: application/json' \
+    -d "{\"email\":\"$REP_EMAIL\",\"password\":\"colleague-password-123\"}" \
+    "$APP_BASE/v1/auth/login" >/dev/null
+  PASSPORT_REP="$(connect_with "$WORK/rep.cookies" e2e-llm-rep read write)" || exit 1
 
   [[ "$DOOR" = rest ]] && fetch_skill
   write_mcp_config
@@ -345,18 +423,18 @@ except Exception: print("")')"
   # which reads downstream as a model that chose not to call anything. Fail
   # here instead, where the cause is still visible.
   local probe token
-  for token in "$PASSPORT_NARROW" "$PASSPORT_WIDE" "$PASSPORT_RESEARCH"; do
+  for token in "$PASSPORT_NARROW" "$PASSPORT_WIDE" "$PASSPORT_RESEARCH" "$PASSPORT_READONLY" "$PASSPORT_REP"; do
     probe="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$APP_BASE/mcp" \
       -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
       -H 'Accept: application/json, text/event-stream' \
       -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"e2e-llm","version":"1"}}}')"
     [[ "$probe" = "200" ]] || {
-      echo "a freshly minted passport cannot reach $APP_BASE/mcp (HTTP $probe)" >&2
+      echo "a freshly connected passport cannot reach $APP_BASE/mcp (HTTP $probe)" >&2
       exit 1
     }
   done
 }
-mint_passport
+connect_passports
 
 # --- the search the answers depend on ----------------------------------------
 #
@@ -423,7 +501,7 @@ if [[ "$ready" -eq 1 ]]; then
     echo "HARNESS: $why." >&2
     echo "  Every candidate would be measured on a degraded search. Put GEMINI_API_KEY in" >&2
     echo "  .env.local, or OPENAI_COMPATIBLE_API_KEY with E2E_LLM_STACK_PRESET=config/presets/" >&2
-    echo "  openrouter_cloud_eu.yaml; E2E_LLM_ALLOW_LEXICAL=1 runs anyway and files it as lexical." >&2
+    echo "  openrouter_cloud_eu.yaml; E2E_LLM_ALLOW_LEXICAL=1 with E2E_LLM_VERDICTS runs anyway, unpublished." >&2
     exit 2
   fi
   echo "==> search is lexical only, by E2E_LLM_ALLOW_LEXICAL: $why"
@@ -443,7 +521,7 @@ echo "==> search $SEARCH"
 # stack's database to a template and `dev-restore` clones it back — about a
 # second — which is the shape the integration lanes have used all along
 # (scripts/lib-testdb.sh). What is different here is that the snapshot is taken
-# AFTER the seed and after the passport is minted, so a restore returns the
+# AFTER the seed and after the passports are connected, so a restore returns the
 # records and the credential together and neither has to be rebuilt.
 #
 # The stack comes down for the copy and straight back up, because Postgres will
@@ -473,25 +551,9 @@ restart_stack snapshot_world
 #
 # e2e/llm/clean.py starts the CLI from an empty directory, with no settings,
 # memory or skills; check.py --clean stops a run whose init line says otherwise.
-run_claude() {
-  local prompt_file="$1" out="$2" exited=0
-  python3 "$ROOT/e2e/llm/clean.py" -p "$(cat "$prompt_file")" \
-    --model "$MODEL" \
-    --mcp-config "$MCP_CONFIG" --strict-mcp-config \
-    --allowedTools "mcp__${MCP_SERVER}__*" --tools "" \
-    --permission-mode dontAsk \
-    --output-format stream-json --verbose \
-    --max-turns 20 \
-    > "$out" 2>"$out.err" || exited=$?
-
-  # An unknown flag produces an empty transcript, which a naive checker reads as
-  # a scenario that called nothing — a false failure that looks like a finding.
-  if [[ ! -s "$out" ]]; then
-    echo "  the CLI produced no transcript:" >&2
-    head -5 "$out.err" >&2
-    return 1
-  fi
-
+# mcp_attached reads the transcript's init line and fails unless the lane's
+# server is connected there. Both claude routes write that line.
+mcp_attached() {
   # THE SERVER HAS TO BE CONNECTED, and the passport probe above does not
   # establish it. That probe talks to the stack directly; this asks the CLI what
   # it actually attached, which is a different question with its own answers.
@@ -501,7 +563,7 @@ run_claude() {
   # fails to attach will be a different one, and what makes any of them
   # expensive is not the cause but that the lane reports it as the product
   # failing.
-  local status
+  local out="$1" status
   status="$(python3 -c '
 import json, sys
 want = sys.argv[2]
@@ -525,8 +587,30 @@ else:
     echo "  product's. A 'disabled' here means this CLI has a server of that name turned off for" >&2
     echo "  this project (disabledMcpServers in ~/.claude.json), which --strict-mcp-config does" >&2
     echo "  not override; anything else points at the stack or the passport." >&2
-    return 3
+    return 1
   fi
+}
+
+run_claude() {
+  local prompt_file="$1" out="$2" exited=0
+  python3 "$ROOT/e2e/llm/clean.py" -p "$(cat "$prompt_file")" \
+    --model "$MODEL" \
+    --mcp-config "$MCP_CONFIG" --strict-mcp-config \
+    --allowedTools "mcp__${MCP_SERVER}__*" --tools "" \
+    --permission-mode dontAsk \
+    --output-format stream-json --verbose \
+    --max-turns 20 \
+    > "$out" 2>"$out.err" || exited=$?
+
+  # An unknown flag produces an empty transcript, which a naive checker reads as
+  # a scenario that called nothing — a false failure that looks like a finding.
+  if [[ ! -s "$out" ]]; then
+    echo "  the CLI produced no transcript:" >&2
+    head -5 "$out.err" >&2
+    return 1
+  fi
+
+  mcp_attached "$out" || return 3
 
   # A NONZERO EXIT IS SCORED ONLY WHEN THE RESULT OWNS IT. The CLI exits nonzero
   # on the turn cap, and its result says so with is_error; a nonzero exit whose
@@ -548,6 +632,9 @@ for line in open(sys.argv[1]):
 # keep_transcript copies a stopped run's transcript where the reader looks. It is
 # the only evidence of which failure this was, so a copy that fails says so.
 keep_transcript() {
+  if [[ -f "$1.calls" ]] && ! cp "$1.calls" "$RECORD_DIR/"; then
+    echo "  and the server's call log could not be kept: $1.calls" >&2
+  fi
   if ! cp "$1" "$RECORD_DIR/"; then
     echo "  and the transcript could not be kept: $1" >&2
   else
@@ -555,13 +642,39 @@ keep_transcript() {
   fi
 }
 
+# keep_world <file> keeps the approvals a run left, with their audit and outbox
+# rows, before the restore takes them away. A staged approval that is gone by the
+# time a model looks can only be followed through its own trail.
+keep_world() {
+  bash "$ROOT/scripts/dev.sh" query "$SLUG" > "$1" 2>&1 <<'SQL' || echo "  the world could not be kept: $1" >&2
+\echo approval
+SELECT id, kind, status, created_at, decided_at, decided_by_system, consumed_at, effect_ran_at,
+       effect_failed_at, expires_at, staged_by_connection
+  FROM approval ORDER BY created_at DESC LIMIT 20;
+\echo audit_log
+SELECT occurred_at, action, actor_type, entity_type, entity_id
+  FROM audit_log WHERE entity_id IN (SELECT id FROM approval) ORDER BY occurred_at DESC LIMIT 50;
+\echo event_outbox
+SELECT created_at, published_at, stream, envelope ->> 'type' AS type
+  FROM event_outbox
+ WHERE envelope::text LIKE ANY (ARRAY(SELECT '%' || id || '%' FROM approval))
+ ORDER BY created_at DESC LIMIT 50;
+SQL
+}
+
 # run_once drives one run on the chosen route: 0 when it ran, 1 when it left no
 # usable transcript (scored as a failed run, as before), 3 when the route could
 # not run it at all — a harness stop, never a score. drive.py reads the
 # passport from the variable it is named, so it reaches no command line.
 run_once() {
-  local status=0
+  local status=0 at=0
+  [[ -f "$CALL_LOG" ]] && at=$(($(wc -c < "$CALL_LOG")))
   drive_once "$@" || status=$?
+  # Only the run's own calls: the REST door's are http, and restmap below reads
+  # the catalog over /mcp itself.
+  if [[ "$DOOR" = mcp ]]; then
+    python3 "$ROOT/e2e/llm/calllog.py" cut "$CALL_LOG" "$at" "$2.calls" 2>>"$2.err" || return 3
+  fi
   # On the REST door the run holds http calls; they are rewritten to the verbs
   # they ran, and the tools it was offered are the MCP surface's own, so the
   # checker reads the run as it reads one made over MCP.
@@ -578,11 +691,13 @@ drive_once() {
     run_claude "$prompt_file" "$out"
     return
   fi
+  local scenario_args=()
+  [[ "$WIRE" = claude-sdk ]] && scenario_args=(--scenario "$scenario")
   [[ "$DOOR" = rest ]] && door_args=(--rest-skill-dir "$SKILL_DIR" --rest-base "$APP_BASE/v1")
   MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/drive.py" \
     --candidate "$CANDIDATE" --via "$VIA" --model "$MODEL" --folder "${FOLDER%@*}" --effort "$EFFORT" \
     --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN \
-    ${door_args[@]+"${door_args[@]}"} \
+    ${door_args[@]+"${door_args[@]}"} ${scenario_args[@]+"${scenario_args[@]}"} \
     --prompt-file "$prompt_file" --out "$out" 2>"$out.err" || status=$?
   if [[ "$status" -eq 3 ]]; then
     return 3
@@ -592,6 +707,9 @@ drive_once() {
     head -5 "$out.err" >&2
     return 1
   fi
+  if [[ "$WIRE" = claude-sdk ]]; then
+    mcp_attached "$out" || return 3
+  fi
 }
 
 # WORLD_DIRTY says whether any run has written since the last fresh database.
@@ -599,46 +717,11 @@ drive_once() {
 # scenario, so the first run of the first case has the world the seed built.
 WORLD_DIRTY=0
 
-# EVERY DECLARATION IS CHECKED BEFORE THE FIRST TOKEN IS SPENT.
-#
-# The per-scenario check below runs inside the loop, which is the right place to
-# USE the value and the wrong place to discover it is missing: a typo in the last
-# scenario would abort the lane after every earlier case had been paid for. This
-# lane bills real money, so the whole corpus is validated while it is still free.
-# The judge is one of those declarations. A lane that drives twenty-one cases
-# and then cannot score the judged half of them has spent the whole budget to
-# learn one environment variable was unset, so it is asked before the first
-# token — and only for the scenarios that actually carry a judged criterion.
+# THE JUDGE IS ASKED FOR BEFORE THE FIRST TOKEN. A lane that drives every case
+# and then cannot score the judged half has spent the budget to learn that one
+# variable was unset, so it is asked here, and only for scenarios that carry a
+# judged criterion.
 python3 "$ROOT/e2e/llm/check.py" --judge-ready "$SCENARIO_DIR"/*.yaml
-
-for scenario in "$SCENARIO_DIR"/*.yaml; do
-  declared="$(python3 "$ROOT/e2e/llm/check.py" --field writes "$scenario")"
-  case "$declared" in
-    true|false) ;;
-    *)
-      echo "$(basename "$scenario") declares writes=${declared:-<absent>}; it must be exactly" >&2
-      echo "true or false. It is the case author's statement that this case changes the world," >&2
-      echo "and TestEveryWritingScenarioDeclaresThatItWrites derives the same fact from the tools" >&2
-      echo "the case names and fails when the two disagree — an absent or misspelled value would" >&2
-      echo "leave that gate comparing against nothing." >&2
-      exit 1
-      ;;
-  esac
-done
-
-# `passport:` is absent (the narrow credential), `wide` or `research`. Anything else would be
-# read as narrow by use_passport and measure a case on a surface its author did
-# not mean, so a misspelling stops the lane here, before the first token.
-for scenario in "$SCENARIO_DIR"/*.yaml; do
-  declared="$(python3 "$ROOT/e2e/llm/check.py" --field passport "$scenario")"
-  case "$declared" in
-    ""|wide|research) ;;
-    *)
-      echo "$(basename "$scenario") declares passport=$declared; it must be absent, wide or research" >&2
-      exit 1
-      ;;
-  esac
-done
 
 PASSED=0
 FAILED=0
@@ -668,9 +751,12 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
 
   echo "==> $name ($runs runs, passes at $pass_at)"
   ok=0
+  # The transcripts of the runs that passed: only their tools count as driven.
+  passing=()
   results="$WORK/$name.results"
   : > "$results"
 
+  rm -f "$RECORD_DIR/$name".run*.world.txt
   made=0
   for i in $(seq 1 "$runs"); do
     # A run that cannot move the verdict is not paid for: two passes at 2-of-3
@@ -713,12 +799,33 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       # while a clone is byte-identical to the world it was already looking at.
       (cd "$ROOT" && make dev-restore DEV_SLUG="$SLUG" >/dev/null)
       WORLD_DIRTY=0
+      # The restore cut every database connection under the api; the run starts
+      # once an authenticated call is answered again, never on the outage.
+      if ! why="$(MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/stackready.py" --settled \
+        --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN --wait 30)"; then
+        echo
+        echo "HARNESS: $name run $i: $why"
+        echo "  This is not a use-case failure. Nothing was scored."
+        exit 2
+      fi
     fi
 
     # Dirty BEFORE the run rather than after it. A run that dies mid-way has
     # still written whatever it wrote up to that point, and a failure path that
     # left the flag clean would hand the next run that debris.
     WORLD_DIRTY=1
+
+    # The case's own setup runs on the reset world, which is already marked
+    # dirty, so the restore before the next run is what takes it away again.
+    setup="$(python3 "$ROOT/e2e/llm/check.py" --field setup "$scenario")"
+    if [[ -n "$setup" ]] && ! why="$(python3 "$ROOT/e2e/llm/casesetup.py" "$setup" "$APP_BASE" "$COOKIES" 2>&1)"; then
+      echo
+      echo "HARNESS: $name run $i could not be set up: $why"
+      keep_world "$RECORD_DIR/$name.run$i.world.txt"
+      echo "  what the setup left is at $RECORD_DIR/$name.run$i.world.txt"
+      echo "  This is not a use-case failure. Nothing was scored."
+      exit 2
+    fi
 
     transcript="$WORK/$name.run$i.jsonl"
     run_status=0
@@ -781,13 +888,14 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     fi
     # THE WORLD IS READ BEFORE IT IS RESTORED. An answer can report a write
     # that never landed, and nothing above reads the database, so a case's
-    # must_end_with is read back here through the same passport. Exit 4 is a
+    # must_end_with is read back here through the reader's passport. Exit 4 is a
     # world that did not hold; any other failure is a world the reader could
     # not read, a harness stop like the bridge's.
     ended=0
-    MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/endstate.py" \
+    MARGINCE_E2E_TOKEN="$READER_PASSPORT" python3 "$ROOT/e2e/llm/endstate.py" \
       --scenario "$scenario" --transcript "$transcript" \
       --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN >> "$results" 2>&1 || ended=$?
+    [[ -z "$setup" ]] || keep_world "$RECORD_DIR/$name.run$i.world.txt"
     if [[ "$ended" -ne 0 && "$ended" -ne 4 ]]; then
       echo
       echo "HARNESS: $name run $i left a world that could not be read:"
@@ -813,6 +921,7 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       0)
         if [[ "$ended" -eq 0 ]]; then
           ok=$((ok + 1))
+          passing+=("$transcript")
           echo "  run $i: pass"
         else
           echo "  run $i: fail"
@@ -866,18 +975,34 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   # The verdict carries what the answer cost as well as whether it held.
   E2E_LLM_DRIVER="$DRIVER" E2E_LLM_EFFORT="$EFFORT" E2E_LLM_SYSTEM_PROMPT="$SYSTEM_PROMPT" \
     E2E_LLM_SELF_JUDGED="$SELF_JUDGED" E2E_LLM_SEARCH="$SEARCH" \
+    E2E_LLM_STAMPS="$STAMP_DIR/stamps.json" E2E_LLM_COMMIT="$COMMIT" \
     python3 "$ROOT/e2e/llm/check.py" --record "$scenario" "$ok" "$made" \
-    ${transcripts[@]+"${transcripts[@]}"} > "$VERDICT_DIR/${name}.json"
+    ${transcripts[@]+"${transcripts[@]}"} --passing ${passing[@]+"${passing[@]}"} > "$WORK/${name}.verdict.json" || {
+    echo "HARNESS: the verdict of $name could not be written; the committed one is unchanged." >&2
+    exit 2
+  }
+  # Moved into place whole: a redirect into the committed file would empty it
+  # before the writer ran, and a writer that crashed would leave it empty.
+  mv "$WORK/${name}.verdict.json" "$VERDICT_DIR/${name}.json"
 
   # And the same total in prose while the reason for it is still on screen. The
   # line is formatted by check.py, which owns what a usage total means, rather
   # than assembled here out of JSON the shell would have to parse.
   python3 "$ROOT/e2e/llm/check.py" --usage "$made" \
     ${transcripts[@]+"${transcripts[@]}"} | tee -a "$REPORT"
+  # How directly the runs finished, flagged slow past `expected_calls`; a score
+  # beside the verdict, never a part of it.
+  python3 "$ROOT/e2e/llm/check.py" --efficiency "$scenario" \
+    ${transcripts[@]+"${transcripts[@]}"} | tee -a "$REPORT"
 
-  # A settled scenario makes fewer runs than an earlier lane may have kept.
-  rm -f "$RECORD_DIR/$name".run*.jsonl
+  # A settled scenario makes fewer runs than an earlier lane may have kept. Each
+  # run's cut of the server's call log stays beside its transcript.
+  rm -f "$RECORD_DIR/$name".run*.jsonl "$RECORD_DIR/$name".run*.jsonl.calls
   cp "$WORK/$name".run*.jsonl "$RECORD_DIR/" 2>/dev/null || true
+  for calls in "$WORK/$name".run*.jsonl.calls; do
+    [[ -e "$calls" ]] || continue
+    cp "$calls" "$RECORD_DIR/" || echo "  the server's call log could not be kept: $calls" >&2
+  done
 done
 
 # A run that called nothing is scored on its answer, but a sweep in which no run

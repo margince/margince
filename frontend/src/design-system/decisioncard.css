@@ -167,6 +167,16 @@
   overflow-wrap: anywhere;
 }
 
+/* A proposal shown without its card sits in a surface that already has its
+   own space above it. */
+.dcard-proposal {
+  padding: var(--space-3) var(--space-4);
+}
+
+.dcard-proposal > :first-child {
+  margin-top: 0;
+}
+
 .dcard-evidence {
   display: flex;
   flex-wrap: wrap;

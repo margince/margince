@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { UTC_ZONE } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
+import { expectTextFits, UNBROKEN_SUBJECT } from "../testing/unbrokentext";
 import { StatCard } from "./atoms";
 import { HowItStands } from "./howitstands";
 import { StageLadder } from "./stageladder";
@@ -266,6 +267,71 @@ export const DealWithLadder: Story = {
   ),
 };
 
+/** A deal read from records, whose newest word is the reason Margince gave
+ *  for a change. The line under the call says it, with the way into History. */
+export const DealWithLatestWord: Story = {
+  render: () => (
+    <HowItStands
+      date="11 Nov"
+      verdict={{ word: "On track", tone: "success" }}
+      latest={{
+        byMargince: true,
+        kind: "Note",
+        when: "9 Nov",
+        text: "Win probability set to 40%: The customer stated an intention to proceed with different, smaller components (#1 and #2a) rather than the deal as currently scoped.\nUndo any of these from Home.",
+        onOpen: noop,
+      }}
+      dims={
+        <StandingDims
+          dims={[
+            {
+              key: "m",
+              label: "Momentum",
+              value: "Active",
+              sub: "last activity filed on this deal 5 Nov",
+              tone: "success",
+            },
+            {
+              key: "r",
+              label: "Risk",
+              value: "2 signals",
+              sub: "Single-threaded · No engaged champion",
+              tone: "warning",
+            },
+          ]}
+        />
+      }
+    />
+  ),
+};
+
+/** A contact whose newest word is their own email, named by sender. */
+export const ContactWithLatestMail: Story = {
+  render: () => (
+    <HowItStands
+      date="11 Nov"
+      verdict={{
+        word: "Warm",
+        sentence: "Replied after a quiet month.",
+        tone: "success",
+      }}
+      latest={{
+        byMargince: false,
+        kind: "Email",
+        detail: "From Sonya Beck",
+        when: "10 Nov",
+        text: "Happy to go ahead with the first two parts. Can you send the revised offer by Friday?",
+        onOpen: noop,
+      }}
+    />
+  ),
+};
+
+export const DealWithLatestWordDark: Story = {
+  ...DealWithLatestWord,
+  globals: { theme: "dark" },
+};
+
 /** A project nobody has assessed: neutral, no wash, and nothing invented. */
 export const NotAssessed: Story = {
   render: () => (
@@ -345,4 +411,29 @@ export const NarrowGerman: Story = {
       }
     />
   ),
+};
+
+/** The verdict's sentence quotes a subject with no space in it, and wraps
+ *  inside the sheet on a phone. */
+export const UnbrokenSentencePhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <HowItStands
+      date="13 Aug"
+      verdict={{
+        word: "Watch",
+        sentence: `You owe Greta Schilling: ${UNBROKEN_SUBJECT}`,
+        tone: "warning",
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const sentence = await within(canvasElement).findByText(
+      `You owe Greta Schilling: ${UNBROKEN_SUBJECT}`,
+    );
+    const sheet = sentence.closest(".standing-sheet-verdict");
+    if (!sheet) throw new Error("the sheet drew no verdict");
+    await expectTextFits(sentence, sheet.getBoundingClientRect());
+  },
 };

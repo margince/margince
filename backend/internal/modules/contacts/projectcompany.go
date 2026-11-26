@@ -41,7 +41,7 @@ const projectCompanySource = "project"
 // projectCompanyDefaultRole is what a company is to a project when the caller
 // names no role: its client. The same role the migration backfill used, so a
 // project created before the edge existed and one created after read alike.
-const projectCompanyDefaultRole = "customer"
+const projectCompanyDefaultRole = auth.ProjectCustomerRole
 
 // relationshipRoleField is the audit key the edge's role is recorded under,
 // spelled once so the three writers cannot disagree about it.
@@ -87,52 +87,14 @@ func AttachCompanyToProjectTx(
 func CompaniesOnProjectTx(
 	ctx context.Context, tx pgx.Tx, projectID ids.ProjectID,
 ) ([]ProjectCompany, error) {
-	// Reading an edge discloses its endpoints AS A PAIR — that this project and
-	// this company are working together — which is what relationship.read
-	// governs; the endpoints' own grants do not cover it.
-	//
-	// A caller without that grant gets an EMPTY list rather than a refusal.
-	// This read is one section of a project, and refusing it would refuse the
-	// project: a seat that may read a project but holds no relationship grant
-	// would lose the record entirely over a section it was never entitled to.
-	// Withholding the section is the answer the rest of this tree gives — an
-	// omitted 360 section, a masked field — and it is the one that leaves the
-	// caller with what they may see.
-	if err := auth.Require(ctx, "relationship", principal.ActionRead); err != nil {
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return nil, nil
-		}
-		return nil, err
-	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	projectPos := arg(projectID)
-	edge, err := auth.EdgeReadScope(ctx, "r", arg)
-	if err != nil {
+	bounds, err := auth.ProjectCompanyPredicates(ctx, "r", "o", arg)
+	if err != nil || !bounds.CompaniesRead {
 		return nil, err
 	}
-	if edge == "" {
-		edge = sqlAlwaysVisible
-	}
-	// And the company itself is a row-scoped record, so one the caller may not
-	// open is omitted rather than named.
-	//
-	// BOTH halves, because the row half alone answers WHICH companies and never
-	// whether this caller may read companies at all: under row_scope=all it
-	// admits every row, so a seat holding relationship.read and project.update
-	// and no company grant would be handed display names it is refused on every
-	// other surface. Withheld the same way the relationship grant above is —
-	// the section goes, not the project.
-	if !auth.ReadGranted(ctx, "company") {
-		return nil, nil
-	}
-	scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
-	if err != nil {
-		return nil, err
-	}
-	if scope == "" {
-		scope = sqlAlwaysVisible
-	}
+	edge, scope := bounds.Edge, bounds.Company
 	rows, err := tx.Query(ctx, storekit.SQLf(`
 		SELECT r.company_id, o.display_name, coalesce(r.role, '')
 		  FROM relationship r
@@ -157,6 +119,51 @@ func CompaniesOnProjectTx(
 		return nil, fmt.Errorf("read the companies on the project: %w", err)
 	}
 	return out, nil
+}
+
+// FirstCustomersOnProjectsTx answers each project's first live customer edge,
+// in attach order, in one statement for the whole page.
+//
+// A project with no customer edge is absent from the map. A customer this
+// caller may not read maps to nil: its id is blanked in SQL and never leaves
+// the database. edgesRead is false when the caller holds no
+// relationship.read, so nothing is known about any project's customer.
+func FirstCustomersOnProjectsTx(
+	ctx context.Context, tx pgx.Tx, projectIDs []ids.ProjectID,
+) (customers map[ids.ProjectID]*ids.CompanyID, edgesRead bool, err error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	projectsPos := arg(projectIDs)
+	customer, err := auth.ProjectCustomerSQL(ctx, "p.id", arg)
+	if err != nil || !customer.EdgesRead {
+		return nil, false, err
+	}
+	customers = make(map[ids.ProjectID]*ids.CompanyID, len(projectIDs))
+	if len(projectIDs) == 0 {
+		return customers, true, nil
+	}
+	rows, err := tx.Query(ctx, storekit.SQLf(`
+		SELECT p.id, %s, %s FROM unnest($%d::uuid[]) AS p(id)`,
+		customer.Readable, customer.Present, projectsPos), args...)
+	if err != nil {
+		return nil, false, fmt.Errorf("read the projects' first customers: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var project ids.ProjectID
+		var company *ids.CompanyID
+		var present bool
+		if err := rows.Scan(&project, &company, &present); err != nil {
+			return nil, false, fmt.Errorf("read one project's first customer: %w", err)
+		}
+		if present {
+			customers[project] = company
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, fmt.Errorf("read the projects' first customers: %w", err)
+	}
+	return customers, true, nil
 }
 
 // ProjectCompany is one company's place on a project.
@@ -376,7 +383,7 @@ func (s *Store) RemoveProjectCompany(ctx context.Context, projectID ids.ProjectI
 type LastProjectCompanyError struct{}
 
 func (e *LastProjectCompanyError) Error() string {
-	return "a project keeps at least one company; add another before taking this one off"
+	return "A project keeps at least one company. Add another before you take this one off."
 }
 
 // FieldFault names the company the caller tried to remove.
@@ -401,8 +408,14 @@ func (p ProjectCompany) OnProjectAs() string { return p.Role }
 type CompanyHasDealsOnProjectError struct{ Deals int }
 
 func (e *CompanyHasDealsOnProjectError) Error() string {
-	return fmt.Sprintf("this company still has %d deal(s) on the project; "+
-		"move or close them before taking the company off", e.Deals)
+	// The count is of unarchived deals, so a won or lost deal still holds the
+	// company on. Moving or archiving it is what lifts the refusal.
+	if e.Deals == 1 {
+		return "This company still has 1 deal on the project. " +
+			"Move it to another project or archive it before you take the company off."
+	}
+	return fmt.Sprintf("This company still has %d deals on the project. "+
+		"Move them to another project or archive them before you take the company off.", e.Deals)
 }
 
 // FieldFault names the company the caller tried to take off.

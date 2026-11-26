@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -138,11 +139,13 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	}
 	out.Access = access
 	out.Summary = availableSummary(activity, parties, len(attachments), access.DisplayStatus)
-
 	// What HAPPENED to it. Read after the access gate for the reason the
 	// attachment count is: whether a message left is something about the
 	// message, so the caller's own gate is what decides.
 	if out.ControllerSend, err = withEmailStateOn(ctx, tx, activity.Id, &out.Summary, asOf); err != nil {
+		return crmcontracts.EmailPresentation{}, err
+	}
+	if err := markCalendarFacts(ctx, tx, id, &out.Summary, asOf); err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
 
@@ -161,6 +164,28 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 		out.CanRelink = writable
 	}
 	return out, nil
+}
+
+// markOpenInvitation turns the summary into an invitation's when the reader
+// may still answer it.
+// markCalendarFacts says whether the mail is an open invitation and what it
+// changed about its meeting, as the page read does for each row.
+func markCalendarFacts(ctx context.Context, tx pgx.Tx, id ids.ActivityID, summary *crmcontracts.EmailSummary, asOf time.Time) error {
+	if err := markOpenInvitation(ctx, tx, id, summary, asOf); err != nil {
+		return err
+	}
+	return markCalendarChange(ctx, tx, id, summary)
+}
+
+func markOpenInvitation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, summary *crmcontracts.EmailSummary, asOf time.Time) error {
+	open, err := openInvitationsTx(ctx, tx, []ids.UUID{id.UUID}, readerOrNobody(ctx), asOf)
+	if err != nil {
+		return err
+	}
+	if found, ok := open[id.UUID]; ok {
+		found.mark(summary)
+	}
+	return nil
 }
 
 // withheldPresentation is the whole answer for a caller who may know the
@@ -200,17 +225,11 @@ func availableSummary(
 		summary.Direction = &d
 	}
 	if activity.Body != nil {
-		if preview := EmailSummaryText(*activity.Body); preview != "" {
+		if preview := EmailSummaryText(*activity.Body, deref(activity.Subject)); preview != "" {
 			summary.Preview = &preview
 		}
 	}
-	// Who it was with: the far side of the exchange, which is the sender on a
-	// message that came in and the recipients on one that went out.
-	far := parties.to
-	if activity.Direction != nil && *activity.Direction == crmcontracts.ActivityDirectionInbound {
-		far = parties.from
-	}
-	summary.Counterparty, summary.CounterpartyContactId = counterpartyOf(far)
+	summary.Counterparty, summary.CounterpartyContactId = rowCounterparty(activity.Direction, parties)
 	if activity.EmailSummary != nil {
 		summary.Move = activity.EmailSummary.Move
 	}
@@ -243,12 +262,20 @@ func callerIsSenderSeat(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool
 // the content gate above admitted the caller, so it carries no second gate of
 // its own — the parent decided, exactly as ListAttachments' parent check does.
 func readEmailAttachments(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]crmcontracts.EmailAttachmentSummary, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT at.id, at.filename, at.byte_size, at.content_type, at.bytes_withheld
+	args := []any{id.UUID}
+	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
+	// Only a copied-only row keeps the fingerprint of what it withheld
+	// (WithheldFile.Checksum), so the fingerprint tells it from a private one.
+	query := `
+		SELECT at.id, at.filename, at.byte_size, at.content_type, at.bytes_withheld,
+		       CASE WHEN NOT at.bytes_withheld THEN NULL
+		            WHEN at.checksum IS NOT NULL THEN ` + arg(crmcontracts.EmailAttachmentSummaryWithheldReasonNotAddressed) + `
+		            ELSE ` + arg(crmcontracts.EmailAttachmentSummaryWithheldReasonPrivate) + ` END
 		  FROM attachment at
 		 WHERE at.entity_type = 'activity' AND at.entity_id = $1 AND at.archived_at IS NULL
-		   AND `+arrivedWithMessage("at")+`
-		 ORDER BY at.created_at, at.id`, id.UUID)
+		   AND ` + arrivedWithMessage("at") + `
+		 ORDER BY at.created_at, at.id`
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -258,10 +285,12 @@ func readEmailAttachments(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]
 		var a crmcontracts.EmailAttachmentSummary
 		var raw ids.UUID
 		var withheld bool
-		if err := rows.Scan(&raw, &a.Filename, &a.ByteSize, &a.ContentType, &withheld); err != nil {
+		var reason *string
+		if err := rows.Scan(&raw, &a.Filename, &a.ByteSize, &a.ContentType, &withheld, &reason); err != nil {
 			return nil, err
 		}
 		a.BytesWithheld = &withheld
+		a.WithheldReason = (*crmcontracts.EmailAttachmentSummaryWithheldReason)(reason)
 		a.Id = openapi_types.UUID(raw)
 		out = append(out, a)
 	}
@@ -303,11 +332,11 @@ func withheldAccess() crmcontracts.EmailAccess {
 // every message would make opening the newest one cost the whole history.
 //
 // It runs the same gated list every timeline runs. Narrowing to a thread_key
-// upgrades that list to the CONTENT gate, so a member the caller may not read
-// is absent rather than withheld: the drawer shows the conversation this
-// reader is party to, not its true length. That is the existing behaviour of
-// a thread-narrowed list and not a choice made here, but it means the member
-// count is the reader's own and no one else's.
+// upgrades that list to the CONTENT gate. A member the caller may not read is
+// then absent rather than withheld. The drawer shows the conversation this
+// reader is party to, not its true length. A thread-narrowed list always did
+// this. So the member count is the reader's own and no one else's. A mail several mailboxes
+// captured counts once, as on the timeline.
 func readThreadPage(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -324,16 +353,17 @@ func readThreadPage(
 	key := *activity.ThreadKey
 	limit := maxThreadMembers
 	members, page, err := ListActivitiesTx(ctx, tx, ListActivitiesInput{
-		ThreadKey: &key,
-		Cursor:    cursor,
-		Limit:     &limit,
+		ThreadKey:          &key,
+		Cursor:             cursor,
+		Limit:              &limit,
+		CollapseSeatCopies: true,
 	})
 	if err != nil {
 		return empty, err
 	}
 	out := crmcontracts.EmailThreadPage{Members: []crmcontracts.EmailSummary{}}
 	for _, member := range members {
-		if member.Kind != crmcontracts.ActivityKindEmail {
+		if member.Kind != crmcontracts.ActivityKindEmail || standsFor(member, activity.Id) {
 			continue
 		}
 		if member.EmailSummary != nil {
@@ -344,4 +374,11 @@ func readThreadPage(
 		out.NextCursor = &page.NextCursor
 	}
 	return out, nil
+}
+
+// standsFor reports whether a collapsed row is another mailbox's copy of the
+// opened message. The drawer already shows that message, so the copy is no
+// second member of its thread.
+func standsFor(member crmcontracts.Activity, opened openapi_types.UUID) bool {
+	return member.CopyIds != nil && slices.Contains(*member.CopyIds, opened)
 }

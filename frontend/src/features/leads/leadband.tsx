@@ -9,6 +9,7 @@ import { Button } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { WriteRefused } from "../../design-system/querystates";
 import { useT } from "../../i18n";
+import { useCanWrite } from "../../lib/capability";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import type { LeadWriter } from "./leads";
@@ -40,45 +41,21 @@ export function terminalSentence(
     : t("lead.terminalDisqualified");
 }
 
-// The band under the strip: a write the lead refused, and the sentence that
-// says a live lead is not this reader's to change. A closed lead says so in
-// the verdict of How it stands, so its sentence stays hidden (the actions
-// carry it for assistive technology). The way back out of a disqualification
-// is in More.
-//
-// RecordView draws the band's element and its two intervals for anything it is
-// handed, so this answers `undefined` rather than a fragment that renders
-// nothing when there is nothing to say: a fragment is truthy, and every live
-// lead paid a step of dead air between its strip and its columns for one.
+// The band under the strip: a write the lead refused. A lead not this reader's
+// says so in the View only pill, and a closed lead in How it stands.
+// RecordView draws a band for anything it is handed, so nothing to say is
+// `undefined`, never an empty fragment.
 export function leadBand({
-  lead,
   writer,
-  reasonId,
-  t,
-}: Readonly<{
-  lead: Lead;
-  writer: LeadWriter;
-  reasonId: string;
-  t: ReturnType<typeof useT>;
-}>): ReactNode | undefined {
+}: Readonly<{ writer: LeadWriter }>): ReactNode | undefined {
   // The owner's write is not read here: its dialog states its own refusal.
   const refusal = writer.patch.error;
-  const sentence = lead.archived_at
-    ? undefined
-    : terminalSentence(lead, writer, t);
-  if (!refusal && !sentence) {
+  if (!refusal) {
     return undefined;
   }
-  return (
-    <>
-      {/* The page's one write serves both columns and every tab, so what it
-          REFUSES is stated where both are visible. In the ladder panel this
-          reached only the Overview tab, and a rail write refused while the
-          reader was on History said nothing at all. */}
-      <WriteRefused titleKey="lead.writeRefused" error={refusal} />
-      {sentence && <p id={reasonId}>{sentence}</p>}
-    </>
-  );
+  // The page's one write serves both columns and every tab, so what it
+  // REFUSES is stated where both are visible.
+  return <WriteRefused titleKey="lead.writeRefused" error={refusal} />;
 }
 
 /**
@@ -116,17 +93,20 @@ export function ReopenAction({ lead }: Readonly<{ lead: Lead }>) {
       setOpen(false);
     },
   });
+  // The server asks for both grants, since reopening un-archives the row. An
+  // archived lead is never `writable`, so that flag cannot be this gate.
+  const mayUpdate = useCanWrite("lead", "update");
+  const mayUnarchive = useCanWrite("lead", "delete");
   const close = () => {
     setOpen(false);
     reopen.reset();
   };
-  // The way back is offered only on a disqualification a reader may write. The
-  // promoted closure is the demote's to reverse, and a reader who cannot
-  // change this lead cannot reopen it either.
+  // The promoted closure is the demote's to reverse.
   if (
     !lead.archived_at ||
     lead.status !== "disqualified" ||
-    lead.writable === false
+    !mayUpdate ||
+    !mayUnarchive
   ) {
     return null;
   }

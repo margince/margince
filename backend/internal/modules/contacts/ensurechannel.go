@@ -302,10 +302,8 @@ func (s *Store) offerChannelContact(ctx context.Context, tx pgx.Tx, in EnsureCha
 	// bot serves the workspace, and auth's owner predicate already treats an
 	// ownerless row as workspace-shared at every row-scope tier.
 	//
-	// quarantined_at is left NULL, and not because impersonation does not
-	// happen here: both tells quarantineSuspect reads — a punycode domain, a
-	// display name naming a DIFFERENT domain than the message arrived from —
-	// are statements about a mail domain this record does not have.
+	// No impersonation sign is recorded. Both signs impersonationSign reads are
+	// statements about a mail domain, and a channel record has none.
 	id, err := createContact(ctx, tx, s, match, ContactSpec{
 		FullName: name,
 		// A channel message arrived from them: the same act as an inbound
@@ -428,9 +426,9 @@ func refreshChannelUsername(ctx context.Context, tx pgx.Tx, ci connector.Channel
 	var previous *string
 	err := tx.QueryRow(ctx, `
 		SELECT id, contact_id, username FROM contact_channel_identity
-		 WHERE provider = $1 AND channel_user_id = $2 AND archived_at IS NULL
+		 WHERE provider = $1 AND channel_user_id = $2 AND account_scope = $3 AND archived_at IS NULL
 		 FOR UPDATE`,
-		ci.Provider, ci.ChannelUserID).Scan(&boundID, &contactID, &previous)
+		ci.Provider, ci.ChannelUserID, ci.AccountScope).Scan(&boundID, &contactID, &previous)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing is bound to this identity yet, which the bind above this call
 		// is what fixes.

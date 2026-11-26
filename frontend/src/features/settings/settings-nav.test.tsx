@@ -86,6 +86,8 @@ const pagesIn = (group: SettingsGroupId) =>
 // changes it, because the read is one every seat holds. Granting the read here
 // would leave this "every page" fixture four pages short.
 const EVERY_PAGE_GRANTED: GrantSpec = {
+  // Meetings, which opens for a seat that may book.
+  activity: ["read", "create"],
   // Writing voice, whose card asks the WRITE. It needed no entry while the page
   // was ungated; now that the rail carries what a reader can act on, an admin
   // without this grant would consult their own voice profile rather than own it.
@@ -174,6 +176,9 @@ const SALES_READS: readonly {
 // plus a `contact` AND `consent_config` pair for the management role, which is
 // seeded the consent vocabulary and nothing else on that page.
 const SEEDED_READS: GrantSpec = {
+  // Every seeded role but read_only creates activities, which is what opens
+  // Meetings.
+  activity: ["read", "create"],
   automation: ["read"],
   contact: ["read"],
   capture_settings: ["read"],
@@ -232,8 +237,9 @@ const SEEDED_READ_PAGES = pagesNamed(
   // `company` is NOT here: it opens on the installation write or the rate
   // read, and no seeded role below ops holds either.
   //
-  // Nor `members`/`teams`: only the `admin` role is seeded `user_admin` or
-  // `team_admin`, so no seeded role below it reaches either page.
+  // Nor `members`: only the `admin` role is seeded `user_admin`.
+  // Teams asks nothing, so every seat reads it.
+  "teams",
   "deals",
   "leads",
   "partners",
@@ -241,6 +247,8 @@ const SEEDED_READ_PAGES = pagesNamed(
   "products",
   "capture",
   "knowledge",
+  // Asks for nothing, so it opens for every fixture here.
+  "about",
 );
 
 const SEEDED_OPS_PAGES = pagesNamed(
@@ -251,9 +259,9 @@ const SEEDED_OPS_PAGES = pagesNamed(
   "notifications",
   "connections",
   "company",
-  // Not `members`/`teams`: ops holds neither `user_admin` nor `team_admin` in
-  // the seeded matrix. Administering colleagues is the admin's, and the roster
-  // ops reads for pickers is answered by the endpoint, not by this page.
+  // Not `members`: ops holds no `user_admin` in the seeded matrix.
+  // Administering colleagues is the admin's.
+  "teams",
   "seats",
   "deals",
   "leads",
@@ -271,6 +279,7 @@ const SEEDED_OPS_PAGES = pagesNamed(
   "system-health",
   // The same installation_settings update, which lists where each setting comes from.
   "configuration",
+  "about",
 );
 
 describe("SettingsScreen page visibility", () => {
@@ -322,9 +331,9 @@ describe("SettingsScreen page visibility", () => {
   });
 
   // The floor, and the reason removing the seat gate is not "everyone gets
-  // everything". A principal holding NOTHING reaches the five personal pages and
-  // no others: members and teams follow `user_admin`/`team_admin` now, and every
-  // remaining page is absent because its requirement says so.
+  // everything". A principal holding no grant reaches the pages that ask for
+  // none and no others: every remaining page is absent because its
+  // requirement says so.
   //
   // ASSERTED THROUGH THE EVALUATOR, NOT THE RAIL, and that is not a shortcut.
   // For a grantless snapshot the rendered rail is byte-identical before and

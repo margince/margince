@@ -1,0 +1,6 @@
+{
+  "verb": "read_ai_routing",
+  "checks": [
+    "ai_routing.read"
+  ]
+}

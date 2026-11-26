@@ -31,26 +31,23 @@ afterEach(() => {
 // unchecked. That lets a shape drift off the contract while every test passes.
 type StateStrip360 = NonNullable<Company360["state_strip"]>;
 
-// The page's two lifecycle controls, header first. They are different
-// primitives. The header's is the design system's dropdown worn as a button
-// beside the name (a combobox named by its field). The grid's is the inline
-// value a row of values carries ("Change Lifecycle"). One of each, so a third
-// mount point or a lost one fails here. An account nobody has assessed has an
-// empty lifecycle row, which folds behind the details' "Show N empty fields".
-async function lifecycleControls(): Promise<HTMLElement[]> {
-  const header = await screen.findAllByRole("combobox", { name: "Lifecycle" });
+// The About reading of the stage, the one place it is edited from: the header
+// draws no lifecycle control. An unassessed stage folds behind "Show N empty
+// fields".
+async function lifecycleReading(): Promise<HTMLElement> {
   const unfold = screen.queryByRole("button", {
     name: /^Show \d+ empty fields$/,
   });
   if (unfold) {
     await userEvent.click(unfold);
   }
-  const grid = await screen.findAllByRole("button", {
-    name: /^Change Lifecycle/,
-  });
-  expect(header).toHaveLength(1);
-  expect(grid).toHaveLength(1);
-  return [...header, ...grid];
+  const about = await screen.findByRole("region", { name: "About" });
+  const row = within(about).getByText("Lifecycle", { selector: "dt" });
+  expect(screen.queryByRole("combobox", { name: "Lifecycle" })).toBeNull();
+  if (!(row.nextElementSibling instanceof HTMLElement)) {
+    throw new Error("the About section draws no Lifecycle value");
+  }
+  return row.nextElementSibling;
 }
 
 describe("company view — where the account stands, and what it is to us", () => {
@@ -59,12 +56,11 @@ describe("company view — where the account stands, and what it is to us", () =
     // the tab would share a label and tell the test nothing.
     //
     // The same override goes into both reads: the 360's own `company` (read by
-    // the rail's grid) and the standalone GET (read by the header). Both draw a
-    // lifecycle control. Two real reads of one row never disagree, so the
-    // fixture must not either.
+    // the rail's grid) and the standalone GET (read by the header). Two real
+    // reads of one row never disagree, so the fixture must not either.
     const withLifecycle: Company = {
       ...company,
-      lifecycle: "former_customer",
+      status: "former_customer",
       relationship_types: ["customer", "supplier"],
     };
     stub(view({ company: withLifecycle }), 200, withLifecycle);
@@ -73,14 +69,8 @@ describe("company view — where the account stands, and what it is to us", () =
 
     // A classification with one value let an account whose contract had ended
     // read as "Prospect" while it was also a partner. Lifecycle is the editable
-    // control; the types stay read-only badges. findAllBy, not getBy: the
-    // controls appear only once /me answers with the viewer's grants, which
-    // resolves apart from the 360 awaited above. Two controls, the header's
-    // button and the Details grid's field. Both show the same value,
-    // because both read the one row and write through the same patch.
-    for (const control of await lifecycleControls()) {
-      expect(control.textContent).toContain("Former customer");
-    }
+    // field, in the details; the types stay read-only badges.
+    expect((await lifecycleReading()).textContent).toContain("Former customer");
     // The design draws no relationship badge beside the name and no type row
     // in the details: the types are a Profile tab field. This account is a
     // former customer and still carries the `customer` type. Printing both
@@ -90,10 +80,10 @@ describe("company view — where the account stands, and what it is to us", () =
     expect(screen.queryByText("Supplier")).toBeNull();
   });
 
-  it("offers the lifecycle control on an account nobody has assessed yet", async () => {
+  it("reads an account nobody has assessed yet as Unknown, in the details only", async () => {
     stub(view(), 200, {
       ...company,
-      lifecycle: "unknown",
+      status: "unknown",
       relationship_types: [],
     });
     renderCompany();
@@ -103,16 +93,14 @@ describe("company view — where the account stands, and what it is to us", () =
     // Hiding it takes the field away from the account that needs it set, and
     // there is no other way in from here. It reads "Unknown", the stage's own
     // word, never a verdict. Both mount points (header, grid) show it.
-    for (const control of await lifecycleControls()) {
-      expect(control.textContent).toContain("Unknown");
-    }
+    expect((await lifecycleReading()).textContent).toContain("Unknown");
   });
 
-  it("writes lifecycle once and shows the new value on both mount points", async () => {
+  it("writes lifecycle once, from the details dialog, and shows the new value", async () => {
     // What "one write path, two mount points" promises: a save through either
     // control reaches the server once. The other control shows the new value
     // once the record refetches, with no second write and no stale value left.
-    let currentCompany: Company = { ...company, lifecycle: "unknown" };
+    let currentCompany: Company = { ...company, status: "unknown" };
     let patchCount = 0;
     let lastIfMatch: string | null = null;
     vi.stubGlobal(
@@ -139,7 +127,7 @@ describe("company view — where the account stands, and what it is to us", () =
             if (sent === null || typeof sent !== "object") {
               throw new Error(`the PATCH body is not an object: ${sent}`);
             }
-            const body: { lifecycle?: Company["lifecycle"] } = sent;
+            const body: { status?: Company["status"] } = sent;
             if (currentCompany.version === undefined) {
               // What this case asserts is the If-Match the second write sends,
               // so a fixture with no version to increment would be measuring
@@ -148,7 +136,7 @@ describe("company view — where the account stands, and what it is to us", () =
             }
             currentCompany = {
               ...currentCompany,
-              lifecycle: body.lifecycle ?? currentCompany.lifecycle,
+              status: body.status ?? currentCompany.status,
               version: currentCompany.version + 1,
             };
           }
@@ -160,18 +148,23 @@ describe("company view — where the account stands, and what it is to us", () =
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
 
-    const [headerControl] = await lifecycleControls();
-    await pickOption(userEvent.setup(), headerControl, "Prospect");
+    await lifecycleReading();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Edit About" }));
+    const dialog = await screen.findByRole("dialog", { name: "About" });
+    await pickOption(
+      user,
+      within(dialog).getByRole("combobox", { name: "Lifecycle" }),
+      "Prospect",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(patchCount).toBe(1));
     expect(lastIfMatch).toBe("1");
-    // Both controls read "Prospect" (the header's own and the grid's reused
-    // copy). The single write invalidates the one query both read from; neither
-    // wrote a second time.
+    // Both read "Prospect": the single write invalidates the one query both
+    // read from, and nothing wrote a second time.
     await waitFor(async () => {
-      for (const control of await lifecycleControls()) {
-        expect(control.textContent).toContain("Prospect");
-      }
+      expect((await lifecycleReading()).textContent).toContain("Prospect");
     });
   });
 });
@@ -183,7 +176,7 @@ describe("company view — the KPI row never invents a figure", () => {
   const commercial = (
     over: Partial<NonNullable<StateStrip360["commercial"]>>,
   ): StateStrip360 => ({
-    account: { lifecycle: "prospect", relationship_types: [] },
+    account: { status: "prospect", relationship_types: [] },
     commercial: {
       open_count: 2,
       stalled_count: 0,
@@ -248,7 +241,9 @@ describe("company view — the KPI row never invents a figure", () => {
     // far back any part of it reaches. The date itself is checked, not only the
     // prefix: a dropped or wrong interpolation is the failure this
     // qualification exists to prevent.
-    expect(within(strip).getByText(/1 converted, rates .*2026/)).toBeTruthy();
+    expect(
+      within(strip).getByText(/1 converted, exchange rates .*2026/),
+    ).toBeTruthy();
   });
 
   it("keeps saying the pipeline is unpriced even when a deal has stalled", async () => {
@@ -315,7 +310,7 @@ describe("company view — the KPI row never invents a figure", () => {
     stub(
       view({
         state_strip: {
-          account: { lifecycle: "prospect", relationship_types: [] },
+          account: { status: "prospect", relationship_types: [] },
           commercial: {
             open_count: 1,
             stalled_count: 0,
@@ -344,7 +339,7 @@ describe("company view — the KPI row never invents a figure", () => {
       view({
         health: { days_since_last_inbound: 90 },
         state_strip: {
-          account: { lifecycle: "customer", relationship_types: [] },
+          account: { status: "customer", relationship_types: [] },
           commercial: {
             open_count: 1,
             stalled_count: 0,
@@ -376,7 +371,7 @@ describe("company view — the state strip", () => {
       view({
         state_strip: {
           account: {
-            lifecycle: "former_customer",
+            status: "former_customer",
             relationship_types: ["partner"],
           },
           engagement: {
@@ -411,7 +406,7 @@ describe("company view — the state strip", () => {
     stub(
       view({
         state_strip: {
-          account: { lifecycle: "prospect", relationship_types: [] },
+          account: { status: "prospect", relationship_types: [] },
           engagement: null,
           commercial: null,
           signal: {
@@ -519,7 +514,7 @@ describe("company view — advice you can act on", () => {
 // rather than a second copy of that card.
 describe("a customer's KPI row reports what the account is worth", () => {
   const customer = {
-    account: { lifecycle: "customer" as const, relationship_types: [] },
+    account: { status: "customer" as const, relationship_types: [] },
   };
   const connected = (extra: Record<string, unknown>) => ({
     company_id: "o-1",
@@ -591,7 +586,7 @@ describe("a customer's KPI row reports what the account is worth", () => {
 // already connected sends them to a settings page to change nothing.
 describe("the money slot says WHY it has no figure", () => {
   const customer = {
-    account: { lifecycle: "customer" as const, relationship_types: [] },
+    account: { status: "customer" as const, relationship_types: [] },
   };
   const strip = async () =>
     await screen.findByRole("region", { name: "Company status" });
@@ -754,7 +749,7 @@ describe("the money slot says WHY it has no figure", () => {
 // does.
 describe("the money slot says its reason once and borrows no figure", () => {
   const customer = {
-    account: { lifecycle: "customer" as const, relationship_types: [] },
+    account: { status: "customer" as const, relationship_types: [] },
   };
   const strip = async () =>
     await screen.findByRole("region", { name: "Company status" });
@@ -806,7 +801,7 @@ describe("the money slot says its reason once and borrows no figure", () => {
   const withStanding = () =>
     view({
       state_strip: {
-        account: { lifecycle: "customer" as const, relationship_types: [] },
+        account: { status: "customer" as const, relationship_types: [] },
         commercial: {
           open_count: 2,
           open_pipeline_minor_base: 500000,

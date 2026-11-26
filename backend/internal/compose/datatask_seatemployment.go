@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // seatEmploymentDataTask archives the employment edges capture or a provider
@@ -21,7 +22,7 @@ import (
 func seatEmploymentDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792894995_seat_employment_edges", Version: 2,
-		Title: "Removing employers inferred for colleagues", Requires: []string{"core/1792887436"},
+		Title: systemtext.Literal("datatask.title.core.1792894995_seat_employment_edges"), Requires: []string{"core/1792887436"},
 		Steps: []datatask.Step{{
 			Name: "retire_seat_employment_edges", Limit: 200, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

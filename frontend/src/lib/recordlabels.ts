@@ -47,7 +47,12 @@ export function signalKindLabel(
   const key = Object.hasOwn(SIGNAL_KIND_LABELS, kind)
     ? SIGNAL_KIND_LABELS[kind]
     : undefined;
-  return key ? t(key) : kind.replaceAll("_", " ");
+  if (key) return t(key);
+  // An extension's kind reads `ext:<unit>:<kind>`; the unit prefix is plumbing.
+  const name = kind.startsWith("ext:")
+    ? kind.slice(kind.lastIndexOf(":") + 1)
+    : kind;
+  return name.replaceAll("_", " ");
 }
 
 // How serious a signal is, in the strip's own vocabulary of tones. `info` is
@@ -94,18 +99,32 @@ const DEAL_ROLE_LABELS: Record<DealRole, MessageKey> = {
   user: "co.roleLabel.user",
 };
 
+// A role older records still carry. It is named when read and never offered.
+// backend/gates/frontenddealroles_test.go holds both maps to the server's.
+const LEGACY_DEAL_ROLE_LABELS: Readonly<Record<string, MessageKey>> = {
+  decision_maker: "co.roleLabel.decision_maker",
+};
+
 /**
- * dealRoleLabel names a stakeholder's role on a deal.
+ * dealRoleLabel names a stakeholder's role on a deal, or "" for a typed role
+ * outside the vocabulary. A typed "contact" means nothing to translate, so
+ * callers leave the role out.
  *
- * It lives in the kit rather than on the company page because a deal role is
- * not a company's fact: contact360, the coverage card and the project sections
- * all name the same roles, and all three used to import this from a screen
- * about companies.
+ * It lives in the kit because a deal role is not a company's fact. The
+ * contact page, the coverage card and the project sections name the same roles.
  */
-export function dealRoleLabel(role: string, t: (key: MessageKey) => string) {
+export function dealRoleLabel(
+  role: string,
+  t: (key: MessageKey) => string,
+): string {
+  const stored = role.trim().toLowerCase();
   const labels: Readonly<Record<string, MessageKey>> = DEAL_ROLE_LABELS;
-  const key = Object.hasOwn(labels, role) ? labels[role] : undefined;
-  return key ? t(key) : role.replace(/_/g, " ");
+  const key = Object.hasOwn(labels, stored)
+    ? labels[stored]
+    : Object.hasOwn(LEGACY_DEAL_ROLE_LABELS, stored)
+      ? LEGACY_DEAL_ROLE_LABELS[stored]
+      : undefined;
+  return key ? t(key) : "";
 }
 
 /** A role's words as a reader may type them: any case, any run of spaces. */
@@ -131,10 +150,12 @@ export function roleFromTyped(
 ): string {
   const typed = roleWords(text);
   const known = [...offered, ...vocabulary.keys];
-  const role = known.find(
-    (candidate) =>
-      roleWords(vocabulary.label(candidate, t)) === typed ||
-      roleWords(candidate) === typed,
+  // An offered role outside the vocabulary has no label, so its key's words
+  // stand in for it. The reader typed them back from the open form.
+  const role = known.find((candidate) =>
+    [vocabulary.label(candidate, t), candidate, candidate.replace(/_/g, " ")]
+      .filter(Boolean)
+      .some((words) => roleWords(words) === typed),
   );
   return role ?? text.trim();
 }
@@ -152,18 +173,18 @@ const PROJECT_ROLE_LABELS: Record<ProjectStakeholderRole, MessageKey> = {
 /**
  * projectRoleLabel names a stakeholder's seat on a project.
  *
- * Beside dealRoleLabel because it IS dealRoleLabel plus four words: the project
- * vocabulary is the deal one with the delivery roles added, and the card that
- * draws a seat and the dialog that offers one must not each keep their own copy
- * of that list.
+ * The project vocabulary is the deal one plus the delivery roles. The card that
+ * draws a seat and the dialog that offers one share this list. A typed role
+ * outside both gets "", as in dealRoleLabel.
  */
 export function projectRoleLabel(
   role: string,
   t: (key: MessageKey) => string,
 ): string {
+  const stored = role.trim().toLowerCase();
   const labels: Readonly<Record<string, MessageKey>> = PROJECT_ROLE_LABELS;
-  const key = Object.hasOwn(labels, role) ? labels[role] : undefined;
-  return key ? t(key) : dealRoleLabel(role, t);
+  const key = Object.hasOwn(labels, stored) ? labels[stored] : undefined;
+  return key ? t(key) : dealRoleLabel(stored, t);
 }
 
 /** Whether `value` names a seat the project stakeholder request accepts. */

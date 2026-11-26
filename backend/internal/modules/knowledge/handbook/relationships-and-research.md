@@ -1,28 +1,30 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/contacts/contactnetwork frontend/src/features/contacts/contactstanding.ts frontend/src/features/contacts/contactstrengthsentence.ts frontend/src/features/import/linkedin-import.tsx backend/internal/shared/kernel/relstrength backend/internal/compose/contact360/lasttouch.go backend/internal/modules/introductions backend/internal/modules/contacts/linkedinmatch.go backend/internal/compose/deepread.go backend/internal/platform/webread backend/internal/platform/techprofile -->
+<!-- describes: frontend/src/features/contacts/introreplace.tsx frontend/src/features/contacts/introdrawer.tsx frontend/src/features/contacts/contactnetwork frontend/src/features/contacts/contactstanding.ts frontend/src/features/contacts/contactstrengthsentence.ts frontend/src/features/import/linkedin-import.tsx backend/internal/shared/kernel/relstrength backend/internal/compose/contact360/lasttouch.go backend/internal/modules/introductions backend/internal/modules/contacts/linkedinmatch.go backend/internal/compose/deepread.go backend/internal/platform/webread backend/internal/platform/techprofile -->
 # Relationships, introductions and research
 
 Four questions go together here. Who here already knows a contact, from mail or from your LinkedIn network? How do you get a warm introduction to someone you do not know? What can Margince read about a company from its own website? And what does the company publicly run?
 
 ### Who here knows this contact?
-To see who in your company knows a contact in Margince, open the contact's page and choose the **Network** tab. **Routes** lists the colleagues who write with them, best route first.
+To see who in your company knows a contact in Margince, open the contact's page and choose the **Relationships** tab. **Routes** lists the colleagues who write with them, best route first.
 1. Open the contact.
-2. Choose the **Network** tab.
-3. Read the top route, such as "Ask {name}. They already correspond with this contact.", with its **Evidence**: exchanges in 90 days and **Last contact**.
-4. **Other routes** lists the rest, "Ranked by two-way correspondence."
+2. Choose the **Relationships** tab.
+3. Read the **Best way in** card. It shows your route to the contact, the exchanges in 90 days and the **Last contact**.
+4. The other routes are listed under it in the same card, ranked 2, 3 and on.
 When nobody does: "No one in the company has corresponded with this contact."
 Also called: who knows this client, warm path, relationship map, colleague connections, who has talked to them.
 
 ## Who here knows a contact
 
-A contact's **Network** tab shows which colleagues have written with them, best first, with the number of exchanges behind each. When nobody has: "No one in the company has corresponded with this contact."
+A contact's **Relationships** tab shows which colleagues have written with them, best first, with the number of exchanges behind each. When nobody has: "No one in the company has corresponded with this contact." Unless an introduction ask is open, the tab then leaves out the introduction steps and keeps **Record an introduction**. It also leaves out **Who knows {name}** and its link at the top when the contact would stand alone on its map. That part stays, and says so, when the colleagues who wrote with them are hidden from you.
+
+The tab reads in up to three parts, each with a one-line answer: **Way in**, **Who knows {name}** and **Progress**. Way in shows the best route with the other routes under it, and the links at the top take you to each part. Progress holds the introduction steps and one dated list of recent changes and earlier asks, then your open asks. The **Research** tab has three parts too: **To check**, **Sources** and **Record keeping**. To check holds what Margince read from mail and pages, for you to confirm, correct or dismiss. Sources has **Research public sources**, and Record keeping holds the details, permissions and lists.
 
 When you write with the contact yourself, the tab names you **You**: in the top card, on the map and in the card under it. Your own place on the map offers **Write email**, not **Use this route**, because you need no introduction to a contact you already write with. The top card's badge gives the best route's own strength, such as "Barely in contact", in the same words as the map.
 
 ### What does Reach on the Overview count?
 **Reach** on a contact's **How it stands** card counts the colleagues in touch with them. In touch means both sides wrote in the last 90 days, and the line under it names them.
 
-A colleague who sent the contact a message with no reply follows, after "also wrote". With no colleague in touch, **Reach** reads "No two-way contact" and names who wrote. A colleague who was only copied on a mail is not named.
+A colleague who sent the contact a message with no reply follows, after "also wrote". With no colleague in touch, **Reach** reads "No two-way contact" and names who wrote. A colleague who was only copied on a mail is not named. **Your commitments** on the same card counts open tasks filed for the contact, and promises from conversations that no task holds yet. A promise counts once while its task is open and not at all once it is done, and a reminder Margince set itself never counts. When colleagues filed more tasks than the page shows, the count reads as at least that many, as in "25+ open".
 
 ### How strength is worked out
 Relationship strength in Margince comes from one rule, worked out from captured interactions, such as mail and meetings, **each time you look**:
@@ -30,8 +32,7 @@ Relationship strength in Margince comes from one rule, worked out from captured 
 **Recency × Frequency × Reciprocity**, scored out of 100.
 
 - **Recency** is cut by half every 30 days since the contact last wrote to you or had a meeting or call with you. Your own mail they have not answered does not reset it.
-- **Frequency** counts up to 20 interactions in 90 days; any more add
-  nothing.
+- **Frequency** counts up to 20 interactions in 90 days; any more add nothing.
 - **Reciprocity** gives more for an exchange that goes both ways than for one that goes one way, and never goes below a quarter.
 
 **You cannot change it by hand.** It shows what happened in captured interactions.
@@ -63,7 +64,7 @@ So do not read "Weak" on one screen as the same thing as "barely in contact" on 
 
 ### The network map
 
-The contact's **Network** tab also shows who can reach them, in four groups: **Your team**, **Their company**, **Their contacts**, and **Target**.
+The contact's **Relationships** tab also shows who can reach them, in four groups: **Your team**, **Their company**, **Their contacts**, and **Target**.
 
 It counts and never shows the messages: "{total} interactions in 90 days · {inbound} in, {outbound} out", with "Counts only. The messages stay on the timeline."
 
@@ -79,7 +80,6 @@ A contact's last-message dates count only the messages you can open. The same ru
 - the dates on that contact's Worklist rows.
 
 What this means for you:
-
 
 - A reply on a private thread you are part of counts for you. A colleague who cannot open that
   thread does not see the reply, and their dates, card and rows stay as they were.
@@ -107,7 +107,7 @@ their own badge, **Quiet relationship**.
 To import your LinkedIn network, open **Settings**, then **Connections**, and use the **LinkedIn connections** card.
 1. On LinkedIn, open **Settings**, then **Data privacy**, then **Get a copy of your data**, and ask for the archive.
 2. When the download arrives, open the archive and take the file named Connections.csv. Do not edit it.
-3. In Margince, choose **Edit** beside **Your LinkedIn profile URL**, paste your profile address, and choose **Save profile**.
+3. In Margince, choose **Edit** beside **Your LinkedIn profile URL**, paste your profile address, and choose **Save profile**. It must be a LinkedIn profile, such as `https://www.linkedin.com/in/your-name`; another site or a company page is refused.
 4. Choose **Choose Connections.csv** and pick the file. The import starts at once.
 5. Read the counts: **Connections imported**, **Matched to a contact** and **Awaiting confirmation**.
    **Rows skipped (no usable name)** shows only when there are any.
@@ -189,8 +189,8 @@ A row with no usable name is counted under **Rows skipped (no usable name)**. A 
 When your seat is turned off, your imported connections are deleted with it.
 
 ### How do I ask for a warm introduction?
-To ask a colleague for a warm introduction in Margince, open the contact's **Network** tab. Press **Ask {name} to introduce you** (or **Use this route** on the map), fill in the request, and press **Request introduction**.
-1. Open the contact and choose **Network**.
+To ask a colleague for a warm introduction in Margince, open the contact's **Relationships** tab. Press **Ask {name} to introduce you** (or **Use this route** on the map), fill in the request, and press **Request introduction**.
+1. Open the contact and choose **Relationships**.
 2. Press **Ask {name} to introduce you** on the route you want.
 3. Fill **Reason for request** (required), **Value for the contact** and **Forwardable note**.
 4. If you like, tick **Ask permission to mention their name**, and choose **If they say no**.
@@ -222,23 +222,23 @@ The introduction request has three parts, and the form says who reads which:
 
 You can also **Ask permission to mention their name**. And you can say what should happen **If they say no**: **Nothing further**, **Ask to use their name instead**, or **Try the next route**.
 
-Nothing on the contact's Network tab writes the ask for you.
+Nothing on the contact's Relationships tab writes the ask for you.
 
 A company's **Contacts** tab has a path of its own with fewer steps. **Request introduction** on its contact map opens a box whose **Draft message** writes a note to your colleague. You **Copy** it or use **Open in mail app**, and send it yourself. That draft is not recorded as an ask, and nothing follows its answer.
 
 ### How do I answer an introduction request?
-To answer an introduction request in Margince, open it from your Worklist or from the contact's **Network** tab. Press **Answer**, choose your answer, and press **Record answer**.
-1. Open the request ("Introduction requested by colleague" in your Worklist, or under **Introductions** on the contact's Network tab).
+To answer an introduction request in Margince, open it from your Worklist or from the contact's **Relationships** tab. Press **Answer**, choose your answer, and press **Record answer**.
+1. Open the request ("Introduction requested by colleague" in your Worklist, or under **Introductions** on the contact's Relationships tab).
 2. Press **Answer**.
-3. Choose **Make introduction**, **Let them mention you**, **Suggest someone else** or **Decline**, and add a **Comment** if it helps.
+3. Choose **Make introduction**, **Let them mention you** or **Decline**, and add a **Comment** if it helps.
 4. Press **Record answer**.
 Your colleague sees your comment as written.
 Also called: respond to an intro, accept or decline an introduction.
 
 ### What your colleague sees, and the four answers
-The ask reaches your colleague in two places: on that contact's Network tab, and as an item in their own Worklist.
+The ask reaches your colleague in two places: on that contact's Relationships tab, and as an item in their own Worklist.
 
-There are four answers:
+There are four answers. The **Answer** form offers three of them, because **Suggest someone else** needs a named colleague:
 
 | Answer | What it means |
 |---|---|
@@ -260,6 +260,8 @@ You mark the introduction made (**Mark introduced**), or the name used (**Mark n
 An ask waits **7 days** and then ends on its own (**Expired**), which frees the route.
 
 You can **Withdraw** your own ask; your colleague turns it down with Decline and does not withdraw it. Either way the ask stays on record.
+
+If the colleague cannot help, choose **Choose another colleague** on your ask. Pick another route, say why you need to change it, and review the new ask. The old ask stays open until the new one is saved. Earlier approval does not carry over: the new colleague must decide. The old ask and your reason stay visible to its two original colleagues. A colleague who has left cannot get a new ask.
 
 ### Who can see an ask
 An introduction request is open to the two colleagues in it, and nobody else. Any other colleague sees an empty list, so they cannot tell if anyone was asked about a contact.
@@ -316,9 +318,9 @@ When a read fails, it names the cause in plain words. For example: the site aske
 
 A read that started on its own has a harder limit than one you ask for: 12 pages, not 60.
 
-### Nothing is written until you accept
+### What a read writes
 
-Every result of company research comes as a **staged proposal** in your approvals, one for the company's facts.
+A read fills the company's facts and empty fields, and never replaces a value you set or the company's name. A domain can change hands, so the site's own name must match the company's name or a domain. If it does not, nothing is applied, and the read says so. If the company changed its name or uses a parent brand, add that name or domain to the company, then read again. A domain with no company yet waits for a colleague to answer instead.
 
 Nobody named on the company's website is added. Someone found that way may only become a record once Margince can tell them it has their details. It must also record that it told them (the notice that GDPR Article 14 asks for). Until that exists, a read suggests no one, and such a proposal left from an earlier read cannot be accepted. You can still decline it to clear it.
 
@@ -332,12 +334,12 @@ An address Margince cannot split stays whole under **Registered address** in the
 
 ### Other readings
 
-- **Dossier**: what this company *is*, written only from facts already on file,
-  with every sentence naming one.
+- **Dossier**: what this company *is*, written only from facts already on file, with every sentence naming one.
 - **Account scan**: a reading of one company *for you*, naming records and
   showing words. It is never shared, because it is made from what you can see.
-- **Growth fit**: what this company is worth to *you*, in bands, with both
-  counts of how complete the facts are shown.
+- **Growth fit**: what this company is worth to *you*, in bands. While facts are missing, it lists
+  the facts it is judged on and how many it needs. If you may edit the company, add one there.
+  Technology is the one you cannot add: only a read of the website finds it.
 - **VAT check**: asks the EU list and keeps the answer. A company never
   checked shows as not checked, not as failed.
 - **Hierarchy rollup**: the numbers of a parent company, with the companies under it that you can read added in.

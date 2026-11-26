@@ -505,32 +505,35 @@ export const LeadsBoard: Story = {
 };
 
 export const LeadPresentationComponents: Story = {
-  render: () => (
-    <StoryProviders>
-      <div style={{ display: "grid", gap: "var(--space-3)" }}>
-        <div style={{ display: "flex", gap: "var(--space-2)" }}>
-          <StatusBadge status="new" />
-          <StatusBadge status="contacted" />
+  render: () => {
+    installFetchStub({ "GET /me": meRoute({ lead: ["read", "update"] }) });
+    return (
+      <StoryProviders>
+        <div style={{ display: "grid", gap: "var(--space-3)" }}>
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            <StatusBadge status="new" />
+            <StatusBadge status="contacted" />
+          </div>
+          <LeadBoard
+            query={UNNARROWED_LIST_QUERY}
+            rows={[
+              { ...lead, status: "new", score: 82 },
+              {
+                ...lead,
+                id: "l-2",
+                full_name: "Petra Vogel",
+                status: "contacted",
+                score: 54,
+              },
+            ]}
+            onMoved={() => undefined}
+            hasMore={false}
+            loadMore={() => undefined}
+          />
         </div>
-        <LeadBoard
-          query={UNNARROWED_LIST_QUERY}
-          rows={[
-            { ...lead, status: "new", score: 82 },
-            {
-              ...lead,
-              id: "l-2",
-              full_name: "Petra Vogel",
-              status: "contacted",
-              score: 54,
-            },
-          ]}
-          onMoved={() => undefined}
-          hasMore={false}
-          loadMore={() => undefined}
-        />
-      </div>
-    </StoryProviders>
-  ),
+      </StoryProviders>
+    );
+  },
 };
 
 export const ManualQualificationEvidence: Story = {

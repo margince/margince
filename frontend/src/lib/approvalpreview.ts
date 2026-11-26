@@ -21,7 +21,7 @@ import { lifecyclePreviewFields } from "./approvallifecycle";
 import { previewFieldLabel } from "./approvalpreviewfields";
 import { importPreviewFields } from "./approvalpreviewimport";
 import { mergeValueLabel } from "./approvalpreviewmergevalues";
-import { contextOptions } from "./compose-context";
+import { communicationContextLabel } from "./compose-context";
 import {
   MEMBER_RETIREMENT_EFFECT_LABELS,
   memberRetirementBlocker,
@@ -213,10 +213,8 @@ export function previewLabel(
   if (field === "promotion_set_origin") return t("field.yes");
 
   if (field === "communication_context") {
-    const option = contextOptions(t).find(
-      (option) => option.value === value.text,
-    );
-    if (option) return option.label;
+    const label = communicationContextLabel(value.text, t);
+    if (label) return label;
   }
   const catalogs: Record<string, Readonly<Record<string, MessageKey>>> = {
     relationship_kind: KIND_LABELS,
@@ -243,7 +241,7 @@ export function previewLabel(
       legal_obligation: "approval.preview.basisObligation",
       vital_or_security_interest: "approval.preview.basisSecurity",
       existing_customer_exception: "approval.preview.basisCustomer",
-      vn_subject_agreement: "approval.preview.basisAgreement",
+      consent: "approval.preview.basisAgreement",
     },
     promotion_restriction_authority: {
       machine: "approval.preview.promotionMachine",
@@ -256,22 +254,16 @@ export function previewLabel(
     status: DEAL_STATUS_LABEL,
     phase: PHASE_LABEL,
     enrichment_depth: ENRICHMENT_DEPTH_LABELS,
-    communication_context: {
-      reply_to_inbound: "approval.preview.contextReply",
-      security_notice: "approval.preview.contextSecurity",
-      privacy_notice: "approval.preview.contextPrivacy",
-      record_confirmation: "approval.preview.contextRecord",
-      consent_confirmation: "approval.preview.contextConsent",
-      optout_confirmation: "approval.preview.contextOptout",
-    },
+    promise_strength: { tentative: "approval.commitment.tentative" },
+
     consent_result: {
       granted: "approval.preview.consentGranted",
       withdrawn: "approval.preview.consentWithdrawn",
     },
   };
+  // A company's status is named `status` like a deal's, so its kind decides.
   const labels =
-    catalogs[catalogField] ??
-    (value.kind === "lifecycle" ? LIFECYCLE_LABELS : undefined);
+    value.kind === "lifecycle" ? LIFECYCLE_LABELS : catalogs[catalogField];
   const label = Object.entries(labels ?? {}).find(
     ([code]) => code === value.text,
   )?.[1];
@@ -434,7 +426,7 @@ export function editedCommercialPreview(
     ...preview,
     changes: preview.changes.map((change) => {
       const key =
-        change.field === "lifecycle" ? "proposed_lifecycle" : change.field;
+        change.after.kind === "lifecycle" ? "proposed_lifecycle" : change.field;
       const text = draft[key];
       if (
         !Object.hasOwn(draft, key) ||

@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -44,10 +45,11 @@ var ErrNoJournalManifest = errors.New("privacy: the object store holds no comple
 // ReadJournalManifest reports what the journal knows, or ErrNoJournalManifest
 // when no export ever finished.
 func (e *Eraser) ReadJournalManifest(ctx context.Context) (JournalManifest, error) {
+	ctx = corefeatures.RetainedDataContext(ctx)
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return JournalManifest{}, err
 	}
-	if e.blob == nil {
+	if e.journalStore() == nil {
 		return JournalManifest{}, ErrNoJournalManifest
 	}
 	return e.loadJournalManifest(ctx)
@@ -71,7 +73,7 @@ func (e *Eraser) advanceJournalManifest(ctx context.Context, export JournalManif
 	}
 	recorded.Entries = max(recorded.Entries, export.Entries)
 	body := []byte(recorded.encode())
-	if err := e.blob.Put(ctx, suppressionJournalManifestKey,
+	if err := e.journalStore().Put(ctx, suppressionJournalManifestKey,
 		bytes.NewReader(body), int64(len(body)), "text/plain"); err != nil {
 		return fmt.Errorf("privacy: writing the suppression journal manifest: %w", err)
 	}
@@ -79,7 +81,7 @@ func (e *Eraser) advanceJournalManifest(ctx context.Context, export JournalManif
 }
 
 func (e *Eraser) loadJournalManifest(ctx context.Context) (JournalManifest, error) {
-	reader, _, err := e.blob.Get(ctx, suppressionJournalManifestKey)
+	reader, _, err := e.journalStore().Get(ctx, suppressionJournalManifestKey)
 	if errors.Is(err, blobstore.ErrNotFound) {
 		return JournalManifest{}, ErrNoJournalManifest
 	}

@@ -1,0 +1,9 @@
+{
+  "verb": "read_onboarding_company_proposal",
+  "checks": [
+    "company.read"
+  ],
+  "takes": [
+    "onboarding_with_read"
+  ]
+}

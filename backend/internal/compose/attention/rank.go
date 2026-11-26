@@ -125,6 +125,11 @@ type ranked struct {
 	// reminded says the row is a task of the reader's whose reminder came due.
 	// It sorts at the pin level for the same reason, and means what it meant.
 	reminded bool
+	// pulledForward says a later task stands in today's work because its
+	// follow-up reminder is due now. Its window's count still holds it.
+	pulledForward bool
+	// pastRanking says the backlog tail read this row below the ranked top.
+	pastRanking bool
 	// uncrowdable exempts the row from crowding: the reader's own meeting,
 	// within meetingHorizon, that they have not confirmed they are ready for.
 	uncrowdable bool
@@ -241,7 +246,9 @@ func renderInOrder(rows []ranked, reader ids.UUID) []crmcontracts.WorklistItem {
 		// Every row but the last says what it beat, and how. The last has
 		// nothing below it, so it says nothing rather than inventing a
 		// comparison against a row that is not there.
-		if i+1 < len(rows) {
+		// A row past the ranking was never compared with its neighbours. So
+		// neither it nor the ranked row above it claims an order over the other.
+		if i+1 < len(rows) && !row.pastRanking && !rows[i+1].pastRanking {
 			comparison := compare(row, rows[i+1])
 			item.AboveNext = &comparison
 		}
@@ -436,4 +443,10 @@ func scoreValue(score float64) *crmcontracts.WorklistValue {
 // (backend/gates/overdueboundary_test.go).
 func overdueAt(due *time.Time, asOf time.Time) bool {
 	return deadline.Passed(due, asOf)
+}
+
+// taskLateAt keeps a task that asks whether our later mail kept it off the
+// late list. Not yet removes the question, and the task is late again.
+func taskLateAt(due *time.Time, asOf time.Time, asks *crmcontracts.WorklistMayBeDone) bool {
+	return asks == nil && overdueAt(due, asOf)
 }

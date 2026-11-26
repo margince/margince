@@ -6,6 +6,11 @@ import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { browserZone } from "../../format/timezone";
 import type { Transport } from "../../lib/contacttransports";
+import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
+import {
+  allowedPreview,
+  previewedAddresses,
+} from "../../testing/sendpermission.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -13,8 +18,8 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ComposeModal } from "./compose";
 import { RelinkModal } from "./composerelink";
+import { ComposeWindow } from "./composewindow";
 import { editSeedOf } from "./schedulededit";
 
 // The composer surface (draftEmail / sendEmail / relinkActivity) rendered off
@@ -32,7 +37,7 @@ import { editSeedOf } from "./schedulededit";
 // served below because the composer reads them, but a reader never picks one —
 // the answer here is what the send derives its purpose from.
 const WHY_ASK = "Reason for contact";
-const WHY_ANSWER = "Follow-up they requested";
+const WHY_ANSWER = "They asked for it";
 
 // One consent purpose is enough to satisfy the Send precondition and populate
 // the purpose dropdown; its `label` is what the story clicks and its `key`
@@ -115,6 +120,7 @@ function composeStory(routes: RouteMap) {
       // which fails every grant closed and draws a branch no story is named
       // for.
       "GET /me": meRoute({}),
+      "GET /connectors": () => jsonResponse(CONNECTED_ROSTER),
       "GET /consent-purposes": () => jsonResponse(PURPOSES),
       "GET /activities/act-1": () =>
         jsonResponse({
@@ -123,11 +129,15 @@ function composeStory(routes: RouteMap) {
           subject: "Q3 numbers",
           occurred_at: "2026-09-01T09:00:00Z",
         }),
+      // Send waits on the engine's answer, so each story here starts from
+      // an allowed one and its send route decides the refusal.
+      "POST /activities/act-1/send-email:preview": (body) =>
+        jsonResponse(allowedPreview(previewedAddresses(body))),
       ...routes,
     });
     return (
       <StoryProviders>
-        <ComposeModal
+        <ComposeWindow
           activityId="act-1"
           entityType="contact"
           entityId="p-1"
@@ -281,11 +291,33 @@ export const ColleaguesMailbox: Story = {
   },
 };
 
+// The review a refused send names, as GET /communication-reviews/{id} serves it.
+function reviewOf(
+  id: string,
+  refusals: components["schemas"]["CommunicationReview"]["refusals"],
+) {
+  return jsonResponse({
+    id,
+    state: "needs_context",
+    kind: "single",
+    reason_code: refusals[0]?.reason_code ?? "no_compatible_evidence",
+    refusals,
+  });
+}
+
 // A filled, confirmed send comes back 409 consent_not_granted. The modal stays
 // open, and the send status shows the engine's reason for the refused address
 // with the action the server offers this rep.
 export const ConsentBlocked: Story = {
   render: composeStory({
+    "GET /communication-reviews/01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0001": () =>
+      reviewOf("01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0001", [
+        {
+          address: "buyer@acme.test",
+          reason_code: "no_marketing_consent",
+          category: "marketing",
+        },
+      ]),
     "POST /activities/act-1/send-email": () =>
       jsonResponse(
         {
@@ -297,13 +329,7 @@ export const ConsentBlocked: Story = {
           // point of the refusal now — was never rendered in Storybook.
           details: {
             review_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0001",
-            available_actions: ["overrule"],
-            overrulable: [
-              {
-                contact_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0003",
-                category: "marketing",
-              },
-            ],
+            available_actions: ["direct_send"],
             refusals: [
               {
                 address: "buyer@acme.test",
@@ -327,6 +353,8 @@ export const ConsentBlocked: Story = {
 // safe. Without this story that fallback was never looked at.
 export const ConsentBlockedUnknownAction: Story = {
   render: composeStory({
+    "GET /communication-reviews/01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0002": () =>
+      reviewOf("01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0002", []),
     "POST /activities/act-1/send-email": () =>
       jsonResponse(
         {
@@ -422,7 +450,7 @@ function channelReplyStory(conversation: RouteMap[string]) {
     });
     return (
       <StoryProviders>
-        <ComposeModal
+        <ComposeWindow
           activityId="act-1"
           entityType="contact"
           entityId="p-1"
@@ -570,7 +598,7 @@ function headStory(transports?: readonly Transport[], extra: RouteMap = {}) {
     installFetchStub({ ...HEAD_ROUTES, ...extra });
     return (
       <StoryProviders>
-        <ComposeModal
+        <ComposeWindow
           entityType="contact"
           entityId="p-1"
           contactId="p-1"
@@ -717,7 +745,7 @@ export const EditingScheduled: Story = {
     installFetchStub(HEAD_ROUTES);
     return (
       <StoryProviders>
-        <ComposeModal
+        <ComposeWindow
           edit={SCHEDULED_EDIT}
           entityType="contact"
           entityId="p-1"

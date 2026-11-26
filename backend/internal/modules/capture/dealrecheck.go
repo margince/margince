@@ -4,9 +4,10 @@
 package capture
 
 // The historical recheck: a deal link the rule wrote on a suggestion, before
-// the topic check existed, is asked about once. A confident "not about it"
-// takes the link back, audited. A fit or doubt keeps it and is remembered. No
-// answer keeps it. A colleague's filing or decline is never touched.
+// the topic check existed, is asked about once. The answer marks the link: a
+// fit relevant, doubt uncertain, a confident "not about it" unrelated. The
+// link stays, and the answer is remembered. No answer marks nothing. A
+// colleague's filing, decline or mark is never touched.
 
 import (
 	"context"
@@ -18,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // DealRecheckWindowDays bounds the recheck to mail of the last 90 days, by
@@ -83,11 +85,10 @@ func (r DealRepair) recheckTx(ctx context.Context, tx pgx.Tx, mail ids.ActivityI
 	return question, err
 }
 
-// recheckTopic settles one suggested link by the check's answer. Only a
-// confident "not about it" takes the link back. Doubt keeps it, and is
-// remembered like a fit, so the recheck asks about it once.
+// recheckTopic marks one suggested link by the check's answer, and remembers
+// the answer so the recheck asks about it once.
 func (r DealRepair) recheckTopic(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current ids.UUID) (DealOutcome, *topicQuestion, error) {
-	suggested, err := r.suggestedLink(f, tx, mail, current)
+	suggested, memo, err := r.suggestedLink(f, tx, mail, current)
 	if err != nil || !suggested {
 		return DealNone, nil, err
 	}
@@ -98,38 +99,55 @@ func (r DealRepair) recheckTopic(f dealFiling, tx pgx.Tx, mail ids.ActivityID, c
 	}
 	answer := f.topic.answer
 	switch {
+	case memo == digest:
+		return DealMachineConfirmed, nil, nil
 	case answer == nil:
 		return dealTopicPending, &topicQuestion{decider: f.decider, mail: mail, deals: deals, digest: digest}, nil
 	case answer.digest != digest || !answer.answered:
 		return DealNone, nil, nil
-	case !answer.topic.Confident || !answer.topic.Deal.IsZero():
-		return DealMachineConfirmed, nil, f.filer.StampDealTopic(f.writer, tx, mail, digest)
 	}
-	retracted, err := retractMachineDealLink(f, tx, mail, current)
-	if err != nil || !retracted {
+	if _, err := markMachineDealLink(f, tx, mail, current, recheckMark(answer.topic, current)); err != nil {
 		return DealNone, nil, err
 	}
-	return DealMachineRetracted, nil, f.filer.StampDealTopic(f.writer, tx, mail, digest)
+	return DealMachineConfirmed, nil, f.filer.StampDealTopic(f.writer, tx, mail, digest)
+}
+
+// recheckMark is the mark one answer about current gives its link. An answer
+// naming any other deal was not asked for, so it proves nothing either way.
+func recheckMark(topic DealTopic, current ids.UUID) string {
+	switch {
+	case !topic.Confident:
+		return relstrength.DealUncertain
+	case topic.Deal.IsZero():
+		return relstrength.DealUnrelated
+	case topic.Deal != current:
+		return relstrength.DealUncertain
+	}
+	return relstrength.DealRelevant
 }
 
 // suggestedLink answers whether the rule's link on current rests on a
-// suggestion. Where the rule still files the mail there, its basis says so.
-// Where it no longer reaches current, as for a closed deal, the link is a
-// suggestion unless the mail's project or proven thread names it.
-func (r DealRepair) suggestedLink(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current ids.UUID) (bool, error) {
-	facts, err := readDealFacts(f.decider, tx, mail, true)
+// suggestion, and the mail's topic memo. Where the rule still files the mail
+// there, its basis says so. Where it no longer reaches current, as for a
+// closed deal, the link is a suggestion unless the mail's project or proven
+// thread names it.
+func (r DealRepair) suggestedLink(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current ids.UUID) (bool, string, error) {
+	facts, err := readDealFacts(f.decider, tx, mail, true, f.hooks)
 	if err != nil || facts.outcome != "" {
-		return false, err
+		return false, "", err
 	}
-	verdict, err := decideDeal(f.decider, tx, facts, r.Candidates)
+	verdict, err := decideDeal(f.decider, tx, facts, r.Candidates, f.hooks)
 	if err != nil {
-		return false, err
+		return false, "", err
+	}
+	if verdict.Outcome == DealHookFailed {
+		return false, "", nil
 	}
 	if verdict.Outcome == DealLinked && verdict.Deal == current {
-		return verdict.Basis.NeedsTopicCheck(), nil
+		return verdict.Basis.NeedsTopicCheck(), facts.topicMemo, nil
 	}
 	explicit, err := explicitDealEvidence(f.decider, tx, mail.UUID, current)
-	return !explicit, err
+	return !explicit, facts.topicMemo, err
 }
 
 // explicitDealEvidence answers whether the mail's project, or a proven mail of
@@ -147,7 +165,7 @@ func explicitDealEvidence(ctx context.Context, tx pgx.Tx, mail, deal ids.UUID) (
 		   WHERE l.activity_id = `+mailArg+` AND l.entity_type = 'project' AND d.id = `+dealArg+`)
 		 OR EXISTS (SELECT 1 FROM activity self
 		   JOIN activity a ON a.id <> self.id AND `+correspondence.ConversationSQL("a", "self")+`
-		   JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = `+dealArg+`
+		   JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = `+dealArg+` AND `+relstrength.DealLinkStandsSQL("l")+`
 		   WHERE self.id = `+mailArg+` AND `+correspondence.ProvenSQL("self")+` AND `+correspondence.ProvenSQL("a")+`
 		     AND a.restricted_at IS NULL)`, args...).Scan(&explicit)
 	if err != nil {

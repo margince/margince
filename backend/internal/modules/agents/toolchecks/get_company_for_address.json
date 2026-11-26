@@ -1,0 +1,6 @@
+{
+  "verb": "get_company_for_address",
+  "checks": [
+    "company.read"
+  ]
+}

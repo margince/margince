@@ -67,7 +67,7 @@ func provisionalKeys(t *testing.T, e *integration.Env) []string {
 	t.Helper()
 	var keys []string
 	if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
-		rows, err := tx.Query(context.Background(), `SELECT storage_key FROM stored_object_intent ORDER BY storage_key`)
+		rows, err := tx.Query(context.Background(), `SELECT storage_key FROM stored_object_intent WHERE reaped_at IS NULL ORDER BY storage_key`)
 		if err != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ func TestTheReapDestroysAnOrphansBytesAndRetiresItsKey(t *testing.T) {
 	orphanedObject(t, e, blob, key)
 
 	worker := reapWorkerOver(e, blob)
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
+	if err := worker.reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatalf("reapWorkspace: %v", err)
 	}
 
@@ -113,7 +113,7 @@ func TestAnObjectTheStoreWillNotDeleteStaysInTheLedger(t *testing.T) {
 	orphanedObject(t, e, blob, key)
 
 	worker := reapWorkerOver(e, blob)
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
+	if err := worker.reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatalf("reapWorkspace: %v — one key that will not delete must not stop the pass", err)
 	}
 
@@ -130,6 +130,7 @@ type reapBlobstore struct {
 	blobstore.Store
 	refuseDelete error
 	deleted      map[string]bool
+	onDelete     func(string) error
 }
 
 func newReapBlobstore() *reapBlobstore {
@@ -137,6 +138,11 @@ func newReapBlobstore() *reapBlobstore {
 }
 
 func (b *reapBlobstore) Delete(ctx context.Context, key string) error {
+	if b.onDelete != nil {
+		if err := b.onDelete(key); err != nil {
+			return err
+		}
+	}
 	if b.refuseDelete != nil {
 		return b.refuseDelete
 	}
@@ -176,7 +182,7 @@ func TestTheSweepCollectsAnOrphanOfEveryDeclaredKind(t *testing.T) {
 	}
 
 	worker := reapWorkerOver(e, blob)
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
+	if err := worker.reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatalf("reapWorkspace: %v", err)
 	}
 
@@ -216,7 +222,7 @@ func TestAKeyStillInsideItsGracePeriodSurvivesAPass(t *testing.T) {
 	}
 
 	worker := reapWorkerOver(e, blob)
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
+	if err := worker.reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatalf("reapWorkspace: %v", err)
 	}
 
@@ -256,7 +262,7 @@ func TestAReferencedObjectOfEveryKindSurvivesTheSweep(t *testing.T) {
 	}
 
 	worker := reapWorkerOver(e, blob)
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
+	if err := worker.reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatalf("reapWorkspace: %v", err)
 	}
 
@@ -306,13 +312,13 @@ func referenceKeyFromItsOwner(t *testing.T, e *integration.Env, kind storedobjec
 	case storedobjects.KindLogo:
 		// The ICON column, not the wide one: a check reading only logo_object_key
 		// calls this unreferenced, which is the four-column finding this pins.
-		e.WsExec(t, `UPDATE company SET logo_icon_object_key = $1, logo_icon_origin = 'upload' WHERE id = $2`,
+		e.WsExec(t, `UPDATE company SET logo_icon_object_key = $1, logo_icon_source = 'upload' WHERE id = $2`,
 			key, e.SeedCompany(t, "Referenced Mark GmbH", nil))
 	case storedobjects.KindOffer:
 		e.WsExec(t, `
 			INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
 				pdf_asset_ref, source, captured_by)
-			VALUES ($1, $2, 'A-1', 1, 'draft', 'EUR', $3, 'human', 'human:test')`,
+			VALUES ($1, $2, 'A-1', 1, 'draft', 'EUR', $3, 'manual', 'human:test')`,
 			ids.NewV7(), e.SeedWonDealLinkedTo(t), key)
 	case storedobjects.KindImport:
 		e.WsExec(t, `
@@ -481,11 +487,11 @@ func TestALogoOnlyASentOfferNamesSurvivesTheSweep(t *testing.T) {
 		INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
 			issuer_snapshot, source, captured_by)
 		VALUES ($1, $2, 'A-1', 1, 'sent', 'EUR',
-			jsonb_build_object('workspace_name', 'Acme Wien GmbH', 'logo_object_key', $3::text), 'human', 'human:test')`,
+			jsonb_build_object('workspace_name', 'Acme Wien GmbH', 'logo_object_key', $3::text), 'manual', 'human:test')`,
 		ids.NewV7(), e.SeedWonDealLinkedTo(t), printed)
 
 	worker := reapWorkerOver(e, blob)
-	if err := worker.reapWorkspace(context.Background(), e.WS); err != nil {
+	if err := worker.reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatalf("reapWorkspace: %v", err)
 	}
 	if blob.deleted[printed] {
@@ -500,5 +506,8 @@ func TestALogoOnlyASentOfferNamesSurvivesTheSweep(t *testing.T) {
 // clock is the wall clock, because the provisional keys are dated by the
 // database's own now().
 func reapWorkerOver(e *integration.Env, blob blobstore.Store) *storedObjectReapWorker {
-	return &storedObjectReapWorker{pool: e.Pool, blob: blob, log: slog.New(slog.DiscardHandler), now: time.Now}
+	return &storedObjectReapWorker{pool: e.Pool, blob: blob, log: slog.New(slog.DiscardHandler), now: time.Now, batch: storedObjectReapBatch}
 }
+
+// unbudgeted is a stop time no test run reaches.
+var unbudgeted = time.Date(9999, time.January, 1, 0, 0, 0, 0, time.UTC)

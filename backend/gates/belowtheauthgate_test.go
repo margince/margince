@@ -73,7 +73,7 @@ var verifiesItsOwnCaller = gatekit.Waive(map[string]string{
 		"(gateMetrics), and refuses every scrape when none is configured — a scraper is not a seat and " +
 		"holds no login. Only an explicit --metrics-access=open serves it without one, for a port the " +
 		"deployment declares contained",
-	"/webhooks/gmail": "verifies a Google-signed OIDC token on the push notification (oidcverify.go). " +
+	"/webhooks/gmail": "verifies a Google-signed OIDC token on the push notification (compose/oidctoken). " +
 		"The sender is proven; what it does not carry is one of OUR sessions",
 	"/webhooks/graph": "the Microsoft Graph push, proven the same way by its own subscription secret",
 	"/mcp": "the remote MCP edge. It mounts its own admission (mcpEdge) rather than the session " +

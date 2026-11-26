@@ -1,0 +1,14 @@
+{
+  "verb": "change_meeting_invitation",
+  "checks": [
+    "activity.create",
+    "activity.read",
+    "activity.update",
+    "company.read",
+    "contact.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "confirmed_invitation"
+  ]
+}

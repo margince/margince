@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { ADDRESSABLE_DEAL_DIALS, type DealDial } from "../../lib/dealsaddress";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { DealsScreen, dealsQueryParams } from "./deals";
 
@@ -78,6 +79,11 @@ function stubBackend(seen: Seen) {
     const url = String(request ? request.url : input);
     const method = request ? request.method : (init?.method ?? "GET");
     const path = new URL(url, "http://localhost").pathname;
+    const reference =
+      method === "GET"
+        ? companyNamesAnswer(url, { [COMPANY.id]: COMPANY.display_name })
+        : null;
+    if (reference) return reference;
     if (url.includes("/pipelines")) {
       return jsonResponse({
         data: [
@@ -166,6 +172,8 @@ const SAMPLE: Record<
   stage_id: { value: "s1", sent: { stage_id: "s1" } },
   company_id: { value: "c-nw", sent: { company_id: "c-nw" } },
   status: { value: "lost", sent: { status: "lost" } },
+  owner_id: { value: "u-1", sent: { owner_id: "u-1" } },
+  owner_team_id: { value: "t-1", sent: { owner_team_id: "t-1" } },
   win_probability: {
     value: "60..89",
     sent: { win_probability_min: 60, win_probability_max: 89 },

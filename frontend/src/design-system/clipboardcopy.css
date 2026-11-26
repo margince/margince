@@ -1,0 +1,15 @@
+/* A copy glyph beside a value in a details row or a table row is quiet like
+   the chat glyph (callaction.css): the value leads, the verb waits. */
+:is(.recorddetails, tr) .copy-action .btn-icon:not(:hover, :focus-visible) {
+  border-color: transparent;
+  background: transparent;
+  color: var(--textSecondary);
+}
+/* In a table row it shows only while the pointer or focus is on the row. It
+   keeps its box, so the address does not re-cut as the pointer moves.
+   Without hover (touch) it stays, since nothing would ever reveal it. */
+@media (hover: hover) {
+  tr:not(:hover, :focus-within) .copy-action {
+    opacity: 0;
+  }
+}

@@ -28,8 +28,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -129,7 +131,11 @@ func CompanyCoverageFor(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (Com
 	// would cost them a confident wrong verdict, so the comparison leans this
 	// way on purpose.
 	out.CoverageIncomplete = total > len(visible)
-	out.Threading = threadingVerdict(len(visible), out.CoverageIncomplete)
+	thresholds, _, err := reporting.AccountCoverageThresholds(ctx, tx)
+	if err != nil {
+		return out, err
+	}
+	out.Threading = threadingVerdict(len(visible), out.CoverageIncomplete, *thresholds.MaxEngagedSeats)
 	return out, nil
 }
 
@@ -138,9 +144,10 @@ func CompanyCoverageFor(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (Com
 // The asymmetry is deliberate. Seeing ENOUGH is safe to report whatever is
 // hidden, because hidden contacts can only add to the count. Seeing too few is
 // only a finding when there is nothing left to hide behind — otherwise the
-// honest answer is that we do not know.
-func threadingVerdict(visible int, incomplete bool) ThreadingVerdict {
-	if visible >= ReportThreadingFloor {
+// answer is that we do not know. The account's contacts are judged by the
+// deal's rule, at the published threshold.
+func threadingVerdict(visible int, incomplete bool, maxEngagedSeats int) ThreadingVerdict {
+	if !reporting.SingleThreaded(true, visible, maxEngagedSeats) {
 		return ThreadingMultiple
 	}
 	if incomplete {
@@ -284,14 +291,14 @@ func companyStakeholderEdge(ctx context.Context, companyPos int, arg func(any) i
 		projectScope = scopeAll
 	}
 	return fmt.Sprintf(`(
-		   (r.kind = 'deal_stakeholder' AND EXISTS (
+		   (%[4]s AND EXISTS (
 		      SELECT 1 FROM deal d WHERE d.id = r.deal_id
 		        AND d.company_id = $%[1]d AND d.archived_at IS NULL
 		        AND (%[2]s)))
 		OR (r.kind = 'project_stakeholder' AND EXISTS (
 		      SELECT 1 FROM relationship pc
 		        JOIN project pr ON pr.id = pc.project_id AND pr.archived_at IS NULL
-		       WHERE pc.kind = 'project_company' AND pc.project_id = r.project_id
+		       WHERE pc.kind = '`+auth.ProjectCompanyKind+`' AND pc.project_id = r.project_id
 		         AND pc.company_id = $%[1]d AND pc.archived_at IS NULL
-		         AND (%[3]s))))`, companyPos, dealScope, projectScope), nil
+		         AND (%[3]s))))`, companyPos, dealScope, projectScope, dealseat.CurrentSQL("r")), nil
 }

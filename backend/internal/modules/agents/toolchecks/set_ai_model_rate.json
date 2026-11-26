@@ -1,0 +1,7 @@
+{
+  "verb": "set_ai_model_rate",
+  "checks": [
+    "ai_model_rate.create",
+    "ai_model_rate.create|update"
+  ]
+}

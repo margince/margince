@@ -121,4 +121,14 @@ const (
 	// robots.txt groups that have nothing to say about it.
 	ModelCatalogueProduct = "margince-modelcatalogue"
 	ModelCatalogueHeader  = ModelCatalogueProduct + "/" + version
+
+	// PolicySourceProduct identifies the release-time reads of the published
+	// texts a messaging policy pack cites, so a publisher can name the client.
+	PolicySourceProduct = "margince-policysource"
+	PolicySourceHeader  = PolicySourceProduct + "/" + version
+
+	// ChatProduct identifies the calls a chat bot makes to the team chat a
+	// deal or project channel lives in.
+	ChatProduct = "margince-chat"
+	ChatHeader  = ChatProduct + "/" + version
 )

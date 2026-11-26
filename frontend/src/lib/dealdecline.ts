@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { useT } from "../i18n";
 import { isTimelineRead, TASK_QUEUE_KEY } from "./activitykeys";
 import { unwrap } from "./problem";
+import { recordWriteKeys } from "./recordwritekeys";
 import { worklistKey } from "./workkeys";
 
 type DealDecline = components["schemas"]["ActivityDealDecline"];
@@ -23,10 +24,12 @@ export type DealDeclineInput = { activityId: string; dealId?: string };
  */
 export function useDealDecline(
   onDeclined?: (answer: DealDecline) => Promise<unknown>,
+  mutationKey?: readonly unknown[],
 ) {
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey,
     mutationFn: async (input: DealDeclineInput) =>
       unwrap(
         await api.POST("/activities/{id}/deal-decline", {
@@ -47,6 +50,52 @@ export function useDealDecline(
         }),
       ]);
       if (answer) await onDeclined?.(answer);
+    },
+  });
+}
+
+type DealRelevance = components["schemas"]["ActivityDealRelevance"];
+
+/** A colleague's mark on one activity's link to one deal. */
+export type DealRelevanceInput = {
+  activityId: string;
+  dealId: string;
+  relevance: "relevant" | "unrelated";
+};
+
+/**
+ * Says whether an activity is about a deal it is linked to. The link stays and
+ * carries the mark, so the deal's timeline still shows the row; the same call
+ * with the other mark is the undo. Every timeline and the activity are read
+ * again, since the deal's activity date moves with the mark.
+ */
+export function useDealRelevance(
+  onMarked?: (answer: DealRelevance, input: DealRelevanceInput) => void,
+) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: DealRelevanceInput) =>
+      unwrap(
+        await api.PUT("/activities/{id}/deal-relevance", {
+          params: { path: { id: input.activityId } },
+          body: { deal_id: input.dealId, deal_relevance: input.relevance },
+        }),
+        t,
+      ),
+    onSuccess: async (answer, input) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          predicate: (query) => isTimelineRead(query.queryKey),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["activity", input.activityId],
+        }),
+        ...recordWriteKeys("deal", input.dealId).map((queryKey) =>
+          queryClient.invalidateQueries({ queryKey }),
+        ),
+      ]);
+      if (answer) onMarked?.(answer, input);
     },
   });
 }

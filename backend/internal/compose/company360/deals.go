@@ -18,6 +18,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 )
@@ -57,19 +58,20 @@ func dealsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now t
 	if err != nil {
 		return crmcontracts.Company360Deals{}, err
 	}
+	stageName := labeltranslation.SQL(ctx, "s.name", "s.name_translations", arg)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT d.id, d.name, d.status, d.stage_id, s.name, %[3]s, d.currency,
+		SELECT d.id, d.name, d.status, d.stage_id, %[5]s, %[3]s, d.currency,
 		       -- Read as text, then parsed below. pgx decodes a bare DATE into
 		       -- its own type and refuses the contract's Date wrapper, so the
 		       -- scan fails at RUNTIME on any deal that names a close date —
 		       -- and it 500s the whole company page, not just this card.
 		       to_char(d.expected_close_date, 'YYYY-MM-DD'),
-		       d.created_at, d.last_activity_at, d.wait_until, %[4]s
+		       d.created_at, d.last_activity_at, %[6]s, %[4]s
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		%[1]s
 		ORDER BY d.created_at DESC, d.id DESC
-		LIMIT %[2]d`, openDealsWhere(companyPos, dealScope), sectionLimit+1, amountSQL, deals.MeetingAheadSQL("d")), args...)
+		LIMIT %[2]d`, openDealsWhere(companyPos, dealScope), sectionLimit+1, amountSQL, deals.MeetingAheadSQL("d"), stageName, deals.PauseEndsSQL("d")), args...)
 	if err != nil {
 		return crmcontracts.Company360Deals{}, err
 	}

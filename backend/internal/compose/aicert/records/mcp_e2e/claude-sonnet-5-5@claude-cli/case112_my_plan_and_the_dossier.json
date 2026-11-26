@@ -10,14 +10,83 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "3ecde096a3993a4f",
+    "tools": "8b8541f343556697",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "1796d51361de08d5",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T05:34:28Z",
+    "graded_commit": "d6e75ceb67055f27957df96e9c87467d2cc560a9",
+    "graded_at": "2026-11-25T06:51:31Z"
+  },
   "usage": {
-    "input_tokens": 14,
-    "output_tokens": 1298,
-    "cache_creation_input_tokens": 5827,
-    "cache_read_input_tokens": 422279,
+    "input_tokens": 12,
+    "output_tokens": 1208,
+    "cache_creation_input_tokens": 7503,
+    "cache_read_input_tokens": 436538,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.0785
+    "cost_usd": 0.0858
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "get_company_dossier",
+        "read_details",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "get_company_dossier",
+        "read_details",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3,
+      "min": 3,
+      "max": 3
+    },
+    "turns": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 222026.5,
+      "min": 222022,
+      "max": 222031
+    },
+    "output_tokens": {
+      "median": 604,
+      "min": 601,
+      "max": 607
+    },
+    "duration_ms": {
+      "median": 8011,
+      "min": 5574,
+      "max": 10448
+    }
   }
 }

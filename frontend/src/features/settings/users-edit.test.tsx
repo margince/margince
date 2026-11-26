@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 /** @vitest-environment happy-dom */
 import { UTC_ZONE } from "../../format/timezone";
+import { en } from "../../i18n/en";
 import { backend, render } from "./users-admin.testkit";
 import { EditMember } from "./users-edit";
 import type { User } from "./users-members";
@@ -62,4 +63,98 @@ it("saves a reactivated invitation's name and team before first sign-in", async 
       expected_updated_at: MEMBER.updated_at,
     },
   ]);
+});
+
+it("puts an address another member holds on the email field", async () => {
+  const user = userEvent.setup();
+  const routed = backend([]);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (req.method === "PATCH") {
+        return new Response(
+          JSON.stringify({
+            status: 409,
+            code: "email_taken",
+            detail: "a user with this email already exists",
+          }),
+          { status: 409, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return routed(input, init);
+    }),
+  );
+  render(<EditMember member={MEMBER} onClose={vi.fn()} />);
+  const email = screen.getByRole("textbox", { name: "Email" });
+  await user.clear(email);
+  await user.type(email, "taken@example.test");
+  await user.click(screen.getByRole("button", { name: "Save member" }));
+  expect(await screen.findByText(en["users.emailTaken"])).toBeTruthy();
+  await waitFor(() => expect(document.activeElement).toBe(email));
+  expect(
+    screen.queryByText("a user with this email already exists"),
+  ).toBeNull();
+});
+
+it("asks for a cleared name on its field and sends nothing", async () => {
+  const user = userEvent.setup();
+  const saved: unknown[] = [];
+  const routed = backend([]);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (req.method === "PATCH") saved.push(await req.json());
+      return routed(input, init);
+    }),
+  );
+  render(<EditMember member={MEMBER} onClose={vi.fn()} />);
+  await user.clear(screen.getByRole("textbox", { name: "Full name" }));
+  await user.click(screen.getByRole("button", { name: "Save member" }));
+  expect(await screen.findByText("Full name is required.")).toBeTruthy();
+  expect(saved).toEqual([]);
+});
+
+it("offers Reload member after an edit clash and shows the current record", async () => {
+  const user = userEvent.setup();
+  const routed = backend([]);
+  const current = { ...MEMBER, display_name: "Ivy Elsewhere" };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? input : new Request(String(input), init);
+      const json = { "Content-Type": "application/json" };
+      if (req.method === "PATCH") {
+        return new Response(
+          JSON.stringify({ status: 409, code: "version_skew" }),
+          { status: 409, headers: json },
+        );
+      }
+      if (
+        req.method === "GET" &&
+        new URL(req.url).pathname.endsWith(MEMBER.id)
+      ) {
+        return new Response(JSON.stringify(current), { headers: json });
+      }
+      return routed(input, init);
+    }),
+  );
+  render(<EditMember member={MEMBER} onClose={vi.fn()} />);
+  const name = screen.getByRole("textbox", { name: "Full name" });
+  await user.clear(name);
+  await user.type(name, "Ivy Mine");
+  await user.click(screen.getByRole("button", { name: "Save member" }));
+  await user.click(
+    await screen.findByRole("button", { name: en["users.reloadMember"] }),
+  );
+  await waitFor(() =>
+    expect((name as HTMLInputElement).value).toBe("Ivy Elsewhere"),
+  );
+  expect(
+    screen.queryByRole("button", { name: en["users.reloadMember"] }),
+  ).toBeNull();
 });

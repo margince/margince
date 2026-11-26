@@ -111,7 +111,9 @@ func moveCapturedMeetingTx(
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE activity SET occurred_at = $2, duration_seconds = $3, occurred_precision = $4, meeting_status = $5,
-		       agenda_fingerprint = NULLIF($6, '')
+		       agenda_fingerprint = NULLIF($6, ''),
+		       meeting_wall = CASE WHEN $4 = 'day' THEN NULL ELSE meeting_wall END,
+		       meeting_zone = CASE WHEN $4 = 'day' THEN NULL ELSE meeting_zone END
 		 WHERE id = $1`, id, moved.start, moved.duration, moved.precision, moved.status, moved.agenda); err != nil {
 		return false, fmt.Errorf("activities: moving the captured meeting %s: %w", id, err)
 	}

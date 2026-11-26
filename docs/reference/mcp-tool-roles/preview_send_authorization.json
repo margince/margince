@@ -1,0 +1,15 @@
+{
+  "tool": "change_activities",
+  "action": "check_send",
+  "verb": "preview_send_authorization",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

@@ -33,7 +33,7 @@ cdx="$dir/margince.cdx.json"
 s22="$dir/margince.spdx221.json"
 s30="$dir/margince.spdx300.json"
 for f in "$cdx" "$s22" "$s30" "$map"; do
-	[ -f "$f" ] || { echo "FAIL: no $f — run 'make sbom' first"; exit 1; }
+	[[ -f "$f" ]] || { echo "FAIL: no $f — run 'make sbom' first"; exit 1; }
 done
 
 python3 - "$cdx" "$s22" "$s30" "$map" <<'PY'

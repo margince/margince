@@ -25,7 +25,7 @@ func (e *loadEnv) openDeal(t *testing.T) ids.UUID {
 	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Pipeline "+pipeline.String())
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
 	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'Deal A', 'open', $2, $3, $4, 'seed', 'system')`, deal, e.rep, pipeline, stage)
+		VALUES ($1, 'Deal A', 'open', $2, $3, $4, 'manual', 'system')`, deal, e.rep, pipeline, stage)
 	return deal
 }
 
@@ -228,7 +228,10 @@ func TestTheDealReadNamesOnlyThatDealsMeetings(t *testing.T) {
 	s := storeAddressing(e, readerAddress)
 	deal := e.openDeal(t)
 	onDeal, elsewhere := e.metOnDeal(t, deal), e.metOnDeal(t, e.openDeal(t))
-	rows, err := s.MeetingsAwaitingFollowUpOnDeal(e.followUpReader(), clocktest.Now(t), deal)
+	// The deal read reports a meeting only when somebody can be written to.
+	e.attended(t, onDeal, e.buyer(t), "attendee")
+	e.attended(t, elsewhere, e.buyer(t), "attendee")
+	rows, err := s.NextMeetingFollowUpOnDeal(e.followUpReader(), clocktest.Now(t), deal)
 	if err != nil {
 		t.Fatalf("reading the deal's meeting follow-ups: %v", err)
 	}

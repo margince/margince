@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 // migrations carries the unit's SQL layer INTO the binary. Shipping the
@@ -30,8 +32,29 @@ const migrationsLayer = "migrations"
 func New() extension.Extension {
 	return extension.Extension{
 		Name:        "openchannel",
-		Version:     "1.0.0",
+		Version:     "1.4.0",
 		Description: "An anonymous, signed endpoint an outside party can post to, with its own records and a job that drains arrivals into the CRM.",
+		Privacy: []privacy.Table{
+			{
+				Name:      "ext_openchannel_inbound",
+				Links:     []privacy.Link{{Column: "activity_id", Record: privacy.Activity}},
+				Personal:  []string{"body"},
+				Retention: jurisdiction.CommercialCorrespondence,
+				AgeColumn: "updated_at",
+			},
+			{
+				Name:      "ext_openchannel_archived_before_landing",
+				Links:     []privacy.Link{{Column: "activity_id", Record: privacy.Activity}},
+				Retention: jurisdiction.CommercialCorrespondence,
+			},
+			// No record kind the core resolves: an endpoint names a member.
+			{Name: "ext_openchannel_endpoint", Retention: jurisdiction.CommercialCorrespondence},
+			{
+				Name:      "ext_openchannel_outbound",
+				Links:     []privacy.Link{{Column: "activity_id", Record: privacy.Activity}},
+				Retention: jurisdiction.CommercialCorrespondence,
+			},
+		},
 		Tools: []extension.Tool{
 			{Name: "openchannel_open", Handle: open},
 			{Name: "openchannel_read_endpoint", Handle: readEndpoint},
@@ -144,6 +167,14 @@ func New() extension.Extension {
 			Icon:   extension.IconPlug,
 			Object: "ext_openchannel_endpoint",
 		}},
+		// The connector's own destination in the home side drawer, for a member
+		// who may read the endpoint the screen opens on.
+		App: &extension.App{
+			Icon:   extension.IconPlug,
+			Group:  extension.AppGroupWork,
+			Object: "ext_openchannel_endpoint",
+			Export: "OpenchannelApp",
+		},
 	}
 }
 

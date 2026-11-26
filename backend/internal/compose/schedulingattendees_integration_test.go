@@ -30,7 +30,7 @@ func newAttendeeWorld(t *testing.T) attendeeWorld {
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	w := attendeeWorld{e: e, calendar: newSchedulingCalendar(e.Pool, nil), host: ids.From[ids.UserKind](e.Rep1)}
-	purpose, err := consent.NewStore(InstallationDB(e.Pool)).CreatePurpose(e.Admin(), "transactional", "transactional", false)
+	purpose, err := consent.NewStore(InstallationDB(e.Pool)).CreatePurpose(e.Admin(), "transactional", "transactional", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,6 +62,21 @@ func (w attendeeWorld) queued(t *testing.T, invitee ids.UUID, attendees ...strin
 	}
 	roster := append([]connector.CalendarAttendee{{Address: attendees[0], Basis: connector.AttendeeContact, ID: invitee, AskConsent: true}}, further...)
 	return connector.CalendarAppointment{ContactID: invitee, Attendees: attendees, Roster: roster}
+}
+
+// An invited colleague is a colleague to schedule with before they redeem the
+// invitation.
+func TestAnInvitedColleagueResolvesAsAColleague(t *testing.T) {
+	w := newAttendeeWorld(t)
+	const address = "invited@colleague.example"
+	_, seat, _ := invitedColleague(t, w.e, address)
+	got, err := w.calendar.ResolveAttendees(w.e.Admin(), w.host, []string{address})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Basis != connector.AttendeeColleague || got[0].ID != seat.UUID {
+		t.Errorf("the invited colleague resolved as %+v, want a colleague", got)
+	}
 }
 
 // A visible lead resolves as a lead and carries no name: its participant row is

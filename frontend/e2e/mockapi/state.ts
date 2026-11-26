@@ -79,7 +79,11 @@ export type CounterpartyHold = {
   created_at: string;
 };
 
-export type DealPatches = Record<string, Partial<(typeof deals)[number]>>;
+export type DealPatches = Record<
+  string,
+  Partial<(typeof deals)[number]> &
+    Pick<Partial<components["schemas"]["Deal"]>, "archived_at">
+>;
 
 function captureSettings(): components["schemas"]["CaptureSettings"] {
   return {
@@ -91,6 +95,9 @@ function captureSettings(): components["schemas"]["CaptureSettings"] {
     site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
     mail_sync_interval_seconds: 120,
     confidentiality_pass_cap: 40,
+    verdict_pass_cap: 200,
+    classify_pass_cap: 500,
+    owed_classify_pass_cap: 500,
   };
 }
 
@@ -174,6 +181,10 @@ export function createMockState(options: MockApiOptions = {}) {
       options.journey === "unstarted" || options.journey === "unconfigured",
     automations: [{ ...seededAutomation }],
     dealPatches,
+    recordReferences: new Map<
+      string,
+      components["schemas"]["RecordReference"]
+    >(),
     views: seededViews.map((view) => ({ ...view })),
     brief: {
       ...briefRun,

@@ -1,9 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { refetchAfterAssignment } from "../../components/taskwritefollowup";
 import { isEntityKind } from "../../lib/entity";
+import { hideHomeRows } from "../../lib/homerows";
 import { problemCodeOf, throwProblem, unwrap } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { nudgeDismissalKey } from "../../lib/workkeys";
@@ -167,6 +168,8 @@ export function useCoachTeammate() {
       recipientUserId: string;
       kind: components["schemas"]["NoticeKind"];
       note: string;
+      /** The deal a next-step note is about; "" on every other kind. */
+      dealId: string;
     }) => {
       unwrap(
         await api.POST("/notices", {
@@ -176,6 +179,7 @@ export function useCoachTeammate() {
             // An empty note is ABSENT rather than an empty string: the coach
             // added none, which the kind's own headline already covers.
             ...(input.note.trim() === "" ? {} : { note: input.note }),
+            ...(input.dealId === "" ? {} : { deal_id: input.dealId }),
           },
         }),
       );
@@ -189,19 +193,7 @@ export function useCoachTeammate() {
 // reason. Deciding one needs the rest: the payload a reader may edit, who
 // staged it, the evidence behind it. So the row being decided fetches the
 // approval it shows, the same read the record page makes.
-export function useApproval(id: string, enabled: boolean) {
-  return useQuery({
-    enabled,
-    queryKey: ["approvals", "one", id],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/approvals/{id}", {
-          params: { path: { id } },
-        }),
-      );
-    },
-  });
-}
+export { useApproval } from "../../lib/approvalread";
 
 /**
  * Set a lapsed contact aside, stop following them, or put them back.
@@ -272,17 +264,17 @@ const DISMISSAL_DAYS = 30;
 // has already judged needs a way to leave, or it returns every morning and the
 // count above it stays wrong.
 //
-// The queue is invalidated rather than edited in place, for the reason the
-// reassign mutation states. The rank numbers and the summary above them are
-// the server's. A row removed locally leaves both describing a page that is no
-// longer on screen.
+// Home drops the row at once and shows Updating. The rank numbers and the
+// summary stay the server's, so the queue is read again to replace them.
 export function useSetDisposition() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: {
       activityId: string;
       disposition: WorklistDisposition;
+      source: string;
       snoozedUntil?: string;
+      snoozedIntent?: components["schemas"]["IntentTime"];
       reopenOn?: ReopenCondition;
       reopenRef?: string;
     }) => {
@@ -297,15 +289,23 @@ export function useSetDisposition() {
             ...(input.snoozedUntil
               ? { snoozed_until: input.snoozedUntil }
               : {}),
+            ...(input.snoozedIntent
+              ? { snoozed_intent: input.snoozedIntent }
+              : {}),
             ...(input.reopenOn ? { reopen_on: input.reopenOn } : {}),
             ...(input.reopenRef ? { reopen_ref: input.reopenRef } : {}),
           },
         }),
       );
     },
+    onMutate: (input) =>
+      hideHomeRows(queryClient, [
+        { source: input.source, id: input.activityId },
+      ]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: worklistKey });
     },
+    onSettled: (_data, _error, _input, settle) => settle?.(),
   });
 }
 

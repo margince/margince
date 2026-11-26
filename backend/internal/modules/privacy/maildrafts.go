@@ -21,20 +21,19 @@ import (
 // a lead twin.
 func redactUnsentMessages(
 	ctx context.Context, tx pgx.Tx, reason string, subject ids.ContactID, leads []ids.UUID, emails []string,
-	payloads PayloadPurger,
 ) error {
 	if err := redactScheduledSends(ctx, tx, reason, emails); err != nil {
 		return err
 	}
-	if err := redactLeadDeliveries(ctx, tx, leads, payloads); err != nil {
+	if err := redactLeadDeliveries(ctx, tx, leads); err != nil {
 		return err
 	}
 	return purgeMailDrafts(ctx, tx, subject, leads, emails)
 }
 
-// subjectDraftMatch is which drafts are the subject's: opened on their contact
-// or one of their lead twins, or addressed to one of their addresses on any
-// line. The erasure and the export share it, so a subject is never shown a
+// subjectDraftMatch is which drafts are the subject's. That is one opened on
+// their contact or a lead twin, or a reply or forward of a message filed under
+// either. It is also one addressed to any of their addresses on any line. The erasure and the export share it, so a subject is never shown a
 // draft the erasure would leave behind, nor the reverse. Addresses compare
 // trimmed and lowercased, the way the send path compares them.
 //
@@ -42,6 +41,10 @@ func redactUnsentMessages(
 const subjectDraftMatch = `
 	   (d.anchor_type = 'contact' AND d.anchor_id = $1)
 	OR (d.anchor_type = 'lead'    AND d.anchor_id = ANY($2::uuid[]))
+	OR (d.anchor_type IN ('activity', 'forward') AND EXISTS (
+	     SELECT 1 FROM activity_link l
+	      WHERE l.activity_id = d.anchor_id
+	        AND (l.contact_id = $1 OR l.lead_id = ANY($2::uuid[]))))
 	OR EXISTS (
 	     SELECT 1 FROM unnest(d.to_addresses || d.cc_addresses || d.bcc_addresses) AS addressed(address)
 	      WHERE lower(btrim(addressed.address)) = ANY($3::text[]))`

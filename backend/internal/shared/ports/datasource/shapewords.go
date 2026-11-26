@@ -60,6 +60,27 @@ func wantedShape(t reflect.Type) (want, shape string, perItem bool) {
 	}
 }
 
+// shapeCode names the wire code for a value a field of this type cannot hold.
+func shapeCode(t reflect.Type) string {
+	t = derefType(t)
+	if t == nil {
+		return codeInvalidType
+	}
+	if named, ok := namedTypes[t.Name()]; ok {
+		return named.code
+	}
+	switch scalarShape(t.Kind()) {
+	case integerShape:
+		return "not_integer"
+	case numberShape:
+		return "not_number"
+	}
+	return codeInvalidType
+}
+
+// codeInvalidType answers a value whose shape has no code of its own.
+const codeInvalidType = "invalid_type"
+
 // The two shape phrases repeated across this file, named so the array form and
 // the bare form cannot drift apart.
 const (
@@ -71,24 +92,31 @@ const (
 	arrayOfPrefix = "an array of "
 )
 
+// The two numeric phrases, named so shapeCode reads the phrase scalarShape writes.
+const (
+	integerShape = "an integer"
+	numberShape  = "a number"
+)
+
+// namedType spells a type whose Go form is not its wire shape, such as a UUID.
+// It holds the type's sentence phrase, sketch word and refusal code.
+type namedType struct{ phrase, leaf, code string }
+
+var namedTypes = map[string]namedType{
+	"UUID":  {phrase: "a UUID string", leaf: "uuid", code: "invalid_uuid"},
+	"Time":  {phrase: "an RFC 3339 timestamp", leaf: "rfc3339", code: "datetime_malformed"},
+	"Date":  {phrase: "a date in YYYY-MM-DD form", leaf: "YYYY-MM-DD", code: "invalid_date"},
+	"Email": {phrase: "an email address", leaf: "email", code: "email_malformed"},
+}
+
 // namedShape names the WIRE shape of a type whose Go representation is not it.
 func namedShape(name string) (string, bool) {
-	switch name {
-	case "UUID":
-		return "a UUID string", true
-	case "Time":
-		return "an RFC 3339 timestamp", true
-	case "Date":
-		return "a date in YYYY-MM-DD form", true
-	case "Email":
-		return "an email address", true
-	default:
-		return "", false
-	}
+	named, ok := namedTypes[name]
+	return named.phrase, ok
 }
 
 func isNamedShape(name string) bool {
-	_, ok := namedShape(name)
+	_, ok := namedTypes[name]
 	return ok
 }
 
@@ -103,9 +131,9 @@ func scalarShape(kind reflect.Kind) string {
 		return "a boolean"
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return "an integer"
+		return integerShape
 	case reflect.Float32, reflect.Float64:
-		return "a number"
+		return numberShape
 	default:
 		return anyShape
 	}
@@ -169,15 +197,8 @@ func leafShape(t reflect.Type) string {
 	// enum — reflection cannot see the values, so an enum field reads `string`
 	// here and its vocabulary in the description. That gap is structural, and
 	// the description is the half that carries it.
-	switch t.Name() {
-	case "UUID":
-		return "uuid"
-	case "Time":
-		return "rfc3339"
-	case "Date":
-		return "YYYY-MM-DD"
-	case "Email":
-		return "email"
+	if named, ok := namedTypes[t.Name()]; ok {
+		return named.leaf
 	}
 	switch t.Kind() {
 	case reflect.Slice, reflect.Array:

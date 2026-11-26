@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -47,7 +48,7 @@ func (t memberTool) Spec() mcp.ToolSpec {
 	spec := mcp.ToolSpec{
 		Name: toolMergeMembers, Title: "Merge duplicate members", Version: toolVersionV1,
 		AskUserFirst:  true,
-		Description:   "Transfer an unused imported or invited duplicate member's work to the selected account and remove the duplicate. Use the token from preview_member_retirement after the user has confirmed which account survives. The survivor keeps its sign-in settings and access; original attribution remains in history. Use resolve_duplicates for customer contacts or companies.",
+		Description:   "Transfer an unused imported or invited duplicate member's work to the selected member and remove the duplicate. Use the token from preview_member_retirement after the user has confirmed which member survives. The survivor keeps its sign-in settings and access; original attribution remains in history. Use resolve_duplicates for customer contacts or companies.",
 		Instead:       "Use resolve_duplicates for customer contacts or companies.",
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired, WaitsEvenForItsUser: true, Unlisted: true,
 		OpenAPIOp: "mergeMembers", ReplayGrant: &mcp.ReplayGrant{Object: memberAdminObject, Action: principal.ActionDelete},
@@ -57,10 +58,11 @@ func (t memberTool) Spec() mcp.ToolSpec {
 	if t.preview {
 		spec.Name = "preview_member_retirement"
 		spec.Title = "Preview removing or merging a member"
-		spec.Description = "Read the work and dependencies affected by retiring a member. Requires an administrator with member read and delete permission. Set mode to merge and include to_user_id to choose the surviving member. Return the preview to the user before merge_members. Use list_colleagues to find the member accounts first."
-		spec.Instead = "Use list_colleagues to find the member accounts first."
+		spec.Description = "Read the work and dependencies affected by retiring a member. Requires an administrator with member read and delete permission. Set mode to merge and include to_user_id to choose the surviving member. Return the preview to the user before merge_members. Use list_colleagues to find the members first."
+		spec.Instead = "Use list_colleagues to find the members first."
 		spec.RequiredScope = principal.ScopeRead
 		spec.Tier = mcp.TierAutoExecute
+		spec.AskUserFirst = false
 		spec.WaitsEvenForItsUser = false
 		spec.OpenAPIOp = "previewMemberRetirement"
 		spec.ReplayGrant = nil
@@ -127,7 +129,11 @@ func (t memberTool) StageInfo(ctx context.Context, in json.RawMessage) (StageInf
 	if len(preview.Blockers) > 0 || preview.SurvivorName == nil || preview.SurvivorEmail == nil {
 		return StageInfo{}, apperrors.ErrConflict
 	}
-	return StageInfo{TargetType: memberAdminObject, TargetID: args.SourceID, Summary: fmt.Sprintf(summaryIn(ctx, t.language).mergeMembers, preview.SourceName, preview.SourceEmail, *preview.SurvivorName, *preview.SurvivorEmail)}, nil
+	source, survivor := systemtext.Inline(fmt.Sprint(preview.SourceName)), systemtext.Inline(*preview.SurvivorName)
+	return StageInfo{
+		TargetType: memberAdminObject, TargetID: args.SourceID, SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.mergeMembers", systemtext.Text(source), systemtext.Text(fmt.Sprint(preview.SourceEmail)), systemtext.Text(survivor), systemtext.Text(fmt.Sprint(*preview.SurvivorEmail)))},
+		Summary: fmt.Sprintf(summaryIn(ctx, t.language).mergeMembers, source, preview.SourceEmail, survivor, *preview.SurvivorEmail),
+	}, nil
 }
 
 type memberPreviewTool struct{ tool memberTool }

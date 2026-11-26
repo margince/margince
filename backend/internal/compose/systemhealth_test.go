@@ -14,6 +14,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/internal/compose/healthrank"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -65,16 +66,16 @@ func TestHealthCompositionKeepsReadableEvidenceBesideAFailedSource(t *testing.T)
 	}
 }
 
-func TestHealthCompositionCannotTurnAnUnknownSourceIntoAllClear(t *testing.T) {
-	ctx := healthTestContext(map[string]principal.ObjectGrant{"ai_diagnostics": {Read: true}})
-	reads := []healthRead{{"providers", "ai_diagnostics", func(context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
-		s := healthSource("providers", "ai_diagnostics")
-		s.Availability = "unknown"
-		return s, nil, nil
-	}}}
-	report := composeHealth(ctx, reads, func() time.Time { return time.Time{} })
-	if report.Assessment != "incomplete" || report.Complete {
-		t.Fatalf("unknown became clear: %+v", report)
+func TestHealthCompositionNeitherClearsAnUnknownSourceNorAlarmsOnInformation(t *testing.T) {
+	unknown, information := crmcontracts.HealthSource{Availability: "unknown", Condition: "unknown"}, crmcontracts.HealthSource{Availability: "available", Condition: healthInformation}
+	for want, s := range map[crmcontracts.SystemHealthAssessment]crmcontracts.HealthSource{"incomplete": unknown, "checked": information} {
+		read := func(context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
+			return s, nil, nil
+		}
+		report := composeHealth(healthTestContext(map[string]principal.ObjectGrant{"ai_diagnostics": {Read: true}}), []healthRead{{"providers", "ai_diagnostics", read}}, func() time.Time { return time.Time{} })
+		if report.Assessment != want || report.Complete != (want == "checked") || report.ActionCount != 0 {
+			t.Fatalf("%s/%s read as %+v, want %s", s.Availability, s.Condition, report, want)
+		}
 	}
 }
 
@@ -138,7 +139,7 @@ func TestHealthFindingOrderingIsTransitiveWithMissingCounts(t *testing.T) {
 	for _, a := range findings {
 		for _, b := range findings {
 			for _, c := range findings {
-				if healthFindingLess(a, b) && healthFindingLess(b, c) && !healthFindingLess(a, c) {
+				if healthrank.FindingLess(a, b) && healthrank.FindingLess(b, c) && !healthrank.FindingLess(a, c) {
 					t.Fatalf("nontransitive: %s < %s < %s", a.Id, b.Id, c.Id)
 				}
 			}
@@ -156,7 +157,7 @@ func TestIntakeWindowUsesTheUTCReportingDay(t *testing.T) {
 
 func TestHealthActionsExcludeAutomaticProcessing(t *testing.T) {
 	source := healthSource("jobs", "job_health")
-	for _, condition := range []crmcontracts.HealthSourceCondition{"clear", "processing", "retrying", "unknown", "recovered"} {
+	for _, condition := range []crmcontracts.HealthSourceCondition{"clear", "processing", "retrying", "unknown", "recovered", "information"} {
 		if healthFinding(source, "queue_checked", condition, 1, "runs").RequiresAction {
 			t.Fatalf("%s unexpectedly requires human action", condition)
 		}
@@ -189,5 +190,20 @@ func TestJobSummaryKeepsLiveRetriesBesideDiscardedHistory(t *testing.T) {
 		if counts["queue_unverified"] != int(row.Discarded) || counts["queue_retrying"] != 2 {
 			t.Fatalf("history hid current retries: %+v", findings)
 		}
+	}
+}
+
+// The zone finding asks an admin to act, and sends them to the settings part
+// that holds the zone.
+func TestTheZoneFindingSendsAnAdminToTheRegionalSettings(t *testing.T) {
+	f := zoneFinding(healthSource("jobs", healthReadObject))
+	if f.Id != "jobs:zone_unresolved" || !f.RequiresAction || f.Count != nil || f.Unit != nil {
+		t.Errorf("finding = %+v, want an uncounted jobs:zone_unresolved that requires action", f)
+	}
+	if f.Responsible != crmcontracts.HealthFindingResponsibleAdministrator || f.Scope != crmcontracts.HealthFindingScopeInstallation {
+		t.Errorf("the finding is for %q at scope %q, want the administrator and the installation", f.Responsible, f.Scope)
+	}
+	if f.Action.Destination != crmcontracts.HealthActionDestinationRegional || !f.Action.Available {
+		t.Errorf("the finding's action is %+v, want the regional settings, available", f.Action)
 	}
 }

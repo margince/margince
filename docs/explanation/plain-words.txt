@@ -170,7 +170,6 @@ box
 brain
 branch
 breach
-breadcrumb
 break
 brief
 bring
@@ -1223,7 +1222,6 @@ run
 rung
 runtime
 safe
-safer
 said
 sale
 same
@@ -1233,7 +1231,6 @@ sampling
 sandbox
 save
 savepoint
-saw
 say
 scalar
 scale
@@ -1533,7 +1530,6 @@ up
 update
 upkeep
 upload
-upper
 upsert
 upstream
 uptime
@@ -1558,7 +1554,6 @@ verdict
 version
 very
 video
-vietnam
 view
 visibility
 visible

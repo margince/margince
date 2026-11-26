@@ -46,7 +46,7 @@ var BaseLanguage = config.DefineStored(config.Spec[string]{
 		return nil
 	},
 	Doc: "The language AI writes the shared record in: en, de or vi.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
+}, config.Store{Cacheable: true, RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
 
 // BaseLanguageOf resolves the language shared AI writing is written in, inside
 // a transaction the caller already holds.
@@ -125,7 +125,7 @@ func BaseLanguageForRecord(ctx context.Context, tx pgx.Tx) textlang.Lang {
 	if !may {
 		return textlang.English
 	}
-	lang, err := BaseLanguageOf(ctx, tx)
+	lang, err := baseLanguageInSavepoint(ctx, tx)
 	if err != nil {
 		slog.WarnContext(ctx, "the installation's base language could not be read; English is used instead",
 			"reason", err)
@@ -134,13 +134,28 @@ func BaseLanguageForRecord(ctx context.Context, tx pgx.Tx) textlang.Lang {
 	return textlang.Lang(lang)
 }
 
+// baseLanguageInSavepoint reads under a savepoint. A failed read aborts only
+// the savepoint, so the caller's transaction runs on after the English answer.
+func baseLanguageInSavepoint(ctx context.Context, tx pgx.Tx) (string, error) {
+	savepoint, err := tx.Begin(ctx)
+	if err != nil {
+		return "", err
+	}
+	lang, err := BaseLanguageOf(ctx, savepoint)
+	if err != nil {
+		return "", errors.Join(err, savepoint.Rollback(ctx))
+	}
+	return lang, savepoint.Commit(ctx)
+}
+
 // baseLanguageReader asks the settings read gate unrecorded. A caller it
-// refuses gets English from both readers above, logged as any failed read is,
-// so the call never needs the grant.
+// refuses gets English from both readers above, so the call never needs the
+// grant. The refusal logs at debug: every agent call asks, and a seat without
+// the grant is a setting, not a fault.
 func baseLanguageReader(ctx context.Context) (context.Context, bool) {
 	readCtx, err := auth.Unrecorded(ctx, BaseLanguage.Object(), principal.ActionRead)
 	if err != nil {
-		slog.WarnContext(ctx, "the installation's base language could not be read; English is used instead",
+		slog.DebugContext(ctx, "the installation's base language could not be read; English is used instead",
 			"reason", err)
 		return ctx, false
 	}

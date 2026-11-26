@@ -16,6 +16,7 @@ import { existsSync } from "node:fs";
 import { cp, mkdir, readdir, rm } from "node:fs/promises";
 import { build } from "vite";
 import { writeDigests } from "./lib/mcp-app-digests.mjs";
+import { stable } from "./lib/stable.mjs";
 
 const SOURCES = "src/mcp-apps";
 const CONFIG = "vite.mcp-apps.config.ts";
@@ -30,7 +31,7 @@ const VIEWS = (await readdir(SOURCES, { withFileTypes: true }))
     (e) => e.isDirectory() && existsSync(`${SOURCES}/${e.name}/index.html`),
   )
   .map((e) => e.name)
-  .sort();
+  .sort(stable);
 
 if (VIEWS.length === 0) {
   throw new Error(

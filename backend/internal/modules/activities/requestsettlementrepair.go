@@ -100,6 +100,10 @@ func settlementRepairItemTx(ctx context.Context, tx pgx.Tx, request ids.UUID, as
 	if err != nil {
 		return SettlementRepairItem{}, err
 	}
+	private, err := privateMailRequests(ctx, tx)
+	if err != nil {
+		return SettlementRepairItem{}, err
+	}
 	query := `SELECT a.version, coalesce((SELECT sum(r.version) FROM activity r
 	       WHERE r.source_system = $4 AND r.source_activity_id = a.id), 0),
 	     s.judged_through_activity_id::text || '|' || s.decided_at::text || '|' || s.decided_by
@@ -112,8 +116,8 @@ func settlementRepairItemTx(ctx context.Context, tx pgx.Tx, request ids.UUID, as
 	     EXISTS (SELECT 1 FROM activity r WHERE r.source_system = $4 AND r.source_activity_id = a.id
 	       AND ` + storekit.HumanWroteActivityClause("r") + `),
 	     ` + occurredday.FromSQL("a", "$3") + `,
-	     a.archived_at IS NULL AND a.audience = 'workspace' AND a.restricted_at IS NULL
-	       AND EXISTS (` + settlementAnswersSQL() + `)
+	     a.archived_at IS NULL AND ` + judgeableAudienceSQL("a", private) + `
+	       AND EXISTS (` + settlementAnswersSQL(private) + `)
 	   FROM activity_request_settlement s JOIN activity a ON a.id = s.request_activity_id
 	  WHERE s.request_activity_id = $2 AND ` + legacySettledSQL
 	if lock {

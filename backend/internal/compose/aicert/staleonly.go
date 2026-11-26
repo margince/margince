@@ -11,8 +11,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"maps"
-	"reflect"
 	"slices"
 	"strings"
 
@@ -34,30 +32,22 @@ func recordMeasures(rec Record, binding ai.ProviderConfig, profile ai.Profile, t
 }
 
 // MeasuredAs is the binding and profile a record names when it grades binding
-// on another provider's measurement (ai.MeasuredBy). A Vertex binding is graded
-// by the AI Studio record for the same model: Vertex serves Gemini's weights on
-// Gemini's wire, so the request that record measured is the one Vertex is sent.
-// Those records are filed under cloud_frontier, the profile AI Studio is bound
-// under; a profile alters no call but by refusing one, and a refused binding is
-// never run.
+// on another provider's measurement. ai.MeasuredAs holds the rule, so the
+// runtime's grade lookup reads the same one.
 func MeasuredAs(binding ai.ProviderConfig, profile ai.Profile) (ai.ProviderConfig, ai.Profile) {
-	by := ai.MeasuredBy(binding.Provider)
-	if by == binding.Provider {
-		return binding, profile
-	}
-	binding.Provider, binding.Location = by, ""
-	return binding, ai.ProfileCloudFrontier
+	return ai.MeasuredAs(binding, profile)
 }
 
+// measuresExactly compares the record's certification key with the binding's,
+// which the runtime grade lookup (ai.CertificationFor) builds the same way.
 func measuresExactly(rec Record, binding ai.ProviderConfig, profile ai.Profile, task ai.Task) bool {
-	return rec.Kind != KindDecision &&
-		rec.Task == string(task) &&
-		rec.Provider == binding.Provider &&
-		rec.ServedModel == binding.Model &&
-		rec.EnvClass == string(profile) &&
-		rec.ThinkingLevel == binding.ThinkingLevel &&
-		maps.Equal(rec.SiteThinking, ai.SiteThinkingLevels(binding, task)) &&
-		reflect.DeepEqual(rec.CandidateUpstream, ai.UpstreamPreferencesFor(binding))
+	return rec.Kind != KindDecision && recordCertKey(rec) == ai.CertKeyFor(task, binding, profile)
+}
+
+// recordCertKey is the key of the binding rec measured.
+func recordCertKey(rec Record) ai.CertKey {
+	return ai.NewCertKey(ai.Task(rec.Task), rec.Provider, rec.ServedModel, rec.EnvClass, rec.ThinkingLevel,
+		rec.SiteThinking, rec.CandidateUpstream)
 }
 
 // currentBindings marks, per task and binding, the candidates whose committed
@@ -67,6 +57,11 @@ func currentBindings(ctx context.Context, cfg RunnerConfig, byTask map[ai.Task][
 	records, err := LoadRecords(cfg.RecordDir)
 	if err != nil {
 		return nil, fmt.Errorf("reading records for STALE_ONLY: %w", err)
+	}
+	if young := recordsWithin(records, nowFunc(), recordMaxAge); len(young) < len(records) {
+		log.InfoContext(ctx, "aicert: STALE_ONLY measures records older than the most a record stays current",
+			"older", len(records)-len(young), "max_age", recordMaxAge.String())
+		records = young
 	}
 	current := map[string]bool{}
 	for task, scenarios := range byTask {

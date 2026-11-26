@@ -14,6 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/oidctoken"
+	"github.com/margince/margince/backend/internal/compose/oidctoken/oidctokentest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
@@ -82,9 +85,47 @@ func TestWithGoogleSignInCompleteMountsAndReportsCapability(t *testing.T) {
 
 	startReq := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil)
 	startRec := httptest.NewRecorder()
-	s.StartOidcSignIn(startRec, startReq, "google")
+	s.StartOidcSignIn(startRec, startReq, "google", crmcontracts.StartOidcSignInParams{})
 	if startRec.Code != http.StatusFound {
 		t.Fatalf("StartOidcSignIn status = %d, want 302 (the route the capability just advertised must actually be mounted)", startRec.Code)
+	}
+}
+
+// Only a start that asks for the consent screen signs the marker into the
+// state cookie the callback reads.
+func TestStartSignsTheConsentMarkerOnlyWhenAsked(t *testing.T) {
+	const key = "0123456789012345678901234567890123"
+	var s Server
+	WithGoogleSignIn(GoogleSignInConfig{
+		ClientID: "cid", ClientSecret: "secret", StateKey: key,
+		RedirectBase: "https://app.example.com", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed",
+	})(&s, nil)
+	consent := crmcontracts.StartOidcSignInParamsReturnConsent
+	for _, tc := range []struct {
+		name   string
+		params crmcontracts.StartOidcSignInParams
+		want   bool
+	}{
+		{"consent screen", crmcontracts.StartOidcSignInParams{Return: &consent}, true},
+		{"sign-in page", crmcontracts.StartOidcSignInParams{}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google", tc.params)
+			var token string
+			for _, c := range rec.Result().Cookies() {
+				if c.Name == "oidc_login_state" {
+					token = c.Value
+				}
+			}
+			st, err := loginStateSignerAdapter{s: newLoginStateSigner([]byte(key))}.Verify(token)
+			if err != nil {
+				t.Fatalf("status %d, state cookie %q: %v", rec.Code, token, err)
+			}
+			if st.ReturnToConsent != tc.want {
+				t.Fatalf("ReturnToConsent = %v, want %v", st.ReturnToConsent, tc.want)
+			}
+		})
 	}
 }
 
@@ -92,28 +133,28 @@ func TestWithGoogleSignInCompleteMountsAndReportsCapability(t *testing.T) {
 // app's client id says nothing about who may sign in here, whoever issued it.
 func TestTheAudienceCheckRefusesAnotherAppsToken(t *testing.T) {
 	match := audienceIs("cid")
-	if err := match(oidcClaims{Aud: "cid"}); err != nil {
+	if err := match(oidctoken.Claims{Aud: oidctoken.Audience{"cid"}}); err != nil {
 		t.Fatalf("match(correct aud) = %v, want nil", err)
 	}
-	if err := match(oidcClaims{Aud: "someone-elses-client"}); err == nil {
+	if err := match(oidctoken.Claims{Aud: oidctoken.Audience{"someone-elses-client"}}); err == nil {
 		t.Fatal("expected a mismatch to be rejected")
 	}
-	if err := match(oidcClaims{}); err == nil {
+	if err := match(oidctoken.Claims{}); err == nil {
 		t.Fatal("a token naming no audience at all was accepted")
 	}
 }
 
 func TestGoogleOIDCVerifierAdapterTranslatesClaims(t *testing.T) {
-	rig := newOIDCTestRig(t)
-	v := newGoogleOIDCVerifier(rig.jwksURL(), identityResolvedPerRequest).
-		withHTTPClient(rig.srv.Client()).
-		setClock(func() time.Time { return rig.base })
-	adapter := googleOIDCVerifierAdapter{v: v, matchIdentity: func(oidcClaims) error { return nil }}
+	rig := oidctokentest.NewRig(t)
+	v := oidctoken.NewGoogle(rig.JWKSURL(), oidctoken.IdentityResolvedPerRequest).
+		WithHTTPClient(rig.Srv.Client()).
+		SetClock(func() time.Time { return rig.Base })
+	adapter := googleOIDCVerifierAdapter{v: v, matchIdentity: func(oidctoken.Claims) error { return nil }}
 
 	// A Google token typically carries NO groups claim: the adapter must
 	// surface the empty list, never an error — a groupless token simply
 	// grants nothing.
-	tok := rig.mint(t, testKID, "RS256", map[string]any{
+	tok := rig.Mint(t, oidctokentest.KID, "RS256", map[string]any{
 		"sub": "sub-1", "email": "carol@example.com", "given_name": "Carol",
 		"picture": "https://lh3.googleusercontent.com/a/carol",
 	})
@@ -136,7 +177,7 @@ func TestGoogleOIDCVerifierAdapterTranslatesClaims(t *testing.T) {
 
 	// And a token that DOES carry one surfaces it verbatim, for the
 	// group→role grants downstream.
-	grouped := rig.mint(t, testKID, "RS256", map[string]any{
+	grouped := rig.Mint(t, oidctokentest.KID, "RS256", map[string]any{
 		"sub": "sub-1", "email": "carol@example.com", "groups": []string{"sales", "leads"},
 	})
 	claims, err = adapter.Verify(context.Background(), grouped)
@@ -187,19 +228,18 @@ func TestGoogleTokenExchangerAdapterDelegates(t *testing.T) {
 
 func TestLoginStateSignerAdapterRoundTrips(t *testing.T) {
 	adapter := loginStateSignerAdapter{s: newLoginStateSigner([]byte("0123456789012345678901234567890123"))}
-	token := adapter.Sign("google", "client-1", "nonce-1", "verifier-1", 10*time.Minute)
-
-	provider, clientID, nonce, codeVerifier, err := adapter.Verify(token)
+	want := identity.OIDCLoginState{
+		Provider: "google", ClientID: "client-1", Nonce: "nonce-1", CodeVerifier: "verifier-1", ReturnToConsent: true,
+	}
+	got, err := adapter.Verify(adapter.Sign(want, 10*time.Minute))
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if provider != "google" || clientID != "client-1" ||
-		nonce != "nonce-1" || codeVerifier != "verifier-1" {
-		t.Fatalf("provider=%q clientID=%q nonce=%q codeVerifier=%q",
-			provider, clientID, nonce, codeVerifier)
+	if got != want {
+		t.Fatalf("Verify = %+v, want %+v", got, want)
 	}
 
-	if _, _, _, _, err := adapter.Verify("not-a-real-token"); err == nil {
+	if _, err := adapter.Verify("not-a-real-token"); err == nil {
 		t.Fatal("expected an error to pass through for a malformed token")
 	}
 }
@@ -255,7 +295,7 @@ func TestOfferedProvidersOnlyEverNarrowsWhatTheDeploymentComposed(t *testing.T) 
 func TestGoogleSignInRunsOnTheEnvironmentsPairBeforeTheStoredApp(t *testing.T) {
 	ctx := context.Background()
 	env := signInClient{ClientID: "env-cid", ClientSecret: "env-secret"}
-	verifier := newGoogleOIDCVerifier(googleJWKSURL, identityResolvedPerRequest)
+	verifier := oidctoken.NewGoogle(oidctoken.GoogleJWKSURL, oidctoken.IdentityResolvedPerRequest)
 	stored := func(context.Context) (capture.ConnectorApp, bool, error) {
 		return capture.ConnectorApp{ClientID: "stored-cid", ClientSecretRef: "stored-secret"}, true, nil
 	}
@@ -314,7 +354,7 @@ func TestGoogleSignInMountedWithoutAClientIsNotOffered(t *testing.T) {
 		t.Fatalf("oidc_providers = %v, want none while no client exists", got)
 	}
 	rec := httptest.NewRecorder()
-	s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google")
+	s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google", crmcontracts.StartOidcSignInParams{})
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("StartOidcSignIn = %d, want 404 for a mounted provider with no client", rec.Code)
 	}

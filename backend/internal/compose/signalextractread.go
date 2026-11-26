@@ -22,6 +22,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
@@ -68,12 +70,13 @@ const (
 
 // threadMessage is one message of a conversation as the prompt sees it.
 type threadMessage struct {
-	Parties   []commitmentParty
-	ID        ids.UUID
-	Direction string
-	Subject   string
-	Body      string
-	At        time.Time
+	Attachments []string
+	Parties     []commitmentParty
+	ID          ids.UUID
+	Direction   string
+	Subject     string
+	Body        string
+	At          time.Time
 	// UnreadRunes is how much of this body extractBodyLimit left behind.
 	//
 	// Carried rather than inferred, because it cannot be inferred: a body cut
@@ -184,7 +187,7 @@ func (t settledThread) partyRefs() *promptref.Refs {
 	for _, message := range t.Messages {
 		parties = append(parties, message.Parties...)
 	}
-	return commitmentPartyRefs(parties)
+	return commitmentparty.Refs(parties)
 }
 
 func (t settledThread) eventCap() int {
@@ -247,7 +250,11 @@ func (t settledThread) firstReadHere(m threadMessage) bool {
 // whose conversation this is, not which of its messages the model may read.
 func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]settledThread, error) {
 	settled := now.Add(-extractSettleHours * time.Hour)
-	rows, err := tx.Query(ctx, dueThreadsQuery,
+	private, err := activities.SharesPrivateRequestsTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, dueThreadsQuery(private),
 		settled, limit, extractRefusalCap, now.Add(-extractParkFor))
 	if err != nil {
 		return nil, fmt.Errorf("list the threads due for a read: %w", err)

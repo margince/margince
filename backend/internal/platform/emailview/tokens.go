@@ -42,24 +42,27 @@ const (
 	tokenCount
 )
 
+// boxCorner is --r-sm, which the product's control, card and pane corners read.
+const boxCorner = "8px"
+
 var tokens = [tokenCount]Token{
-	bgPage:              {"bgPage", "#eff6f3", "#0c1311"},
-	bgElevated:          {"bgElevated", "#fbfcfb", "#161d1a"},
-	pane:                {"pane", "#fcfffe", "rgba(239, 247, 244, 0.045)"},
-	paneEdge:            {"paneEdge", "#d8e2de", "rgba(239, 247, 244, 0.09)"},
-	bgWell:              {"bgWell", "#f6f8f7", "#111815"},
-	borderSubtle:        {"borderSubtle", "#e3eae6", "#22352e"},
-	textPrimary:         {"textPrimary", "#182c28", "#edf6f4"},
-	textSecondary:       {"textSecondary", "#55645f", "#9aa8a3"},
-	accent:              {"accent", "#045647", "#16a34a"},
-	textOnAccentControl: {"textOnAccentControl", "#f4faf7", "#06130b"},
+	bgPage:              {"bgPage", "#eff6f3", "#111816"},
+	bgElevated:          {"bgElevated", "#fbfcfb", "#19211f"},
+	pane:                {"pane", "#fcfffe", "#1d2422"},
+	paneEdge:            {"paneEdge", "#d8e2de", "#2f3835"},
+	bgWell:              {"bgWell", "#f6f8f7", "#161d1b"},
+	borderSubtle:        {"borderSubtle", "#e3eae6", "#2f3937"},
+	textPrimary:         {"textPrimary", "#182c28", "#e1e8e6"},
+	textSecondary:       {"textSecondary", "#55645f", "#adb9b6"},
+	accent:              {"accent", "#045647", "#48a58f"},
+	textOnAccentControl: {"textOnAccentControl", "#f4faf7", "#062d26"},
 	warningText:         {"warningText", "#885700", "#f7b750"},
-	infoText:            {"infoText", "#005eb5", "#3d99ff"},
-	successText:         {"successText", "#007132", "#17c964"},
-	dangerText:          {"dangerText", "#c2001a", "#ff615e"},
-	rControl:            {"r-control", "12px", "12px"},
-	rMd:                 {"r-md", "16px", "16px"},
-	rLg:                 {"r-lg", "20px", "20px"},
+	infoText:            {"infoText", "#005eb5", "#62aaff"},
+	successText:         {"successText", "#007132", "#51d75e"},
+	dangerText:          {"dangerText", "#c2001a", "#ff817a"},
+	rControl:            {"r-control", boxCorner, boxCorner},
+	rMd:                 {"r-md", boxCorner, boxCorner},
+	rLg:                 {"r-lg", boxCorner, boxCorner},
 	shadowRest:          {"shadow-rest", "0 1px 2px 0 rgb(0 0 0 / 0.05)", "0 1px 2px 0 rgb(0 0 0 / 0.4)"},
 	fontWeightMedium:    {"fontWeightMedium", "500", "500"},
 }

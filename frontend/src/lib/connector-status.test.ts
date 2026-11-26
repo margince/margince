@@ -9,7 +9,9 @@ import {
   type ConnectorStatus,
   errorClassKey,
   healthBadge,
+  holdsSendGrant,
   isConnectedAtAll,
+  isLiveConnection,
   isUnhealthy,
   missingSendGrant,
   needsReconnect,
@@ -47,14 +49,12 @@ describe("statusTone", () => {
     expect(statusTone("disconnected")).toBe(undefined);
   });
 
-  // A channel connection whose webhook registration hasn't landed yet is a
-  // half-registration, not a live channel — it must read as "needs a look"
-  // (the same tone as reauth_required), never as the "success" tone a
-  // healthy connected row gets (§9.1).
-  it("renders pending as a warning tone, distinct from connected", () => {
-    expect(statusTone("pending")).toBe("warning");
-    expect(statusLabel("pending")).toBe("connectors.statusPending");
-    expect(statusLabel("pending")).not.toBe(statusLabel("connected"));
+  // A Telegram Business link nobody has approved is not a live channel. It reads
+  // as "needs a look", the tone of reauth_required, never as success.
+  it("renders pending_approval as a warning tone, distinct from connected", () => {
+    expect(statusTone("pending_approval")).toBe("warning");
+    expect(statusLabel("pending_approval")).toBe("connectors.statusPending");
+    expect(statusLabel("pending_approval")).not.toBe(statusLabel("connected"));
   });
 });
 
@@ -110,11 +110,19 @@ describe("missingSendGrant", () => {
   });
 
   // A provider that cannot send at all is not "cannot send" — it was never a
-  // sending mailbox, and its scope vocabulary is neither vendor's, so no absent
-  // scope says anything about it.
+  // sending mailbox, so no absent scope says anything about it.
   it("never badges a provider that does not send in the first place", () => {
-    expect(missingSendGrant({ provider: "imap", scopes: [] })).toBe(false);
     expect(missingSendGrant({ provider: "gcal", scopes: [] })).toBe(false);
+  });
+
+  // An IMAP mailbox sends only when its owner turned sending on. Left off, it
+  // is read-only by choice, which is not a grant to reconnect for.
+  it("never badges an IMAP mailbox left read-only, and lets one that sends send", () => {
+    expect(missingSendGrant({ provider: "imap", scopes: [] })).toBe(false);
+    expect(holdsSendGrant({ provider: "imap", scopes: [] })).toBe(false);
+    expect(
+      holdsSendGrant({ provider: "imap", scopes: ["urn:margince:imap:send"] }),
+    ).toBe(true);
   });
 
   // Outlook sends too, and its grant carries Microsoft's own permission name —
@@ -144,6 +152,7 @@ const FULL_GRANT = [
   "https://www.googleapis.com/auth/calendar.events",
   "Mail.Send",
   "Calendars.ReadWrite",
+  "https://www.googleapis.com/auth/documents.readonly",
 ];
 
 function service(
@@ -175,7 +184,7 @@ describe("healthBadge", () => {
   it("uses no key the shared status vocabulary uses", () => {
     const shared: readonly ConnectorStatus[] = [
       "connected",
-      "pending",
+      "pending_approval",
       "reauth_required",
       "error",
       "disconnected",
@@ -292,6 +301,19 @@ describe("accountHealth", () => {
     ).toBe("needs_attention");
   });
 
+  it("needs attention when the meeting notes cannot read the Docs", () => {
+    expect(
+      accountHealth({
+        mail: service("gmail"),
+        calendar: service("gcal"),
+        notes: service("gdocs", {
+          scopes: ["email"],
+          concern: "notes_grant_missing",
+        }),
+      }),
+    ).toBe("needs_attention");
+  });
+
   it("reads an account with no live service as not connected", () => {
     expect(accountHealth({ mail: null, calendar: null })).toBe("not_connected");
     expect(
@@ -320,6 +342,16 @@ describe("a service's one badge and one reason", () => {
     expect(serviceReason(calendar)).toBe("scheduling.readOnlyCalendar");
   });
 
+  it("names meeting notes Google was refused the Docs for", () => {
+    const notes = service("gdocs", {
+      scopes: ["email"],
+      concern: "notes_grant_missing",
+    });
+    expect(serviceBadge(notes).label).toBe("connectors.cannotReadNotes");
+    expect(serviceReason(notes)).toBe("connectors.reconnectToReadNotes");
+    expect(needsReconnect(notes)).toBe(true);
+  });
+
   it("lets a refused grant outrank a narrow one, and says why", () => {
     const mail = service("gmail", {
       status: "reauth_required",
@@ -340,5 +372,14 @@ describe("a service's one badge and one reason", () => {
   it("has nothing to explain on a healthy service", () => {
     expect(serviceReason(service("gmail"))).toBeNull();
     expect(needsReconnect(service("gmail"))).toBe(false);
+  });
+});
+
+describe("isLiveConnection", () => {
+  it("counts a degraded mailbox as live, as the server does", () => {
+    expect(isLiveConnection({ status: "connected" })).toBe(true);
+    expect(isLiveConnection({ status: "error" })).toBe(true);
+    expect(isLiveConnection({ status: "disconnected" })).toBe(false);
+    expect(isLiveConnection({ status: "reauth_required" })).toBe(false);
   });
 });

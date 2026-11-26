@@ -5,20 +5,92 @@
     6
   ],
   "passed": 2,
-  "runs": 2,
+  "runs": 3,
   "pass_at": 2,
   "driver": "claude:cli",
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": true,
+  "stamp": {
+    "scenario": "5c4fe6ab0ba18e76",
+    "tools": "6e0c5d7efc3f580f",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "1796d51361de08d5",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T05:47:11Z",
+    "graded_commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "graded_at": "2026-11-25T05:47:11Z"
+  },
   "usage": {
-    "input_tokens": 12,
-    "output_tokens": 1582,
-    "cache_creation_input_tokens": 76412,
-    "cache_read_input_tokens": 313932,
-    "runs_measured": 2,
-    "runs_costed": 2,
-    "cost_usd": 0.3529
+    "input_tokens": 18,
+    "output_tokens": 2247,
+    "cache_creation_input_tokens": 22439,
+    "cache_read_input_tokens": 665540,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.1788
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "preview_import"
+      ]
+    },
+    {
+      "passed": false,
+      "tools": [
+        "describe_import_format",
+        "preview_import",
+        "read_import"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_import_format",
+        "preview_import",
+        "read_import"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 3,
+    "calls": {
+      "median": 2,
+      "min": 2,
+      "max": 2
+    },
+    "turns": {
+      "median": 3,
+      "min": 3,
+      "max": 3
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 233825,
+      "min": 220302,
+      "max": 233870
+    },
+    "output_tokens": {
+      "median": 737,
+      "min": 669,
+      "max": 841
+    },
+    "duration_ms": {
+      "median": 8103,
+      "min": 7819,
+      "max": 11454
+    }
   }
 }

@@ -3,23 +3,30 @@ import { CalendarClock, Zap } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { WebsiteInquiryDialog } from "../../components/websiteinquirydialog";
 import { EmptyState } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { ErrorLine } from "../../design-system/errorline";
+import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { type QueryLike, QueryStates } from "../../design-system/querystates";
 import { Chip } from "../../design-system/readings";
 import { RowOpen } from "../../design-system/rowopen";
-import { INTL_LOCALE } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
+import {
+  nameToStore,
+  templateDescription,
+  templateName,
+} from "./automations.catalogwords";
 import { AutomationDialog } from "./automations.form";
 import { ConfiguredAutomations, shut } from "./automations.instances";
 import { triggerLabel } from "./automations.recipe";
 import "./automations.css";
+import { segmenter } from "../../format/formatters";
 
 // The automations editor over the closed catalog. Every form field derives from
 // the entry's params_schema plus the instance name: no free-form rule body and no
@@ -34,7 +41,7 @@ type StagedTemplate = { entry: CatalogEntry; seq: number; open: boolean };
 /** Which tab of the Automations page is open. */
 export type AutomationsView = "mine" | "library";
 
-// One section of Settings → AI: the page owns the reading column and the h1.
+// The settings page owns the reading column and its heading.
 export function AutomationsAdmin({
   view = "mine",
 }: Readonly<{ view?: AutomationsView }>) {
@@ -115,6 +122,7 @@ export function AutomationsAdmin({
             intro={
               <>
                 <PanelIntro>{t("auto.sub")}</PanelIntro>
+                <PanelIntro>{t("auto.ownerHint")}</PanelIntro>
                 {/* Bound to `update`, the grant the row's Switch asks for. */}
                 {me.isSuccess && !canEdit && (
                   <PanelIntro>{t("auto.readOnly")}</PanelIntro>
@@ -153,17 +161,28 @@ export function AutomationsAdmin({
           )}
         </Panel>
       )}
-      {staged && (
+      {staged?.open && staged.entry.key === WEBSITE_INQUIRY_RECIPE && (
+        <WebsiteInquiryDialog onClose={() => setStaged(shut)} />
+      )}
+      {staged && staged.entry.key !== WEBSITE_INQUIRY_RECIPE && (
         <AutomationDialog
           key={staged.seq}
           open={staged.open}
           entry={staged.entry}
-          initialName={staged.entry.name}
+          initialName={templateName(staged.entry, t)}
           submitLabel={t("auto.create")}
           pending={create.isPending}
-          refusal={<ErrorLine error={create.error} />}
+          error={create.error}
           onSubmit={(name, params) =>
-            create.mutate({ key: staged.entry.key, name, params })
+            create.mutate({
+              key: staged.entry.key,
+              name: nameToStore(
+                name,
+                templateName(staged.entry, t),
+                staged.entry.name,
+              ),
+              params,
+            })
           }
           onClose={() => setStaged(shut)}
         />
@@ -251,17 +270,49 @@ function StarterLibrary({
       </PanelBody>
     );
   }
-  return (
+  const columns = libraryColumns(t, locale, canCreate ? onUse : undefined);
+  const groups = [
+    ["inquiries", t("auto.group.inquiries")],
+    ["deals", t("auto.group.deals")],
+    ["customers", t("auto.group.customers")],
+    ["meetings", t("auto.group.meetings")],
+    ["lists", t("auto.group.lists")],
+  ] as const;
+  const knownGroups = new Set<string>(groups.map(([key]) => key));
+  const fallback = entries.filter(
+    (entry) => !knownGroups.has(entry.group ?? ""),
+  );
+  const table = (rows: CatalogEntry[], label: string) => (
     <DataTable
       bleed
       fold
-      label={t("auto.catalog")}
-      columns={libraryColumns(t, locale, canCreate ? onUse : undefined)}
-      rows={entries}
+      label={label}
+      columns={columns}
+      rows={rows}
       rowKey={(entry) => entry.key}
       rowTestId={(entry) => `template-${entry.key}`}
       onRowClick={canCreate ? onUse : undefined}
     />
+  );
+  return (
+    <>
+      {groups.map(([key, label]) => {
+        const rows = entries.filter((entry) => entry.group === key);
+        return (
+          rows.length > 0 && (
+            <div key={key}>
+              <PanelBody>
+                <Heading size="small" as="h3">
+                  {label}
+                </Heading>
+              </PanelBody>
+              {table(rows, label)}
+            </div>
+          )
+        );
+      })}
+      {fallback.length > 0 && table(fallback, t("auto.catalog"))}
+    </>
   );
 }
 
@@ -276,16 +327,19 @@ function libraryColumns(
       header: t("auto.name"),
       fold: "title",
       grow: true,
-      render: (entry) => (
-        <CellStack>
-          <span>{entry.name}</span>
-          {entry.description && (
-            <span className="t-caption">
-              {leadSentence(entry.description, locale)}
-            </span>
-          )}
-        </CellStack>
-      ),
+      render: (entry) => {
+        const description = templateDescription(entry, t);
+        return (
+          <CellStack>
+            <span>{templateName(entry, t)}</span>
+            {description && (
+              <span className="t-caption">
+                {leadSentence(description, locale)}
+              </span>
+            )}
+          </CellStack>
+        );
+      },
     },
     {
       key: "trigger",
@@ -313,7 +367,7 @@ function libraryColumns(
       fold: "end",
       render: (entry) => (
         <RowOpen
-          label={t("auto.useNamed", { name: entry.name })}
+          label={t("auto.useNamed", { name: templateName(entry, t) })}
           opensDialog
           onOpen={() => onUse(entry)}
         />
@@ -324,7 +378,7 @@ function libraryColumns(
 
 // The row says what a template does; the dialog it opens reads the rest.
 function leadSentence(text: string, locale: Locale): string {
-  const [first] = new Intl.Segmenter(INTL_LOCALE[locale], {
+  const [first] = segmenter(locale, {
     granularity: "sentence",
   }).segment(text);
   return first?.segment.trim() ?? text;

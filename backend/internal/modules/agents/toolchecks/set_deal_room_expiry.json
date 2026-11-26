@@ -1,0 +1,9 @@
+{
+  "verb": "set_deal_room_expiry",
+  "checks": [
+    "deal_room.update"
+  ],
+  "takes": [
+    "deal_room"
+  ]
+}

@@ -22,6 +22,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -64,8 +65,9 @@ type importHandlers struct {
 	// registryForTest are tool registry options only the integration harness
 	// sets, such as how long preview_import waits for its test's report.
 	registryForTest []agents.RegistryOption
-	// routesForTest wraps the signed-in /v1 routes in the integration harness
-	// only, such as to record what their gates ask; nil serves them as they are.
+	// routesForTest wraps each /v1 route, signed in or public, in the
+	// integration harness only. It can record what their gates ask. Nil serves
+	// them as they are.
 	routesForTest func(http.Handler) http.Handler
 }
 
@@ -140,7 +142,8 @@ func (h importHandlers) discardSource(ctx context.Context, ref string) error {
 
 // profileAndStore is everything the upload does once it has the bytes. It reads
 // the header and counts the rows, proposes a mapping, stores the file and opens
-// its run. fileName is empty for pasted text.
+// its run. fileName is empty for pasted text, and an empty object is chosen
+// from the header.
 //
 // Two doors share it. The REST one reads a multipart file; the tool surface
 // takes CSV as text, since an assistant cannot perform a file upload.
@@ -148,24 +151,37 @@ func (h importHandlers) profileAndStore(
 	ctx context.Context, object, fileName string, body []byte,
 ) (crmcontracts.ImportSourceProfile, error) {
 	if err := migration.CheckUTF8(body); err != nil {
-		return crmcontracts.ImportSourceProfile{}, importProblem(err)
+		return crmcontracts.ImportSourceProfile{}, importwire.Problem(err)
 	}
 	profile, err := migration.ProfileCSV(bytes.NewReader(body), migration.ProfileRowLimit)
 	if err != nil {
-		return crmcontracts.ImportSourceProfile{}, importProblem(err)
+		return crmcontracts.ImportSourceProfile{}, importwire.Problem(err)
 	}
 	rows, err := migration.CountRecords(bytes.NewReader(body))
 	if err != nil {
-		return crmcontracts.ImportSourceProfile{}, importProblem(err)
+		return crmcontracts.ImportSourceProfile{}, importwire.Problem(err)
 	}
 	if err := refuseTooManyRows(rows); err != nil {
 		return crmcontracts.ImportSourceProfile{}, err
 	}
-	cat, err := readImportCatalog(ctx, h.db, object)
+	objects := []string{object}
+	if object == "" {
+		objects = migration.ImportOrder
+	}
+	cats, err := readImportCatalogs(ctx, h.db, objects)
 	if err != nil {
 		return crmcontracts.ImportSourceProfile{}, err
 	}
-	targets, err := importTargets(object, cat)
+	suggestions, err := suggestionsByObject(profile, cats, objects)
+	if err != nil {
+		return crmcontracts.ImportSourceProfile{}, err
+	}
+	var chosenBy *crmcontracts.ImportSourceProfileObjectChosenBy
+	if object == "" {
+		chosen, how := importwire.ObjectOf(suggestions)
+		object, chosenBy = chosen, &how
+	}
+	targets, err := importTargets(object, cats[object])
 	if err != nil {
 		return crmcontracts.ImportSourceProfile{}, err
 	}
@@ -173,10 +189,11 @@ func (h importHandlers) profileAndStore(
 	if err != nil {
 		return crmcontracts.ImportSourceProfile{}, err
 	}
-	suggested := suggestImportMapping(profile, targets, cat)
+	suggested := suggestions[object]
 	out := crmcontracts.ImportSourceProfile{
 		SourceRef:        key,
 		Object:           new(crmcontracts.ImportObject(object)),
+		ObjectChosenBy:   chosenBy,
 		FileName:         sentText(fileName),
 		Columns:          toContractColumns(profile),
 		RowsProfiled:     profile.RowsProfiled,
@@ -314,10 +331,10 @@ func (h importHandlers) commitRun(
 	// cannot be built is refused while it can still be approved again.
 	source, _, err := bundleSourceFor(h.blobs, *run.Mapping, run.SourceRef, h.uploadLimit)
 	if err != nil {
-		return crmcontracts.ImportRun{}, importProblem(err)
+		return crmcontracts.ImportRun{}, importwire.Problem(err)
 	}
 	if _, err := newBundleWriters(ctx, h.db, run.ID, run.Mapping, source); err != nil {
-		return crmcontracts.ImportRun{}, importProblem(err)
+		return crmcontracts.ImportRun{}, importwire.Problem(err)
 	}
 
 	approved, err := h.startOrResume(ctx, migration.NewRunStore(h.db), run, version, queue.commits(ws))

@@ -64,3 +64,12 @@ export function storedLocale(): Locale | null {
 export function preferredLocale(): Locale {
   return storedLocale() ?? detectLocale();
 }
+
+let effectiveLocale: Locale | null = null;
+
+export function setEffectiveLocale(locale: Locale): void {
+  effectiveLocale = locale;
+}
+export function effectiveDisplayLocale(): Locale {
+  return effectiveLocale ?? preferredLocale();
+}

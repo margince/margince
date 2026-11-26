@@ -50,8 +50,8 @@ func TestSendMIMESubmitsTheMessageAsMicrosoftExpectsIt(t *testing.T) {
 	if err := NewAPI(stub.srv.Client(), stub.srv.URL).SendMIME(context.Background(), "tok", raw); err != nil {
 		t.Fatalf("SendMIME: %v", err)
 	}
-	if stub.method != http.MethodPost || stub.path != sendMIMEPath {
-		t.Errorf("request = %s %s, want POST %s", stub.method, stub.path, sendMIMEPath)
+	if stub.method != http.MethodPost || stub.path != "/me/sendMail" {
+		t.Errorf("request = %s %s, want POST /me/sendMail", stub.method, stub.path)
 	}
 	if stub.auth != "Bearer tok" {
 		t.Errorf("Authorization = %q", stub.auth)

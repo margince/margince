@@ -17,9 +17,11 @@ on:
 permissions:
   contents: read
 
+# One run at a time per pull request, never cancelling the one in flight, for
+# the reason closing-declaration.yml gives.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   describing:

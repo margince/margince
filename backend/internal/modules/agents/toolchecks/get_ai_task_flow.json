@@ -1,0 +1,6 @@
+{
+  "verb": "get_ai_task_flow",
+  "checks": [
+    "ai_diagnostics.read"
+  ]
+}

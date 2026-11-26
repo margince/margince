@@ -1,0 +1,105 @@
+{
+  "scenario": "case10_finish_the_import",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "door": "rest",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "ec71bd9972b5a8d6",
+    "tools": "5d7df7e66e0fb55c",
+    "instructions": "101cbb08c678f0fb",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "784accefb641e19be5b02fde1393d20b0547959c",
+    "ran_at": "2026-11-25T07:17:15Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T07:41:05Z"
+  },
+  "usage": {
+    "input_tokens": 66,
+    "output_tokens": 6919,
+    "cache_creation_input_tokens": 64104,
+    "cache_read_input_tokens": 346189,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.3604
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "create_record",
+        "find_records",
+        "list_approvals",
+        "list_records",
+        "skill_file"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "create_record",
+        "find_records",
+        "list_approvals",
+        "list_records",
+        "skill_file"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "create_record",
+        "find_records",
+        "list_approvals",
+        "list_records",
+        "skill_file"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 3,
+    "calls": {
+      "median": 15,
+      "min": 15,
+      "max": 15
+    },
+    "turns": {
+      "median": 16,
+      "min": 16,
+      "max": 16
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 141337,
+      "min": 126765,
+      "max": 142257
+    },
+    "output_tokens": {
+      "median": 2274,
+      "min": 2272,
+      "max": 2373
+    },
+    "duration_ms": {
+      "median": 24092,
+      "min": 20401,
+      "max": 28910
+    }
+  }
+}

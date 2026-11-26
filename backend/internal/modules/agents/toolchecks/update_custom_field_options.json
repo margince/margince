@@ -1,0 +1,9 @@
+{
+  "verb": "update_custom_field_options",
+  "checks": [
+    "custom_field.update"
+  ],
+  "takes": [
+    "picklist_field"
+  ]
+}

@@ -11,7 +11,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -30,9 +29,10 @@ func (a *assembly) readContracts() error {
 	return nil
 }
 
-// readDocuments lists the files attached to the project itself. Its gate is
-// the project grant — an attachment inherits its parent's authority — which
-// the anchor read already held, so the section has no omission case.
+// readDocuments lists the project's own uploads and the files of the
+// activities filed under it. Its gate is the project grant, which the anchor
+// read already held, so the section has no omission case. Each activity file
+// is gated on its own activity.
 func (a *assembly) readDocuments() error {
 	limit := sectionLimit
 	rows, page, err := a.svc.activities.ListAttachmentsTx(a.ctx, a.tx, entityTypeProject, a.projectID.UUID, nil, &limit)
@@ -64,8 +64,11 @@ func (a *assembly) readCommitments() error {
 			ActivityId: openapi_types.UUID(t.ID),
 			Subject:    t.Subject,
 			DueAt:      t.DueAt,
+			DueHasTime: t.DueHasTime,
+			DueIntent:  t.DueIntent,
 			AssigneeId: uuidPtr(t.AssigneeID),
-			Overdue:    deadline.Passed(t.DueAt, a.now),
+			Overdue:    t.Overdue,
+			Version:    t.Version,
 		}
 		if t.AssigneeID != nil {
 			name := t.AssigneeName
@@ -87,7 +90,7 @@ func (a *assembly) readTimeline() error {
 	limit := sectionLimit
 	rows, page, err := activities.ListActivitiesTx(a.ctx, a.tx, activities.ListActivitiesInput{
 		EntityType: &entityTypeProject, EntityID: &a.projectID.UUID, Limit: &limit,
-		AsOf: &a.now, Columns: a.cats.activity,
+		AsOf: &a.now, Columns: a.cats.activity, CollapseSeatCopies: true,
 	})
 	if err != nil {
 		return err

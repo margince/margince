@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -16,6 +18,51 @@ func TestAJobTickCannotSendANotice(t *testing.T) {
 	_, err := extensionCore{unattended: true}.Notices().Send(context.Background(), validNotice())
 	if !errors.Is(err, extension.ErrForbidden) {
 		t.Fatalf("err = %v, want ErrForbidden", err)
+	}
+}
+
+// A delivery has nobody behind it and may still send, so a flag found while a
+// mail is delivered reaches someone. The send gets past the refusal and meets
+// the rate limit, which an unattended send is held to like any other.
+func TestADeliveryMaySendANoticeAndATickMayNot(t *testing.T) {
+	const unit = "delivery-unit"
+	for range extensionNoticesPerMinute {
+		extensionNotices.Allow(unit)
+	}
+	authority := func(ctx context.Context) (context.Context, error) { return ctx, nil }
+	delivery := deliveryRuntimeFor(context.Background(), unit, "1.0.0", "subscription/flag", extensionRuntimeBinding{})
+	core := extensionCore{unit: unit, unattended: delivery.unattended, notifies: delivery.deliversNotices, authority: authority}
+	if _, err := core.Notices().Send(context.Background(), validNotice()); !errors.Is(err, extension.ErrRateLimited) {
+		t.Errorf("a delivery's send = %v, want it past the refusal and on to ErrRateLimited", err)
+	}
+	tick := jobRuntimeFor(context.Background(), unit, "1.0.0", "job/nightly", extensionRuntimeBinding{})
+	if tick.deliversNotices {
+		t.Error("a job tick may send a notice")
+	}
+}
+
+const testNoticeUnit = "delivery-unit"
+
+func TestANoticeMayNameARecordKindOnlyItsOwnUnitDeclared(t *testing.T) {
+	extregistrytest.Reset(t)
+	recordkinds.Register("delivery-unit", []extension.RecordKindDeclaration{{Kind: "room"}})
+	recordkinds.Register("other-unit", []extension.RecordKindDeclaration{{Kind: "room"}})
+	for name, c := range map[string]struct {
+		recordType string
+		wantErr    bool
+	}{
+		"its own kind":           {"ext:delivery-unit:room", false},
+		"another unit's kind":    {"ext:other-unit:room", true},
+		"a kind nobody declared": {"ext:delivery-unit:ghost", true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			in := validNotice()
+			in.Record.Type = c.recordType
+			err := validateNotice(testNoticeUnit, in)
+			if c.wantErr != errors.Is(err, extension.ErrInvalid) {
+				t.Errorf("validateNotice(%s) = %v, want refusal %v", c.recordType, err, c.wantErr)
+			}
+		})
 	}
 }
 
@@ -32,12 +79,12 @@ func TestANoticeNamesOneRecipientAndAKnownRecord(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			in := good
 			mutate(&in)
-			if err := validateNotice(in); !errors.Is(err, extension.ErrInvalid) {
+			if err := validateNotice(testNoticeUnit, in); !errors.Is(err, extension.ErrInvalid) {
 				t.Errorf("validateNotice = %v, want ErrInvalid", err)
 			}
 		})
 	}
-	if err := validateNotice(good); err != nil {
+	if err := validateNotice(testNoticeUnit, good); err != nil {
 		t.Errorf("a well-formed notice was refused: %v", err)
 	}
 }
@@ -52,6 +99,24 @@ func TestAUnitThatSendsTooManyNoticesIsRefused(t *testing.T) {
 	core := extensionCore{unit: unit, authority: func(ctx context.Context) (context.Context, error) { return ctx, nil }}
 	if _, err := core.Notices().Send(context.Background(), validNotice()); !errors.Is(err, extension.ErrRateLimited) {
 		t.Fatalf("err = %v, want ErrRateLimited", err)
+	}
+}
+
+// Past the ceiling every send is refused, and the refusal is the unit's own: a
+// neighbouring unit still sends.
+func TestTheNoticeCeilingHoldsPastTheLimitAndOnlyForTheUnitThatReachedIt(t *testing.T) {
+	const unit, neighbour = "past-limit-unit", "quiet-unit"
+	for range extensionNoticesPerMinute {
+		extensionNotices.Allow(unit)
+	}
+	core := extensionCore{unit: unit, authority: func(ctx context.Context) (context.Context, error) { return ctx, nil }}
+	for i := range 3 {
+		if _, err := core.Notices().Send(context.Background(), validNotice()); !errors.Is(err, extension.ErrRateLimited) {
+			t.Fatalf("send %d past the limit = %v, want ErrRateLimited", i+1, err)
+		}
+	}
+	if !extensionNotices.Allow(neighbour) {
+		t.Error("a unit under its limit was refused for another unit's flood")
 	}
 }
 

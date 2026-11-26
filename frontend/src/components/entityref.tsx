@@ -4,11 +4,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { AppLink } from "../design-system/applink";
 import { useT } from "../i18n";
+import { recordEnabled, useHiddenCoreFeatures } from "../lib/corefeatures";
 import { ENTITY, type EntityKind } from "../lib/entity";
 import { useMemberName } from "../lib/membernames";
 import { routeHash } from "../lib/router";
 import {
-  entityNameQuery,
+  entityNameObserverQuery,
   type NameReading,
   readingOf,
   usableName,
@@ -35,8 +36,6 @@ import { SeatAvatar } from "./seatavatar";
 
 export {
   ENTITY_NAME_KEY,
-  entityNameQuery,
-  fetchEntityName,
   useEntityName,
 } from "./entityref.queries";
 export type { RosterKind, RosterRead } from "./roster";
@@ -206,52 +205,43 @@ function RosterRef({
   id,
   name,
 }: Readonly<{ kind: RosterKind; id: string; name?: string | null }>) {
-  if (kind === "user") {
-    return <UserRef id={id} name={name} />;
-  }
-  return <TeamRef id={id} name={name} />;
-}
-
-// A resolved name as plain text, or the reading `UnnamedRef` owes a reader who
-// gets none, shared by both roster arms so neither draws its fallback
-// differently from the other.
-function resolvedOrFallback(
-  id: string,
-  resolved: string | null,
-  reading: NameReading,
-) {
+  const { name: resolved, reading } = useRosterName(kind, id, name);
   if (resolved == null) {
     return <UnnamedRef id={id} reading={reading} />;
   }
-  return <span title={id}>{resolved}</span>;
+  return <span>{resolved}</span>;
 }
 
-function UserRef({ id, name }: Readonly<{ id: string; name?: string | null }>) {
-  // A caller-supplied name wins here exactly as it does for a record: the
-  // connection graph returns its own labels rather than a raw uuid until the
-  // by-id read resolves.
-  const supplied = usableName(name);
-  const query = useMemberName(supplied == null ? id : null);
-  return resolvedOrFallback(
-    id,
-    supplied ?? usableName(query.data),
-    readingOf(query),
-  );
-}
-
-function TeamRef({ id, name }: Readonly<{ id: string; name?: string | null }>) {
-  const supplied = usableName(name);
-  const roster = useRosterWalk("team", supplied == null);
-  const match = roster.data?.entries.find((entry) => entry.id === id);
+/**
+ * The name a colleague or team reference shows, and the reading that stands in
+ * when there is none. Exported so a label that names the same id (an
+ * accessible name, a question) says what the reference on screen says.
+ *
+ * A user is named by id, so a departed or invited seat still has its name. A
+ * team is named off the roster walk. A caller-supplied name wins, as it does
+ * for a record: the connection graph returns its own labels.
+ */
+export function useRosterName(
+  kind: RosterKind,
+  id: string,
+  supplied?: string | null,
+): { name: string | null; reading: NameReading } {
+  const given = usableName(supplied);
+  const member = useMemberName(kind === "user" && given == null ? id : null);
+  const teams = useRosterWalk("team", kind === "team" && given == null);
+  if (given != null) {
+    return { name: given, reading: "unnamed" };
+  }
+  if (kind === "user") {
+    return { name: usableName(member.data), reading: readingOf(member) };
+  }
+  const match = teams.data?.entries.find((entry) => entry.id === id);
   // `match` is `User | Team`; only a Team has `name`, so the property check
   // narrows it without a cast.
-  const resolved =
-    supplied ?? (match && "name" in match ? usableName(match.name) : null);
-  return resolvedOrFallback(
-    id,
-    resolved,
-    rosterReading(roster, roster.data?.partial === true),
-  );
+  return {
+    name: match && "name" in match ? usableName(match.name) : null,
+    reading: rosterReading(teams, teams.data?.partial === true),
+  };
 }
 
 /** A record with a 360 behind it: a resolved name is also the backlink. */
@@ -272,19 +262,23 @@ function RecordRef({
   // blank is the caller saying it has nothing rather than saying the record is
   // nameless. `usableName` is what decides that, once, so the value that
   // switches the read off is the same value that gets rendered.
+  const available = recordEnabled(kind, useHiddenCoreFeatures());
   const supplied = usableName(name);
   const query = useQuery({
-    ...entityNameQuery(kind, id),
-    enabled: supplied == null,
+    ...entityNameObserverQuery(kind, id),
+    enabled: available && supplied == null,
   });
   // Only a resolved name is a safe link target; a reference with no name —
   // still loading, refused, or a record that carries none — never becomes one.
   const resolved = supplied ?? usableName(query.data);
+  if (!available) {
+    return supplied ? <span>{supplied}</span> : null;
+  }
   if (resolved == null) {
     return <UnnamedRef id={id} reading={readingOf(query)} />;
   }
   if (asText) {
-    return <span title={id}>{resolved}</span>;
+    return <span>{resolved}</span>;
   }
   // Native destinations support copying and new tabs; ordinary clicks use the router.
   return (
@@ -292,7 +286,6 @@ function RecordRef({
       className="entity-link"
       href={routeHash(ENTITY[kind].route(id))}
       onClick={(event) => event.stopPropagation()}
-      title={id}
       {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
     >
       {resolved}

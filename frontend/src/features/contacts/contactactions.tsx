@@ -10,7 +10,7 @@ import {
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ExtensionEntries } from "../../components/extensionentries";
 import { Button, OverflowMenu } from "../../design-system/atoms";
-import { IconAction, VerbWord } from "../../design-system/iconaction";
+import { IconAction, tipText, VerbWord } from "../../design-system/iconaction";
 import { useT } from "../../i18n";
 import type { Transport, TransportSource } from "../../lib/contacttransports";
 import {
@@ -18,6 +18,7 @@ import {
   useTransports,
 } from "../../lib/contacttransports";
 import { navigate } from "../../lib/router";
+import { useShortcut } from "../../lib/shortcuts";
 import { EmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";
 import { openContactTab } from "../worklist/worklist.return";
@@ -80,12 +81,15 @@ export function ContactActions({
   refusedReasonId?: string;
 }>): ReactNode {
   const t = useT();
-  const ownGate = useActivityGate(view.contact);
+  const ownGate = useActivityGate("contact", view.contact);
   const gate = activity ?? ownGate;
   // An archived contact takes no activity either, and the page's one sentence
   // says so for every verb here.
   const archived = view.contact.archived_at ? refusedReasonId : undefined;
   const logRefused = archived ?? gate.refusedId;
+  // The archived page's sentence is the host's, so only its id reaches here.
+  const logRefusal =
+    archived || !gate.refusalKey ? undefined : t(gate.refusalKey);
   const logPending = !archived && gate.pending;
   // Read here so the button NAMES what pressing it does, from the same
   // reachability the composer resolves.
@@ -93,6 +97,14 @@ export function ContactActions({
   const write = primaryTransportAction(transports, t);
   const WriteIcon = write.icon;
   const refusal = writeRefusal({ transports }, t);
+  const logOpen = !logPending && !logRefused;
+  const logKeys = useShortcut("record.logActivity", onLogActivity, logOpen);
+  const taskKeys = useShortcut("record.addTask", onAddTask, logOpen);
+  const writeKeys = useShortcut(
+    "record.writeEmail",
+    onWrite,
+    logOpen && !refusal,
+  );
   return (
     <>
       <EmailVerb
@@ -101,8 +113,10 @@ export function ContactActions({
         disabled={logPending}
         reason={logRefused || writeRefusalId ? undefined : refusal}
         reasonId={logRefused ?? (refusal ? writeRefusalId : undefined)}
+        reasonTip={logRefused ? logRefusal : refusal}
         onClick={onWrite}
-        word={t("record.verb.email")}
+        word={write.word}
+        keyShortcuts={writeKeys}
       />
       <IconAction
         label={t("contact.action.meetings")}
@@ -118,7 +132,8 @@ export function ContactActions({
         disabled={logPending}
         reasonId={logRefused}
         onClick={onLogActivity}
-        title={t("log.title")}
+        title={tipText(t("log.title"), logRefusal)}
+        aria-keyshortcuts={logKeys}
       >
         <FileText aria-hidden="true" />
         <VerbWord word={t("record.verb.log")} label={t("log.title")} />
@@ -144,7 +159,12 @@ export function ContactActions({
       >
         {/* First in the menu: the most frequent verb here. Files the task
             against THIS record, in the same form Log activity opens. */}
-        <Button disabled={logPending} reasonId={logRefused} onClick={onAddTask}>
+        <Button
+          disabled={logPending}
+          reasonId={logRefused}
+          onClick={onAddTask}
+          aria-keyshortcuts={taskKeys}
+        >
           {t("contact.action.addTask")}
         </Button>
         <ContactRecordActions

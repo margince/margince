@@ -35,8 +35,7 @@
 // resumed into an answer nobody asked for.
 //
 // It owns `worklist_snapshot`, and writes no audit row and no event: this is
-// per-reader derived state, the shape company_brief, contact_brief and
-// deal_status_card already have. An assembly generated FOR one contact and never
-// served to another has no record history to write, and a trail over it would
-// record reading rather than changing.
+// per-reader derived state, the shape generated_summary already has. An
+// assembly generated FOR one contact has no record history to write. A trail
+// over it would record reading, not changing.
 package worklistsnap

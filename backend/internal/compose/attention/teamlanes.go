@@ -82,7 +82,7 @@ func (s *Service) degradableRoster(ctx context.Context) (roster []TeamMember, cu
 	if s.teamRoster != nil {
 		return s.teamRoster.members, s.teamRoster.cut, nil
 	}
-	err = s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+	err = s.degradable(ctx, "team_roster", laneBudget, func(ctx context.Context) error {
 		var err error
 		roster, cut, err = s.teammates.LiveTeammatesOfCaller(ctx)
 		return err

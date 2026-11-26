@@ -51,7 +51,7 @@ func (s *Service) PendingForTarget(ctx context.Context, tx pgx.Tx, targetType st
 			}
 			out.Total++
 			if len(out.Approvals) < PendingScanCap {
-				out.Approvals = append(out.Approvals, wire(a, now))
+				out.Approvals = append(out.Approvals, wire(ctx, a, now))
 				subjects = append(subjects, a)
 			}
 		}

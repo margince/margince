@@ -21,8 +21,7 @@ import {
 } from "../../testing/story-utils";
 import { RecordListsPanel } from "./recordlists";
 
-// The lists one record is on, on its own page, and the check that says why it
-// is not on a Live List.
+// The lists one record is on, and why it is not on a Live List.
 const meta: Meta = {
   title: "Records/Record lists",
   parameters: { layout: "padded" },
@@ -31,9 +30,9 @@ export default meta;
 
 type Story = StoryObj;
 
-function stub(onLists: readonly unknown[]) {
+function stub(onLists: readonly unknown[], me = listsMe(true)) {
   installFetchStub({
-    "GET /me": listsMe(true),
+    "GET /me": me,
     [`GET /records/company/${MEMBER_ID}/lists`]: () =>
       jsonResponse({ data: onLists }),
     "GET /lists": () =>
@@ -51,6 +50,53 @@ export const OnTwoLists: Story = {
     return (
       <StoryProviders>
         <RecordListsPanel entityType="company" entityId={MEMBER_ID} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const OnTwoListsOnAPhone: Story = {
+  ...OnTwoLists,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// A seat that may read lists and change none: no Add to Shortlist, and the
+// check's hint does not point at it.
+export const WithoutListGrant: Story = {
+  render: () => {
+    stub(
+      [liveList],
+      listsMe(true, [], { allow: { list: ["read"], company: ["read"] } }),
+    );
+    return (
+      <StoryProviders>
+        <RecordListsPanel entityType="company" entityId={MEMBER_ID} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByRole("link", { name: "All lists" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", { name: "Add to Shortlist" }),
+    ).not.toBeInTheDocument();
+  },
+};
+
+// On a contact's Research tab, where the rail beside it holds the verbs.
+export const BesideARail: Story = {
+  render: () => {
+    stub([{ ...shortlist, health: "ok" }, liveList]);
+    return (
+      <StoryProviders>
+        <RecordListsPanel
+          entityType="company"
+          entityId={MEMBER_ID}
+          actions={false}
+        />
       </StoryProviders>
     );
   },

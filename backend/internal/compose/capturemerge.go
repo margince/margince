@@ -52,6 +52,7 @@ func (m mergeStager) StageMerge(ctx context.Context, in capture.MergeProposal) (
 		return ids.Nil, fmt.Errorf("compose: marshal merge identity: %w", err)
 	}
 	id, _, err := m.svc.StageUnlessDeclined(ctx, approvals.StageInput{
+		Why:            approvals.HeadlineSaysWhy,
 		Kind:           captureCollisionKind,
 		ProposedChange: in.ProposedChange,
 		DiffHash:       hex.EncodeToString(digest[:]),
@@ -59,11 +60,8 @@ func (m mergeStager) StageMerge(ctx context.Context, in capture.MergeProposal) (
 		TargetType:     in.TargetType,
 		TargetID:       in.TargetID,
 		Summary:        in.Summary,
-		// JoinPending absorbs the re-sync while a proposal is still waiting,
-		// which is what the pending check here used to do on its own. Identity
-		// staging requires it, and it is the same behaviour by a stronger route:
-		// the join runs under the identity's row lock rather than as a separate
-		// read that a concurrent decision can land between.
+		SystemText:     in.SystemText,
+		// A re-sync joins the waiting proposal under the identity's row lock.
 		JoinPending: true,
 	})
 	if errors.Is(err, approvals.ErrNoDecider) {

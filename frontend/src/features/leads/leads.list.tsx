@@ -19,7 +19,7 @@ import {
   useListQuery,
 } from "../../components/listquery";
 import {
-  mineEmptyNote,
+  mineEmptyLine,
   standardViews,
   useOwnerTagChips,
 } from "../../components/recordlist";
@@ -30,7 +30,6 @@ import { useRowSelection } from "../../design-system/listselection";
 import { QueryGate } from "../../design-system/querystates";
 import { useOwnToast } from "../../design-system/toast";
 import { industryOptions } from "../../format/industry";
-import { leadIdentityName } from "../../format/leadname";
 import { useLocale, useT } from "../../i18n";
 import {
   originFilterOptions,
@@ -46,8 +45,9 @@ import {
   SaveViewAction,
   useSavedViewTabs,
 } from "../lists/savedviews";
-import { LeadBulkBar } from "./leadbulk";
+import { LeadBulkBar, useBulkDoneMessage } from "./leadbulk";
 import { useLeadSettings } from "./leadhandling";
+import { leadIdentityName } from "./leadname";
 import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
 import { leadColumns } from "./leads.columns";
 import {
@@ -57,7 +57,7 @@ import {
   useRefusalOf,
   useWithheldLeadDials,
 } from "./leads.companydials";
-import { leadIdentityFields } from "./leads.contactoffers";
+import { LEAD_IDENTITY_CREATE_FIELDS } from "./leads.form";
 import "./leads.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import { leadPartnerCreateFields, useLeadPartnerOptions } from "./leadpartner";
@@ -91,9 +91,11 @@ const LEAD_SLA_STATES = [
 export async function fetchLeadsPage(
   query: ListQuery,
   cursor: string | null,
+  signal?: AbortSignal,
 ): Promise<ListPage<Lead>> {
   const data = unwrap(
     await api.GET("/leads", {
+      signal,
       params: {
         query: {
           ...leadsQueryParams(query),
@@ -113,7 +115,9 @@ export async function fetchLeadsPage(
   };
 }
 
-export function LeadsScreen() {
+export function LeadsScreen({
+  startCreating = false,
+}: Readonly<{ startCreating?: boolean }>) {
   const t = useT();
   const me = useMe();
   return (
@@ -127,26 +131,13 @@ export function LeadsScreen() {
         {(session) => (
           <LeadsWorkbench
             viewerId={session.user.id}
-            // A seat scoped past its own records opens on every lead — they run
-            // the queue; a seat scoped to its own opens on those.
-            //
-            // The opening FILTER, not a permission: every seat holding the lead
-            // grant may read any lead (auth/tableclass.go), so this decides
-            // which view the queue starts in and nothing about what it may
-            // fetch. The row scope the server computed, though, rather than the
-            // role keys it came from — those were a second reading of the same
-            // policy, and a custom role, or a seeded role whose grants an
-            // operator edits, opens the wrong view while the server answers
-            // correctly.
-            //
-            // Written as the POSITIVE test, so an absent authorization block
-            // opens on "mine". `!== "own"` would read a missing answer as
-            // permission to open on everything, which is the wrong direction to
-            // be wrong in — and the block is optional on this response.
+            // The opening filter, not a permission. An absent row scope opens
+            // on "mine", never on every lead.
             opensOnAll={
               session.authorization?.row_scope === "team" ||
               session.authorization?.row_scope === "all"
             }
+            startCreating={startCreating}
           />
         )}
       </QueryGate>
@@ -163,7 +154,12 @@ const LEAD_SCREEN_DIALS: readonly string[] = [LEAD_VIEW_PARAM];
 function LeadsWorkbench({
   viewerId,
   opensOnAll,
-}: Readonly<{ viewerId: string; opensOnAll: boolean }>) {
+  startCreating,
+}: Readonly<{
+  viewerId: string;
+  opensOnAll: boolean;
+  startCreating: boolean;
+}>) {
   const ownerChips = useOwnerTagChips();
   const pageName = usePageName("leads");
   const savedViews = useSavedViewTabs("leads");
@@ -199,10 +195,10 @@ function LeadsWorkbench({
   const [noteDismissed, setNoteDismissed] = useState(
     () => readStored(STORAGE_KEYS.segregationNoteDismissed) === "1",
   );
-  // What the last bulk write did to a row the current view then stopped
-  // showing — a successful assign out of "Mine" must never look like nothing
-  // happened (or like a failure).
+  // What the last bulk write did, said every time. The moved rows leave the
+  // selection, and an assign out of "Mine" leaves the view as well.
   const assignedAway = useOwnToast({ leavesWithCaller: true });
+  const bulkDone = useBulkDoneMessage();
   const showingMine = state.query.filters.owner_id === viewerId;
   const chosen = useRowSelection({
     rows: state.rows,
@@ -250,15 +246,18 @@ function LeadsWorkbench({
       <ListTable
         title={pageName}
         emptyNote={
-          refused.length > 0 ? (
+          refused.length > 0 && (
             <RefusedFiltersNote
               message={t("lead.filterRefused", { dial: refusedNames })}
               dials={refused}
               names={refusedNames}
             />
-          ) : (
-            mineEmptyNote({ t, state, viewerId, unit: "unit.leads" })
           )
+        }
+        emptyLine={
+          refused.length > 0
+            ? undefined
+            : mineEmptyLine({ t, state, viewerId, unit: "unit.leads" })
         }
         // The board renders inside the surface, so the toolbar stays above it:
         // a narrowed answer always shows the way to change what narrowed it.
@@ -276,11 +275,14 @@ function LeadsWorkbench({
         bodyOwnsPaging={view === "board" && refused.length === 0}
         state={state}
         unit="unit.leads"
+        unitOne="unit.lead"
         action={
           <CreateAction
             label={t("create.lead")}
+            requires={{ object: "lead", action: "create" }}
             invalidate="leads"
             screen="leads"
+            listCreate={{ open: startCreating }}
             create={(values) => createLead(values, cf.toBody(values), t)}
             // A contact holding the lead's email or profile opens as the
             // contact: a new opportunity with them is a deal on that contact.
@@ -290,7 +292,7 @@ function LeadsWorkbench({
                 : { screen: "leads", id }
             }
             fields={[
-              ...leadIdentityFields,
+              ...LEAD_IDENTITY_CREATE_FIELDS,
               {
                 key: "industry",
                 label: "create.industry",
@@ -350,11 +352,11 @@ function LeadsWorkbench({
                 // must not stand beside this one's rows.
                 assignedAway.withdraw();
                 const moved = outcomes.filter((o) => !o.error);
+                if (moved.length === 0) return;
                 if (
                   action.kind === "assign" &&
                   showingMine &&
-                  action.ownerId !== viewerId &&
-                  moved.length > 0
+                  action.ownerId !== viewerId
                 ) {
                   // The verb goes through `action`: the region draws it as one
                   // control on one ground, not a `Button` hand-placed on the
@@ -376,6 +378,8 @@ function LeadsWorkbench({
                       },
                     },
                   );
+                } else {
+                  assignedAway.show(bulkDone(moved.length, action));
                 }
               }}
             />
@@ -441,7 +445,7 @@ function LeadsWorkbench({
           },
           { label: "lead.viewNew", sort: "", filters: { status: "new" } },
           {
-            label: "lead.viewNeedsFollowUp",
+            label: "lead.viewContacted",
             sort: "",
             filters: { status: "contacted" },
           },

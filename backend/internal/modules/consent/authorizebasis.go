@@ -26,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -43,10 +44,11 @@ import (
 // mail the installation cannot account for — which is the exact gap this table
 // exists to close.
 func recordBasis(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolution, req commsauthz.Request, w packRules) error {
-	if !res.Supported || res.Basis == "" {
+	if !res.Supported || res.Basis == "" || res.Basis == commsauthz.BasisConsent {
 		// Nothing was concluded, so there is nothing to stand behind. An
 		// unsupported resolution falls through to the legacy verdict, whose own
-		// grounds are already recorded as consent rows.
+		// grounds are already recorded as consent rows. A consent ground is
+		// such a row already.
 		return nil
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -194,7 +196,7 @@ func threadKeyOf(ctx context.Context, tx pgx.Tx, anchor ids.UUID) string {
 		anchor).Scan(&key); err != nil {
 		return ""
 	}
-	if key == nil {
+	if key == nil || correspondence.IsHandLoggedThread(*key) {
 		return ""
 	}
 	return *key

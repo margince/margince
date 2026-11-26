@@ -68,13 +68,13 @@ func TestAMaskedReaderIsListedNoFindingMoneyOnADealTheyCannotChange(t *testing.T
 	myDeal, theirDeal := ids.NewV7(), ids.NewV7()
 	for deal, dealOwner := range map[ids.UUID]ids.UUID{myDeal: mine, theirDeal: theirs} {
 		exec(`INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, amount_minor, currency, source, captured_by)
-			 VALUES ($1, 'Deal', 'open', $2, $3, $4, 500000, 'EUR', 'seed', 'test')`,
+			 VALUES ($1, 'Deal', 'open', $2, $3, $4, 500000, 'EUR', 'manual', 'test')`,
 			deal, dealOwner, pipeline, stage)
 		exec(`INSERT INTO assurance_exception
 			     (logical_key, type, subject_kind, subject_id, severity, owner_id,
 			      affected_minor, currency, claim, observed, captured_by)
 			 VALUES ($1, $2, 'deal', $3, 'medium', $4, 200000, 'EUR',
-			         '{"amount_minor":500000}', '{"offer_total":300000}', 'test')`,
+			         '{"amount_minor":500000}', '{"offer_net":300000}', 'test')`,
 			assurance.TypeAmountVsOffer+":"+deal.String(), assurance.TypeAmountVsOffer, deal, dealOwner)
 		exec(`INSERT INTO assurance_exception
 			     (logical_key, type, subject_kind, subject_id, severity, owner_id,
@@ -135,6 +135,10 @@ func TestAMaskedReaderIsListedNoFindingMoneyOnADealTheyCannotChange(t *testing.T
 			t.Errorf("%s on a colleague's deal listed affected_minor %d — deal.amount_minor is masked "+
 				"outside the reader's write authority", kind, *row.AffectedMinor)
 		}
+		if row.Currency != "" {
+			t.Errorf("%s on a colleague's deal listed currency %q — a mask on the amount withholds "+
+				"the currency beside it", kind, row.Currency)
+		}
 	}
 	if money := colleague[assurance.TypeAmountVsOffer]; money.Claim != nil || money.Observed != nil {
 		t.Errorf("amount_vs_offer on a colleague's deal listed claim %s and observed %s — both "+
@@ -149,6 +153,9 @@ func TestAMaskedReaderIsListedNoFindingMoneyOnADealTheyCannotChange(t *testing.T
 	own := seen[myDeal]
 	if got := own[assurance.TypeAmountVsOffer].AffectedMinor; got == nil || *got != 200000 {
 		t.Errorf("the reader's own amount_vs_offer listed affected_minor %v, want 200000", got)
+	}
+	if got := own[assurance.TypeAmountVsOffer].Currency; got != "EUR" {
+		t.Errorf("the reader's own amount_vs_offer listed currency %q, want EUR", got)
 	}
 	if got := string(own[assurance.TypeAmountVsOffer].Claim); !strings.Contains(got, "500000") {
 		t.Errorf("the reader's own amount_vs_offer listed claim %s, want the amount", got)

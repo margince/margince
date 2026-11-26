@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // The four access states the buyer edge reports. Distinct from the room's
@@ -58,10 +59,10 @@ type roomStanding struct {
 func readStanding(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) (roomStanding, error) {
 	var st roomStanding
 	err := tx.QueryRow(ctx,
-		`SELECT r.state, r.expires_at, r.closed_at, u.display_name, r.title, r.welcome_message
+		`SELECT `+roomStateSQL+`, r.expires_at, r.closed_at, u.display_name, r.title, r.welcome_message
 		   FROM deal_room r
 		   JOIN deal d ON d.id = r.deal_id AND d.archived_at IS NULL
-		   LEFT JOIN app_user u ON u.id = r.steward_user_id
+		   LEFT JOIN app_user u ON u.id = r.steward_user_id AND `+workforce.LiveHumanSQL("u")+`
 		  WHERE r.id = $1 AND r.archived_at IS NULL`,
 		roomID).Scan(&st.state, &st.expiresAt, &st.closedAt, &st.stewardName, &st.title, &st.welcome)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -74,18 +75,16 @@ func readStanding(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) (roomSt
 }
 
 // access maps the room's lifecycle onto what the buyer may do. Expiry is
-// decided HERE, on every read, rather than by a sweep that flips the state
-// later: a room whose expires_at has passed stops serving the moment it passes.
-func (st roomStanding) access(now time.Time) string {
+// decided by roomStateSQL on every read, not by a later sweep. So a room whose
+// expires_at has passed stops serving the moment it passes. Staff read the
+// same state, so both sides see one answer.
+func (st roomStanding) access() string {
 	switch st.state {
 	case statePaused:
 		return accessPaused
 	case stateClosed:
 		return accessClosed
-	case "expired", stateArchived:
-		return accessExpired
-	}
-	if st.expiresAt != nil && !st.expiresAt.After(now) {
+	case stateExpired, stateArchived:
 		return accessExpired
 	}
 	return accessLive
@@ -113,7 +112,7 @@ func (s *Store) BuyerView(ctx context.Context, sess Session) (crmcontracts.Buyer
 		if err != nil {
 			return err
 		}
-		out.Access = crmcontracts.BuyerRoomAccess(st.access(time.Now()))
+		out.Access = crmcontracts.BuyerRoomAccess(st.access())
 		out.StewardName = st.stewardName
 		if sess.Preview {
 			preview := true

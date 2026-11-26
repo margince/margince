@@ -15,7 +15,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -32,9 +31,8 @@ import (
 const (
 	productTranslationTable = "product_translation"
 	languageField           = "language"
-	translationNameLimit    = 500
-	translationTextLimit    = 4000
-	translationTooLong      = "too_long"
+	translationNameLimit    = values.TextLabelCharacters
+	translationTextLimit    = values.TextDocumentCharacters
 )
 
 var languageShape = regexp.MustCompile(`^[a-z]{2}$`)
@@ -94,9 +92,10 @@ func (s *Store) PutProductTranslation(ctx context.Context, id ids.ProductID, lan
 	if !values.HasVisibleText(name) {
 		return crmcontracts.ProductTranslation{}, &RequiredFieldError{Field: dealNameColumn}
 	}
-	if utf8.RuneCountInString(name) > translationNameLimit ||
-		(description != nil && utf8.RuneCountInString(*description) > translationTextLimit) {
-		return crmcontracts.ProductTranslation{}, &values.ParseError{Field: dealNameColumn, Code: translationTooLong, Message: "the name is at most 500 and the description at most 4000 characters"}
+	if description != nil {
+		if err := httperr.RequireWithin("description", *description, translationTextLimit); err != nil {
+			return crmcontracts.ProductTranslation{}, err
+		}
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -110,6 +109,11 @@ func (s *Store) PutProductTranslation(ctx context.Context, id ids.ProductID, lan
 		before, err := readProductTranslation(ctx, tx, id, language)
 		if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
 			return err
+		}
+		if before == nil || before.Name != name {
+			if err := httperr.RequireWithin(dealNameColumn, name, translationNameLimit); err != nil {
+				return err
+			}
 		}
 		row := tx.QueryRow(ctx, `
 			INSERT INTO product_translation (product_id, language, name, description, captured_by)

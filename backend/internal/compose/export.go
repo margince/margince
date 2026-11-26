@@ -31,9 +31,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/recordexport"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -221,7 +223,7 @@ func readMember(ctx context.Context, tx pgx.Tx, m exportMember) (memberData, err
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 
-	scope, err := memberScope(ctx, m, "t", arg)
+	with, scope, err := memberScope(ctx, m, arg)
 	if err != nil {
 		return memberData{}, err
 	}
@@ -230,7 +232,7 @@ func readMember(ctx context.Context, tx pgx.Tx, m exportMember) (memberData, err
 	for i, col := range columns {
 		selects[i] = exportColumnSQL(m.table, col, arg)
 	}
-	sql := fmt.Sprintf("SELECT %s FROM %s t", strings.Join(selects, ", "), m.table)
+	sql := fmt.Sprintf("%sSELECT %s FROM %s %s", with, strings.Join(selects, ", "), m.table, memberAlias)
 	if scope != "" {
 		sql += " WHERE " + scope
 	}
@@ -247,8 +249,9 @@ func readMember(ctx context.Context, tx pgx.Tx, m exportMember) (memberData, err
 	defer pgRows.Close()
 
 	data := memberData{table: m.table, columns: columns}
+	reader := rowvalue.NewReader()
 	for pgRows.Next() {
-		values, err := pgRows.Values()
+		values, err := reader.Values(pgRows)
 		if err != nil {
 			return memberData{}, err
 		}
@@ -280,7 +283,7 @@ func readMember(ctx context.Context, tx pgx.Tx, m exportMember) (memberData, err
 // happened is not something an erasure undoes, and a bundle missing the line
 // would answer "who touched this record" with a gap.
 func exportColumnSQL(table, column string, arg func(any) int) string {
-	if derived, ok := derivedColumnExpr(table, column); ok {
+	if derived, ok := recordexport.DerivedColumnExpr(table, column); ok {
 		return derived + " AS " + column
 	}
 	if table != "audit_log" || (column != "before" && column != "after") {
@@ -290,17 +293,14 @@ func exportColumnSQL(table, column string, arg func(any) int) string {
 		privacy.UnscrubbedImageSQL("t", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs()))), column, column)
 }
 
-// exportableColumns lists a table's persisted columns in definition order,
-// excluding generated ones — today the tsvector search indexes, which are a
-// derived form of text the export already carries in full. The single source of
-// truth is the live schema, so the export can never drift from the tables it
-// dumps, and a column that stops being generated joins the bundle by itself.
-// That is the intent: a figure the product stores about a record is a figure
-// the record's subject may read.
+// exportableColumns lists a table's stored columns from the live schema, in
+// definition order, without the generated ones and without any tsvector. A
+// search value repeats text the export already carries. Any other stored
+// column joins the bundle: a subject may read what the product keeps on them.
 func exportableColumns(ctx context.Context, tx pgx.Tx, table string) ([]string, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT column_name FROM information_schema.columns
-		 WHERE table_schema = 'public' AND table_name = $1 AND is_generated = 'NEVER'
+		 WHERE table_schema = 'public' AND table_name = $1 AND is_generated = 'NEVER' AND udt_name <> 'tsvector'
 		 ORDER BY ordinal_position`, table)
 	if err != nil {
 		return nil, err
@@ -322,5 +322,5 @@ func exportableColumns(ctx context.Context, tx pgx.Tx, table string) ([]string, 
 		// registry disagree — fail loudly rather than write an empty file.
 		return nil, fmt.Errorf("export: table %q has no exportable columns", table)
 	}
-	return append(columns, derivedExportColumns[table]...), nil
+	return append(columns, recordexport.DerivedColumns[table]...), nil
 }

@@ -6,7 +6,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 ## project
 
-24 columns · primary key `(id)` · referenced by 12 foreign keys
+24 columns · primary key `(id)` · referenced by 13 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -30,7 +30,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `legal_hold` | `boolean`, default `false` | yes | True while a litigation or investigation hold is preserving this record. |
 | `search_tsv` | `tsvector`, generated as `(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(key, ''::text))), 'A'::"char"))` |  | Computed by the database. It cannot be written directly. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -50,6 +50,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 - `project_key_shape`: `CHECK (((key IS NULL) OR (key ~ '^[A-Za-z][A-Za-z0-9_-]{1,23}$')))`
 - `project_phase_check`: `CHECK ((phase = ANY (ARRAY['initiative', 'pursuing', 'delivering', 'closed'])))`
 - `project_source_author_needs_a_source`: `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
+- `project_source_check`: `CHECK ((source = ANY (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) NOT VALID`
 - `project_source_id_length`: `CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))`
 - `project_source_id_needs_a_source`: `CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))`
 - `project_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
@@ -69,6 +70,9 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 - `home_read_fence_project_owner`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `project_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `project_source_channel`: `BEFORE UPDATE FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) EXECUTE FUNCTION move_source_onto_its_channel()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "name": 120, "phase": 20000, "source": 20000, "captured_by": 20000, "description": 20000, "closed_reason": 2000, "source_system": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"closed_reason":2000,"description":20000,"key":20000,"name":120,"phase":20000,"source":20000,"source_system":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "name": 120, "phase": 20000, "source": 20000, "captured_by": 20000, "description": 20000, "closed_reason": 2000, "source_system": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"closed_reason":2000,"description":20000,"key":20000,"name":120,"phase":20000,"source":20000,"source_system":20000}')`
 - `trg_project_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## project_health_assessment
@@ -99,7 +103,6 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 - `project_health_assessment_project_id_key`: `UNIQUE (project_id, id)`
 - `project_health_not_its_own_successor`: `CHECK ((supersedes_assessment_id IS DISTINCT FROM id))`
-- `project_health_note_bounded`: `CHECK (((note IS NULL) OR (length(note) <= 4000)))`
 - `project_health_state_known`: `CHECK ((state = ANY (ARRAY['on_track', 'at_risk', 'off_track'])))`
 - `project_health_trouble_is_explained`: `CHECK (((state = 'on_track') OR ((note IS NOT NULL) AND (length(btrim(note)) > 0))))`
 
@@ -113,15 +116,19 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 **Triggers**
 
 - `project_health_assessment_append_only`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION project_health_assessment_is_append_only()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note": 2000, "state": 20000, "source": 20000, "captured_by": 20000, "source_author": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"note":2000,"source":20000,"source_author":20000,"state":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "state": 20000, "source": 20000, "captured_by": 20000, "source_author": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"note":2000,"source":20000,"source_author":20000,"state":20000}')`
 
 ## project_phase_history
 
-8 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `audit_log_id` | `uuid` |  |  |
+| `cause_deal_id` | `uuid` |  |  |
+| `cause_kind` | `text` |  | One of `deal_won`. |
 | `changed_by` | `text` | yes |  |
 | `from_phase` | `text` |  |  |
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |
@@ -135,7 +142,17 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 |---|---|---|
 | `project_id` | `project` | deleting the parent deletes this row |
 
+**Rules**
+
+- `project_phase_history_cause_kind_check`: `CHECK ((cause_kind = ANY (ARRAY['deal_won'])))`
+- `project_phase_history_cause_pairs`: `CHECK (((cause_kind IS NULL) = (cause_deal_id IS NULL)))`
+
 **Indexes**
 
 - `idx_pph_project`: `btree (project_id, occurred_at DESC)`
 - `project_phase_history_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"reason": 2000, "to_phase": 20000, "cause_kind": 120, "changed_by": 20000, "from_phase": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"cause_kind":120,"changed_by":20000,"from_phase":20000,"reason":2000,"to_phase":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "to_phase": 20000, "cause_kind": 120, "changed_by": 20000, "from_phase": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"cause_kind":120,"changed_by":20000,"from_phase":20000,"reason":2000,"to_phase":20000}')`

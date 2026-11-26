@@ -3,6 +3,8 @@
 
 import type { ReactNode } from "react";
 import { MayBeDone } from "../../components/maybedone";
+import { subjectChipped } from "../../components/taskmeta";
+import { TaskNextStepsPending } from "../../components/tasknextsteps";
 import { Badge } from "../../design-system/atoms";
 import { PanelRow } from "../../design-system/panel";
 import { QuietVerbs } from "../../design-system/verbvolume";
@@ -10,6 +12,7 @@ import { useLocale, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { useMe } from "../../lib/session";
+import { askedReason, askSentence, saysOpen } from "../../lib/worklistask";
 import {
   briefContextTitle,
   briefSubjectLabel,
@@ -20,16 +23,14 @@ import {
   readerTask,
   reasonText,
   rowHref,
+  saysReadOnly,
   sentenceTitled,
   subjectHref,
   whenText,
 } from "../../lib/worklistcopy";
-import {
-  conditionOf,
-  eyebrowKeyFor,
-  kindClass,
-} from "../../lib/worklisteyebrow";
-import { askKey } from "./worklist.ask";
+import { emailNamesRow } from "../../lib/worklistemailrow";
+import { conditionOf, eyebrowKeyFor } from "../../lib/worklisteyebrow";
+import { cardLine, useHappenedClock } from "../../lib/worklisthappened";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { DepartedOwnerCaption } from "./worklist.departedowner";
 import {
@@ -37,7 +38,7 @@ import {
   PutDownByThumb,
   useRowPutDown,
 } from "./worklist.dispositions";
-import { WaitingEmailLine } from "./worklist.emailtitle";
+import { PromiseEmailLine, WaitingEmailLine } from "./worklist.emailtitle";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
@@ -56,7 +57,11 @@ import { RowActs } from "./worklist.rowverbs";
 import "./worklist.row.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import { PreparationNote } from "./worklist.ready";
-import { rowAnswer } from "./worklist.row.answer";
+import {
+  type RowPlacement,
+  RowProposal,
+  rowAnswer,
+} from "./worklist.row.answer";
 import { Rank, RowLead, RowText, titleLinks } from "./worklist.row.cells";
 
 // Preserve server order while naming each group member once.
@@ -116,9 +121,14 @@ export function WorklistRow({
   onReview,
   onOpenEmail,
   context,
+  verbs,
+  menu,
   framed = false,
   quiet = false,
+  answerPending = false,
   pick,
+  titleEnd,
+  underTitle,
 }: Readonly<{
   item: WorklistItem;
   /** The row's selection checkbox, drawn beside its rank where the list
@@ -127,8 +137,18 @@ export function WorklistRow({
   /** The way into what this row is ABOUT, drawn among its verbs. The Brief
    *  has no pane beside its list, so its focus rows open a drawer instead. */
   context?: ReactNode;
+  /** The surface's own verbs, drawn after the row's answer. */
+  verbs?: ReactNode;
+  /** Lines the surface adds at the top of the row's menu. */
+  menu?: ReactNode;
   /** The card already holds a filled verb, so the row's own is outlined. */
   quiet?: boolean;
+  /** Whether the answer fills is still being read, so its place is held. */
+  answerPending?: boolean;
+  /** Drawn at the end of the title line. */
+  titleEnd?: ReactNode;
+  /** Drawn under the title's own lines, so it follows them in reading order. */
+  underTitle?: ReactNode;
   /** A CARD around this row says whose it is, why it is here and where it
    *  stands, so the row withholds those captions and the verb that only
    *  reaches its record. The Brief's card is the only frame there is. */
@@ -174,11 +194,14 @@ export function WorklistRow({
   // Open the activity itself without leaving the queue for its linked record.
   const source = useRowSource(item);
   const viewer = useMe(false).data?.user;
+  // A queue row says who and when as Home's cards do: in the chip line.
+  const chipped = density !== "compact" && !framed;
   const name = framedName(
     readerTask(sentenceTitled(item), viewer, t),
     t,
     locale,
     framed,
+    chipped,
   );
   const title = name.title;
   const facts = dealFactsText(item, t, locale, zone);
@@ -195,7 +218,12 @@ export function WorklistRow({
   // line takes `due_today` the same way when it is drawn: the moment names the
   // hour a rep is racing, and "due today" underneath it is that clock said
   // again in a coarser register.
+  // A card's ask already states its leading reason as a sentence.
+  const asked = askedReason(item, framed);
+  // A row the reader may only read says so first: it is why no verb is drawn.
   const reasons = phrasedReasons(item, when !== null)
+    .filter((reason) => reason.kind !== asked)
+    .sort((a, b) => Number(saysReadOnly(b)) - Number(saysReadOnly(a)))
     .map((reason) => reasonText(reason, t, locale, zone, partyName(item)))
     .filter((phrase): phrase is string => phrase !== null);
   // The row says its one current reason; the rest are facts its Details lists.
@@ -206,16 +234,16 @@ export function WorklistRow({
   // AND somewhere to open it, the title line otherwise. Held as the opener
   // rather than as a flag, so the row cannot be drawn without one — a caller
   // with no drawer keeps the title instead of losing the row's name with it.
-  const emailOpener = item.email_summary != null ? onOpenEmail : undefined;
+  const emailOpener = emailNamesRow(item) ? onOpenEmail : undefined;
   // WHICH RECORD THE ROW IS ABOUT, linked, on the one row that does not link
   // it: a waiting message names its sender as text, where every other title
   // names and links its record (`itemTitle`, `rowHref`). A FRAMED row names it
   // under the row itself (brief.focus.tsx) and withholds this — the frame, not
   // the verb order, because the drawer takes that order with no card around
   // its rows and this line is the only place those facts are said there.
-  const about = framed
+  const about = chipped
     ? undefined
-    : aboutRecord(item, emailOpener !== undefined, listed);
+    : framedAbout(item, framed, emailOpener !== undefined, listed);
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   const host = hostText(item, viewer?.id, t);
   const responsibility = sharedResponsibility(item, locale, t);
@@ -228,14 +256,17 @@ export function WorklistRow({
   // registers a mutation and reads nothing, so every row may call it. Two
   // writes would carry two settled flags, and one item could be answered twice.
   const brief = useBriefAnswer(item);
-  const answer = withFoldedBrief(rowAnswer(item, brief, quiet), item, brief);
+  const answer = heldAnswer(
+    withFoldedBrief(rowAnswer(item, brief, quiet), item, brief),
+    answerPending,
+  );
   const readings: RowReadings = shapedReadings(framed, {
     item,
     ...name,
     href,
     open: source.open,
     sourceUnavailable: source.unavailable,
-    when,
+    when: chipped ? null : when,
     facts,
     said,
     detail,
@@ -246,7 +277,6 @@ export function WorklistRow({
     touch,
     pinned,
   });
-  const named = conditionOf(item, t);
   return (
     <PanelRow
       // A CLASS and not a data attribute: `PanelRow` takes a className and
@@ -281,24 +311,9 @@ export function WorklistRow({
             />
           )}
         </RowLead>
-        {/* WHAT KIND of work, in its own column at a width that has one, so a
-            reader running down the queue reads the kinds as a list without
-            reading a title first — and in the warning tone on the rows the day
-            put in its first band, where the kind is also why it is there. The
-            title line keeps the states that are about this row alone: overdue,
-            unprepared.
-
-            A soft `Badge`, the variant a column carrying one per row wears:
-            the solid fill is kept for the one status a surface must not let a
-            reader miss, and a queue of those would teach the eye to skip them.
-            The span is PLACEMENT — the grid cell and the
-            width the kinds share; `conditionOf` says what a system row
-            draws there instead. */}
-        <span className={kindClass(named)} title={named ?? undefined}>
-          <Badge tone={item.band === "now" ? "warning" : undefined}>
-            {named ?? t(eyebrowKeyFor(item))}
-          </Badge>
-        </span>
+        {/* The one-line density keeps the kind as its lead; every other
+            row names it in the chip line. */}
+        {density === "compact" && <CompactKind item={item} />}
         <div className="worklist-row-text">
           {/* A waiting EMAIL names itself with the canonical row — the same one
             the timeline draws — so the queue shows the message rather than a
@@ -320,8 +335,12 @@ export function WorklistRow({
               readings={readings}
               emailOpener={emailOpener}
               badged={badged}
+              titleEnd={titleEnd}
+              underTitle={underTitle}
+              chipped={chipped}
             />
           )}
+          <PromiseEmailLine item={item} onOpen={onOpenEmail} />
           <RowAsk item={item} framed={framed} />
           <PreparationNote item={item} />
           {responsibility && <p className="t-caption">{responsibility}</p>}
@@ -353,6 +372,8 @@ export function WorklistRow({
             equals={answer.equals}
             onReview={onReview}
             context={context}
+            verbs={verbs}
+            menu={joinedMenu(menu, answer.menu)}
             framed={framed}
             titled={titleLinks(emailOpener, href, source.open)}
           />
@@ -368,17 +389,58 @@ export function WorklistRow({
   );
 }
 
+// The frame names the row's records itself, so a framed row withholds them.
+function framedAbout(
+  item: WorklistItem,
+  framed: boolean,
+  named: boolean,
+  listed: (href: string) => string,
+) {
+  return framed ? undefined : aboutRecord(item, named, listed);
+}
+
+/** The kind as the one-line row's lead, warm on the day's first band. */
+function CompactKind({ item }: Readonly<{ item: WorklistItem }>) {
+  const t = useT();
+  const kind = conditionOf(item, t) ?? t(eyebrowKeyFor(item));
+  return (
+    <span className="worklist-row-kind" title={kind}>
+      <Badge tone={item.band === "now" ? "warning" : undefined}>{kind}</Badge>
+    </span>
+  );
+}
+
+// A held answer keeps its place in the line, in no weight it may then lose.
+function heldAnswer(answer: RowPlacement, held: boolean): RowPlacement {
+  if (!held || !answer.primary) return answer;
+  return { ...answer, primary: <TaskNextStepsPending /> };
+}
+
+// The surface's menu lines first, then the lane's rarer answers.
+function joinedMenu(surface: ReactNode, lane: ReactNode): ReactNode {
+  if (!lane) return surface;
+  return (
+    <>
+      {surface}
+      {lane}
+    </>
+  );
+}
+
 function framedName(
   item: WorklistItem,
   t: Parameters<typeof itemTitle>[1],
   locale: Parameters<typeof itemTitle>[2],
   framed: boolean,
+  chipped: boolean,
 ) {
   const subject = framed ? briefSubjectLabel(item) : undefined;
-  const subjectNamed =
-    framed &&
-    !!subjectHref(item) &&
-    (!item.contact?.label || item.contact.id === item.subject?.id);
+  // A chip names the subject on a chipped row, so the title need not. A brief
+  // item's chip line withholds its subject, so its title keeps it.
+  const subjectNamed = framed
+    ? !!subjectHref(item) &&
+      (!item.contact?.label || item.contact.id === item.subject?.id)
+    : chipped && subjectChipped(item) && !briefSubjectLabel(item);
   return {
     title: subject ?? itemTitle(item, t, locale, subjectNamed),
     heading: subject !== undefined,
@@ -386,14 +448,24 @@ function framedName(
   };
 }
 
-// The card is read on its own, so it says what the row asks. A queue row leaves
-// that to the details its reader opens.
+// The card is read on its own, so it says what happened and what to do about
+// it. A queue row leaves that to the details its reader opens.
 function RowAsk({
   item,
   framed,
 }: Readonly<{ item: WorklistItem; framed: boolean }>) {
   const t = useT();
-  return framed ? (
-    <p className="t-body worklist-row-ask">{t(askKey(item))}</p>
-  ) : null;
+  const clock = useHappenedClock();
+  if (!framed) return null;
+  // A reminder Margince cannot check says so in place of its event. A row
+  // asking whether it may be done has its question below, not the stock ask.
+  const event = item.request_check ? null : cardLine(item, t, clock);
+  const ask = saysOpen(item) ? askSentence(item, t) : null;
+  const line = event ?? ask;
+  return (
+    <>
+      {line && <p className="t-body worklist-row-ask">{line}</p>}
+      <RowProposal item={item} />
+    </>
+  );
 }

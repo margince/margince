@@ -67,3 +67,39 @@ func TestLegacyCalendarResourcesAreNotMeetingCounterparties(t *testing.T) {
 		t.Fatalf("unreadable contacts decided meeting admission: %d rows", len(rows))
 	}
 }
+
+// A meeting whose only guest is an invited colleague has no outside party. A
+// stranger's address on the same kind of meeting does.
+func TestAnInvitedColleagueIsNoOutsidePartyToAMeeting(t *testing.T) {
+	e := integration.Setup(t)
+	const colleague = "invited@colleague.example"
+	invitedColleague(t, e, colleague)
+	host := ids.From[ids.UserKind](e.AdminUser)
+	meetingWith := func(guest string) ids.UUID {
+		t.Helper()
+		row, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			Kind: "meeting", Subject: new("Planning"), OccurredAt: new(laneDay.Add(time.Hour)), Source: "manual", HostUserID: &host,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		e.WsExec(t, `INSERT INTO activity_participant (activity_id, address, address_domain_folded, role) VALUES ($1, $2, $3, 'attendee')`,
+			ids.UUID(row.Id), guest, owndomain.StoredOfAddress(guest))
+		return ids.UUID(row.Id)
+	}
+	internal, external := meetingWith(colleague), meetingWith("stranger@elsewhere.example")
+	rows, _, err := e.Activities.ListActivities(e.Admin(), activities.ListActivitiesInput{Kind: new("meeting"), WithOutsideParty: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := map[ids.UUID]bool{}
+	for _, row := range rows {
+		found[ids.UUID(row.Id)] = true
+	}
+	if !found[external] {
+		t.Fatal("the meeting with a stranger has no outside party; this case proves nothing")
+	}
+	if found[internal] {
+		t.Error("a meeting with only an invited colleague counts as having an outside party")
+	}
+}

@@ -18,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -47,6 +48,7 @@ type Service struct {
 	pool       *pgxpool.Pool
 	schemaPool *pgxpool.Pool
 	liveLists  LiveListReader
+	removers   map[string]ChoiceRemover
 }
 
 // NewService wires the engine. schemaPool MAY be nil: the schema-change
@@ -150,10 +152,16 @@ func (e *ColumnTakenError) Error() string {
 // without a dedicated branch still answer 409, never 500.
 func (e *ColumnTakenError) Is(target error) bool { return target == apperrors.ErrConflict }
 
+// MessageFault names it a label clash: another label gives the field another column.
+func (e *ColumnTakenError) MessageFault() (code, message string) {
+	return codeLabelTaken, e.Error()
+}
+
 // catalogColumns is the ONE spelling of the custom_field row selection,
 // in scanCustomField's scan order.
 const catalogColumns = `id, object, slug, label, type, status, archived_at,
-	column_name, currency, options, show_in_create, reportable, activity_kinds, created_by, created_at, updated_at, version`
+	column_name, currency, options, label_translations, option_translations,
+	show_in_create, reportable, activity_kinds, created_by, created_at, updated_at, version`
 
 // scanCustomFieldPage scans one row of a sorted page: the catalog columns, and
 // the sort's cursor key where the sort appends one.
@@ -192,9 +200,11 @@ func scanCustomField(row pgx.Row) (crmcontracts.CustomField, error) {
 		optionsRaw                   []byte
 		activityKinds                []string
 		version                      int64
+		labelTranslations            map[string]string
+		optionTranslations           map[string]map[string]string
 	)
 	err := row.Scan(&id, &object, &out.Slug, &out.Label, &typ, &status, &out.ArchivedAt,
-		&colName, &currency, &optionsRaw, &out.ShowInCreate, &out.Reportable, &activityKinds, &createdBy, &out.CreatedAt, &out.UpdatedAt, &version)
+		&colName, &currency, &optionsRaw, &labelTranslations, &optionTranslations, &out.ShowInCreate, &out.Reportable, &activityKinds, &createdBy, &out.CreatedAt, &out.UpdatedAt, &version)
 	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}
@@ -206,6 +216,8 @@ func scanCustomField(row pgx.Row) (crmcontracts.CustomField, error) {
 	out.ColumnName = &colName
 	out.Currency = currency
 	out.Version = &version
+	out.LabelTranslations = labeltranslation.ToWire(labelTranslations)
+	out.OptionTranslations = labeltranslation.OptionsToWire(optionTranslations)
 	options, err := unmarshalOptions(optionsRaw)
 	if err != nil {
 		return crmcontracts.CustomField{}, err

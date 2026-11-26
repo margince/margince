@@ -12,10 +12,13 @@ import (
 
 func TestCorrectionFailureNoticeNamesTheTaskAndItsCause(t *testing.T) {
 	class := "statement_stopped"
-	subject, body := dataTaskFailureWords(datatask.Progress{
+	subject, body, err := dataTaskFailureWords(datatask.Progress{
 		TaskID: "core/100_example", Title: "Mapping company industries onto the fixed list",
 		Step: "remap", ConsecutiveFailures: 5, LastErrorClass: &class,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if subject != "Background correction stopped: Mapping company industries onto the fixed list" {
 		t.Fatalf("subject=%q", subject)
 	}
@@ -27,7 +30,10 @@ func TestCorrectionFailureNoticeNamesTheTaskAndItsCause(t *testing.T) {
 }
 
 func TestCorrectionFailureNoticeSaysWhenTheCauseIsUnknown(t *testing.T) {
-	subject, body := dataTaskFailureWords(datatask.Progress{TaskID: "core/100_example", Step: "first", ConsecutiveFailures: 5})
+	subject, body, err := dataTaskFailureWords(datatask.Progress{TaskID: "core/100_example", Step: "first", ConsecutiveFailures: 5})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if subject != "Background correction stopped: core/100_example" {
 		t.Fatalf("an untitled task is named by its id, got %q", subject)
 	}

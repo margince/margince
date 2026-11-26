@@ -12,6 +12,7 @@ import {
 import { formatNumber } from "../format/format";
 import {
   formatDayMonth,
+  formatDayMonthNearYear,
   monthAndYear,
   monthName,
 } from "../format/format.dates";
@@ -26,6 +27,7 @@ import {
   groupMarks,
   instant,
   isWeekly,
+  isYearly,
   LABEL_MAX_PX,
   type LabelPlace,
   placeLabels,
@@ -67,6 +69,8 @@ export type TimelineEvent = Readonly<{
   // The logged items this event already stands for, so no mark is drawn a
   // second time beside its label.
   activityIds?: readonly string[];
+  // A deal's result on the day it was decided: drawn as a flag, not a dot.
+  outcome?: "won" | "lost";
 }>;
 
 /**
@@ -141,7 +145,7 @@ export function StandingTimeline({
   const { locale } = useLocale();
   const scroller = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLDivElement>(null);
-  const canvasPx = useWidth(canvas);
+  const canvasPx = useWidth(canvas, events.length > 0 || marks.length > 0);
   const region = useScrollRegion(scroller, label);
   const [chosen, setChosen] = useState<TimelineZoom>();
   const today = instant(asOf);
@@ -149,14 +153,16 @@ export function StandingTimeline({
     chosen ??
     defaultZoom(
       today,
-      events.map((e) => instant(e.at)),
+      // With no event, the logged items are all the line holds, so it opens on them.
+      (events.length > 0 ? events : marks).map((e) => instant(e.at)),
     );
   const from = zoomStart(zoom, today, [
     ...events.map((event) => instant(event.at)),
     ...marks.map((mark) => instant(mark.at)),
   ]);
   const older = useOlderHistory(history, zoom === "all" ? null : from);
-  if (events.length === 0) {
+  // A logged item on the line is dated too, so the axis is drawn for it.
+  if (events.length === 0 && marks.length === 0) {
     return (
       <p className="standing-timeline-empty t-caption">
         {t("standing.timeline.empty")}
@@ -179,6 +185,7 @@ export function StandingTimeline({
     event,
     pct: axisPct(instant(event.at), axis),
     kind: event.kind,
+    decided: event.outcome !== undefined,
   }));
   const labels = clusterEvents(items, canvasPx).map(({ lead, members }) => {
     const { event, pct: at } = items[lead] ?? { event: shown[0], pct: 0 };
@@ -195,6 +202,7 @@ export function StandingTimeline({
     labels.map(({ event, at, sub }) => ({
       pct: at,
       kind: event?.kind ?? "done",
+      decided: event?.outcome !== undefined,
       titleChars: event?.title.length ?? 0,
       subChars: sub.length,
     })),
@@ -251,13 +259,22 @@ export function StandingTimeline({
                 </span>
               </span>
             )}
-            {items.map(({ event, pct: at }) => (
-              <span
-                key={event.key}
-                className={`standing-timeline-dot is-${event.kind}`}
-                style={{ left: `${at}%` }}
-              />
-            ))}
+            {items.map(({ event, pct: at }) =>
+              event.outcome ? (
+                <span
+                  key={event.key}
+                  className="standing-timeline-flag"
+                  data-outcome={event.outcome}
+                  style={{ left: `${at}%` }}
+                />
+              ) : (
+                <span
+                  key={event.key}
+                  className={`standing-timeline-dot is-${event.kind}`}
+                  style={{ left: `${at}%` }}
+                />
+              ),
+            )}
             {labels.map(({ event, at, sub }, index) =>
               event ? (
                 <EventLabel
@@ -312,12 +329,16 @@ function namedActivities(
 }
 
 // The canvas's drawn width, so labels are measured against the room they
-// really have; 760px, the design's canvas, until the first layout.
-function useWidth(target: RefObject<HTMLDivElement | null>): number {
+// really have; 760px, the design's canvas, until the first layout. `drawn`
+// says the canvas is mounted, which an empty line is not.
+function useWidth(
+  target: RefObject<HTMLDivElement | null>,
+  drawn: boolean,
+): number {
   const [width, setWidth] = useState(760);
   useLayoutEffect(() => {
     const node = target.current;
-    if (!node || typeof ResizeObserver === "undefined") {
+    if (!drawn || !node || typeof ResizeObserver === "undefined") {
       return;
     }
     const observer = new ResizeObserver(([entry]) => {
@@ -327,8 +348,30 @@ function useWidth(target: RefObject<HTMLDivElement | null>): number {
     });
     observer.observe(node);
     return () => observer.disconnect();
-  }, [target]);
+  }, [target, drawn]);
   return width;
+}
+
+// A grid line's words. On a span across New Year, the first line names its year.
+// So does each line that opens a year against `prior`, so the dates read in order.
+function tickText(
+  range: TimelineAxis["range"],
+  day: Date,
+  prior: Date | undefined,
+  locale: Locale,
+): string {
+  if (isYearly(range)) {
+    return String(day.getUTCFullYear());
+  }
+  const iso = day.toISOString();
+  if (isWeekly(range)) {
+    return prior
+      ? formatDayMonthNearYear(iso, locale, UTC_ZONE, prior)
+      : formatDayMonth(iso, locale, UTC_ZONE);
+  }
+  return prior
+    ? monthAndYear(day, locale, UTC_ZONE)
+    : monthName(day.getUTCMonth() + 1, locale);
 }
 
 function Ticks({
@@ -336,16 +379,24 @@ function Ticks({
   locale,
   canvasPx,
 }: Readonly<{ axis: TimelineAxis; locale: Locale; canvasPx: number }>) {
-  const weekly = isWeekly(axis.range);
-  const ticks = ticksOf(axis.range).map((tick) => ({
-    ...tick,
-    pct: axisPct(tick.at, axis),
-    text: weekly
-      ? formatDayMonth(new Date(tick.at).toISOString(), locale, UTC_ZONE)
-      : monthName(new Date(tick.at).getUTCMonth() + 1, locale),
-  }));
+  const ticks = ticksOf(axis.range).map((tick, index, all) => {
+    const day = new Date(tick.at);
+    const prior = new Date(all[index - 1]?.at ?? axis.range.end);
+    const namesYear = prior.getUTCFullYear() !== day.getUTCFullYear();
+    const text = tickText(
+      axis.range,
+      day,
+      namesYear ? prior : undefined,
+      locale,
+    );
+    return { ...tick, pct: axisPct(tick.at, axis), text, namesYear };
+  });
   const shown = tickLabelsShown(
-    ticks.map((tick) => ({ pct: tick.pct, chars: tick.text.length })),
+    ticks.map(({ pct, text, namesYear }) => ({
+      pct,
+      chars: text.length,
+      namesYear,
+    })),
     canvasPx,
   );
   return ticks.map((tick, index) => (

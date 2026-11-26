@@ -1,0 +1,6 @@
+{
+  "verb": "mark_booking_page_shared",
+  "checks": [
+    "activity.create"
+  ]
+}

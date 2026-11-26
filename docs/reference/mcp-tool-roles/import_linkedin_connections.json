@@ -1,0 +1,15 @@
+{
+  "tool": "change_capture",
+  "action": "import_linkedin_connections",
+  "verb": "import_linkedin_connections",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

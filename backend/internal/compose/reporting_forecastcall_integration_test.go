@@ -12,13 +12,14 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The company quarter has a standing call of 760k under the manager-call
 // measure. A seat that may read the totals but not the call gets the landing
-// GET /forecast gives it: the records' projection with the call_absent caveat.
+// GET /forecast gives it: the records' projection with the call_withheld caveat.
 // Neither the metric nor its CSV holds the call.
 func TestAReaderWhoMayNotSeeTheCallGetsTheLandingWithoutIt(t *testing.T) {
 	q := seedTargetQuarter(t)
@@ -34,8 +35,8 @@ func TestAReaderWhoMayNotSeeTheCallGetsTheLandingWithoutIt(t *testing.T) {
 	if basis == nil || basis.CallMinor != nil || overHTTP.CurrentCall != nil || overHTTP.Landing == nil || !reflect.DeepEqual(basis.Landing, *overHTTP.Landing) {
 		t.Fatalf("the team-lens basis %+v beside GET /forecast's call %v and landing %+v, want no call and one landing", basis, overHTTP.CurrentCall, overHTTP.Landing)
 	}
-	if basis.Landing.Measure != "likely" || basis.Landing.Caveat == nil || *basis.Landing.Caveat != "call_absent" {
-		t.Fatalf("the team-lens landing %+v, want the records' projection with call_absent", basis.Landing)
+	if basis.Landing.Measure != "likely" || basis.Landing.Caveat == nil || *basis.Landing.Caveat != "call_withheld" {
+		t.Fatalf("the team-lens landing %+v, want the records' projection with call_withheld", basis.Landing)
 	}
 	assertNoCallInCSV(t, evaluation)
 
@@ -49,7 +50,7 @@ func TestAReaderWhoMayNotSeeTheCallGetsTheLandingWithoutIt(t *testing.T) {
 
 func assertNoCallInCSV(t *testing.T, evaluation crmcontracts.ReportingEvaluation) {
 	t.Helper()
-	for _, row := range reportingCSVRows(evaluation) {
+	for _, row := range reportingCSVRows(evaluation, reporting.ExplanationCopy(evaluation.Context)) {
 		if slices.Contains(row, "manager_call") || slices.Contains(row, "76000000") {
 			t.Fatalf("the CSV holds the call: %v", row)
 		}

@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
@@ -36,7 +37,7 @@ func TestEveryCapturePurgeKeepsAMessagePinnedAfterSelection(t *testing.T) {
 				t.Fatal(err)
 			}
 			controller := controllerCtx(e, principal.ObjectGrant{Read: true, Update: true})
-			if err := privacy.NewEraser(e.DB()).PinToFloor(controller, id, reason); err != nil {
+			if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).PinToFloor(controller, id, reason); err != nil {
 				t.Fatal(err)
 			}
 			// The restriction must hold even when the current jurisdiction has no floor.

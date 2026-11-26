@@ -5,20 +5,82 @@
     2
   ],
   "passed": 2,
-  "runs": 3,
+  "runs": 2,
   "pass_at": 2,
   "driver": "gpt:cli",
   "effort": "reasoning medium",
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "00210e3689df6825",
+    "tools": "8654edccb7c19d75",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "8551a428626d254858a634a2d1e0b95a0e03f93a",
+    "ran_at": "2026-11-22T09:23:41Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:05Z"
+  },
   "usage": {
-    "input_tokens": 87179,
-    "output_tokens": 5393,
+    "input_tokens": 64183,
+    "output_tokens": 3324,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 628096,
-    "runs_measured": 3,
+    "cache_read_input_tokens": 420992,
+    "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "create_record",
+        "describe_record_fields",
+        "find_records",
+        "read_record",
+        "read_workspace",
+        "resolve_duplicates",
+        "resolve_entities"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "at_risk_relationships",
+        "create_record",
+        "describe_record_fields",
+        "find_records",
+        "read_attention",
+        "read_record",
+        "read_workspace",
+        "resolve_duplicates",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 6.5,
+      "min": 5,
+      "max": 8
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 242587.5,
+      "min": 240967,
+      "max": 244208
+    },
+    "output_tokens": {
+      "median": 1662,
+      "min": 1561,
+      "max": 1763
+    }
   }
 }

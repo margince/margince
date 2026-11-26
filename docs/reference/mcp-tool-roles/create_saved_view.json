@@ -1,0 +1,14 @@
+{
+  "tool": "change_settings",
+  "action": "create_saved_view",
+  "verb": "create_saved_view",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

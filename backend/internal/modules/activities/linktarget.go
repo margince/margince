@@ -31,6 +31,12 @@ type linkTarget struct {
 	nameColumn string
 }
 
+// The columns that name a linked record on its own table.
+const (
+	columnFullName = "full_name"
+	columnName     = "name"
+)
+
 // linkTargets is the module's whole vocabulary for the timeline link, in
 // the column order uq_activity_link's coalesce was created with. The
 // entity_type CHECK is pinned to datasource.RecordType by
@@ -38,23 +44,38 @@ type linkTarget struct {
 // schema and forgotten here fails that gate rather than surfacing as a 422
 // on the one code path nobody exercised.
 var linkTargets = []linkTarget{
-	{datasource.RecordContact, "contact_id", "full_name"},
+	{datasource.RecordContact, "contact_id", columnFullName},
 	{datasource.RecordCompany, "company_id", "display_name"},
-	{datasource.RecordDeal, "deal_id", "name"},
-	{datasource.RecordLead, "lead_id", "full_name"},
-	{datasource.RecordProject, "project_id", "name"},
+	{datasource.RecordDeal, "deal_id", columnName},
+	{datasource.RecordLead, "lead_id", columnFullName},
+	{datasource.RecordProject, "project_id", columnName},
 }
 
 // linkColumn resolves a wire entity_type to its id column. The empty
 // string means the type is outside the vocabulary — the caller's cue to
 // raise InvalidLinkTypeError rather than to build SQL from it.
 func linkColumn(entityType string) string {
-	for _, t := range linkTargets {
-		if string(t.kind) == entityType {
-			return t.column
-		}
+	if t, ok := linkTargetOf(entityType); ok {
+		return t.column
 	}
 	return ""
+}
+
+// linkTargetOf finds the vocabulary arm a wire entity_type names.
+func linkTargetOf(entityType string) (linkTarget, bool) {
+	for _, t := range linkTargets {
+		if string(t.kind) == entityType {
+			return t, true
+		}
+	}
+	return linkTarget{}, false
+}
+
+// linkedSQL tests that the activity_link row under alias points at the record
+// whose id is bound at idPos. The type is the vocabulary's own literal, so a
+// generic plan still matches it to the partial index on activity_link.
+func (t linkTarget) linkedSQL(alias string, idPos int) string {
+	return sprintf("%[1]s.entity_type = '%[2]s' AND %[1]s.%[3]s = $%[4]d", alias, string(t.kind), t.column, idPos)
 }
 
 // linkIDCoalesce is uq_activity_link's id expression, built from the same

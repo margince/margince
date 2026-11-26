@@ -102,8 +102,8 @@ func (s *Store) GetLegalReview(ctx context.Context, id ids.UUID) (crmcontracts.L
 	if err := auth.Require(ctx, legalReviewEntity, principal.ActionRead); err != nil {
 		return out, err
 	}
-	if s.reviewDocs == nil {
-		return out, errors.New("deals: legal review needs a document reader, and none is wired")
+	if s.reviewDocs == nil || s.reviewRecords == nil {
+		return out, errors.New("deals: legal review needs its record readers, and they are not wired")
 	}
 	var packet reviewPacket
 	var sight reviewerSight
@@ -143,12 +143,12 @@ func (s *Store) GetLegalReview(ctx context.Context, id ids.UUID) (crmcontracts.L
 	if err != nil {
 		return out, err
 	}
-	// After the transaction: the file reader opens its own connection.
-	openable, err := s.reviewDocs.OpenableDocuments(ctx, packetDocumentIDs(packet))
+	// After the transaction: the readers open their own connection.
+	opened, err := s.readRecordSight(ctx, packet)
 	if err != nil {
 		return out, err
 	}
-	out.Packet = packetWire(packet, names, openable, sight)
+	out.Packet = packetWire(packet, names, opened, sight)
 	return out, nil
 }
 

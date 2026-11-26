@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -20,7 +21,7 @@ import (
 // by this reader. The Worklist shows them as one card, so setting the card
 // aside sets them aside too; otherwise the next one would surface as a fresh
 // card the moment this one went. Empty for a card that is not a request.
-func earlierRequestsOnCard(ctx context.Context, tx pgx.Tx, card ids.ActivityID) ([]ids.ActivityID, error) {
+func earlierRequestsOnCard(ctx context.Context, tx pgx.Tx, card ids.ActivityID, asOf time.Time, ownDomains []string) ([]ids.ActivityID, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	content, err := auth.ActivityContentClause(ctx, "a", arg)
@@ -28,14 +29,16 @@ func earlierRequestsOnCard(ctx context.Context, tx pgx.Tx, card ids.ActivityID) 
 		return nil, err
 	}
 	cardID := arg(card)
+	neverOwed := invitationNeverOwedSQL(fmt.Sprintf("$%d::timestamptz", arg(asOf)), fmt.Sprintf("$%d", arg(ownDomains)))
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id FROM activity a
-		  JOIN activity card ON card.id = $%[1]d AND card.owed_verdict = '`+OwedVerdictAsksUs+`'
+		  JOIN activity card ON card.id = $%[1]d AND `+storekit.AsksUsClause("card")+`
 		 WHERE a.archived_at IS NULL AND a.thread_key = card.thread_key AND a.kind = card.kind
 		   AND coalesce(a.channel_provider, '') = coalesce(card.channel_provider, '')
 		   AND (a.occurred_at, a.id) < (card.occurred_at, card.id)
-		   AND a.owed_verdict = '`+OwedVerdictAsksUs+`'
+		   AND `+storekit.AsksUsClause("a")+`
 		   AND `+requestOpenSQL+`
+		   AND (`+acceptedRequestSQL+` OR NOT `+neverOwed+`)
 		   AND %[2]s`, cardID, content), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the requests a card stands for: %w", err)
@@ -48,7 +51,11 @@ func earlierRequestsOnCard(ctx context.Context, tx pgx.Tx, card ids.ActivityID) 
 func (s *Store) setOnEarlierRequests(
 	ctx context.Context, tx pgx.Tx, card ids.ActivityID, write func(ids.ActivityID) error,
 ) error {
-	earlier, err := earlierRequestsOnCard(ctx, tx, card)
+	ownDomains, err := s.ownDomainList(ctx, tx)
+	if err != nil {
+		return err
+	}
+	earlier, err := earlierRequestsOnCard(ctx, tx, card, s.now(), ownDomains)
 	if err != nil {
 		return err
 	}

@@ -46,7 +46,9 @@ operation in the OpenAPI document shows which. A list answers `{ "data": [...], 
 
 ## Errors
 
-An error answers `application/problem+json` (RFC 7807) with a machine `code` to branch on:
+An error answers `application/problem+json` (RFC 7807) with a machine `code` to branch on. A file
+route that a browser tab opens answers its 404 or 403 as a short `text/html` page instead, and the
+contract declares it there:
 
 ```json
 {"type": "https://errors.gradion.com/version_skew", "title": "Conflict", "status": 409,
@@ -56,6 +58,10 @@ An error answers `application/problem+json` (RFC 7807) with a machine `code` to 
 `detail` is a sentence for a human to read. `details` carries structured context when there is
 some: an `errors` array of `{field, code, message}` on a `422`, or `existing_id` on a duplicate. The
 statuses each operation can answer are listed with its responses in the OpenAPI document.
+
+An `errors` entry with the code `too_long` also carries `max`, the limit in characters, so a client
+can name the number in its reader's language. `httperr.TooLong` and `httperr.RequireWithin` write
+it, and `backend/gates/toolongcarriesmax_test.go` fails a `too_long` refusal that leaves it out.
 
 A path, query or header parameter whose value does not parse, or that is missing, answers
 `422 validation_error`, with `invalid_parameter` as the code of its entry. Every operation that can
@@ -69,7 +75,17 @@ operation a bad value for each parameter and checks.
 | `Idempotency-Key` | Once the first request has finished, a retry with the same key within 24 hours answers its status and body. The key is held per caller and path, and the same key with another body answers `409 idempotency_key_conflict`. While the first request is still running, a retry answers `409 idempotency_key_in_progress` with a `Retry-After` header; send it again after the wait until it answers with the recorded result. If the first request failed after it had started, a retry answers `409 idempotency_key_failed`: check whether it had an effect before using a new key. On an operation that runs an agent tool, the key is held per caller and tool, and the same key with other arguments answers `409 conflict`. Only an operation that lists the header in the OpenAPI document reads it. |
 | `If-Match` | The record `version` you last read. If the record changed since, the write answers `409 version_skew`. Read it again and retry. |
 
+A request has 30 seconds to answer (`httpserver.ResponseDeadline`), and a route that waits on a model has
+longer. The work stops two seconds before that limit, so there is time to answer. A request stopped there
+answers `503 request_timed_out` with a `Retry-After` header. If it saved nothing, its `Idempotency-Key` is
+free again, so send the same request after the wait. If it saved before it stopped, a retry answers
+`409 idempotency_key_failed`.
+
 ## Changes that wait for a human
+
+A client must get human approval before sending; a direct instruction to send counts.
+Standing send permission alone is not approval of an unattended message. The API cannot
+verify the conversation outside Margince.
 
 A passport's change runs at once or waits for a human, per the operation's tier
 ([explanation/authorization.md](../explanation/authorization.md#autonomy-tiers--how-agent-actions-are-governed---)).
@@ -96,6 +112,11 @@ when you import. A record is archived, not deleted: an archive operation sets `a
 record stays readable by id. A few operations remove a part of a record, such as
 `removeOfferLineItem`.
 
+On a deal, an offer, a project and a signal, `source` is one of the values the contract lists for
+that field. A program that calls the API sends `api`. Any other value is refused with
+`422 invalid_source`. A signal that a job or an extension wrote names it in `source_system`, which
+only the server sets.
+
 ## An id from your system
 
 A contact, company, deal or project can keep `source_id`, its id in your system. You set it on
@@ -113,6 +134,46 @@ Only `listCompanies` and `listDeals` can look a record up by it. Send both query
 the one record. Each also works alone. `source_system` lists every record from that system, and
 `source_id` matches that id in any system. An empty value, or one over 128 characters, is also `422`
 on the parameters.
+
+## Company types from an extension
+
+A company has core's `relationship_types`, a closed list. An installed extension can add types of its own,
+as `ext:<unit>:<type>`. They come back in the separate field `extension_relationship_types`, so the closed list
+never holds a value your client does not know.
+
+| Request | Answer |
+|---|---|
+| `PATCH /v1/companies/{id}` with `extension_relationship_types` | Replaces the extension types of the company. An empty array clears them. Leaving the field out changes nothing. |
+| A value no installed extension declares | `422` on `extension_relationship_types`, code `invalid_enum`. |
+| `GET /v1/company-types` | Every declared value with its `label` and `unit`, for any signed-in user. |
+| `GET /v1/companies?extension_relationship_type=ext:acme:reseller` | The companies that carry it. A value no extension declares is `422`. |
+| `GET /v1/companies?relationship_type=...` | Takes core types only, as before. An extension value is `422`. |
+
+A company keeps a value when its extension is later removed. A save that leaves it unchanged is still accepted.
+The steps for the extension's side are in [how-to/add-an-extension.md](../how-to/add-an-extension.md#declare-a-company-type).
+
+## Record kinds from extensions
+
+`GET /v1/record-kinds` lists the kinds of record installed extensions add, each named `ext:<unit>:<kind>`. A signed-in
+seat sees only the kinds it may read. Each entry carries the `display_name`, the `fields`, the `natural_key`, the
+`delete_policy` and the `actions` the seat holds. The list is empty when no extension declares a kind or the seat may read none.
+The steps for the extension's side are in [how-to/add-an-extension.md](../how-to/add-an-extension.md#declare-a-record-kind).
+
+## Reports from extensions
+
+`GET /v1/extension-reports` answers the counts installed extensions add, whole or split by a field, to Reports and Home, each named
+`ext:<unit>:<name>`. Each entry carries the `label`, the `kind` (`count` or `breakdown`), the `population`, the `by`
+field of a breakdown, the `groups` and the `total`. Row scope, the mask and the group floor apply as for a core report.
+
+| Field | Meaning |
+|---|---|
+| `groups` | One entry per group, or one for a count. A hidden group has `withheld: true` and no key or count. |
+| `withheld` | The floor hides a group. `total` is then `null`. |
+| `excluded_by_permission` | Visible rows a mask hides. `null` when no mask applied. |
+
+A report the seat may not read is left out. So is one whose custom field this installation has not set up. The list is
+empty when no extension declares one. The steps for the extension's side are in
+[how-to/add-an-extension.md](../how-to/add-an-extension.md#declare-a-report-count-or-breakdown).
 
 ## Events out
 

@@ -67,7 +67,7 @@ func (r *Registry) DueWatches(ctx context.Context, name string, within time.Dura
 func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic string) error {
 	var (
 		name          string
-		grantedBy     ids.UserID
+		grantedBy     *ids.UserID
 		credentialRef *string
 		authBytes     []byte
 		watchRef      *string
@@ -75,12 +75,12 @@ func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic 
 	)
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT provider, user_id, credential_ref, auth, watch_ref, generation FROM capture_connection
-			WHERE id = $1 AND status = 'connected'`, connectionID).
+			SELECT provider, user_id, credential_ref, auth, watch_ref, generation FROM capture_connection c
+			WHERE id = $1 AND status = 'connected' AND (user_id IS NOT NULL OR `+sharedMailboxLiveSQL+`)`, connectionID).
 			Scan(&name, &grantedBy, &credentialRef, &authBytes, &watchRef, &generation)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("capture: connection %s: %w", connectionID, apperrors.ErrNotFound)
+		return fmt.Errorf("the connection is gone, or was never yours to reach: %w", apperrors.ErrNotFound)
 	}
 	if err != nil {
 		return err
@@ -89,18 +89,21 @@ func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic 
 	if err != nil {
 		return err
 	}
-	watcher, ok := c.(connector.Watcher)
-	if !ok {
+	if _, ok := c.(connector.Watcher); !ok {
 		return fmt.Errorf("capture: connector %q does not support push-watch renewal", name)
 	}
-	runCtx, err := r.connectorContext(ctx, name, grantedBy)
+	runCtx, err := r.runContext(ctx, name, grantedBy, connectionID)
 	if err != nil {
 		return err
 	}
 	// A member who may no longer capture keeps no push subscription alive.
-	auth, err := r.syncCredential(runCtx, credentialRef, authBytes)
+	c, auth, err := r.runCredential(runCtx, c, grantedBy, credentialRef, authBytes)
 	if err != nil {
 		return err
+	}
+	watcher, ok := c.(connector.Watcher)
+	if !ok {
+		return fmt.Errorf("capture: connector %q does not support push-watch renewal", name)
 	}
 	// BY THE HANDLE, where there is one and the connector renews that way.
 	//
@@ -117,13 +120,11 @@ func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic 
 		return err
 	}
 	// FENCED ON THE GENERATION THE READ SAW. The connector call above is a round
-	// trip, and a rebind can commit inside it — pointing the row at a different
-	// mailbox and clearing the handle on the way past. Unfenced, this write puts
-	// the OLD mailbox's subscription back, which is the reset undone by a
-	// renewal that was already in flight when it happened. A rebind bumps the
-	// generation, so a stale renewal matches nothing and writes nothing; the
-	// scan picks the row up again on its own with no handle to renew by, and
-	// registers.
+	// trip under the credential read before it. A disconnect inside it withdraws
+	// that credential and bumps the generation, and a reconnect can set the
+	// status back before this write. The status guard cannot see that; the
+	// generation can, so the renewal writes nothing and the scan renews the row
+	// under the new grant.
 	return r.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			UPDATE capture_connection SET watch_expires_at = $2, watch_ref = NULLIF($3, '')

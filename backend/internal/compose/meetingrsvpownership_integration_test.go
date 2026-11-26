@@ -33,8 +33,9 @@ type mailboxCopy struct {
 	provider, id, uid, owner, organizer string
 	// guests are the listed attendees besides the organizer, with their answers.
 	guests map[string]string
-	// day moves the meeting that many days past its first start.
-	day int
+	// first is the meeting's first start; day moves it that many days later.
+	first time.Time
+	day   int
 }
 
 func (c mailboxCopy) record(t *testing.T) connector.NormalizedRecord {
@@ -56,7 +57,7 @@ func (c mailboxCopy) record(t *testing.T) connector.NormalizedRecord {
 }
 
 func (c mailboxCopy) start() time.Time {
-	return time.Date(2030, 1, 7+c.day, 10, 0, 0, 0, time.UTC)
+	return c.first.AddDate(0, 0, c.day)
 }
 
 func (c mailboxCopy) event() map[string]any {
@@ -125,12 +126,16 @@ type ownershipEnv struct {
 	provider string
 	sink     *capture.Sink
 	address  map[ids.UUID]string
+	first    time.Time
 }
 
 func setupOwnership(t *testing.T, provider string) ownershipEnv {
 	t.Helper()
 	e := integration.Setup(t)
-	o := ownershipEnv{e: e, provider: provider, sink: newCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(nil, nil), address: map[ids.UUID]string{}}
+	o := ownershipEnv{
+		e: e, provider: provider, sink: newCaptureSink(e.Pool, CaptureConfig{}).WithEnsurer(nil, nil), address: map[ids.UUID]string{},
+		first: meetingStartAhead(t),
+	}
 	for _, seat := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3} {
 		o.address[seat] = seatAddress(t, e, seat)
 		e.GrantRole(t, seat, "admin")
@@ -141,7 +146,7 @@ func setupOwnership(t *testing.T, provider string) ownershipEnv {
 
 func (o ownershipEnv) sync(t *testing.T, seat ids.UUID, c mailboxCopy) ids.UUID {
 	t.Helper()
-	c.provider, c.owner = o.provider, o.address[seat]
+	c.provider, c.owner, c.first = o.provider, o.address[seat], o.first
 	if c.uid == "" {
 		c.uid = sharedMeetingUID
 	}
@@ -346,7 +351,7 @@ func TestADisconnectedCalendarsAnswerFollowsTheOrganizersRosterUntilItReconnects
 			rows := o.ownRows(t, meeting, e.Rep2)
 
 			registry := NewCaptureRegistry(e.Pool, keyvault.NewMemory(), CaptureConfig{})
-			if err := registry.Disconnect(e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms), provider); err != nil {
+			if err := registry.Disconnect(e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms), capture.ProviderMailbox(provider)); err != nil {
 				t.Fatal(err)
 			}
 			o.sync(t, e.Rep1, listed("accepted"))
@@ -404,17 +409,17 @@ func TestAReconnectedSeatsRemovalRetiresTheRowAnotherCalendarTookOver(t *testing
 			listed := map[string]string{guest: "accepted", "buyer@customer.test": "accepted"}
 			meeting := o.sync(t, e.Rep1, mailboxCopy{id: "evt-1", organizer: organizer, guests: listed})
 			own := mailboxCopy{
-				provider: provider, id: "evt-2", uid: sharedMeetingUID, owner: guest, organizer: organizer,
+				provider: provider, id: "evt-2", uid: sharedMeetingUID, owner: guest, organizer: organizer, first: o.first,
 				guests: map[string]string{guest: "declined", "buyer@customer.test": "accepted"},
 			}
 			o.sync(t, e.Rep2, own)
 
 			registry := NewCaptureRegistry(e.Pool, keyvault.NewMemory(), CaptureConfig{})
-			if err := registry.Disconnect(e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms), provider); err != nil {
+			if err := registry.Disconnect(e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms), capture.ProviderMailbox(provider)); err != nil {
 				t.Fatal(err)
 			}
 			o.sync(t, e.Rep1, mailboxCopy{id: "evt-1", organizer: organizer, guests: listed})
-			if n := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id=$1 AND user_id=$2 AND roster_seat=$3`, meeting, e.Rep2, e.Rep1); n == 0 {
+			if n := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id=$1 AND user_id=$2 AND $3=ANY(roster_seats)`, meeting, e.Rep2, e.Rep1); n == 0 {
 				t.Fatal("the organizer's roster did not take over the disconnected guest's row")
 			}
 			reconnect(t, e, registry, e.Rep2, provider, guest)

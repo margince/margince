@@ -42,7 +42,7 @@ var ErrTerminal = errors.New("comms: delivery is already terminal")
 // wrapped pgx violation carries the constraint and table names, and a client
 // is owed neither.
 var ErrDuplicateMessage = fmt.Errorf(
-	"comms: this message identity is already staged for delivery: %w", apperrors.ErrConflict)
+	"this message identity is already staged for delivery: %w", apperrors.ErrConflict)
 
 // ErrNoAddressee marks a delivery staged with nobody to reach. A message with
 // neither a To nor a Cc address can only be refused later — the consent gate
@@ -82,6 +82,11 @@ type Store struct {
 	// suppressions exist. The production wiring is in compose/, and a gate
 	// holds that it is present there.
 	bounce BounceObserver
+	// echoIdentity recovers a stamped identity the read-back could not
+	// (echoidentity.go). Nil leaves such a message on its staged identity.
+	echoIdentity EchoIdentity
+	// sentEffect is the domain change a receipt releases (sendeffect.go).
+	sentEffect SentEffect
 }
 
 // StoreOption adjusts a store after construction.
@@ -122,9 +127,12 @@ func NewStore(
 type StageInput struct {
 	ActivityID ids.ActivityID
 	Provider   string
-	MessageID  string // unbracketed
-	Recipients []string
-	Cc         []string
+	// ConnectionID is the sender's mailbox the message goes out from; zero
+	// leaves the choice to the transmission, which takes their default.
+	ConnectionID ids.UUID
+	MessageID    string // unbracketed
+	Recipients   []string
+	Cc           []string
 	// Bcc receives the message and is rendered into no header. It is stored so
 	// a retry addresses the same contacts the first attempt did.
 	Bcc     []string
@@ -154,7 +162,10 @@ type StageInput struct {
 	// so the dispatcher needs none of it. It is stored because the delivery
 	// row is the send log's own record of which conversation the message
 	// joined, held independently of the activity this delivery reports on.
-	ThreadKey       string
+	ThreadKey string
+	// AnswersActivity is the message a reply on a new topic answers. Its own
+	// ThreadKey then names a new conversation; zero on every other delivery.
+	AnswersActivity ids.UUID
 	ListUnsubscribe string // the Post header is derived from this, never stored
 }
 
@@ -210,13 +221,16 @@ func (s *Store) StageTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.UUID
 		INSERT INTO comms_outbound
 		  (id, activity_id, user_id, provider, message_id,
 		   recipients, cc, bcc, subject, body, html_body, from_name, consent_purpose, in_reply_to,
-		   references_chain, thread_key, list_unsubscribe, status, created_at, attachments, inline_logo_key)
+		   references_chain, thread_key, list_unsubscribe, status, created_at, attachments, inline_logo_key, connection_id,
+		   answers_activity_id)
 		VALUES ($1, $2, $3, $4, $5,
 		        $6, $7, $8, $9, $10, NULLIF($11,''), NULLIF($12,''), $13, NULLIF($14,''), $15,
-		        NULLIF($16,''), NULLIF($17,''), 'pending', $18, $19, NULLIF($20,''))`,
+		        NULLIF($16,''), NULLIF($17,''), 'pending', $18, $19, NULLIF($20,''), NULLIF($21::uuid, '00000000-0000-0000-0000-000000000000'),
+		        NULLIF($22::uuid, '00000000-0000-0000-0000-000000000000'))`,
 		id, in.ActivityID, userID, in.Provider, in.MessageID,
 		recipients, cc, bcc, in.Subject, in.Body, in.HTMLBody, in.FromName, in.ConsentPurpose,
-		in.InReplyTo, refs, in.ThreadKey, in.ListUnsubscribe, s.now().UTC(), files, in.InlineLogoKey); err != nil {
+		in.InReplyTo, refs, in.ThreadKey, in.ListUnsubscribe, s.now().UTC(), files, in.InlineLogoKey, in.ConnectionID,
+		in.AnswersActivity); err != nil {
 		// The idempotency key is an ANSWER, and it is mapped rather than
 		// wrapped: a raw violation carries the constraint and table names, and
 		// no caller is owed the schema behind a refusal it can act on.
@@ -309,12 +323,13 @@ func marshalList(values []string) ([]byte, error) {
 // with a second query: the row is already being written, and a separate read
 // would be a second chance for the two to disagree.
 func (s *Store) RecordSent(ctx context.Context, id ids.UUID, receipt connector.SendReceipt) error {
-	activityID, staged, err := s.commitReceipt(ctx, id, receipt)
+	sent, err := s.commitReceipt(ctx, id, receipt)
 	if err != nil {
 		return err
 	}
-	s.reconcileIdentity(ctx, id, activityID, staged, receipt.RFC822MessageID)
-	s.admitSentParties(ctx, activityID)
+	s.reconcileIdentity(ctx, id, sent.activity, sent.staged, s.identityAfterReceipt(ctx, id, sent, receipt))
+	s.admitSentParties(ctx, sent.activity)
+	s.applySentEffect(ctx, sent.staged)
 	return nil
 }
 
@@ -329,12 +344,11 @@ func (s *Store) RecordSent(ctx context.Context, id ids.UUID, receipt connector.S
 // delivery back to a ladder that cannot tell it went. The staged identity that
 // comes back is then empty, which the reconcile reads as "nothing to re-key" —
 // the correct answer for a transport with no mail identity at all.
-func (s *Store) commitReceipt(ctx context.Context, id ids.UUID, receipt connector.SendReceipt) (ids.ActivityID, string, error) {
+func (s *Store) commitReceipt(ctx context.Context, id ids.UUID, receipt connector.SendReceipt) (sentReceipt, error) {
 	ctx, cancel := detachedWrite(ctx)
 	defer cancel()
 
-	var activityID ids.ActivityID
-	var staged string
+	sent := sentReceipt{providerSentID: receipt.ProviderMessageID, sentAt: s.now().UTC()}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// inflight_at is cleared with the receipt: the outcome is now KNOWN, and
 		// a sent row still carrying the marker would read as a transmission
@@ -345,19 +359,19 @@ func (s *Store) commitReceipt(ctx context.Context, id ids.UUID, receipt connecto
 		arg := func(v any) string { args = append(args, v); return "$" + strconv.Itoa(len(args)) }
 		query := `
 			UPDATE comms_outbound
-			   SET status = 'sent', party_admission_pending = true, provider_message_id = ` + arg(receipt.ProviderMessageID) + `, sent_at = ` + arg(s.now().UTC()) + `,
+			   SET status = 'sent', party_admission_pending = true, provider_message_id = ` + arg(receipt.ProviderMessageID) + `, sent_at = ` + arg(sent.sentAt) + `,
 			       reason = NULL, inflight_at = NULL, from_address = coalesce(nullif(` + arg(receipt.FromAddress) + `, ''), from_address)
 			 WHERE id = ` + arg(id) + ` AND status = 'pending'
-			RETURNING activity_id, coalesce(message_id, '')`
-		return tx.QueryRow(ctx, query, args...).Scan(&activityID, &staged)
+			RETURNING activity_id, coalesce(message_id, ''), coalesce(user_id, '00000000-0000-0000-0000-000000000000'), provider, connection_id`
+		return tx.QueryRow(ctx, query, args...).Scan(&sent.activity, &sent.staged, &sent.seat, &sent.provider, &sent.connection)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.ActivityID{}, "", ErrTerminal
+		return sentReceipt{}, ErrTerminal
 	}
 	if err != nil {
-		return ids.ActivityID{}, "", fmt.Errorf("comms: recording the send receipt: %w", err)
+		return sentReceipt{}, fmt.Errorf("comms: recording the send receipt: %w", err)
 	}
-	return activityID, staged, nil
+	return sent, nil
 }
 
 // detachedWriteTimeout bounds a write the caller's cancellation no longer

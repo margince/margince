@@ -99,6 +99,9 @@
   flex-wrap: wrap;
   /* A row of verbs wider than the card wraps inside it instead of overflowing. */
   max-inline-size: 100%;
+  /* Beside the words the verbs centre on them, however many lines they run to;
+   * on a line of their own this changes nothing. */
+  align-self: center;
   /* Wrapped onto a line of their own, the verbs keep the card's end edge. Beside
    * the words the copy takes the free width first, so this margin is zero. */
   margin-inline-start: auto;
@@ -113,6 +116,8 @@
 .callout-dismiss {
   display: flex;
   flex: none;
+  /* On the card's middle, level with the verbs beside the words. */
+  align-self: center;
 }
 
 /* Tone reaches the glyph's ink (`--callout-ink`) and the card's wash

@@ -41,14 +41,15 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/dispactapp"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -73,13 +74,12 @@ var errMissingBearer = errors.New("missing bearer token")
 // its time windows against an injectable clock — so a second instance would
 // hold a second cache and, worse, its own time.Now, silently escaping a clock
 // a test injected on the process's real service.
-func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slog.Logger) http.Handler {
+func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slog.Logger, lim mcpLimiters) http.Handler {
 	if !s.mcpConnectorEnabled {
 		return nil
 	}
-	// An operator turning the gate on needs one line confirming the surface
-	// came up, and how much of it: a mount that silently serves nothing is
-	// indistinguishable from a mount that never happened.
+	// One line confirms the surface came up, and how much of it: a silent mount
+	// looks like no mount.
 	log.Info("mcp: hosted connector transport mounted", "path", "/mcp", "tools", len(s.toolRegistry.Specs()))
 	// The consent flow leaves this origin and has to come back to it: the
 	// authorize GET redirects a human's browser to the SPA route below, which
@@ -88,7 +88,7 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 	// sends it elsewhere 404s a human mid-consent, so the target is named where an
 	// operator can compare it against what their front end actually routes.
 	log.Info("mcp: consent screen redirect target", "location", identity.ConsentScreenPath)
-	return agents.NewHTTPHandler(s.toolRegistry, mcpAuthenticate(auth),
+	return agents.NewHTTPHandler(s.toolRegistry, mcpPaceAfterAuth(s.dispactCalls.Or(auth, mcpAuthenticate(auth)), lim.perPassport, s.volumeMeter),
 		agents.ResourceMetadataChallenge(s.mcpAllowedOrigin), mcpServerName, mcpServerVersion, log,
 		// The cross-module edge: composing the query vocabulary is the search
 		// module's job and publishing it is the transport's, and neither
@@ -108,13 +108,9 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 		// validates against (queryseam.go), which is what makes "what this
 		// document advertises" and "what a plan can be answered from" the same
 		// sentence rather than two that have to be kept in step.
-		// TWO providers now, fanned into the one the transport takes: the
-		// vocabulary above, and the interactive views the tool surface serves. The
-		// views come second, so a URI collision resolves to the vocabulary — see
-		// composeResources for why the order is stated rather than incidental, and
-		// TestTheProductionProvidersClaimDisjointURIs for the gate that makes
-		// it moot — which is the one that reaches BOTH of these, unlike the
-		// duplicate sweep, which only sees the view catalogue.
+		// Two providers fan into the one the transport takes, the vocabulary first.
+		// So a URI collision resolves to the vocabulary (composeResources), and
+		// TestTheProductionProvidersClaimDisjointURIs holds that none occurs.
 		agents.WithResourceProvider(composeResources(
 			mcpResourceProviders(
 				agents.NewCapabilitiesResource(s.toolRegistry),
@@ -129,7 +125,9 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 		// The origin the Origin guard admits is the one the app is served from.
 		// Record links and the connector's icon point at it.
 		agents.WithPublicOrigin(s.mcpAllowedOrigin),
-		agents.WithInputStateKey(s.mcpInputStateKey),
+		agents.WithInputStateKey(s.mcpDoor.inputStateKey),
+		agents.WithReplayGuard(s.mcpDoor.replayGuard),
+		agents.WithCallLog(s.mcpDoor.callLog),
 		// The Tasks extension, which is why a confirm-first call no longer dead-ends
 		// for a client that can hold a handle. The store is composed here for the
 		// same reason the claim store is: agent_task rows are this transport's own
@@ -142,9 +140,8 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 }
 
 // mcpAuthenticate binds one request to its agent principal. It runs on EVERY
-// exchange: the passport, the granting human's seat and their RBAC are all
-// re-derived, so a revocation or demotion takes effect on the next call
-// rather than after a reconnect.
+// exchange, so a revocation or demotion binds on the next call. A Dispact call
+// token takes the dispactapp branch in front of it (mcpHandler).
 func mcpAuthenticate(auth *identity.Service) func(*http.Request) (context.Context, error) {
 	return func(r *http.Request) (context.Context, error) {
 		wsID, err := auth.InstallationWorkspace(r.Context())
@@ -176,9 +173,52 @@ func mcpAuthenticate(auth *identity.Service) func(*http.Request) (context.Contex
 			}
 			return nil, err
 		}
-		return principal.WithCorrelationID(principal.WithActor(ctx, agent.Principal()), ids.NewV7()), nil
+		// The request keeps the chassis's correlation id, the one its answer's
+		// X-Correlation-ID header names, so its audit rows can be found from it.
+		return principal.WithActor(ctx, agent.Principal()), nil
 	}
 }
+
+// mcpPaceAfterAuth paces a tool call by its caller's roles, through the policy
+// the window allowances use. It runs after authentication, so an anonymous or
+// refused caller never reaches the role check. An unpaced caller's calls are
+// never counted, so the check mcpEdge makes before authentication never
+// refuses them either.
+func mcpPaceAfterAuth(
+	authenticate func(*http.Request) (context.Context, error),
+	calls *ratelimit.Limiter,
+	meter *agentvolume.Meter,
+) func(*http.Request) (context.Context, error) {
+	return func(r *http.Request) (context.Context, error) {
+		ctx, err := authenticate(r)
+		if err != nil || !meter.Paced(ctx) {
+			return ctx, err
+		}
+		if !calls.Allow(dispactapp.PaceKey(ctx, passportBucket(r))) {
+			// The caller is known; the door names it in the refusal it records.
+			return ctx, mcpPacingRefusal{bucket: calls}
+		}
+		return ctx, nil
+	}
+}
+
+// mcpPacingRefusal is a paced caller over its per-minute tool calls. The
+// transport hands the answer back here, so the 429 has one writer.
+type mcpPacingRefusal struct{ bucket *ratelimit.Limiter }
+
+func (p mcpPacingRefusal) Error() string {
+	return "mcp: the tool calls a minute on this credential are spent"
+}
+
+func (p mcpPacingRefusal) WriteRefusal(w http.ResponseWriter, r *http.Request) {
+	writeMCPRateLimited(w, r, p.bucket, mcpToolCalls)
+}
+
+// mcpToolCalls and mcpStreamOpens name what each bucket counts in a refusal.
+const (
+	mcpToolCalls   = "tool calls on this credential"
+	mcpStreamOpens = "stream opens on this credential"
+)
 
 // mcpLimiters bounds the connector's edges — the /mcp transport here and the
 // authorization server in oauthedge.go, from ONE set, because they are two
@@ -204,9 +244,8 @@ type mcpLimiters struct {
 	peerCeiling *ratelimit.Limiter // 600/min per (endpoint group, peer) — the shared ceiling no chosen key escapes
 }
 
-// The per-minute bounds of the MCP transport. They guard the server against a
-// flood and do not set what an agent may do. So the build fixes them, and the
-// settings page shows them read-only.
+// The per-minute bounds of the MCP transport guard against a flood. They do not
+// set what an agent may do, so the build fixes them and settings shows them.
 const (
 	mcpCallsPerMinute       = 240
 	mcpStreamOpensPerMinute = 30
@@ -279,12 +318,17 @@ func mcpEdge(next http.Handler, lim mcpLimiters, allowedOrigin string) http.Hand
 			// it gets its own tighter bucket. It is metered here, ahead of the
 			// transport's method dispatch, so what bounds the churn is whether
 			// the request was made — not what the transport answers it with.
-			bucket, what := lim.perPassport, "tool calls on this credential"
-			if r.Method == http.MethodGet {
-				bucket, what = lim.streams, "stream opens on this credential"
+			// The transport refuses a GET before it authenticates, so no role
+			// is known for one and every caller keeps this bucket.
+			if r.Method == http.MethodGet && !lim.streams.Allow(credential) {
+				writeMCPRateLimited(w, r, lim.streams, mcpStreamOpens)
+				return
 			}
-			if !bucket.Allow(credential) {
-				writeMCPRateLimited(w, r, bucket, what)
+			// Tool calls are counted after authentication (mcpPaceAfterAuth),
+			// where the caller's roles are known. This check only refuses a
+			// credential already over its pacing without a passport lookup.
+			if r.Method != http.MethodGet && lim.perPassport.Blocked(credential) {
+				writeMCPRateLimited(w, r, lim.perPassport, mcpToolCalls)
 				return
 			}
 		}

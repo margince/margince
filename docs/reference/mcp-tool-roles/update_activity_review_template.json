@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "update_review_template",
+  "verb": "update_activity_review_template",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

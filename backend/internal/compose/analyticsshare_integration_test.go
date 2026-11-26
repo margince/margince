@@ -16,8 +16,10 @@ package compose
 
 import (
 	"context"
+	"encoding/csv"
 	"errors"
 	"maps"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -517,7 +519,7 @@ func TestTheExportedRowsAreTheRowsTheHeadlineWasSummedFrom(t *testing.T) {
 
 func TestAnExportedCellCannotCarryAFormulaIntoASpreadsheet(t *testing.T) {
 	rows := []SharedContribution{{DealName: "=cmd|' /c calc'!A1", Currency: "EUR"}}
-	body, err := shareRowsCSV(frozenForReader{Rows: rows}, nil)
+	body, err := shareRowsCSV(frozenForReader{Rows: rows}, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -531,20 +533,40 @@ func TestAnExportedCellCannotCarryAFormulaIntoASpreadsheet(t *testing.T) {
 func TestAShareExportSaysWhetherItsChancesCorrectedThemselves(t *testing.T) {
 	on := true
 	drawn := forecasting.Range{LowMinor: 1200, HighMinor: 3400, Runs: 8}
-	body, err := shareRowsCSV(frozenForReader{Rows: []SharedContribution{{DealName: "Frozen"}}, Range: &drawn}, &on)
+	body, err := shareRowsCSV(frozenForReader{Rows: []SharedContribution{{DealName: "Frozen"}}, Range: &drawn}, &on, "USD")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimSpace(string(body)), "\n")
-	if len(lines) != 2 || !strings.HasSuffix(lines[0], ",self_correcting,risk_signal_facts,range_low_minor,range_high_minor,contributions_limited") ||
-		!strings.HasSuffix(lines[1], ",true,,1200,3400,false") {
+	if len(lines) != 2 || !strings.HasSuffix(lines[0], ",self_correcting,risk_signal_facts,range_low_minor,range_high_minor,contributions_limited,contributions_limited_reason,base_currency") ||
+		!strings.HasSuffix(lines[1], ",true,,1200,3400,false,,USD") {
 		t.Errorf("the export does not carry the snapshot's self_correcting and the reader's range:\n%s", body)
+	}
+}
+
+// A file limited to the reader's own rows says why on every row. A reader who
+// owns none of its deals gets one summary row, which says it too.
+func TestAShareExportSaysWhyItsRowsAreTheReadersOwn(t *testing.T) {
+	reason := reportingCoverageWords.IndividualOff.En
+	for name, rows := range map[string][]SharedContribution{"own rows": {{DealName: "Mine"}}, "summary row": nil} {
+		body, err := shareRowsCSV(frozenForReader{Rows: rows, Limited: true, Reason: reason}, nil, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		records, err := csv.NewReader(strings.NewReader(string(body))).ReadAll()
+		if err != nil {
+			t.Fatal(err)
+		}
+		column := slices.Index(records[0], "contributions_limited_reason")
+		if len(records) != 2 || column < 0 || records[1][column] != reason {
+			t.Errorf("%s: the export does not say why its rows are limited:\n%s", name, body)
+		}
 	}
 }
 
 func TestAnUnpricedDealExportsAnEmptyCellRatherThanAZero(t *testing.T) {
 	rows := []SharedContribution{{DealName: "Unpriced", ExclusionReason: "unpriced"}}
-	body, err := shareRowsCSV(frozenForReader{Rows: rows}, nil)
+	body, err := shareRowsCSV(frozenForReader{Rows: rows}, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -886,7 +908,7 @@ func TestASharedSnapshotCountsPricingRatherThanConversion(t *testing.T) {
 	// rows than the whole state and the count is shown to ride the same
 	// visibility clause as its siblings rather than to be taken over the table.
 	e.seedDealClosingWithin(t, "Another team's", &e.Rep3, priced)
-
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency, fx_rate_to_base, status, closed_at, source, captured_by) VALUES ($1, 'Won', $2, $3, $4, $5, 'EUR', 1, 'won', now(), 'manual', 'human:x')`, e.pipeline, e.stages[20], e.Rep1, priced)
 	id := e.freezeWorkspace(t)
 	whole := e.readShared(snapshotWriterCtx(e.WS), t, id).Readings
 

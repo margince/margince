@@ -1,0 +1,15 @@
+{
+  "tool": "change_activities",
+  "action": "reschedule_send",
+  "verb": "reschedule_scheduled_send",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

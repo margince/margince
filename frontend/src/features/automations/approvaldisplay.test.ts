@@ -44,6 +44,28 @@ describe("what a staged proposal shows", () => {
 
   // The reason the server wrote leads, so the card can print it as a sentence
   // rather than as one more captioned row.
+  // A follow-up proposes a task, so its subject and body read as a task's
+  // title and note rather than as a message somebody would send.
+  it("shows a follow-up as the task it would add", () => {
+    const fields = resolveDisplay(
+      "deal_follow_up",
+      {
+        deal_id: "01a03781-9083-7565-8d65-5939ec0f3e70",
+        subject: "Follow up on Acme Rollout",
+        due_date: "2026-11-12",
+        body: "Follow up on the call from 9 Nov 2026.",
+        evidence_activity_id: "01a1bf79-0e55-750e-bdb0-7bfb5605261d",
+      },
+      t,
+      day,
+    );
+    expect(shown(fields).map((entry) => [entry.label, entry.value])).toEqual([
+      ["Task", "Follow up on Acme Rollout"],
+      ["Due", "12.11.2026"],
+      ["Note", "Follow up on the call from 9 Nov 2026."],
+    ]);
+  });
+
   it("marks the reason as the lead", () => {
     const lead = closeDate().find((entry) => entry.lead);
     expect(lead?.value).toBe("deal has gone quiet; confirm it is still alive");

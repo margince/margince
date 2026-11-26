@@ -21,12 +21,9 @@ type ChannelConnection = components["schemas"]["ChannelConnection"];
 
 // The mail providers (CaptureConnection) and the messaging-channel bot
 // (ChannelConnection) publish two different wire enums, but they share one
-// status vocabulary from here on. `pending` survives in the channel enum for a
-// generator reason the contract states, not a product one — no server produces it,
-// because a bot binding is polled and a connect either commits live or writes
-// nothing. It keeps its arms below because the switches are exhaustive over the
-// published type, and it is rendered as "needs a look" rather than as healthy in
-// case an older or foreign server ever sends one.
+// status vocabulary from here on. `pending_approval` is a Telegram Business link
+// waiting for an admin. A bot binding never has it, but the channel enum does.
+// The switches below show it as "needs a look", never as healthy.
 export type ConnectorStatus =
   | CaptureConnection["status"]
   | ChannelConnection["status"];
@@ -42,7 +39,13 @@ export type ConnectorStatus =
 const SEND_SCOPES: Readonly<Record<string, string>> = {
   gmail: "https://www.googleapis.com/auth/gmail.send",
   graph: "Mail.Send",
+  imap: "urn:margince:imap:send",
 };
+
+/** Providers whose owner turns sending on by choice, with a switch on the
+ *  connect form. A read-only connection of one is that choice, not a grant
+ *  that went missing, so it is never badged as one. */
+const OPT_IN_SENDERS: ReadonlySet<string> = new Set(["imap"]);
 
 /** Whether this connection captures mail it will never be allowed to send.
  *  Neither Google nor Microsoft will widen an existing refresh token, so every
@@ -52,19 +55,45 @@ const SEND_SCOPES: Readonly<Record<string, string>> = {
  *  granted scopes say it, which is why this reads them rather than the status.
  *
  *  A provider absent from the table above is not "cannot send" — it is not a
- *  sending mailbox in the first place (a calendar, an IMAP box), and badging it
- *  would be a refusal nobody could act on. */
+ *  sending mailbox in the first place (a calendar), and badging it would be a
+ *  refusal nobody could act on. Nor is an opt-in sender left read-only. */
 export function missingSendGrant(
   connection: Pick<CaptureConnection, "provider" | "scopes">,
 ): boolean {
   const required = SEND_SCOPES[connection.provider];
-  return required !== undefined && !connection.scopes.includes(required);
+  return (
+    required !== undefined &&
+    !OPT_IN_SENDERS.has(connection.provider) &&
+    !connection.scopes.includes(required)
+  );
+}
+
+/** The statuses the server treats as a live mailbox: `error` is degraded and
+ *  probed daily, and it still sends. A DELIBERATE MIRROR of the status list in
+ *  the server's `capture/sendingmailbox.go`, held by a gate that fails when the
+ *  two differ. */
+const LIVE_STATUSES: ReadonlySet<string> = new Set(["connected", "error"]);
+
+/** Whether a connection counts as a live mailbox, as the server decides it. */
+export function isLiveConnection(
+  connection: Pick<CaptureConnection, "status">,
+): boolean {
+  return LIVE_STATUSES.has(connection.status);
+}
+
+/** Whether this connection's grant can send mail: a sending provider whose
+ *  granted scopes carry its send scope. */
+export function holdsSendGrant(
+  connection: Pick<CaptureConnection, "provider" | "scopes">,
+): boolean {
+  const required = SEND_SCOPES[connection.provider];
+  return required !== undefined && connection.scopes.includes(required);
 }
 
 /** Each contract status gets its own Badge tone. Collapsing reauth_required
  *  and error into the same tone is what made a dead mailbox and a merely-
  *  stale one indistinguishable at a glance. `disconnected` gets no tone (the
- *  shipped card's neutral, undecorated row). `pending` reads as `warning`, the
+ *  shipped card's neutral, undecorated row). `pending_approval` reads as `warning`, the
  *  same "needs a look" tone as reauth_required — never `success`: a row this
  *  installation cannot produce must not be rendered as a healthy channel if an
  *  older or foreign server ever sends one. */
@@ -74,7 +103,7 @@ export function statusTone(
   switch (status) {
     case "connected":
       return "success";
-    case "pending":
+    case "pending_approval":
     case "reauth_required":
       return "warning";
     case "error":
@@ -91,7 +120,7 @@ export function statusLabel(status: ConnectorStatus): MessageKey {
   switch (status) {
     case "connected":
       return "connectors.statusConnected";
-    case "pending":
+    case "pending_approval":
       return "connectors.statusPending";
     case "reauth_required":
       return "connectors.statusReauth";
@@ -158,6 +187,13 @@ export function missingCalendarWriteGrant(
   );
 }
 
+/** Whether a connection's grant is too narrow for what its row offers. */
+function missingGrant(
+  connection: Pick<CaptureConnection, "provider" | "scopes">,
+): boolean {
+  return missingSendGrant(connection) || missingCalendarWriteGrant(connection);
+}
+
 /** The words the Connections page puts on an account and on each service.
  *  Their own keys, never statusLabel's: the Telegram badge reads those. */
 export type ConnectorHealth =
@@ -192,12 +228,12 @@ export function healthBadge(health: ConnectorHealth): HealthBadge {
 }
 
 /** Whether a service needs its owner's consent again: the vendor refused the
- *  grant, or the grant is too narrow to send or to book. */
+ *  grant, or the grant is too narrow to send, to book or to read notes. */
 export function needsReconnect(service: CaptureConnection): boolean {
   return (
     service.status === "reauth_required" ||
-    missingSendGrant(service) ||
-    missingCalendarWriteGrant(service)
+    service.concern === "notes_grant_missing" ||
+    missingGrant(service)
   );
 }
 
@@ -205,6 +241,10 @@ export function needsReconnect(service: CaptureConnection): boolean {
  *  what it cannot do, so the row needs no second badge to say it. */
 export function serviceBadge(service: CaptureConnection): HealthBadge {
   const health = serviceHealth(service);
+  if (service.concern === "notes_grant_missing")
+    return badgeOf("attention", "connectors.cannotReadNotes");
+  if (service.concern === "notes_account_mismatch")
+    return badgeOf("attention", "captureConcern.notesAccount");
   if (health === "up_to_date" && missingSendGrant(service)) {
     return badgeOf("attention", "connectors.cannotSend");
   }
@@ -216,6 +256,10 @@ export function serviceBadge(service: CaptureConnection): HealthBadge {
 
 /** The one sentence that says why a service is not up to date, or null. */
 export function serviceReason(service: CaptureConnection): MessageKey | null {
+  if (service.concern === "notes_grant_missing")
+    return "connectors.reconnectToReadNotes";
+  if (service.concern === "notes_account_mismatch")
+    return "captureConcern.notesAccount";
   const health = serviceHealth(service);
   if (health === "needs_reconnect" || health === "needs_attention") {
     return errorClassKey(service.last_sync_error_class);
@@ -225,7 +269,11 @@ export function serviceReason(service: CaptureConnection): MessageKey | null {
   return null;
 }
 
-type ServiceFacts = Pick<CaptureConnection, "status" | "last_sync_error_class">;
+type ServiceFacts = Pick<
+  CaptureConnection,
+  "status" | "last_sync_error_class"
+> &
+  Partial<Pick<CaptureConnection, "concern">>;
 
 /** Whether a service is connected at all: set up, and neither removed nor
  *  expired. A failing sync still counts, and so does an `error` row, because the
@@ -248,7 +296,11 @@ export function serviceHealth(service: ServiceFacts): ConnectorHealth {
     case "disconnected":
       return "not_connected";
     case "connected":
-      return service.last_sync_error_class ? "needs_attention" : "up_to_date";
+      return service.last_sync_error_class ||
+        service.concern === "notes_grant_missing" ||
+        service.concern === "notes_account_mismatch"
+        ? "needs_attention"
+        : "up_to_date";
     default:
       return "needs_attention";
   }
@@ -256,11 +308,13 @@ export function serviceHealth(service: ServiceFacts): ConnectorHealth {
 
 /** The account's word. A broken service outranks a running import: the import
  *  shows its own progress, and the reconnect is what the member has to do. A
- *  grant too narrow to send or to book counts as broken, as its row says. */
+ *  grant too narrow to send, to book or to read notes counts as broken, as its
+ *  row says. */
 export function accountHealth(
-  account: Pick<ConnectionAccount, "mail" | "calendar">,
+  account: Pick<ConnectionAccount, "mail" | "calendar"> &
+    Partial<Pick<ConnectionAccount, "notes">>,
 ): ConnectorHealth {
-  const services = [account.mail, account.calendar]
+  const services = [account.mail, account.calendar, account.notes ?? null]
     .filter((service) => service !== null)
     .filter((service) => service.status !== "disconnected");
   if (services.length === 0) return "not_connected";
@@ -269,8 +323,7 @@ export function accountHealth(
     return (
       health === "needs_reconnect" ||
       health === "needs_attention" ||
-      missingSendGrant(service) ||
-      missingCalendarWriteGrant(service)
+      missingGrant(service)
     );
   });
   if (broken) return "needs_attention";

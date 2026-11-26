@@ -16,6 +16,8 @@ import { createPortal } from "react-dom";
 import { isImeCommit } from "../lib/imecommit";
 import { coveredByLayer } from "./dialogfocus";
 import { useHoverIntent } from "./hoverintent";
+import { hidesLines } from "./lineclamp";
+import { useTopLayer } from "./toplayer";
 import "./tooltip.css";
 
 // The gap between the anchor's box and the tip, and the margin the tip keeps
@@ -127,13 +129,27 @@ function useTipFrame(
 
 // A tip is worth showing only for a string the row could not fit. A name the
 // reader can already read in full needs no tip. A string drawn in parts (an
-// address's mailbox and domain) is cut when any part is.
+// address's mailbox and domain) is cut when any part is. Text drawn for a
+// screen reader alone (`sr-only`) is never on screen, so it is never cut.
 function clipped(element: Element | null): boolean {
   return (
     element !== null &&
+    !element.classList.contains("sr-only") &&
     (element.scrollWidth > element.clientWidth ||
+      clampedLines(element) ||
       Array.from(element.children).some(clipped))
   );
+}
+
+// Asks for the clamp itself: a box under `overflow: visible` draws text taller
+// than itself whole.
+function clampedLines(element: Element): boolean {
+  if (!hidesLines(element)) {
+    return false;
+  }
+  const lines =
+    getComputedStyle(element).getPropertyValue("-webkit-line-clamp");
+  return lines !== "" && lines !== "none";
 }
 
 /** A control's own name is always worth showing: it is not on screen at all. */
@@ -184,6 +200,16 @@ export function useTruncationTooltip<T extends HTMLElement = HTMLElement>(
 }
 
 /**
+ * `useTruncationTooltip` for an anchor that wraps its own control, such as a
+ * link. Focus on that control raises the tip, so the anchor takes no tab stop.
+ */
+export function useTruncationTooltipAround<T extends HTMLElement = HTMLElement>(
+  text: string,
+): Tooltip<T> {
+  return useTip<T>(text, clipped, false);
+}
+
+/**
  * A control's name, on hover and on focus, for a control that cannot draw it.
  *
  * The icon-only button is the case: `aria-label` carries the name to a screen
@@ -206,11 +232,14 @@ export function useTooltip<T extends HTMLElement = HTMLElement>(
  *
  * Always worth showing, and the anchor takes a tab stop. A figure is not a
  * control, so without one the exact amount is reachable by pointer only.
+ * With `tabStop` false only the pointer raises it, so the anchor carries the
+ * text as its description.
  */
 export function useDetailTooltip<T extends HTMLElement = HTMLElement>(
   text: string,
+  tabStop = true,
 ): Tooltip<T> {
-  return useTip<T>(text, always, true);
+  return useTip<T>(text, always, tabStop);
 }
 
 /**
@@ -264,6 +293,7 @@ function useTip<T extends HTMLElement>(
   const anchor = useRef<T | null>(null);
   const box = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
+  useTopLayer(box, open);
   // Whether the text is clipped AT REST, which is a different question from
   // whether to show the tip now: this one decides whether the element is worth
   // a tab stop, and it has to be answered before anybody reaches it.
@@ -272,10 +302,8 @@ function useTip<T extends HTMLElement>(
   const close = useCallback(() => setOpen(false), []);
   const frame = useTipFrame(anchor, box, open, close);
 
-  // Measured after every render rather than when `text` changes: the width the
-  // string has to fit in moves for reasons this hook never sees — a rail that
-  // narrowed, a sibling badge that appeared — and re-reading it is one property
-  // read. Setting the same answer twice is a no-op, so this cannot loop.
+  // Measured after every render, not when `text` changes: the room for the text
+  // moves with things this hook never sees. Setting the same answer is a no-op.
   useLayoutEffect(() => {
     if (earnsTabStop) {
       setReachable(worthShowing(anchor.current));
@@ -286,9 +314,27 @@ function useTip<T extends HTMLElement>(
     if (!earnsTabStop) {
       return;
     }
-    const measure = () => setReachable(worthShowing(anchor.current));
+    let live = true;
+    const measure = () => {
+      if (live) setReachable(worthShowing(anchor.current));
+    };
+    // A late web font can rewrap the text with no resize and no render.
+    document.fonts?.ready.then(measure, measure);
     globalThis.addEventListener("resize", measure);
-    return () => globalThis.removeEventListener("resize", measure);
+    // A narrower column or a folded rail resizes the box with no render here:
+    // a list table's rows do not re-render on a width change.
+    const boxResized =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(measure);
+    if (anchor.current) {
+      boxResized?.observe(anchor.current);
+    }
+    return () => {
+      live = false;
+      globalThis.removeEventListener("resize", measure);
+      boxResized?.disconnect();
+    };
   }, [earnsTabStop, worthShowing]);
 
   // Which of the two ways the tip is up matters to the Escape key alone.
@@ -339,6 +385,7 @@ function useTip<T extends HTMLElement>(
             className={frame ? "tooltip" : "tooltip tooltip-unmeasured"}
             id={id}
             ref={box}
+            popover="manual"
             role="tooltip"
             // Only the MEASURED placement is inline, because only it is a
             // number the render worked out; the state before it is a class.

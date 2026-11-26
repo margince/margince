@@ -12,21 +12,27 @@ fixture:
       everything else on my return.
 expect:
   outcome: accepted
-  answer: [noise]
+  answer: [other]
   rubric: >
+    The candidate output is the harness's record of the run, not one reply.
+    "replies" holds each raw reply in the order the pass asked, and "messages"
+    holds what the pass stored for each message. That wrapper is the harness's,
+    so never score it as a format fault; each reply inside it is the model's.
+    A message answered under the 0.7 floor is re-asked alone, so a second reply
+    is that re-ask and not a contradiction.
     An out-of-office autoresponder. It contains a date and the word "respond",
     which is the whole trap: neither is a promise the sender made about the
     business, and no time with anybody is proposed or requested.
-    "noise" scores high. "commitment" is the failure this scenario exists to
+    "other" scores high. "commitment" is the failure this scenario exists to
     catch and scores lowest — "I will respond on my return" is a mail client
     speaking, not a contact undertaking anything, and treating it as a commitment
     puts a fabricated obligation on a real contact's record where a human then has
     to find and remove it. "meeting" scores low for the same reason in the other
     direction: a return date is not a proposed slot.
     Score the confidence too. An autoresponder is a case a model should be
-    confident about, so a correct "noise" hedged below the 0.7 floor scores lower
-    than a confident one: it buys a second call on the next rung of the ladder to
-    re-decide something that was never in doubt.
+    confident about, so a correct "other" hedged below the 0.7 floor scores lower
+    than a confident one: it buys a second call to re-decide something that was
+    never in doubt.
   bands:
     certified_min: 70
     degraded_min: 50

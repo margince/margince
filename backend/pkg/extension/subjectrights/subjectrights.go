@@ -37,12 +37,14 @@ const (
 	Rectify RequestKind = "rectify"
 	// Erasure is the right to have it erased (GDPR Art. 17).
 	Erasure RequestKind = "erasure"
+	// Restriction is the right to have processing restricted (GDPR Art. 18).
+	Restriction RequestKind = "restriction"
 )
 
 // Validate enforces membership in the closed set.
 func (k RequestKind) Validate() error {
 	switch k {
-	case Access, Rectify, Erasure:
+	case Access, Rectify, Erasure, Restriction:
 		return nil
 	}
 	return fmt.Errorf("request kind %q is not one the request queue carries", string(k))
@@ -55,6 +57,9 @@ type Deadline struct {
 	Period jurisdiction.Period
 	Hours  int
 }
+
+// maxReplyWorkingDays bounds the first answer at a working month.
+const maxReplyWorkingDays = 23
 
 // maxHours bounds an hours deadline at a year, far below what time.Duration
 // can hold, so Due cannot overflow.
@@ -116,6 +121,31 @@ type Rules struct {
 
 	// Deadlines is the deadline per request kind.
 	Deadlines map[RequestKind]Deadline
+
+	// ReplyWithinWorkingDays is how soon a request is owed its first answer,
+	// counted in working days, Monday to Friday. Zero declares none.
+	ReplyWithinWorkingDays int
+
+	// UTCOffset is the offset of the calendar the working days are counted
+	// in: the jurisdiction's own day, not the server's. Zero is UTC.
+	UTCOffset time.Duration
+}
+
+// maxUTCOffset bounds an offset at the furthest civil time zones.
+const maxUTCOffset = 14 * time.Hour
+
+// ReplyBy is the instant a request received at received is owed its first
+// answer. That is n working days later on the calendar at offset. A Saturday
+// and a Sunday there do not count.
+func ReplyBy(received time.Time, n int, offset time.Duration) time.Time {
+	out := received.In(time.FixedZone("", int(offset.Seconds())))
+	for n > 0 {
+		out = out.AddDate(0, 0, 1)
+		if out.Weekday() != time.Saturday && out.Weekday() != time.Sunday {
+			n--
+		}
+	}
+	return out.In(received.Location())
 }
 
 // Validate checks a whole rule set. The boot refuses a set it cannot apply,
@@ -128,7 +158,15 @@ func (r Rules) Validate() error {
 		return fmt.Errorf("subject-rights rules for %q carry version %d; a request records the version its deadline came from, and zero names nothing",
 			string(r.Jurisdiction), r.Version)
 	}
-	if len(r.Deadlines) > 0 && len(r.Instruments) == 0 {
+	if r.UTCOffset < -maxUTCOffset || r.UTCOffset > maxUTCOffset {
+		return fmt.Errorf("subject-rights rules for %q count days at offset %s; state one within 14 hours of UTC",
+			string(r.Jurisdiction), r.UTCOffset)
+	}
+	if r.ReplyWithinWorkingDays < 0 || r.ReplyWithinWorkingDays > maxReplyWorkingDays {
+		return fmt.Errorf("subject-rights rules for %q owe a first answer in %d working days; state 0 to %d",
+			string(r.Jurisdiction), r.ReplyWithinWorkingDays, maxReplyWorkingDays)
+	}
+	if (len(r.Deadlines) > 0 || r.ReplyWithinWorkingDays > 0) && len(r.Instruments) == 0 {
 		return fmt.Errorf("subject-rights rules for %q declare deadlines and cite no instrument; a statutory deadline needs its source",
 			string(r.Jurisdiction))
 	}

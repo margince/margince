@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -199,7 +200,7 @@ func TestAColleaguesMeetingWithOutsideGuestsIsFiledOnGuestsWhoArriveLater(t *tes
 		t.Errorf("%d rows for the invitation mail, want 1 beside the meeting", got)
 	}
 
-	store := contacts.NewStore(e.DB())
+	store := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx)
 	ctx := contactCreator(e)
 	var arrived []ids.ContactID
 	for _, g := range lateGuests {

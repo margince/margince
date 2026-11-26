@@ -24,6 +24,21 @@ export function isEntityKind(kind: string): kind is EntityKind {
   return ROUTABLE_KINDS.has(kind);
 }
 
+// A kind an extension declared, spelled `ext:<unit>:<kind>`. The unit is a unit
+// name (hyphen-joined lower-case segments) and the kind starts with a letter.
+// The grammar is the database CHECK's; which pairs exist is the server's to say
+// (`useRecordKindDirectory`). Such a kind has no record page yet, so it is not
+// an EntityKind and `recordRoute` names nothing for it.
+export type ExtensionEntityKind = `ext:${string}:${string}`;
+
+const EXTENSION_KIND = /^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$/;
+
+export function isExtensionEntityKind(
+  kind: string,
+): kind is ExtensionEntityKind {
+  return EXTENSION_KIND.test(kind);
+}
+
 export type EntityDescriptor = {
   route: (id: string) => Route;
 };

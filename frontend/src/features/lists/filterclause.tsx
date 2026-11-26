@@ -19,6 +19,7 @@ import {
 } from "../../lib/filterdata";
 import {
   type FilterOp,
+  isFilterOp,
   isGroup,
   type Leaf,
   type LeafValue,
@@ -27,33 +28,10 @@ import {
   removeNode,
   replaceNode,
 } from "../../lib/segmentpredicate";
+import { carriedValue, emptyValueFor } from "./filtercarry";
 import { ownLeaf } from "./filterproposal";
 import { operatorKey } from "./filtersentence";
 import { ValueControl } from "./filtervalue";
-
-/**
- * The value a clause starts with when its field or operator changes.
- *
- * It is deliberately the EMPTY one for its shape rather than a guess: an operand
- * this screen invented would be a filter the human did not write, and the count
- * would move before they had said anything. `isComplete` then holds the preview
- * back until they fill it in, which is the whole reason an empty value is safe to
- * put in the tree.
- *
- * A boolean operand, on `exists` or a yes/no field, is the exception: its
- * two-way control always shows one arm pressed, and every boolean is complete.
- * So it starts at `true`, the arm shown, and the row never shows a choice the
- * tree does not hold.
- */
-function emptyValueFor(
-  op: FilterOp,
-  type: VocabularyField["type"] | undefined,
-): LeafValue {
-  if (op === "in") {
-    return [];
-  }
-  return op === "exists" || type === "boolean" ? true : "";
-}
 
 /**
  * One picker group as options, in the order a reader scans them: by the word
@@ -70,18 +48,12 @@ function labelledInOrder(
     .sort((a, b) => forReader(a.label, b.label, locale));
 }
 
-/** A new clause starts on the vocabulary's first field, a reader picks from there. */
-export function firstClause(fields: readonly VocabularyField[]): Node {
-  // A place is a poor start for a blank clause, so a distance field comes last.
-  const first = fields.find((f) => f.type !== "distance") ?? fields[0];
-  if (!first) {
-    // A resource with no filterable field cannot happen through this screen —
-    // the vocabulary read 404s rather than answering an empty set — but the tree
-    // must still be a valid node if it ever did.
-    return newLeaf("", "eq", "");
-  }
-  const op = (first.operators[0] ?? "eq") as FilterOp;
-  return newLeaf(first.name, op, emptyValueFor(op, first.type));
+/**
+ * A new clause names no field until the reader picks one. `isComplete` holds a
+ * fieldless leaf back, so it is never sent and never counts as a filter.
+ */
+export function firstClause(): Node {
+  return newLeaf("", "eq", "");
 }
 
 // Deliberately not the group's props: a clause has no children, so depth would
@@ -146,7 +118,7 @@ export function ClauseRow({
   const operatorOptions: SelectOption[] = (chosen?.operators ?? []).map(
     (candidate) => ({
       value: candidate,
-      label: t(operatorKey(candidate as FilterOp, chosen?.type ?? "text")),
+      label: t(operatorKey(candidate, chosen)),
     }),
   );
 
@@ -165,17 +137,28 @@ export function ClauseRow({
 
   const retype = (nextField: string) => {
     const next = fields.find((f) => f.name === nextField);
-    // The operator may not survive the move — a date has no `contains` — so it
-    // falls back to the new field's first admitted one rather than staying and
-    // being refused.
-    const keptOp = next?.operators.includes(op)
-      ? op
-      : ((next?.operators[0] ?? "eq") as FilterOp);
+    // The operator may not survive the move: a date has no `contains`. Then,
+    // or on a clause that had no field yet, it takes the new field's first.
+    const keptOp =
+      field !== "" && next?.operators.includes(op)
+        ? op
+        : (next?.operators[0] ?? "eq");
     edit((found) => ({
       ...found,
       field: nextField,
       op: keptOp,
       value: emptyValueFor(keptOp, next?.type),
+    }));
+  };
+
+  const reop = (nextOp: string) => {
+    if (!isFilterOp(nextOp)) {
+      return;
+    }
+    edit((found) => ({
+      ...found,
+      op: nextOp,
+      value: carriedValue(found.op, nextOp, found.value, chosen?.type),
     }));
   };
 
@@ -192,46 +175,50 @@ export function ClauseRow({
         aria-label={t("filters.field")}
         placeholder={t("filters.choosePlaceholder")}
       />
-      {chosen?.custom && <Badge>{t("filters.customBadge")}</Badge>}
-      <Select
-        options={operatorOptions}
-        value={op}
-        onChange={(nextOp) =>
-          edit((found) => ({
-            ...found,
-            op: nextOp as FilterOp,
-            value: emptyValueFor(nextOp as FilterOp, chosen?.type),
-          }))
-        }
-        aria-label={t("filters.operator")}
-      />
-      <ValueControl
-        type={chosen?.type ?? "text"}
-        references={chosen?.references}
-        options={chosen?.options}
-        currency={chosen?.currency}
-        field={chosen?.name}
-        op={op}
-        value={value}
-        onChange={(nextValue) =>
-          edit((found) => ({ ...found, value: nextValue }))
-        }
-      />
+      {field !== "" && (
+        <>
+          {chosen?.custom && <Badge>{t("filters.customBadge")}</Badge>}
+          <Select
+            options={operatorOptions}
+            value={op}
+            onChange={reop}
+            aria-label={t("filters.operator")}
+          />
+          {/* A new field starts its value control afresh, typed text included. */}
+          <ValueControl
+            key={field}
+            type={chosen?.type ?? "text"}
+            references={chosen?.references}
+            options={chosen?.options}
+            currency={chosen?.currency}
+            field={chosen?.name}
+            op={op}
+            value={value}
+            onChange={(nextValue) =>
+              edit((found) => ({ ...found, value: nextValue }))
+            }
+          />
+        </>
+      )}
       {proposed && <Badge tone="ai">{t("filters.proposed")}</Badge>}
       <Button
         variant="ghost"
         iconOnly
-        aria-label={t("filters.removeClause", {
-          field: fieldLabel(
-            chosen ?? {
-              name: field,
-              type: "text",
-              operators: [],
-              custom: false,
-            },
-            t,
-          ),
-        })}
+        aria-label={
+          field === ""
+            ? t("filters.removeEmptyClause")
+            : t("filters.removeClause", {
+                field: fieldLabel(
+                  chosen ?? {
+                    name: field,
+                    type: "text",
+                    operators: [],
+                    custom: false,
+                  },
+                  t,
+                ),
+              })
+        }
         onClick={() => onChange(removeNode(tree, leafID))}
       >
         <X aria-hidden="true" />

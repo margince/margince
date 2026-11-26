@@ -34,6 +34,7 @@ func siteReadField() crmcontracts.CompanyProfileField {
 		SourceUrl:       new("https://voltaq.example/about"),
 		Confidence:      new(float32(0.9)),
 		UpdatedAt:       assessedAt,
+		Version:         new(int64(4)),
 	}
 }
 
@@ -65,6 +66,9 @@ func TestASiteReadReceiptCarriesTheURLAndTheSpanItWasReadFrom(t *testing.T) {
 	}
 	if got.Gaps != nil {
 		t.Errorf("gaps = %v, want none — this row carries everything its kind owes", *got.Gaps)
+	}
+	if got.ClaimVersion == nil || *got.ClaimVersion != 4 {
+		t.Errorf("claim version = %v, want the stored row's version 4", got.ClaimVersion)
 	}
 	if got.Confidence == nil {
 		t.Error("a machine-read value carries the model's confidence and it is missing")
@@ -212,11 +216,15 @@ func TestAFactReceiptCarriesItsOwnProvenance(t *testing.T) {
 		SourceUrl:       new("https://voltaq.example/tech"),
 		Confidence:      new(float32(0.8)),
 		UpdatedAt:       assessedAt,
+		Version:         new(int64(7)),
 	}}}
 
 	got, err := factEvidence(in, *id)
 	if err != nil {
 		t.Fatalf("evidence: %v", err)
+	}
+	if got.ClaimVersion == nil || *got.ClaimVersion != 7 {
+		t.Errorf("claim version = %v, want the stored fact's version 7", got.ClaimVersion)
 	}
 	if got.EntityType != crmcontracts.ClaimEvidenceEntityTypeFact {
 		t.Errorf("entity type = %q, want fact", got.EntityType)
@@ -267,6 +275,10 @@ func (s stubFacts) GetCompany(
 	if s.in.Industry != "" {
 		industry := crmcontracts.CompanyIndustry(s.in.Industry)
 		company.Industry = &industry
+	}
+	if s.in.SizeBand != "" {
+		band := crmcontracts.CompanySizeBand(s.in.SizeBand)
+		company.SizeBand = &band
 	}
 	return company, nil
 }

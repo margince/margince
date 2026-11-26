@@ -13,7 +13,14 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
+// CheckChanges refuses a removal or notice change the deprecation policy does not allow.
 func CheckChanges(before, after *openapi3.T, release string, at time.Time) error {
+	return CheckChangesRatified(before, after, release, at, nil)
+}
+
+// CheckChangesRatified is CheckChanges where a maintainer ratified removing
+// the named operations without a published notice.
+func CheckChangesRatified(before, after *openapi3.T, release string, at time.Time, ratified RatifiedRemovals) error {
 	oldNotices, err := Notices(before)
 	if err != nil {
 		return err
@@ -30,6 +37,9 @@ func CheckChanges(before, after *openapi3.T, release string, at time.Time) error
 			key := method + " " + httpserver.BaseURL + path
 			nextPath := after.Paths.Value(path)
 			if nextPath == nil || nextPath.GetOperation(method) == nil {
+				if _, ok := ratified[key]; ok {
+					continue
+				}
 				if !op.Deprecated {
 					return fmt.Errorf("%s: deprecate the operation in a published release before removal", key)
 				}

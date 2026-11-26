@@ -1,0 +1,15 @@
+{
+  "tool": "change_my_settings",
+  "action": "reject_voice_version",
+  "verb": "reject_voice_version",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

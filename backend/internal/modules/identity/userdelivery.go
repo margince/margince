@@ -56,6 +56,9 @@ type Delivery struct {
 	Weekly       *string
 	QuietDay     *bool
 	HourLocal    *int
+
+	// ClearTeam removes TeamID on a save; a nil TeamID there means "leave it".
+	ClearTeam bool
 }
 
 // MyDelivery answers the caller's own delivery settings.
@@ -109,7 +112,7 @@ func (s *Service) SaveMyDelivery(ctx context.Context, in Delivery) (Delivery, er
 			out.RoutineTime = &chosen
 		}
 		if in.TeamID != nil || (in.Scope != nil && out.ScopeChoice() != RoutinePersonal) {
-			if err := validateDeliveryTeam(ctx, tx, out); err != nil {
+			if err := checkChosenTeam(ctx, tx, out); err != nil {
 				return err
 			}
 		}
@@ -125,7 +128,7 @@ func (s *Service) SaveMyDelivery(ctx context.Context, in Delivery) (Delivery, er
 		patch.Set("quiet_day_notice", before.QuietDay, out.QuietDay)
 		patch.Set("delivery_hour_local", before.HourLocal, out.HourLocal)
 		patch.Set("routine_mail_scope", before.Scope, out.Scope)
-		patch.Set("routine_mail_team_id", before.TeamID, out.TeamID)
+		patch.Set(fieldRoutineMailTeam, before.TeamID, out.TeamID)
 		patch.Set("weekly_delivery_day", before.WeeklyDay, out.WeeklyDay)
 		patch.Set("combine_routine_email", before.CombineRoutine, out.CombineRoutine)
 		patch.Set("routine_delivery_time", before.RoutineTime, out.RoutineTime)
@@ -194,6 +197,9 @@ func checkDelivery(in Delivery) error {
 	if in.WeeklyDay != nil && (*in.WeeklyDay < 1 || *in.WeeklyDay > 7) {
 		return &values.ParseError{Field: "weekly_delivery_day", Code: "out_of_range", Message: "choose a weekday from 1 to 7"}
 	}
+	if in.ClearTeam && in.TeamID != nil {
+		return &values.ParseError{Field: "clear_routine_mail_team", Code: "mutually_exclusive", Message: "send a team or clear it, not both"}
+	}
 
 	return nil
 }
@@ -227,6 +233,13 @@ func merged(before, patch Delivery) Delivery {
 	}
 	if patch.TeamID != nil {
 		out.TeamID = patch.TeamID
+	}
+	if patch.ClearTeam {
+		out.TeamID = nil
+		if out.ScopeChoice() != RoutinePersonal {
+			personal := RoutinePersonal
+			out.Scope = &personal
+		}
 	}
 	if patch.WeeklyDay != nil {
 		out.WeeklyDay = patch.WeeklyDay
@@ -272,7 +285,7 @@ func deliveryImage(d Delivery) map[string]any {
 		"quiet_day_notice":       d.QuietDay,
 		"delivery_hour_local":    d.HourLocal,
 		"routine_mail_scope":     d.Scope,
-		"routine_mail_team_id":   d.TeamID,
+		fieldRoutineMailTeam:     d.TeamID,
 		"weekly_delivery_day":    d.WeeklyDay,
 		"combine_routine_email":  d.CombineRoutine,
 		"routine_delivery_time":  d.RoutineTime,
@@ -305,7 +318,7 @@ func deliveryChanges(before, after Delivery) []string {
 		changed = append(changed, "routine_mail_scope")
 	}
 	if !same(before.TeamID, after.TeamID) {
-		changed = append(changed, "routine_mail_team_id")
+		changed = append(changed, fieldRoutineMailTeam)
 	}
 	if !same(before.WeeklyDay, after.WeeklyDay) {
 		changed = append(changed, "weekly_delivery_day")

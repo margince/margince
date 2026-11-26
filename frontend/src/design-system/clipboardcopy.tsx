@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useT } from "../i18n";
 import { Callout } from "./callout";
+import "./clipboardcopy.css";
 import { IconAction } from "./iconaction";
 
 type CopySource =
@@ -164,11 +165,13 @@ export function CopyableText({
 export function CopyAction({
   text,
   labels,
+  onCopied,
 }: Readonly<{
   text: string;
   labels: Readonly<{ copy: string; copied: string; remedy: string }>;
+  onCopied?: () => void;
 }>) {
-  const copy = useClipboardCopy(text, labels);
+  const copy = useClipboardCopy(text, labels, onCopied);
   return (
     <span className="copy-action">
       <IconAction

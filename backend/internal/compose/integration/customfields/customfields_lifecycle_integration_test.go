@@ -183,6 +183,102 @@ func TestCustomFieldRetire_PreservesColumnAndValues(t *testing.T) {
 	}
 }
 
+func TestCustomFieldCreate_OntoARetiredFieldsName_TakesAFreeColumnAndLeavesTheOldDataAlone(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
+	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
+	spec := customfieldsmod.FieldSpec{Object: "contact", Label: "Deal Size", Type: customfieldsmod.TypeText, Source: "manual"}
+
+	first, err := svc.Create(ctx, spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact := e.SeedContact(t, "Ada", &e.Rep1)
+	e.WsExec(t, `UPDATE contact SET cf_deal_size = 'big' WHERE id = $1`, contact)
+	if _, err := svc.Retire(ctx, ids.UUID(first.Id)); err != nil {
+		t.Fatal(err)
+	}
+
+	second, err := svc.Create(ctx, spec)
+	if err != nil {
+		t.Fatalf("a new field may take a retired field's name: %v", err)
+	}
+	if second.Slug != first.Slug || *second.ColumnName != "cf_deal_size_2" {
+		t.Fatalf("the new field keeps the slug and takes a free column, got slug=%q column=%q", second.Slug, *second.ColumnName)
+	}
+	if !columnOnTable(t, owner, "contact", "cf_deal_size") || !columnOnTable(t, owner, "contact", "cf_deal_size_2") {
+		t.Fatal("the retired field keeps its column and the new one gets its own")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM contact WHERE cf_deal_size = 'big' AND cf_deal_size_2 IS NULL`); n != 1 {
+		t.Fatal("the retired field keeps its values and the new field starts empty")
+	}
+	if n := e.WsCount(t,
+		`SELECT count(*) FROM custom_field WHERE object = 'contact' AND slug = 'deal_size' AND status <> 'retired' AND id = $1`,
+		ids.UUID(second.Id)); n != 1 {
+		t.Fatal("a lookup of the slug among live fields must find the new field")
+	}
+	active, err := svc.ActiveColumns(ctx, "contact")
+	if err != nil || len(active) != 1 || active[0].Name != "cf_deal_size_2" {
+		t.Fatalf("only the new field is written to: %+v, %v", active, err)
+	}
+	filterable, err := svc.FilterableColumns(ctx, "contact")
+	if err != nil || len(filterable) != 2 {
+		t.Fatalf("a filter may still name the retired column: %+v, %v", filterable, err)
+	}
+
+	for _, label := range []string{"Deal Size", "deal size", "Deal-Size"} {
+		again := spec
+		again.Label = label
+		if _, err := svc.Create(ctx, again); !errors.Is(err, apperrors.ErrConflict) {
+			t.Fatalf("a third %q while the second is live must conflict, got %v", label, err)
+		}
+	}
+
+	if _, err := svc.Retire(ctx, ids.UUID(second.Id)); err != nil {
+		t.Fatal(err)
+	}
+	third, err := svc.Create(ctx, spec)
+	if err != nil {
+		t.Fatalf("a field retired twice leaves the name free again: %v", err)
+	}
+	if *third.ColumnName != "cf_deal_size_3" {
+		t.Fatalf("the third field takes the next free column, got %q", *third.ColumnName)
+	}
+}
+
+func TestCustomFieldRename_OntoARetiredFieldsName_IsAllowedButOntoALiveOneIsRefused(t *testing.T) {
+	e := integration.Setup(t)
+	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
+	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
+
+	old, err := svc.Create(ctx, dateSpec("Renewal date"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Retire(ctx, ids.UUID(old.Id)); err != nil {
+		t.Fatal(err)
+	}
+	live, err := svc.Create(ctx, dateSpec("Signed date"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	renamed, err := svc.Update(ctx, ids.UUID(live.Id), renameTo("Renewal date"), nil)
+	if err != nil {
+		t.Fatalf("renaming onto a retired field's name is allowed: %v", err)
+	}
+	if renamed.Label != "Renewal date" {
+		t.Fatalf("label = %q, want the retired field's name", renamed.Label)
+	}
+	other, err := svc.Create(ctx, dateSpec("Closed date"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Update(ctx, ids.UUID(other.Id), renameTo("Renewal date"), nil); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("renaming onto a live field's name must conflict, got %v", err)
+	}
+}
+
 func TestCustomFieldSetOptions_RegeneratesTheCheck(t *testing.T) {
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
@@ -356,5 +452,27 @@ func TestCustomFieldRBAC_ReadGrantCannotChangeSchema(t *testing.T) {
 	}
 	if fields, _, err := svc.List(reader, customfieldsmod.ListInput{Object: "deal"}); err != nil || len(fields) != 1 {
 		t.Fatalf("the read grant lists the catalog: %v / %d rows", err, len(fields))
+	}
+}
+
+// Removing a choice changes records, so it needs the grant to update the
+// field's object as well as custom_field. Adding one changes no record.
+func TestRemovingAChoiceNeedsTheGrantToUpdateTheRecords(t *testing.T) {
+	e := integration.Setup(t)
+	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
+	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
+
+	created, err := svc.Create(ctx, customfieldsmod.FieldSpec{
+		Object: "deal", Label: "Deal channel", Type: customfieldsmod.TypePicklist,
+		Options: []string{"direct", "reseller"}, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.SetOptions(ctx, ids.UUID(created.Id), []string{"direct", "reseller", "marketplace"}); err != nil {
+		t.Fatalf("adding a choice without a deal grant: %v", err)
+	}
+	if _, err := svc.SetOptions(ctx, ids.UUID(created.Id), []string{"direct"}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("removing a choice without deal update answered %v, want permission denied", err)
 	}
 }

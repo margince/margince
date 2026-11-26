@@ -45,7 +45,7 @@ func TestTwoConcurrentVoidsOfOnePaymentWriteOneReversal(t *testing.T) {
 	// once both are waiting on the lock. A void that read the status before
 	// asking for the lock has by then read `paid` exactly like its twin.
 	ctx := context.Background()
-	hold, err := OwnerConn(t).Begin(ctx)
+	hold, err := FreshOwnerConn(t).Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

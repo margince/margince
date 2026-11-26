@@ -67,7 +67,7 @@ func TestTheNearTaskCarriesTheDealsGrounds(t *testing.T) {
 	due := rankInstant.AddDate(0, 0, 2)
 	task := classifyTask(crmcontracts.AttentionItem{Id: "t", Source: "task", Subject: subject, DueAt: &due}, rankInstant)
 
-	rows := dropDealsAlreadyInHand([]ranked{risk, task}, rankInstant)
+	rows := dropDealsAlreadyInHand([]ranked{risk, task}, rankInstant, nil)
 
 	if len(rows) != 1 || rows[0].item.Source != sourceTask {
 		t.Fatalf("rows = %+v, want the task alone", rows)

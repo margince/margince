@@ -1,0 +1,149 @@
+{
+  "task": "rewrite",
+  "provider": "gemini",
+  "served_model": "gemini-3.1-flash-lite",
+  "env_class": "cloud_frontier",
+  "prompt_version": "pe52ee3396c31037c14ab99575cac80d8",
+  "corpus_version": "v1",
+  "verdict": "not_supported",
+  "runs": 27,
+  "passed": 16,
+  "reliability": 0.5925925925925926,
+  "reported_accepted": 16,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 11,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": null,
+  "context_owed": 0,
+  "judge_score_p50": 30,
+  "judge_score_min": 12,
+  "latency_p50": 964,
+  "latency_p95": 1240,
+  "mean_tokens": 870,
+  "mean_tokens_in": 799,
+  "mean_tokens_out": 70,
+  "mean_cached_tokens": 0,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 304,
+  "judge_served_model": "claude-sonnet-5-5",
+  "judge_provider": "claude_cli",
+  "self_judged": false,
+  "served_identity_source": "response",
+  "wire_rule": "gemini-wire-5",
+  "ran_at": "2026-11-25T05:10:03Z",
+  "scenarios": [
+    {
+      "scenario": "rewrite_email_shorter_keeps_the_ask",
+      "site": "rewrite",
+      "stamp": "64ad9017a663350358ad6b562b915edbbdd1e43a0d8c78ab0bd36f21f9b9bf11a7e4bd52df1c5e55b375c5f0457500d4db6cb9ad699d25b5f86f21c4bb7bdf6231fd436c613ad185d8e1e368bef2ad9ba93b031d0b3428d23dd269b896f97502",
+      "verdict": "supported_degraded",
+      "judge_band": "supported_degraded",
+      "runs": 9,
+      "passed": 9,
+      "judge_scores": [
+        81,
+        81,
+        80,
+        61,
+        82,
+        62,
+        80,
+        82,
+        72
+      ],
+      "bands": {
+        "certified_min": 80,
+        "degraded_min": 60,
+        "floor": 50
+      },
+      "context_owed": 0,
+      "reported_accepted": 9,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "rewrite_german_note_stays_german",
+      "site": "rewrite",
+      "stamp": "55c04827b510f114a6cc7998fc22ef6750260c699cca124f373144ce1380b51db008f9755fac6f914b3854855e887f5040d2e00c79b3f8152a3323d0e1fb295b7cd728d51a0f08904771015e075969408ca2c60d92868d6f9deb3ceb92508aa8",
+      "verdict": "not_supported",
+      "judge_band": "not_supported",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        30,
+        42,
+        57
+      ],
+      "bands": {
+        "certified_min": 80,
+        "degraded_min": 60,
+        "floor": 50
+      },
+      "context_owed": 0,
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "rewrite_instruction_in_note_is_data",
+      "site": "rewrite",
+      "stamp": "c855b614d097d39228d4e4cdc0741be71bdfba85d75f991c67cc49764f1c78505304b51c5f8232159e5ff935428f72826ce5d7870e707c2786a96d54c5d3eff4ba25e6160d1020e522431bf832b3149040f08b38bd162feb2473ec6c8d32a158",
+      "verdict": "not_supported",
+      "judge_band": "not_supported",
+      "runs": 3,
+      "passed": 0,
+      "judge_scores": [
+        22,
+        22,
+        22
+      ],
+      "bands": {
+        "certified_min": 80,
+        "degraded_min": 60,
+        "floor": 50
+      },
+      "context_owed": 0,
+      "reported_accepted": 0,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 3,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "rewrite_task_keeps_names_and_dates",
+      "site": "rewrite",
+      "stamp": "3156c0421343f8ff01738dbfcbda088e20ceeaf5204eff881d540e62526405cd3f639e114ae9d82a3189b3bb1efc9ec0f2b17b26cb349cce1d4ced1e28dc3578eb8fb234aa094030c7886ea760b408529b49e5ad31e8b2b072bd00be58c09d2a",
+      "verdict": "not_supported",
+      "judge_band": "not_supported",
+      "runs": 12,
+      "passed": 4,
+      "judge_scores": [
+        30,
+        12,
+        28,
+        20,
+        15,
+        22,
+        22,
+        19,
+        30,
+        20,
+        30,
+        22
+      ],
+      "bands": {
+        "certified_min": 80,
+        "degraded_min": 60,
+        "floor": 50
+      },
+      "context_owed": 0,
+      "reported_accepted": 4,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 8,
+      "reported_abstained": 0
+    }
+  ]
+}

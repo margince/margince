@@ -26,7 +26,7 @@ func TestHomeAndDigestApprovalCountsAreExactPastTheScanCap(t *testing.T) {
 	staged := approvals.PendingScanCap + 5
 	for range staged {
 		deal := e.SeedDeal(t, "Review date", pipeline, open, &e.AdminUser)
-		proposal, err := json.Marshal(deals.CloseDateCorrection{DealID: ids.From[ids.DealKind](deal), ExpectedCloseDate: "2026-12-01", Basis: "Review the date"})
+		proposal, err := json.Marshal(deals.CloseDateCorrection{DealID: ids.From[ids.DealKind](deal), ExpectedCloseDate: closeDateAhead(t), Basis: "Review the date"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -59,8 +59,8 @@ func TestHomeAndDigestApprovalCountsAreExactPastTheScanCap(t *testing.T) {
 	if err != nil || lane != paged {
 		t.Fatalf("Home lane count %d, pages hold %d: %v", lane, paged, err)
 	}
-	digest, err := newDigestReviewSource(e.Pool, svc)(e.Admin())
-	if err != nil || digest.ApprovalsPending != paged {
-		t.Fatalf("digest count %d, pages hold %d: %v", digest.ApprovalsPending, paged, err)
+	lanePage := attention.ApprovalQuery{Status: status, Limit: 9, RequestedForReader: true}
+	if rows, complete, err := (attentionApprovals{svc: svc}).ListWire(e.Admin(), lanePage); err != nil || complete || len(rows) != 9 {
+		t.Fatalf("a lane page of 9 from %d proposals is %d rows, complete %v (%v); want 9 and incomplete", paged, len(rows), complete, err)
 	}
 }

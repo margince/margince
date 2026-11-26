@@ -1,0 +1,6 @@
+{
+  "verb": "list_voice_profiles",
+  "checks": [
+    "voice_profile.read"
+  ]
+}

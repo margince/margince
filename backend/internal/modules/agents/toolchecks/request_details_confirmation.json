@@ -1,0 +1,12 @@
+{
+  "verb": "request_details_confirmation",
+  "checks": [
+    "activity.create",
+    "activity.read",
+    "contact.update"
+  ],
+  "takes": [
+    "contact",
+    "mail_contact"
+  ]
+}

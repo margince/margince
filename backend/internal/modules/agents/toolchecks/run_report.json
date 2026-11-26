@@ -1,0 +1,7 @@
+{
+  "verb": "run_report",
+  "checks": [
+    "activity.read",
+    "installation_settings.read"
+  ]
+}

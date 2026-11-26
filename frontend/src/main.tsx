@@ -18,10 +18,9 @@ import {
   reportError,
   startInstruments,
 } from "./lib/instruments";
-import { listenForInstall, registerServiceWorker } from "./lib/pwa";
+import { startPointerTarget } from "./lib/pointertarget";
 import { SPA_RELEASE } from "./lib/release";
 import { restoreReturnRoute } from "./lib/returnroute";
-import { parseHash } from "./lib/router";
 import { startTheme } from "./lib/theme";
 import "./app.css";
 
@@ -38,12 +37,11 @@ import "./app.css";
 // only while it is open — a tab nobody opened the menu in would otherwise stay
 // deaf to the switch.
 startTheme();
+// app.css lights the scrollbar of the element this marks.
+startPointerTarget();
 
 // Before the first render reads the address: a provider sign-in lands bare.
 restoreReturnRoute();
-
-listenForInstall();
-registerServiceWorker();
 
 // Extension instruments start before the first render, so an error in it is
 // theirs to see. The generated registry is untyped; it is annotated here.
@@ -58,12 +56,7 @@ if (!root) {
 async function mountApp(root: HTMLElement) {
   try {
     await Promise.all([
-      localeReady(
-        preferredLocale(),
-        parseHash(location.hash).screen === "analytics"
-          ? "essential"
-          : "complete",
-      ),
+      localeReady(preferredLocale(), "essential"),
       startupSessionReady(),
     ]);
   } catch (error: unknown) {
@@ -94,9 +87,7 @@ async function mountApp(root: HTMLElement) {
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <AppErrorBoundary>
-          <LocaleProvider
-            initialEssential={parseHash(location.hash).screen === "analytics"}
-          >
+          <LocaleProvider>
             <AppErrorBoundary>
               <AttentionProvider>
                 <ToastProvider>

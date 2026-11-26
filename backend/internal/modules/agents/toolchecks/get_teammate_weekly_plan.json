@@ -1,0 +1,11 @@
+{
+  "verb": "get_teammate_weekly_plan",
+  "checks": [
+    "scope:team",
+    "weekly_plan.read"
+  ],
+  "takes": [
+    "teammate_plan",
+    "user"
+  ]
+}

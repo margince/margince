@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { meFixture } from "../../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { CompanyContractsCard } from "./companycontracts";
 
 // margince#3286: the row menu offered Edit and Archive only. Renew, change
@@ -30,6 +30,7 @@ const ACTIVE = {
   captured_by: "human:u-1",
   status: "active",
   under_contract: true,
+  term_state: "in_force",
   auto_renew: false,
   value_basis: "total",
   version: 3,
@@ -41,14 +42,32 @@ const EXPIRED = { ...ACTIVE, id: "c-2", status: "expired" };
 const RENEWED_DEAL = { id: "d-1", name: "2025 renewal" };
 
 const GRANTED = meFixture({
-  allow: { contract: ["read", "create", "update", "delete"] },
+  allow: { ...READS_RECORDS, contract: ["read", "create", "update", "delete"] },
 });
 
 function stub(contracts: unknown[], me: unknown = GRANTED) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : String(input);
+      const asked = new URL(url, "https://test.local");
+      const method =
+        input instanceof Request ? input.method : (init?.method ?? "GET");
+      if (method === "GET" && asked.pathname === "/v1/records/references") {
+        return Response.json({
+          data:
+            asked.searchParams.get("kind") === "deal" &&
+            asked.searchParams.getAll("id").includes(RENEWED_DEAL.id)
+              ? [
+                  {
+                    id: RENEWED_DEAL.id,
+                    name: RENEWED_DEAL.name,
+                    archived: false,
+                  },
+                ]
+              : [],
+        });
+      }
       const body = url.includes("/me")
         ? me
         : url.includes("/documents")
@@ -82,7 +101,9 @@ describe("the contract row menu", () => {
     show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Contract actions" }),
+      await screen.findByRole("button", {
+        name: "Actions for Framework agreement 2024",
+      }),
     );
 
     expect(screen.getByRole("button", { name: "Renew" })).toBeTruthy();
@@ -92,13 +113,73 @@ describe("the contract row menu", () => {
     ).toBeTruthy();
   });
 
+  // A renewal starts with its predecessor's title, so the menus need more.
+  it("tells two menus of one title apart by number, else by start day", async () => {
+    stub([
+      { ...ACTIVE, id: "c-1", contract_number: "MSA-7" },
+      { ...ACTIVE, id: "c-2", starts_on: "2025-03-01" },
+    ]);
+    show(<CompanyContractsCard companyId="o-1" />);
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Actions for Framework agreement 2024, MSA-7",
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: /^Actions for Framework agreement 2024, .*2025/,
+      }),
+    ).toBeTruthy();
+  });
+
+  it("numbers menus still named alike by their place in the list", async () => {
+    stub([
+      { ...ACTIVE, id: "c-1" },
+      { ...ACTIVE, id: "c-2" },
+      { ...ACTIVE, id: "c-3", starts_on: "2025-03-01" },
+      { ...ACTIVE, id: "c-4", starts_on: "2025-03-01" },
+    ]);
+    show(<CompanyContractsCard companyId="o-1" />);
+
+    const named = (name: string | RegExp) =>
+      screen.getAllByRole("button", { name }).length;
+    await screen.findByRole("button", {
+      name: "Actions for Framework agreement 2024 (1)",
+    });
+    expect(named("Actions for Framework agreement 2024 (2)")).toBe(1);
+    expect(named(/^Actions for Framework agreement 2024, .*2025 \(1\)$/)).toBe(
+      1,
+    );
+    expect(named(/^Actions for Framework agreement 2024, .*2025 \(2\)$/)).toBe(
+      1,
+    );
+  });
+
+  it("gives every menu its own name, a title already ending in a number included", async () => {
+    stub([
+      { ...ACTIVE, id: "c-1", title: "Agreement" },
+      { ...ACTIVE, id: "c-2", title: "Agreement" },
+      { ...ACTIVE, id: "c-3", title: "Agreement (1)" },
+    ]);
+    show(<CompanyContractsCard companyId="o-1" />);
+
+    await screen.findByRole("button", { name: "Actions for Agreement (1)" });
+    const names = screen
+      .getAllByRole("button", { name: /^Actions for Agreement/ })
+      .map((menu) => menu.getAttribute("aria-label"));
+    expect(new Set(names).size).toBe(3);
+  });
+
   it("withholds change-status and cancel from a terminal agreement, but not renew", async () => {
     stub([EXPIRED]);
     const user = userEvent.setup();
     show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Contract actions" }),
+      await screen.findByRole("button", {
+        name: "Actions for Framework agreement 2024",
+      }),
     );
 
     // A terminal status has no valid transition out of it but superseded, and
@@ -121,7 +202,9 @@ describe("the contract row menu", () => {
     show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Contract actions" }),
+      await screen.findByRole("button", {
+        name: "Actions for Framework agreement 2024",
+      }),
     );
 
     // refuseRenewalOfTerminal (contract_lifecycle.go): the ONE status renewal
@@ -134,12 +217,17 @@ describe("the contract row menu", () => {
     // contract:update in one call — it both creates the successor and
     // supersedes the predecessor. A seat holding update alone would see every
     // press of Renew refused by the server.
-    stub([ACTIVE], meFixture({ allow: { contract: ["read", "update"] } }));
+    stub(
+      [ACTIVE],
+      meFixture({ allow: { ...READS_RECORDS, contract: ["read", "update"] } }),
+    );
     const user = userEvent.setup();
     show(<CompanyContractsCard companyId="o-1" />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Contract actions" }),
+      await screen.findByRole("button", {
+        name: "Actions for Framework agreement 2024",
+      }),
     );
 
     expect(screen.queryByRole("button", { name: "Renew" })).toBeNull();
@@ -150,12 +238,17 @@ describe("the contract row menu", () => {
   });
 
   it("offers no menu at all to a seat with no write grants", async () => {
-    stub([ACTIVE], meFixture({ allow: { contract: ["read"] } }));
+    stub(
+      [ACTIVE],
+      meFixture({ allow: { ...READS_RECORDS, contract: ["read"] } }),
+    );
     show(<CompanyContractsCard companyId="o-1" />);
 
     await screen.findByText("Framework agreement 2024");
     expect(
-      screen.queryByRole("button", { name: "Contract actions" }),
+      screen.queryByRole("button", {
+        name: "Actions for Framework agreement 2024",
+      }),
     ).toBeNull();
   });
 });
@@ -179,5 +272,38 @@ describe("the contract row's linked deal", () => {
     await screen.findByText("Framework agreement 2024");
     expect(screen.queryByText(RENEWED_DEAL.name)).toBeNull();
     expect(screen.queryByText("Deal")).toBeNull();
+  });
+});
+
+// An active agreement is out of contract both before its term starts and after
+// it ends. Only the ended one is a status change waiting on somebody.
+describe("the contract row's term", () => {
+  it("does not call an agreement that has not started ended", async () => {
+    stub([
+      {
+        ...ACTIVE,
+        starts_on: "2099-01-01",
+        under_contract: false,
+        term_state: "not_started",
+      },
+    ]);
+    show(<CompanyContractsCard companyId="o-1" />);
+
+    await screen.findByText("Framework agreement 2024");
+    expect(screen.queryByText("Term ended, status pending")).toBeNull();
+  });
+
+  it("says an active agreement whose term ended waits on its status", async () => {
+    stub([
+      {
+        ...ACTIVE,
+        ends_on: "2020-12-31",
+        under_contract: false,
+        term_state: "ended",
+      },
+    ]);
+    show(<CompanyContractsCard companyId="o-1" />);
+
+    expect(await screen.findByText("Term ended, status pending")).toBeTruthy();
   });
 });

@@ -13,13 +13,13 @@ package main
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
-// validate enforces the contract's own invariants: every tier a ladder
-// or degrade_to entry names must be declared in tiers, every task name
-// is a valid Go-identifier source, and on_budget_exhausted is one of the
-// two policies the runtime understands. Execution mode and exhaustion policy
-// are a closed pair: interactive tasks degrade, background tasks queue.
+// validate enforces the contract's own invariants. Every tier a ladder or
+// degrade_to entry names must be declared in tiers. Every task name is a valid
+// Go-identifier source. The execution mode is one of the two the runtime
+// understands, and it alone decides what a spent budget does.
 // Status and sites are a closed pair too: a shipped task owes at least one
 // uniquely named site of a known kind, a planned task owes none. A declared
 // company-context policy must be internally coherent.
@@ -73,20 +73,8 @@ func validateTask(name string, def taskDef, tierSet map[string]bool) error {
 			return fmt.Errorf("task %q: ladder names unknown tier %q", name, tier)
 		}
 	}
-	switch def.OnBudgetExhausted {
-	case "queue", "degrade":
-	default:
-		return fmt.Errorf("task %q: on_budget_exhausted must be \"queue\" or \"degrade\", got %q", name, def.OnBudgetExhausted)
-	}
 	switch def.ExecutionMode {
-	case "interactive":
-		if def.OnBudgetExhausted != "degrade" {
-			return fmt.Errorf("task %q: interactive execution_mode requires on_budget_exhausted \"degrade\"", name)
-		}
-	case "background":
-		if def.OnBudgetExhausted != "queue" {
-			return fmt.Errorf("task %q: background execution_mode requires on_budget_exhausted \"queue\"", name)
-		}
+	case "interactive", "background":
 	default:
 		return fmt.Errorf("task %q: execution_mode must be \"interactive\" or \"background\", got %q", name, def.ExecutionMode)
 	}
@@ -130,8 +118,37 @@ func validateTask(name string, def taskDef, tierSet map[string]bool) error {
 	if err := validateDecision(name, def); err != nil {
 		return err
 	}
+	if def.LatencyScalesWithInput && def.ExecutionMode != "interactive" {
+		return fmt.Errorf("task %q: latency_scales_with_input applies only to an interactive task, "+
+			"the only kind held to a time limit from certified latency", name)
+	}
+	if err := validateSubjectRestriction(name, def); err != nil {
+		return err
+	}
 	return def.CompanyContext.validate(name)
 }
+
+// validateSubjectRestriction holds the restriction posture: honour, or none
+// with the reason the task reads no contact's data.
+func validateSubjectRestriction(name string, def taskDef) error {
+	switch {
+	case def.SubjectRestriction == restrictionHonour && def.SubjectRestrictionReason == "":
+		return nil
+	case def.SubjectRestriction == restrictionHonour:
+		return fmt.Errorf("task %q: subject_restriction honour takes no subject_restriction_reason", name)
+	case def.SubjectRestriction == restrictionNone && strings.TrimSpace(def.SubjectRestrictionReason) == "":
+		return fmt.Errorf("task %q: subject_restriction none needs a subject_restriction_reason saying why it reads no contact's data", name)
+	case def.SubjectRestriction == restrictionNone:
+		return nil
+	}
+	return fmt.Errorf("task %q: subject_restriction must be %q or %q, got %q", name, restrictionHonour, restrictionNone, def.SubjectRestriction)
+}
+
+// The two restriction postures a task declares.
+const (
+	restrictionHonour = "honour"
+	restrictionNone   = "none"
+)
 
 // validateDecision refuses a decision form on a task that cannot carry one.
 // A decision attempt is a network call ahead of the ladder, and only a

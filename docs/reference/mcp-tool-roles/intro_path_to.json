@@ -1,0 +1,18 @@
+{
+  "tool": "read_relationships",
+  "action": "company_id",
+  "verb": "intro_path_to",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

@@ -4,14 +4,34 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { api } from "../../api/client";
+import type { components } from "../../api/schema";
 import { CaptureNotice } from "../../components/capture-notice";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
+import { useFieldFaults } from "../../design-system/savepage";
 import { formatNumber, identifierNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { problemCodeOf, problemMessageOf, unwrap } from "../../lib/problem";
+import {
+  IMAP_PORT_DEFAULT,
+  imapErrorMessage,
+  isWebAddress,
+  PORT_RANGE,
+  type Range,
+  rangeFault,
+  rangeParams,
+} from "../../lib/imapconnect";
+import {
+  type FieldLabels,
+  fieldCheckSentence,
+  unwrap,
+} from "../../lib/problem";
+import {
+  ImapSendFields,
+  READ_ONLY,
+  smtpPort,
+  smtpRequest,
+} from "./imap-send-fields";
 import "../../design-system/querystates.css";
 import "./imap-connect-form.css";
 
@@ -22,51 +42,18 @@ import "./imap-connect-form.css";
 // `/connectors/imap/connect` onboarding's ImapConnectPanel
 // (onboarding-connect-panels.imap.tsx) posts to.
 //
-// Two surfaces render the form: Settings, in a dialog, and the first-run
-// platform step, inline. ImapMailboxForm is the one form; ImapConnectForm is
-// the dialog around it.
+// Three surfaces render the form: Settings, in a dialog, and inline the
+// first-run platform step and the onboarding connect step. ImapMailboxForm is
+// the one form; ImapConnectForm is the dialog around it.
 
-type ImapConnectRequest = {
-  host: string;
-  port: number;
-  username: string;
-  secret: string;
-  mailbox: string;
-  max_messages: number;
-};
+type ImapConnectRequest = components["schemas"]["ImapCredentials"];
 
-const DEFAULT_PORT = "993";
+const DEFAULT_PORT = String(IMAP_PORT_DEFAULT);
 const DEFAULT_MAILBOX = "INBOX";
 const DEFAULT_MAX_MESSAGES = "50";
 
-type Range = { min: number; max: number };
-const PORT_RANGE: Range = { min: 1, max: 65535 };
 // The server clamps a larger count rather than refusing it; the form asks first.
 const MAX_MESSAGES_RANGE: Range = { min: 1, max: 200 };
-
-function inRange(value: number, { min, max }: Range): boolean {
-  return Number.isInteger(value) && value >= min && value <= max;
-}
-
-// The two IMAP-specific server conditions get their own honest sentence;
-// every other failure reads the way failures read everywhere else. Neither
-// sentence ever echoes the submitted host — the server doesn't send it back
-// either, so there is nothing here to leak. Exported so the onboarding IMAP
-// panel (onboarding-connect-panels.imap.tsx) reads the same two sentences off the
-// same server codes. It keeps no copy of this mapping of its own.
-export function imapErrorMessage(
-  error: unknown,
-  t: (key: MessageKey) => string,
-): string {
-  const code = problemCodeOf(error);
-  if (code === "imap_login_rejected") {
-    return t("connectors.imapLoginRejected");
-  }
-  if (code === "imap_unreachable") {
-    return t("connectors.imapUnreachable");
-  }
-  return problemMessageOf(error, t);
-}
 
 /**
  * The mailbox form itself: fields, the standing connect, and the two actions.
@@ -79,7 +66,7 @@ export function ImapMailboxForm({
   onDismiss,
   onConnected,
   onPendingChange,
-  renderActions = (actions) => actions,
+  renderActions = (actions) => <div className="actions">{actions}</div>,
 }: Readonly<{
   /** What backing out is called on this surface: Cancel in a dialog, Not
    * now on a step that does not block. */
@@ -109,11 +96,10 @@ export function ImapMailboxForm({
   const [secret, setSecret] = useState("");
   const [mailbox, setMailbox] = useState(DEFAULT_MAILBOX);
   const [maxMessages, setMaxMessages] = useState(DEFAULT_MAX_MESSAGES);
-  // Whether Connect has been pressed with something still missing. The button
-  // is always pressable; the press is what turns the missing fields red and
-  // names them beside it, so a reader learns what is needed by trying rather
-  // than by guessing why a button is grey.
-  const [attempted, setAttempted] = useState(false);
+  const [send, setSend] = useState(READ_ONLY);
+  const [faults, faultsRoot] = useFieldFaults();
+  // The password is emptied after a refused connect, which is not a missing one.
+  const [secretEmptied, setSecretEmptied] = useState(false);
 
   const connect = useMutation({
     mutationFn: async (request: ImapConnectRequest) => {
@@ -138,6 +124,7 @@ export function ImapMailboxForm({
     onError: () => {
       // The secret is never retained after a failed submit.
       setSecret("");
+      setSecretEmptied(true);
     },
   });
   useEffect(() => {
@@ -145,52 +132,62 @@ export function ImapMailboxForm({
     return () => onPendingChange?.(false);
   }, [connect.isPending, onPendingChange]);
 
-  const parsedPort = port.trim() === "" ? 993 : Number(port);
+  const parsedPort = port.trim() === "" ? IMAP_PORT_DEFAULT : Number(port);
   const parsedMax = maxMessages.trim() === "" ? 50 : Number(maxMessages);
-  // The fields without which nothing can be dialled, by label, in the order
-  // they stand on the form: what the rail names once Connect is pressed.
-  const missing = [
-    [host.trim() === "", t("connectors.imapHost")],
-    [username.trim() === "", t("connectors.imapUsername")],
-    [secret === "", t("connectors.imapSecret")],
-  ]
-    .filter((need): need is [true, string] => need[0] === true)
-    .map(([, label]) => label);
-  const portInRange = inRange(parsedPort, PORT_RANGE);
-  const maxInRange = inRange(parsedMax, MAX_MESSAGES_RANGE);
-  // Filled in but unusable: named like the missing fields, never a silent no-op.
-  const outOfRange = [
-    [!portInRange, t("connectors.imapPort")],
-    [!maxInRange, t("connectors.imapMaxMessages")],
-  ]
-    .filter((bad): bad is [true, string] => bad[0] === true)
-    .map(([, label]) => label);
-  const ready = missing.length === 0 && outOfRange.length === 0;
-  const needed = (absent: boolean) =>
-    attempted && absent ? t("connectors.imapNeeded") : undefined;
-  const ranged = (
-    fits: boolean,
-    range: Range,
-    written: (bound: number) => string,
-  ) =>
-    attempted && !fits
-      ? t("connectors.imapRange", {
-          min: written(range.min),
-          max: written(range.max),
-        })
-      : undefined;
-  const refusal =
-    missing.length > 0
-      ? t("connectors.imapStillNeeded", { fields: missing.join(", ") })
-      : t("connectors.imapOutOfRange", { fields: outOfRange.join(", ") });
+  const whole = (wire: string) => identifierNumber(Number(wire));
+  const labels: FieldLabels = {
+    host: t("connectors.imapHost"),
+    port: { label: t("connectors.imapPort"), limit: whole },
+    username: t("connectors.imapUsername"),
+    secret: t("connectors.imapSecret"),
+    max_messages: {
+      label: t("connectors.imapMaxMessages"),
+      limit: (wire) => formatNumber(Number(wire), locale),
+    },
+    smtp_port: { label: t("connectors.imapSmtpPort"), limit: whole },
+  };
+  // Each field a press would refuse, in the words the server's refusal gets.
+  const checked = () => {
+    const found = new Map<string, string>();
+    const refuse = (field: string, code: string, bounds?: Range) =>
+      found.set(
+        field,
+        fieldCheckSentence(
+          code,
+          locale,
+          labels[field],
+          bounds && rangeParams(bounds),
+        ),
+      );
+    const rangeOf = (field: string, value: number, bounds: Range) => {
+      const fault = rangeFault(value, bounds);
+      if (fault) refuse(field, fault, bounds);
+    };
+    if (host.trim() === "") refuse("host", "required");
+    else if (isWebAddress(host))
+      found.set("host", t("connectors.imapHostName"));
+    if (username.trim() === "") refuse("username", "required");
+    if (secret === "") refuse("secret", "required");
+    rangeOf("port", parsedPort, PORT_RANGE);
+    rangeOf("max_messages", parsedMax, MAX_MESSAGES_RANGE);
+    if (send.on) rangeOf("smtp_port", smtpPort(send), PORT_RANGE);
+    return found;
+  };
 
   const errorMessage = connect.isError
     ? imapErrorMessage(connect.error, t)
     : null;
+  // A new value ends the refusal of the old one, on its field and at the foot.
+  const edit =
+    (field: string, set: (value: string) => void) =>
+    (event: { target: { value: string } }) => {
+      set(event.target.value);
+      faults.edited(field, connect);
+      if (field === "secret") setSecretEmptied(false);
+    };
 
-  // One submit for Enter in a field and for the Connect button, wherever the
-  // button stands: pressable whatever is filled in, and the press is what
-  // marks the missing fields and names them beside it.
+  // One submit for Enter in a field and for the Connect button, wherever it
+  // stands. The button is always pressable; the press marks refused fields.
   const submit = () => {
     // The button carries `pending`, but Enter in a field reaches this directly
     // and mutations run in parallel by default — so a second press while the
@@ -199,8 +196,8 @@ export function ImapMailboxForm({
     if (connect.isPending) {
       return;
     }
-    if (!ready) {
-      setAttempted(true);
+    connect.reset();
+    if (faults.show(checked())) {
       return;
     }
     connect.mutate({
@@ -210,12 +207,12 @@ export function ImapMailboxForm({
       secret,
       mailbox: mailbox.trim() || DEFAULT_MAILBOX,
       max_messages: parsedMax,
+      smtp: smtpRequest(send),
     });
   };
 
   const actions = (
     <>
-      {attempted && !ready && <ErrorLine inline>{refusal}</ErrorLine>}
       <Button type="button" onClick={onDismiss} disabled={connect.isPending}>
         {dismissLabel}
       </Button>
@@ -235,6 +232,7 @@ export function ImapMailboxForm({
     <>
       <form
         id={formId}
+        ref={faultsRoot}
         className="form-stack"
         // The press names what is missing itself; a native bubble would pre-empt it.
         noValidate
@@ -251,35 +249,30 @@ export function ImapMailboxForm({
           <Field
             label={t("connectors.imapHost")}
             required
-            error={needed(host.trim() === "")}
+            error={faults.of("host")}
           >
             {(control) => (
               <TextInput
                 {...control}
                 value={host}
-                onChange={(event) => setHost(event.target.value)}
+                onChange={edit("host", setHost)}
               />
             )}
           </Field>
-          <Field
-            label={t("connectors.imapPort")}
-            error={ranged(portInRange, PORT_RANGE, identifierNumber)}
-          >
+          <Field label={t("connectors.imapPort")} error={faults.of("port")}>
             {(control) => (
               <TextInput
                 {...control}
-                type="number"
-                min={PORT_RANGE.min}
-                max={PORT_RANGE.max}
+                inputMode="numeric"
                 value={port}
-                onChange={(event) => setPort(event.target.value)}
+                onChange={edit("port", setPort)}
               />
             )}
           </Field>
           <Field
             label={t("connectors.imapUsername")}
             required
-            error={needed(username.trim() === "")}
+            error={faults.of("username")}
           >
             {(control) => (
               <TextInput
@@ -287,14 +280,19 @@ export function ImapMailboxForm({
                 type="email"
                 autoComplete="email"
                 value={username}
-                onChange={(event) => setUsername(event.target.value)}
+                onChange={edit("username", setUsername)}
               />
             )}
           </Field>
           <Field
             label={t("connectors.imapSecret")}
             required
-            error={needed(secret === "")}
+            hint={
+              secretEmptied && secret === ""
+                ? t("connectors.imapSecretEmptied")
+                : undefined
+            }
+            error={faults.of("secret")}
           >
             {(control) => (
               <TextInput
@@ -302,7 +300,7 @@ export function ImapMailboxForm({
                 type="password"
                 autoComplete="off"
                 value={secret}
-                onChange={(event) => setSecret(event.target.value)}
+                onChange={edit("secret", setSecret)}
               />
             )}
           </Field>
@@ -311,27 +309,32 @@ export function ImapMailboxForm({
               <TextInput
                 {...control}
                 value={mailbox}
-                onChange={(event) => setMailbox(event.target.value)}
+                onChange={edit("mailbox", setMailbox)}
               />
             )}
           </Field>
           <Field
             label={t("connectors.imapMaxMessages")}
-            error={ranged(maxInRange, MAX_MESSAGES_RANGE, (count) =>
-              formatNumber(count, locale),
-            )}
+            error={faults.of("max_messages")}
           >
             {(control) => (
               <TextInput
                 {...control}
-                type="number"
-                min={MAX_MESSAGES_RANGE.min}
-                max={MAX_MESSAGES_RANGE.max}
+                inputMode="numeric"
                 value={maxMessages}
-                onChange={(event) => setMaxMessages(event.target.value)}
+                onChange={edit("max_messages", setMaxMessages)}
               />
             )}
           </Field>
+          <ImapSendFields
+            draft={send}
+            onChange={(next) => {
+              setSend(next);
+              faults.edited("smtp_port", connect);
+            }}
+            imapHost={host}
+            portError={faults.of("smtp_port")}
+          />
           <p className="t-caption imap-mailbox-span">
             {t("connectors.imapSecretHint")}
           </p>
@@ -342,7 +345,7 @@ export function ImapMailboxForm({
           )}
         </div>
       </form>
-      {renderActions(<div className="actions">{actions}</div>)}
+      {renderActions(actions)}
     </>
   );
 }

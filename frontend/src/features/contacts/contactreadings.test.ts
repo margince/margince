@@ -7,8 +7,8 @@ import { scopedConsentWord } from "./contactreadings";
 // A contact's consent row names the fact on record, never a blanket
 // "Allowed": a reader must not take one purpose's answer for every message.
 
-const t = ((key: Parameters<typeof translate>[1]) =>
-  translate("en", key)) as Parameters<typeof scopedConsentWord>[1];
+const t: Parameters<typeof scopedConsentWord>[1] = (key) =>
+  translate("en", key);
 
 type Entry = Parameters<typeof scopedConsentWord>[0];
 
@@ -84,13 +84,18 @@ describe("scopedConsentWord", () => {
     expect(scopedConsentWord(entry, t)).toBe(word);
   });
 
-  // A newer server's reason must not read as a recorded grant.
-  it("falls back to the plain word for a reason this build does not know", () => {
-    const entry = {
+  it.each<[Parameters<typeof translate>[0], string]>([
+    ["en", "Supported for this purpose"],
+    ["de", "Grundlage für diesen Zweck vorhanden"],
+    ["vi", "Có căn cứ cho mục đích này"],
+  ])("keeps an unfamiliar reason scoped in %s", (locale, word) => {
+    const entry: Entry = {
       verdict: "allowed",
       purpose_class: "marketing",
       reason_code: "statutory_route",
-    } as unknown as Entry;
-    expect(scopedConsentWord(entry, t)).toBe("Allowed");
+    };
+    expect(scopedConsentWord(entry, (key) => translate(locale, key))).toBe(
+      word,
+    );
   });
 });

@@ -88,8 +88,11 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 	if err != nil {
 		return err
 	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+	reactivate := func(tx pgx.Tx) error {
 		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
+		if err := lockMemberAddressClaims(ctx, tx, userID); err != nil {
 			return err
 		}
 		// Restoring an admin somebody removed is the mirror of removing one, so
@@ -153,6 +156,9 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 			 WHERE id = $1 RETURNING status`, userID).Scan(&restored); err != nil {
 			return err
 		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		auditID, err := storekit.Audit(ctx, tx, "update", "user", userID.UUID,
 			map[string]any{userAuditKeyStatus: status}, map[string]any{userAuditKeyStatus: restored})
 		if err != nil {
@@ -160,7 +166,8 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, userID.UUID,
 			userReactivatedPayload(userID, actor.UserID, restored))
-	})
+	}
+	return storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, reactivate) })
 }
 
 // userReactivatedPayload builds user.reactivated's typed payload.
@@ -225,8 +232,11 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 	if err != nil {
 		return err
 	}
-	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	deactivate := func(tx pgx.Tx) error {
 		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
+		if err := lockMemberAddressClaims(ctx, tx, in.UserID); err != nil {
 			return err
 		}
 		// A delegated holder must not lock out an administrator. The last-admin
@@ -261,6 +271,9 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 			`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, in.UserID); err != nil {
 			return err
 		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		if err := s.revokeBorrowedAuthority(ctx, tx, in.UserID); err != nil {
 			return err
 		}
@@ -271,7 +284,8 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, in.UserID.UUID,
 			userDeactivatedPayload(in.UserID, actor.UserID, in.Reason))
-	}); err != nil {
+	}
+	if err := storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, deactivate) }); err != nil {
 		return err
 	}
 	// The withdrawal above committed, so the mailbox has already stopped being
@@ -353,6 +367,12 @@ func (s *Service) revokeBorrowedAuthority(ctx context.Context, tx pgx.Tx, userID
 // principal for a caller with no live Identity): the audit rows this writes
 // and the passport.revoked event both name who ended the authority.
 func endCredentialAuthority(ctx context.Context, tx pgx.Tx, userID ids.UserID, reason string) error {
+	// Held first, against holdConsentAgainstRevocation. A consent for this member
+	// either commits first and its code is ended below, or waits and finds its
+	// session gone.
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(`+credentialAuthorityLock+`)`, userID.String()); err != nil {
+		return err
+	}
 	if err := revokeGrantsOfUserTx(ctx, tx, userID, reason); err != nil {
 		return err
 	}

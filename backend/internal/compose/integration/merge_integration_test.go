@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -64,9 +65,9 @@ func TestMergeContact_relinkSurvivorshipAndReferentialIntegrity(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM contact_email WHERE contact_id = $1`, tgt); n != 2 {
 		t.Errorf("survivor has %d emails, want both relinked", n)
 	}
-	// Primary demotion: exactly one primary work email survives on B.
-	if n := e.WsCount(t, `SELECT count(*) FROM contact_email WHERE contact_id = $1 AND email_type = 'work' AND is_primary AND archived_at IS NULL`, tgt); n != 1 {
-		t.Errorf("survivor has %d primary work emails, want exactly 1 (A's must demote)", n)
+	// Primary demotion: one primary email survives on B.
+	if n := e.WsCount(t, `SELECT count(*) FROM contact_email WHERE contact_id = $1 AND is_primary AND archived_at IS NULL`, tgt); n != 1 {
+		t.Errorf("survivor has %d primary emails, want exactly 1 (A's must demote)", n)
 	}
 
 	// Fill-only survivorship: B had no first_name, so it takes A's.
@@ -88,6 +89,49 @@ func TestMergeContact_relinkSurvivorshipAndReferentialIntegrity(t *testing.T) {
 	}
 	if archived.MergedIntoId == nil || ContactIDOf(ids.UUID(*archived.MergedIntoId)) != tgt {
 		t.Errorf("source merged_into_id = %v, want the target %s", archived.MergedIntoId, tgt)
+	}
+}
+
+// The primary slot is per contact. A source primary of another type than the
+// target's does not become a second primary. A target with none takes the
+// source's.
+func TestMergeContact_keepsOnePrimaryAcrossTypes(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+
+	create := func(name string, emails ...contacts.ContactEmailInput) ids.UUID {
+		t.Helper()
+		c, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{FullName: name, Source: "manual", Emails: emails})
+		if err != nil {
+			t.Fatalf("create %s: %v", name, err)
+		}
+		return ids.UUID(c.Id)
+	}
+	source := create("Primary Source",
+		contacts.ContactEmailInput{Email: "src.work@x.test", EmailType: "work", IsPrimary: true})
+	target := create("Primary Target",
+		contacts.ContactEmailInput{Email: "tgt.home@x.test", EmailType: "personal", IsPrimary: true})
+	bare := create("Primary Bare", contacts.ContactEmailInput{Email: "bare.home@x.test", EmailType: "personal"})
+	if _, err := e.Contacts.UpdateContact(admin, ContactIDOf(bare), contacts.UpdateContactInput{
+		Emails: []contacts.ContactEmailInput{},
+	}); err != nil {
+		t.Fatalf("emptying the bare contact: %v", err)
+	}
+
+	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(source), ContactIDOf(target), nil); err != nil {
+		t.Fatalf("merge into a target with a primary of another type: %v", err)
+	}
+	if got := e.WsScalar(t, `SELECT string_agg(email, ',') FROM contact_email WHERE contact_id = $1 AND is_primary AND archived_at IS NULL`, target); got != "tgt.home@x.test" {
+		t.Errorf("survivor primaries = %q, want only the target's own", got)
+	}
+
+	source2 := create("Primary Source Two",
+		contacts.ContactEmailInput{Email: "src2.work@x.test", EmailType: "work", IsPrimary: true})
+	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(source2), ContactIDOf(bare), nil); err != nil {
+		t.Fatalf("merge into a target with no address: %v", err)
+	}
+	if got := e.WsScalar(t, `SELECT string_agg(email, ',') FROM contact_email WHERE contact_id = $1 AND is_primary AND archived_at IS NULL`, bare); got != "src2.work@x.test" {
+		t.Errorf("survivor primaries = %q, want the source's", got)
 	}
 }
 
@@ -220,9 +264,9 @@ func TestMerge_errorPaths(t *testing.T) {
 	c := e.SeedContact(t, "C", nil)
 
 	// Self-merge.
-	var selfErr *contacts.MergeSelfError
+	var selfErr *recordmerge.MergeSelfError
 	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(a), ContactIDOf(a), nil); !errors.As(err, &selfErr) {
-		t.Fatalf("self-merge → %v, want contacts.MergeSelfError", err)
+		t.Fatalf("self-merge → %v, want recordmerge.MergeSelfError", err)
 	}
 
 	// First merge succeeds; a second merge OF the same source answers
@@ -230,16 +274,16 @@ func TestMerge_errorPaths(t *testing.T) {
 	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(a), ContactIDOf(b), nil); err != nil {
 		t.Fatalf("first merge: %v", err)
 	}
-	var already *contacts.AlreadyMergedError
+	var already *recordmerge.AlreadyMergedError
 	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(a), ContactIDOf(c), nil); !errors.As(err, &already) {
-		t.Fatalf("re-merge of a merged-away source → %v, want contacts.AlreadyMergedError", err)
+		t.Fatalf("re-merge of a merged-away source → %v, want recordmerge.AlreadyMergedError", err)
 	} else if already.IntoID != b {
 		t.Errorf("AlreadyMerged points at %s, want the first survivor %s", already.IntoID, b)
 	}
 
 	// Merging INTO a merged-away (archived) target is refused.
-	var deadTarget *contacts.MergedTargetError
+	var deadTarget *recordmerge.MergedTargetError
 	if _, err := e.Contacts.MergeContact(admin, ContactIDOf(c), ContactIDOf(a), nil); !errors.As(err, &deadTarget) {
-		t.Fatalf("merge into a dead target → %v, want contacts.MergedTargetError", err)
+		t.Fatalf("merge into a dead target → %v, want recordmerge.MergedTargetError", err)
 	}
 }

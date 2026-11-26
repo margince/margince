@@ -115,7 +115,7 @@ func (r LeadFilingRepair) file(ctx context.Context, tx pgx.Tx, activity ids.Acti
 	if !ok || name == "" {
 		return 0, nil
 	}
-	rows, err := tx.Query(ctx, `SELECT DISTINCT user_id FROM capture_import WHERE activity_id = $1 ORDER BY user_id`, activity)
+	rows, err := tx.Query(ctx, `SELECT DISTINCT user_id FROM capture_import WHERE activity_id = $1 AND user_id IS NOT NULL ORDER BY user_id`, activity)
 	if err != nil {
 		return 0, fmt.Errorf("capture: reading the mailboxes an activity came from: %w", err)
 	}

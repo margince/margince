@@ -1,0 +1,9 @@
+{
+  "verb": "archive_legal_entity",
+  "checks": [
+    "legal_entity.delete"
+  ],
+  "takes": [
+    "legal_entity"
+  ]
+}

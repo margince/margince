@@ -3,9 +3,8 @@
 
 package compose
 
-// The three answers the task's lifecycle reaches without a database: what the
-// task is called, whether a refusal was about the SEAT rather than the task,
-// and whether a task still names the subject it was raised for.
+// Two answers the task's lifecycle reaches without a database. Was a refusal
+// about the SEAT rather than the task? Does a task still name its subject?
 
 import (
 	"errors"
@@ -15,33 +14,10 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
-
-// The subject line is what a rep reads on their list, and one finding is the
-// ordinary case — a plural there reads as a template nobody finished.
-func TestTheTaskCountsItsFindingsInWords(t *testing.T) {
-	t.Parallel()
-
-	for _, c := range []struct {
-		lang     textlang.Lang
-		findings int
-		want     string
-	}{
-		{textlang.English, 1, "1 forecast input needs attention"},
-		{textlang.English, 7, "7 forecast inputs need attention"},
-		{textlang.German, 1, "1 Angabe zur Prognose muss geprüft werden"},
-		{textlang.German, 2, "2 Angaben zur Prognose müssen geprüft werden"},
-		{textlang.Vietnamese, 3, "3 đầu vào dự báo cần xem lại"},
-	} {
-		if got := bundleTaskSubject(c.lang, c.findings); got != c.want {
-			t.Errorf("bundleTaskSubject(%s, %d) = %q, want %q", c.lang, c.findings, got, c.want)
-		}
-	}
-}
 
 // A refusal about WHO the task was aimed at is retried unassigned; anything
 // else is a real failure. Retrying the wrong one would mint a task nobody is
@@ -49,13 +25,13 @@ func TestTheTaskCountsItsFindingsInWords(t *testing.T) {
 func TestOnlyASeatRefusalIsRetriedUnassigned(t *testing.T) {
 	t.Parallel()
 
-	// A seat that is missing, inactive or archived — deliberately one error.
-	if !unassignableSeat(fmt.Errorf("wrapped: %w", apperrors.ErrNotFound)) {
-		t.Error("a missing or inactive seat did not read as a seat refusal, so the deals of " +
+	// A seat that is missing, inactive, archived or an agent: one error.
+	if !unassignableSeat(fmt.Errorf("wrapped: %w", &auth.AssigneeNotAllowedError{Field: "assignee_id"})) {
+		t.Error("a refused seat did not read as a seat refusal, so the deals of " +
 			"everyone who has left stop being checked")
 	}
-	if !unassignableSeat(&activities.AgentAssigneeError{}) {
-		t.Error("an agent seat did not read as a seat refusal")
+	if unassignableSeat(apperrors.ErrNotFound) {
+		t.Error("a missing record read as a seat refusal")
 	}
 	if unassignableSeat(apperrors.ErrPermissionDenied) {
 		t.Error("a permission refusal read as a seat refusal — it would be retried into a " +

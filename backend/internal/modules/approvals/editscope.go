@@ -103,12 +103,24 @@ func refsOf(raw json.RawMessage) (map[string]string, error) {
 	return refs, nil
 }
 
+// doerPaths names, per kind, the one payload member that says which colleague
+// does the work, not which record it lands on. Whoever accepts may
+// choose it, and the kind's effect checks that colleague as it writes the task.
+var doerPaths = map[string]string{
+	kindCommitmentTask: "/" + DoerField,
+	kindDealFollowUp:   "/" + DoerField,
+}
+
+// DoerField is the payload member doerPaths frees. Empty means the default
+// doer: the colleague the card was put to.
+const DoerField = "doer_id"
+
 // assertSameEntityRefs refuses an edit that adds, drops or repoints ANY entity
 // reference the staged proposal carried. Equality of the whole set — not just
 // of the ids the effect happens to read today — is what makes this survive a
 // new kind: an executor added tomorrow that resolves a record from a field
 // nobody pinned would otherwise reopen the hole silently.
-func assertSameEntityRefs(original, edited json.RawMessage) error {
+func assertSameEntityRefs(kind string, original, edited json.RawMessage) error {
 	before, err := refsOf(original)
 	if err != nil {
 		return err
@@ -116,6 +128,10 @@ func assertSameEntityRefs(original, edited json.RawMessage) error {
 	after, err := refsOf(edited)
 	if err != nil {
 		return err
+	}
+	if path, ok := doerPaths[kind]; ok {
+		delete(before, path)
+		delete(after, path)
 	}
 	var changed []string
 	for path, was := range before {

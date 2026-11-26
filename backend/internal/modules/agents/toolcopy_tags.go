@@ -43,7 +43,7 @@ var removeTagCopy = toolCopy{
 // rather than warning about an authority the store already enforces.
 var createTagCopy = toolCopy{
 	Purpose: "Coin a new word in the workspace vocabulary, so records can be grouped by it.",
-	Limits: "list_tags FIRST: a workspace with \"Key Account\" does not want \"key accounts\" " +
+	Limits: "list_tags FIRST: a workspace with \"Key Customer\" does not want \"key customers\" " +
 		"beside it, and the two then split the records that belong together. A name already " +
 		"taken is a conflict, matched case-insensitively — including a RETIRED word holding " +
 		"it, which change_tags restores. Needs the tag.create grant, " +
@@ -93,15 +93,12 @@ var readTagsCopy = toolCopy{
 }
 
 var changeTagsCopy = toolCopy{
-	Purpose: "Change the workspace's tags. apply and remove put one tag on, or take it off, one " +
-		"contact, company, deal, lead or project, by tag_id or by the tag_name of a tag that " +
-		"already exists. create coins a new word. update renames, recolours or describes one; " +
-		"fields left out are unchanged. merge folds a duplicate word into the one kept.",
+	Purpose: "Change the workspace's tags: the words themselves, and which records carry them.",
 	Limits: "apply never creates a tag: an unknown name is refused, a name matches " +
 		"case-insensitively, an archived word is refused as archived, and the same tag twice is a " +
 		"conflict. Before create, read the list — a near-duplicate splits records that belong " +
 		"together, and a taken name is a conflict, even a retired one, which restore brings back. create and update need tag grants an ordinary seat lacks. update " +
-		"sends no version, so read the tag right before editing; it changes what a word is " +
+		"changes only the fields it is sent, and sends no version, so read the tag right before editing; it changes what a word is " +
 		"called, never what carries it. Removing a tag that is not there succeeds. archive retires " +
 		"a word for every record; the records keep it.",
 }

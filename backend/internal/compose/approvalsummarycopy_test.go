@@ -27,9 +27,8 @@ import (
 // down here rather than derived from the English entry it has to hold.
 var approvalSummaryHoles = map[string][]string{
 	"taskCompleted":                {"%s", "%s"},
-	"taskContact":                  nil,
 	"signaturePrivate":             nil,
-	"draftedReplyWaiting":          {"%q"},
+	"draftedReplyWaiting":          {"%s"},
 	"counterpartyWorthKeeping":     {"%s"},
 	"contactShareAsked":            {"%s"},
 	"companyRename":                {"%s", "%s"},
@@ -40,7 +39,7 @@ var approvalSummaryHoles = map[string][]string{
 	"vcardResemblesContact":        {"%s"},
 	"vcardReadFromPhoto":           {"%s"},
 	"unnamedEmployer":              nil,
-	"heldNotSent":                  {"%q", "%s"},
+	"heldNotSent":                  {"%s", "%s"},
 	"heldConsentWithdrawn":         nil,
 	"heldSenderInactive":           nil,
 	"heldPassportRevoked":          nil,

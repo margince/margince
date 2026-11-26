@@ -1,0 +1,14 @@
+{
+  "tool": "change_capture",
+  "action": "lift_exclusion",
+  "verb": "lift_capture_exclusion",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

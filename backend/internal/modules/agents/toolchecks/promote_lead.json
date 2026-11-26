@@ -1,0 +1,14 @@
+{
+  "verb": "promote_lead",
+  "checks": [
+    "company.create",
+    "company.read",
+    "contact.create",
+    "contact.read",
+    "lead.update",
+    "relationship.read"
+  ],
+  "takes": [
+    "lead"
+  ]
+}

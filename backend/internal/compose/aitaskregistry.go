@@ -3,28 +3,23 @@
 
 package compose
 
-// The composition's AI invocation-site census. Every cross-module edge is
-// injected in this layer, and a model-invocation site is one: the task
-// contract names it, this package builds it. A process role that wires no
-// model path never calls this.
+// Compose binds the task contract to the concrete invocation sites this build serves.
 
 import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/cardphoto"
+	"github.com/margince/margince/backend/internal/compose/chatsummary"
+	"github.com/margince/margince/backend/internal/compose/chattasks"
+	"github.com/margince/margince/backend/internal/compose/goalproposal"
 	"github.com/margince/margince/backend/internal/compose/reportsetup"
+	"github.com/margince/margince/backend/internal/compose/rewrite"
+	"github.com/margince/margince/backend/internal/compose/searchplan"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
-// NewTaskCensus registers this build's AI invocation sites with the
-// certification case that serves each, and validates them against the task
-// contract. The error names every mismatch at once.
-//
-// The list is written out rather than derived from the contract on purpose: a
-// loop over ai.SitesFor would make Validate compare the contract to itself and
-// pass no matter what this build actually implements. Each line below is a
-// claim that a site exists here and that this case certifies it, and Validate
-// is what holds those claims to the contract — including that the case agrees
-// with the line it sits on. The case type is the navigable link to the code:
-// it is the site's only compiler-checked address.
+// NewTaskCensus registers concrete sites and their certification cases.
+// Validate checks those independent claims against the task contract.
+// Deriving this list from ai.SitesFor would compare the contract with itself.
 func NewTaskCensus() (*aitasks.Registry, error) {
 	r := aitasks.NewRegistry()
 	register := func(kind string, task ai.Task, variant string, c aitasks.CaseFactory) {
@@ -37,9 +32,6 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	}
 	multiTurn := func(task ai.Task, variant string, c aitasks.CaseFactory) {
 		register(ai.SiteKindMultiTurn, task, variant, c)
-	}
-	agentLoop := func(task ai.Task, variant string, c aitasks.CaseFactory) {
-		register(ai.SiteKindAgentLoop, task, variant, c)
 	}
 
 	oneShot(ai.TaskCaptureClassify, "classify", captureClassifyCases{})
@@ -58,12 +50,18 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskSummarize, "meeting_brief", meetingBriefCases{})
 	oneShot(ai.TaskDraftReply, "intro", introDraftCases{})
 	oneShot(ai.TaskDraftReply, "intro_note", introNoteCases{})
+	oneShot(ai.TaskRewrite, "rewrite", rewrite.CertCases{})
+	oneShot(ai.TaskChatSummary, "episode", chatsummary.CertCases{})
+	oneShot(ai.TaskChatTaskReading, "chat_tasks", chattasks.CertCases{})
 	oneShot(ai.TaskProposeRoles, "committee", proposeRolesCases{})
 	oneShot(ai.TaskNlSearch, "filter_propose", filterProposeCases{})
+	oneShot(ai.TaskNlSearch, "search_data_plan", searchplan.Cases{Vocabulary: searchCaseVocabulary})
 	oneShot(ai.TaskReaderRendering, "activity_text", readerRenderingCases{})
-	oneShot(ai.TaskReportInterpret, "sales_assessment", salesAssessmentCases{})
+	oneShot(ai.TaskReportInterpret, "sales_assessment", salesReviewCases)
+	oneShot(ai.TaskReportInterpret, "progress_summary", progressSummaryCases)
 	oneShot(ai.TaskReportSetup, "initiative_setup", reportSetupCases{site: reportsetup.SiteInitiative})
 	oneShot(ai.TaskReportSetup, "custom_report_setup", reportSetupCases{site: reportsetup.SiteCustomReport})
+	oneShot(ai.TaskReportSetup, "sales_goal_months", goalproposal.Cases{})
 	oneShot(ai.TaskBriefRanking, "rank", briefRankingCases{})
 	oneShot(ai.TaskWeeklyReview, "narrative", weeklyNarrativeCases{})
 	oneShot(ai.TaskWeeklyLearnings, "learn", weeklyLearningsCases{})
@@ -83,7 +81,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskSummarize, "deal_room_brief", roomBriefCases{})
 	oneShot(ai.TaskTranscriptPropose, "next_steps", transcriptProposeCases{})
 	oneShot(ai.TaskDocumentExtract, "fields", documentFieldsCases{})
-	oneShot(ai.TaskDocumentExtract, "cards", cardPhotoCases{})
+	oneShot(ai.TaskDocumentExtract, "cards", cardphoto.CertCases{})
 	oneShot(ai.TaskDocumentExtract, laneChat, chatCaptureCases{})
 	oneShot(ai.TaskGrowthFit, "growth_fit", growthFitCases{})
 	oneShot(ai.TaskCertJudge, "judge", certJudgeCases{})
@@ -97,7 +95,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	multiTurn(ai.TaskColdStart, "sitereadmessage", companyReadMessageCases{})
 	multiTurn(ai.TaskColdStart, "acts", onboardingActCases{})
 	for _, agent := range ai.AgentsFor(ai.TaskAgentLoop) {
-		agentLoop(ai.TaskAgentLoop, agent.Name, agentLoopCases{agent: agent.Name})
+		register(ai.SiteKindAgentLoop, ai.TaskAgentLoop, agent.Name, agentLoopCases{agent: agent.Name})
 	}
 
 	return r, r.Validate()

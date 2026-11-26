@@ -20,13 +20,15 @@ package gates
 // apart: the first says so by the door it calls, and says why in a waiver here.
 //
 // It is the census half of a pair. storekit's refusal is the chokepoint, and it
-// is the authority — an H2 walk cannot resolve a call reached through an
-// interface, a stored field, or a closure, nor an action argument built at
-// runtime (privacy/retentionactions.go passes a verb read from a database row).
-// The gate censuses the direct writers of audit_log too, because the chokepoint
-// binds only what goes through it: the approvals module sends its own INSERT for
-// its own row. Between them, the gate says who writes the table and the
-// chokepoint says what a door will accept.
+// is the authority. The sites come from the audit census (auditdoorsites_test.go):
+// every call into a storekit door, with its verb read by the type checker. A
+// verb built at runtime stays unread (privacy/retentionactions.go passes one
+// read from a database row). A before-image read only at the door: a wrapper
+// that forwards it as a parameter is left to the refusal. The census also
+// reports any other writer of audit_log, including a direct INSERT. The
+// integration harness's tombstone seed in harnessseed.go carries the
+// integration build tag, so the census never reads it. Between them, the gate
+// says who writes the table and the chokepoint says what a door will accept.
 //
 // Only `update` is judged. `archive` sites also pass an absent before-image and
 // are deliberately left alone: un-archiving is not a before-image replay but
@@ -34,47 +36,11 @@ package gates
 // it, which is a per-type product decision and not this gate's to force.
 
 import (
-	"go/ast"
-	"go/token"
-	"path/filepath"
-	"strconv"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
-)
-
-// The doors into audit_log, and which of them carries a before-image.
-var auditDoorsWithBeforeImage = map[string]bool{
-	"Audit":                  true,
-	"AuditWithEvidence":      true,
-	"AuditWithTrail":         true,
-	"AuditEvent":             false,
-	"AuditEventWithEvidence": false,
-}
-
-// Doors whose verb is fixed by construction rather than passed as an argument.
-// AuditWithTrail takes a verb the caller cannot spell freely — Trail.Resolve
-// admits update and restore and nothing else — so every call through it is
-// update-shaped and the rule binds it without this walk having to reduce
-// anything.
-//
-// This is why threading a runtime verb through the record types costs no
-// ratification: the one door that carries a verb the walk cannot see is also
-// the one door whose verb set is closed.
-var auditDoorsAlwaysUpdateShaped = map[string]bool{
-	"AuditWithTrail": true,
-}
-
-// Argument positions shared by every door: (ctx, tx, verb, entityType,
-// entityID, …). Only the images differ after that, which is the point of the
-// split. AuditWithTrail carries a Trail where the others carry an action
-// string; the positions are the same, and its verb is answered by
-// auditDoorsAlwaysUpdateShaped rather than read from the argument.
-const (
-	auditActionArg     = 2
-	auditEntityTypeArg = 3
-	auditBeforeArg     = 5
 )
 
 // eventShapedUpdates: writes that record an occurrence on a record rather than a
@@ -91,27 +57,28 @@ const (
 // Empty is a result, not a default: it would mean every audited update in the
 // tree records what it changed from.
 var eventShapedUpdates = gatekit.Waive(map[string]string{
-	"internal/modules/privacy/linkedhistoricalaudit.go:redactLinkedHistoricalEntry": "certifies removal of an old audit row payload. A before-image would retain the personal values being removed; the original row metadata and a separate proof identify the change",
-	"internal/modules/privacy/historicalaudit.go:redactHistoricalRecord":            "a payload redaction of an earlier audit entry, certified by its immutable record ID. A before-image would keep the personal values this correction removes. The original audit metadata stays fixed and a redacted marker replaces its payload",
-	"internal/modules/contacts/company_offered_value.go:RecordOfferedValues":        "a feed's offer is kept beside the company's own fields and changes none of them, so there is no prior field state to image. The audit row names the source and the fields offered, never the values, which may hold personal data.",
-	"internal/modules/capture/meetingguests.go:SettleMeetingRosterTx":               "a calendar's roster was settled on a meeting already on file: participant rows it lists were ADDED, rows it no longer lists were retired, and contact links were added. No field of the activity changed. The rows are a set keyed by the calendar that wrote them, not a field with a prior value, and an image of their addresses would outlive an erasure. What it has instead is the count of guests added and retired and of links added, plus the repair run as evidence when the data task wrote them",
-	"internal/modules/capture/meetingdocuments.go:recordMeetingDocuments":           "a later calendar sync found notes or transcript documents Google attached to a meeting already on file, and recorded each as a document link row on it. No field of the activity changed; the link rows are new rows with their own create audit. What it has instead is the count of documents added",
-	"internal/modules/activities/meetingcopyretire.go:carryMeetingDocumentLinksTx":  "a meeting copy retiring onto the meeting that stays handed its notes-document link rows to it. No field of the surviving activity changed; each moved link row has its own update audit with the meeting it left as the before-image. What it has instead is the count of documents handed on, with the retired copy as evidence",
-	"internal/modules/activities/meetingcopysplit.go:UndoMeetingCopyGuestsTx":       "a repair split a wrong meeting-copy fold and took back the guest rows the fold had carried onto the survivor. No field of the activity changed; the rows are a set the fold added, and an image of their addresses would outlive an erasure. What it has instead is the count of guests taken back, with the split-off copy as evidence",
-	"internal/modules/activities/requesttaskrestore.go:recordRequestAcceptance":     "accepting an already-live automatic reminder records a human decision, not a field change. The accepted_request evidence is the durable admission fact; archived restoration separately records its real before/after field values",
-	"internal/modules/privacy/commitmenterasure.go:eraseCommitmentTask":             "held evidence keeps its activity fields unchanged. The occurrence invalidates derived indexes and announces that erased source evidence withholds the task; the audit records that cause rather than a fabricated field update",
-	"internal/modules/activities/projectfilingundo.go:recordProjectFilingUndone":    "a member took an activity back out of a project and withdrew the retention class that filing gave it. An OCCURRENCE and not a field edit: retention_class is not a field a reversal may put back, and a before-image of it would invite one. What the row has instead of a prior state is stronger — the evidence names the class that was withdrawn, every project filing that qualified it (by the name frozen when it did), the deciding member's name and the reason they wrote, which together answer the question a supervisory authority asks of a shortened retention",
-	"internal/modules/consent/satellitecarry.go:auditSatelliteCarry":                "a merge moved the retired record's consent links and bases onto the survivor, so rows were ADDED to a record that did not hold them. No field of the survivor changed, and there is no prior state to record. What it has instead is the count moved, and evidence naming every moved row by table and the record it came from — so an auditor asking why an old unsubscribe link now withdraws this contact reaches the merge that brought it",
-	"internal/modules/consent/stopcarry.go:CarryStopsTx":                            "a merge retired one record and the stop it held now also applies to the survivor, so a stop was ADDED to a record that had none. There is no prior state to record because the survivor had no such row: this is not a field of theirs changing, it is a fact about the merge landing on them. What it has instead is the count of stops carried, and the row itself names its origin in carried_from — so an auditor asking why this contact is suppressed reaches the record that actually objected, and the merge that brought it here, without needing a before-image of a row that did not exist",
-	"internal/modules/consent/overridecarry.go:auditAndEmitCarriedOverrides":        "the same merge landing an override rather than a stop on the survivor, split into its own function from CarryOverridesTx so the read query and the write stay legible on their own. The same OCCURRENCE shape CarryStopsTx has and for the same reason: there is no prior state to record because the survivor had no such row, and what it has instead is the count of overrides carried plus one event per carried row on a contact survivor — the row itself names its origin in carried_from, so an auditor asking why a send to this contact was overruled reaches the rep who vouched and the merge that brought it here, without needing a before-image of a row that did not exist",
-	"internal/modules/consent/lift.go:liftAdmittedTx":                               "somebody with the authority to do so took back a stop, so mail may resume. An OCCURRENCE and not a replacement: no field of the contact changes, and the row it revokes is not edited — revoked_at is set and the row stands, because a stop that was lifted is still a thing that happened. What it has instead of a prior state is the level the stop was recorded at and the level that lifted it, which together say the comparison that permitted this and let an auditor check it without re-deriving it from a row that no longer says what it was",
-	"internal/modules/consent/bouncesuppress.go:RecordHardBounceTx":                 "the receiving mail system said an address is permanently gone, so this installation stops writing to it. An OCCURRENCE and not a replacement: no field of anybody's record changes, the row is created and never edited, and a lift revokes it rather than rewriting it. The entity is named at runtime because a bounce is a fact about an ADDRESS and the address may belong to a contact, to a lead, or to nobody at all — so the audit hangs from the contact when one owns the address and from the delivery that died when none does, which is the only other identity this fact has. What it carries instead of a prior state is the kind of stop and the level it was decided at, which is what an auditor asking why mail to this address is refused needs. The address itself is deliberately NOT in the payload: audit_log is append-only, so an address written there would outlive the Art. 17 erase that clears the row",
-	"internal/modules/consent/bouncesuppress.go:LiftAddressStop":                    "an address that refused delivery works again — usually because somebody corrected a typo — so the stop the machinery wrote is taken back. The same OCCURRENCE shape liftAdmittedTx has and for the same reason: revoked_at is set and the row stands, because a stop that was lifted is still a thing that happened. The entity is the SUPPRESSION ROW rather than a contact, because a bounce stop deliberately names no contact — a contact-scoped row would refuse every address that record has — so the row is the one identity this fact reliably carries. What it has instead of a prior state is the kind that was lifted and the reason the caller gave, which together answer who decided this address works again and why",
-	"internal/modules/consent/withdrawalpress.go:StopForCredentialTx":               "a lead or an address-only recipient pressed the unsubscribe link in their mail, and holding no per-purpose consent rows there is nothing to withdraw — so the press records a stop. The same OCCURRENCE shape suppressAdmittedTx has, for the same reason: no field of the record changes, the row is created and never edited, and a lift revokes it rather than rewriting it. The entity is named at runtime because the subject is genuinely one of two — the lead when a lead holds the address, and nothing at all when no record does, in which case the row is its own record and no audit entry is written. What it carries instead of a prior state is the kind of stop and where it came from, which is what an auditor asking why this lead is suppressed needs",
+	"internal/modules/consent/restrictionlift.go:queueRestrictionLiftTx":             "an admin asking to lift a restriction of processing. An OCCURRENCE: no field of the contact changes and the stop stays as it was until the notice is sent. What it has instead of a prior state is the stop it names and the admin's reason",
+	"internal/modules/privacy/linkedhistoricalaudit.go:correctLinkedHistoricalEntry": "certifies removal of an old audit row payload. A before-image would retain the personal values being removed; the original row metadata and a separate proof identify the change",
+	"internal/modules/privacy/historicalaudit.go:redactHistoricalRecord":             "a payload redaction of an earlier audit entry, certified by its immutable record ID. A before-image would keep the personal values this correction removes. The original audit metadata stays fixed and a redacted marker replaces its payload",
+	"internal/modules/contacts/company_offered_value.go:RecordOfferedValues":         "a feed's offer is kept beside the company's own fields and changes none of them, so there is no prior field state to image. The audit row names the source and the fields offered, never the values, which may hold personal data.",
+	"internal/modules/capture/meetingguests.go:SettleMeetingRosterTx":                "a calendar's roster was settled on a meeting already on file: participant rows it lists were ADDED, rows it no longer lists were retired, and contact links were added. No field of the activity changed. The rows are a set keyed by the calendar that wrote them, not a field with a prior value, and an image of their addresses would outlive an erasure. What it has instead is the count of guests added and retired and of links added, plus the repair run as evidence when the data task wrote them",
+	"internal/modules/capture/meetingdocuments.go:announceTx":                        "a later calendar sync added, archived or restored the notes or transcript document links on a meeting already on file. No field of the activity changed; each link row has its own create, archive or restore audit. What it has instead is the count of documents changed",
+	"internal/modules/activities/meetingcopyretire.go:carryMeetingDocumentLinksTx":   "a meeting copy retiring onto the meeting that stays handed its notes-document link rows to it. No field of the surviving activity changed; each moved link row has its own update audit with the meeting it left as the before-image. What it has instead is the count of documents handed on, with the retired copy as evidence",
+	"internal/modules/activities/meetingcopysplit.go:UndoMeetingCopyGuestsTx":        "a repair split a wrong meeting-copy fold and took back the guest rows the fold had carried onto the survivor. No field of the activity changed; the rows are a set the fold added, and an image of their addresses would outlive an erasure. What it has instead is the count of guests taken back, with the split-off copy as evidence",
+	"internal/modules/activities/requesttaskrestore.go:recordRequestAcceptance":      "accepting an already-live automatic reminder records a human decision, not a field change. The accepted_request evidence is the durable admission fact; archived restoration separately records its real before/after field values",
+	"internal/modules/privacy/commitmenterasure.go:eraseCommitmentTask":              "held evidence keeps its activity fields unchanged. The occurrence invalidates derived indexes and announces that erased source evidence withholds the task; the audit records that cause rather than a fabricated field update",
+	"internal/modules/activities/projectfilingundo.go:recordProjectFilingUndone":     "a member took an activity back out of a project and withdrew the retention class that filing gave it. An OCCURRENCE and not a field edit: retention_class is not a field a reversal may put back, and a before-image of it would invite one. What the row has instead of a prior state is stronger — the evidence names the class that was withdrawn, every project filing that qualified it (by the name frozen when it did), the deciding member's name and the reason they wrote, which together answer the question a supervisory authority asks of a shortened retention",
+	"internal/modules/consent/satellitecarry.go:auditSatelliteCarry":                 "a merge moved the retired record's consent links and bases onto the survivor, so rows were ADDED to a record that did not hold them. No field of the survivor changed, and there is no prior state to record. What it has instead is the count moved, and evidence naming every moved row by table and the record it came from — so an auditor asking why an old unsubscribe link now withdraws this contact reaches the merge that brought it",
+	"internal/modules/consent/stopcarry.go:CarryStopsTx":                             "a merge retired one record and the stop it held now also applies to the survivor, so a stop was ADDED to a record that had none. There is no prior state to record because the survivor had no such row: this is not a field of theirs changing, it is a fact about the merge landing on them. What it has instead is the count of stops carried, and the row itself names its origin in carried_from — so an auditor asking why this contact is suppressed reaches the record that actually objected, and the merge that brought it here, without needing a before-image of a row that did not exist",
+	"internal/modules/consent/overridecarry.go:auditAndEmitCarriedOverrides":         "the same merge landing an override rather than a stop on the survivor, split into its own function from CarryOverridesTx so the read query and the write stay legible on their own. The same OCCURRENCE shape CarryStopsTx has and for the same reason: there is no prior state to record because the survivor had no such row, and what it has instead is the count of overrides carried plus one event per carried row on a contact survivor — the row itself names its origin in carried_from, so an auditor asking why a send to this contact was overruled reaches the rep who vouched and the merge that brought it here, without needing a before-image of a row that did not exist",
+	"internal/modules/consent/lift.go:revokeStopTx":                                  "somebody with the authority to do so took back a stop, so mail may resume. An OCCURRENCE and not a replacement: no field of the contact changes, and the row it revokes is not edited — revoked_at is set and the row stands, because a stop that was lifted is still a thing that happened. What it has instead of a prior state is the level the stop was recorded at and the level that lifted it, which together say the comparison that permitted this and let an auditor check it without re-deriving it from a row that no longer says what it was",
+	"internal/modules/consent/bouncesuppress.go:RecordHardBounceTx":                  "the receiving mail system said an address is permanently gone, so this installation stops writing to it. An OCCURRENCE and not a replacement: no field of anybody's record changes, the row is created and never edited, and a lift revokes it rather than rewriting it. The entity is named at runtime because a bounce is a fact about an ADDRESS and the address may belong to a contact, to a lead, or to nobody at all — so the audit hangs from the contact when one owns the address and from the delivery that died when none does, which is the only other identity this fact has. What it carries instead of a prior state is the kind of stop and the level it was decided at, which is what an auditor asking why mail to this address is refused needs. The address itself is deliberately NOT in the payload: audit_log is append-only, so an address written there would outlive the Art. 17 erase that clears the row",
+	"internal/modules/consent/bouncesuppress.go:LiftAddressStop":                     "an address that refused delivery works again — usually because somebody corrected a typo — so the stop the machinery wrote is taken back. The same OCCURRENCE shape revokeStopTx has and for the same reason: revoked_at is set and the row stands, because a stop that was lifted is still a thing that happened. The entity is the SUPPRESSION ROW rather than a contact, because a bounce stop deliberately names no contact — a contact-scoped row would refuse every address that record has — so the row is the one identity this fact reliably carries. What it has instead of a prior state is the kind that was lifted and the reason the caller gave, which together answer who decided this address works again and why",
+	"internal/modules/consent/withdrawalpress.go:StopForCredentialTx":                "a lead or an address-only recipient pressed the unsubscribe link in their mail, and holding no per-purpose consent rows there is nothing to withdraw — so the press records a stop. The same OCCURRENCE shape suppressAdmittedTx has, for the same reason: no field of the record changes, the row is created and never edited, and a lift revokes it rather than rewriting it. The entity is named at runtime because the subject is genuinely one of two — the lead when a lead holds the address, and nothing at all when no record does, in which case the row is its own record and no audit entry is written. What it carries instead of a prior state is the kind of stop and where it came from, which is what an auditor asking why this lead is suppressed needs",
+	"internal/modules/recordlinks/write.go:recordLinkChange":                         "a user linking two records, or removing a link. An OCCURRENCE and not a replacement: no field of either record changes. What moved is a row in record_link, which holds the type and both ends, and the audit row names the link by id and type. The subject is the record the link starts on, an entity named at runtime, and the other end stays off the image because a reader of one record may not be allowed to see the other",
 
 	"internal/modules/consent/suppress.go:suppressAdmittedTx":                "somebody recorded that a subject asked us to stop writing to them. An OCCURRENCE and not a replacement: no field of the contact changes, and there is no prior state to image because a stop either was on file or was not — the row is created, never edited, and lifting one revokes it rather than rewriting it. What it has instead of a prior state is the kind of stop and the authority it was recorded at, which together say what was asked and who may lift it. The subject's own words for the reason stay on the row and out of the audit payload, because an audit entry is read by contacts the reason was not given to",
-	"internal/modules/consent/override.go:allowAdmittedTx":                   "a rep vouched that a machine-level refusal for one category may be overruled for this contact. An OCCURRENCE and not a replacement: no field of the contact changes, and there is no prior state to image because an override either was on file or was not — the row is created, never edited, and revoking one sets revoked_at rather than rewriting it. What it has instead of a prior state is the category vouched for and the authority it was recorded at, which together say what was overruled and by whom. The rep's own words for the reason stay on the row and out of the audit payload, for the same reason suppressAdmittedTx keeps the subject's off theirs: an audit entry is read by contacts the reason was not given to",
-	"internal/modules/consent/overridechain.go:auditAndEmitRevokedOverrides": "somebody with the authority to do so took back a standing override, so the machine-level refusal it vouched against applies again. The same OCCURRENCE shape liftAdmittedTx has and for the same reason: no field of the contact changes, and the override it revokes is not edited — revoked_at is set and the row stands, because an override that was revoked is still a thing that happened. What it has instead of a prior state is the level the override was recorded at and the level that revoked it, which together say the comparison that permitted this and let an auditor check it without re-deriving it from a row that no longer says what it was",
+	"internal/modules/consent/overridechain.go:auditAndEmitRevokedOverrides": "somebody with the authority to do so took back a standing override, so the machine-level refusal it vouched against applies again. The same OCCURRENCE shape revokeStopTx has and for the same reason: no field of the contact changes, and the override it revokes is not edited — revoked_at is set and the row stands, because an override that was revoked is still a thing that happened. What it has instead of a prior state is the level the override was recorded at and the level that revoked it, which together say the comparison that permitted this and let an auditor check it without re-deriving it from a row that no longer says what it was",
 	"internal/modules/consent/authorizebasis.go:recordBasis":                 "the lawful ground an outbound message was permitted on, written down when the engine concludes it. An OCCURRENCE and not a replacement: no field of the contact changes — the contact is the subject because a reader asking why we wrote to somebody looks the contact up, not a basis id — and there is no prior state to image, because a ground either was on file or was not: the row is created, never edited, and the check beside it refuses a second one while the first is live. What it has instead of a prior state is the basis kind and the category the engine resolved, which together say what was concluded and on what footing. The row itself carries the conversation, the window and the source message",
 	"internal/modules/contacts/sdrhandoff.go:ResubmitHandoff":                "a recycled handoff reopened. An OCCURRENCE and not a replacement, on the CAS: the UPDATE carries `status = recycled`, so a write that lands is one where the prior state WAS recycled — an image would record that one word for every row, forever, which the verb already says. What it has instead of a prior state is sdr_handoff_event, written in the same transaction and append-only, carrying every round this prospect has been through",
 	"internal/modules/assurance/bundle.go:CloseCycle":                        "a pass of assurance ending. An OCCURRENCE and not a replacement, and the CAS makes that exact: the UPDATE carries `closed_at IS NULL`, so a write that lands is one where the cycle WAS open — an image would record that one fact for every row, forever, which the verb already says. A second close reports ErrNotFound and the first moment stands. What the audit row has instead of a prior state is WHO decided the window was over, which the closed_at timestamp on the row cannot say",
@@ -128,8 +95,9 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/activities/worklistpin.go:recordPin":   "a rep putting one row at the top of their own day. An OCCURRENCE and not a replacement: NO field of the row changes — it is exactly the row the lanes assembled — and what moved is a line in a side table saying one reader wants it first. The row's own record is the subject because that is what the pin is about. There is no prior state to image either: a pin either stood or did not, and the insert does nothing when it already did, so an image would record the absence of one for every row that has never been pinned. What it has instead is the action, the lane the row came from, the row's own id and whose day was reordered — the id on the IMAGE rather than only as the subject, because a folded group's identity is synthetic and cannot be an entity id at all",
 	"internal/modules/activities/worklistdone.go:recordDone": "a rep taking one row off their own Worklist. An OCCURRENCE, as a pin is: no field of the row changes, and what moved is a line in a side table saying one reader is done with it. There is no prior state to image: the Done either stood or did not. What it has instead is the action (done or reopened), the lane the row came from, the row's own id and whose list it cleared. The id is on the image because a folded group's identity is synthetic and cannot be an entity id",
 
-	"internal/modules/activities/meetingreadiness.go:recordReadiness": "an attendee saying they are ready for a meeting, or taking it back. An OCCURRENCE and not a replacement: NO field of the meeting changes, and what moved is a row in meeting_readiness that holds for that attendee alone. There is no prior field state to image. What it has instead is the new state, the preparation revision it was given at as evidence, and the actor or the user an agent acted for, which names the attendee",
-	"internal/modules/activities/disposition.go:recordDisposition":    "a rep deciding what to do about a waiting message. An OCCURRENCE and not a replacement: NO field of the activity changes — the message is exactly as the customer sent it, and what moved is a row in a side table saying somebody put it down. The activity is the subject because it is what the judgement is about and what a reader investigating would look up. What it has instead of a prior state is the decision itself plus the moment a snooze lifts, and the side tables carry set_by and set_at, so who judged and when is recoverable from the rows the audit row points at",
+	"internal/modules/activities/linksuggestion.go:recordLinkSuggestion": "an extension proposing a record for a message, and a reader deciding it. An OCCURRENCE and not a replacement: no field of the activity changes. What moved is a row in activity_link_suggestion, which holds the target, the unit, who decided and when, and the audit row points at it. An accept also files the message through the relink, which writes its own audit row with its own before image",
+	"internal/modules/activities/meetingreadiness.go:recordReadiness":    "an attendee saying they are ready for a meeting, or taking it back. An OCCURRENCE and not a replacement: NO field of the meeting changes, and what moved is a row in meeting_readiness that holds for that attendee alone. There is no prior field state to image. What it has instead is the new state, the preparation revision it was given at as evidence, and the actor or the user an agent acted for, which names the attendee",
+	"internal/modules/activities/disposition.go:recordDisposition":       "a rep deciding what to do about a waiting message. An OCCURRENCE and not a replacement: NO field of the activity changes — the message is exactly as the customer sent it, and what moved is a row in a side table saying somebody put it down. The activity is the subject because it is what the judgement is about and what a reader investigating would look up. What it has instead of a prior state is the decision itself plus the moment a snooze lifts, and the side tables carry set_by and set_at, so who judged and when is recoverable from the rows the audit row points at",
 
 	"internal/modules/contacts/nudgedismissal.go:recordNudgeDismissal": "a rep setting a lapsed contact aside so their own decay lane stops raising them, or putting them back. An OCCURRENCE and not a replacement: NO field of the contact changes — the contact is exactly as they were, and what moved is a row in a side table saying one reader decided not to chase them for a while. The contact is the subject because the judgement is about them and is what a reader investigating why a contact stopped appearing would look up. What it has instead of a prior state is the action and, on a dismissal, the moment it lifts; the side table carries set_by and set_at, so who decided and when is recoverable from the row the audit row points at. A restore names no moment because it takes effect now, and the moment it ends was already published by the dismissal it undoes. A RE-dismissal is the one case that does replace something — a deadline that was still standing — and it takes the other branch, imaging the moment it displaced through storekit.Audit",
 
@@ -143,9 +111,12 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 
 	"internal/modules/contacts/channelidentity.go:auditChannelIdentityChange": "binding an account to a contact who had none replaces nothing: the question is which account reaches this human, and before the bind none did. A rebind takes the other branch and names the binding it moved",
 
-	"internal/modules/contacts/acquisitionrequest.go:RetractAcquisitionRequest": "a human taking back the request a contact's acquisition records. It is an OCCURRENCE on the contact: the acquisition rows stay and gain the moment the request was withdrawn, and the image names the request kinds withdrawn",
-	"internal/modules/consent/qualifyingevent.go:RetractQualifyingEvent":        "a human taking back an exchange they recorded. It is an OCCURRENCE on the contact, as recording is: the exchange row stays and gains the moment it was withdrawn, and the image names the exchange by its kind and when it happened",
-	"internal/modules/consent/qualifyingevent.go:writeExchangeTx":               "a human writing down an exchange that happened away from every system — a card handed over at a trade fair. It is an OCCURRENCE and not a replacement: nothing about the contact changed state, a row saying what happened was added, and there is no prior version of a meeting for the image to name. The verb is `update` on `contact` because that is the row the caller was authorized against and the row whose sendability this changes; the alternative, a create on the qualifying-event row, would put a rule in the trail that authorized nothing here",
+	"internal/modules/contacts/impersonationwarning.go:carryImpersonationWarningTx": "a merge moving the merged-away contact's open warning to the survivor. It is an OCCURRENCE on the survivor: the survivor held no open warning, so no field of it has a prior value to name, and the image names the reason carried",
+	"internal/modules/contacts/impersonationwarning.go:raiseImpersonationWarningTx": "a later mail labelling a contact that carried no verdict. It is an OCCURRENCE on the contact: the guard matches only a row whose verdict columns were empty, so no field has a prior value to name, and the image names the reason raised",
+	"internal/modules/contacts/impersonationwarning.go:ClearImpersonationWarning":   "a user answering the sender check's warning on a contact as fine. It is an OCCURRENCE on the contact: the verdict and its reason stay on the row and gain the moment and the user that cleared it, and the image names the reason cleared",
+	"internal/modules/contacts/acquisitionrequest.go:RetractAcquisitionRequest":     "a human taking back the request a contact's acquisition records. It is an OCCURRENCE on the contact: the acquisition rows stay and gain the moment the request was withdrawn, and the image names the request kinds withdrawn",
+	"internal/modules/consent/qualifyingevent.go:retractQualifyingSubject":          "a human taking back an exchange they recorded. It is an OCCURRENCE on the contact, as recording is: the exchange row stays and gains the moment it was withdrawn, and the image names the exchange by its kind and when it happened",
+	"internal/modules/consent/qualifyingevent.go:writeExchangeTx":                   "a human writing down an exchange that happened away from every system — a card handed over at a trade fair. It is an OCCURRENCE and not a replacement: nothing about the contact changed state, a row saying what happened was added, and there is no prior version of a meeting for the image to name. The verb is `update` on `contact` because that is the row the caller was authorized against and the row whose sendability this changes; the alternative, a create on the qualifying-event row, would put a rule in the trail that authorized nothing here",
 
 	"internal/modules/consent/submissionreview.go:markResolvedTx": "a colleague answering what a subject proposed. An OCCURRENCE and not a replacement: the submission row went from undecided to decided, which is a fact arriving rather than a field of anybody's record changing — and on a rejection nothing about the contact moves at all. Where an ACCEPTED correction does move a field, that change is written by contacts' own update path, which records its own before-image of the value it replaced; a second image here would describe the same edit from a row that never held it. The verb is `update` on `contact` because that is the row a later reader asks about, the same choice stageSubmission makes. What it carries instead of a prior state is the kind of proposal and the decision recorded, which is what an auditor asking what we did about this contact's request needs. The proposed value stays OFF the payload for stageSubmission's reason: a second copy of the subject's own data would outlive the erasure that clears the first",
 
@@ -156,6 +127,7 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 	// what, and the branch that replaced nothing says so rather than inventing
 	// an image. The runtime refusal found all three; no static reading could,
 	// because each reaches the door through a verb it does not spell.
+	"internal/modules/capture/freemaildomain.go:AddConfirmed":                   "a carve-out the list did not hold replaces no kind, because the domain was not on it; amending an entry takes the other branch and records the kind it replaced",
 	"internal/modules/capture/owndomainstore.go:Add":                            "registering a domain nobody had seen adds an entry to the workspace list, so there is no prior source or verification for the row to name; confirming a candidate a mailbox already saw takes the other branch and records what moved",
 	"internal/modules/contacts/domainadmission.go:recordHumanDomainAdmissionTx": "a first decision replaces no admission, no reason and nobody answerable for one; every later decision moved all three and records what they were",
 
@@ -165,7 +137,7 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/capture/senderoverride.go:Remove":               "the same decision withdrawn: what it had been is in the row this deletes, and the image names that it was withdrawn",
 	"internal/modules/capture/exclusionstore.go:Add":                  "the settings row has no column for a rule; the write inserts one exclusion into a list, and the image names the rule that now applies",
 	"internal/modules/capture/owneridentityrestore.go:RestoreRemoval": "the restore re-inserts the claim a withdrawal removed, so there is no prior state to record: the before-image is the withdrawal's own audit row, which this one names as the entry it reverses. The image carries the claim's id and kind and never its value, for the reason Add gives",
-	"internal/modules/capture/owneridentitystore.go:Add":              "the settings row has no column for a seat's own addresses; the write inserts one claim into a per-seat list. The image names the claim's id and kind and deliberately NOT its value — an owner identity is one contact's private address, and the audit log is where nothing erases it and every admin reads it",
+	"internal/modules/capture/owneridentitystore.go:AddConfirmed":     "the settings row has no column for a seat's own addresses; the write inserts one claim into a per-seat list. The image names the claim's id and kind and deliberately NOT its value — an owner identity is one contact's private address, and the audit log is where nothing erases it and every admin reads it",
 
 	"internal/modules/contacts/providerclaims.go:WriteProviderClaims": "the bought values land in contact_provider_claim and the contact row is untouched, and quoting them would put a second copy of the subject's data in a table the erasure treats as evidence rather than as subject data",
 	"internal/modules/contacts/researchclaim.go:SaveResearchClaims":   "the claims land in contact_profile_field and the contact row is untouched; what arrived rides the evidence column, where field history will not read it as a field of the record",
@@ -203,369 +175,123 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 // gate impossible to green over wrappers that are correct; merely counting them
 // would let a real defect through in silence.
 var unresolvableAuditActions = gatekit.Waive(map[string]string{
-	"internal/modules/reporting/persistence.go:recordChange":            "The shared mutation writer requires a non-nil before image for every non-create action before invoking Audit.",
-	"internal/modules/forecasting/capturestatus.go:RecordCaptureStatus": "The locked capture-status row is the before image; only its absence selects create, while update always carries the previously stored status.",
-	"internal/modules/knowledge/external.go:auditAndQueue":              "op is only create or update, and each caller spells it as a literal: the create caller has no prior row and passes none, the update caller passes the replaced document's name and checksum",
+	"internal/modules/reporting/persistence.go:recordChange": "The shared mutation writer requires a non-nil before image for every non-create action before invoking Audit.",
+	"internal/modules/knowledge/external.go:auditAndQueue":   "op is only create or update, and each caller spells it as a literal: the create caller has no prior row and passes none, the update caller passes the replaced document's name and checksum",
 	// The seam that routes an extension's own change, choosing the door from
 	// what the change carries rather than from a verb it cannot read.
 	"internal/compose/extledger.go:recordExtensionChange": "the verb is the unit's own, and the seam picks the door from whether the change declared a before-image, so an update either carries one or is recorded as the occurrence it says it is",
 
 	// Wrappers whose images are computed by the caller and handed in whole.
-	"internal/modules/capture/lifecycleaudit.go:auditLifecycle":                           "both images are parameters, so the verb and what it changed arrive together from a caller that has the row",
-	"internal/modules/identity/teams.go:recordTeamChange":                                 "the verb spans create, update, archive and restore, and every one of them is handed the team row's own images",
-	"internal/modules/identity/onboarding.go:auditOnboardingState":                        "create and update share one writer, and both pass the onboarding row as it stood before the step",
-	"internal/modules/contacts/coldstartprofile.go:applyColdStartTx":                      "a created record diffs against an explicitly empty image and an existing one against its own columns, so both verbs carry a before-image by construction",
-	"internal/modules/contacts/anchorcompany.go:SaveCompany":                              "the anchor's columns are read before the save and narrowed against what it wrote, so the update branch records what each one held",
-	"internal/modules/contacts/companysitereadconfirmation.go:recordSiteReadConfirmation": "the confirmation shares the anchor's column images, so its update branch records what the record held before the read was applied",
-	"internal/modules/contacts/relationshipimage.go:emitRelationshipNarrowedImagePairs":   "create and archive carry the edge whole and update carries the columns that moved, narrowed against the row read under the lock",
-	"internal/modules/ai/voice_source_store.go:recordSourceIngest":                        "a first ingest has no prior row and records none; a re-ingest records the corpus source it replaced",
-	"internal/modules/ai/voice_versions.go:recordVoiceVersionTransition":                  "the image is the version's own status on either side, and the verb names which transition it was",
-	"internal/modules/ai/ratewrite.go:writeModelRate":                                     "an upsert resolves to create or update, and the replaced rate is read and passed in either way",
-	"internal/modules/deals/fxrate_store.go:writeFxRate":                                  "the same upsert shape as the model rate, carrying the rate row it superseded",
-	"internal/modules/capture/freemaildomain.go:Add":                                      "a fresh carve-out and an amended one take different verbs, and the amended one carries the rule it replaced",
-	"internal/modules/approvals/decide.go:decideInTx":                                     "approve and reject are the two verbs, chosen from one boolean, and the same boolean names the status the decision left — so both branches carry the identical image pair: the pending status the row was locked in against the verdict it now holds",
-	"internal/modules/commissions/decide.go:decideTx":                                     "the verb names the decision and the images are the patch's own, so what the decision moved is recorded with it",
-	"internal/modules/commissions/decide.go:voidOne":                                      "a void is spelled as its own verb and carries the patch images for the row it retired",
-	"internal/modules/consent/recordadmitted.go:recordAdmittedTx":                         "a grant and a withdrawal are separate verbs, and both record the consent state they moved from",
-	"internal/modules/dealrooms/lifecycle.go:moveRoom":                                    "each room transition names its own verb and carries the patch images the move built",
-	"internal/platform/settings/delete.go:DeleteRawTx":                                    "each setting declares its own verb; the before image is the stored row it removes, and the after image is the registered default the key reads as once the row is gone",
-	"internal/platform/settings/store.go:SetRawTxReceipt":                                 "each setting declares its own verb, and the value on either side is rendered by the same declaration",
+	"internal/modules/capture/lifecycleaudit.go:auditLifecycle":                         "both images are parameters, so the verb and what it changed arrive together from a caller that has the row",
+	"internal/modules/capture/sharedmailboxaudit.go:announceSharedMailboxTx":            "both images are parameters, and every caller reads the shared row under lock first, so an update always carries its prior readers and visibility",
+	"internal/modules/contacts/relationshipimage.go:emitRelationshipNarrowedImagePairs": "create and archive carry the edge whole and update carries the columns that moved, narrowed against the row read under the lock",
+	"internal/modules/commissions/decide.go:decideTx":                                   "the verb names the decision and the images are the patch's own, so what the decision moved is recorded with it",
+	"internal/modules/commissions/decide.go:voidOne":                                    "a void is spelled as its own verb and carries the patch images for the row it retired",
+	"internal/platform/settings/delete.go:DeleteRawTx":                                  "each setting declares its own verb; the before image is the stored row it removes, and the after image is the registered default the key reads as once the row is gone",
+	"internal/platform/settings/store.go:SetRawTxReceipt":                               "each setting declares its own verb, and the value on either side is rendered by the same declaration",
 
 	// The one site no static reading could ever judge, and the reason the
 	// chokepoint is not optional.
-	"internal/modules/privacy/retentionactions.go:apply": "the verb is a column of the policy row being applied, read at run time; retention_policy_action_check admits only archive, anonymize and erase, so this site cannot reach update at all",
-})
-
-// directAuditLogWriters: files that send their own INSERT into audit_log rather
-// than calling a door. Every rule this gate and the chokepoint hold is built on
-// the doors, so a direct writer is outside both — and one nobody ratified is a
-// second spelling of the write nobody noticed.
-//
-// storekit itself is absent on purpose: it IS the doors, and its own statement
-// is what they reach.
-var directAuditLogWriters = gatekit.Waive(map[string]string{
-	"internal/compose/integration/harnessseed.go": "the integration harness's scrub-tombstone fixture, and the only writer here that is not product code. Its rows are erase tombstones — no before or after column, so there is no image for the door's rule to be about — and there is no door to reach: every product path that stamps one also archives its subject, and a tombstone on a LIVE record is the one seed that isolates an erasure boundary from that cascade",
+	"internal/modules/privacy/retentionactions.go:auditRetentionAction": "the verb is a column of the policy row being applied, read at run time; retention_policy_action_check admits only archive, anonymize and erase, so this site cannot reach update at all",
 })
 
 func TestEveryAuditedUpdateRecordsWhatItChangedFrom(t *testing.T) {
 	t.Parallel()
 	defer eventShapedUpdates.AssertAllMatched(t)
 	defer unresolvableAuditActions.AssertAllMatched(t)
-	defer directAuditLogWriters.AssertAllMatched(t)
 
-	files := gatekit.Scope{
-		Roots:   []string{"internal"},
-		Subject: fileReachesAnAuditDoor,
-		// The extension tier is absent on purpose. extensions/ holds separate Go
-		// modules that cannot import internal/platform/database/storekit at all —
-		// the dependency DAG forbids it — so an extension reaches audit_log only
-		// through compose/extledger.go, which is inside this root and ratified
-		// below like any other wrapper.
-	}.Files(t)
-
-	constantsByPackage := packageConstants(t, files)
-
-	var withBefore, eventShaped, unresolvable, direct int
-	for _, parsed := range files {
-		if writesAuditLogDirectly(parsed.File) && !strings.Contains(parsed.Path, "/storekit/") {
-			direct++
-			if !directAuditLogWriters.Waived(t, filepath.Dir(parsed.Path)+"/"+filepath.Base(parsed.Path)) {
-				t.Errorf("%s writes audit_log with its own statement, so neither this gate's rule nor "+
-					"storekit's refusal reaches it.\n"+
-					"\tCall a door, or ratify the file in directAuditLogWriters with what its rows are.",
-					parsed.Path)
+	census := auditEntityCensusOf(t)
+	for _, at := range census.directInserts {
+		t.Errorf("%s writes audit_log with its own statement, so neither this gate's rule nor "+
+			"storekit's refusal reaches it.\n\tCall a storekit door.", at)
+	}
+	var withBefore, eventShaped, unresolvable int
+	for _, site := range auditDoorSitesOf(t) {
+		switch beforeImageVerdictOf(site) {
+		case verdictUnreadVerb:
+			unresolvable++
+			if !unresolvableAuditActions.Waived(t, site.key()) {
+				t.Errorf("%s: %s builds its audit verb at runtime, so this gate cannot judge it.\n"+
+					"\tRatify it in unresolvableAuditActions with the guarantee that holds it, "+
+					"or pass the verb as a constant.", site.key(), site.door.name)
 			}
-		}
-		consts := constantsByPackage[filepath.Dir(parsed.Path)]
-		for _, site := range auditSitesIn(parsed) {
-			switch action, known := site.action(consts); {
-			case !known:
-				unresolvable++
-				if !unresolvableAuditActions.Waived(t, site.key) {
-					t.Errorf("%s: %s builds its audit verb at runtime, so this gate cannot judge it.\n"+
-						"\tRatify it in unresolvableAuditActions with the guarantee that holds it, "+
-						"or spell the verb as a literal.", site.key, site.door)
-				}
-			case action != "update":
-				// archive, create, erase and the rest: out of this gate's scope.
-			case auditDoorsWithBeforeImage[site.door]:
-				withBefore++
-				if site.beforeIsAbsent {
-					t.Errorf("%s: audits an update to %s with no before-image.\n"+
-						"\tRecord what the fields held (the row is readable in this transaction), "+
-						"or call storekit.AuditEvent and say here what this write has instead.",
-						site.key, site.entityType(consts))
-				}
-			default:
-				eventShaped++
-				if !eventShapedUpdates.Waived(t, site.key) {
-					t.Errorf("%s: records an update to %s as an occurrence.\n"+
-						"\tRatify it in eventShapedUpdates with what this write has instead of a "+
-						"prior state, or record the before-image and call storekit.Audit.",
-						site.key, site.entityType(consts))
-				}
+		case verdictImaged:
+			withBefore++
+		case verdictNoBeforeImage:
+			withBefore++
+			t.Errorf("%s: audits an update to %s with no before-image.\n"+
+				"\tRecord what the fields held (the row is readable in this transaction), "+
+				"or call storekit.AuditEvent and say here what this write has instead.",
+				site.key(), site.entityType())
+		case verdictOccurrence:
+			eventShaped++
+			if !eventShapedUpdates.Waived(t, site.key()) {
+				t.Errorf("%s: records an update to %s as an occurrence.\n"+
+					"\tRatify it in eventShapedUpdates with what this write has instead of a "+
+					"prior state, or record the before-image and call storekit.Audit.",
+					site.key(), site.entityType())
 			}
+		case verdictNotAnUpdate:
 		}
 	}
 
-	// Counted last, and reported rather than fatal: a Fatalf here would abort
-	// before the findings above print, and those findings are the worklist.
-	//
-	// Three counts, because the walk has three ways to fail short and one total
-	// would hide which. Each floor sits BELOW the real number, so a scan that
-	// stopped working fails instead of quietly finding nothing.
-	if withBefore < 80 || eventShaped+unresolvable < 15 || direct < 1 {
+	// Reported rather than fatal, so the findings above still print. Each
+	// floor sits below the real count, so a reader that stopped working fails.
+	if withBefore < 80 || eventShaped+unresolvable < 15 || !census.seedInserts {
 		t.Errorf("resolved %d image-carrying, %d occurrence-shaped and %d runtime-verb audit site(s), "+
-			"and %d direct writer(s) of the table — one of the ways of finding a write has stopped working",
-			withBefore, eventShaped, unresolvable, direct)
+			"and the seed's INSERT read %v: one of the ways of finding a write has stopped working",
+			withBefore, eventShaped, unresolvable, census.seedInserts)
 	}
 }
 
-// auditSite is one call into audit_log, located and pre-read.
-type auditSite struct {
-	key            string // path:function — what a waiver is keyed by
-	door           string // which of the four doors
-	args           []ast.Expr
-	beforeIsAbsent bool
-	// fn is the function the call sits in, so a reader can follow an image the
-	// call names rather than spells — a local, or a parameter its own callers
-	// fill. historyfieldlabels_test.go needs it; this gate reads only the
-	// argument.
-	fn *ast.FuncDecl
-}
+// beforeImageVerdict is what this gate concludes about one door site.
+type beforeImageVerdict int
 
-// action resolves the site's verb: a literal, or a package-level constant this
-// file's package declares. Anything else — a parameter, a struct field, a value
-// read at runtime — is unknown, and saying so is the point.
-func (s auditSite) action(consts map[string]string) (string, bool) {
-	if auditDoorsAlwaysUpdateShaped[s.door] {
-		return "update", true
+const (
+	verdictNotAnUpdate beforeImageVerdict = iota
+	verdictUnreadVerb
+	verdictImaged
+	verdictNoBeforeImage
+	verdictOccurrence
+)
+
+// beforeImageVerdictOf judges one site. archive, create, erase and the other
+// verbs are out of this gate's scope.
+func beforeImageVerdictOf(site auditDoorSite) beforeImageVerdict {
+	verbs, known := site.verbs()
+	switch {
+	case !known:
+		return verdictUnreadVerb
+	case !slices.Contains(verbs, "update"):
+		return verdictNotAnUpdate
+	case site.door.before < 0:
+		return verdictOccurrence
+	case site.beforeIsAbsent():
+		return verdictNoBeforeImage
 	}
-	return resolveString(s.argAt(auditActionArg), consts)
+	return verdictImaged
 }
 
-// entityType is for the failure message only, so an unresolvable one degrades to
-// the expression's own spelling rather than costing a finding.
-func (s auditSite) entityType(consts map[string]string) string {
-	if value, known := resolveString(s.argAt(auditEntityTypeArg), consts); known {
-		return value
+func TestAnUpdateWithANilBeforeImageIsReportedAndOneWithAnImageIsNot(t *testing.T) {
+	t.Parallel()
+	census := fixtureCensus(t, fixtureSeed, map[string]string{"a.go": fixtureHeader +
+		"func absent() { _ = k.Record(ctx, tx, \"update\", \"alpha\", nil, map[string]any{\"a\": 1}) }\n" +
+		"func imaged() { _ = k.Record(ctx, tx, \"update\", \"alpha\", map[string]any{\"a\": 0}, map[string]any{\"a\": 1}) }\n"})
+	sites, _ := census.doorSites()
+	got := map[string]beforeImageVerdict{}
+	for _, site := range sites {
+		got[site.use.decl.Name.Name] = beforeImageVerdictOf(site)
 	}
-	return "an entity named at runtime"
-}
-
-func (s auditSite) argAt(i int) ast.Expr {
-	if i >= len(s.args) {
-		return nil
-	}
-	return s.args[i]
-}
-
-func resolveString(expr ast.Expr, consts map[string]string) (string, bool) {
-	switch node := expr.(type) {
-	case *ast.BasicLit:
-		if node.Kind != token.STRING {
-			return "", false
-		}
-		value, err := strconv.Unquote(node.Value)
-		return value, err == nil
-	case *ast.Ident:
-		value, declared := consts[node.Name]
-		return value, declared
-	default:
-		return "", false
+	if got["absent"] != verdictNoBeforeImage || got["imaged"] != verdictImaged {
+		t.Errorf("judged %v, want absent reported and imaged passed", got)
 	}
 }
 
-// storekitPath is the package whose doors this gate judges. The subject
-// predicate, the qualifier resolution and the direct-INSERT sweep all read it,
-// so they cannot come to mean different packages.
-const storekitPath = "github.com/margince/margince/backend/internal/platform/database/storekit"
-
-// fileReachesAnAuditDoor is the Scope subject, asked identically inside the
-// roots and outside them: a file that calls a door, or that writes audit_log
-// with its own statement.
-func fileReachesAnAuditDoor(path string, file *ast.File) bool {
-	if strings.HasSuffix(path, "_test.go") {
-		return false
-	}
-	if writesAuditLogDirectly(file) {
-		return true
-	}
-	qualifier := auditDoorQualifier(file)
-	found := false
-	ast.Inspect(file, func(n ast.Node) bool {
-		if _, isDoor := auditDoorAt(n, qualifier); isDoor {
-			found = true
-		}
-		return !found
-	})
-	return found
-}
-
-// auditDoorQualifier is the name THIS file reaches storekit by. A gate that
-// assumed the canonical spelling would stop seeing a file that aliases the
-// import, and would report nothing rather than fail — the way a census fails
-// short. Empty means the file cannot reach the doors at all.
-func auditDoorQualifier(file *ast.File) string {
-	if file.Name != nil && file.Name.Name == "storekit" {
-		return ""
-	}
-	qualifier, dotImported := gatekit.ImportedAs(file, storekitPath)
-	if dotImported {
-		// A dot-import leaves the door bare. No file in this tree does it, and
-		// the gate would silently stop judging one that did.
-		return "."
-	}
-	return qualifier
-}
-
-// writesAuditLogDirectly reports whether a file sends its own INSERT into
-// audit_log. The doors are a chokepoint only for callers that use them, and a
-// module writing the table itself is outside every check built on them.
-func writesAuditLogDirectly(file *ast.File) bool {
-	found := false
-	ast.Inspect(file, func(n ast.Node) bool {
-		if found {
-			return false
-		}
-		if text, ok := gatekit.LiteralText(asExpr(n)); ok &&
-			strings.Contains(strings.ToUpper(text), "INSERT INTO AUDIT_LOG") {
-			found = true
-		}
-		return !found
-	})
-	return found
-}
-
-func asExpr(n ast.Node) ast.Expr {
-	expr, _ := n.(ast.Expr)
-	return expr
-}
-
-func auditSitesIn(parsed gatekit.ParsedFile) []auditSite {
-	qualifier := auditDoorQualifier(parsed.File)
-	var sites []auditSite
-	for _, decl := range parsed.File.Decls {
-		fn, isFunc := decl.(*ast.FuncDecl)
-		if !isFunc || fn.Body == nil {
-			continue
-		}
-		ast.Inspect(fn.Body, func(n ast.Node) bool {
-			call, isCall := n.(*ast.CallExpr)
-			if !isCall {
-				return true
-			}
-			door, isDoor := auditDoorAt(call.Fun, qualifier)
-			if !isDoor {
-				return true
-			}
-			sites = append(sites, auditSite{
-				key:            parsed.Path + ":" + fn.Name.Name,
-				door:           door,
-				args:           call.Args,
-				beforeIsAbsent: auditDoorsWithBeforeImage[door] && isAbsentImageExpr(call),
-				fn:             fn,
-			})
-			return true
-		})
-	}
-	return sites
-}
-
-// auditDoorAt names the door a node calls, if it calls one.
-func auditDoorAt(n ast.Node, qualifier string) (string, bool) {
-	selector, isSelector := n.(*ast.SelectorExpr)
-	if !isSelector {
-		return "", false
-	}
-	pkg, isIdent := selector.X.(*ast.Ident)
-	if !isIdent || qualifier == "" || pkg.Name != qualifier {
-		return "", false
-	}
-	if _, isDoor := auditDoorsWithBeforeImage[selector.Sel.Name]; !isDoor {
-		return "", false
-	}
-	return selector.Sel.Name, true
-}
-
-// isAbsentImageExpr reads the before argument the one way source can be read
-// here: the bare `nil` identifier, written at the call.
-//
-// Everything else is invisible to it — a variable assigned nil, a parameter, a
-// field, and any helper that builds an image conditionally, such as
-// `imageOrNil(ch.Before)`. Each of those reaches audit_log as SQL NULL exactly
-// as a bare nil does, and only storekit's refusal catches them. That is the
-// division of labour this gate's doc comment describes, and the reason the
-// refusal is not optional.
-func isAbsentImageExpr(call *ast.CallExpr) bool {
-	if auditBeforeArg >= len(call.Args) {
-		return false
-	}
-	ident, isIdent := call.Args[auditBeforeArg].(*ast.Ident)
-	return isIdent && ident.Name == "nil"
-}
-
-// packageConstants collects every package-level string constant in the tree,
-// grouped by the directory that declares it. Go puts a package in a directory,
-// so the directory is the resolution scope.
-//
-// By PACKAGE and not by file, because that is where the verbs live that are not
-// written as literals. `actionUpdate` is a package-level constant used from
-// many files in that package; resolving only a file's own declarations would call
-// those sites unresolvable, and an unresolvable site gets RATIFIED. That would
-// turn "we could not read this verb" into a standing waiver over sites whose
-// verb is plainly `update` — the census failing short into the one bucket that
-// forgives it.
-// It reads the whole DIRECTORY rather than only the swept files, for the same
-// reason it groups by package at all: a constant lives wherever its author put
-// it, and `kindEmail` sits in the file that defines the sink parts, not in the
-// one that audits them. Resolving only the audit-door files calls such a site
-// unresolvable, and an unresolvable site gets ratified.
-func packageConstants(t *testing.T, files []gatekit.ParsedFile) map[string]map[string]string {
-	t.Helper()
-	byPackage := map[string]map[string]string{}
-	fset := gatekit.SourceFileSet()
-	for _, parsed := range files {
-		dir := filepath.Dir(parsed.Path)
-		if byPackage[dir] != nil {
-			continue
-		}
-		byPackage[dir] = map[string]string{}
-		parsed := parsePackageDir(t, fset, dir)
-		for _, file := range parsed {
-			collectStringConstants(file, byPackage[dir])
-		}
-		// A second pass, because a constant may name another rather than a
-		// literal — `freemailDomainObject = captureSettingsObject`, the capture
-		// settings object under the name the free-mail list calls it. One pass
-		// leaves the alias unresolved, and an unresolved entity type is the
-		// answer that gets a site ratified.
-		for _, file := range parsed {
-			collectStringConstants(file, byPackage[dir])
-		}
-	}
-	return byPackage
-}
-
-func collectStringConstants(file *ast.File, into map[string]string) {
-	for _, decl := range file.Decls {
-		gen, isGen := decl.(*ast.GenDecl)
-		if !isGen || gen.Tok != token.CONST {
-			continue
-		}
-		for _, spec := range gen.Specs {
-			value, isValue := spec.(*ast.ValueSpec)
-			if !isValue {
-				continue
-			}
-			for i, name := range value.Names {
-				if i >= len(value.Values) {
-					continue
-				}
-				if literal, known := resolveString(value.Values[i], into); known {
-					into[name.Name] = literal
-				}
-			}
-		}
+func TestAnExportedWriterWhoseVerbNoRuleReadsIsUnjudged(t *testing.T) {
+	t.Parallel()
+	census := fixtureCensus(t, fixtureSeed, map[string]string{"a.go": fixtureHeader})
+	_, unjudged := census.doorSites()
+	if len(unjudged) != 1 || !strings.HasSuffix(unjudged[0], ".FromData") {
+		t.Errorf("unjudged %v, want only the planted writer that reads its verb from data", unjudged)
 	}
 }

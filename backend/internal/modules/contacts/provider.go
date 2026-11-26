@@ -18,9 +18,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // Provider answers the datasource verbs for contact|company|lead|
@@ -46,7 +46,7 @@ func NewProvider(db *database.DB) *Provider {
 // WithFieldCatalog wires the workspace custom-field catalog into the
 // provider's store (see Store.WithFieldCatalog), so the MCP surface's
 // record verbs carry cf_* values exactly like the HTTP handlers.
-func (p *Provider) WithFieldCatalog(catalog fieldcatalog.Reader) *Provider {
+func (p *Provider) WithFieldCatalog(catalog storekit.FieldCatalog) *Provider {
 	p.store = p.store.WithFieldCatalog(catalog)
 	return p
 }
@@ -65,6 +65,13 @@ func (p *Provider) WithStopCarrier(carrier StopCarrier) *Provider {
 // WithStopCarrier does.
 func (p *Provider) WithSatelliteCarriers(consent ConsentSatelliteCarrier, intros IntroCarrier) *Provider {
 	p.store = p.store.WithSatelliteCarriers(consent, intros)
+	return p
+}
+
+// WithExtensions mirrors the HTTP wiring: a provider merge refuses a record
+// that extension rows depend on.
+func (p *Provider) WithExtensions(r extprivacy.Registry) *Provider {
+	p.store = p.store.WithExtensions(r)
 	return p
 }
 

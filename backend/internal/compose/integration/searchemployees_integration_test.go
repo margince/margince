@@ -305,7 +305,7 @@ func TestARankedWalkWithEmployeesReturnsEachContactOnce(t *testing.T) {
 func TestACompanyHitCarriesItsLogo(t *testing.T) {
 	e := SetupSearch(t)
 	key := "logos/quedlinburg-werke.png"
-	branded := e.SeedID(t, `INSERT INTO company (id, display_name, logo_object_key, logo_origin, source, captured_by)
+	branded := e.SeedID(t, `INSERT INTO company (id, display_name, logo_object_key, logo_source, source, captured_by)
 		VALUES ($1, 'Quedlinburg Werke', $2, 'upload', 'manual', 'human:x')`, key)
 	plain := seedSearchCompany(t, e, "Quedlinburg Logistik")
 
@@ -419,7 +419,7 @@ func TestThePaletteFindsTheStaffOfACompanyMadeThroughTheApp(t *testing.T) {
 	staff := map[string]bool{}
 	for _, name := range []string{"Anna Becker", "Ben Fischer", "Clara Wolf"} {
 		var contact contactRecord
-		if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": name, "source": "manual"}, nil, &contact); status != 201 {
+		if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": name, "source": "manual"}, nil, &contact); status != 201 {
 			t.Fatalf("create contact %s → %d", name, status)
 		}
 		linkEdge(t, e, AnyMap{"kind": "employment", "contact_id": contact.ID, "company_id": company.ID, "source": "manual"})
@@ -433,7 +433,7 @@ func TestThePaletteFindsTheStaffOfACompanyMadeThroughTheApp(t *testing.T) {
 		t.Fatalf("search → %d", status)
 	}
 	for _, hit := range page.Data {
-		if hit.Type == crmcontracts.SearchResultTypeContact && hit.WorksAt != nil && hit.WorksAt.CompanyId.String() == company.ID {
+		if hit.Type == "contact" && hit.WorksAt != nil && hit.WorksAt.CompanyId.String() == company.ID {
 			delete(staff, hit.Id.String())
 		}
 	}

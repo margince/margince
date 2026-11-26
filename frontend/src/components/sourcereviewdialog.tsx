@@ -58,13 +58,20 @@ type SourceReviewProps = Readonly<{
   caseId: string;
   open: boolean;
   onClose: () => void;
+  /** Called once a confirmed source is saved, before the drawer closes. */
+  onConfirmed?: () => void;
 }>;
 
 export function SourceReviewDialog(props: SourceReviewProps) {
   return <SourceReviewForm key={props.caseId} {...props} />;
 }
 
-function SourceReviewForm({ caseId, open, onClose }: SourceReviewProps) {
+function SourceReviewForm({
+  caseId,
+  open,
+  onClose,
+  onConfirmed,
+}: SourceReviewProps) {
   const t = useT();
   const canWork = useCanChangeNoticeCase();
   const queryClient = useQueryClient();
@@ -122,14 +129,21 @@ function SourceReviewForm({ caseId, open, onClose }: SourceReviewProps) {
     typeof preview.data?.preview_token === "string";
   const canConfirm = unsure ? canWork : previewReady;
   const assessment = useMutation({
-    mutationFn: async (body: components["schemas"]["AssessNoticeSource"]) =>
+    mutationFn: async ({
+      id,
+      body,
+    }: Readonly<{
+      id: string;
+      body: components["schemas"]["AssessNoticeSource"];
+    }>) =>
       unwrap(
         await api.POST("/privacy/notice-case-reviews/{id}/source", {
-          params: { path: { id: caseId } },
+          params: { path: { id } },
           body,
         }),
       ),
     onSuccess: () => {
+      onConfirmed?.();
       onClose();
       for (const key of SOURCE_READS) {
         void queryClient.invalidateQueries({ queryKey: key });
@@ -158,8 +172,8 @@ function SourceReviewForm({ caseId, open, onClose }: SourceReviewProps) {
         if (unsure) onClose();
         else if (request && previewReady && preview.data)
           assessment.mutate({
-            ...request,
-            preview_token: preview.data.preview_token,
+            id: caseId,
+            body: { ...request, preview_token: preview.data.preview_token },
           });
       }}
     >
@@ -271,7 +285,8 @@ function canPreviewSource(
     settled &&
     request !== null &&
     (!request.met_in_person || Boolean(request.obtained_at)) &&
-    (request.note.trim() !== "" || request.selected_evidence !== undefined)
+    ((request.note ?? "").trim() !== "" ||
+      request.selected_evidence !== undefined)
   );
 }
 

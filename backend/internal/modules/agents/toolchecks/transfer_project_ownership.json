@@ -1,0 +1,11 @@
+{
+  "verb": "transfer_project_ownership",
+  "checks": [
+    "project.read",
+    "project.update"
+  ],
+  "takes": [
+    "me",
+    "teammate"
+  ]
+}

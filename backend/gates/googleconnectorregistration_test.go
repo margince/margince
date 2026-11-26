@@ -64,6 +64,7 @@ const googleConnectorRegistrar = "newCaptureRegistryWithGoogle"
 var googleConnectorPackages = []string{
 	"github.com/margince/margince/backend/internal/modules/capture/gmail",
 	"github.com/margince/margince/backend/internal/modules/capture/gcal",
+	"github.com/margince/margince/backend/internal/modules/capture/gdocs",
 }
 
 // builtForSomethingOtherThanTheRegistry names the constructions that are a USE
@@ -73,6 +74,7 @@ var googleConnectorPackages = []string{
 var builtForSomethingOtherThanTheRegistry = gatekit.Waive(map[string]string{
 	"internal/compose/connectorapp.go:connectorHandlers.gmailApp": "builds a connector to call Authenticate on it and drops it; the registry never sees this one, so it decides nothing about whether Gmail is reachable",
 	"internal/compose/connectorapp.go:connectorHandlers.gcalApp":  "builds a connector to call Authenticate on it and drops it; the registry never sees this one, so it decides nothing about whether Calendar is reachable",
+	"internal/compose/connectorapp.go:connectorHandlers.gdocsApp": "builds a connector to call Authenticate on it and drops it; the registry never sees this one, so it decides nothing about whether meeting notes are reachable",
 })
 
 // TestOnlyOneFunctionRegistersTheGoogleConnectors is the census.

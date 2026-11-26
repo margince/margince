@@ -97,9 +97,9 @@ describe("custom fields on the record edit form", () => {
 
     // The divider heading sets the custom fields apart.
     expect(screen.getByText("Custom fields")).toBeTruthy();
-    // Currency prefilled from 1250 minor units → "12.5" major units.
+    // Currency prefilled from 1250 minor units → "12.50" major units.
     const input = screen.getByLabelText("Budget ceiling") as HTMLInputElement;
-    expect(input.value).toBe("12.5");
+    expect(input.value).toBe("12.50");
 
     await userEvent.clear(input);
     await userEvent.type(input, "20");
@@ -108,7 +108,7 @@ describe("custom fields on the record edit form", () => {
     await waitFor(() => expect(update).toHaveBeenCalled());
     // The screen coerces the edited major amount back to minor units.
     const submitted = update.mock.calls[0][0];
-    expect(customFieldsToBody(submitted, [ceilingCf])).toEqual({
+    expect(customFieldsToBody(submitted, [ceilingCf], "en")).toEqual({
       cf_budget_ceiling: 2000,
     });
   });
@@ -147,10 +147,12 @@ describe("custom fields on the record edit form", () => {
 
     await waitFor(() => expect(update).toHaveBeenCalled());
     const submitted = update.mock.calls[0][0];
-    expect(customFieldsToPatch(submitted, seeded, [ceilingCf])).toEqual({});
+    expect(customFieldsToPatch(submitted, seeded, [ceilingCf], "en")).toEqual(
+      {},
+    );
     // What the snapshot would have sent, and why it earned a 422: the same
     // save, one function apart.
-    expect(customFieldsToBody(submitted, [ceilingCf])).toEqual({
+    expect(customFieldsToBody(submitted, [ceilingCf], "en")).toEqual({
       cf_budget_ceiling: null,
     });
   });

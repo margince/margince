@@ -1,0 +1,11 @@
+{
+  "verb": "list_company_link_candidates",
+  "checks": [
+    "company.read",
+    "contact.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

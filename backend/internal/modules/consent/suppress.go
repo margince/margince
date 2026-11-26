@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -45,15 +46,17 @@ type SuppressInput struct {
 	// yet, and an input field naming a subject the authorization check cannot
 	// name would be a door claiming a reach it does not have.
 	ContactID ids.ContactID
-	// Kind is which stop this is. The vocabulary is the table's own CHECK, and
-	// a caller may only ever record subject_request — the other three are
-	// written by machinery (a bounce) or describe a legal fact (an objection, a
-	// restriction) that a rep relaying a phone call is not recording.
+	// Kind is which stop this is. The vocabulary is the table's own CHECK;
+	// admitSuppress says which kinds a caller may write.
 	Kind string
 	// Reason is what the rep was told, in their words. Stored because a
 	// suppression somebody later wants lifted is only reviewable if the record
 	// says why it was made.
 	Reason string
+	// ReceivedAt is when the refusal reached the controller: the arrival of the
+	// mail that said so, or the time of the call. Nil means it arrived as it was
+	// recorded. A Vietnamese receipt prints it (Decree 91/2020 Art. 20.4(a)).
+	ReceivedAt *time.Time
 }
 
 // The kinds a seat may write, and the two are a different shape of thing.
@@ -70,9 +73,9 @@ type SuppressInput struct {
 // newsletter" on the phone had only subject_request — which stopped the
 // invoices too.
 //
-// A processing restriction and a hard bounce stay machine-written: the first is
-// an Art. 18 legal state with its own workflow, the second a fact about a
-// mailbox only the mail path can observe.
+// A processing restriction is admitted through admitRestriction instead, and a
+// hard bounce stays machine-written: a fact about a mailbox only the mail path
+// can observe.
 var suppressibleKinds = []string{"subject_request", commsauthz.ReasonObjection}
 
 // suppressibleKind is the kind a seat writes when the subject asked to stop
@@ -123,11 +126,15 @@ func admitSuppress(ctx context.Context, in SuppressInput) (subject, commsauthz.A
 	if err != nil {
 		return subject{}, "", err
 	}
-	if !slices.Contains(suppressibleKinds, in.Kind) {
+	if in.Kind == kindProcessingRestriction {
+		if err := admitRestriction(ctx); err != nil {
+			return subject{}, "", err
+		}
+	} else if !slices.Contains(suppressibleKinds, in.Kind) {
 		return subject{}, "", &ValidationError{
 			Field: auditFieldKind,
-			Reason: "a contact may record that the subject asked us to stop, or objected to " +
-				"marketing; a processing restriction and a bounce are not recorded by hand here",
+			Reason: "a contact may record that the subject asked us to stop, objected to " +
+				"marketing, or restricted processing; a bounce is not recorded by hand here",
 		}
 	}
 	// The BOUND only. The contract makes this reason optional (`required: [kind]`),
@@ -145,6 +152,18 @@ func admitSuppress(ctx context.Context, in SuppressInput) (subject, commsauthz.A
 		return subject{}, "", err
 	}
 	return sub, levelFor(ctx, in.Kind), nil
+}
+
+// survivingContact is survivingSubject in a transaction of its own, for a
+// caller that holds none.
+func (s *Store) survivingContact(ctx context.Context, id ids.UUID) (ids.UUID, error) {
+	var surviving ids.UUID
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		surviving, err = survivingSubject(ctx, tx, id)
+		return err
+	})
+	return surviving, err
 }
 
 // survivingSubject resolves a contact to whichever record survives them, so a
@@ -184,7 +203,7 @@ func survivingSubject(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID, er
 // conversation, with no article behind it, and an admin correcting a
 // misheard "stop everything" should not need the subject on the phone.
 func levelFor(ctx context.Context, kind string) commsauthz.AuthorityLevel {
-	if kind == commsauthz.ReasonObjection {
+	if kind == commsauthz.ReasonObjection || kind == kindProcessingRestriction {
 		return commsauthz.LevelSubject
 	}
 	return authorityOf(ctx)
@@ -265,6 +284,13 @@ func (s *Store) suppressAdmittedTx(
 		}
 	}
 	sub.id = subjectID
+	recordedAt, err := stopLockInstantTx(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if in.ReceivedAt != nil && in.ReceivedAt.After(recordedAt) {
+		return &ValidationError{Field: fieldReceivedAt, Reason: "a refusal cannot arrive after it is recorded; give the time it reached you"}
+	}
 	// storekit.CapturedBy, which is the write shape's own reader: it resolves
 	// the authenticated principal to the string every audited table stores, so
 	// a suppression names its author the same way every other row does.
@@ -285,17 +311,21 @@ func (s *Store) suppressAdmittedTx(
 	if err != nil {
 		return err
 	}
+	if err := storekit.LockStopAddresses(ctx, tx, nil, kept); err != nil {
+		return err
+	}
 	// One row, or one per kept hash for an anonymized subject. Its addresses
 	// are gone, so the stop is pinned to their hashes, and a returning
 	// subject's new record is matched through them. The first row answers the id.
 	rows, err := tx.Query(ctx, `
 		INSERT INTO communication_suppression
-		    (`+sub.column+`, address_hash, address_key_id, kind, source, captured_by, decided_by_level, recorded_through)
-		SELECT $1, u.hash, CASE WHEN u.hash IS NOT NULL THEN $8::text END, $2, $3, $4, $5, $6
+		    (`+sub.column+`, address_hash, address_key_id, kind, source, captured_by, decided_by_level, recorded_through,
+		     recorded_at, received_at)
+		SELECT $1, u.hash, CASE WHEN u.hash IS NOT NULL THEN $8::text END, $2, $3, $4, $5, $6, $9::timestamptz, coalesce($10::timestamptz, $9::timestamptz)
 		  FROM unnest(coalesce($7::text[], ARRAY[NULL::text])) WITH ORDINALITY AS u(hash, n)
 		 ORDER BY u.n
 		RETURNING id`,
-		sub.id, in.Kind, suppressionSource(in.Reason), by, string(level), string(through), kept, keptKey)
+		sub.id, in.Kind, suppressionSource(in.Reason), by, string(level), string(through), kept, keptKey, recordedAt, in.ReceivedAt)
 	if err != nil {
 		return fmt.Errorf("consent: recording the suppression: %w", err)
 	}
@@ -327,7 +357,7 @@ func (s *Store) suppressAdmittedTx(
 	}
 	// THE ACKNOWLEDGEMENT THIS STOP OWES, on the same transaction.
 	//
-	// Decree 91/2020 Art. 16 owes a Vietnamese recipient a confirmation that
+	// Decree 91/2020 Art. 20 owes a Vietnamese recipient a confirmation that
 	// their refusal was received. Staging it here rather than from a consumer
 	// of the event below makes the stop and its acknowledgement one fact: a
 	// separate consumer would have to answer what happens when the stop commits
@@ -336,7 +366,15 @@ func (s *Store) suppressAdmittedTx(
 	//
 	// Answers nothing where no pack owes one, which is every installation but a
 	// Vietnamese one today.
-	if err := s.acknowledgeOptOutTx(ctx, tx, sub, in.Kind, stopID); err != nil {
+	received := recordedAt
+	if in.ReceivedAt != nil {
+		received = *in.ReceivedAt
+	}
+	if err := s.acknowledgeOptOutTx(ctx, tx, sub, in.Kind, stopID,
+		RefusalTimes{ReceivedAt: received, StoppedAt: recordedAt}); err != nil {
+		return err
+	}
+	if err := s.answerStopTx(ctx, tx, sub, in.Kind, stopID, recordedAt); err != nil {
 		return err
 	}
 	// EmitEvent, because the payload declares a STATIC entity: this door writes
@@ -344,6 +382,20 @@ func (s *Store) suppressAdmittedTx(
 	// scope from the type rather than from a runtime subject somebody has to
 	// ratify by hand.
 	return storekit.EmitEvent(ctx, tx, auditID, sub.id, suppressionRecordedPayload(in.Kind, level))
+}
+
+// answerStopTx opens what a stop owes under a pack that follows the recipient.
+// An objection or broad stop has its receipt already and gets the dated task.
+// A restriction gets the request receipt and the task.
+func (s *Store) answerStopTx(ctx context.Context, tx pgx.Tx, sub subject, kind string, stopID ids.UUID, at time.Time) error {
+	switch {
+	case acknowledgeableStop(kind):
+		who := ruleSubject{Kind: sub.entityType, ID: sub.id.String()}
+		return s.openRequestTaskTx(ctx, tx, who, RequestTaskObjection, stopID.String(), at)
+	case kind == kindProcessingRestriction:
+		return s.answerRequestTx(ctx, tx, sub, RequestTaskRestriction, stopID.String(), at)
+	}
+	return nil
 }
 
 // suppressionSource carries what the rep was told, bounded.

@@ -1,0 +1,14 @@
+{
+  "tool": "change_capture",
+  "action": "cancel_backfill",
+  "verb": "cancel_connector_backfill",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

@@ -1,0 +1,12 @@
+{
+  "verb": "get_claim_evidence",
+  "checks": [
+    "company.read",
+    "contact.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "company",
+    "profile_field"
+  ]
+}

@@ -13,9 +13,7 @@ package identity
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -106,11 +104,7 @@ func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	err = h.svc.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
-			INSERT INTO oauth_client (client_id, client_name, redirect_uris)
-			VALUES ($1, $2, $3)`,
-			clientID, req.ClientName, req.RedirectURIs)
-		return err
+		return insertDynamicClient(ctx, tx, h.unusedDynamicClientLimit(), clientID, req)
 	})
 	if errors.Is(err, database.ErrNoWorkspace) {
 		// Registration is per tenant; the request's host resolved to none.
@@ -208,7 +202,7 @@ func (h Handlers) validateAuthorize(r *http.Request, q url.Values) (authorizeReq
 	if !methods.MetadataDocument && cimdClientID(req.ClientID) == nil {
 		return authorizeRequest{}, oauthErrUnauthorizedClient, refusedMethodDescription
 	}
-	if err := h.svc.resolveCIMDClient(ctx, req.ClientID); err != nil && !errors.Is(err, errNotCIMD) {
+	if err := h.svc.resolveCIMDClient(ctx, req.ClientID, h.unusedDynamicClientLimit()); err != nil && !errors.Is(err, errNotCIMD) {
 		return authorizeRequest{}, oauthErrInvalidClient, "unknown client_id"
 	}
 	err = h.svc.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -374,8 +368,12 @@ func (h Handlers) oauthAuthorize(w http.ResponseWriter, r *http.Request) {
 	var code string
 	if err == nil {
 		code, err = h.svc.mintConsentedAuthorizationCode(
-			r.Context(), id, consentChoice{scopes: r.PostForm.Get("scopes"), areas: areas}, req,
+			r.Context(), id, currentSessionHash(r), consentChoice{scopes: r.PostForm.Get("scopes"), areas: areas}, req,
 		)
+	}
+	if errors.Is(err, errConsentingSessionEnded) {
+		httperr.Unauthorized(w, r, "your session ended before the consent was saved; sign in again and start from the client")
+		return
 	}
 	if errors.Is(err, apperrors.ErrInvalidArgument) {
 		// Not something the human's next click fixes: this server rendered
@@ -402,6 +400,7 @@ const refusedMethodDescription = "an admin has turned off this way of registerin
 
 // oauthError is the RFC 6749 §5.2 error shape.
 func oauthError(w http.ResponseWriter, status int, code, description string) {
+	w.Header().Set("Cache-Control", "no-store")
 	httperr.WriteJSON(w, status, map[string]string{oauthParamError: code, "error_description": description})
 }
 
@@ -455,11 +454,6 @@ func parseOAuthScopes(raw string) (scopes []string, offline bool, err error) {
 		scopes = []string{string(principal.ScopeRead)}
 	}
 	return scopes, offline, nil
-}
-
-func hashOAuthCode(code string) string {
-	sum := sha256.Sum256([]byte(code))
-	return hex.EncodeToString(sum[:])
 }
 
 func randomToken() (string, error) {

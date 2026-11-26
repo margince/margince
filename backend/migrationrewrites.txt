@@ -24,6 +24,9 @@
 1792998604_a_service_member_may_land_deals.down.sql | role | one UPDATE of the single service_ingest system role, which exists only once a service member was declared
 1792998607_a_service_member_reads_installation_settings.up.sql | role | one UPDATE of the single service_ingest system role, which exists only once a service member was declared
 1792998607_a_service_member_reads_installation_settings.down.sql | role | one UPDATE of the single service_ingest system role, which exists only once a service member was declared
+1794470041_a_message_may_have_suggested_links.up.sql | * | creates one new empty table and a trigger on it; no existing row is read or changed
+1794470022_the_signal_kind_check_is_validated.down.sql | signal | runs only on a rollback and archives only rows naming an ext: kind, which exist only once an installed extension declared a signal type and filed one, so the set is small
+1794470011_a_record_kind_may_come_from_an_extension.down.sql | activity_link, attachment, dedupe_candidate, embedding, field_provenance, list, list_live_member, list_member, list_member_event, record_grant, saved_view, signal, taggable, user_record_view | only rows naming an ext: kind are deleted, and those exist only once an installed extension declared a record kind and a user linked, tagged or listed one of its records, so each set is small
 1792863000_every_sender_may_direct_a_send.up.sql | role | updates only the fixed set of system roles, at most three rows per workspace
 1792863000_every_sender_may_direct_a_send.down.sql | role | updates only the fixed set of system roles, at most three rows per workspace
 1792887435_the_sender_kind_check_knows_vendor_pitch.down.sql | capture_pending_counterparty | runs only on a rollback and rewrites only rows judged vendor_pitch since the upgrade, one per sender address
@@ -34,6 +37,7 @@
 1793072052_a_built_in_label_reads_in_the_readers_language.up.sql | *, activity_review_template, deal_acquisition_source, lead_disqualify_reason, lead_origin, record_role | the procedural body is a trigger function that keys the questions of the one template row being saved; the updates touch only the built-in rows each list shipped with, at most eight per table and two review templates, and the generated columns rewrite these short settings lists once
 1793072052_a_built_in_label_reads_in_the_readers_language.down.sql | activity_review_template | the down migration rewrites only the built-in review templates, the two the product shipped with
 1793102336_retired_members_cannot_receive_active_work.up.sql | * | the procedural body is a per-row trigger function that checks a member reference; the migration installs guards and validates constraints without rewriting any existing row
+1794470001_a_company_type_may_come_from_an_extension.down.sql | company_relationship_type | only rows holding an ext: type are deleted, and those exist only once an installed extension declared a type and set it on a company, so the set is small
 1793175360_the_duplicate_scan_reads_facts_and_employment.down.sql | dedupe_scan_state | deletes only the watermark rows of the two streams this migration added, at most two rows
 1793159036_a_geocode_lives_beside_its_company.up.sql | * | the procedural body is a trigger function that marks the one side row of the company being updated stale; the migration adds empty columns and changes no existing row
 1793159036_a_geocode_lives_beside_its_company.down.sql | *, company | runs only on a rollback: the procedural body restores the trigger function that edits only the company row being updated, and the UPDATE returns each geocoded company's point to its own row, one row per company that has one
@@ -65,6 +69,8 @@
 1793747477_an_admin_keeps_tax_rates_per_country.down.sql | role | removes that one grant from the same fixed set of system roles
 1793769685_gemini_pro_is_priced_in_two_bands.up.sql | *, ai_model_rate, audit_log | one model on two providers: at most two inserted rows, and the few dated rows of that model still at its old flat price
 1793769685_gemini_pro_is_priced_in_two_bands.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1794796825_google_decisions_are_priced.up.sql | *, ai_model_rate, audit_log | one model on one provider: at most one inserted row and its one audit row
+1794796825_google_decisions_are_priced.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793774861_a_person_says_whether_they_chose_their_time_zone.up.sql | app_user | one row per seat, and a workspace holds at most its licensed seats plus a few agents; only seats that saved working hours are touched
 1793781269_only_a_call_that_reached_somebody_is_contact.up.sql | * | the bodies are the four last_activity_of_* read functions, re-created to read the call outcome, and two triggers re-created to fire on it; the migration validates two checks on a column every row holds NULL in and changes no existing row
 1793781269_only_a_call_that_reached_somebody_is_contact.down.sql | * | the down migration re-creates the same four read functions and two triggers as they were; it changes no existing row
@@ -99,5 +105,196 @@
 1794215101_large_originals_name_their_stored_object.up.sql | * | defines a retirement trigger whose body runs only on later writes; no existing original is rewritten
 1794215101_large_originals_name_their_stored_object.down.sql | * | refuses removal while external references exist, then removes only schema objects; no original is rewritten
 1794215102_large_original_references_are_valid.down.sql | * | the down migration is a single SELECT 1 that changes nothing
-1794215200_a_google_docs_corpus_and_a_document_that_knows_its_source_id.down.sql | knowledge_corpus, knowledge_document | runs only on a rollback and deletes only the rows of the gdocs source, which is one corpus and the Google Docs a workspace chose to sync
-1794215201_the_google_docs_source_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+
+1794283985_system_text_provenance.up.sql | * | nullable columns and unvalidated checks visit no existing row; the function and two triggers are DDL only, with no data rewrite
+1794283986_system_text_shapes_are_validated.down.sql | * | the down migration retains validation and changes no row
+1794412051_a_room_past_its_end_frees_its_deal.down.sql | deal_room | runs only on a rollback and rewrites only an expired room left beside a newer open room on the same deal, at most a few rows per deal
+1794412052_a_unit_sql_runs_as_the_ext_runtime_role.up.sql | * | the procedural body creates one role where it may and grants privileges on the ext schema; it reads and writes no row
+1794412052_a_unit_sql_runs_as_the_ext_runtime_role.down.sql | * | the procedural body only grants and revokes privileges on the ext schema; it reads and writes no row
+1794412054_a_google_docs_connection_reads_meeting_notes.down.sql | *, capture_connection | runs only on a rollback; the DO block only counts and refuses, and the DELETE reaches withdrawn gdocs connections, at most one row per seat
+1794470061_an_activity_link_names_a_core_record_only.up.sql | activity_link | the DELETE reaches rows naming an ext: kind, which no code ever wrote; the rest only drops a column and swaps two checks
+1794470102_a_newsletter_moves_no_activity_clock.up.sql | * | the bodies are the six last_activity_of_* read functions, re-created to refuse a newsletter, and two triggers re-created to fire on bulk_mail_attested; it changes no existing row, and a data task refolds the stored clocks
+1794470102_a_newsletter_moves_no_activity_clock.down.sql | * | the down migration re-creates the same six read functions and two triggers as they were; it changes no existing row
+1794470104_a_mailbox_may_belong_to_no_person.down.sql | * | runs only on a rollback, drops what the up added and sets user_id NOT NULL again, which reads the table but rewrites no row; it fails while a shared mailbox exists
+1794470111_the_finance_mirror_keys_are_validated.up.sql | *, audit_log, finance_external_customer | inserts one directory entry and its create audit row per customer link that names no entry, which only a link seeded before its first sync has; links are human decisions, a few per customer at most
+1794470114_a_team_change_drops_home_answers.up.sql | * | creates four triggers whose bodies run only on later writes; no existing row is read or rewritten
+1794489411_the_scheduled_mail_intent_pairs_are_validated.down.sql | * | rollback retains the validated intent pairs and changes no row
+1794489414_the_task_intent_pairs_are_validated.down.sql | * | SELECT 1 changes no rows
+1794489416_the_snooze_intent_pairs_are_validated.down.sql | * | SELECT 1 changes no rows
+1794489418_the_meeting_intent_pair_is_validated.down.sql | * | SELECT 1 changes no rows
+1794489413_task_deadlines_keep_the_chosen_clock.up.sql | * | adds four nullable columns, two NOT VALID checks and two triggers on activity; the triggers act on later writes only, and it changes no existing row
+1794489415_snoozes_keep_the_chosen_clock.up.sql | * | the DO block adds two nullable columns, a NOT VALID check and two triggers each to activity_reader_state and brief_item; it changes no existing row
+1794489415_snoozes_keep_the_chosen_clock.down.sql | * | runs only on a rollback; the DO block drops the triggers, the check and the two added columns, and changes no remaining value
+1794489417_booked_meetings_keep_the_chosen_clock.up.sql | * | adds two nullable columns, two NOT VALID checks and two triggers on activity; the triggers act on later writes only, and it changes no existing row
+1794489405_the_company_description_limit_is_validated.down.sql | * | rollback retains the validated bound and changes no row
+1794489408_the_shared_text_checks_are_validated.down.sql | * | rollback retains validation and changes no row
+1794483980_a_website_form_names_its_reviewed_inquiry_policy.down.sql | * | read-only existence check refuses rollback after a cutover; no row is rewritten
+1794483981_an_inquiry_effect_keeps_its_planned_assignment.down.sql | * | read-only existence check refuses rollback after an assignment; no row is rewritten
+1794600201_each_table_checks_its_text_limits.up.sql | * | creates or replaces two text guards per core table, each in its own statement; the guards act on later writes only, and it changes no existing row
+1794600202_custom_text_fields_check_their_limits.up.sql | * | the block reads the custom-field schema catalog, bounded by PostgreSQL physical columns per core table, and creates or replaces two guards per affected table; it never reads or rewrites domain rows
+1794600202_custom_text_fields_check_their_limits.down.sql | * | the block drops only the two named custom-field guards from the schema catalog and changes no domain rows
+1794600300_machine_written_text_keeps_its_full_length.up.sql | * | runs unwrapped and replaces the two text guards on each table it names in place; the guards act on later writes only, and it changes no existing row
+1794600300_machine_written_text_keeps_its_full_length.down.sql | * | runs only on a rollback; replaces the same guards with their earlier bounds, and changes no existing row
+1794604300_a_deal_or_project_may_have_a_chat_channel.up.sql | * | the trigger statements change no row; the migration adds one channel_provider row and two empty tables, and channel_connection holds at most one live bot per provider
+1794604300_a_deal_or_project_may_have_a_chat_channel.down.sql | *, channel_connection, channel_provider | channel_connection holds at most one live bot per provider and its archived bindings, and channel_provider loses its one dispact row; the trigger statements change no row
+1794604700_the_chat_channel_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1794604800_a_chat_app_caller_holds_a_passport.up.sql | * | the trigger statements change no row; the migration adds two empty columns, a NOT VALID check and a partial index to passport
+1794604800_a_chat_app_caller_holds_a_passport.down.sql | * | runs only on a rollback; the trigger statements restore the earlier bounds and change no row, then the two columns are dropped
+1794604900_the_app_caller_pair_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1794654294_an_inbound_message_keeps_when_its_thread_settled_it.up.sql | * | the procedural bodies clear the stamp on one thread's inbound messages when a row of that thread changes, and write the stamps of one locked batch the job read; the migration adds one empty column and changes no existing row
+1794701219_linkedin_can_name_a_logged_message.down.sql | * | the down migration is a single SELECT 1; the provider remains available to historical foreign keys and no row changes
+1794701221_the_capture_label_check_is_validated.down.sql | * | the down migration is a single SELECT 1; validation changes no row
+1794701222_signature_read_state_checks_its_text.up.sql | * | installs two text-limit triggers on contact_signature_enrich_state; the guards apply to later writes and change no existing row
+1794766200_a_company_field_can_cite_a_meeting.down.sql | company_profile_field | the down migration deletes only the rows whose source is meeting, which this migration introduced; one row per company and field, written only from workspace-wide meeting transcripts
+1794834284_a_bulk_mail_write_clears_settled_stamps_once.up.sql | * | the procedural bodies are trigger functions that clear the stamps on the threads one statement wrote; the migration only replaces triggers and functions and changes no existing row
+1794839607_the_senders_ask_checks_its_length.up.sql | * | runs unwrapped and replaces the two text guards on activity in place; the guards act on later writes only, and it changes no existing row
+1794839607_the_senders_ask_checks_its_length.down.sql | * | runs only on a rollback; replaces the same guards without the new column, and changes no existing row
+1794844773_a_consent_names_its_request_and_its_frequency.up.sql | * | adds columns that are empty or take a constant default, checks and foreign keys NOT VALID, and replaces two text-bound triggers; no existing row is read or changed
+1794844773_a_consent_names_its_request_and_its_frequency.down.sql | * | drops the columns this migration added and restores the two text-bound triggers; no existing row is changed
+1794844774_the_consent_request_and_frequency_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1794986141_a_forward_keeps_its_own_draft.down.sql | mail_draft | runs only on a rollback and deletes only forward drafts, which exist only since this release, at most one per author and forwarded message, so the set is small
+1794986142_the_forward_draft_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795014301_the_sending_mailbox_link_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795014300_a_member_connects_more_than_one_mailbox.up.sql | capture_exclusion | only container rules a member picked by hand are touched, a handful per member
+1795014300_a_member_connects_more_than_one_mailbox.down.sql | capture_exclusion | runs only on a rollback; removes duplicate container rules a member picked by hand, a handful per member
+1795014225_the_draft_reason_is_bounded.up.sql | * | replaces the two text guards on mail_draft; the guards act on later writes only, and it changes no existing row
+1795014225_the_draft_reason_is_bounded.down.sql | * | restores the two earlier text guards on mail_draft; it changes no existing row
+1795025701_the_ruleset_digest_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795025702_the_ruleset_digest_checks_its_length.up.sql | * | replaces the two text guards on communication_decision; the guards act on later writes only, and it changes no existing row
+1795025702_the_ruleset_digest_checks_its_length.down.sql | * | restores the two earlier text guards on communication_decision; it changes no existing row
+1795048712_the_decision_country_source_is_bounded.up.sql | * | replaces the two text guards on communication_decision; the guards act on later writes only, and it changes no existing row
+1795048712_the_decision_country_source_is_bounded.down.sql | * | restores the two earlier text guards on communication_decision; it changes no existing row
+1795048714_the_confirmation_country_is_bounded.up.sql | * | adds the two text guards on lawful_basis_confirmation; the guards act on later writes only, and it changes no existing row
+1795101202_a_contact_has_one_primary_address_and_one_primary_number.up.sql | contact_email, contact_phone | only the extra live primaries of a contact holding more than one are demoted, so the set is the contacts with a primary of two types, a fraction of the contacts; each statement is one indexed pass that takes row locks only, and the index builds that follow are concurrent
+1795101202_a_contact_has_one_primary_address_and_one_primary_number.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795101206_the_link_shape_follows_the_address.down.sql | attachment | runs only on a rollback and touches only links users added by hand, each typed into a dialog one at a time, so the set is small
+1795101300_a_foreign_site_waits_for_a_colleague.down.sql | company_domain_disposition | only the open foreign-site questions are moved back to unevidenced, one row per domain whose site named another business, a handful of rows
+1795101301_a_foreign_site_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795101700_a_personal_meeting_moves_no_deal_clock.up.sql | * | the procedural bodies are clock trigger functions that move a derived column; the migration replaces two functions and one trigger, adds one trigger, and changes no existing row
+1795101700_a_personal_meeting_moves_no_deal_clock.down.sql | * | the procedural bodies are clock trigger functions; the down migration drops one trigger and restores two functions and changes no existing row
+1795108620_a_contact_greeting_register_checks_its_length.up.sql | * | replaces the two text guards on contact; the guards act on later writes only, and it changes no existing row
+1795108620_a_contact_greeting_register_checks_its_length.down.sql | * | replaces the two text guards on contact; the guards act on later writes only, and it changes no existing row
+1795143224_an_outcome_asks_one_review_template.up.sql | activity_review_template | review templates are a short settings list, two shipped and a few an admin adds; only a second active template of one outcome is retired, which no installation could make before this migration
+1795139172_a_deal_link_judgement_checks_its_length.up.sql | * | replaces the two text guards on activity_link; the guards act on later writes only, and it changes no existing row
+1795139172_a_deal_link_judgement_checks_its_length.down.sql | * | restores the two earlier text guards on activity_link; it changes no existing row
+1795144657_a_lead_link_may_ask_the_consent_question.down.sql | confirm_token | only the consent links a booking mailed to leads are deleted, and the per-address budget caps those at three per address per 90 days, so the set is a handful of rows
+1795144658_a_lead_link_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795175006_the_company_clock_counts_no_personal_mail.up.sql | * | creates functions and triggers that move clocks when rows change later; no existing row is read or changed
+1795175006_the_company_clock_counts_no_personal_mail.down.sql | * | restores the earlier functions and triggers; no existing row is read or changed
+1795180850_a_mailbox_connected_before_the_scope_names_its_company.up.sql | capture_connection | one row per mailbox or calendar a member ever connected, including disconnected and archived ones; capture_connection holds one row per mailbox, not per message, so a few rows per seat fit the start-up budget, and each gets one column set from the owner's legal entity
+1795180850_a_mailbox_connected_before_the_scope_names_its_company.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795204293_a_task_handle_belongs_to_its_connection.up.sql | *, agent_task, idempotency_key | the WITH only selects the moving keys. agent_task: only live rows move, one per confirm-first call staged in task mode, each living no longer than its approval (72h by default), so the set is the confirm-first calls awaiting a human, the live inbox. idempotency_key: only a connected agent's settled claims from the last 24 hours move (one in flight stays for the process that will settle it); each claim is one keyed tool call, and a connection's calls per window are capped (installation ceiling 20,000), so the set is at most connections times that cap. Each moved row is found through the passport primary key and idempotency_key's primary key, which leads with principal_id, so the work is index lookups over that set
+1795229137_an_activity_text_check_names_its_columns.up.sql | * | runs unwrapped and replaces the two text guards of activity in place; the guards act on later writes only, and it changes no existing row
+1795229137_an_activity_text_check_names_its_columns.down.sql | * | runs only on a rollback; replaces the same two guards with their earlier whole-row form, and changes no existing row
+1795241482_an_embedding_can_be_stored_at_half_precision.up.sql | * | the procedural body only checks that the halfvec type exists and writes no row; the migration adds one empty column and a check that is not validated here
+1795241482_an_embedding_can_be_stored_at_half_precision.down.sql | embedding | runs only on a rollback; it writes each vector back at full precision, one row per embedded record
+1795241485_the_embedding_vector_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795243928_a_legal_entity_states_its_jurisdiction_apart_from_its_address.up.sql | *, legal_entity | replaces the two text-bound triggers, which act on later writes only; legal_entity holds one row per further legal entity an administrator described by hand, a handful per installation, each given one column copied from its own country
+1795243928_a_legal_entity_states_its_jurisdiction_apart_from_its_address.down.sql | * | drops the column and the check this migration added and restores the two text-bound triggers; no existing row is changed
+1795243929_the_legal_entity_jurisdiction_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795246461_four_features_nobody_can_reach_are_removed.up.sql | * | the procedural body deletes the queued jobs of one retired kind, at most one a day; the rest drops five tables nothing reads
+1795246461_four_features_nobody_can_reach_are_removed.down.sql | * | runs only on a rollback and creates five empty tables; no row is read or written
+1795247581_address_columns_hold_their_canonical_form.up.sql | app_user, capture_pending_counterparty, capture_sender_override, communication_suppression | only a row whose address is not already lowercased and trimmed is written, and every writer has folded the value for many releases, so the set is at most a handful of old rows
+1795247585_the_canonical_address_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795257100_the_text_limits_follow_the_dropped_columns.up.sql | * | replaces the two text-bound triggers on four tables, which act on later writes only; no existing row is changed
+1795257100_the_text_limits_follow_the_dropped_columns.down.sql | * | restores the two text-bound triggers on four tables as they stood before; no existing row is changed
+1795276613_updated_at_is_never_null.up.sql | automation, voice_build, voice_corpus_source, voice_learning_signal, voice_profile, voice_profile_delta, voice_profile_version | the voice tables hold one profile per user with its builds, versions, sources and learned drafts, and automation holds the rules an administrator configured: thousands of rows at most; one column is copied from its own row
+1795325706_a_trigger_copies_activity_evidence_to_participants.up.sql | * | the procedural bodies are two trigger functions that act on later updates of an activity only; the migration creates two triggers and drops one foreign key, and changes no existing row
+1795283820_five_one_row_tables_share_one_table.up.sql | *, installation_state | copies one row from each of five tables that hold at most one row, into a new table; the procedural marker is the two trigger definitions on that new table
+1795283820_five_one_row_tables_share_one_table.down.sql | activity_clock_refold_mark, activity_waiting_horizon, capture_answered_sweep_cursor, capture_party_admission_cursor, deal_authorship_sweep_cursor | runs only on a rollback and writes at most one row into each of five new one-row tables
+1795283823_a_weekly_review_holds_its_own_bars.up.sql | weekly_review | writes only the reviews that hold bars, and bars exist only since 1788650004 created their table, eleven weeks before this migration, so the set is one row for each member and week of that span, about two thousand for 200 members; a rollout that takes this migration a year late writes 52 for each member; each row gets one array of at most 18 bars
+1795283823_a_weekly_review_holds_its_own_bars.down.sql | *, weekly_review_movement | runs only on a rollback and writes at most 18 rows for each weekly review that froze a bridge, into a new table; the procedural marker is the two trigger definitions on that table
+1795299763_capture_knows_when_a_fact_it_judges_mail_by_moved.up.sql | * | the procedural body grants USAGE on the new sequence to the app role when that role exists; the migration changes no existing row
+1795299764_a_participant_write_clears_only_the_stamps_it_can_move.up.sql | * | the procedural bodies are trigger functions that clear the stamps on the threads one statement's participants or sender addresses reach; the migration only replaces triggers and functions and changes no existing row
+1795299764_a_participant_write_clears_only_the_stamps_it_can_move.down.sql | * | restores the row-level participant and contact_email triggers and their functions; no existing row is changed
+1795299766_an_empty_renewal_starter_is_switched_off.up.sql | *, automation, audit_log | the starter template seeds one renewal_reminder row per installation, plus the few a user created; only those with no record type or date field change, each with one audit row
+1795299766_an_empty_renewal_starter_is_switched_off.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795299767_a_contact_stores_its_strength_dates.up.sql | * | the bodies are two read functions and the trigger functions that keep the new columns; the migration adds columns with a constant default and changes no existing row, and the contact_strength_dates data task fills them
+1795319280_the_text_limits_follow_the_unread_columns.up.sql | * | replaces the two text-bound triggers on five tables, which act on later writes only; no existing row is changed
+1795319280_the_text_limits_follow_the_unread_columns.down.sql | * | restores the two text-bound triggers on five tables as they stood before; no existing row is changed
+1795329559_the_token_hash_format_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795331712_the_meeting_proposal_hash_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795596207_mail_search_holds_the_senders_own_text.up.sql | * | the procedural bodies are the trigger function that keeps the search value, the batch function of the mail_search_text data task and the settlement key trigger; the migration adds an empty column and drops a column expression, and neither rewrites a row
+1795336761_the_text_limits_follow_the_unread_capture_and_chat_columns.up.sql | * | replaces the two text-bound triggers on seven tables, which act on later writes only; no existing row is changed
+1795336761_the_text_limits_follow_the_unread_capture_and_chat_columns.down.sql | * | restores the two text-bound triggers on seven tables as they stood before; no existing row is changed
+1795336758_unread_capture_chat_and_run_columns_are_dropped.up.sql | * | the trigger statement re-creates the version trigger of chat_link without a dropped column in its list; the migration drops columns and changes no existing row
+1795336758_unread_capture_chat_and_run_columns_are_dropped.down.sql | * | the trigger statements restore the version trigger of chat_link and the touch trigger of capture_sync_state; the columns return with defaults and no existing row is rewritten
+1795355020_the_sender_warning_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795355021_the_sender_warning_columns_are_bounded.up.sql | * | replaces the two text guards on contact; the guards act on later writes only, and it changes no existing row
+1795355021_the_sender_warning_columns_are_bounded.down.sql | * | restores the two earlier text guards on contact; it changes no existing row
+1795363335_a_record_source_names_a_channel.up.sql | *, partner | the UPDATE touches the partner table once, one row per partner company, and only rows whose source is off the list; the procedural body is a trigger function that acts on later updates of a deal, offer or project only, and those rows are left to a data task
+1795363336_the_partner_source_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795577705_generated_summaries_share_one_table.up.sql | *, generated_summary | copies the rows of five cache tables into a new table, one row per reader per record that reader opened, each a regenerable summary; the copy spares every reader a model call, and the procedural marker is the two trigger definitions on that new table
+1795577705_generated_summaries_share_one_table.down.sql | *, company_brief, company_dossier, company_growth_fit, contact_brief, deal_status_card | runs only on a rollback and copies the same cache rows back into five new tables; the procedural marker is the trigger definitions on those tables
+1795363368_a_rate_correction_keeps_the_rate_it_replaced.down.sql | fx_rate | restores the two read functions and deletes only superseded rate versions, at most the few corrections an operator typed by hand per currency and day
+1795363370_a_signature_may_state_a_second_email.down.sql | contact_profile_field | runs only on a rollback and deletes only email evidence rows, one per further address a signature stated, a handful per contact at most
+1795363371_a_second_email_evidence_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363372_a_shared_mailbox_contact_stays_its_backup_owners.down.sql | contact | runs only on a rollback and touches only contacts a verdict kept for a shared mailbox's backup owner, a small share of one mailbox's senders
+1795363373_the_shared_mailbox_narrowing_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363376_the_progress_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363378_a_bulk_change_can_move_deals_to_a_stage_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363380_every_foreign_key_states_its_delete_rule_1_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363382_every_foreign_key_states_its_delete_rule_2_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363384_every_foreign_key_states_its_delete_rule_3_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363386_every_foreign_key_states_its_delete_rule_4_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363388_every_foreign_key_states_its_delete_rule_5_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363390_every_foreign_key_states_its_delete_rule_6_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363392_cited_evidence_outlives_its_source_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363391_cited_evidence_outlives_its_source.up.sql | * | the procedural body is a trigger function that writes no row; the migration adds one column with a constant default, which rewrites nothing, and changes no existing row
+1795370878_an_ai_call_names_the_extension_it_was_made_for.up.sql | * | adds one defaulted column and replaces the two text-bound triggers on ai_call, which act on later writes only; no existing row is changed
+1795370878_an_ai_call_names_the_extension_it_was_made_for.down.sql | * | restores the two text-bound triggers on ai_call as they stood before and drops the column; no existing row is changed
+1795363395_the_target_type_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363395_the_target_type_checks_are_validated.up.sql | * | the procedural body only counts rows and validates constraints; it writes no row
+1795363397_the_notice_and_report_type_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363397_the_notice_and_report_type_checks_are_validated.up.sql | * | the procedural body only counts rows and validates constraints; it writes no row
+1795363398_an_approval_with_an_old_type_stays_updatable.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795363398_an_approval_with_an_old_type_stays_updatable.up.sql | * | the procedural body only counts rows, drops or validates constraints; it writes no row
+1795388838_the_ai_call_text_limits_follow_its_columns.up.sql | * | replaces the two text-bound triggers on ai_call, which act on later writes only; no existing row is changed
+1795388838_the_ai_call_text_limits_follow_its_columns.down.sql | * | restores the two text-bound triggers on ai_call as they stood before; no existing row is changed
+1795388888_the_basis_vocabulary_names_no_country_validated.up.sql | * | the procedural body only counts rows, drops or validates constraints; it writes no row
+1795388888_the_basis_vocabulary_names_no_country_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795449105_an_archived_record_leaves_its_chat_channel.up.sql | *, audit_log, chat_link | touches only live chat links whose deal or project is archived, with one audit row each; a link is a channel a member chose by hand for one deal or project, so the set is the links people made
+1795449105_an_archived_record_leaves_its_chat_channel.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795540594_a_host_keeps_team_links_beside_the_personal_link.up.sql | booking_page | revokes a host's older live booking pages; every writer kept one live page per host, so the set is empty or a handful
+1795540594_a_host_keeps_team_links_beside_the_personal_link.down.sql | booking_page | revokes the live team links, at most a few per member
+1795639489_a_company_says_status_and_source.up.sql | saved_view | only company list views a reader saved with the status filter or sort are rewritten, one row each, and each was saved by hand, so the set is small
+1795639489_a_company_says_status_and_source.down.sql | saved_view | runs only on a rollback and moves back the same hand-saved company list views
+1795639490_a_company_bounds_its_text_by_the_contract.up.sql | * | replaces the two text guards on company and on site_read; the guards act on later writes only, and it changes no existing row
+1795639490_a_company_bounds_its_text_by_the_contract.down.sql | * | restores the two text guards on company and on site_read as they stood before; no existing row is changed
+1795589887_the_text_limits_follow_the_signal_source_system.up.sql | * | replaces the two text guards on signal; the guards act on later writes only, and it changes no existing row
+1795589887_the_text_limits_follow_the_signal_source_system.down.sql | * | restores the two earlier text guards on signal; it changes no existing row
+1795639491_a_chat_connection_can_ride_a_bot_and_name_its_account.down.sql | channel_connection | channel_connection holds a handful of rows, one per bot and business account, and the dev-only rollback drops the account rows
+1795639492_the_connection_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795639493_the_new_connection_columns_check_their_text_limits.up.sql | * | the file only replaces trigger definitions and writes no row
+1795639493_the_new_connection_columns_check_their_text_limits.down.sql | * | the file only replaces trigger definitions and writes no row
+1795639487_a_finding_about_two_deals_can_be_answered_separate.down.sql | assurance_exception, assurance_resolution | runs only on a rollback and touches only findings somebody answered separate, at most one per pair of deals, which people answered by hand
+1795639488_the_separate_answer_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795624398_a_contact_and_company_source_names_a_channel.up.sql | * | adds unvalidated checks and the triggers that map a source on later writes; it changes no existing row
+1795603730_a_settings_list_holds_each_name_once.up.sql | * | the procedural body renames only the second and later spellings of one name in nine settings lists, which an admin keeps by hand, so the set is empty or a handful of rows
+1795603731_a_lead_name_holds_at_most_a_label.up.sql | * | replaces the two text-bound triggers on lead, which act on later writes only; no existing row is changed
+1795603731_a_lead_name_holds_at_most_a_label.down.sql | * | restores the two text-bound triggers on lead as they stood before; no existing row is changed
+1795639494_a_chat_business_account_has_a_seat.down.sql | channel_connection, capture_connection | the dev-only rollback removes business link rows and their seats, a handful per business account; the tables hold one row per connection
+1795639495_the_seat_provider_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795639497_a_business_link_without_a_seat_waits_for_approval.up.sql | channel_connection | moves only the Telegram Business link rows that are connected with no seat, a handful per business account, and the table holds one row per connection
+1795639497_a_business_link_without_a_seat_waits_for_approval.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795616131_the_text_limits_follow_the_unread_deal_and_sales_columns.up.sql | * | replaces the two text-bound triggers on four tables and drops them from two tables left with no limited text; triggers act on later writes only, and no existing row is changed
+1795616131_the_text_limits_follow_the_unread_deal_and_sales_columns.down.sql | * | restores the two text-bound triggers on six tables as they stood before; no existing row is changed
+1795607704_an_edition_reader_key_is_validated.up.sql | * | the procedural body validates or drops the two report_edition keys the file before added; it reads editions and changes no row
+1795607704_an_edition_reader_key_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795608587_the_array_vocabularies_are_validated.up.sql | * | the procedural body validates or drops the seven array checks the file before added; it reads those tables and changes no row
+1795608587_the_array_vocabularies_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795621953_claude_five_models_are_priced.up.sql | *, ai_model_rate, audit_log | two models on one provider: at most two inserted rows and their audit rows
+1795621953_claude_five_models_are_priced.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795626071_unread_planning_finance_and_graph_columns_are_dropped.down.sql | * | the trigger statements restore the touch triggers of tag_suggestion, knowledge_corpus and knowledge_document; the columns return with defaults and no existing row is rewritten
+1795626074_the_text_limits_follow_the_unread_planning_finance_and_graph_columns.up.sql | * | replaces the two text-bound triggers on nine tables and drops them from contact_signature_enrich_state; they act on later writes only, and no existing row is changed
+1795626074_the_text_limits_follow_the_unread_planning_finance_and_graph_columns.down.sql | * | restores the two text-bound triggers on ten tables as they stood before; no existing row is changed
+1795639498_a_member_keeps_their_own_ingest_position.down.sql | extension_ingest_position | one row per unit and source, and the dev-only rollback drops the per-member rows
+1795639499_the_ingest_position_version_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795634861_a_phase_move_names_the_deal_win_that_caused_it.up.sql | * | the procedural bodies are the two text limit triggers on project_phase_history, re-created to hold the new cause_kind column to its limit; the migration adds two nullable columns with no default and changes no existing row
+1795634861_a_phase_move_names_the_deal_win_that_caused_it.down.sql | * | the down migration re-creates the same two text limit triggers as they were, then drops the two cause columns; it changes no existing row
+1795634862_the_phase_move_cause_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795639501_core_only_kind_columns_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795639500_core_only_kind_columns_refuse_an_extension_kind.up.sql | * | the procedural body only checks whether any dedupe pair holds an extension id and drops two empty columns when none does; it writes no row
+1795639501_core_only_kind_columns_are_validated.up.sql | * | the procedural body validates seven CHECKs and writes no row; a CHECK a stored row breaks stays NOT VALID
+1795657800_a_google_docs_corpus_and_a_document_that_knows_its_source_id.down.sql | knowledge_corpus, knowledge_document | runs only on a rollback and deletes only the rows of the gdocs source, which is one corpus and the Google Docs a workspace chose to sync
+1795657801_the_google_docs_source_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

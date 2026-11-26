@@ -250,6 +250,7 @@ function DrawerComposer({
         subject: forwardSubject(presentation.summary.subject ?? ""),
         body: forwardedText(presentation, formatWhen, t),
       }}
+      forwarding={presentation.id}
       open
       onClose={onClose}
       onSent={onSent}
@@ -278,8 +279,10 @@ export function forwardedText(
     `${t("email.detail.from")}: ${names(presentation.from)}`,
     `${t("email.detail.when")}: ${formatWhen(presentation.occurred_at, presentation.occurred_precision)}`,
     `${t("compose.subject")}: ${presentation.summary.subject ?? ""}`,
-    `${t("email.detail.to")}: ${names(presentation.to)}`,
   ];
+  if (presentation.to.length > 0) {
+    lines.push(`${t("email.detail.to")}: ${names(presentation.to)}`);
+  }
   if (presentation.cc.length > 0) {
     lines.push(`${t("email.detail.cc")}: ${names(presentation.cc)}`);
   }

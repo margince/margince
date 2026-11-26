@@ -1,0 +1,14 @@
+{
+  "tool": "change_activities",
+  "action": "preview_sign_off",
+  "verb": "preview_email_sign_off",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

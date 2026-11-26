@@ -69,6 +69,7 @@ func (s *Store) PeekCredential(ctx context.Context, raw string) (bool, error) {
 type IssuedSession struct {
 	Token     string
 	ExpiresAt time.Time
+	Lifetime  time.Duration
 }
 
 // ExchangeCredential consumes a one-time credential and opens a session.
@@ -82,7 +83,8 @@ func (s *Store) ExchangeCredential(ctx context.Context, raw string) (IssuedSessi
 	if err != nil {
 		return IssuedSession{}, err
 	}
-	expiresAt := time.Now().UTC().Add(sessionTTL)
+	lifetime := sessionTTL
+	var expiresAt time.Time
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var participantID ids.DealRoomParticipantID
 		var roomID ids.DealRoomID
@@ -104,14 +106,15 @@ func (s *Store) ExchangeCredential(ctx context.Context, raw string) (IssuedSessi
 		ctx := principal.WithActor(ctx, BuyerPrincipal(participantID))
 		if preview {
 			// A rep's tab, not a buyer's week: bounded like the credential was.
-			expiresAt = time.Now().UTC().Add(previewSessionTTL)
+			lifetime = previewSessionTTL
 		}
+		expiresAt = time.Now().UTC().Add(lifetime)
 		return openSession(ctx, tx, participantID, roomID, digest, expiresAt, preview)
 	})
 	if err != nil {
 		return IssuedSession{}, err
 	}
-	return IssuedSession{Token: token, ExpiresAt: expiresAt}, nil
+	return IssuedSession{Token: token, ExpiresAt: expiresAt, Lifetime: lifetime}, nil
 }
 
 // openSession inserts the session row and records that somebody signed in.
@@ -125,9 +128,9 @@ func openSession(ctx context.Context, tx pgx.Tx, participantID ids.DealRoomParti
 	}
 	id := ids.NewV7()
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO deal_room_session (id, participant_id, room_id, token_hash, expires_at, last_seen_at, source, captured_by)
-		 VALUES ($1, $2, $3, $4, $5, now(), $6, $7)`,
-		id, participantID, roomID, digest, expiresAt, sourceCredential, by); err != nil {
+		`INSERT INTO deal_room_session (id, participant_id, room_id, token_hash, expires_at, last_seen_at, captured_by)
+		 VALUES ($1, $2, $3, $4, $5, now(), $6)`,
+		id, participantID, roomID, digest, expiresAt, by); err != nil {
 		return fmt.Errorf("open deal room session: %w", err)
 	}
 	// The audit row names the session, not the token: nothing in the image

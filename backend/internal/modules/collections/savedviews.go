@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 // A saved view is per-user view state (B-E15.12, runtime-config-surface.md
@@ -65,7 +66,7 @@ func wireSavedView(v savedViewRow) crmcontracts.SavedView {
 		Id:          openapi_types.UUID(v.ID.UUID),
 		OwnerId:     openapi_types.UUID(v.OwnerID.UUID),
 		SharedScope: &scope,
-		Resource:    crmcontracts.SavedViewResource(v.Resource),
+		Resource:    v.Resource,
 		Name:        v.Name,
 		Query:       v.Query,
 		Version:     v.Version,
@@ -168,6 +169,10 @@ func (s *Store) CreateSavedView(ctx context.Context, in CreateSavedViewInput) (s
 		return savedViewRow{}, err
 	}
 	in.Name = name
+	if kindUnavailable(ctx, in.Resource) {
+		return savedViewRow{}, &BadInputError{Field: "resource", Reason: fmt.Sprintf(
+			"%q is not a record kind you can read; read GET /v1/record-kinds for the kinds there are", in.Resource)}
+	}
 	if in.Query == nil {
 		return savedViewRow{}, &BadInputError{Field: viewQueryField, Reason: "must not be null"}
 	}
@@ -237,12 +242,18 @@ func (s *Store) validateViewFilter(ctx context.Context, resource string, query m
 		return nil
 	}
 	engineKey, filterable := viewResourceToEngine[resource]
+	if recordkinds.IsExtensionName(resource) {
+		engineKey, filterable = resource, true
+	}
 	if !filterable {
 		return nil
 	}
 	filterMap, isTree := rawFilter.(map[string]any)
 	if !isTree {
 		return &BadInputError{Field: viewQueryField, Reason: "filter state must be a filter tree"}
+	}
+	if kindUnavailable(ctx, engineKey) {
+		return &BadInputError{Field: viewQueryField, Reason: "the records of this view are unavailable"}
 	}
 	engine, ok, err := s.SegmentEngine(ctx, engineKey)
 	if err != nil {

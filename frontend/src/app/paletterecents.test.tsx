@@ -59,7 +59,7 @@ afterEach(() => {
 });
 function mount(
   read: (request: Request) => Promise<Response> | Response = () =>
-    json({ id, full_name: "Fresh name" }),
+    json({ data: [{ id, name: "Fresh name", archived: false }] }),
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -142,16 +142,34 @@ it("never paints a stored name and shows the current name before the screens", a
   mount(() => pending.then((response) => response.clone()));
   expect(screen.queryByText(record.label)).toBeNull();
   expect(screen.getByText("Acme")).toBeTruthy();
-  await act(async () => resolve(json({ id, full_name: "Renamed contact" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Renamed contact", archived: false }] })),
+  );
   expect(await screen.findByText("Renamed contact")).toBeTruthy();
   const rows = screen
-    .getAllByRole("button")
-    .filter((button) => button.classList.contains("palette-row"));
+    .getAllByRole("option")
+    .filter(
+      (button) =>
+        button.classList.contains("palette-row") &&
+        !button.classList.contains("palette-ask"),
+    );
   expect(rows.map((row) => row.querySelector(".label")?.textContent)).toEqual([
     "Renamed contact",
     "Acme",
     "Deals",
   ]);
+});
+// A saved search and a record it found are two kinds of entry, and each row
+// says which it is.
+it("marks a saved search with the magnifier and Search, and a record with its kind", async () => {
+  writeRecents(me.user.id, [record, query]);
+  mount();
+  const named = await screen.findByText("Fresh name");
+  const recordRow = named.closest('[role="option"]');
+  const searchRow = screen.getByText("Acme").closest('[role="option"]');
+  expect(recordRow?.querySelector(".sub")?.textContent).toBe("Contact");
+  expect(searchRow?.querySelector(".sub")?.textContent).toBe("Search");
+  expect(searchRow?.querySelector("svg.lucide-search")).not.toBeNull();
 });
 it.each([403, 404])("prunes a definitive %s refusal", async (status) => {
   writeRecents(me.user.id, [record, query]);
@@ -171,9 +189,7 @@ it("prunes archived records while keeping a transiently failed read for another 
   expect(readRecents(me.user.id).entries).toEqual([record]);
   view.rerender(false);
   cleanup();
-  mount(() =>
-    json({ id, full_name: "Archived", archived_at: "2026-01-01T00:00:00Z" }),
-  );
+  mount(() => json({ data: [{ id, name: "Archived", archived: true }] }));
   await waitFor(() => expect(readRecents(me.user.id).entries).toEqual([]));
 });
 it("Clear cannot be undone by a late name response", async () => {
@@ -184,7 +200,9 @@ it("Clear cannot be undone by a late name response", async () => {
   writeRecents(me.user.id, [record, query]);
   mount(() => pending.then((response) => response.clone()));
   fireEvent.click(screen.getByRole("button", { name: "Clear" }));
-  await act(async () => resolve(json({ id, full_name: "Too late" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Too late", archived: false }] })),
+  );
   expect(readRecents(me.user.id).entries).toEqual([]);
   expect(screen.queryByText("Too late")).toBeNull();
 });
@@ -201,24 +219,26 @@ it("a seat switch cannot paint or restore an earlier seat's late read", async ()
       user: { ...me.user, id: "00000000-0000-4000-8000-000000000003" },
     }),
   );
-  await act(async () => resolve(json({ id, full_name: "Wrong seat" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Wrong seat", archived: false }] })),
+  );
   expect(screen.queryByText("Wrong seat")).toBeNull();
   expect(readRecents(me.user.id).entries).toEqual([record]);
 });
 it("replaying a query refills the box without closing or adding history", () => {
   writeRecents(me.user.id, [query]);
   const view = mount();
-  fireEvent.keyDown(screen.getByRole("searchbox"), { key: "Enter" });
-  expect(screen.getByRole("searchbox").getAttribute("value")).toBe("Acme");
+  fireEvent.keyDown(screen.getByRole("combobox"), { key: "Enter" });
+  expect(screen.getByRole("combobox").getAttribute("value")).toBe("Acme");
   expect(view.close).not.toHaveBeenCalled();
   expect(readRecents(me.user.id).entries).toEqual([query]);
 });
 it("records an executed See all query but never typing or Ask", async () => {
   const view = mount();
-  const input = screen.getByRole("searchbox");
+  const input = screen.getByRole("combobox");
   fireEvent.change(input, { target: { value: "Acme" } });
   expect(readRecents(me.user.id).entries).toEqual([]);
-  fireEvent.click(screen.getByRole("button", { name: /See all results/ }));
+  fireEvent.click(screen.getByRole("option", { name: /See all results/ }));
   await waitFor(() => expect(readRecents(me.user.id).entries).toEqual([query]));
   expect(view.close).toHaveBeenCalledOnce();
 });
@@ -227,10 +247,10 @@ it("rechecks access on activation and refuses a now-hidden record", async () => 
   writeRecents(me.user.id, [record]);
   mount(() =>
     allowed
-      ? json({ id, full_name: "Fresh name" })
-      : json({ code: "not_found", status: 404 }, 404),
+      ? json({ data: [{ id, name: "Fresh name", archived: false }] })
+      : json({ data: [] }),
   );
-  const row = await screen.findByRole("button", { name: /^Fresh name/ });
+  const row = await screen.findByRole("option", { name: /^FN\s*Fresh name/ });
   allowed = false;
   fireEvent.click(row);
   await waitFor(() => expect(readRecents(me.user.id).entries).toEqual([]));
@@ -247,7 +267,7 @@ it("sign-out clears history and notifies the open palette", () => {
 it("rechecks fresh names on each opening", async () => {
   let name = "First name";
   writeRecents(me.user.id, [record]);
-  const view = mount(() => json({ id, full_name: name }));
+  const view = mount(() => json({ data: [{ id, name, archived: false }] }));
   await screen.findByText("First name");
   view.rerender(false);
   name = "Second name";
@@ -260,10 +280,10 @@ it("hides a transient activation failure and keeps it for the next opening", asy
   writeRecents(me.user.id, [record]);
   mount(() =>
     available
-      ? json({ id, full_name: "Fresh name" })
+      ? json({ data: [{ id, name: "Fresh name", archived: false }] })
       : json({ status: 503, code: "service_unavailable" }, 503),
   );
-  const row = await screen.findByRole("button", { name: /^Fresh name/ });
+  const row = await screen.findByRole("option", { name: /^FN\s*Fresh name/ });
   available = false;
   fireEvent.click(row);
   await waitFor(() => expect(screen.queryByText("Fresh name")).toBeNull());
@@ -278,13 +298,17 @@ it("a closed palette never navigates when an activation finishes late", async ()
   });
   writeRecents(me.user.id, [record]);
   const view = mount(() =>
-    waiting ? pending : json({ id, full_name: "Fresh name" }),
+    waiting
+      ? pending
+      : json({ data: [{ id, name: "Fresh name", archived: false }] }),
   );
-  const row = await screen.findByRole("button", { name: /^Fresh name/ });
+  const row = await screen.findByRole("option", { name: /^FN\s*Fresh name/ });
   waiting = true;
   fireEvent.click(row);
   view.rerender(false);
-  await act(async () => resolve(json({ id, full_name: "Late name" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Late name", archived: false }] })),
+  );
   expect(window.location.hash).toBe("");
   expect(view.close).not.toHaveBeenCalled();
 });
@@ -304,7 +328,7 @@ it("updates an open palette when another tab clears storage", () => {
 });
 
 it.each(["contact", "company", "lead", "deal", "project"] as const)(
-  "remembers an executed %s hit with its query",
+  "remembers an executed %s hit as the record alone",
   async (kind) => {
     const user = steppedClock();
     const view = mount();
@@ -319,33 +343,28 @@ it.each(["contact", "company", "lead", "deal", "project"] as const)(
           : json(me),
       ),
     );
-    await user.type(screen.getByRole("searchbox"), "Acme");
+    await user.type(screen.getByRole("combobox"), "Acme");
     await user.click(await screen.findByText("Chosen record"));
     expect(readRecents(me.user.id).entries).toEqual([
       { kind: "record", entity_type: kind, id, label: "Chosen record" },
-      query,
     ]);
     expect(view.close).toHaveBeenCalledOnce();
   },
 );
 
 function metadata(kind: EntityKind, name: string, archived = false): Response {
-  const archived_at = archived ? "2026-01-01T00:00:00Z" : null;
-  if (kind === "company")
-    return json({
-      data: [
-        {
-          id,
-          display_name: name,
-          logo_url: "https://example.test/current-logo.png",
-          archived_at,
-        },
-      ],
-      page: { has_more: false, next_cursor: null },
-    });
-  if (kind === "contact" || kind === "lead")
-    return json({ id, full_name: name, archived_at });
-  return json({ id, name, archived_at });
+  return json({
+    data: [
+      {
+        id,
+        name,
+        archived,
+        ...(kind === "company"
+          ? { logo: "https://example.test/current-logo.png" }
+          : {}),
+      },
+    ],
+  });
 }
 it.each(ENTITY_KINDS)(
   "reads the authorized current name of a saved %s",
@@ -360,7 +379,10 @@ it.each(ENTITY_KINDS)(
     expect(read).toHaveBeenCalledOnce();
     if (kind === "company")
       expect(
-        name.closest("button")?.querySelector("img")?.getAttribute("src"),
+        name
+          .closest('[role="option"]')
+          ?.querySelector("img")
+          ?.getAttribute("src"),
       ).toBe("https://example.test/current-logo.png");
   },
 );
@@ -376,16 +398,14 @@ it.each(ENTITY_KINDS)("removes an absent saved %s", async (kind) => {
   writeRecents(me.user.id, [
     { kind: "record", entity_type: kind, id, label: "Old" },
   ]);
-  mount(() =>
-    kind === "company"
-      ? json({ data: [] })
-      : json({ code: "not_found", status: 404 }, 404),
-  );
+  mount(() => json({ data: [] }));
   await waitFor(() => expect(readRecents(me.user.id).entries).toEqual([]));
 });
 it("shows a renamed record when storage can be read but refuses writes", async () => {
   writeRecents(me.user.id, [record]);
-  const read = vi.fn(() => json({ id, full_name: "Current name" }));
+  const read = vi.fn(() =>
+    json({ data: [{ id, name: "Current name", archived: false }] }),
+  );
   const storage = localStorage;
   vi.stubGlobal("localStorage", {
     get length() {
@@ -411,19 +431,21 @@ it("keeps a keyboard-picked destination when checked records arrive above it", a
   });
   writeRecents(me.user.id, [record, query]);
   const view = mount(() => pending.then((response) => response.clone()));
-  const input = screen.getByRole("searchbox");
+  const input = screen.getByRole("combobox");
   fireEvent.keyDown(input, { key: "ArrowDown" });
   fireEvent.keyDown(input, { key: "ArrowDown" });
   expect(
     screen
-      .getByRole("button", { name: "Deals Screen" })
+      .getByRole("option", { name: "Deals Screen" })
       .classList.contains("selected"),
   ).toBe(true);
-  await act(async () => resolve(json({ id, full_name: "Current name" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Current name", archived: false }] })),
+  );
   expect(await screen.findByText("Current name")).toBeTruthy();
   expect(
     screen
-      .getByRole("button", { name: "Deals Screen" })
+      .getByRole("option", { name: "Deals Screen" })
       .classList.contains("selected"),
   ).toBe(true);
   fireEvent.keyDown(input, { key: "Enter" });
@@ -437,11 +459,13 @@ it("waits for a mixed recent list before default Enter opens its newest record",
   });
   writeRecents(me.user.id, [record, query]);
   const view = mount(() => pending.then((response) => response.clone()));
-  const input = screen.getByRole("searchbox");
+  const input = screen.getByRole("combobox");
   fireEvent.keyDown(input, { key: "Enter" });
   expect(view.close).not.toHaveBeenCalled();
   expect(input.getAttribute("value")).toBe("");
-  await act(async () => resolve(json({ id, full_name: "Current name" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Current name", archived: false }] })),
+  );
   await screen.findByText("Current name");
   fireEvent.keyDown(input, { key: "Enter" });
   await waitFor(() => expect(window.location.hash).toBe(`#/contacts/${id}`));
@@ -450,17 +474,17 @@ it("returns focus to the query after clicking a saved search", async () => {
   const user = steppedClock();
   writeRecents(me.user.id, [query]);
   mount();
-  await user.click(screen.getByRole("button", { name: "Acme" }));
-  expect(document.activeElement).toBe(screen.getByRole("searchbox"));
+  await user.click(screen.getByRole("option", { name: "Acme Search" }));
+  expect(document.activeElement).toBe(screen.getByRole("combobox"));
 });
 it("keeps Clear reachable with only unnamed saved records and returns focus", async () => {
   const user = steppedClock();
   writeRecents(me.user.id, [record]);
-  mount(() => json({ id, full_name: "" }));
+  mount(() => json({ data: [{ id, name: "", archived: false }] }));
   await waitFor(() => expect(screen.queryByText("Loading")).toBeNull());
   await user.click(screen.getByRole("button", { name: "Clear" }));
   expect(readRecents(me.user.id).entries).toEqual([]);
-  expect(document.activeElement).toBe(screen.getByRole("searchbox"));
+  expect(document.activeElement).toBe(screen.getByRole("combobox"));
 });
 it("returns focus after an activation fails and hides its row", async () => {
   const user = steppedClock();
@@ -468,14 +492,14 @@ it("returns focus after an activation fails and hides its row", async () => {
   writeRecents(me.user.id, [record]);
   mount(() =>
     allowed
-      ? json({ id, full_name: "Current name" })
+      ? json({ data: [{ id, name: "Current name", archived: false }] })
       : json({ code: "service_unavailable", status: 503 }, 503),
   );
-  const button = await screen.findByRole("button", { name: /Current name/ });
+  const button = await screen.findByRole("option", { name: /Current name/ });
   allowed = false;
   await user.click(button);
   await waitFor(() => expect(screen.queryByText("Current name")).toBeNull());
-  expect(document.activeElement).toBe(screen.getByRole("searchbox"));
+  expect(document.activeElement).toBe(screen.getByRole("combobox"));
 });
 it("hides a shown record before the changed permission read answers", async () => {
   let changed = false;
@@ -487,7 +511,9 @@ it("hides a shown record before the changed permission read answers", async () =
   writeRecents(me.user.id, [record]);
   const view = mount(() => {
     calls++;
-    return changed ? pending : json({ id, full_name: "Current name" });
+    return changed
+      ? pending
+      : json({ data: [{ id, name: "Current name", archived: false }] });
   });
   await screen.findByText("Current name");
   changed = true;
@@ -519,9 +545,9 @@ it("a permission change aborts an in-flight activation", async () => {
       ? json({ code: "permission_denied", status: 403 }, 403)
       : waiting
         ? pending
-        : json({ id, full_name: "Current name" });
+        : json({ data: [{ id, name: "Current name", archived: false }] });
   });
-  const button = await screen.findByRole("button", { name: /Current name/ });
+  const button = await screen.findByRole("option", { name: /Current name/ });
   waiting = true;
   fireEvent.click(button);
   await waitFor(() => expect(calls).toBe(2));
@@ -532,7 +558,9 @@ it("a permission change aborts an in-flight activation", async () => {
       meFixture({ allow: { company: ["read"] } }),
     ),
   );
-  await act(async () => resolve(json({ id, full_name: "Too late" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Too late", archived: false }] })),
+  );
   expect(window.location.hash).toBe("");
   expect(view.close).not.toHaveBeenCalled();
   expect(screen.queryByText("Too late")).toBeNull();
@@ -575,10 +603,10 @@ it("a late session proof cannot rewrite history cleared in another tab", async (
       return json({ data: [], page: { has_more: false, next_cursor: null } });
     }),
   );
-  fireEvent.change(screen.getByRole("searchbox"), {
+  fireEvent.change(screen.getByRole("combobox"), {
     target: { value: "Acme" },
   });
-  fireEvent.click(screen.getByRole("button", { name: /See all results/ }));
+  fireEvent.click(screen.getByRole("option", { name: /See all results/ }));
   await waitFor(() => expect(probing).toBe(true));
   act(() => {
     localStorage.removeItem(STORAGE_KEYS.paletteRecents.name);
@@ -598,10 +626,10 @@ it("a stale seat cannot remember an action after its server session ended", asyn
     "fetch",
     vi.fn(async () => json({ code: "unauthorized", status: 401 }, 401)),
   );
-  fireEvent.change(screen.getByRole("searchbox"), {
+  fireEvent.change(screen.getByRole("combobox"), {
     target: { value: "Acme" },
   });
-  fireEvent.click(screen.getByRole("button", { name: /See all results/ }));
+  fireEvent.click(screen.getByRole("option", { name: /See all results/ }));
   await waitFor(() => expect(fetch).toHaveBeenCalled());
   await act(async () => {});
   expect(readRecents(me.user.id).entries).toEqual([]);
@@ -616,14 +644,18 @@ it("two clicks share one activation and navigate only once", async () => {
   writeRecents(me.user.id, [record]);
   const view = mount(() => {
     calls++;
-    return waiting ? pending : json({ id, full_name: "Current name" });
+    return waiting
+      ? pending
+      : json({ data: [{ id, name: "Current name", archived: false }] });
   });
-  const button = await screen.findByRole("button", { name: /Current name/ });
+  const button = await screen.findByRole("option", { name: /Current name/ });
   waiting = true;
   fireEvent.click(button);
   fireEvent.click(button);
   await waitFor(() => expect(calls).toBe(2));
-  await act(async () => resolve(json({ id, full_name: "Current name" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Current name", archived: false }] })),
+  );
   await waitFor(() => expect(view.close).toHaveBeenCalledOnce());
   fireEvent.click(button);
   expect(calls).toBe(2);
@@ -638,9 +670,11 @@ it("keeps an activation when another tab appends an unrelated recent query", asy
   writeRecents(me.user.id, [record, query]);
   const view = mount(() => {
     calls++;
-    return calls === 2 ? pending : json({ id, full_name: "Current name" });
+    return calls === 2
+      ? pending
+      : json({ data: [{ id, name: "Current name", archived: false }] });
   });
-  const button = await screen.findByRole("button", { name: /Current name/ });
+  const button = await screen.findByRole("option", { name: /Current name/ });
   fireEvent.click(button);
   await waitFor(() => expect(calls).toBe(2));
   const raw = JSON.stringify({
@@ -660,7 +694,9 @@ it("keeps an activation when another tab appends an unrelated recent query", asy
       }),
     );
   });
-  await act(async () => resolve(json({ id, full_name: "Current name" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Current name", archived: false }] })),
+  );
   await waitFor(() => expect(view.close).toHaveBeenCalledOnce());
   expect(readRecents(me.user.id).entries).toContainEqual({
     kind: "query",
@@ -690,7 +726,7 @@ it("invalid entries do not consume the eight valid slots and oversized values ar
 });
 it("Ask does not remember its question", () => {
   mount();
-  fireEvent.change(screen.getByRole("searchbox"), {
+  fireEvent.change(screen.getByRole("combobox"), {
     target: { value: "Where are the documents?" },
   });
   fireEvent.click(screen.getByRole("button", { name: /Ask your documents/ }));
@@ -714,12 +750,12 @@ it("keeps executed searches in selection order when session reads finish later",
       return json({ data: [], page: { has_more: false, next_cursor: null } });
     }),
   );
-  const input = screen.getByRole("searchbox");
+  const input = screen.getByRole("combobox");
   fireEvent.change(input, { target: { value: "First search" } });
-  fireEvent.click(screen.getByRole("button", { name: /See all results/ }));
+  fireEvent.click(screen.getByRole("option", { name: /See all results/ }));
   await waitFor(() => expect(calls).toBe(1));
   fireEvent.change(input, { target: { value: "Second search" } });
-  fireEvent.click(screen.getByRole("button", { name: /See all results/ }));
+  fireEvent.click(screen.getByRole("option", { name: /See all results/ }));
   await act(async () => resolve(json(me)));
   await waitFor(() =>
     expect(readRecents(me.user.id).entries).toEqual([
@@ -749,10 +785,10 @@ it("an empty-key sign-out cancels a pending write even after the same seat retur
       return json({ data: [], page: { has_more: false, next_cursor: null } });
     }),
   );
-  fireEvent.change(screen.getByRole("searchbox"), {
+  fireEvent.change(screen.getByRole("combobox"), {
     target: { value: "Acme" },
   });
-  fireEvent.click(screen.getByRole("button", { name: /See all results/ }));
+  fireEvent.click(screen.getByRole("option", { name: /See all results/ }));
   await waitFor(() => expect(calls).toBe(1));
   await act(async () => {
     await resetToSignedOut(view.client);
@@ -786,15 +822,15 @@ it("Clear aborts a pending session check so another search can be remembered", a
       });
     }),
   );
-  const input = screen.getByRole("searchbox");
+  const input = screen.getByRole("combobox");
   fireEvent.change(input, { target: { value: "Old pending search" } });
-  fireEvent.click(screen.getByRole("button", { name: /See all results/ }));
+  fireEvent.click(screen.getByRole("option", { name: /See all results/ }));
   await waitFor(() => expect(calls).toBe(1));
   fireEvent.change(input, { target: { value: "" } });
   fireEvent.click(screen.getByRole("button", { name: "Clear" }));
   await waitFor(() => expect(aborted).toBe(true));
   fireEvent.change(input, { target: { value: "New search" } });
-  fireEvent.click(screen.getByRole("button", { name: /See all results/ }));
+  fireEvent.click(screen.getByRole("option", { name: /See all results/ }));
   await waitFor(() =>
     expect(readRecents(me.user.id).entries).toEqual([
       { kind: "query", text: "New search" },
@@ -818,7 +854,7 @@ it("keeps Clear available when an archived row's prune cannot be saved", async (
     },
   });
   const read = vi.fn(() =>
-    json({ id, full_name: "Archived", archived_at: "2026-01-01T00:00:00Z" }),
+    json({ data: [{ id, name: "Archived", archived: true }] }),
   );
   mount(read);
   await waitFor(() => expect(read).toHaveBeenCalledOnce());

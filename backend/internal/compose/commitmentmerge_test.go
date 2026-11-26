@@ -38,7 +38,7 @@ func saidInConversation(subject string, dueInDays int) agents.OpenCommitment {
 // typed was reported as absent — and a model told "these are the open
 // commitments" repeats that as fact.
 func TestAPromiseMadeInAConversationReachesTheAnswer(t *testing.T) {
-	got, _ := rankPromises(swept, nil, []agents.OpenCommitment{
+	got, _ := rankPromises(swept, time.UTC, nil, []agents.OpenCommitment{
 		saidInConversation("Send the security questionnaire", -2),
 	}, agents.CommitmentSweepLimit(0))
 
@@ -59,7 +59,7 @@ func TestAPromiseMadeInAConversationReachesTheAnswer(t *testing.T) {
 // Both sources rank by one rule, so an agent and a reader looking at the same
 // account agree about what is most overdue.
 func TestBothSourcesRankByOneRule(t *testing.T) {
-	got, _ := rankPromises(swept,
+	got, _ := rankPromises(swept, time.UTC,
 		[]agents.OpenCommitment{filedTask("Return the redlines", -20)},
 		[]agents.OpenCommitment{saidInConversation("Send the quote", -1)},
 		agents.CommitmentSweepLimit(0))
@@ -75,7 +75,7 @@ func TestBothSourcesRankByOneRule(t *testing.T) {
 // The caller asked for a bounded set and gets exactly that, plus the fact that
 // more exist. A merged answer can exceed the bound each source respected.
 func TestTheMergedAnswerHonoursTheCallersBound(t *testing.T) {
-	got, truncated := rankPromises(swept,
+	got, truncated := rankPromises(swept, time.UTC,
 		[]agents.OpenCommitment{filedTask("a", -3), filedTask("b", -2)},
 		[]agents.OpenCommitment{saidInConversation("c", -1)},
 		2)
@@ -93,7 +93,7 @@ func TestTheMergedAnswerHonoursTheCallersBound(t *testing.T) {
 // cut. Reporting truncation on a complete answer would have a model hedge a
 // fact it could have stated.
 func TestAnAnswerThatFitsReportsNoTruncation(t *testing.T) {
-	got, truncated := rankPromises(swept,
+	got, truncated := rankPromises(swept, time.UTC,
 		[]agents.OpenCommitment{filedTask("a", -3)},
 		[]agents.OpenCommitment{saidInConversation("b", -1)},
 		agents.CommitmentSweepLimit(0))
@@ -116,7 +116,7 @@ func TestAnOmittedLimitIsTheToolsOwnCeiling(t *testing.T) {
 		said = append(said, saidInConversation("promise", -i-1))
 	}
 
-	got, truncated := rankPromises(swept, nil, said, agents.CommitmentSweepLimit(0))
+	got, truncated := rankPromises(swept, time.UTC, nil, said, agents.CommitmentSweepLimit(0))
 
 	// Both ends, because either alone passes for the wrong reason: a ceiling
 	// with no floor is satisfied by returning nothing, and a floor with no
@@ -139,7 +139,7 @@ func TestASharedDeadlineBreaksOnWhenThePromiseWasMade(t *testing.T) {
 	claim := saidInConversation("Send the quote", 8)
 	claim.FiledAt = swept.AddDate(0, 0, -30)
 
-	got, _ := rankPromises(swept, []agents.OpenCommitment{task}, []agents.OpenCommitment{claim}, 10)
+	got, _ := rankPromises(swept, time.UTC, []agents.OpenCommitment{task}, []agents.OpenCommitment{claim}, 10)
 
 	if got[0].Subject != "Send the quote" {
 		t.Errorf("led with %q; of two promises due the same day the one promised first leads, "+

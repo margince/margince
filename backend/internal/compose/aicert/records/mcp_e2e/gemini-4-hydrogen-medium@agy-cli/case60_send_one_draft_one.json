@@ -1,0 +1,97 @@
+{
+  "scenario": "case60_send_one_draft_one",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "5551ebf05ff463ba",
+    "tools": "52fa92fe7510a6d9",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T10:17:04Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T10:17:04Z"
+  },
+  "usage": {
+    "input_tokens": 64908,
+    "output_tokens": 20581,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 219991,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "draft_email",
+        "draft_outbound",
+        "find_records",
+        "list_records",
+        "read_context",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "draft_email",
+        "draft_outbound",
+        "find_records",
+        "list_documents",
+        "list_records",
+        "read_context",
+        "read_record",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 17,
+      "min": 17,
+      "max": 17
+    },
+    "turns": {
+      "median": 7.5,
+      "min": 7,
+      "max": 8
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 142449.5,
+      "min": 134260,
+      "max": 150639
+    },
+    "output_tokens": {
+      "median": 10290.5,
+      "min": 10050,
+      "max": 10531
+    }
+  }
+}

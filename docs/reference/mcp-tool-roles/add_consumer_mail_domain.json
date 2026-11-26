@@ -1,0 +1,15 @@
+{
+  "tool": "change_capture",
+  "action": "add_consumer_mail_domain",
+  "verb": "add_consumer_mail_domain",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

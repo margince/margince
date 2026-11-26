@@ -17,15 +17,10 @@ package capture
 // PROJECT would take most of the rest — silently, in bulk, onto records that
 // later get stamped for years of retention.
 
-import "strings"
+import (
+	"strings"
 
-// projectKeyMinLen / projectKeyMaxLen bound a candidate to the shape the
-// project_key_shape CHECK admits: letter-led, 2 to 24 characters of letters,
-// digits, underscore and hyphen. Anything outside that range can match no key
-// that could ever have been created, so it never reaches the database.
-const (
-	projectKeyMinLen = 2
-	projectKeyMaxLen = 24
+	"github.com/margince/margince/backend/internal/shared/kernel/projectkey"
 )
 
 // maxProjectKeyCandidates bounds how many bracketed groups one subject may
@@ -54,7 +49,9 @@ func projectKeyCandidates(subject string) []string {
 	seen := map[string]struct{}{}
 	for _, group := range bracketedGroups(subject) {
 		token := strings.ToLower(strings.TrimSpace(group))
-		if !projectKeyShaped(token) {
+		// A token outside the key shape matches no key that could exist, so
+		// it never reaches the database.
+		if !projectkey.Shaped(token) {
 			continue
 		}
 		if _, repeat := seen[token]; repeat {
@@ -87,39 +84,5 @@ func bracketedGroups(subject string) []string {
 		}
 		groups = append(groups, rest[:shut])
 		rest = rest[shut+1:]
-	}
-}
-
-// projectKeyShaped reports whether a lowercased token could be a project key —
-// the Go reading of the project_key_shape CHECK, applied to the whole token.
-//
-// A bare number is excluded by the letter-led rule, which is the point of that
-// rule: `[2026]` and `[4711]` are a year and an order number, and a key that
-// could be one of those would attribute mail at random.
-func projectKeyShaped(token string) bool {
-	if len(token) < projectKeyMinLen || len(token) > projectKeyMaxLen {
-		return false
-	}
-	if first := token[0]; first < 'a' || first > 'z' {
-		return false
-	}
-	// Byte-wise, which is exact here: every byte this loop admits is a
-	// single-byte character, so a multi-byte rune fails on its first byte and
-	// the length bounds above count characters rather than bytes.
-	for i := 1; i < len(token); i++ {
-		if !projectKeyByte(token[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-// projectKeyByte reports whether one lowercased byte is legal inside a key.
-func projectKeyByte(b byte) bool {
-	switch {
-	case b >= 'a' && b <= 'z', b >= '0' && b <= '9':
-		return true
-	default:
-		return b == '_' || b == '-'
 	}
 }

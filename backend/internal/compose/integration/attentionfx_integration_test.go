@@ -20,11 +20,16 @@ package integration
 // pair — which is every pair in the demo data.
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestTheWorklistPricesAmountsThroughTheStoredRates(t *testing.T) {
@@ -55,5 +60,51 @@ func TestTheWorklistPricesAmountsThroughTheStoredRates(t *testing.T) {
 	}
 	if converted[2] != nil {
 		t.Fatalf("a currency with no stored rate came back priced at %d — that raw figure is exactly what the ordering must not see", *converted[2])
+	}
+}
+
+// The Worklist only ORDERS by the base currency, so it neither waits for a
+// re-base in flight nor needs the installation_settings grant.
+// The re-base holds the row as a settings write does. A read that took it FOR
+// SHARE would park behind it until the bound below gives up.
+func TestTheWorklistPricingNeitherWaitsForAReBaseNorNeedsTheSettingsGrant(t *testing.T) {
+	e := Setup(t)
+	// The admin holds the settings grant, so its case reaches the row and
+	// proves the lock half; the rep proves the grant half.
+	seats := map[string]context.Context{
+		"an admin": e.Admin(),
+		"a seat holding only deal.read": e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"deal": {Read: true}},
+			RowScope: principal.RowScopeAll,
+		}),
+	}
+
+	rebase, err := OwnerConn(t).Begin(context.Background())
+	if err != nil {
+		t.Fatalf("opening the re-base transaction: %v", err)
+	}
+	//craft:ignore swallowed-errors the re-base only holds the row; rolling it back is the cleanup
+	defer func() { _ = rebase.Rollback(context.Background()) }()
+	if err := settings.LockForWrite(e.Admin(), rebase, baseCurrencyKey); err != nil {
+		t.Fatalf("holding the base-currency row as a re-base does: %v", err)
+	}
+
+	now := clocktest.Now(t)
+	for seatName, seat := range seats {
+		done := make(chan error, 1)
+		go func() {
+			_, _, err := compose.AttentionBaseMoney{Pool: e.Pool}.ToBase(seat, now,
+				[]attention.CurrencyAmount{{Minor: 40_000, Currency: "EUR"}})
+			done <- err
+		}()
+		select {
+		case err := <-done:
+			if err != nil {
+				t.Errorf("the Worklist's pricing, by %s: %v", seatName, err)
+			}
+		case <-time.After(10 * time.Second):
+			t.Fatalf("the Worklist's pricing, by %s, waited on the re-base's row lock: a read that only ranks took FOR SHARE",
+				seatName)
+		}
 	}
 }

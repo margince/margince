@@ -178,7 +178,7 @@ func (s *Store) signOffDrafted(ctx context.Context, body, subject, name string, 
 	}
 	signature := draft.over(stored)
 	if strings.TrimSpace(signature.HTML) != "" {
-		markup, text, err := signatureMarkup(signature.HTML)
+		markup, text, err := sanitizeSignature(signature.HTML)
 		if err != nil {
 			return SignOff{}, err
 		}

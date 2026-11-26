@@ -20,7 +20,14 @@ func (w *csvWriters) markPredictedRow(row migration.Row, outcome predictedOutcom
 		return
 	}
 	w.links.markPending(w.object, row.ExternalID)
-	w.links.markNaturalPending(w.object, textFields(row.Fields)[naturalKeyField(w.object)])
+	if outcome == predictHeldKey {
+		// The record keeps its ref, and the row claims none of its keys.
+		return
+	}
+	w.rememberRow(row, outcome)
+	typed, _, _ := w.landingCells(row)
+	w.claimRow(row, typed)
+	w.links.markNaturalPending(w.object, textFields(row.Fields)[naturalKeyField(w.object)], rowRef(row.ExternalID))
 	if w.object == migration.ObjectCompany {
 		fields := textFields(row.Fields)
 		creates := outcome == predictCreate || outcome == predictCollides
@@ -34,14 +41,14 @@ func (w *csvWriters) markPredictedRow(row migration.Row, outcome predictedOutcom
 func reviewDisposition(outcome predictedOutcome) (string, error) {
 	switch outcome {
 	case predictCreate:
-		return "create", nil
+		return importRowCreate, nil
 	case predictCollides:
-		return "create_duplicate", nil
+		return importRowCreateDuplicate, nil
 	case predictUpdate:
 		return "update", nil
 	case predictUnchanged:
 		return "unchanged", nil
-	case predictUnwritable, predictCollidesSkipped:
+	case predictUnwritable, predictHeldKey, predictCollidesSkipped:
 		return importRowSkip, nil
 	default:
 		return "", apperrors.ErrInvalidArgument
@@ -67,7 +74,7 @@ func (w *csvWriters) reviewRow(ctx context.Context, row migration.Row, outcome p
 			return out, err
 		}
 	}
-	if outcome != predictUpdate && outcome != predictUnchanged {
+	if outcome != predictUpdate && outcome != predictUnchanged && outcome != predictHeldKey {
 		return out, nil
 	}
 	target, err := w.reviewTarget(ctx, row)
@@ -118,13 +125,17 @@ func (w *csvWriters) reviewTarget(ctx context.Context, row migration.Row) (ids.U
 		return target.id, nil
 	}
 	id, found, err := w.lookup(ctx, w.object, row.ExternalID)
+	if err != nil || found {
+		return id, err
+	}
+	holder, matched, err := w.domainHolderOf(ctx, row)
 	if err != nil {
 		return ids.UUID{}, err
 	}
-	if !found {
+	if !matched {
 		return ids.UUID{}, apperrors.ErrNotFound
 	}
-	return id, nil
+	return holder, nil
 }
 
 func (w *csvWriters) reviewRowValues(ctx context.Context, row migration.Row, out *migration.ReviewRow) error {

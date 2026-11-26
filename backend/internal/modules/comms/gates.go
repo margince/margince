@@ -331,25 +331,18 @@ func transmitRequestFor(del Delivery) commsauthz.TransmitRequest {
 	}
 }
 
-// recheckBeforeTheWire asks consent again right before the provider call. The
-// first answer came before pacing, the attachment checks and the file read. A
-// stop or a retraction committed in that time is in no ticket.
-//
-// An unchanged answer lets the attempt go. A changed one goes through the same
-// decision and requirement gates as the first. A stop committed during the
-// provider call itself is too late for this attempt.
-func (d *Dispatcher) recheckBeforeTheWire(
-	ctx context.Context, del Delivery, issued commsauthz.TransmitTicket,
+// gateRecheckedTicket applies the fresh decision held by the transmit permit.
+func (d *Dispatcher) gateRecheckedTicket(
+	ctx context.Context, del Delivery, issued, fresh commsauthz.TransmitTicket,
 ) (Outcome, time.Duration, error) {
-	fresh, err := d.consent.RecheckTransmit(ctx, transmitRequestFor(del), issued)
-	if err != nil {
-		return d.retry(ctx, del.ID, err)
+	if !fresh.Current(del.ID, del.Attempts) {
+		return d.park(ctx, del.ID, "no current authorization decision covers this attempt")
 	}
 	if fresh.DecisionSetID == issued.DecisionSetID {
 		return outcomeUndecided, 0, nil
 	}
 	ticket, outcome, wait, err := d.gateConsentDecision(ctx, fresh, del)
-	if outcome != outcomeUndecided {
+	if outcome != outcomeUndecided || err != nil {
 		return outcome, wait, err
 	}
 	return d.gateRequirements(ctx, del, ticket)

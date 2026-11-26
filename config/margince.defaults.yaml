@@ -20,6 +20,13 @@ blobstore_use_ssl: false
 certlog_base_url: null
 connector_state_key: ${file:/run/secrets/connector_state_key}
 dsn: ${file:/run/secrets/dsn}
+erasure_journal_access_key: ${file:/run/secrets/erasure_journal_access_key}
+erasure_journal_bucket: null
+erasure_journal_endpoint: null
+erasure_journal_path: null
+erasure_journal_region: null
+erasure_journal_secret_key: ${file:/run/secrets/erasure_journal_secret_key}
+erasure_journal_use_ssl: false
 geocode_base_url: null
 gmail_client_id: null
 gmail_client_secret: ${file:/run/secrets/gmail_client_secret}
@@ -57,12 +64,15 @@ work_dir: .tmp/aitask
 
 activities:
   follow_up_after_days: 2
+  private_mail_requests: true
+  share_private_quote_requests: true
 
 ai:
   budget: {"tokens_per_full_user":12000000,"company_monthly_tokens":null}
   capture_payloads: false
   price_sync: {"auto_sync":true}
   provider_keys_anthropic: ${file:/run/secrets/ai.provider_keys_anthropic}
+  provider_keys_azure_openai: ${file:/run/secrets/ai.provider_keys_azure_openai}
   provider_keys_gemini: ${file:/run/secrets/ai.provider_keys_gemini}
   provider_keys_gemini_vertex: ${file:/run/secrets/ai.provider_keys_gemini_vertex}
   provider_keys_jev: ${file:/run/secrets/ai.provider_keys_jev}
@@ -75,6 +85,9 @@ ai:
 analytics:
   performance_enabled: false
 
+approvals:
+  auto_apply_enabled: true
+
 auth:
   password:
     enabled: true
@@ -82,16 +95,22 @@ auth:
 capture:
   auto_enrich: true
   auto_enrich_daily_cap: 500
+  classify_pass_cap: 500
   confidentiality_pass_cap: 40
   freemail_extra: null
   freemail_never: null
   gmail_mailbox_quota: 6000
   gmail_project_quota: 1200000
   history_concurrency: 1
+  history_fetch_workers: 0
   history_hold: false
+  history_lookahead: 0
+  history_page_delay: 0s
+  history_page_size: 0
   mail_sharing: true
   mail_sync_interval_seconds: 120
   max_backfill_months: 0
+  owed_classify_pass_cap: 500
   shared_posture_allowed: false
   signature_enrich: true
   site_read_max_mib: 32
@@ -101,6 +120,7 @@ capture:
   trace_payloads: true
   transactional_extra: null
   transactional_never: null
+  verdict_pass_cap: 200
 
 company_context:
   rollout: onboarding
@@ -110,6 +130,8 @@ consent:
   controller_particulars: null
 
 contacts:
+  dormancy_days: [30,60,90]
+  dormancy_follow_up_enabled: true
   first_response_enabled: false
   first_response_target_minutes: 240
   shared_merge_reviews: false
@@ -120,6 +142,9 @@ data_tasks:
   pace: 1s
 
 database:
+  connection_idle_time: 5m0s
+  connection_lifetime: 10m0s
+  read_concurrency: 3
   worker_max_connections: 12
   worker_statement_cache_capacity: 256
 
@@ -138,6 +163,9 @@ email:
     password_file: null
     port: 0
     username: null
+
+features:
+  disabled: []
 
 identity:
   enabled_oidc_providers: null
@@ -198,9 +226,12 @@ lists:
   enabled: true
 
 mcp:
+  call_log: null
   client_registration:
     dynamic: true
     metadata_document: true
+    unused_limit: 1000
+    unused_retention: 24h0m0s
   connector_enabled: false
 
 operations:
@@ -223,3 +254,19 @@ uploads:
 
 web:
   security_txt: null
+
+webforms:
+  throttle:
+    block_after_minutes: 5
+    cooldown_minutes: 15
+    form_expiry_seconds: 120
+    form_refresh_seconds: 30
+    max_cooldown_hours: 24
+    min_senders: 10
+    per_address_per_minute: 10
+    per_form_per_minute: 30
+    per_installation_per_minute: 600
+    per_ip_per_minute: 5
+    per_workspace_per_minute: 120
+    preflights_per_minute: 20
+    unknown_keys_per_minute: 60

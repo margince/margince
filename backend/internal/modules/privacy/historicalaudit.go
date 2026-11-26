@@ -31,10 +31,12 @@ const markerHoldLockSQL = `LOCK TABLE company,contact,deal,lead,project,data_sub
 type HistoricalAuditPage struct {
 	Scanned []ids.UUID
 	Changed int
+	// Review names records whose kept copies a reviewer must check by hand.
+	Review []ErasureReviewSource
 }
 
-// RedactHistoricalAuditPageTx advances over the audit primary key, including
-// ordinary writes. The run ID bounds the walk before newly written certificates.
+// RedactHistoricalAuditPageTx advances over the erasure certificates in audit
+// primary key order. The run ID bounds the walk before newly written certificates.
 func RedactHistoricalAuditPageTx(ctx context.Context, tx pgx.Tx, after, until ids.UUID, limit int, country CountryReader) (HistoricalAuditPage, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return HistoricalAuditPage{}, err
@@ -43,10 +45,12 @@ func RedactHistoricalAuditPageTx(ctx context.Context, tx pgx.Tx, after, until id
 	if err != nil {
 		return HistoricalAuditPage{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT id, entity_type, entity_id,
-	 action=ANY(@erasure_actions) AND before IS NULL AND after IS NULL
-	 AND (evidence ? 'cause' OR evidence ? 'retention_action' OR evidence ? 'emails_suppressed')
-	 FROM audit_log WHERE id > @after AND id < @until ORDER BY id LIMIT @limit`,
+	// Only erasure certificates are read, so a page of ordinary writes costs
+	// nothing; a held certificate is still returned and revisited next run.
+	rows, err := tx.Query(ctx, `SELECT id, entity_type, entity_id
+	 FROM audit_log WHERE id > @after AND id < @until
+	 AND `+storekit.PhysicalErasureCertificateSQL("audit_log", "@erasure_actions")+`
+	 ORDER BY id LIMIT @limit`,
 		pgx.StrictNamedArgs{"after": after, "until": until, auditPageLimitParameter: limit, "erasure_actions": storekit.AuditRedactionActions()})
 	if err != nil {
 		return HistoricalAuditPage{}, err
@@ -54,11 +58,10 @@ func RedactHistoricalAuditPageTx(ctx context.Context, tx pgx.Tx, after, until id
 	type entry struct {
 		id, entity ids.UUID
 		kind       string
-		privacy    *bool
 	}
 	entries, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (entry, error) {
 		var e entry
-		err := row.Scan(&e.id, &e.kind, &e.entity, &e.privacy)
+		err := row.Scan(&e.id, &e.kind, &e.entity)
 		return e, err
 	})
 	if err != nil {
@@ -67,9 +70,6 @@ func RedactHistoricalAuditPageTx(ctx context.Context, tx pgx.Tx, after, until id
 	page := HistoricalAuditPage{}
 	for _, e := range entries {
 		page.Scanned = append(page.Scanned, e.id)
-		if e.privacy == nil || !*e.privacy {
-			continue
-		}
 		changed, err := redactHistoricalRecord(ctx, tx, e.id, e.kind, e.entity, floor)
 		if err != nil {
 			return HistoricalAuditPage{}, err
@@ -87,19 +87,15 @@ func redactHistoricalRecord(ctx context.Context, tx pgx.Tx, original ids.UUID, k
 		return false, err
 	}
 	var needed bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM audit_log history, audit_log certificate
-	 WHERE certificate.id = @original AND history.entity_type = certificate.entity_type
-	 AND history.entity_id = certificate.entity_id
-	 AND (history.occurred_at, history.id) <= (certificate.occurred_at, certificate.id)
-	 AND `+storekit.AuditRedactionNeededSQL+`)
-	 OR EXISTS (SELECT 1 FROM event_outbox retained, audit_log certificate
-	 WHERE certificate.id = @original AND retained.created_at <= certificate.occurred_at
-	 AND retained.envelope->'entity'->>'type' = certificate.entity_type
-	 AND retained.envelope->'entity'->>'id' = certificate.entity_id::text
-	 AND retained.envelope->'trace'->>'audit_log_id' <> certificate.id::text)`,
+	if err := tx.QueryRow(ctx, `SELECT `+historicalAuditPendingSQL+`
+   FROM audit_log certificate WHERE certificate.id=@original`,
 		pgx.StrictNamedArgs{"original": original}).Scan(&needed); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
 		return false, err
 	}
+
 	if !needed {
 		return false, nil
 	}

@@ -5,10 +5,6 @@ package activities
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/mail"
@@ -25,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -66,6 +63,11 @@ type invitationRow struct {
 	AttentionEpisode *ids.UUID
 	// ClaimedAt is when this delivery attempt began, in memory only.
 	ClaimedAt time.Time
+	// Team is the colleagues of a team booking link whose time this meeting
+	// holds beside its host. Empty on every other booking.
+	Team []ids.UUID
+	// Page is the booking page a public booking came through, nil otherwise.
+	Page *ids.UUID
 }
 
 type schedulingArgs []any
@@ -76,20 +78,11 @@ func (a *schedulingArgs) add(value any) string {
 	return fmt.Sprintf("$%d", len(*a))
 }
 
-func invitationToken() (string, string, error) {
-	var entropy [32]byte
-	if _, err := rand.Read(entropy[:]); err != nil {
-		return "", "", err
-	}
-	token := base64.RawURLEncoding.EncodeToString(entropy[:])
-	hash := sha256.Sum256([]byte(token))
-	return token, hex.EncodeToString(hash[:]), nil
-}
-
 func invitationView(row invitationRow) crmcontracts.MeetingInvitation {
 	out := crmcontracts.MeetingInvitation{
 		Id: crmcontracts.Id(row.ID), Status: crmcontracts.MeetingInvitationStatus(row.Status),
 		Start: row.Appointment.Start, End: row.Appointment.End, Subject: row.Appointment.Subject, Location: row.Appointment.Location, Version: row.Version,
+		StartIntent: bookedStartIntent(row.Appointment),
 	}
 	reminder := crmcontracts.MeetingInvitationReminderStatus(row.ReminderStatus)
 	out.ReminderStatus = &reminder
@@ -160,8 +153,14 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 	if err := validateInvitee(in, intent); err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
+	if err := admitBookedStart(in.StartIntent, &in.Start, &in.End); err != nil {
+		return crmcontracts.MeetingInvitation{}, err
+	}
 	profile, err := s.validateInvitationTime(ctx, host, in.Start, in.End)
 	if err != nil {
+		return crmcontracts.MeetingInvitation{}, err
+	}
+	if err := s.validateTeamTime(ctx, intent.Team, profile, in.Start, in.End, ids.Nil, nil); err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
 	// A lead booker was found by this very address on this request, and the
@@ -171,11 +170,11 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 			return crmcontracts.MeetingInvitation{}, err
 		}
 	}
-	roster, err := s.resolveRoster(ctx, host, in, intent)
+	roster, err := s.resolveRoster(ctx, host, withTeamAttendees(in, intent.Team), intent)
 	if err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
-	token, hash, err := invitationToken()
+	token, hash, err := storekit.MintToken()
 	if err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
@@ -186,6 +185,10 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 	row := invitationRow{PublicIntent: intent.Public, ManagementRef: ref, Host: host, Provider: string(profile.Provider), Calendar: profile.CalendarId, ReminderStatus: "off", Status: invitationPending, Version: 1, Command: "create"}
 	row.Appointment = invitationAppointment(profile, in)
 	row.Appointment.LeadID = intent.Lead.UUID
+	row.Team = teamIDs(intent.Team)
+	if intent.Page != ids.Nil {
+		row.Page = &intent.Page
+	}
 	row.Appointment.Attendees, row.Appointment.Roster = rosterAddresses(roster), roster
 	if intent.DescriptionFromBooker {
 		row.Appointment.Description = ""
@@ -224,16 +227,21 @@ func reserveInvitation(ctx context.Context, tx pgx.Tx, host ids.UserID, start, e
 
 func readInvitation(ctx context.Context, tx pgx.Tx, id ids.UUID, lock bool) (invitationRow, error) {
 	args := schedulingArgs{}
-	query := `SELECT activity_id,host_user_id,provider,calendar_id,appointment,receipt,status,version,command,attempts,management_ref,reminder_status,public_intent,attention_reason,attention_episode FROM meeting_invitation WHERE activity_id=` + args.add(id)
+	query := `SELECT activity_id,host_user_id,provider,calendar_id,appointment,receipt,status,version,command,attempts,management_ref,reminder_status,public_intent,attention_reason,attention_episode,team_user_ids,booking_page_id FROM meeting_invitation WHERE activity_id=` + args.add(id)
 	if lock {
 		query += " FOR UPDATE"
 	}
 	var row invitationRow
-	err := tx.QueryRow(ctx, query, args...).Scan(&row.ID, &row.Host, &row.Provider, &row.Calendar, &row.Appointment, &row.Receipt, &row.Status, &row.Version, &row.Command, &row.Attempts, &row.ManagementRef, &row.ReminderStatus, &row.PublicIntent, &row.AttentionReason, &row.AttentionEpisode)
+	err := tx.QueryRow(ctx, query, args...).Scan(&row.ID, &row.Host, &row.Provider, &row.Calendar, &row.Appointment, &row.Receipt, &row.Status, &row.Version, &row.Command, &row.Attempts, &row.ManagementRef, &row.ReminderStatus, &row.PublicIntent, &row.AttentionReason, &row.AttentionEpisode, &row.Team, &row.Page)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return row, apperrors.ErrNotFound
 	}
-	return row, err
+	if err != nil {
+		return row, err
+	}
+	// Every read, delivery and settlement sees the chosen clock under current
+	// zone rules, as the meeting's own read does (occurredday.BookedStartSQL).
+	return row, admitBookedStart(bookedStartIntent(row.Appointment), &row.Appointment.Start, &row.Appointment.End)
 }
 
 func auditInvitation(ctx context.Context, tx pgx.Tx, before *invitationRow, after invitationRow) error {
@@ -271,7 +279,7 @@ func (s *Store) Invitation(ctx context.Context, id ids.UUID) (crmcontracts.Meeti
 func invitationSource(ctx context.Context) string {
 	actor, _ := principal.Actor(ctx)
 	if actor.ID == "system:public_booking" {
-		return "public_booking"
+		return publicBookingSource
 	}
 	return sourceManual
 }
@@ -284,19 +292,26 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 				return err
 			}
 		}
-		if err := storekit.LockWriteIdentity(ctx, tx, "meeting_host", host.String()); err != nil {
+		// The page lock comes before every host lock, on every path that takes both.
+		if intent.DescriptionFromBooker || len(row.Team) > 0 {
+			if err := confirmTeamTx(ctx, tx, host, intent.Page, row.Team); err != nil {
+				return err
+			}
+		}
+		if err := lockSlotHolders(ctx, tx, host, row.Team); err != nil {
 			return err
 		}
 		if err := admitPublicBookingIntent(ctx, tx, row.PublicIntent); err != nil {
 			return err
 		}
-		if err := reserveInvitation(ctx, tx, host, in.Start, in.End, buffer, ids.Nil); err != nil {
+		if err := reserveSlotHolders(ctx, tx, host, row.Team, in.Start, in.End, buffer, ids.Nil); err != nil {
 			return err
 		}
 		seconds := int(in.End.Sub(in.Start) / time.Second)
 		activity, _, err := s.LogActivityTx(ctx, tx, LogActivityInput{
-			Kind: KindMeeting, Subject: &in.Subject, Body: &in.Description,
-			OccurredAt: &in.Start, DurationSeconds: &seconds, HostUserID: &host, ClaimsHostSlot: true,
+			SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, ""), Body: systemtext.Prose(systemtext.Quote, "")},
+			Kind:       KindMeeting, Subject: &in.Subject, Body: &in.Description,
+			OccurredAt: &in.Start, MeetingIntent: in.StartIntent, DurationSeconds: &seconds, HostUserID: &host, ClaimsHostSlot: true,
 			Links: invitationLinks(in, intent), LinksFromRequest: in.Links != nil, Source: invitationSource(ctx),
 		})
 		if err != nil {
@@ -305,6 +320,13 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 		row.ID = ids.UUID(activity.Id)
 		if err := stampInvitationAttendees(ctx, tx, ids.From[ids.ActivityKind](row.ID), host, row.Appointment.Roster); err != nil {
 			return err
+		}
+		if invitationSource(ctx) == publicBookingSource {
+			for _, holder := range slotHolders(host, row.Team) {
+				if _, err := s.CloseTasksAnsweredByBookingTx(ctx, tx, ids.From[ids.ActivityKind](row.ID), holder, invitationLinks(in, intent)); err != nil {
+					return err
+				}
+			}
 		}
 		if !intent.Lead.IsZero() {
 			if s.leadQualifyTasks != nil {
@@ -315,14 +337,14 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 		}
 		row.Appointment.RequestID = row.ID.String()
 		args := schedulingArgs{}
-		values := []string{args.add(row.ID), args.add(host), args.add(row.Provider), args.add(row.Calendar), args.add(row.Appointment), args.add(row.Status), args.add(hash), args.add(row.ManagementRef), args.add(s.now()), args.add(row.ReminderStatus), args.add(row.PublicIntent), args.add(s.now())}
-		_, err = tx.Exec(ctx, `INSERT INTO meeting_invitation(activity_id,host_user_id,provider,calendar_id,appointment,status,management_hash,management_ref,next_attempt_at,reminder_status,public_intent,created_at) VALUES (`+strings.Join(values, ",")+`)`, args...)
+		values := []string{args.add(row.ID), args.add(host), args.add(row.Provider), args.add(row.Calendar), args.add(row.Appointment), args.add(row.Status), args.add(hash), args.add(row.ManagementRef), args.add(s.now()), args.add(row.ReminderStatus), args.add(row.PublicIntent), args.add(s.now()), args.add(row.Team), args.add(row.Page)}
+		_, err = tx.Exec(ctx, `INSERT INTO meeting_invitation(activity_id,host_user_id,provider,calendar_id,appointment,status,management_hash,management_ref,next_attempt_at,reminder_status,public_intent,created_at,team_user_ids,booking_page_id) VALUES (`+strings.Join(values, ",")+`)`, args...)
 		if err != nil {
 			return err
 		}
 		// The door's own flag: Public is nil for a booking sent without a key.
 		if intent.DescriptionFromBooker {
-			if _, err := stampBookingPageUseTx(ctx, tx, host, s.now()); err != nil {
+			if _, err := stampBookingPageUseTx(ctx, tx, host, intent.Page, s.now()); err != nil {
 				return err
 			}
 		}

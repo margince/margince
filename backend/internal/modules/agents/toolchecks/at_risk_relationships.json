@@ -1,0 +1,10 @@
+{
+  "verb": "at_risk_relationships",
+  "checks": [
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "project.read",
+    "relationship.read"
+  ]
+}

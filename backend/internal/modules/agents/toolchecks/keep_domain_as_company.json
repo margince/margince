@@ -1,0 +1,12 @@
+{
+  "verb": "keep_domain_as_company",
+  "checks": [
+    "activity.read",
+    "company.create",
+    "company.read",
+    "company.update"
+  ],
+  "takes": [
+    "domain_question"
+  ]
+}

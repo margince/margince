@@ -30,6 +30,12 @@ func SeatScopedMailKey(messageID, seat string) string {
 	return messageID + MailSeatMarker + seat
 }
 
+// MailboxScopedMailKey is SeatScopedMailKey for a shared mailbox, which has no
+// seat: the key names its connection instead.
+func MailboxScopedMailKey(messageID, connection string) string {
+	return SeatScopedMailKey(messageID, "mailbox:"+connection)
+}
+
 // SharedMailKey is the Message-ID behind a stored natural key, whether the row
 // holds the shared key or one seat's scoped copy of it.
 //
@@ -40,4 +46,20 @@ func SharedMailKey(sourceID string) string {
 		return before
 	}
 	return sourceID
+}
+
+// SharedMailKeySQL is SharedMailKey spelled for a query over `activity` rows.
+// It is the Message-ID a captured email row is keyed by, or NULL for a row
+// another source system keyed. alias is a compile-time literal.
+func SharedMailKeySQL(alias string) string {
+	return "(CASE WHEN " + alias + ".source_system = '" + EmailSourceSystem + "'" +
+		" THEN split_part(" + alias + ".source_id, '" + MailSeatMarker + "', 1) END)"
+}
+
+// ScopedMailCopySQL is true for a captured email row filed under one seat's or
+// one mailbox's scoped key. Such a row is a copy of a message whose shared key
+// another row holds. It is never NULL, so its negation keeps every other row. alias is a
+// compile-time literal.
+func ScopedMailCopySQL(alias string) string {
+	return "coalesce(" + alias + ".source_system = '" + EmailSourceSystem + "' AND strpos(" + alias + ".source_id, '" + MailSeatMarker + "') > 0, false)"
 }

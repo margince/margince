@@ -12,13 +12,86 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "4cab916d7aa3f0e5",
+    "tools": "6a95babb9d657feb",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "53246e5fe328e22058409bea6b0b93e8a29005ee",
+    "ran_at": "2026-11-22T02:57:10Z",
+    "graded_commit": "53246e5fe328e22058409bea6b0b93e8a29005ee",
+    "graded_at": "2026-11-22T02:57:10Z"
+  },
   "usage": {
-    "input_tokens": 56146,
-    "output_tokens": 3611,
+    "input_tokens": 58471,
+    "output_tokens": 4050,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 500864,
+    "cache_read_input_tokens": 419328,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "advance_project_phase",
+        "catch_me_up_on",
+        "change_state",
+        "find_records",
+        "get_record_history",
+        "list_approvals",
+        "read_attention",
+        "read_context",
+        "read_project",
+        "read_project_360",
+        "read_record",
+        "read_workspace",
+        "review_commitments",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "advance_project_phase",
+        "catch_me_up_on",
+        "change_state",
+        "find_records",
+        "list_approvals",
+        "read_attention",
+        "read_context",
+        "read_project",
+        "read_project_360",
+        "read_record",
+        "review_commitments",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 11.5,
+      "min": 9,
+      "max": 14
+    },
+    "refused": {
+      "median": 2,
+      "min": 1,
+      "max": 3
+    },
+    "prompt_tokens": {
+      "median": 238899.5,
+      "min": 229018,
+      "max": 248781
+    },
+    "output_tokens": {
+      "median": 2025,
+      "min": 1988,
+      "max": 2062
+    }
   }
 }

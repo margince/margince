@@ -17,7 +17,6 @@
   display: block;
   width: 5px;
   border-radius: var(--r-xs);
-  corner-shape: round;
   background: var(--borderStrong);
 }
 .strength-meter-bars i:nth-child(1) {

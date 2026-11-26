@@ -13,8 +13,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // complianceFixtures fill the consent, privacy and retention calls. Each acts
@@ -23,6 +23,10 @@ import (
 //
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
 var complianceFixtures = map[string]func(p *recordPool) map[string]any{
+	"list_contact_overrides": func(p *recordPool) map[string]any {
+		vouch := p.take("consent_override")
+		return map[string]any{"id": p.fact(vouch, "contact")}
+	},
 	"record_consent": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("mail_contact"), "request_body": map[string]any{
 			"purpose_id": p.take("consent_purpose"), "new_state": "granted", "lawful_basis": "consent",
@@ -33,6 +37,15 @@ var complianceFixtures = map[string]func(p *recordPool) map[string]any{
 		return map[string]any{"id": p.take("contact"), "request_body": map[string]any{
 			"kind": "in_person", "note": "Met at the fair.", "occurred_at": pastInstant(p),
 		}}
+	},
+	"record_lead_qualifying_event": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("lead"), "request_body": map[string]any{
+			"kind": "requested_by_subject", "note": "Asked by phone for the document.", "occurred_at": pastInstant(p),
+		}}
+	},
+	"retract_lead_qualifying_event": func(p *recordPool) map[string]any {
+		event := p.take("lead_qualifying_event")
+		return map[string]any{"id": p.fact(event, "lead"), "event_id": event}
 	},
 	"retract_qualifying_event": func(p *recordPool) map[string]any {
 		event := p.take("qualifying_event")
@@ -89,12 +102,7 @@ var complianceFixtures = map[string]func(p *recordPool) map[string]any{
 			"subject_id": p.fact(review, "contact"), "kind": "in_person", "note": "They asked for it at the fair.", "occurred_at": pastInstant(p),
 		}}
 	},
-	"direct_communication_send": func(p *recordPool) map[string]any {
-		return map[string]any{"id": p.take("communication_review"), "request_body": map[string]any{
-			"reason_code": "contractual_necessity", "explanation": "The service agreement obliges us to send this notice.",
-			"warning_version": consent.OverrideWarningVersion, "acknowledged": true,
-		}}
-	},
+
 	"preview_controller_mail": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("mail_contact"), "kind": "privacy_notice"}
 	},
@@ -137,20 +145,24 @@ func complianceSeeders(s sweepSeed) map[string]func() string {
 		apptest.DriveNoticeCase(s.t, s.e, contact)
 		return s.ownerScalar(`SELECT id::text FROM privacy_notice_case WHERE contact_id = $1`, contact)
 	}
-	qualifying := func() string {
-		contact := s.create["contact"]()
-		event := s.post("/v1/contacts/"+contact+"/consent/qualifying-events", integration.AnyMap{
-			"kind": "in_person", "note": "Met at the fair.",
-			"occurred_at": s.pool.sweepStart.Add(-48 * time.Hour).Format(time.RFC3339),
-		})
-		s.pool.note(event, "contact", contact)
-		return event
+	qualifying := func(kind string) func() string {
+		return func() string {
+			subject := s.create[kind]()
+			event := s.post("/v1/"+kind+"s/"+subject+"/consent/qualifying-events", integration.AnyMap{
+				"kind": "in_person", "note": "Met at the fair.",
+				"occurred_at": s.pool.sweepStart.Add(-48 * time.Hour).Format(time.RFC3339),
+			})
+			s.pool.note(event, kind, subject)
+			return event
+		}
 	}
+
 	return map[string]func() string{
 		"mail_contact":          mailContact,
 		"consent_purpose":       purpose(false),
 		"double_opt_in_purpose": purpose(true),
-		"qualifying_event":      qualifying,
+		"qualifying_event":      qualifying("contact"),
+		"lead_qualifying_event": qualifying("lead"),
 		// A contact a web form or lead conversion created as one who asked for
 		// a quote. No route of the sweep's creates one with that acquisition.
 		"acquisition_contact": func() string {
@@ -178,12 +190,12 @@ func complianceSeeders(s sweepSeed) map[string]func() string {
 		},
 		"consent_override": func() string {
 			contact := s.create["contact"]()
-			var vouch struct {
-				ID string `json:"override_id"`
-			}
-			s.call("POST", "/v1/contacts/"+contact+"/consent/allow", integration.AnyMap{"category": "marketing", "reason": "They asked at the fair."}, nil, &vouch)
-			s.pool.note(vouch.ID, "contact", contact)
-			return vouch.ID
+			vouch := s.ownerScalar(`INSERT INTO communication_override
+				(contact_id, category, reason, decided_by_level, captured_by, legal_entity_id, recorded_directly)
+				VALUES ($1, 'marketing', 'They asked at the fair.', 'admin', 'human:x',
+				        (SELECT id FROM legal_entity WHERE is_default), true) RETURNING id::text`, contact)
+			s.pool.note(vouch, "contact", contact)
+			return vouch
 		},
 		"contact_note": func() string {
 			return s.post("/v1/activities", integration.AnyMap{
@@ -207,7 +219,7 @@ func complianceSeeders(s sweepSeed) map[string]func() string {
 		"confirm_submission": func() string {
 			contact := mailContact()
 			token := s.ownerScalar(`INSERT INTO confirm_token (contact_id, token_hash, delivered_to, expires_at)
-				VALUES ($1, $2, 'subject@role-sweep.test', $3) RETURNING id::text`, contact, "role-sweep-"+contact, clocktest.Now(s.t).Add(14*24*time.Hour))
+				VALUES ($1, $2, 'subject@role-sweep.test', $3) RETURNING id::text`, contact, storekit.TokenHash(contact), clocktest.Now(s.t).Add(14*24*time.Hour))
 			return s.ownerScalar(`INSERT INTO contact_confirm_submission (contact_id, token_id, kind, field, proposed_value)
 				VALUES ($1, $2, 'correction', 'full_name', 'Role Sweep Corrected') RETURNING id::text`, contact, token)
 		},

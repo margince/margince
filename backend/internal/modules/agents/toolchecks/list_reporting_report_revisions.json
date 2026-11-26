@@ -1,0 +1,10 @@
+{
+  "verb": "list_reporting_report_revisions",
+  "checks": [
+    "report_definition.read",
+    "report_definition.update"
+  ],
+  "takes": [
+    "report"
+  ]
+}

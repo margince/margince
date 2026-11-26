@@ -70,7 +70,7 @@ func (s *Scanner) ScanDeal(ctx context.Context, now time.Time, deal ids.UUID) (R
 func (s *Scanner) scanOneDeal(
 	ctx context.Context, tx pgx.Tx, now time.Time, deal ids.UUID, generation int64, out *Result,
 ) error {
-	runID, err := s.store.openRun(ctx, tx, now, nil, &deal)
+	runID, err := s.store.openRun(ctx, tx, now, &deal)
 	if err != nil {
 		return err
 	}
@@ -84,16 +84,20 @@ func (s *Scanner) scanOneDeal(
 	subjects, err := s.dealSubjects(ctx, tx, now, coverage, deal)
 	if err != nil {
 		out.Status, out.Readiness = StatusIncomplete, ReadinessChecksIncomplete
-		return s.store.FinishRun(ctx, tx, runID, 0, 0, 0, out.Status, out.Readiness)
+		return s.store.FinishRun(ctx, tx, runID, Eligible{}, 0, out.Status, out.Readiness)
 	}
 	pass := askEveryRule(now, subjects, s.cfg, coverage)
+	if err := s.askPairs(ctx, tx, now, []ids.UUID{deal}, &pass); err != nil {
+		out.Status, out.Readiness = StatusIncomplete, ReadinessChecksIncomplete
+		return s.store.FinishRun(ctx, tx, runID, Eligible{}, 0, out.Status, out.Readiness)
+	}
 	out.EligibleDeals, out.Findings = pass.eligible, len(pass.raised)
 	for _, r := range pass.raised {
 		if err := s.store.UpsertException(ctx, tx, r.finding, r.owner); err != nil {
 			return err
 		}
 	}
-	if err := s.store.RecordReceipts(ctx, tx, runID, now, s.cfg.ReceiptLifetime, subjects); err != nil {
+	if err := s.store.RecordReceipts(ctx, tx, runID, subjects); err != nil {
 		return err
 	}
 	if err := s.store.RecordRunFindings(ctx, tx, runID, pass.seen); err != nil {
@@ -101,6 +105,13 @@ func (s *Scanner) scanOneDeal(
 	}
 	if out.Cleared, err = s.store.CloseCleared(ctx, tx, clearableTypes(coverage), pass.deals, pass.seen); err != nil {
 		return err
+	}
+	if s.pairs != nil {
+		pairs, err := s.store.closeClearedPairsOf(ctx, tx, deal, pass.seen)
+		if err != nil {
+			return err
+		}
+		out.Cleared += pairs
 	}
 	if out.Departed, err = s.store.CloseDeparted(ctx, tx, &deal, pass.deals); err != nil {
 		return err
@@ -112,7 +123,7 @@ func (s *Scanner) scanOneDeal(
 	} else if err := s.store.clearDealMarker(ctx, tx, deal, generation); err != nil {
 		return err
 	}
-	return s.store.FinishRun(ctx, tx, runID, out.EligibleDeals, 0, out.Cleared, out.Status, out.Readiness)
+	return s.store.FinishRun(ctx, tx, runID, Eligible{Deals: out.EligibleDeals, DealOwners: pass.owners}, out.Cleared, out.Status, out.Readiness)
 }
 
 // DealChangePending answers whether the deal has a change no pass has read.

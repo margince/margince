@@ -16,9 +16,9 @@ package compose
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
@@ -69,25 +69,12 @@ func pageFactsSystem(menu pageMenu, fence promptfence.Fence) string {
 	return b.String()
 }
 
-// menuGuidance narrows categoryGuidance to the fields the menu offers.
+// menuGuidance is the guidance for the fields the menu offers, and only them.
 func menuGuidance(fields []string) string {
-	present := map[string]bool{}
-	for _, f := range fields {
-		present[f] = true
-	}
 	var parts []string
-	// EVERY category the vocabulary describes, "market" included. It was
-	// missing, so a page offering company_size or served_industry reached the
-	// model with no guidance for either — and company_size then collected
-	// whatever looked numeric: a headcount that belonged in employee_range,
-	// the company's own name, a revenue figure. The categories are listed in
-	// the order the guidance reads best, not the order the map iterates.
-	for _, category := range []string{companyWord, "offering", "market", "signal"} {
-		for _, f := range contacts.CompanyFactFields[category] {
-			if present[f] {
-				parts = append(parts, categoryGuidance[category])
-				break
-			}
+	for _, guidance := range factGuidance {
+		if slices.ContainsFunc(guidance.fields, func(field string) bool { return slices.Contains(fields, field) }) {
+			parts = append(parts, guidance.text)
 		}
 	}
 	return strings.Join(parts, " ")

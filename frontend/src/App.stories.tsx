@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App } from "./App";
 import { LocaleProvider } from "./i18n";
+import { emptyListAnswer } from "./testing/story-utils";
 
 const meta: Meta = {
   title: "Shell/Application",
@@ -69,13 +70,7 @@ function installAppStub() {
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
-    return new Response(
-      JSON.stringify({
-        data: [],
-        page: { next_cursor: null, has_more: false },
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } },
-    );
+    return emptyListAnswer(input);
   }) as typeof fetch;
 }
 

@@ -50,8 +50,8 @@ func seedCalendar(t *testing.T, e *integration.Env, provider, status string, fai
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var id ids.UUID
 		if err := tx.QueryRow(context.Background(), `
-			INSERT INTO capture_connection (provider, user_id, scopes, status, auth)
-			VALUES ($1, $2, '{}', $3, $4) RETURNING id`,
+			INSERT INTO capture_connection (provider, user_id, status, auth)
+			VALUES ($1, $2, $3, $4) RETURNING id`,
 			provider, e.Rep1, status, []byte(`{"refresh_token":"r","granted":[]}`)).Scan(&id); err != nil {
 			return err
 		}
@@ -103,6 +103,7 @@ func TestTheReadersCalendarSaysWhetherItFeedsTheMeetingsCount(t *testing.T) {
 func horizonContacts(t *testing.T, e *integration.Env) (visible, hidden ids.UUID) {
 	t.Helper()
 	visible = partiesContact(t, e, "Blair Shared", ids.UUID{}, nil)
+	e.ShareForWriting(t, "contact", visible, "team", e.Team1, e.Team2)
 	hidden = partiesContact(t, e, "Alex Private", e.Rep3, nil)
 	private := "owner"
 	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](hidden),
@@ -140,14 +141,19 @@ func bookMeetingFor(
 	return ids.UUID(meeting.Id)
 }
 
-// An empty day names the soonest booked customer meeting past it, skipping the
-// internal one and the cancelled one before it, with only the attendees the
-// reader may see in the room.
+// An empty day names the soonest booked customer meeting past it. It skips the
+// internal ones and the cancelled one before it, and names only the attendees
+// the reader may see in the room.
 func TestAnEmptyDayNamesTheNextCustomerMeetingWithOnlyVisibleAttendees(t *testing.T) {
 	e := integration.Setup(t)
 	now := todayAt(9 * time.Hour)
 	visible, hidden := horizonContacts(t, e)
 	bookOwnMeeting(t, e, "Team sync", now.Add(48*time.Hour), "")
+	// Linked to a record, but only a colleague is on it.
+	trustOwnDomain(t, e)
+	bea := addressedContact(t, e, "Colleague Bea", "bea@"+colleagueTestDomain)
+	e.ShareForWriting(t, "contact", bea, "team", e.Team1)
+	bookOwnMeeting(t, e, "One to one", now.Add(50*time.Hour), "", bea)
 	bookOwnMeeting(t, e, "Called off", now.Add(60*time.Hour), "canceled", visible)
 	// Booked by the colleague who owns the private buyer, onto Rep1's calendar.
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AccountRepPerms)

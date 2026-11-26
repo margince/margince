@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 // previewIDs is the set of record ids /filters/preview answers for one filter,
@@ -151,18 +152,22 @@ func TestTheStandardDealFieldsSelectTheirRecordsAndNeverMixCurrencies(t *testing
 			"source": "manual", "amount_minor": amount, "currency": currency, "expected_close_date": closes,
 		})
 	}
-	big := deal("Big rollout", 5_000_000, "EUR", "2026-11-30")
-	small := deal("Small pilot", 90_000, "EUR", "2027-02-15")
+	// Dated from the clock: a close date already past is refused. The cutoff
+	// falls between the two near deals and the far one.
+	soon := clocktest.Now(t).AddDate(0, 1, 0)
+	day := func(months, days int) string { return soon.AddDate(0, months, days).Format(time.DateOnly) }
+	big := deal("Big rollout", 5_000_000, "EUR", day(0, 0))
+	small := deal("Small pilot", 90_000, "EUR", day(3, 0))
 	// No USD rate is on the sheet, so this deal has no worth in the base
 	// currency and must not be compared as though its dollars were euros.
-	dollars := deal("Dollar deal", 9_000_000, "USD", "2026-12-01")
+	dollars := deal("Dollar deal", 9_000_000, "USD", day(0, 1))
 
 	expectSelects(t, e, "deal", []filterCase{
 		{leaf("name", "contains", "rollout"), []string{big}},
 		{leaf("amount", "gte", 1_000_000), []string{big}},
 		{leaf("amount", "lt", 1_000_000), []string{small}},
 		{leaf("amount", "exists", false), []string{dollars}},
-		{leaf("expected_close_date", "lt", "2027-01-01"), []string{big, dollars}},
+		{leaf("expected_close_date", "lt", day(2, 0)), []string{big, dollars}},
 		{leaf("created_at", "gte", daysAgo(1)), []string{big, small, dollars}},
 		{leaf("last_activity_at", "exists", true), []string{}},
 	})
@@ -206,8 +211,8 @@ type clauseWire struct {
 
 func TestAQuietForFortyFiveDaysListHoldsTheQuietContactAndSaysWhy(t *testing.T) {
 	e, _ := listsApp(t, true)
-	quiet := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Quiet Contact", "source": "manual"})
-	busy := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Busy Contact", "source": "manual"})
+	quiet := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Quiet Contact", "source": "manual"})
+	busy := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Busy Contact", "source": "manual"})
 	touch(t, e, "contact", quiet, 60)
 	touch(t, e, "contact", busy, 2)
 
@@ -276,18 +281,11 @@ func touchAt(t *testing.T, e *apptest.AppEnv, id string, at time.Time) {
 
 func TestADayRunsFromOneMidnightToTheNext(t *testing.T) {
 	e, _ := listsApp(t, true)
-	var zone string
-	if err := e.Owner.QueryRow(t.Context(), `SELECT current_setting('TimeZone')`).Scan(&zone); err != nil {
-		t.Fatal(err)
-	}
-	loc, err := time.LoadLocation(zone)
-	if err != nil {
-		t.Fatalf("session time zone %q: %v", zone, err)
-	}
-	midnight := time.Date(2026, 3, 10, 0, 0, 0, 0, loc)
-	onTheStroke := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Stroke Of Midnight", "source": "manual"})
-	justBefore := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Second Before", "source": "manual"})
-	lastSecond := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Last Second Of Day", "source": "manual"})
+	// App pools use UTC even when the maintenance session uses another zone.
+	midnight := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
+	onTheStroke := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Stroke Of Midnight", "source": "manual"})
+	justBefore := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Second Before", "source": "manual"})
+	lastSecond := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Last Second Of Day", "source": "manual"})
 	touchAt(t, e, onTheStroke, midnight)
 	touchAt(t, e, justBefore, midnight.Add(-time.Second))
 	touchAt(t, e, lastSecond, midnight.Add(24*time.Hour-time.Second))

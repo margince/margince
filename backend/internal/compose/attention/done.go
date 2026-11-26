@@ -13,6 +13,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -23,37 +25,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// doneInPlace are the sources whose row offers Done. Each one is otherwise left
-// only by working the record elsewhere, or by waiting until its lane stops
-// reporting it. A source absent here leaves through a verb of its own, and
-// TestEverySourceOffersAWayOffTheList holds that each one does.
-var doneInPlace = map[crmcontracts.WorklistItemSource]bool{
-	crmcontracts.WorklistItemSourceAwaitingReply:       true,
-	crmcontracts.WorklistItemSourceDomainQuestion:      true,
-	crmcontracts.WorklistItemSourceMeetingFollowUp:     true,
-	crmcontracts.WorklistItemSourceDealAtRisk:          true,
-	crmcontracts.WorklistItemSourceMeeting:             true,
-	crmcontracts.WorklistItemSourceLeadResponse:        true,
-	crmcontracts.WorklistItemSourceIntroductionRequest: true,
-	crmcontracts.WorklistItemSourceBatch:               true,
-	crmcontracts.WorklistItemSourceAutomationRun:       true,
-	crmcontracts.WorklistItemSourceAiWorkHealth:        true,
-	crmcontracts.WorklistItemSourceCaptureHealth:       true,
-	crmcontracts.WorklistItemSourceBookingHealth:       true,
-	crmcontracts.WorklistItemSourceBounce:              true,
-	crmcontracts.WorklistItemSourceUndelivered:         true,
-	crmcontracts.WorklistItemSourceDsr:                 true,
-	crmcontracts.WorklistItemSourceNoticeCase:          true,
-	// Done sets a case aside for this owner alone; the other owners keep it.
-	crmcontracts.WorklistItemSourceContactCase: true,
-}
-
 // DoneStore keeps the reader's own Done set. OPTIONAL: unbound, no row is ever
 // hidden as done and every Done is refused as not found.
 type DoneStore interface {
 	// DoneRows answers when this reader marked each of these rows done, and
 	// every group row they marked.
 	DoneRows(ctx context.Context, among []RowRef) (map[RowRef]time.Time, error)
+	// AlreadyDone names which of these rows this reader has put down, wherever
+	// the Done is kept. A row kept on its activity is in no DoneRows answer.
+	AlreadyDone(ctx context.Context, rows []RowRef) (map[RowRef]bool, error)
 	MarkDone(ctx context.Context, rows []RowRef) error
 	ReopenDone(ctx context.Context, rows []RowRef) error
 }
@@ -71,12 +51,6 @@ type doneState struct {
 	asked map[crmcontracts.WorklistItemSource][]ids.UUID
 }
 
-// offersDone is whether a source's rows offer Done. dispositionsFor answers
-// the same for a row, and always leads with Done where it offers any.
-func offersDone(source crmcontracts.WorklistItemSource) bool {
-	return source == sourceWaiting || doneInPlace[source]
-}
-
 // dispositionsFor is what a row offers a reader who is putting it down.
 func dispositionsFor(row ranked, reader ids.UUID) []crmcontracts.WorklistItemDispositions {
 	if domainMaintenanceBatch(row) {
@@ -85,16 +59,16 @@ func dispositionsFor(row ranked, reader ids.UUID) []crmcontracts.WorklistItemDis
 	if row.item.Source == sourceWaiting {
 		return waitingDispositions(row, reader)
 	}
-	if doneInPlace[row.item.Source] {
+	if offersDone(row.item.Source) {
 		return []crmcontracts.WorklistItemDispositions{disposeHandled}
 	}
 	return nil
 }
 
 // MarkRowsDone takes rows off this reader's own Worklist. Each row must offer
-// Done and be one the reader is shown now. That is judged by assembling their
-// day with every lane's own grant and row scope. A row on no scope the reader holds is
-// not found.
+// Done and be one the reader is shown now, or one they already put down. That
+// is judged by assembling their day with every lane's own grant and row scope.
+// Any other row is not found.
 func (s *Service) MarkRowsDone(ctx context.Context, rows []RowRef) error {
 	if actor, ok := principal.Actor(ctx); !ok || !actor.HumanOrItsAgent() {
 		return apperrors.ErrPermissionDenied
@@ -134,7 +108,26 @@ func (s *Service) MarkRowsDone(ctx context.Context, rows []RowRef) error {
 			return s.marked.store.MarkDone(ctx, rows)
 		}
 	}
-	return apperrors.ErrNotFound
+	return s.markUnlessDone(ctx, rows, missing)
+}
+
+// markUnlessDone answers a second Done on a row its lane now hides. The row is
+// already off the reader's list, so it succeeds and is not written again.
+func (s *Service) markUnlessDone(ctx context.Context, rows []RowRef, missing map[RowRef]bool) error {
+	already, err := s.marked.store.AlreadyDone(ctx, slices.Collect(maps.Keys(missing)))
+	if err != nil {
+		return err
+	}
+	for row := range missing {
+		if !already[row] {
+			return apperrors.ErrNotFound
+		}
+	}
+	fresh := slices.DeleteFunc(slices.Clone(rows), func(row RowRef) bool { return already[row] })
+	if len(fresh) == 0 {
+		return nil
+	}
+	return s.marked.store.MarkDone(ctx, fresh)
 }
 
 // ReopenRows puts rows back on this reader's own Worklist. It only removes the
@@ -167,8 +160,12 @@ func (s *Service) dropShown(ctx context.Context, scope string, missing map[RowRe
 			}
 		}
 	}
-	_, err := probe.worklistIn(ctx, scope, "", ids.UUID{}, worklistMaxPage, "")
-	return err
+	// In a snapshot of its own, as Worklist reads. Without one no lane gets
+	// its statement budget, and the slowest lane runs out the whole request.
+	return s.inSnapshot(ctx, ReadWorklistDone, func(ctx context.Context) error {
+		_, err := probe.worklistIn(ctx, scope, "", ids.UUID{}, worklistMaxPage, "")
+		return err
+	})
 }
 
 // readingDone returns a copy carrying what this reader marked done among the

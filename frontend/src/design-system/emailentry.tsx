@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { AlertTriangle, Mail, Paperclip } from "lucide-react";
+import { AlertTriangle, CalendarClock, Mail, Paperclip } from "lucide-react";
 
 import type { components } from "../api/schema";
+import { formatActivityWhen } from "../format/activitywhen";
 import { formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useViewerZone } from "../lib/viewerzone";
 import { Badge } from "./atoms";
+import { MeetingChange } from "./meetingchange";
 import { VisibilityBadge } from "./visibility";
 import "./emailentry.css";
 
@@ -26,6 +29,7 @@ import "./emailentry.css";
 // shows the subject and the date and no preview.
 
 type EmailSummary = components["schemas"]["EmailSummary"];
+type EmailCalendarInvitation = components["schemas"]["EmailCalendarInvitation"];
 
 const MOVE_LABEL: Record<string, MessageKey> = {
   needs_reply: "email.move.needsReply",
@@ -39,12 +43,15 @@ const MOVE_LABEL: Record<string, MessageKey> = {
  * cannot disagree about one message. A withheld message claims no move.
  */
 export function moveLabel(
-  summary: Pick<EmailSummary, "move"> | undefined,
+  summary: Pick<EmailSummary, "move" | "calendar_change"> | undefined,
   withheld: boolean,
 ): MessageKey | undefined {
   if (withheld || !summary) {
     return undefined;
   }
+  // A meeting change is seen, not replied to; only a proposed time may be.
+  const change = summary.calendar_change;
+  if (change && change.kind !== "proposed") return undefined;
   return MOVE_LABEL[summary.move];
 }
 
@@ -185,7 +192,16 @@ function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
       ? t("email.withheldSubject")
       : summary.subject?.trim() || t("email.noSubject"),
     who: direction ?? t("email.aMessage"),
-    preview: withheld ? null : summary.preview,
+    // An invitation names an event; its body is the calendar's boilerplate,
+    // so the row draws the event instead of the words.
+    invitation: withheld ? undefined : summary.calendar_invitation,
+    // A later calendar mail is drawn as its meeting and what changed, which
+    // takes the place of the subject and the words.
+    change: withheld ? undefined : summary.calendar_change,
+    preview:
+      withheld || summary.calendar_invitation || summary.calendar_change
+        ? null
+        : summary.preview,
     move: moveLabel(summary, withheld) ?? null,
   };
 }
@@ -238,6 +254,30 @@ export function EmailWords({ summary }: Readonly<{ summary: EmailSummary }>) {
     return null;
   }
   return <span className="emailentry__words">{preview}</span>;
+}
+
+/** When an invitation's event starts, the line a row and the drawer both draw. */
+export function InvitationStarts({
+  invitation,
+}: Readonly<{ invitation: EmailCalendarInvitation }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  if (!invitation.starts_at) {
+    return null;
+  }
+  return (
+    <span className="emailentry__starts">
+      {t("email.invitation.startsAt", {
+        when: formatActivityWhen(
+          invitation.starts_at,
+          invitation.starts_precision ?? "instant",
+          locale,
+          zone,
+        ),
+      })}
+    </span>
+  );
 }
 
 /**
@@ -308,11 +348,12 @@ export function EmailEntry({
     | { whyNotOpenable: NoOpenReason }>) {
   const t = useT();
   const row = rowFields(summary, t);
+  const Kind = row.invitation || row.change ? CalendarClock : Mail;
 
   const content = (
     <>
       <span className="emailentry__lead">
-        <Mail aria-hidden="true" />
+        <Kind aria-hidden="true" />
         {/* The row's KIND, for a reader who cannot see the envelope. Every
             other timeline kind announces itself through a Badge; this one
             said "email" in an icon and nothing else, so a screen reader was
@@ -321,19 +362,27 @@ export function EmailEntry({
         <span className="emailentry__who">{row.who}</span>
         {timestamp && <span className="emailentry__when">{timestamp}</span>}
       </span>
-      <span className="emailentry__subject">{row.subject}</span>
+      {row.change ? (
+        <MeetingChange change={row.change} fallbackTitle={row.subject} />
+      ) : (
+        <span className="emailentry__subject">{row.subject}</span>
+      )}
       {/* No preview on a withheld row, and none invented when the message has
           no text of its own: the server composes this line, so an empty one
           means the sender wrote nothing rather than that the row is loading. */}
       {row.preview && (
         <span className="emailentry__preview">{row.preview}</span>
       )}
+      {row.invitation && <InvitationStarts invitation={row.invitation} />}
       <span className="emailentry__marks">
         {/* Who may read it, as the one mark the drawer and the contact panel
             draw too. `display_status` is the server's word and the mark's
             vocabulary contains every value of it, so the row prints the state
             it was sent and never re-derives one. */}
         <VisibilityBadge state={summary.display_status} />
+        {row.invitation && (
+          <Badge tone="info">{t("email.invitation.badge")}</Badge>
+        )}
         {row.move && (
           <Badge tone={summary.move === "needs_reply" ? "warning" : undefined}>
             {t(row.move)}

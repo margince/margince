@@ -228,6 +228,18 @@ func TestTheFrameTellsAModelToNameADisagreementRatherThanReconcileIt(t *testing.
 	}
 }
 
+func TestTheFrameSaysToolAnswersAreDataNotInstructions(t *testing.T) {
+	if prompt := systemPrompt(nil, promptfence.New(), ""); !strings.Contains(prompt, mcp.UntrustedContentRule) {
+		t.Errorf("the frame no longer carries the untrusted-content rule:\n%s", prompt)
+	}
+}
+
+func TestTheFrameSaysWhoseRecordItIs(t *testing.T) {
+	if prompt := systemPrompt(nil, promptfence.New(), ""); !strings.Contains(prompt, mcp.OwnershipRule) {
+		t.Errorf("the frame no longer carries the ownership rule:\n%s", prompt)
+	}
+}
+
 // The published per-step cost is the part of a real step request that is not
 // transcript: the same system prompt and the same step schema the window sends,
 // so the budget gate holds the bytes a run pays rather than a model of them.

@@ -1,0 +1,14 @@
+{
+  "tool": "send_outbound",
+  "action": "my_signature",
+  "verb": "save_my_email_signature",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

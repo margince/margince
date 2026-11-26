@@ -132,7 +132,11 @@ function useProjectChronology(
       <>
         <ChronologyFilter filter={filter} onFilter={setFilter} />
         {filter !== "changes" && (
-          <TimelineFilterBar value={filters} onChange={setFilters} />
+          <TimelineFilterBar
+            key={view.project.id}
+            value={filters}
+            onChange={setFilters}
+          />
         )}
       </>
     ),
@@ -154,6 +158,7 @@ function useProjectChronology(
       {
         // A narrowed read is the list's own and has its own wait; the
         // unfiltered one is the 360's section, already on screen.
+        filtered: hasTimelineFilters(filters),
         loading: timeline.isPending,
         failed: timeline.isError,
         assembled: hasTimelineFilters(filters)

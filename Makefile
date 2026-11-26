@@ -14,26 +14,43 @@ include scripts/composition-profile.mk
 # one target here that invokes the compiler directly instead of delegating.
 GO ?= go
 
+# Local go commands build with -trimpath so worktrees share one build cache; see
+# the same lines in backend/Makefile. CI and release builds keep the paths.
+ifeq ($(CI),)
+ifeq (,$(findstring -trimpath,$(GOFLAGS)))
+override GOFLAGS += -trimpath
+export GOFLAGS
+endif
+# -trimpath leaves runtime.GOROOT empty in a `go run` tool such as gen-composition,
+# so the root of the same go is passed in the environment.
+ifeq ($(GOROOT),)
+GOROOT := $(shell $(GO) env GOROOT)
+export GOROOT
+endif
+endif
+
 # The deterministic script gates `check-root-gates` fans out. One list, one
 # consumer — see the comment on check-root-gates for why they are not that
 # target's prerequisites.
 ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-env-local test-api-entrypoint \
-  test-dev-cleanup test-disk-headroom \
-  test-golangci-guard test-scheduled-report test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict \
-  test-review-coverage \
-  test-laneorder test-lane-binaries check-image-pins check-host-ports ci-doc-parity \
+  test-dev-cleanup test-disk-headroom test-dev-ready test-composed-units test-compose-recreate-guard \
+  test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict \
+  test-review-coverage test-home-budget-compare test-repeat-changed-tests \
+  test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts check-image-pins check-early-pipe-readers check-host-ports ci-doc-parity \
   make-target-parity test-make-target-parity contract-breaking-check \
   test-contract-frontend-drift migration-versions test-migration-versions \
   test-lanes env-reads gofmt go-file-length fe-file-length test-fe-file-length test-test-budget rls-store-path \
   comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-phase-timer test-check-lane-end \
   check-extension-modules go-work-sum \
   no-jurisdiction test-no-jurisdiction \
-  pkg-freeze \
-  test-dev-postgres-container test-e2e-llm-check \
-  test-release-version-stamped test-closing-declaration test-release-patch-base \
+  pkg-freeze test-pkg-freeze \
+  test-dev-postgres-container test-e2e-llm-check test-gate-slot \
+  test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog \
   test-docs-describing \
-  test-craft-review test-release-tag-version test-release-license-stamped \
-  test-release-notes test-release-bundle embedded-binary-licenses third-party-files test-third-party-files \
+  test-craft-review test-release-tag-version test-release-dist-version test-release-license-stamped \
+  test-release-policy-sources-fresh \
+  test-release-version-file test-build-revision test-release-tag-on-main test-release-tag-go-proxy \
+  test-release-notes test-release-bundle test-release-compose test-backend-notices embedded-binary-licenses third-party-files test-third-party-files \
   test-strict-lint-packages
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
@@ -70,8 +87,9 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
-.PHONY: gate-timings
-.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-lane-binaries secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-bundle test-release-version-stamped test-closing-declaration test-release-patch-base docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
+.PHONY: gate-timings preflight
+.PHONY: repeat-changed-tests test-repeat-changed-tests
+.PHONY: help help-all install dev-fresh prod prod-stop check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe test-gate-slot dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards e2e-llm-report fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-dev-ready test-composed-units test-compose-recreate-guard test-api-entrypoint check-image-pins check-early-pipe-readers check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check messaging-rules-drift policy-refresh contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-policy-sources-fresh test-release-version-file test-build-revision test-release-tag-on-main test-release-tag-go-proxy test-release-notes test-release-bundle test-release-compose test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -141,6 +159,7 @@ install: fe-install tools hooks
 ## one of them running these is enough.
 CHECK_TREE_GATES ?= on
 check-backend:
+	@bash scripts/gate-slot.sh acquire $@
 	@bash scripts/phase-timer.sh reset
 ifneq ($(CHECK_TREE_GATES),off)
 	@bash scripts/phase-timer.sh start "frontend contract types (gen:api)"
@@ -150,6 +169,12 @@ ifneq ($(CHECK_TREE_GATES),off)
 endif
 	PHASE_TIMER_OWNED=1 $(MAKE) -C backend check
 	@bash scripts/phase-timer.sh report
+
+## preflight — the gates a few added lines turn red, in seconds: the file-length
+## caps, the comment budget and density, and the root compose size ceiling.
+## Optional, before a gate run; `make check` runs every one of them again.
+preflight:
+	$(MAKE) -k go-file-length fe-file-length comment-budget comment-density preflight-gates
 
 ## check-root-gates — the root deterministic script gates, side by side.
 ##
@@ -171,15 +196,16 @@ endif
 check-root-gates:
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh reset
 	@bash scripts/phase-timer.sh start "root script gates (x$(words $(ROOT_SCRIPT_GATES)), -j$(GATE_JOBS))"
-	$(MAKE) -j$(GATE_JOBS) $(ROOT_SCRIPT_GATES)
+	$(MAKE) -k -j$(GATE_JOBS) $(ROOT_SCRIPT_GATES)
 	@bash scripts/phase-timer.sh stop
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
 
 # The steps of `make check` that rewrite files another step reads, measured
 # step by step: the frontend install (frontend/node_modules), composition
-# (build/composition/), drift (the generated Go, config and docs files) and
-# contract-frontend-drift (frontend/src/api/). They run first, one at a time.
-CHECK_WRITERS := fe-install composition drift contract-frontend-drift
+# (build/composition/), drift (the generated Go, config and docs files),
+# contract-frontend-drift (frontend/src/api/) and generators-twice (every
+# committed generated file, put back afterwards). They run first, one at a time.
+CHECK_WRITERS := fe-install composition drift contract-frontend-drift generators-twice
 
 # The lanes `make check` runs side by side once the writers are done. Under
 # CHECK_WRITERS_RAN no lane reaches a writer: composition and fe-drift print a
@@ -205,6 +231,7 @@ CHECK_LANE_LOGS ?= .tmp/check-lanes
 ## ledger, and a prerequisite would record a phase before the reset. check-fe
 ## needs `make install` first.
 check:
+	@bash scripts/gate-slot.sh acquire $@
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh reset
 	@bash scripts/phase-timer.sh start "writers ($(CHECK_WRITERS))"
 	$(MAKE) -j1 $(CHECK_WRITERS)
@@ -212,6 +239,7 @@ check:
 	@rm -rf "$(CHECK_LANE_LOGS)"
 	@echo "check: $(words $(CHECK_LANES)) lanes, $(CHECK_LANE_JOBS) at a time, each logs to $(CHECK_LANE_LOGS)/<lane>.log"
 	@CHECK_WRITERS_RAN=1 PHASE_TIMER_OWNED=1 $(MAKE) -j$(CHECK_LANE_JOBS) $(CHECK_LANES)
+	@$(MAKE) -s -C backend mcp-inaccessible
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
 
 # One lane each. PHASE_LANE puts the lane's phases in a lane of their own in
@@ -262,6 +290,7 @@ check-q:
 ## + fitness tests, contract drift). A scope-aware per-task gate for backend-only
 ## work; the full `make check` adds the deterministic script gates.
 check-go:
+	@bash scripts/gate-slot.sh acquire $@
 	$(MAKE) -C backend check
 
 ## check-gates — the meta-gate lane: the waiver census, the obligations derived
@@ -279,7 +308,7 @@ check-gates:
 ## so an optimization starts from a reading rather than from a guess.
 gate-timings:
 	@mkdir -p backend/.tmp
-	@cd backend && $(GO) test ./gates/ -count=1 -v > .tmp/gate-timings.log 2>&1 || true
+	@cd backend && CHECK_BASE_REF="$(CHECK_BASE_REF)" $(GO) test ./gates/ -count=1 -v > .tmp/gate-timings.log 2>&1 || true
 	@GATE_TIMING_CORES="$$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)" \
 		bash scripts/gate-timings.sh backend/.tmp/gate-timings.log
 
@@ -324,6 +353,18 @@ dev-fresh:
 ## stack on the machine, including other worktrees', use `make dev-sweep`.
 dev-stop:
 	@bash scripts/dev.sh stop "$(DEV_SLUG)" $(if $(filter 1,$(DROP)),--drop,)
+
+## prod — run this checkout as a customer runs a release: production mode
+## and the 14-day trial, through the release's Compose folder with images built
+## here. Not for working on the code; that is `make dev`. scripts/prod.sh
+## has the details.
+prod:
+	@bash scripts/prod.sh up
+
+## prod-stop — stop the `make prod` stack. DROP=1 also deletes its
+## data and the settings under .tmp/production/.
+prod-stop:
+	@bash scripts/prod.sh stop $(if $(filter 1,$(DROP)),--drop,)
 
 ## dev-snapshot — copy THIS stack's database to `<db>_tmpl`, so `dev-restore`
 ## can put the world back in about a second instead of a migrate and a reseed.
@@ -377,6 +418,7 @@ scripts/composition-profile.mk: ;
 ## fails loudly if they are still missing after that. The CI frontend job runs
 ## this too.
 check-fe: fe-typecheck-composed
+	@bash scripts/gate-slot.sh acquire $@
 	@[ -d frontend/node_modules ] || { echo "check-fe: frontend/node_modules missing — run 'make install' (or 'make fe-install') first" >&2; exit 1; }
 	@bash scripts/phase-timer.sh start "frontend: core suite (ds-gates, drift, lint, unit, build)"
 	$(MAKE) frontend-check
@@ -423,6 +465,7 @@ fe-test:
 ## frontend/, so its default include never reached extensions/, and 2230 tests
 ## ran with none of them from a unit. They were typechecked and never executed.
 fe-test-ext: composition
+	$(FE_SHUFFLE_NOTE)
 	@[ -f build/composition/frontend/extlocales.gen.ts ] || { echo "fe-test-ext: build/composition/frontend/extlocales.gen.ts is missing after 'make composition' — a unit screen's suite would resolve the empty-tree copy registry and fail on every string" >&2; exit 1; }
 	@# The ROOT install first, and the order is load-bearing: the composed
 	@# workspace links react, react-dom, @tanstack/react-query and @types/react
@@ -574,15 +617,12 @@ verify-boot:
 ## same thing. A leg added here reaches CI through the `fe-quality` /
 ## `fe-unit` / `fe-bundle` aggregates; a leg added only to a CI job would run
 ## in no local gate at all.
+##
+## One sub-make under -k, so a red leg does not hide the legs after it: a run
+## names every finding. -j1 keeps the legs one at a time under a parallel
+## caller, because several of them install into one frontend/node_modules.
 frontend-check:
-	$(MAKE) fe-ds-gates
-	$(MAKE) fe-drift
-	$(MAKE) fe-file-length
-	$(MAKE) fe-lint
-	$(MAKE) fe-compiler-lint
-	$(MAKE) fe-unit
-	$(MAKE) fe-census
-	$(MAKE) fe-build
+	$(MAKE) -k -j1 fe-ds-gates fe-drift fe-file-length fe-lint fe-compiler-lint fe-unit fe-census fe-build
 
 ## fe-ds-gates — the frontend's cheap grep gates on their own, so the CI job that
 ## wants only them does not also pull a vitest run behind them. Most are
@@ -668,7 +708,12 @@ FE_SHARD ?=
 ## Named on both sides because vitest's own default for --merge-reports moved
 ## between majors (.vitest-reports → .vitest/blob); the upload step reads it too.
 FE_BLOB_DIR := .vitest-reports
+## TEST_SHUFFLE_SEED=<n> shuffles the tests inside each vitest file with that
+## seed (frontend/scripts/vitest-shards.ts); CI passes its run number. Unset,
+## they run in source order.
+FE_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order seed $(TEST_SHUFFLE_SEED); replay: make $@ TEST_SHUFFLE_SEED=$(TEST_SHUFFLE_SEED) or cd frontend && TEST_SHUFFLE_SEED=$(TEST_SHUFFLE_SEED) $(if $(filter fe-test-ext,$@),MARGINCE_COMPOSITION_FRONTEND=../build/composition/frontend pnpm test:ext,pnpm exec vitest run) <file>")
 fe-unit:
+	$(FE_SHUFFLE_NOTE)
 	node --test scripts/ensure-pnpm.test.mjs
 	bash frontend/scripts/check-lcov-paths.test.sh
 	bash frontend/scripts/check-shard-union.test.sh
@@ -733,6 +778,25 @@ fe-clock-drift:
 ## what each reaches. Not in `make check`: time passing breaks these, not a diff.
 backend-clock-drift:
 	@BACKEND_CLOCK_SKEW=$(BACKEND_CLOCK_SKEW) ./scripts/backend-clock-drift.sh
+
+## test-clock-drift-host — prove shifted-clock orchestration restores before
+## returning, including failed suites, timeout, interruption and retryable recovery.
+test-clock-drift-host:
+	@bash scripts/test-clock-drift-host.sh
+
+## repeat-changed-tests — every Go and vitest test the branch adds or changes
+## against REPEAT_BASE, run many times on a loaded machine. An integration test
+## in the plan needs `make db-up` and `make test-db-up`. Not in `make check`:
+## the `repeat-changed-tests` job of ci.yml runs it on a pull request.
+REPEAT_BASE ?= origin/main
+repeat-changed-tests:
+	@plan="$$(mktemp)"; trap 'rm -f "$$plan"' EXIT; \
+	./scripts/repeat-changed-tests.sh plan "$(REPEAT_BASE)" "$$plan" && ./scripts/repeat-changed-tests.sh run "$$plan" "$(REPEAT_BASE)"
+
+## test-repeat-changed-tests — prove the repeat job's scope sees every test
+## file, and that its log reader names the attempt of each failure.
+test-repeat-changed-tests:
+	@bash scripts/repeat-changed-tests.test.sh
 
 ## fe-quality — every leg of the frontend gate EXCEPT the unit suite and the
 ## bundle, which CI runs beside this one. Needs Go: the composed lane composes.
@@ -868,6 +932,12 @@ home-budget:
 	@test -n "$(BENCH_API_PORT)" || { echo "home-budget: set BENCH_API_PORT to the api port of a running stack"; exit 2; }
 	BENCH_API_PORT=$(BENCH_API_PORT) bash scripts/home-budget.sh
 
+## test-home-budget-compare — prove the comparison home-budget makes against
+## the merge base still reads the check's lines. A parser that stopped reading
+## them finds no metric and reports no slowdown.
+test-home-budget-compare:
+	@bash scripts/home-budget-compare.test.sh
+
 ## bench-mobile-check — the same measurement, writing NOTHING: a check run by
 ## hand without touching the published page, as bench-perf-check is beside
 ## bench-perf.
@@ -935,6 +1005,12 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 e2e-llm: SHELL := /bin/bash
 e2e-llm:
 	@bash scripts/e2e-llm.sh
+
+## e2e-llm-report — which committed MCP use-case verdicts still describe the
+## product: each verdict's stamp held against the scenario, tool copy, server
+## instructions, judge and harness of this tree. Free, and always exits 0.
+e2e-llm-report:
+	@cd backend && go run ./internal/compose/mcpe2e/mcpe2ecmd report
 
 ## e2e-llm-guards — put the SCENARIOS' regex guards on trial rather than the
 ## product. A real model writes answers a good assistant would give and answers
@@ -1044,7 +1120,7 @@ fe-edge-padding:
 ## BLOCKER and MAJOR findings both fail it. The code checks judge every
 ## hand-written Go file, and they are green because the backlog was cleared to
 ## arm them. The comment checks read Go and TypeScript and judge only the lines
-## added since CHECK_BASE_REF (origin/main unless set), so old comments improve as
+## added since CHECK_BASE_REF (the branch this one was cut from, unless set), so old comments improve as
 ## files are touched; with no such ref the gate fails instead of judging nothing. `make check` runs
 ## it locally.
 ##
@@ -1231,6 +1307,25 @@ test-dev-isolation:
 test-disk-headroom:
 	@bash scripts/lib-diskspace.test.sh
 
+## test-dev-ready — prove `make dev` refuses a machine without Docker or its
+## Compose plugin by name, and that a stack is called ready, seeded and verified
+## only once its app port reaches the api, naming the api or the frontend proxy
+## when it does not.
+test-dev-ready:
+	@bash scripts/lib-devready.test.sh
+
+## test-composed-units — prove verify-boot reads the transports of the units the
+## composer selected: a development unit on disk is not expected, and a missing
+## unit list or listed manifest fails instead of expecting nothing.
+test-composed-units:
+	@bash scripts/lib-composedunits.test.sh
+
+## test-compose-recreate-guard — prove `make db-up` refuses to recreate a running
+## shared dev container whose config differs from this checkout's, and lets
+## DB_RECREATE=1, a stopped container or a first start through.
+test-compose-recreate-guard:
+	@bash scripts/compose-recreate-guard.test.sh
+
 ## test-dev-cleanup — prove a failed `make dev` leaves nothing running: the EXIT
 ## trap is armed for every `up` rather than only for a stack that claims a port,
 ## it follows TERM with KILL, and it spares a stack that was already up. The
@@ -1300,12 +1395,26 @@ test-review-coverage:
 test-laneorder:
 	@./scripts/test-laneorder.sh
 
+## test-shardqueue — prove the CI integration shards that share one queue claim
+## every group of parts exactly once, a fast shard takes more, and a later
+## attempt skips what passed. A lost or doubled group fails only the fan-in,
+## after the whole lane has run, so the protocol gets a test of its own.
+test-shardqueue:
+	@./scripts/test-shardqueue.sh
+
 ## test-lane-binaries — prove the integration build empties only a directory it
 ## made, and that a shard refuses binaries compiled from other source than its
 ## checkout. Neither fails on its own: one deletes files, the other tests old
-## code and reports green.
+## code and reports green. Also that a shard waits for its own attempt's
+## binaries and stops when the build failed.
 test-lane-binaries:
 	@./scripts/test-lane-binaries.sh
+
+## test-integration-artifacts — prove a red shard keeps each failing part's log
+## under its own name, and lists every test still owed. A lost log fails nothing
+## on its own: the shard is red either way, and only the evidence is gone.
+test-integration-artifacts:
+	@./scripts/test-integration-artifacts.sh
 
 ## check-image-pins — every `uses:` in .github/workflows/, every container
 ## `image:` (workflow service containers + docker-compose.dev.yml) AND every
@@ -1319,6 +1428,14 @@ check-image-pins:
 ## reads Dockerfiles, and a scan that stopped recognising a `FROM` line reports
 ## the same "image pins OK" as a fully pinned tree.
 	@bash ./scripts/check-image-pins.test.sh
+
+## check-early-pipe-readers — no tracked pipefail script pipes into a reader that
+## stops early (`grep -q`, `grep -m`, `head`, an awk or sed that exits, `tar -x`).
+## The writer then dies of SIGPIPE and the pipeline reads as failed, which an `if`
+## takes as the answer. The test plants a good and a bad case of each form.
+check-early-pipe-readers:
+	@./scripts/check-early-pipe-readers.sh
+	@bash ./scripts/check-early-pipe-readers.test.sh
 
 ## check-host-ports — every host port published by docker-compose.dev.yml
 ## sits BELOW the ephemeral floor (32768). A published port inside the kernel's
@@ -1351,12 +1468,23 @@ test-make-target-parity:
 	@./scripts/check-make-target-parity.test.sh
 
 ## contract-breaking-check — strict compatibility against CHECK_BASE_REF
-## (origin/main by default). Set origin/develop when that is the target branch.
+## (the branch this one was cut from, by default: scripts/check-base-ref.sh).
 ## A deliberate spec resync uses CONTRACT_STABILITY=pre-live.
-CHECK_BASE_REF ?= origin/main
+CHECK_BASE_REF ?= $(shell ./scripts/check-base-ref.sh)
 contract-breaking-check:
 	@bash scripts/check-contract-breaking.test.sh
 	@CONTRACT_BREAKING_REQUIRE_BASE="$(if $(filter file,$(origin CHECK_BASE_REF)),$(CONTRACT_BREAKING_REQUIRE_BASE),1)" ./scripts/check-contract-breaking.sh "$(CHECK_BASE_REF)"
+
+## messaging-rules-drift — every pack's policy/ folder compiles, and its
+## messagingrules_gen.go is what the folder compiles to. backend drift runs it.
+messaging-rules-drift:
+	$(MAKE) -C backend messaging-rules-drift
+
+## policy-refresh — compare each messaging policy pack with its official
+## sources, stamp the layers it read, and regenerate the rules. A release step:
+## it fetches from the publishers, so no lane runs it. REPORT=1 writes nothing.
+policy-refresh:
+	$(MAKE) -C backend policy-refresh REPORT=$(REPORT)
 
 ## contract-frontend-drift — the THIRD regeneration a crm.yaml change owes.
 ## `make gen` covers the Go artifacts and a unit test covers the MCP surface
@@ -1373,7 +1501,7 @@ test-contract-frontend-drift:
 	@./scripts/check-contract-frontend-drift.test.sh
 
 ## migration-versions — a migration this branch adds claims a version no
-## migration on CHECK_BASE_REF (origin/main by default) already claims, and sorts
+## migration on CHECK_BASE_REF (the branch this one was cut from) already claims, and sorts
 ## after all of them. Two
 ## PRs numbering against the same main is how core 0240 (and then 0248) ended
 ## up claimed twice, which the per-tree loader test cannot see.
@@ -1392,6 +1520,17 @@ test-migration-versions:
 ## one does not, so Go's test cache never replays a stale result.
 test-keep-unchanged-mtimes:
 	@bash scripts/keep-unchanged-mtimes.test.sh
+
+## gate-slot.sh gives check, check-backend, check-go, check-fe and (in backend/)
+## test-integration one of the machine's gate slots for the whole run: two by
+## default, GATE_SLOTS=N to change, 0 to switch off, never taken when CI is set.
+## The make running the recipe is the holder, so the slot frees itself when that
+## make ends, and a sub-make under it takes none.
+##
+## test-gate-slot — gate-slot.sh's own test: a third run waits, a dead
+## holder's slot is reclaimed, and CI, GATE_SLOTS=0 and a nested call take none.
+test-gate-slot:
+	@bash scripts/gate-slot.test.sh
 
 ## test-phase-timer — phase-timer.sh's own test: phases in one lane do not
 ## nest, lanes overlap, and the report gives the wall time next to the sum.
@@ -1466,23 +1605,32 @@ test-budget:
 ## test-input-census — every cached unit-test package that reads a file outside
 ## its module also reads that file's tree digest, or a replayed pass outlives an
 ## edit to it. Judged on a real run, since such paths are mostly built at run
-## time; a failing test does not decide it. cache-warm runs it.
+## time; a failing test does not decide it. cache-warm runs it. The solo
+## packages log apart and are judged against their own floor, which the tree's
+## logs cannot make up for.
 test-input-census:
-	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; \
-	if ! TESTLOG_DIR="$$logs" $(MAKE) -C backend -k test-cached test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
+	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; mkdir "$$logs/tree" "$$logs/solo"; \
+	if ! TESTLOG_DIR="$$logs/tree" $(MAKE) -C backend -k test-cached test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
 	  echo "test-input-census: a test failed under the census; its inputs are judged all the same" >&2; \
 	fi; \
-	TESTLOG_DIR="$$logs" $(MAKE) --no-print-directory test-input-census-judge
+	if ! TESTLOG_DIR="$$logs/solo" $(MAKE) -C backend test-solo TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
+	  echo "test-input-census: a solo test failed under the census; its inputs are judged all the same" >&2; \
+	fi; \
+	TESTLOG_DIR="$$logs/tree" TESTLOG_MINIMUM=100 $(MAKE) --no-print-directory test-input-census-judge; \
+	TESTLOG_DIR="$$logs/solo" TESTLOG_MINIMUM=1 $(MAKE) --no-print-directory test-input-census-judge
 
 ## test-input-census-judge — the judging half of test-input-census, over logs a
 ## pass run with TEST_EXEC=scripts/testlog-exec.sh left in TESTLOG_DIR. CI's
-## deterministic-gates (unit) leg logs its own test pass and judges it here, so
-## the census costs no second run of the tests.
+## deterministic-gates legs log their own test pass and judge it here, so the
+## census costs no second run of the tests. TESTLOG_MINIMUM is the fewest logs
+## that pass can leave: 100 for a leg over the tree, the count for a named few.
+TESTLOG_MINIMUM ?= 100
 test-input-census-judge:
 	@set -e; logs="$(TESTLOG_DIR)"; \
 	[ -d "$$logs" ] || { echo "test-input-census-judge: TESTLOG_DIR must name the logs a testlog-exec.sh pass wrote" >&2; exit 2; }; \
 	./scripts/ci-stable-mtimes.sh --names > "$$logs/names.tsv"; \
-	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv"
+	git -c core.quotepath=off ls-files > "$$logs/tracked.txt"; \
+	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv" -tracked "$$logs/tracked.txt" -minimum "$(TESTLOG_MINIMUM)"
 
 ## test-test-budget — the budget gate's own test, run by check-backend because
 ## the gate itself runs only on CI, where a refusal that stopped firing reads green.
@@ -1499,11 +1647,11 @@ test-fe-file-length:
 	@./scripts/check-fe-file-length.test.sh
 
 ## comment-budget — a change may not add more comment lines than the code they
-## explain. Diff-scoped against origin/main, Go and TypeScript; `doc.go` and generated
+## explain. Diff-scoped against CHECK_BASE_REF, Go and TypeScript; `doc.go` and generated
 ## files are exempt. The counterweight to the function ceiling, which does not
 ## count comment lines at all.
 comment-budget:
-	@./scripts/check-comment-budget.sh
+	@CHECK_BASE_REF="$(CHECK_BASE_REF)" ./scripts/check-comment-budget.sh
 
 ## comment-density — backend's comment-to-code ratio may fall and never rise,
 ## pinned in scripts/comment-density-baseline.txt. The aggregate counterpart to
@@ -1553,8 +1701,11 @@ rls-store-path:
 ## one, and a genuinely bad answer is still a finding. It also holds the judged
 ## half offline, against verdicts a real judge gave the committed fixtures: a
 ## judge that agreed with everything fails every defect fixture, and a judge that
-## cannot be reached is a stop rather than a pass.
+## cannot be reached is a stop rather than a pass. The aicert sweep wrapper
+## waits out a judge limit or an outage and stops on any other failure.
 test-e2e-llm-check:
+	@./scripts/test-e2e-llm-sweep.sh
+	@./scripts/test-aicert-sweep.sh
 	@./scripts/test-e2e-llm-check.sh
 
 ## test-dev-postgres-container — prove the dev tooling names ONE database: the
@@ -1600,6 +1751,15 @@ test-docs-describing:
 test-release-patch-base:
 	@./scripts/release-patch-base.test.sh
 
+## test-release-changelog — the dist changelog builder's own test: the sections
+## and the compare line from the commit subjects since the patch base, the room
+## it passes on, an invalid UTF-8 byte dropped, the one sentence of a first
+## release, and the calls it refuses (no subject since the base, missing or
+## empty arguments, breaking changes over the room).
+## Its one caller is the release workflow.
+test-release-changelog:
+	@./scripts/release-changelog.test.sh
+
 ## test-release-tag-version — the release tag reader's own test: what the
 ## grammar accepts, and what shelf each accepted tag lands on. The reader has
 ## exactly one caller, a tag push, so without this the grammar's only test is a
@@ -1607,11 +1767,43 @@ test-release-patch-base:
 test-release-tag-version:
 	@./scripts/release-tag-version.test.sh
 
+## test-release-dist-version — the dist version rule's own test: a plain tag
+## loses its v, a pre-release tag drafts nothing, and a typed x.y.z needs main.
+test-release-dist-version:
+	@./scripts/release-dist-version.test.sh
+
 ## test-release-license-stamped — the LICENSE release check's own test: the
 ## Change Date and Licensed Work line each release must carry, and what it
 ## refuses. Its one caller is a tag push, like the tag reader's.
 test-release-license-stamped:
 	@./scripts/release-license-stamped.test.sh
+
+## test-release-policy-sources-fresh — the policy source check's own test:
+## how old a layer's source-checked may be at a plain tag, and what is no layer.
+test-release-policy-sources-fresh:
+	@./scripts/release-policy-sources-fresh.test.sh
+
+## test-release-version-file — the VERSION release check's own test: the one
+## spelling of the tag's version it accepts, and the near misses it refuses.
+test-release-version-file:
+	@./scripts/release-version-file.test.sh
+
+## test-release-tag-on-main — the on-main check both release lanes run: a commit
+## on main passes, a commit off main and a checkout without origin/main are
+## refused, each with its own message.
+test-release-tag-on-main:
+	@./scripts/release-tag-on-main.test.sh
+
+## test-release-tag-go-proxy — the Go proxy check both release lanes run: a
+## version Go has not recorded, or recorded at the tagged commit, passes; a
+## version recorded at another commit, or with no commit, is refused.
+test-release-tag-go-proxy:
+	@./scripts/release-tag-go-proxy.test.sh
+
+## test-build-revision — the build revision reader's own test: a checkout, a
+## source download and a tree that knows neither each name the right commit.
+test-build-revision:
+	@./scripts/build-revision.test.sh
 
 ## test-release-notes — the release notes builder's own test: which merge
 ## subjects a release lists, in which section, and what the size budget cuts.
@@ -1624,6 +1816,18 @@ test-release-notes:
 ## missing platform or program it refuses. Its one caller is a tag push.
 test-release-bundle:
 	@./scripts/release-bundle.test.sh
+
+## test-release-compose — the compose packer's own test: every image pinned to
+## its digest, the bundle's routes pointed at the stack's services, and the
+## image it refuses to pack without. Its one caller is a tag push.
+test-release-compose:
+	@./scripts/release-compose.test.sh
+
+## test-backend-notices — the Go notice generator's own test: it writes every
+## linked module's licence text, the toolchain's and the embedded-binary
+## declarations, and fails on a linked module with no licence text.
+test-backend-notices:
+	@./scripts/backend-notices.test.sh
 
 ## no-jurisdiction — pack-boundary fitness gate: no country-specific
 ## regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or ISO-3166 code appears
@@ -1679,14 +1883,19 @@ go-work-sum:
 
 ## pkg-freeze — published-surface freeze gate (ADR-0120 §3, EXT-P3): apidiff
 ## on every backend/pkg package vs the merge target (origin/$GITHUB_BASE_REF
-## in CI; locally the extensions integration branch, else origin/main).
-## ADVISORY before the first v1+ release tag (the surface is design-fluid:
-## incompatible changes print, never block); ENFORCING from v1.0.0 — then a
-## ratified change is its exact finding line in
-## scripts/pkg-freeze-allowlist.txt, bound to the merge-base sha it
-## ratifies against, and package removals are never allowlistable.
+## on a pull request, else origin/main). ADVISORY before the first v1+
+## release tag (the surface is design-fluid: incompatible changes print,
+## never block); ENFORCING from v1.0.0 — then a ratified change is a
+## `<package>: <finding> # <reason citing #issue>` line in
+## scripts/pkg-freeze-allowlist.txt, and package removals are never
+## allowlistable.
 pkg-freeze:
 	@./scripts/check-pkg-freeze.sh
+
+## test-pkg-freeze — the freeze gate's own test: a ratified entry passes the
+## pull request and the merge queue, and excuses only its exact finding.
+test-pkg-freeze:
+	@./scripts/check-pkg-freeze.test.sh
 
 ## hooks — install the repo's git hooks (the pre-commit gofmt + license gate).
 ## Run once after cloning.
@@ -1703,7 +1912,7 @@ hooks:
 # host binaries (e.g. `make sbom SYFT=syft GRANT=grant`).
 SBOM_DIR     := sboms
 SYFT_IMAGE   ?= anchore/syft@sha256:0356562f495d432056237fbea5cbc2d4839c9c75cd500784a66de2e7cc95ca7c # v1.54.0
-GRANT_IMAGE  ?= anchore/grant@sha256:172463611795f43b77302cdfbd7b3f81295492a7330e0820cfe41c3674920237 # v0.6.8
+GRANT_IMAGE  ?= anchore/grant@sha256:2f273ee261204d24a4d7e8799c2bcc210374c652000e7c415da2bb5173ec99d3 # v0.7.0
 COSIGN_IMAGE ?= gcr.io/projectsigstore/cosign@sha256:c77247c92f4dfea851c70555738226498393e34e2f9ca83cb959e51c230e4ad7 # v2.4.3
 # Per-format validators (sbom-validate). No single tool covers all three, so:
 # cyclonedx-cli is the first-party CycloneDX validator and bundles its own spec
@@ -1716,7 +1925,7 @@ COSIGN_IMAGE ?= gcr.io/projectsigstore/cosign@sha256:c77247c92f4dfea851c70555738
 # Bump tag and digest together, same as above.
 CYCLONEDX_IMAGE   ?= cyclonedx/cyclonedx-cli@sha256:252c2e26f468c25fea1e63ecde1bc3198ad6e9dbb57f5ed3236bddcb2281b3a7 # v0.33.1
 JSONSCHEMA_IMAGE  ?= ghcr.io/sourcemeta/jsonschema@sha256:a8931de12c23cb07a40318a9549beecf9ace73ac1af219ab61123ab46d3f1284 # v16.5.0
-SBOM_PYTHON_IMAGE ?= python@sha256:646fb0bca3dd3ea1bcc6feb72c17ed16eed6e10cffc732fcc1478bd3e7f02d7b # 3.12-slim
+SBOM_PYTHON_IMAGE ?= python@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b # 3.12-slim
 DOCKER_SBOM  := docker run --rm -v "$(CURDIR)":/src -w /src
 # The validators only read; mount the tree read-only so a swapped image cannot
 # touch the working copy it validates — the same "the tools that read the repo
@@ -1794,7 +2003,7 @@ sbom-supplement:
 	@python3 scripts/third_party_files.py supplement $(SBOM_DIR) third-party-files.txt
 
 ## sbom-normalize — reconcile syft's three writers so all three SBOMs describe one
-## tree, the invariant the constellation dist gate enforces. syft scans the export
+## tree, the invariant the publisher's release gate enforces. syft scans the export
 ## at /src/$(SBOM_SRC), and its writers then disagree: CycloneDX names every file
 ## with that absolute scan-root prefix while SPDX names are repo-relative, and the
 ## SPDX writers additionally emit a pseudo-entry per directory (lone zero SHA1) plus
@@ -1879,7 +2088,7 @@ sbom-validate:
 	@echo "validating $(SBOM_DIR)/margince.spdx300.json (SPDX 3.0.1 schema)"
 	@# --fast: exhaustive mode keeps an evaluation trace per node and exhausts the runner's memory on a
 	@# document that digests every committed file; fast mode still fails an invalid document (exit 2).
-	@$(JSONSCHEMA) validate --fast $(SBOM_SCHEMA_DIR)/spdx-3.0.1.schema.json $(SBOM_DIR)/margince.spdx300.json
+	@$(JSONSCHEMA) validate --fast $(SBOM_SCHEMA_DIR)/spdx-3.0.1/spdx-3.0.1.schema.json $(SBOM_DIR)/margince.spdx300.json
 	@echo "OK: three SBOMs valid against their formats"
 
 ## sbom-sign — keyless-sign each generated SBOM with cosign (writes *.cosign.bundle; needs an OIDC token).

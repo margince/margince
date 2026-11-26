@@ -37,6 +37,12 @@ type MailDraftAnchor struct {
 	ID   ids.UUID
 }
 
+// onMessage says the anchor is a message, answered or forwarded, rather than a record.
+// Both quote its content, so both pass its content gate.
+func (a MailDraftAnchor) onMessage() bool {
+	return a.Type == crmcontracts.MailDraftAnchorTypeActivity || a.Type == crmcontracts.MailDraftAnchorTypeForward
+}
+
 // MailDraftContent is the composer's fields as they stand. Addresses are
 // trimmed and lowercased on save and otherwise unchecked until the message is
 // sent — a draft may hold one half-typed.
@@ -53,6 +59,12 @@ type MailDraftContent struct {
 	Context       commsauthz.Category
 	Schedule      *SendSchedule
 	EditorState   crmcontracts.MailDraftEditorState
+	// OverrideExplanation is the reason the author typed for sending past a
+	// refusal. Kept with the words; it grants nothing until they send.
+	OverrideExplanation string
+	// RecipientCountries are the countries the author stated or cleared for
+	// recipients. Only entries for an address on the draft are kept.
+	RecipientCountries []commsauthz.CountryOverride
 }
 
 // MailDraft is one saved draft.
@@ -77,6 +89,8 @@ const (
 	entityMailDraft = "mail_draft"
 	fieldAnchorType = "anchor_type"
 	fieldVersion    = "version"
+	fieldAnchorID   = "anchor_id"
+	fieldBcc        = "bcc"
 	// maxDraftAddresses bounds each address line. A composer holds a handful;
 	// the ceiling stops a caller parking a mailing list in a row nothing reads.
 	maxDraftAddresses = 100
@@ -84,11 +98,15 @@ const (
 	// line and mailbox lengths), counted in characters.
 	maxDraftSubject = 998
 	maxDraftAddress = 320
+	// maxDraftExplanation is the direct send's own cap on an explanation.
+	maxDraftExplanation = 1000
+	fieldExplanation    = "override_explanation"
 )
 
 const mailDraftColumns = `id, anchor_type, anchor_id, to_addresses, cc_addresses, bcc_addresses,
 	subject, body, html_body, version, agent_drafted, grounding, attachment_ids,
-	communication_context, scheduled_at, scheduled_tz, created_at, updated_at, editor_state`
+	communication_context, ` + scheduleInstantSQL + ` AS scheduled_at, scheduled_tz, scheduled_wall, created_at, updated_at, editor_state,
+	override_explanation, recipient_countries`
 
 // InvalidMailDraftError refuses a draft the store will not keep.
 type InvalidMailDraftError struct {
@@ -194,23 +212,34 @@ func (s *Store) SaveMailDraft(ctx context.Context, anchor MailDraftAnchor, conte
 	return out, nil
 }
 
+// mailDraftArgs binds the anchor and content arguments that every write of a
+// draft shares.
+func mailDraftArgs(author ids.UUID, anchor MailDraftAnchor, content MailDraftContent) pgx.NamedArgs {
+	at, tz, wall := draftScheduleColumns(content.Schedule)
+	return pgx.NamedArgs{
+		argAuthor: author, fieldAnchorType: string(anchor.Type), fieldAnchorID: anchor.ID,
+		"to": addressLine(content.To), "cc": addressLine(content.Cc), fieldBcc: addressLine(content.Bcc),
+		fieldSubject: content.Subject, fieldBody: content.Body, argHTML: nullableText(content.HTMLBody),
+		"attachments": content.AttachmentIDs, "context": nullableText(string(content.Context)),
+		"at": at, argZone: tz, argWall: wall, fieldExplanation: nullableText(content.OverrideExplanation),
+		recipientCountriesField: freezeCountries(content.RecipientCountries),
+	}
+}
+
 func insertMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor MailDraftAnchor, content MailDraftContent) (MailDraft, error) {
-	at, tz := draftScheduleColumns(content.Schedule)
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	query := fmt.Sprintf(`
-		INSERT INTO mail_draft (id, author_id, anchor_type, anchor_id, to_addresses, cc_addresses,
-		                        bcc_addresses, subject, body, html_body, attachment_ids,
-		                        communication_context, scheduled_at, scheduled_tz, editor_state)
-		VALUES ($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)
-		ON CONFLICT (author_id, anchor_type, anchor_id) DO NOTHING
-		RETURNING `+mailDraftColumns,
-		arg(ids.NewV7()), arg(author), arg(string(anchor.Type)), arg(anchor.ID),
-		arg(addressLine(content.To)), arg(addressLine(content.Cc)), arg(addressLine(content.Bcc)),
-		arg(content.Subject), arg(content.Body), arg(nullableText(content.HTMLBody)),
-		arg(content.AttachmentIDs), arg(nullableText(string(content.Context))), arg(at), arg(tz),
-		arg(content.EditorState))
-	row := tx.QueryRow(ctx, query, args...)
+	args := mailDraftArgs(author, anchor, content)
+	args["id"], args["editor"] = ids.NewV7(), content.EditorState
+	row := tx.QueryRow(ctx, `
+ INSERT INTO mail_draft(id,author_id,anchor_type,anchor_id,to_addresses,cc_addresses,
+ bcc_addresses,subject,body,html_body,attachment_ids,communication_context,
+ scheduled_at,scheduled_tz,scheduled_wall,editor_state,override_explanation,recipient_countries)
+ SELECT @id,@author,@anchor_type,@anchor_id,@to,@cc,@bcc,@subject,@body,@html,
+ @attachments,@context,planned.instant,COALESCE(planned.timezone,@zone),planned.wall_time,@editor,@override_explanation,
+ @recipient_countries::jsonb
+ FROM public.update_intent_time(NULL,NULL,NULL,@wall::text::timestamp,@zone,@at) AS planned
+ WHERE true
+ ON CONFLICT(author_id,anchor_type,anchor_id) DO NOTHING
+ RETURNING `+mailDraftColumns, args)
 	saved, err := scanMailDraft(row)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		// The conflict target held: a draft is already here that this caller
@@ -227,23 +256,20 @@ func insertMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Mai
 }
 
 func replaceMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor MailDraftAnchor, content MailDraftContent, expected int64) (MailDraft, error) {
-	at, tz := draftScheduleColumns(content.Schedule)
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	query := fmt.Sprintf(`
-		UPDATE mail_draft
-		   SET to_addresses = $%d, cc_addresses = $%d, bcc_addresses = $%d,
-		       subject = $%d, body = $%d, html_body = $%d, attachment_ids = $%d,
-		       communication_context = $%d, scheduled_at = $%d, scheduled_tz = $%d, editor_state = $%d,
-		       version = version + 1, agent_drafted = false, updated_at = now()
-		 WHERE author_id = $%d AND anchor_type = $%d AND anchor_id = $%d AND version = $%d
-		RETURNING `+mailDraftColumns,
-		arg(addressLine(content.To)), arg(addressLine(content.Cc)), arg(addressLine(content.Bcc)),
-		arg(content.Subject), arg(content.Body), arg(nullableText(content.HTMLBody)),
-		arg(content.AttachmentIDs), arg(nullableText(string(content.Context))), arg(at), arg(tz),
-		arg(content.EditorState),
-		arg(author), arg(string(anchor.Type)), arg(anchor.ID), arg(expected))
-	row := tx.QueryRow(ctx, query, args...)
+	args := mailDraftArgs(author, anchor, content)
+	args[fieldVersion], args["editor"] = expected, content.EditorState
+	row := tx.QueryRow(ctx, `
+ UPDATE mail_draft
+ SET to_addresses=@to,cc_addresses=@cc,bcc_addresses=@bcc,
+ subject=@subject,body=@body,html_body=@html,attachment_ids=@attachments,
+ communication_context=@context,
+ (scheduled_at,scheduled_tz,scheduled_wall)=(
+ SELECT planned.instant,COALESCE(planned.timezone,@zone),planned.wall_time
+ FROM public.update_intent_time(scheduled_wall,scheduled_tz,scheduled_at,@wall::text::timestamp,@zone,@at) AS planned),
+ editor_state=@editor,override_explanation=@override_explanation,recipient_countries=@recipient_countries::jsonb,
+ version=version+1,agent_drafted=false,updated_at=now()
+ WHERE author_id=@author AND anchor_type=@anchor_type AND anchor_id=@anchor_id AND version=@version
+ RETURNING `+mailDraftColumns, args)
 	saved, err := scanMailDraft(row)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		// Moved by another composer, or discarded: the draft this caller read
@@ -291,10 +317,10 @@ func (s *Store) DiscardMailDraft(ctx context.Context, id ids.UUID) error {
 }
 
 // ensureDraftAnchorVisible asks whether the caller may still see what the
-// draft is about. A reply needs the conversation's content, so an activity is
-// probed through its content gate rather than the discover one.
+// draft is about. A reply or forward needs the message's content, so it is
+// probed through the content gate rather than the discover one.
 func ensureDraftAnchorVisible(ctx context.Context, tx pgx.Tx, anchor MailDraftAnchor) error {
-	if anchor.Type == crmcontracts.MailDraftAnchorTypeActivity {
+	if anchor.onMessage() {
 		return auth.EnsureActivityContentVisibleLive(ctx, tx, anchor.ID)
 	}
 	// Each record type lives in a table named for it (linktarget.go), and the
@@ -302,10 +328,10 @@ func ensureDraftAnchorVisible(ctx context.Context, tx pgx.Tx, anchor MailDraftAn
 	return auth.EnsureVisibleLive(ctx, tx, string(anchor.Type), anchor.ID)
 }
 
-// checkDraftAnchor admits the conversation a reply answers or a record a
-// message can be filed under — the timeline link's own vocabulary.
+// checkDraftAnchor admits the message a reply answers or a forward carries, or
+// a record a message can be filed under: the timeline link's own vocabulary.
 func checkDraftAnchor(anchor MailDraftAnchor) error {
-	if anchor.Type == crmcontracts.MailDraftAnchorTypeActivity || linkColumn(string(anchor.Type)) != "" {
+	if anchor.onMessage() || linkColumn(string(anchor.Type)) != "" {
 		return nil
 	}
 	return &InvalidMailDraftError{Field: fieldAnchorType, Reason: "is not a place a message can be written from"}
@@ -330,7 +356,7 @@ func validateDraft(anchor MailDraftAnchor, content MailDraftContent, now time.Ti
 	for _, line := range []struct {
 		field     string
 		addresses []string
-	}{{"to", content.To}, {"cc", content.Cc}, {"bcc", content.Bcc}} {
+	}{{"to", content.To}, {"cc", content.Cc}, {fieldBcc, content.Bcc}} {
 		if len(line.addresses) > maxDraftAddresses {
 			return &InvalidMailDraftError{Field: line.field, Reason: fmt.Sprintf("holds more than %d addresses", maxDraftAddresses)}
 		}
@@ -343,6 +369,9 @@ func validateDraft(anchor MailDraftAnchor, content MailDraftContent, now time.Ti
 	if utf8.RuneCountInString(content.Subject) > maxDraftSubject {
 		return &InvalidMailDraftError{Field: fieldSubject, Reason: fmt.Sprintf("is longer than %d characters", maxDraftSubject)}
 	}
+	if utf8.RuneCountInString(content.OverrideExplanation) > maxDraftExplanation {
+		return &InvalidMailDraftError{Field: fieldExplanation, Reason: fmt.Sprintf("is longer than %d characters", maxDraftExplanation)}
+	}
 	return validateDraftSending(content, now)
 }
 
@@ -353,8 +382,29 @@ func canonicalDraft(content MailDraftContent) MailDraftContent {
 	content.To = canonicalAddresses(content.To)
 	content.Cc = canonicalAddresses(content.Cc)
 	content.Bcc = canonicalAddresses(content.Bcc)
+	content.RecipientCountries = countriesOnTheDraft(content)
 	content.EditorState.ContentFingerprint = new(draftContentFingerprint(content))
 	return content
+}
+
+// countriesOnTheDraft keeps the statements about addresses the draft holds, so
+// a removed recipient takes their country with them. countryOverridesFrom has
+// already refused a second statement about one address.
+func countriesOnTheDraft(content MailDraftContent) []commsauthz.CountryOverride {
+	held := map[string]bool{}
+	for _, line := range [][]string{content.To, content.Cc, content.Bcc} {
+		for _, addr := range line {
+			held[addr] = true
+		}
+	}
+	var out []commsauthz.CountryOverride
+	for _, stated := range content.RecipientCountries {
+		stated.Address = normalizeAddress(stated.Address)
+		if held[stated.Address] {
+			out = append(out, stated)
+		}
+	}
+	return out
 }
 
 func canonicalAddresses(line []string) []string {
@@ -372,7 +422,7 @@ func canonicalAddresses(line []string) []string {
 //
 //craft:ignore naked-any the audit seam serializes this image to jsonb
 func draftImage(d MailDraft) map[string]any {
-	return map[string]any{fieldAnchorType: string(d.Anchor.Type), "anchor_id": d.Anchor.ID, fieldVersion: d.Version}
+	return map[string]any{fieldAnchorType: string(d.Anchor.Type), fieldAnchorID: d.Anchor.ID, fieldVersion: d.Version}
 }
 
 // addressLine is never nil: the columns are NOT NULL and a nil slice is NULL.
@@ -398,12 +448,15 @@ func scanMailDraft(row pgx.Row) (MailDraft, error) {
 		grounding  []draftGround
 		claimed    *string
 		at         *time.Time
+		wall       *time.Time
 		tz         *string
+		explained  *string
+		countries  []frozenCountry
 	)
 	err := row.Scan(&out.ID, &anchorType, &out.Anchor.ID, &out.Content.To, &out.Content.Cc,
 		&out.Content.Bcc, &out.Content.Subject, &out.Content.Body, &html, &out.Version,
-		&out.AgentDrafted, &grounding, &out.Content.AttachmentIDs, &claimed, &at, &tz,
-		&out.CreatedAt, &out.UpdatedAt, &out.Content.EditorState)
+		&out.AgentDrafted, &grounding, &out.Content.AttachmentIDs, &claimed, &at, &tz, &wall,
+		&out.CreatedAt, &out.UpdatedAt, &out.Content.EditorState, &explained, &countries)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return MailDraft{}, apperrors.ErrNotFound
 	}
@@ -421,8 +474,12 @@ func scanMailDraft(row pgx.Row) (MailDraft, error) {
 		out.Grounding = append(out.Grounding, MailDraftAnchor(ground))
 	}
 	out.Content.Context = commsauthz.Category(orEmpty(claimed))
-	if at != nil && tz != nil {
-		out.Content.Schedule = &SendSchedule{At: *at, TZ: *tz}
+	out.Content.OverrideExplanation = orEmpty(explained)
+	out.Content.RecipientCountries = thawCountries(countries)
+	schedule, err := readSchedule(at, tz, wall)
+	if err != nil {
+		return MailDraft{}, err
 	}
+	out.Content.Schedule = schedule
 	return out, nil
 }

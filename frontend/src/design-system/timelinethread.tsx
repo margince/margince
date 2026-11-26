@@ -1,7 +1,8 @@
 import { Lock, Send } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
+import { reveal } from "../lib/reveal";
 import { Avatar, Button } from "./atoms";
 import { attachmentCount, EmailFiles, EmailWords } from "./emailentry";
 import { Eyebrow } from "./eyebrow";
@@ -13,9 +14,7 @@ import "./composed.css";
 import {
   automaticLabel,
   CommitmentReviewFlag,
-  entryDay,
-  entryMove,
-  entryTimeOfDay,
+  CopiesFlag,
   groupCountLabel,
   MoveFlag,
   sideClass,
@@ -24,9 +23,9 @@ import {
   TIMELINE_KIND_LABEL,
   type TimelineEntry,
   type TimelineGroup,
-  TimelineWhen,
 } from "./timelineentry";
 import { TimelineBody } from "./timelinetext";
+import { entryDay, entryTimeOfDay, TimelineWhen } from "./timelinewhen";
 
 // How many of a thread's messages stand open before the rest fold behind a
 // count. Three is a conversation a reader takes in at a glance: the ask,
@@ -256,6 +255,7 @@ function ThreadMessage({
           {entry.emailSummary && (
             <EmailFiles summaries={[entry.emailSummary]} />
           )}
+          <CopiesFlag entry={entry} />
           <CommitmentReviewFlag
             count={entry.withheld ? 0 : entry.commitmentReviewCount}
           />
@@ -303,15 +303,19 @@ export function ThreadRow({
   zone,
   repeatsDay,
   onOpenThread,
+  anchorPrefix,
 }: Readonly<{
   group: TimelineGroup;
   zone: string;
   repeatsDay?: boolean;
   onOpenThread?: (threadKey: string) => void;
+  anchorPrefix?: string;
 }>) {
   const { locale } = useLocale();
   const t = useT();
   const [allOpen, setAllOpen] = useState(false);
+  const ownPrefix = useId();
+  const prefix = anchorPrefix ?? ownPrefix;
   const [newest] = group.entries;
   if (newest === undefined) {
     return null;
@@ -335,9 +339,15 @@ export function ThreadRow({
   // The subject, from a member whose words the reader may read. A withheld
   // member's title is the kind it was, not the subject it had. A thread
   // every member of which is withheld says so where its subject would go.
-  const subject = group.entries.find((entry) => !entry.withheld)?.title;
+  const subject = (group.threadEntries ?? group.entries).find(
+    (entry) => !entry.withheld,
+  )?.title;
   return (
-    <li className={sideClass(newest)}>
+    <li
+      id={`${prefix}-${group.id}`}
+      className={sideClass(newest)}
+      tabIndex={-1}
+    >
       {/* The same three columns a single row sits on (date, rail, what
           happened), because a conversation is a row of the chronology. Its
           mark is the kind's own icon: a dot would say it was one message. */}
@@ -355,7 +365,7 @@ export function ThreadRow({
           {/* Whose move the conversation waits on, read off its newest
                 message. It goes on the row that stands for it, never on the
                 members inside. */}
-          {entryMove(newest) && <MoveFlag entry={newest} />}
+          <MoveFlag entry={newest} />
           <CommitmentReviewFlag
             count={group.entries.reduce(
               (count, entry) =>
@@ -401,6 +411,7 @@ export function ThreadRow({
             <EmailFiles summaries={memberSummaries(group.entries)} />
           )}
           <ProvenanceTag provenance={newest.provenance} />
+          <ThreadContinuation group={group} prefix={prefix} />
           {/* A thread cut by the page edge can be completed when the page
                 passed a handler; where it cannot, the notice still stands,
                 because rendering neither would present the cut as the whole
@@ -423,5 +434,26 @@ export function ThreadRow({
         {newest.actions && <span className="tl-actions">{newest.actions}</span>}
       </div>
     </li>
+  );
+}
+
+function ThreadContinuation({
+  group,
+  prefix,
+}: Readonly<{ group: TimelineGroup; prefix: string }>) {
+  const t = useT();
+  return (
+    <>
+      {group.newerPart && (
+        <Button variant="link" onClick={reveal(`${prefix}-${group.newerPart}`)}>
+          {t("timeline.group.newerPart")}
+        </Button>
+      )}
+      {group.olderPart && (
+        <Button variant="link" onClick={reveal(`${prefix}-${group.olderPart}`)}>
+          {t("timeline.group.olderPart")}
+        </Button>
+      )}
+    </>
   );
 }

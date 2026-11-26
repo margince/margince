@@ -73,9 +73,6 @@ func TestStoredOriginalsRequireTheirWorkspaceAndExactBytes(t *testing.T) {
 	if _, err := Read(other, ref); err == nil {
 		t.Fatal("a different workspace read the stored original")
 	}
-	if err := Delete(other, ref); err == nil {
-		t.Fatal("a different workspace deleted the stored original")
-	}
 	put([]byte(`{"message":"modified"}`))
 	if _, err := Read(ctx, ref); err == nil {
 		t.Fatal("same-sized modified bytes passed the integrity check")
@@ -83,11 +80,5 @@ func TestStoredOriginalsRequireTheirWorkspaceAndExactBytes(t *testing.T) {
 	put(payload[:len(payload)-1])
 	if _, err := Read(ctx, ref); err == nil {
 		t.Fatal("truncated bytes passed the integrity check")
-	}
-	if err := Delete(ctx, ref); err != nil {
-		t.Fatal(err)
-	}
-	if err := Delete(ctx, ref); err != nil {
-		t.Fatalf("retrying a delete failed: %v", err)
 	}
 }

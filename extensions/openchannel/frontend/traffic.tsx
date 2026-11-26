@@ -222,11 +222,6 @@ export function OutboundList({ canRead }: Readonly<{ canRead: boolean }>) {
                   ),
                 },
                 {
-                  key: "recipient",
-                  header: t("extOpenchannel.outboundList.recipient"),
-                  render: (row) => row.recipient,
-                },
-                {
                   key: "attempt",
                   header: t("extOpenchannel.outboundList.attempt"),
                   render: (row) => formatNumber(row.attempt, locale),

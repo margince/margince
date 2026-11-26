@@ -7,6 +7,10 @@
 // why this record is NOT on a Live List, clause by clause.
 
 import { useCallback, useRef, useState } from "react";
+import {
+  RecordListsActions,
+  useMayAddToShortlist,
+} from "../../components/addtoshortlist";
 import { Button, Field } from "../../design-system/atoms";
 import { useFocusHandoff } from "../../design-system/focushandoff";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -32,6 +36,9 @@ import { useUndoableRemoval } from "../../lib/undoableremoval";
 
 type RecordRef = Readonly<{ entityType: ListedRecordType; entityId: string }>;
 
+// A page whose rail beside the block already draws `RecordListsActions` passes false.
+type WithActions = Readonly<{ actions?: boolean }>;
+
 /**
  * The block as a card of its own, for a record page's column. The server
  * answers no lists for an archived record, so `archived` leaves the card out
@@ -41,7 +48,8 @@ export function RecordListsPanel({
   entityType,
   entityId,
   archived = false,
-}: RecordRef & Readonly<{ archived?: boolean }>) {
+  actions = true,
+}: RecordRef & WithActions & Readonly<{ archived?: boolean }>) {
   const t = useT();
   const available = useListsAvailable();
   if (!available || archived) {
@@ -50,14 +58,22 @@ export function RecordListsPanel({
   return (
     <Panel title={t("lists.record.title")}>
       <PanelBody>
-        <RecordListsBody entityType={entityType} entityId={entityId} />
+        <RecordListsBody
+          entityType={entityType}
+          entityId={entityId}
+          actions={actions}
+        />
       </PanelBody>
     </Panel>
   );
 }
 
 /** The block's content, for a host that frames it itself. */
-export function RecordListsBody({ entityType, entityId }: RecordRef) {
+export function RecordListsBody({
+  entityType,
+  entityId,
+  actions = true,
+}: RecordRef & WithActions) {
   const t = useT();
   const lists = useRecordLists(entityType, entityId);
   const found = lists.data?.data ?? [];
@@ -94,6 +110,9 @@ export function RecordListsBody({ entityType, entityId }: RecordRef) {
           <p className="t-caption">{t("lists.record.truncated")}</p>
         )}
       </SurfaceState>
+      {actions && (
+        <RecordListsActions entityType={entityType} entityId={entityId} />
+      )}
       <CheckAList entityType={entityType} entityId={entityId} />
     </div>
   );
@@ -103,6 +122,7 @@ export function RecordListsBody({ entityType, entityId }: RecordRef) {
 function CheckAList({ entityType, entityId }: RecordRef) {
   const t = useT();
   const live = useLists({ entityType, listType: "dynamic" });
+  const mayAdd = useMayAddToShortlist();
   const [picked, setPicked] = useState("");
   const options = (live.data?.data ?? []).map((list) => ({
     value: list.id,
@@ -113,7 +133,12 @@ function CheckAList({ entityType, entityId }: RecordRef) {
   }
   return (
     <div className="lists-record-check">
-      <Field label={t("lists.record.check")} hint={t("lists.record.checkHint")}>
+      <Field
+        label={t("lists.record.check")}
+        hint={t(
+          mayAdd ? "lists.record.checkHintAdd" : "lists.record.checkHint",
+        )}
+      >
         {(control) => (
           <Select
             {...control}

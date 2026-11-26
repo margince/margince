@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/platform/database/storekit/answered.go backend/internal/modules/activities/answered.go backend/internal/modules/activities/requeststate.go backend/internal/compose/dealstatus/requestbasis.go backend/internal/compose/dealstatus/service.go backend/internal/modules/activities/requestsettlement.go backend/internal/modules/activities/owedverdict.go backend/internal/modules/activities/emailrequesttasks.go backend/internal/modules/activities/requesttask.go -->
+<!-- describes: backend/internal/platform/database/storekit/answered.go backend/internal/modules/activities/answered.go backend/internal/modules/activities/requeststate.go backend/internal/compose/dealstatus/requestbasis.go backend/internal/compose/dealstatus/service.go backend/internal/modules/activities/requestsettlement.go backend/internal/modules/activities/owedverdict.go backend/internal/modules/activities/emailrequesttasks.go backend/internal/modules/activities/requesttask.go backend/internal/platform/database/storekit/requestintent.go backend/internal/modules/activities/requestcheck.go -->
 # Customer requests last longer than pipeline stages
 
 A captured request and a sales deal have different lives. When a deal closes, Margince stops telling
@@ -8,14 +8,17 @@ the user how to move it down the pipeline. That does not answer the customer or 
 ## Finding a request, who owns it, and when it is complete
 
 The owed verdict (`asks_us` or `informs_us`) decides what the sender asks for. The capture label
-(`meeting`, `commitment`, or `noise`) says what the message is about. A request to set up a meeting
-still needs action, even when its label is `meeting`. When a `noise` label disagrees, a confirmed
+(`meeting`, `commitment`, or `other`) says what the message is about. A request to set up a meeting
+still needs action, even when its label is `meeting`. When a `other` label disagrees, a confirmed
 request stays open for review and is not handed to anyone on its own.
 
 A reply to a calendar invite, such as a contact saying no to a meeting, is owed nothing on its own. It
 is owed only when the owed verdict says `asks_us` or someone took it on. Capture reads this from the
 method the mail's calendar part names (`REPLY`, `COUNTER` or `DECLINECOUNTER`). The owed verdict
 still reads every such mail, because a sender can put that method on any mail.
+
+A calendar invite the reader may still answer files no reminder task. Its own row offers the answers
+on the reader's calendar instead, so the request writer skips it (`answerableInvitationSQL`).
 
 The activities module owns the request state. Its shared checks serve the email brief, the waiting
 queue and the queue of mail still to classify. They also serve the reminders it files on its own, and
@@ -34,8 +37,9 @@ Other transports and older rows without proof cannot end a request through inbou
 
 The settle pass asks whether the evidence completes the exact request: `settled`, `still_owed`, or
 `unsure` below the confidence floor. A signature notice must name the requested document; matching
-subjects alone prove nothing. The model receives the request and eligible later evidence, marked as
-from them or from us. With no eligible evidence or no model, the request stays owed until someone
+subjects alone prove nothing. The model receives the request and eligible later evidence, marked as from them or from us.
+It also receives the names and count of files attached to our replies. A reply saying
+"attached" without a file does not prove delivery. With no eligible evidence or no model, the request stays owed until someone
 completes its reminder.
 
 A `settled` verdict completes the reminder linked to the evidence, through the ordinary activity writer.
@@ -47,6 +51,12 @@ mail's subject line). The quote must be at least two words of their request, out
 and the signature. A text that is not such a quote is dropped, so a question we asked them never
 becomes our work. It never touches a reminder a human accepted, dated or opened again.
 
+The classifier also copies the ask word for word from the mail (`owedverdict.VerbatimAsk`). It
+keeps the text only when it is found in the mail itself, and stores it with the verdict in
+`activity.owed_ask`. The reminder's body then reads `Anna Weber asked: "…"`, whichever pass files
+it, so the Home card names who asked and what, with no model call on Home. Erasing the mail clears
+the ask with the body, and erases the reminder that quotes it (`eraseRequestReminders`).
+
 Each verdict records the rule it was reached under. A `still_owed` verdict from an older rule is judged
 again, and the title it gave a reminder may change once more.
 
@@ -54,6 +64,13 @@ An open reminder always wins over the machine's verdict. Someone who takes the w
 answer, and the request counts as open again while their task stands. `unsure` records that the pass
 asked and would not commit. That leaves the request owed and stops the pass from reading the same
 conversation again until someone writes on it again.
+
+The settle pass judges a request only when the request and every mail it would read were read in
+full (`settlementEvidenceCompleteSQL`). A request whose text cannot be checked is never judged, and its
+reminder stays open until someone completes it. The Home row and the task view then say that Margince
+cannot check whether it was answered (`request_check` on the row). They name the newest mail we sent among
+the answers the pass would have read, when the reader may read it. A call, a meeting or the
+customer's own mail is never named there.
 
 Any user who completes the reminder linked to the evidence settles its source request. Marking a conversation as not sales removes it from request review. When a reader chooses
 snooze, `not_mine` or `handled`, that changes their own queue, not what is owed for every user.
@@ -138,6 +155,10 @@ decision and the time of the check. Time since contact exchange, activity filed 
 request arrival are separate figures. No one links mail to another record to make those dates match.
 Cache readers share a version check; a card from an older projection is a miss. The move's dismissal
 identity still names its action and source, so a new decision does not undo a reader's choice.
+
+Review admits a machine's verdict by the same rule as the reminders the pass files on its own
+(`OwedVerdictStandsClause`). The verdict counts only on a mail read in full, or when a human checked
+the verdict. A request a human already took stays open for review, so its holder can take it again.
 
 The deal offers **Create task** for a request that waits to be accepted. Both task and activity create
 calls accept `request_activity_id`. The server checks that the caller may read the source evidence, and

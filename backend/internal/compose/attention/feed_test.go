@@ -13,6 +13,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -31,8 +32,8 @@ type stubApprovals struct {
 	err     error
 }
 
-func (s stubApprovals) ListWire(context.Context, ApprovalQuery) ([]crmcontracts.Approval, error) {
-	return s.rows, s.err
+func (s stubApprovals) ListWire(context.Context, ApprovalQuery) ([]crmcontracts.Approval, bool, error) {
+	return s.rows, s.pending <= len(s.rows), s.err
 }
 
 func (s stubApprovals) CountPending(context.Context, ApprovalQuery) (int, error) {
@@ -46,6 +47,14 @@ type stubDuplicates struct {
 	pairs []DuplicatePair
 	open  int
 	err   error
+	// ownerless says the pairs have no owner on either end, so a page for an
+	// owner set that names owners has none of them.
+	ownerless bool
+	// byOwner narrows the pairs to the ones a read's owner set decides, as the
+	// store does.
+	byOwner bool
+	// owners records the owner set each read was narrowed to.
+	owners *[]*storekit.OwnerSet
 	// unreadable is a record this caller may not name. The pair still comes
 	// back from the queue, which is the case that matters: a visible pair
 	// pointing at a record the reader cannot see.
@@ -67,11 +76,39 @@ type stubDuplicates struct {
 	decideErr error
 }
 
-func (s stubDuplicates) OpenCandidates(context.Context, int) ([]DuplicatePair, error) {
-	return s.pairs, s.err
+// holds says whether the pairs belong on a page narrowed to these owners.
+func (s stubDuplicates) holds(owners *storekit.OwnerSet) bool {
+	if s.owners != nil {
+		*s.owners = append(*s.owners, owners)
+	}
+	return !s.ownerless || owners == nil || owners.Unassigned
 }
 
-func (s stubDuplicates) CountOpen(context.Context) (int, error) { return s.open, s.err }
+// within is the pairs a read narrowed to these owners returns.
+func (s stubDuplicates) within(owners *storekit.OwnerSet) []DuplicatePair {
+	if !s.byOwner || owners == nil {
+		return s.pairs
+	}
+	var kept []DuplicatePair
+	for _, pair := range s.pairs {
+		mine := slices.ContainsFunc(pair.Owners, func(o ids.UUID) bool { return slices.Contains(owners.IDs, o) })
+		if mine || (owners.Unassigned && len(pair.Owners) == 0) {
+			kept = append(kept, pair)
+		}
+	}
+	return kept
+}
+
+func (s stubDuplicates) OpenCandidates(_ context.Context, _ int, owners *storekit.OwnerSet) ([]DuplicatePair, int, error) {
+	if !s.holds(owners) {
+		return nil, 0, nil
+	}
+	if s.byOwner {
+		kept := s.within(owners)
+		return kept, len(kept), s.err
+	}
+	return s.pairs, s.open, s.err
+}
 
 func (s stubDuplicates) DescribeMany(
 	_ context.Context, entityType string, rowIDs []ids.UUID,
@@ -154,7 +191,7 @@ type stubTasks struct {
 }
 
 func (s *stubTasks) CountOpenForViewer(
-	_ context.Context, _, _ time.Time, _ TaskScope, _ ids.UUID, _ []ids.UUID,
+	_ context.Context, _, _ time.Time, _ TaskScope, _ string, _ ids.UUID, _ []ids.UUID,
 ) (int, error) {
 	if s.countErr != nil {
 		return 0, s.countErr
@@ -165,32 +202,21 @@ func (s *stubTasks) CountOpenForViewer(
 	return len(s.rows), nil
 }
 
-func (s *stubTasks) OpenForViewer(
-	_ context.Context, _, until time.Time, _ int, scope TaskScope, owner ids.UUID, _ []ids.UUID,
-) ([]Task, error) {
-	s.until = &until
-	s.scope = scope
-	s.owner = owner
-	return s.rows, s.err
-}
-
-// UpcomingForViewer answers the work due after today. Recorded separately from
-// OpenForViewer's window so a test can prove the two reads are bounded
-// independently rather than sharing one allocation.
-func (s *stubTasks) UpcomingForViewer(
-	_ context.Context, _, from, until time.Time, limit int, scope TaskScope, owner ids.UUID, _ []ids.UUID,
-) ([]Task, error) {
-	s.upcomingFrom, s.upcomingUntil, s.upcomingLimit = &from, &until, limit
-	s.scope = scope
-	s.owner = owner
-	return s.upcoming, s.upcomingErr
-}
-
-// RemindersForViewer answers the reader's due reminders, recorded so a test
-// can prove the read is made only for the reader's own queue.
-func (s *stubTasks) RemindersForViewer(context.Context, time.Time) ([]Task, error) {
-	s.remindersAsked = true
-	return s.reminders, nil
+// PlannedForViewer answers the day's rows, the upcoming rows and the reminders.
+// Each window is recorded on its own, so a test can prove the reads are bounded
+// apart rather than sharing one allocation.
+func (s *stubTasks) PlannedForViewer(_ context.Context, ask PlannedAsk) (PlannedTasks, error) {
+	s.until, s.scope, s.owner = &ask.Window.Until, ask.Window.Scope, ask.Window.Owner
+	s.upcomingFrom, s.upcomingUntil, s.upcomingLimit = &ask.Window.Until, &ask.Horizon, ask.UpcomingLimit
+	s.remindersAsked = ask.Reminders
+	if err := errors.Join(s.err, s.upcomingErr); err != nil {
+		return PlannedTasks{}, err
+	}
+	read := PlannedTasks{Open: s.rows, Upcoming: s.upcoming}
+	if ask.Reminders {
+		read.Reminders = s.reminders
+	}
+	return read, nil
 }
 
 // mineOnly is what most callers actually ask of the recorded scope.
@@ -217,7 +243,7 @@ type stubBriefing struct {
 	err  error
 }
 
-func (s stubBriefing) Queue(context.Context) ([]BriefEntry, bool, time.Time, error) {
+func (s stubBriefing) Queue(context.Context, time.Time) ([]BriefEntry, bool, time.Time, error) {
 	return s.rows, s.ran || len(s.rows) > 0, s.asOf, s.err
 }
 

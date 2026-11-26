@@ -1,0 +1,14 @@
+{
+  "verb": "link_company_contacts",
+  "checks": [
+    "company.read",
+    "contact.read",
+    "contact.update",
+    "relationship.create",
+    "relationship.read"
+  ],
+  "takes": [
+    "company",
+    "linkable_contact"
+  ]
+}

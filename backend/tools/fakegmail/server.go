@@ -47,6 +47,7 @@ func (s *server) routes() *http.ServeMux {
 		writeJSON(w, map[string]any{"historyId": "100"})
 	})
 	m.HandleFunc("GET "+apiPrefix+"/labels", s.labels)
+	m.HandleFunc("GET "+apiPrefix+"/settings/sendAs", s.sendAs)
 	m.HandleFunc("POST "+apiPrefix+"/watch", func(w http.ResponseWriter, _ *http.Request) {
 		s.count("watch")
 		writeJSON(w, map[string]any{"historyId": "100", "expiration": strconv.FormatInt(time.Now().Add(7*24*time.Hour).UnixMilli(), 10)})
@@ -95,17 +96,65 @@ func (s *server) consent(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "redirect_uri is not a URL")
 		return
 	}
-	if !isLoopback(back) && (s.callbackOrigin == "" || origin(back) != s.callbackOrigin) {
-		writeError(w, http.StatusBadRequest, "redirect_uri must point at this machine or at -callback-origin")
-		return
-	}
 	v := back.Query()
 	v.Set("code", "code-"+owner)
 	v.Set("state", q.Get("state"))
 	v.Set("scope", q.Get("scope"))
-	back.RawQuery = v.Encode()
-	//nolint:gosec // G710: the check above admits only loopback or the origin the operator named
-	http.Redirect(w, r, back.String(), http.StatusFound)
+	target, ok := s.callbackTarget(back, v)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "redirect_uri must point at this machine or at -callback-origin")
+		return
+	}
+	//nolint:gosec // G710: target is rebuilt from parts isLoopback or callbackOrigin checked; TestTheConsentRedirectIsRebuiltFromTheCheckedParts holds it
+	http.Redirect(w, r, target, http.StatusFound)
+}
+
+// callbackTarget rebuilds the redirect from checked parts only. The scheme and
+// host come from the loopback check or from the operator's -callback-origin.
+// The path is the caller's, and the query is the one this server wrote. A
+// target that passes neither check is refused.
+func (s *server) callbackTarget(back *url.URL, query url.Values) (string, bool) {
+	target := url.URL{Path: back.Path, RawQuery: query.Encode()}
+	switch {
+	case isLoopback(back):
+		host, ok := loopbackHost(back)
+		if !ok {
+			return "", false
+		}
+		target.Scheme, target.Host = "http", host
+		if back.Scheme == "https" {
+			target.Scheme = "https"
+		}
+	case s.callbackOrigin != "" && origin(back) == s.callbackOrigin:
+		named, err := url.Parse(s.callbackOrigin)
+		if err != nil {
+			return "", false
+		}
+		target.Scheme, target.Host = named.Scheme, named.Host
+	default:
+		return "", false
+	}
+	return target.String(), true
+}
+
+// loopbackHost spells a loopback host again from its parsed parts: the
+// address or lower-case name, and the port as a number.
+func loopbackHost(u *url.URL) (string, bool) {
+	name := strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
+	if ip := net.ParseIP(name); ip != nil {
+		name = ip.String()
+	}
+	if u.Port() == "" {
+		if strings.Contains(name, ":") {
+			return "[" + name + "]", true
+		}
+		return name, true
+	}
+	port, err := strconv.Atoi(u.Port())
+	if err != nil || port < 1 || port > 65535 {
+		return "", false
+	}
+	return net.JoinHostPort(name, strconv.Itoa(port)), true
 }
 
 // isLoopback admits only a dev stack on this machine, so the consent page
@@ -175,6 +224,21 @@ func (s *server) profile(w http.ResponseWriter, r *http.Request) {
 	if box, ok := s.mailboxOf(w, r); ok {
 		writeJSON(w, map[string]any{"emailAddress": s.boxes[box].owner, "historyId": "100", "messagesTotal": s.boxes[box].count})
 	}
+}
+
+// sendAs answers the mailbox's one send-as address with an HTML signature
+// that carries markup a saved signature keeps and markup it drops.
+func (s *server) sendAs(w http.ResponseWriter, r *http.Request) {
+	s.count("sendAs")
+	box, ok := s.mailboxOf(w, r)
+	if !ok {
+		return
+	}
+	owner := s.boxes[box].owner
+	writeJSON(w, map[string]any{"sendAs": []map[string]any{{
+		"sendAsEmail": owner, "isPrimary": true, "isDefault": true,
+		"signature": `<div><b>` + owner + `</b><br>Demo GmbH<script>alert(1)</script></div>`,
+	}}})
 }
 
 // list pages through the mailbox newest first. The search query is ignored:

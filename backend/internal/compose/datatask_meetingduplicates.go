@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // meetingDuplicatesDataTask retires a Google Calendar copy of a meeting another
@@ -29,7 +30,7 @@ func meetingDuplicatesDataTask(pool *pgxpool.Pool) datatask.Task {
 	meetings := activities.NewStore(InstallationDB(pool))
 	return datatask.Task{
 		ID: "core/1793054210_calendar_meeting_duplicates", Version: 1,
-		Title: "Retiring calendar copies of meetings stored twice",
+		Title: systemtext.Literal("datatask.title.core.1793054210_calendar_meeting_duplicates"),
 		Steps: []datatask.Step{{
 			Name: "retire_calendar_duplicates", Limit: 100, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

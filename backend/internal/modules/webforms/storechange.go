@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -27,6 +28,7 @@ type UpdateInput struct {
 	AllowedOrigins       *[]string
 	SenderSecret         *string
 	LeadOrigin           *string
+	HandlingAutomationID *ids.UUID
 	OwnerID              *ids.UUID
 	ProductID            *ids.UUID
 	FieldMap             *map[string]string
@@ -47,6 +49,8 @@ type UpdateInput struct {
 const (
 	colLeadOrigin           = "lead_origin"
 	colOwnerID              = "owner_id"
+	colHandlingAutomationID = "handling_automation_id"
+	colHandlingCutoverAt    = "handling_cutover_at"
 	colProductID            = "product_id"
 	colConsentPolicyVersion = "consent_policy_version"
 	colConsentWording       = "consent_wording"
@@ -60,6 +64,7 @@ func clearableColumns(f Form) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
 		colLeadOrigin:           {Column: colLeadOrigin, Current: f.LeadOrigin},
 		colOwnerID:              {Column: colOwnerID, Current: f.OwnerID},
+		colHandlingAutomationID: {Column: colHandlingAutomationID, Current: f.HandlingAutomationID},
 		colProductID:            {Column: colProductID, Current: f.ProductID},
 		colConsentPolicyVersion: {Column: colConsentPolicyVersion, Current: f.ConsentPolicyVersion},
 		colConsentWording:       {Column: colConsentWording, Current: f.ConsentWording},
@@ -89,6 +94,7 @@ func (in UpdateInput) merged(f Form) (Form, error) {
 	}
 	assign(&f.LeadOrigin, in.LeadOrigin)
 	assign(&f.OwnerID, in.OwnerID)
+	assign(&f.HandlingAutomationID, in.HandlingAutomationID)
 	assign(&f.ProductID, in.ProductID)
 	assign(&f.ConsentPolicyVersion, in.ConsentPolicyVersion)
 	assign(&f.ConsentWording, in.ConsentWording)
@@ -126,6 +132,8 @@ func clearField(f *Form, field string) {
 		f.LeadOrigin = nil
 	case colOwnerID:
 		f.OwnerID = nil
+	case colHandlingAutomationID:
+		f.HandlingAutomationID = nil
 	case colProductID:
 		f.ProductID = nil
 	case colConsentPolicyVersion:
@@ -167,7 +175,20 @@ func (s *Store) UpdateForm(ctx context.Context, id ids.UUID, in UpdateInput) (Fo
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
 		return Form{}, err
 	}
-	if err := refuseAgentSecretChange(ctx, in); err != nil {
+	if s.fence == nil {
+		return s.writeFormUpdate(ctx, id, in)
+	}
+	var out Form
+	err := s.fence.Within(ctx, id, func(bound context.Context) error {
+		var err error
+		out, err = s.writeFormUpdate(bound, id, in)
+		return err
+	})
+	return out, err
+}
+
+func (s *Store) writeFormUpdate(ctx context.Context, id ids.UUID, in UpdateInput) (Form, error) {
+	if err := refuseAgentSecret(ctx, in.SenderSecret != nil || slices.Contains(in.Clear, fieldSenderSecret)); err != nil {
 		return Form{}, err
 	}
 	newRef, err := s.replacementSecret(ctx, id, in.SenderSecret)
@@ -188,17 +209,15 @@ func (s *Store) UpdateForm(ctx context.Context, id ids.UUID, in UpdateInput) (Fo
 		if err != nil {
 			return err
 		}
-		next, err := in.merged(current)
-		if err == nil {
-			err = refuseAgentPromiseChange(ctx, current, next)
-		}
+		next, err := checkedFormUpdate(ctx, tx, id, in, current)
 		if err != nil {
 			return err
 		}
-		if err := checkReferences(ctx, tx, in.LeadOrigin, in.OwnerID, in.ProductID); err != nil {
-			return err
-		}
 		p := patchFor(current, next)
+		if !sameID(current.HandlingAutomationID, next.HandlingAutomationID) {
+			next.HandlingCutoverAt = new(s.now().UTC())
+			p.Set(colHandlingCutoverAt, current.HandlingCutoverAt, next.HandlingCutoverAt)
+		}
 		if err := storekit.ApplyClears(p, in.Clear, clearableColumns(current)); err != nil {
 			return err
 		}
@@ -224,6 +243,22 @@ func (s *Store) UpdateForm(ctx context.Context, id ids.UUID, in UpdateInput) (Fo
 	}
 	s.dropSecret(ctx, replacedRef, "web form secret replaced")
 	return out, nil
+}
+
+// checkedFormUpdate is the form after the update, once the caller may make the
+// change and every record it names is one they may use.
+func checkedFormUpdate(ctx context.Context, tx pgx.Tx, id ids.UUID, in UpdateInput, current Form) (Form, error) {
+	next, err := in.merged(current)
+	if err == nil {
+		err = refuseAgentPromiseChange(ctx, current, next)
+	}
+	if err != nil {
+		return next, err
+	}
+	if err := checkReferences(ctx, tx, in.LeadOrigin, in.OwnerID, in.ProductID); err != nil {
+		return next, err
+	}
+	return next, checkHandlingPolicy(ctx, tx, id, current, next)
 }
 
 // replacementSecret seals a builder's new secret before the update's
@@ -268,6 +303,9 @@ func patchFor(current, next Form) *storekit.Patch {
 	}
 	if next.OwnerID != nil {
 		p.Set(colOwnerID, current.OwnerID, next.OwnerID)
+	}
+	if next.HandlingAutomationID != nil {
+		p.Set(colHandlingAutomationID, current.HandlingAutomationID, next.HandlingAutomationID)
 	}
 	if next.ProductID != nil {
 		p.Set(colProductID, current.ProductID, next.ProductID)
@@ -318,24 +356,46 @@ func (s *Store) RotateSecret(ctx context.Context, id ids.UUID) (Form, string, er
 	return out, secret, nil
 }
 
-// ArchiveForm retires a form: its address answers 404 from then on, and its
-// secret is destroyed, since nothing can verify against it again.
+// ArchiveForm retires a form: its address answers 404 and its handling plan is
+// switched off. Its secret is destroyed, since nothing can verify against it again.
 func (s *Store) ArchiveForm(ctx context.Context, id ids.UUID) (Form, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionDelete); err != nil {
 		return Form{}, err
 	}
+	if s.fence == nil {
+		return s.retireForm(ctx, id)
+	}
 	var out Form
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.fence.Within(ctx, id, func(bound context.Context) error {
 		var err error
-		out, err = scanForm(tx.QueryRow(ctx,
-			"UPDATE web_form SET archived_at = now() WHERE id = $1 AND archived_at IS NULL RETURNING "+formColumns, id))
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		} else if err != nil {
+		out, err = s.retireForm(bound, id)
+		return err
+	})
+	return out, err
+}
+
+func (s *Store) retireForm(ctx context.Context, id ids.UUID) (Form, error) {
+	if err := auth.Require(ctx, rbacObject, principal.ActionDelete); err != nil {
+		return Form{}, err
+	}
+	var out Form
+	err := database.WithWorkspaceWriteTx(ctx, s.db.Pool(), func(bound context.Context) error {
+		err := s.db.Tx(bound, func(tx pgx.Tx) error {
+			var err error
+			out, err = scanForm(tx.QueryRow(bound,
+				"UPDATE web_form SET archived_at = now() WHERE id = $1 AND archived_at IS NULL RETURNING "+formColumns, id))
+			if errors.Is(err, pgx.ErrNoRows) {
+				return apperrors.ErrNotFound
+			} else if err != nil {
+				return err
+			}
+			_, err = storekit.Audit(bound, tx, "archive", auditEntity, id, nil, nil)
+			return err
+		})
+		if err != nil || out.HandlingAutomationID == nil || s.settings == nil {
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "archive", auditEntity, id, nil, nil)
-		return err
+		return s.settings.SwitchOff(bound, *out.HandlingAutomationID)
 	})
 	if err != nil {
 		return Form{}, err
@@ -346,27 +406,29 @@ func (s *Store) ArchiveForm(ctx context.Context, id ids.UUID) (Form, error) {
 
 const fieldSenderSecret = "sender_secret"
 
-// refuseAgentSecretChange keeps a form's secret with a user. An agent may change
-// the rest of a form, but a secret it chose would let it post leads as that form.
-func refuseAgentSecretChange(ctx context.Context, in UpdateInput) error {
+// actingAgent reports whether an agent makes this call. A form's secret and its
+// promises stay with a user, whichever door the agent comes through.
+func actingAgent(ctx context.Context) bool {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalAgent {
+	return ok && actor.Type == principal.PrincipalAgent
+}
+
+// refuseAgentSecret keeps a form's secret with a user. An agent may set up the
+// rest of a form, but a secret it chose would let it post leads as that form.
+func refuseAgentSecret(ctx context.Context, setsSecret bool) error {
+	if !setsSecret || !actingAgent(ctx) {
 		return nil
 	}
-	if in.SenderSecret != nil || slices.Contains(in.Clear, fieldSenderSecret) {
-		return &httperr.DetailedError{
-			Status: http.StatusForbidden, Code: "agent_sets_no_form_secret",
-			Detail: "an agent does not set or clear a form's secret; ask the user to do it in the app",
-		}
+	return &httperr.DetailedError{
+		Status: http.StatusForbidden, Code: "agent_sets_no_form_secret",
+		Detail: "an agent does not set or clear a form's secret; ask the user to do it in the app",
 	}
-	return nil
 }
 
 // refuseAgentPromiseChange keeps with a user what a form promises a visitor and
 // where it takes posts from. Each has legal weight, or lets a site post leads.
 func refuseAgentPromiseChange(ctx context.Context, current, next Form) error {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalAgent {
+	if !actingAgent(ctx) {
 		return nil
 	}
 	same := sameOrigins(current.AllowedOrigins, next.AllowedOrigins) &&

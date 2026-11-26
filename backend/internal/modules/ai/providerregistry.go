@@ -11,8 +11,8 @@ import "github.com/margince/margince/backend/internal/platform/config"
 // endpoint default, carriage, public naming, default model, vendor hosting) is
 // a projection of providerRegistry, so a provider cannot be known to one
 // question and missing from the next. Adding a chat provider is adding one row
-// here plus its construction recipe in selectBrainOn; a decision provider needs
-// the row alone, since every decision adapter speaks one wire.
+// here plus its construction recipe in selectBrainOn. A decision provider needs
+// the row alone, since one decision client speaks every dialect of its wire.
 //
 // Held by: TestProviderFactsLiveOnlyInTheRegistry (backend/internal/modules/ai/providerregistry_census_test.go)
 type providerDescriptor struct {
@@ -70,6 +70,10 @@ type providerDescriptor struct {
 	// serviceAccountKey marks an adapter whose key credential is a Google
 	// service-account JSON rather than an API key.
 	serviceAccountKey bool
+	// wireRule versions how the adapter translates a request for its decoder.
+	// A record measured through another translation reads stale (WireRule).
+	// It is empty for an adapter that declares none.
+	wireRule string
 	// measuredBy is the provider whose certification records grade this one:
 	// an adapter sending the same request to the same weights through another
 	// host. Empty means its own records.
@@ -78,10 +82,7 @@ type providerDescriptor struct {
 	// to; empty means the binding must name one. A decision binding's base_url
 	// is the whole URL, posted to as written.
 	defaultEndpoint string
-	// localByEndpoint marks an adapter whose locality is its endpoint's: it is
-	// local exactly when its base_url's host is the customer's own
-	// (classifyHost). That one answer makes it sovereign-eligible and decides
-	// whether a local-only task may take it.
+	// Endpoint ownership decides whether sovereign routing can use this adapter.
 	localByEndpoint bool
 	// thinkingFloor reports whether a binding's adapter maps a site's thinking
 	// floor onto its wire (sitethinking.go); nil maps none.
@@ -89,6 +90,15 @@ type providerDescriptor struct {
 	// floorSkipsTools marks an adapter that sends no floor on a request
 	// carrying tools, so an agent_loop site is never floored on it.
 	floorSkipsTools bool
+	// hostRequired marks an adapter with no default host: a lane binding it
+	// cannot be served until the provider names one.
+	hostRequired bool
+	// customModelIDs marks an adapter whose model ids are names the customer
+	// chose, so the vendor's own model list would offer ids no binding can use.
+	customModelIDs bool
+	// decisionDialect is which spelling of the decision wire the adapter
+	// speaks; the zero value is Jev's.
+	decisionDialect decisionDialect
 }
 
 // capSet is the set of wires an adapter answers on.
@@ -108,6 +118,14 @@ const (
 	providerJev           = "jev"
 	providerJevCompatible = "jev_compatible"
 	defaultJevEndpoint    = "https://api.typesafe.ai/v1/systemone"
+)
+
+// Google's Decisions API, which the Gemini Developer API alone serves, and the
+// one model Google documents for it.
+const (
+	providerGeminiDecision        = "gemini_decision"
+	defaultGeminiDecisionEndpoint = "https://generativelanguage.googleapis.com/v1beta/decisions"
+	geminiDecisionModel           = "gemini-decision-1"
 )
 
 // providerRegistry's row order is the order knownProviders reports, which
@@ -161,7 +179,7 @@ var providerRegistry = []providerDescriptor{
 		priceSource: priceSource{kind: priceFromBroker},
 		name:        providerOpenAICompatible, caps: capChat, egress: egressOperatorEndpoint,
 		key: OpenAICompatibleKey, servedSource: servedIdentitySourceEcho, pathsUnderV1: true,
-		public: true, carriage: carriesImages,
+		public: true, carriage: carriesImages, hostRequired: true,
 		wildcardReason: "serves whichever vendor the operator pointed base_url at",
 		thinkingFloor:  openRouterTakesThinkingFloor, floorSkipsTools: true,
 	},
@@ -175,7 +193,7 @@ var providerRegistry = []providerDescriptor{
 		priceSource: modelsDevSource("google"),
 		name:        providerGemini, caps: capChat, egress: egressPublicOnly, key: GeminiKey,
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultGeminiBaseURL, public: true,
-		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor,
+		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor, wireRule: geminiWireRule,
 	},
 	{
 		// The Gemini wire served by Vertex AI. Its key is a service-account
@@ -184,7 +202,18 @@ var providerRegistry = []providerDescriptor{
 		name:        providerGeminiVertex, caps: capChat, egress: egressPublicOnly, key: GeminiVertexKey,
 		serviceAccountKey: true, measuredBy: providerGemini, pricedBy: providerGemini,
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
-		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor,
+		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor, wireRule: geminiWireRule,
+	},
+	{
+		// Azure OpenAI is the OpenAI-compatible adapter in its Azure mode.
+		// The host is the customer's own resource and the model is a
+		// deployment name. The binding's location is the Azure region where the
+		// data is processed. A vendor cloud, so never local and always https.
+		priceSource: priceSource{kind: priceNotPublished},
+		name:        providerAzureOpenAI, caps: capChat, egress: egressPublicOnly, key: AzureOpenAIKey,
+		servedSource: servedIdentitySourceEcho, public: true, pricedBy: providerOpenAI,
+		carriage: carriesImages, hostRequired: true, customModelIDs: true,
+		wildcardReason: "serves whichever model the deployment holds",
 	},
 	{
 		// TypeSafe's own API: a vendor cloud, so never local and never pinned
@@ -204,6 +233,15 @@ var providerRegistry = []providerDescriptor{
 		name:        providerJevCompatible, caps: capDecision, egress: egressOperatorEndpoint,
 		key: JevCompatibleKey, keyOptional: true, servedSource: servedIdentityPerReply,
 		localByEndpoint: true,
+	},
+	{
+		// Google's Decisions API, sent the gemini row's key. Google hosts it in
+		// no EU region, so it is a vendor cloud like jev. Its answer names no
+		// model, so a reply is graded as the configured one.
+		priceSource: modelsDevSource("google"),
+		name:        providerGeminiDecision, caps: capDecision, egress: egressPublicOnly, key: GeminiKey,
+		servedSource: servedIdentitySourceResponse, vendorHosted: true,
+		defaultEndpoint: defaultGeminiDecisionEndpoint, decisionDialect: dialectGemini,
 	},
 }
 

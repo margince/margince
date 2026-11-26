@@ -59,6 +59,71 @@ const draw = (
     />,
   );
 
+describe("an axis with nothing dated", () => {
+  const drawOnly = (marks: TimelineMark[]) =>
+    render(
+      <StandingTimeline
+        label="Brandt over time"
+        asOf="2026-08-13T09:00:00Z"
+        record={UTC_ZONE}
+        events={[]}
+        marks={marks}
+      />,
+    );
+
+  it("says nothing is dated when nothing is", () => {
+    drawOnly([]);
+    expect(screen.getByText("Nothing dated here yet.")).toBeInTheDocument();
+  });
+
+  it("draws a logged item rather than saying nothing is dated", () => {
+    drawOnly([mark({ key: "m", at: "2026-08-10", when: "10 Aug" })]);
+    expect(screen.queryByText("Nothing dated here yet.")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Aug" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens wide enough for a logged item older than a quarter", () => {
+    drawOnly([mark({ key: "m", at: "2026-01-10", when: "10 Jan" })]);
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Jan" }),
+    ).toBeInTheDocument();
+  });
+
+  it("measures the canvas once a first logged item draws it", () => {
+    const observed: Element[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe(node: Element) {
+          observed.push(node);
+        }
+        disconnect() {}
+      },
+    );
+    try {
+      const { rerender } = drawOnly([]);
+      rerender(
+        <StandingTimeline
+          label="Brandt over time"
+          asOf="2026-08-13T09:00:00Z"
+          record={UTC_ZONE}
+          events={[]}
+          marks={[mark({ key: "m", at: "2026-08-10", when: "10 Aug" })]}
+        />,
+      );
+      expect(
+        observed.some((node) =>
+          node.classList.contains("standing-timeline-canvas"),
+        ),
+      ).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 describe("marks on the line", () => {
   it("draws a chip for one logged item and opens a card of who, what and when", async () => {
     const user = userEvent.setup();
@@ -183,6 +248,35 @@ describe("marks on the line", () => {
   });
 });
 
+describe("a deal's outcome", () => {
+  it("stands as a flag in its tone where the deal was decided, not as a dot", () => {
+    const { container } = render(
+      <StandingTimeline
+        label="Brandt over time"
+        asOf="2026-08-13T09:00:00Z"
+        record={UTC_ZONE}
+        events={[
+          { key: "a", at: "2026-06-03", title: "Kickoff", kind: "done" },
+          {
+            key: "c",
+            at: "2026-07-20T10:00:00Z",
+            title: "Lost",
+            kind: "end",
+            outcome: "lost",
+          },
+        ]}
+      />,
+    );
+
+    const flags = container.querySelectorAll(".standing-timeline-flag");
+    expect(flags).toHaveLength(1);
+    expect(flags[0]).toHaveAttribute("data-outcome", "lost");
+    expect(container.querySelectorAll(".standing-timeline-dot")).toHaveLength(
+      1,
+    );
+  });
+});
+
 describe("a date far ahead", () => {
   it("is drawn past a break that names its month and year", () => {
     render(
@@ -199,6 +293,102 @@ describe("a date far ahead", () => {
 
     expect(screen.getByText("August 2029")).toBeInTheDocument();
     expect(screen.queryByText("2028")).toBeNull();
+  });
+});
+
+describe("an axis over several years", () => {
+  it("names the years on its grid lines, not the months", () => {
+    render(
+      <StandingTimeline
+        label="Brandt over time"
+        asOf="2026-11-16T09:00:00Z"
+        record={UTC_ZONE}
+        events={[
+          { key: "a", at: "2020-11-15", title: "Target end", kind: "end" },
+          { key: "z", at: "2026-11-16", title: "Opened", kind: "done" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("2021")).toBeInTheDocument();
+    expect(screen.queryByText("January")).toBeNull();
+  });
+
+  it("names the year on the first month line and on each that opens a year", () => {
+    render(
+      <StandingTimeline
+        label="Brandt over time"
+        asOf="2027-02-10T09:00:00Z"
+        record={UTC_ZONE}
+        events={[
+          { key: "a", at: "2026-10-03", title: "Kickoff", kind: "done" },
+          { key: "z", at: "2027-02-10", title: "Review", kind: "last" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("February 2026")).toBeInTheDocument();
+    expect(screen.getByText("February 2027")).toBeInTheDocument();
+    expect(screen.getByText("October")).toBeInTheDocument();
+  });
+});
+
+describe("an axis across New Year", () => {
+  const labels = () =>
+    [...document.querySelectorAll(".standing-timeline-tick-label")].map(
+      (label) => label.textContent,
+    );
+
+  it("keeps the label that opens the new year on a narrow canvas", () => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(
+          private readonly measured: (
+            entries: { contentRect: { width: number } }[],
+          ) => void,
+        ) {}
+        observe() {
+          this.measured([{ contentRect: { width: 300 } }]);
+        }
+        disconnect() {}
+      },
+    );
+    try {
+      render(
+        <StandingTimeline
+          label="Brandt over time"
+          asOf="2027-01-10T09:00:00Z"
+          record={UTC_ZONE}
+          events={[
+            { key: "a", at: "2026-02-01", title: "Kickoff", kind: "done" },
+            { key: "z", at: "2027-12-01", title: "Go-live", kind: "end" },
+          ]}
+        />,
+      );
+      expect(labels()[0]).toBe("January 2026");
+      expect(labels()).toContain("January 2027");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("names the year on the week line that opens it", async () => {
+    const user = userEvent.setup();
+    render(
+      <StandingTimeline
+        label="Brandt over time"
+        asOf="2027-01-03T09:00:00Z"
+        record={UTC_ZONE}
+        events={[
+          { key: "a", at: "2026-12-20", title: "Kickoff", kind: "done" },
+          { key: "z", at: "2027-01-03", title: "Review", kind: "last" },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Month" }));
+    expect(labels()).toContain("5 Jan 2027");
+    expect(labels()).toContain("8 Dec");
   });
 });
 

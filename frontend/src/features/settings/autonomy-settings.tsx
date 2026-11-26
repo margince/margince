@@ -9,8 +9,10 @@ import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
 import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
+import { lockReasonOr } from "../../format/settinglocks";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useCanMutate, useHoldsAdminRole } from "../../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { humanizeToken } from "./audit";
 
@@ -19,8 +21,6 @@ import { humanizeToken } from "./audit";
 // It sits on the AGENTS page rather than beside the admin cards because the
 // answer is one colleague's: an admin does not decide how much of a rep's queue
 // applies without asking, so there is no role gating here and no refusal copy.
-// Under the tier reference it is written in terms of, on the page about agents
-// deciding without you.
 // The only thing that can stop a row is a write already in flight.
 //
 // The contract calls this `autonomy`; the copy calls it what a rep would. The
@@ -65,6 +65,26 @@ function useUpdateAutonomy() {
     // stale record beside a fresh switch.
     onSuccess: (data) => {
       queryClient.setQueryData(["autonomy"], data);
+      toast.show(t("settings.saved"));
+    },
+  });
+}
+
+// The installation switch is the outer bound on every row. It changes only
+// whether anything runs, so the rows keep showing what each reader chose.
+function useUpdateInstallationBound() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const t = useT();
+  return useMutation({
+    mutationFn: async (enabled: boolean) =>
+      unwrap(await api.PUT("/autonomy/installation", { body: { enabled } })),
+    onSuccess: (data) => {
+      queryClient.setQueryData(
+        ["autonomy"],
+        (old: components["schemas"]["AutonomySettings"] | undefined) =>
+          old && { ...old, auto_apply_enabled: data.enabled },
+      );
       toast.show(t("settings.saved"));
     },
   });
@@ -218,7 +238,13 @@ export function AutonomySettingsCard() {
         query={query}
         empty={(settings) => settings.data.length === 0}
       >
-        {(settings) => <AutonomyChoices rows={settings.data} />}
+        {(settings) => (
+          <AutonomyChoices
+            rows={settings.data}
+            installationOn={settings.auto_apply_enabled}
+            locks={settings.locks}
+          />
+        )}
       </QueryGate>
     </Panel>
   );
@@ -226,13 +252,66 @@ export function AutonomySettingsCard() {
 
 function AutonomyChoices({
   rows,
-}: Readonly<{ rows: readonly KindAutonomy[] }>) {
+  installationOn,
+  locks,
+}: Readonly<{
+  rows: readonly KindAutonomy[];
+  installationOn: boolean;
+  locks: components["schemas"]["AutonomySettings"]["locks"];
+}>) {
   const t = useT();
+  const admin = useHoldsAdminRole();
+  const mutable = useCanMutate();
+  const bound = useUpdateInstallationBound();
   const { locale } = useLocale();
   const update = useUpdateAutonomy();
   const noneYet = noneDecidedYet(rows);
   return (
     <>
+      {!installationOn && (
+        <PanelBody>
+          <Callout
+            tone="warning"
+            kind="standing"
+            title={t("autonomy.installationOff")}
+          />
+        </PanelBody>
+      )}
+      {admin && (
+        <SettingList bleed="settings">
+          <SettingRow
+            label={t("autonomy.installationSwitch")}
+            description={t("autonomy.installationHelp")}
+            control={
+              <Switch
+                testId="autonomy-installation-switch"
+                label={t("autonomy.installationSwitch")}
+                labelHidden
+                checked={installationOn}
+                disabled={!mutable || bound.isPending}
+                reason={lockReasonOr(
+                  locks,
+                  "approvals.auto_apply_enabled",
+                  t,
+                  undefined,
+                )}
+                onChange={(next) => bound.mutate(next)}
+              />
+            }
+          />
+        </SettingList>
+      )}
+      {bound.isError && (
+        <PanelBody>
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("autonomy.updateFailed")}
+          >
+            {problemMessageOf(bound.error, t)}
+          </Callout>
+        </PanelBody>
+      )}
       <SettingList bleed="settings">
         {rows.map((row) => (
           <SettingRow

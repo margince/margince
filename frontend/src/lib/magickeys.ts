@@ -31,6 +31,7 @@ export const MAGIC_SENTENCE_KEYS = [
   "magic.action.approval_coldstart",
   "magic.action.approval_send_email",
   "magic.action.approval_advance_deal",
+  "magic.action.approval_deal_proposal_stage",
   "magic.action.approval_promote_lead",
   "magic.action.approval_overnight",
   "magic.action.approval_commitment_task",
@@ -64,12 +65,53 @@ export const MAGIC_SENTENCE_KEYS = [
   "magic.action.create_lead",
   "magic.action.create_project",
   "magic.action.create_activity",
+  "magic.action.create_activity_email",
+  "magic.action.create_activity_meeting",
+  "magic.action.create_activity_call",
+  "magic.action.create_activity_note",
+  "magic.action.create_activity_task",
+  "magic.action.create_activity_message",
   "magic.action.archive_contact",
   "magic.action.archive_company",
   "magic.action.archive_deal",
   "magic.action.archive_lead",
   "magic.action.archive_project",
+  "magic.action.create_offer",
+  "magic.action.update_offer",
+  "magic.action.archive_offer",
+  "magic.action.create_contract",
+  "magic.action.update_contract",
+  "magic.action.archive_contract",
+  "magic.action.create_deal_room",
+  "magic.action.update_deal_room",
+  "magic.action.archive_deal_room",
+  "magic.action.create_stage_evidence",
+  "magic.action.update_stage_evidence",
+  "magic.action.archive_stage_evidence",
+  "magic.action.create_introduction",
+  "magic.action.update_introduction",
+  "magic.action.archive_introduction",
+  "magic.action.create_assignment",
+  "magic.action.update_assignment",
+  "magic.action.archive_assignment",
+  "magic.action.create_attachment",
+  "magic.action.update_attachment",
+  "magic.action.archive_attachment",
+  "magic.action.create_deal_suggestion",
+  "magic.action.update_deal_suggestion",
+  "magic.action.schedule_send",
+  "magic.action.update_scheduled_send",
+  "magic.action.create_invoice",
+  "magic.action.update_invoice",
+  "magic.action.create_payment",
+  "magic.action.update_payment",
   "magic.action.archive_activity",
+  "magic.action.archive_activity_email",
+  "magic.action.archive_activity_meeting",
+  "magic.action.archive_activity_call",
+  "magic.action.archive_activity_note",
+  "magic.action.archive_activity_task",
+  "magic.action.archive_activity_message",
 ] as const satisfies readonly MessageKey[];
 
 export type MagicSentenceKey = (typeof MAGIC_SENTENCE_KEYS)[number];
@@ -86,6 +128,7 @@ export const MAGIC_WHY_KEYS = [
   "magic.why.site_read_unnamed",
   "magic.why.site_read_each",
   "magic.why.signature",
+  "magic.why.stated",
   "magic.why.retention",
 ] as const satisfies readonly MessageKey[];
 
@@ -136,6 +179,7 @@ function registry(
 const SENTENCES = registry(MAGIC_SENTENCE_KEYS);
 const WHYS = registry(MAGIC_WHY_KEYS);
 const BYS = registry(MAGIC_BY_KEYS);
+const CONSEQUENCES = registry(MAGIC_CONSEQUENCE_KEYS);
 
 /** The sentence key this build carries, or null for one it predates. */
 export function magicSentenceKey(key: string): MessageKey | null {
@@ -145,6 +189,11 @@ export function magicSentenceKey(key: string): MessageKey | null {
 /** The reason key this build carries, or null for one it predates. */
 export function magicWhyKey(key: string): MessageKey | null {
   return WHYS.get(key) ?? null;
+}
+
+/** The consequence key this build carries, or null for one it predates. */
+export function magicConsequenceKey(key: string): MessageKey | null {
+  return CONSEQUENCES.get(key) ?? null;
 }
 
 /** The actor-name key this build carries, or null for one it predates. */
@@ -162,11 +211,18 @@ const MAGIC_UNDO_REASONS: Readonly<Record<string, MessageKey | undefined>> = {
   undo_not_evaluated: "magic.undoReason.notEvaluated",
 };
 
-/** Why this line cannot be taken back, in words, or null for a reason this build has none for. */
+// Refusals about the reader, not the change. A receipt says what happened to
+// the reader's work; that they may not write it is no news on every row.
+const READER_REFUSALS: ReadonlySet<string> = new Set([
+  "not_writable_by_caller",
+  "restore_archiver_required",
+]);
+
+/** Why this line cannot be taken back, in words, or null for a reason this build has none for or does not say. */
 export function magicUndoReasonKey(
   reason: string | undefined,
 ): MessageKey | null {
-  if (!reason) {
+  if (!reason || READER_REFUSALS.has(reason)) {
     return null;
   }
   return undoRefusalKey(reason) ?? MAGIC_UNDO_REASONS[reason] ?? null;

@@ -14,7 +14,7 @@ import (
 
 func TestAssessmentMoneyUsesTheCurrencyScale(t *testing.T) {
 	for currency, want := range map[string]string{"EUR": "120.50 EUR", "JPY": "12050 JPY", "KWD": "12.050 KWD", "hours": "12050 hours", "ratio": "12050 ratio"} {
-		if got := figureText(12050, currency); got != want {
+		if got := salesassessment.FigureText(12050, currency); got != want {
 			t.Errorf("%s: %q, want %q", currency, got, want)
 		}
 	}
@@ -39,7 +39,7 @@ func TestAssessmentForecastCellsKeepTheForecastPeriod(t *testing.T) {
 	if !found {
 		t.Fatal("no forecast cells")
 	}
-	if got := figureText(1.7, "hours"); got != "1.7 hours" {
+	if got := salesassessment.FigureText(1.7, "hours"); got != "1.7 hours" {
 		t.Fatalf("response time: %q", got)
 	}
 }
@@ -49,7 +49,7 @@ func TestACandidateAmountIsDisplayedAsACellOfTheSameFigure(t *testing.T) {
 		Cells:      []salesassessment.CellIn{{ID: "metric:open_pipeline", Value: "25000 EUR", Unit: "EUR"}},
 		Candidates: []salesassessment.CandidateIn{{ID: "deal-1", Amount: "25000 EUR"}},
 	}
-	displayAssessmentFigures(&in, string(textlang.English))
+	salesassessment.DisplayFigures(&in, string(textlang.English))
 	if in.Candidates[0].Display == "" || in.Candidates[0].Display != in.Cells[0].Display {
 		t.Fatalf("candidate display %q, want the cell's %q", in.Candidates[0].Display, in.Cells[0].Display)
 	}

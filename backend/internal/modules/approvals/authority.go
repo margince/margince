@@ -79,8 +79,9 @@ const kindHeldDraft = "held_draft"
 // rep it was staged for decides it alone, and what filing it means — and a typo
 // across them would leave the kind half-governed with nothing saying so.
 const (
-	kindDealFollowUp   = "deal_follow_up"
-	kindCommitmentTask = approvalsubject.KindCommitmentTask
+	kindDealFollowUp      = "deal_follow_up"
+	kindDealProposalStage = "deal_proposal_stage"
+	kindCommitmentTask    = approvalsubject.KindCommitmentTask
 	// kindTranscriptProposal is retired: nothing stages it and no effect
 	// applies it. It stays governed so the cards already decided under it stay
 	// readable to whoever decided them.
@@ -180,7 +181,7 @@ var decisionGrants = map[string][]DecisionGrant{
 	// A send is an activity write plus consent enforcement at redemption
 	// time; the approver needs the write grant, the consent gate runs in
 	// the handler regardless of who approved.
-	"send_email": {{objectActivity, principal.ActionCreate}},
+	"send_email": sendShapedGrants,
 	// send_company_email is the same send from the other origin (ADR-0087 §6):
 	// it starts a conversation instead of continuing one, and the effect it
 	// stages is the identical activity write. The records the message is filed
@@ -188,10 +189,10 @@ var decisionGrants = map[string][]DecisionGrant{
 	// staging and again at insert — they are a question about the STAGER's
 	// reach, not about the approver's, so they add nothing here. Governed
 	// identically to the reply means exactly this grant and no other.
-	"send_company_email": {{objectActivity, principal.ActionCreate}},
+	"send_company_email": sendShapedGrants,
 	// send_message is the same effect on a messaging channel: an activity
 	// write, with the consent gate running in the handler whoever approved it.
-	"send_message":   {{objectActivity, principal.ActionCreate}},
+	"send_message":   sendShapedGrants,
 	"book_meeting":   {{objectActivity, principal.ActionCreate}},
 	"invite_meeting": {{objectActivity, principal.ActionCreate}},
 	// A relink moves an activity onto another record, which the store gates on
@@ -233,8 +234,7 @@ var decisionGrants = map[string][]DecisionGrant{
 		{targetFxRate, principal.ActionCreate},
 		{targetFxRate, principal.ActionUpdate},
 	},
-	// Accepting a deep site read writes profile fields and category facts
-	// onto the target company — the same update authority enrich needs.
+	// A deep site read writes profile fields and facts onto the target company.
 	"deepread": {{tableCompany, principal.ActionUpdate}},
 	// Accepting a site_lead proposal (a published contact from a deep read's
 	// team page) captures them as a LEAD through the capture sink — the
@@ -249,9 +249,14 @@ var decisionGrants = map[string][]DecisionGrant{
 	// the domain is free-mail, the company behind them — so deciding it
 	// needs both create grants, exactly as if the approver had typed them in.
 	approvalsubject.KindCounterparty: {{tableContact, principal.ActionCreate}, {tableCompany, principal.ActionCreate}},
-	// Accepting a contact_share request shares the contact with the colleague
-	// who asked, which is the grant the Share button itself requires.
+	// A contact_share request takes the grant the Share button itself requires.
 	approvalsubject.KindContactShare: {{tableContact, principal.ActionUpdate}},
+	// Answering a due-date question writes the date onto the captured task.
+	approvalsubject.KindTaskDueDate: {{objectActivity, principal.ActionUpdate}},
+	// Accepting an employer change starts the new employment and ends the old one.
+	approvalsubject.KindEmployerChange: {{tableContact, principal.ActionUpdate}, {targetRelationship, principal.ActionCreate}, {targetRelationship, principal.ActionUpdate}},
+	// The card decides nothing; a seat needs the grants the review's own answer takes.
+	approvalsubject.KindLegalReviewRequest: legalReviewGrants(),
 	// Accepting a vcard_create proposal (an imported card the dedupe pass
 	// refused to create beside its near-match) creates the contact; when the
 	// card names an employer, also the employment edge (relationship create
@@ -284,6 +289,8 @@ var decisionGrants = map[string][]DecisionGrant{
 	// Confirming a nightly close-date correction (formulas §11 🟡 tier)
 	// releases an expected_close_date write onto the deal.
 	closeDateCorrectionKind: {{tableDeal, principal.ActionUpdate}},
+	// Accepting moves the deal forward, the write advance_deal takes.
+	kindDealProposalStage: {{tableDeal, principal.ActionUpdate}},
 	// Confirming an overnight follow-up proposal (features/07 §8a) creates
 	// the drafted task activity; the target deal's visibility gates who
 	// may see and decide it (targetVisible), the create grant gates the
@@ -322,7 +329,7 @@ var decisionGrants = map[string][]DecisionGrant{
 	// automation composed is still a message this human is putting their name
 	// on, and "an automation wrote it" is not a reason to release it on
 	// weaker authority than typing it would have taken.
-	kindHeldDraft: {{objectActivity, principal.ActionCreate}},
+	kindHeldDraft: sendShapedGrants,
 }
 
 // targetResolvedGrants are the kinds whose decision grant is not fixed by the
@@ -362,9 +369,9 @@ var targetResolvedGrants = map[string]principal.Action{
 	// A part is written on the record it hangs off (an offer, a company, a
 	// project). Its store gates the write on that record's update grant.
 	"change_record_parts": principal.ActionUpdate,
-	// Accepting a transfer moves a contact or a company to a colleague, which
-	// is an owner change on that record.
-	approvalsubject.KindOwnershipTransfer: principal.ActionUpdate,
+	// Accepting a transfer changes the record's owner. Approving edit access
+	// shares the record, which takes its update grant as Share does.
+	approvalsubject.KindOwnershipTransfer: principal.ActionUpdate, approvalsubject.KindEditAccess: principal.ActionUpdate,
 }
 
 // PendingDecidableBy rechecks current state and authority because a notification event may be stale.
@@ -419,7 +426,8 @@ func requireDecisionGrants(p principal.Principal, a row) error {
 	return nil
 }
 
-// An owner's archive may use update; the row check still proves ownership.
+// decisionChecksFor lists the grant checks approving a row needs. Each is
+// admitted by the actions decisionActions names.
 func decisionChecksFor(a row) ([]auth.Check, error) {
 	grants, err := decisionGrantsFor(a.Kind, a.TargetType)
 	if err != nil {
@@ -427,11 +435,7 @@ func decisionChecksFor(a row) ([]auth.Check, error) {
 	}
 	checks := make([]auth.Check, 0, len(grants))
 	for _, grant := range grants {
-		check := auth.Check{Object: grant.Object, Actions: []principal.Action{grant.Action}}
-		if _, ruled := auth.ArchiveRuleFor(grant.Object); ruled && a.Kind == kindArchiveRecord && grant.Action == principal.ActionDelete {
-			check.Actions = append(check.Actions, principal.ActionUpdate)
-		}
-		checks = append(checks, check)
+		checks = append(checks, auth.Check{Object: grant.Object, Actions: decisionActions(a.Kind, grant)})
 	}
 	return checks, nil
 }

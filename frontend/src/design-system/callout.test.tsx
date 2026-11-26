@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { MailX } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { declaredValues, rulesOf } from "../../scripts/lib/css-rules";
+import { stable } from "../format/collate";
 import {
   CALLOUT_TONES,
   Callout,
@@ -45,7 +46,7 @@ const TONES: ReadonlyArray<CalloutTone> = TONE_GLYPHS.map(([tone]) => tone);
 // added there with no glyph fails here rather than shipping with the default.
 describe("the tone vocabulary", () => {
   it("names a glyph for every tone the component offers", () => {
-    expect([...TONES].sort()).toEqual([...CALLOUT_TONES].sort());
+    expect([...TONES].sort(stable)).toEqual([...CALLOUT_TONES].sort(stable));
   });
 });
 
@@ -181,10 +182,12 @@ describe("Callout", () => {
   it("states the announcement for every kind against every tone", () => {
     // A table that quietly covers nine of twenty pairs reports PASS for the
     // eleven it never rendered, and there is no failing assertion to notice.
-    const stated = DERIVATIONS.map(([kind, tone]) => `${kind}/${tone}`).sort();
+    const stated = DERIVATIONS.map(([kind, tone]) => `${kind}/${tone}`).sort(
+      stable,
+    );
     const pairs = KINDS.flatMap((kind) =>
       TONES.map((tone) => `${kind}/${tone}`),
-    ).sort();
+    ).sort(stable);
     expect(stated).toEqual(pairs);
   });
 

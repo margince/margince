@@ -5,6 +5,7 @@ import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
+import { TEXT_LIMITS } from "../lib/textlimits_gen";
 import {
   companyChoice,
   contactCompanyField,
@@ -22,12 +23,34 @@ type Contact = components["schemas"]["Contact"];
 // repeatable email and phone rows cost two clicks before a value can be typed.
 //
 // On a company's page the company is already chosen, so the box is left out.
-function quickCaptureFields(askCompany: boolean): CreateField[] {
+function quickCaptureFields(
+  askCompany: boolean,
+  t: (key: MessageKey) => string,
+): CreateField[] {
   return [
-    { key: "full_name", label: "create.fullName", required: true },
-    { key: "title", label: "create.contactTitle" },
+    {
+      key: "full_name",
+      label: "create.fullName",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
+    },
+    {
+      key: "title",
+      label: "create.contactTitle",
+      maxLength: TEXT_LIMITS.label,
+    },
     ...(askCompany ? [contactCompanyField] : []),
-    { key: "profile_url", label: "create.linkedin" },
+    {
+      key: "profile_url",
+      label: "create.linkedin",
+      validate: (value, values) =>
+        !values?.full_name?.trim() ||
+        value.trim() ||
+        values?.email?.trim() ||
+        values?.phone?.trim()
+          ? undefined
+          : t("create.contactChannelRequired"),
+    },
     { key: "email", label: "create.email", type: "email" },
     { key: "phone", label: "create.phone" },
   ];
@@ -79,7 +102,8 @@ function leadIdsOf(extra: Record<string, unknown> | undefined) {
 
 export function QuickCaptureAction({
   company,
-}: Readonly<{ company?: HomeCompany }>) {
+  refusalId,
+}: Readonly<{ company?: HomeCompany; refusalId?: string }>) {
   const t = useT();
   // The form stays open and gives no other feedback, so without this six
   // saved contacts look the same as six that failed silently.
@@ -88,6 +112,8 @@ export function QuickCaptureAction({
   return (
     <CreateAction
       label={t("create.quickCapture")}
+      requires={{ object: "contact", action: "create" }}
+      refusalId={refusalId}
       invalidate={company?.listKey ?? "contacts"}
       screen="contacts"
       testId="quick-capture"
@@ -105,7 +131,7 @@ export function QuickCaptureAction({
         void refreshCompaniesAfterContact(queryClient);
       }}
       resolveExisting={(_code, id) => ({ screen: "contacts", id })}
-      fields={quickCaptureFields(company === undefined)}
+      fields={quickCaptureFields(company === undefined, t)}
     />
   );
 }

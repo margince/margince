@@ -63,7 +63,7 @@ const QUESTION: ContactMoment = {
   claim_key: "moment:may_be_done:a-9",
   evidence_fingerprint: "fp-1",
   rule: "overdue_promise",
-  headline: "You may have done this — you wrote to them on 12 Aug",
+  headline: "This may be done: an email went to them on 12 Aug",
   why_now: "You owe them: Send demo email. Due 2 days ago and still open.",
   confidence: "medium",
   evidence: [

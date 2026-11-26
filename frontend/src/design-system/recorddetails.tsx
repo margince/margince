@@ -8,13 +8,15 @@ import { useLocale, usePlural, useT } from "../i18n";
 import { Button } from "./atoms";
 import { FactList } from "./factlist";
 import { Heading } from "./heading";
+import { SectionHelp } from "./panel";
 import "./recorddetails.css";
 
 /**
  * One label/value pair. `empty` folds the row behind "Show N empty fields"
  * until the reader opens them; the caller still passes the plain words for
- * it ("Add…", "Not set"). `block` puts the term over the value, for a value
- * that is a card rather than a line.
+ * it ("Add…", "Not set"). `block` puts the term over a value that is a card.
+ * `termHidden` keeps the term for a screen reader alone, for a card whose
+ * lines name themselves.
  */
 export type DetailRow = Readonly<{
   key: string;
@@ -22,41 +24,55 @@ export type DetailRow = Readonly<{
   value: ReactNode;
   empty?: boolean;
   block?: boolean;
+  termHidden?: boolean;
 }>;
 
 /** A named group: its rows, then anything that is not a row (chips). */
 export type DetailSection = Readonly<{
   key: string;
-  label: ReactNode;
+  label: string;
+  /** What the group shows, behind a "?" beside its label. */
+  help?: string;
+  /** Leave it out for a reader who may not edit: the section then draws no Edit link. */
+  edit?: Readonly<{ onEdit: () => void }>;
   rows?: readonly DetailRow[];
   children?: ReactNode;
 }>;
 
 /**
- * The details under a record's head, as flat groups: a small label, then
- * label/value rows with no card around them, a hairline between groups. The
- * empty rows of every group fold behind one link, and a group with nothing
- * left to show draws no label. The `footnote` is what the record says about itself (who
- * may change it, what a verb will ask), in a grey box at the foot.
+ * What this reader may do with the record, as a row and the ask under it. It
+ * joins the Ownership group, beside the owner it is about.
+ */
+export type DetailAccess = Readonly<{ row: DetailRow; foot?: ReactNode }>;
+
+/**
+ * The details under a record's head, each group a pane of its own: a small
+ * label, then label/value rows. The empty rows of every group fold behind one
+ * link, and a group with nothing left to show draws no pane. The `footnote` is
+ * what the record says about itself, such as who may change it, in a pane of
+ * the same shape at the foot.
  */
 export function RecordDetails({
   sections,
   footnote,
+  access,
 }: Readonly<{
   sections: readonly DetailSection[];
   footnote?: ReactNode;
+  access?: DetailAccess;
 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const [showEmpty, setShowEmpty] = useState(false);
-  const empties = sections.reduce(
+  const groups = withAccess(sections, access, t("record.details.ownership"));
+  const empties = groups.reduce(
     (sum, section) => sum + (section.rows ?? []).filter((r) => r.empty).length,
     0,
   );
   return (
     <div className="recorddetails">
-      {sections.map((section) => (
+      {groups.map((section) => (
         <DetailGroup
           key={section.key}
           section={section}
@@ -80,8 +96,48 @@ export function RecordDetails({
           </Button>
         </div>
       )}
-      {footnote && <p className="recorddetails-note">{footnote}</p>}
+      {footnote && <div className="recorddetails-note">{footnote}</div>}
     </div>
+  );
+}
+
+// The access row goes last in Ownership, or opens a group of that name when
+// the record draws none.
+function withAccess(
+  sections: readonly DetailSection[],
+  access: DetailAccess | undefined,
+  ownershipLabel: string,
+): readonly DetailSection[] {
+  if (!access) {
+    return sections;
+  }
+  const foot = access.foot && (
+    <div className="recorddetails-access">{access.foot}</div>
+  );
+  if (!sections.some((section) => section.key === "ownership")) {
+    return [
+      ...sections,
+      {
+        key: "ownership",
+        label: ownershipLabel,
+        rows: [access.row],
+        children: foot,
+      },
+    ];
+  }
+  return sections.map((section) =>
+    section.key === "ownership"
+      ? {
+          ...section,
+          rows: [...(section.rows ?? []), access.row],
+          children: (
+            <>
+              {section.children}
+              {foot}
+            </>
+          ),
+        }
+      : section,
   );
 }
 
@@ -89,21 +145,37 @@ function DetailGroup({
   section,
   showEmpty,
 }: Readonly<{ section: DetailSection; showEmpty: boolean }>) {
+  const t = useT();
   const labelId = useId();
   const rows = (section.rows ?? []).filter((row) => showEmpty || !row.empty);
-  if (rows.length === 0 && !section.children) {
+  if (rows.length === 0 && !section.children && !section.edit) {
     return null;
   }
   return (
     <section className="recorddetails-group" aria-labelledby={labelId}>
-      <Heading
-        size="xxsmall"
-        as="h2"
-        id={labelId}
-        className="recorddetails-label"
-      >
-        {section.label}
-      </Heading>
+      <div className="recorddetails-labelline">
+        <Heading
+          size="xxsmall"
+          as="h2"
+          id={labelId}
+          className="recorddetails-label"
+        >
+          {section.label}
+        </Heading>
+        {section.help && <SectionHelp help={section.help} />}
+        {section.edit && (
+          <Button
+            variant="link"
+            className="recorddetails-edit"
+            aria-label={t("record.details.editSection", {
+              section: section.label,
+            })}
+            onClick={section.edit.onEdit}
+          >
+            {t("record.edit")}
+          </Button>
+        )}
+      </div>
       {rows.length > 0 && <FactList flat facts={rows} />}
       {section.children}
     </section>

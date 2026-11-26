@@ -20,7 +20,7 @@ func admitTaskTime(in *LogActivityInput) error {
 		return nil
 	}
 	if in.Kind != string(crmcontracts.ActivityKindTask) {
-		return &KindFieldError{Field: fieldDueHasTime, Only: "a task"}
+		return &KindFieldError{Field: fieldDueHasTime, Only: onlyATask}
 	}
 	if in.DueAt == nil {
 		return &RequiredFieldError{Field: fieldDueAt}
@@ -28,6 +28,7 @@ func admitTaskTime(in *LogActivityInput) error {
 	if in.RemindAt == nil {
 		due := *in.DueAt
 		in.RemindAt = &due
+		in.RemindIntent = in.DueIntent
 	}
 	return nil
 }
@@ -38,7 +39,7 @@ func admitTaskTime(in *LogActivityInput) error {
 // the time of day it would vouch for is due_at's.
 func (in *UpdateActivityInput) admitPatchTime(kind crmcontracts.ActivityKind) error {
 	if in.DueHasTime != nil && kind != crmcontracts.ActivityKindTask {
-		return &KindFieldError{Field: fieldDueHasTime, Only: "a task"}
+		return &KindFieldError{Field: fieldDueHasTime, Only: onlyATask}
 	}
 	if in.DueHasTime != nil && in.DueAt == nil {
 		return &RequiredFieldError{Field: fieldDueAt}
@@ -63,6 +64,7 @@ func (in *UpdateActivityInput) followReminder(current crmcontracts.Activity) {
 	if in.DueAt != nil && in.DueHasTime != nil && *in.DueHasTime {
 		due := *in.DueAt
 		in.RemindAt = &due
+		in.RemindIntent = in.DueIntent
 		return
 	}
 	moved := in.DueAt != nil || in.clears("due_at")

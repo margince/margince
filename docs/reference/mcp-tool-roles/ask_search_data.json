@@ -1,0 +1,14 @@
+{
+  "tool": "read_analytics",
+  "action": "ask",
+  "verb": "ask_search_data",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

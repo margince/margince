@@ -7,14 +7,22 @@
 
 import { infiniteQueryOptions } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { components } from "../api/schema";
+import type { components, operations } from "../api/schema";
 import { unwrap } from "./problem";
 import { HOME_DAY_FRESH_MS, isLiveWorkRead, worklistKey } from "./workkeys";
-import { categoryInView, type WorklistView } from "./worklistviews";
+import {
+  categoryInView,
+  DEFAULT_VIEW,
+  type WorklistView,
+} from "./worklistviews";
 
 type Worklist = components["schemas"]["Worklist"];
 type WorklistScope = Worklist["scope"];
 type WorklistFilter = NonNullable<Worklist["filter"]>;
+/** `home` is what Home draws: Focus, the figures and the day's meetings. */
+type WorklistShape = NonNullable<
+  NonNullable<operations["getWorklist"]["parameters"]["query"]>["shape"]
+>;
 
 /** The read useWorklist makes, which Home's prefetch also starts. */
 export function worklistDayOptions(
@@ -22,14 +30,17 @@ export function worklistDayOptions(
   filter: WorklistFilter,
   owner?: string,
   view?: WorklistView,
+  shape?: WorklistShape,
 ) {
-  // A view joins the key only when named, so a view-less read keeps its own key.
+  // A view and a shape join the key only when named, so a read without them
+  // keeps its own key.
   const queryKey = [
     ...worklistKey,
     scope,
     filter,
     owner ?? "",
     ...(view ? [view] : []),
+    ...(shape ? [shape] : []),
   ];
   return infiniteQueryOptions({
     queryKey,
@@ -37,17 +48,27 @@ export function worklistDayOptions(
       ? { refetchOnWindowFocus: true }
       : {
           refetchInterval: (query: {
-            state: { data?: { pages: Worklist[] } };
-          }) => homeDayWait(query.state.data?.pages ?? [], Date.now()),
+            state: { data?: { pages: Worklist[] }; dataUpdatedAt: number };
+          }) =>
+            homeDayWait(
+              query.state.data?.pages ?? [],
+              Date.now(),
+              query.state.dataUpdatedAt,
+            ),
         }),
     initialPageParam: undefined as string | undefined,
     // React Query aborts the signal once no screen still observes this key, and
     // the server then stops assembling the day instead of answering nobody.
     queryFn: ({ pageParam, signal }) =>
-      readWorklistPage(scope, filter, owner, pageParam, signal, view),
+      readWorklistPage(scope, filter, owner, pageParam, signal, view, shape),
     // A page can empty as rows leave the snapshot; only its cursor ends the walk.
     getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
+}
+
+/** Home's own read of the day: Focus, the figures and the day's meetings. */
+export function homeDayOptions() {
+  return worklistDayOptions("mine", "all", undefined, DEFAULT_VIEW, "home");
 }
 
 // The contract's largest page. Every page assembles the whole day again, so a
@@ -62,6 +83,7 @@ export async function readWorklistPage(
   cursor: string | undefined,
   signal?: AbortSignal,
   view?: WorklistView,
+  shape?: WorklistShape,
 ): Promise<Worklist> {
   // Decisions and System also send their own filter, so a server that knows
   // no `view` still answers with that view's rows.
@@ -70,9 +92,12 @@ export async function readWorklistPage(
   const whose = owner
     ? { owner, filter: wire, relationships: "omit" as const }
     : { scope, filter: wire, relationships: "omit" as const };
-  const dials = view
-    ? { ...whose, view, limit: WORKLIST_PAGE_ROWS }
-    : { ...whose, limit: WORKLIST_PAGE_ROWS };
+  const dials = {
+    ...whose,
+    ...(view ? { view } : {}),
+    ...(shape ? { shape } : {}),
+    limit: WORKLIST_PAGE_ROWS,
+  };
   const page = unwrap(
     await api.GET("/worklist", {
       params: { query: cursor ? { ...dials, cursor } : dials },
@@ -127,8 +152,34 @@ const DUE_SLACK_MS = 1_000;
 // next month would then read the day again the moment each read ends.
 const LONGEST_WAIT_MS = 60 * 60_000;
 
-/** When Home's day is read again: its next due row, or once it is stale. */
-export function homeDayWait(pages: Worklist[], now: number): number {
+// A kept answer served past its freshness is read again behind it on the
+// server; asking shortly after picks up the fresh one. Three stale answers in a
+// row mean that read is failing, and the day waits as usual. After a pause
+// longer than the retries span, a stale answer starts a new run. That is the
+// one after the reader's own write, and it gets its short retries again.
+export const HOME_DAY_STALE_RETRY_MS = 3_000;
+const HOME_DAY_STALE_RETRIES = 3;
+const HOME_DAY_STALE_RUN_GAP_MS = 4 * HOME_DAY_STALE_RETRY_MS;
+const staleRun = { lastAnswerAt: 0, answers: 0 };
+
+/** When Home's day is read again: its next due row, or once it is stale.
+ *  answeredAt is when the newest response arrived; each response counts once,
+ *  however often this is asked about it. */
+export function homeDayWait(
+  pages: Worklist[],
+  now: number,
+  answeredAt: number = now,
+): number {
+  if (pages[0]?.served_stale) {
+    if (answeredAt !== staleRun.lastAnswerAt) {
+      const sinceLast = answeredAt - staleRun.lastAnswerAt;
+      const newRun = sinceLast < 0 || sinceLast > HOME_DAY_STALE_RUN_GAP_MS;
+      staleRun.answers = newRun ? 1 : staleRun.answers + 1;
+      staleRun.lastAnswerAt = answeredAt;
+    }
+    if (staleRun.answers <= HOME_DAY_STALE_RETRIES)
+      return HOME_DAY_STALE_RETRY_MS;
+  }
   const due = untilNextDue(pages, now);
   return due === false ? HOME_DAY_FRESH_MS : Math.min(due, HOME_DAY_FRESH_MS);
 }

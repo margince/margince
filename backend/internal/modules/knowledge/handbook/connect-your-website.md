@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/webforms.tsx frontend/src/features/settings/webformdrawer.tsx frontend/src/features/settings/webformsetup.tsx frontend/src/features/settings/webformsnippet.ts backend/internal/modules/webforms backend/internal/compose/webformleads.go backend/internal/compose/webforms.go -->
+<!-- describes: frontend/src/components/websiteinquiryexisting.tsx frontend/src/components/websiteinquirydialog.tsx frontend/src/components/websiteinquiryfields.tsx frontend/src/features/settings/webforms.tsx frontend/src/features/settings/webformdrawer.tsx frontend/src/features/settings/webformsetup.tsx frontend/src/features/settings/webformsnippet.ts backend/internal/modules/webforms backend/internal/compose/webformlead backend/internal/compose/webforms.go -->
 # Connecting your website
 
 A website form sends each question from your website to Margince as a new lead. Each form
@@ -19,6 +19,11 @@ Style the form as you like, but keep each field's `name`. A post from a website 
 
 To check that the code works, send one test message from your page. Once Margince accepts it, the form's row shows **Last post** and the date. Until then it shows **No post recorded yet**.
 Also called: contact form, request form, lead form, web form, embed a form.
+
+### How do I make a form's leads ask about one product?
+<!-- opens: settings/web-forms -->
+To tie a form to one product, open the form under **Settings → Website forms** and pick a **Product**. Every new lead the form captures asks about that product, and a lead that already exists keeps its own. **Capture leads with no product** clears it.
+Also called: form product, product on a web form, lead source product.
 
 ### Can I keep the form I already have?
 Yes. Point the form at the **Form address** with `method="post"`, and give its fields the names Margince reads:
@@ -40,18 +45,31 @@ Margince adds a lead with the prospect's name, email, phone and company, and the
 
 Open the note to see each field under its own label. The page it came from is a link, and the consent is a badge with its policy version. Margince stores that page, and the page before it, only as a web address. It drops the text after `?` except the `utm_` names, the text after `#`, and any name and password in the address. Text that is not a web address is not stored.
 
-If a lead or contact already has that email address, Margince adds the note to it and makes no new lead. A double click on the send button adds one note. If the address was erased on request, Margince keeps nothing, and the prospect sees the same message as any other.
+If a lead or contact already has that email address, Margince adds the note to it and makes no new lead. With the form code we give you, a double click adds one note. If the address was erased on request, Margince keeps nothing, and the prospect sees the same message as any other.
 
 A line outside the quote was written by Margince, so a prospect cannot type one.
 
 The prospect then sees the form's **Success message**, or goes to the **Thank-you page** if you set one.
 Also called: where do my website leads go, new lead from website, duplicate lead.
 
-### Who gets the leads from a form?
-Pick a colleague in **Owner of new leads** when you create or edit the form. Each new lead from it then goes to that colleague. With **Unassigned**, anyone on the team can pick the lead up. If the owner leaves the workspace, new leads arrive unassigned until you pick someone else.
+### Who handles questions from a form?
+Choose **Inquiry handling** beside the form. Choose one colleague, share work between selected colleagues, or ask someone to check each question first. Pick a colleague to check questions that need review, a task title, a deadline and its time zone.
 
-The list holds every colleague who may own records, also those whose records you do not see. Type a name to find it.
-Also called: assign website leads, lead owner, route form leads.
+Choose **Review handling** to check the plan. **Authorized by** names the colleague whose rights let the rule act. The colleague who checks questions and the selected colleagues get the work. Saving this plan replaces the old lead handling for this form.
+
+**Save paused** keeps the plan off and stops automatic tasks for new posts. Choose **Turn on this handling** to create tasks for future accepted posts. Turning it on leaves past questions as they are.
+
+An existing owner keeps the lead or contact. A new or unowned lead follows the plan. The colleague who checks questions gets a task when the plan leaves the lead unassigned. A new post gets its own task. A retry with the same key keeps the old task. The deadline ends on the chosen local day, in the chosen time zone.
+
+**Request type field (optional)** can name a lead picklist sent by your website form. A value outside that list stays in the note. Leave this choice as **Not specified** if the form has no request type.
+
+For a form with no handling plan, **Owner of new leads** still sets who gets new leads. Its value stops deciding who gets new work once you save a handling plan.
+
+To work on past questions, save the plan first. Open **Inquiry handling**, then **Handle existing inquiries**. Choose up to 50 posts and **Review selected inquiries**. Check who gets the task and when it is due. **Create the reviewed tasks** acts only on posts shown as ready.
+
+A post that changed, or that you can no longer read, needs a new review. The result names each task made. This leaves a paused plan off and does not change future work.
+
+Also called: assign website leads, lead owner, route form leads, handle questions.
 
 ### How do I connect WordPress?
 To connect a WordPress site, add a **Custom HTML** block to the page and paste the **Code to paste** into it. Choose **Your website** and list the site's address under **Websites**.
@@ -78,10 +96,12 @@ A post whose secret does not match is refused. If the secret is lost, choose **M
 Also called: Typeform webhook, Tally webhook, form builder.
 
 ### How do I send leads from my website's server?
-To send leads from your own server, choose **Website server** and choose **Create form**. Margince shows the form's secret once. Store it on the server as `MARGINCE_FORM_SECRET`, then use the **Code to paste**. It signs each post, so a copy of an old post is refused.
+To send leads from your own server, choose **Website server** and choose **Create form**. Margince shows the form's secret once. Store it on the server as `MARGINCE_FORM_SECRET`, then use the **Code to paste**. It signs each post, so a copy of an old post is refused. Posts that arrive together wait a few seconds for each other. If the form stays busy longer, the post is refused as busy and nothing is stored, and the **Code to paste** sends it twice more.
 
 This fits a site that handles its forms on the server, such as one built with Payload. **Make a new secret** in the row's **⋯** menu makes a new secret, and the old one stops working at once.
-Also called: server to server, API, signed post, backend form.
+
+Your AI assistant can also create a form for you. It never sees the form's secret, so the secret stays out of the chat. Choose **Make a new secret** on the new form to see one, then store it on your server.
+Also called: server to server, API, signed post, backend form, create a form with an agent.
 
 ### How do I connect a Payload site?
 To connect a site built with Payload and its form tool, create a form with **Website server** chosen. Then send each new form entry from a hook:
@@ -112,7 +132,15 @@ Each Payload form field keeps the name you give it. Name them `email`, `full_nam
 Also called: Payload, form builder, Payload forms.
 
 ### How does Margince keep spam out?
-Margince takes a post only from a website on the form's list, or with the form's secret. It also drops a post that fills the hidden `_mrg_hp` field. It drops one sent under three seconds after the page first opened in that browser tab. Too many posts from one place in a minute are refused. A post the hidden checks drop still gets the usual answer, so a bot cannot learn which check stopped it.
+Margince takes a post only from a website on the form's list, or with the form's secret. It also drops a post that fills the hidden `_mrg_hp` field. It drops one sent under three seconds after the page first opened in that browser tab. A post the hidden checks drop still gets the usual answer, so a bot cannot learn which check stopped it.
+
+Too many posts at once are slowed down before they reach your leads. By default one address may send 10 posts a minute to all forms, and 5 to one form. One form takes 30 a minute from everyone. All forms of your Margince together take 120 a minute, and the whole installation 600. A post past a limit is refused with the answer "too many requests" and a time to wait, and nothing is stored. Each further post waits longer.
+
+A post refused for its address is not counted for the wider limits, so one sender cannot hold up anyone else.
+
+After 5 minutes in a row over a limit, every post under that limit is refused for 15 minutes. All forms are refused together only when posts come from at least 10 addresses. A second block soon after lasts twice as long, at most 24 hours. A block always ends on its own. A prospect who sends during a refusal sees an error and can send again after the wait.
+
+While a form refuses posts, its row under **Settings** says so, such as "Throttled since 14:02, too many submissions" or "Blocked until 15:30". When all forms are refused together, every row says "Paused for all forms: too much traffic". Whoever runs your Margince can change the numbers.
 Also called: spam, bots, junk leads.
 
 A prospect who sends, goes back and sends again keeps the first time, so the second message lands. That needs a browser that lets the page store it. In a browser that blocks this, a second send within three seconds of going back is still dropped. The code on your page does not update itself. Copy the **Code to paste** again when it changes.
@@ -140,5 +168,7 @@ When you run Margince yourself, you decide what happens to what the form asks fo
 Also called: privacy notice, privacy policy, GDPR notice.
 
 ### How do I stop a form?
-To stop a form for a while, choose **Pause form** in the row's **⋯** menu. A paused form refuses posts until you choose **Resume form**. To stop it for good, choose **Archive**. An archived form's address stops working, and a new form gets a new address.
+To stop a form for a while, choose **Pause form** in the row's **⋯** menu. A paused form refuses posts until you choose **Resume form**.
+
+To stop it for good, choose **Archive**. An archived form's address stops working, and a new form gets a new address. Archiving also turns off the form's handling plan, which stays in **Settings** → **Automations** with its run history. To archive a form with a handling plan, you also need the right to change automations.
 Also called: turn off form, disable form, delete form.

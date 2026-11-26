@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // joinSchema is the two join tables as the real schema declares them, plus the
@@ -200,7 +201,10 @@ func TestAJoinEdgeIsNeverReadAsAnInverseOne(t *testing.T) {
 		t.Fatalf("a join edge bound as a scalar one: column=%q forward=%v", hop.column, hop.forward)
 	}
 	compiler := &planCompiler{}
-	condition := compiler.edgeCondition(hop)
+	condition, err := compiler.edgeCondition(context.Background(), hop, entityContact)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !strings.Contains(condition, "FROM \"relationship\" j") {
 		t.Errorf("the edge does not traverse the join table: %s", condition)
 	}
@@ -224,7 +228,7 @@ func TestAJoinHopReadsItsLifecycleGuardsOffTheTableRatherThanAssumingThem(t *tes
 	if !strings.Contains(condition, "j.archived_at IS NULL") {
 		t.Errorf("an archived employment still carries a hop: %s", condition)
 	}
-	if !strings.Contains(condition, "j.ended_at IS NULL OR j.ended_at > current_date") {
+	if !strings.Contains(condition, "j.ended_at IS NULL OR j.ended_at > "+occurredday.TodaySQL("now()")) {
 		t.Errorf("a job the contact left still carries a hop: %s", condition)
 	}
 	// A future ended_at is a notice period and is still current, so the
@@ -511,7 +515,7 @@ func TestAPlanTraversesAJoinEdgeAndTheHopKeepsItsOwnGuards(t *testing.T) {
 		// recorded in error, an ended one is a job the contact left, and the SQL
 		// that filtered only the first read a former employer as current.
 		`j.archived_at IS NULL`,
-		`j.ended_at IS NULL OR j.ended_at > current_date`,
+		"j.ended_at IS NULL OR j.ended_at > " + occurredday.TodaySQL("now()"),
 		// Everything a hop already carried, unchanged by the new edge form.
 		"JOIN LATERAL", "hop_id", "hop_title", "h.archived_at IS NULL",
 		"NOT h.is_anchor", `h."address_city" =`, "ORDER BY h.id LIMIT 1",

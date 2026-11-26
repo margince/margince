@@ -105,7 +105,7 @@ func TestASelfOnlyStagingIsAbsentFromAColleaguesTargetFilteredReads(t *testing.T
 	// THE LEAK. The colleague holds every contact grant and every row, so
 	// requireDecisionGrants and targetVisible both pass — and the self-only
 	// narrowing is the only thing standing between them and the row.
-	if listed, panel := read(t, seatFor(e.ws, colleague, tableDeal, objectActivity)); listed != 0 || panel != 0 {
+	if listed, panel := read(t, seatFor(e.ws, colleague, tableDeal, objectActivity, tableContact)); listed != 0 || panel != 0 {
 		t.Errorf("a colleague read %d row(s) from List(targeted) and %d from PendingForTarget for a "+
 			"held draft written for somebody else — releasing one sends it as the approver, so this "+
 			"colleague could put their own name on a rep's message", listed, panel)
@@ -114,7 +114,7 @@ func TestASelfOnlyStagingIsAbsentFromAColleaguesTargetFilteredReads(t *testing.T
 	// THE POSITIVE CONTROL, and it is what makes the assertion above mean
 	// anything: without it this test also passes when both reads are broken and
 	// return nothing to anyone.
-	listed, panel := read(t, seatFor(e.ws, e.rep, tableDeal, objectActivity))
+	listed, panel := read(t, seatFor(e.ws, e.rep, tableDeal, objectActivity, tableContact))
 	if listed != 1 || panel != 1 {
 		t.Errorf("the member it was staged for read %d row(s) from List(targeted) and %d from "+
 			"PendingForTarget, want 1 and 1 — the narrowing withholds the proposal from its own subject",
@@ -123,7 +123,7 @@ func TestASelfOnlyStagingIsAbsentFromAColleaguesTargetFilteredReads(t *testing.T
 	if listed == 1 {
 		// The row is the one staged here rather than some other pending proposal
 		// against the same contact, so "1" is this proposal and not a coincidence.
-		rows, _, err := e.svc.List(seatFor(e.ws, e.rep, tableDeal, objectActivity), ListInput{TargetType: &targetType, TargetID: &target})
+		rows, _, err := e.svc.List(seatFor(e.ws, e.rep, tableDeal, objectActivity, tableContact), ListInput{TargetType: &targetType, TargetID: &target})
 		if err != nil {
 			t.Fatalf("re-reading the subject's own list: %v", err)
 		}

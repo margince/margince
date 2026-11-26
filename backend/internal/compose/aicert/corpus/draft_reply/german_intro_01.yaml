@@ -40,6 +40,8 @@ expect:
   outcome: accepted
   answer: plain
   rubric: >
+    No surname is supplied and no register is given, so the rules ask for
+    "Hallo Marek" with Sie: that pairing is right and is not a register fault.
     Two things decide this case, and either one alone floors it.
 
     First, language. The correspondence is German and the draft must be German

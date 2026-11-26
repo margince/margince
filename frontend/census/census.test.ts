@@ -11,6 +11,7 @@ import { readdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
+import { stable } from "../src/format/collate";
 import {
   buildTree,
   type CensusRule,
@@ -24,7 +25,7 @@ import {
 const rulesDir = join(dirname(fileURLToPath(import.meta.url)), "rules");
 const ruleFiles = readdirSync(rulesDir)
   .filter((name) => name.endsWith(".census.ts"))
-  .sort();
+  .sort(stable);
 
 function isRule(value: unknown): value is CensusRule {
   if (typeof value !== "object" || value === null) return false;
@@ -77,7 +78,7 @@ describe("census", () => {
   // So the walk must equal what git knows under the same roots.
   it("reads every file git knows under its roots", () => {
     const walked = tree.files.map((file) => relative(repoRoot, file.path));
-    expect(walked.sort()).toEqual(gitListedFiles().sort());
+    expect(walked.sort(stable)).toEqual(gitListedFiles().sort(stable));
   });
 
   it("runs one rule per *.census.ts file, each under its own name", () => {

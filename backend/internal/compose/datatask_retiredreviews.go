@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // retiredReviewsDataTask closes the customer-support reviews still open. No
@@ -23,7 +24,7 @@ import (
 func retiredReviewsDataTask(pool *pgxpool.Pool) datatask.Task {
 	return datatask.Task{
 		ID: "core/1793803167_close_retired_customer_reviews", Version: 1,
-		Title: "Closing the retired customer-support reviews", Requires: []string{"core/1793883845"},
+		Title: systemtext.Literal("datatask.title.core.1793803167_close_retired_customer_reviews"), Requires: []string{"core/1793883845"},
 		Steps: []datatask.Step{{
 			Name: "close_retired_customer_reviews", Limit: 50, MinLimit: 5,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

@@ -3,13 +3,21 @@
 
 import {
   type QueryClient,
+  type QueryKey,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { fileListKeys } from "./attachmentkeys";
 import { problemCodeOf, problemStatus, unwrap } from "./problem";
 import { invalidateRecord } from "./recordwritekeys";
-import { contactCasesKey, worklistKey } from "./workkeys";
+import {
+  companyPairsKey,
+  contactCasesKey,
+  dsrsKey,
+  worklistKey,
+} from "./workkeys";
 
 export type PairDisposition = "merge" | "not_a_duplicate";
 
@@ -19,25 +27,41 @@ function invalidatePairReads(client: QueryClient): Promise<unknown> {
   return Promise.all([
     client.invalidateQueries({ queryKey: worklistKey }),
     client.invalidateQueries({ queryKey: contactCasesKey }),
+    client.invalidateQueries({ queryKey: companyPairsKey }),
   ]);
 }
 
 /**
  * The reads a contact merge reshapes: each named contact's own pages, the
  * contact lists that showed the merged-away record, and the pair reads. The
- * case merge and a merge of one contact pair both end here.
+ * subject requests that named it go stale too. The case merge and a merge of
+ * one contact pair both end here.
  */
 export function invalidateAfterContactMerge(
   client: QueryClient,
   contactIds: Iterable<string>,
 ): Promise<unknown> {
+  const ids = [...new Set(contactIds)];
   return Promise.all([
     invalidatePairReads(client),
     client.invalidateQueries({ queryKey: ["contacts"] }),
-    ...[...new Set(contactIds)].map((id) =>
-      invalidateRecord(client, "contact", id),
+    client.invalidateQueries({ queryKey: dsrsKey }),
+    ...ids.map((id) => invalidateRecord(client, "contact", id)),
+    // The merged-away contact's files and message links move to the survivor.
+    ...movedFileKeys("contact", ids).map((queryKey) =>
+      client.invalidateQueries({ queryKey }),
     ),
   ]);
+}
+
+// A merge refiles every file of the merged-away record under the survivor.
+function movedFileKeys(
+  kind: "contact" | "company",
+  ids: readonly string[],
+): QueryKey[] {
+  return ids.flatMap((id) =>
+    fileListKeys({ entityType: kind, entityId: id }, "moved"),
+  );
 }
 
 /**
@@ -61,6 +85,8 @@ export function useDedupeDisposition() {
       winnerId?: string;
       /** Both ends of a contact pair, so a merge stales their pages too. */
       contactIds?: readonly string[];
+      /** Both ends of a company pair, whose libraries a merge combines. */
+      companyIds?: readonly string[];
     }) => {
       unwrap(
         await api.POST("/dedupe/candidates/{id}/disposition", {
@@ -69,10 +95,19 @@ export function useDedupeDisposition() {
         }),
       );
     },
-    onSuccess: (_, input) =>
-      input.disposition === "merge" && input.contactIds
-        ? invalidateAfterContactMerge(queryClient, input.contactIds)
-        : invalidatePairReads(queryClient),
+    onSuccess: (_, input) => {
+      if (input.disposition !== "merge")
+        return invalidatePairReads(queryClient);
+      if (input.contactIds) {
+        return invalidateAfterContactMerge(queryClient, input.contactIds);
+      }
+      return Promise.all([
+        invalidatePairReads(queryClient),
+        ...movedFileKeys("company", input.companyIds ?? []).map((queryKey) =>
+          queryClient.invalidateQueries({ queryKey }),
+        ),
+      ]);
+    },
   });
 }
 
@@ -106,4 +141,39 @@ export function pairDecisionFailure(error: unknown): PairDecisionFailure {
   }
   if (code === "already_disposed" || code === "not_undoable") return "settled";
   return "failed";
+}
+
+/** The ids of the other companies an open pair puts beside this one, every page of them. */
+export async function readCompanyPairs(companyId: string): Promise<string[]> {
+  const others: string[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = unwrap(
+      await api.GET("/dedupe/candidates", {
+        params: {
+          query: {
+            status: "open",
+            entity_type: "company",
+            record_id: companyId,
+            limit: 100,
+            cursor,
+          },
+        },
+      }),
+    );
+    for (const pair of page.data) {
+      others.push(pair.left_id === companyId ? pair.right_id : pair.left_id);
+    }
+    cursor = page.page.has_more
+      ? (page.page.next_cursor ?? undefined)
+      : undefined;
+  } while (cursor !== undefined);
+  return others;
+}
+
+export function useCompanyPairs(companyId: string) {
+  return useQuery({
+    queryKey: [...companyPairsKey, companyId],
+    queryFn: () => readCompanyPairs(companyId),
+  });
 }

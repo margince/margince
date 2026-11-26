@@ -10,6 +10,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -18,9 +19,11 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/dormancy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -55,13 +58,16 @@ type ListCompaniesInput struct {
 	// storekit.OwnershipClause, which also refuses two of them at once.
 	OwnerTeamID *ids.TeamID
 	Unassigned  *bool
-	// Two questions, asked separately because one value could not answer both:
-	// Lifecycle is where the account stands with us and holds one value at a
-	// time, while RelationshipType is what the company IS to us and holds
-	// several — a partner is routinely a customer as well. They replaced a
-	// single classification field, now retired.
-	Lifecycle        *string
+	// Two questions, asked separately because one value could not answer both.
+	// Status is where the account stands with us and holds one value at a time.
+	// RelationshipType is what the company is to us and holds several: a
+	// partner is often a customer as well. They replaced the retired
+	// classification field.
+	Status           *string
 	RelationshipType *string
+	// ExtensionRelationshipType is RelationshipType for an `ext:<unit>:<type>`
+	// value, kept apart so the closed core enum stays closed.
+	ExtensionRelationshipType *string
 	// Industry is free text on the record; SizeBand is the contract's enum.
 	Industry *string
 	SizeBand *string
@@ -91,6 +97,8 @@ type ListCompaniesInput struct {
 	MemberOf *ids.UUID
 	// Partner narrows to companies whose live partner programme matches.
 	Partner partnerProgramFilter
+	// Dormancy narrows to the companies on one rung of the dormancy ladder.
+	Dormancy *string
 }
 
 // companyListFields is the company list's core sortable
@@ -103,11 +111,11 @@ var companyListFields = map[string]storekit.SortField{
 	ownerIDColumn:      storekit.OwnerNameSort(companyEntity),
 	lastActivityColumn: storekit.Column(storekit.KindTimestamp),
 	columnDescription:  storekit.Column(fieldcatalog.TypeText),
-	// classification is retired and the column the list draws is lifecycle, so
+	// classification is retired and the column the list draws is status, so
 	// this is the one the header offers. By the stored value, which groups the
 	// seven states together; the funnel's own order is a question of its own
 	// and the deals list answers `status` the same way today.
-	filterLifecycle: storekit.Column(fieldcatalog.TypeText),
+	filterStatus: storekit.Column(fieldcatalog.TypeText),
 	// The three the list draws and does not store (company_sorts.go).
 	"website_url":     {Kind: fieldcatalog.TypeText, Expr: orderByPrimaryDomain},
 	"contact_count":   {Kind: fieldcatalog.TypeNumber, Expr: orderByContactCount},
@@ -147,7 +155,7 @@ func companyDomainClause(domain *string, includeArchived bool, arg func(any) int
 	return storekit.SQLf(`EXISTS (
 		SELECT 1 FROM company_domain d
 		WHERE d.company_id = company.id
-		  AND d.domain = $%d`+live+`)`,
+		  AND `+owndomain.FoldedEqualsSQL("d", "$%[1]d")+live+`)`,
 		arg(foldDomainQuery(*domain)))
 }
 
@@ -157,7 +165,7 @@ func companyDomainClause(domain *string, includeArchived bool, arg func(any) int
 // page with nothing in it, not a request the surface should refuse: the
 // caller named an account by something, and no account has it.
 func foldDomainQuery(raw string) string {
-	parsed, err := values.ParseDomain(raw)
+	parsed, err := owndomain.ParseDomain(raw)
 	if err != nil {
 		return ""
 	}
@@ -195,7 +203,7 @@ func companyCommonFilters(in ListCompaniesInput) listFilters {
 // ListCompanies answers one page of accounts under the caller's row scope,
 // filtered by the dials the contract declares and ordered by the shared sort.
 func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crmcontracts.Company, storekit.Page, error) {
-	return listPage(ctx, s, in.Sort, in.Limit, companyListSpec(in))
+	return listPage(ctx, s, in.Sort, in.Limit, companyListSpec(in, s.clock()))
 }
 
 // ListCompaniesTx is ListCompanies inside a caller-opened transaction. Same
@@ -205,17 +213,34 @@ func (s *Store) ListCompaniesTx(ctx context.Context, tx pgx.Tx, in ListCompanies
 	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	recs, page, err := listPageTx(ctx, tx, in.Sort, storekit.ClampLimit(in.Limit), active.cols, companyListSpec(in))
+	spec := companyListSpec(in, s.clock())
+	ctx, err := spec.prepare(ctx, tx)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	recs, page, err := listPageTx(ctx, tx, in.Sort, storekit.ClampLimit(in.Limit), active.cols, spec)
 	if recs == nil {
 		recs = []crmcontracts.Company{}
 	}
 	return recs, page, err
 }
 
-func companyListSpec(in ListCompaniesInput) listPageSpec[crmcontracts.Company] {
+func companyListSpec(in ListCompaniesInput, now time.Time) listPageSpec[crmcontracts.Company] {
 	shared := companyCommonFilters(in)
+	// The ladder is the installation's setting, read in the page's own
+	// transaction before the filters render.
+	var ladder dormancy.Ladder
 	return listPageSpec[crmcontracts.Company]{
-		entity:  companyEntity,
+		entity:    companyEntity,
+		firstPage: in.Cursor == nil || *in.Cursor == "",
+		prepare: func(ctx context.Context, tx pgx.Tx) (context.Context, error) {
+			if in.Dormancy == nil {
+				return ctx, nil
+			}
+			policy, err := DormancyPolicyTx(ctx, tx)
+			ladder = policy.Ladder
+			return ctx, err
+		},
 		columns: func(context.Context, func(any) int) (string, error) { return companyColumns, nil },
 		fields:  companyListFields,
 		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
@@ -244,12 +269,9 @@ func companyListSpec(in ListCompaniesInput) listPageSpec[crmcontracts.Company] {
 			}
 			where = append(where, sourceKey...)
 			where = appendCompanyLinkClauses(ctx, where, in, arg)
-			partner, err := companyPartnerClause(ctx, in.Partner, arg)
+			where, err = appendCompanyStandingClauses(ctx, where, in, ladder, now, arg)
 			if err != nil {
 				return nil, err
-			}
-			if partner != "" {
-				where = append(where, partner)
 			}
 			return appendCompanyEnumClauses(where, in, arg)
 		},
@@ -274,6 +296,9 @@ func companyListSpec(in ListCompaniesInput) listPageSpec[crmcontracts.Company] {
 			}
 			// One sample for the page, for the reason the single read binds
 			// one: every row on it is counted against the same day.
+			if err := stampCompanyCapabilities(ctx, tx, companies); err != nil {
+				return err
+			}
 			return attachCompanyCounts(ctx, tx, companies, rollupAsOf())
 		},
 		cursorKey: func(last crmcontracts.Company) (time.Time, ids.UUID) {
@@ -290,12 +315,12 @@ func companyListSpec(in ListCompaniesInput) listPageSpec[crmcontracts.Company] {
 // when the contract never accepted the question. The check runs here, inside
 // the store, so it lands after listPage's auth.Require.
 func appendCompanyEnumClauses(where []string, in ListCompaniesInput, arg func(any) int) ([]string, error) {
-	if in.Lifecycle != nil {
-		if !crmcontracts.ListCompaniesParamsLifecycle(*in.Lifecycle).Valid() {
-			return nil, httperr.Validation("lifecycle", "not_a_known_value",
+	if in.Status != nil {
+		if !crmcontracts.ListCompaniesParamsStatus(*in.Status).Valid() {
+			return nil, httperr.Validation(filterStatus, "not_a_known_value",
 				"filter by one of the account stages the contract defines, or leave the parameter off")
 		}
-		where = append(where, storekit.SQLf("lifecycle = $%d", arg(*in.Lifecycle)))
+		where = append(where, storekit.SQLf("status = $%d", arg(*in.Status)))
 	}
 	if in.Industry != nil {
 		if !crmcontracts.ListCompaniesParamsIndustry(*in.Industry).Valid() {
@@ -316,15 +341,25 @@ func appendCompanyEnumClauses(where []string, in ListCompaniesInput, arg func(an
 			return nil, httperr.Validation("relationship_type", "not_a_known_value",
 				"filter by one of the relationship types the contract defines, or leave the parameter off")
 		}
-		// EXISTS, not a join: an account carries several types, and a join
-		// would return it once per row for the keyset cursor to page over.
-		where = append(where, storekit.SQLf(`EXISTS (
-			SELECT 1 FROM company_relationship_type rt
-			WHERE rt.company_id = company.id
-			  AND rt.relationship_type = $%d AND rt.archived_at IS NULL)`,
-			arg(*in.RelationshipType)))
+		where = append(where, relationshipTypeClause(arg(*in.RelationshipType)))
+	}
+	if in.ExtensionRelationshipType != nil {
+		if _, declared := companytypes.Lookup(*in.ExtensionRelationshipType); !declared {
+			return nil, httperr.Validation("extension_relationship_type", "not_a_known_value",
+				"filter by a company type an installed extension declares, or leave the parameter off")
+		}
+		where = append(where, relationshipTypeClause(arg(*in.ExtensionRelationshipType)))
 	}
 	return where, nil
+}
+
+// relationshipTypeClause is EXISTS, not a join. An account carries several
+// types, and a join would return it once per row for the keyset cursor to page over.
+func relationshipTypeClause(argument int) string {
+	return storekit.SQLf(`EXISTS (
+		SELECT 1 FROM company_relationship_type rt
+		WHERE rt.company_id = company.id
+		  AND rt.relationship_type = $%d AND rt.archived_at IS NULL)`, argument)
 }
 
 // scanCompanyPage drains one list query's rows: each company
@@ -368,4 +403,37 @@ func appendCompanyLinkClauses(
 		where = append(where, clause)
 	}
 	return where
+}
+
+// appendCompanyStandingClauses adds the narrowings on how the account stands
+// with us: its partner programme and its rung on the dormancy ladder.
+func appendCompanyStandingClauses(
+	ctx context.Context, where []string, in ListCompaniesInput, ladder dormancy.Ladder, now time.Time, arg func(any) int,
+) ([]string, error) {
+	partner, err := companyPartnerClause(ctx, in.Partner, arg)
+	if err != nil {
+		return nil, err
+	}
+	if partner != "" {
+		where = append(where, partner)
+	}
+	if in.Dormancy == nil {
+		return where, nil
+	}
+	clause, err := dormancyClause(*in.Dormancy, ladder, now, arg)
+	if err != nil {
+		return nil, err
+	}
+	return append(where, clause), nil
+}
+
+// dormancyClause narrows to the companies on one rung today, by the window the
+// company page's reading agrees with (dormancy.Ladder.WindowOf).
+func dormancyClause(rung string, ladder dormancy.Ladder, now time.Time, arg func(any) int) (string, error) {
+	if !slices.Contains(dormancy.Rungs(), dormancy.Rung(rung)) {
+		return "", httperr.Validation("dormancy", "not_a_known_value",
+			"filter by active, cooling, dormant or stale, or leave the parameter off")
+	}
+	asOf := fmt.Sprintf("$%d::timestamptz", arg(now))
+	return ladder.WindowOf(dormancy.Rung(rung)).SQL("company.last_activity_at", asOf), nil
 }

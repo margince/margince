@@ -381,13 +381,13 @@ func TestTheQuietRungMintsAVerbTheWithholdingCovers(t *testing.T) {
 	}
 
 	reader := quiet
-	momentaction.Withhold(as(map[string]principal.ObjectGrant{"contact": {Read: true}}), "en", &reader)
+	momentaction.Withhold(as(map[string]principal.ObjectGrant{"contact": {Read: true}}), "en", "contact", &reader)
 	if reader.RecommendedAction.State != crmcontracts.ContactMomentActionStateBlocked {
 		t.Errorf("state = %q for a caller without activity.create, want blocked", reader.RecommendedAction.State)
 	}
 
 	writer := quiet
-	momentaction.Withhold(as(map[string]principal.ObjectGrant{"contact": {Read: true}, "activity": {Create: true}}), "en", &writer)
+	momentaction.Withhold(as(map[string]principal.ObjectGrant{"contact": {Read: true}, "activity": {Create: true}}), "en", "contact", &writer)
 	if writer.RecommendedAction.State != crmcontracts.ContactMomentActionStateAvailable || writer.RecommendedAction.Destination == nil {
 		t.Errorf("a caller holding activity.create got %q with destination %v, want the action untouched", writer.RecommendedAction.State, writer.RecommendedAction.Destination)
 	}
@@ -404,7 +404,7 @@ func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
 	// The package's fixed noon, not now: the "due later today" case
 	// below asks a CALENDAR-day question, so a real clock decides it by what
 	// hour the suite happens to run. Two hours past 22:00 is tomorrow, and the
-	// sentence flips to "Due in 1 days."
+	// sentence flips to "Due tomorrow."
 	filed := now.Add(-48 * time.Hour)
 	page := &crmcontracts.Contact360{
 		NextSteps: &struct {

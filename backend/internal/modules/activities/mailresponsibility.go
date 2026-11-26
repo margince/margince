@@ -6,7 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
-	"strings"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -19,15 +19,15 @@ import (
 // seat named it keeps every mail somebody answers for, so mail nobody owns
 // never becomes shared or unassigned work. It runs before WaitingScanCap.
 //
-// A named seat's read starts from its mail that the waiting horizon can still
-// admit (waitingMailKeptSQL), never from its whole history.
+// A named seat's read starts from recent mail and human-held requests, never
+// from its whole address history.
 func personalMailResponsibilitySQL(owner *ids.UUID, identities string, arg func(any) int, asOf, days string) string {
 	if owner == nil {
 		return "(a.kind <> 'email' OR " + soleDirectSeatSQL(identities) + " IS NOT NULL)"
 	}
 	seat := fmt.Sprintf("$%d::uuid", arg(*owner))
 	return fmt.Sprintf("(a.kind = 'email' AND a.id = ANY (%s) AND %s = %s)",
-		storekit.DirectMailActivitiesSQL(identities, seat, waitingMailKeptSQL(asOf, days)), soleDirectSeatSQL(identities), seat)
+		storekit.DirectMailActivitiesSQL(identities, seat, waitingMailCutoffSQL(asOf, days), heldRequestIDsSQL()), soleDirectSeatSQL(identities), seat)
 }
 
 // mailSeats is whose mail one waiting scan reads before WaitingScanCap. It is
@@ -55,13 +55,15 @@ func (m mailSeats) responsibilitySQL(identities string, arg func(any) int, asOf,
 	return fmt.Sprintf("(a.kind <> 'email' OR %s = ANY($%d::uuid[]))", soleDirectSeatSQL(identities), arg(m.answeredBy))
 }
 
-// waitingMailKeptSQL is the mail, aliased `mail`, that the waiting horizon can
-// still admit: arrived inside it, or kept by a held request. It mirrors the
-// `young OR held` half of withinWaitingHorizonSQL; the raw instant bound is the
-// first conjunct of occurredday.FromSQL, so no young mail falls outside it.
-func waitingMailKeptSQL(asOf, days string) string {
-	young := fmt.Sprintf("mail.occurred_at >= %s - make_interval(days => %s) -- occurred_at raw: a superset bound, FromSQL's own first conjunct\n", asOf, days)
-	return "(" + young + " OR " + strings.Replace(heldRequestSQL(), "a.id = ANY", "mail.id = ANY", 1) + ")"
+// notAColleaguesOwnMailSQL keeps what a record page shows reader as waiting.
+// Unlike the Worklist it keeps unaddressed mail and non-mail messages, and hides only mail whose sole direct seat is a colleague.
+func notAColleaguesOwnMailSQL(identities, reader string) string {
+	return fmt.Sprintf("(a.kind <> 'email' OR coalesce(%s, %s) = %s)", soleDirectSeatSQL(identities), reader, reader)
+}
+
+// The raw instant bound is a superset of the waiting horizon's day comparison.
+func waitingMailCutoffSQL(asOf, days string) string {
+	return fmt.Sprintf("%s - make_interval(days => %s)", asOf, days)
 }
 
 // soleDirectSeatSQL decides who answers an inbound mail `a`
@@ -75,8 +77,10 @@ func mailSeatAddressesSQL(identities, seat string) string {
 	return storekit.MailSeatAddressesSQL(identities, seat)
 }
 
-func directMailSeatsSQL(identities string) string {
-	return storekit.DirectMailSeatsSQL("a", identities)
+// mailAnswerersSQL is the seats that answer mail `a`
+// (storekit.MailAnswerersSQL), the list a waiting row names its owner from.
+func mailAnswerersSQL(identities string) string {
+	return storekit.MailAnswerersSQL("a", identities)
 }
 
 func (s *Store) mailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error) {
@@ -115,6 +119,7 @@ func waitingReplyForOwner(row WaitingReply, owner *ids.UUID) WaitingReply {
 	} else if len(row.DirectRecipients) == 1 {
 		row.OwnerID = row.DirectRecipients[0]
 	}
+	row.OwnerWroteOnThread = !row.OwnerID.IsZero() && slices.Contains(row.threadWriters, row.OwnerID)
 	return row
 }
 

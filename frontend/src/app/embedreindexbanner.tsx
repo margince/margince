@@ -22,8 +22,7 @@ import { useCan } from "../lib/capability";
 // below asks the same grant the server checks, before a query that could only
 // 403. The embed binding is asked the same way. With no model bound the read
 // could only 501, and a /me not yet answered, or older than the field, asks nothing.
-export function EmbedReindexBanner() {
-  const t = useT();
+export function useReindexNeeded(): boolean | undefined {
   const canRead = useCan("embedding_reindex", "read");
   const bound = useEmbedReindexAvailable();
   const enabled = canRead && bound;
@@ -37,12 +36,18 @@ export function EmbedReindexBanner() {
   // stuck, exactly the state the settings card's recovery affordance
   // exists for. A redundant banner during a healthy rebuild is the
   // cheaper failure.
-  if (
-    !enabled ||
-    query.isError ||
-    !query.data ||
-    query.data.configured_identity === query.data.populated_identity
-  ) {
+  if (query.isLoading) return undefined;
+  return (
+    enabled &&
+    !query.isError &&
+    query.data !== undefined &&
+    query.data.configured_identity !== query.data.populated_identity
+  );
+}
+
+export function EmbedReindexBanner() {
+  const t = useT();
+  if (!useReindexNeeded()) {
     return null;
   }
   return (

@@ -93,14 +93,14 @@ func activityHasReaderExceptTx(ctx context.Context, tx pgx.Tx, id ids.UUID, exce
 		SELECT CASE WHEN a.internal_mail_authorization IS NOT NULL THEN EXISTS (
  SELECT 1 FROM app_user internal_reader WHERE %[4]s
  AND internal_reader.id NOT IN (%[3]s) AND %[5]s)
- ELSE a.audience = 'workspace'
+ ELSE %[6]s
 		    OR EXISTS (SELECT 1 FROM app_user u WHERE a.captured_by LIKE '%%:' || u.id
                     AND u.id NOT IN (%[3]s))
 		    OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id
-                    AND ci.user_id NOT IN (%[3]s))
-		    OR EXISTS (SELECT 1 FROM activity_participant ap
-		                WHERE ap.activity_id = a.id AND ap.user_id IS NOT NULL AND %[2]s
-                    AND ap.user_id NOT IN (%[3]s))
+                    AND ci.user_id IS NOT NULL AND ci.user_id NOT IN (%[3]s))
+		    OR %[7]s
+		    OR EXISTS (SELECT 1 FROM %[8]s AND guest.user_id IS NOT NULL AND %[2]s
+                    AND guest.user_id NOT IN (%[3]s))
 		    OR (a.audience = 'selected' AND EXISTS (
 		          SELECT 1 FROM activity_audience_member am
 		           WHERE am.activity_id = a.id
@@ -110,7 +110,8 @@ func activityHasReaderExceptTx(ctx context.Context, tx pgx.Tx, id ids.UUID, exce
 		                       JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
 		                      WHERE tm.team_id = am.subject_id
                             AND tm.user_id NOT IN (%[3]s))))))
-		  END FROM activity a WHERE a.id = $%[1]d`, row, ParticipantStandsSQL("ap", "a"), memberIdentitySetSQL(excluded), workforce.LiveHumanSQL("internal_reader"), internalMailReaderSQL("a"))
+		  END FROM activity a WHERE a.id = $%[1]d`, row, ParticipantStandsSQL("guest", "guest_of"), memberIdentitySetSQL(excluded), workforce.LiveHumanSQL("internal_reader"), internalMailReaderSQL("a"), WorkspaceAudienceSQL("a"),
+		sharedMailboxReaderSQL("a", sharedMailboxReaderColumn+" NOT IN ("+memberIdentitySetSQL(excluded)+")"), guestRowsSQL("a"))
 	var reachable bool
 	if err := tx.QueryRow(ctx, query, args...).Scan(&reachable); err != nil {
 		return false, fmt.Errorf("auth: reading whether an activity still has a reader: %w", err)

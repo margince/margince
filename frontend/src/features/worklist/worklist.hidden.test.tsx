@@ -28,6 +28,7 @@ function backlog(over: Partial<HiddenBacklog> = {}): HiddenBacklog {
     unlinked: 0,
     colleagues: 0,
     informs_us: 0,
+    private_unchecked: 0,
     truncated: false,
     clear: true,
     ...over,
@@ -119,6 +120,32 @@ describe("the hidden-backlog panel", () => {
       expect(screen.getByText("Judged to ask nothing")).toBeTruthy(),
     );
     expect(screen.getByText("4 waiting")).toBeTruthy();
+  });
+
+  // Mail no AI may check is shown, not hidden. It is named even on a clear
+  // backlog, because the queue ranked it without knowing what it asks.
+  it("names the private mail no AI checked, even when nothing is held back", async () => {
+    draw(backlog({ private_unchecked: 2 }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("2 private emails not checked by AI"),
+      ).toBeTruthy(),
+    );
+    expect(
+      screen.getByText(
+        "Nothing is hidden. Every waiting customer reaches a Worklist.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says nothing about private mail when every message was checked", async () => {
+    draw(backlog({ clear: false, past_horizon: 1 }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Too old for the Worklist")).toBeTruthy(),
+    );
+    expect(screen.queryByText(/not checked by AI/)).toBeNull();
   });
 
   // A figure opens onto the messages behind it, read only when opened.

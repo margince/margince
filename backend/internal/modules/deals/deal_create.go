@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -100,14 +101,13 @@ func (s *Store) CreateDeal(ctx context.Context, in CreateDealInput) (crmcontract
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return crmcontracts.Deal{}, err
-	}
 
 	var out crmcontracts.Deal
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		out, err = s.createDealInTx(ctx, tx, in, born, active)
 		return err
 	})
@@ -156,6 +156,9 @@ type bornDeal struct {
 func (s *Store) readyDealCreate(ctx context.Context, in CreateDealInput) (bornDeal, error) {
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
+		return bornDeal{}, err
+	}
+	if err := dealNameWithin(in.Name); err != nil {
 		return bornDeal{}, err
 	}
 	// The money pair holds from birth (data-model §6): a deal with an
@@ -296,6 +299,9 @@ func (s *Store) clearedForBirth(ctx context.Context, tx pgx.Tx, in CreateDealInp
 }
 
 func (s *Store) clearedForBirthWithOwner(ctx context.Context, tx pgx.Tx, in CreateDealInput, pastCloseAllowed bool, fallback *ids.UserID) (CreateDealInput, error) {
+	if err := provenance.AdmitRecordSource(in.Source); err != nil {
+		return in, err
+	}
 	// A decided owner arrives already settled: the qualify seam carries the
 	// LEAD's owner over rather than assigning one, and the suggestion seam
 	// asks auth.EnsureAssignee itself before it decides.
@@ -367,7 +373,7 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 		in.Description, in.CommercialMotion, in.Priority, in.AcquisitionSource,
 		in.ExpectedArrMinor, in.SourceSystem, in.CloseDateProvisional,
 	})
-	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, base)
+	cfCols, cfHolders, args, err := storekit.InsertFragmentsIn(ctx, tx, active, in.CustomFields, base)
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}
@@ -414,7 +420,7 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventDealCreated{Name: in.Name, Imported: imported, ImportRunId: importRun}); err != nil {
 		return crmcontracts.Deal{}, fmt.Errorf("emit deal.created: %w", err)
 	}
-	out, err := readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+	out, err := s.readDealStamped(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Deal{}, fmt.Errorf("read created deal: %w", err)
 	}

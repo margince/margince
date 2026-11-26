@@ -45,7 +45,6 @@ export type OutboundAttempt = {
   id: string;
   delivery_key: string;
   attempt: number;
-  recipient: string;
   outcome: string;
   error_class?: string;
   created_at: string;

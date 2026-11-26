@@ -10,15 +10,17 @@ import {
   ownerColumn,
   tagsColumn,
 } from "../../components/recordlist";
-import { Badge } from "../../design-system/atoms";
+import { Avatar, Badge } from "../../design-system/atoms";
 import { CellStrip, type ListColumn } from "../../design-system/listtable";
+import { ReadOnlyValue } from "../../design-system/readonlyvalue";
+import { taskDueOnDay } from "../../format/calendarday";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
-import { leadIdentityName } from "../../format/leadname";
 import type { useLocale, useT } from "../../i18n";
 import { type LeadOrigin, originLabelFor } from "../../lib/leadorigins";
 import { LeadCompanyName } from "./leadcompany";
+import { leadIdentityName } from "./leadname";
 import { openTaskCountLabel } from "./leadopentasks";
-import { leadPartnerName } from "./leadpartner";
+import { LeadPartnerName } from "./leadpartner";
 import {
   SlaBadge,
   StatusBadge,
@@ -44,9 +46,12 @@ export function leadColumns(
       header: t("contacts.name"),
       cell: (lead: Lead) => {
         const terminal = terminalBadge(lead);
+        const shown = leadIdentityName(lead);
         return (
-          <span>
-            <strong>{leadIdentityName(lead) || t("lead.unnamed")}</strong>
+          <span className="avatar-row">
+            {/* Not the fallback words: they would draw letters for a lead with no name. */}
+            <Avatar identity={lead.id} name={shown} />
+            <strong>{shown || t("lead.unnamed")}</strong>
             {terminal && (
               <Badge tone={terminal.tone}>{t(terminal.label)}</Badge>
             )}
@@ -72,29 +77,35 @@ export function leadColumns(
         </span>
       ),
       sort: "company_name",
+      phone: "caption",
+      folded: (lead: Lead) => <LeadCompanyName lead={lead} asText />,
     },
     {
       key: "score",
       header: t("lead.score"),
       cell: (lead: Lead) => (
-        <CellStrip>
+        <ReadOnlyValue
+          reason={
+            lead.score_reason
+              ? scoreFactorLabel(lead.score_reason, t)
+              : t("lead.scoreNoSignals")
+          }
+          tabStop={false}
+        >
           <Badge tone={scoreTone(lead.score)}>
             {formatNumber(lead.score, locale)}
           </Badge>
-          <span className="t-caption">
-            {lead.score_reason
-              ? scoreFactorLabel(lead.score_reason, t)
-              : t("lead.scoreNoSignals")}
-          </span>
-        </CellStrip>
+        </ReadOnlyValue>
       ),
       sort: "score",
       numeric: true,
+      holds: "score",
     },
     {
       key: "status",
       header: t("lead.status"),
       sort: "status",
+      phone: "end",
       cell: (lead: Lead) => (
         <span className="lead-status-cell">
           <StatusBadge status={lead.status} />
@@ -114,23 +125,43 @@ export function leadColumns(
             ? ` · ${openTaskCountLabel(locale, lead.open_task_count)}`
             : ""}
           {lead.next_task_due_at
-            ? ` · ${formatDateAbbrev(lead.next_task_due_at, locale, recordZone)}`
+            ? ` · ${formatDateAbbrev(nextTaskDueOn(lead, recordZone), locale, recordZone)}`
             : ""}
         </span>
       ),
+      phone: "caption",
+      folded: (lead: Lead) => lead.next_task_subject ?? null,
+    },
+    {
+      key: "nextTaskDue",
+      header: t("log.dueAt"),
+      cell: (lead: Lead) =>
+        lead.next_task_subject && lead.next_task_due_at
+          ? formatDateAbbrev(
+              nextTaskDueOn(lead, recordZone),
+              locale,
+              recordZone,
+            )
+          : null,
+      phone: "caption",
+      phoneOnly: true,
     },
     // The shared column, now that this header can offer a sort.
-    lastActivityColumn<Lead>(t, locale, recordZone),
+    {
+      ...lastActivityColumn<Lead>(t, locale, recordZone),
+      initiallyHidden: true,
+    },
     {
       key: "origin",
       header: t("lead.origin"),
+      initiallyHidden: true,
       sort: "origin", // the catalog's label, which is what the cell prints
       cell: (lead: Lead) => (
         <span>{originLabelFor(lead, origins) ?? t("lead.originUnset")}</span>
       ),
     },
     ...partnerColumns(t, partners),
-    tagsColumn<Lead>(t),
+    { ...tagsColumn<Lead>(t), initiallyHidden: true },
     ownerColumn<Lead>(t),
     createdColumn<Lead>(t, locale, recordZone),
   ];
@@ -147,10 +178,11 @@ function partnerColumns(
     {
       key: "partner",
       header: t("lead.partner"),
+      initiallyHidden: true,
       cell: (lead: Lead) =>
         lead.partner_company_id ? (
           <CellStrip>
-            <span>{leadPartnerName(partners, lead.partner_company_id)}</span>
+            <LeadPartnerName partners={partners} id={lead.partner_company_id} />
             {!lead.partner_accepted_at && (
               <Badge tone="warning">{t("lead.partnerAwaiting")}</Badge>
             )}
@@ -160,4 +192,14 @@ function partnerColumns(
         ),
     },
   ];
+}
+
+/** The instant that reads as the lead's next task's due day in the record's zone. */
+function nextTaskDueOn(lead: Lead, zone: string): string {
+  return taskDueOnDay(
+    lead.next_task_due_at ?? "",
+    lead.next_task_due_has_time,
+    lead.next_task_due_intent,
+    zone,
+  );
 }

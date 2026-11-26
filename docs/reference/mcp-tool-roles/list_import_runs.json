@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "import_runs",
+  "verb": "list_import_runs",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

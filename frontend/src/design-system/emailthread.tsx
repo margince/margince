@@ -22,8 +22,7 @@ import {
   relaySendOf,
   senderParties,
 } from "./emailmessage";
-import { EmailText } from "./emailtext";
-import { ReaderRendering } from "./readerrendering";
+import { EmailReading } from "./emailtext";
 import { SurfaceState } from "./surfacestate";
 import { ProvenanceTag } from "./trust";
 import "./emailthread.css";
@@ -244,7 +243,6 @@ function OpenMessage({
           type="button"
           className="emailthread__fold"
           aria-expanded="true"
-          aria-label={t("email.thread.fold", { name })}
           onClick={onFold}
         >
           <Avatar name={name} identity={sender?.address ?? name} size="sm" />
@@ -284,12 +282,13 @@ function OpenMessage({
         </EmailEnvelope>
       )}
       <TextNotice completeness={presentation.body_completeness} />
-      <ReaderRendering
+      <EmailReading
         activityId={presentation.id}
         language={presentation.language}
-      >
-        <EmailText body={presentation.body ?? ""} />
-      </ReaderRendering>
+        body={presentation.body}
+        subject={presentation.summary.subject}
+        textUnreadable={presentation.body_completeness === "unreadable"}
+      />
       <EmailAttachments files={presentation.attachments} />
       {related?.()}
       {renderActions && (

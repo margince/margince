@@ -1,52 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useAddedNotice } from "../../components/addednotice";
 import { CreateAction, type CreateField } from "../../components/create";
-import { currencyOptions } from "../../format/currencychoices";
-import { toMinorUnits } from "../../format/minorunits";
-import { useT } from "../../i18n";
+import { amountField, currencyField } from "../../components/currencyfield";
+import { useDealCreateFields } from "../../components/dealcreatefields";
+import { useOwnerPicker } from "../../components/recordowners";
+import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { currencyBeside } from "../../lib/dealcurrency";
+import { mapDealCreate } from "../../lib/dealcreate";
+import { translatedPipeline } from "../../lib/labeltranslation";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
-import { defaultPipelineOf } from "../../lib/pipelines.queries";
+import {
+  defaultPipelineOf,
+  pipelinesOptions,
+} from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { useProjectCreateForm } from "../projects/projects.create";
-
-// What a rep can START from the company page.
-//
-// The page could already say everything about an account and do nothing with
-// it: opening a deal meant leaving for the pipeline board and re-finding the
-// company there, and applying a tag or adding the account to a list had no
-// control at all. Each action below is the record's OWN verb — the company is
-// the subject, so it is never something the rep has to pick.
-
-type Pipeline = components["schemas"]["Pipeline"];
-type Stage = components["schemas"]["Stage"];
-
-/**
- * useDealTarget resolves where a deal created from this page should land: the
- * default pipeline and its first OPEN stage.
- *
- * Open only. A deal is born open (INV-CLOSE-PAST), so won and lost are reached
- * through the confirmed advance and must never be a create-time choice — the
- * deal board applies the same rule to its own stage picker.
- */
-function useDealTarget() {
-  return useQuery({
-    queryKey: ["pipelines", "dealTarget"],
-    queryFn: async () => {
-      const data = unwrap(
-        await api.GET("/pipelines", {
-          params: { query: {} },
-        }),
-      );
-      const pipeline: Pipeline | undefined = defaultPipelineOf(data.data);
-      const stages: Stage[] = pipeline?.stages ?? [];
-      const open = stages.filter((stage) => stage.semantic === "open");
-      return { pipeline, open };
-    },
-  });
-}
 
 /**
  * NewDealAction opens a deal on THIS company.
@@ -73,10 +44,14 @@ export function NewDealAction({
   onCreated?: (deal: components["schemas"]["Deal"]) => void;
 }>) {
   const t = useT();
-  const target = useDealTarget();
+  const { locale } = useLocale();
+  const target = useQuery({ ...pipelinesOptions, select: defaultPipelineOf });
   const leading = useLeadingCurrencies();
-  const pipeline = target.data?.pipeline;
-  const open = target.data?.open ?? [];
+  const owner = useOwnerPicker(null);
+  const optionalFields = useDealCreateFields(t, owner);
+  const pipeline = target.data && translatedPipeline(target.data, locale);
+  const open =
+    pipeline?.stages?.filter((stage) => stage.semantic === "open") ?? [];
   // No pipeline, or none of its stages is open, means there is nowhere for a
   // deal to land. A button that can only fail is worse than no button.
   if (!pipeline || open.length === 0) {
@@ -84,22 +59,22 @@ export function NewDealAction({
   }
 
   const fields: CreateField[] = [
-    { key: "name", label: "create.dealName", required: true },
     {
-      key: "amount",
-      label: "create.amount",
-      type: "number",
-      step: "0.01",
-      min: "0",
-      wireField: "amount_minor",
-    },
-    {
-      key: "currency",
-      label: "create.currency",
-      type: "select",
+      key: "name",
+      label: "create.dealName",
       required: true,
-      options: currencyOptions(leading),
+      maxLength: TEXT_LIMITS.label,
     },
+    amountField(
+      { key: "amount", label: "create.amount", wireField: "amount_minor" },
+      {
+        currency: (values) => values.currency || leading[0],
+        locale,
+        t,
+        nonNegative: true,
+      },
+    ),
+    currencyField(leading, locale),
     {
       key: "stage_id",
       label: "create.stage",
@@ -107,6 +82,7 @@ export function NewDealAction({
       required: true,
       options: open.map((stage) => ({ value: stage.id, label: stage.name })),
     },
+    ...optionalFields,
     { key: "expected_close_date", label: "create.expectedClose", type: "date" },
   ];
 
@@ -115,23 +91,15 @@ export function NewDealAction({
     _rows: unknown,
     idempotencyKey: string,
   ) => {
-    const amount = values.amount?.trim();
-    const currency = values.currency || leading[0];
     return unwrap(
       await api.POST("/deals", {
         params: { header: { "Idempotency-Key": idempotencyKey } },
-        body: {
-          name: (values.name ?? "").trim(),
-          pipeline_id: pipeline.id,
-          stage_id: values.stage_id ?? "",
-          // The form takes major units; the wire is minor units.
-          amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
-          currency: currencyBeside(currency, amount),
-          company_id: companyId,
-          project_id: projectId ?? null,
-          expected_close_date: values.expected_close_date || null,
-          source: "manual",
-        },
+        body: mapDealCreate(
+          { ...values, company_id: companyId, project_id: projectId ?? "" },
+          pipeline.id,
+          leading[0],
+          locale,
+        ),
       }),
       t,
     );
@@ -140,6 +108,7 @@ export function NewDealAction({
   return (
     <CreateAction
       label={t("co.deal.new", { name: companyName })}
+      requires={{ object: "deal", action: "create" }}
       // The page that offered the verb is the page that has to show the deal.
       invalidate={projectId ? "project" : "company360"}
       screen="deals"
@@ -149,6 +118,22 @@ export function NewDealAction({
       stay={onCreated !== undefined}
       onCreated={onCreated}
       link={link}
+    />
+  );
+}
+
+/**
+ * The Deals tab's verb. The reader stays on the company and is told what was
+ * added, with a way to open it. A deal made from a project still opens.
+ */
+export function CompanyNewDealAction(
+  props: Readonly<{ companyId: string; companyName: string }>,
+) {
+  const added = useAddedNotice();
+  return (
+    <NewDealAction
+      {...props}
+      onCreated={(deal) => added(deal.name, { screen: "deals", id: deal.id })}
     />
   );
 }
@@ -184,16 +169,23 @@ function NewProjectDialog({
 }: Readonly<{ companyId: string; companyName: string }>) {
   const t = useT();
   const form = useProjectCreateForm({ pinned: companyId });
+  const added = useAddedNotice();
   return (
     <CreateAction
       label={t("co.project.new", { name: companyName })}
+      requires={{ object: "project", action: "create" }}
       // The record that offered the verb is the record that has to show the
       // project.
       invalidate="company360"
       screen="projects"
       create={form.create}
+      onValuesChange={form.onValuesChange}
       fields={form.fields}
       aboutId={companyId}
+      stay
+      onCreated={(project) =>
+        added(project.name, { screen: "projects", id: project.id })
+      }
     />
   );
 }

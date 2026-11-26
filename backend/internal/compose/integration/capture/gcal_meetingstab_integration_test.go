@@ -143,7 +143,7 @@ func guestMeetings(t *testing.T, owner, colleague, guest string) []map[string]an
 
 func TestAColleaguesMeetingWithAContactIsOnTheirMeetingsTab(t *testing.T) {
 	e := integration.SetupSearch(t)
-	buyer, err := contacts.NewStore(e.DB()).EnsureContactByEmail(contactCreator(e), "Anna Buyer", "anna@acme.com", "manual", storekit.RefuseErased)
+	buyer, err := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx).EnsureContactByEmail(contactCreator(e), "Anna Buyer", "anna@acme.com", "manual", storekit.RefuseErased)
 	if err != nil {
 		t.Fatalf("seeding the guest: %v", err)
 	}
@@ -159,7 +159,7 @@ func TestAColleaguesMeetingWithAContactIsOnTheirMeetingsTab(t *testing.T) {
 func TestAMeetingSyncedBeforeItsGuestBecameAContactReachesTheirMeetingsTab(t *testing.T) {
 	e := integration.SetupSearch(t)
 	syncGcalEvents(t, e, "rep@ws.example", guestMeetings(t, "rep@ws.example", "lead@ws.example", "anna@acme.com"))
-	store := contacts.NewStore(e.DB())
+	store := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx)
 	buyer, err := store.EnsureContactByEmail(contactCreator(e), "Anna Buyer", "anna@acme.com", "manual", storekit.RefuseErased)
 	if err != nil {
 		t.Fatalf("seeding the guest: %v", err)

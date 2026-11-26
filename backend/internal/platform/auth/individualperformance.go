@@ -39,8 +39,18 @@ func MayMeasureSeat(ctx context.Context, allowed bool, seat ids.UUID) bool {
 	if allowed {
 		return true
 	}
+	own, err := OwnSeat(ctx)
+	return err == nil && seat == own
+}
+
+// OwnSeat is the reader's own seat, the one the switch never withholds. A
+// caller cannot name another, so a record read by it is the reader's own.
+func OwnSeat(ctx context.Context) (ids.UUID, error) {
 	p, ok := principal.Actor(ctx)
-	return ok && !seat.IsZero() && seat == p.UserID
+	if !ok || p.UserID.IsZero() {
+		return ids.Nil, apperrors.ErrPermissionDenied
+	}
+	return p.UserID, nil
 }
 
 // IndividualPerformanceOffError refuses a question about a colleague, or one that splits
@@ -60,5 +70,6 @@ func (IndividualPerformanceOffError) Is(target error) bool {
 func (IndividualPerformanceOffError) MessageFault() (code, message string) {
 	return "individual_performance_off", "An administrator switched off individual performance. " +
 		"You can see your own figures. " +
-		"A figure is withheld when fewer than two other members make it up, or when taking another team's total from it would leave fewer than two."
+		"A figure is withheld when fewer than two other members make it up, or when taking another team's total from it would leave fewer than two. " +
+		"A forecast is withheld in full if any of its groups would show one colleague's figures."
 }

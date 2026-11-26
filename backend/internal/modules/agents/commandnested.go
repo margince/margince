@@ -32,6 +32,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -74,6 +75,7 @@ func (r applyTagResolver) Subject(ctx context.Context, cmd ApplyTagCommand) (Sta
 	return StageInfo{
 		TargetType: tagRecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.applyTag", systemtext.Text(fmt.Sprint(cmd.ID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).applyTag, cmd.ID),
 	}, nil
 }
@@ -115,6 +117,7 @@ func (r addOfferLineItemResolver) Subject(ctx context.Context, cmd AddOfferLineI
 	return StageInfo{
 		TargetType: offerRecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.addLineItem", systemtext.Text(fmt.Sprint(cmd.ID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).addLineItem, cmd.ID),
 	}, nil
 }
@@ -161,6 +164,7 @@ func (r updateOfferLineItemResolver) Subject(ctx context.Context, cmd UpdateOffe
 	return StageInfo{
 		TargetType: offerRecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.updateLineItem", systemtext.Text(fmt.Sprint(cmd.LineItemID)), systemtext.Text(fmt.Sprint(cmd.ID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).updateLineItem, cmd.LineItemID, cmd.ID),
 	}, nil
 }
@@ -199,6 +203,7 @@ func (r removeOfferLineItemResolver) Subject(ctx context.Context, cmd RemoveOffe
 	return StageInfo{
 		TargetType: offerRecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.removeLineItem", systemtext.Text(fmt.Sprint(cmd.LineItemID)), systemtext.Text(fmt.Sprint(cmd.ID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).removeLineItem, cmd.LineItemID, cmd.ID),
 	}, nil
 }
@@ -246,9 +251,10 @@ type createOfferResolver struct {
 // no id at all is the only staged target this create could honestly carry.
 func (r createOfferResolver) Subject(ctx context.Context, cmd CreateOfferCommand) (StageInfo, error) {
 	said := summaryIn(ctx, r.language)
-	write := describeGenericWrite(said, fmt.Sprintf(said.createHead, said.noun(offerRecordType)), cmd.Fields)
+	write := describeGenericWrite(said, systemtext.Sentence("agent.createHead", systemtext.NounArgument(offerRecordType)), cmd.Fields)
 	return StageInfo{
 		TargetType: offerRecordType,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.onDeal", systemtext.Nested(genericWriteMetadata(systemtext.Sentence("agent.createHead", systemtext.NounArgument(offerRecordType)), cmd.Fields).Subject), systemtext.Text(fmt.Sprint(cmd.DealID)))},
 		Summary:    fmt.Sprintf(said.onDeal, write, cmd.DealID),
 	}, nil
 }

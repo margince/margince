@@ -74,7 +74,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	// write's read-back is a result like any other, and it is the one every
 	// write tool shares.
 	contact := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"contact","fields":{"full_name":"Schema Conformance"}}`)
+		`{"record_type":"contact","fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-4dca51f4f3d93999","full_name":"Schema Conformance"}}`)
 	company := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"company","fields":{"display_name":"Conformance GmbH"}}`)
 	lead := createThroughTheToolSurface(ctx, t, registry,
@@ -91,11 +91,11 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	promotable := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"lead","fields":{"email":"promote@conformance.example","full_name":"Promo Table"}}`)
 	spare := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"contact","fields":{"full_name":"To Be Archived"}}`)
+		`{"record_type":"contact","fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-6c48be4cc6f5f3e1","full_name":"To Be Archived"}}`)
 	duplicate := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"contact","fields":{"full_name":"Schema Conformance (dup)"}}`)
+		`{"record_type":"contact","fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-7358d61d493deb50","full_name":"Schema Conformance (dup)"}}`)
 	handable := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"contact","fields":{"full_name":"To Be Handed On"}}`)
+		`{"record_type":"contact","fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-81ce80f117b841ef","full_name":"To Be Handed On"}}`)
 	handableItems := `[{"id":"` + handable.String() + `","version":` +
 		e.WsScalar(t, `SELECT version::text FROM contact WHERE id = $1`, handable) + `}]`
 	project := createThroughTheToolSurface(ctx, t, registry,
@@ -258,9 +258,9 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"disqualify_lead", `{"lead_id":"` + lead.String() + `"}`},
 		{"log_activity", `{"kind":"note","body":"conformance","links":[{"entity_type":"deal","entity_id":"` +
 			deal.String() + `"}]}`},
-		{"create_task", `{"subject":"conformance","links":[{"entity_type":"deal","entity_id":"` +
+		{"create_task", `{"subject":"conformance","body":"Conformance Deal asked for a check.","links":[{"entity_type":"deal","entity_id":"` +
 			deal.String() + `"}]}`},
-		{"update_record", `{"record_type":"contact","id":"` + contact.String() +
+		{"update_record", `{"why":"A test asks for this change.","record_type":"contact","id":"` + contact.String() +
 			`","fields":{"title":"Head of Conformance"}}`},
 		{"progress_deal", `{"deal_id":"` + deal.String() + `","to_stage_id":"` + open.String() +
 			`","note":"still open"}`},
@@ -500,7 +500,7 @@ func oneFinishedInputCheck(ctx context.Context, t *testing.T, e *Env) {
 	store := assurance.NewStore(compose.InstallationDB(e.Pool))
 	asOf := time.Now().UTC()
 	if err := store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		run, err := store.StartRun(ctx, tx, asOf, nil)
+		run, err := store.StartRun(ctx, tx, asOf)
 		if err != nil {
 			return err
 		}
@@ -518,7 +518,7 @@ func oneFinishedInputCheck(ctx context.Context, t *testing.T, e *Env) {
 		}); err != nil {
 			return err
 		}
-		return store.FinishRun(ctx, tx, run, 1, 0, 0, assurance.StatusComplete, "ready")
+		return store.FinishRun(ctx, tx, run, assurance.Eligible{Deals: 1}, 0, assurance.StatusComplete, "ready")
 	}); err != nil {
 		t.Fatalf("recording a finished input check for the forecast tools: %v", err)
 	}
@@ -529,13 +529,14 @@ func oneFinishedInputCheck(ctx context.Context, t *testing.T, e *Env) {
 // what the queue tools read back is a row production would have written.
 func stageOneProposal(ctx context.Context, t *testing.T, e *Env, deal ids.UUID) ids.ApprovalID {
 	t.Helper()
+	closes := clocktest.Now(t).AddDate(0, 1, 0).Format(time.DateOnly)
 	staged, err := approvals.NewService(compose.InstallationDB(e.Pool)).Stage(ctx, approvals.StageInput{
 		Kind:           "close_date_correction",
-		ProposedChange: json.RawMessage(`{"expected_close_date":"2026-12-31"}`),
+		ProposedChange: json.RawMessage(`{"expected_close_date":"` + closes + `"}`),
 		DiffHash:       ids.NewV7().String(),
 		TargetType:     "deal",
 		TargetID:       deal,
-		Summary:        "Move the expected close date to 2026-12-31",
+		Summary:        "Move the expected close date to " + closes,
 	})
 	if err != nil {
 		t.Fatalf("staging a proposal for the queue tools: %v", err)

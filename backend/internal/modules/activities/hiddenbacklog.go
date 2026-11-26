@@ -109,6 +109,10 @@ type HiddenBacklog struct {
 	// is counted where a wrong verdict would show. A request a human accepted
 	// is never hidden by it.
 	InformsUs int
+	// PrivateUnchecked is mail Shown counts that no model will check for a
+	// request (WaitingReply.JudgeWithheld). It is not hidden, so Clear ignores
+	// it, but the queue ranks such mail without knowing what it asks.
+	PrivateUnchecked int
 }
 
 // Clear reports whether nothing is being held back.
@@ -152,11 +156,11 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 		}
 		// What the eligibility query finds under the rules as they stand — a
 		// near neighbour of the page's own count, for the reason Shown states.
-		shown, err := s.countWaiting(ctx, tx, asOf, waitingRelaxation{reader: reader}, measured)
+		shown, withheld, err := s.countWaiting(ctx, tx, asOf, waitingRelaxation{reader: reader}, measured)
 		if err != nil {
 			return err
 		}
-		out.Shown = shown
+		out.Shown, out.PrivateUnchecked = shown, withheld
 		// Asked of the STRICT read as well as the relaxed ones below: a queue
 		// already at the cap cannot have its hidden work measured at all, since
 		// every relaxation clips at the same bound.
@@ -177,7 +181,7 @@ func (s *Store) HiddenWaiting(ctx context.Context, asOf time.Time) (HiddenBacklo
 			{&out.Colleagues, waitingRelaxation{reader: reader, keepColleagues: true}},
 			{&out.InformsUs, waitingRelaxation{reader: reader, keepInformsUs: true}},
 		} {
-			widened, err := s.countWaiting(ctx, tx, asOf, relaxed.with, measured)
+			widened, _, err := s.countWaiting(ctx, tx, asOf, relaxed.with, measured)
 			if err != nil {
 				return err
 			}
@@ -256,7 +260,7 @@ func (s *Store) waitingStatement(
 	arg func(any) int,
 ) (string, error) {
 	instant := arg(asOf)
-	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	content, err := auth.ActivityMessageContentClause(ctx, "a", arg)
 	if err != nil {
 		return "", err
 	}
@@ -319,8 +323,12 @@ func (s *Store) waitingStatement(
 	if err != nil {
 		return "", err
 	}
+	withheld, err := withheldColumns(ctx, tx, arg)
+	if err != nil {
+		return "", err
+	}
 	responsibility := personalMailResponsibilitySQL(&relax.reader, identities, arg, fmt.Sprintf("$%d", instant), fmt.Sprint(horizon))
-	return fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
+	return fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, waitingLimitSQL(arg, WaitingScanCap),
 		horizon,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
@@ -328,31 +336,29 @@ func (s *Store) waitingStatement(
 		arg(relax.reader),
 		responsibility,
 		notSales, unlinked,
-		colleague, ownDomainSenderSQL("a", arg(ownDomains)),
+		colleague, fmt.Sprintf("$%d", arg(ownDomains)),
 		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 		mailSeatAddressesSQL(identities, fmt.Sprintf("$%d::uuid", arg(relax.reader))),
 		informsUs,
 		noKeyset, bookedDiscover,
-		setAside, neverRelaxed, requestTaskDiscover), nil
+		setAside, neverRelaxed, requestTaskDiscover, withheld), nil
 }
 
-// countWaiting is the statement above asked for how many.
+// countWaiting is the statement above asked for how many, and how many of
+// those no model will judge.
 func (s *Store) countWaiting(
 	ctx context.Context, tx pgx.Tx, asOf time.Time, relax waitingRelaxation, measured int,
-) (int, error) {
+) (count, withheld int, err error) {
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	inner, err := s.waitingStatement(ctx, tx, asOf, relax, measured, arg)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
-	var count int
 	// Counted around the whole statement rather than by replacing its SELECT
 	// list: the query GROUPs and LIMITs, so the row count IS the answer and a
 	// count(*) pushed inside would report groups before the cap.
-	if err := tx.QueryRow(ctx, `SELECT count(*) FROM (`+inner+`) waiting`,
-		planEachBind(args)...).Scan(&count); err != nil {
-		return 0, err
-	}
-	return count, nil
+	err = tx.QueryRow(ctx, `SELECT count(*), count(*) FILTER (WHERE waiting.judge_withheld) FROM (`+inner+`) waiting`,
+		planEachBind(ctx, args)...).Scan(&count, &withheld)
+	return count, withheld, err
 }

@@ -1,6 +1,9 @@
 import { type ReactNode, useEffect, useRef } from "react";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
+import { isISODate } from "../format/datepattern";
+import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { type FieldLabel, fieldCheckSentence } from "../lib/problem";
 import type { NameOffers } from "./create.offered";
 
 export type CreateFieldOption = { value: string; label: string };
@@ -16,15 +19,16 @@ export type SubField = {
   multiselectEncoding?: "json";
   placeholder?: string;
   maxLength?: number;
-  // Granularity for a number input. Omitted means the browser's default of 1,
-  // which rejects any fractional entry.
-  step?: string;
-  // See CreateField.min.
-  min?: string;
 };
 
 export type CreateField = {
   searchTargets?: (q: string) => Promise<RecordPickerCandidate[]>;
+  // Names the record a stored id points at, for a picker whose records are on
+  // no page the form loaded. `scope` keeps one kind's answers from another's.
+  resolveSelected?: Readonly<{
+    scope: string;
+    read: (id: string) => Promise<RecordPickerCandidate | null>;
+  }>;
   // A text field that offers existing records by name. See NameOffers.
   offers?: NameOffers;
   key: string;
@@ -36,7 +40,11 @@ export type CreateField = {
   type?:
     | "text"
     | "email"
+    // A whole number. Typed as text, with a keyboard of digits only.
     | "number"
+    // A number typed as text (an amount, a rate), read by parseTypedDecimal.
+    // Never type="number", whose decimal sign is the browser's.
+    | "decimal"
     | "date"
     | "select"
     | "multiselect"
@@ -47,41 +55,56 @@ export type CreateField = {
   multiselectEncoding?: "json";
   placeholder?: string;
   maxLength?: number;
+  requiredWhen?: (values: Record<string, string>) => boolean;
   // Already translated guidance beneath the control.
   hint?: ReactNode;
   // A validation refusal blocks Save and is announced through Field.error.
   // The server remains authoritative for uniqueness and cross-record rules.
-  validate?: (value: string) => string | undefined;
+  validate?: (
+    value: string,
+    values?: Record<string, string>,
+    rows?: FormRows,
+  ) => string | undefined;
   // repeatable-only: each row's subfields, the add label, the primary flag's
-  // key and (if set) the kind's key, which scopes primaryKey to one kind.
+  // key and (if set) the kind's key.
   rowFields?: SubField[];
   addLabel?: MessageKey;
   // The verb that opens the list's editor, naming the list: "Change Email"
   // reads as one address, where the editor also adds and removes them.
   editLabel?: MessageKey;
   primaryKey?: string;
+  // A repeatable field whose value the server stores once: a second row
+  // holding it is refused before the form sends.
+  rowsUnique?: true;
   typeKey?: string;
-  // typeKey's value when unanswered. It must match the request mapper's own
-  // fallback, or an unset row groups differently here than once submitted.
+  // The kind a new row starts with. It must match the request mapper's own
+  // fallback, or an unset row reads differently here than once submitted.
   typeDefault?: string;
   // A heading that holds no value, setting custom fields apart from core ones.
   divider?: boolean;
   // Maps the record's raw value to the input string at prefill (minor units →
   // major); absent, the raw value is stringified.
   toInput?: (raw: unknown) => string;
-  // See SubField.step: a money field must declare its cents.
-  step?: string;
-  // Lowest value a number input accepts. A money amount that cannot be below
-  // zero declares it, so the browser refuses a minus before the server does.
-  min?: string;
   // The API field a refusal names when it differs from `key`: an amount typed
   // in major units is sent as amount_minor.
   wireField?: string;
+  // A bound a refusal states in the wire's unit, shown in the unit the reader
+  // typed: moneyLimit or percentLimit. `sent` is the form as it was sent.
+  limit?: (wire: string, sent: Readonly<Record<string, string>>) => string;
   // Hidden fields are neither required nor submitted.
   showWhen?: (values: Record<string, string>) => boolean;
   // Recompute dependent choices; clear values no longer valid after a change.
   optionsFor?: (values: Record<string, string>) => CreateFieldOption[];
+  // Shown with why it is locked, and never sent.
+  readOnly?: Readonly<{ reading: ReactNode; reason: string }>;
+  // Changed by a flow of its own, which the form leaves before it opens.
+  flow?: Readonly<{ open: () => void; reading?: ReactNode }>;
 };
+
+/** A field the form shows but never answers: read-only, or changed by its own flow. */
+export function answerless(field: CreateField): boolean {
+  return Boolean(field.readOnly || field.flow);
+}
 
 // Publish after render so server-dependent choices also see seeded answers.
 // The callback ref avoids publishing again solely because its identity changed.
@@ -114,7 +137,13 @@ export function visibleFields(
   fields: CreateField[],
   values: Record<string, string>,
 ): CreateField[] {
-  return fields.filter((field) => field.showWhen?.(values) ?? true);
+  return fields
+    .filter((field) => field.showWhen?.(values) ?? true)
+    .map((field) =>
+      field.requiredWhen
+        ? { ...field, required: field.requiredWhen(values) }
+        : field,
+    );
 }
 
 // Blanks what showWhen hides, so a cleared partner's role is not sent orphaned.
@@ -153,6 +182,40 @@ export function keepUnsubmitted(
     }
   }
   return next;
+}
+
+// The days a date field can store; the server refuses a day outside them.
+export const EARLIEST_DAY = "0001-01-02";
+export const LATEST_DAY = "9999-12-30";
+
+/** Why a day cannot be stored, in the words of the server's own refusal. */
+export function dayOutOfRange(
+  day: string,
+  locale: Locale,
+  label: FieldLabel,
+): string | undefined {
+  if (!isISODate(day) || (day >= EARLIEST_DAY && day <= LATEST_DAY)) {
+    return undefined;
+  }
+  return fieldCheckSentence("out_of_range", locale, label, {
+    min: EARLIEST_DAY,
+    max: LATEST_DAY,
+  });
+}
+
+/** The kind of box an inline editor draws for a field. */
+export function inlineTextKind(
+  field: CreateField,
+): "text" | "email" | "number" | "date" | "decimal" {
+  switch (field.type) {
+    case "number":
+    case "date":
+    case "email":
+    case "decimal":
+      return field.type;
+    default:
+      return "text";
+  }
 }
 
 // The label a top-level field shows: the literal labelText wins; otherwise the

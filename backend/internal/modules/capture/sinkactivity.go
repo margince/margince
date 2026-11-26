@@ -24,8 +24,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -46,13 +48,15 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if fields, err = settledFields(ctx, tx, rec, fields); err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
-	// Whose credential carried this record, asked ONCE and carried to both the
-	// birth decision and this seat's import row — the two readers of it, and the
-	// same argument the birth decision makes for itself below.
+	// Whose credential carried this record, asked once for its two readers: the
+	// birth decision and this seat's import row.
 	memberBound, err := memberBoundCredentialTx(ctx, tx, fields.ChannelProvider)
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
+	// A transport the installation shares can still carry one member's own
+	// account, which makes the message that member's correspondence.
+	memberBound = memberBound || fields.memberOwned
 	// ONE decision per capture, taken before the row exists and carried to both
 	// the insert and this seat's import row. Asking twice would not merely cost
 	// two reads: the marker step RE-OPENS a settled thread verdict as it
@@ -86,6 +90,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	// prevent.
 	id, created := known, false
 	if !alreadyFiled {
+		if err := s.checkTaskAssignee(ctx, tx, rec, fields); err != nil {
+			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+		}
 		id, created, err = s.upsertActivity(ctx, tx, rec, fields, birth)
 		if err != nil {
 			return s.upsertRefused(ctx, tx, id, err, rec, fields, birth, memberBound)
@@ -144,7 +151,8 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		}
 		if asserted && alreadyFiled && s.takeOverAsserted != nil {
 			err := s.takeOverAsserted(
-				ctx, tx, id, fields.Subject, fields.Body, wasCapturedBy, capturedByFor(ctx, rec), senderIsMachine(rec, fields))
+				ctx, tx, id, fields.Subject, fields.Body, wasCapturedBy, capturedByFor(ctx, rec), senderIsMachine(rec, fields),
+			)
 			// Archived under us between the resolve and here — an erasure racing
 			// this capture. Skipping advances the watermark; propagating would
 			// stall this mailbox on this message on every pass forever.
@@ -171,18 +179,7 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 			// advances the watermark and no later pass retries it.
 			return s.fileUnderOwnReplayKey(ctx, tx, rec, fields, birth, memberBound)
 		}
-		// Before this seat's own import and participant rows: the claim asks who
-		// the STORED row names as sender, and this capture is about to add itself.
-		if err := s.claimOwnSentMailTx(ctx, tx, id, rec); err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
-		}
-		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
-		}
-		if err := s.joinThread(ctx, tx, id, rec, false); err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
-		}
-		if err := s.settleMeetingReplay(ctx, tx, id, rec, alreadyFiled); err != nil {
+		if err := s.joinActivityTx(ctx, tx, id, rec, fields, birth, joinedCapture{memberBound: memberBound, alreadyFiled: alreadyFiled}); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
 		return ref, false, counterpartyDecision{}, nil
@@ -198,6 +195,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	}
 	decision, err := s.finishNewActivity(ctx, tx, id, rec, fields, birth, memberBound)
 	if err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
+	if err := s.foldReplacedSeries(ctx, tx, id, rec); err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
 	return ref, true, decision, nil
@@ -233,17 +233,11 @@ func (s *Sink) finishNewActivity(
 	// read from the activity's own company link, which does not exist until
 	// the line above has run.
 	//
-	// Staged HERE, inside the transaction and only once the message is known to
-	// be new. The bytes still land before the row that points at them — the put
-	// is not transactional — but two things now cannot happen. Colleague mail
-	// the internal gate drops never has its files written at all, which it did
-	// when staging ran ahead of that gate. And a replayed message writes no
-	// second copy: every pull minted fresh keys and then skipped the insert, so
-	// a routine backfill left an unreferenced object per attachment per pass.
-	// A private message stores no bytes, only the files' names. Decided here,
-	// before staging, because this is the last point where the bodies are
-	// still only in memory: once stageParts has run they are in the object
-	// store, and the raw original points at them rather than carrying them.
+	// Named here, once the message is known to be new. The bytes were stored
+	// before the transaction when the short read found them kept
+	// (sinkprestage.go), and are stored here otherwise. Dropped internal mail,
+	// a replay and a private message keep no bytes: the short read asks the
+	// same gates. What a committed capture names nowhere is deleted after it.
 	rec, err := s.keepPartsAndOriginal(ctx, tx, id, rec, fields)
 	if err != nil {
 		return counterpartyDecision{}, err
@@ -292,13 +286,7 @@ func (s *Sink) finishNewActivity(
 		return counterpartyDecision{}, err
 	}
 	if internalMailAdmitted(ctx) {
-		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
-			return counterpartyDecision{}, err
-		}
-		if err := s.joinThread(ctx, tx, id, rec, true); err != nil {
-			return counterpartyDecision{}, err
-		}
-		return counterpartyDecision{}, nil
+		return counterpartyDecision{}, s.finishInternalMail(ctx, tx, id, rec, fields, birth, memberBound)
 	}
 	if err := s.emitReply(ctx, tx, auditID, id, rec, fields); err != nil {
 		return counterpartyDecision{}, err
@@ -314,13 +302,14 @@ func (s *Sink) finishNewActivity(
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
+	decision = withNotesMailHold(rec, decision)
 	// A meeting names no counterparty, so the gate above created nothing and
 	// nothing has filed this row anywhere. The contacts who were in it are already
 	// resolved on the participant rows, so the links come from there — BEFORE
 	// the audience limiter, which decides what a link-less record is born as.
 	derivedLinks := 0
 	// Mail private to this seat goes on no lead, as it creates no contact.
-	private, _, err := messageIsPrivateTx(ctx, tx, rec, fields)
+	private, _, err := capturedMessageIsPrivateTx(ctx, tx, rec, fields)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
@@ -347,12 +336,15 @@ func (s *Sink) finishNewActivity(
 	// copied on it, leaving mail workspace-readable that the limiter exists to
 	// hold. The meeting arm feeds the count because an attendee link means a
 	// record stands behind the meeting; a cc'd contact is not that claim.
-	if fields.Kind != meetingKind && decision.traceOutcome != TraceSuppressed {
-		if err := s.linkResolvedMailParticipants(ctx, tx, id, len(rec.Links), private); err != nil {
+	if fields.Kind != meetingKind && !decision.notesMail {
+		if err := s.fileMailUnderParticipants(ctx, tx, id, len(rec.Links), decision, private); err != nil {
 			return counterpartyDecision{}, err
 		}
 	}
 	if err := limitLinkLessAudience(ctx, tx, id, rec, fields.Kind, decision, derivedLinks); err != nil {
+		return counterpartyDecision{}, err
+	}
+	if err := s.landNotesMail(ctx, tx, rec, fields, decision); err != nil {
 		return counterpartyDecision{}, err
 	}
 	// This mailbox's own record of having imported the message, and the
@@ -376,10 +368,20 @@ func (s *Sink) finishNewActivity(
 	return decision, nil
 }
 
+// finishInternalMail is what an admitted internal operational mail still owes:
+// this seat's import and its thread. It names no counterparty and is filed nowhere.
+func (s *Sink) finishInternalMail(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID,
+	rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision, memberBound bool,
+) error {
+	if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
+		return err
+	}
+	return s.joinThread(ctx, tx, id, rec, true)
+}
+
 // activityCaptureEventPayload builds the activity.captured event for the
-// capture ingestion path — the one emit site (of the event's two) that
-// names an originating source system; the direct-log path
-// (activities/activity.go) sets no fields but kind.
+// capture ingestion path. Website-note metadata belongs to the direct-log writer.
 func activityCaptureEventPayload(ctx context.Context, kind, channelProvider, sourceSystem string) crmcontracts.PublicEventActivityCaptured {
 	p := crmcontracts.PublicEventActivityCaptured{Kind: kind, SourceSystem: &sourceSystem}
 	p.Imported, p.ImportRunId = storekit.ImportMark(ctx)
@@ -403,9 +405,20 @@ func (s *Sink) upsertActivity(
 		return ids.ActivityID{}, false, err
 	}
 	var id ids.ActivityID
-	query, args := capturedActivityInsert(ctx, rec, fields, birth)
+	now := s.clock()
+	askDue := !fields.DueAt.IsZero() && !values.DueInWindow(fields.DueAt, now)
+	if askDue && s.dueAsker == nil {
+		return ids.ActivityID{}, false, fmt.Errorf("this task has a due date far outside the allowed window, and nobody is set up to ask about it: %w", apperrors.ErrInvalidArgument)
+	}
+	query, args := capturedActivityInsert(ctx, rec, fields, birth, now)
 	err := tx.QueryRow(ctx, query, args...).Scan(&id)
 	if err == nil {
+		if askDue && !fields.AssigneeID.IsZero() {
+			err := s.dueAsker.AskDueTx(ctx, tx, DueQuestion{TaskID: id, OwnerID: fields.AssigneeID, Summary: fields.Subject, Due: fields.DueAt})
+			if err != nil {
+				return ids.ActivityID{}, false, err
+			}
+		}
 		// Field-level provenance (B-E02.12) for the content fields this
 		// capture set — same source/author the row itself carries.
 		var stamps []storekit.FieldStamp
@@ -451,34 +464,7 @@ func (s *Sink) upsertActivity(
 	return id, false, nil
 }
 
-// settledFields fills in what the capture does not take as sent. That is the
-// time and its day anchor, the storable length, and the envelope's judgement.
-func settledFields(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields) (ActivityFields, error) {
-	var err error
-	if fields.DateOnly {
-		if fields.OccurredAt, err = dayAnchor(fields.OccurredAt); err != nil {
-			return fields, err
-		}
-	}
-	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
-	fields.DurationSeconds = StorableDuration(fields.DurationSeconds)
-	fields.judged, err = judgeEnvelopeTx(ctx, tx, rec, fields)
-	return fields, err
-}
-
-// defaultOccurredAt fills a provider payload that carried no timestamp:
-// capture time is the honest fallback — better a coarse "when we saw
-// it" than a zero time sorting the record to the beginning of history.
-// A stamp outside the storable range is no timestamp either: no zone can
-// render it.
-func defaultOccurredAt(occurredAt time.Time) time.Time {
-	if occurredAt.IsZero() || !datasource.InstantInRange(occurredAt) {
-		return time.Now().UTC()
-	}
-	return occurredAt
-}
-
-func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision) (string, []any) {
+func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord, fields ActivityFields, birth birthDecision, now time.Time) (string, []any) {
 	occurredAt := fields.OccurredAt
 	audience, audienceReason := birth.bornAudience()
 	// The label reads the opening: an envelope block is English in any language.
@@ -490,8 +476,22 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 		fields.occurredPrecision(),
 		nullableID(fields.InvitationFromSeat),
 		nullableString(fields.AgendaFingerprint),
+		nullableID(fields.AssigneeID), nullableTime(storedDue(fields.DueAt, now)),
+		nullableString(fields.CalendarUID),
+		fields.CalendarEvent,
+		fields.forwardedFrom != nil,
+		mailquote.OwnEnd(fields.Kind, fields.Subject, nullableString(fields.Body)),
 	}
-	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender,agenda_fingerprint)
+	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender,agenda_fingerprint,assignee_id,due_at,calendar_uid,calendar_event,forwarded_to_self,body_own_end)
  VALUES (` + storekit.Placeholders(args) + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
 	return query, args
+}
+
+// storedDue is the due date the row keeps: none for a day outside the shared
+// window, which upsertActivity puts to the task's owner instead.
+func storedDue(due, now time.Time) time.Time {
+	if !due.IsZero() && !values.DueInWindow(due, now) {
+		return time.Time{}
+	}
+	return due
 }

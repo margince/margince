@@ -1,0 +1,11 @@
+{
+  "verb": "dismiss_deal_suggestion",
+  "checks": [
+    "company.read",
+    "deal.create",
+    "deal.read"
+  ],
+  "takes": [
+    "deal_suggestion"
+  ]
+}

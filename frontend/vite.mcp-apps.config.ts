@@ -44,6 +44,8 @@ export function mcpAppView(name: string, outDir: string): UserConfig {
     // public/ bypasses transforms and is copied unchanged — a file there would
     // land beside the document and break the one-file cardinality rule.
     publicDir: false,
+    // Dev middleware serves the same self-contained dependency build as shipping.
+    define: { "process.env.NODE_ENV": JSON.stringify("production") },
     esbuild: {
       // esbuild strips every comment even with minify off, SPDX included, so
       // there is nothing for legalComments to preserve. Stated so the inliner's

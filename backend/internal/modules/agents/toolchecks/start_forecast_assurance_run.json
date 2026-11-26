@@ -1,0 +1,9 @@
+{
+  "verb": "start_forecast_assurance_run",
+  "checks": [
+    "forecast.create"
+  ],
+  "takes": [
+    "idle_input_check"
+  ]
+}

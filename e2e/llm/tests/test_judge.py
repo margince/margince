@@ -30,17 +30,42 @@ class ApiJudgeTest(unittest.TestCase):
             with unittest.mock.patch.dict(os.environ, env):
                 self.assertEqual(judge.verdict("crit", "ans"), (True, "it holds"))
         body = provider.requests[0][2]
-        self.assertEqual(body["model"], "claude-haiku-4-5-20251001")
+        self.assertEqual(body["model"], "claude-haiku-5-5")
         self.assertNotIn("tools", body)
         self.assertIn("crit", json.dumps(body["messages"][0]["content"]))
 
     def test_an_unparseable_reply_is_retried_once_with_the_reason(self):
-        with FakeProvider([messages_reply("sure!"), messages_reply(NO)]) as provider:
+        with FakeProvider([messages_reply("sure!"), messages_reply(NO), messages_reply(NO), messages_reply(NO)]) as provider:
             env = {"E2E_LLM_JUDGE": "live", "E2E_LLM_JUDGE_VIA": "api", "ANTHROPIC_API_KEY": "k",
                    "E2E_LLM_JUDGE_BASE_URL": provider.url}
             with unittest.mock.patch.dict(os.environ, env):
-                self.assertEqual(judge.verdict("crit", "ans"), (False, "it does not"))
+                self.assertEqual(judge.verdict("crit", "ans"), (False, "3 of 3 votes no: it does not"))
         self.assertIn("could not be read", json.dumps(provider.requests[1][2]["messages"][0]["content"]))
+
+    def test_a_live_no_is_asked_twice_more_and_the_majority_decides(self):
+        yes = '{"reason": "it does", "verdict": "yes"}'
+        with FakeProvider([messages_reply(NO), messages_reply(yes), messages_reply(yes)]) as provider:
+            env = {"E2E_LLM_JUDGE": "live", "E2E_LLM_JUDGE_VIA": "api", "ANTHROPIC_API_KEY": "k",
+                   "E2E_LLM_JUDGE_BASE_URL": provider.url}
+            with unittest.mock.patch.dict(os.environ, env):
+                self.assertEqual(judge.verdict("crit", "ans"), (True, "2 of 3 votes yes: it does"))
+        self.assertEqual(len(provider.requests), 3)
+
+    def test_a_live_yes_is_not_asked_again(self):
+        yes = '{"reason": "it does", "verdict": "yes"}'
+        with FakeProvider([messages_reply(yes)]) as provider:
+            env = {"E2E_LLM_JUDGE": "live", "E2E_LLM_JUDGE_VIA": "api", "ANTHROPIC_API_KEY": "k",
+                   "E2E_LLM_JUDGE_BASE_URL": provider.url}
+            with unittest.mock.patch.dict(os.environ, env):
+                self.assertEqual(judge.verdict("crit", "ans"), (True, "it does"))
+        self.assertEqual(len(provider.requests), 1)
+
+    def test_a_model_belongs_to_its_vendor_family(self):
+        self.assertEqual(judge.family("claude-haiku-5-5"), "claude")
+        self.assertEqual(judge.family("anthropic/claude-haiku-5.5"), "claude")
+        self.assertEqual(judge.family("gpt-5.6-sol"), "gpt")
+        self.assertEqual(judge.family("gemini-4-hydrogen-medium"), "gemini")
+        self.assertEqual(judge.family("some-other-model"), "")
 
     def test_openrouter_judge_records_the_canonical_model_not_the_wire_id(self):
         directory = tempfile.mkdtemp()
@@ -49,10 +74,10 @@ class ApiJudgeTest(unittest.TestCase):
                    "OPENAI_COMPATIBLE_API_KEY": "k", "OPENAI_COMPATIBLE_BASE_URL": provider.url}
             with unittest.mock.patch.dict(os.environ, env):
                 self.assertEqual(judge.verdict("crit", "ans"), (False, "it does not"))
-        self.assertEqual(provider.requests[0][2]["model"], "anthropic/claude-haiku-4.5")
+        self.assertEqual(provider.requests[0][2]["model"], "anthropic/claude-haiku-5.5")
         [recorded] = os.listdir(directory)
         with open(os.path.join(directory, recorded), encoding="utf-8") as handle:
-            self.assertEqual(json.load(handle)["model"], "claude-haiku-4-5-20251001")
+            self.assertEqual(json.load(handle)["model"], "claude-haiku-5-5")
 
     def test_a_refused_judge_is_unavailable_not_a_no(self):
         with FakeProvider([(401, {"error": "bad key"})]) as provider:

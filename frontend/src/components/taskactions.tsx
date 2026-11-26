@@ -4,28 +4,25 @@ import {
   Badge,
   Button,
   Checkbox,
-  Field,
   Modal,
   PendingBody,
 } from "../design-system/atoms";
-import { DateInput } from "../design-system/dateinput";
 import { focusableWithin } from "../design-system/dialogfocus";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
-import { NoteMarkdown } from "../design-system/markdown";
 import { provenanceOf } from "../design-system/provenanceof";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { formatActivityWhen } from "../format/activitywhen";
 import { calendarDay } from "../format/calendarday";
-import { isoOrBlank } from "../format/datepattern";
 import { formatDue } from "../format/format";
-import { dueTimeOf, startOfDayInZone } from "../format/timezone";
+import { startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
-import { taskDueFields } from "../lib/activitybody";
+import { taskDueChoice, taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
-import { TaskTimeField } from "./followuptaskfields";
-import { mostSpecificFirst, RecordLinks } from "./recordlinks";
+import { isWebsiteInquiryTask } from "../lib/websiteinquiries";
+import { mostSpecificFirst, RecordLinkChips } from "./recordlinks";
 import { TaskAssignee } from "./taskassignee";
+import { TaskDetailReading, TaskDetailTitle } from "./taskdetailtext";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
 import { useActivity } from "../lib/activityread";
@@ -35,11 +32,17 @@ import { useTaskContact } from "../lib/taskcontact";
 import { useViewerZone } from "../lib/viewerzone";
 import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
-import { TaskNextSteps } from "./tasknextsteps";
+import {
+  currentDueFields,
+  TaskDueDatePick,
+  useMoveTask,
+} from "./taskduedatepick";
+import { TaskNextStepsPending, useTaskNextSteps } from "./tasknextsteps";
 import { taskOriginKey } from "./taskorigin";
 import { TaskOutcomeForm } from "./taskoutcome";
+import { TaskRemindMenu } from "./taskreminder";
 import type { useTaskUpdate } from "./taskwrite";
-import { WhichDealDecline } from "./whichdealdecline";
+import { TaskWriteFailure } from "./taskwritefailure";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -50,11 +53,13 @@ import { WhichDealDecline } from "./whichdealdecline";
 // record's timeline is not.
 
 export {
+  readMeetingStatus,
   useAutomationRetry,
   useClaimSettle,
   useMeetingOutcome,
   useNoticeRead,
 } from "./taskactions.rowwrites";
+export { TaskDueDatePick } from "./taskduedatepick";
 export { useTaskDone, useTaskUpdate } from "./taskwrite";
 
 type Activity = components["schemas"]["Activity"];
@@ -65,44 +70,51 @@ export function snoozedDueAt(
   hasTime: boolean | undefined,
   zone: string,
   now = new Date(),
-): { due_at: string; due_has_time: boolean } | null {
+  intent?: components["schemas"]["IntentTime"],
+): ReturnType<typeof taskDueFields> | null {
   if (!dueAt) return null;
-  const dueDay = calendarDay(new Date(dueAt), zone);
-  const today = calendarDay(now, zone);
+  const choice = taskDueChoice(dueAt, hasTime, zone, intent);
+  const dueDay = choice.day;
+  const today = calendarDay(now, choice.zone);
   const base = dueDay > today ? dueDay : today;
-  const next = calendarDay(new Date(startOfDayInZone(base, zone, 1)), zone);
-  return taskDueFields(next, dueTimeOf(dueAt, hasTime, zone), zone);
+  const next = calendarDay(
+    new Date(startOfDayInZone(base, choice.zone, 1)),
+    choice.zone,
+  );
+  return taskDueFields(next, choice.time, choice.zone);
 }
 
 /**
  * TaskCompleteCheck is the tick itself: a checkbox for a row that names its
- * own verb, since ticking is completing. Every caller lists open tasks only,
- * so the box starts unchecked. The row leaves on the invalidated re-read,
- * with the confirmation and its Undo raised meanwhile.
+ * own verb, since ticking is completing. Its name is for screen readers only,
+ * and names the task, so a box read out of its row still says what it does.
+ * Every caller lists open tasks only, so the box starts unchecked. The row
+ * leaves on the invalidated re-read, with the confirmation and its Undo raised
+ * meanwhile.
  */
 export function TaskCompleteCheck({
   activityId,
+  subject,
   version,
   update,
 }: Readonly<{
   activityId: string;
+  subject: string;
   version: number | undefined;
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
   const complete = useCompleteTask(update);
   const isThisTask = update.variables?.id === activityId;
-  const pending = update.isPending && isThisTask;
+  const pending = update.isPending;
   // A rejected PATCH re-enables the box, unchecked, like a click that did
   // nothing; this line is what tells the two apart.
   const failed = update.isError && isThisTask;
+  const name = t("tasks.completeNamed", { subject });
   return (
     <>
-      {/* The row already names the task beside it, so the tick's own name is
-          screen-reader-only — the words are not repeated on screen, and the
-          box still announces what ticking it does. */}
       <Checkbox
-        label={<span className="sr-only">{t("tasks.complete")}</span>}
+        label={<span className="sr-only">{name}</span>}
         checked={false}
         disabled={pending}
         onChange={() => complete(activityId, version)}
@@ -112,126 +124,76 @@ export function TaskCompleteCheck({
   );
 }
 
-/** Complete, snooze a dated task, or explicitly choose its next due day. */
+/** Complete, or snooze a dated task. */
 export function TaskQuickActions({
   activityId,
   version,
   dueAt,
   dueHasTime,
+  dueIntent,
   update,
   showComplete = true,
-  showDuePicker = false,
+  completeLabel,
+  quiet = false,
 }: Readonly<{
   activityId: string;
   version: number | undefined;
   dueAt?: string | null;
   /** The task's `due_has_time`: whether `dueAt` is a time of day. */
   dueHasTime?: boolean;
+  dueIntent?: components["schemas"]["IntentTime"];
   update: ReturnType<typeof useTaskUpdate>;
   showComplete?: boolean;
-  // Whether the reader may name a day, rather than only step the due date on.
-  // Off by default, since a date box in every next-steps row is too heavy.
-  // The detail modal opts in: a reader came there to work on one task.
-  showDuePicker?: boolean;
+  completeLabel?: string;
+  /** Done steps back to a plain button beside another filled verb. */
+  quiet?: boolean;
 }>) {
   const t = useT();
   const readerZone = useViewerZone();
-  const pending = update.isPending && update.variables?.id === activityId;
+  // Any task write through this `update` holds every verb. The page draws the
+  // old next task until the reads land; a press then acts on a stale row.
+  const pending = update.isPending;
   const complete = useCompleteTask(update);
+  const move = useMoveTask(update);
   return (
     <>
       {showComplete && (
         <Button
-          variant="primary"
+          variant={quiet ? undefined : "primary"}
           disabled={pending}
           onClick={() => complete(activityId, version)}
         >
-          {t("tasks.complete")}
+          {completeLabel ?? t("tasks.complete")}
         </Button>
       )}
       {dueAt && (
         <Button
           disabled={pending}
           onClick={() => {
-            const nextDue = snoozedDueAt(dueAt, dueHasTime, readerZone);
+            const nextDue = snoozedDueAt(
+              dueAt,
+              dueHasTime,
+              readerZone,
+              new Date(),
+              dueIntent,
+            );
             if (nextDue)
-              update.mutate({ id: activityId, version, body: nextDue });
+              void move({
+                id: activityId,
+                version,
+                to: nextDue,
+                back: currentDueFields(
+                  dueAt,
+                  dueHasTime,
+                  readerZone,
+                  dueIntent,
+                ),
+              });
           }}
         >
           {t("tasks.snooze")}
         </Button>
       )}
-      {showDuePicker && (
-        <TaskDueDatePick
-          activityId={activityId}
-          version={version}
-          dueAt={dueAt}
-          dueHasTime={dueHasTime}
-          update={update}
-        />
-      )}
-    </>
-  );
-}
-
-// The picker also dates tasks that have no deadline to snooze.
-function TaskDueDatePick({
-  activityId,
-  version,
-  dueAt,
-  dueHasTime,
-  update,
-}: Readonly<{
-  activityId: string;
-  version: number | undefined;
-  dueAt?: string | null;
-  dueHasTime?: boolean;
-  update: ReturnType<typeof useTaskUpdate>;
-}>) {
-  const t = useT();
-  const pending = update.isPending && update.variables?.id === activityId;
-  const readerZone = useViewerZone();
-  // Seeded from the task's own day and time in the INSTALLATION's zone,
-  // matching what the meta line above reads it in: a picker opening on a
-  // different day than the one displayed beside it would be two answers to
-  // "when is this due".
-  const current = isoOrBlank(
-    dueAt ? calendarDay(new Date(dueAt), readerZone) : "",
-  );
-  const time = dueAt ? dueTimeOf(dueAt, dueHasTime, readerZone) : "";
-  const move = (day: string, nextTime: string) =>
-    update.mutate({
-      id: activityId,
-      version,
-      body: taskDueFields(day, nextTime, readerZone),
-    });
-  return (
-    <>
-      <Field label={t("tasks.moveTo")}>
-        {(field) => (
-          <DateInput
-            {...field}
-            value={current}
-            disabled={pending}
-            onChange={(event) => {
-              const day = event.target.value;
-              // A cleared box is not a request to undate the task.
-              if (day === "") {
-                return;
-              }
-              move(day, time);
-            }}
-          />
-        )}
-      </Field>
-      {/* Clearing the time puts the task back to the end of its day. */}
-      <TaskTimeField
-        day={pending ? "" : current}
-        value={time}
-        onChange={(nextTime) => {
-          if (current !== "") move(current, nextTime);
-        }}
-      />
     </>
   );
 }
@@ -250,6 +212,7 @@ export function TaskDetailDialog({
   update,
   openerFor,
   why,
+  title,
 }: Readonly<{
   activityId: string;
   // An archived company takes no new activity, so the verbs below would only
@@ -262,6 +225,8 @@ export function TaskDetailDialog({
   openerFor: SourceOpenerFor;
   // Why the task is on the list it was opened from, which only that list knows.
   why?: ReactNode;
+  // The name the opening card gave the task, so the two read alike.
+  title?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -293,7 +258,7 @@ export function TaskDetailDialog({
     >
       <DrawerHead className="task-detail-head">
         <Heading size="large" id={titleId} className="t-h2">
-          {task?.subject ?? t("tasks.detail")}
+          {title ?? <TaskDetailTitle task={task} />}
         </Heading>
       </DrawerHead>
       <DrawerBody ref={body}>
@@ -303,18 +268,13 @@ export function TaskDetailDialog({
           {task && (
             <div className="form-stack">
               {origin && <p className="t-body">{t(origin)}</p>}
-              {/* Markdown, as the timeline draws the same body. */}
-              {task.body && (
-                <div className="t-body task-detail-body">
-                  <NoteMarkdown source={task.body} />
-                </div>
-              )}
+              <TaskDetailReading task={task} />
               <div className="t-caption task-detail-meta">
                 {/* In the same tab: the reader opened the panel to learn what the
                   task is about, and following its record is leaving for it. */}
                 {task.links && task.links.length > 0 && (
-                  <span>
-                    <RecordLinks links={mostSpecificFirst(task.links)} />
+                  <span className="task-detail-records">
+                    <RecordLinkChips links={mostSpecificFirst(task.links)} />
                   </span>
                 )}
                 {task.due_at ? (
@@ -330,6 +290,7 @@ export function TaskDetailDialog({
                         task.due_has_time,
                         locale,
                         readerZone,
+                        task.due_intent,
                       ),
                     })}
                   </span>
@@ -348,7 +309,15 @@ export function TaskDetailDialog({
                 {task.is_done && (
                   <Badge tone="success">{t("tasks.isDone")}</Badge>
                 )}
-                <TaskAssignee id={task.assignee_id} />
+                {/* A held task names its holder after a label, as Logged
+                  names its time; an unheld one reads Unassigned alone. */}
+                {task.assignee_id ? (
+                  <span>
+                    {t("tasks.heldBy")} <TaskAssignee id={task.assignee_id} />
+                  </span>
+                ) : (
+                  <TaskAssignee id={task.assignee_id} />
+                )}
                 {/* A task an agent wrote says so, so a reader knows it was
                   read out of a conversation rather than typed by a colleague. */}
                 {provenanceOf(task.captured_by).kind === "agent" && (
@@ -403,34 +372,59 @@ function TaskDetailActions({
   const t = useT();
   const [logging, setLogging] = useState(false);
   const canAct = !task.is_done && !readOnly && writable && !logging;
+  // The type's own step is the panel's one filled verb, so Done steps back.
+  const next = useTaskNextSteps(task, true);
   return (
     <>
-      {!logging && (
-        <TaskNextSteps
-          task={task}
-          className="form-actions task-detail-actions"
-        />
+      {!logging && (next.steps !== null || next.others) && (
+        <div className="task-detail-actions">
+          {next.steps}
+          {next.others}
+        </div>
       )}
       {canAct && (
-        <div ref={verbs} className="form-actions task-detail-actions">
-          <TaskQuickActions
+        <div ref={verbs} className="task-detail-verbs">
+          <div className="task-detail-buttons">
+            {/* Done's weight waits on the contact read, so its place is held. */}
+            {next.pending && <TaskNextStepsPending />}
+            <TaskQuickActions
+              showComplete={!next.pending}
+              completeLabel={
+                isWebsiteInquiryTask(task)
+                  ? t("inquiry.markHandled")
+                  : undefined
+              }
+              activityId={task.id}
+              version={task.version}
+              dueAt={task.due_at}
+              dueHasTime={task.due_has_time}
+              dueIntent={task.due_intent}
+              update={update}
+              quiet={next.fills}
+            />
+            <Button onClick={() => setLogging(true)}>
+              {t("tasks.log.action")}
+            </Button>
+            <TaskRemindMenu task={task} update={update} />
+          </div>
+          {/* After the buttons in reading order, as on screen. */}
+          <TaskDueDatePick
             activityId={task.id}
             version={task.version}
             dueAt={task.due_at}
             dueHasTime={task.due_has_time}
+            dueIntent={task.due_intent}
             update={update}
-            showDuePicker
           />
-          <WhichDealDecline task={task} />
         </div>
       )}
-      {canAct && (
-        <Button onClick={() => setLogging(true)}>
-          {t("tasks.log.action")}
-        </Button>
-      )}
+      {!logging && <TaskWriteFailure taskId={task.id} update={update} />}
       {logging && (
-        <TaskOutcomeForm task={task} onLogged={() => setLogging(false)} />
+        <TaskOutcomeForm
+          task={task}
+          onLogged={() => setLogging(false)}
+          onBack={() => setLogging(false)}
+        />
       )}
     </>
   );

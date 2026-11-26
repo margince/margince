@@ -58,12 +58,12 @@ function source(
 
 type Call = { url: string; method: string; body: unknown };
 
-const CONFLICT = {
+const NAME_TAKEN = {
   type: "about:blank",
   title: "Conflict",
   status: 409,
-  code: "conflict",
-  detail: "conflict",
+  code: "name_taken",
+  detail: "name taken",
 };
 
 // `slaOn` seeds the stored first-response posture. The target box is inert
@@ -88,7 +88,7 @@ function backend(
     if (url.endsWith("/v1/me")) {
       body = meFixture({ allow });
     } else if (options.refuseWrite && method !== "GET") {
-      body = CONFLICT;
+      body = NAME_TAKEN;
       status = 409;
     } else if (method === "DELETE") {
       status = 204;
@@ -212,7 +212,7 @@ describe("LeadOriginsCard", () => {
     const dialog = within(await screen.findByRole("dialog"));
     const field = dialog.getByLabelText(en["leadSources.labelField"]);
     expect(field).toHaveValue("Trade show");
-    expect(dialog.getByText("trade_show").tagName).toBe("CODE");
+    expect(dialog.queryByText("trade_show")).toBeNull();
     await user.clear(field);
     await user.type(field, "Messe{Enter}");
     await waitFor(() =>
@@ -387,6 +387,27 @@ describe("LeadOriginsCard", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
+  it("says a new origin needs a name on Add origin, and sends nothing", async () => {
+    const user = userEvent.setup();
+    const calls: Call[] = [];
+    vi.stubGlobal("fetch", backend(ADMIN, calls));
+    render(
+      <Providers>
+        <LeadOriginsCard />
+      </Providers>,
+    );
+    await user.click(await screen.findByRole("button", { name: "New origin" }));
+    const dialog = within(screen.getByRole("dialog"));
+    await user.click(dialog.getByRole("button", { name: "Add origin" }));
+    expect(
+      dialog.getByText(`${en["leadSources.labelField"]} is required.`),
+    ).toBeTruthy();
+    expect(document.activeElement).toBe(
+      dialog.getByTestId("lead-origin-new-label"),
+    );
+    expect(calls.filter((call) => call.method === "POST")).toEqual([]);
+  });
+
   it("says a duplicate origin name on the field and keeps the dialog open", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
@@ -403,7 +424,27 @@ describe("LeadOriginsCard", () => {
     await user.type(field, "Trade show{Enter}");
     expect(await dialog.findByText(en["leadOrigins.duplicate"])).toBeTruthy();
     expect(field.getAttribute("aria-invalid")).toBe("true");
-    expect(dialog.queryByText(CONFLICT.detail)).toBeNull();
+    expect(dialog.queryByText(NAME_TAKEN.detail)).toBeNull();
+  });
+
+  it("says a rename to a taken origin name on the field", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
+    render(
+      <Providers>
+        <LeadOriginsCard />
+      </Providers>,
+    );
+    await openMenu(user, "Trade show");
+    await user.click(screen.getByRole("button", { name: "Rename" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    const field = dialog.getByLabelText(en["leadSources.labelField"]);
+    expect(field).toHaveAttribute("data-character-limit", "120");
+    await user.clear(field);
+    await user.type(field, "Created manually{Enter}");
+    await waitFor(() =>
+      expect(field).toHaveAccessibleDescription(en["leadOrigins.duplicate"]),
+    );
   });
 
   it("leaves every control inert for a reader, and leaves the why to the page", async () => {

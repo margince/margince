@@ -7,16 +7,20 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { useUnsavedGuard } from "../../components/unsaved";
+import { TextInput } from "../../design-system/atoms";
 import { EvidenceMark } from "../../design-system/evidencemark";
+import {
+  FieldEditDialog,
+  useFieldEditor,
+} from "../../design-system/fieldeditdialog";
 import { FieldRow } from "../../design-system/fieldgrid";
 import { InlineText } from "../../design-system/inlinetext";
-import { useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import { invalidateCompany } from "../../lib/recordwritekeys";
-import { useViewerZone } from "../../lib/viewerzone";
 import { VatMark } from "./companyvatmark";
-import { derivedSource } from "./evidencesource";
+import { useDerivedSource } from "./evidencesource";
 import { profileFieldsKey } from "./evidenceverdict";
 
 type ProfileField = components["schemas"]["CompanyProfileField"];
@@ -64,6 +68,8 @@ type SidecarFieldProps = Readonly<{
   // individually, so it passes none and its rows read as they always have.
   icon?: ReactNode;
   placeholderKey: MessageKey;
+  // Why an empty field is empty, shown to a reader who cannot fill it.
+  emptyKey?: MessageKey;
   canEdit: boolean;
   readOnlyReason: string | undefined;
   multiline?: boolean;
@@ -72,26 +78,98 @@ type SidecarFieldProps = Readonly<{
 
 /** One sidecar field's value and its marks, for a row its caller draws. */
 export function SidecarFieldValue({
-  companyId,
-  anchor,
-  fields,
-  fieldsLoaded,
-  field,
   labelKey,
   label: labelText,
   placeholderKey,
+  emptyKey,
   canEdit,
   readOnlyReason,
   multiline,
-  guardDetails,
+  ...target
 }: SidecarFieldProps) {
   const t = useT();
-  const { locale } = useLocale();
-  const readerZone = useViewerZone();
+  const write = useSidecarWrite(target);
+  const label = labelText ?? (labelKey ? t(labelKey) : target.field);
+  return (
+    <>
+      {/* The value is the control that opens its edit, so the receipt is a
+          second control beside it, as the VAT verdict is. */}
+      <InlineText
+        label={label}
+        value={write.current?.value ?? ""}
+        placeholder={t(placeholderKey)}
+        emptyText={emptyKey ? t(emptyKey) : undefined}
+        multiline={multiline}
+        canEdit={canEdit && target.fieldsLoaded}
+        readOnlyReason={readOnlyReason}
+        onEditingChange={write.onEditingChange}
+        onDirtyChange={write.setDirty}
+        onSave={write.save}
+      />
+      <SidecarMarks
+        companyId={target.companyId}
+        field={target.field}
+        current={write.current}
+        canAsk={canEdit}
+      />
+    </>
+  );
+}
+
+type SidecarTarget = Pick<
+  SidecarFieldProps,
+  "companyId" | "anchor" | "fields" | "fieldsLoaded" | "field" | "guardDetails"
+>;
+
+const asLine = (draft: string) => draft.trim();
+
+/**
+ * One sidecar field changed as a flow of its own: its stored row, the dialog
+ * that changes it, and `open` when this reader may.
+ */
+export function useSidecarFieldFlow(
+  target: SidecarTarget & Readonly<{ label: string; canEdit: boolean }>,
+) {
+  const write = useSidecarWrite(target);
+  const canEdit = target.canEdit && target.fieldsLoaded;
+  const { open, editing } = useFieldEditor(canEdit, write.onEditingChange);
+  return {
+    current: write.current,
+    open: canEdit ? () => editing(true) : undefined,
+    element: (
+      <FieldEditDialog
+        open={open}
+        label={target.label}
+        value={write.current?.value ?? ""}
+        settle={asLine}
+        onClose={() => editing(false)}
+        onSave={write.save}
+        onDirtyChange={write.setDirty}
+      >
+        {({ control, draft, setDraft, saving }) => (
+          <TextInput
+            {...control}
+            value={draft}
+            readOnly={saving}
+            aria-busy={saving || undefined}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+        )}
+      </FieldEditDialog>
+    ),
+  };
+}
+
+function useSidecarWrite({
+  companyId,
+  anchor,
+  fields,
+  field,
+  guardDetails,
+}: SidecarTarget) {
   const queryClient = useQueryClient();
   const [dirty, setDirty] = useState(false);
   useUnsavedGuard(dirty, guardDetails ? "details" : undefined);
-  const label = labelText ?? (labelKey ? t(labelKey) : field);
   const current = fields.find((one) => one.field === field);
   // The row the editor opened on: a refetch while it is open must not move the
   // precondition, or the save overwrites a concurrent change.
@@ -123,26 +201,28 @@ export function SidecarFieldValue({
       invalidateCompany(queryClient, { id: companyId, is_anchor: anchor }),
     ]);
   };
+  return { current, onEditingChange, setDirty, save };
+}
+
+/** The receipt and, for a VAT number, the register's verdict beside a sidecar value. */
+export function SidecarMarks({
+  companyId,
+  field,
+  current,
+  canAsk,
+}: Readonly<{
+  companyId: string;
+  field: ProfileFieldKey;
+  current: ProfileField | undefined;
+  canAsk: boolean;
+}>) {
+  const t = useT();
+  const sourceOf = useDerivedSource();
   // A value a machine read keeps its receipt. Absent for a value a human typed:
   // a mark with nothing behind it teaches the reader to stop opening them.
-  const source = current
-    ? derivedSource(current, locale, readerZone)
-    : undefined;
+  const source = current ? sourceOf(current) : undefined;
   return (
     <>
-      {/* The value is the control that opens its edit, so the receipt is a
-          second control beside it, as the VAT verdict is. */}
-      <InlineText
-        label={label}
-        value={current?.value ?? ""}
-        placeholder={t(placeholderKey)}
-        multiline={multiline}
-        canEdit={canEdit && fieldsLoaded}
-        readOnlyReason={readOnlyReason}
-        onEditingChange={onEditingChange}
-        onDirtyChange={setDirty}
-        onSave={save}
-      />
       {source && current && (
         <EvidenceMark
           value={t("evidence.mark")}
@@ -154,11 +234,7 @@ export function SidecarFieldValue({
           number exists: a mark on an empty field would say the register had
           declined to recognise something nobody has stated. */}
       {field === "register_vat" && current?.value && (
-        <VatMark
-          companyId={companyId}
-          stated={current.value}
-          canAsk={canEdit}
-        />
+        <VatMark companyId={companyId} stated={current.value} canAsk={canAsk} />
       )}
     </>
   );

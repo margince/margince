@@ -46,6 +46,10 @@ func userInvitedPayload(userID ids.UserID, role string, by ids.UserID, teams []i
 // notice.
 func (s *Service) joinTeamsTx(ctx context.Context, tx pgx.Tx, actor Identity, userID ids.UUID, teams []ids.UUID) error {
 	for _, teamID := range uniqueTeams(teams) {
+		after, err := s.memberJoinsTx(ctx, tx, teamID, userID)
+		if err != nil {
+			return err
+		}
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO team_membership (team_id, user_id)
 			SELECT id, $2 FROM team WHERE id = $1 AND archived_at IS NULL
@@ -60,8 +64,7 @@ func (s *Service) joinTeamsTx(ctx context.Context, tx pgx.Tx, actor Identity, us
 			}
 		}
 		if err := s.recordTeamChange(ctx, tx, actor, teamID, &userID, changeMemberAdded,
-			map[string]any{teamAuditKeyMember: userID, "on": false},
-			map[string]any{teamAuditKeyMember: userID, "on": true}); err != nil {
+			map[string]any{teamAuditKeyMember: userID, "on": false}, after); err != nil {
 			return err
 		}
 	}

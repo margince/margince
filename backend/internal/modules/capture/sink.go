@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -31,6 +32,9 @@ type Sink struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db     *database.DB
 	stager MergeStager
+	// dueAsker puts an out-of-window due date to the task's owner. Nil refuses
+	// such a task, because a date nobody can be asked about would be lost.
+	dueAsker DueAsker
 	// contactArrivals tells a contact's owner about a captured lead whose
 	// address is the contact's. Nil tells nobody, and the lead is still not made.
 	contactArrivals ContactArrivals
@@ -41,16 +45,18 @@ type Sink struct {
 	// files is the timeline module's attachment writer. Nil is a role that
 	// keeps no files: messages still land, and their attachments do not.
 	files FileKeeper
-	// projectKeys resolves the subject-line rung of the project attribution
-	// ladder. Nil is a role that attributes nothing — messages still land, and
-	// none of them is filed under a project.
-	projectKeys ProjectKeyMatcher
-	// stampProject classifies the correspondence a project link qualifies. It
-	// arrives with projectKeys in one ProjectAttribution value, so the two are
-	// set together or neither is; attributeProject checks both anyway, because
-	// a ladder that files without classifying is the one outcome this must
-	// never reach.
-	stampProject StampProjectCorrespondence
+	// meetingNotes lands the text of a meeting's notes Docs. Nil reads none.
+	meetingNotes MeetingNotesWriter
+	// now dates the meeting-notes window. Nil is the wall clock.
+	now func() time.Time
+	// projectAttribution is the project attribution ladder. An incomplete value
+	// is a role that attributes nothing: messages still land, and none of them is
+	// filed under a project. attributesProject checks every part, because a
+	// ladder that files without classifying must never run.
+	projectAttribution ProjectAttribution
+	// taskAssignee refuses a task filed for a seat that cannot hold work. Nil
+	// is a role that lands no task for anyone: such a record is refused.
+	taskAssignee TaskAssigneeCheck
 	// deals files captured mail under its one deal. A zero value files none.
 	deals DealAttribution
 	// purgeRemoved acts on a message the provider says the owner deleted. Nil
@@ -82,6 +88,8 @@ type Sink struct {
 	// foldMeeting retires one of two live rows holding one meeting. Nil keeps
 	// both.
 	foldMeeting MeetingFolder
+	// replacedSeries folds the meetings a split series replaced. Nil keeps them.
+	replacedSeries SeriesSplitFolder
 	// keepMeetingHost hands a replayed meeting to its organizer. Nil leaves the
 	// first calendar that synced it as its host.
 	keepMeetingHost   MeetingHostKeeper
@@ -93,6 +101,9 @@ type Sink struct {
 	// claimOwnSentMail corrects a colleague's earlier reading of this seat's
 	// sent mail; nil leaves the first reading standing.
 	claimOwnSentMail OwnSentMailClaim
+	// adoptSentEcho re-keys the seat's send onto its echo's identity
+	// (sentecho.go). Nil lands such an echo as a second row.
+	adoptSentEcho SentEchoAdoption
 	// mailIdentityKind is activities.IdentityKindMail, and the two identity
 	// seams below are that module's own resolve and claim. All three are set
 	// together by WithMessageIdentity or none is: an empty kind is what
@@ -116,6 +127,7 @@ const (
 	fieldSourceSystem = "source_system"
 	fieldSourceID     = "source_id"
 	fieldReason       = "reason"
+	fieldOutcome      = "outcome"
 	// fieldError carries the cause on a fault breadcrumb. Named once because
 	// two post-commit steps record one, and an operator filtering system_log
 	// must not have to know which of them spelled the key.
@@ -135,6 +147,7 @@ type MergeStager interface {
 // MergeProposal names the collision: the surviving record and the
 // captured fields that would fold into it.
 type MergeProposal struct {
+	SystemText *systemtext.Message
 	// note: TargetType + TargetID are the polymorphic pair the approvals
 	// merge target carries — this is a discriminated ref, not a single
 	// entity's id, so it stays untyped (kernel Ref semantics).
@@ -192,6 +205,19 @@ func (s *Sink) WithContactArrivals(arrivals ContactArrivals) *Sink {
 	return &c
 }
 
+// TaskAssigneeCheck answers whether a seat may be given a new task, with the
+// refusal the task form gives a user who tries the same. Compose binds it, so
+// capture and the task form read one rule.
+type TaskAssigneeCheck func(ctx context.Context, tx pgx.Tx, seat ids.UserID) error
+
+// WithTaskAssigneeCheck returns a copy that lets a record file a task for a
+// colleague.
+func (s *Sink) WithTaskAssigneeCheck(check TaskAssigneeCheck) *Sink {
+	c := *s
+	c.taskAssignee = check
+	return &c
+}
+
 // WithStager returns a copy wired to the merge-staging path.
 func (s *Sink) WithStager(stager MergeStager) *Sink {
 	c := *s
@@ -233,11 +259,18 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 	}
 
 	s = s.withRetryFileStage()
+	if err := s.prestageFiles(ctx, rec); err != nil {
+		return datasource.EntityRef{}, err
+	}
+	// The counterparty ensure acts as the connector, not under the member
+	// authority the admission below binds into the transaction's context.
+	ensureCtx := ctx
 	var attempt captureAttempt
 	txStart := time.Now()
 	original := rec
 	err = storekit.RetryLockCycles(ctx, func() error {
-		return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		s.beginFileAttempt()
+		return s.db.Tx(ctx, s.notingCommit(func(tx pgx.Tx) error {
 			rec = original
 			attempt = captureAttempt{}
 			ctx, err := s.admitWriteTx(withAdmissionNote(ctx, &attempt.admission), tx, rec)
@@ -246,6 +279,9 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 			}
 
 			if err := s.prepareActivityCapture(ctx, tx, rec, existingOnly); err != nil {
+				return err
+			}
+			if rec, err = s.readForwardToSelfTx(ctx, tx, rec); err != nil {
 				return err
 			}
 
@@ -261,7 +297,16 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 
 			switch fields := rec.Fields.(type) {
 			case ActivityFields:
-				attempt.activityLanding, err = s.landActivityTx(ctx, tx, rec, fields, actor.UserID)
+				if err := memberGuardTx(ctx, tx, actor.UserID); err != nil {
+					return err
+				}
+				if attempt.activityLanding, err = s.landActivityTx(ctx, tx, rec, fields, actor.UserID); err != nil {
+					return err
+				}
+				if attempt.ensured, err = s.ensureCounterpartyTx(ensureCtx, tx, rec, attempt.activityLanding); err != nil {
+					return err
+				}
+				attempt.ladder, err = s.fileUnderProjectInCaptureTx(ensureCtx, tx, rec, attempt.activityLanding)
 				return err
 			case LeadFields:
 				if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
@@ -272,13 +317,15 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 			default:
 				return fmt.Errorf("capture: unmapped Fields type %T for %s", rec.Fields, rec.EntityType)
 			}
-		})
+		}))
 	})
 	capturemetrics.ObserveStage(ctx, capturemetrics.StageSink, time.Since(txStart))
 	if err != nil {
+		s.discardFilesOfFailedCapture(ctx)
 		s.traceInvisibleIncumbent(ctx, rec, err)
 		return datasource.EntityRef{}, err
 	}
+	s.discardUnnamedFiles(ctx)
 	return s.finishCapture(ctx, rec, attempt)
 }
 
@@ -299,31 +346,13 @@ func (s *Sink) finishCapture(ctx context.Context, rec connector.NormalizedRecord
 	ensureStart := time.Now()
 	defer func() { capturemetrics.ObserveStage(ctx, capturemetrics.StageEnsure, time.Since(ensureStart)) }()
 	if attempt.created {
-		// The tier ladder already decided, and recorded its decision, inside
-		// the transaction above. Creation runs AFTER that commit, in its own
-		// transaction: the timeline row is never lost to a resolver fault, and
-		// a fault here is logged for the link_reconcile sweep rather than
-		// surfaced as a capture failure (the 60s p95 already delivered).
-		s.ensureCounterparty(ctx, rec, ref, attempt.decision)
+		s.settleCounterparty(ctx, rec, ref, attempt.decision, attempt.ensured)
 	}
 	s.admitCapturedParties(ctx, rec, ref, attempt.created && !attempt.admission.pending)
-	// The project ladder runs on the same terms as the counterparty step —
-	// after the commit, in its own transaction, never failing the capture —
-	// and on EVERY capture of the activity rather than only the first.
-	//
-	// A transient fault used to leave the message unfiled forever: the ladder
-	// ran only on creation, so every later replay found the activity present
-	// and skipped it, and the reconcile the comment promised has no caller.
-	// Running it again is the retry. It is safe by construction —
-	// linkActivityToProject is ON CONFLICT DO NOTHING and stamps either way —
-	// and cheap because an activity already filed under a project stops on one
-	// indexed read before the rungs.
-	//
 	// Independent of the counterparty decision: a message from a sender no
 	// record was created for still belongs to the project its subject names.
-	s.attributeProject(ctx, rec, ref)
-	// The deal step reads the project link the ladder just wrote, so it runs
-	// after it, on the same terms.
+	s.settleProject(ctx, rec, ref, attempt.ladder)
+	// The deal step reads the project link, so it runs after the ladder.
 	s.attributeDeal(ctx, rec, ref)
 	if ref.Type == datasource.EntityContact && s.contactArrivals != nil {
 		if fields, ok := rec.Fields.(LeadFields); ok {
@@ -342,7 +371,8 @@ func (s *Sink) stageDuplicateLead(ctx context.Context, rec connector.NormalizedR
 	}
 	_, err := s.stager.StageMerge(ctx, MergeProposal{
 		TargetType: "lead", TargetID: hit.UUID, ProposedChange: fields,
-		Summary: s.duplicateLeadSummary(ctx, rec.NaturalKey),
+		Summary:    s.duplicateLeadSummary(ctx, rec.NaturalKey),
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("capture.duplicateLead", systemtext.Text(rec.NaturalKey.SourceSystem), systemtext.Text(rec.NaturalKey.SourceID))},
 	})
 	if err != nil {
 		return fmt.Errorf("capture: staging the dedupe merge: %w", err)
@@ -357,6 +387,14 @@ func (s *Sink) admitWriteTx(ctx context.Context, tx pgx.Tx, rec connector.Normal
 	ctx, err := s.mailboxRunAllowedTx(ctx, tx)
 	if err != nil {
 		return ctx, err
+	}
+	// The counterparty ensure in this transaction holds the member's authority,
+	// which must come before any row lock. A mailbox run holds it already.
+	if !isMailboxRun(ctx) && s.ensurer != nil {
+		_, owner := capturePrincipal(ctx)
+		if err := s.holdPartyAuthorityTx(ctx, tx, owner); err != nil {
+			return ctx, err
+		}
 	}
 	// A channel record's account id is personal data, and this transaction
 	// makes it durable. So the erasure is excluded here, under the account's own

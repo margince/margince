@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "my_linkedin_reach",
+  "verb": "get_my_linked_in_reach",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

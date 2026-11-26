@@ -7,11 +7,14 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Receipt is one completed autonomous act, reported rather than asked about.
 type Receipt struct {
+	CompletedChange *crmcontracts.MagicLine
+	SystemDisplay   *crmcontracts.SystemDisplay
 	// Source says which identity ID is; AuditLogID is the correction's audit
 	// entry, kept apart from Undo because a receipt without Undo still has one.
 	Source          ReceiptSource
@@ -23,6 +26,9 @@ type Receipt struct {
 	Summary         string
 	SummaryParts    *crmcontracts.ApprovalSummaryParts
 	OccurredAt      time.Time
+	// ListedAt is when the receipt joined the reader's list; zero means
+	// OccurredAt. A close offered back lists later than it happened.
+	ListedAt time.Time
 	// The record the decision was about, carried from the approval it came
 	// from. A reader told the system sent something on their behalf wants the
 	// account it went to, and the card offers `open` only when this names one.
@@ -55,6 +61,15 @@ type Receipt struct {
 	// CustomerQuote is the customer's own words the act rests on. It is kept
 	// apart from Reason, which is Margince's reading and never a quote.
 	CustomerQuote string
+	// ReasonKind says whether Reason is a rule or an inference; empty when
+	// the act cannot say.
+	ReasonKind string
+	// CitedActivities are the messages a change rests on. The newest the
+	// reader may open becomes the receipt's source.
+	CitedActivities []ids.UUID
+	// CitedMoments are when the cited messages happened as the change was
+	// written. A message missing here is dated by its live row.
+	CitedMoments map[ids.UUID]deals.CitedMoment
 }
 
 // ReceiptUndo is what a receipt needs to offer a way back.

@@ -6,7 +6,7 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 
 ## notice
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+17 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -22,6 +22,7 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 | `retracted_at` | `timestamp with time zone` |  |  |
 | `subject` | `text` | yes | The headline the recipient reads, derived from the kind rather than supplied. |
 | `subject_parts` | `jsonb` |  |  |
+| `system_text` | `jsonb` |  |  |
 | `target_id` | `uuid` |  |  |
 | `target_type` | `text` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -35,11 +36,13 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 
 **Rules**
 
-- `notice_content_bounded`: `CHECK (((length(subject) <= 200) AND (length(body) <= 2000)))`
+- `notice_content_bounded`: `CHECK ((length(body) <= 2000))`
 - `notice_email_error_after_attempt`: `CHECK (((email_error IS NULL) OR (email_attempted_at IS NOT NULL)))`
 - `notice_email_error_bounded`: `CHECK ((length(email_error) <= 500))`
 - `notice_subject_present`: `CHECK ((subject <> ''))`
+- `notice_system_text_shape`: `CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object') AND (((system_text ->> 'schema_version') = '1') IS TRUE) AND (octet_length((system_text)) <= 8192))))`
 - `notice_target_paired`: `CHECK (((target_type IS NULL) = (target_id IS NULL)))`
+- `notice_target_type_check`: `CHECK (((target_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant', 'list', 'signal', 'saved_view', 'tag', 'custom_field', 'webhook_subscription', 'import_run', 'report_definition', 'app_user', 'user_admin', 'team', 'record_grant', 'data_subject_request', 'fx_rate', 'ai_model_rate', 'legal_review', 'brief', 'stage', 'approval', 'data_task', 'retained_email_signature', 'email_signature', 'signature_template', 'legal_entity', 'knowledge_document', 'approval_history'])) OR (target_type ~ '^ext_[a-z0-9]+(_[a-z0-9]+)*$')))`
 
 **Indexes**
 
@@ -49,6 +52,12 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 - `notice_pkey`: `unique, btree (id)`
 - `notice_unread`: `btree (recipient_user_id, created_at DESC) WHERE (read_at IS NULL)`
 - `uq_notice_dedupe`: `unique, btree (recipient_user_id, dedupe_key) WHERE (dedupe_key IS NOT NULL)`
+
+**Triggers**
+
+- `notice_system_text_retire`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"body": 2000, "kind": 20000, "subject": 500, "dedupe_key": 20000, "captured_by": 20000, "email_error": 500, "target_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"body":2000,"captured_by":20000,"dedupe_key":20000,"email_error":500,"kind":20000,"subject":500,"target_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"body": 2000, "kind": 20000, "subject": 500, "dedupe_key": 20000, "captured_by": 20000, "email_error": 500, "target_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"body":2000,"captured_by":20000,"dedupe_key":20000,"email_error":500,"kind":20000,"subject":500,"target_type":20000}')`
 
 ## notification_digest_run
 
@@ -75,6 +84,11 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 
 - `notification_digest_run_pkey`: `unique, btree (user_id, digest_date)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"mail_error": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"mail_error":500}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mail_error": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"mail_error":500}')`
+
 ## notification_preference
 
 5 columns · primary key `(user_id, class)` · referenced by 0 foreign keys
@@ -100,3 +114,8 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 **Indexes**
 
 - `notification_preference_pkey`: `unique, btree (user_id, class)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"class": 20000, "delivery": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"delivery":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"class": 20000, "delivery": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"delivery":20000}')`

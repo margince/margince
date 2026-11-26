@@ -30,27 +30,35 @@ import (
 	"strings"
 )
 
-// minimumPackages is the census's floor: fewer logs than this means the run
-// that produced them lost most of the tree, and a small corpus reports clean.
+// minimumPackages is the census's floor for a leg that tests the tree. Fewer
+// logs than this means the run that produced them lost most of it. A small
+// corpus reports clean. A leg that tests a named few passes their count.
 const minimumPackages = 100
 
 func main() {
 	logs := flag.String("logs", "", "the directory scripts/testlog-exec.sh wrote to")
 	namesFile := flag.String("names", "", "the output of scripts/ci-stable-mtimes.sh --names")
+	trackedFile := flag.String("tracked", "", "the output of git ls-files, which a read must fall under to be covered by a digest")
+	minimum := flag.Int("minimum", minimumPackages, "the fewest package logs the run that wrote them can have left")
 	flag.Parse()
 	names, err := readNames(*namesFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "check-test-inputs: %v\n", err)
 		os.Exit(2)
 	}
-	findings, read, err := census(*logs, names)
+	tracked, err := readTracked(*trackedFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "check-test-inputs: %v\n", err)
 		os.Exit(2)
 	}
-	if read < minimumPackages {
-		fmt.Fprintf(os.Stderr, "check-test-inputs: read %d package logs from %s, too few to be the tree — "+
-			"the run that wrote them lost most of it\n", read, *logs)
+	findings, read, err := census(*logs, names, tracked)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "check-test-inputs: %v\n", err)
+		os.Exit(2)
+	}
+	if read < *minimum {
+		fmt.Fprintf(os.Stderr, "check-test-inputs: read %d package logs from %s, fewer than the %d its run "+
+			"tests — the run that wrote them lost some\n", read, *logs, *minimum)
 		os.Exit(2)
 	}
 	for _, finding := range findings {
@@ -63,6 +71,25 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("OK: check-test-inputs — %d package logs, every read outside a module declared\n", read)
+}
+
+// readTracked parses `git ls-files`: every tracked file and each directory above
+// one. An empty name means no check, for a caller with no file list.
+func readTracked(path string) (map[string]bool, error) {
+	if path == "" {
+		return nil, nil
+	}
+	body, err := fs.ReadFile(os.DirFS(filepath.Dir(path)), filepath.Base(path))
+	if err != nil {
+		return nil, fmt.Errorf("reading the tracked file list: %w", err)
+	}
+	tracked := map[string]bool{}
+	for file := range strings.SplitSeq(strings.TrimSpace(string(body)), "\n") {
+		for ; file != "." && file != "/" && file != ""; file = filepath.ToSlash(filepath.Dir(file)) {
+			tracked[file] = true
+		}
+	}
+	return tracked, nil
 }
 
 // readNames parses `ci-stable-mtimes.sh --names`: one top-level entry and its
@@ -85,7 +112,7 @@ func readNames(path string) (map[string]string, error) {
 
 // census judges every log in dir and reports the undeclared reads, sorted, and
 // how many package logs it read.
-func census(dir string, names map[string]string) ([]string, int, error) {
+func census(dir string, names map[string]string, tracked map[string]bool) ([]string, int, error) {
 	// Rooted at the log directory, so a name read from it cannot reach outside.
 	logs := os.DirFS(dir)
 	entries, err := fs.ReadDir(logs, ".")
@@ -107,7 +134,7 @@ func census(dir string, names map[string]string) ([]string, int, error) {
 		if err != nil {
 			return nil, 0, fmt.Errorf("opening %s: %w", entry.Name(), err)
 		}
-		undeclared, err := undeclaredReads(log, strings.TrimSpace(string(pkgDir)), names)
+		undeclared, err := undeclaredReads(log, strings.TrimSpace(string(pkgDir)), names, tracked)
 		closeErr := log.Close()
 		if err != nil {
 			return nil, 0, fmt.Errorf("reading %s: %w", entry.Name(), err)
@@ -125,7 +152,7 @@ func census(dir string, names map[string]string) ([]string, int, error) {
 // undeclaredReads judges one package's test log: every file or directory it
 // opened or stated inside the repository but outside its module must be
 // matched by a read of that path's tree digest variable.
-func undeclaredReads(log io.Reader, pkgDir string, names map[string]string) ([]string, error) {
+func undeclaredReads(log io.Reader, pkgDir string, names map[string]string, tracked map[string]bool) ([]string, error) {
 	module, repo := enclosing(pkgDir, "go.mod"), enclosing(pkgDir, ".git")
 	if module == "" || repo == "" {
 		return nil, fmt.Errorf("%s lies in no module or no repository", pkgDir)
@@ -168,7 +195,11 @@ func undeclaredReads(log io.Reader, pkgDir string, names map[string]string) ([]s
 	var findings []string
 	for path, top := range outside {
 		variable, described := names[top]
+		_, onDisk := os.Lstat(filepath.Join(repo, filepath.FromSlash(path)))
 		switch {
+		case described && tracked != nil && !tracked[path] && onDisk == nil:
+			findings = append(findings, fmt.Sprintf("%s: reads %s, which git does not track, so the digest of %s "+
+				"does not cover it — read a tracked file, or declare the tracked source it is built from", pkg, path, top))
 		case !described:
 			findings = append(findings, fmt.Sprintf("%s: reads %s, in %s, which no tree digest describes — "+
 				"it is not tracked, so declare the tracked source it is built from", pkg, path, top))

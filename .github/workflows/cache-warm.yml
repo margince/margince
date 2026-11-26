@@ -7,11 +7,11 @@
 # The cache was being seeded by accident, rarely.
 #
 # It cannot move to the merge queue. actions/cache scopes an entry to the branch
-# that wrote it plus the default branch, and a merge_group run lives on a
-# throwaway `gh-readonly-queue/main/...` ref: an entry saved there is invisible
-# to every PR lane and dies with the ref. RESTORING works from anywhere — only
-# the write is scoped — so the writer has to run on main, which is what this
-# does.
+# that wrote it, and a reader looks in its own ref, then its base branch, then
+# the default branch. A merge_group run lives on a throwaway
+# `gh-readonly-queue/main/...` ref: an entry saved there is invisible to every PR
+# lane and dies with the ref. So the writer runs on the branches pull requests
+# merge into, main and develop, and each serves the pull requests into it.
 #
 # On a SCHEDULE rather than on push. Seeding both flavours means redoing a full
 # `make check-backend` and an integration shard against a live Postgres; at ~80
@@ -28,24 +28,27 @@ name: cache-warm
 
 on:
   schedule:
-    # Every three hours. Ten-ish merges of drift against a content-addressed
-    # cache, which is still a warm restore. pace.yml starts a run from a push once
-    # the newest is three hours old, because GitHub drops some of these.
+    # Every three hours, on the default branch only: GitHub runs a cron nowhere
+    # else. pace.yml starts a run from a push to main or develop once that
+    # branch's newest run is three hours old, which is what starts develop's.
     - cron: "0 */3 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# One writer at a time. Two concurrent runs would race for the same key and the
-# loser's ~550 MB upload would evict the entry it meant to seed. Never cancel: a
-# cancelled run saves nothing, and the entire point is that a run finishes.
+# One writer per branch at a time. Two concurrent runs on one branch would race
+# for the same key, and the loser's upload would evict the entry it meant to seed.
+# One group for both branches would queue each behind the other, and GitHub keeps
+# only one pending run per group. Never cancel: a cancelled run saves nothing.
 concurrency:
-  group: ${{ github.workflow }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
+# A job in the CI image runs `sh` unless told otherwise, and the steps use bash.
 defaults:
   run:
+    shell: bash
     working-directory: backend
 
 # A module the proxy cannot serve is not a broken build: the PIPE falls through
@@ -54,13 +57,15 @@ defaults:
 # backend/gates/buildinputfetch_test.go, which holds this line.
 env:
   GOPROXY: https://proxy.golang.org|direct
+  # The diff-scoped legs of `make check-backend` judge a branch against itself.
+  CHECK_BASE_REF: origin/${{ github.ref_name }}
 
 jobs:
-  # The CI image for main's tree, built here when no pull request pushed it.
+  # The CI image for this branch's tree, built here when no pull request pushed it.
   ci-image:
     name: ci-image
     timeout-minutes: 60
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -93,14 +98,11 @@ jobs:
       matrix:
         where: ${{ fromJSON(needs.ci-image.outputs.pinned-image == '' && '["runner"]' || '["runner", "image"]') }}
     container: ${{ matrix.where == 'image' && needs.ci-image.outputs.pinned-image || '' }}
-    # Default branch only, dispatch included. A cache entry is scoped to the
-    # branch that wrote it, so a run dispatched from a feature branch spends ~10
-    # minutes and ~550 MB of the 10 GB quota on an entry no PR lane and no queue
-    # build can read — and it takes the `cancel-in-progress: false` slot ahead of
-    # the scheduled main run that would have written a usable one. The workflow
-    # says above that the writer has to run on main; this is what makes that true
-    # rather than merely intended.
-    if: ${{ !cancelled() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    # The default branch and develop only, dispatch included. A cache entry is
+    # scoped to the branch that wrote it, so a run dispatched from a feature
+    # branch spends ~10 minutes and quota on an entry no PR lane and no queue
+    # build can read.
+    if: ${{ !cancelled() && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.ref == 'refs/heads/develop') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -108,7 +110,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The gate this mirrors diffs against origin/main; a shallow checkout
+          # The gate this mirrors diffs against CHECK_BASE_REF; a shallow checkout
           # would silently disarm it and warm a different set of artifacts than
           # the gate actually compiles.
           fetch-depth: 0
@@ -156,15 +158,15 @@ jobs:
       # `make check-backend` runs golangci over every module, so the gate
       # binaries have to be here or lint-modules fails before it compiles
       # anything — which is what this job exists to do. The action keys them
-      # as the ci lane does, and saves a miss here, on main, where every PR
-      # can read it. The image holds them.
+      # as the ci lane does, and saves a miss only on main: the key holds no
+      # commit, so a develop copy would only take room. The image holds them.
       - name: Gate binaries on PATH
         if: matrix.where == 'runner'
         uses: ./.github/actions/gate-binaries
         with:
-          save: "true"
-      # The entry every PR restores: a PR can read only its own entries and
-      # main's, and ci.yml saves none.
+          save: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+      # The entry every PR restores: a PR can read only its own entries and its
+      # base branch's, and ci.yml saves none.
       - name: Compute the golangci cache key
         id: golangci-key
         uses: ./.github/actions/golangci-cache-key
@@ -179,6 +181,13 @@ jobs:
         run: |
           mkdir -p ~/.cache/golangci-lint
           touch "$RUNNER_TEMP/golangci-restored.stamp"
+      # In the image pnpm is on PATH, so the contract drift gate regenerates
+      # the frontend's types and needs its packages; on the runner it skips.
+      - name: Frontend packages for the contract drift gate
+        if: matrix.where == 'image'
+        working-directory: frontend
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Compile what the gate compiles (make check-backend)
         working-directory: .
         env:
@@ -235,7 +244,8 @@ jobs:
   integration:
     name: warm integration
     timeout-minutes: 45
-    # Default branch only, for the reason spelled out on `plain` above.
+    # Default branch only: a pull request into develop skips the integration
+    # lane (`full_lane` in ci.yml), so a develop entry would have no reader.
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     permissions:
@@ -301,7 +311,7 @@ jobs:
   integration-timing:
     name: integration test durations
     timeout-minutes: 10
-    # Default branch only, for the reason spelled out on `plain` above.
+    # Default branch only, for the reason given on `integration` above.
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     permissions:
@@ -358,8 +368,8 @@ jobs:
   frontend:
     name: warm frontend
     timeout-minutes: 30
-    # Default branch only, for the reason spelled out on `plain` above.
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    # The default branch and develop only, for the reason given on `plain` above.
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -371,8 +381,8 @@ jobs:
         with:
           persist-credentials: false
       # No version input: the pin is package.json's "packageManager".
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: pnpm
@@ -400,3 +410,31 @@ jobs:
         with:
           path: ${{ steps.frontend-key.outputs.path }}
           key: ${{ steps.frontend-key.outputs.key }}
+
+  # A restore takes the newest entry of this branch, so the older ones only take
+  # room under the repository's cache limit, and this workflow writes up to eight
+  # generations a day. The reaper keeps the newest entry per key prefix, so a
+  # newer entry from another writer stays. On the runner, because it needs `gh`.
+  prune:
+    name: prune older build cache entries
+    timeout-minutes: 10
+    needs: [plain, integration, frontend]
+    if: ${{ !cancelled() && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.ref == 'refs/heads/develop') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # To delete this branch's older entries once the new ones are saved.
+      actions: write
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Delete this branch's superseded entries
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref }}
+        run: ./scripts/reap-build-caches.sh

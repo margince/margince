@@ -62,10 +62,14 @@ var acceptedRequestSQL = `EXISTS (SELECT 1 FROM activity accepted
 // tested on every inbound message ever captured. The list holds 16 bytes per
 // open reminder a human wrote, far under any value size limit.
 func heldRequestSQL() string {
-	return `a.id = ANY (ARRAY(SELECT held.source_activity_id FROM activity held
+	return "a.id = ANY (" + heldRequestIDsSQL() + ")"
+}
+
+func heldRequestIDsSQL() string {
+	return `ARRAY(SELECT held.source_activity_id FROM activity held
  WHERE held.source_activity_id IS NOT NULL AND held.restricted_at IS NULL
  AND held.source_system = '` + EmailRequestTaskSource + `'
- AND ` + storekit.HeldTaskClause("held") + `))`
+ AND ` + storekit.HeldTaskClause("held") + `)`
 }
 
 const openRequestReminderSQL = `EXISTS (SELECT 1 FROM activity reminder
@@ -73,8 +77,15 @@ const openRequestReminderSQL = `EXISTS (SELECT 1 FROM activity reminder
  AND reminder.source_activity_id = a.id AND NOT reminder.is_done
  AND reminder.archived_at IS NULL)`
 
-// confirmedRequestSQL is a request the classifier or a human confirmed.
-var confirmedRequestSQL = `a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL
+// confirmedRequestSQL is a request a human took, or one whose asks_us verdict
+// stands (storekit.AsksUsClause).
+var confirmedRequestSQL = confirmedRequestOf(acceptedRequestSQL)
+
+// confirmedRequestOf is confirmedRequestSQL over accepted, a boolean that says
+// a human took the request.
+func confirmedRequestOf(accepted string) string {
+	return storekit.AsksUsClause("a") + ` OR ` + accepted
+}
 
 var outstandingRequestSQL = requestUnsettledSQL + ` AND (` + confirmedRequestSQL + `)`
 
@@ -95,9 +106,13 @@ func calendarMethodInSQL(methods []string) string {
 
 // A scheduling/commitment label is enough to keep an unjudged candidate for
 // review, never enough to assign it.
-var requestIntentSQL = confirmedRequestSQL + `
+var requestIntentSQL = requestIntentOf(acceptedRequestSQL)
+
+func requestIntentOf(accepted string) string {
+	return confirmedRequestOf(accepted) + `
  OR (a.owed_verdict IS NULL AND a.capture_label IN ('commitment', 'meeting')
      AND NOT ` + calendarCopySQL + `)`
+}
 
 var requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + `)`
 
@@ -105,16 +120,19 @@ var requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + `)
 // evidence first. The deal card offers these as work, and it applies no
 // sender rule, so a hand-logged note or a threadless noreply mail would
 // otherwise become a standing obligation on the deal.
-func reviewableRequestSQL(asOf string) string {
-	return requestUnsettledSQL + ` AND (a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL + `
- OR (a.owed_verdict IS NULL AND (` + requestCandidateSQL + `
+// The machine arms read the mail's text, so they hold only where that text
+// may be judged. A request a human already took stays reviewable for them.
+func reviewableRequestSQL(asOf, ownDomains string) string {
+	return requestUnsettledSQL + ` AND (` + acceptedRequestSQL + ` OR NOT ` + invitationNeverOwedSQL(asOf, ownDomains) + `)
+ AND (` + confirmedRequestSQL + `
+ OR (` + storekit.OwedVerdictStandsClause("a") + ` AND a.owed_verdict IS NULL AND (` + requestCandidateSQL + `
    OR (a.thread_key IS NOT NULL AND NOT ` + calendarCopySQL + `
        AND NOT ` + answeredSQL("a", asOf) + `))))`
 }
 
 // Current work needs confirmed intent and a responsible seat. Review remains broader.
-func currentRequestSQL(asOf, days, identities string, arg func(any) int) string {
-	admitted := "(" + owedSQL(asOf, neverRelaxed, neverRelaxed, neverRelaxed) + ") AND (" + confirmedRequestSQL + ") AND " +
+func currentRequestSQL(asOf, ownDomains, days, identities string, arg func(any) int) string {
+	admitted := "(" + owedSQL(asOf, ownDomains, neverRelaxed, neverRelaxed, neverRelaxed) + ") AND (" + confirmedRequestSQL + ") AND " +
 		withinWaitingHorizonSQL(asOf, days) + " AND " + personalMailResponsibilitySQL(nil, identities, arg, asOf, days)
 	return "((" + admitted + ") OR (" + requestUnsettledSQL + " AND " + heldRequestSQL() + "))"
 }

@@ -11,264 +11,38 @@ import {
   EmptyState,
   Field,
   Modal,
-  TextInput,
 } from "../../design-system/atoms";
 import { CardBoundary } from "../../design-system/cardboundary";
 import { CellStack } from "../../design-system/cellstack";
-import { ChoiceList } from "../../design-system/choicelist";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { DateInput, type ISODate } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { Textarea } from "../../design-system/field";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
-import { Select } from "../../design-system/select";
-import { dueInstant, todayIn } from "../../format/calendarday";
-import { isoOrBlank } from "../../format/datepattern";
+import { useFieldFaults } from "../../design-system/savepage";
 import { formatDate } from "../../format/format.dates";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { useLegalEntities } from "../../lib/legalentities.queries";
-import { unwrap } from "../../lib/problem";
+import { blankRequired, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
+import { DeclareForm } from "./customernotices.declare";
+import { NOTICES_KEY, useMarketingPurposes } from "./customernotices.queries";
 
 type CustomerNotice = components["schemas"]["ExistingCustomerNotice"];
-
-const NOTICES_KEY = ["existing-customer-notices"] as const;
-
-type Draft = Readonly<{
-  entity: string;
-  group: string;
-  channel: string;
-  text: string;
-  from: ISODate | "";
-  until: ISODate | "";
-  proof: string;
-  proofDay: ISODate | "";
-  purposes: string[];
-}>;
-
-// A picked day starts at midnight in the reader's own zone. The end day counts
-// on screen but not on the wire, so it is sent as the next day's first second.
-function startOf(day: string, zone: string): string {
-  return dueInstant(day, zone, "00:00");
-}
-function afterEndOf(day: string, zone: string): string {
-  return new Date(
-    new Date(dueInstant(day, zone)).getTime() + 1000,
-  ).toISOString();
-}
-
-function useMarketingPurposes() {
-  return useQuery({
-    queryKey: ["consent-purposes"],
-    queryFn: async () => unwrap(await api.GET("/consent-purposes")),
-    select: (page) => page.data.filter((p) => p.class === "marketing"),
-  });
-}
-
-function DeclareForm({ onDone }: Readonly<{ onDone: () => void }>) {
-  const t = useT();
-  const zone = useViewerZone();
-  const queryClient = useQueryClient();
-  const formId = useId();
-  const entities = useLegalEntities();
-  const purposes = useMarketingPurposes();
-  const live = (entities.data ?? []).filter((e) => !e.archived_at);
-  const fallbackEntity = live.find((e) => e.is_default)?.id ?? "";
-  const [draft, setDraft] = useState<Draft>({
-    entity: "",
-    group: "",
-    channel: "",
-    text: "",
-    from: "",
-    until: "",
-    proof: "",
-    proofDay: "",
-    purposes: [],
-  });
-  const entity = draft.entity || fallbackEntity;
-  const declare = useMutation({
-    mutationFn: async (d: Draft) =>
-      unwrap(
-        await api.POST("/existing-customer-notices", {
-          body: {
-            legal_entity_id: entity,
-            customer_group: d.group.trim(),
-            collection_channel: d.channel.trim(),
-            notice_text: d.text.trim(),
-            effective_from: startOf(d.from, zone),
-            effective_until: d.until ? afterEndOf(d.until, zone) : null,
-            evidence_reference: d.proof.trim() || null,
-            evidence_dated_at:
-              d.proof.trim() && d.proofDay ? startOf(d.proofDay, zone) : null,
-            purpose_ids: d.purposes,
-          },
-        }),
-      ),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: NOTICES_KEY });
-      onDone();
-    },
-  });
-  function edit(next: Partial<Draft>) {
-    setDraft((was) => ({ ...was, ...next }));
-    if (declare.isError) declare.reset();
-  }
-  const ready =
-    entity !== "" &&
-    draft.group.trim() !== "" &&
-    draft.channel.trim() !== "" &&
-    draft.text.trim() !== "" &&
-    draft.from !== "" &&
-    draft.purposes.length > 0 &&
-    (draft.proof.trim() === "") === (draft.proofDay === "");
-  const marketing = purposes.data ?? [];
-  return (
-    <>
-      <form
-        id={formId}
-        className="form-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (ready && !declare.isPending) declare.mutate(draft);
-        }}
-      >
-        {live.length > 1 && (
-          <Field label={t("privacy.customerNoticeEntity")}>
-            {(control) => (
-              <Select
-                id={control.id}
-                aria-describedby={control["aria-describedby"]}
-                value={entity}
-                onChange={(value) => edit({ entity: value })}
-                options={live.map((e) => ({
-                  value: e.id,
-                  label: e.display_name,
-                }))}
-              />
-            )}
-          </Field>
-        )}
-        <Field
-          label={t("privacy.customerNoticeGroup")}
-          hint={t("privacy.customerNoticeGroupHint")}
-        >
-          {(control) => (
-            <TextInput
-              {...control}
-              maxLength={500}
-              value={draft.group}
-              onChange={(event) => edit({ group: event.target.value })}
-            />
-          )}
-        </Field>
-        <Field
-          label={t("privacy.customerNoticeChannel")}
-          hint={t("privacy.customerNoticeChannelHint")}
-        >
-          {(control) => (
-            <TextInput
-              {...control}
-              maxLength={200}
-              value={draft.channel}
-              onChange={(event) => edit({ channel: event.target.value })}
-            />
-          )}
-        </Field>
-        <Field label={t("privacy.customerNoticeText")}>
-          {(control) => (
-            <Textarea
-              {...control}
-              rows={4}
-              maxLength={4000}
-              value={draft.text}
-              onChange={(event) => edit({ text: event.target.value })}
-            />
-          )}
-        </Field>
-        <Field label={t("privacy.customerNoticeFrom")}>
-          {(control) => (
-            <DateInput
-              {...control}
-              value={draft.from}
-              max={isoOrBlank(todayIn(zone)) || undefined}
-              onChange={(event) => edit({ from: event.target.value })}
-            />
-          )}
-        </Field>
-        <Field
-          label={t("privacy.customerNoticeUntil")}
-          hint={t("privacy.customerNoticeUntilHint")}
-        >
-          {(control) => (
-            <DateInput
-              {...control}
-              value={draft.until}
-              min={draft.from || undefined}
-              onChange={(event) => edit({ until: event.target.value })}
-            />
-          )}
-        </Field>
-        <Field
-          label={t("privacy.customerNoticeProof")}
-          hint={t("privacy.customerNoticeProofHint")}
-        >
-          {(control) => (
-            <TextInput
-              {...control}
-              maxLength={500}
-              value={draft.proof}
-              onChange={(event) => edit({ proof: event.target.value })}
-            />
-          )}
-        </Field>
-        <Field label={t("privacy.customerNoticeProofDay")}>
-          {(control) => (
-            <DateInput
-              {...control}
-              value={draft.proofDay}
-              max={isoOrBlank(todayIn(zone)) || undefined}
-              onChange={(event) => edit({ proofDay: event.target.value })}
-            />
-          )}
-        </Field>
-        {marketing.length === 0 && purposes.isSuccess ? (
-          <p className="t-caption">{t("privacy.customerNoticeNoPurposes")}</p>
-        ) : (
-          <ChoiceList
-            multiple
-            legend={t("privacy.customerNoticePurposes")}
-            value={draft.purposes}
-            onChange={(next) => edit({ purposes: next })}
-            choices={marketing.map((p) => ({ value: p.id, label: p.label }))}
-          />
-        )}
-        <ErrorLine error={declare.error} />
-      </form>
-      <div className="actions">
-        <Button
-          type="submit"
-          form={formId}
-          variant="primary"
-          disabled={!ready || declare.isPending}
-        >
-          {t("privacy.customerNoticeSave")}
-        </Button>
-      </div>
-    </>
-  );
-}
 
 function WithdrawForm({
   notice,
   onDone,
 }: Readonly<{ notice: CustomerNotice; onDone: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const formId = useId();
+  const [faults, faultsRoot] = useFieldFaults();
   const [reason, setReason] = useState("");
+  const reasonLabel = t("privacy.customerNoticeWithdrawReason");
   const withdraw = useMutation({
     mutationFn: async () =>
       unwrap(
@@ -286,21 +60,29 @@ function WithdrawForm({
     <>
       <form
         id={formId}
+        ref={faultsRoot}
         className="form-stack"
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          if (reason.trim() !== "" && !withdraw.isPending) withdraw.mutate();
+          const blank = blankRequired(locale, {
+            reason: [reasonLabel, reason],
+          });
+          if (!faults.show(blank) && !withdraw.isPending) withdraw.mutate();
         }}
       >
         <p>{t("privacy.customerNoticeWithdrawBody")}</p>
-        <Field label={t("privacy.customerNoticeWithdrawReason")}>
+        <Field label={reasonLabel} required error={faults.of("reason")}>
           {(control) => (
             <Textarea
               {...control}
               rows={3}
               maxLength={500}
               value={reason}
-              onChange={(event) => setReason(event.target.value)}
+              onChange={(event) => {
+                setReason(event.target.value);
+                faults.edited("reason");
+              }}
             />
           )}
         </Field>
@@ -311,7 +93,7 @@ function WithdrawForm({
           type="submit"
           form={formId}
           variant="primary"
-          disabled={reason.trim() === "" || withdraw.isPending}
+          pending={withdraw.isPending}
         >
           {t("privacy.customerNoticeWithdraw")}
         </Button>

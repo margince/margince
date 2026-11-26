@@ -4,34 +4,25 @@
 package contacts
 
 import (
+	"slices"
 	"strings"
-	"unicode"
-
-	"golang.org/x/text/cases"
-	"golang.org/x/text/transform"
-	"golang.org/x/text/unicode/norm"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
-)
-
-// The string metric behind the dedupe fuzzy tier (PO-F-1/PO-F-2
-// `name_sim`). Pinned to standard Jaro-Winkler with prefix scale p=0.1,
-// max prefix 4, and no boost threshold (PO-PARAM-JW-1) over casefolded,
-// unaccented input (PO-PARAM-JW-2) — pinned so the spec's worked
-// examples stay reproducible against this code.
-const (
-	jaroWinklerPrefixScale = 0.1
-	jaroWinklerMaxPrefix   = 4
+	"github.com/margince/margince/backend/internal/platform/namematch"
 )
 
 // legalSuffixes is PO-PARAM-1: the trailing tokens company-name
 // normalization strips so "Acme Inc" and "Acme GmbH" both reduce to
 // "acme" and meet at the fuzzy tier for a human to judge.
+//
+//nolint:goconst // legal-form words; "company" here is not the record kind.
 var legalSuffixes = map[string]bool{
 	"inc": true, "llc": true, "ltd": true, "gmbh": true, "ag": true,
 	"sa": true, "sas": true, "bv": true, "oy": true, "plc": true,
 	"co": true, "corp": true, "kg": true, "ug": true,
+	// The same forms written in full, as reps type them as often as the short ones.
+	"incorporated": true, "corporation": true, "company": true, "limited": true,
+	"pty": true, "llp": true, "jsc": true, "nv": true,
 	// The markets that write the form in front ALSO write one behind, and a name
 	// carries whichever the writer used. Indonesia's listed companies end in
 	// "Tbk" and bracket the brand between it and a leading "PT"; Romania and
@@ -57,83 +48,8 @@ var legalSuffixes = map[string]bool{
 // one follows it — which is exactly the compound case and nothing else.
 var legalConnectives = map[string]bool{"&": true, "und": true, "and": true}
 
-// normalizeName casefolds and unaccents (PO-PARAM-JW-2). Both sides of
-// every comparison run through it, so the metric stays internally
-// consistent; it is deliberately not required to agree rune-for-rune
-// with Postgres f_unaccent, which only narrows the candidate set.
-// Casefold is Unicode FULL folding, not ToLower — Straße and STRASSE
-// must compare equal (ß folds to ss), and the DACH market meets that
-// pair daily. A fresh Caser per call: cases.Caser is stateful and not
-// safe for concurrent use.
-func normalizeName(s string) string {
-	decomposed, _, err := transform.String(norm.NFD, s)
-	if err != nil {
-		// Decomposition failure means a malformed rune, not an outage:
-		// compare what we were given rather than dropping the candidate.
-		decomposed = s
-	}
-	recomposed, _, err := transform.String(norm.NFC, dropAccents(decomposed))
-	if err != nil {
-		recomposed = decomposed
-	}
-	return strings.TrimSpace(cases.Fold().String(recomposed))
-}
-
-// combiningDiaeresis is the mark that turns Cyrillic "е" into "ё".
-const combiningDiaeresis = '\u0308'
-
-// dropAccents removes the combining marks that are ACCENTS and keeps the ones
-// that are letters in their own right.
-//
-// The BASE LETTER decides, because NFD leaves a mark directly after the letter it
-// belongs to:
-//
-//   - Latin and Greek write accents, and those go — Müller/Muller, Straße,
-//     Việt Nam, Οδυσσεύς all depend on it. "Mueller" is a different spelling
-//     and meets "Müller" only through digraphNameKey.
-//   - Hebrew and Arabic write vocalization, optional and usually absent, so a
-//     pointed spelling folds onto the plain one.
-//   - Everything else writes letters, and those stay.
-//
-// Removing every Mn mark instead was wrong wherever a mark IS a letter: it
-// turned "เมืองไทย" into "เมองไทย" and the Russian "Мойка" into "моика", so
-// those names lost characters before any comparison began. Cyrillic's one real
-// accent pair, "ё" against "е", is spelled out below.
-func dropAccents(decomposed string) string {
-	var out strings.Builder
-	out.Grow(len(decomposed))
-	accented, diaeresisAfterYe := false, false
-	for _, r := range decomposed {
-		switch {
-		case unicode.Is(unicode.Mn, r):
-			if accented || (diaeresisAfterYe && r == combiningDiaeresis) {
-				diaeresisAfterYe = false
-				continue
-			}
-			diaeresisAfterYe = false
-		case unicode.Is(unicode.Latin, r), unicode.Is(unicode.Greek, r),
-			unicode.Is(unicode.Hebrew, r), unicode.Is(unicode.Arabic, r):
-			accented, diaeresisAfterYe = true, false
-		case r == 'е' || r == 'Е':
-			// Russian writes "ё" and "е" for one letter and a registry may hold
-			// either, so the DIAERESIS after this one is dropped. NFD has
-			// already split "ё" into "е" plus its mark by the time this runs.
-			//
-			// That mark and no other: "ӗ" is "е" with a BREVE and is a letter of
-			// Chuvash, so a rule of "any mark after е" folded "Ӗнер" and "Енер"
-			// into one name.
-			diaeresisAfterYe = true
-			accented = false
-		default:
-			accented, diaeresisAfterYe = false, false
-		}
-		out.WriteRune(r)
-	}
-	return out.String()
-}
-
-// NormalizeContactName is the contact-name KEY: normalizeName's fold and
-// unaccent, plus a collapse of internal whitespace. Both halves are
+// NormalizeContactName is the contact-name key: namematch.Fold plus a
+// collapse of internal whitespace. Both halves are
 // load-bearing and neither implies the other.
 //
 // The fold is what makes Straße and STRASSE one contact — strings.ToLower
@@ -142,13 +58,12 @@ func dropAccents(decomposed string) string {
 // contact as "Anna Muster" — a key that kept the second space mints a second
 // record on the next crawl of an unchanged page.
 //
-// Deliberately not normalizeName itself, which also feeds nameSimilarity:
-// that input is pinned by PO-PARAM-JW-2 so the spec's worked examples stay
-// reproducible against this code.
+// Not namematch.Fold itself, which also feeds nameSimilarity. That input is
+// pinned by PO-PARAM-JW-2 so the spec's worked examples stay reproducible.
 func NormalizeContactName(s string) string { return foldedNameKey(s) }
 
-// foldedNameKey is the key both dedupe lanes compare on: normalizeName's fold
-// and unaccent, the ASCII apostrophe, and a collapse of internal whitespace.
+// foldedNameKey is the key both dedupe lanes compare on: namematch.Fold, no
+// ASCII apostrophe, and a collapse of internal whitespace.
 //
 // EXACTLY the ASCII apostrophe, because that is what the SQL arm in front of
 // this removes. Folding the typographic one as well would make the key call
@@ -158,51 +73,76 @@ func NormalizeContactName(s string) string { return foldedNameKey(s) }
 //
 // One helper because the contact lane and the company lane ask one question.
 func foldedNameKey(s string) string {
-	return collapseSpaces(strings.ReplaceAll(normalizeName(s), "'", ""))
+	return collapseSpaces(strings.ReplaceAll(namematch.Fold(s), "'", ""))
 }
 
 // companyNamesAreTheSame answers whether two names are one name. Only case,
 // accents and spacing are folded. A legal suffix stays, for the reason
 // CompanyCandidateScore.ExactName gives.
 func companyNamesAreTheSame(left, right string) bool {
-	l, r := foldedNameKey(left), foldedNameKey(right)
-	return l != "" && l == r
+	return sameNameKey(foldedNameKey(left), foldedNameKey(right))
 }
+
+// sameNameKey says two folded name keys name one name. An empty key names none.
+func sameNameKey(left, right string) bool { return left != "" && left == right }
 
 // collapseSpaces reduces every run of whitespace to one space. A name read off
 // a web page carries the spacing of its markup, and "Baqend  GmbH" is not a
 // different company from "Baqend GmbH".
 func collapseSpaces(s string) string { return strings.Join(strings.Fields(s), " ") }
 
-// umlautDigraphs writes ä, ö and ü the way German does without them.
-var umlautDigraphs = strings.NewReplacer("ä", "ae", "ö", "oe", "ü", "ue", "Ä", "Ae", "Ö", "Oe", "Ü", "Ue")
-
 // digraphNameKey is the contact-name key with umlauts written as digraphs, so
 // "Björn" and "Bjoern" share a key while "Bjoern" and "Bjorn" do not. It sits
 // beside NormalizeContactName and never replaces it. That key also feeds
 // locks, stored review hashes and other lanes, none of which may move.
 func digraphNameKey(s string) string {
-	return foldedNameKey(umlautDigraphs.Replace(norm.NFC.String(s)))
+	return foldedNameKey(namematch.Digraphs(s))
 }
 
 // contactNameSimilarity is nameSimilarity for the contact lane, taking the
 // better of the plain and the digraph spelling. Only the contact score asks
 // it: lead dedupe and site-contact routing keep nameSimilarity as it is.
 func contactNameSimilarity(a, b string) float64 {
-	plain := nameSimilarity(a, b)
-	digraph := nameSimilarity(umlautDigraphs.Replace(norm.NFC.String(a)), umlautDigraphs.Replace(norm.NFC.String(b)))
-	return max(plain, digraph)
+	return contactFormsSimilarity(contactNameFormsOf(a), contactNameFormsOf(b))
 }
 
-// NormalizeCompanyName is normalizeName plus the PO-PARAM-1 legal-suffix
-// strip, applied only to the trailing token: "Co" inside "Coca Co" is a
-// name, "Co" at the end is a suffix.
+// contactNameForms is a contact name in every form the contact score compares.
+type contactNameForms struct {
+	folded, digraphs []rune
+	given, family    string
+	// noDigraph says the digraph form is the folded one.
+	noDigraph bool
+}
+
+func contactNameFormsOf(name string) contactNameForms {
+	given, family := namematch.SplitName(name)
+	forms := contactNameForms{
+		folded: namematch.ScoringRunes(namematch.Fold(name)), digraphs: namematch.ScoringRunes(namematch.Fold(namematch.Digraphs(name))),
+		given: given, family: family,
+	}
+	forms.noDigraph = slices.Equal(forms.folded, forms.digraphs)
+	return forms
+}
+
+// contactFormsSimilarity is contactNameSimilarity over forms. Two names with
+// no umlaut have digraph forms equal to their folded ones, scored once.
+func contactFormsSimilarity(a, b contactNameForms) float64 {
+	plain := namematch.JaroWinklerRunes(a.folded, b.folded)
+	if a.noDigraph && b.noDigraph {
+		return plain
+	}
+	return max(plain, namematch.JaroWinklerRunes(a.digraphs, b.digraphs))
+}
+
+// NormalizeCompanyName is namematch.Fold plus the PO-PARAM-1 legal-suffix
+// strip, applied only to the trailing token. "Co" inside "Coca Co" is a name,
+// and "Co" at the end is a suffix.
 //
 // The strip never consumes the whole name: "Co" alone stays "co", because a
 // company may BE its suffix and an empty key would collide with every other
 // empty key.
 func NormalizeCompanyName(s string) string {
-	fields := strings.Fields(normalizeName(strings.ReplaceAll(s, ",", " ")))
+	fields := strings.Fields(namematch.Fold(strings.ReplaceAll(s, ",", " ")))
 	strippedOne := false
 	for len(fields) > 1 {
 		last := undottedForm(fields[len(fields)-1])
@@ -226,7 +166,7 @@ func NormalizeCompanyName(s string) string {
 // undotted and space-joined, or "" when it strips none: "Acme GmbH & Co. KG"
 // reads "gmbh & co kg", and "Acme" reads "".
 func companyLegalForm(s string) string {
-	fields := strings.Fields(normalizeName(strings.ReplaceAll(s, ",", " ")))
+	fields := strings.Fields(namematch.Fold(strings.ReplaceAll(s, ",", " ")))
 	core := strings.Fields(NormalizeCompanyName(s))
 	if len(core) >= len(fields) {
 		return ""
@@ -254,104 +194,7 @@ func undottedForm(word string) string {
 // nameSimilarity is `name_sim`: Jaro-Winkler over normalized input,
 // in [0,1].
 func nameSimilarity(a, b string) float64 {
-	return jaroWinkler(normalizeName(a), normalizeName(b))
-}
-
-// jaroWinkler applies the Winkler prefix boost unconditionally — the
-// pinned variant has no boost threshold, so a low-Jaro pair with a
-// shared prefix still gains (PO-PARAM-JW-1).
-// nameScoringMaxRunes bounds what the similarity metric compares.
-//
-// jaro is quadratic in the longer input — measured on this code, two 60 000-rune
-// names take a full second and the cost grows with the square — while
-// `display_name` is `text` with no maxLength in the contract, so one create can
-// hand it a megabyte. That scoring runs inside the writing transaction holding
-// the company-name lock, so an unbounded score pins a pool connection and
-// every company-name writer in the workspace behind it.
-//
-// The cap lives HERE and not in normalizeName, which looked like the tidier
-// place and is not: normalizeName also produces exact-match and grouping keys
-// (companyMatchKeys in linkedinimport.go, the promotion sweep's name buckets), and
-// truncating there would make two distinct names compare EQUAL as keys past the
-// bound — a match, not a capped score. Capping the metric changes only how
-// similar two things are said to be, which is all this bound is entitled to do.
-//
-// 256 runes is far past any real company or contact name. A maxLength in the
-// contract is the complete answer and is raised upstream.
-const nameScoringMaxRunes = 256
-
-// boundedForScoring caps one side of a comparison. Two names that differ only
-// past the bound score as identical, which for names this long is the same
-// answer any metric would give.
-func boundedForScoring(s string) string {
-	return textcut.Runes(s, nameScoringMaxRunes)
-}
-
-func jaroWinkler(a, b string) float64 {
-	a, b = boundedForScoring(a), boundedForScoring(b)
-	j := jaro(a, b)
-	if j == 0 {
-		return 0
-	}
-	ra, rb := []rune(a), []rune(b)
-	prefix := 0
-	for prefix < len(ra) && prefix < len(rb) && prefix < jaroWinklerMaxPrefix && ra[prefix] == rb[prefix] {
-		prefix++
-	}
-	return j + float64(prefix)*jaroWinklerPrefixScale*(1-j)
-}
-
-// jaro is the standard Jaro similarity: matches inside a half-length
-// window, discounted by half the transpositions among them.
-func jaro(a, b string) float64 {
-	ra, rb := []rune(a), []rune(b)
-	if len(ra) == 0 && len(rb) == 0 {
-		return 1
-	}
-	if len(ra) == 0 || len(rb) == 0 {
-		return 0
-	}
-
-	window := max(max(len(ra), len(rb))/2-1, 0)
-
-	matchedA := make([]bool, len(ra))
-	matchedB := make([]bool, len(rb))
-	matches := 0
-	for i, r := range ra {
-		lo := max(0, i-window)
-		hi := min(len(rb)-1, i+window)
-		for j := lo; j <= hi; j++ {
-			if matchedB[j] || rb[j] != r {
-				continue
-			}
-			matchedA[i], matchedB[j] = true, true
-			matches++
-			break
-		}
-	}
-	if matches == 0 {
-		return 0
-	}
-
-	// Transpositions: matched runes that pair up out of order. Each such
-	// pair is counted twice by this walk, hence the halving below.
-	transpositions := 0
-	k := 0
-	for i := range ra {
-		if !matchedA[i] {
-			continue
-		}
-		for !matchedB[k] {
-			k++
-		}
-		if ra[i] != rb[k] {
-			transpositions++
-		}
-		k++
-	}
-
-	m := float64(matches)
-	return (m/float64(len(ra)) + m/float64(len(rb)) + (m-float64(transpositions)/2)/m) / 3
+	return namematch.JaroWinkler(namematch.Fold(a), namematch.Fold(b))
 }
 
 // exactNameKeySQL is the SQL side of the Go exact-name comparison, and BOTH
@@ -359,11 +202,11 @@ func jaro(a, b string) float64 {
 // cannot fold its two sides with different normalizations of one name.
 //
 // One function because there is one question. NormalizeContactName is
-// normalizeName plus a whitespace collapse, and companyNamesAreTheSame is the
-// same pair — case, accents and spacing folded away, and nothing else. The
-// company lane's legal-suffix key is a DIFFERENT question and is not this one:
-// see CompanyCandidateScore.ExactName for why "Baqend GmbH" and "Baqend Inc"
-// must not fold together.
+// namematch.Fold plus a whitespace collapse. companyNamesAreTheSame folds the
+// same three things: case, accents and spacing. The company lane's
+// legal-suffix key is a DIFFERENT question and is not this one. See
+// CompanyCandidateScore.ExactName for why "Baqend GmbH" and "Baqend Inc" must
+// not fold together.
 //
 // Not a mirror of the Go key — it deliberately is not one. SQL's lower and Go's
 // Unicode full fold are different normalizations, and the arm exists so the lane
@@ -384,6 +227,15 @@ func jaro(a, b string) float64 {
 func exactNameKeySQL(expr string) string {
 	return storekit.SQLf(
 		`btrim(regexp_replace(replace(f_fold_apostrophes(lower(%s)), 'ς', 'σ'), '\s+', ' ', 'g'))`, expr)
+}
+
+// familyNameKeySQL is the last token of the folded name, or of the part before a
+// comma ("Doe, Jon" is Jon Doe). idx_contact_family_name_key holds the same
+// expression. The employer arm of the candidate query reads colleagues by that
+// index and never scans all of an employer's contacts.
+func familyNameKeySQL(expr string) string {
+	return storekit.SQLf(`substring(%s from '[^ ]+$')`,
+		exactNameKeySQL(storekit.SQLf(`CASE WHEN %[1]s LIKE '%%,%%' THEN split_part(%[1]s, ',', 1) ELSE %[1]s END`, expr)))
 }
 
 // exactDigraphNameKeySQL is exactNameKeySQL over the name with its umlauts

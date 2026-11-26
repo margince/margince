@@ -183,9 +183,6 @@ func recordPendingDispositionTx(
 	if err != nil {
 		return false, fmt.Errorf("contacts: opening the disposition question for %s: %w", domain, err)
 	}
-	if err := recordDomainQuestionReader(ctx, tx, domain, ownerID, evidenceAt); err != nil {
-		return false, err
-	}
 	return tag.RowsAffected() > 0, nil
 }
 
@@ -327,7 +324,6 @@ func MarkTriageQueuedTx(ctx context.Context, tx pgx.Tx, domain string) error {
 	if _, err := tx.Exec(ctx, `
 		UPDATE company_domain_disposition
 		   SET attempts = attempts + 1,
-		       last_attempt_at = now(),
 		       next_attempt_at = now() + $2::interval,
 		       updated_at = now()
 		 WHERE domain = $1 AND status = 'pending'`,

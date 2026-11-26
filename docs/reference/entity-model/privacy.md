@@ -6,22 +6,31 @@ The 2 tables owned by `privacy`, as the migrations build them. [Back to the enti
 
 ## erasure_suppression
 
-4 columns · primary key `(kind, value_hash)` · referenced by 0 foreign keys
+7 columns · primary key `(kind, value_hash)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `key_id` | `text` |  |  |
 | `kind` | `text` | yes | One of `email`, `channel_identity`. |
+| `lift_consent_event_id` | `uuid` |  |  |
+| `lift_contact_id` | `uuid` |  |  |
+| `lifted_at` | `timestamp with time zone` |  |  |
 | `value_hash` | `text` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Rules**
 
 - `erasure_suppression_kind_check`: `CHECK ((kind = ANY (ARRAY['email', 'channel_identity'])))`
+- `erasure_suppression_lift_is_whole`: `CHECK ((((lifted_at IS NULL) = (lift_consent_event_id IS NULL)) AND ((lifted_at IS NULL) = (lift_contact_id IS NULL))))`
 
 **Indexes**
 
 - `erasure_suppression_pkey`: `unique, btree (kind, value_hash)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "key_id": 20000, "value_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"key_id":20000,"kind":20000,"value_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "key_id": 20000, "value_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"key_id":20000,"kind":20000,"value_hash":20000}')`
 
 ## retention_policy
 
@@ -47,3 +56,8 @@ The 2 tables owned by `privacy`, as the migrations build them. [Back to the enti
 
 - `retention_policy_pkey`: `unique, btree (id)`
 - `retention_policy_unique`: `unique, btree (object_type, category) NULLS NOT DISTINCT`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"action": 20000, "category": 20000, "object_type": 20000, "lawful_basis": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"action":20000,"category":20000,"lawful_basis":20000,"object_type":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"action": 20000, "category": 20000, "object_type": 20000, "lawful_basis": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"action":20000,"category":20000,"lawful_basis":20000,"object_type":20000}')`

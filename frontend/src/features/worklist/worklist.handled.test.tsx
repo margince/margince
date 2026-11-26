@@ -5,15 +5,18 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
-import { HandledForYouPanel } from "./worklist.handled";
+import { CHANGE_HISTORY_ID, HandledForYouPanel } from "./worklist.handled";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+  window.location.hash = "";
 });
 
 // What a reader is told about work already done, and the one thing this panel
@@ -87,6 +90,15 @@ describe("what was handled for the reader", () => {
             version: 4,
             reversed: false,
           },
+          review: {
+            kind: "close_date",
+            accepted: false,
+            reversed: false,
+            version: 4,
+            can_undo: true,
+            can_accept: true,
+            writable: true,
+          },
         },
       ],
     });
@@ -97,6 +109,43 @@ describe("what was handled for the reader", () => {
     expect(
       await screen.findByRole("button", { name: en["common.undo"] }),
     ).toBeTruthy();
+  });
+
+  it("offers no way back on a deal the row scope makes read-only, whatever the grant says", async () => {
+    stubHandled({
+      as_of: "2026-09-05T09:00:00Z",
+      truncated: false,
+      receipts: [
+        {
+          id: "01a05500-0000-7000-8000-00000000e004",
+          kind: "close_date_correction",
+          summary: 'Corrected the close date on "Ablösung Checkout"',
+          occurred_at: "2026-09-05T08:00:00Z",
+          subject: { type: "deal", id: "d1", label: "Ablösung Checkout" },
+          undo: {
+            audit_log_id: "01a05500-0000-7000-8000-0000000000a1",
+            version: 4,
+            reversed: false,
+          },
+          review: {
+            kind: "close_date",
+            accepted: false,
+            reversed: false,
+            version: 4,
+            can_undo: true,
+            can_accept: true,
+            writable: false,
+          },
+        },
+      ],
+    });
+
+    render(panel());
+    await screen.findByText('Corrected the close date on "Ablösung Checkout"');
+
+    expect(
+      screen.queryByRole("button", { name: en["common.undo"] }),
+    ).toBeNull();
   });
 
   // A correction already put back keeps its row and says so. Dropping the row
@@ -336,3 +385,126 @@ function panel(
     </QueryClientProvider>
   );
 }
+
+describe("a link to the Change history", () => {
+  it("lands on the panel once it has read its list, then lets the address go", async () => {
+    stubHandled({
+      as_of: "2026-09-05T09:00:00Z",
+      truncated: false,
+      receipts: [
+        {
+          id: "01a05500-0000-7000-8000-00000000e009",
+          kind: "email_sent",
+          summary: "Sent the confirmation to Kirsten",
+          occurred_at: "2026-09-05T08:00:00Z",
+        },
+      ],
+    });
+    const scrolled = vi.fn();
+    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(function (
+      this: Element,
+    ) {
+      scrolled(this.id);
+    });
+    window.location.hash = "#/?queue=1&queue_at=history";
+
+    render(panel());
+    await screen.findByText("Sent the confirmation to Kirsten");
+
+    await waitFor(() =>
+      expect(scrolled).toHaveBeenCalledWith(CHANGE_HISTORY_ID),
+    );
+    expect(document.activeElement?.id).toBe(CHANGE_HISTORY_ID);
+    expect(window.location.hash).toBe("#/?queue=1");
+  });
+
+  it("lands on the panel's empty sentence when nothing was done", async () => {
+    stubHandled({
+      as_of: "2026-09-05T09:00:00Z",
+      truncated: false,
+      receipts: [],
+    });
+    const scrolled = vi.fn();
+    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(function (
+      this: Element,
+    ) {
+      scrolled(this.id);
+    });
+    window.location.hash = "#/?queue=1&queue_at=history";
+
+    render(panel());
+    expect(await screen.findByText(en["worklist.handled.empty"])).toBeTruthy();
+    await waitFor(() =>
+      expect(scrolled).toHaveBeenCalledWith(CHANGE_HISTORY_ID),
+    );
+    expect(window.location.hash).toBe("#/?queue=1");
+    // Still there once the address let go of the panel.
+    expect(screen.getByText(en["worklist.handled.empty"])).toBeTruthy();
+  });
+
+  it("stays where the reader is when the address names no panel", async () => {
+    stubHandled({
+      as_of: "2026-09-05T09:00:00Z",
+      truncated: false,
+      receipts: [
+        {
+          id: "01a05500-0000-7000-8000-00000000e010",
+          kind: "email_sent",
+          summary: "Sent the reminder to Kirsten",
+          occurred_at: "2026-09-05T08:00:00Z",
+        },
+      ],
+    });
+    const scrolled = vi.fn();
+    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(scrolled);
+    window.location.hash = "#/?queue=1";
+
+    render(panel());
+    await screen.findByText("Sent the reminder to Kirsten");
+    expect(scrolled).not.toHaveBeenCalled();
+  });
+});
+
+it("keeps an incomplete empty history distinct from nothing done", async () => {
+  stubHandled({
+    as_of: "2026-11-15T09:00:00Z",
+    truncated: false,
+    receipts: [],
+    sources_unavailable: [{ source: "approval", reason: "withheld" }],
+  });
+  window.location.hash = "#/?queue=1&queue_at=history";
+  render(panel());
+  await waitFor(() =>
+    expect(screen.queryByText(en["worklist.handled.loading"])).toBeNull(),
+  );
+  expect(screen.queryByText(en["worklist.handled.empty"])).toBeNull();
+  expect(screen.getByText(en["worklist.handled.title"])).toBeTruthy();
+});
+
+it("shows a direct automatic change from the common Home result", async () => {
+  stubHandled({
+    as_of: "2026-11-15T09:00:00Z",
+    truncated: false,
+    receipts: [
+      {
+        id: "11111111-1111-7111-8111-111111111111",
+        kind: "magic.action.create_contact",
+        summary: "",
+        occurred_at: "2026-11-15T08:00:00Z",
+        completed_change: {
+          id: "11111111-1111-7111-8111-111111111111",
+          lane: "done",
+          occurred_at: "2026-11-15T08:00:00Z",
+          summary: { key: "magic.action.create_contact" },
+          actor: { type: "system", id: "capture" },
+          count: 3,
+        },
+      },
+    ],
+  });
+  render(panel());
+  const user = userEvent.setup();
+  await user.click(await screen.findByText(en["worklist.handled.showHistory"]));
+  expect(screen.queryByText(en["worklist.handled.empty"])).toBeNull();
+  expect(screen.getByText(/Created contact/)).toBeTruthy();
+});

@@ -78,12 +78,6 @@ func seatsWithAMorning(ctx context.Context, tx pgx.Tx) (map[ids.UUID]string, err
 // seatContext binds one colleague's own authority, which every read and write on
 // their behalf then runs under.
 //
-// EffectiveAuthority reads the grants AND the seat as ONE snapshot. Composed
-// from separate reads they can describe an authority the colleague never held —
-// permissions from before a role change with a seat type from after — and the
-// seat type is carried onto the principal for that reason rather than as
-// decoration: it is half of what the row-scope clauses answer with.
-//
 // A fresh correlation id per seat, so one morning's work for one colleague is
 // one recoverable trace in the audit spine rather than a fleet pass nobody can
 // take apart.
@@ -95,25 +89,12 @@ func seatsWithAMorning(ctx context.Context, tx pgx.Tx) (map[ids.UUID]string, err
 func seatContext(
 	ctx context.Context, users *identity.Service, wsID, userID ids.UUID,
 ) (context.Context, bool, error) {
-	rbac, seat, err := users.EffectiveAuthority(ctx, wsID, userID)
+	member, err := authz.MemberPrincipal(ctx, users, wsID, userID)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, fmt.Errorf("resolving the colleague's authority: %w", err)
 	}
-	return principal.WithCorrelationID(boundToSeat(ctx, userID, rbac, seat), ids.NewV7()), true, nil
-}
-
-// boundToSeat binds the colleague's own authority, as read from the database, as
-// the actor of ctx.
-func boundToSeat(ctx context.Context, userID ids.UUID, rbac authz.RBAC, seat principal.SeatType) context.Context {
-	return principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          "human:" + userID.String(),
-		UserID:      userID,
-		SeatType:    seat,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	})
+	return principal.WithCorrelationID(principal.WithActor(ctx, member), ids.NewV7()), true, nil
 }

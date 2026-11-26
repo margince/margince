@@ -66,11 +66,15 @@ func routineFooterContent(base string, words mailcopy.Copy) emailview.Content {
 }
 
 // writeMailItemLink links every row. A task, a meeting or its outcome opens
-// on Home; any other row opens its record page, or Home when it has none.
+// on Home; any other row opens its record page, or Home when it has none. An
+// approval with no record opens itself: Home's focus finds only the day's rows.
 func writeMailItemLink(body *emailview.Content, item crmcontracts.WorklistItem, base string, words mailcopy.Copy) {
 	fragment := ""
 	if item.Subject != nil && !opensOnHome(item.Source) {
 		fragment = mailcopy.RecordFragment(string(item.Subject.Type), item.Subject.Id.String())
+	}
+	if item.Subject == nil && item.Source == crmcontracts.WorklistItemSourceApproval {
+		fragment = mailcopy.RecordFragment("approval", item.Id)
 	}
 	if fragment == "" {
 		fragment = mailcopy.WorkItemFragment(string(item.Source), item.Id)

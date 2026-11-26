@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -62,6 +63,7 @@ type Approvals interface {
 // StageRequest carries what the inbox shows the human and what redemption
 // later re-checks.
 type StageRequest struct {
+	SystemText     *systemtext.Message
 	Tool           string
 	ProposedChange json.RawMessage
 	DiffHash       string
@@ -76,6 +78,8 @@ type StageRequest struct {
 	Summary      string
 	// SummaryParts is Summary taken apart, nil when Summary is a sentence alone.
 	SummaryParts *crmcontracts.ApprovalSummaryParts
+	// Why is the reason the call gave for itself, in the agent's words.
+	Why string
 }
 
 // StageInfo is what a 🟡-capable tool contributes to its own staging: the
@@ -90,6 +94,7 @@ type StageRequest struct {
 // against — a difference worth stating, since a field named TargetVersion on
 // the staging seam reads like the thing that binds the redemption.
 type StageInfo struct {
+	SystemText    *systemtext.Message
 	TargetType    string
 	TargetID      ids.UUID
 	TargetVersion *int64
@@ -150,17 +155,23 @@ func RedeemAndMark(ctx context.Context, approvals Approvals, approvalID ids.Appr
 		if err != nil {
 			return ctx, 0, false, err
 		}
-		if pins.Target != nil {
-			version, pinned = pins.Target.Version, true
-		}
-		ctx = auth.WithReleasedRecordPins(ctx, pins)
-		return withApprovalRedeemed(ctx, version, pinned), version, pinned, nil
+		marked, version, pinned = markReleased(ctx, pins)
+		return marked, version, pinned, nil
 	}
 	version, pinned, err = approvals.Redeem(ctx, approvalID, tool, diffHash)
 	if err != nil {
 		return ctx, 0, false, err
 	}
 	return withApprovalRedeemed(ctx, version, pinned), version, pinned, nil
+}
+
+// markReleased hands a release's pins to the writers, which re-check them under
+// their own row locks. A redeemed approval and a confirmed call share it.
+func markReleased(ctx context.Context, pins auth.ReleasedRecordPins) (marked context.Context, version int64, pinned bool) {
+	if pins.Target != nil {
+		version, pinned = pins.Target.Version, true
+	}
+	return withApprovalRedeemed(auth.WithReleasedRecordPins(ctx, pins), version, pinned), version, pinned
 }
 
 // ApprovalRedeemed reports whether this call already consumed a redeemed

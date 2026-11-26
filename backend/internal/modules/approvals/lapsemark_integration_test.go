@@ -93,8 +93,8 @@ func TestAnApprovalTheAgentNeverRedeemedIsMarkedRatherThanLeftSilent(t *testing.
 	// The approver's own sentence. It has to say the work did not happen AND
 	// what to do, because a human told only "expired" decides again and the row
 	// refuses them as already decided.
-	if *sentence != lapsedRedemptionSentence {
-		t.Errorf("stored sentence = %q, want %q", *sentence, lapsedRedemptionSentence)
+	if *sentence != failureLapsed.sentence {
+		t.Errorf("stored sentence = %q, want %q", *sentence, failureLapsed.sentence)
 	}
 	// The status is untouched. A human DID approve this, and rewriting that to
 	// something else would put a decision in the record they never made.
@@ -255,5 +255,59 @@ func TestOnlyTheExpirySweepMayMarkLapsedRedemptions(t *testing.T) {
 	}
 	if at, _ := e.effectFailureOf(t, id); at != nil {
 		t.Error("the refused call marked a row anyway")
+	}
+}
+
+// Between the window closing and the sweep running, the decider's failure lane
+// carries the lapse. The sweep then records that same failure, not a second one.
+func TestALapseBeforeTheSweepIsInTheFailureLaneLikeASweptOne(t *testing.T) {
+	e := setupStaging(t)
+	id := e.lapsed(t)
+	e.pastTheWindow()
+
+	listed, err := e.svc.OwnFailedDecisions(e.asDecider(), 8)
+	if err != nil {
+		t.Fatalf("reading the failure lane before the sweep: %v", err)
+	}
+	if len(listed) != 1 || listed[0].Approval.EffectFailedAt == nil || listed[0].Approval.EffectFailure == nil {
+		t.Fatalf("lane before the sweep = %+v, want the one lapsed approval with its failure", listed)
+	}
+	before := *listed[0].Approval.EffectFailedAt
+	if *listed[0].Approval.EffectFailure != failureLapsed.sentence {
+		t.Errorf("sentence = %q, want the lapse sentence", *listed[0].Approval.EffectFailure)
+	}
+	if code := listed[0].Approval.EffectFailureCode; code == nil || *code != "approval_lapsed" {
+		t.Errorf("code before the sweep = %v, want approval_lapsed", code)
+	}
+
+	if marked, err := e.svc.MarkLapsedRedemptions(e.sweeping()); err != nil || marked != 1 {
+		t.Fatalf("sweep = (%d, %v), want the one row marked", marked, err)
+	}
+	if at, _ := e.effectFailureOf(t, id); at == nil || !at.Equal(before) {
+		t.Errorf("the sweep recorded %v, want the failure time the lane already showed (%v)", at, before)
+	}
+	after, err := e.svc.OwnFailedDecisions(e.asDecider(), 8)
+	if err != nil || len(after) != 1 || !after[0].Approval.EffectFailedAt.Equal(before) {
+		t.Fatalf("lane after the sweep = (%v, %v), want the same single failure", after, err)
+	}
+	if code := after[0].Approval.EffectFailureCode; code == nil || *code != "approval_lapsed" {
+		t.Errorf("code after the sweep = %v, want approval_lapsed", code)
+	}
+}
+
+func TestALapseBeforeTheSweepCanBeAcknowledged(t *testing.T) {
+	e := setupStaging(t)
+	id := e.lapsed(t)
+	e.pastTheWindow()
+	listed, err := e.svc.OwnFailedDecisions(e.asDecider(), 8)
+	if err != nil || len(listed) != 1 {
+		t.Fatalf("lane = (%v, %v), want the lapsed approval", listed, err)
+	}
+
+	if err := e.svc.AcknowledgeEffectFailure(e.asDecider(), id, *listed[0].Approval.EffectFailedAt); err != nil {
+		t.Fatalf("acknowledging the lapse the lane showed: %v", err)
+	}
+	if left, err := e.svc.OwnFailedDecisions(e.asDecider(), 8); err != nil || len(left) != 0 {
+		t.Errorf("lane after acknowledging = (%v, %v), want it empty", left, err)
 	}
 }

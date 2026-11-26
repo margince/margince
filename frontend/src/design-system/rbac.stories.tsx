@@ -45,14 +45,16 @@ export const SeededRoles: Story = {
 };
 
 /**
- * A workspace-defined role outside the seeded set renders as its RAW KEY rather
- * than as an invented label. A prettified guess would read as a name somebody
- * chose, and this component has no way to know what the installation meant.
+ * A workspace-defined role outside the seeded set shows the name its admin gave
+ * it, which `/me` sends as `role_names`. With no name it renders as its RAW KEY
+ * rather than an invented label: a prettified guess would read as a name
+ * somebody chose.
  */
 export const WorkspaceDefinedRole: Story = {
   render: () => (
     <span style={ROW}>
       <RoleBadge roleKey="admin" />
+      <RoleBadge roleKey="custom_sales_assistant" name="Sales assistant" />
       <RoleBadge roleKey="regional_lead" />
     </span>
   ),

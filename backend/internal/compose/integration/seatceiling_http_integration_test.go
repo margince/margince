@@ -140,3 +140,36 @@ func TestInviteBelowTheLicensedCeilingIsAdmitted(t *testing.T) {
 		t.Errorf("invite once the licensed seats are used = %d %q, want 403", status, refusal.Code)
 	}
 }
+
+// A license refused while the process runs keeps the last valid ceiling. The
+// screen shows that ceiling, and an invite beyond it is refused, so a lapse
+// never lifts the seat limit.
+func TestARefusedLicenseHoldsAnInviteToTheLastValidCeiling(t *testing.T) {
+	held := &atomic.Int64{}
+	e := apptest.SetupAppWithOptions(t, compose.WithLicensePosture(func() licensecheck.Posture {
+		return licensecheck.Posture{
+			State:       licensecheck.StateRejected,
+			HeldCeiling: &licensecheck.Ceiling{Seats: int(held.Load()), Capped: true},
+			CheckedAt:   time.Date(2026, 8, 15, 9, 0, 0, 0, time.UTC),
+		}
+	}))
+	e.BootstrapWorkspace(t)
+	e.DescribeCompany(t)
+
+	var before licenseEntitlement
+	e.Call(t, http.MethodGet, "/v1/installation/license", nil, nil, &before)
+	if before.SeatsUsed == 0 {
+		t.Fatal("a bootstrapped installation reports no seats in use; the refusal below would hold vacuously")
+	}
+	held.Store(int64(before.SeatsUsed))
+
+	var screen licenseEntitlement
+	e.Call(t, http.MethodGet, "/v1/installation/license", nil, nil, &screen)
+	if screen.State != "rejected" || screen.SeatsGranted == nil || *screen.SeatsGranted != before.SeatsUsed {
+		t.Errorf("the screen reads state=%q granted=%v, want rejected held at %d", screen.State, screen.SeatsGranted, before.SeatsUsed)
+	}
+	var refusal problemDocument
+	if status := invite(t, e, "after-the-lapse@seatceiling.test", &refusal); status != http.StatusForbidden || refusal.Code != "seat_limit_reached" {
+		t.Errorf("invite beyond the held ceiling = %d %q, want 403 seat_limit_reached", status, refusal.Code)
+	}
+}

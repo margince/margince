@@ -20,6 +20,7 @@ package meetingbrief
 
 import (
 	"fmt"
+	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
@@ -38,7 +39,7 @@ const askCap = 5
 // fact about the record, and "the model did not mention it" is a fact about the
 // model. Only the first belongs in front of a reader.
 func unknownsFor(in Input, typ MeetingType, arc []ArcMoment) []Unknown {
-	said := briefCopyFor(in.Language)
+	said := in.words()
 	var out []Unknown
 	add := func(kind crmcontracts.MeetingPlanUnknownKind, question string) {
 		out = append(out, Unknown{Kind: kind, Question: question})
@@ -89,7 +90,7 @@ func hasClaimKind(in Input, kind string) bool {
 // asked, a promise we made them. A hypothesis with no record behind it is a
 // guess, and a guess printed beside cited facts borrows their credibility.
 func likelyAsksFor(in Input, ranked *rankedClaims) []Ask {
-	said := briefCopyFor(in.Language)
+	said := in.words()
 	var out []Ask
 	for _, claim := range ranked.all(openOfKind(kindOpenQuestion, kindCommitmentOurs, kindObjection)) {
 		if len(out) == askCap {
@@ -119,7 +120,9 @@ func (said briefCopy) askLines(claim ClaimIn) (string, string) {
 		return fmt.Sprintf("%q", claim.Body),
 			said.Say(questionWords.Answer)
 	case kindCommitmentOurs:
-		return fmt.Sprintf(said.Say(questionWords.Progress), claim.Body),
+		// The body is a whole sentence, so it is quoted without its own full
+		// stop rather than spliced into ours.
+		return fmt.Sprintf(said.Say(questionWords.Progress), strings.TrimRight(claim.Body, ". ")),
 			said.Say(questionWords.Prepare)
 	case kindObjection:
 		return fmt.Sprintf(said.Say(questionWords.Objection), claim.Body),
@@ -131,9 +134,9 @@ func (said briefCopy) askLines(claim ClaimIn) (string, string) {
 
 func (said briefCopy) askBasis(claim ClaimIn) string {
 	if claim.Kind == kindCommitmentOurs {
-		return fmt.Sprintf(said.Say(questionWords.PromiseOpen), claim.ContactName)
+		return fmt.Sprintf(said.Say(questionWords.PromiseOpen), said.whom(claim))
 	}
-	return fmt.Sprintf(said.Say(questionWords.RaisedOpen), claim.ContactName)
+	return fmt.Sprintf(said.Say(questionWords.RaisedOpen), said.whom(claim))
 }
 
 // questionsFor is what to ask THEM.
@@ -144,7 +147,7 @@ func (said briefCopy) askBasis(claim ClaimIn) string {
 // file. An unknown with nothing to anchor on stays in `unknowns`, where it
 // reads as the gap it is, instead of being dressed up as preparation.
 func questionsFor(in Input, unknowns []Unknown, ranked *rankedClaims) []Question {
-	said := briefCopyFor(in.Language)
+	said := in.words()
 	var out []Question
 	for _, claim := range ranked.all(func(claim ClaimIn) bool {
 		return ofKind(kindPriority, kindSuccessCriterion)(claim) || openOfKind(kindOpenQuestion)(claim)
@@ -156,7 +159,7 @@ func questionsFor(in Input, unknowns []Unknown, ranked *rankedClaims) []Question
 			Ask: fmt.Sprintf(said.Say(questionWords.Changed), claim.Body),
 			Why: fmt.Sprintf(
 				said.Say(questionWords.Named),
-				claim.ContactName),
+				said.whom(claim)),
 			ListenFor: said.Say(questionWords.ListenPriority),
 			Evidence:  []Evidence{{EntityType: citeActivity, EntityID: claim.SourceID}},
 		})

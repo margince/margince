@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -112,8 +111,8 @@ func validateFrameworkInput(in crmcontracts.ReportingFrameworkInput) error {
 	if !values.HasVisibleText(in.Reason) {
 		return refuse("reason", "invalid", "supply a reason")
 	}
-	if utf8.RuneCountInString(in.Reason) > 1000 {
-		return refuse("reason", "too_long", "a reason holds at most 1000 characters")
+	if err := refuseLongReason(in.Reason); err != nil {
+		return err
 	}
 	if len(in.CaptureContexts) > 20 {
 		return refuse("capture_contexts", "out_of_range", "supply at most twenty capture contexts")

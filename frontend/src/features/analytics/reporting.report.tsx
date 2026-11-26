@@ -12,10 +12,13 @@ import { Select } from "../../design-system/select";
 import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { type Departure, fromHere } from "../../lib/navigatefrom";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { scopeName } from "./analytics.context";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ReportingComparison } from "./reporting.comparison";
+import { useCreateReport } from "./reporting.create";
 import { ReportingExecutions } from "./reporting.executions";
 import { ReportingExportButton } from "./reporting.export";
 import {
@@ -24,9 +27,11 @@ import {
   type ReportAction,
   type ReportingEvidenceRef,
   type ReportingReport,
+  unpublishedDraft,
 } from "./reporting.model";
 import { useReportDetailQueries } from "./reporting.queries";
 import { PreviewAsSelect } from "./reporting.readerpreview";
+import { ReportGate } from "./reporting.reportgate";
 import { ReportResults } from "./reporting.results";
 import { SaveReportingDialog } from "./reporting.save";
 import { ReportingScheduleDialog } from "./reporting.schedule";
@@ -35,6 +40,20 @@ import {
   ReportVersions,
   useDraftEditing,
 } from "./reporting.versions";
+
+// Back must not reopen an archived report, and a snapshot leaves the reader on
+// the edition they are reading.
+function leaveAfter(
+  action: ReportAction,
+  created: string | undefined,
+  from: Departure,
+): void {
+  if (action.kind === "duplicate") {
+    from.navigate({ screen: "analytics", id: "reports", id2: created });
+  } else if (action.kind === "archive") {
+    from.navigateReplacing({ screen: "analytics", id: "reports" });
+  }
+}
 
 export function ReportingReportDetail({
   reportId,
@@ -49,11 +68,10 @@ export function ReportingReportDetail({
   const [archiving, setArchiving] = useState(false);
   const [comparing, setComparing] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  // The draft revision shown in place of the published one, while previewed.
-  const [previewRevision, setPreviewRevision] = useState<number>();
+  // The draft revision the editor chose to show in place of the published one.
+  const [chosenPreview, setPreviewRevision] = useState<number>();
   // The role the report is previewed as, in place of the caller's own view.
   const [previewRole, setPreviewRole] = useState<string>();
-  const previewDraft = previewRevision !== undefined;
   const [capturePending, setCapturePending] = useState<boolean | undefined>(
     undefined,
   );
@@ -65,27 +83,32 @@ export function ReportingReportDetail({
   const canReadSchedules = useCan("report_schedule", "read");
   const canReadEditions = useCan("report_edition", "read");
   const canSchedule = useCanWrite("report_schedule", "create");
-  const { report, live, edition, editions, schedules } = useReportDetailQueries(
+  const {
+    report,
+    live,
+    edition,
+    editions,
+    schedules,
+    shownRevision: previewRevision,
+  } = useReportDetailQueries(
     reportId,
     editionId,
     { editions: canReadEditions, schedules: canReadSchedules },
-    previewRevision,
+    chosenPreview,
   );
+  const previewDraft = previewRevision !== undefined;
   const draftEditing = useDraftEditing(reportId, report.data, canEdit);
+  const createReport = useCreateReport();
   const write = useMutation({
     mutationFn: async (action: ReportAction) => {
       switch (action.kind) {
         case "duplicate": {
-          const data = unwrap(
-            await api.POST("/analytics/reports", {
-              body: {
-                name: (action.name ?? action.report.name).slice(0, 160),
-                description: action.report.description,
-                audience: "private",
-                selection: action.report.selection,
-              },
-            }),
-          );
+          const data = await createReport({
+            name: (action.name ?? action.report.name).slice(0, 160),
+            description: action.report.description,
+            audience: "private",
+            selection: action.report.selection,
+          });
           return { reportId: data.id };
         }
         case "archive": {
@@ -109,14 +132,15 @@ export function ReportingReportDetail({
         }
       }
     },
-    onSuccess: async (result, action) => {
+    onMutate: fromHere,
+    onSuccess: async (result, action, from) => {
       if (action.kind === "freeze") setCapturePending(true);
       await client.invalidateQueries({ queryKey: ["reporting-reports"] });
       await client.invalidateQueries({
         queryKey: ["reporting-executions", reportId],
       });
       setRequestKey(crypto.randomUUID());
-      navigate({ screen: "analytics", id: "reports", id2: result.reportId });
+      leaveAfter(action, result.reportId, from);
     },
   });
   const allEditions = editions.data?.pages.flatMap((page) => page.data) ?? [];
@@ -177,11 +201,22 @@ export function ReportingReportDetail({
         {canCreate && (
           <Button
             variant="ghost"
-            disabled={write.isPending}
+            disabled={
+              write.isPending ||
+              (unpublishedDraft(report) !== undefined &&
+                draftEditing.editBlocked)
+            }
             onClick={() =>
               write.mutate({
                 kind: "duplicate",
-                report,
+                // A copy of a report with nothing published takes its draft.
+                report: {
+                  ...report,
+                  selection:
+                    unpublishedDraft(report) !== undefined
+                      ? draftEditing.editSelection(report)
+                      : report.selection,
+                },
                 key: requestKey,
                 name: t("reporting.copyName", { name: report.name }),
               })
@@ -202,7 +237,7 @@ export function ReportingReportDetail({
       </OverflowMenu>
     );
   return (
-    <QueryGate query={report} pendingLabel={t("reporting.reports")}>
+    <ReportGate query={report}>
       {(report) => (
         <>
           <div className="reporting-header">
@@ -439,7 +474,7 @@ export function ReportingReportDetail({
           )}
         </>
       )}
-    </QueryGate>
+    </ReportGate>
   );
 }
 
@@ -447,7 +482,7 @@ export function ReportingReportDetail({
 function ReportTitle({ report }: Readonly<{ report: ReportingReport }>) {
   const t = useT();
   return (
-    <div>
+    <div className="reporting-title">
       <Heading as="h2" size="large">
         {report.name}
       </Heading>
@@ -455,7 +490,7 @@ function ReportTitle({ report }: Readonly<{ report: ReportingReport }>) {
         <p className="reporting-description">{report.description}</p>
       )}
       <p className="t-caption">
-        {report.selection.scope.label} ·{" "}
+        {scopeName(report.selection.scope, t)} ·{" "}
         {t(`reporting.${report.selection.period}`)} ·{" "}
         {t(`reporting.${report.audience}`)}
       </p>

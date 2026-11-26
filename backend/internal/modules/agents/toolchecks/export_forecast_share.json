@@ -1,0 +1,9 @@
+{
+  "verb": "export_forecast_share",
+  "checks": [
+    "forecast.read"
+  ],
+  "takes": [
+    "forecast_share"
+  ]
+}

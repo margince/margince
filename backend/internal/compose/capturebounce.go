@@ -44,6 +44,7 @@ func (o consentBounceObserver) HardBounceTx(
 	if carried {
 		return privacy.EraseUntoldLeadTx(ctx, tx, privacy.UntoldLead{
 			LeadID: notice.LeadID, ApprovalID: notice.ApprovalID, DeliveryID: notice.DeliveryID,
+			Extensions: ExtensionData(),
 		})
 	}
 	return consent.RecordHardBounceTx(ctx, tx, consent.HardBounceFact{

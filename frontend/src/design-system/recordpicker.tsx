@@ -1,9 +1,11 @@
 import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useT } from "../i18n";
+import { useCachedHealthScope } from "../lib/healthscope";
 import { isImeCommit } from "../lib/imecommit";
 import { problemMessageOf } from "../lib/problem";
 import { Button, SearchField } from "./atoms";
+import { SEARCH_DEBOUNCE_MS } from "./debouncedsearch";
 import { ErrorLine } from "./errorline";
 
 // The shared debounced search→candidate-list→pick pattern. MergeAction
@@ -16,8 +18,6 @@ import { ErrorLine } from "./errorline";
 // rather than aborted (the request still reaches the server), and the
 // candidate list is a list of buttons rather than a combobox — no
 // role=combobox, no aria-expanded, no arrow-key navigation.
-
-const SEARCH_DEBOUNCE_MS = 250;
 
 // `detail` is the line under the name that tells two look-alike names apart
 // (a contact's company and address, a company's domain).
@@ -65,12 +65,16 @@ export function useCandidateSearch<T>(
   // and follows the locale. Wrapped, because a promise may reject with `null`.
   const [answer, setAnswer] = useState<Readonly<{
     query: string;
+    readerScope: string | undefined;
     candidates: readonly T[];
     failure: Readonly<{ cause: unknown }> | null;
   }> | null>(null);
 
   const query = term.trim();
   const emptySearch = searchEmpty && query === "";
+  // Candidates are records the reader's row scope narrows, so an answer holds
+  // only under the scope it was read for.
+  const readerScope = useCachedHealthScope();
 
   // New targets or a changed empty-search mode must never show the old answer.
   const [searchSpace, setSearchSpace] = useState(() => ({
@@ -95,11 +99,16 @@ export function useCandidateSearch<T>(
       try {
         const candidates = await searchTargets(query);
         if (!cancelled) {
-          setAnswer({ query, candidates, failure: null });
+          setAnswer({ query, readerScope, candidates, failure: null });
         }
       } catch (error) {
         if (!cancelled) {
-          setAnswer({ query, candidates: [], failure: { cause: error } });
+          setAnswer({
+            query,
+            readerScope,
+            candidates: [],
+            failure: { cause: error },
+          });
         }
       }
     }, SEARCH_DEBOUNCE_MS);
@@ -107,8 +116,11 @@ export function useCandidateSearch<T>(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, searchTargets, asking]);
-  const current = asking && answer?.query === query ? answer : null;
+  }, [query, searchTargets, asking, readerScope]);
+  const current =
+    asking && answer?.query === query && answer.readerScope === readerScope
+      ? answer
+      : null;
   return {
     candidates: current?.candidates ?? [],
     answered: current !== null && current.failure === null,
@@ -117,7 +129,9 @@ export function useCandidateSearch<T>(
   };
 }
 
-export function RecordPicker({
+export function RecordPicker<
+  T extends RecordPickerCandidate = RecordPickerCandidate,
+>({
   label,
   searchTargets,
   onPick,
@@ -129,13 +143,19 @@ export function RecordPicker({
   unavailableReason,
   noMatch,
   id,
+  placeholder = label,
+  required,
   "aria-describedby": describedBy,
   "aria-invalid": invalid,
 }: Readonly<{
   "aria-describedby"?: string;
   "aria-invalid"?: boolean;
-  searchTargets: (q: string) => Promise<RecordPickerCandidate[]>;
-  onPick: (candidate: RecordPickerCandidate) => void;
+  // The hint inside a field a `Field` names; a `label` is its own hint.
+  placeholder?: string;
+  // Announced, not native: the field empties once a candidate is picked.
+  required?: boolean;
+  searchTargets: (q: string) => Promise<T[]>;
+  onPick: (candidate: T) => void;
   selected?: RecordPickerCandidate | null;
   // Inert while the caller's own write for this pick is still in flight, so a
   // second choice cannot race the first. Disabled rather than unmounted: the
@@ -149,7 +169,7 @@ export function RecordPicker({
   onSearchChange?: (term: string) => void;
   // A sentence for a row that is listed but cannot be picked. A function read
   // at render, not part of the search, so a new translator never restarts it.
-  unavailableReason?: (candidate: RecordPickerCandidate) => string | undefined;
+  unavailableReason?: (candidate: T) => string | undefined;
   // The sentence for a search that finds nothing, when the caller can say why
   // and what to do next.
   noMatch?: string;
@@ -180,8 +200,9 @@ export function RecordPicker({
         id={id}
         aria-describedby={describedBy}
         aria-invalid={invalid}
-        placeholder={label}
+        placeholder={placeholder}
         aria-label={label}
+        aria-required={required || undefined}
         value={term}
         onFocus={() => setShowDefaults(true)}
         disabled={disabled}
@@ -217,7 +238,7 @@ export function RecordPicker({
           </span>
         </p>
       )}
-      {answered && candidates.length === 0 && (
+      {answered && candidates.length === 0 && term.trim() !== "" && (
         <p aria-live="polite">{noMatch ?? t("picker.noMatch")}</p>
       )}
       {candidates.length > 0 && (

@@ -6,16 +6,20 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // approvalNoticeUse says who reads the refreshed notice. Only the single email
@@ -35,6 +39,10 @@ func refreshApprovalNotice(
 	ctx context.Context, pool *pgxpool.Pool, attempt notices.EmailAttempt, now time.Time, use approvalNoticeUse,
 ) (notices.EmailAttempt, approvalMailFacts, bool, error) {
 	var facts approvalMailFacts
+	if attempt.TeamRequestPage != nil {
+		refreshed, current, err := refreshTeamRequest(ctx, pool, attempt)
+		return refreshed, facts, current, err
+	}
 	if attempt.ApprovalID == nil {
 		if attempt.Notice.Kind == notices.KindApprovalPending {
 			return attempt, facts, false, errors.New("approval notice has no decision reference")
@@ -126,6 +134,17 @@ func mailNow(clock func() time.Time) time.Time {
 func digestOrSubjectLine(approval crmcontracts.Approval, use approvalNoticeUse) string {
 	if use == forSingleEmail {
 		return approvalSentence(approval)
+	}
+	if display := approval.SystemDisplay; display != nil && display.Subject != nil {
+		lines := []string{*display.Subject}
+		lang := textlang.Lang(display.Locale)
+		for _, field := range summaryMailLines(approval.SummaryParts, lang, nil) {
+			lines = append(lines, field.Label+": "+field.Value)
+		}
+		if approval.SummaryParts != nil && approval.SummaryParts.MoreFields > 0 {
+			lines = append(lines, fmt.Sprintf(agents.MoreFields(lang), approval.SummaryParts.MoreFields))
+		}
+		return strings.Join(lines, " · ")
 	}
 	if approval.Summary != nil {
 		return *approval.Summary

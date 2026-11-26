@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // requestProofDataTask gives every privacy request closed before proofs were
@@ -50,7 +51,7 @@ func requestProofDataTask() datatask.Task {
 	}
 	return datatask.Task{
 		ID: "core/1792908100_privacy_request_proofs", Version: 1,
-		Title:    "Recording the proof of privacy requests answered earlier",
+		Title:    systemtext.Literal("datatask.title.core.1792908100_privacy_request_proofs"),
 		Requires: []string{"core/1792908100", "core/1792908101"},
 		Steps:    []datatask.Step{step},
 	}

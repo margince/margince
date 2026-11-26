@@ -30,6 +30,15 @@ const (
 	keyName           = "name"
 	keyParams         = "params"
 	keyStatus         = "status"
+	keyCatalogKey     = "key"
+)
+
+// SQL argument names that several statements share.
+const (
+	argOwner   = "owner"
+	argHandler = "handler"
+	argKeys    = "keys"
+	argRunKey  = "run_key"
 )
 
 // livePassportOf holds the agent's passport for the rest of the transaction and

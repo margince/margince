@@ -3,18 +3,12 @@
 
 package deals
 
-// The overnight follow-up reconciliation pass (features/07 §8a,
-// B-E06.2a): the deterministic half of the overnight agent's
-// "reconcile the day's captured calls/mail/meetings into staged
-// proposals" contract. Over every open deal that had a real captured
-// interaction (call/mail/meeting) in the reconciliation window but has
-// NO open follow-up on its timeline, the pass stages a "draft this
-// follow-up" proposal — never a silent write. A human confirms (or
-// edits) it in the morning approval inbox; only then is the follow-up
-// task created. It follows the close-date corrector's shape exactly:
-// one read pass per live workspace, the truth decided in Go over an
-// injectable clock, staging through an approvals seam the composition
-// root fills, and the confirm effect owned there too.
+// The overnight follow-up reconciliation pass. An open deal with a recent
+// call, mail or meeting and no open follow-up gets one. A task lands on the
+// deal owner's list as their own work. A reply to an inbound email is drafted
+// and waits for their approval, because it would leave the building. The pass
+// reads each live workspace once, over an injectable clock, and writes through
+// a seam the composition root fills.
 //
 // Scope note (B-E06.2a): the value-judgement proposals in §8a — a stage
 // / next-step / amount change inferred from what was SAID on a call —
@@ -35,12 +29,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
 
@@ -71,7 +67,8 @@ const (
 // triggering activity id) — a proposal never floats free of the record
 // it came from (P5/P12).
 type FollowUpProposal struct {
-	DealID ids.DealID `json:"deal_id"`
+	SystemText *systemtext.Message `json:"-"`
+	DealID     ids.DealID          `json:"deal_id"`
 	// DueDate is the proposed follow-up due date, date-only wire form.
 	DueDate string `json:"due_date"`
 	Subject string `json:"subject"`
@@ -84,6 +81,9 @@ type FollowUpProposal struct {
 	// us. Only the first can be replied to.
 	EvidenceDirection  string    `json:"evidence_direction,omitempty"`
 	EvidenceOccurredAt time.Time `json:"evidence_occurred_at"`
+	// DoerID is the colleague the accepter hands the follow-up to; empty
+	// leaves it with the deal's owner.
+	DoerID string `json:"doer_id"`
 }
 
 // UnmarshalFollowUpProposal decodes a staged (possibly human-edited)
@@ -105,14 +105,12 @@ func UnmarshalFollowUpProposal(raw json.RawMessage) (FollowUpProposal, error) {
 	return p, nil
 }
 
-// FollowUpStager is the approvals seam the composition root fills (a
-// module never imports a sibling): stage a follow-up proposal, and ask
-// whether one is already pending so a nightly sweep — whose proposal
-// moves with "today" — cannot stack duplicates on one still awaiting a
-// decision.
+// FollowUpStager is the seam the composition root fills, as a module never
+// imports a sibling. It files one deal's follow-up. It also reports a drafted
+// reply already waiting, so a nightly sweep cannot stack a second on it.
 type FollowUpStager interface {
 	HasPendingFollowUp(ctx context.Context, dealID ids.UUID) (bool, error)
-	StageFollowUp(ctx context.Context, dealID ids.UUID, summary string, proposal FollowUpProposal) error
+	StageFollowUp(ctx context.Context, dealID ids.UUID, proposal FollowUpProposal) error
 }
 
 // FollowUpReconciler drives the pass; the worker ticks it nightly.
@@ -210,7 +208,7 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 			  -- because this statement is a plain string with no format
 			  -- verbs; the predicate is the helper's, and a change to one
 			  -- is a change to both.
-			  AND a.audience = 'workspace'
+			  AND `+auth.WorkspaceAudienceSQL("a")+`
 			  AND %[5]s
 			  AND %[4]s
 			  AND (a.kind <> 'meeting' OR (%[1]s AND %[3]s))
@@ -264,18 +262,18 @@ func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {
 	}
 	// One settings read per pass, not per deal: every proposal in it is written
 	// in the same installation's language.
-	said := summaryIn(ctx, r.language)
+	words := followUpWordsIn(ctx, r.language)
 	for _, cand := range candidates {
-		if err := r.stage(ctx, cand, now, said); err != nil {
+		if err := r.stage(ctx, cand, now, words); err != nil {
 			return fmt.Errorf("follow-up reconcile on %s: %w", cand.dealID, err)
 		}
 	}
 	return nil
 }
 
-// stage records one deal's follow-up proposal unless one is already
-// pending — the pass proposes, it never writes the follow-up itself.
-func (r *FollowUpReconciler) stage(ctx context.Context, cand followUpCandidate, now time.Time, said summaryCopy) error {
+// stage files one deal's follow-up unless one is already waiting for a
+// decision.
+func (r *FollowUpReconciler) stage(ctx context.Context, cand followUpCandidate, now time.Time, words followUpWords) error {
 	pending, err := r.stager.HasPendingFollowUp(ctx, cand.dealID.UUID)
 	if err != nil {
 		return err
@@ -287,24 +285,32 @@ func (r *FollowUpReconciler) stage(ctx context.Context, cand followUpCandidate, 
 	proposal := FollowUpProposal{
 		DealID:             cand.dealID,
 		DueDate:            dueDate.Format(time.DateOnly),
-		Subject:            fmt.Sprintf(said.followUpSubject, cand.dealName),
-		Body:               followUpBody(cand, said),
+		Subject:            fmt.Sprintf(words.said.followUpSubject, cand.dealName),
+		Body:               followUpBody(cand, words),
 		EvidenceActivityID: cand.activityID,
 		EvidenceKind:       cand.activityKind,
 		EvidenceDirection:  cand.activityDirection,
 		EvidenceOccurredAt: cand.occurredAt,
 	}
-	summary := fmt.Sprintf(said.draftFollowUp,
-		cand.dealName, cand.activityKind, cand.occurredAt.Format(time.DateOnly))
-	return r.stager.StageFollowUp(ctx, cand.dealID.UUID, summary, proposal)
+	day := words.day(cand.occurredAt)
+	proposal.SystemText = &systemtext.Message{Subject: systemtext.Sentence("deals.followUpSubject", systemtext.Label(cand.dealName)), Body: followUpBodyComponent(cand, day)}
+	return r.stager.StageFollowUp(ctx, cand.dealID.UUID, proposal)
 }
 
 // followUpBody grounds the drafted follow-up in the real last exchange
 // (P5) — the human sees what it is answering before they approve.
-func followUpBody(cand followUpCandidate, said summaryCopy) string {
-	when := cand.occurredAt.Format(time.DateOnly)
+func followUpBody(cand followUpCandidate, words followUpWords) string {
+	when := words.day(cand.occurredAt)
 	if cand.subject != nil && *cand.subject != "" {
-		return fmt.Sprintf(said.followUpBodyQuoted, cand.activityKind, *cand.subject, when)
+		return fmt.Sprintf(words.said.followUpBodyQuoted, cand.activityKind, *cand.subject, when)
 	}
-	return fmt.Sprintf(said.followUpBody, cand.activityKind, when)
+	return fmt.Sprintf(words.said.followUpBody, cand.activityKind, when)
+}
+
+func followUpBodyComponent(cand followUpCandidate, day string) *systemtext.Component {
+	kind, when := systemtext.ActivityKindArgument(cand.activityKind), systemtext.Text(day)
+	if cand.subject != nil && *cand.subject != "" {
+		return systemtext.Sentence("deals.followUpBodyQuoted", kind, systemtext.Label(*cand.subject), when)
+	}
+	return systemtext.Sentence("deals.followUpBody", kind, when)
 }

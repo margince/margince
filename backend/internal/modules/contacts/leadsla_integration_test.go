@@ -17,10 +17,13 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // seedLeadCreatedAt seeds a working lead whose clock started at createdAt.
@@ -97,6 +100,50 @@ func TestSLAScanEscalatesEachBreachOnce(t *testing.T) {
 	}
 	if n := e.countEvents(t, "lead.sla_breached", fresh.UUID); n != 0 {
 		t.Errorf("a lead inside its target was escalated")
+	}
+}
+
+// A website form enquiry is the lead writing in, as an inbound email is. It
+// starts the clock, and the row, the filter and the scan agree on it.
+func TestAWebsiteFormEnquiryStartsTheFirstResponseClock(t *testing.T) {
+	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
+	now := clocktest.Now(t)
+	createdAt := now.Add(-DefaultFirstResponseTarget - time.Hour)
+	id := ids.NewV7()
+	ctx := context.Background()
+	form, submission := ids.NewV7().String(), "submission"
+	if _, err := e.owner.Exec(ctx,
+		`INSERT INTO lead (id, full_name, email, status, source, source_system, source_id, captured_by, owner_id, created_at)
+		 VALUES ($1, 'Web Lead', 'web@sla.test', 'new', 'inbound', $2, $3, 'system', $4, $5)`,
+		id, provenance.WebFormSource, provenance.WebFormSourceID(form, submission), e.user, createdAt); err != nil {
+		t.Fatal(err)
+	}
+	lead := ids.From[ids.LeadKind](id)
+	e.seedLeadTouchFrom(t, lead, "note", "", "system", "system", createdAt,
+		provenance.WebFormSource, provenance.WebFormSourceID(form, submission))
+
+	read, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if read.SlaState == nil || *read.SlaState != crmcontracts.LeadSlaStateLeadSlaStateBreached {
+		t.Errorf("an unanswered website enquiry reads sla_state=%v, want breached", read.SlaState)
+	}
+	breached := crmcontracts.ListLeadsParamsSlaState(crmcontracts.LeadSlaStateLeadSlaStateBreached)
+	page, _, err := e.store.ListLeads(e.ctx, ListLeadsInput{SLAState: &breached})
+	if err != nil {
+		t.Fatalf("list breached: %v", err)
+	}
+	if len(page) != 1 || page[0].Id != read.Id {
+		t.Errorf("sla_state=breached lists %d leads, want the website enquiry", len(page))
+	}
+	breaches, err := e.store.ScanLeadSLA(e.ctx, now)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if len(breaches) != 1 || breaches[0].LeadID != lead {
+		t.Errorf("breaches = %+v, want the website enquiry %s", breaches, lead)
 	}
 }
 
@@ -420,6 +467,7 @@ func TestTakingOnALeadClearsTheBreachItEarnedWhileUnowned(t *testing.T) {
 // unanswered lead is an explicit disposition and stamps it too.
 func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
 	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
 	now := pinLeadAuditClock(t)
 	worked := e.seedLeadCreatedAt(t, "worked@example.test", now.Add(-time.Hour))
 	status := "contacted"
@@ -433,11 +481,11 @@ func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
 	if after.SlaState != nil {
 		t.Errorf("an answered lead reads sla_state=%v, want null — it owes nothing", *after.SlaState)
 	}
+	if after.FirstResponseMarkedBy == nil || *after.FirstResponseMarkedBy != openapi_types.UUID(e.user) {
+		t.Errorf("first_response_marked_by = %v, want the user who moved the lead (%v)", after.FirstResponseMarkedBy, e.user)
+	}
 	stamped := *after.FirstResponseAt
 	back := "new"
-	if _, err := e.store.UpdateLead(e.ctx, worked, UpdateLeadInput{Status: &back}); err != nil {
-		t.Fatalf("update back: %v", err)
-	}
 	if _, err := e.store.UpdateLead(e.ctx, worked, UpdateLeadInput{Status: &status}); err != nil {
 		t.Fatalf("update again: %v", err)
 	}
@@ -449,6 +497,18 @@ func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
 		t.Errorf("first_response_at moved from %v to %v; the first stamp is the one that counts", stamped, again.FirstResponseAt)
 	}
 
+	released, err := e.store.UpdateLead(e.ctx, worked, UpdateLeadInput{Status: &back})
+	if err != nil {
+		t.Fatalf("update back: %v", err)
+	}
+	if released.FirstResponseAt != nil || released.FirstResponseMarkedBy != nil {
+		t.Errorf("moving back to new with no activity left first_response_at=%v marked_by=%v, want both cleared",
+			released.FirstResponseAt, released.FirstResponseMarkedBy)
+	}
+	if released.SlaState == nil {
+		t.Error("a lead put back to new owes a reply again, so sla_state must be read again")
+	}
+
 	dropped := e.seedLeadCreatedAt(t, "dropped@example.test", now.Add(-time.Hour))
 	closed, err := e.store.DisqualifyLead(e.ctx, dropped, DisqualifyLeadInput{})
 	if err != nil {
@@ -457,7 +517,49 @@ func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
 	if closed.FirstResponseAt == nil {
 		t.Error("disqualifying is an explicit disposition and must stamp first_response_at")
 	}
-	requireStoredLeadClockAudit(e.ctx, t, e.store, worked)
+	kept := e.seedLeadCreatedAt(t, "kept-stamp@example.test", now.Add(-time.Hour))
+	if _, err := e.store.UpdateLead(e.ctx, kept, UpdateLeadInput{Status: &status}); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	requireStoredLeadClockAudit(e.ctx, t, e.store, kept)
+}
+
+// A reply logged on the lead answers it whatever a status move did. Moving the
+// lead back to new keeps the stamp. A reply earlier than a status stamp takes
+// the stamp over and drops the name.
+func TestAReplyOnTheLeadOutlivesAMovedStatus(t *testing.T) {
+	e := setupPromoteConsent(t)
+	now := pinLeadAuditClock(t)
+	contacted := "contacted"
+	back := "new"
+
+	kept := e.seedLeadCreatedAt(t, "kept@example.test", now.Add(-3*time.Hour))
+	e.seedLeadTouch(t, kept, "email", "outbound", "human:"+e.user.String(), "manual", now.Add(-2*time.Hour))
+	if _, err := e.store.UpdateLead(e.ctx, kept, UpdateLeadInput{Status: &contacted}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := e.store.UpdateLead(e.ctx, kept, UpdateLeadInput{Status: &back})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.FirstResponseAt == nil {
+		t.Error("a lead with a logged reply lost its first response when moved back to new")
+	}
+
+	taken := e.seedLeadCreatedAt(t, "taken@example.test", now.Add(-3*time.Hour))
+	if _, err := e.store.UpdateLead(e.ctx, taken, UpdateLeadInput{Status: &contacted}); err != nil {
+		t.Fatal(err)
+	}
+	if set, err := e.store.RecordLeadFirstResponse(e.ctx, taken, now.Add(-2*time.Hour)); err != nil || !set {
+		t.Fatalf("an earlier reply over a status stamp: set=%t err=%v", set, err)
+	}
+	got, err = e.store.GetLead(e.ctx, taken, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.FirstResponseMarkedBy != nil {
+		t.Errorf("first_response_marked_by = %v after a reply took the stamp, want null", got.FirstResponseMarkedBy)
+	}
 }
 
 // The bus is unordered: a reply that happened at 09:00 may be processed
@@ -499,18 +601,21 @@ func TestFirstResponseKeepsTheEarliestReplyWhateverTheDeliveryOrder(t *testing.T
 // to survive the window between the activity's commit and the projection.
 func (e *promoteConsentEnv) seedLeadTouch(t *testing.T, lead ids.LeadID, kind, direction, capturedBy, source string, at time.Time) {
 	t.Helper()
+	e.seedLeadTouchFrom(t, lead, kind, direction, capturedBy, source, at, "", "")
+}
+
+// seedLeadTouchFrom is seedLeadTouch for an activity a source system wrote;
+// a blank sourceSystem and sourceID leave both NULL.
+func (e *promoteConsentEnv) seedLeadTouchFrom(t *testing.T, lead ids.LeadID, kind, direction, capturedBy, source string, at time.Time, sourceSystem, sourceID string) {
+	t.Helper()
 	id := ids.NewV7()
 	ctx := context.Background()
 	// direction is NULL for a note: the column's CHECK admits inbound and
 	// outbound and nothing else, and a note has neither.
-	var carried *string
-	if direction != "" {
-		carried = &direction
-	}
 	if _, err := e.owner.Exec(ctx,
-		`INSERT INTO activity (id, kind, subject, direction, occurred_at, source, captured_by)
-		 VALUES ($1, $2, 'Reply', $3, $4, $5, $6)`,
-		id, kind, carried, at, source, capturedBy); err != nil {
+		`INSERT INTO activity (id, kind, subject, direction, occurred_at, source, captured_by, source_system, source_id)
+		 VALUES ($1, $2, 'Reply', NULLIF($3, ''), $4, $5, $6, NULLIF($7, ''), NULLIF($8, ''))`,
+		id, kind, direction, at, source, capturedBy, sourceSystem, sourceID); err != nil {
 		t.Fatalf("seeding the %s activity: %v", kind, err)
 	}
 	if _, err := e.owner.Exec(ctx,

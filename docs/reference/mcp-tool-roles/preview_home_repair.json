@@ -1,0 +1,15 @@
+{
+  "tool": "run_research",
+  "action": "preview_home_repair",
+  "verb": "preview_home_repair",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

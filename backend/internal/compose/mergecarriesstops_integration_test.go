@@ -22,12 +22,10 @@ package compose
 // their contact is later merged during ordinary cleanup, and marketing resumes
 // against them with nothing in the audit saying a stop was dropped.
 //
-// THE OVERRIDE DEFECT IS THE MIRROR IMAGE. A rep vouches that a machine-level
-// refusal may be overruled for one category (consent/override.go's Allow), the
-// contact carrying that vouch is later merged into a duplicate, and the vouch
-// stays on the retired id — so the very next send to the survivor for that
-// category is refused all over again, with nothing on file saying a rep
-// already cleared it.
+// The override defect is the mirror image. A standing exception on file lets a
+// machine-level refusal be overruled for one category. A merge that left it on
+// the retired id would refuse the next send to the survivor in that category.
+// Nothing on file would then say a rep already cleared it.
 
 import (
 	"context"
@@ -420,6 +418,22 @@ func liveOverrideCount(t *testing.T, e *integration.Env, contactID ids.UUID) int
 	return n
 }
 
+// plantAdminOverride writes a live marketing exception an admin recorded, in
+// the shape the recording left: recorded directly, for the default entity.
+// No door records one any more, so a row is the only way to start.
+func plantAdminOverride(t *testing.T, e *integration.Env, contactID ids.UUID, reason string) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := e.Pool.QueryRow(context.Background(), `
+		INSERT INTO communication_override
+		    (contact_id, category, reason, decided_by_level, captured_by, legal_entity_id, recorded_directly)
+		VALUES ($1, 'marketing', $2, 'admin', $3, (SELECT id FROM legal_entity WHERE is_default), true)
+		RETURNING id`, contactID, reason, "human:"+e.AdminUser.String()).Scan(&id); err != nil {
+		t.Fatalf("planting the override: %v", err)
+	}
+	return id
+}
+
 // seedMarketingPurpose plants a legacy consent purpose of class "marketing",
 // which is what lets a Preview request resolve LegacyPurposeKey to the
 // "marketing" category the override below is recorded for — the same mapping
@@ -481,13 +495,7 @@ func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
 		t.Fatalf("verdict = allow before any override reached the survivor — the fixture proves nothing")
 	}
 
-	if _, err := consentStore.Allow(admin, consent.AllowInput{
-		ContactID: ids.From[ids.ContactKind](vouched),
-		Category:  "marketing",
-		Reason:    "recorded context supports correspondence in this category",
-	}); err != nil {
-		t.Fatalf("recording the override: %v", err)
-	}
+	plantAdminOverride(t, e, vouched, "recorded context supports correspondence in this category")
 	if got := liveOverrideCount(t, e, survivor); got != 0 {
 		t.Fatalf("precondition: the survivor already holds %d override(s)", got)
 	}
@@ -555,13 +563,7 @@ func TestACarryDoesNotDuplicateAnEquallyStrongOverrideTheSurvivorHolds(t *testin
 	survivor := e.SeedContact(t, "Duplicate Override Survivor", nil)
 
 	for _, id := range []ids.UUID{retiring, survivor} {
-		if _, err := consentStore.Allow(admin, consent.AllowInput{
-			ContactID: ids.From[ids.ContactKind](id),
-			Category:  "marketing",
-			Reason:    "confirmed the opt-in on a call",
-		}); err != nil {
-			t.Fatalf("recording the override: %v", err)
-		}
+		plantAdminOverride(t, e, id, "confirmed the opt-in on a call")
 	}
 
 	scope, err := contactsStore.PreviewMergeSurvivorship(admin, "contact", retiring, survivor, nil, nil)
@@ -583,19 +585,12 @@ func TestACarryDoesNotDuplicateAnEquallyStrongOverrideTheSurvivorHolds(t *testin
 func TestAnUnwiredMergeRefusesOnlyWhenAnOverrideWouldBeLost(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()
-	consentStore := consent.NewStore(e.DB())
 	// Deliberately NOT .WithStopCarrier(...).
 	unwired := contacts.NewStore(e.DB())
 
 	vouched := e.SeedContact(t, "Unwired Override Source", nil)
 	survivor := e.SeedContact(t, "Unwired Override Survivor", nil)
-	if _, err := consentStore.Allow(admin, consent.AllowInput{
-		ContactID: ids.From[ids.ContactKind](vouched),
-		Category:  "marketing",
-		Reason:    "confirmed the opt-in on a call",
-	}); err != nil {
-		t.Fatalf("recording the override: %v", err)
-	}
+	plantAdminOverride(t, e, vouched, "confirmed the opt-in on a call")
 
 	scope, previewErr := unwired.PreviewMergeSurvivorship(admin, "contact", vouched, survivor, nil, nil)
 	if _, ok := errors.AsType[*contacts.OverrideCarrierNotWiredError](previewErr); !ok || len(scope.Overrides) != 0 {
@@ -643,14 +638,7 @@ func TestRevokingAPreMergeOverrideHandleStopsTheSendOnTheSurvivor(t *testing.T) 
 	addContactEmail(t, e, survivor, address)
 	seedMarketingPurpose(t, e, "override-carry-newsletter")
 
-	recorded, err := consentStore.Allow(admin, consent.AllowInput{
-		ContactID: ids.From[ids.ContactKind](vouched),
-		Category:  "marketing",
-		Reason:    "confirmed the opt-in on a call before the records were merged",
-	})
-	if err != nil {
-		t.Fatalf("recording the override: %v", err)
-	}
+	recorded := plantAdminOverride(t, e, vouched, "confirmed the opt-in on a call before the records were merged")
 
 	if _, err := contactsStore.MergeContact(admin,
 		ids.From[ids.ContactKind](vouched), ids.From[ids.ContactKind](survivor), nil); err != nil {

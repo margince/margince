@@ -4,7 +4,15 @@ import {
   type QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { createQueryClient } from "../../app/queryclient";
 import { LocaleProvider } from "../../i18n";
@@ -32,15 +40,25 @@ afterEach(cleanup);
 // product: re-read on a return to the tab.
 function mount(routes: RouteMap, client: QueryClient = createQueryClient()) {
   installFetchStub(routes);
-  render(
+  const page = (id: string) => (
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <RecordShell>
-          <ContactPageV2 id="p-1" tab="overview" />
+          <ContactPageV2 id={id} tab="overview" />
         </RecordShell>
       </LocaleProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const rendered = render(page("p-1"));
+  return { ...rendered, open: (id: string) => rendered.rerender(page(id)) };
+}
+
+// What the page says when its row read is refused. A 404 names no contact the
+// reader may see; any other refusal keeps the page's own sentence.
+function refusalOf(status: number): string {
+  return status === 404
+    ? en["record.gone.contact"]
+    : en["contact.page.notOpened"];
 }
 
 // A row answer the spec releases itself, so it can look at the page between
@@ -84,11 +102,64 @@ describe("the contact page's row read", () => {
       });
       mount(routes, client);
 
-      expect(
-        await screen.findByText(en["contact.page.notOpened"]),
-      ).toBeTruthy();
+      expect(await screen.findByText(refusalOf(status))).toBeTruthy();
     });
   }
+
+  it("offers the way back to the contacts when the row is not there", async () => {
+    const routes = liveRoutes();
+    routes["GET /contacts/p-1"] = () =>
+      jsonResponse({ status: 404, code: "not_found" }, 404);
+    const client = createQueryClient();
+    client.setDefaultOptions({
+      queries: { ...client.getDefaultOptions().queries, retry: false },
+    });
+    mount(routes, client);
+
+    await screen.findByText(en["record.gone.contact"]);
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Back to Contacts" }));
+    expect(window.location.hash).toBe("#/contacts");
+  });
+
+  // The contact can go between the two reads: the row answered, then the 360
+  // found it gone.
+  it("says the contact is not there when the 360 answers 404 after the row", async () => {
+    const routes = liveRoutes();
+    routes["GET /contacts/p-1/360"] = () =>
+      jsonResponse({ status: 404, code: "not_found" }, 404);
+    const client = createQueryClient();
+    client.setDefaultOptions({
+      queries: { ...client.getDefaultOptions().queries, retry: false },
+    });
+    mount(routes, client);
+
+    expect(await screen.findByText(en["record.gone.contact"])).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Back to Contacts" }),
+    ).toBeTruthy();
+  });
+
+  // The sentence replaces the page's wait, so it is announced as it arrives.
+  // The way back is something to reach, not something to hear.
+  it("announces that the contact is not there, with the way back outside it", async () => {
+    const routes = liveRoutes();
+    routes["GET /contacts/p-1"] = () =>
+      jsonResponse({ status: 404, code: "not_found" }, 404);
+    const client = createQueryClient();
+    client.setDefaultOptions({
+      queries: { ...client.getDefaultOptions().queries, retry: false },
+    });
+    mount(routes, client);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe(en["record.gone.contact"]);
+    expect(within(alert).queryByRole("button")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Back to Contacts" }),
+    ).toBeTruthy();
+  });
 
   it("asks for no 360 once the row is known archived", async () => {
     const asked: string[] = [];
@@ -127,7 +198,7 @@ describe("the contact page's row read", () => {
     expect(screen.queryByText(en["contact.page.notOpened"])).toBeNull();
   });
 
-  it("keeps the page while a refused 360 waits on the row being re-read", async () => {
+  it("withdraws the page and its actions while a refused 360 waits on the row", async () => {
     const client = createQueryClient();
     const routes = liveRoutes();
     mount(routes, client);
@@ -147,7 +218,10 @@ describe("the contact page's row read", () => {
     await waitFor(() =>
       expect(client.getQueryState(["contact360", "p-1"])?.status).toBe("error"),
     );
+    expect(await screen.findByText(en["contact.page.loading"])).toBeTruthy();
     expect(screen.queryByText(en["contact.page.notOpened"])).toBeNull();
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
     act(() => row.release(archivedContact));
     expect(await screen.findByText(en["record.archived"])).toBeTruthy();
   });
@@ -169,5 +243,187 @@ describe("the contact page's row read", () => {
     ).toBeNull();
     act(() => row.release(archivedContact));
     expect(await screen.findByText(en["record.archived"])).toBeTruthy();
+  });
+});
+
+describe("confirmed contact identity while the 360 loads", () => {
+  it("shows the base name and title without starting another record read", async () => {
+    const held = heldRow();
+    const client = createQueryClient();
+    let rows = 0;
+    let views = 0;
+    const contact = { ...liveView.contact, title: "Buyer" };
+    mount(
+      {
+        ...liveRoutes(),
+        "GET /contacts/p-1": () => {
+          rows++;
+          return jsonResponse(contact);
+        },
+        "GET /contacts/p-1/360": () => {
+          views++;
+          return held.answer();
+        },
+      },
+      client,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: contact.full_name }),
+    ).toBeTruthy();
+    expect(screen.getByText("Buyer")).toBeTruthy();
+    expect(screen.getByText(en["contact.page.loading"])).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["tab.overview"] }),
+    ).toBeNull();
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(rows).toBe(1);
+    expect(views).toBe(1);
+    act(() => held.release({ ...liveView, contact }));
+    expect(
+      await screen.findByRole("button", { name: en["tab.overview"] }),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["contact.page.loading"])).toBeNull();
+    expect(rows).toBe(1);
+    expect(views).toBe(1);
+  });
+
+  for (const status of [403, 404, 500]) {
+    it(`drops cached identity when the base fails with ${status} before the 360`, async () => {
+      const held = heldRow();
+      const client = createQueryClient();
+      client.setDefaultOptions({
+        queries: { ...client.getDefaultOptions().queries, retry: false },
+      });
+      client.setQueryData(["contacts", {}], {
+        pages: [{ data: [liveView.contact] }],
+      });
+      mount(
+        {
+          ...liveRoutes(),
+          "GET /contacts/p-1": () => jsonResponse({ status }, status),
+          "GET /contacts/p-1/360": held.answer,
+        },
+        client,
+      );
+      expect(await screen.findByText(refusalOf(status))).toBeTruthy();
+      expect(
+        screen.queryByRole("heading", { name: liveView.contact.full_name }),
+      ).toBeNull();
+      expect(screen.queryByText(en["contact.page.loading"])).toBeNull();
+    });
+  }
+
+  for (const status of [403, 404]) {
+    it(`hides the fallback after 360 ${status} until the base resolves`, async () => {
+      const row = heldRow();
+      const client = createQueryClient();
+      client.setQueryData(["contacts", {}], {
+        pages: [{ data: [liveView.contact] }],
+      });
+      mount(
+        {
+          ...liveRoutes(),
+          "GET /contacts/p-1": row.answer,
+          "GET /contacts/p-1/360": () => jsonResponse({ status }, status),
+        },
+        client,
+      );
+      await waitFor(() =>
+        expect(client.getQueryState(["contact360", "p-1"])?.status).toBe(
+          "error",
+        ),
+      );
+      await waitFor(() => expect(screen.queryByRole("heading")).toBeNull());
+      expect(screen.getByText(en["contact.page.loading"])).toBeTruthy();
+      act(() =>
+        row.release(status === 404 ? archivedContact : liveView.contact),
+      );
+      expect(
+        await screen.findByText(
+          en[status === 404 ? "record.archived" : "contact.page.notOpened"],
+        ),
+      ).toBeTruthy();
+    });
+
+    it(`shows no cached archived row while its re-read is held, then refuses on ${status}`, async () => {
+      const client = createQueryClient();
+      client.setDefaultOptions({
+        queries: { ...client.getDefaultOptions().queries, retry: false },
+      });
+      client.setQueryData(["contact", "p-1"], archivedContact, {
+        updatedAt: 1,
+      });
+      let refuse: () => void = () => undefined;
+      const held = new Promise<Response>((settle) => {
+        refuse = () => settle(jsonResponse({ status }, status));
+      });
+      mount(
+        {
+          ...archivedContactRoutes(),
+          "GET /contacts/p-1": () => held,
+        },
+        client,
+      );
+      expect(await screen.findByText(en["contact.page.loading"])).toBeTruthy();
+      expect(screen.queryByText(en["record.archived"])).toBeNull();
+      expect(screen.queryByRole("heading")).toBeNull();
+      expect(screen.queryAllByRole("button")).toHaveLength(0);
+      act(() => refuse());
+      expect(await screen.findByText(refusalOf(status))).toBeTruthy();
+      expect(screen.queryByText(en["record.archived"])).toBeNull();
+      expect(
+        screen.queryByRole("heading", { name: archivedContact.full_name }),
+      ).toBeNull();
+    });
+  }
+
+  it("opens a cached archived row once its re-read confirms it", async () => {
+    const client = createQueryClient();
+    client.setQueryData(["contact", "p-1"], archivedContact, { updatedAt: 1 });
+    const row = heldRow();
+    mount(
+      { ...archivedContactRoutes(), "GET /contacts/p-1": row.answer },
+      client,
+    );
+    expect(await screen.findByText(en["contact.page.loading"])).toBeTruthy();
+    expect(screen.queryByText(en["record.archived"])).toBeNull();
+    act(() => row.release(archivedContact));
+    expect(await screen.findByText(en["record.archived"])).toBeTruthy();
+  });
+
+  it("does not show a previous contact when its pending 360 answers after navigation", async () => {
+    const first = heldRow();
+    const second = heldRow();
+    const next = {
+      ...liveView.contact,
+      id: "p-2",
+      full_name: "Second Contact",
+      title: "Engineer",
+    };
+    const mounted = mount({
+      ...liveRoutes(),
+      "GET /contacts/p-1/360": first.answer,
+      "GET /contacts/p-2": () => jsonResponse(next),
+      "GET /contacts/p-2/360": second.answer,
+      "GET /contacts/p-2/consent/guard": () =>
+        jsonResponse({ contact_id: "p-2", entries: [] }),
+    });
+    expect(
+      await screen.findByRole("heading", { name: liveView.contact.full_name }),
+    ).toBeTruthy();
+    mounted.open("p-2");
+    expect(
+      await screen.findByRole("heading", { name: next.full_name }),
+    ).toBeTruthy();
+    await act(async () => first.release(liveView));
+    expect(
+      screen.queryByRole("heading", { name: liveView.contact.full_name }),
+    ).toBeNull();
+    expect(screen.getByText(next.title)).toBeTruthy();
+    expect(screen.getByText(en["contact.page.loading"])).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["tab.overview"] }),
+    ).toBeNull();
   });
 });

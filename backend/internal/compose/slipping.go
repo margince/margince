@@ -13,18 +13,15 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/dayrule"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -92,7 +89,7 @@ func quietDealScan(
 func quietDealScanWithClock(pool *pgxpool.Pool, quietForDays int, clock func() time.Time) func(context.Context, *storekit.OwnerSet) ([]agents.SlippingDeal, bool, error) {
 	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
 	return func(ctx context.Context, owners *storekit.OwnerSet) ([]agents.SlippingDeal, bool, error) {
-		zone, err := installationZone(ctx, pool)
+		zone, err := dayrule.ZoneForOwners(ctx, pool, owners)
 		if err != nil {
 			return nil, false, err
 		}
@@ -186,7 +183,7 @@ func quietDealTail(pool *pgxpool.Pool, quietForDays int) func(
 ) ([]agents.SlippingDeal, []string, bool, error) {
 	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
 	return func(ctx context.Context, asOf time.Time, owners *storekit.OwnerSet, after string, limit int) ([]agents.SlippingDeal, []string, bool, error) {
-		zone, err := installationZone(ctx, pool)
+		zone, err := dayrule.ZoneForOwners(ctx, pool, owners)
 		if err != nil {
 			return nil, nil, false, err
 		}
@@ -210,31 +207,8 @@ func quietDealTail(pool *pgxpool.Pool, quietForDays int) func(
 	}
 }
 
-// installationZone loads the zone the installation's days are counted in.
-func installationZone(ctx context.Context, pool *pgxpool.Pool) (*time.Location, error) {
-	var name string
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		var err error
-		name, err = identity.TimezoneOf(ctx, tx)
-		return err
-	}); err != nil {
-		return nil, fmt.Errorf("read the installation's timezone: %w", err)
-	}
-	return zoneNamed(name), nil
-}
-
-// zoneNamed resolves a stored zone name, answering UTC for one Go cannot load.
-//
-// The same fallback the deals module's own date arithmetic makes for a nil
-// zone, so a setting nobody can load cannot make the two surfaces disagree in a
-// NEW way — they are then both wrong about the day in the same direction, which
-// is a different and much smaller problem.
-func zoneNamed(name string) *time.Location {
-	if zone, err := time.LoadLocation(name); err == nil {
-		return zone
-	}
-	return time.UTC
-}
+// installationZone is the zone a combined screen counts its days in.
+var installationZone = dayrule.InstallationZone
 
 // slippingCandidate carries a deal row across the seam with its risk
 // flags and the fields that evidence them; the tool drops any flag its
@@ -315,11 +289,13 @@ func atRiskList(
 	quietForDays int, asOf time.Time, zone *time.Location, owners *storekit.OwnerSet, arm deals.AtRiskArm,
 ) deals.ListDealsInput {
 	sort := deals.AtRiskSort
+	// A slipping deal is drawn from the deal's own columns, so the page skips the
+	// enrichment a deal screen shows.
 	return deals.ListDealsInput{
 		AtRisk: &deals.AtRiskWindow{
 			QuietForDays: quietForDays, AsOf: asOf, CloseBefore: storekit.WorkspaceDay(asOf, zone), Arm: arm,
 		},
-		Sort: &sort, ScopeOwners: owners,
+		Sort: &sort, ScopeOwners: owners, FactsOnly: true,
 	}
 }
 
@@ -330,7 +306,7 @@ func quietDealsAmong(pool *pgxpool.Pool, quietForDays int) func(
 ) (map[ids.UUID]bool, error) {
 	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
 	return func(ctx context.Context, asOf time.Time, owners *storekit.OwnerSet, among []ids.UUID) (map[ids.UUID]bool, error) {
-		zone, err := installationZone(ctx, pool)
+		zone, err := dayrule.ZoneForOwners(ctx, pool, owners)
 		if err != nil {
 			return nil, err
 		}

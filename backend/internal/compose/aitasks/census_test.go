@@ -206,14 +206,13 @@ func TestLookupFindsARegisteredSite(t *testing.T) {
 	}
 }
 
-// An agent loop's committed scenarios seed a window and grade ONE turn; the
-// loop itself is never exercised. A record that does not say so overstates
-// what was certified, so the scope is derived from the kind rather than left
-// to a reader to infer.
-func TestAgentLoopCertifiesOneTurnNotTheLoop(t *testing.T) {
+// An agent loop's case drives the whole run on the fixture's tool answers. A
+// multi-turn site's scenarios seed the history and grade one reply. The scope is
+// derived from the kind, not left to a reader to infer.
+func TestAgentLoopCertifiesTheRunAndAConversationOneTurn(t *testing.T) {
 	loop := aitasks.Site{Task: ai.TaskAgentLoop, Variant: "loop", Kind: ai.SiteKindAgentLoop}
-	if got := loop.CertifiedScope(); got != aitasks.ScopeSingleTurn {
-		t.Errorf("CertifiedScope() = %q, want %q — a seeded-window turn is not a loop run", got, aitasks.ScopeSingleTurn)
+	if got := loop.CertifiedScope(); got != aitasks.ScopeFullInvocation {
+		t.Errorf("CertifiedScope() = %q, want %q — the loop runs whole on its fixture's tools", got, aitasks.ScopeFullInvocation)
 	}
 
 	oneShot := aitasks.Site{Task: ai.TaskVoiceBuild, Variant: "eval_draft", Kind: ai.SiteKindOneShot}

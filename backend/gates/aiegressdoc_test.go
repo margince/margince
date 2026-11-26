@@ -34,9 +34,11 @@ func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 		Tasks map[string]struct {
 			Ladder    []string `yaml:"ladder"`
 			NoPayload bool     `yaml:"no_payload"`
-			LocalOnly bool     `yaml:"local_only"`
 			Decision  bool     `yaml:"decision"`
 		} `yaml:"tasks"`
+		Embed struct {
+			NoPayload bool `yaml:"no_payload"`
+		} `yaml:"embed"`
 	}
 	if err := yaml.Unmarshal(raw, &contract); err != nil {
 		t.Fatalf("parsing the task contract: %v", err)
@@ -49,6 +51,16 @@ func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 		t.Fatalf("reading the egress page: %v; regenerate it with make gen", err)
 	}
 	text := string(page)
+
+	// The search index is a workload, not a task, and sends record text, mail
+	// included, to a provider: its row answers the same two questions.
+	if row, found := rowFor(text, "embed"); !found {
+		t.Error("the egress page has no `embed` row, so it does not say that indexed mail text " +
+			"goes to the embeddings provider. Run make gen")
+	} else if got := cellSaysYes(row, 4); got != contract.Embed.NoPayload {
+		t.Errorf("the egress page says prompt-not-retained=%v for embed; the contract says %v. "+
+			"Run make gen", got, contract.Embed.NoPayload)
+	}
 
 	local := map[string]bool{"local_small": true, "local_large": true}
 	for name, def := range contract.Tasks {
@@ -75,11 +87,7 @@ func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 			t.Errorf("the egress page says prompt-not-retained=%v for %q; the contract says %v. "+
 				"Run make gen", got, name, def.NoPayload)
 		}
-		if got := cellSaysYes(row, 5); got != def.LocalOnly {
-			t.Errorf("the egress page says local-only-enforced=%v for %q; the contract says %v. "+
-				"Run make gen", got, name, def.LocalOnly)
-		}
-		if got := egressCell(row, 6) != "none"; got != def.Decision {
+		if got := egressCell(row, 5) != "none"; got != def.Decision {
 			t.Errorf("the egress page says a decision model may read %q's text=%v; the contract "+
 				"declares decision=%v. Run make gen", name, got, def.Decision)
 		}

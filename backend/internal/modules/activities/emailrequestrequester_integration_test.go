@@ -186,3 +186,41 @@ func TestAReminderReachesASenderSharedWithTheAssigneesLiveTeamOnly(t *testing.T)
 		}
 	}
 }
+
+// A sender row whose stored contact never held its address names the address's
+// holder. Both doors file the reminder on that contact, not on the stored one.
+func TestAReplyReminderFollowsTheSenderAddressOverAMismatchedStoredContact(t *testing.T) {
+	for _, byHand := range []bool{false, true} {
+		e := setupLoad(t)
+		guessed, _ := e.mailContact(t, "guessed", "workspace")
+		sender, from := e.mailContact(t, "sender", "workspace")
+		source := seedEmailRequestFiledUnder(t, e, "Send the report", "commitment", OwedVerdictAsksUs, from,
+			[]ActivityLinkInput{contactLink(guessed), contactLink(sender)}, mailParticipants{From: from})
+		// The backfill shape: one sender row, the first link's contact beside the sender's address.
+		e.exec(t, `DELETE FROM activity_participant WHERE activity_id = $1 AND role = 'from' AND address IS NULL`, source)
+		e.exec(t, `UPDATE activity_participant SET contact_id = $2 WHERE activity_id = $1 AND role = 'from'`, source, guessed)
+
+		if links := remindedOn(t, e, source, byHand); len(links) != 1 || !links["contact:"+sender.String()] {
+			t.Fatalf("by hand %v: reminder sits on %v, want only the sender %v (stored contact %v)", byHand, links, sender, guessed)
+		}
+	}
+}
+
+// A sender row with only an address another contact once held proves nobody, so
+// the reminder sits on the mail's other records.
+func TestAReplyReminderFromABareMovedAddressSitsOnTheMailsRecords(t *testing.T) {
+	e := setupLoad(t)
+	holder, from := e.mailContact(t, "holder", "workspace")
+	former, _ := e.mailContact(t, "former", "workspace")
+	e.exec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by, archived_at)
+		VALUES ($1, $2, 'seed', 'system', now())`, former, from)
+	company := e.company(t)
+	source := seedEmailRequestFiledUnder(t, e, "Send the report", "commitment", OwedVerdictAsksUs, from,
+		[]ActivityLinkInput{contactLink(holder), companyLink(company)}, mailParticipants{From: from})
+	e.exec(t, `DELETE FROM activity_participant WHERE activity_id = $1 AND role = 'from' AND address IS NULL`, source)
+	e.exec(t, `UPDATE activity_participant SET contact_id = NULL WHERE activity_id = $1 AND role = 'from'`, source)
+
+	if links := remindedOn(t, e, source, false); len(links) != 1 || !links["company:"+company.String()] {
+		t.Fatalf("reminder sits on %v, want only the company %v (holder of the moved address %v)", links, company, holder)
+	}
+}

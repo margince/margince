@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -91,8 +92,10 @@ func TestARepCannotAnswerAFindingOnAColleaguesDeal(t *testing.T) {
 	theirs := e.openFindingOn(t, e.seedDealOwnedBy(t, colleague))
 	mine := e.openFindingOn(t, e.seedDealOwnedBy(t, rep))
 
-	// Resolve judges an answer against the clock it is handed, never the wall.
-	now := time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC)
+	// Resolve judges an answer against the clock it is handed. The row's
+	// created_at is the database's, so a fixed date would let the expiry fall
+	// before it and trip the expiry-after-creation check.
+	now := clocktest.Now(t)
 	expires := now.AddDate(0, 0, 30)
 	hide := Resolution{Outcome: OutcomeNotRelevant, Reason: "checked", ExpiresAt: &expires}
 	ctx := e.asOwnScopeRep(rep, principal.ObjectGrant{Read: true, Update: true})

@@ -20,6 +20,7 @@ import (
 	"github.com/emersion/go-message/mail"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/calendarevent"
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -74,6 +75,9 @@ type Message struct {
 	// inbound invitation is a fact about the message either way.
 	hasCalendarPart bool
 	calendarMethod  string // the part's RFC 5546 method, "" when none is known
+	calendarUID     string // the UID of the event that part names, "" when none
+	calendarEvent   *calendarevent.Event
+	calendarSend    string // the provider send this copy is one of, "" when none
 	// deliveryReport is the RFC 3464 shape — `multipart/report` carrying
 	// `report-type=delivery-status`. Kept in its own right beside
 	// hasCalendarPart, and for the same reason: it is a fact about the message
@@ -95,6 +99,7 @@ type Message struct {
 	partDrops []PartDrop
 	// bodyCompleteness is how much of the message's text this parser decoded.
 	bodyCompleteness capture.BodyCompleteness
+	forwarded        *connector.ForwardedOriginal // the original it forwards, never its author
 	// openRecipients holds the To and Cc addresses, the owner's own included, and
 	// linkHosts where the body's links lead: the evidence capture.MailEnvelope carries.
 	openRecipients   []string
@@ -160,9 +165,8 @@ func Parse(raw []byte, owner string) (Message, error) {
 	// ADR-0082 §3 and not something this parser can recover.
 	bccList, _ := addressList(header, "Bcc")
 	deliveredTo := TopDeliveredTo(header)
-	senderAuth := TopSenderAuthentication(header)
-	from := firstAddress(fromList)
-	to := firstAddress(toList)
+	senderAuth := groupRelayed(TopSenderAuthentication(header), viaGroup)
+	from, to := firstAddress(fromList), firstAddress(toList)
 
 	walked := extractText(root)
 	body, parts, drops, calendar := walked.text, walked.parts, walked.drops, walked.calendar
@@ -194,11 +198,8 @@ func Parse(raw []byte, owner string) (Message, error) {
 	// is the opposite of this rule's purpose. The wrong contacts came from the
 	// outbound direction: the owner invites, and every attendee reads as
 	// somebody the workspace writes to.
-	calendarNotice := direction == connector.DirectionOutbound &&
-		calendarNotification(header, hasCalendarPart)
-	if calendarNotice {
-		machineTouched = true
-	}
+	calendarNotice := direction == connector.DirectionOutbound && calendarNotification(header, hasCalendarPart)
+	machineTouched = machineTouched || calendarNotice
 
 	return Message{
 		messageID:        strings.TrimSpace(messageID),
@@ -219,6 +220,9 @@ func Parse(raw []byte, owner string) (Message, error) {
 		calendarNotice:   calendarNotice,
 		hasCalendarPart:  hasCalendarPart,
 		calendarMethod:   calendar.method(),
+		calendarUID:      calendar.uid(),
+		calendarEvent:    calendar.event(),
+		calendarSend:     calendarSend(calendarNotice, calendar.method(), calendar.uid(), calendar.event()),
 		deliveryReport:   deliveryReport,
 		listUnsubscribe:  hasListUnsubscribe(header.Values("List-Unsubscribe"), viaGroup),
 		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
@@ -232,6 +236,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		parts:            parts,
 		partDrops:        drops,
 		bodyCompleteness: walked.completeness,
+		forwarded:        walked.forwarded,
 	}, nil
 }
 
@@ -423,6 +428,9 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 			Direction:         m.direction,
 			HasCalendarPart:   m.hasCalendarPart,
 			CalendarMethod:    m.calendarMethod,
+			CalendarUID:       m.calendarUID,
+			CalendarEvent:     m.calendarEvent,
+			CalendarSend:      m.calendarSend,
 			BodyCompleteness:  stored,
 			CredentialsMasked: m.masksCredentials(),
 			Envelope:          m.envelope(),
@@ -439,6 +447,7 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 		Addresses:            m.addresses,
 		Parts:                m.recordParts(),
 		PartDrops:            m.recordDrops(),
+		Forwarded:            m.forwarded,
 	}
 }
 
@@ -466,22 +475,6 @@ func domainOf(addr string) string {
 		return addr[idx+1:]
 	}
 	return ""
-}
-
-func firstAddress(list []*mail.Address) string {
-	if len(list) == 0 {
-		return ""
-	}
-	return list[0].Address
-}
-
-func firstNonOwner(list []*mail.Address, ownerLower string) string {
-	for _, a := range list {
-		if strings.ToLower(a.Address) != ownerLower {
-			return a.Address
-		}
-	}
-	return firstAddress(list)
 }
 
 func orDash(s string) string {

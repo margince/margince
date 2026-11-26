@@ -329,9 +329,10 @@ type applyTag struct{ tags Tags }
 func (t applyTag) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "apply_tag", Title: "Apply a tag to a record", Version: toolVersionV1,
-		Description:   applyTagCopy.render(),
-		Instead:       applyTagCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       applyTagCopy.render(),
+		Instead:           applyTagCopy.Instead,
+		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "applyTag",
 		InputSchema:  schema(taggingSchema(t.tags.TaggableTypes())),
 		OutputSchema: schemaFor[TagAppliedResult](),
@@ -380,9 +381,10 @@ type removeTag struct{ tags Tags }
 func (t removeTag) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "remove_tag", Title: "Take a tag off a record", Version: toolVersionV1,
-		Description:   removeTagCopy.render(),
-		Instead:       removeTagCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       removeTagCopy.render(),
+		Instead:           removeTagCopy.Instead,
+		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "removeTag",
 		InputSchema:  schema(taggingSchema(t.tags.TaggableTypes())),
 		OutputSchema: schemaFor[TagAppliedResult](),

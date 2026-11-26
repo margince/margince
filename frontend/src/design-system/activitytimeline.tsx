@@ -6,7 +6,9 @@ import type { components } from "../api/schema";
 import { emailSummaryText } from "../format/emailtext";
 import type { Locale, useT } from "../i18n";
 import { callOutcomeLabel } from "../lib/calloutcome";
+import { meetingInvitationLabel } from "../lib/meetinginvitation";
 import { correspondenceSide } from "../lib/messagevoice";
+import { displayedBody, displayedSubject } from "../lib/systemdisplay";
 import { markdownLines } from "./markdown-text";
 import {
   type ContactOn,
@@ -15,9 +17,15 @@ import {
   namesOf,
   withWhom,
 } from "./participants";
-import { provenanceOf, withControllerSend, withCreator } from "./provenanceof";
-import type { TimelineEntry } from "./timelineentry";
+import {
+  provenanceOf,
+  withAgentOrigin,
+  withControllerSend,
+  withCreator,
+} from "./provenanceof";
+import { TIMELINE_KIND_LABEL, type TimelineEntry } from "./timelineentry";
 import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
+import { TranscriptSummary } from "./transcriptsummary";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -66,7 +74,7 @@ const TIMELINE_TITLE_MAX = 140;
 // connector fills it for a wordless message ("photo", "voice"): capture's
 // messageBody names the kind precisely so this row has something to show.
 function timelineTitle(activity: Activity): string {
-  const subject = activity.subject?.trim();
+  const subject = displayedSubject(activity)?.trim();
   if (subject) {
     return subject;
   }
@@ -76,18 +84,39 @@ function timelineTitle(activity: Activity): string {
   // where the reason for the mail should be.
   const raw = activity.body ?? "";
   const body = titleText(activity, raw);
-  if (!body) {
-    return activity.kind;
-  }
   return body.length > TIMELINE_TITLE_MAX
     ? `${body.slice(0, TIMELINE_TITLE_MAX - 1)}…`
     : body;
 }
 
+// A call with no words is titled by how it ended, which is then not repeated
+// beside the kind. How a call ended, or who a meeting's folded invitation
+// reached, otherwise sits where a direction sits.
+function headline(
+  activity: Activity,
+  t: ReturnType<typeof useT> | undefined,
+  locale: Locale | undefined,
+): Pick<TimelineEntry, "title" | "qualifier"> {
+  const written = timelineTitle(activity);
+  const outcome = callOutcomeLabel(activity, t);
+  return {
+    title: written || outcome || kindWord(activity.kind, t),
+    qualifier:
+      (written ? outcome : undefined) ??
+      meetingInvitationLabel(activity, locale),
+  };
+}
+
+function kindWord(kind: string, t: ReturnType<typeof useT> | undefined) {
+  return t ? t(TIMELINE_KIND_LABEL[timelineKind(kind)]) : kind;
+}
+
 // A written body is markdown, so its title is the text it renders, not its
 // syntax.
 function titleText(activity: Activity, raw: string): string {
-  if (activity.kind === "email") return emailSummaryText(raw);
+  if (activity.kind === "email") {
+    return emailSummaryText(raw, activity.subject ?? "");
+  }
   const written = writtenAsMarkdown({
     kind: timelineKind(activity.kind),
     transcript: isTranscriptActivity(activity),
@@ -131,7 +160,7 @@ export function activityTimeline(
   // Absent leaves a row saying which way it went and nothing about whom, which
   // is what it said before anybody could resolve a name at all.
   who?: Readonly<{
-    nameOf: NameOf;
+    nameOf?: NameOf;
     t: ReturnType<typeof useT>;
     locale: Locale;
   }>,
@@ -142,17 +171,12 @@ export function activityTimeline(
     const contacts = who ? contactsOn(activity.links, who.nameOf) : undefined;
     return {
       id: activity.id,
+      systemDisplay: activity.system_display,
+      sourceVersion: activity.version ?? undefined,
       kind: timelineKind(activity.kind),
       isDone: activity.is_done,
-      commitmentReviewCount:
-        activity.content_state === "withheld"
-          ? 0
-          : activity.commitment_admissions?.filter(
-              (decision) => !decision.current_work,
-            ).length,
-      title: timelineTitle(activity),
-      // How a call ended sits where a direction sits: what the call did.
-      qualifier: callOutcomeLabel(activity, who?.t),
+      commitmentReviewCount: commitmentReviewCount(activity),
+      ...headline(activity, who?.t, who?.locale),
       // Carried beside the rendered title, which may be the body or the kind:
       // bulk grouping needs the message's OWN subject or it folds unrelated
       // subjectless rows together.
@@ -160,7 +184,7 @@ export function activityTimeline(
       // The body is already in the composite read this row came from, so a
       // timeline of unreadable subject lines was a rendering choice, not a
       // limit of what the page knew.
-      body: activity.body,
+      body: displayedBody(activity),
       language: activity.language,
       transcript: isTranscriptActivity(activity),
       direction: activity.direction,
@@ -176,7 +200,7 @@ export function activityTimeline(
       // What this exchange was ABOUT, when it is filed against a deal. A
       // chronology of an account runs several deals through one list, and the
       // row that does not say which one is a row a reader has to open to place.
-      via: who ? dealChip(activity, who.nameOf) : undefined,
+      via: who?.nameOf ? dealChip(activity, who.nameOf) : undefined,
       // The server's own row model, carried rather than re-derived. Present
       // exactly when kind=email, so the row branches on the field and every
       // other kind keeps the reading it had.
@@ -186,30 +210,55 @@ export function activityTimeline(
       withheld: activity.content_state === "withheld",
       threadKey: activity.thread_key,
       bulkAttested: activity.bulk_mail_attested,
+      copies: activity.copies,
       automaticKind: activity.automatic_kind,
+      aiAssisted: activity.ai_assisted,
+      chatEpisode: activity.chat_episode,
       atIso: activity.occurred_at,
       atPrecision: activity.occurred_precision,
       provenance: withControllerSend(
         withCreator(
-          provenanceOf(
-            activity.captured_by,
-            viewerUserId,
-            activity.author,
-            activity.source,
-            activity.imported_from,
+          withAgentOrigin(
+            provenanceOf(
+              activity.captured_by,
+              viewerUserId,
+              activity.author,
+              activity.source,
+              activity.imported_from,
+            ),
+            activity.recorded_by_agent,
           ),
           activity.created_by,
         ),
         activity.controller_send,
         viewerUserId,
       ),
-      // Offered on the row rather than by each caller: a transcript is readable
-      // wherever it is listed, and a per-screen opt-in is how the same affordance
-      // ends up on the deal and missing on the contact who was in the meeting.
-      detail: isTranscriptActivity(activity) ? (
-        <TranscriptReadCard activityId={activity.id} />
-      ) : undefined,
+      ...transcriptSlots(activity),
       actions: renderActions?.(activity),
     };
   });
+}
+
+// Offered on the row rather than by each caller, so a transcript is readable
+// wherever it is listed. A per-screen opt-in left it on the deal and missing
+// on the contact who was in the meeting. The summary sits above the
+// transcript and the reading below it.
+function transcriptSlots(
+  activity: Activity,
+): Pick<TimelineEntry, "detail" | "lead"> {
+  if (!isTranscriptActivity(activity)) {
+    return {};
+  }
+  return {
+    detail: <TranscriptReadCard activityId={activity.id} />,
+    lead: <TranscriptSummary activityId={activity.id} />,
+  };
+}
+
+function commitmentReviewCount(activity: Activity): number {
+  return activity.content_state === "withheld"
+    ? 0
+    : (activity.commitment_admissions?.filter(
+        (decision) => !decision.current_work,
+      ).length ?? 0);
 }

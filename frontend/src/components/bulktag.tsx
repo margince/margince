@@ -16,7 +16,7 @@ import { useT } from "../i18n";
 import { useCan } from "../lib/capability";
 import { problemMessageOf } from "../lib/problem";
 import { useCreateOrFindTag, useTagVocabulary } from "../lib/tags.queries";
-import { CreateTagWay, TagListFooter } from "./tagwayforward";
+import { CreateTagWay, TagListFooter, useEmptyTagWords } from "./tagwayforward";
 
 export type PickedTag = Readonly<{ id: string; name: string }>;
 
@@ -28,9 +28,12 @@ export type PickedTag = Readonly<{ id: string; name: string }>;
  */
 export function TagVerbs({
   disabled,
+  reasonId,
   onPick,
 }: Readonly<{
   disabled: boolean;
+  /** The bar's sentence saying why tagging is refused, when it is. */
+  reasonId?: string;
   onPick: (verb: "add_tag" | "remove_tag", tag: PickedTag) => void;
 }>) {
   const t = useT();
@@ -38,6 +41,7 @@ export function TagVerbs({
   const vocabulary = useTagVocabulary();
   const create = useCreateOrFindTag();
   const canCreate = useCan("tag", "create");
+  const emptyWords = useEmptyTagWords(vocabulary, canCreate);
   const [picked, setPicked] = useState<PickedTag | null>(null);
   const options = useMemo(
     () =>
@@ -62,6 +66,7 @@ export function TagVerbs({
         title={t("bulk.tag")}
         searchLabel={t("tags.pickerLabel")}
         variant="ghost"
+        reasonId={reasonId}
         open={open}
         onOpenChange={(next) => {
           if (!next && create.isPending) {
@@ -74,13 +79,8 @@ export function TagVerbs({
         }}
         selected={picked?.id}
         options={vocabulary.isError ? [] : options}
-        empty={
-          vocabulary.isError
-            ? problemMessageOf(vocabulary.error, t)
-            : canCreate
-              ? t("tags.noMatchYouCanCreate")
-              : t("tags.noMatch")
-        }
+        empty={emptyWords.empty}
+        none={emptyWords.none}
         emptyAction={
           canCreate && !vocabulary.isError
             ? (term, done) => (
@@ -112,11 +112,16 @@ export function TagVerbs({
           />
         }
       />
-      <Button disabled={disabled || !picked} onClick={() => press("add_tag")}>
+      <Button
+        disabled={disabled || !picked}
+        reasonId={reasonId}
+        onClick={() => press("add_tag")}
+      >
         {t("bulk.addTag")}
       </Button>
       <Button
         disabled={disabled || !picked}
+        reasonId={reasonId}
         onClick={() => press("remove_tag")}
       >
         {t("bulk.removeTag")}

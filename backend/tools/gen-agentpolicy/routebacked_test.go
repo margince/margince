@@ -5,6 +5,7 @@ package main
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 
@@ -185,9 +186,10 @@ content:
       allOf:
         - $ref: '#/components/schemas/Base'
         - type: object
+          description: words about the schema, which the shape does not need
           required: [note]
           properties:
-            note: { type: string, description: words a caller does not need }
+            note: { type: string, description: what a caller may write here }
             label: { type: [string, 'null'] }
             when:
               oneOf:
@@ -199,16 +201,16 @@ content:
 	schemas := map[string]any{"Base": map[string]any{
 		"type": "object", "required": []any{"id"}, "properties": map[string]any{"id": map[string]any{"type": "string"}},
 	}}
-	got, err := bodySchema(node.Content[0], schemas)
+	got, _, err := bodySchema(node.Content[0], schemas)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`"id":{"type":"string"}`, `"note":{"type":"string"}`, `"label":{"type":"string"}`, `"when":{"format":"date","type":"string"}`, `"required":["id","note"]`} {
+	for _, want := range []string{`"id":{"type":"string"}`, `"note":{"description":"what a caller may write here","type":"string"}`, `"label":{"type":"string"}`, `"when":{"format":"date","type":"string"}`, `"required":["id","note"]`} {
 		if !strings.Contains(got, want) {
 			t.Errorf("body schema %s lacks %s", got, want)
 		}
 	}
-	for _, refused := range []string{"allOf", "oneOf", "description", "$ref"} {
+	for _, refused := range []string{"allOf", "oneOf", "about the schema", "$ref"} {
 		if strings.Contains(got, refused) {
 			t.Errorf("body schema %s still carries %s", got, refused)
 		}
@@ -268,14 +270,14 @@ func TestTheRoutersAreReadFromTheAgentsPackage(t *testing.T) {
 }
 
 func TestAFieldNamedLikeProseKeepsItsPlaceInABodySchema(t *testing.T) {
-	out, err := resolveRefs(map[string]any{
+	out, err := (&refWalk{open: map[string]bool{}}).resolve(map[string]any{
 		"type":        "object",
 		"description": "dropped",
 		"properties": map[string]any{
 			"description": map[string]any{"type": "string", "description": "dropped too"},
 			"example":     map[string]any{"type": "string"},
 		},
-	}, nil, 0, map[string]bool{})
+	}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,6 +312,47 @@ schema: { $ref: '#/components/schemas/Kind' }
 	param.Required, param.Schema.Ref, param.Schema.Type, param.Schema.Format = false, "", "string", "uuid"
 	if got, _ := queryOf(param, schemas); got.literal() != `{Name: "entity_type", Type: "string", Format: "uuid"}` {
 		t.Errorf("an optional uuid renders as %s", got.literal())
+	}
+}
+
+// A list carries its members' words, so a caller learns which values the route
+// takes before the route refuses one.
+func TestAListParameterCarriesItsMembersWords(t *testing.T) {
+	var param queryParameter
+	if err := yaml.Unmarshal([]byte(`
+name: state
+in: query
+schema: { type: array, items: { $ref: '#/components/schemas/State' } }
+style: form
+explode: true
+`), &param); err != nil {
+		t.Fatal(err)
+	}
+	schemas := map[string]schemaNode{"State": {Type: "string", Enum: []string{"open", "closed"}}}
+	got, err := queryOf(param, schemas)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{Name: "state", Type: "array", Enum: []string{"open", "closed"}}`; got.literal() != want {
+		t.Errorf("the list renders as %s, want %s", got.literal(), want)
+	}
+	param.Schema.Items = &parameterSet{Format: "uuid"}
+	if got, _ := queryOf(param, schemas); got.literal() != `{Name: "state", Type: "array", Format: "uuid"}` {
+		t.Errorf("a list of uuids renders as %s", got.literal())
+	}
+}
+
+// The door sends one key per member, so a route reading a list another way
+// fails generation instead of answering a request it misreads.
+func TestAListTheDoorCannotSendFailsGeneration(t *testing.T) {
+	for _, encoding := range []string{"style: form\nexplode: false", "style: spaceDelimited"} {
+		var param queryParameter
+		if err := yaml.Unmarshal([]byte("name: types\nin: query\nschema: { type: array, items: { type: string } }\n"+encoding), &param); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := queryOf(param, nil); err == nil || !strings.Contains(err.Error(), "one key per member") {
+			t.Errorf("a list read as %q generated (%v), want it refused", encoding, err)
+		}
 	}
 }
 
@@ -363,5 +406,211 @@ func TestAClosedAnswerAdmitsTheReadableFigureBesideAnAmount(t *testing.T) {
 	got, err := answerSchema(*node.Content[0], nil)
 	if err != nil || !strings.Contains(got, `"total_display":{"type":"string"}`) {
 		t.Errorf("answer schema %s (%v) does not admit total_display", got, err)
+	}
+}
+
+func TestAClosedAnswerAdmitsTheReadableFigureUnderAnEnclosingBaseCurrency(t *testing.T) {
+	var node yaml.Node
+	if err := yaml.Unmarshal([]byte(`
+'200':
+  content:
+    application/json:
+      schema:
+        type: object
+        additionalProperties: false
+        properties:
+          readings:
+            type: object
+            additionalProperties: false
+            properties:
+              base_currency: { type: string }
+              by_source:
+                type: object
+                additionalProperties: false
+                properties:
+                  human:
+                    type: object
+                    additionalProperties: false
+                    properties: { open_minor: { type: integer } }
+              rows:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  properties: { weighted_minor: { type: integer } }
+              by_region:
+                type: object
+                additionalProperties:
+                  type: object
+                  additionalProperties: false
+                  properties: { region_minor: { type: integer } }
+              row:
+                type: object
+                required: [currency]
+                properties:
+                  currency: { type: string }
+                  child:
+                    type: object
+                    additionalProperties: false
+                    properties: { owned_minor: { type: integer } }
+          loose:
+            type: object
+            additionalProperties: false
+            properties: { stray_minor: { type: integer } }
+`), &node); err != nil {
+		t.Fatal(err)
+	}
+	got, err := answerSchema(*node.Content[0], nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"open_display":{"type":"string"}`, `"weighted_display":{"type":"string"}`, `"region_display":{"type":"string"}`} {
+		if !strings.Contains(got, want) {
+			t.Errorf("answer schema %s does not admit %s under the enclosing base_currency", got, want)
+		}
+	}
+	for _, refused := range []string{"stray_display", "owned_display"} {
+		if strings.Contains(got, refused) {
+			t.Errorf("answer schema %s admits %s where no currency is in scope", got, refused)
+		}
+	}
+}
+
+func TestADeprecatedOperationsVerbSaysSoInItsSummary(t *testing.T) {
+	var paths map[string]map[string]yaml.Node
+	if err := yaml.Unmarshal([]byte(`
+/weeks:
+  get: { summary: A team's week., deprecated: true }
+/days:
+  get: { summary: A rep's day. }
+`), &paths); err != nil {
+		t.Fatal(err)
+	}
+	policies := []policy{{Route: "GET /v1/weeks"}, {Route: "GET /v1/days"}}
+	shapes, err := routeShapes(paths, nil, nil, nil, policies, func(policy) bool { return true })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := shapes["GET /v1/weeks"].summary; got != "Deprecated: A team's week." {
+		t.Errorf("deprecated verb summary = %q", got)
+	}
+	if got := shapes["GET /v1/days"].summary; got != "A rep's day." {
+		t.Errorf("supported verb summary = %q", got)
+	}
+}
+
+// A member a human alone may set is left out of the shape an agent is offered.
+// A body that requires one cannot be offered at all.
+func TestAHumanOnlyMemberIsLeftOutOfTheAgentBody(t *testing.T) {
+	body := func(required string) *yaml.Node {
+		var node yaml.Node
+		if err := yaml.Unmarshal([]byte(`
+content:
+  application/json:
+    schema:
+      type: object
+      required: [`+required+`]
+      properties:
+        status: { type: string }
+        kind: { type: string, x-human-only: true }
+`), &node); err != nil {
+			t.Fatal(err)
+		}
+		return node.Content[0]
+	}
+	got, marks, err := bodySchema(body("status"), map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, `"status"`) || strings.Contains(got, `"kind"`) || strings.Contains(got, "x-human-only") {
+		t.Errorf("body schema %s, want status alone and no marker", got)
+	}
+	if !slices.Equal(marks.HumanOnly, []string{"kind"}) {
+		t.Errorf("human-only members %v, want [kind] for the agent gate", marks.HumanOnly)
+	}
+	if _, _, err := bodySchema(body("kind"), map[string]any{}); err == nil || !strings.Contains(err.Error(), "kind") {
+		t.Errorf("a body requiring a human-only member answered %v, want a refusal naming it", err)
+	}
+	var referenced yaml.Node
+	if err := yaml.Unmarshal([]byte(`
+content:
+  application/json:
+    schema:
+      type: object
+      properties:
+        kind: { $ref: '#/components/schemas/Kind', x-human-only: true }
+`), &referenced); err != nil {
+		t.Fatal(err)
+	}
+	got, marks, err = bodySchema(referenced.Content[0], map[string]any{"Kind": map[string]any{"type": "string"}})
+	if err != nil || strings.Contains(got, `"kind"`) || !slices.Equal(marks.HumanOnly, []string{"kind"}) {
+		t.Errorf("a marker beside $ref: schema %s, human-only %v (%v), want kind left out and named", got, marks.HumanOnly, err)
+	}
+	var nested yaml.Node
+	if err := yaml.Unmarshal([]byte(`
+content:
+  application/json:
+    schema:
+      type: object
+      properties:
+        line: { type: object, properties: { price: { type: number, x-human-only: true } } }
+`), &nested); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := bodySchema(nested.Content[0], map[string]any{}); err == nil {
+		t.Error("a nested human-only member was accepted, though the agent gate reads top-level members only")
+	}
+}
+
+func agentValuedBody(t *testing.T, member string) *yaml.Node {
+	t.Helper()
+	var node yaml.Node
+	if err := yaml.Unmarshal([]byte(`
+content:
+  application/json:
+    schema:
+      type: object
+      properties:
+        source: `+member+`
+`), &node); err != nil {
+		t.Fatal(err)
+	}
+	return node.Content[0]
+}
+
+// An agent is offered only the values it may send, and the gate is told them.
+func TestAnAgentIsOfferedOnlyTheValuesItMaySend(t *testing.T) {
+	got, marks, err := bodySchema(agentValuedBody(t,
+		`{ type: string, enum: [browser, chosen, agent], x-agent-values: [agent], description: Only an agent sends agent. }`), map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"properties":{"source":{"description":"Only an agent sends agent.","enum":["agent"],"type":"string"}},"type":"object"}`
+	if got != want {
+		t.Errorf("body schema %s, want %s", got, want)
+	}
+	if !slices.Equal(marks.AgentValues["source"], []string{"agent"}) {
+		t.Errorf("agent values %v, want source: [agent] for the agent gate", marks.AgentValues)
+	}
+	for _, member := range []string{
+		`{ type: string, enum: [browser, agent], x-agent-values: [chosen] }`,
+		`{ type: string, x-agent-values: [agent] }`,
+		`{ type: object, properties: { kind: { type: string, enum: [a, b], x-agent-values: [a] } } }`,
+	} {
+		if _, _, err := bodySchema(agentValuedBody(t, member), map[string]any{}); err == nil {
+			t.Errorf("%s was accepted; a value outside the enum, a member with no enum and a nested marker are refused", member)
+		}
+	}
+}
+
+// The words that state what a caller may send are on the field, in a body only.
+func TestABodyFieldKeepsItsDescription(t *testing.T) {
+	schemas := map[string]any{"Zone": map[string]any{"type": "string", "description": "An IANA zone name."}}
+	got, _, err := bodySchema(agentValuedBody(t, `{ $ref: '#/components/schemas/Zone' }`), schemas)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, `"description":"An IANA zone name."`) {
+		t.Errorf("body schema %s, want the referenced schema's description on the field", got)
 	}
 }

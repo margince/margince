@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "record_tax_rate",
+  "verb": "record_tax_rate",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

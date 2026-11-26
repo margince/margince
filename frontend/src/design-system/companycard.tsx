@@ -17,6 +17,7 @@ export function CompanyCard({
   facts,
   children,
   actions,
+  layout = "card",
 }: Readonly<{
   // The slot is kept when absent so a row without a mark still lines its name
   // up with the rows that have one.
@@ -30,11 +31,14 @@ export function CompanyCard({
   // The rest of the tie, under the facts. Controls here stay above the stretched
   // link and keep their own press.
   children?: ReactNode;
-  // The verbs, revealed on hover or focus; use an `OverflowMenu`.
+  // The verbs, always in view; use an `OverflowMenu`.
   actions?: ReactNode;
+  // `track` draws a run of cards as one timeline. It drops the frame and joins
+  // each mark to the next.
+  layout?: "card" | "track";
 }>) {
   return (
-    <div className="company-card">
+    <div className="company-card" data-layout={layout}>
       <span className="company-card-logo">{logo}</span>
       <span className="company-card-body">
         <span className="company-card-name">

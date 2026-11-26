@@ -526,20 +526,6 @@ kinds:
       starts a pass when no active recovery pass remains. It freezes its horizon and
       resumes through bounded pages instead of rescanning the first page on each tick.
 
-  capture_digest:
-    role: worker
-    fleet: true
-    go_type: CaptureDigestArgs
-    queue: default
-    timeout: 5m
-    opts_owner: caller
-    cadence: 24h
-    registration: {when: [GmailRegistry], absent: registers_nothing}
-    reason: >-
-      Daily, after the overnight passes it summarizes. The boot pass backfills
-      a missed night, so a morning is never silently empty.
-
-
   brief_generate:
     role: worker
     fleet: true
@@ -762,7 +748,6 @@ kinds:
     timeout: 2m
     opts_owner: caller
     cadence: 15m
-    registration: {when: [SendRegistry, SendDelivery], absent: registers_nothing}
     args: {}
     fault:
       nil_after_logging: >-
@@ -784,7 +769,10 @@ kinds:
       vault past payload_expires_at, and a link that outlives its expiry is a
       credential to somebody's mailbox that nobody is watching. The index this
       reads already exists and until now nothing queried it. Cheap: one indexed
-      read, and on a healthy installation it finds nothing.
+      read, and on a healthy installation it finds nothing. The same pass raises
+      the missed opt-out receipts whose alarm failed. That needs only the
+      database, so the kind registers on every worker, with or without send
+      wiring.
 
   comms_scheduled_send:
     role: worker
@@ -796,6 +784,7 @@ kinds:
     args:
       Workspace: id
       ScheduledSendID: id
+      DueAt: {scalar: true, reason: "The moment the alarm was set for. It keys the job's uniqueness and the worker never reads it."}
     reason: >-
       A dumb alarm, not the schedule. The row is the schedule: this wakes,
       re-reads it, and does nothing if the message was cancelled, snoozes if
@@ -823,9 +812,13 @@ kinds:
     cadence: 15m
     registration: {when: [Embedder], absent: registers_nothing}
     reason: >-
-      An empty pass is six indexed NOT-EXISTS probes per workspace, so a short
-      cadence is cheap; fifteen minutes is how long a lost embed event may keep
-      a record out of semantic search. The when: above is the weaker of the two
+      Most passes read only the activity, contact and company rows written in
+      the last hour, through the indexes on created_at or updated_at, plus the
+      small deal, lead and project tables in full; fifteen minutes is how long
+      a lost embed event for a new row may keep it out of semantic search. The
+      first pass of each UTC day in a worker process reads every live row of all
+      six tables, which finds an edit whose event was lost and a row that became
+      embeddable without a write of its own. The when: above is the weaker of the two
       conditions addEmbedDriftSweepJob actually applies, and deliberately so:
       the lane must also be BOUND (a non-empty EmbedIdentity), which is a
       runtime method rather than a JobRunnerConfig field and so cannot be
@@ -930,6 +923,66 @@ kinds:
       day after — with nothing to difference, movement is empty either way, and
       the sooner the first one exists the sooner the second is worth taking.
 
+
+  meeting_profile_retract_sweep:
+    role: worker
+    fleet: true
+    go_type: MeetingProfileRetractSweepArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 1h
+    reason: >-
+      Removes the company fields a meeting filled once its transcript was
+      narrowed, restricted, archived or redacted, or no participant works at
+      that company any more. Hourly, so a value stops speaking for such a
+      meeting within the hour. Database-only; each transaction is bounded, and
+      the timeout bounds the pass.
+
+  transcript_audience_sweep:
+    role: worker
+    fleet: true
+    go_type: TranscriptAudienceSweepArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 15m
+    reason: >-
+      Gives each meeting transcript the readers its meeting has now. A guest
+      added to or taken off the meeting by calendar sync or any other writer
+      reaches the transcript within a quarter hour; an audience set by hand
+      reaches it at once. Database-only; each transaction is bounded, and
+      the timeout bounds the pass.
+
+  promise_kept_sweep:
+    role: worker
+    fleet: true
+    go_type: PromiseKeptSweepArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 15m
+    reason: >-
+      Closes a promise to invite someone once a guest accepted a later meeting its
+      owner may read, and reopens that close when the guest declines or leaves or
+      the meeting is called off or archived. A quarter hour bounds how long a
+      changed answer leaves a promise closed. Database-only; each workspace is one
+      transaction per owner, and the timeout bounds the pass.
+
+  initiative_enrolment_sweep:
+    role: worker
+    fleet: true
+    go_type: InitiativeEnrolmentSweepArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 15m
+    reason: >-
+      Dates the membership of every live sales initiative. A record that starts
+      matching a rule gets a joined row and one that stops matching gets its
+      left date. Picks, exclusions and rule edits write their rows at the save,
+      so the tick only catches records whose own fields changed. Fifteen
+      minutes bounds how late a left date can be.
 
   report_schedule_sweep:
     role: worker
@@ -1075,6 +1128,21 @@ kinds:
       staleness the migration states, and doubles as the corruption remedy, so
       loosening the cadence without amending the migration makes it a lie.
 
+
+  approval_owner_notice:
+    role: worker
+    go_type: ApprovalOwnerNoticeArgs
+    queue: default
+    timeout: 1m
+    opts_owner: args
+    args:
+      Workspace: id
+      ApprovalID: id
+      DeciderID: id
+    reason: >-
+      Recheck a handed-over request under its current owner's held authority
+      before creating its notice and optional email. Runs after the deal write
+      commits so authorization is locked before any record.
 
   approval_notice_reconcile:
     role: worker
@@ -1340,6 +1408,22 @@ kinds:
       answers not found, so nobody can find it to discard it — and a draft
       holds a subject's address and the words written to them.
 
+  oauth_client_unused_sweep:
+    role: worker
+    go_type: OAuthClientUnusedSweepArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 1h
+    reason: >-
+      Hourly, because each pass is capped (unusedClientSweepBatch) and the
+      cadence drains a backlog deeper than one batch. It deletes the clients
+      that registered themselves at /oauth/register and that no consent used
+      within mcp.client_registration.unused_retention. Registration needs no
+      sign-in, so without it nothing removes such a row, and the cap on them
+      would stay full.
+
   privacy_request_proof_expiry:
     role: worker
     go_type: RequestProofExpiryArgs
@@ -1410,7 +1494,7 @@ kinds:
     timeout: 5m
     opts_owner: caller
     cadence: 1h
-    registration: {when: [Blobstore], absent: registers_nothing}
+    registration: {when: [JournalBlobstore], absent: registers_nothing}
     reason: >-
       Hourly, and the cadence answers how much of the journal a restore may
       lose rather than how long the export takes: an erasure recorded after the
@@ -1494,6 +1578,22 @@ kinds:
       arrives with its participants stamped — but it stays periodic because a
       restore or an import can reintroduce unattributed rows.
 
+  # When a same-thread fact settled each inbound message. The database clears a
+  # stamp whenever a write can change it; this pass writes it again.
+  reply_settled_stamp:
+    role: worker
+    fleet: true
+    go_type: ReplySettledStampArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 1m
+    reason: >-
+      Every minute, so new mail is stamped soon after it arrives. A pass is at
+      most replySettledBatchesPerTick (20) batches of replySettledBatch (500)
+      indexed rows, each one locked UPDATE, well inside two minutes. An
+      unstamped message is still read whole, so a late pass costs speed only.
+
 
   # One job, not a dispatcher and a child (ADR-0103 §1): it keeps the
   # dispatcher's kind and cadence and the child's queue, timeout and attempt
@@ -1516,7 +1616,7 @@ kinds:
     queue: privacy_retention
     timeout:
       derived: privacyRetentionPassTimeout
-      value: 7h51m40s
+      value: 8h25m0s
       reason: >-
         privacy.MaxPassDuration is the pass's own ceiling — its stage count
         times its batch bound times its per-record allowance — and the margin
@@ -1998,6 +2098,7 @@ kinds:
       Workspace: id
       DealID: id
       ActivityID: id
+      RereadFor: id
     reason: >-
       Four minutes is one model call with the structured lane's
       retry-and-escalate headroom, plus the ledger writes — the same wall the
@@ -2008,6 +2109,29 @@ kinds:
       deal, so there is no human watching a queued row wondering why it has not
       moved. An installation with no model configured simply reads no criteria,
       and its stages keep the deterministic evidence the ledger already writes.
+
+  stage_evidence_reread:
+    role: worker
+    go_type: StageEvidenceRereadArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    registration: {when: [StageEvidenceBrain], absent: registers_anyway}
+    args:
+      Workspace: id
+      Domain: {scalar: true, reason: "The removed own domain is an installation setting the admin list already showed; it names no contact and carries no mail content."}
+      Removal: id
+      After: id
+    reason: >-
+      Two minutes is one page of 200 activities: a short authorship read for
+      each and one insert per reading, with no model call. The API queues the
+      first page in the transaction that removes an own domain, and each full
+      page queues the next with its cursor.
+
+      REGISTERED without a model lane, unlike the reading it queues. The API
+      cannot see whether the worker holds a lane, so the row arrives either
+      way, and a kind no worker claims would retry to its last attempt. Without
+      a lane the worker completes and queues nothing.
 
   document_extract:
     role: worker
@@ -2040,6 +2164,55 @@ kinds:
       forever; registered it fails with a message that says the installation has
       no model configured.
 
+  chat_link_flush:
+    role: worker
+    go_type: ChatLinkFlushArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    registration: {when: [ChannelVault], absent: registers_nothing}
+    args:
+      Workspace: id
+      LinkID: id
+    reason: >-
+      One linked channel's pending events become one post, and its card is kept
+      current. A few calls to the chat, each bounded at fifteen seconds, so two
+      minutes covers a card, a rewrite and the post with room to spare.
+
+  chat_pull:
+    role: worker
+    go_type: ChatPullArgs
+    queue: default
+    timeout: 10m
+    max_attempts: 3
+    opts_owner: args
+    registration: {when: [ChannelVault], absent: registers_nothing}
+    args:
+      Workspace: id
+      ConnectionID: id
+    reason: >-
+      One bot's linked channels each read at most five history pages, and each
+      closed stretch of talk is one model call. Ten minutes covers a busy hour
+      across a few dozen channels. Three attempts, because chat_pull_sweep
+      enqueues the next pull every minute, and the pull is unique per
+      connection while one waits or runs.
+
+  chat_pull_sweep:
+    role: dispatcher
+    go_type: ChatPullSweepArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 1m
+    registration: {when: [ChannelVault], absent: registers_nothing}
+    fans_out_to: chat_pull
+    fan_out_unit: connection
+    reason: >-
+      Every minute, so a stretch of talk is judged soon after its thirty quiet
+      minutes end. A connection whose channels have nothing new costs one
+      history read per channel. A connection Dispact pushed a notice for in
+      the last hour is read only hourly, because the notices start its pulls.
+
   telegram_ingest:
     role: worker
     go_type: TelegramIngestArgs
@@ -2051,6 +2224,7 @@ kinds:
       ConnectionID: id
       BotID: id
       RawCaptureID: id
+      BusinessLinkID: {scalar: true, reason: "The approved business link row id the poll admitted the update through; empty for a message sent to the bot itself. It names no contact and carries no message content."}
     reason: >-
       One raw payload read back, normalized, and put through the capture sink —
       database-only, one update at a time, with no provider call in it at all.

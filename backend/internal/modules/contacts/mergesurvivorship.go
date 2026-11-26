@@ -13,11 +13,24 @@ func buildCompanySurvivorshipPatch(target, source crmcontracts.Company) *storeki
 	fillString(p, fieldLegalName, target.LegalName, source.LegalName)
 	fillString(p, "description", target.Description, source.Description)
 	fillIndustry(p, target, source)
+	fillLifecycle(p, target.Status, source.Status)
+	if target.SizeBand == nil && source.SizeBand != nil {
+		p.Set(columnSizeBand, nil, string(*source.SizeBand))
+	}
 	fillString(p, "linkedin_url", target.LinkedinUrl, source.LinkedinUrl)
 	fillString(p, columnCompanyPhone, target.Phone, source.Phone)
 	fillString(p, columnCompanyEmail, emailArg(target.Email), emailArg(source.Email))
 	fillMergeAddress(p, target.Address, source.Address)
 	return p
+}
+
+// fillLifecycle reads "unknown" as empty, since the column is never NULL. A
+// carried "live" passes no human check: the merge moves a judgement, it makes none.
+func fillLifecycle(p *storekit.Patch, target, source *crmcontracts.CompanyStatus) {
+	unknown := string(crmcontracts.CompanyStatusUnknown)
+	if lifecycleValue(target) == unknown && lifecycleValue(source) != unknown {
+		p.Set(filterStatus, unknown, string(*source))
+	}
 }
 
 // An address moves as a block; filling individual gaps can invent a location.

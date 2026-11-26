@@ -4,44 +4,41 @@
 // What the machinery did since the reader's last brief. Four lanes: what
 // waits on a human, what did not land, what must be restored, and what already
 // happened. A receipt and a router, never a second inbox: no row carries a
-// verb, and a lane with nothing in it draws nothing.
+// verb, and a part with nothing to show draws nothing.
 
 import { useId } from "react";
 import { rowsOf } from "../../api/rows";
+import { Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { floorFigure } from "../../format/figure";
 import { formatNumber } from "../../format/format";
-import { browserZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import {
   fillsPage,
+  lacksLane,
+  MAGIC_LANES,
   type MagicLane,
   type MagicLine,
-  type MagicNotShown,
   type MagicReceipt,
+  magicFailed,
   useMagic,
 } from "../../lib/magic.queries";
+import { doneLinesApart } from "../../lib/magiccopy";
+import { useViewerZone } from "../../lib/viewerzone";
 import { sourceUnavailableText } from "../../lib/worklistcopy";
+import { MagicDoneCard } from "./magic.done";
 import { MagicLaneSection } from "./magic.lines";
 import { spansDays } from "./magic.marks";
 import "../brief/brief.css";
 
-// The reading order: what waits on you, what broke, what needs restoring, and
-// what already happened. A list rather than four call sites, so a fifth lane is
-// one entry.
-const LANES = [
-  "needs_you",
-  "could_not_complete",
-  "watching",
-  "done",
-] as const satisfies readonly MagicLane[];
-
 /** Every lane but the done one, which Home draws in its Done for you section. */
-export const WAITING_LANES: readonly MagicLane[] = LANES.filter(
+export const WAITING_LANES: readonly MagicLane[] = MAGIC_LANES.filter(
   (lane) => lane !== "done",
 );
 
@@ -52,30 +49,18 @@ const LANE_HEADING: Readonly<Record<MagicLane, MessageKey>> = {
   watching: "magic.lane.watching",
 };
 
-// Housekeeping is left out without a count: it tells the reader nothing.
-type ToldNotShown = MagicNotShown & {
-  reason: Exclude<MagicNotShown["reason"], "unadmitted_action">;
-};
-
-const NOT_SHOWN_REASON: Readonly<Record<ToldNotShown["reason"], MessageKey>> = {
-  unknown_entity_type: "magic.notShown.unknownEntityType",
-  out_of_scope: "magic.notShown.outOfScope",
-};
-
-function told(entry: MagicNotShown): entry is ToldNotShown {
-  return entry.reason !== "unadmitted_action";
-}
+type SourceUnavailable = MagicReceipt["sources_unavailable"][number];
 
 /**
  * The lanes in `lanes`, in reading order. Home draws the waiting lanes here and
  * the done lane `embedded` in its Done for you section, which brings the
- * heading. Each part says only what is true of the lanes it draws: the done
- * lane its coverage, the others the sources and records left out.
+ * heading. Only the part that draws the done lane says the read failed or came
+ * back short, so Home says it once.
  */
 export function MagicPanel({
   visibleApprovalIds = [],
   visibleReceiptIds = [],
-  lanes = LANES,
+  lanes = MAGIC_LANES,
   embedded = false,
 }: Readonly<{
   visibleApprovalIds?: readonly string[];
@@ -88,13 +73,12 @@ export function MagicPanel({
   const plural = usePlural();
   // The READER's own zone. A receipt says when something happened to them, and
   // an instant rendered in UTC asks them to do the arithmetic.
-  const zone = browserZone();
-  const magic = useMagic();
+  const zone = useViewerZone();
+  // Embedded, this part mounts to say a read failed. Reading again on that
+  // mount would blank the failure and unmount it, so only Retry reads again.
+  const magic = useMagic(useCan("deal", "read"), !embedded);
   const titleId = useId();
   const receipt = magic.data;
-  const drawsDone = lanes.includes("done");
-  const drawsWaiting = lanes.some((lane) => lane !== "done");
-  const withheld = drawsWaiting ? (receipt?.sources_unavailable ?? []) : [];
   const state = queryState(magic);
   // Lines only off a read that answered: a refresh that failed keeps the last
   // answer cached, and drawing it would offer undos under "did not load".
@@ -103,74 +87,65 @@ export function MagicPanel({
     visibleApprovalIds,
     visibleReceiptIds,
   );
-  const drawn = LANES.filter(
+  const drawn = MAGIC_LANES.filter(
     (lane) => lanes.includes(lane) && hasLines(shown?.[lane]),
   );
-  const done = rowsOf(shown?.done);
-  const doneRecords = recordsOf(done);
-  const coverageIncomplete = drawsDone && doneCoverageIncomplete(shown);
-  // The decision source read to its bound and still had more.
+  const sources = lanes.some((lane) => lane !== "done")
+    ? rowsOf(shown?.sources_unavailable)
+    : [];
+  const doneRecords = recordsOf(rowsOf(shown?.done));
+  // A lane the server read to its bound may hold more than it drew.
+  const cut = new Set(rowsOf(receipt?.cut_at_limit));
   const doneFloor =
     sumIsFloor("done", rowsOf(receipt?.done)) ||
-    coverageIncomplete ||
-    receipt?.done_is_floor === true;
-  // "All" would claim the whole of a count that is only a floor.
-  const doneFold = plural(
-    doneFloor ? "magic.done.atLeast" : "magic.done.all",
-    doneRecords,
-    {
-      count: floorFigure(
-        formatNumber(doneRecords, locale),
-        doneFloor,
-        doneRecords,
-      ),
-    },
-  );
+    receipt?.done_is_floor === true ||
+    cut.has("done");
+  const doneFold = plural("magic.done.fold", doneRecords, {
+    count: floorFigure(
+      formatNumber(doneRecords, locale),
+      doneFloor,
+      doneRecords,
+    ),
+  });
   const byDay = shown ? spansDays(shown.since, shown.as_of) : false;
-  const read = sectionRead(state, shown, lanes, drawn, coverageIncomplete);
-  if (read === "empty") {
+  // The done lane says "at least" in its fold. The waiting lanes say it here,
+  // so a cut queue never reads as the whole of it. Watching has no bound.
+  const laneNote = (lane: MagicLane): string | undefined =>
+    lane !== "done" && lane !== "watching" && cut.has(lane)
+      ? t("magic.laneCut")
+      : undefined;
+  const read = panelRead(
+    state,
+    shown,
+    lanes.includes("done"),
+    drawn.length > 0 || sources.some(failedSource),
+  );
+  // A section of its own stays away until its read lands. Drawn as a loader,
+  // it took a block of the page and then left it again when nothing waited.
+  // Embedded, the section around it already waits for its own read.
+  if (read === "empty" || (read === "loading" && !embedded)) {
     return null;
   }
-  const notShown = drawsWaiting ? rowsOf(shown?.not_shown).filter(told) : [];
   const body = (
     <>
-      <PanelBody>
-        <SurfaceState
-          state={read}
-          emptyLabel=""
-          loadingLabel={t("magic.loading")}
-          detail={{ onRetry: () => void magic.refetch() }}
-        >
-          <WithheldSources withheld={withheld} />
-          {drawsWaiting && shown?.not_shown_count_withheld && (
-            <p className="t-caption">{t("magic.visibleScope")}</p>
-          )}
-          {coverageIncomplete && (
-            <p className="t-caption">{t("magic.coverageIncomplete")}</p>
-          )}
-        </SurfaceState>
-      </PanelBody>
+      <ReadNotice
+        read={read}
+        sources={sources}
+        retrying={magic.isFetching}
+        onRetry={() => void magic.refetch()}
+      />
       {drawn.map((lane) => (
-        <MagicLaneSection
+        <DrawnLane
           key={lane}
           lane={lane}
-          title={t(
-            embedded && lane === "done"
-              ? "magic.lane.doneOther"
-              : labelFor(LANE_HEADING, lane),
-          )}
-          rows={shown?.[lane] ?? []}
-          since={shown?.since}
+          shown={shown}
           zone={zone}
           byDay={byDay}
-          fold={lane === "done" ? doneFold : undefined}
+          embedded={embedded}
+          note={laneNote(lane)}
+          done={{ fold: doneFold, floor: doneFloor }}
         />
       ))}
-      {notShown.length > 0 && (
-        <PanelBody>
-          <NotShown entries={notShown} />
-        </PanelBody>
-      )}
     </>
   );
   if (embedded) {
@@ -186,47 +161,76 @@ export function MagicPanel({
   );
 }
 
-function queryState(
-  query: Readonly<{ isPending: boolean; isError: boolean }>,
-): "loading" | "failed" | "ready" {
-  if (query.isPending) return "loading";
-  return query.isError ? "failed" : "ready";
+/** One lane under its heading. Embedded, the done lane is Done for you's last card instead. */
+function DrawnLane({
+  lane,
+  shown,
+  zone,
+  byDay,
+  embedded,
+  note,
+  done,
+}: Readonly<{
+  lane: MagicLane;
+  shown: MagicReceipt | undefined;
+  zone: string;
+  byDay: boolean;
+  embedded: boolean;
+  /** Why the lane may hold more than it draws, under it. */
+  note: string | undefined;
+  done: Readonly<{ fold: string; floor: boolean }>;
+}>) {
+  const t = useT();
+  if (embedded && lane === "done") {
+    return (
+      <MagicDoneCard
+        rows={rowsOf(shown?.done)}
+        since={shown?.since}
+        zone={zone}
+        byDay={byDay}
+        floor={done.floor}
+      />
+    );
+  }
+  return (
+    <MagicLaneSection
+      lane={lane}
+      title={t(labelFor(LANE_HEADING, lane))}
+      rows={shown?.[lane] ?? []}
+      since={shown?.since}
+      zone={zone}
+      byDay={byDay}
+      fold={lane === "done" ? done.fold : undefined}
+      note={note}
+    />
+  );
 }
 
-// A quiet window and an unread one are different answers. Only a read that
-// answered completely, with nothing drawn, is empty and stays away. A lane
-// the response did not carry is unread, not empty, and a count this reader
-// may not be given is unmeasured.
-function sectionRead(
+function queryState(
+  query: Parameters<typeof magicFailed>[0],
+): "loading" | "failed" | "ready" {
+  if (magicFailed(query)) return "failed";
+  return query.isPending ? "loading" : "ready";
+}
+
+// Home says a failed or short read once: the part that draws the done lane says
+// it, and the waiting part beside it stays away.
+function panelRead(
   state: "loading" | "failed" | "ready",
   shown: MagicReceipt | undefined,
-  lanes: readonly MagicLane[],
-  drawn: readonly MagicLane[],
-  coverageIncomplete: boolean,
+  drawsDone: boolean,
+  hasContent: boolean,
 ): "loading" | "failed" | "ready" | "empty" | "unavailable" {
-  if (state !== "ready") return state;
-  if (lanes.some((lane) => !Array.isArray(shown?.[lane]))) {
-    return "unavailable";
-  }
-  const waitingComplete =
-    !lanes.some((lane) => lane !== "done") ||
-    (rowsOf(shown?.sources_unavailable).length === 0 &&
-      rowsOf(shown?.not_shown).length === 0 &&
-      shown?.not_shown_count_withheld !== true);
-  const doneComplete =
-    !lanes.includes("done") ||
-    (shown?.done_is_floor !== true && !coverageIncomplete);
-  return drawn.length === 0 && waitingComplete && doneComplete
-    ? "empty"
-    : "ready";
+  if (state === "loading") return "loading";
+  if (state === "failed") return drawsDone ? "failed" : "empty";
+  if (drawsDone && lacksLane(shown)) return "unavailable";
+  return hasContent ? "ready" : "empty";
 }
 
-function doneCoverageIncomplete(receipt: MagicReceipt | undefined): boolean {
-  return (
-    receipt?.not_shown?.some(
-      (item) => item.reason === "unknown_entity_type",
-    ) === true
-  );
+// A source the reader's grant withholds is true on every read, so it never
+// holds a section up by itself; one that failed is news.
+function failedSource(source: SourceUnavailable): boolean {
+  return source.reason === "failed";
 }
 
 // A lane off a payload this client cannot read is not an empty one: absent is
@@ -249,9 +253,53 @@ function sumIsFloor(lane: MagicLane, rows: readonly MagicLine[]): boolean {
   );
 }
 
+/** What the read itself says before any lane: that it failed, is on its way, or left a source out. */
+function ReadNotice({
+  read,
+  sources,
+  retrying,
+  onRetry,
+}: Readonly<{
+  read: "loading" | "failed" | "ready" | "unavailable";
+  sources: readonly SourceUnavailable[];
+  retrying: boolean;
+  onRetry: () => void;
+}>) {
+  const t = useT();
+  if (read === "failed") {
+    return (
+      <PanelBody>
+        <ErrorLine
+          actions={
+            <Button variant="link" pending={retrying} onClick={onRetry}>
+              {t("state.retry")}
+            </Button>
+          }
+        >
+          {t("magic.failed")}
+        </ErrorLine>
+      </PanelBody>
+    );
+  }
+  if (read === "ready" && sources.length === 0) {
+    return null;
+  }
+  return (
+    <PanelBody>
+      <SurfaceState
+        state={read}
+        emptyLabel=""
+        loadingLabel={t("magic.loading")}
+      >
+        <WithheldSources withheld={sources} />
+      </SurfaceState>
+    </PanelBody>
+  );
+}
+
 function WithheldSources({
   withheld,
-}: Readonly<{ withheld: MagicReceipt["sources_unavailable"] }>) {
+}: Readonly<{ withheld: readonly SourceUnavailable[] }>) {
   const t = useT();
   if (withheld.length === 0) {
     return null;
@@ -261,30 +309,6 @@ function WithheldSources({
       {withheld.map((missing) => (
         <li className="t-caption" key={`${missing.source}-${missing.reason}`}>
           {sourceUnavailableText(missing, t)}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/**
- * What this read deliberately left out, by kind and count.
- *
- * Said rather than dropped, because a page showing five lines that never
- * mentions the sixth is a completeness claim nobody made.
- */
-function NotShown({ entries }: Readonly<{ entries: readonly ToldNotShown[] }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const plural = usePlural();
-  return (
-    <ul className="magic-notshown">
-      {entries.map((entry) => (
-        <li className="t-caption" key={entry.reason}>
-          {plural("magic.notShown", entry.count, {
-            count: formatNumber(entry.count, locale),
-            reason: t(labelFor(NOT_SHOWN_REASON, entry.reason)),
-          })}
         </li>
       ))}
     </ul>
@@ -302,12 +326,6 @@ function distinctReceipt(
     needs_you: receipt.needs_you?.filter(
       (line) => !approvalIds.includes(line.id),
     ),
-    // A grouped line names every change it stands for, so it leaves only when
-    // all of them are shown elsewhere. A line without ids always stays.
-    done: receipt.done?.filter(
-      (line) =>
-        !line.receipt_ids?.length ||
-        !line.receipt_ids.every((id) => receiptIds.includes(id)),
-    ),
+    done: receipt.done && doneLinesApart(receipt.done, receiptIds),
   };
 }

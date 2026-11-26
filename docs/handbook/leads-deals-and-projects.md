@@ -13,7 +13,7 @@ A lead needs no origin. Email and LinkedIn address are the fields used to find c
 ### How do I create a lead?
 To create a lead in Margince, open **Leads** in the sidebar and choose **New lead**.
 1. Enter the **Full name** (required).
-2. You may fill **Email**, **LinkedIn URL**, **Title** and **Company**. The company is free text.
+2. You may fill **Email**, **LinkedIn URL**, **Title**, **Company** and **Industry**. The company is free text.
 3. Pick the **Owner** (required; **Unassigned** is one of the choices).
 4. Pick the **Origin** if you know it: where the lead came from, such as a referral or an event. You may add an **Origin note**, such as the event name. Only the origin counts for the score, and a lead with none gets no points for it.
 5. Pick **Referred by partner** if a partner sent the lead. The choice shows once a company is a partner, and only to a role that may see companies and partners.
@@ -24,9 +24,7 @@ Also called: add a prospect, new lead.
 ### What if someone is already a contact?
 Someone is either a lead or a contact, never both. Open a deal when an existing contact has a new opportunity.
 
-When a new lead carries an email or LinkedIn profile already held by a contact,
-Margince creates no lead. It opens the contact when you enter the lead by hand.
-An automatic request is filed on the contact. Its owner gets a task to review it.
+When a new lead carries an email or LinkedIn profile already held by a contact, Margince creates no lead. When you enter it by hand, the form refuses it and offers **View existing record**, which opens the contact. The form says "A contact already has this email address or LinkedIn profile." If someone else owns the contact, that owner gets a task on it to review what arrived. A contact with no owner, or one you own, gets none.
 ### The ladder
 
 A lead has five statuses. The first three are open, the last two are final.
@@ -47,7 +45,7 @@ On the leads board, the **Qualified** and **Disqualified** columns follow the bo
 
 ### How do I qualify a lead or convert it into a deal?
 To qualify a lead in Margince, open the lead and choose **Qualify**. The dialog offers deal choices.
-1. Check the **Contact** preview: "Qualifying creates a new contact." or "Qualifying merges into the existing contact". A lead linked to a company you can open gives that contact a job link there. If that company has no industry, it gets the **Industry** typed on the lead.
+1. Check the **Contact** preview: "Qualifying creates a new contact." or "Qualifying merges into the existing contact". A lead linked to a company you can open gives that contact a job link there. If that company has no industry, it gets the **Industry** typed on the lead. A company the qualifying creates gets that **Industry** too, and a new contact gets the lead's **LinkedIn URL**.
 2. Pick **Add to an existing deal** to join an open deal at the employer. Pick **Open a new deal** for a new one. A new deal asks for **Pipeline**, **Stage**, **Deal name** and, if you like, **Amount**.
 3. Read **Why** and add an **Evidence note (optional)**.
 4. Choose **Qualify**, **Qualify and add to deal**, or **Qualify and open deal**.
@@ -69,27 +67,21 @@ The contact's company comes from the lead. Without a company link, the lead's wo
 A personal address such as Gmail names no company. The dialog then offers **Add … as the employer**, which links or creates the company with the typed name. Left unticked, the contact gets no job link, and its page offers the typed name to link or create.
 
 Margince does not qualify a lead on its own. Mail and chat stay on the lead, and a booking is filed there too.
-A current reply or booking gives the lead's owner a task to review the lead and qualify them
-when that is the right next step.
+A current reply, booking or held meeting gives the lead's owner a task to review qualification.
+A lead keeps at most one open qualification task until you qualify or disqualify them.
 
-This advice has no automatic deadline. Old imported mail creates no new task. A reply you already answered creates no new task. A task you kept remains your work.
+This advice has no automatic deadline. Old imported mail creates no new task. A reply you already answered creates no new task. An open qualification task remains after you answer its source mail.
 
-When you add or edit a contact with an email or LinkedIn profile held by a
-live lead, Margince asks whether to convert the lead. Nothing is written until
-you choose. An automatic import or enrichment does not make the second record.
+When you add or edit a contact with an email or LinkedIn profile held by a live lead, Margince asks whether to convert the lead. Nothing is written until you choose. An automatic import or enrichment does not make the second record.
 
-A warning on that preview: the matching contact may be one you are not allowed
-to see. The preview then says "Qualifying merges into an existing contact you
-cannot see." and does not show you the contact. **No contact shown does not mean
-no match.**
+A warning on that preview: the matching contact may be one you are not allowed to see. The preview then says "Qualifying merges into an existing contact you cannot see." and does not show you the contact. **No contact shown does not mean no match.**
 
 The only open deal you can change at the employer starts selected. Choose **Qualify without a deal** to create no deal. When you pick one, the contact joins its team and the lead links to it. A deal that closes or moves to another company before you confirm is refused.
 
-A deal opened in the same step takes the lead's owner and the contact's employer, when one exists. The amount is a whole number in the base currency of your
-installation.
+A deal opened in the same step takes the lead's owner and the contact's employer, when one exists. The amount is a whole number in the base currency of your installation.
 
 ### How do I reverse a qualification?
-To reverse a lead qualification in Margince, open the qualified lead and choose **Reverse qualification**.
+To reverse a lead qualification in Margince, open the qualified lead, choose **More**, then **Reverse qualification**.
 1. Enter a **Reason (recorded in the audit trail)**. Without one the dialog says "Enter a reason first."
 2. Choose **Reverse**.
 
@@ -101,16 +93,10 @@ Also called: undo a qualification, unqualify, demote a lead.
 
 What reversing does depends on how the lead was qualified:
 
-- If it **created** a contact: the contact is archived, unless other records
-  now depend on it (see the last point). The lead comes back to the queue at
-  Engaged. Activities captured since the qualification stay on
-  the contact's timeline.
+- If it **created** a contact: the contact is archived, unless other records now depend on it (see the last point). The lead comes back to the queue at Engaged. Activities captured since the qualification stay on the contact's timeline.
 - If it **merged** into an existing contact: it cannot be reversed. The contact
   keeps the history and values the qualification carried into it.
-- **A stakeholder on a live deal blocks it.** If the contact is a stakeholder
-  on a live deal, the qualification cannot be reversed, so the deal does not
-  lose its contact. Being the deal's owner does not count; being a stakeholder
-  does.
+- **A stakeholder on a live deal blocks it.** If the contact is a stakeholder on a live deal, the qualification cannot be reversed, so the deal does not lose its contact. Being the deal's owner does not count; being a stakeholder does.
 - Other records may have come to depend on the contact. Then reversing only
   removes the link to the lead, where it would have archived the contact.
 
@@ -119,47 +105,55 @@ To disqualify a lead in Margince, open the lead, choose **More actions**, then *
 1. In **Disqualify {name}?**, pick a **Reason** (required; without one it says "Choose a reason first.").
 2. You may add a **Note (optional)**.
 3. Choose **Disqualify**.
-To disqualify several at once, tick them on the **Leads** list and choose **Disqualify** in the bulk bar.
-Leads have no archive action; disqualifying is how you close one.
+To disqualify several, tick them on the **Leads** list, pick a reason in the bulk bar and choose **Disqualify**. A message then says how many leads were disqualified, and the bar names any lead that was not. Leads have no archive action; disqualifying is how you close one.
 Also called: reject a lead, close a lead, archive a lead.
 
-Disqualifying archives the lead. It records a reason, from a list that administrators manage, and a note if you add one. You can still open the lead, but it becomes read-only: "This lead is closed and cannot be changed."
+Disqualifying archives the lead. It records a reason, from a list that administrators manage, and a note if you add one. You can still open the lead, but it becomes read-only: "Disqualified. This lead is read-only." Its overview says "Closed: {reason}. The record is kept as history." with your note under it.
 
 ### How do I reopen a disqualified lead?
-To reopen a disqualified lead in Margince, open the lead and choose **Reopen**, then **Reopen lead** in the **Reopen this lead?** dialog.
-The lead goes back to the status it held before it was disqualified, and the reason is cleared. History and score are kept.
-Leads disqualified in bulk have no one-step undo: reopen them one at a time.
+To reopen a disqualified lead in Margince, open the lead, choose **More actions**, then **Reopen**, then **Reopen lead** in the **Reopen this lead?** dialog.
+The lead goes back to the status it held before it was disqualified, and the reason is cleared. History and score are kept. Leads disqualified in bulk have no one-step undo: reopen them one at a time. Reopening needs the rights to edit and to close leads.
 Also called: restore a lead, undo a disqualification.
 
 ### How do I edit a lead?
-To edit a lead in Margince, open it from **Leads** and press the value to change in its **Details** panel. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows.
-1. Press a value or the name at the top, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving. Pressing the **Email** address starts a message; press the box around it or its mark to change it.
-2. Fields: **Full name**, **Email**, **Phone**, **Title**, **Company**, **Industry**, **Owner**. More fields: **Company routing key**, **Project**, **Origin**, **Origin note**, **Referred by partner**, custom fields. **Added via** shows how the row came into Margince, and Margince writes it.
+To edit a lead in Margince, open it from **Leads** and press **Edit** in a section of its **Details** panel. The sections are **About**, **Email and phone**, **Ownership** and **Registration**. Each **Edit** opens a dialog with only the fields of its section.
+1. Press **Edit** in the section, change the fields in the dialog, and press **Save**. Nothing in the dialog is stored until **Save**; **Cancel** or Esc closes without saving. To rename the lead, press the name at the top. Pressing the **Email** address starts a message.
+2. **About** holds **Company**, **Title**, **Industry**, **Project** and **Product**, and **Full name** while the lead has none. **Email and phone** holds **Email** and **Phone**. **Registration** holds **Origin**, **Origin note**, **Referred by partner**, **Company routing key** and **Tags**. In the dialog, **Change Project**, **Change Product** and **Change Tags** close it and open a list of their own. A pick there saves at once.
+3. The owner has its own control; see [How do I change a lead's owner?](#how-do-i-change-a-leads-owner). **Added via** shows how the row came into Margince, and Margince writes it.
 
-**LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead "cannot be changed".
+**LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead is read-only.
 Also called: update a lead, rename a lead, correct a prospect.
 
-**Referred by partner** shows once a company is a partner, to a role that may see companies and partners. On a lead that names a partner, a role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean). The **Leads** table then has a **Referred by partner** column. A lead that no one has accepted for its partner yet says **Awaiting acceptance** there.
+**Referred by partner** shows once a company is a partner, to a role that may see companies and partners. On a lead that names a partner, a role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean). The **Leads** table then offers a **Referred by partner** column under **View** → **Columns**. A lead that no one has accepted for its partner yet says **Awaiting acceptance** there.
 
 ### How do I change a lead's owner?
-To change or set the owner of a lead in Margince, open the lead and press the **Owner** value under **Ownership** in its **Details** panel. Then pick a colleague under **Choose a colleague** and press **Save**.
-1. **Assign to me** is listed first; saving it on a lead with no owner claims the lead for you.
-2. Pick anyone else to hand the lead over.
-For many leads, tick them on the **Leads** table and use **Choose owner** → **Assign**.
+To change or set the owner of a lead in Margince, open the lead. Press **Edit** in the **Ownership** section of its **Details** panel. Search under **Search colleagues** and pick a colleague. The pick saves at once, with no **Save** button, and confirms "Assigned to {name}".
+Pick yourself on a lead with no owner to claim it, or anyone else to hand it over. The current owner is marked; picking them changes nothing.
+
+For many leads, tick them on the **Leads** table and use **Choose owner** → **Assign**. A message says how many leads went to the new owner.
 The new owner must be "an active colleague you may assign work to".
 Also called: assign a lead, reassign a prospect, take a lead, claim a lead.
 
+### How do I set which product a lead wants?
+To name a lead's product in Margince, open the lead, press **Edit** in the **About** section, then **Change Product**. Pick it under **Search products**. The same list changes it later, and **Clear the product** there removes it. Product reports count the lead under that product.
+Also called: lead product, the product a lead asks about.
+
+### How do I see why a lead has its score?
+To see why a lead has its score in Margince, open the lead and look at its **Score** panel. Each factor lists what counted, and **{count} activities** on a factor opens **Activities behind this factor**. On the **Leads** table, point at a score to read its main reason.
+Also called: lead score explained, why is this lead hot.
+
 ### Scoring
 
-Leads carry a score from 0 to 100. You can override it by hand, but a reason is
-required. The override stops the score being updated until you clear it.
+Leads carry a score from 0 to 100. You can override it by hand, but a reason is required. The override stops the score being updated until you clear it.
 
-The score falls over time: the screen shows it as "{base}, halved every 14
+The score falls over time: under the score the panel says "activity points halve every 14
 days".
 
-There is an optional target for the first response to a lead, **off by default**, set
-between 15 minutes and 7 days. When it is on, leads show as **On time**, **Due
-soon** or **Overdue**.
+An optional first-response target, **off by default**, runs 15 minutes to 7 days. When
+on, a lead that wrote to you by email or a website form shows as **On time**, **Due
+soon** or **Overdue**. That includes a lead you typed in, once such a message is linked to
+it. A lead without one, or one from a data import, gets no deadline. Mail from a data import
+does not count.
 
 ## Deals
 
@@ -180,10 +174,10 @@ Old buying evidence carries its source date and a warning to check whether the b
 To create a deal in Margince, open **Deals** in the sidebar and choose **New deal**.
 1. Enter a **Deal name** (required).
 2. Pick a **Currency** (required) and a **Stage** (required; only open stages are offered).
-   The form opens on your base currency. Your exchange-rate sheet's currencies come next, then all others.
+   The form opens on your base currency. Type a code or a name, such as "dong", to find another.
 3. You may add a **Value**, a **Company**, and a **Project** (offered once a company is chosen).
-   You may also add partner details, **Expected close**, and any custom fields.
-4. Choose **Create**. It stays turned off until every required field is filled.
+   You may also set the **Owner** (you by default), **Acquisition source**, partner details, **Expected close** and custom fields.
+4. Choose **Create**. If a required field is empty, Create says so under it and takes you to the first one.
 The currency is saved only when you also enter a value.
 Also called: new opportunity, add a deal, open a deal.
 
@@ -196,43 +190,44 @@ On a company or project page, the button is hidden when the pipeline has no open
 Also called: opportunity.
 
 ### How do I edit a deal?
-To edit a deal in Margince, open it from **Deals** and press the value to change in its **Details** panel. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows.
+To edit a deal in Margince, open it from **Deals** and press **Edit** in a section of its **Details** panel. The sections are **About**, **Value**, **Ownership** and **Registration**. Each **Edit** opens a dialog with only the fields of its section. **More actions** → **Edit details** opens every field in one place.
 1. If the panel is hidden, choose **Show details**.
-2. Press a value or the name at the top, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving. **Value**, **Company** and **Referring partner** open a dialog with several fields.
+2. Press **Edit** in the section, change the fields in the dialog, and press **Save**. Nothing in the dialog is stored until **Save**; **Cancel** or Esc closes without saving. To rename the deal, press the name at the top.
 
-Fields: **Deal name**, **Value**, **Currency**, **Owner**, **Company**, **Project**, **Referring partner**, **Probability**, **Expected close**, **Wait until**, **Deal brief**, **Commercial motion**, **Priority**, **Acquisition source**, custom fields. The stage moves on the **Stage** ladder.
+**About** holds **Expected close**, **Probability**, **Wait until**, **Commercial motion** and **Priority**. A closed deal offers neither **Expected close** nor **Probability**. **Value** holds **Value**, **Expected ARR** and **Currency**, **Ownership** holds **Owner**, and **Registration** holds **Acquisition source** and **Tags**. In the dialog, **Change Tags** closes it and opens the tags in a panel of their own, where a change saves at once. **Company**, **Project**, **Referring partner** and custom fields change only in **Edit details**, where you press a value; the stage moves on the **Stage** ladder.
 Also called: update an opportunity, rename a deal, change deal details.
 
 ### How do I change a deal's value or currency?
-To change a deal's value or currency, open the deal and click **Value** in its **Details** panel, then change **Value** or **Currency** and choose **Save**.
-Value and currency go together: a value with no currency is refused, and so is a currency with no value.
-Changing the currency keeps the figures as typed, now in the new currency; nothing is turned into the new currency.
+To change a deal's value or currency, press **Edit** in the **Value** section of the deal's **Details** panel, change them and choose **Save**.
+Value and currency go together: a value with no currency is refused, and so is a currency with no value. Changing the currency keeps the figures as typed and converts nothing; empty **Value** on an open deal to remove its price.
 The recurring value may come from an accepted offer. Then the row reads **Expected ARR**, "comes from the accepted offer and is not edited here"; accepting another offer replaces it.
 Also called: change the amount, update deal size, switch to dollars.
 
 ### How do I change a deal's expected close date?
-To change when a deal is expected to close, open the deal, click **Expected close** in its **Details** panel and pick the date.
+To change when a deal is expected to close, open the deal and press **Edit** in the **About** section of its **Details** panel. Pick the date under **Expected close** and press **Save**. On a closed deal, use **More actions** → **Edit details** and press **Expected close**. On the **Board** view, an open deal's card has **Change close date** in its **…** menu.
+
 An open deal cannot get a date in the past: "an open deal cannot claim a close date in the past; pick today or later". A closed deal keeps its dates open to edits, past ones included.
 To hold a deal until a date without moving its close date, set **Wait until** instead. **How it stands** reads **On hold** until that day, and **Follow-up overdue** from that day on.
 Also called: push the close date, change closing date, slip a deal.
 
 ### How do I change a deal's company or project?
-To change the company or project of a deal in Margince, open the deal and click **Company** in its **Details** panel. Pick the **Company**, then a **Project** of that company, and choose **Save**.
+To change the company or project of a deal in Margince, open the deal and choose **More actions** → **Edit details**, then press **Company**. Pick the **Company**, then a **Project** of that company, and choose **Save**.
 A deal and its project must belong to the same company. The **Project** field offers only that company's projects, and empties when you change the company.
 
 **New project…** creates one on the chosen company; without a company it says "Select the deal’s company first. A project belongs to a company."
+Margince refuses to move a deal to another company while contracts filed on it name the old company. Move or end those contracts first, then change the company.
 Also called: move a deal to another account, attach a deal to a project.
 
 ### How do I change the owner of a deal?
-To reassign a deal to a colleague in Margince, open the deal and press the **Owner** row of its **Details** panel. Pick the colleague in the dialog and press **Save**.
+To reassign a deal to a colleague in Margince, open the deal and press **Edit** in the **Ownership** section of its **Details** panel. Pick the colleague in the dialog and press **Save**. On the **Board** view, open the card's **…** menu, choose **Change owner** and pick the colleague; that pick saves at once.
 
 To reassign many, switch **Deals** to **Table** and tick them. Use **Pick an owner** → **Assign owner** in the bulk bar, then **Change owner**.
 The new owner must be "an active colleague you may assign work to". That is any active colleague on a full seat, not an agent, even one whose records you cannot change. You may reassign only a deal you may change, or one with no owner.
 Also called: hand over a deal, change deal owner, transfer an opportunity.
 
 ### Can I edit a closed or archived deal?
-A won or lost deal in Margince can still be edited: only its **Stage** ladder is locked until you reopen it. Changing a closed deal's value or currency fixes its exchange rate again.
-An archived deal cannot be edited: "This deal is archived and takes no changes." Without edit rights you see "You cannot change this deal. Ask its owner to share it, or an administrator for edit rights."
+A won or lost deal in Margince can still be edited: only its **Stage** ladder and its **Probability** are locked until you reopen it. Changing a closed deal's value or currency fixes its exchange rate again, and its price stays until you reopen it.
+An archived deal cannot be edited: "This deal is archived and takes no changes." Without edit rights you see "You can log activity and add tasks. Changing this deal needs its owner to share it."
 Also called: change a won deal, fix a lost deal.
 
 ### How do I add a contact to a deal?
@@ -240,7 +235,9 @@ To add a contact to a deal in Margince as a stakeholder, open the deal. Choose *
 1. Search for and pick the **Contact** (required). It must already exist.
 2. You may type a **Role**, such as economic buyer, and a **Started** date.
 3. Choose **Create**.
-To change a role or take someone off, open **Change or remove stakeholders** on the same panel. Choose **Edit** on the row to change the role, or **Remove** to take the contact off ("Remove this relationship? There is no undo.").
+Anyone who may edit the deal can open **Change or remove stakeholders** on the same panel. Choose **Edit stakeholder** on the row to change the role. To take the contact off, choose **Remove** on the row and confirm in **Remove stakeholder?**; there is no undo. A contact with several roles has a row for each role, and each row needs its own **Remove**. The **Buying committee** panel names a contact once, with each role, and counts them once.
+
+To show that a contact no longer takes part, set an **End** date on the row instead. On that date the contact leaves the **Buying committee** and its count. The contact's **Deals** tab still lists the deal and marks it **No longer on this deal**. The row stays under the fold with its dates. With too few contacts engaged, the panel asks for another one. An admin sets that limit under **Metric definitions**.
 
 From a contact's **Deals** tab, **Add to a deal** does the same from the other end. Select the search field to see open deals at their current employers. Typing searches open deals, with employer deals first and each deal's company shown.
 Also called: add a stakeholder, add a decision maker, link a contact to an opportunity.
@@ -250,8 +247,8 @@ No. A deal in Margince stays in the pipeline it was created in, and its stage ca
 Also called: change a deal's pipeline, switch pipeline.
 
 ### Can I set the win probability of one deal?
-Yes. Press **Probability** in the deal's **Details** and enter a number from 0 to 100. Leave it empty to use the stage's probability again (**Settings → Deals**, **Win probability**). Moving the deal to another stage also sets it back to that stage's.
-Also called: deal probability, likelihood, confidence.
+Yes. Press **Edit** in the **About** section of the deal's **Details**, and enter a number from 0 to 100 under **Probability**. Leave it empty to use the stage's probability again (**Settings → Deals**, **Win probability**). Moving the deal to another stage also sets it back to that stage's. The ⓘ beside the figure says how it was made ([how it is set](forecast-learning.md)).
+Also called: deal probability, likelihood, confidence, why this probability.
 
 ## Projects
 
@@ -266,9 +263,12 @@ To create a project in Margince, open **Projects** in the sidebar and choose **N
 1. Enter the **Project name** (required).
 2. Pick the **Company** (required): the client the work is for.
 3. Pick the **Owner**. You are picked first; you may pick a colleague instead.
-4. You may add a **Description** and a **Target end date**.
-5. Fill any custom fields, then choose **Create**.
-The owner must be "an active colleague you may assign work to", the same rule as **Assign to a colleague**. Margince creates the project key from the name. Read-only seats cannot create projects.
+4. You may add a **Description** and a **Target end**.
+5. Under **Key**, Margince shows the key it suggests from the name. Leave it empty to use that key, or type your own.
+6. The **Starting phase** is **Initiative**. You may pick **Pursuing** or **Delivering** instead. A new project cannot start closed.
+7. Under **Deal**, you may pick an open deal of the company that has no project yet. The deal then belongs to the new project.
+8. Fill any custom fields, then choose **Create**.
+The owner must be "an active colleague you may assign work to", the same rule as **Assign to a colleague**. Linking a deal needs the right to edit that deal. Read-only seats cannot create projects.
 Also called: start a new project for a client, new engagement.
 
 ### Can I create a project from a company page or a deal?
@@ -280,34 +280,40 @@ The project is created on the deal's company.
 Also called: add a project to a client.
 
 ### What is on a project page?
-A project page in Margince brings together everything filed under the work. Its phase and key are beside the name, and the **Phase** bar runs under the top of the page. **More actions** holds **Edit project**, **Share**, **Assign to a colleague** and **Archive project**.
+A project page in Margince brings together everything filed under the work. Its phase and key are beside the name, with **Log** and **More actions** in the header. **More actions** holds **Add task**, **Edit project**, **Share**, **Assign to a colleague**, **Companies and contacts**, **Record reading**, **Full history** and **Archive project**. **Correct reading** joins them once a reading stands.
 
-The large column opens with the figures **Open deals**, **Won deals**, **Open tasks** and **Activity**. Then come **Delivery health**, and the **Deals** card with **New deal**.
-Then comes **Open tasks**: the open tasks filed under the project, soonest due first, late ones marked **Overdue**. The timeline follows.
+The page opens with the next step, then **How it stands**. That card holds a sentence on how the work is going, the **Phase** bar, the readings **Open tasks**, **Time used** and **Deals**, and the timeline. Its figures are **Phase time**, **Open deal value**, **Won deal value**, **Open tasks** and **Documents**.
 
-The side column of a project page in Margince holds **Companies**, **Responsibilities**, **Stakeholders**, **Contracts**, **Documents** and **Phase history**. **Phase history** records every phase move, with who made it and the reason. A move an AI agent made names the colleague it worked for and the tool, as in "Anna Weber, via Claude, moved it". If nobody recorded who made a move, Phase history says so; it is never shown as **System**. Files attached to the project's deals stay on the deals.
+Under it come the **Deals** card with **New deal**, and **Open tasks**. **Open tasks** lists the open tasks filed under the project, soonest due first, late ones marked **Overdue**. With none open, the card is not shown, unless you may not see the tasks. Beside them are **Contracts**, **Team chat** when chats are linked, and **Phase history**. The **Details** panel holds **About** and **Ownership**.
+
+The project's **Companies**, **Responsibilities** and **Stakeholders** open from **More actions** → **Companies and contacts**. **Phase history** records every phase move, with who made it and the reason. A move an AI agent made names the colleague it worked for and the tool, as in "Anna Weber, via Claude, moved it". If nobody recorded who made a move, Phase history says so; it is never shown as **System**.
+
+**Documents**, on the **Contracts** card, lists the files uploaded to the project and the files attached to the notes, calls and meetings filed under it. Its **Add document** uploads one. Files attached to the project's deals stay on the deals.
+
+### Does a note on a deal show on its project?
+Yes. In Margince, what you log on a deal, or relink onto it, also goes under the deal's project, unless you pick a project yourself. Deals of two projects, or a deal with no project, add none. A note an AI agent or Margince itself logs stays on the deal only. Take the note off the deal, and the project goes too; moving the deal later moves no older note.
 
 ### How do I edit or rename a project?
 To rename a project in Margince, open it from **Projects**, press its name at the top, type the new name and press **Save**. To edit the rest, choose **More actions** → **Edit project**, change the fields and choose **Save**.
-You can change **Project name** (required), **Owner**, **Description**, **Target end date** and custom fields. It confirms "“{name}” saved". Emptying **Description** or **Target end date** clears it. To change only **Owner**, **Target end date** or **Description** (behind **Show {count} empty fields**), press its value in the project's **Details** panel instead.
+You can change **Project name** (required), **Owner**, **Description**, **Target end** and custom fields. It confirms "“{name}” saved". Emptying **Description** or **Target end** clears it. For only **Target end** or **Description**, press **Edit** in **About** in the project's **Details** panel; for **Owner**, in **Ownership**.
 
-The company is not in this form: add or take off companies in the project's **Companies** panel. The phase moves on the **Phase** bar. An archived project takes no changes.
+The company is not in this form: add or take off companies under **More actions** → **Companies and contacts**. The phase moves on the **Phase** bar. An archived project takes no changes.
 Also called: update a project, change the project's end date.
 
 ### How do I change a project's owner?
-To reassign a project in Margince, open it and choose **More actions** → **Assign to a colleague**. Search under **Search colleagues**, pick one and choose **Assign**. It confirms "Assigned to {name}".
+To reassign a project in Margince, open it and choose **More actions** → **Assign to a colleague**. Pick a colleague from the list, or search under **Search colleagues** first. The pick saves at once, with no **Assign** button, and confirms "Assigned to {name}".
 **Edit project** also has **Owner**, which lists the colleagues you may assign to, then **Unassigned**, which releases the project. A project cannot be claimed, so only a role that edits every project or someone it is shared with at **Write** can assign one.
 Also called: hand over a project, change project lead, transfer a project, release a project.
 
 ### How do I add or remove a company on a project?
-To add a company to a project in Margince, open the project and choose **Attach company** in its **Companies** panel. Search under **Search companies by name**, and pick a role under **As** (**Customer**, **Partner** or **Subcontractor**).
-Confirm with **Attach company**.
-To take one off, choose **Detach** on its row, then **Remove company** in "Remove company from project?". The last company cannot be removed, nor a company that still has deals on the project.
+To add a company to a project in Margince, open the project and choose **More actions** → **Companies and contacts**, then **Attach company** under **Companies**. Search under **Search companies by name** and pick the company. Pick its role under **As** (**Customer**, **Partner** or **Subcontractor**), then choose **Attach company**.
+
+To take one off, open **More actions** → **Companies and contacts** in the same way. On the company's card, choose **More actions** → **Remove**, then **Remove company** in "Remove company from project?". The only company on a project has no **More actions**. A company that still has deals on the project is refused until those deals move to another project or are archived.
 Also called: add a partner to a project, link a client to a project.
 
 ### How do I move a project to another phase or close it?
-To move a project in Margince, open it and click the phase you need on its **Phase** bar: **Initiative**, **Pursuing**, **Delivering** or **Closed**.
-In **Move to {phase}**, add a **Reason** and choose **Move**. For **Closed** the button is **Close project**, and the reason is required: "A closed project needs a reason."
+To move a project in Margince, open it and click the phase you need on its **Phase** bar: **Initiative**, **Pursuing** or **Delivering**. To close it, click **Close project** on the same bar.
+In **Move to {phase}**, add a **Reason** and choose **Move**. In **Close project** the button is **Close project**, and the reason is required: "A closed project needs a reason."
 Click another phase on a closed project to reopen it.
 Also called: close a project, finish delivery, reopen a project.
 
@@ -331,56 +337,50 @@ move it on the **Phase** bar.
 Pursuing. A project already in delivery stays where it is, and a win never
 reopens a closed project. Only a human can reopen one.
 
-Every phase move is recorded, including the automatic one. That one is put
-under the name of the colleague whose action caused it.
+Every phase move is recorded, including the automatic one. That one is put under the name of the colleague whose action caused it, and names the deal, as in "Deal Wendt renewal won". When you win the deal, the dialog says so first: "This also moves {project} to Delivering."
 
 ### The key
 
-Every project gets a short key, which Margince creates. You cannot choose it.
+Every project has a short key. You choose it when you create the project, or
+keep the one Margince suggests from the name. It never changes after that.
 
-The key comes from the project's name, plus the lowest free number. A name of
-several words gives its first letters; a single word gives its first eight
-letters. So "Nordwind ERP rollout" becomes `NER-1`, and "ERP rollout Acme"
-becomes `ERA-1`. The number counts up on its own for each set of letters.
+A name of several words gives its first letters, and a single word gives its
+first eight letters. When a live project already uses those letters, the next
+one gets a number: `NER`, then `NER-2`. Margince refuses, with a reason, a
+word of a colleague's name, a word such as `FWD` or `URGENT`, and the key of
+another live project.
 
 The key is what files email on its own. Any subject carrying it **in square
-brackets** goes under that project. See [Capture](capture.md).
-
-Two live projects never share a key. Archiving a project frees its key.
+brackets** goes under that project. See [Capture](capture.md). Two live
+projects never share a key. Archiving a project frees its key.
 
 ### How do I choose a good project key?
-To get a project key you can read in Margince, pick the right project name. The key is made from the name once, when the project is created, and never changes.
-Lead with the customer, then the work: "Nordwind ERP rollout" gives `NER-1`, while "ERP rollout" gives `ER-1`, which names nobody. A one-word name gives a long key: "Datenmigration" gives `DATENMIG-1`. Three or four words give a short key.
+To get a project key you can read in Margince, type a short one under **Key** on **New project**, such as `NORD`.
+If you leave **Key** empty, the key comes from the name. Lead with the customer, then the work: "Nordwind ERP rollout" gives `NER`, while "ERP rollout" gives `ER`, which names nobody.
 
 A name that opens with numbers drops them, and a name with too few letters falls back to `PRJ`. Renaming a project keeps its key; to get a different one, archive the project and create it again. Also called: project code, project number, ticket prefix.
 
 ### How do I get a customer's emails filed under a project?
-To have a customer's emails filed under a project in Margince, get the project's key in square brackets into the subject, such as `[NER-1]`.
+To have a customer's emails filed under a project in Margince, get the project's key in square brackets into the subject, such as `[NER]`.
 Send from the deal or project, or pick the project under **Project** in the composer. Margince then puts the tag at the start of your subject, and a reply that keeps the subject brings the answer in.
-Ask the customer in your first mail to keep `[NER-1]` in the subject. See [Capture](capture.md) for every filing rule. Also called: email not on the project, project reference in email.
+Ask the customer in your first mail to keep `[NER]` in the subject. See [Capture](capture.md) for every filing rule. Also called: email not on the project, project reference in email.
 
 ### Companies and stakeholders
 
-A project always has at least one company. Trying to remove the last one is
-refused: "A project keeps at least one company; add another before taking this
-one off." A company with deals still on the project cannot be removed either.
+A project always has at least one company, so the only one has no **Remove**. A company with deals still on the project cannot be removed either: "This company still has 1 deal on the project. Move it to another project or archive it before you take the company off."
 
 Companies on a project can be a customer, partner or subcontractor. These are labels only; a project can have several customers or none.
 
-Stakeholder roles: champion, economic buyer, blocker, influencer, user, sponsor, project lead, delivery lead, subject-matter expert.
+Stakeholder roles: champion, economic buyer, blocker, influencer, end user, sponsor, project lead, delivery lead, subject-matter expert.
 
-You can add someone from either end. The project's own Stakeholders card adds,
-removes and changes roles, and so does the contact's page. The contact page
-offers the five delivery roles; the project card offers them all. The card goes
-read-only when the project is archived, or when your role does not allow adding
-stakeholders.
+You can add someone from either end. The project's own Stakeholders card adds, removes and changes roles, and so does the contact's page. The contact page offers the five delivery roles; the project card offers them all. The card goes read-only when the project is archived, or when your role does not allow adding stakeholders.
 
 ### How do I add a stakeholder to a project?
-To add a contact to a project in Margince, open the project and choose **Add stakeholder** in its **Stakeholders** card.
+To add a contact to a project in Margince, open the project, choose **More actions** → **Companies and contacts**, then **Add stakeholder** under **Stakeholders**.
 1. Search under **Search contacts by name** and pick the contact.
 2. Pick the **Role**: one of those listed above.
 3. Choose **Add**. A contact already on the project takes the new role instead: one role per contact.
-To take someone off, choose **Remove** on the row and confirm **Remove stakeholder?**; their activity stays where it is.
+To take someone off, choose **More actions** → **Remove** on the row, then **Remove** in the **Remove stakeholder?** dialog. Their activity stays where it is.
 Also called: add a sponsor, add a project lead, add someone to a project team.
 
 ### Who may do what
@@ -394,7 +394,5 @@ Project permissions by role:
 | Admin / Ops | yes | yes | yes | yes |
 | Read-only | no | yes | no | no |
 
-Archiving a project is final from the app: "Archiving removes this project from
-the active list and frees its key. This cannot be undone here." It does not
-archive the deals or activities under it: the project goes, the history
-stays.
+Archiving a project is final from the app: "Archiving removes this project from the active list and frees its key. This cannot be undone here." It does not archive the deals or activities under it: the project goes, the history stays.
+Turn on **Show archived** on the list to open it again. Its page shows its history and says "This project is archived and takes no changes."

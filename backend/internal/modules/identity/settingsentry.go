@@ -72,13 +72,13 @@ var Name = config.DefineStored(config.Spec[string]{
 	Env:  "MARGINCE_INSTALLATION_NAME",
 	Type: config.String,
 	Validate: func(v string) error {
-		if code, why := values.CompanyNameFault(v); code != "" {
-			return errors.New(why)
+		if refused := values.CompanyNameFault("installation.name", v); refused != nil {
+			return errors.New(refused.Message)
 		}
 		return nil
 	},
 	Doc: "The company's name. Set at boot, it also refuses a different name on the company profile.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
+}, config.Store{Cacheable: true, RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
 
 // Timezone is the IANA reporting-period zone every period boundary is
 // computed in. Distinct from a user's own timezone (app_user.timezone), which
@@ -355,15 +355,18 @@ func BaseCurrencyOf(ctx context.Context, tx pgx.Tx) (string, error) {
 	return settings.ReadForDecision(ctx, tx, BaseCurrency)
 }
 
-// TimezoneOf resolves the installation's IANA zone inside a transaction the
-// caller already holds — the zone a "today" is computed in.
+// timezoneOf is the gated read of the installation's IANA zone, used by the
+// calendar change on the settings surface. It is unexported so any other
+// derivation of a day or window uses TimezoneAppliedTx.
 //
-// RequireTx, like BaseCurrencyOf: a close-date sweep or a forecast cutoff that
-// silently fell back to UTC would move real dates for an installation that
-// runs in Europe/Berlin, and would move them by a day only sometimes, which is
-// the hardest kind of wrong to notice.
-func TimezoneOf(ctx context.Context, tx pgx.Tx) (string, error) {
-	return settings.RequireTx(ctx, tx, Timezone)
+// RequireTx, like BaseCurrencyOf: an absent row is an error, never a silent UTC.
+// storekit.EffectiveZone says when a stored name Go cannot load reads as UTC.
+func timezoneOf(ctx context.Context, tx pgx.Tx) (string, error) {
+	stored, err := settings.RequireTx(ctx, tx, Timezone)
+	if err != nil {
+		return "", err
+	}
+	return storekit.EffectiveZone(ctx, stored), nil
 }
 
 // BaseCurrencyAppliedTx resolves the base currency for a read that only
@@ -377,14 +380,18 @@ func BaseCurrencyAppliedTx(ctx context.Context, tx pgx.Tx) (string, error) {
 // derivation — a "today" computed while executing an operation the caller is
 // already authorized for — WITHOUT the installation_settings.read gate.
 //
-// ApplyTx, not the gated TimezoneOf: deriving which calendar day it is is
+// ApplyTx, not the gated timezoneOf: deriving which calendar day it is is
 // infrastructure, not the settings-management surface the object gate protects.
 // A contract writer holds `contract`, not `installation_settings`, and the zone
 // is disclosed by every date it is ever shown anyway — WorkingHoursOf reads it
 // the same way for the same reason. An unset zone reads as the registered UTC
 // default rather than erroring, so a fresh installation still writes.
 func TimezoneAppliedTx(ctx context.Context, tx pgx.Tx) (string, error) {
-	return settings.ApplyTx(ctx, tx, Timezone)
+	stored, err := settings.ApplyTx(ctx, tx, Timezone)
+	if err != nil {
+		return "", err
+	}
+	return storekit.EffectiveZone(ctx, stored), nil
 }
 
 // ZoneAppliedTx is TimezoneAppliedTx resolved to a location. A compose read

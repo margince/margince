@@ -42,6 +42,30 @@ const STAGES = [
   { id: "s3", pipeline_id: "p1", name: "Won", position: 3, semantic: "won" },
 ];
 
+const RETIRED = {
+  id: "p2",
+  name: "Partner sales",
+  is_default: false,
+  position: 1,
+  archived_at: "2026-07-01T00:00:00Z",
+  stages: [
+    {
+      id: "r1",
+      pipeline_id: "p2",
+      name: "Intro",
+      position: 1,
+      semantic: "open",
+    },
+    {
+      id: "r2",
+      pipeline_id: "p2",
+      name: "Pilot",
+      position: 2,
+      semantic: "open",
+    },
+  ],
+};
+
 function deal(over: Partial<Deal> = {}): Deal {
   return {
     id: "d1",
@@ -64,7 +88,7 @@ function mount(current: Deal) {
   installFetchStub({
     "GET /me": meRoute({ deal: ["read", "update"] }, { seat: "full" }),
     "GET /deals/d1": () => jsonResponse(current),
-    "GET /pipelines": () =>
+    "GET /pipelines": (_body, url) =>
       jsonResponse({
         data: [
           {
@@ -74,6 +98,9 @@ function mount(current: Deal) {
             position: 0,
             stages: STAGES,
           },
+          ...(url.searchParams.get("include_archived") === "true"
+            ? [RETIRED]
+            : []),
         ],
         page: { next_cursor: null },
       }),
@@ -108,17 +135,8 @@ afterEach(() => {
 
 // The page already prints this sentence in its header band, so the rungs point
 // at THAT one rather than drawing a second copy under each of themselves.
-it.each([
-  [
-    "a colleague's deal",
-    { owner_id: "u-else", writable: false } as Partial<Deal>,
-  ],
-  [
-    "an archived deal",
-    { archived_at: "2026-07-01T00:00:00Z" } as Partial<Deal>,
-  ],
-])("names the page's own sentence on %s", async (_what, fields) => {
-  mount(deal(fields));
+it("names the page's own sentence on an archived deal", async () => {
+  mount(deal({ archived_at: "2026-07-01T00:00:00Z" }));
 
   const step = await proposalStep();
   expect(step.hasAttribute("disabled")).toBe(true);
@@ -127,6 +145,16 @@ it.each([
   // The SAME element the page's band draws, not a copy of its words: a second
   // copy would drift, and a ladder of five rungs would print it five times.
   expect(screen.getAllByText(reason ?? "")).toHaveLength(1);
+});
+
+// The server refuses every move to a reader who may not write the deal, so
+// the ladder reads where the deal stands and offers none.
+it("draws a colleague's deal as stage names, with no move and no way out", async () => {
+  mount(deal({ owner_id: "u-else", writable: false }));
+
+  expect(await screen.findByText("Proposal")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Proposal" })).toBeNull();
+  expect(screen.queryByText("Won")).toBeNull();
 });
 
 // Nothing on the page says this one, so the ladder draws it — once, under the
@@ -154,4 +182,17 @@ it("offers the move, unexplained, on a live deal the viewer may change", async (
   expect(step.hasAttribute("disabled")).toBe(false);
   expect(step.getAttribute("aria-describedby")).toBeNull();
   expect(screen.queryByText(/This deal is closed/)).toBeNull();
+});
+
+// A retired pipeline keeps its deals. The page draws that pipeline's own
+// stages, so the deal's stage is named, and offers no move to any of them.
+it("draws a deal on a retired pipeline with its own stages and no move", async () => {
+  mount(deal({ pipeline_id: "p2", stage_id: "r1" }));
+
+  const pilot = await screen.findByRole("button", { name: "Pilot" });
+  expect(pilot.hasAttribute("disabled")).toBe(true);
+  expect(reasonOf(pilot)).toBe(
+    "This deal’s pipeline is retired, so its stages are read-only. Restore the pipeline in Settings to move the deal.",
+  );
+  expect(screen.queryByText("Proposal")).toBeNull();
 });

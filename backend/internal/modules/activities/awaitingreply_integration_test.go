@@ -31,7 +31,7 @@ const readerAddress = "rep@ourco.test"
 func (e *loadEnv) customerAt(t *testing.T, lifecycle string) ids.UUID {
 	t.Helper()
 	contact, company := e.buyer(t), ids.NewV7()
-	e.exec(t, `INSERT INTO company (id, display_name, owner_id, lifecycle, source, captured_by)
+	e.exec(t, `INSERT INTO company (id, display_name, owner_id, status, source, captured_by)
 		VALUES ($1, 'Company A', $2, $3, 'seed', 'system')`, company, e.rep, lifecycle)
 	e.exec(t, `INSERT INTO relationship (id, kind, contact_id, company_id, source, captured_by)
 		VALUES ($1, 'employment', $2, $3, 'seed', 'system')`, ids.NewV7(), contact, company)
@@ -257,7 +257,7 @@ func TestTheCustomerTestReadsOnlyRecordKindsTheReaderMayRead(t *testing.T) {
 	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Pipeline "+pipeline.String())
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
 	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'Deal A', 'open', $2, $3, $4, 'seed', 'system')`, deal, e.rep, pipeline, stage)
+		VALUES ($1, 'Deal A', 'open', $2, $3, $4, 'manual', 'system')`, deal, e.rep, pipeline, stage)
 	sent, _ := e.sentTo(t, contact, "", 3*24*time.Hour)
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id)
 		VALUES ($1, $2, 'deal', $3)`, ids.NewV7(), sent, deal)

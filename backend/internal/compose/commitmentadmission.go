@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dueday"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
@@ -17,7 +18,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/stateddeadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -37,13 +40,13 @@ func (read commitmentRead) proposeLate() bool {
 // proposeLate adds the promise's own conditions to the evidence's: ours, from
 // the original source, not private mail, and not withheld on its meaning.
 func (c Commitment) proposeLate(read commitmentRead) bool {
-	return read.proposeLate() && c.Theirs == nil && c.PrivateTo == nil && c.AdmissionSourceID == nil && c.Meaning.withheldOutcome() == ""
+	return read.proposeLate() && c.Theirs == nil && c.PrivateTo == nil && c.AdmissionSourceID == nil && c.withheldOutcome() == ""
 }
 
 func (d *CommitmentDispatcher) admission(ctx context.Context, tx pgx.Tx, c Commitment) (commitmentRead, error) {
 	var due *time.Time
 	if c.DueDate != "" {
-		at, err := commitmentDueInstant(ctx, tx, c.DueDate, c.DueZone)
+		at, err := dueday.EndOf(ctx, tx, c.DueDate, c.DueZone)
 		if err != nil {
 			return commitmentRead{}, err
 		}
@@ -228,7 +231,7 @@ func originalMessageTime(payload []byte) time.Time {
 }
 
 func (d *CommitmentDispatcher) renewTask(ctx context.Context, tx pgx.Tx, c Commitment, reason activities.CommitmentAdmissionReason) (CommitmentOutcome, ids.UUID, error) {
-	if c.Meaning.withheldOutcome() != "" || c.NeedsConfirmation || c.AdmissionSourceID == nil || c.DueDate == "" || c.Confidence < CommitmentTaskConfidence {
+	if c.withheldOutcome() != "" || c.NeedsConfirmation || c.AdmissionSourceID == nil || c.DueDate == "" || c.Confidence < CommitmentTaskConfidence {
 		return CommitmentRemembered, ids.UUID{}, nil
 	}
 	if reason != activities.CommitmentCurrent {
@@ -238,9 +241,12 @@ func (d *CommitmentDispatcher) renewTask(ctx context.Context, tx pgx.Tx, c Commi
 	if err != nil || held {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
-	due, err := commitmentDueInstant(ctx, tx, c.DueDate, c.DueZone)
+	due, err := dueday.EndOf(ctx, tx, c.DueDate, c.DueZone)
 	if err != nil {
 		return CommitmentRemembered, ids.UUID{}, err
+	}
+	if !values.DueInWindow(due, d.now()) {
+		return CommitmentRemembered, ids.UUID{}, nil
 	}
 	changed, err := d.tasks.RenewCommitmentTaskTx(extractorContext(ctx, c.Extractor), tx, c.Locator, c.Summary, c.Body, due, c.PrivateTo)
 	if err != nil || !changed {
@@ -260,4 +266,15 @@ func (outcome CommitmentOutcome) wroteWork() bool {
 
 func (outcome CommitmentOutcome) withheld() bool {
 	return outcome != CommitmentRemembered && outcome != CommitmentRetained && !outcome.wroteWork()
+}
+
+// commitmentWindow is how long a proposal waits for its promiser. An invited
+// colleague finds the card when they first sign in, which may be weeks away,
+// and the default 72 hours would expire it unseen. A promise from a late
+// report is as old as the horizon already, so it gets the same wait.
+func commitmentWindow(state activities.SeatWorkState, late bool) *time.Duration {
+	if state != activities.SeatInvited && !late {
+		return nil
+	}
+	return new(time.Duration(provenance.CommitmentHorizonDays) * 24 * time.Hour)
 }

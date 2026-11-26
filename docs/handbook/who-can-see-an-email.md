@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering frontend/src/features/settings/internalmailsettings.tsx frontend/src/features/settings/internalmailhistoryscope.tsx frontend/src/features/capture/internalmailhistorychoice.tsx backend/internal/modules/capture/internalmailpolicy.go backend/internal/modules/capture/internalmailcapture.go backend/internal/modules/capture/internalmailhistory.go backend/internal/modules/activities/internalmail.go -->
+<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/settings/sharedmailboxes.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering frontend/src/features/settings/internalmailsettings.tsx frontend/src/features/settings/internalmailhistoryscope.tsx frontend/src/features/capture/internalmailhistorychoice.tsx backend/internal/modules/capture/internalmailpolicy.go backend/internal/modules/capture/internalmailcapture.go backend/internal/modules/capture/internalmailhistory.go backend/internal/modules/activities/internalmail.go backend/internal/modules/capture/sharedmailbox.go backend/internal/platform/auth/sharedmailboxreader.go -->
 # Who can see an email
 
 Two things decide who can read an email in Margince, and **a "no" from either is a
@@ -24,8 +24,11 @@ each file by name and size, with its kind where the file name shows one, marked
 as not kept.
 
 A sender verdict does not apply to a sender you marked as business on the
-Senders page. It does not apply to one you have replied to, or a contact you
-write with.
+Senders page. It does not apply to an address on a contact either. An archived
+contact does not count. Nor does an address that came only from a file import,
+a contact card, **Quick capture** or a chat app. A reply does not change it: mail
+from a sender judged personal loses its files even after you or a colleague
+answered that sender.
 
 Mail that came in before the verdict loses its files later, once you have
 time to change your view. On a thread held as personal, Margince stops keeping its
@@ -38,7 +41,9 @@ keeps it. It also skips mail a privacy request is about, and mail a colleague
 also imported.
 
 The sweep of personal mail deletes all of the mail from a sender judged
-personal, on the same timing. Marking the sender as business first stops it. The
+personal, on the same timing. Marking the sender as business first stops it, and
+so does filing the mail against a contact. A reply to the sender, by you or a
+colleague, does not keep the mail. The
 sweep also keeps mail under a legal hold or inside the time the law keeps it.
 It keeps mail a privacy request is about, and a colleague's copy of mail they
 imported too.
@@ -60,6 +65,11 @@ then open a message to see who can read it and change sharing. Another owner's h
 **Sender decisions** works the same way: find an address, name or domain, then correct the decision.
 **My overrides** shows your own choices. Removing an override does not restore mail already destroyed.
 
+### How do I keep email between colleagues in Margince?
+<!-- opens: settings/capture -->
+To keep email between colleagues in Margince, an admin turns on **Internal operational mail** in **Settings → Mail capture**, chooses the mail connections, and presses **Save**. Mail between colleagues is not kept until then.
+Also called: internal mail, colleague email, capture internal threads.
+
 ## Mail between colleagues
 
 Mail between colleagues is not kept by default. An admin can turn on
@@ -74,7 +84,14 @@ can open one message, choose **Selected**, and name the colleagues who may read
 it. The participants on the message keep access. The choice replaces the named
 readers of that message.
 
-It does not share a thread or give a team access.
+A shared mailbox can be a source too. The list names it by its address. Its
+mail is also read by the mailbox's reader team, including members who are not
+on the message. Admins outside that team do not read it. Older mail between
+colleagues is never kept from a shared mailbox, because that import needs a
+mailbox owner. **Import older mail** on the mailbox brings in its other older
+mail, see [Shared mailboxes](#shared-mailboxes).
+
+Sharing one message does not share its thread or give a team access.
 Other members see no message or count. A link to a company, deal or project
 does not change that. This mail adds no contact and is not proof of a client
 reply or a reason to write to a client.
@@ -138,6 +155,14 @@ domains. The mail server that received the mail must also have confirmed that it
 came from that domain.
 Also called: my own sent mail, mail I sent to a customer, copied colleague.
 
+### Why does a mail that several colleagues received show only once?
+Margince keeps one copy of a mail for each mailbox that received it. A timeline
+shows the copies you can read as one row, marked **Also in 1 other mailbox**. The
+row names every record those copies are filed under that you can see. A copy you
+cannot read stays a row of its own, marked withheld. How often you were in touch
+with a contact counts the mail once.
+Also called: duplicate email, the same email twice, one mail in two mailboxes.
+
 ## Why this one is held
 
 A held Margince message carries a reason, so you can see why it is held:
@@ -153,6 +178,7 @@ A held Margince message carries a reason, so you can see why it is held:
 | **Kept private** | A human decided, and that decision stays |
 | **Held: no record** | Something judged the sender, so it is filed under nothing |
 | **Held: no counterparty** | It named nobody Margince could create a record for |
+| **In a shared mailbox** | A shared mailbox brought it in, and it keeps its mail to its reader team |
 
 A later verdict clears some of these and not others:
 
@@ -248,22 +274,26 @@ It holds mail from then on, and lifting it opens nothing again: "Lifting applies
 to new mail. Mail already held stays held."
 
 ### How do I share an email thread with my team?
-To share an email thread in Margince, open the captured message from a timeline and choose **Share with the company** beside its visibility mark. Or use **Share with the team** in **Settings → Connections → Activity → Held threads**.
+To share an email thread in Margince, open the captured message from a timeline and choose **Share with the company** beside its visibility mark. Or open Settings → **Connections** → **Activity**, find it under **Mail not shared with the team**, and choose **Preview and change sharing**.
 1. On a contact, company or deal timeline, open the email.
 2. Beside the mark under the subject, press **Share with the company**. It "Applies to the whole thread."
 3. To go back, press **Make private**.
 
-Or press **Share with the team** on the thread under **Settings → Connections → Activity → Held threads**.
+Or choose **Preview and change sharing** on the thread under **Mail not shared with the team**, in Settings → **Connections** → **Activity**. It opens the email.
 Only the mailbox owner can share. If a colleague also holds it, you see how many other seats still do.
 Also called: release an email, unhide a thread, make an email public.
+
+### How do I find a contact's mail that is not shared with the team?
+To find mail with one contact that your mailbox holds back, open the contact's timeline. On a held email, choose **Show held mail with this contact**. It opens **Mail not shared with the team** with only that contact's threads; **Show all threads** drops the filter.
+Also called: hidden mail with a contact, private threads, held email.
 
 ## Sharing a thread
 
 You change who can read a captured message by **sharing its thread**.
 
 Sharing lets go of **your own hold only**. If a colleague still holds the same
-message, Margince tells you how many other seats do, but never who. The **Held
-threads** card says the same: "A thread opens only when every recipient agrees."
+message, Margince tells you how many other seats do, but never who. A thread opens
+to the team only when every mailbox that holds it lets go.
 
 That is the rule when a message reached two mailboxes. Each owner adds what
 their own mailbox asks for, and the message ends at the **strictest** of those.
@@ -290,6 +320,62 @@ That is how it is different from sharing, above. **Share with the company** on a
 thread "Applies to the whole thread." and lets go of your own hold on all of it.
 Changing a message's visibility changes that one message.
 
+### How do I connect a shared mailbox?
+<!-- opens: settings/integrations -->
+To connect a shared mailbox in Margince, an administrator opens **Settings → Integrations → Shared mailboxes** and presses **Connect a shared mailbox**.
+1. Choose the mail service: **IMAP**, **Microsoft 365** or **Google Workspace**.
+2. Enter the **Mailbox address**, choose the **Team that reads it**, and choose **Held** or **Shared**.
+3. Enter the login of the mail service, then press **Connect a shared mailbox**.
+
+**Change** on its row changes the team or the visibility, for all mail it already captured. **Import older mail** and **Disconnect** are in the row's menu.
+Also called: sales@ inbox, team mailbox, group mailbox.
+
+## Shared mailboxes
+
+A shared mailbox, such as sales@ or support@, belongs to no one user. An
+administrator connects it and names one team as its readers.
+
+**Who reads it.** The members of its reader team read its mail, and so do the
+those on each message. Nobody else does, whatever their rank or the records
+they can open. When the same email also reached a colleague's own mailbox, that
+mailbox's rules count too, and the strictest of them wins.
+
+**Held or shared.** A shared mailbox is **Held** or **Shared**. **Held** keeps
+each message to the reader team and those on it. **Shared** opens its mail
+to everyone who can open the records it is filed under. An administrator must
+first allow mailboxes to share, in **Settings → Mail capture**.
+
+A change of readers or of held and shared applies to all mail the mailbox has
+already captured, not only to new mail.
+
+**Removing a team member.** A member taken off the reader team loses its mail
+at their next read. Their Home stops showing it at once, too.
+
+**A delete in the shared mailbox.** Deleting a message in the mail service
+removes nothing in Margince.
+
+**Older mail.** An admin brings in older mail with **Import older mail** on a
+connected mailbox's row and chooses how far back to go. **Contacts.** Mail that
+came in only through a shared mailbox adds no contact, company or lead. It is filed under a contact or lead that has the address it
+came from, else under nothing.
+
+**Work from it.** Such mail can still make work for one colleague. It goes to
+the owner of the contact it came from or went to. With no such owner, it goes
+to the owner of that contact's company. When neither gives one colleague, for
+example two contacts with different owners, it goes to the mailbox's backup
+owner.
+
+The colleague must be someone who can be given tasks and who already reads the
+mail. For mail from a **Held** mailbox:
+
+- A reply reminder needs the AI to find a request. Whether it reads held mail is the **Check private mail for requests** setting, see [Your day](your-day.md#what-happens-to-a-request-in-an-email).
+- With that setting off, held mail shows on your Worklist only when you wrote on its conversation first.
+- A follow-up on a promise is never made from held mail.
+- When several open deals fit, the task **Which deal is this about?** goes to that colleague. Only they see it.
+
+When you open such an email, the reason under its subject says **In a shared
+mailbox**. The line below it names the mailbox and the team that reads it.
+
 ## What you can see of other seats' capture
 
 Your own connections need no permission from anyone, because it is your own mail.
@@ -308,6 +394,7 @@ never shows mail from another seat's own mailbox.
 | This mailbox's posture | Settings → Connections → Mail visibility |
 | The company-wide floor | Settings → Mail capture → Sharing and sync |
 | Hold mail with one contact or company | Private correspondence, on the contact's or company's page |
-| Share one thread | The message itself, or Settings → Connections → Activity → Held threads |
+| Share one thread | The message itself, or Settings → Connections → Activity → Mail not shared with the team |
 | One logged message's audience | Change visibility, under More actions on its row |
+| A shared mailbox and who reads it | Settings → Integrations → Shared mailboxes |
 | Who can see the *record* | The contact or company header |

@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -100,6 +101,9 @@ const (
 	// sender, or a colleague-only thread whose external party left. Unexported:
 	// no call site outside this module has occasion to state it.
 	traceReasonNoCounterparty = "no_counterparty"
+	// traceReasonChosenSubject is a message a member filed on a contact or lead
+	// they chose, so no counterparty was resolved from its identity.
+	traceReasonChosenSubject = "chosen_subject"
 	// TraceReasonRoleMailbox is mail from an address that names a FUNCTION an
 	// company answers — `support@`, `billing@`, a helpdesk vendor's ticket
 	// address. The message commits and stays visible, so the naive trace is
@@ -429,6 +433,13 @@ func nonEmpty(text string) *string {
 // nullableID renders a zero id as SQL NULL. A zero user id is not a member with
 // no name — it is a workspace-owned connection, which the read distinguishes by
 // exactly this NULL.
+func nullableTime(t time.Time) *time.Time {
+	if t.IsZero() {
+		return nil
+	}
+	return &t
+}
+
 func nullableID(id ids.UUID) *ids.UUID {
 	if id.IsZero() {
 		return nil

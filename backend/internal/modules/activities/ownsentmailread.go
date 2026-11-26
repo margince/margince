@@ -36,7 +36,7 @@ func voiceEligibleSQL(alias string) string {
 	return sprintf(`%[1]s.kind = 'email' AND %[2]s
 	   AND %[1]s.counterparty_outbound_attested AND %[1]s.sent_by_colleague IS NULL
 	   AND %[1]s.archived_at IS NULL AND %[1]s.restricted_at IS NULL AND %[1]s.body IS NOT NULL
-	   AND %[1]s.audience = 'workspace'`, alias, relstrength.WeWroteSQL(alias))
+	   AND `+auth.WorkspaceAudienceSQL("%[1]s")+``, alias, relstrength.WeWroteSQL(alias))
 }
 
 // OwnSentMailTx reads the newest limit mails the signed-in human sent

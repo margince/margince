@@ -1,0 +1,5 @@
+/* The Share glyph stands in a line of text, on the text's own baseline. */
+.installhint-share {
+  display: inline-block;
+  vertical-align: -0.2em;
+}

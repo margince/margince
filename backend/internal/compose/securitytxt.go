@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/securitytxt"
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
@@ -36,13 +37,13 @@ func WithSecurityTxt(body string) Option {
 func SecurityTxtOption(c *config.Config, now time.Time, log *slog.Logger) Option {
 	s := config.Val(c, WebSecurityTxt)
 	WarnSecurityTxt(s, now, log)
-	return WithSecurityTxt(securityTxtBody(s))
+	return WithSecurityTxt(securitytxt.Body(s))
 }
 
 // WarnSecurityTxt logs, once at boot, a web.security_txt whose expiry has
 // passed or sits further out than RFC 9116 recommends.
 func WarnSecurityTxt(s *SecurityTxt, now time.Time, log *slog.Logger) {
-	for _, warning := range securityTxtWarnings(s, now) {
+	for _, warning := range securitytxt.Warnings(s, now) {
 		log.Warn("web configuration: " + warning)
 	}
 }

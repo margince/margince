@@ -14,3 +14,10 @@
 .task-next-pending {
   display: contents;
 }
+
+/* The number a desk reader copies, read beside its copy button. */
+.task-next-number {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}

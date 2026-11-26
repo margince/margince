@@ -10,6 +10,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { AppLink } from "../design-system/applink";
@@ -17,7 +18,11 @@ import { Badge } from "../design-system/atoms";
 import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useHiddenCoreFeatures } from "../lib/corefeatures";
+import { appsFor } from "../lib/extensionapps";
+import { useReadsTeamProgress } from "../lib/progressreader";
 import { navigate, type Route, routeHash } from "../lib/router";
+import { useMe } from "../lib/session";
 import {
   currentClaim,
   entryLabel,
@@ -27,9 +32,12 @@ import {
   type NavSection,
   type NavTrailLevel,
   navEntryHref,
-  navLevelRoute,
   railTrail,
+  walkUpTarget,
 } from "./nav";
+import { useRowIntent } from "./navintent";
+import { type TipState, useRowTip } from "./navrowtip";
+import { NavTip } from "./navtip";
 
 // ONE navigation level, whatever its depth. The rail's ten destinations and the
 // entries of a section drilled into from them render through this, so the two
@@ -128,17 +136,6 @@ export function useNavWalk(route: Route, remembers: boolean): NavWalkStore {
   return walk;
 }
 
-// The address the way back leads to. Below the section's own level it is the
-// entry the reader drilled through — that entry's own address is what names the
-// shallower level. At the section's own level there is no address above it
-// INSIDE the section, so the walk leaves: back to where the reader came in from.
-function walkUpTarget(parent: NavTrailLevel | undefined, origin: Route): Route {
-  if (!parent || parent.path.length === 0 || !parent.activeId) {
-    return origin;
-  }
-  return navLevelRoute(parent.path, parent.activeId);
-}
-
 /**
  * The level the sidebar is showing, and the two ways a reader moves between
  * levels.
@@ -155,7 +152,10 @@ export function useNavLevel(
   container: RefObject<HTMLElement | null>,
   onNavigate: () => void,
 ) {
-  const trail = railTrail(route, section);
+  const disabled = useHiddenCoreFeatures();
+  const readsTeam = useReadsTeamProgress();
+  const apps = appsFor(useMe().data);
+  const trail = railTrail(route, section, disabled, readsTeam, apps);
   const depth = trail.length - 1;
   const shown = trail[depth];
   if (shown === undefined)
@@ -178,7 +178,7 @@ export function useNavLevel(
   // direction that drops focus to <body> without saying so, so they are counted
   // here rather than left to be discovered one at a time.
   const onWalkUp = () => {
-    const target = walkUpTarget(parent, walk.origin());
+    const target = walkUpTarget(parent, walk.origin(), disabled);
     walk.claim(routeHash(target));
     navigate(target);
   };
@@ -220,12 +220,6 @@ function drawsRow(level: NavTrailLevel, rows: NavRows, id: string): boolean {
   return (level.barIds?.has(id) ?? false) === (rows === "bar");
 }
 
-type TipState = Readonly<{
-  collapsed: boolean;
-  tip: string | null;
-  onTip: (key: string | null, by?: "pointer" | "focus") => void;
-}>;
-
 function NavLevelRow({
   level,
   entry,
@@ -247,29 +241,44 @@ function NavLevelRow({
   const label = entryLabel(entry, locale, t);
   const active = level.activeId === entry.id;
   const key = navTipKey(level, entry.id);
-  // The rail's tips wait for the pointer to settle like every other popover.
-  // A rail crossed on the way to the work column fired one tip per row it
-  // passed, which read as the rail flickering rather than as a page answering.
-  const hover = useHoverIntent(
-    () => state.onTip(key, "pointer"),
-    () => state.onTip(null),
-  );
+  const tip = useRowTip(state, { key, level, id: entry.id, label });
+  // A label the open rail cuts gets a tip that carries all of it.
+  const labelBox = useRef<HTMLSpanElement>(null);
+  const [cut, setCut] = useState(false);
+  const raise = (by: "pointer" | "focus") => {
+    const box = labelBox.current;
+    const clipped =
+      !state.collapsed && box !== null && box.scrollWidth > box.clientWidth;
+    setCut(clipped);
+    if (clipped) {
+      state.onTip(key, by);
+    } else {
+      tip.raise(by);
+    }
+  };
+  const tipText = cut && !state.collapsed ? label : tip.text;
+  const handlers = useRowIntent({
+    level,
+    entry,
+    active,
+    raiseTip: raise,
+    closeTip: () => state.onTip(null),
+    select: () => onSelect(entry),
+  });
   return (
     <AppLink
       className={active ? "navitem t-body active" : "navitem t-body"}
       href={navEntryHref(level.path, entry)}
       aria-label={label}
       aria-current={active ? currentClaim(level) : undefined}
-      onPointerEnter={hover.onPointerEnter}
-      onPointerLeave={hover.onPointerLeave}
-      onFocus={() => state.onTip(key, "focus")}
-      onBlur={() => state.onTip(null)}
-      onClick={() => onSelect(entry)}
+      {...handlers}
     >
       <entry.icon aria-hidden />
       {/* The label stays mounted and fades, so the transition is continuous
           rather than a pop. aria-label carries the accessible name either way. */}
-      <span className="navlabel">{label}</span>
+      <span className="navlabel" ref={labelBox}>
+        {label}
+      </span>
       {count !== undefined && count > 0 && (
         // The wrapper only places the figure: trailing in a row, pinned to
         // the glyph's corner when the rail is collapsed or a phone bar.
@@ -284,11 +293,7 @@ function NavLevelRow({
           row and never tears it away mid-read (WCAG 1.4.13, hoverable). A
           sibling could not manage that without making the wrapper itself
           interactive. */}
-      {state.collapsed && state.tip === key && (
-        <span className="navtip" role="tooltip">
-          {label}
-        </span>
-      )}
+      {tipText !== null && state.tip === key && <NavTip>{tipText}</NavTip>}
     </AppLink>
   );
 }
@@ -338,12 +343,8 @@ function NavLevelGroupView({
       role={labelId ? "group" : undefined}
       aria-labelledby={labelId}
     >
-      {/* Collapsed the label hides its text and draws a hairline inside the same
-          space — it keeps its box in both states, and swapping it for a shorter
-          <hr> re-spaced every group and drifted the icons. The group is still
-          NAMED there: a hidden element referenced by `aria-labelledby` is read
-          for the name, which is the whole reason the name is wired this way
-          rather than taken from the content. */}
+      {/* Hidden when collapsed: `aria-labelledby` still reads a hidden
+          element, so the group keeps its name. */}
       {heading && (
         <div className="navheading" id={labelId}>
           {t(heading)}
@@ -421,9 +422,7 @@ function NavLevelBack({
         {above === undefined ? t("shell.navBackApp") : t("shell.navBack")}
       </span>
       {state.collapsed && state.tip === BACK_TIP_KEY && (
-        <span className="navtip" role="tooltip">
-          {label}
-        </span>
+        <NavTip>{label}</NavTip>
       )}
     </button>
   );

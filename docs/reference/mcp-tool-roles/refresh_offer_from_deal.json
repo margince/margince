@@ -1,0 +1,15 @@
+{
+  "tool": "change_offers",
+  "action": "refresh_offer_from_deal",
+  "verb": "refresh_offer_from_deal",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

@@ -225,10 +225,11 @@ func othersHoldingTx(ctx context.Context, tx pgx.Tx, messages []ids.UUID, user i
 	if len(messages) == 0 {
 		return 0, nil
 	}
+	// A shared mailbox holding the message is one holder too: its readers keep it closed.
 	rows, err := tx.Query(ctx, `
-		SELECT i.user_id, i.posture_at_import, i.verdict_status
+		SELECT coalesce(i.user_id, i.connection_id), i.posture_at_import, i.verdict_status
 		  FROM capture_import i
-		 WHERE i.activity_id = ANY($1) AND i.user_id <> $2`,
+		 WHERE i.activity_id = ANY($1) AND (i.user_id IS NULL OR i.user_id <> $2)`,
 		messages, user)
 	if err != nil {
 		return 0, fmt.Errorf("compose: counting the seats still holding a thread: %w", err)

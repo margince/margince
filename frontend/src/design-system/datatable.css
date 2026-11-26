@@ -6,6 +6,12 @@
   cursor: pointer;
 }
 
+/* The row a pane beside the table shows keeps the ground a pointer gives a
+   row: where the reader is, never a call to press. */
+.table > tbody > tr.is-selected > td {
+  background: var(--groundHover);
+}
+
 /* A column of figures, heading and cells alike: set against the end so the
    digits of every row stack, and tabular so each digit takes one width. */
 .table .datatable-end {
@@ -80,7 +86,7 @@
   contain: inline-size;
 }
 .table > tbody > tr.datatable-open:hover + tr.datatable-detail > td,
-.table > tbody > tr.datatable-open:has(+ tr.datatable-detail:hover) > td {
+.table > tbody > tr.datatable-open[data-detail-hover] > td {
   background: var(--groundHover);
 }
 /* A detail spans every column, so in a pinned table that scrolls it outgrows
@@ -312,10 +318,7 @@
     > tbody
     > tr.datatable-open:hover
     + tr.datatable-detail,
-  .table-scroll-fold
-    > .table
-    > tbody
-    > tr.datatable-open:has(+ tr.datatable-detail:hover) {
+  .table-scroll-fold > .table > tbody > tr.datatable-open[data-detail-hover] {
     background: var(--groundHover);
   }
 }

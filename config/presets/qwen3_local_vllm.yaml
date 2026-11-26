@@ -1,13 +1,15 @@
 # yaml-language-server: $schema=../margince.schema.json
+# Model setup: Qwen3 on your own server, through vLLM
 # config/presets/qwen3_local_vllm.yaml — Qwen3-14B on the operator's own box,
 # through vLLM on loopback, embeddings through a second vLLM. Zero egress.
 #
-# WHAT THIS PRESET IS NOT CERTIFIED FOR: it binds a model to every task, and the
-# certification records do not grade every one of those bindings as certified.
-# Which tasks, and how badly, is in docs/reference/ai-certification.md under
-# this file's name. Read it before binding this preset to a workspace whose
-# confidentiality decisions matter: a task graded `supported_degraded` or
-# `not_supported` answers wrongly often enough to have been measured doing so.
+# NOT YET MEASURED: no certification record exists for this setup, so no task is
+# graded on it and none of its answers is known to be good enough. Certify it
+# with `make e2e-ai ROUTING=config/presets/qwen3_local_vllm.yaml`
+# on a machine that serves it, then regenerate the page with
+# `cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert`;
+# its grades then appear in docs/reference/ai-certification.md under this file's name. Until
+# then, do not bind this preset to a workspace whose confidentiality decisions matter.
 #
 # No task list here on purpose. The bands move when a prompt is fixed or the
 # corpus grows, and a list in this comment would read as true long after it
@@ -38,8 +40,8 @@
 # 3 12B cannot hold a 40,960 window here and its JSON output loops, gpt-oss-20b
 # thinks at "medium" on every call because vLLM has no server-side default for
 # its effort, and both Mistral models trailed. On an NVIDIA host serve the
-# original weights instead (Qwen/Qwen3-14B) and bind that id; the records
-# below certify the MLX 4-bit build and do not transfer to it.
+# original weights instead (Qwen/Qwen3-14B) and bind that id. NOT YET
+# MEASURED: no record is committed for this binding, on either build.
 #
 # WHY THOSE MEMORY SHARES. 40,960 is the window the agent loop's prompt budget
 # needs; at it Qwen3-14B needs 6.25GiB of KV cache beside 8.3GB of weights,

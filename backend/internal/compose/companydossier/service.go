@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -69,10 +70,9 @@ type Service struct {
 	facts Facts
 	lane  Completer
 	now   func() time.Time
-	// routingVersion identifies the model binding in the fingerprint, so a
-	// re-pointed lane invalidates rather than serving assemblies written
-	// against a model that is no longer wired.
-	routingVersion string
+	// routingVersion names the model binding in the fingerprint. It is read per
+	// request, so a rebind invalidates the assemblies an unwired model wrote.
+	routingVersion func() string
 	// emailRows opens the messages the dossier cites. Held rather than read
 	// inline because the dossier is CACHED: a summary is assembled out of one
 	// reader's own grants, so it is attached to the wire value on the way out
@@ -104,10 +104,13 @@ func (s *Service) enrich(ctx context.Context, out crmcontracts.CompanyDossier) (
 // A nil lane is the no-model deployment, which serves the deterministic floor
 // and says so.
 func NewService(pool *pgxpool.Pool, facts Facts, lane Completer,
-	routingVersion string, now func() time.Time,
+	routingVersion func() string, now func() time.Time,
 ) *Service {
 	if now == nil {
 		now = time.Now
+	}
+	if routingVersion == nil {
+		routingVersion = func() string { return "" }
 	}
 	return &Service{pool: pool, facts: facts, lane: lane, now: now, routingVersion: routingVersion}
 }
@@ -181,7 +184,7 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 		return zero, err
 	}
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
-	fingerprint, err := Fingerprint(in, s.routingVersion, lang)
+	fingerprint, err := Fingerprint(in, s.routingVersion(), lang)
 	if err != nil {
 		return zero, err
 	}
@@ -191,7 +194,7 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 		return zero, err
 	}
 	if found && !force && cached.usable(fingerprint) {
-		return s.enrich(ctx, cached.wire(companyID, s.now().UTC()))
+		return s.enrich(ctx, cached.wire(companyID, s.now().UTC(), crmcontracts.AssemblyServedFromCache))
 	}
 
 	// The company is NAMED to the rail here, from the same input the dossier
@@ -207,7 +210,7 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 		// The same gate the ordinary read applies: a lane being down is a
 		// reason to keep a good answer, never to serve one written from facts
 		// that have since moved or in a shape this build cannot read.
-		return s.enrich(ctx, cached.wire(companyID, s.now().UTC()))
+		return s.enrich(ctx, cached.wire(companyID, s.now().UTC(), crmcontracts.AssemblyServedFromCache))
 	}
 	written := stored{
 		Fingerprint:    fingerprint,
@@ -221,12 +224,12 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 	// the current fingerprint, this plainer answer would be served as a hit on
 	// every later read, so one transient outage would outlive itself.
 	if laneFailed || withheld {
-		return s.enrich(ctx, written.wire(companyID, s.now().UTC()))
+		return s.enrich(ctx, written.wire(companyID, s.now().UTC(), crmcontracts.AssemblyServedFromGenerated))
 	}
 	if err := s.save(ctx, userID, companyID, written); err != nil {
 		return zero, err
 	}
-	return s.enrich(ctx, written.wire(companyID, s.now().UTC()))
+	return s.enrich(ctx, written.wire(companyID, s.now().UTC(), crmcontracts.AssemblyServedFromGenerated))
 }
 
 // keepGrounded runs every assembled sentence past the SHARED filter, whichever
@@ -279,7 +282,7 @@ func Fingerprint(in Input, routingVersion, lang string) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-func (d stored) wire(companyID ids.CompanyID, now time.Time) crmcontracts.CompanyDossier {
+func (d stored) wire(companyID ids.CompanyID, now time.Time, from crmcontracts.AssemblyServedFrom) crmcontracts.CompanyDossier {
 	sections := make([]crmcontracts.CompanyDossierSection, 0, len(d.Sections))
 	for _, section := range d.Sections {
 		sentences := wireSentences(section.Sentences)
@@ -297,6 +300,7 @@ func (d stored) wire(companyID ids.CompanyID, now time.Time) crmcontracts.Compan
 		CompanyId:   openapi_types.UUID(companyID.UUID),
 		GeneratedAt: d.GeneratedAt,
 		GeneratedBy: crmcontracts.WrittenBy(d.GeneratedBy),
+		ServedFrom:  &from,
 		Sections:    sections,
 	}
 	// Said out loud BESIDE the content, never instead of it: a stale dossier is
@@ -372,7 +376,7 @@ func wireEvidence(cited []claims.Evidence) ([]crmcontracts.CompanyBriefEvidence,
 
 // cached reads this READER's dossier out of the shared per-reader cache.
 func (s *Service) cached(ctx context.Context, userID ids.UserID, companyID ids.CompanyID) (stored, bool, error) {
-	row, found, err := dossierCache.load(ctx, s.pool, userID, companyID)
+	row, found, err := generatedsummary.Read(ctx, s.pool, userID, generatedsummary.CompanyDossier(companyID))
 	if err != nil || !found {
 		return stored{}, false, err
 	}
@@ -393,12 +397,13 @@ func (s *Service) save(ctx context.Context, userID ids.UserID, companyID ids.Com
 	if err != nil {
 		return fmt.Errorf("encode the dossier payload: %w", err)
 	}
-	return dossierCache.save(ctx, s.pool, userID, companyID, entry{
-		Fingerprint: dossier.Fingerprint,
-		GeneratedAt: dossier.GeneratedAt,
-		GeneratedBy: dossier.GeneratedBy,
-		Payload:     payload,
-	})
+	return generatedsummary.Save(ctx, s.pool, userID, generatedsummary.CompanyDossier(companyID),
+		generatedsummary.Entry{
+			Fingerprint: dossier.Fingerprint,
+			GeneratedAt: dossier.GeneratedAt,
+			GeneratedBy: dossier.GeneratedBy,
+			Payload:     payload,
+		})
 }
 
 // actingUser resolves the human an assembly belongs to. That these assemblies

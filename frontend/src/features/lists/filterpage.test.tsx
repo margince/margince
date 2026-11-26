@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
@@ -10,7 +16,12 @@ import { en } from "../../i18n/en";
 import type { FilterVocabulary } from "../../lib/filterdata";
 import { meFixture } from "../../testing/mefixture";
 import { FiltersScreen } from "./filters";
-import { GuardedFilters, mountFilters, type Sent } from "./filters.testkit";
+import {
+  addCondition,
+  GuardedFilters,
+  mountFilters,
+  type Sent,
+} from "./filters.testkit";
 
 // The focused new-filter page. What it owns is the WIRING and the order the
 // page grows in: which request went out for which record type, when the count
@@ -59,6 +70,9 @@ function mount(preview?: {
   });
 }
 
+const recordType = () =>
+  screen.getByRole("combobox", { name: en["filters.objectLabel"] });
+
 const previews = (seen: readonly Sent[]) =>
   seen.filter((sent) => sent.url.includes("/filters/preview"));
 
@@ -80,7 +94,7 @@ describe("the calm start", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "New contact filter" }),
     ).toBeTruthy();
-    expect(screen.getByRole("group", { name: "Record type" })).toBeTruthy();
+    expect(recordType().textContent).toContain("Contacts");
     expect(
       screen.getByLabelText("Describe the contacts you want"),
     ).toBeTruthy();
@@ -153,15 +167,24 @@ describe("the calm start", () => {
 
 describe("growing the filter", () => {
   it("shows results only from the first complete condition", async () => {
-    const { wrapper } = mount({ match_count: 12 });
+    const { wrapper, seen } = mount({ match_count: 12 });
     const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
 
     await user.click(await screen.findByRole("button", { name: ADD }));
+    // A condition with no field is not a filter: nothing is sent for it.
+    expect(screen.queryByLabelText("Value")).toBeNull();
+    expect(screen.getByText(FINISH_HINT)).toBeTruthy();
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Field" }),
+      "Name",
+    );
     // The row alone: a clause with an empty value is nothing to count yet.
     expect(screen.getByLabelText("Value")).toBeTruthy();
     expect(screen.getByText(FINISH_HINT)).toBeTruthy();
     expect(screen.queryByText("Matching records")).toBeNull();
+    expect(previews(seen)).toHaveLength(0);
 
     await user.type(screen.getByLabelText("Value"), "ann");
 
@@ -180,11 +203,11 @@ describe("growing the filter", () => {
     const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
 
-    await user.click(await screen.findByRole("button", { name: ADD }));
+    await addCondition(user, "Name");
     await user.type(screen.getByLabelText("Value"), "ann");
     await screen.findByText("12 contacts match");
 
-    await user.click(screen.getByRole("button", { name: ADD }));
+    await addCondition(user, "Name");
     expect(screen.getByText("12 contacts match")).toBeTruthy();
     expect(screen.getByText(en["filters.hint.update"])).toBeTruthy();
 
@@ -211,7 +234,7 @@ describe("growing the filter", () => {
     const user = userEvent.setup();
     render(<FiltersScreen id="deals" />, { wrapper });
 
-    await user.click(await screen.findByRole("button", { name: ADD }));
+    await addCondition(user, "Stage");
     await user.type(screen.getByLabelText("Value"), "s1");
 
     // "3 deals match", not "3 contacts match" and not "3 match" — the object is
@@ -230,7 +253,7 @@ describe("growing the filter", () => {
     const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
 
-    await user.click(await screen.findByRole("button", { name: ADD }));
+    await addCondition(user, "Name");
     await user.type(screen.getByLabelText("Value"), "ann");
 
     expect(await screen.findByText("Ann Lee")).toBeTruthy();
@@ -249,7 +272,7 @@ describe("growing the filter", () => {
     const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
 
-    await user.click(await screen.findByRole("button", { name: ADD }));
+    await addCondition(user, "Name");
     await user.type(screen.getByLabelText("Value"), "ann");
 
     // The results are waiting, and nothing claims there is no count or asks
@@ -279,7 +302,9 @@ describe("keeping the reader's place", () => {
       screen.getByRole("combobox", { name: "Field" }),
     );
 
-    screen.getByRole("button", { name: "Remove Name condition" }).focus();
+    screen
+      .getByRole("button", { name: en["filters.removeEmptyClause"] })
+      .focus();
     await user.keyboard("{Enter}");
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: ADD }),
@@ -316,7 +341,7 @@ describe("paging the rows", () => {
     const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
 
-    await user.click(await screen.findByRole("button", { name: ADD }));
+    await addCondition(user, "Name");
     await user.type(screen.getByLabelText("Value"), "ann");
     await screen.findByText("Contact 24");
     await pickOption(
@@ -342,10 +367,36 @@ describe("switching the record type", () => {
     const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
 
-    await user.click(await screen.findByRole("button", { name: "Companies" }));
+    await screen.findByRole("button", { name: ADD });
+    await pickOption(user, recordType(), "Companies");
 
     expect(window.location.hash).toBe("#/filters/companies");
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("offers the kinds installed extensions declare after the core four", async () => {
+    const { client, wrapper } = mount();
+    client.setQueryData(["record-kinds"], {
+      data: [{ name: "ext:hotel:room", display_name: "Room" }],
+    });
+    const user = userEvent.setup();
+    render(<FiltersScreen id="contacts" />, { wrapper });
+
+    await screen.findByRole("button", { name: ADD });
+    await user.click(recordType());
+    const offered = within(await screen.findByRole("listbox"))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    expect(offered).toEqual([
+      "Contacts",
+      "Companies",
+      "Deals",
+      "Leads",
+      "Room",
+    ]);
+
+    await user.click(screen.getByRole("option", { name: "Room" }));
+    expect(window.location.hash).toBe("#/filters/ext:hotel:room");
   });
 
   it("asks before clearing conditions that name the other type's fields", async () => {
@@ -353,8 +404,8 @@ describe("switching the record type", () => {
     const user = userEvent.setup();
     const { rerender } = render(<FiltersScreen id="contacts" />, { wrapper });
 
-    await user.click(await screen.findByRole("button", { name: ADD }));
-    await user.click(screen.getByRole("button", { name: "Companies" }));
+    await addCondition(user, "Name");
+    await pickOption(user, recordType(), "Companies");
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog.textContent).toContain("Switch to companies?");
@@ -364,7 +415,7 @@ describe("switching the record type", () => {
     expect(screen.getByLabelText("Value")).toBeTruthy();
     expect(window.location.hash).toBe("");
 
-    await user.click(screen.getByRole("button", { name: "Companies" }));
+    await pickOption(user, recordType(), "Companies");
     await user.click(
       await screen.findByRole("button", { name: "Switch and clear" }),
     );
@@ -387,7 +438,7 @@ describe("keeping and exporting", () => {
     const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
 
-    await user.click(await screen.findByRole("button", { name: ADD }));
+    await addCondition(user, "Name");
     // A clause with an empty value is refused per-leaf as filter_value_invalid,
     // so every verb in the band would send a tree the engine refuses.
     expect(editor()?.querySelector(".panel-foot")).toBeNull();
@@ -429,7 +480,7 @@ describe("keeping and exporting", () => {
 
   /** One complete condition, then Export CSV beside the count. */
   async function exportCsv(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(await screen.findByRole("button", { name: ADD }));
+    await addCondition(user, "Name");
     await user.type(screen.getByLabelText("Value"), "ann");
     await user.click(await screen.findByRole("button", { name: "Export CSV" }));
   }
@@ -486,7 +537,7 @@ describe("keeping and exporting", () => {
     const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
 
-    await user.click(await screen.findByRole("button", { name: ADD }));
+    await addCondition(user, "Name");
     await user.type(screen.getByLabelText("Value"), "ann");
     await screen.findByText("2 contacts match");
     // Only the export's answer changes, so the failure path is the real one —
@@ -537,7 +588,7 @@ describe("leaving a filter", () => {
   }
 
   async function complete(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(await screen.findByRole("button", { name: ADD }));
+    await addCondition(user, "Name");
     await user.type(screen.getByLabelText("Value"), "ann");
   }
 
@@ -594,7 +645,7 @@ describe("leaving a filter", () => {
     guarded();
     const user = userEvent.setup();
     await complete(user);
-    await user.click(screen.getByRole("button", { name: "Companies" }));
+    await pickOption(user, recordType(), "Companies");
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: "Switch and clear" }));
 
@@ -649,7 +700,7 @@ function refusing(route: string, body: unknown, status: number) {
  * previous key's success: re-asking the same one would read a cache hit.
  */
 async function addSecondClause(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: ADD }));
+  await addCondition(user, "Name");
   await user.type(screen.getAllByLabelText("Value")[1], "lee");
 }
 
@@ -659,7 +710,7 @@ describe("a refused count", () => {
     const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
 
-    await user.click(await screen.findByRole("button", { name: ADD }));
+    await addCondition(user, "Name");
     await user.type(screen.getByLabelText("Value"), "ann");
     await screen.findByText("2 contacts match");
 
@@ -689,7 +740,7 @@ describe("a refused count", () => {
     const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
 
-    await user.click(await screen.findByRole("button", { name: ADD }));
+    await addCondition(user, "Name");
     await user.type(screen.getByLabelText("Value"), "ann");
     await screen.findByText("2 contacts match");
 
@@ -729,7 +780,5 @@ it("names itself once, with the record type beside its name", async () => {
   await screen.findByRole("button", { name: ADD });
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   // The record type stays: everything on the page reads from it.
-  expect(
-    screen.getByRole("button", { name: en["filters.tab.contacts"] }),
-  ).toBeTruthy();
+  expect(recordType().textContent).toContain(en["filters.tab.contacts"]);
 });

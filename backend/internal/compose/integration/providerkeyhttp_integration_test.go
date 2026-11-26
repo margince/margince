@@ -17,6 +17,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
@@ -79,29 +80,44 @@ func TestTheListSaysWhichVendorsAreConfigured(t *testing.T) {
 
 	var before struct {
 		Providers []struct {
-			Provider   string  `json:"provider"`
-			Configured bool    `json:"configured"`
-			EnvVar     string  `json:"env_var"`
-			PricedBy   *string `json:"priced_by"`
+			Provider   string    `json:"provider"`
+			Configured bool      `json:"configured"`
+			EnvVar     string    `json:"env_var"`
+			PricedBy   *string   `json:"priced_by"`
+			SentBy     *[]string `json:"sent_by"`
 		} `json:"providers"`
 	}
 	if code := e.Call(t, "GET", "/v1/ai/provider-keys", nil, nil, &before); code != 200 {
 		t.Fatalf("GET = %d", code)
 	}
-	// Vertex serves Gemini's models and is priced at Gemini's rows; nothing
-	// else borrows a price, so nothing else names a lender.
-	sawVertex := false
+	// Vertex serves Gemini's models and Azure serves OpenAI's, so each is
+	// priced at its lender's rows. Nothing else borrows a price.
+	lenders := map[string]string{"gemini_vertex": "gemini", "azure_openai": "openai"}
+	seen := map[string]bool{}
 	for _, p := range before.Providers {
-		sawVertex = sawVertex || p.Provider == "gemini_vertex"
+		lender, borrows := lenders[p.Provider]
+		seen[p.Provider] = borrows
 		switch {
-		case p.Provider == "gemini_vertex" && (p.PricedBy == nil || *p.PricedBy != "gemini"):
-			t.Errorf("gemini_vertex priced_by = %v, want gemini", p.PricedBy)
-		case p.Provider != "gemini_vertex" && p.PricedBy != nil:
+		case borrows && (p.PricedBy == nil || *p.PricedBy != lender):
+			t.Errorf("%s priced_by = %v, want %s", p.Provider, p.PricedBy, lender)
+		case !borrows && p.PricedBy != nil:
 			t.Errorf("%s priced_by = %q, want it omitted", p.Provider, *p.PricedBy)
 		}
 	}
-	if !sawVertex {
-		t.Error("gemini_vertex is not listed, so its priced_by was never read")
+	for provider := range lenders {
+		if !seen[provider] {
+			t.Errorf("%s is not listed, so its priced_by was never read", provider)
+		}
+	}
+	// gemini_decision sends the gemini key and has no row, so the gemini row
+	// names it; no other row lends its key.
+	for _, p := range before.Providers {
+		switch {
+		case p.Provider == "gemini" && (p.SentBy == nil || !slices.Equal(*p.SentBy, []string{"gemini_decision"})):
+			t.Errorf("gemini sent_by = %v, want [gemini_decision]", p.SentBy)
+		case p.Provider != "gemini" && p.SentBy != nil:
+			t.Errorf("%s sent_by = %v, want it omitted", p.Provider, *p.SentBy)
+		}
 	}
 	// An installation that has configured nothing is exactly the one that needs
 	// the screen, so every servable vendor is listed.

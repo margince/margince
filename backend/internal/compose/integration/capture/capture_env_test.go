@@ -75,6 +75,9 @@ type mailBatchConnector struct {
 	// parentFolderId, the IMAP mailbox a pull selected — so a fixture that
 	// wants an exclusion to match one has to arrive the same way.
 	containers map[string][]string
+	// receivedAt is when the provider says each message arrived. Internal
+	// operational mail is admitted only after its source was enrolled.
+	receivedAt time.Time
 }
 
 func (m *mailBatchConnector) Descriptor() connector.Descriptor {
@@ -113,6 +116,7 @@ func (m *mailBatchConnector) Sync(ctx context.Context, _ connector.Auth, _ conne
 			rec.Links = append(rec.Links, datasource.EntityRef{Type: datasource.EntityDeal, ID: dealID})
 		}
 		rec.Containers = m.containers[msg.ID()]
+		rec.ProviderReceivedAt = m.receivedAt
 		if kind, overridden := m.kinds[msg.ID()]; overridden {
 			fields, ok := rec.Fields.(capturemod.ActivityFields)
 			if !ok {
@@ -318,11 +322,25 @@ type captureEnv struct {
 	// topic is the model the deal topic check asks, shared with the refile
 	// pass a test builds with refiler.
 	topic *topicModel
+	// now is the clock the registry runs on.
+	now time.Time
 }
 
 // captureNow is the fixed clock the capture harness runs on: the day after the
 // Date every fixture mail carries, so that mail is current.
 var captureNow = time.Date(2026, 6, 5, 8, 0, 0, 0, time.UTC)
+
+// fixtureSharedMailbox is the shared mailbox every capture env holds, so each
+// suite runs with one present. It receives no mail.
+const fixtureSharedMailbox = "desk@myco.example"
+
+func connectFixtureSharedMailbox(t *testing.T, e *integration.SearchEnv, registry *capturemod.Registry) {
+	t.Helper()
+	registry.Register(&mailBatchConnector{name: sharedMailboxProvider, accountLabel: fixtureSharedMailbox})
+	integration.ConnectSharedMailbox(t, registry, e.WS, integration.SharedMailbox{
+		Provider: sharedMailboxProvider, Address: fixtureSharedMailbox, ReaderTeam: e.Team2, ConnectedBy: e.Rep1, Posture: capturemod.PostureHeld,
+	})
+}
 
 func newCaptureEnv(t *testing.T) captureEnv {
 	t.Helper()
@@ -337,12 +355,18 @@ func newCaptureEnvAt(t *testing.T, now time.Time) captureEnv {
 
 func newCaptureEnvWithBlob(t *testing.T, now time.Time, blob blobstore.Store) captureEnv {
 	t.Helper()
+	return newCaptureEnvConfigured(t, now, compose.CaptureConfig{Blob: blob})
+}
+
+// newCaptureEnvConfigured is the harness on a registry configured by cfg. The
+// clock and the deal topic model are the harness's own and replace cfg's.
+func newCaptureEnvConfigured(t *testing.T, now time.Time, cfg compose.CaptureConfig) captureEnv {
+	t.Helper()
 	e := integration.SetupSearch(t)
 	conn := &mailBatchConnector{}
 	topic := &topicModel{}
-	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{
-		Now: func() time.Time { return now }, DealTopicBrain: topic, Blob: blob,
-	})
+	cfg.Now, cfg.DealTopicBrain = func() time.Time { return now }, topic
+	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), cfg)
 	registry.Register(conn)
 
 	seedCaptureRole(t, e)
@@ -352,6 +376,7 @@ func newCaptureEnvWithBlob(t *testing.T, now time.Time, blob blobstore.Store) ca
 	if err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
+	connectFixtureSharedMailbox(t, e, registry)
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
 	// pull drives one sync with the connector configured exactly as this call
 	// says — every field set, so a batch never inherits the previous one's
@@ -430,7 +455,7 @@ func newCaptureEnvWithBlob(t *testing.T, now time.Time, blob blobstore.Store) ca
 		t.Fatal("a mailbox must not verify its own domain — the company's claim does that")
 	}
 	return captureEnv{
-		e: e, sync: sync, syncSent: syncSent, registry: registry, conn: conn, topic: topic,
+		e: e, sync: sync, syncSent: syncSent, registry: registry, conn: conn, topic: topic, now: now,
 		syncFiledUnderDeal: syncFiledUnderDeal, syncAsKind: syncAsKind, syncInContainer: syncInContainer,
 	}
 }

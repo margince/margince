@@ -1,0 +1,9 @@
+{
+  "verb": "decide_legacy_loss_reason",
+  "checks": [
+    "custom_field.update"
+  ],
+  "takes": [
+    "loss_reason_key"
+  ]
+}

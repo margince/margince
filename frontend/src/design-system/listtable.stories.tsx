@@ -10,6 +10,7 @@ import {
 import { browserZone } from "../format/timezone";
 import { useLocale } from "../i18n";
 import { playOpenViewStep } from "../testing/listview.play";
+import { phoneRow } from "../testing/phonerow";
 import { Badge, Button, OverflowMenu } from "./atoms";
 import { Avatar } from "./avatar";
 import type { ListChip } from "./listsurface";
@@ -30,6 +31,12 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
+
+// The `uat-phone` tag stays a literal in each story: the index reads it unrun.
+const phoneStory = {
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+} satisfies Story;
 
 type Company = {
   id: string;
@@ -376,7 +383,9 @@ export const PinnedWhileScrolling: Story = {
 // which stays put while the rest scrolls. The bar above the grid carries the
 // count, the verbs, Select all and Clear selection. The header box ticks the
 // page. Two rows come pre-selected so the bar is on screen.
-function SelectableSurface() {
+function SelectableSurface({
+  columns: drawn = columns,
+}: Readonly<{ columns?: ListColumn<Company>[] }>) {
   const { locale } = useLocale();
   const rows = companies(8);
   const [selected, setSelected] = useState<ReadonlySet<string>>(
@@ -397,8 +406,9 @@ function SelectableSurface() {
   return (
     <ListTable<Company>
       rows={rows}
-      columns={columns}
+      columns={drawn}
       rowKey={(row) => row.id}
+      rowHref={(row) => `#/companies/${row.id}`}
       unit="companies"
       selection={{
         selected,
@@ -592,8 +602,7 @@ export const ShortListEmpty: Story = {
 
 export const ShortListEmptyOnPhone: Story = {
   ...ShortListEmpty,
-  parameters: { layout: "fullscreen" },
-  globals: { viewport: { value: "phone" } },
+  ...phoneStory,
   tags: ["uat-phone"],
 };
 
@@ -607,7 +616,9 @@ export const LongerListKeepsPager: Story = {
     await expect(
       canvas.getByRole("combobox", { name: "Rows per page" }),
     ).toBeVisible();
-    await expect(canvas.getByRole("searchbox")).toBeVisible();
+    await expect(
+      canvas.getByRole("combobox", { name: "Search" }),
+    ).toBeVisible();
   },
 };
 
@@ -645,8 +656,7 @@ export const RowMenu: Story = {
 export const RowMenuOnPhone: Story = {
   render: () => <Surface rows={companies(4)} columns={menuColumns} />,
   play: openRowMenu,
-  parameters: { layout: "fullscreen" },
-  globals: { viewport: { value: "phone" } },
+  ...phoneStory,
   tags: ["uat-phone"],
 };
 
@@ -682,8 +692,205 @@ export const CardsOnPhone: Story = {
       await expect(cell).not.toBeVisible();
     }
   },
-  parameters: { layout: "fullscreen" },
-  globals: { viewport: { value: "phone" } },
+  ...phoneStory,
+  tags: ["uat-phone"],
+};
+
+// A partner the reader may not see: the cell renders nothing, as `EntityRef` can.
+const Unseen = () => null;
+// A stage badge ends the name's line; industry, owner and partner are its caption.
+const phoneRowColumns: ListColumn<Company>[] = [
+  ...columns.slice(0, 1),
+  ...columns
+    .slice(1, 2)
+    .map((column) => ({ ...column, phone: "caption" as const })),
+  ...columns.slice(2, 3),
+  {
+    key: "owner",
+    header: "Owner",
+    phone: "caption",
+    cell: (row: Company) => row.owner || "Unowned",
+    folded: (row: Company) => (row.owner ? undefined : null),
+  },
+  {
+    key: "stage",
+    header: "Stage",
+    phone: "end",
+    cell: (row: Company) => (
+      <Badge tone={row.owner === "Lars" ? "success" : "default"}>
+        {row.owner === "Lars" ? "Customer" : "Prospect"}
+      </Badge>
+    ),
+  },
+  {
+    key: "partner",
+    header: "Partner",
+    phone: "caption",
+    cell: () => <Unseen />,
+  },
+  ...columns.slice(4),
+];
+
+const lineOf = ({ identity, end, caption }: ReturnType<typeof phoneRow>) =>
+  [identity.textContent, ...end, ...caption].join(" | ");
+
+// Line one: the name and its stage badge; line two: industry · owner.
+export const PhoneRow: Story = {
+  render: () => <Surface rows={companies(4)} columns={phoneRowColumns} />,
+  play: async ({ canvasElement }) => {
+    const name = await within(canvasElement).findByText("Company 01");
+    await expect(lineOf(phoneRow(name))).toBe(
+      "Company 01 | Customer | Manufacturing | Lars",
+    );
+  },
+  ...phoneStory,
+  tags: ["uat-phone"],
+};
+
+// "Unowned" and the unseen partner say nothing, so each goes with its dot.
+export const PhoneRowSkipsPlaceholder: Story = {
+  render: () => (
+    <Surface
+      rows={companies(4).map((row, index) =>
+        index % 2 === 1 ? { ...row, owner: "" } : row,
+      )}
+      columns={phoneRowColumns}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const dots = async (name: string) => {
+      const { row } = phoneRow(await within(canvasElement).findByText(name));
+      return [...row.querySelectorAll(".lt-fact")].map((fact) =>
+        getComputedStyle(fact, "::after").content.includes("·"),
+      );
+    };
+    await expect(await dots("Company 01")).toEqual([true, false, false]);
+    await expect(await dots("Company 02")).toEqual([false, false, false]);
+  },
+  ...phoneStory,
+  tags: ["uat-phone"],
+};
+
+const LONG_NAME =
+  "Vereinigte Norddeutsche Präzisionsmaschinenbau- und Antriebstechnik GmbH & Co. KG";
+
+// A long name and a long caption wrap; nothing runs past the screen's edge.
+export const PhoneRowLongText: Story = {
+  render: () => (
+    <Surface
+      rows={companies(3).map((row, index) =>
+        index === 0
+          ? {
+              ...row,
+              name: LONG_NAME,
+              industry:
+                "Industrial automation, drive systems and precision machining",
+            }
+          : row,
+      )}
+      columns={phoneRowColumns}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText(LONG_NAME);
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    );
+  },
+  ...phoneStory,
+  tags: ["uat-phone"],
+};
+
+const markedName: ListColumn<Company> = {
+  key: "name",
+  header: "Company",
+  fixed: true,
+  cell: (row: Company) => (
+    <span className="avatar-row">
+      <Avatar identity={row.id} name={row.name} />
+      <strong>{row.name}</strong>
+    </span>
+  ),
+};
+
+// The box and the logo lead the name; the caption starts under the name.
+export const PhoneRowMenuAndSelection: Story = {
+  render: () => (
+    <SelectableSurface
+      columns={[
+        markedName,
+        ...phoneRowColumns.slice(1),
+        {
+          key: "menu",
+          header: "Actions",
+          verbs: "menu",
+          cell: (row: Company) => (
+            <OverflowMenu label={`Actions for ${row.name}`}>
+              <Button>Edit</Button>
+              <Button variant="danger">Archive</Button>
+            </OverflowMenu>
+          ),
+        },
+      ]}
+    />
+  ),
+  play: async (context) => {
+    const box = await within(context.canvasElement).findByLabelText(
+      "Select Company 01",
+    );
+    await expect(box).toBeVisible();
+    const [name, caption] = ["strong", '[data-phone="caption"]'].map((part) =>
+      box.closest("tr")?.querySelector(part)?.getBoundingClientRect(),
+    );
+    await expect(caption?.left).toBeCloseTo(name?.left ?? 0, 0);
+    await openRowMenu(context);
+  },
+  ...phoneStory,
+  tags: ["uat-phone"],
+};
+
+// The name drops its region on a phone, where a phone-only year joins the caption.
+export const PhoneRowFoldedName: Story = {
+  render: () => (
+    <Surface
+      rows={companies(4)}
+      columns={[
+        {
+          ...markedName,
+          cell: (row: Company) => `${row.name} · ${row.region}`,
+          folded: (row: Company) => row.name,
+        },
+        ...phoneRowColumns.slice(1),
+        {
+          key: "since",
+          header: "Since",
+          phone: "caption",
+          phoneOnly: true,
+          cell: (row: Company) => `Since ${row.createdAt.slice(0, 4)}`,
+        },
+      ]}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const name = await within(canvasElement).findByText("Company 01");
+    await expect(lineOf(phoneRow(name))).toBe(
+      "Company 01 | Customer | Manufacturing | Lars | Since 2026",
+    );
+  },
+  ...phoneStory,
+  tags: ["uat-phone"],
+};
+
+// A list that places no column keeps the card of labelled lines.
+export const PhoneRowWithoutPlaces: Story = {
+  render: () => <Surface rows={companies(4)} />,
+  play: async ({ canvasElement }) => {
+    const name = await within(canvasElement).findByText("Company 01");
+    const value = name.closest("tr")?.querySelector('[data-label="Region"]');
+    if (!value) throw new Error("the card drew no Region line");
+    await expect(getComputedStyle(value, "::before").content).toBe('"Region"');
+  },
+  ...phoneStory,
   tags: ["uat-phone"],
 };
 

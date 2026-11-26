@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "handoff_assignee",
+  "verb": "get_handoff_assignee",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

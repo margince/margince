@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // mergeDroppedPrimaryDataTask gives a contact back the current employer a
@@ -20,7 +21,7 @@ import (
 func mergeDroppedPrimaryDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1793719006_merge_dropped_primary", Version: 1,
-		Title: "Restoring current employers lost in a merge", Requires: []string{"core/1793682320"},
+		Title: systemtext.Literal("datatask.title.core.1793719006_merge_dropped_primary"), Requires: []string{"core/1793682320"},
 		Steps: []datatask.Step{{
 			Name: "restore_merge_dropped_primaries", Limit: 200, MinLimit: 1, EmptyWhenDone: true,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

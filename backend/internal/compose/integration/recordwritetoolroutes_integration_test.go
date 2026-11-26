@@ -15,6 +15,10 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 // sharedContact is the part of a stored contact that two contacts made the
@@ -71,14 +75,14 @@ func anIDIn(t *testing.T, raw json.RawMessage) string {
 func TestContactWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "record-write-doors", "read", "write")
 
-	restMade := d.restStatus(t, "POST", "/v1/contacts", AnyMap{"full_name": "Rest Rowan", "title": "Buyer", "source": "manual"}, http.StatusCreated)
+	restMade := d.restStatus(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Rest Rowan", "title": "Buyer", "source": "manual"}, http.StatusCreated)
 	toolMade := d.tool(t, "create_record", map[string]any{
-		"record_type": "contact", "fields": map[string]any{"full_name": "Tool Tamsin", "title": "Buyer", "source": "manual"},
+		"record_type": "contact", "fields": map[string]any{"linkedin_url": apptest.ContactProfile(), "full_name": "Tool Tamsin", "title": "Buyer", "source": "manual"},
 	})
 	viaREST, viaTool := anIDIn(t, restMade), anIDIn(t, toolMade)
-	sameStored(t, "create", d.storedContact(t, viaREST), d.storedContact(t, viaTool), viaREST, viaTool, "full_name")
+	sameStored(t, "create", d.storedContact(t, viaREST), d.storedContact(t, viaTool), viaREST, viaTool, "full_name", "social")
 	sameRecords[sharedContact](t, "create", d.storedContact(t, viaREST), d.storedContact(t, viaTool))
-	left := d.sameEffect(t, "create", viaREST, viaTool, "full_name")
+	left := d.sameEffect(t, "create", viaREST, viaTool, "full_name", "social")
 	if !strings.HasPrefix(left.Audit[0], "create | agent | ") {
 		t.Errorf("the creation left %v, want a create row naming the agent", left.Audit)
 	}
@@ -86,19 +90,22 @@ func TestContactWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	version := versionOf(t, d.storedContact(t, viaREST))
 	d.restPinned(t, "PATCH", "/v1/contacts/"+viaREST, AnyMap{"title": "Head of Buying"}, version)
 	d.tool(t, "update_record", map[string]any{
-		"record_type": "contact", "id": viaTool, "fields": map[string]any{"title": "Head of Buying"},
+		"record_type": "contact", "id": viaTool, "fields": map[string]any{"title": "Head of Buying"}, "why": "A test asks for this change.",
 		"if_version": versionOf(t, d.storedContact(t, viaTool)),
 	})
-	sameStored(t, "update", d.storedContact(t, viaREST), d.storedContact(t, viaTool), viaREST, viaTool, "full_name")
+	sameStored(t, "update", d.storedContact(t, viaREST), d.storedContact(t, viaTool), viaREST, viaTool, "full_name", "social")
 	edited := sameRecords[sharedContact](t, "update", d.storedContact(t, viaREST), d.storedContact(t, viaTool))
 	if edited.Title == nil || *edited.Title != "Head of Buying" {
 		t.Errorf("the edited contact carries title %v, want the new one", edited.Title)
 	}
-	d.sameEffect(t, "update", viaREST, viaTool, "full_name")
+	d.sameEffect(t, "update", viaREST, viaTool, "full_name", "social")
+	if reasons := d.effectOf(t, viaTool, nil).Reasons; reasons[len(reasons)-1] != "A test asks for this change." {
+		t.Errorf("the tool's update kept reasons %q, want the one the agent stated", reasons)
+	}
 
 	d.restPinned(t, "DELETE", "/v1/contacts/"+viaREST, nil, versionOf(t, d.storedContact(t, viaREST)))
 	d.tool(t, "archive_record", map[string]any{"record_type": "contact", "id": viaTool})
-	d.sameEffect(t, "archive", viaREST, viaTool, "full_name")
+	d.sameEffect(t, "archive", viaREST, viaTool, "full_name", "social")
 }
 
 type sharedActivity struct {
@@ -114,7 +121,7 @@ type sharedActivity struct {
 // same rows.
 func TestLogActivityAndCreateTaskLeaveTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "activity-write-doors", "read", "write")
-	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Linked Lena", "source": "manual"})
+	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Linked Lena", "source": "manual"})
 	link := []map[string]any{{"entity_type": "contact", "entity_id": contact}}
 
 	restNote := d.restStatus(t, "POST", "/v1/activities", AnyMap{
@@ -134,11 +141,12 @@ func TestLogActivityAndCreateTaskLeaveTheSameOnEitherDoor(t *testing.T) {
 	}
 	d.sameEffect(t, "note", noteREST, noteTool)
 
+	due := clocktest.Now(t).AddDate(0, 1, 0).Truncate(time.Hour).Format(time.RFC3339)
 	restTask := d.restStatus(t, "POST", "/v1/tasks", AnyMap{
-		"subject": "Send the quote", "source_activity_id": noteREST, "due_at": "2036-04-01T09:00:00Z", "source": "manual", "links": link,
+		"subject": "Send the quote", "body": "Anna Weber asked for the quote in the note.", "source_activity_id": noteREST, "due_at": due, "source": "manual", "links": link,
 	}, http.StatusCreated)
 	toolTask := d.tool(t, "create_task", map[string]any{
-		"subject": "Send the quote", "source_activity_id": noteREST, "due_at": "2036-04-01T09:00:00Z", "links": link,
+		"subject": "Send the quote", "body": "Anna Weber asked for the quote in the note.", "source_activity_id": noteREST, "due_at": due, "links": link,
 	})
 	taskREST, taskTool := anIDIn(t, restTask), anIDIn(t, toolTask)
 	sameStored(t, "task", stored(taskREST), stored(taskTool), taskREST, taskTool)

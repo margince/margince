@@ -11,8 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/platform/mailrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // ProvedMailboxLabels reads labels attested by a connected OAuth provider, never typed IMAP labels.
@@ -21,24 +21,20 @@ import (
 // until somebody takes it down. The label on it would otherwise go on
 // attributing imports to a mailbox nobody holds.
 func ProvedMailboxLabels(ctx context.Context, tx pgx.Tx) (map[ids.UUID][]string, error) {
-	rows, err := tx.Query(ctx, `SELECT c.user_id, c.account_label FROM capture_connection c
-		 JOIN app_user u ON u.id = c.user_id AND `+workforce.LiveMemberSQL("u")+`
-		 WHERE `+provedMailboxClause("c"))
+	records, err := readMailSeatIdentities(ctx, tx)
 	if err != nil {
-		return nil, fmt.Errorf("reading proved mailbox labels: %w", err)
-	}
-	defer rows.Close()
-	out := map[ids.UUID][]string{}
-	for rows.Next() {
-		var seat ids.UUID
-		var label string
-		if err := rows.Scan(&seat, &label); err != nil {
-			return nil, err
-		}
-		out[seat] = append(out[seat], label)
-	}
-	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+	out := map[ids.UUID][]string{}
+	for _, record := range records {
+		if !record.provedMailbox {
+			continue
+		}
+		seat, err := ids.Parse(record.seat)
+		if err != nil {
+			return nil, fmt.Errorf("reading proved mailbox seat: %w", err)
+		}
+		out[seat] = append(out[seat], record.label)
 	}
 	return out, nil
 }
@@ -55,6 +51,19 @@ func provedMailboxClause(alias string) string {
 // alias or a delivered-to sighting proves nothing here either. An address two
 // seats proved belongs to neither.
 func ProvedMailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error) {
+	return provedSeatIdentitiesSQL(ctx, tx, bind, false)
+}
+
+// ProvedPersonalSeatIdentitiesSQL is ProvedMailSeatIdentitiesSQL without role
+// mailboxes (sales@, info@, a helpdesk queue). A calendar roster binds a guest
+// to a seat through it. An answer given for a role mailbox a member connected
+// credits that member with nothing, because only their own answer proves they
+// attended. A shared mailbox has no seat to bind.
+func ProvedPersonalSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error) {
+	return provedSeatIdentitiesSQL(ctx, tx, bind, true)
+}
+
+func provedSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int, withoutRoles bool) (string, error) {
 	labels, err := ProvedMailboxLabels(ctx, tx)
 	if err != nil {
 		return "", err
@@ -62,6 +71,9 @@ func ProvedMailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) 
 	holders := map[string]map[ids.UUID]bool{}
 	for seat, values := range labels {
 		for _, label := range values {
+			if _, role := mailrole.Match(label); withoutRoles && role {
+				continue
+			}
 			// Keyed by the folded address, so two seats proving one mailbox in two
 			// spellings collide, as they do in UnambiguousMailSeatIdentities.
 			address := mailidentity.SeatAddressKey(label, "")

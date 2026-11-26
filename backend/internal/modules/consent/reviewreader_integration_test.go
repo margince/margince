@@ -6,6 +6,7 @@
 package consent
 
 import (
+	"context"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -94,6 +95,31 @@ func TestAStoredNeedsContextReviewReadsByTheCurrentAnswerableList(t *testing.T) 
 	for name, got := range map[string]string{"reader": byReader.State, "initiator": byInitiator.State} {
 		if got != ReviewNeedsRepair {
 			t.Errorf("%s state = %q, want %q", name, got, ReviewNeedsRepair)
+		}
+	}
+}
+
+func TestAReviewNamesTheSendingCompanyItActuallyRecorded(t *testing.T) {
+	e := setupChannelConsent(t)
+	company := overrideTestCompany(t, e, e.user, "Reviewed Company")
+	var opened Review
+	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		var err error
+		opened, err = OpenReviewTx(e.ctx, tx, commsauthz.DecisionSet{Decisions: []commsauthz.Decision{{Recipient: connector.Recipient{Email: "anna@example.test"}, SendingEntity: company, Verdict: commsauthz.VerdictDeny, ReasonCode: "no_compatible_evidence"}}}, ids.Nil)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	overrideTestCompany(t, e, e.user, "Another Company")
+	for _, reader := range []func(context.Context, ids.UUID) (Review, error){e.store.ReviewForReader, e.store.ReviewForInitiator} {
+		got, err := reader(e.ctx, opened.ID)
+		if err != nil || len(got.Refusals) != 1 {
+			t.Fatalf("reading review = %+v, %v", got, err)
+		}
+		wire := wireReview(got)
+		if wire.Refusals[0].SendingEntityId == nil || ids.UUID(*wire.Refusals[0].SendingEntityId) != company || wire.Refusals[0].SendingEntityName == nil || *wire.Refusals[0].SendingEntityName != "Reviewed Company" {
+			t.Fatalf("review company = %+v", wire.Refusals[0])
 		}
 	}
 }

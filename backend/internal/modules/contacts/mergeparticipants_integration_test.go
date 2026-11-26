@@ -5,19 +5,12 @@
 
 package contacts
 
-// A merge moves who-was-in-it, not only how the message is filed.
+// A merge moves who was in a message, and not only how the message is filed.
 //
-// activity_link followed the survivor from the start; activity_participant did
-// not, and nothing failed when it stayed behind. The rows kept naming a record
-// no read returns, so the interaction graph — the answer to "who on our team
-// knows this contact" — went on crediting the merged-away contact forever, and
-// every reader of those rows matches contact_id exactly with none walking
-// merged_into_id.
-//
-// This needs a database for the collision: uq_activity_participant spans
-// (activity, role, user, contact, address), so the case where BOTH halves of the
-// merge sat on ONE activity in the same role is a constraint violation the unit
-// lane cannot see.
+// Readers of activity_participant match contact_id and never walk merged_into_id.
+// It needs a database for the collision. uq_activity_participant_identity spans
+// activity, role and a digest of the identity columns.
+// Both halves of a merge on one activity in one role violate it.
 
 import (
 	"context"
@@ -25,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -108,5 +102,60 @@ func TestAMergeMovesTheParticipantRowsOntoTheSurvivor(t *testing.T) {
 	got := e.participantContactsOn(ctx, t, shared)
 	if len(got) != 1 || got[0] != survivor.ContactID.UUID {
 		t.Errorf("the shared activity names %v, want the survivor once — the two halves were one party, not two", got)
+	}
+}
+
+// A row stored before addresses were held lowercase moves with its lowercase
+// twin. The two spellings become one row on the survivor, and the merge succeeds.
+func TestAMergeFoldsTwoSpellingsOfTheSourcesAddress(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	survivor, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "keeper@fold.test", "Keeper", "fold.test"))
+	if err != nil {
+		t.Fatalf("ensure survivor: %v", err)
+	}
+	retired, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "dupe@fold.test", "Dupe", "fold.test"))
+	if err != nil {
+		t.Fatalf("ensure retired: %v", err)
+	}
+	shared := e.seedCapturedMail(ctx, t, "other@fold.test", "from")
+	testdb.WithParticipantAddressCheckLifted(t, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `INSERT INTO activity_participant (activity_id, contact_id, role, address)
+			VALUES ($1, $2, 'cc', 'Dupe@Fold.test')`, shared, retired.ContactID)
+		return err
+	})
+	e.seedParticipantOn(ctx, t, shared, retired.ContactID, "cc", "dupe@fold.test")
+
+	if _, err := e.store.MergeContact(ctx, retired.ContactID, survivor.ContactID, nil); err != nil {
+		t.Fatalf("merging a contact held under two spellings of one address: %v", err)
+	}
+	var rows int
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT count(*) FROM activity_participant
+			 WHERE activity_id = $1 AND role = 'cc' AND contact_id = $2 AND address = 'dupe@fold.test'`,
+			shared, survivor.ContactID).Scan(&rows)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if rows != 1 {
+		t.Errorf("the survivor holds %d row(s) for the address, want the two spellings as one", rows)
+	}
+	if n := len(e.participantContactsOn(ctx, t, shared)); n != 1 {
+		t.Errorf("the activity names %d contact row(s), want 1", n)
+	}
+}
+
+// A merge whose context ended stops at the fold and reports it, before any
+// participant row moves.
+func TestAMergeReportsAFoldItCouldNotRun(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	stopped, stop := context.WithCancel(ctx)
+	stop()
+	err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return relinkParticipantRows(stopped, tx, ids.New[ids.ContactKind](), ids.New[ids.ContactKind]())
+	})
+	if err == nil {
+		t.Fatal("moving participant rows under an ended context reported success")
 	}
 }

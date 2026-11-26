@@ -16,8 +16,9 @@ git archive HEAD ─▶ syft ─▶ 3 SBOM docs ─▶ normalize ─▶ suppleme
 
 The SBOM lane covers the whole repository (`backend/`, `frontend/` and `extensions/`), so
 its targets live in the root `Makefile`, outside `backend/`. It is not part of
-`make check`: CI runs it as its own workflow, `.github/workflows/sbom.yml`, and
-only when someone starts it by hand. The dependency license policy still runs on
+`make check`. CI runs it in `.github/workflows/sbom.yml`, started by hand, and once per
+release tag in `_release-sbom.yml` on a `linux/amd64` runner
+([ci-workflows.md](ci-workflows.md#release-tagyml)). The dependency license policy still runs on
 its own on every PR that touches a dependency, as the `license gate` job in
 `ci.yml`.
 
@@ -43,8 +44,7 @@ One scan, three documents:
 | `sboms/margince.spdx221.json` | SPDX JSON 2.2.1 | `spdx-json@2.2` |
 | `sboms/margince.spdx300.json` | SPDX JSON 3.0 | `spdx-json@3.0` |
 
-`/sboms/` is in `.gitignore`: these are build files that CI publishes, never
-committed.
+`/sboms/` is in `.gitignore`: these are build files that CI publishes, never committed.
 
 Scan policy lives in [`.syft.yaml`](../../.syft.yaml). The `Makefile` owns the
 "what is scanned" policy (the clean export), and the config owns the rest:
@@ -141,7 +141,7 @@ The allow list, as set up:
 | Group | License names |
 |---|---|
 | Open licenses with few rules | `Apache-2.0`, `MIT`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `0BSD`, `Zlib`, `BSL-1.0`, `CC0-1.0` |
-| Found in the tree, added to cover it | `MIT-0`, `BlueOak-1.0.0`, `MPL-2.0`, `PostgreSQL` |
+| Found in the tree, added to cover it | `MIT-0`, `BlueOak-1.0.0`, `MPL-2.0`, `PostgreSQL`, `Unicode-3.0` |
 | Set by a maintainer | `CC-BY-4.0`, `Python-2.0`, `Unlicense` |
 | The own source license of Margince | `BUSL-1.1` |
 
@@ -236,7 +236,7 @@ the validator its format has:
 |---|---|
 | `margince.cdx.json` | `cyclonedx validate --fail-on-errors` |
 | `margince.spdx221.json` | `pyspdxtools`, from a requirements file pinned by hash |
-| `margince.spdx300.json` | `jsonschema` against `sbom-schemas/spdx-3.0.1.schema.json`, kept in the tree |
+| `margince.spdx300.json` | `jsonschema` against `sbom-schemas/spdx-3.0.1/spdx-3.0.1.schema.json`, kept in the tree |
 
 `make sbom-sign` depends on `sbom-parity` and `sbom-validate`, so a document
 that does not agree with the others, or is not valid, cannot be signed. A
@@ -388,13 +388,13 @@ See also:
 
 ## Copied third-party files
 
-[`third-party-files.txt`](../../third-party-files.txt) records each copied file, its source and version,
-its SPDX licence and the path to its licence text. `make third-party-files` checks the committed
-licence files and their siblings. It refuses missing files, copies with no record and licences
-outside `.grant.yaml`. A package with no licence text may use a recorded file whose source is `name@version`.
+[`third-party-files.txt`](../../third-party-files.txt) records each copied file, its source and version, its SPDX
+licence and its licence text. `make third-party-files` checks the licence files and their siblings, and refuses missing
+files, copies with no record, and a licence outside `copied-file-licenses`. One not also in `allow` needs its file in
+`ignore-packages`. A copy with no licence text beside it fails if it has a recorded copy's bytes, another SPDX
+licence, or another owner than Gradion. A package with no licence text may use a recorded file whose source is
+`name@version`.
 
-The frontend build collects licence and notice texts from bundled code, CSS and copied files.
-Missing text fails the build. The app serves `/licenses/THIRD-PARTY-NOTICES.txt`; MCP App documents
-embed the text to stay in one file. `make sbom-supplement` sets the copied-file licences in all three
-formats. `make sbom-parity` refuses missing files or licences that do not match. `make test-third-party-files`
-tests those failures on test data.
+The frontend build collects licence and notice texts from bundled code, CSS and copied files, and missing text fails it.
+The app serves `/licenses/THIRD-PARTY-NOTICES.txt`; MCP App documents embed the text to stay in one file.
+`make sbom-supplement` sets the copied-file licences in all three formats, and `make sbom-parity` refuses files or licences that do not match.

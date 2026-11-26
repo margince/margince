@@ -12,9 +12,13 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 func admitProjectCreation(ctx context.Context, tx pgx.Tx, in CreateProjectInput, fallback *ids.UserID) (CreateProjectInput, error) {
+	if err := provenance.AdmitRecordSource(in.Source); err != nil {
+		return CreateProjectInput{}, err
+	}
 	owner, err := storekit.NewRecordOwnerWithDefault(ctx, tx, in.OwnerID, fallback)
 	if err != nil {
 		return CreateProjectInput{}, err
@@ -26,7 +30,52 @@ func admitProjectCreation(ctx context.Context, tx pgx.Tx, in CreateProjectInput,
 	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return CreateProjectInput{}, err
 	}
+	if err := refuseStartPhase(in.Phase); err != nil {
+		return CreateProjectInput{}, err
+	}
+	if in.Key != nil {
+		key, err := normalizeChosenKey(*in.Key)
+		if err != nil {
+			return CreateProjectInput{}, err
+		}
+		if err := refuseChosenKey(ctx, tx, key); err != nil {
+			return CreateProjectInput{}, err
+		}
+		in.Key = &key
+	}
 	return in, nil
+}
+
+// StartPhase is the phase the project is born in.
+func (in CreateProjectInput) StartPhase() string {
+	if in.Phase == "" {
+		return PhaseInitiative
+	}
+	return in.Phase
+}
+
+// refuseStartPhase admits every phase but closed: closing is a claim that the
+// work ended, which needs a reason and a project that existed to end.
+func refuseStartPhase(phase string) error {
+	switch phase {
+	case "", PhaseInitiative, PhasePursuing, PhaseDelivering:
+		return nil
+	default:
+		return &ProjectStartPhaseError{}
+	}
+}
+
+// ProjectStartPhaseError maps to 422: a project starts in initiative, pursuing
+// or delivering.
+type ProjectStartPhaseError struct{}
+
+func (e *ProjectStartPhaseError) Error() string {
+	return "a new project starts in initiative, pursuing or delivering; close it after it is created"
+}
+
+// FieldFault names the create body's phase field.
+func (e *ProjectStartPhaseError) FieldFault() (field, code, message string) {
+	return "phase", "invalid_phase", e.Error()
 }
 
 // PreviewProjectCreationForActor leaves key allocation to the writer rather than reserving it in review.
@@ -41,20 +90,27 @@ func (s *Store) PreviewProjectCreationForActor(ctx context.Context, in CreatePro
 	if _, err := storekit.CapturedBy(creatorCtx); err != nil {
 		return CreateProjectInput{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return CreateProjectInput{}, err
-	}
 	var out CreateProjectInput
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		out, err = admitProjectCreation(ctx, tx, in, storekit.OwnerOrActor(creatorCtx))
+		if err != nil {
+			return err
+		}
+		// The creator's authority, because the create links the deal as them.
+		if out.DealID != nil {
+			if err := s.checkDeal(creatorCtx, tx, *out.DealID, out.CompanyID); err != nil {
+				return err
+			}
+		}
+		out.CustomFields, err = storekit.CreateFieldValues(active, in.CustomFields)
 		return err
 	})
 	if err != nil {
 		return CreateProjectInput{}, err
 	}
-	out.Key = nil
-	out.CustomFields, err = storekit.CreateFieldValues(active, in.CustomFields)
-	return out, err
+	return out, nil
 }

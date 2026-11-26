@@ -17,6 +17,8 @@ import {
 } from "../privacy/privacy.corrections";
 import { ConsentPurposesCard } from "../privacy/privacy.purposes";
 import { RetentionCard } from "../privacy/retention";
+import { ArchivePurposeCard } from "./archivepurpose";
+import { ArchiveReviewCard } from "./archivereview";
 import { CustomerNoticesCard } from "./customernotices";
 import {
   PinRecordAction,
@@ -35,7 +37,13 @@ export function PrivacyLanes({ tab = "consent" }: Readonly<{ tab?: string }>) {
     case "customers":
       return <CustomerNoticesCard />;
     case "retention":
-      return <RetentionCard />;
+      return (
+        <>
+          <RetentionCard />
+          <ArchivePurposeCard />
+          <ArchiveReviewCard />
+        </>
+      );
     case "requests":
       return <RequestsPanel />;
     case "duties":
@@ -106,8 +114,8 @@ function NewRequestAction() {
   const t = useT();
   const titleId = useId();
   const [creating, setCreating] = useState(false);
-  // Opening a request writes the contact it names (consent/dsr.go CreateDSR).
-  const canOpenRequest = useCanWrite("contact", "update");
+  // Filing a request is working the queue (consent/dsr.go CreateDSR).
+  const canOpenRequest = useCanWrite("privacy_request", "update");
   if (!canOpenRequest) {
     return null;
   }

@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 type sharedBulk struct {
@@ -34,7 +35,7 @@ func TestBulkUpdateRecordsLeavesTheSameOnEitherDoor(t *testing.T) {
 	tagTool := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Spring tool", "color": "lime"})
 	seed := func(names ...string) (items []map[string]any, records []string) {
 		for _, name := range names {
-			id := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": name, "source": "manual"})
+			id := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": name, "source": "manual"})
 			items = append(items, map[string]any{"id": id, "version": versionOf(t, d.storedContact(t, id))})
 			records = append(records, id)
 		}
@@ -68,7 +69,7 @@ func TestBulkUpdateRecordsLeavesTheSameOnEitherDoor(t *testing.T) {
 // list with the same rows behind it.
 func TestChangeListsLeavesTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoorsWith(t, "list-write-doors", []compose.Option{compose.WithListsEnabled(true)}, "read", "write")
-	member := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Listed Lena", "source": "manual"})
+	member := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Listed Lena", "source": "manual"})
 
 	restMade := d.restStatus(t, "POST", "/v1/lists", AnyMap{
 		"name": "Rest shortlist", "entity_type": "contact", "list_type": "static", "purpose": "Spring outreach",
@@ -101,8 +102,8 @@ func TestChangeListsLeavesTheSameOnEitherDoor(t *testing.T) {
 func TestMergeRecordsLeavesTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "merge-write-doors", "read", "write")
 	pair := func(source, survivor string) (string, string) {
-		return createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": source, "source": "manual"}),
-			createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": survivor, "source": "manual"})
+		return createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": source, "source": "manual"}),
+			createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": survivor, "source": "manual"})
 	}
 	restSource, restSurvivor := pair("Merge Rest Source", "Merge Rest Survivor")
 	toolSource, toolSurvivor := pair("Merge Tool Source", "Merge Tool Survivor")
@@ -115,7 +116,7 @@ func TestMergeRecordsLeavesTheSameOnEitherDoor(t *testing.T) {
 			Archived     bool   `json:"archived"`
 			MergedIntoID string `json:"merged_into_id"`
 		}
-		if err := json.Unmarshal(d.restStatus(t, "GET", "/v1/contacts/"+pair[0]+"?include_archived=true", nil, http.StatusOK), &read); err != nil {
+		if err := json.Unmarshal(d.restStatus(t, "GET", "/v1/contacts/"+pair[0], nil, http.StatusOK), &read); err != nil {
 			t.Fatal(err)
 		}
 		if read.MergedIntoID != pair[1] {

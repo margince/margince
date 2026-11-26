@@ -182,3 +182,27 @@ func TestDirectSenderCorrectionKeepsAQueuedSiblingAndCountsChangedContacts(t *te
 		t.Fatalf("settled sibling count = %d", got)
 	}
 }
+
+func TestDirectSenderCorrectionLeavesAMovedAddressWithItsFormerHolder(t *testing.T) {
+	for _, attributed := range []bool{true, false} {
+		directSenderAfterMovedMail(t, attributed)
+	}
+}
+
+func directSenderAfterMovedMail(t *testing.T, attributed bool) {
+	t.Helper()
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	holder := seedDirectSenderDuty(t, e, "unknown_legacy", "open", "connector:gmail")
+	former := e.SeedContact(t, "Former Holder", &e.Rep1)
+	e.WsExec(t, `WITH retired AS (
+  INSERT INTO contact_email (contact_id, email, source, captured_by, archived_at)
+  SELECT @former, email, 'manual', 'human:seed', now() FROM contact_email WHERE contact_id = @holder)
+ UPDATE activity_participant SET contact_id = CASE WHEN @attributed THEN @former::uuid END
+  WHERE role = 'from' AND address IN (SELECT email FROM contact_email WHERE contact_id = @holder)`,
+		pgx.NamedArgs{"former": former, "holder": holder, "attributed": attributed})
+	runMachineAddressTask(ctx, t, e, subjectMailDataTask(func() time.Time { return clocktest.Now(t) }))
+	if got := e.WsCount(t, `SELECT count(*) FROM privacy_notice_case WHERE state = 'open'`); got != 1 {
+		t.Fatalf("attributed %v: mail sent from the moved address settled the new holder's notice duty", attributed)
+	}
+}

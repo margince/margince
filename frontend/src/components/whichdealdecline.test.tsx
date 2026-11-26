@@ -51,6 +51,7 @@ function show(task: Activity) {
         return jsonResponse({
           declined_deal_ids: ["deal-1", "deal-2"],
           unlinked: false,
+          marked_unrelated: false,
           project_unfiled: false,
           project_kept: false,
           questions_closed: 1,

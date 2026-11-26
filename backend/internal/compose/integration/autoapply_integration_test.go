@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -46,7 +48,7 @@ func stageCloseDateCorrection(t *testing.T, svc *approvals.Service, e *Env, deal
 	// a payload the product never produces and fail somewhere unrelated.
 	proposal, err := json.Marshal(deals.CloseDateCorrection{
 		DealID:            ids.From[ids.DealKind](deal),
-		ExpectedCloseDate: "2026-12-01",
+		ExpectedCloseDate: clocktest.Now(t).AddDate(0, 1, 0).Format(time.DateOnly),
 		Basis:             "the date has passed and the deal is still open",
 	})
 	if err != nil {

@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -44,6 +46,14 @@ const mcpCallDeadline = 150 * time.Second
 // the classification (see compose/mcpedge.go).
 var ErrAuthUnavailable = errors.New("agents: the credential could not be verified")
 
+// EdgeRefusal is an authenticate failure that writes its own answer: the
+// credential is good, and the edge still refuses this request, as pacing does.
+// The answer belongs to compose, which owns the edge's limits.
+type EdgeRefusal interface {
+	error
+	WriteRefusal(w http.ResponseWriter, r *http.Request)
+}
+
 // ResourceMetadataChallenge builds the RFC 9728 WWW-Authenticate challenge a
 // 401 on this transport carries: the "Bearer" scheme name plus a pointer at
 // the protected-resource document. The pointer is ABSOLUTE because a client
@@ -56,10 +66,8 @@ var ErrAuthUnavailable = errors.New("agents: the credential could not be verifie
 // credentials to, so where the pointer leads must not be the sender's choice.
 // The challenge is therefore the same for every request, and is built once.
 //
-// The scope hint is not decoration: absent it, a client requests every scope
-// the protected-resource metadata advertises in scopes_supported, including
-// send. Naming "read draft" makes the conservative grant the default, with
-// the human free to widen it on the consent page.
+// The scope hint shapes only what a client asks for. The consent page offers
+// every scope ticked, so the human decides the grant.
 func ResourceMetadataChallenge(origin string) func(*http.Request) string {
 	challenge := `Bearer resource_metadata="` + origin + `/.well-known/oauth-protected-resource", scope="read draft"` // NOSONAR: RFC 9728 challenge, not a secret
 	return func(*http.Request) string { return challenge }
@@ -197,6 +205,13 @@ func WithInputStateKey(key string) HTTPOption {
 	return func(d *Dispatcher) { d.inputState = newInputStateSigner([]byte(key)) }
 }
 
+// WithReplayGuard spends each confirm code and each answered chat question once.
+// It needs the input-state key too. Without either, no tool asks in the chat,
+// and a call that waits for its own user stages into the approval inbox.
+func WithReplayGuard(guard ReplayGuard) HTTPOption {
+	return func(d *Dispatcher) { d.replayGuard = guard }
+}
+
 // WithHeldViews tells the tool surface which `ui://` documents are actually
 // being served, so a tool never names one this deployment does not publish.
 func WithHeldViews(held func(uri string) bool) HTTPOption {
@@ -219,20 +234,35 @@ func WithTaskStore(tasks Tasks, approvals TaskApprovals) HTTPOption {
 // long-lived pipe rather than one request.
 func bindAuthenticated(ctx context.Context) (context.Context, error) { return ctx, nil }
 
+// mcpAllowedMethods leaves DELETE out: it authenticates, but always answers 405.
+const mcpAllowedMethods = http.MethodPost
+
 func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost, http.MethodDelete:
 	default:
 		// The GET stream is a later phase; every other verb is refused
 		// outright.
+		w.Header().Set("Allow", mcpAllowedMethods)
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusMethodNotAllowed,
 			Code:   "method_not_allowed",
-			Detail: "MCP is POST and DELETE only on this transport.",
+			Detail: "MCP is POST only on this transport.",
 		})
 		return
 	}
+	start := time.Now()
 	ctx, err := h.authenticate(r)
+	if refusal, refused := errors.AsType[EdgeRefusal](err); refused {
+		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+		refusal.WriteRefusal(sw, r)
+		// A refusal past authentication, such as pacing, keeps its caller.
+		if ctx != nil {
+			r = r.WithContext(ctx) //nolint:contextcheck // ctx is derived from r.Context() inside the injected authenticate closure
+		}
+		h.recordRefusal(r, start, sw.status)
+		return
+	}
 	if errors.Is(err, ErrAuthUnavailable) {
 		// The server could not REACH a verdict on the credential, so it must
 		// not imply one. A 401 here tells a client its token is bad: a
@@ -245,6 +275,7 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Code:   "authentication_unavailable",
 			Detail: "This server cannot verify credentials right now. Retry with the same token.",
 		})
+		h.recordRefusal(r, start, http.StatusServiceUnavailable)
 		return
 	}
 	if err != nil {
@@ -253,6 +284,7 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// there is no unauthenticated teardown path.
 		w.Header().Set("WWW-Authenticate", h.challenge(r))
 		httperr.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid_token"})
+		h.recordRefusal(r, start, http.StatusUnauthorized)
 		return
 	}
 
@@ -268,6 +300,7 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// and this server no longer mints one, so a legacy client has nothing
 		// to name here either — and telling it so beats a 404 it would read as
 		// "your session expired" and re-handshake over.
+		w.Header().Set("Allow", mcpAllowedMethods)
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusMethodNotAllowed,
 			Code:   "method_not_allowed",
@@ -287,14 +320,19 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // request, and the framing decides how a call is parsed — never what it may
 // do, which is the registry's business either way.
 func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	body, release, err := h.readBody(w, r)
 	if err != nil {
-		h.writeBodyRefusal(w, r, err)
+		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+		h.writeBodyRefusal(sw, r, err)
+		h.recordRefusal(r, start, sw.status)
 		return
 	}
 	defer release()
 	var req rpcRequest
-	if err := json.Unmarshal(body, &req); err != nil {
+	// Nested tool arguments are decoded later, past this point, so the whole
+	// request is held to the text rule once, here.
+	if err := json.Unmarshal(body, &req); err != nil || datasource.HasMalformedText(body) {
 		// The body is what normally decides the era, and this one does not
 		// decode, so the header is the only thing left that can say. A caller
 		// that named the modern revision gets the status that framing pins for
@@ -303,7 +341,7 @@ func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
 		if servesAsModern(declaredTransportVersion(r.Header)) {
 			status = http.StatusBadRequest
 		}
-		writeRPCResponse(w, r,
+		h.answer(w, r, start, req,
 			rpcResponse{JSONRPC: jsonRPCVersion, Error: &rpcError{Code: codeParseError, Message: "parse error"}},
 			status)
 		return
@@ -313,7 +351,7 @@ func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
 	// rather than a plain 4xx so a modern client recognizes it as this server
 	// refusing rather than as a legacy server to fall back to.
 	if duplicatedVersionHeader(r.Header) {
-		writeRPCResponse(w, r, rpcResponse{
+		h.answer(w, r, start, req, rpcResponse{
 			JSONRPC: jsonRPCVersion, ID: req.ID,
 			Error: &rpcError{
 				Code: codeHeaderMismatch,
@@ -332,11 +370,11 @@ func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
 		// JSON-RPC error, which is the pair a dual-era client reads: the status
 		// alone would send it back to the handshake, and the body alone would
 		// not be seen.
-		writeRPCResponse(w, r, rpcResponse{JSONRPC: jsonRPCVersion, ID: req.ID, Error: refusal},
+		h.answer(w, r, start, req, rpcResponse{JSONRPC: jsonRPCVersion, ID: req.ID, Error: refusal},
 			http.StatusBadRequest)
 		return
 	}
-	if !fr.modern && !h.legacyVersionServed(w, r, req) {
+	if !fr.modern && !h.legacyVersionServed(w, r, start, req) {
 		return
 	}
 	if req.ID == nil {
@@ -350,7 +388,7 @@ func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
 		return
 	}
-	h.exchange(w, r, req, fr)
+	h.exchange(w, r, start, req, fr)
 }
 
 // legacyVersionServed refuses a handshake-era request that names a revision
@@ -363,12 +401,12 @@ func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
 // retry with. initialize is exempt: it negotiates through its own body, and a
 // client has no version to put in this header until initialize has answered
 // one.
-func (h *httpMCPHandler) legacyVersionServed(w http.ResponseWriter, r *http.Request, req rpcRequest) bool {
+func (h *httpMCPHandler) legacyVersionServed(w http.ResponseWriter, r *http.Request, start time.Time, req rpcRequest) bool {
 	v := r.Header.Get(headerProtocolVersion)
 	if req.Method == methodInitialize || v == "" || slices.Contains(legacyProtocolVersions, v) {
 		return true
 	}
-	writeRPCResponse(w, r,
+	h.answer(w, r, start, req,
 		rpcResponse{JSONRPC: jsonRPCVersion, ID: req.ID, Error: unsupportedProtocolVersion(v)},
 		http.StatusBadRequest)
 	return false
@@ -376,7 +414,13 @@ func (h *httpMCPHandler) legacyVersionServed(w http.ResponseWriter, r *http.Requ
 
 // exchange dispatches one request and writes its answer under the status its
 // framing pins.
-func (h *httpMCPHandler) exchange(w http.ResponseWriter, r *http.Request, req rpcRequest, fr framing) {
+func (h *httpMCPHandler) exchange(w http.ResponseWriter, r *http.Request, start time.Time, req rpcRequest, fr framing) {
+	if refusal := seatlessRefusal(r.Context(), req.Method); refusal != nil {
+		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+		refusal.WriteRefusal(sw, r)
+		h.recordRefusal(r, start, sw.status)
+		return
+	}
 	// A dynamic tool call can block on a model call, which modules/ai
 	// budgets at 120s per request; the api's server-wide WriteTimeout is
 	// 30s. Extend the deadline for THIS route only — raising the server's
@@ -396,7 +440,7 @@ func (h *httpMCPHandler) exchange(w http.ResponseWriter, r *http.Request, req rp
 	// handler behind it, which keeps its goroutine and every database
 	// connection it takes from there on. Both halves, or the response is lost
 	// and the pool is still paying for it.
-	ctx, done := context.WithTimeout(r.Context(), mcpCallDeadline)
+	ctx, done := httpserver.WithinResponseDeadline(r.Context(), mcpCallDeadline)
 	defer done()
 	resp := h.server.handle(ctx, req, fr)
 	status := http.StatusOK
@@ -409,5 +453,5 @@ func (h *httpMCPHandler) exchange(w http.ResponseWriter, r *http.Request, req rp
 	// on its Bearer passport, and the volume the session implicitly bounded is
 	// now bounded per Passport in Redis (ADR-0092 §6). What the header cost was
 	// real: it pinned a conversation to the process that answered initialize.
-	writeRPCResponse(w, r, resp, status)
+	h.answer(w, r.WithContext(ctx), start, req, resp, status)
 }

@@ -3,27 +3,24 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
   fireEvent,
+  renderHook,
   render as rtlRender,
   screen,
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Heading } from "../design-system/heading";
-import { Modal } from "../design-system/modal";
-import { holdExits } from "../design-system/presence-testing";
 import { COMPANY_CONTEXT_ON } from "../features/settings/settingspages.fixtures";
 import { LocaleProvider } from "../i18n";
-import { type GrantSpec, meFixture } from "../testing/mefixture";
+import { type GrantSpec, meFixture, READS_RECORDS } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
-import { CREATE_ID } from "./nav";
+import { CREATE_ID, CREATE_SCREENS } from "./nav";
 import {
   type Command,
   CommandPalette,
-  paletteHotkeyCaps,
+  isCreateCommand,
   useBuiltinCommands,
-  usePaletteHotkey,
 } from "./palette";
 
 // B-EP09.5 (AC-shell-3..7) and RS-1 (live /search records + see-all)
@@ -54,10 +51,11 @@ function wrap(ui: ReactNode, client: QueryClient) {
   );
 }
 
-const render = (ui: ReactNode) => {
+const render = (ui: ReactNode, session?: ReturnType<typeof meFixture>) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  if (session) client.setQueryData(["me"], session);
   const view = rtlRender(wrap(ui, client));
   return {
     ...view,
@@ -88,46 +86,26 @@ const commands: Command[] = [
   },
 ];
 
-// The palette answers to both modifiers, but the affordance may advertise only
-// one, and ⌘ names a key a Windows keyboard does not have.
 // The DESTINATIONS, which is what every assertion below means by a row. Asking
 // sits above them and is not one: it answers a different question and is not
 // something the arrow keys walk, so a test that counted it would be asserting
 // about a control it never meant.
 function destinationRows(): HTMLElement[] {
   return screen
-    .getAllByRole("button")
+    .getAllByRole("option")
     .filter((button) => !button.classList.contains("palette-ask"));
 }
 
-describe("paletteHotkeyCaps", () => {
-  it("names the modifier the platform actually has", () => {
-    expect(paletteHotkeyCaps("MacIntel")).toEqual(["⌘", "K"]);
-    expect(paletteHotkeyCaps("iPhone")).toEqual(["⌘", "K"]);
-    expect(paletteHotkeyCaps("Win32")).toEqual(["Ctrl", "K"]);
-    expect(paletteHotkeyCaps("Linux x86_64")).toEqual(["Ctrl", "K"]);
-  });
-
-  // An unreported platform is far more likely to be Windows or Linux than a Mac,
-  // and Ctrl is the modifier that works on both.
-  it("falls back to Ctrl when the platform is unknown", () => {
-    expect(paletteHotkeyCaps("")).toEqual(["Ctrl", "K"]);
-  });
-
-  // One cap per key, and never a string a caller has to take apart again: the
-  // surface that draws these drew them by splitting "⌘K" with a lookbehind regex,
-  // which does not parse at all on an engine without lookbehind.
-  it("hands back one entry per key, so no caller has to split a string", () => {
-    for (const platform of ["MacIntel", "Win32", ""]) {
-      expect(paletteHotkeyCaps(platform)).toHaveLength(2);
-    }
-  });
-});
+// Record search waits for the session to name its reader.
+const renderSignedIn = (ui: ReactNode) =>
+  render(ui, meFixture({ rowScope: "all", allow: READS_RECORDS }));
 
 describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   it("shows the default command list with type tags, focuses the input", () => {
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    expect(document.activeElement).toBe(screen.getByRole("searchbox"));
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    expect(document.activeElement).toBe(screen.getByRole("combobox"));
     expect(screen.getByText("Deals")).toBeTruthy();
     expect(screen.getByText("Record")).toBeTruthy(); // type tag rendered
   });
@@ -137,8 +115,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // destination quietly removes it from the palette for everyone who knows it by
   // its older name.
   it("matches a keyword the row does not display, without showing it", async () => {
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "pipeline");
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await userEvent.type(screen.getByRole("combobox"), "pipeline");
     const rows = destinationRows();
     expect(rows[0].textContent).toContain("Deals");
     expect(rows[0].textContent).not.toContain("pipeline");
@@ -147,8 +127,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   });
 
   it("filters by label+subtitle case-insensitively and puts the see-all row after them", async () => {
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "COMPANY");
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await userEvent.type(screen.getByRole("combobox"), "COMPANY");
     const rows = destinationRows();
     expect(rows).toHaveLength(2);
     expect(rows[0].textContent).toContain("Brandt Automotive");
@@ -158,8 +140,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   });
 
   it("Enter runs the selection; arrows move and clamp (AC-shell-5)", async () => {
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    const input = screen.getByRole("searchbox");
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    const input = screen.getByRole("combobox");
     await userEvent.keyboard("{ArrowUp}"); // clamps at 0
     await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}"); // clamps at end
     await userEvent.keyboard("{ArrowUp}{ArrowUp}"); // back to index 0
@@ -176,8 +160,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   it("opens the dialog where the reader is, carrying the query and taking them nowhere", async () => {
     window.location.hash = "#/deals";
     const onClose = vi.fn();
-    render(<CommandPalette open onClose={onClose} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "zzz nothing matches");
+    renderSignedIn(
+      <CommandPalette open onClose={onClose} commands={commands} />,
+    );
+    await userEvent.type(screen.getByRole("combobox"), "zzz nothing matches");
     await userEvent.click(screen.getByText("Ask your documents"));
     // The screen the reader was on is still the screen they are on.
     // Two dials: presence opens it, the question rides beside it. An empty
@@ -194,8 +180,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // and pressed it goes there, and asking is not what they did.
   it("Enter runs the first destination, not the ask", async () => {
     window.location.hash = "#/home";
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "deals");
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await userEvent.type(screen.getByRole("combobox"), "deals");
     await userEvent.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/deals");
   });
@@ -203,8 +191,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   it("runs nothing on an input method's Enter", async () => {
     window.location.hash = "#/home";
     const onClose = vi.fn();
-    render(<CommandPalette open onClose={onClose} commands={commands} />);
-    const input = screen.getByRole("searchbox");
+    renderSignedIn(
+      <CommandPalette open onClose={onClose} commands={commands} />,
+    );
+    const input = screen.getByRole("combobox");
     await userEvent.type(input, "deals");
 
     fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
@@ -216,8 +206,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   it("closes on a selection that lands on the address it is already at", async () => {
     window.location.hash = "#/deals";
     const onClose = vi.fn();
-    render(<CommandPalette open onClose={onClose} commands={commands} />);
-    await userEvent.type(screen.getByRole("searchbox"), "deals");
+    renderSignedIn(
+      <CommandPalette open onClose={onClose} commands={commands} />,
+    );
+    await userEvent.type(screen.getByRole("combobox"), "deals");
     await userEvent.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/deals");
     expect(onClose).toHaveBeenCalled();
@@ -225,12 +217,12 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
   it("closes on a backdrop press, never on a drag that ends there", () => {
     const onClose = vi.fn();
-    const { baseElement } = render(
+    const { baseElement } = renderSignedIn(
       <CommandPalette open onClose={onClose} commands={commands} />,
     );
     const overlay = baseElement.querySelector<HTMLElement>(".palette-overlay");
     if (!overlay) throw new Error("the palette draws no overlay");
-    fireEvent.pointerDown(screen.getByRole("searchbox"));
+    fireEvent.pointerDown(screen.getByRole("combobox"));
     fireEvent.pointerUp(overlay);
     fireEvent.click(overlay);
     expect(onClose).not.toHaveBeenCalled();
@@ -243,10 +235,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
   it("Esc closes; opening clears the previous query (AC-shell-3)", async () => {
     const onClose = vi.fn();
-    const view = render(
+    const view = renderSignedIn(
       <CommandPalette open onClose={onClose} commands={commands} />,
     );
-    await userEvent.type(screen.getByRole("searchbox"), "deal");
+    await userEvent.type(screen.getByRole("combobox"), "deal");
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalled();
     view.rerender(
@@ -255,7 +247,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     view.rerender(
       <CommandPalette open onClose={onClose} commands={commands} />,
     );
-    expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("");
+    expect((screen.getByRole("combobox") as HTMLInputElement).value).toBe("");
   });
 
   // The palette is a dialog and had none of a dialog's keyboard behaviour: it
@@ -265,11 +257,13 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
   it("Esc closes from a result row, not only from the search box", async () => {
     const onClose = vi.fn();
-    render(<CommandPalette open onClose={onClose} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={onClose} commands={commands} />,
+    );
     const user = userEvent.setup();
     // Where the arrow keys put a reader — and where Escape used to do nothing,
     // because the handler belonged to the input this focus has left.
-    const row = screen.getByRole("button", { name: /Deals/ });
+    const row = screen.getByRole("option", { name: /Deals/ });
     row.focus();
     expect(document.activeElement).toBe(row);
     await user.keyboard("{Escape}");
@@ -282,10 +276,12 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     outside.textContent = "a link on the page behind";
     document.body.append(outside);
     try {
-      render(<CommandPalette open onClose={() => {}} commands={commands} />);
+      renderSignedIn(
+        <CommandPalette open onClose={() => {}} commands={commands} />,
+      );
       const user = userEvent.setup();
       const dialog = screen.getByRole("dialog");
-      screen.getByRole("searchbox").focus();
+      screen.getByRole("combobox").focus();
 
       // Backwards off the first stop was the reported failure: one Shift+Tab
       // and focus was on the page behind.
@@ -309,7 +305,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     document.body.append(opener);
     try {
       opener.focus();
-      const view = render(
+      const view = renderSignedIn(
         <CommandPalette open onClose={() => {}} commands={commands} />,
       );
       expect(document.activeElement).not.toBe(opener);
@@ -333,8 +329,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
         }),
       ),
     );
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await user.type(screen.getByRole("searchbox"), "acme");
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await user.type(screen.getByRole("combobox"), "acme");
     await waitFor(() =>
       expect(screen.getByText("Dana Buyer at Acme")).toBeTruthy(),
     );
@@ -354,10 +352,18 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       "fetch",
       vi.fn(async () => new Response("nope", { status: 500 })),
     );
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await user.type(screen.getByRole("searchbox"), "acme");
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await user.type(screen.getByRole("combobox"), "acme");
 
     expect(await screen.findByText(/Search failed/)).toBeTruthy();
+    // The notice heads the list, so it names what still works, not where.
+    expect(
+      screen.getByText(
+        "Records could not be searched. Screens and actions still work.",
+      ),
+    ).toBeTruthy();
     // Not the empty state: the list is not empty, and saying so would be the
     // false claim this replaces.
     expect(screen.queryByText("No matches.")).toBeNull();
@@ -365,11 +371,49 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     // "acme" and no builtin command carries that word — the claim is that a
     // failed RECORD search leaves the command list working, not that it leaves
     // the previous query matching something it never matched.
-    await user.clear(screen.getByRole("searchbox"));
-    await user.type(screen.getByRole("searchbox"), "Deals");
+    await user.clear(screen.getByRole("combobox"));
+    await user.type(screen.getByRole("combobox"), "Deals");
     expect(
       destinationRows().some((row) => row.textContent?.includes("Deals")),
     ).toBe(true);
+  });
+
+  it("says nothing matched once the search finds no record, and offers no results page", async () => {
+    const user = steppedClock();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await user.type(screen.getByRole("combobox"), "zzzzqqq");
+
+    expect(await screen.findByText("No matches for “zzzzqqq”.")).toBeTruthy();
+    expect(screen.queryByText(/See all results/)).toBeNull();
+    expect(screen.getByText("Ask your documents")).toBeTruthy();
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("");
+  });
+
+  it("keeps the results row while the search has not answered", async () => {
+    const user = steppedClock();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await user.type(screen.getByRole("combobox"), "zzzzqqq");
+
+    expect(screen.getByText("See all results for “zzzzqqq”")).toBeTruthy();
+    expect(screen.queryByText(/No matches/)).toBeNull();
   });
 
   // A hit's kind is the heading of its group, in the reader's words. It used to
@@ -385,16 +429,16 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
         }),
       ),
     );
-    const { container } = render(
+    const { container } = renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await user.type(screen.getByRole("searchbox"), "brandt");
-    const row = await screen.findByRole("button", { name: /Brandt GmbH/ });
+    await user.type(screen.getByRole("combobox"), "brandt");
+    const row = await screen.findByRole("option", { name: /Brandt GmbH/ });
     expect(
       [...container.querySelectorAll(".palette-group")].map(
         (heading) => heading.textContent,
       ),
-    ).toEqual(["Companies"]);
+    ).toEqual(["Companies", "Ask Margince"]);
     // The heading says it once; the row repeats neither the kind nor "Record".
     expect(row.querySelector(".label")?.textContent).toBe("Brandt GmbH");
     expect(row.querySelector(".sub")).toBeNull();
@@ -428,17 +472,17 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    const { container } = render(
+    const { container } = renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await user.type(screen.getByRole("searchbox"), "acme");
+    await user.type(screen.getByRole("combobox"), "acme");
 
-    const email = await screen.findByRole("button", { name: /Acme renewal/ });
+    const email = await screen.findByRole("option", { name: /Acme renewal/ });
     expect(
       [...container.querySelectorAll(".palette-group")].map(
         (heading) => heading.textContent,
       ),
-    ).toEqual(["Companies", "Emails"]);
+    ).toEqual(["Companies", "Emails", "Ask Margince"]);
     const rows = destinationRows().map((row) => row.textContent ?? "");
     expect(rows.findIndex((text) => text.includes("Acme GmbH"))).toBeLessThan(
       rows.findIndex((text) => text.includes("Acme renewal")),
@@ -453,6 +497,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       input instanceof Request ? input.url : String(input),
     );
     expect(asked.some((url) => url.includes("per_type=3"))).toBe(true);
+    expect(asked.some((url) => url.includes("typeahead=true"))).toBe(true);
   });
 
   // A partner is a property of a company rather than a kind of its own, so the
@@ -475,9 +520,11 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
         }),
       ),
     );
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await user.type(screen.getByRole("searchbox"), "brandt");
-    const row = await screen.findByRole("button", { name: /Brandt GmbH/ });
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await user.type(screen.getByRole("combobox"), "brandt");
+    const row = await screen.findByRole("option", { name: /Brandt GmbH/ });
     expect(row.querySelector(".sub")?.textContent).toBe("Partner");
   });
 
@@ -500,17 +547,17 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await user.type(screen.getByRole("searchbox"), "acme");
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await user.type(screen.getByRole("combobox"), "acme");
 
-    const row = await screen.findByRole("button", {
-      name: "Jonas Weiß Works at Acme GmbH",
+    // The name starts with the initials the mark prints (WCAG 2.5.3).
+    const row = await screen.findByRole("option", {
+      name: /^JW\s*Jonas Weiß Works at Acme GmbH$/,
     });
     expect(row.querySelector(".sub")?.textContent).toBe("Works at Acme GmbH");
-    // The mark is hidden from the row's name, which is why the name above
-    // carries no initials.
     const mark = row.querySelector(".palette-mark");
-    expect(mark?.getAttribute("aria-hidden")).toBe("true");
     expect(mark?.querySelector(".avatar")?.textContent).toBe("JW");
     const asked = fetchMock.mock.calls.map(([input]) =>
       input instanceof Request ? input.url : String(input),
@@ -534,15 +581,17 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
         }),
       ),
     );
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await user.type(screen.getByRole("searchbox"), "acme");
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await user.type(screen.getByRole("combobox"), "acme");
 
-    const company = await screen.findByRole("button", { name: "Acme GmbH" });
+    const company = await screen.findByRole("option", { name: "Acme GmbH" });
     expect(
       company.querySelector(".palette-mark .avatar-img")?.getAttribute("src"),
     ).toBe(logo);
     // A deal is not a contact or a company, and keeps the row's glyph.
-    const deal = screen.getByRole("button", { name: "Acme renewal" });
+    const deal = screen.getByRole("option", { name: "Acme renewal" });
     expect(deal.querySelector(".palette-mark")).toBeNull();
   });
 
@@ -566,9 +615,11 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
         }),
       ),
     );
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await user.type(screen.getByRole("searchbox"), "dana");
-    const row = await screen.findByRole("button", { name: /Dana Buyer/ });
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await user.type(screen.getByRole("combobox"), "dana");
+    const row = await screen.findByRole("option", { name: /Dana Buyer/ });
     expect(row.querySelector(".sub")).toBeNull();
   });
 
@@ -586,8 +637,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
         }),
       ),
     );
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await user.type(screen.getByRole("searchbox"), "scrub");
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await user.type(screen.getByRole("combobox"), "scrub");
     await waitFor(() =>
       expect(screen.getByText("Floor scrubber")).toBeTruthy(),
     );
@@ -622,8 +675,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await user.type(screen.getByRole("searchbox"), "roll");
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await user.type(screen.getByRole("combobox"), "roll");
     expect(await screen.findByText("ACME-CRM · Acme GmbH")).toBeTruthy();
     expect(screen.getByText("Brandt Automotive")).toBeTruthy();
     expect(
@@ -653,8 +708,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
         }),
       ),
     );
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
-    await user.type(screen.getByRole("searchbox"), "key");
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await user.type(screen.getByRole("combobox"), "key");
     await waitFor(() => expect(screen.getByText("Key Account")).toBeTruthy());
 
     await user.click(screen.getByText("Key Account"));
@@ -716,98 +773,6 @@ describe("a palette that is leaving", () => {
   });
 });
 
-// The shell's wiring, with a dialog the page behind may be holding up.
-function ShellWithDialog({
-  dialogOpen,
-  onDialogClose = () => {},
-}: Readonly<{ dialogOpen: boolean; onDialogClose?: () => void }>) {
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  usePaletteHotkey(paletteOpen, setPaletteOpen);
-  return (
-    <>
-      <CommandPalette
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        commands={commands}
-      />
-      <Modal
-        open={dialogOpen}
-        onClose={onDialogClose}
-        labelledBy="edit-deal"
-        intent="form"
-      >
-        <Heading size="large" id="edit-deal">
-          Edit deal
-        </Heading>
-        <button type="button">Save</button>
-      </Modal>
-    </>
-  );
-}
-
-// An open dialog makes the rest of the app unreachable, and the palette is the
-// rest of the app: raised over one it sat under the dialog's keyboard, so
-// Escape closed the dialog and left the palette standing.
-describe("the palette hotkey", () => {
-  it("does nothing while a dialog is up, and Escape still closes the dialog", async () => {
-    const onDialogClose = vi.fn();
-    render(<ShellWithDialog dialogOpen onDialogClose={onDialogClose} />);
-    const user = userEvent.setup();
-
-    await user.keyboard("{Meta>}k{/Meta}");
-    expect(screen.queryByRole("searchbox")).toBeNull();
-    // The browser's own ⌘K is still withheld: the chord belongs to the product.
-    expect(fireEvent.keyDown(document.body, { key: "k", metaKey: true })).toBe(
-      false,
-    );
-
-    await user.keyboard("{Escape}");
-    expect(onDialogClose).toHaveBeenCalledOnce();
-  });
-
-  it("opens the palette and closes it again on the same chord", async () => {
-    render(<ShellWithDialog dialogOpen={false} />);
-    const user = userEvent.setup();
-
-    await user.keyboard("{Meta>}k{/Meta}");
-    expect(screen.getByRole("searchbox")).toBeTruthy();
-    await user.keyboard("{Meta>}k{/Meta}");
-    expect(screen.queryByRole("searchbox")).toBeNull();
-  });
-
-  it("opens the palette again while its own exit is still playing", async () => {
-    const exits = holdExits();
-    try {
-      render(<ShellWithDialog dialogOpen={false} />);
-      const user = userEvent.setup();
-      await user.keyboard("{Meta>}k{/Meta}");
-      await user.keyboard("{Escape}");
-      expect(document.querySelector(".palette-overlay[inert]")).not.toBeNull();
-
-      await user.keyboard("{Meta>}k{/Meta}");
-      const input = screen.getByRole("searchbox");
-      expect(input.closest("[inert]")).toBeNull();
-    } finally {
-      exits.mockRestore();
-    }
-  });
-
-  it("opens over a dialog that is already on its way out", async () => {
-    const exits = holdExits();
-    try {
-      const view = render(<ShellWithDialog dialogOpen />);
-      view.rerender(<ShellWithDialog dialogOpen={false} />);
-      expect(view.baseElement.querySelector("#edit-deal")).not.toBeNull();
-      const user = userEvent.setup();
-
-      await user.keyboard("{Meta>}k{/Meta}");
-      expect(screen.getByRole("searchbox")).toBeTruthy();
-    } finally {
-      exits.mockRestore();
-    }
-  });
-});
-
 describe("useBuiltinCommands", () => {
   function Probe() {
     return (
@@ -815,15 +780,28 @@ describe("useBuiltinCommands", () => {
     );
   }
 
+  function CreateProbe() {
+    return (
+      <CommandPalette
+        open
+        mode="create"
+        onClose={() => {}}
+        commands={useBuiltinCommands()}
+      />
+    );
+  }
+
   // A /me with no grant at all, which is the harder case: the two settings
   // shortcuts drop out, so anything still offered here is offered because the
   // rail names it rather than because the principal holds something.
-  function renderProbe() {
+  function renderProbe(probe: ReactNode = <Probe />) {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => jsonResponse(meFixture({ roles: [], allow: {} }))),
+      vi.fn(async () =>
+        jsonResponse(meFixture({ roles: [], allow: READS_RECORDS })),
+      ),
     );
-    return render(<Probe />);
+    return render(probe);
   }
 
   // Company profile opens on the catalog's installation grants, and the profile
@@ -858,7 +836,7 @@ describe("useBuiltinCommands", () => {
     // Typed by its OLD name, which the palette keeps as a keyword: the page is
     // "Company profile" now, and a reader who learnt "General" should still
     // find it rather than concluding it was removed.
-    await user.type(screen.getByRole("searchbox"), "general");
+    await user.type(screen.getByRole("combobox"), "general");
     await waitFor(() => {
       expect(destinationRows()[0].textContent).toContain("Company profile");
     });
@@ -875,7 +853,7 @@ describe("useBuiltinCommands", () => {
         capture_settings: ["read"],
       },
     });
-    const box = screen.getByRole("searchbox");
+    const box = screen.getByRole("combobox");
     await user.type(box, "capture");
     await screen.findByText("Mail capture");
     await user.clear(box);
@@ -890,7 +868,7 @@ describe("useBuiltinCommands", () => {
     async (role) => {
       const user = userEvent.setup();
       renderProbeWithCompany({ roles: [role], allow: INSTALLATION_WRITER });
-      await user.type(screen.getByRole("searchbox"), "company");
+      await user.type(screen.getByRole("combobox"), "company");
       await screen.findByText("Company profile");
       expect(screen.queryByText("Read a company")).toBeNull();
     },
@@ -899,7 +877,7 @@ describe("useBuiltinCommands", () => {
   it("reaches Company profile by its refresh button's words for an admin", async () => {
     const user = userEvent.setup();
     renderProbeWithCompany({ roles: ["admin"], allow: INSTALLATION_WRITER });
-    await user.type(screen.getByRole("searchbox"), "website");
+    await user.type(screen.getByRole("combobox"), "website");
     await waitFor(() => {
       expect(destinationRows()[0].textContent).toContain("Company profile");
     });
@@ -912,12 +890,43 @@ describe("useBuiltinCommands", () => {
   it("does not send ops to Company profile for the website", async () => {
     const user = userEvent.setup();
     renderProbeWithCompany({ roles: ["ops"], allow: INSTALLATION_WRITER });
-    const box = screen.getByRole("searchbox");
+    const box = screen.getByRole("combobox");
     await user.type(box, "company");
     await screen.findByText("Company profile");
     await user.clear(box);
     await user.type(box, "website");
     expect(screen.queryByText("Company profile")).toBeNull();
+  });
+
+  // Elsewhere `C` lists these commands, so a list form with none is one that
+  // `C` cannot reach from there.
+  it("offers a create command for each list that opens a create form", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse(meFixture({ roles: [], allow: {} }))),
+    );
+    const client = new QueryClient();
+    const view = renderHook(() => useBuiltinCommands(), {
+      wrapper: ({ children }) => wrap(children, client),
+    });
+    const routes = view.result.current
+      .filter(isCreateCommand)
+      .map((command) => command.route);
+    expect(new Set(routes.map((route) => route?.screen))).toEqual(
+      CREATE_SCREENS,
+    );
+    expect(routes.every((route) => route?.id === CREATE_ID)).toBe(true);
+  });
+
+  it("names each create command for the record it makes", () => {
+    renderProbe(<CreateProbe />);
+    expect(destinationRows().map((row) => row.textContent)).toEqual([
+      expect.stringContaining("New contact"),
+      expect.stringContaining("New company"),
+      expect.stringContaining("New lead"),
+      expect.stringContaining("New deal"),
+      expect.stringContaining("New project"),
+    ]);
   });
 
   // The two destinations that carry a word the rail no longer prints. A reader
@@ -932,7 +941,7 @@ describe("useBuiltinCommands", () => {
     async (typed, label, hash) => {
       const user = userEvent.setup();
       renderProbe();
-      await user.type(screen.getByRole("searchbox"), typed);
+      await user.type(screen.getByRole("combobox"), typed);
       const rows = destinationRows();
       expect(rows[0].textContent).toContain(label);
       await user.keyboard("{Enter}");
@@ -945,7 +954,7 @@ describe("useBuiltinCommands", () => {
     renderProbe();
     // Its own title, not a fourth spelling of it: "views" appears in no other
     // command, so matching on it proves the row carries the screen's own words.
-    await user.type(screen.getByRole("searchbox"), "views");
+    await user.type(screen.getByRole("combobox"), "views");
     const rows = destinationRows();
     expect(rows[0].textContent).toContain("Filters and views");
     await user.keyboard("{Enter}");
@@ -955,7 +964,7 @@ describe("useBuiltinCommands", () => {
   it("reaches it by its route id too, so the domain word finds it", async () => {
     const user = userEvent.setup();
     renderProbe();
-    await user.type(screen.getByRole("searchbox"), "filters");
+    await user.type(screen.getByRole("combobox"), "filters");
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/filters");
   });
@@ -966,7 +975,7 @@ describe("useBuiltinCommands", () => {
   it("reaches the scheduled queue, which no rail row names", async () => {
     const user = userEvent.setup();
     renderProbe();
-    await user.type(screen.getByRole("searchbox"), "scheduled");
+    await user.type(screen.getByRole("combobox"), "scheduled");
     const rows = destinationRows();
     expect(rows[0].textContent).toContain("Scheduled messages");
     await user.keyboard("{Enter}");
@@ -980,7 +989,7 @@ describe("useBuiltinCommands", () => {
   it("finds it under the words the composer's control uses", async () => {
     const user = userEvent.setup();
     renderProbe();
-    await user.type(screen.getByRole("searchbox"), "Schedule send");
+    await user.type(screen.getByRole("combobox"), "Schedule send");
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/scheduled");
   });

@@ -16,6 +16,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/dealclosetasks"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -50,7 +51,7 @@ func newCloseTasksProbe(t *testing.T, name string) closeTasksProbe {
 	native := NewProvider(e.Pool)
 	registry := agents.NewRegistry(
 		approvalsAdapter{svc: approvals.NewService(e.DB())}, auth.NewGate(adminSeat{}),
-		agents.WithDealTaskSettler(newDealCloseTasks(activities.NewStore(e.DB()), e.DB())))
+		agents.WithDealTaskSettler(dealclosetasks.New(activities.NewStore(e.DB()), e.DB())))
 	agents.RegisterCoreTools(registry, native, native, nil, nil, nil, nil)
 	return closeTasksProbe{e: e, registry: registry, deal: ids.UUID(deal), task: task, won: won}
 }

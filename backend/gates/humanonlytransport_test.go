@@ -66,9 +66,15 @@ var humanOnlyWithoutASession = gatekit.Waive(map[string]string{
 	"acceptPublicMeetingProposal":   "an expiring recipient-bound capability authorizes one atomic acceptance without a seat",
 	// The public booking page, opened by somebody who has never been here.
 	"bookPublicMeeting": "the public booking page: an anonymous buyer holds no seat, and the link is the capability",
+	// An erased subject asks to be stored again, then confirms a mailed link.
+	"requestBookingReturn": "the public booking page: the answer is the same for every address, and nothing is stored until the mailed link is confirmed",
+	"confirmBookingReturn": "the signed, single-use link mailed to the address authenticates the subject, who holds no seat",
+	"previewBookingReturn": "the signed link mailed to the address authenticates the subject, who holds no seat; it stores nothing",
 	// A website form's intake: the visitor holds no seat, and the form's allowed
 	// origins, or its signature, admit the post.
 	"submitWebForm": "a website visitor holds no seat; the form key names the form, and its allowed origins or signature admit the post",
+	// A connected chat's push, which the chat itself sends.
+	"receiveDispactChannelEvent": "Dispact's signed notice: the Standard Webhooks signature with the events secret sealed on the connected bot authenticates it, and the chat itself sends it",
 
 	// Pages a buyer opens from a link, holding no seat here. The token in the
 	// URL is the capability, and requiring a session would make the page
@@ -98,7 +104,8 @@ var humanOnlyWithoutASession = gatekit.Waive(map[string]string{
 	"getAssistantProfile":  "the public identity and posture of the AI presence, shown before sign-in",
 
 	// Read by machines that hold no seat and never will.
-	"getStatus": "the reachability probe an external uptime monitor calls: a fixed body, no work, nothing disclosed",
+	"getStatus":  "the reachability probe an external uptime monitor calls: a fixed body, no work, nothing disclosed",
+	"headStatus": "the same probe for a monitor that sends HEAD: no body, no work, nothing disclosed",
 })
 
 // aDealRoomSession is the scheme the buyer's own room authenticates with.

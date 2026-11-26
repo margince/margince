@@ -12,6 +12,7 @@ import { Button, EmptyState, Modal, Skeleton } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { Panel } from "../../design-system/panel";
+import { LoadMoreButton } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
@@ -27,11 +28,8 @@ import {
   reachCaveat,
   useLinkedInReach,
 } from "../import/linkedin-reach";
-import {
-  AwaitingContacts,
-  useAwaitingDecision,
-  useSenders,
-} from "./capture-senders";
+import { AwaitingContacts, useAwaitingDecision } from "./capture-awaiting";
+import { useSenders } from "./capture-senders";
 import { HeldThreads, useHeldThreads } from "./held-threads";
 import { heldTotal } from "./held-threads.counts";
 
@@ -176,6 +174,7 @@ export function ConnectionOutcomesCard() {
           returnFocusTo={backTo("reach")}
         >
           <NetworkReach reach={reach.data} />
+          <LoadMoreButton query={reach} />
         </OutcomeDrawer>
       )}
     </Panel>

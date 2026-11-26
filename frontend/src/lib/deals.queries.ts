@@ -3,8 +3,10 @@ import { api } from "../api/client";
 import { dealStatusFilter } from "../format/dealstatus";
 import { useNow } from "../format/now";
 import { dayInZone } from "../format/timezone";
+import { useLocale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCompanyZone } from "./companyzone";
+import { motionFilter, priorityFilter } from "./dealcommercialvalues";
 import {
   CLOSE_DAY_DIAL,
   closeDayRange,
@@ -13,39 +15,49 @@ import {
   rangeQueryParams,
   WIN_PROBABILITY_DIAL,
 } from "./dealranges";
-import { defaultPipelineOf } from "./pipelines.queries";
-import { throwProblem, unwrap } from "./problem";
+import { useHealthScope } from "./healthscope";
+import { translatedPipeline } from "./labeltranslation";
+import { coverageOf, type MoneyCoverage } from "./moneycoverage";
+import {
+  defaultPipelineOf,
+  pipelinesOptions,
+  pipelinesWithArchivedOptions,
+} from "./pipelines.queries";
+import { isOwnerNotMeasurable, throwProblem, unwrap } from "./problem";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { useInstallationSettings } from "./uploadlimit";
 import { bandOfDial } from "./winprobabilitybands";
 
 /**
- * The pipeline a record belongs to, falling back to the default.
+ * The pipeline a record belongs to: the deal's own, retired ones included.
  *
- * `pipelineId` is the deal's own. Without it, every deal would get the default
- * pipeline, and the stepper offers its stages as moves. The stages of a
- * pipeline the deal is not in are targets the server refuses as a pipeline
- * mismatch.
+ * The active catalog the pickers share answers first. Only a pipeline missing
+ * there is looked up among the retired ones. One found in neither is a load
+ * error, since another pipeline's stages would offer moves the server refuses.
+ * Without an id, the default pipeline answers.
  */
 export function usePipeline(pipelineId?: string | null) {
-  return useQuery({
-    queryKey: ["pipelines", pipelineId ?? "default"],
-    queryFn: async () => {
-      const data = unwrap(
-        await api.GET("/pipelines", {
-          params: { query: {} },
-        }),
-      );
-      const pipeline =
-        (pipelineId &&
-          data.data.find((candidate) => candidate.id === pipelineId)) ||
-        defaultPipelineOf(data.data);
-      if (!pipeline) {
-        throw new Error("no pipeline");
-      }
-      return pipeline;
-    },
+  const { locale } = useLocale();
+  const active = useQuery(pipelinesOptions);
+  const inActive = pipelineId
+    ? active.data?.find((candidate) => candidate.id === pipelineId)
+    : defaultPipelineOf(active.data ?? []);
+  const lookUpRetired = Boolean(pipelineId) && active.isSuccess && !inActive;
+  const retired = useQuery({
+    ...pipelinesWithArchivedOptions,
+    enabled: lookUpRetired,
   });
+  const found =
+    inActive ?? retired.data?.find((candidate) => candidate.id === pipelineId);
+  const missing =
+    active.isSuccess && !found && (!lookUpRetired || retired.isSuccess);
+  const failed = active.error ?? retired.error ?? null;
+  return {
+    data: found ? translatedPipeline(found, locale) : undefined,
+    error: failed ?? (missing ? new Error("no pipeline") : null),
+    isError: failed !== null || missing,
+    isPending: !found && failed === null && !missing,
+  };
 }
 
 export type DealFilters = {
@@ -99,6 +111,8 @@ export function dealsQueryParams(f: DealFilters) {
     partner_company_id: filters.partner_company_id || undefined,
     stalled: filters.stalled === "true" ? true : undefined,
     partner_sourced: filters.partner_sourced === "true" ? true : undefined,
+    ...commercialDialParams(filters),
+    link_type: filters.link_type || undefined,
     // Several ids and their mode, out of the one comma-joined string the
     // address carries them in. Spelled by the shared encoder rather than here,
     // so this board and the three lists cannot read one address two ways.
@@ -107,6 +121,16 @@ export function dealsQueryParams(f: DealFilters) {
       parseTagMode(filters.tag_mode),
     ),
     ...rangeQueryParams(filters, f.closeDay),
+  };
+}
+
+// The commercial dials, sent to the deal list and the stage totals alike, so a
+// column's total counts the cards it draws.
+function commercialDialParams(filters: Record<string, string>) {
+  return {
+    commercial_motion: motionFilter(filters.commercial_motion),
+    priority: priorityFilter(filters.priority),
+    acquisition_source: filters.acquisition_source || undefined,
   };
 }
 
@@ -133,21 +157,27 @@ export function nextCursorOf(page: DealListPage): string | undefined {
   return page.page?.has_more ? (page.page.next_cursor ?? undefined) : undefined;
 }
 
-/** The deals as one keyset walk over every stage. */
-export function useDeals(f: DealFilters, enabled = true) {
+/**
+ * The deals as one keyset walk over every stage, `limit` rows a read. A table
+ * passes the size its pager slices (`listFetchLimit`); the default suits a
+ * picker that lists them all.
+ */
+export function useDeals(f: DealFilters, enabled = true, limit = 100) {
   const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
+  // The rows one reader scope may see; nothing is read before /me names it.
+  const readerScope = useHealthScope();
   return useInfiniteQuery({
-    enabled,
+    enabled: enabled && readerScope !== undefined,
     // The days, not the dial's word: a list opened after the quarter turns
     // never reuses the old quarter's cached page. Today is read at mount.
-    queryKey: ["deals", f, closeDay],
+    queryKey: ["deals", readerScope ?? "", f, closeDay, limit],
     // `as` steers useInfiniteQuery's TPageParam generic to the cursor type: a
     // bare `undefined` infers TPageParam=undefined and the string cursor no
     // longer type-checks.
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam, signal }) =>
       readDealPage(
-        { ...dealsQueryParams({ ...f, closeDay }), cursor: pageParam },
+        { ...dealsQueryParams({ ...f, closeDay }), limit, cursor: pageParam },
         signal,
       ),
     getNextPageParam: nextCursorOf,
@@ -158,9 +188,14 @@ export function useDeals(f: DealFilters, enabled = true) {
 // deals-by-stage report's filter shape. They are the same dials dealsQueryParams
 // sends to /deals, so a stage total and its cards agree on which deals are in
 // scope. Unsupported population dials withhold totals before this runs.
-function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
+export function dealsByStageReportFilters(
+  f: DealFilters,
+): Record<string, unknown> {
   const { filters } = f;
   const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(commercialDialParams(filters))) {
+    if (value) out[key] = value;
+  }
   if (f.pipelineId) out.pipeline_id = f.pipelineId;
   if (filters.owner_id) out.owner_id = filters.owner_id;
   if (filters.company_id) out.company_id = filters.company_id;
@@ -198,6 +233,9 @@ export function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
   if (f.filters.owner_team_id || f.filters.unassigned === "true") {
     return "deals.totalsNoTeamFilter";
   }
+  // The report's link_type matches a deal's whole set of link types. The list
+  // matches any one of them, so the two would count different deals.
+  if (f.filters.link_type) return "deals.totalsNoLinkFilter";
   if (narrowsByRange(f.filters)) return "deals.totalsNoRangeFilter";
   // The report narrows by band only, so a range no band matches has no total.
   const probability = f.filters[WIN_PROBABILITY_DIAL];
@@ -208,8 +246,8 @@ export function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
 }
 
 // The one reason the server decides: an owner dial naming somebody whose
-// totals this reader may not measure answers 403. The cards stay, because
-// reading a deal and measuring its owner are different permissions.
+// totals this reader may not measure answers owner_not_measurable. The cards
+// stay, because reading a deal and measuring its owner are different permissions.
 export function totalsRefusedBecause(
   totals: Map<string, StageTotals> | null | undefined,
 ): MessageKey | undefined {
@@ -222,17 +260,32 @@ export function totalsRefusedBecause(
 // Reports exclude archived deals, so that broader board population withholds
 // its totals through the same rule as every other unsupported filter.
 export function useStageTotals(f: DealFilters, enabled = true) {
+  // The reader's grants decide what the report counts, so a changed grant must
+  // never reuse totals counted under the old one.
+  const scope = useHealthScope();
+  const reportFilters = dealsByStageReportFilters(f);
+  const withheld = totalsWithheldBecause(f);
   return useQuery({
     // Under ["deals"], so the one invalidation every deal mutation fires
     // refreshes the column headers along with the cards. Keyed apart, a moved
     // card would sit under a header still counting it in the stage it left.
-    queryKey: ["deals", "by-stage-totals", f],
+    // Keyed by the request body, not the whole filter set. A table sort then
+    // reuses the board's fresh totals on return, since sort never reaches it.
+    // A withheld key is never read, so it never holds a total.
+    queryKey: [
+      "deals",
+      "by-stage-totals",
+      scope,
+      reportFilters,
+      withheld ?? null,
+    ],
     // Asked only when the report would count the deals the board is drawing.
     // totalsWithheldBecause owns that decision and the words for it both, so
     // the column cannot explain a missing total by the wrong rule.
-    enabled: enabled && totalsWithheldBecause(f) === undefined,
-    queryFn: async (): Promise<Map<string, StageTotals> | null> => {
-      const { data, error, response } = await api.POST("/reports/{report}", {
+    enabled: enabled && scope !== undefined && withheld === undefined,
+    queryFn: async ({ signal }): Promise<Map<string, StageTotals> | null> => {
+      const { data, error } = await api.POST("/reports/{report}", {
+        signal,
         params: { path: { report: "deals-by-stage" } },
         body: {
           group_by: ["stage_id"],
@@ -244,15 +297,12 @@ export function useStageTotals(f: DealFilters, enabled = true) {
               field: "weighted_base_minor",
               as: "weighted_base_minor",
             },
-            { fn: "count", field: "amount_base_minor", as: "priced_deals" },
           ],
-          filters: dealsByStageReportFilters(f),
+          filters: reportFilters,
         },
       });
       if (error) {
-        if (response.status === 403) {
-          return null;
-        }
+        if (isOwnerNotMeasurable(error)) return null;
         throwProblem(error);
       }
       return buildStageTotals(
@@ -273,7 +323,7 @@ export type StageTotals = {
   currency: string | null;
   asOf: string | null;
   timezone: string | null;
-  unpricedCount: number | null;
+  coverage: MoneyCoverage | null;
 };
 
 function reportMinor(value: unknown): number | null {
@@ -291,7 +341,6 @@ export function buildStageTotals(
   return new Map(
     rows.map((row) => {
       const count = reportMinor(row.deals) ?? 0;
-      const priced = reportMinor(row.priced_deals);
       return [
         String(row.stage_id ?? ""),
         {
@@ -303,7 +352,7 @@ export function buildStageTotals(
           currency,
           asOf,
           timezone,
-          unpricedCount: priced == null ? null : Math.max(0, count - priced),
+          coverage: coverageOf(row),
         },
       ];
     }),

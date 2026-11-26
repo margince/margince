@@ -87,7 +87,7 @@ func TestImporterDefaultsDoNotAssignMeetingsOrHistoricalCredit(t *testing.T) {
 		if voice := row.Voice; voice != nil && voice.Author != nil && voice.Author.UserId != nil && ids.UUID(*voice.Author.UserId) == e.Rep1 {
 			t.Fatal("author projection still names the importer")
 		}
-		if got := e.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_meeting_history h ON h.activity_id=a.id WHERE a.id=$1 AND EXISTS (SELECT 1 FROM `+storekit.MeetingCreditedSeatsAtChangeSQL("a", "false", "h.host_id_at_change")+` WHERE credit.id=$2)`, id, e.Rep1); got != 0 {
+		if got := e.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_meeting_history h ON h.activity_id=a.id WHERE a.id=$1 AND EXISTS (SELECT 1 FROM `+storekit.MeetingCreditedSeatsAtChangeSQL("a", "false", "h.host_id_at_change", "h.credited_seats_at_change")+` WHERE credit.id=$2)`, id, e.Rep1); got != 0 {
 			t.Fatal("recorded history still credits the importer")
 		}
 

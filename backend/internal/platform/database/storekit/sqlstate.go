@@ -5,6 +5,8 @@ package storekit
 
 import (
 	"errors"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -144,6 +146,72 @@ func CheckViolation(err error) (constraint string, ok bool) {
 	return pgViolation(err, pgCheckViolation)
 }
 
+// CheckViolationCode is the SQLSTATE CheckViolation reads, for a test that
+// builds the refusal Postgres sends.
+const CheckViolationCode = pgCheckViolation
+
+// CustomColumnPrefix starts every custom field's physical column name.
+const CustomColumnPrefix = "cf_"
+
+// PicklistConstraint names the CHECK that holds a custom picklist column to its
+// options, so its refusal can name the field.
+func PicklistConstraint(column string) string {
+	return column + "_check"
+}
+
+var picklistConstraint = regexp.MustCompile(`^(` + CustomColumnPrefix + `[a-z0-9_]+)_check$`)
+
+// PicklistViolation reads a refusal of a CHECK named by PicklistConstraint and
+// answers the custom column it holds.
+func PicklistViolation(err error) (column string, ok bool) {
+	constraint, ok := CheckViolation(err)
+	if !ok {
+		return "", false
+	}
+	match := picklistConstraint.FindStringSubmatch(constraint)
+	if match == nil {
+		return "", false
+	}
+	return match[1], true
+}
+
+// TextBoundViolation reads a refusal of a text bound: the shared guard, which
+// names the column and its limit, or a CHECK named by TextMaxConstraint.
+func TextBoundViolation(err error) (column string, limit int, ok bool) {
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) {
+		return "", 0, false
+	}
+	column, detail := pgErr.ColumnName, pgErr.Detail
+	switch {
+	case pgErr.Code == pgStringDataRightTruncation && pgErr.ConstraintName == TextBoundConstraint:
+	case pgErr.Code == pgCheckViolation:
+		match := textMaxConstraint.FindStringSubmatch(pgErr.ConstraintName)
+		if match == nil {
+			return "", 0, false
+		}
+		column, detail = match[1], match[2]
+	default:
+		return "", 0, false
+	}
+	limit, parseErr := strconv.Atoi(detail)
+	if parseErr != nil {
+		return "", 0, false
+	}
+	return column, limit, true
+}
+
+// TextMaxConstraint names a CHECK that bounds column to limit characters, so
+// its refusal reports the field and the limit.
+func TextMaxConstraint(column string, limit int) string {
+	return column + "_text_max_" + strconv.Itoa(limit)
+}
+
+var textMaxConstraint = regexp.MustCompile(`^([a-z_][a-z0-9_]*)_text_max_([0-9]+)$`)
+
+// TextBoundConstraint is the constraint name refuse_oversized_text() reports.
+const TextBoundConstraint = "text_character_bound"
+
 // IsQueryCanceled detects the 57014 a statement raises when it stops before
 // answering: a spent statement_timeout, an operator's pg_cancel_backend, or
 // the client going away.
@@ -157,10 +225,18 @@ func IsQueryCanceled(err error) bool {
 	return errors.As(err, &pgErr) && pgErr.Code == pgQueryCanceled
 }
 
+// IsStatementTimeout detects a 57014 that Postgres raised because the statement
+// ran past its statement_timeout, which is the one cancel a budget causes. An
+// operator cancelling the backend carries the same SQLSTATE and is not one.
+func IsStatementTimeout(err error) bool {
+	pgErr, ok := errors.AsType[*pgconn.PgError](err)
+	return ok && pgErr.Code == pgQueryCanceled && strings.Contains(pgErr.Message, "statement timeout")
+}
+
 // IsProgramLimitExceeded detects a 54000: a value the database accepted as
 // input but cannot store or index at that size.
 //
-// The case that earned it is `activity.search_tsv`, a GENERATED column whose
+// The case that earned it is `activity.search_tsv`, a trigger-kept column whose
 // to_tsvector output has a hard 1,048,575-byte ceiling. Output runs about
 // 1.10x input for word-dense text, so a body around 950 KB overflows it —
 // comfortably inside the HTTP chassis's 1 MiB request cap, which means a

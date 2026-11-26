@@ -17,7 +17,6 @@ package integration
 // offer read disclosed strictly more than the id the deal read withholds.
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -40,11 +39,12 @@ import (
 
 // offerDeskCompanyPerms is the offer desk that may also read companies.
 //
-// offerDeskPerms carries no `company` grant at all, and VisibleSubset
-// withholds every id when the object grant is missing — so a fixture built on
-// it would pass whatever capture privacy did, which is the wrong subject. This
-// set isolates the row-scope arm: the grant is present for both seats, and the
-// only thing separating them is who the company was captured private to.
+// OfferDeskPerms carries no `company` grant at all.
+// VisibleSubset withholds every id when the object grant is missing.
+// A fixture built on it would pass whatever capture privacy did.
+// That is the wrong subject.
+// This set isolates the row-scope arm. The grant is present for both seats.
+// The only thing separating them is who the company was captured private to.
 var offerDeskCompanyPerms = principal.Permissions{
 	RoleKeys: []string{"deal_desk"},
 	Objects: map[string]principal.ObjectGrant{
@@ -378,7 +378,7 @@ func TestADownloadSaysNoMoreAboutTheBuyerThanTheReadDoes(t *testing.T) {
 	if served.Code != http.StatusOK {
 		t.Fatalf("downloading as the colleague who can open the buyer = %d %s, want 200", served.Code, served.Body.String())
 	}
-	if !bytes.Contains(served.Body.Bytes(), []byte("Meridian Labs")) {
+	if !strings.Contains(offerPDFText(t, served.Body.Bytes()), "Meridian Labs") {
 		t.Error("the stored document does not print the buyer, so the refusal above withheld nothing")
 	}
 }
@@ -412,7 +412,7 @@ func TestANewBuyerRetiresTheRenderingThatPrintsTheOldOne(t *testing.T) {
 	// after it prints the new buyer, and the desk downloads that one.
 	renderOfferAs(desk, t, h, offer)
 	served := downloadOfferPdfAs(desk, h, offer)
-	if served.Code != http.StatusOK || !bytes.Contains(served.Body.Bytes(), []byte("Ashgrove Holdings")) {
+	if served.Code != http.StatusOK || !strings.Contains(offerPDFText(t, served.Body.Bytes()), "Ashgrove Holdings") {
 		t.Fatalf("downloading the rendering made after the change = %d, want 200 printing the new buyer", served.Code)
 	}
 }

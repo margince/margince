@@ -21,13 +21,15 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// recordImportTx records that THIS seat's mailbox delivered this message.
+// recordImportTx records that this seat's mailbox delivered this message, or
+// the shared mailbox this run syncs did.
 //
 // Written on every capture of the message, not only the one that created the
 // activity row: the second mailbox to deliver a message is exactly the case the
@@ -42,10 +44,10 @@ func recordImportTx(
 	ownerUserID ids.UUID, provider string, birth birthDecision, receivedAt, sourceAt time.Time,
 	bccOnly *bool, providerMessageID string,
 ) error {
-	if ownerUserID == ids.Nil {
-		// No identifiable seat behind this capture. Nothing to attribute the
-		// import to, and a row keyed on a nil user would claim a seat that
-		// does not exist.
+	who, ok := importerOf(ctx, ownerUserID)
+	if !ok {
+		// No seat and no shared mailbox behind this capture. A row keyed on
+		// nobody would claim an importer that does not exist.
 		return nil
 	}
 	// delivered_by names this seat's connection and the generation of its bound account.
@@ -61,17 +63,27 @@ func recordImportTx(
 	if !sourceAt.IsZero() && datasource.InstantInRange(sourceAt) {
 		occurred = &sourceAt
 	}
+	deliveringProvider, deliveringConnection := provider, runConnection(ctx)
+	if seat, onSeat := chatSeatOf(ctx); onSeat {
+		var err error
+		if deliveringProvider, err = chatSeatProviderTx(ctx, tx, seat); err != nil {
+			return err
+		}
+		deliveringConnection = &seat
+	}
 	query := `
-        INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
-                                    provider_received_at, source_occurred_at, delivered_by, bcc_only, provider_message_ids)
-        VALUES (@activity, @seat, NULLIF(@import_posture, ''), NULLIF(@verdict_status, ''), NULLIF(@verdict_reason, ''), @verdict_reasons, @received, @occurred,
-                ARRAY(SELECT c.provider || ':' || c.generation FROM capture_connection c WHERE c.user_id = @seat AND c.provider = @delivering_provider),
-                @bcc, ` + providerMessageKeysSQL("@seat", "@delivering_provider", "@message") + `)
-        ON CONFLICT (activity_id, user_id) DO UPDATE SET
+        INSERT INTO capture_import (activity_id, ` + who.column + `, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
+                                    provider_received_at, source_occurred_at, delivered_by, bcc_only, provider_message_ids, legal_entity_id)
+        VALUES (@activity, @importer, NULLIF(@import_posture, ''), NULLIF(@verdict_status, ''), NULLIF(@verdict_reason, ''), @verdict_reasons, @received, @occurred,
+                ARRAY(SELECT ` + storekit.MailboxMarkSQL("c") + ` FROM capture_connection c WHERE ` + who.connection + `),
+                @bcc, ` + storekit.ConnectionMessageKeysSQL(who.connection, "@message") + `,
+                (SELECT c.legal_entity_id FROM capture_connection c WHERE ` + who.connection + `))
+        ON CONFLICT ` + who.conflict + ` DO UPDATE SET
          provider_received_at = coalesce(capture_import.provider_received_at, EXCLUDED.provider_received_at),
          source_occurred_at = coalesce(capture_import.source_occurred_at, EXCLUDED.source_occurred_at),
-         delivered_by = ARRAY(SELECT DISTINCT unnest(capture_import.delivered_by || EXCLUDED.delivered_by) ORDER BY 1),
+         delivered_by = ` + mergedDeliveredBySQL + `,
          bcc_only = coalesce(capture_import.bcc_only, EXCLUDED.bcc_only),
+         legal_entity_id = ` + deliveringEntitySQL("capture_import", mergedDeliveredBySQL) + `,
          provider_message_ids = ARRAY(SELECT DISTINCT unnest(capture_import.provider_message_ids || EXCLUDED.provider_message_ids) ORDER BY 1)
         WHERE (capture_import.provider_received_at IS NULL AND EXCLUDED.provider_received_at IS NOT NULL)
            OR (capture_import.source_occurred_at IS NULL AND EXCLUDED.source_occurred_at IS NOT NULL)
@@ -79,9 +91,9 @@ func recordImportTx(
            OR NOT (EXCLUDED.delivered_by <@ capture_import.delivered_by)
            OR NOT (EXCLUDED.provider_message_ids <@ capture_import.provider_message_ids)`
 	args := pgx.NamedArgs{
-		"activity": activityID, "seat": ownerUserID, "import_posture": birth.posture,
+		"activity": activityID, "importer": who.id, "import_posture": birth.posture,
 		"verdict_status": birth.verdictStatus, "verdict_reason": birth.reason, "verdict_reasons": birth.reasons,
-		"received": received, "occurred": occurred, "delivering_provider": provider,
+		"received": received, "occurred": occurred, "delivering_provider": deliveringProvider, "delivering_connection": deliveringConnection,
 		"bcc": bccOnly, "message": providerMessageID,
 	}
 	if _, err := tx.Exec(ctx, query, args); err != nil {
@@ -89,6 +101,10 @@ func recordImportTx(
 	}
 	return nil
 }
+
+// mergedDeliveredBySQL is the mailboxes that delivered an import once the
+// arriving one is added.
+const mergedDeliveredBySQL = `ARRAY(SELECT DISTINCT unnest(capture_import.delivered_by || EXCLUDED.delivered_by) ORDER BY 1)`
 
 // AudienceRecomputer derives a captured activity's audience from every
 // mailbox that imported it. The activities module owns the activity table and
@@ -248,6 +264,11 @@ func seatDeliveredTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	rec connector.NormalizedRecord, memberBound bool,
 ) (bool, error) {
+	if _, onSeat := chatSeatOf(ctx); onSeat && !memberBound {
+		// A company account's link was approved for this seat, and the capture
+		// reached it through that link. No colleague's mailbox is at stake.
+		return true, nil
+	}
 	if !memberBound {
 		return mailboxWasARecipientTx(ctx, tx, rec)
 	}
@@ -328,17 +349,17 @@ func replayClaimIsProvenTx(
 		sum := sha256.Sum256(part.Body)
 		carried = append(carried, hex.EncodeToString(sum[:]))
 	}
-	// The seat the import row would name — the same one recordThisImport writes.
-	// A capture with no seat behind it claims nothing: recordImportTx writes no
-	// row for it and the delivery test has no identities to match, so there is
-	// no grant here to prove.
+	// The importer the row would name, as recordThisImport writes it. With
+	// neither a seat nor a shared mailbox there is no row and so no grant. A
+	// shared mailbox's row grants its whole reader team, so it is proven too.
 	seat := actorUserID(ctx)
-	if seat == ids.Nil {
+	shared, isShared := sharedMailboxOf(ctx)
+	if seat == ids.Nil && !isShared {
 		return true, nil
 	}
-	// Freely when the row is already this seat's, by the standing every door
+	// Freely when the row is already this importer's, by the standing every door
 	// judges with.
-	held, err := SeatHoldsActivityTx(ctx, tx, id)
+	held, err := importerHoldsActivityTx(ctx, tx, id, shared, isShared)
 	if err != nil || held {
 		return held, err
 	}
@@ -347,6 +368,11 @@ func replayClaimIsProvenTx(
 		return false, err
 	}
 	if masked {
+		// The masked proof is an address the seat proved; a shared mailbox has
+		// no proven addresses beyond its own, so masked mail never joins.
+		if isShared {
+			return false, nil
+		}
 		return maskedReplayIsProvenTx(ctx, tx, id, seat, carried)
 	}
 	var same bool

@@ -1,0 +1,13 @@
+{
+  "tool": "whoami",
+  "verb": "whoami",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

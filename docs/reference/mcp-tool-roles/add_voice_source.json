@@ -1,0 +1,15 @@
+{
+  "tool": "change_my_settings",
+  "action": "add_voice_source",
+  "verb": "add_voice_source",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

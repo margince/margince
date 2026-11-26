@@ -30,14 +30,14 @@ func guessedMailboxSeatSQL() string {
 }
 
 // GuessedMailboxActivitiesTx locks the next limit activities after the cursor,
-// in id order, that carry a guessed mailbox owner.
+// in id order, that carry a guessed mailbox owner, through LockMeetingAttendeePage.
 func GuessedMailboxActivitiesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ids.UUID, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a WHERE a.id > $1
 		   AND EXISTS (SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id AND `+guessedMailboxSeatSQL()+`)
-		 ORDER BY a.id LIMIT $2 FOR UPDATE OF a`, after, limit)
+		 ORDER BY a.id LIMIT $2`, after, limit)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading mail with a guessed mailbox owner: %w", err)
 	}
@@ -45,7 +45,7 @@ func GuessedMailboxActivitiesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, 
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading mail with a guessed mailbox owner: %w", err)
 	}
-	return found, nil
+	return found, storekit.LockMeetingAttendeePage(ctx, tx, found)
 }
 
 // CountGuessedMailboxActivities counts the activities carrying a guessed
@@ -68,6 +68,9 @@ func RetireGuessedMailboxSeatsTx(ctx context.Context, tx pgx.Tx, activityID, run
 	if err := auth.RequireSystem(ctx); err != nil {
 		return false, err
 	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID); err != nil {
+		return false, err
+	}
 	if _, err := storekit.LockRow(ctx, tx, "activity", activityID, storekit.IncludeArchived); err != nil {
 		return false, err
 	}
@@ -86,7 +89,7 @@ func RetireGuessedMailboxSeatsTx(ctx context.Context, tx pgx.Tx, activityID, run
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "activity", activityID,
 		map[string]any{auditFieldMailboxSeats: seats}, map[string]any{auditFieldMailboxSeats: []ids.UUID{}},
-		map[string]any{"data_task_run": runID.String()})
+		map[string]any{evidenceDataTaskRun: runID.String()})
 	if err != nil {
 		return false, err
 	}

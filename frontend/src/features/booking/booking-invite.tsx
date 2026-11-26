@@ -11,8 +11,8 @@ import { Heading } from "../../design-system/heading";
 import { IconAction } from "../../design-system/iconaction";
 import { useT } from "../../i18n";
 import { contactQuery } from "../../lib/contact.queries";
+import { closeOnto } from "../../lib/navigatefrom";
 import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -59,6 +59,7 @@ export function BookingInviteScreen({
     enabled: !!selectedId,
   });
   const activity = useActivityGate(
+    "contact",
     contact.isError ? null : (contact.data ?? null),
   );
   const saved = profile.data;
@@ -82,7 +83,7 @@ export function BookingInviteScreen({
   const pick = (slot: BookingSlot) =>
     setPicks((current) => togglePick(current, slot, mode));
   const back = () =>
-    navigate(
+    closeOnto(
       contactId
         ? { screen: "contacts", id: contactId, id2: "meetings" }
         : { screen: "home" },
@@ -196,7 +197,7 @@ function bookingDraft(
     contactId,
     contactName: edits.contact?.name ?? contact?.full_name,
     attendee: edits.attendee ?? bookingRecipient(contact),
-    subject: edits.subject ?? saved?.title ?? t("book.subject"),
+    subject: edits.subject ?? saved?.title ?? t("scheduling.defaultSubject"),
     location: edits.location ?? saved?.location ?? "",
     description: edits.description ?? "",
     duration: edits.duration ?? saved?.duration_minutes ?? 30,

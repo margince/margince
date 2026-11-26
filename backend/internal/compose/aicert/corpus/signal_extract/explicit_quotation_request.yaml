@@ -1,0 +1,11 @@
+name: explicit_quotation_request
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/claude
+fixture: [{"direction": "inbound", "subject": "Quotation for a support desk", "sent": "2026-09-07", "body": "Hi Linh,\n\nWe are choosing a vendor for our new support desk. Please send us a quotation for 40 seats. Our budget is 12,000 per year.\n\nThanks,\nMira", "participants": [{"key": "buyer", "kind": "contact", "role": "from", "name": "Mira", "address": "mira@maple.test"}, {"key": "seller", "kind": "seat", "role": "to", "name": "Linh Nguyen", "address": "linh@seller.test"}]}]
+expect:
+  outcome: accepted
+  answer: [{"kind": "new_opportunity", "message": 1, "buyer": "buyer", "commercial_role": "buyer", "request_kind": "explicit_request"}]
+  rubric: "A buyer asking us outright for a quotation is an explicit request. A need the buyer only describes is a need."
+  bands: {certified_min: 70, degraded_min: 50, floor: 40}

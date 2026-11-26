@@ -347,10 +347,19 @@ func scanTreeForCitations(t *testing.T, known map[string]map[string]bool) (found
 // ANCHORED to the directories that hold generated Go rather than accepted as a
 // bare suffix: a suffix alone makes `_gen.go` a general-purpose invisibility
 // cloak any new file can put on.
+//
+// The two renumber records list versions the tree no longer ships: each line
+// names a version a database may still hold. Two tests in backend/migrations
+// hold every line of them to the tree instead
+// (TestEveryDeclaredRenumberPointsAtTheMigrationThatShips,
+// TestTheOldHeadManifestResolves). They are exempt by exact path, so no other
+// file is excused.
 func citationScanExempt(rel string) bool {
 	switch {
 	case rel == "backend/gates/migrationcitations_test.go",
 		rel == "backend/"+citationRegisterPath,
+		rel == "backend/migrations/renumbered.txt",
+		rel == "backend/migrations/testdata/oldhead-e549efee.txt",
 		rel == "frontend/src/api/schema.d.ts",
 		rel == "frontend/src/api/public-events.ts",
 		strings.HasPrefix(rel, "backend/internal/contracts/"),

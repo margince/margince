@@ -21,12 +21,16 @@ func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
 		asksFirst bool
 	}
 	writes := map[string]weight{
-		"recordConsent": {scopeWrite, true}, "allowContact": {scopeWrite, true}, "revokeOverride": {scopeWrite, true},
+		"recordConsent": {scopeWrite, true}, "revokeOverride": {scopeWrite, true},
 		"liftSuppression": {scopeWrite, true}, "recordQualifyingEvent": {scopeWrite, true},
 		"retractQualifyingEvent": {scopeWrite, true},
 		"issueDoubleOptIn":       {scopeSend, true}, "sendPrivacyNotice": {scopeSend, true}, "requestDetailsConfirmation": {scopeSend, true},
 		// A contact asking to stop has legal weight. The marker asks the model; the server still records it at once.
 		"suppressContact": {scopeWrite, true},
+	}
+	// Consent writes that stay a human admin's alone, each with why.
+	humanOnly := map[string]string{
+		"liftContactRestriction": "ending a restriction of processing resumes the product's use of the contact's data, which only an admin signed in to the app decides, as only one records the restriction",
 	}
 	verbs := map[string]agents.RouteVerb{}
 	for _, v := range RouteVerbs() {
@@ -45,6 +49,13 @@ func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
 			}
 			continue
 		}
+		if _, human := humanOnly[pol.Op]; human {
+			if pol.Access != accessHumanOnly {
+				t.Errorf("%s (%s) is a human admin's decision and must refuse an agent, got %+v", route, pol.Op, pol)
+			}
+			delete(humanOnly, pol.Op)
+			continue
+		}
 		if pol.Access != accessTool || pol.ServedBy != servedByRoute {
 			t.Errorf("%s (%s) must be a route-backed action of the user's agent, got %+v", route, pol.Op, pol)
 			continue
@@ -61,6 +72,9 @@ func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
 		delete(writes, pol.Op)
 	}
 	for op := range writes {
+		t.Errorf("%s left the per-contact consent routes: this pin no longer covers it", op)
+	}
+	for op := range humanOnly {
 		t.Errorf("%s left the per-contact consent routes: this pin no longer covers it", op)
 	}
 	if seen == 0 {
@@ -82,19 +96,18 @@ func TestConsentRoutesSplitByWhoseDecisionTheyHold(t *testing.T) {
 	}
 }
 
-// Directing a refused send is the user's decision, carried out by their agent:
-// it spends send and asks first.
-func TestDirectingARefusedSendAsksFirstAndSpendsSend(t *testing.T) {
+// Directing a refused send is the user's own decision, so no agent records it:
+// the route is human-only and only a session reaches it.
+func TestOnlyItsUserDirectsARefusedSend(t *testing.T) {
 	pol, known := agentPolicies[http.MethodPost+" /v1/communication-reviews/{id}/direct-send"]
-	if !known || pol.Access != accessTool || pol.Scope != scopeSend {
-		t.Fatalf("the directed send must be an agent's action on send, got %+v (known %v)", pol, known)
+	if !known || pol.Access != accessHumanOnly || pol.HumanOnlyReason != humanOnlySecurity {
+		t.Fatalf("the directed send must be human-only for security, got %+v (known %v)", pol, known)
 	}
 	for _, v := range RouteVerbs() {
-		if v.Verb == pol.Tool && v.AskUserFirst {
-			return
+		if v.Op == pol.Op {
+			t.Errorf("%s still serves the directed send to agents", v.Verb)
 		}
 	}
-	t.Errorf("%s does not ask the user first", pol.Tool)
 }
 
 // These reach something a user could not safely hand over: they destroy data, take

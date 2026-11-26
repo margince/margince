@@ -23,6 +23,8 @@ const (
 	TranscriptFailureMissing       = "missing"
 	TranscriptFailureRefused       = "refused"
 	TranscriptFailureNoModel       = "no_model"
+	TranscriptFailureUnanswered    = "unanswered"
+	TranscriptFailureUnfinished    = "unfinished"
 )
 
 // TranscriptReadFacts is what one reading did with what it found.
@@ -40,6 +42,10 @@ type TranscriptReadFacts struct {
 	Proposals []TranscriptProposal    `json:"proposals,omitempty"`
 	Withheld  []TranscriptReasonCount `json:"withheld,omitempty"`
 	Failure   *TranscriptFailure      `json:"failure,omitempty"`
+	// Summary is what this reading wrote onto the meeting. SummaryRefused says
+	// a done reading wrote none, because its summary failed the check.
+	Summary        *TranscriptSummary `json:"summary,omitempty"`
+	SummaryRefused bool               `json:"summary_refused,omitempty"`
 }
 
 // TranscriptSeatCount is how many tasks went to one seat.

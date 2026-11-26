@@ -1,0 +1,6 @@
+{
+  "verb": "set_blocked_domain",
+  "checks": [
+    "company.update"
+  ]
+}

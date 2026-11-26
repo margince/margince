@@ -48,7 +48,7 @@ func TestAChangeEmailNamesTheRecordAndEachFieldBeforeAndAfter(t *testing.T) {
 				},
 				{Field: "expected_close_date", Before: previewText(previewValueEmpty, ""), After: previewText(previewValueDate, "2026-10-11")},
 				{Field: "owner_id", Before: previewText(previewValueUnavailable, ""), After: previewText("owner", "Rainer")},
-				{Field: "lifecycle", Before: previewText(previewValueLifecycle, "customer"), After: previewText(previewValueLifecycle, "former_customer")},
+				{Field: "status", Before: previewText(previewValueLifecycle, "customer"), After: previewText(previewValueLifecycle, "former_customer")},
 				{Field: "closed_at", Before: previewText(previewValueEmpty, ""), After: previewText(previewValueExecution, "")},
 				{Field: "address", Before: previewText(previewValueEmpty, ""), After: previewText("structured", `{"city":"Hanoi"}`)},
 			},
@@ -60,7 +60,7 @@ func TestAChangeEmailNamesTheRecordAndEachFieldBeforeAndAfter(t *testing.T) {
 		"Proposal: " + summary,
 		"Value: 25,000.00 USD → 27,036.00 USD",
 		"Expected close: Not set → 2026-10-11",
-		"Lifecycle: Customer → Former customer",
+		"Status: Customer → Former customer",
 		"Closed on: Not set → Set when applied",
 		`Address: Not set → {"city":"Hanoi"}`,
 		"Why you: " + words.MailReasonOnBehalf,
@@ -243,5 +243,23 @@ func TestAChangeEmailListsWhatThePreviewHidAndCountsItInTheLimit(t *testing.T) {
 	}}, words)
 	if got := factsText(facts); strings.Contains(got, "u-7") || !strings.Contains(got, ": +1 more") {
 		t.Errorf("a summary line past the limit was listed or not counted:\n%s", got)
+	}
+}
+
+func TestLocalizedDigestRetainsTheAuthorizedFieldValues(t *testing.T) {
+	sentence := "Datensatz aktualisieren"
+	approval := crmcontracts.Approval{
+		SystemDisplay: &crmcontracts.SystemDisplay{Locale: "de", Subject: &sentence},
+		SummaryParts:  &crmcontracts.ApprovalSummaryParts{Fields: []crmcontracts.ApprovalSummaryField{{Field: "name", Value: "Acme, Inc."}}},
+	}
+	digest := digestOrSubjectLine(approval, forDigestLine)
+	if !strings.Contains(digest, sentence) || !strings.Contains(digest, "Acme, Inc.") {
+		t.Fatalf("digest lost proposal facts: %q", digest)
+	}
+	if got := digestOrSubjectLine(approval, forSingleEmail); got != sentence {
+		t.Fatalf("subject = %q", got)
+	}
+	if got := approvalSentence(approval); got != sentence {
+		t.Fatalf("proposal sentence = %q", got)
 	}
 }

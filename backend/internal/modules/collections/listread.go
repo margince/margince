@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -32,6 +33,9 @@ const (
 	// healthRetiredTag is a Live List whose filter names an archived tag, which
 	// no longer matches any record, so its steward should name the live one.
 	healthRetiredTag = "retired_tag"
+	// healthUnavailable is a list over an extension kind this reader cannot
+	// read: its unit was removed, or the reader lacks the kind's read right.
+	healthUnavailable = "unavailable"
 )
 
 // ExportDetailListID is the system_log detail key a filtered export of a list
@@ -80,64 +84,6 @@ type RuleUse struct {
 func (s *Store) WithRuleUses(read func(ctx context.Context, id ids.ListID) ([]RuleUse, error)) *Store {
 	s.ruleUses = read
 	return s
-}
-
-// summarize counts what this reader may see of a list and judges its health.
-// A Live List whose filter no longer compiles reports invalid and no count
-// rather than failing the read, so the library still opens. A list nobody
-// looks after reports that before a retired field, which only its steward can
-// replace.
-func (s *Store) summarize(ctx context.Context, l listRow) (listSummary, error) {
-	out := listSummary{listRow: l, Health: healthOK, CanEdit: mayEditList(ctx, l)}
-	count, err := s.CountMembers(ctx, l.ID)
-	var pred *storekit.PredicateError
-	switch {
-	case errors.As(err, &pred), errors.Is(err, errNotAFilterTree):
-		out.Health = healthInvalid
-	case err != nil:
-		return listSummary{}, err
-	default:
-		out.VisibleCount = &count
-	}
-	if out.Health != healthOK {
-		return out, nil
-	}
-	if out.RetiredFields, err = s.retiredFieldsOf(ctx, l); err != nil {
-		return listSummary{}, err
-	}
-	if out.RetiredTags, err = s.retiredTagsOf(ctx, l); err != nil {
-		return listSummary{}, err
-	}
-	gone, err := s.stewardGone(ctx, l)
-	switch {
-	case err != nil:
-		return listSummary{}, err
-	case gone:
-		out.Health = healthOwnerless
-	case len(out.RetiredFields) > 0:
-		out.Health = healthRetiredField
-	case len(out.RetiredTags) > 0:
-		out.Health = healthRetiredTag
-	}
-	return out, nil
-}
-
-// stewardGone says nobody looks after the list: it has no steward, or one who
-// may no longer act.
-func (s *Store) stewardGone(ctx context.Context, l listRow) (bool, error) {
-	if l.StewardID == nil {
-		return true, nil
-	}
-	if s.liveSteward == "" {
-		return false, nil
-	}
-	var live bool
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			"SELECT EXISTS (SELECT 1 FROM app_user u WHERE u.id = @steward_id AND "+s.liveSteward+")",
-			pgx.StrictNamedArgs{stewardIDField: l.StewardID}).Scan(&live)
-	})
-	return !live, err
 }
 
 // Dependencies reads what uses a list: the active automation rules that watch
@@ -205,6 +151,10 @@ func (s *Store) ExplainMember(ctx context.Context, listID ids.ListID, entityID i
 	if err != nil {
 		return MemberExplanation{}, err
 	}
+	// No record of a removed kind can be seen.
+	if kindRemoved(list.EntityType) {
+		return MemberExplanation{}, apperrors.ErrNotFound
+	}
 	if list.ListType == listTypeDynamic {
 		engine, pred, err := s.liveFilter(ctx, list)
 		if err != nil {
@@ -261,6 +211,7 @@ type HistoryEntry struct {
 	Actor             string
 	EntityType        *string
 	EntityID          *ids.UUID
+	EntityName        *string
 	Reason            *string
 	Note              *string
 	DefinitionVersion *int64
@@ -268,6 +219,12 @@ type HistoryEntry struct {
 	Name              *string
 	Definition        map[string]any
 	Sharing           *string
+	// Changes names what a revision changed against the version before it, in
+	// revisionChangesSQL's words; nil when no earlier version is kept.
+	Changes []string
+	// Previous holds the version before a revision, for what Changes names.
+	PreviousName       *string
+	PreviousDefinition map[string]any
 }
 
 // History pages through a list's changes, newest first. A membership change
@@ -279,9 +236,14 @@ func (s *Store) History(ctx context.Context, listID ids.ListID, limit int, curso
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
+	removed := kindRemoved(list.EntityType)
+	// A revision carries the filter, which a reader of the kind alone may see.
+	if !removed && kindUnavailable(ctx, list.EntityType) {
+		return nil, storekit.Page{}, apperrors.ErrPermissionDenied
+	}
 	var after *storekit.Cursor
 	if cursor != "" {
-		decoded, err := storekit.DecodeCursor(cursor)
+		decoded, err := storekit.DecodeCursor("list_history", cursor)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
@@ -305,10 +267,16 @@ func (s *Store) History(ctx context.Context, listID ids.ListID, limit int, curso
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
+	// A removed kind's filter names fields no reader can read any more.
+	if removed {
+		for i := range out {
+			out[i].Definition, out[i].PreviousDefinition = nil, nil
+		}
+	}
 	if len(out) > limit {
 		out = out[:limit]
 		last := out[limit-1]
-		next, err := storekit.EncodeCursor(last.OccurredAt, last.ID)
+		next, err := storekit.EncodeCursor("list_history", last.OccurredAt, last.ID)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
@@ -331,21 +299,41 @@ func historySQL(ctx context.Context, list listRow, after *storekit.Cursor, limit
 	}
 	return fmt.Sprintf(`SELECT h.* FROM (
 		SELECT ev.id, 'member_' || ev.action AS kind, ev.occurred_at, ev.actor,
-		       ev.entity_type, ev.entity_id, ev.reason, ev.note, ev.definition_version,
-		       NULL::bigint AS version, NULL::text AS name, NULL::jsonb AS definition, NULL::text AS sharing
-		FROM list_member_event ev WHERE ev.list_id = $%[1]d AND %[2]s
+		       ev.entity_type, ev.entity_id, %[5]s AS entity_name, ev.reason, ev.note, ev.definition_version,
+		       NULL::bigint AS version, NULL::text AS name, NULL::jsonb AS definition, NULL::text AS sharing,
+		       NULL::text[] AS changes, NULL::text AS previous_name, NULL::jsonb AS previous_definition
+		FROM list_member_event ev %[6]s WHERE ev.list_id = $%[1]d AND %[2]s
 		UNION ALL
 		SELECT r.id, 'revised', r.changed_at, r.changed_by,
-		       NULL, NULL, NULL, NULL, NULL, r.version, r.name, r.definition, r.sharing
-		FROM list_revision r WHERE r.list_id = $%[1]d
+		       NULL, NULL, NULL, NULL, NULL, NULL, r.version, r.name, r.definition, r.sharing,
+		       %[7]s, p.name, p.definition
+		FROM list_revision r
+		LEFT JOIN list_revision p ON p.list_id = r.list_id AND p.version = r.version - 1
+		WHERE r.list_id = $%[1]d
 	) h %[3]s ORDER BY h.occurred_at DESC, h.id DESC LIMIT $%[4]d`,
-		listPos, visible, page, arg(limit+1)), nil
+		listPos, visible, page, arg(limit+1),
+		recordNameExpr(list.EntityType), recordNameJoin(list.EntityType, "ev.entity_id"), revisionChangesSQL), nil
 }
+
+// filterChangedSQL is whether revision r changed the filter of the version p
+// before it. The history and the visit summary both ask it, so they agree.
+const filterChangedSQL = `r.definition IS DISTINCT FROM p.definition`
+
+// revisionChangesSQL is what revision r changed against the version p before
+// it, as the contract's ListHistoryEntry.changes spells it; NULL with no p.
+const revisionChangesSQL = `CASE WHEN p.id IS NULL THEN NULL ELSE array_remove(ARRAY[
+		CASE WHEN r.name IS DISTINCT FROM p.name THEN 'name' END,
+		CASE WHEN r.purpose IS DISTINCT FROM p.purpose THEN 'purpose' END,
+		CASE WHEN ` + filterChangedSQL + ` THEN 'filter' END,
+		CASE WHEN (r.sharing, r.team_id) IS DISTINCT FROM (p.sharing, p.team_id) THEN 'sharing' END,
+		CASE WHEN r.steward_id IS DISTINCT FROM p.steward_id THEN 'steward' END
+	], NULL) END`
 
 func scanHistory(row pgx.CollectableRow) (HistoryEntry, error) {
 	var h HistoryEntry
-	err := row.Scan(&h.ID, &h.Kind, &h.OccurredAt, &h.Actor, &h.EntityType, &h.EntityID,
-		&h.Reason, &h.Note, &h.DefinitionVersion, &h.Version, &h.Name, &h.Definition, &h.Sharing)
+	err := row.Scan(&h.ID, &h.Kind, &h.OccurredAt, &h.Actor, &h.EntityType, &h.EntityID, &h.EntityName,
+		&h.Reason, &h.Note, &h.DefinitionVersion, &h.Version, &h.Name, &h.Definition, &h.Sharing,
+		&h.Changes, &h.PreviousName, &h.PreviousDefinition)
 	return h, err
 }
 

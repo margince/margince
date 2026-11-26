@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/scheduling_park.go backend/internal/modules/activities/handlers_proposal.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go -->
+<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/scheduling_team.go backend/internal/modules/activities/scheduling_teamlinks.go backend/internal/modules/activities/scheduling_teamlinkmove.go backend/internal/compose/teamrequestnotice.go backend/internal/modules/activities/scheduling_teamtime.go backend/internal/modules/activities/scheduling_park.go backend/internal/modules/activities/handlers_proposal.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go backend/internal/modules/activities/activityintent.go -->
 # Scheduling
 
 What a meeting host sees is in the handbook page
@@ -34,6 +34,63 @@ authority, never from a provider call. `no_calendar` is a page that names none, 
 a connection without the write grant, and `calendar_unavailable` a connection that is gone or
 refused.
 
+## A team link waits for every member
+
+A host has one personal booking page and any number of team links, each a `booking_page` row of its
+own with `team_link` set. The index `booking_page_one_personal_per_host` keeps one live personal page
+per host. The personal page names no team, so it offers its host's free time alone. A
+team link stores its name, its switch and up to five colleagues in `team_members`. Its calendar and
+every other setting come from the host's personal page (`bookingPageProfile`). Each read of one page
+names it by id, or names the personal page (`livePageSQL`).
+
+Each member's answer is their own. The owner's save keeps it, and starts a new member as `pending`.
+Only the member writes `confirmed` or `left`, and they answer one team link by its id.
+
+The save that names a new member also gives them a notice of kind `meeting_team_request`, in the same
+transaction, through `compose/teamrequestnotice.go`. The notice is keyed by team link and member, so
+two links that name one colleague each ask. It sits in the approval class of notices, so it is mailed
+as an approval is unless the member chose otherwise. A member kept on the list gets no second notice.
+Answering, being taken off the list or a deleted link takes the notice back, and a notice taken
+back is never mailed.
+
+The mail reads its team link again, by the link's id, when it leaves. It names the current title,
+and it is not sent if the member is no longer pending at that check. The send holds the link while
+it is booked in, so an answer, or taking the member off, waits for it. An answer that commits after
+the send is booked in cannot stop that mail. Naming a member again opens the same notice, with the
+current title.
+
+A team stored on a personal page moves onto a new team link with a new address, through the data task
+`core/1795540594_teams_move_to_team_links`. Each member keeps their answer.
+
+Confirming is a consent to share free time with a public page, so an agent cannot give it. Until every member has confirmed
+and has a calendar Margince can read, the page's `blocker` is `team_not_ready` and the page is
+paused. Home tells the owner through a booking card for that link, which names the link.
+
+A booking reads its page again under the page lock before it commits. A team link switched off since
+the guest opened it, or a team that changed since, refuses the booking as a paused page does.
+
+A member's calendar is read through the calendars of their own booking settings. The page keeps
+the same free time around their meetings as around the host's. A read-only grant is enough, because a member's
+calendar is only read. A free time is free for the host and for every member. It must also fall in
+each member's own working hours, read in their own zone.
+
+A booking names the members in `meeting_invitation.team_user_ids`. That holds their time the way a
+hosted meeting does. The local hold check (`localMeetingSlots`) counts it for each member, through
+an arm of its own on that column's index. A booking, a move and a delivery each take the host lock
+of the host and of every member, always in one sorted order. A booking through the page first takes
+the page lock and reads each member's answer again under it. So two links cannot book one member
+twice, and each member's own page stops offering the time.
+
+Each member is invited on the one event, and the booking closes each member's own open tasks on the
+booked record. A meeting records the link that booked it in `meeting_invitation.booking_page_id`. A move
+checks every member again who is still confirmed on that link, and none once the link is deleted. A
+meeting booked before the column existed checks the members confirmed on any of the host's live links. A member who left the link or
+the workspace is left out.
+
+A member whose calendar cannot be read refuses the move, as the host's own calendar would. The member's copy of
+the meeting has an event id of its own, so the move knows it by its current time. When a member
+leaves the workspace, every link that names them marks them `unavailable` and stays paused.
+
 ## Free times are read live, and a failed read shows no times
 
 The invite engine reads the provider's busy time at the moment of the request. Google gets a
@@ -58,6 +115,24 @@ Each request or move checks hours, notice, horizon, length and the live calendar
 host puts local holds in a line. The delivery worker checks the provider once more right before it
 writes. The provider calendar is not part of the database transaction. So another client can still
 take the time between that check and the write: the gap is narrowed, not closed.
+
+## A booked time keeps the clock it was picked in
+
+A booking or a move can send the local time and IANA zone the host or guest picked the time in
+(`start_intent`). That clock decides the start, and the meeting keeps the length the request gave
+it. The meeting stores the clock beside `occurred_at`. `occurred_at` keeps the start worked out
+with the zone rules of the day it was saved. The rule that stops two holds sharing time needs that
+fixed moment. A read of a meeting that is still booked works the start out again with current
+rules.
+
+Both providers get the zone with the event times, so the event keeps the same local time there.
+Google gets the IANA name. Microsoft gets the Windows zone that the Unicode CLDR data maps it to.
+Graph's event create and update take every Windows zone but only some IANA names.
+
+A zone CLDR maps to no Windows zone goes to Microsoft in UTC. So does a zone that a newer CLDR
+release moved to a new Windows zone, because the old Windows zone states the old rules. A move the
+provider reports, or a move that names only a UTC time, drops the clock. A whole-day meeting never
+keeps one.
 
 ## Delivery is a command, not a call
 

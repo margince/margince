@@ -9,6 +9,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -224,8 +225,12 @@ func requestConversation(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 	counterparty string, asOf time.Time, only *ids.UUID, limit int,
 ) ([]threadMessage, error) {
+	judgeable, err := activities.JudgeableAudienceTx(ctx, tx, "activity")
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, `
-		SELECT activity.id, coalesce(activity.direction, ''), coalesce(activity.subject, ''),
+		SELECT activity.id, coalesce(`+activities.WriterSideSQL("activity", "true")+`, ''), coalesce(activity.subject, ''),
 		       coalesce(left(activity.body, $1), ''), activity.occurred_at, NOT `+provenance.MailBodyCompleteSQL("activity")+`
 		  FROM activity
 		  JOIN activity request ON request.id = $2
@@ -245,11 +250,8 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 		   AND (activity.id = $2 OR `+activities.CapturedInboundSQL("activity")+`
 		        OR activity.counterparty_outbound_attested OR activity.sent_by_colleague IS NOT NULL)
 		   AND activity.archived_at IS NULL
-		   -- The audience, tested HERE and not only in the read that offered
-		   -- this request: the candidate query runs in its own statement and a
-		   -- thread can be narrowed between the two, which under read-committed
-		   -- this statement is the first to see.
-		   AND activity.audience = 'workspace' AND activity.restricted_at IS NULL
+		   -- Tested HERE too: a thread can be narrowed after the candidate read.
+		   AND `+judgeable+`
 		   AND `+occurredday.BegunSQL("activity", "$3")+`
 		   AND (activity.id = $2 OR `+activities.SettlementThreadSQL("activity", "request")+`)
 		   AND ($6::uuid IS NULL OR activity.id = $6)
@@ -283,7 +285,7 @@ func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate
 		return 0, nil
 	}
 	verdicts, err := s.ask(ctx, batch)
-	if declinedByTheModels(err) {
+	if declinedByTheModels(err) || errors.Is(err, ai.ErrSubjectRestricted) {
 		return s.judgeEach(ctx, batch, calls)
 	}
 	if err != nil {
@@ -295,11 +297,15 @@ func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate
 	}
 	judged := 0
 	var retry []settleCandidate
+	// A conversation with no usable answer is retried alone like a below-floor
+	// one. Otherwise bad answers at the front of the queue would starve the rest.
+	answered := make(map[string]bool, len(verdicts.results))
 	for _, v := range verdicts.results {
 		candidate, ok := byID[v.ID]
 		if !ok {
 			continue // the validator guarantees this; belt and braces
 		}
+		answered[v.ID] = true
 		if v.Confidence < settleConfidenceFloor || !settleRemainderStands(v, batch) {
 			retry = append(retry, candidate)
 			continue
@@ -308,6 +314,11 @@ func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate
 			return judged, err
 		}
 		judged++
+	}
+	for _, c := range batch {
+		if !answered[c.Request.RequestID.String()] {
+			retry = append(retry, c)
+		}
 	}
 	solo, err := s.judgeEach(ctx, retry, calls)
 	return judged + solo, err
@@ -330,6 +341,9 @@ func (s *RequestSettler) judgeEach(ctx context.Context, candidates []settleCandi
 			s.log.WarnContext(ctx, "request settle: the models declined one conversation, recorded unsure",
 				"request_id", candidate.Request.RequestID, "err", err)
 			solo.judge = settleDeclinedBy
+		case errors.Is(err, ai.ErrSubjectRestricted):
+			// Left unjudged: the conversation is read once the restriction lifts.
+			continue
 		case err != nil:
 			return judged, err
 		case len(solo.results) == 1 && solo.results[0].Confidence >= settleConfidenceFloor:
@@ -392,5 +406,5 @@ func (s *RequestSettler) ask(ctx context.Context, batch []settleCandidate) (sett
 	if msg := validateSettlePayload(payload, batch); msg != "" {
 		return settleAnswer{}, fmt.Errorf("request settle: %s", msg)
 	}
-	return settleAnswer{results: resolveBatchRefs(payload.Results, settleRefs(batch)), judge: judgeOf(resp)}, nil
+	return settleAnswer{results: resolveSettleResults(payload, settleRefs(batch)), judge: judgeOf(resp)}, nil
 }

@@ -12,7 +12,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -39,12 +38,12 @@ type buyerDocument struct {
 // The audience rule (inTheDealsFilesArea) is what keeps this honest: a file
 // archived, unlinked from the deal, or hidden from it stops being readable
 // here even though its room entry survives for the seller to remove.
-func visibleDocuments(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, now time.Time) ([]buyerDocument, error) {
+func visibleDocuments(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) ([]buyerDocument, error) {
 	st, err := readStanding(ctx, tx, roomID)
 	if err != nil {
 		return nil, err
 	}
-	if !servesContent(st.access(now)) {
+	if !servesContent(st.access()) {
 		return []buyerDocument{}, nil
 	}
 	rows, err := tx.Query(ctx, `
@@ -89,7 +88,7 @@ func (s *Store) BuyerDocuments(ctx context.Context, sess Session) ([]crmcontract
 	}
 	var out []crmcontracts.BuyerRoomDocument
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		docs, err := visibleDocuments(ctx, tx, sess.RoomID, time.Now())
+		docs, err := visibleDocuments(ctx, tx, sess.RoomID)
 		if err != nil {
 			return err
 		}
@@ -121,7 +120,7 @@ func (s *Store) BuyerDocumentLocator(ctx context.Context, sess Session, document
 	}
 	var out BuyerDocumentFile
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		docs, err := visibleDocuments(ctx, tx, sess.RoomID, time.Now())
+		docs, err := visibleDocuments(ctx, tx, sess.RoomID)
 		if err != nil {
 			return err
 		}

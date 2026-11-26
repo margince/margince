@@ -126,7 +126,7 @@ func privateThreadFilesDue(windows PersonalPurgeWindows, floor StatutoryFloor) (
 		   AND greatest(a.created_at, v.resolved_at)
 		       + (CASE WHEN v.status = 'held_by_owner' THEN $1 ELSE $2 END)::interval <= now()
 		   AND NOT EXISTS (
-		       SELECT 1 FROM capture_import o WHERE o.activity_id = a.id AND o.user_id <> v.user_id)
+		       SELECT 1 FROM capture_import o WHERE o.activity_id = a.id AND o.user_id IS DISTINCT FROM v.user_id)
 		   AND EXISTS (
 		       SELECT 1 FROM attachment at
 		        WHERE at.activity_id = a.id AND at.storage_key <> '' AND NOT at.bytes_withheld)`, args

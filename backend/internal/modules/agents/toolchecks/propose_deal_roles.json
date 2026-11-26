@@ -1,0 +1,13 @@
+{
+  "verb": "propose_deal_roles",
+  "checks": [
+    "contact.read",
+    "deal.read",
+    "deal.update",
+    "relationship.create",
+    "relationship.read"
+  ],
+  "takes": [
+    "deal"
+  ]
+}

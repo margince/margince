@@ -43,9 +43,9 @@ package gates
 import (
 	"fmt"
 	"go/ast"
-	"path/filepath"
+	"go/types"
 	"regexp"
-	"strconv"
+	"slices"
 	"strings"
 	"testing"
 
@@ -74,40 +74,30 @@ func TestEveryProjectedAuditKeyHasALabel(t *testing.T) {
 	defer sharedHistoryWords.AssertAllMatched(t)
 
 	actions, entities := fieldHistoryProjection(t)
-	files := gatekit.Scope{Roots: []string{"internal"}, Subject: fileReachesAnAuditDoor}.Files(t)
-	constantsByPackage := packageConstants(t, files)
 	callsByPackage := map[string]callIndex{}
-	for _, parsed := range files {
-		dir := filepath.Dir(parsed.Path)
-		if _, indexed := callsByPackage[dir]; !indexed {
-			callsByPackage[dir] = callsWithin(t, dir)
-		}
-	}
-
 	emitted := map[string]string{}
-	for _, parsed := range files {
-		consts := constantsByPackage[filepath.Dir(parsed.Path)]
-		for _, site := range auditSitesIn(parsed) {
-			action, known := site.action(consts)
-			// The record's history prints a merge's images beside an update's
-			// fields, on the archived record and on the survivor.
-			readAsALine := known && action == mergeAuditVerb
-			if auditDoorsWithBeforeImage[site.door] && !readAsALine {
-				continue
-			}
-			entity, entityKnown := resolveAuditEntity(t, parsed.File, site.argAt(auditEntityTypeArg), consts)
-			// An unresolvable verb or record type is READ AS PROJECTED rather
-			// than skipped. Under-recognition is the one direction a census
-			// must not have: a site this walk cannot place would otherwise
-			// carry its keys past the map unasked, which is exactly how the
-			// original gap survived.
-			if (known && !actions[action] && !readAsALine) || (entityKnown && !entities[entity]) {
-				continue
-			}
-			for _, key := range site.imageKeys(t, consts, callsByPackage[filepath.Dir(parsed.Path)]) {
-				if _, seen := emitted[key]; !seen {
-					emitted[key] = site.key
-				}
+	for _, site := range auditDoorSitesOf(t) {
+		verbs, known := site.verbs()
+		// The record's history prints a merge's images beside an update's
+		// fields, on the archived record and on the survivor.
+		readAsALine := known && slices.Contains(verbs, mergeAuditVerb)
+		if site.door.before >= 0 && !readAsALine {
+			continue
+		}
+		types, typeKnown := site.values(site.door.entity)
+		// An unread verb or record type is read as projected rather than
+		// skipped, so a site this walk cannot place still has its keys judged.
+		if (known && !anyProjected(verbs, actions) && !readAsALine) || (typeKnown && !anyProjected(types, entities)) {
+			continue
+		}
+		calls, indexed := callsByPackage[site.use.pkg.path]
+		if !indexed {
+			calls = callsWithin(site.use.pkg)
+			callsByPackage[site.use.pkg.path] = calls
+		}
+		for _, key := range site.imageKeys(t, calls) {
+			if _, seen := emitted[key]; !seen {
+				emitted[key] = site.key()
 			}
 		}
 	}
@@ -175,22 +165,23 @@ var runtimeAuditImages = gatekit.Waive(map[string]string{
 	"internal/compose/extledger.go:recordExtensionChange": "an extension unit's own change, entity and image both handed over at run time. " +
 		"It cannot reach the History tab whatever it holds: extension.Change.Entity must be a table in the INVOKING unit's namespace " +
 		"(`ext_<namespace>_<table>`), which is never one of the six core record types fieldHistoryEntityTypes projects",
-	"internal/modules/contacts/company_evidence_write.go:writeEvidence": "the image is the patch's own After(), assembled from the request " +
-		"struct, and the entity is the SIDECAR being written — company_fact or company_profile_field, neither of which the projection " +
-		"admits. The company's own history is written by the update beside this one",
 })
+
+func anyProjected(values []string, projected map[string]bool) bool {
+	return slices.ContainsFunc(values, func(value string) bool { return projected[value] })
+}
 
 // imageKeys reads the field names this site's audit images name. An image built
 // where the walk cannot follow is a finding rather than an absence.
-func (s auditSite) imageKeys(t *testing.T, consts map[string]string, callers callIndex) []string {
+func (s auditDoorSite) imageKeys(t *testing.T, callers callIndex) []string {
 	t.Helper()
 	var keys []string
 	for _, arg := range s.imageArgs() {
 		literals, resolved := s.resolveImage(arg, callers)
 		if !resolved {
-			if !runtimeAuditImages.Waived(t, s.key) {
+			if !runtimeAuditImages.Waived(t, s.key()) {
 				t.Errorf("%s: %s builds its audit image where this gate cannot read it, so the field names inside it are judged by nobody.\n"+
-					"\tSpell the map at the call, or ratify it in runtimeAuditImages with what keeps its keys off the History tab.", s.key, s.door)
+					"\tSpell the map at the call, or ratify it in runtimeAuditImages with what keeps its keys off the History tab.", s.key(), s.door.name)
 			}
 			continue
 		}
@@ -199,10 +190,10 @@ func (s auditSite) imageKeys(t *testing.T, consts map[string]string, callers cal
 			if !isPair {
 				continue
 			}
-			if key, resolved := resolveString(pair.Key, consts); resolved {
+			if key, resolved := auditConstString(s.use.pkg.info, pair.Key); resolved {
 				keys = append(keys, key)
-			} else if !runtimeAuditImages.Waived(t, s.key) {
-				t.Errorf("%s: %s names an audit field this gate cannot resolve to a string, so the History tab's word for it is judged by nobody.", s.key, s.door)
+			} else if !runtimeAuditImages.Waived(t, s.key()) {
+				t.Errorf("%s: %s names an audit field this gate cannot resolve to a string, so the History tab's word for it is judged by nobody.", s.key(), s.door.name)
 			}
 		}
 	}
@@ -221,7 +212,7 @@ func (s auditSite) imageKeys(t *testing.T, consts map[string]string, callers cal
 //
 // Anything else — a method's return, a value assembled across a package
 // boundary — is reported rather than guessed at.
-func (s auditSite) resolveImage(arg ast.Expr, callers callIndex) ([]*ast.CompositeLit, bool) {
+func (s auditDoorSite) resolveImage(arg ast.Expr, callers callIndex) ([]*ast.CompositeLit, bool) {
 	if literal, isLiteral := arg.(*ast.CompositeLit); isLiteral {
 		return []*ast.CompositeLit{literal}, true
 	}
@@ -229,25 +220,26 @@ func (s auditSite) resolveImage(arg ast.Expr, callers callIndex) ([]*ast.Composi
 		return literals, true
 	}
 	named, isNamed := arg.(*ast.Ident)
-	if !isNamed || s.fn == nil {
+	fn := s.use.decl
+	if !isNamed || fn == nil {
 		return nil, false
 	}
-	if local, found := s.localLiteral(named.Name); found {
+	if local, found := localLiteral(fn, named.Name); found {
 		return []*ast.CompositeLit{local}, true
 	}
-	at, isParam := paramIndex(s.fn, named.Name)
+	at, isParam := paramIndex(fn, named.Name)
 	if !isParam {
 		return nil, false
 	}
-	return callers.literalsAt(s.fn.Name.Name, at)
+	return callers.literalsAt(fn.Name.Name, at)
 }
 
 // localLiteral is the map literal this function assigns to a name. The LAST
 // assignment wins, so a map declared empty and then replaced by a literal reads
 // as the literal.
-func (s auditSite) localLiteral(name string) (*ast.CompositeLit, bool) {
+func localLiteral(fn *ast.FuncDecl, name string) (*ast.CompositeLit, bool) {
 	var found *ast.CompositeLit
-	ast.Inspect(s.fn.Body, func(n ast.Node) bool {
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
 		assign, isAssign := n.(*ast.AssignStmt)
 		if !isAssign {
 			return true
@@ -286,6 +278,7 @@ func paramIndex(fn *ast.FuncDecl, name string) (int, bool) {
 type callIndex struct {
 	calls   map[string][]*ast.CallExpr
 	returns map[string][]*ast.CompositeLit
+	info    *types.Info
 }
 
 // returnedLiterals reads an image a small builder returns — `handleImage(…)`,
@@ -323,7 +316,7 @@ func (c callIndex) literalsAt(fn string, at int) ([]*ast.CompositeLit, bool) {
 		if at >= len(call.Args) {
 			return nil, false
 		}
-		if isNilExpr(call.Args[at]) {
+		if isNilExpr(c.info, call.Args[at]) {
 			continue
 		}
 		switch arg := call.Args[at].(type) {
@@ -343,14 +336,11 @@ func (c callIndex) literalsAt(fn string, at int) ([]*ast.CompositeLit, bool) {
 // callsWithin indexes a package's calls to its own plain functions, so an
 // auditing helper's parameters can be read from the sites that fill them.
 //
-// The whole DIRECTORY, for the reason packageConstants reads one: a helper's
-// callers sit wherever the writes are, which is rarely the file that holds the
-// audit door. Indexing only the swept files would find some of them and union a
-// subset of the keys — a census short by exactly the callers it could not see.
-func callsWithin(t *testing.T, dir string) callIndex {
-	t.Helper()
-	index := callIndex{calls: map[string][]*ast.CallExpr{}, returns: map[string][]*ast.CompositeLit{}}
-	for _, file := range parsePackageDir(t, gatekit.SourceFileSet(), dir) {
+// The whole package, because a helper's callers sit wherever the writes are,
+// which is rarely the file that holds the audit door.
+func callsWithin(pkg *typedPackage) callIndex {
+	index := callIndex{calls: map[string][]*ast.CallExpr{}, returns: map[string][]*ast.CompositeLit{}, info: pkg.info}
+	for _, file := range pkg.files {
 		ast.Inspect(file, func(n ast.Node) bool {
 			if call, isCall := n.(*ast.CallExpr); isCall {
 				if name, isPlain := call.Fun.(*ast.Ident); isPlain {
@@ -389,17 +379,12 @@ func returnedComposites(body *ast.BlockStmt) []*ast.CompositeLit {
 
 // imageArgs are the before and after images this door carries. `nil` is a real
 // answer for a before-image and carries no keys.
-func (s auditSite) imageArgs() []ast.Expr {
-	after := auditBeforeArg
+func (s auditDoorSite) imageArgs() []ast.Expr {
 	var args []ast.Expr
-	if auditDoorsWithBeforeImage[s.door] {
-		after++
-		if before := s.argAt(auditBeforeArg); !isNilExpr(before) {
-			args = append(args, before)
+	for _, at := range []int{s.door.before, s.door.after} {
+		if image := s.argAt(at); at >= 0 && !isNilExpr(s.use.pkg.info, image) {
+			args = append(args, image)
 		}
-	}
-	if image := s.argAt(after); !isNilExpr(image) {
-		args = append(args, image)
 	}
 	return args
 }
@@ -413,11 +398,10 @@ func allElements(literals []*ast.CompositeLit) []ast.Expr {
 	return elements
 }
 
-// isNilExpr answers the literal `nil`, which every door admits for an image
+// isNilExpr answers the untyped nil, which every door admits for an image
 // that does not exist.
-func isNilExpr(expr ast.Expr) bool {
-	ident, isIdent := expr.(*ast.Ident)
-	return expr == nil || (isIdent && ident.Name == "nil")
+func isNilExpr(info *types.Info, expr ast.Expr) bool {
+	return expr == nil || info.Types[expr].IsNil()
 }
 
 // fieldHistoryProjection reads the two closed sets that decide whether an audit
@@ -520,37 +504,4 @@ func tsMapKeys(t *testing.T, path, source, marker string) map[string]bool {
 		t.Fatalf("%s's %s literal reads as empty, so every key would look unlabelled", path, marker)
 	}
 	return keys
-}
-
-// Imported audit subjects keep the writer and receipt on one vocabulary.
-func resolveAuditEntity(t *testing.T, file *ast.File, expr ast.Expr, local map[string]string) (string, bool) {
-	t.Helper()
-	if value, ok := resolveString(expr, local); ok {
-		return value, true
-	}
-	selector, ok := expr.(*ast.SelectorExpr)
-	if !ok {
-		return "", false
-	}
-	qualifier, ok := selector.X.(*ast.Ident)
-	if !ok || qualifier.Obj != nil {
-		return "", false
-	}
-	for _, imported := range file.Imports {
-		path, err := strconv.Unquote(imported.Path.Value)
-		if err != nil {
-			t.Fatal(err)
-		}
-		name, dot := gatekit.ImportedAs(file, path)
-		if dot || name != qualifier.Name {
-			continue
-		}
-		dir, internal := strings.CutPrefix(path, modulePath+"/")
-		if !internal {
-			return "", false
-		}
-		value, known := gatekit.PackageStringConstants(t, dir)[selector.Sel.Name]
-		return value, known
-	}
-	return "", false
 }

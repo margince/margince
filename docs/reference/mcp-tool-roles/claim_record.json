@@ -1,0 +1,19 @@
+{
+  "tool": "change_access",
+  "action": "claim_record",
+  "verb": "claim_record",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

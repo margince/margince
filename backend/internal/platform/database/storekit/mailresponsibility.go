@@ -37,16 +37,17 @@ type mailSeatSnapshot struct {
 	tx         pgx.Tx
 	actorID    string
 	identities map[string][]string
+	records    []mailSeatIdentity
 }
 
 // WithMailSeatIdentitySnapshot shares one identity read inside this caller's read transaction.
 func WithMailSeatIdentitySnapshot(ctx context.Context, tx pgx.Tx) (context.Context, error) {
-	identities, err := UnambiguousMailSeatIdentities(ctx, tx)
+	records, err := readMailSeatIdentities(ctx, tx)
 	if err != nil {
 		return ctx, err
 	}
 	actor, _ := principal.Actor(ctx)
-	return context.WithValue(ctx, mailSeatSnapshotKey{}, mailSeatSnapshot{tx: tx, actorID: actor.ID, identities: identities}), nil
+	return context.WithValue(ctx, mailSeatSnapshotKey{}, mailSeatSnapshot{tx: tx, actorID: actor.ID, identities: foldMailSeatIdentities(records), records: records}), nil
 }
 
 // PreparedMailSeatIdentitiesSQL refuses sorting projections without their prepared read snapshot.
@@ -69,6 +70,10 @@ func UnambiguousMailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][
 	if err != nil {
 		return nil, err
 	}
+	return foldMailSeatIdentities(records), nil
+}
+
+func foldMailSeatIdentities(records []mailSeatIdentity) map[string][]string {
 	owners, strengths := map[string]string{}, map[string]int{}
 	// Keyed by the folded address, so a Unicode and a punycode spelling of one
 	// mailbox are one claim, and two seats holding them collide.
@@ -87,8 +92,15 @@ func UnambiguousMailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][
 		switch record.source {
 		case loginSource, provedMailboxSource:
 			claim(record.seat, record.label, 2)
+		case invitedLoginSource:
+			// An invited login reserves its address at login strength, so no
+			// other seat's alias takes it, and owes no answer until redeemed.
+			claim("", record.label, 2)
 		case "user":
 			claim(record.seat, record.label, 1)
+		default:
+			// A provider or discovered alias, or a mailbox not proven, names
+			// no seat that owes an answer.
 		}
 	}
 	out := map[string][]string{}
@@ -99,7 +111,7 @@ func UnambiguousMailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][
 			out[seat] = append(out[seat], mailidentity.AddressSpellings(address)...)
 		}
 	}
-	return out, nil
+	return out
 }
 
 // MailSeatIdentities reads live mailbox identities for restoring factual
@@ -112,6 +124,10 @@ func MailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][]string, er
 	}
 	out := map[string][]string{}
 	for _, record := range records {
+		if record.source == invitedLoginSource {
+			// An invited seat reads no stored mail until it redeems the invite.
+			continue
+		}
 		if address := mailidentity.ReaderAddress(record.label, record.source); address != "" {
 			out[record.seat] = append(out[record.seat], mailidentity.AddressSpellings(address)...)
 		}
@@ -121,11 +137,15 @@ func MailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][]string, er
 
 const (
 	loginSource            = "login"
+	invitedLoginSource     = "invited_login"
 	provedMailboxSource    = "proved_mailbox"
 	withdrawnMailboxSource = "withdrawn_mailbox"
 )
 
-type mailSeatIdentity struct{ seat, label, source string }
+type mailSeatIdentity struct {
+	seat, label, source string
+	provedMailbox       bool
+}
 
 // decidesNew is the lifecycle of a withdrawn mailbox: its label is no evidence
 // for a decision made now. Only a disconnect withdraws; a mailbox in error or
@@ -134,18 +154,30 @@ type mailSeatIdentity struct{ seat, label, source string }
 func (r mailSeatIdentity) decidesNew() bool { return r.source != withdrawnMailboxSource }
 
 func readMailSeatIdentities(ctx context.Context, tx pgx.Tx) ([]mailSeatIdentity, error) {
-	rows, err := tx.Query(ctx, `SELECT u.id::text, u.email, 'login' FROM app_user u WHERE `+workforce.LiveMemberSQL("u")+`
- UNION SELECT i.user_id::text, i.value, i.source FROM capture_owner_identity i
+	actor, _ := principal.Actor(ctx)
+	if snapshot, ok := ctx.Value(mailSeatSnapshotKey{}).(mailSeatSnapshot); ok && snapshot.tx == tx && snapshot.actorID == actor.ID {
+		return snapshot.records, nil
+	}
+	return RememberCaptureFact(ctx, tx, mailSeatIdentitiesMemo, func() ([]mailSeatIdentity, error) { return queryMailSeatIdentities(ctx, tx) })
+}
+
+const mailSeatIdentitiesMemo = CaptureFactsMemo + "mail_seat_identities"
+
+func queryMailSeatIdentities(ctx context.Context, tx pgx.Tx) ([]mailSeatIdentity, error) {
+	rows, err := tx.Query(ctx, `SELECT u.id::text, u.email,
+ CASE WHEN u.status = 'invited' THEN '`+invitedLoginSource+`' ELSE '`+loginSource+`' END, false
+ FROM app_user u WHERE `+workforce.ActivatableMemberSQL("u")+`
+ UNION SELECT i.user_id::text, i.value, i.source, false FROM capture_owner_identity i
  JOIN app_user u ON u.id = i.user_id WHERE i.kind = 'address' AND `+workforce.LiveMemberSQL("u")+`
  UNION SELECT c.user_id::text, c.account_label, CASE WHEN `+provedMailboxClause("c")+` THEN '`+provedMailboxSource+`'
-   WHEN c.status = 'disconnected' THEN '`+withdrawnMailboxSource+`' ELSE '' END FROM capture_connection c
+   WHEN c.status = 'disconnected' THEN '`+withdrawnMailboxSource+`' ELSE '' END, `+provedMailboxClause("c")+` FROM capture_connection c
  JOIN app_user u ON u.id = c.user_id WHERE c.archived_at IS NULL AND `+workforce.LiveMemberSQL("u")+` AND coalesce(c.account_label, '') <> ''`)
 	if err != nil {
 		return nil, fmt.Errorf("reading mail identities: %w", err)
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (mailSeatIdentity, error) {
 		var value mailSeatIdentity
-		err := row.Scan(&value.seat, &value.label, &value.source)
+		err := row.Scan(&value.seat, &value.label, &value.source, &value.provedMailbox)
 		return value, err
 	})
 }
@@ -162,19 +194,40 @@ func DirectMailRecipientSQL(activity, addresses string) string {
 	return strings.ReplaceAll(strings.ReplaceAll(clause, "a.", activity+"."), "ADDRESS_LIST", addresses)
 }
 
-// DirectMailActivitiesSQL lists the live inbound mail whose parsed To line
-// names one seat, built once as an array. A seat's own reads start from it,
-// over the address index, rather than testing each mail in the workspace.
-// keep narrows the mail, aliased `mail`, to what the caller can still use;
-// empty keeps it all.
-func DirectMailActivitiesSQL(identities, seat, keep string) string {
-	kept := ""
-	if keep != "" {
-		kept = " AND (" + keep + ")"
-	}
-	return `ARRAY(SELECT recipient.activity_id FROM activity_participant recipient
- JOIN activity mail ON mail.id = recipient.activity_id AND mail.direction = 'inbound' AND mail.archived_at IS NULL` + kept + `
- WHERE ` + strings.ReplaceAll(directRecipientMatch, "ADDRESS_LIST", MailSeatAddressesSQL(identities, seat)) + ")"
+// DirectMailActivitiesSQL builds a seat's waiting-mail candidates from recent
+// recipients, recent shared-mailbox mail it holds, and human-held requests. Null evidence uses an index probe so
+// backfill state never changes which mail a seat can read.
+func DirectMailActivitiesSQL(identities, seat, cutoff, heldIDs string) string {
+	match := strings.ReplaceAll(directRecipientMatch, "ADDRESS_LIST", MailSeatAddressesSQL(identities, seat))
+	live := `mail.direction = 'inbound' AND mail.archived_at IS NULL`
+	return `ARRAY(WITH held_mail AS MATERIALIZED (SELECT unnest(` + heldIDs + `) AS activity_id)
+ SELECT activity_id FROM (
+ SELECT recipient.activity_id FROM activity_participant recipient
+ JOIN activity mail ON mail.id = recipient.activity_id
+ WHERE ` + match + ` AND ` + live + `
+ AND recipient.domain_evidence_at >= -- domain evidence raw: waiting age superset bound
+ ` + cutoff + ` AND mail.occurred_at >= -- occurred_at raw: waiting age superset bound
+ ` + cutoff + `
+ UNION
+ SELECT recipient.activity_id FROM activity_participant recipient
+ JOIN activity mail ON mail.id = recipient.activity_id
+ WHERE ` + match + ` AND ` + live + `
+ AND recipient.domain_evidence_at IS NULL
+ AND mail.occurred_at >= -- occurred_at raw: waiting age superset bound
+ ` + cutoff + `
+ UNION
+ SELECT shared_mail.activity_id FROM capture_import shared_mail
+ JOIN activity mail ON mail.id = shared_mail.activity_id
+ WHERE shared_mail.user_id IS NULL AND ` + live + `
+ AND mail.occurred_at >= -- occurred_at raw: waiting age superset bound
+ ` + cutoff + ` AND ` + SharedMailWorkOwnerSQL("mail") + ` = ` + seat + `
+ UNION
+ SELECT recipient.activity_id FROM held_mail held
+ CROSS JOIN LATERAL (SELECT activity_id, role, address FROM activity_participant
+  WHERE activity_id = held.activity_id OFFSET 0) recipient
+ JOIN activity mail ON mail.id = recipient.activity_id
+ WHERE ` + match + ` AND ` + live + `
+ ) candidate)`
 }
 
 // DirectMailSeatsSQL lists every seat the mail's parsed To line names. It is
@@ -185,13 +238,33 @@ func DirectMailSeatsSQL(activity, identities string) string {
 		activity + ".id AND recipient.role = 'to'\n AND mail_seat.value ? lower(recipient.address)))"
 }
 
+// MailAnswerersSQL lists the seats that answer a mail: every seat its parsed
+// To line names. When it names none, the answerer is the work owner of mail
+// only a shared mailbox captured (SharedMailWorkOwnerSQL).
+func MailAnswerersSQL(activity, identities string) string {
+	return "(SELECT CASE WHEN cardinality(direct.seats) = 0 THEN array_remove(ARRAY[" + SharedMailWorkOwnerSQL(activity) +
+		"], NULL) ELSE direct.seats END FROM (SELECT " + DirectMailSeatsSQL(activity, identities) + " AS seats OFFSET 0) direct)"
+}
+
 // SoleDirectMailSeatSQL decides who answers an inbound mail: the seat in its
 // To line when it is the only seat there, else NULL. Two addressed seats make
-// no automatic duty for either, and no shared one. OFFSET 0 keeps the planner
+// no automatic duty for either, and no shared one. Mail addressed to no seat
+// is answered by its shared-mailbox work owner. OFFSET 0 keeps the planner
 // from inlining the seat list into both of its uses, which built it twice.
 func SoleDirectMailSeatSQL(activity, identities string) string {
+	return soleSeatSQL(MailAnswerersSQL(activity, identities))
+}
+
+// SoleToLineSeatSQL is SoleDirectMailSeatSQL without the shared-mailbox step:
+// the one seat the parsed To line names, else NULL. A question about a
+// colleague's own correspondence, such as who decides a vendor, asks it.
+func SoleToLineSeatSQL(activity, identities string) string {
+	return soleSeatSQL(DirectMailSeatsSQL(activity, identities))
+}
+
+func soleSeatSQL(seats string) string {
 	return "(SELECT CASE WHEN cardinality(direct.seats) = 1 THEN direct.seats[1] END FROM (SELECT " +
-		DirectMailSeatsSQL(activity, identities) + " AS seats OFFSET 0) direct)"
+		seats + " AS seats OFFSET 0) direct)"
 }
 
 // MailSeatAddressesSQL selects one seat's unambiguous addresses from a bound identity map.

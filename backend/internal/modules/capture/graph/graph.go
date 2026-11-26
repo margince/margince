@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -61,6 +62,13 @@ type Connector struct {
 	// persist one, and a rotation reported to nobody is the behaviour this
 	// connector had before the seam existed.
 	rotations connector.CredentialSink
+	// shared reads shared mailboxes; nil on a connector that reads none.
+	shared *sharedReader
+	// checkpointMessages also checkpoints a round once this many messages
+	// passed since the last one. Zero checkpoints by pages alone.
+	checkpointMessages int
+	// tuning sizes a history page; the zero value keeps the built-in sizes.
+	tuning connector.BackfillTuning
 }
 
 // WithBounceSink returns a copy that records delivery reports instead of
@@ -68,6 +76,14 @@ type Connector struct {
 func (c *Connector) WithBounceSink(sink connector.BounceSink) *Connector {
 	copied := *c
 	copied.bounces = sink
+	return &copied
+}
+
+// WithClock returns a copy that reads the time from now, the clock the
+// deletion hold runs on.
+func (c *Connector) WithClock(now func() time.Time) *Connector {
+	copied := *c
+	copied.now = now
 	return &copied
 }
 
@@ -85,6 +101,15 @@ func (c *Connector) WithCredentialSink(sink connector.CredentialSink) connector.
 	return &copied
 }
 
+// WithBackfillTuning returns a copy that walks history pages by t. Microsoft
+// allows four requests at once per mailbox, so the fetch workers are held to
+// that however high the setting is.
+func (c *Connector) WithBackfillTuning(t connector.BackfillTuning) *Connector {
+	copied := *c
+	copied.tuning = t
+	return &copied
+}
+
 // New returns a Graph connector over the given Authorizer + API surfaces.
 //
 // The Authorizer is the TOKEN half of the handshake, not the whole of it: a
@@ -96,12 +121,13 @@ func New(oauth Authorizer, api API) *Connector {
 }
 
 var (
-	_ connector.Connector         = (*Connector)(nil)
-	_ connector.Backfiller        = (*Connector)(nil)
-	_ connector.Watcher           = (*Connector)(nil)
-	_ connector.GrantedScoper     = (*Connector)(nil)
-	_ connector.AccountLabeler    = (*Connector)(nil)
-	_ connector.CredentialRotator = (*Connector)(nil)
+	_ connector.Connector           = (*Connector)(nil)
+	_ connector.Backfiller          = (*Connector)(nil)
+	_ connector.Watcher             = (*Connector)(nil)
+	_ connector.GrantedScoper       = (*Connector)(nil)
+	_ connector.AccountLabeler      = (*Connector)(nil)
+	_ connector.CredentialRotator   = (*Connector)(nil)
+	_ connector.SharedMailboxReader = (*Connector)(nil)
 )
 
 // cursorState is the persisted incremental watermark: Graph's deltaLink, plus
@@ -118,6 +144,32 @@ type cursorState struct {
 	// recent sent mail rather than its whole history.
 	SentDeltaLink string `json:"sent_delta_link,omitempty"`
 	Email         string `json:"email"`
+	// Rounds holds a folder's round still in progress, keyed by folder: where a
+	// checkpoint left it. Absent once the folder's round has closed.
+	Rounds map[string]*DeltaResume `json:"rounds,omitempty"`
+	// DeletionsDeltaLink is the Recoverable Items Deletions watermark.
+	DeletionsDeltaLink string `json:"deletions_delta_link,omitempty"`
+	// DeletionsListing is set only while that folder's delta fails.
+	DeletionsListing *deletionsListing `json:"deletions_listing,omitempty"`
+	// PendingPurges maps a message seen arriving in Deletions to when it was
+	// seen; deletions.go purges it once deletionHold has passed.
+	PendingPurges map[string]pendingPurge `json:"pending_purges,omitempty"`
+}
+
+// link is the stored watermark of one folder.
+func (s *cursorState) link(folder string) string {
+	if folder == folderSent {
+		return s.SentDeltaLink
+	}
+	return s.DeltaLink
+}
+
+func (s *cursorState) setLink(folder, link string) {
+	if folder == folderSent {
+		s.SentDeltaLink = link
+		return
+	}
+	s.DeltaLink = link
 }
 
 // AuthRequestFrom packages an OAuth callback's code into the opaque connector
@@ -193,7 +245,7 @@ func (c *Connector) GrantedScopes(auth connector.Auth) ([]string, error) {
 	return st.Granted, nil
 }
 
-// Sync mints a fresh access token, then pulls incrementally: with no cursor
+// Sync takes the mailbox's access token and pulls incrementally. With no cursor
 // it starts a bounded initial delta (messages received within anchorWindow);
 // with a cursor it resumes the stored deltaLink. A deltaLink Graph no longer
 // honors (ErrDeltaGone, HTTP 410) degrades to the same bounded re-anchor
@@ -215,20 +267,22 @@ func (c *Connector) SyncFrom(
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return nil, fmt.Errorf("graph: malformed auth state: %w", err)
 	}
-	owner := st.Owner // local — never stored on the shared instance
+	return authorized(ctx, c, st, func(refreshed oauthflow.TokenRefresh) (connector.Cursor, error) {
+		// Reported before the pull: the replacement is issued and the old token
+		// spent by the time Graph answers. Waiting for the pull would drop the
+		// rotation on every sync that fails for another reason, the mailbox that
+		// most needs its credential kept fresh.
+		graphconn.ReportRotation(ctx, connectorName, c.rotations, st, refreshed.Rotated)
+		return c.syncWith(ctx, refreshed.AccessToken, st.Owner, cursor, from, sink)
+	})
+}
 
-	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
-	if err != nil {
-		return nil, err
-	}
-	access := refreshed.AccessToken
-	// Reported BEFORE the pull, and deliberately: the replacement is already
-	// issued and the old token is already spent by the time Graph answers, so
-	// waiting for the pull to succeed would drop the rotation on every sync
-	// that fails for an unrelated reason — which is exactly the mailbox that
-	// most needs its credential kept fresh.
-	graphconn.ReportRotation(ctx, connectorName, c.rotations, st, refreshed.Rotated)
-
+// syncWith is one SyncFrom's pull under one access token, from the stored
+// cursor each time, so a repeated pull starts where the first one did.
+func (c *Connector) syncWith(
+	ctx context.Context, access, owner string, cursor connector.Cursor,
+	from time.Time, sink connector.Sink,
+) (connector.Cursor, error) {
 	start, err := parseCursor(cursor)
 	if err != nil {
 		// A stored cursor we can't read is a bug/corruption, NOT a fresh mailbox:
@@ -236,6 +290,7 @@ func (c *Connector) SyncFrom(
 		// overwriting the watermark (which would drop everything in between).
 		return nil, err
 	}
+	start.boundPendingPurges(c.now().UTC())
 	// TWO folders, each with its own watermark. What arrived is half the
 	// correspondence; what the owner SENT is the other half, and it is the half
 	// that attests the counterparty — ADR-0072 §1: an outbound activity to an
@@ -249,90 +304,28 @@ func (c *Connector) SyncFrom(
 	// pass reaches it first is the one whose attestation sticks and the second is
 	// a no-op. Inbox-first left exactly those messages permanently unattested,
 	// which is the T1 evidence this change exists to collect.
-	links := map[string]*string{folderSent: &start.SentDeltaLink, folderInbox: &start.DeltaLink}
+	start.Email = owner
 	for _, folder := range syncedFolders {
-		next, err := c.pullFolder(ctx, access, folder, *links[folder], from, sink, owner, folder == folderSent)
+		next, err := c.pullFolder(ctx, access, folder, &start, from, sink, owner)
 		if err != nil {
 			return nil, err
 		}
-		*links[folder] = next
+		start.setLink(folder, next)
+		delete(start.Rounds, folder)
 	}
-	// Neither watermark is stored until BOTH folders are through: one cursor is
-	// returned at the end, so a round that lost either half advances nothing and
-	// the next cycle re-reads the same window.
-	return marshalCursor(start.DeltaLink, start.SentDeltaLink, owner), nil
-}
-
-// pullFolder walks one folder's delta and captures what it names, returning the
-// watermark to store for that folder.
-//
-// sentByOwner is a property of the FOLDER, not of the message: Microsoft files
-// a copy into Sent Items because the authenticated account sent it, which no
-// amount of header forgery can imitate (ADR-0072 §1's T1 evidence). It is the
-// same attestation the backfill makes from ParentFolderID.
-func (c *Connector) pullFolder(
-	ctx context.Context, access, folder, cursor string, anchorFrom time.Time,
-	sink connector.Sink, owner string, sentByOwner bool,
-) (string, error) {
-	ids, removed, next, err := c.selectMessages(ctx, access, folder, cursor, anchorFrom)
-	if err != nil {
-		return "", err
+	// After both folders, so a message restored to one of them this cycle has
+	// already cancelled its purge.
+	if err := c.trackDeletions(ctx, access, &start); err != nil {
+		return nil, err
 	}
-	// The owner's own deletions, reported before the round's new mail is
-	// captured. Order matters only in the degenerate case — a message deleted
-	// and re-delivered in one round — and reporting first is the safe half: the
-	// re-delivery re-captures it, where the other order would destroy the copy
-	// that just arrived.
-	if err := reportRemovals(ctx, sink, removed); err != nil {
-		return "", err
+	if err := c.purgeDeleted(ctx, access, &start, sink); err != nil {
+		return nil, err
 	}
-	for _, message := range ids {
-		raw, err := c.api.GetMIME(ctx, access, "", message.ID)
-		if errors.Is(err, connector.ErrSkip) {
-			// A message the provider refuses to hand over: deleted since the
-			// delta named it, or oversized (truncated MIME is not honest
-			// evidence). Either is a per-message drop, never a pull-stopping
-			// fault — the cursor still advances past it.
-			continue
-		}
-		if err != nil {
-			// A fetch fault is transient — stop the pull without advancing the
-			// cursor so the next cycle retries from the same watermark.
-			return "", err
-		}
-		if _, err := captureOne(ctx, raw, sink, c.bounces, owner, folder, message.ID, sentByOwner, message.ReceivedAt); err != nil {
-			return "", err
-		}
-	}
-	if next == "" {
-		next = cursor // provider closed the round without a new link; keep the prior watermark
-	}
-	return next, nil
-}
-
-// selectMessages resolves which message ids to pull, which the provider
-// tombstoned, and the deltaLink to advance to — choosing the initial-anchor or
-// the incremental path and folding the stale-cursor fallback into one place.
-//
-// An ANCHOR round reports no removals, and that is right rather than a gap: it
-// establishes a cursor rather than replaying history, so it has no prior state
-// to say anything was deleted from.
-func (c *Connector) selectMessages(
-	ctx context.Context, access, folder, start string, anchorFrom time.Time,
-) (ids []MessageRef, removed []string, next string, err error) {
-	if start == "" {
-		anchored, link, anchorErr := c.api.DeltaInit(ctx, access, folder, anchorFrom)
-		return anchored, nil, link, anchorErr
-	}
-	ids, removed, next, err = c.api.Delta(ctx, access, start)
-	if errors.Is(err, ErrDeltaGone) {
-		anchored, link, anchorErr := c.api.DeltaInit(ctx, access, folder, anchorFrom)
-		return anchored, nil, link, anchorErr
-	}
-	if err != nil {
-		return nil, nil, "", err
-	}
-	return ids, removed, next, nil
+	// The sync's own cursor carries no round in progress: both folders closed.
+	// A checkpoint may already have stored Sent Items' closed link while the
+	// inbox walked, which is safe because that folder's round was complete.
+	start.Rounds = nil
+	return marshalCursor(start)
 }
 
 // captureOne parses, drops, or upserts one raw message — the same discipline
@@ -398,15 +391,10 @@ func (c *Connector) HealthCheck(ctx context.Context, auth connector.Auth) error 
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return fmt.Errorf("graph: malformed auth state: %w", err)
 	}
-	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
-	if err != nil {
-		return err
-	}
-	access := refreshed.AccessToken
-	if _, err := c.api.Profile(ctx, access); err != nil {
-		return err
-	}
-	return nil
+	_, err := authorized(ctx, c, st, func(refreshed oauthflow.TokenRefresh) (string, error) {
+		return c.api.Profile(ctx, refreshed.AccessToken)
+	})
+	return err
 }
 
 // parseCursor reads the stored watermark. An empty cursor means a genuinely
@@ -425,12 +413,12 @@ func parseCursor(cur connector.Cursor) (cursorState, error) {
 	return cs, nil
 }
 
-func marshalCursor(deltaLink, sentDeltaLink, email string) connector.Cursor {
-	// cursorState has only string fields, so Marshal cannot fail here.
-	b, _ := json.Marshal(cursorState{ //nolint:errchkjson // string-only struct never errors
-		DeltaLink: deltaLink, SentDeltaLink: sentDeltaLink, Email: email,
-	})
-	return b
+func marshalCursor(state cursorState) (connector.Cursor, error) {
+	b, err := json.Marshal(state)
+	if err != nil {
+		return nil, fmt.Errorf("graph: encoding the sync cursor: %w", err)
+	}
+	return b, nil
 }
 
 func reportRemovals(ctx context.Context, sink connector.Sink, removed []string) error {
@@ -446,9 +434,13 @@ func (c *Connector) ListContainers(
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return nil, false, fmt.Errorf("graph: malformed auth state: %w", err)
 	}
-	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
-	if err != nil {
-		return nil, false, err
+	type listing struct {
+		folders []connector.NamedContainer
+		partial bool
 	}
-	return c.api.ListFolders(ctx, refreshed.AccessToken)
+	listed, err := authorized(ctx, c, st, func(refreshed oauthflow.TokenRefresh) (listing, error) {
+		folders, partial, err := c.api.ListFolders(ctx, refreshed.AccessToken)
+		return listing{folders, partial}, err
+	})
+	return listed.folders, listed.partial, err
 }

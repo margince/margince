@@ -45,7 +45,7 @@ var DeadWorkBannerHours = config.DefineStored(config.Spec[int]{
 		return nil
 	},
 	Doc: "Hours the job-health banner looks back before it calls dead work a problem.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
+}, config.Store{Cacheable: true, RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // riverRetentionHours is how long River's job cleaner keeps a discarded or
 // cancelled row at its defaults — seven days. It bounds the setting above

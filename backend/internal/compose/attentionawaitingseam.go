@@ -42,7 +42,7 @@ func (w attentionAwaiting) AwaitingReplies(
 		for _, row := range rows {
 			sent = append(sent, row.ActivityID)
 		}
-		if summaries, err = emailSummariesReusingPlans(ctx, w.store, sent); err != nil {
+		if summaries, err = emailSummariesReusingPlans(ctx, w.store, sent, asOf); err != nil {
 			return nil, false, err
 		}
 	}

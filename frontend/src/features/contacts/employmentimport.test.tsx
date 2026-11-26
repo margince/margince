@@ -5,7 +5,10 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { steppedClock } from "../../testing/steppedclock";
-import { ImportedEmploymentHistory } from "./employmentimport";
+import {
+  ImportedEmploymentHistory,
+  useEmploymentImport,
+} from "./employmentimport";
 
 afterEach(() => {
   cleanup();
@@ -39,46 +42,57 @@ const view: components["schemas"]["Contact360"] = {
   ],
 };
 
+function History() {
+  const imported = useEmploymentImport(view, true);
+  return <ImportedEmploymentHistory view={view} canEdit imported={imported} />;
+}
+
+// Serves one imported episode waiting for a match, and records each write.
+function serve(domain: string) {
+  const writes: components["schemas"]["EmploymentImportRequest"][] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      if (request.method === "POST") {
+        writes.push(await request.json());
+        return Response.json({ contact_id: "contact", items: [] });
+      }
+      return Response.json({
+        contact_id: "contact",
+        items: [
+          {
+            key: "episode",
+            provider: "surfe",
+            company_name: "Buyer",
+            role: "Advisor",
+            employment_status: "unknown",
+            state: "needs_match",
+            domain,
+          },
+        ],
+      });
+    }),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <LocaleProvider initial="en">
+        <History />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return writes;
+}
+
 it.each(["keep", "Current", "Former"])(
   "resolves provider uncertainty with %s status",
   async (choice) => {
     const user = steppedClock();
-    const writes: components["schemas"]["EmploymentImportRequest"][] = [];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const request = new Request(input, init);
-        if (request.method === "POST") {
-          writes.push(await request.json());
-          return Response.json({ contact_id: "contact", items: [] });
-        }
-        return Response.json({
-          contact_id: "contact",
-          items: [
-            {
-              key: "episode",
-              provider: "surfe",
-              company_name: "Buyer",
-              role: "Advisor",
-              employment_status: "unknown",
-              state: "needs_match",
-              domain: "buyer.example",
-            },
-          ],
-        });
-      }),
-    );
-    render(
-      <QueryClientProvider
-        client={
-          new QueryClient({ defaultOptions: { queries: { retry: false } } })
-        }
-      >
-        <LocaleProvider initial="en">
-          <ImportedEmploymentHistory view={view} canEdit />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
+    const writes = serve("buyer.example");
     await user.click(
       await screen.findByRole("button", { name: "Match company" }),
     );
@@ -101,3 +115,20 @@ it.each(["keep", "Current", "Former"])(
     else expect(writes[0]?.employment_status).toBe(choice.toLowerCase());
   },
 );
+
+it("says the website is required with no company picked, and sends nothing", async () => {
+  const user = steppedClock();
+  const writes = serve("");
+  await user.click(
+    await screen.findByRole("button", { name: "Match company" }),
+  );
+  await screen.findByRole("dialog", { name: "Match company" });
+  await user.click(screen.getByRole("button", { name: "Save company link" }));
+  expect(
+    screen.getByText("Confirmed company website is required."),
+  ).toBeTruthy();
+  expect(document.activeElement).toBe(
+    screen.getByRole("textbox", { name: /^Confirmed company website/ }),
+  );
+  expect(writes).toHaveLength(0);
+});

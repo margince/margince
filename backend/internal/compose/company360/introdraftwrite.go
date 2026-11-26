@@ -117,6 +117,7 @@ func introRequest(facts introFacts) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: introSchema(),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       model.AboutContacts(facts.subjects...),
 	}
 }
 
@@ -150,7 +151,7 @@ func parseIntroDraft(raw string, facts introFacts) (introDraft, error) {
 	// the draft was refused is a guess, and the next attempt picks a synonym.
 	if claim := warmthOverclaim(facts.band, subject+" "+body); claim != "" {
 		return introDraft{}, fmt.Errorf(
-			"company360: the route is cold and the draft claims %q: %w",
+			"the route is cold and the draft claims %q: %w",
 			claim, apperrors.ErrInvalidArgument)
 	}
 	return introDraft{subject: subject, body: body}, nil

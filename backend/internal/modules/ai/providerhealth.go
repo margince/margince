@@ -46,6 +46,14 @@ func (e *ProviderDownError) Error() string {
 
 func (e *ProviderDownError) Unwrap() []error { return []error{ErrProviderDown, e.Cause} }
 
+// RetryAt is when the blocked provider is next probed, and false for the
+// call that tripped it: that call was made and failed.
+func (e *ProviderDownError) RetryAt() (time.Time, bool) { return e.RetryAfter, e.Cause == nil }
+
+// RefusedUncalled reports whether err is a call the router refused for a
+// blocked provider without calling it.
+func RefusedUncalled(err error) bool { return refusedUncalled(err) }
+
 // IsDeferral reports whether err means "not now, and not this item's fault":
 // the installation's budget stop or a blocked provider. The attempt is refunded
 // and the pass stops.
@@ -455,7 +463,7 @@ func refusedUncalled(err error) bool {
 // blocked provider, unless a cached answer will serve it: that reaches no
 // provider and spends no attempt, so an outage must not withhold it.
 func (r *Router) blockedUnlessCached(b *binding, task Task, ladder []Tier, key string, wsID ids.WorkspaceID, keyErr error) *ProviderDownError {
-	servable := servableLadder(b, task, ladder)
+	servable := servableLadder(b, ladder)
 	if keyErr == nil && !r.cacheOff {
 		if _, tier, hit := r.cache.get(key, wsID, b.generation); hit && tierOnLadder(servable, tier) {
 			return nil

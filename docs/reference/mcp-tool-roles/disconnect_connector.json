@@ -1,0 +1,14 @@
+{
+  "tool": "change_capture",
+  "action": "disconnect_mailbox",
+  "verb": "disconnect_connector",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

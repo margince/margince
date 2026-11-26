@@ -10,6 +10,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
@@ -24,6 +25,7 @@ import {
   bookingProposals,
   bookingSlots,
 } from "../../testing/book.testkit";
+import { contactDocuments } from "../../testing/contactdocuments";
 import {
   installFetchStub,
   jsonResponse,
@@ -82,6 +84,7 @@ function mount(
   routes: RouteMap = {},
   allow: Parameters<typeof meRoute>[0] = { activity: ["read", "create"] },
   shown: components["schemas"]["Contact360"] = view,
+  beside: ReactNode = null,
 ) {
   installFetchStub({
     "GET /me": meRoute(allow, { seat: "full" }),
@@ -96,6 +99,7 @@ function mount(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ViewerZoneProvider zone="UTC">
+          {beside}
           <ContactMeetingsTab view={shown} />
         </ViewerZoneProvider>
       </LocaleProvider>
@@ -187,6 +191,39 @@ it("withdraws an invitation by archiving it, then reads the list and the timelin
   expect(client.getQueryState(["contact360", "p-1"])?.isInvalidated).toBe(true);
 });
 
+it("takes a withdrawn invitation's files out of the contact's Documents count", async () => {
+  const user = userEvent.setup();
+  const docs = contactDocuments(2);
+  mount(
+    () => [proposed],
+    {
+      "GET /attachments": () => docs.list(),
+      [`DELETE /activities/${proposed.id}`]: () => {
+        docs.becomes(1);
+        return jsonResponse({ id: proposed.id });
+      },
+    },
+    undefined,
+    view,
+    docs.strip,
+  );
+  await docs.shows(2);
+  const row = (await screen.findByText("Project discovery")).closest("article");
+  if (!row) throw new Error("Each proposal is drawn as its own card");
+  await user.click(
+    within(row).getByRole("button", {
+      name: "More actions for Project discovery",
+    }),
+  );
+  await user.click(await screen.findByRole("button", { name: "Withdraw" }));
+  await user.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: "Withdraw invitation",
+    }),
+  );
+  await docs.shows(1);
+});
+
 it("returns focus to the proposal's menu when the withdrawal is cancelled", async () => {
   const user = userEvent.setup();
   mount(() => [proposed]);
@@ -276,7 +313,7 @@ it("does not ask for proposals when the reader may not book", async () => {
   mount(asked, {}, {});
   expect(
     await screen.findByText(
-      "An administrator must grant permission to book meetings.",
+      "Your role can only read. Ask an administrator for another role.",
     ),
   ).toBeTruthy();
   expect(asked).not.toHaveBeenCalled();
@@ -658,14 +695,12 @@ it.each([false, undefined])(
     mount(
       () => [proposed],
       {},
-      { activity: ["read", "create"] },
+      { activity: ["read", "create"], contact: ["read", "update"] },
       { ...view, contact: { ...view.contact, attachable } },
     );
     expect(await screen.findByText("Project discovery")).toBeTruthy();
     expect(
-      await screen.findByText(
-        "You can only read this contact. Ask its owner for write access.",
-      ),
+      await screen.findByText(translate("en", "contact.attachRefused")),
     ).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "Book a meeting" }),

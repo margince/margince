@@ -22,8 +22,8 @@ import (
 const passportAgentPrefix = "agent:"
 
 // kindProcessingRestriction is the Art. 18 stop. Lifting one owes the contact
-// notice before it happens, and Margince has no such notice, so no seat lifts
-// one here at any level.
+// notice before it happens, so no seat lifts one here at any level: the sent
+// notice does (restrictionlift.go).
 const kindProcessingRestriction = "processing_restriction"
 
 // recordedThroughOf names how the signed-in principal records a stop through
@@ -107,11 +107,5 @@ const carriedSourceMark = "carried: "
 // ends at the suppression aliased `alias`. A carried row always points at an
 // older row, so the walk ends.
 func originColumnSQL(alias, column string) string {
-	return `(WITH RECURSIVE chain AS (
-		    SELECT c.carried_from, c.` + column + ` AS value, 0 AS depth
-		      FROM communication_suppression c WHERE c.id = ` + alias + `.id
-		    UNION ALL
-		    SELECT p.carried_from, p.` + column + `, chain.depth + 1
-		      FROM communication_suppression p JOIN chain ON p.id = chain.carried_from)
-		  SELECT value FROM chain ORDER BY depth DESC LIMIT 1)`
+	return carriedRootSQL("communication_suppression", alias, column)
 }

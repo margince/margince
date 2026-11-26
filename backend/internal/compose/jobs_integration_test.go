@@ -119,20 +119,20 @@ func quotedKinds(pending map[string]struct{}) string {
 // The defect this guards: a wait consumes the subscription, so a kind that
 // finishes early is read and dropped by whichever wait is holding at the time,
 // and the wait that actually wants it then waits for an event already gone.
-// The kinds are offered here in the reverse of the order the caller names —
-// the arrival order a sequential await cannot survive, and the one River
-// really produces when capture_digest's default queue beats ai_capture.
+// The kinds are offered here in the reverse of the order the caller names.
+// A sequential await cannot survive that order, and River really produces it
+// when a job on the default queue beats ai_capture.
 //
 // A regression fails this rather than hanging the suite: the set is complete on
 // the buffered channel, so the only way not to return promptly is to have
 // discarded something.
 func TestAWaitDoesNotDiscardAKindAnotherWaitIsOwed(t *testing.T) {
 	sub := make(chan *river.Event, 4)
-	for _, kind := range []string{"capture_digest", "close_date_sweep", "capture_enrich", "capture_classify"} {
+	for _, kind := range []string{"capture_trace_sweep", "close_date_sweep", "capture_enrich", "capture_classify"} {
 		sub <- &river.Event{Kind: river.EventKindJobCompleted, Job: &rivertype.JobRow{Kind: kind}}
 	}
 
-	awaitKindsCompleted(t, sub, "capture_classify", "capture_enrich", "capture_digest")
+	awaitKindsCompleted(t, sub, "capture_classify", "capture_enrich", "capture_trace_sweep")
 
 	// close_date_sweep was traffic nobody awaited. It is consumed like any
 	// other event; what matters is that consuming it retired no wanted kind.
@@ -202,9 +202,7 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 		t.Error("the replacement is the sweep's own estimate and must say so")
 	}
 	if swept.probability == nil || *swept.probability != 95 {
-		// The tier comes with it. 45 here is what the downgrade notch writes,
-		// reached only from a stalled finding this fixture does not carry.
-		// Naming the decision says which of the two an occurrence was.
+		// Naming the sweep's decision says which tier an occurrence was.
 		t.Errorf("probability = %s, want the untouched 95 (%s)",
 			shownInt(swept.probability), e.sweptTier(t, id))
 	}

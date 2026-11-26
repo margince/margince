@@ -11,11 +11,12 @@ import {
   MapPin,
   Users,
 } from "lucide-react";
+import { fn } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { Badge } from "./atoms";
 import { Avatar } from "./avatar";
 import { ProviderMark } from "./provider-mark";
-import { BarList, Chip, Meter, SegmentBar, Sparkline } from "./readings";
+import { BarList, Chip, Meter, Sparkline } from "./readings";
 
 // The three reading primitives: a proportion, a series, an attribute.
 const meta: Meta = {
@@ -163,6 +164,48 @@ export const RecordChips: Story = {
   ),
 };
 
+// A name longer than its column breaks inside the chip; the short one beside it
+// stays on one line.
+export const WrappedChipPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <div
+      style={{
+        maxWidth: 200,
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "var(--space-1)",
+      }}
+    >
+      <Chip
+        dense
+        wrap
+        appHref="#/contacts/contact-maximilian"
+        lead={
+          <Avatar
+            name="Maximilian Konstantinopoulou-Wertheimer"
+            identity="contact-maximilian"
+          />
+        }
+      >
+        Maximilian Konstantinopoulou-Wertheimer
+      </Chip>
+      <Chip
+        dense
+        wrap
+        appHref="#/contacts/contact-sonya"
+        lead={<Avatar name="Sonya Beck" identity="contact-sonya" />}
+      >
+        Sonya Beck
+      </Chip>
+      <Chip dense wrap icon={Mail}>
+        procurement.and.vendor.onboarding@weber.example
+      </Chip>
+    </div>
+  ),
+};
+
 // The row a chip and a badge share: a name and the marks on it, one line.
 const NAME_CELL = {
   display: "flex",
@@ -238,6 +281,38 @@ export const BarsAgainstAWhole: Story = {
   ),
 };
 
+// Amounts of very different widths and a name that wraps: every track still
+// starts and ends at the same x, plain and as evidence actions.
+const unevenStages = [
+  { key: "discovery", label: "Discovery", value: 9, amount: "€900" },
+  {
+    key: "proposal",
+    label: "Proposal sent and awaiting the customer's legal review",
+    value: 5_800,
+    amount: "€580,000 · 12 priced deals",
+  },
+  {
+    key: "negotiation",
+    label: "Negotiation",
+    value: 4_400,
+    amount: "€440,000",
+  },
+];
+
+export const BarsWithUnevenAmounts: Story = {
+  render: () => <BarList label="Open pipeline by stage" rows={unevenStages} />,
+};
+
+export const BarsToSelect: Story = {
+  render: () => (
+    <BarList
+      label="Open pipeline by stage"
+      rows={unevenStages}
+      onSelect={fn()}
+    />
+  ),
+};
+
 // One row is a list of one, not a bar at full width with nothing to compare it
 // to — worth seeing, because it is what a filtered report often produces.
 export const BarsSingleRow: Story = {
@@ -283,53 +358,6 @@ export const MetersWithAPart: Story = {
         <Meter value={68} part={41} max={100} label="Won" dense />
         <Meter value={90} part={90} max={100} label="Lost" dense />
       </div>
-    </>
-  ),
-};
-
-// Disjoint parts of one total with a target marked across them. The call lands
-// inside the parts in the first frame and past them in the second, which leaves
-// recessed track between the last part and the mark.
-export const SegmentBars: Story = {
-  render: () => (
-    <>
-      <SegmentBar
-        label="How the period is made up"
-        parts={[
-          { key: "won", label: "Already won", value: 92_000, amount: "€92K" },
-          {
-            key: "evidence",
-            label: "Evidence",
-            value: 148_000,
-            amount: "€148K",
-          },
-          {
-            key: "best",
-            label: "Best case beyond evidence",
-            value: 112_000,
-            amount: "€112K",
-          },
-        ]}
-        marker={{
-          key: "call",
-          label: "Current call",
-          value: 200_000,
-          amount: "€200K",
-        }}
-      />
-      <SegmentBar
-        label="How the period is made up"
-        parts={[
-          { key: "won", label: "Already won", value: 40_000, amount: "€40K" },
-          { key: "evidence", label: "Evidence", value: 60_000, amount: "€60K" },
-        ]}
-        marker={{
-          key: "call",
-          label: "Current call",
-          value: 180_000,
-          amount: "€180K",
-        }}
-      />
     </>
   ),
 };

@@ -8,7 +8,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
@@ -19,12 +19,10 @@ import {
   OAuthReturnPanel,
 } from "./onboarding-connect-panels";
 
-// The onboarding IMAP panel (G-10): the wizard's connect step for the one
-// credential provider. It must post through the typed client, with the nested
-// `{imap:{...}}` shape a standing connect expects. It must never use a raw
-// fetch to the retired transient endpoint. A standing connect answers before
-// any mail is read, so the panel hands back to the step. The step's account
-// panel shows the mailbox from the roster.
+// The onboarding IMAP panel is the Settings mailbox form, tested in
+// imap-connect-form.test.tsx, with the step's own dismissal. Tested here: it
+// hands back to the step once connected. "Not now" neither contacts the server
+// nor closes over a connect still in flight.
 
 function render(ui: ReactNode, client?: QueryClient) {
   return rtlRender(
@@ -39,11 +37,10 @@ function render(ui: ReactNode, client?: QueryClient) {
   );
 }
 
-async function fillValidForm() {
-  await userEvent.clear(screen.getByLabelText("IMAP host"));
-  await userEvent.type(screen.getByLabelText("IMAP host"), "mail.example.org");
-  await userEvent.type(screen.getByLabelText("Email"), "lars@example.org");
-  await userEvent.type(screen.getByLabelText("App password"), "app-password");
+async function fillValidForm(user: Pick<UserEvent, "type"> = userEvent) {
+  await user.type(screen.getByLabelText("IMAP server *"), "mail.example.org");
+  await user.type(screen.getByLabelText("Email address *"), "lars@example.org");
+  await user.type(screen.getByLabelText("App password *"), "app-password");
 }
 
 afterEach(() => {
@@ -52,6 +49,17 @@ afterEach(() => {
 });
 
 describe("ImapConnectPanel", () => {
+  // The step tells the reader what the app password is used for and that
+  // disconnecting deletes it, before they type it.
+  it("says how the app password is kept before it is typed", () => {
+    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
+    expect(
+      screen.getByText(en["connectors.imapSecretHint"]),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Port")).toHaveValue("993");
+    expect(screen.getByLabelText("Messages per sync")).toHaveValue("50");
+  });
+
   it("connects IMAP through the typed client, not a raw fetch to a bespoke path", async () => {
     const calls: { url: string; body: unknown }[] = [];
     installFetchStub({
@@ -70,9 +78,7 @@ describe("ImapConnectPanel", () => {
     const onDone = vi.fn();
     render(<ImapConnectPanel onDone={onDone} onDismiss={() => {}} />);
     await fillValidForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: /test and connect/i }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
     await waitFor(() => expect(calls.length).toBe(1));
     expect(calls[0].body).toMatchObject({
       imap: {
@@ -81,94 +87,60 @@ describe("ImapConnectPanel", () => {
         username: "lars@example.org",
         secret: "app-password",
         mailbox: "INBOX",
-        max_messages: 30,
+        max_messages: 50,
       },
     });
 
     await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
   });
 
-  it("hands back to the step once the mailbox is live", async () => {
-    installFetchStub({
-      "POST /connectors/imap/connect": () =>
-        jsonResponse({
-          connection: {
-            id: "c1",
-            provider: "imap",
-            status: "connected",
-            scopes: [],
-          },
-        }),
-    });
-    const onDone = vi.fn();
-    render(<ImapConnectPanel onDone={onDone} onDismiss={() => {}} />);
-    await fillValidForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: /test and connect/i }),
-    );
-    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+  // The card is for hosts other than Google's, so no real server is filled in
+  // for the reader to send a password to by accident.
+  it("starts with an empty host", () => {
+    installFetchStub({});
+    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
+    expect(screen.getByLabelText("IMAP server *")).toHaveValue("");
   });
 
-  it("surfaces a rejected IMAP login without echoing the host back", async () => {
+  it("names an out-of-range port on its field instead of greying the button", async () => {
+    const calls: unknown[] = [];
     installFetchStub({
-      "POST /connectors/imap/connect": () =>
-        jsonResponse(
-          {
-            code: "imap_login_rejected",
-            detail: "The mailbox rejected these credentials.",
-          },
-          422,
-        ),
+      "POST /connectors/imap/connect": (body) => {
+        calls.push(body);
+        return jsonResponse({}, 500);
+      },
     });
+    const user = userEvent.setup();
     render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
-    await fillValidForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: /test and connect/i }),
+    await fillValidForm(user);
+    const port = screen.getByLabelText("Port");
+    await user.clear(port);
+    await user.type(port, "99999");
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+
+    expect(screen.getByLabelText("Port")).toHaveAttribute(
+      "aria-invalid",
+      "true",
     );
     expect(
-      await screen.findByText(/rejected these credentials/i),
+      screen.getByText("Port must be from 1 to 65535."),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/mail\.example\.org/)).not.toBeInTheDocument();
+    expect(calls).toHaveLength(0);
   });
 
-  it("never retains the password after a failed submit", async () => {
+  it("drops a failure once the reader changes what was sent", async () => {
     installFetchStub({
       "POST /connectors/imap/connect": () =>
         jsonResponse({ code: "imap_unreachable", detail: "unreachable" }, 502),
     });
+    const user = userEvent.setup();
     render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
-    await fillValidForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: /test and connect/i }),
-    );
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: "Connect" }));
     await screen.findByText(/could not be reached/i);
-    expect(screen.getByLabelText("App password")).toHaveValue("");
-  });
 
-  it("invalidates the shared connectors query so Settings picks up the new connection immediately", async () => {
-    installFetchStub({
-      "POST /connectors/imap/connect": () =>
-        jsonResponse({
-          connection: {
-            id: "c1",
-            provider: "imap",
-            status: "connected",
-            scopes: [],
-          },
-        }),
-    });
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
-    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />, client);
-    await fillValidForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: /test and connect/i }),
-    );
-    await waitFor(() =>
-      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["connectors"] }),
-    );
+    await user.type(screen.getByLabelText("IMAP server *"), "x");
+    expect(screen.queryByText(/could not be reached/i)).toBeNull();
   });
 
   // "Not now" closes THIS dialog without deciding anything — it never
@@ -218,9 +190,7 @@ describe("ImapConnectPanel", () => {
     const onDone = vi.fn();
     render(<ImapConnectPanel onDone={onDone} onDismiss={onDismiss} />);
     await fillValidForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: /test and connect/i }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Not now" })).toBeDisabled(),
     );
@@ -266,9 +236,7 @@ describe("ImapConnectPanel", () => {
       />,
     );
     await fillValidForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: /test and connect/i }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
     await waitFor(() => expect(pendingChanges).toContain(true));
     deferred.resolve?.(
       jsonResponse({
@@ -364,7 +332,7 @@ describe("OAuthReturnPanel reading a reader-typed outcome", () => {
       await screen.findByText("The connection could not be confirmed."),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Connect again in Settings under Connections."),
+      screen.getByText("Select the account again below."),
     ).toBeInTheDocument();
   });
 });

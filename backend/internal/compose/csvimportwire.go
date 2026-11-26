@@ -10,26 +10,22 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"path"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -99,32 +95,7 @@ func partsMappingFrom(requested []crmcontracts.ImportPartRequest, catalogs map[s
 	return parts, nil
 }
 
-// sourceNamePattern is the contract's pattern for `source_name`.
-var sourceNamePattern = regexp.MustCompile(`^[A-Za-z0-9 ._-]*$`)
-
-const (
-	maxSourceName     = 80
-	maxImportFileName = 255
-)
-
-// sourceNameFrom trims the requested source name and holds it to the contract.
-func sourceNameFrom(raw *string) (string, error) {
-	if raw == nil {
-		return "", nil
-	}
-	name := strings.TrimSpace(*raw)
-	if len(name) > maxSourceName || !sourceNamePattern.MatchString(name) {
-		return "", httperr.Validation("source_name", "invalid",
-			fmt.Sprintf("A source name is at most %d letters, digits, spaces, dots, underscores or hyphens.", maxSourceName))
-	}
-	return name, nil
-}
-
-// unsupportedObject refuses an object no import lands.
-func unsupportedObject() error {
-	return httperr.Validation("object", "unsupported",
-		"An import lands companies, contacts or leads; name one of them.")
-}
+const maxImportFileName = 255
 
 // partMappingFrom validates one file's mapping against the object's live field
 // catalog. A target the object does not have is refused here rather than at row
@@ -134,7 +105,7 @@ func partMappingFrom(
 ) (migration.PartMapping, error) {
 	targets, err := importTargets(object, cat)
 	if err != nil {
-		return migration.PartMapping{}, unsupportedObject()
+		return migration.PartMapping{}, importwire.UnsupportedObject()
 	}
 	allowed := make(map[string]bool, len(targets))
 	for _, t := range targets {
@@ -158,8 +129,7 @@ func partMappingFrom(
 			// Two columns onto one field: whichever the row builder happened to
 			// write last would win, so identical requests could import
 			// different data. Refused rather than resolved by luck.
-			return migration.PartMapping{}, httperr.Validation("mapping", "duplicate_target",
-				fmt.Sprintf("%q and %q both map to %q; one column per field.", other, column, target))
+			return migration.PartMapping{}, importwire.DuplicateTarget(target, column, other)
 		}
 		claimed[target] = column
 		fields[column] = target
@@ -203,8 +173,7 @@ func partMappingFrom(
 		sourceKey = columnFor(fields, sourceKey)
 	}
 	if sourceKey == "" {
-		return migration.PartMapping{}, httperr.Validation("source_key", "unmappable",
-			fmt.Sprintf("Map a column to %q, or name the column that identifies a row.", csvSourceKeyDefault[object]))
+		return migration.PartMapping{}, importwire.UnmappableKey(object, csvSourceKeyDefault[object], csvTargetRef)
 	}
 	if _, mapped := fields[sourceKey]; !mapped {
 		return migration.PartMapping{}, httperr.Validation("source_key", "unmapped_column",
@@ -244,7 +213,7 @@ func runOptionsFrom(req crmcontracts.CreateImportRunRequest) (migration.RunMappi
 		}
 		onBrokenLink = string(*req.OnBrokenLink)
 	}
-	sourceName, err := sourceNameFrom(req.SourceName)
+	sourceName, err := importwire.SourceName(req.SourceName)
 	if err != nil {
 		return migration.RunMapping{}, err
 	}
@@ -252,9 +221,8 @@ func runOptionsFrom(req crmcontracts.CreateImportRunRequest) (migration.RunMappi
 	if req.FileName != nil {
 		fileName = *req.FileName
 	}
-	if utf8.RuneCountInString(fileName) > maxImportFileName {
-		return migration.RunMapping{}, httperr.Validation("file_name", "too_long",
-			fmt.Sprintf("A file name is at most %d characters.", maxImportFileName))
+	if err := httperr.RequireWithin("file_name", fileName, maxImportFileName); err != nil {
+		return migration.RunMapping{}, err
 	}
 	presets, err := presetLinksFrom(req.PresetLinks)
 	if err != nil {
@@ -272,7 +240,7 @@ func runOptionsFrom(req crmcontracts.CreateImportRunRequest) (migration.RunMappi
 func checkPartColumns(ctx context.Context, source *migration.CSVSource, fields map[string]string) error {
 	header, err := source.Header(ctx)
 	if err != nil {
-		return importProblem(err)
+		return importwire.Problem(err)
 	}
 	return mappingNamesTheFilesColumns(fields, header)
 }
@@ -335,31 +303,6 @@ func columnFor(fields map[string]string, target string) string {
 	return ""
 }
 
-// importProblem keeps a file's own failures on the caller's side of the line:
-// an unreadable upload or an unusable header is the customer's file, not our
-// server, and it is told which so they can fix it.
-func importProblem(err error) error {
-	switch {
-	case errors.Is(err, migration.ErrHeaderInvalid):
-		return httperr.Validation("file", "header_unusable", err.Error())
-	case errors.Is(err, migration.ErrNotUTF8):
-		return httperr.Validation("file", "not_utf8", err.Error())
-	case errors.Is(err, migration.ErrSourceUnreadable):
-		return httperr.Validation("file", "unreadable", err.Error())
-	case errors.Is(err, migration.ErrBundleRefused):
-		return httperr.Validation("file", "bundle_refused", err.Error())
-	case errors.Is(err, migration.ErrObjectNotInSource):
-		return httperr.Validation("object", "mismatch", err.Error())
-	case errors.Is(err, blobstore.ErrNotFound):
-		// The reference was this workspace's (ownsSource proved that) but the
-		// bytes are gone. Not-found names what is actually missing; a 500 would
-		// blame the server for a source the caller can simply re-upload.
-		return fmt.Errorf("the uploaded file behind this run is no longer stored: %w", apperrors.ErrNotFound)
-	default:
-		return err
-	}
-}
-
 func toContractColumns(p migration.Profile) []crmcontracts.ImportColumn {
 	out := make([]crmcontracts.ImportColumn, 0, len(p.Columns))
 	for _, c := range p.Columns {
@@ -390,6 +333,7 @@ func toContractImportRun(run migration.Run) crmcontracts.ImportRun {
 		message := run.Error
 		out.Error = &message
 	}
+	out.ErrorRefusal = importwire.RunRefusal(run.ErrorRefusal)
 	applySession(&out, run)
 	applyProgress(&out, run)
 	return out
@@ -453,8 +397,8 @@ func readImportUpload(w http.ResponseWriter, r *http.Request, limit int64) (impo
 		return importUpload{}, httperr.Validation("file", "empty", "The uploaded file has no content.")
 	}
 	object := strings.TrimSpace(r.FormValue("object"))
-	if _, ok := csvTargets[object]; !ok && !migration.IsZip(body) {
-		return importUpload{}, unsupportedObject()
+	if _, ok := csvTargets[object]; object != "" && !ok && !migration.IsZip(body) {
+		return importUpload{}, importwire.UnsupportedObject()
 	}
 	return importUpload{Object: object, FileName: path.Base(header.Filename), Body: body}, nil
 }

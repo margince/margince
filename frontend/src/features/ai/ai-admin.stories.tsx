@@ -97,7 +97,9 @@ export const Preview: Story = {
       await canvas.findByRole("button", { name: "Edit allowance" }),
     );
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Preview effects" }),
+      await within(canvasElement.ownerDocument.body).findByRole("button", {
+        name: "Preview effects",
+      }),
     );
   },
 };
@@ -143,7 +145,9 @@ export const ChangedWhileEditing: Story = {
     focusManager.setFocused(false);
     focusManager.setFocused(true);
     await expect(
-      await canvas.findByRole("button", { name: "Reload values" }),
+      await within(canvasElement.ownerDocument.body).findByRole("button", {
+        name: "Reload values",
+      }),
     ).toBeInTheDocument();
     focusManager.setFocused(undefined);
   },
@@ -162,7 +166,7 @@ const mixedFeatures = [
     ...feature,
     task: "site_triage",
     display_name: "Triage a site",
-    decision_skip_reason: "local_only" as const,
+    decision_skip_reason: "unbound" as const,
   },
   {
     ...feature,
@@ -181,6 +185,33 @@ const mixedFeatures = [
     ],
   },
 ];
+// A fallback model the records do not certify for the task it serves.
+const certificationFeatures = [
+  {
+    ...feature,
+    task: "draft_reply",
+    display_name: "Draft a reply",
+    effective_candidates: [
+      {
+        ...lead,
+        certification: { verdict: "not_supported" as const, current: false },
+      },
+    ],
+  },
+  {
+    ...feature,
+    task: "summarize",
+    effective_candidates: [
+      {
+        ...lead,
+        certification: { verdict: "certified" as const, current: true },
+      },
+    ],
+  },
+];
+export const CertificationPerTask: Story = {
+  render: story("normal", true, certificationFeatures),
+};
 export const DecisionFirstOnTop: Story = {
   render: story("normal", true, mixedFeatures),
 };

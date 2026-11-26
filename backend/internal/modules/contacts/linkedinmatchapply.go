@@ -446,9 +446,8 @@ func writeLinkedInHandle(ctx context.Context, tx pgx.Tx, connectionID, contactID
 //
 // contact_social is part of the contact aggregate, and the ordinary update path
 // bumps the row for exactly this reason. Writing a child without it leaves a
-// stale If-Match token valid: a browser holding version V would overwrite the
-// social set it never saw, and replaceContactSocial replaces ALL rows, so the
-// handle just written would vanish with no error anywhere.
+// stale If-Match token valid. A browser holding version V would then overwrite
+// the LinkedIn handle it never saw, with no error anywhere.
 //
 // The row is LOCKED before the bump rather than updated blind. Two decisions
 // landing on one contact at the same instant would otherwise both read the

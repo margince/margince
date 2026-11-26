@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -66,6 +68,11 @@ func (c *invitationCalendar) Save(_ context.Context, _ ids.UserID, _ string, in 
 		receipt.VideoURL = "https://meet.example.test/" + in.RequestID
 	}
 	return receipt, nil
+}
+
+// Respond is never reached by a booking.
+func (c *invitationCalendar) Respond(context.Context, ids.UserID, string, string) error {
+	return errors.New("a booking answered an invitation")
 }
 
 func (c *invitationCalendar) Cancel(context.Context, ids.UserID, string, string, string) error {
@@ -139,6 +146,7 @@ func TestInvitationDeliveryKeepsOneActivityAndOneProviderIdentity(t *testing.T) 
 	if err != nil || booked.Status != "confirmed" {
 		t.Fatalf("confirmation: %+v %v", booked, err)
 	}
+	assertInvitationRefusesActivityArchive(t, e, store, ids.UUID(invited.Id))
 	if len(calendar.requests) != 2 || calendar.requests[0].RequestID != calendar.requests[1].RequestID {
 		t.Fatal("retry changed the durable provider identity")
 	}
@@ -158,6 +166,9 @@ func TestInvitationDeliveryKeepsOneActivityAndOneProviderIdentity(t *testing.T) 
 	state, err := store.Invitation(ctx, ids.UUID(invited.Id))
 	if err != nil || state.Status != "canceled" || calendar.canceled != 1 {
 		t.Fatalf("canceled: %+v %v calls=%d", state, err, calendar.canceled)
+	}
+	if released, err := store.GetActivity(onAFullSeat(ctx, t), ids.From[ids.ActivityKind](ids.UUID(invited.Id)), storekit.LiveOnly); err != nil || released.Archivable == nil || !*released.Archivable {
+		t.Errorf("the host reads the meeting as not archivable (%v) once its invitation is canceled, want archivable", err)
 	}
 	if _, err := store.CreateInvitation(ctx, in); err != nil {
 		t.Fatalf("acknowledged cancellation did not release slot: %v", err)
@@ -284,6 +295,10 @@ func (c *invitationCalendar) ResolveAttendees(_ context.Context, _ ids.UserID, a
 	return out, nil
 }
 
+func (c *invitationCalendar) HostMayWrite(context.Context, pgx.Tx, ids.UserID, string, ids.UUID) (bool, error) {
+	return true, nil
+}
+
 func (c *invitationCalendar) InviteeAddress(_ context.Context, _ ids.UserID, kind string, id ids.UUID, _ []string) (string, ids.UUID, error) {
 	if kind == linkEntityLead {
 		return c.invitees[id], ids.Nil, nil
@@ -325,20 +340,33 @@ func (c *invitationCalendar) Inspect(context.Context, ids.UserID, string, string
 	return connector.CalendarState{Start: last.Start, End: last.End}, nil
 }
 
+// assertInvitationRefusesActivityArchive asks the host and a delete holder.
+// A live invitation keeps the meeting, so neither reads it archivable or
+// archives it.
 func assertInvitationRefusesActivityArchive(t *testing.T, e *sendEnv, store *Store, invitationID ids.UUID) {
 	t.Helper()
-	ctx := e.asArchiver()
 	id := ids.From[ids.ActivityKind](invitationID)
-	for _, decide := range []func() error{
-		func() error { return store.RefuseArchiveActivity(ctx, id) },
-		func() error { _, err := store.ArchiveActivity(ctx, id, nil); return err },
+	for who, ctx := range map[string]context.Context{
+		"the host": onAFullSeat(e.as(principal.RowScopeAll), t), "a delete holder": onAFullSeat(e.asArchiver(), t),
 	} {
-		var refusal *SchedulingArgumentError
-		if err := decide(); !errors.As(err, &refusal) || refusal.Code != "calendar_managed" {
-			t.Fatalf("active invitation archive refusal: %v", err)
+		read, err := store.GetActivity(ctx, id, storekit.LiveOnly)
+		if err != nil {
+			t.Fatalf("%s reading the invited meeting: %v", who, err)
+		}
+		if read.Archivable == nil || *read.Archivable {
+			t.Errorf("%s reads a meeting a live invitation holds as archivable, want not archivable", who)
+		}
+		for _, decide := range []func() error{
+			func() error { return store.RefuseArchiveActivity(ctx, id) },
+			func() error { _, err := store.ArchiveActivity(ctx, id, nil); return err },
+		} {
+			var refusal *SchedulingArgumentError
+			if err := decide(); !errors.As(err, &refusal) || refusal.Code != "calendar_managed" {
+				t.Fatalf("%s: active invitation archive refusal: %v", who, err)
+			}
 		}
 	}
-	if _, err := store.GetActivity(ctx, id, storekit.LiveOnly); err != nil {
+	if _, err := store.GetActivity(e.asArchiver(), id, storekit.LiveOnly); err != nil {
 		t.Fatalf("refused archive changed the meeting: %v", err)
 	}
 }

@@ -356,7 +356,7 @@ func TestRefusedOutboundCallsReachTheInbox(t *testing.T) {
 			tool:        "send_email",
 			args:        fmt.Sprintf(`{"activity_id":%q,"to":["buyer@example.test"],"subject":"Next steps","body":"b","consent_purpose":"support"}`, anchor),
 			wantTarget:  string(datasource.EntityActivity),
-			wantSummary: `Send an email to buyer@example.test, subject "Next steps"`,
+			wantSummary: `Send an email to buyer@example.test, subject “Next steps”`,
 		},
 	} {
 		t.Run(tc.tool, func(t *testing.T) {
@@ -458,7 +458,7 @@ func TestAStagedSummaryNamesEveryArgumentItReleases(t *testing.T) {
 		got := describeSend(summaryByLang[textlang.English], SendEmailCommand{
 			To: []string{"buyer@example.test"}, Cc: []string{"rival@example.test"}, Subject: "Q3 pricing",
 		})
-		for _, want := range []string{"buyer@example.test", "rival@example.test", `"Q3 pricing"`} {
+		for _, want := range []string{"buyer@example.test", "rival@example.test", `“Q3 pricing”`} {
 			if !strings.Contains(got, want) {
 				t.Errorf("summary %q does not name %q", got, want)
 			}
@@ -474,7 +474,7 @@ func TestAStagedSummaryNamesEveryArgumentItReleases(t *testing.T) {
 		got := describeBooking(summaryByLang[textlang.English], cmd, []RecordLink{
 			{EntityType: "deal", EntityID: deal}, {EntityType: "company", EntityID: company},
 		})
-		for _, want := range []string{host.String(), "2 record(s)", `"Review"`} {
+		for _, want := range []string{host.String(), "2 record(s)", `“Review”`} {
 			if !strings.Contains(got, want) {
 				t.Errorf("summary %q does not name %q", got, want)
 			}
@@ -515,6 +515,29 @@ func TestDraftEmailComposesAFirstMessageFromLinksAlone(t *testing.T) {
 	// And it reached the account-started seam, not the threaded one.
 	if len(comms.accountDrafted) != 1 {
 		t.Errorf("the first-message seam saw %+v, want the one link", comms.accountDrafted)
+	}
+}
+
+// An instruction to move an appointment names the requested follow-up on both
+// draft shapes, so the send can carry it as its communication_context.
+func TestDraftEmailNamesTheReasonAMovedAppointmentGives(t *testing.T) {
+	company := ids.NewV7()
+	tool := draftEmailTool{comms: &recordingComms{}, p: oneRecord(datasource.EntityCompany, company, `{}`, 1)}
+	for name, args := range map[string]string{
+		"first message": `{"links":[{"entity_type":"company","entity_id":"` + company.String() + `"}],"intent":"Termin verschieben"}`,
+		"reply":         `{"activity_id":"` + ids.NewV7().String() + `","intent":"please reschedule our call"}`,
+	} {
+		out, err := tool.Handle(context.Background(), json.RawMessage(args))
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		var got DraftEmailResult
+		if err := json.Unmarshal(out, &got); err != nil {
+			t.Fatalf("%s: decoding the draft: %v", name, err)
+		}
+		if got.CommunicationContext != "requested_followup" {
+			t.Errorf("%s: communication_context = %q, want requested_followup", name, got.CommunicationContext)
+		}
 	}
 }
 

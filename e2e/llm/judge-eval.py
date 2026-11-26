@@ -9,7 +9,7 @@ judge's accuracy is a fact the page has to be able to state and a reader has to
 be able to reproduce.
 
 THE GROUND TRUTH IS NOT ANOTHER MODEL'S OPINION. e2e/llm/testdata/judge holds
-185 verdicts recorded by whichever model is pinned; scoring a judge against them
+the verdicts recorded by whichever model is pinned; scoring a judge against them
 measures resemblance to that model and hands it a free hundred per cent when it
 IS that model. The fixtures under e2e/llm/testdata/<case>/ carry a better label:
 a contact wrote each answer to be right or wrong on a named criterion, and
@@ -17,7 +17,7 @@ scripts/test-e2e-llm-check.sh states which. So this drives that suite with a
 LIVE judge and reads its own pass/fail lines — no second copy of the harness,
 and no labels this file invents.
 
-    python3 e2e/llm/judge-eval.py claude-haiku-4-5-20251001
+    python3 e2e/llm/judge-eval.py claude-haiku-5-5
 
 It bills tokens (one live judge call per judged criterion) and writes
 backend/internal/compose/aicert/records/judge_eval/<model>.json, which
@@ -30,7 +30,7 @@ import re
 import subprocess
 import sys
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 RECORDS = os.path.join(
     ROOT, "backend", "internal", "compose", "aicert", "records", "judge_eval"
 )
@@ -50,6 +50,15 @@ JUDGED = re.compile(r"^case\d+/")
 MODEL_ID = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9._-]*\Z")
 
 
+def unreached(suite_output):
+    """The judged fixtures whose check stopped because no verdict was reached."""
+    return [
+        name
+        for name in re.findall(r"^FAIL: (\S+) — exit 2, want [01]$", suite_output, re.M)
+        if JUDGED.match(name)
+    ]
+
+
 def main():
     if len(sys.argv) != 2:
         print(__doc__.strip().splitlines()[-3].strip(), file=sys.stderr)
@@ -58,7 +67,7 @@ def main():
     if not MODEL_ID.match(model):
         print(
             f"not a model id: {model!r} — expected something like "
-            "claude-haiku-4-5-20251001",
+            "claude-haiku-5-5",
             file=sys.stderr,
         )
         return 2
@@ -75,6 +84,18 @@ def main():
     if not passed and not failed:
         # A run that scored nothing is not a judge that got everything right.
         print("the suite reported no case at all:\n" + done.stdout[-2000:], file=sys.stderr)
+        return 1
+    stopped = unreached(done.stdout)
+    if stopped:
+        # Exit 2 is check.py's JudgeUnavailable: the judge was never asked, so
+        # these are not its errors and the record would publish a missing
+        # credential as the model's accuracy.
+        print(
+            f"the judge could not be reached on {len(stopped)} judged fixtures "
+            f"(first: {stopped[0]}); no record written. Check its credential "
+            f"(CLAUDE_CODE_OAUTH_TOKEN for the claude CLI).",
+            file=sys.stderr,
+        )
         return 1
 
     os.makedirs(RECORDS, exist_ok=True)

@@ -12,6 +12,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { escapeHtml } from "../format/html";
+import { isChordOf } from "../lib/chord";
 import { isImeCommit } from "../lib/imecommit";
 import { AiPending } from "./aipending";
 import { useAiReveal } from "./aireveal";
@@ -32,12 +33,24 @@ import {
   markdownOf,
   pastedMarkup,
 } from "./richtext-markdown";
+import {
+  headingAtCaret,
+  MARK_COMMANDS,
+  useMarksAtCaret,
+} from "./richtext-marks";
 import "./richtext.css";
 
 // The palette's key too: in the editor it opens the link instead.
 const LINK_KEY = "k";
 
 export { paragraphsFrom, plainTextOf, safeEditorHTML } from "./richtext-html";
+
+const TOGGLES = [
+  ["bold", Bold],
+  ["italic", Italic],
+  ["bulletList", List],
+  ["numberList", ListOrdered],
+] as const;
 
 /**
  * RichText — the light formatting a business email needs, and nothing more.
@@ -206,6 +219,7 @@ export function RichText({
     href: string;
     range: Range;
   } | null>(null);
+  const [marks, refreshMarks] = useMarksAtCaret(editor, disabled);
 
   useEffect(() => {
     const node = editor.current;
@@ -282,13 +296,11 @@ export function RichText({
     // wrong; what it produces is bounded by the server's allowlist anyway.
     document.execCommand(command, false, argument);
     report();
+    refreshMarks();
   };
 
   const toggleHeading = () =>
-    apply(
-      "formatBlock",
-      document.queryCommandValue("formatBlock") === "h2" ? "p" : "h2",
-    );
+    apply("formatBlock", headingAtCaret() ? "p" : "h2");
 
   const openLink = () => {
     const node = editor.current;
@@ -346,10 +358,7 @@ export function RichText({
     if (isImeCommit(event)) {
       return;
     }
-    if (
-      (event.metaKey || event.ctrlKey) &&
-      event.key.toLowerCase() === LINK_KEY
-    ) {
+    if (isChordOf(event, LINK_KEY)) {
       // Stopped here, the palette's listener on the window never hears it.
       event.preventDefault();
       event.stopPropagation();
@@ -372,39 +381,23 @@ export function RichText({
           <RichTextButton
             onClick={toggleHeading}
             title={labels.heading}
+            pressed={marks.heading}
             disabled={disabled}
           >
             <Heading2 size={14} aria-hidden="true" />
           </RichTextButton>
         )}
-        <RichTextButton
-          onClick={() => apply("bold")}
-          title={labels.bold}
-          disabled={disabled}
-        >
-          <Bold size={14} aria-hidden="true" />
-        </RichTextButton>
-        <RichTextButton
-          onClick={() => apply("italic")}
-          title={labels.italic}
-          disabled={disabled}
-        >
-          <Italic size={14} aria-hidden="true" />
-        </RichTextButton>
-        <RichTextButton
-          onClick={() => apply("insertUnorderedList")}
-          title={labels.bulletList}
-          disabled={disabled}
-        >
-          <List size={14} aria-hidden="true" />
-        </RichTextButton>
-        <RichTextButton
-          onClick={() => apply("insertOrderedList")}
-          title={labels.numberList}
-          disabled={disabled}
-        >
-          <ListOrdered size={14} aria-hidden="true" />
-        </RichTextButton>
+        {TOGGLES.map(([mark, Glyph]) => (
+          <RichTextButton
+            key={mark}
+            onClick={() => apply(MARK_COMMANDS[mark])}
+            title={labels[mark]}
+            pressed={marks[mark]}
+            disabled={disabled}
+          >
+            <Glyph size={14} aria-hidden="true" />
+          </RichTextButton>
+        ))}
         <RichTextButton
           onClick={openLink}
           title={labels.link}
@@ -473,11 +466,14 @@ export function RichText({
 function RichTextButton({
   onClick,
   title,
+  pressed,
   disabled,
   children,
 }: Readonly<{
   onClick: () => void;
   title: string;
+  /** Whether the mark is on at the caret; absent on a verb such as Link. */
+  pressed?: boolean;
   disabled?: boolean;
   children: React.ReactNode;
 }>) {
@@ -492,6 +488,7 @@ function RichTextButton({
       onClick={onClick}
       title={title}
       aria-label={title}
+      aria-pressed={pressed}
     >
       {children}
     </button>

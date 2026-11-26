@@ -68,6 +68,14 @@ var textLimits = []textLimit{
 		"internal/modules/collections/memberwrite.go", "maxMemberNote",
 		schemaPath("components", "schemas", "ListMemberChangeRequest", "properties", "note"),
 	},
+	{
+		"internal/modules/introductions/store.go", "noteBound",
+		schemaPath("components", "schemas", "IntroRequestInput", "properties", "forwardable_note"),
+	},
+	{
+		"internal/modules/introductions/store.go", "reasonBound",
+		schemaPath("components", "schemas", "IntroRequestInput", "properties", "value_for_target"),
+	},
 	{"internal/modules/knowledge/corpustext.go", "maxAskQuestion", corpusBody("post", "/knowledge/corpora/{id}/ask", "question")},
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusName", corpusBody("post", "/knowledge/corpora", "name")},
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusTopic", corpusBody("post", "/knowledge/corpora", "topic_statement")},
@@ -130,6 +138,9 @@ func publishedMaxLength(t *testing.T, doc map[string]any, path []string) int {
 // appliedIntConst reads a module's integer constant from source. The constants
 // stay unexported: exporting one to suit a gate would widen the surface to make
 // the check convenient.
+// sharedTextLimits declares the four shared limits a cap may name instead of a literal.
+const sharedTextLimits = "internal/shared/kernel/values/textlimits.go"
+
 func appliedIntConst(t *testing.T, file, name string) int {
 	t.Helper()
 	parsed, err := gatekit.ParseFile(file, 0)
@@ -150,9 +161,12 @@ func appliedIntConst(t *testing.T, file, name string) int {
 				if ident.Name != name {
 					continue
 				}
+				if shared, ok := value.Values[i].(*ast.SelectorExpr); ok && types.ExprString(shared.X) == "values" {
+					return appliedIntConst(t, sharedTextLimits, shared.Sel.Name)
+				}
 				literal, ok := value.Values[i].(*ast.BasicLit)
 				if !ok || literal.Kind != token.INT {
-					t.Fatalf("%s in %s is not an integer literal — this gate reads only that shape", name, file)
+					t.Fatalf("%s in %s is neither an integer literal nor a shared values limit — this gate reads only those shapes", name, file)
 				}
 				text := types.ExprString(literal)
 				n, err := strconv.Atoi(text)

@@ -131,21 +131,14 @@ func TestThousandsAreGroupedInThrees(t *testing.T) {
 	}
 }
 
-func TestAnAllowedServerErrorOnAListedRowRendersAgainstItsIssue(t *testing.T) {
-	burst := measurement{
-		Name: "morning_load_cheap_route", Flow: "morning_load", Seat: "team", P95Ms: 700, BudgetMs: 150, Samples: 40,
-		Verdict: storedOverKnown, KnownIssue: 7068, Status5xx: 1, Allowed5xx: true,
-	}
-	if got := verdict(burst); got != "over budget (#7068)" {
-		t.Errorf("budgets page verdict %q, want the listed issue, not a failure", got)
+func TestServerErrorsFailEvenOnAKnownIssueRow(t *testing.T) {
+	burst := measurement{Name: "morning_load_cheap_route", Flow: "morning_load", Seat: "team", P95Ms: 700, BudgetMs: 150, Samples: 40,
+		Verdict: storedOverKnown, KnownIssue: 7068, Status5xx: 1}
+	if got := verdict(burst); got != "**FAILED**: 1 server errors" {
+		t.Fatalf("got %q", got)
 	}
 	if got := dailyNotes(burst); !strings.Contains(got, "1 server errors") {
-		t.Errorf("notes %q; the server errors must still be counted", got)
-	}
-	unallowed := burst
-	unallowed.Allowed5xx = false
-	if got := verdict(unallowed); got != "**FAILED**: 1 server errors" {
-		t.Errorf("verdict %q; a 5xx no entry allows must still read as a failure", got)
+		t.Fatalf("notes=%q", got)
 	}
 }
 
@@ -198,5 +191,38 @@ func TestHealthMeasurementsKeepEachChecksSampleCountAndNote(t *testing.T) {
 		if !strings.Contains(page, want) {
 			t.Errorf("measurement missing: %s", want)
 		}
+	}
+}
+
+func TestALongHistoryRowShowsItsTimeWithoutAPromise(t *testing.T) {
+	row := func(seat, name string, p95 float64) measurement {
+		return measurement{Name: name, Flow: "history_search_to_deal", Seat: seat, P95Ms: p95, BudgetMs: 100, Samples: 30, Verdict: storedNotGated}
+	}
+	failed := row("manager", "history_search_to_deal_page", 900)
+	failed.Status5xx = 2
+	page := renderPlain(map[string]record{dailyTarget: {Target: dailyTarget, Corpus: &corpus{Scale: 1}, Budgets: []measurement{
+		row("rep", "history_search_to_deal_search", 80), row("rep", "history_search_to_deal_page", 3900),
+		row("rep", "history_search_to_deal_total", 3980), failed,
+	}}})
+	want := "| Search, then open the deal | ⚪ About 4 seconds | 🔴 Some tries failed | Failed: some tries got no answer, so no time can be trusted. |"
+	if !strings.Contains(page, "## How fast does a record with a long history open?\n") || !strings.Contains(page, want) {
+		t.Errorf("a recorded row shows its slowest time with no colour, and a failed try still fails; want\n%s\nin\n%s", want, page)
+	}
+	if got := recordedAnswer([]measurement{row("rep", "history_thread", 40)}).words(); got != "Measured only: no promise covers a history this long yet." {
+		t.Errorf("a recorded row's words %q must say no promise covers it", got)
+	}
+}
+
+func TestTheTestCompanyStatesItsLongestHistories(t *testing.T) {
+	var b strings.Builder
+	renderCorpusFacts(&b, &corpus{Scale: 1, LargestCompany: 20000, LargestDeal: 10000, LargestContact: 5000, LargestThread: 2000})
+	want := "Its longest histories are a company with 20,000 activities, a deal with 10,000, a contact with 5,000\nand a mail conversation of 2,000 messages.\n"
+	if !strings.Contains(b.String(), want) {
+		t.Errorf("got\n%s\nwant the longest histories stated:\n%s", b.String(), want)
+	}
+	b.Reset()
+	renderCorpusFacts(&b, &corpus{Scale: 1})
+	if strings.Contains(b.String(), "longest histories") {
+		t.Errorf("a record from before the long histories must render as it did: %s", b.String())
 	}
 }

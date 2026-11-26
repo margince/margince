@@ -16,12 +16,14 @@ import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { TagPill } from "../../design-system/tagpill";
+import { ABSENT } from "../../format/absent";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
-import { problemMessageOf } from "../../lib/problem";
+import { blankRequired, problemMessageOf } from "../../lib/problem";
 import { useUndoableRemoval } from "../../lib/undoableremoval";
 import type { Tag } from "./tagadmin.queries";
 import {
@@ -155,7 +157,7 @@ function TagTable({
       align: "end",
       render: (tag) =>
         tag.carried_by === undefined
-          ? "—"
+          ? ABSENT
           : plural("tagAdmin.usedBy", tag.carried_by, {
               count: formatNumber(tag.carried_by, locale),
             }),
@@ -288,6 +290,8 @@ function MergeDialog({
   const t = useT();
   const { locale } = useLocale();
   const [target, setTarget] = useState("");
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const targetLabel = t("tagAdmin.mergeIntoLabel");
   const merge = useMergeTags();
   const result = merge.data;
   // A live word other than this one: the endpoint refuses an archived target
@@ -332,17 +336,25 @@ function MergeDialog({
       title={t("tagAdmin.mergeTitle", { name: source.name })}
       confirmLabel={t("tagAdmin.mergeConfirm")}
       confirmVariant="danger"
-      confirmDisabled={target === ""}
+      bodyRef={faultsRoot}
       pending={merge.isPending}
       error={merge.error != null ? problemMessageOf(merge.error, t) : undefined}
-      onConfirm={() => merge.mutate({ id: source.id, intoTagID: target })}
+      onConfirm={() => {
+        const blank = blankRequired(locale, { target: [targetLabel, target] });
+        if (!faults.show(blank)) {
+          merge.mutate({ id: source.id, intoTagID: target });
+        }
+      }}
     >
-      <Field label={t("tagAdmin.mergeIntoLabel")}>
+      <Field label={targetLabel} required error={faults.of("target")}>
         {(control) => (
           <Select
             {...control}
             value={target}
-            onChange={(next) => setTarget(next)}
+            onChange={(next) => {
+              setTarget(next);
+              faults.edited("target");
+            }}
             options={[
               { value: "", label: t("tagAdmin.mergeIntoNone") },
               ...candidates.map((tag) => ({ value: tag.id, label: tag.name })),

@@ -1,7 +1,8 @@
 import type { components } from "../../api/schema";
+import { overdueReadingOf } from "../../components/financesummary";
 import { Badge } from "../../design-system/atoms";
 import { Meter } from "../../design-system/readings";
-import { formatMoney, formatNumber } from "../../format/format";
+import { formatMoneyWhole, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { medianDaysLabel } from "./company360";
 import { amountOf, FinanceFigure } from "./companyfinance";
@@ -21,22 +22,22 @@ type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 // balance it is, how late this customer usually pays, and the two halves of
 // the open balance drawn against each other.
 //
-// The hero figure is drawn whatever the rest of the panel can say. The
-// sentence and the bar under it each appear only when their own inputs
-// arrived, so a customer with no settled invoices gets the figure and nothing
-// invented beneath it.
+// The figure always draws; the sentence and the bar need their own inputs.
 export function OverdueLead({
   summary,
 }: Readonly<{ summary: FinanceSummary }>) {
   const t = useT();
   const { locale } = useLocale();
   const split = openSplitOf(summary);
+  // The figure leads at full size only while it is current. A stale one stays
+  // in the ink of the rest, dated by the panel's own caveat.
+  const reading = overdueReadingOf(summary);
   return (
     <div className="fin-lead">
       <FinanceFigure
         label={t("finance.overdue")}
         value={amountOf(summary.overdue, locale)}
-        hero
+        hero={reading !== null && !reading.asOf}
         // An overdue figure is a call to action, and the server withholds it
         // once the relationship has ended rather than sending a number that
         // would read as a collection to make. A bare dash here would say "we
@@ -64,12 +65,12 @@ export function OverdueLead({
           <p className="fin-legend">
             <Badge tone="danger">
               {t("finance.legendOverdue", {
-                amount: formatMoney(split.overdue, split.currency, locale),
+                amount: formatMoneyWhole(split.overdue, split.currency, locale),
               })}
             </Badge>
             <Badge tone="accent">
               {t("finance.legendOpen", {
-                amount: formatMoney(split.open, split.currency, locale),
+                amount: formatMoneyWhole(split.open, split.currency, locale),
               })}
             </Badge>
           </p>

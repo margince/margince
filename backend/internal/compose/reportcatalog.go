@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
@@ -36,9 +37,16 @@ import (
 //
 // Everything is sorted: the map is not ordered, and a description that
 // reshuffles per boot reads as a changed tool to a client that caches it.
-func reportToolCatalog() []agents.ReportCatalogEntry {
+func reportToolCatalog(selected ...corefeatures.Availability) []agents.ReportCatalogEntry {
+	var availability corefeatures.Availability
+	if len(selected) > 0 {
+		availability = selected[0]
+	}
 	catalog := make([]agents.ReportCatalogEntry, 0, len(prebuiltReports))
 	for report, spec := range prebuiltReports {
+		if !reportAvailable(availability, spec) {
+			continue
+		}
 		catalog = append(catalog, agents.ReportCatalogEntry{
 			Report:  report,
 			GroupBy: allowedReportNames(spec.dimensions),
@@ -46,7 +54,8 @@ func reportToolCatalog() []agents.ReportCatalogEntry {
 			// object — so it is listed with them.
 			Filters:    catalogFilterNames(spec),
 			Aggregates: allowedReportNames(spec.measures),
-			Defaults:   describeReportDefaults(spec),
+			Measures:   describeReportMeasures(spec),
+			DefaultBy:  slices.Clone(spec.defaultBy),
 			Notes:      spec.notes,
 		})
 	}
@@ -65,35 +74,18 @@ func catalogFilterNames(spec reportSpec) []string {
 	return names
 }
 
-// describeReportDefaults renders what a report answers with no plan arguments,
-// which is the call a caller should make first and the one they cannot see from
-// the vocabularies alone.
-func describeReportDefaults(spec reportSpec) string {
-	aggs := make([]string, 0, len(spec.defaultAggs))
+// describeReportMeasures is the default aggregates as bare function(field)
+// terms. An alias names an output column the answer already carries.
+func describeReportMeasures(spec reportSpec) string {
+	terms := make([]string, 0, len(spec.defaultAggs))
 	for _, agg := range spec.defaultAggs {
-		rendered := agg.Fn
+		term := agg.Fn
 		if agg.Field != "" {
-			rendered += "(" + agg.Field + ")"
+			term += "(" + agg.Field + ")"
 		}
-		if agg.As != "" && agg.As != agg.Field {
-			rendered += " as " + agg.As
-		}
-		aggs = append(aggs, rendered)
+		terms = append(terms, term)
 	}
-	// Each half is rendered only if it EXISTS. runAdHocPlan already builds a spec
-	// with default aggregates and no default grouping (report.go), so an `&&`
-	// guard here would ship "count as deals grouped by " to an agent the first
-	// time such a report joined the prebuilt catalog.
-	switch {
-	case len(aggs) > 0 && len(spec.defaultBy) > 0:
-		return strings.Join(aggs, ", ") + " grouped by " + strings.Join(spec.defaultBy, ", ")
-	case len(aggs) > 0:
-		return strings.Join(aggs, ", ") + " over the whole set"
-	case len(spec.defaultBy) > 0:
-		return "grouped by " + strings.Join(spec.defaultBy, ", ")
-	default:
-		return ""
-	}
+	return strings.Join(terms, ", ")
 }
 
 // strictDecodeReportPlan decodes the tool's plan arguments, refusing a key the

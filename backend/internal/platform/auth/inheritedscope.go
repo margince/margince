@@ -39,9 +39,20 @@ func ActivityAvailableClause(alias string) string {
 }
 
 func discoverGateFor(p principal.Principal, alias string, arg func(any) int) string {
-	available := ActivityAvailableClause(alias) + " AND " + internalMailAccessClause(p, alias, arg)
+	return ActivityAvailableClause(alias) + " AND " + discoverReach(p, alias, arg, assignedCommitmentArm)
+}
+
+// discoverReach is the discover gate past availability. taskArm is the task
+// holder's way in, which only a task can use; nil leaves it out. The chat
+// summary arm sits here so every gate that composes the reach carries it.
+func discoverReach(p principal.Principal, alias string, arg func(any) int, taskArm clauseBuilder) string {
+	return chatSummaryArm(p, alias, arg) + " AND " + linkedReach(p, alias, arg, taskArm)
+}
+
+func linkedReach(p principal.Principal, alias string, arg func(any) int, taskArm clauseBuilder) string {
+	access := internalMailAccessClause(p, alias, arg)
 	if UnboundedFor(p, linkTargetTables...) {
-		return available
+		return access
 	}
 	// One correlated pass over the activity's links, not two. bool_or is
 	// exactly the ANY-link rule, and its empty-set answer — NULL, coalesced
@@ -69,16 +80,23 @@ func discoverGateFor(p principal.Principal, alias string, arg func(any) int) str
 	// host_user_id: that column labels whose calendar a row came off, which is
 	// ownership rather than membership, and a label is not evidence that anybody
 	// was present.
-	return fmt.Sprintf(`%[1]s AND (%[4]s.internal_mail_authorization IS NOT NULL OR %[2]s OR %[3]s)`,
-		available, activityReachArms(p, alias, arg), assignedCommitmentArm(p, alias, arg), alias)
+	reach := activityReachArms(p, alias, arg)
+	if taskArm != nil {
+		reach += " OR " + taskArm(p, alias, arg)
+	}
+	return fmt.Sprintf(`%[1]s AND (%[3]s.internal_mail_authorization IS NOT NULL OR %[2]s)`, access, reach, alias)
 }
 
 // activityReachArms is discovery through the row's own links or its attendance.
+// A link-less row is open to discovery, except one only shared mailboxes
+// imported and held: its reader team and its parties find it through
+// attendance.
 func activityReachArms(p principal.Principal, alias string, arg func(any) int) string {
 	return fmt.Sprintf(`coalesce((SELECT bool_or(%[2]s)
-	   FROM activity_link l WHERE l.activity_id = %[1]s.id), true)
+	   FROM activity_link l WHERE l.activity_id = %[1]s.id), NOT %[4]s)
 	   OR %[3]s`,
-		alias, linkTargetVisible(p, "l", arg, everyLinkTarget), activityAttendanceArm(p, alias, arg))
+		alias, linkTargetVisible(p, "l", arg, everyLinkTarget), activityAttendanceArm(p, alias, arg),
+		heldByOnlySharedMailboxesSQL(alias))
 }
 
 // assignedCommitmentArm lets the holder of a promise's task find it. Every
@@ -135,12 +153,12 @@ func activityAttendanceArm(p principal.Principal, alias string, arg func(any) in
 
 func activityAttendanceForMemberSQL(alias, members string) string {
 	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id IN (%[2]s))
-    OR EXISTS (SELECT 1 FROM activity_participant ap
-                WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND ap.address IS NOT NULL)
+    OR %[5]s
+    OR EXISTS (SELECT 1 FROM %[6]s AND guest.user_id IN (%[2]s) AND guest.address IS NOT NULL)
     OR (%[1]s.sent_by_colleague IN (%[2]s) AND EXISTS (SELECT 1 FROM data_task_run sender_check
          WHERE sender_check.step = '%[3]s' AND sender_check.status = 'done')
         AND %[4]s))`,
-		alias, members, SenderStampsCheckedStep, senderAtOwnDomain(alias))
+		alias, members, SenderStampsCheckedStep, senderAtOwnDomain(alias), sharedMailboxReaderInSQL(alias, members), guestRowsSQL(alias))
 }
 
 // senderAtOwnDomain re-asks at read time that the stamped seat's login address
@@ -181,10 +199,16 @@ const SenderStampsCheckedStep = "recheck_colleague_sender_domains"
 // one seat's provenance and the second is a statement about the audience rather
 // than about who was present.
 func activityMembershipArm(p principal.Principal, alias string, arg func(any) int) string {
-	me := arg(p.UserID)
+	return activityMembershipForMemberSQL(alias, memberIdentitySQL(arg(p.UserID)))
+}
+
+// activityMembershipForMemberSQL is activityMembershipArm for a member set
+// given as SQL.
+func activityMembershipForMemberSQL(alias, members string) string {
 	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id IN (%[2]s))
-	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND %[3]s))`,
-		alias, memberIdentitySQL(me), ParticipantStandsSQL("ap", alias))
+	   OR %[4]s
+	   OR EXISTS (SELECT 1 FROM %[3]s AND guest.user_id IN (%[2]s) AND %[5]s))`,
+		alias, members, guestRowsSQL(alias), sharedMailboxReaderInSQL(alias, members), ParticipantStandsSQL("guest", "guest_of"))
 }
 
 func contentGateFor(p principal.Principal, alias string, arg func(any) int) string {
@@ -192,27 +216,24 @@ func contentGateFor(p principal.Principal, alias string, arg func(any) int) stri
 	if p.Type == principal.PrincipalSystem {
 		return discover + " AND " + CommitmentContentRetainedClause(alias)
 	}
-	return discover + " AND " + activityContentAudienceArm(p, alias, arg)
+	return discover + " AND " + contentAudienceArm(p, alias, arg, activityAudienceMembership)
 }
 
-// Source availability is independent of the task's audience. A reminder cannot
-// grant access to evidence that the reader can no longer open.
+// activityContentAudienceArm is the content gate's audience half for a reader
+// that does not also apply the discover gate.
 func activityContentAudienceArm(p principal.Principal, alias string, arg func(any) int) string {
-	own := activityAudienceArm(p, alias, arg)
-	// Reassignment hands over the reminder, never a grant to its source email.
-	own = fmt.Sprintf("(%s OR coalesce(%s.source_system = '%s' AND %s.assignee_id = $%d, false))",
-		own, alias, provenance.EmailRequestSource, alias, arg(p.UserID))
-	// A captured request is a personal reminder of its source, not a new grant
-	// to that correspondence. Archiving or restricting the source withholds it.
-	source := discoverGateFor(p, contentGateSource, arg) + " AND " + activityAudienceArm(p, contentGateSource, arg)
-	sourceID := provenance.TaskSourceActivitySQL(alias)
-	sourceBound := own + fmt.Sprintf(` AND ((coalesce(%[1]s.source_system, '') NOT IN ('`+provenance.EmailRequestSource+`', '`+provenance.CommitmentTaskSource+`', '`+provenance.LeadRepliedSource+`') AND (%[1]s.kind <> 'task' OR %[1]s.source_activity_id IS NULL))
-	 OR EXISTS (SELECT 1 FROM activity %[4]s
-	   WHERE %[4]s.id = %[3]s
-     AND (coalesce(%[1]s.source_system, '') <> '`+provenance.EmailRequestSource+`' OR %[4]s.archived_at IS NULL)
-	     AND %[4]s.restricted_at IS NULL AND %[2]s))`, alias, source, sourceID, contentGateSource)
-	return sourceBound + fmt.Sprintf(" AND (coalesce(%s.source_system, '') <> '%s' OR %s)",
-		alias, provenance.CommitmentTaskSource, commitmentEvidenceArm(p, alias+".source_activity_id", alias+".source_id", arg))
+	return contentAudienceArm(p, alias, arg, activityAudienceArm)
+}
+
+// agentRestrictionArm withholds from an agent, the product's own or one a seat
+// connected, every mail a restricted contact sent or received (GDPR Art. 18).
+// It sits in the audience arm, so a discover-gated reader's content_state and
+// a reminder whose source is such a mail both answer no.
+func agentRestrictionArm(p principal.Principal, alias string) string {
+	if p.Type != principal.PrincipalAgent {
+		return ""
+	}
+	return " AND NOT " + ActivityRestrictedSQL(alias+".id")
 }
 
 // ActivityAudienceArm renders the audience membership test alone — the
@@ -240,6 +261,13 @@ func ActivityAudienceArm(ctx context.Context, alias string, arg func(any) int) (
 // audienceorphan.go. Change an arm here and change it there; the pair is held by
 // a test named in that file's doc comment.
 func activityAudienceArm(p principal.Principal, alias string, arg func(any) int) string {
+	return "(" + activityAudienceMembership(p, alias, arg) + " AND " + internalMailAccessClause(p, alias, arg) + ")"
+}
+
+// activityAudienceMembership is activityAudienceArm without its internal-mail
+// test, for a gate whose discover half already applies that test to the row.
+// Postgres plans and keeps every copy, so the gate states it once.
+func activityAudienceMembership(p principal.Principal, alias string, arg func(any) int) string {
 	me := arg(p.UserID)
 	// captured_by is `human:<uuid>` for a hand-logged row and
 	// `connector:<name>:<uuid>` for a captured one; both end in the user's
@@ -256,15 +284,15 @@ func activityAudienceArm(p principal.Principal, alias string, arg func(any) int)
 	// The two membership arms are activityMembershipArm's, composed rather than
 	// repeated: discovery asks the same question of the same two tables, and a
 	// second copy is how one of them gains an arm the other lacks.
-	ordinary := fmt.Sprintf(`(%[1]s.audience = 'workspace'
+	ordinary := fmt.Sprintf(`(%[6]s
 	   OR %[5]s
 	   OR %[4]s
 	   OR (%[1]s.audience = 'selected' AND EXISTS (
 	      SELECT 1 FROM activity_audience_member am WHERE am.activity_id = %[1]s.id
 	        AND ((am.subject_type = 'user' AND am.subject_id IN (%[2]s))
 	          OR (am.subject_type = 'team' AND am.subject_id = ANY($%[3]d))))))`,
-		alias, memberIdentitySQL(me), teams, activityMembershipArm(p, alias, arg), memberAuthorshipSQL(alias, me, arg))
-	return "(" + ordinary + " AND " + internalMailAccessClause(p, alias, arg) + ")"
+		alias, memberIdentitySQL(me), teams, activityMembershipArm(p, alias, arg), memberAuthorshipSQL(alias, me, arg), WorkspaceAudienceSQL(alias))
+	return ordinary
 }
 
 // EnsureActivityVisible is EnsureVisible for activities under the DISCOVER

@@ -46,16 +46,26 @@ func NotImplemented(w http.ResponseWriter, r *http.Request, op string) {
 	})
 }
 
-// Unavailable is ServiceUnavailable with a code of its own.
+// UnavailableProblem is a 503 with a code of its own. It is an error, so a
+// caller that answers through a handler it does not own can return it.
 //
-// The code is what a UI can translate. `service_unavailable` says only that
-// something is down, so a client with a reader to speak to has to render the
-// detail verbatim — and the detail is written in one language, which is how an
-// English sentence ends up inside a German screen. A named code lets the client
-// carry its own copy and keeps the detail for everyone else: curl, a log, an
-// integrator with no catalog.
-func Unavailable(w http.ResponseWriter, r *http.Request, code, detail string) {
-	writeProblem(w, problem{Status: http.StatusServiceUnavailable, Code: code, Detail: detail})
+// The code is what a UI translates; the detail is one language, kept for a
+// caller with no catalog (curl, a log, an integrator).
+func UnavailableProblem(code, detail string) *DetailedError {
+	return &DetailedError{Status: http.StatusServiceUnavailable, Code: code, Detail: detail}
+}
+
+// CodeAINotConfigured is the one problem code that says no AI model is bound.
+// A screen maps it to its "connect an AI" copy.
+const CodeAINotConfigured = "ai_not_configured"
+
+// ErrNotConfigured is what a model call returns while no AI model is bound.
+// It is a 409 with CodeAINotConfigured: the request is fine and the
+// installation lacks a model. A job that meets it has nothing to do yet, and a
+// handler that returns it as it came says the same to its caller.
+var ErrNotConfigured = &DetailedError{
+	Status: http.StatusConflict, Code: CodeAINotConfigured,
+	Detail: "No AI model is connected. Connect one under Settings, AI.",
 }
 
 // NotImplementedBecause is NotImplemented for a route that IS implemented and
@@ -81,6 +91,47 @@ func Validation(field, code, message string) *DetailedError {
 		Detail: message,
 		Fields: []FieldError{{Field: field, Code: code, Message: message}},
 	}
+}
+
+// TooLong is the 422 for text past its limit. It carries the limit, so a
+// screen can say the number in the reader's language. A limit of 0 or less is
+// a caller's bug: the wire would carry no max, so it panics. An actual of 0
+// says the length is unknown, as in a refusal the database raised.
+func TooLong(field string, limit, actual int) *DetailedError {
+	if limit <= 0 {
+		panic(fmt.Sprintf("httperr.TooLong: %s has limit %d; a length limit is positive", field, limit))
+	}
+	message := fmt.Sprintf("%s holds at most %d characters", field, limit)
+	if actual > 0 {
+		message += fmt.Sprintf("; this one has %d", actual)
+	}
+	return Validation(field, "too_long", message).WithMax(limit)
+}
+
+// WithMax states the limit a one-field refusal names.
+func (e *DetailedError) WithMax(limit int) *DetailedError {
+	e.Fields[0].Max = limit
+	return e
+}
+
+// fieldMaxer is a FieldFault that also states the limit it refused at. It is
+// declared here rather than in apperrors because only this mapping reads it.
+type fieldMaxer interface {
+	FieldMax() int
+}
+
+// fieldParamser is a FieldFault that also states the values its code names.
+type fieldParamser interface {
+	FieldParams() map[string]string
+}
+
+// WithParams states the values a one-field refusal's code names, so a screen
+// can word the code in the reader's language without reading the message.
+func (e *DetailedError) WithParams(params map[string]string) *DetailedError {
+	if len(params) > 0 {
+		e.Fields[0].Params = params
+	}
+	return e
 }
 
 // RequirePair refuses a filter that names half of a discriminated reference.
@@ -109,8 +160,8 @@ func RequireNonBlank(field, raw string) (string, error) {
 // characters, not bytes, so a German or Vietnamese sentence is not refused for
 // its accents.
 func RequireWithin(field, text string, limit int) error {
-	if utf8.RuneCountInString(text) > limit {
-		return Validation(field, "too_long", fmt.Sprintf("%s holds at most %d characters", field, limit))
+	if n := utf8.RuneCountInString(text); n > limit {
+		return TooLong(field, limit, n)
 	}
 	return nil
 }
@@ -158,18 +209,38 @@ func RequireBodyID(field string, id ids.UUID) error {
 const fieldErrorsKey = "errors"
 
 func fieldDetails(fields []FieldError) map[string]any {
-	errs := make([]map[string]string, 0, len(fields))
+	errs := make([]map[string]any, 0, len(fields))
 	for _, f := range fields {
-		entry := map[string]string{"field": f.Field, "code": f.Code}
+		entry := map[string]any{"field": f.Field, "code": f.Code}
 		// A multi-field validator may have no per-entry prose (the code IS the
 		// reason). Omitting the key beats shipping "message": "", which reads
 		// as an explanation that came out blank.
 		if f.Message != "" {
 			entry["message"] = f.Message
 		}
+		if f.Max > 0 {
+			entry["max"] = f.Max
+		}
+		if len(f.Params) > 0 {
+			entry["params"] = f.Params
+		}
 		errs = append(errs, entry)
 	}
 	return map[string]any{fieldErrorsKey: errs}
+}
+
+// FieldErrorsOf reads fieldDetails' shape back out of a decoded problem's
+// details. A details bag without that shape holds no field errors.
+func FieldErrorsOf(details map[string]any) []FieldError {
+	raw, err := json.Marshal(details[fieldErrorsKey])
+	if err != nil {
+		return nil
+	}
+	var fields []FieldError
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return nil
+	}
+	return fields
 }
 
 // Duplicate is the 409 dedupe shape. existingID is included only when
@@ -190,7 +261,14 @@ func Duplicate(code, existingID string) *DetailedError {
 // codeInternal is the wire code of every opaque 500.
 const codeInternal = "internal"
 
+// sessionChallenge is what a 401 names when its writer named no scheme of its
+// own. RFC 9110 requires a challenge, and /v1 takes a passport as a bearer.
+const sessionChallenge = `Bearer realm="margince"`
+
 func writeProblem(w http.ResponseWriter, p problem) {
+	if p.Status == http.StatusUnauthorized && w.Header().Get("WWW-Authenticate") == "" {
+		w.Header().Set("WWW-Authenticate", sessionChallenge)
+	}
 	if p.Type == "" {
 		p.Type = problemTypeBase + p.Code
 	}

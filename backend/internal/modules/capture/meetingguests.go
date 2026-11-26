@@ -3,10 +3,11 @@
 
 package capture
 
-// A meeting's guests are the rosters of the calendars that list it. Each row a
-// roster writes names that calendar's seat in roster_seat. The next sync of the
-// same calendar adds who joined and retires who left. Rows a member, an
-// import, mail or another calendar wrote carry no such seat and stay.
+// A meeting's guests are the rosters of the calendars that list it. A guest row
+// names the seat of each calendar that lists it. A sync adds its seat to the
+// rows it lists and takes it off the rows it dropped. A row no calendar lists
+// is retired. Rows a member, an import or mail wrote name no seat and stay.
+// A relinked row keeps its seats for the answers, and is never retired.
 
 import (
 	"context"
@@ -17,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -69,6 +71,9 @@ func (g LaterGuests) Changed() bool {
 // stampBirthParties writes a new activity's further parties. A calendar's
 // rows carry the seat whose roster listed them, so a later sync can settle them.
 func stampBirthParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, fields ActivityFields) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, id.UUID); err != nil {
+		return err
+	}
 	attested := ParticipantListAttested(rec)
 	var roster *ids.UUID
 	if seat := actorUserID(ctx); fields.Kind == meetingKind && attested && seat != ids.Nil {
@@ -87,6 +92,13 @@ func stampBirthParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec co
 	}
 	if roster != nil && rec.CalendarAnswer != nil {
 		if _, err := settleAnswers(ctx, tx, id, MeetingRoster{Seat: *roster, Current: true, OwnerAnswer: rec.CalendarAnswer}, nil); err != nil {
+			return err
+		}
+	}
+	// The meeting's first transition was recorded before its guests. Keep the
+	// credit of the guest list it was born with.
+	if fields.Kind == meetingKind {
+		if _, err := storekit.KeepMeetingCreditTx(ctx, tx, id.UUID); err != nil {
 			return err
 		}
 	}
@@ -109,6 +121,9 @@ func SettleMeetingRosterTx(
 	listed := append(append([]connector.MessageParticipant{}, roster.Parties.Participants...), roster.Parties.Withheld...)
 	if roster.Seat == ids.Nil || (len(listed) == 0 && !roster.Left && (roster.OwnerAnswer == nil || roster.OwnerAnswer.Response == "")) {
 		return LaterGuests{}, nil
+	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID.UUID); err != nil {
+		return LaterGuests{}, err
 	}
 	if _, err := storekit.LockRow(ctx, tx, "activity", activityID.UUID, storekit.LiveOnly); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
@@ -149,6 +164,9 @@ func SettleMeetingRosterTx(
 func settleRosterRows(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, roster MeetingRoster, listed []connector.MessageParticipant, bindSeats bool,
 ) (LaterGuests, int, error) {
+	if err := nameRosterOnListedRows(ctx, tx, activityID, roster, listed); err != nil {
+		return LaterGuests{}, 0, err
+	}
 	retired, err := retireOffTheRoster(ctx, tx, activityID, roster, listed)
 	if err != nil {
 		return LaterGuests{}, 0, err
@@ -182,7 +200,7 @@ func settleRosterRows(
 // audience, and open is false for a restricted meeting, which takes no guests.
 func audienceNarrowedByAMember(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (narrowed, open bool, err error) {
 	err = tx.QueryRow(ctx, `
-		SELECT audience <> 'workspace' AND audience_reason IS NOT DISTINCT FROM $2
+		SELECT `+"NOT ("+auth.WorkspaceAudienceSQL("activity")+")"+` AND audience_reason IS NOT DISTINCT FROM $2
 		  FROM activity WHERE id = $1 AND restricted_at IS NULL`, activityID, manualAudienceReason).Scan(&narrowed)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, false, nil
@@ -191,86 +209,6 @@ func audienceNarrowedByAMember(ctx context.Context, tx pgx.Tx, activityID ids.Ac
 		return false, false, fmt.Errorf("capture: reading who narrowed a meeting's audience: %w", err)
 	}
 	return narrowed, true, nil
-}
-
-// retireOffTheRoster removes this calendar's rows the roster no longer grants:
-// a colleague's seat once they declined, and anybody a complete roster dropped.
-// It also retires rows of a disconnected calendar, and colleagues the organizer
-// removed. A seat that left drops every calendar row bound to it, whichever
-// roster wrote it last. The syncing seat's own row and the host's are never
-// retired otherwise.
-func retireOffTheRoster(
-	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, roster MeetingRoster, listed []connector.MessageParticipant,
-) (int, error) {
-	if !roster.Current {
-		return 0, nil
-	}
-	addresses := make([]string, 0, len(listed))
-	declined := make([]string, 0, len(listed))
-	for _, p := range listed {
-		address := strings.ToLower(strings.TrimSpace(p.Email))
-		addresses = append(addresses, address)
-		if p.Declined() {
-			declined = append(declined, address)
-		}
-	}
-	tag, err := tx.Exec(ctx, `
- DELETE FROM activity_participant ap USING activity a
- WHERE a.id=ap.activity_id AND ap.activity_id=@activity
- AND ((@left AND ap.roster_seat IS NOT NULL AND ap.user_id=@seat)
- OR (NOT @left AND (ap.roster_seat=@seat OR `+rosterOwnerGoneSQL("ap")+`) AND ap.address IS NOT NULL
- AND ap.user_id IS DISTINCT FROM @seat AND ap.user_id IS DISTINCT FROM a.host_user_id
- AND ((ap.user_id IS NOT NULL AND ap.address=ANY(@declined)) OR (@complete AND NOT ap.address=ANY(@addresses)))))`, pgx.StrictNamedArgs{
-		capturedActivityObject: activityID, rosterSeatArg: roster.Seat, "left": roster.Left, "declined": declined, "complete": roster.Complete, rosterAddressesArg: addresses,
-		calendarProvidersArg: calendarProviderNames(),
-	})
-	if err != nil {
-		return 0, fmt.Errorf("capture: retiring the guests a calendar no longer lists: %w", err)
-	}
-	if roster.Left || !roster.Complete {
-		return int(tag.RowsAffected()), nil
-	}
-	removed, err := retireSeatsTheOrganizerRemoved(ctx, tx, activityID, roster.Seat, addresses)
-	return int(tag.RowsAffected()) + removed, err
-}
-
-// calendarProvidersArg binds calendarProviderNames for rosterOwnerGoneSQL.
-const calendarProvidersArg = "calendar_providers"
-
-// rosterOwnerGoneSQL is a row a calendar roster wrote whose seat holds no live
-// calendar connection now. No calendar of that seat will settle the row again,
-// so any current roster may. A reconnected seat's own sync takes it back.
-func rosterOwnerGoneSQL(participant string) string {
-	return fmt.Sprintf(`(%[1]s.roster_seat IS NOT NULL AND NOT EXISTS (SELECT 1 FROM capture_connection owner_calendar
- WHERE owner_calendar.user_id=%[1]s.roster_seat AND owner_calendar.provider=ANY(@%[2]s)
- AND owner_calendar.status IN ('connected','error') AND owner_calendar.archived_at IS NULL))`, participant, calendarProvidersArg)
-}
-
-// retireSeatsTheOrganizerRemoved deletes a colleague's own calendar rows once
-// the organizer's complete roster no longer lists any address of theirs. Their
-// own calendar may report the removal much later, or never.
-func retireSeatsTheOrganizerRemoved(
-	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, seat ids.UUID, addresses []string,
-) (int, error) {
-	organizer, err := SeatOrganizesMeetingTx(ctx, tx, activityID, seat)
-	if err != nil || !organizer {
-		return 0, err
-	}
-	args := []any{activityID, seat, addresses, storedDomainsOf(addresses)}
-	listedSeat, err := calendarSeatMatch(ctx, tx, meetingKind, true, &args)
-	if err != nil {
-		return 0, err
-	}
-	tag, err := tx.Exec(ctx, `
- DELETE FROM activity_participant ap USING activity a
- WHERE a.id=ap.activity_id AND ap.activity_id=$1
- AND ap.user_id=ap.roster_seat AND ap.user_id<>$2 AND ap.user_id IS DISTINCT FROM a.host_user_id
- AND NOT EXISTS (SELECT 1 FROM app_user u, unnest($3::text[], $4::text[]) AS inp(address, domain_folded)
-  WHERE u.id=ap.user_id AND (inp.address=ap.address OR `+listedSeat+`))`, args...)
-	if err != nil {
-		return 0, fmt.Errorf("capture: retiring the colleagues an organizer removed from a meeting: %w", err)
-	}
-	return int(tag.RowsAffected()), nil
 }
 
 // addFromTheRoster writes the listed parties the meeting does not hold yet,
@@ -324,12 +262,13 @@ func addFromTheRoster(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 }
 
 // heldAddresses answers each address the meeting holds, and whether its only
-// rows are this calendar's own address-only ones.
+// rows are address-only ones this calendar alone lists. A row another calendar
+// lists too is never offered again: one copy may not show a decline.
 func heldAddresses(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, seat ids.UUID) (map[string]bool, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT address,
-		       count(*) = count(CASE WHEN roster_seat IS NOT DISTINCT FROM $2 AND user_id IS NULL AND contact_id IS NULL THEN 1 END)
-		  FROM activity_participant WHERE activity_id = $1 AND address IS NOT NULL
+		       count(*) = count(CASE WHEN `+storekit.RosterSeatsSQL("held")+` = ARRAY[$2::uuid] AND user_id IS NULL AND contact_id IS NULL THEN 1 END)
+		  FROM activity_participant held WHERE activity_id = $1 AND address IS NOT NULL
 		 GROUP BY address`, activityID, seat)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading who a meeting already names: %w", err)
@@ -355,7 +294,7 @@ func heldAddresses(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, se
 func retireSupersededRosterRows(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, seat ids.UUID) (int, error) {
 	tag, err := tx.Exec(ctx, `
 		DELETE FROM activity_participant bare
-		 WHERE bare.activity_id = $1 AND bare.roster_seat = $2
+		 WHERE bare.activity_id = $1 AND `+storekit.RosterListsSQL("bare", "$2")+`
 		   AND bare.user_id IS NULL AND bare.contact_id IS NULL AND bare.address IS NOT NULL
 		   AND EXISTS (SELECT 1 FROM activity_participant resolved
 		                WHERE resolved.activity_id = bare.activity_id AND resolved.role = bare.role

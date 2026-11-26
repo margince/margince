@@ -6,6 +6,7 @@ package reporting
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -34,7 +35,13 @@ func scanReport(row pgx.Row) (crmcontracts.ReportingReport, error) {
 	return report, storedError(err)
 }
 
-func audienceClause(ctx context.Context, b *bindings) (string, error) {
+// ReportAudienceClause is the report library's audience rule, rendered for a
+// statement another module holds. report_definition is aliased d there.
+func ReportAudienceClause(ctx context.Context, arg func(any) int) (string, error) {
+	return audienceClause(ctx, func(value any) string { return fmt.Sprintf("$%d", arg(value)) })
+}
+
+func audienceClause(ctx context.Context, add func(any) string) (string, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return "", apperrors.ErrPermissionDenied
@@ -46,12 +53,12 @@ func audienceClause(ctx context.Context, b *bindings) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "(d.owner_id=" + b.add(owner) + " OR d.audience='workspace' OR (d.audience='team' AND d.audience_team_id=ANY(" + b.add(actor.TeamIDs) + ")))", nil
+	return "(d.owner_id=" + add(owner) + " OR d.audience='workspace' OR (d.audience='team' AND d.audience_team_id=ANY(" + add(actor.TeamIDs) + ")))", nil
 }
 
 func (s *Service) report(ctx context.Context, tx pgx.Tx, id ids.UUID, lock bool) (crmcontracts.ReportingReport, error) {
 	var b bindings
-	audience, err := audienceClause(ctx, &b)
+	audience, err := audienceClause(ctx, b.add)
 	if err != nil {
 		return crmcontracts.ReportingReport{}, err
 	}
@@ -62,6 +69,9 @@ func (s *Service) report(ctx context.Context, tx pgx.Tx, id ids.UUID, lock bool)
 	report, err := scanReport(tx.QueryRow(ctx, query, b.values...))
 	if err != nil {
 		return report, err
+	}
+	if !s.evaluator.FeaturesAvailable(ctx, report.Selection) {
+		return crmcontracts.ReportingReport{}, errFeatureUnavailable
 	}
 	allowed := s.canEditReport(ctx, tx, report)
 	if allowed != nil && !errors.Is(allowed, apperrors.ErrPermissionDenied) && !errors.Is(allowed, apperrors.ErrNotFound) {
@@ -100,7 +110,7 @@ func (s *Service) ListReports(ctx context.Context, after *ids.UUID, limit int, s
 	out := crmcontracts.ReportingReportList{Data: []crmcontracts.ReportingReport{}}
 	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		var b bindings
-		where, err := audienceClause(ctx, &b)
+		where, err := audienceClause(ctx, b.add)
 		if err != nil {
 			return err
 		}
@@ -124,22 +134,28 @@ func (s *Service) ListReports(ctx context.Context, after *ids.UUID, limit int, s
 		if err != nil {
 			return err
 		}
+		if len(out.Data) > limit {
+			cursor := out.Data[limit-1].Id.String()
+			out.NextCursor = &cursor
+			out.Data = out.Data[:limit]
+		}
+		out.Data = slices.DeleteFunc(out.Data, func(report crmcontracts.ReportingReport) bool {
+			return !s.evaluator.FeaturesAvailable(ctx, report.Selection)
+		})
 		return populateReportSummaries(ctx, tx, out.Data)
 	})
-	if len(out.Data) > limit {
-		cursor := out.Data[limit-1].Id.String()
-		out.NextCursor = &cursor
-		out.Data = out.Data[:limit]
-	}
 	return out, err
 }
 
-func (s *Service) validateReport(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingReportInput) error {
-	if !values.HasVisibleText(in.Name) || utf8.RuneCountInString(in.Name) > 160 {
-		return refuse("name", "invalid", "name the report in at most 160 characters")
+// validateReport checks a submission against previous, the stored report or the
+// zero value on a create. A stored value sent back unchanged is admitted whole.
+func (s *Service) validateReport(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingReportInput, previous crmcontracts.ReportingReport) error {
+	if !values.HasVisibleText(in.Name) || (strings.TrimSpace(in.Name) != previous.Name && utf8.RuneCountInString(strings.TrimSpace(in.Name)) > values.TextLabelCharacters) {
+		return refuse("name", "invalid", fmt.Sprintf("name the report in at most %d characters", values.TextLabelCharacters))
 	}
-	if in.Description != nil && utf8.RuneCountInString(*in.Description) > 2000 {
-		return refuse("description", "invalid", "describe the report in at most 2000 characters")
+	if description := reportDescription(in.Description); description != nil && !sameDescription(description, previous.Description) &&
+		utf8.RuneCountInString(*description) > values.TextNoteCharacters {
+		return refuse("description", "invalid", fmt.Sprintf("describe the report in at most %d characters", values.TextNoteCharacters))
 	}
 	if err := s.validateRevision(ctx, tx, &in.Selection); err != nil {
 		return err
@@ -177,19 +193,27 @@ func (s *Service) validateRevision(ctx context.Context, tx pgx.Tx, selection *cr
 	if _, err := TargetWindow(interval, string(selection.TargetBasis), calendar); err != nil {
 		return refusedField("selection.target_basis", err)
 	}
-	if selection.CloseWindow != "all_open" && selection.CloseWindow != reportingFiscalQuarter {
-		return refuse("selection.close_window", "invalid", "choose the expected-close window")
+	switch selection.CloseWindow {
+	case "all_open", reportingFiscalQuarter:
+		return nil
+	case crmcontracts.ReportingSelectionCloseWindowCustom:
+		_, err := CustomCloseWindow(selection.CloseInterval)
+		return refusedField("selection.close_interval", err)
 	}
-	return nil
+	return refuse("selection.close_window", "invalid", "choose the expected-close window")
 }
+
+// MaxSelectionMetrics bounds the metrics of one selection. Every Analytics view
+// asks all of its metrics in one selection, so it is at least the largest view.
+const MaxSelectionMetrics = 12
 
 func (s *Service) validateSelection(ctx context.Context, selection crmcontracts.ReportingSelection) error {
 	catalog, err := s.evaluator.Catalog(ctx, textlang.English)
 	if err != nil {
 		return err
 	}
-	if len(selection.Metrics) == 0 || len(selection.Metrics) > 8 {
-		return refuse("selection.metrics", "out_of_range", "choose between one and eight supported metrics")
+	if len(selection.Metrics) == 0 || len(selection.Metrics) > MaxSelectionMetrics {
+		return refuse("selection.metrics", "out_of_range", fmt.Sprintf("choose between one and %d supported metrics", MaxSelectionMetrics))
 	}
 	if len(selection.Blocks) > 20 {
 		return refuse("selection.blocks", "out_of_range", "choose at most twenty charts")
@@ -229,36 +253,53 @@ func (s *Service) CreateReport(ctx context.Context, in crmcontracts.ReportingRep
 	if err := requireReadWrite(ctx, "report_definition", principal.ActionCreate); err != nil {
 		return crmcontracts.ReportingReport{}, err
 	}
-	return s.insertReport(ctx, in)
+	return s.insertReport(ctx, in, false)
 }
 
-func (s *Service) insertReport(ctx context.Context, in crmcontracts.ReportingReportInput) (crmcontracts.ReportingReport, error) {
+// insertReport stores a new report. A drafted one publishes a revision with no
+// charts and holds the input's charts as its open draft.
+func (s *Service) insertReport(ctx context.Context, in crmcontracts.ReportingReportInput, drafted bool) (crmcontracts.ReportingReport, error) {
 	owner, err := actorID(ctx)
 	if err != nil {
 		return crmcontracts.ReportingReport{}, err
 	}
-	out := crmcontracts.ReportingReport{Id: openapi_types.UUID(ids.NewV7()), OwnerId: openapi_types.UUID(owner), Name: strings.TrimSpace(in.Name), Description: reportDescription(in.Description), Audience: crmcontracts.ReportingReportAudience(in.Audience), AudienceTeamId: in.AudienceTeamId, Selection: in.Selection, Revision: 1, Version: 1, CreatedAt: s.now()}
+	out := crmcontracts.ReportingReport{Id: openapi_types.UUID(ids.NewV7()), OwnerId: openapi_types.UUID(owner), Name: strings.TrimSpace(in.Name), Description: reportDescription(in.Description), Audience: crmcontracts.ReportingReportAudience(in.Audience), AudienceTeamId: in.AudienceTeamId, Revision: 1, Version: 1, CreatedAt: s.now()}
 	err = s.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := s.validateReport(ctx, tx, &in); err != nil {
+		if err := s.validateReport(ctx, tx, &in, crmcontracts.ReportingReport{}); err != nil {
 			return err
 		}
 		out.Selection = in.Selection
+		draft := out
+		if drafted {
+			out.Selection = withoutCharts(in.Selection)
+			draft.Revision = out.Revision + 1
+			out.DraftRevision = &draft.Revision
+		}
 		var b bindings
-		values := []string{b.add(out.Id), b.add(owner), b.add(out.Name), b.add(out.Description), b.add(out.Audience), b.add(out.AudienceTeamId), b.add(1), b.add(1), b.add(out.CreatedAt)}
-		_, err := tx.Exec(ctx, "INSERT INTO report_definition(id,owner_id,name,description,audience,audience_team_id,revision,version,created_at) VALUES ("+strings.Join(values, ",")+")", b.values...)
+		values := []string{b.add(out.Id), b.add(owner), b.add(out.Name), b.add(out.Description), b.add(out.Audience), b.add(out.AudienceTeamId), b.add(out.Revision), b.add(out.DraftRevision), b.add(out.Version), b.add(out.CreatedAt)}
+		_, err := tx.Exec(ctx, "INSERT INTO report_definition(id,owner_id,name,description,audience,audience_team_id,revision,draft_revision,version,created_at) VALUES ("+strings.Join(values, ",")+")", b.values...)
 		if err != nil {
 			return err
 		}
 		if err := s.saveReportRevision(ctx, tx, &out); err != nil {
 			return err
 		}
-		return recordChange(ctx, tx, "report_definition", ids.UUID(out.Id), "create", nil, out)
+		created := reportImage{ReportingReport: out}
+		if drafted {
+			if err := s.saveReportRevision(ctx, tx, &draft); err != nil {
+				return err
+			}
+			created.DraftSelection = &draft.Selection
+		}
+		return recordChange(ctx, tx, "report_definition", ids.UUID(out.Id), "create", nil, created)
 	})
 	return out, err
 }
 
 // reportDescription trims what the author typed. A blank description is no
 // description, so the report page shows nothing rather than an empty line.
+func sameDescription(sent, stored *string) bool { return stored != nil && *sent == *stored }
+
 func reportDescription(typed *string) *string {
 	if typed == nil || !values.HasVisibleText(*typed) {
 		return nil
@@ -334,7 +375,7 @@ func (s *Service) UpdateReport(ctx context.Context, id ids.UUID, version int64, 
 		if err := refuseOpenDraft(before); err != nil {
 			return err
 		}
-		if err := s.validateReport(ctx, tx, &in); err != nil {
+		if err := s.validateReport(ctx, tx, &in, before); err != nil {
 			return err
 		}
 		out = before

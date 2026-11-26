@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "confirm_site_read",
+  "verb": "confirm_anchor_company_site_read",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

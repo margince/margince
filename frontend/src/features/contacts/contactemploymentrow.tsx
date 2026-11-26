@@ -5,13 +5,19 @@ import {
   hasEmployerFacts,
   useEmployerSummary,
 } from "../../components/contactemployersummary";
-import { Button, OverflowMenu } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
 import { CompanyCard } from "../../design-system/companycard";
 import { ErrorLine } from "../../design-system/errorline";
 import { InlineText } from "../../design-system/inlinetext";
+import { RemoveLinkMenu } from "../../design-system/projectlinks";
 import { formatDateAbbrev } from "../../format/format";
+import { formatMonthAbbrev } from "../../format/format.dates";
 import { type Locale, useLocale, useT } from "../../i18n";
-import { stillHeld } from "../../lib/employmentcurrency";
+import {
+  careerDate,
+  stillHeld,
+  useEmploymentZone,
+} from "../../lib/employmentcurrency";
 import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
 import type { Employment, EmploymentActions } from "./contactemployers";
@@ -43,7 +49,8 @@ export function EmploymentRow({
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const detail = employmentDetail(employment, t, locale, zone);
+  const employmentZone = useEmploymentZone();
+  const detail = employmentDetail(employment, t, locale, zone, employmentZone);
   const summary = useEmployerSummary(employment.company_id);
   const company = summary.data;
   const hasFacts = showCompany && hasEmployerFacts(company);
@@ -57,6 +64,7 @@ export function EmploymentRow({
     actions.end.variables?.relationship_id === employment.relationship_id;
   return (
     <CompanyCard
+      layout="track"
       // Only the first row naming a company carries its mark; the slot stays
       // so every row's name and role line up under one another.
       logo={
@@ -78,9 +86,12 @@ export function EmploymentRow({
       facts={hasFacts && company ? employerFacts(company, t, locale) : null}
       actions={
         canEdit && (
-          <OverflowMenu label={t("record.moreActions")}>
+          <RemoveLinkMenu
+            name={employment.company_name ?? null}
+            onRemove={onRemove}
+          >
             <Button onClick={onEdit}>{t("employment.edit")}</Button>
-            {stillHeld(employment) && (
+            {stillHeld(employment, employmentZone) && (
               <Button
                 disabled={ending}
                 onClick={() => actions.end.mutate(employment)}
@@ -88,10 +99,7 @@ export function EmploymentRow({
                 {t("contact.rail.markEnded")}
               </Button>
             )}
-            <Button variant="danger" onClick={onRemove}>
-              {t("rel.remove")}
-            </Button>
-          </OverflowMenu>
+          </RemoveLinkMenu>
         )
       }
     >
@@ -141,7 +149,8 @@ function EmploymentStatus({
   employment,
 }: Readonly<{ employment: Employment }>) {
   const t = useT();
-  if (stillHeld(employment)) {
+  const employmentZone = useEmploymentZone();
+  if (stillHeld(employment, employmentZone)) {
     return <span className="pe-rail-value-good">{t("rel.current")}</span>;
   }
   return (
@@ -160,17 +169,21 @@ function employmentDetail(
   t: ReturnType<typeof useT>,
   locale: Locale,
   zone: string,
+  employmentZone: string,
 ): string {
-  // Career dates keep the year and the precision actually recorded.
+  // A line the reader scans, so the abbreviated month.
+  const day = (value: string) => formatDateAbbrev(value, locale, zone);
+  const month = (value: string) => formatMonthAbbrev(value, locale);
   const start = employment.started_at
-    ? employment.started_precision === "month"
-      ? employment.started_at.slice(0, 7)
-      : formatDateAbbrev(employment.started_at.slice(0, 10), locale, zone)
+    ? careerDate(
+        employment.started_at,
+        employment.started_precision,
+        day,
+        month,
+      )
     : undefined;
   const end = employment.ended_at
-    ? employment.ended_precision === "month"
-      ? employment.ended_at.slice(0, 7)
-      : formatDateAbbrev(employment.ended_at.slice(0, 10), locale, zone)
+    ? careerDate(employment.ended_at, employment.ended_precision, day, month)
     : undefined;
   if (start && end) {
     return `${start} – ${end}`;
@@ -179,7 +192,7 @@ function employmentDetail(
     return t("rel.endedOn", { when: end });
   }
   if (start) {
-    return `${start} – ${t(stillHeld(employment) ? "employment.status.current" : employment.employment_status === "unknown" ? "employment.status.unknown" : "employment.status.former")}`;
+    return `${start} – ${t(stillHeld(employment, employmentZone) ? "employment.status.current" : employment.employment_status === "unknown" ? "employment.status.unknown" : "employment.status.former")}`;
   }
   return "";
 }

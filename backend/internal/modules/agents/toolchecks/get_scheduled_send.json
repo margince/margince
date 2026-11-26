@@ -1,0 +1,9 @@
+{
+  "verb": "get_scheduled_send",
+  "checks": [
+    "activity.read"
+  ],
+  "takes": [
+    "scheduled_send"
+  ]
+}

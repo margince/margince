@@ -120,7 +120,7 @@ func TestAdmissionHistoryObeysSourcePrivacyAndSubjectErasure(t *testing.T) {
 	if len(exported.CommitmentAdmissions) != 1 || exported.CommitmentAdmissions[0]["source_quote"] != nil || exported.CommitmentAdmissions[0]["summary"] != nil {
 		t.Fatalf("export republished private source content: %#v", exported.CommitmentAdmissions)
 	}
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID.UUID, "Subject requested erasure"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), contactID.UUID, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission WHERE source_activity_id = $1`, source); got != 0 {

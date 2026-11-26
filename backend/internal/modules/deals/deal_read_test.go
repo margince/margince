@@ -93,7 +93,7 @@ func TestAppendDealFiltersPartnerAttribution(t *testing.T) {
 // composition ListDeals runs) binds AFTER the filter args it follows.
 func TestAppendDealFiltersPartnerBeforeCursorKeepsPlaceholderOrder(t *testing.T) {
 	partnerCompany := ids.New[ids.CompanyKind]()
-	cursor, err := storekit.EncodeCursor(time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC), ids.NewV7())
+	cursor, err := storekit.EncodeCursor("deals", time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC), ids.NewV7())
 	if err != nil {
 		t.Fatalf("minting the cursor: %v", err)
 	}
@@ -104,7 +104,7 @@ func TestAppendDealFiltersPartnerBeforeCursorKeepsPlaceholderOrder(t *testing.T)
 		t.Fatalf("appendDealFilters: %v", err)
 	}
 	var defaultSort *storekit.ListSort
-	clause, err := defaultSort.KeysetClause(cursor, arg)
+	clause, err := defaultSort.KeysetClause("deals", cursor, arg)
 	if err != nil {
 		t.Fatalf("KeysetClause: %v", err)
 	}

@@ -31,13 +31,18 @@ func (r *Registry) offersGated(ctx context.Context) bool {
 // them, so a scheduled run never holds one.
 func (r *Registry) gatedFor(ctx context.Context, all []mcp.ToolSpec) []mcp.ToolSpec {
 	var out []mcp.ToolSpec
-	p, _ := principal.Actor(ctx)
 	for _, spec := range all {
-		if spec.Gated && invocableByCaller(ctx, spec) && auth.AreasAdmit(p, spec) && r.offersGated(ctx) {
+		if r.gateAdmits(ctx, spec) {
 			out = append(out, r.asSeenBy(ctx, spec))
 		}
 	}
 	return out
+}
+
+// gateAdmits reports a Gated tool the gate offers this caller.
+func (r *Registry) gateAdmits(ctx context.Context, spec mcp.ToolSpec) bool {
+	p, _ := principal.Actor(ctx)
+	return spec.Gated && invocableByCaller(ctx, spec) && auth.AreasAdmit(p, spec) && r.offersGated(ctx)
 }
 
 // assertGatedShape refuses a Gated tool that is listed: the tool list and the

@@ -15,6 +15,7 @@ import { Heading } from "../../design-system/heading";
 import { IconAction } from "../../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
 import { formatDate } from "../../format/format";
@@ -22,6 +23,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
 import {
+  blankRequired,
   problemCodeOf,
   problemMessageOf,
   throwProblem,
@@ -34,6 +36,7 @@ import {
 } from "../../lib/undoableremoval";
 import { useViewerZone } from "../../lib/viewerzone";
 import { captureValueMessage } from "./capturevalue";
+import { DomainQuestionCallout, domainQuestionOf } from "./domainquestion";
 import "./capture-owner-identities.css";
 
 // A seat's own other addresses. Examples are a send-as alias, a private domain
@@ -71,7 +74,11 @@ function useAddIdentity() {
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { kind: Kind; value: string }) => {
+    mutationFn: async (body: {
+      kind: Kind;
+      value: string;
+      confirm?: boolean;
+    }) => {
       return unwrap(
         await api.POST("/capture/owner-identities", {
           body,
@@ -93,6 +100,7 @@ const RESTORE_REFUSALS = new Map<string, MessageKey>([
   ["not_found", "ownerIdentities.restoreGone"],
   ["removal_moved_on", "ownerIdentities.restoreMovedOn"],
   ["identity_declared_again", "ownerIdentities.restoreDeclaredAgain"],
+  ["domain_needs_confirmation", "ownerIdentities.restoreOnFile"],
 ]);
 
 // On the hooks, not on `mutate`: an Undo runs after its row has unmounted.
@@ -256,7 +264,7 @@ function IdentityRow({
   const learned = learnedNote(identity.source);
   return (
     <SettingRow
-      label={identity.value}
+      label={<span className="owner-identity-value">{identity.value}</span>}
       description={
         <span className="owner-identity-caption">
           <span>{t(labelFor(kindLabel, identity.kind))}</span>
@@ -283,12 +291,15 @@ function IdentityRow({
 // rather than waiting there under a kind nobody re-chose.
 function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const add = useAddIdentity();
   const headingId = useId();
   const formId = useId();
+  const [faults, faultsRoot] = useFieldFaults();
   const [kind, setKind] = useState<Kind>("address");
   const [draft, setDraft] = useState("");
   const value = draft.trim();
+  const valueLabel = t("ownerIdentities.valueLabel");
   return (
     <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
@@ -296,12 +307,13 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
       </Heading>
       <form
         id={formId}
+        ref={faultsRoot}
         className="form-stack"
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          if (value === "") {
-            return;
-          }
+          const blank = blankRequired(locale, { value: [valueLabel, value] });
+          if (faults.show(blank)) return;
           add.mutate({ kind, value }, { onSuccess: onClose });
         }}
       >
@@ -316,15 +328,20 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
           label={t("ownerIdentities.kindLabel")}
         />
         <Field
-          label={t("ownerIdentities.valueLabel")}
+          label={valueLabel}
           labelHidden
+          required
           hint={t("ownerIdentities.notRetroactive")}
+          error={faults.of("value")}
         >
           {(control) => (
             <TextInput
               {...control}
               value={draft}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                faults.edited("value");
+              }}
               placeholder={
                 kind === "address"
                   ? t("ownerIdentities.addressPlaceholder")
@@ -333,25 +350,43 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
             />
           )}
         </Field>
-        {add.isError && (
+        {add.isError && domainQuestionOf(add.error) === null && (
           <Callout
             tone="danger"
             kind="outcome"
             title={t("ownerIdentities.addFailed")}
           >
-            {captureValueMessage(add.error, add.variables?.kind, t)}
+            {captureValueMessage(
+              add.error,
+              add.variables?.kind,
+              t,
+              add.variables?.value,
+            )}
           </Callout>
         )}
+        {add.isError &&
+          add.variables?.value === value &&
+          add.variables?.kind === kind && (
+            <DomainQuestionCallout
+              error={add.error}
+              value={value}
+              scope="ownAddress"
+              pending={add.isPending}
+              t={t}
+              onConfirm={() =>
+                add.mutate(
+                  { kind, value, confirm: true },
+                  { onSuccess: onClose },
+                )
+              }
+            />
+          )}
       </form>
       <div className="actions">
         <Button variant="ghost" onClick={onClose} type="button">
           {t("create.cancel")}
         </Button>
-        <Button
-          type="submit"
-          form={formId}
-          disabled={value === "" || add.isPending}
-        >
+        <Button type="submit" form={formId} disabled={add.isPending}>
           {t("ownerIdentities.confirm")}
         </Button>
       </div>

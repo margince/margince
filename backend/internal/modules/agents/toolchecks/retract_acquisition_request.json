@@ -1,0 +1,10 @@
+{
+  "verb": "retract_acquisition_request",
+  "checks": [
+    "contact.update"
+  ],
+  "takes": [
+    "acquisition_contact",
+    "contact"
+  ]
+}

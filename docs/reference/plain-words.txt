@@ -300,7 +300,6 @@ connector
 consent
 consolidation
 constant
-constellation
 construction
 consume
 contact
@@ -775,7 +774,6 @@ keyless
 keyset
 keyword
 kib
-kill
 kind
 know
 known
@@ -892,7 +890,6 @@ middle
 might
 migrate
 migration
-milestone
 mint
 minute
 mirrored
@@ -1073,7 +1070,6 @@ plant
 platform
 plural
 plus
-poc
 pod
 point
 policy
@@ -1460,7 +1456,6 @@ such
 suite
 suits
 summary
-superseded
 superuser
 supervisor
 supply
@@ -1566,6 +1561,7 @@ translate
 transport
 treat
 tree
+trial
 trigger
 trip
 true

@@ -3,8 +3,8 @@
 
 package activities
 
-// Filing a chat screenshot on the contact it was pasted on. One message
-// activity is linked to the contact, and the stored image moves onto it.
+// Filing a chat screenshot on the contact, lead or deal it was pasted on. One
+// message activity is linked to that record, and the stored image moves onto it.
 // Nothing is written before the user confirms. The reading of the image never
 // writes anything.
 
@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // ChatCaptureSourceSystem keys a filed chat on the reading it was read by. A
@@ -51,9 +52,16 @@ func ChatImageMIMEs() []string {
 
 // ChatCaptureError is one refused confirm. Field names the request field the
 // caller fixes; it is empty when nothing in the request can fix it.
-type ChatCaptureError struct{ Field, Code, Message string }
+type ChatCaptureError struct {
+	Field, Code, Message string
+	// Max is the limit a too_long refusal names.
+	Max int
+}
 
 func (e *ChatCaptureError) Error() string { return e.Message }
+
+// FieldMax is the limit the refusal names; zero states none.
+func (e *ChatCaptureError) FieldMax() int { return e.Max }
 
 // FieldFault answers 422 naming the field, when there is one.
 func (e *ChatCaptureError) FieldFault() (field, code, message string) {
@@ -74,6 +82,9 @@ type ChatCaptureFiling struct {
 	// user, who typed or changed the text.
 	WriteAs func(context.Context) context.Context
 }
+
+// chatParents are the records a chat screenshot is filed on.
+var chatParents = []string{linkEntityContact, linkEntityLead, linkEntityDeal}
 
 // refuseUnaskableQuestion refuses a chat capture of a file that is not an
 // image. The text lane would otherwise read any text file as a "chat".
@@ -108,20 +119,27 @@ func bareMediaType(contentType string) string {
 	return strings.ToLower(strings.TrimSpace(media))
 }
 
+// ChatFiled is the message a confirm filed. Refiled says a repeated confirm
+// answered the activity an earlier confirm wrote, and nothing was written now.
+type ChatFiled struct {
+	ActivityID ids.UUID
+	Refiled    bool
+}
+
 // FileChatCapture writes the message activity and moves the image onto it, in
 // one transaction. The gates run under the caller's own principal, before
 // WriteAs is applied, because the reader's principal passes every RBAC check.
-func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ids.UUID, error) {
+func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ChatFiled, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
-		return ids.UUID{}, err
+		return ChatFiled{}, err
 	}
 	if utf8.RuneCountInString(in.Body) > MaxChatText {
-		return ids.UUID{}, &ChatCaptureError{
-			Field: fieldBody, Code: "too_long",
+		return ChatFiled{}, &ChatCaptureError{
+			Field: fieldBody, Code: codeTooLong, Max: MaxChatText,
 			Message: fmt.Sprintf("a chat holds at most %d characters; shorten the text", MaxChatText),
 		}
 	}
-	var filed ids.UUID
+	var filed ChatFiled
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		// Locked before the parent is read, so a second confirm waits here and
 		// then sees the file already on the first confirm's activity.
@@ -133,30 +151,31 @@ func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ids.
 			return err
 		}
 		if parentType == linkEntityActivity {
-			filed, err = refiledChat(ctx, tx, in)
+			filed.Refiled = true
+			filed.ActivityID, err = refiledChat(ctx, tx, in)
 			return err
 		}
-		if parentType != linkEntityContact {
+		if !slices.Contains(chatParents, parentType) {
 			return &ChatCaptureError{
 				Code:    "unsupported_entity_type",
-				Message: "a chat is filed from a screenshot on a contact; this file hangs on a " + parentType,
+				Message: "a chat is filed from a screenshot on a contact, lead or deal; this file hangs on a " + parentType,
 			}
 		}
 		read, err := requireChatReading(ctx, tx, in)
 		if err != nil {
 			return err
 		}
-		if err := requireSameCounterparty(ctx, tx, in, read); err != nil {
+		if err := requireSameCounterparty(ctx, tx, in, parentType, read); err != nil {
 			return err
 		}
 		if err := requireRegisteredChannel(ctx, tx, in.Channel); err != nil {
 			return err
 		}
-		filed, err = s.writeChatActivity(ctx, tx, in)
+		filed.ActivityID, err = s.writeChatActivity(ctx, tx, in, parentType)
 		if err != nil {
 			return err
 		}
-		return refileAttachment(ctx, tx, in.AttachmentID, filed)
+		return refileAttachment(ctx, tx, in.AttachmentID, filed.ActivityID)
 	})
 	return filed, err
 }
@@ -189,21 +208,21 @@ func requireChatReading(ctx context.Context, tx pgx.Tx, in ChatCaptureFiling) (E
 }
 
 // requireSameCounterparty refuses a chat whose header names someone other
-// than the contact, unless the user confirmed it belongs here anyway.
-func requireSameCounterparty(ctx context.Context, tx pgx.Tx, in ChatCaptureFiling, read ExtractionRead) error {
+// than the contact or lead, unless the user confirmed it belongs here anyway.
+func requireSameCounterparty(ctx context.Context, tx pgx.Tx, in ChatCaptureFiling, parentType string, read ExtractionRead) error {
 	if in.ConfirmOtherCounterparty {
 		return nil
 	}
-	contactID, err := attachmentParentID(ctx, tx, in.AttachmentID)
+	parentID, err := attachmentParentID(ctx, tx, in.AttachmentID)
 	if err != nil {
 		return err
 	}
-	shows, err := otherChatCounterparty(ctx, tx, contactID, read)
+	shows, err := otherChatCounterparty(ctx, tx, parentType, parentID, read)
 	if err != nil || shows == "" {
 		return err
 	}
-	return fmt.Errorf("%w: this chat shows %s, not this contact; confirm to file it here anyway",
-		apperrors.ErrConflict, shows)
+	return fmt.Errorf("%w: this chat shows %s, not this %s; confirm to file it here anyway",
+		apperrors.ErrConflict, shows, parentType)
 }
 
 // requireRegisteredChannel checks the channel against the registry, so a
@@ -223,8 +242,8 @@ func requireRegisteredChannel(ctx context.Context, tx pgx.Tx, channel string) er
 	return nil
 }
 
-func (s *Store) writeChatActivity(ctx context.Context, tx pgx.Tx, in ChatCaptureFiling) (ids.UUID, error) {
-	contactID, err := attachmentParentID(ctx, tx, in.AttachmentID)
+func (s *Store) writeChatActivity(ctx context.Context, tx pgx.Tx, in ChatCaptureFiling, parentType string) (ids.UUID, error) {
+	parentID, err := attachmentParentID(ctx, tx, in.AttachmentID)
 	if err != nil {
 		return ids.UUID{}, err
 	}
@@ -239,10 +258,11 @@ func (s *Store) writeChatActivity(ctx context.Context, tx pgx.Tx, in ChatCapture
 		writeCtx = in.WriteAs(ctx)
 	}
 	out, _, err := s.LogActivityTx(writeCtx, tx, LogActivityInput{
+		SystemText:      &systemtext.Message{Body: systemtext.Prose(systemtext.Quote, "")},
 		Kind:            string(crmcontracts.ActivityKindMessage),
 		ChannelProvider: in.Channel,
 		Body:            body,
-		Links:           []ActivityLinkInput{{EntityType: linkEntityContact, EntityID: contactID}},
+		Links:           []ActivityLinkInput{{EntityType: parentType, EntityID: parentID}},
 		SourceSystem:    &source,
 		SourceID:        &sourceID,
 		Source:          ChatCaptureSourceSystem,
@@ -291,17 +311,9 @@ func refileAttachment(ctx context.Context, tx pgx.Tx, attachmentID, activityID i
 	if err != nil {
 		return err
 	}
-	rollUp, hasAccount, err := accountRollUp(ctx, tx, linkEntityActivity, activityID)
-	if err != nil {
-		return err
-	}
-	var account *ids.UUID
-	if hasAccount {
-		account = &rollUp
-	}
 	if _, err := tx.Exec(ctx,
-		`UPDATE attachment SET entity_type = $2, entity_id = $3, company_id = $4 WHERE id = $1`,
-		attachmentID, linkEntityActivity, activityID, account); err != nil {
+		`UPDATE attachment SET entity_type = $2, entity_id = $3, company_id = NULL WHERE id = $1`,
+		attachmentID, linkEntityActivity, activityID); err != nil {
 		return err
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", "attachment", attachmentID,

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/chatsync"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -51,6 +52,8 @@ type workerLanes struct {
 	inserter  *jobs.Runner
 	deliverer func(*database.DB) *webhooks.Deliverer
 	blob      blobstore.Store
+	// journal is the resolved erasure journal store: the separate one, else blob.
+	journal blobstore.Store
 	// providers is the licensed-data-provider adapter registry this boot was
 	// configured with (MARGINCE_PROVIDER_SURFE). Nil is a deployment with no
 	// provider: the run lanes register nothing and nothing can reach a vendor.
@@ -59,6 +62,18 @@ type workerLanes struct {
 	// The lanes themselves were handed one at construction and do not read
 	// this.
 	logger *slog.Logger
+	// pushMarks holds when Dispact last pushed a notice, on the coordination
+	// Redis, so chat_pull_sweep reads a pushed connection hourly. Nil reads
+	// every connection on every tick.
+	pushMarks chatsync.Marks
+}
+
+// withPushMarks returns the lanes with the store chat_pull_sweep reads Dispact's
+// notices from. It is the coordination Redis, not the bus, whose connections
+// the lanes hold in blocking reads.
+func (l workerLanes) withPushMarks(marks chatsync.Marks) workerLanes {
+	l.pushMarks = marks
+	return l
 }
 
 // laneJoinWindow bounds join(). It keeps the same promise the job drain keeps —

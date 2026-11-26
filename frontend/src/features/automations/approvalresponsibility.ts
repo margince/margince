@@ -10,14 +10,13 @@ type Proposal = Readonly<{
 
 export function useApprovalNames(approvals: readonly Proposal[]) {
   const ids = approvals.flatMap((approval) => {
-    const change =
-      approval.kind === "commitment_task"
-        ? (approval.proposed_change ?? {})
-        : {};
+    const change = approval.proposed_change ?? {};
+    const commitment = approval.kind === "commitment_task";
     return [
       approval.requested_decider_id,
-      change.promiser_seat_id,
-      change.seat_id,
+      commitment ? change.promiser_seat_id : undefined,
+      commitment ? change.seat_id : undefined,
+      chosenDoer(approval.kind, change),
     ].filter((id): id is string => typeof id === "string" && id.length > 0);
   });
   return useMemberNames(ids);
@@ -30,12 +29,13 @@ export function commitmentResponsibility(
   assigneeInactive = false,
 ): readonly ResolvedDisplayField[] {
   const promiser = change.promiser_seat_id;
-  // A new task with no seat of its own goes to the colleague who made the
-  // promise, as the server assigns it.
+  // The colleague the accepter chose, else the card's own seat, else the
+  // colleague who made the promise, as the server assigns it.
   const assignee =
-    typeof change.seat_id === "string" && change.seat_id
+    chosenDoer("commitment_task", change) ??
+    (typeof change.seat_id === "string" && change.seat_id
       ? change.seat_id
-      : promiser;
+      : promiser);
   const party = typeof change.party === "string" ? change.party.trim() : "";
   const madeBy =
     typeof promiser === "string" && promiser
@@ -78,9 +78,18 @@ export function madeByRow(
   );
 }
 
+/** The server marked this mail as one its sender cannot send. */
+export function mailCannotBeSent(
+  approval: Readonly<{ mailbox_send_capable?: boolean }>,
+  decided: boolean | undefined,
+): boolean {
+  return !decided && approval.mailbox_send_capable === false;
+}
+
 export function approvalAcceptable(
   approval: Readonly<{
     assignee_inactive?: boolean;
+    mailbox_send_capable?: boolean;
     preview?: {
       version: number;
       state: string;
@@ -89,6 +98,7 @@ export function approvalAcceptable(
   }>,
 ): boolean {
   return (
+    approval.mailbox_send_capable !== false &&
     approval.assignee_inactive !== true &&
     (!approval.preview ||
       ((approval.preview.version === 1 || approval.preview.version === 2) &&
@@ -97,4 +107,39 @@ export function approvalAcceptable(
           (conflict) => conflict.blocks_approval,
         )))
   );
+}
+
+/** The cards whose accepter may choose who does the work (`doer_id`). */
+const DOER_KINDS: readonly string[] = ["commitment_task", "deal_follow_up"];
+
+/**
+ * The colleague chosen to do a card's work, read from its `doer_id`: set when
+ * the accepter picked somebody, so a decided card names them. Undefined while
+ * the card keeps its own rule.
+ */
+export function chosenDoer(
+  kind: string,
+  change: Readonly<Record<string, unknown>>,
+): string | undefined {
+  const doer = change.doer_id;
+  return DOER_KINDS.includes(kind) && typeof doer === "string" && doer
+    ? doer
+    : undefined;
+}
+
+/** A follow-up card's "Who does this" row, once a colleague was chosen. */
+export function followUpDoerRow(
+  change: Readonly<Record<string, unknown>>,
+  names: ReadonlyMap<string, string>,
+  t: Translator,
+): readonly ResolvedDisplayField[] {
+  const doer = chosenDoer("deal_follow_up", change);
+  if (!doer) return [];
+  return [
+    {
+      field: "doer_id",
+      label: t("approval.field.doer"),
+      value: names.get(doer) ?? t("approval.commitment.unnamedColleague"),
+    },
+  ];
 }

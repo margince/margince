@@ -1,0 +1,14 @@
+{
+  "tool": "find_records",
+  "action": "list",
+  "verb": "list_records",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

@@ -18,15 +18,20 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/assurancetools"
+	"github.com/margince/margince/backend/internal/compose/dealclosetasks"
+	"github.com/margince/margince/backend/internal/compose/partnersteps"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
@@ -57,9 +62,10 @@ func NewRegistryFor(db *database.DB, send SendPath) *agents.Registry {
 // after the registry is built still reach draft_email. served is the Server
 // whose object store the document tools write to; without one they store nothing.
 type registryFeatures struct {
-	lists       bool
-	firstDrafts *firstMessageEngines
-	served      *Server
+	lists        bool
+	coreFeatures corefeatures.Availability
+	firstDrafts  *firstMessageEngines
+	served       *Server
 	// reclaim deletes a retired offer rendering where no Server holds the store.
 	reclaim deals.RetiredRendering
 }
@@ -73,13 +79,11 @@ func registryWithDraftBrain(pool *pgxpool.Pool, brain completer, send SendPath, 
 	return registryWithGate(db, auth.NewGate(identity.NewService(pool)), newReplyDrafter(pool, brain, nil), send, companyEnricher{}, nil, nil, nil, brief, slog.Default(), features)
 }
 
-// registryWithGate composes the tool surface. The volume budget charger arrives as
-// an option rather than a parameter because only the API server — the one role
-// that serves agent principals through the MCP and REST doors — has a meter to
-// charge. The Surface-B runner and the workflow paths run as the human or the
-// system that started them, and the volume meter governs agents only, so a registry
-// built without one is not an unmetered agent surface; it is a surface no agent
-// reaches.
+// registryWithGate composes the tool surface. The volume charger is an option,
+// because only the API server has a meter. It is the one role that serves agent
+// principals through the MCP and REST doors. The workflow paths run as the human
+// or the system that started them. The Surface-B runner acts on a passport and
+// is not metered; a scheduled run is held to its step budget and tool allowlist.
 //
 // embedder is the RETRIEVAL embed lane, and it is a parameter rather than a
 // construction detail because it is the composition root's to choose: a role
@@ -92,13 +96,14 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	pool, provider := db.Pool(), providerWithTranscripts(db, transcriptOnLanding)
 	provider = withServerSeams(provider, pool, features)
 	// Every mutating tool shares retry claims and replay authorization on every host role.
-	opts = append(opts, withContractTierFloor(), agents.WithToolGate(clientCheckGate(pool, log)),
-		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
+	opts = append(opts, agents.WithCallAvailability(coreCallAvailability(features.coreFeatures)), withContractTierFloor(), agents.WithToolGate(clientCheckGate(pool, log)),
+		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider), agents.WithRouteRetryKeys(routeRetryKeyVerbs(agentPolicies)),
 		agents.WithBaseLanguage(installationLanguage(pool)),
 		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))), agents.WithActivityListCalendar(activityListCalendar(captureHealthRegistry(db))),
 		agents.WithChangeWords(agentChangeWords(db)),
 		agents.WithContactCaseMerger(contactCaseMergerSeam(db)),
-		agents.WithDealTaskSettler(newDealCloseTasks(activities.NewStore(db), db)))
+		agents.WithDealTaskSettler(dealclosetasks.New(activities.NewStore(db), db)),
+		agents.WithRecordSidecars(recordSidecars(db)))
 	// Approval decisions need the same registered effects as the HTTP path.
 	approvalsSvc := decidingApprovalsService(pool, send, log)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)
@@ -106,17 +111,18 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 		openDuplicatesFor(pool), tagOfferSeam(db))
 	agents.RegisterListTool(registry, provider, provider)
 	agents.RegisterRecordPartsTool(registry, recordParts{offers: provider, RecordParts: contacts.NewRecordParts(db)})
-	agents.RegisterReadViewTool(registry, readViews(agentPolicies), readViewThrough(viewDoorOf(features.served)))
-	agents.RegisterReadViewsTool(registry, agents.NewReadViewsResource(readViews(agentPolicies)))
+	views := coreReadViews(features.coreFeatures)
+	agents.RegisterReadViewTool(registry, views, readViewThrough(viewDoorOf(features.served)))
+	agents.RegisterReadViewsTool(registry, agents.NewReadViewsResource(views))
 	agents.RegisterRouteVerbs(registry, declaredRouteVerbs(agentPolicies), routeThrough(viewDoorOf(features.served)))
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
-	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer, partnerSetUpAdapter{store: newContactsStore(db)})
+	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer, partnerSetUpAdapter{store: newContactsStore(db).WithPartnerNextSteps(partnersteps.New(activities.NewStore(db)))})
 	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate).withListsIf(features.lists)})
 	agents.RegisterEnrichTool(registry, provider, enricher)
 	agents.RegisterPipelineTool(registry, pipelineLister(pool))
 	agents.RegisterApprovalTools(registry, approvalQueue(approvalsSvc))
-	agents.RegisterReportTool(registry, reportToolRunner(newReportEngine(pool)), reportToolCatalog(), reportPlanVocabulary())
-	agents.RegisterReportVocabularyTool(registry, agents.NewReportVocabularyResource(reportToolCatalog()))
+	agents.RegisterReportTool(registry, reportToolRunner(newReportEngine(pool)), reportToolCatalog(features.coreFeatures), reportPlanVocabulary())
+	agents.RegisterReportVocabularyTool(registry, agents.NewReportVocabularyResource(reportToolCatalog(features.coreFeatures)))
 	agents.RegisterReportingTool(registry, reportingReader(pool))
 	agents.RegisterReportDraftTool(registry, reportDrafter(pool))
 	agents.RegisterAnalyticsReportTool(registry, analyticsReportComposer(pool, analyticsquery.DefaultFloor))
@@ -127,9 +133,9 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterReportBlocksTool(registry, agents.NewReportBlocksResource(reportBlockGrammar()))
 	agents.RegisterForecastTool(registry, forecastToolReader(pool))
 	agents.RegisterMovementTool(registry, movementToolReader(pool))
-	agents.RegisterAssuranceTool(registry, assuranceToolReader(pool))
-	agents.RegisterInputChecksTool(registry, inputChecksToolReader(pool))
-	agents.RegisterCoverageTool(registry, coverageToolReader(pool))
+	agents.RegisterAssuranceTool(registry, assurancetools.RunReader(assuranceRun(pool)))
+	agents.RegisterInputChecksTool(registry, assurancetools.InputChecksReader(assurance.NewStore(InstallationDB(pool)), AssuranceExceptionsIn))
+	agents.RegisterCoverageTool(registry, assurancetools.CoverageReader(assurance.NewStore(InstallationDB(pool))))
 	// Search references are read back through the governed provider before disclosure.
 	agents.RegisterQueryTool(registry, provider,
 		queryRunner(pool, embedder))
@@ -159,7 +165,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterSlippingTools(registry, slippingLister(pool), followUpDrafter(provider), deals.StalledThresholdDays, runner.SweepQuietDays)
 	agents.RegisterCommitmentTool(registry, commitmentLister(pool))
 	agents.RegisterHandoffTool(registry, handoffReader(pool))
-	agents.RegisterProject360Tool(registry, project360Reader(pool))
+	agents.RegisterProject360Tool(registry, project360Reader(pool), activities.WriterSide)
 	agents.RegisterNetworkTools(registry, whoKnowsLister(pool, newContactsStore(InstallationDB(pool))), coverageReader(pool, newContactsStore(InstallationDB(pool))),
 		introPathLister(pool),
 		atRiskLister(pool, newContactsStore(InstallationDB(pool))))

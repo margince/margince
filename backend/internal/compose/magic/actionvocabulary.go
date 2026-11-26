@@ -44,8 +44,12 @@ type admittedAction struct {
 	perType map[string]string
 }
 
-// actionUpdate is the audit verb for a change to a record's fields.
-const actionUpdate = "update"
+// actionUpdate is the audit verb for a change to a record's fields, and
+// actionSchedule the verb for booking a meeting or deferring a message.
+const (
+	actionUpdate   = "update"
+	actionSchedule = "schedule"
+)
 
 // The verbs a machine runs over records in bulk: a mailbox import creates
 // thousands of contacts, and the mail reader archives messages it judges noise.
@@ -98,7 +102,7 @@ var admitted = map[string]admittedAction{
 		// not allow.
 		reversible: false,
 	},
-	"schedule": {
+	actionSchedule: {
 		sentence:    "magic.action.schedule",
 		consequence: "magic.consequence.meeting_booked",
 		reversible:  false,
@@ -129,6 +133,28 @@ var admitted = map[string]admittedAction{
 			typeProject:  "magic.action.archive_project",
 			typeActivity: "magic.action.archive_activity",
 		},
+	},
+}
+
+// activityKindSentences name a created or archived activity by its kind, so a
+// line says "Saved an email" where it can. A kind missing here keeps the
+// action's own sentence.
+var activityKindSentences = map[string]map[string]string{
+	actionCreate: {
+		"email":   "magic.action.create_activity_email",
+		"meeting": "magic.action.create_activity_meeting",
+		"call":    "magic.action.create_activity_call",
+		"note":    "magic.action.create_activity_note",
+		"task":    "magic.action.create_activity_task",
+		"message": "magic.action.create_activity_message",
+	},
+	actionArchive: {
+		"email":   "magic.action.archive_activity_email",
+		"meeting": "magic.action.archive_activity_meeting",
+		"call":    "magic.action.archive_activity_call",
+		"note":    "magic.action.archive_activity_note",
+		"task":    "magic.action.archive_activity_task",
+		"message": "magic.action.archive_activity_message",
 	},
 }
 

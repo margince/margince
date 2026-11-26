@@ -59,12 +59,12 @@ type readReporting struct{ read ReportingReader }
 
 var reportingReadCopy = toolCopy{
 	Purpose: "Discover standard sales metrics, evaluate the same graphs as Analytics, or reopen saved report definitions and frozen editions.",
-	Limits:  "Read only. commission_summary answers the open partner commission liability. Catalog returns permitted metric IDs and blocks. Evaluate requires a selection. Report, report_evaluation (a saved report evaluated now, at its latest or a given revision) and editions require a report id; edition requires an edition id. Evidence requires the evaluation receipt and selection, or an edition id, plus its exact reference. Compare requires two edition IDs. Always retain coverage and capture times when quoting numbers.",
-	Instead: "Use " + pipelinesSource + " to discover pipeline and stage IDs. Use run_analytics_query for custom groupings and compose_analytics_report for a document. Configure targets, report sharing and schedules in Analytics.",
+	Limits:  "commission_summary answers the open partner commission liability. Catalog returns permitted metric IDs and blocks. Evaluate requires a selection. Report, report_evaluation (a saved report evaluated now, optionally at a revision) and editions require a report id; edition requires an edition id. Evidence requires the evaluation receipt and selection, or an edition id, plus its exact reference. Compare requires two edition IDs. Always retain coverage and capture times when quoting numbers.",
+	Instead: "Use run_analytics_query for custom groupings and compose_analytics_report for a document. Configure targets, report sharing and schedules in Analytics.",
 }
 
 func (t readReporting) Spec() mcp.ToolSpec {
-	return mcp.ToolSpec{Name: "read_reporting", Title: "Read sales reporting", Version: toolVersionV1, Description: reportingReadCopy.render(), Instead: reportingReadCopy.Instead, RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true, OpenAPIOp: "evaluateReporting", InputSchema: reportingReadInput, OutputSchema: schema(`{"type":"object","properties":{"catalog":{"type":"object"},"evaluation":{"type":"object"},"reports":{"type":"object"},"report":{"type":"object"},"editions":{"type":"object"},"edition":{"type":"object"},"evidence":{"type":"object"},"comparison":{"type":"object"},"commission_summary":{"type":"object"}},"additionalProperties":false}`)}
+	return mcp.ToolSpec{Name: "read_reporting", Title: "Read sales reporting", Version: toolVersionV1, Description: reportingReadCopy.render(), Instead: reportingReadCopy.Instead, RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true, ProductMadeAnswer: true, OpenAPIOp: "evaluateReporting", InputSchema: reportingReadInput, OutputSchema: schema(`{"type":"object","properties":{"catalog":{"type":"object"},"evaluation":{"type":"object"},"reports":{"type":"object"},"report":{"type":"object"},"editions":{"type":"object"},"edition":{"type":"object"},"evidence":{"type":"object"},"comparison":{"type":"object"},"commission_summary":{"type":"object"}},"additionalProperties":false}`)}
 }
 
 func (t readReporting) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
@@ -101,11 +101,16 @@ func metricReferenceSchema() json.RawMessage {
 	delete(shape.Properties["selection"].Properties, "layout")
 	shape.Description = pipelineIDProvenance
 	noteTimestamps(shape, windowRule)
+	if err := noteContractEnums(reflect.TypeFor[crmcontracts.ReportMetricReference](), shape); err != nil {
+		//craft:ignore panic-in-domain Tool schemas are constructed at composition time; an enum the contract table lacks must fail boot.
+		panic(fmt.Sprintf("note metric reference enums: %v", err))
+	}
 	raw, err := json.Marshal(shape)
 	if err != nil {
 		//craft:ignore panic-in-domain Tool schemas are constructed at composition time; a shape that cannot marshal must fail boot.
 		panic(fmt.Sprintf("render metric reference: %v", err))
 	}
+	recordReflectedInput(reflect.TypeFor[crmcontracts.ReportMetricReference](), raw)
 	return raw
 }
 
@@ -117,10 +122,15 @@ func describedSchema[T any](description, rule string) json.RawMessage {
 	}
 	shape.Description = description
 	noteTimestamps(shape, rule)
+	if err := noteContractEnums(reflect.TypeFor[T](), shape); err != nil {
+		//craft:ignore panic-in-domain Tool schemas are constructed at composition time; an enum the contract table lacks must fail boot.
+		panic(fmt.Sprintf("note tool input enums: %v", err))
+	}
 	raw, err := json.Marshal(shape)
 	if err != nil {
 		//craft:ignore panic-in-domain A schema encoding failure is a composition defect, before any request is admitted.
 		panic(fmt.Sprintf("encode tool input: %v", err))
 	}
+	recordReflectedInput(reflect.TypeFor[T](), raw)
 	return raw
 }

@@ -1,0 +1,94 @@
+{
+  "scenario": "case120_what_the_pump_customer_wants",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "8b19d429855ee029",
+    "tools": "a5b3c4827df3eb5b",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "1796d51361de08d5",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T05:42:05Z",
+    "graded_commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "graded_at": "2026-11-25T05:42:05Z"
+  },
+  "usage": {
+    "input_tokens": 20,
+    "output_tokens": 2422,
+    "cache_creation_input_tokens": 11794,
+    "cache_read_input_tokens": 587117,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.1301
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "read_context",
+        "read_record",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "list_records",
+        "read_context",
+        "read_record",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 4.5,
+      "min": 4,
+      "max": 5
+    },
+    "turns": {
+      "median": 5.5,
+      "min": 5,
+      "max": 6
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 299465.5,
+      "min": 298907,
+      "max": 300024
+    },
+    "output_tokens": {
+      "median": 1211,
+      "min": 1118,
+      "max": 1304
+    },
+    "duration_ms": {
+      "median": 12003,
+      "min": 11890,
+      "max": 12116
+    }
+  }
+}

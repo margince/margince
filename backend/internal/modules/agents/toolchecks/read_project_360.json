@@ -1,0 +1,15 @@
+{
+  "verb": "read_project_360",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "contract.read",
+    "deal.read",
+    "project.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "project"
+  ]
+}

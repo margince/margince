@@ -83,7 +83,7 @@ func TestInternalMailSourceEnrollmentRequiresHumanAdminAndAuditsAtomically(t *te
 		t.Fatalf("not enabled: %+v", policy)
 	}
 	source := policy.Sources[0]
-	if source.OwnerUserID != actor.UserID || source.Generation != 3 || source.EnrolledBy != actor.ID || source.EnrolledAt.IsZero() {
+	if source.OwnerUserID == nil || *source.OwnerUserID != actor.UserID || source.Generation != 3 || source.EnrolledBy != actor.ID || source.EnrolledAt.IsZero() {
 		t.Fatalf("untrusted provenance: %+v", source)
 	}
 	assertInternalMailPolicyAudit(ctx, t, pool, 1)

@@ -9,8 +9,7 @@ import {
   Modal,
 } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
-import { KeyCode } from "../../design-system/keyedname";
-import { NameDialog } from "../../design-system/namedialog";
+import { NameDialog, nameRefusal } from "../../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
@@ -22,11 +21,14 @@ import { useCan, useCanWrite } from "../../lib/capability";
 import {
   CF_OBJECTS,
   type CfObject,
+  type CfType,
   columnName,
   slug,
 } from "../../lib/customfields.logic";
+import { customFieldsQuery } from "../../lib/customfields.query";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { FieldBuilder, type NewFieldDraft } from "./customfields.builder";
 import { activityKindsOf, useSetActivityKinds } from "./customfields.kinds";
 import { objectLabels } from "./customfields.labels";
@@ -41,8 +43,6 @@ import {
   STAGED_ID,
 } from "./customfields.table";
 import "./customfields.css";
-
-type CustomFieldList = components["schemas"]["CustomFieldListResponse"];
 
 // The add-field create body (CUSTOM-FIELDS-WIRE-2): a plain manual field carries
 // `source:"manual"` (the FE convention across deals/leads/companies), and the
@@ -61,10 +61,13 @@ function createBody(
       ? { activity_kinds: activityKindsOf(draft.activityKinds) }
       : {}),
     ...(draft.type === "currency" ? { currency: draft.currency } : {}),
-    ...(draft.type === "picklist" || draft.type === "multiselect"
-      ? { options: cleanOptions(draft.options) }
-      : {}),
+    ...(hasOptions(draft.type) ? { options: cleanOptions(draft.options) } : {}),
   };
+}
+
+// A record field keeps the kind it points at in its single option.
+function hasOptions(type: CfType): boolean {
+  return type === "picklist" || type === "multiselect" || type === "record";
 }
 
 // A picklist ships only its real choices: blank / whitespace-only rows (the
@@ -98,10 +101,7 @@ function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
     status: "active",
     column_name: columnName(draft.label),
     currency: draft.type === "currency" ? draft.currency : null,
-    options:
-      draft.type === "picklist" || draft.type === "multiselect"
-        ? cleanOptions(draft.options)
-        : null,
+    options: hasOptions(draft.type) ? cleanOptions(draft.options) : null,
     show_in_create: draft.showInCreate,
     reportable: false,
     activity_kinds:
@@ -149,16 +149,7 @@ export function CustomFieldsAdmin() {
   const [addSeq, setAddSeq] = useState(0);
   const addId = useId();
 
-  const list = useQuery({
-    queryKey: ["custom-fields", object],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/custom-fields", {
-          params: { query: { object } },
-        }),
-      );
-    },
-  });
+  const list = useQuery(customFieldsQuery(object));
 
   const audit = useQuery({
     queryKey: ["cf-audit"],
@@ -177,7 +168,9 @@ export function CustomFieldsAdmin() {
   });
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["custom-fields", object] });
+    queryClient.invalidateQueries({
+      queryKey: customFieldsQuery(object).queryKey,
+    });
     queryClient.invalidateQueries({ queryKey: ["cf-audit"] });
     queryClient.invalidateQueries({ queryKey: ANALYTICS_SCHEMA_KEY });
   };
@@ -194,25 +187,28 @@ export function CustomFieldsAdmin() {
       // Key the optimistic write to the DRAFT's object, not the current-render
       // one, so switching objects mid-create still stages, rolls back, and
       // invalidates the right list (m2).
-      const key = ["custom-fields", draft.object];
+      const key = customFieldsQuery(draft.object).queryKey;
       await queryClient.cancelQueries({ queryKey: key });
-      const previous = queryClient.getQueryData<CustomFieldList>(key);
-      queryClient.setQueryData<CustomFieldList>(key, (old) =>
+      const previous = queryClient.getQueryData(key);
+      queryClient.setQueryData(key, (old) =>
         old
-          ? { ...old, data: [...old.data, stagedField(draft, meUserId ?? "")] }
+          ? {
+              ...old,
+              data: [...old.data, stagedField(draft, meUserId ?? "")],
+            }
           : old,
       );
       return { previous, key };
     },
-    onError: (error, _draft, context) => {
+    // The refusal is the open dialog's to show, on its fields.
+    onError: (_error, _draft, context) => {
       if (context) {
         queryClient.setQueryData(context.key, context.previous);
       }
-      toast.show(problemMessageOf(error, t), { tone: "danger" });
     },
     onSuccess: (_data, draft) => {
       queryClient.invalidateQueries({
-        queryKey: ["custom-fields", draft.object],
+        queryKey: customFieldsQuery(draft.object).queryKey,
       });
       queryClient.invalidateQueries({ queryKey: ["cf-audit"] });
       toast.show(t("cf.added", { label: draft.label }));
@@ -243,6 +239,11 @@ export function CustomFieldsAdmin() {
       setRenaming(null);
     },
   });
+  const renameRefused = nameRefusal(rename.error, t, {
+    label: t("cf.renamePrompt"),
+    duplicate: "cf.labelTaken",
+    code: "custom_field_label_taken",
+  });
 
   // The variable carries the field, so a flip that lands before React re-arms
   // the mutation still writes the row the reader pressed. The saved row goes
@@ -268,8 +269,8 @@ export function CustomFieldsAdmin() {
       );
     },
     onSuccess: (saved, input) => {
-      queryClient.setQueryData<CustomFieldList>(
-        ["custom-fields", input.field.object],
+      queryClient.setQueryData(
+        customFieldsQuery(input.field.object).queryKey,
         (old) =>
           old && {
             ...old,
@@ -314,6 +315,7 @@ export function CustomFieldsAdmin() {
           <Button
             onClick={() => {
               setAddSeq((seq) => seq + 1);
+              create.reset();
               setAdding(true);
             }}
           >
@@ -411,7 +413,10 @@ export function CustomFieldsAdmin() {
           key={addSeq}
           object={object}
           pending={create.isPending}
-          onSubmit={(draft) => create.mutate(draft)}
+          error={create.error}
+          onSubmit={(draft, refused) =>
+            create.mutate(draft, { onError: refused })
+          }
           onCancel={() => setAdding(false)}
         />
       </Modal>
@@ -432,14 +437,11 @@ export function CustomFieldsAdmin() {
         title={t("cf.edit")}
         label={t("cf.renamePrompt")}
         initial={renaming?.label ?? ""}
-        hint={
-          renaming && (
-            <KeyCode code={`${renaming.object}.${renaming.column_name}`} />
-          )
-        }
         confirmLabel={t("trust.save")}
         pending={rename.isPending}
-        problem={rename.isError ? problemMessageOf(rename.error, t) : null}
+        problem={renameRefused.problem}
+        nameProblem={renameRefused.nameProblem}
+        maxLength={TEXT_LIMITS.label}
         onSave={(label) => {
           if (renaming) rename.mutate({ field: renaming, label });
         }}

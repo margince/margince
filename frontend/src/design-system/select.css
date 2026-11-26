@@ -67,15 +67,13 @@
    ellipsizes, and the chevron keeps the far edge. */
 .select-button {
   justify-content: space-between;
-  text-align: left;
+  text-align: start;
 }
 
-/* Above `.overlay` (50) and `.toast-region` (60) in atoms.css: a select inside a
-   dialog has to draw over the dialog it belongs to, and the popup is portalled
-   to the body so stacking context cannot do that for it. */
+/* In the top layer (toplayer.ts): a select inside a dialog draws over the
+   dialog it belongs to whatever stacking context the dialog makes. */
 .select-popup {
   position: fixed;
-  z-index: 70;
   /* THE LIST IS AS WIDE AS WHAT IS IN IT, and the trigger is only its floor
      (`min-width`, handed in by select.tsx). Pinned to the trigger's width, a
      short closed face truncated every option behind it — "My own d…" over
@@ -102,7 +100,8 @@
      carries that exception with its reason. */
   padding: var(--controlGap);
 }
-.select-list {
+.select-list,
+.select-list > [role="listbox"] {
   display: flex;
   flex-direction: column;
 }
@@ -153,10 +152,10 @@
   color: var(--textPrimary);
   font-weight: var(--fontWeightMedium);
 }
-/* A disabled option stays listed and stays readable — a choice this workspace
-   cannot make right now is information — but it takes no hover treatment,
-   because a highlight is a promise that a click will do something. */
+/* Listed and readable, since a choice that cannot be made is information;
+   secondary ink and no hover, since a highlight promises a click works. */
 .select-option.is-disabled {
+  color: var(--textSecondary);
   cursor: not-allowed;
   background: none;
 }
@@ -191,4 +190,27 @@
   transition:
     background-color var(--dur-state) var(--ease-out),
     color var(--dur-state) var(--ease-out);
+}
+
+/* The box that narrows a long list. It stays at the top while the rows under
+   it scroll, on the popup's own fill so no row shows through it. */
+.select-filter {
+  flex-shrink: 0;
+  inline-size: 100%;
+  margin-block-end: var(--controlGap);
+}
+.select-empty {
+  padding: var(--controlGap) 9px;
+  color: var(--textSecondary);
+}
+
+.select-popup-filtered {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.select-popup-filtered .select-list {
+  position: relative;
+  overflow-y: auto;
+  min-block-size: 0;
 }

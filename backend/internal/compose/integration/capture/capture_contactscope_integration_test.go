@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -122,7 +123,7 @@ func TestAVerdictPromotesTheContactItJudged(t *testing.T) {
 // workspace-scoped, because something judged the sender.
 func promoteByVerdict(t *testing.T, e *integration.SearchEnv, email string, activityID ids.UUID) {
 	t.Helper()
-	store := contacts.NewStore(e.DB())
+	store := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx)
 	// The grants the verdict engine runs with: it mints and links records, and
 	// the promotion rides the same ensure.
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)

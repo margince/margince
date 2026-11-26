@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -194,6 +195,7 @@ func (r approvalPreviewReader) creationFieldDetails(ctx context.Context, recordT
 		if value.Kind == previewValueText && value.Text == "" {
 			value.Kind = previewValueEmpty
 		}
+		markCompanyStatus(recordType, field, &value)
 		displayField := field
 		if recordType == string(recordTypeLead) && field == previewFieldStatus {
 			displayField = "lead_status"
@@ -224,7 +226,7 @@ func (r approvalPreviewReader) creationAuthority(ctx context.Context, approval c
 	if err != nil {
 		return principal.Principal{}, err
 	}
-	actor.Permissions, actor.TeamIDs, actor.SeatType = rbac.Permissions, rbac.TeamIDs, seat
+	actor = authz.WithAuthority(actor, rbac, seat)
 	if !seat.CanMutate() {
 		return principal.Principal{}, apperrors.ErrSeatTierInsufficient
 	}
@@ -257,7 +259,7 @@ func creationAddressFields(address *crmcontracts.Address) map[string]any {
 func creationValueField(field string) string {
 	valueField := ""
 	switch field {
-	case dealIDField, previewFieldBuyerCompanyID, previewFieldTemplateID, "product_id", previewFieldValidUntil, bulkParamOwner, refColProject, companionContactField, refColCompany, refColParentCompany, refColPartnerCompany, fieldPipelineID, fieldStageID, acceptFieldExpectedClose, previewFieldStartedAt, previewFieldTargetEndDate, previewLifecycle, activityTargetOccurredAt:
+	case dealIDField, previewFieldBuyerCompanyID, previewFieldTemplateID, previewFieldProductID, previewFieldValidUntil, bulkParamOwner, refColProject, companionContactField, refColCompany, refColParentCompany, refColPartnerCompany, fieldPipelineID, fieldStageID, acceptFieldExpectedClose, previewFieldStartedAt, previewFieldTargetEndDate, activityTargetOccurredAt:
 		valueField = field
 	case previewFieldSourceAuthorID:
 		valueField = "user_id"

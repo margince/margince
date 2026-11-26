@@ -1,0 +1,18 @@
+/* Each kind of handle is its own stack inside the reach card, so its fold
+   link sits under its own lines. */
+.contacthandles {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+.contacthandles-more {
+  align-self: flex-start;
+  min-block-size: var(--space-8);
+}
+/* The copy glyph shows for the line under the pointer, not the whole card. */
+@media (hover: hover) {
+  .recorddetails .reachline:not(:hover, :focus-within) .copy-action {
+    max-inline-size: 0;
+    overflow: hidden;
+  }
+}

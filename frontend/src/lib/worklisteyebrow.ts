@@ -2,6 +2,7 @@ import { providerName } from "../format/connectorprovider";
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { aiTaskLabel } from "./ai-task-label";
+import { changeBadge } from "./calendarchange";
 import { labelFor } from "./labelfor";
 import type { WorklistItem } from "./worklisttypes";
 
@@ -21,11 +22,24 @@ export function nonBuyerRequest(item: WorklistItem): boolean {
   );
 }
 
+// One short word for the narrow kind column; the meeting box says what changed.
+function calendarKind(item: WorklistItem): MessageKey | undefined {
+  const mail = item.email_summary;
+  if (mail?.calendar_invitation) return "email.invitation.badge";
+  const change = mail?.calendar_change;
+  if (!change) return undefined;
+  return change.kind === "canceled"
+    ? changeBadge(change).key
+    : "timeline.kind.meeting";
+}
+
 // Labels follow the row's evidence when its broad category would misstate the work.
 export function eyebrowKeyFor(item: WorklistItem): MessageKey {
   if (item.source === "failed_approval")
     return "worklist.source.failed_approval";
   if (nonBuyerRequest(item)) return "worklist.source.awaiting_reply";
+  const calendar = calendarKind(item);
+  if (calendar) return calendar;
   if (item.source === "notice") return "brief.updates.title";
   if (item.source === "domain_question")
     return "worklist.source.domain_question";
@@ -72,20 +86,4 @@ export function conditionOf(item: WorklistItem, t: Translator): string | null {
   if (item.ai_task || item.source === "ai_work_health")
     return aiTaskLabel(item.ai_task, t, item.cause_label);
   return item.cause_label ?? null;
-}
-
-/**
- * The kind cell's class, which depends on what the cell holds.
- *
- * A category word fits the track it was sized for. A named condition does not
- * — "Notify sales on a new lead" is several times "Meeting" — and the badge
- * inside is `nowrap`, so it ran out of the cell and under the title. The named
- * variant clips with an ellipsis rather than wrapping: the column's argument is
- * that a reader runs DOWN it, and one row growing to two lines breaks the scan.
- * The caller puts the full name in `title` for a pointer.
- */
-export function kindClass(named: string | null): string {
-  return named === null
-    ? "worklist-row-kind"
-    : "worklist-row-kind worklist-row-kind-named";
 }

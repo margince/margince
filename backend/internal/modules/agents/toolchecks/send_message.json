@@ -1,0 +1,11 @@
+{
+  "verb": "send_message",
+  "checks": [
+    "activity.create",
+    "activity.read"
+  ],
+  "takes": [
+    "activity",
+    "channel_conversation"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "verb": "list_deal_suggestions",
+  "checks": [
+    "company.read",
+    "deal.read"
+  ]
+}

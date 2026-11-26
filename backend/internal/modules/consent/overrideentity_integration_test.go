@@ -46,24 +46,17 @@ func (e *resolveEnv) secondEntity(t *testing.T) ids.UUID {
 	t.Helper()
 	entity := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO legal_entity (id, display_name, legal_name, country, captured_by)
-		VALUES ($1, 'Branch', 'Branch Ltd', 'at', 'human:x')`, entity); err != nil {
+		INSERT INTO legal_entity (id, display_name, legal_name, country, jurisdiction, captured_by)
+		VALUES ($1, 'Branch', 'Branch Ltd', 'at', 'at', 'human:x')`, entity); err != nil {
 		t.Fatalf("describing the second entity: %v", err)
 	}
 	return entity
 }
 
-// vouchAs records a marketing vouch through the real door, as user.
+// vouchAs plants a marketing vouch as user recorded it, for user's entity.
 func (e *resolveEnv) vouchAs(t *testing.T, user ids.UUID) ids.UUID {
 	t.Helper()
-	id, err := e.store.Allow(e.seatCtx(user), AllowInput{
-		ContactID: e.contact, Category: string(commsauthz.CategoryMarketing),
-		Reason: "she asked on the call for the spring catalogue",
-	})
-	if err != nil {
-		t.Fatalf("recording the vouch: %v", err)
-	}
-	return id
+	return recordedOverrideAs(e.seatCtx(user), t, e.store, e.contact, string(commsauthz.CategoryMarketing))
 }
 
 // decideAs runs the whole per-recipient decision as user, naming the sending
@@ -73,7 +66,7 @@ func (e *resolveEnv) decideAs(t *testing.T, user ids.UUID) commsauthz.Decision {
 	ctx := e.seatCtx(user)
 	var out commsauthz.Decision
 	if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		req, err := withSendingEntity(ctx, tx, commsauthz.Request{LegacyPurposeKey: "newsletter"})
+		req, err := withSendFacts(ctx, tx, commsauthz.Request{LegacyPurposeKey: "newsletter"})
 		if err != nil {
 			return err
 		}

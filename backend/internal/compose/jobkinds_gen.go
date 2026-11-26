@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "8b793eb432d69c8f07e22515ea99b0fa1e0ba100d4dabf7f007656ef384fa8b3"
+const jobContractHash = "4a9336dc7431ca4c053c2089e3570d37980f3967d45a1ad9ee20d0fbc042b360"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -20,108 +20,118 @@ type declaredJobArgs[T river.JobArgs] interface {
 	declaredJobType(T)
 }
 
-func (AccountScanArgs) declaredJobType(AccountScanArgs)                           {}
-func (AddressCountryCheckArgs) declaredJobType(AddressCountryCheckArgs)           {}
-func (AgentSchedulerArgs) declaredJobType(AgentSchedulerArgs)                     {}
-func (AgentTaskRetentionArgs) declaredJobType(AgentTaskRetentionArgs)             {}
-func (AIActivityReconcileArgs) declaredJobType(AIActivityReconcileArgs)           {}
-func (AIActivityRetentionArgs) declaredJobType(AIActivityRetentionArgs)           {}
-func (AIBudgetResumeArgs) declaredJobType(AIBudgetResumeArgs)                     {}
-func (AIPriceSyncSweepArgs) declaredJobType(AIPriceSyncSweepArgs)                 {}
-func (ApprovalAutoApplyArgs) declaredJobType(ApprovalAutoApplyArgs)               {}
-func (ApprovalExpiryArgs) declaredJobType(ApprovalExpiryArgs)                     {}
-func (ApprovalNoticeReconcileArgs) declaredJobType(ApprovalNoticeReconcileArgs)   {}
-func (AssuranceDealRescanArgs) declaredJobType(AssuranceDealRescanArgs)           {}
-func (AssuranceRunArgs) declaredJobType(AssuranceRunArgs)                         {}
-func (AssuranceSweepArgs) declaredJobType(AssuranceSweepArgs)                     {}
-func (BriefGenerateArgs) declaredJobType(BriefGenerateArgs)                       {}
-func (CaptureAutoEnrichSweepArgs) declaredJobType(CaptureAutoEnrichSweepArgs)     {}
-func (CaptureBackfillArgs) declaredJobType(CaptureBackfillArgs)                   {}
-func (CaptureBackfillReconcileArgs) declaredJobType(CaptureBackfillReconcileArgs) {}
-func (CaptureClassifyArgs) declaredJobType(CaptureClassifyArgs)                   {}
-func (ConfidentialityVerdictArgs) declaredJobType(ConfidentialityVerdictArgs)     {}
-func (CounterpartyVerdictArgs) declaredJobType(CounterpartyVerdictArgs)           {}
-func (CaptureDigestArgs) declaredJobType(CaptureDigestArgs)                       {}
-func (CaptureEnrichArgs) declaredJobType(CaptureEnrichArgs)                       {}
-func (CapturePartSlimArgs) declaredJobType(CapturePartSlimArgs)                   {}
-func (CaptureSyncArgs) declaredJobType(CaptureSyncArgs)                           {}
-func (CaptureTraceSweepArgs) declaredJobType(CaptureTraceSweepArgs)               {}
-func (CapturedDealRefileArgs) declaredJobType(CapturedDealRefileArgs)             {}
-func (CapturedDealRefileSweepArgs) declaredJobType(CapturedDealRefileSweepArgs)   {}
-func (CheckCompanyVatArgs) declaredJobType(CheckCompanyVatArgs)                   {}
-func (CloseDateSweepArgs) declaredJobType(CloseDateSweepArgs)                     {}
-func (AuthzDisagreementArgs) declaredJobType(AuthzDisagreementArgs)               {}
-func (ControllerPayloadSweepArgs) declaredJobType(ControllerPayloadSweepArgs)     {}
-func (ScheduledSendArgs) declaredJobType(ScheduledSendArgs)                       {}
-func (ScheduledSendRecoveryArgs) declaredJobType(ScheduledSendRecoveryArgs)       {}
-func (SendEmailArgs) declaredJobType(SendEmailArgs)                               {}
-func (CompanyNamePromotionArgs) declaredJobType(CompanyNamePromotionArgs)         {}
-func (DataTaskReconcileArgs) declaredJobType(DataTaskReconcileArgs)               {}
-func (DataTaskRunArgs) declaredJobType(DataTaskRunArgs)                           {}
-func (DealScoutArgs) declaredJobType(DealScoutArgs)                               {}
-func (DedupeRecheckArgs) declaredJobType(DedupeRecheckArgs)                       {}
-func (DocumentExtractArgs) declaredJobType(DocumentExtractArgs)                   {}
-func (EmbedDriftSweepArgs) declaredJobType(EmbedDriftSweepArgs)                   {}
-func (EmbedReindexArgs) declaredJobType(EmbedReindexArgs)                         {}
-func (EmploymentImportSweepArgs) declaredJobType(EmploymentImportSweepArgs)       {}
-func (EvidenceAuthorshipArgs) declaredJobType(EvidenceAuthorshipArgs)             {}
-func (FinanceSyncArgs) declaredJobType(FinanceSyncArgs)                           {}
-func (FinanceSyncSweepArgs) declaredJobType(FinanceSyncSweepArgs)                 {}
-func (FollowUpReconcileArgs) declaredJobType(FollowUpReconcileArgs)               {}
-func (ForecastSnapshotSweepArgs) declaredJobType(ForecastSnapshotSweepArgs)       {}
-func (FxRateRefreshArgs) declaredJobType(FxRateRefreshArgs)                       {}
-func (GeocodeBackfillArgs) declaredJobType(GeocodeBackfillArgs)                   {}
-func (GeocodeCompanyArgs) declaredJobType(GeocodeCompanyArgs)                     {}
-func (GmailSyncArgs) declaredJobType(GmailSyncArgs)                               {}
-func (GmailWatchArgs) declaredJobType(GmailWatchArgs)                             {}
-func (GmailWatchRenewArgs) declaredJobType(GmailWatchRenewArgs)                   {}
-func (GraphEdgeReconcileArgs) declaredJobType(GraphEdgeReconcileArgs)             {}
-func (GraphWatchArgs) declaredJobType(GraphWatchArgs)                             {}
-func (GraphWatchRenewArgs) declaredJobType(GraphWatchRenewArgs)                   {}
-func (IdempotencyRetentionArgs) declaredJobType(IdempotencyRetentionArgs)         {}
-func (ImportCommitArgs) declaredJobType(ImportCommitArgs)                         {}
-func (ImportRunSweepArgs) declaredJobType(ImportRunSweepArgs)                     {}
-func (ImportUndoArgs) declaredJobType(ImportUndoArgs)                             {}
-func (ImportValidateArgs) declaredJobType(ImportValidateArgs)                     {}
-func (IntroExpiryArgs) declaredJobType(IntroExpiryArgs)                           {}
-func (KnowledgeIngestArgs) declaredJobType(KnowledgeIngestArgs)                   {}
-func (LinkReconcileArgs) declaredJobType(LinkReconcileArgs)                       {}
-func (LinkedInRematchArgs) declaredJobType(LinkedInRematchArgs)                   {}
-func (ListEvaluateArgs) declaredJobType(ListEvaluateArgs)                         {}
-func (MailDraftRetentionArgs) declaredJobType(MailDraftRetentionArgs)             {}
-func (MeetingDeliveryArgs) declaredJobType(MeetingDeliveryArgs)                   {}
-func (NotificationDigestArgs) declaredJobType(NotificationDigestArgs)             {}
-func (SendNotificationEmailArgs) declaredJobType(SendNotificationEmailArgs)       {}
-func (OwedVerdictArgs) declaredJobType(OwedVerdictArgs)                           {}
-func (ParticipantBackfillArgs) declaredJobType(ParticipantBackfillArgs)           {}
-func (PastActivityClockRefoldArgs) declaredJobType(PastActivityClockRefoldArgs)   {}
-func (RequestProofExpiryArgs) declaredJobType(RequestProofExpiryArgs)             {}
-func (PrivacyRetentionArgs) declaredJobType(PrivacyRetentionArgs)                 {}
-func (ProjectHealthScanArgs) declaredJobType(ProjectHealthScanArgs)               {}
-func (ProviderLookupSweepArgs) declaredJobType(ProviderLookupSweepArgs)           {}
-func (ProviderRunPollSweepArgs) declaredJobType(ProviderRunPollSweepArgs)         {}
-func (ProviderRunSubmitArgs) declaredJobType(ProviderRunSubmitArgs)               {}
-func (ReportScheduleSweepArgs) declaredJobType(ReportScheduleSweepArgs)           {}
-func (RiskVerdictSweepArgs) declaredJobType(RiskVerdictSweepArgs)                 {}
-func (SignalScanArgs) declaredJobType(SignalScanArgs)                             {}
-func (SiteDeepReadArgs) declaredJobType(SiteDeepReadArgs)                         {}
-func (StageEvidenceReadArgs) declaredJobType(StageEvidenceReadArgs)               {}
-func (StoredObjectReapArgs) declaredJobType(StoredObjectReapArgs)                 {}
-func (SuppressionJournalArgs) declaredJobType(SuppressionJournalArgs)             {}
-func (TagScoutArgs) declaredJobType(TagScoutArgs)                                 {}
-func (TechnicalEnrichBackfillArgs) declaredJobType(TechnicalEnrichBackfillArgs)   {}
-func (TechnicalEnrichCompanyArgs) declaredJobType(TechnicalEnrichCompanyArgs)     {}
-func (TelegramIngestArgs) declaredJobType(TelegramIngestArgs)                     {}
-func (TelegramPollArgs) declaredJobType(TelegramPollArgs)                         {}
-func (TelegramPollSweepArgs) declaredJobType(TelegramPollSweepArgs)               {}
-func (TimeScanArgs) declaredJobType(TimeScanArgs)                                 {}
-func (TranscriptProposeArgs) declaredJobType(TranscriptProposeArgs)               {}
-func (VCardIngestArgs) declaredJobType(VCardIngestArgs)                           {}
-func (VoiceBuildArgs) declaredJobType(VoiceBuildArgs)                             {}
-func (VoiceBuildRetryArgs) declaredJobType(VoiceBuildRetryArgs)                   {}
-func (WaitingHorizonRefreshArgs) declaredJobType(WaitingHorizonRefreshArgs)       {}
-func (WebhookRetryArgs) declaredJobType(WebhookRetryArgs)                         {}
-func (WeeklyReviewGenerateArgs) declaredJobType(WeeklyReviewGenerateArgs)         {}
+func (AccountScanArgs) declaredJobType(AccountScanArgs)                               {}
+func (AddressCountryCheckArgs) declaredJobType(AddressCountryCheckArgs)               {}
+func (AgentSchedulerArgs) declaredJobType(AgentSchedulerArgs)                         {}
+func (AgentTaskRetentionArgs) declaredJobType(AgentTaskRetentionArgs)                 {}
+func (AIActivityReconcileArgs) declaredJobType(AIActivityReconcileArgs)               {}
+func (AIActivityRetentionArgs) declaredJobType(AIActivityRetentionArgs)               {}
+func (AIBudgetResumeArgs) declaredJobType(AIBudgetResumeArgs)                         {}
+func (AIPriceSyncSweepArgs) declaredJobType(AIPriceSyncSweepArgs)                     {}
+func (ApprovalAutoApplyArgs) declaredJobType(ApprovalAutoApplyArgs)                   {}
+func (ApprovalExpiryArgs) declaredJobType(ApprovalExpiryArgs)                         {}
+func (ApprovalNoticeReconcileArgs) declaredJobType(ApprovalNoticeReconcileArgs)       {}
+func (ApprovalOwnerNoticeArgs) declaredJobType(ApprovalOwnerNoticeArgs)               {}
+func (AssuranceDealRescanArgs) declaredJobType(AssuranceDealRescanArgs)               {}
+func (AssuranceRunArgs) declaredJobType(AssuranceRunArgs)                             {}
+func (AssuranceSweepArgs) declaredJobType(AssuranceSweepArgs)                         {}
+func (BriefGenerateArgs) declaredJobType(BriefGenerateArgs)                           {}
+func (CaptureAutoEnrichSweepArgs) declaredJobType(CaptureAutoEnrichSweepArgs)         {}
+func (CaptureBackfillArgs) declaredJobType(CaptureBackfillArgs)                       {}
+func (CaptureBackfillReconcileArgs) declaredJobType(CaptureBackfillReconcileArgs)     {}
+func (CaptureClassifyArgs) declaredJobType(CaptureClassifyArgs)                       {}
+func (ConfidentialityVerdictArgs) declaredJobType(ConfidentialityVerdictArgs)         {}
+func (CounterpartyVerdictArgs) declaredJobType(CounterpartyVerdictArgs)               {}
+func (CaptureEnrichArgs) declaredJobType(CaptureEnrichArgs)                           {}
+func (CapturePartSlimArgs) declaredJobType(CapturePartSlimArgs)                       {}
+func (CaptureSyncArgs) declaredJobType(CaptureSyncArgs)                               {}
+func (CaptureTraceSweepArgs) declaredJobType(CaptureTraceSweepArgs)                   {}
+func (CapturedDealRefileArgs) declaredJobType(CapturedDealRefileArgs)                 {}
+func (CapturedDealRefileSweepArgs) declaredJobType(CapturedDealRefileSweepArgs)       {}
+func (ChatLinkFlushArgs) declaredJobType(ChatLinkFlushArgs)                           {}
+func (ChatPullArgs) declaredJobType(ChatPullArgs)                                     {}
+func (ChatPullSweepArgs) declaredJobType(ChatPullSweepArgs)                           {}
+func (CheckCompanyVatArgs) declaredJobType(CheckCompanyVatArgs)                       {}
+func (CloseDateSweepArgs) declaredJobType(CloseDateSweepArgs)                         {}
+func (AuthzDisagreementArgs) declaredJobType(AuthzDisagreementArgs)                   {}
+func (ControllerPayloadSweepArgs) declaredJobType(ControllerPayloadSweepArgs)         {}
+func (ScheduledSendArgs) declaredJobType(ScheduledSendArgs)                           {}
+func (ScheduledSendRecoveryArgs) declaredJobType(ScheduledSendRecoveryArgs)           {}
+func (SendEmailArgs) declaredJobType(SendEmailArgs)                                   {}
+func (CompanyNamePromotionArgs) declaredJobType(CompanyNamePromotionArgs)             {}
+func (DataTaskReconcileArgs) declaredJobType(DataTaskReconcileArgs)                   {}
+func (DataTaskRunArgs) declaredJobType(DataTaskRunArgs)                               {}
+func (DealScoutArgs) declaredJobType(DealScoutArgs)                                   {}
+func (DedupeRecheckArgs) declaredJobType(DedupeRecheckArgs)                           {}
+func (DocumentExtractArgs) declaredJobType(DocumentExtractArgs)                       {}
+func (EmbedDriftSweepArgs) declaredJobType(EmbedDriftSweepArgs)                       {}
+func (EmbedReindexArgs) declaredJobType(EmbedReindexArgs)                             {}
+func (EmploymentImportSweepArgs) declaredJobType(EmploymentImportSweepArgs)           {}
+func (EvidenceAuthorshipArgs) declaredJobType(EvidenceAuthorshipArgs)                 {}
+func (FinanceSyncArgs) declaredJobType(FinanceSyncArgs)                               {}
+func (FinanceSyncSweepArgs) declaredJobType(FinanceSyncSweepArgs)                     {}
+func (FollowUpReconcileArgs) declaredJobType(FollowUpReconcileArgs)                   {}
+func (ForecastSnapshotSweepArgs) declaredJobType(ForecastSnapshotSweepArgs)           {}
+func (FxRateRefreshArgs) declaredJobType(FxRateRefreshArgs)                           {}
+func (GeocodeBackfillArgs) declaredJobType(GeocodeBackfillArgs)                       {}
+func (GeocodeCompanyArgs) declaredJobType(GeocodeCompanyArgs)                         {}
+func (GmailSyncArgs) declaredJobType(GmailSyncArgs)                                   {}
+func (GmailWatchArgs) declaredJobType(GmailWatchArgs)                                 {}
+func (GmailWatchRenewArgs) declaredJobType(GmailWatchRenewArgs)                       {}
+func (GraphEdgeReconcileArgs) declaredJobType(GraphEdgeReconcileArgs)                 {}
+func (GraphWatchArgs) declaredJobType(GraphWatchArgs)                                 {}
+func (GraphWatchRenewArgs) declaredJobType(GraphWatchRenewArgs)                       {}
+func (IdempotencyRetentionArgs) declaredJobType(IdempotencyRetentionArgs)             {}
+func (ImportCommitArgs) declaredJobType(ImportCommitArgs)                             {}
+func (ImportRunSweepArgs) declaredJobType(ImportRunSweepArgs)                         {}
+func (ImportUndoArgs) declaredJobType(ImportUndoArgs)                                 {}
+func (ImportValidateArgs) declaredJobType(ImportValidateArgs)                         {}
+func (InitiativeEnrolmentSweepArgs) declaredJobType(InitiativeEnrolmentSweepArgs)     {}
+func (IntroExpiryArgs) declaredJobType(IntroExpiryArgs)                               {}
+func (KnowledgeIngestArgs) declaredJobType(KnowledgeIngestArgs)                       {}
+func (LinkReconcileArgs) declaredJobType(LinkReconcileArgs)                           {}
+func (LinkedInRematchArgs) declaredJobType(LinkedInRematchArgs)                       {}
+func (ListEvaluateArgs) declaredJobType(ListEvaluateArgs)                             {}
+func (MailDraftRetentionArgs) declaredJobType(MailDraftRetentionArgs)                 {}
+func (MeetingDeliveryArgs) declaredJobType(MeetingDeliveryArgs)                       {}
+func (MeetingProfileRetractSweepArgs) declaredJobType(MeetingProfileRetractSweepArgs) {}
+func (NotificationDigestArgs) declaredJobType(NotificationDigestArgs)                 {}
+func (SendNotificationEmailArgs) declaredJobType(SendNotificationEmailArgs)           {}
+func (OAuthClientUnusedSweepArgs) declaredJobType(OAuthClientUnusedSweepArgs)         {}
+func (OwedVerdictArgs) declaredJobType(OwedVerdictArgs)                               {}
+func (ParticipantBackfillArgs) declaredJobType(ParticipantBackfillArgs)               {}
+func (PastActivityClockRefoldArgs) declaredJobType(PastActivityClockRefoldArgs)       {}
+func (RequestProofExpiryArgs) declaredJobType(RequestProofExpiryArgs)                 {}
+func (PrivacyRetentionArgs) declaredJobType(PrivacyRetentionArgs)                     {}
+func (ProjectHealthScanArgs) declaredJobType(ProjectHealthScanArgs)                   {}
+func (PromiseKeptSweepArgs) declaredJobType(PromiseKeptSweepArgs)                     {}
+func (ProviderLookupSweepArgs) declaredJobType(ProviderLookupSweepArgs)               {}
+func (ProviderRunPollSweepArgs) declaredJobType(ProviderRunPollSweepArgs)             {}
+func (ProviderRunSubmitArgs) declaredJobType(ProviderRunSubmitArgs)                   {}
+func (ReplySettledStampArgs) declaredJobType(ReplySettledStampArgs)                   {}
+func (ReportScheduleSweepArgs) declaredJobType(ReportScheduleSweepArgs)               {}
+func (RiskVerdictSweepArgs) declaredJobType(RiskVerdictSweepArgs)                     {}
+func (SignalScanArgs) declaredJobType(SignalScanArgs)                                 {}
+func (SiteDeepReadArgs) declaredJobType(SiteDeepReadArgs)                             {}
+func (StageEvidenceReadArgs) declaredJobType(StageEvidenceReadArgs)                   {}
+func (StageEvidenceRereadArgs) declaredJobType(StageEvidenceRereadArgs)               {}
+func (StoredObjectReapArgs) declaredJobType(StoredObjectReapArgs)                     {}
+func (SuppressionJournalArgs) declaredJobType(SuppressionJournalArgs)                 {}
+func (TagScoutArgs) declaredJobType(TagScoutArgs)                                     {}
+func (TechnicalEnrichBackfillArgs) declaredJobType(TechnicalEnrichBackfillArgs)       {}
+func (TechnicalEnrichCompanyArgs) declaredJobType(TechnicalEnrichCompanyArgs)         {}
+func (TelegramIngestArgs) declaredJobType(TelegramIngestArgs)                         {}
+func (TelegramPollArgs) declaredJobType(TelegramPollArgs)                             {}
+func (TelegramPollSweepArgs) declaredJobType(TelegramPollSweepArgs)                   {}
+func (TimeScanArgs) declaredJobType(TimeScanArgs)                                     {}
+func (TranscriptAudienceSweepArgs) declaredJobType(TranscriptAudienceSweepArgs)       {}
+func (TranscriptProposeArgs) declaredJobType(TranscriptProposeArgs)                   {}
+func (VCardIngestArgs) declaredJobType(VCardIngestArgs)                               {}
+func (VoiceBuildArgs) declaredJobType(VoiceBuildArgs)                                 {}
+func (VoiceBuildRetryArgs) declaredJobType(VoiceBuildRetryArgs)                       {}
+func (WaitingHorizonRefreshArgs) declaredJobType(WaitingHorizonRefreshArgs)           {}
+func (WebhookRetryArgs) declaredJobType(WebhookRetryArgs)                             {}
+func (WeeklyReviewGenerateArgs) declaredJobType(WeeklyReviewGenerateArgs)             {}
 
 // addDeclaredWorker is the sanctioned registration path. Its type parameter
 // is constrained to the declared set, so a kind absent from api/jobs.yaml
@@ -148,10 +158,10 @@ var (
 	_ jobs.FleetWide = CaptureClassifyArgs{}
 	_ jobs.FleetWide = ConfidentialityVerdictArgs{}
 	_ jobs.FleetWide = CounterpartyVerdictArgs{}
-	_ jobs.FleetWide = CaptureDigestArgs{}
 	_ jobs.FleetWide = CaptureEnrichArgs{}
 	_ jobs.FleetWide = CaptureTraceSweepArgs{}
 	_ jobs.FleetWide = CapturedDealRefileSweepArgs{}
+	_ jobs.FleetWide = ChatPullSweepArgs{}
 	_ jobs.FleetWide = CloseDateSweepArgs{}
 	_ jobs.FleetWide = CompanyNamePromotionArgs{}
 	_ jobs.FleetWide = DataTaskReconcileArgs{}
@@ -169,15 +179,19 @@ var (
 	_ jobs.FleetWide = GraphEdgeReconcileArgs{}
 	_ jobs.FleetWide = GraphWatchArgs{}
 	_ jobs.FleetWide = IdempotencyRetentionArgs{}
+	_ jobs.FleetWide = InitiativeEnrolmentSweepArgs{}
 	_ jobs.FleetWide = LinkReconcileArgs{}
 	_ jobs.FleetWide = LinkedInRematchArgs{}
 	_ jobs.FleetWide = ListEvaluateArgs{}
+	_ jobs.FleetWide = MeetingProfileRetractSweepArgs{}
 	_ jobs.FleetWide = NotificationDigestArgs{}
 	_ jobs.FleetWide = OwedVerdictArgs{}
 	_ jobs.FleetWide = ParticipantBackfillArgs{}
 	_ jobs.FleetWide = ProjectHealthScanArgs{}
+	_ jobs.FleetWide = PromiseKeptSweepArgs{}
 	_ jobs.FleetWide = ProviderLookupSweepArgs{}
 	_ jobs.FleetWide = ProviderRunPollSweepArgs{}
+	_ jobs.FleetWide = ReplySettledStampArgs{}
 	_ jobs.FleetWide = ReportScheduleSweepArgs{}
 	_ jobs.FleetWide = RiskVerdictSweepArgs{}
 	_ jobs.FleetWide = SignalScanArgs{}
@@ -186,6 +200,7 @@ var (
 	_ jobs.FleetWide = TagScoutArgs{}
 	_ jobs.FleetWide = TelegramPollSweepArgs{}
 	_ jobs.FleetWide = TimeScanArgs{}
+	_ jobs.FleetWide = TranscriptAudienceSweepArgs{}
 	_ jobs.FleetWide = VoiceBuildRetryArgs{}
 	_ jobs.FleetWide = WeeklyReviewGenerateArgs{}
 )
@@ -194,11 +209,14 @@ var (
 // in its own args.
 var (
 	_ jobs.WorkspaceScoped = AccountScanArgs{}
+	_ jobs.WorkspaceScoped = ApprovalOwnerNoticeArgs{}
 	_ jobs.WorkspaceScoped = AssuranceDealRescanArgs{}
 	_ jobs.WorkspaceScoped = AssuranceRunArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureSyncArgs{}
 	_ jobs.WorkspaceScoped = CapturedDealRefileArgs{}
+	_ jobs.WorkspaceScoped = ChatLinkFlushArgs{}
+	_ jobs.WorkspaceScoped = ChatPullArgs{}
 	_ jobs.WorkspaceScoped = CheckCompanyVatArgs{}
 	_ jobs.WorkspaceScoped = ScheduledSendArgs{}
 	_ jobs.WorkspaceScoped = SendEmailArgs{}
@@ -216,6 +234,7 @@ var (
 	_ jobs.WorkspaceScoped = ProviderRunSubmitArgs{}
 	_ jobs.WorkspaceScoped = SiteDeepReadArgs{}
 	_ jobs.WorkspaceScoped = StageEvidenceReadArgs{}
+	_ jobs.WorkspaceScoped = StageEvidenceRereadArgs{}
 	_ jobs.WorkspaceScoped = TechnicalEnrichCompanyArgs{}
 	_ jobs.WorkspaceScoped = TelegramIngestArgs{}
 	_ jobs.WorkspaceScoped = TelegramPollArgs{}

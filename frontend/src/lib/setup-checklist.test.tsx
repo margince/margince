@@ -15,7 +15,7 @@ import {
   type SetupReads,
   useSetupChecklist,
 } from "./setup-checklist";
-import { forgetSeat } from "./storage";
+import { forgetSeat, STORAGE_KEYS, writeStored } from "./storage";
 
 // The reminder and the settings home both draw these steps. These cases pin
 // what each roster asks of the reader. Nothing is stored except the reader's
@@ -30,7 +30,12 @@ type VoiceBuild = components["schemas"]["VoiceBuild"];
 type SchedulingProfile = components["schemas"]["SchedulingProfile"];
 type PassportSummary = components["schemas"]["PassportSummary"];
 
-const VOICE_WRITER: GrantSpec = { voice_profile: ["read", "create", "update"] };
+// The seat's own pages: Voice by its grant, Meetings by the booking grant the
+// scheduling profile is served under.
+const VOICE_WRITER: GrantSpec = {
+  voice_profile: ["read", "create", "update"],
+  activity: ["read", "create"],
+};
 const MAIL_PROVIDERS: readonly MailProvider[] = ["gmail", "graph", "imap"];
 
 // A calendar can write bookings unless a test takes its grant away.
@@ -167,6 +172,9 @@ function reads(overrides: Partial<SetupReads> = {}): SetupReads {
     scheduling: scheduling(false),
     passports: null,
     now: Date.parse("2026-11-05T12:00:00Z"),
+    modelReady: null,
+    personal: null,
+    registersApps: false,
     ...overrides,
   };
 }
@@ -242,7 +250,10 @@ describe("deriveSetupSteps", () => {
   it("offers nothing to do next while every connection waits on an administrator", () => {
     const steps = summary(
       reads({
-        acts: actsFor({ voice_profile: ["read"] }),
+        acts: actsFor({
+          voice_profile: ["read"],
+          activity: ["read", "create"],
+        }),
         connectors: roster([], {
           gmail: "app_missing",
           graph: "app_missing",
@@ -255,6 +266,46 @@ describe("deriveSetupSteps", () => {
       { id: "mail", state: "open", blocked: true, reason: "waitsAdmin" },
       { id: "calendar", state: "open", blocked: true, reason: "waitsAdmin" },
       { id: "booking", state: "open", blocked: true, reason: "needsCalendar" },
+    ]);
+  });
+
+  it("sends the reader who sets up the company app to do it, rather than to wait", () => {
+    const steps = deriveSetupSteps(
+      reads({
+        registersApps: true,
+        connectors: roster([], {
+          gmail: "app_missing",
+          graph: "app_unusable",
+          imap: "unsupported",
+        }),
+      }),
+    );
+
+    expect(
+      steps.map(({ id, state, page, blocked, reason }) => ({
+        id,
+        state,
+        page,
+        blocked,
+        reason,
+      })),
+    ).toEqual([
+      {
+        id: "mail",
+        state: "current",
+        page: "authentication",
+        blocked: false,
+        reason: "registerApp",
+      },
+      {
+        id: "calendar",
+        state: "open",
+        page: "authentication",
+        blocked: false,
+        reason: "registerApp",
+      },
+      expect.objectContaining({ id: "voice" }),
+      expect.objectContaining({ id: "booking", reason: "needsCalendar" }),
     ]);
   });
 
@@ -406,7 +457,12 @@ describe("deriveSetupSteps", () => {
 
   it("leaves out a step whose page the reader cannot act on", () => {
     const steps = summary(
-      reads({ acts: actsFor({ voice_profile: ["read"] }) }),
+      reads({
+        acts: actsFor({
+          voice_profile: ["read"],
+          activity: ["read", "create"],
+        }),
+      }),
     );
 
     expect(steps.map((step) => step.id)).toEqual([
@@ -472,6 +528,21 @@ describe("deriveSetupSteps", () => {
     });
   });
 
+  it("asks a reader who can bind models to set up AI first, until a model is bound", () => {
+    const binder = new Set<SettingsPageId>([...actsFor(), "models"]);
+    const first = (
+      modelReady: boolean | null,
+      acts: ReadonlySet<SettingsPageId> = binder,
+    ) => deriveSetupSteps(reads({ acts, modelReady }))[0];
+
+    expect(first(false)).toMatchObject({ id: "model", state: "current" });
+    expect(first(false)?.page).toBe("models");
+    expect(first(true)).toMatchObject({ id: "model", state: "done" });
+    // Unknown, or a reader who cannot act on the models page: no step.
+    expect(first(null)?.id).toBe("mail");
+    expect(first(false, actsFor())?.id).toBe("mail");
+  });
+
   it("still counts a booking link that is on, whatever the roster says", () => {
     const steps = summary(
       reads({
@@ -512,12 +583,26 @@ function serve(answers: Readonly<Record<string, () => Response>>) {
   );
 }
 
-function wrapper({ children }: Readonly<{ children: ReactNode }>) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+// A signed-in seat holding allow, as /me answered it.
+function wrapperFor(allow: GrantSpec, personalChoicesMade = true) {
+  return function SignedIn({ children }: Readonly<{ children: ReactNode }>) {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const me = meFixture({ allow, personalChoicesMade });
+    client.setQueryData(["me"], me);
+    if (personalChoicesMade) {
+      writeStored(
+        { family: STORAGE_KEYS.setupPermissionsSeen, member: me.user.id },
+        "1",
+      );
+    }
+    return (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+  };
 }
+const wrapper = wrapperFor(VOICE_WRITER);
 
 const REACH = settingsReach(meFixture({ allow: VOICE_WRITER }));
 
@@ -553,16 +638,19 @@ describe("useSetupChecklist", () => {
     expect(result.current.steps.map((step) => step.id)).toEqual([
       "mail",
       "calendar",
+      "timezone",
+      "language",
+      "permissions",
       "voice",
       "booking",
     ]);
     // An unknown voice is never counted done, so the reminder cannot read as
     // complete just because the profile could not be read.
-    expect(result.current.steps[2]).toMatchObject({
+    expect(result.current.steps[5]).toMatchObject({
       state: "open",
       voice: null,
     });
-    expect([result.current.done, result.current.total]).toEqual([1, 4]);
+    expect([result.current.done, result.current.total]).toEqual([4, 7]);
   });
 
   it("is complete only once every read answered and every step is done", async () => {
@@ -619,5 +707,81 @@ describe("useSetupChecklist", () => {
       wrapper,
     });
     expect(signedInAgain.result.current.hidden).toBe(false);
+  });
+});
+
+describe("a seat that sets up the company apps", () => {
+  it("is sent to register the missing app, and a seat without the grant waits", async () => {
+    const appless = () =>
+      jsonResponse({
+        data: [],
+        providers: MAIL_PROVIDERS.map((provider) => ({
+          provider,
+          reason: provider === "imap" ? "unsupported" : "app_missing",
+        })),
+      });
+    serve({
+      "/connectors": appless,
+      "/voice-profiles": () => jsonResponse({ data: [] }),
+      "/scheduling/profile": () => jsonResponse(scheduling(false)),
+    });
+    const holder: GrantSpec = {
+      ...VOICE_WRITER,
+      authentication_policy: ["read"],
+      capture_settings: ["read", "update"],
+    };
+    const calendarOf = async (allow: GrantSpec) => {
+      const { result, unmount } = renderHook(
+        () => useSetupChecklist(settingsReach(meFixture({ allow }))),
+        { wrapper: wrapperFor(allow) },
+      );
+      await waitFor(() => expect(result.current.settled).toBe(true));
+      const step = result.current.steps.find(
+        (entry) => entry.id === "calendar",
+      );
+      unmount();
+      return step;
+    };
+
+    expect(await calendarOf(holder)).toMatchObject({
+      page: "authentication",
+      blocked: false,
+      reason: "registerApp",
+    });
+    expect(await calendarOf(VOICE_WRITER)).toMatchObject({
+      page: "connections",
+      blocked: true,
+      reason: "waitsAdmin",
+    });
+  });
+});
+
+describe("a seat that may not book", () => {
+  it("never asks for the scheduling profile and shows no booking step", async () => {
+    const reader: GrantSpec = {
+      voice_profile: ["read", "create", "update"],
+      activity: ["read"],
+    };
+    const asked: string[] = [];
+    serve({
+      "/connectors": () => jsonResponse({ data: [], providers: [] }),
+      "/voice-profiles": () => jsonResponse({ data: [] }),
+      "/scheduling/profile": () => {
+        asked.push("/scheduling/profile");
+        return jsonResponse(
+          { status: 403, code: "permission_denied", title: "Forbidden" },
+          403,
+        );
+      },
+    });
+    const { result } = renderHook(
+      () => useSetupChecklist(settingsReach(meFixture({ allow: reader }))),
+      { wrapper: wrapperFor(reader) },
+    );
+    await waitFor(() => expect(result.current.settled).toBe(true));
+    expect(result.current.steps.map((step) => step.id)).not.toContain(
+      "booking",
+    );
+    expect(asked).toEqual([]);
   });
 });

@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // Provider answers the datasource verbs for project.
@@ -42,7 +41,7 @@ func ProviderOver(store *Store) *Provider {
 // WithFieldCatalog wires the workspace custom-field catalog into the provider's
 // store (see Store.WithFieldCatalog), so the MCP surface's record verbs carry
 // cf values exactly like REST.
-func (p *Provider) WithFieldCatalog(catalog fieldcatalog.Reader) *Provider {
+func (p *Provider) WithFieldCatalog(catalog storekit.FieldCatalog) *Provider {
 	p.store = p.store.WithFieldCatalog(catalog)
 	return p
 }
@@ -114,9 +113,6 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		return datasource.EntityRef{}, err
 	}
 	var req crmcontracts.CreateProjectRequest
-	if err := datasource.ClaimKeys(raw, claimCallerChosenKey); err != nil {
-		return datasource.EntityRef{}, err
-	}
 	if err := datasource.StrictDecode(raw, &req); err != nil {
 		return datasource.EntityRef{}, err
 	}

@@ -1,0 +1,15 @@
+{
+  "tool": "change_reports",
+  "action": "restore_revision",
+  "verb": "restore_reporting_report_revision",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "rep"
+  ],
+  "refused_for": [
+    "ops",
+    "read_only"
+  ]
+}

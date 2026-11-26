@@ -26,9 +26,19 @@ package events
 // link (audit_log OR system_log) so the outcome stays attributable — Validate
 // enforces the trace, only the entity is relaxed.
 var pipelineEventTypes = map[string]struct{}{
+	// Staffing changes remain private to the readers of their parent records.
+	"sdr_handoff.created":        {},
+	"sdr_handoff.updated":        {},
+	"record_assignment.created":  {},
+	"record_assignment.updated":  {},
+	"record_assignment.archived": {},
+	// Held correspondence and its exception remain private to their authorized readers.
+	"communication_instruction.updated": {},
+	"scheduled_send.updated":            {},
 	// Source policy and owner consent are private configuration, not webhook subjects.
 	"capture_settings.updated":      {},
 	"internal_mail_history.created": {},
+	"shared_mailbox.changed":        {},
 	// Reporting changes carry private configuration; they are not webhook subscriptions.
 	"reporting.changed": {},
 	// Host settings and invitation delivery state feed private UI recovery;
@@ -65,11 +75,6 @@ var pipelineEventTypes = map[string]struct{}{
 	"deal_suggestion.accepted":   {},
 	"deal_suggestion.dismissed":  {},
 	"deal_suggestion.superseded": {},
-	// A legal review's note and pack are for holders of the legal_review
-	// grant, and no subscriber can be held to that. The audit row names the deal.
-	"legal_review.requested": {},
-	"legal_review.decided":   {},
-	"legal_review.withdrawn": {},
 	// The same holds for a tag suggestion, whose evidence may be one owner's mail.
 	"tag_suggestion.created":    {},
 	"tag_suggestion.accepted":   {},

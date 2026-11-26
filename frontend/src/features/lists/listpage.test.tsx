@@ -33,6 +33,7 @@ import {
   members,
   SHORTLIST_ID,
   shortlist,
+  TEAM_ID,
   visitAnswer,
 } from "../../testing/lists.fixtures";
 import { openViewStep } from "../../testing/listview.testkit";
@@ -267,7 +268,7 @@ describe("an opened list", () => {
     expect(
       within(row).getByText("Signed the quote for the launch deck"),
     ).toBeInTheDocument();
-    expect(within(row).getByText(/2026/)).toBeInTheDocument();
+    expect(within(row).getByText(/^20 Sept? 2026$/)).toBeInTheDocument();
     for (const header of [
       en["lists.members.addedBy"],
       en["lists.members.addedOn"],
@@ -310,6 +311,40 @@ describe("an opened list", () => {
     expect(screen.queryByText(en["lists.health.retiredField"])).toBeNull();
   });
 
+  it("names a retired field by the label the catalog still holds for it", async () => {
+    stubLivePage(
+      {
+        ...liveList,
+        health: "retired_field",
+        retired_fields: ["cf_last_touch"],
+      },
+      {
+        "GET /filters/vocabulary": () => jsonResponse(vocabulary),
+        "GET /custom-fields": () =>
+          jsonResponse({
+            data: [
+              {
+                column_name: "cf_last_touch",
+                label: "Last Touch",
+                label_translations: {},
+                object: "company",
+                type: "date",
+                status: "retired",
+              },
+            ],
+            page: { has_more: false },
+          }),
+      },
+    );
+    page(LIVE_ID);
+
+    expect(
+      await screen.findByText(
+        en["lists.retiredField.body_one"].replace("{fields}", "Last Touch"),
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("records the visit once the list is read, reads it again, and marks the members the server says joined", async () => {
     const visits: string[] = [];
     let listReads = 0;
@@ -329,9 +364,10 @@ describe("an opened list", () => {
         jsonResponse({ data: members, page: { has_more: false } }),
     });
     page(LIVE_ID);
-    const joined = (await screen.findByText("MiTek")).closest(
-      "tr",
-    ) as HTMLElement;
+    // The history names MiTek too, as the record that joined.
+    const joined = (
+      await screen.findByText("MiTek", { selector: ".lists-member-name" })
+    ).closest("tr") as HTMLElement;
     expect(
       await within(joined).findByText(en["lists.members.new"]),
     ).toBeInTheDocument();
@@ -649,7 +685,7 @@ describe("an opened list", () => {
   });
 
   it("lays out how many records a reader can see, who can find the list and who looks after it", async () => {
-    stubLivePage(liveList);
+    stubLivePage(liveList, { "GET /me": listsMe(true, [TEAM_ID]) });
     page(LIVE_ID);
     expect(
       await screen.findByText(en["lists.col.recordType"]),
@@ -661,6 +697,21 @@ describe("an opened list", () => {
     ).toBeInTheDocument();
     expect(within(strip).getByText("Lena Vogt")).toBeInTheDocument();
     expect(within(strip).queryByText(/—/)).toBeNull();
+  });
+
+  it("says only the reader finds their own team list while they are in no team", async () => {
+    stubLivePage(liveList);
+    page(LIVE_ID);
+    expect(
+      await screen.findByText(en["lists.col.recordType"]),
+    ).toBeInTheDocument();
+    const strip = facts();
+    expect(
+      await within(strip).findByText(en["lists.sharing.private"]),
+    ).toBeInTheDocument();
+    expect(
+      within(strip).queryByText(en["lists.audience.yourTeams"]),
+    ).toBeNull();
   });
 
   it("states a broken filter in its notice alone, and names the record type when the server could not count", async () => {
@@ -679,6 +730,16 @@ describe("an opened list", () => {
     expect(within(facts()).queryByText(/—/)).toBeNull();
     expect(screen.queryByText(en["lists.health.invalid"])).toBeNull();
     expect(screen.queryByRole("button", { name: /^Select all/ })).toBeNull();
+  });
+
+  it("says the records are unavailable, and does not call the filter broken", async () => {
+    stubLivePage({ ...liveList, health: "unavailable", visible_count: null });
+    page(LIVE_ID);
+    expect(
+      await screen.findByText(en["lists.unavailable.title"]),
+    ).toBeInTheDocument();
+    expect(screen.getByText(en["lists.unavailable.body"])).toBeInTheDocument();
+    expect(screen.queryByText(en["lists.invalid.title"])).toBeNull();
   });
 
   it("dates a list's exports by the latest of them, whatever order they arrive in", async () => {

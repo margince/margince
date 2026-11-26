@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { de } from "../i18n/de";
 import { en } from "../i18n/en";
 import { vi } from "../i18n/vi";
@@ -221,7 +222,7 @@ describe("speak", () => {
     [
       "an unknown kind",
       {
-        subject_type: "constellation",
+        subject_type: "orbital-body",
         subject_id: "019f7e65-fbf7-7114-b114-40af4af63a77",
       },
     ],
@@ -237,6 +238,22 @@ describe("speak", () => {
     );
     expect(line?.subject).toEqual({ name: "Acme", route: null });
     expect(line && spokenText(line)).toBe("Summary of Acme ready");
+  });
+
+  // A failed draft says which thread or deal it was for. An occurrence that
+  // carried no name keeps the unnamed line rather than empty quotes.
+  it.each([
+    ["draft_reply", "Re: Pricing", "Reply draft for “Re: Pricing” failed"],
+    ["draft_reply", null, "Reply draft failed"],
+    ["offer_draft", "Acme Renewal", "Offer draft for Acme Renewal failed"],
+    ["offer_draft", "", "Offer draft failed"],
+  ])("names the record a failed %s was about (%s)", (kind, label, text) => {
+    expect(
+      lineFor(
+        { kind, state: "failed", subject_label: label },
+        (key) => en[key],
+      ),
+    ).toBe(text);
   });
 
   it("renders the line for a state that has copy", () => {
@@ -342,7 +359,7 @@ describe("the site-read lanes carry one reason of their own", () => {
 // and does it still fit inside `recent`'s cap of ten alongside the rest.
 describe("the kinds the rail asks for", () => {
   it("is exactly the reviewed set", () => {
-    expect([...displayedKinds()].sort()).toEqual([
+    expect([...displayedKinds()].sort(stable)).toEqual([
       // The account scan's sentence. It reaches one seat's feed — the read
       // runs under the reader's own principal, for the account they opened,
       // so the occurrence is theirs rather than the workspace's. And it fits:

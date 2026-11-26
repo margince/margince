@@ -16,7 +16,7 @@ import { FilterPills } from "../../design-system/filterpills";
 import { useLocale, useT } from "../../i18n";
 import { WORKLIST_FILTER_PARAM } from "../../lib/worklistrouting";
 import type { WorklistView } from "../../lib/worklistviews";
-import { completenessText, pillFigure } from "./worklist.completeness";
+import { completenessText, loadedFigure } from "./worklist.completeness";
 import { OwnerPicker } from "./worklist.manager";
 import type {
   Worklist,
@@ -162,6 +162,7 @@ export function WorklistHeader({
   onFilter,
   owner,
   onOwner,
+  embedded = false,
 }: Readonly<{
   day: Worklist;
   // The cards on screen, which grow as the reader pages.
@@ -174,6 +175,8 @@ export function WorklistHeader({
   onScope: (next: WorklistScope) => void;
   onFilter: (next: WorklistFilter) => void;
   onOwner: (next: string) => void;
+  // Home's drawer draws the dials after the view tabs, so they follow them here.
+  embedded?: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -181,6 +184,35 @@ export function WorklistHeader({
   const completeness = completenessText(day, filter, t, locale, loaded, view);
   const pills: readonly ViewPill[] = VIEW_PILLS[view];
   const [head, inColumn] = useLanesColumn();
+  const dials = (
+    <div className="worklist-header-dials">
+      {/* Drawn only when there is a choice: a rep who can see only their
+        own work is never offered a switch that would refuse when
+        pressed. */}
+      {scopes.length > 1 && (
+        <SegmentedControl
+          options={scopes}
+          value={scope}
+          onChange={onScope}
+          label={t("worklist.scope.label")}
+          labels={{
+            mine: t("worklist.scope.mine"),
+            unassigned: t("worklist.scope.unassigned"),
+            team: t("worklist.scope.team"),
+            all: t("worklist.scope.all"),
+          }}
+        />
+      )}
+      {/* Whose queue. Offered on the same tier the server admits a named
+          owner on — `team` in the options means this reader reaches past
+          themselves — so the control and the refusal cannot disagree. The
+          scope switch stays beside it: pressing a scope clears the owner, so
+          the request never carries both. */}
+      {scopes.includes("team") && (
+        <OwnerPicker owner={owner} onOwner={onOwner} scope={scope} />
+      )}
+    </div>
+  );
   return (
     // The stack the lanes column takes is keyed on this class rather than on a
     // width: `useLanesColumn` reads the wrapper's own computed display, which
@@ -196,41 +228,17 @@ export function WorklistHeader({
           whose day. A dial belongs beside the sentence it changes rather than
           under it, where it read as a control over the pills below. */}
       <div className="worklist-header-line">
-        {/* The view's own headline, counted by the server over the whole view
-            rather than the loaded rows, so it stays still while rows load. */}
-        <p className="t-h3 worklist-lead">{viewHeadline(day, view, locale)}</p>
+        {/* The view's own headline, counted by the server over the whole view.
+            Only a floor moves as rows load, so it never reads below them. */}
+        <p className="t-h3 worklist-lead">
+          {viewHeadline(day, view, locale, loaded)}
+        </p>
         {/* BOTH scope controls at the trailing end of the header's own line, in
             one group so they share the sentence's line rather than each
             claiming a row of the page. The owner picker was full width under
             the sentence, where a control as wide as the page read as a switch
             over the pills below it rather than as a dial on the day above. */}
-        <div className="worklist-header-dials">
-          {/* Drawn only when there is a choice: a rep who can see only their
-            own work is never offered a switch that would refuse when
-            pressed. */}
-          {scopes.length > 1 && owner === "" && (
-            <SegmentedControl
-              options={scopes}
-              value={scope}
-              onChange={onScope}
-              label={t("worklist.scope.label")}
-              labels={{
-                mine: t("worklist.scope.mine"),
-                unassigned: t("worklist.scope.unassigned"),
-                team: t("worklist.scope.team"),
-                all: t("worklist.scope.all"),
-              }}
-            />
-          )}
-          {/* Whose queue. Offered on the same tier the server admits a named
-              owner on — `team` in the options means this reader reaches past
-              themselves — so the control and the refusal cannot disagree. It
-              replaces the scope switch rather than sitting beside it: a named
-              owner outranks the scope word, and the pair is a 422. */}
-          {scopes.includes("team") && (
-            <OwnerPicker owner={owner} onOwner={onOwner} scope={scope} />
-          )}
-        </div>
+        {!embedded && dials}
       </div>
       {scope === "unassigned" && owner === "" && (
         <p className="worklist-completeness">
@@ -243,12 +251,13 @@ export function WorklistHeader({
           strip. */}
       <div className="worklist-header-cuts">
         <WorklistViewPicker day={day} view={view} onView={onView} />
+        {embedded && dials}
         {pills.length > 0 && (
           <FilterPills
             pills={pills.map((value) => ({
               value,
               label: t(`worklist.filter.${value}` as const),
-              ...pillFigure(day, value, view),
+              ...loadedFigure(day, value, loaded, view),
             }))}
             value={filter}
             onChange={onFilter}

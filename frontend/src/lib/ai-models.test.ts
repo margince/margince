@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
+import { stable } from "../format/collate";
 import {
   offeredModels,
   suggestionsFor,
@@ -240,7 +241,7 @@ describe("withBorrowedRows", () => {
     const vertex = (read ?? [])
       .filter((r) => r.provider === "gemini_vertex")
       .map((r) => `${r.model_id}@${r.input_per_mtok}`)
-      .sort();
+      .sort(stable);
     expect(vertex).toEqual(["gemini-2.5-pro@1.25", "gemini-3.5-flash@1.60"]);
   });
 

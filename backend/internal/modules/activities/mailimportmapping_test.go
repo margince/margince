@@ -4,9 +4,13 @@
 package activities
 
 import (
+	"strings"
 	"testing"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // emailRequest is the smallest create request that will reach the mail
@@ -78,6 +82,9 @@ func TestOnlyAnEmailCarriesTheHeadersOfOne(t *testing.T) {
 		}},
 		{"thread key", fieldThreadKey, func(r *crmcontracts.CreateActivityRequest) {
 			r.ThreadKey = &msgID
+		}},
+		{"the mail it replies to", fieldInReplyTo, func(r *crmcontracts.CreateActivityRequest) {
+			r.InReplyToActivityId = new(openapi_types.UUID(ids.NewV7()))
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -304,4 +311,45 @@ func mustRefuse(t *testing.T, req crmcontracts.CreateActivityRequest) error {
 	}
 	t.Fatal("expected a refusal, got none")
 	return nil
+}
+
+// A reply names the mail it answers or a thread, never both: the two would
+// file it on two conversations.
+func TestAReplyNamesItsMailOrItsThreadNotBoth(t *testing.T) {
+	thread := "abc@example.test"
+	req := emailRequest()
+	req.ThreadKey = &thread
+	req.InReplyToActivityId = new(openapi_types.UUID(ids.NewV7()))
+	if got := faultFieldOf(t, mustRefuse(t, req)); got != fieldInReplyTo {
+		t.Fatalf("refused %q, want %q", got, fieldInReplyTo)
+	}
+}
+
+// A hand-logged mail with no identity starts a thread of its own; one an
+// importer carried across, or one with a Message-ID, does not.
+func TestOnlyAHandLoggedMailStartsAThreadOfItsOwn(t *testing.T) {
+	plain, err := LogActivityInputFrom(emailRequest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !plain.ownThread {
+		t.Fatal("a hand-logged mail with no identity starts no thread of its own")
+	}
+	msgID, system := "abc@example.test", "hubspot"
+	withID := emailRequest()
+	withID.RfcMessageId = &msgID
+	imported := emailRequest()
+	imported.SourceSystem = &system
+	for name, req := range map[string]crmcontracts.CreateActivityRequest{"with a Message-ID": withID, "imported": imported} {
+		in, err := LogActivityInputFromImporter(req)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if in.ownThread {
+			t.Errorf("a mail %s starts a thread of its own", name)
+		}
+	}
+	if !strings.HasPrefix(ownThreadKey(ids.NewV7()), ownThreadPrefix) || strings.Contains(ownThreadKey(ids.NewV7()), "@") {
+		t.Fatal("an own thread key can be mistaken for a Message-ID")
+	}
 }

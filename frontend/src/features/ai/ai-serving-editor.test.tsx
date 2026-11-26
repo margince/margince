@@ -110,6 +110,15 @@ describe("servingBlocked", () => {
     ).toBe("decisions");
     expect(
       servingBlocked(
+        {
+          kind: "decisions",
+          binding: { provider: "gemini_decision", model: "gemini-decision-1" },
+        },
+        ROUTING,
+      ),
+    ).toBe("decisionsDirect");
+    expect(
+      servingBlocked(
         { ...TIER, binding: { provider: "gemini", model: "m" } },
         ROUTING,
       ),
@@ -141,7 +150,9 @@ describe("ServingSection", () => {
       />,
     );
     expect(screen.queryByRole("textbox", { name: "Serving JSON" })).toBeNull();
-    expect(screen.getByText(/gemini serves this model itself/)).toBeTruthy();
+    expect(
+      screen.getByText(/Google Gemini serves this model itself/),
+    ).toBeTruthy();
   });
 
   it("lists each problem the server names, on its line, and holds the save", async () => {
@@ -397,5 +408,7 @@ describe("RequestSummary", () => {
         "Thinking level comes from each task’s setting under AI tasks.",
       ),
     ).toBeTruthy();
+    expect(screen.getByText(/every call from Everyday cloud,/)).toBeTruthy();
+    expect(screen.queryByText(/cheap_cloud/)).toBeNull();
   });
 });

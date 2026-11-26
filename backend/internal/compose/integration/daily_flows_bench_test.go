@@ -54,7 +54,20 @@ type dailyFlow struct {
 	Allow422 bool
 	PerCall  bool
 	Journey  bool
+	// Recorded times the flow beside its budget and never judges it there: a
+	// read whose cost no bound holds yet, kept visible until one does.
+	Recorded bool
 	Calls    func(in dailyInput) []dailyCall
+}
+
+// dailyRecordedNote is the note on every row of a Recorded flow.
+const dailyRecordedNote = "recorded, not gated: no bound holds this read to its budget yet"
+
+func (f dailyFlow) note() string {
+	if f.Recorded {
+		return dailyRecordedNote
+	}
+	return ""
 }
 
 // dailyRow is one recorded row and what the gate reads off it. Empty and
@@ -73,6 +86,10 @@ type dailyInput struct {
 	Team                                           string
 	DealID, DealName, CompanyID, CompanyName       string
 	ContactID, ProjectID, ListPrefix, EvaluateArgs string
+	// ThreadKey is the mail conversation a thread read opens.
+	ThreadKey string
+	// AIMonth is the admin's usage query: from and to, the month's bounds.
+	AIMonth string
 }
 
 var dailyFlows = []dailyFlow{
@@ -84,25 +101,9 @@ var dailyFlows = []dailyFlow{
 	{Name: "results_search", ID: "PERF-10", Budget: Perf10Budget, PerCall: true, Calls: resultsCalls},
 	{Name: "lists", ID: "PERF-2", Budget: Perf2Budget, PerCall: true, Calls: listCalls},
 	{Name: "record_open", ID: "PERF-1", Budget: perf1RecordOpenBudget, PerCall: true, Calls: recordOpenCalls},
-	{Name: "contact_360", ID: "PERF-7", Budget: search.Perf7Budget, Calls: func(in dailyInput) []dailyCall {
-		return []dailyCall{{Path: "/v1/contacts/" + in.ContactID + "/360"}}
-	}},
-	// The company screen loads its whole page through this one read, every
-	// section included; search_to_company times only the record beside it.
-	{Name: "company_360", ID: "PERF-7", Budget: search.Perf7Budget, Calls: func(in dailyInput) []dailyCall {
-		return []dailyCall{{Path: "/v1/companies/" + in.CompanyID + "/360"}}
-	}},
-	{Name: "search_to_deal", Journey: true, Calls: func(in dailyInput) []dailyCall {
-		page := "/v1/deals/" + in.DealID
-		return []dailyCall{
-			paletteCall("search", in.DealName),
-			{Name: "deal", Path: page},
-			{Name: "offers", Path: page + "/offers"},
-			{Name: "documents", Path: page + "/documents"},
-			{Name: "coverage", Path: page + "/coverage"},
-			{Name: "commitments", Path: page + "/commitments"},
-		}
-	}},
+	{Name: "contact_360", ID: "PERF-7", Budget: search.Perf7Budget, Calls: contact360Calls},
+	{Name: "company_360", ID: "PERF-7", Budget: search.Perf7Budget, Calls: company360Calls},
+	{Name: "search_to_deal", Journey: true, Calls: searchToDealCalls},
 	{Name: "search_to_company", Journey: true, Calls: func(in dailyInput) []dailyCall {
 		page := "/v1/companies/" + in.CompanyID
 		return []dailyCall{
@@ -114,6 +115,29 @@ var dailyFlows = []dailyFlow{
 		}
 	}},
 	{Name: "analytics", ID: "PERF-9", Budget: Perf9Budget, PerCall: true, Calls: analyticsCalls},
+}
+
+func contact360Calls(in dailyInput) []dailyCall {
+	return []dailyCall{{Path: "/v1/contacts/" + in.ContactID + "/360"}}
+}
+
+// company360Calls is the read that loads the company screen's whole page, every
+// section included; search_to_company times only the record beside it.
+func company360Calls(in dailyInput) []dailyCall {
+	return []dailyCall{{Path: "/v1/companies/" + in.CompanyID + "/360"}}
+}
+
+func searchToDealCalls(in dailyInput) []dailyCall {
+	page := "/v1/deals/" + in.DealID
+	return []dailyCall{
+		paletteCall("search", in.DealName),
+		{Name: "deal", Path: page},
+		{Name: "status", Path: page + "/status"},
+		{Name: "offers", Path: page + "/offers"},
+		{Name: "documents", Path: page + "/documents"},
+		{Name: "coverage", Path: page + "/coverage"},
+		{Name: "commitments", Path: page + "/commitments"},
+	}
 }
 
 // appShellCalls are the reads a rep's or a manager's browser sends on load.
@@ -176,22 +200,21 @@ func worklistCalls(in dailyInput) []dailyCall {
 }
 
 // homeCalls are what a browser on Today sends once the shell's gates clear.
-// The day is the Today view of the reader's queue, as readWorklistPage sends it.
+// The day is Home's shape of the reader's Today view, as homeDayOptions sends it.
 // The weekly review is the Weekly view's read, which Today never sends. Every
 // seat has a brief from the brief step, so its 404 fails the run.
 func homeCalls(dailyInput) []dailyCall {
 	return []dailyCall{
 		{Name: "brief", Path: "/v1/brief"},
-		{Name: "worklist", Path: worklistDay + "mine&view=today"},
+		{Name: "worklist", Path: worklistDay + "mine&view=today&shape=home"},
 		{Name: "handled", Path: "/v1/worklist/handled"},
 		{Name: "magic", Path: "/v1/magic?limit=100"},
-		{Name: "digest", Path: "/v1/digest", Optional: true},
 	}
 }
 
 // paletteCall is the command palette's request: three hits per type, colleagues included.
 func paletteCall(name, q string) dailyCall {
-	return dailyCall{Name: name, Path: "/v1/search?q=" + url.QueryEscape(q) + "&per_type=3&with_employees=true"}
+	return dailyCall{Name: name, Path: "/v1/search?q=" + url.QueryEscape(q) + "&per_type=3&with_employees=true&typeahead=true"}
 }
 
 func paletteCalls(in dailyInput) []dailyCall {
@@ -510,7 +533,7 @@ func measureDailyRow(t *testing.T, e *apptest.AppEnv, f dailyFlow, s Seat, name 
 		}
 		return []time.Duration{elapsed}, nil
 	}
-	specs := []dailyRowSpec{{flow: f.Name, id: f.ID, name: name, budget: f.Budget, allow422: f.Allow422, gated: true}}
+	specs := []dailyRowSpec{{flow: f.Name, id: f.ID, name: name, budget: f.Budget, allow422: f.Allow422, gated: !f.Recorded, note: f.note()}}
 	samples, err := dailySampling(1, round)
 	if err == nil {
 		samples, err = confirmBreaches(specs, samples, func() ([][]time.Duration, error) { return dailySampling(1, round) })
@@ -532,7 +555,7 @@ func runDailyJourney(t *testing.T, e *apptest.AppEnv, f dailyFlow, in dailyInput
 		t.Fatalf("seat %s, %s: the palette search answered 404", s.Name, f.Name)
 	}
 	page, absent, pageTally := probeCalls(t, e, f, s, calls[1:])
-	pageNote := "the page's calls, in parallel: " + strings.Join(callNames(page), ", ")
+	pageNote := joinNotes("the page's calls, in parallel: "+strings.Join(callNames(page), ", "), f.note())
 	rows := dailyAbsentRows(t.Log, f, "PERF-1", f.Name+"_page", s, perf1RecordOpenBudget, absent, false)
 	round := func(counted bool) ([]time.Duration, error) {
 		start := time.Now()
@@ -559,9 +582,9 @@ func runDailyJourney(t *testing.T, e *apptest.AppEnv, f dailyFlow, in dailyInput
 		return []time.Duration{searched.Sub(start), end.Sub(searched), end.Sub(start)}, nil
 	}
 	specs := []dailyRowSpec{
-		{flow: f.Name, id: "PERF-10", name: f.Name + "_search", budget: Perf10Budget, gated: true},
-		{flow: f.Name, id: "PERF-1", name: f.Name + "_page", budget: perf1RecordOpenBudget, gated: true, note: pageNote},
-		{flow: f.Name, id: "PERF-10", name: f.Name + "_total", budget: Perf10Budget + perf1RecordOpenBudget},
+		{flow: f.Name, id: "PERF-10", name: f.Name + "_search", budget: Perf10Budget, gated: !f.Recorded, note: f.note()},
+		{flow: f.Name, id: "PERF-1", name: f.Name + "_page", budget: perf1RecordOpenBudget, gated: !f.Recorded, note: pageNote},
+		{flow: f.Name, id: "PERF-10", name: f.Name + "_total", budget: Perf10Budget + perf1RecordOpenBudget, note: f.note()},
 	}
 	samples, err := dailySampling(len(specs), round)
 	if err == nil {
@@ -697,7 +720,7 @@ func dailyMeasuredRow(t *testing.T, s Seat, spec dailyRowSpec, durations []time.
 		Result: DailyResult{
 			Flow: flow, Row: name, Seat: s.Role, Verdict: verdict, Issue: issue,
 			Status5xx: tally.s5xx, Status422: tally.s422, Allow422: spec.allow422,
-			P95: stats.P95, Budget: budget, Samples: stats.Samples,
+			P50: stats.P50, P95: stats.P95, Budget: budget, Samples: stats.Samples,
 			FirstP95: spec.firstP95, Incomplete: tally.incomplete, Lacking: tally.lacking,
 		},
 		Empty:  tally.empty,

@@ -3,12 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import type { Reference } from "../../components/filterreference";
 import type { VocabularyField } from "../../lib/filterdata";
 import type { FilterOp, LeafValue } from "../../lib/segmentpredicate";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { ValueControl } from "./filtervalue";
@@ -52,6 +54,11 @@ function Editing({
 function story(props: Parameters<typeof Editing>[0]) {
   return () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+      }),
       "GET /users": () =>
         jsonResponse({
           data: [
@@ -63,6 +70,11 @@ function story(props: Parameters<typeof Editing>[0]) {
       "GET /companies": () =>
         jsonResponse({
           data: [{ id: "c-1", display_name: "Brandt Maschinenbau" }],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /tags": () =>
+        jsonResponse({
+          data: [{ id: "t-1", name: "VIP" }],
           page: { next_cursor: null, has_more: false },
         }),
     });
@@ -79,7 +91,15 @@ export const ReferencePicker: Story = {
   render: story({ type: "id", references: "app_user", op: "eq", start: "u-2" }),
 };
 
-// Companies are as many as the customers, so they are searched, not listed.
+// Nothing picked yet: the picker names the kind of record it lists.
+export const EmptyOwnerPicker: Story = {
+  render: story({ type: "id", references: "app_user", op: "eq", start: "" }),
+};
+
+export const EmptyTagPicker: Story = {
+  render: story({ type: "id", references: "tag", op: "eq", start: "" }),
+};
+
 export const CompanySearch: Story = {
   render: story({ type: "id", references: "company", op: "eq", start: "" }),
 };
@@ -94,6 +114,23 @@ export const Quantity: Story = {
 
 export const Text: Story = {
   render: story({ type: "text", op: "eq", start: "Referral" }),
+};
+
+export const DaysAgo: Story = {
+  render: story({ type: "date", op: "gte", start: { days_ago: 30 } }),
+};
+
+// A count the engine cannot take stays as typed, with the reason under it.
+export const DaysAgoRefused: Story = {
+  render: story({ type: "date", op: "gte", start: { days_ago: 30 } }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const days = await canvas.findByDisplayValue("30");
+    await userEvent.clear(days);
+    await userEvent.type(days, "-1");
+    await canvas.findByText("Enter a whole number of days from 0 to 36,600.");
+    await expect(days).toHaveAttribute("aria-invalid", "true");
+  },
 };
 
 // A money field whose currency the reader cannot learn: the amount is held back, and the line under it says why.
@@ -113,6 +150,12 @@ export const OperatorOnly: Story = {
 
 export const Phone: Story = {
   ...CompanySearch,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+export const EmptyOwnerPickerPhone: Story = {
+  ...EmptyOwnerPicker,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };

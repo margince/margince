@@ -22,7 +22,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -61,12 +60,12 @@ func (s *Store) mirrorLedger(
 	for _, invoice := range ledger.Invoices {
 		out.InvoicesSeen++
 		id, outcome, err := s.mirrorInvoice(ctx, tx, mirrorArgs{
-			connectionID: connectionID, companyID: mapped.companyID,
+			connectionID: connectionID, companyID: mapped.companyID, linkID: mapped.id,
 			invoice: invoice, capturedBy: by, rowIDs: rowIDs, source: source,
 			creditedAgainst: credited[invoice.ExternalID], baseCurrency: base,
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("source invoice %s: %w", invoice.ExternalID, err)
 		}
 		rowIDs[invoice.ExternalID] = id
 		countOutcome(outcome, &out.InvoicesInsert, &out.InvoicesUpdate, &out.Unchanged)
@@ -74,7 +73,7 @@ func (s *Store) mirrorLedger(
 	for _, payment := range ledger.Payments {
 		out.PaymentsSeen++
 		outcome, err := s.mirrorPayment(ctx, tx, paymentArgs{
-			connectionID: connectionID, companyID: mapped.companyID,
+			connectionID: connectionID, companyID: mapped.companyID, linkID: mapped.id,
 			payment: payment, capturedBy: by, rowIDs: rowIDs, source: source,
 		})
 		if err != nil {
@@ -132,6 +131,9 @@ func existingRowIDs(
 // unchanged source really wrote nothing.
 type writeOutcome int
 
+// maxDunningLevel is the highest reminder count the mirror's range check takes.
+const maxDunningLevel = 99
+
 const (
 	wroteNothing writeOutcome = iota
 	wroteInsert
@@ -141,6 +143,7 @@ const (
 type mirrorArgs struct {
 	connectionID ids.UUID
 	companyID    ids.CompanyID
+	linkID       ids.UUID
 	invoice      SourceInvoice
 	capturedBy   string
 	// source is the provider's own name, stamped on every row it produced so a
@@ -162,14 +165,17 @@ func (s *Store) mirrorInvoice(
 	ctx context.Context, tx pgx.Tx, args mirrorArgs,
 ) (ids.UUID, writeOutcome, error) {
 	inv := args.invoice
+	if level := inv.DunningLevel; level != nil && (*level < 0 || *level > maxDunningLevel) {
+		return ids.UUID{}, wroteNothing, fmt.Errorf("the source states dunning level %d; a level runs from 0 to %d", *level, maxDunningLevel)
+	}
 	hash := invoiceHash(inv)
 	existing, found, err := findInvoice(ctx, tx, args.connectionID, inv.ExternalID)
 	if err != nil {
 		return ids.UUID{}, wroteNothing, err
 	}
 	// A relinked customer's invoices move even when the source is unchanged:
-	// the hash covers the source, and the company is the link's.
-	relinked := found && existing.image.CompanyID != args.companyID
+	// the hash covers the source, and the link and its company are the mapping's.
+	relinked := found && !existing.image.mirroredThrough(args.linkID, args.companyID)
 	// The source says what it said last time. Rewriting the row would bump its
 	// version and write an audit row for a change that did not happen. That is
 	// history minted four times a day by a sweep over an unchanged ledger.
@@ -225,19 +231,20 @@ func findInvoice(
 	// reason it writes: the change key covers them, so a narrower read would
 	// produce a before image that cannot explain the update beside it.
 	err = tx.QueryRow(ctx, `
-		SELECT id, sync_hash, fx_rate_to_base, company_id, number,
+		SELECT id, sync_hash, fx_rate_to_base, company_id, customer_link_id, number,
 		       issued_at, due_at, status, currency, net_minor, tax_minor,
 		       gross_minor, open_minor, credited_minor,
-		       fully_paid_at, disputed_at, void_at
+		       fully_paid_at, disputed_at, void_at, dunning_level
 		  FROM finance_invoice
 		 WHERE connection_id = $1 AND external_id = $2
 		   FOR UPDATE`,
 		connectionID, externalID).Scan(&row.id, &row.hash, &row.fxRate,
-		&row.image.CompanyID, &row.image.Number,
+		&row.image.CompanyID, &row.image.CustomerLinkID, &row.image.Number,
 		&row.image.IssuedAt, &row.image.DueAt, &row.image.Status,
 		&row.image.Currency, &row.image.NetMinor, &row.image.TaxMinor,
 		&row.image.GrossMinor, &row.image.OpenMinor, &row.image.CreditedMinor,
-		&row.image.FullyPaidAt, &row.image.DisputedAt, &row.image.VoidAt)
+		&row.image.FullyPaidAt, &row.image.DisputedAt, &row.image.VoidAt,
+		&row.image.DunningLevel)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return mirroredInvoice{}, false, nil
 	}
@@ -254,13 +261,13 @@ func findInvoice(
 func invoiceImageOf(args mirrorArgs, values invoiceValues, hash string) invoiceImage {
 	inv := args.invoice
 	return invoiceImage{
-		CompanyID: args.companyID, Number: nullable(inv.Number),
+		CompanyID: args.companyID, CustomerLinkID: &args.linkID, Number: nullable(inv.Number),
 		IssuedAt: inv.IssuedOn, DueAt: inv.DueOn, Status: values.status,
 		Currency: inv.Currency, NetMinor: inv.NetMinor, TaxMinor: inv.TaxMinor,
 		GrossMinor: inv.GrossMinor, OpenMinor: values.openMinor,
 		CreditedMinor: values.credited, FullyPaidAt: inv.FullyPaidAt,
 		DisputedAt: values.disputedAt, VoidAt: values.voidAt,
-		FxRateToBase: values.fxRate, SyncHash: hash,
+		DunningLevel: inv.DunningLevel, FxRateToBase: values.fxRate, SyncHash: hash,
 	}
 }
 
@@ -286,10 +293,9 @@ func deriveValues(
 		// Overpaid. Nothing owed rather than a negative balance, which would
 		// read as us owing them.
 		0)
-	if inv.CreditsExternalID != "" {
-		// A credit note is money going the other way. Left with its gross as
-		// an open balance it would inflate receivables by the amount it was
-		// supposed to reduce them by.
+	if inv.CreditsExternalID != "" || inv.FullyPaidAt != nil {
+		// A credit note is money going the other way, and an invoice the
+		// source settled owes nothing, even by a discount the ledger omits.
 		open = 0
 	}
 	out := invoiceValues{openMinor: open, credited: creditedAgainst}
@@ -326,17 +332,17 @@ func insertInvoice(
 		       (id, connection_id, company_id, external_id, number,
 		        issued_at, due_at, status, currency, net_minor, tax_minor, gross_minor,
 		        open_minor, credited_minor, fully_paid_at, disputed_at, void_at,
-		        credits_invoice_id, source_updated_at, sync_hash, fx_rate_to_base,
-		        fx_rate_date, source, captured_by)
+		        credits_invoice_id, sync_hash, fx_rate_to_base,
+		        fx_rate_date, source, captured_by, customer_link_id, dunning_level)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-		        $16, $17, $18, $19, $20, $21, $22, $23, $24)
+		        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
 		RETURNING fx_rate_to_base`,
 		id, args.connectionID, args.companyID,
 		inv.ExternalID, nullable(inv.Number), inv.IssuedOn, inv.DueOn, values.status,
 		inv.Currency, inv.NetMinor, inv.TaxMinor, inv.GrossMinor, values.openMinor,
 		values.credited, inv.FullyPaidAt, values.disputedAt, values.voidAt,
-		values.creditsID, inv.UpdatedAt, hash, values.fxRate, values.fxDate,
-		args.source, args.capturedBy).Scan(&values.fxRate)
+		values.creditsID, hash, values.fxRate, values.fxDate,
+		args.source, args.capturedBy, args.linkID, inv.DunningLevel).Scan(&values.fxRate)
 	if err != nil {
 		return fmt.Errorf("mirror the invoice: %w", err)
 	}
@@ -375,15 +381,16 @@ func updateInvoice(
 		       status = $6, currency = $7, net_minor = $8, tax_minor = $9,
 		       gross_minor = $10, open_minor = $11, credited_minor = $12,
 		       fully_paid_at = $13, disputed_at = $14, void_at = $15,
-		       credits_invoice_id = $16, source_updated_at = $17, sync_hash = $18,
-		       fx_rate_to_base = $19, fx_rate_date = $20
+		       credits_invoice_id = $16, sync_hash = $17,
+		       fx_rate_to_base = $18, fx_rate_date = $19, customer_link_id = $20,
+		       dunning_level = $21
 		 WHERE id = $1
 		RETURNING fx_rate_to_base`,
 		id, args.companyID, nullable(inv.Number), inv.IssuedOn, inv.DueOn,
 		values.status, inv.Currency, inv.NetMinor, inv.TaxMinor, inv.GrossMinor,
 		values.openMinor, values.credited, inv.FullyPaidAt, values.disputedAt,
-		values.voidAt, values.creditsID, inv.UpdatedAt, hash,
-		values.fxRate, values.fxDate).Scan(&values.fxRate)
+		values.voidAt, values.creditsID, hash,
+		values.fxRate, values.fxDate, args.linkID, inv.DunningLevel).Scan(&values.fxRate)
 	if err != nil {
 		return fmt.Errorf("update the mirrored invoice: %w", err)
 	}
@@ -429,46 +436,6 @@ func applyCredits(ledger SourceLedger) (map[string]int64, []string) {
 		credited[inv.CreditsExternalID] += inv.GrossMinor
 	}
 	return credited, orphans
-}
-
-// The mirrored invoice's status vocabulary, matching the column's CHECK and
-// the contract's enum. Named rather than repeated: the derivation below and
-// the CHECK have to agree, and two spellings of one word is how they stop.
-const (
-	statusVoid          = "void"
-	statusCredited      = "credited"
-	statusDisputed      = "disputed"
-	statusPaid          = "paid"
-	statusOverdue       = "overdue"
-	statusPartiallyPaid = "partially_paid"
-	statusOpen          = "open"
-)
-
-// deriveStatus computes what the invoice IS today, from values that do not
-// move. Never hashed and never taken from the provider: "overdue" changes at
-// midnight, and a stored-and-hashed status would rewrite the ledger every
-// morning.
-func deriveStatus(inv SourceInvoice, open int64, now time.Time) string {
-	switch {
-	case inv.Void:
-		return statusVoid
-	case inv.CreditsExternalID != "":
-		return statusCredited
-	case inv.Disputed:
-		return statusDisputed
-	case open == 0 && inv.FullyPaidAt != nil:
-		return statusPaid
-	case overdue(inv, now):
-		return statusOverdue
-	case inv.PaidMinor > 0:
-		return statusPartiallyPaid
-	default:
-		return statusOpen
-	}
-}
-
-func overdue(inv SourceInvoice, now time.Time) bool {
-	return deadline.Passed(inv.DueOn, now)
 }
 
 func nullable(value string) *string {

@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // ownDomainFoldDataTask writes the folded domain on rows stored before the own-
@@ -24,7 +25,7 @@ import (
 func ownDomainFoldDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792909146_own_domains_folded", Version: 1,
-		Title: "Fold the mail domains own-domain checks compare", Requires: []string{"core/1792909145"},
+		Title: systemtext.Literal("datatask.title.core.1792909146_own_domains_folded"), Requires: []string{"core/1792909145"},
 		Steps: []datatask.Step{
 			foldStep("fold_login_domains", "identity writes the same folded login domain on the seat it inserts, without a separate audit",
 				identity.FoldLoginDomainsTx, identity.CountUnfoldedLoginDomains),

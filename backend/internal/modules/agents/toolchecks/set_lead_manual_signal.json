@@ -1,0 +1,9 @@
+{
+  "verb": "set_lead_manual_signal",
+  "checks": [
+    "lead.update"
+  ],
+  "takes": [
+    "lead"
+  ]
+}

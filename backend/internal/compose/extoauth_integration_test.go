@@ -43,7 +43,7 @@ func TestAConnectedUnitAppServesItsTokenAndKeepsItFromTheUnit(t *testing.T) {
 	}
 
 	h := connectorHandlers{
-		authority:     adminAuthority{},
+		authority:     grantedAuthority{rbac: adminRBAC(), seat: principal.SeatFull},
 		signer:        newStateSigner([]byte(testStateKey)),
 		publicBaseURL: "https://app.test", apiBaseURL: "https://api.test",
 	}

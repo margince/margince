@@ -57,6 +57,17 @@ describe("grouping the account's chronology", () => {
     expect(groups).toHaveLength(1);
   });
 
+  it("keeps one mail held in several mailboxes as one row, not a bulk send", () => {
+    const groups = groupChronology([
+      mail("2", "Update zu Margince", "2026-07-17T09:00:01Z", { copies: 4 }),
+      mail("1", "Update zu Margince", "2026-07-17T09:00:00Z"),
+    ]);
+    // Four colleagues' copies of one message are one recipient, so two
+    // same-subject rows stay below the bulk threshold.
+    expect(groups.map((g) => g.kind)).toEqual(["single", "single"]);
+    expect(groups[0].entries).toHaveLength(1);
+  });
+
   it("folds a bulk send addressed to several contacts into one event", () => {
     const groups = groupChronology([
       mail("1", "Update zu Margince", "2026-07-17T09:00:00Z"),
@@ -242,11 +253,10 @@ describe("grouping the account's chronology", () => {
     expect(groups[1].partial).toBe(true);
   });
 
-  it("marks the group holding the oldest entry, not the last group on screen", () => {
-    // The thread ranks FIRST because a group takes the position of its newest
-    // member, and it also holds the page's oldest message. Marking the last
-    // group would offer to continue the single row — which is complete — and
-    // stay silent about the conversation that is actually cut.
+  it("marks the group holding the oldest entry, not the newest part of its thread", () => {
+    // The thread splits around the single row, and its older part holds the
+    // page's oldest message. That part is the one the page edge cuts; its
+    // newer part and the single row are complete.
     const groups = groupChronology(
       [
         mail("t-new", "Re: Pricing", "2026-07-05T10:00:00Z", {
@@ -257,9 +267,37 @@ describe("grouping the account's chronology", () => {
       ],
       true,
     );
-    expect(groups[0].kind).toBe("thread");
-    expect(groups[0].partial).toBe(true);
-    expect(groups[1].partial).toBe(false);
+    expect(groups.map((group) => group.partial)).toEqual([false, false, true]);
+    expect(groups[2]?.kind).toBe("thread");
+  });
+
+  it("splits a conversation around intervening activities and links its parts", () => {
+    const entries = [
+      mail("t-new", "Re: Pricing", "2026-07-10T10:00:00Z", {
+        threadKey: "t-1",
+      }),
+      mail("task", "Send quote", "2026-07-05T10:00:00Z", { kind: "task" }),
+      mail("meeting", "Review", "2026-07-02T10:00:00Z", { kind: "meeting" }),
+      mail("t-old", "Pricing", "2026-07-01T10:00:00Z", { threadKey: "t-1" }),
+    ];
+    const firstPage = groupChronology(entries.slice(0, 3), true);
+    expect(firstPage.map((group) => group.id)).toEqual([
+      "t-new",
+      "task",
+      "meeting",
+    ]);
+    const groups = groupChronology(entries, true);
+    expect(
+      groups.map((group) => group.entries.map((entry) => entry.id)),
+    ).toEqual([["t-new"], ["task"], ["meeting"], ["t-old"]]);
+    expect(groups[0].olderPart).toBe("t-old");
+    expect(groups[3].newerPart).toBe("t-new");
+    expect(groups.map((group) => group.partial)).toEqual([
+      false,
+      false,
+      false,
+      true,
+    ]);
   });
 
   it("does not let one attested message fold an unrelated same-subject reply", () => {
@@ -337,5 +375,51 @@ describe("a run of newsletters", () => {
       ["newsletters", ["in"]],
       ["bulk", ["out"]],
     ]);
+  });
+});
+
+describe("a thread with other activity between its messages", () => {
+  const thread = { threadKey: "t-offer" };
+  const day1 = mail("m1", "Offer", "2026-09-01T09:00:00Z", thread);
+  const meeting = mail("meet", "Kickoff", "2026-09-02T09:00:00Z", {
+    kind: "meeting",
+  });
+  const task = mail("task", "Send pricing", "2026-09-05T09:00:00Z", {
+    kind: "task",
+  });
+  const day10 = mail("m10", "Re: Offer", "2026-09-10T09:00:00Z", thread);
+
+  it("splits at the activity in between, and the parts name each other", () => {
+    const groups = groupChronology([day10, task, meeting, day1]);
+    expect(groups.map((group) => group.entries.map((one) => one.id))).toEqual([
+      ["m10"],
+      ["task"],
+      ["meet"],
+      ["m1"],
+    ]);
+    expect(groups[0]?.olderPart).toBe("m1");
+    expect(groups[3]?.newerPart).toBe("m10");
+  });
+
+  it("splits around a newsletter run as around any other row", () => {
+    const newsletter = mail("news", "Weekly digest", "2026-09-07T09:00:00Z", {
+      bulkAttested: true,
+      direction: "inbound",
+    });
+    const groups = groupChronology([day10, newsletter, day1]);
+    expect(groups.map((group) => group.id)).toEqual(["m10", "news", "m1"]);
+  });
+
+  it("keeps a thread whole for a list of conversations", () => {
+    const groups = groupChronology([day10, task, meeting, day1], false, {
+      wholeThreads: true,
+    });
+    expect(groups[0]?.entries.map((one) => one.id)).toEqual(["m10", "m1"]);
+  });
+
+  it("stays one group while nothing falls between its messages", () => {
+    const groups = groupChronology([day10, day1, task]);
+    expect(groups[0]?.entries.map((one) => one.id)).toEqual(["m10", "m1"]);
+    expect(groups[0]?.olderPart).toBeUndefined();
   });
 });

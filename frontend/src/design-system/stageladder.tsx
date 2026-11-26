@@ -30,7 +30,7 @@ import type { ReactNode } from "react";
 import { Button } from "./atoms";
 import type { ReadingTone } from "./readingtone";
 import { LadderBars } from "./stageladder.bars";
-import { LadderRun } from "./stageladder.run";
+import { isOfferedExit, LadderRun } from "./stageladder.run";
 import "./stageladder.css";
 
 export type StageStep = {
@@ -50,8 +50,12 @@ export type StageStep = {
   // so they stand off from the run of open stages.
   terminal?: boolean;
   // The move to this step. Never called for the current one, which draws no
-  // control.
-  onPick: () => void;
+  // control. Absent where the reader may not move the record: a stage is then
+  // its name only, and a way out not taken is left out.
+  onPick?: () => void;
+  // The move's accessible name where the step's label alone does not say that
+  // pressing it moves the record ("Move to Pursuing"). Absent, the label names it.
+  actionLabel?: string;
   disabled?: boolean;
   // Why this move cannot be made. Both go straight to `Button`, which owns the
   // refusal contract: `reason` is a sentence it draws under the control,
@@ -128,7 +132,7 @@ function ChevronLadder({
   wrap?: boolean;
 }>) {
   const run = steps.filter((step) => !step.terminal);
-  const exits = steps.filter((step) => step.terminal);
+  const exits = steps.filter(isOfferedExit);
   return (
     // A fieldset rather than a nav, and rather than a bare list: it IS a group
     // of controls acting on one record, and the native element says so without
@@ -194,10 +198,13 @@ function LadderStep({
         <span className="stage-ladder-here" aria-current="step">
           {step.label}
         </span>
+      ) : !step.onPick ? (
+        <span className="stage-ladder-stage">{step.label}</span>
       ) : (
         <Button
           variant="ghost"
           data-testid={step.testId}
+          aria-label={step.actionLabel}
           disabled={step.disabled}
           reason={step.reason}
           reasonId={step.reasonId}

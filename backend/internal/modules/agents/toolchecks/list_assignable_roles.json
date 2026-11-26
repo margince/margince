@@ -1,0 +1,6 @@
+{
+  "verb": "list_assignable_roles",
+  "checks": [
+    "user_admin.create|update"
+  ]
+}

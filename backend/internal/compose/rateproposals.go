@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // The rate-refresh proposal kinds and their apply-on-approval effects. A
@@ -61,27 +62,23 @@ func sameRate(a, b string) bool {
 // approval restores the older value).
 //
 //craft:ignore naked-any payload is any JSON-marshalable proposal struct (fx or model); the concrete type rides through json.Marshal
-func stageRateProposal(ctx context.Context, svc *approvals.Service, kind, targetType string, ws ids.UUID, payload any, identity json.RawMessage, summary string) error {
+func stageRateProposal(ctx context.Context, svc *approvals.Service, kind, targetType string, ws ids.UUID, payload any, identity json.RawMessage, summary string, messages ...*systemtext.Message) error {
+	var metadata *systemtext.Message
+	if len(messages) > 0 {
+		metadata = messages[0]
+	}
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("compose: marshal %s: %w", kind, err)
 	}
 	digest := sha256.Sum256(raw)
 	hash := hex.EncodeToString(digest[:])
-	// StageUnlessDeclined rather than Stage, and the difference is a rejection
-	// rather than a duplicate. JoinPending collapses a proposal that is still
-	// waiting; the moment a human turns one down there is no pending row left to
-	// join, so a plain Stage puts the refused figure straight back. And it comes
-	// back on every refresh after that: the diff is computed against the RATE
-	// SHEET, which a rejection does not change, so the same click re-derives the
-	// same proposal from the same source indefinitely.
-	//
-	// The identity was already declared for the join, and it is what makes the
-	// memory precise: a refused $5 stays refused while a genuine move to $6 is
-	// still offered.
+	// A refused figure stays refused: every refresh re-derives it from the rate
+	// sheet, and the identity still offers a move to a new figure.
 	_, _, err = svc.StageUnlessDeclined(ctx, approvals.StageInput{
+		Why:  approvals.HeadlineSaysWhy,
 		Kind: kind, ProposedChange: raw, DiffHash: hash,
-		TargetType: targetType, TargetID: ws, Summary: summary,
+		TargetType: targetType, TargetID: ws, Summary: summary, SystemText: metadata,
 		JoinPending: true, Identity: identity,
 	})
 	if errors.Is(err, approvals.ErrNoDecider) {

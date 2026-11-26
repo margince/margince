@@ -111,8 +111,35 @@ export function EmailAccessEditor({
         action={changeable && <ChangeAccess presentation={presentation} />}
       />
       {sentence && <p className="emailaccess__sentence">{t(sentence)}</p>}
+      <SharedMailboxes access={access} />
       <NamedMembers access={access} />
     </div>
+  );
+}
+
+/**
+ * Which shared mailbox brought the message in, and the team that reads it.
+ *
+ * The reason badge says "in a shared mailbox". This says which one and whom it
+ * lets in, so a reader tells sales@ from support@ without asking an admin.
+ */
+function SharedMailboxes({ access }: Readonly<{ access: EmailAccess }>) {
+  const t = useT();
+  const mailboxes = access.shared_mailboxes ?? [];
+  if (mailboxes.length === 0) {
+    return null;
+  }
+  return (
+    <ul className="emailaccess__mailboxes">
+      {mailboxes.map((mailbox) => (
+        <li key={mailbox.address} className="t-caption">
+          {t("email.access.sharedMailbox", {
+            mailbox: mailbox.address,
+            team: mailbox.reader_team_name,
+          })}
+        </li>
+      ))}
+    </ul>
   );
 }
 

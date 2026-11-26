@@ -20,15 +20,13 @@ import "./buyerroom.css";
 // The buyer's half of a Deal Room: the documents the seller shared, the
 // questions under each, and the one verb a buyer has on a file — take a copy.
 //
-// Everything arrives on the room session's Bearer, so each frame routes the two
+// Everything arrives on the room session's cookie, so each frame routes the two
 // public reads the board makes and nothing else. What differs between them is
 // what the SEAT may do: a commenting buyer, a read-only one, and a room with
 // nothing in it yet.
 
 type BuyerRoomDocument = components["schemas"]["BuyerRoomDocument"];
 type DealRoomThread = components["schemas"]["DealRoomThread"];
-
-const TOKEN = "mdrs_story";
 
 const DOCUMENTS: readonly BuyerRoomDocument[] = [
   {
@@ -98,7 +96,8 @@ function Board({
   const t = useT();
   return (
     <BuyerBoard
-      token={TOKEN}
+      session={1}
+      participantId="p-1"
       onSessionLost={() => {}}
       mayWrite={mayWrite}
       refusal={refusalKey ? t(refusalKey) : undefined}
@@ -148,7 +147,7 @@ export const NoDocumentsYet: Story = { render: board([], []) };
 export const ReadOnlySeat: Story = {
   render: board(DOCUMENTS, THREADS, {
     mayWrite: false,
-    refusalKey: "threads.readOnly",
+    refusalKey: "buyer.readOnly",
   }),
 };
 

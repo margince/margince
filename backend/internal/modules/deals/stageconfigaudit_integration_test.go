@@ -97,7 +97,7 @@ func (e *configEnv) as() context.Context {
 		Type: principal.PrincipalHuman, ID: "human:" + e.admin.String(), UserID: e.admin,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
-			Objects:  map[string]principal.ObjectGrant{"pipeline": {Create: true, Read: true, Update: true}},
+			Objects:  map[string]principal.ObjectGrant{"pipeline": {Create: true, Read: true, Update: true, Delete: true}},
 		},
 	})
 }
@@ -163,20 +163,21 @@ func TestARenamedPipelineRecordsTheNameItHadBefore(t *testing.T) {
 	e := setupConfigEnv(t)
 	ctx := e.as()
 
-	created, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Original", Position: 3})
+	original := "Original " + ids.NewV7().String()
+	created, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: original, Position: 3})
 	if err != nil {
 		t.Fatalf("seeding the pipeline: %v", err)
 	}
 	id := ids.From[ids.PipelineKind](ids.UUID(created.Id))
 
-	renamed := "Renamed"
+	renamed := "Renamed " + ids.NewV7().String()
 	if _, err := e.store.UpdatePipeline(ctx, id, UpdatePipelineInput{Name: &renamed}); err != nil {
 		t.Fatalf("renaming the pipeline: %v", err)
 	}
 
 	before, after := e.auditImages(t, "pipeline", id.UUID)
-	if before["name"] != "Original" {
-		t.Fatalf("the rename recorded %v as the previous name, but the row held \"Original\"", before["name"])
+	if before["name"] != original {
+		t.Fatalf("the rename recorded %v as the previous name, but the row held %q", before["name"], original)
 	}
 	if after["name"] != renamed {
 		t.Fatalf("the rename recorded %v as the new name, but it wrote %q", after["name"], renamed)
@@ -236,7 +237,7 @@ func TestAWonStageRecordsTheProbabilityTheRowActuallyHolds(t *testing.T) {
 // creators, and hands back its id.
 func (e *configEnv) seedStage(ctx context.Context, t *testing.T, name string, probability int) ids.StageID {
 	t.Helper()
-	pipeline, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Sales " + name})
+	pipeline, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Sales " + ids.NewV7().String()})
 	if err != nil {
 		t.Fatalf("seeding the pipeline: %v", err)
 	}
@@ -281,7 +282,8 @@ func twoStagePipeline(t *testing.T, e *configEnv) (ids.DealID, ids.StageID, ids.
 	fromID := ids.From[ids.StageKind](ids.UUID(first.Id))
 	owner := ids.From[ids.UserKind](e.admin)
 	deal, err := e.store.CreateDeal(e.asDealWriter(), CreateDealInput{
-		Name: "Warehouse rollout", PipelineID: pipelineID, StageID: fromID,
+		Source: "manual",
+		Name:   "Warehouse rollout", PipelineID: pipelineID, StageID: fromID,
 		OwnerID: &owner, OwnerExact: true,
 	})
 	if err != nil {
@@ -289,4 +291,20 @@ func twoStagePipeline(t *testing.T, e *configEnv) (ids.DealID, ids.StageID, ids.
 	}
 	return ids.From[ids.DealKind](ids.UUID(deal.Id)), fromID,
 		ids.From[ids.StageKind](ids.UUID(second.Id))
+}
+
+// closingStageUUIDs answers the ids of a pipeline's closing stages, which a
+// full-ladder reorder must name after the open ones.
+func closingStageUUIDs(t *testing.T, owner *pgx.Conn, pipelineID ids.PipelineID) []ids.UUID {
+	t.Helper()
+	rows, err := owner.Query(context.Background(),
+		`SELECT id FROM stage WHERE pipeline_id = $1 AND semantic <> 'open' AND archived_at IS NULL ORDER BY position`, pipelineID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
 }

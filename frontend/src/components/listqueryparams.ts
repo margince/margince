@@ -16,8 +16,8 @@ export type ListQuery = {
   filters: Record<string, string>;
   /**
    * Rows per page, chosen by the reader in the table footer. It is the size of
-   * a rendered page, and a read is larger. One read fetches several of these
-   * at once (see `listFetchLimit`), so the pager offers them with no wait.
+   * a rendered page, and a read is larger. One read fetches the page shown and
+   * the next one (see `listFetchLimit`), so the first Next costs no wait.
    */
   perPage: number;
 };
@@ -396,22 +396,21 @@ export function paramsFromListQuery(
 /** The most rows one list read may ask for (the contract's CAP-PAGE ceiling). */
 const MAX_ROWS_PER_READ = 200;
 
+/** The rendered pages one read carries: the one shown and the one Next opens. */
+const PAGES_PER_READ = 2;
+
 /**
- * How many rows to fetch for a footer page size of `perPage`: as many whole
- * rendered pages as one read is allowed to carry.
+ * How many rows to fetch for a footer page size of `perPage`: the page on
+ * screen and the one Next opens. Most readers never leave the first page, and
+ * pages further on are read when the reader steps onto them.
  *
- * A keyset cursor can only walk forward one read at a time, so a pager can
- * only number the pages already in hand. Reading a page at a time numbers one
- * page, and every further number costs a round trip. That made a second page
- * appear only after the reader had been told none existed. Reading in whole
- * multiples puts several numbered pages in hand at once. Each is a slice of
- * one response, so they also form one consistent snapshot. No row shows up
- * twice and none is skipped between them.
- *
- * Whole multiples matter. A remainder would leave a last page shorter than the
- * size the footer names. A request above the ceiling is clamped with no error,
- * so the pager would offer numbers the response has no rows for.
+ * Whole multiples, because a remainder would leave a last page shorter than
+ * the size the footer names.
  */
 export function listFetchLimit(perPage: number): number {
-  return Math.max(1, Math.floor(MAX_ROWS_PER_READ / perPage)) * perPage;
+  const pages = Math.min(
+    PAGES_PER_READ,
+    Math.max(1, Math.floor(MAX_ROWS_PER_READ / perPage)),
+  );
+  return pages * perPage;
 }

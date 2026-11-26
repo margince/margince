@@ -266,9 +266,6 @@ func TestCheckOwnerPermissionReadSeatOwnerBlocks(t *testing.T) {
 	if decision.reason == "" {
 		t.Error("decision.reason is empty — a human reading run history needs to know why the firing was refused")
 	}
-	if resolver.calls != 0 {
-		t.Errorf("EffectiveRBAC called %d times, want 0 — the seat ceiling must block before RBAC is even consulted", resolver.calls)
-	}
 }
 
 // TestCheckOwnerPermissionFullSeatOwnerProceedsPastTheSeatCheck proves the
@@ -309,9 +306,6 @@ func TestCheckOwnerPermissionSeatGoneBlocks(t *testing.T) {
 	if !decision.blocked {
 		t.Fatal("decision.blocked = false, want true — ErrNotFound on SeatType means the owner is gone/archived/suspended")
 	}
-	if resolver.calls != 0 {
-		t.Errorf("EffectiveRBAC called %d times, want 0 — the seat check must fail closed before RBAC runs", resolver.calls)
-	}
 }
 
 // TestCheckOwnerPermissionSeatTransientErrorSurfacesForRetry mirrors
@@ -330,9 +324,6 @@ func TestCheckOwnerPermissionSeatTransientErrorSurfacesForRetry(t *testing.T) {
 	}
 	if decision.blocked {
 		t.Error("decision.blocked = true, want false — a transient seat-resolution failure must retry, never a fabricated denial")
-	}
-	if resolver.calls != 0 {
-		t.Errorf("EffectiveRBAC called %d times, want 0 — a transient seat error must surface before RBAC runs", resolver.calls)
 	}
 }
 

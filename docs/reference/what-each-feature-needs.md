@@ -33,6 +33,7 @@ in [Every setting](configuration.md#every-setting). The least a production insta
 | Gmail push | `gmail_pubsub_topic` on the worker, `gmail_push_token` on the api | worker, api | Capture polls the mailbox instead. |
 | Microsoft 365 mail and calendar | `graph_client_id`, `graph_client_secret`, `graph_tenant`, `connector_state_key`, `keyvault_root_key`, `public_base_url` | api connects, worker syncs | `/connectors/graph/*` answers 501. |
 | Microsoft 365 push | `graph_notification_url` on the worker, `graph_push_token` on the api | worker, api | Capture polls instead. |
+| Chat channels (Dispact) | `keyvault_root_key`, and `public_base_url` for the link back on each post | api connects and links, worker posts | Dispact cannot be connected, and a record's **Team chat** card says to connect it in Settings. |
 | Microsoft sign-in | `microsoft_signin_tenant`, or a `graph_tenant` that names one directory | api | The provider stays off, and the boot log says why. |
 | Password sign-in turned off | `auth.password.enabled: false` and a sign-in provider | api | With no provider, the api refuses to start. |
 
@@ -43,6 +44,7 @@ Each setting is explained in [Mail connectors and sign-in](connectors-and-sign-i
 | Feature | Settings | Read by | When one is missing |
 |---|---|---|---|
 | Attachments, company logos and import files | `blobstore_endpoint`, `blobstore_bucket`, `blobstore_region` and the two keys; or `blobstore_path` | api, worker | `/attachments` answers 501, and every company shows its letter mark. |
+| A restore-proof erasure journal | `erasure_journal_endpoint`, `erasure_journal_bucket`, `erasure_journal_region` and the two keys; or `erasure_journal_path` | worker | The journal stays in the main object store, and `worker replay-erasures` warns that a restore may have rolled it back. |
 | New custom fields and options | `schema_dsn` | api | Creating a field, or changing its options, answers 501. |
 | The data reset | `operations.allow_data_reset` | api, worker | `POST /v1/admin/reset-data` answers 404. |
 | `security.txt` | `web.security_txt` | api | `/.well-known/security.txt` answers 404. |

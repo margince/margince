@@ -72,6 +72,7 @@ type Meeting struct {
 	addresses       []string
 	participants    connector.Parties
 	notes           []capture.MeetingDocument
+	notesListed     bool
 }
 
 // Classify applies the meeting rules to one decoded event against the account
@@ -117,6 +118,8 @@ func Classify(ev Event, owner string) Meeting {
 		addresses:     eventAddresses(ev, owner),
 		participants:  meetingParties(ev, ownerAddress),
 		notes:         NotesDocuments(ev, owner),
+		// Only an owner who could find notes on the event may say it has none.
+		notesListed: ev.ListsDocuments && organizedInHouse(ev.Organizer.Email, owner),
 	}
 }
 
@@ -213,8 +216,9 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 			DateOnly:          m.allDay,
 			DurationSeconds:   m.durationSeconds,
 			// A meeting is not directional (no inbound/outbound sender).
-			Direction:        "",
-			MeetingDocuments: m.notes,
+			Direction:              "",
+			MeetingDocuments:       m.notes,
+			MeetingDocumentsListed: m.notesListed,
 		},
 		// This calendar's own id for its copy, so its import row can resolve a
 		// later tombstone that carries nothing else.

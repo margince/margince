@@ -11,6 +11,7 @@
 import { ArrowDown, Lock } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import type { components } from "../../api/schema";
+import { TranslationsLine } from "../../components/labeltranslations";
 import { Badge, EmptyState } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
@@ -18,7 +19,7 @@ import { PanelBody, PanelGroupHead } from "../../design-system/panel";
 import { useLastSubject } from "../../design-system/presence";
 import { Meter } from "../../design-system/readings";
 import { foldForMatch } from "../../format/collate";
-import { formatNumber } from "../../format/format";
+import { formatNumber, formatPercent } from "../../format/format";
 import { type PluralTranslator, useLocale, usePlural, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
 import { useCanWrite, useWriteRefusal } from "../../lib/capability";
@@ -31,6 +32,7 @@ import { useStageOrder } from "./settings.pipelineorder";
 import { useStageChances } from "./settings.stagechances";
 import {
   ladderOf,
+  onlyClosingStages,
   StageCreate,
   StageMenu,
   StageRemoveConfirm,
@@ -78,7 +80,7 @@ function OpenName({
         <ArrowDown aria-hidden="true" />
         {t("stage.lowerThanAbove", {
           name: above.name,
-          reading: `${formatNumber(above.win_probability, locale)}%`,
+          reading: formatPercent(above.win_probability / 100, locale),
         })}
       </span>
     </CellStack>
@@ -98,7 +100,7 @@ export function StageChanceLine({
   const { locale } = useLocale();
   const chance = chances?.byStage.get(stage.id);
   if (!chances || !chance) return null;
-  const pct = (value: number) => `${formatNumber(value, locale)}%`;
+  const pct = (value: number) => formatPercent(value / 100, locale);
   const typed = pct(chance.typed_probability);
   let line: string;
   if (!chances.selfCorrecting) {
@@ -158,7 +160,7 @@ function criteriaFolded(stage: Stage, { plural, locale }: ColumnsOf) {
 function stageColumns(of: ColumnsOf): DataTableColumn<Stage>[] {
   const { t, locale, open, verbs, chances } = of;
   const reading = (stage: Stage) =>
-    `${formatNumber(stage.win_probability, locale)}%`;
+    formatPercent(stage.win_probability / 100, locale);
   return [
     {
       key: "step",
@@ -181,12 +183,16 @@ function stageColumns(of: ColumnsOf): DataTableColumn<Stage>[] {
       header: t("stage.colStage"),
       fold: "title",
       grow: true,
-      render: (stage) =>
-        stage.semantic === "open" ? (
-          <OpenName stage={stage} above={open[open.indexOf(stage) - 1]} />
-        ) : (
-          <ClosingName stage={stage} />
-        ),
+      render: (stage) => (
+        <CellStack>
+          {stage.semantic === "open" ? (
+            <OpenName stage={stage} above={open[open.indexOf(stage) - 1]} />
+          ) : (
+            <ClosingName stage={stage} />
+          )}
+          <TranslationsLine translations={stage.name_translations} />
+        </CellStack>
+      ),
     },
     {
       key: "odds",
@@ -270,6 +276,7 @@ export function StageLadderEditor({
   const verbs: StageVerbs = {
     writable,
     canRemove,
+    onlyOfKind: onlyClosingStages(ladder),
     onAddCriterion: (stage) => {
       toggle(stage.id, true);
       setAdding(stage);

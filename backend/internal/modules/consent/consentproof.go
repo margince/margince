@@ -19,19 +19,27 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// loadConsentPurpose resolves the target purpose's key and DOI flag; an
-// unknown or archived purpose is 404.
-func loadConsentPurpose(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID) (key string, requiresDOI bool, err error) {
-	err = tx.QueryRow(ctx,
-		`SELECT key, requires_double_opt_in FROM consent_purpose WHERE id = $1 AND archived_at IS NULL`,
-		purposeID).Scan(&key, &requiresDOI)
+// consentPurpose is what a decision needs to know about its purpose.
+type consentPurpose struct {
+	key         string
+	requiresDOI bool
+	class       string
+}
+
+// loadConsentPurpose resolves the target purpose; an unknown or archived
+// purpose is 404.
+func loadConsentPurpose(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID) (consentPurpose, error) {
+	var p consentPurpose
+	err := tx.QueryRow(ctx,
+		`SELECT key, requires_double_opt_in, class FROM consent_purpose WHERE id = $1 AND archived_at IS NULL`,
+		purposeID).Scan(&p.key, &p.requiresDOI, &p.class)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", false, fmt.Errorf("purpose %s: %w", purposeID, apperrors.ErrNotFound)
+		return consentPurpose{}, fmt.Errorf("purpose %s: %w", purposeID, apperrors.ErrNotFound)
 	}
 	if err != nil {
-		return "", false, err
+		return consentPurpose{}, err
 	}
-	return key, requiresDOI, nil
+	return p, nil
 }
 
 // resolveDOIConfirmation enforces the German email norm: a DOI purpose's grant
@@ -39,20 +47,11 @@ func loadConsentPurpose(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID)
 // thing that confirms one is the subject spending a single-use link that was
 // mailed to their own live primary address. Non-DOI paths return nil.
 //
-// The round trip is contact-keyed, so a DOI grant on a lead subject is refused
-// rather than recorded unconfirmed — the lead promotes first, then confirms.
+// A contact and a lead confirm the same way: by spending the link mailed to
+// their own address.
 func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, requiresDOI bool) (*time.Time, error) {
 	if ConsentState(in.NewState) != StateGranted || !requiresDOI {
 		return nil, nil
-	}
-	if sub.entityType != entityContact {
-		return nil, &ValidationError{
-			// The subject, not the purpose: the purpose is fine and the caller
-			// cannot fix it. What they must change is which subject they named,
-			// which is the field consentSubject's own refusals already use.
-			Field:  "subject",
-			Reason: "a double opt-in purpose needs a contact subject; promote the lead before granting it",
-		}
 	}
 	// A mailbox already proven by the single-use link that carried the subject
 	// here answers what the round trip would ask, so the grant confirms on the
@@ -86,7 +85,10 @@ func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in Record
 // append-only consent_event that says when, how, and by whom. The upsert
 // targets the subject arm's own unique key (contact×purpose or
 // lead×purpose); the other arm's column stays NULL.
-func upsertConsentWithProof(ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, doiConfirmedAt *time.Time, capturedAt time.Time, actorID string) error {
+func upsertConsentWithProof(
+	ctx context.Context, tx pgx.Tx, in RecordInput, sub subject,
+	doiConfirmedAt *time.Time, capturedAt time.Time, keptUntil *time.Time, actorID string,
+) (ids.UUID, error) {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO contact_consent (`+sub.column+`, purpose_id, state, lawful_basis, captured_at, source)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -94,7 +96,7 @@ func upsertConsentWithProof(ctx context.Context, tx pgx.Tx, in RecordInput, sub 
 		DO UPDATE SET state = EXCLUDED.state, lawful_basis = EXCLUDED.lawful_basis,
 		              captured_at = EXCLUDED.captured_at, source = EXCLUDED.source`,
 		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, capturedAt, in.Source); err != nil {
-		return err
+		return ids.Nil, err
 	}
 	// issuance_trigger names the mailbox proof this grant rests on, so the chain
 	// is readable from the proof row alone. Set only where a mailbox proof
@@ -121,13 +123,15 @@ func upsertConsentWithProof(ctx context.Context, tx pgx.Tx, in RecordInput, sub 
 	// The published row this rests on, where the door knew which one. Written
 	// BESIDE policy_text rather than instead of it: the text stays readable
 	// without a join, and the id is what a reader checks it against.
-	_, err := tx.Exec(ctx, `
+	var proofID ids.UUID
+	err := tx.QueryRow(ctx, `
 		INSERT INTO consent_event (`+sub.column+`, purpose_id, new_state, lawful_basis, source,
 		                           policy_text, policy_version, double_opt_in_confirmed_at, captured_at, captured_by,
-		                           issuance_trigger, consent_text_version_id)
-		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), $6, $7, $8, $9, $10, $11, $12)`,
+		                           issuance_trigger, consent_text_version_id, subject_request_id, kept_until)
+		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		RETURNING id`,
 		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, in.Source,
 		text, version, doiConfirmedAt, capturedAt, actorID, trigger,
-		zeroUUIDAsNull(in.TextVersionID))
-	return err
+		zeroUUIDAsNull(in.TextVersionID), zeroUUIDAsNull(in.SubjectRequest), keptUntil).Scan(&proofID)
+	return proofID, err
 }

@@ -35,6 +35,25 @@ func (p Policy) For(roles []string) Allowance {
 	return out
 }
 
+// Paced reports whether an agent whose granting human holds roles is held to
+// the per-minute pacing. One unpaced role lifts it. Like For, it is derived on
+// every call, so no caller is judged by the roles of the one before.
+func (p Policy) Paced(roles []string) bool {
+	return !slices.ContainsFunc(roles, func(role string) bool {
+		return slices.Contains(p.Unpaced, role)
+	})
+}
+
+// Paced is Policy.Paced for the agent on ctx, judged by the policy the window
+// allowances use. Anything but an authenticated agent is paced.
+func (m *Meter) Paced(ctx context.Context) bool {
+	actor, present := principal.Actor(ctx)
+	if !present || actor.Type != principal.PrincipalAgent {
+		return true
+	}
+	return m.policy(ctx).Paced(rolesOf(ctx))
+}
+
 // highest walks the roles in key order, so a tie names the same role on every
 // call. A role's own value wins a tie only over another role's own value.
 func (p Policy) highest(roles []string, c Counter) (limit int, from string) {

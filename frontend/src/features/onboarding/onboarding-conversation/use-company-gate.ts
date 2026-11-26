@@ -3,10 +3,15 @@ import { useCallback } from "react";
 import type { components } from "../../../api/schema";
 import type { useT } from "../../../i18n";
 import type { Locale } from "../../../i18n/locale";
-import { usePlatformDeclined } from "../../../lib/installation-setup.decline";
+import { useCanWrite } from "../../../lib/capability";
 import {
+  useSetupDecline,
+  useSetupDeclines,
+} from "../../../lib/installation-setup.decline";
+import { useInstallationSetup } from "../../../lib/installation-setup-query";
+import {
+  modelSkipped,
   outstandingStep,
-  useInstallationSetup,
 } from "../../sign-in/installation-setup";
 import type { CompanyDraft } from "../onboarding";
 import { changeDraftField, normalizeUrl } from "../onboarding";
@@ -48,7 +53,9 @@ export function useCompanyGate({
   t,
 }: CompanyGateArgs) {
   const setup = useInstallationSetup();
-  const platformDeclined = usePlatformDeclined();
+  const canBind = useCanWrite("ai_routing", "update");
+  const declined = useSetupDeclines();
+  const { withdraw } = useSetupDecline();
 
   // The gate's field is the one place a website address is typed. It hands
   // back a bare host, and normalizeUrl is the one spelling of an address.
@@ -75,7 +82,11 @@ export function useCompanyGate({
     // the setup screen has a panel for.
     setupOutstanding:
       beforeReview &&
-      outstandingStep(setup.data, platformDeclined) !== undefined,
+      outstandingStep(setup.data, declined, canBind) !== undefined,
+    // The reader skipped the model: no website can be read, so the gate
+    // offers the manual interview and a way back to the key.
+    modelSkipped: modelSkipped(setup.data, declined),
+    askForModel: () => withdraw("ai_models"),
     notice: gateNoticeFor({
       state,
       read,

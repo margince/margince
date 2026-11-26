@@ -23,10 +23,8 @@ type Assembly struct {
 	// Limited says deals the caller cannot read were left out. A boolean: a
 	// count of what a caller may not read says how much of it there is.
 	Limited bool
-	// SelfCorrecting is whether the chances moved with recorded outcomes, and
-	// EvidenceCutoff the instant no later outcome counted.
+	// SelfCorrecting is whether the chances moved with recorded outcomes.
 	SelfCorrecting bool
-	EvidenceCutoff time.Time
 	// RiskSignalsVersion names the signal rules on the rows; empty while
 	// self-correction is off and no signal was assessed.
 	RiskSignalsVersion string
@@ -38,9 +36,10 @@ type Assembly struct {
 type AssembleFunc func(ctx context.Context, tx pgx.Tx, period Period, scope Scope, asOf time.Time, baseCurrency string) (Assembly, error)
 
 // ReaderRowsFunc narrows the per-deal rows of a reading to what the reader may
-// see one by one. Injected, because the installation's individual-performance
-// rule lives in the composition layer.
-type ReaderRowsFunc func(ctx context.Context, tx pgx.Tx, rows []Contribution) ([]Contribution, bool, error)
+// see one by one. withheldReason says why rows are missing, and is "" when none is.
+// Injected, because the installation's individual-performance rule lives in
+// the composition layer.
+type ReaderRowsFunc func(ctx context.Context, tx pgx.Tx, rows []Contribution) (visible []Contribution, withheldReason string, err error)
 
 // WithReaderRows narrows the rows GET /forecast?contributions=true returns.
 // Unbound, the door refuses to return rows at all.
@@ -56,11 +55,15 @@ func (h Handlers) contributionRows(ctx context.Context, tx pgx.Tx, readings Read
 	if h.readerRows == nil {
 		return errors.New("forecasting: no reader lens is bound, so per-deal rows cannot be narrowed")
 	}
-	visible, limited, err := h.readerRows(ctx, tx, readings.Contributions)
+	visible, reason, err := h.readerRows(ctx, tx, readings.Contributions)
 	if err != nil {
 		return err
 	}
 	rows := ContributionsToWire(visible)
+	limited := reason != ""
 	out.Contributions, out.ContributionsLimited = &rows, &limited
+	if limited {
+		out.ContributionsLimitedReason = &reason
+	}
 	return nil
 }

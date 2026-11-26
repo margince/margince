@@ -82,12 +82,12 @@ var changeMySettingsCopy = toolCopy{
 
 var changeComplianceCopy = toolCopy{
 	Purpose: "Do the user's privacy work on a contact or record: record consent, record that a contact " +
-		"asked to stop, allow a refused category, record the exchange that makes correspondence lawful, " +
+		"asked to stop, take back a standing exception, record an exchange with a lead or contact, " +
 		"answer a refused send, open or update a data subject request, assign a disclosure duty, confirm a " +
 		"source, accept or decline what a subject proposed, place a legal hold and pin an activity to the " +
 		"retention floor.",
-	Limits: "record_consent, allow_contact, revoke_override, lift_suppression, record_qualifying_event, " +
-		"retract_qualifying_event, retract_acquisition_request and " +
+	Limits: "record_consent, revoke_override, lift_suppression, record_qualifying_event, " +
+		"retract_qualifying_event, record_lead_qualifying_event, retract_lead_qualifying_event, retract_acquisition_request and " +
 		"record_communication_context have legal weight: tell the user what you will record and call only " +
 		"after they say yes. The proof names you as its author. Record only what the user or the contact " +
 		"said, never your reading of their tone. Fulfilling an erasure request, lifting a legal hold, " +
@@ -144,7 +144,7 @@ var readDetailsCopy = toolCopy{
 		"and a site read's logo.",
 	Limits: "Each action reads one panel as the app draws it, for the records the user may open. Without the " +
 		"enrich scope, a brief, dossier or growth fit not written yet answers its plain form from the records, " +
-		"marked deterministic; run_research writes one.",
+		"marked deterministic; run_research writes one. " + sendAnywayRule,
 	Instead: "Use read_context for the story so far on a record, read_attention for what needs the " +
 		"user now, and read_record for a record's own fields.",
 }

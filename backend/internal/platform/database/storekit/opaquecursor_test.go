@@ -133,18 +133,18 @@ func TestAGenericCursorMissingHalfItsTupleIsRefused(t *testing.T) {
 		if err != nil {
 			t.Fatalf("minting %s: %v", name, err)
 		}
-		if _, err := storekit.DecodeCursor(token); !errors.As(err, new(*storekit.MalformedCursorError)) {
+		if _, err := storekit.DecodeCursor("list", token); !errors.As(err, new(*storekit.MalformedCursorError)) {
 			t.Errorf("DecodeCursor(<%s>) = %v, want MalformedCursorError — a zero position reads as the "+
 				"top of the list and pages it from the start", name, err)
 		}
 	}
 	// And the whole tuple still round-trips.
-	whole := storekit.Cursor{CreatedAt: at, ID: ids.NewV7()}
+	whole := storekit.Cursor{Scope: "list", CreatedAt: at, ID: ids.NewV7()}
 	token, err := storekit.EncodeOpaque(whole)
 	if err != nil {
 		t.Fatalf("minting a whole position: %v", err)
 	}
-	got, err := storekit.DecodeCursor(token)
+	got, err := storekit.DecodeCursor("list", token)
 	if err != nil {
 		t.Fatalf("DecodeCursor(<a whole position>): %v", err)
 	}
@@ -153,25 +153,38 @@ func TestAGenericCursorMissingHalfItsTupleIsRefused(t *testing.T) {
 	}
 }
 
-// An id page continues from its last id, and the cursor it mints reads back as
-// that id; a last page mints none.
-func TestAnIDPageCursorReadsBackAsTheLastIDOfThePage(t *testing.T) {
-	first, last := ids.NewV7(), ids.NewV7()
-	page := storekit.IDPage([]ids.UUID{first, last}, true)
-	if !page.HasMore {
-		t.Fatal("a page with more behind it answered has_more false")
+func TestACursorFromAnotherListIsRefusedAsASortMismatch(t *testing.T) {
+	at := time.Date(2026, 8, 25, 9, 0, 0, 0, time.UTC)
+	token, err := storekit.EncodeCursor("contacts", at, ids.NewV7())
+	if err != nil {
+		t.Fatalf("minting: %v", err)
 	}
-	after, err := storekit.DecodeIDCursor(page.NextCursor)
-	if err != nil || after == nil || *after != last {
-		t.Fatalf("DecodeIDCursor(%q) = %v, %v, want the page's last id %s", page.NextCursor, after, err, last)
+	if _, err := storekit.DecodeCursor("contacts", token); err != nil {
+		t.Fatalf("the list that minted the token refused it: %v", err)
 	}
-	if end := storekit.IDPage([]ids.UUID{first}, false); end.HasMore || end.NextCursor != "" {
-		t.Errorf("the last page answered %+v, want no cursor", end)
+	if _, err := storekit.DecodeCursor("deals", token); !errors.As(err, new(*storekit.CursorSortMismatchError)) {
+		t.Errorf("a contacts token read by deals = %v, want CursorSortMismatchError", err)
 	}
-	if start, err := storekit.DecodeIDCursor(""); start != nil || err != nil {
-		t.Errorf("an empty cursor read as %v, %v, want the first page", start, err)
+	unscoped, err := storekit.EncodeOpaque(storekit.Cursor{CreatedAt: at, ID: ids.NewV7()})
+	if err != nil {
+		t.Fatalf("minting an unscoped token: %v", err)
 	}
-	if _, err := storekit.DecodeIDCursor("not-an-id"); !errors.As(err, new(*storekit.MalformedCursorError)) {
-		t.Errorf("a token no page minted gave %v, want MalformedCursorError", err)
+	if _, err := storekit.DecodeCursor("contacts", unscoped); !errors.As(err, new(*storekit.CursorSortMismatchError)) {
+		t.Errorf("an unscoped token = %v, want CursorSortMismatchError", err)
+	}
+}
+
+func TestASortedCursorFromAnotherListIsRefused(t *testing.T) {
+	var sorted *storekit.ListSort
+	token, err := sorted.EncodePageCursor("contacts", nil, time.Date(2026, 8, 25, 9, 0, 0, 0, time.UTC), ids.NewV7())
+	if err != nil {
+		t.Fatalf("minting: %v", err)
+	}
+	arg := func(any) int { return 1 }
+	if _, err := sorted.KeysetClause("contacts", token, arg); err != nil {
+		t.Fatalf("the list that minted the token refused it: %v", err)
+	}
+	if _, err := sorted.KeysetClause("deals", token, arg); !errors.As(err, new(*storekit.CursorSortMismatchError)) {
+		t.Errorf("a contacts token read by deals = %v, want CursorSortMismatchError", err)
 	}
 }

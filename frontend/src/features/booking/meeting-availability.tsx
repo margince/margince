@@ -10,11 +10,10 @@ import { Callout } from "../../design-system/callout";
 import { ChoiceList } from "../../design-system/choicelist";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { useSaveDraft } from "../../design-system/savepage";
+import { retireErrors, useSaveDraft } from "../../design-system/savepage";
 import { StatusBadge } from "../../design-system/statusbadge";
 import { clockOrBlank, TimeInput } from "../../design-system/timeinput";
-import { useToast } from "../../design-system/toast";
-import { timezoneOption } from "../../format/timezone";
+import { timezoneOption } from "../../format/timezoneoptions";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemFieldSentencesOf, unwrap } from "../../lib/problem";
@@ -153,16 +152,26 @@ function useAvailabilityDraft(
     },
   });
   const pickPreset = (field: RuleField, value: number) => {
+    retireErrors(save);
     const { [field]: _picked, ...kept } = other;
     setOther(kept);
     if (next) setDraftRules({ ...next, [field]: value });
   };
+  // A refusal describes the value it refused, so the next edit retires it.
+  const editHours = (value: WorkingHours) => {
+    retireErrors(save);
+    setDraftHours(value);
+  };
+  const editOther = (value: Partial<Record<RuleField, string>>) => {
+    retireErrors(save);
+    setOther(value);
+  };
   return {
     draftHours,
-    setDraftHours,
+    setDraftHours: editHours,
     next,
     other,
-    setOther,
+    setOther: editOther,
     pickPreset,
     narrowed,
     save,
@@ -311,9 +320,7 @@ function useSaveAvailability(
   onHoursSaved: (hours: WorkingHours) => void,
   onRulesSaved: (rules: Rules) => void,
 ) {
-  const t = useT();
   const client = useQueryClient();
-  const toast = useToast();
   return useMutation({
     scope: { id: "working-hours" },
     mutationFn: async ({ hours, rules }: Draft) => {
@@ -337,7 +344,6 @@ function useSaveAvailability(
         client.setQueryData(["scheduling-profile"], profile);
         await client.invalidateQueries({ queryKey: ["reliable-availability"] });
       }
-      toast.show(t("settings.saved"));
     },
   });
 }

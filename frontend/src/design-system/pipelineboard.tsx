@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { Fragment, useContext, useRef } from "react";
-import { formatNumber } from "../format/format";
+import { formatNumber, formatPercent } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
+import type { MoneyCoverage } from "../lib/moneycoverage";
 import { AnsweredSearch } from "./answeredsearch";
 import { Button, OptionCount } from "./atoms";
 import { ColumnTotals, largestStageTotal } from "./boardtotals";
@@ -15,7 +16,9 @@ import {
   matchingColumns,
   scrollColumnIn,
   useOffScreenMatches,
+  useUnfoldIntoView,
 } from "./pipelinereveal";
+import { useTruncationTooltip } from "./tooltip";
 
 export type BoardRecord = {
   id: string;
@@ -80,6 +83,13 @@ export type BoardDeal = BoardRecord & {
    */
   valueMinor: number | null;
   currency: string | null;
+  /**
+   * The chance the deal is won, in percent. Null on a closed deal, whose stage
+   * fixes it at 100 or 0, and on one the server named none for.
+   */
+  probabilityPct?: number | null;
+  /** Why the deal has that figure, shown on hover over the ring. */
+  probabilityReason?: string;
   idleSince: string;
   measuredAt: number;
   /**
@@ -92,6 +102,11 @@ export type BoardDeal = BoardRecord & {
    */
   closeDate?: string | null;
   closeDateProvisional?: boolean;
+  /**
+   * When a won or lost deal closed, which the card states in place of the
+   * forecast. Null on a closed deal that carries no day; absent on an open one.
+   */
+  closedAt?: string | null;
   /**
    * Who carries the deal: the seat's name, its user id to key the chip, and
    * its picture if it has one.
@@ -168,7 +183,7 @@ export type BoardMoneyColumn = BoardColumn<BoardDeal> & {
   currency: string | null;
   asOf?: string | null;
   timezone?: string | null;
-  unpricedCount?: number | null;
+  coverage?: MoneyCoverage | null;
 };
 
 type BoardHandlers<Record extends BoardRecord> = {
@@ -255,17 +270,25 @@ function BoardLayout<Record extends BoardRecord>({
   // The head's interactive half, or nothing at all. Written as a function so
   // the column's JSX stays one line of props rather than a spread conditional
   // the reader has to unpick.
+  const unfolding = useUnfoldIntoView(
+    sections,
+    columns.filter((column) => !column.collapsed).map((column) => column.stage),
+  );
   function foldProps(column: BoardColumn<Record>) {
     if (!onToggleColumn || column.collapsed === undefined) return {};
+    const toggle = () => {
+      if (column.collapsed) unfolding(column.stage);
+      onToggleColumn(column);
+    };
     return {
       role: "button",
       tabIndex: 0,
       "aria-expanded": !column.collapsed,
-      onClick: () => onToggleColumn(column),
+      onClick: toggle,
       onKeyDown: (event: React.KeyboardEvent) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          onToggleColumn(column);
+          toggle();
         }
       },
     };
@@ -294,6 +317,9 @@ function BoardLayout<Record extends BoardRecord>({
       <div className="board" ref={board}>
         {columns.map((column) => {
           const money = moneyFor(column);
+          // Written as a deal card writes its own chance.
+          const chance =
+            money && formatPercent(money.probabilityPct / 100, locale);
           const dealCount = column.count ?? column.deals.length;
           const countHidden =
             column.count === null || (!money && column.sumHidden);
@@ -338,7 +364,7 @@ function BoardLayout<Record extends BoardRecord>({
                 foldable column beside it. A control that does nothing is worse
                 than no control, and a lead board would otherwise have made its
                 three open stages focusable to no effect. */}
-              <div className="board-col-head" {...foldProps(column)}>
+              <ColumnHead label={column.label} fold={foldProps(column)}>
                 <span className="stage">{column.label}</span>
                 {/* Its own node, not one composed string. The name is data of
                   unbounded length and truncates; the count is three characters
@@ -359,12 +385,8 @@ function BoardLayout<Record extends BoardRecord>({
                 >
                   <OptionCount count={dealCount} />
                 </span>
-                {money && (
-                  <span className="prob">
-                    {formatNumber(money.probabilityPct, locale)}%
-                  </span>
-                )}
-              </div>
+                {money && <span className="prob">{chance}</span>}
+              </ColumnHead>
               {/* The stage's money leads the sub. The count is in the head;
                   a screen reader gets it here with its unit, as "12 deals". */}
               <div className="board-col-sub">
@@ -392,6 +414,33 @@ function BoardLayout<Record extends BoardRecord>({
         })}
       </div>
     </>
+  );
+}
+
+// A stage name is data of any length, so once its head cuts it short the head
+// shows it whole on hover and on focus.
+function ColumnHead({
+  label,
+  fold,
+  children,
+}: Readonly<{
+  label: string;
+  fold: HTMLAttributes<HTMLDivElement>;
+  children: ReactNode;
+}>) {
+  const { ref, trigger, tip } = useTruncationTooltip<HTMLDivElement>(label);
+  return (
+    <div
+      ref={ref}
+      className="board-col-head"
+      {...trigger}
+      {...fold}
+      // A head that folds is a button named by this text already.
+      aria-describedby={fold.role ? undefined : trigger["aria-describedby"]}
+    >
+      {children}
+      {tip}
+    </div>
   );
 }
 

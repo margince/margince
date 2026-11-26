@@ -20,6 +20,7 @@ import { problemMessageOf } from "../lib/problem";
 import { AppLink } from "./applink";
 import { Button, EmptyState, Field } from "./atoms";
 import { ConfirmModal } from "./confirmmodal";
+import { OverflowMenu } from "./overflowmenu";
 import { Panel, PanelBody, PanelGroupHead, PanelRow } from "./panel";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 import { Select } from "./select";
@@ -50,7 +51,8 @@ export type LinkedProject = Readonly<{
   // Where the name points. Defaults to the project page, which is right for
   // every caller listing PROJECTS; the mirror listing companies overrides it.
   href?: string;
-  key?: string | null;
+  // The record's key as the caller draws it, for the reason `phase` is a node.
+  key?: ReactNode;
   // The phase as the CALLER draws it. A node rather than the phase string,
   // because the badge that renders a phase lives with the projects screen and
   // this tier may not reach into a screen — and a second badge drawn here would
@@ -220,23 +222,24 @@ export function ProjectLinks({
     );
   const dialogs = (
     <>
-      <AttachDialog
-        open={picking}
-        adapter={adapter}
-        role={role}
-        onRole={setRole}
-        moving={moving}
-        busy={busy}
-        refusal={refusal}
-        words={said}
-        onClose={() => setPicking(false)}
-        onPick={(id) =>
-          run(
-            () => adapter.attach(id, role),
-            () => setPicking(false),
-          )
-        }
-      />
+      {picking && (
+        <AttachDialog
+          adapter={adapter}
+          role={role}
+          onRole={setRole}
+          moving={moving}
+          busy={busy}
+          refusal={refusal}
+          words={said}
+          onClose={() => setPicking(false)}
+          onAttach={(id) =>
+            run(
+              () => adapter.attach(id, role),
+              () => setPicking(false),
+            )
+          }
+        />
+      )}
       <DetachDialog
         project={detaching}
         detach={adapter.detach}
@@ -283,7 +286,6 @@ function LinkedRows({
   adapter: ProjectLinksAdapter;
   onDetach: (project: LinkedProject) => void;
 }>) {
-  const t = useT();
   const onDetach = adapter.detach && !adapter.readOnly ? detach : undefined;
   if (adapter.card) {
     return (
@@ -305,34 +307,60 @@ function LinkedRows({
         <AppLink href={project.href ?? `#/projects/${project.project_id}`}>
           {project.name}
         </AppLink>
-        {project.key && <span>{project.key}</span>}
+        {project.key}
         {project.phase}
         {onDetach && (
-          <Button
-            variant="ghost"
-            onClick={() => onDetach(project)}
-            // Every row's verb reads the same to the eye. A screen reader
-            // needs the name, because five "Detach" buttons cannot say which
-            // record each one takes off.
-            aria-label={t("projectLinks.detachNamed", { name: project.name })}
-          >
-            {t("projectLinks.detach")}
-          </Button>
+          <RemoveLinkMenu
+            name={project.name}
+            onRemove={() => onDetach(project)}
+          />
         )}
       </div>
     </PanelRow>
   ));
 }
 
+/**
+ * The verb that takes one linked record off this one: a "Remove" item in the
+ * row's overflow menu, which stays in view. The caller asks before removing.
+ * The row's other verbs, as `children`, come before it. A null `name` is a
+ * record with no name to read, and the menu takes the generic label.
+ */
+export function RemoveLinkMenu({
+  name,
+  onRemove,
+  children,
+}: Readonly<{
+  name: string | null;
+  onRemove: () => void;
+  children?: ReactNode;
+}>) {
+  const t = useT();
+  return (
+    // Named for the record, because every row's menu looks the same.
+    <OverflowMenu
+      label={
+        name
+          ? t("record.moreActionsFor", { subject: name })
+          : t("record.moreActions")
+      }
+    >
+      {children}
+      <Button variant="danger" onClick={onRemove}>
+        {t("rel.remove")}
+      </Button>
+    </OverflowMenu>
+  );
+}
+
 // The pick dialog, lifted out of the section: it carries a role, a search and a
 // refusal, and folding all three back in is what took the section past what one
 // function should ask a reader to hold at once.
 //
-// It confirms nothing of its own — picking IS the act — so its confirm button
-// is permanently disabled, present only because ConfirmModal's pending and
-// error slots are what make a refused write legible.
+// A pick only selects, as Add stakeholder's does: the reader may still change
+// the role, and the confirm is what writes. Mounted per opening, so a second
+// opening starts with nothing picked.
 function AttachDialog({
-  open,
   adapter,
   role,
   onRole,
@@ -341,9 +369,8 @@ function AttachDialog({
   refusal,
   words,
   onClose,
-  onPick,
+  onAttach,
 }: Readonly<{
-  open: boolean;
   adapter: ProjectLinksAdapter;
   role: string;
   onRole: (role: string) => void;
@@ -352,12 +379,10 @@ function AttachDialog({
   refusal: string | null;
   words: LinkWords;
   onClose: () => void;
-  onPick: (projectID: string) => void;
+  onAttach: (projectID: string) => void;
 }>) {
   const t = useT();
-  if (!open) {
-    return null;
-  }
+  const [picked, setPicked] = useState<RecordPickerCandidate | null>(null);
   return (
     <ConfirmModal
       intent="form"
@@ -365,11 +390,22 @@ function AttachDialog({
       onClose={onClose}
       title={moving ? words.move : words.attach}
       confirmLabel={words.attach}
-      confirmDisabled
-      onConfirm={() => undefined}
+      confirmDisabled={picked === null}
+      onConfirm={() => {
+        if (picked) {
+          onAttach(picked.id);
+        }
+      }}
       pending={busy}
       error={refusal}
     >
+      <RecordPicker
+        label={words.search}
+        searchTargets={adapter.search}
+        disabled={busy}
+        selected={picked}
+        onPick={setPicked}
+      />
       {adapter.roles.length > 1 && (
         <Field label={t("projectLinks.roleLabel")}>
           {(control) => (
@@ -387,12 +423,6 @@ function AttachDialog({
           )}
         </Field>
       )}
-      <RecordPicker
-        label={words.search}
-        searchTargets={adapter.search}
-        disabled={busy}
-        onPick={(candidate) => onPick(candidate.id)}
-      />
     </ConfirmModal>
   );
 }

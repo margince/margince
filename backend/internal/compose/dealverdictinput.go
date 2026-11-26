@@ -17,10 +17,16 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dealprivatemail"
 	"github.com/margince/margince/backend/internal/compose/dealverdict"
+	"github.com/margince/margince/backend/internal/compose/dealverdictsum"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // dealVerdictActivities bounds the activities one verdict reads, newest first.
@@ -31,13 +37,16 @@ const dealVerdictBodyChars = 1500
 
 // dealVerdictChecksumSQL is what a verdict read about one deal. It moves when
 // the viability evidence, the deal's own fields, an offer or a stage move
-// does. It is stored after the verdict's own writes, so those never ask for a
-// second reading. Every reader aliases the deal as d.
+// does. It also moves on what the stage move's row-lock rule reads: the
+// criterion ledger and which participants stand on an own domain. It is
+// stored after the verdict's own writes, so those never ask for a second
+// reading. Every reader aliases the deal as d.
 func dealVerdictChecksumSQL() string {
 	return `md5(concat_ws('|', ` + viabilityFingerprintSQL("d") + `, d.amount_minor, d.currency,
 		d.win_probability_override, d.win_probability_set_by, d.stage_id,
 		(SELECT concat_ws('|', count(*), max(vo.updated_at)) FROM offer vo WHERE vo.deal_id = d.id),
-		(SELECT concat_ws('|', count(*), max(vh.changed_at)) FROM deal_stage_history vh WHERE vh.deal_id = d.id)))`
+		(SELECT concat_ws('|', count(*), max(vh.changed_at)) FROM deal_stage_history vh WHERE vh.deal_id = d.id),
+		` + dealverdictsum.LedgerSQL + `, ` + dealverdictsum.OwnSideSQL() + `, ` + dealprivatemail.ChecksumSQL(dealVerdictActivities) + `))`
 }
 
 // dealVerdictRead is one deal's input and the state the rules check.
@@ -65,7 +74,7 @@ func readDealVerdict(
 		return read, err
 	}
 	steps := []func(context.Context, pgx.Tx, ids.UUID, *dealVerdictRead) error{
-		readVerdictActivities, readVerdictOffers, readVerdictStageMoves, readVerdictEdits,
+		readVerdictActivities, readVerdictPrivateMail, readVerdictOffers, readVerdictStageMoves, readVerdictEdits,
 		readVerdictLaterStages, readVerdictExitCriteria,
 	}
 	for _, step := range steps {
@@ -101,16 +110,26 @@ func readVerdictDeal(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVe
 	}
 	read.in.AmountMinor, read.in.Currency, read.in.CloseDate = seen.AmountMinor, seen.Currency, seen.CloseDate
 	read.in.Provisional = seen.Provisional
+	chances, err := chances.WinChances(ctx, tx, read.in.ReadAt, []ids.UUID{deal})
+	if err != nil {
+		return err
+	}
+	if chance, ok := chances[deal]; ok {
+		read.in.WinChance, read.in.WinChanceLine = chance.Percent, chance.Line()
+	}
 	return nil
 }
 
 func readVerdictActivities(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
 	rows, err := tx.Query(ctx, `
-		SELECT a.id::text, a.kind, coalesce(a.direction, ''), a.occurred_at, coalesce(a.subject, ''),
-		       left(coalesce(a.body, ''), $2), greatest(a.created_at, l.created_at), greatest(a.updated_at, l.created_at)
+		SELECT a.id::text, a.kind, coalesce(`+activities.WriterSideSQL("a", "true")+`, ''), a.occurred_at, coalesce(a.subject, ''),
+		       left(coalesce(a.body, ''), $2), greatest(a.created_at, l.created_at), greatest(a.updated_at, l.created_at),
+ EXISTS (SELECT 1 FROM activity_participant p WHERE p.activity_id=a.id AND p.role='from' AND `+auth.ParticipantStandsSQL("p", "a")+`
+ AND (p.user_id IS NOT NULL OR EXISTS (SELECT 1 FROM app_user u WHERE `+storekit.SeatLoginIsSQL("u", "p.address", "p.address_domain_folded")+` AND `+workforce.CaptureSeatSQL("u")+`)))
 		  FROM activity_link l JOIN activity a ON a.id = l.activity_id
 		 WHERE l.deal_id = $1 AND a.archived_at IS NULL AND a.kind IN ('email', 'meeting', 'call', 'note')
-		   AND `+visibleToAllSQL("a")+` AND `+relstrength.OriginIsEngagementSQL("a")+`
+		   AND `+visibleToAllSQL("a")+` AND `+relstrength.OriginIsEngagementSQL("a")+` AND a.origin <> 'agent'
+		   AND `+relstrength.DealEvidenceSQL("a", "l.deal_id")+`
 		 ORDER BY a.occurred_at DESC, a.id DESC LIMIT $3`, deal, dealVerdictBodyChars, dealVerdictActivities)
 	if err != nil {
 		return fmt.Errorf("compose: reading the deal's activities: %w", err)
@@ -120,7 +139,7 @@ func readVerdictActivities(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *
 		var activity dealverdict.Activity
 		var arrived time.Time
 		if err := rows.Scan(&activity.ID, &activity.Kind, &activity.Direction, &activity.OccurredAt,
-			&activity.Subject, &activity.Body, &activity.ArrivedAt, &arrived); err != nil {
+			&activity.Subject, &activity.Body, &activity.ArrivedAt, &arrived, &activity.FromOurSide); err != nil {
 			return err
 		}
 		read.in.Activities = append(read.in.Activities, activity)
@@ -130,9 +149,13 @@ func readVerdictActivities(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *
 	return rows.Err()
 }
 
+func readVerdictPrivateMail(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
+	return dealprivatemail.Read(ctx, tx, deal, dealVerdictActivities, &read.in, &read.newestEvidenceAt)
+}
+
 func readVerdictOffers(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
 	rows, err := tx.Query(ctx, `
-		SELECT gross_minor, currency::text, status, accepted_at IS NOT NULL, updated_at
+		SELECT net_minor, currency::text, status, accepted_at IS NOT NULL, updated_at
 		  FROM offer WHERE deal_id = $1 AND archived_at IS NULL
 		 ORDER BY accepted_at NULLS FIRST, id`, deal)
 	if err != nil {
@@ -142,7 +165,7 @@ func readVerdictOffers(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *deal
 	for rows.Next() {
 		var offer dealverdict.Offer
 		var updated time.Time
-		if err := rows.Scan(&offer.GrossMinor, &offer.Currency, &offer.Status, &offer.Accepted, &updated); err != nil {
+		if err := rows.Scan(&offer.NetMinor, &offer.Currency, &offer.Status, &offer.Accepted, &updated); err != nil {
 			return err
 		}
 		read.in.Offers = append(read.in.Offers, offer)
@@ -192,7 +215,7 @@ func readVerdictEdits(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealV
 		SELECT c.name, max(a.occurred_at)
 		  FROM (VALUES ($2, ARRAY['expected_close_date']), ($3, ARRAY['amount_minor', 'currency']),
 		               ($4, ARRAY['win_probability_override']), ($5, ARRAY['stage_id'])) c(name, cols)
-		  JOIN audit_log a ON a.entity_type = 'deal' AND a.entity_id = $1 AND a.actor_type = 'human'
+		  JOIN audit_log a ON a.entity_type = 'deal' AND a.entity_id = $1 AND `+storekit.AuditForAUser("a")+`
 		                  AND a.after ?| c.cols
 		 GROUP BY c.name
 		UNION ALL

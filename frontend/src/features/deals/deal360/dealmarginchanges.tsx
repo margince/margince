@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ReceiptReview } from "../../../components/receiptreview";
+import { ReceiptDetail } from "../../../components/receiptdetail";
+import { ReceiptVerbs } from "../../../components/receiptverbs";
 import { Button } from "../../../design-system/atoms";
 import {
   OverviewCard,
@@ -19,13 +20,20 @@ import { useViewerZone } from "../../../lib/viewerzone";
 
 /**
  * Every change Margince made to this deal, newest first, with its reason and
- * an Undo while it is not undone. It stays when the change leaves Home, so an
- * owner who dismissed it there can still take it back here. A latest check
+ * an Undo while it is not undone. Its Details read as they do on Home. It
+ * stays when the change leaves Home, so an owner who dismissed it there can
+ * still take it back here. A latest check
  * that changed nothing leads the list.
  */
 export function DealMarginceChangesCard({
   dealId,
-}: Readonly<{ dealId: string }>) {
+  canWrite,
+}: Readonly<{
+  dealId: string;
+  // Whether this reader may write the deal. An Undo writes it, so one who may
+  // not reads the changes without one.
+  canWrite: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
@@ -63,13 +71,23 @@ export function DealMarginceChangesCard({
           <OverviewRow
             key={change.id}
             title={receiptSummary(change, t, locale, zone)}
-            sub={[
-              receiptBasis(change, t, locale),
-              formatDayMonth(change.occurred_at, locale, zone),
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-            right={<ReceiptReview receipt={change} />}
+            sub={
+              <>
+                {[
+                  receiptBasis(change, t, locale),
+                  formatDayMonth(change.occurred_at, locale, zone),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+                <ReceiptDetail receipt={change} />
+              </>
+            }
+            right={
+              <ReceiptVerbs
+                receipt={change}
+                undoable={canWrite && change.review?.writable !== false}
+              />
+            }
           />
         ))}
       </OverviewList>

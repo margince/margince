@@ -70,6 +70,38 @@ it("labels archived evidence while keeping its permitted text", async () => {
   expect(await screen.findByText("Archived")).toBeTruthy();
   expect(screen.getByText("The buyer asked for a revised quote.")).toBeTruthy();
 });
+it.each([
+  [true, 1],
+  [false, 0],
+])(
+  "marks words AI polished as AI-assisted (ai_assisted %s)",
+  async (assisted, badges) => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }),
+      "GET /activities/source": () =>
+        jsonResponse({
+          id: "source",
+          kind: "task",
+          subject: "Call Anna about pricing",
+          occurred_at: "2026-07-01T09:00:00Z",
+          content_state: "available",
+          ai_assisted: assisted,
+          links: [],
+        }),
+    });
+    renderWithQueryClient(
+      <OpenActivityDrawer
+        activityId="source"
+        zone={browserZone()}
+        onClose={() => {}}
+      />,
+    );
+    expect(
+      await screen.findAllByText("Call Anna about pricing"),
+    ).not.toHaveLength(0);
+    expect(screen.queryAllByText("AI-assisted")).toHaveLength(badges);
+  },
+);
 it("lists the activity's files and offers an upload while it is live", async () => {
   installFetchStub({
     "GET /me": meRoute({ activity: ["read", "update"] }),
@@ -286,4 +318,37 @@ it("shows a website form's fields under their labels instead of the note's text"
   expect(term("Page")).toBe("javascript:alert(1)");
   expect(screen.queryByRole("link", { name: /javascript/ })).toBeNull();
   expect(screen.queryByText(/Consent: not ticked/)).toBeNull();
+});
+
+it.each([
+  ["connect", "Notes are attached. Connect meeting notes to read them."],
+  [
+    "notes_account_mismatch",
+    "Notes are attached. Connect meeting notes with the same Google account as your calendar.",
+  ],
+])("explains a pending notes document with %s", async (concern, sentence) => {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /activities/source": () =>
+      jsonResponse({
+        id: "source",
+        kind: "meeting",
+        subject: "Discovery call",
+        occurred_at: "2026-11-14T10:00:00Z",
+        content_state: "available",
+        meeting_notes_connection: concern,
+        links: [],
+      }),
+  });
+  renderWithQueryClient(
+    <OpenActivityDrawer
+      activityId="source"
+      zone={browserZone()}
+      onClose={() => {}}
+    />,
+  );
+  expect(await screen.findByText(sentence)).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Connect meeting notes" }),
+  ).toBeTruthy();
 });

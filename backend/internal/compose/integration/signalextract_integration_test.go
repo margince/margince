@@ -174,7 +174,7 @@ func TestAThreadThatEndsAContractRaisesASignalCitingIt(t *testing.T) {
 		"inbound", extractClock.Add(-48*time.Hour))
 
 	judge := principal.WithActor(e.Admin(), principal.Principal{Type: principal.PrincipalSystem, ID: "system:owed_verdict", Permissions: principal.Permissions{RowScope: principal.RowScopeAll}})
-	if applied, err := e.LabelCapture(judge, notice, "noise"); err != nil || !applied {
+	if applied, err := e.LabelCapture(judge, notice, "other"); err != nil || !applied {
 		t.Fatalf("capture label: %t %v", applied, err)
 	}
 	if applied, err := e.Activities.SetOwedVerdict(judge, notice, activities.OwedVerdictInformsUs, "test-rules", extractClock); err != nil || !applied {
@@ -506,7 +506,7 @@ func TestTheTwoProducersBothReachTheSameAccount(t *testing.T) {
 	// An outbound tail nobody answered, old enough for the deterministic rule.
 	seedThread(t, e, company, "thread-chase", "Following up", "Any thoughts on the proposal?",
 		"outbound", extractClock.AddDate(0, 0, -30))
-	e.WsExec(t, `UPDATE company SET lifecycle = 'customer' WHERE id = $1`, company)
+	e.WsExec(t, `UPDATE company SET status = 'customer' WHERE id = $1`, company)
 
 	brain := &scriptedBrain{reply: `{"events": []}`}
 	if raised := extractPass(t, e, brain); raised != 0 {

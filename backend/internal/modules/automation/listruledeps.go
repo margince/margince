@@ -50,7 +50,7 @@ func (s *AutomationStore) RulesOnList(ctx context.Context, listID ids.UUID) ([]L
 			  AND (params ->> 'list_id' = @list_id OR params ->> 'shortlist_id' = @list_id)
 			ORDER BY created_at, id`,
 			pgx.StrictNamedArgs{
-				"list_id": listID.String(), "keys": listRuleKeys,
+				"list_id": listID.String(), argKeys: listRuleKeys,
 				"watches": RuleWatchesList, "writes": RuleWritesList,
 			})
 		if err != nil {

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -22,7 +23,10 @@ type TaskWindow struct {
 	// window [From, Until).
 	From, Until time.Time
 	Scope       TaskScope
-	Owner       ids.UUID
+	// Zone is the IANA zone a chosen due date is judged in. Empty is the
+	// installation's zone; only the reader's own list sets it.
+	Zone  string
+	Owner ids.UUID
 	// Team is the seats a team view keeps, plus unassigned work. Nil reads the
 	// scope unnarrowed.
 	Team []ids.UUID
@@ -42,6 +46,12 @@ type TaskBacklog interface {
 	// TasksOnDeals reads every task of the window filed under any of these
 	// deals, drawn as the lane draws them.
 	TasksOnDeals(ctx context.Context, window TaskWindow, deals []ids.UUID) ([]Task, error)
+	// FollowUpPromises names the reader's own open tasks derived from any of
+	// these emails, with their due dates.
+	FollowUpPromises(ctx context.Context, emails []ids.UUID) ([]activities.FollowUpPromise, error)
+	// TasksIn reads these tasks of the window, drawn as the lane draws them. A
+	// task the lane would not draw is not answered.
+	TasksIn(ctx context.Context, window TaskWindow, tasks []ids.UUID) ([]Task, error)
 }
 
 // Positioned is one row a backlog read returned, with the position that
@@ -97,9 +107,12 @@ type backlogState struct {
 	waiting   WaitingBacklog
 	risk      RiskBacklog
 	approvals ApprovalBacklog
-	// approvalsFrom is where the approval tail starts: after the last
-	// approval the ranked rows hold.
-	approvalsFrom string
+	// The suggestion continuations, one per producer.
+	dealSuggestions DealSuggestionBacklog
+	tagSuggestions  TagSuggestionBacklog
+	// resumeAt is where each decision source's tail starts: after the last
+	// row of it the ranked rows hold. A source absent starts at its beginning.
+	resumeAt map[crmcontracts.WorklistItemSource]string
 	// exact is each source's whole count per category, for this request only.
 	exact map[totalKey]int
 	// whole names the windows read short of their cap, whose rows on the page
@@ -126,7 +139,7 @@ func (s *Service) readingBacklog(ctx context.Context, day crmcontracts.Attention
 	reading := *s
 	reading.backlog.exact, reading.backlog.whole = map[totalKey]int{}, map[totalKey]bool{}
 	reading.backlog.until, reading.backlog.zone = beside.until, beside.zone
-	reading.backlog.approvalsFrom = beside.approvalsFrom
+	reading.backlog.resumeAt = beside.resumeAt
 	if !first || s.marked.probe != nil || s.backlog.tasks == nil {
 		return &reading
 	}
@@ -144,7 +157,7 @@ func (s *Service) readingBacklog(ctx context.Context, day crmcontracts.Attention
 // taskWindows are the two task windows a page draws, by the category each
 // window's rows carry: today's under tasks, the later ones under upcoming.
 func (s *Service) taskWindows(asOf, until time.Time) map[totalKey]TaskWindow {
-	today := TaskWindow{AsOf: asOf, Until: until, Scope: s.taskScope, Owner: s.taskOwner, Team: s.rosterSeats()}
+	today := TaskWindow{AsOf: asOf, Until: until, Scope: s.taskScope, Zone: dayZoneOf(s.taskScope, s.backlog.zone), Owner: s.taskOwner, Team: s.rosterSeats()}
 	later := today
 	later.From, later.Until = until, until.AddDate(0, 0, upcomingHorizonDays)
 	return map[totalKey]TaskWindow{
@@ -155,7 +168,8 @@ func (s *Service) taskWindows(asOf, until time.Time) map[totalKey]TaskWindow {
 
 // countInto states one task window's total. A window read short of its cap
 // is whole on the page. Today's cut window is the planned lane's own count,
-// which a team page narrows to its roster as the lane does.
+// which a team page narrows to its roster as the lane does. Home names a cut
+// later window as a floor; the queue drawer counts it.
 func (s *Service) countInto(ctx context.Context, key totalKey, window TaskWindow, day crmcontracts.Attention, cut bool) {
 	switch {
 	case !cut:
@@ -164,9 +178,11 @@ func (s *Service) countInto(ctx context.Context, key totalKey, window TaskWindow
 	case window.From.IsZero():
 		s.backlog.exact[key] = day.Counts.Planned
 		return
+	case s.homeShape:
+		return
 	}
 	var total int
-	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+	err := s.degradable(ctx, "task_count", laneBudget, func(ctx context.Context) error {
 		var err error
 		total, err = s.backlog.tasks.CountTasks(ctx, window)
 		return err

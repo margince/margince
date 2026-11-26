@@ -546,7 +546,7 @@ actions:
                       items:
                         type: object
                         additionalProperties: false
-                        required: [id, delivery_key, attempt, recipient, outcome, created_at]
+                        required: [id, delivery_key, attempt, outcome, created_at]
                         properties:
                           id: { type: string, format: uuid }
                           delivery_key:
@@ -558,10 +558,6 @@ actions:
                           attempt:
                             type: integer
                             description: Which try this was, counting from one.
-                          recipient:
-                            type: string
-                            description: >-
-                              The account this connector addressed, as the CRM resolved it.
                           outcome:
                             type: string
                             enum: [sent, refused, unknown]

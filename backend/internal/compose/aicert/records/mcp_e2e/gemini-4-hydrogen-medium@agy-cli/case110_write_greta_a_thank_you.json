@@ -1,0 +1,94 @@
+{
+  "scenario": "case110_write_greta_a_thank_you",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "6ad6e69899eb11f0",
+    "tools": "b26e632ec47ee6a4",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T07:44:54Z",
+    "graded_commit": "e78e69d3f41bf45bbc08207d2d75a94ae33d19f4",
+    "graded_at": "2026-11-25T11:02:18Z"
+  },
+  "usage": {
+    "input_tokens": 55037,
+    "output_tokens": 11315,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 127070,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "draft_email",
+        "draft_outbound",
+        "find_records",
+        "list_records",
+        "read_context",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "draft_email",
+        "draft_outbound",
+        "find_records",
+        "list_records",
+        "read_context",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 10,
+      "min": 10,
+      "max": 10
+    },
+    "turns": {
+      "median": 7.5,
+      "min": 7,
+      "max": 8
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 91053.5,
+      "min": 81827,
+      "max": 100280
+    },
+    "output_tokens": {
+      "median": 5657.5,
+      "min": 5068,
+      "max": 6247
+    }
+  }
+}

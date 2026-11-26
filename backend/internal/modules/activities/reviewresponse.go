@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // WriteReviewInput is one submission, as the caller that already holds the deal
@@ -48,6 +49,9 @@ type WriteReviewInput struct {
 	Answers         map[string]string
 	ChoiceAnswers   map[string][]string
 	TemplateVersion *int64
+	// TemplateKey names the template the form showed. A version alone cannot
+	// tell two templates apart, because every new template starts at 1.
+	TemplateKey *string
 	// Body is optional prose for the note itself. The answers are the review;
 	// this is what somebody wanted to say beside them.
 	Body   *string
@@ -87,6 +91,9 @@ func (s *Store) WriteOutcomeReviewTx(ctx context.Context, tx pgx.Tx, in WriteRev
 	if in.TemplateVersion != nil && *in.TemplateVersion != template.Version {
 		return crmcontracts.OutcomeReview{}, apperrors.ErrConflict
 	}
+	if in.TemplateKey != nil && *in.TemplateKey != template.Key {
+		return crmcontracts.OutcomeReview{}, apperrors.ErrConflict
+	}
 	if err := validateReviewAnswers(template.Questions, in.Answers, in.ChoiceAnswers); err != nil {
 		return crmcontracts.OutcomeReview{}, err
 	}
@@ -95,6 +102,7 @@ func (s *Store) WriteOutcomeReviewTx(ctx context.Context, tx pgx.Tx, in WriteRev
 	// it. Written through the ordinary activity writer so it carries the
 	// author, the audience and the retention treatment every other note has.
 	note, _, err := s.LogActivityTx(ctx, tx, LogActivityInput{
+		SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, ""), Body: systemtext.Prose(systemtext.Quote, "")},
 		// A note, not a kind of its own. The review IS a note somebody wrote;
 		// a new activity kind would need a place in every timeline filter and
 		// every count, to say something the frozen row beside it already says.

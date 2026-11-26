@@ -100,9 +100,11 @@ func sqlLiterals(t *testing.T, path string, constants ...map[string]string) []st
 // privacy package: retention.go also writes subject tables, and a retention sweep
 // must not satisfy "Art. 17 reaches this table".
 var erasureCascadeFiles = []string{
+	"internal/modules/privacy/erasurependingedges.go",
 	"internal/modules/privacy/originalobjects.go",
 	"internal/modules/privacy/raworiginalsubjects.go",
 	"internal/platform/database/storekit/auditredaction.go",
+	"internal/modules/privacy/erasure_links.go",
 	// Capture owns the projection purge reached through privacy.RawCapturePurger.
 	"internal/modules/capture/partysourceerase.go",
 	// ai owns the voice samples copied from sent mail, emptied through the
@@ -114,7 +116,10 @@ var erasureCascadeFiles = []string{
 	"internal/modules/privacy/commitmentlegacy.go",
 	"internal/modules/privacy/activityerase.go",
 	"internal/modules/privacy/commitmenterasure.go",
+	"internal/modules/privacy/requestremindererasure.go",
 	"internal/modules/privacy/activitycontenterasure.go",
+	// armSuppression, the erasure list writer every erasure calls.
+	"internal/modules/privacy/suppressionlift.go",
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/reportingquestions.go",
 	"internal/modules/privacy/reportingbindings.go",
@@ -128,6 +133,8 @@ var erasureCascadeFiles = []string{
 	// transaction, so it counts here; leaving it off would let a table look
 	// uncovered the moment its purge moved file.
 	"internal/modules/privacy/erasuretimeline.go",
+	// The note and comments of a legal review on a deal the subject holds a stake in.
+	"internal/modules/privacy/erasure_legalreview.go",
 	// The webhook bodies rendered from the subject, cleared through the
 	// purger seam, and the call that reaches it.
 	"internal/modules/privacy/retentioncopies.go",
@@ -163,11 +170,9 @@ var erasureCascadeFiles = []string{
 	// the reason this list's own header gives: leaving it off would make
 	// preference_token look uncovered the moment its DELETE moved file.
 	"internal/modules/privacy/erasure_consent.go",
-	// What a colleague wrote down to DO about the subject, on their own weekly
-	// plan. Same Art. 17 transaction, its own file for the size reason the
-	// timeline has one — and named here so weekly_plan_commitment cannot look
-	// uncovered the moment its redaction moves.
-	"internal/modules/privacy/erasure_commitments.go",
+	// The working records naming the subject in passing, and the call into
+	// the tables other owners declared (sweepreach).
+	"internal/modules/privacy/erasure_declared.go",
 	"internal/modules/privacy/erasure_unlinkednotes.go",
 	"internal/modules/privacy/erasure_manualreview.go",
 	"internal/modules/privacy/notementionlocks.go",
@@ -215,6 +220,9 @@ var erasureCascadeFiles = []string{
 	// its own.
 	"internal/modules/privacy/subjectcolumns.go",
 	"internal/modules/privacy/erasurestrings.go",
+	// The audit history of the signals about the subject, which keeps the old
+	// kind and evidence of a corrected signal. Same Art. 17 transaction.
+	"internal/modules/privacy/erasure_signals.go",
 }
 
 // reachedButNotCascade are files EraseContact's call graph reaches which are NOT
@@ -229,17 +237,16 @@ var erasureCascadeFiles = []string{
 // the derivation names everything and this register accounts for what is not
 // cascade, one entry at a time.
 var reachedButNotCascade = gatekit.Waive(map[string]string{
-	"internal/modules/ai/voice_corpus_summary.go":      "the voice meter and staleness helpers the sample erasure calls after it empties a sample. They read the corpus counts and mark the profile stale; they write no subject text",
-	"internal/modules/ai/voice_source_mutations.go":    "reached for voiceCorpusChangedPayload, a payload builder living here. Its own SQL is the owner's remove, exclude and clear, never the cascade's",
-	"internal/modules/privacy/erasuretally.go":         "the counting transaction every arm of the cascade runs on. Its Exec, Query and QueryRow pass the arm's own statement through and count the rows it touched; it names no table and holds no statement of its own",
-	"internal/modules/privacy/retention.go":            "the nightly time-based evaluator. EraseContact reaches it through the statutory correspondence floor it shares, not to erase anything: its writes are the sweep's own, on the sweep's trigger, and admitting them here would let a retention pass answer for a subject's request",
-	"internal/modules/privacy/retention_floor.go":      "the shared floor itself — the statutory minimum both engines apply. It computes a cutoff and writes nothing",
-	"internal/modules/privacy/floorpolicy.go":          "the floor policy the cascade resolves before it erases. It reads the jurisdiction and the carried floor, and its only write is the carry a jurisdiction change records, never a subject's PII",
-	"internal/modules/privacy/entityfloor.go":          "the further legal entities' floors the policy above resolves. It reads entity ids and countries and writes nothing",
-	"internal/modules/privacy/retentionscope.go":       "the sweep's due-list scoping. Reached through the floor above, and it writes nothing",
-	"internal/modules/privacy/erasure_tombstone.go":    "the suppression record written AFTER the cascade commits, so a re-capture cannot resurrect the subject. It is the same transaction and it writes no subject PII — the tombstone holds hashes, which is the point of it",
-	"internal/modules/privacy/scheduledsends.go":       "the queued sends cancelled on the way through. Reached from the cascade and executing no SQL of its own — it hands its statements to a helper this scan already reads at that call site",
-	"internal/modules/privacy/retentionpolicystore.go": "the policy CRUD an operator drives — reads the table and writes rules, never a subject's PII. It is reached only through a name the walk cannot tell apart from the cascade's own, and admitting it would let a policy edit count as an erasure",
+	"internal/modules/ai/voice_corpus_summary.go":   "the voice meter and staleness helpers the sample erasure calls after it empties a sample. They read the corpus counts and mark the profile stale; they write no subject text",
+	"internal/modules/ai/voice_source_mutations.go": "reached for voiceCorpusChangedPayload, a payload builder living here. Its own SQL is the owner's remove, exclude and clear, never the cascade's",
+	"internal/modules/privacy/erasuretally.go":      "the counting transaction every arm of the cascade runs on. Its Exec, Query and QueryRow pass the arm's own statement through and count the rows it touched; it names no table and holds no statement of its own",
+	"internal/modules/privacy/retention.go":         "the nightly time-based evaluator. EraseContact reaches it through the statutory correspondence floor it shares, not to erase anything: its writes are the sweep's own, on the sweep's trigger, and admitting them here would let a retention pass answer for a subject's request",
+	"internal/modules/privacy/retention_floor.go":   "the shared floor itself — the statutory minimum both engines apply. It computes a cutoff and writes nothing",
+	"internal/modules/privacy/floorpolicy.go":       "the floor policy the cascade resolves before it erases. It reads the jurisdiction and the carried floor, and its only write is the carry a jurisdiction change records, never a subject's PII",
+	"internal/modules/privacy/entityfloor.go":       "the further legal entities' floors the policy above resolves. It reads entity ids and countries and writes nothing",
+	"internal/modules/privacy/retentionscope.go":    "the sweep's due-list scoping. Reached through the floor above, and it writes nothing",
+	"internal/modules/privacy/erasure_tombstone.go": "the suppression record written AFTER the cascade commits, so a re-capture cannot resurrect the subject. It is the same transaction and it writes no subject PII — the tombstone holds hashes, which is the point of it",
+	"internal/modules/privacy/scheduledsends.go":    "the queued sends cancelled on the way through. Reached from the cascade and executing no SQL of its own — it hands its statements to a helper this scan already reads at that call site",
 })
 
 // retentionSweepFiles are the nightly time-based evaluator — the only eraser a
@@ -266,6 +273,7 @@ var reachedButNotCascade = gatekit.Waive(map[string]string{
 var retentionSweepFiles = []string{
 	"internal/platform/database/storekit/auditredaction.go",
 	"internal/modules/privacy/commitmenterasure.go",
+	"internal/modules/privacy/requestremindererasure.go",
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/reportingquestions.go",
 	"internal/modules/privacy/reportingbindings.go",
@@ -436,15 +444,8 @@ func oneStatementCarries(statements []string, assignments []string) bool {
 	return false
 }
 
-// sweepPurges reports whether the sweep deletes from table under every declared
-// predicate — one delete per predicate, so a declaration names the acts rather
-// than the table.
-//
-// Through deleteRe, the matcher tableownership_test.go already derives its own
-// answer from, rather than a second spelling here. The hand-written one this
-// replaced looked for "delete from <table> " and its end-of-string twin, and
-// went blind on a trailing `;` or `)` — both of which end a statement in this
-// tree, and both of which would have reported a purge that exists as missing.
+// Each declared predicate needs a delete; a table-level match could hide a
+// missing purge for one retained record shape.
 func sweepPurges(statements []string, table string, predicates []string) bool {
 	for _, predicate := range predicates {
 		found := false
@@ -452,8 +453,8 @@ func sweepPurges(statements []string, table string, predicates []string) bool {
 			if !strings.Contains(stmt, strings.ToLower(predicate)) {
 				continue
 			}
-			for _, m := range deleteRe.FindAllStringSubmatch(stmt, -1) {
-				if m[1] == table {
+			for _, write := range sqlWrites(stmt) {
+				if write.verb == "delete" && write.table == table {
 					found = true
 				}
 			}
@@ -502,7 +503,7 @@ func statementDestroying(statements []string, table, column string) string {
 		if !writesTable {
 			continue
 		}
-		if deleteRe.MatchString(stmt) {
+		if sqlWritesVerb(stmt, "delete") {
 			return stmt
 		}
 		if sets := setAssignments(stmt); sets != "" && needle.MatchString("SET "+strings.ToLower(sets)) {
@@ -544,7 +545,7 @@ func statementDestroying(statements []string, table, column string) string {
 // reader can follow, not a column hidden from one.
 func assembledSetTarget(statements []string) string {
 	for _, stmt := range statements {
-		if !updateRe.MatchString(stmt) {
+		if !sqlWritesVerb(stmt, "update") {
 			continue
 		}
 		assignments := strings.TrimSpace(setAssignments(stmt))

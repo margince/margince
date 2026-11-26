@@ -73,11 +73,19 @@ describe("the details pane is open until folded", () => {
   });
 
   it("starts open when storage refuses to answer", () => {
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new Error("storage refused");
-    });
-    const { pane } = record();
-    expect(pane()).not.toBeNull();
+    const refused = vi
+      .spyOn(Storage.prototype, "getItem")
+      .mockImplementation(() => {
+        throw new Error("storage refused");
+      });
+    // Restored here: the afterEach restoreAllMocks left this prototype spy in
+    // place, and the next case then read a refusing storage.
+    try {
+      const { pane } = record();
+      expect(pane()).not.toBeNull();
+    } finally {
+      refused.mockRestore();
+    }
   });
 });
 

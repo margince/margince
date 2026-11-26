@@ -1,0 +1,7 @@
+{
+  "verb": "list_domain_questions",
+  "checks": [
+    "activity.read",
+    "company.read"
+  ]
+}

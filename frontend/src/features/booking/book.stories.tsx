@@ -6,7 +6,7 @@ import {
 } from "../../testing/book.testkit";
 import { jsonResponse } from "../../testing/story-utils";
 import { BookingScreen } from "./book";
-import { bookingStory } from "./book.storykit";
+import { bookingFrame, bookingStory } from "./book.storykit";
 
 const meta: Meta<typeof BookingScreen> = {
   parameters: { layout: "fullscreen" },
@@ -104,5 +104,16 @@ export const RecoveredProposal: Story = {
 };
 export const RecoveredProposalDark: Story = {
   ...RecoveredProposal,
+  globals: { theme: "dark" },
+};
+
+// The page support sends an erased contact to. No other page links to it.
+export const ReturnRequest: Story = {
+  render: bookingFrame(() => (
+    <BookingScreen hostSlug="ada-lovelace" page="return" />
+  )),
+};
+export const ReturnRequestDark: Story = {
+  ...ReturnRequest,
   globals: { theme: "dark" },
 };

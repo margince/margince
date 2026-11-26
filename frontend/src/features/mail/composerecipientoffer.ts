@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useCallback, useEffect, useRef } from "react";
+import { addressKey } from "../../lib/addresskey";
 import { useReplyRecipient } from "./composereplyrecipient";
 
 // Where the recipient offer stands, parked with a conversation on a switch.
@@ -11,16 +12,36 @@ export type OfferSnapshot = Readonly<{
 }>;
 
 // The field with the offered address in it. A drafted or committed recipient
-// outranks the offer, unless the field holds values beside a vacated slot.
-function withOffer(
+// outranks the offer, unless the field holds values beside a vacated slot. An
+// address already in Cc or Bcc stays there.
+export function withOffer(
   current: string[],
   address: string,
   fillsVacancy: boolean,
+  copies: readonly string[],
 ): string[] {
+  return offerLands(current, address, fillsVacancy, copies)
+    ? [...current, address]
+    : current;
+}
+
+function offerLands(
+  current: readonly string[],
+  address: string,
+  fillsVacancy: boolean,
+  copies: readonly string[],
+): boolean {
   if (current.length > 0 && !fillsVacancy) {
-    return current;
+    return false;
   }
-  return current.includes(address) ? current : [...current, address];
+  const key = addressKey(address);
+  return ![...current, ...copies].some((held) => addressKey(held) === key);
+}
+
+// The field with a withdrawn offer taken out, in whatever case it stands.
+export function withoutOffer(current: string[], previous: string): string[] {
+  const key = addressKey(previous);
+  return current.filter((address) => addressKey(address) !== key);
 }
 
 // The address the composer offers into To: the thread's counterparty, or the
@@ -31,13 +52,19 @@ export function useRecipientOffer({
   isChannelReply,
   answering,
   recordAddress,
+  to,
   setTo,
+  copies,
 }: Readonly<{
   open: boolean;
   isChannelReply: boolean;
   answering: string | undefined;
   recordAddress: string | undefined;
+  /** The To on screen. */
+  to: readonly string[];
   setTo: (update: (current: string[]) => string[]) => void;
+  /** The Cc and Bcc on screen. */
+  copies: readonly string[];
 }>) {
   // A channel reply resolves its recipient on the server and asks nothing.
   const asksAddress = open && !isChannelReply;
@@ -57,9 +84,9 @@ export function useRecipientOffer({
   const restoringRecipient = useRef(false);
   // Which address was offered, so a change of conversation replaces it alone.
   const offeredAddress = useRef<string | undefined>(undefined);
-  // A change of conversation emptied the offer's slot, so the next anchor's
-  // address fills it even beside recipients the reader typed.
-  const vacated = useRef(false);
+  // The address a change of conversation took out of the offer's slot. The next
+  // anchor's address fills that slot even beside recipients the reader typed.
+  const vacated = useRef<string | undefined>(undefined);
   // The reader has taken the field over. The first keystroke is the signal,
   // because committed values stay empty until Enter.
   const settle = useCallback(() => {
@@ -79,8 +106,8 @@ export function useRecipientOffer({
       return;
     }
     offeredAddress.current = undefined;
-    vacated.current = true;
-    setTo((current) => current.filter((address) => address !== previous));
+    vacated.current = previous;
+    setTo((current) => withoutOffer(current, previous));
   }, [answering]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: the anchor is a key here. Two conversations with one counterparty share an address, and the vacated slot still needs filling.
   useEffect(() => {
@@ -88,11 +115,20 @@ export function useRecipientOffer({
       return;
     }
     offered.current = true;
-    offeredAddress.current = threadRecipient;
     // The refs settle before the updater, which StrictMode may run twice.
-    const fillsVacancy = vacated.current;
-    vacated.current = false;
-    setTo((current) => withOffer(current, threadRecipient, fillsVacancy));
+    const vacatedBy = vacated.current;
+    vacated.current = undefined;
+    const fillsVacancy = vacatedBy !== undefined;
+    // Only an offer that lands is the offer's to withdraw on the next switch.
+    const before =
+      vacatedBy === undefined ? to : withoutOffer([...to], vacatedBy);
+    if (!offerLands(before, threadRecipient, fillsVacancy, copies)) {
+      return;
+    }
+    offeredAddress.current = threadRecipient;
+    setTo((current) =>
+      withOffer(current, threadRecipient, fillsVacancy, copies),
+    );
   }, [threadRecipient, answering]);
 
   return {
@@ -110,7 +146,7 @@ export function useRecipientOffer({
       offeredAddress.current = next.offeredAddress;
       offered.current = next.offered;
       restoringRecipient.current = restoring;
-      vacated.current = false;
+      vacated.current = undefined;
     },
   };
 }

@@ -1,0 +1,9 @@
+{
+  "verb": "start_search_reindex",
+  "checks": [
+    "embedding_reindex.update"
+  ],
+  "takes": [
+    "idle_reindex"
+  ]
+}

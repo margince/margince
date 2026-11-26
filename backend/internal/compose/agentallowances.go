@@ -32,7 +32,7 @@ func toAgentAllowances(p agentvolume.Policy, roles []identity.RoleAllowance, now
 			AdminWritesPerWindow: identity.AdminAllowancePreset.Writes,
 			AdminCallsPerWindow:  identity.AdminAllowancePreset.Calls,
 		},
-		Roles:                   toRoleAllowances(p.Limits, roles),
+		Roles:                   toRoleAllowances(p, roles),
 		McpCallsPerMinute:       mcpCallsPerMinute,
 		McpStreamOpensPerMinute: mcpStreamOpensPerMinute,
 	}
@@ -46,7 +46,8 @@ func toAgentAllowances(p agentvolume.Policy, roles []identity.RoleAllowance, now
 // toRoleAllowances reports what each role gives per count and where it comes
 // from. The order is the role's own value, a kept installation value, the
 // Admin preset, then the installation value it inherits.
-func toRoleAllowances(installation agentvolume.Limits, roles []identity.RoleAllowance) []crmcontracts.AgentRoleAllowance {
+func toRoleAllowances(p agentvolume.Policy, roles []identity.RoleAllowance) []crmcontracts.AgentRoleAllowance {
+	installation := p.Limits
 	out := make([]crmcontracts.AgentRoleAllowance, 0, len(roles))
 	for _, r := range roles {
 		value := func(c agentvolume.Counter) crmcontracts.AgentRoleAllowanceValue {
@@ -68,6 +69,7 @@ func toRoleAllowances(installation agentvolume.Limits, roles []identity.RoleAllo
 			AgentWritesPerWindow: value(agentvolume.Writes),
 			AgentEgressPerWindow: value(agentvolume.Egress),
 			AgentCallsPerWindow:  value(agentvolume.Calls),
+			PacedPerMinute:       p.Paced([]string{r.Key}),
 		})
 	}
 	return out

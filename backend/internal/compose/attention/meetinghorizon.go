@@ -98,7 +98,7 @@ func (s *Service) meetingHorizon(ctx context.Context, day crmcontracts.Attention
 func (s *Service) horizonSide(
 	ctx context.Context, source string, read func(context.Context) error,
 ) *crmcontracts.WorklistSourceUnavailable {
-	err := s.degradable(ctx, laneBudget, read)
+	err := s.degradable(ctx, source, laneBudget, read)
 	if err == nil || errors.Is(err, apperrors.ErrPermissionDenied) {
 		return nil
 	}

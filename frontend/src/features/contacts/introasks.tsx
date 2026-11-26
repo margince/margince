@@ -16,16 +16,19 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDate } from "../../format/format";
 import { INTRO_STATUS_LABELS as STATUS_LABEL } from "../../format/introstatus";
 import { useLocale, useT } from "../../i18n";
+import { useCanWrite } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { IntroDecisionDrawer } from "./introdecision";
+import { IntroReplacement } from "./introreplace";
 import {
   type IntroRequest,
   useCancelIntroRequest,
   useCompleteIntroRequest,
   useIntroRequests,
 } from "./introrequests";
+import { lastReadFailed } from "./readfailed";
 
 type CompleteMutation = ReturnType<typeof useCompleteIntroRequest>;
 type CancelMutation = ReturnType<typeof useCancelIntroRequest>;
@@ -44,12 +47,30 @@ const WITHDRAWABLE = new Set<IntroRequest["status"]>([
   "name_drop_approved",
 ]);
 
+/** isOpenAsk is whether a row can still carry a verb for either party. */
+export function isOpenAsk(ask: IntroRequest): boolean {
+  return WITHDRAWABLE.has(ask.status);
+}
+
 /**
- * IntroAsksPanel lists the open and settled asks the viewer is party to.
+ * askSettledAt is when a settled ask last moved, so a timeline can place it.
+ * Its latest stamp wins; an ask with none falls back to when it was made.
+ */
+export function askSettledAt(ask: IntroRequest): string {
+  return (
+    ask.replied_at ??
+    ask.name_dropped_at ??
+    ask.introduced_at ??
+    ask.decided_at ??
+    ask.requested_at
+  );
+}
+
+/**
+ * IntroAsksPanel lists the open asks the viewer is party to.
  *
- * An empty list renders nothing at all rather than an empty card: a contact
- * nobody has asked about is the ordinary case, and a card saying so on every
- * such page is noise on most of them.
+ * Settled asks belong to the Progress timeline, where they sit by date among
+ * the relationship's changes. With no open ask the panel renders nothing.
  */
 export function IntroAsksPanel({
   contactId,
@@ -62,6 +83,7 @@ export function IntroAsksPanel({
   const viewerUserId = useViewerId();
   const asks = useIntroRequests(contactId);
   const [deciding, setDeciding] = useState<IntroRequest | undefined>();
+  const [replacing, setReplacing] = useState<IntroRequest>();
   // Shared across the whole card, not per-row — each mutation's own
   // `.variables.id` is what AskRow reads to tell whether ITS row is the one
   // a given pending state or failure belongs to, rather than a separate
@@ -71,7 +93,7 @@ export function IntroAsksPanel({
   const cancel = useCancelIntroRequest(contactId);
 
   // A failed read keeps the card, because no card at all reads as no asks.
-  if (asks.isError) {
+  if (lastReadFailed(asks)) {
     return (
       <Panel title={t("contact.intro.asksTitle")}>
         <PanelBody>
@@ -92,7 +114,7 @@ export function IntroAsksPanel({
       </Panel>
     );
   }
-  const rows = asks.data ?? [];
+  const rows = (asks.data ?? []).filter(isOpenAsk);
   if (rows.length === 0) {
     return null;
   }
@@ -109,11 +131,20 @@ export function IntroAsksPanel({
               complete={complete}
               cancel={cancel}
               onAnswer={() => setDeciding(ask)}
+              onReplace={() => setReplacing(ask)}
             />
           ))}
         </ul>
       </PanelBody>
 
+      {replacing ? (
+        <IntroReplacement
+          contactId={contactId}
+          contactName={contactName}
+          request={replacing}
+          onClose={() => setReplacing(undefined)}
+        />
+      ) : null}
       {deciding ? (
         <IntroDecisionDrawer
           contactId={contactId}
@@ -137,12 +168,14 @@ function AskRow({
   complete,
   cancel,
   onAnswer,
+  onReplace,
 }: Readonly<{
   ask: IntroRequest;
   viewerUserId: string | undefined;
   complete: CompleteMutation;
   cancel: CancelMutation;
   onAnswer: () => void;
+  onReplace: () => void;
 }>) {
   const t = useT();
   // Only the colleague being asked may answer, and only while the ask is
@@ -168,8 +201,7 @@ function AskRow({
   // press on each before the first answer returns cannot fire both at once.
   return (
     <li>
-      <Badge>{t(labelFor(STATUS_LABEL, ask.status))}</Badge>{" "}
-      <AskSummary ask={ask} />
+      <AskLine ask={ask} />
       {mine && ask.status === "requested" ? (
         <Button onClick={onAnswer}>{t("contact.intro.answerAction")}</Button>
       ) : null}
@@ -183,14 +215,12 @@ function AskRow({
         </Button>
       ) : null}
       {isRequester && WITHDRAWABLE.has(ask.status) ? (
-        <Button
-          variant="ghost"
-          onClick={() => cancel.mutate({ id: ask.id, version: ask.version })}
-          pending={cancellingThis && cancel.isPending}
-          disabled={completingThis && complete.isPending}
-        >
-          {t("contact.intro.withdrawAction")}
-        </Button>
+        <RequesterActions
+          onReplace={onReplace}
+          onWithdraw={() => cancel.mutate({ id: ask.id, version: ask.version })}
+          cancelling={cancellingThis && cancel.isPending}
+          completing={completingThis && complete.isPending}
+        />
       ) : null}
       {completingThis && complete.isError ? (
         <p role="alert">
@@ -203,6 +233,17 @@ function AskRow({
         </p>
       ) : null}
     </li>
+  );
+}
+
+/** AskLine is an ask's state and its one-line summary, with no verbs. */
+export function AskLine({ ask }: Readonly<{ ask: IntroRequest }>) {
+  const t = useT();
+  return (
+    <>
+      <Badge>{t(labelFor(STATUS_LABEL, ask.status))}</Badge>{" "}
+      <AskSummary ask={ask} />
+    </>
   );
 }
 
@@ -267,3 +308,40 @@ function outcomeFor(
 // Every status the contract admits has words here, so a state the server can
 // send cannot reach a reader as a raw enum. A name-drop and an introduction
 // read differently on purpose: they are different events.
+
+function RequesterActions({
+  onReplace,
+  onWithdraw,
+  cancelling,
+  completing,
+}: Readonly<{
+  onReplace: () => void;
+  onWithdraw: () => void;
+  cancelling: boolean;
+  completing: boolean;
+}>) {
+  const t = useT();
+  const canCreate = useCanWrite("introduction", "create");
+  const canUpdate = useCanWrite("introduction", "update");
+  return (
+    <>
+      {canCreate && canUpdate ? (
+        <Button
+          variant="ghost"
+          onClick={onReplace}
+          disabled={cancelling || completing}
+        >
+          {t("contact.intro.replaceAction")}
+        </Button>
+      ) : null}
+      <Button
+        variant="ghost"
+        onClick={onWithdraw}
+        pending={cancelling}
+        disabled={completing}
+      >
+        {t("contact.intro.withdrawAction")}
+      </Button>
+    </>
+  );
+}

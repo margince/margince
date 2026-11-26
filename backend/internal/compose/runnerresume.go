@@ -40,7 +40,7 @@ type approvalDecision struct {
 // Every other event on the group's streams is not ours — nil, not an
 // error, so the group keeps flowing.
 func (s *RunnerService) HandleEvent(ctx context.Context, env kevents.Envelope) error {
-	if env.Type != "approval.decided" {
+	if !kevents.OvernightAgentTypes.Has(env.Type) {
 		return nil
 	}
 	approvalID := ids.From[ids.ApprovalKind](env.Entity.ID)
@@ -130,6 +130,7 @@ func (s *RunnerService) HandleEvent(ctx context.Context, env kevents.Envelope) e
 		TriggerRef: suspended.TriggerRef,
 		Budget:     spec.Budget,
 		Tools:      spec.Tools,
+		Outcome:    outcomeCheckFor(spec),
 		// Resolved fresh on resume rather than carried in the suspended row:
 		// the summary is written after the human answers, so it takes the
 		// language the installation has NOW, the same way Tools rides the

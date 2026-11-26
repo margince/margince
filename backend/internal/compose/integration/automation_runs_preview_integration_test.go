@@ -16,27 +16,37 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // automationRunWire is the contract AutomationRun shape as this suite
 // reads it; pointers make absent-vs-present assertable.
 type automationRunWire struct {
-	ID               string  `json:"id"`
-	AutomationID     string  `json:"automation_id"`
-	Outcome          string  `json:"outcome"`
-	Tier             string  `json:"tier"`
-	OccurredAt       string  `json:"occurred_at"`
-	Reason           *string `json:"reason"`
-	ApprovalRequired *bool   `json:"approval_required"`
-	TriggerEvidence  *string `json:"trigger_evidence"`
-	TargetRef        *string `json:"target_ref"`
-	ActionResult     *string `json:"action_result"`
+	ID               string   `json:"id"`
+	AutomationID     string   `json:"automation_id"`
+	Outcome          string   `json:"outcome"`
+	Tier             string   `json:"tier"`
+	OccurredAt       string   `json:"occurred_at"`
+	Reason           *string  `json:"reason"`
+	ApprovalRequired *bool    `json:"approval_required"`
+	TriggerEvidence  *string  `json:"trigger_evidence"`
+	TargetRef        *string  `json:"target_ref"`
+	ActionResult     *string  `json:"action_result"`
+	EventID          string   `json:"event_id"`
+	TriggerEventType *string  `json:"trigger_event_type"`
+	ActionKinds      []string `json:"action_kinds"`
+	Target           *struct {
+		Type  string  `json:"type"`
+		ID    string  `json:"id"`
+		Label *string `json:"label"`
+	} `json:"target"`
 }
 
 type automationRunsPage struct {
@@ -57,7 +67,7 @@ func createRouteLeadAutomation(t *testing.T, e *apptest.AppEnv) string {
 	}
 	if status := e.Call(t, "POST", "/v1/automations", AnyMap{
 		"key": "assign_lead_owner", "name": "Router under observation",
-		"params": AnyMap{"owners": []string{"0198c0de-0000-7000-8000-000000000001"}, "cap_per_owner": 3},
+		"params": AnyMap{"owners": []string{apptest.SessionUserID(t, e)}, "cap_per_owner": 3},
 	}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("create automation → %d", status)
 	}
@@ -95,7 +105,7 @@ func TestAutomationRunHistoryAndPreviewOverHTTP(t *testing.T) {
 
 	assertRunsStartEmptyAndHideAbsentInstances(t, e, autoID)
 	assertRunsRenderEveryOutcomeWithItsTrace(t, e, autoID)
-	assertPreviewMeasuresWithoutWriting(t, e, autoID)
+	assertEventPreviewWritesNothing(t, e, autoID)
 }
 
 // assertRunsStartEmptyAndHideAbsentInstances pins the empty-history page
@@ -131,7 +141,8 @@ func assertRunsRenderEveryOutcomeWithItsTrace(t *testing.T, e *apptest.AppEnv, a
 	base := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 	reason := func(s string) []byte { return runDetailReason(t, s) }
 
-	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: autoID, Status: "applied", Trigger: ids.NewV7(), Planned: &actionTrace, Applied: &actionTrace, At: base})
+	firedBy := ids.NewV7()
+	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: autoID, Status: "applied", Trigger: firedBy, Planned: &actionTrace, Applied: &actionTrace, At: base})
 	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: autoID, Status: "failed", Trigger: ids.NewV7(), Detail: reason("provider error"), At: base.Add(time.Minute)})
 	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{
 		Automation: autoID, Status: "requires_approval", Trigger: ids.NewV7(), Planned: &actionTrace,
@@ -162,17 +173,27 @@ func assertRunsRenderEveryOutcomeWithItsTrace(t *testing.T, e *apptest.AppEnv, a
 
 	requireStr(t, "fired action_result", fired.ActionResult, "applied assign_owner")
 	requireStr(t, "fired target_ref", fired.TargetRef, "lead:"+targetLead)
+	requireStr(t, "fired trigger_event_type", fired.TriggerEventType, "lead.created")
+	if fired.EventID != firedBy.String() || !slices.Equal(fired.ActionKinds, []string{"assign_owner"}) {
+		t.Fatalf("fired event_id=%s action_kinds=%v, want %s and [assign_owner]", fired.EventID, fired.ActionKinds, firedBy)
+	}
+	if fired.Target == nil || fired.Target.Type != "lead" || fired.Target.ID != targetLead || fired.Target.Label != nil {
+		t.Fatalf("fired target = %+v, want the lead with no name: no lead by that id exists", fired.Target)
+	}
 	if fired.Reason != nil || fired.ApprovalRequired != nil {
 		t.Fatalf("a fired run carries reason=%v approval_required=%v, want neither", fired.Reason, fired.ApprovalRequired)
 	}
 
 	requireStr(t, "failed reason", failed.Reason, "provider error")
-	if failed.ActionResult != nil || failed.TargetRef != nil {
-		t.Fatalf("a pre-plan failure carries action_result=%v target_ref=%v, want neither (its plan is honestly empty)",
-			failed.ActionResult, failed.TargetRef)
+	if failed.ActionResult != nil || failed.TargetRef != nil || failed.Target != nil || len(failed.ActionKinds) != 0 {
+		t.Fatalf("a pre-plan failure carries action_result=%v target_ref=%v target=%v action_kinds=%v, want none (its plan is honestly empty)",
+			failed.ActionResult, failed.TargetRef, failed.Target, failed.ActionKinds)
 	}
 
 	requireStr(t, "parked action_result", parked.ActionResult, "queued to approval inbox")
+	if !slices.Equal(parked.ActionKinds, []string{"assign_owner"}) {
+		t.Fatalf("parked action_kinds = %v, want the queued [assign_owner]", parked.ActionKinds)
+	}
 	if parked.ApprovalRequired == nil || !*parked.ApprovalRequired {
 		t.Fatalf("a parked run reads approval_required=%v, want true", parked.ApprovalRequired)
 	}
@@ -187,11 +208,8 @@ func assertRunsRenderEveryOutcomeWithItsTrace(t *testing.T, e *apptest.AppEnv, a
 	}
 }
 
-// assertPreviewMeasuresWithoutWriting pins the dry-run: the stored
-// assign_lead_owner recipe counts the open unrouted lead pool, the draft
-// override previews another catalog type before saving, the editor's 422
-// vocabulary matches a save's, and the whole thing leaves zero rows.
-func assertPreviewMeasuresWithoutWriting(t *testing.T, e *apptest.AppEnv, autoID string) {
+// Event previews name what cannot be estimated and leave no audit, event or run rows.
+func assertEventPreviewWritesNothing(t *testing.T, e *apptest.AppEnv, autoID string) {
 	t.Helper()
 	var lead struct {
 		ID string `json:"id"`
@@ -213,24 +231,18 @@ func assertPreviewMeasuresWithoutWriting(t *testing.T, e *apptest.AppEnv, autoID
 		t.Fatal(err)
 	}
 
-	var preview struct {
-		MatchesNow           int       `json:"matches_now"`
-		WindowDays           int       `json:"window_days"`
-		WouldHaveFired       *int      `json:"would_have_fired"`
-		Sample               *[]string `json:"sample"`
-		ExcludedByPermission *int      `json:"excluded_by_permission"`
-	}
+	var preview crmcontracts.AutomationPreview
 	if status := e.Call(t, "POST", "/v1/automations/"+autoID+"/preview", AnyMap{}, nil, &preview); status != http.StatusOK {
 		t.Fatalf("preview → %d", status)
 	}
-	if preview.MatchesNow != 1 || preview.WindowDays != 30 {
-		t.Fatalf("preview = %d matches over %d days, want the 1 unrouted lead over the default 30", preview.MatchesNow, preview.WindowDays)
+	if preview.PreviewKind == nil || *preview.PreviewKind != crmcontracts.AutomationPreviewKindEvent || preview.WindowDays != 30 {
+		t.Fatalf("event preview = %+v", preview)
 	}
-	if preview.WouldHaveFired == nil || *preview.WouldHaveFired != 1 {
-		t.Fatalf("would_have_fired = %v, want 1 (the lead created inside the window)", preview.WouldHaveFired)
+	if preview.MatchesNowAvailable == nil || *preview.MatchesNowAvailable || preview.HistoricalPreviewAvailable == nil || *preview.HistoricalPreviewAvailable {
+		t.Fatalf("event preview claims a record count or historical estimate: %+v", preview)
 	}
-	if preview.Sample == nil || len(*preview.Sample) != 1 || (*preview.Sample)[0] != lead.ID {
-		t.Fatalf("sample = %v, want exactly the matching lead %s", preview.Sample, lead.ID)
+	if preview.MatchesNow != 0 || preview.WouldHaveFired != nil || (preview.Sample != nil && len(*preview.Sample) != 0) {
+		t.Fatalf("event preview inferred work from current leads: %+v", preview)
 	}
 	// Zero ships explicitly: "nothing was hidden" is information.
 	if preview.ExcludedByPermission == nil || *preview.ExcludedByPermission != 0 {
@@ -238,17 +250,14 @@ func assertPreviewMeasuresWithoutWriting(t *testing.T, e *apptest.AppEnv, autoID
 	}
 
 	// The draft override previews an edited recipe before it is saved.
-	var draft struct {
-		MatchesNow int `json:"matches_now"`
-		WindowDays int `json:"window_days"`
-	}
+	var draft crmcontracts.AutomationPreview
 	if status := e.Call(t, "POST", "/v1/automations/"+autoID+"/preview", AnyMap{
 		"key": "stage_change_create_task", "window_days": 7,
 	}, nil, &draft); status != http.StatusOK {
 		t.Fatalf("draft-override preview → %d", status)
 	}
-	if draft.MatchesNow != 0 || draft.WindowDays != 7 {
-		t.Fatalf("draft preview = %d matches over %d days, want 0 open deals over the requested 7", draft.MatchesNow, draft.WindowDays)
+	if draft.MatchesNow != 0 || draft.WindowDays != 7 || draft.MatchesNowAvailable == nil || *draft.MatchesNowAvailable || draft.WouldHaveFired != nil {
+		t.Fatalf("draft preview = %d matches over %d days, want no record estimate over the requested 7 days", draft.MatchesNow, draft.WindowDays)
 	}
 
 	// The editor's preview 422s match its save 422s.

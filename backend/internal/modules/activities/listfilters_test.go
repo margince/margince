@@ -28,7 +28,7 @@ func TestActivityFiltersLandWhereTheRouteFillsThem(t *testing.T) {
 		"kind": "email", "channel_provider": "gmail", "entity_type": "contact", "entity_id": entity.String(),
 		"assignee_id": assignee.String(), "project_id": project.String(), "thread_key": "thread-7",
 		"occurred_after": "2026-10-01T00:00:00Z", "occurred_before": "2026-10-15T09:30:00+02:00",
-		"waiting_reply": "true", "include_archived": "true", "sort": "-occurred_at",
+		"website_form_id": project.String(), "waiting_reply": "true", "include_archived": "true", "sort": "-occurred_at",
 	})
 	if err != nil {
 		t.Fatalf("applying every filter: %v", err)
@@ -53,6 +53,9 @@ func TestActivityFiltersLandWhereTheRouteFillsThem(t *testing.T) {
 	if in.WithinProjectID == nil || in.WithinProjectID.UUID != project {
 		t.Errorf("project_id landed as %v, want %s", in.WithinProjectID, project)
 	}
+	if in.WebsiteFormID == nil || *in.WebsiteFormID != project {
+		t.Errorf("website_form_id landed as %v, want %s", in.WebsiteFormID, project)
+	}
 	after := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
 	before := time.Date(2026, 10, 15, 7, 30, 0, 0, time.UTC)
 	if in.OccurredAfter == nil || !in.OccurredAfter.Equal(after) {
@@ -74,6 +77,7 @@ func TestActivityFiltersLandWhereTheRouteFillsThem(t *testing.T) {
 func TestAnActivityFilterOperandOfTheWrongShapeIsRefused(t *testing.T) {
 	for _, c := range []struct{ filter, operand, says string }{
 		{"entity_id", "contact-42", "uuid"},
+		{"website_form_id", "form-42", "uuid"},
 		{"occurred_after", "yesterday", "RFC 3339"},
 		{"occurred_before", "2026-10-15", "RFC 3339"},
 		{"waiting_reply", "yes", "true"},
@@ -100,7 +104,7 @@ func TestOnlyTheActivityTypeOffersTheTimelineFilters(t *testing.T) {
 	p := &Provider{}
 	want := []string{
 		"assignee_id", "call_outcome", "channel_provider", "entity_id", "entity_type", "include_archived", "kind",
-		"occurred_after", "occurred_before", "project_id", "reminder_due", "sort", "source_activity_id", "thread_key", "waiting_reply",
+		"occurred_after", "occurred_before", "project_id", "reminder_due", "sort", "source_activity_id", "thread_key", "waiting_reply", "website_form_id",
 		"cf_",
 	}
 	if got := p.ListFilters(datasource.EntityActivity); !slices.Equal(got, want) {

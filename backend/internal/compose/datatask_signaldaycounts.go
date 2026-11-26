@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -26,7 +27,7 @@ import (
 func signalDayCountsDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1793028172_signal_day_counts", Version: 1,
-		Title: "Reword signal summaries that froze a day count",
+		Title: systemtext.Literal("datatask.title.core.1793028172_signal_day_counts"),
 		Steps: []datatask.Step{{
 			Name: "reword_signal_day_counts", Limit: 200, MinLimit: 20,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
@@ -77,8 +78,8 @@ func rewordedDaySummary(kind, summary string) (string, bool) {
 	return "", false
 }
 
-const signalDayCountScope = `FROM signal s
- WHERE s.source = 'signal-scan' AND s.kind IN ('` + kindGhostedThread + `', '` + kindProjectGoneQuiet + `')`
+var signalDayCountScope = `FROM signal s
+ WHERE ` + signals.ScanWrittenSQL("s.") + ` AND s.kind IN ('` + kindGhostedThread + `', '` + kindProjectGoneQuiet + `')`
 
 type storedSignalSummary struct {
 	ID      ids.UUID

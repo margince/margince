@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # scheduled-report.sh — turn a failing scheduled check into a durable issue.
 #
-# Called when a check in scheduled.yml OR main-health.yml failed. A red
+# Called by the report job of every workflow that names this script (grep
+# .github/workflows/ for it), on every run of the default branch. A red
 # scheduled run notifies essentially nobody by default, which is the whole reason
 # these checks moved off the PR path in the first place: nothing was going to make
 # someone look. An issue is the artifact that survives until it is closed.
@@ -14,6 +15,16 @@ set -euo pipefail
 : "${GH_TOKEN:?the reporting step needs a token to file issues}"
 : "${REPO:?REPO must name the repository to file against}"
 : "${RUN_URL:?RUN_URL must link the run that produced this verdict}"
+: "${GITHUB_REF:?GITHUB_REF must name the ref this run measured}"
+: "${DEFAULT_BRANCH:?DEFAULT_BRANCH must name the branch whose issues this files}"
+
+# Every issue here is about the default branch. A run on any other ref measured
+# that ref, so its verdicts neither file nor close one; its run summary says
+# what it found.
+if [[ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]]; then
+  echo "run on $GITHUB_REF, not refs/heads/$DEFAULT_BRANCH: no issue filed or closed"
+  exit 0
+fi
 
 # EVERY open issue, read ONCE for the whole run — not a first page of them, and
 # not once per finding. A capped read answers "no issue with this title" the
@@ -64,7 +75,7 @@ report() {
   if [[ -n "$existing" ]]; then
     echo "already open as #$existing — commenting"
     gh issue comment "$existing" --repo "$REPO" \
-      --body "Still failing on the $(date -u +%Y-%m-%d) scheduled run: $RUN_URL"
+      --body "Still failing on the run of $(date -u +%Y-%m-%d): $RUN_URL"
     return
   fi
   echo "filing: $title"
@@ -162,8 +173,9 @@ reads the gate, so this job reads it and files here when it goes red.
 A \`NONE\` status is reported as a failure on purpose: it means no analysis is
 attached to \`main\` at all, which looks identical to green on every dashboard.
 
-The failing conditions are printed in the \`quality-gate\` job log of the run
-above."\
+On \`ERROR\` or \`WARN\`, the \`quality-gate\` job log of the run above prints the
+failing conditions and the security and reliability findings behind them, or a
+warning where the findings could not be listed."\
     || unreported=1
 elif [[ "${GATE_RESULT:-}" = "success" ]]; then
   resolve "SonarCloud quality gate is not green on main"
@@ -240,15 +252,32 @@ elif [[ "${RENOVATE_RESULT:-}" = "success" ]]; then
   resolve "Renovate is running but opens no pull requests"
 fi
 
+# One reporter for both PERF tiers, so one tier cannot drift from the other in
+# what it files. The arguments are the tier's name as its issue titles carry it
+# ("" for SMB, whose titles predate the second tier), its job result and step
+# outcome, the command it ran, the seed it times out in, what a breach means at
+# that tier, and what happens to its numbers.
+#
 # Two findings, not one, because the job result cannot tell them apart: a failed
 # checkout, a cold cache, a refused database or a hung seed all arrive here as
 # `failure`. Filing "a budget is breaching" for those sends somebody bisecting a
 # regression that never happened — which is the failure this whole lane keeps
-# learning about. PERF_OUTCOME is set by the step from the harness's own breach
+# learning about. The outcome is set by the step from the harness's own breach
 # message, so only a MEASURED breach is reported as one.
-if [[ "${PERF_RESULT:-}" = "failure" ]] && [[ "${PERF_OUTCOME:-}" != "breach" ]]; then
-  report "the weekly PERF-3/PERF-7 run could not complete" "priority: normal,area: ci-tests,bug" \
-"\`make bench-perf BENCH_PERF_TIER=smb\` failed on the weekly run of \`main\` WITHOUT
+perf_report() {
+  local tier="$1" result="$2" outcome="$3" cmd="$4" seed="$5" meaning="$6" record="$7"
+  # A measure-only dispatch runs with the gate off, so its `ok` is no verdict
+  # on the budget and its failures are not the weekly lane's: it must neither
+  # open nor close a perf issue.
+  if [[ "${PERF_MEASURE_ONLY:-}" = "true" ]]; then
+    return
+  fi
+  local cannot="the weekly PERF-3/PERF-7 run${tier:+ on the $tier tier} could not complete"
+  local breaching="a PERF-3/PERF-7 budget is breaching on main${tier:+ ($tier tier)}"
+
+  if [[ "$result" = "failure" ]] && [[ "$outcome" != "breach" ]]; then
+    report "$cannot" "priority: normal,area: ci-tests,bug" \
+"\`$cmd\` failed on the weekly run of \`main\` WITHOUT
 reaching a budget verdict: $RUN_URL
 
 No budget is known to be breaching, and none is known to hold — the lane did not
@@ -256,44 +285,57 @@ get far enough to say. The step separates the two outcomes precisely so this
 issue does not claim a regression that was never measured.
 
 Likely causes, in the order they occur: the runner could not reach the Postgres
-service, \`bench_db\` could not create \`margince_bench\`, or the SMB seed
-outran \`go test\`'s 20m budget (which would have printed a goroutine dump — if
-the job was killed at 30m instead, the runner was slower than the budget assumes
+service, \`bench_db\` could not create \`margince_bench\`, or the $seed
+outran \`go test\`'s budget (which would have printed a goroutine dump — if
+the job was killed first, the runner was slower than the budget assumes
 and the two timeouts need re-deriving, not raising).
 
-Reproduce with \`make db-up && make bench-perf-check\`. No record reached the
-tree: a record is proposed as a pull request, and this run measured nothing to
-propose."\
-    || unreported=1
-elif [[ "${PERF_RESULT:-}" = "success" ]] || [[ "${PERF_OUTCOME:-}" = "breach" ]]; then
-  # A MEASURED BREACH IS PROOF THE LANE RAN, which is the only thing this
-  # title claims — so it retracts here as well as on a pass, and the arm below
-  # files the breach under its own title.
-  resolve "the weekly PERF-3/PERF-7 run could not complete"
-fi
+Reproduce with \`make db-up && make bench-perf-check${tier:+ BENCH_PERF_CHECK_TIER=mid_market}\`. No record reached the
+tree: this run measured nothing to propose."\
+      || unreported=1
+  elif [[ "$result" = "success" ]] || [[ "$outcome" = "breach" ]]; then
+    # A MEASURED BREACH IS PROOF THE LANE RAN, which is the only thing this
+    # title claims — so it retracts here as well as on a pass, and the arm below
+    # files the breach under its own title.
+    resolve "$cannot"
+  fi
 
-if [[ "${PERF_OUTCOME:-}" = "breach" ]]; then
-  report "a PERF-3/PERF-7 budget is breaching on main" "priority: normal,area: ci-tests,bug" \
-"\`make bench-perf BENCH_PERF_TIER=smb\` failed on the weekly run of \`main\`: $RUN_URL
+  if [[ "$outcome" = "breach" ]]; then
+    report "$breaching" "priority: normal,area: ci-tests,bug" \
+"\`$cmd\` failed on the weekly run of \`main\`: $RUN_URL
 
-This alarm runs the SMB tier only, and that shapes what the finding means: SMB
-is the corpus most installations look like, while the PERF-7 SLO binds at
-mid-market. So a breach here is worse than it sounds — the SMALLER corpus is
-already over a bound the larger one has to meet. Mid-market is not measured by
-any schedule; run \`make bench-perf\` by hand to see it.
+$meaning
 
-The breach is recorded, and the run proposes the record as a pull request. Merge
-it only once the breach is understood; until then the published page shows the
-last record a maintainer merged. Reproduce with \`make db-up && make bench-perf-check\`.
+$record Reproduce with \`make db-up && make bench-perf-check${tier:+ BENCH_PERF_CHECK_TIER=mid_market}\`.
 
 This budget carried no merge gate: PERF-3/PERF-7 left the integration lane
 because a mid-market SLO gated on an SMB corpus renders \`inconclusive\`, never
 \`within budget\`. So the breach may predate this run by up to a week, and
 bisecting is the honest first move rather than assuming the newest commit."\
-    || unreported=1
-elif [[ "${PERF_RESULT:-}" = "success" ]]; then
-  resolve "a PERF-3/PERF-7 budget is breaching on main"
-fi
+      || unreported=1
+  elif [[ "$result" = "success" ]]; then
+    resolve "$breaching"
+  fi
+}
+
+perf_report "" "${PERF_RESULT:-}" "${PERF_OUTCOME:-}" \
+  "make bench-perf BENCH_PERF_TIER=smb" "SMB seed" \
+"This alarm runs the SMB tier, and that shapes what the finding means: SMB
+is the corpus most installations look like, while the PERF-7 SLO binds at
+mid-market. So a breach here is worse than it sounds — the SMALLER corpus is
+already over a bound the larger one has to meet. The mid-market tier has its own
+finding." \
+"The breach is recorded, and the run proposes the record as a pull request. Merge
+it only once the breach is understood; until then the published page shows the
+last record a maintainer merged."
+
+perf_report "mid-market" "${PERF_MM_RESULT:-}" "${PERF_MM_OUTCOME:-}" \
+  "make bench-perf-check BENCH_PERF_CHECK_TIER=mid_market" "mid-market seed" \
+"This is the tier the PERF-7 SLO binds at. The budgets are the shared PERF-3 and
+PERF-7 ones; five runs on runners read the PERF-3 p95 at 147 to 186 ms against
+200 ms, so a breach can be real drift or the spread between runners. Read the
+p95 lines in the job log, and rerun once before bisecting." \
+"This run records nothing."
 
 # The mobile budget splits the same two ways and for the same reason. Its
 # discriminator is the spec's own log line rather than a failure message: the
@@ -371,7 +413,28 @@ elif [[ "${CLOCK_RESULT:-}" = "success" ]]; then
   resolve "the frontend suite's verdict depends on the calendar"
 fi
 
-if [[ "${BACKEND_CLOCK_RESULT:-}" = "failure" ]]; then
+# Split two ways like the growth arms below: BACKEND_CLOCK_OUTCOME is "calendar"
+# only when the suites failed with the shift proven still in force. A hosted runner
+# lost while its clock is moved fails the job with no verdict about the tree.
+if [[ "${BACKEND_CLOCK_RESULT:-}" = "failure" ]] && [[ "${BACKEND_CLOCK_OUTCOME:-}" != "calendar" ]]; then
+  report "the backend clock-drift lane could not complete" "priority: normal,area: ci-tests,bug" \
+"\`make backend-clock-drift\` failed on the scheduled run of \`main\` WITHOUT reaching a
+verdict about the tree: $RUN_URL
+
+No backend test is known to depend on the calendar, and none is known not to. The
+\`backend clock drift (main, +200 days)\` job names each slice that gave no verdict.
+That slice's own job says why it stopped: its annotations show a runner that lost
+its connection while its clock was moved, and the end of its step log shows a slice
+over its 30-minute budget or \`scripts/clock-drift-host.sh\` finding the shift no
+longer in force.
+
+Reproduce the suites locally with \`BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift\`."\
+    || unreported=1
+elif [[ "${BACKEND_CLOCK_RESULT:-}" = "success" ]] || [[ "${BACKEND_CLOCK_OUTCOME:-}" = "calendar" ]]; then
+  resolve "the backend clock-drift lane could not complete"
+fi
+
+if [[ "${BACKEND_CLOCK_OUTCOME:-}" = "calendar" ]]; then
   report "the backend suite's verdict depends on the calendar" "priority: normal,area: ci-tests,bug" \
 "\`make backend-clock-drift\` failed on the scheduled run of \`main\` at +200 days: $RUN_URL
 
@@ -407,8 +470,8 @@ if [[ "${ROLE_SWEEP_RESULT:-}" = "failure" ]]; then
 The job failed, which is one of two findings. If a step before the sweep failed
 (the database, the build), the sweep never ran and the matrix says nothing. If
 the sweep failed, a role's cell, a tool's checks, or a cell no gate decides no
-longer equals \`docs/reference/mcp-tool-roles.json\` or
-\`backend/internal/modules/agents/toolchecks.json\`. tools/list reads that table,
+longer equals \`docs/reference/mcp-tool-roles/\` or
+\`backend/internal/modules/agents/toolchecks/\`. tools/list reads that table,
 so an agent may be offered a tool its user is refused, or not offered one it may use.
 
 Treat it as a red \`main\`: claim it with a \`claim: main-red\` pull request first.
@@ -416,6 +479,39 @@ Read the failing lines, then follow docs/how-to/prove-a-tool-in-the-role-matrix.
     || unreported=1
 elif [[ "${ROLE_SWEEP_RESULT:-}" = "success" ]]; then
   resolve "the MCP role sweep failed on main"
+fi
+
+# Split two ways for the reason the PERF arms give: GROWTH_OUTCOME is "breach"
+# only when the bench printed its own breach line, so a lane that never measured
+# is never reported as a slow Home.
+if [[ "${GROWTH_RESULT:-}" = "failure" ]] && [[ "${GROWTH_OUTCOME:-}" != "breach" ]]; then
+  report "the nightly Home growth bench could not complete" "priority: normal,area: ci-tests,bug" \
+"\`make bench-growth\` failed on the nightly run of \`main\` WITHOUT reaching a
+budget verdict: $RUN_URL
+
+No Home budget is known to be breaching, and none is known to hold. Read the log
+for the first failure: the database, the seed, a Home read that answered an
+error, or the \`go test\` timeout.
+
+Reproduce with \`make db-up && make bench-growth MARGINCE_BENCH_GROWTH_STEPS=4\`."\
+    || unreported=1
+elif [[ "${GROWTH_RESULT:-}" = "success" ]] || [[ "${GROWTH_OUTCOME:-}" = "breach" ]]; then
+  resolve "the nightly Home growth bench could not complete"
+fi
+
+if [[ "${GROWTH_OUTCOME:-}" = "breach" ]]; then
+  report "a Home growth budget is breaching on main" "priority: normal,area: ci-tests,bug" \
+"\`make bench-growth\` measured a broken budget on the nightly run of \`main\`: $RUN_URL
+
+The lines after \`home-growth: breach\` in the log name each one: a read predicted
+to reach 10 s within the horizon, a cold read already over it, a warm read's
+database time, the memory a connection holds, or the Home cache's hit rate on
+repeat opens. The \`home-growth: fit\` lines show how each read grows per year.
+
+Reproduce with \`make db-up && make bench-growth MARGINCE_BENCH_GROWTH_STEPS=4\`."\
+    || unreported=1
+elif [[ "${GROWTH_RESULT:-}" = "success" ]]; then
+  resolve "a Home growth budget is breaching on main"
 fi
 
 if [[ "${STORIES_RESULT:-}" = "failure" ]]; then
@@ -693,12 +789,33 @@ fi
 # The model lane, same two-findings shape and for the same reason. A missing
 # CLI, a stack that will not boot, a seed that fails, or a credential the MCP
 # endpoint rejects all arrive as `failure` — and "the assistant is answering
-# wrongly" is the one conclusion none of them support. LLM_OUTCOME is set by the
-# step from the runner's own "scenarios: N passed" line, which it prints only
-# once every scenario has actually been driven.
-if [[ "${LLM_RESULT:-}" = "failure" ]] && [[ "${LLM_OUTCOME:-}" != "scenario-failed" ]]; then
-  report "the weekly model-driven use cases could not run" "priority: normal,area: ci-tests,bug" \
-"\`make e2e-llm\` failed on the weekly run of \`main\` WITHOUT driving the
+# wrongly" is the one conclusion none of them support. LLM_OUTCOME and
+# LLM_DRIVEN come from scripts/e2e-llm-shard-outcome.sh: `ok` and
+# `scenario-failed` only once every scenario has a fresh verdict, `cut-off` when
+# some case was driven and not all, `lane-failed` when none was.
+#
+# A CUT-OFF IS ITS OWN FINDING. The lane did drive scenarios, so "could not run"
+# would be false, and a job the runner stopped ends `cancelled`, which no other
+# arm reads. It publishes nothing, so the issue is the only trace it leaves.
+if [[ "${LLM_OUTCOME:-}" = "cut-off" ]] || [[ "${LLM_RESULT:-}" = "cancelled" ]]; then
+  report "the model-driven use cases were cut off" "priority: normal,area: ci-tests,bug" \
+"A dispatched run of \`make e2e-llm\` on \`main\` stopped before every scenario
+had a verdict: $RUN_URL
+
+It drove ${LLM_DRIVEN:-an unknown number of} cases before it stopped. A shard
+ran out of its time limit, the runner stopped it, or the sweep failed after it
+started. The cases it did drive are in the shard's transcripts, kept 30 days;
+the run published no verdict and opened no pull request, because a half result
+must not replace a whole one.
+
+Read the shard's sweep log first. A subscription limit makes the sweep wait,
+and waits that add up past the step's limit look like this; a crash names its
+step. If a shard is simply too long, raise the shard count in
+\`e2e/llm/shards.py plan\` in the workflow."\
+    || unreported=1
+elif [[ "${LLM_RESULT:-}" = "failure" ]] && [[ "${LLM_OUTCOME:-}" != "scenario-failed" ]]; then
+  report "the model-driven use cases could not run" "priority: normal,area: ci-tests,bug" \
+"\`make e2e-llm\` failed on a dispatched run of \`main\` WITHOUT driving the
 scenarios: $RUN_URL
 
 No scenario is known to be failing, and none is known to pass — the lane did not
@@ -721,16 +838,19 @@ Reproduce locally with \`MARGINCE_E2E_LLM=1 make e2e-llm\`."\
 elif [[ "${LLM_RESULT:-}" = "success" ]] || [[ "${LLM_OUTCOME:-}" = "scenario-failed" ]]; then
   # A scenario that drove and failed proves the lane RAN, so "could not run"
   # is no longer true and the arm below owns what is.
-  resolve "the weekly model-driven use cases could not run"
+  resolve "the model-driven use cases could not run"
+fi
+if [[ "${LLM_RESULT:-}" = "success" ]] || [[ "${LLM_OUTCOME:-}" = "scenario-failed" ]]; then
+  resolve "the model-driven use cases were cut off"
 fi
 
 if [[ "${LLM_OUTCOME:-}" = "scenario-failed" ]]; then
   report "a use case is failing when driven by a real model" "priority: normal,area: ci-tests,bug" \
-"\`make e2e-llm\` drove all six use cases on \`main\` and at least one did not
+"\`make e2e-llm\` drove every use case on \`main\` and at least one did not
 reach its pass rate: $RUN_URL
 
 **Read the transcripts before treating this as a regression.** They are attached
-to the run as \`e2e-llm-transcripts\` and kept 30 days. The verdict line says
+to the run as \`e2e-llm-transcripts-<shard>\` and kept 30 days. The verdict line says
 which scenario failed; only the transcript says what the assistant actually did,
 and the difference between those two has been the whole value of this lane.
 
@@ -749,13 +869,13 @@ Three things this is NOT, each of which has looked like a regression before:
 There is no standing failure to dismiss this against. Case 6 — asked about past
 account-manager changes, the assistant repeating a note's wrong month in its own
 voice — was the one, and it was fixed: it passed 3 of 3 on \`claude-opus-5\`.
-This job drives \`claude-sonnet-5-5\` over the claude CLI, on a stack whose
-search ranks by word overlap (no embedding key reaches the runner), and its
-verdicts say \`search: lexical\`. A failure here is not yet a REGRESSION:
-re-run the case locally on a semantic stack (the how-to's section 2) before
-calling it one, and read this run's transcript for what differed. The run
-proposes its verdicts as a pull request; do not merge a lexical failure over a
-semantic pass until you know which one is true.
+This job drives \`claude-sonnet-5-5\` over the claude CLI. With the
+\`OPENAI_COMPATIBLE_API_KEY\` secret its search ranks by meaning, as a run by
+hand does, and it proposes its verdicts as a pull request. Without it, search
+ranks by word overlap, the verdicts stay outside the records tree, and this issue
+is the only result: re-run the case on a stack by meaning (the how-to's section
+2) before calling it a REGRESSION, and read this run's transcript for what
+differed.
 
 Nothing else is standing either. Every scenario in this lane is expected to pass,
 and this issue means one did not."\
@@ -764,24 +884,35 @@ elif [[ "${LLM_RESULT:-}" = "success" ]]; then
   resolve "a use case is failing when driven by a real model"
 fi
 
-# The weekly records pull request. Rendering and proposing are two jobs, and
-# either failing means a measurement was taken and nobody was asked to publish it.
-if [[ "${RECORDS_RESULT:-}" = "failure" ]] || [[ "${RECORDS_PR_RESULT:-}" = "failure" ]]; then
-  report "the weekly records pull request could not be opened" "priority: normal,area: ci-tests,bug" \
-"The weekly measurements recorded, but no pull request proposes the records: $RUN_URL
+# The records pull requests, one finding per part: each caller of _records.yml
+# hands in its own part's result, so a green speed proposal never closes a red
+# MCP one. A failed render or proposal fails the call, and means a measurement
+# was taken and nobody was asked to publish it.
+records_body() {
+  local part="$1"
+  printf '%s' "A run recorded a measurement, but no pull request proposes it: $RUN_URL
 
-The \`records\` job renders the pages the records feed (\`make perfdoc\` and the
-MCP tool coverage generator) and hands over a patch; \`records-pr\` commits it on
-a \`bench/scheduled-*\` branch and opens the pull request. The job log names the
-step that failed.
+The \`render\` job of \`_records.yml\` renders the pages the record feeds and
+uploads a patch; \`propose\` commits it on \`records/$part\` and opens the
+pull request. The job log names the step that failed.
 
-If the branch was pushed and only \`gh pr create\` failed, the repository may not
-let GitHub Actions open pull requests (Settings, Actions, General). Open the pull
-request from the branch by hand. The patch is kept on the run as
-\`scheduled-records\` for 30 days."\
-    || unreported=1
-elif [[ "${RECORDS_PR_RESULT:-}" = "success" ]]; then
-  resolve "the weekly records pull request could not be opened"
+If \`render\` failed, no patch exists: fix the generator it names and run the
+workflow again. If only \`propose\` failed, the patch is kept on the run as
+\`records-$part\` for 30 days. The repository may not let GitHub Actions open
+pull requests (Settings, Actions, General); open the pull request from the
+patch by hand."
+}
+if [[ "${SPEED_RECORDS_RESULT:-}" = "failure" ]]; then
+  report "the speed records pull request could not be opened" "priority: normal,area: ci-tests,bug" \
+    "$(records_body speed)" || unreported=1
+elif [[ "${SPEED_RECORDS_PR_RESULT:-}" = "success" ]]; then
+  resolve "the speed records pull request could not be opened"
+fi
+if [[ "${MCP_RECORDS_RESULT:-}" = "failure" ]]; then
+  report "the MCP verdicts pull request could not be opened" "priority: normal,area: ci-tests,bug" \
+    "$(records_body llm)" || unreported=1
+elif [[ "${MCP_RECORDS_PR_RESULT:-}" = "success" ]]; then
+  resolve "the MCP verdicts pull request could not be opened"
 fi
 
 # --- merge-attest.yml -----------------------------------------------------------

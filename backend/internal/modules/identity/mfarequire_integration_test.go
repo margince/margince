@@ -5,18 +5,60 @@
 
 package identity
 
-// Require-MFA confinement: while the installation requires a second factor, a
-// member who holds none is flagged must-enrol at admission — the same mechanism
-// a forced password change uses — and the flag clears the moment they confirm a
-// factor. An installation that requires nothing pays nothing for the check.
+// Password sessions need a confirmed factor when the policy requires one.
+// Provider sessions rely on the provider’s authentication policy.
 
 import (
 	"context"
+	"errors"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
+// mfaAlwaysRequired is the admission reader with require-MFA on, which a stored
+// row would turn on for every test sharing this database.
+func mfaAlwaysRequired(ctx context.Context, tx pgx.Tx) (AdmissionSettings, error) {
+	allowed, err := IndividualPerformanceTx(ctx, tx)
+	return AdmissionSettings{IndividualPerformance: allowed, RequireMFA: true}, err
+}
+
 func (e *revocationEnv) requireMFAOn() {
-	e.svc.requireMFA = func(context.Context) (bool, error) { return true, nil }
+	e.svc.admissionSettings = mfaAlwaysRequired
+}
+
+// The stored policy, read through the production reader, confines a password
+// session of a member with no factor.
+func TestAStoredRequireMFAConfinesAFactorlessPasswordSession(t *testing.T) {
+	e := setupRevocationEnv(t, "require-mfa-stored")
+	e.withVault()
+	cfg := unlockedConfig(t, e.pool)
+	store := NewInstallationSettings(e.svc.db, settings.New(e.pool, settings.NewRegistry(append(Definitions(), cfg.StoredDefinitions()...)...)), cfg)
+	e.svc.WithAdmissionSettings(store.AdmissionSettings)
+	if err := config.Save(e.wsCtx(e.admin), cfg, RequireMFA, true); err != nil {
+		t.Fatalf("turning require-MFA on: %v", err)
+	}
+	// The setting row has no workspace column, so it would outlive this test.
+	t.Cleanup(func() {
+		if err := config.Save(e.wsCtx(e.admin), cfg, RequireMFA, false); err != nil {
+			t.Errorf("turning require-MFA off again: %v", err)
+		}
+	})
+
+	_, login, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
+	if err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	id, err := e.svc.Authenticate(e.wsOnlyCtx(), login.Token)
+	if err != nil {
+		t.Fatalf("authenticate: %v", err)
+	}
+	if !id.MustEnrolMFA {
+		t.Fatal("a stored require-MFA did not confine a member with no factor")
+	}
 }
 
 func TestRequireMFAFlagsAMemberWithNoFactorAndClearsOnEnrolment(t *testing.T) {
@@ -72,7 +114,7 @@ func TestAVaultlessServiceNeverChallengesConfinesOrEnrols(t *testing.T) {
 	e.enrolMemberMFA(t)
 
 	bare := NewServiceFor(e.svc.db)
-	bare.requireMFA = func(context.Context) (bool, error) { return true, nil }
+	bare.admissionSettings = mfaAlwaysRequired
 
 	// Password login never answers the 202 challenge state: a challenge this
 	// service could not verify would be a lockout, not a factor.
@@ -99,10 +141,83 @@ func TestAVaultlessServiceNeverChallengesConfinesOrEnrols(t *testing.T) {
 	}
 }
 
+// With require_mfa on, a Google or Microsoft sign-in counts as the second
+// factor. The provider session is never confined or challenged.
+//
+// A password session is confined while the member holds no factor. Once they
+// hold one, the password path asks for it.
+func TestRequireMFATrustsTheProviderAndAsksThePasswordPath(t *testing.T) {
+	e := setupRevocationEnv(t, "require-mfa-paths")
+	e.withVault()
+	e.requireMFAOn()
+
+	// No factor yet: the provider session is not confined.
+	token, err := e.svc.LoginViaFederatedIdentity(e.wsOnlyCtx(), "google",
+		OIDCClaims{Subject: "sub-mfa-paths", Email: e.member.Email})
+	if err != nil {
+		t.Fatalf("provider sign-in: %v", err)
+	}
+	id, err := e.svc.Authenticate(e.wsOnlyCtx(), token)
+	if err != nil {
+		t.Fatalf("authenticate a provider session: %v", err)
+	}
+	if id.MustEnrolMFA {
+		t.Error("a provider session for a member with no factor is confined, want it trusted")
+	}
+
+	// No factor yet: the password session is confined to enrolment.
+	_, login, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
+	if err != nil {
+		t.Fatalf("password sign-in with no factor: %v", err)
+	}
+	passwordID, err := e.svc.Authenticate(e.wsOnlyCtx(), login.Token)
+	if err != nil {
+		t.Fatalf("authenticate a password session: %v", err)
+	}
+	if !passwordID.MustEnrolMFA {
+		t.Error("a password session for a member with no factor is not confined")
+	}
+
+	// The member confirms a factor. The password path now challenges, and the
+	// provider path still signs them in.
+	ctx := e.asMember()
+	secret, err := e.svc.StartTOTPEnrolment(ctx)
+	if err != nil {
+		t.Fatalf("start enrolment: %v", err)
+	}
+	code, err := totpCodeAt(secret, e.svc.now(), totpDigits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.ConfirmTOTP(ctx, code, hashToken(token)); err != nil {
+		t.Fatalf("confirm: %v", err)
+	}
+
+	if _, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice); !errors.Is(err, errMFARequired) {
+		t.Errorf("password sign-in with a confirmed factor: err = %v, want %v", err, errMFARequired)
+	}
+	signedIn, err := e.svc.LoginViaFederatedIdentity(e.wsOnlyCtx(), "google",
+		OIDCClaims{Subject: "sub-mfa-paths", Email: e.member.Email})
+	if err != nil {
+		t.Fatalf("provider sign-in with a confirmed factor: %v", err)
+	}
+	unconfined, err := e.svc.Authenticate(e.wsOnlyCtx(), signedIn)
+	if err != nil {
+		t.Fatalf("authenticate the provider session: %v", err)
+	}
+	if unconfined.MustEnrolMFA {
+		t.Error("provider session with a confirmed factor is confined, want an unconfined session")
+	}
+	if unconfined.UserID != e.member.UserID {
+		t.Errorf("provider session belongs to %v, want the member %v who confirmed the factor",
+			unconfined.UserID, e.member.UserID)
+	}
+}
+
 func TestRequireMFAOffLeavesTheMemberUnconfined(t *testing.T) {
 	e := setupRevocationEnv(t, "require-mfa-off")
 	e.withVault()
-	// requireMFA left nil: no enforcement, and no per-request enrolment check.
+	// admissionSettings left nil: no enforcement, and no per-request enrolment check.
 	_, login, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatalf("login: %v", err)
@@ -113,5 +228,59 @@ func TestRequireMFAOffLeavesTheMemberUnconfined(t *testing.T) {
 	}
 	if id.MustEnrolMFA {
 		t.Error("must-enrol is set with require-MFA off")
+	}
+}
+
+func TestProviderSessionsAreExemptFromPasswordMFAConfinement(t *testing.T) {
+	for _, provider := range []string{"google", "microsoft"} {
+		t.Run(provider, func(t *testing.T) {
+			e := setupRevocationEnv(t, "provider-mfa-"+provider)
+			e.withVault()
+			e.requireMFAOn()
+			token, err := e.svc.LoginViaFederatedIdentity(e.wsOnlyCtx(), provider,
+				OIDCClaims{Subject: "provider-member", Email: e.member.Email})
+			if err != nil {
+				t.Fatal(err)
+			}
+			id, err := e.svc.Authenticate(e.wsOnlyCtx(), token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if id.MustEnrolMFA {
+				t.Fatal("provider session confined to Margince MFA enrolment")
+			}
+			_, passwordSession, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
+			if err != nil {
+				t.Fatal(err)
+			}
+			passwordID, err := e.svc.Authenticate(e.wsOnlyCtx(), passwordSession.Token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !passwordID.MustEnrolMFA {
+				t.Fatal("a provider link exempted a password session")
+			}
+		})
+	}
+}
+
+func TestASessionWithoutSignInProvenanceKeepsThePasswordMFARule(t *testing.T) {
+	e := setupRevocationEnv(t, "legacy-session-mfa")
+	e.withVault()
+	e.requireMFAOn()
+	token, hash, err := mintSessionToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(t.Context(), `INSERT INTO session (user_id, token_hash, idle_expires_at, expires_at)
+  VALUES (@user, @hash, now()+interval '1 hour', now()+interval '1 hour')`, pgx.StrictNamedArgs{"user": e.member.UserID, "hash": hash}); err != nil {
+		t.Fatal(err)
+	}
+	id, err := e.svc.Authenticate(e.wsOnlyCtx(), token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !id.MustEnrolMFA {
+		t.Fatal("an unknown sign-in method bypassed password MFA enrolment")
 	}
 }

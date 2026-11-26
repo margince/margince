@@ -106,19 +106,33 @@ type BackfillRun struct {
 	// rather than reading the window again from the top: it ended on an error
 	// and still holds the page it stopped at.
 	Resumable bool
+	// WindowRestarts counts walks begun again after the provider refused the
+	// saved page token; the message counts start from zero each time.
+	WindowRestarts int
+	// RetryAttempts is the run's consecutive failed pages, zero once one lands.
+	RetryAttempts int
 }
 
-// connectionForUser resolves the calling user's connection for provider.
-func (r *Registry) connectionForUser(ctx context.Context, tx pgx.Tx, provider string, userID ids.UserID) (ids.UUID, error) {
-	var id ids.UUID
-	err := tx.QueryRow(ctx, `
+// connectionForUser resolves the calling user's live connection mailbox names.
+func (r *Registry) connectionForUser(ctx context.Context, tx pgx.Tx, mailbox Mailbox, userID ids.UserID) (ids.UUID, error) {
+	rows, err := tx.Query(ctx, `
 		SELECT id FROM capture_connection
-		WHERE provider = $1 AND user_id = $2 AND status IN ('connected','error') AND archived_at IS NULL`,
-		provider, userID).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.Nil, apperrors.ErrNotFound
+		WHERE provider = $1 AND user_id = $2 AND status IN ('connected','error') AND archived_at IS NULL
+		  AND ($3::uuid IS NULL OR id = $3)`,
+		mailbox.Provider, userID, mailboxIDArg(mailbox))
+	if err != nil {
+		return ids.Nil, err
 	}
-	return id, err
+	live, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	switch {
+	case err != nil:
+		return ids.Nil, err
+	case len(live) == 0:
+		return ids.Nil, apperrors.ErrNotFound
+	case len(live) > 1:
+		return ids.Nil, ErrMailboxAmbiguous
+	}
+	return live[0], nil
 }
 
 // BackfillPreview binds the provider's count to the date it actually queried.
@@ -132,7 +146,7 @@ type BackfillPreview struct {
 // newer than the window boundary. The consent number (preview before spend,
 // ADR-0020). Pricing the projected spend is the estimator's job now (ADR-0068),
 // so this returns the raw message count only.
-func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int) (BackfillPreview, error) {
+func (r *Registry) EstimateBackfill(ctx context.Context, mailbox Mailbox, userID ids.UserID, windowMonths int) (BackfillPreview, error) {
 	if !r.admitsWindow(windowMonths) {
 		return BackfillPreview{}, fmt.Errorf("%w: %d months (this installation offers %v)",
 			ErrWindowInvalid, windowMonths, r.OfferedBackfillWindows())
@@ -147,7 +161,7 @@ func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID
 	var credentialRef *string
 	var authBytes []byte
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		id, err := r.connectionForUser(ctx, tx, provider, userID)
+		id, err := r.connectionForUser(ctx, tx, mailbox, userID)
 		if err != nil {
 			return err
 		}
@@ -203,26 +217,19 @@ type EnqueueBackfill func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) e
 // A start whose window an earlier run that ended on an error already covers
 // CONTINUES that run (resumeFailedBackfillTx) instead of reading the mailbox
 // again from the newest message. StartBackfillOver is the explicit fresh start.
-func (r *Registry) StartBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill) (BackfillRun, error) {
-	return r.openBackfill(ctx, provider, userID, windowMonths, estimate, enqueue, backfillStart{resume: true})
+func (r *Registry) StartBackfill(ctx context.Context, mailbox Mailbox, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill) (BackfillRun, error) {
+	return r.openBackfill(ctx, mailbox, userID, windowMonths, estimate, enqueue, backfillStart{resume: true})
 }
 
 // StartBackfillOver starts a new run from the top of the window even where a
 // failed run could be continued — the human's "start over".
-func (r *Registry) StartBackfillOver(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill) (BackfillRun, error) {
-	return r.openBackfill(ctx, provider, userID, windowMonths, estimate, enqueue, backfillStart{})
+func (r *Registry) StartBackfillOver(ctx context.Context, mailbox Mailbox, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill) (BackfillRun, error) {
+	return r.openBackfill(ctx, mailbox, userID, windowMonths, estimate, enqueue, backfillStart{})
 }
 
-func (r *Registry) openBackfill(ctx context.Context, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill, options backfillStart) (BackfillRun, error) {
-	// Checked HERE as well as at the estimate, and not only there: the estimate
-	// is a preview a client may skip, and a start that trusted it would take
-	// the whole window from anyone who called this door directly.
-	if !r.admitsWindow(windowMonths) {
-		return BackfillRun{}, fmt.Errorf("%w: %d months (this installation offers %v)",
-			ErrWindowInvalid, windowMonths, r.OfferedBackfillWindows())
-	}
-	if enqueue == nil {
-		return BackfillRun{}, errors.New("capture: starting a backfill needs a scheduler — an unpaged run blocks its connection permanently")
+func (r *Registry) openBackfill(ctx context.Context, mailbox Mailbox, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill, options backfillStart) (BackfillRun, error) {
+	if err := r.admitsBackfillStart(windowMonths, enqueue); err != nil {
+		return BackfillRun{}, err
 	}
 	if err := r.requireCapturingMember(ctx, userID); err != nil {
 		return BackfillRun{}, err
@@ -230,23 +237,42 @@ func (r *Registry) openBackfill(ctx context.Context, provider string, userID ids
 	var run BackfillRun
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		run, err = r.openBackfillTx(ctx, tx, provider, userID, windowMonths, estimate, enqueue, options)
+		run, err = r.openBackfillTx(ctx, tx, mailbox, userID, windowMonths, estimate, enqueue, options)
 		return err
 	})
 	return run, err
 }
 
-func (r *Registry) openBackfillTx(ctx context.Context, tx pgx.Tx, provider string, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill, options backfillStart) (BackfillRun, error) {
-	var run BackfillRun
+// admitsBackfillStart is what every start asks before it touches a row. The
+// estimate asks the window too, but a client may skip the estimate.
+func (r *Registry) admitsBackfillStart(windowMonths int, enqueue EnqueueBackfill) error {
+	if !r.admitsWindow(windowMonths) {
+		return fmt.Errorf("%w: %d months (this installation offers %v)",
+			ErrWindowInvalid, windowMonths, r.OfferedBackfillWindows())
+	}
+	if enqueue == nil {
+		return errors.New("capture: starting a backfill needs a scheduler — an unpaged run blocks its connection permanently")
+	}
+	return nil
+}
+
+func (r *Registry) openBackfillTx(ctx context.Context, tx pgx.Tx, mailbox Mailbox, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill, options backfillStart) (BackfillRun, error) {
 	if options.internalMailToken != "" {
 		if err := settings.ShareLockForDecision(ctx, tx, internalMailPolicyKey); err != nil {
-			return run, err
+			return BackfillRun{}, err
 		}
 	}
-	connID, err := r.connectionForUser(ctx, tx, provider, userID)
+	connID, err := r.connectionForUser(ctx, tx, mailbox, userID)
 	if err != nil {
-		return run, err
+		return BackfillRun{}, err
 	}
+	return r.openConnectionBackfillTx(ctx, tx, connID, userID, windowMonths, estimate, enqueue, options)
+}
+
+// openConnectionBackfillTx opens a run on one connection. userID is the seat an
+// internal-mail history import is authorized for; a shared mailbox has none.
+func (r *Registry) openConnectionBackfillTx(ctx context.Context, tx pgx.Tx, connID ids.UUID, userID ids.UserID, windowMonths int, estimate connector.BackfillEstimate, enqueue EnqueueBackfill, options backfillStart) (BackfillRun, error) {
+	var run BackfillRun
 	// New runs and sync-triggered continuations serialize on the connection.
 	// Both paths must preserve one live run per connection.
 	if err := lockConnectionTx(ctx, tx, connID); err != nil {
@@ -257,7 +283,7 @@ func (r *Registry) openBackfillTx(ctx context.Context, tx pgx.Tx, provider strin
 	if err != nil {
 		return run, err
 	}
-	resumed, err := resumeOrNil(ctx, tx, options.resume, connID, windowMonths, widest, enqueue)
+	resumed, err := resumeOrNil(ctx, tx, options, connID, windowMonths, widest, enqueue)
 	if err != nil {
 		return run, err
 	}
@@ -283,7 +309,7 @@ func (r *Registry) openBackfillTx(ctx context.Context, tx pgx.Tx, provider strin
 	}
 	// The connection audit keeps the previous and next reach after individual runs expire.
 	// A failed schedule must leave neither a run nor an import audit.
-	if err := auditOpenedBackfillTx(ctx, tx, run, history, widest); err != nil {
+	if err := auditOpenedBackfillTx(ctx, tx, run, history, widest, options.shared); err != nil {
 		return run, err
 	}
 
@@ -298,10 +324,10 @@ func (r *Registry) openBackfillTx(ctx context.Context, tx pgx.Tx, provider strin
 // BackfillStatus reads the latest run for the user's connection — the
 // activation view's single-row read. No run at all is (nil, nil): the
 // contract's state "none".
-func (r *Registry) BackfillStatus(ctx context.Context, provider string, userID ids.UserID) (*BackfillRun, error) {
+func (r *Registry) BackfillStatus(ctx context.Context, mailbox Mailbox, userID ids.UserID) (*BackfillRun, error) {
 	var run *BackfillRun
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		connID, err := r.connectionForUser(ctx, tx, provider, userID)
+		connID, err := r.connectionForUser(ctx, tx, mailbox, userID)
 		if err != nil {
 			return err
 		}
@@ -328,14 +354,15 @@ func latestBackfill(ctx context.Context, tx pgx.Tx, connID ids.UUID) (*BackfillR
 		       b.scanned + b.inflight_scanned, b.captured + b.inflight_captured, b.skipped + b.inflight_skipped,
 		       b.failed, b.contacts_created, b.companies_created,
 		       b.started_at, b.completed_at, b.updated_at, b.last_error_class,
-		       `+resumableRunPredicate+`
+		       `+resumableRunPredicate+`, b.window_restarts, b.consecutive_failures
 		FROM capture_backfill b JOIN capture_connection c ON c.id = b.connection_id
 		WHERE b.connection_id = $1
 		ORDER BY b.created_at DESC LIMIT 1`, connID)
 	var b BackfillRun
 	err := row.Scan(&b.ID, &b.ConnectionID, &b.WindowMonths, &b.AfterDate, &b.Status, &b.Cursor, &b.Estimate, &b.EstimateIsFloor,
 		&b.Scanned, &b.Captured, &b.Skipped, &b.Failed, &b.Contacts, &b.Companies,
-		&b.StartedAt, &b.CompletedAt, &b.UpdatedAt, &b.ErrorClass, &b.Resumable)
+		&b.StartedAt, &b.CompletedAt, &b.UpdatedAt, &b.ErrorClass, &b.Resumable,
+		&b.WindowRestarts, &b.RetryAttempts)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil //nolint:nilnil // absence IS the answer: the contract's state "none", not an error
 	}
@@ -347,9 +374,9 @@ func latestBackfill(ctx context.Context, tx pgx.Tx, connID ids.UUID) (*BackfillR
 
 // CancelBackfill stops a live run; captured rows are retained (real
 // history). No live run → apperrors.ErrConflict (409 not_running).
-func (r *Registry) CancelBackfill(ctx context.Context, provider string, userID ids.UserID) (*BackfillRun, error) {
+func (r *Registry) CancelBackfill(ctx context.Context, mailbox Mailbox, userID ids.UserID) (*BackfillRun, error) {
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		connID, err := r.connectionForUser(ctx, tx, provider, userID)
+		connID, err := r.connectionForUser(ctx, tx, mailbox, userID)
 		if err != nil {
 			return err
 		}
@@ -360,14 +387,14 @@ func (r *Registry) CancelBackfill(ctx context.Context, provider string, userID i
 			return err
 		}
 		if tag.RowsAffected() == 0 {
-			return fmt.Errorf("capture: no running backfill to cancel: %w", apperrors.ErrConflict)
+			return fmt.Errorf("there is no running history import to cancel: %w", apperrors.ErrConflict)
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return r.BackfillStatus(ctx, provider, userID)
+	return r.BackfillStatus(ctx, mailbox, userID)
 }
 
 // LiveBackfills answers the runs this workspace still owes work on: every row

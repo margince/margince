@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserPlus } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
@@ -9,18 +9,32 @@ import type { components } from "../../api/schema";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { useHoldsAdminRole } from "../../lib/capability";
+import { emailFault } from "../../lib/emailshape";
 import { nameFromEmail } from "../../lib/namefromemail";
-import { unwrap } from "../../lib/problem";
+import {
+  type FieldLabels,
+  fieldCheckSentence,
+  problemCodeOf,
+  problemMessageOf,
+  type RefusalSentences,
+  refusalSentences,
+  unwrap,
+  writeMayHaveLanded,
+} from "../../lib/problem";
 import { roleOptions, useAssignableRoles } from "../../lib/roles.queries";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { AccessPreviewPanel } from "./users-access";
 import {
   entityOptions,
   useEntityChoice,
   useMayAssignEntity,
 } from "./users-entitycell";
+import { useMemberRefresh } from "./users-members";
 import { MemberTeamsField } from "./users-teams";
 import "./users-admin.css";
 
@@ -35,9 +49,54 @@ export type Role = components["schemas"]["ChangeUserRoleRequest"]["role"];
 
 export type InvitedMember = Readonly<{ id: string; name: string }>;
 
+// Refusals of an address another member holds, each with its own copy.
+const EMAIL_CODES = new Set(["email_taken", "removed_member_email"]);
+
+/**
+ * A refused member write split between its fields and the foot. A taken
+ * address answers 409 naming no field, and belongs on the email.
+ */
+export function memberRefusal(
+  error: unknown,
+  t: Translator,
+  labels: FieldLabels,
+): RefusalSentences {
+  if (EMAIL_CODES.has(problemCodeOf(error) ?? "")) {
+    return {
+      byField: new Map([["email", problemMessageOf(error, t)]]),
+      rest: null,
+    };
+  }
+  return refusalSentences(error, t, labels);
+}
+
+/** What the member's name and address need before anything is sent. */
+export function memberChecks(
+  member: Readonly<{ email: string; display_name: string }>,
+  labels: FieldLabels,
+  locale: Locale,
+): ReadonlyMap<string, string> {
+  const found = new Map<string, string>();
+  const email = member.email.trim();
+  const malformed = emailFault(email, locale, labels.email);
+  if (email === "") {
+    found.set("email", fieldCheckSentence("required", locale, labels.email));
+  } else if (malformed) {
+    found.set("email", malformed);
+  }
+  if (member.display_name.trim() === "" && "display_name" in labels) {
+    found.set(
+      "display_name",
+      fieldCheckSentence("required", locale, labels.display_name),
+    );
+  }
+  return found;
+}
+
 export function InviteUserForm({
   titleId,
   askName = true,
+  unconfirmedKey = "users.inviteUnconfirmed",
   onInvited,
 }: Readonly<{
   /**
@@ -52,10 +111,28 @@ export function InviteUserForm({
    * from it (`nameFromEmail`) until somebody changes it.
    */
   askName?: boolean;
+  /**
+   * What the form says when an invite may have landed unseen. The roster's
+   * dialog sits over the member list; the setup journey has none to point at.
+   */
+  unconfirmedKey?: MessageKey;
   onInvited: (member: InvitedMember) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const formId = useId();
+  const [faults, faultsRoot] = useFieldFaults();
+  const labels: FieldLabels = {
+    email: t("users.emailLabel"),
+    ...(askName
+      ? {
+          display_name: t("users.nameLabel"),
+          greeting_name: t("users.greetingLabel"),
+        }
+      : null),
+    role: t("users.roleLabel"),
+    legal_entity_id: t("users.entityLabel"),
+  };
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [greeting, setGreeting] = useState("");
@@ -74,19 +151,21 @@ export function InviteUserForm({
   const { entities, fallback } = useEntityChoice(useMayAssignEntity());
   const [entityId, setEntityId] = useState<string | null>(null);
   const placedIn = entityId ?? fallback?.id ?? null;
-  const [error, setError] = useState<Error | null>(null);
+  const refreshMembers = useMemberRefresh();
 
-  // The role and the team set ride as the mutation's variable rather than
-  // through the closure: react-query re-arms a mutation's options in a passive effect,
-  // so a click in that window would otherwise invite with the PREVIOUS
-  // selection — granting or omitting authority the admin did not choose.
+  // Choices ride as variables: a closure can hold the previous render's.
   const displayName = askName ? name.trim() : nameFromEmail(email);
   // Asked only beside the name: the setup journey derives the name from the
   // address, and the member's first sign-in can fill this instead.
   const greetingName = askName ? greeting.trim() : "";
+  const queryClient = useQueryClient();
+  const inviteKey = ["member-invite", formId];
   const invite = useMutation({
+    mutationKey: inviteKey,
     mutationFn: async (
       choice: Readonly<{
+        email: string;
+        name: string;
         role: Role;
         teams: string[];
         greeting: string;
@@ -96,8 +175,8 @@ export function InviteUserForm({
       const data = unwrap(
         await api.POST("/users", {
           body: {
-            email: email.trim(),
-            display_name: displayName,
+            email: choice.email,
+            display_name: choice.name,
             ...(choice.greeting === ""
               ? {}
               : { greeting_name: choice.greeting }),
@@ -111,25 +190,31 @@ export function InviteUserForm({
       );
       return data.id;
     },
-    onSuccess: (newUserId) => {
-      const invitedName = displayName;
+    onSuccess: (newUserId, choice) => {
       setEmail("");
       setName("");
       setGreeting("");
       setRole("rep");
       setTeamIds([]);
       setEntityId(null);
-      setError(null);
-      onInvited({ id: newUserId, name: invitedName });
+      onInvited({ id: newUserId, name: choice.name });
     },
-    onError: (e: Error) => setError(e),
+    onError: (error) => {
+      faults.show(memberRefusal(error, t, labels).byField);
+      if (writeMayHaveLanded(error)) void refreshMembers();
+    },
   });
-
-  const canInvite =
-    email.trim().length > 0 &&
-    displayName.length > 0 &&
-    offersRole &&
-    !invite.isPending;
+  const refused = memberRefusal(invite.error, t, labels);
+  // A failure that may still have created the member sends the admin to the
+  // list, refreshed, instead of to a retry. A refusal never may have landed.
+  const foot = writeMayHaveLanded(invite.error)
+    ? t(unconfirmedKey)
+    : refused.rest;
+  // An edit answers the refusal, so the foot's sentence goes with it.
+  const edited = (field: string) => {
+    faults.edited(field);
+    invite.reset();
+  };
 
   return (
     <>
@@ -142,40 +227,72 @@ export function InviteUserForm({
           row below sit outside it so a dialog can pin both while it scrolls. */}
       <form
         id={formId}
+        ref={faultsRoot}
         className="form-stack"
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          if (canInvite) {
-            invite.mutate({
-              role,
-              teams: placesOnTeams ? teamIds : [],
-              greeting: greetingName,
-              // The default entity is what an invite naming none gets.
-              entity: placedIn === fallback?.id ? null : placedIn,
-            });
+          // The cache, not `invite.isPending`: a second click can land before
+          // the render that would carry the first one's pending state.
+          if (queryClient.isMutating({ mutationKey: inviteKey }) > 0) return;
+          const member = { email: email.trim(), display_name: displayName };
+          const checks = new Map(memberChecks(member, labels, locale));
+          if (!offersRole) {
+            checks.set(
+              "role",
+              fieldCheckSentence("required", locale, labels.role),
+            );
           }
+          if (faults.show(checks)) {
+            invite.reset();
+            return;
+          }
+          invite.mutate({
+            email: member.email,
+            name: member.display_name,
+            role,
+            teams: placesOnTeams ? teamIds : [],
+            greeting: greetingName,
+            // The default entity is what an invite naming none gets.
+            entity: placedIn === fallback?.id ? null : placedIn,
+          });
         }}
       >
         {titleId !== undefined && <p>{t("users.inviteSub")}</p>}
-        <Field label={t("users.emailLabel")} required>
+        <Field
+          label={t("users.emailLabel")}
+          required
+          error={faults.of("email")}
+        >
           {(control) => (
             <TextInput
               {...control}
               placeholder={t("users.emailPlaceholder")}
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                edited("email");
+              }}
             />
           )}
         </Field>
         {askName && (
-          <Field label={t("users.nameLabel")} required>
+          <Field
+            label={t("users.nameLabel")}
+            required
+            error={faults.of("display_name")}
+          >
             {(control) => (
               <TextInput
                 {...control}
                 placeholder={t("users.namePlaceholder")}
+                maxLength={TEXT_LIMITS.label}
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  edited("display_name");
+                }}
               />
             )}
           </Field>
@@ -184,24 +301,31 @@ export function InviteUserForm({
           <Field
             label={t("users.greetingLabel")}
             hint={t("users.greetingHint")}
+            error={faults.of("greeting_name")}
           >
             {(control) => (
               <TextInput
                 {...control}
                 value={greeting}
-                onChange={(e) => setGreeting(e.target.value)}
+                onChange={(e) => {
+                  setGreeting(e.target.value);
+                  edited("greeting_name");
+                }}
               />
             )}
           </Field>
         )}
-        <Field label={t("users.roleLabel")}>
+        <Field label={t("users.roleLabel")} required error={faults.of("role")}>
           {(control) => (
             <Select
               {...control}
               value={offersRole ? role : ""}
               placeholder={t("users.setRole")}
               disabled={assignable.isPending}
-              onChange={setRole}
+              onChange={(next) => {
+                setRole(next);
+                edited("role");
+              }}
               options={roleOptions(t, offered)}
             />
           )}
@@ -210,15 +334,28 @@ export function InviteUserForm({
           team edits only its own records, and the preview below says so before
           the invite goes out. */}
         {placesOnTeams && (
-          <MemberTeamsField value={teamIds} onChange={setTeamIds} canManage />
+          <MemberTeamsField
+            value={teamIds}
+            onChange={(next) => {
+              setTeamIds(next);
+              invite.reset();
+            }}
+            canManage
+          />
         )}
         {fallback !== undefined && placedIn !== null && (
-          <Field label={t("users.entityLabel")}>
+          <Field
+            label={t("users.entityLabel")}
+            error={faults.of("legal_entity_id")}
+          >
             {(control) => (
               <Select
                 {...control}
                 value={placedIn}
-                onChange={setEntityId}
+                onChange={(next) => {
+                  setEntityId(next);
+                  edited("legal_entity_id");
+                }}
                 options={entityOptions(t, entities)}
               />
             )}
@@ -228,7 +365,7 @@ export function InviteUserForm({
         {/* ABOVE the submit row, where the sibling dialogs in this family put a
           refusal: under the button it reads as a footnote to the form rather
           than as the answer to the press. */}
-        <ErrorLine error={error} />
+        {foot !== null && <ErrorLine>{foot}</ErrorLine>}
       </form>
       {/* Outside a dialog (the onboarding team step) `.form-actions` aligns
           the row; inside one `.modal .actions` does. */}
@@ -237,7 +374,7 @@ export function InviteUserForm({
           variant="primary"
           type="submit"
           form={formId}
-          disabled={!canInvite}
+          pending={invite.isPending}
         >
           <UserPlus aria-hidden /> {t("users.invite")}
         </Button>

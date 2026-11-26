@@ -1,0 +1,9 @@
+{
+  "verb": "update_signal",
+  "checks": [
+    "signal.update"
+  ],
+  "takes": [
+    "signal"
+  ]
+}

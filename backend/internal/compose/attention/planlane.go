@@ -40,19 +40,16 @@ func (s *Service) WithWeeklyPlans(plans WeeklyPlans) *Service {
 
 // Plan work joins the same ranking used by the browser and the worklist tool.
 // The request copy carries it; the shared service never holds a reader's plan.
-func (s *Service) readingPlan(ctx context.Context, scope string, now time.Time) (*Service, *crmcontracts.WorklistSourceUnavailable) {
+func (s *Service) readingPlan(ctx context.Context, now time.Time) (*Service, *crmcontracts.WorklistSourceUnavailable) {
 	defer timeStage(ctx, "plan")()
 	scoped := *s
 	if s.weeklyPlans == nil || s.taskScope == TasksUnassigned {
 		return &scoped, nil
 	}
+	// All reads the plans Team reads, the reader's own and their teammates'.
+	// So the wider scope never counts fewer promises than the narrower one.
 	if s.taskScope == TasksVisible {
-		if scope == scopeTeam {
-			return s.readingTeamPlans(ctx, now)
-		}
-		// All has no roster to read plans across until a policy says which members
-		// it covers: every member of every team the reader oversees, or none.
-		return &scoped, planUnavailable(crmcontracts.WorklistSourceUnavailableReasonWithheld)
+		return s.readingTeamPlans(ctx, now)
 	}
 	entries, refusal := s.duePlan(ctx, laneBudget, s.taskOwner, now)
 	scoped.planRows = planRowsOf(entries, now)
@@ -103,7 +100,7 @@ func (s *Service) readingTeamPlans(ctx context.Context, now time.Time) (*Service
 // rather than aborting the snapshot every other source shares.
 func (s *Service) duePlan(ctx context.Context, budget time.Duration, owner ids.UUID, now time.Time) ([]PlanWork, *crmcontracts.WorklistSourceUnavailable) {
 	var entries []PlanWork
-	err := s.degradable(ctx, budget, func(ctx context.Context) error {
+	err := s.degradable(ctx, sourceWeeklyCommitment, budget, func(ctx context.Context) error {
 		var err error
 		entries, err = s.weeklyPlans.DuePlan(ctx, owner, now)
 		return err

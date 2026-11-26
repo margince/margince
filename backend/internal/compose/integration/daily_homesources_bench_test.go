@@ -9,7 +9,6 @@ import (
 	"cmp"
 	"context"
 	"errors"
-	"fmt"
 	"maps"
 	"net/http"
 	"slices"
@@ -108,7 +107,7 @@ func seedDailyAICalls(t *testing.T, e *apptest.AppEnv, scale float64) int {
 		if err := calls.Record(ctx, []ai.Call{{
 			LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: "completion",
 			Task: task, Tier: tier, Provider: "anthropic", ModelID: dailyAIModel(tier),
-			ServedModel: dailyAIModel(tier), ServedIdentitySource: "response", RequestFingerprint: fmt.Sprintf("bench-%d", i),
+			ServedModel: dailyAIModel(tier), ServedIdentitySource: "response",
 			TokensIn: tokensIn, TokensOut: tokensOut,
 		}}); err != nil {
 			t.Fatalf("recording AI call %d: %v", i, err)

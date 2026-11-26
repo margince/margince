@@ -34,6 +34,21 @@ func (e *AlreadyDecidedError) MessageFault() (code, message string) {
 
 func (e *AlreadyDecidedError) Unwrap() error { return apperrors.ErrConflict }
 
+// ObsoleteError is a precheck's answer that the card's work is no longer
+// needed: what it was staged for has happened another way. The card is
+// withdrawn with Reason, and the decider is told why rather than shown a
+// failure.
+type ObsoleteError struct{ Reason string }
+
+func (e *ObsoleteError) Error() string { return e.Reason }
+
+// MessageFault names the outcome so a caller can branch on the code.
+func (e *ObsoleteError) MessageFault() (code, message string) {
+	return "no_longer_needed", e.Reason
+}
+
+func (e *ObsoleteError) Unwrap() error { return apperrors.ErrConflict }
+
 // InvalidEditError maps to 422: an edited payload that is not a JSON
 // object cannot be canonicalized, so it cannot become an authority.
 type InvalidEditError struct{ Cause error }
@@ -163,7 +178,32 @@ func (s *Service) runPrecheck(ctx context.Context, id ids.ApprovalID, approve bo
 		}
 		return &AlreadyDecidedError{Status: st}
 	}
-	return s.precheckMember(ctx, a, edited)
+	err = s.precheckMember(ctx, a, edited)
+	if obsolete, ok := errors.AsType[*ObsoleteError](err); ok {
+		return s.withdrawObsolete(ctx, id, obsolete)
+	}
+	return err
+}
+
+// withdrawObsolete closes a card whose work is no longer needed and answers
+// the decider with the reason. The decider's authority is asked again under the
+// row lock, as a decision asks it. A decision that landed first keeps the card.
+func (s *Service) withdrawObsolete(ctx context.Context, id ids.ApprovalID, obsolete *ObsoleteError) error {
+	p, _ := principal.Actor(ctx)
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var locked ids.ApprovalID
+		if err := tx.QueryRow(ctx, `SELECT id FROM approval WHERE id = $1 FOR UPDATE`, id).Scan(&locked); err != nil {
+			return err
+		}
+		if _, err := s.pendingToDecide(ctx, tx, p, id, true, nil, decidedByContact); err != nil {
+			return err
+		}
+		_, err := withdrawInTx(ctx, tx, id, obsolete.Reason)
+		return err
+	}); err != nil {
+		return err
+	}
+	return obsolete
 }
 
 // countIfAContactDecided records the track record, and records nothing for an
@@ -210,6 +250,9 @@ func landEditedPayload(
 	if err := assertEditableMembers(a.Kind, a.ProposedChange, edited); err != nil {
 		return err
 	}
+	if err := assertMailHasText(a.Kind, edited); err != nil {
+		return err
+	}
 	return applyEditedPayload(ctx, tx, id, edited, a, auditEvidence, decidedPayload)
 }
 
@@ -249,7 +292,7 @@ func (s *Service) pendingToDecide(ctx context.Context, tx pgx.Tx, p principal.Pr
 	// this module keeps everywhere. Before the status check, because what a
 	// credential may release is a question about the credential and not about
 	// how far this particular proposal has got.
-	if err := agentMayDecide(p, a, approve, s.ownReleaseFor(ctx, tx, a)); err != nil {
+	if err := agentMayDecide(ctx, p, a, approve, s.ownReleaseFor(ctx, tx, a)); err != nil {
 		return row{}, err
 	}
 	// An agent never edits what it releases, whoever staged it: what a credential
@@ -271,7 +314,7 @@ func (s *Service) pendingToDecide(ctx context.Context, tx pgx.Tx, p principal.Pr
 	// A retired kind is governed only so its decided cards stay readable;
 	// nothing applies it, so a yes would be recorded and do nothing.
 	if approve && retiredKinds[a.Kind] {
-		return row{}, fmt.Errorf("crmapprovals: %s is retired and can no longer be applied: %w",
+		return row{}, fmt.Errorf("approvals of the kind %s are retired and can no longer be applied: %w",
 			a.Kind, apperrors.ErrConflict)
 	}
 	return a, nil

@@ -1,6 +1,6 @@
 module github.com/margince/margince/extensions/finance-demo
 
-go 1.27.3
+go 1.27.4
 
 // The backend this unit compiles against is the one IN THIS TREE, not a published
 // snapshot of it. pkg/extension has no module version — it resolves through the
@@ -15,4 +15,7 @@ go 1.27.3
 // nobody could fix without hand-writing sums (#2003).
 replace github.com/margince/margince/backend => ../../backend
 
-require github.com/margince/margince/backend v0.0.0-00010101000000-000000000000
+require (
+	github.com/go-pdf/fpdf v0.9.0
+	github.com/margince/margince/backend v0.0.0-00010101000000-000000000000
+)

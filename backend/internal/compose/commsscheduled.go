@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -35,13 +36,17 @@ const defaultScheduleGrace = time.Hour
 // human rather than a row nothing will ever wake again.
 const scheduledSendMaxAttempts = 5
 
-// ScheduledSendArgs wakes ONE message a rep chose to send later. It carries the
-// row's id and nothing else: the row is the schedule, and everything this job
-// needs to decide — whether it is still wanted, when it is due, who it fires as
-// — is read from the row at wake time, never frozen into the alarm.
+// ScheduledSendArgs wakes one message a rep chose to send later. The row is the
+// schedule. Whether it is still wanted, when it is due and who it fires as are
+// all read from the row at wake time.
+//
+// DueAt is the moment the alarm was set for, and the worker never reads it. It
+// makes the uniqueness key name one moment of one message. Two alarms for the
+// same moment coalesce, and a move to an earlier moment still gets its own alarm.
 type ScheduledSendArgs struct {
-	Workspace       ids.UUID `json:"workspace_id"`
-	ScheduledSendID string   `json:"scheduled_send_id"`
+	Workspace       ids.UUID  `json:"workspace_id"`
+	ScheduledSendID string    `json:"scheduled_send_id"`
+	DueAt           time.Time `json:"due_at"`
 }
 
 // Kind is the stable job identifier River persists in river_job.
@@ -82,9 +87,13 @@ func (t scheduleTimer) ScheduleTx(ctx context.Context, tx pgx.Tx, id ids.UUID, d
 	return t.runner.EnqueueTx(ctx, tx, ScheduledSendArgs{
 		Workspace:       ws,
 		ScheduledSendID: id.String(),
+		// Postgres keeps microseconds, so a moment read back from the row
+		// keys the same as the one first written from Go.
+		DueAt: due.UTC().Truncate(time.Microsecond),
 	}, &river.InsertOpts{
 		ScheduledAt: due,
 		MaxAttempts: scheduledSendMaxAttempts,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
 	})
 }
 
@@ -96,6 +105,7 @@ func (t scheduleTimer) ScheduleTx(ctx context.Context, tx pgx.Tx, id ids.UUID, d
 // scheduling human's freshly re-derived authority, never the one they had when
 // they pressed the button.
 type scheduledSendWorker struct {
+	features corefeatures.Availability
 	pool     *pgxpool.Pool
 	store    *activities.Store
 	actors   storedActor
@@ -112,9 +122,10 @@ type scheduledSendWorker struct {
 // immediate one is: the signature, the sender name, the unsubscribe linker and
 // the draft-outcome recorder all present, all identical. A hand-built store
 // here would be a second send path wearing the first one's name.
-func newScheduledSendWorker(pool *pgxpool.Pool, delivery DeliveryMachinery, blob blobstore.Store, origin SendOrigin) *scheduledSendWorker {
+func newScheduledSendWorker(pool *pgxpool.Pool, delivery DeliveryMachinery, blob blobstore.Store, origin SendOrigin, disabled ...string) *scheduledSendWorker {
 	return &scheduledSendWorker{
-		pool: pool,
+		features: corefeatures.New(disabled),
+		pool:     pool,
 		// The ORIGIN travels, because a fired message builds its unsubscribe
 		// link from it. An empty send path here refuses every scheduled
 		// correspondence and marketing send at fire time while the
@@ -257,6 +268,7 @@ func (w *scheduledSendWorker) scheduler(ctx context.Context, id ids.UUID) (sched
 // sign-off when an agent acts. Fired as a human, an agent's message would carry
 // the approver's signature, which the same immediate send never does.
 func (w *scheduledSendWorker) fireAs(ctx context.Context, sched schedulerOf) (context.Context, string, error) {
+	ctx = w.features.Context(ctx)
 	actor, err := w.actors.rebuild(ctx, sched.storedActor())
 	switch {
 	case errors.Is(err, errActorSeatGone):

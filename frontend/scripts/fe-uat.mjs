@@ -14,6 +14,7 @@ import { availableParallelism } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { importSpecifiers } from "./lib/import-specifiers.mjs";
+import { stable } from "./lib/stable.mjs";
 import { isDocsPage, storyCensus } from "./lib/story-files.ts";
 import { outcomeErrors, SETTLED_EVENTS } from "./lib/story-outcome.mjs";
 import {
@@ -29,6 +30,7 @@ import {
   paintCensus,
   renderPhase,
   storyOutcome,
+  unroutedHints,
   viewportFor,
 } from "./lib/uat-page.mjs";
 import {
@@ -226,7 +228,7 @@ for (const f of changed) {
       missing.push({ component: f });
     } else {
       for (const story of covering) storyFiles.add(story);
-      fanOut.set(f, [...covering].sort());
+      fanOut.set(f, [...covering].sort(stable));
     }
   }
 }
@@ -262,8 +264,10 @@ async function captureStory(page, port, story) {
   // Set before navigating: a resize after first paint measures a reflow rather
   // than the layout the story is about.
   await page.setViewportSize(viewportFor(tags));
+  const warnings = [];
   page.on("console", (m) => {
     if (m.type() === "error" && !expectsConsoleError) errors.push(m.text());
+    if (m.type() === "warning") warnings.push(m.text());
   });
 
   await page.goto(
@@ -318,6 +322,7 @@ async function captureStory(page, port, story) {
     errors.push(`theme is ${drawnTheme}, expected ${expectedTheme}`);
   }
   const pass = rendered && errors.length === 0;
+  if (!pass) errors.push(...unroutedHints(warnings));
   console.log(pass ? `✓ ${story.id}` : `✗ ${story.id} — ${errors.join("; ")}`);
   return {
     id: story.id,

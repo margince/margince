@@ -1,0 +1,15 @@
+{
+  "tool": "send_outbound",
+  "action": "email_reply",
+  "verb": "send_email",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

@@ -96,7 +96,7 @@ func connectMailbox(t *testing.T, e *integration.Env, seat ids.UUID, provider, l
 
 func runOwnSentMailRepair(t *testing.T, e *integration.Env) {
 	t.Helper()
-	if _, err := newParticipantBackfillWorker(e.Pool, nil, slog.Default()).backfillWorkspace(context.Background(), e.WS); err != nil {
+	if _, err := newParticipantBackfillWorker(e.Pool, slog.Default()).backfillWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("running the participant backfill: %v", err)
 	}
 }
@@ -142,6 +142,27 @@ func TestMailTheSeatWroteFromAFormerAddressIsReadAgainAsTheirs(t *testing.T) {
 	if seat := e.WsScalar(t, `SELECT on_behalf_of::text FROM audit_log WHERE entity_id = $1 AND actor_id = $2`,
 		id, ownSentMailRepairActor); seat != e.AdminUser.String() {
 		t.Errorf("the claim's audit row speaks for %q, want the seat whose mailbox stored it", seat)
+	}
+}
+
+// A verdict exists only on inbound mail, so turning a row round to outbound
+// clears it. Leaving it would break the check that ties a verdict to inbound
+// and fail the whole capture.
+func TestTheOwnSentMailClaimClearsTheReplyVerdict(t *testing.T) {
+	e := integration.Setup(t)
+	seedRepairSeat(t, e)
+	id := seedReceivedMail(t, e, "verdict@previous-employer.example")
+	e.WsExec(t, `UPDATE activity SET reply_verdict = 'positive', reply_verdict_at = now(), reply_verdict_by = 'model'
+		WHERE id = $1`, id)
+
+	runOwnSentMailRepair(t, e)
+
+	if got := storedEndsOf(t, e, id); got.direction != "outbound" || got.verdict != capture.OwnSentMailClaimed {
+		t.Fatalf("after the pass the mail reads %+v, want claimed and outbound", got)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1
+		AND reply_verdict IS NULL AND reply_verdict_at IS NULL AND reply_verdict_by IS NULL`, id); n != 1 {
+		t.Errorf("the claimed row still carries a reply verdict")
 	}
 }
 

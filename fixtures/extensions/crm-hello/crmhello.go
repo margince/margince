@@ -12,17 +12,32 @@ package crmhello
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"log/slog"
 
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension/privacy"
+	"github.com/margince/margince/backend/pkg/extension/reach"
 )
+
+//go:embed migrations
+var migrations embed.FS
+
+// note is the unit's one table. It names a company and a contact, so the
+// core's merge and erasure must reach it.
+var note = reach.Table{
+	Name:  "ext_crm_hello_note",
+	Links: []reach.Link{{Column: "company_id", Record: reach.Company}, {Column: "contact_id", Record: reach.Contact}},
+	Erase: []reach.Clear{{Column: "body", To: reach.Tombstone}, {Column: "contact_id", To: reach.Null}},
+}
 
 // New returns the unit's declaration. hello_ping in api/crm.yaml has no Tools
 // entry: a contract-only request reaches the manifest and serves
 // nothing. The subscription puts a declared system read in the extension lane,
-// and the panel puts the frontend layer and a panel slot there.
+// and the panel puts the frontend layer and a panel slot there. The note
+// table puts a migrations layer, a Reach and a Privacy declaration there.
 func New() extension.Extension {
 	return extension.Extension{
 		Name:          "crm-hello",
@@ -33,6 +48,11 @@ func New() extension.Extension {
 			{Name: "note_deal_change", Events: []string{"deal.updated"}, Handle: noteDealChange},
 		},
 		SystemReads: []extension.SystemRead{extension.SystemReadDeals},
+		MailHooks:   extension.MailHooks{Deal: keepDealAnswer, Reasons: []string{"kept_core_answer"}},
+		Needs: []extension.Need{
+			{Capability: extension.CapabilityModels, Reason: "Summarises a deal's changes in one sentence."},
+			{Capability: extension.CapabilityObjects, Reason: "Keeps the summaries it writes."},
+		},
 		Settings: []extension.Setting{
 			{Key: "greeting", Label: "Greeting", Hint: "A line the smoke fixture keeps.", Kind: extension.SettingText},
 		},
@@ -40,7 +60,24 @@ func New() extension.Extension {
 			{Slot: extension.SlotDealPanel, Export: "DealHello", Object: "ext_crm_hello_ping"},
 		},
 		Instrumentation: &extension.Instrumentation{Start: startInstrumentation, Browser: "instrument", Edge: instrumentationEdge()},
+		Migrations:      migrations,
+		Reach:           []reach.Table{note},
+		// The same links as note, which the merge moves, so they never refuse
+		// a merge. A subject export serves the body.
+		Privacy: []privacy.Table{{
+			Name:      "ext_crm_hello_note",
+			Links:     []privacy.Link{{Column: "company_id", Record: privacy.Company}, {Column: "contact_id", Record: privacy.Contact}},
+			Personal:  []string{"body"},
+			Retention: jurisdiction.CommercialCorrespondence,
+			AgeColumn: "noted_at",
+		}},
 	}
+}
+
+// keepDealAnswer is the smallest deal hook: it hands core's answer back as it
+// came, so the fixture walks the declaration and changes no mail.
+func keepDealAnswer(_ context.Context, _ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
+	return d, nil
 }
 
 // noteDealChange reads the deal a delivery names and logs its stage, the

@@ -16,8 +16,8 @@ import (
 func TestADirectCompanyMergeKeepsTheOpenPairAsMerged(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	holder := e.createNamedCompany(ctx, t, "Example Group", "example.com")
-	created := e.createNamedCompany(ctx, t, "Cloudy", "cloudy.test", "cloud.example.com")
+	holder := e.createNamedCompany(ctx, t, "Example Group", "example-group.test")
+	created := e.createNamedCompany(ctx, t, "Cloudy", "cloudy.test", "cloud.example-group.test")
 	pair := e.openPairID(ctx, t, entityCompany, holder.UUID, created.UUID)
 	if pair.IsZero() {
 		t.Fatal("no open pair was filed, so the merge has nothing to settle")
@@ -47,5 +47,28 @@ func TestADirectCompanyMergeKeepsTheOpenPairAsMerged(t *testing.T) {
 	}
 	if _, err := e.store.UndoDedupeDisposition(ctx, pair); !errors.Is(err, ErrNotUndoable) {
 		t.Errorf("undo = %v, want ErrNotUndoable", err)
+	}
+}
+
+// The survivor of a real merge takes the lifecycle and size band of the record
+// it absorbs when it had none of its own.
+func TestAMergedAwayCustomerLeavesTheSurvivorACustomer(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	kept := e.createNamedCompany(ctx, t, "Kept Unassessed", "kept.test")
+	retired := e.createNamedCompany(ctx, t, "Retired Customer", "retired.test")
+	if _, err := e.store.UpdateCompany(ctx, retired, UpdateCompanyInput{Status: new("customer"), SizeBand: new("51-200")}); err != nil {
+		t.Fatalf("assess the retiring company: %v", err)
+	}
+
+	survivor, err := e.store.MergeCompany(ctx, retired, kept, nil)
+	if err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+	if survivor.Status == nil || *survivor.Status != "customer" {
+		t.Errorf("survivor lifecycle = %v, want customer", survivor.Status)
+	}
+	if survivor.SizeBand == nil || *survivor.SizeBand != "51-200" {
+		t.Errorf("survivor size band = %v, want 51-200", survivor.SizeBand)
 	}
 }

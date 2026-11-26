@@ -2,20 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { FiltersScreen } from "../features/lists/filters";
+import type { Route } from "../lib/router";
 import {
-  type FiltersServer,
-  mountFilters,
-  type Sent,
-} from "../features/lists/filters.testkit";
-import { en } from "../i18n/en";
-import { parseHash, type Route } from "../lib/router";
-import { LIVE_ID, liveList } from "../testing/lists.fixtures";
-import {
-  fixtureSection,
   ignoreSearch,
   newClient,
   render,
@@ -24,45 +15,10 @@ import {
   stubPhoneViewport,
   TWO_MARKS,
 } from "../testing/shellharness";
-import type { NavSection } from "./nav";
 import { TopBar } from "./topbar";
 
-// The sticky strip above every railed page: what is true of the SESSION rather
-// than of the page under it. Left to right — the sidebar's collapse toggle, the
-// trail that says where the reader is, the one search affordance, the system-of
-// -record chip and the account menu.
-//
-// Three of those five are proved here, because three of them are the top bar's
-// own: the toggle, the trail and the search. The chip and the account menu are
-// components with suites of their own (account.test.tsx);
-// what this file asserts about them is nothing, and what the SHELL asserts is
-// that they are mounted (shell.test.tsx).
-//
-// The page's own NAME is deliberately absent from this file: it is not in the
-// top bar. It stands inside the scroller above the content it names, and its
-// rules are PageTitle's, in shell.test.tsx.
-
-// A composed installation, because the vanilla registry is empty by
-// construction — a unit's trail could otherwise only ever be exercised on its
-// miss path. The descriptor shape is the generator's, the same one
-// App.extscreen.test.tsx hands the same lookup.
-vi.mock("@composition/extensions", () => ({
-  extensions: [
-    {
-      name: "notes",
-      verbs: [
-        {
-          operationId: "notesList",
-          route: "/ext/notes/list",
-          method: "POST",
-          title: "List demo notes",
-          version: "1.0.0",
-          rbacObject: "ext_notes_note",
-        },
-      ],
-    },
-  ],
-}));
+// The strip above every railed page: the search, then what is waiting and who
+// is signed in. The account menu and the bell have suites of their own.
 
 afterEach(() => {
   cleanup();
@@ -70,45 +26,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// The collapse control is minted only when the bar is handed a toggle, so a case
-// that needs it on screen supplies one that records nothing.
-const ignoreToggle = () => undefined;
-
-// The trail landmark. Named, because a page carries more than one navigation
-// landmark — the sidebar is the other — and two unnamed ones are
-// indistinguishable in a screen reader's landmark list.
-const trail = () => screen.getByRole("navigation", { name: "Breadcrumb" });
-
-// One stop's words, without the separator the stop carries INSIDE it. The slash
-// is an `aria-hidden` span in the same list item on purpose (a separator that is
-// a list item of its own makes a three-stop trail announce as five things), so
-// reading the item's text means reading the slash with it.
-function stopText(item: Element): string {
-  return (item.textContent ?? "")
-    .replace(/\s+/g, " ")
-    .replace(/^\/\s*/, "")
-    .trim();
-}
-
-const stopTexts = () => within(trail()).getAllByRole("listitem").map(stopText);
-
 function renderTopBar(
   route: Route,
-  extra: Readonly<{
-    section?: NavSection;
-    collapsed?: boolean;
-    onToggle?: () => void;
-    onOpenSearch?: () => void;
-  }> = {},
+  extra: Readonly<{ onOpenSearch?: () => void }> = {},
 ) {
   return render(
-    <TopBar
-      route={route}
-      section={extra.section}
-      collapsed={extra.collapsed ?? false}
-      onToggle={extra.onToggle}
-      onOpenSearch={extra.onOpenSearch ?? ignoreSearch}
-    />,
+    <TopBar route={route} onOpenSearch={extra.onOpenSearch ?? ignoreSearch} />,
   );
 }
 
@@ -118,10 +41,7 @@ describe("Top bar search (AC-shell-7)", () => {
   it("opens the palette and never takes the query itself", async () => {
     const user = userEvent.setup();
     const onOpenSearch = vi.fn();
-    const { container } = renderTopBar(
-      { screen: "home" },
-      { onOpenSearch, onToggle: ignoreToggle },
-    );
+    const { container } = renderTopBar({ screen: "home" }, { onOpenSearch });
 
     await user.click(
       screen.getByRole("button", { name: "Search or ask Margince" }),
@@ -133,10 +53,7 @@ describe("Top bar search (AC-shell-7)", () => {
   });
 
   it("is a button rather than the field it is styled as", () => {
-    const { container } = renderTopBar(
-      { screen: "home" },
-      { onToggle: ignoreToggle },
-    );
+    const { container } = renderTopBar({ screen: "home" });
     expect(container.querySelector(".topbar-search")?.tagName).toBe("BUTTON");
   });
 
@@ -145,10 +62,7 @@ describe("Top bar search (AC-shell-7)", () => {
   // be made to spell out ⌘K. `name` is an exact match on the computed name, so
   // a kbd that leaked into it fails this.
   it("is named for what it does, with the shortcut kept out of that name", () => {
-    const { container } = renderTopBar(
-      { screen: "home" },
-      { onToggle: ignoreToggle },
-    );
+    const { container } = renderTopBar({ screen: "home" });
     expect(
       screen.getByRole("button", { name: "Search or ask Margince" }),
     ).toBeTruthy();
@@ -169,344 +83,58 @@ describe("Top bar search (AC-shell-7)", () => {
     expect(caps[1]).toBe("K");
     expect(caps[0]).toMatch(/^(⌘|Ctrl)$/);
   });
+
+  // The name is the printed words alone, so a speech-input reader's "click
+  // Search or ask Margince" matches it; a screen reader hears the chord apart.
+  it("takes its name from its printed words and announces the chord apart", () => {
+    renderTopBar({ screen: "home" });
+    const search = screen.getByRole("button", {
+      name: "Search or ask Margince",
+    });
+    expect(search.hasAttribute("aria-label")).toBe(false);
+    // Both modifiers answer, so both are announced: the keymap's own value.
+    expect(search.getAttribute("aria-keyshortcuts")).toBe("Meta+K Control+K");
+  });
 });
 
-// The page heading under the bar names the page, so a phone's bar spends the
-// trail's room on the company's mark instead.
-describe("Top bar at phone width", () => {
-  it("leads home from the company's mark in place of the trail", () => {
+// The page heading in the card names the page, so the bar carries no trail.
+describe("Top bar's lead", () => {
+  it("leads home from the company's mark at phone width", () => {
     stubPhoneViewport();
     const client = newClient();
     client.setQueryData(["me"], repSeeing(TWO_MARKS));
     renderWith(
       client,
-      <TopBar
-        route={{ screen: "deals" }}
-        collapsed={false}
-        onOpenSearch={ignoreSearch}
-      />,
+      <TopBar route={{ screen: "deals" }} onOpenSearch={ignoreSearch} />,
     );
-    expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).toBeNull();
+    // The name starts with what the chip prints (WCAG 2.5.3): the initials until
+    // the square mark paints, then nothing.
     const home = screen.getByRole("link", {
-      name: "Demo GmbH home, powered by Margince",
+      name: "DG Demo GmbH home, powered by Margince",
     });
     expect(home.getAttribute("href")).toBe("/#/home");
+    const mark = home.querySelector(".ws-chip-company img");
+    expect(mark?.getAttribute("src")).toBe(TWO_MARKS.logo_icon_url);
+    if (mark) fireEvent.load(mark);
     expect(
-      home.querySelector(".ws-chip-company img")?.getAttribute("src"),
-    ).toBe(TWO_MARKS.logo_icon_url);
+      screen.getByRole("link", { name: "Demo GmbH home, powered by Margince" }),
+    ).toBe(home);
   });
 
-  it("reads no record name for the trail it does not draw", async () => {
-    const recordReads = (fetch: ReturnType<typeof vi.fn>) =>
-      fetch.mock.calls.filter(([request]) =>
-        String(request instanceof Request ? request.url : request).includes(
-          "/deals/d-1",
-        ),
-      );
-    const wideFetch = vi.fn(async () => new Response(null, { status: 404 }));
-    vi.stubGlobal("fetch", wideFetch);
-    renderTopBar({ screen: "deals", id: "d-1" });
-    await waitFor(() => expect(recordReads(wideFetch)).not.toEqual([]));
-    cleanup();
-
-    stubPhoneViewport();
-    const phoneFetch = vi.fn(async () => new Response(null, { status: 404 }));
-    vi.stubGlobal("fetch", phoneFetch);
-    renderTopBar({ screen: "deals", id: "d-1" });
-    await waitFor(() => expect(phoneFetch).toHaveBeenCalled());
-    expect(recordReads(phoneFetch)).toEqual([]);
+  it("draws no trail and no mark on a wide screen", () => {
+    const { container } = renderTopBar({ screen: "deals" });
+    expect(screen.queryByRole("navigation")).toBeNull();
+    expect(container.querySelector(".topbar-lead")).toBeNull();
+    expect(container.querySelector(".topbar .ws-chip")).toBeNull();
   });
 
-  it("keeps the trail and no mark on a wide screen", () => {
-    renderTopBar({ screen: "deals" });
-    expect(trail()).toBeTruthy();
-    expect(document.querySelector(".topbar .ws-chip")).toBeNull();
-  });
-});
-
-// The sidebar's own control, moved out of the sidebar: a panel that can collapse
-// to 56px cannot hold the affordance that brings it back at a width where its
-// labels are gone.
-describe("Top bar sidebar toggle", () => {
-  it("reports the sidebar expanded and calls the handler on click", async () => {
-    const user = userEvent.setup();
-    const onToggle = vi.fn();
-    renderTopBar({ screen: "home" }, { onToggle });
-
-    const toggle = screen.getByRole("button", { name: "Collapse sidebar" });
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    await user.click(toggle);
-    expect(onToggle).toHaveBeenCalledTimes(1);
-  });
-
-  // The other half, and the one a hard-coded attribute breaks silently: the
-  // control names the state it will MOVE to while `aria-expanded` reports the
-  // state the sidebar is IN. Either alone passes against a control that never
-  // changes.
-  it("reports the sidebar collapsed and names the state it will move to", () => {
-    renderTopBar(
-      { screen: "home" },
-      { collapsed: true, onToggle: ignoreToggle },
-    );
-    const toggle = screen.getByRole("button", { name: "Expand sidebar" });
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-  });
-
-  // A bar with no sidebar behind it mints no control for one. The toggle is
-  // conditioned on the handler because the handler is the only evidence the bar
-  // has that a sidebar exists at all.
-  it("mints no control when it is handed no toggle", () => {
-    const { container } = renderTopBar({ screen: "home" });
-    expect(container.querySelector(".topbar-toggle")).toBeNull();
-    expect(screen.queryByRole("button", { name: /sidebar$/ })).toBeNull();
-  });
-});
-
-// Where the reader is, ending in the page itself. The last stop is the page and
-// is never a link — a link to the page you are already on is a control that does
-// nothing — and it is the ONE element in the bar that claims the current page.
-describe("Top bar trail", () => {
-  it("names the page once on a list route, with nothing to lead back to", () => {
-    renderTopBar({ screen: "deals" }, { onToggle: ignoreToggle });
-    expect(stopTexts()).toEqual(["Deals"]);
-    // A one-stop trail is the page and nothing else: no link, and no separator
-    // leading a stop that is not there.
-    expect(within(trail()).queryByRole("link")).toBeNull();
-    expect(trail().querySelectorAll('[aria-current="page"]')).toHaveLength(1);
-  });
-
-  it("leads a record back to the list it was opened from", () => {
-    const client = newClient();
-    client.setQueryData(["contact", "ref", "p-anna"], "Anna Weber");
-    renderWith(
-      client,
-      <TopBar
-        route={{ screen: "contacts", id: "p-anna" }}
-        collapsed={false}
-        onToggle={ignoreToggle}
-        onOpenSearch={ignoreSearch}
-      />,
-    );
-
-    expect(stopTexts()).toEqual(["Contacts", "Anna Weber"]);
-    const back = within(trail()).getByRole("link", { name: "Contacts" });
-    expect(back.getAttribute("href")).toBe("/#/contacts");
-    // The record itself is the page: not a link, and the one current claim.
-    const stops = within(trail()).getAllByRole("listitem");
-    const last = stops[stops.length - 1];
-    expect(within(last).queryByRole("link")).toBeNull();
-    expect(last.querySelector('[aria-current="page"]')?.textContent).toContain(
-      "Anna Weber",
-    );
-    expect(trail().querySelectorAll('[aria-current="page"]')).toHaveLength(1);
-  });
-
-  // Loading, or a record this principal cannot read: the id is not a name, but
-  // it is true, and it is what the reader can quote. A blank stop is not.
-  it("falls back to the record id when the name cannot be resolved", () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response(null, { status: 404 })),
-    );
-    renderTopBar(
-      { screen: "contacts", id: "p-anna" },
-      { onToggle: ignoreToggle },
-    );
-    expect(stopTexts()).toEqual(["Contacts", "p-anna"]);
-  });
-
-  it("leads a section entry back to the section it belongs to", () => {
-    renderTopBar(
-      { screen: "settings", id: "account" },
-      { section: fixtureSection("account"), onToggle: ignoreToggle },
-    );
-    expect(stopTexts()).toEqual(["Settings", "Account"]);
-    expect(
-      within(trail())
-        .getByRole("link", { name: "Settings" })
-        .getAttribute("href"),
-    ).toBe("/#/settings");
-    expect(within(trail()).queryByRole("link", { name: "Account" })).toBeNull();
-  });
-
-  // An id segment that names no record is the SCREEN's own state, not a record:
-  // `#/settings/deep` is still the Settings page. Treating the segment as a
-  // record put the raw slug in the trail as though it were somebody's name — and
-  // with no section resolved there is no entry to name either, so the trail is
-  // the screen alone.
-  it("keeps a screen's own id segment out of the trail", () => {
-    renderTopBar(
-      { screen: "settings", id: "deep" },
-      { onToggle: ignoreToggle },
-    );
-    expect(stopTexts()).toEqual(["Settings"]);
-    expect(trail().textContent).not.toContain("deep");
-  });
-
-  // A composed unit is offered from Settings and has no index of its own, so
-  // Settings is what its trail leads back to. The unit is named as the settings
-  // pages name it: its title, else its key read as words.
-  it("leads a composed unit back to Settings", () => {
-    renderTopBar({ screen: "ext", id: "notes" }, { onToggle: ignoreToggle });
-    expect(stopTexts()).toEqual(["Settings", "Notes"]);
-    expect(
-      within(trail())
-        .getByRole("link", { name: "Settings" })
-        .getAttribute("href"),
-    ).toBe("/#/settings");
-  });
-
-  // AC-shell-1k: every route resolves to real copy. A hash nobody answers used
-  // to put whatever the reader typed on screen, which reads as a page by that
-  // name existing.
-  it("names an unknown route rather than echoing the hash", () => {
-    renderTopBar(parseHash("#/nope"), { onToggle: ignoreToggle });
-    expect(stopTexts()).toEqual(["Not found"]);
-    expect(trail().textContent).not.toContain("nope");
-  });
-
-  // The deliberate half of the unit case: a unit this installation did NOT
-  // compose is genuinely an unknown page, and the trail says so rather than
-  // printing the segment the reader typed.
-  it("names an uncomposed unit route as the unknown page it is", () => {
-    renderTopBar({ screen: "ext", id: "ghost" }, { onToggle: ignoreToggle });
-    expect(stopTexts()).toEqual(["Not found"]);
-    expect(trail().textContent).not.toContain("ghost");
-  });
-});
-
-// A focused filter page and one list sit BELOW the Filters and views library,
-// so their trail leads back to it and ends in the page. A name is the page's
-// own read, watched under the page's own key: the trail asks for nothing, so
-// each case draws the page beside it, as the shell does.
-describe("Top bar trail below Filters and views", () => {
-  const VIEW = {
-    id: "v1",
-    owner_id: "u-1",
-    resource: "contacts",
-    name: "Berlin contacts",
-    shared_scope: "private",
-    query: { filter: { and: [{ field: "city", op: "eq", value: "B" }] } },
-    version: 1,
-  };
-
-  /** The bar and the page the App mounts at `hash`, over one fake server. */
-  function renderAt(hash: string, server: FiltersServer = {}) {
-    const route = parseHash(hash);
-    const mounted = mountFilters(server);
-    renderWith(
-      mounted.client,
-      <>
-        <TopBar
-          route={route}
-          collapsed={false}
-          onToggle={ignoreToggle}
-          onOpenSearch={ignoreSearch}
-        />
-        {route.screen === "lists" ? (
-          <FiltersScreen list={route.id} />
-        ) : (
-          <FiltersScreen id={route.id} view={route.id2} />
-        )}
-      </>,
-    );
-    return mounted;
-  }
-
-  const reads = (seen: readonly Sent[], at: string) =>
-    seen.filter((sent) => sent.method === "GET" && sent.url.endsWith(at));
-
-  it("is the library's own name on the library", () => {
-    renderAt("#/filters");
-    expect(stopTexts()).toEqual(["Filters and views"]);
-    expect(within(trail()).queryByRole("link")).toBeNull();
-  });
-
-  it("leads a new filter back to the library", () => {
-    renderAt("#/filters/contacts");
-    expect(stopTexts()).toEqual(["Filters and views", "New contact filter"]);
-    expect(
-      within(trail())
-        .getByRole("link", { name: "Filters and views" })
-        .getAttribute("href"),
-    ).toBe("/#/filters");
-  });
-
-  it("names an opened view once the page has read it, with one read between them", async () => {
-    let release = () => {};
-    const viewsAnswered = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const { seen } = renderAt("#/filters/contacts/v1", {
-      views: [VIEW],
-      viewsAnswered,
-    });
-    expect(stopTexts()).toEqual(["Filters and views", "Saved view"]);
-    await waitFor(() => expect(reads(seen, "/views/v1")).toHaveLength(1));
-    release();
-    await waitFor(() =>
-      expect(stopTexts()).toEqual(["Filters and views", "Berlin contacts"]),
-    );
-    expect(reads(seen, "/views/v1")).toHaveLength(1);
-  });
-
-  // The page reads a view it cannot open as gone, so the trail does not name it.
-  it.each([
-    ["that was deleted", { archived_at: "2026-06-01T00:00:00Z" }],
-    ["over a record type no builder reads", { resource: "activities" }],
-    ["keeping a list's state and no filter", { query: { list: {} } }],
-  ])("names no view %s", async (_, change) => {
-    renderAt("#/filters/contacts/v1", { views: [{ ...VIEW, ...change }] });
-    expect(await screen.findByText(en["filters.view.gone"])).toBeTruthy();
-    expect(stopTexts()).toEqual(["Filters and views", "Saved view"]);
-  });
-
-  it("leads a Live List's filter back through the list it edits", async () => {
-    const { seen } = renderAt(`#/filters/list/${LIVE_ID}`, {
-      listsOn: true,
-      lists: [liveList],
-    });
-    await waitFor(() =>
-      expect(stopTexts()).toEqual([
-        "Filters and views",
-        liveList.name,
-        "Edit filter",
-      ]),
-    );
-    expect(
-      within(trail())
-        .getByRole("link", { name: liveList.name })
-        .getAttribute("href"),
-    ).toBe(`/#/lists/${LIVE_ID}`);
-    expect(reads(seen, `/lists/${LIVE_ID}`)).toHaveLength(1);
-  });
-
-  // The page records a visit only once its own read lands, so a trail that
-  // read the list first would leave the visit unrecorded.
-  it("leads one list back to the library, leaving the visit to the page", async () => {
-    const { written } = renderAt(`#/lists/${LIVE_ID}`, {
-      listsOn: true,
-      lists: [liveList],
-    });
-    await waitFor(() =>
-      expect(stopTexts()).toEqual(["Filters and views", liveList.name]),
-    );
-    await waitFor(() =>
-      expect(
-        written.filter((sent) => sent.url.endsWith(`/lists/${LIVE_ID}/visit`)),
-      ).toHaveLength(1),
-    );
-  });
-
-  // The server refuses every list route while lists are off, so nothing on
-  // the page asks for one and the trail names the page instead.
-  it("reads no list while lists are off", async () => {
-    const { seen } = renderAt(`#/lists/${LIVE_ID}`, {
-      listsOn: false,
-      lists: [liveList],
-    });
-    expect(await screen.findByText(en["lists.unavailable"])).toBeTruthy();
-    expect(stopTexts()).toEqual(["Filters and views", "List"]);
-    expect(reads(seen, `/lists/${LIVE_ID}`)).toEqual([]);
+  it("leads a record with its back control alone", () => {
+    const { container } = renderTopBar({ screen: "contacts", id: "p-anna" });
+    const lead = container.querySelector<HTMLElement>(".topbar-lead");
+    expect(lead).not.toBeNull();
+    const inLead = within(lead ?? container);
+    expect(inLead.getAllByRole("button")).toHaveLength(1);
+    expect(inLead.getByRole("button", { name: "Back" })).toBeTruthy();
+    expect(screen.queryByRole("navigation")).toBeNull();
   });
 });

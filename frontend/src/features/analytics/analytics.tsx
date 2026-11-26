@@ -1,12 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, FileText } from "lucide-react";
 import { type ReactNode, Suspense } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { FilterBar } from "../../design-system/filterbar";
-import { Popover } from "../../design-system/popover";
 import { QueryStates } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { type Locale, useLocale, useT } from "../../i18n";
@@ -14,7 +11,9 @@ import {
   openAnalyticsSection,
   type Section,
 } from "../../lib/analytics.address";
-import { problemStatus, unwrap } from "../../lib/problem";
+import { translatedPipeline } from "../../lib/labeltranslation";
+import { pipelinesWithArchivedOptions } from "../../lib/pipelines.queries";
+import { problemStatus } from "../../lib/problem";
 import {
   type ReviewActions,
   ReviewActionsContext,
@@ -47,16 +46,14 @@ import {
   ReportingTargets,
   SharedForecastView,
 } from "./analytics.sections";
-import {
-  SETUP_LABEL,
-  type SetupSection,
-  useAnalyticsSections,
-} from "./analytics.tabs";
+import { useAnalyticsSections } from "./analytics.tabs";
+import { TabVerbs } from "./analytics.tabverbs";
 import { stagesOfEveryPipeline } from "./pipelinestages";
 import { VIEW_SHAPE, viewOfSection } from "./reporting.views";
 import "./analytics.css";
 
 import { SECTION_REPORTS, useReportRun } from "./analytics.reports.queries";
+import { ExtensionReports } from "./extensionreports";
 
 export function AnalyticsScreen({
   reviewActions,
@@ -77,16 +74,12 @@ export function AnalyticsScreen({
   const { route, section, tabs, setup, library, holding } =
     useAnalyticsSections(context.data?.default_scope.kind);
   const pipelinesQuery = useQuery({
-    queryKey: ["pipelines", "with-archived"],
+    // Archived too: a deal keeps its stage when its pipeline is archived.
+    ...pipelinesWithArchivedOptions,
+    select: (pipelines) =>
+      pipelines.map((pipeline) => translatedPipeline(pipeline, locale)),
     // Only report cards name stages, so the other sections never wait on this.
     enabled: !holding && SECTION_REPORTS[section].length > 0,
-    // Archived too: a deal keeps its stage when its pipeline is archived.
-    queryFn: async () =>
-      unwrap(
-        await api.GET("/pipelines", {
-          params: { query: { include_archived: true } },
-        }),
-      ).data,
   });
   const scopeControl =
     selection && context.data ? (
@@ -151,7 +144,7 @@ export function AnalyticsScreen({
             <TabVerbs library={library} setup={setup} section={section} />
           }
         />
-        <div className="analytics-body">
+        <div className="analytics-body page-pane">
           <ReviewActionsContext value={reviewActions ?? inheritedReviewActions}>
             {holding ? (
               <PendingBody label={t("analytics.sections")} />
@@ -217,58 +210,6 @@ function ScopeRefused({
     >
       <p>{t("analytics.scopeRefusedBody")}</p>
     </Callout>
-  );
-}
-
-function TabVerbs({
-  library,
-  setup,
-  section,
-}: Readonly<{
-  library: Section | undefined;
-  setup: readonly SetupSection[];
-  section: Section;
-}>) {
-  const t = useT();
-  if (!library && setup.length === 0) return null;
-  return (
-    <div className="analytics-tab-verbs">
-      {library && (
-        <Button
-          variant="ghost"
-          aria-current={section === library ? "page" : undefined}
-          onClick={() => openAnalyticsSection(library)}
-        >
-          <FileText aria-hidden="true" />
-          {t(
-            library === "reports"
-              ? "analytics.sectionReports"
-              : "analytics.sectionQuestions",
-          )}
-        </Button>
-      )}
-      {setup.length > 0 && (
-        <Popover
-          variant="ghost"
-          label={
-            <>
-              {t("analytics.setup")}
-              <ChevronDown aria-hidden="true" />
-            </>
-          }
-        >
-          {setup.map((candidate) => (
-            <Button
-              key={candidate}
-              variant="link"
-              onClick={() => openAnalyticsSection(candidate)}
-            >
-              {t(SETUP_LABEL[candidate])}
-            </Button>
-          ))}
-        </Popover>
-      )}
-    </div>
   );
 }
 
@@ -491,6 +432,7 @@ function PipelineSection({
         locale={locale}
         scope={scope}
       />
+      <ExtensionReports />
     </>
   );
 }

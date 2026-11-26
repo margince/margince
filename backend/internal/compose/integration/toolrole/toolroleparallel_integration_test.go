@@ -122,7 +122,7 @@ func sweepSeat(t *testing.T, seat roleSeat, recorded *toolCheckRecorder, calls [
 // be another's answer.
 var aloneVerbs = map[string]bool{
 	"start_forecast_assurance_run": true, "confirm_anchor_company_site_read": true,
-	"put_anchor_company": true, "update_activity_review_template": true,
+	"put_anchor_company": true, "update_activity_review_template": true, "create_activity_review_template": true,
 	"delete_anchor_company_logo": true, "delete_anchor_company_logo_icon": true, "delete_legal_entity_logo": true,
 	"update_contact_case_settings": true, "update_follow_up_settings": true, "update_lead_settings": true,
 	"update_legal_review_settings": true, "upload_company_logo": true, "upload_company_logo_icon": true,
@@ -156,6 +156,7 @@ func callAsSeat(t *testing.T, seat roleSeat, client *apptest.MCPClient, call too
 	withArgs(t, seat, call, pool, func(args map[string]any) {
 		got, releaseRefused = callThroughApproval(t, seat.e, client, call.verb, args)
 	})
+	holdNoBusyForm(t, call.verb, got)
 	return got, releaseRefused
 }
 
@@ -166,14 +167,16 @@ func callAsSeat(t *testing.T, seat roleSeat, client *apptest.MCPClient, call too
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
 func withArgs(t *testing.T, seat roleSeat, call toolRoleCall, pool *recordPool, run func(args map[string]any)) {
 	t.Helper()
-	if !runsAlone(t, call) {
-		run(call.args(pool))
-		return
-	}
-	installationSeeds.Lock()
-	defer installationSeeds.Unlock()
-	apptest.AssignRoleTo(t, seat.e, seat.email, "admin")
-	args := call.args(pool)
-	apptest.AssignRoleTo(t, seat.e, seat.email, seat.role.Key)
-	run(args)
+	oneWebFormAtATime(t, call, func() {
+		if !runsAlone(t, call) {
+			run(call.args(pool))
+			return
+		}
+		installationSeeds.Lock()
+		defer installationSeeds.Unlock()
+		apptest.AssignRoleTo(t, seat.e, seat.email, "admin")
+		args := call.args(pool)
+		apptest.AssignRoleTo(t, seat.e, seat.email, seat.role.Key)
+		run(args)
+	})
 }

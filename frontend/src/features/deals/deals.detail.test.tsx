@@ -1,5 +1,12 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
@@ -30,10 +37,12 @@ afterEach(() => {
   localStorage.clear();
 });
 
+const offerReads = { count: 0 };
+
 function stubDealBackend(
   onRecord: Deal,
   offers: Offer[],
-  onCreateOffer?: (body: unknown) => void,
+  onCreateOffer?: (body: unknown, headers: Headers) => unknown,
 ) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
@@ -57,13 +66,18 @@ function stubDealBackend(
       const body = request
         ? await request.json()
         : JSON.parse(String(init?.body));
-      onCreateOffer?.(body);
+      const answer = await onCreateOffer?.(
+        body,
+        new Headers(request ? request.headers : init?.headers),
+      );
+      if (answer instanceof Response) return answer;
       return jsonResponse(
         offer({ id: "new-offer", currency: body.currency }),
         201,
       );
     }
     if (url.includes("/offers")) {
+      offerReads.count += 1;
       return jsonResponse({ data: offers, page: { next_cursor: null } });
     }
     if (url.includes("/history")) {
@@ -171,11 +185,63 @@ describe("DealScreen — edit, archive (A3)", () => {
 
     // One row names the partner and what it did, so both are read off its
     // text rather than off two elements.
-    const partner = await screen.findByText(/VietnamPartner JSC/);
-    expect(partner.closest("aside")).not.toBeNull();
+    const aside = await screen.findByRole("complementary");
+    const partner = await within(aside).findByText(/VietnamPartner JSC/);
     expect(partner.textContent).toContain(
       translate("en", "deal.attributionSourced"),
     );
+    // The head names the referral under the deal's name too.
+    const line = (await screen.findByText(translate("en", "deal.referredBy"), {
+      exact: false,
+    })) as HTMLElement;
+    expect(line.closest("aside")).toBeNull();
+    expect(line.textContent).toBe("Referred by VietnamPartner JSC (sourced)");
+  });
+
+  it("says where a partner would go when no company is a partner yet", async () => {
+    const d = deal({ id: "x", partner_company_id: null });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (new URL(request.url).pathname.endsWith("/partners")) {
+          return jsonResponse({ data: [], page: { next_cursor: null } });
+        }
+        return stubBackend([d], { single: d })(request);
+      }),
+    );
+
+    render(<DealScreen id="x" />);
+
+    const aside = await screen.findByRole("complementary");
+    expect(
+      await within(aside).findByText(translate("en", "deal.partnerNoneYet")),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(translate("en", "deal.referredBy"), { exact: false }),
+    ).toBeNull();
+  });
+
+  it("says None, not the admin hint, while the partner list is refused", async () => {
+    const d = deal({ id: "x", partner_company_id: null });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        if (new URL(request.url).pathname.endsWith("/partners")) {
+          return jsonResponse({ title: "Forbidden", status: 403 }, 403);
+        }
+        return stubBackend([d], { single: d })(request);
+      }),
+    );
+
+    render(<DealScreen id="x" />);
+
+    const aside = await screen.findByRole("complementary");
+    expect(
+      await within(aside).findByText(translate("en", "deal.aside.partnerNone")),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(translate("en", "deal.partnerNoneYet")),
+    ).toBeNull();
   });
 
   // A form offers nothing the record already carries as a blank. The partner
@@ -337,10 +403,15 @@ describe("DealScreen — edit, archive (A3)", () => {
 
     render(<DealScreen id="x" />);
 
-    const partner = await screen.findByText(/Xentral/);
+    const aside = await screen.findByRole("complementary");
+    const partner = await within(aside).findByText(/Xentral/);
     expect(partner.textContent).toContain(
       translate("en", "deal.attributionInfluenced"),
     );
+    const line = await screen.findByText(translate("en", "deal.supportedBy"), {
+      exact: false,
+    });
+    expect(line.textContent).toBe("Supported by Xentral (influenced)");
   });
 
   it("archive confirms then DELETEs", async () => {
@@ -410,7 +481,7 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     expect(await screen.findByText("Moved to Proposal")).toBeTruthy();
   });
 
-  it("says the probability the new stage set, in place of the bare move", async () => {
+  it("says the probability the new stage set beside the move", async () => {
     const d = deal({ id: "x", version: 7, stage_id: "s1" });
     vi.stubGlobal(
       "fetch",
@@ -429,9 +500,8 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     await user.click(await screen.findByRole("button", { name: "Proposal" }));
 
     expect(
-      await screen.findByText("Probability set to 60% by the stage Proposal"),
+      await screen.findByText("Moved to Proposal · probability now 60%"),
     ).toBeTruthy();
-    expect(screen.queryByText("Moved to Proposal")).toBeNull();
   });
 
   // The deal's tags ride in the context rail, beside the seats, the deal room
@@ -616,7 +686,7 @@ describe("DealScreen — the stage stepper advances the deal", () => {
 describe("DealScreen — an archived deal keeps its verbs, refused", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
-  it("shows Edit, Archive, Share and Reopen disabled, each reachable from the one sentence naming the archive", async () => {
+  it("shows Share and Reopen disabled, each reachable from the one sentence naming the archive", async () => {
     const d = deal({
       id: "x",
       status: "won",
@@ -630,7 +700,6 @@ describe("DealScreen — an archived deal keeps its verbs, refused", () => {
     // Each is awaited, not read in the tick the first arrived in. The note on
     // the same list in companies.header.test.tsx says why.
     const refused = [
-      await screen.findByTestId("archive-record"),
       await screen.findByTestId("share-record"),
       await screen.findByTestId("reopen-open"),
     ];
@@ -648,46 +717,71 @@ describe("DealScreen — an archived deal keeps its verbs, refused", () => {
 });
 
 // `writable` is what the server's write gate would answer on a mutation. A
-// rep holding deal.update on the object is not offered Edit on a colleague's
-// deal. Otherwise the 403 arrives only after the form is filled in.
-// The upload, the offer and the stage move are refused the same way.
+// reader it refuses is offered none of the deal's changes: each would only
+// fail. What every seat may do on any deal it reads, logging and tasks, stays.
 describe("DealScreen — a live deal that is not the viewer's to change", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
-  it("refuses Edit, Archive, Share and New offer from the one sentence the page prints", async () => {
+  const sentence =
+    "You can log activity and add tasks. Changing this deal needs its owner to share it.";
+
+  it("says what the reader may do, and draws no control the server would refuse", async () => {
     const notMine = deal({
       id: "x",
       owner_id: "u-someone-else",
       writable: false,
     });
-    vi.stubGlobal("fetch", stubDealBackend(notMine, []));
+    vi.stubGlobal("fetch", stubBackend([notMine], { single: notMine }));
+    const user = userEvent.setup();
     render(<DealScreen id="x" />);
 
-    const sentence =
-      "You cannot change this deal. Ask its owner to share it, or an administrator for edit rights.";
     expect(await screen.findByText(sentence)).toBeTruthy();
+    // The ladder still reads where the deal stands, as names only.
+    expect(await screen.findByText("Proposal")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Proposal" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Won" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Move to/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "New offer" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Write brief" })).toBeNull();
 
-    // The offer is hung off the deal through the deal's own write gate. So it
-    // is refused by the same fact and points at the same sentence.
-    const newOffer = await screen.findByRole("button", { name: "New offer" });
-    expect(newOffer.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Log activity" })).toBeTruthy();
+    await openHeaderMenu(user);
     expect(
-      document.getElementById(newOffer.getAttribute("aria-describedby") ?? "")
-        ?.textContent,
-    ).toBe(sentence);
-
-    // Every verb in the menu describes itself by an id minted in the page's
-    // band on the first render. One minted inside the menu would name no
-    // element until the menu had been opened.
-    await openHeaderMenu();
+      await screen.findByRole("button", { name: "Add task" }),
+    ).toBeTruthy();
     for (const testId of ["archive-record", "share-record"]) {
-      const control = await screen.findByTestId(testId);
-      expect(control.hasAttribute("disabled")).toBe(true);
-      expect(
-        document.getElementById(control.getAttribute("aria-describedby") ?? "")
-          ?.textContent,
-      ).toBe(sentence);
+      expect(screen.queryByTestId(testId)).toBeNull();
     }
+    expect(
+      screen.queryByRole("button", {
+        name: translate("en", "deal.editDetails"),
+      }),
+    ).toBeNull();
+  });
+
+  it("draws every one of those controls on a deal the reader may change", async () => {
+    const mine = deal({ id: "x", writable: true });
+    vi.stubGlobal("fetch", stubBackend([mine], { single: mine }));
+    const user = userEvent.setup();
+    render(<DealScreen id="x" />);
+
+    expect(
+      await screen.findByRole("button", { name: "Proposal" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Won" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "New offer" })).toBeTruthy();
+    // The brief writes through the page's one deal edit.
+    expect(
+      await screen.findByRole("button", { name: "Write brief" }),
+    ).toBeTruthy();
+    expect(screen.queryByText(sentence)).toBeNull();
+    await openHeaderMenu(user);
+    for (const testId of ["archive-record", "share-record"]) {
+      expect(await screen.findByTestId(testId)).toBeTruthy();
+    }
+    expect(
+      screen.getByRole("button", { name: translate("en", "deal.editDetails") }),
+    ).toBeTruthy();
   });
 
   // Absent is not "unknown", it is "no". A server too old to send the field
@@ -698,7 +792,7 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     vi.stubGlobal("fetch", stubDealBackend(withoutWritable, []));
     render(<DealScreen id="x" />);
 
-    expect(await screen.findByText(/You cannot change this deal/)).toBeTruthy();
+    expect(await screen.findByText(sentence)).toBeTruthy();
     await openHeaderMenu();
     expect(
       screen.queryByRole("button", { name: /^Change Deal name/ }),
@@ -825,6 +919,55 @@ describe("DealScreen offers panel", () => {
     await waitFor(() =>
       expect(window.location.hash).toBe("#/offers/new-offer"),
     );
+  });
+
+  // A double click lands its second press before the first create is drawn
+  // pending. It must not make a second draft and spend a second offer number.
+  it("a double click on New offer posts one draft, under an idempotency key", async () => {
+    const keys: (string | null)[] = [];
+    const { promise, resolve } = Promise.withResolvers<void>();
+    vi.stubGlobal(
+      "fetch",
+      stubDealBackend(deal({ currency: "EUR" }), [], (_body, headers) => {
+        keys.push(headers.get("Idempotency-Key"));
+        return promise;
+      }),
+    );
+    render(<DealScreen id="d1" />);
+    const newOffer = await screen.findByRole("button", { name: "New offer" });
+    fireEvent.click(newOffer);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    fireEvent.click(newOffer);
+    resolve();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/offers/new-offer"),
+    );
+    expect(keys).toHaveLength(1);
+    expect(keys[0]).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it("says so of a create the server cannot vouch for, reads the offers again, and sends the next press under a new key", async () => {
+    const keys: (string | null)[] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubDealBackend(deal({ currency: "EUR" }), [], (_body, headers) => {
+        keys.push(headers.get("Idempotency-Key"));
+        const failed = { status: 409, code: "idempotency_key_failed" };
+        return keys.length === 1 ? jsonResponse(failed, 409) : undefined;
+      }),
+    );
+    render(<DealScreen id="d1" />);
+    const user = userEvent.setup();
+    const newOffer = await screen.findByRole("button", { name: "New offer" });
+    const readsBefore = offerReads.count;
+    await user.click(newOffer);
+    await screen.findByText(translate("en", "offer.writeUnsure"));
+    await waitFor(() => expect(offerReads.count).toBeGreaterThan(readsBefore));
+    await user.click(newOffer);
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[1]).not.toBe(keys[0]);
   });
 });
 

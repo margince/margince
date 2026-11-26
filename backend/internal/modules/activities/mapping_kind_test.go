@@ -56,7 +56,7 @@ func TestEveryCreateDoorRefusesAnUnknownKind(t *testing.T) {
 	doors := map[string]func(crmcontracts.CreateActivityRequest) (LogActivityInput, error){
 		"client":          LogActivityInputFrom,
 		"importer":        LogActivityInputFromImporter,
-		"engine reminder": logActivityInputAllowingReminderIdentity,
+		"engine reminder": logActivityInputAllowingTaskIdentity,
 	}
 	for name, door := range doors {
 		t.Run(name, func(t *testing.T) {

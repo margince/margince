@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -96,7 +97,7 @@ func assertHistorySurvivesFirstGraphFold(t *testing.T, table string, parties int
 	t.Cleanup(func() { cancel(); commitBlocker(); <-olderDone })
 	select {
 	case pid := <-observer.started:
-		awaitBlockedGraphFold(ctx, t, b.env.Pool, pid)
+		awaitBlockedGraphFold(ctx, t, b.env.Pool, pid, olderDone)
 	case err := <-olderResult:
 		t.Fatalf("older fold did not start: %v", err)
 	case <-ctx.Done():
@@ -118,10 +119,10 @@ func assertHistorySurvivesFirstGraphFold(t *testing.T, table string, parties int
 	if reads := observer.folds.Load(); reads != 2 {
 		t.Fatalf("first-creation batch ran %d exact folds, want two", reads)
 	}
-	if _, err := b.registry.CancelBackfill(b.human, "gmail", ids.From[ids.UserKind](b.env.Rep1)); err != nil {
+	if _, err := b.registry.CancelBackfill(b.human, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](b.env.Rep1)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.registry.CancelBackfill(other, "gmail", ids.From[ids.UserKind](b.env.Rep2)); err != nil {
+	if _, err := b.registry.CancelBackfill(other, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](b.env.Rep2)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := releaseTerminalImportWork(system, b.env.Pool); err != nil {
@@ -145,25 +146,17 @@ func assertHistorySurvivesFirstGraphFold(t *testing.T, table string, parties int
 	}
 }
 
-func awaitBlockedGraphFold(ctx context.Context, t *testing.T, pool *pgxpool.Pool, pid uint32) {
+func awaitBlockedGraphFold(ctx context.Context, t *testing.T, pool *pgxpool.Pool, pid uint32, olderDone <-chan struct{}) {
 	t.Helper()
 	conn, err := pool.Acquire(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer conn.Release()
-	for {
-		if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-			t.Fatal(err)
-		}
-		var blocked bool
-		if err := conn.QueryRow(ctx, `SELECT cardinality(pg_blocking_pids(@pid))>0`, pgx.NamedArgs{"pid": pid}).Scan(&blocked); err != nil {
-			t.Fatal(err)
-		}
-		if blocked {
-			return
-		}
-	}
+	testdb.WaitForContention(t, olderDone, "the older fold finished without waiting on a lock",
+		"the older fold never waited on a lock", func(ctx context.Context) (bool, error) {
+			return testdb.Waiting(ctx, conn.Conn(), int32(pid))
+		})
 }
 
 func finishGraphFoldAfterOlder(ctx context.Context, t *testing.T, pool *pgxpool.Pool, table string, latest events.Envelope, commitBlocker func(), olderResult <-chan error, cancel context.CancelFunc) {

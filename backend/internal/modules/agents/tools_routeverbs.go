@@ -50,6 +50,7 @@ type RouteVerb struct {
 	AnswerSchema json.RawMessage
 	// AskUserFirst is true when the app confirms the act before it runs.
 	AskUserFirst bool
+	Egress       bool
 }
 
 // RouteCall is one route-backed call as its route takes it.
@@ -113,7 +114,10 @@ func RegisterRouteVerbs(r *Registry, verbs []RouteVerb, run RouteRunner) {
 	if len(verbs) == 0 {
 		return
 	}
-	r.Register(describeRouterActions{verbs: verbs})
+	r.Register(describeRouterActions{
+		verbs: verbs, runs: r.routerRunSpec, choices: r.routerChoices, offered: r.offeredActions,
+		wording: r.lister, selector: r.actionField,
+	})
 	r.mu.Lock()
 	r.routeActions[readWorkspaceName] = map[string]string{routeActionsTopic: describeRouterActionsName}
 	r.mu.Unlock()
@@ -168,7 +172,6 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	for _, name := range slices.Sorted(maps.Keys(properties)) {
 		members = append(members, strconv.Quote(name)+":"+properties[name])
 	}
-	egress := v.Scope.Egresses()
 	answer := v.AnswerSchema
 	if v.Method != http.MethodGet {
 		answer = writeAnswerSchema(answer)
@@ -176,11 +179,14 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: v.Verb, Title: v.Summary, Version: toolVersionV1,
 		Description:   v.Summary + " (" + v.Method + " " + v.Pattern + ", as the app does it.)",
-		RequiredScope: v.Scope, Tier: mcp.TierAutoExecute, Egress: egress, AskUserFirst: v.AskUserFirst,
-		Unlisted:         true,
-		OpenAPIOp:        v.Op,
-		UnkeyedArguments: unkeyed,
-		MaxArgsBytes:     maxArgs,
+		RequiredScope: v.Scope, Tier: mcp.TierAutoExecute, Egress: v.Egress, AskUserFirst: v.AskUserFirst,
+		Unlisted: true,
+		// The route's own answer schema decides: one that names only ids, numbers,
+		// dates and closed sets of words holds nothing someone wrote.
+		ProductMadeAnswer: !CarriesFreeText(v.AnswerSchema),
+		OpenAPIOp:         v.Op,
+		UnkeyedArguments:  unkeyed,
+		MaxArgsBytes:      maxArgs,
 		InputSchema: schema(`{"type":"object","required":` + mustJSON(required) + `,"properties":{` +
 			strings.Join(members, ",") + `},"additionalProperties":false}`),
 		OutputSchema: answer,
@@ -400,7 +406,20 @@ const (
 
 // describeRouterActions answers what each action of one router takes, so a
 // router's own listing stays one enum and one body object.
-type describeRouterActions struct{ verbs []RouteVerb }
+type describeRouterActions struct {
+	verbs []RouteVerb
+	// runs finds an action the router runs in process, which has no route.
+	runs func(router, action string) (mcp.ToolSpec, bool)
+	// choices names every action of a router, routed or run in process.
+	choices func(router string) []string
+	// offered says which of a router's actions the caller's tools/list offers,
+	// and false when it offers the router not at all.
+	offered func(ctx context.Context, router string) (func(action string) bool, bool)
+	// wording words a target's spec as the listing words it, built once per answer.
+	wording func() lister
+	// selector names the member a router picks its action by.
+	selector func(router string) string
+}
 
 func (d describeRouterActions) routers() []string {
 	var names []string
@@ -413,28 +432,35 @@ func (d describeRouterActions) routers() []string {
 func (d describeRouterActions) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: describeRouterActionsName, Title: "Describe a router's actions", Version: toolVersionV1,
+		ProductMadeAnswer: true,
 		Description: "Lists what each action of one router takes: its path ids, if_version, and the " +
 			"JSON schema of its body, as the app's own route defines them. Name action to read one; a large " +
 			"router's whole list is long.",
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "describeRouterActions",
-		OutputSchema: schema(`{"type":"object","required":["router","actions"],"properties":{` +
-			`"router":{"type":"string"},"actions":{"type":"array","items":{"type":"object",` +
+		OutputSchema: schema(`{"type":"object","required":["router","actions","how_to_call"],"properties":{` +
+			`"router":{"type":"string"},"ask_user_first_means":{"type":"string"},"how_to_call":{"type":"string"},"actions":{"type":"array","items":{"type":"object",` +
 			`"required":["action","does","route"],"properties":{"action":{"type":"string"},` +
 			`"does":{"type":"string"},"route":{"type":"string"},"ids":{"type":"array","items":{"type":"string"}},` +
-			`"query":{"type":"array","items":{"type":"string"}},"if_version":{"type":"boolean"},` +
+			`"query":{"type":"array","items":{"type":"object","required":["name","type"],"properties":{"name":{"type":"string"},` +
+			`"type":{"type":"string"},"required":{"type":"boolean"},"enum":{"type":"array","items":{"type":"string"}},` +
+			`"format":{"type":"string"}}}},"if_version":{"type":"boolean"},` +
 			`"ask_user_first":{"type":"boolean"},"uploads_a_file":{"type":"boolean"},"body":{"type":"object"}}}}}}`),
 		InputSchema: schema(`{"type":"object","required":["router"],"properties":{"router":{"type":"string","enum":` +
 			mustJSON(d.routers()) + `},"action":{"type":"string","description":"One action to describe; leave it out for all of them"}},"additionalProperties":false}`),
 	}
 }
 
+// routerRunRoute stands in the route column for an action the router runs in
+// process: the arguments go to the router itself, beside its action field.
+const routerRunRoute = "in process: send body's members at the top level, beside action"
+
 type routeActionShape struct {
 	Action       string          `json:"action"`
 	Does         string          `json:"does"`
 	Route        string          `json:"route"`
 	IDs          []string        `json:"ids,omitempty"`
-	Query        []string        `json:"query,omitempty"`
+	Query        []ViewQuery     `json:"query,omitempty"`
 	IfVersion    bool            `json:"if_version,omitempty"`
 	AskUserFirst bool            `json:"ask_user_first,omitempty"`
 	Body         json.RawMessage `json:"body,omitempty"`
@@ -443,37 +469,23 @@ type routeActionShape struct {
 	UploadsAFile bool `json:"uploads_a_file,omitempty"`
 }
 
-func (d describeRouterActions) Handle(_ context.Context, in json.RawMessage) (json.RawMessage, error) {
+// Handle answers for the caller: a router or action its tools/list does not
+// offer is refused as one the catalog does not have.
+func (d describeRouterActions) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
 		Router string `json:"router"`
 		Action string `json:"action"`
 	}
-	if err := json.Unmarshal(in, &args); err != nil || !slices.Contains(d.routers(), args.Router) {
-		return nil, &BadArgsError{Field: "router", Cause: fmt.Errorf("router must be one of %s", strings.Join(d.routers(), ", "))}
+	if err := json.Unmarshal(in, &args); err != nil {
+		return nil, &BadArgsError{Field: catalogRouterArg, Cause: err}
 	}
-	actions := []routeActionShape{}
-	for _, v := range d.verbs {
-		if v.Router != args.Router || (args.Action != "" && v.Action != args.Action) {
-			continue
-		}
-		shape := routeActionShape{
-			Action: v.Action, Does: v.Summary, Route: v.Method + " " + v.Pattern, IDs: v.PathParams,
-			IfVersion: v.IfMatch, AskUserFirst: v.AskUserFirst,
-		}
-		for _, q := range v.Query {
-			shape.Query = append(shape.Query, q.Name)
-		}
-		if v.Body && len(v.BodySchema) > 0 {
-			shape.Body = v.BodySchema
-		}
-		shape.UploadsAFile = v.UploadField != ""
-		actions = append(actions, shape)
+	if d.offered == nil {
+		return d.catalog(args.Router, args.Action, nil)
 	}
-	if args.Action != "" && len(actions) == 0 {
-		return nil, &BadArgsError{Field: "action", Cause: fmt.Errorf(
-			"router %s has no route action %s; a router-run action takes the router's inputSchema, and any other name is no action of %[1]s",
-			args.Router, args.Action)}
+	seen, offered := d.offered(ctx, args.Router)
+	if !offered {
+		visible := slices.DeleteFunc(d.routers(), func(router string) bool { _, ok := d.offered(ctx, router); return !ok })
+		return nil, &BadArgsError{Field: catalogRouterArg, Cause: fmt.Errorf("router must be one of %s", strings.Join(visible, ", "))}
 	}
-	slices.SortFunc(actions, func(a, b routeActionShape) int { return strings.Compare(a.Action, b.Action) })
-	return json.Marshal(map[string]any{"router": args.Router, "actions": actions})
+	return d.catalog(args.Router, args.Action, seen)
 }

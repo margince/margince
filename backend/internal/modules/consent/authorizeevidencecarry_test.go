@@ -11,6 +11,7 @@ package consent
 // about what the decoder does with the bytes, not about any join.
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -24,19 +25,31 @@ import (
 // than failing as "the structs differ" somewhere a reader has to diff by eye.
 func TestEveryEvidenceIDSurvivesTheRoundTrip(t *testing.T) {
 	in := commsauthz.Evidence{
+		PolicyRevision: "policy-facts",
+		FooterFindings: []commsauthz.FooterFinding{{Kind: "objection_route"}, {Kind: "public_opt_out_link"}},
 		ActivityID:     ids.NewV7(),
 		DealID:         ids.NewV7(),
 		InvoiceID:      ids.NewV7(),
 		ContractID:     ids.NewV7(),
 		ConsentEventID: ids.NewV7(),
 		BasisID:        ids.NewV7(),
+		AuthoredOffer:  true,
 	}
-	raw, err := evidenceJSON(in)
+	raw, err := evidenceJSON(in, "")
 	if err != nil {
 		t.Fatalf("rendering: %v", err)
 	}
-	got := evidenceFrom(raw)
+	got := evidenceFrom(raw, "")
 
+	if got.PolicyRevision != in.PolicyRevision {
+		t.Fatal("policy revision did not survive")
+	}
+	if !reflect.DeepEqual(got.FooterFindings, in.FooterFindings) {
+		t.Fatalf("footer findings did not survive: %v", got.FooterFindings)
+	}
+	if !got.AuthoredOffer {
+		t.Fatal("the authored offer did not survive")
+	}
 	for _, c := range []struct {
 		field    string
 		want, is ids.UUID
@@ -79,8 +92,8 @@ func TestAnUnusableEvidenceColumnYieldsNoEvidenceRatherThanAnError(t *testing.T)
 		{"an id that is not a uuid", []byte(`{"invoice_id":"not-a-uuid"}`)},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			got := evidenceFrom(c.raw)
-			if got != (commsauthz.Evidence{}) {
+			got := evidenceFrom(c.raw, "")
+			if !reflect.DeepEqual(got, commsauthz.Evidence{}) {
 				t.Errorf("decoded %v, want no evidence at all", got)
 			}
 		})
@@ -90,11 +103,23 @@ func TestAnUnusableEvidenceColumnYieldsNoEvidenceRatherThanAnError(t *testing.T)
 // An empty Evidence renders as the column's own default rather than as a row of
 // nulls, so a decision taken on no named record reads as one.
 func TestNoEvidenceRendersAsTheEmptyObject(t *testing.T) {
-	raw, err := evidenceJSON(commsauthz.Evidence{})
+	raw, err := evidenceJSON(commsauthz.Evidence{}, "")
 	if err != nil {
 		t.Fatalf("rendering: %v", err)
 	}
 	if string(raw) != `{}` {
 		t.Errorf("rendered %s, want {}", raw)
+	}
+}
+
+func TestFooterDecisionEvidenceStoresADigestRatherThanTheDisplayedText(t *testing.T) {
+	in := commsauthz.Evidence{FooterDigest: "digest", FooterPreview: []string{"Company footer text"}, FooterFindings: []commsauthz.FooterFinding{{Kind: "objection_route"}}}
+	raw, err := evidenceJSON(in, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := evidenceFrom(raw, "")
+	if got.FooterDigest != in.FooterDigest || len(got.FooterPreview) != 0 || len(got.FooterFindings) != 1 {
+		t.Fatalf("stored footer evidence = %+v", got)
 	}
 }

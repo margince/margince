@@ -1,0 +1,15 @@
+{
+  "tool": "change_offers",
+  "action": "reject_offer",
+  "verb": "reject_offer",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

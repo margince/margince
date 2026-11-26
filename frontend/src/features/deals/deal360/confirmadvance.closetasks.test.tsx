@@ -241,6 +241,53 @@ it("completes exactly the listed tasks after the close lands, with undo", async 
   ).toBeInTheDocument();
 });
 
+it("completes the listed tasks at the versions the close left them at", async () => {
+  // Winning stamps every activity on the deal, so each task the dialog read
+  // is one version further on by the time Complete all runs.
+  let closed = false;
+  const sent = stubServer({
+    activities: () =>
+      json({
+        data: OPEN_TASKS.map((row) =>
+          closed ? { ...row, version: row.version + 1 } : row,
+        ).filter((row) => !(closed && row.id === "t-device")),
+        page: { has_more: false },
+      }),
+    preview: (body) => {
+      const stale = body.items.filter((item) => item.version !== 3);
+      return {
+        ...previewOf(body),
+        count: body.items.length - stale.length,
+        excluded: stale.map((item) => ({
+          id: item.id,
+          reason: "changed_since_preview",
+        })),
+      };
+    },
+  });
+  const user = userEvent.setup();
+  renderClose(async () => {
+    closed = true;
+    return { id: "deal-1", version: 4 };
+  });
+  await screen.findByRole("list");
+  await answer(user, "Complete all");
+
+  await waitFor(() =>
+    expect(sent.map((call) => call.path)).toEqual([
+      "/v1/bulk/preview",
+      "/v1/bulk/execute",
+    ]),
+  );
+  // A listed task finished elsewhere meanwhile is no longer sent.
+  expect(sent[1]?.body).toMatchObject({
+    items: [{ id: "t-invoice", version: 3 }],
+  });
+  expect(
+    await screen.findByRole("button", { name: "Undo" }),
+  ).toBeInTheDocument();
+});
+
 it("keeps every task open when the reader picks Keep", async () => {
   const sent = stubServer();
   const user = userEvent.setup();
@@ -369,4 +416,31 @@ it("lists the first five tasks and counts the rest", async () => {
   const list = await screen.findByRole("list");
   expect(within(list).getAllByRole("listitem")).toHaveLength(5);
   expect(screen.getByText("and 2 more")).toBeInTheDocument();
+});
+
+it("prints a task's chosen clock and names its zone when it is not the reader's", async () => {
+  stubServer({
+    activities: () =>
+      json({
+        data: [
+          {
+            ...task("t-call", "Call the buyer"),
+            due_at: "2026-11-04T12:00:00Z",
+            due_has_time: true,
+            due_intent: {
+              wall_clock: "2026-11-05T09:00:00",
+              timezone: "Asia/Tokyo",
+            },
+          },
+        ],
+        page: { has_more: false },
+      }),
+  });
+  renderClose(async () => ({ id: "deal-1", version: 4 }));
+  const question = await screen.findByRole("group", {
+    name: /What happens to the/,
+  });
+  expect(within(question).getByRole("listitem")).toHaveTextContent(
+    /Call the buyerDue .*\(Asia\/Tokyo\)/,
+  );
 });

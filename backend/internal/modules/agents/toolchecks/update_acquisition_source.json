@@ -1,0 +1,9 @@
+{
+  "verb": "update_acquisition_source",
+  "checks": [
+    "custom_field.update"
+  ],
+  "takes": [
+    "acquisition_source"
+  ]
+}

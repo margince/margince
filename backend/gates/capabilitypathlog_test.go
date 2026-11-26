@@ -219,6 +219,7 @@ func TestEveryPublicRoutePrefixIsJudgedForCredentials(t *testing.T) {
 		"/v1/public/rooms/":           "the segment is an operation name (peek, exchange, link-request); a deal room presents a Bearer, never a path token",
 		"/v1/public/forms/":           "the segment is a website form's key, printed in the page's own HTML; a signed form proves itself with a header signature, never the key",
 		"/v1/public/instrument/":      "the segment is the unit's name, which every composed build publishes",
+		"/v1/public/":                 "the root of the anonymous surface, read to stop its writes after the trial; its next segment is a route name, and each token-bearing route under it is judged by its own prefix",
 	}
 
 	redacted := make(map[string]bool)

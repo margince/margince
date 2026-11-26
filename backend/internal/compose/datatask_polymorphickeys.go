@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // polymorphicKeysDataTask keys the signals, weekly commitments and record views
@@ -30,7 +31,7 @@ func polymorphicKeysDataTask() datatask.Task {
 	}
 	return datatask.Task{
 		ID: "core/1792911121_polymorphic_rows_keyed", Version: 1,
-		Title:    "Linking signals, weekly commitments and record views to the records they name",
+		Title:    systemtext.Literal("datatask.title.core.1792911121_polymorphic_rows_keyed"),
 		Requires: []string{"core/1792911121"},
 		Steps: []datatask.Step{
 			keyPolymorphicRowsStep("key_signals", follows("CASCADE"), signals.KeyEntitiesTx, signals.EstimateUnkeyedEntities),

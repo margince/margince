@@ -82,12 +82,18 @@ export function toBoardDeal(
     // have — a zero amount, or a euro sign over an unknown currency.
     valueMinor: deal.amount_minor ?? null,
     currency: deal.currency ?? null,
+    probabilityPct:
+      deal.status === "open" ? (deal.win_probability ?? null) : null,
     idleSince: since,
     measuredAt,
     stalled: deal.stalled ?? false,
     archived: deal.archived_at != null,
-    closeDate: deal.expected_close_date ?? null,
-    closeDateProvisional: deal.close_date_provisional ?? false,
+    ...(deal.status === "open"
+      ? {
+          closeDate: deal.expected_close_date ?? null,
+          closeDateProvisional: deal.close_date_provisional ?? false,
+        }
+      : { closeDate: null, closedAt: deal.closed_at ?? null }),
     owner:
       ownerName && deal.owner_id
         ? {

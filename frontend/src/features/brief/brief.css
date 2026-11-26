@@ -12,72 +12,6 @@
  * this sheet is Brief's own voice — the briefing block, the readings' place,
  * the shapes inside the rail's panels, and the queue drawer's band. */
 
-/* ── Arrival ───────────────────────────────────────────────────────────────
- * The page composes itself in reading order: greeting, then the figures one
- * after another, then the work, then the rest. One movement, from a step below
- * and translucent, at the entering duration — and each block a beat after the
- * one before it, so the eye is led down the page the way the sentences are.
- * The resting state is the end state; a reader who asked for less motion gets
- * the page at rest, at once. */
-@keyframes brief-arrive {
-  from {
-    opacity: 0;
-    transform: translateY(var(--space-2));
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-/* The SLOT arrives, not the tile inside it: every reading's cell is the link
-   or button that opens it, so a delay keyed on `.stat-card` landed on an only
-   child and every slot arrived at once. */
-.arrive,
-.brief-readings .stat-strip > *,
-.brief-main > *,
-.brief-rail > * {
-  animation: brief-arrive var(--dur-enter) var(--ease-out) both;
-}
-/* THE ORDER THE PAGE IS READ IN is the order it arrives in: the work the
-   morning is for, then the day's five readings under it, then the
-   follow-through. A delay keyed to the old order left the readings landing
-   before the panel they now sit beneath. */
-.brief-readings .stat-strip > *:nth-child(1) {
-  animation-delay: var(--dur-move);
-}
-.brief-readings .stat-strip > *:nth-child(2) {
-  animation-delay: calc(var(--dur-move) + var(--dur-tap) * 0.5);
-}
-.brief-readings .stat-strip > *:nth-child(3) {
-  animation-delay: calc(var(--dur-move) + var(--dur-tap));
-}
-.brief-readings .stat-strip > *:nth-child(4) {
-  animation-delay: calc(var(--dur-move) + var(--dur-tap) * 1.5);
-}
-.brief-readings .stat-strip > *:nth-child(5) {
-  animation-delay: calc(var(--dur-move) + var(--dur-tap) * 2);
-}
-.brief-main > * {
-  animation-delay: calc(var(--dur-move) + var(--dur-tap));
-}
-.brief-rail > :nth-child(1) {
-  animation-delay: calc(var(--dur-move) + var(--dur-tap));
-}
-.brief-rail > :nth-child(2) {
-  animation-delay: calc(var(--dur-move) + var(--dur-state));
-}
-.brief-rail > :nth-child(n + 3) {
-  animation-delay: calc(var(--dur-move) + var(--dur-move));
-}
-@media (prefers-reduced-motion: reduce) {
-  .arrive,
-  .brief-readings .stat-strip > *,
-  .brief-main > *,
-  .brief-rail > * {
-    animation: none;
-  }
-}
-
 /* ── The briefing ──────────────────────────────────────────────────────────
  * Small facts over a one-line greeting, the day in one sentence under it, and
  * the view's dial at the end. Quiet, so the cards below carry the page. */
@@ -108,7 +42,7 @@
   min-width: 0;
   margin: 0;
   font: var(--fontHeadingLarge);
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
   text-wrap: balance;
 }
 .glance-greeting-lead:empty {
@@ -130,6 +64,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  min-height: var(--space-5);
   gap: var(--space-1) var(--space-2);
   margin: 0;
   color: var(--textSecondary);
@@ -159,14 +94,6 @@
  * readings as the house's reading cards, each a door into its lane with its
  * basis under the figure, the way a record's band draws its readings — with
  * the strip's own footnotes under them. */
-/* The readings band, under the work: its own section's air above it, the
-   same interval every section of this page takes. */
-.brief-overview {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: var(--space-6) 0 0;
-}
 .brief-readings {
   margin: 0;
 }
@@ -189,15 +116,19 @@
 }
 
 /* ── The frame ─────────────────────────────────────────────────────────────
- * Both views hold one reading width rather than the window's, so a wide
- * screen gets margins instead of longer lines. */
+ * The page's own column (`.wrap`) sets its width, as on every capped page. */
 .brief-frame {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  max-width: 70rem;
-  margin-inline: auto;
-  padding-block-start: var(--space-6);
+}
+/* The day block rises without fading: the browser counts content at opacity 0
+   as unpainted, and Home's paint budget is timed on this block. */
+@media (prefers-reduced-motion: no-preference) {
+  .brief-main > .brief-first {
+    animation-name: ds-arrive-rise;
+    animation-duration: var(--dur-move);
+  }
 }
 .brief-morning > .brief-main {
   gap: var(--space-12);
@@ -210,8 +141,11 @@
   vertical-align: top;
   min-block-size: 1lh;
 }
-.brief-morning .brief-overview {
-  margin: 0;
+/* The same line, empty, where the read settled on no sentence. It sets the
+   sentence's font so that 1lh is the height the skeleton held. */
+.glance-sentence-hold {
+  min-block-size: 1lh;
+  font: var(--fontBodyLarge);
 }
 /* A section's name on this page is a quiet label over its rows, not a title:
    the greeting is the page's one headline and the card in hand its second. */
@@ -237,60 +171,72 @@
 .brief-rail {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-4);
 }
-/* A reading in the rail is one line: the name, its basis quiet at the end,
-   the figure, and an arrow into its lane. Context, so it stays smaller than
-   the cards it is read beside. The arrow's track is held on every row, with or
-   without an arrow, so all the figures end on one edge. */
+/* A reading in the rail: its name over its basis, the figure at the end, and
+   the arrow's track after it. The basis wraps rather than cutting to a stub. */
 .brief-rail .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row {
-  grid-template-areas: "label basis figure foot";
-  grid-template-columns: auto minmax(0, 1fr) auto var(--controlIcon);
+  grid-template-areas:
+    "label figure foot"
+    "basis figure foot";
+  grid-template-columns: minmax(0, 1fr) auto var(--controlIcon);
   align-items: center;
   column-gap: var(--space-3);
-  padding-block: var(--space-2);
   row-gap: 0;
+  padding-block: var(--space-3);
 }
 .brief-rail
   .stat-strip:has(.stat-card-narrow-row)
   .stat-card-narrow-row
-  > .stat-card-value {
-  font: var(
-    --fontHeadingSmall
-  ); /* ds:ignore the rail's one-line rows read the figure a rung down */
+  > .stat-card-label {
+  align-self: end;
+  color: var(--textPrimary);
 }
 .brief-rail
   .stat-strip:has(.stat-card-narrow-row)
   .stat-card-narrow-row
   > .stat-card-detail {
-  min-width: 0;
-  text-align: end;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  align-self: start;
+}
+.brief-rail
+  .stat-strip:has(.stat-card-narrow-row)
+  .stat-card-narrow-row
+  > .stat-card-value:not([data-word]) {
+  font: var(
+    --fontHeadingSmall
+  ); /* ds:ignore the rail's rows read the figure a rung down */
+  font-variant-numeric: tabular-nums;
 }
 .brief-rail
   .stat-strip:has(.stat-card-narrow-row)
   .stat-card-narrow-row
   > .stat-card-foot {
   justify-self: end;
-  /* One text line high, so a row with an arrow is no taller than one without;
-     the arrow's target overhangs into the row's padding. */
   padding-top: 0;
-  block-size: 1lh;
-  align-items: center;
+}
+/* The arrow is what tells a row that opens from one that does not, so it is
+   always drawn: quiet at rest, in the door's ink where a pointer or focus is. */
+@media (hover: hover) {
+  .brief-rail .stat-card-narrow-row .stat-card-arrow {
+    color: var(--textSecondary);
+  }
+  .brief-rail .stat-card-narrow-row:hover .stat-card-arrow,
+  .brief-rail .stat-card-open:focus-visible .stat-card-arrow {
+    color: var(--accentText);
+  }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .brief-rail .stat-card-narrow-row .stat-card-arrow {
+    transition:
+      color var(--dur-state) var(--ease-out),
+      transform var(--dur-state) var(--ease-out);
+  }
 }
 /* Under a thumb the door is 44px tall, so every row grows to hold it and taps
    never land on the row next to it. */
 @media (pointer: coarse) {
   .brief-rail .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row {
     min-block-size: calc(max(var(--controlHeight), 44px) + 2 * var(--space-2));
-  }
-  .brief-rail
-    .stat-strip:has(.stat-card-narrow-row)
-    .stat-card-narrow-row
-    > .stat-card-foot {
-    block-size: auto;
   }
 }
 /* The arrow alone opens the lane here; its word stays for a screen reader. */
@@ -301,12 +247,6 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
-}
-.brief-rail
-  .stat-strip:has(.stat-card-narrow-row)
-  .stat-card-narrow-row
-  > .stat-card-label {
-  color: var(--textPrimary);
 }
 
 .rail-count,
@@ -371,83 +311,85 @@
   gap: var(--space-2);
 }
 
-/* ── The day's own line, in the rail ───────────────────────────────────────
- * A schedule row is read as a COLUMN of times hung on one line: the hour on
- * its own rail, a stop on the line beside it, the meeting after. The eye runs
- * down the times and the stops rather than hunting for each hour at the head
- * of a sentence of different length. The panel's own hairlines between rows
- * go: the line through the stops is the connector. */
+/* ── External meetings, in the rail ─────────────────────────────────────────────────
+ * One card: each row is a time and what fills it, the title over its caption.
+ * The card owns the time column and every row takes it as a subgrid, so a date
+ * in one row and an hour in the next start their titles on one edge.
+ * minmax(0, …) lets a long title wrap instead of widening its column. */
+.rail-schedule {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+.rail-schedule > * {
+  grid-column: 1 / -1;
+}
 .rail-schedule-row {
   display: grid;
-  grid-template-columns: auto auto 1fr;
-  gap: var(--space-3);
+  grid-template-columns: subgrid;
+  column-gap: var(--space-3);
   align-items: baseline;
 }
-.rail-schedule-row::before {
-  content: none;
-}
-
-/* Tabular figures so 09:30 and 11:00 occupy the same width — a column of times
-   that shifts by a digit reads as a ragged edge rather than as a rail. The
-   hour is set a weight up in the primary ink: it is what the eye runs down. */
 .rail-schedule-when {
-  color: var(--textPrimary);
   font-variant-numeric: tabular-nums;
-  font-weight: var(--fontWeightMedium);
   white-space: nowrap;
-  min-width: 3rem;
 }
-
-/* The stop, and the line through it: an accent disc on its own column, with
-   the line drawn from the row's top edge to its bottom so one stop's line
-   meets the next's. The first row's line starts at its stop and the last
-   row's ends at its own, so the line reads as the day and not as a rule that
-   runs off the panel. */
-.rail-schedule-dot {
-  position: relative;
-  align-self: stretch;
-  inline-size: var(--space-3);
-}
-.rail-schedule-dot::before {
-  content: "";
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: calc(50% - 0.5px);
-  inline-size: 1px;
-  background: var(--borderStrong);
-}
-.rail-schedule-row:first-child .rail-schedule-dot::before,
-.panel-head + .rail-schedule-row .rail-schedule-dot::before {
-  inset-block-start: var(--space-3);
-}
-.rail-schedule-row:last-child .rail-schedule-dot::before {
-  inset-block-end: calc(100% - var(--space-3));
-}
-.rail-schedule-dot::after {
-  content: "";
-  position: absolute;
-  inset-block-start: var(--space-2);
-  inset-inline-start: 0;
-  inline-size: var(--space-3);
-  block-size: var(--space-3);
-  box-sizing: border-box;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--accent);
-  /* A rim in the pane's own ground, so the disc sits ON the line rather than
-     being cut by it. A border rather than a spread shadow: depth here is the
-     three tokens', and this is not depth. */
-  border: 2px solid var(--ground);
-}
-
-/* The badge sits WITH the title rather than after it, so a meeting whose name
-   wraps keeps its warning attached to it. */
 .rail-schedule-what {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
   min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* A meeting's title reads as the row's subject; it still opens the meeting. */
+.rail-schedule-what > .btn.btn-link,
+.rail-schedule-title {
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
+}
+/* How soon it starts, and the prep badge beside it. */
+.rail-schedule-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* Who the meeting is with: the record chips wrap onto as many lines as they need. */
+.rail-schedule-attendees {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+/* The next meeting is set apart by an outline on the card's own ground.
+   The plate keeps the row's inset, so its time and title stay on the columns
+   above and below. Its height is its content's, so a longer row grows it. */
+.rail-schedule-next {
+  /* Half the card's inset outside the outline and half inside, at any width. */
+  margin: var(--space-1) calc(var(--padPanel) / 2);
+  padding: var(--space-3) calc(var(--padPanel) / 2 - 1px);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-md);
+}
+/* As the card's last row, the plate keeps the same air below it as beside it. */
+.rail-schedule-next:last-child {
+  margin-block-end: calc(var(--padPanel) / 2);
+}
+.rail-schedule-next::before,
+.rail-schedule-next + .panel-row::before {
+  content: none;
+}
+.rail-schedule-next .rail-schedule-what > :first-child {
+  font: var(--fontHeadingSmall);
+  color: var(--textPrimary);
+}
+.rail-schedule-prep {
+  margin-block-start: var(--space-2);
+}
+/* The readings sit right under the card's title, as Your day's rows do. */
+.brief-overview > .panel-body {
+  padding-block-start: 0;
 }
 
 /* What the panel cannot tell you, under what it can. Quiet like every other
@@ -545,9 +487,11 @@
   overflow-wrap: anywhere;
 }
 
+.magic-line-sep,
 .magic-line-subject {
   margin-inline-start: var(--space-2);
   color: var(--textSecondary);
+  overflow-wrap: anywhere;
 }
 
 .magic-line-controls {
@@ -615,18 +559,11 @@
   margin-bottom: 0;
 }
 
-/* The two caveats: what could not be read, above the summary, and what was
-   left out, under the lanes. Both are lists of captions and neither wants a
-   bullet. */
-.magic-withheld,
-.magic-notshown {
+/* The sources the receipt could not read, above the lanes: captions, no bullet. */
+.magic-withheld {
   list-style: none;
   margin: 0 0 var(--space-3);
   padding: 0;
-}
-
-.magic-notshown {
-  margin: 0;
 }
 
 /* An opened line: one row per record, its name and its undo on one line, the
@@ -699,7 +636,8 @@
    room there is. */
 @media (pointer: coarse) {
   .rail-count-go,
-  .record-details-toggle {
+  .record-details-toggle,
+  .brief-done-band > .btn {
     min-height: max(var(--controlHeight), 44px);
   }
 }
@@ -719,23 +657,28 @@
   list-style: none;
 }
 
-/* ── The work column ──────────────────────────────────────────────────────
- * The cards stand on the page itself: a pane around them would be a card
- * holding cards. The rail keeps its pane. */
-.brief-morning > .brief-main.page-pane {
-  border-color: transparent;
-  background: none;
-  box-shadow: none;
-  padding: 0;
-}
 .brief-morning > .brief-main {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
 }
-/* Done for you: one deal per row, parted by hairlines, its changes under
-   its name. Each change reads what moved, then why, then its verbs, with no
-   card around it and no footer of its own. */
+/* Done for you: one card per deal under a band like Needs you. A card's
+   changes run down one line of steps, newest first, and its verbs close it.
+   Only the open card shows its steps. */
+.brief-done {
+  gap: var(--space-3);
+}
+.brief-done-band {
+  border-color: var(--aiMed);
+  background: var(--bgNoticeAi);
+}
+.brief-morning .brief-done-band > .t-eyebrow,
+.brief-done-band > .t-eyebrow {
+  color: var(--aiText);
+}
+.brief-done-band > .brief-first-count {
+  color: var(--aiText);
+}
 .brief-done-deals,
 .brief-done-changes {
   display: grid;
@@ -744,70 +687,221 @@
   list-style: none;
 }
 .brief-done-deals {
-  gap: var(--space-4);
-}
-.brief-done-deal {
-  display: grid;
-  gap: var(--space-2);
-}
-.brief-done-deal + .brief-done-deal {
-  padding-block-start: var(--space-4);
-  border-block-start: 1px solid var(--borderSubtle);
-}
-.brief-done-name {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-.brief-done-changes {
   gap: var(--space-3);
 }
+.brief-done-deal {
+  padding: var(--space-4) var(--space-5);
+}
+.brief-done-fold.disclosure {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.brief-done-fold > .disclosure-summary {
+  align-items: start;
+  font-weight: var(--fontWeightRegular);
+}
+.brief-done-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-3);
+  align-items: baseline;
+}
+.brief-done-name {
+  font: var(--fontHeadingXSmall);
+  overflow-wrap: anywhere;
+}
+.brief-done-name a {
+  color: var(--textPrimary);
+}
+/* The tick that puts the deal in the review list's Undo, before its name. */
+.brief-done-pick {
+  display: inline-flex;
+  margin-inline-end: var(--space-2);
+  vertical-align: middle;
+}
+.brief-done-latest,
+.brief-done-when {
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.brief-done-chips {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.brief-done-chips:empty {
+  display: none;
+}
+.brief-done-preview {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  color: var(--textSecondary);
+}
+/* The steps: a dot per change on a hairline spine. The dot is indigo while
+   the change waits, since Margince made it, and grey once it is settled. */
+.brief-done-changes {
+  position: relative;
+  gap: var(--space-4);
+  margin-block-start: var(--space-4);
+}
+.brief-done-changes::before {
+  content: "";
+  position: absolute;
+  inset-block: var(--space-2);
+  inset-inline-start: 5px;
+  inline-size: 1px;
+  background: var(--borderSubtle);
+}
 .brief-done-change {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   column-gap: var(--space-3);
   row-gap: var(--space-1);
   align-items: baseline;
+  padding-inline-start: var(--space-6);
+}
+.brief-done-change::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 5px;
+  inset-inline-start: 0;
+  inline-size: 11px;
+  block-size: 11px;
+  box-sizing: border-box;
+  border: 2px solid var(--ai);
+  border-radius: var(--r-full);
+  background: var(--ground);
+}
+.brief-done-change:not([data-state="open"])::before {
+  border-color: var(--borderStrong);
+}
+.brief-done-change[data-state="replaced"] > .brief-done-what,
+.brief-done-change[data-state="replaced"] > .brief-done-reason {
+  color: var(--textSecondary);
 }
 .brief-done-what,
 .brief-done-reason {
   margin: 0;
   overflow-wrap: anywhere;
 }
-.brief-done-when {
+.brief-done-what {
+  font-weight: var(--fontWeightMedium);
+}
+.brief-done-reason {
   color: var(--textSecondary);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 .brief-done-change > .brief-done-reason,
 .brief-done-change > .brief-done-quote,
-.brief-done-change > .disclosure,
 .brief-done-change > .brief-done-controls {
   grid-column: 1 / -1;
 }
-.brief-done-change > .disclosure {
-  margin-block: 0;
-}
 .brief-done-quote {
   margin: 0;
-  padding-inline-start: var(--space-3);
-  border-inline-start: 2px solid var(--borderSubtle);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgWell);
 }
 .brief-done-quote blockquote {
   margin: 0;
   overflow-wrap: anywhere;
 }
-.brief-done-controls,
+/* A change's own verbs sit as one quiet line; its Details opens under them. */
+.brief-done-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  color: var(--textSecondary);
+}
+.brief-done-controls > p {
+  margin: 0;
+}
+.brief-done-controls .disclosure {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.brief-done-controls .disclosure[open] {
+  flex-basis: 100%;
+}
+.brief-done-controls .disclosure-summary {
+  display: inline-flex;
+  font-weight: var(--fontWeightRegular);
+}
+.brief-done-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+  margin-block-start: var(--space-4);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+.brief-done-verbs > .t-danger {
+  flex-basis: 100%;
+}
 .brief-done-foot {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--gapActions);
 }
-.brief-done-foot {
-  padding-block-start: var(--space-4);
+@media (max-width: 640px) {
+  .brief-done-deal {
+    padding: var(--space-4);
+  }
+  .brief-done-change {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .brief-done-when {
+    grid-row: 2;
+  }
+  .brief-done-verbs {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .brief-done-verbs > .btn {
+    justify-content: center;
+  }
+  .brief-done-verbs > .btn-primary {
+    order: -1;
+  }
 }
+
 /* The name moves to its own line whole rather than breaking after the lead. */
 .glance-greeting-name {
   display: inline-block;
+  max-inline-size: 100%;
   text-wrap: balance;
+}
+
+/* A small change names its record first on its line, so the record takes no
+   gap of its own before it. */
+.brief-done-small .magic-line-subject {
+  margin-inline-start: 0;
+}
+
+/* The embedded receipt's caveat body stays out of the grid when it has none. */
+.brief-done > .panel-body:empty {
+  display: none;
+}
+
+.brief-payments-customer {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.brief-payments-total {
+  font: var(--fontHeadingSmall);
 }

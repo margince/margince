@@ -6,6 +6,7 @@ import { type FormEvent, type ReactNode, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, EmptyState, SearchField } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { FilterPills } from "../../design-system/filterpills";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
@@ -15,18 +16,21 @@ import {
 } from "../../design-system/querystates";
 import { RecordCardList } from "../../design-system/recordcard";
 import { useT } from "../../i18n";
-import { labelFor } from "../../lib/labelfor";
+import { isExtensionEntityKind } from "../../lib/entity";
+import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
+import { useRecordKindDirectory } from "../../lib/recordkinds";
 import { navigate, useRoute } from "../../lib/router";
 import {
   bestIdentifierMatch,
   groupSearchHits,
-  SEARCH_FILTER_KEY,
-  SEARCH_GROUP_KEY,
   SEARCH_HIT_ORDER,
   type SearchHitType,
+  searchFilterLabel,
+  searchGroupHeading,
   searchGroupType,
   searchHitHasCard,
+  searchTimedOutLines,
 } from "../../lib/searchkinds";
 import { useUrlParams } from "../../lib/urlstate";
 import { SearchHit } from "./searchhit";
@@ -65,7 +69,12 @@ export const SEARCH_TYPE_PARAM = "type";
 const ALL_TYPES = "all";
 type TypeFilter = SearchHitType | typeof ALL_TYPES;
 
+// An extension kind is accepted whether or not the directory lists it. The
+// address may be a bookmark from a seat that could read the kind.
 function typeFilterFrom(value: string | undefined): TypeFilter {
+  if (value && isExtensionEntityKind(value)) {
+    return value;
+  }
   return SEARCH_HIT_ORDER.find((kind) => kind === value) ?? ALL_TYPES;
 }
 
@@ -87,6 +96,11 @@ export function SearchScreen({
   const { onOpen, drawers } = useSearchPanels(openActivityId, openAs);
   const [params, setParams] = useUrlParams();
   const filter = typeFilterFrom(params.get(SEARCH_TYPE_PARAM));
+  const directory = useRecordKindDirectory().data?.data ?? [];
+  const kinds: readonly SearchHitType[] = [
+    ...SEARCH_HIT_ORDER,
+    ...directory.map((entry) => entry.name).filter(isExtensionEntityKind),
+  ];
 
   const narrowTo = (next: TypeFilter) => {
     const dials = new Map(params);
@@ -146,9 +160,9 @@ export function SearchScreen({
                   value: ALL_TYPES as TypeFilter,
                   label: t("search.filter.all"),
                 },
-                ...SEARCH_HIT_ORDER.map((kind) => ({
+                ...kinds.map((kind) => ({
                   value: kind as TypeFilter,
-                  label: t(labelFor(SEARCH_FILTER_KEY, kind)),
+                  label: searchFilterLabel(kind, t, directory),
                 })),
               ]}
             />
@@ -177,8 +191,11 @@ function GroupedResults({
   onNarrow: (type: SearchHitType) => void;
 }>) {
   const t = useT();
+  const directory = useRecordKindDirectory().data?.data ?? [];
+  const readerScope = useHealthScope();
   const query = useQuery({
-    queryKey: ["search", q, ALL_TYPES],
+    queryKey: ["search", q, ALL_TYPES, readerScope ?? ""],
+    enabled: readerScope !== undefined,
     queryFn: async () => {
       return unwrap(
         await api.GET("/search", {
@@ -195,20 +212,34 @@ function GroupedResults({
   });
   return (
     <QueryGate query={query} pendingLabel={t("search.pending")}>
-      {(data) =>
-        data.data.length === 0 ? (
+      {(data) => {
+        const timedOut = searchTimedOutLines(
+          data.types_timed_out ?? [],
+          t,
+          directory,
+        );
+        return (
           <>
-            <EmptyState>{t("search.empty", { q })}</EmptyState>
-            <NearMatches matches={data.near_matches} />
+            {timedOut.map((line) => (
+              <Callout key={line} tone="warning" kind="outcome" title={line} />
+            ))}
+            {data.data.length === 0 ? (
+              <>
+                {timedOut.length === 0 && (
+                  <EmptyState>{t("search.empty", { q })}</EmptyState>
+                )}
+                <NearMatches matches={data.near_matches} />
+              </>
+            ) : (
+              <SearchGroups
+                results={data.data}
+                onOpen={onOpen}
+                more={{ types: data.types_with_more ?? [], onNarrow }}
+              />
+            )}
           </>
-        ) : (
-          <SearchGroups
-            results={data.data}
-            onOpen={onOpen}
-            more={{ types: data.types_with_more ?? [], onNarrow }}
-          />
-        )
-      }
+        );
+      }}
     </QueryGate>
   );
 }
@@ -224,8 +255,10 @@ function NarrowedResults({
   onOpen: OpenHit;
 }>) {
   const t = useT();
+  const readerScope = useHealthScope();
   const query = useInfiniteQuery({
-    queryKey: ["search", q, type],
+    queryKey: ["search", q, type, readerScope ?? ""],
+    enabled: readerScope !== undefined,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
       return unwrap(
@@ -272,11 +305,12 @@ function SearchGroups({
   // Which types hold more than is drawn, and how to show them. Absent on a
   // narrowed page, where the rest arrives by loading more instead.
   more?: Readonly<{
-    types: readonly SearchHitType[];
+    types: readonly string[];
     onNarrow: (type: SearchHitType) => void;
   }>;
 }>) {
   const t = useT();
+  const directory = useRecordKindDirectory().data?.data ?? [];
   const groups = groupSearchHits(results);
   const best = bestIdentifierMatch(results);
   return (
@@ -291,7 +325,7 @@ function SearchGroups({
         </Panel>
       )}
       {groups.map(({ group, hits }, index) => {
-        const heading = t(SEARCH_GROUP_KEY[group]);
+        const heading = searchGroupHeading(group, t, directory);
         const type = searchGroupType(group);
         // Emails and activities narrow to one list and the server counts them
         // as one type, so only the first of their groups offers the rest.
@@ -308,7 +342,7 @@ function SearchGroups({
               more && (
                 <Button
                   aria-label={t("search.group.showAllNamed", {
-                    group: t(labelFor(SEARCH_FILTER_KEY, type)),
+                    group: searchFilterLabel(type, t, directory),
                   })}
                   onClick={() => more.onNarrow(type)}
                 >

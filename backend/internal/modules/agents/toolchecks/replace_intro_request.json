@@ -1,0 +1,13 @@
+{
+  "verb": "replace_intro_request",
+  "checks": [
+    "contact.read",
+    "introduction.create",
+    "introduction.read",
+    "introduction.update"
+  ],
+  "takes": [
+    "intro_request",
+    "user"
+  ]
+}

@@ -42,6 +42,7 @@ const FILTER_VIEW: Readonly<Record<WorklistFilter, WorklistView | null>> = {
   tasks: "today",
   upcoming: "today",
   urgent: "today",
+  website_inquiries: "today",
 };
 
 const CATEGORY_VIEW: Readonly<Record<WorklistCategory, WorklistView>> = {

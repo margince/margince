@@ -19,6 +19,7 @@ import { lastActivityColumn, ownerColumn } from "../../components/recordlist";
 import { Badge, EmptyState } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Chip } from "../../design-system/readings";
+import { ABSENT } from "../../format/absent";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor, valueFor } from "../../lib/labelfor";
@@ -47,9 +48,11 @@ import "./projects.css";
 async function fetchProjectsPage(
   query: ListQuery,
   cursor: string | null,
+  signal?: AbortSignal,
 ): Promise<ListPage<Project>> {
   const data = unwrap(
     await api.GET("/projects", {
+      signal,
       params: {
         query: {
           q: query.q || undefined,
@@ -83,6 +86,23 @@ const PHASE_TONE = {
   delivering: "info",
   closed: "default",
 } as const satisfies Record<ProjectPhase, ComponentProps<typeof Badge>["tone"]>;
+
+// A null company_id is a hidden customer only when masked_fields says so;
+// otherwise the project has none, as on the project page.
+function ProjectCompanyCell({
+  project,
+  asText,
+}: Readonly<{ project: Project; asText?: boolean }>) {
+  const t = useT();
+  if (project.company_id) {
+    return <EntityRef kind="company" id={project.company_id} asText={asText} />;
+  }
+  return project.masked_fields?.includes("company_id") ? (
+    <span data-testid="project-company-withheld">{t("state.withheld")}</span>
+  ) : asText ? null : (
+    <span data-testid="project-company-none">{ABSENT}</span>
+  );
+}
 
 /** The phase as a status pill: closed is the one terminal reading. */
 export function PhaseBadge({ phase }: Readonly<{ phase: ProjectPhase }>) {
@@ -126,15 +146,18 @@ export function ProjectKeyChip({
  * One element rather than two renderings, so the dialog behind both is the
  * same dialog with the same fields.
  */
-function NewProjectAction() {
+function NewProjectAction({ open }: Readonly<{ open: boolean }>) {
   const t = useT();
   const form = useProjectCreateForm();
   return (
     <CreateAction
       label={t("project.new")}
+      requires={{ object: "project", action: "create" }}
       invalidate="projects"
       screen="projects"
+      listCreate={{ open }}
       create={form.create}
+      onValuesChange={form.onValuesChange}
       resolveExisting={(_code, id) => ({ screen: "projects", id })}
       fields={form.fields}
     />
@@ -147,7 +170,9 @@ const PHASE_CHIP_OPTIONS: { value: ProjectPhase; label: MessageKey }[] =
     label: labelFor(PHASE_LABEL, phase),
   }));
 
-export function ProjectsScreen() {
+export function ProjectsScreen({
+  startCreating = false,
+}: Readonly<{ startCreating?: boolean }>) {
   const t = useT();
   const pageName = usePageName("projects");
   const { locale } = useLocale();
@@ -164,7 +189,9 @@ export function ProjectsScreen() {
   // mounts its own copy of this verb, and a button pressed in the table's
   // header a moment before the plate replaces it would open a dialog the
   // swap throws away.
-  const createAction = !state.isPending && <NewProjectAction />;
+  const createAction = !state.isPending && (
+    <NewProjectAction open={startCreating} />
+  );
   // First run: nothing exists and nothing narrows the list. It waits for the
   // views read, since a saved view is reachable only from the rail.
   const firstRun =
@@ -230,11 +257,16 @@ export function ProjectsScreen() {
             // reader who wanted the account behind it had to open the project
             // first and come back out.
             cell: (project: Project) => (
-              <EntityRef kind="company" id={project.company_id} />
+              <ProjectCompanyCell project={project} />
             ),
             // By the company's NAME. One outside this reader's scope orders
             // the page by nothing rather than by a name it withholds.
             sort: "company_id",
+            phone: "caption",
+            // A list page carries no `companies`; each row reads its company's name.
+            folded: (project: Project) => (
+              <ProjectCompanyCell project={project} asText />
+            ),
           },
           {
             key: "phase",
@@ -243,6 +275,7 @@ export function ProjectsScreen() {
             // closed — which is the arrangement the account page already uses.
             // Alphabetical would be that order shuffled.
             sort: "phase",
+            phone: "end",
             cell: (project: Project) => <PhaseBadge phase={project.phase} />,
           },
           ownerColumn<Project>(t),

@@ -13,13 +13,82 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "4cb359cf4623858d",
+    "tools": "72ad1c1f63c48fc6",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "53246e5fe328e22058409bea6b0b93e8a29005ee",
+    "ran_at": "2026-11-22T03:04:43Z",
+    "graded_commit": "53246e5fe328e22058409bea6b0b93e8a29005ee",
+    "graded_at": "2026-11-22T03:04:43Z"
+  },
   "usage": {
-    "input_tokens": 87641,
-    "output_tokens": 7857,
+    "input_tokens": 91106,
+    "output_tokens": 7471,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 864768,
+    "cache_read_input_tokens": 993152,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "draft_email",
+        "draft_follow_ups_for",
+        "draft_outbound",
+        "find_records",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "read_relationships",
+        "search_records",
+        "whats_slipping_this_week",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "draft_email",
+        "draft_follow_ups_for",
+        "draft_outbound",
+        "find_records",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "search_records",
+        "whats_slipping_this_week",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 25.5,
+      "min": 25,
+      "max": 26
+    },
+    "refused": {
+      "median": 8.5,
+      "min": 7,
+      "max": 10
+    },
+    "prompt_tokens": {
+      "median": 542129,
+      "min": 513014,
+      "max": 571244
+    },
+    "output_tokens": {
+      "median": 3735.5,
+      "min": 3216,
+      "max": 4255
+    }
   }
 }

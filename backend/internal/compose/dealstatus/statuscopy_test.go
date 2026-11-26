@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -27,6 +29,8 @@ func TestStatusLanguageKeepsTheSameActionAndDismissal(t *testing.T) {
 	reminded.EmailSummary = &crmcontracts.EmailSummary{RequestHasReminder: new(true)}
 	unnamed := request
 	unnamed.Subject = nil
+	reminderID := openapi_types.UUID(ids.NewV7())
+	replied := repliedRequest(testNow.AddDate(0, 0, -2), &reminderID, nil)
 	roleOnly := seat(roleChampion, "Hidden Name")
 	roleOnly.Attachable = false
 	closed := openDeal()
@@ -44,6 +48,7 @@ func TestStatusLanguageKeepsTheSameActionAndDismissal(t *testing.T) {
 		"reply owed":        {deal: openDeal(), now: testNow, loc: time.UTC, requests: []crmcontracts.Activity{owed}},
 		"reminder":          {deal: openDeal(), now: testNow, loc: time.UTC, requests: []crmcontracts.Activity{reminded}},
 		"unnamed request":   {deal: openDeal(), now: testNow, loc: time.UTC, requests: []crmcontracts.Activity{unnamed}},
+		"replied":           {deal: openDeal(), now: testNow, loc: time.UTC, currentRequests: []crmcontracts.Activity{replied}},
 		"role-only meeting": {deal: openDeal(), now: testNow, loc: time.UTC, timeline: []crmcontracts.Activity{last}, seats: []Seat{roleOnly}},
 		"closed":            {deal: closed, now: testNow, loc: time.UTC},
 	} {
@@ -91,4 +96,22 @@ func actionLinks(move crmcontracts.DealStatusCardMove) map[string]any {
 	args := maps.Clone(*move.Arguments)
 	delete(args, "subject")
 	return args
+}
+
+// The Next box speaks the reader's language over an English installation, and
+// its dismissal identity stays the one an English reader sees.
+func TestTheNextBoxFollowsTheReadersLanguage(t *testing.T) {
+	f := facts{
+		deal: openDeal(), now: testNow, loc: time.UTC, lang: "en",
+		openTasks: []activities.OpenTask{{ID: ids.NewV7(), Subject: "Send the offer"}},
+	}
+	english := decideMove(f)
+	f.say = string(textlang.Vietnamese)
+	vietnamese := decideMove(f)
+	if vietnamese.Reason == english.Reason {
+		t.Fatalf("a Vietnamese reader read the English reason %q", english.Reason)
+	}
+	if vietnamese.Action != english.Action || !reflect.DeepEqual(vietnamese.Fingerprint, english.Fingerprint) {
+		t.Fatal("the reader's language changed the action or its dismissal identity")
+	}
 }

@@ -14,9 +14,12 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The Home profile is the daily corpus at one small fixed scale. On top come
@@ -46,9 +49,9 @@ type HomeProfile struct {
 // a brief, a busy agent log and unanswered mail, and checks every count.
 // Every shape goes through the product's own writers, so no audit row or
 // participant is written behind the product's back.
-func seedHomeProfile(t *testing.T, e *apptest.AppEnv, seats Seats) HomeProfile {
+func seedHomeProfile(t *testing.T, e *apptest.AppEnv, seats Seats, scale float64) HomeProfile {
 	t.Helper()
-	loadDailyCorpus(t, e, seats, homeBudgetScale).dropOrdinals()
+	loadDailyCorpus(t, e, seats, scale).dropOrdinals()
 	owner := heaviestOwner(t, e, seats)
 	// The receipt's window opens at the owner's last brief, so the brief comes
 	// before the agent's changes it must show.
@@ -61,7 +64,40 @@ func seedHomeProfile(t *testing.T, e *apptest.AppEnv, seats Seats) HomeProfile {
 		t.Fatalf("counting the heaviest owner's contacts: %v", err)
 	}
 	assertHomeProfile(t, e, profile)
+	settleHomeCorpus(t, e)
 	return profile
+}
+
+// settleHomeCorpus stamps the seeded mail as the worker's pass does within a
+// minute of capture, then vacuums and analyzes the whole bench database.
+// Otherwise autovacuum first reaches the fresh corpus during the timed rounds
+// and slows the reads it overlaps. A server with few databases, as in CI,
+// visits each one often.
+func settleHomeCorpus(t *testing.T, e *apptest.AppEnv) {
+	t.Helper()
+	stampSeededMail(t, e)
+	if _, err := e.Owner.Exec(context.Background(), `VACUUM ANALYZE`); err != nil {
+		t.Fatalf("vacuuming the seeded Home corpus: %v", err)
+	}
+}
+
+// stampSeededMail runs the reply-settled stamping pass until it stamps nothing,
+// as the worker's pass does within a minute of capture. A bench that read
+// unstamped mail would time the owed check's full clause on every message.
+func stampSeededMail(t *testing.T, e *apptest.AppEnv) {
+	t.Helper()
+	ws := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool)
+	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ws), principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:reply_settled_stamp",
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+	store := activities.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](ws)))
+	for stamped := -1; stamped != 0; {
+		var err error
+		if stamped, err = store.StampReplySettledBatch(ctx, 500); err != nil {
+			t.Fatalf("stamping the seeded mail: %v", err)
+		}
+	}
 }
 
 // heaviestOwner is the rep who owns the most contacts: Home's worst seat,
@@ -107,12 +143,13 @@ func seedAgentLog(t *testing.T, e *apptest.AppEnv, owner Seat) int {
 }
 
 // seedAwaitedMail logs mail the owner sent to their own contacts on open
-// deals, through the activities endpoint, with no reply after it.
+// deals, through the activities endpoint, with no reply after it. Own contacts
+// only: a contact a seat can merely see refuses the activity.
 func seedAwaitedMail(t *testing.T, e *apptest.AppEnv, owner Seat) int {
 	t.Helper()
 	rows, err := e.Owner.Query(context.Background(), `SELECT DISTINCT ON (d.id) d.id::text, r.contact_id::text
 	      FROM deal d JOIN relationship r ON r.deal_id = d.id
-	      JOIN contact c ON c.id = r.contact_id AND c.archived_at IS NULL AND (c.owner_id = d.owner_id OR c.visibility <> 'owner')
+	      JOIN contact c ON c.id = r.contact_id AND c.archived_at IS NULL AND c.owner_id = d.owner_id
 	      WHERE d.owner_id = $1 AND d.status = 'open' AND d.archived_at IS NULL
 	      ORDER BY d.id, r.contact_id LIMIT $2`, owner.UserID, homeAwaitedMails)
 	if err != nil {

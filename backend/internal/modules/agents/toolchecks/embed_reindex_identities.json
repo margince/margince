@@ -1,0 +1,6 @@
+{
+  "verb": "embed_reindex_identities",
+  "checks": [
+    "embedding_reindex.read"
+  ]
+}

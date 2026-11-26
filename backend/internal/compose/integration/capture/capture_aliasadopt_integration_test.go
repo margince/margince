@@ -27,7 +27,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -161,7 +160,7 @@ func TestTheSweepAdoptsMailStrandedBeforeTheAddressWasKnown(t *testing.T) {
 	}
 	declareOwnAddress(t, env, env.e.Rep1, late)
 
-	worker := compose.NewLinkReconcileWorkspaceWorkerForTest(env.e.Pool, contacts.NewStore(compose.InstallationDB(env.e.Pool)))
+	worker := compose.NewLinkReconcileWorkspaceWorkerForTest(env.e.Pool)
 	if err := worker.ReconcileWorkspaceForTest(context.Background(), env.e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
 	}

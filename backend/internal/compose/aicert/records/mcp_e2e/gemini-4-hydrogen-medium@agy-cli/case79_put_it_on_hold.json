@@ -1,0 +1,111 @@
+{
+  "scenario": "case79_put_it_on_hold",
+  "criteria": [
+    1
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "ee53990341e38099",
+    "tools": "60f6d8a3a7cc3485",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T10:28:01Z",
+    "graded_commit": "8d1a2e3f3d0e19ca67b1a23f47f3c2d8686628c3",
+    "graded_at": "2026-11-25T10:49:55Z"
+  },
+  "usage": {
+    "input_tokens": 73385,
+    "output_tokens": 18478,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 186777,
+    "runs_measured": 3,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "describe_router_actions",
+        "find_records",
+        "list_legal_holds",
+        "read_context",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "change_compliance",
+        "describe_router_actions",
+        "find_records",
+        "list_legal_holds",
+        "place_legal_hold",
+        "read_context",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "describe_router_actions",
+        "find_records",
+        "list_legal_holds",
+        "list_records",
+        "read_context",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 3,
+    "calls": {
+      "median": 9,
+      "min": 6,
+      "max": 9
+    },
+    "turns": {
+      "median": 6,
+      "min": 5,
+      "max": 8
+    },
+    "refused": {
+      "median": 1,
+      "min": 0,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 80042,
+      "min": 62396,
+      "max": 117724
+    },
+    "output_tokens": {
+      "median": 5656,
+      "min": 5092,
+      "max": 7730
+    }
+  }
+}

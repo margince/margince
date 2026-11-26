@@ -49,6 +49,8 @@ const participantStandsRule = "ParticipantStandsSQL"
 // "package-dir:FuncName". Every entry says why a guessed owner cannot matter
 // there; an entry whose declaration stops reading the table fails as stale.
 var presenceReadsAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/activities:transcriptReadersImage":          "the audit image of a transcript's colleague rows, before and after its readers are copied from the meeting. It records rows; it decides no presence",
+	"internal/platform/database/storekit:DirectMailActivitiesSQL": "its user_id test is on capture_import, picking the mail only shared mailboxes imported. The participant arms match addresses, and the seat test inside SharedMailWorkOwnerSQL composes the standing rule through auth.SeatMayReadMailSQL",
 	"internal/modules/activities:participantCandidatesSQL": "the participant backfill's batch: its NOT EXISTS asks " +
 		"whether an activity has any participant row, with no user_id test, so a guessed owner's row defers the " +
 		"activity until the guess is retired. The user_id it selects is the owner it writes. No presence is decided here",
@@ -64,6 +66,8 @@ var presenceReadsAdmitted = gatekit.Waive(map[string]string{
 	"internal/modules/activities:readGuestRows": "selects rows with `ap.user_id IS NULL`, which name no seat at all. A " +
 		"guessed mailbox owner names only a seat, so it cannot match this predicate and the question the rule answers " +
 		"does not arise.",
+	"internal/modules/activities:carryRostersTx":     "adds a folded copy's calendars to the survivor's roster rows, and leaves a colleague's own row out. It touches only rows a calendar roster lists, and a guessed mailbox owner's row names no roster, so the rule could change nothing here",
+	"internal/modules/capture:retireTheSeatThatLeft": "drops the calendar rows bound to the syncing seat once its own copy of the meeting is gone, and the colleague rows it listed that no live calendar lists any more. It touches only rows a calendar roster lists, and a guessed mailbox owner's row names no roster, so the rule could change nothing here",
 	"internal/modules/capture:ReleaseImportTx": "releases one seat's import of one activity, by (activity, seat). It " +
 		"removes rows rather than concluding from them, and a guessed owner row is among the rows a release clears.",
 	"internal/modules/capture:stampSeatsPastCap": "renders the statement that stamps calendar attendance, where a seat " +

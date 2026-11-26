@@ -1,0 +1,15 @@
+{
+  "tool": "change_access",
+  "action": "update_team",
+  "verb": "update_team",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

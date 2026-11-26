@@ -24,6 +24,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/winchance"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/assurance"
@@ -180,7 +181,7 @@ func TestRecordedOutcomesMoveTheChanceAndImportedSyncedOrLegacyMovesDoNot(t *tes
 	var stages forecasting.StageChances
 	if err := database.WithWorkspaceTx(f.forecastReader(), f.env.Pool, func(tx pgx.Tx) error {
 		var err error
-		stages, err = ForecastStageChances(f.forecastReader(), tx, today)
+		stages, err = chances.StageChances(f.forecastReader(), tx, today)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -266,6 +267,12 @@ func TestIndividualPerformanceOffKeepsOnlyTheReadersOwnRows(t *testing.T) {
 		overTool.ContributionsLimited == nil || !*overTool.ContributionsLimited {
 		t.Fatalf("contributions_limited = %v over HTTP and %v over the tool, want true on both",
 			overHTTP.ContributionsLimited, overTool.ContributionsLimited)
+	}
+	// Both doors give the sentence an owner chart limited by the same switch carries.
+	for door, why := range map[string]*string{"http": overHTTP.ContributionsLimitedReason, "tool": overTool.ContributionsLimitedReason} {
+		if why == nil || *why != reportingCoverageWords.IndividualOff.En {
+			t.Fatalf("%s: contributions_limited_reason = %v, want the owner chart's sentence", door, why)
+		}
 	}
 }
 
@@ -379,7 +386,7 @@ func TestARiskEffectIsLearnedFromSettledFrozenForecasts(t *testing.T) {
 	var effects map[string]float64
 	if err := database.WithWorkspaceTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
 		var err error
-		effects, err = forecastRiskEffects(f.writer, tx, cutoff)
+		effects, err = winchance.RiskEffects(f.writer, tx, cutoff)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -444,7 +451,7 @@ func TestStageEvidenceReadsHowADealStoodAtTheCutoff(t *testing.T) {
 	var evidence map[string]forecasting.StageEvidence
 	if err := database.WithWorkspaceTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
 		var err error
-		evidence, err = forecastStageEvidence(f.writer, tx, cutoff)
+		evidence, err = winchance.StageEvidence(f.writer, tx, cutoff)
 		return err
 	}); err != nil {
 		t.Fatal(err)

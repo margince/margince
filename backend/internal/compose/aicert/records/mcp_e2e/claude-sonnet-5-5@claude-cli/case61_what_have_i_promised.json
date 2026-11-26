@@ -11,13 +11,79 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": true,
+  "stamp": {
+    "scenario": "4a3a4db6731eeacd",
+    "tools": "ac46fda637901146",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "1796d51361de08d5",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T06:01:02Z",
+    "graded_commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "graded_at": "2026-11-25T06:01:02Z"
+  },
   "usage": {
     "input_tokens": 8,
-    "output_tokens": 719,
-    "cache_creation_input_tokens": 3727,
-    "cache_read_input_tokens": 238319,
+    "output_tokens": 624,
+    "cache_creation_input_tokens": 5085,
+    "cache_read_input_tokens": 287644,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.0459
+    "cost_usd": 0.0554
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "read_attention",
+        "review_commitments",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "read_attention",
+        "review_commitments",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 2,
+      "min": 2,
+      "max": 2
+    },
+    "turns": {
+      "median": 3,
+      "min": 3,
+      "max": 3
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 146368.5,
+      "min": 146365,
+      "max": 146372
+    },
+    "output_tokens": {
+      "median": 312,
+      "min": 309,
+      "max": 315
+    },
+    "duration_ms": {
+      "median": 5163.5,
+      "min": 4987,
+      "max": 5340
+    }
   }
 }

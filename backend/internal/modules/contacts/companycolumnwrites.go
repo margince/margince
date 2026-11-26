@@ -16,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // companyWriteAuthority says what a writer may do to a column somebody has already
@@ -93,7 +94,7 @@ func addressWriteArguments(companyID ids.CompanyID, a crmcontracts.Address) []an
 // CompanyDescriptionMax is what company_description_length admits, in
 // characters. The column refuses a longer write, so every writer bounds or
 // refuses the value before it gets there.
-const CompanyDescriptionMax = 500
+const CompanyDescriptionMax = values.TextDocumentCharacters
 
 // The source can exceed its display column. Trim on rune and word boundaries
 // without changing the source or inventing punctuation in the display value.

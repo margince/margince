@@ -31,16 +31,16 @@ const latestInboundLimit = 10
 // nobody has answered, newest first, and the record's last exchange. Mail and
 // messages come from the waiting_reply read, so this never judges a thread on its own.
 func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID ids.UUID) (crmcontracts.LatestInboundList, error) {
-	columns, err := s.ActiveActivityColumns(ctx)
-	if err != nil {
-		return crmcontracts.LatestInboundList{}, err
-	}
 	now := s.now()
 	since := now.Add(-JustInDays * 24 * time.Hour)
 	var out crmcontracts.LatestInboundList
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
 		// An unknown record is a 404, which the timeline's own gate serves as an empty list.
 		if err := auth.EnsureVisibleExisting(ctx, tx, entityType, entityID); err != nil {
+			return err
+		}
+		columns, err := s.activityColumnsIn(ctx, tx)
+		if err != nil {
 			return err
 		}
 		read := func(in ListActivitiesInput) ([]crmcontracts.Activity, error) {
@@ -66,7 +66,13 @@ func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID i
 		if out.Data, err = markLatestInboundTasks(ctx, tx, unansweredInbound(waiting, forms, answers), now); err != nil {
 			return err
 		}
-		out.LastExchange, err = s.lastExchange(ctx, tx, entityType, entityID, now, columns)
+		if out.LastExchange, err = s.lastExchange(ctx, tx, entityType, entityID, now, columns); err != nil {
+			return err
+		}
+		if out.LastInbound, err = s.lastWrote(ctx, tx, entityType, entityID, crmcontracts.ActivityDirectionInbound, now, columns); err != nil {
+			return err
+		}
+		out.LastOutbound, err = s.lastWrote(ctx, tx, entityType, entityID, crmcontracts.ActivityDirectionOutbound, now, columns)
 		return err
 	})
 	return out, err
@@ -108,10 +114,10 @@ func momentOf(row crmcontracts.Activity) occurredday.Moment {
 // answersThemSQL keeps a row under alias a that answers them at now. That is
 // anything we sent, or a call or meeting that kept us in touch
 // (relstrength.HadContactSQL), so a meeting still to come answers nobody yet.
-// A note answers nobody.
+// A note answers nobody, and neither does a forward to self.
 func answersThemSQL(now string) string {
-	return `((a.kind IN ('email', 'message') AND a.direction = 'outbound') OR (a.kind IN ('call', 'meeting') AND ` +
-		relstrength.HadContactSQL("a", now) + `))`
+	return `((a.kind IN ('email', 'message') AND a.direction = 'outbound' AND NOT ` + relstrength.ForwardToSelfSQL("a") +
+		`) OR (a.kind IN ('call', 'meeting') AND ` + relstrength.HadContactSQL("a", now) + `))`
 }
 
 // markLatestInboundTasks drops an item a task already stands for, which
@@ -129,13 +135,17 @@ func markLatestInboundTasks(ctx context.Context, tx pgx.Tx, items []crmcontracts
 	args := []any{}
 	arg := func(value any) int { args = append(args, value); return len(args) }
 	in, instant := arg(wanted), fmt.Sprintf("$%d", arg(now))
+	ownDomains, err := bindColleagueDomains(ctx, tx, arg)
+	if err != nil {
+		return nil, err
+	}
 	// A task that is no longer current work stands for nothing.
 	current := storekit.CurrentTaskClause("task", now, "'[]'::jsonb", arg)
 	rows, err := tx.Query(ctx, storekit.SQLf(`SELECT a.id,
  %s OR EXISTS (SELECT 1 FROM activity task WHERE task.kind = 'task'
    AND task.source_activity_id = a.id AND NOT task.is_done AND task.archived_at IS NULL AND %s),
  coalesce((%s) AND %s, false)
- FROM activity a WHERE a.id = ANY($%d)`, openRequestReminderSQL, current, reviewableRequestSQL(instant),
+ FROM activity a WHERE a.id = ANY($%d)`, openRequestReminderSQL, current, reviewableRequestSQL(instant, ownDomains),
 		occurredday.BegunSQL("a", instant), in), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading what stands for the latest inbound: %w", err)

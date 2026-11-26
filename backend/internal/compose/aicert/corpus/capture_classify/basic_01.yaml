@@ -15,15 +15,21 @@ expect:
   outcome: accepted
   answer: [meeting]
   rubric: >
-    This site answers with {id, label, confidence} per message and nothing
-    else, the label drawn from the closed set commitment | meeting | noise.
+    The candidate output is the harness's record of the run, not one reply.
+    "replies" holds each raw reply in the order the pass asked, and "messages"
+    holds what the pass stored for each message. That wrapper is the harness's,
+    so never score it as a format fault; each reply inside it is the model's.
+    A message answered under the 0.7 floor is re-asked alone, so a second reply
+    is that re-ask and not a contradiction.
+    Each reply is {id, label, confidence, reply} per message, the label drawn
+    from the closed set commitment | meeting | other.
     Score the label first: the mail asks for thirty minutes on Thursday
     afternoon and offers a time, which is scheduling and nothing more, so
     "meeting" is right — the tie-break that prefers commitment when a message
-    is both does not fire here, and "noise" is wrong on a mail that names a
+    is both does not fire here, and "other" is wrong on a mail that names a
     slot. Then score the confidence as a real judgement rather than a
     formality, because production spends on it: every message left under the
-    0.7 floor is re-asked alone on the next rung of the routing ladder, and
+    0.7 floor is re-asked alone, and
     every label at or above it is applied unexamined. So a correct label held
     confidently scores highest; a correct one hedged below the floor scores
     lower, since it buys a second call it did not need; a wrong label scores

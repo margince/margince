@@ -10,6 +10,7 @@ package deals
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"time"
@@ -20,6 +21,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -59,6 +61,12 @@ type AdvanceDealInput struct {
 	// imported win keeps the day its source closed it, and the Undo of a
 	// reopen keeps the day the deal was lost.
 	closedAt *time.Time
+	// toPipeline marks a move to another pipeline. ToStageID then names an open
+	// stage of it, or is zero for that pipeline's first open stage.
+	toPipeline *ids.PipelineID
+	// undoPipelineMove asks the move to derive its target from the deal's latest
+	// history row and to record itself as the reversal of that row.
+	undoPipelineMove bool
 	// auditEvidence rides into the move's audit row. Margince's own close sets
 	// it, so the Home receipt can say why the deal was closed.
 	auditEvidence map[string]any
@@ -67,27 +75,6 @@ type AdvanceDealInput struct {
 // StageApprovalEvidenceKey links an applied stage audit to the approval a
 // human decided.
 const StageApprovalEvidenceKey = "stage_approval_id"
-
-// StagePipelineMismatchError maps to 422: the target stage exists but
-// belongs to another pipeline.
-type StagePipelineMismatchError struct {
-	StageID ids.StageID
-	// Field is the request field that named the stage; empty means the advance
-	// route's to_stage_id.
-	Field string
-}
-
-func (e *StagePipelineMismatchError) Error() string {
-	return "stage " + e.StageID.String() + " does not belong to the deal's pipeline"
-}
-
-// FieldFault refuses a target stage that belongs to another pipeline.
-func (e *StagePipelineMismatchError) FieldFault() (field, code, message string) {
-	if e.Field != "" {
-		return e.Field, "stage_not_in_pipeline", e.Error()
-	}
-	return "to_stage_id", "stage_not_in_pipeline", e.Error()
-}
 
 // LostReasonRequiredError maps to 422 on advancing to a lost stage
 // without a reason (deal_lost_reason CHECK, features/01 §3.1).
@@ -108,17 +95,12 @@ func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealIn
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return AdvancedDeal{}, err
 	}
-	// The custom-field catalog is fetched BEFORE the transaction opens: it
-	// reads through its own connection, and a second connection inside a
-	// transaction commits separately and can deadlock undetectably against a
-	// lock that transaction holds.
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return AdvancedDeal{}, err
-	}
 	var out AdvancedDeal
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		out, err = s.advanceOnTx(ctx, tx, id, in, active)
 		return err
 	})
@@ -181,17 +163,17 @@ func (s *Store) advanceOnTx(
 		// Moving to the stage the deal already holds changes nothing. Answering
 		// with the deal as it stands makes a retried call safe, where running the
 		// move again would close a closed deal a second time and move its day.
-		if ids.UUID(*current.StageId) == in.ToStageID.UUID {
+		if in.toPipeline == nil && ids.UUID(*current.StageId) == in.ToStageID.UUID {
 			if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
 				return err
 			}
-			out.Deal, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+			out.Deal, err = s.readDealStamped(ctx, tx, id, storekit.LiveOnly, active)
 			return err
 		}
-		semantic, winProbability, err := resolveAdvanceTarget(ctx, tx, in.ToStageID, current)
+		semantic, winProbability, err := resolveMoveTarget(ctx, tx, &in, current)
 		if err != nil {
 			if in.ReferencesFromRequest {
-				err = auth.NameMissingReference("to_stage_id", err)
+				err = auth.NameMissingReference(advanceTargetField, err)
 			}
 			return err
 		}
@@ -225,7 +207,7 @@ func (s *Store) advanceOnTx(
 		// it was not.
 		from := ids.UUID(*current.StageId)
 		out.HistoryID, err = s.recordStageHistory(ctx, tx, stageHistoryInput{
-			DealID: id, FromStageID: &from, ToStageID: in.ToStageID, ChangedBy: by, OwnerID: (*ids.UUID)(current.OwnerId), PipelineID: ids.UUID(*current.PipelineId),
+			DealID: id, FromStageID: &from, ToStageID: in.ToStageID, ChangedBy: by, OwnerID: (*ids.UUID)(current.OwnerId), PipelineID: pipelineAfterMove(current, in),
 			Amount: current.AmountMinor, Currency: current.Currency,
 			Probability: &winProbability, ApprovalID: in.ApprovalID,
 			ReversalOf: in.ReversalOf, Semantic: &semantic, LostReasonCode: lostReasonCodeFromPatch(p),
@@ -239,16 +221,32 @@ func (s *Store) advanceOnTx(
 			return err
 		}
 		out.AuditLogID = auditID
-		out.Probability = newProbabilitySet(winProbability, toStageName)
+		readerName, err := readerStageName(ctx, tx, in.ToStageID, toStageName)
+		if err != nil {
+			return err
+		}
+		out.Probability = newProbabilitySet(winProbability, readerName)
 		if err := s.onDealWon(ctx, tx, id, status, by, p); err != nil {
 			return err
 		}
-		if out.Deal, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active); err != nil {
+		if out.Deal, err = s.readDealStamped(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 			return fmt.Errorf("read advanced deal: %w", err)
+		}
+		if out.WinChance != nil && out.WinProbability != nil {
+			out.Probability = newProbabilitySet(*out.WinProbability, readerName)
 		}
 		return nil
 	}()
 	return out, err
+}
+
+// pipelineAfterMove is the pipeline the deal stands in after the move.
+// The history row records it as the pipeline at the change.
+func pipelineAfterMove(current crmcontracts.Deal, in AdvanceDealInput) ids.UUID {
+	if in.toPipeline != nil {
+		return in.toPipeline.UUID
+	}
+	return ids.UUID(*current.PipelineId)
 }
 
 // dealStageChangedPayload builds the deal.stage_changed wire payload from
@@ -396,6 +394,11 @@ func (s *Store) buildStageAdvance(ctx context.Context, tx pgx.Tx, id ids.DealID,
 	if err != nil {
 		return nil, "", err
 	}
+	if DealStatus(status) != DealOpen && DealStatus(current.Status) == DealOpen {
+		if err := dropManagerRequest(ctx, tx, p, ids.UUID(current.Id)); err != nil {
+			return nil, "", err
+		}
+	}
 	stored, storedBy := storedWinProbability(current)
 	setWinProbability(p, stored, storedBy, nil, SourceStage)
 	return p, status, nil
@@ -425,6 +428,9 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 
 	p := storekit.NewPatch()
 	p.Set(stageIDColumn, current.StageId, in.ToStageID)
+	if in.toPipeline != nil {
+		p.Set(pipelineIDColumn, current.PipelineId, *in.toPipeline)
+	}
 	if status != string(current.Status) {
 		p.Set("status", current.Status, status)
 	}
@@ -437,10 +443,10 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	// The won-without-contract reason is written only on a win, and cleared on
 	// every other landing, for the same reason.
 	if DealStatus(status) == DealWon {
-		p.Set("won_without_contract_reason", current.WonWithoutContractReason, in.WonWithoutContractReason)
+		p.Set(wonWithoutContractReasonField, current.WonWithoutContractReason, in.WonWithoutContractReason)
 		p.Set("won_without_contract_detail", current.WonWithoutContractDetail, in.WonWithoutContractDetail)
 	} else {
-		p.Set("won_without_contract_reason", current.WonWithoutContractReason, nil)
+		p.Set(wonWithoutContractReasonField, current.WonWithoutContractReason, nil)
 		p.Set("won_without_contract_detail", current.WonWithoutContractDetail, nil)
 	}
 	// Closing with an amount freezes the FX rate so base-currency roll-ups stay
@@ -467,4 +473,18 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 		}
 	}
 	return p, status, nil
+}
+
+// readerStageName is the stage's name in the reader's language, for the
+// confirmation the mover reads. The event keeps the stored name, because its
+// subscribers read no UI language.
+func readerStageName(ctx context.Context, tx pgx.Tx, stage ids.StageID, stored string) (string, error) {
+	args := []any{stage}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	name, translated := stored, labeltranslation.SQL(ctx, "s.name", "s.name_translations", arg)
+	err := tx.QueryRow(ctx, `SELECT `+translated+` FROM stage s WHERE s.id = $1`, args...).Scan(&name)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return "", fmt.Errorf("read the stage's name for the reader: %w", err)
+	}
+	return name, nil
 }

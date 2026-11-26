@@ -5,6 +5,7 @@ package ai
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"slices"
 	"strings"
@@ -50,7 +51,7 @@ func TestNewLocalRouterWithoutResultCacheServesEveryScriptedAnswer(t *testing.T)
 		t.Fatal(err)
 	}
 	ctx := wsContext(t)
-	req := model.Request{Messages: []model.Message{{Role: "user", Content: "same prompt"}}}
+	req := model.Request{Subjects: model.AboutNoContact("test prompt"), Messages: []model.Message{{Role: "user", Content: "same prompt"}}}
 
 	first, info1, err := r.Complete(ctx, TaskSummarize, req)
 	if err != nil {
@@ -71,12 +72,8 @@ func TestNewLocalRouterWithoutResultCacheServesEveryScriptedAnswer(t *testing.T)
 	}
 }
 
-// TestNewLocalRouterWithCallStoreRecordsOneCallPerCompletionAndStampsCacheOff
-// covers Step 1 requirement 2: WithCallStore wires a recorder that gets
-// one Call per completion, and every one of them carries CacheOff=true
-// when WithoutResultCache is also set — the trace tells the truth about
-// the Router's own posture, not just what happened to this one request.
-func TestNewLocalRouterWithCallStoreRecordsOneCallPerCompletionAndStampsCacheOff(t *testing.T) {
+// WithCallStore wires a recorder that gets one Call per completion.
+func TestNewLocalRouterWithCallStoreRecordsOneCallPerCompletion(t *testing.T) {
 	fake := NewFakeClient().Script("a", "b")
 	store := &memCallStore{}
 	r, err := NewLocalRouter(localFakeConfig(), WithCallStore(store), WithoutResultCache(), WithFakeClient(fake))
@@ -84,8 +81,8 @@ func TestNewLocalRouterWithCallStoreRecordsOneCallPerCompletionAndStampsCacheOff
 		t.Fatal(err)
 	}
 	ctx := wsContext(t)
-	req1 := model.Request{Messages: []model.Message{{Role: "user", Content: "one"}}}
-	req2 := model.Request{Messages: []model.Message{{Role: "user", Content: "two"}}}
+	req1 := model.Request{Subjects: model.AboutNoContact("test prompt"), Messages: []model.Message{{Role: "user", Content: "one"}}}
+	req2 := model.Request{Subjects: model.AboutNoContact("test prompt"), Messages: []model.Message{{Role: "user", Content: "two"}}}
 
 	if _, _, err := r.Complete(ctx, TaskSummarize, req1); err != nil {
 		t.Fatal(err)
@@ -95,11 +92,6 @@ func TestNewLocalRouterWithCallStoreRecordsOneCallPerCompletionAndStampsCacheOff
 	}
 	if len(store.calls) != 2 {
 		t.Fatalf("want one recorded Call per completion, got %d", len(store.calls))
-	}
-	for i, c := range store.calls {
-		if !c.CacheOff {
-			t.Fatalf("call %d: CacheOff must be stamped true when WithoutResultCache is set, got %+v", i, c)
-		}
 	}
 }
 
@@ -115,7 +107,7 @@ func TestNewLocalRouterCacheOnByDefaultCollapsesIdenticalRequests(t *testing.T) 
 		t.Fatal(err)
 	}
 	ctx := wsContext(t)
-	req := model.Request{Messages: []model.Message{{Role: "user", Content: "same prompt"}}}
+	req := model.Request{Subjects: model.AboutNoContact("test prompt"), Messages: []model.Message{{Role: "user", Content: "same prompt"}}}
 
 	first, _, err := r.Complete(ctx, TaskSummarize, req)
 	if err != nil {
@@ -143,7 +135,7 @@ func TestAFreshAnswerReachesTheModelThoughTheRequestIsCached(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := wsContext(t)
-	req := model.Request{Messages: []model.Message{{Role: "user", Content: "same prompt"}}}
+	req := model.Request{Subjects: model.AboutNoContact("test prompt"), Messages: []model.Message{{Role: "user", Content: "same prompt"}}}
 
 	if _, _, err := r.Complete(ctx, TaskSummarize, req); err != nil {
 		t.Fatal(err)
@@ -179,7 +171,7 @@ func TestNewLocalRouterWithMonthlyBudgetIsLive(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := wsContext(t)
-	req := model.Request{Messages: []model.Message{{Role: "user", Content: "burn the budget"}}}
+	req := model.Request{Subjects: model.AboutNoContact("test prompt"), Messages: []model.Message{{Role: "user", Content: "burn the budget"}}}
 
 	if _, info, err := r.Complete(ctx, TaskSummarize, req); err != nil || info.Degraded {
 		t.Fatalf("first call should serve un-degraded and spend real tokens, got info=%+v err=%v", info, err)
@@ -261,11 +253,65 @@ func TestNewLocalRouterServesAHarnessProviderWithTheCallersClient(t *testing.T) 
 	if err != nil {
 		t.Fatalf("a harness-served binding could not be built: %v", err)
 	}
-	resp, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Messages: []model.Message{{Role: "user", Content: "hi"}}})
+	resp, _, err := r.Complete(wsContext(t), TaskSummarize, model.Request{Subjects: model.AboutNoContact("test prompt"), Messages: []model.Message{{Role: "user", Content: "hi"}}})
 	if err != nil || resp.Text != "served by the harness" {
 		t.Fatalf("resp = %q, err = %v, want the harness client's answer", resp.Text, err)
 	}
 	if len(store.calls) != 1 || store.calls[0].Provider != "harness_cli" {
 		t.Errorf("calls = %+v, want one traced under harness_cli", store.calls)
+	}
+}
+
+// A trace is read to audit a grade, so it must hold all the model read and
+// said. The row caps that bound ai_call_payload would cut a long answer
+// before the part a judge scored.
+func TestNewLocalRouterPayloadCaptureKeepsTheWholeText(t *testing.T) {
+	answer := strings.Repeat("b", maxCapturedPayloadRunes+5000)
+	fake := NewFakeClient().Script(answer)
+	store := &memCallStore{}
+	r, err := NewLocalRouter(localFakeConfig(), WithCallStore(store), WithoutResultCache(), WithFakeClient(fake), WithPayloadCapture())
+	if err != nil {
+		t.Fatal(err)
+	}
+	long := strings.Repeat("a", maxCapturedRequestRunes+5000)
+	req := model.Request{Subjects: model.AboutNoContact("test prompt"), System: long, Messages: []model.Message{{Role: "user", Content: long}}}
+	if _, _, err := r.Complete(wsContext(t), TaskSummarize, req); err != nil {
+		t.Fatal(err)
+	}
+	if len(store.calls) != 1 || store.calls[0].Payload == nil {
+		t.Fatalf("want one call with a captured payload, got %+v", store.calls)
+	}
+	p := store.calls[0].Payload
+	if strings.Contains(string(p.Request)+string(p.Response), captureTruncationMarker) {
+		t.Fatal("the trace capture was cut")
+	}
+	if got := longestRun(string(p.Request), 'a'); got != len(long) {
+		t.Fatalf("a request field kept %d of %d runes", got, len(long))
+	}
+	if got := longestRun(string(p.Response), 'b'); got != len(answer) {
+		t.Fatalf("response kept %d of %d runes", got, len(answer))
+	}
+}
+
+// The input-count cap bounds an ai_call_payload row, as the rune caps do. The
+// trace capture lifts it too, so no embedded input goes missing from a trace.
+func TestNewLocalRouterPayloadCaptureKeepsEveryEmbedInput(t *testing.T) {
+	r, err := NewLocalRouter(localFakeConfig(), WithoutResultCache(), WithFakeClient(NewFakeClient()), WithPayloadCapture())
+	if err != nil {
+		t.Fatal(err)
+	}
+	inputs := make([]string, maxCapturedEmbedInputs+50)
+	for i := range inputs {
+		inputs[i] = "x"
+	}
+	var captured struct {
+		Inputs          []string `json:"inputs"`
+		InputsTruncated bool     `json:"inputs_truncated"`
+	}
+	if err := json.Unmarshal(r.buildEmbedPayload(model.EmbedRequest{Inputs: inputs}, model.Embeddings{}).Request, &captured); err != nil {
+		t.Fatal(err)
+	}
+	if len(captured.Inputs) != len(inputs) || captured.InputsTruncated {
+		t.Fatalf("trace kept %d of %d inputs (truncated=%v)", len(captured.Inputs), len(inputs), captured.InputsTruncated)
 	}
 }

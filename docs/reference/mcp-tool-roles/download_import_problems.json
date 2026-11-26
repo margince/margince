@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "import_problems",
+  "verb": "download_import_problems",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

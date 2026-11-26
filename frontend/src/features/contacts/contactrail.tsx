@@ -1,21 +1,29 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { RecordListsActions } from "../../components/addtoshortlist";
 import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { CounterpartyHoldRow } from "../../components/counterparty-hold";
+import { useViewOnlyAccess } from "../../components/viewonly";
 import { Badge } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
+  type DetailAccess,
   type DetailSection,
   RecordDetails,
 } from "../../design-system/recorddetails";
 import { omitted, type SectionState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useCanWriteRecord } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { navigate } from "../../lib/router";
 import { useWriteRefusal } from "./contactactions";
-import { type ConsentRead, useConsentRows } from "./contactconsentpanel";
+import {
+  type ConsentRead,
+  useConsentRows,
+  useManageConsent,
+} from "./contactconsentpanel";
 import { useContactAboutSections } from "./contactdetails";
 import { ContactSourceReview } from "./contactsourcereview";
 
@@ -69,12 +77,8 @@ export function bodyState(withheld: boolean, count: number): SectionState {
   return count === 0 ? "empty" : "ready";
 }
 
-/**
- * The left column under the head: About, Ownership, Consent & channels and an
- * unconfirmed source as flat groups. Then the lists the contact is on, the one link to the empty
- * fields, and the page's footnote. Employers, billing roles, tags, the record's
- * source and the consent proof live on the Network and Research tabs.
- */
+/** The left column: the contact's details panes, each with its own Edit, then
+ *  the lists the contact is on and the page's footnote. */
 export function ContactRail({
   view,
   consent,
@@ -90,6 +94,7 @@ export function ContactRail({
 }>) {
   const t = useT();
   const writeRefusal = useWriteRefusal(view);
+  const access = useViewOnlyAccess("contact", view.contact);
   const footnote = (refusals || writeRefusal) && (
     <>
       {writeRefusal && <span id={writeRefusalId}>{writeRefusal}</span>}
@@ -99,17 +104,31 @@ export function ContactRail({
   );
   const about = useContactAboutSections(view);
   const consentRows = useConsentRows(view, consent);
+  const manageConsent = useManageConsent(view);
+  const mayManageConsent =
+    useCanWriteRecord("contact", view.contact) && !view.contact.archived_at;
   const listsOn = useListsAvailable();
   const reviews = view.privacy_source_reviews ?? [];
+  const confirmedSource = view.privacy_confirmed_source;
   const sections: DetailSection[] = [
-    ...about,
-    { key: "consent", label: t("contact.aside.consent"), rows: consentRows },
-    ...(reviews.length > 0
+    ...about.sections,
+    {
+      key: "consent",
+      label: t("contact.aside.consent"),
+      edit: mayManageConsent ? { onEdit: manageConsent.open } : undefined,
+      rows: consentRows,
+    },
+    ...(reviews.length > 0 || confirmedSource
       ? [
           {
             key: "source",
             label: t("history.field.source"),
-            children: <ContactSourceReview reviews={reviews} />,
+            children: (
+              <ContactSourceReview
+                reviews={reviews}
+                confirmed={confirmedSource}
+              />
+            ),
           },
         ]
       : []),
@@ -123,10 +142,17 @@ export function ContactRail({
           contactId={view.contact.id}
           sections={sections}
           footnote={footnote}
+          access={access}
         />
       ) : (
-        <RecordDetails sections={sections} footnote={footnote} />
+        <RecordDetails
+          sections={sections}
+          footnote={footnote}
+          access={access}
+        />
       )}
+      {about.element}
+      {manageConsent.element}
       {!view.contact.archived_at && (
         <ConversationSuggestionsCard
           key={view.contact.id}
@@ -141,39 +167,44 @@ function ContactRailWithLists({
   contactId,
   sections,
   footnote,
+  access,
 }: Readonly<{
   contactId: string;
   sections: readonly DetailSection[];
   footnote?: ReactNode;
+  access?: DetailAccess;
 }>) {
   const t = useT();
   const lists = useRecordLists("contact", contactId).data?.data ?? [];
-  // No memberships, no group: the design draws no empty state for it.
-  const withLists =
-    lists.length === 0
-      ? sections
-      : [
-          ...sections,
-          {
-            key: "lists",
-            label: t("lists.record.title"),
-            children: (
-              <div className="pe-list-chips">
-                {lists.map((list) => (
-                  <button
-                    key={list.id}
-                    type="button"
-                    className="link-button"
-                    onClick={() => navigate({ screen: "lists", id: list.id })}
-                  >
-                    <Badge>{list.name}</Badge>
-                  </button>
-                ))}
-              </div>
-            ),
-          },
-        ];
-  return <RecordDetails sections={withLists} footnote={footnote} />;
+  const withLists = [
+    ...sections,
+    {
+      key: "lists",
+      label: t("lists.record.title"),
+      children: (
+        <>
+          {lists.length > 0 && (
+            <div className="pe-list-chips">
+              {lists.map((list) => (
+                <button
+                  key={list.id}
+                  type="button"
+                  className="link-button"
+                  onClick={() => navigate({ screen: "lists", id: list.id })}
+                >
+                  <Badge>{list.name}</Badge>
+                </button>
+              ))}
+            </div>
+          )}
+          <RecordListsActions entityType="contact" entityId={contactId} />
+        </>
+      ),
+    },
+  ];
+  return (
+    <RecordDetails sections={withLists} footnote={footnote} access={access} />
+  );
 }
 
 // --- Keeping this correspondence private -------------------------------

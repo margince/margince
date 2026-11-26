@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -100,6 +101,22 @@ func (w *documentExtractWorker) Work(ctx context.Context, job *river.Job[Documen
 	_, err = InstallationDB(w.pool).WithWorkLease(wsCtx, "document_extract", args.ExtractionReadID, w.log, func(owned context.Context) error {
 		return w.read(owned, args)
 	})
+	if jobs.Exhausted(job.JobRow, err) {
+		// As for a transcript, the reading was handed back for a try that will
+		// not come. It closes here, on a context the timeout did not cancel.
+		closeCtx, cancel := terminalCtx(wsCtx)
+		defer cancel()
+		said := documentCopyFor(string(w.language.Resolve(closeCtx)))
+		detail := documentWords.Unfinished.In(said.Lang())
+		if modelfailure.Unanswered(err) {
+			detail = documentWords.Unanswered.In(said.Lang())
+		}
+		closed, closeErr := w.closeUnread(closeCtx, args, detail)
+		if wait := waitToClose(wsCtx, w.log, args.ExtractionReadID, closed, closeErr,
+			activities.ExtractionReadLease); wait != nil {
+			return jobs.FaultContext(ctx, wait)
+		}
+	}
 	return jobs.FaultContext(ctx, err)
 }
 
@@ -115,26 +132,33 @@ func (w *documentExtractWorker) read(wsCtx context.Context, args DocumentExtract
 			"attachment_extraction_id", args.ExtractionReadID)
 		return nil
 	}
-	return jobs.FaultContext(wsCtx, err)
+	return jobs.FaultContext(wsCtx, snoozeWhileRestricted(err))
 }
 
-// declineUnread closes a reading no configured lane can perform. Failing it
-// visibly is the point: a queued row nobody will ever pick up is
-// indistinguishable, to the rep watching it, from one still being worked.
+// declineUnread closes a reading no configured lane can perform.
 func (w *documentExtractWorker) declineUnread(ctx context.Context, args DocumentExtractArgs) error {
 	w.log.WarnContext(ctx, "document reading declined: no model lane configured",
 		"attachment_extraction_id", args.ExtractionReadID)
+	_, err := w.closeUnread(ctx, args,
+		documentWords.NoModel.In(documentCopyFor(string(w.language.Resolve(ctx))).Lang()))
+	return err
+}
+
+// closeUnread fails a reading no worker will read, with the reason why, and
+// reports whether it did. To the rep, a queued row nobody picks up looks the
+// same as one being worked.
+func (w *documentExtractWorker) closeUnread(ctx context.Context, args DocumentExtractArgs, detail string) (bool, error) {
 	claim, err := w.activities.BeginExtractionRead(ctx, args.ExtractionReadID, activities.ExtractionReadLease)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrConflict) {
-			return nil
+			return false, nil
 		}
-		return err
+		return false, err
 	}
-	return w.activities.FinishExtractionRead(ctx, args.ExtractionReadID,
+	return true, w.activities.FinishExtractionRead(ctx, args.ExtractionReadID,
 		activities.ExtractionReadOutcome{
 			Status:    activities.ExtractionReadFailed,
-			Detail:    documentWords.NoModel.In(documentCopyFor(string(w.language.Resolve(ctx))).Lang()),
+			Detail:    detail,
 			ClaimedAt: claimStart(claim),
 		})
 }

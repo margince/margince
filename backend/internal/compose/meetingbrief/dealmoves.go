@@ -32,6 +32,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -113,13 +114,18 @@ func (said briefCopy) readDealMoves(
 func (said briefCopy) readStageMoves(
 	ctx context.Context, tx pgx.Tx, dealID ids.UUID, since, now time.Time,
 ) ([]DealMoveIn, error) {
+	args := []any{dealID, since, now, dealMovesCap}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	// The brief's own language, so a move reads as the sentence around it does.
+	from := labeltranslation.SQLIn(string(said.Lang()), "f.name", "f.name_translations", arg)
+	to := labeltranslation.SQLIn(string(said.Lang()), "t.name", "t.name_translations", arg)
 	rows, err := tx.Query(ctx, `
-		SELECT h.changed_at, coalesce(f.name, ''), coalesce(t.name, '')
+		SELECT h.changed_at, coalesce(`+from+`, ''), coalesce(`+to+`, '')
 		  FROM deal_stage_history h
 		  LEFT JOIN stage f ON f.id = h.from_stage_id
 		  LEFT JOIN stage t ON t.id = h.to_stage_id
 		 WHERE h.deal_id = $1 AND h.changed_at > $2 AND h.changed_at <= $3
-		 ORDER BY h.changed_at DESC, h.id DESC LIMIT $4`, dealID, since, now, dealMovesCap)
+		 ORDER BY h.changed_at DESC, h.id DESC LIMIT $4`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the deal's stage moves: %w", err)
 	}

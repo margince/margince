@@ -45,6 +45,8 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`activity.archived`](#activityarchived) | activity | 1 |
 | [`activity.captured`](#activitycaptured) | activity | 1 |
 | [`activity.disposition_recorded`](#activitydisposition_recorded) | activity | 1 |
+| [`activity.invitation_answered`](#activityinvitation_answered) | activity | 1 |
+| [`activity.link_suggestion_changed`](#activitylink_suggestion_changed) | activity | 1 |
 | [`activity.marked_handled`](#activitymarked_handled) | activity | 1 |
 | [`activity.readiness_recorded`](#activityreadiness_recorded) | activity | 1 |
 | [`activity.updated`](#activityupdated) | activity | 1 |
@@ -54,6 +56,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`approval.requested`](#approvalrequested) | approval | 1 |
 | [`attachment.archived`](#attachmentarchived) | attachment | 1 |
 | [`attachment.created`](#attachmentcreated) | attachment | 1 |
+| [`attachment.restored`](#attachmentrestored) | attachment | 1 |
 | [`attachment.updated`](#attachmentupdated) | attachment | 1 |
 | [`audit.appended`](#auditappended) | audit | 1 |
 | [`coldstart.accepted`](#coldstartaccepted) | approval | 1 |
@@ -127,6 +130,9 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`lead.updated`](#leadupdated) | lead | 1 |
 | [`lead_disqualify_reason.changed`](#lead_disqualify_reasonchanged) | lead_disqualify_reason | 1 |
 | [`lead_source.changed`](#lead_sourcechanged) | lead_source | 1 |
+| [`legal_review.decided`](#legal_reviewdecided) | legal_review | 1 |
+| [`legal_review.requested`](#legal_reviewrequested) | legal_review | 1 |
+| [`legal_review.withdrawn`](#legal_reviewwithdrawn) | legal_review | 1 |
 | [`linkedin_account.changed`](#linkedin_accountchanged) | user | 1 |
 | [`linkedin_match.decided`](#linkedin_matchdecided) | user | 1 |
 | [`linkedin_network.imported`](#linkedin_networkimported) | user | 1 |
@@ -156,6 +162,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`project.health_assessed`](#projecthealth_assessed) | project | 1 |
 | [`project.phase_changed`](#projectphase_changed) | project | 1 |
 | [`project.updated`](#projectupdated) | project | 1 |
+| [`record_link.changed`](#record_linkchanged) | dynamic | 1 |
 | [`relationship_nudge.decided`](#relationship_nudgedecided) | contact | 1 |
 | [`retention.applied`](#retentionapplied) | dynamic | 1 |
 | [`retention.restricted`](#retentionrestricted) | activity | 1 |
@@ -205,15 +212,17 @@ Payload for activity.archived: an activity was archived. Carries only the import
 
 Record: `activity` · version 1
 
-Payload for activity.captured, the first-class capture verb, emitted instead of (never alongside) a generic activity.created (events.md §1). Two emit sites: the direct-log path (activities/activity.go) that sets kind only, and the capture ingestion path (capture/sink.go) that also names its originating source system.
+Payload for activity.captured. This event replaces activity.created. Manual logging includes the activity kind and trusted website receipt details. Connector ingestion includes the source system.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.channel_provider` | string | no | Which transport carried the message. Present when kind is `message`, and absent otherwise. Without this field a consumer could not tell a Telegram message from any other. Before ADR-0107 the `kind` field told them that. The envelope is additionalProperties:false, so the field must be named here to be sent at all. |
+| `data.handling_automation_id` | string (uuid) | no | Reviewed handling policy on the trusted accepted website note; absent on other activity events. |
 | `data.import_run_id` | string (uuid) | no | The import run that wrote the event. Present when `imported` is true. |
 | `data.imported` | boolean | no | True when a data import wrote the event. Absent otherwise. |
 | `data.kind` | string | yes | The activity kind (email \| call \| meeting \| note \| task \| message). Decoded by automation/handlers_event.go's post_meeting_recap trigger, this field's JSON key is a binding contract, not just documentation. Since ADR-0107/A158 the kind no longer names a messaging transport: every channel message is `message`, and channel_provider says what carried it. |
-| `data.source_system` | string | no | The originating source system (capture ingestion only; absent on a direct log). |
+| `data.source_system` | string | no | The originating source system for capture ingestion or a trusted website note; absent on other direct logs. |
+| `data.website_submission_key` | string | no | Canonical accepted website submission key, carried only by a website note. Consumers verify its stored provenance before routing. Contains no submission content. |
 
 ### `activity.disposition_recorded`
 
@@ -225,6 +234,31 @@ Payload for activity.disposition_recorded. Somebody decided what to do about a w
 |---|---|---|---|
 | `data.activity_id` | string (uuid) | yes |  |
 | `data.disposition` | string: `not_sales`, `sales_again`, `snoozed`, `not_mine`, `picked_up` | yes | What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the reader states, Done included. A decision withdrawn is itself a decision. A consumer counting dispositions has to see it happen rather than infer it from a row going quiet. |
+
+### `activity.invitation_answered`
+
+Record: `activity` · version 1
+
+Payload for activity.invitation_answered. One reader answered a calendar invitation that came by email, and their own calendar sent the answer to the organizer (activities/calendarinvitation.go). It is that reader's own answer, and the reader is not on the wire. The same press marks the message done for them, announced as activity.marked_handled.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.activity_id` | string (uuid) | yes |  |
+| `data.response` | string: `accepted`, `tentative`, `declined` | yes |  |
+
+### `activity.link_suggestion_changed`
+
+Record: `activity` · version 1
+
+Payload for activity.link_suggestion_changed. An extension proposed a record a message may belong to, or a reader accepted or rejected one (activities/linksuggestion.go). A proposal attaches nothing. Accepting it files the message through the ordinary relink, which announces activity.updated as well. Who decided is on the audit row, not on the wire.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.activity_id` | string (uuid) | yes |  |
+| `data.status` | string | yes | One of proposed, accepted or rejected. |
+| `data.suggestion_id` | string (uuid) | yes |  |
+| `data.target_id` | string (uuid) | yes |  |
+| `data.target_type` | string | yes | The kind of record the suggestion names, one of contact, company, deal or project. |
 
 ### `activity.marked_handled`
 
@@ -257,8 +291,12 @@ Payload for activity.updated, a bounded delta. The contact, company, deal and le
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.changed_fields` | PublicEventActivityChangedFields | yes |  |
+| `data.handling_automation_id` | string (uuid) | no | Reviewed handling policy on the trusted accepted website note; absent on other activity events. |
 | `data.import_run_id` | string (uuid) | no | The import run that wrote the event. Present when `imported` is true. |
 | `data.imported` | boolean | no | True when a data import wrote the event. Absent otherwise. |
+| `data.kind` | string | no | Present for a trusted accepted website note whose handling was explicitly reviewed. |
+| `data.source_system` | string | no | Present only when a trusted website note acquires its reviewed handling policy. |
+| `data.website_submission_key` | string | no | Canonical accepted website key; consumers verify the actual stored note and policy. |
 
 ### `approval.decided`
 
@@ -336,6 +374,17 @@ Payload for attachment.created. A file was uploaded against a record. The attach
 | `data.content_type` | string | no | The MIME type as stored, or null where the upload declared none. |
 | `data.parent_id` | string (uuid) | yes | The record the file hangs off. A subscriber routes on this rather than on the attachment. |
 | `data.parent_type` | string | yes | The kind of record the file hangs off. That record is also where the authority to change the file comes from (activity \| contact \| company \| deal \| lead \| contract). |
+
+### `attachment.restored`
+
+Record: `attachment` · version 1
+
+Payload for attachment.restored. An archived file is back in the record's listings, because the source that listed it lists it again. It is the undo of attachment.archived for the same file, not a new file, so a subscriber that counts uploads does not count it twice. It carries the same shape as the other three, with the same omissions.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.parent_id` | string (uuid) | yes | The record the file hangs off. |
+| `data.parent_type` | string | yes | The kind of record the file hangs off. |
 
 ### `attachment.updated`
 
@@ -491,7 +540,7 @@ Payload for company.updated, an open envelope. Eight emit sites carry different 
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.changed_fields` | object | yes | What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site: a column patch carries a flat field → new-value entry, while the recompute/routing/relationship sites carry a `{delta: {...}}` sub-object (occasionally with a sibling `source`). Read a key's value as either form. |
+| `data.changed_fields` | object | yes | What this update touched, incl. runtime cf_* custom fields. The value shape depends on the emit site. A column patch carries a flat field → new-value entry. The recompute/routing/relationship sites carry a `{delta: {...}}` sub-object, sometimes with a sibling `source`. Read a key's value as either form. A change to the company's `status` also carries the value under `lifecycle`, the key this version first gave it. `lifecycle` is deprecated; read `status`. |
 
 ### `consent.changed`
 
@@ -521,13 +570,13 @@ Payload for consent.override_lifted. Somebody with the authority to do so took b
 
 Record: `contact` · version 1
 
-Payload for consent.override_recorded. A rep recorded a standing vouch that a machine-level refusal for one category may be overruled for this contact (consent/override.go's Allow). It is its own event rather than a consent.changed. An override is neither consent nor a lawful basis. It outranks only a machine-level, non-absolute refusal, and a subject-level stop still wins at the gate regardless of this row. The subject is always a contact, because the write door names that object as a literal. So this is a static entity, and the fan-out gate proves its delivery scope mechanically rather than by hand-ratification. It names what category was vouched for and at which authority. It never names the reason the rep gave. That explanation belongs to the audit trail a rep reviewing the contact reads, and not to every subscriber the event reaches.
+Payload for consent.override_recorded. A merge carried a standing exception onto the surviving contact under a new id (consent/overridecarry.go). No route records a new standing exception, so this event announces a carried copy only. An exception is neither consent nor a lawful basis. It outranks only a machine-level, non-absolute refusal, and a subject-level stop still wins at the gate. It is its own event rather than a consent.changed. The event names the category the exception covers and the authority it was first recorded at. It never names the reason the rep gave, which stays on the row for the audit trail.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.category` | string | yes | Which category of send this vouch covers. The engine resolves every send to a single category, and the override applies to that one only. |
-| `data.decided_by_level` | string | yes | Whose decision it is (user \| admin), always the recording seat's own authority, never a value the request body could name. |
-| `data.override_id` | string (uuid) | yes | Which row was recorded. It is the handle the revoke door takes (POST /contacts/{id}/consent/allow/{overrideId}/revoke). A contact can hold several live vouches at once: one per category, and after a merge more than one for a single category. So a consumer with no id cannot say which of them a later consent.override_lifted describes. |
+| `data.decided_by_level` | string | yes | Whose decision it is (user \| admin): the authority of the seat that recorded the original exception. |
+| `data.override_id` | string (uuid) | yes | Which row the merge wrote. It is the handle the revoke door takes (POST /contacts/{id}/consent/allow/{overrideId}/revoke). A contact can hold several live vouches at once: one per category, and after a merge more than one for a single category. So a consumer with no id cannot say which of them a later consent.override_lifted describes. |
 
 ### `consent.suppressed`
 
@@ -977,14 +1026,14 @@ Payload for forecast.created, somebody accountable for a number said what they b
 
 Record: `user` · version 1
 
-Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the seven alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit.
+Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the eight alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.actor_user_id` | string (uuid) | yes |  |
 | `data.exception_id` | string (uuid) | yes |  |
 | `data.expires_at` | string (date-time) | no | When a suppressing answer stops holding. Present only for the two outcomes that hide a finding, a consumer that re-surfaces findings needs the date. |
-| `data.outcome` | string: `fixed_record`, `added_evidence`, `value_correct`, `not_relevant`, `remind_later`, `reassign`, `condition_cleared` | yes |  |
+| `data.outcome` | string: `fixed_record`, `added_evidence`, `value_correct`, `not_relevant`, `remind_later`, `reassign`, `condition_cleared`, `separate` | yes |  |
 
 ### `forecast.share_issued`
 
@@ -1163,6 +1212,7 @@ Payload for lead.sla_breached: the first scan on which a lead's first-response d
 |---|---|---|---|
 | `data.deadline` | string (date-time) | yes | The first-response deadline that passed. |
 | `data.escalation_target` | string (uuid) | no | The seat the scan chose for the escalation: the lead's owner while that owner can be handed work, else the intake seat. Delivery asks again, so the task and notice can go to the intake seat instead, or to nobody. Absent when no seat was chosen, so it can differ from `owner_id`. |
+| `data.lead_name` | string | no | The lead's name at breach time. The escalation names the lead it is about without reading it back. |
 | `data.owner_id` | string (uuid) | no | The lead's owner at breach time (absent when unrouted). |
 
 ### `lead.updated`
@@ -1198,6 +1248,40 @@ Deprecated: the lead source list no longer feeds the score, and a separate break
 | `data.change` | string: `created`, `updated`, `deleted` | yes |  |
 | `data.key` | string | yes | The stable key leads carry, which never changes for a given source. |
 | `data.source_id` | string (uuid) | yes |  |
+
+### `legal_review.decided`
+
+Record: `legal_review` · version 1
+
+Payload for legal_review.decided: legal answered a request. It carries the outcome and none of the reviewer's comments.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.deal_id` | string (uuid) | yes | The deal under review. |
+| `data.outcome` | string | yes | approved or changes_needed. |
+| `data.review_id` | string (uuid) | yes | The review that was answered. |
+
+### `legal_review.requested`
+
+Record: `legal_review` · version 1
+
+Payload for legal_review.requested: a deal's side asked legal to review the deal. It names the deal and the review and nothing the requester wrote: a receiver reads the note under its own scope.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.deal_id` | string (uuid) | yes | The deal under review. |
+| `data.review_id` | string (uuid) | yes | The review the request opened. |
+
+### `legal_review.withdrawn`
+
+Record: `legal_review` · version 1
+
+Payload for legal_review.withdrawn: the deal's side took back an open request.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.deal_id` | string (uuid) | yes | The deal under review. |
+| `data.review_id` | string (uuid) | yes | The review that was taken back. |
 
 ### `linkedin_account.changed`
 
@@ -1341,7 +1425,7 @@ Payload for notification.preference_changed, one seat decided how a class of not
 
 Record: `offer` · version 1
 
-Payload for offer.accepted, a sent offer was accepted. The deal's headline amount is synced from this offer's gross in the same transaction (see deal.updated on the paired deal entity).
+Payload for offer.accepted: a sent offer was accepted. The deal's headline amount is synced from this offer's net, the figure without tax, in the same transaction. The paired deal.updated carries that net. This payload still states the offer's own gross.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
@@ -1533,6 +1617,18 @@ Payload for project.updated, a column patch on the project row. It is not emitte
 |---|---|---|---|
 | `data.changed_fields` | object | yes | What this update touched, incl. runtime cf_* custom fields. |
 
+### `record_link.changed`
+
+Record: `dynamic` · version 1
+
+Payload for record_link.changed. A typed link was made or removed. The subject is the record the link starts on (deal, company or contact), so only a subscriber who may see that record gets the event. It names the link and its type. It does not name the record on the other end, which that subscriber may not be allowed to see.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.link_id` | string (uuid) | yes |  |
+| `data.link_type` | string | yes | A core type word, or `ext:<unit>:<type>`. |
+| `data.status` | string | yes | One of added or removed. |
+
 ### `relationship_nudge.decided`
 
 Record: `contact` · version 1
@@ -1550,7 +1646,7 @@ Payload for relationship_nudge.decided. A rep set a lapsed contact aside so thei
 
 Record: `dynamic` · version 1
 
-Payload for retention.applied. A retention or erasure action ran against one record. Four emit sites have four different runtime subjects. The embed-call sweep acts on ai_call. The voice-learning-signal content sweep acts on voice_learning_signal. A workspace's configured retention policy acts on its object type (activity | deal | lead | contact | ai_call_payload). Art. 17 erasure acts on a contact. None is fixed enough for this schema to name, so this is a dynamic-entity event (contract `x-entity-type: dynamic`). The generated EntityType() is unused, and each emit site supplies its own runtime entity type through storekit.EmitEventForEntity. The policy and reason fields are a union across the sites. Both telemetry sweeps set neither, the policy-driven sweep sets only policy, and Art. 17 erasure sets only reason.
+Payload for retention.applied. A retention or erasure action ran against one record. Three emit sites have three different runtime subjects. The voice-learning-signal content sweep acts on voice_learning_signal. A workspace's configured retention policy acts on its object type (activity | deal | lead | contact | ai_call_payload). Art. 17 erasure acts on a contact. None is fixed enough for this schema to name, so this is a dynamic-entity event (contract `x-entity-type: dynamic`). The generated EntityType() is unused, and each emit site supplies its own runtime entity type through storekit.EmitEventForEntity. The policy and reason fields are a union across the sites. The voice sweep sets neither, the policy-driven sweep sets only policy, and Art. 17 erasure sets only reason.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|

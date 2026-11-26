@@ -14,11 +14,13 @@ const (
 	ruleMeetingFollowUp moveRule = "meeting_follow_up"
 	ruleOpenTask        moveRule = "open_task"
 	ruleRequestReminder moveRule = "request_reminder"
+	ruleRequestReplied  moveRule = "request_replied"
 	ruleAcceptRequest   moveRule = "accept_request"
 	ruleFarMeeting      moveRule = "future_meeting"
 	ruleFirstOutreach   moveRule = "first_outreach"
 	ruleNextStep        moveRule = "next_step"
 	ruleMeetingRequest  moveRule = "meeting_request"
+	ruleBringInManager  moveRule = "bring_in_manager"
 )
 
 type moveRuleDefinition struct {
@@ -31,11 +33,13 @@ var moveRules = map[moveRule]moveRuleDefinition{
 	ruleMeetingFollowUp: {ActionDraftEmail, sameCurrentBasis},
 	ruleOpenTask:        {ActionOpenTask, sameCurrentBasis},
 	ruleRequestReminder: {ActionDraftEmail, sameCurrentBasis},
+	ruleRequestReplied:  {ActionOpenTask, sameCurrentBasis},
 	ruleAcceptRequest:   {ActionCreateTask, sameCurrentBasis},
 	ruleFarMeeting:      {ActionOpenMeetingBrief, sameCurrentBasis},
 	ruleFirstOutreach:   {ActionDraftEmail, sameCurrentBasis},
 	ruleNextStep:        {ActionCreateTask, sameCurrentBasis},
 	ruleMeetingRequest:  {ActionCreateTask, sameCurrentBasis},
+	ruleBringInManager:  {ActionBringInManager, sameCurrentBasis},
 }
 
 func ruleMove(rule moveRule, reason string, args map[string]any, evidence ...crmcontracts.DealNextBestActionEvidence) crmcontracts.DealStatusCardMove {

@@ -54,14 +54,26 @@ seeds:
   # its `seeds:` replace the base's whole. Comment this block out to let your
   # own file bind instead.
   ai_routing:
+    # The same binding as config/presets/gemini_cloud.yaml, where each model and
+    # thinking level is explained. TestTheDevPostureBindsTheGeminiCloudPreset
+    # holds the two equal, so a model the API retires is changed in both.
+    #
     # cloud_frontier, not eu_hosted: the Gemini Developer API states no EU
     # processing region, so nothing here keeps text in the EU.
     profile: cloud_frontier     # eu_hosted | sovereign | cloud_frontier
     tiers:
       local_small: { provider: gemini, model: gemini-3.1-flash-lite }
       cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
-      premium:     { provider: gemini, model: gemini-3.5-flash }
-      frontier:    { provider: gemini, model: gemini-3.1-pro-preview }
+      premium:     { provider: gemini, model: gemini-3.8-flash, thinking_level: low }
+      frontier:    { provider: gemini, model: gemini-3.8-flash, thinking_level: low }
+    # As gemini_cloud.yaml: the scheduled agents, search plans and voice
+    # builds answer on premium first.
+    task_ladders:
+      agent_loop: [premium, cheap_cloud]
+      nl_search: [premium, cheap_cloud]
+      voice_build: [premium, cheap_cloud]
+      rewrite: [premium, cheap_cloud]
+      growth_fit: [premium, cheap_cloud]
     # The embed lane rides the SAME provider as the tiers above, so a dev
     # stack needs one credential (GEMINI_API_KEY) rather than two.
     #

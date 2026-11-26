@@ -19,7 +19,7 @@ afterEach(() => {
   // is what every other case here asserts.
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
-  window.location.hash = "";
+  globalThis.history.replaceState(null, "", "/");
   sessionStorage.clear();
 });
 
@@ -258,6 +258,36 @@ describe("federated sign-in", () => {
 
       expect(assign).toHaveBeenCalledWith("/v1/auth/oidc/microsoft/start");
       expect(takeReturnRoute()).toBe("#/home?approval=ap-7");
+    });
+  });
+
+  // An MCP client's consent popup must come back to the consent screen, so the
+  // buttons there ask the server for that landing, and only there.
+  it("asks for the consent landing from the consent screen only", async () => {
+    globalThis.history.replaceState(
+      null,
+      "",
+      "/consent#/oauth-consent?client_id=cl-1&state=s",
+    );
+    await stubLocationAssign(async (assign) => {
+      stubApi(
+        {
+          password: true,
+          password_reset: true,
+          oidc_providers: [{ key: "google", label: "Continue with Google" }],
+        },
+        () => ok(200),
+      );
+      render(<AuthScreen onAuthed={vi.fn()} />);
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Continue with Google" }),
+      );
+
+      expect(assign).toHaveBeenCalledWith(
+        "/v1/auth/oidc/google/start?return=consent",
+      );
+      expect(takeReturnRoute()).toBe("#/oauth-consent?client_id=cl-1&state=s");
     });
   });
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dueday"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
@@ -54,7 +55,7 @@ func homeRepairCommitmentProposalTx(ctx context.Context, tx pgx.Tx, proposal app
 	}
 	var due *time.Time
 	if staged.DueDate != "" {
-		at, err := commitmentDueInstant(ctx, tx, staged.DueDate, staged.DueZone)
+		at, err := dueday.EndOf(ctx, tx, staged.DueDate, staged.DueZone)
 		if err != nil {
 			return item, err
 		}

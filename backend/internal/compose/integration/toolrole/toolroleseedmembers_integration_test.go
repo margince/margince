@@ -15,16 +15,18 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// sweepSeed is what a state seed reaches: the app, the pool it notes facts in,
-// and the seeders of the kinds it builds on.
+// sweepSeed is what a state seed reaches: the app, the pool it notes facts in
+// and the seeders of the kinds it builds on. Its owner owns what they make.
 type sweepSeed struct {
 	t      *testing.T
 	e      *apptest.AppEnv
 	pool   *recordPool
 	create map[string]func() string
+	owner  string
 }
 
 // call sends one route as the signed-in admin and stops the sweep on any
@@ -34,7 +36,14 @@ type sweepSeed struct {
 func (s sweepSeed) call(method, path string, body any, headers map[string]string, out any) {
 	s.t.Helper()
 	var raw json.RawMessage
-	if status := s.e.Call(s.t, method, path, body, headers, &raw); status < 200 || status >= 300 {
+	status := s.e.CallUntilSettled(s.t, method, path, body, headers, &raw)
+	// The roles seed in parallel, so a schema change can meet another role's
+	// writes. The server answers that it may be retried, and each try waits out
+	// its lock timeout first.
+	for try := 1; try < tableBusyTries && tableBusy(status, raw); try++ {
+		status = s.e.CallUntilSettled(s.t, method, path, body, headers, &raw)
+	}
+	if status < 200 || status >= 300 {
 		s.t.Fatalf("seeding %s %s → %d %s", method, path, status, raw)
 	}
 	if out != nil {
@@ -42,6 +51,17 @@ func (s sweepSeed) call(method, path string, body any, headers map[string]string
 			s.t.Fatalf("seeding %s %s answered %s: %v", method, path, raw, err)
 		}
 	}
+}
+
+const tableBusyTries = 10
+
+// tableBusy reports the custom-field answer that asks for the schema change again.
+func tableBusy(status int, raw json.RawMessage) bool {
+	var problem struct {
+		Detail string `json:"detail"`
+	}
+	return status == http.StatusConflict && json.Unmarshal(raw, &problem) == nil &&
+		problem.Detail == customfields.ErrTableBusy.Error()
 }
 
 // asCallerWhereItMay makes a record as the call's own passport. A role refused that
@@ -120,7 +140,7 @@ func memberSeeders(s sweepSeed) map[string]func() string {
 		// A contact a colleague off the caller's team owns, which a seat short
 		// of all row scope may ask to be handed.
 		"stranger_contact": func() string {
-			return s.post("/v1/contacts", integration.AnyMap{"full_name": "Role Sweep", "source": "manual", "owner_id": active("rep")})
+			return s.post("/v1/contacts", integration.AnyMap{"full_name": "Role Sweep", "source": "manual", "owner_id": active("rep"), "emails": []map[string]string{{"email": uniqueEmail()}}})
 		},
 		"invited_user":     func() string { return invited("rep") },
 		"deactivated_user": deactivated,
@@ -241,6 +261,13 @@ func accessSeeders(s sweepSeed) map[string]func() string {
 			company := s.post("/v1/companies", integration.AnyMap{"display_name": "Sweep " + ids.NewV7().String(), "source": "manual", "owner_id": s.create["user"]()})
 			defer s.asRoles("rep")()
 			s.call("POST", "/v1/records/company/"+company+"/ownership-request", integration.AnyMap{}, nil, nil)
+			return company
+		},
+		// The same ask for edit access, on a company of its own.
+		"edit_asked_company": func() string {
+			company := s.post("/v1/companies", integration.AnyMap{"display_name": "Sweep " + ids.NewV7().String(), "source": "manual", "owner_id": s.create["user"]()})
+			defer s.asRoles("rep")()
+			s.call("POST", "/v1/records/company/"+company+"/edit-access-request", nil, nil, nil)
 			return company
 		},
 	}

@@ -1,0 +1,22 @@
+{
+  "commission": ["deals", "analytics"],
+  "company": ["companies"],
+  "contact": ["contacts"],
+  "deal": ["deals"],
+  "deal_room": ["deals"],
+  "forecast": ["deals"],
+  "lead": ["leads"],
+  "list": ["filters"],
+  "offer": ["deals"],
+  "offer_template": ["deals"],
+  "pipeline": ["deals"],
+  "product": ["deals"],
+  "project": ["projects"],
+  "report_definition": ["analytics"],
+  "report_edition": ["analytics"],
+  "report_schedule": ["analytics"],
+  "reporting_credit": ["leads"],
+  "sales_target": ["analytics"],
+  "saved_view": ["filters"],
+  "tag": ["filters"]
+}

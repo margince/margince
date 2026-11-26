@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "installation_jurisdiction",
+  "verb": "read_installation_jurisdiction",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

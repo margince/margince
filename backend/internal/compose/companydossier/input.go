@@ -12,12 +12,15 @@ package companydossier
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Facts is the read seam over the company's factual sidecars. It is an
@@ -61,6 +64,9 @@ type Input struct {
 	// had. The model is shown the code worded in the prompt language
 	// (encodeInput), which the language component of the fingerprint covers.
 	Industry string `json:"industry,omitempty"`
+	// SizeBand is the company column's employee band, kept as Industry is:
+	// omitted when empty so a company without one keeps its fingerprint.
+	SizeBand string `json:"size_band,omitempty"`
 	// AssessAgainst is the legal entity whose offering this company is judged
 	// against, empty for the main one. The offering read and the model request
 	// both take it from here, so the cache key and the prompt use one value. It
@@ -98,14 +104,39 @@ func BuildInput(ctx context.Context, facts Facts, id ids.CompanyID) (Input, erro
 	if err != nil {
 		return Input{}, err
 	}
+	industry, band := companyIndustry(company), companySizeBand(company)
 	return Input{
 		CompanyID:     id.String(),
 		Name:          company.DisplayName,
-		Industry:      companyIndustry(company),
+		Industry:      industry,
+		SizeBand:      band,
 		AssessAgainst: assessAgainstOf(company),
-		ProfileFields: fields,
-		Facts:         extracted,
+		ProfileFields: fieldsBesideColumn(fields, industry),
+		Facts:         factsBesideColumn(extracted, band),
 	}, nil
+}
+
+// fieldsBesideColumn drops the industry profile field when the company column
+// holds one. The column is what the record shows and what the fit counts, so a
+// second industry could only be cited against it.
+func fieldsBesideColumn(fields []crmcontracts.CompanyProfileField, industry string) []crmcontracts.CompanyProfileField {
+	if industry == "" {
+		return fields
+	}
+	return slices.DeleteFunc(fields, func(field crmcontracts.CompanyProfileField) bool {
+		return field.Field == crmcontracts.CompanyProfileFieldFieldIndustry
+	})
+}
+
+// factsBesideColumn is fieldsBesideColumn for size: the size band column
+// replaces every employee range fact.
+func factsBesideColumn(facts []crmcontracts.CompanyFact, band string) []crmcontracts.CompanyFact {
+	if band == "" {
+		return facts
+	}
+	return slices.DeleteFunc(facts, func(fact crmcontracts.CompanyFact) bool {
+		return fact.Field == crmcontracts.CompanyFactFieldEmployeeRange
+	})
 }
 
 // KnownRecords is what this dossier was assembled from, keyed by TYPE AND ID.
@@ -119,16 +150,17 @@ func BuildInput(ctx context.Context, facts Facts, id ids.CompanyID) (Input, erro
 // gap to paper over: a sentence citing a field the assembler cannot name is a
 // sentence the reader cannot open, and the filter is supposed to drop it.
 //
-// The COMPANY is not in the set either, for the same reason stated once
-// more. It is the one id every assembly holds, so admitting it would ground any
-// sentence at all — a model with nothing to say could cite the company and pass
-// — and the receipt endpoint has nothing to answer with, because the row
-// carries no provenance of its own. A citation that resolves to nothing teaches
-// the reader that citations do not work.
+// The COMPANY is in the set only when its industry or size band column holds a
+// value, and its source is those two columns alone. A sentence about the
+// column is then citable, and the company cannot ground a figure it does not
+// hold.
 // The VALUE is what that row said, as the model was shown it, so a sentence can
 // be held to the rows it points at rather than only to their existence.
 func KnownRecords(in Input) map[claims.Evidence]string {
 	known := map[claims.Evidence]string{}
+	if columns := companyColumnsOf(in, ""); columns != nil && in.CompanyID != "" {
+		known[claims.Evidence{EntityType: citeCompany, EntityID: in.CompanyID}] = claims.Source(columns)
+	}
 	for _, field := range in.ProfileFields {
 		if field.Id == nil {
 			continue
@@ -144,12 +176,40 @@ func KnownRecords(in Input) map[claims.Evidence]string {
 	return known
 }
 
+// companyColumns is the company record as the prompts show it: its id, so a
+// sentence can cite it, and the two columns the assessment reads.
+type companyColumns struct {
+	ID       string `json:"id"`
+	Industry string `json:"industry,omitempty"`
+	SizeBand string `json:"size_band,omitempty"`
+}
+
+// companyColumnsOf is nil when neither column holds a value, so a company with
+// nothing to say is neither shown nor citable. The industry is worded in lang.
+func companyColumnsOf(in Input, lang string) *companyColumns {
+	if in.Industry == "" && in.SizeBand == "" {
+		return nil
+	}
+	return &companyColumns{
+		ID:       in.CompanyID,
+		Industry: contacts.IndustryWords(in.Industry, textlang.Lang(lang)),
+		SizeBand: in.SizeBand,
+	}
+}
+
 // companyIndustry is the trimmed industry column, or "" when the company has none.
 func companyIndustry(company crmcontracts.Company) string {
 	if company.Industry == nil {
 		return ""
 	}
 	return strings.TrimSpace(string(*company.Industry))
+}
+
+func companySizeBand(company crmcontracts.Company) string {
+	if company.SizeBand == nil {
+		return ""
+	}
+	return string(*company.SizeBand)
 }
 
 func assessAgainstOf(company crmcontracts.Company) string {

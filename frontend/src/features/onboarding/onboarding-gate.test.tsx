@@ -4,6 +4,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
   render as rtlRender,
@@ -50,8 +51,15 @@ afterEach(() => {
 
 let restoreMotion: (() => void) | null = null;
 
-const render = (ui: ReactNode) =>
-  rtlRender(<LocaleProvider initial="en">{ui}</LocaleProvider>);
+// A wrapper, not a tree, so a rerender keeps the client the band's Sign out reads.
+const render = (ui: ReactNode) => {
+  const client = new QueryClient();
+  return rtlRender(<LocaleProvider initial="en">{ui}</LocaleProvider>, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    ),
+  });
+};
 
 function fact(
   over: Partial<CompanySiteReadFact> & { value_key: string },
@@ -224,6 +232,32 @@ describe("OnboardingGate", () => {
     );
 
     expect(onManual).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers no website read without a model, only the manual path and the key", async () => {
+    const onManual = vi.fn();
+    const onAddModel = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <OnboardingGate
+        running={false}
+        onSubmit={vi.fn()}
+        onManual={onManual}
+        onAddModel={onAddModel}
+        configuredModel={MODEL}
+      />,
+    );
+
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByText(MODEL)).toBeNull();
+    expect(screen.getByText(/cannot read your website/)).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Enter details manually" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Add an AI key" }));
+
+    expect(onManual).toHaveBeenCalledTimes(1);
+    expect(onAddModel).toHaveBeenCalledTimes(1);
   });
 
   it("reports a failed read with the server's own detail and stays usable", () => {

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -50,6 +51,7 @@ func (r *setUpPartnerResolver) Subject(ctx context.Context, cmd SetUpPartnerComm
 		TargetType:    string(datasource.EntityCompany),
 		TargetID:      cmd.CompanyID,
 		TargetVersion: &rec.Version,
+		SystemText:    &systemtext.Message{Subject: systemtext.Sentence("agent.setUpPartner", systemtext.Label(fmt.Sprint(recordLabel(rec))), systemtext.Text(fmt.Sprint(strings.Join(cmd.Kinds, ", "))))},
 		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).setUpPartner, recordLabel(rec), strings.Join(cmd.Kinds, ", ")),
 	}, nil
 }

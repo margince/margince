@@ -7,13 +7,19 @@ import {
   useMemo,
   useRef,
 } from "react";
-import { FIRST_PAGE } from "../api/client";
 import type { ListChip, ListView } from "../design-system/listtable";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useHealthScope } from "../lib/healthscope";
+import { problemFieldErrorsOf } from "../lib/problem";
 import { useTagVocabulary } from "../lib/tags.queries";
 import { currentParams, useUrlParams } from "../lib/urlstate";
 import "./listquery.css";
+import {
+  type ListFetchPage,
+  listInfiniteOptions,
+  listOpening,
+} from "./listquery.options";
 
 // The shared list foundation (P-14): every list screen sends the rich
 // q/sort/cursor/include_archived/filter vocabulary instead of a flat
@@ -21,7 +27,6 @@ import "./listquery.css";
 // mutate under a live feed). useListQuery owns the react-query wiring;
 // ListTable binds that query to the list surface, which owns the controls.
 import {
-  LIST_PAGE_SIZES,
   type ListQuery,
   listPageOf,
   listQueryFromParams,
@@ -131,6 +136,12 @@ export type RailView = ListView &
     perPage?: number;
   }>;
 
+/** The codes a list read's `sort` field error carries for a sort it does not take. */
+const SORT_REFUSALS: ReadonlySet<string> = new Set([
+  "sort_field_not_allowed",
+  "sort_unsupported",
+]);
+
 export function useListQuery<Row>({
   key,
   fetchPage,
@@ -141,10 +152,7 @@ export function useListQuery<Row>({
   enabled,
 }: Readonly<{
   key: string;
-  fetchPage: (
-    query: ListQuery,
-    cursor: string | null,
-  ) => Promise<ListPage<Row>>;
+  fetchPage: ListFetchPage<Row>;
   initialSort?: string;
   /**
    * Filters the list opens on, for a reader who has not narrowed it themselves.
@@ -182,14 +190,8 @@ export function useListQuery<Row>({
   enabled?: (query: ListQuery) => boolean;
 }>) {
   const [params, setParams] = useUrlParams();
-  const opening = useMemo<ListQuery>(
-    () => ({
-      q: "",
-      sort: initialSort ?? "",
-      includeArchived: false,
-      filters: initialFilters ?? {},
-      perPage: LIST_PAGE_SIZES[0],
-    }),
+  const opening = useMemo(
+    () => listOpening(initialSort, initialFilters),
     [initialSort, initialFilters],
   );
 
@@ -291,16 +293,29 @@ export function useListQuery<Row>({
     [opening, setParams, screenDials, paramScope],
   );
 
+  // Rows are read for one reader scope; until /me names it nothing is read.
+  const readerScope = useHealthScope();
   const infinite = useInfiniteQuery({
-    queryKey: [key, query],
-    enabled: enabled?.(query) ?? true,
-    queryFn: ({ pageParam }) => fetchPage(query, pageParam),
-    initialPageParam: FIRST_PAGE,
-    getNextPageParam: (last) =>
-      last.page.has_more && last.page.next_cursor
-        ? last.page.next_cursor
-        : undefined,
+    ...listInfiniteOptions(key, readerScope ?? "", query, fetchPage),
+    enabled: readerScope !== undefined && (enabled?.(query) ?? true),
   });
+  // A bookmark from an older build can name a sort the server no longer
+  // offers. The list then opens in its own order. If that one is refused too,
+  // it asks for no sort at all, which the server always takes.
+  const sortRefused = problemFieldErrorsOf(infinite.error).some(
+    (refusal) => refusal.field === "sort" && SORT_REFUSALS.has(refusal.code),
+  );
+  // Keyed on the sort too. A cached read that kept its rows also keeps its
+  // refusal, so going back to a refused opening order changes nothing else.
+  useEffect(() => {
+    if (!sortRefused || query.sort === "") {
+      return;
+    }
+    setQuery((prev) => ({
+      ...prev,
+      sort: prev.sort === opening.sort ? "" : opening.sort,
+    }));
+  }, [sortRefused, query.sort, setQuery, opening.sort]);
   const rows = (infinite.data?.pages ?? []).flatMap((page) => page.data);
   return {
     rows,
@@ -311,10 +326,11 @@ export function useListQuery<Row>({
     paramScope,
     hasMore: infinite.hasNextPage,
     loadMore: () => infinite.fetchNextPage(),
-    // Read off the LAST page fetched rather than the first: each response
-    // recounts against the same filters, so the newest answer is the one that
-    // has seen the most recent writes.
-    total: infinite.data?.pages.at(-1)?.page.total,
+    // The newest page that counted. A record list counts on its first page
+    // only; a refetch re-reads that page, so a later write still reaches it.
+    total: infinite.data?.pages.findLast(
+      (page) => page.page.total !== undefined,
+    )?.page.total,
     isPending: infinite.isPending,
     isError: infinite.isError,
     error: infinite.error,
@@ -400,6 +416,7 @@ export function useTagChips(): readonly ListChip[] {
         ? t("tags.columnHeaderPartial")
         : t("tags.columnHeader"),
       allLabel: t("tags.filterAll"),
+      filterable: true,
       options: words.map((tag) => ({ value: tag.id, label: tag.name })),
     },
   ];

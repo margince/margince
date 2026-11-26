@@ -26,7 +26,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -63,54 +62,6 @@ const (
 // wrote by accident.
 const reviewKindSingle = "single"
 
-// RefusedRecipient is one recipient's half of a refusal, as the engine gave it.
-//
-// The ADDRESS is stored, which is why the privacy engine clears this column
-// with the subject. A reason code without an address says a message was refused
-// and not who for, which is exactly the question the rep is asking.
-type RefusedRecipient struct {
-	Address     string `json:"address"`
-	SubjectKind string `json:"subject_kind,omitempty"`
-	SubjectID   string `json:"subject_id,omitempty"`
-	ReasonCode  string `json:"reason_code"`
-	Category    string `json:"category,omitempty"`
-	// Requested is what the sender claimed the message is, which an unproven
-	// claim never writes into Category. Empty on a snapshot from before it.
-	Requested string `json:"requested,omitempty"`
-	// DealID is the deal the message named as its evidence, so an answer to
-	// this refusal is recorded about that deal. Nil when it named none.
-	DealID *ids.UUID `json:"deal_id,omitempty"`
-	// PurposeID is the purpose the SEND resolved to, nil for a broad send —
-	// and nil, additively, for a snapshot written before this field existed.
-	PurposeID *ids.UUID `json:"purpose_id,omitempty"`
-	// CanBeOverruled is the preview's own answer for this refusal. It is told
-	// to the sender and never stored: a stored copy would outlive the rule.
-	CanBeOverruled bool `json:"-"`
-	// RequestedCategory is the reason for contact the sender picked. It is told
-	// to the sender and never stored: the decision row already records it, and
-	// Category stays the engine's own reading. An unproven claim never
-	// resolves, so this is the only place the sender's pick travels, and the
-	// remedy for a failed active-deal claim is named from it.
-	RequestedCategory string `json:"-"`
-}
-
-// claim is what the sender said the message is: the claim when one was made,
-// otherwise the engine's reading.
-func (r RefusedRecipient) claim() commsauthz.Category {
-	if r.Requested != "" {
-		return commsauthz.Category(r.Requested)
-	}
-	return commsauthz.Category(r.Category)
-}
-
-// dealID is the deal the refused message named, or zero.
-func (r RefusedRecipient) dealID() ids.UUID {
-	if r.DealID == nil {
-		return ids.UUID{}
-	}
-	return *r.DealID
-}
-
 // Review is a refused send somebody can look at.
 type Review struct {
 	ID          ids.UUID
@@ -120,6 +71,8 @@ type Review struct {
 	InitiatedBy ids.UUID
 	Refusals    []RefusedRecipient
 	ReasonCode  string
+	Correction  *WordingCorrectionContext
+	Warnings    []OverrideWarning
 }
 
 // OpenReviewTx records one refusal, inside the transaction that refused.
@@ -169,7 +122,10 @@ func OpenReviewTx(ctx context.Context, tx pgx.Tx, set commsauthz.DecisionSet, in
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (delivery_intent_id)
 		  WHERE delivery_intent_id IS NOT NULL AND resolved_at IS NULL
-		  DO UPDATE SET refusals = EXCLUDED.refusals,
+		  DO UPDATE SET refusals = CASE WHEN EXISTS (
+		                    SELECT 1 FROM communication_instruction i
+		                    WHERE i.review_id = communication_review.id AND i.status = 'directed'
+		                  ) THEN communication_review.refusals ELSE EXCLUDED.refusals END,
 		                reason_code = EXCLUDED.reason_code,
 		                state = EXCLUDED.state,
 		                opened_at = now()
@@ -260,47 +216,20 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 			return err
 		}
 		out.State = openStateFor(out.State, out.Refusals)
+		out.Warnings = warningsServed(ctx, out.InitiatedBy, out.IntentID)
+		if err := s.nameReviewEntities(ctx, tx, out.Refusals); err != nil {
+			return err
+		}
+		correction, available, err := wordingCorrectionForReviewTx(ctx, tx, out.ID)
+		if err != nil {
+			return err
+		}
+		if available {
+			out.Correction = &correction
+		}
 		return nil
 	})
 	return out, err
-}
-
-// refusedRecipientsOf lifts the denied half of a decision set into what the row
-// stores. Order follows the set, so the first refusal is the one the summary
-// names.
-func refusedRecipientsOf(set commsauthz.DecisionSet) []RefusedRecipient {
-	denied := set.Denied()
-	if len(denied) == 0 {
-		return nil
-	}
-	out := make([]RefusedRecipient, 0, len(denied))
-	for _, d := range denied {
-		out = append(out, refusedRecipientOf(d))
-	}
-	return out
-}
-
-func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {
-	refusal := RefusedRecipient{
-		// Normalized on the way in, because the erasure sweeps match on it.
-		// A lowercased, trimmed comparison walks past an address stored as
-		// typed. What it walks past is an erased subject's mailbox.
-		Address:     strings.ToLower(strings.TrimSpace(d.Recipient.Email)),
-		SubjectKind: d.SubjectKind,
-		ReasonCode:  d.ReasonCode,
-		Category:    string(d.Resolved),
-		Requested:   string(d.Requested),
-		PurposeID:   d.PurposeID,
-		DealID:      zeroUUIDAsNull(d.Evidence.DealID),
-		// The same answer the preview sends, so the composer picks the same
-		// deciding recipient before and after Send.
-		CanBeOverruled:    d.CanBeOverruledByCategory(),
-		RequestedCategory: string(d.Requested),
-	}
-	if !d.SubjectID.IsZero() {
-		refusal.SubjectID = d.SubjectID.String()
-	}
-	return refusal
 }
 
 // stateFor decides which kind of work this refusal is.
@@ -411,8 +340,10 @@ func (g *Gate) RecordRefusal(ctx context.Context, set commsauthz.DecisionSet, in
 	var out Review
 	err := g.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = OpenReviewTx(ctx, tx, set, intentID)
-		return err
+		if out, err = OpenReviewTx(ctx, tx, set, intentID); err != nil {
+			return err
+		}
+		return RecordFooterHoldTx(ctx, tx, set, intentID, principal.Unattended(ctx))
 	})
 	return out, err
 }
@@ -455,7 +386,7 @@ func (s *Store) ReviewForInitiator(ctx context.Context, id ids.UUID) (Review, er
 			return err
 		}
 		out.State = openStateFor(out.State, out.Refusals)
-		return nil
+		return s.nameReviewEntities(ctx, tx, out.Refusals)
 	})
 	return out, err
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // guessedMailboxSeatsDataTask takes off the mailbox owners the participant
@@ -21,7 +22,7 @@ import (
 func guessedMailboxSeatsDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792967725_guessed_mailbox_owners", Version: 1,
-		Title: "Removing mailbox owners guessed for older mail", Requires: []string{"core/1788151532"},
+		Title: systemtext.Literal("datatask.title.core.1792967725_guessed_mailbox_owners"), Requires: []string{"core/1788151532"},
 		Steps: []datatask.Step{{
 			Name: "retire_guessed_mailbox_owners", Limit: 200, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

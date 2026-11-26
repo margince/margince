@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { stable } from "../../src/format/collate";
 
 // Every shipped catalog of a locale, core and extension: a gate that names one
 // file reads a smaller tree and still passes.
@@ -41,7 +42,8 @@ export function readJsonCatalog(path: string): Catalog {
   return catalog;
 }
 
-// Listed by git, so a unit catalog in any layer counts.
+// Listed by git, so a unit catalog in any layer counts. An override layer
+// rewrites core keys and has no English twin, so it is not unit copy.
 function listedUnitCatalogs(locale: string): string[] {
   const listed = execFileSync(
     "git",
@@ -58,13 +60,18 @@ function listedUnitCatalogs(locale: string): string[] {
   const catalog = new RegExp(`(?:^|/)frontend/(?:.+/)?${locale}\\.json$`);
   return listed
     .split("\0")
-    .filter((path) => catalog.test(path) && !path.includes("/node_modules/"));
+    .filter(
+      (path) =>
+        catalog.test(path) &&
+        !path.includes("/node_modules/") &&
+        !path.includes("/i18n-overrides/"),
+    );
 }
 
 /** Each unit's `<locale>.json`, with the en.json beside it. */
 export function listedUnitCopy(locale: string): LocaleCopy[] {
   return listedUnitCatalogs(locale)
-    .sort()
+    .sort(stable)
     .map((path) => {
       const full = join(repoRoot, path);
       return {

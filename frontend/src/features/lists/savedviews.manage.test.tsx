@@ -144,7 +144,7 @@ describe("managing saved views", () => {
     await user.click(
       screen.getByRole("button", { name: "Rename German customers" }),
     );
-    const name = screen.getByLabelText("Name");
+    const name = screen.getByLabelText(/^Name/);
     expect((name as HTMLInputElement).value).toBe("German customers");
     await user.clear(name);
     await user.type(name, "DACH customers");
@@ -180,7 +180,7 @@ describe("managing saved views", () => {
         views={[{ ...row, name: "DACH customers", version: 4 }]}
       />,
     );
-    await user.type(screen.getByLabelText("Name"), " 2");
+    await user.type(screen.getByLabelText(/^Name/), " 2");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
@@ -193,8 +193,8 @@ describe("managing saved views", () => {
     );
   });
 
-  it("will not save an empty name", async () => {
-    stubServer([VIEW]);
+  it("says an empty name is required on Save, and sends nothing", async () => {
+    const seen = stubServer([VIEW]);
     const user = userEvent.setup();
     draw();
 
@@ -204,12 +204,13 @@ describe("managing saved views", () => {
     await user.click(
       screen.getByRole("button", { name: "Rename German customers" }),
     );
-    await user.clear(screen.getByLabelText("Name"));
+    const name = screen.getByLabelText(/^Name/);
+    await user.clear(name);
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(
-      (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
+    expect(screen.getByText("Name is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(name);
+    expect(seen.filter((request) => request.method === "PATCH")).toEqual([]);
   });
 
   it("asks before deleting, then removes the view", async () => {
@@ -242,7 +243,7 @@ describe("managing saved views", () => {
     draw({ ...UNNARROWED, q: "berlin" });
 
     await user.click(await screen.findByRole("button", { name: "Save view" }));
-    await user.type(screen.getByLabelText("Name"), "Berlin customers");
+    await user.type(screen.getByLabelText(/^Name/), "Berlin customers");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
@@ -288,11 +289,11 @@ describe("managing saved views", () => {
     await user.click(
       screen.getByRole("button", { name: "Rename German customers" }),
     );
-    await user.type(screen.getByLabelText("Name"), " 2");
+    await user.type(screen.getByLabelText(/^Name/), " 2");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByRole("alert")).toBeTruthy();
-    expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
+    expect((screen.getByLabelText(/^Name/) as HTMLInputElement).value).toBe(
       "German customers 2",
     );
   });

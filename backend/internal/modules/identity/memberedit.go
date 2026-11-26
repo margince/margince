@@ -6,7 +6,7 @@ package identity
 import (
 	"context"
 	"errors"
-	"strings"
+	"fmt"
 	"time"
 	"unicode/utf8"
 
@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -32,6 +33,14 @@ type MemberEdit struct {
 	// LegalEntity moves the member to that entity; nil keeps their entity.
 	LegalEntity       *ids.LegalEntityID
 	ExpectedUpdatedAt time.Time
+}
+
+// displayNameLine is a typed name as colleagues read it, on one line. The zero-width and
+// bidi characters that hide or reorder text in a picker or the audit log are dropped.
+// Controls go first, so a joiner is judged by the letters left beside it and a second
+// pass changes nothing.
+func displayNameLine(raw string) string {
+	return draftfloor.NameLine(values.WithoutZeroWidth(draftfloor.NameLine(raw)))
 }
 
 func validateDisplayName(name string) error {
@@ -50,10 +59,7 @@ func (s *Service) UpdateMember(ctx context.Context, actor Identity, member ids.U
 	if err != nil {
 		return err
 	}
-	in.Name = strings.TrimSpace(in.Name)
-	if err := validateDisplayName(in.Name); err != nil {
-		return err
-	}
+	in.Name = displayNameLine(in.Name)
 	email, err := values.ParseEmail(in.Email)
 	if err != nil {
 		return err
@@ -62,8 +68,11 @@ func (s *Service) UpdateMember(ctx context.Context, actor Identity, member ids.U
 	if in.Teams != nil && len(*in.Teams) > 2000 {
 		return &values.ParseError{Field: fieldTeamIDs, Code: codeInvalid, Message: "choose at most 2000 teams"}
 	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+	edit := func(tx pgx.Tx) error {
 		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
+		if err := lockMemberAddressClaims(ctx, tx, member, in.Email); err != nil {
 			return err
 		}
 		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, member, reachTakeover); err != nil {
@@ -86,7 +95,20 @@ func (s *Service) UpdateMember(ctx context.Context, actor Identity, member ids.U
 			}
 		}
 		return s.placeMember(ctx, tx, in.LegalEntity, member)
-	})
+	}
+	return storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, edit) })
+}
+
+// lockMemberAddressClaims takes the seat-address claim lock on the member's
+// login and on any address it is about to become, before any row lock. The
+// authorization lock the caller holds keeps the login read here current.
+func lockMemberAddressClaims(ctx context.Context, tx pgx.Tx, member ids.UserID, next ...string) error {
+	var login string
+	err := tx.QueryRow(ctx, `SELECT email FROM app_user WHERE id = $1`, member).Scan(&login)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("identity: reading the member's login: %w", err)
+	}
+	return storekit.LockSeatAddressClaims(ctx, tx, append(next, login)...)
 }
 
 func (s *Service) editMemberIdentityTx(ctx context.Context, tx pgx.Tx, actor Identity, member ids.UserID, in MemberEdit) error {
@@ -110,6 +132,11 @@ func (s *Service) editMemberIdentityTx(ctx context.Context, tx pgx.Tx, actor Ide
 	if email == in.Email && name == in.Name {
 		return nil
 	}
+	if name != in.Name {
+		if err := validateDisplayName(in.Name); err != nil {
+			return err
+		}
+	}
 	if email != in.Email {
 		if err := requireUnusedMemberEmail(ctx, tx, member); err != nil {
 			return err
@@ -119,6 +146,9 @@ func (s *Service) editMemberIdentityTx(ctx context.Context, tx pgx.Tx, actor Ide
 		if storekit.IsUniqueViolation(err) {
 			return errEmailTaken
 		}
+		return err
+	}
+	if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
 		return err
 	}
 	if email != in.Email {

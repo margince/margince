@@ -3,48 +3,16 @@
 
 package contacts
 
-// The total beside a list page: how many rows match the request once the
-// keyset cursor is set aside. Split from listpage.go, which owns the page
-// read — the count is a second statement over the same WHERE, and keeping it
-// here is what makes "same filters, same scope, no cursor" one readable rule
-// rather than a branch inside the page read.
-
 import (
 	"context"
 	"strings"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
-
-// countPassKey marks the context of the count pass, so the shared filter
-// chain drops the keyset cursor and counts the whole matching set.
-//
-// A context value rather than a parameter because the three record lists build
-// their own listFilters INSIDE the spec's filters closure — contact_list.go,
-// company_list.go and lead_list.go each spell one — and the count re-runs that
-// same closure so a filter can never reach the page without reaching the
-// count. Threading a flag through would mean editing every closure to forward
-// it: three chances to forward it wrong today, and a fourth the next record
-// list forgets, with the failure being a total that silently counts the wrong
-// set.
-//
-// Held by: TestAListTotalDoesNotShrinkAsTheReaderPagesForward
-// (backend/internal/modules/contacts/listtotal_integration_test.go), which
-// pages forward and fails if the count inherited the cursor — the one thing
-// this mark exists to prevent.
-type countPassKey struct{}
-
-// countingSet reports whether ctx is the count pass rather than the page read.
-func countingSet(ctx context.Context) bool {
-	return ctx.Value(countPassKey{}) != nil
-}
-
-// forCountPass marks ctx as the count pass.
-func forCountPass(ctx context.Context) context.Context {
-	return context.WithValue(ctx, countPassKey{}, struct{}{})
-}
 
 // countQuery is one prepared COUNT(*): the statement and its bind values.
 type countQuery struct {
@@ -52,8 +20,8 @@ type countQuery struct {
 	args []any
 }
 
-// countWhere builds the COUNT(*) that labels a page — how many rows match the
-// request once the cursor is set aside.
+// countWhere builds the COUNT(*) that labels a first page: how many rows match
+// the request. It runs only on a page without a cursor, so it counts the whole set.
 //
 // It re-runs the spec's OWN filters closure against a fresh argument counter
 // rather than reusing the page's clauses, so the count is assembled by the same
@@ -65,8 +33,8 @@ type countQuery struct {
 // argument slice while nothing in a COUNT's WHERE ever uses them — Postgres
 // then refuses the statement outright, because a bind with no placeholder has
 // no type to infer ("could not determine data type of parameter $1"). The
-// count needs the sort only to satisfy the filters signature: the one clause
-// that reads it is the keyset cursor, which the count pass drops.
+// count needs the sort only for the filters signature. The one clause that
+// reads it is the keyset cursor, and a first page has none.
 //
 // Held by: TestTheContactsListSortsByTheEmployerItDraws and
 // TestAnUnreadableEmployerOrdersTheContactsListByNothing
@@ -87,12 +55,11 @@ func countWhere[T any](
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 
-	counting := forCountPass(ctx)
 	where := []string{whereAlways}
 	// The caller's row scope, asked again on this statement's own counter. A
 	// count that skipped it would say how many rows EXIST rather than how many
 	// this reader may see, which is a disclosure wearing a total's clothes.
-	scope, err := auth.ScopeClauseFor(counting, spec.entity, "", arg)
+	scope, err := auth.ScopeClauseFor(ctx, spec.entity, "", arg)
 	if err != nil {
 		return countQuery{}, err
 	}
@@ -100,7 +67,7 @@ func countWhere[T any](
 		where = append(where, scope)
 	}
 
-	filters, err := spec.filters(counting, active, sorted, arg)
+	filters, err := spec.filters(ctx, active, sorted, arg)
 	if err != nil {
 		return countQuery{}, err
 	}
@@ -110,4 +77,16 @@ func countWhere[T any](
 		sql:  `SELECT count(*) FROM ` + spec.entity + ` WHERE ` + strings.Join(where, " AND "),
 		args: args,
 	}, nil
+}
+
+// firstPageTotal labels a first page. A later page sends no total, because the
+// client keeps the first page's and a recount per page reads the whole set again.
+// fetched includes the extra row requested to detect another page.
+func firstPageTotal(ctx context.Context, tx pgx.Tx, total countQuery, fetched, limit int) (int, error) {
+	if fetched <= limit {
+		return fetched, nil
+	}
+	var matching int
+	err := tx.QueryRow(ctx, total.sql, total.args...).Scan(&matching)
+	return matching, err
 }

@@ -103,7 +103,7 @@ func stageContactAndAgent(t *testing.T, e *apptest.AppEnv, fullName, label strin
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": fullName}, nil, &contact); status != 201 {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": fullName}, nil, &contact); status != 201 {
 		t.Fatalf("human create → %d", status)
 	}
 	var minted struct {
@@ -174,7 +174,7 @@ func TestAutomaticWorkOverwritesAHumanTypedFieldWithoutApproval(t *testing.T) {
 	invoke := automaticInvoker(t, e)
 
 	out, err := invoke("update_record", fmt.Sprintf(
-		`{"record_type":"contact","id":%q,"fields":{"full_name":"Mona Machine","title":"VP Engineering"}}`, contactID,
+		`{"why":"A test asks for this change.","record_type":"contact","id":%q,"fields":{"full_name":"Mona Machine","title":"VP Engineering"}}`, contactID,
 	))
 	if err != nil {
 		t.Fatalf("a patch touching a human-typed name → %v, want it applied", err)

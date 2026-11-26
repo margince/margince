@@ -1,0 +1,9 @@
+{
+  "verb": "update_legal_entity",
+  "checks": [
+    "legal_entity.update"
+  ],
+  "takes": [
+    "legal_entity"
+  ]
+}

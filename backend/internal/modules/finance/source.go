@@ -59,7 +59,7 @@ func (s *Store) readSourceState(ctx context.Context, tx pgx.Tx) (crmcontracts.Fi
 	if s.sources != nil {
 		for _, option := range s.sources.Providers() {
 			out.Available = append(out.Available, crmcontracts.FinanceSourceOption{
-				Provider: option.Provider, Description: option.Description,
+				Provider: option.Provider, ProviderName: option.readerName(), Description: option.Description,
 			})
 		}
 	}
@@ -72,6 +72,7 @@ func (s *Store) readSourceState(ctx context.Context, tx pgx.Tx) (crmcontracts.Fi
 		 LIMIT 1`).Scan(&conn.Id, &conn.Provider, &conn.Status, &conn.ConnectedAt,
 		&conn.LastAttemptAt, &conn.LastSuccessAt, &conn.LastErrorCode)
 	if err == nil {
+		conn.ProviderName = s.sourceOption(conn.Provider).readerName()
 		out.Connection = &conn
 		return out, nil
 	}
@@ -132,12 +133,10 @@ func insertConnection(ctx context.Context, tx pgx.Tx, id ids.UUID, connectedAt t
 	if err != nil {
 		return err
 	}
-	// credential_ref names where the credential lives: with the unit that
-	// supplies the source, never in this table.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO finance_connection (id, provider, status, credential_ref, created_at, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, 'manual', $6)`,
-		id, provider, statusConnectionConnecting, "extension:"+provider, connectedAt, by); err != nil {
+		INSERT INTO finance_connection (id, provider, status, created_at, captured_by)
+		VALUES ($1, $2, $3, $4, $5)`,
+		id, provider, statusConnectionConnecting, connectedAt, by); err != nil {
 		return fmt.Errorf("record the finance connection: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "create", entityConnection, id, nil,

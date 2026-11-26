@@ -1,0 +1,10 @@
+{
+  "verb": "preview_controller_mail",
+  "checks": [
+    "contact.update"
+  ],
+  "takes": [
+    "contact",
+    "mail_contact"
+  ]
+}

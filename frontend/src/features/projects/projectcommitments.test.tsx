@@ -22,6 +22,8 @@ const COMMITMENT = {
   due_at: "2026-09-11T09:00:00Z",
   assignee_id: null,
   assignee_name: null,
+  due_has_time: false,
+  version: 1,
   overdue: false,
 } satisfies components["schemas"]["Project360Commitment"];
 

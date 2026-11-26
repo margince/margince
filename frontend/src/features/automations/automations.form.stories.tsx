@@ -1,10 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
+import { AUTOMATION_CATALOG } from "./automations.fixtures";
 import { AutomationDialog } from "./automations.form";
 
 // The dialog both automation verbs open, drawn open. Create and edit differ only
@@ -14,7 +17,7 @@ import { AutomationDialog } from "./automations.form";
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 
 const meta: Meta<typeof AutomationDialog> = {
-  title: "Settings/AI/Automations/Automation form",
+  title: "Settings/Data/Automations/Automation form",
   component: AutomationDialog,
   parameters: { layout: "padded" },
 };
@@ -162,4 +165,83 @@ const sequence: CatalogEntry = {
 /** Eight fields: the same form in the drawer. */
 export const LongDefinitionInADrawer: Story = {
   render: () => form({ entry: sequence, initialName: sequence.name }),
+};
+
+export const CalendarDayDeadline: Story = {
+  render: () =>
+    form({
+      entry: {
+        ...nudge,
+        params_schema: {
+          type: "object",
+          properties: {
+            due_in_days: {
+              type: "integer",
+              default: 1,
+              minimum: 1,
+              maximum: 30,
+            },
+            timezone: { type: "string", format: "timezone" },
+          },
+        },
+      },
+      initialParams: { due_in_days: 1, timezone: "Europe/Berlin" },
+    }),
+};
+
+/** Save on an edit whose name was cleared: the dialog stays and says so at
+ *  the Name field. */
+export const BlankNameRefused: Story = {
+  render: () =>
+    form({
+      initialName: "Nudge after three quiet days",
+      initialParams: { due_in_days: 7 },
+      submitLabel: "Save",
+    }),
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    const body = within(canvasElement.ownerDocument.body);
+    await user.clear(await body.findByRole("textbox", { name: "Name" }));
+    await user.click(body.getByRole("button", { name: "Save" }));
+    await expect(await body.findByText(en["auto.nameRequired"])).toBeVisible();
+  },
+};
+
+const renewalTemplate = AUTOMATION_CATALOG.find(
+  (entry) => entry.key === "renewal_reminder",
+);
+
+/** The real renewal template on a record type with no date field: Create is
+ *  refused with the reason, and the note says where a date field is added. */
+export const RenewalWithoutDateField: Story = {
+  render: () => {
+    if (!renewalTemplate) throw new Error("the fixtures hold no renewal");
+    installFetchStub({
+      "GET /custom-fields": () =>
+        jsonResponse({ data: [], page: { next_cursor: null } }),
+    });
+    return (
+      <StoryProviders>
+        <AutomationDialog
+          open
+          entry={renewalTemplate}
+          initialName={en["auto.template.renewal_reminder.name"]}
+          initialParams={{ object: "deal", recipient: "record_owner" }}
+          submitLabel="Create"
+          pending={false}
+          onSubmit={() => undefined}
+          onClose={() => undefined}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await body.findByRole("link", { name: en["auto.dateField.place"] });
+    const create = body.getByRole("button", { name: "Create" });
+    await expect(create).toBeDisabled();
+    await expect(create).toHaveAccessibleDescription(
+      en["auto.needs.dateField"],
+    );
+  },
 };

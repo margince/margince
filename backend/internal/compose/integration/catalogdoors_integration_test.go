@@ -34,7 +34,7 @@ func TestAPassportKeepsTheCatalogThroughTheRecordTools(t *testing.T) {
 		"name": "Onboarding day", "unit_price_minor": 120000, "currency": "EUR",
 	}})
 	id := recordIDOf(t, created)
-	d.tool(t, "update_record", map[string]any{"record_type": "product", "id": id, "fields": map[string]any{"unit_price_minor": 99000}})
+	d.tool(t, "update_record", map[string]any{"why": "A test asks for this change.", "record_type": "product", "id": id, "fields": map[string]any{"unit_price_minor": 99000}})
 
 	var product struct {
 		UnitPriceMinor int64   `json:"unit_price_minor"`

@@ -17,13 +17,14 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/database/textbounds"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -66,7 +67,6 @@ var columnBackedColdStartFields = map[string]string{
 	fieldLegalName:       columnLegalName,
 	"industry":           "industry",
 	"registered_address": "address",
-	fieldOfferSummary:    "description",
 }
 
 // ApplyColdStartProfile executes an ACCEPTED coldstart proposal. A
@@ -323,6 +323,15 @@ func applyEvidenceFieldsWithOverwrite(
 	}
 	applied := map[string]any{}
 	for _, f := range fields {
+		// A machine's industry is a code or nothing: free words reach neither
+		// the column nor the evidence row.
+		if f.Field == columnIndustry {
+			code, ok := ResolveIndustry(f.Value)
+			if !ok {
+				continue
+			}
+			f.Value = code
+		}
 		if column, backed := columnBackedColdStartFields[f.Field]; backed {
 			filled, err := writeCompanyColumn(ctx, tx, companyID, column, f.Value, overwrite[f.Field])
 			if err != nil {
@@ -349,8 +358,12 @@ func applyEvidenceFieldsWithOverwrite(
 		// The evidence row lands for every accepted field; a re-accept
 		// refreshes an agent-captured row and never touches one a human has
 		// since claimed.
+		// The row keeps what a machine read, cut to its columns; the human form
+		// writes its own rows and is refused past the limit instead.
+		value := textbounds.Fit("public.company_profile_field.value", f.Value)
+		snippet := textbounds.Fit("public.company_profile_field.evidence_snippet", f.EvidenceSnippet)
 		if _, err := tx.Exec(ctx, upsertCompanyProfileField,
-			companyID, f.Field, f.Value, f.EvidenceSnippet, f.SourceURL, f.Confidence, source, by, overwrite[f.Field]); err != nil {
+			companyID, f.Field, value, snippet, f.SourceURL, f.Confidence, source, by, overwrite[f.Field], nil); err != nil {
 			return nil, fmt.Errorf("upsert profile field %s: %w", f.Field, err)
 		}
 	}
@@ -389,7 +402,11 @@ func coldStartHost(rawURL string) (string, error) {
 	if err != nil || parsed.Host == "" {
 		return "", fmt.Errorf("contacts: coldstart source url %q has no host", rawURL)
 	}
-	return strings.TrimPrefix(strings.ToLower(parsed.Hostname()), "www."), nil
+	host, err := owndomain.ParseDomain(parsed.Hostname())
+	if err != nil {
+		return "", fmt.Errorf("contacts: coldstart source url %q has no valid host: %w", rawURL, err)
+	}
+	return host.String(), nil
 }
 
 // UnmarshalColdStartFields decodes the staged proposal's field array —

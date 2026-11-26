@@ -45,6 +45,7 @@ func project360History(h crmcontracts.Project360PhaseHistory) *Project360PhaseHi
 			FromPhase: orBlank(t.FromPhase),
 			ToPhase:   t.ToPhase,
 			Reason:    orBlank(t.Reason),
+			Cause:     project360Cause(t.Cause),
 			ChangedAt: t.ChangedAt,
 			ChangedBy: project360Attribution(t.ChangedBy),
 		})
@@ -53,6 +54,18 @@ func project360History(h crmcontracts.Project360PhaseHistory) *Project360PhaseHi
 		out.Durations = append(out.Durations, Project360PhaseDuration{
 			Phase: d.Phase, Seconds: d.Seconds, Current: d.Current,
 		})
+	}
+	return out
+}
+
+func project360Cause(c *crmcontracts.Project360PhaseCause) *Project360Cause {
+	if c == nil {
+		return nil
+	}
+	out := &Project360Cause{Kind: string(c.Kind), DealName: orBlank(c.DealName)}
+	if c.DealId != nil {
+		id := ids.UUID(*c.DealId)
+		out.DealID = &id
 	}
 	return out
 }
@@ -109,6 +122,9 @@ func project360Contracts(rows []crmcontracts.Contract) []Project360Contract {
 		if c.UnderContract != nil {
 			item.UnderContract = *c.UnderContract
 		}
+		if c.TermState != nil {
+			item.TermState = string(*c.TermState)
+		}
 		out = append(out, item)
 	}
 	return out
@@ -143,24 +159,21 @@ func project360Commitments(rows []crmcontracts.Project360Commitment, asOf time.T
 		taskID := ids.UUID(c.ActivityId)
 		promise := OpenCommitment{
 			Source: CommitmentFromTask, TaskID: &taskID,
-			Subject: c.Subject, DueAt: c.DueAt,
+			Subject: c.Subject, DueAt: c.DueAt, Overdue: &c.Overdue,
 			AssigneeID: (*ids.UUID)(c.AssigneeId), AssigneeName: orBlank(c.AssigneeName),
 		}
-		out = append(out, promise.wire(asOf))
+		out = append(out, promise.wire(asOf, nil))
 	}
 	return out
 }
 
-func project360Activities(rows []crmcontracts.Activity) []Project360Activity {
+func project360Activities(rows []crmcontracts.Activity, writerSide ActivityWriterSide) []Project360Activity {
 	out := make([]Project360Activity, 0, len(rows))
 	for _, a := range rows {
-		item := Project360Activity{
+		out = append(out, Project360Activity{
 			ActivityID: ids.UUID(a.Id), Kind: string(a.Kind), Subject: orBlank(a.Subject), OccurredAt: a.OccurredAt,
-		}
-		if a.Direction != nil {
-			item.Direction = string(*a.Direction)
-		}
-		out = append(out, item)
+			Direction: writerSide(a),
+		})
 	}
 	return out
 }

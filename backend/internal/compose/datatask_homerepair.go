@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 const homeRepairTaskID = "core/1792501453_home_attention_repair"
@@ -30,7 +31,7 @@ const (
 
 func homeRepairDataTask(pool *pgxpool.Pool, now func() time.Time) datatask.Task {
 	return datatask.Task{
-		ID: homeRepairTaskID, Version: 1, Title: "Review automatic Home work", Manual: true, ReviewVersion: homeRepairVersion,
+		ID: homeRepairTaskID, Version: 1, Title: systemtext.Literal("datatask.title.core.1792501453_home_attention_repair"), Manual: true, ReviewVersion: homeRepairVersion,
 		Requires: []string{"core/1792501453"}, Review: validateHomeRepairTx,
 		Steps: []datatask.Step{{
 			Name: "reviewed_tasks", Limit: 50, MinLimit: 1, Audit: datatask.AuditPolicy{PerRecord: true},

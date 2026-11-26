@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "team_margince_changes",
+  "verb": "get_team_margince_changes",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only"
+  ],
+  "refused_for": [
+    "rep"
+  ]
+}

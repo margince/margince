@@ -17,6 +17,8 @@ export function typeLabels(t: ReturnType<typeof useT>): Record<CfType, string> {
     multiselect: t("cf.type.multiselect"),
     picklist: t("cf.type.picklist"),
     boolean: t("cf.type.boolean"),
+    record: t("cf.type.record"),
+    url: t("cf.type.url"),
   };
 }
 

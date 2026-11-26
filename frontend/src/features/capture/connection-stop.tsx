@@ -14,11 +14,12 @@ import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ConnectAccountInput } from "../../lib/connect-account";
 import type { Service } from "../../lib/connect-flow-draft";
+import { mailboxParams } from "../../lib/connectors";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
 
 // Disconnecting an account, or some of its services, behind one confirm.
 
-type Provider = components["schemas"]["CaptureConnection"]["provider"];
+type CaptureConnection = components["schemas"]["CaptureConnection"];
 
 // Disconnecting deletes OUR stored credential and does not revoke the grant at
 // the vendor, so the confirm names where a careful reader finishes that.
@@ -49,7 +50,12 @@ export type PendingStop = Readonly<{
   afterwards: ConnectAccountInput | null;
 }>;
 
-type StopTarget = Readonly<{ service: Service; provider: Provider }>;
+// A target with no service is the meeting-notes connection, which a whole-account
+// stop takes with it and no service label names.
+type StopTarget = Readonly<{
+  service: Service | null;
+  connection: CaptureConnection;
+}>;
 
 export function servicesOf(account: ConnectionAccount): Service[] {
   const services: Service[] = [];
@@ -88,7 +94,9 @@ export function StopConfirm({
     disconnect.isPending || disconnect.isSuccess
       ? disconnect.variables
       : undefined;
-  const named = confirmed?.map((target) => target.service) ?? services;
+  const named =
+    confirmed?.flatMap((target) => (target.service ? [target.service] : [])) ??
+    services;
   // The account can lose a service while the confirm is open. With nothing left
   // to stop, the stop is over, and a follow-up connect still has to run. A
   // disconnect that is running or succeeded ends the stop itself, and only once.
@@ -112,8 +120,11 @@ export function StopConfirm({
   }, [stop, reset]);
   const targets = services.flatMap((service): StopTarget[] => {
     const connection = service === "mail" ? account.mail : account.calendar;
-    return connection ? [{ service, provider: connection.provider }] : [];
+    return connection ? [{ service, connection }] : [];
   });
+  if (whole && account.notes) {
+    targets.push({ service: null, connection: account.notes });
+  }
   return (
     <ConfirmModal
       open={stop !== null && !nothingLeft}
@@ -154,9 +165,9 @@ function useDisconnectServices() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (targets: readonly StopTarget[]) => {
-      for (const { provider } of targets) {
+      for (const { connection } of targets) {
         const { error } = await api.POST("/connectors/{provider}/disconnect", {
-          params: { path: { provider } },
+          params: mailboxParams(connection),
         });
         if (error) {
           throwProblem(error);
@@ -165,4 +176,42 @@ function useDisconnectServices() {
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ["connectors"] }),
   });
+}
+
+/** The confirm that stops Google's meeting-notes connection alone. Mail and
+ *  calendar keep running. */
+export function NotesStopConfirm({
+  notes,
+  open,
+  onClose,
+}: Readonly<{
+  notes: CaptureConnection | null;
+  open: boolean;
+  onClose: () => void;
+}>) {
+  const t = useT();
+  const disconnect = useDisconnectServices();
+  return (
+    <ConfirmModal
+      open={open && notes !== null}
+      onClose={() => {
+        disconnect.reset();
+        onClose();
+      }}
+      title={t("connectors.notes.stopTitle")}
+      confirmLabel={t("connectors.disconnect")}
+      confirmVariant="danger"
+      pending={disconnect.isPending}
+      error={disconnect.isError ? problemMessageOf(disconnect.error, t) : null}
+      onConfirm={() => {
+        if (!notes) return;
+        disconnect.mutate([{ service: null, connection: notes }], {
+          onSuccess: onClose,
+        });
+      }}
+    >
+      <p>{t("connectors.notes.stopBody")}</p>
+      <p className="t-caption">{t(REVOKE_NOTE.google)}</p>
+    </ConfirmModal>
+  );
 }

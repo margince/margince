@@ -14,7 +14,7 @@ import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ChangeList } from "../../components/changelist";
-import { ReceiptReview } from "../../components/receiptreview";
+import { ReceiptVerbs } from "../../components/receiptverbs";
 import { AppLink } from "../../design-system/applink";
 import { Button } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
@@ -22,14 +22,15 @@ import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { browserZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { type Receipt, useHandledForYou } from "../../lib/handled";
 import { type MagicLine, magicKey } from "../../lib/magic.queries";
+import { lineSentence } from "../../lib/magiccopy";
 import { unwrap } from "../../lib/problem";
-import { receiptAuditId } from "../../lib/receiptreview";
+import { receiptAuditId } from "../../lib/receiptstate";
 import { routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { MagicUndoButton } from "./magic.undo";
 import "../brief/brief.css";
 
@@ -130,7 +131,11 @@ function LineRecordsList({
       )}
       <ul className="magic-records">
         {records.map((record) => (
-          <RecordRow key={record.audit_id} record={record} />
+          <RecordRow
+            key={record.audit_id}
+            record={record}
+            happened={lineSentence(line, t)}
+          />
         ))}
       </ul>
       {read.hasNextPage && (
@@ -145,9 +150,15 @@ function LineRecordsList({
   );
 }
 
-function RecordRow({ record }: Readonly<{ record: MagicLineRecord }>) {
+// A record shares its line's sentence: a line groups records whose change reads
+// the same. A create or an archive moved no field, so the sentence is what it says.
+function RecordRow({
+  record,
+  happened,
+}: Readonly<{ record: MagicLineRecord; happened: string }>) {
   const t = useT();
   const { locale } = useLocale();
+  const zone = useViewerZone();
   const entity = record.entity;
   const label = entity.label ?? t("magic.noRecord");
   const href = isEntityKind(entity.type)
@@ -160,19 +171,23 @@ function RecordRow({ record }: Readonly<{ record: MagicLineRecord }>) {
         <RecordActions record={record} />
       </div>
       <time className="t-caption" dateTime={record.occurred_at}>
-        {formatDateTime(record.occurred_at, locale, browserZone())}
+        {formatDateTime(record.occurred_at, locale, zone)}
       </time>
-      <ChangeList changes={record.changes} />
+      {record.changes.length > 0 ? (
+        <ChangeList changes={record.changes} />
+      ) : (
+        <p className="t-body">{happened}</p>
+      )}
     </li>
   );
 }
 
-// A grouped change keeps the verbs its receipt has on its own: Mark reviewed
-// and Undo on a deal change, its restore on any other.
+// A grouped change keeps the verb its receipt has on its own: the deal
+// change's Undo, or the restore of any other.
 function RecordActions({ record }: Readonly<{ record: MagicLineRecord }>) {
-  const reviewed = useReviewedReceipt(record.receipt_id);
-  if (reviewed) {
-    return <ReceiptReview receipt={reviewed} />;
+  const change = useDealChangeReceipt(record.receipt_id);
+  if (change) {
+    return <ReceiptVerbs receipt={change} />;
   }
   return (
     <MagicUndoButton
@@ -184,8 +199,8 @@ function RecordActions({ record }: Readonly<{ record: MagicLineRecord }>) {
 }
 
 // Only off a read that answered now. A refetch that failed keeps the old list
-// cached, and its review verbs may no longer be this reader's to press.
-function useReviewedReceipt(id: string | undefined): Receipt | undefined {
+// cached, and its Undo may no longer be this reader's to press.
+function useDealChangeReceipt(id: string | undefined): Receipt | undefined {
   const handled = useHandledForYou();
   if (!id || !handled.isSuccess) {
     return undefined;

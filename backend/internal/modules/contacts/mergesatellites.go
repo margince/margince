@@ -11,10 +11,9 @@ package contacts
 // of either kind stranded on the merged-away contact is worse than invisible,
 // because it silently changes what the product does next.
 //
-// Nothing here is reached by file name. The lifecycle census
-// (gates/satellite_lifecycle_test.go) walks what relinkContactReferences can
-// CALL, so a satellite joins the merge by being written somewhere under it,
-// wherever that happens to live.
+// Nothing here is reached by file name. The merge census
+// (gates/mergereferences_test.go) walks what MergeContact can CALL. A
+// satellite joins the merge by being written somewhere under it.
 
 import (
 	"context"
@@ -22,16 +21,21 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // relinkStrandedSatellites is the one call the merge makes for both halves
-// below, so relinkContactReferences names this concern once rather than twice.
+// below and the LinkedIn connections, so relinkContactReferences names this
+// concern once.
 func relinkStrandedSatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
 	if err := relinkReaderJudgements(ctx, tx, sourceID, targetID); err != nil {
 		return err
 	}
-	return relinkWorkInFlight(ctx, tx, sourceID, targetID)
+	if err := relinkWorkInFlight(ctx, tx, sourceID, targetID); err != nil {
+		return err
+	}
+	return relinkLinkedInConnections(ctx, tx, sourceID, targetID)
 }
 
 // relinkReaderJudgements moves what a READER decided about this contact, and
@@ -57,8 +61,8 @@ func relinkReaderJudgements(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	// sees the source rows the delete is about to remove.
 	if _, err := tx.Exec(ctx, `
 		WITH carried AS (
-		  INSERT INTO contact_moment_dismissal (user_id, contact_id, claim_key, evidence_fingerprint, dismissed_at)
-		  SELECT user_id, @target, claim_key, evidence_fingerprint, dismissed_at
+		  INSERT INTO contact_moment_dismissal (user_id, contact_id, claim_key, evidence_fingerprint)
+		  SELECT user_id, @target, claim_key, evidence_fingerprint
 		    FROM contact_moment_dismissal WHERE contact_id = @source
 		  ON CONFLICT (user_id, contact_id, claim_key) DO NOTHING
 		)
@@ -77,9 +81,7 @@ func relinkReaderJudgements(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		pgx.NamedArgs{auditKeySource: sourceID, mergeTargetKey: targetID}); err != nil {
 		return fmt.Errorf("carry the nudges a reader had already put down: %w", err)
 	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM contact_brief WHERE contact_id IN (@source, @target)`,
-		pgx.NamedArgs{auditKeySource: sourceID, mergeTargetKey: targetID}); err != nil {
+	if err := generatedsummary.ForgetContacts(ctx, tx, sourceID, targetID); err != nil {
 		return fmt.Errorf("drop the briefs the merge made stale: %w", err)
 	}
 	return nil

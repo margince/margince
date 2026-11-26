@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -179,5 +180,62 @@ func TestFailedLoginIsAuditedAndThrottled(t *testing.T) {
 	}
 	if lockouts != 1 {
 		t.Fatalf("lockout system_log rows = %d, want 1", lockouts)
+	}
+}
+
+// A write's response names the request in X-Request-Id. That id is the
+// correlation_id of the event the same transaction staged beside its audit row.
+// Server-Timing rides the signed-in answer only: a failed login, which no
+// session answers, carries the id and no timing.
+func TestResponseRequestIDJoinsTheWriteItCaused(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	post := func(path, body string) (int, http.Header) {
+		t.Helper()
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, e.TS.URL+path, strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := e.Client.Do(req) //nolint:bodyclose // closed by apptest.CloseBody below
+		if err != nil {
+			t.Fatal(err)
+		}
+		apptest.CloseBody(t, resp)
+		return resp.StatusCode, resp.Header
+	}
+
+	createdStatus, created := post("/v1/contacts", `{"source":"manual","full_name":"Grace Hopper","emails":[{"email":"grace@example.com"}]}`)
+	if createdStatus != http.StatusCreated {
+		t.Fatalf("create contact status = %d", createdStatus)
+	}
+	if !strings.HasPrefix(created.Get("Server-Timing"), "total;dur=") {
+		t.Errorf("signed-in answer Server-Timing = %q, want total;dur=<ms>", created.Get("Server-Timing"))
+	}
+
+	owner, err := pgx.Connect(t.Context(), os.Getenv("MARGINCE_TEST_DSN"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing owner connection: %v", err)
+		}
+	})
+	staged := stagedContactCreated(t, owner)
+	if got := created.Get("X-Request-Id"); got == "" || got != staged.env.Trace.CorrelationID.String() {
+		t.Errorf("X-Request-Id %q, staged event correlation_id %s: want the same id", got, staged.env.Trace.CorrelationID)
+	}
+
+	refusedStatus, refused := post("/v1/auth/login", `{"email":"nobody@example.com","password":"wrong-password-entirely"}`)
+	if refusedStatus != http.StatusUnauthorized {
+		t.Fatalf("bad login status = %d, want 401", refusedStatus)
+	}
+	if refused.Get("X-Request-Id") == "" {
+		t.Error("a 401 carries no X-Request-Id")
+	}
+	if got := refused.Get("Server-Timing"); got != "" {
+		t.Errorf("failed login Server-Timing = %q, want none", got)
 	}
 }

@@ -3,6 +3,7 @@ import {
   formatAnalyticsHours,
   formatAnalyticsMoney,
   formatAnalyticsNumber,
+  formatAnalyticsPercentPoints,
   formatDateAbbrev,
   formatDateAbbrevRange,
   formatDateTime,
@@ -16,6 +17,18 @@ export type ReportingChart = components["schemas"]["ReportingChart"];
 export type ReportingEvidenceRef =
   components["schemas"]["ReportingEvidenceRef"];
 export type ReportingReport = components["schemas"]["ReportingReport"];
+
+/**
+ * The draft of a report that has published no charts yet, as one an agent
+ * prepares. Its editor reads that draft, since the published revision is empty.
+ */
+export function unpublishedDraft(
+  report: ReportingReport | undefined,
+): number | undefined {
+  return report?.selection.metrics.length === 0
+    ? report.draft_revision
+    : undefined;
+}
 export type ReportingMetricID = components["schemas"]["ReportingMetricID"];
 export type ReportingBlockKind = components["schemas"]["ReportingBlockKind"];
 export type ReportingEdition = components["schemas"]["ReportingEdition"];
@@ -33,6 +46,8 @@ export function reportingQuery(selection: ReportingSelection) {
     end_at: selection.interval?.end_at,
     target_basis: selection.target_basis,
     close_window: selection.close_window,
+    close_start_at: selection.close_interval?.start_at,
+    close_end_at: selection.close_interval?.end_at,
     product_id: selection.product_id,
     initiative_id: selection.initiative_id,
     country: selection.country,
@@ -54,7 +69,8 @@ export function reportingAmount(
     return currency ? formatAnalyticsMoney(value, currency, locale) : "—";
   if (unit === "hours") return formatAnalyticsHours(value, locale);
   if (unit === "ratio") return formatNumber(value, locale);
-  return `${formatAnalyticsNumber(value, locale)}${unit === "percent" ? "%" : ""}`;
+  if (unit === "percent") return formatAnalyticsPercentPoints(value, locale);
+  return formatAnalyticsNumber(value, locale);
 }
 
 // Names a metric as the catalog does, in the reader's language.

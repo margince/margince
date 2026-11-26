@@ -1,0 +1,10 @@
+{
+  "verb": "reassign_handoff",
+  "checks": [
+    "lead.read",
+    "lead.update"
+  ],
+  "takes": [
+    "sdr_handoff"
+  ]
+}

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { recordEnabled } from "./corefeaturepolicy";
 
 /**
  * Reading a grant out of the access snapshot, with no React in the way.
@@ -11,10 +12,9 @@ import type { components } from "../api/schema";
  * client. That is fine inside the app, and wrong for a consumer that only reads
  * the vocabulary.
  *
- * `e2e/ac.spec.ts` is that consumer. It derives its settings sweep from
- * `SETTINGS_PAGES`, and the catalog reached this predicate through
- * `capability.ts` — so Playwright's transform followed the chain into a
- * stylesheet and the whole suite failed to boot before a single test ran.
+ * `e2e/screens.ts` is that consumer. It derives its settings sweep from
+ * `SETTINGS_PAGES`. Through `capability.ts`, Playwright's transform would
+ * follow the chain into a stylesheet and fail to boot the suite.
  *
  * `capability.ts` re-exports what is here, so every call site inside the app is
  * unchanged and there is still ONE answer to "does this snapshot grant this".
@@ -62,6 +62,14 @@ export function grants(
   object: RbacObject,
   action: RbacAction,
 ): boolean {
+  if (
+    !recordEnabled(
+      object,
+      snapshot?.settings_availability?.disabled_features ?? [],
+    )
+  ) {
+    return false;
+  }
   // Two optional steps, both load-bearing. `objects` is an index signature, so
   // TypeScript types a miss as PRESENT — only the chain makes an absent grant
   // deny at runtime; and the chain must cover `objects` itself, or a snapshot

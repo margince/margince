@@ -106,13 +106,17 @@ var rowScopedResponses = map[string]expectedTarget{
 	// Row-scoped through its TARGET, by a rule that lives inside the approvals
 	// module; compose borrows that rule rather than keeping a second copy.
 	"Approval": {moduleProbe: "approval", pathParam: "id"},
+	// A sales goal plan answers a seller's draft and history, which only
+	// the reporting module decides who may read.
+	"SalesGoalPlan": {object: "sales_target", moduleProbe: "sales_goal_plan", pathParam: "owner_id", rowNote: "a plan carries no owner column a scope reads; it answers the seller's draft and history, so the reporting module owns the probe"},
 	// A bulk answer carries no record of its own, but it names every record
 	// the change left alone and why. Only the batch's stored result says which,
 	// so the bulk engine owns the probe.
-	"BulkChangeResult": {moduleProbe: "bulk_batch", idPath: "batch_id"},
-	"RecordGrant":      {tableField: "record_type", idPath: "record_id"},
-	"OwnershipRequest": {tableField: "record_type", idPath: "record_id"},
-	"OwnershipOffer":   {tableField: "record_type", idPath: "record_id"},
+	"BulkChangeResult":  {moduleProbe: "bulk_batch", idPath: "batch_id"},
+	"RecordGrant":       {tableField: "record_type", idPath: "record_id"},
+	"OwnershipRequest":  {tableField: "record_type", idPath: "record_id"},
+	"EditAccessRequest": {tableField: "record_type", idPath: "record_id"},
+	"OwnershipOffer":    {tableField: "record_type", idPath: "record_id"},
 	// A health assessment has no owner column: its visibility IS the project it
 	// judges, which the body names as project_id. Probed rather than waved
 	// through, because a replay hands back how a delivery is going — something
@@ -132,6 +136,9 @@ var rowScopedResponses = map[string]expectedTarget{
 	// A body with no reference of its own is the easiest kind to wave through
 	// and still hands back whatever its parent contains.
 	"ContactConsentState": {table: "contact", pathParam: "id"},
+	// A consent mail's answer names the contact's own live address, so it is
+	// read about the contact in the path.
+	"ConfirmRequestIssued": {table: "contact", pathParam: "id"},
 	// The company's evidence sidecars. Neither carries an id or an owner of
 	// its own — the claim belongs to the company named in the path and
 	// inherits exactly its visibility, so the probe is the parent's.

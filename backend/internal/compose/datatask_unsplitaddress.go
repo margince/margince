@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // unsplitAddressDataTask splits the company addresses older writers stored
@@ -20,7 +21,7 @@ import (
 func unsplitAddressDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792852411_unsplit_addresses", Version: 1,
-		Title: "Splitting company addresses stored in one line into their parts",
+		Title: systemtext.Literal("datatask.title.core.1792852411_unsplit_addresses"),
 		Steps: []datatask.Step{{
 			Name: "companies", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

@@ -8,7 +8,7 @@ package ai
 func FakeRoutingConfig() RoutingConfig {
 	fake := ProviderConfig{Provider: ProviderFake}
 	tiers := make(map[Tier]ProviderConfig)
-	for _, task := range AllTasks() {
+	for _, task := range RoutedTasks() {
 		for _, tier := range TaskLadder(task) {
 			tiers[tier] = fake
 		}

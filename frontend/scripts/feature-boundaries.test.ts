@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
+import { stable } from "../src/format/collate";
 import {
   type ImportGraph,
   judge,
@@ -225,7 +226,7 @@ describe("the reader", () => {
   plant("features/deals/a.test.tsx", 'vi.mock("../leads/b");\n');
 
   it("sees every form of import, a mock and every kind of source file", () => {
-    expect(reachFindings(readGraph(root)).sort()).toEqual([
+    expect(reachFindings(readGraph(root)).sort(stable)).toEqual([
       "reach features/deals/a.css features/leads/b.css",
       "reach features/deals/a.test.tsx features/leads/b.tsx",
       "reach features/deals/a.tsx features/leads/b.css",

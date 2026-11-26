@@ -29,6 +29,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// profileLink is a LinkedIn profile link, the one value the linkedin key takes.
+func profileLink(name string) string { return "https://www.linkedin.com/in/" + name }
+
 func opsSeat(e *integration.Env) context.Context {
 	return e.As(e.Rep1, []ids.UUID{e.Team1}, integration.OpsPerms)
 }
@@ -39,12 +42,12 @@ func TestAContactsSocialLinkAColleagueSetSinceIsNotPutBack(t *testing.T) {
 	id := e.SeedContact(t, "Social Contact", nil)
 	contactID := ids.From[ids.ContactKind](id)
 	for _, v := range []string{"a", "b"} {
-		if _, err := e.Contacts.UpdateContact(admin, contactID, contacts.UpdateContactInput{Social: map[string]any{"linkedin": v}}); err != nil {
+		if _, err := e.Contacts.UpdateContact(admin, contactID, contacts.UpdateContactInput{Social: map[string]any{"linkedin": profileLink(v)}}); err != nil {
 			t.Fatalf("set social %s: %v", v, err)
 		}
 	}
 	entry := latestAuditRowID(t, e, "contact", id, "update")
-	if _, err := e.Contacts.UpdateContact(opsSeat(e), contactID, contacts.UpdateContactInput{Social: map[string]any{"linkedin": "c"}}); err != nil {
+	if _, err := e.Contacts.UpdateContact(opsSeat(e), contactID, contacts.UpdateContactInput{Social: map[string]any{"linkedin": profileLink("c")}}); err != nil {
 		t.Fatalf("a colleague sets social: %v", err)
 	}
 
@@ -215,7 +218,7 @@ func TestSocialLinksWalkBackThroughTheirOwnHistory(t *testing.T) {
 	contactID := ids.From[ids.ContactKind](id)
 	entries := map[string]ids.UUID{}
 	for _, v := range []string{"a", "b", "c"} {
-		if _, err := e.Contacts.UpdateContact(admin, contactID, contacts.UpdateContactInput{Social: map[string]any{"linkedin": v}}); err != nil {
+		if _, err := e.Contacts.UpdateContact(admin, contactID, contacts.UpdateContactInput{Social: map[string]any{"linkedin": profileLink(v)}}); err != nil {
 			t.Fatalf("set social %s: %v", v, err)
 		}
 		entries[v] = latestAuditRowID(t, e, "contact", id, "update")
@@ -230,7 +233,7 @@ func TestSocialLinksWalkBackThroughTheirOwnHistory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Social == nil || (*got.Social)["linkedin"] != "a" {
+	if got.Social == nil || (*got.Social)["linkedin"] != profileLink("a") {
 		t.Errorf("after walking back two steps the contact holds %v, want linkedin a", got.Social)
 	}
 }

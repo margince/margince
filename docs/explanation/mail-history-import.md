@@ -86,7 +86,7 @@ own unit:
 
 | pass | one unit is | what it produces |
 |---|---|---|
-| classify | a message | the label for how much it needs a human: `commitment` / `meeting` / `noise` |
+| classify | a message | the label for how much it needs a human: `commitment` / `meeting` / `other` |
 | enrich | a newly created contact | contact fields read from the mail signature |
 | embed | a record | the vector that lets search find it |
 

@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import {
   apiKey,
   CF_OBJECTS,
   columnName,
-  ddlPreview,
+  customFieldLabel,
   looksStructural,
   slug,
 } from "./customfields.logic";
@@ -25,7 +26,7 @@ describe("custom-fields logic", () => {
       "contract",
       "activity",
     ] as const;
-    expect([...CF_OBJECTS].sort()).toEqual([...admitted].sort());
+    expect([...CF_OBJECTS].sort(stable)).toEqual([...admitted].sort(stable));
   });
 
   it("slugs a label to a snake_case identifier", () => {
@@ -42,12 +43,15 @@ describe("custom-fields logic", () => {
     );
   });
 
-  it("renders the pending DDL per object and type", () => {
-    expect(ddlPreview("company", "Contract end date", "date", "EUR")).toBe(
-      "ALTER company ADD COLUMN cf_contract_end_date (date) · backfilled NULL · reversible",
-    );
-    expect(ddlPreview("deal", "Budget ceiling", "currency", "EUR")).toBe(
-      "ALTER deal ADD COLUMN cf_budget_ceiling (numeric · cents · EUR) · backfilled NULL · reversible",
+  it("reads a retired field's label with a retired suffix, in the reader's language", () => {
+    const field = {
+      label: "Deal Size",
+      status: "retired",
+    } as Parameters<typeof customFieldLabel>[0];
+    expect(customFieldLabel(field, "en")).toBe("Deal Size (retired)");
+    expect(customFieldLabel(field, "de")).toBe("Deal Size (stillgelegt)");
+    expect(customFieldLabel({ ...field, status: "active" }, "en")).toBe(
+      "Deal Size",
     );
   });
 

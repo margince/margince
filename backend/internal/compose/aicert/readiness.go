@@ -15,12 +15,12 @@ package aicert
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // The four states a shipped site's certification can be in. They are separate
@@ -101,70 +101,21 @@ type Standing struct {
 	// holds. They do not make it stale — it is not wrong about what ships — but
 	// they are not coverage either, because nobody can re-run them.
 	Dropped []string
+	// GradedBy names the judge that graded a record when it is not this build's.
+	// A new judge moves scores on its own, so such a record is stale until this
+	// build's judge grades it again.
+	GradedBy string
+	// WireMoved says the provider's wire translation changed since the run, so
+	// the model was answering a request this build no longer sends it.
+	WireMoved bool
+	// judgeOnly says GradedBy or WireMoved alone made the record stale: its
+	// stamps still match.
+	judgeOnly bool
 	// TaskStampOnly marks a record written before ScenarioRecord.Stamp existed.
 	// There is nothing finer to compare than the task stamp it carries, so its
 	// staleness names no scenario. Such a record reports no counts, exactly as
 	// it did before per-scenario stamps landed.
 	TaskStampOnly bool
-}
-
-// StampParts says which of a scenario stamp's three digests moved. A stamp is
-// the scenario digested WHOLE, then the request its site builds, then how a run
-// is graded — three fixed-width hex digests concatenated
-// (ScenarioStamps), so which one differs is readable rather than inferred.
-type StampParts struct {
-	// Case is true when the test itself changed: its fixture, its expected
-	// answer, its rubric or its bands. Re-running measures a different question.
-	Case bool
-	// Prompt is true when the request this build sends changed while the test
-	// stayed put. The band that follows describes the NEW prompt, and a drop is
-	// a consequence of a product change rather than of the model.
-	Prompt bool
-	// Grader is true when how a run is graded changed: the judge's request or
-	// the scoring rule. A band can move with neither the test nor the product
-	// touched, which reads as a model regression and is not one.
-	Grader bool
-}
-
-// Describe names the moved halves in the order a reader acts on them.
-func (p StampParts) Describe() string {
-	var moved []string
-	if p.Case {
-		moved = append(moved, "the case")
-	}
-	if p.Prompt {
-		moved = append(moved, "the prompt this build sends")
-	}
-	if p.Grader {
-		moved = append(moved, "how a run is graded")
-	}
-	if len(moved) == 0 {
-		// A stamp this build cannot split — one written before the three-part
-		// layout, or a length it does not recognise. Saying so beats naming a
-		// half on a guess.
-		return "something this build cannot attribute"
-	}
-	return strings.Join(moved, " and ")
-}
-
-// stampSegment is the width of each digest in a scenario stamp, and three of
-// them is the whole stamp. Derived from sha256's hex width rather than written
-// as 64, so a digest change cannot leave this reading the wrong slice.
-const stampSegment = sha256.Size * 2
-
-// splitStampChange compares two stamps segment by segment. An unrecognised
-// length yields the zero value, whose Describe says it could not attribute the
-// change — under-reporting here is the one failure that must not look like an
-// answer.
-func splitStampChange(was, now string) StampParts {
-	if len(was) != stampSegment*3 || len(now) != stampSegment*3 {
-		return StampParts{}
-	}
-	return StampParts{
-		Case:   was[:stampSegment] != now[:stampSegment],
-		Prompt: was[stampSegment:stampSegment*2] != now[stampSegment:stampSegment*2],
-		Grader: was[stampSegment*2:] != now[stampSegment*2:],
-	}
 }
 
 // Reason states why the record is no longer current, in the terms a reader
@@ -176,6 +127,7 @@ func (s Standing) Reason() string {
 	}
 	var reason string
 	switch {
+	case s.judgeOnly:
 	case s.TaskStampOnly:
 		reason = "predates per-scenario stamps: only its task stamp can be compared, and that has moved"
 	case len(s.Moved) == 1:
@@ -184,6 +136,22 @@ func (s Standing) Reason() string {
 	default:
 		reason = fmt.Sprintf("%d scenarios it scored have changed since (%s): %s",
 			len(s.Moved), s.movedCauses(), namesUpTo(s.Moved, movedNamesShown))
+	}
+	if s.WireMoved {
+		wire := "the provider's wire translation changed since the run"
+		if reason == "" {
+			reason = wire
+		} else {
+			reason += "; " + wire
+		}
+	}
+	if s.GradedBy != "" {
+		judge := fmt.Sprintf("graded by judge %s, and this build grades with %s", s.GradedBy, DefaultJudgeModel)
+		if reason == "" {
+			reason = judge
+		} else {
+			reason += "; " + judge
+		}
 	}
 	if len(s.Dropped) > 0 {
 		reason += fmt.Sprintf(" (it also scored %s, which the corpus no longer holds)",
@@ -273,20 +241,6 @@ func (r ReadinessRow) Coverage() string {
 	return fmt.Sprintf("%d/%d", r.Standing.Measured, r.Standing.Total)
 }
 
-// ClaimedScope is how much of the site the row can claim. With a record it is
-// what that run folded to; with none it is the most a run could ever cover,
-// which is how the agent loop's one-turn limit — and every case that measures
-// less than its site's whole path — stays visible while nothing is certified.
-func (r ReadinessRow) ClaimedScope() string {
-	if !r.Certified {
-		return r.Scope
-	}
-	if r.Record.CertifiedScope == "" {
-		return Unmeasured
-	}
-	return r.Record.CertifiedScope
-}
-
 // Binding names the (provider, model, env) this row was measured on, plus the
 // thinking level where the run set one — the whole of what a band green-lights.
 // Empty for an absent row, which was measured on nothing.
@@ -349,9 +303,16 @@ func Readiness(census Census, taskStamps map[string]string, perScenario map[stri
 			}
 			claimed[RecordKey(rec)] = true
 			measured = true
+			standing := scenarioStanding(rec, site.Variant, perScenario[task+"/"+site.Variant], taskStamps[task])
+			standing.judgeOnly = !standing.Stale
+			if gradedElsewhere(rec) {
+				standing.Stale, standing.GradedBy = true, rec.JudgeServedModel
+			}
+			if rec.WireRule != ai.WireRule(rec.Provider) {
+				standing.Stale, standing.WireMoved = true, true
+			}
 			rows = append(rows, ReadinessRow{
-				Site: site, Scope: scope, Record: rec, Tally: tally, Certified: true,
-				Standing: scenarioStanding(rec, site.Variant, perScenario[task+"/"+site.Variant], taskStamps[task]),
+				Site: site, Scope: scope, Record: rec, Tally: tally, Certified: true, Standing: standing,
 			})
 		}
 		if !measured {
@@ -365,6 +326,17 @@ func Readiness(census Census, taskStamps map[string]string, perScenario map[stri
 		}
 	}
 	return rows, unclaimed
+}
+
+// DefaultJudgeModel is the judge this build grades with, the model of
+// AICERT_DEFAULT_JUDGE in backend/Makefile, which a test holds it to.
+const DefaultJudgeModel = "claude-sonnet-5-5"
+
+// gradedElsewhere says rec's judge was not DefaultJudgeModel. A candidate of
+// the default judge's own family needs another judge, so any judge stands for it.
+func gradedElsewhere(rec Record) bool {
+	return rec.JudgeServedModel != "" && rec.JudgeServedModel != DefaultJudgeModel &&
+		!selfJudged(rec.ServedModel, DefaultJudgeModel)
 }
 
 // scenarioStanding judges one record against THIS SITE's scenarios, one by one.

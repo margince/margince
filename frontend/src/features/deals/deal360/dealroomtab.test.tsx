@@ -51,6 +51,7 @@ function room(over: Partial<DealRoom> = {}): DealRoom {
     deal_id: "deal-1",
     title: "Acme Expansion — Deal Room",
     state: "live",
+    writable: true,
     source: "manual",
     version: 1,
     created_at: "2026-08-22T09:00:00Z",
@@ -82,7 +83,9 @@ function roomRoutes(state: DealRoom["state"] = "live") {
 describe("DealRoomTab", () => {
   it("draws the room's band once the deal has one", async () => {
     stubWithSession(roomRoutes(), { deal_room: ["read", "update"] });
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
 
     expect(
       await screen.findByRole("heading", {
@@ -99,11 +102,63 @@ describe("DealRoomTab", () => {
       { "GET /deal-rooms": () => jsonResponse({ data: [], page: {} }) },
       { deal_room: ["read", "create"] },
     );
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
 
     expect(
       await screen.findByRole("button", { name: "Open a Deal Room" }),
     ).toBeInTheDocument();
+  });
+
+  it("stops a room title at the length the room can hold", async () => {
+    stubWithSession(
+      { "GET /deal-rooms": () => jsonResponse({ data: [], page: {} }) },
+      { deal_room: ["read", "create"] },
+    );
+    const user = userEvent.setup();
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Open a Deal Room" }),
+    );
+    expect(await screen.findByLabelText(/Room title/)).toHaveAttribute(
+      "data-character-limit",
+      "120",
+    );
+  });
+
+  it("says the room title is required on Open, and sends nothing", async () => {
+    const create = vi.fn(() => jsonResponse(room(), 201));
+    stubWithSession(
+      {
+        "GET /deal-rooms": () => jsonResponse({ data: [], page: {} }),
+        "POST /deal-rooms": create,
+      },
+      { deal_room: ["read", "create"] },
+    );
+    const user = userEvent.setup();
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Open a Deal Room" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const title = within(dialog).getByLabelText(/Room title/);
+    await user.clear(title);
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: translate("en", "room.create.confirm"),
+      }),
+    );
+
+    expect(within(dialog).getByText("Room title is required.")).toBeVisible();
+    expect(title).toHaveFocus();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("a reader who may not create is offered no way to open a room", async () => {
@@ -112,10 +167,33 @@ describe("DealRoomTab", () => {
       { deal_room: ["read"] },
     );
     const { container } = withProviders(
-      <DealRoomTab dealId="deal-1" dealName="Acme Expansion" />,
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
     );
 
     await waitFor(() => expect(container).toBeEmptyDOMElement());
+  });
+});
+
+describe("DealRoomTab on a deal the reader may not change", () => {
+  // Opening a room writes the deal, so the server refuses it to a reader the
+  // deal's write gate refuses, whatever their room grant.
+  it("offers no way to open a room", async () => {
+    stubWithSession(
+      { "GET /deal-rooms": () => jsonResponse({ data: [], page: {} }) },
+      { deal_room: ["read", "create"] },
+    );
+    const { container } = withProviders(
+      <DealRoomTab
+        dealWritable={false}
+        dealId="deal-1"
+        dealName="Acme Expansion"
+      />,
+    );
+
+    await waitFor(() => expect(container).toBeEmptyDOMElement());
+    expect(
+      screen.queryByRole("button", { name: "Open a Deal Room" }),
+    ).toBeNull();
   });
 });
 
@@ -133,7 +211,9 @@ describe("the tab carries the room's own access list", () => {
       },
       { deal_room: ["read", "update"] },
     );
-    withProviders(<DealRoomTab dealId="deal-1" dealName="BaymeOps" />);
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="BaymeOps" />,
+    );
 
     expect(
       await screen.findByText(translate("en", "access.title")),
@@ -159,7 +239,9 @@ describe("Manage room opens the room's settings", () => {
       { deal_room: ["read", "update"] },
     );
     const user = userEvent.setup();
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
 
     await user.click(
       await screen.findByRole("button", { name: "Manage room" }),
@@ -181,7 +263,9 @@ describe("Manage room opens the room's settings", () => {
   it("warns before a room is closed", async () => {
     stubWithSession(roomRoutes(), { deal_room: ["read", "update"] });
     const user = userEvent.setup();
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
 
     await user.click(
       await screen.findByRole("button", { name: "Manage room" }),
@@ -200,7 +284,9 @@ describe("Manage room opens the room's settings", () => {
       { deal_room: ["read", "update"] },
     );
     const user = userEvent.setup();
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
 
     await user.click(await screen.findByRole("button", { name: "Resume" }));
 
@@ -209,7 +295,9 @@ describe("Manage room opens the room's settings", () => {
 
   it("offers a reader who may not manage the room no way to its settings", async () => {
     stubWithSession(roomRoutes(), { deal_room: ["read"] });
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
 
     expect(
       await screen.findByRole("heading", {
@@ -233,7 +321,9 @@ describe("the tab says what the room still lacks", () => {
       },
       { deal_room: ["read", "update"] },
     );
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
 
     expect(
       await screen.findByText(translate("en", "roomtab.setup.title")),
@@ -371,7 +461,9 @@ describe("inviting from the setup list", () => {
   it("keeps the issued link when the invite finishes the list", async () => {
     stubLastStepRoom({ failing: false });
     const user = userEvent.setup();
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
 
     await sendTheInviteStep(user);
 
@@ -388,7 +480,9 @@ describe("inviting from the setup list", () => {
     const roomReads = { failing: false };
     stubLastStepRoom(roomReads);
     const user = userEvent.setup();
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
 
     await sendTheInviteStep(user);
     roomReads.failing = true;
@@ -441,7 +535,9 @@ describe("the room brief", () => {
       },
       { deal_room: ["read", "update"] },
     );
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
 
     expect(
       await screen.findByText("Lena Vogt asked for a new link."),
@@ -455,7 +551,9 @@ describe("the room brief", () => {
 
   it("draws nothing for a room with nothing to say", async () => {
     stubWithSession(roomRoutes(), { deal_room: ["read", "update"] });
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
 
     await screen.findByRole("heading", { name: "Acme Expansion — Deal Room" });
     await waitFor(() =>
@@ -475,7 +573,9 @@ describe("a room buyers cannot simply walk into says so", () => {
     "names a %s room's state, with the way to its settings",
     async (state, key) => {
       stubWithSession(roomRoutes(state), { deal_room: ["read", "update"] });
-      withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+      withProviders(
+        <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+      );
 
       expect(await screen.findByText(translate("en", key))).toBeInTheDocument();
       expect(
@@ -503,14 +603,16 @@ describe("the settings dialog's access changes", () => {
       { deal_room: ["read", "update"] },
     );
     const user = userEvent.setup();
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
 
     await user.click(
       await screen.findByRole("button", { name: "Manage room" }),
     );
     await user.type(
       await screen.findByRole("textbox", { name: /Access ends on/ }),
-      "31/12/2026{Enter}",
+      "31/12/2026{Tab}",
     );
     await user.click(screen.getByRole("radio", { name: /Closed/ }));
     await user.click(screen.getByRole("button", { name: "Save changes" }));
@@ -520,6 +622,43 @@ describe("the settings dialog's access changes", () => {
         'PUT {"expires_at":"2026-12-31T23:59:59.000Z"}',
         "POST close",
       ]),
+    );
+  });
+});
+
+describe("an expired room takes a later end date", () => {
+  it("leaves only the end date open, and saves it", async () => {
+    const calls: string[] = [];
+    stubWithSession(
+      {
+        ...roomRoutes("expired"),
+        "PUT /deal-rooms/room-1/expiry": (body) => {
+          calls.push(`PUT ${JSON.stringify(body)}`);
+          return jsonResponse(room({ version: 2 }));
+        },
+      },
+      { deal_room: ["read", "update"] },
+    );
+    const user = userEvent.setup();
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
+
+    await user.click(
+      (await screen.findAllByRole("button", { name: "Manage room" }))[0],
+    );
+    expect(
+      await screen.findByText(translate("en", "roomtab.manage.expiredHint")),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/Room title/)).toBeDisabled();
+    await user.type(
+      screen.getByRole("textbox", { name: /Access ends on/ }),
+      "31/12/2026{Tab}",
+    );
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(calls).toEqual(['PUT {"expires_at":"2026-12-31T23:59:59.000Z"}']),
     );
   });
 });
@@ -544,7 +683,9 @@ describe("the brief follows the room", () => {
       { deal_room: ["read", "update"] },
     );
     const user = userEvent.setup();
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
 
     await user.type(
       await screen.findByLabelText("New thread"),
@@ -555,3 +696,25 @@ describe("the brief follows the room", () => {
     await waitFor(() => expect(briefReads).toHaveBeenCalledTimes(2));
   });
 });
+
+it.each([true, false])(
+  "asks only a room editor to repair an unavailable contact: %s",
+  async (writable) => {
+    stubWithSession(
+      {
+        ...roomRoutes(),
+        "GET /deal-rooms": () =>
+          jsonResponse({
+            data: [room({ needs_steward: true, writable })],
+            page: {},
+          }),
+      },
+      { deal_room: ["read", "update"] },
+    );
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
+    await screen.findByRole("heading", { name: "Acme Expansion — Deal Room" });
+    expect(screen.queryByText("New contact needed") !== null).toBe(writable);
+  },
+);

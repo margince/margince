@@ -1,0 +1,14 @@
+{
+  "tool": "read_reports",
+  "action": "analytics_schema",
+  "verb": "get_analytics_schema",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

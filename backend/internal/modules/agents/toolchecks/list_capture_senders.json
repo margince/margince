@@ -1,0 +1,6 @@
+{
+  "verb": "list_capture_senders",
+  "checks": [
+    "contact.read"
+  ]
+}

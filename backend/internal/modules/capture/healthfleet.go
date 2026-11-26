@@ -21,8 +21,10 @@ import (
 
 // FleetConcern associates a health concern with its owner for authorized operators.
 type FleetConcern struct {
-	UserID      ids.UUID
+	// UserID is nil for a shared mailbox, which Shared marks.
+	UserID      *ids.UUID
 	DisplayName *string
+	Shared      bool
 	Connection  ConnectionView
 }
 
@@ -38,11 +40,11 @@ func FleetConcernsTx(ctx context.Context, tx pgx.Tx, now time.Time) ([]FleetConc
 	rows, err := tx.Query(ctx, `SELECT c.user_id, u.display_name, c.id, c.provider, c.status,
   c.account_label, c.connected_at, c.silence_dismissed_since,
   s.last_delivery_at, s.last_success_at, s.last_error_class, s.failing_since,
-  b.status, b.completed_at
- FROM capture_connection c JOIN app_user u ON u.id = c.user_id AND `+workforce.LiveMemberSQL("u")+`
+  b.status, b.completed_at, c.provider_scopes, `+notesCalendarAccountSQL+`
+ FROM capture_connection c LEFT JOIN app_user u ON u.id = c.user_id AND `+workforce.LiveMemberSQL("u")+`
  LEFT JOIN capture_sync_state s ON s.connection_id = c.id
  LEFT JOIN LATERAL (SELECT status, completed_at FROM capture_backfill WHERE connection_id = c.id ORDER BY created_at DESC, id DESC LIMIT 1) b ON true
- WHERE c.archived_at IS NULL AND c.status <> 'disconnected'`)
+ WHERE c.archived_at IS NULL AND c.status <> 'disconnected' AND (u.id IS NOT NULL OR `+sharedMailboxLiveSQL+`)`)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading connection health: %w", err)
 	}
@@ -55,9 +57,10 @@ func FleetConcernsTx(ctx context.Context, tx pgx.Tx, now time.Time) ([]FleetConc
 		v := &row.Connection
 		if err := rows.Scan(&row.UserID, &row.DisplayName, &v.ID, &v.Provider, &v.Status,
 			&v.AccountLabel, &v.ConnectedAt, &v.SilenceDismissedSince, &v.LastDeliveryAt, &v.LastSuccessAt,
-			&v.LastErrorClass, &v.FailingSince, &status, &completed); err != nil {
+			&v.LastErrorClass, &v.FailingSince, &status, &completed, &v.ProviderScopes, &v.CalendarAccountLabel); err != nil {
 			return nil, err
 		}
+		row.Shared = row.UserID == nil
 		if status != nil {
 			v.Backfill = &BackfillRun{Status: *status, CompletedAt: completed}
 		}

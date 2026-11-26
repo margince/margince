@@ -15,6 +15,7 @@ import { useLists } from "../../lib/lists.queries";
 import { useAllSavedViews } from "../../lib/savedviews.queries";
 import type { UrlParams } from "../../lib/urlstate";
 import { filterSentence, useSentenceWords } from "./filtersentence";
+import { mergeReferencedIds, referencedIdsOf } from "./filtersentence.names";
 import {
   type LibraryCut,
   type LibraryGroup,
@@ -170,19 +171,33 @@ function usePaused(value: string): string {
 export function useCaptions(
   items: readonly LibraryItem[],
 ): (item: LibraryItem) => string {
-  const words = useSentenceWords();
   const wanted = new Set<FilterResource>(
     items
       .filter((item) => treeOf(item) !== null && !purposeOf(item))
       .map(resourceOf),
   );
-  const vocabularies: Readonly<Record<FilterResource, VocabularyRead>> = {
+  // Core types only. An extension's kind has no wording here, so its rows are
+  // counted rather than named.
+  const vocabularies: Readonly<
+    Partial<Record<FilterResource, VocabularyRead>>
+  > = {
     contact: useFilterVocabulary("contact", wanted.has("contact")),
     company: useFilterVocabulary("company", wanted.has("company")),
     deal: useFilterVocabulary("deal", wanted.has("deal")),
     lead: useFilterVocabulary("lead", wanted.has("lead")),
     project: useFilterVocabulary("project", wanted.has("project")),
   };
+  const words = useSentenceWords(
+    mergeReferencedIds(
+      items.map((item) => {
+        const tree = treeOf(item);
+        return referencedIdsOf(
+          tree ? [tree] : [],
+          vocabularies[resourceOf(item)]?.data?.fields,
+        );
+      }),
+    ),
+  );
   return (item) => {
     const purpose = purposeOf(item);
     if (purpose) {
@@ -190,7 +205,11 @@ export function useCaptions(
     }
     const tree = treeOf(item);
     return tree
-      ? filterSentence(tree, vocabularies[resourceOf(item)].data?.fields, words)
+      ? filterSentence(
+          tree,
+          vocabularies[resourceOf(item)]?.data?.fields,
+          words,
+        )
       : "";
   };
 }

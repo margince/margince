@@ -18,10 +18,8 @@ package agents
 
 import (
 	"encoding/json"
-	"fmt"
-	"sort"
-	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -135,19 +133,6 @@ const summaryFieldLimit = 8
 // staged row carries the whole of them in proposed_change, which the inbox shows
 // beside this line; repeating them here would truncate exactly the long text a
 // reader would then have to open proposed_change to see anyway.
-func describeGenericWrite(said summaryCopy, head string, fields json.RawMessage) string {
-	var patch map[string]json.RawMessage
-	if json.Unmarshal(fields, &patch) != nil || len(patch) == 0 {
-		return head
-	}
-	names := make([]string, 0, len(patch))
-	for name := range patch {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	if len(names) > summaryFieldLimit {
-		names = append(names[:summaryFieldLimit],
-			fmt.Sprintf(said.moreFields, len(names)-summaryFieldLimit))
-	}
-	return head + fmt.Sprintf(said.settingFields, strings.Join(names, ", "))
+func describeGenericWrite(said summaryCopy, head *systemtext.Component, fields json.RawMessage) string {
+	return systemtext.Canonical(genericWriteMetadata(head, fields).Subject, said.lang)
 }

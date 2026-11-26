@@ -9,6 +9,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -16,7 +18,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -27,7 +31,8 @@ func repDeals(t *testing.T, e *integration.Env, fixture territory, territory str
 	owner := ids.From[ids.UserKind](e.Rep1)
 	for i := range n {
 		if _, err := fixture.deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: fmt.Sprintf("Rep deal %d", i), PipelineID: fixture.pipeline, StageID: fixture.open,
+			Source: "manual",
+			Name:   fmt.Sprintf("Rep deal %d", i), PipelineID: fixture.pipeline, StageID: fixture.open,
 			OwnerID: &owner, CustomFields: map[string]any{*fixture.field.ColumnName: territory},
 		}); err != nil {
 			t.Fatal(err)
@@ -127,5 +132,82 @@ func TestACustomFieldFilterThatSeparatesOutTooFewDealsIsRefused(t *testing.T) {
 	refusal, ok := errors.AsType[*analyticsquery.RefusalError](err)
 	if !ok || refusal.Kind != analyticsquery.RefusalPrivacy {
 		t.Fatalf("a filter leaving out the one APAC deal answered %v, want a privacy refusal", err)
+	}
+}
+
+// A grant that only narrows the analytics vocabulary is asked unrecorded, so
+// tools/list keeps offering the schema to a role without it. Naming the field
+// outright still asks it recorded, and refuses.
+func TestAnOptionalAnalyticsGrantNarrowsTheSchemaWithoutHidingTheTool(t *testing.T) {
+	specs := map[string]reportSpec{"projects-by-phase": projectsByPhaseSpec()}
+	ctx, recorded := auth.RecordChecksForTest(seatWith("project", "deal"))
+
+	schema := analyticsSchemaFrom(ctx, specs)
+	if _, named := schema.Entities["projects-by-phase"].Fields[fieldCompanyID]; named {
+		t.Errorf("a role without company and relationship reads can name %s", fieldCompanyID)
+	}
+	for _, optional := range []string{"company.read", "relationship.read"} {
+		if slices.Contains(recorded().Checks, optional) {
+			t.Errorf("deriving the schema recorded %s, which would hide the tool from a role without it", optional)
+		}
+	}
+
+	err := requireVocabularyGrants(ctx, projectsByPhaseSpec(), []string{fieldCompanyID})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("naming %s without the grants answered %v, want a refusal", fieldCompanyID, err)
+	}
+	if !slices.Contains(recorded().Checks, "company.read") {
+		t.Errorf("the refusing check was not recorded: %v", recorded().Checks)
+	}
+
+	// One grant held and the other not: each is asked unrecorded on its own.
+	relationOnly, recordedOne := auth.RecordChecksForTest(seatWith("project", "deal", "company"))
+	analyticsSchemaFrom(relationOnly, specs)
+	if slices.Contains(recordedOne().Checks, "relationship.read") {
+		t.Error("deriving the schema without relationship.read recorded it")
+	}
+
+	wide := analyticsSchemaFrom(seatWith("project", "deal", "company", "relationship"), specs)
+	if _, named := wide.Entities["projects-by-phase"].Fields[fieldCompanyID]; !named {
+		t.Errorf("a role with both grants cannot name %s", fieldCompanyID)
+	}
+}
+
+// A population a role cannot read narrows the schema without hiding the tool.
+// One any-of check is recorded, so a role that reads no population at all is
+// still not offered it.
+func TestAnUnreadablePopulationNarrowsTheSchemaWithoutHidingTheTool(t *testing.T) {
+	ctx, recorded := auth.RecordChecksForTest(seatWith("deal"))
+	schema := AnalyticsSchemaFor(ctx)
+	if len(schema.Entities) == 0 {
+		t.Fatal("a role reading deals was handed no population")
+	}
+	for key := range schema.Entities {
+		if entity := prebuiltReports[key].entity; entity != "deal" {
+			t.Errorf("a role reading only deals was handed %s, a %s population", key, entity)
+		}
+	}
+	anyOf := ""
+	for _, check := range recorded().Checks {
+		if strings.Contains(check, ",") {
+			anyOf = check
+			continue
+		}
+		if check == "activity.read" || check == "lead.read" || check == "project.read" {
+			t.Errorf("deriving the schema recorded %s alone, which would hide the tool from a role without it", check)
+		}
+	}
+	for _, check := range analyticsPopulationChecks(prebuiltReports) {
+		if !strings.Contains(anyOf, check.String()) {
+			t.Errorf("the recorded population check %q leaves out %s", anyOf, check)
+		}
+	}
+
+	none, recordedNone := auth.RecordChecksForTest(seatWith())
+	if got := AnalyticsSchemaFor(none); len(got.Entities) != 0 {
+		t.Errorf("a role reading no population was handed %d", len(got.Entities))
+	}
+	if !slices.Contains(recordedNone().Refused, anyOf) {
+		t.Errorf("a role reading no population was not refused the any-of check: %v", recordedNone().Refused)
 	}
 }

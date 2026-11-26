@@ -248,10 +248,10 @@ func (s *Sink) decideChannelCounterparty(ctx context.Context) counterpartyDecisi
 }
 
 // ensureChannelCounterparty is the auto-create follow-up for one freshly
-// captured channel activity. Like its mail sibling it runs after the capture
-// transaction committed and NEVER fails the capture — a fault lands in
-// system_log for the link_reconcile sweep, and the link-less connector activity is
-// the retry marker.
+// captured channel activity. Unlike the mail ensure, it runs after the capture
+// transaction committed. It never fails the capture: a fault lands in
+// system_log for the link_reconcile sweep, and the link-less activity is the
+// retry marker.
 func (s *Sink) ensureChannelCounterparty(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef, decision counterpartyDecision) {
 	cp := rec.Counterparty
 	outcome, err := s.channelEnsurer.EnsureChannelCounterparty(ctx, EnsureChannelRequest{

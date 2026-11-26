@@ -13,7 +13,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -73,8 +72,8 @@ func TestActivityArchiveUndoRefusesStaleVersionAndMissingAuthority(t *testing.T)
 		t.Fatalf("stale undo: %v", err)
 	}
 	reader := e.As(e.AdminUser, nil, principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{"activity": {Read: true, Update: true}, "contact": {Read: true}}})
-	if answer := advisoryAnswer(reader, t, e, entityTypeActivity, id, archive); answer.Undoable || answer.Reason != string(ReasonNotWritableByCaller) {
-		t.Fatalf("delete grant not required: %+v", answer)
+	if answer := advisoryAnswer(reader, t, e, entityTypeActivity, id, archive); answer.Undoable || answer.Reason != string(ReasonRestoreArchiverRequired) {
+		t.Fatalf("an editor who neither holds delete nor made the archive is told %+v, want %s", answer, ReasonRestoreArchiverRequired)
 	}
 	err := e.DB().Tx(reader, func(tx pgx.Tx) error {
 		_, err := e.Activities.RestoreActivityTx(reader, tx, ids.From[ids.ActivityKind](id), &version, unarchiveWith(nil))
@@ -91,7 +90,7 @@ func TestActivityArchiveUndoRefusesStaleVersionAndMissingAuthority(t *testing.T)
 func TestActivityArchiveUndoCannotCrossErasure(t *testing.T) {
 	e := integration.Setup(t)
 	id, archive, contact := archivedSourceNote(t, e)
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "Subject requested erasure"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), contact, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
 	if err := undoEntry(t, e, entityTypeActivity, id, archive); err == nil {

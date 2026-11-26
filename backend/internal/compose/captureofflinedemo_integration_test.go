@@ -99,7 +99,7 @@ func seedOfflineDemoAccount(t *testing.T, e *integration.Env, owner ids.UUID, sl
 	ctx := context.Background()
 	var companyID ids.UUID
 	err := e.Pool.QueryRow(ctx, `
-		INSERT INTO company (display_name, lifecycle, owner_id, source, captured_by)
+		INSERT INTO company (display_name, status, owner_id, source, captured_by)
 		VALUES ($2, 'customer', $1, 'test', 'human:test')
 		RETURNING id`, owner, slug+" GmbH").Scan(&companyID)
 	if err != nil {

@@ -2,18 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../src/api/schema";
+import { REPORT_SCHEMA } from "../../src/features/analytics/analytics.questions.testkit";
 import {
   reportingStoryCatalog,
   reportingStoryEvaluation,
   reportingStoryFramework,
 } from "../../src/testing/reporting.fixtures";
-import * as ai from "./ai";
-import * as booking from "./booking";
-import * as calls from "./calls";
-import * as capture from "./capture";
-import * as dataTasks from "./datatasks";
 import {
-  agentUsageByUser,
+  allowedPreview,
+  isPreviewDoor,
+  previewedAddresses,
+} from "../../src/testing/sendpermission.testkit";
+import {
   aiCalls,
   aiHealth,
   aiProviderHealth,
@@ -21,18 +21,26 @@ import {
   aiRouting,
   aiUsage,
   aiUsageSummary,
+  captureHealth,
+  extensionIngestHealth,
+  installationJurisdiction,
+  jobHealth,
+  recoveryHealth,
+} from "./adminfixtures";
+import * as ai from "./ai";
+import * as booking from "./booking";
+import * as calls from "./calls";
+import * as capture from "./capture";
+import * as dataTasks from "./datatasks";
+import {
+  agentUsageByUser,
   anna,
   approval,
   automationCatalog,
   brandt,
   captureActivity,
-  captureHealth,
-  extensionIngestHealth,
-  installationJurisdiction,
-  jobHealth,
   knowledgeCorpora,
   passports,
-  recoveryHealth,
   seats,
   seededLead,
 } from "./fixtures";
@@ -40,6 +48,7 @@ import { importRoutes } from "./imports";
 import * as insight from "./insight";
 import * as lists from "./lists";
 import * as records from "./records";
+import { recordReferences } from "./references";
 import { type MockRoute, notFound, page, reply } from "./server";
 import * as session from "./session";
 import * as work from "./work";
@@ -53,6 +62,13 @@ const empty = reply(page([]));
 // above any prefix row that would also match it.
 export const routes: readonly MockRoute[] = [
   { path: "/me", handle: session.me },
+  // The list envelope is no answer to the send check, and Send waits for one.
+  {
+    method: "POST",
+    path: isPreviewDoor,
+    handle: ({ route, json }) =>
+      json(allowedPreview(previewedAddresses(route.request().postDataJSON()))),
+  },
   ...importRoutes,
   { path: "/me/working-hours", handle: session.myWorkingHours },
   {
@@ -84,6 +100,21 @@ export const routes: readonly MockRoute[] = [
     method: "GET",
     path: "/installation/configuration",
     handle: reply(session.installationConfiguration),
+  },
+  {
+    method: "GET",
+    path: "/finance/customer-payments",
+    handle: reply({
+      access_scope: "disconnected",
+      state: "no_connection",
+      linked_companies: 0,
+      company_count: 0,
+      invoice_count: 0,
+      totals: [],
+      customers: [],
+      data: [],
+      page: { has_more: false },
+    }),
   },
   // An installation with the demo source composed in and nothing connected.
   {
@@ -259,9 +290,10 @@ export const routes: readonly MockRoute[] = [
   {
     method: "POST",
     path: "/leads/l-1/promote",
-    handle: reply(records.promotedLead),
+    handle: records.promoteLead,
   },
   { path: "/users", handle: reply(page(seats)) },
+  { method: "GET", path: "/records/references", handle: recordReferences },
   { path: "/users/names", handle: records.userNames },
   { path: "/pipelines", handle: reply(records.pipelines) },
   {
@@ -376,6 +408,10 @@ export const routes: readonly MockRoute[] = [
     handle: reply(booking.schedulingProfile),
   },
   { path: "/scheduling/calendars", handle: reply(booking.calendars) },
+  // Both answer a bare array, so the empty list page would break the cards.
+  { path: "/scheduling/team-candidates", handle: reply([]) },
+  { path: "/scheduling/team-requests", handle: reply([]) },
+  { path: "/scheduling/team-links", handle: reply([]) },
   {
     path: "/public/meeting/guest-booking",
     handle: reply(booking.guestBooking),
@@ -388,6 +424,8 @@ export const routes: readonly MockRoute[] = [
   { path: "/availability", handle: reply(booking.availability) },
   { path: "/search", handle: insight.search },
   { path: "/analytics/context", handle: reply(insight.analyticsContext) },
+  // The explain drawer draws no amount before the schema marks the money columns.
+  { path: "/analytics/schema", handle: reply(REPORT_SCHEMA) },
   { path: "/forecast", handle: reply(insight.forecast) },
   { path: "/analytics/framework", handle: reply(reportingStoryFramework) },
   { path: "/analytics/metrics", handle: reply(reportingStoryCatalog) },
@@ -418,7 +456,6 @@ export const routes: readonly MockRoute[] = [
     path: (path) => path.includes("/context"),
     handle: reply({ anchor: { type: "contact", id: "x" }, sections: [] }),
   },
-  { path: "/digest", handle: reply(insight.digest) },
   { path: "/capture/activity", handle: reply(captureActivity) },
   { path: "/capture/activity/workspace", handle: reply(captureActivity) },
   {
@@ -445,6 +482,13 @@ export const routes: readonly MockRoute[] = [
   { path: "/ai/usage/summary", handle: reply(aiUsageSummary) },
   { method: "GET", path: "/ai/agent-usage", handle: reply(agentUsageByUser) },
   { method: "GET", path: "/ai/provider-keys", handle: reply(aiProviderKeys) },
+  // The cold start binds the model only after the vendor accepts the key.
+  {
+    method: "POST",
+    path: /^\/ai\/provider-keys\/([^/]+)\/test$/,
+    handle: ({ json, params }) =>
+      json({ provider: params[0], ok: true, key_confirmed: true }),
+  },
   { path: "/ai/provider-health", handle: reply(aiProviderHealth) },
   { method: "GET", path: "/ai/calls", handle: reply(aiCalls) },
   { path: "/ai/call-stats", handle: ai.callStats },

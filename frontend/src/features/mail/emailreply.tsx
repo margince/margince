@@ -11,6 +11,7 @@ import { Button } from "../../design-system/atoms";
 import { OverflowMenu } from "../../design-system/overflowmenu";
 import { useT } from "../../i18n";
 import type { RelinkKind } from "./composerelink";
+import { InvitationAnswer } from "./invitationanswer";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 type ActivityLink = components["schemas"]["ActivityLink"];
@@ -82,10 +83,19 @@ export function EmailDrawerActions({
   if (!anchor || presentation.access.content_state === "withheld") {
     return null;
   }
+  // An invitation asks for an RSVP, so its answers lead and a written reply,
+  // say to propose another time, steps back to a quiet verb.
+  const invitation = presentation.summary.calendar_invitation;
   return (
     <>
+      {invitation && (
+        <InvitationAnswer
+          activityId={presentation.id}
+          invitation={invitation}
+        />
+      )}
       {presentation.can_reply && (
-        <Button variant="primary" onClick={onReply}>
+        <Button variant={invitation ? "ghost" : "primary"} onClick={onReply}>
           <Reply aria-hidden="true" />
           {t("compose.reply")}
         </Button>

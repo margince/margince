@@ -142,6 +142,56 @@ export const RailEmployments: Story = {
   },
 };
 
+// A tagged contact with a name too long for its LinkedIn chip. The tags sit at
+// the end of About with Add tag, and the chip ends in an ellipsis.
+const taggedLongName: View = {
+  ...populated,
+  contact: {
+    ...populated.contact,
+    full_name: "Dana Alexandra Buyer-Wolkenstein von Hohenberg",
+    tags: [
+      { tag_id: "t-1", name: "Champion", color: "teal" },
+      { tag_id: "t-2", name: "Fleet electrification 2027", color: "amber" },
+    ],
+  },
+};
+
+export const RailTaggedLongName: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(meFixture({ allow: { contact: ["update"] } })),
+      "GET /records/contact/p-1/tags": () =>
+        jsonResponse({
+          data: [
+            {
+              tag_id: "t-1",
+              name: "Champion",
+              color: "teal",
+              archived: false,
+              assigned_at: "2026-03-03T10:00:00Z",
+            },
+            {
+              tag_id: "t-2",
+              name: "Fleet electrification 2027",
+              color: "amber",
+              archived: false,
+              assigned_at: "2026-04-03T10:00:00Z",
+            },
+          ],
+          withheld: false,
+        }),
+    });
+    return (
+      <StoryProviders>
+        <div style={{ maxWidth: 320 }}>
+          <LeftColumn view={taggedLongName} guard={undefined} />
+        </div>
+      </StoryProviders>
+    );
+  },
+};
+
 // The rail's consent slot when a purpose is refused rather than merely
 // unrecorded: VerdictWord (contactconsentpanel.tsx) draws this as the warning
 // badge. The readings above carry no consent slot (the header's Write

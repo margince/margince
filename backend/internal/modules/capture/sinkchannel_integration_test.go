@@ -15,13 +15,15 @@ package capture_test
 // ladder were ever widened to swallow channel records, its address-keyed
 // deferral would fail inside the gate savepoint and leave exactly such an
 // artifact behind. The fourth gate — the impersonation quarantine — lives in
-// contacts and is proved there (TestQuarantineSuspectNeedsADomainToJudge).
+// contacts and is proved there (TestAnImpersonationSignNeedsADomainToJudge).
 
 import (
 	"context"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -58,7 +60,7 @@ func (r *recordingChannelEnsurer) seen() []capture.EnsureChannelRequest {
 // a contact with no identity binding.
 type refusingMailEnsurer struct{ t *testing.T }
 
-func (m refusingMailEnsurer) EnsureCounterparty(_ context.Context, in capture.EnsureRequest) (capture.EnsureOutcome, error) {
+func (m refusingMailEnsurer) EnsureCounterpartyTx(_ context.Context, _ pgx.Tx, in capture.EnsureRequest) (capture.EnsureOutcome, error) {
 	m.t.Errorf("the mail resolver was asked to ensure %+v; a channel record has no address for it to resolve", in)
 	return capture.EnsureOutcome{}, nil
 }

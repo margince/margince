@@ -39,7 +39,6 @@ afterEach(() => {
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMoment = components["schemas"]["ContactMoment"];
-type Activity = components["schemas"]["Activity"];
 type ContactPhone = components["schemas"]["ContactPhone"];
 
 const CAPTURED = {
@@ -438,7 +437,7 @@ describe("Call on the next task", () => {
   });
 });
 
-describe("Call on the move a call left owed", () => {
+describe("the call the server leads an owed promise with", () => {
   const PHONE: ContactPhone = {
     id: "ph-1",
     phone: "+49 30 1234567",
@@ -447,137 +446,92 @@ describe("Call on the move a call left owed", () => {
     position: 0,
     ...CAPTURED,
   };
-  const CALLED: Activity = {
-    ...OPEN_TASK,
-    id: "a-7",
-    subject: "Call Dana back on Monday",
-    source_activity_id: "call-1",
-    links: [{ entity_type: "contact", entity_id: "p-1" }],
-  };
-  const TYPED: Activity = { ...CALLED, id: "a-6", source_activity_id: null };
   const OWED: ContactMoment = {
     ...PROMISE,
     headline: "You owe them: Call Dana back on Monday",
     evidence: [{ type: "task", id: "a-7", label: "Call Dana back" }],
     recommended_action: {
-      kind: "draft_reply",
-      label: "Write to them",
+      kind: "call",
+      label: "Call them",
       state: "available",
     },
+    secondary_actions: [
+      {
+        kind: "draft_reply",
+        label: "Write to them",
+        state: "will_confirm",
+        destination: { surface: "composer" },
+      },
+    ],
   };
-  const viewWith = (contact: Partial<Contact360["contact"]>): Contact360 => ({
+  const withPhone: Contact360 = {
     ...VIEW,
-    contact: { ...VIEW.contact, phones: [PHONE], ...contact },
-    next_steps: { data: [CALLED, TYPED], page: { has_more: false } },
-  });
-  const dial = () => document.querySelector('a[href^="tel:"]');
+    contact: { ...VIEW.contact, phones: [PHONE] },
+  };
 
   beforeEach(() =>
-    installFetchStub({
-      "GET /me": meRoute({ activity: ["read", "create"] }),
-      "GET /activities/call-1": () =>
-        jsonResponse({
-          id: "call-1",
-          kind: "call",
-          content_state: "available",
-          occurred_at: "2026-08-09T09:00:00Z",
-        }),
-    }),
+    installFetchStub({ "GET /me": meRoute({ activity: ["read", "create"] }) }),
   );
 
-  it("offers Call beside the server's own action when the task came from a call", async () => {
-    show(viewWith({}), OWED);
+  it("draws the lead as a dial link with the server's label and keeps writing beside it", async () => {
+    show(withPhone, OWED);
 
-    const call = await screen.findByRole("link", {
-      name: en["record.verb.call"],
-    });
+    const call = await screen.findByRole("link", { name: "Call them" });
     expect(call.getAttribute("href")).toBe("tel:+49301234567");
     expect(screen.getByRole("button", { name: "Write to them" })).toBeTruthy();
   });
 
-  it("offers Call on a move about a hand-typed task", async () => {
-    show(viewWith({}), {
+  it("keeps the call on the card that asks whether the promise is done", async () => {
+    show(withPhone, {
       ...OWED,
-      evidence: [{ type: "task", id: "a-6", label: "Typed" }],
+      recommended_action: {
+        kind: "complete_task",
+        label: "Done",
+        state: "available",
+      },
+      secondary_actions: [OWED.recommended_action],
+      may_be_done: {
+        promise_type: "task",
+        promise_id: "a-7",
+        email_activity_id: "e-1",
+        wrote_at: "2026-08-12T10:00:00Z",
+      },
     });
-    const call = await screen.findByRole("link", {
-      name: en["record.verb.call"],
-    });
+
+    const call = await screen.findByRole("link", { name: "Call them" });
     expect(call.getAttribute("href")).toBe("tel:+49301234567");
   });
 
-  const quiet: [
-    string,
-    Partial<ContactMoment>,
-    Partial<Contact360["contact"]>,
-  ][] = [
-    [
-      "a record that is not a task",
-      { evidence: [{ type: "activity", id: "a-7", label: "Re: renewal" }] },
-      {},
-    ],
-    [
-      "a task the record does not list",
-      { evidence: [{ type: "task", id: "a-5", label: "Gone" }] },
-      {},
-    ],
-    ["an archived contact", {}, { archived_at: "2026-08-01T00:00:00Z" }],
-  ];
-  it.each(quiet)(
-    "offers no Call on a move about %s",
-    async (_, moment, contact) => {
-      const client = show(viewWith(contact), { ...OWED, ...moment });
+  it("does not draw a kind it does not know, with no surface, as a dead button", async () => {
+    const client = show(withPhone, {
+      ...OWED,
+      recommended_action: {
+        kind: "ring_them" as ContactMoment["recommended_action"]["kind"],
+        label: "Ring them",
+        state: "available",
+      },
+      secondary_actions: undefined,
+    });
 
-      // Every read has answered, so a missing Call is the decision, not a wait.
-      await waitFor(() => expect(client.isFetching()).toBe(0));
-      expect(
-        screen.getByRole("button", { name: "Write to them" }),
-      ).toBeTruthy();
-      expect(dial()).toBeNull();
-    },
-  );
-
-  // The promise, dated 12 days late and read out of a call; the evidence names
-  // a hand-typed task 2 days late. Both the badge and Call follow the promise.
-  const promised = (evidence: ContactMoment["evidence"]): ContactMoment => ({
-    ...OWED,
-    evidence,
-    may_be_done: {
-      promise_type: "task",
-      promise_id: "a-7",
-      email_activity_id: "e-1",
-      wrote_at: "2026-08-12T10:00:00Z",
-    },
-  });
-  const datedView = (): Contact360 => ({
-    ...viewWith({}),
-    next_steps: {
-      data: [
-        { ...CALLED, due_at: "2026-08-01T09:00:00Z" },
-        { ...TYPED, due_at: "2026-08-11T09:00:00Z" },
-      ],
-      page: { has_more: false },
-    },
-  });
-  const lateBy = (days: number) =>
-    en["co.next.daysLate_other"].replace("{days}", String(days));
-
-  it("dates the promise and offers its Call when the evidence names another task", async () => {
-    show(datedView(), promised([{ type: "task", id: "a-6", label: "Typed" }]));
-
-    expect(
-      await screen.findByRole("link", { name: en["record.verb.call"] }),
-    ).toBeTruthy();
-    expect(screen.getByText(lateBy(12))).toBeTruthy();
-    expect(screen.queryByText(lateBy(2))).toBeNull();
+    await waitFor(() => expect(client.isFetching()).toBe(0));
+    expect(screen.queryByRole("button", { name: "Ring them" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Ring them" })).toBeNull();
   });
 
-  it("offers Call on a move that rests on the promise alone", async () => {
-    show(datedView(), promised([]));
+  it("derives no call of its own when the server led with writing", async () => {
+    show(withPhone, {
+      ...OWED,
+      evidence: [{ type: "task", id: "a-7", label: "Call Dana back" }],
+      recommended_action: {
+        kind: "draft_reply",
+        label: "Write to them",
+        state: "available",
+      },
+      secondary_actions: undefined,
+    });
 
-    expect(
-      await screen.findByRole("link", { name: en["record.verb.call"] }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Write to them" })).toBeTruthy();
+    expect(document.querySelector('a[href^="tel:"]')).toBeNull();
   });
 });
 
@@ -682,7 +636,9 @@ it("shows a privacy duty in place of the quiet answer and opens its review actio
   );
   expect(screen.getByText("Privacy notice owed")).not.toBeNull();
   expect(
-    screen.queryByRole("button", { name: en["standing.next.snooze"] }),
+    screen.queryByRole("button", {
+      name: en["worklist.disposition.verb.notNow"],
+    }),
   ).toBeNull();
   expect(screen.queryByText(en["standing.next.noTask"])).toBeNull();
   await user.click(screen.getByRole("button", { name: "Review privacy duty" }));

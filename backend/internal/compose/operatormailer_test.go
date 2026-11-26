@@ -36,9 +36,17 @@ func TestTheRelayPasswordResolvesEachConfiguredSource(t *testing.T) {
 	if err := os.WriteFile(mounted, []byte("from-the-secret-store\n"), 0o600); err != nil {
 		t.Fatalf("writing the mounted secret: %v", err)
 	}
+	padded := filepath.Join(t.TempDir(), "smtp-password-crlf")
+	if err := os.WriteFile(padded, []byte(" from-the-secret-store\r\n\n"), 0o600); err != nil {
+		t.Fatalf("writing the padded secret: %v", err)
+	}
 	for name, tc := range map[string]struct{ lines, want string }{
-		"a reference to the environment": {"    password: ${env:RELAY_SECRET}\n", "from-the-environment"},
-		"a reference to a mounted file":  {"    password: ${file:" + mounted + "}\n", "from-the-secret-store"},
+		// password_file has always trimmed all surrounding whitespace; ${file:}
+		// drops one trailing newline. Both read through config.ReadSecretFile.
+		"password_file trims CRLF and blank lines": {"    password_file: " + padded + "\n", "from-the-secret-store"},
+		"a file reference keeps them but one":      {"    password: ${file:" + padded + "}\n", " from-the-secret-store\r\n"},
+		"a reference to the environment":           {"    password: ${env:RELAY_SECRET}\n", "from-the-environment"},
+		"a reference to a mounted file":            {"    password: ${file:" + mounted + "}\n", "from-the-secret-store"},
 		// The older spelling keeps working, so a deployment that names a path
 		// boots unchanged.
 		"the original password_file spelling": {"    password_file: " + mounted + "\n", "from-the-secret-store"},

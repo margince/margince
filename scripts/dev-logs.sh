@@ -81,7 +81,7 @@ run_awk() {
   # "hide it" decision lives in exactly one place.
   local hb="$heartbeat"
   [[ "$all" == "1" ]] && hb=""
-  awk -v mode=view -v colour="$colour" -v role="$role" \
+  devlog_awk -v mode=view -v colour="$colour" -v role="$role" \
       -v heartbeat="$hb" -v want="$level" \
       -v keeplist="$(keep_for_level "$level")" \
       -f "$awk_lib" -

@@ -1,0 +1,15 @@
+{
+  "tool": "change_attention",
+  "action": "accept_deal_suggestion",
+  "verb": "accept_deal_suggestion",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

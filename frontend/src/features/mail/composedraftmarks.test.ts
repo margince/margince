@@ -11,6 +11,8 @@ const MARKS = {
   provenance: null,
   reasoning: [],
   scope: undefined,
+  language: null,
+  draftedIntent: "",
 };
 
 describe("the remembered bodies", () => {

@@ -35,7 +35,7 @@ func (s *Store) PreviewDraftCarryTx(ctx context.Context, tx pgx.Tx, kind string,
 		}
 	}
 	var private bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM mail_draft WHERE anchor_type=@kind AND anchor_id=@source AND author_id<>@author)`, pgx.StrictNamedArgs{fieldKind: kind, ledgerSourceKey: source, "author": author}).Scan(&private); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM mail_draft WHERE anchor_type=@kind AND anchor_id=@source AND author_id<>@author)`, pgx.StrictNamedArgs{fieldKind: kind, ledgerSourceKey: source, argAuthor: author}).Scan(&private); err != nil {
 		return nil, nil, err
 	}
 	if private {
@@ -54,7 +54,7 @@ func (s *Store) PreviewDraftCarryTx(ctx context.Context, tx pgx.Tx, kind string,
 
 func readCarriedDraft(ctx context.Context, tx pgx.Tx, kind string, anchor, author ids.UUID) (*crmcontracts.MailDraft, error) {
 	draft, err := scanMailDraft(tx.QueryRow(ctx, `SELECT `+mailDraftColumns+` FROM mail_draft
- WHERE anchor_type=@kind AND anchor_id=@anchor AND author_id=@author`, pgx.StrictNamedArgs{fieldKind: kind, "anchor": anchor, "author": author}))
+ WHERE anchor_type=@kind AND anchor_id=@anchor AND author_id=@author`, pgx.StrictNamedArgs{fieldKind: kind, "anchor": anchor, argAuthor: author}))
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, nil //nolint:nilnil // No draft means no effect for this author.
 	}

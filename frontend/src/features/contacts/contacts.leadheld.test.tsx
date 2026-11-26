@@ -41,9 +41,10 @@ function leadHolds(details: Record<string, unknown>) {
 }
 
 // Answers the first write with the lead-held refusal and any write that names
-// the leads to convert with the created contact, recording every body.
+// the leads to convert with the created contact. Records each body and key.
 function stubWrites(path: string, details: Record<string, unknown>) {
   const posted: Record<string, unknown>[] = [];
+  const keys: (string | null)[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
@@ -51,6 +52,7 @@ function stubWrites(path: string, details: Record<string, unknown>) {
       if (request.method === "POST" && url.pathname.endsWith(path)) {
         const body = JSON.parse(await request.text());
         posted.push(body);
+        keys.push(request.headers.get("Idempotency-Key"));
         if (!body.convert_lead_ids) return leadHolds(details);
         const contact = { id: "p-new", full_name: "Dana Buyer", version: 1 };
         return jsonResponse(
@@ -66,7 +68,7 @@ function stubWrites(path: string, details: Record<string, unknown>) {
       return jsonResponse(emptyPage);
     }),
   );
-  return posted;
+  return { posted, keys };
 }
 
 async function submit(button: string) {
@@ -84,14 +86,19 @@ async function submit(button: string) {
   );
   await user.click(screen.getByTestId(button));
   await user.type(screen.getByLabelText("Full name *"), "Dana Buyer");
+  if (button === "new-record") await user.click(screen.getByText("Add email"));
+  await user.type(
+    screen.getByLabelText(button === "quick-capture" ? "Email" : "Email *"),
+    "dana@example.test",
+  );
   await user.click(screen.getByRole("button", { name: "Create" }));
   await screen.findByText("This is already a lead.");
   return user;
 }
 
 describe("a contact form over a live lead", () => {
-  it("New contact converts the lead by sending the form again", async () => {
-    const posted = stubWrites("/contacts", {
+  it("New contact converts the lead by sending the form again under a new key", async () => {
+    const { posted, keys } = stubWrites("/contacts", {
       existing_id: "lead-1",
       lead_ids: ["lead-1"],
       convertible: true,
@@ -105,10 +112,13 @@ describe("a contact form over a live lead", () => {
       convert_lead_ids: ["lead-1"],
     });
     expect(posted[0]).not.toHaveProperty("convert_lead_ids");
+    expect(keys[0]).toBeTruthy();
+    expect(keys[1]).toBeTruthy();
+    expect(keys[1]).not.toBe(keys[0]);
   });
 
   it("Quick capture converts the lead by sending the form again", async () => {
-    const posted = stubWrites("/quick-capture", {
+    const { posted } = stubWrites("/quick-capture", {
       existing_id: "lead-2",
       lead_ids: ["lead-2"],
       convertible: true,

@@ -27,7 +27,7 @@ func TestAnExpiredButStoredPendingApprovalIsNoWorkOnAnySurface(t *testing.T) {
 	svc := NewApprovalsService(e.DB())
 	stage := func() ids.ApprovalID {
 		deal := e.SeedDeal(t, "Review date", pipeline, open, &e.AdminUser)
-		proposal, err := json.Marshal(deals.CloseDateCorrection{DealID: ids.From[ids.DealKind](deal), ExpectedCloseDate: "2026-12-01", Basis: "Review the date"})
+		proposal, err := json.Marshal(deals.CloseDateCorrection{DealID: ids.From[ids.DealKind](deal), ExpectedCloseDate: closeDateAhead(t), Basis: "Review the date"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -46,7 +46,7 @@ func TestAnExpiredButStoredPendingApprovalIsNoWorkOnAnySurface(t *testing.T) {
 		t.Fatalf("pending count = %d, err %v, want 1", count.Count, err)
 	}
 
-	lane, err := (attentionApprovals{svc: svc}).ListWire(e.Admin(), attention.ApprovalQuery{Status: status, Limit: 9, RequestedForReader: true})
+	lane, _, err := (attentionApprovals{svc: svc}).ListWire(e.Admin(), attention.ApprovalQuery{Status: status, Limit: 9, RequestedForReader: true})
 	if err != nil {
 		t.Fatal(err)
 	}

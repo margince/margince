@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// ProviderConfig is one tier→provider binding from ai-routing.yaml — the only
+// ProviderConfig is one tier→provider binding from the routing setting, the only
 // place vendor names appear. It carries NO secret: a cloud provider's BYOK key
 // is read at boot from the provider's conventional environment variable (see
 // cloudKeyEnv), so secrets live in the environment, never a config file. The
@@ -106,6 +106,7 @@ const (
 	providerOpenAI           = "openai"
 	providerGemini           = "gemini"
 	providerGeminiVertex     = "gemini_vertex"
+	providerAzureOpenAI      = "azure_openai"
 )
 
 // knownProviders is the provider names SelectBrain accepts: the registry's
@@ -231,8 +232,8 @@ func selectBrainOn(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (
 			attachmentMIMEs: narrowedCarriage(geminiCarries, cfg.Input),
 			thinkingLevel:   cfg.ThinkingLevel,
 		}, nil
-	case providerGeminiVertex:
-		return selectVertex(cfg, keys, httpc)
+	case providerGeminiVertex, providerAzureOpenAI:
+		return selectPlaced(cfg, keys, httpc)
 	case "":
 		return nil, errors.New("ai: binding has no provider")
 	default:

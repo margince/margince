@@ -1,0 +1,18 @@
+{
+  "tool": "enrich",
+  "verb": "enrich",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ],
+  "colleague_record": {
+    "manager": "other",
+    "rep": "other"
+  }
+}

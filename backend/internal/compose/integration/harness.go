@@ -15,6 +15,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/corereach"
+	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
@@ -116,6 +118,10 @@ func Setup(t *testing.T) *Env {
 		t.Fatal(err)
 	}
 	seedInstallationIdentity(ctx, t, owner)
+	// The boot seals these in RegisterExtensions, which no test here runs.
+	if err := corereach.Install(nil); err != nil {
+		t.Fatal(err)
+	}
 	for i, user := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3, e.AdminUser} {
 		address := string(rune('a'+i)) + "@authz.test"
 		if _, err := owner.Exec(ctx,
@@ -127,8 +133,8 @@ func Setup(t *testing.T) *Env {
 	e.AgentPassport = ids.NewV7()
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO passport (id, on_behalf_of, granted_by, token_hash, scopes, expires_at)
-		VALUES ($1, $2, $2, $3, ARRAY['read', 'write'], now() + interval '30 days')`,
-		e.AgentPassport, e.Rep1, "hash-"+e.AgentPassport.String()); err != nil {
+		VALUES ($1, $2, $2, encode(sha256($1::uuid::text::bytea), 'hex'), ARRAY['read', 'write'], now() + interval '30 days')`,
+		e.AgentPassport, e.Rep1); err != nil {
 		t.Fatal(err)
 	}
 	for _, team := range []ids.UUID{e.Team1, e.Team2} {
@@ -157,7 +163,7 @@ func Setup(t *testing.T) *Env {
 	// last and sees a package that has genuinely stopped.
 	testdb.AssertPoolsQuiesced(t)
 	e.Pool = pool
-	e.bindStores(harnessDB(pool, e.WS))
+	e.bindStores(t, harnessDB(pool, e.WS))
 	return e
 }
 
@@ -176,7 +182,8 @@ func Setup(t *testing.T) *Env {
 // this store that legitimately varies between them.
 func ProjectsStore(db *database.DB) *projects.Store {
 	return projects.NewStore(db).
-		WithCompanyEdges(contacts.AttachCompanyToProjectTx, projects.CompaniesFrom(contacts.CompaniesOnProjectTx))
+		WithCompanyEdges(contacts.AttachCompanyToProjectTx, projects.CompaniesFrom(contacts.CompaniesOnProjectTx), contacts.FirstCustomersOnProjectsTx).
+		WithDealLink(installseam.ProjectDealLink(deals.NewStore(db, installseam.Deals())))
 }
 
 // ContractsStore builds the contract store the way compose builds it.
@@ -214,26 +221,6 @@ func SchemaPool(t *testing.T) *pgxpool.Pool {
 	}
 	t.Cleanup(pool.Close)
 	return pool
-}
-
-// OwnerConn opens the schema-owner connection tests use to shift
-// timestamps the app role's workspace-bound path could never touch.
-func OwnerConn(t *testing.T) *pgx.Conn {
-	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	conn, err := pgx.Connect(context.Background(), dsn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err := conn.Close(context.Background()); err != nil {
-			t.Errorf("closing owner connection: %v", err)
-		}
-	})
-	return conn
 }
 
 // As binds a full operation context for one human principal.
@@ -492,4 +479,22 @@ func (e *Env) SeedWonDealLinkedTo(t *testing.T, activities ...ids.UUID) ids.UUID
 		t.Fatalf("seeding the qualifying deal: %v", err)
 	}
 	return deal
+}
+
+// ShareForWriting is the admin sharing one record at `write` with each
+// subject, a user or a team, through the real grant writer. A fixture uses it
+// so a seat may file onto a record it does not own. A user subject gets the
+// rep role first, because a share follows the subject's role.
+func (e *Env) ShareForWriting(t *testing.T, recordType string, record ids.UUID, subjectType string, subjects ...ids.UUID) {
+	t.Helper()
+	for _, subject := range subjects {
+		if subjectType == "user" {
+			e.GrantRole(t, subject, "rep")
+		}
+		if _, err := identity.NewService(e.Pool).CreateRecordGrant(e.Admin(), identity.CreateGrantInput{
+			RecordType: recordType, RecordID: record, SubjectType: subjectType, SubjectID: subject, Access: "write",
+		}); err != nil {
+			t.Fatalf("sharing the %s for writing: %v", recordType, err)
+		}
+	}
 }

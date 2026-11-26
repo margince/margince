@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   installFetchStub,
@@ -30,6 +30,7 @@ const ROOM: DealRoom = {
   deal_id: "deal-1",
   title: "Brandt Automotive — retrofit programme",
   state: "live",
+  writable: true,
   source: "manual",
   captured_by: "u-me",
   version: 3,
@@ -130,5 +131,26 @@ export const SettingTheEndDate: Story = {
     await expect(
       within(dialog).getByRole("textbox", { name: "Access ends on" }),
     ).toHaveValue("30/11/2026");
+  },
+};
+
+export const StewardUnavailable: Story = {
+  render: served([{ ...ROOM, needs_steward: true }]),
+};
+
+export const StewardUnavailablePhone: Story = {
+  tags: ["uat-phone"],
+  render: served([{ ...ROOM, needs_steward: true }]),
+};
+
+export const ChoosingTheNextSteward: Story = {
+  tags: ["uat-phone"],
+  render: served([{ ...ROOM, needs_steward: true }]),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Manage room" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Manage room" });
+    await waitFor(() => expect(dialog).toBeVisible());
   },
 };

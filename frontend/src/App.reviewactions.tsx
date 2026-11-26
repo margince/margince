@@ -29,7 +29,7 @@ function CompanyDealPicker(props: ComponentProps<typeof DealPicker>) {
 }
 
 const LazyApprovalDetailModal = lazy(async () => ({
-  default: (await import("./features/automations/approvaleditor"))
+  default: (await import("./features/automations/approvaldetail"))
     .ApprovalDetailModal,
 }));
 function ApprovalDetailModal(
@@ -65,6 +65,18 @@ function ComposedNewDealAction(props: ComponentProps<typeof NewDealAction>) {
   return (
     <Suspense fallback={null}>
       <NewDealAction {...props} />
+    </Suspense>
+  );
+}
+
+const LazyDealMergeAction = lazy(async () => ({
+  default: (await import("./features/deals/deal360/dealactions"))
+    .DealMergeAction,
+}));
+function DealMergeAction(props: ComponentProps<typeof LazyDealMergeAction>) {
+  return (
+    <Suspense fallback={null}>
+      <LazyDealMergeAction {...props} />
     </Suspense>
   );
 }
@@ -120,6 +132,7 @@ export const reviewActions: ReviewActions = {
   NewDealAction: ComposedNewDealAction,
   CompanyDealPicker,
   CoveredDealSuggestion,
+  DealMergeAction,
   OpenActivityDrawer,
 };
 

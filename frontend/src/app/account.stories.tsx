@@ -9,7 +9,10 @@ import {
   openThemeFlyout,
   stubSession,
 } from "../testing/accountmenu-story";
+import { bookingProfile } from "../testing/book.testkit";
+import { meFixture } from "../testing/mefixture";
 import { PORTRAIT, WHITE_PORTRAIT } from "../testing/seatphotos";
+import { jsonResponse } from "../testing/story-utils";
 import { AccountMenu } from "./account";
 import { AccountPanel } from "./accountpanel";
 import { ThemeSubmenu } from "./accounttheme";
@@ -30,13 +33,13 @@ type Story = StoryObj<typeof AccountMenu>;
 
 /**
  * The top bar: the seat's chip alone, a circle filling the bar's square inside
- * a control-edge ring. The initials are hidden, so the button's name is "Account".
+ * a control-edge ring. The name starts with the initials the chip prints.
  */
 export const TopBar: Story = {
   name: "Top bar trigger",
   play: async ({ canvasElement }) => {
     const trigger = await within(canvasElement).findByRole("button", {
-      name: "Account",
+      name: /account$/i,
     });
     const face = await waitFor(() => {
       const chip = trigger.querySelector(".avatar");
@@ -61,7 +64,7 @@ export const TopBarPhoto: Story = {
   name: "Top bar trigger with a picture",
   play: async ({ canvasElement }) => {
     const trigger = await within(canvasElement).findByRole("button", {
-      name: "Account",
+      name: /account$/i,
     });
     await waitFor(() =>
       expect(trigger.querySelector(".avatar-photo img")).not.toBeNull(),
@@ -142,6 +145,46 @@ export const TopBarMenuPhoto: Story = {
 };
 
 /**
+ * A name with no space in it. The menu stops at its ceiling, and the name ends
+ * in an ellipsis instead of widening the menu.
+ */
+export const TopBarMenuLongName: Story = {
+  name: "Top bar menu with a long name",
+  play: async (context) => {
+    await openMenu(context);
+    const menu = await within(document.body).findByRole("menu");
+    await expect(menu.getBoundingClientRect().width).toBeLessThanOrEqual(360);
+  },
+  render: () => {
+    stubSession({ display_name: "Maximiliane".repeat(10) });
+    return <AccountMenuFrame />;
+  },
+};
+
+/** A seat that may book and has no link yet is offered to set one up. */
+export const TopBarMenuNoBookingLink: Story = {
+  name: "Top bar menu before a booking link exists",
+  play: async (context) => {
+    await openMenu(context);
+    await within(document.body).findByRole("menuitem", {
+      name: "Set up my booking link",
+    });
+  },
+  render: () => {
+    stubSession(
+      {},
+      {
+        "GET /me": () =>
+          jsonResponse(meFixture({ allow: { activity: ["read", "create"] } })),
+        "GET /scheduling/profile": () =>
+          jsonResponse({ ...bookingProfile, enabled: false, slug: "" }),
+      },
+    );
+    return <AccountMenuFrame />;
+  },
+};
+
+/**
  * The appearance flyout, open, opening LEFT.
  *
  * That direction is the point of the frame: the menu is anchored to a trigger at
@@ -184,7 +227,7 @@ export const TopBarMenuPhone: Story = {
     await openMenu(context);
     const bar = context.canvasElement.querySelector<HTMLElement>(".topbar");
     if (!bar) throw new Error("the top bar is missing");
-    const trigger = within(bar).getByRole("button", { name: /Account$/ });
+    const trigger = within(bar).getByRole("button", { name: /account$/i });
     const menu = await within(document.body).findByRole("menu");
     const inner =
       bar.getBoundingClientRect().right -

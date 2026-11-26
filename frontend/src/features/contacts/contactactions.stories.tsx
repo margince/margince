@@ -95,7 +95,12 @@ const ROUTES = {
 function Header({
   view = VIEW,
   refusedReasonId,
-}: Readonly<{ view?: Contact360; refusedReasonId?: string }>) {
+  writeRefusalId,
+}: Readonly<{
+  view?: Contact360;
+  refusedReasonId?: string;
+  writeRefusalId?: string;
+}>) {
   return (
     // The head's own bar class, so the verbs share the width as tiles the way
     // they do on the record page.
@@ -109,6 +114,7 @@ function Header({
           onLogActivity={() => undefined}
           onAddTask={() => undefined}
           refusedReasonId={refusedReasonId}
+          writeRefusalId={writeRefusalId}
         />
       </div>
     </div>
@@ -189,9 +195,49 @@ export const NoTransport: Story = {
   },
 };
 
-// A role that may not log activity: the two log verbs are refused and the one
-// sentence saying why hangs under the row as a caption, at the verbs' width,
-// rather than setting the row's width and pushing the header's name aside.
+// Nowhere to write to, and the rail states why. The verb points at that
+// sentence and shows it in its tip.
+export const NoTransportStatedByThePage: Story = {
+  render: () => {
+    installFetchStub(ROUTES);
+    return (
+      <StoryProviders>
+        <Header
+          view={{
+            ...VIEW,
+            contact: { ...VIEW.contact, emails: [], primary_email: null },
+          }}
+          writeRefusalId="write-refused"
+        />
+        <p id="write-refused" className="t-caption">
+          {en["contact.action.noTransport"]}
+        </p>
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const write = await within(canvasElement).findByRole("button", {
+      name: en["contact.action.write"],
+    });
+    await expect(write).toHaveAccessibleDescription(
+      en["contact.action.noTransport"],
+    );
+    // The tip's handlers ride the wrapping span, so the hover goes there.
+    const host = write.closest(".icon-action");
+    await expect(host).not.toBeNull();
+    if (host) {
+      await userEvent.hover(host);
+    }
+    await waitFor(() =>
+      expect(screen.getByRole("tooltip")).toHaveTextContent(
+        `${en["contact.action.write"]}. ${en["contact.action.noTransport"]}`,
+      ),
+    );
+  },
+};
+
+// A role that may change the contact but not log activity. Both log verbs are
+// refused, and the one sentence hangs under the row as a caption at their width.
 export const LogRefused: Story = {
   render: () => {
     installFetchStub({
@@ -209,9 +255,7 @@ export const LogRefused: Story = {
       name: "Email",
     });
     await waitFor(() =>
-      expect(email).toHaveAccessibleDescription(
-        "You do not have permission to log activities on this record.",
-      ),
+      expect(email).toHaveAccessibleDescription(en["record.actionRefused"]),
     );
     await expect(email).toBeDisabled();
   },

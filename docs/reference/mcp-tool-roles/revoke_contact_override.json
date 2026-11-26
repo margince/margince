@@ -1,0 +1,19 @@
+{
+  "tool": "change_compliance",
+  "action": "revoke_override",
+  "verb": "revoke_contact_override",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

@@ -27,9 +27,13 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // activityScan holds one row mid-flight: the contract record being built, and
@@ -39,14 +43,20 @@ import (
 // destination of a column is part of that column's declaration below, and a
 // closure cannot address a variable that does not exist yet.
 type activityScan struct {
-	a  crmcontracts.Activity
-	id ids.UUID
+	systemText *systemtext.Message
+	a          crmcontracts.Activity
+	id         ids.UUID
 	// assigneeID and hostUserID are typed ids in the row and openapi UUIDs on
 	// the record.
 	assigneeID, hostUserID *ids.UUID
 	// dueHasTime is answered on a task only; the column is false on every
 	// other kind and means nothing there.
 	dueHasTime bool
+	// aiAssisted is withheld with the content it describes.
+	aiAssisted bool
+	taskType   *string
+	// replyChannel is how the message a reply task answers came in.
+	replyChannel *string
 	// sourceActivityID is the activity this one was derived from — the meeting
 	// whose transcript proposed a task. Scanned as a typed id and mapped to the
 	// contract's openapi UUID, like the two above.
@@ -112,17 +122,24 @@ type activityColumn struct {
 // content or only its markers. Its SQL is supplied per query, so it carries an
 // empty sql here and activityColumns fills it in.
 var activityProjection = []activityColumn{
+	{"a.system_text", func(s *activityScan) any { return &s.systemText }},
 	{"a.id", func(s *activityScan) any { return &s.id }},
 	{"a.kind", func(s *activityScan) any { return &s.kind }},
 	{"a.channel_provider", func(s *activityScan) any { return &s.channelProvider }},
 	{"a.subject", func(s *activityScan) any { return &s.a.Subject }},
 	{"a.body", func(s *activityScan) any { return &s.a.Body }},
-	{"a.occurred_at", func(s *activityScan) any { return &s.a.OccurredAt }},
+	{"a.ai_assisted", func(s *activityScan) any { return &s.aiAssisted }},
+	{occurredday.BookedStartSQL("a"), func(s *activityScan) any { return &s.a.OccurredAt }},
 	{"a.occurred_precision", func(s *activityScan) any { return &s.occurredPrecision }},
 	{"a.direction", func(s *activityScan) any { return &s.direction }},
 	{storekit.TaskDueSQL("a"), func(s *activityScan) any { return &s.a.DueAt }},
 	{"a.due_has_time", func(s *activityScan) any { return &s.dueHasTime }},
-	{"a.remind_at", func(s *activityScan) any { return &s.a.RemindAt }},
+	{storekit.TaskTypeSQL("a"), func(s *activityScan) any { return &s.taskType }},
+	{storekit.ReplyChannelSQL("a", ""), func(s *activityScan) any { return &s.replyChannel }},
+	{storekit.IntentInstantSQL("a", "remind"), func(s *activityScan) any { return &s.a.RemindAt }},
+	{storekit.IntentWireSQL("a", "due"), func(s *activityScan) any { return &s.a.DueIntent }},
+	{storekit.IntentWireSQL("a", "remind"), func(s *activityScan) any { return &s.a.RemindIntent }},
+	{storekit.IntentWireSQL("a", "meeting"), func(s *activityScan) any { return &s.a.MeetingIntent }},
 	{"a.assignee_id", func(s *activityScan) any { return &s.assigneeID }},
 	{"a.is_done", func(s *activityScan) any { return &s.a.IsDone }},
 	{"a.done_at", func(s *activityScan) any { return &s.a.DoneAt }},
@@ -149,7 +166,7 @@ var activityProjection = []activityColumn{
 	{"a.updated_at", func(s *activityScan) any { return &s.a.UpdatedAt }},
 	{"a.archived_at", func(s *activityScan) any { return &s.a.ArchivedAt }},
 	{"a.thread_key", func(s *activityScan) any { return &s.threadKey }},
-	{"a.capture_label", func(s *activityScan) any { return &s.captureLabel }},
+	{capturekind.SQL("a.capture_label"), func(s *activityScan) any { return &s.captureLabel }},
 	{"a.bulk_mail_attested", func(s *activityScan) any { return &s.bulkMailAttested }},
 	{"a.body_completeness", func(s *activityScan) any { return &s.bodyCompleteness }},
 	{"a.origin", func(s *activityScan) any { return &s.origin }},
@@ -220,21 +237,53 @@ func SourceAuthorOf(id *ids.UUID, seatName, sourceName, sourceSystem *string) *c
 // archived rows rather than fail.
 const activityLive = "a.archived_at IS NULL"
 
-// activityColumns renders the select list. contentArm is the predicate
-// auth.ActivityAudienceArm rendered for this query's arguments, which is why
-// the final column's SQL cannot be a constant.
+// activityColumns renders the select list. contentArm is the audience test
+// rendered for this query's arguments, so the SQL cannot be a constant. Body
+// and raw are returned only when it holds, so withheld payload stays in the
+// database. Callers pass a decision computed once per row (ActivityContentFrom).
 func activityColumns(ctx context.Context, contentArm string, arg func(any) int) (string, error) {
 	share, err := auth.ActivityInternalMailShareClause(ctx, "a", arg)
 	if err != nil {
 		return "", err
 	}
+	replyChannel := storekit.ReplyChannelSQL("a", "")
+	sourceArm := auth.ActivitySourceAudienceArm
+	if rowsContentReadable(contentArm) {
+		sourceArm = auth.ActivityReadSourceAudienceArm
+	}
+	sourceAudience, err := sourceArm(ctx, "s", arg)
+	if err != nil {
+		return "", err
+	}
 	out := make([]string, len(activityProjection))
 	for i, c := range activityProjection {
-		out[i] = c.sql
+		switch c.sql {
+		case replyChannel:
+			out[i] = storekit.ReplyChannelSQL("a", sourceAudience)
+		case "a.body":
+			out[i] = "CASE WHEN (" + contentArm + ") THEN a.body END AS body"
+		case "a.raw":
+			out[i] = "CASE WHEN (" + contentArm + ") THEN a.raw END AS raw"
+		default:
+			out[i] = c.sql
+		}
 	}
 	out[len(out)-1] = "(" + contentArm + ") AS content_available"
 	out[len(out)-2] = "CASE WHEN a.internal_mail_authorization IS NOT NULL THEN (" + share + ") ELSE NULL END AS can_share_internal"
 	return strings.Join(out, ", "), nil
+}
+
+// activityCountColumns serves CountActivities, which reads no column. It keeps
+// only the content decision, which binds the arguments the filter rendered for
+// it. Postgres keeps every column's tree in the cached statement, read or not.
+func activityCountColumns(contentArm string) string {
+	return "(" + contentArm + ") AS content_available"
+}
+
+// rowsContentReadable is whether contentArm says every row already passed the
+// content gate, as a literal true does: body and raw are then served ungated.
+func rowsContentReadable(contentArm string) bool {
+	return contentArm == sqlTrue || contentArm == scopeUnbounded
 }
 
 // activityScanTargets answers the destinations, in the projection's order.
@@ -248,30 +297,21 @@ func activityScanTargets(s *activityScan) []any {
 
 // record finishes the row: the conversions the scan could not do, and the
 // content withholding the audience test decided.
-func (s *activityScan) record() crmcontracts.Activity {
+func (s *activityScan) record(ctx context.Context) crmcontracts.Activity {
 	a := s.a
-	aud := crmcontracts.ActivityAudience(s.audience)
-	a.Audience = &aud
-	threadKey, captureLabel, audienceReason := s.threadKey, s.captureLabel, s.audienceReason
-	state := crmcontracts.ActivityContentStateAvailable
-	if !s.contentAvailable {
-		// Withheld: the row is discoverable, its content is not the caller's.
-		// Everything that carries what was said — or identifies the message
-		// at the provider — goes; the markers stay.
-		state = crmcontracts.ActivityContentStateWithheld
-		a.Subject, a.Body, a.SourceId = nil, nil, nil
-		a.CanShareInternal = nil
-		// The language too: it was read off the body, so answering it would
-		// tell a caller one fact about text they may not read.
-		a.Language = nil
-		threadKey, captureLabel, audienceReason = nil, nil, nil
-	}
-	a.ContentState = &state
-
+	audience := crmcontracts.ActivityAudience(s.audience)
+	a.Audience = &audience
+	threadKey, captureLabel, audienceReason := s.contentProjection(ctx, &a)
 	a.Id = openapi_types.UUID(s.id)
 	a.AssigneeId = uuidPtr(s.assigneeID)
 	if s.kind == string(crmcontracts.ActivityKindTask) {
 		a.DueHasTime = new(s.dueHasTime)
+		if s.taskType != nil {
+			a.TaskType = new(crmcontracts.TaskType(*s.taskType))
+		}
+		if s.replyChannel != nil {
+			a.ReplyChannel = new(crmcontracts.ActivityReplyChannel(*s.replyChannel))
+		}
 	}
 	// The meeting a task was read out of. A marker, not content: which record
 	// produced this one is a fact like its date, and opening it is a separate
@@ -314,7 +354,39 @@ func (s *activityScan) record() crmcontracts.Activity {
 		raw := s.raw
 		a.Raw = &raw
 		a.WebForm = webFormSubmissionOf(a.SourceSystem, raw)
+		a.ChatEpisode = chatEpisodeOf(a.SourceSystem, raw)
 	}
+	s.projectStatuses(&a)
+	a.ThreadKey = threadKey
+	a.AudienceReason = audienceReason
+	if captureLabel != nil {
+		label := crmcontracts.ActivityCaptureLabel(*captureLabel)
+		a.CaptureLabel = &label
+	}
+	bulk := s.bulkMailAttested
+	a.BulkMailAttested = &bulk
+	// The calendar method, the sender stamp and the bulk stamp describe what a
+	// message is, so they travel with its content. The origin is the product's
+	// own fact.
+	evidence := relstrength.Evidence{Kind: s.kind, Origin: s.origin}
+	if s.contentAvailable {
+		evidence.CalendarMethod, evidence.SenderIsMachine = deref(s.calendarMethod), s.senderIsMachine
+		evidence.BulkMail = s.bulkMailAttested
+	}
+	a.AutomaticKind = automaticKindToWire(evidence)
+	a.RecordedByAgent = new(recordedByAgent(s.origin, deref(s.a.CapturedBy)))
+	version := s.version
+	a.Version = &version
+	// What a canonical email row draws, composed here so every reader of an
+	// activity carries it: a list that had to fetch a message per visible line
+	// to draw one would be the N+1 this field exists to avoid. Attached from
+	// the row's own columns only — the counterparty and the attachment count
+	// need joins this scan does not have, and the detail read fills them in.
+	a.EmailSummary = RowEmailSummary(a)
+	return a
+}
+
+func (s *activityScan) projectStatuses(a *crmcontracts.Activity) {
 	a.Kind = crmcontracts.ActivityKind(s.kind)
 	a.OccurredPrecision = crmcontracts.OccurredPrecision(s.occurredPrecision)
 	a.ChannelProvider = s.channelProvider
@@ -334,32 +406,12 @@ func (s *activityScan) record() crmcontracts.Activity {
 		outcome := crmcontracts.ActivityCallOutcome(*s.callOutcome)
 		a.CallOutcome = &outcome
 	}
-	a.ThreadKey = threadKey
-	a.AudienceReason = audienceReason
-	if captureLabel != nil {
-		label := crmcontracts.ActivityCaptureLabel(*captureLabel)
-		a.CaptureLabel = &label
-	}
-	bulk := s.bulkMailAttested
-	a.BulkMailAttested = &bulk
-	// The calendar method, the sender stamp and the bulk stamp describe what a
-	// message is, so they travel with its content. The origin is the product's
-	// own fact.
-	evidence := relstrength.Evidence{Kind: s.kind, Origin: s.origin}
-	if s.contentAvailable {
-		evidence.CalendarMethod, evidence.SenderIsMachine = deref(s.calendarMethod), s.senderIsMachine
-		evidence.BulkMail = s.bulkMailAttested
-	}
-	a.AutomaticKind = automaticKindToWire(evidence)
-	version := s.version
-	a.Version = &version
-	// What a canonical email row draws, composed here so every reader of an
-	// activity carries it: a list that had to fetch a message per visible line
-	// to draw one would be the N+1 this field exists to avoid. Attached from
-	// the row's own columns only — the counterparty and the attachment count
-	// need joins this scan does not have, and the detail read fills them in.
-	a.EmailSummary = RowEmailSummary(a)
-	return a
+}
+
+// recordedByAgent answers whether an assistant wrote the row. The origin counts
+// too, because an agent can cause a row under another principal's captured_by.
+func recordedByAgent(origin, capturedBy string) bool {
+	return origin == OriginAgent || strings.HasPrefix(capturedBy, string(principal.PrincipalAgent)+":")
 }
 
 // automaticKindToWire renders what sent a row no human wrote, nil when a
@@ -418,9 +470,30 @@ func RowEmailSummary(a crmcontracts.Activity) *crmcontracts.EmailSummary {
 	}
 	summary.Subject = a.Subject
 	if a.Body != nil {
-		if preview := EmailSummaryText(*a.Body); preview != "" {
+		if preview := EmailSummaryText(*a.Body, deref(a.Subject)); preview != "" {
 			summary.Preview = &preview
 		}
 	}
 	return &summary
+}
+
+func (s *activityScan) contentProjection(ctx context.Context, a *crmcontracts.Activity) (*string, *string, *string) {
+	threadKey, captureLabel, audienceReason := s.threadKey, s.captureLabel, s.audienceReason
+	state := crmcontracts.ActivityContentStateAvailable
+	if !s.contentAvailable {
+		state = crmcontracts.ActivityContentStateWithheld
+		a.Subject, a.Body, a.SourceId = nil, nil, nil
+		a.CanShareInternal = nil
+		a.Language = nil
+		threadKey, captureLabel, audienceReason = nil, nil, nil
+	}
+	a.ContentState = &state
+	if s.contentAvailable && s.aiAssisted {
+		a.AiAssisted = new(true)
+	}
+	if s.contentAvailable {
+		a.SystemDisplay = activitySystemDisplay(ctx, s.systemText, a.Subject, a.Body, s.version)
+	}
+
+	return threadKey, captureLabel, audienceReason
 }

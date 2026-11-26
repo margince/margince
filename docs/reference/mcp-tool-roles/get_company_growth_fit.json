@@ -1,0 +1,18 @@
+{
+  "tool": "read_details",
+  "action": "growth_fit",
+  "verb": "get_company_growth_fit",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

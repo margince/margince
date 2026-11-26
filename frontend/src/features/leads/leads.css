@@ -70,8 +70,8 @@
   color: var(--textPrimary);
 }
 
-/* The email row: the address and its copy glyph on one line, the address
-   cut with an ellipsis so the glyph keeps its place. */
+/* The email row: the address and its copy glyph side by side, the address
+   wrapping or cut in the room the glyph leaves it. */
 .lead-row-email {
   display: flex;
   align-items: center;
@@ -89,6 +89,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.lead-company-guidance {
+  display: block;
 }
 
 .lead-company-offer.btn {
@@ -146,6 +150,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--gapCards);
+  column-gap: var(--gapPanes);
   align-items: start;
 }
 
@@ -178,6 +183,11 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--gapActions);
+}
+/* `Select`'s face is `width: 100%`, which would wrap it under the toggle; one
+   fixed measure fits the longest cut in every catalog and never jumps. */
+.lead-history-dials .select-control {
+  inline-size: 9rem;
 }
 
 /* A lead's status and its SLA state, side by side in one table cell. */

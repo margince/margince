@@ -17,8 +17,10 @@ import (
 	"sort"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -90,7 +92,8 @@ func (s *Service) worklistIn(
 	if reader, err = reader.readingPins(ctx); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	reader.omitDecay = reader.omitDecay && !reader.relationshipsChosen()
+	// A Done check never reads decay, pinned or not: no decay row offers Done.
+	reader.omitDecay = reader.marked.probe != nil || reader.omitDecay && !reader.relationshipsChosen()
 	// The day AND what the night knows about each deal — its finding and its
 	// score — from one read of the brief lane. Both travel as values rather than
 	// on the service: feed.go's assembleDay states why a field there would carry
@@ -115,7 +118,8 @@ func (s *Service) worklistIn(
 	// Read beside the assembled day rather than inside it: /attention has its
 	// own fourteen-lane promise and this source is not one of its lanes. A
 	// refused read is named, never folded into an empty answer.
-	waiting, waitingErr := reader.waitingCustomers(ctx, day.AsOf)
+	// The whole day, because step B asks which of its at-risk deals wait past a cut scan.
+	waiting, waitingErr := reader.waitingCustomers(ctx, day)
 	// The NARROWED service, not the shared one. The narrowing happens twice on
 	// this path — once when the lanes are read, once when the assembled rows are
 	// kept — and both halves read the same taskOwner. Projecting through `s`
@@ -139,9 +143,11 @@ func (s *Service) worklistIn(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
+	withPins.briefSnoozed = beside.night.snoozed
 	withPins = withPins.readingBacklog(ctx, day, beside, token == "")
-	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
+	withPins, planErr := withPins.readingPlan(ctx, day.AsOf)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
+	withPins = withPins.readingFollowUpPromises(ctx, day)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
 	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, awaitingErrs...), beside.failed...)
 	out := withPins.worklistFrom(
@@ -194,7 +200,7 @@ func (s *Service) worklistFrom(
 	waits, waitNote := s.rankedWaits(ctx, waiting, day.AsOf, scope)
 	// One admission rule for every row the page, Focus and counts will read.
 	rows, refused := admitBySource(ctx, slices.Concat(
-		classifyDay(day, day.AsOf, s.money), s.planRows, s.followUps.rows, waits))
+		classifyDay(day, day.AsOf, s.money), s.planRows, s.followUps.rows, s.followUps.promises, waits))
 	// What the night thought of each deal, onto whichever row is about it — the
 	// brief's own row, and the at-risk row the fold below keeps. Stamped BEFORE
 	// the fold so the surviving row can inherit a score even where the night's
@@ -202,7 +208,7 @@ func (s *Service) worklistFrom(
 	rows = stampOpportunity(rows, s.briefScores)
 	// One job is one row: a deal with a waiting customer or a near task does
 	// not also appear as drifting.
-	rows = dropDealsAlreadyInHand(rows, day.AsOf)
+	rows = dropDealsAlreadyInHand(rows, day.AsOf, waiting.dealsPastScan)
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
 	// contact's day, and leaving it in would make a manager's answer to "show me
@@ -222,10 +228,13 @@ func (s *Service) worklistFrom(
 	// This runs after the drops above, because they may remove the row that
 	// took the brief's id. It runs after the scope, because the brief is the
 	// acting reader's. A named owner's page drops every brief row first.
+	rows = s.withoutSnoozedRisk(rows)
 	rows = foldBriefIntoRisk(rows)
 	// Before anything is counted, so a row the reader marked done is gone from
 	// the figures as well as from the list.
 	rows = dropDone(rows, s.marked, day.AsOf)
+	// After Done, so a reminder the reader put down joins no task.
+	rows = foldFollowUpsIntoPromises(rows, readerOf(ctx))
 	scoped := rowNote.merge(waitNote)
 	bounded := boundedSources(day)
 	if !s.relationshipsChosen() {
@@ -326,9 +335,7 @@ func (s *Service) worklistFrom(
 	// the three it was assembled from.
 	rows = markCrowding(rows)
 	sortByRank(rows)
-	shown, more, reached, walk := s.pageOf(
-		ctx, rows, limit, cursor, scope, askedFor(s.view, filter), unreadSources(missing), day.AsOf)
-	shown, rest, tailFailed := s.withTail(ctx, tailPage{scope, filter, day, bounded, cursor.Params == "", nil}, shown, more, limit, cursor.Rest, rows)
+	shown, more, reached, walk, rest, tailFailed := s.cut(ctx, rows, limit, cursor, scope, filter, day, bounded, missing)
 	// A walk this reader named and cannot continue — expired, somebody else's,
 	// or minted under another question. It cannot be answered with a page: an
 	// empty queue on this surface means the day is clear, so an expired walk
@@ -344,6 +351,7 @@ func (s *Service) worklistFrom(
 	// would be the one a reader sees while the filter used the other.
 	ordered := renderInOrder(stampAsOf(shown, day.AsOf), readerOf(ctx))
 	bands := bandsOf(ordered)
+	counts := withTotals(countsOf(considered, shown, bounded), considered, bounded, s.exactSources(day, scope, considered), missing, scoped)
 	out := crmcontracts.Worklist{
 		AsOf:                               day.AsOf,
 		Queue:                              ordered,
@@ -373,7 +381,7 @@ func (s *Service) worklistFrom(
 		// The same accounting per kind of work. Both read the same two
 		// snapshots, so the per-source and per-category figures are two views of
 		// one answer rather than two answers.
-		Counts: withTotals(countsOf(considered, shown, bounded), considered, bounded, s.exactSources(day, scope, considered), missing, scoped),
+		Counts: counts,
 		// The outcome figures beside the per-kind tallies, over the same
 		// snapshot: what the day's work is worth rather than how much of it
 		// there is.
@@ -384,7 +392,7 @@ func (s *Service) worklistFrom(
 		// merely convenient: DSR rows classify as `system` and feed none of the
 		// four readings, so a suppressed DSR lane hides no work these figures
 		// count. A lane whose rows DID feed one would have to be named.
-		Readings: readingsOf(considered, drawn, bounded, missing),
+		Readings: withDecisionsTotal(readingsOf(considered, drawn, s.view, bounded, missing), counts),
 	}
 	s.echoAsked(&out, filter)
 	// The token for the row this page stopped on, minted ONLY when there is more
@@ -401,7 +409,7 @@ func (s *Service) worklistFrom(
 	// moment the day moves between pages, and a running total would push the
 	// offset past the work still owed.
 	if (more && len(shown) > 0) || (!more && rest != nil) {
-		token := encodeCursor(reached, scope, askedFor(s.view, filter), s.taskOwner, walk.id, rest)
+		token := encodeCursor(reached, scope, askedFor(s.view, filter), s.taskOwner, walk, rest)
 		out.NextCursor = &token
 	}
 	out.SourcesUnavailable = append(out.SourcesUnavailable, s.stampSources(tailFailed)...)
@@ -461,4 +469,30 @@ func pageLimit(limit int) int {
 		return worklistPage
 	}
 	return min(limit, worklistMaxPage)
+}
+
+// cut is the page this read answers. Home's shape is the day's meetings, which
+// its schedule draws beside Focus. It also holds every row that comes due
+// before Home's kept answer ends, which tells Home when to read again. No walk
+// is frozen and no tail is read.
+func (s *Service) cut(
+	ctx context.Context, rows []ranked, limit int, cursor worklistCursor, scope, filter string,
+	day crmcontracts.Attention, bounded map[crmcontracts.WorklistItemSource]bool,
+	missing []crmcontracts.WorklistSourceUnavailable,
+) ([]ranked, bool, int, walkState, *backlogCursor, []crmcontracts.WorklistSourceUnavailable) {
+	if s.homeShape {
+		var drawn []ranked
+		for _, row := range rows {
+			due := row.item.DueAt
+			comesDue := !deadline.Passed(due, day.AsOf) && deadline.Passed(due, day.AsOf.Add(homecache.Life))
+			if row.item.Source == sourceMeeting || comesDue {
+				drawn = append(drawn, row)
+			}
+		}
+		return drawn, false, 0, walkState{}, nil, nil
+	}
+	shown, more, reached, walk := s.pageOf(
+		ctx, rows, limit, cursor, scope, askedFor(s.view, filter), unreadSources(missing), day.AsOf)
+	shown, rest, tailFailed := s.withTail(ctx, tailPage{scope, filter, day, bounded, cursor.Params == "", nil}, shown, more, limit, cursor.Rest, rows)
+	return shown, more, reached, walk, rest, tailFailed
 }

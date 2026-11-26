@@ -20,6 +20,7 @@ package consent
 import (
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
 
@@ -51,6 +52,14 @@ type packRules struct {
 	// marketingException is the exception this jurisdiction allows. It is nil
 	// for a pack that declares none and for the baseline.
 	marketingException *messaging.MarketingException
+	// optOut is the country's mode: advertising is allowed until the recipient
+	// refuses. It is false for the baseline, which keeps consent required.
+	optOut bool
+}
+
+// marketingContext is what a marketing verdict reads from the pack.
+func (w packRules) marketingContext(entity ids.UUID) MarketingContext {
+	return MarketingContext{Exception: w.marketingException, SendingEntity: entity, OptOut: w.optOut}
 }
 
 // packRulesFor answers the rules that bind a message to a recipient in this
@@ -62,19 +71,17 @@ type packRules struct {
 // in an address.
 func packRulesFor(country RecipientCountry) packRules {
 	out := packRules{reply: defaultReplyWindow, dealFollow: defaultDealFollowUpWindow}
+	// The windows bound a legitimate interest, so the sender's pack shortens
+	// them too. The marketing exception stays the recipient's pack's alone.
+	if windows, _, found := applicableRules(country.dataProtectionCodes()...); found {
+		out.reply, out.dealFollow = shorterOf(out.reply, windows.ReplyWindow), shorterOf(out.dealFollow, windows.DealFollowUpWindow)
+	}
 	rules, _, applicable := applicableRules(country.Code)
 	if !applicable {
 		return out
 	}
-	// Zero means the pack says nothing about this window, which is not the same
-	// as a pack asking for zero — Rules.Validate refuses a negative one and the
-	// published contract documents zero as "the core default".
-	if rules.ReplyWindow > 0 && rules.ReplyWindow < out.reply {
-		out.reply = rules.ReplyWindow
-	}
-	if rules.DealFollowUpWindow > 0 && rules.DealFollowUpWindow < out.dealFollow {
-		out.dealFollow = rules.DealFollowUpWindow
-	}
+	// Marketing mode follows the recipient's pack alone, never the sender's.
+	out.optOut = rules.MarketingMode.OptOut()
 	// THE EXCEPTION IS THE PACK'S TO DECLARE, and a jurisdiction that declares
 	// none grants none. A declared one still grants nothing today: the verdict
 	// refuses it and names it in the reason.
@@ -85,4 +92,13 @@ func packRulesFor(country RecipientCountry) packRules {
 		}
 	}
 	return out
+}
+
+// shorterOf is the core default shortened by a pack's window. A zero window
+// says nothing, and the contract documents it as the core default.
+func shorterOf(core, declared time.Duration) time.Duration {
+	if declared > 0 && declared < core {
+		return declared
+	}
+	return core
 }

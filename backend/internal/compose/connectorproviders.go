@@ -27,6 +27,7 @@ import (
 const (
 	providerGmail    = "gmail"
 	providerGcal     = "gcal"
+	providerGdocs    = "gdocs"
 	providerGraph    = "graph"
 	providerGraphCal = "graphcal"
 )
@@ -36,7 +37,7 @@ const (
 // step with the refusal MESSAGE beside it and nothing made them widen together
 // — a provider admitted by the guard but missing from the message, or the
 // reverse, is a refusal that names the wrong set.
-var oauthProviders = []string{providerGmail, providerGcal, providerGraph, providerGraphCal}
+var oauthProviders = []string{providerGmail, providerGcal, providerGdocs, providerGraph, providerGraphCal}
 
 // isOAuthProvider reports whether a provider connects by consent redirect (as
 // opposed to imap, which submits a credential).
@@ -53,10 +54,10 @@ func IsMailProvider(provider string) bool {
 }
 
 // calendarProviders are the providers that connect a CALENDAR. Derived as the
-// complement of the mail set inside the OAuth set rather than written out a
-// third time: a vendor is brought here by ONE change to oauthProviders, and a
-// calendar this deployment can connect but nothing recognises as one is exactly
-// the failure MailProviders' own comment records from the other direction.
+// complement of the mail and meeting-notes sets inside the OAuth set rather
+// than written out a third time. A vendor arrives by one change to oauthProviders.
+// A calendar that nothing recognises as one is the failure MailProviders'
+// comment records from the other direction.
 //
 // What reads it is the scheduling seam: free/busy computed for a host with none
 // of these connected is not a reading of their diary, and the answer has to say
@@ -66,7 +67,7 @@ var calendarProviders = calendarProvidersFrom(oauthProviders)
 func calendarProvidersFrom(oauth []string) []string {
 	calendars := make([]string, 0, len(oauth))
 	for _, provider := range oauth {
-		if !IsMailProvider(provider) {
+		if !IsMailProvider(provider) && !slices.Contains(capture.MeetingNotesProviders(), provider) {
 			calendars = append(calendars, provider)
 		}
 	}

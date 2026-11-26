@@ -22,6 +22,8 @@ import {
 } from "../../testing/story-utils";
 import {
   chatConversation,
+  foldedHandles,
+  manyHandles,
   meetingPrepMoment,
   page,
   populated,
@@ -422,6 +424,16 @@ function Page({
 
 export const PageStory: Story = { name: "Page", render: () => <Page /> };
 
+export const PageManyHandles: Story = {
+  name: "Page · two addresses and numbers",
+  render: () => <Page view={manyHandles} />,
+};
+
+export const PageFoldedHandles: Story = {
+  name: "Page · four addresses fold",
+  render: () => <Page view={foldedHandles} />,
+};
+
 // Dana wrote two hours ago and nobody has answered. The Overview leads with
 // her mail, and every other tab keeps it in one line under the pills.
 const twoHoursAgo = new Date(Date.now() - 2 * 3_600_000).toISOString();
@@ -701,6 +713,8 @@ const calledBack: View = {
         due_at: "2026-08-12T09:00:00Z",
         is_done: false,
         source_activity_id: "call-7",
+        task_type: "reach_out",
+        reply_channel: "call",
         links: [{ entity_type: "contact", entity_id: "p-1" }],
         source: "manual",
         captured_by: "human:u1",
@@ -717,13 +731,6 @@ export const LeadNextTaskFromCall: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute({ activity: ["read", "update"] }),
-      "GET /activities/call-7": () =>
-        jsonResponse({
-          id: "call-7",
-          kind: "call",
-          content_state: "available",
-          occurred_at: "2026-08-09T15:00:00Z",
-        }),
     });
     return (
       <StoryProviders>
@@ -755,10 +762,19 @@ const owedCallMoment: components["schemas"]["ContactMoment"] = {
     },
   ],
   recommended_action: {
-    kind: "draft_reply",
-    label: "Write to them",
+    kind: "call",
+    label: "Call them",
     state: "available",
+    destination: { surface: "activity_log" },
   },
+  secondary_actions: [
+    {
+      kind: "draft_reply",
+      label: "Write to them",
+      state: "will_confirm",
+      destination: { surface: "composer" },
+    },
+  ],
 };
 
 export const LeadMomentFromCall: Story = {
@@ -766,13 +782,6 @@ export const LeadMomentFromCall: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute({ activity: ["read", "update"] }),
-      "GET /activities/call-7": () =>
-        jsonResponse({
-          id: "call-7",
-          kind: "call",
-          content_state: "available",
-          occurred_at: "2026-08-09T15:00:00Z",
-        }),
     });
     return (
       <StoryProviders>
@@ -787,7 +796,8 @@ export const LeadMomentFromCall: Story = {
     );
   },
   play: async () => {
-    await screen.findByRole("link", { name: en["record.verb.call"] });
+    const call = await screen.findByRole("link", { name: "Call them" });
+    await expect(call.getAttribute("href")).toMatch(/^tel:/);
   },
 };
 
@@ -801,6 +811,63 @@ export const DetailsOnPhone: Story = {
     await screen.findByText(en["contact.aside.consent"]);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
       window.innerWidth,
+    );
+  },
+};
+
+// 35 characters, wider than the About column holds on one line, and bought,
+// so the row seats its mark too.
+const LONG_ADDRESS = "priya.ramasami@examplecorp-group.de";
+const longAddress: View = {
+  ...populated,
+  contact: {
+    ...populated.contact,
+    primary_email: LONG_ADDRESS,
+    emails: populated.contact.emails?.map((row) => ({
+      ...row,
+      email: LONG_ADDRESS,
+    })),
+    bought_fields: [
+      {
+        target: "email:pe-1",
+        provider: "surfe",
+        applied_at: "2026-06-02T12:00:00Z",
+        paid: true,
+        trigger: "manual",
+      },
+    ],
+  },
+};
+
+function expectWhole(half: HTMLElement) {
+  return expect(half.scrollWidth).toBeLessThanOrEqual(half.clientWidth);
+}
+
+// The About panel's address on a wide window, its copy glyph shown as on
+// hover. Every letter reads, and the glyph sits on the address's line.
+export const PageLongAddress: Story = {
+  name: "Page · long address",
+  tags: ["uat-wide"],
+  render: () => <Page view={longAddress} />,
+  play: async () => {
+    const link = await screen.findByRole("link", { name: LONG_ADDRESS });
+    const local = link.querySelector<HTMLElement>(".contactlink-email-local");
+    const domain = link.querySelector<HTMLElement>(".contactlink-email-domain");
+    const copy = link.parentElement?.querySelector<HTMLElement>(".copy-action");
+    const column = link.closest(".factlist-value");
+    if (!local || !domain || !copy || !column) {
+      throw new Error("the address lost a half or its copy glyph");
+    }
+    copy.style.maxInlineSize = "none";
+    await expectWhole(local);
+    await expectWhole(domain);
+    const address = link.getBoundingClientRect();
+    const glyph = copy.getBoundingClientRect();
+    await expect(glyph.left).toBeGreaterThanOrEqual(address.right - 0.5);
+    await expect(glyph.top).toBeLessThan(address.bottom);
+    await expect(glyph.bottom).toBeGreaterThan(address.top);
+    await expect(glyph.right).toBeLessThanOrEqual(
+      column.getBoundingClientRect().right + 0.5,
     );
   },
 };

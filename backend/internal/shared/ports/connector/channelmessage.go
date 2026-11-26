@@ -6,6 +6,8 @@ package connector
 import (
 	"context"
 	"errors"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // MessageSender is the channel twin of EmailSender: the OPTIONAL outbound seam
@@ -22,6 +24,10 @@ type MessageSender interface {
 // guarantee rests on IdempotencyKey rather than on ValidMessageID; see
 // ChannelMessage.Validate.
 type ChannelMessage struct {
+	// ActivityID is the timeline entry this message is. A connector that keeps
+	// a record of its sends keeps this, not the recipient. The activity already
+	// says who it went to, under the core's privacy rules.
+	ActivityID ids.ActivityID
 	// Recipient is the channel identity to deliver to (Task 8's
 	// ChannelIdentity, same package).
 	Recipient ChannelIdentity

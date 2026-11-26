@@ -104,7 +104,7 @@ func TestTheCountAndTheListExcludeEachUndecidableRowAlike(t *testing.T) {
 
 	// Requested for someone else: an all-scope reader may decide the colleague's
 	// deal. The row is asked of the colleague, so the personal scope leaves it out.
-	allSeat := seatFor(e.ws, e.rep, tableDeal, objectActivity)
+	allSeat := seatFor(e.ws, e.rep, tableDeal, objectActivity, tableContact)
 	forColleague := excluded["target out of the reader's scope"].String()
 	mine := e.listedIDs(allSeat, t, ListInput{RequestedForReader: true})
 	everyone := e.listedIDs(allSeat, t, ListInput{})

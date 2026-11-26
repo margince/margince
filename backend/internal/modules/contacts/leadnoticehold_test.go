@@ -22,7 +22,7 @@ var leadHandovers = map[string]string{
 	"promotableLead":            "every promotion: REST, the agent tools, qualify, held and mail-driven promotion",
 	"ClaimRecord":               "taking ownership",
 	"ensureLeadUpdateAuthority": "an owner set by an update, a bulk reassignment or an assignment",
-	"RouteLead":                 "automatic routing",
+	"planLeadRouting":           "automatic routing and its preview",
 	"mergeLeadTx":               "a lead merged into another, by a human or an accepted merge proposal",
 	"linkableLead":              "a lead linked to a company a human confirmed",
 }

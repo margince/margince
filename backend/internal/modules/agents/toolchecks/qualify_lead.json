@@ -1,0 +1,10 @@
+{
+  "verb": "qualify_lead",
+  "checks": [
+    "lead.read",
+    "lead.update"
+  ],
+  "takes": [
+    "lead"
+  ]
+}

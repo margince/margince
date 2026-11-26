@@ -173,24 +173,124 @@ var extSQLGateCases = []extSQLGateCase{
 		tables: 2,
 	},
 	{
-		name: "a core table inside a DO block",
-		// The one statement whose quoted body IS the statement. Everywhere else
-		// a dollar-quoted body is a value and gets stripped; here stripping it
-		// would delete the only place the DML is written.
-		body:   "tx.Exec(ctx, `DO $$ BEGIN DELETE FROM contact; END $$`)",
-		want:   `"contact"`,
+		name: "a DO block, even on the unit's own table",
+		// The one statement whose quoted body is the statement itself, so the
+		// body is read for tables too. The block itself is refused: it can leave the role.
+		body:   "tx.Exec(ctx, `DO $$ BEGIN DELETE FROM ext.ext_probe_note; END $$`)",
+		want:   "SQL runs a DO block",
 		tables: 1,
 	},
 	{
-		name:   "a core table inside a quoted DO body",
-		body:   `tx.Exec(ctx, "DO 'DELETE FROM contact'")`,
-		want:   `"contact"`,
+		name:   "a quoted DO body",
+		body:   `tx.Exec(ctx, "DO 'DELETE FROM ext.ext_probe_note'")`,
+		want:   "SQL runs a DO block",
 		tables: 1,
+	},
+	{
+		name:   "a role switch",
+		body:   `tx.Exec(ctx, "SET LOCAL ROLE margince_app")`,
+		want:   "changes the database role",
+		tables: 0,
+	},
+	{
+		name:   "a role reset",
+		body:   `tx.Exec(ctx, "RESET ROLE")`,
+		want:   "changes the database role",
+		tables: 0,
+	},
+	{
+		name:   "a session authorization",
+		body:   `tx.Exec(ctx, "SET SESSION AUTHORIZATION margince_app")`,
+		want:   "changes the database role",
+		tables: 0,
+	},
+	{
+		name:   "a reset of every setting",
+		body:   `tx.Exec(ctx, "RESET ALL")`,
+		want:   "changes the database role",
+		tables: 0,
+	},
+	{
+		name:   "a role switch after the unit's own statement",
+		body:   `tx.Exec(ctx, "DELETE FROM "+noteTable+"; RESET ROLE")`,
+		want:   "changes the database role",
+		tables: 1,
+	},
+	{
+		name:   "set_config on the role",
+		body:   `tx.Exec(ctx, "SELECT set_config('role', 'margince_app', true) FROM "+noteTable)`,
+		want:   "set_config('role', …) changes the database role",
+		tables: 1,
+	},
+	{
+		name:   "set_config on the session authorization",
+		body:   `tx.Exec(ctx, "SELECT set_config('session_authorization', 'margince_app', true) FROM "+noteTable)`,
+		want:   "set_config('session_authorization', …)",
+		tables: 1,
+	},
+	{
+		name:   "set_config on a setting passed as an argument",
+		body:   `tx.Exec(ctx, "SELECT set_config($1, $2, true) FROM "+noteTable)`,
+		want:   "set_config names its setting through something this gate cannot read",
+		tables: 1,
+	},
+	{
+		name:   "set_config on another setting",
+		body:   `tx.Exec(ctx, "SELECT set_config('statement_timeout', '5s', true) FROM "+noteTable)`,
+		tables: 1,
+	},
+	{
+		name:   "a dynamic statement",
+		body:   `tx.Exec(ctx, "EXECUTE probe_statement")`,
+		want:   "EXECUTE, PREPARE",
+		tables: 0,
+	},
+	{
+		name:   "a prepared statement",
+		body:   `tx.Exec(ctx, "PREPARE probe_statement AS SELECT id FROM "+noteTable)`,
+		want:   "EXECUTE, PREPARE",
+		tables: 0,
+	},
+	{
+		name:   "query_to_xml",
+		body:   `tx.Exec(ctx, "SELECT query_to_xml('SELECT * FROM contact', true, false, '') FROM "+noteTable)`,
+		want:   "runs a query named by a string",
+		tables: 1,
+	},
+	{
+		name:   "query_to_xml_and_xmlschema, schema-qualified",
+		body:   `tx.Exec(ctx, "SELECT pg_catalog.query_to_xml_and_xmlschema('SELECT 1', true, false, '') FROM "+noteTable)`,
+		want:   "runs a query named by a string",
+		tables: 1,
+	},
+	{
+		name:   "cursor_to_xml",
+		body:   `tx.Exec(ctx, "SELECT cursor_to_xml('probe_cursor', 10, true, false, '') FROM "+noteTable)`,
+		want:   "runs a query named by a string",
+		tables: 1,
+	},
+	{
+		name:   "ts_stat",
+		body:   `tx.Exec(ctx, "SELECT * FROM ts_stat('SELECT body_tsv FROM contact')")`,
+		want:   "runs a query named by a string",
+		tables: 0,
+	},
+	{
+		name:   "a function created by the unit",
+		body:   "tx.Exec(ctx, `CREATE FUNCTION ext.ext_probe_f() RETURNS int LANGUAGE sql AS $$ SELECT 1 $$`)",
+		want:   "creates a function or a procedure",
+		tables: 0,
+	},
+	{
+		name:   "a procedure created or replaced by the unit",
+		body:   "tx.Exec(ctx, `CREATE OR REPLACE PROCEDURE ext.ext_probe_p() LANGUAGE sql AS $$ SELECT 1 $$`)",
+		want:   "creates a function or a procedure",
+		tables: 0,
 	},
 	{
 		name: "a core table read out by COPY",
-		// COPY … TO STDOUT needs only SELECT, which the shared runtime role
-		// holds on every core table, so this is a read of the whole table.
+		// COPY … TO STDOUT needs only SELECT, so it reads a whole table out.
+		// The runtime role refuses it on a core table; the lint says so first.
 		body:   `tx.Exec(ctx, "COPY contact TO STDOUT")`,
 		want:   `"contact"`,
 		tables: 1,
@@ -337,7 +437,7 @@ const source = "FROM contact LIMIT 1"`,
 	},
 	{
 		name:   "prose that merely reads like SQL",
-		body:   `_ = "hello from the demo extension"; _ = "update the note, then select the row"; _ = "truncate the note body before sending"; _ = "do the work, then copy the note"`,
+		body:   `_ = "hello from the demo extension"; _ = "update the note, then select the row"; _ = "truncate the note body before sending"; _ = "do the work, then copy the note"; _ = "set the role in Settings"; _ = "reset all filters, then execute the plan"`,
 		tables: 0,
 	},
 }

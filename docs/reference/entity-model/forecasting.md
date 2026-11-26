@@ -46,6 +46,11 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_call_pkey`: `unique, btree (id)`
 - `idx_forecast_call_period`: `btree (period_start, period_end, scope_kind, scope_id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note": 2000, "scope_kind": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"note":2000,"scope_kind":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "scope_kind": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"note":2000,"scope_kind":20000}')`
+
 ## forecast_capture_status
 
 6 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -68,9 +73,14 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_capture_status_context_key_key`: `unique, btree (context_key)`
 - `forecast_capture_status_pkey`: `unique, btree (id)`
 
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"failure": 20000, "context_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"context_key":20000,"failure":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"failure": 20000, "context_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"context_key":20000,"failure":20000}')`
+
 ## forecast_contribution
 
-38 columns · primary key `(id)` · referenced by 0 foreign keys
+34 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -79,16 +89,16 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `approval_id` | `uuid` |  |  |
 | `audit_id` | `uuid` |  |  |
 | `base_minor` | `bigint` |  | The deal's amount in the base currency. |
-| `category` | `text` |  |  |
 | `close_provisional` | `boolean`, default `false` | yes |  |
 | `currency` | `currency_code` |  |  |
 | `deal_id` | `uuid` | yes |  |
 | `effective_close_date` | `date` |  |  |
 | `evidence_n` | `integer` |  | How many recorded deals that entered this stage in the last two years have closed. |
 | `exclusion_reason` | `text` |  | Why a deal in the reading contributes no money. |
+| `focus_rank` | `smallint` |  |  |
+| `focus_reason` | `jsonb` |  |  |
 | `fx_date` | `date` |  |  |
 | `fx_rate` | `numeric(20,10)` |  |  |
-| `in_best_case` | `boolean`, default `false` | yes |  |
 | `in_evidence` | `boolean`, default `false` | yes | Whether the deal counts in the Likely reading. |
 | `in_lost` | `boolean`, default `false` | yes |  |
 | `in_open` | `boolean`, default `false` | yes |  |
@@ -96,8 +106,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `owner_id` | `uuid` |  |  |
 | `probability_source` | `text` |  | Where the deal's probability came from. |
 | `qualification` | `text` |  | One of `eligible`, `excluded`, `unsupported`, `unknown`. |
-| `qualification_complete` | `boolean` |  |  |
-| `qualified_policy_version` | `text` |  |  |
 | `risk_effect` | `numeric` |  |  |
 | `risk_signal_facts` | `jsonb` |  |  |
 | `risk_signals` | `text[]` |  |  |
@@ -105,8 +113,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `stage_id` | `uuid` |  |  |
 | `stage_probability` | `integer` |  |  |
 | `typed_probability` | `integer` |  | The deal's own probability where one is set, else the chance typed on its stage, in percent. |
-| `viability_assessed_at` | `timestamp with time zone` |  |  |
-| `viability_disposition` | `text` |  | One of `none`, `open_review`, `override`, `unsupported`. |
 | `weighted_minor` | `bigint` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -126,6 +132,9 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_contribution_base_minor_js_safe`: `CHECK (((base_minor >= '-9007199254740991'::bigint) AND (base_minor <= '9007199254740991'::bigint)))`
 - `forecast_contribution_evidence_n_is_a_tally`: `CHECK (((evidence_n IS NULL) OR (evidence_n >= 0)))`
 - `forecast_contribution_exclusion_reason_check`: `CHECK (((exclusion_reason IS NULL) OR (exclusion_reason = ANY (ARRAY['unpriced', 'fx_missing', 'out_of_period', 'not_eligible']))))`
+- `forecast_contribution_focus_rank_in_list`: `CHECK (((focus_rank IS NULL) OR ((focus_rank >= 1) AND (focus_rank <= 20))))`
+- `forecast_contribution_focus_reason_object`: `CHECK (((focus_reason IS NULL) OR (jsonb_typeof(focus_reason) = 'object')))`
+- `forecast_contribution_focus_reason_pair`: `CHECK (((focus_rank IS NULL) = (focus_reason IS NULL)))`
 - `forecast_contribution_probability_is_a_percent`: `CHECK (((stage_probability IS NULL) OR ((stage_probability >= 0) AND (stage_probability <= 100))))`
 - `forecast_contribution_probability_source_known`: `CHECK (((probability_source IS NULL) OR (probability_source = ANY (ARRAY['stage', 'human', 'margince']))))`
 - `forecast_contribution_qualification_check`: `CHECK (((qualification IS NULL) OR (qualification = ANY (ARRAY['eligible', 'excluded', 'unsupported', 'unknown']))))`
@@ -136,7 +145,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_contribution_risk_signals_known`: `CHECK (((risk_signals IS NULL) OR (risk_signals <@ ARRAY['close_pushed', 'no_next_step', 'quiet', 'stuck'])))`
 - `forecast_contribution_typed_probability_is_a_percent`: `CHECK (((typed_probability IS NULL) OR ((typed_probability >= 0) AND (typed_probability <= 100))))`
 - `forecast_contribution_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
-- `forecast_contribution_viability_disposition_known`: `CHECK (((viability_disposition IS NULL) OR (viability_disposition = ANY (ARRAY['none', 'open_review', 'override', 'unsupported']))))`
 - `forecast_contribution_weighted_minor_js_safe`: `CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))`
 - `forecast_contribution_weighted_needs_a_base`: `CHECK (((weighted_minor IS NULL) = (base_minor IS NULL)))`
 - `uq_forecast_contribution_deal`: `UNIQUE (snapshot_id, deal_id)`
@@ -144,13 +152,14 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 **Indexes**
 
 - `forecast_contribution_pkey`: `unique, btree (id)`
-- `idx_forecast_contribution_audit`: `btree (audit_id) WHERE (audit_id IS NOT NULL)`
 - `idx_forecast_contribution_deal`: `btree (deal_id, created_at DESC)`
 - `uq_forecast_contribution_deal`: `unique, btree (snapshot_id, deal_id)`
 
 **Triggers**
 
 - `forecast_contribution_is_frozen`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION forecast_contribution_is_frozen()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"risk_signals":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"risk_signals":20000}')`
 
 ## forecast_snapshot
 
@@ -165,8 +174,8 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `confirmed_date_count` | `integer` | yes |  |
 | `definition_version` | `text` | yes |  |
 | `eligible_count` | `integer` | yes |  |
-| `evidence_cutoff` | `timestamp with time zone` |  |  |
 | `evidence_minor` | `bigint` | yes |  |
+| `focus_on_target` | `boolean` |  |  |
 | `forward_measure` | `text` |  | One of `likely`, `qualified_likely`, `commit_evidence`, `qualified_commit_evidence`, `weighted`, `qualified_weighted` and 1 more. |
 | `fx_missing_count` | `integer` | yes |  |
 | `input_fingerprint` | `text` |  |  |
@@ -250,3 +259,5 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 **Triggers**
 
 - `forecast_snapshot_is_frozen`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION forecast_snapshot_is_frozen()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"trigger": 20000, "scope_kind": 20000, "captured_by": 20000, "range_version": 20000, "forward_measure": 20000, "landing_measure": 20000, "range_quantiles": 20000, "input_fingerprint": 20000, "definition_version": 20000, "risk_signals_version": 20000, "population_fingerprint": 20000, "qualified_policy_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"definition_version":20000,"forward_measure":20000,"input_fingerprint":20000,"landing_measure":20000,"population_fingerprint":20000,"qualified_policy_version":20000,"range_quantiles":20000,"range_version":20000,"risk_signals_version":20000,"scope_kind":20000,"trigger":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"trigger": 20000, "scope_kind": 20000, "captured_by": 20000, "range_version": 20000, "forward_measure": 20000, "landing_measure": 20000, "range_quantiles": 20000, "input_fingerprint": 20000, "definition_version": 20000, "risk_signals_version": 20000, "population_fingerprint": 20000, "qualified_policy_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"definition_version":20000,"forward_measure":20000,"input_fingerprint":20000,"landing_measure":20000,"population_fingerprint":20000,"qualified_policy_version":20000,"range_quantiles":20000,"range_version":20000,"risk_signals_version":20000,"scope_kind":20000,"trigger":20000}')`

@@ -26,6 +26,8 @@ import (
 const (
 	providerGmail = "gmail"
 	providerGraph = "graph"
+	providerGcal  = "gcal"
+	providerGdocs = "gdocs"
 )
 
 // SeatProvedAddressTx reports whether one seat has proven one address is a
@@ -73,7 +75,7 @@ const (
 //
 // Held by: TestATypedAccountLabelCannotTakeOverAColleaguesImport,
 // TestADeclaredAddressAloneDoesNotAttribute and TestADomainClaimDoesNotAttribute
-// (backend/internal/compose/importthencapture_integration_test.go)
+// (backend/internal/compose/integration/importthencapture_integration_test.go)
 func SeatProvedAddressTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, address string) (bool, error) {
 	folded := foldAddress(bareAddress(address))
 	if folded == "" || seat == ids.Nil {

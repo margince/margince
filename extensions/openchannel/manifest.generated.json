@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "name": "openchannel",
-  "version": "1.0.0",
+  "version": "1.4.0",
   "risk_tiers": [
     {
       "id": "job/drain",
@@ -78,5 +78,12 @@
       "target": "",
       "object": "ext_openchannel_endpoint"
     }
-  ]
+  ],
+  "app": {
+    "icon": "plug",
+    "label": "extOpenchannel.title",
+    "group": "work",
+    "object": "ext_openchannel_endpoint",
+    "export": "OpenchannelApp"
+  }
 }

@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { isValidElement } from "react";
 import { expect, it } from "vitest";
+import { stable } from "../../format/collate";
 import { KNOWN_SOURCES, rowHref } from "../../lib/worklistcopy";
 import { row } from "../../testing/worklist.testkit";
 import { reviewView } from "./worklist.destinations";
@@ -136,8 +137,8 @@ const CONTEXT = {
 } satisfies Record<WorklistItem["source"], ContextCase>;
 
 it("covers the generated source vocabulary without shortening it", () => {
-  expect(Object.keys(CONTEXT).sort()).toEqual(
-    Object.keys(KNOWN_SOURCES).sort(),
+  expect(Object.keys(CONTEXT).sort(stable)).toEqual(
+    Object.keys(KNOWN_SOURCES).sort(stable),
   );
 });
 it.each(Object.entries(CONTEXT))(

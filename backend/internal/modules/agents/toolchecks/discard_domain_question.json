@@ -1,0 +1,7 @@
+{
+  "verb": "discard_domain_question",
+  "checks": [],
+  "takes": [
+    "domain_question"
+  ]
+}

@@ -25,6 +25,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, Field } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { RemoveLinkMenu } from "../../design-system/projectlinks";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -52,7 +53,7 @@ function invalidateProject(
   queryClient: ReturnType<typeof useQueryClient>,
   projectId: string,
 ) {
-  queryClient.invalidateQueries({ queryKey: project360Key(projectId) });
+  return queryClient.invalidateQueries({ queryKey: project360Key(projectId) });
 }
 
 async function searchContacts(query: string): Promise<RecordPickerCandidate[]> {
@@ -97,8 +98,8 @@ export function AddProjectStakeholder({
         }),
       );
     },
-    onSuccess: () => {
-      invalidateProject(queryClient, projectId);
+    onSuccess: async () => {
+      await invalidateProject(queryClient, projectId);
       close();
     },
   });
@@ -195,6 +196,7 @@ export function RemoveProjectStakeholder({
   const t = useT();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const shownName = contactName ?? t("coverage.seatWithheld");
 
   const detach = useMutation({
     mutationFn: async (contact: string) => {
@@ -204,24 +206,15 @@ export function RemoveProjectStakeholder({
         }),
       );
     },
-    onSuccess: () => {
-      invalidateProject(queryClient, projectId);
+    onSuccess: async () => {
+      await invalidateProject(queryClient, projectId);
       setOpen(false);
     },
   });
 
   return (
     <>
-      <Button
-        variant="danger"
-        onClick={() => setOpen(true)}
-        data-testid="remove-project-stakeholder"
-        aria-label={t("project.stakeholders.removeOne", {
-          name: contactName ?? t("coverage.seatWithheld"),
-        })}
-      >
-        {t("rel.remove")}
-      </Button>
+      <RemoveLinkMenu name={shownName} onRemove={() => setOpen(true)} />
       <ConfirmModal
         open={open}
         onClose={() => {
@@ -236,11 +229,7 @@ export function RemoveProjectStakeholder({
         pending={detach.isPending}
         error={detach.isError ? problemMessageOf(detach.error, t) : null}
       >
-        <p>
-          {t("project.stakeholders.removeConfirm", {
-            name: contactName ?? t("coverage.seatWithheld"),
-          })}
-        </p>
+        <p>{t("project.stakeholders.removeConfirm", { name: shownName })}</p>
       </ConfirmModal>
     </>
   );

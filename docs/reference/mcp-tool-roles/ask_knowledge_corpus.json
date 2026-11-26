@@ -1,0 +1,14 @@
+{
+  "tool": "run_research",
+  "action": "ask_corpus",
+  "verb": "ask_knowledge_corpus",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

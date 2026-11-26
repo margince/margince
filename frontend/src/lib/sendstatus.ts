@@ -21,6 +21,11 @@ export type RefusedRecipient = Readonly<{
   requestedCategory?: string;
   /** The server's answer to whether a recorded reason may lift it. */
   canBeOverruled: boolean;
+  footerFindings?: readonly components["schemas"]["FooterFinding"][];
+  /** The first law cited for the reason, when one may be shown. */
+  provision?: components["schemas"]["CitedProvision"];
+  /** Every law cited for the reason: the recipient's pack, then the sender's. */
+  provisions?: readonly components["schemas"]["CitedProvision"][];
 }>;
 
 export type SendStatusKind =
@@ -32,22 +37,15 @@ export type SendStatusKind =
 
 export type SendStatus = Readonly<{
   kind: SendStatusKind;
-  /** The refusal the status explains: the one the rep is least able to fix. */
+  /** The refusal the status explains: the first in the server's order. */
   deciding?: RefusedRecipient;
   /** How many recipients refuse, the deciding one included. */
   refusing: number;
+  /** Every refused recipient, in the server's order. */
+  refused: readonly RefusedRecipient[];
   /** How many recipients the answer covers; 0 where the server did not say. */
   recipients: number;
 }>;
-
-// The order a rep is told about refusals in. A stop nobody here can lift
-// comes first, because fixing the others would still not send the message.
-const SEVERITY: readonly RefusalKind[] = [
-  "restricted",
-  "missingPermission",
-  "missingContext",
-  "missingEvidence",
-];
 
 /**
  * The category a refusal's remedy is named for. The sender's own pick comes
@@ -60,38 +58,17 @@ export function remedyCategoryOf(
   return refusal.requestedCategory ?? refusal.category;
 }
 
-function rankOf(refusal: RefusedRecipient): number {
-  const severity = SEVERITY.indexOf(
-    refusalKindOf(refusal.reasonCode, remedyCategoryOf(refusal)),
-  );
-  return (refusal.canBeOverruled ? SEVERITY.length : 0) + severity;
-}
-
-/**
- * The refusal the status explains, by one rule before and after Send. One a
- * recorded reason cannot lift outranks one it can; then the more severe kind;
- * then the server's order.
- */
-export function decidingRefusal(
-  refusals: readonly RefusedRecipient[],
-): RefusedRecipient | undefined {
-  let deciding: RefusedRecipient | undefined;
-  for (const refusal of refusals) {
-    if (deciding === undefined || rankOf(refusal) < rankOf(deciding)) {
-      deciding = refusal;
-    }
-  }
-  return deciding;
-}
-
 /** A preview recipient as a refusal. Absent overrulability is not a yes. */
 export function refusalOf(recipient: PreviewRecipient): RefusedRecipient {
   return {
+    footerFindings: recipient.footer_findings,
     address: recipient.address,
     reasonCode: recipient.reason_code,
     category: recipient.resolved_category,
     requestedCategory: recipient.requested_category,
     canBeOverruled: recipient.can_be_overruled === true,
+    provision: recipient.provision,
+    provisions: recipient.provisions,
   };
 }
 
@@ -99,13 +76,16 @@ function statusOf(
   refusals: readonly RefusedRecipient[],
   recipients: number,
 ): SendStatus {
-  const deciding = decidingRefusal(refusals);
+  // The server ranks refusals, in the preview and after Send alike, so the
+  // first is the one the status explains.
+  const deciding = refusals[0];
   return {
     kind: deciding
       ? refusalKindOf(deciding.reasonCode, remedyCategoryOf(deciding))
       : "restricted",
     deciding,
     refusing: refusals.length,
+    refused: refusals,
     recipients,
   };
 }
@@ -130,7 +110,7 @@ export function previewStatus(
     unanswered: boolean;
   }>,
 ): SendStatus {
-  const none = { refusing: 0, recipients: 0 };
+  const none = { refusing: 0, refused: [], recipients: 0 };
   if (answer.unanswered) return { kind: "unavailable", ...none };
   if (answer.asking) return { kind: "checking", ...none };
   const { preview } = answer;
@@ -143,6 +123,7 @@ export function previewStatus(
     return {
       kind: "ready",
       refusing: 0,
+      refused: [],
       recipients: preview.recipients.length,
     };
   }

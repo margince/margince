@@ -77,11 +77,15 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 			out = forecastToolResult(period, resolved, assembly.Readings, baseCurrency, at, assembly.Limited)
 			out.SelfCorrecting = &assembly.SelfCorrecting
 			if req.Contributions {
-				visible, limited, err := ForecastReaderContributions(ctx, tx, assembly.Readings.Contributions)
+				visible, reason, err := ForecastReaderContributions(ctx, tx, assembly.Readings.Contributions)
 				if err != nil {
 					return err
 				}
+				limited := reason != ""
 				out.ContributionsLimited = &limited
+				if limited {
+					out.ContributionsLimitedReason = &reason
+				}
 				if out.Contributions, err = forecastContributionsToTool(visible); err != nil {
 					return err
 				}
@@ -109,35 +113,38 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 }
 
 // addForecastAssertions adds the snapshots and the standing call, which only a
-// seat that may assert about the population sees. called is the call's amount,
-// nil when this seat sees none, as the endpoint's landing takes it.
+// seat that may assert about the population sees. It answers the call as the
+// endpoint's landing takes it.
 func addForecastAssertions(
 	ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period,
 	resolved forecasting.Scope, baseCurrency string, out *agents.ForecastReadingsResult,
-) (called *int64, err error) {
+) (forecasting.SeenCall, error) {
 	mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, resolved)
-	if err != nil || !mayAssert {
-		return nil, err
-	}
-	refs, err := store.SnapshotRefsTx(ctx, tx, period, resolved, baseCurrency)
 	if err != nil {
-		return nil, err
+		return forecasting.SeenCall{}, err
 	}
-	out.Snapshots = forecastSnapshotRefsToTool(refs)
+	if mayAssert {
+		refs, err := store.SnapshotRefsTx(ctx, tx, period, resolved, baseCurrency)
+		if err != nil {
+			return forecasting.SeenCall{}, err
+		}
+		out.Snapshots = forecastSnapshotRefsToTool(refs)
+	}
 	call, seen, err := forecasting.CallSeen(ctx, tx, store, mayAssert, period, resolved)
-	if err != nil || !seen {
-		return nil, err
+	out.CallWithheld = seen.Withheld
+	if err != nil || seen.Amount == nil {
+		return seen, err
 	}
 	rendered := forecastCallToTool(call)
 	if err := addCallReview(ctx, tx, rendered, call); err != nil {
-		return nil, err
+		return forecasting.SeenCall{}, err
 	}
 	encoded, err := json.Marshal(rendered)
 	if err != nil {
-		return nil, fmt.Errorf("compose: rendering the standing call: %w", err)
+		return forecasting.SeenCall{}, fmt.Errorf("compose: rendering the standing call: %w", err)
 	}
 	out.CurrentCall = encoded
-	return &call.AmountMinor, nil
+	return seen, nil
 }
 
 // forecastLandingToTool is the endpoint's landing in the tool's shape.

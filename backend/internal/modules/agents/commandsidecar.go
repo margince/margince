@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -64,6 +65,7 @@ func (r confirmFactResolver) Subject(ctx context.Context, cmd ConfirmFactCommand
 	return StageInfo{
 		TargetType: companySidecarRecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.confirmFact", systemtext.Text(fmt.Sprint(cmd.FactKey)), systemtext.Text(fmt.Sprint(cmd.ID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).confirmFact, cmd.FactKey, cmd.ID),
 	}, nil
 }
@@ -111,6 +113,7 @@ func (r updateFactResolver) Subject(ctx context.Context, cmd UpdateFactCommand) 
 	return StageInfo{
 		TargetType: companySidecarRecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.updateFact", systemtext.Text(fmt.Sprint(cmd.FactKey)), systemtext.Text(fmt.Sprint(cmd.ID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).updateFact, cmd.FactKey, cmd.ID),
 	}, nil
 }
@@ -147,6 +150,7 @@ func (r createFactResolver) Subject(ctx context.Context, cmd CreateFactCommand) 
 	return StageInfo{
 		TargetType: companySidecarRecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.createFact", systemtext.Text(fmt.Sprint(cmd.ID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).createFact, cmd.ID),
 	}, nil
 }
@@ -182,6 +186,7 @@ func (r deleteFactResolver) Subject(ctx context.Context, cmd DeleteFactCommand) 
 	return StageInfo{
 		TargetType: companySidecarRecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.deleteFact", systemtext.Text(fmt.Sprint(cmd.FactKey)), systemtext.Text(fmt.Sprint(cmd.ID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).deleteFact, cmd.FactKey, cmd.ID),
 	}, nil
 }
@@ -220,6 +225,7 @@ func (r confirmProfileFieldResolver) Subject(ctx context.Context, cmd ConfirmPro
 	return StageInfo{
 		TargetType: companySidecarRecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.confirmProfileField", systemtext.Text(fmt.Sprint(cmd.Field)), systemtext.Text(fmt.Sprint(cmd.ID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).confirmProfileField, cmd.Field, cmd.ID),
 	}, nil
 }
@@ -257,6 +263,7 @@ func (r updateProfileFieldResolver) Subject(ctx context.Context, cmd UpdateProfi
 	return StageInfo{
 		TargetType: companySidecarRecordType,
 		TargetID:   cmd.ID,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("agent.updateProfileField", systemtext.Text(fmt.Sprint(cmd.Field)), systemtext.Text(fmt.Sprint(cmd.ID)))},
 		Summary:    fmt.Sprintf(summaryIn(ctx, r.language).updateProfileField, cmd.Field, cmd.ID),
 	}, nil
 }

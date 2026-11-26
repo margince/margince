@@ -18,7 +18,7 @@ type SignOff = components["schemas"]["EmailSignOff"];
 type SignatureDraft = components["schemas"]["EmailSignatureDraft"];
 
 // How long the words must rest before the closing's language is asked again.
-const SETTLE_MS = 400;
+const SETTLE_MS = 1500;
 
 /**
  * The cache family every sign-off preview lives under. Saving a signature
@@ -64,7 +64,9 @@ export function SignOffPreview({
           {t("compose.signsOffAs", {
             closing: signOff.text
               .trim()
-              .split(/\s*\n\s*/)
+              .split("\n")
+              .map((line) => line.trim())
+              .filter(Boolean)
               .join(" "),
           })}{" "}
           {t("compose.signOffClosing")}

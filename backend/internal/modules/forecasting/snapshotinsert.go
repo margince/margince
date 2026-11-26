@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func (s *Store) insertSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot, landing Landing, capturedBy string) (ids.UUID, error) {
+func (s *Store) insertSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot, landing Landing, focus *FocusList, capturedBy string) (ids.UUID, error) {
 	//craft:ignore naked-any pgx binds heterogeneous scalar values at the SQL boundary.
 	arguments := []any{
 		in.Period.StartDate, in.Period.EndDate, in.Scope.Kind, in.Scope.ID,
@@ -24,18 +24,23 @@ func (s *Store) insertSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot, l
 		in.PipelineID, in.PopulationFingerprint,
 		nullIfEmpty(string(in.ForwardMeasure)),
 		InputFingerprint(in.Readings.Contributions),
-		in.SelfCorrecting, in.EvidenceCutoff, nullIfEmpty(in.RiskSignalsVersion), likelyThresholdColumn(in.Readings.LikelyThreshold),
+		in.SelfCorrecting, nullIfEmpty(in.RiskSignalsVersion), likelyThresholdColumn(in.Readings.LikelyThreshold),
 	}
 	arguments = append(arguments, frozenRange(in.Readings.Range)...)
 	arguments = append(arguments, frozenLandingColumns(landing)...)
+	var onTarget *bool
+	if focus != nil {
+		onTarget = &focus.OnTarget
+	}
+	arguments = append(arguments, onTarget)
 	query := `INSERT INTO forecast_snapshot
         (period_start,period_end,scope_kind,scope_id,taken_at,local_day,trigger,definition_version,
         base_currency,won_minor,evidence_minor,open_minor,weighted_minor,
         eligible_count,priced_count,confirmed_date_count,fx_missing_count,call_id,captured_by,
         pipeline_id,population_fingerprint,forward_measure,input_fingerprint,
-        self_correcting,evidence_cutoff,risk_signals_version,likely_threshold,
+        self_correcting,risk_signals_version,likely_threshold,
         range_low_minor,range_high_minor,range_runs,range_quantiles,range_version,
-        landing_measure,landing_call_minor) VALUES (` + storekit.Placeholders(arguments) + `) RETURNING id`
+        landing_measure,landing_call_minor,focus_on_target) VALUES (` + storekit.Placeholders(arguments) + `) RETURNING id`
 	var id ids.UUID
 	if err := tx.QueryRow(ctx, query, arguments...).Scan(&id); err != nil {
 		return ids.Nil, fmt.Errorf("forecasting: writing the snapshot: %w", err)
@@ -76,14 +81,11 @@ func (s *Store) frozenLanding(ctx context.Context, tx pgx.Tx, in NewSnapshot) (L
 		return Landing{}, nil
 	}
 	// A call covers every pipeline, so a one-pipeline snapshot has none.
-	var call *int64
+	var call SeenCall
 	if in.ForwardMeasure == MeasureManagerCall && in.PipelineID == nil {
-		standing, seen, err := CallSeen(ctx, tx, s, true, in.Period, in.Scope)
-		if err != nil {
+		var err error
+		if _, call, err = CallSeen(ctx, tx, s, true, in.Period, in.Scope); err != nil {
 			return Landing{}, err
-		}
-		if seen {
-			call = &standing.AmountMinor
 		}
 	}
 	return ProjectLanding(in.Readings, in.ForwardMeasure, call)

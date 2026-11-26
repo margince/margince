@@ -48,7 +48,8 @@ func (v *dealVerdictEnv) createDeal(t *testing.T, name string, owner *ids.UserID
 	t.Helper()
 	amount, currency := int64(1_000_000), "EUR"
 	created, err := v.Deals.CreateDeal(v.Admin(), deals.CreateDealInput{
-		Name: name, PipelineID: v.pipeline, StageID: v.stage, OwnerID: owner, AmountMinor: &amount, Currency: &currency,
+		Source: "manual",
+		Name:   name, PipelineID: v.pipeline, StageID: v.stage, OwnerID: owner, AmountMinor: &amount, Currency: &currency,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -127,6 +128,12 @@ func (l lowConfidenceLane) Complete(context.Context, model.Request) (model.Respo
 func TestTheOwnerReadsWhyMarginceChangedNothingAndAColleagueDoesNot(t *testing.T) {
 	v := setupDealVerdict(t)
 	v.pass.brain = dealVerdictRefs(lowConfidenceLane{cite: &v.note})
+	if _, _, err := v.Activities.LogActivity(v.Admin(), activities.LogActivityInput{
+		Kind: "note", Body: new("Account context."), Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: v.deal}},
+	}); err != nil {
+		t.Fatal(err)
+	}
 	subject, body, at := "Pricing call", "They asked about volume pricing.", v.now
 	call, _, err := v.Activities.LogActivity(v.Admin(), activities.LogActivityInput{
 		Kind: "call", Subject: &subject, Body: &body, OccurredAt: &at, Source: "manual",
@@ -258,7 +265,7 @@ func TestAnAgentActingForTheOwnerReadsNoReasonOnEitherRead(t *testing.T) {
 	v := setupDealVerdict(t)
 	v.run(t)
 	agent := v.ownersAgentReader()
-	applied, _, err := v.Deals.DealChanges(agent, ids.From[ids.DealKind](v.deal), nil, 10)
+	applied, _, err := v.Deals.DealChanges(agent, ids.From[ids.DealKind](v.deal), nil, 10, deals.DealChangeFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -348,7 +355,7 @@ func TestTwoAmountChangesOnOneDealCountTheirNetMoveOnce(t *testing.T) {
 	lane := &amountLane{cite: &v.note, whole: 45000}
 	v.pass.brain = dealVerdictRefs(lane)
 	v.run(t)
-	v.note = v.logNote(t, "The board raised it: 50,000 EUR a year.")
+	v.note = v.logBuyerMessage(t, "The board raised it: 50,000 EUR a year.")
 	lane.whole = 50000
 	v.pass.now = func() time.Time { return v.now.Add(2 * time.Minute) }
 	v.run(t)

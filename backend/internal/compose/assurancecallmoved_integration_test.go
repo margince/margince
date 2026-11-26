@@ -85,7 +85,7 @@ func (e *callEnv) postCall(t *testing.T, body []byte) crmcontracts.ForecastCall 
 	t.Helper()
 	r := httptest.NewRequest(http.MethodPost, "/forecast/calls", bytes.NewReader(body)).WithContext(e.Admin())
 	w := httptest.NewRecorder()
-	e.handlers.RecordForecastCall(w, r)
+	e.handlers.RecordForecastCall(w, r, crmcontracts.RecordForecastCallParams{})
 	if w.Code != http.StatusCreated {
 		t.Fatalf("recording the call answered %d: %s", w.Code, w.Body.String())
 	}
@@ -227,8 +227,8 @@ func TestACallSupersededDuringThePassLeavesNoOpenFinding(t *testing.T) {
 		e.recordCall(t, 7_000_000)
 		return subjects, err
 	}
-	scanner := assuranceScanner(e.Pool, assurance.NewStore(InstallationDB(e.Pool))).WithCallSubjects(duringRead)
-	if _, err := scanner.Scan(e.passCtxFor(), e.at, nil); err != nil {
+	scanner := AssuranceScanner(e.Pool, assurance.NewStore(InstallationDB(e.Pool))).WithCallSubjects(duringRead)
+	if _, err := scanner.Scan(e.passCtxFor(), e.at); err != nil {
 		t.Fatalf("the pass: %v", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM assurance_exception WHERE subject_id = $1 AND status = 'open'`,

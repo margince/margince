@@ -9,11 +9,15 @@ import (
 	"github.com/margince/margince/backend/internal/compose/programsettings"
 )
 
-// A deployment sets every boot setting from its container's environment, and
-// an operator by hand from the command line, so each has both names.
-func TestEveryProgramSettingHasAFlagAndAnEnvironmentName(t *testing.T) {
+func TestProgramSettingsExposeOnlyTheirAllowedSources(t *testing.T) {
 	t.Parallel()
 	for _, s := range programsettings.Settings() {
+		if s.Key() == programsettings.CoreFeaturesDisabled.Key() {
+			if s.Flag() != "" || s.Env() != "" || s.Stored() {
+				t.Errorf("%s must be set only in a config file", s.Key())
+			}
+			continue
+		}
 		if s.Flag() == "" || s.Env() == "" {
 			t.Errorf("%s: flag %q, env %q; a boot setting needs both", s.Key(), s.Flag(), s.Env())
 		}

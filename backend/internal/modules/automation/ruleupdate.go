@@ -25,10 +25,21 @@ func settleRuleOwner(ctx context.Context, tx pgx.Tx, before Automation, in Updat
 			return ids.Nil, err
 		}
 	}
-	if in.Enabled == nil || !*in.Enabled {
+	enabled := before.Enabled
+	if in.Enabled != nil {
+		enabled = *in.Enabled
+	}
+	if !enabled || (before.Enabled && (in.Params == nil || sameParams(before.Params, in.Params))) {
 		return ids.Nil, nil
 	}
-	return claimDraftStarter(ctx, tx, before)
+	if in.Params != nil {
+		params, err := json.Marshal(in.Params)
+		if err != nil {
+			return ids.Nil, err
+		}
+		before.Params = params
+	}
+	return claimStarterAuthorizer(ctx, tx, before)
 }
 
 // ruleUpdateImages is an update's before and after, with the owner and setter only

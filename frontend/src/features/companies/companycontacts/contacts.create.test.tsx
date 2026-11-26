@@ -79,9 +79,12 @@ describe("Creating a contact from a company's Contacts tab", () => {
     );
     const user = userEvent.setup();
 
-    expect(screen.queryByTestId("vcard-import")).toBeNull();
     await user.click(screen.getByTestId("quick-capture"));
     await user.type(await screen.findByLabelText("Full name *"), "Dana Buyer");
+    await user.type(
+      screen.getByLabelText("LinkedIn"),
+      "https://www.linkedin.com/in/dana-buyer",
+    );
     expect(screen.queryByRole("combobox", { name: "Company" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Create" }));
 
@@ -91,6 +94,21 @@ describe("Creating a contact from a company's Contacts tab", () => {
       body: { full_name: "Dana Buyer", company_id: "co-acme" },
     });
     expect(writes[0]?.body).not.toHaveProperty("company_name");
+  });
+
+  it("offers the vCard import for the company, which files each new contact under it", () => {
+    stubApi();
+    render(
+      providers(
+        <CompanyContactsList companyId="co-acme" mayCreate />,
+        newClient(),
+      ),
+    );
+
+    expect(screen.getByTestId("vcard-import")).toHaveAttribute(
+      "href",
+      "/#/contacts/import?company=co-acme",
+    );
   });
 
   it("files a full new contact under the company, by id", async () => {
@@ -105,6 +123,10 @@ describe("Creating a contact from a company's Contacts tab", () => {
 
     await user.click(screen.getByRole("button", { name: "New contact" }));
     await user.type(await screen.findByLabelText("Full name *"), "Dana Buyer");
+    await user.type(
+      screen.getByLabelText("LinkedIn"),
+      "https://www.linkedin.com/in/dana-buyer",
+    );
     expect(screen.queryByRole("combobox", { name: "Company" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Create" }));
 
@@ -132,6 +154,10 @@ describe("Creating a contact from a company's Contacts tab", () => {
     const user = userEvent.setup();
     await user.click(screen.getByTestId("quick-capture"));
     await user.type(await screen.findByLabelText("Full name *"), "Dana Buyer");
+    await user.type(
+      screen.getByLabelText("LinkedIn"),
+      "https://www.linkedin.com/in/dana-buyer",
+    );
 
     rerender(
       providers(<CompanyContactsList companyId="co-other" mayCreate />, client),

@@ -14,6 +14,7 @@ package dealstatus
 //
 
 import (
+	"cmp"
 	"fmt"
 	"time"
 
@@ -64,11 +65,11 @@ func decideMove(f facts) crmcontracts.DealStatusCardMove {
 	mv := nextMove(f)
 	mv.Basis = requestMoveBasis(f, mv)
 	mv.MailCoverage = f.mailCoverage
-	if f.lang != "" && f.lang != "en" {
+	if lang := cmp.Or(f.say, f.lang); lang != "" && lang != "en" {
 		// Existing dismissal digests include generated English task subjects.
 		// Keep that identity while the same rules render the requested language.
 		canonical := f
-		canonical.lang = "en"
+		canonical.say = "en"
 		mv.Fingerprint = decideMove(canonical).Fingerprint
 		return mv
 	}
@@ -79,7 +80,7 @@ func decideMove(f facts) crmcontracts.DealStatusCardMove {
 }
 
 func nextMove(f facts) crmcontracts.DealStatusCardMove {
-	said := statusCopyFor(f.lang)
+	said := statusCopyFor(cmp.Or(f.say, f.lang))
 	if meeting, ok := upcomingMeeting(f); ok {
 		activityID := openapi_types.UUID(meeting.ID)
 		subject := meeting.Subject
@@ -105,8 +106,14 @@ func nextMove(f facts) crmcontracts.DealStatusCardMove {
 			untimed(&activityID, task.Subject))
 	}
 	if request, current, ok := requestForMove(f); ok {
+		if reply := ourReplyOn(request); current && reply != nil && reply.ReminderId != nil {
+			return repliedMove(said, f, request, *reply)
+		}
 		if request.EmailSummary != nil && request.EmailSummary.RequestHasReminder != nil && *request.EmailSummary.RequestHasReminder {
 			reason := said.Say(statusWords.Reminder)
+			if reply := ourReplyOn(request); current && reply != nil {
+				reason = said.repliedReason(f, *reply)
+			}
 			if !current {
 				reason = fmt.Sprintf(said.Say(statusWords.ReviewReply), said.subjectOf(request))
 			}
@@ -147,7 +154,7 @@ func nextMove(f facts) crmcontracts.DealStatusCardMove {
 // farMeetingMove is what to say about a meeting nobody needs to prepare for
 // yet: it exists, it is the next step, and there is nothing owed before it.
 func farMeetingMove(f facts) crmcontracts.DealStatusCardMove {
-	said := statusCopyFor(f.lang)
+	said := statusCopyFor(cmp.Or(f.say, f.lang))
 	meeting := *f.nextMeeting
 	subject := meeting.Subject
 	if subject == "" {
@@ -170,7 +177,7 @@ func farMeetingMove(f facts) crmcontracts.DealStatusCardMove {
 // said about the same deal, and the two disagreeing on one morning is what sent
 // this work here: kernel/nextstep is now the one predicate both ask.
 func quietDealMove(f facts) crmcontracts.DealStatusCardMove {
-	said := statusCopyFor(f.lang)
+	said := statusCopyFor(cmp.Or(f.say, f.lang))
 	missing := nextstep.Missing(nextstep.Facts{
 		DealOpen:       true,
 		MeetingBooked:  f.nextMeeting != nil,
@@ -197,7 +204,7 @@ func quietDealMove(f facts) crmcontracts.DealStatusCardMove {
 // button that said it books a meeting and did something else would be worse
 // than one that files a task saying so.
 func meetingRequest(f facts, seat Seat) crmcontracts.DealStatusCardMove {
-	said := statusCopyFor(f.lang)
+	said := statusCopyFor(cmp.Or(f.say, f.lang))
 	links := []map[string]any{{argEntityType: linkDeal, argEntityID: f.deal.Id}}
 	// The contact is linked only where this reader may file against them.
 	// Reading a contact and adding to their record are different grants, and a
@@ -247,7 +254,7 @@ func (said statusCopy) meetingSubject(seat Seat, deal crmcontracts.Deal) string 
 // opening move's business, so this arm is reached only where the timeline is
 // readable and empty.
 func sinceLastContact(f facts) string {
-	said := statusCopyFor(f.lang)
+	said := statusCopyFor(cmp.Or(f.say, f.lang))
 	last, ok := lastContact(f)
 	if !ok {
 		return said.Say(statusWords.Never)
@@ -291,7 +298,7 @@ var openingRoles = []string{roleChampion, roleEconomicBuyer, roleDecisionMaker, 
 // reason to write to somebody, and picking arbitrarily would put a stranger's
 // name in an instruction.
 func firstOutreach(f facts) (crmcontracts.DealStatusCardMove, bool) {
-	said := statusCopyFor(f.lang)
+	said := statusCopyFor(cmp.Or(f.say, f.lang))
 	if _, contacted := lastContact(f); contacted {
 		return crmcontracts.DealStatusCardMove{}, false
 	}
@@ -318,11 +325,10 @@ func (said statusCopy) openingReason(seat Seat, seats int) string {
 		seats, said.seatWords(seat))
 }
 
-// roleWord is a stakeholder role as a sentence says it. An unknown role is
-// returned as it is stored rather than dropped: the card would otherwise write
-// "Open with Maria Schmidt, the ." for a role added after this build.
+// roleWord is a stakeholder role as a sentence says it. Seats reach it only
+// through bestSeat, so the role is always one of openingRoles and has a label.
 func (said statusCopy) roleWord(role string) string {
-	return dealrole.Word(role, string(said.Lang()))
+	return dealrole.Label(role, string(said.Lang()))
 }
 
 func move(action, reason string, args map[string]any, evidence ...crmcontracts.DealNextBestActionEvidence) crmcontracts.DealStatusCardMove {
@@ -359,11 +365,6 @@ func upcomingMeeting(f facts) (activities.BookedMeeting, bool) {
 	return *f.nextMeeting, true
 }
 
-// The activities owner admits current requests before limiting the result.
-func unansweredInbound(f facts) (crmcontracts.Activity, bool) {
-	return readableRequest(f.currentRequests)
-}
-
 // lastContact is the newest exchange that has already happened. The timeline's
 // first rows can be scheduled meetings, which are plans and not contact. A
 // canceled or no-show meeting and automatic mail are no contact either.
@@ -397,7 +398,7 @@ func lastContact(f facts) (crmcontracts.Activity, bool) {
 }
 
 func nextStepReason(f facts) string {
-	said := statusCopyFor(f.lang)
+	said := statusCopyFor(cmp.Or(f.say, f.lang))
 	last, ok := lastContact(f)
 	if !ok {
 		return said.Say(statusWords.NoContactNext)
@@ -407,7 +408,7 @@ func nextStepReason(f facts) string {
 }
 
 func lastContactEvidence(f facts) []crmcontracts.DealNextBestActionEvidence {
-	said := statusCopyFor(f.lang)
+	said := statusCopyFor(cmp.Or(f.say, f.lang))
 	last, ok := lastContact(f)
 	if !ok {
 		return nil

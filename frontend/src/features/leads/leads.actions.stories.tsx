@@ -89,3 +89,41 @@ export const Live: Story = {
     await waitFor(() => expect(drawer).toBeVisible());
   },
 };
+
+// A role that may change the lead but not log: each verb's tooltip or title
+// names the one sentence its description points at.
+export const LogRefused: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ lead: ["read", "update"] }, { seat: "full" }),
+      "GET /leads/l-1": () => jsonResponse(LEAD),
+    });
+    return (
+      <StoryProviders>
+        <Verbs />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const why = en["record.actionRefused"];
+    const log = await within(canvasElement).findByRole("button", {
+      name: en["log.title"],
+    });
+    await waitFor(() => expect(log).toHaveAccessibleDescription(why));
+    await expect(log).toHaveAttribute("title", `${en["log.title"]}. ${why}`);
+    const email = within(canvasElement).getByRole("button", {
+      name: en["contact.action.email"],
+    });
+    await expect(email).toHaveAccessibleDescription(why);
+    const host = email.closest(".icon-action");
+    await expect(host).not.toBeNull();
+    if (host) {
+      await userEvent.hover(host);
+    }
+    await waitFor(() =>
+      expect(within(document.body).getByRole("tooltip")).toHaveTextContent(
+        `${en["contact.action.email"]}. ${why}`,
+      ),
+    );
+  },
+};

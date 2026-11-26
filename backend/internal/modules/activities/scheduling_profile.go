@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -29,6 +30,8 @@ type SchedulingCalendar interface {
 	Check(context.Context, ids.UserID, string) error
 	List(context.Context, ids.UserID, string) ([]connector.CalendarOption, error)
 	CheckRecipient(context.Context, ids.UserID, ids.UUID, string) error
+	// HostMayWrite says whether the host may change the live lead or contact now.
+	HostMayWrite(context.Context, pgx.Tx, ids.UserID, string, ids.UUID) (bool, error)
 	// ResolveAttendees says what each address is to the host: a contact they
 	// can see, a live colleague, a lead, or host-named.
 	ResolveAttendees(context.Context, ids.UserID, []string) ([]connector.CalendarAttendee, error)
@@ -46,6 +49,9 @@ type SchedulingCalendar interface {
 	Lookup(context.Context, ids.UserID, string, connector.CalendarAppointment) (*connector.CalendarReceipt, error)
 	Save(context.Context, ids.UserID, string, connector.CalendarAppointment) (connector.CalendarReceipt, error)
 	Cancel(context.Context, ids.UserID, string, string, string) error
+	// Respond answers the event with this iCalendar UID on the host's own
+	// connected calendar, which tells its organizer.
+	Respond(ctx context.Context, host ids.UserID, uid, response string) error
 }
 
 // WithSchedulingCalendar binds provider operations without coupling domain modules.
@@ -74,8 +80,8 @@ func schedulingHost(ctx context.Context) (ids.UserID, error) {
 
 func defaultSchedulingProfile() crmcontracts.SchedulingProfile {
 	return crmcontracts.SchedulingProfile{
-		CalendarId: "primary", DurationMinutes: 30,
-		NoticeMinutes: 120, HorizonDays: 30, BufferMinutes: 10, Title: "Let's meet",
+		CalendarId: "primary", DurationMinutes: 30, UseDefaultTitle: new(true),
+		NoticeMinutes: 120, HorizonDays: 30, BufferMinutes: 10, Title: systemtext.Literal("booking.lets_meet"),
 	}
 }
 
@@ -91,18 +97,18 @@ func videoCallFor(profile crmcontracts.SchedulingProfile, requested *bool) bool 
 
 func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crmcontracts.SchedulingProfile, error) {
 	profile := defaultSchedulingProfile()
+	defaultTitle := true
 	var name string
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		args := []any{host}
 		var err error
 		name, err = schedulingAccountName(ctx, tx, host)
 		if err != nil {
 			return err
 		}
-		var stored *crmcontracts.SchedulingProfile
+		var stored *storedSchedulingProfile
 		var slug string
-		err = tx.QueryRow(ctx, fmt.Sprintf(`SELECT slug, scheduling_policy FROM booking_page
-   WHERE host_user_id = $%d AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1`, len(args)), args...).Scan(&slug, &stored)
+		args := schedulingArgs{}
+		err = tx.QueryRow(ctx, `SELECT slug, scheduling_policy FROM booking_page WHERE `+livePageSQL(&args, host, ids.Nil), args...).Scan(&slug, &stored)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -110,7 +116,8 @@ func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crm
 			return err
 		}
 		if stored != nil {
-			profile = *stored
+			profile = stored.SchedulingProfile
+			defaultTitle = stored.DefaultTitle
 		}
 		profile.Slug = &slug
 		profile.Alias = nil
@@ -120,6 +127,10 @@ func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crm
 		}
 		return err
 	})
+	profile.UseDefaultTitle = new(defaultTitle)
+	if defaultTitle {
+		profile.Title = systemtext.Copy("booking.lets_meet", systemtext.Locale(ctx))
+	}
 	profile.HostName = &name
 
 	if err == nil && profile.Slug != nil {
@@ -134,7 +145,7 @@ func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crm
 	return profile, err
 }
 
-// SchedulingProfile returns the acting host’s reusable booking settings.
+// SchedulingProfile returns the acting host’s personal booking settings, with no team.
 func (s *Store) SchedulingProfile(ctx context.Context) (crmcontracts.SchedulingProfile, error) {
 	host, err := schedulingHost(ctx)
 	if err != nil {
@@ -144,20 +155,25 @@ func (s *Store) SchedulingProfile(ctx context.Context) (crmcontracts.SchedulingP
 	if err != nil {
 		return profile, err
 	}
-	blocker, err := s.calendarBlocker(ctx, host, profile)
+	blocker, err := s.pageBlocker(ctx, host, profile)
 	profile.Blocker = &blocker
-	return s.brandSchedulingProfile(ctx, host, profile), err
+	if err != nil {
+		return profile, err
+	}
+	profile.TeamMembers = nil
+	return s.brandSchedulingProfile(ctx, host, profile), nil
 }
 
 // pagePaused is the one answer to whether a standing booking page takes
-// bookings: the host switched it on, and its calendar can take them. The
-// guest profile, the free-time read and both booking reads ask it.
-func (s *Store) pagePaused(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) (bool, error) {
+// bookings. The host switched it on, its calendar can take them, and its team
+// is ready. The guest profile, the free-time read and both booking reads ask it.
+// An open page also answers its team, so a request reads the team once.
+func (s *Store) pagePaused(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) (bool, []teamCalendar, error) {
 	if !profile.Enabled {
-		return true, nil
+		return true, nil, nil
 	}
-	blocker, err := s.calendarBlocker(ctx, host, profile)
-	return blocker != crmcontracts.SchedulingProfileBlockerNone, err
+	blocker, team, err := s.pageReadiness(ctx, host, profile)
+	return blocker != crmcontracts.SchedulingProfileBlockerNone, team, err
 }
 
 // calendarBlocker is why bookings cannot reach the host's calendar. A page that
@@ -236,7 +252,7 @@ func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
 	}
 	if p.BlockingCalendars != nil && slices.ContainsFunc(*p.BlockingCalendars, func(id string) bool { return utf8.RuneCountInString(id) > maxSchedulingCalendar }) {
 		return &SchedulingArgumentError{
-			Field: fieldBlockingCalendars, Code: codeTooLong,
+			Field: fieldBlockingCalendars, Code: codeTooLong, Max: maxSchedulingCalendar,
 			Message: fmt.Sprintf("A calendar id may be at most %d characters", maxSchedulingCalendar),
 		}
 	}
@@ -257,6 +273,9 @@ func (s *Store) SaveSchedulingProfile(ctx context.Context, profile crmcontracts.
 	profile.CompanyName, profile.LogoUrl = nil, nil
 	if err := validateSchedulingProfile(profile); err != nil {
 		return profile, err
+	}
+	if len(teamMembers(profile)) > 0 {
+		return profile, &SchedulingArgumentError{Field: fieldTeamMembers, Code: faultInvalid, Message: "Name colleagues on a team link; your personal link offers only your own free time"}
 	}
 	if profile.Enabled {
 		if err := s.publicOriginUsable(); err != nil {
@@ -368,18 +387,12 @@ func validateSchedulingLimits(p crmcontracts.SchedulingProfile) error {
 			}
 		}
 	}
-	if !values.HasVisibleText(p.Title) {
-		return &SchedulingArgumentError{Field: "title", Code: "required", Message: "Give the meeting a title guests can read"}
-	}
-	if utf8.RuneCountInString(p.Title) > maxSchedulingTitle {
-		return &SchedulingArgumentError{
-			Field: "title", Code: codeTooLong,
-			Message: fmt.Sprintf("The title may be at most %d characters", maxSchedulingTitle),
-		}
+	if err := validateSchedulingTitle(p.Title); err != nil {
+		return err
 	}
 	if utf8.RuneCountInString(p.Location) > maxSchedulingLocation {
 		return &SchedulingArgumentError{
-			Field: "location", Code: codeTooLong,
+			Field: "location", Code: codeTooLong, Max: maxSchedulingLocation,
 			Message: fmt.Sprintf("The location may be at most %d characters", maxSchedulingLocation),
 		}
 	}
@@ -388,8 +401,23 @@ func validateSchedulingLimits(p crmcontracts.SchedulingProfile) error {
 	}
 	if utf8.RuneCountInString(p.CalendarId) > maxSchedulingCalendar {
 		return &SchedulingArgumentError{
-			Field: "calendar_id", Code: codeTooLong,
+			Field: "calendar_id", Code: codeTooLong, Max: maxSchedulingCalendar,
 			Message: fmt.Sprintf("The calendar id may be at most %d characters", maxSchedulingCalendar),
+		}
+	}
+	return nil
+}
+
+// validateSchedulingTitle refuses a meeting title guests cannot read, on a
+// personal page and a team link alike.
+func validateSchedulingTitle(title string) error {
+	if !values.HasVisibleText(title) {
+		return &SchedulingArgumentError{Field: fieldTitle, Code: "required", Message: "Give the meeting a title guests can read"}
+	}
+	if utf8.RuneCountInString(title) > maxSchedulingTitle {
+		return &SchedulingArgumentError{
+			Field: fieldTitle, Code: codeTooLong, Max: maxSchedulingTitle,
+			Message: fmt.Sprintf("The title may be at most %d characters", maxSchedulingTitle),
 		}
 	}
 	return nil
@@ -407,14 +435,15 @@ func schedulingAccountName(ctx context.Context, tx pgx.Tx, host ids.UserID) (str
 }
 
 func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) error {
+	canonicalDefault := systemtext.Copy("booking.lets_meet", s.footerLanguage(ctx, "", ""))
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		if err := storekit.LockWriteIdentity(ctx, tx, "booking_page", host.String()); err != nil {
 			return err
 		}
-		var before *crmcontracts.SchedulingProfile
+		var before *storedSchedulingProfile
 		var id ids.UUID
-		args := []any{host}
-		err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT id, scheduling_policy FROM booking_page WHERE host_user_id=$%d AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, len(args)), args...).Scan(&id, &before)
+		pageArgs := schedulingArgs{}
+		err := tx.QueryRow(ctx, `SELECT id, scheduling_policy FROM booking_page WHERE `+livePageSQL(&pageArgs, host, ids.Nil)+` FOR UPDATE`, pageArgs...).Scan(&id, &before)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return err
 		}
@@ -426,15 +455,20 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 		}
 		profile.Slug, profile.Alias, profile.PublicUrl, profile.ReplaceLink = nil, nil, nil, nil
 		profile.HostName, profile.Blocker = nil, nil
-		args = []any{profile, id}
+		profile.TeamMembers = mergeTeam(before, profile.TeamMembers)
+		stored := schedulingProfileToStore(ctx, profile, before, canonicalDefault)
+		args := []any{stored, id}
 		if _, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE booking_page SET scheduling_policy=$%d WHERE id=$%d`, len(args)-1, len(args)), args...); err != nil {
+			return err
+		}
+		if err := s.tellTeamChanges(ctx, tx, host, id, before, profile); err != nil {
 			return err
 		}
 		var audit ids.UUID
 		if before == nil {
-			audit, err = storekit.AuditEvent(ctx, tx, "create", "booking_page", id, profile)
+			audit, err = storekit.AuditEvent(ctx, tx, "create", "booking_page", id, stored)
 		} else {
-			audit, err = storekit.Audit(ctx, tx, "update", "booking_page", id, before, profile)
+			audit, err = storekit.Audit(ctx, tx, "update", "booking_page", id, before, stored)
 		}
 		if err != nil {
 			return err
@@ -445,11 +479,11 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 
 func (s *Store) replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.UserID, enabled bool) (ids.UUID, error) {
 	args := schedulingArgs{}
-	if _, err := tx.Exec(ctx, `UPDATE booking_page SET revoked_at=now() WHERE host_user_id=`+args.add(host)+` AND revoked_at IS NULL`, args...); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE booking_page SET revoked_at=now() WHERE `+livePageSQL(&args, host, ids.Nil), args...); err != nil {
 		return ids.Nil, err
 	}
-	// Replace address stops every public address of the old page, the alias
-	// included. The alias is retired, so its cooldown starts now.
+	// Replace address stops every public address of the old personal page, the
+	// alias included; team links keep theirs. The alias cooldown starts now.
 	if err := s.retireBookingAliasTx(ctx, tx, host); err != nil {
 		return ids.Nil, err
 	}

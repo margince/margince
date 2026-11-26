@@ -1,0 +1,57 @@
+{
+  "name": "search_data_counts_won_deals_in_a_period",
+  "task": "nl_search",
+  "site": "search_data_plan",
+  "source": "hand_authored",
+  "sanitized_by": "hand_authored/codex",
+  "fixture": {
+    "now": "2026-11-16T12:00:00Z",
+    "context": {
+      "timezone": "UTC",
+      "base_currency": "EUR",
+      "as_of": "2026-11-16T12:00:00Z",
+      "default_scope": {
+        "kind": "owner",
+        "id": "019f0000-0000-7000-8000-000000000001",
+        "label": "Me"
+      },
+      "allowed_scopes": [
+        {
+          "kind": "owner",
+          "id": "019f0000-0000-7000-8000-000000000001",
+          "label": "Me"
+        }
+      ],
+      "capabilities": {
+        "submit_manager_forecast": false,
+        "view_manager_forecast": false
+      }
+    },
+    "self_user_id": "019f0000-0000-7000-8000-000000000001",
+    "objects": [
+      "deal",
+      "company",
+      "contact",
+      "forecast",
+      "report_definition",
+      "installation_settings",
+      "pipeline",
+      "activity"
+    ],
+    "question": "How many deals did I win from 2024 to 2026?"
+  },
+  "expect": {
+    "outcome": "accepted",
+    "answer": {
+      "engine": "reporting",
+      "count": true,
+      "arguments": "{\"scope\": {\"kind\": \"owner\", \"id\": \"019f0000-0000-7000-8000-000000000001\"}, \"period\": \"custom\", \"interval\": {\"start_at\": \"2024-01-01T00:00:00Z\", \"end_at\": \"2027-01-01T00:00:00Z\"}, \"target_basis\": \"month\", \"close_window\": \"all_open\", \"metrics\": [\"bookings_won\"], \"blocks\": []}"
+    },
+    "bands": {
+      "certified_min": 80,
+      "degraded_min": 60,
+      "floor": 50
+    },
+    "rubric": "Preserve the requested source, owner and complete period; unsupported questions use the handbook."
+  }
+}

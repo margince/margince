@@ -11,12 +11,14 @@ package compose
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -252,24 +254,67 @@ func TestTheResumeOutlivesTheAbandonedResetRequest(t *testing.T) {
 	}
 }
 
-func TestDrainTimeoutIsReportedAndDoesNotFailTheReset(t *testing.T) {
+func TestADrainTimeoutRefusesTheResetBeforeAnythingIsDeleted(t *testing.T) {
+	var deleted []string
+	resumed := false
 	rt := ResetRuntime{
 		QuiesceQueues: func(context.Context) (bool, error) { return false, nil },
-		ResumeQueues:  func(context.Context) error { return nil },
-		PurgeQueue:    func(context.Context, ids.UUID) (int, error) { return 3, nil },
-		PurgeBus:      func(context.Context) (int, int, error) { return 12, 41, nil },
-		SignalReset:   func(context.Context, ids.UUID) error { return nil },
+		ResumeQueues:  func(context.Context) error { resumed = true; return nil },
+		PurgeQueue:    func(context.Context, ids.UUID) (int, error) { deleted = append(deleted, "jobs"); return 3, nil },
+		PurgeBus:      func(context.Context) (int, int, error) { deleted = append(deleted, "bus"); return 12, 41, nil },
+		SignalReset:   func(context.Context, ids.UUID) error { deleted = append(deleted, "signal"); return nil },
 	}
+	clearOutbox := func() error { deleted = append(deleted, "outbox"); return nil }
 
-	counts, err := runPhase(rt, func(*resetCounts) error { return nil })
-	if err != nil {
-		t.Fatalf("a drain timeout must not fail the reset: %v", err)
+	_, err := resetHandlers(rt).runQuiesced(context.Background(), ids.NewV7(), clearOutbox, func(*resetCounts) error {
+		deleted = append(deleted, "sweep")
+		return nil
+	})
+
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("err = %v, want a conflict so the admin gets a 409 and can run the reset again", err)
 	}
-	if !counts.DrainTimedOut {
-		t.Error("DrainTimedOut = false; the operator would never learn a job was still running")
+	fault, ok := errors.AsType[apperrors.MessageFault](err)
+	if !ok {
+		t.Fatalf("err = %v carries no message for the admin", err)
 	}
-	if counts.JobsDeleted != 3 || counts.StreamsPurged != 12 || counts.CacheKeys != 41 {
-		t.Errorf("counts = %+v; every surface's tally must reach the response", counts)
+	if _, message := fault.MessageFault(); !strings.Contains(message, "Run the reset again") {
+		t.Errorf("message = %q, want it to tell the admin to run the reset again", message)
+	}
+	if len(deleted) != 0 {
+		t.Errorf("a refused reset still ran %v", deleted)
+	}
+	if !resumed {
+		t.Error("the queues were not resumed after the refusal")
+	}
+}
+
+func TestAFailedResumeReachesTheAnswerOnTheRefusalAndTheSuccessPath(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		drained bool
+		want    string
+	}{
+		{"refusal", false, "The reset did not finish."},
+		{"success", true, "The reset finished."},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rt := ResetRuntime{
+				QuiesceQueues: func(context.Context) (bool, error) { return tc.drained, nil },
+				ResumeQueues:  func(context.Context) error { return errors.New("redis down") },
+			}
+
+			_, err := resetHandlers(rt).runQuiesced(context.Background(), ids.NewV7(), noOutbox, func(*resetCounts) error { return nil })
+
+			fault, ok := errors.AsType[apperrors.MessageFault](err)
+			if !ok {
+				t.Fatalf("err = %v, want the queues-not-resumed answer", err)
+			}
+			code, message := fault.MessageFault()
+			if code != "reset_queues_not_resumed" || !strings.Contains(message, tc.want) || !strings.Contains(message, "Run the reset again") {
+				t.Errorf("answer = %q %q, want the code, %q and what to do", code, message, tc.want)
+			}
+		})
 	}
 }
 
@@ -379,21 +424,5 @@ func TestTheDataResetReachesTheObjectStoreInEitherOptionOrder(t *testing.T) {
 				t.Error("the reset holds no object store — the swept rows' bytes would survive the wipe")
 			}
 		})
-	}
-}
-
-// TestAFailedResumeDoesNotFailAnOtherwiseCleanReset: the fleet pause is this
-// process's doing, so a resume failure is the operator's problem to see in the
-// log — not a reason to report a completed reset as failed, which would send
-// an admin to re-run a wipe that already succeeded.
-func TestAFailedResumeDoesNotFailAnOtherwiseCleanReset(t *testing.T) {
-	rt := ResetRuntime{
-		QuiesceQueues: func(context.Context) (bool, error) { return true, nil },
-		ResumeQueues:  func(context.Context) error { return errors.New("river is unreachable") },
-	}
-
-	h := resetHandlers(rt)
-	if _, err := h.runQuiesced(context.Background(), ids.NewV7(), noOutbox, func(*resetCounts) error { return nil }); err != nil {
-		t.Fatalf("resume failure must not fail the reset: %v", err)
 	}
 }

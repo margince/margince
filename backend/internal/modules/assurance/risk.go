@@ -13,7 +13,7 @@ import (
 
 // RiskSignalsVersion names the rules RiskSignals applies. A forecast frozen
 // under another version measured other signals, so its effects are not pooled.
-const RiskSignalsVersion = "v2"
+const RiskSignalsVersion = "v3"
 
 // The risk signals a forecast weighs. Each is a fact about the deal, not a
 // finding: no review is raised for one, and a deal may carry several.
@@ -56,7 +56,7 @@ func RiskSignals(asOf time.Time, s Subject, cfg Config, stuckAfter *time.Duratio
 		signal.ClosePassed = closesIn != nil && *closesIn < 0
 		out = append(out, signal)
 	}
-	if !s.HasNextStep {
+	if lacksNextStep(s) {
 		signal := RiskSignal{Code: SignalNoNextStep}
 		if closesIn != nil && *closesIn >= 0 && *closesIn <= soonDays {
 			signal.ClosesInDays = closesIn
@@ -89,8 +89,7 @@ func closeDaysFrom(asOf time.Time, closes *time.Time, loc *time.Location) *int {
 	if closes == nil {
 		return nil
 	}
-	day := time.Date(closes.Year(), closes.Month(), closes.Day(), 0, 0, 0, 0, loc)
-	return new(elapsed.Days(asOf, day, loc))
+	return new(elapsed.Days(asOf, closeDayOn(closes, loc), loc))
 }
 
 // closeKeepsMoving is the close_pushed rule's own test. The review and the

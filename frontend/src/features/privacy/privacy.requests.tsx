@@ -12,19 +12,19 @@ import {
   useRosterHint,
   useRosterPartial,
 } from "../../components/entityref";
-import { Button, Field, Textarea } from "../../design-system/atoms";
+import { Field, Textarea } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
 import { type Fact, FactList } from "../../design-system/factlist";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select, type SelectOption } from "../../design-system/select";
 import { StatusBadge } from "../../design-system/statusbadge";
 import { formatDate } from "../../format/format";
 import { ruleText } from "../../format/jurisdiction";
 import { type Translator, useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
 import {
@@ -39,15 +39,21 @@ import {
   isIllegalTransition,
   isOverdue,
   isTerminal,
-  nextStatuses,
 } from "../../lib/privacy.logic";
-import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
+import { ProblemError, unwrap } from "../../lib/problem";
+import { dsrsKey } from "../../lib/workkeys";
 import { RequestProof } from "./privacy.proofreading";
 import "./privacy.css";
 import { labelFor } from "../../lib/labelfor";
-import { isUuid } from "../../lib/uuid";
 import { useViewerZone } from "../../lib/viewerzone";
-import { DsrDispute, DsrProofFields } from "./privacy.requestproof";
+import {
+  DsrDispute,
+  DsrProofFields,
+  DsrTransitions,
+  REQUESTER_EMAIL,
+  useRequesterEmail,
+} from "./privacy.requestproof";
+import { DsrSubjectActions, namesRecord } from "./privacy.subject";
 
 export type DataSubjectRequest = components["schemas"]["DataSubjectRequest"];
 type UpdateDataSubjectRequest =
@@ -60,9 +66,7 @@ export function subjectName(dsr: DataSubjectRequest, t: Translator): string {
   if (dsr.subject_label) {
     return dsr.subject_label;
   }
-  return isUuid(dsr.subject_ref)
-    ? t("notice.recordUnavailable")
-    : dsr.subject_ref;
+  return namesRecord(dsr) ? t("notice.recordUnavailable") : dsr.subject_ref;
 }
 
 // Linked only to the record the label resolved to, so a lead never opens as a contact.
@@ -167,13 +171,6 @@ function DsrStatusBadge({ status }: Readonly<{ status: DsrStatus }>) {
   );
 }
 
-// nextStatuses never routes back to open, so three verbs cover every move.
-function transitionLabelKey(status: DsrStatus): MessageKey {
-  if (status === "in_progress") return "privacy.inProgress";
-  if (status === "fulfilled") return "privacy.fulfil";
-  return "privacy.reject";
-}
-
 // Who a request can be handed to, led by the unassigned pool and, when the
 // roster does not offer them, the request's own holder.
 function assigneeOptions(
@@ -227,6 +224,8 @@ export function DsrDetail({
   const queryClient = useQueryClient();
   const canWork = useCanWrite("privacy_request", "update");
   const [closing, setClosing] = useState<DsrClosing>(() => requestClosing(dsr));
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const email = useRequesterEmail();
 
   const patch = useMutation({
     mutationFn: async (vars: {
@@ -240,25 +239,33 @@ export function DsrDetail({
         }),
       );
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["dsrs"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: dsrsKey }),
     // Only the moved-on race re-reads; a 403 or a 500 stays explained.
     onError: (error) => {
       if (error instanceof ProblemError && isIllegalTransition(error.problem)) {
-        void queryClient.invalidateQueries({ queryKey: ["dsrs"] });
+        void queryClient.invalidateQueries({ queryKey: dsrsKey });
       }
     },
   });
 
   function transition(next: DsrStatus) {
+    if (isTerminal(next) && faults.show(email.check(closing.requesterEmail))) {
+      patch.reset();
+      return;
+    }
     if (dsr.kind === "erasure" && next === "fulfilled") {
       onFulfilErasure(dsr, closing);
       return;
     }
-    patch.mutate({ id: dsr.id, body: closingBody(next, closing, dsr.kind) });
+    patch.mutate(
+      { id: dsr.id, body: closingBody(next, closing, dsr.kind) },
+      { onError: (error) => faults.show(email.refused(error).byField) },
+    );
   }
 
   function draft(change: Partial<DsrClosing>) {
     setClosing((current) => ({ ...current, ...change }));
+    if ("requesterEmail" in change) faults.edited(REQUESTER_EMAIL);
     if (patch.isError) patch.reset();
   }
 
@@ -266,6 +273,7 @@ export function DsrDetail({
     patch.error instanceof ProblemError ? patch.error.problem : null;
   const movedOn = problem !== null && isIllegalTransition(problem);
   const open = canWork && !isTerminal(dsr.status);
+  const rest = email.refused(patch.error).rest;
 
   return (
     <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
@@ -280,8 +288,9 @@ export function DsrDetail({
         </Heading>
       </DrawerHead>
       <DrawerBody>
-        <div className="form-stack">
+        <div className="form-stack" ref={faultsRoot}>
           <DsrFacts dsr={dsr} nowMs={nowMs} canWork={canWork} />
+          <DsrSubjectActions dsr={dsr} canWork={canWork} />
           {canWork && (
             <DsrAssignee
               dsr={dsr}
@@ -293,12 +302,8 @@ export function DsrDetail({
           )}
           {/* Announced, never standing: the badges do not move on a refused
               write, so this line alone says the press changed nothing. */}
-          {patch.isError && (
-            <ErrorLine>
-              {movedOn
-                ? t("privacy.movedOn")
-                : problemMessageOf(patch.error, t)}
-            </ErrorLine>
+          {patch.isError && (movedOn || rest) && (
+            <ErrorLine>{movedOn ? t("privacy.movedOn") : rest}</ErrorLine>
           )}
           {isTerminal(dsr.status) && <p>{t("privacy.closed")}</p>}
           {dsr.proof && <RequestProof proof={dsr.proof} />}
@@ -334,7 +339,13 @@ export function DsrDetail({
               )}
             </Field>
           )}
-          {open && <DsrProofFields closing={closing} onDraft={draft} />}
+          {open && (
+            <DsrProofFields
+              closing={closing}
+              emailError={faults.of(REQUESTER_EMAIL)}
+              onDraft={draft}
+            />
+          )}
           {open && (
             <DsrTransitions
               status={dsr.status}
@@ -456,34 +467,6 @@ function DsrAssignee({
         />
       )}
     </Field>
-  );
-}
-
-// A close needs its answer and its identity check (closingReady).
-function DsrTransitions({
-  status,
-  ready,
-  pending,
-  onTransition,
-}: Readonly<{
-  status: DsrStatus;
-  ready: (next: DsrStatus) => boolean;
-  pending: boolean;
-  onTransition: (next: DsrStatus) => void;
-}>) {
-  const t = useT();
-  return (
-    <div className="dsr-actions">
-      {nextStatuses(status).map((next) => (
-        <Button
-          key={next}
-          disabled={pending || (isTerminal(next) && !ready(next))}
-          onClick={() => onTransition(next)}
-        >
-          {t(transitionLabelKey(next))}
-        </Button>
-      ))}
-    </div>
   );
 }
 

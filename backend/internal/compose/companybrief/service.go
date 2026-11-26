@@ -18,11 +18,9 @@ package companybrief
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -32,10 +30,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Assembler reads the account exactly as its reader would see it. The
@@ -64,10 +64,9 @@ type Service struct {
 	profile ProfileReader
 	lane    Completer
 	now     func() time.Time
-	// routingVersion identifies the model binding in the fingerprint, so
-	// re-pointing the lane rewrites briefs rather than leaving text
-	// attributed to a model that no longer writes it.
-	routingVersion string
+	// routingVersion names the model binding in the fingerprint. It is read per
+	// request, so a rebind rewrites the briefs the previous model wrote.
+	routingVersion func() string
 	// emailRows opens the messages the brief cites. Held rather than read
 	// inline because the brief is CACHED: the sentences are one reader's to
 	// keep, and the summary behind a citation is another reader's to receive,
@@ -102,7 +101,10 @@ func (s *Service) enrich(ctx context.Context, out crmcontracts.CompanyBrief) (cr
 // NewService binds the brief to the composite read it is written from and
 // the model lane that writes it. lane may be nil: that is a deployment
 // running no model, and the deterministic floor is the answer.
-func NewService(pool *pgxpool.Pool, view Assembler, profile ProfileReader, lane Completer, routingVersion string, now func() time.Time) *Service {
+func NewService(pool *pgxpool.Pool, view Assembler, profile ProfileReader, lane Completer, routingVersion func() string, now func() time.Time) *Service {
+	if routingVersion == nil {
+		routingVersion = func() string { return "" }
+	}
 	return &Service{pool: pool, view: view, profile: profile, lane: lane, routingVersion: routingVersion, now: now}
 }
 
@@ -124,9 +126,9 @@ func NewService(pool *pgxpool.Pool, view Assembler, profile ProfileReader, lane 
 // the scoped 360 reports what the narrowing kept, and that report is handed
 // back beside the input so the wire can say so.
 func (s *Service) assemble(
-	ctx context.Context, companyID ids.CompanyID, withProfile bool, projectID *ids.ProjectID,
+	ctx context.Context, companyID ids.CompanyID, withProfile bool, projectID *ids.ProjectID, lang string,
 ) (Input, *crmcontracts.ProjectScope, error) {
-	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{ProjectID: projectID, WrittenByHumanOnly: true})
+	view, err := s.view.AssembleScoped(writtenIn(ctx, lang), companyID, company360.AssembleOptions{ProjectID: projectID, WrittenByHumanOnly: true})
 	if err != nil {
 		return Input{}, nil, err
 	}
@@ -167,13 +169,13 @@ func (s *Service) GetScoped(
 	// The gates that matter run HERE, in the caller's own composite read: a
 	// brief can only be written from what this caller may see, and an
 	// account they cannot read refuses before any cache is consulted.
-	in, scope, err := s.assemble(ctx, companyID, true, projectID)
+	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	in, scope, err := s.assemble(ctx, companyID, true, projectID, lang)
 	if err != nil {
 		return crmcontracts.CompanyBrief{}, err
 	}
-	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
 	in = in.WordedIn(lang)
-	fingerprint, err := Fingerprint(in, s.routingVersion, lang)
+	fingerprint, err := Fingerprint(in, s.routingVersion(), lang)
 	if err != nil {
 		return crmcontracts.CompanyBrief{}, err
 	}
@@ -194,9 +196,10 @@ func (s *Service) GetScoped(
 	// a task and a prompt, so without this the reader's rail could say "this
 	// company" and nothing more.
 	lane, withheld := ai.ReadLane(ctx, s.lane)
-	sections, by, err := Write(ai.WithSubject(ctx, companyID.Ref(), in.Name), lane, companyID.String(), in, lang)
-	if err != nil {
-		return crmcontracts.CompanyBrief{}, err
+	sections, by, laneFailed := Write(ai.WithSubject(ctx, companyID.Ref(), in.Name), lane, companyID.String(), in, lang)
+	if laneFailed && found && cached.Version == storedVersion && cached.Fingerprint == fingerprint {
+		// A forced rewrite that failed keeps the model's brief for these facts.
+		return s.enrich(ctx, cached.wire(companyID, scope))
 	}
 	written := stored{
 		Fingerprint: fingerprint,
@@ -208,7 +211,7 @@ func (s *Service) GetScoped(
 		// than trusted from the model's own reply.
 		Sections: withSectionEvidenceNames(sections, in),
 	}
-	if withheld {
+	if laneFailed || withheld {
 		return s.enrich(ctx, written.wire(companyID, scope))
 	}
 	if err := s.save(ctx, userID, companyID, written); err != nil {
@@ -245,11 +248,11 @@ func (s *Service) AskScoped(
 	// The gates that matter run HERE, in the caller's own composite read: an
 	// answer can only be written from what this caller may see, and an account
 	// they cannot read refuses before a single word is written.
-	in, scope, err := s.assemble(ctx, companyID, false, projectID)
+	lang := s.answerLanguage(ctx)
+	in, scope, err := s.assemble(ctx, companyID, false, projectID, lang)
 	if err != nil {
 		return crmcontracts.CompanyAnswer{}, err
 	}
-	lang := s.answerLanguage(ctx)
 	sentences, by, err := Answer(ai.WithSubject(ctx, companyID.Ref(), in.Name), s.lane, question, companyID.String(), in.WordedIn(lang), lang)
 	if err != nil {
 		return crmcontracts.CompanyAnswer{}, err
@@ -266,6 +269,12 @@ func (s *Service) AskScoped(
 		return crmcontracts.CompanyAnswer{}, err
 	}
 	return out, nil
+}
+
+// writtenIn reads the account in the language the text is written in. A task
+// Margince wrote is then named alike for every reader of one brief.
+func writtenIn(ctx context.Context, lang string) context.Context {
+	return systemtext.WithLocale(ctx, textlang.Lang(lang))
 }
 
 // answerLanguage is the language a prepared answer is written in: the
@@ -367,32 +376,24 @@ func wireSentences(in []Sentence) []crmcontracts.CompanyBriefSentence {
 	return out
 }
 
-// cached reads this user's brief for this account. The user_id predicate is
-// the whole scope and has to be written out: without it one rep would read
-// another's brief — which was written from records they may not share. It is
-// also sufficient — core 0225 collapsed company_brief's unique key to
-// (user_id, company_id).
+// cached reads this user's brief for this account. The store keys the row on
+// the reader, without which one rep would read a brief written from records
+// they may not share.
 func (s *Service) cached(ctx context.Context, userID ids.UserID, companyID ids.CompanyID) (stored, bool, error) {
-	var out stored
-	var payload []byte
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `
-			SELECT fingerprint, generated_at, generated_by, payload FROM company_brief
-			WHERE user_id = $1 AND company_id = $2`,
-			userID, companyID).Scan(&out.Fingerprint, &out.GeneratedAt, &out.GeneratedBy, &payload)
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return stored{}, false, nil
-	}
-	if err != nil {
+	row, found, err := generatedsummary.Read(ctx, s.pool, userID, generatedsummary.CompanyBrief(companyID))
+	if err != nil || !found {
 		return stored{}, false, err
+	}
+	out := stored{
+		Fingerprint: row.Fingerprint, GeneratedAt: row.GeneratedAt,
+		GeneratedBy: crmcontracts.WrittenBy(row.GeneratedBy),
 	}
 	// The WHOLE envelope, version and sections included. Unmarshalling the
 	// payload into the sentence list alone left Version at zero on every read,
 	// so the version check below could never pass and the cache never once
 	// answered — a model call on every page load, invisible to a build gate
 	// because nothing about the served brief looked wrong.
-	if err := json.Unmarshal(payload, &out); err != nil {
+	if err := json.Unmarshal(row.Payload, &out); err != nil {
 		// A payload this build cannot read is a cache MISS, not a failure:
 		// the brief is derived content, regenerating it costs one call, and
 		// the new row replaces the unreadable one.
@@ -410,20 +411,13 @@ func (s *Service) save(ctx context.Context, userID ids.UserID, companyID ids.Com
 	if err != nil {
 		return fmt.Errorf("encode the brief payload: %w", err)
 	}
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
-			INSERT INTO company_brief (user_id, company_id, fingerprint,
-			                       generated_at, generated_by, payload)
-			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (user_id, company_id) DO UPDATE
-			SET fingerprint = EXCLUDED.fingerprint,
-			    generated_at = EXCLUDED.generated_at,
-			    generated_by = EXCLUDED.generated_by,
-			    payload = EXCLUDED.payload`,
-			userID, companyID, brief.Fingerprint,
-			brief.GeneratedAt, brief.GeneratedBy, payload)
-		return err
-	})
+	return generatedsummary.Save(ctx, s.pool, userID, generatedsummary.CompanyBrief(companyID),
+		generatedsummary.Entry{
+			Fingerprint: brief.Fingerprint,
+			GeneratedAt: brief.GeneratedAt,
+			GeneratedBy: string(brief.GeneratedBy),
+			Payload:     payload,
+		})
 }
 
 // actingUser resolves the human this brief belongs to. Acknowledging that

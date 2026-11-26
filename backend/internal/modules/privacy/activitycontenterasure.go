@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 // purgeContentDerivedFrom destroys everything an activity's text left behind:
@@ -91,6 +92,9 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	if err := e.eraseCommitmentDerivatives(ctx, tx, []ids.UUID{id}, act); err != nil {
 		return err
 	}
+	if err := e.eraseRequestReminders(ctx, tx, id, act); err != nil {
+		return err
+	}
 	// What was promised, asked or decided in the message — and, on every one of
 	// these rows, a VERBATIM quotation of the words it was read from. The
 	// writer refuses a claim that carries neither the activity nor the snippet,
@@ -110,14 +114,11 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	}
 	// The external identities this message answered to, through the helper the
 	// Art. 17 cascade also calls — see retireActivityIdentities for why they
-	// cannot be left behind. The noise act keeps them as its tombstone and
-	// erases only the meeting proposals.
-	retire := retireActivityIdentities
-	if act.keepsMessageIdentity {
-		retire = eraseMeetingProposals
-	}
-	if err := retire(ctx, tx, []ids.UUID{id}); err != nil {
-		return err
+	// cannot be left behind. The noise act keeps them as its tombstone.
+	if !act.keepsMessageIdentity {
+		if err := retireActivityIdentities(ctx, tx, []ids.UUID{id}); err != nil {
+			return err
+		}
 	}
 	if err := purgeTranscriptReadings(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
@@ -131,7 +132,11 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	if err := e.eraseAttachments(ctx, tx, act.collateralReason, act.cause, `entity_type = 'activity' AND entity_id = $1`, id); err != nil {
 		return err
 	}
-	return redactDeliveries(ctx, tx, []ids.UUID{id}, erasedActivitySubject, e.payloads)
+	if err := clearExtensionRows(ctx, tx, e.extensions, act.collateralReason, act.cause,
+		map[extdecl.RecordKind][]ids.UUID{extdecl.Activity: {id}}); err != nil {
+		return err
+	}
+	return redactDeliveries(ctx, tx, []ids.UUID{id}, erasedActivitySubject)
 }
 
 // PurgeContentDerivedFromNoiseTx destroys everything the text of hidden noise
@@ -192,6 +197,13 @@ var (
 		approvalWithdrawal: ReleasedSourceWithdrawal,
 		collateralReason:   "controller release: the record's content was erased",
 		cause:              causeControllerRelease,
+	}
+	// aControllerReviewedArchive is a controller deleting archived records
+	// whose purpose has ended. Nothing reaches it on a schedule.
+	aControllerReviewedArchive = erasureAct{
+		approvalWithdrawal: ReleasedSourceWithdrawal,
+		collateralReason:   "archive review: the controller deleted the record's content",
+		cause:              causeArchiveReview,
 	}
 	// aNoiseVerdictHid is the capture sweep destroying mail a noise verdict hid
 	// and nobody brought back within the undo window.

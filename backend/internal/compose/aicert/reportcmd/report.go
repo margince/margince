@@ -36,7 +36,12 @@ var reportColumns = []string{
 // Nothing here fails or exits non-zero. The certification lane is paid, manual
 // and BYOK-gated, so this is a view a human reads before a release decision —
 // not a gate, which would make every prompt edit wait on a paid run.
-func renderReadiness(census aicert.Census, stamps map[string]string, perScenario map[string]map[string]string, records []aicert.Record) string {
+//
+// contextOwed names the tasks some site of which production sends company
+// context to (aicert.ContextOwedTasks); only those can have gone without it.
+func renderReadiness(census aicert.Census, stamps map[string]string, perScenario map[string]map[string]string, records []aicert.Record,
+	contextOwed map[string]bool,
+) string {
 	rows, unclaimed := aicert.Readiness(census, stamps, perScenario, records)
 
 	var buf strings.Builder
@@ -54,7 +59,7 @@ func renderReadiness(census aicert.Census, stamps map[string]string, perScenario
 	for _, row := range rows {
 		writeRow("%s\n", strings.Join(cells(row), "\t"))
 	}
-	for _, line := range legend(rows, census.Sites, unclaimed) {
+	for _, line := range legend(rows, census.Sites, unclaimed, contextOwed) {
 		writeRow("%s\n", line)
 	}
 	if writeErr == nil {
@@ -74,7 +79,7 @@ func renderReadiness(census aicert.Census, stamps map[string]string, perScenario
 // count of runs that happened.
 func cells(r aicert.ReadinessRow) []string {
 	if !r.Certified {
-		out := []string{r.SiteKey(), r.ClaimedScope(), r.Status(), r.Coverage()}
+		out := []string{r.SiteKey(), r.Scope, r.Status(), r.Coverage()}
 		for len(out) < len(reportColumns) {
 			out = append(out, aicert.Unmeasured)
 		}
@@ -82,10 +87,10 @@ func cells(r aicert.ReadinessRow) []string {
 	}
 	rec, tally := r.Record, r.Tally
 	return []string{
-		r.SiteKey(), r.ClaimedScope(), r.Status(), r.Coverage(), tally.Verdict,
+		r.SiteKey(), r.Scope, r.Status(), r.Coverage(), tally.Verdict,
 		rec.Provider, rec.ServedModel, rec.EnvClass,
 		fmt.Sprintf("%d", tally.Runs), fmt.Sprintf("%d", tally.Passed),
-		fmt.Sprintf("%.2f", tally.Reliability()),
+		aicert.ReliabilityCell(tally.Passed, tally.Runs),
 		fmt.Sprintf("%d", tally.ReportedAccepted), fmt.Sprintf("%d", tally.ReportedWrongAnswer),
 		fmt.Sprintf("%d", tally.ReportedInvalid), fmt.Sprintf("%d", tally.ReportedAbstained),
 	}
@@ -105,17 +110,16 @@ func summarize(rows []aicert.ReadinessRow) string {
 		len(covered), len(sites))
 }
 
-// taskContextsNotServed names every certified task whose contract has
-// production prepend company context, with the scopes its runs went without —
-// each task once, however many of its sites have rows. A task whose contract
-// prepends none is left out: nothing was missing from it, and listing it would
-// bury the ones where something was.
-func taskContextsNotServed(rows []aicert.ReadinessRow) []string {
+// taskContextsNotServed names every certified task production prepends company
+// context to, with the scopes its runs went without, each task once. A task owed
+// none is left out, even with a conditional policy no site asks for. Nothing was
+// missing from it, and listing it would bury the ones where something was.
+func taskContextsNotServed(rows []aicert.ReadinessRow, contextOwed map[string]bool) []string {
 	named := map[string]bool{}
 	var out []string
 	for _, row := range rows {
 		record := row.Record
-		if !row.Certified || record.ContextApplied || len(record.ContextScopes) == 0 || named[record.Task] {
+		if !row.Certified || !contextOwed[record.Task] || record.ContextApplied || len(record.ContextScopes) == 0 || named[record.Task] {
 			continue
 		}
 		named[record.Task] = true
@@ -129,14 +133,17 @@ func taskContextsNotServed(rows []aicert.ReadinessRow) []string {
 // belong in the output rather than in a reader's head: the binding is part of
 // every claim here, and a row read as a property of the product rather than of
 // one deployment is the way this report would mislead.
-func legend(rows []aicert.ReadinessRow, sites []aitasks.Site, unclaimed []aicert.Record) []string {
+func legend(rows []aicert.ReadinessRow, sites []aitasks.Site, unclaimed []aicert.Record, contextOwed map[string]bool) []string {
 	lines := []string{
 		"",
 		"Every row is one (provider, model, env) binding: a band says what that deployment did,",
 		"and green-lights no other. A record is written per task and covers every site that task",
 		"ships, so sites sharing a task share its record — but each row's numbers are that SITE's",
 		"own scenarios, never the task's pooled total.",
-		"RUNS/PASSED is how often the site did what its scenarios asked. ACCEPTED, WRONG_ANSWER,",
+		"RUNS/PASSED is how often the site did what its scenarios asked. RELIABILITY is PASSED over RUNS,",
+		"then its Wilson interval, from the formula and z the verdict uses. The band reads the lower end",
+		"of this pooled rate, and the upper end of each case alone. Treat a change between two records as",
+		"real only when their intervals do not overlap or the band changes. ACCEPTED, WRONG_ANSWER,",
 		"INVALID and ABSTAINED are what the site's validator REPORTED: a run can be accepted and",
 		"still fail, when the scenario asked for an abstention.",
 	}
@@ -145,7 +152,7 @@ func legend(rows []aicert.ReadinessRow, sites []aitasks.Site, unclaimed []aicert
 	// database to assemble it from — and for most tasks that costs nothing,
 	// because their contract prepends none. The tasks whose contract DOES is the
 	// part a reader cannot infer from a row, so those rows say it.
-	if without := taskContextsNotServed(rows); len(without) > 0 {
+	if without := taskContextsNotServed(rows, contextOwed); len(without) > 0 {
 		lines = append(lines,
 			"Certified without the company context production prepends (this lane runs with no database to",
 			"assemble it from): "+strings.Join(without, "; ")+".")

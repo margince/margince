@@ -1,0 +1,9 @@
+{
+  "verb": "download_attachment",
+  "checks": [
+    "company.read"
+  ],
+  "takes": [
+    "attachment"
+  ]
+}

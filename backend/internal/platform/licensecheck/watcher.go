@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime/debug"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -20,12 +21,14 @@ import (
 // short-lived wazero instantiation.
 const recheckInterval = 24 * time.Hour
 
-// TokenSource answers the installation's license token, freshly. A source rather
-// than a string because a re-check has to see a token the operator REPLACED: a
-// watcher holding the boot-time value could only ever watch a license lapse,
-// never one renewed in place, and would keep reporting a refusal after the
-// operator had already fixed it.
-type TokenSource func() (string, error)
+// recheckBudget bounds the context of a re-check that no longer follows its
+// caller. One token read and one module run take seconds; a minute leaves room
+// for a loaded host.
+const recheckBudget = time.Minute
+
+// TokenSource reads the installation's license token under the current read's
+// context. Reading it afresh lets a renewed token take effect without a restart.
+type TokenSource func(context.Context) (string, error)
 
 // Watcher holds this installation's license posture and re-resolves it while the
 // process runs, so a license crossing expiry-plus-grace — or one renewed in
@@ -40,20 +43,31 @@ type TokenSource func() (string, error)
 type Watcher struct {
 	source  TokenSource
 	now     func() time.Time
+	budget  time.Duration
+	module  []byte
 	log     *slog.Logger
 	env     runtimeenv.Environment
 	posture atomic.Pointer[Posture]
+
+	// running is the re-check in flight, guarded by mu. One runs at a time, so
+	// an older read can never store over a newer one.
+	mu      sync.Mutex
+	running *recheckRun
 }
 
-// NewWatcher resolves the posture once and refuses a rejected one, so the
-// caller's boot fails before the role serves.
-//
-// An absent license is a posture here, not a refusal. Whether an installation
-// may RUN unlicensed depends on the deployment posture rather than on the
-// license, so that decision is the composition root's (compose.EnsureLicense)
-// and this package reports what it found.
+// recheckRun is one re-check that later callers join instead of starting
+// their own. done closes once err is set.
+type recheckRun struct {
+	done chan struct{}
+	err  error
+}
+
+// NewWatcher resolves the posture once. A rejected license is a posture here,
+// as an absent one is. The role starts locked rather than not at all, so every
+// seat sees why and an admin can correct the token without a shell. What a
+// posture locks is the composition root's to decide (installtrial).
 func NewWatcher(ctx context.Context, source TokenSource, now func() time.Time, log *slog.Logger, env runtimeenv.Environment) (*Watcher, error) {
-	token, err := source()
+	token, err := source(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -64,14 +78,7 @@ func NewWatcher(ctx context.Context, source TokenSource, now func() time.Time, l
 	if err != nil {
 		return nil, err
 	}
-	if resolved.State == StateRejected {
-		// Where the token CAME from is not named here: this package is handed a
-		// token, not a configuration file, and the caller that resolved it is the
-		// one that can tell the operator which setting to correct.
-		return nil, fmt.Errorf("licensecheck: the license was refused by the bundled validation module (%s): %s",
-			ModuleVersion(), resolved.Reason)
-	}
-	w := &Watcher{source: source, now: now, log: log, env: env}
+	w := &Watcher{source: source, now: now, budget: recheckBudget, module: bundledModule, log: log, env: env}
 	w.posture.Store(&resolved)
 	return w, nil
 }
@@ -91,24 +98,58 @@ func (w *Watcher) Posture() Posture { return *w.posture.Load() }
 // is reported as itself. None of those is evidence about the license, and
 // degrading on one would tell an operator their license had been refused when
 // what actually broke was the machinery for asking.
-func (w *Watcher) Recheck(ctx context.Context) {
-	defer w.surviveFault(ctx)
+//
+// The returned error is that fault, already logged, for a caller that waits.
+// A caller arriving while a re-check runs joins it and gets its answer. So
+// the daily loop and "Check now" never run the module twice at once.
+func (w *Watcher) Recheck(ctx context.Context) error {
+	w.mu.Lock()
+	if run := w.running; run != nil {
+		w.mu.Unlock()
+		w.log.DebugContext(ctx, "joining the license re-check already running")
+		select {
+		case <-run.done:
+			return run.err
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	run := &recheckRun{done: make(chan struct{})}
+	w.running = run
+	w.mu.Unlock()
+
+	// Not the caller's cancellation: callers who joined are waiting on this run.
+	detached, cancel := context.WithTimeout(context.WithoutCancel(ctx), w.budget)
+	run.err = w.recheckOnce(detached)
+	cancel()
+	w.mu.Lock()
+	w.running = nil
+	w.mu.Unlock()
+	close(run.done)
+	return run.err
+}
+
+// recheckOnce reads the token and resolves it once; Recheck makes sure only one
+// runs at a time.
+func (w *Watcher) recheckOnce(ctx context.Context) (err error) {
+	defer w.surviveFault(ctx, &err)
 	before := w.Posture()
-	token, err := w.source()
+	token, err := w.source(ctx)
 	if err != nil {
 		w.log.ErrorContext(ctx, "re-reading the license failed; keeping the posture this process last resolved",
 			"err", err, "posture", string(before.State))
-		return
+		return fmt.Errorf("licensecheck: re-reading the license token: %w", err)
 	}
-	after, err := Resolve(ctx, token, w.now(), w.env)
+	after, err := resolveWith(ctx, w.module, token, w.now(), w.env)
 	if err != nil {
 		w.log.ErrorContext(ctx, "re-checking the license failed; keeping the posture this process last resolved",
 			"err", err, "posture", string(before.State))
-		return
+		return fmt.Errorf("licensecheck: re-checking the license: %w", err)
 	}
+	carryCeiling(before, &after)
 	w.posture.Store(&after)
 	if after.State == before.State {
-		return
+		return nil
 	}
 	// Any transition is worth a warning, including one back to valid: a license
 	// that recovered did so because somebody replaced the token, and when it
@@ -116,18 +157,21 @@ func (w *Watcher) Recheck(ctx context.Context) {
 	w.log.WarnContext(ctx, "license posture changed",
 		"from", string(before.State), "to", string(after.State),
 		"reason", after.Reason, "module", ModuleVersion())
+	return nil
 }
 
 // surviveFault turns a panic on the re-check path into a logged fault. The
 // posture keeps whatever it last held, which is the honest answer: a panicking
-// runtime said nothing about the license.
-func (w *Watcher) surviveFault(ctx context.Context) {
+// runtime said nothing about the license. The panic becomes the re-check's
+// error, so a caller waiting on the answer is not told it succeeded.
+func (w *Watcher) surviveFault(ctx context.Context, err *error) {
 	fault := recover()
 	if fault == nil {
 		return
 	}
 	w.log.ErrorContext(ctx, "re-checking the license panicked; keeping the posture this process last resolved",
 		"panic", fmt.Sprint(fault), "module", ModuleVersion(), "stack", string(debug.Stack()))
+	*err = fmt.Errorf("licensecheck: re-checking the license panicked: %v", fault)
 }
 
 // RunRecheck re-resolves until ctx is cancelled. It is started by each process
@@ -140,7 +184,8 @@ func (w *Watcher) RunRecheck(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			w.Recheck(ctx)
+			//craft:ignore swallowed-errors Recheck logs its own fault and keeps the last posture; the loop has nobody to tell
+			_ = w.Recheck(ctx)
 		}
 	}
 }

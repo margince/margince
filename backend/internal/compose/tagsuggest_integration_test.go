@@ -276,7 +276,7 @@ func TestRestrictedArchivedAndNoiseItemsAreNeverSent(t *testing.T) {
 		       restricted_until = now() + interval '1 year',
 		       retention_class = 'commercial_correspondence', retention_class_at = now()
 		 WHERE id = $1`, restricted)
-	e.WsExec(t, `UPDATE activity SET capture_label = 'noise', capture_labeled_at = now() WHERE id = $1`, noise)
+	e.WsExec(t, `UPDATE activity SET capture_label = 'other', capture_labeled_at = now() WHERE id = $1`, noise)
 
 	brain := &tagBrainStub{cues: map[string]ids.TagID{"Excel": migration}}
 	e.mustSuggest(t, brain)
@@ -541,7 +541,7 @@ func TestErasingAnItemDropsWhatTheModelReadOfIt(t *testing.T) {
 	if _, err := retention.PurgeActivities(e.Admin(), []ids.UUID{purged}, privacy.PurgeOwnerRule); err != nil {
 		t.Fatalf("purging the note: %v", err)
 	}
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), bea, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), bea, "subject request"); err != nil {
 		t.Fatalf("erasing Bea: %v", err)
 	}
 	for name, id := range map[string]ids.UUID{"the purged note": purged, "the erased subject's note": subjects} {

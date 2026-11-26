@@ -59,13 +59,13 @@ func (s *Store) CreateContract(ctx context.Context, in CreateContractInput) (crm
 	if err != nil {
 		return crmcontracts.Contract{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.Contract{}, err
-	}
 
 	var out crmcontracts.Contract
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		today, err := s.today(ctx, tx)
 		if err != nil {
 			return err
@@ -85,6 +85,10 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	// Naming the counterparty is a read of it, and naming a deal is a read of
 	// that deal — both are client-supplied references to row-scoped records, so
 	// a caller may not hang an agreement off something it cannot see.
+	// Deal edits lock the deal before refreshing its company, so references use that order too.
+	if err := ensureLinksVisible(ctx, tx, fromRequest, dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
+		return crmcontracts.Contract{}, err
+	}
 	companyProbe := auth.EnsureLinkTarget(ctx, tx, companyTable, in.CompanyID.UUID)
 	if fromRequest {
 		companyProbe = auth.NameMissingReference("company_id", companyProbe)
@@ -92,16 +96,13 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	if companyProbe != nil {
 		return crmcontracts.Contract{}, companyProbe
 	}
-	if err := ensureLinksVisible(ctx, tx, fromRequest, dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
-		return crmcontracts.Contract{}, err
-	}
 	if err := ensureLinksShareCompany(ctx, tx, in.CompanyID.UUID,
 		dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 
 	id := ids.New[ids.ContractKind]()
-	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, []any{
+	cfCols, cfHolders, args, err := storekit.InsertFragmentsIn(ctx, tx, active, in.CustomFields, []any{
 		id, in.CompanyID, in.DealID, in.ProjectID, in.ContractNumber, in.Title,
 		in.ValueMinor, in.Currency, in.ValueBasis, in.StartsOn, in.EndsOn, in.RenewalOn,
 		in.AutoRenew, in.NoticePeriodDays, in.PaymentTermDays, in.SignedOn, in.Source, by,
@@ -154,16 +155,16 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 // through ChangeStatus, so a correction to a term can never silently activate
 // an agreement.
 func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcontracts.UpdateContractRequest, cleared []string, ifVersion *int64) (crmcontracts.Contract, error) {
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.Contract{}, err
-	}
 	if err := auth.Require(ctx, contractObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 
 	var out crmcontracts.Contract
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		today, err := s.today(ctx, tx)
 		if err != nil {
 			return err
@@ -212,7 +213,7 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		if err := storekit.EnsureIfMatch(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
 			return err
 		}
-		if err := storekit.SetCustomFieldPatch(patch, active, in.AdditionalProperties, existing.AdditionalProperties); err != nil {
+		if err := storekit.SetCustomFieldPatchIn(ctx, tx, patch, active, in.AdditionalProperties, existing.AdditionalProperties); err != nil {
 			return err
 		}
 		if patch.Empty() {
@@ -231,7 +232,7 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 			out = unchanged
 			return nil
 		}
-		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, "contract update"); err != nil {
+		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, storekit.LiveOnly, "contract update"); err != nil {
 			return err
 		}
 		out, err = readContractForCaller(ctx, tx, id, today, active)
@@ -256,9 +257,9 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 // over custom-field columns would put their values in front of external
 // subscribers with nothing at the call site saying so.
 func applyContractUpdate(ctx context.Context, tx pgx.Tx, id ids.ContractID,
-	patch *storekit.Patch, ifVersion *int64, what string,
+	patch *storekit.Patch, ifVersion *int64, archived storekit.ArchivedFilter, what string,
 ) error {
-	if err := patch.ApplyGuarded(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
+	if err := patch.ApplyGuardedIn(ctx, tx, contractTable, id.UUID, ifVersion, archived); err != nil {
 		if constraint, ok := storekit.CheckViolation(err); ok {
 			return contractCheckError(constraint)
 		}

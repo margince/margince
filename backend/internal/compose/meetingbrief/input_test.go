@@ -11,7 +11,9 @@ package meetingbrief
 // trusted downstream in every section that reads Recent.
 
 import (
+	"strings"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -102,5 +104,31 @@ func TestAWithheldActivityDoesNotSpendARecentSlot(t *testing.T) {
 	}
 	if got, want := in.Recent[recentCap-1].ID, ids.UUID(lastReadableID).String(); got != want {
 		t.Errorf("last recent id = %s, want %s — the withheld row displaced the last readable one instead of being skipped", got, want)
+	}
+}
+
+// A stakeholder role is free text. The brief names a built-in role in the
+// reader's language and leaves a typed one out, both on the line and in the
+// prompt input.
+func TestAttendeeRoleIsShownOnlyWhenBuiltIn(t *testing.T) {
+	cases := []struct {
+		stored, language, wantInput, wantLine string
+	}{
+		{"contact", "en", "", "Anna Berg, CFO"},
+		{"Key contact", "de", "", "Anna Berg, CFO"},
+		{" Champion ", "de", "champion", "Anna Berg, CFO, Champion"},
+		{"economic_buyer", "en", "economic_buyer", "Anna Berg, CFO, economic buyer"},
+	}
+	for _, c := range cases {
+		room := meeting{ID: ids.MustParse(meetingID), StartsAt: at(12)}
+		room.Attendees = []attendeeRow{{ContactID: ids.NewV7(), FullName: "Anna Berg", Title: "CFO", DealRole: c.stored}}
+		in := FromMeeting(room, nil, at(10))
+		line := briefCopyFor(c.language).attendeeLine(in.Attendees[0], at(10), time.UTC)
+		if !strings.HasPrefix(line, c.wantLine+" ") && !strings.HasPrefix(line, c.wantLine+":") {
+			t.Errorf("%q/%s: line = %q, want it to start with %q", c.stored, c.language, line, c.wantLine)
+		}
+		if want := `"DealRole":"` + c.wantInput + `"`; !strings.Contains(encodeInput(in), want) {
+			t.Errorf("%q: prompt input lacks %s", c.stored, want)
+		}
 	}
 }

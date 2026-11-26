@@ -12,15 +12,17 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/initiatives"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 )
 
-// contactMergeDoor is a contacts door that merges: the HTTP handlers, the
-// agent provider and the store the case seam calls.
+// contactMergeDoor is a contacts door that merges or promotes: the HTTP
+// handlers, the agent provider and the store the case seam calls.
 type contactMergeDoor[T any] interface {
 	WithStopCarrier(carrier contacts.StopCarrier) T
 	WithSatelliteCarriers(consent contacts.ConsentSatelliteCarrier, intros contacts.IntroCarrier) T
@@ -28,11 +30,16 @@ type contactMergeDoor[T any] interface {
 	WithParticipantRosterReader(read contacts.ParticipantRosterReader) T
 	WithProviderRunReader(read contacts.ProviderRunReader) T
 	WithMergeSignalReader(read contacts.MergeSignalReader) T
+	WithSignalCarrier(carry contacts.SignalCarrier) T
+	WithInitiativeCarrier(carry contacts.InitiativeCarrier) T
 	WithMergeCommitmentReader(read contacts.MergeCommitmentReader) T
 	WithMergeNoticeReader(read contacts.MergeNoticeReader) T
 	WithMergeContentReader(read contacts.MergeContentReader) T
 	WithProfileVerdictReader(read contacts.ProfileVerdictReader) T
 	WithFeedbackCarryReader(reader contacts.FeedbackCarryReader) T
+	WithExtensions(r extprivacy.Registry) T
+	WithSenderStamp(stamp contacts.SenderStamp) T
+	WithPromotionWitness(witness contacts.PromotionWitness) T
 }
 
 // withContactMergeCarriers wires every edge a contact merge carries or
@@ -47,9 +54,14 @@ func withContactMergeCarriers[T contactMergeDoor[T]](db *database.DB, door T) T 
 		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
 		WithProviderRunReader(integrations.ReadRunForContactTx).
 		WithMergeSignalReader(signals.PreviewSignalCarry(signalSummaryWords)).
-		WithMergeCommitmentReader(weeklyPlanStore(pool).PreviewCommitmentCarryTx).
+		WithSignalCarrier(signals.CarryResolutionsTx).
+		WithInitiativeCarrier(initiatives.CarryLeadMergeTx).
+		WithMergeCommitmentReader(WeeklyPlanStore(pool).PreviewCommitmentCarryTx).
 		WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
 		WithMergeContentReader(activities.NewStore(db)).
 		WithProfileVerdictReader(profileverdicts.MergeReader(db)).
-		WithFeedbackCarryReader(ai.NewFeedbackStore(db))
+		WithFeedbackCarryReader(ai.NewFeedbackStore(db)).
+		WithExtensions(ExtensionData()).
+		WithSenderStamp(activities.StampProvenSendersTx).
+		WithPromotionWitness(NewInitiativeStore(pool))
 }

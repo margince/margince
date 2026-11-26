@@ -39,8 +39,6 @@ package compose
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
@@ -48,7 +46,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -80,14 +77,9 @@ func NewCohortPromoteGen(pool *pgxpool.Pool, store *contacts.Store, log *slog.Lo
 // not care about answers nil, so the group keeps flowing rather than wedging on
 // somebody else's traffic.
 func (g *CohortPromoteGen) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Entity.Type != contactObject || env.Entity.ID == ids.Nil {
-		return nil
-	}
 	// Every event that can leave a live contact holding addresses whose mail is
-	// not yet on their record. An archive needs no reaction: the repair only
-	// ever ADDS a link, and an archived contact is not a record anybody is
-	// asking to complete.
-	if !contactGainedAddresses(env.Type) {
+	// not yet on their record. The repair only adds links, so an archive needs none.
+	if !events.CohortPromoteTypes.Has(env.Type) || env.Entity.Type != contactObject || env.Entity.ID == ids.Nil {
 		return nil
 	}
 	// The repair reads mail the workspace already holds and attaches it to a
@@ -114,21 +106,11 @@ func (g *CohortPromoteGen) HandleEvent(ctx context.Context, env events.Envelope)
 	contact := ids.From[ids.ContactKind](env.Entity.ID)
 	return InstallationDB(g.pool).Tx(ctx, func(tx pgx.Tx) error {
 		done, err := g.store.PromoteContactCohortTx(ctx, tx, contact)
-		// The contact this event named has gone since, so no later pass finds
-		// it and retrying is work with no outcome. Reported as unactionable so
-		// the entry is acked once and loudly, rather than reclaimed every
-		// cycle for as long as the stream keeps it.
-		//
-		// Not the ordering race the consumer exists to fix. That race is a
-		// message arriving before its contact.
-		//
-		// The trigger here is the contact's own write, so the row existed when
-		// the event was emitted.
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return fmt.Errorf("%w: contact %s", events.ErrUnactionable, contact)
-		}
+		// A missing contact is not the race this consumer exists to fix (a
+		// message arriving before its contact). The trigger is the contact's
+		// own write, so the row existed when the event was emitted.
 		if err != nil {
-			return err
+			return events.UnactionableIfGone(err, "contact", contact.UUID)
 		}
 		if done.Linked > 0 || done.Promoted > 0 {
 			g.log.InfoContext(ctx, "repaired a contact's captured cohort",
@@ -142,20 +124,11 @@ func (g *CohortPromoteGen) HandleEvent(ctx context.Context, env events.Envelope)
 // holding an address whose mail is not on their record yet — created, renamed
 // or re-addressed, absorbed by a merge, or brought back.
 func contactGainedAddresses(eventType string) bool {
-	switch eventType {
-	case contactCreatedEvent, contactUpdatedEvent, contactMergedEvent, contactRestoredEvent:
-		return true
-	}
-	return false
+	return events.CohortPromoteTypes.Has(eventType)
 }
 
-// The contact events this repair reacts to. Spelled beside the predicate that
-// reads them rather than at each case, so a fifth event is added in one place.
-const (
-	contactUpdatedEvent  = "contact.updated"
-	contactMergedEvent   = "contact.merged"
-	contactRestoredEvent = "contact.restored"
-)
+// contactMergedEvent names the merged-away contact as its entity.
+const contactMergedEvent = "contact.merged"
 
 // cohortPromoteActor names this consumer in captured_by and in the audit trail,
 // so a link that appeared without anybody clicking is attributable to the pass
@@ -163,5 +136,5 @@ const (
 const cohortPromoteActor = "cohort-promote"
 
 func cohortRepairStore(store *contacts.Store) *contacts.Store {
-	return store.WithAudienceRecompute(activities.RecomputeAudienceTx)
+	return store.WithAudienceRecompute(activities.RecomputeAudienceTx).WithSenderStamp(activities.StampProvenSendersTx)
 }

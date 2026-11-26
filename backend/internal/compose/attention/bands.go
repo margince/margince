@@ -35,13 +35,16 @@ const (
 	// bandReview is judgement and hygiene — approvals, duplicate pairs, and
 	// everything the product reports about itself.
 	bandReview = "review"
+	// bandMore heads the rows past the ranked top. A walk reaches them after
+	// every ranked row, so their own facts must not reopen an earlier band.
+	bandMore = "more"
 )
 
 // bandOrder is the order a page draws the bands in, and the order the ranking
 // already produces. Spelled here so the client is told the sequence rather than
 // inferring it from the rows it happens to receive: a day with no `now` rows
 // must still draw its remaining bands in this order.
-var bandOrder = []string{bandNow, bandKeepMomentum, bandBuildPipeline, bandReview}
+var bandOrder = []string{bandNow, bandKeepMomentum, bandBuildPipeline, bandReview, bandMore}
 
 // bandOfRow says which heading a row sits under.
 //
@@ -58,6 +61,9 @@ var bandOrder = []string{bandNow, bandKeepMomentum, bandBuildPipeline, bandRevie
 // of hygiene. The two agreed-work labels can recur as their facts decide the
 // order.
 func bandOfRow(row ranked) string {
+	if row.pastRanking {
+		return bandMore
+	}
 	// A pinned row is whatever the reader said it was, and they put it at the
 	// top: it leads the page, so it heads the first band.
 	//

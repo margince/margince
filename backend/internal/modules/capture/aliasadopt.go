@@ -30,7 +30,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -97,6 +99,16 @@ func adoptHeldMailForIdentityTx(
 ) ([]ids.ActivityID, error) {
 	if seat == ids.Nil || provider == "" || address == "" {
 		return nil, nil
+	}
+	// Under the address's own lock, which every identity writer takes. Another
+	// seat may hold the address as a claim, a mailbox or a login. Then it names
+	// no seat alone, and importing its mail for this one would be a guess.
+	if err := storekit.LockSeatAddressClaims(ctx, tx, address); err != nil {
+		return nil, err
+	}
+	held, err := claimHeldElsewhereTx(ctx, tx, seat, address)
+	if err != nil || held {
+		return nil, err
 	}
 	candidates, err := adoptableMessagesTx(ctx, tx, seat, provider, address)
 	if err != nil || len(candidates) == 0 {
@@ -257,9 +269,10 @@ func settledVerdictForTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, msg adop
 		}
 		return "", fmt.Errorf("capture: reading a thread's settled verdict: %w", err)
 	}
-	switch status {
-	case VerdictHeld, VerdictUnsure, VerdictHeldByOwner:
+	if threadverdict.Holds(status) {
 		return status, nil
+	}
+	switch status {
 	case VerdictCleared, VerdictSharedByOwner:
 		if !addressWasSeen(msg.counterparty, seen) {
 			return "", nil
@@ -333,6 +346,9 @@ func (s *PendingStore) strandedSeats(ctx context.Context, limit int) ([]Stranded
 			  JOIN activity_participant p ON p.address = oi.value
 			  JOIN activity a ON a.id = p.activity_id
 			 WHERE oi.kind = $1
+			   AND NOT EXISTS (
+			         SELECT 1 FROM capture_owner_identity other
+			          WHERE other.kind = oi.kind AND other.value = oi.value AND other.user_id <> oi.user_id)
 			   AND a.kind = 'email'
 			   AND a.captured_by = 'connector:' || c.provider || ':' || oi.user_id
 			   AND a.archived_at IS NULL

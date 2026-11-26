@@ -11,7 +11,11 @@ import {
 import { Button } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
-import { ApprovalDecisionDrawer } from "../automations/approvaldrawer";
+import {
+  ApprovalDecision,
+  ApprovalDecisionDrawer,
+  ApprovalProposalPreview,
+} from "../automations/approvaldrawer";
 import { hasMoveControl, MoveButton } from "../records/movebutton";
 import {
   FailedApprovalAnswer,
@@ -22,7 +26,10 @@ import {
   type BriefAnswer,
   BriefSetAsides,
 } from "./worklist.briefverbs";
-import { DomainQuestionAnswer } from "./worklist.domainquestion";
+import {
+  DomainQuestionAnswer,
+  DomainQuestionMenu,
+} from "./worklist.domainquestion";
 import { PlanWorkActions } from "./worklist.plan";
 import {
   useNudgeDismissal,
@@ -30,7 +37,8 @@ import {
   worklistKey,
 } from "./worklist.queries";
 import { MeetingReadyVerb, needsReadiness } from "./worklist.ready";
-import { replyTarget, WaitingReply } from "./worklist.reply";
+import { RowTaskReminder } from "./worklist.reminder";
+import { repliedMessage, replyTarget, WaitingReply } from "./worklist.reply";
 import { answerBelow } from "./worklist.suggestion";
 
 /**
@@ -56,13 +64,15 @@ import { answerBelow } from "./worklist.suggestion";
  * All three are optional. A row the server named no verb on returns none: it is
  * still real work, with nothing to press.
  */
-type RowPlacement = Readonly<{
+export type RowPlacement = Readonly<{
   /** The lane's one call to action, at the trailing end of the row's verbs. */
   primary?: ReactNode;
   /** Verbs of equal weight, among the row's quieter ones. */
   equals?: ReactNode;
   /** An answer carrying its own layout, under the row rather than in it. */
   below?: ReactNode;
+  /** The lane's rarer answers, as lines at the top of the row's menu. */
+  menu?: ReactNode;
 }>;
 
 // The answers the row itself is enough for, keyed by the source that carries
@@ -102,7 +112,10 @@ const ANSWER_BY_SOURCE: Partial<
   // reopen but never keep. The control asks the row again for each button.
   domain_question: {
     verbs: ["keep", "keep_as_vendor", "discard", "reopen"],
-    draw: (item) => ({ equals: <DomainQuestionAnswer item={item} /> }),
+    draw: (item) => ({
+      equals: <DomainQuestionAnswer item={item} />,
+      menu: <DomainQuestionMenu item={item} />,
+    }),
   },
   // Verbs of equal weight, so the row has no primary. Any answer is plausible
   // about a meeting the product knows nothing about. A filled verb would claim
@@ -129,13 +142,29 @@ const ANSWER_BY_SOURCE: Partial<
     verbs: ["complete"],
     draw: (item) => ({ primary: <PromiseKept id={item.id} /> }),
   },
+  // A task carrying the email it was promised in drafts the follow-up first,
+  // and completing it stays beside the draft.
   task: {
     verbs: ["complete"],
-    draw: (item, quiet) => ({
-      primary: (
-        <TaskComplete id={item.id} version={item.version} quiet={quiet} />
-      ),
-    }),
+    draw: (item, quiet) => {
+      const complete = (
+        <TaskComplete
+          id={item.id}
+          version={item.version}
+          quiet={quiet}
+          inquiry={item.kind === "website_inquiry"}
+        />
+      );
+      const replyTo = repliedMessage(item) ? replyTarget(item) : undefined;
+      const menu = <RowTaskReminder item={item} />;
+      return replyTo
+        ? {
+            primary: <WaitingReply item={item} to={replyTo} />,
+            equals: complete,
+            menu,
+          }
+        : { primary: complete, menu };
+    },
   },
   // The row's id is the contact's here, which is what the dismissal endpoint
   // takes, so this verb is offered on this lane alone. `dismiss` on brief_item
@@ -182,7 +211,9 @@ export function rowAnswer(
     return { primary: <WaitingReply item={item} to={replyTo} /> };
   }
   const primary =
-    item.move?.action === "create_task" && hasMoveControl(item.move) ? (
+    (item.move?.action === "create_task" ||
+      item.move?.action === "bring_in_manager") &&
+    hasMoveControl(item.move) ? (
       <MoveButton
         dealId={item.subject?.type === "deal" ? item.subject.id : undefined}
         move={item.move}
@@ -277,6 +308,26 @@ function decidable(item: WorklistItem): boolean {
   return item.actions.includes("decide") && item.source === "approval";
 }
 
+/** What a decision row's proposal would do, for a card read on its own. */
+export function RowProposal({ item }: Readonly<{ item: WorklistItem }>) {
+  return decidable(item) ? (
+    <ApprovalProposalPreview
+      approvalId={item.id}
+      className="worklist-row-proposal"
+    />
+  ) : null;
+}
+
+/**
+ * The decision itself where a surface has the room for it, as the drawer
+ * draws it. Undefined for a row that is not one.
+ */
+export function inlineDecision(item: WorklistItem): ReactNode {
+  return decidable(item) ? (
+    <ApprovalDecision approvalId={item.id} />
+  ) : undefined;
+}
+
 // The decision itself, fetched whole because a row cannot carry it, and
 // answered in a drawer, not in the row.
 //
@@ -326,7 +377,13 @@ function TaskComplete({
   id,
   version,
   quiet,
-}: Readonly<{ id: string; version: number | undefined; quiet: boolean }>) {
+  inquiry,
+}: Readonly<{
+  id: string;
+  version: number | undefined;
+  quiet: boolean;
+  inquiry: boolean;
+}>) {
   const t = useT();
   const done = useTaskDone(id, version);
   return (
@@ -335,7 +392,7 @@ function TaskComplete({
       pending={done.pending}
       onClick={done.complete}
     >
-      {t("tasks.complete")}
+      {t(inquiry ? "inquiry.markHandled" : "tasks.complete")}
     </Button>
   );
 }

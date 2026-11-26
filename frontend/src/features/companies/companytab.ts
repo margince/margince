@@ -1,13 +1,14 @@
 import { useEffect } from "react";
 import { type CompanyTab, companyTabRoute } from "../../lib/companytab";
-import { navigateReplacing } from "../../lib/router";
+import { useAddressWriters } from "../../lib/urlstate";
 import { keptWorklistReturn } from "../worklist/worklist.return";
 
 // The tabs an archived account cannot answer: the server refuses its roster,
-// deals, tasks and money.
+// deals, tasks and money, and the account read its meetings stand on.
 export const REFUSED_WHEN_ARCHIVED: readonly CompanyTab[] = [
   "contacts",
   "deals",
+  "meetings",
   "tasks",
   "finance",
 ];
@@ -20,10 +21,11 @@ export function useShownCompanyTab(
   addressed: CompanyTab,
 ): CompanyTab {
   const refused = archived && REFUSED_WHEN_ARCHIVED.includes(addressed);
+  const { navigateReplacing } = useAddressWriters();
   useEffect(() => {
     if (refused) {
       navigateReplacing(companyTabRoute(id, "overview"), keptWorklistReturn());
     }
-  }, [refused, id]);
+  }, [refused, id, navigateReplacing]);
   return refused ? "overview" : addressed;
 }

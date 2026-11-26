@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // colleagueWork is one piece of work on a contact. write puts it there inside
@@ -102,6 +103,7 @@ var colleagueWorkKinds = map[string]func(t *testing.T, e *integration.Env, conta
 		e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, echo, contact)
 		return colleagueWork{
 			write: func(ctx context.Context, tx pgx.Tx, _ ids.UUID) error {
+				ctx = connector.WithSentEcho(ctx, connector.SentEcho{Identity: stamped, Subject: "Angebot", Body: "Anbei."})
 				return e.Activities.ReconcileMessageIdentityTx(ctx, tx, ids.From[ids.ActivityKind](send), staged, stamped)
 			},
 			landed: func(t *testing.T) bool {

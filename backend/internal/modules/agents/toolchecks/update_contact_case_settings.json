@@ -1,0 +1,7 @@
+{
+  "verb": "update_contact_case_settings",
+  "checks": [
+    "admin",
+    "installation_settings.update"
+  ]
+}

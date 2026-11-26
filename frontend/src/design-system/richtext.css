@@ -10,7 +10,7 @@
 .richtext {
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
+  background: var(--bgField);
   /* `clip`, not `hidden`: it keeps the rounded corners without making the frame
      a scroll container, which would hold a sticky footer in place. */
   overflow: clip;
@@ -40,7 +40,7 @@
   gap: var(--space-3);
   padding: 2px var(--space-2) var(--space-2); /* ds:ignore the footer's own tight rhythm against the surface it sits under */
   /* Opaque, so text scrolling under a sticky footer does not show through. */
-  background: var(--bgElevated);
+  background: var(--bgField);
 }
 .richtext-hint {
   margin: 0;
@@ -65,7 +65,9 @@
   justify-content: center;
   min-inline-size: var(--controlHeight);
   min-block-size: var(--controlHeight);
-  border: none;
+  box-sizing: border-box;
+  /* Transparent at rest, so a pressed mark's edge moves nothing. */
+  border: 1px solid transparent;
   border-radius: var(--r-sm);
   background: transparent;
   cursor: pointer;
@@ -98,6 +100,14 @@
   color: var(--textPrimary);
 }
 
+/* A mark on at the caret takes the pressed toggle row's neutral pair
+   (listtable.css): it says what the next letter gets, not what to press. */
+.richtext-btn[aria-pressed="true"] {
+  border-color: var(--borderStrong);
+  background: var(--bgChip);
+  color: var(--textPrimary);
+}
+
 .richtext-btn:focus-visible {
   outline: var(--focus-ring-forced);
   outline-offset: 2px;
@@ -120,6 +130,7 @@
 /* Type and ink are the reader's own, exactly as in the plain `.textarea` this
  * replaces on the same forms, and the inset is the field's. */
 .richtext-input {
+  position: relative;
   font: inherit;
   color: inherit;
   padding: var(--inputPaddingY) var(--inputPaddingX);

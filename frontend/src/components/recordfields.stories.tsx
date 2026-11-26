@@ -46,7 +46,7 @@ function Example({
               { value: "USD", label: "USD" },
             ],
           },
-          { key: "amount", labelText: "Amount", type: "number", step: "any" },
+          { key: "amount", labelText: "Amount", type: "number" },
           {
             key: "emails",
             labelText: "Email addresses",

@@ -22,7 +22,7 @@ import {
 import { CellStack } from "../../design-system/cellstack";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { KeyCode } from "../../design-system/keyedname";
+import { ErrorLine } from "../../design-system/errorline";
 import {
   NameDialog,
   nameRefusal,
@@ -32,12 +32,14 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { PanelNotices } from "../../design-system/panelnotices";
 import { useSinglePress } from "../../design-system/presslatch";
 import { QueryStates } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Switch } from "../../design-system/switch";
-import { INTL_LOCALE } from "../../format/format";
+import { listFormat } from "../../format/formatters";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
-import { problemMessageOf } from "../../lib/problem";
+import { blankRequired } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { useVocabGrants, vocabMenuColumn } from "../leads/leadvocab.rows";
 
 const RECORD_KINDS: Record<AssignmentRecordType, MessageKey> = {
@@ -59,7 +61,7 @@ function heldByKey(kinds: readonly AssignmentSubjectKind[]): MessageKey | null {
 function RoleReach({ role }: Readonly<{ role: RecordRole }>) {
   const t = useT();
   const { locale } = useLocale();
-  const records = new Intl.ListFormat(INTL_LOCALE[locale], {
+  const records = listFormat(locale, {
     style: "long",
     type: "conjunction",
   }).format(
@@ -139,21 +141,24 @@ function Choices<Value extends string>({
   options,
   chosen,
   disabled,
+  error,
   onChange,
 }: Readonly<{
   legend: string;
   options: readonly { value: Value; label: string }[];
   chosen: readonly Value[];
   disabled: boolean;
+  error?: string;
   onChange: (next: Value[]) => void;
 }>) {
   return (
     <fieldset className="field-multiselect" disabled={disabled}>
       <legend className="t-name">{legend}</legend>
-      {options.map(({ value, label }) => (
+      {options.map(({ value, label }, index) => (
         <Checkbox
           key={value}
           label={label}
+          aria-invalid={index === 0 && error ? true : undefined}
           checked={chosen.includes(value)}
           onChange={(e) =>
             onChange(
@@ -164,6 +169,7 @@ function Choices<Value extends string>({
           }
         />
       ))}
+      <ErrorLine>{error}</ErrorLine>
     </fieldset>
   );
 }
@@ -177,25 +183,35 @@ function AddRoleDialog({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults();
   const [label, setLabel] = useState("");
   const [recordTypes, setRecordTypes] = useState<AssignmentRecordType[]>([]);
   const [assigneeKinds, setAssigneeKinds] = useState<AssignmentSubjectKind[]>(
     [],
   );
   const name = label.trim();
-  const refused = nameRefusal(create.error, t, "recordRoles.duplicate");
+  const nameLabel = t("recordRoles.addLabel");
+  const refused = nameRefusal(create.error, t, {
+    label: nameLabel,
+    duplicate: "recordRoles.duplicate",
+  });
   const { refusedName: nameProblem, markSent } = useRefusedName(
     name,
     refused.nameProblem,
   );
   const singlePress = useSinglePress(create.isPending);
-  const ready =
-    name !== "" &&
-    recordTypes.length > 0 &&
-    assigneeKinds.length > 0 &&
-    !nameProblem;
+  // The two choice groups word their sentence bare: their legends read as
+  // phrases, not names.
   const save = () => {
-    if (!ready || create.isPending) return;
+    if (create.isPending) return;
+    const blank = blankRequired(locale, {
+      label: [nameLabel, name],
+      recordTypes: [undefined, recordTypes.join(",")],
+      assigneeKinds: [undefined, assigneeKinds.join(",")],
+    });
+    if (nameProblem && !blank.has("label")) blank.set("label", nameProblem);
+    if (faults.show(blank)) return;
     markSent();
     create.mutate(
       {
@@ -213,28 +229,34 @@ function AddRoleDialog({
       title={t("recordRoles.addTitle")}
       intent="form"
       confirmLabel={t("recordRoles.addConfirm")}
-      confirmDisabled={!ready}
       pending={create.isPending}
       error={refused.problem}
       onConfirm={save}
     >
       <form
         className="form-stack"
+        ref={faultsRoot}
+        noValidate
         onSubmit={singlePress((event: FormEvent) => {
           event.preventDefault();
           save();
         })}
       >
         <Field
-          label={t("recordRoles.addLabel")}
+          label={nameLabel}
           hint={t("recordRoles.addHint")}
-          error={nameProblem}
+          required
+          error={faults.of("label") ?? nameProblem}
         >
           {(control) => (
             <TextInput
               {...control}
               value={label}
-              onChange={(e) => setLabel(e.target.value)}
+              maxLength={TEXT_LIMITS.label}
+              onChange={(e) => {
+                setLabel(e.target.value);
+                faults.edited("label");
+              }}
             />
           )}
         </Field>
@@ -246,7 +268,11 @@ function AddRoleDialog({
           }))}
           chosen={recordTypes}
           disabled={create.isPending}
-          onChange={setRecordTypes}
+          error={faults.of("recordTypes")}
+          onChange={(next) => {
+            setRecordTypes(next);
+            faults.edited("recordTypes");
+          }}
         />
         <Choices
           legend={t("recordRoles.assigneeKinds")}
@@ -256,7 +282,11 @@ function AddRoleDialog({
           ]}
           chosen={assigneeKinds}
           disabled={create.isPending}
-          onChange={setAssigneeKinds}
+          error={faults.of("assigneeKinds")}
+          onChange={(next) => {
+            setAssigneeKinds(next);
+            faults.edited("assigneeKinds");
+          }}
         />
       </form>
     </ConfirmModal>
@@ -283,6 +313,10 @@ export function RecordRolesCard() {
   const [renaming, setRenaming] = useState<RecordRole | null>(null);
   const [renamingOpen, setRenamingOpen] = useState(false);
   const roles = rowsOf(query.data);
+  const renameRefused = nameRefusal(rename.error, t, {
+    label: t("recordRoles.addLabel"),
+    duplicate: "recordRoles.duplicate",
+  });
   const columns = roleColumns({
     t,
     canEdit,
@@ -350,17 +384,17 @@ export function RecordRolesCard() {
           }}
         />
       )}
-      {/* A rename cannot collide: only the key is unique, and it never changes. */}
       <NameDialog
         open={renamingOpen}
         onClose={() => setRenamingOpen(false)}
         title={t("recordRoles.renameTitle")}
         label={t("recordRoles.addLabel")}
         initial={renaming?.label ?? ""}
-        hint={renaming && <KeyCode code={renaming.key} />}
         confirmLabel={t("leadSources.renameSave")}
         pending={rename.isPending}
-        problem={rename.isError ? problemMessageOf(rename.error, t) : null}
+        problem={renameRefused.problem}
+        nameProblem={renameRefused.nameProblem}
+        maxLength={TEXT_LIMITS.label}
         onSave={(label) => {
           if (renaming) {
             rename.mutate(

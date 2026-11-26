@@ -172,6 +172,8 @@ export const LongGermanReadings: Story = {
   ),
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByText("Kein Termin geplant");
+    // Measured once the web fonts load. A fallback face is wider and overflows.
+    await document.fonts.ready;
     const whole = canvasElement.querySelectorAll<HTMLElement>(
       ".stat-card-label-text, .stat-card-value",
     );
@@ -223,7 +225,7 @@ export const ReadingsThatNameWhatTheyCount: Story = {
         detail="4 open"
         onOpen={() => undefined}
         peek={{
-          head: "Open deals on this account",
+          head: "Open deals on this company",
           items: [
             {
               key: "a",

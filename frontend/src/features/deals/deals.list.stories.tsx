@@ -2,11 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { playOpenView } from "../../testing/listview.play";
+import { WRITES_RECORDS } from "../../testing/mefixture";
+import { phoneRow } from "../../testing/phonerow";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { DealsScreen } from "./deals";
@@ -67,6 +70,7 @@ const boardDeals = [
     id: "b1",
     name: "Fleet retrofit",
     company_id: "o1",
+    expected_close_date: "2026-12-15",
     // The buyer wrote last, two days ago.
     last_email: { occurred_at: daysAgo(2), direction: "inbound" },
   },
@@ -165,12 +169,11 @@ function installBoardStub(pipelines: readonly (typeof sales)[] = [sales]) {
         data: [{ id: "o1", display_name: "Acme GmbH" }],
         page: { next_cursor: null },
       }),
-    "GET /me": () =>
+    "GET /records/references": () =>
       jsonResponse({
-        user: { id: "u-9", display_name: "Me" },
-        roles: ["rep"],
-        teams: [],
+        data: [{ id: "o1", name: "Acme GmbH", archived: false, logo: null }],
       }),
+    "GET /me": meRoute(WRITES_RECORDS),
   });
 }
 
@@ -185,6 +188,23 @@ export const BoardInListSurface: Story = {
   },
 };
 
+/** `#/deals/new`: the board with its create form open, as `C` opens it. */
+export const CreateFormOpen: Story = {
+  render: () => {
+    installBoardStub();
+    return (
+      <StoryProviders>
+        <DealsScreen startCreating />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await expect(
+      await screen.findByRole("dialog", { name: "New deal" }),
+    ).toBeInTheDocument();
+  },
+};
+
 // The same deals as rows: the mail chip is a column here, so a reader who
 // switches views reads the same fact off the same field.
 export const TableInListSurface: Story = {
@@ -196,6 +216,30 @@ export const TableInListSurface: Story = {
         <DealsScreen />
       </StoryProviders>
     );
+  },
+};
+
+// At 390px line one ends in the amount; under it the company, the stage and
+// the close day. A withheld company stays withheld; a missing close day goes.
+export const TablePhone: Story = {
+  ...TableInListSurface,
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findAllByText("Acme GmbH");
+    const retrofit = phoneRow(canvas.getByText("Fleet retrofit"));
+    await expect(retrofit.end).toEqual(["€48,000.00"]);
+    await expect(retrofit.caption).toEqual([
+      "Acme GmbH",
+      "Qualify",
+      "15/12/2026",
+    ]);
+    const depot = phoneRow(canvas.getByText("Depot rollout"));
+    await expect(depot.caption).toEqual(["Acme GmbH", "Proposal"]);
+    const northgate = phoneRow(canvas.getByText("Northgate framework"));
+    await expect(northgate.caption).toEqual(["••••", "Qualify"]);
   },
 };
 

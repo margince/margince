@@ -135,7 +135,7 @@ func TestARenderingIsRefusedBeforeAnyModelCall(t *testing.T) {
 			note(crmcontracts.ActivityKindNote, germanBody, nil), &recordingLane{}, apperrors.ErrPermissionDenied,
 		},
 		{"a withheld message", reader("en"), withheld, &recordingLane{}, apperrors.ErrNotFound},
-		{"a task", reader("en"), note(crmcontracts.ActivityKindTask, germanBody, nil), &recordingLane{}, apperrors.ErrNotFound},
+		{"an attachment", reader("en"), note(crmcontracts.ActivityKind("attachment"), germanBody, nil), &recordingLane{}, apperrors.ErrNotFound},
 		{"no model", reader("en"), note(crmcontracts.ActivityKindNote, germanBody, nil), nil, ErrNoModel},
 		{
 			"text past the limit", reader("en"), note(crmcontracts.ActivityKindNote, strings.Repeat("ü ", MaxSourceRunes), nil),

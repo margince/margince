@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 )
 
 // scenarioCap bounds the branches. Three is a thing a rep can hold walking in;
@@ -108,6 +109,7 @@ type replyQuestion struct {
 type replyScenario struct {
 	Label    string          `json:"label"`
 	Play     string          `json:"play"`
+	Coach    string          `json:"coach"`
 	Evidence []replyEvidence `json:"evidence"`
 }
 
@@ -128,7 +130,7 @@ func ParsePlan(reply string, in Input, floor Plan) (Plan, error) {
 	written := Plan{Type: floor.Type, Unknowns: floor.Unknowns}
 
 	if sentence, ok := keptPlanSentence(parsed.Objective, "objective", known); ok {
-		written.Objective = &Objective{Sentence: sentence, Caveat: briefCopyFor(in.Language).caveatFor(floor.Type)}
+		written.Objective = &Objective{Sentence: sentence, Caveat: in.words().caveatFor(floor.Type)}
 	}
 	if sentence, ok := keptPlanSentence(parsed.Opening, "opening", known); ok {
 		written.Opening = &sentence
@@ -281,6 +283,18 @@ func keptQuestions(raw []replyQuestion, known map[Evidence]string) []Question {
 	return out
 }
 
+// keptCoach is the scenario's coach line when it holds as advice to the lead.
+// It must rest on the branch's own records, name no id, not open with the
+// writer, and not repeat the play. Otherwise the branch has no coach line.
+func keptCoach(scenario replyScenario, cited []Evidence, known map[Evidence]string) string {
+	coach := strings.TrimSpace(scenario.Coach)
+	if coach == "" || spellsAnID(coach) || mailsubject.Topic(coach) == mailsubject.Topic(scenario.Play) ||
+		claims.OpensWithWriterSubject(coach) || !groundedLine(Sentence{Text: coach, Evidence: cited}, known) {
+		return ""
+	}
+	return coach
+}
+
 func keptScenarios(raw []replyScenario, known map[Evidence]string) []Scenario {
 	out := make([]Scenario, 0, len(raw))
 	for _, scenario := range raw {
@@ -298,7 +312,7 @@ func keptScenarios(raw []replyScenario, known map[Evidence]string) []Scenario {
 		if !groundedEvidenceOnly(cited, known) {
 			continue
 		}
-		out = append(out, Scenario{Label: scenario.Label, Play: scenario.Play, Evidence: cited})
+		out = append(out, Scenario{Label: scenario.Label, Play: scenario.Play, Coach: keptCoach(scenario, cited, known), Evidence: cited})
 	}
 	return out
 }

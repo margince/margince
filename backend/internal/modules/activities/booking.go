@@ -25,10 +25,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // DefaultMeetingSubject keeps booking previews and saved meetings aligned when no title is supplied.
-const DefaultMeetingSubject = "Meeting"
+var DefaultMeetingSubject = systemtext.Literal("booking.meeting")
+
+// DefaultMeetingSubject shares the configured built-in caption with previews and writes.
+func (s *Store) DefaultMeetingSubject(ctx context.Context) string {
+	return DefaultMeetingSubjectIn(s.footerLanguage(ctx, "", ""))
+}
+
+// DefaultMeetingSubjectIn localizes the built-in caption without classifying edited titles.
+func DefaultMeetingSubjectIn(language textlang.Lang) string {
+	return systemtext.Copy("booking.meeting", language)
+}
 
 // BookMeetingInput is one slot a caller is committing: whose calendar it lands
 // on, when, what it is called, and the records it is about.

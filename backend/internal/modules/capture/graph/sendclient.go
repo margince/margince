@@ -21,10 +21,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// sendMIMEPath is Microsoft's submit endpoint. It takes the whole RFC822
-// message base64-encoded, under a `text/plain` content type — the vendor's own
-// convention for "the body IS the MIME", not a mislabelling on our part.
-const sendMIMEPath = "/me/sendMail"
+// sendMIMEPath is Microsoft's submit endpoint under the mailbox root. It takes
+// the whole RFC822 message base64-encoded, under a `text/plain` content type.
+// That is Microsoft's own convention for a body that is the MIME.
+const sendMIMEPath = "/sendMail"
 
 // maxSubmitBytes is Microsoft's 4 MB write-request ceiling, read as the size of
 // the BASE64 body actually sent — which is what the limit applies to and what
@@ -57,7 +57,8 @@ func (a *httpAPI) SendMIME(ctx context.Context, accessToken string, rfc822 []byt
 		return fmt.Errorf("graph: the message is %d encoded bytes against Microsoft's %d-byte sendMail limit: %w",
 			len(encoded), maxSubmitBytes, connector.ErrFilesNotCarried)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.base+sendMIMEPath, strings.NewReader(encoded))
+	op := a.mailbox + sendMIMEPath
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.base+op, strings.NewReader(encoded))
 	if err != nil {
 		return fmt.Errorf("graph: building send request: %w", err)
 	}
@@ -67,12 +68,12 @@ func (a *httpAPI) SendMIME(ctx context.Context, accessToken string, rfc822 []byt
 	req.Header.Set("Content-Type", "text/plain")
 	resp, err := a.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("graph: %s: %w", sendMIMEPath, ErrUnreachable)
+		return fmt.Errorf("graph: %s: %w", op, ErrUnreachable)
 	}
 	//craft:ignore swallowed-errors best-effort close of the response body — the status is what matters
 	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyLen))
-	return classifyStatus(resp, sendMIMEPath, body)
+	return classifyStatus(resp, op, body)
 }
 
 // maxErrorBodyLen bounds how much of a refusal Microsoft's OData envelope is
@@ -103,7 +104,7 @@ func (a *httpAPI) FindSentByMessageID(ctx context.Context, accessToken, unbracke
 		// doubled) before url.Values escapes it for the query. Without the
 		// first step an identity carrying a quote would end the literal and the
 		// rest of it would be read as filter syntax.
-		paramFilter: {"internetMessageId eq '" + odataQuote("<"+unbracketedMessageID+">") + "'"},
+		paramFilter: {internetMessageIDFilter("<" + unbracketedMessageID + ">")},
 		paramSelect: {"id"},
 		paramTop:    {"1"},
 	}
@@ -112,7 +113,7 @@ func (a *httpAPI) FindSentByMessageID(ctx context.Context, accessToken, unbracke
 			ID string `json:"id"`
 		} `json:"value"`
 	}
-	if _, err := a.get(ctx, accessToken, a.base+"/me/mailFolders/sentitems/messages?"+q.Encode(), nil, &out); err != nil {
+	if _, err := a.get(ctx, accessToken, a.root()+"/mailFolders/sentitems/messages?"+q.Encode(), nil, &out); err != nil {
 		return "", false, err
 	}
 	if len(out.Value) == 0 || out.Value[0].ID == "" {
@@ -125,3 +126,8 @@ func (a *httpAPI) FindSentByMessageID(ctx context.Context, accessToken, unbracke
 // a literal quote is written twice. It is the ONE place this escaping happens,
 // so a second filter cannot be written without it.
 func odataQuote(v string) string { return strings.ReplaceAll(v, "'", "''") }
+
+// internetMessageIDFilter matches a message by its bracketed RFC822 identity.
+func internetMessageIDFilter(bracketed string) string {
+	return "internetMessageId eq '" + odataQuote(bracketed) + "'"
+}

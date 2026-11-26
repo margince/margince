@@ -14,10 +14,13 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stable } from "../../format/collate";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import type { FilterPreview, VocabularyField } from "../../lib/filterdata";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { openViewStep } from "../../testing/listview.testkit";
+import { meFixture } from "../../testing/mefixture";
 import { FilterResults, previewColumnNames } from "./filterresults";
 
 // The preview answers every non-generated column of the table, so what this
@@ -125,8 +128,10 @@ function preview(rows: readonly Record<string, unknown>[]): FilterPreview {
 // The table reads the companies its rows name, so it needs a query client
 // even when no column is a reference.
 function wrapper({ children }: { children: ReactNode }) {
+  const client = new QueryClient();
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   return (
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <LocaleProvider>{children}</LocaleProvider>
     </QueryClientProvider>
   );
@@ -163,6 +168,132 @@ it("heads a custom column the way the field picker named it", () => {
   expect(
     screen.queryByRole("columnheader", { name: /cf_loyalty_tier/ }),
   ).toBeNull();
+});
+
+it("heads a custom column with the label the catalog gave it", () => {
+  render(
+    <FilterResults
+      preview={preview([
+        { id: "p1", full_name: "Ann Lee", cf_loyalty_tier: "gold" },
+      ])}
+      resource="contact"
+      fields={[{ ...TIER_FIELD, label: "Loyalty Tier" }]}
+      named={["cf_loyalty_tier"]}
+      unit="contacts"
+      widthsKey="filter-preview-contacts"
+      pending={false}
+    />,
+    { wrapper },
+  );
+
+  expect(
+    screen.getByRole("columnheader", { name: /Loyalty Tier/ }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("columnheader", { name: /loyalty tier/ }),
+  ).toBeNull();
+});
+
+describe("a cell read by its field's type", () => {
+  const TYPED: VocabularyField[] = [
+    { name: "created_at", type: "date", operators: ["gte"], custom: false },
+    { name: "cf_renewal", type: "date", operators: ["gte"], custom: true },
+    { name: "cf_seats", type: "number", operators: ["gte"], custom: true },
+    {
+      name: "cf_budget",
+      type: "currency",
+      operators: ["gte"],
+      custom: true,
+      currency: "EUR",
+    },
+    { name: "cf_partner", type: "boolean", operators: ["eq"], custom: true },
+  ];
+  const NAMES = TYPED.map((field) => field.name);
+
+  // West of Greenwich, where a calendar day read as a UTC instant shows the day before.
+  function renderTyped(row: Record<string, unknown>) {
+    return render(
+      <ViewerZoneProvider zone="America/Los_Angeles">
+        <FilterResults
+          preview={{
+            resource: "contact",
+            match_count: 1,
+            columns: ["id", "full_name", ...NAMES, "updated_at"],
+            rows: [{ id: "p1", full_name: "Ann Lee", ...row }],
+            truncated: false,
+          }}
+          resource="contact"
+          fields={TYPED}
+          named={NAMES}
+          unit="contacts"
+          widthsKey="filter-preview-typed"
+          pending={false}
+        />
+      </ViewerZoneProvider>,
+      { wrapper },
+    );
+  }
+
+  it("shows a timestamp as the day it fell on in the reader's zone", () => {
+    renderTyped({ created_at: "2026-11-16T01:19:20.700242Z" });
+
+    expect(screen.getByText("15 Nov 2026")).toBeTruthy();
+    expect(screen.queryByText("16 Nov 2026")).toBeNull();
+    expect(screen.queryByText(/2026-11-16T/)).toBeNull();
+  });
+
+  it("keeps a calendar day on its day in any zone", () => {
+    renderTyped({ cf_renewal: "2026-12-01" });
+
+    expect(screen.getByText("1 Dec 2026")).toBeTruthy();
+    expect(screen.queryByText("30 Nov 2026")).toBeNull();
+  });
+
+  it("shows a timestamp at midnight UTC on the reader's day, as the record lists do", () => {
+    renderTyped({ created_at: "2026-03-01T00:00:00Z" });
+
+    expect(screen.getByText("28 Feb 2026")).toBeTruthy();
+    expect(screen.queryByText("1 Mar 2026")).toBeNull();
+  });
+
+  it("writes a figure, an amount and a yes in the reader's words", () => {
+    renderTyped({ cf_seats: 1234.5, cf_budget: 250000, cf_partner: true });
+
+    expect(screen.getByText("1,234.5")).toBeTruthy();
+    expect(screen.getByText("€2,500.00")).toBeTruthy();
+    expect(screen.getByText(en["field.yes"])).toBeTruthy();
+  });
+
+  it("reads a deal's amount in the currency its row carries", () => {
+    render(
+      <FilterResults
+        preview={{
+          resource: "deal",
+          match_count: 1,
+          columns: ["id", "name", "amount_minor", "currency"],
+          rows: [
+            {
+              id: "d1",
+              name: "Renewal",
+              amount_minor: 2500000,
+              currency: "EUR",
+            },
+          ],
+          truncated: false,
+        }}
+        resource="deal"
+        fields={[]}
+        named={[]}
+        unit="deals"
+        widthsKey="filter-preview-deals"
+        pending={false}
+      />,
+      { wrapper },
+    );
+
+    expect(screen.getByText("€25,000.00")).toBeTruthy();
+    expect(screen.queryByText("2500000")).toBeNull();
+  });
 });
 
 it("shows a dash where a row has no value", () => {
@@ -263,6 +394,35 @@ describe("a first page of many", () => {
 
     expect(onLoadMore).toHaveBeenCalled();
   });
+
+  it("calls every page a sample of the matches", async () => {
+    const user = userEvent.setup();
+    const twoPages = [
+      ...PAGE,
+      ...PAGE.map((row) => ({ ...row, id: `${row.id}b` })),
+    ];
+    render(
+      <FilterResults
+        preview={{ ...preview(twoPages), match_count: 214, truncated: true }}
+        resource="contact"
+        fields={[TIER_FIELD]}
+        named={["cf_loyalty_tier"]}
+        unit="contacts"
+        widthsKey="filter-preview-contacts"
+        pending={false}
+        total={214}
+        hasMore
+        onLoadMore={() => {}}
+      />,
+      { wrapper },
+    );
+    expect(screen.getByText(en["filters.resultsCaption"])).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(screen.getByText(/26 to 50 of 214 contacts/)).toBeInTheDocument();
+    expect(screen.getByText(en["filters.resultsCaption"])).toBeInTheDocument();
+  });
 });
 
 describe("a row", () => {
@@ -304,7 +464,12 @@ describe("the columns past the opening six", () => {
           truncated: false,
         }}
         resource="company"
-        fields={[]}
+        fields={WIDE.slice(1).map((name) => ({
+          name,
+          type: "text",
+          operators: ["eq"],
+          custom: false,
+        }))}
         named={[]}
         unit="companies"
         widthsKey="filter-preview-wide"
@@ -325,6 +490,40 @@ describe("the columns past the opening six", () => {
     await user.click(offered);
 
     expect(screen.getByRole("columnheader", { name: "f" })).toBeTruthy();
+  });
+
+  it("leave out a stored column the product has no word for", async () => {
+    const user = userEvent.setup();
+    render(
+      <FilterResults
+        preview={{
+          resource: "company",
+          match_count: 1,
+          columns: ["id", "name", "captured_by", "anonymized_address_hashes"],
+          rows: [{ id: "c1", name: "Acme", captured_by: "human:x" }],
+          truncated: false,
+        }}
+        resource="company"
+        fields={[
+          { name: "name", type: "text", operators: ["eq"], custom: false },
+        ]}
+        named={[]}
+        unit="companies"
+        widthsKey="filter-preview-stored"
+        pending={false}
+      />,
+      { wrapper },
+    );
+
+    const step = await openViewStep(user, "Columns");
+    expect(
+      within(step).queryByRole("checkbox", { name: /captured by/i }),
+    ).toBeNull();
+    expect(
+      within(step).queryByRole("checkbox", {
+        name: /anonymized address hashes/i,
+      }),
+    ).toBeNull();
   });
 });
 
@@ -381,6 +580,22 @@ describe("a column that points at another record", () => {
     const fetchMock = vi.fn(async (request: Request) => {
       const url = new URL(request.url);
       const path = url.pathname;
+      if (path === "/v1/records/references") {
+        const kind = url.searchParams.get("kind");
+        if (kind === "company" && companiesFail)
+          return jsonResponse({ title: "Server error" }, 500);
+        return jsonResponse({
+          data: url.searchParams.getAll("id").flatMap((id) => {
+            const name =
+              kind === "company" && id === "c-1"
+                ? "Brandt GmbH"
+                : kind === "project" && id === "p-1"
+                  ? "Rollout"
+                  : undefined;
+            return name === undefined ? [] : [{ id, name, archived: false }];
+          }),
+        });
+      }
       if (path.endsWith("/companies") && companiesFail) {
         return jsonResponse({ title: "Server error" }, 500);
       }
@@ -416,16 +631,11 @@ describe("a column that points at another record", () => {
     return fetchMock;
   }
 
-  function pathsAsked(fetchMock: ReturnType<typeof stubWorkspace>) {
-    return fetchMock.mock.calls.map(
-      ([request]) => new URL(request.url).pathname,
-    );
-  }
-
   function renderDeals(rows: readonly Record<string, unknown>[]) {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    client.setQueryData(["me"], meFixture({ rowScope: "all" }));
     return render(
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">
@@ -471,6 +681,26 @@ describe("a column that points at another record", () => {
     expect(screen.queryByText("c-1")).toBeNull();
   });
 
+  it("keeps the id out of a named cell's tooltip, and on one it could not name", async () => {
+    stubWorkspace();
+    renderDeals([
+      { id: "d-1", name: "Named", owner_id: "u-1", company_id: "c-1" },
+      { id: "d-2", name: "Orphaned", owner_id: "u-removed" },
+    ]);
+
+    expect(
+      (await screen.findByText("Priya Shah")).getAttribute("title"),
+    ).toBeNull();
+    expect(
+      (await screen.findByText("Brandt GmbH")).getAttribute("title"),
+    ).toBeNull();
+    expect(
+      (await screen.findByText(en["filters.resultRefGone"])).getAttribute(
+        "title",
+      ),
+    ).toBe("u-removed");
+  });
+
   it("reads every company on the page in one request", async () => {
     const fetchMock = stubWorkspace();
     renderDeals(
@@ -484,11 +714,19 @@ describe("a column that points at another record", () => {
     );
 
     expect(await screen.findAllByText("Brandt GmbH")).toHaveLength(2);
-    const companyReads = pathsAsked(fetchMock).filter((path) =>
-      path.includes("/companies"),
-    );
+    const companyReads = fetchMock.mock.calls
+      .map(([request]) => new URL(request.url))
+      .filter(
+        (url) =>
+          url.pathname === "/v1/records/references" &&
+          url.searchParams.get("kind") === "company",
+      );
     expect(companyReads).toHaveLength(1);
-    expect(companyReads[0]).toMatch(/\/companies$/);
+    expect(companyReads[0]?.searchParams.getAll("id").sort(stable)).toEqual([
+      "c-1",
+      "c-2",
+      "c-3",
+    ]);
   });
 
   it("says a reference is gone rather than printing an id nobody can read", async () => {

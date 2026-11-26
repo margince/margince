@@ -1,0 +1,15 @@
+{
+  "tool": "change_access",
+  "action": "assign_legal_entity",
+  "verb": "assign_legal_entity_member",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

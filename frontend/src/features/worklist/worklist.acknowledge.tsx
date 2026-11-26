@@ -11,6 +11,7 @@ import { useNoticeRead } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
+import { invalidateApprovalViews } from "../../lib/approvals.queries";
 import { unwrap } from "../../lib/problem";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
@@ -50,7 +51,7 @@ export function useApprovalFailureAcknowledge(
  * Approving the change once more, which runs the work it released again. The
  * server accepts this only for an approval whose work never ran.
  */
-export function useApprovalRetry(invalidateKeys: readonly QueryKey[]) {
+export function useApprovalRetry() {
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
@@ -64,11 +65,11 @@ export function useApprovalRetry(invalidateKeys: readonly QueryKey[]) {
     },
     // Settled either way: a retry that fails again moves the failure's time,
     // and the list must show the new one.
-    onSettled: () => {
-      for (const queryKey of invalidateKeys) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-    },
+    //
+    // Through the shared invalidator rather than a key list of its own. A
+    // retry that succeeds changes the approval, and its own read is keyed
+    // `["approval", id]`, which no prefix of `["approvals"]` reaches.
+    onSettled: () => invalidateApprovalViews(queryClient),
   });
 }
 
@@ -82,7 +83,7 @@ export function FailedApprovalAnswer({
   const t = useT();
   const toast = useToast();
   const acknowledge = useApprovalFailureAcknowledge([worklistKey]);
-  const retry = useApprovalRetry([worklistKey, ["approvals"]]);
+  const retry = useApprovalRetry();
   const failedAt = item.occurred_at;
   return (
     <>

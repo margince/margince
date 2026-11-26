@@ -4,7 +4,9 @@ import { unwrap } from "../../lib/problem";
 import { worklistKey } from "../../lib/workkeys";
 import { worklistDayOptions } from "../../lib/worklistday";
 import type { WorklistView } from "../../lib/worklistviews";
+import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import type {
+  ForecastFocus,
   TeamBoard,
   TeamExceptions,
   Worklist,
@@ -34,11 +36,27 @@ export function useWorklist(
   owner?: string,
   enabled = true,
   view?: WorklistView,
+  shape?: Parameters<typeof worklistDayOptions>[4],
 ) {
   return useInfiniteQuery({
-    ...worklistDayOptions(scope, filter, owner, view),
+    ...worklistDayOptions(scope, filter, owner, view, shape),
     enabled,
   });
+}
+
+/**
+ * Home's day, in Home's own shape. A link that names a row reads the queue
+ * instead, because the row may be outside Focus and the day's meetings.
+ */
+export function useHomeDay(linksARow: boolean) {
+  return useWorklist(
+    "mine",
+    "all",
+    undefined,
+    true,
+    DEFAULT_VIEW,
+    linksARow ? undefined : "home",
+  );
 }
 
 /**
@@ -83,6 +101,17 @@ export function useTeamExceptions(enabled: boolean) {
     queryFn: async (): Promise<TeamExceptions> => {
       return unwrap(await api.GET("/worklist/exceptions", {}));
     },
+  });
+}
+
+// The deals each of the reader's teams should work to meet its quarter goal,
+// as the last daily freeze ranked them. A seat with no team lens reads no team.
+export function useForecastFocus(enabled: boolean) {
+  return useQuery({
+    enabled,
+    queryKey: [...worklistKey, "focus"],
+    queryFn: async (): Promise<ForecastFocus> =>
+      unwrap(await api.GET("/forecast/focus", {})),
   });
 }
 

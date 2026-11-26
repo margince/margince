@@ -31,6 +31,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/socialplatform"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -85,7 +86,7 @@ type RecordFieldsReader interface {
 // cannot see.
 func (r RecordFieldsResource) ReadResource(ctx context.Context, uri string) (mcp.ResourceContents, error) {
 	if uri != RecordFieldsURI {
-		return mcp.ResourceContents{}, fmt.Errorf("agents: resource %q: %w", uri, apperrors.ErrNotFound)
+		return mcp.ResourceContents{}, fmt.Errorf("no resource is published at %q: %w", uri, apperrors.ErrNotFound)
 	}
 	body, err := r.RecordFieldsDocument(ctx)
 	if err != nil {
@@ -127,6 +128,43 @@ type recordFieldsDoc struct {
 	Notation string            `json:"notation"`
 	Create   recordFieldsWrite `json:"create_record"`
 	Update   recordFieldsWrite `json:"update_record"`
+	Parts    recordPartsDoc    `json:"record_parts"`
+}
+
+// recordPartsDoc names the fields a company or contact page shows beside the
+// record's own. read_record answers them; create_record and update_record do not take them.
+type recordPartsDoc struct {
+	Note    string                `json:"note"`
+	Company recordPartsDocCompany `json:"company"`
+	Contact recordPartsDocContact `json:"contact"`
+}
+
+type recordPartsDocCompany struct {
+	ProfileFields  []string `json:"profile_fields"`
+	FactCategories []string `json:"fact_categories"`
+	FactFields     []string `json:"fact_fields"`
+}
+
+type recordPartsDocContact struct {
+	ProfileFields []string `json:"profile_fields"`
+}
+
+const recordPartsNote = "read_record answers a company's `profile_fields` (the VAT ID is `register_vat`) " +
+	"and `facts`, and a contact's `profile_fields` that no contact field carries, beside the record's " +
+	"own fields. A key with no value is left out of the answer. change_record_parts writes a company's: " +
+	"update_company_profile_field and confirm_company_profile_field take a profile field as `field`; " +
+	"add_company_fact takes `category` and `field`, and the other fact actions take the `fact_key` read_record returns."
+
+func recordPartsDocument() recordPartsDoc {
+	return recordPartsDoc{
+		Note: recordPartsNote,
+		Company: recordPartsDocCompany{
+			ProfileFields:  companyProfileFieldKeys,
+			FactCategories: companyFactCategories,
+			FactFields:     companyFactFields,
+		},
+		Contact: recordPartsDocContact{ProfileFields: contactProfileFieldKeys},
+	}
 }
 
 // recordFieldsWrite is one tool's half: the shape per record_type, and the
@@ -139,7 +177,7 @@ type recordFieldsWrite struct {
 // recordFieldsVersion identifies the document's shape, not its content. A
 // caller caching it needs to know when the SHAPE changed; the field lists move
 // with crm.yaml on their own schedule and are re-read either way.
-const recordFieldsVersion = "1"
+const recordFieldsVersion = "2"
 
 func recordFieldsDocument() recordFieldsDoc {
 	return recordFieldsDoc{
@@ -147,6 +185,7 @@ func recordFieldsDocument() recordFieldsDoc {
 		Notation: recordFieldsNotation,
 		Create:   recordFieldsWrite{Fields: createRecordShapes, Notes: fieldNotes(createShapes, false)},
 		Update:   recordFieldsWrite{Fields: updateRecordShapes, Notes: fieldNotes(updateShapes, true)},
+		Parts:    recordPartsDocument(),
 	}
 }
 
@@ -165,23 +204,41 @@ func fieldNotes(shapes map[datasource.EntityType]reflect.Type, patch bool) []str
 	notes = append(notes, assigneeNote(shapes)...)
 	notes = append(notes, transcriptNote(shapes)...)
 	notes = append(notes, descriptionNote(shapes)...)
+	notes = append(notes, socialNote(shapes, patch)...)
 	return append(notes, customFieldNotes(shapes)...)
+}
+
+// socialNote says which keys a contact's `social` object takes and how it
+// lands, which its shape (`object`) cannot show. The keys come from the list
+// the contacts module refuses against. A patch
+// merges: a reader who believes it replaces sends every link to change one.
+func socialNote(shapes map[datasource.EntityType]reflect.Type, patch bool) []string {
+	if !describesField(shapes, "social") {
+		return nil
+	}
+	notes := []string{"A contact's `social` takes only the keys " + strings.Join(socialplatform.Keys(), ", ") +
+		"; any other key is refused by name. `social." + socialplatform.LinkedIn + "` takes only a LinkedIn " +
+		"profile link like " + socialplatform.LinkedInProfileExample + "; any other value is refused."}
+	if patch {
+		notes = append(notes, "A contact's `social` is merged on update: a key you do not send keeps its link, "+
+			"and a key sent as \"\" or null removes it.")
+	}
+	return notes
 }
 
 // sourceNote says what naming `source` does on this write.
 //
 // Only where the shapes actually carry the field. On create it is accepted and
-// then overwritten, so believing it took effect would be wrong. On update the
-// one record type that carries it is the lead, where `source` is the
-// administered "where did this come from" value and a patch genuinely
-// corrects it — the opposite of the create advice, so the two sentences are
-// kept apart by which write this is rather than by one shared note.
+// then overwritten, so believing it took effect would be wrong. On update only
+// the lead carries it. There a changed `source` is refused, and `origin` is the
+// field a caller means to correct.
 func sourceNote(shapes map[datasource.EntityType]reflect.Type, patch bool) []string {
 	if !describesField(shapes, "source") {
 		return nil
 	}
 	if patch {
-		return []string{"`source` on a lead is the administered lead-source key (see Settings › Data model); a patch corrects it, and the score follows."}
+		return []string{"`source` on a lead says how the row reached Margince and is read-only: any value but the stored one is refused, and it never scores. " +
+			"Where the lead came from is `origin`, an active key from `/lead-origins` (Settings › Leads); while the lead is open (new, contacted or engaged), a patch to it rescores the lead."}
 	}
 	return []string{"`source` is accepted but overwritten — this surface stamps its own provenance."}
 }
@@ -214,7 +271,9 @@ func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
 		// The patch half still owes the reader the pointer, because a contact's
 		// employer is the field they will look for first and not find.
 		return "A contact's employer is NOT a field here: employment is a relationship, created and " +
-			"archived as record_type=relationship — its endpoints are what it IS, so they cannot be patched."
+			"archived as record_type=relationship — its endpoints are what it IS, so they cannot be patched. " +
+			"To correct a wrong employer, find the edge with read_view view=relationships (contact_id, kind=employment), " +
+			"end it with update_record on that relationship (employment_status=former, ended_at), then create the right one."
 	}
 	// REQUIRES, not "and rejects any other". The schema's shape CHECKs pin the
 	// pair each kind must have and forbid the endpoints that would contradict it,

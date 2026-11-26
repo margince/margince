@@ -1,0 +1,6 @@
+{
+  "verb": "record_tax_rate",
+  "checks": [
+    "tax_rate.create"
+  ]
+}

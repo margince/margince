@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // EnsureActivityWritable is EnsureWritable for an activity, which has no
@@ -211,9 +212,14 @@ func linkTargetWritable(p principal.Principal, alias string, arg func(any) int) 
 		{leadIDColumn, tableLead, "wl"},
 		{projectIDColumn, tableProject, "wpr"},
 	} {
-		arms = append(arms, fmt.Sprintf(
+		arm := fmt.Sprintf(
 			`(%[1]s.%[2]s IS NOT NULL AND EXISTS (SELECT 1 FROM %[3]s %[4]s WHERE %[4]s.id = %[1]s.%[2]s AND %[5]s))`,
-			alias, t.column, t.table, t.probe, writeAuthorityPredicateAs(p, t.table, t.probe, arg)))
+			alias, t.column, t.table, t.probe, writeAuthorityPredicateAs(p, t.table, t.probe, arg))
+		// A project that came with a deal gives no one a say over the activity.
+		if t.table == tableProject {
+			arm = "(" + arm + " AND NOT " + provenance.InheritedProjectLinkSQL(alias+".activity_id", alias+"."+t.column) + ")"
+		}
+		arms = append(arms, arm)
 	}
 	return "(" + strings.Join(arms, " OR ") + ")"
 }

@@ -1,0 +1,14 @@
+{
+  "tool": "read_reports",
+  "action": "sdr_meetings",
+  "verb": "list_sdr_upcoming_meetings",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

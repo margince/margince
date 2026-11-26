@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -41,7 +42,7 @@ func falseMeetingCancelsDataTask(now func() time.Time) datatask.Task {
 	since := func() time.Time { return now().Add(-falseCancellationLookback) }
 	return datatask.Task{
 		ID: "core/1794138928_calendar_cancellations_a_guest_caused", Version: 1,
-		Title: "Reopening meetings a guest's calendar cancelled for everybody",
+		Title: systemtext.Literal("datatask.title.core.1794138928_calendar_cancellations_a_guest_caused"),
 		Steps: []datatask.Step{{
 			Name: "reopen_guest_cancellations", Limit: 100, MinLimit: 1,
 			Audit: datatask.AuditPolicy{PerRecord: true},

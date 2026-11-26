@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ReceiptDetail } from "../../components/receiptdetail";
-import { ReceiptReview } from "../../components/receiptreview";
+import { ReceiptVerbs } from "../../components/receiptverbs";
 import { sameCalendarDay } from "../../format/calendarday";
 import {
   formatDateTime,
@@ -11,13 +11,17 @@ import {
 } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { Receipt } from "../../lib/handled";
-import { receiptHeadline, receiptReason } from "../../lib/receiptcopy";
+import { headlineUnder, receiptReason } from "../../lib/receiptcopy";
+import { isOpenReceipt } from "../../lib/receiptstate";
 import { useViewerZone } from "../../lib/viewerzone";
 
 // The automatic change that closes a deal; the one whose reason is expected.
 const CLOSE_LOST = "deal_close_lost";
 
-/** One change: what moved and when, why, the evidence, and its verbs. */
+/**
+ * One change on the deal's line: what moved and when, why, the evidence, and
+ * its own Undo. The deal's name stands above it, so the line leaves it out.
+ */
 export function ChangeRow({
   receipt,
   asOf,
@@ -37,11 +41,9 @@ export function ChangeRow({
     receiptReason(receipt, t, locale) ??
     (closed && receipt.headline ? t("brief.done.noReason") : null);
   return (
-    <li className="brief-done-change">
+    <li className="brief-done-change" data-state={changeState(receipt)}>
       <p className="brief-done-what">
-        {closed && receipt.headline
-          ? t("brief.done.markedLost")
-          : receiptHeadline(receipt, t, locale, zone)}
+        <ChangeWhat receipt={receipt} />
       </p>
       <time
         className="t-caption brief-done-when"
@@ -59,12 +61,29 @@ export function ChangeRow({
           <blockquote>{receipt.customer_quote}</blockquote>
         </figure>
       )}
-      <ReceiptDetail receipt={receipt} />
       <div className="brief-done-controls">
-        <ReceiptReview receipt={receipt} onDone={onSettled} />
+        <ReceiptVerbs receipt={receipt} onDone={onSettled} />
+        <ReceiptDetail receipt={receipt} />
       </div>
     </li>
   );
+}
+
+/** What one change moved, without the deal it moved it on. */
+function ChangeWhat({ receipt }: Readonly<{ receipt: Receipt }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  return receipt.kind === CLOSE_LOST && receipt.headline
+    ? t("brief.done.markedLost")
+    : headlineUnder(receipt, t, locale, zone);
+}
+
+// The dot a change wears on the deal's line: it stands, was undone, or a
+// later change replaced it.
+function changeState(receipt: Receipt): string {
+  if (receipt.review?.reversed || receipt.undo?.reversed) return "undone";
+  return isOpenReceipt(receipt) ? "open" : "replaced";
 }
 
 // The hour for a change from today, the day for an older one: the list spans

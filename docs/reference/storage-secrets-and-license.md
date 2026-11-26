@@ -60,14 +60,16 @@ command line, where any user on the machine can read argv.
 
 ### Keys derived from the root key
 
-Two more keys are derived from the root key with `HKDF-SHA256`, each under its own label. Neither is
-stored anywhere, and neither needs a setting of its own.
+Three more keys are derived from the root key with `HKDF-SHA256`, each under its own label. None is
+stored anywhere, and none needs a setting of its own.
 
 - **The erasure list key.** The erasure list, the address hashes the `anonymize` action keeps, and
   the address hash of a failed login are each an HMAC under it. Each row records the key's id
   (`key_id`, `address_key_id`, `anonymized_address_key_id`, `email_key_id`).
 - **The preference link key.** A preference link names its row and carries an HMAC under it, so
   the database holds no link that works.
+- **The return link key.** The link an erased subject confirms to be stored again carries the
+  request and an HMAC under it. Without a root key, no such link is mailed or accepted.
 
 The data task `core/1794125373_keyed_privacy_identifiers` moves rows written before the key to the
 keyed form, and hashes the preference links stored before it. Until it reaches a row, the row's
@@ -211,7 +213,10 @@ The `license:` block points at the license token of the installation. Margince c
 `backend/internal/platform/licensecheck/module/`. It makes no call out of any kind. So an
 installation with no network proves its license the same way a connected one does. The tools of
 the publisher install the module, its pin and its digest together, and nobody edits them by hand.
-A blob that stops matching its recorded digest fails `make check`.
+
+The `VERSION` file names the release tag on its first line and, on its second, the digest of the
+blob that tag was written for. A blob that stops matching its recorded digest, or a `VERSION`
+written for another blob, fails `make check`.
 
 | field | default | what it does |
 |---|---|---|
@@ -222,9 +227,9 @@ There are three postures. This is what each one does at boot:
 
 | posture | boot | reported as |
 |---|---|---|
-| **no token set up** | **refuses to boot in production**; starts with a warning when `MARGINCE_ENV` is `dev` or `test` | `margince_license_posture{state="absent"} 1` |
-| **token checked and good** | starts | `margince_license_posture{state="valid"} 1`, plus `margince_license_seats` when the license grants a seat count |
-| **token refused** | **refuses to boot** (api and worker both), naming the own reason of the module and the setting to fix | (none) |
+| **no token set up** | starts. In production it runs on its [trial](#the-trial); under `MARGINCE_ENV` `dev` or `test` it runs with no license and no trial, with a warning | `margince_license_posture{state="absent"} 1` |
+| **token checked and good** | starts. Past its end date it starts **locked**, as an ended trial is: there is no grace period | `margince_license_posture{state="valid"} 1`, plus `margince_license_seats` when the license grants a seat count |
+| **token refused** | starts **locked** (api and worker both), and logs an error with the own reason of the module and the setting to fix | `margince_license_posture{state="rejected"} 1` |
 
 Margince reads the token where it is declared, and never seals it. A token an earlier release sealed
 in the key vault is read only when nothing declares one. See
@@ -232,27 +237,73 @@ in the key vault is read only when nothing declares one. See
 It also covers the boot error that a vault Margince cannot reach causes, in place of an `absent`
 posture.
 
-**A production installation serves only on a license.** The posture decides it, and `MARGINCE_ENV`
-fails closed. So an installation that names nothing is production, and must have a license. When
-Margince refuses, it names both ways out: set up the token, or name the installation as not
-production.
+### The trial
 
-A refused license refuses the boot in *every* posture. To name yourself as not
-production says you have no license. It does not let you run one the module has refused.
+A production installation with no token runs on a trial of 14 days. `MARGINCE_ENV` fails closed, so
+an installation that names nothing is production. The trial starts when the installation's
+workspace is created: the earliest `created_at` in `workspace`, archived rows included. There is no
+grace period. Nothing about the trial is signed and nothing calls out: a changed date or changed
+code breaks the license terms, not a check (`installtrial.Trial`,
+`licensecheck.TrialLength`).
+
+While the trial runs, everything works and seats are not capped. A seat with `license:read` sees how
+many days are left in the shell and in **Settings → Seats and license**.
+
+When the trial ends, the installation stops working until a token is set up:
+
+- the api refuses every change with `403 trial_ended`. Sign-in, a seat's own password, MFA and
+  sessions, `/installation/license*`, `POST /exports` and `/data-subject-requests*` stay open, and
+  so does every read;
+- every agent tool call is refused with `trial_ended`;
+- no role does background work. A job is snoozed, an event lane stops reading, and the outbox
+  relay stops shipping. Events wait in the outbox, so nothing is lost. The inline relay and webhook
+  lane in the api stop the same way. While it waits, the worker reads the token again every 5
+  minutes;
+- `/me` answers `trial_ended: true`, and the app shows every seat the screen that says so.
+
+To end the lock, set up the token and start the api and the worker again. A token in
+`MARGINCE_LICENSE` reaches a role only when it starts. Or replace a token file and click
+**Check now** on the lock screen, which a seat that may change installation settings sees. That
+check reads the file in the api process that answers it. Any other api process keeps the lock until
+it starts again or makes its daily check. The worker reads the file within 5 minutes, and a
+snoozed job asks again within 10 minutes of that.
+
+A refused license, or one past its end date, locks the installation in *every* posture, the same
+way an ended trial does. Changes and agent calls answer `license_lapsed`, background work waits, and
+`/me` answers `license_lapsed: true`, so every seat sees the screen that says so. There is no grace
+period: the renewal notice warns 90 days before the end date. To name yourself as not production
+does not let you run a license the module has refused.
 
 **What Margince refuses.** A signature it does not trust, the wrong issuer, or no grant for this
 product at this generation. It also refuses a license whose end date is past the grace time the
-module carries. A module that cannot run at all is refused the same way, because that is a package
+module carries. A module that cannot run at all refuses the boot instead, because that is a package
 error. To read it as no license would lower the installation without a word.
 
 A `token_file` that is
 set but cannot be read, or is empty, is also a boot error. So a wrong path does not count as a wish
-to run with no license.
+to run with no license. Margince reads a `token_file` with the same size limit as a `${file:…}`
+reference, and drops the spaces and empty lines around the token.
 
-**An ended license never stops a running process.** A license that ends while the process
-runs leaves it serving. The api checks again daily, and its `/metrics` posture gets worse; nothing
-goes offline mid-month without a human there. Each daily check reads `token_file` (or the variable)
-again. So a license replaced in place applies within a day, without starting the process again.
+A license that ends while the process runs locks it at the next check. The api and the worker
+each check again daily. The api also checks at once on **Check now**, and the worker every 5
+minutes while it is locked. From that
+check on, the installation is locked as above. The data stays, and reads still answer.
+
+Each daily check reads the token file again: the file a `token: ${file:…}` reference names, or the
+`token_file` path. So a token replaced in that file applies within a day, without starting the
+process again. A token from the environment (`MARGINCE_LICENSE`, or `token: ${env:…}`) cannot
+change while the process runs, because a process's environment is fixed when it starts. A token
+changed there applies at the next start.
+
+**Check now.** Settings → Seats has a **Check now** button for admin and ops. It runs the same
+check at once, through `POST /installation/license/check`, and shows the result. It needs
+`installation_settings` update and `license` read. It reads what the daily check reads: a token
+replaced in the token file, and not a changed environment variable. It writes nothing, and nobody
+can type a token into the app.
+
+Check now checks only the api process that answers the request. The worker and any other api
+process keep their daily check. A request that comes while a check runs waits for that check and shows its result. A token that cannot be read, or a module that cannot run, answers
+`503`. The process then keeps its last result, and the server log says why.
 
 Some results are not a result about the license: a token it cannot read, or a module that failed to
 run. Those keep the posture the process last worked out, and are logged as what they are. None of
@@ -269,8 +320,8 @@ them is evidence about the license.
   so an admin at the limit can make room.
 - A license that carries no seat count limits nothing, and the same goes for a dev installation with
   no license.
-- Margince reads the limit live, so a license replaced in place raises it on the next daily check,
-  without starting the process again. The number an admin is refused against is the number the
+- Margince reads the limit live. A license replaced in place raises it on the next daily check,
+  or at once on **Check now**, without starting the process again. The number an admin is refused against is the number the
   license screen and `margince_license_seats` report.
 
 **Which authority a license must come from.** A production installation accepts one:

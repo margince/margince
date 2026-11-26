@@ -36,7 +36,7 @@ Return ONLY a JSON object: {"sections":[{"kind":"summary|products_services|marke
 The sections answer, in order: what this company is; what they sell; where and to whom; who decides; what they claim sets them apart; their size, age and registration. Omit a section you have nothing real to say in.
 Describe THEM. This is not about our relationship with them, our pipeline, or whether they are a good fit — a different surface answers that, and a sentence here about either belongs there instead.
 Every sentence is a FACT: it restates something the summary says and cites the record it came from. You are rewriting recorded values as prose for a human reader, not drawing conclusions from them. If the summary does not say it, do not write it.
-Cite the refs the summary gave you; a record's entity_type is the key the summary lists it under: profile_field or fact. Every sentence must cite at least one — a sentence you cannot attach a record to is one to leave out.
+Cite the refs the summary gave you; a record's entity_type is the key the summary lists it under: company, profile_field or fact. Every sentence must cite at least one — a sentence you cannot attach a record to is one to leave out.
 Put refs ONLY in evidence. A ref must never appear in a sentence's text — the reader sees the text, and a ref there is unreadable.
 Write plainly, one claim per sentence, and never open two sentences with the company name.`
 
@@ -64,6 +64,7 @@ func DossierRequest(in Input, lang string) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: dossierSchema(),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       model.AboutNoContact("the company's own recorded facts"),
 	}
 }
 
@@ -87,7 +88,7 @@ func WriteDossier(ctx context.Context, lane Completer, in Input, lang string) ([
 	}
 	written, err := writeWithModel(ctx, lane, in, lang)
 	if err != nil {
-		// The declared degrade posture (on_budget_exhausted: degrade), not a
+		// The interactive degrade posture (execution_mode: interactive), not a
 		// swallowed error. A lane that is unavailable, over budget or answering
 		// unparseable JSON must not take the page down: the reader gets the
 		// floor, labelled as the floor's.

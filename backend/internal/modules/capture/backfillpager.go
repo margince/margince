@@ -32,7 +32,7 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 	var (
 		connID        ids.UUID
 		name          string
-		grantedBy     ids.UserID
+		grantedBy     *ids.UserID
 		credentialRef *string
 		authBytes     []byte
 		after         time.Time
@@ -45,11 +45,11 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 		return tx.QueryRow(ctx, `
 			SELECT b.connection_id, b.after_date, b.cursor, b.status, c.provider, c.user_id, c.credential_ref, c.auth, c.generation, `+backfillMatchesAccount+`
 			FROM capture_backfill b JOIN capture_connection c ON c.id = b.connection_id
-			WHERE b.id = $1`, backfillID).
+			WHERE b.id = $1 AND (c.user_id IS NOT NULL OR `+sharedMailboxLiveSQL+`)`, backfillID).
 			Scan(&connID, &after, &cursor, &status, &name, &grantedBy, &credentialRef, &authBytes, &generation, &sameAccount)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return true, false, 0, fmt.Errorf("capture: backfill %s: %w", backfillID, apperrors.ErrNotFound)
+		return true, false, 0, fmt.Errorf("this history import no longer exists: %w", apperrors.ErrNotFound)
 	}
 	if err != nil {
 		return false, false, 0, err
@@ -69,18 +69,21 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 		// StartBackfill for the connection and never surfacing as failed.
 		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))
 	}
-	bf, ok := supportsBackfill(c)
-	if !ok {
+	if _, ok := supportsBackfill(c); !ok {
 		return true, false, 0, errors.Join(ErrBackfillUnsupported, r.failBackfill(ctx, backfillID, ErrBackfillUnsupported))
 	}
-	runCtx, err := r.connectorContext(ctx, name, grantedBy)
+	runCtx, err := r.runContext(ctx, name, grantedBy, connID)
 	if err != nil {
 		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))
 	}
 	runCtx = withMailboxConnection(runCtx, connID, generation)
-	auth, err := r.syncCredential(runCtx, credentialRef, authBytes)
+	c, auth, err := r.runCredential(runCtx, c, grantedBy, credentialRef, authBytes)
 	if err != nil {
 		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))
+	}
+	bf, ok := supportsBackfill(c)
+	if !ok {
+		return true, false, 0, errors.Join(ErrBackfillUnsupported, r.failBackfill(ctx, backfillID, ErrBackfillUnsupported))
 	}
 
 	pageToken, err := backfillPageCursor(cursor)
@@ -267,10 +270,14 @@ const (
 	backfillRateBackoffCap  = 30 * time.Minute
 )
 
-// backfillPageDelay is the wait between a committed page and the next one. The
-// admission slot already keeps an import from crowding out another, so a page
-// that finished starts the next at once.
-const backfillPageDelay time.Duration = 0
+// WithBackfillPageDelay sets the wait between a committed page and the next
+// one. The admission slot already keeps an import from crowding out another,
+// so the default is none: a page that finished starts the next at once. A
+// longer wait trades import speed for load on the database and the worker.
+func (r *Registry) WithBackfillPageDelay(d time.Duration) *Registry {
+	r.backfillPageDelay = max(0, d)
+	return r
+}
 
 // commitBackfillPage advances the cursor and remaining counters together.
 // Creation credits already belong to their domain transactions.
@@ -305,9 +312,15 @@ func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, 
 		rowsAffected = tag.RowsAffected()
 		if rowsAffected > 0 {
 			if finishing {
-				return reconcileBackfillCreationsTx(ctx, tx, backfillID)
+				if err := settleUnreadPeriodTx(ctx, tx, backfillID); err != nil {
+					return err
+				}
+				if err := reconcileBackfillCreationsTx(ctx, tx, backfillID); err != nil {
+					return err
+				}
+				return retryWeatheredSyncTx(ctx, tx, backfillID)
 			}
-			return rescheduleBackfillTx(ctx, tx, backfillID, backfillPageDelay)
+			return rescheduleBackfillTx(ctx, tx, backfillID, r.backfillPageDelay)
 		}
 		return cancelReboundBackfillTx(ctx, tx, backfillID)
 	})

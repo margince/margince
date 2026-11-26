@@ -3,32 +3,17 @@
 
 package compose
 
-// The vocabulary a generic question may be asked in, derived from the report
-// catalog and narrowed by the caller's grants.
-//
-// DERIVED, not declared. Every entity, dimension and measure here is one a
-// prebuilt report already groups or aggregates by, which buys two things a
-// hand-written catalog would not: the row-scope and reference-scope machinery
-// already knows how to gate each field, and a column added to a spec appears
-// here without anybody remembering to add it twice.
-//
-// The narrowing happens BEFORE the query is planned. A field the caller may not
-// read is absent from their schema, so naming it answers "no such field" — the
-// alternative sentence, "you may not read that", tells somebody the column
-// exists, which is the disclosure the grant was for.
+// The vocabulary comes from report specs and is narrowed before a model sees it.
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
 	"maps"
 	"slices"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/dealcoverage"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -55,46 +40,47 @@ func AnalyticsSchemaIn(ctx context.Context, tx pgx.Tx) (analyticsquery.Schema, m
 
 func analyticsSchemaFrom(ctx context.Context, specs map[string]reportSpec) analyticsquery.Schema {
 	entities := map[string]analyticsquery.Entity{}
+	// Record one admission check; the per-population checks below only filter the vocabulary.
+	if auth.RequireOneOf(ctx, analyticsPopulationChecks(specs)...) != nil {
+		return analyticsquery.Schema{Entities: entities, Version: schemaVersion(entities)}
+	}
 	for key, spec := range specs {
-		// The population's OWN read gate, applied at derivation. grantedSpec
-		// below narrows only the fields that read ANOTHER record type
-		// (spec.grants); the base entity's grant is the engine's admission
-		// gate, and a derivation that skipped it would name populations —
-		// here, in the vocabulary document, and in the unknown-name refusal —
-		// to a seat that may not read a row of them.
-		if requireAnalyticsRead(ctx, spec.entity) != nil {
+		// Refuse to name a population whose base entity the caller cannot read.
+		if _, err := auth.Unrecorded(ctx, string(spec.entity), principal.ActionRead); err != nil {
 			continue
 		}
 		granted := grantedSpec(ctx, spec)
 		entity := analyticsquery.Entity{
 			Name: key,
-			// fromClause() and not the bare table: it carries the alias `t`
-			// every spec expression is written against, plus the spec's fixed
-			// lookup joins. Reassembling it here would be a second spelling of
-			// the report engine's FROM, and the two would disagree the first
-			// time a spec grew a join.
+			// Reuse the report engine's aliases and fixed joins.
 			From:        granted.fromClause(),
 			BaseWhere:   granted.populationWhere(),
+			Rows:        spec.basePlain,
 			Fields:      map[string]analyticsquery.Field{},
 			Contributor: contributorColumn(granted),
 		}
-		addFields(entity.Fields, withoutKeys(granted.dimensions, slices.Concat(granted.rowKeys, granted.rowMoments)), analyticsquery.KindDimension)
+		addFields(entity.Fields, analyticsquery.WithoutKeys(granted.dimensions, slices.Concat(granted.rowKeys, granted.rowMoments)), analyticsquery.KindDimension)
 		addFields(entity.Fields, granted.measures, analyticsquery.KindMeasure)
 		// Narrowed by grant, not spec.filters. A filter reading another record
 		// type owes that type's read grant, and naming one the caller lacks
 		// would advertise a narrowing that answers 403.
 		addFields(entity.Fields, grantedFilters(ctx, spec), analyticsquery.KindFilter)
-		addFields(entity.Fields, onlyKeys(granted.dimensions, granted.rowMoments), analyticsquery.KindFilter)
+		addFields(entity.Fields, analyticsquery.OnlyKeys(granted.dimensions, granted.rowMoments), analyticsquery.KindFilter)
 		for name, field := range entity.Fields {
+			// The same template the report engine renders, so one declaration
+			// decides the question both doors ask.
+			field.Predicate = spec.filterPredicates[name]
 			field.Domain = filterDomain(spec, field.Expr)
 			field.Currency = granted.perRowCurrency(name)
 			field.Unpriced = granted.sumCoverage[name]
+			field.PartialSum = granted.partialSums && field.Unpriced != ""
 			field.Period = periodFieldOf(name, field.Expr)
 			if custom, ok := spec.customFields[field.Expr]; ok {
 				field = custom.describe(field)
 			}
 			entity.Fields[name] = field
 		}
+		entity.Coverage = partialSumCoverage(granted, entity.Fields)
 		// An entity with nothing left to name is not offered. A population a
 		// caller can see the existence of but ask nothing about is a name that
 		// only tells them a report exists.
@@ -106,38 +92,27 @@ func analyticsSchemaFrom(ctx context.Context, specs map[string]reportSpec) analy
 	return analyticsquery.Schema{Entities: entities, Version: schemaVersion(entities)}
 }
 
-func withoutKeys(from map[string]string, keys []string) map[string]string {
-	out := make(map[string]string, len(from))
-	for name, expr := range from {
-		if !slices.Contains(keys, name) {
-			out[name] = expr
-		}
+// partialSumCoverage is how a population's partial sums state what they leave
+// out, or nil when none is offered. A reader not granted the currency gets none listed.
+// Rows with a masked amount or currency never reach the counts, because the mask narrows the statement.
+func partialSumCoverage(granted reportSpec, fields map[string]analyticsquery.Field) *analyticsquery.MoneyCoverage {
+	if !granted.partialSums || !slices.ContainsFunc(slices.Collect(maps.Values(fields)), func(f analyticsquery.Field) bool { return f.PartialSum }) {
+		return nil
 	}
-	return out
-}
-
-func onlyKeys(from map[string]string, keys []string) map[string]string {
-	out := make(map[string]string, len(keys))
-	for _, name := range keys {
-		if expr, ok := from[name]; ok {
-			out[name] = expr
-		}
+	currency, ok := granted.dimensions[fieldCurrency]
+	if !ok {
+		currency = "NULL::text"
 	}
-	return out
+	return &analyticsquery.MoneyCoverage{Value: pipelineBaseValueExpr, Amount: dealcoverage.AmountSQL, Currency: currency}
 }
 
 func addFields(into map[string]analyticsquery.Field, from map[string]string, kind analyticsquery.FieldKind) {
 	for name, expr := range from {
-		// A name already served keeps the kind it has. Most filters are also
-		// dimensions, and a dimension is the more capable of the two: it can
-		// be grouped on as well as narrowed by. Overwriting it with the filter
-		// kind would take the grouping away.
+		// A dimension remains groupable when it is also offered as a filter.
 		if _, served := into[name]; served {
 			continue
 		}
-		// A measure is a number by construction — it is the thing an aggregate
-		// adds up — so a caller's 1000 binds to it as readily as their "1000".
-		// A dimension is text unless its column says otherwise.
+		// Aggregate inputs bind as numbers; dimensions use their declared shape.
 		shape := columnValueShapes[expr]
 		if kind == analyticsquery.KindMeasure {
 			shape = analyticsquery.ShapeNumber
@@ -146,18 +121,7 @@ func addFields(into map[string]analyticsquery.Field, from map[string]string, kin
 	}
 }
 
-// columnValueShapes are the EXPRESSIONS whose value is something other than
-// text. A filter against one carries the JSON literal a question is naturally
-// written in, rather than a quoted spelling of it.
-//
-// Keyed by the expression rather than declared per spec, because what a column
-// holds is the COLUMN's property and not each spec's that exposes it:
-// win_probability is a dimension of two reports today, and a per-spec
-// declaration would let the two disagree about it.
-//
-// A column missing from here is compared as text, which refuses its literal
-// with the quoted spelling that binds — recoverable advice, never the opaque
-// fault this list exists to keep a caller out of.
+// Shapes belong to expressions so two reports cannot type the same field differently.
 var columnValueShapes = map[string]analyticsquery.ColumnShape{
 	colWinProbability:    analyticsquery.ShapeNumber,
 	colBecameOpportunity: analyticsquery.ShapeBoolean,
@@ -166,73 +130,42 @@ var columnValueShapes = map[string]analyticsquery.ColumnShape{
 	// anyone would write it.
 	deals.StalledSQL("t"):        analyticsquery.ShapeBoolean,
 	deals.PartnerSourcedSQL("t"): analyticsquery.ShapeBoolean,
+	// Record ids, held by TestEveryIDNamedFieldReadsAnIDShapedColumn.
+	colRowID: analyticsquery.ShapeID, colOwnerID: analyticsquery.ShapeID, colPipelineID: analyticsquery.ShapeID,
+	colStageID: analyticsquery.ShapeID, colCompanyID: analyticsquery.ShapeID, colPartnerCompanyID: analyticsquery.ShapeID,
+	colProjectID: analyticsquery.ShapeID, colProjectCustomer: analyticsquery.ShapeID, colCreditedSeat: analyticsquery.ShapeID,
+	colCreditedSeats:       analyticsquery.ShapeID,
+	colMeetingCreditedSeat: analyticsquery.ShapeID, activityProjectIDExpr: analyticsquery.ShapeID,
 }
 
-// schemaVersion is a digest of the vocabulary this caller was handed.
-//
-// Every answer echoes it, so a caller comparing two answers can tell whether
-// they were asked in the same vocabulary. Nothing refuses on it: a question
-// carries no version and is compiled against the vocabulary current when it
-// runs, so a field that has since gone is refused by name.
-//
-// Per-caller rather than installation-wide, deliberately. A seat that LOSES a
-// grant is asking in a different vocabulary, and an installation-wide version
-// would not move when one contact's roles changed.
+// valueShape is the shape of the column a filter or dimension name reads.
+func (s reportSpec) valueShape(name string) analyticsquery.ColumnShape {
+	expr, _ := predicateExpr(s, name)
+	return columnValueShapes[expr]
+}
+
 func schemaVersion(entities map[string]analyticsquery.Entity) string {
-	sum := sha256.New()
-	for _, name := range slices.Sorted(maps.Keys(entities)) {
-		sum.Write([]byte(name))
-		entity := entities[name]
-		// The population is part of the meaning: a saved answer over a base
-		// predicate that has since narrowed must not look comparable to today's.
-		sum.Write([]byte(entity.BaseWhere))
-		for _, field := range slices.Sorted(maps.Keys(entity.Fields)) {
-			sum.Write([]byte(field))
-			sum.Write([]byte(entity.Fields[field].Expr))
-			sum.Write([]byte(entity.Fields[field].Kind))
-			writeCustomMeaning(sum, entity.Fields[field])
-			if money := entity.Fields[field].Currency; money != nil {
-				sum.Write([]byte("currency:" + money.By + ":" + money.Base))
-			}
-		}
-	}
-	return hex.EncodeToString(sum.Sum(nil))[:16]
+	return analyticsquery.SchemaVersion(entities)
 }
 
 // DescribeAnalyticsSchema renders the vocabulary as prose for a model.
-//
-// Prose rather than JSON because it reaches a model inside a tool description
-// budget, and a nested object spends most of that budget on punctuation.
 func DescribeAnalyticsSchema(schema analyticsquery.Schema) string {
-	var out strings.Builder
-	for _, name := range schema.EntityNames() {
-		entity := schema.Entities[name]
-		out.WriteString(name)
-		out.WriteString("\n  group by: ")
-		out.WriteString(strings.Join(entity.FieldNames(analyticsquery.KindDimension), ", "))
-		out.WriteString("\n  measure:  ")
-		out.WriteString(strings.Join(entity.FieldNames(analyticsquery.KindMeasure), ", "))
-		out.WriteString("\n")
-		describeCurrencyBasis(&out, entity)
-		describeCustomFields(&out, entity)
-	}
-	return out.String()
+	return analyticsquery.DescribeSchema(schema)
 }
 
-// describeCurrencyBasis names the measures kept in each row's own currency, so a
-// model groups them by currency instead of learning the rule from a refusal.
-func describeCurrencyBasis(out *strings.Builder, entity analyticsquery.Entity) {
-	for _, name := range entity.FieldNames(analyticsquery.KindMeasure) {
-		money := entity.Fields[name].Currency
-		if money == nil {
-			continue
-		}
-		fmt.Fprintf(out, "  %s is in each row's own currency: group by %s", name, money.By)
-		if money.Base != "" {
-			fmt.Fprintf(out, ", or measure %s, converted to the base currency", money.Base)
-		}
-		out.WriteString("\n")
+// analyticsPopulationChecks is the read check of each population specs name,
+// once each, in a fixed order so the recorded check reads the same every call.
+func analyticsPopulationChecks(specs map[string]reportSpec) []auth.Check {
+	var objects []string
+	for _, spec := range specs {
+		objects = append(objects, string(spec.entity))
 	}
+	slices.Sort(objects)
+	checks := make([]auth.Check, 0, len(objects))
+	for _, object := range slices.Compact(objects) {
+		checks = append(checks, auth.Check{Object: object, Actions: []principal.Action{principal.ActionRead}})
+	}
+	return checks
 }
 
 func requireAnalyticsRead(ctx context.Context, entity datasource.EntityType) error {

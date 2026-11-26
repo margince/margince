@@ -44,18 +44,21 @@ func rbacActor(ctx context.Context) (principal.Principal, error) {
 // methods carry the room predicate that grants it. Nothing in platform/auth
 // admits a buyer, and the refusal is stated once here so a gate added later
 // inherits it by calling the same helper.
-func refuseBuyer(p principal.Principal, what string) error {
+func refuseBuyer(p principal.Principal) error {
 	if p.Type != principal.PrincipalBuyer {
 		return nil
 	}
-	return fmt.Errorf("%s: a Deal Room participant holds no CRM authority: %w",
-		what, apperrors.ErrPermissionDenied)
+	return fmt.Errorf("a Deal Room participant holds no CRM authority: %w", apperrors.ErrPermissionDenied)
 }
 
 // Require is the object-level admission gate: the actor's merged role
 // policy must grant the action on the object type. The system principal
 // (workspace provisioning) is trusted by construction and has no role.
 func Require(ctx context.Context, object string, action principal.Action) error {
+	object, err := gateObject(object)
+	if err != nil {
+		return err
+	}
 	c := Check{Object: object, Actions: []principal.Action{action}}
 	noteCheck(ctx, c)
 	return refusedOn(ctx, c, probeCheck(ctx, c))
@@ -74,22 +77,6 @@ func Allows(ctx context.Context, object string, action principal.Action) bool {
 	return probe(ctx, object, action) == nil
 }
 
-// AllowsWrite is Allows under the seat ceiling, for a control a read offers: a
-// read seat writes nothing, whatever its role grants. It records nothing.
-func AllowsWrite(ctx context.Context, object string, action principal.Action) bool {
-	p, err := rbacActor(ctx)
-	if err != nil {
-		return false
-	}
-	return seatAdmitsWrites(p) && Allows(ctx, object, action)
-}
-
-// seatAdmitsWrites is the seat ceiling every offered write sits under. The
-// system principal holds no seat and is trusted by construction.
-func seatAdmitsWrites(p principal.Principal) bool {
-	return p.Type == principal.PrincipalSystem || p.SeatType.CanMutate()
-}
-
 // RequireAny admits when the actor holds ANY of the listed actions on the
 // object. It exists for a write whose exact action is not yet knowable —
 // an upsert learns insert-vs-overwrite only from the table — so the caller
@@ -97,19 +84,13 @@ func seatAdmitsWrites(p principal.Principal) bool {
 // connection. It is the upfront half of a pair, never a substitute for
 // requiring the specific action once the write knows it (see UpsertAction).
 func RequireAny(ctx context.Context, object string, actions ...principal.Action) error {
-	p, err := rbacActor(ctx)
+	object, err := gateObject(object)
 	if err != nil {
 		return err
 	}
 	c := Check{Object: object, Actions: actions}
 	noteCheck(ctx, c)
-	if err := refuseBuyer(p, object); err != nil {
-		return refusedOn(ctx, c, err)
-	}
-	if c.HeldBy(p) {
-		return nil
-	}
-	return refusedOn(ctx, c, fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied))
+	return refusedOn(ctx, c, probeCheck(ctx, c))
 }
 
 // RequireAnyObject admits when the actor holds the action on AT LEAST ONE
@@ -136,13 +117,13 @@ func RequireAnyObject(ctx context.Context, action principal.Action) error {
 	}
 	c := Check{Object: anyObject, Actions: []principal.Action{action}}
 	noteCheck(ctx, c)
-	if err := refuseBuyer(p, string(action)); err != nil {
+	if err := refuseBuyer(p); err != nil {
 		return refusedOn(ctx, c, err)
 	}
 	if c.HeldBy(p) {
 		return nil
 	}
-	return refusedOn(ctx, c, fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied))
+	return refusedOn(ctx, c, refuseGrant(c))
 }
 
 // UpsertAction names the grant an upsert actually demands once it knows
@@ -178,7 +159,7 @@ func RequireHuman(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := refuseBuyer(p, "human-only operation"); err != nil {
+	if err := refuseBuyer(p); err != nil {
 		return err
 	}
 	if p.Type == principal.PrincipalAgent {
@@ -236,7 +217,7 @@ func RequireMember(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return refuseBuyer(p, "member-only operation")
+	return refuseBuyer(p)
 }
 
 // RequireSystem admits ONLY the system principal, and is the admission of a
@@ -438,11 +419,11 @@ func RequireCoach(ctx context.Context) error {
 	}
 	c := Check{Object: objTeamLead, Actions: []principal.Action{principal.ActionCreate}}
 	noteCheck(ctx, c)
-	if err := refuseBuyer(p, "coaching a colleague"); err != nil {
+	if err := refuseBuyer(p); err != nil {
 		return refusedOn(ctx, c, err)
 	}
 	if !leads(p, principal.ActionCreate) {
-		return refusedOn(ctx, c, fmt.Errorf("coaching a colleague: %w", apperrors.ErrPermissionDenied))
+		return refusedOn(ctx, c, refuseGrant(c))
 	}
 	return nil
 }
@@ -464,13 +445,13 @@ func RequireAdmin(ctx context.Context) error {
 	}
 	c := Check{Admin: true}
 	noteCheck(ctx, c)
-	if err := refuseBuyer(p, "admin-only operation"); err != nil {
+	if err := refuseBuyer(p); err != nil {
 		return refusedOn(ctx, c, err)
 	}
 	if c.HeldBy(p) {
 		return nil
 	}
-	return refusedOn(ctx, c, fmt.Errorf("admin-only operation: %w", apperrors.ErrPermissionDenied))
+	return refusedOn(ctx, c, refuseGrant(c))
 }
 
 // AdminGranted is RequireAdmin read as a boolean, for a branch that widens an
@@ -493,5 +474,5 @@ func RequireRowScope(ctx context.Context, least principal.RowScope) error {
 	if c.HeldBy(p) {
 		return nil
 	}
-	return refusedOn(ctx, c, fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied))
+	return refusedOn(ctx, c, refuseGrant(c))
 }

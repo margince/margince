@@ -14,8 +14,8 @@ package migration
 // SkippedRow is one disclosed skip in the run report.
 type SkippedRow struct {
 	ExternalID string `json:"external_id"`
-	// Line is the file line the row came from, so the reader reading the report
-	// can go to it. Zero when the source has no file behind it.
+	// Line is the row number the row came from (the header is row 1, as in a
+	// spreadsheet), so the reader can go to it. Zero when the source has no file behind it.
 	Line   int    `json:"line,omitempty"`
 	Reason string `json:"reason"`
 	Column string `json:"column,omitempty"`
@@ -41,21 +41,22 @@ func (s SkippedRow) Why() Reason { return Reason{Code: s.Code, Params: s.Params}
 // The kinds of problem a report names. The contract's ImportProblemKind enum
 // is this same list, and a test holds the two equal.
 const (
-	ProblemBrokenLink   = "broken_link"
-	ProblemDroppedLink  = "dropped_link"
-	ProblemInvalidValue = "invalid_value"
-	ProblemUnknownOwner = "unknown_owner"
-	ProblemNewTag       = "new_tag"
-	ProblemDuplicate    = "duplicate"
-	ProblemPermission   = "permission"
-	ProblemUnusableRow  = "unusable_row"
+	ProblemBrokenLink         = "broken_link"
+	ProblemDroppedLink        = "dropped_link"
+	ProblemInvalidValue       = "invalid_value"
+	ProblemUnknownOwner       = "unknown_owner"
+	ProblemNewTag             = "new_tag"
+	ProblemDuplicate          = "duplicate"
+	ProblemPermission         = "permission"
+	ProblemUnusableRow        = "unusable_row"
+	ProblemIncompleteIdentity = "incomplete_identity"
 )
 
 // ProblemKinds answers every problem kind, in a new slice the caller may sort.
 func ProblemKinds() []string {
 	return []string{
 		ProblemBrokenLink, ProblemDroppedLink, ProblemInvalidValue, ProblemUnknownOwner,
-		ProblemNewTag, ProblemDuplicate, ProblemPermission, ProblemUnusableRow,
+		ProblemNewTag, ProblemDuplicate, ProblemPermission, ProblemUnusableRow, ProblemIncompleteIdentity,
 	}
 }
 
@@ -152,6 +153,8 @@ type SkippedAssoc struct {
 	// before they existed has only Reason.
 	Code   ReasonCode `json:"reason_code,omitempty"`
 	Params Params     `json:"params,omitempty"`
+	// RowSkipped says the edge's own row does not land, whatever the reason.
+	RowSkipped bool `json:"row_skipped,omitempty"`
 }
 
 // record folds one row's outcome into the class's disposition.
@@ -178,6 +181,12 @@ func (or *ObjectReport) record(row Row, res EnsureResult) {
 	}
 	if res.Disclosure != "" {
 		or.Disclosures = append(or.Disclosures, res.Disclosure)
+	}
+	if !res.Skipped {
+		for _, warning := range res.Warnings {
+			warning.ExternalID, warning.Line = row.ExternalID, row.Line
+			or.Warnings = append(or.Warnings, warning)
+		}
 	}
 	if res.Problem != nil && !res.Skipped {
 		warning := *res.Problem

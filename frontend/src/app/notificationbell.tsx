@@ -16,10 +16,14 @@ import {
   useMarkAllNoticesRead,
   useNotifications,
 } from "../features/settings/notifications.queries";
+import { formatBadgeCount } from "../format/badgecount";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
+import { isExtensionEntityKind } from "../lib/entity";
+import { useFirstScreenSettled } from "../lib/journeymarks";
 import { problemMessageOf } from "../lib/problem";
+import { useRecordKindDirectory } from "../lib/recordkinds";
 import { worklistKey } from "../lib/workkeys";
 import { usePopoverDismiss } from "./popover";
 import "./notificationbell.css";
@@ -55,7 +59,8 @@ export function NotificationBell() {
   const trigger = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const panelId = useId();
-  const notices = useNotifications();
+  // The bell is drawn at once; its read waits for the first screen's day.
+  const notices = useNotifications({ enabled: useFirstScreenSettled() });
   // BOTH SETTLES OUTLIVE THE PANEL. The centre renders only while open, so a
   // refusal declared inside it is thrown away by the dismissal that follows the
   // press — and a write still in flight loses the listener its invalidation
@@ -129,7 +134,7 @@ export function NotificationBell() {
         {unread > 0 && (
           <span className="notifbell-count">
             <Badge variant="primary" tone="accent">
-              {formatNumber(unread, locale)}
+              {formatBadgeCount(unread, locale)}
             </Badge>
           </span>
         )}
@@ -174,6 +179,11 @@ function NotificationCentre({
 }>) {
   const t = useT();
   const rows = query.data?.pages.flatMap((page) => page.items) ?? [];
+  // Read once for the panel, and only when a row is about a unit's own record,
+  // the one target whose page the unit names.
+  const kindViews = useRecordKindDirectory(
+    rows.some((row) => isExtensionEntityKind(row.target?.type ?? "")),
+  ).data?.data;
   return (
     <Panel
       title={t("notifications.centre")}
@@ -241,6 +251,7 @@ function NotificationCentre({
                       notice={notice}
                       onSettle={settle.mutate}
                       onActivate={onActivate}
+                      kindViews={kindViews}
                       settling={
                         settle.isPending && settle.variables === notice.id
                       }

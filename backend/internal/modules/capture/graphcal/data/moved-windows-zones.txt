@@ -1,0 +1,4 @@
+America/Edmonton
+America/Inuvik
+America/Vancouver
+America/Winnipeg

@@ -6,6 +6,7 @@
 // provider.
 
 import { selectorList } from "../../scripts/lib/css-rules";
+import { stable } from "../../src/format/collate";
 import { withoutComments } from "../../src/testing/css";
 import type { CensusFile, CensusRule } from "../tree";
 
@@ -198,7 +199,7 @@ const relsWhere = (
   files
     .filter((file) => test(file.text))
     .map((file) => file.rel)
-    .sort();
+    .sort(stable);
 
 // The answer to "where does X mount" has one home, above the screens. A second
 // mount is a second queue, guard or dialog that unmounts with its own screen.

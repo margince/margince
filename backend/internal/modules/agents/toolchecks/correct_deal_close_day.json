@@ -1,0 +1,13 @@
+{
+  "verb": "correct_deal_close_day",
+  "checks": [
+    "company.read",
+    "deal.update",
+    "installation_settings.read",
+    "project.read"
+  ],
+  "takes": [
+    "deal",
+    "lost_deal"
+  ]
+}

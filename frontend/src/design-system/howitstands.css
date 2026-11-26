@@ -72,6 +72,7 @@
   font-weight: var(--fontWeightRegular);
   color: var(--textPrimary);
   text-wrap: pretty;
+  overflow-wrap: anywhere;
 }
 /* The note a rep wrote under the call: body text, two lines until opened. */
 .standing-sheet-note {
@@ -94,6 +95,42 @@
   align-self: flex-start;
   margin-inline-start: -4px;
   font: var(--fontBodySmall);
+}
+/* Two links on one line: Show more beside the way into History. */
+.standing-sheet-note-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+.standing-sheet-note-links > .standing-sheet-note-toggle {
+  margin-inline-start: 0;
+}
+/* The newest thing said on the record, in a recess under the call so it reads
+   as the record's own words, not the card's. */
+.standing-sheet-latest {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-inline-size: 62ch;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-md);
+  background: var(--bgWell);
+}
+.standing-sheet-latest-head > strong {
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+}
+.standing-sheet-latest .standing-sheet-note {
+  color: var(--textPrimary);
+}
+.standing-sheet-latest-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
 }
 /* The ring and the dimension rows, side by side. */
 .standing-sheet-readings {
@@ -141,4 +178,11 @@
 }
 .standing-sheet-figures {
   margin-inline: calc(-1 * var(--standing-inset));
+}
+/* A grid line passes behind the axis label before it rather than through it:
+   a label that names its year runs past the next line on a narrow axis. */
+.standing-sheet-pane .standing-timeline-tick-label {
+  z-index: 1;
+  padding-inline-end: var(--space-1);
+  background: var(--ground);
 }

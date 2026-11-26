@@ -6,23 +6,19 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 ## finance_connection
 
-15 columns · primary key `(id)` · referenced by 4 foreign keys
+11 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `capabilities` | `jsonb`, default `'{}'::jsonb` | yes |  |
-| `credential_ref` | `text` | yes |  |
 | `last_attempt_at` | `timestamp with time zone` |  |  |
 | `last_error_code` | `text` |  |  |
 | `last_success_at` | `timestamp with time zone` |  |  |
-| `provider` | `text` | yes |  |
+| `provider` | `text` | yes | The source's key. |
 | `status` | `text`, default `'connecting'::text` | yes | `connecting` until the first sync finishes; `error` when the last one failed. |
-| `sync_cursor` | `text` |  |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -37,11 +33,13 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "provider": 20000, "captured_by": 20000, "last_error_code": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"last_error_code":20000,"provider":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "provider": 20000, "captured_by": 20000, "last_error_code": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"last_error_code":20000,"provider":20000,"status":20000}')`
 - `trg_finance_connection_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## finance_customer_link
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -50,11 +48,9 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `connection_id` | `uuid` | yes | Points at `finance_connection.id`. |
 | `external_customer_id` | `text` | yes |  |
 | `source_updated_at` | `timestamp with time zone` |  |  |
-| `sync_hash` | `text` | yes |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -64,24 +60,30 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 |---|---|---|
 | `company_id` | `company` | the parent cannot be deleted while this row points at it |
 | `connection_id` | `finance_connection` | the parent cannot be deleted while this row points at it |
+| `connection_id, external_customer_id` | `finance_external_customer` | the parent cannot be deleted while this row points at it |
 
 **Rules**
 
+- `finance_customer_link_mapping_key`: `UNIQUE (id, connection_id, company_id)`
 - `finance_customer_link_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
 - `finance_customer_link_company_ix`: `btree (connection_id, company_id) WHERE (archived_at IS NULL)`
+- `finance_customer_link_directory_idx`: `btree (connection_id, external_customer_id)`
 - `finance_customer_link_external_ux`: `unique, btree (connection_id, external_customer_id) WHERE (archived_at IS NULL)`
+- `finance_customer_link_mapping_key`: `unique, btree (id, connection_id, company_id)`
 - `finance_customer_link_pkey`: `unique, btree (id)`
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"captured_by": 20000, "external_customer_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000, "external_customer_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000}')`
 - `trg_finance_customer_link_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## finance_external_customer
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+11 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -89,7 +91,6 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `connection_id` | `uuid` | yes | Points at `finance_connection.id`. |
 | `display_name` | `text` | yes |  |
 | `external_customer_id` | `text` | yes |  |
-| `source_updated_at` | `timestamp with time zone` |  |  |
 | `sync_hash` | `text` | yes |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -116,11 +117,13 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_customer_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000,"source":20000,"sync_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_customer_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000,"source":20000,"sync_hash":20000}')`
 - `trg_finance_external_customer_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## finance_invoice
 
-29 columns · primary key `(id)` · referenced by 2 foreign keys
+30 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -130,8 +133,10 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `credited_minor` | `bigint`, default `0` | yes |  |
 | `credits_invoice_id` | `uuid` |  | Points at `finance_invoice.id`. |
 | `currency` | `currency_code` | yes |  |
+| `customer_link_id` | `uuid` |  |  |
 | `disputed_at` | `timestamp with time zone` |  |  |
 | `due_at` | `date` |  |  |
+| `dunning_level` | `smallint` |  |  |
 | `external_id` | `text` | yes |  |
 | `fully_paid_at` | `timestamp with time zone` |  |  |
 | `fx_rate_date` | `date` |  |  |
@@ -142,7 +147,6 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `number` | `text` |  | The source's own invoice number, absent when it does not issue one. |
 | `open_minor` | `bigint`, default `0` | yes | What is still unpaid on it. |
 | `raw_status` | `text` |  |  |
-| `source_updated_at` | `timestamp with time zone` |  |  |
 | `status` | `text` | yes | One of `draft`, `open`, `partially_paid`, `paid`, `overdue`, `disputed` and 2 more. |
 | `sync_hash` | `text` | yes |  |
 | `tax_minor` | `bigint`, default `0` | yes |  |
@@ -161,15 +165,21 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `company_id` | `company` | the parent cannot be deleted while this row points at it |
 | `connection_id` | `finance_connection` | the parent cannot be deleted while this row points at it |
 | `credits_invoice_id` | `finance_invoice` | the parent cannot be deleted while this row points at it |
+| `credits_invoice_id, connection_id, company_id` | `finance_invoice` | the parent cannot be deleted while this row points at it |
+| `customer_link_id, connection_id, company_id` | `finance_customer_link` | the parent cannot be deleted while this row points at it |
 
 **Rules**
 
 - `finance_invoice_connection_id_external_id_key`: `UNIQUE (connection_id, external_id)`
+- `finance_invoice_credit_note_status`: `CHECK (((credits_invoice_id IS NULL) OR (status = ANY (ARRAY['credited', 'void']))))`
 - `finance_invoice_credits_not_self`: `CHECK (((credits_invoice_id IS NULL) OR (credits_invoice_id <> id)))`
+- `finance_invoice_dunning_level_range`: `CHECK (((dunning_level >= 0) AND (dunning_level <= 99)))`
 - `finance_invoice_fx_pair`: `CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))`
 - `finance_invoice_gross_minor_js_safe`: `CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))`
+- `finance_invoice_names_its_customer_link`: `CHECK ((customer_link_id IS NOT NULL)) NOT VALID`
 - `finance_invoice_net_minor_js_safe`: `CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))`
 - `finance_invoice_open_minor_js_safe`: `CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))`
+- `finance_invoice_owner_key`: `UNIQUE (id, connection_id, company_id)`
 - `finance_invoice_paid_status`: `CHECK (((fully_paid_at IS NULL) OR (status = ANY (ARRAY['paid', 'credited', 'void']))))`
 - `finance_invoice_status_check`: `CHECK ((status = ANY (ARRAY['draft', 'open', 'partially_paid', 'paid', 'overdue', 'disputed', 'credited', 'void'])))`
 - `finance_invoice_tax_minor_js_safe`: `CHECK (((tax_minor >= '-9007199254740991'::bigint) AND (tax_minor <= '9007199254740991'::bigint)))`
@@ -180,17 +190,21 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 - `finance_invoice_account_ix`: `btree (company_id, issued_at DESC)`
 - `finance_invoice_connection_id_external_id_key`: `unique, btree (connection_id, external_id)`
-- `finance_invoice_credits_ix`: `btree (credits_invoice_id) WHERE (credits_invoice_id IS NOT NULL)`
+- `finance_invoice_credit_owner_idx`: `btree (credits_invoice_id, connection_id, company_id)`
+- `finance_invoice_customer_owner_idx`: `btree (customer_link_id, connection_id, company_id)`
 - `finance_invoice_open_ix`: `btree (company_id) WHERE ((open_minor > 0) AND (void_at IS NULL))`
+- `finance_invoice_owner_key`: `unique, btree (id, connection_id, company_id)`
 - `finance_invoice_pkey`: `unique, btree (id)`
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"number": 20000, "source": 20000, "status": 20000, "sync_hash": 20000, "raw_status": 20000, "captured_by": 20000, "external_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_id":20000,"number":20000,"raw_status":20000,"source":20000,"status":20000,"sync_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"number": 20000, "source": 20000, "status": 20000, "sync_hash": 20000, "raw_status": 20000, "captured_by": 20000, "external_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_id":20000,"number":20000,"raw_status":20000,"source":20000,"status":20000,"sync_hash":20000}')`
 - `trg_finance_invoice_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## finance_payment
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+17 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -199,6 +213,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `company_id` | `uuid` | yes | Points at `company.id`. |
 | `connection_id` | `uuid` | yes | Points at `finance_connection.id`. |
 | `currency` | `currency_code` | yes |  |
+| `customer_link_id` | `uuid` |  |  |
 | `external_id` | `text` | yes |  |
 | `invoice_id` | `uuid` |  | Points at `finance_invoice.id`. |
 | `paid_at` | `timestamp with time zone` | yes |  |
@@ -217,21 +232,28 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 |---|---|---|
 | `company_id` | `company` | the parent cannot be deleted while this row points at it |
 | `connection_id` | `finance_connection` | the parent cannot be deleted while this row points at it |
+| `customer_link_id, connection_id, company_id` | `finance_customer_link` | the parent cannot be deleted while this row points at it |
 | `invoice_id` | `finance_invoice` | the parent cannot be deleted while this row points at it |
+| `invoice_id, connection_id, company_id` | `finance_invoice` | the parent cannot be deleted while this row points at it |
 
 **Rules**
 
 - `finance_payment_amount_minor_js_safe`: `CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))`
 - `finance_payment_connection_id_external_id_key`: `UNIQUE (connection_id, external_id)`
+- `finance_payment_names_its_customer_link`: `CHECK ((customer_link_id IS NOT NULL)) NOT VALID`
 - `finance_payment_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
 - `finance_payment_account_ix`: `btree (company_id, paid_at DESC)`
 - `finance_payment_connection_id_external_id_key`: `unique, btree (connection_id, external_id)`
+- `finance_payment_customer_owner_idx`: `btree (customer_link_id, connection_id, company_id)`
 - `finance_payment_invoice_ix`: `btree (invoice_id) WHERE (invoice_id IS NOT NULL)`
+- `finance_payment_invoice_owner_idx`: `btree (invoice_id, connection_id, company_id)`
 - `finance_payment_pkey`: `unique, btree (id)`
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_id":20000,"source":20000,"sync_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "sync_hash": 20000, "captured_by": 20000, "external_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_id":20000,"source":20000,"sync_hash":20000}')`
 - `trg_finance_payment_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`

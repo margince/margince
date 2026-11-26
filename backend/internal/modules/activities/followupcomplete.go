@@ -43,6 +43,8 @@ func (s *Store) CompleteFollowUpsTouchingLead(ctx context.Context, leadID ids.Le
 			WHERE l.activity_id = a.id AND l.%s = $%d)
 			AND a.source_system IS DISTINCT FROM $%d`,
 		leadLinkColumn, arg(leadID.UUID), arg(provenance.LeadRepliedSource))
+	// A new touch does not prove that a specific accepted inquiry was handled.
+	where += " AND NOT " + provenance.WebsiteInquiryTaskSQL("a")
 	return s.completeOpenSystemTasks(ctx, where, arg, &args)
 }
 
@@ -74,18 +76,8 @@ func (s *Store) CompleteOpenSystemTasksForContact(ctx context.Context, contactID
 	return s.completeOpenSystemTasksLinkedBy(ctx, contactLinkColumn, contactID.UUID)
 }
 
-// CompleteCarriedSystemTasks completes the open system-minted tasks among a
-// NAMED set of activities. A promotion names the ones it moved from the lead
-// onto the contact, which the lead.promoted payload carries. The review pass
-// names the review tasks whose findings are all settled.
-//
-// Named ids rather than a link column, which is what makes it exact for a
-// MERGE. The contact-keyed reading answers "every open system task on this
-// contact", and on a survivor that includes reminders the promotion never
-// touched; this answers "the tasks this promotion carried", which is a fact
-// about the promotion. The same system-minted predicate applies — source AND
-// captured_by together — so a task a caller planted is no more completable
-// through this door than through the other.
+// CompleteCarriedSystemTasks finishes carried follow-ups answered by promotion.
+// Accepted inquiries follow their contact until explicitly handled.
 func (s *Store) CompleteCarriedSystemTasks(ctx context.Context, activityIDs []ids.UUID) (int, error) {
 	if len(activityIDs) == 0 {
 		return 0, nil
@@ -95,7 +87,7 @@ func (s *Store) CompleteCarriedSystemTasks(ctx context.Context, activityIDs []id
 	// No link join: the ids ARE the selection. Which record they hang off is
 	// what the promotion just changed, so filtering on it would ask the
 	// question this door exists to stop asking.
-	where := storekit.SQLf("a.id = ANY($%d)", arg(activityIDs))
+	where := storekit.SQLf("a.id = ANY($%d)", arg(activityIDs)) + " AND NOT " + provenance.WebsiteInquiryTaskSQL("a")
 	return s.completeOpenSystemTasks(ctx, where, arg, &args)
 }
 
@@ -232,6 +224,7 @@ func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, column stri
 	where := storekit.SQLf(`EXISTS (SELECT 1 FROM activity_link l
 			WHERE l.activity_id = a.id AND l.%s = $%d)`, column, linkPos)
 	if column == contactLinkColumn {
+		where += " AND NOT " + provenance.WebsiteInquiryTaskSQL("a")
 		// Both sides are Postgres's clock: contact.created_at and
 		// activity.created_at are each DEFAULT now(), and reading them in one
 		// statement leaves no second clock for a caller to introduce. A contact
@@ -289,6 +282,12 @@ func (s *Store) flipSystemTasks(
 	return completed, nil
 }
 
+// systemCapturedSQL is the stamp half of "system-minted", which is decided by
+// the stamp together with source = systemSource.
+func systemCapturedSQL(alias, exact, pattern string) string {
+	return storekit.SQLf("(%[1]s.captured_by = %[2]s OR %[1]s.captured_by LIKE %[3]s)", alias, exact, pattern)
+}
+
 // systemTask is one system-minted task a selection found, at the version read.
 type systemTask struct {
 	id      ids.ActivityID
@@ -305,12 +304,12 @@ func selectSystemTasks(
 	query := storekit.SQLf(`
 		SELECT a.id, a.version FROM activity a
 		WHERE %s AND a.kind = $%d AND a.source = $%d
-		  AND (a.captured_by = $%d OR a.captured_by LIKE $%d)
+		  AND %s
 		  AND a.is_done = $%d AND a.archived_at IS NULL
 		ORDER BY a.id FOR UPDATE OF a`,
 		where,
 		arg(string(crmcontracts.ActivityKindTask)), arg(systemSource),
-		arg(systemCapturedBy), arg(systemCapturedByPattern), arg(done))
+		systemCapturedSQL("a", fmt.Sprintf("$%d", arg(systemCapturedBy)), fmt.Sprintf("$%d", arg(systemCapturedByPattern))), arg(done))
 	rows, err := tx.Query(ctx, query, (*args)...)
 	if err != nil {
 		return nil, err
@@ -326,6 +325,12 @@ func selectSystemTasks(
 // the caller's transaction. It takes the update a user's tick takes, so each
 // keeps its audit row and event. A task somebody wrote by hand is left alone.
 func (s *Store) CompleteSystemTasksTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (int, error) {
+	return s.flipNamedSystemTasksTx(ctx, tx, activityIDs, false)
+}
+
+// flipNamedSystemTasksTx moves the named system-minted tasks whose done state
+// is `done` to the other state, inside the caller's transaction.
+func (s *Store) flipNamedSystemTasksTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, done bool) (int, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return 0, err
 	}
@@ -334,20 +339,20 @@ func (s *Store) CompleteSystemTasksTx(ctx context.Context, tx pgx.Tx, activityID
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	open, err := selectSystemTasks(ctx, tx, storekit.SQLf("a.id = ANY($%d)", arg(activityIDs)), arg, &args, false)
+	found, err := selectSystemTasks(ctx, tx, storekit.SQLf("a.id = ANY($%d)", arg(activityIDs)), arg, &args, done)
 	if err != nil {
 		return 0, err
 	}
-	done := true
-	for _, task := range open {
+	target := !done
+	for _, task := range found {
 		at := s.now()
-		in := UpdateActivityInput{IsDone: &done, IfVersion: &task.version}
+		in := UpdateActivityInput{IsDone: &target, IfVersion: &task.version}
 		in.recordedAt, in.recordZone = &at, s.recordZone
 		if _, err := updateActivityInTx(ctx, tx, task.id, in); err != nil {
-			return 0, fmt.Errorf("completing system task %s: %w", task.id, err)
+			return 0, fmt.Errorf("moving system task %s: %w", task.id, err)
 		}
 	}
-	return len(open), nil
+	return len(found), nil
 }
 
 // The two activity_link columns this file resolves follow-ups through, named

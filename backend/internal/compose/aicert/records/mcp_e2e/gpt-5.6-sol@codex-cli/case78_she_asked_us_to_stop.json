@@ -11,13 +11,79 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "053d0d93a1e18476",
+    "tools": "7484e420dc8d6152",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "0fbb56525a64e3a0d67dce27557b9284616654eb",
+    "ran_at": "2026-11-22T04:37:46Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:55Z"
+  },
   "usage": {
-    "input_tokens": 81595,
-    "output_tokens": 3903,
+    "input_tokens": 53096,
+    "output_tokens": 2903,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 702208,
+    "cache_read_input_tokens": 533888,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_compliance",
+        "describe_router_actions",
+        "find_records",
+        "get_contact_consent_guard",
+        "list_contact_stops",
+        "read_details",
+        "read_record",
+        "read_workspace",
+        "resolve_entities",
+        "search_records",
+        "suppress_contact"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_compliance",
+        "describe_router_actions",
+        "find_records",
+        "list_contact_stops",
+        "read_details",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "suppress_contact"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 10.5,
+      "min": 9,
+      "max": 12
+    },
+    "refused": {
+      "median": 2.5,
+      "min": 2,
+      "max": 3
+    },
+    "prompt_tokens": {
+      "median": 293492,
+      "min": 263718,
+      "max": 323266
+    },
+    "output_tokens": {
+      "median": 1451.5,
+      "min": 1294,
+      "max": 1609
+    }
   }
 }

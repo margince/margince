@@ -52,11 +52,11 @@ func ReadRestoreOf(ctx context.Context, db *database.DB, entityType string, enti
 		if err != nil {
 			return err
 		}
-		mask, err := withheldHistoryOf(ctx, entityType)
+		mask, edgeMask, err := historyMasks(ctx, entityType)
 		if err != nil {
 			return err
 		}
-		entry = recordHistoryEntry(row, mask)
+		entry = recordHistoryEntry(row, mask, edgeMask)
 		return nil
 	})
 	if err != nil {
@@ -95,7 +95,7 @@ func queryRestoreOf(ctx context.Context, tx pgx.Tx, entityType string, entityID,
 	// Registered and rendered before the call that spreads args — see the same
 	// sequencing in queryRecordHistoryWindow.
 	fetchPos := arg(1)
-	window := recordHistoryWindowSQL(typePos, idPos, fetchPos, conds, edgeCTE)
+	window := recordHistoryWindowSQL(typePos, idPos, fetchPos, conds, edgeCTE, "")
 	err = scanEdgeAuditRow(tx.QueryRow(ctx, window, args...), &row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return recordAuditRow{}, apperrors.ErrNotFound

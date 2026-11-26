@@ -90,7 +90,7 @@ func (s *Store) SyncConnection(
 		if err := mirrorCustomers(ctx, tx, conn.id, customers, source); err != nil {
 			return err
 		}
-		links, err = readLinks(ctx, tx, conn.id)
+		links, err = readLinks(ctx, tx, conn.id, "")
 		return err
 	})
 	if err != nil || !connected {
@@ -98,39 +98,24 @@ func (s *Store) SyncConnection(
 		return SyncResult{}, err
 	}
 
-	// The ledgers are read with no transaction open. A vendor answers in
-	// seconds per customer, and a transaction held across every call would
-	// keep the mirror's rows locked for the whole pass.
-	ledgers := make(map[string]SourceLedger, len(links))
+	// Each ledger is read with no transaction open, then written in its own.
+	// One transaction across every vendor call would lock the mirror for the
+	// whole pass. A pass cut short would also keep nothing it had read.
 	for _, l := range links {
 		ledger, err := provider.InvoicesFor(ctx, l.externalCustomerID)
 		if err != nil {
 			return SyncResult{}, fmt.Errorf("read the ledger for %s: %w", l.externalCustomerID, err)
 		}
-		ledgers[l.externalCustomerID] = ledger
+		stillConnected, err := s.mirrorCustomerLedger(ctx, conn.id, l.externalCustomerID, ledger, source, &out)
+		if err != nil || !stillConnected {
+			return SyncResult{}, err
+		}
 	}
 
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// A source disconnected while the ledgers were read is left as the
-		// administrator set it; marking it synced would reconnect it.
 		live, stillConnected, err := readConnection(ctx, tx)
 		if err != nil || !stillConnected || live.id != conn.id {
 			return err
-		}
-		// The links as they stand now. One removed while the ledgers were read
-		// writes nothing, and one moved to another company follows the move.
-		current, err := readLinks(ctx, tx, conn.id)
-		if err != nil {
-			return err
-		}
-		for _, l := range current {
-			ledger, fetched := ledgers[l.externalCustomerID]
-			if !fetched {
-				continue
-			}
-			if err := s.mirrorLedger(ctx, tx, conn.id, l, ledger, source, &out); err != nil {
-				return err
-			}
 		}
 		return markSynced(ctx, tx, conn.id)
 	})
@@ -140,18 +125,49 @@ func (s *Store) SyncConnection(
 	return out, nil
 }
 
-// link is one accounting customer's mapping onto a company.
+// mirrorCustomerLedger writes one customer's ledger through its link as the
+// link stands now. It answers false when the connection the pass ran against
+// is no longer the live one. Writing then, or marking the pass synced, would
+// reconnect a source the administrator disconnected while the ledger was read.
+func (s *Store) mirrorCustomerLedger(
+	ctx context.Context, connectionID ids.UUID, externalCustomerID string,
+	ledger SourceLedger, source string, out *SyncResult,
+) (bool, error) {
+	stillConnected := false
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		live, connected, err := readConnection(ctx, tx)
+		if err != nil || !connected || live.id != connectionID {
+			return err
+		}
+		stillConnected = true
+		// A link removed while the ledger was read writes nothing, and one
+		// moved to another company follows the move.
+		current, err := readLinks(ctx, tx, connectionID, externalCustomerID)
+		if err != nil || len(current) == 0 {
+			return err
+		}
+		return s.mirrorLedger(ctx, tx, connectionID, current[0], ledger, source, out)
+	})
+	return stillConnected, err
+}
+
+// link is one accounting customer's mapping onto a company. Every row mirrored
+// through it names its id, and the database holds that row to its company.
 type link struct {
+	id                 ids.UUID
 	companyID          ids.CompanyID
 	externalCustomerID string
 }
 
-func readLinks(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) ([]link, error) {
+// readLinks reads the live links of one connection. A non-empty onlyCustomer
+// reads that source customer's link alone.
+func readLinks(ctx context.Context, tx pgx.Tx, connectionID ids.UUID, onlyCustomer string) ([]link, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT company_id, external_customer_id
+		SELECT id, company_id, external_customer_id
 		  FROM finance_customer_link
 		 WHERE connection_id = $1 AND archived_at IS NULL
-		 ORDER BY external_customer_id`, connectionID)
+		   AND ($2 = '' OR external_customer_id = $2)
+		 ORDER BY external_customer_id`, connectionID, onlyCustomer)
 	if err != nil {
 		return nil, fmt.Errorf("read the customer links: %w", err)
 	}
@@ -159,7 +175,7 @@ func readLinks(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) ([]link, e
 	var out []link
 	for rows.Next() {
 		var each link
-		if err := rows.Scan(&each.companyID, &each.externalCustomerID); err != nil {
+		if err := rows.Scan(&each.id, &each.companyID, &each.externalCustomerID); err != nil {
 			return nil, fmt.Errorf("scan a customer link: %w", err)
 		}
 		out = append(out, each)
@@ -221,10 +237,10 @@ func mirrorCustomer(
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO finance_external_customer
 		       (id, connection_id, external_customer_id, display_name,
-		        source_updated_at, sync_hash, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		        sync_hash, source, captured_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		id, connectionID, customer.ExternalID, customer.DisplayName,
-		customer.UpdatedAt, hash, source, by); err != nil {
+		hash, source, by); err != nil {
 		return fmt.Errorf("mirror the source's customer: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "create", entityExternalCustomer, id, nil, after); err != nil {
@@ -247,9 +263,9 @@ func updateExternalCustomer(
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE finance_external_customer
-		   SET display_name = $2, source_updated_at = $3, sync_hash = $4
+		   SET display_name = $2, sync_hash = $3
 		 WHERE id = $1`,
-		id, customer.DisplayName, customer.UpdatedAt, hash); err != nil {
+		id, customer.DisplayName, hash); err != nil {
 		return fmt.Errorf("update the mirrored customer: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "update", entityExternalCustomer, id, before, after); err != nil {
@@ -333,7 +349,7 @@ func hashOf(parts ...string) string {
 // computes. Present: the dates and amounts, which move only when the source
 // moves them.
 func invoiceHash(inv SourceInvoice) string {
-	return hashOf(
+	parts := []string{
 		inv.ExternalID, inv.Number,
 		inv.IssuedOn.UTC().Format(time.RFC3339Nano),
 		stampOf(inv.DueOn), inv.Currency,
@@ -344,7 +360,13 @@ func invoiceHash(inv SourceInvoice) string {
 		stampOf(inv.FullyPaidAt),
 		strconv.FormatBool(inv.Disputed), strconv.FormatBool(inv.Void),
 		inv.CreditsExternalID,
-	)
+	}
+	// Appended only when stated. A source that names no dunning level keeps the
+	// hash its rows were mirrored under, so the next pass writes nothing.
+	if inv.DunningLevel != nil {
+		parts = append(parts, "dunning", strconv.Itoa(*inv.DunningLevel))
+	}
+	return hashOf(parts...)
 }
 
 func paymentHash(pay SourcePayment) string {
@@ -374,6 +396,9 @@ func stampOf(at *time.Time) string {
 // that fails must not replace the failure it was trying to record — the caller
 // would then report the wrong reason for the wrong thing.
 func (s *Store) RecordSyncFailure(ctx context.Context, cause error) error {
+	// Detached: the pass's context may have ended, often the reason it failed.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), failureRecordTimeout)
+	defer cancel()
 	writeErr := s.tx(ctx, func(tx pgx.Tx) error {
 		// The SAME connection the pass ran against, resolved the same way the
 		// pass resolved it. The statement used to carry no id predicate at all
@@ -397,6 +422,9 @@ func (s *Store) RecordSyncFailure(ctx context.Context, cause error) error {
 	}
 	return cause
 }
+
+// failureRecordTimeout bounds the write that records a failed pass.
+const failureRecordTimeout = 15 * time.Second
 
 // markSyncFailed puts one connection into the error state.
 //

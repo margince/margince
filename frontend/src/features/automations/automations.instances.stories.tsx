@@ -19,7 +19,7 @@ import { ConfiguredAutomations } from "./automations.instances";
 import { RulePausedReason } from "./automations.lists";
 
 const meta: Meta = {
-  title: "Settings/AI/Automations/Configured automations",
+  title: "Settings/Data/Automations/Configured automations",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -82,7 +82,10 @@ const rendersTable: NonNullable<Story["play"]> = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
   await canvas.findByRole("switch", { name: "Renewal reminder is enabled" });
   await expect(canvas.getByText("Never")).toBeVisible();
-  await expect(canvas.getByText("Needs approval")).toBeVisible();
+  // The rule that drafts an email waits for approval, so it says so too.
+  await expect(
+    within(canvas.getByTestId("automation-au-5")).getByText("Needs approval"),
+  ).toBeVisible();
 };
 
 export const Outcomes: Story = {
@@ -131,6 +134,11 @@ export const RunHistoryOpen: Story = {
     const body = within(canvasElement.ownerDocument.body);
     await user.click(await body.findByRole("button", { name: "Runs" }));
     await canvas.findByText("This automation has not fired yet.");
+    // The menu closes after the choice and the panel it opened takes focus.
+    await expect(body.queryByRole("button", { name: "Runs" })).toBeNull();
+    await expect(canvasElement.ownerDocument.activeElement).toBe(
+      canvas.getByRole("region", { name: "Run history" }),
+    );
     await expect(
       canvas.queryByRole("combobox", { name: "Outcome" }),
     ).toBeNull();

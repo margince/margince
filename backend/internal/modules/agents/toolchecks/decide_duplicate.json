@@ -1,0 +1,10 @@
+{
+  "verb": "decide_duplicate",
+  "checks": [
+    "company.read",
+    "company.update"
+  ],
+  "takes": [
+    "dedupe_candidate"
+  ]
+}

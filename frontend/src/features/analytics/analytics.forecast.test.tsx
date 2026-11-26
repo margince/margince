@@ -1,7 +1,9 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -74,7 +76,7 @@ function readings(over: Record<string, unknown> = {}) {
 
 type StubOpts = {
   readings?: Record<string, unknown>;
-  onCall?: (body: Record<string, unknown>) => void;
+  onCall?: (body: Record<string, unknown>, key: string | null) => void;
   // Every URL the page READ from, so a test can assert what it asked for
   // rather than what its controls look like.
   onRead?: (url: string) => void;
@@ -83,6 +85,8 @@ type StubOpts = {
   // run, which is why that case went unrendered until somebody opened the page.
   assuranceStatus?: number;
   unreadSource?: boolean;
+  // Answers every call with this refusal instead of storing it.
+  callRefusal?: { status: number; body: Record<string, unknown> };
 };
 
 function forecastStub(opts: StubOpts = {}) {
@@ -97,7 +101,13 @@ function forecastStub(opts: StubOpts = {}) {
       const body = request
         ? await request.json()
         : JSON.parse(String(init?.body));
-      opts.onCall?.(body);
+      opts.onCall?.(
+        body,
+        request ? request.headers.get("Idempotency-Key") : null,
+      );
+      if (opts.callRefusal) {
+        return jsonResponse(opts.callRefusal.body, opts.callRefusal.status);
+      }
       return jsonResponse({ id: "c1", ...body }, 201);
     }
     if (url.includes("/forecast/assurance/exceptions")) {
@@ -138,14 +148,27 @@ function forecastStub(opts: StubOpts = {}) {
   });
 }
 
+// Opens the call editor and types an amount, since Save waits for one.
+async function openCallEditor(
+  user: ReturnType<typeof userEvent.setup>,
+  amount = "2500",
+) {
+  await user.click(
+    await screen.findByRole("button", { name: /Update forecast/i }),
+  );
+  await user.type(await screen.findByLabelText(/Expected total/i), amount);
+}
+
 describe("ForecastView", () => {
   // The same two facts the Overview's caption states: the whole period, and
-  // the instant its actuals run through.
+  // the instant its actuals run through on the clock that counted them.
   it("names the whole period and the cutoff as two facts", async () => {
     vi.stubGlobal("fetch", forecastStub());
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     const period = await screen.findByText("1 April – 30 June");
-    const through = screen.getByText("Actuals through 14/05/2026, 11:00");
+    const through = screen.getByText(
+      "Actuals through 14/05/2026, 11:00 · Central European Summer Time · UTC+2",
+    );
     expect(period.parentElement).toBe(through.parentElement);
   });
 
@@ -372,9 +395,7 @@ describe("ForecastView", () => {
 
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: /^Week$/i }));
-    await user.click(
-      await screen.findByRole("button", { name: /Update forecast/i }),
-    );
+    await openCallEditor(user);
     await user.click(screen.getByRole("button", { name: /Save forecast/i }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
@@ -404,9 +425,7 @@ describe("ForecastView", () => {
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
     const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: /Update forecast/i }),
-    );
+    await openCallEditor(user);
     await user.type(
       await screen.findByLabelText(/Supporting note/i),
       "Two renewals slipped",
@@ -418,7 +437,108 @@ describe("ForecastView", () => {
     expect(posted[0].currency).toBe("EUR");
   });
 
-  // An empty note is NO note. Sent as "", it claims the author wrote something
+  it("stores a call once when Save forecast is pressed twice in one frame", async () => {
+    const posted: { key: string | null }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      forecastStub({ onCall: (_b, key) => posted.push({ key }) }),
+    );
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+
+    const user = userEvent.setup();
+    await openCallEditor(user);
+    const save = screen.getByRole("button", { name: /Save forecast/i });
+    act(() => {
+      fireEvent.click(save);
+      fireEvent.click(save);
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: /Save forecast/i }),
+      ).toBeNull(),
+    );
+    expect(posted).toHaveLength(1);
+    expect(posted[0].key).toBeTruthy();
+  });
+
+  // An untouched editor holds no amount. Saving it would record a call of
+  // zero that nobody typed, so Save waits, and a typed 0 is still a call.
+  it("keeps Save forecast closed until an amount is typed", async () => {
+    const posted: Record<string, unknown>[] = [];
+    vi.stubGlobal("fetch", forecastStub({ onCall: (b) => posted.push(b) }));
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+    const amount = () =>
+      screen.getByLabelText(/Expected total/i) as HTMLInputElement;
+    const refusesSave = () => {
+      const save = screen.getByRole("button", { name: /Save forecast/i });
+      expect((save as HTMLButtonElement).disabled).toBe(true);
+      expect(screen.getByText(en["forecast.callAmountNeeded"])).toBeTruthy();
+      fireEvent.click(save);
+      expect(posted).toHaveLength(0);
+    };
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: /Update forecast/i }),
+    );
+    expect(amount().value).toBe("");
+    refusesSave();
+
+    await user.type(amount(), "5");
+    await user.clear(amount());
+    expect(amount().value).toBe("");
+    refusesSave();
+
+    await user.type(amount(), "0");
+    await user.click(screen.getByRole("button", { name: /Save forecast/i }));
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0].amount_minor).toBe(0);
+  });
+
+  it("refuses a negative amount in the editor, before any request", async () => {
+    const posted: Record<string, unknown>[] = [];
+    vi.stubGlobal("fetch", forecastStub({ onCall: (b) => posted.push(b) }));
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+
+    const user = userEvent.setup();
+    await openCallEditor(user, "-500");
+
+    expect(screen.getByText(en["forecast.callAmountNegative"])).toBeTruthy();
+    const save = screen.getByRole("button", { name: /Save forecast/i });
+    expect((save as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(save);
+    expect(posted).toHaveLength(0);
+  });
+
+  it("says why a refused call was not saved and keeps the editor open", async () => {
+    vi.stubGlobal(
+      "fetch",
+      forecastStub({
+        callRefusal: {
+          status: 422,
+          body: {
+            type: "about:blank",
+            title: "Unprocessable Entity",
+            status: 422,
+            detail: "The server refused this amount.",
+          },
+        },
+      }),
+    );
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+
+    const user = userEvent.setup();
+    await openCallEditor(user);
+    await user.click(screen.getByRole("button", { name: /Save forecast/i }));
+
+    expect(
+      await screen.findByText("The server refused this amount."),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Save forecast/i })).toBeTruthy();
+  });
+
+  // An empty note is no note. Sent as "", it claims the author wrote something
   // blank, and a reader cannot tell that from a note they cannot see.
   it("sends no note at all when the author wrote none", async () => {
     const posted: Record<string, unknown>[] = [];
@@ -426,9 +546,7 @@ describe("ForecastView", () => {
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
     const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: /Update forecast/i }),
-    );
+    await openCallEditor(user);
     await user.click(screen.getByRole("button", { name: /Save forecast/i }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
@@ -518,6 +636,22 @@ describe("SharedForecastView", () => {
     }
   });
 
+  it("says a closed or unknown share link is gone and offers no Retry", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({ status: 404, detail: "not found" }, 404),
+      ),
+    );
+    render(<SharedForecastView token="closed" />);
+    expect(
+      await screen.findByText(en["reporting.sharedForecastGone"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["common.retry"] }),
+    ).toBeNull();
+  });
+
   const ranged = {
     range_low_minor: 90_000,
     range_high_minor: 210_000,
@@ -529,6 +663,7 @@ describe("SharedForecastView", () => {
         jsonResponse({
           kind,
           target: "forecast",
+          as_of: "2026-05-14T09:00:00Z",
           withheld: false,
           readings: readings({ ...ranged, ...over }),
         }),
@@ -537,7 +672,7 @@ describe("SharedForecastView", () => {
     render(<SharedForecastView token="fixture" />);
   }
 
-  it("shows a live share's landing basis beside its modelled finish", async () => {
+  it("shows a live share's landing basis beside its modelled finish, and names the zone it was read in", async () => {
     share("live", {
       landing: {
         amount_minor: 160_000,
@@ -548,6 +683,11 @@ describe("SharedForecastView", () => {
     });
     expect(await screen.findByText("Won + Likely deals")).toBeTruthy();
     expect(screen.getByText("Modelled quarter finish")).toBeTruthy();
+    expect(
+      screen.getByText(
+        /^Live report · .+ · Central European Summer Time · UTC\+2$/,
+      ),
+    ).toBeTruthy();
   });
 
   it("says a snapshot from before the landing was kept has no recorded basis", async () => {
@@ -560,6 +700,33 @@ describe("SharedForecastView", () => {
     expect(model?.textContent).toContain(
       `${formatAnalyticsMoney(90_000, "EUR", "en")} to ${formatAnalyticsMoney(210_000, "EUR", "en")}`,
     );
+  });
+
+  it("states the manager forecast a live share carries", async () => {
+    share("live", {
+      current_call: {
+        id: "c1",
+        period_start: "2026-04-01",
+        period_end: "2026-06-30",
+        scope_kind: "workspace",
+        amount_minor: 3_000_000,
+        currency: "EUR",
+        author_id: "u1",
+        created_at: "2026-05-01T09:00:00Z",
+      },
+    });
+    expect(await screen.findByText(/^Manager forecast: .*30,000/)).toBeTruthy();
+    expect(screen.queryByText(/No manager forecast submitted/)).toBeNull();
+  });
+
+  // A reader who may not see calls is told nothing about one: "none
+  // submitted" would be a claim about a call they were not shown.
+  it("says nothing about a manager forecast it withholds", async () => {
+    share("live", { call_withheld: true });
+    expect(
+      await screen.findByText(/^Won plus Likely deals: .*\.$/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/manager forecast/i)).toBeNull();
   });
 
   it("keeps the modelled finish on a live share that carries a range alone", async () => {

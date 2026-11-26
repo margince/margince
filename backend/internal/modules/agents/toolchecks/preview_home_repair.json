@@ -1,0 +1,7 @@
+{
+  "verb": "preview_home_repair",
+  "checks": [
+    "activity.read",
+    "data_task.read"
+  ]
+}

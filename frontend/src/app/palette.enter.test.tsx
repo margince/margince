@@ -2,6 +2,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../testing/mefixture";
 import { renderWithQueryClient } from "../testing/queryrender";
 import { steppedClock } from "../testing/steppedclock";
 import { type Command, CommandPalette } from "./palette";
@@ -47,6 +48,7 @@ function hits(data: readonly Record<string, string>[]) {
 function renderPalette() {
   renderWithQueryClient(
     <CommandPalette open onClose={() => {}} commands={commands} />,
+    meFixture({ rowScope: "all" }),
   );
 }
 
@@ -73,8 +75,8 @@ describe("CommandPalette Enter", () => {
     const user = steppedClock();
     hits([{ type: "company", id: "o1", title: "Straight" }]);
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), "strai");
-    await screen.findByRole("button", { name: /Straight/ });
+    await user.type(screen.getByRole("combobox"), "strai");
+    await screen.findByRole("option", { name: /Straight/ });
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/search/strai");
   });
@@ -86,8 +88,8 @@ describe("CommandPalette Enter", () => {
       { type: "contact", id: "p1", title: "Anna Becker" },
     ]);
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), "straight");
-    await screen.findByRole("button", { name: /Straight/ });
+    await user.type(screen.getByRole("combobox"), "straight");
+    await screen.findByRole("option", { name: /Straight/ });
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/companies/o1");
   });
@@ -101,7 +103,7 @@ describe("CommandPalette Enter", () => {
       vi.fn(() => new Promise<Response>(() => {})),
     );
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), "straight");
+    await user.type(screen.getByRole("combobox"), "straight");
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/search/straight");
   });
@@ -109,10 +111,13 @@ describe("CommandPalette Enter", () => {
   it("stays closed after Enter runs a row from a palette a button opened", async () => {
     const user = steppedClock();
     hits([]);
-    renderWithQueryClient(<PaletteWithOpener />);
+    renderWithQueryClient(
+      <PaletteWithOpener />,
+      meFixture({ rowScope: "all" }),
+    );
     const opener = screen.getByRole("button", { name: "Search" });
     await user.click(opener);
-    await user.type(screen.getByRole("searchbox"), "deals");
+    await user.type(screen.getByRole("combobox"), "deals");
     await user.keyboard("{Enter}");
     expect(document.activeElement).toBe(opener);
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -125,8 +130,8 @@ describe("CommandPalette Enter", () => {
     const user = steppedClock();
     hits([{ type: "company", id: "o1", title: "Straight" }]);
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), "strai");
-    await screen.findByRole("button", { name: /Straight/ });
+    await user.type(screen.getByRole("combobox"), "strai");
+    await screen.findByRole("option", { name: /Straight/ });
     await user.keyboard("{ArrowDown}{Enter}");
     expect(window.location.hash).toBe("#/companies/o1");
   });
@@ -135,8 +140,8 @@ describe("CommandPalette Enter", () => {
     const user = steppedClock();
     hits([{ type: "deal", id: "d1", title: "Pipeline review" }]);
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), "pipeline");
-    await screen.findByRole("button", { name: /Pipeline review/ });
+    await user.type(screen.getByRole("combobox"), "pipeline");
+    await screen.findByRole("option", { name: /Pipeline review/ });
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/deals");
   });
@@ -149,8 +154,8 @@ describe("CommandPalette Enter", () => {
       { type: "activity", id: "a2", title: "Quarterly review with Demo GmbH" },
     ]);
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), "quarterly");
-    await screen.findByRole("button", { name: /Quarterly review/ });
+    await user.type(screen.getByRole("combobox"), "quarterly");
+    await screen.findByRole("option", { name: /Quarterly review/ });
     await user.keyboard("{ArrowDown}{Enter}");
     expect(window.location.hash).toBe("#/search/quarterly/a2/activity");
   });
@@ -163,9 +168,9 @@ it("shows the address match above its normal group and opens the same lead", asy
     { type: "lead", id: "l1", title: "Lena", identifier_match: "prefix" },
   ]);
   renderPalette();
-  await user.type(screen.getByRole("searchbox"), "lena@exam");
+  await user.type(screen.getByRole("combobox"), "lena@exam");
   await screen.findByText("Best match");
-  const rows = screen.getAllByRole("button", { name: /Lena/ });
+  const rows = screen.getAllByRole("option", { name: /Lena/ });
   expect(rows).toHaveLength(2);
   await user.click(rows[0]);
   expect(window.location.hash).toBe("#/leads/l1");

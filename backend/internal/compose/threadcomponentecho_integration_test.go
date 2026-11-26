@@ -91,9 +91,11 @@ func TestReceiptReconciliationWaitsForAnUncommittedCapturedEcho(t *testing.T) {
 	defer cancel()
 	captured := make(chan error, 1)
 	captureDone := make(chan struct{})
+	record := parsed.ToRecord("gmail", raw)
+	record.ProviderMessageID = "accepted-provider-id"
 	go func() {
 		defer close(captureDone)
-		_, err := newCaptureSink(pool, CaptureConfig{}).Upsert(ctx, parsed.ToRecord("gmail", raw))
+		_, err := newCaptureSink(pool, CaptureConfig{}).Upsert(ctx, record)
 		captured <- err
 	}()
 	var releaseOnce sync.Once

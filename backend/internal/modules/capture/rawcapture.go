@@ -16,12 +16,13 @@ import (
 )
 
 const (
-	sqlArgIDs     = "ids"
-	sqlArgKeys    = "keys"
-	sqlArgObject  = "object"
-	sqlArgPayload = "payload"
-	sqlArgSource  = "source"
-	sqlArgSystem  = "system"
+	sqlArgIDs      = "ids"
+	sqlArgKeys     = "keys"
+	sqlArgObject   = "object"
+	sqlArgPayload  = "payload"
+	sqlArgProvider = "provider"
+	sqlArgSource   = "source"
+	sqlArgSystem   = "system"
 )
 
 // RawRecord is one provider original waiting to be stored verbatim.
@@ -92,10 +93,22 @@ func GetRawCapturePayloadTx(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]byte
 	var payload []byte
 	err := tx.QueryRow(ctx, `SELECT `+originalstore.SQL("r")+` FROM raw_capture r WHERE id = $1`, id).Scan(&payload)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, fmt.Errorf("capture: raw capture %s: %w", id, apperrors.ErrNotFound)
+		return nil, fmt.Errorf("the captured message this work names is no longer kept: %w", apperrors.ErrNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading raw capture payload: %w", err)
 	}
 	return originalstore.Decode(ctx, payload)
+}
+
+// DeleteRawCaptureTx destroys one original that was stored and will not be filed,
+// in the caller's transaction. Content of an object it offloaded is released by
+// the original store's own sweep.
+func DeleteRawCaptureTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	rows, err := tx.Query(ctx, `DELETE FROM raw_capture WHERE id = $1 RETURNING payload_object`, id)
+	if err != nil {
+		return fmt.Errorf("capture: discarding an original that will not be filed: %w", err)
+	}
+	_, _, err = originalstore.CountReturned(rows)
+	return err
 }

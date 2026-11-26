@@ -256,13 +256,13 @@ func decodeOnboardingCompanyMessage(w http.ResponseWriter, r *http.Request) (crm
 		httperr.Write(w, r, httperr.Validation("message", "empty", "write a company-setup message for Margince"))
 		return req, "", false
 	}
-	if len([]rune(message)) > companyReadMessageMaxRunes {
-		httperr.Write(w, r, httperr.Validation("message", "too_long", "message must be at most 2000 characters"))
+	if err := httperr.RequireWithin("message", message, companyReadMessageMaxRunes); err != nil {
+		httperr.Write(w, r, err)
 		return req, "", false
 	}
 	if req.CompanyDraft != nil {
-		if field := oversizedOnboardingDraftField(*req.CompanyDraft); field != "" {
-			httperr.Write(w, r, httperr.Validation("company_draft."+field, "too_long", "each company draft field must be at most 2000 characters"))
+		if err := refuseOversizedOnboardingDraft(*req.CompanyDraft); err != nil {
+			httperr.Write(w, r, err)
 			return req, "", false
 		}
 	}
@@ -299,7 +299,7 @@ func invalidOnboardingSelection(req crmcontracts.OnboardingCompanyMessageRequest
 	return "", "", ""
 }
 
-func oversizedOnboardingDraftField(draft crmcontracts.OnboardingCompanyDraft) string {
+func refuseOversizedOnboardingDraft(draft crmcontracts.OnboardingCompanyDraft) error {
 	fields := []struct {
 		name  string
 		value *string
@@ -322,11 +322,14 @@ func oversizedOnboardingDraftField(draft crmcontracts.OnboardingCompanyDraft) st
 		{fieldHistory, draft.History},
 	}
 	for _, field := range fields {
-		if field.value != nil && len([]rune(*field.value)) > onboardingCompanyDraftMaxRunes {
-			return field.name
+		if field.value == nil {
+			continue
+		}
+		if err := httperr.RequireWithin("company_draft."+field.name, *field.value, onboardingCompanyDraftMaxRunes); err != nil {
+			return err
 		}
 	}
-	return ""
+	return nil
 }
 
 func (a *onboardingCompanyAssistant) onboardingEvidence(ctx context.Context, state identity.OnboardingState) ([]companyReadEvidence, ids.UUID, onboardingResearchState, *contacts.SiteRead, []contacts.SiteReadComparison, error) {

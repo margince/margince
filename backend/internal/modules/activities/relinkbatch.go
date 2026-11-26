@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // maxBulkRelink bounds how many activities one explicit-id relink may name.
@@ -69,6 +70,8 @@ type RelinkActivityInput struct {
 	unfiledOnly bool
 	// evidence is the reason an automatic writer records in the audit row.
 	evidence map[string]any
+	// relevance is the classifier's mark on a new deal link; empty for none.
+	relevance string
 }
 
 // RelinkActivity is the single-relink door: admits the request, then commits
@@ -160,15 +163,19 @@ func admitRelink(ctx context.Context, in RelinkActivityInput) (string, error) {
 
 // relinkActivityRow is the guarded write for ONE activity, inside the caller's
 // transaction, after the caller has probed the destination record. It answers
-// whether a link was actually written — replaying the same association is a
-// no-op, and a no-op writes no audit noise — and whether the row is held, so
-// a caller reading it back afterward (RelinkActivity's own final read) knows
-// which archived filter still finds a no-op's row.
+// whether a link was actually written. Replaying the same association writes
+// no link and no audit noise. The one exception is a colleague confirming a
+// deal link (confirmDealByHand). It also answers whether the row is held.
+// A caller reading it back afterward (RelinkActivity's own final read) then
+// knows which archived filter still finds a no-op's row.
 //
 // The write check is per row on purpose. Customer identity is workspace-
 // readable, so the write arm (auth.EnsureActivityWritable) is what keeps a
 // colleague's correspondence theirs — and in a batch every row is somebody's.
 func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, column string) (wrote, held bool, err error) {
+	if err := lockRelinkedAttendees(ctx, tx, in, id.UUID); err != nil {
+		return false, false, err
+	}
 	// THE LOCK COMES FIRST, before the authority check and before the version
 	// compare, because both are answers about the row and both are only true
 	// while it holds still. Checked first and locked after, an ownership change
@@ -201,21 +208,19 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 			return false, held, err
 		}
 	}
-	if in.EntityType == linkEntityContact && in.ReplaceExistingOfType && len(displaced) > 0 {
-		if err := repointDisplacedParticipants(ctx, tx, id, in.EntityID, displaced); err != nil {
-			return false, held, err
-		}
+	if err := settleDisplaced(ctx, tx, id, in, displaced); err != nil {
+		return false, held, err
 	}
 	tag, err := tx.Exec(ctx, storekit.SQLf(`
-		INSERT INTO activity_link (activity_id, entity_type, %s)
-		VALUES ($1, $2, $3)
+		INSERT INTO activity_link (activity_id, entity_type, %s, deal_relevance, relevance_source)
+		VALUES ($1, $2, $3, NULLIF($4, ''), CASE WHEN $4 <> '' THEN $5 END)
 		ON CONFLICT (activity_id, entity_type, `+linkIDCoalesce+`) DO NOTHING`, column),
-		id, in.EntityType, in.EntityID)
+		id, in.EntityType, in.EntityID, in.relevance, relstrength.RelevanceByClassifier)
 	if err != nil {
 		return false, held, err
 	}
 	if tag.RowsAffected() == 0 {
-		return false, held, nil
+		return false, held, confirmDealByHand(ctx, tx, id, in, held)
 	}
 	return true, held, finalizeRelinkedActivity(ctx, tx, id, in, displaced)
 }
@@ -239,14 +244,27 @@ func finalizeRelinkedActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	}
 	// Filing under a project is what qualifies the correspondence (D5), so
 	// the stamp commits with the link that earned it.
-	if in.EntityType == linkEntityProject {
+	if in.EntityType == linkEntityProject && !inheritedRelink(in) {
 		if err := StampCorrespondenceForProject(ctx, tx, id, in.EntityID); err != nil {
 			return err
 		}
 	}
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", id.UUID, relinkBefore(in.EntityType, removed), map[string]any{
-		"entity_type": in.EntityType, "entity_id": in.EntityID, "replaced": in.ReplaceExistingOfType,
-	}, in.evidence)
+	after := map[string]any{"entity_type": in.EntityType, fieldEntityID: in.EntityID, "replaced": in.ReplaceExistingOfType}
+	if in.relevance != "" {
+		after[fieldDealRelevance], after[fieldRelevanceSource] = in.relevance, relstrength.RelevanceByClassifier
+	}
+	// A contact linked later is the sender only when the message's stated
+	// address proves it.
+	if in.EntityType == linkEntityContact {
+		proven, err := stampProvenSender(ctx, tx, id.UUID, in.EntityID)
+		if err != nil {
+			return err
+		}
+		if proven {
+			after[auditFieldProvenSender] = in.EntityID
+		}
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", id.UUID, relinkBefore(in.EntityType, removed), after, in.evidence)
 	if err != nil {
 		return err
 	}
@@ -317,39 +335,6 @@ func relinkMeetsItsPin(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVers
 	return nil
 }
 
-// refuseBatchPin keeps a version pin off the doors it cannot mean.
-//
-// One version cannot speak for a thread or a named set: applied per row it
-// would refuse every activity except the one that happened to match, which
-// reads as a partial move nobody asked for. The doors that take a pin are the
-// single relink's, and a caller that supplies one here is told so rather than
-// having it quietly dropped — a pin silently ignored is the failure this whole
-// change is about.
-func refuseBatchPin(in RelinkActivityInput) error {
-	if in.IfVersion == nil {
-		return nil
-	}
-	return &BatchPinError{}
-}
-
-// BatchPinError refuses a version pin on a door that moves many activities.
-//
-// A MessageFault rather than a field fault: the pin arrives as an If-Match
-// HEADER, so there is no request field to name, and inventing one would point
-// the caller at an input that is not theirs to change.
-type BatchPinError struct{}
-
-func (e *BatchPinError) Error() string {
-	return "a thread or a named set moves many activities, and one version cannot condition them"
-}
-
-// MessageFault maps this to a 422 carrying the code, so a client can branch on
-// the reason rather than parsing prose.
-func (e *BatchPinError) MessageFault() (code, message string) {
-	return "pin_not_supported", e.Error() +
-		" — drop the If-Match and relink them one at a time to pin a version"
-}
-
 // RelinkThread applies one relink to every non-archived activity of anchor's
 // correspondence (SameCorrespondenceSQL) that the caller may write. A row the
 // caller cannot see or cannot write is LEFT, not refused. The caller never named
@@ -368,6 +353,10 @@ func (s *Store) RelinkThread(ctx context.Context, anchor ids.ActivityID, in Reli
 	}
 	var out RelinkBatchResult
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		project, err := lockDealRelink(ctx, tx, in)
+		if err != nil {
+			return err
+		}
 		// ATTACH, as the single-row relink is: every activity this moves lands
 		// on the target record, which its readers then see.
 		if err := auth.EnsureAttachTarget(ctx, tx, in.EntityType, in.EntityID); err != nil {
@@ -384,6 +373,13 @@ func (s *Store) RelinkThread(ctx context.Context, anchor ids.ActivityID, in Reli
 		if err != nil {
 			return err
 		}
+		conversation := make([]ids.UUID, 0, len(members))
+		for _, id := range members {
+			conversation = append(conversation, id.UUID)
+		}
+		if err := lockRelinkedAttendees(ctx, tx, in, conversation...); err != nil {
+			return err
+		}
 		for _, id := range members {
 			written, _, err := relinkActivityRow(ctx, tx, id, in, column)
 			switch {
@@ -393,7 +389,7 @@ func (s *Store) RelinkThread(ctx context.Context, anchor ids.ActivityID, in Reli
 				return err
 			case written:
 				out.Relinked++
-				if err := s.answerOnDealFiling(ctx, tx, id, in); err != nil {
+				if err := s.answerOnDealFiling(ctx, tx, id, in, project); err != nil {
 					return err
 				}
 			}
@@ -439,9 +435,16 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 	}
 	var out RelinkBatchResult
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		project, err := lockDealRelink(ctx, tx, in)
+		if err != nil {
+			return err
+		}
 		// ATTACH, as the single-row relink is: every activity this moves lands
 		// on the target record, which its readers then see.
 		if err := auth.EnsureAttachTarget(ctx, tx, in.EntityType, in.EntityID); err != nil {
+			return err
+		}
+		if err := lockRelinkedAttendees(ctx, tx, in, activityIDs...); err != nil {
 			return err
 		}
 		seen := make(map[ids.UUID]struct{}, len(activityIDs))
@@ -457,7 +460,7 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 			}
 			if written {
 				out.Relinked++
-				if err := s.answerOnDealFiling(ctx, tx, ids.From[ids.ActivityKind](raw), in); err != nil {
+				if err := s.answerOnDealFiling(ctx, tx, ids.From[ids.ActivityKind](raw), in, project); err != nil {
 					return err
 				}
 			}
@@ -467,20 +470,20 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 	return out, err
 }
 
-// answerOnDealFiling lets each row a batch door files on a deal answer its
-// conversation's question, as the single door's row does. The first of a
-// conversation's rows settles its question, and the rest find none open.
-func (s *Store) answerOnDealFiling(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput) error {
-	if in.EntityType != linkEntityDeal {
-		return nil
-	}
-	return s.answerWhichDealTx(ctx, tx, id, in.EntityID)
-}
-
 func validateRelinkCount(count int) error {
 	if count == 0 || count > maxBulkRelink {
 		return httperr.Validation("activity_ids", "out_of_range",
 			fmt.Sprintf("activity_ids names between 1 and %d activities; this request names %d", maxBulkRelink, count))
 	}
 	return nil
+}
+
+// lockRelinkedAttendees takes the attendee locks a contact relink needs, since
+// it moves participant rows and may stamp the sender. A batch takes them all,
+// sorted, before its first row lock.
+func lockRelinkedAttendees(ctx context.Context, tx pgx.Tx, in RelinkActivityInput, activityIDs ...ids.UUID) error {
+	if in.EntityType != linkEntityContact {
+		return nil
+	}
+	return storekit.LockMeetingAttendeeWrites(ctx, tx, activityIDs...)
 }

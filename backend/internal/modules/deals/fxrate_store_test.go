@@ -172,11 +172,36 @@ func TestEveryUninjectedInstallationSeamRefuses(t *testing.T) {
 					t.Fatalf("%s is nil after orRefusing; an un-injected seam must refuse, not panic", field)
 				}
 				_, err = seam("de")
+			case ManagerOwners:
+				if seam == nil {
+					t.Fatalf("%s is nil after orRefusing; an un-injected seam must refuse, not panic", field)
+				}
+				_, err = seam(context.Background(), nil, nil, nil)
 			case IssuerEntityReader:
 				if seam == nil {
 					t.Fatalf("%s is nil after orRefusing; an un-injected seam must refuse, not panic", field)
 				}
 				_, err = seam(context.Background(), nil, nil)
+			case CarryGrants:
+				err = seam(context.Background(), nil, "deal", ids.UUID{}, ids.UUID{})
+			case []MoveDealRefs:
+				if len(seam) == 0 {
+					t.Fatalf("%s is empty after orRefusing; an un-injected seam must refuse, not panic", field)
+				}
+				_, err = seam[0](context.Background(), nil, ids.UUID{}, ids.UUID{})
+			case WinChanceReader:
+				// Optional by design: a store with none keeps the stored
+				// probability, which is what a store built outside the
+				// composition reads. It must stay nil, never a refusal.
+				if seam != nil {
+					t.Fatalf("%s is set after orRefusing; an unset win chance read must stay nil", field)
+				}
+				return
+			case WinChanceSQL:
+				if seam != nil {
+					t.Fatalf("%s is set after orRefusing; an unset win chance read must stay nil", field)
+				}
+				return
 			default:
 				t.Fatalf("%s is neither seam shape; teach this test how to call it", field)
 			}

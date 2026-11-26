@@ -1,0 +1,12 @@
+{
+  "verb": "list_company_contracts",
+  "checks": [
+    "company.read",
+    "contract.read",
+    "deal.read",
+    "project.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

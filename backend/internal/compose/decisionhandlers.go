@@ -86,10 +86,10 @@ func (h salesDecisionHandlers) RecordSalesDecisionOutcome(w http.ResponseWriter,
 // wireSalesReview binds what a sales review records beside its figures: the
 // initiatives it narrows to and the decisions it writes as tasks.
 func (s *Server) wireSalesReview(pool *pgxpool.Pool) {
-	s.initiativeHandlers = initiatives.NewHandlers(newInitiativeStore(pool))
+	s.initiativeHandlers = initiatives.NewHandlers(NewInitiativeStore(pool))
 	decisions := newSalesDecisions(InstallationDB(pool))
 	s.salesDecisionHandlers = salesDecisionHandlers{decisions: decisions}
-	s.salesAssessmentHandlers = salesAssessmentHandlers{svc: newSalesAssessments(s.reportMetrics, decisions, InstallationDB(pool))}
-	s.reportSetupHandlers = reportSetupHandlers{svc: newReportSetups(s.reportMetrics, s.dealsStore, pool)}
+	s.salesAssessmentHandlers = salesAssessmentHandlers{svc: newSalesAssessments(s.reportMetrics, decisions, InstallationDB(pool)), Reading: s.salesProgressReading, Assess: s.assessProgress}
+	s.reportSetupHandlers = reportSetupHandlers{svc: newReportSetups(s.reportMetrics, s.dealsStore, pool), goalProposalHandlers: s.newGoalProposals()}
 	s.accountCoverageHandlers = accountCoverageHandlers{svc: accountCoverage{db: InstallationDB(pool), now: time.Now}}
 }

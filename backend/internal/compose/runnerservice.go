@@ -18,13 +18,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/promptlang"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
 )
 
@@ -65,6 +69,9 @@ type RunnerService struct {
 	// own goal forbids — so the coverage was only ever there by way of a
 	// prohibited call. Rather than lose it, the lane reaches for the wiring.
 	specByName func(string) (runner.AgentSpec, bool)
+	// seeded remembers today's occurrences this process already inserted, so a
+	// tick after the due hour does not repeat an insert that can only conflict.
+	seeded runner.SeededMemo
 }
 
 // RunnerOption adjusts a RunnerService at construction.
@@ -81,8 +88,13 @@ func WithSpecResolver(resolve func(string) (runner.AgentSpec, bool)) RunnerOptio
 	return func(s *RunnerService) { s.specByName = resolve }
 }
 
-// WithRunnerLists turns on list_id narrowing in the runner's tools, as the
-// API's are when lists are on.
+// WithRunnerDisabledCoreFeatures keeps queued tool calls within the configured feature boundary.
+func WithRunnerDisabledCoreFeatures(disabled []string) RunnerOption {
+	availability := corefeatures.New(disabled)
+	return func(s *RunnerService) { s.features.coreFeatures = availability }
+}
+
+// WithRunnerLists turns on list_id narrowing in the runner's tools.
 func WithRunnerLists(on bool) RunnerOption {
 	return func(s *RunnerService) { s.features.lists = on }
 }
@@ -118,6 +130,7 @@ func NewRunnerService(pool *pgxpool.Pool, brain runner.Brain, draftBrain complet
 	for _, opt := range opts {
 		opt(svc)
 	}
+	svc.features.lists = svc.features.lists && svc.features.coreFeatures.Enabled(crmcontracts.CoreFeatureFilters)
 	svc.runner = runner.New(registryWithDraftBrain(pool, draftBrain, send, svc.features), brain)
 	return svc
 }
@@ -152,7 +165,7 @@ func (s *RunnerService) Tick(ctx context.Context, now time.Time) error {
 	// refuse them. The pass runs on the installation's own authority, and the
 	// only caller entitled to start it is one carrying nobody.
 	if actor, ok := principal.Actor(ctx); ok && actor.Type != principal.PrincipalSystem {
-		return fmt.Errorf("runner: a scheduled pass runs as the system, not as %s: %w",
+		return fmt.Errorf("a scheduled pass runs as the system, not as a %s: %w",
 			actor.Type, apperrors.ErrPermissionDenied)
 	}
 	ctx = schedulerContext(ctx)
@@ -217,10 +230,18 @@ func (s *RunnerService) seedSeats(ctx context.Context, spec runner.AgentSpec, no
 		if !grant.Live() || grant.PassportID == nil {
 			continue
 		}
-		passportID := *grant.PassportID
-		if err := s.store.EnqueueJob(ctx, spec.Name, spec.TriggerRef(now, grant.UserID), &passportID, due); err != nil {
-			failures = append(failures, fmt.Errorf("seat %s: %w", grant.UserID, err))
+		// The grants are still read every tick. A seat that grants during the
+		// day is not in the memo yet, so it gets today's job.
+		triggerRef := spec.TriggerRef(now, grant.UserID)
+		if s.seeded.Has(now, spec.Name, triggerRef) {
+			continue
 		}
+		passportID := *grant.PassportID
+		if err := s.store.EnqueueJob(ctx, spec.Name, triggerRef, &passportID, due); err != nil {
+			failures = append(failures, fmt.Errorf("seat %s: %w", grant.UserID, err))
+			continue
+		}
+		s.seeded.Add(spec.Name, triggerRef)
 	}
 	if len(failures) > 0 {
 		return fmt.Errorf("seeding %s for %d of %d seats: %w",
@@ -360,6 +381,7 @@ func (s *RunnerService) executeJob(ctx context.Context, job runner.QueuedJob) {
 		Budget:     spec.Budget,
 		Tools:      spec.Tools,
 		Grounding:  grounding,
+		Outcome:    outcomeCheckFor(spec),
 		// The rendered rule, not a code: the runner is a module and may not
 		// import compose, where the one spelling of this block lives.
 		LanguageRule: promptlang.Rule(identity.BaseLanguageForPrompt(bounded, s.pool)),
@@ -421,4 +443,30 @@ func (s *RunnerService) seedGrounding(ctx context.Context, spec runner.AgentSpec
 // lexically-ranked seed is a less RELEVANT seed, not a less trustworthy one.
 func retrievedSeed(source, snippet string) runner.Grounding {
 	return runner.Grounding{SourceID: source, TrustTier: "T2", Content: snippet}
+}
+
+// agentBrain adapts the router into the runner's Brain seam. It hands the
+// served model identity back as runner.Meta, so the trace records what
+// answered each step without calling the model again (RUNNER-AC-4). The
+// direct-call lanes use routerBrain.
+type agentBrain struct {
+	router         *ai.Router
+	companyContext *companyContextProvider
+}
+
+func (b agentBrain) Complete(ctx context.Context, req model.Request) (model.Response, runner.Meta, error) {
+	prepared, err := prepareOrAnnounce(ctx, b.router, b.companyContext, ai.TaskAgentLoop, req)
+	if err != nil {
+		return model.Response{}, runner.Meta{}, err
+	}
+	resp, info, err := b.router.Complete(ctx, ai.TaskAgentLoop, prepared)
+	meta := runner.Meta{ModelID: info.ModelID, Tier: string(info.Tier), Reject: func() { b.router.Reject(info) }}
+	return resp, meta, agentStepRefusal(err)
+}
+
+// PromptWindow is the window of the agent loop's own ladder, read fresh on
+// every step. A routing rebind or a budget demotion partway through a run is
+// then seen by the next step, not at the next restart.
+func (b agentBrain) PromptWindow() int {
+	return b.router.PromptWindow(ai.TaskAgentLoop)
 }

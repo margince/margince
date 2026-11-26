@@ -7,15 +7,17 @@ import { Building2, Contact, Handshake, UserPlus } from "lucide-react";
 import { useEffect } from "react";
 
 import { api } from "../../api/client";
-import { Button } from "../../design-system/atoms";
+import { AppLink } from "../../design-system/applink";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { isTagTone } from "../../design-system/tagpill";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
-import { navigate, navigateReplacing } from "../../lib/router";
+import { navigate } from "../../lib/router";
+import { useAddressWriters } from "../../lib/urlstate";
 import "./tagresult.css";
 
 /**
@@ -37,6 +39,7 @@ const PREVIEW_ROWS = 5;
 export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
   const t = useT();
   const { locale } = useLocale();
+  const { navigateReplacing } = useAddressWriters();
   const tag = useQuery({
     queryKey: ["tag", tagID],
     queryFn: tagID
@@ -56,7 +59,7 @@ export function TagResultScreen({ tagID }: Readonly<{ tagID?: string }>) {
     if (!tagID) {
       navigateReplacing({ screen: "settings", id: "tags" });
     }
-  }, [tagID]);
+  }, [tagID, navigateReplacing]);
   if (!tagID || tag.isPending) {
     return null;
   }
@@ -192,12 +195,13 @@ function ResultGroup({
   const t = useT();
   const { locale } = useLocale();
   const group = GROUPS[kind];
+  const readerScope = useHealthScope();
   const rows = useQuery({
-    queryKey: ["tag-records", kind, tagID],
+    queryKey: ["tag-records", kind, tagID, readerScope ?? ""],
     // The tag read already said this type carries none, so asking for its rows
     // is a round trip whose answer is known. The hook still RUNS — a group that
     // called it conditionally would change the hook order as counts arrive.
-    enabled: count > 0,
+    enabled: count > 0 && readerScope !== undefined,
     queryFn: async () => {
       const data = unwrap(
         await api.GET(group.path, {
@@ -260,16 +264,12 @@ function ResultGroup({
             has needs no way to see more, and the tag's own count cannot be the
             test here for the same reason it is not the header. */}
         {listed.length >= PREVIEW_ROWS && (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              window.location.hash = allRecordsHref(group.screen, tagID).slice(
-                1,
-              );
-            }}
+          <AppLink
+            className="btn btn-ghost"
+            href={allRecordsHref(group.screen, tagID)}
           >
             {t("tagResult.viewAll", { count: shown, kind: title })}
-          </Button>
+          </AppLink>
         )}
       </PanelBody>
     </Panel>

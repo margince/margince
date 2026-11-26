@@ -235,7 +235,7 @@ func TestCapturedPartiesRetiresEarlierAuthorityWhenTheFolderIsExcluded(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := capture.NewExclusionStore(InstallationDB(e.Pool)).Add(e.Admin(), capture.ExclusionScopeUser, capture.ExclusionKindContainer, "gmail:Private"); err != nil {
+	if _, err := capture.NewExclusionStore(InstallationDB(e.Pool)).Add(e.Admin(), capture.ExclusionScopeUser, capture.ExclusionKindContainer, "gmail:Private", ids.Nil); err != nil {
 		t.Fatal(err)
 	}
 	rec.Containers = []string{"gmail:SENT", "gmail:Private"}
@@ -258,7 +258,7 @@ func TestCapturedPartiesHonorsAnExclusionOnTheCapturingAddress(t *testing.T) {
 	e := integration.Setup(t)
 	sink := newCaptureSink(e.Pool, CaptureConfig{})
 	capturePartiesMailUsing(t, e, sink.WithEnsurer(nil, nil), partyMailProof{outbound: true, sentByOwner: true}, "Bob Buyer <bob@buyer.test>", "", "Could we discuss the product requirements?")
-	if _, err := capture.NewExclusionStore(InstallationDB(e.Pool)).Add(e.Admin(), capture.ExclusionScopeUser, capture.ExclusionKindAddress, seatAddress(t, e, e.AdminUser)); err != nil {
+	if _, err := capture.NewExclusionStore(InstallationDB(e.Pool)).Add(e.Admin(), capture.ExclusionScopeUser, capture.ExclusionKindAddress, seatAddress(t, e, e.AdminUser), ids.Nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := sink.RecoverPartyAdmissions(principal.SystemActing(e.Admin(), "party-recovery-test"), 10); err != nil {

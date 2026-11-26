@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -31,7 +32,7 @@ func heldQuestionSource() string {
  COALESCE(qd.legal_hold,false) OR COALESCE(qdc.legal_hold,false) OR COALESCE(qdp.legal_hold,false)
  OR COALESCE(ql.legal_hold,false) OR COALESCE(qp.legal_hold,false)
  OR EXISTS(SELECT 1 FROM company pc WHERE pc.legal_hold AND (pc.id=qp.company_id
- OR pc.id IN (SELECT company_id FROM relationship WHERE project_id=qp.id AND kind='project_company')))
+ OR pc.id IN (SELECT company_id FROM relationship WHERE project_id=qp.id AND kind='` + auth.ProjectCompanyKind + `')))
  OR EXISTS(SELECT 1 FROM relationship rel JOIN contact subject ON subject.id=rel.contact_id
  WHERE ((rel.deal_id=qd.id AND rel.kind='deal_stakeholder') OR (rel.project_id=qp.id AND rel.kind='project_stakeholder')) AND subject.legal_hold)
  OR EXISTS(SELECT 1 FROM contact lc WHERE lc.id IN (ql.promoted_contact_id, ql.from_contact_id) AND lc.legal_hold)
@@ -53,15 +54,15 @@ func subjectQuestionSources(contact, emails string) string {
 
 // leadTwinOf selects the leads that are the subject bound as contact, before or
 // after promotion, merge or conversion, or by their address in emails. These are
-// the leads anonymizeLeadTwins wipes. Its statement keeps its own copy, since
-// waivers key on that statement's text, and a test in this package holds the
-// two equal.
+// the leads anonymizeLeadTwins wipes. Exports, erasure and retained reporting
+// use this predicate so a historical contact link has the same reach in each.
 func leadTwinOf(contact, emails string) string {
 	return `promoted_contact_id = ` + contact + `
+		     OR promoted_contact_id IN (SELECT id FROM contact WHERE merged_into_id = ` + contact + `)
 		     OR from_contact_id = ` + contact + `
 		     OR from_contact_id IN (SELECT id FROM contact WHERE merged_into_id = ` + contact + `)
-		     OR id IN (SELECT converted_from_lead_id FROM contact WHERE id = ` + contact + ` AND converted_from_lead_id IS NOT NULL)
-		     OR (email IS NOT NULL AND lower(email) = ANY(` + emails + `))`
+		     OR id IN (SELECT converted_from_lead_id FROM contact WHERE (id = ` + contact + ` OR merged_into_id = ` + contact + `) AND converted_from_lead_id IS NOT NULL)
+		     OR (email IS NOT NULL AND email = ANY(` + emails + `))`
 }
 
 // sarQuestionSection hands over each kept answer row a record about the

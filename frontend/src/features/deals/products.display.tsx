@@ -7,6 +7,7 @@
 import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
+import { type BillingMonths, CADENCE } from "../../format/billingphrase";
 import { formatMoney } from "../../format/format";
 import { billingModelLabel } from "../../format/productbilling";
 import { type Translator, useLocale, useT } from "../../i18n";
@@ -31,17 +32,6 @@ export const COMPONENT_LABEL: Readonly<Record<ComponentKind, MessageKey>> = {
 export function componentKindOf(value: unknown): ComponentKind | undefined {
   return COMPONENT_KINDS.find((kind) => kind === value);
 }
-
-export type BillingMonths = NonNullable<Product["billing_interval_months"]>;
-
-export const BILLING_MONTHS: readonly BillingMonths[] = [1, 3, 6, 12];
-
-export const CADENCE: Readonly<Record<BillingMonths, MessageKey>> = {
-  1: "product.billingMonthly",
-  3: "product.billingQuarterly",
-  6: "product.billingHalfYearly",
-  12: "product.billingYearly",
-};
 
 const PRICE_PER: Readonly<Record<BillingMonths, MessageKey>> = {
   1: "product.pricePerMonth",

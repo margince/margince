@@ -1,0 +1,15 @@
+{
+  "tool": "change_activities",
+  "action": "set_thread_audience",
+  "verb": "set_thread_audience",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

@@ -36,10 +36,13 @@ const (
 // a commitment or correcting one, and a reader of either path should land on
 // the same constant.
 const (
-	codeRequired   = "required"
-	codeWeekClosed = "week_closed"
-	fieldLabel     = "label"
-	fieldWeek      = "week"
+	codeRequired    = "required"
+	codeWeekClosed  = "week_closed"
+	fieldLabel      = "label"
+	fieldWeek       = "week"
+	fieldLinkedID   = "linked_record_id"
+	fieldLinkedKind = "linked_record_type"
+	fieldResponse   = "manager_response"
 
 	// changedCommitments is the field name every write to a plan's commitments
 	// reports, so a consumer filtering on it sees all of them.
@@ -327,7 +330,7 @@ func bounded(field, value string, limit int) (string, error) {
 	// did not.
 	if utf8.RuneCountInString(trimmed) > limit {
 		return "", &values.ParseError{
-			Field: field, Code: "too_long",
+			Field: field, Code: "too_long", Max: limit,
 			Message: fmt.Sprintf("%s is at most %d characters", field, limit),
 		}
 	}

@@ -68,6 +68,17 @@ type fakeSurface struct {
 	// offered narrows what a run is SHOWN, leaving Specs — what an observation
 	// may be attributed to — whole. Nil means the surface offers everything.
 	offered []mcp.ToolSpec
+	// explained is what the surface tells a caller about any refusal; empty
+	// tells it the error's own words.
+	explained string
+}
+
+// Explain stands in for the registry's wording, which agents tests hold.
+func (s *fakeSurface) Explain(_ context.Context, _ string, err error) string {
+	if s.explained != "" {
+		return s.explained
+	}
+	return err.Error()
 }
 
 type recordedCall struct {
@@ -188,7 +199,7 @@ func TestAResumedRunKeepsAttributingAToolItMayNoLongerCall(t *testing.T) {
 	staging := &fakeSurface{
 		results: map[string]json.RawMessage{
 			"read_record":   json.RawMessage(`{"record_type":"deal","fields":{"name":"Nordwind"}}`),
-			"update_record": json.RawMessage(`{"record_type":"deal","updated":true}`),
+			"update_record": json.RawMessage(`{"why":"A test asks for this change.","record_type":"deal","updated":true}`),
 		},
 		errs: map[string]error{
 			"send_email": &workflow.StagedApprovalError{ApprovalID: ids.New[ids.ApprovalKind]()},
@@ -196,7 +207,7 @@ func TestAResumedRunKeepsAttributingAToolItMayNoLongerCall(t *testing.T) {
 	}
 	suspended, err := New(staging, &scriptedBrain{texts: []string{
 		`{"tool":"read_record","args":{"record_type":"deal","id":"x"}}`,
-		`{"tool":"update_record","args":{"record_type":"deal","id":"x"}}`,
+		`{"tool":"update_record","args":{"why":"A test asks for this change.","record_type":"deal","id":"x"}}`,
 		`{"tool":"send_email","args":{"to":"a@b.c"}}`,
 	}}).Run(context.Background(), Job{Goal: "follow up", Tools: []string{"read_record", "update_record", "send_email"}})
 	if err != nil {
@@ -396,8 +407,8 @@ func TestTerminalDirectiveStaysOutsideTheObservationSpan(t *testing.T) {
 		t.Fatal("the run's system prompt declares no data boundary")
 	}
 
-	observeRefusal(win, modelStep{Tool: "run_report"},
-		fmt.Errorf("reports: %w", apperrors.ErrUnsupportedBySoR), Meta{}, model.Response{})
+	refused := fmt.Errorf("reports: %w", apperrors.ErrUnsupportedBySoR)
+	observeRefusal(win, modelStep{Tool: "run_report"}, refused.Error(), refused, Meta{}, model.Response{})
 
 	msgs := win.snapshot()
 	last := msgs[len(msgs)-1].Content
@@ -942,8 +953,8 @@ func TestALongRefusalDoesNotCrowdTheTerminalFindingOutOfTheTrace(t *testing.T) {
 	win := newWindow(Job{Goal: "g"}, nil, nil)
 	huge := strings.Repeat("x", traceObservationLimit*2)
 
-	step := observeRefusal(win, modelStep{Tool: "run_report"},
-		fmt.Errorf("%s: %w", huge, apperrors.ErrUnsupportedBySoR), Meta{}, model.Response{})
+	refused := fmt.Errorf("%s: %w", huge, apperrors.ErrUnsupportedBySoR)
+	step := observeRefusal(win, modelStep{Tool: "run_report"}, refused.Error(), refused, Meta{}, model.Response{})
 
 	if !strings.Contains(step.Observation, "do not call it again") {
 		t.Errorf("the terminal finding was truncated out of the trace: %q", step.Observation)

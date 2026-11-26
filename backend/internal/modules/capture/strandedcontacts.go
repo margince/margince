@@ -84,13 +84,7 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 		rows, err := tx.Query(ctx, `
 			SELECT p.id, p.owner_id, pe.email,
 			       coalesce(p.full_name, ''),
-			       (SELECT a.id
-			          FROM activity_link l
-			          JOIN activity a ON a.id = l.activity_id
-			         WHERE l.entity_type = 'contact' AND l.contact_id = p.id
-			           AND a.captured_by LIKE 'connector:%'
-			           AND lower(btrim(coalesce(a.counterparty_email, ''))) = pe.email
-			           AND a.archived_at IS NULL AND a.restricted_at IS NULL
+			       (SELECT a.id `+judgeableMessageFrom("p", "pe.email")+`
 			         ORDER BY a.occurred_at DESC, a.id DESC
 			         LIMIT 1)
 			  FROM contact p
@@ -102,9 +96,7 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 			   AND (p.captured_by LIKE 'connector:%' OR p.captured_by LIKE 'agent:%')
 			   AND NOT EXISTS (SELECT 1 FROM capture_pending_counterparty q
 			                    WHERE q.email = pe.email)
-			   AND NOT EXISTS (SELECT 1 FROM audit_log al
-			                    WHERE al.entity_type = 'contact' AND al.entity_id = p.id
-			                      AND `+storekit.AuditForAUser("al")+`)
+			   AND NOT `+contactTouchedByAUser("p")+`
 			   -- The message the projection above looks for, asked here as a
 			   -- FILTER so a contact the engine cannot judge does not consume
 			   -- the page. A contact known only from a meeting has no such
@@ -112,13 +104,7 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 			   -- otherwise be drawn, discarded after the LIMIT, and drawn
 			   -- again next tick, crowding out the contacts a verdict can
 			   -- actually be reached for.
-			   AND EXISTS (SELECT 1
-			                 FROM activity_link l
-			                 JOIN activity a ON a.id = l.activity_id
-			                WHERE l.entity_type = 'contact' AND l.contact_id = p.id
-			                  AND a.captured_by LIKE 'connector:%'
-			                  AND lower(btrim(coalesce(a.counterparty_email, ''))) = pe.email
-			                  AND a.archived_at IS NULL AND a.restricted_at IS NULL)
+			   AND EXISTS (SELECT 1 `+judgeableMessageFrom("p", "pe.email")+`)
 			 ORDER BY random()
 			 LIMIT $1`, limit)
 		if err != nil {
@@ -147,6 +133,26 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 		return nil, fmt.Errorf("capture: listing captured contacts nobody was asked about: %w", err)
 	}
 	return out, nil
+}
+
+// judgeableMessageFrom is the `FROM` and `WHERE` of the captured messages a sender
+// verdict could be raised over for one address of the contact aliased contact.
+// The sweep asks with them, and the owner's waiting list says the sweep will.
+func judgeableMessageFrom(contact, email string) string {
+	return `FROM activity_link l
+	          JOIN activity a ON a.id = l.activity_id
+	         WHERE l.entity_type = 'contact' AND l.contact_id = ` + contact + `.id
+	           AND a.captured_by LIKE 'connector:%'
+	           AND lower(btrim(coalesce(a.counterparty_email, ''))) = ` + email + `
+	           AND a.archived_at IS NULL AND a.restricted_at IS NULL`
+}
+
+// contactTouchedByAUser holds when a user worked on the contact aliased
+// contact, which takes it out of both sweeps for good.
+func contactTouchedByAUser(contact string) string {
+	return `EXISTS (SELECT 1 FROM audit_log al
+	                 WHERE al.entity_type = 'contact' AND al.entity_id = ` + contact + `.id
+	                   AND ` + storekit.AuditForAUser("al") + `)`
 }
 
 // NoiseJudgedContact is one capture-made contact still standing at an address a
@@ -207,9 +213,7 @@ func (s *PendingStore) NoiseJudgedContacts(ctx context.Context, limit int) ([]No
 			   AND p.owner_id IS NOT NULL
 			   AND (p.captured_by LIKE 'connector:%' OR p.captured_by LIKE 'agent:%')
 			   AND `+noiseJudgedStandsSQL("pe.email", "p.owner_id")+`
-			   AND NOT EXISTS (SELECT 1 FROM audit_log al
-			                    WHERE al.entity_type = 'contact' AND al.entity_id = p.id
-			                      AND `+storekit.AuditForAUser("al")+`)
+			   AND NOT `+contactTouchedByAUser("p")+`
 			 ORDER BY random()
 			 LIMIT $1`, limit)
 		if err != nil {

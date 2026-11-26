@@ -25,7 +25,7 @@ import type { Locale } from "../i18n";
 import { en } from "../i18n/en";
 import type { Route } from "../lib/router";
 import { SETTINGS_PAGES } from "../lib/settingscatalog";
-import type { GrantSpec } from "../testing/mefixture";
+import { type GrantSpec, READS_DESTINATIONS } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -53,8 +53,8 @@ import "../features/settings/settings.css";
 // fullscreen: the shell sizes itself to the viewport, so Storybook's default
 // canvas padding would clip the sidebar foot and misrepresent the layout — and
 // the foot is where the entitlement row reports the installation's seats. The
-// account block is NOT there any more; it stands at the end of the top bar's
-// trail (Shell/Account block), which is why every frame here renders that bar.
+// account block stands at the end of the top bar (Shell/Account block), which
+// is why every frame here renders that bar.
 const meta: Meta<typeof Shell> = {
   title: "Shell/Navigation shell",
   component: Shell,
@@ -83,13 +83,13 @@ const COMPANY_BADGE =
  * banners ask `automation:update` and `embedding_reindex:read` — so a hand-written
  * body carrying no `authorization` at all answers every one of them closed. That
  * looks exactly like a deliberate denial on screen, which is how a frame comes to
- * be named for something it never draws. `meRoute({})` is the honest default here:
- * an admin on a full seat holding no object grants.
+ * be named for something it never draws. The seat reads every destination, since
+ * the rail leaves out one its seat cannot read; `allow` adds to that.
  */
 function stubSession(allow: GrantSpec = {}, about: RouteMap = {}) {
   installFetchStub({
     ...SHELL_ROUTES,
-    "GET /me": meRoute(allow),
+    "GET /me": meRoute({ ...READS_DESTINATIONS, ...allow }),
     ...about,
   });
 }
@@ -112,14 +112,9 @@ export const Default: Story = {
 };
 
 /**
- * A named page on the capped reading column: the heading starts and ends
- * exactly where the card under it does.
- *
- * The head used to run the full width of the window while the column was
- * capped, so on a wide display the page's name began a hand's width to the left
- * of its own content. One measure now caps both (shell.css, --pageMeasure), and
- * this frame is where a change to either is visible: put a ruler on the left
- * edge of the title and the left edge of the card.
+ * A named page: the heading starts and ends where the card under it does, both
+ * on the page gutter. Put a ruler on the left edge of the title and
+ * the left edge of the card.
  */
 export const PageHeadOnItsColumn: Story = {
   name: "a named page — head on the column",
@@ -223,18 +218,9 @@ export const CompanyWordmark: Story = {
 };
 
 /**
- * One sidebar state, in the frame it really sits in.
- *
- * The `.app` grid is what gives the sidebar its width (56px collapsed, 252px
- * labeled) and the content column its edge, so the example renders the grid
- * rather than a hand-set width — otherwise the story would be showing geometry
- * the product does not use. The content column is present and empty on purpose:
- * the sidebar is flush to the frame's left edge, separated by its own
- * border-right and nothing else, and that reads only against something beside it.
- *
- * The collapse control is live, so each panel can be moved to the other state —
- * the two are one component, and a story where the control does nothing hides
- * the transition it exists for.
+ * One sidebar state, in the `.app` grid that gives it its width.
+ * The empty content card shows the edge between content and chrome.
+ * The toggle at the rail's foot is live, so the transition can be watched.
  */
 function SidebarExample({
   initiallyCollapsed,
@@ -247,14 +233,10 @@ function SidebarExample({
         route={{ screen: "deals" }}
         counts={COUNTS}
         collapsed={collapsed}
+        onToggle={() => setCollapsed((current) => !current)}
       />
       <main className="main">
-        <TopBar
-          route={{ screen: "deals" }}
-          collapsed={collapsed}
-          onToggle={() => setCollapsed((current) => !current)}
-          onOpenSearch={openSearch}
-        />
+        <TopBar route={{ screen: "deals" }} onOpenSearch={openSearch} />
         <div className="scroll" />
       </main>
       {palette}
@@ -262,20 +244,8 @@ function SidebarExample({
   );
 }
 
-// Both sidebar states, side by side. Expanded is 252px of 34px rows on a 4px
-// gutter; collapsed is the canonical 56px geometry, where a row IS its target and
-// keeps 44px, the head is the mark with the build badge under it, and the group
-// headings are not drawn at all — 56px carries a glyph and not a label, and the
-// break between two groups is what says where one ends.
-//
-// The head is TWO rows either way: the brand block, then what the installation
-// runs on and which build of it this is. Expanded that line reads "Powered by
-// Margince" with the version badge beside it; at 56px the attribution goes and
-// the badge stays, shortened to one glyph.
-//
-// Neither panel holds the search or the account block. Both live in
-// the strip above (app/topbar.tsx), which is why these frames render that strip
-// rather than the sidebar alone.
+// Both sidebar states, side by side, under the top bar that holds the search
+// and the account block. Collapsed, each row is a 32px square.
 export const SidebarStates: Story = {
   name: "sidebar — expanded and collapsed",
   render: () => {
@@ -394,16 +364,8 @@ function stubEntitlement(entitlement: LicenseEntitlement) {
 /**
  * The rail's foot under both panel states side by side.
  *
- * A licence is stubbed because the shell's providers want one, not because the
- * foot reports it; the posture has its own banner. A frame with an over-cap
- * licence or a seat without `license:read` draws this same picture, so none
- * exists. What each would show is said where the behaviour is, in
- * lib/license-posture.ts.
- *
- * `.rail.collapsed` sets `overflow: visible` so its tooltips can escape the 56px
- * box, so the collapsed panel neither scrolls nor clips: in a window shorter
- * than its 44px rows add up to, its foot sits below the viewport. The expanded
- * panel scrolls; read the collapsed foot in a window tall enough to hold it.
+ * A licence is stubbed because the shell's providers want one. The foot does
+ * not report it; the posture has its own banner (lib/license-posture.ts).
  */
 export const RailFoot: Story = {
   name: "the foot — collapsed and expanded",
@@ -521,9 +483,7 @@ const SETTINGS_SECTION: NavSection = {
 // where the story put it. Each depth below is therefore a story of its own,
 // which is also how a reviewer sees them side by side.
 //
-// A level takes the brand's words for its rows and nothing else. The search and
-// the collapse control belong to the top bar above, so the story renders that bar
-// too — a panel shown without it would be a picture of half the chrome.
+// The story renders the top bar too, since the search lives there.
 function LevelExample({
   initiallyCollapsed,
   tab = "general",
@@ -538,13 +498,11 @@ function LevelExample({
         section={{ ...SETTINGS_SECTION, activeId: tab }}
         counts={COUNTS}
         collapsed={collapsed}
+        onToggle={() => setCollapsed((current) => !current)}
       />
       <main className="main">
         <TopBar
           route={{ screen: "settings", id: tab, id2: sub }}
-          section={{ ...SETTINGS_SECTION, activeId: tab }}
-          collapsed={collapsed}
-          onToggle={() => setCollapsed((current) => !current)}
           onOpenSearch={openSearch}
         />
         <div className="scroll" />
@@ -580,10 +538,10 @@ export const SectionLevel: Story = {
   ),
 };
 
-// German: the privacy entry is wider than the rail, so its row wraps and grows
-// while the rows around it keep their height.
+// German: the privacy entry is wider than the rail, so its label is cut on one
+// line. The row keeps its height, and its tip carries the whole label.
 export const SectionLevelGerman: Story = {
-  name: "second level — a German entry that wraps",
+  name: "second level, a German entry cut to one line",
   render: () => (
     <LevelStory locale="de">
       <LevelExample initiallyCollapsed={false} tab="account" />
@@ -600,13 +558,20 @@ export const SectionLevelGerman: Story = {
       const short = rows.find((row) =>
         row.textContent?.includes("Nutzerkonto"),
       );
-      const label = long?.querySelector(".navlabel");
-      if (!long || !short || !(label instanceof HTMLElement)) {
+      if (!long || !short) {
         throw new Error("the settings level has no privacy or account row");
       }
-      expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth);
-      expect(long.offsetHeight).toBeGreaterThan(short.offsetHeight);
+      expect(long.offsetHeight).toBe(short.offsetHeight);
     });
+    const privacy = within(canvasElement).getByRole("link", {
+      name: "Datenschutz und Aufbewahrung",
+    });
+    privacy.focus();
+    await waitFor(() =>
+      expect(within(canvasElement).getByRole("tooltip").textContent).toBe(
+        "Datenschutz und Aufbewahrung",
+      ),
+    );
   },
 };
 
@@ -651,12 +616,7 @@ function PhoneSectionExample() {
     <div className="app railexpanded">
       <WorkspaceRail route={route} section={SETTINGS_SECTION} counts={COUNTS} />
       <main className="main">
-        <TopBar
-          route={route}
-          section={SETTINGS_SECTION}
-          collapsed={false}
-          onOpenSearch={openSearch}
-        />
+        <TopBar route={route} onOpenSearch={openSearch} />
         <div className="scroll">
           <PageTitle route={route} section={SETTINGS_SECTION} />
           <div className="wrap">
@@ -700,13 +660,12 @@ export const SectionPhoneGerman: Story = {
       }
       expect(name.textContent).toBe("Datenschutz und Aufbewahrung");
       expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
-      const firstLine = parseFloat(getComputedStyle(name).lineHeight);
+      const firstLine = Number.parseFloat(getComputedStyle(name).lineHeight);
       const glyph = chevron.getBoundingClientRect();
       expect(glyph.top + glyph.height / 2).toBeCloseTo(
         name.getBoundingClientRect().top + firstLine / 2,
         0,
       );
-      expect(canvasElement.querySelector(".topbar .crumbs")).toBeNull();
     });
   },
 };
@@ -736,7 +695,7 @@ function PhoneMenuExample() {
     <div className="app railexpanded">
       <WorkspaceRail route={route} counts={COUNTS} />
       <main className="main">
-        <TopBar route={route} collapsed={false} onOpenSearch={openSearch} />
+        <TopBar route={route} onOpenSearch={openSearch} />
         <div className="scroll">
           <PageTitle route={route} />
           <div className="wrap">
@@ -787,7 +746,11 @@ export const PhoneMoreMenu: Story = {
     await expect(menu.querySelector(".railhead")).toBeNull();
   },
   render: () => {
-    stubEntitlement(WITHIN_CAP);
+    // The menu lists only the destinations this reader may read.
+    stubSession(
+      { ...READS_DESTINATIONS, license: ["read"] },
+      { "GET /installation/license": () => jsonResponse(WITHIN_CAP) },
+    );
     return (
       <StoryProviders>
         <SeedInstallation>
@@ -811,7 +774,7 @@ function PhoneBarExample() {
     <div className="app railexpanded">
       <WorkspaceRail route={route} counts={COUNTS} />
       <main className="main">
-        <TopBar route={route} collapsed={false} onOpenSearch={openSearch} />
+        <TopBar route={route} onOpenSearch={openSearch} />
         <div className="scroll">
           <PageTitle route={route} />
           <div className="wrap">
@@ -876,4 +839,52 @@ export const PhoneAgentPanel: Story = {
       </StoryProviders>
     );
   },
+};
+
+// A frameless page paints its own ground to the viewport edge, so its scroller
+// reserves no gutter, short page or long. Classic scrollbars are the case the
+// default Mac look hides, so the computed style is asserted rather than seen.
+function framelessScroller(canvasElement: HTMLElement) {
+  const scroller = canvasElement.querySelector(".app.railless .scroll");
+  if (!scroller) throw new Error("no frameless scroller on this frame");
+  return scroller;
+}
+
+const LONG_PAGE = Array.from({ length: 40 }, (_, n) => `Content ${n + 1}`);
+
+function FramelessPage({ rows }: Readonly<{ rows: readonly string[] }>) {
+  stubSession();
+  return (
+    <StoryProviders>
+      <SeedInstallation>
+        <ShellExample at="#/onboarding">
+          <div className="wrap">
+            {rows.map((row) => (
+              <Card as="div" key={row}>
+                {row}
+              </Card>
+            ))}
+          </div>
+        </ShellExample>
+      </SeedInstallation>
+    </StoryProviders>
+  );
+}
+
+export const FramelessPageShort: Story = {
+  name: "a frameless page — short, no reserved gutter",
+  render: () => <FramelessPage rows={["Content"]} />,
+  play: async ({ canvasElement }) => {
+    await waitFor(() =>
+      expect(
+        getComputedStyle(framelessScroller(canvasElement)).scrollbarGutter,
+      ).toBe("auto"),
+    );
+  },
+};
+
+export const FramelessPageOverflowing: Story = {
+  name: "a frameless page — overflowing, no reserved gutter",
+  render: () => <FramelessPage rows={LONG_PAGE} />,
+  play: FramelessPageShort.play,
 };

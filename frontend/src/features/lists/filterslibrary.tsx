@@ -23,15 +23,16 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
+  type CoreLibraryType,
   type LibraryAnchor,
-  type LibraryType,
-  NEW_FILTER_LABEL,
   NO_TYPE_HITS_LABEL,
   OBJECT_TABS,
   type ObjectTab,
-  TAB_LABEL,
+  useObjectTabs,
+  useTabWords,
 } from "../../lib/filtersaddress";
 import { navigate } from "../../lib/router";
+import { useMe } from "../../lib/session";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { useFoldedViewport } from "../../lib/viewport";
 import {
@@ -49,7 +50,9 @@ import {
   isCut,
   isFirstRun,
   type LibraryCut,
+  type LibraryGroup,
   type LibraryItem,
+  listsLanding,
   pillCounts,
   typeOf,
   visibleGroups,
@@ -62,7 +65,6 @@ import {
   type LibraryTableGroup,
   NewShortlistAction,
 } from "./listlibrary";
-import { DEFAULT_AUDIENCE } from "./listsharing";
 
 export function FiltersLibrary({
   anchor,
@@ -70,6 +72,9 @@ export function FiltersLibrary({
   const t = useT();
   const folded = useFoldedViewport();
   const listsOn = useListsAvailable();
+  // FiltersScreen draws this page only once the session has answered, so a
+  // list is never filed before its owner can be told from the reader.
+  const readerId = useMe().data?.user.id;
   const [params] = useUrlParams();
   const cut = cutOf(params);
   const reads = useLibraryReads(cut, listsOn);
@@ -84,10 +89,15 @@ export function FiltersLibrary({
     : visibleGroups(
         listsOn ? ["mine", "shared"] : ["mine"],
         shown,
+        readerId,
         narrowed,
         reads.unsettled,
       );
-  const anchors = useAnchorFocus(anchor, listsOn, reads.settled);
+  const anchors = useAnchorFocus(
+    anchor,
+    anchor === "lists" && listsOn ? listsLanding(shown, readerId) : "mine",
+    reads.settled,
+  );
   // Nothing matched only once every read, a capped library's server search
   // included, has answered: until then the match may be out or refused.
   const cutEmpty =
@@ -118,7 +128,8 @@ export function FiltersLibrary({
         <div
           key={group}
           ref={group === "mine" ? anchors.mine : anchors.shared}
-          className="library-anchor"
+          className="arrival-focus"
+          data-testid="library-anchor"
           tabIndex={-1}
         >
           {firstRun ? (
@@ -139,7 +150,7 @@ export function FiltersLibrary({
           ) : (
             <LibraryGroupPanel
               group={listsOn ? group : "views"}
-              rows={shown.filter((item) => groupOf(item) === group)}
+              rows={shown.filter((item) => groupOf(item, readerId) === group)}
               reads={reads}
               narrowed={narrowed}
               captionOf={captionOf}
@@ -191,9 +202,7 @@ function LibraryToolbar({
 }>) {
   const t = useT();
   const newFilter = <NewFilterAction type={cut.type} />;
-  const shortlist = listsOn ? (
-    <NewShortlistAction defaultAudience={DEFAULT_AUDIENCE} />
-  ) : null;
+  const shortlist = listsOn ? <NewShortlistAction /> : null;
   const finders = searchable ? (
     <>
       <SearchField
@@ -248,11 +257,12 @@ function TypePills({
   const projects =
     cut.type === "projects" ||
     items.some((item) => typeOf(item) === "projects");
-  const pills: FilterPill<LibraryType | "all">[] = [
+  const wordsOf = useTabWords();
+  const pills: FilterPill<CoreLibraryType | "all">[] = [
     { value: "all", label: t("filters.library.all"), count: counts?.all },
     ...OBJECT_TABS.map((tab) => ({
       value: tab,
-      label: t(labelFor(TAB_LABEL, tab)),
+      label: wordsOf(tab).tab,
       count: counts?.[tab],
     })),
     ...(projects
@@ -282,8 +292,12 @@ function TypePills({
  * filter; otherwise it asks which records first, because a filter is built
  * over the fields of one type and there is no neutral one to start on.
  */
-function NewFilterAction({ type }: Readonly<{ type: LibraryType | "all" }>) {
+function NewFilterAction({
+  type,
+}: Readonly<{ type: CoreLibraryType | "all" }>) {
   const t = useT();
+  const wordsOf = useTabWords();
+  const tabs = useObjectTabs();
   const open = (tab: ObjectTab) => navigate({ screen: "filters", id: tab });
   if (type !== "all" && type !== "projects") {
     return (
@@ -293,7 +307,7 @@ function NewFilterAction({ type }: Readonly<{ type: LibraryType | "all" }>) {
         onClick={() => open(type)}
       >
         <Plus aria-hidden />
-        {t(labelFor(NEW_FILTER_LABEL, type))}
+        {wordsOf(type).newFilter}
       </Button>
     );
   }
@@ -310,9 +324,9 @@ function NewFilterAction({ type }: Readonly<{ type: LibraryType | "all" }>) {
     >
       <p className="t-caption">{t("filters.library.whichRecords")}</p>
       <div className="library-types">
-        {OBJECT_TABS.map((tab) => (
+        {tabs.map((tab) => (
           <Button key={tab} onClick={() => open(tab)}>
-            {t(labelFor(TAB_LABEL, tab))}
+            {wordsOf(tab).tab}
           </Button>
         ))}
       </div>
@@ -440,14 +454,13 @@ function RetryButton({ onRetry }: Readonly<{ onRetry: () => void }>) {
 }
 
 /**
- * `#/filters/views` and `#/filters/lists` land on their group, or on the one
- * drawn when a cut or the first-run plate leaves theirs out. Focus moves one
- * commit after the rows have drawn, so the shell's scroll memory has already
- * put the new page at its top and the move is not undone under the reader.
+ * An address lands on its `landing` group, or on the one drawn when a cut or
+ * the first-run plate leaves that out. Focus waits one commit after the rows
+ * draw, so the shell's scroll memory cannot undo the move.
  */
 function useAnchorFocus(
   anchor: LibraryAnchor | undefined,
-  listsOn: boolean,
+  landing: LibraryGroup,
   settled: boolean,
 ): Readonly<{
   mine: RefObject<HTMLDivElement | null>;
@@ -467,9 +480,8 @@ function useAnchorFocus(
       return;
     }
     landed.current = true;
-    const [own, other] =
-      anchor === "lists" && listsOn ? [shared, mine] : [mine, shared];
+    const [own, other] = landing === "shared" ? [shared, mine] : [mine, shared];
     (own.current ?? other.current)?.focus();
-  }, [ready, anchor, listsOn]);
+  }, [ready, anchor, landing]);
   return { mine, shared };
 }

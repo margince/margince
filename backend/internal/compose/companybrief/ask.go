@@ -20,6 +20,7 @@ package companybrief
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // The prepared questions, derived from the contract's enum rather than
@@ -98,9 +100,25 @@ func askSystemFor(question crmcontracts.CompanyQuestion, fence promptfence.Fence
 // paraphrase one into an answer about something else entirely, cited to the
 // company and so accepted by the grounding check.
 func AskRequest(question crmcontracts.CompanyQuestion, in Input, lang string) model.Request {
-	return groundedRequest(func(fence promptfence.Fence, forLang string) string {
+	req := groundedRequest(func(fence promptfence.Fence, forLang string) string {
 		return askSystemFor(question, fence, forLang)
 	}, in.withoutProfile(), lang)
+	req.ResponseSchema = askSchema()
+	return req
+}
+
+// askSchema is the reply ParseBrief reads. It carries no nature: an answer only
+// restates the summary, and ParseBrief reads an unlabelled sentence as a fact.
+func askSchema() json.RawMessage {
+	return schema.Must(schema.Record(
+		schema.Field("sentences", schema.Array(schema.Record(
+			schema.Field("text", schema.String()),
+			schema.Field("evidence", schema.Array(schema.Record(
+				schema.Field("entity_type", schema.Enum(citeDeal, citeActivity, citeContact, citeCompany)),
+				schema.Field("entity_id", schema.String()),
+			))),
+		))),
+	))
 }
 
 // Answer writes the answer to one prepared question. lane may be nil, which
@@ -127,7 +145,7 @@ func Answer(
 		// unavailable, over budget, or answering unparseable JSON must not take
 		// the answer down with it, and generated_by reports which the reader
 		// got.
-		//nolint:nilerr // on_budget_exhausted: degrade — the fallback IS the answer, and generated_by reports it
+		//nolint:nilerr // an interactive task degrades — the fallback IS the answer, and generated_by reports it
 		return deterministic, crmcontracts.WrittenByDeterministic, nil
 	}
 	return written, crmcontracts.WrittenByModel, nil
@@ -463,11 +481,8 @@ func openDealLine(deal DealIn, say spoken) string {
 	if deal.Stage != "" {
 		line += ", " + deal.Stage
 	}
-	if amount := renderedAmount(deal.AmountMinor, deal.Currency); amount != "" {
-		// The same rendering the prompt gets, not a fresh /100 of the minor
-		// integer: dividing understates every zero-decimal currency a
-		// hundredfold, and two renderings of one number are two chances to
-		// disagree. The card formats money properly; this text is the fallback.
+	if amount := renderedAmount(deal.AmountMinor, deal.Currency, say.Lang()); amount != "" {
+		// The rendering the prompt gets, so the answer and the brief agree.
 		line += ", " + amount + " " + deal.Currency
 	}
 	if deal.Stalled {

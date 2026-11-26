@@ -164,7 +164,7 @@ func TestSyncStartTellsAnUnboundedConnectorNothing(t *testing.T) {
 			// A zero Registry has no database. Reaching one would panic, which
 			// is the assertion: neither case may read or write a row.
 			from, err := new(Registry).syncStart(
-				context.Background(), ids.UUID{}, 1, c.d, c.cursor, now)
+				context.Background(), &syncSnapshot{generation: 1, prior: c.cursor}, nil, c.d, now)
 			if err != nil {
 				t.Fatalf("deciding the start failed: %v", err)
 			}

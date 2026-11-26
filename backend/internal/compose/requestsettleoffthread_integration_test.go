@@ -8,18 +8,24 @@ package compose
 import (
 	"context"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // judge is the settlement pass's own principal.
@@ -67,8 +73,7 @@ func (o *owedEnv) evidence(t *testing.T, candidate activities.RepliedRequest) []
 	return messages
 }
 
-// A request answered by a reply that lost its thread stays owed until the
-// settlement model judges that reply, and settles when it does.
+// A reply that lost its thread leaves the request owed until the model judges it.
 func TestARequestAnsweredOffItsThreadSettlesOnThatAnswer(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -146,8 +151,7 @@ func TestAMeetingWithSomebodyElseOffersNothing(t *testing.T) {
 	}
 }
 
-// A reply on the thread also matches the off-thread rule (our mail to the
-// sender with the same subject). The model reads it once, as thread mail.
+// A thread reply that also meets the off-thread rule is read once, as thread mail.
 func TestAReplyOnTheThreadReachesTheModelOnce(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -182,8 +186,7 @@ func TestAReplyOnTheThreadReachesTheModelOnce(t *testing.T) {
 	}
 }
 
-// Past the window's size the newest answer is still in it, because the verdict
-// is recorded through it.
+// Past the window's size the newest answer stays in it: the verdict is recorded through it.
 func TestTheNewestAnswerIsInTheWindowPastItsSize(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -209,9 +212,7 @@ func TestTheNewestAnswerIsInTheWindowPastItsSize(t *testing.T) {
 	}
 }
 
-// Our reply on the request's thread, sent to a colleague of theirs with them in
-// copy, is not in the thread read (it names another correspondent) but meets
-// the same-subject rule. It still reaches the model as thread mail.
+// Our thread reply to their colleague, with them in copy, still reaches the model as thread mail.
 func TestAReplyOnTheThreadFoundBySubjectIsNotCalledASeparateEmail(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -247,8 +248,7 @@ func TestAReplyOnTheThreadFoundBySubjectIsNotCalledASeparateEmail(t *testing.T) 
 	}
 }
 
-// Our reply filed before a request dated by its day, at that day's stored instant, answers it (occurredday.Answers).
-// The model reads that reply even under another subject, so the request the pass offers is judged.
+// Our reply at a day-dated request's stored instant answers it (occurredday.Answers), under any subject.
 func TestADayTieReplyFiledFirstReachesTheModel(t *testing.T) {
 	o := setupOwed(t)
 	o.contact(t, "Pat Buyer", "pat@customer.example")
@@ -350,4 +350,81 @@ func TestAVerdictOverAnEditedTiedMailIsDropped(t *testing.T) {
 	if !o.owed(t, request) {
 		t.Fatal("a verdict over a tied mail edited after the model read it settled the request")
 	}
+}
+
+func TestSettlementReadsTheFilesOnTheActualAnswer(t *testing.T) {
+	o := setupOwed(t)
+	o.contact(t, "Pat Buyer", "pat@customer.example")
+	request := o.askOf(t, "Send the report", o.now.Add(-3*time.Hour))
+	reply := o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Re: Send the report", body: "The report is attached.", at: o.now.Add(-2 * time.Hour)})
+	candidate, ok := o.offered(t, request)
+	if !ok {
+		t.Fatal("answer not offered")
+	}
+	assertFiles := func(want int) {
+		t.Helper()
+		messages := o.evidence(t, candidate)
+		found := false
+		for _, message := range messages {
+			if message.ID == reply {
+				found = true
+				if len(message.Attachments) != want {
+					t.Fatalf("answer files=%v want %d", message.Attachments, want)
+				}
+			}
+		}
+		if !found {
+			t.Fatal("answer absent from evidence")
+		}
+	}
+	assertFiles(0)
+	fileStore := activities.NewStore(o.e.DB()).WithBlobstore(blobstore.NewMemory())
+	file, err := fileStore.UploadAttachment(o.e.Admin(), activities.AttachmentInput{
+		EntityType: "activity", EntityID: reply, Filename: "report.txt", ContentType: "text/plain", Content: strings.NewReader("Synthetic report"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertFiles(0)
+	actor := o.e.As(o.owner, []ids.UUID{o.e.Team1}, integration.AdminPerms)
+	store := comms.NewStore(o.e.DB(), func() time.Time { return o.now }, o.e.Activities)
+	var delivery ids.UUID
+	if err := database.WithWorkspaceTx(actor, o.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		delivery, err = store.StageTx(actor, tx, comms.StageInput{ActivityID: ids.From[ids.ActivityKind](reply), Provider: "gmail", MessageID: ids.NewV7().String() + "@ws.example", Recipients: []string{"pat@customer.example"}, Attachments: []comms.OutboundFile{{AttachmentID: ids.UUID(file.Id), Filename: "report.txt"}}})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// A send still pending has not reached them, so it answers nothing.
+	if _, ok := o.offered(t, request); ok {
+		t.Fatal("an answer whose send is pending was offered")
+	}
+	if slices.ContainsFunc(o.evidence(t, candidate), func(message threadMessage) bool { return message.ID == reply }) {
+		t.Fatal("an answer whose send is pending reached the evidence")
+	}
+	if err := store.RecordSent(sendWorkerScope(actor), delivery, connector.SendReceipt{ProviderMessageID: "report-delivery"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := fileStore.ArchiveAttachment(o.e.Admin(), ids.UUID(file.Id)); err != nil {
+		t.Fatal(err)
+	}
+	assertFiles(1)
+	mail := owedMail{from: o.seat, to: "pat@customer.example", subject: "Re: Send the report", at: o.now.Add(-time.Hour), messageID: ids.NewV7().String() + "@ws.example"}
+	raw := strings.Replace(string(mail.raw()), "Content-Type: text/plain; charset=utf-8\r\n\r\nText.\r\n",
+		"Content-Type: multipart/mixed; boundary=REPORT\r\n\r\n--REPORT\r\nContent-Type: text/plain\r\n\r\nThe report is attached.\r\n--REPORT\r\nContent-Type: text/plain\r\nContent-Disposition: attachment; filename=report.txt\r\n\r\nSynthetic report\r\n--REPORT--\r\n", 1)
+	parsed, err := mailmap.Parse([]byte(raw), o.seat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ref, err := newCaptureSink(o.e.Pool, CaptureConfig{Blob: blobstore.NewMemory()}).Upsert(threadConnectorCtx(o.e, o.owner), parsed.AttestSentByOwner(true).ToRecord("gmail", []byte(raw)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reply = ref.ID
+	candidate, ok = o.offered(t, request)
+	if !ok {
+		t.Fatal("file answer not offered")
+	}
+	assertFiles(1)
 }

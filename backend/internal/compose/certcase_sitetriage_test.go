@@ -12,11 +12,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/decision"
 )
 
+// fixtureJSON encodes a corpus fixture or expectation, for every certification case.
 func fixtureJSON[T any](t *testing.T, v T) json.RawMessage {
 	t.Helper()
 	raw, err := json.Marshal(v)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("encoding %T: %v", v, err)
 	}
 	return raw
 }

@@ -3,11 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { meFixture } from "../../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
+  storyQueryClient,
 } from "../../../testing/story-utils";
+import { systemTask } from "../../../testing/systemtext.fixture";
 import { CloseTasksQuestion, useCloseTasks } from "./closetasks";
 
 // The question a deal's close asks about its open tasks: the tasks listed with
@@ -66,5 +69,32 @@ export const OpenTasks: Story = {
     await expect(canvas.getByText("Send the final invoice")).toBeVisible();
     await userEvent.click(canvas.getByRole("radio", { name: /Keep/ }));
     await expect(canvas.getByRole("radio", { name: /Keep/ })).toBeChecked();
+  },
+};
+
+// A task the product filed reads in the reader's language.
+export const Vietnamese: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /activities": () =>
+        jsonResponse({
+          data: [systemTask],
+          page: { has_more: false, next_cursor: null },
+        }),
+    });
+    const client = storyQueryClient();
+    client.setQueryData(["me"], meFixture());
+    return (
+      <StoryProviders client={client} locale="vi">
+        <Question />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText(
+        systemTask.system_display?.subject ?? "",
+      ),
+    ).toBeVisible();
   },
 };

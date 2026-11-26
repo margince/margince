@@ -32,6 +32,11 @@ type Input struct {
 	Provisional       bool
 	Probability       int
 	ProbabilitySource string
+	// WinChance is the win chance the deal shows and the forecast weights by,
+	// and WinChanceLine says how it was made. Both are empty and zero for a
+	// deal with none, such as a test input.
+	WinChance     int
+	WinChanceLine string
 	// StageProbability is the deal's stage's own probability, the most
 	// Margince may raise the deal's to.
 	StageProbability int
@@ -46,14 +51,24 @@ type Input struct {
 	StageMoves   []StageMove
 	Prior        []PriorAction
 	Activities   []Activity
+	// PrivateMail is mail limited to its participants and filed on the deal.
+	// It shows the deal was worked, so only its date reaches the prompt, never
+	// a direction, subject, body or address.
+	PrivateMail []PrivateMail
+}
+
+// PrivateMail is the date of one email the deal's whole audience may not read.
+type PrivateMail struct {
+	OccurredAt time.Time
 }
 
 // Activity is one logged mail, meeting, call or note, newest last.
 type Activity struct {
-	ID         string
-	Kind       string
-	Direction  string
-	OccurredAt time.Time
+	ID          string
+	Kind        string
+	Direction   string
+	FromOurSide bool
+	OccurredAt  time.Time
 	// ArrivedAt is when the activity reached the deal on this server. The
 	// sender cannot set it, so it orders evidence against a colleague's edit.
 	ArrivedAt time.Time
@@ -79,12 +94,12 @@ type ExitCriterion struct {
 	Hint          string
 }
 
-// Offer is one offer on the deal.
+// Offer is one offer on the deal. Its figure is the net: a deal's value has no tax.
 type Offer struct {
-	GrossMinor int64
-	Currency   string
-	Status     string
-	Accepted   bool
+	NetMinor int64
+	Currency string
+	Status   string
+	Accepted bool
 }
 
 // StageMove is one move in the deal's stage history.

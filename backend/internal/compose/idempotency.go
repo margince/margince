@@ -13,8 +13,8 @@ package compose
 // execute: the loser sees the claim and answers 409 while the first is
 // in flight.
 //
-// A 2xx outcome is recorded for replay. A refusal releases the claim, so the
-// client may retry the same key. Replaying stored failures would pin transient
+// A 2xx outcome is recorded for replay. A refusal that saved nothing releases
+// the claim, so the client may retry the same key. Replaying stored failures would pin transient
 // faults for 24h and would break the stage-then-redeem approval flow, whose
 // retry is the same request.
 
@@ -24,6 +24,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -33,8 +34,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -83,7 +87,7 @@ func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe, restore repl
 				return
 			}
 			if len(key) > 255 {
-				httperr.Write(w, r, httperr.Validation(idempotencyKeyHeader, "too_long", "Idempotency-Key exceeds 255 characters"))
+				httperr.Write(w, r, httperr.TooLong(idempotencyKeyHeader, 255, len(key)))
 				return
 			}
 			actor, ok := principal.Actor(r.Context())
@@ -107,7 +111,12 @@ func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe, restore repl
 			// key per request-path, so /deals/A and /deals/B never collide.
 			endpoint := r.Method + " " + r.URL.Path
 
-			outcome, hold, stored, err := claimKey(r.Context(), pool, actor.ID, key, endpoint, digest)
+			outcome, hold, stored, err := claimKey(r.Context(), pool, retryHolder(actor), key, endpoint, digest)
+			if err != nil && admittedByTheTool(r) { // a tool's caller asked for at most once, so it is refused
+				slog.ErrorContext(r.Context(), "idempotency claim failed; a tool call was not run", "err", err)
+				httperr.Write(w, r, fmt.Errorf("this call could not be made safe to retry just now, so it was not run; retry the identical call: %w", apperrors.ErrConflict))
+				return
+			}
 			if err != nil {
 				// Degraded, not refused: idempotency is a retry-safety layer,
 				// and refusing the request because the layer itself hiccupped
@@ -121,16 +130,25 @@ func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe, restore repl
 				outcome, hold, stored = claimFresh, claimHold{}, storedResponse{}
 			}
 			if outcome != claimFresh {
+				if outcome == claimReplay { // a replay changes nothing, so it charges no write or send
+					agentvolume.NoteEffects(r.Context(), 0)
+				}
 				writeClaimOutcome(w, r, pool, probes, restore, route, outcome, stored)
 				return
 			}
 
 			rec := &replayRecorder{ResponseWriter: w, status: http.StatusOK}
-			next.ServeHTTP(rec, r)
+			work, committed := database.WatchCommits(r.Context())
+			next.ServeHTTP(rec, r.WithContext(work))
 			// Zero records: this door records no served count, so its claims carry
 			// none (0198).
-			if err := settleHTTPClaim(r.Context(), pool, hold, route, rec); err != nil {
-				slog.ErrorContext(r.Context(), "idempotency claim settlement failed", "err", err)
+			// Detached, because the request context may be over: the caller left,
+			// or the handler ran out of time. A settle on it fails and leaves the
+			// key "in progress" for the whole replay window.
+			settleCtx, release := context.WithTimeout(context.WithoutCancel(r.Context()), httpserver.DetachedOutcomeTimeout)
+			defer release()
+			if err := settleHTTPClaim(settleCtx, pool, hold, route, rec, committed()); err != nil {
+				slog.ErrorContext(settleCtx, "idempotency claim settlement failed", "err", err)
 			}
 		})
 	}
@@ -143,6 +161,9 @@ type storedResponse struct {
 	// records is how many records the recorded answer handed over, for the
 	// surface that tells an empty answer from a full one. Zero for a REST claim.
 	records int
+	// Set on a mismatch only: when the key was first spent, and how that call stands.
+	firstUsedAt time.Time
+	earlier     claimOutcome
 }
 
 // claimKey runs the insert-first claim and REPORTS a claim-infrastructure
@@ -249,14 +270,15 @@ func resolveClaimRow(ctx context.Context, tx pgx.Tx, principalID, key, endpoint,
 	var status *int
 	var respBody *string
 	var records int
+	var createdAt time.Time
 	var expired bool
 	err := tx.QueryRow(ctx, `
 		SELECT request_digest, response_status, response_body, response_content_type, response_records,
-		       created_at < now() - make_interval(secs => $4)
+		       created_at, created_at < now() - make_interval(secs => $4)
 		FROM idempotency_key
 		WHERE principal_id = $1 AND key = $2 AND endpoint = $3
 		FOR UPDATE`,
-		principalID, key, endpoint, replayWindow.Seconds()).Scan(&storedDigest, &status, &respBody, &contentType, &records, &expired)
+		principalID, key, endpoint, replayWindow.Seconds()).Scan(&storedDigest, &status, &respBody, &contentType, &records, &createdAt, &expired)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The retention sweep removed the row between the INSERT above and
 		// this read. It was past the replay window, so it was protecting
@@ -307,15 +329,26 @@ func resolveClaimRow(ctx context.Context, tx pgx.Tx, principalID, key, endpoint,
 			principalID, key, endpoint, digest).Scan(&reclaimed)
 		return claimFresh, reclaimed, storedResponse{}, err
 	}
-	stored := storedResponse{contentType: contentType, records: records}
+	if storedDigest != digest {
+		return claimMismatch, ids.Nil, storedResponse{firstUsedAt: createdAt, earlier: settledVerdict(status)}, nil
+	}
+	verdict := settledVerdict(status)
+	if verdict == claimInProgress {
+		return claimInProgress, ids.Nil, storedResponse{}, nil
+	}
+	stored := storedResponse{status: *status, contentType: contentType, records: records}
 	if respBody != nil {
 		stored.body = *respBody
 	}
+	return verdict, ids.Nil, stored, nil
+}
+
+// settledVerdict reads a claim's recorded status: in flight, failed or succeeded.
+// It answers a same-request retry and describes the first call on a mismatch.
+func settledVerdict(status *int) claimOutcome {
 	switch {
-	case storedDigest != digest:
-		return claimMismatch, ids.Nil, storedResponse{}, nil
 	case status == nil:
-		return claimInProgress, ids.Nil, storedResponse{}, nil
+		return claimInProgress
 	case *status < 200 || *status >= 300:
 		// A RECORDED failure — the attempt reached its handler and answered a
 		// refusal it could not take back. The tool surface writes one for a run
@@ -324,18 +357,17 @@ func resolveClaimRow(ctx context.Context, tx pgx.Tx, principalID, key, endpoint,
 		// replay and not a free key: whether the effect landed is exactly what
 		// the recording could not determine, so the body carries the reason and
 		// the caller decides.
-		stored.status = *status
-		return claimFailed, ids.Nil, stored, nil
+		return claimFailed
 	default:
-		stored.status = *status
-		return claimReplay, ids.Nil, stored, nil
+		return claimReplay
 	}
 }
 
 // settleClaim records a 2xx outcome for replay. It gives the key back for a
-// refusal, so the caller can fix the call and retry under the same key.
+// refusal that saved nothing, so the caller can fix the call and retry under
+// the same key. A refusal after a write committed is recorded as failed.
 func settleClaim(ctx context.Context, pool *pgxpool.Pool, hold claimHold,
-	status int, body, contentType string,
+	status int, body, contentType string, committed bool,
 ) error {
 	// A caller that took no claim settles nothing. It reached here after
 	// reading somebody else's row — a replay, a mismatch, or an infrastructure
@@ -344,20 +376,21 @@ func settleClaim(ctx context.Context, pool *pgxpool.Pool, hold claimHold,
 	if !hold.holdsClaim() {
 		return nil
 	}
-	if claimIsReleased(status) {
+	if claimIsReleased(status, committed) {
 		return releaseClaim(ctx, pool, hold)
 	}
 	return recordClaimOutcome(ctx, pool, hold, status, body, contentType, 0)
 }
 
-// claimIsReleased is the rule a refusal is judged by: a key goes back for any
-// outcome that is not a success.
+// claimIsReleased is the rule a refusal is judged by. A key goes back for any
+// outcome that is not a success, unless a write already committed. A retry
+// would then save a second time, as agents.Registry.settleRun also refuses.
 //
 // A function rather than an inline condition because it is the whole of what
 // settleClaim decides, and a case can then state it without a database — the
 // two arms it chooses between are each already held.
-func claimIsReleased(status int) bool {
-	return status < 200 || status >= 300
+func claimIsReleased(status int, committed bool) bool {
+	return !committed && (status < 200 || status >= 300)
 }
 
 // recordClaimOutcome writes a settled response onto a held claim, whatever that

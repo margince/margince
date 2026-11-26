@@ -50,6 +50,8 @@ export function roleAllowance(
     agent_writes_per_window: cell("agent_writes_per_window"),
     agent_egress_per_window: cell("agent_egress_per_window"),
     agent_calls_per_window: cell("agent_calls_per_window"),
+    // As the server answers it: the role the preset is for is not paced.
+    paced_per_minute: !holds_preset,
   };
 }
 

@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "project_filing",
+  "verb": "get_activity_project_filing",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

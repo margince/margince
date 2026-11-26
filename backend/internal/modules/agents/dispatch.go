@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"slices"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -107,9 +108,11 @@ type Binder func(ctx context.Context) (context.Context, error)
 // caller owns framing and hands it one rpcRequest at a time.
 type Dispatcher struct {
 	registry *Registry
-	bind     Binder
-	name     string
-	version  string
+	// callLog is where the HTTP door records each exchange; nil keeps none.
+	callLog CallLog
+	bind    Binder
+	name    string
+	version string
 	// resources publishes the read-only documents beside the tool surface
 	// (the query vocabulary today). Nil is a server with no resources, which
 	// is why the capability is advertised conditionally: claiming one with
@@ -142,6 +145,9 @@ type Dispatcher struct {
 	// inputState signs the questions a tool asks in the chat. Unarmed, no tool
 	// asks, and each does what it did before the question existed.
 	inputState inputStateSigner
+	// replayGuard spends confirm codes and answered questions once. Nil asks
+	// nothing in the chat and keeps the inbox.
+	replayGuard ReplayGuard
 	// log receives the true cause of failures the tool client only sees
 	// generically — the client is an untrusted agent, so infrastructure
 	// detail (DSNs, hosts, wrap chains) stays server-side.
@@ -258,6 +264,9 @@ func (s *Dispatcher) dispatch(ctx context.Context, req rpcRequest, fr framing) r
 		// answering -32601 there reads as a broken server rather than a
 		// legitimate empty catalog.
 		resp.Result = map[string]any{"resources": s.resourceList(ctx, fr)}
+		if IsAppCall(ctx) {
+			resp.Result = map[string]any{"resources": []any{}}
+		}
 	case methodResourcesRead:
 		// Assigned on separate branches so a failed read never carries a
 		// result alongside its error, which JSON-RPC forbids.
@@ -270,6 +279,9 @@ func (s *Dispatcher) dispatch(ctx context.Context, req rpcRequest, fr framing) r
 		resp.Result = map[string]any{"resourceTemplates": []any{}}
 	case methodPromptsList:
 		resp.Result = map[string]any{"prompts": s.promptList(ctx)}
+		if IsAppCall(ctx) {
+			resp.Result = map[string]any{"prompts": []any{}}
+		}
 	case methodPromptsGet:
 		if result, rpcErr := s.promptGet(ctx, req.Params); rpcErr != nil {
 			resp.Error = rpcErr
@@ -374,7 +386,7 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 		p.Arguments = json.RawMessage(`{}`)
 	}
 
-	callCtx, err := s.bind(withRecordLinks(ctx, s.publicOrigin))
+	callCtx, err := s.bind(WithRecordLinks(ctx, s.publicOrigin))
 	if err != nil {
 		// The bind failure's cause (revoked vs expired vs infrastructure)
 		// is server-side knowledge; the client only learns that its
@@ -385,12 +397,15 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 			"mint a new passport or contact the workspace admin.")
 	}
 	callCtx = s.withChatInput(callCtx, fr, p.Name, p.Arguments, params)
+	callCtx = withConversationConfirm(callCtx, conversationConfirm{signer: s.inputState, guard: s.replayGuard, now: time.Now})
 	spec, registered := s.registry.Spec(p.Name)
+	if registered && s.unoffered(callCtx, p.Name) {
+		return toolError(s.explain(p.Name, &UnknownToolError{Name: p.Name}))
+	}
 	if registered && spec.ProtocolOnly {
 		callCtx = withRequestFacts(callCtx, fr.requestFacts())
 	}
 	served, err := s.registry.InvokeServed(callCtx, p.Name, p.Arguments)
-	s.noteHiddenCall(spec, registered)
 	if err != nil {
 		if handle, minted := s.mintTask(callCtx, fr, served.Tool, err); minted {
 			return handle
@@ -399,6 +414,9 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 			return asked
 		}
 		refusal := toolError(s.explain(served.Tool, err))
+		if meta := refusalMetaOf(err); meta != nil {
+			refusal["_meta"] = meta
+		}
 		if shown := shownAnswer(err); shown != nil {
 			if structured, ok := s.structuredContent(served.Tool, shown); ok {
 				refusal["structuredContent"] = structured
@@ -411,12 +429,11 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 
 // result renders one successful tool return.
 //
-// The serialized JSON travels in a TextContent block, and — for a tool that
-// declared an outputSchema, which every tool here does — ALSO as
-// structuredContent: the spec makes that a MUST ("Servers MUST provide
-// structured results that conform to this schema"). The text block stays
-// beside it on the spec's own advice, so a client that predates structured
-// content still reads the same answer rather than an empty result.
+// The serialized JSON travels in a TextContent block, and also as
+// structuredContent for a tool with an outputSchema. The spec requires that
+// where tools/list lists the schema, and allows it where the server keeps it
+// (listsOutputSchema). The text block stays beside it on the spec's own advice,
+// so a client that predates structured content still reads the same answer.
 //
 // What is checked is the DECLARED SCHEMA, not object-ness. Object-ness was
 // sufficient only while every outputSchema on this surface was the bare
@@ -469,6 +486,11 @@ func (s *Dispatcher) structuredContent(name string, out json.RawMessage) (json.R
 	}
 	return out, true
 }
+
+// refusalCodeMeta is the `_meta` member that carries a refusal's stable code,
+// beside the prose a model reads. Only refusals a client must act on without
+// reading prose carry one.
+const refusalCodeMeta = "margince/code"
 
 func toolError(msg string) map[string]any {
 	return map[string]any{

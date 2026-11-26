@@ -1,0 +1,8 @@
+{
+  "verb": "search_context",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "relationship.read"
+  ]
+}

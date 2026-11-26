@@ -1,0 +1,9 @@
+{
+  "verb": "archive_contract",
+  "checks": [
+    "contract.delete"
+  ],
+  "takes": [
+    "contract"
+  ]
+}

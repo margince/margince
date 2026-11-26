@@ -5,6 +5,7 @@
 // read through the spreads and the callers that hand them on.
 
 import ts from "typescript";
+import { stable } from "../../src/format/collate";
 import { classVariants, type Given } from "../../src/testing/classnames";
 import {
   attr,
@@ -188,7 +189,7 @@ function classProps(def: ts.Node): string[] {
       if (decides(p)) names.add(name);
     }
   }
-  const out = [...names].sort();
+  const out = [...names].sort(stable);
   classReads.set(def, out);
   return out;
 }
@@ -211,6 +212,6 @@ export function handedAt(at: ts.Node, def: ts.Node, outer?: Handed): Handed {
     outer && spreads(outer.def, x) ? outer.keyed : [];
   // A body that spreads its props on may hand any of them to a class.
   const written = forwardsAll(def) ? namesHanded(at, handedOn) : [];
-  const keyed = [...new Set([...classProps(def), ...written])].sort();
+  const keyed = [...new Set([...classProps(def), ...written])].sort(stable);
   return { def, props, given, keyed };
 }

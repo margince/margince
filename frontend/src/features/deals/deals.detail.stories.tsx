@@ -7,6 +7,7 @@ import {
   emptyPage,
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { DealScreen } from "./deals.detail";
@@ -31,14 +32,10 @@ const deal = {
   status: "open",
   source: "manual",
   captured_by: "human:u1",
+  writable: true,
+  archivable: true,
   created_at: "2026-06-01T00:00:00Z",
   updated_at: "2026-06-01T00:00:00Z",
-};
-
-const caller = {
-  user: { id: "u-9", display_name: "Me" },
-  roles: ["rep"],
-  teams: [],
 };
 
 function DealPage({ status }: Readonly<{ status: string }>) {
@@ -52,7 +49,10 @@ function DealPage({ status }: Readonly<{ status: string }>) {
     "GET /activities": () => jsonResponse(emptyPage),
     "GET /records/deal/d1/context": () =>
       jsonResponse({ anchor: { type: "deal", id: "d1" }, sections: [] }),
-    "GET /me": () => jsonResponse(caller),
+    "GET /me": meRoute({
+      deal: ["read", "update", "delete"],
+      activity: ["create"],
+    }),
   });
   return (
     <StoryProviders>

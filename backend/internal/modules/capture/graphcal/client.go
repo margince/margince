@@ -55,6 +55,9 @@ const (
 // deltaLink that anchors the next incremental pull.
 const pageSize = 100
 
+// topParam is Graph's OData page-size query parameter.
+const topParam = "$top"
+
 // ErrAuthRejected and ErrUnreachable are the shared Microsoft transport
 // sentinels, re-exported so this package's callers and tests keep a single
 // graphcal-local name.

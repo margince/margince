@@ -12,13 +12,16 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { INSTALLATION_SETTINGS_KEY } from "../../lib/uploadlimit";
+import { meFixture } from "../../testing/mefixture";
 import { DealsScreen } from "./deals";
 
 // The New deal form opens on the installation's base currency and offers the
 // rate sheet's currencies right after it. NOK and SEK are not among the four
-// fallback codes, so the old fixed list cannot pass these cases.
+// fallback codes, so the old fixed list cannot pass these cases. It also asks
+// who owns the deal, where it came from and which partner brought it.
 
 afterEach(() => {
   cleanup();
@@ -59,7 +62,11 @@ const settings = {
   max_upload_bytes: 26_214_400,
 };
 
-function stubApi(posted: unknown[]) {
+const ME = meFixture({
+  allow: { deal: ["create", "read"], company: ["read"] },
+});
+
+function stubApi(posted: unknown[], withPartner = false) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -82,6 +89,43 @@ function stubApi(posted: unknown[]) {
       if (path === "/pipelines") {
         return jsonResponse({ data: [pipeline], page: { next_cursor: null } });
       }
+      if (path === "/me") {
+        return jsonResponse(ME);
+      }
+      if (path === "/users") {
+        return jsonResponse({
+          data: [
+            { id: ME.user.id, display_name: "Me Myself", is_agent: false },
+            { id: "u-anna", display_name: "Anna Weber", is_agent: false },
+          ],
+          page: { next_cursor: null },
+        });
+      }
+      if (path === "/acquisition-sources") {
+        return jsonResponse({
+          data: [
+            {
+              id: "src-1",
+              key: "referral",
+              label: "Referral",
+              sort_order: 1,
+              active: true,
+            },
+          ],
+        });
+      }
+      if (path === "/partners" && withPartner) {
+        return jsonResponse({
+          data: [{ company_id: "co-x" }],
+          page: { next_cursor: null },
+        });
+      }
+      if (path === "/companies" && withPartner) {
+        return jsonResponse({
+          data: [{ id: "co-x", display_name: "Xentral" }],
+          page: { next_cursor: null },
+        });
+      }
       return jsonResponse(emptyPage);
     }),
   );
@@ -89,14 +133,14 @@ function stubApi(posted: unknown[]) {
 
 // The app shows its splash until the installation settings have answered, so
 // no form opens before the base is known. The seeded query stands for that.
-function renderDeals() {
+function renderDeals(locale: "en" | "de" = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   client.setQueryData(INSTALLATION_SETTINGS_KEY, settings);
   render(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
+      <LocaleProvider initial={locale}>
         <DealsScreen startCreating />
       </LocaleProvider>
     </QueryClientProvider>,
@@ -108,17 +152,88 @@ describe("the New deal currency", () => {
     stubApi([]);
     renderDeals();
     const user = userEvent.setup();
-    const currency = await screen.findByLabelText("Currency *");
-    expect(currency.textContent).toContain("NOK");
-    await user.click(currency);
+    const dialog = within(await screen.findByRole("dialog"));
+    // The base stands picked, named in the reader's language.
+    expect(await dialog.findByText("NOK – Norwegian Krone")).toBeTruthy();
+
+    await user.type(dialog.getByLabelText("Currency *"), "kr");
     await waitFor(() =>
       expect(
-        within(screen.getByRole("listbox"))
-          .getAllByRole("option")
+        dialog
+          .getAllByRole("button", { name: /Kr/ })
           .slice(0, 2)
           .map((option) => option.textContent),
-      ).toEqual(["NOK", "SEK"]),
+      ).toEqual(["NOK – Norwegian Krone", "SEK – Swedish Krona"]),
     );
+  });
+
+  it("finds a currency by its name", async () => {
+    stubApi([]);
+    renderDeals();
+    const user = userEvent.setup();
+    const dialog = within(await screen.findByRole("dialog"));
+
+    await user.type(await dialog.findByLabelText("Currency *"), "dong");
+    await user.click(
+      await dialog.findByRole("button", { name: "VND – Vietnamese Dong" }),
+    );
+
+    expect(dialog.getByText("VND – Vietnamese Dong")).toBeTruthy();
+  });
+
+  it("sends the owner, the source and the partner it was given", async () => {
+    const posted: unknown[] = [];
+    stubApi(posted, true);
+    renderDeals();
+    const user = userEvent.setup();
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.type(dialog.getByLabelText("Deal name *"), "Fjord rollout");
+
+    await pickOption(user, dialog.getByLabelText("Owner"), "Anna Weber");
+    await pickOption(
+      user,
+      dialog.getByLabelText("Acquisition source"),
+      "Referral",
+    );
+    await waitFor(() =>
+      expect(dialog.getByLabelText("Referring partner")).toBeTruthy(),
+    );
+    await pickOption(
+      user,
+      dialog.getByLabelText("Referring partner"),
+      "Xentral",
+    );
+    await user.click(dialog.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({
+      owner_id: "u-anna",
+      acquisition_source: "referral",
+      partner_company_id: "co-x",
+    });
+  });
+
+  it("stops a deal name at the length a deal can hold", async () => {
+    stubApi([]);
+    renderDeals();
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(
+      dialog.getByLabelText("Deal name *").getAttribute("data-character-limit"),
+    ).toBe("120");
+  });
+
+  it("makes the reader the owner when the owner is left alone", async () => {
+    const posted: unknown[] = [];
+    stubApi(posted);
+    renderDeals();
+    const user = userEvent.setup();
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.type(dialog.getByLabelText("Deal name *"), "Fjord rollout");
+    await user.click(dialog.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    // Null: the server makes the creator the owner.
+    expect(posted[0]).toMatchObject({ owner_id: null });
   });
 
   it("sends the base it showed when the reader leaves the currency alone", async () => {
@@ -132,5 +247,35 @@ describe("the New deal currency", () => {
     await user.click(dialog.getByRole("button", { name: "Create" }));
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toMatchObject({ currency: "NOK", amount_minor: 48_000 });
+  });
+});
+
+// German groups thousands with a dot, so "1.500" reads two ways and is refused
+// with the form the reader wants; one comma is the decimal sign.
+describe("a New deal amount typed in German", () => {
+  async function typeAmount(amount: string) {
+    const posted: unknown[] = [];
+    stubApi(posted);
+    renderDeals("de");
+    const user = userEvent.setup();
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.type(await dialog.findByLabelText(/^Deal-Name/), "Fjord");
+    await user.type(dialog.getByRole("textbox", { name: /^Wert/ }), amount);
+    await user.click(dialog.getByRole("button", { name: "Erstellen" }));
+    return { posted, dialog };
+  }
+
+  it("sends 12,5 as 1250 minor units", async () => {
+    const { posted } = await typeAmount("12,5");
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ amount_minor: 1250 });
+  });
+
+  it("refuses 1.500 by naming the wanted form, and sends nothing", async () => {
+    const { posted, dialog } = await typeAmount("1.500");
+    expect(
+      await dialog.findByText("Gib den Betrag als 1500 oder 1500,00 ein."),
+    ).toBeTruthy();
+    expect(posted).toEqual([]);
   });
 });

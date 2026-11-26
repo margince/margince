@@ -2,10 +2,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { type JustIn, JustInScope } from "../../components/latestinbound";
+import { MeetingBriefAction } from "../../components/recordmeetings";
 import { CallAction } from "../../design-system/callaction";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
   hasTimelineFilters,
+  type TimelineFilters,
   useRecordTimeline,
 } from "../../design-system/recordtimeline";
 import { omitted, SurfaceState } from "../../design-system/surfacestate";
@@ -13,6 +15,7 @@ import { GroupedTimelineList } from "../../design-system/timeline";
 import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { RecordHistoryTab } from "../records/history";
 import {
   CHRONOLOGY_EMPTY_KEYS,
@@ -26,11 +29,11 @@ import {
   useChronologyCut,
 } from "../records/recordconversations";
 import { RowAnswerActions, TimelineActions } from "../records/timelineactions";
-import { MeetingBriefAction } from "./contactmeetings";
 import { callBackNumber } from "./contactmemory.rows";
 import { timelineState } from "./contacttimelinestate";
 import "./contact360.css";
 import { invalidateRecord } from "../../lib/recordwritekeys";
+import type { TimelineFilter } from "../../lib/timelinefilter";
 import { useViewerZone } from "../../lib/viewerzone";
 
 // The tabs beside Overview that read what the 360 already assembled — the same
@@ -115,6 +118,20 @@ export function ContactLatestInbound({
       {children}
     </JustInScope>
   );
+}
+
+// A narrowed read that finds nothing says nothing about the contact, so it
+// gets the filters' sentence rather than the empty record's.
+function contactTimelineEmptyKey(
+  filter: Exclude<TimelineFilter, "changes">,
+  read: TimelineFilters,
+): MessageKey {
+  if (hasTimelineFilters(read)) {
+    return "chronology.filteredEmpty";
+  }
+  return filter === "all"
+    ? "contact.timeline.empty"
+    : CHRONOLOGY_EMPTY_KEYS[filter];
 }
 
 /**
@@ -208,6 +225,7 @@ export function ContactTimelineTab({
           <ChronologyFilter filter={filter} conversations onFilter={openCut} />
           {filter !== "changes" && (
             <TimelineFilterBar
+              key={contactId}
               value={filters}
               kinds={kinds}
               onChange={setFilters}
@@ -244,11 +262,7 @@ export function ContactTimelineTab({
               hasTimelineFilters(read) && !withheld,
               loading,
             )}
-            emptyLabel={
-              filter === "all"
-                ? t("contact.timeline.empty")
-                : t(CHRONOLOGY_EMPTY_KEYS[filter])
-            }
+            emptyLabel={t(contactTimelineEmptyKey(filter, read))}
           >
             <List
               groups={groupChronology(chronology.entries, timeline.hasNextPage)}

@@ -29,9 +29,11 @@ type OfferTemplate = components["schemas"]["OfferTemplate"];
 async function fetchTemplatesPage(
   query: ListQuery,
   cursor: string | null,
+  signal?: AbortSignal,
 ): Promise<ListPage<OfferTemplate>> {
   const data = unwrap(
     await api.GET("/offer-templates", {
+      signal,
       params: {
         query: {
           sort: query.sort || undefined,
@@ -78,8 +80,8 @@ function templateFields(t: Translator): CreateField[] {
     },
     // The offer PDF prints these two layout keys by these names;
     // backend/gates/offertemplatelayout_test.go holds the spellings together.
-    { key: "header", label: "template.header" },
-    { key: "footer", label: "template.footer" },
+    { key: "header", label: "template.header", type: "textarea" },
+    { key: "footer", label: "template.footer", type: "textarea" },
   ];
 }
 
@@ -210,18 +212,17 @@ export function OfferTemplatesAdmin() {
       className="listsection"
       title={t("template.title")}
       titleAction={
-        canCreate ? (
-          <CreateAction
-            label={t("template.new")}
-            invalidate="offer-templates"
-            // `stay`: a fresh template has no page of its own to open. The list
-            // it joins is already on screen.
-            screen="settings"
-            stay
-            create={createTemplate}
-            fields={fields}
-          />
-        ) : undefined
+        <CreateAction
+          label={t("template.new")}
+          requires={{ object: "offer_template", action: "create" }}
+          invalidate="offer-templates"
+          // `stay`: a fresh template has no page of its own to open. The list
+          // it joins is already on screen.
+          screen="settings"
+          stay
+          create={createTemplate}
+          fields={fields}
+        />
       }
     >
       <PanelBody className="listsection-intro">

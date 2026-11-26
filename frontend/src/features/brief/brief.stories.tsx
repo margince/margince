@@ -11,9 +11,9 @@ import {
   bundle,
   deals,
   decisionRow,
-  digest,
   firstWeek,
   lapsed,
+  meetingRow,
   NOT_FOUND,
   narratedWeek,
   noMarginceChanges,
@@ -49,7 +49,7 @@ import {
 } from "../../testing/worklist.receiptreview.fixtures";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { BriefScreen } from "./brief";
-import type { MorningDigest } from "./brief.queries";
+import { briefReady } from "./meetingbrief/fixtures";
 
 // Decisions share the ranked agenda. Their full proposal opens in the same
 // review drawer used by the worklist, and accepting one refreshes the agenda.
@@ -58,9 +58,6 @@ import type { MorningDigest } from "./brief.queries";
 type Frame = {
   /** Proposals available to the agenda and its review drawers. */
   approvals: Approval[];
-  /** The nightly digest, or null for the 404 an installation answers before its
-   *  first run. */
-  digest?: MorningDigest | null;
   /** The week just gone, or null for the 404 a rep sees before their first
    *  full week. Its two null-narrative states are the ones worth a screenshot:
    *  a week nobody narrated, and a week a pass found unremarkable. */
@@ -94,7 +91,6 @@ const quietNight = {
 
 function brief({
   approvals,
-  digest: overnight = digest,
   weekly = narratedWeek,
   pipeline = () => report(pipelineRows),
   day,
@@ -139,8 +135,6 @@ function brief({
       "GET /weekly-reviews": () => jsonResponse(ARCHIVE),
       "GET /weekly-reviews/latest": () =>
         weekly ? jsonResponse(weekly) : jsonResponse(NOT_FOUND, 404),
-      "GET /digest": () =>
-        overnight ? jsonResponse(overnight) : jsonResponse(NOT_FOUND, 404),
       "GET /deals": () =>
         jsonResponse({ data: deals, page: { next_cursor: null } }),
       "GET /companies/company-nordwind": () =>
@@ -270,31 +264,6 @@ export const ExpiredDecision: Story = {
 
 // ── The rail ────────────────────────────────────────────────────────────────
 
-// Before the first nightly run there is no digest, so the Overnight panel is
-// absent rather than a row of zeros: a fabricated count is worse than a missing
-// one, because a reader cannot tell it apart from a real one.
-export const DigestAbsent: Story = {
-  render: brief({ approvals: [...singles], digest: null }),
-};
-
-// Connector health outside Settings. A degraded source is said in Settings'
-// words with the way to fix it. A healthy one stays silent.
-export const ConnectorUnhealthy: Story = {
-  render: brief({
-    approvals: [...singles],
-    digest: {
-      ...digest,
-      connectors: [
-        {
-          provider: "gmail",
-          status: "reauth_required",
-          last_sync_error_class: "auth",
-        },
-      ],
-    },
-  }),
-};
-
 // One read refused while the other four load. The pipeline says its figure
 // could not be loaded, and the rest of the page is untouched.
 /** The week was measured but has no narration. The panel says the sentence
@@ -324,6 +293,33 @@ export const OnePanelRefused: Story = {
         403,
       ),
   }),
+};
+
+/** The receipt of recent changes refused: Done for you says so once, with
+ *  Retry, and no second section repeats it. */
+export const RecentChangesDidNotLoad: Story = {
+  render: brief({
+    approvals: [...singles],
+    extra: {
+      "GET /me": meRoute({ deal: ["read"] }),
+      "GET /magic": () =>
+        jsonResponse({ title: "Server Error", status: 500 }, 500),
+    },
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const done = await canvas.findByRole("region", {
+      name: en["brief.done.title"],
+    });
+    await within(done).findByText(en["magic.failed"]);
+    await expect(canvas.getAllByText(en["magic.failed"])).toHaveLength(1);
+    await expect(
+      within(done).getAllByRole("button", { name: en["state.retry"] }),
+    ).toHaveLength(1);
+    await expect(
+      canvas.queryByRole("region", { name: en["magic.heading.brief"] }),
+    ).toBeNull();
+  },
 };
 
 // The figures arrived, but a field mask kept rows out of them. Saying so keeps
@@ -405,8 +401,9 @@ export const RowDetailsOpen: Story = {
       throw new Error("Focus shows no context button to open");
     }
     await userEvent.click(context);
+    // The details are named by the row they open on.
     await within(document.body).findByRole("dialog", {
-      name: en["brief.focus.context"],
+      name: /Meet next Tues/,
     });
   },
 };
@@ -521,8 +518,9 @@ const workingMorningRows: WorklistItem[] = [
   },
 ];
 
-export const WorkingMorning: Story = {
-  render: () => {
+/** The working morning, with `meetings` added to the day the rail reads. */
+function workingMorning(meetings: WorklistItem[]) {
+  return () => {
     const day = readingsDay(
       {
         prospecting: 1,
@@ -531,7 +529,7 @@ export const WorkingMorning: Story = {
         revenue_at_risk_minor: 8_900_000,
         revenue_currency: "EUR",
       },
-      workingMorningRows,
+      [...workingMorningRows, ...meetings],
       [],
       { urgent: 7, due: 6 },
     );
@@ -541,7 +539,6 @@ export const WorkingMorning: Story = {
           jsonResponse({ ...day, as_of: "2026-09-13T08:00:00Z" }),
         "GET /brief": () =>
           jsonResponse({ ...ranked, generated_at: "2026-09-13T05:30:00Z" }),
-        "GET /digest": () => jsonResponse({ title: "Not found" }, 404),
         "GET /magic": () => jsonResponse(quietNight),
         "GET /deal-corrections/pending": () => jsonResponse(noMarginceChanges),
         "GET /worklist/handled": () =>
@@ -552,6 +549,9 @@ export const WorkingMorning: Story = {
           }),
         [`GET /deals/${dealID}`]: () =>
           jsonResponse({ id: dealID, name: "PIM Rollout phase 2" }),
+        // The brief Prepare for meeting has Margince write.
+        "GET /activities/meet-next/meeting-brief": () =>
+          jsonResponse(briefReady),
         "POST /reports/deals-by-stage": () =>
           jsonResponse({ rows: [], columns: [] }),
       },
@@ -562,14 +562,68 @@ export const WorkingMorning: Story = {
         <BriefScreen />
       </StoryProviders>
     );
-  },
-};
+  };
+}
 
-export const DigestUnavailable: Story = {
-  render: brief({
-    approvals: [...singles],
-    extra: { "GET /digest": () => jsonResponse(NOT_FOUND, 501) },
-  }),
+export const WorkingMorning: Story = { render: workingMorning([]) };
+
+// Four external meetings ahead on the day the page is read. The rail lists them
+// by start, each naming its account and contacts, and none is cut at the bottom.
+// The next one says how soon it starts and offers the way into its brief.
+export const MorningWithMeetings: Story = {
+  render: workingMorning([
+    {
+      ...meetingRow("meet-next", false, "2026-09-13T09:00:00Z"),
+      title: "Nordwind onboarding",
+      with_contact: "01a00000-0000-7000-8000-000000000017",
+      move: { action: "open_meeting_brief", activity_id: "meet-next" },
+      room: {
+        participants: [
+          {
+            contact_id: "01a00000-0000-7000-8000-000000000017",
+            full_name: "Ines Nordwind",
+          },
+        ],
+      },
+    },
+    {
+      ...meetingRow("meet-later", true, "2026-09-13T12:00:00Z"),
+      title: "Helio pricing call",
+      room: {
+        participants: [
+          {
+            contact_id: "01a00000-0000-7000-8000-000000000021",
+            full_name: "Tomas Helio",
+          },
+          {
+            contact_id: "01a00000-0000-7000-8000-000000000022",
+            full_name: "Mia Sander",
+          },
+        ],
+        participants_more: 2,
+      },
+    },
+    {
+      ...meetingRow("meet-afternoon", false, "2026-09-13T14:30:00Z"),
+      title: "Quarterly review",
+      room: {
+        participants: [],
+        other_participants: [{ kind: "address", name: "cfo@weber.example" }],
+      },
+    },
+    {
+      ...meetingRow("meet-last", false, "2026-09-13T16:00:00Z"),
+      title: "Contract walk-through",
+      room: {
+        participants: [
+          {
+            contact_id: "01a00000-0000-7000-8000-000000000031",
+            full_name: "Lena Hartmann",
+          },
+        ],
+      },
+    },
+  ]),
 };
 
 // ── The panes ───────────────────────────────────────────────────────────────
@@ -580,7 +634,6 @@ export const TodayPhone: Story = {
   tags: ["uat-phone"],
 };
 
-// A dark pane is see-through; the focus card on it stays opaque over its ring.
 export const TodayDark: Story = {
   globals: { theme: "dark" },
   render: brief({ approvals: [...singles] }),

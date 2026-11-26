@@ -6,7 +6,7 @@ import { render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 // The way back to the record the message files under.
 //
@@ -47,6 +47,16 @@ function stubRoutes() {
       const key = url.pathname.replace(/^\/v1/, "");
       if (key === "/consent-purposes") return jsonResponse(PURPOSES);
       if (key === "/voice-profiles") return jsonResponse({ data: [] });
+      if (
+        key === "/records/references" &&
+        url.searchParams.get("kind") === "contact"
+      ) {
+        return jsonResponse({
+          data: url.searchParams.getAll("id").includes("c-1")
+            ? [{ id: "c-1", name: "Anna Weber", archived: false }]
+            : [],
+        });
+      }
       if (key === "/contacts/c-1") {
         return jsonResponse({ id: "c-1", full_name: "Anna Weber" });
       }
@@ -75,7 +85,7 @@ describe("the record a draft files under", () => {
   it("offers it as a link the reader can follow to the record", async () => {
     stubRoutes();
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="c-1"
         recordAddress="anna.weber@example.com"
@@ -93,7 +103,7 @@ describe("the record a draft files under", () => {
   it("says nothing when the composer writes under no record", async () => {
     stubRoutes();
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId={undefined as unknown as string}
         open

@@ -7,20 +7,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { snoozedDueAt } from "../../components/taskactions";
 import { calendarDay, dueInstant } from "../../format/calendarday";
-import { parseTypedDate } from "../../format/datepattern";
+import { readTypedDate } from "../../format/datepattern";
 import { FIXED_DATE_PATTERNS } from "../../format/preferences";
 
 describe("the days a task may be moved to", () => {
   it("never reads a five-digit year, which dueInstant cannot convert", () => {
-    expect(parseTypedDate("15/09/10000", FIXED_DATE_PATTERNS.dmy)).toBeNull();
-    expect(parseTypedDate("10000-09-15", FIXED_DATE_PATTERNS.dmy)).toBeNull();
+    expect(readTypedDate("15/09/10000", FIXED_DATE_PATTERNS.dmy)).toEqual({
+      refused: "shape",
+    });
+    expect(readTypedDate("10000-09-15", FIXED_DATE_PATTERNS.dmy)).toEqual({
+      refused: "shape",
+    });
     expect(() => dueInstant("10000-09-15", "Europe/Berlin")).toThrow();
   });
 
   it("admits an ordinary day, which dueInstant then converts", () => {
-    expect(parseTypedDate("15/09/2026", FIXED_DATE_PATTERNS.dmy)).toBe(
-      "2026-09-15",
-    );
+    expect(readTypedDate("15/09/2026", FIXED_DATE_PATTERNS.dmy)).toEqual({
+      day: "2026-09-15",
+    });
     // Read back in the zone it was minted for, the instant is that day's last
     // whole second. It is the day the picker offered, for every reader.
     expect(dueInstant("2026-09-15", "Europe/Berlin")).toBe(
@@ -44,6 +48,10 @@ describe("snoozing a task by a day", () => {
     expect(snoozedDueAt(from, false, "Europe/Berlin")).toEqual({
       due_at: "2026-03-29T21:59:59.000Z",
       due_has_time: false,
+      due_intent: {
+        wall_clock: "2026-03-29T23:59:59",
+        timezone: "Europe/Berlin",
+      },
     });
     expect(
       calendarDay(
@@ -82,18 +90,40 @@ describe("snoozing a task by a day", () => {
     ).toEqual({
       due_at: "2026-10-25T14:00:00.000Z",
       due_has_time: true,
+      due_intent: { wall_clock: "2026-10-25T15:00", timezone: "Europe/Berlin" },
     });
   });
 
   it.each([
-    ["2025-12-20T14:00:00Z", true, "2026-01-02T14:00:00.000Z"],
-    ["2026-01-01T14:00:00Z", true, "2026-01-02T14:00:00.000Z"],
-    ["2026-01-08T14:00:00Z", true, "2026-01-09T14:00:00.000Z"],
-    ["2025-12-20T22:59:59Z", false, "2026-01-02T22:59:59.000Z"],
-  ])("moves %s at least to tomorrow", (from, hasTime, expected) => {
+    [
+      "2025-12-20T14:00:00Z",
+      true,
+      "2026-01-02T14:00:00.000Z",
+      "2026-01-02T15:00",
+    ],
+    [
+      "2026-01-01T14:00:00Z",
+      true,
+      "2026-01-02T14:00:00.000Z",
+      "2026-01-02T15:00",
+    ],
+    [
+      "2026-01-08T14:00:00Z",
+      true,
+      "2026-01-09T14:00:00.000Z",
+      "2026-01-09T15:00",
+    ],
+    [
+      "2025-12-20T22:59:59Z",
+      false,
+      "2026-01-02T22:59:59.000Z",
+      "2026-01-02T23:59:59",
+    ],
+  ])("moves %s at least to tomorrow", (from, hasTime, expected, wall_clock) => {
     expect(snoozedDueAt(from, hasTime, "Europe/Berlin")).toEqual({
       due_at: expected,
       due_has_time: hasTime,
+      due_intent: { wall_clock, timezone: "Europe/Berlin" },
     });
   });
 

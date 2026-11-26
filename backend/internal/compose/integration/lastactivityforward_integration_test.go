@@ -77,9 +77,9 @@ func TestALinkMovesTheClockForwardWithoutFoldingTheHistory(t *testing.T) {
 	}
 
 	agentAt := newest.Add(time.Hour)
-	agentSubject := "Scheduled agent note"
+	agentSubject, agentBody := "Scheduled agent note", "The deal has gone quiet for three weeks."
 	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "note", Subject: &agentSubject, OccurredAt: &agentAt, Source: "manual", Origin: activities.OriginAgent,
+		Kind: "note", Subject: &agentSubject, Body: &agentBody, OccurredAt: &agentAt, Source: "manual", Origin: activities.OriginAgent,
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}, {EntityType: "project", EntityID: project}},
 	}); err != nil {
 		t.Fatal(err)

@@ -22,9 +22,11 @@ import (
 )
 
 // BookingPageConcern is a used, switched-on booking page that takes no bookings.
+// Title names a team link, and is empty for the host's personal page.
 type BookingPageConcern struct {
 	PageID  ids.UUID
 	Blocker crmcontracts.SchedulingProfileBlocker
+	Title   string
 }
 
 // bookingPageUse is the audited value of a page's first use.
@@ -40,7 +42,7 @@ func (s *Store) MarkBookingPageShared(ctx context.Context) error {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		found, err := stampBookingPageUseTx(ctx, tx, host, s.now())
+		found, err := stampBookingPageUseTx(ctx, tx, host, ids.Nil, s.now())
 		if err == nil && !found {
 			return apperrors.ErrNotFound
 		}
@@ -48,20 +50,19 @@ func (s *Store) MarkBookingPageShared(ctx context.Context) error {
 	})
 }
 
-// stampBookingPageUseTx records a page's first use, for a booking and a link
-// copy alike. It holds the page's write identity, so a link replaced at the
-// same moment cannot carry an unstamped page forward. It answers false when
-// the host has no live page.
-func stampBookingPageUseTx(ctx context.Context, tx pgx.Tx, host ids.UserID, at time.Time) (bool, error) {
+// stampBookingPageUseTx records the first use of the host's page, their
+// personal page when page is Nil, for a booking and a link copy alike. It
+// holds the host's write identity, so a link replaced at the same moment
+// cannot carry an unstamped page forward. It answers false when that page is
+// not live.
+func stampBookingPageUseTx(ctx context.Context, tx pgx.Tx, host ids.UserID, page ids.UUID, at time.Time) (bool, error) {
 	if err := storekit.LockWriteIdentity(ctx, tx, "booking_page", host.String()); err != nil {
 		return false, err
 	}
 	args := schedulingArgs{}
-	var page ids.UUID
 	var used *time.Time
 	var policy *crmcontracts.SchedulingProfile
-	err := tx.QueryRow(ctx, `SELECT id, first_used_at, scheduling_policy FROM booking_page WHERE host_user_id=`+args.add(host)+
-		` AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, args...).Scan(&page, &used, &policy)
+	err := tx.QueryRow(ctx, `SELECT id, first_used_at, scheduling_policy FROM booking_page WHERE `+livePageSQL(&args, host, page)+` FOR UPDATE`, args...).Scan(&page, &used, &policy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -84,45 +85,64 @@ func writeBookingPageUseTx(ctx context.Context, tx pgx.Tx, page ids.UUID, at tim
 	return storekit.EmitEvent(ctx, tx, audit, page, crmcontracts.InternalEventBookingPageUpdated{Enabled: enabled})
 }
 
-// carryBookingPageUseTx copies the host's first use onto their new page, so
-// replacing a leaked link does not make a used page look unused.
+// carryBookingPageUseTx copies the first use of the host's personal page onto
+// their new one. Replacing a leaked link then does not make a used page look unused.
 func carryBookingPageUseTx(ctx context.Context, tx pgx.Tx, host ids.UserID, page ids.UUID, enabled bool) error {
 	args := schedulingArgs{}
 	var used *time.Time
-	if err := tx.QueryRow(ctx, `SELECT min(first_used_at) FROM booking_page WHERE host_user_id=`+args.add(host), args...).Scan(&used); err != nil || used == nil {
+	if err := tx.QueryRow(ctx, `SELECT min(first_used_at) FROM booking_page WHERE NOT team_link AND host_user_id=`+args.add(host), args...).Scan(&used); err != nil || used == nil {
 		return err
 	}
 	return writeBookingPageUseTx(ctx, tx, page, *used, enabled)
 }
 
-// BookingPageConcern answers the acting host's paused booking page, and false
-// when there is none. Only a switched-on page that was used counts. Home stays
-// quiet about a page its host never put to work.
-func (s *Store) BookingPageConcern(ctx context.Context) (BookingPageConcern, bool, error) {
+// BookingPageConcerns answers each of the acting host's paused booking pages,
+// their personal page first and then their team links. Only a switched-on page
+// that was used counts. Home stays quiet about a page its host never put to work.
+func (s *Store) BookingPageConcerns(ctx context.Context) ([]BookingPageConcern, error) {
 	host, err := schedulingHost(ctx)
 	if err != nil {
-		return BookingPageConcern{}, false, err
+		return nil, err
 	}
-	var page ids.UUID
-	var used *time.Time
+	var pages []BookingPage
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		args := schedulingArgs{}
-		return tx.QueryRow(ctx, `SELECT id, first_used_at FROM booking_page WHERE host_user_id=`+args.add(host)+
-			` AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1`, args...).Scan(&page, &used)
+		rows, err := tx.Query(ctx, `SELECT host_user_id, id, team_link FROM booking_page WHERE host_user_id=`+args.add(host)+
+			` AND revoked_at IS NULL AND first_used_at IS NOT NULL ORDER BY team_link, created_at, id`, args...)
+		if err != nil {
+			return err
+		}
+		pages, err = pgx.CollectRows(rows, pgx.RowToStructByPos[BookingPage])
+		return err
 	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return BookingPageConcern{}, false, nil
+	if err != nil {
+		return nil, err
 	}
-	if err != nil || used == nil {
-		return BookingPageConcern{}, false, err
+	var out []BookingPageConcern
+	// Every page of a host books into the one calendar, so one card names a
+	// calendar fault. Only a team that is not ready is each link's own.
+	named := map[crmcontracts.SchedulingProfileBlocker]bool{crmcontracts.SchedulingProfileBlockerNone: true}
+	for _, page := range pages {
+		profile, err := s.bookingPageProfile(ctx, page)
+		if err != nil {
+			return nil, err
+		}
+		if !profile.Enabled {
+			continue
+		}
+		blocker, err := s.pageBlocker(ctx, host, profile)
+		if err != nil {
+			return nil, err
+		}
+		if named[blocker] {
+			continue
+		}
+		named[blocker] = blocker != crmcontracts.SchedulingProfileBlockerTeamNotReady
+		concern := BookingPageConcern{PageID: page.ID, Blocker: blocker}
+		if page.TeamLink {
+			concern.Title = profile.Title
+		}
+		out = append(out, concern)
 	}
-	profile, err := s.hostSchedulingProfile(ctx, host)
-	if err != nil || !profile.Enabled {
-		return BookingPageConcern{}, false, err
-	}
-	blocker, err := s.calendarBlocker(ctx, host, profile)
-	if err != nil || blocker == crmcontracts.SchedulingProfileBlockerNone {
-		return BookingPageConcern{}, false, err
-	}
-	return BookingPageConcern{PageID: page, Blocker: blocker}, true, nil
+	return out, nil
 }

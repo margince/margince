@@ -109,14 +109,10 @@ type consentCarrySpec struct {
 	// evidence that the consent predates the promotion; re-keying them to the
 	// contact would destroy the only record of when it was given and to whom.
 	//
-	// What makes that safe rather than merely principled is that the lead arm
-	// cannot hold the one kind of proof the delivery gate reads: a double
-	// opt-in grant on a lead subject is REFUSED at the writer, because the
-	// round-trip is contact-keyed (consent.Store.resolveDOIConfirmation — "promote
-	// the lead before granting it"). So there is no DOI confirmation on a lead
-	// to strand behind on the archived record. Held by
-	// TestLeadScopedDOIGrantIsRefused; if that refusal is ever lifted, this
-	// answer to question 4 has to be revisited in the same change.
+	// A lead can hold a confirmed double opt-in grant, and the delivery gate
+	// reads that proof off the live record. So a promotion also COPIES the
+	// newest confirmed proof of each carried grant onto the contact
+	// (copyConfirmedProof), leaving the lead's events where they were written.
 	rehomeProof bool
 }
 
@@ -169,7 +165,10 @@ func carryConsent(ctx context.Context, tx pgx.Tx, kind consentCarryKind, fromID,
 		return err
 	}
 	if !spec.rehomeProof {
-		return nil
+		if spec.from == spec.to {
+			return nil
+		}
+		return copyConfirmedProof(ctx, tx, spec, fromID, toID)
 	}
 	if _, err := tx.Exec(ctx, storekit.SQLf(
 		`UPDATE consent_event SET %[2]s = $2 WHERE %[1]s = $1`, spec.from, spec.to),
@@ -184,8 +183,8 @@ func carryConsent(ctx context.Context, tx pgx.Tx, kind consentCarryKind, fromID,
 // in the same statement — a state change without proof would break the
 // Art. 7(1) demonstrability invariant.
 //
-// The flipped row takes the addresses the withdrawal was bound to, because the
-// retiring record's subject withdrew, not the survivor's.
+// The flipped row takes the withdrawal's addresses and its proof row the
+// retention floor, because the retiring record's subject withdrew.
 func flipCarriedWithdrawals(ctx context.Context, tx pgx.Tx, spec consentCarrySpec,
 	fromID, toID ids.UUID, by string, now time.Time,
 ) error {
@@ -200,8 +199,10 @@ func flipCarriedWithdrawals(ctx context.Context, tx pgx.Tx, spec consentCarrySpe
 		  RETURNING b.purpose_id
 		)
 		INSERT INTO consent_event (%[2]s, purpose_id, new_state, source,
-		                           policy_text, policy_version, captured_at, captured_by)
-		SELECT @target, purpose_id, 'withdrawn', @origin, @wording, @version, @now, @actor
+		                           policy_text, policy_version, captured_at, captured_by, kept_until)
+		SELECT @target, purpose_id, 'withdrawn', @origin, @wording, @version, @now, @actor,
+		       (SELECT max(w.kept_until) FROM consent_event w
+		         WHERE w.%[1]s = @source AND w.purpose_id = flipped.purpose_id AND w.new_state = 'withdrawn')
 		FROM flipped`, spec.from, spec.to),
 		pgx.NamedArgs{mergeSourceKey: fromID, mergeTargetKey: toID, "now": now, "actor": by, "origin": spec.source, "wording": spec.policyText, "version": carriedWordingVersion})
 	if err != nil {
@@ -250,6 +251,34 @@ func repointCarriedConsent(ctx context.Context, tx pgx.Tx, spec consentCarrySpec
 		fromID, toID)
 	if err != nil {
 		return fmt.Errorf("re-point the carried consent rows: %w", err)
+	}
+	return nil
+}
+
+// copyConfirmedProof gives a promoted contact the double opt-in proof behind a
+// carried grant. The delivery gate accepts such a grant only with a confirmed,
+// mailbox-triggered event on the same record. The lead's events stay on the
+// lead as the evidence of when the grant was given.
+func copyConfirmedProof(ctx context.Context, tx pgx.Tx, spec consentCarrySpec, fromID, toID ids.UUID) error {
+	_, err := tx.Exec(ctx, storekit.SQLf(`
+		INSERT INTO consent_event (%[2]s, purpose_id, new_state, lawful_basis, source, policy_text, policy_version,
+		                           double_opt_in_confirmed_at, captured_at, captured_by, issuance_trigger, kept_until,
+		                           consent_text_version_id, subject_request_id, confirm_ip, confirm_user_agent)
+		SELECT DISTINCT ON (ce.purpose_id) $2, ce.purpose_id, ce.new_state, ce.lawful_basis, ce.source,
+		       ce.policy_text, ce.policy_version, ce.double_opt_in_confirmed_at, ce.captured_at, ce.captured_by,
+		       ce.issuance_trigger, ce.kept_until, ce.consent_text_version_id, ce.subject_request_id,
+		       ce.confirm_ip, ce.confirm_user_agent
+		  FROM consent_event ce
+		  JOIN contact_consent cc ON cc.%[2]s = $2 AND cc.purpose_id = ce.purpose_id AND cc.state = 'granted'
+		 WHERE ce.%[1]s = $1 AND ce.new_state = 'granted'
+		   AND ce.double_opt_in_confirmed_at IS NOT NULL AND ce.issuance_trigger IS NOT NULL
+		   AND NOT EXISTS (SELECT 1 FROM consent_event own
+		                    WHERE own.%[2]s = $2 AND own.purpose_id = ce.purpose_id
+		                      AND own.double_opt_in_confirmed_at IS NOT NULL AND own.issuance_trigger IS NOT NULL)
+		 ORDER BY ce.purpose_id, ce.captured_at DESC`, spec.from, spec.to),
+		fromID, toID)
+	if err != nil {
+		return fmt.Errorf("copy the confirmed double opt-in proof onto the promoted contact: %w", err)
 	}
 	return nil
 }

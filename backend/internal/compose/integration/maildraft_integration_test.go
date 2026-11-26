@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -136,7 +137,7 @@ func TestErasingARecipientDeletesTheDraftsAddressedToThem(t *testing.T) {
 	if err != nil {
 		t.Fatalf("contact id %q: %v", p.contactID, err)
 	}
-	if err := privacy.NewEraser(compose.InstallationDB(p.Pool)).EraseContact(
+	if err := privacy.NewEraser(compose.InstallationDB(p.Pool)).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(
 		p.privacyAdmin(t), contactID, "art-17"); err != nil {
 		t.Fatalf("erasing the recipient: %v", err)
 	}
@@ -270,10 +271,11 @@ func (p *preflightEnv) seedStranger(t *testing.T) string {
 	return id.String()
 }
 
-// Every shape of "a draft that is the subject's" is exported AND erased, and
-// by the same rule: an address padded and cased as a rep might type it, a
-// draft opened on the contact itself, and one opened on the lead they were
-// before promotion. A draft to somebody else on another record is neither.
+// Every shape of a draft that is the subject's is both exported and erased, by
+// one rule. One is an address padded and cased as a rep might type it. Others
+// sit on the contact, on the lead they were before promotion, or forward
+// their message to somebody else. A draft to somebody else on another record
+// is neither.
 func TestTheExportAndTheErasureAgreeOnWhichDraftsAreTheSubjects(t *testing.T) {
 	p := setupPreflight(t)
 	lead := p.seedLiveLead(t)
@@ -282,6 +284,7 @@ func TestTheExportAndTheErasureAgreeOnWhichDraftsAreTheSubjects(t *testing.T) {
 		{"anchor_type": "activity", "anchor_id": p.activityID, "to": []string{"  BUYER@Preflight.test "}, "body": "padded"},
 		{"anchor_type": "contact", "anchor_id": p.contactID, "to": []string{"assistant@preflight.test"}, "body": "on their record"},
 		{"anchor_type": "lead", "anchor_id": lead, "to": []string{"assistant@preflight.test"}, "body": "on their lead"},
+		{"anchor_type": "forward", "anchor_id": p.activityID, "to": []string{"third@elsewhere.test"}, "body": "their mail forwarded"},
 		{"anchor_type": "contact", "anchor_id": stranger, "to": []string{"stranger@preflight.test"}, "body": "not theirs"},
 	} {
 		if status := p.Call(t, "PUT", "/v1/mail-drafts", draft, nil, nil); status != http.StatusOK {
@@ -300,16 +303,16 @@ func TestTheExportAndTheErasureAgreeOnWhichDraftsAreTheSubjects(t *testing.T) {
 		t.Fatalf("AssembleSAR: %v", err)
 	}
 	exported := fmt.Sprintf("%#v", pkg.DraftMessages)
-	for _, body := range []string{"padded", "on their record", "on their lead"} {
+	for _, body := range []string{"padded", "on their record", "on their lead", "their mail forwarded"} {
 		if !strings.Contains(exported, body) {
 			t.Errorf("the export is missing the %q draft: %s", body, exported)
 		}
 	}
-	if strings.Contains(exported, "not theirs") || len(pkg.DraftMessages) != 3 {
-		t.Errorf("the export carried %d drafts, want exactly the subject's three: %s", len(pkg.DraftMessages), exported)
+	if strings.Contains(exported, "not theirs") || len(pkg.DraftMessages) != 4 {
+		t.Errorf("the export carried %d drafts, want exactly the subject's four: %s", len(pkg.DraftMessages), exported)
 	}
 
-	if err := privacy.NewEraser(compose.InstallationDB(p.Pool)).EraseContact(
+	if err := privacy.NewEraser(compose.InstallationDB(p.Pool)).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(
 		p.privacyAdmin(t), contactID, "art-17"); err != nil {
 		t.Fatalf("erasing the recipient: %v", err)
 	}

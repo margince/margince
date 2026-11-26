@@ -14,6 +14,8 @@ package consent
 import (
 	"context"
 	"fmt"
+	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -23,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // recordAdmittedTx is the write itself, on input Record has already admitted —
@@ -39,6 +42,10 @@ func (s *Store) recordAdmittedTx(
 		in.Source = &named
 	}
 
+	// Grants and withdrawals share the send fence with subject stops.
+	if err := lockSubjectSuppressions(ctx, tx, sub.id); err != nil {
+		return State{}, err
+	}
 	var out State
 	probe, err := rowProbeFor(state)
 	if err != nil {
@@ -47,10 +54,11 @@ func (s *Store) recordAdmittedTx(
 	if err := probe(ctx, tx, sub.entityType, sub.id); err != nil {
 		return State{}, err
 	}
-	purposeKey, requiresDOI, err := loadConsentPurpose(ctx, tx, in.PurposeID)
+	purpose, err := loadConsentPurpose(ctx, tx, in.PurposeID)
 	if err != nil {
 		return State{}, err
 	}
+	purposeKey, requiresDOI := purpose.key, purpose.requiresDOI
 	// FOR UPDATE, because what follows is a read-modify-write and the decision
 	// it makes is "nothing to do". Without the lock this read sees the state
 	// the transaction started with, so a write to the same (subject, purpose)
@@ -85,11 +93,12 @@ func (s *Store) recordAdmittedTx(
 		}
 		reassertion = confirmed
 	}
-	if reassertion {
+	if reassertion && !in.ProveReassertion {
 		out = State{PurposeID: in.PurposeID, PurposeKey: purposeKey, State: current, LawfulBasis: in.LawfulBasis}
 		return out, nil // idempotent re-assertion: no proof row, no event, no fresh token demanded (Changed stays false)
 	}
-	if in.NeverOverrideExisting && current != "" {
+	// A proven re-assertion moves nothing, so it overrides nothing.
+	if in.NeverOverrideExisting && current != "" && !reassertion {
 		out = State{PurposeID: in.PurposeID, PurposeKey: purposeKey, State: current}
 		return out, nil // the decision on record stands; an anonymous capture cannot flip it
 	}
@@ -100,7 +109,8 @@ func (s *Store) recordAdmittedTx(
 	}
 
 	capturedAt := s.now().UTC()
-	if err := upsertConsentWithProof(ctx, tx, in, sub, doiConfirmedAt, capturedAt, actor.ID); err != nil {
+	proofID, err := s.proveDecisionTx(ctx, tx, in, sub, purpose.class, doiConfirmedAt, capturedAt, actor.ID)
+	if err != nil {
 		return State{}, err
 	}
 
@@ -118,12 +128,53 @@ func (s *Store) recordAdmittedTx(
 		consentChangedPayload(in.PurposeID, purposeKey, in.NewState)); err != nil {
 		return State{}, err
 	}
+	// Here rather than at each door, so no door that records a withdrawal can
+	// leave out the receipt a refusal of advertising owes.
+	if ConsentState(in.NewState) == StateWithdrawn && !reassertion {
+		if err := s.answerWithdrawalTx(ctx, tx, sub, purpose.class, capturedAt); err != nil {
+			return State{}, err
+		}
+	}
 	out = State{
 		PurposeID: in.PurposeID, PurposeKey: purposeKey, State: in.NewState,
 		LawfulBasis: in.LawfulBasis, DoubleOptInConfirmedAt: doiConfirmedAt, UpdatedAt: &capturedAt,
-		Changed: true,
+		Changed: !reassertion, ProofEventID: proofID,
 	}
 	return out, nil
+}
+
+// answerWithdrawalTx stages the receipt a withdrawal owes and opens the task
+// its pack sets. One task per act: a press that withdrew four purposes is one
+// request.
+func (s *Store) answerWithdrawalTx(ctx context.Context, tx pgx.Tx, sub subject, purposeClass string, at time.Time) error {
+	if err := s.acknowledgeWithdrawalTx(ctx, tx, sub, purposeClass, at); err != nil {
+		return err
+	}
+	act, err := withdrawalActTx(ctx, tx)
+	if err != nil {
+		return err
+	}
+	key := withdrawalMessageID(sub.id, act)
+	if !slices.Contains(commsauthz.MarketingPurposeClasses(), purposeClass) {
+		// The opt-out receipt answers only advertising, so any other
+		// withdrawal gets the request receipt.
+		return s.answerRequestTx(ctx, tx, sub, RequestTaskWithdrawal, key, at)
+	}
+	who := ruleSubject{Kind: sub.entityType, ID: sub.id.String()}
+	return s.openRequestTaskTx(ctx, tx, who, RequestTaskWithdrawal, key, at)
+}
+
+// proveDecisionTx writes the state and its proof row, with the retention floor
+// a withdrawal of advertising carries from the moment it is written.
+func (s *Store) proveDecisionTx(
+	ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, purposeClass string,
+	doiConfirmedAt *time.Time, capturedAt time.Time, actorID string,
+) (ids.UUID, error) {
+	keptUntil, err := s.withdrawalFloorTx(ctx, tx, sub, ConsentState(in.NewState), purposeClass, capturedAt)
+	if err != nil {
+		return ids.Nil, err
+	}
+	return upsertConsentWithProof(ctx, tx, in, sub, doiConfirmedAt, capturedAt, keptUntil, actorID)
 }
 
 // rowProbeFor answers which row probe a recorded state must clear.

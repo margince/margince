@@ -4,21 +4,43 @@
 package privacy
 
 import (
-	"os"
-	"strings"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"testing"
 )
 
-// The kept question answers reach a subject's leads through leadTwinOf, and
-// erasure wipes them through its own statement. A lead one finds and the
-// other misses is a kept answer erasure leaves behind.
-func TestTheReportingReachFindsTheLeadsErasureWipes(t *testing.T) {
-	source, err := os.ReadFile("erasure_leadtwins.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	squash := func(text string) string { return strings.Join(strings.Fields(text), " ") }
-	if !strings.Contains(squash(string(source)), "WHERE "+squash(leadTwinOf("$1", "$2"))+" RETURNING id") {
-		t.Fatal("anonymizeLeadTwins no longer wipes exactly the leads leadTwinOf selects; change both together")
+func TestExportsAndErasureUseTheReportingLeadReach(t *testing.T) {
+	for _, reader := range []struct{ file, function string }{
+		{"erasure_leadtwins.go", "anonymizeLeadTwins"},
+		{"sar.go", "subjectReach"},
+	} {
+		t.Run(reader.function, func(t *testing.T) {
+			tree, err := parser.ParseFile(token.NewFileSet(), reader.file, nil, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			calls := 0
+			for _, decl := range tree.Decls {
+				function, ok := decl.(*ast.FuncDecl)
+				if !ok || function.Name.Name != reader.function {
+					continue
+				}
+				ast.Inspect(function.Body, func(node ast.Node) bool {
+					call, ok := node.(*ast.CallExpr)
+					if !ok {
+						return true
+					}
+					name, ok := call.Fun.(*ast.Ident)
+					if ok && name.Name == "leadTwinOf" {
+						calls++
+					}
+					return true
+				})
+			}
+			if calls != 1 {
+				t.Fatalf("%s calls leadTwinOf %d times; exports and erasure must share the reporting predicate", reader.function, calls)
+			}
+		})
 	}
 }

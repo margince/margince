@@ -1,0 +1,14 @@
+{
+  "tool": "run_research",
+  "action": "generate_brief",
+  "verb": "generate_morning_brief",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

@@ -37,6 +37,14 @@ var (
 	invitations = []string{"REQUEST", "ADD", "CANCEL", "PUBLISH", "REFRESH"}
 )
 
+// answerable are the invitations that ask the attendee to answer: a new event,
+// or new occurrences of one. An update to a cancelled event asks nothing.
+var answerable = []string{"REQUEST", "ADD"}
+
+// Answerable lists the invitation methods an attendee can accept or decline,
+// for a reader that spells them in SQL.
+func Answerable() []string { return slices.Clone(answerable) }
+
 // Responses lists the methods IsResponse admits, for a reader that spells them
 // in SQL.
 func Responses() []string { return slices.Clone(responses) }

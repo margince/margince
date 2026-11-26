@@ -1,0 +1,94 @@
+{
+  "scenario": "case118_is_the_crane_job_at_risk",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "842d5644ddf2900b",
+    "tools": "f24b3ede9858890c",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T07:50:25Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T07:50:25Z"
+  },
+  "usage": {
+    "input_tokens": 32274,
+    "output_tokens": 6302,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 45865,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "read_attention",
+        "read_context",
+        "read_project",
+        "read_project_360",
+        "review_commitments",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "get_field_history",
+        "read_context",
+        "read_details",
+        "read_project",
+        "read_project_360",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "turns": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 39069.5,
+      "min": 34752,
+      "max": 43387
+    },
+    "output_tokens": {
+      "median": 3151,
+      "min": 3086,
+      "max": 3216
+    }
+  }
+}

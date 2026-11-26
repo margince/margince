@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/src/app/startup-session.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
+<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/index.html frontend/src/app/startup-session.ts frontend/src/app/navigation-prefetch.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/lib/screenaddress.ts frontend/src/lib/navigatefrom.ts frontend/src/lib/historydepth.ts frontend/src/lib/urlstate.ts frontend/src/App.views.tsx frontend/src/App.screens.tsx frontend/src/App.screencode.ts frontend/src/app/startup-reads.ts frontend/src/app/reservedpages.ts frontend/src/lib/essentialscreens.ts frontend/src/lib/session.ts frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
 # The frontend: how the web app is put together
 
 Read this before you change anything under `frontend/`. Most of the rules of
@@ -49,6 +49,28 @@ The web tier serves the app for a browser and sends other fetches to the public 
 `AppLink` keeps app links rooted at the same origin. A hash may carry a query of its own.
 The router removes it, so a `?utm=…` never ends up in a screen name.
 
+A routed screen can stay on screen after the bar has moved, while the next one
+loads or a draft holds it. `ScreenView` (`App.views.tsx`) gives it
+the full address it was drawn for through `ScreenAddress`
+(`lib/screenaddress.ts`). `useHash`, `useRoute` and `useUrlParams` answer with
+that address, so a held screen reads its own page. `useLiveHash` reads the bar,
+for the code that decides what is on screen.
+
+Code that runs after its render (an effect, a settled request, the code after
+an `await`) writes the address through `useAddressWriters()` in
+`lib/urlstate.ts`. Under a routed screen those writers drop the write once the
+bar has left the page.
+`frontend/census/rules/effect-address-writers.census.ts` fails a module-level
+writer reached from such code.
+
+A move that follows an action starts from `fromHere()` in
+`lib/navigatefrom.ts`, called when the reader acts. It moves only a reader
+still on that page. `closeOnto` leaves a record the work closed. It goes back
+through history when the nearest entry outside the record's tabs is the
+target, filters kept, and replaces the entry otherwise. Every move through history
+that the app starts goes through `traverseTo` (`lib/historydepth.ts`), which
+refuses a second one while the first is in flight.
+
 ## The layers
 
 ```text
@@ -85,8 +107,8 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   that needs a feature, such as the record page's mail drawer, lives in that feature.
 - **`src/app/`**: the shell of the app and what holds on every screen.
   `shell.tsx` is the shell, the sidebar and the title of each page.
-  `topbar.tsx` is the top bar of the session: the control that makes the
-  sidebar small, the breadcrumb, search, and the account. `pagemeta.ts` holds
+  `topbar.tsx` is the top bar of the session: a record page's Back control,
+  search, and the actions and the account. `pagemeta.ts` holds
   what both of them know about a page before it renders.
 
   Then come `nav.ts`
@@ -103,7 +125,8 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   `*.test.tsx` and `*.stories.tsx` beside it. A screen gets a folder of its own
   only when it is a state machine and not a page, as
   `features/onboarding/onboarding-conversation/` is. An address that no screen
-  answers shows a note that says so (`shell.unknownPage`), never an empty page.
+  answers shows a note that says so (`shell.unknownAddress`) with a way Home,
+  never an empty page.
 - **`src/custom/`**: the screens a fork adds. Margince ships it with only its
   README, so a fork's screens never conflict with a new release.
 - **`src/i18n/`**: three catalogs (`en`, `de`, `vi`), with `en` the default.
@@ -131,21 +154,45 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   `x-extensible-enum` markers in `crm.yaml`. A value counts only when its type
   comes from `src/api/schema.d.ts`, so a union the app writes itself does not.
 
-  `catalogs.ts` loads the language in use. `bootstrap.ts` starts that read while the app loads.
-  `LocaleProvider` waits for the catalog before drawing its content.
+  `catalogs.ts` loads the language in use at one of two levels. The `essential` level holds the
+  messages the first screen can draw, and the `complete` level holds every message.
+  `bootstrap.ts` starts the `essential` level while the app loads, and `main.tsx` waits only for it
+  before the first render. So `LocaleProvider` draws the shell from the `essential` level on every address.
   The error fallback uses a small copy generated from `en`, so a failed load can still offer Retry.
   Retry clears the failed catalog request before reading it again.
 
-  The `Analytics` route starts with the messages reached by its static imports and deferred
-  components that request the copy their first screen needs through `frontend/src/i18n/lazy.tsx`.
-  `frontend/scripts/gen-essential-copy.mjs` follows those imports from the same entry paths as
-  the bundle groups. `fe-drift` checks the generated copy. Other routes and dialogs wait for the
-  complete catalog through `CompleteLocale` and `frontend/src/i18n/lazy.tsx`.
-  A language change also loads the complete catalog.
+  `frontend/scripts/gen-essential-copy.mjs` builds the `essential` level from the static imports of the
+  bundle groups' entry paths. It also follows each deferred component that asks for that level through
+  `frontend/src/i18n/lazy.tsx`. Sign-in, the `availability` page, the setup claim and the lock screens
+  ask for it. So a reader with no session never waits for the `complete` level. `fe-drift` checks the
+  generated copy.
 
-  `frontend/src/bootstrap.ts` starts the session read through `frontend/src/lib/session.read.ts`
-  while the app loads. `frontend/src/main.tsx` waits for `frontend/src/app/startup-session.ts` to
-  register the prepared query before it renders the app.
+  Home and `Analytics` draw from the `essential` level alone (`frontend/src/lib/essentialscreens.ts`).
+  On those two, `bootstrap.ts` loads the `complete` level once the page has loaded and the browser is free.
+  On every other address it starts the `complete` level beside the `essential` one.
+  `App.views.tsx` puts every other screen behind `CompleteLocale`. So the shell shows first, and the
+  column of the screen shows its loading state until the `complete` level is in. Dialogs wait
+  through `frontend/src/i18n/lazy.tsx`.
+
+  A language change keeps the page in the old language until the new one is loaded. It asks for the
+  new `complete` level at once when the page had already asked for the old one.
+
+  `bootstrap.ts` also starts the code of the screen the address names, through the map in
+  `frontend/src/App.screencode.ts`. `App.screens.tsx` builds every screen it loads late from that map,
+  so the two ask for the same file. The map tells a list from a record with `opensReservedPage` in
+  `frontend/src/app/reservedpages.ts`, the rule `nav.ts` uses too.
+
+  On a browser that had a session (`margince.session.seen`), `bootstrap.ts` starts the reads the shell
+  waits for, all at once. They are the session, the installation settings, the company-context rollout
+  and the onboarding state (`frontend/src/app/startup-reads.ts`). Each lands under the query options its
+  hook reads, so the hook does not ask again. On `Analytics`, it starts the prepared session read through
+  `frontend/src/lib/session.read.ts` instead. `frontend/src/main.tsx` waits for
+  `frontend/src/app/startup-session.ts` to register these reads before it renders the app.
+
+  When a read other than the session answers 401 or 403, `sessionRefusalWatch` in
+  `frontend/src/lib/session.ts` asks for the session again. It does not ask when the last answer of the
+  session already explains the refusal: a signed-out session explains any, a locked one a 403. So an
+  expired session sends one session read, in whatever order its other reads answer.
 
   `frontend/src/app/analytics-prefetch.ts` keeps the response time when
   filling the shared query cache. Expired responses are read again.
@@ -153,6 +200,14 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   The opening page and the rendered views use the same functions in
   `frontend/src/features/analytics/analytics.overview.questions.ts`.
   Sign-in forms, closed drawers and other `Analytics` sections load when opened.
+
+  `frontend/src/app/navigation-prefetch.ts` starts the first read of `Contacts`
+  or `Deals` when a pointer rests on the sidebar link, or focus lands on it.
+  It uses the same query options as the screen, so the screen finds that read
+  and does not ask again. It reads only for a current session
+  that grants the object, and only into an empty cache entry. It cancels the
+  read when the pointer or focus leaves the link before a click. When the
+  signed-in user or their grants change, it drops the entries it filled.
 
   The order of choice is: the user's own choice, then the languages the browser
   asks for, then the default. English with no setting is `en-GB`, never
@@ -198,7 +253,7 @@ and a new line is never added. The steps for a move are in
 ## The shell
 
 `src/app/nav.ts` holds the list of places that decides, and `rail.test.tsx`
-pins its order. It has 8 entries: Home on its own, then three groups with
+pins its order. It has 10 entries: Home on its own, then three groups with
 labels.
 
 | Group | Route ids |
@@ -206,14 +261,19 @@ labels.
 | *(no group)* | `home` |
 | Records | `contacts`, `companies`, `leads`, `deals` |
 | Work | `projects`, `filters` |
-| Insights | `analytics` |
+| Insights | `analytics`, `progress`, `goals` |
 
 The groups belong to the **open sidebar** alone. When the sidebar is small,
-each group title keeps its place and shows a line there. So the
+each group title is hidden and takes no space (`.navheading` in `shell.css`). So the
 `56px` rail is the plain list that [DESIGN.md](../../DESIGN.md#6-the-shell)
 shows; the open state adds to it. Whether the sidebar is small is a stored
 setting (`margince.sidebarCollapsed` in `localStorage`, read once when it first
-renders). The column moves between `256px` and `56px` over `--dur-move`.
+renders).
+
+With no stored choice, a window from `701px` to `1024px` starts with the
+sidebar small, and a wider one starts open. A stored choice wins both ways.
+The control that sets it sits at the foot of the sidebar, under the agent row.
+`⌘B` does the same. The column moves between `256px` and `56px` over `--dur-move`.
 
 At `≤700px` the same `<nav>` element becomes a bar of 5 places of the same
 size, fixed below the page. `MOBILE_PRIMARY` (`home`, `contacts`, `deals`) is on
@@ -225,7 +285,7 @@ the routes not on the bar are `display:none`, so **More** carries
 
 That value sits on the place a hidden row stands for. Some pages sit below such
 a place: a company, lead or project record, a Filters and views page, or one
-list. There the top bar's trail claims the page, so **More** says `"true"`. A contact
+list. There the page below the list is the current page, so **More** says `"true"`. A contact
 or deal record leaves **More** without the value, because the bar shows that
 place and claims the page. **More** drops the value once it is open, so two
 elements never both claim the current page.
@@ -257,11 +317,12 @@ wrong. So it is stated in `nav.ts`, again in `palette.tsx`, and here.
 `NavItem.screen` is the **route id**: the English name that never changes, in
 the hash, in the `switch` of `App.tsx`, and in every `href`.
 `NavItem.labelKey` is a **catalog key** whose rendered text may be different,
-and one of the 8 is:
+and two of the 10 are:
 
 | Route id | Rendered label |
 |---|---|
 | `filters` | `Filters and views` |
+| `goals` | `Sales goals` |
 
 The `⌘K` palette depends on the split. Every screen command carries its route
 id, plus any `aliases` the rail entry declares, as `keywords` the user never
@@ -288,13 +349,14 @@ too.
 
 ## Colour
 
-The app shell has a panel rail and a clear top bar over the theme ground, as
+The app shell has a sidebar and a top bar with no ground of their own, so the page ground shows (`--bgPage`). The page is a white card (`--pageCard`) beside them, as
 [DESIGN.md](../../DESIGN.md#6-the-shell) and the top of `src/app/shell.css`
 state. It does not use the dark green field, so the marks on the rail use
 ordinary theme tokens, not `white-alpha` on a dark field.
 
-The dark group in `tokens.css` (`--bgInkField`, `--textOnInkField`,
-`--overlayScrim`) is the one dark green field, the same in both themes. It is
+The dark group in `tokens.css` (`--bgInkField`, `--textOnInkField`) is the one
+dark green field, the same in both themes. `--overlayScrim` sits beside it but
+has a dark-theme value of its own. The green tint is lighter than the dark ground. The field is
 for what passes over the page, such as the tooltips the folded sidebar shows
 and the bar of the client surface. The sidebar is never on it. A new app panel styled from those tokens
 is styled in error.
@@ -305,10 +367,16 @@ those parts, it points the text, link and focus tokens at the field's own colour
 under it. A new part on the field goes in that list; `frontend/census/rules/inkfield.census.ts` fails one that is missing.
 
 Both themes ship, and **the theme resolves before React starts**.
-`main.tsx` calls `startTheme()` above `createRoot(...).render(...)`. That choice
-lives in `src/lib/theme.ts` and in no other file. A stated choice
+`main.tsx` calls `startTheme()` above `createRoot(...).render(...)`, and
+`src/lib/theme.ts` resolves the choice. A stated choice
 (`margince.theme` in `localStorage`, `light` or `dark`) wins; otherwise the OS
 `prefers-color-scheme` decides.
+
+The page first shows before any module runs. So a script in `index.html` that
+is not a module sets a stored `light` or `dark` on `<html>` first. The inline
+style there draws the ground of that theme. `src/app/prepaint.test.ts` holds the
+script's key and values to `storage.ts` and `theme.ts`. `nginx.conf` admits the
+script by its sha256 in `script-src`, which `src/app/webtier.test.ts` derives.
 
 A third value, `system`, says to keep following the OS. An install that has
 never made a choice resolves as `system`, and so does any value the build does not
@@ -427,6 +495,7 @@ even if the test tree breaks.
 | Design test | `frontend/census/rules/conformance.census.ts`, `design-system/conformance.test.ts` | the same rules read from the AST, not from text, plus copy users see that is written in the code outside the `i18n` catalogs, and a wrong web app manifest |
 | Service worker | `frontend/scripts/vite-pwa.test.ts`, `frontend/census/rules/serviceworker-registrar.census.ts` | the web app build not writing `/sw.js`. The worker answering from `Cache Storage` anything but a failed page load and the offline page with its script. The worker catching a path the API owns, keeping a cache that is not its own, or keeping its cache name when what it holds changed. Any shipped module but `src/lib/pwa.ts`, in any kind of script, reaching for `navigator.serviceWorker` ([pwa.md](pwa.md)) |
 | CSS file owners | `frontend/census/rules/stylesheetnamespace.census.ts` | the class names of a screen declared in a CSS file other than the screen's own, in every `.css` under `frontend/src` and in the frontend layer of each extension |
+| Address writers | `frontend/census/rules/effect-address-writers.census.ts` | a module-level address writer (`replaceParams`, `replaceDial`, `navigateReplacing`) reached from an effect, a settled request or code after an `await` |
 | Timeline rows | `frontend/census/rules/timelinerows.census.ts` | a rule that reaches the `li` of a `.timeline` list by anything but `>` from the `.timeline` part, which also reaches `li` items inside a row; a sibling (`+`, `~`) of such a row passes. It reads every `.css` under `frontend/src` and the frontend of each extension. It fails closed when the selectors it parses and a plain count of the text disagree |
 | Token values | `design-system/tokens.test.ts` | a Ledger-Green value that drifts from the design source |
 | Type check and build | `pnpm build` (`tsc -b && vite build`) | any type error |
@@ -443,10 +512,10 @@ merge gate and needs Node and pnpm.
 | If you are changing… | Start at |
 |---|---|
 | a place on the rail, a rail label, a badge | `src/app/nav.ts`, then `src/app/shell.tsx` and `shell.test.tsx` |
-| what a route renders | `src/App.tsx` (`ScreenView`), then the screen file |
+| what a route renders | `src/App.views.tsx` (`ScreenView`), then the screen file |
 | a colour, a `border-radius`, a spacing step | `src/design-system/tokens.css` (and `tokens.test.ts`), never a call site |
 | a derived colour role | `src/design-system/brand.css`: a `color-mix()`, never a new hex value |
-| light and dark themes | `src/lib/theme.ts` and `tokens.css`, which carries all three states: the light colour set on `:root` alone, the `prefers-color-scheme` block for a surface whose host states nothing, and the `[data-theme]` blocks a stated choice sets |
+| light and dark themes | `src/lib/theme.ts`, the inline script and style in `index.html`, and `tokens.css`, which carries all three states: the light colour set on `:root` alone, the `prefers-color-scheme` block for a surface whose host states nothing, and the `[data-theme]` blocks a stated choice sets |
 | how a derived value shows its evidence | `src/design-system/evidencemark.tsx` |
 | a staging or approval surface | `src/design-system/trust.tsx` and `src/features/worklist/worklist.tsx` |
 | copy | `src/i18n/en.ts`, `de.ts` **and** `vi.ts`; the type check holds their keys the same |
@@ -459,11 +528,13 @@ merge gate and needs Node and pnpm.
 | | |
 |---|---|
 | The API seam and the generated contract types | `frontend/src/api/{client.ts,schema.d.ts,public-events.ts}` |
-| Boot: theme, install offer, service worker, query client, 403 handling | `frontend/src/main.tsx` |
+| Start, before the app's code loads: install offer, service worker, the first reads, the screen's code, language | `frontend/src/bootstrap.ts` |
+| Boot: theme, the first render | `frontend/src/main.tsx` |
+| The query client and its 403 handling | `frontend/src/app/queryclient.ts` |
 | Registering the service worker, install state / the worker and its offline page | `frontend/src/lib/pwa.ts` / `frontend/src/offline/`, built by `frontend/scripts/vite-pwa.ts` |
 | Route → screen, the sign-in gate, the onboarding gate | `frontend/src/App.tsx` |
 | The shell, sidebar, page title | `frontend/src/app/{shell.tsx,shell.css}` |
-| Top bar: breadcrumb, search, account | `frontend/src/app/{topbar.tsx,topbar.css,account.tsx}` |
+| Top bar: Back, search, account | `frontend/src/app/{topbar.tsx,topbar.css,account.tsx}` |
 | The rail list, the badge set, the phone set, the set with no rail | `frontend/src/app/nav.ts` |
 | The hash router | `frontend/src/lib/router.tsx` |
 | The `⌘K` palette, the agent in the rail | `frontend/src/app/{palette.tsx,agentrail.tsx}` |

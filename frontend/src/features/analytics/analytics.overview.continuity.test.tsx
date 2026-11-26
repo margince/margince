@@ -123,7 +123,7 @@ describe("each Overview view keeps its own question", () => {
 
     await waitFor(() => expect(window.location.hash).toContain("pipeline=all"));
     await readings();
-    expect(screen.getByText("Pipeline: All pipelines")).toBeVisible();
+    expect(screen.getByText(/Pipeline: All pipelines/)).toBeVisible();
     expect(lastSales(asked).has("pipeline_id")).toBe(false);
   });
 

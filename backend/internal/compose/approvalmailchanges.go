@@ -78,6 +78,9 @@ func changeMailFacts(approval crmcontracts.Approval, words mailcopy.Copy) approv
 // the joined summary lists after it. An approval staged without parts reads
 // as its whole summary.
 func approvalSentence(approval crmcontracts.Approval) string {
+	if approval.SystemDisplay != nil && approval.SystemDisplay.Subject != nil {
+		return *approval.SystemDisplay.Subject
+	}
 	if approval.SummaryParts != nil && approval.SummaryParts.Sentence != "" {
 		return approval.SummaryParts.Sentence
 	}

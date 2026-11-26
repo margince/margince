@@ -4,6 +4,8 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useLocale } from "../i18n";
+import { translatedPipeline } from "./labeltranslation";
 import { unwrap } from "./problem";
 
 /** The pipeline a reader is on when nothing names one. */
@@ -13,22 +15,54 @@ export function defaultPipelineOf(
   return pipelines.find((each) => each.is_default) ?? pipelines[0];
 }
 
-/**
- * Every pipeline, stages included, in the server's order.
- *
- * ONE key for the plural read, distinct from the single-pipeline reads under
- * `["pipelines", <id>]`: sharing a key would let the cache hold either shape
- * depending on which screen loaded last. A mutation invalidating the
- * `["pipelines"]` prefix still refreshes this entry.
- *
- * `enabled` is for a surface that reads the list only once it is opened.
- */
+/** Rows by `position`, which is not the order the server lists a pipeline's stages in. */
+export function inPositionOrder<T extends { position: number }>(
+  rows: readonly T[],
+): T[] {
+  return [...rows].sort((a, b) => a.position - b.position);
+}
+
+/** Each stage's name by its id, across every pipeline given. */
+export function stageNames(
+  pipelines: readonly components["schemas"]["Pipeline"][],
+): Map<string, string> {
+  return new Map(
+    pipelines.flatMap((pipeline) =>
+      (pipeline.stages ?? []).map((stage) => [stage.id, stage.name] as const),
+    ),
+  );
+}
+
+// Cache raw pipelines together so list and record readers share the same read.
 export const pipelinesOptions = queryOptions({
   queryKey: ["pipelines", "all"],
   queryFn: async ({ signal }) =>
     unwrap(await api.GET("/pipelines", { params: { query: {} }, signal })).data,
 });
 
+// Retired pipelines too: a deal on one is drawn on its own stages, and a reader
+// names a stage a deal once held. Pickers offer the active catalog above.
+export const pipelinesWithArchivedOptions = queryOptions({
+  queryKey: ["pipelines", "with-archived"],
+  queryFn: async ({ signal }) =>
+    unwrap(
+      await api.GET("/pipelines", {
+        params: { query: { include_archived: true } },
+        signal,
+      }),
+    ).data,
+});
+
+/**
+ * The pipelines with each stage named in the reader's UI language. Settings
+ * reads the stored names through its own query, so it edits what is stored.
+ */
 export function usePipelines(enabled = true) {
-  return useQuery({ ...pipelinesOptions, enabled });
+  const { locale } = useLocale();
+  return useQuery({
+    ...pipelinesOptions,
+    enabled,
+    select: (pipelines) =>
+      pipelines.map((pipeline) => translatedPipeline(pipeline, locale)),
+  });
 }

@@ -172,9 +172,9 @@ func (inertRetriever) AssembleContext(context.Context, datasource.EntityRef, ret
 // catch. Every seam here is non-nil for the same reason: each registrar
 // registers nothing when its seam is absent, so a nil would shrink the set
 // silently rather than fail.
-func fullRegistry(t *testing.T) *Registry {
+func fullRegistry(t *testing.T, opts ...RegistryOption) *Registry {
 	t.Helper()
-	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
+	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}), opts...)
 	RegisterCoreTools(r, nil, nil, nil, nil, nil, nil)
 	RegisterRecordSearchTool(r, nil, func(context.Context, RecordSearchQuery) (RecordSearchPage, error) {
 		return RecordSearchPage{}, nil
@@ -205,7 +205,7 @@ func fullRegistry(t *testing.T) *Registry {
 	})
 	RegisterProject360Tool(r, func(context.Context, ids.UUID) (crmcontracts.Project360, error) {
 		return crmcontracts.Project360{}, nil
-	})
+	}, func(crmcontracts.Activity) string { return "" })
 	RegisterNetworkTools(r,
 		func(context.Context, ids.UUID) (WhoKnowsReading, error) { return WhoKnowsReading{}, nil },
 		func(context.Context, ids.UUID) (DealCoverageAnswer, error) { return DealCoverageAnswer{}, nil },
@@ -710,7 +710,8 @@ func TestTheWholeToolListEncodes(t *testing.T) {
 	// rendered without it would leave the one member added most recently as the
 	// only part of the entry no encode check has ever seen.
 	listed := s.toolList(scopedAgentCtx(
-		principal.ScopeRead, principal.ScopeDraft, principal.ScopeWrite, principal.ScopeSend),
+		principal.ScopeRead, principal.ScopeDraft, principal.ScopeWrite, principal.ScopeSend,
+	),
 		framing{modern: true, apps: true})
 	if len(listed) == 0 {
 		t.Fatal("no tools listed — this walk would pass vacuously")
@@ -775,7 +776,8 @@ var probeReportCatalog = []ReportCatalogEntry{{
 	GroupBy:    []string{"pipeline_id", "stage_id", "status"},
 	Filters:    []string{"owner_id", "pipeline_id", "status"},
 	Aggregates: []string{"amount_minor"},
-	Defaults:   "count as deals grouped by stage_id",
+	Measures:   "count",
+	DefaultBy:  []string{"stage_id"},
 }}
 
 // probeReportPlan stands in for the engine's plan vocabulary, and carries the

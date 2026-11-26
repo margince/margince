@@ -12,7 +12,11 @@ package activities
 // who can fix it is still looking at the screen. The two refusals differ only in
 // whose problem it is — the rep's own mailbox, or the workspace's bot.
 
-import "context"
+import (
+	"context"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
 
 // SendAuthority answers whether this installation can actually transmit through
 // a provider for the acting user today. Authority over transmission stays with
@@ -32,8 +36,9 @@ type SendAuthority interface {
 	// ctx, has a credential behind it that can transmit — not merely read.
 	SendCapable(ctx context.Context, provider string) (bool, error)
 
-	// SendableMailProvider names the mail provider this user's next send should
-	// go out through, or "" when none of their mailboxes can transmit.
+	// SendableMailbox names the mailbox this user's next send should go out
+	// through, or "" when none of their mailboxes can transmit. It answers
+	// *MailboxNotConnectedError when they hold no mail connection at all.
 	//
 	// It exists because a MAIL send has no `from` argument — the contract takes
 	// recipients and a body, never a mailbox — so something has to choose, and
@@ -47,7 +52,11 @@ type SendAuthority interface {
 	// row carries the transport-independent mail identity — so the provider's
 	// own copy of the sent message folds onto that row whichever connector
 	// reads it back.
-	SendableMailProvider(ctx context.Context) (string, error)
+	//
+	// It names the mailbox, not only its provider, because a member may hold
+	// several. It is from when the sender chose one. Otherwise it is the
+	// mailbox anchor arrived in, else their default.
+	SendableMailbox(ctx context.Context, from ids.UUID, anchor ids.ActivityID) (string, ids.UUID, error)
 }
 
 // MailboxNotSendCapableError refuses a MAIL send this installation already knows
@@ -64,6 +73,20 @@ func (e *MailboxNotSendCapableError) Error() string {
 // change. Reconnecting the mailbox is the remedy, and a contact has to do it.
 func (e *MailboxNotSendCapableError) MessageFault() (code, message string) {
 	return "mailbox_not_send_capable", e.Error()
+}
+
+// MailboxNotConnectedError refuses a MAIL send by a sender who holds no mail
+// connection at all. It is apart from MailboxNotSendCapableError because the
+// remedy differs: there is nothing to reconnect, a mailbox has to be connected.
+type MailboxNotConnectedError struct{}
+
+func (e *MailboxNotConnectedError) Error() string {
+	return "connect a mailbox to send"
+}
+
+// MessageFault names the condition and no field, like its sibling above.
+func (e *MailboxNotConnectedError) MessageFault() (code, message string) {
+	return "mailbox_not_connected", e.Error()
 }
 
 // NoRecipientsError refuses a mail send whose To: line resolves to nobody —

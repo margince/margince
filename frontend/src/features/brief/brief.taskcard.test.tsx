@@ -47,7 +47,7 @@ it("marks a waiting task done from its tick, without opening it", async () => {
   // The tick writes; it never puts the card in hand.
   expect(
     container.querySelector(".brief-triage-lead .worklist-row-title")
-      ?.textContent,
+      ?.firstChild?.textContent,
   ).toBe("Call Weber");
 });
 
@@ -133,18 +133,61 @@ it("keeps the next card in hand when the completed selection leaves the queue", 
     taskRow("task-2", "Call Lumen"),
   ];
   const view = render(<BriefFeed day={readingsDay({}, rows)} state="ready" />);
-  await user.click(
-    screen.getByRole("button", { name: en["brief.pager.next"] }),
-  );
+  const frame = () => view.container.querySelector(".brief-triage-frame");
+  expect(document.activeElement).toBe(document.body);
+  const [nextCard] = waitingCards(view.container);
+  await user.click(within(nextCard).getByText("Send the sheet"));
   expect(
     view.container.querySelector(".brief-triage-lead .worklist-row-title")
-      ?.textContent,
+      ?.firstChild?.textContent,
   ).toBe("Send the sheet");
+  expect(document.activeElement).toBe(frame());
   view.rerender(
     <BriefFeed day={readingsDay({}, [rows[0], rows[2]])} state="ready" />,
   );
   expect(
     view.container.querySelector(".brief-triage-lead .worklist-row-title")
-      ?.textContent,
+      ?.firstChild?.textContent,
   ).toBe("Call Lumen");
+  expect(document.activeElement).toBe(frame());
+});
+
+it("asks whether a promise is done in place of the open line, on the waiting card and the card in hand", () => {
+  stubApi({});
+  const question = {
+    contact_id: "contact-1",
+    email_activity_id: "mail-1",
+    wrote_at: "2026-09-02T09:00:00Z",
+    wrote_precision: "instant",
+    claim_key: "moment:may_be_done:task-1",
+    evidence_fingerprint: "fp",
+  } as const;
+  const asking = (id: string, title: string): WorklistItem => ({
+    ...taskRow(id, title),
+    due_at: "2026-08-25T09:00:00Z",
+    overdue: false,
+    may_be_done: { ...question, claim_key: `moment:may_be_done:${id}` },
+  });
+  const { container } = render(
+    <BriefFeed
+      day={readingsDay({}, [
+        asking("task-0", "Call Weber"),
+        asking("task-1", "Send the sheet"),
+      ])}
+      state="ready"
+    />,
+  );
+  const [card] = waitingCards(container);
+  expect(
+    within(card).getByRole("button", { name: en["worklist.mayBeDone.notYet"] }),
+  ).toBeTruthy();
+  expect(within(card).queryByText(en["worklist.overdue"])).toBeNull();
+  const lead = container.querySelector<HTMLElement>(".brief-triage-lead");
+  expect(lead).not.toBeNull();
+  expect(
+    within(lead as HTMLElement).getByRole("button", {
+      name: en["worklist.mayBeDone.notYet"],
+    }),
+  ).toBeTruthy();
+  expect(screen.queryByText(en["worklist.ask.task"])).toBeNull();
 });

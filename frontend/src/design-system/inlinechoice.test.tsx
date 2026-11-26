@@ -51,7 +51,9 @@ describe("a choice edited in a dialog", () => {
   it("shows a reader who may not edit the value as plain text", () => {
     renderChoice({ canEdit: false, readOnlyReason: "Archived." });
     expect(screen.queryByRole("button")).toBeNull();
-    expect(screen.getByText("Prospect")).toHaveAttribute("title", "Archived.");
+    const value = screen.getByText("Prospect");
+    expect(value).toHaveAccessibleDescription("Archived.");
+    expect(value).toHaveAttribute("tabindex", "0");
   });
 
   it("names the trigger by the verb and the value", () => {
@@ -99,7 +101,7 @@ describe("a choice edited in a dialog", () => {
       onSave: vi.fn(async () => {
         throw new ProblemError({
           code: "permission_denied",
-          detail: "company.update: permission denied",
+          detail: "your role does not grant update on company",
         });
       }),
     });
@@ -108,7 +110,9 @@ describe("a choice edited in a dialog", () => {
     await user.click(screen.getByRole("button", { name: en["record.save"] }));
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("do not have permission");
-    expect(alert).not.toHaveTextContent("company.update");
+    expect(alert).not.toHaveTextContent(
+      "your role does not grant update on company",
+    );
     expect(alert).toHaveClass("field-error");
     expect(chooser).toHaveTextContent("Customer");
     expect(chooser).toHaveAttribute("aria-invalid", "true");

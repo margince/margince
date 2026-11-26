@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { IncomingMessage } from "node:http";
+import { Socket } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -9,16 +11,18 @@ import { createContext, runInContext } from "node:vm";
 import { build, type InlineConfig } from "vite";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { LOCALES } from "../src/i18n";
+import {
+  BOOKING_HOST_IDS,
+  BOOKING_ID_PREFIXES,
+} from "../src/lib/bookingaddress";
 import { SERVICE_WORKER_URL } from "../src/lib/pwa";
 import spaConfig from "../vite.config";
-import { pwa, workerCacheName } from "./vite-pwa";
+import { apiNavigationPaths, pwa, workerCacheName } from "./vite-pwa";
 
 const ORIGIN = "https://margince.test";
 const RELEASE = "2026.9.1";
-const WORKER_SOURCE = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "../src/offline/serviceworker.js",
-);
+const FRONTEND = join(dirname(fileURLToPath(import.meta.url)), "..");
+const WORKER_SOURCE = join(FRONTEND, "src/offline/serviceworker.js");
 
 /** A plugin option is a plugin, a nested array of them, a promise, or nothing. */
 function pluginNames(options: unknown): string[] {
@@ -27,6 +31,19 @@ function pluginNames(options: unknown): string[] {
   return "name" in options && typeof options.name === "string"
     ? [options.name]
     : [];
+}
+
+async function bundled(config: InlineConfig): Promise<Map<string, string>> {
+  const result = await build(config);
+  const outputs = (Array.isArray(result) ? result : [result]).flatMap(
+    (bundle) => ("output" in bundle ? bundle.output : []),
+  );
+  return new Map(
+    outputs.map((item) => [
+      item.fileName,
+      item.type === "chunk" ? item.code : String(item.source),
+    ]),
+  );
 }
 
 // A site with nothing in it but a document, built through the plugin the way
@@ -46,16 +63,7 @@ async function buildSite(document: string): Promise<Map<string, string>> {
         rolldownOptions: { input: join(root, document) },
       },
     };
-    const result = await build(config);
-    const outputs = (Array.isArray(result) ? result : [result]).flatMap(
-      (bundle) => ("output" in bundle ? bundle.output : []),
-    );
-    return new Map(
-      outputs.map((item) => [
-        item.fileName,
-        item.type === "chunk" ? item.code : String(item.source),
-      ]),
-    );
+    return await bundled(config);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -194,14 +202,56 @@ describe("the build", () => {
     expect(site.has("offline.html")).toBe(false);
   });
 
-  it("names the worker's cache for the release and for exactly what it holds", () => {
+  it("names the worker's cache for the release and for exactly what it holds", async () => {
     expect(settingsOf(emitted("sw.js")).cacheName).toBe(
       workerCacheName({
         release: RELEASE,
         page: emitted(pageFile()),
         workerSource: readFileSync(WORKER_SOURCE, "utf8"),
-        passThrough: Object.keys(spaConfig.server?.proxy ?? {}),
+        passThrough: await apiNavigationPaths(spaConfig.server?.proxy ?? {}),
       }),
+    );
+  });
+
+  it("passes through the proxy keys the api answers, by whole segment, and none a navigation gets the app at", async () => {
+    const toApp = { target: "http://api", bypass: () => "/index.html" };
+    const toApi = { target: "http://api", bypass: () => undefined };
+    expect(
+      await apiNavigationPaths({
+        "/v1": "http://api",
+        "/files/": toApi,
+        "/r/": toApp,
+        "/book": toApp,
+      }),
+    ).toEqual(["/v1", "/files"]);
+  });
+
+  // nginx.conf refuses these with 404 before its preview redirect.
+  it("answers a booking path naming a host control or a guest token with 404, as nginx does, and proxies a host's page with its query", async () => {
+    const book = spaConfig.server?.proxy?.["/book"];
+    if (typeof book !== "object" || !book.bypass || !book.rewrite)
+      throw new Error(
+        "vite.config.ts proxies /book without a bypass and a rewrite",
+      );
+    const bypass = async (url: string) => {
+      const request = new IncomingMessage(new Socket());
+      request.url = url;
+      request.headers = { "sec-fetch-dest": "document" };
+      return book.bypass?.(request, undefined, book);
+    };
+    for (const id of [
+      ...BOOKING_HOST_IDS,
+      ...BOOKING_ID_PREFIXES.map((prefix) => `${prefix}private-token`),
+    ]) {
+      expect(await bypass(`/book/${id}`), id).toBe(false);
+      expect(await bypass(`/book/${id}/?l=30`), id).toBe(false);
+    }
+    expect(await bypass("/book/anna-meyer?l=30")).toBeUndefined();
+    expect(book.rewrite("/book/anna-meyer?l=30")).toBe(
+      "/v1/public/booking/anna-meyer/preview?l=30",
+    );
+    expect(await apiNavigationPaths(spaConfig.server?.proxy ?? {})).toContain(
+      "/book",
     );
   });
 
@@ -229,6 +279,47 @@ describe("the build", () => {
       expect(workerCacheName(changed)).not.toBe(name);
     }
   });
+
+  it("ships every font of app.css as a file, which the CSP's font-src 'self' admits and a data: URL is not", async () => {
+    const appCss = readFileSync(join(FRONTEND, "src/app.css"), "utf8");
+    const sheets = [...appCss.matchAll(/@import "(\.[^"]+)";/g)]
+      .map(([, sheet]) => join(FRONTEND, "src", sheet))
+      .filter((sheet) => readFileSync(sheet, "utf8").includes("@font-face"));
+    expect(sheets.length).toBeGreaterThan(0);
+    const root = mkdtempSync(join(tmpdir(), "margince-fonts-"));
+    try {
+      // Imported from a script, so each sheet resolves its font URLs from its own folder.
+      writeFileSync(
+        join(root, "entry.js"),
+        sheets.map((sheet) => `import ${JSON.stringify(sheet)};`).join("\n"),
+      );
+      const files = await bundled({
+        configFile: false,
+        root,
+        logLevel: "warn",
+        build: {
+          write: false,
+          assetsInlineLimit: spaConfig.build?.assetsInlineLimit,
+          rolldownOptions: { input: join(root, "entry.js") },
+        },
+      });
+      const inlined = [...files]
+        .filter(([name]) => /\.(?:css|js)$/.test(name))
+        .filter(([, source]) =>
+          /data:(?:font\/|application\/(?:x-)?font)/.test(source),
+        )
+        .map(([name]) => name);
+      expect(
+        [...files.keys()].filter((name) => /\.woff2$/.test(name)),
+      ).not.toEqual([]);
+      expect([...files.keys()].filter((name) => /\.woff$/.test(name))).toEqual(
+        [],
+      );
+      expect(inlined).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 60_000);
 
   it("emits nothing into a build that is not the SPA's", async () => {
     const storybook = await buildSite("iframe.html");
@@ -351,6 +442,8 @@ describe("the service worker", () => {
       "/healthz",
       "/readyz",
       "/metrics",
+      // The web tier sends every booking page fetch to the api's card.
+      "/book/anna-meyer",
     ]) {
       expect(worker.request(url, "navigate"), url).toBeUndefined();
     }
@@ -395,6 +488,14 @@ describe("the service worker", () => {
       const answer = await worker.request(url, "navigate");
       expect(await answer?.text(), url).toBe(page());
     }
+  });
+
+  it("gives the offline page to a failed navigation to a record card, which the web tier serves as the app", async () => {
+    const worker = await installed();
+    worker.scope.fetch.mockRejectedValue(new TypeError("Failed to fetch"));
+    const url = "/r/deals/0b6f3c1e-5d2a-4c8e-9f10-2a3b4c5d6e7f";
+    const answer = await worker.request(url, "navigate");
+    expect(await answer?.text(), url).toBe(page());
   });
 
   it("leaves the failure to the browser when its own cache is gone", async () => {

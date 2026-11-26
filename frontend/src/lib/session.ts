@@ -14,9 +14,10 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import type { Middleware } from "openapi-fetch";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { api } from "../api/client";
 import { healthScope } from "./healthscopekey";
+import { endIdBatches } from "./idbatch";
 import { unwrap } from "./problem";
 import { forgetSeat } from "./storage";
 
@@ -48,22 +49,55 @@ export const sessionOptions = queryOptions({
   // window is the one this needs to close.
   refetchOnWindowFocus: "always",
   retry: false,
+  // A refused probe is asked again by sign-in or Retry. A mount after the
+  // startup prefetch was refused would only repeat the refusal.
+  retryOnMount: false,
   queryFn: ({ signal }) => readSession(signal),
 });
+
+// The last signed-in principal each client cleaned up for. It is kept across a
+// signed-out gap, because an expired session that ends in another seat's
+// sign-in reuses its QueryClient. One mark per client, not per useMe instance, so a
+// seat change clears the cache once. A late instance clearing it again would
+// drop the next seat's reads mid-flight, and their observers would ask twice.
+const seatSeen = new WeakMap<
+  QueryClient,
+  { scope: string; user: string | undefined }
+>();
+
+function forgetPreviousSeat(
+  client: QueryClient,
+  scope: string,
+  user: string | undefined,
+) {
+  const previous = seatSeen.get(client);
+  seatSeen.set(client, { scope, user });
+  if (previous === undefined) return;
+  if (previous.user !== user)
+    // Most record caches are keyed by record, not by reader. Only the
+    // snapshot itself (the bare ["me"] key) survives; ["me", ...] reads such
+    // as the reader's own sessions and two-step state belong to the seat.
+    client.removeQueries({
+      predicate: (entry) =>
+        entry.queryKey[0] !== "me" || entry.queryKey.length > 1,
+    });
+  else if (previous.scope !== scope)
+    client.removeQueries({
+      predicate: (entry) =>
+        entry.queryKey.includes(previous.scope) ||
+        entry.queryKey[0] === "reader-rendering" ||
+        entry.queryKey[0] === "scheduling-profile",
+    });
+}
 
 export function useMe(enabled = true) {
   const client = useQueryClient();
   const query = useQuery({ ...sessionOptions, enabled });
   const scope = healthScope(query.data);
-  const previousScope = useRef(scope);
+  const user = query.data?.user?.id;
   useEffect(() => {
-    const previous = previousScope.current;
-    if (previous !== undefined && previous !== scope)
-      client.removeQueries({
-        predicate: (entry) => entry.queryKey.includes(previous),
-      });
-    previousScope.current = scope;
-  }, [client, scope]);
+    if (scope !== undefined) forgetPreviousSeat(client, scope, user);
+  }, [client, scope, user]);
   return query;
 }
 
@@ -89,6 +123,8 @@ export function sessionAnswers(): Promise<boolean> {
 export function resetToSignedOut(queryClient: QueryClient): Promise<void> {
   // The next member must not inherit what this one stored in the browser.
   forgetSeat();
+  // A name batch still reading must not ask its next page as the next member.
+  endIdBatches();
   queryClient.removeQueries({
     predicate: (query) => query.queryKey[0] !== "me",
   });
@@ -117,6 +153,18 @@ export function useViewerId(enabled = true): string | undefined {
   return useMe(enabled).data?.user.id;
 }
 
+// Whether the probe's last refusal already says what `status` would: sign-in
+// answers every refusal, a lock answers a 403 but not a lapse.
+function refusalKnown(queryClient: QueryClient, status: number): boolean {
+  const { error } = queryClient.getQueryState(sessionOptions.queryKey) ?? {};
+  if (!(error instanceof AuthProbeError)) return false;
+  if (error.kind === "unauthorized") return true;
+  return (
+    status === 403 &&
+    (error.kind === "must-change-password" || error.kind === "must-enrol-mfa")
+  );
+}
+
 // A 403 means the session snapshot is stale: grants changed, or the account is
 // now confined. A 401 may be a wrong code or a lapsed session, and the contract
 // gives both one answer. So /me is asked again at once, not at the next focus.
@@ -125,7 +173,8 @@ export function sessionRefusalWatch(queryClient: QueryClient): Middleware {
     onResponse({ request, response }) {
       if (
         (response.status === 401 || response.status === 403) &&
-        !new URL(request.url).pathname.endsWith("/me")
+        !new URL(request.url).pathname.endsWith("/me") &&
+        !refusalKnown(queryClient, response.status)
       ) {
         // Exact, and never cancelling: a prefix match re-asks the ["me", …] read
         // that just 403'd, and a cancel discards the probe's own answer.

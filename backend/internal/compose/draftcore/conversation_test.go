@@ -85,7 +85,7 @@ func TestConversationBoundsEveryTurnAndTheirNumber(t *testing.T) {
 	}
 	for _, turn := range turns {
 		if got := len([]rune(turn.Text)); got == 0 || got > draftcore.TurnTextRunes {
-			t.Errorf("%s turn has %d runes, want 1 to %d", turn.Direction, got, draftcore.TurnTextRunes)
+			t.Errorf("turn %s has %d runes, want 1 to %d", turn.ID, got, draftcore.TurnTextRunes)
 		}
 	}
 }

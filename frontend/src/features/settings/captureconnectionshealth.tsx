@@ -6,20 +6,33 @@ import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { CAPTURE_CONCERNS, concernKey } from "../../lib/captureconcern";
 
-type Concern = components["schemas"]["CaptureConnectionConcern"];
+type MemberConcern = components["schemas"]["CaptureConnectionConcern"];
+type SharedConcern = components["schemas"]["CaptureSharedMailboxConcern"];
+// A shared mailbox has no member, so its row names the mailbox in their place.
+type Concern = SharedConcern & { display_name?: string | null };
 
 export function CaptureConnectionsHealth({
   rows,
+  shared = [],
   zone,
-}: Readonly<{ rows: Concern[]; zone: string }>) {
+}: Readonly<{
+  rows: MemberConcern[];
+  shared?: SharedConcern[];
+  zone: string;
+}>) {
   const t = useT();
   const { locale } = useLocale();
-  if (rows.length === 0) return null;
-  const columns: DataTableColumn<Concern>[] = [
+  const all: (Concern & { shared: boolean })[] = [
+    ...rows.map((row) => ({ ...row, shared: false })),
+    ...shared.map((row) => ({ ...row, shared: true })),
+  ];
+  if (all.length === 0) return null;
+  const columns: DataTableColumn<(typeof all)[number]>[] = [
     {
       key: "member",
       header: t("captureConcern.member"),
-      render: (row) => row.display_name,
+      render: (row) =>
+        row.shared ? t("captureConcern.sharedMailbox") : row.display_name,
     },
     {
       key: "provider",
@@ -62,7 +75,7 @@ export function CaptureConnectionsHealth({
         fold
         label={t("captureConcern.connections")}
         columns={columns}
-        rows={rows}
+        rows={all}
         rowKey={(row) => row.connection_id}
       />
     </>

@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -68,7 +69,7 @@ func applyNotify(ctx context.Context, notifier Notifier, action workflow.Action)
 	// The action's own target, so the notice names the record the firing was
 	// about. "A deal you own changed stage" is true of every deal a rep owns,
 	// and the sentence alone left a reader with nothing to open.
-	return notifier.Notify(ctx, in.Recipient, in.Subject, in.Body, action.Target, in.DedupeKey, in.Origin)
+	return notifier.Notify(systemtext.WithMessage(ctx, action.SystemText), in.Recipient, in.Subject, in.Body, action.Target, in.DedupeKey, in.Origin)
 }
 
 // draftEmailArgs names what draft_email hands to Comms: Target is the

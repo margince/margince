@@ -71,6 +71,10 @@ var statedReasons = gatekit.Waive(map[string]string{
 		"was already in the reader's language, an empty subject is the honest answer for an activity with none " +
 		"where draftreply.Parse refuses one, and the reply is judged against the source text it renders " +
 		"(readerrendering.Check) rather than against a drafting prompt.",
+	"internal/compose/rewrite/prompt.go": "a rewrite revises the rep's own words rather than drafting " +
+		"a message: an empty subject is the answer for an email body and for a note the rep left untitled, where " +
+		"draftreply.Parse refuses one, a note's body stays markdown where draftreply plain-texts it, and the reply is " +
+		"judged against the words it rewrites (readerrendering.CheckSection) rather than against a drafting prompt.",
 	"internal/compose/replydraftmodel.go": "the customer reply draft is a different contract over the same envelope: " +
 		"it refuses a subject carrying a line break and enforces the RFC length bounds its schema declares, " +
 		"leaves the subject un-normalized because the caller sends it as typed, and splits parse from validate " +

@@ -1,0 +1,10 @@
+{
+  "verb": "link_finance_customer",
+  "checks": [
+    "company.read",
+    "integrations.update"
+  ],
+  "takes": [
+    "company"
+  ]
+}

@@ -1,11 +1,14 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { ProblemError } from "../../lib/problem";
 import { FieldBuilder } from "./customfields.builder";
 
 afterEach(() => {
@@ -24,19 +27,34 @@ function builder(
   const onCancel = vi.fn();
   // The real region, not a spy. The builder owes a reader a sentence on screen
   // with no completion mark beside it, and a `vi.fn()` would prove only a call.
+  // The kinds an installed extension declared, seeded where the directory reads
+  // them so the builder offers the record type without a request.
+  const kinds = new QueryClient();
+  kinds.setQueryData(["record-kinds"], {
+    data: [{ name: "ext:alpha:visit", display_name: "Visit" }],
+  });
   wrap(
-    <ToastProvider>
-      <FieldBuilder
-        object="company"
-        pending={false}
-        onSubmit={onSubmit}
-        onCancel={onCancel}
-        {...overrides}
-      />
-      <ToastRegion />
-    </ToastProvider>,
+    <QueryClientProvider client={kinds}>
+      <ToastProvider>
+        <FieldBuilder
+          object="company"
+          pending={false}
+          error={null}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          {...overrides}
+        />
+        <ToastRegion />
+      </ToastProvider>
+    </QueryClientProvider>,
   );
-  return { user, onSubmit, onCancel };
+  const pickType = (type: string) =>
+    pickOption(
+      user,
+      screen.getByRole("combobox", { name: en["cf.typeLabel"] }),
+      type,
+    );
+  return { user, onSubmit, onCancel, pickType };
 }
 
 describe("FieldBuilder", () => {
@@ -48,15 +66,12 @@ describe("FieldBuilder", () => {
     expect(key).toBeDisabled();
   });
 
-  it("shows the pending DDL preview reflecting the type", async () => {
-    const { user } = builder();
+  it("states what adding does in plain words, with no SQL or reversibility claim", async () => {
+    const { user, pickType } = builder();
     await user.type(screen.getByLabelText(/Label/i), "Contract end date");
-    await user.click(screen.getByRole("button", { name: /^Date$/i }));
-    expect(
-      screen.getByText(
-        /ALTER company ADD COLUMN cf_contract_end_date \(date\)/,
-      ),
-    ).toBeInTheDocument();
+    await pickType("Date");
+    expect(screen.getByText(en["cf.builder.intro"])).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/ALTER |reversible|column/i);
   });
 
   it("refuses a structural label and disables Confirm", async () => {
@@ -68,20 +83,59 @@ describe("FieldBuilder", () => {
     expect(screen.getByRole("button", { name: "Add field" })).toBeDisabled();
   });
 
-  it("guards an empty label: Confirm disabled, guard toast on click attempt", async () => {
-    const { onSubmit } = builder();
-    const confirm = screen.getByRole("button", {
-      name: "Add field",
-    });
-    expect(confirm).toBeDisabled();
-    // the guard toast is wired to the always-clickable Add affordance
+  it("asks for a label on its field and sends nothing", async () => {
+    const { user, onSubmit } = builder();
+    await user.click(screen.getByRole("button", { name: "Add field" }));
+    expect(await screen.findByText("Label is required.")).toBeVisible();
+    const label = screen.getByRole("textbox", { name: en["cf.label"] });
+    expect(label).toHaveAttribute("aria-invalid", "true");
+    await vi.waitFor(() => expect(label).toHaveFocus());
     expect(onSubmit).not.toHaveBeenCalled();
-    expect(screen.queryByRole("status")).toBeNull();
+    await user.type(label, "Renewal date");
+    expect(screen.queryByText("Label is required.")).toBeNull();
+  });
+
+  it("leaves a conflict that is not the label's at the foot", async () => {
+    const { user, onSubmit } = builder({
+      error: new ProblemError({
+        status: 409,
+        code: "conflict",
+        detail: "The table is busy. Try again.",
+      }),
+    });
+    onSubmit.mockImplementation((_draft, refused: (error: unknown) => void) =>
+      refused(new ProblemError({ status: 409, code: "conflict" })),
+    );
+    const label = screen.getByRole("textbox", { name: en["cf.label"] });
+    await user.type(label, "Budget");
+    await user.click(screen.getByRole("button", { name: "Add field" }));
+    expect(screen.getByText("The table is busy. Try again.")).toBeVisible();
+    expect(screen.queryByText(en["cf.labelTaken"])).toBeNull();
+    expect(label).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("says on the label that the record type already has it", async () => {
+    const { user, onSubmit } = builder();
+    onSubmit.mockImplementation((_draft, refused: (error: unknown) => void) =>
+      refused(
+        new ProblemError({
+          status: 409,
+          code: "custom_field_label_taken",
+          detail: 'a custom field labelled "Budget" already exists',
+        }),
+      ),
+    );
+    const label = screen.getByRole("textbox", { name: en["cf.label"] });
+    await user.type(label, "Budget");
+    await user.click(screen.getByRole("button", { name: "Add field" }));
+    expect(await screen.findByText(en["cf.labelTaken"])).toBeVisible();
+    expect(label).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText(/labelled "Budget"/)).toBeNull();
   });
 
   it("reveals the ISO-4217 input for currency", async () => {
-    const { user } = builder();
-    await user.click(screen.getByRole("button", { name: /^Currency$/i }));
+    const { pickType } = builder();
+    await pickType("Currency");
     expect(screen.getByLabelText(/Currency code/i)).toBeInTheDocument();
   });
 
@@ -91,8 +145,8 @@ describe("FieldBuilder", () => {
       {},
       userEvent.setup({ advanceTimers: vi.advanceTimersByTime }),
     );
-    const { user } = view;
-    await user.click(screen.getByRole("button", { name: /^Picklist$/i }));
+    const { user, pickType } = view;
+    await pickType("Picklist");
     const removes = screen.getAllByRole("button", { name: /remove option/i });
     // start with one row; removing it is blocked
     await user.click(removes[removes.length - 1]);
@@ -107,9 +161,9 @@ describe("FieldBuilder", () => {
   });
 
   it("submits a well-formed draft on Confirm", async () => {
-    const { user, onSubmit } = builder();
+    const { user, onSubmit, pickType } = builder();
     await user.type(screen.getByLabelText(/Label/i), "Renewal date");
-    await user.click(screen.getByRole("button", { name: /^Date$/i }));
+    await pickType("Date");
     await user.click(screen.getByRole("button", { name: "Add field" }));
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -117,6 +171,29 @@ describe("FieldBuilder", () => {
         label: "Renewal date",
         type: "date",
       }),
+      expect.any(Function),
+    );
+  });
+
+  it("submits a record field with the one kind it points at", async () => {
+    const { user, onSubmit, pickType } = builder();
+    await user.type(screen.getByLabelText(/Label/i), "Last visit");
+    await pickType(en["cf.type.record"]);
+    const add = screen.getByRole("button", { name: "Add field" });
+    await user.click(add);
+    expect(
+      await screen.findByText(`${en["cf.recordKind"]} is required.`),
+    ).toBeVisible();
+    expect(onSubmit).not.toHaveBeenCalled();
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: en["cf.recordKind"] }),
+      "Visit",
+    );
+    await user.click(add);
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "record", options: ["ext:alpha:visit"] }),
+      expect.any(Function),
     );
   });
 
@@ -129,6 +206,7 @@ describe("FieldBuilder", () => {
     await user.click(screen.getByRole("button", { name: "Add field" }));
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ label: "Previous owner", showInCreate: false }),
+      expect.any(Function),
     );
   });
 
@@ -140,15 +218,19 @@ describe("FieldBuilder", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("keeps Confirm disabled for a picklist whose only option is blank", async () => {
-    const { user } = builder();
+  it("asks for a real option before a picklist is sent", async () => {
+    const { user, onSubmit, pickType } = builder();
     await user.type(screen.getByLabelText(/Label/i), "Deal source");
-    await user.click(screen.getByRole("button", { name: /^Picklist$/i }));
-    // The single option row is left blank: a picklist with no real choice
-    // must not be confirmable.
-    expect(screen.getByRole("button", { name: "Add field" })).toBeDisabled();
-    // Typing a real option flips Confirm back on.
+    await pickType("Picklist");
+    await user.click(screen.getByRole("button", { name: "Add field" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      en["cf.lastOptionBlocked"],
+    );
+    const option = screen.getByLabelText(/Option label/i);
+    expect(option).toHaveAttribute("aria-invalid", "true");
+    await vi.waitFor(() => expect(option).toHaveFocus());
+    expect(onSubmit).not.toHaveBeenCalled();
     await user.type(screen.getByLabelText(/Option label/i), "Referral");
-    expect(screen.getByRole("button", { name: "Add field" })).toBeEnabled();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

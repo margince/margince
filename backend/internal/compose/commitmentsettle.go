@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // commitmentSettleActor names this consumer on the audit rows it writes.
@@ -64,6 +65,9 @@ func NewCommitmentSettleTrigger(pool *pgxpool.Pool, log *slog.Logger) *Commitmen
 // HandleEvent routes one envelope. An event this consumer does not act on
 // answers nil so the group keeps flowing.
 func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.Envelope) error {
+	if !events.CommitmentSettleTypes.Has(env.Type) {
+		return nil
+	}
 	// The system acts here, and the originating request's correlation id rides
 	// along so the settlement and what caused it read as one trace.
 	ctx = principal.WithCorrelationID(principal.WithActor(ctx, principal.Principal{
@@ -79,6 +83,10 @@ func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.En
 	case eventClaimChanged:
 		var payload crmcontracts.PublicEventConversationClaimChanged
 		if !readSettlePayload(ctx, t.log, env, &payload) || (payload.Status != claimStatusDone && payload.Status != claimStatusDismissed) {
+			return nil
+		}
+		// An automatic close touches only the claim, so undoing it restores everything.
+		if env.Actor.ID == contacts.PromiseKeptActor {
 			return nil
 		}
 		return t.applyClaimSettlement(ctx, env.Actor, ids.UUID(payload.ClaimId), env.Trace.AuditLogID)
@@ -163,17 +171,14 @@ func (t *CommitmentSettleTrigger) actingAs(ctx context.Context, by events.Actor)
 	if !ok {
 		return ctx, by.Type == string(principal.PrincipalSystem), nil
 	}
-	rbac, seatType, err := t.identity.EffectiveAuthority(ctx, ws.UUID, seat)
+	member, err := authz.MemberPrincipal(ctx, t.identity, ws.UUID, seat)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, false, nil
 	}
 	if err != nil {
 		return nil, false, fmt.Errorf("commitment settle: resolving who caused the change: %w", err)
 	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: principal.HumanIDPrefix + seat.String(), UserID: seat,
-		SeatType: seatType, TeamIDs: rbac.TeamIDs, Permissions: rbac.Permissions,
-	}), true, nil
+	return principal.WithActor(ctx, member), true, nil
 }
 
 // refused reports an answer that means "not theirs to do": the write is

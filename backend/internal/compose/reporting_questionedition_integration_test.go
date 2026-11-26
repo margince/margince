@@ -238,7 +238,7 @@ func TestASubjectsKeptAnswersAreHandedOverAndErased(t *testing.T) {
 		t.Fatalf("subject access handed over %d kept answer rows, want the one the subject's deal was counted in", len(pkg.ReportingQuestionAnswers))
 	}
 
-	if err := privacy.NewEraser(InstallationDB(q.e.Pool)).EraseContact(controller, subject, "subject request"); err != nil {
+	if err := eraserWithGraph(InstallationDB(q.e.Pool)).EraseContact(controller, subject, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 	erased := q.read(q.human, t, ids.UUID(edition.Id))

@@ -19,6 +19,7 @@ const CONTRACT: components["schemas"]["Contract"] = {
   title: "MSA 2026",
   status: "active",
   under_contract: true,
+  term_state: "in_force",
   auto_renew: false,
   value_basis: "total",
   starts_on: "2026-01-01",
@@ -84,7 +85,7 @@ it("refuses an edit whose start day cannot be read and keeps the stored day", as
   expect(writes).toHaveLength(0);
   expect(box).toHaveAttribute("aria-invalid", "true");
   expect((box as HTMLInputElement).validationMessage).toMatch(
-    /^Enter a date as /,
+    /^There is no 31\/02\/2026 in the calendar/,
   );
 });
 
@@ -100,6 +101,6 @@ it("refuses a renewal whose start day cannot be read", async () => {
 
   expect(writes).toHaveLength(0);
   expect((box as HTMLInputElement).validationMessage).toMatch(
-    /^Enter a date as /,
+    /^There is no 31\/02\/2026 in the calendar/,
   );
 });

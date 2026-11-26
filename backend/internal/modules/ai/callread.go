@@ -126,7 +126,7 @@ type CallPage struct {
 // rows it keeps.
 func callSummaryFrom(query *callQuery) string {
 	fallbackFrom, fallbackTo := rateFallbacks()
-	rate := rateMatch("ac.provider", "ac.model_id", "ac.occurred_at::date",
+	rate := rateMatch("ac.provider", "ac.model_id", callDaySQL("ac"),
 		query.arg(fallbackFrom), query.arg(fallbackTo))
 	return storekit.SQLf(`ai_call c
 	CROSS JOIN LATERAL (
@@ -198,7 +198,7 @@ func finishCallPage(items []CallSummary, limit int) (CallPage, error) {
 	}
 	page.Items = page.Items[:limit]
 	last := page.Items[len(page.Items)-1]
-	next, err := storekit.EncodeCursor(last.OccurredAt, last.ID)
+	next, err := storekit.EncodeCursor("ai_calls", last.OccurredAt, last.ID)
 	if err != nil {
 		return CallPage{}, err
 	}
@@ -224,7 +224,7 @@ func (s *CallReadStore) ListCalls(
 	from := callSummaryFrom(query)
 	where := filter.where(query)
 	if cursor != nil && *cursor != "" {
-		decoded, err := storekit.DecodeCursor(*cursor)
+		decoded, err := storekit.DecodeCursor("ai_calls", *cursor)
 		if err != nil {
 			return CallPage{}, err
 		}

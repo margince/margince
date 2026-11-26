@@ -27,20 +27,33 @@ import {
 // one you can actually use" above an empty list. Nothing threw, every element
 // existed, and a DOM query would have passed.
 
+// The sentence a chapter leads with, read once its heading has rendered.
+async function chapterAnswer(title: string): Promise<string> {
+  const heading = await screen.findByRole("heading", { name: title });
+  const answer = heading.closest("section")?.querySelector(".chapter-answer");
+  return answer?.textContent ?? "";
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
 
+// The contact alone in its graph; `over` is what a case changes.
+function alone(over: Partial<ContactGraph> = {}): ContactGraph {
+  return {
+    contact_id: CONTACT,
+    nodes: [anchor],
+    edges: [],
+    routes: [],
+    groups_omitted: [],
+    ...over,
+  };
+}
+
 describe("a contact nobody here reaches", () => {
   it("says so once, not twice", async () => {
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [],
-      groups_omitted: [],
-    });
+    renderTab(alone());
 
     // The strip is this page's answer-first surface, so the reading belongs
     // there. A paragraph under it repeating the same words made one finding
@@ -53,19 +66,70 @@ describe("a contact nobody here reaches", () => {
   });
 
   it("draws no card offering a choice of nothing", async () => {
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [],
-      groups_omitted: [],
-    });
+    renderTab(alone());
 
     await screen.findByText(NO_ROUTE);
     // "Ways in — best first, pick the one you can actually use" over an empty
     // list. The card's own comment says a heading with nothing under it is
     // worse than no card, and the condition that drew it disagreed.
     expect(routesPanel()).toBeNull();
+  });
+
+  it("draws no map of the contact alone and no handoff to start", async () => {
+    renderTab(alone());
+
+    await screen.findByText(NO_ROUTE);
+    expect(
+      screen.queryByRole("group", { name: en["contact.intro.mapRegion"] }),
+    ).toBeNull();
+    expect(screen.queryByText(en["contact.intro.stepRoute"])).toBeNull();
+    // Recording an introduction made elsewhere is still the way to start.
+    expect(
+      screen.getByRole("button", { name: en["contact.intro.recordAction"] }),
+    ).toBeTruthy();
+    // With nothing to hold, a chapter frames no empty card.
+    expect(document.querySelector(".chapter-card")).toBeNull();
+  });
+
+  it("draws the map when who corresponds is withheld from the reader", async () => {
+    renderTab(alone({ groups_omitted: ["direct"] }));
+
+    expect(
+      await screen.findByRole("group", { name: en["contact.intro.mapRegion"] }),
+    ).toBeTruthy();
+  });
+
+  const GAPS_FAILED = en["contact.network.captureGapsFailed"];
+  const RETRY = en["common.retry"];
+  const isMailboxRead = (input: RequestInfo | URL) =>
+    String(input instanceof Request ? input.url : input).endsWith("/network");
+  const reads = () =>
+    vi.mocked(fetch).mock.calls.filter(([input]) => isMailboxRead(input))
+      .length;
+
+  it("keeps a failed mailbox read with its Retry, and does not read it again on its own", async () => {
+    renderTab(alone(), "en", {}, { captureGaps: "fail" });
+
+    expect(await screen.findByText(GAPS_FAILED)).toBeTruthy();
+    await waitFor(() => expect(reads()).toBeGreaterThanOrEqual(2));
+    await act(async () => {});
+    expect(screen.getByText(GAPS_FAILED)).toBeTruthy();
+    expect(screen.getByRole("button", { name: RETRY })).toBeTruthy();
+    expect(reads()).toBeLessThanOrEqual(2);
+  });
+
+  it("keeps a failed mailbox read and its Retry on screen while the read runs again", async () => {
+    renderTab(alone(), "en", {}, { captureGaps: "fail" });
+    const answer = vi.mocked(fetch).getMockImplementation();
+    vi.mocked(fetch).mockImplementation((input, init) =>
+      (isMailboxRead(input) && reads() > 1) || !answer
+        ? new Promise<Response>(() => {})
+        : answer(input, init),
+    );
+
+    await waitFor(() => expect(reads()).toBe(2));
+    expect(screen.getByText(GAPS_FAILED)).toBeTruthy();
+    expect(screen.getByRole("button", { name: RETRY })).toBeTruthy();
   });
 });
 
@@ -151,13 +215,7 @@ describe("a route that cannot be asked for", () => {
   });
 
   it("offers no button that would answer 409", async () => {
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [taken],
-      groups_omitted: [],
-    });
+    renderTab(alone({ routes: [taken] }));
 
     await screen.findByText(en["contact.intro.unavailable"]);
     expect(
@@ -209,24 +267,20 @@ describe("several ways in", () => {
       groups_omitted: [],
     });
 
-    // The COUNT is the reading: the verdict panel above already names the
-    // lead, and a strip repeating that name read as two findings. By the
-    // slot's own value element — a route rank on the list below is a "3" too.
-    await screen.findByText("3", { selector: ".stat-card-value" });
-    expect(
-      screen.getByText(
-        en["contact.intro.stripWhoMix"]
-          .replace("{direct}", "2")
-          .replace("{indirect}", "1"),
-      ),
-    ).toBeTruthy();
-    // The lead is the verdict panel's; the card under it lists the OTHER two,
-    // ranked as the second and third way in rather than as a new list of one.
-    expect(screen.getByText(en["contact.intro.otherRoutesTitle"])).toBeTruthy();
-    expect(routesPanel()).toBeNull();
-    const ranks = Array.from(document.querySelectorAll(".pn-route-rank")).map(
-      (rank) => rank.textContent,
+    // The COUNT is the reading: the lead panel under it already names the
+    // best route, and an answer repeating that name reads as two findings.
+    const mix = en["contact.intro.stripWhoMix"]
+      .replace("{direct}", "2")
+      .replace("{indirect}", "1");
+    expect(await chapterAnswer(en["contact.chapter.wayIn"])).toBe(
+      `3 routes: ${mix}.`,
     );
+    // The lead card ranks the OTHER two under the recommendation, as the
+    // second and third way in rather than as a new list of one.
+    expect(routesPanel()).toBeNull();
+    const ranks = Array.from(
+      document.querySelectorAll(".pn-way .pn-routes .pn-route-rank"),
+    ).map((rank) => rank.textContent);
     expect(ranks).toEqual(["2", "3"]);
     // The strength meter carries its bucket as a word, so a reader who
     // cannot see three bars still gets the fact.
@@ -235,13 +289,7 @@ describe("several ways in", () => {
 
   it("opens the ask drawer from an alternative's own button", async () => {
     const user = userEvent.setup();
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [direct, viaContact],
-      groups_omitted: [],
-    });
+    renderTab(alone({ routes: [direct, viaContact] }));
 
     await user.click(
       await screen.findByRole("button", {
@@ -295,18 +343,15 @@ describe("the verdict and its evidence", () => {
 
   it("cites the receipts and splits the count by who sent it", async () => {
     const user = userEvent.setup();
-    renderTab({
-      contact_id: CONTACT,
-      nodes: [anchor],
-      edges: [],
-      routes: [sofia],
-      groups_omitted: [],
-    });
+    renderTab(alone({ routes: [sofia] }));
 
-    await screen.findByText(
-      en["contact.intro.verdictDirect"].replace("{name}", "Sofia Meier"),
-    );
+    await screen.findByText(en["contact.intro.bestWayIn"]);
     expect(screen.getByText(en["contact.intro.lastYesterday"])).toBeTruthy();
+    expect(
+      screen.getByText(
+        `${en["contact.intro.factReciprocal"]} · ${en["contact.intro.factDirect"]}`,
+      ),
+    ).toBeTruthy();
     expect(
       screen.getByText(
         en["contact.intro.evidenceFrom"]
@@ -322,10 +367,10 @@ describe("the verdict and its evidence", () => {
       ),
     ).toBeTruthy();
     expect(screen.getByText("2 visible receipts")).toBeTruthy();
-    // A mail is cited as a mail; a meeting keeps the plain line, so the
+    // A mail is cited as a mail; a meeting is cited by its own kind, so the
     // reader is not told it was a message.
     expect(screen.getByText("Re: Q4 rollout")).toBeTruthy();
-    expect(screen.getByText(/Northgate pilot ·/)).toBeTruthy();
+    expect(screen.getByText("Northgate pilot").closest(".emailref")).toBeNull();
 
     await user.click(
       screen.getByRole("button", {
@@ -370,11 +415,20 @@ describe("the verdict and its evidence", () => {
       groups_omitted: [],
     });
 
-    await screen.findByText(
-      en["contact.intro.verdictVia"]
-        .replace("{name}", "Lena Hoff")
-        .replace("{through}", "Philipp Königs"),
-    );
+    // The chain draws the contact in between as a node of its own.
+    await screen.findByText(en["contact.intro.factIndirect"], {
+      exact: false,
+    });
+    expect(
+      Array.from(document.querySelectorAll(".pn-chain-node b")).map(
+        (name) => name.textContent,
+      ),
+    ).toEqual([
+      en["contact.intro.heroYou"],
+      "Lena Hoff",
+      "Philipp Königs",
+      anchor.label,
+    ]);
     expect(
       screen.getByText(en["contact.intro.lastDays"].replace("{days}", "6")),
     ).toBeTruthy();
@@ -407,10 +461,10 @@ describe("the verdict and its evidence", () => {
       groups_omitted: [],
     });
 
-    await screen.findByText(
-      en["contact.intro.verdictOneSided"].replace("{name}", "Martin Weber"),
-    );
-    expect(screen.getByText(en["contact.intro.factOneSided"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["contact.intro.factOneSided"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["contact.intro.factReciprocal"])).toBeNull();
     expect(screen.getByText(en["contact.intro.lastNever"])).toBeTruthy();
   });
 });
@@ -448,15 +502,18 @@ describe("the handoff with an ask open", () => {
   it("says the colleague owes an answer, and by when", async () => {
     renderTab(graph, "en", {}, { asks: [ask] });
 
-    // Once on the strip's handoff slot, once under the steps: the same
-    // words, from the same reading of the ask.
+    // In the chapter's answer and under the steps: the same words, from the
+    // same reading of the ask.
+    const owner = en["contact.intro.handoffOwner"].replace(
+      "{name}",
+      "Sofia Meier",
+    );
     await waitFor(() => {
-      expect(
-        screen.getAllByText(
-          en["contact.intro.handoffOwner"].replace("{name}", "Sofia Meier"),
-        ).length,
-      ).toBe(2);
+      expect(screen.getAllByText(owner).length).toBe(1);
     });
+    expect(await chapterAnswer(en["contact.chapter.progress"])).toContain(
+      owner,
+    );
     expect(screen.getByText(/^due /)).toBeTruthy();
     expect(
       screen.getByText(
@@ -477,13 +534,16 @@ describe("the handoff with an ask open", () => {
       },
     );
 
+    const owner = en["contact.intro.handoffOwner"].replace(
+      "{name}",
+      "Demo Admin",
+    );
     await waitFor(() => {
-      expect(
-        screen.getAllByText(
-          en["contact.intro.handoffOwner"].replace("{name}", "Demo Admin"),
-        ).length,
-      ).toBe(2);
+      expect(screen.getAllByText(owner).length).toBe(1);
     });
+    expect(await chapterAnswer(en["contact.chapter.progress"])).toContain(
+      owner,
+    );
     // The answer window has closed; nothing is due.
     expect(screen.queryByText(/^due /)).toBeNull();
     expect(
@@ -495,7 +555,7 @@ describe("the handoff with an ask open", () => {
 });
 
 // What moved lately is a dated list, newest first, and its head is the same
-// change the strip's "why now" slot was read from.
+// change the Progress chapter's answer was read from.
 describe("what changed lately", () => {
   const graph: ContactGraph = {
     contact_id: CONTACT,
@@ -528,18 +588,15 @@ describe("what changed lately", () => {
 
     const head = en["contact.change.repliedAfterGap"].replace("{days}", "41");
     // One change, two surfaces, two shapes: the panel writes the sentence,
-    // the strip writes the same change as a word over what it rests on.
+    // the answer writes the same change as a word over what it rests on.
     await waitFor(() => {
       expect(screen.getAllByText(head).length).toBe(1);
     });
-    expect(screen.getByText(en["contact.intro.change.replied"])).toBeTruthy();
-    expect(
-      screen.getByText(
-        en["contact.intro.change.repliedSub"].replace("{days}", "41"),
-      ),
-    ).toBeTruthy();
-    // The label over the slot and the badge on the head say the same words.
-    expect(screen.getAllByText(en["contact.intro.stripWhyNow"]).length).toBe(2);
+    const sub = en["contact.intro.change.repliedSub"].replace("{days}", "41");
+    expect(await chapterAnswer(en["contact.chapter.progress"])).toContain(
+      `${en["contact.intro.change.replied"]} (${sub})`,
+    );
+    expect(screen.getAllByText(en["contact.intro.stripWhyNow"]).length).toBe(1);
     expect(
       screen.getByText(
         en["contact.change.warmed"]
@@ -562,7 +619,9 @@ describe("what changed lately", () => {
     expect(
       await screen.findByText(en["contact.network.noMoments"]),
     ).toBeTruthy();
-    expect(screen.getByText(en["contact.intro.stripNoMoment"])).toBeTruthy();
+    expect(await chapterAnswer(en["contact.chapter.progress"])).toContain(
+      en["contact.intro.stripNoMoment"],
+    );
   });
 
   it("does not claim nothing moved when the section was withheld", async () => {
@@ -577,10 +636,11 @@ describe("what changed lately", () => {
 
     expect(await screen.findByText(en["state.withheld"])).toBeTruthy();
     expect(screen.queryByText(en["contact.network.noMoments"])).toBeNull();
-    // A refused section is not an empty one, and the slot must not report
+    // A refused section is not an empty one, and the answer must not report
     // the relationship as unmoved out of a permission boundary.
-    expect(screen.getByText(en["reading.restricted"])).toBeTruthy();
-    expect(screen.queryByText(en["contact.intro.stripNoMoment"])).toBeNull();
+    const answer = await chapterAnswer(en["contact.chapter.progress"]);
+    expect(answer).toContain(en["reading.restricted"]);
+    expect(answer).not.toContain(en["contact.intro.stripNoMoment"]);
   });
 });
 
@@ -704,11 +764,15 @@ describe("the reader's own route", () => {
   it("is written in the second contact and offers no introduction", async () => {
     const { seatAnswered } = renderTab(reachedByReader([mine]));
 
+    // The chain starts at the reader, with no colleague between them.
     expect(
-      await screen.findByText(en["contact.intro.verdictDirectYou"]),
+      await screen.findByText(en["contact.intro.heroDirectYou"]),
     ).toBeTruthy();
-    expect(screen.getByText(en["contact.intro.heroYou"])).toBeTruthy();
-    expect(screen.getByText(en["contact.intro.heroDirectYou"])).toBeTruthy();
+    expect(
+      Array.from(document.querySelectorAll(".pn-chain-node b")).map(
+        (name) => name.textContent,
+      ),
+    ).toEqual([en["contact.intro.heroYou"], anchor.label]);
     // The counts speak to the reader too — the split legend named them beside
     // the contact, so one half of one line said "you" and the other said
     // "Demo Admin" about the same contact.
@@ -732,24 +796,27 @@ describe("the reader's own route", () => {
     expect(screen.getByText(en["contact.intro.ownRouteNoAsk"])).toBeTruthy();
   });
 
-  it("is the only way in, and the strip says so as one contact", async () => {
+  it("is the only way in, and the answer counts it as one route", async () => {
     renderTab(reachedByReader([mine]));
 
-    // Counted like anybody else, and named on a line of its own: a reading
-    // states a fact and does not address its reader.
-    expect(
-      await screen.findByText("1", { selector: ".stat-card-value" }),
-    ).toBeTruthy();
-    expect(screen.getByText(en["contact.intro.stripWhoOwn"])).toBeTruthy();
+    // Counted like anybody else, and named in a sentence of its own.
+    // The reader is known once the session answers.
+    await waitFor(async () => {
+      const answer = await chapterAnswer(en["contact.chapter.wayIn"]);
+      expect(answer).toMatch(/^1 route:/);
+      expect(answer).toContain(en["contact.intro.stripWhoOwn"]);
+    });
   });
 
   it("is counted apart from the colleagues who can be asked", async () => {
     renderTab(reachedByReader([mine, colleague]));
 
-    expect(
-      await screen.findByText("2", { selector: ".stat-card-value" }),
-    ).toBeTruthy();
-    expect(screen.getByText(en["contact.intro.stripWhoOwn"])).toBeTruthy();
+    // The reader is known once the session answers.
+    await waitFor(async () => {
+      const answer = await chapterAnswer(en["contact.chapter.wayIn"]);
+      expect(answer).toMatch(/^2 routes:/);
+      expect(answer).toContain(en["contact.intro.stripWhoOwn"]);
+    });
     // And the colleague beside them keeps their own ask.
     expect(
       screen.getByRole("button", {
@@ -903,9 +970,11 @@ describe("the handoff while the ask list is still being read", () => {
       { asksPending: true },
     );
 
-    const label = await screen.findByText(en["contact.intro.stripHandoff"]);
-    const card = label.closest(".stat-card");
-    expect(card?.textContent).toContain(en["common.loading"]);
+    const heading = await screen.findByRole("heading", {
+      name: en["contact.chapter.progress"],
+    });
+    const chapter = heading.closest("section");
+    expect(chapter?.textContent).toContain(en["common.loading"]);
     expect(
       screen.queryByText(en["contact.intro.handoffNotStarted"]),
     ).toBeNull();

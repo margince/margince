@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -79,7 +78,7 @@ func TestAnAddressErasedBeforeTheKeyStaysRefusedThroughTheRekey(t *testing.T) {
 	useRootKey(t, "")
 	const address = "Erased.Subject@rekey.test"
 	subject := keyedRecipient(t, e, "Erased Subject", address)
-	if err := ComposedEraser(e.Pool, nil, nil).EraseContact(e.Admin(), subject, "test"); err != nil {
+	if err := ComposedEraser(e.Pool, nil).EraseContact(e.Admin(), subject, "test"); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := identity.NewService(e.Pool).Login(e.Admin(), "nobody@rekey.test", "wrong", "test"); err == nil {
@@ -118,7 +117,7 @@ func TestAnAddressErasedBeforeTheKeyStaysRefusedThroughTheRekey(t *testing.T) {
 		t.Fatal(err)
 	}
 	later := keyedRecipient(t, e, "Later Subject", "later@rekey.test")
-	if err := ComposedEraser(e.Pool, nil, nil).EraseContact(e.Admin(), later, "test"); err != nil {
+	if err := ComposedEraser(e.Pool, nil).EraseContact(e.Admin(), later, "test"); err != nil {
 		t.Fatal(err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM erasure_suppression WHERE key_id IS NULL`); n != 0 || !storedAddressRefused(t, e, "later@rekey.test") {
@@ -196,7 +195,7 @@ func TestAPreferenceLinkMailedBeforeTheKeyKeepsOpeningAfterItIsHashed(t *testing
 func TestAKeyedExportRemovesTheUnkeyedJournalAndStillCatchesARestore(t *testing.T) {
 	e := integration.Setup(t)
 	store := blobstore.NewMemory()
-	eraser := privacy.NewEraser(InstallationDB(e.Pool)).WithBlobstore(store)
+	eraser := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(store)
 	useRootKey(t, "")
 	seedSuppressedEmail(t, resurrectedAddress)
 	unkeyedEntry := "erasure-suppression/email/" + storekit.SuppressionHash(resurrectedAddress)

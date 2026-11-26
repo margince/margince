@@ -1,0 +1,6 @@
+{
+  "verb": "get_ai_provider_health",
+  "checks": [
+    "ai_diagnostics.read"
+  ]
+}

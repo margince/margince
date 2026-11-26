@@ -15,26 +15,19 @@
 # "The pipeline", not "my deals": Sofia Meier owns every seeded deal, and a
 # careful run that filters "my deals" by owner would rightly find none.
 #
-# WHAT IS HELD, and where:
-#   - quiet_days=21 on the call: must_call_with. Three weeks is 21 days, and a
-#     model rounding it to a month has answered a different question;
+# WHAT IS HELD, and where. The result, not the window's argument:
 #   - both deals named in the answer: must_mention;
 #   - Körber described truthfully: judged, because "under the sixty-day line"
 #     is true and "slipping past the sixty-day line" is not, and both carry the
 #     same words.
 name: case58_quiet_for_three_weeks
+title: Quiet for three weeks
 criteria: [1]
 writes: false
 
 prompt: |
   Which deals in the pipeline have gone quiet for three weeks or more? I want
   to call round this afternoon.
-
-must_call:
-  - whats_slipping_this_week
-
-must_call_with:
-  - whats_slipping_this_week.quiet_days=21
 
 may_call:
   - list_records
@@ -44,6 +37,7 @@ may_call:
   - query_workspace
   - at_risk_relationships
   - whoami
+  - whats_slipping_this_week
 
 must_mention:
   - "K(ö|oe|o)rber"

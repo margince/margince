@@ -8,6 +8,7 @@ export const MERGE_FIELD_LABELS: Readonly<Record<string, MessageKey>> = {
   merge_address_usage: "approval.merge.address_usage",
   merge_address_primary_before: "approval.merge.address_primary_before",
   merge_address_primary_after: "approval.merge.address_primary_after",
+  merge_address_already_held: "approval.merge.address_already_held",
   merge_assignment_collapsed: "approval.merge.assignment_collapsed",
   merge_assignment_moved: "approval.merge.assignment_moved",
   merge_assignment_role: "approval.merge.assignment_role",

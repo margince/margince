@@ -26,7 +26,11 @@ func TestAMergeHonoursTheSourcesIfMatchVersion(t *testing.T) {
 	} {
 		t.Run(kind.path, func(t *testing.T) {
 			create := func(name string) string {
-				return createAndID(t, e, kind.path, AnyMap{kind.nameField: name, "source": kind.source})
+				body := AnyMap{kind.nameField: name, "source": kind.source}
+				if kind.path == "/v1/contacts" {
+					body["linkedin_url"] = apptest.ContactProfile()
+				}
+				return createAndID(t, e, kind.path, body)
 			}
 			version := func(id string) int64 {
 				var row struct {
@@ -62,7 +66,7 @@ func TestAMergeHonoursTheSourcesIfMatchVersion(t *testing.T) {
 			targetBefore := version(target)
 
 			// 409 alone is not the claim: a merge answers it for an already-merged
-			// source and an unwritable target too.
+			// source and a target the caller cannot see too.
 			if status, problem := merge(source, target, strconv.FormatInt(current+98, 10)); status != http.StatusConflict || problem.Code != "version_skew" {
 				t.Errorf("merge with a version the source is not at answered %d %q, want 409 version_skew", status, problem.Code)
 			}

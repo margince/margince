@@ -18,17 +18,22 @@ package storedobjects
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+const storageKeyArg = "key"
 
 // Kind names what put the bytes, DECLARED by the writer rather than read off the key.
 //
@@ -116,7 +121,10 @@ func RecordTx(ctx context.Context, tx pgx.Tx, kind Kind, key string) error {
 		return fmt.Errorf("record a provisional object: %q is not a declared kind", kind)
 	}
 	if _, err := tx.Exec(ctx, `SELECT record_stored_object_intent(@kind, @key)`,
-		pgx.NamedArgs{"kind": string(kind), "key": key}); err != nil {
+		pgx.NamedArgs{"kind": string(kind), storageKeyArg: key}); err != nil {
+		if fault, ok := errors.AsType[*pgconn.PgError](err); ok && fault.Code == "55000" {
+			return fmt.Errorf("the stored file has expired; upload it again: %w", apperrors.ErrNotFound)
+		}
 		return fmt.Errorf("record a provisional object: %w", err)
 	}
 	return nil
@@ -128,8 +136,20 @@ func RecordTx(ctx context.Context, tx pgx.Tx, kind Kind, key string) error {
 // committed separately could land while the row's transaction then failed, which is
 // the orphan this ledger exists to catch, re-created one step along.
 func Clear(ctx context.Context, tx pgx.Tx, key string) error {
+	var reaping bool
+	err := tx.QueryRow(ctx, `SELECT reaping_since IS NOT NULL FROM stored_object_intent
+ WHERE storage_key = @key FOR UPDATE`, pgx.NamedArgs{storageKeyArg: key}).Scan(&reaping)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("lock a provisional object: %w", err)
+	}
+	if reaping {
+		return fmt.Errorf("the stored file has expired; upload it again: %w", apperrors.ErrNotFound)
+	}
 	if _, err := tx.Exec(ctx,
-		`DELETE FROM stored_object_intent WHERE storage_key = $1`, key); err != nil {
+		`DELETE FROM stored_object_intent WHERE storage_key = @key`, pgx.NamedArgs{storageKeyArg: key}); err != nil {
 		return fmt.Errorf("retire a provisional object: %w", err)
 	}
 	return nil
@@ -159,8 +179,8 @@ func (l *Ledger) ListProvisional(ctx context.Context, before time.Time, limit in
 		rows, err := tx.Query(ctx, `
 			SELECT storage_key, kind, recorded_at
 			  FROM stored_object_intent
-			 WHERE recorded_at < $1
-			 ORDER BY recorded_at
+			 WHERE recorded_at < $1 AND reaped_at IS NULL
+			 ORDER BY coalesce(reaping_since, recorded_at), storage_key
 			 LIMIT $2`, before, limit)
 		if err != nil {
 			return fmt.Errorf("list provisional objects: %w", err)
@@ -181,16 +201,14 @@ func (l *Ledger) ListProvisional(ctx context.Context, before time.Time, limit in
 	return out, nil
 }
 
-// Retire removes one key once its bytes are gone.
-//
-// Called AFTER the object-store delete, so a failed delete leaves the key here and
-// the next pass tries again. The other order would forget an object that is still
-// there, which is the state this ledger exists to make impossible.
-func (l *Ledger) Retire(ctx context.Context, key string) error {
+// Retire forgets an adopted intent only if no writer has renewed it since the scan.
+func (l *Ledger) Retire(ctx context.Context, pending Provisional) error {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
 	}
 	return database.WithWorkspaceTx(ctx, l.db.Pool(), func(tx pgx.Tx) error {
-		return Clear(ctx, tx, key)
+		_, err := tx.Exec(ctx, `DELETE FROM stored_object_intent WHERE storage_key = @key
+ AND recorded_at = @recorded AND reaped_at IS NULL`, pgx.NamedArgs{storageKeyArg: pending.Key, "recorded": pending.RecordedAt})
+		return err
 	})
 }

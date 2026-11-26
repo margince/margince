@@ -90,7 +90,7 @@ func TestOneRepsSnoozeDoesNotHideTheRowFromAnother(t *testing.T) {
 
 	twoDays := waitingInstant.Add(48 * time.Hour)
 	if err := atWaitingInstant(e).SnoozeMessage(
-		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnTime, &twoDays, nil); err != nil {
+		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnTime, &twoDays, nil, nil); err != nil {
 		t.Fatalf("the first rep snoozing the message: %v", err)
 	}
 
@@ -215,7 +215,7 @@ func TestASnoozeLiftsWhenItsMomentPasses(t *testing.T) {
 
 	until := waitingInstant.Add(24 * time.Hour)
 	if err := atWaitingInstant(e).SnoozeMessage(
-		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnTime, &until, nil); err != nil {
+		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnTime, &until, nil, nil); err != nil {
 		t.Fatalf("snoozing the message: %v", err)
 	}
 
@@ -295,7 +295,7 @@ func TestASnoozeIntoThePastIsRefused(t *testing.T) {
 	// here is the moment being behind rather than the fixture being historical.
 	past := waitingInstant.Add(-time.Hour)
 	err := atWaitingInstant(e).SnoozeMessage(
-		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnTime, &past, nil)
+		e.As(e.Rep1, nil, AdminPerms), id, values.ReopenOnTime, &past, nil, nil)
 	if err == nil {
 		t.Fatal("a snooze into the past was accepted, and hides nothing")
 	}

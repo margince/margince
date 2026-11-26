@@ -1,0 +1,9 @@
+{
+  "verb": "settle_conversation_claim",
+  "checks": [
+    "contact.update"
+  ],
+  "takes": [
+    "claim"
+  ]
+}

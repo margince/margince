@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "notice_case_reviews",
+  "verb": "list_notice_case_reviews",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

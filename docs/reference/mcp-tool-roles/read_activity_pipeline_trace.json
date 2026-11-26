@@ -1,0 +1,14 @@
+{
+  "tool": "read_details",
+  "action": "activity_pipeline",
+  "verb": "read_activity_pipeline_trace",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

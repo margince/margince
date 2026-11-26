@@ -3,8 +3,16 @@
 
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { day, renderWorklist, row, stub } from "../../testing/worklist.testkit";
+import { en } from "../../i18n/en";
+import {
+  day,
+  renderWorklist,
+  row,
+  stub,
+  stubWalk,
+} from "../../testing/worklist.testkit";
 
 // The headings, and the band that holds nothing.
 //
@@ -110,6 +118,118 @@ describe("the headings follow the QUEUE", () => {
         (n) => n.textContent,
       ),
     ).toEqual(["1", "2"]);
+  });
+});
+
+describe("a page that loads only appends", () => {
+  const bands = [
+    { band: "now" as const, shown: 1 },
+    { band: "keep_momentum" as const, shown: 1 },
+    { band: "more" as const, shown: 2 },
+  ];
+  const ranks = () =>
+    [...document.querySelectorAll(".worklist-rank")].map((n) => n.textContent);
+
+  // Rows past the ranking arrive last under their own heading, so the rows a
+  // reader already saw keep their numbers and their headings.
+  it("keeps the ranks already drawn when the next page loads", async () => {
+    vi.stubGlobal("IntersectionObserver", undefined);
+    stubWalk([
+      day({
+        bands,
+        queue: [
+          row({ id: "a", title: "Call the buyer", band: "now" }),
+          row({ id: "b", title: "Send the quote", band: "keep_momentum" }),
+        ],
+        summary: { urgent: 1, due: 0, lower_priority: 3, total: 4 },
+        next_cursor: "page-2",
+      }),
+      day({
+        bands,
+        queue: [
+          row({ id: "c", title: "An older overdue task", band: "more" }),
+          row({ id: "d", title: "Another overdue task", band: "more" }),
+        ],
+        summary: { urgent: 1, due: 0, lower_priority: 3, total: 4 },
+      }),
+    ]);
+    renderWorklist("en");
+
+    await screen.findByText("Send the quote");
+    expect(ranks()).toEqual(["1", "2"]);
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: en["list.loadMore"] }));
+
+    await screen.findByText("Another overdue task");
+    expect(ranks()).toEqual(["1", "2", "3", "4"]);
+    expect(headings()).toEqual(["Now", "Keep momentum", "More in your list"]);
+  });
+
+  // A frozen walk re-reads each row's facts, so a later page can still name a
+  // band drawn above. The page appends it rather than moving it up.
+  it("never renumbers drawn rows for a band a later page names again", async () => {
+    vi.stubGlobal("IntersectionObserver", undefined);
+    stubWalk([
+      day({
+        bands,
+        queue: [
+          row({ id: "a", title: "Call the buyer", band: "now" }),
+          row({ id: "b", title: "Send the quote", band: "keep_momentum" }),
+        ],
+        summary: { urgent: 2, due: 0, lower_priority: 1, total: 3 },
+        next_cursor: "page-2",
+      }),
+      day({
+        bands,
+        queue: [row({ id: "c", title: "Became urgent", band: "now" })],
+        summary: { urgent: 2, due: 0, lower_priority: 1, total: 3 },
+      }),
+    ]);
+    renderWorklist("en");
+
+    await screen.findByText("Send the quote");
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: en["list.loadMore"] }));
+
+    const rankOf = async (title: string) =>
+      (await screen.findByText(title))
+        .closest(".worklist-row")
+        ?.querySelector(".worklist-rank")?.textContent;
+    expect(await rankOf("Became urgent")).toBe("3");
+    expect(await rankOf("Send the quote")).toBe("2");
+  });
+
+  // A due sub-heading opens inside the section that holds it, so an overdue
+  // row past the ranking never lands under the Later run above it.
+  it("starts the due runs again under the rows past the ranking", async () => {
+    stub(
+      day({
+        bands,
+        queue: [
+          row({
+            id: "a",
+            title: "Due next month",
+            band: "keep_momentum",
+            due_group: "later",
+          }),
+          row({
+            id: "b",
+            title: "An older overdue task",
+            band: "more",
+            due_group: "overdue",
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 2, total: 2 },
+      }),
+    );
+    renderWorklist("en");
+
+    const overdue = await screen.findByText("An older overdue task");
+    const section = overdue.closest(".worklist-queue-band");
+    expect(section?.querySelector("h3")?.textContent).toBe("More in your list");
+    expect(section?.querySelector("h4")).toBeNull();
   });
 });
 
@@ -232,6 +352,41 @@ describe("the day a run of work is due", () => {
     ]) {
       expect(screen.getByText(title)).toBeTruthy();
     }
+  });
+
+  it("heads the undated backlog after the dated work", async () => {
+    stub(
+      banded({
+        bands: [
+          { band: "now", shown: 2 },
+          { band: "build_pipeline", shown: 0 },
+          { band: "keep_momentum", shown: 0 },
+          { band: "review", shown: 0 },
+        ],
+        queue: [
+          row({
+            id: "a",
+            band: "now",
+            due_group: "later",
+            title: "Renew the contract",
+          }),
+          row({
+            id: "b",
+            band: "now",
+            due_group: "none",
+            title: "Call back about the renewal",
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 2 },
+      }),
+    );
+    renderWorklist("en");
+    await screen.findByText("Call back about the renewal");
+
+    const subHeadings = screen
+      .getAllByRole("heading", { level: 4 })
+      .map((node) => node.textContent);
+    expect(subHeadings).toEqual(["Later", "No due date"]);
   });
 
   it("draws no sub-heading at all when everything is due today", async () => {

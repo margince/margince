@@ -239,6 +239,13 @@ func (s *Store) readClaims(
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("read the conversation claims: %w", err)
 	}
+	rows.Close()
+	if err := withLooksKept(ctx, tx, out); err != nil {
+		return nil, err
+	}
+	if err := withAutoKept(ctx, tx, out); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 

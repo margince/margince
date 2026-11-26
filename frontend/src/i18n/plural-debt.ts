@@ -23,7 +23,6 @@
 const STANDALONE: readonly string[] = [
   "aiSettings.providers.missing",
   "aiSettings.providers.value",
-  "analytics.forecastPriced",
   "brief.weekly.scorecard.regressionsDetail",
   "brief.weekly.scorecard.respondedNoCohort",
   "brief.weekly.scorecard.unanswered",
@@ -49,7 +48,6 @@ const STANDALONE: readonly string[] = [
   "contact.intro.evidenceFrom",
   "contact.intro.evidenceFromYou",
   "contracts.state.title",
-  "deals.bulkFailed",
   "embedreindex.workspacePending",
   "extIngest.refusalCount",
   "lead.bulkFailed",

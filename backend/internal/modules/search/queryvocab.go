@@ -389,10 +389,10 @@ func (r *VocabularyResolver) customFields(ctx context.Context, entity string) ([
 	return fields, nil
 }
 
-// customFieldKinds maps the six closed custom-field types onto this
-// vocabulary's kinds. Both sets are closed and neither is this file's to
-// extend: a seventh custom-field type arrives with its own entry, and the
-// fitness function fails until it has one.
+// customFieldKinds maps the closed custom-field types onto this vocabulary's
+// kinds. Both sets are closed and neither is this file's to extend. A new
+// custom-field type arrives with its own entry, and the fitness function fails
+// until it has one.
 var customFieldKinds = map[string]FieldKind{
 	fieldcatalog.TypeText:        KindText,
 	fieldcatalog.TypeNumber:      KindNumber,
@@ -401,4 +401,6 @@ var customFieldKinds = map[string]FieldKind{
 	fieldcatalog.TypeMultiselect: KindMultiselect,
 	fieldcatalog.TypePicklist:    KindText,
 	fieldcatalog.TypeBoolean:     KindBoolean,
+	fieldcatalog.TypeRecord:      KindText,
+	fieldcatalog.TypeURL:         KindText,
 }

@@ -31,7 +31,7 @@ const inboundPageSize = 100
 // inboundColumns is the listing's projection. It deliberately does not include
 // the body — see the file comment.
 const inboundColumns = `id::text, nonce, state, attempts, coalesce(last_error_class, ''),
-	octet_length(body), sent_at, received_at`
+	body_bytes, sent_at, received_at`
 
 // inboundEntry is one received request as a screen sees it.
 type inboundEntry struct {

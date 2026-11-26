@@ -19,7 +19,7 @@ import (
 func ladderRow(logical ids.UUID, attempt int, terminal bool, tier Tier, reason, sentinel string) Call {
 	return Call{
 		LogicalCallID: logical, Attempt: attempt, IsTerminal: terminal, Kind: callKindCompletion,
-		Task: TaskSiteTriage, Tier: tier, Provider: "test", ModelID: "test-model", RequestFingerprint: "fp-health",
+		Task: TaskSiteTriage, Tier: tier, Provider: "test", ModelID: "test-model",
 		AttemptReason: reason, ErrorSentinel: sentinel, TokensIn: 100, TokensOut: 10,
 	}
 }
@@ -29,6 +29,17 @@ func ladderRow(logical ids.UUID, attempt int, terminal bool, tier Tier, reason, 
 func rungHealthAfter(t *testing.T, logicalCalls ...[]Call) map[string]RungHealth {
 	t.Helper()
 	return rungHealthBoundTo(t, nil, logicalCalls...)
+}
+
+func TestCallerCancellationDoesNotReplaceTheProvidersLastOutcome(t *testing.T) {
+	rungs := rungHealthAfter(t,
+		[]Call{ladderRow(ids.NewV7(), 1, true, TierCheapCloud, "", "provider_error")},
+		[]Call{ladderRow(ids.NewV7(), 1, true, TierCheapCloud, "", sentinelCanceled)},
+	)
+	rung := rungs[string(TierCheapCloud)]
+	if rung.Calls != 1 || rung.Failures != 1 || rung.LastSentinel != "provider_error" || rung.Healthy() {
+		t.Fatalf("a caller cancellation changed provider health: %+v", rung)
+	}
 }
 
 // rungHealthBoundTo is rungHealthAfter with each tier in bound serving the

@@ -97,7 +97,7 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 		// Naming the subject costs one extra read and buys the ordering: it
 		// takes no row lock, so it can say who this link belongs to without
 		// ordering anything.
-		contactID, kind, err := s.subjectOfConfirmTokenTx(ctx, tx, token)
+		who, kind, asksNews, err := s.subjectOfConfirmTokenTx(ctx, tx, token)
 		if err != nil {
 			return err
 		}
@@ -106,7 +106,13 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 		if err := refuseWiderThanTheMail(kind, in); err != nil {
 			return err
 		}
-		if err := auth.LockSubjectLive(ctx, tx, "contact", contactID.UUID); err != nil {
+		if !asksNews && in.MarketingChoice != "" {
+			return &ValidationError{Field: "marketing_choice", Reason: "this link asks no news question and takes no answer to one"}
+		}
+		if err := lockSubjectSuppressions(ctx, tx, who.id); err != nil {
+			return err
+		}
+		if err := auth.LockSubjectLive(ctx, tx, who.entityType, who.id); err != nil {
 			return err
 		}
 		// Spent under the subject lock, which is what makes the link
@@ -138,6 +144,12 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 			return err
 		}
 		receipts = staged
+		taskFor := ruleSubject{Kind: entityContact, ID: ref.ContactID.String()}
+		for _, receipt := range staged {
+			if err := s.openRequestTaskTx(ctx, tx, taskFor, receipt.Kind, receipt.Reference, receivedAt); err != nil {
+				return err
+			}
+		}
 		if in.MarketingChoice == "" {
 			return nil
 		}
@@ -160,7 +172,7 @@ func (s *Store) recordMarketingAnswerTx(ctx context.Context, tx pgx.Tx, ref Conf
 	// THE QUESTION THE SUBJECT ANSWERED, where the link pinned one. See
 	// boundquestion.go: in.MarketingWording is what the client said it had
 	// shown, and a client that said something else would be believed.
-	wording, err := s.wordingForGrantTx(ctx, tx, ref, in.MarketingWording)
+	wording, err := s.wordingForGrantTx(ctx, tx, ref, in)
 	if err != nil {
 		return err
 	}
@@ -282,13 +294,14 @@ func (s *Store) recordLinkedPurposeTx(ctx context.Context, tx pgx.Tx, ref Confir
 	// path most double-opt-in grants actually arrive through, so leaving it on
 	// the client's sentence would have fixed the defect for the door fewer
 	// callers use.
-	wording, err := s.wordingForGrantTx(ctx, tx, ref, in.MarketingWording)
+	wording, err := s.wordingForGrantTx(ctx, tx, ref, in)
 	if err != nil {
 		return err
 	}
 	source := "consent_link"
 	input := RecordInput{
 		ContactID:     ref.ContactID,
+		LeadID:        ref.LeadID,
 		PurposeID:     ref.PurposeID,
 		NewState:      in.MarketingChoice,
 		Source:        &source,
@@ -298,7 +311,8 @@ func (s *Store) recordLinkedPurposeTx(ctx context.Context, tx pgx.Tx, ref Confir
 		// Earned, not asserted: set only after spendConfirmTokenTx consumed the
 		// link that proves the mailbox. This is what satisfies a double-opt-in
 		// purpose, and the only thing that does.
-		MailboxProof: MailboxProvenByConfirmLink,
+		MailboxProof:   MailboxProvenByConfirmLink,
+		SubjectRequest: ref.SubjectRequest,
 	}
 	sub, state, err := admitRecord(ctx, input)
 	if err != nil {

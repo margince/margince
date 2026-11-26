@@ -7,6 +7,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useAssignableUserOptions } from "../../components/assigneepicker";
 import { EntityRef } from "../../components/entityref";
+import { assignedRecord } from "../../components/recordassignments.queries";
 import {
   Badge,
   Button,
@@ -20,20 +21,25 @@ import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
-import { formatDate } from "../../format/format";
+import { formatDate, isRenderableZone } from "../../format/format";
+import { useNow } from "../../format/now";
+import { dayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
-import { unwrap } from "../../lib/problem";
+import { useHealthScope } from "../../lib/healthscope";
+import { blankRequired, unwrap } from "../../lib/problem";
+import { useInstallationSettings } from "../../lib/uploadlimit";
+import { DECISIONS_KEY } from "./analytics.decisions.key";
+import { OutcomeDialog } from "./analytics.decisions.outcome";
 import type { ReportingSelection } from "./reporting.model";
 
 export type SalesDecision = components["schemas"]["SalesDecision"];
 type DecisionInput = components["schemas"]["SalesDecisionInput"];
-
-const DECISIONS_KEY = "sales-decisions";
 
 /** The part of a review's selection that narrows its decisions to its deals. */
 export type DecisionReview = Pick<
@@ -119,7 +125,9 @@ export function DecisionsPanel({
       }
     >
       <PanelBody>
-        <p className="t-caption">{t("analytics.decisions.purpose")}</p>
+        <PanelIntro className="t-caption">
+          {t("analytics.decisions.purpose")}
+        </PanelIntro>
         <QueryGate
           query={decisions}
           pendingLabel={t("analytics.decisions.title")}
@@ -265,9 +273,17 @@ export function RecordDecisionDialog({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const titleId = useId();
   const formId = useId();
+  const [faults, faultsRoot] = useFieldFaults();
   const client = useQueryClient();
+  // The server refuses a review day before today in the installation's zone.
+  // Without that zone the field stays open and the server's refusal shows.
+  const zone = useInstallationSettings().data?.timezone;
+  const now = useNow(0);
+  const today =
+    zone && isRenderableZone(zone) ? isoOrBlank(dayInZone(now, zone)) : "";
   const [key] = useState(() => crypto.randomUUID());
   const [draft, setDraft] = useState<Draft>({
     decision: "",
@@ -277,9 +293,14 @@ export function RecordDecisionDialog({
     expected: "",
     ...initial,
   });
-  const owners = useAssignableUserOptions();
+  const owners = useAssignableUserOptions(
+    true,
+    assignedRecord("deal", draft.dealId),
+  );
+  const readerScope = useHealthScope();
   const deals = useQuery({
-    queryKey: ["decision-deals"],
+    queryKey: ["decision-deals", readerScope ?? ""],
+    enabled: readerScope !== undefined,
     queryFn: async () =>
       unwrap(
         await api.GET("/deals", {
@@ -301,12 +322,18 @@ export function RecordDecisionDialog({
       onClose();
     },
   });
-  const incomplete =
-    !draft.decision.trim() ||
-    !draft.dealId ||
-    !draft.ownerId ||
-    !isoOrBlank(draft.reviewOn);
-  const submit = () =>
+  const set = (key: keyof Draft, value: string) => {
+    faults.edited(key);
+    setDraft({ ...draft, [key]: value });
+  };
+  const submit = () => {
+    const blank = blankRequired(locale, {
+      decision: [t("analytics.decisions.decision"), draft.decision],
+      dealId: [t("analytics.decisions.deal"), draft.dealId],
+      ownerId: [t("analytics.decisions.owner"), draft.ownerId],
+      reviewOn: [t("analytics.decisions.reviewOn"), isoOrBlank(draft.reviewOn)],
+    });
+    if (faults.show(blank)) return;
     record.mutate({
       decision: draft.decision.trim(),
       deal_id: draft.dealId,
@@ -314,6 +341,7 @@ export function RecordDecisionDialog({
       review_on: draft.reviewOn,
       expected_result: draft.expected.trim() || undefined,
     });
+  };
   return (
     <Modal open onClose={onClose} labelledBy={titleId} intent="form">
       <Heading size="large" id={titleId} className="t-h2 modal-title">
@@ -321,25 +349,33 @@ export function RecordDecisionDialog({
       </Heading>
       <form
         id={formId}
+        ref={faultsRoot}
+        noValidate
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          if (!incomplete) submit();
+          submit();
         }}
       >
-        <Field label={t("analytics.decisions.decision")} required>
+        <Field
+          label={t("analytics.decisions.decision")}
+          required
+          error={faults.of("decision")}
+        >
           {(field) => (
             <TextInput
               {...field}
               value={draft.decision}
               maxLength={500}
-              onChange={(event) =>
-                setDraft({ ...draft, decision: event.target.value })
-              }
+              onChange={(event) => set("decision", event.target.value)}
             />
           )}
         </Field>
-        <Field label={t("analytics.decisions.deal")} required>
+        <Field
+          label={t("analytics.decisions.deal")}
+          required
+          error={faults.of("dealId")}
+        >
           {(field) => (
             <Select
               {...field}
@@ -348,11 +384,15 @@ export function RecordDecisionDialog({
                 { value: "", label: t("analytics.decisions.chooseDeal") },
                 ...(deals.data ?? []),
               ]}
-              onChange={(value) => setDraft({ ...draft, dealId: value })}
+              onChange={(value) => set("dealId", value)}
             />
           )}
         </Field>
-        <Field label={t("analytics.decisions.owner")} required>
+        <Field
+          label={t("analytics.decisions.owner")}
+          required
+          error={faults.of("ownerId")}
+        >
           {(field) => (
             <Select
               {...field}
@@ -361,18 +401,22 @@ export function RecordDecisionDialog({
                 { value: "", label: t("analytics.decisions.chooseOwner") },
                 ...owners.options,
               ]}
-              onChange={(value) => setDraft({ ...draft, ownerId: value })}
+              onChange={(value) => set("ownerId", value)}
             />
           )}
         </Field>
-        <Field label={t("analytics.decisions.reviewOn")} required>
+        <Field
+          label={t("analytics.decisions.reviewOn")}
+          required
+          error={faults.of("reviewOn")}
+        >
           {(field) => (
             <DateInput
               {...field}
               value={isoOrBlank(draft.reviewOn)}
-              onChange={(event) =>
-                setDraft({ ...draft, reviewOn: event.target.value })
-              }
+              min={today || undefined}
+              today={today || undefined}
+              onChange={(event) => set("reviewOn", event.target.value)}
             />
           )}
         </Field>
@@ -382,9 +426,7 @@ export function RecordDecisionDialog({
               {...field}
               value={draft.expected}
               rows={3}
-              onChange={(event) =>
-                setDraft({ ...draft, expected: event.target.value })
-              }
+              onChange={(event) => set("expected", event.target.value)}
             />
           )}
         </Field>
@@ -395,80 +437,8 @@ export function RecordDecisionDialog({
         <Button variant="ghost" onClick={onClose}>
           {t("reporting.cancel")}
         </Button>
-        <Button
-          type="submit"
-          form={formId}
-          disabled={incomplete}
-          pending={record.isPending}
-        >
+        <Button type="submit" form={formId} pending={record.isPending}>
           {t("analytics.decisions.confirm")}
-        </Button>
-      </div>
-    </Modal>
-  );
-}
-
-/** Record outcome: what work was completed. The task closes; the deal stays. */
-function OutcomeDialog({
-  decision,
-  onClose,
-}: Readonly<{ decision: SalesDecision; onClose: () => void }>) {
-  const t = useT();
-  const titleId = useId();
-  const formId = useId();
-  const client = useQueryClient();
-  const [result, setResult] = useState("");
-  const close = useMutation({
-    mutationFn: async (text: string) =>
-      unwrap(
-        await api.POST("/analytics/decisions/{id}/outcome", {
-          params: { path: { id: decision.id } },
-          body: { result: text },
-        }),
-      ),
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: [DECISIONS_KEY] });
-      onClose();
-    },
-  });
-  return (
-    <Modal open onClose={onClose} labelledBy={titleId} intent="form">
-      <Heading size="large" id={titleId} className="t-h2 modal-title">
-        {t("analytics.decisions.recordOutcome")}
-      </Heading>
-      <p className="t-caption">{decision.decision}</p>
-      <form
-        id={formId}
-        className="form-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (result.trim()) close.mutate(result.trim());
-        }}
-      >
-        <Field label={t("analytics.decisions.whatWasDone")} required>
-          {(field) => (
-            <Textarea
-              {...field}
-              value={result}
-              rows={4}
-              onChange={(event) => setResult(event.target.value)}
-            />
-          )}
-        </Field>
-        <p className="t-caption">{t("analytics.decisions.outcomeNote")}</p>
-        <ErrorLine error={close.error} />
-      </form>
-      <div className="actions">
-        <Button variant="ghost" onClick={onClose}>
-          {t("reporting.cancel")}
-        </Button>
-        <Button
-          type="submit"
-          form={formId}
-          disabled={!result.trim()}
-          pending={close.isPending}
-        >
-          {t("analytics.decisions.saveOutcome")}
         </Button>
       </div>
     </Modal>

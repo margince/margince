@@ -113,10 +113,10 @@ func TestTheWriteCarriesItsAuditAndItsEvent(t *testing.T) {
 
 // TestOnlyAStopTheSubjectAskedForIsRecordableByHand bounds the door.
 //
-// A processing restriction is an Art. 18 legal state with its own workflow, and
-// a hard bounce is a fact only the mail path observes. A door accepting either
+// A hard bounce is a fact only the mail path observes. A door accepting it
 // would let a rep write, in good faith, a row asserting something nobody
-// verified.
+// verified. A processing restriction is admitted for an admin only
+// (restriction_integration_test.go).
 //
 // marketing_objection USED TO BE REFUSED HERE too, on that reasoning plus the
 // observation that it is unliftable, so a mistake would be permanent. That read
@@ -134,7 +134,7 @@ func TestTheWriteCarriesItsAuditAndItsEvent(t *testing.T) {
 func TestOnlyAStopTheSubjectAskedForIsRecordableByHand(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	for _, kind := range []string{"processing_restriction", "hard_bounce", ""} {
+	for _, kind := range []string{"hard_bounce", ""} {
 		err := e.store.Suppress(e.ctx, SuppressInput{ContactID: e.contact, Kind: kind})
 		// A VALIDATION error naming the field, not merely some error. Without
 		// this the test stays green with the check deleted — a bad kind would

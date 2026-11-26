@@ -45,7 +45,7 @@ func TestTheAdvertisedSignInRedirectIsTheOneTheFlowSends(t *testing.T) {
 	// The authorization request carries the redirect_uri the exchange will
 	// repeat, so the consent redirect is where "what is sent" can be read.
 	rec := httptest.NewRecorder()
-	s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google")
+	s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/start", nil), "google", crmcontracts.StartOidcSignInParams{})
 	location := rec.Header().Get("Location")
 	if location == "" {
 		t.Fatal("the start route sent no redirect, so there is nothing to compare the advertised URI against")
@@ -90,7 +90,7 @@ func TestTheAdvertisedMicrosoftSignInRedirectIsTheOneTheFlowSends(t *testing.T) 
 	}
 
 	rec := httptest.NewRecorder()
-	s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/microsoft/start", nil), "microsoft")
+	s.StartOidcSignIn(rec, httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/microsoft/start", nil), "microsoft", crmcontracts.StartOidcSignInParams{})
 	location := rec.Header().Get("Location")
 	if location == "" {
 		t.Fatal("the start route sent no redirect, so there is nothing to compare the advertised URI against")

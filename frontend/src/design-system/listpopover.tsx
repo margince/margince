@@ -18,7 +18,7 @@ import { problemMessageOf } from "../lib/problem";
 import { useActiveOptionVisible } from "./anchoredpopup";
 import { type ButtonVariant, SearchField } from "./atoms";
 import { ErrorLine } from "./errorline";
-import { PopoverSheet } from "./popover";
+import { PopoverSheet, type SheetOpener } from "./popover";
 import { type CandidateSearch, useCandidateSearch } from "./recordpicker";
 import {
   type ListKey,
@@ -41,26 +41,41 @@ export type ListPopoverOption = Readonly<{
 }>;
 
 /** The rows come in hand, filtered here as the reader types (`undefined`
- *  while they load), or from the server, asked once per settled non-empty term. */
+ *  while they load), or from the server, asked once per settled non-empty term.
+ *  With `listOnOpen` the server is also asked for the empty term as the panel
+ *  opens, so a short list is there to pick from before anything is typed. */
 type ListSource =
   | Readonly<{
       options: readonly ListPopoverOption[] | undefined;
       search?: undefined;
+      listOnOpen?: undefined;
     }>
   | Readonly<{
       search: (term: string) => Promise<readonly ListPopoverOption[]>;
+      listOnOpen?: boolean;
       options?: undefined;
     }>;
 
+/** Its own trigger, open or closed by the reader or held by the caller; or
+ *  `opener="caller"`, opened from a control elsewhere and drawn as the sheet. */
+export type ListOpener =
+  | Readonly<{
+      opener?: undefined;
+      /** The trigger's face. */
+      label: ReactNode;
+      variant?: ButtonVariant;
+      className?: string;
+      reasonId?: string;
+      open?: boolean;
+      onOpenChange?: (open: boolean) => void;
+      onClose?: undefined;
+    }>
+  | Extract<SheetOpener, { opener: "caller" }>;
+
 type ListPopoverProps = Readonly<{
-  /** The trigger's face. */
-  label: ReactNode;
-  /** The list's name, and the sheet's heading on a phone. */
+  /** The list's name, and the sheet's heading on a phone or opened by a caller. */
   title: string;
   searchLabel: string;
-  variant?: ButtonVariant;
-  className?: string;
-  reasonId?: string;
   /** The id of the option the record holds now, marked selected. */
   selected?: string;
   /**
@@ -75,6 +90,8 @@ type ListPopoverProps = Readonly<{
   error?: ReactNode;
   /** What an empty list says, where "No match" is not the whole answer. */
   empty?: ReactNode;
+  /** What a list with no options says before a term is typed, for `options`. */
+  none?: ReactNode;
   /**
    * What the reader can do instead when a typed term matches nothing, given
    * that term and `done`. Drawn under the list, outside the live status, so
@@ -82,9 +99,8 @@ type ListPopoverProps = Readonly<{
    */
   emptyAction?: (term: string, done: () => void) => ReactNode;
   footer?: ReactNode;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
 }> &
+  ListOpener &
   ListSource;
 
 /**
@@ -93,7 +109,28 @@ type ListPopoverProps = Readonly<{
  * On a phone the same search and list fill a `Modal` sheet instead, because a
  * panel anchored to a thumb-sized trigger leaves no room for the keyboard.
  */
-export function ListPopover({
+export function ListPopover(props: ListPopoverProps) {
+  if (props.opener === "caller") {
+    return (
+      <PopoverSheet
+        opener="caller"
+        title={props.title}
+        open={props.open}
+        onClose={props.onClose}
+      >
+        <ListSearch
+          title={props.title}
+          searchLabel={props.searchLabel}
+          list={props}
+          done={props.onClose}
+        />
+      </PopoverSheet>
+    );
+  }
+  return <TriggeredListPopover {...props} />;
+}
+
+function TriggeredListPopover({
   label,
   title,
   searchLabel,
@@ -103,7 +140,7 @@ export function ListPopover({
   open: openProp,
   onOpenChange,
   ...list
-}: ListPopoverProps) {
+}: ListPopoverProps & Readonly<{ opener?: undefined }>) {
   const [ownOpen, setOwnOpen] = useState(false);
   const open = openProp ?? ownOpen;
   const setOpen = useCallback(
@@ -146,6 +183,7 @@ function ListSearch({
     ListPopoverProps,
     | "options"
     | "search"
+    | "listOnOpen"
     | "selected"
     | "onPick"
     | "pending"
@@ -161,7 +199,7 @@ function ListSearch({
   const { locale } = useLocale();
   const listboxId = useId();
   const [term, setTerm] = useState("");
-  const found = useCandidateSearch(list.search, term);
+  const found = useCandidateSearch(list.search, term, list.listOnOpen === true);
   const rows = list.search
     ? found.candidates
     : matchingTerm(list.options ?? [], term);
@@ -206,6 +244,7 @@ function ListSearch({
     list,
     found,
     empty: rows.length === 0,
+    typed: term.trim() !== "",
   });
   return (
     <div className="listpopover">
@@ -319,11 +358,13 @@ function statusOf({
   list,
   found,
   empty,
+  typed,
 }: Readonly<{
   t: ReturnType<typeof useT>;
-  list: Pick<ListPopoverProps, "options" | "search" | "empty">;
+  list: Pick<ListPopoverProps, "options" | "search" | "empty" | "none">;
   found: CandidateSearch<ListPopoverOption>;
   empty: boolean;
+  typed: boolean;
 }>): ReactNode {
   const noMatch = list.empty ?? t("picker.noMatch");
   if (list.search) {
@@ -335,5 +376,8 @@ function statusOf({
   if (list.options === undefined) {
     return t("common.loading");
   }
-  return empty ? noMatch : null;
+  if (!empty) {
+    return null;
+  }
+  return typed ? noMatch : (list.none ?? noMatch);
 }

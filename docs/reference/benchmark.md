@@ -13,6 +13,7 @@ many tries, and the time shown is one that nearly every try beat.
 | 🔴 Too slow | Over the promise with no fix under way yet. |
 | 🔴 Failed | Some tries got no answer, so no time can be trusted. |
 | ⚪ Not measured | The screen had nothing to show yet, or the run cannot prove it. |
+| ⚪ with a time | Measured, but we make no promise for it yet. |
 
 <details>
 <summary>How this page is made</summary>
@@ -23,7 +24,7 @@ The test company has 250,000 contacts at 10,000 companies, 25,000 deals, 100,000
 500 projects and 500,000 activities, owned by 12 reps under 2 managers.
 It also holds 20,000 model calls this month, 1,560 approvals waiting, 480 applied today and 240 expired.
 
-Measured on 2026-10-29 on Apple M5 Max (18 cores, 48 GiB), Postgres 16.15.
+Measured on 2026-11-14 on Apple M5 Max (18 cores, 48 GiB), Postgres 16.16.
 Each time is the p95 of its rows: 95 in every 100 tries were faster.
 
 Rounding: under 250 ms reads "under a quarter of a second", under 1 s "under a second",
@@ -40,28 +41,28 @@ How a case is chosen and added: [design-a-bench-case.md](../how-to/design-a-benc
 | Moment | Rep | Manager | In plain words |
 |---|---|---|---|
 | Opening the app | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
-| The Worklist | 🟡 About 1.1 seconds | 🟡 About 1.9 seconds | Slower than we promise: we are working on it ([#4912](https://github.com/margince/margince/issues/4912)). We promise under 1 second. |
-| Home | 🟢 Under a second | 🟢 Under a second | Fast. |
+| The Worklist | 🟢 Under a quarter of a second | 🟡 About 4.6 seconds | Slower than we promise: we are working on it ([#10779](https://github.com/margince/margince/issues/10779)). We promise under 1 second. |
+| Home | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
 
 The first open after a restart is slower, because nothing is warmed up yet:
 
-- The Worklist for a rep, first open after a restart: about 2.1 seconds.
+- The Worklist for a rep, first open after a restart: about 2.3 seconds.
 - Search for a rep, first open after a restart: under a second.
 
 ## How quickly do I find a customer?
 
 | Moment | Rep | Manager | In plain words |
 |---|---|---|---|
-| Typing a name in the search box | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
+| Typing a name in the search box | 🟢 Under a second | 🟢 Under a second | Fast. |
 | Typing the first few letters | 🟢 Under a second | 🟢 Under a second | Fast. |
-| The full search results | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
+| The full search results | 🟢 Under a second | 🟢 Under a second | Fast. |
 | Search, then open the company | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
 
 ## How quickly do I find a deal?
 
 | Moment | Rep | Manager | In plain words |
 |---|---|---|---|
-| Search, then open the deal | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
+| Search, then open the deal | 🟢 Under a second | 🟢 Under a second | Fast. |
 
 ## How fast do lists and records open?
 
@@ -70,7 +71,11 @@ The first open after a restart is slower, because nothing is warmed up yet:
 | A list of 50 records | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
 | Opening a record | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
 | A contact's whole story | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
-| A company's whole page | 🟢 Under a second | 🟢 Under a second | Fast. |
+| A company's whole page | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
+
+## How fast does a record with a long history open?
+
+Not measured in the last run.
 
 ## How fast is the analytics screen?
 
@@ -91,6 +96,7 @@ Every rep and manager opens the app, the Worklist, Home and a few records at the
 | Moment | Rep | Manager | In plain words |
 |---|---|---|---|
 | `admin_rail` | ⚪ Not measured | ⚪ Not measured | Not measured yet. |
+| `ai_settings` | ⚪ Not measured | ⚪ Not measured | Not measured yet. |
 
 ## How quickly can I check System health?
 

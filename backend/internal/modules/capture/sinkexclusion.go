@@ -5,6 +5,7 @@ package capture
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -49,13 +50,8 @@ func (s *Sink) dropBeforeStoreTx(ctx context.Context, tx pgx.Tx, rec connector.N
 		}
 	}
 	if internal && !internalMailAdmitted(ctx) {
-		if err := s.logBreadcrumbTx(ctx, tx, actionCaptureInternalDropped, rec, reasonInternalOnly); err != nil {
-			return ctx, "", err
-		}
-		if err := s.traceTx(ctx, tx, rec, pipelinetrace.StageInternalDrop, TraceInternal, reasonInternalOnly); err != nil {
-			return ctx, "", err
-		}
-		return ctx, "all participants are on the workspace's own domains", nil
+		skip, err := s.dropInternalTx(ctx, tx, rec)
+		return ctx, skip, err
 	}
 	// A message the workspace or this mailbox's owner ruled out is not the
 	// CRM's to hold either.
@@ -83,6 +79,27 @@ func (s *Sink) dropBeforeStoreTx(ctx context.Context, tx pgx.Tx, rec connector.N
 	return ctx, "a capture exclusion rule keeps this message out (" + excluded + ")", nil
 }
 
+// dropInternalTx leaves the breadcrumb and trace of a message dropped as
+// internal, and answers the sentence its skip carries. Mail between the seat's
+// own addresses says so, because "your company's domains" would be a wrong why.
+func (s *Sink) dropInternalTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (string, error) {
+	if err := s.logBreadcrumbTx(ctx, tx, actionCaptureInternalDropped, rec, reasonInternalOnly); err != nil {
+		return "", err
+	}
+	own, err := ownAddressesOnlyTx(ctx, tx, rec)
+	if err != nil {
+		return "", err
+	}
+	reason, skip := reasonInternalOnly, "all participants are on the workspace's own domains"
+	if own {
+		reason, skip = reasonOwnAddressesOnly, skipOwnAddressesOnly
+	}
+	if err := s.traceTx(ctx, tx, rec, pipelinetrace.StageInternalDrop, TraceInternal, reason); err != nil {
+		return "", err
+	}
+	return skip, nil
+}
+
 var _ connector.PreStoreJudge = (*Sink)(nil)
 
 // DropBeforeStore runs the gates Upsert runs first — the colleagues-only gate
@@ -105,6 +122,14 @@ func (s *Sink) DropBeforeStore(ctx context.Context, rec connector.NormalizedReco
 		if err := s.refuseErasedChannelAccount(ctx, tx, rec.Counterparty); err != nil {
 			return err
 		}
+		// Headers cannot show a forward to self, which only its body carries.
+		// Only current mail is downloaded to look: history is not worth every
+		// note a seat ever sent themselves.
+		if s.currentMail(rec) && rec.Counterparty.FiledAsSent() {
+			if own, err := ownAddressesOnlyTx(ctx, tx, rec); err != nil || own {
+				return err
+			}
+		}
 		_, reason, err := s.dropBeforeStoreTx(ctx, tx, rec)
 		dropped = reason != ""
 		return err
@@ -113,6 +138,16 @@ func (s *Sink) DropBeforeStore(ctx context.Context, rec connector.NormalizedReco
 		return false, err
 	}
 	return dropped, nil
+}
+
+// currentMail reports mail that arrived inside the waiting horizon, as the
+// provider dates it or, failing that, as the message does.
+func (s *Sink) currentMail(rec connector.NormalizedRecord) bool {
+	arrived := rec.ProviderReceivedAt
+	if fields, ok := rec.Fields.(ActivityFields); ok && arrived.IsZero() {
+		arrived = fields.OccurredAt
+	}
+	return arrived.After(s.clock().AddDate(0, 0, -storekit.DefaultWaitingHorizonDays))
 }
 
 // excludedTx reports whether any address this message names — sender,
@@ -143,20 +178,26 @@ func excludedForTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecor
 	// A domain rule covers its subdomains: an exclusion of acme.com keeps out
 	// mail.acme.com, the way the own-domain matcher reads a domain.
 	//
-	// The container arm compares EXACTLY, where the two address arms fold: a
-	// container value is the provider's own token, and folding it would merge
-	// two Graph folders whose base64url ids differ only in case.
+	// The container arm compares the token as stored, where the address arms fold. A
+	// container value is the provider's own token; folding would merge two
+	// Graph folders whose ids differ only in case. A member's rule matches only
+	// in the mailbox it was picked from.
+	mailboxes, err := containerMailboxesTx(ctx, tx, owner, rec.Containers)
+	if err != nil {
+		return "", err
+	}
 	var kind string
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT kind FROM capture_exclusion e
 		 WHERE (e.scope = 'workspace' OR e.user_id = $3)
 		   AND ((e.kind = 'address' AND e.value = ANY($1::text[]))
 		     OR (e.kind = 'domain' AND EXISTS (
 		           SELECT 1 FROM unnest($2::text[]) d
 		            WHERE d = e.value OR d LIKE '%.' || `+storekit.EscapeLikeSQL("e.value")+`))
-		     OR (e.kind = 'container' AND e.value = ANY($4::text[])))
+		     OR (e.kind = 'container' AND e.value = ANY($4::text[])
+		         AND (e.connection_id IS NULL OR e.connection_id = ANY($5::uuid[]))))
 		 ORDER BY e.kind LIMIT 1`,
-		addresses, domains, nilToNull(owner), rec.Containers).Scan(&kind)
+		addresses, domains, nilToNull(owner), rec.Containers, mailboxes).Scan(&kind)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return "", nil
@@ -170,6 +211,30 @@ func excludedForTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecor
 		return reasonExcludedContainer, nil
 	}
 	return reasonExcludedDomain, nil
+}
+
+// containerMailboxesTx answers the mailboxes rec's containers were filed in.
+// It names them as seatMailboxTx names the capturing mailbox: the run's own,
+// else the owner's only mailbox of each provider a container names. So a check
+// made outside a mailbox run still meets the member's container rule.
+func containerMailboxesTx(ctx context.Context, tx pgx.Tx, owner ids.UUID, containers []string) ([]ids.UUID, error) {
+	var mailboxes []ids.UUID
+	asked := map[string]bool{}
+	for _, container := range containers {
+		provider, _, _ := strings.Cut(container, ":")
+		if asked[provider] {
+			continue
+		}
+		asked[provider] = true
+		id, found, err := seatMailboxTx(ctx, tx, owner, provider)
+		if err != nil {
+			return nil, err
+		}
+		if found && !slices.Contains(mailboxes, id) {
+			mailboxes = append(mailboxes, id)
+		}
+	}
+	return mailboxes, nil
 }
 
 // nilToNull hands a zero user id to SQL as NULL, so a connection with no

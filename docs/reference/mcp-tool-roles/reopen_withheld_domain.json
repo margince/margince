@@ -1,0 +1,15 @@
+{
+  "tool": "change_capture",
+  "action": "reopen_domain",
+  "verb": "reopen_withheld_domain",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

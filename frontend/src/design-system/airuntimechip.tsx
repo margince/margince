@@ -14,8 +14,10 @@ import {
 import type { components } from "../api/schema";
 import { formatAiRunCost } from "../format/aicost";
 import { formatNumber } from "../format/format";
-import { type Locale, translate } from "../i18n";
+import { type Locale, type Translator, translate } from "../i18n";
+import { providerName } from "../lib/ai-provider-names";
 import { aiTaskLabel } from "../lib/ai-task-label";
+import { tierLabel } from "../lib/ai-tier-label";
 import "./airuntimechip.css";
 import { coveredByDialog } from "./dialogfocus";
 import { useScrollRegion } from "./scrollregion";
@@ -355,10 +357,11 @@ function servedModels(runtime?: AiRunSummary) {
 }
 
 function routes(runtime: AiRunSummary | undefined, locale: Locale) {
+  const t: Translator = (key, params) => translate(locale, key, params);
   return unique(
     (runtime?.models ?? []).map(
       (entry) =>
-        `${aiTaskLabel(entry.task, (key, params) => translate(locale, key, params))} · ${entry.tier} · ${entry.provider}`,
+        `${aiTaskLabel(entry.task, t)} · ${tierLabel(entry.tier, t)} · ${providerName(entry.provider, t)}`,
     ),
   ).join(" + ");
 }

@@ -1,0 +1,15 @@
+{
+  "tool": "change_reports",
+  "action": "revoke_forecast_share",
+  "verb": "revoke_forecast_share",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops"
+  ],
+  "refused_for": [
+    "read_only",
+    "rep"
+  ]
+}

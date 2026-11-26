@@ -1,0 +1,17 @@
+{
+  "verb": "create_record",
+  "checks": [
+    "company.create,contact.create,lead.create,project.create",
+    "company.create,contact.create,lead.create,project.read",
+    "company.create,contact.create,lead.read,project.create",
+    "company.create,contact.create,lead.read,project.read",
+    "company.read,lead.create",
+    "company.read,lead.read",
+    "contact.read,lead.create,project.create",
+    "contact.read,lead.create,project.read",
+    "contact.read,lead.read,project.create",
+    "contact.read,lead.read,project.read",
+    "lead.create,relationship.read",
+    "lead.read,relationship.read"
+  ]
+}

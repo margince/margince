@@ -1,0 +1,12 @@
+{
+  "verb": "send_privacy_notice",
+  "checks": [
+    "activity.create",
+    "activity.read",
+    "contact.update"
+  ],
+  "takes": [
+    "contact",
+    "mail_contact"
+  ]
+}

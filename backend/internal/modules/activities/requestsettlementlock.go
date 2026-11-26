@@ -55,14 +55,18 @@ func holdSettlementEvidenceTx(ctx context.Context, tx pgx.Tx, request RepliedReq
 		settlementLockWait).Scan(&restore, new(string)); err != nil {
 		return false, fmt.Errorf("activities: bounding the verdict's lock wait: %w", err)
 	}
-	live, err := requestStillWritable(ctx, tx, request.RequestID)
+	private, err := privateMailRequests(ctx, tx)
+	if err != nil {
+		return false, err
+	}
+	live, err := requestStillWritable(ctx, tx, request.RequestID, private)
 	if err == nil && live {
 		// The request row sits inside the IN, so the answers are found once and
 		// each is locked by its key. Beside seen, it made Postgres walk every
 		// activity and find the answers again for each one.
 		_, err = tx.Exec(ctx, `SELECT seen.id FROM activity seen
 		  WHERE seen.id IN (SELECT answered.id FROM activity a
-		    CROSS JOIN LATERAL (`+settlementAnswersSQL()+` UNION `+settlementContextSQL()+`) answered WHERE a.id = $2)
+		    CROSS JOIN LATERAL (`+settlementAnswersSQL(private)+` UNION `+settlementContextSQL(private)+`) answered WHERE a.id = $2)
 		  FOR SHARE OF seen`, request.AsOf, request.RequestID)
 	}
 	if err == nil && live {
@@ -94,12 +98,12 @@ func settlementWaitFailed(err error) error {
 // it, a settlement that finished after an erasure would write about a subject
 // the cascade already swept. `FOR NO KEY UPDATE` lets a writer add a
 // participant or link under the request while the verdict waits.
-func requestStillWritable(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (bool, error) {
+func requestStillWritable(ctx context.Context, tx pgx.Tx, requestID ids.UUID, private bool) (bool, error) {
 	var live bool
 	err := tx.QueryRow(ctx, `
 		SELECT true FROM activity
 		 WHERE id = $1 AND archived_at IS NULL
-		   AND audience = 'workspace' AND restricted_at IS NULL
+		   AND `+judgeableAudienceSQL("activity", private)+`
 		   FOR NO KEY UPDATE`, requestID).Scan(&live)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
@@ -112,9 +116,11 @@ func requestStillWritable(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (b
 
 // lostSettlementBasisSQL is a settled verdict that recorded its evidence and
 // has no answer left the pass may read: the evidence it rested on is gone.
-var lostSettlementBasisSQL = `judged.verdict = '` + RequestSettled + `' AND judged.judged_evidence IS NOT NULL
- AND NOT EXISTS (` + settlementAnswersSQL() + `)
- AND judged.judged_evidence IS DISTINCT FROM (` + settlementEvidenceSQL() + `)`
+func lostSettlementBasisSQL(private bool) string {
+	return `judged.verdict = '` + RequestSettled + `' AND judged.judged_evidence IS NOT NULL
+ AND NOT EXISTS (` + settlementAnswersSQL(private) + `)
+ AND judged.judged_evidence IS DISTINCT FROM (` + settlementEvidenceSQL(private) + `)`
+}
 
 // WithdrawLostSettlements turns a settled verdict whose answers are all gone
 // into an unsure one. Absence of an answer is no proof of anything either way,
@@ -129,9 +135,13 @@ func (s *Store) WithdrawLostSettlements(ctx context.Context, asOf time.Time, lim
 	}
 	var found []lostSettlement
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
+		private, err := privateMailRequests(ctx, tx)
+		if err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx, `SELECT judged.request_activity_id, judged.judged_through_activity_id
 			  FROM activity_request_settlement judged JOIN activity a ON a.id = judged.request_activity_id
-			 WHERE a.restricted_at IS NULL AND `+lostSettlementBasisSQL+` ORDER BY judged.request_activity_id LIMIT $2`, asOf, limit)
+			 WHERE a.restricted_at IS NULL AND `+lostSettlementBasisSQL(private)+` ORDER BY judged.request_activity_id LIMIT $2`, asOf, limit)
 		if err != nil {
 			return fmt.Errorf("activities: reading settled verdicts that lost their evidence: %w", err)
 		}
@@ -166,9 +176,13 @@ func (s *Store) withdrawLostSettlement(ctx context.Context, l lostSettlement, as
 		if err != nil || !live {
 			return err
 		}
+		private, err := privateMailRequests(ctx, tx)
+		if err != nil {
+			return err
+		}
 		var evidence *string
 		var still bool
-		if err := tx.QueryRow(ctx, `SELECT `+lostSettlementBasisSQL+`, (`+settlementEvidenceSQL()+`)
+		if err := tx.QueryRow(ctx, `SELECT `+lostSettlementBasisSQL(private)+`, (`+settlementEvidenceSQL(private)+`)
 			  FROM activity_request_settlement judged JOIN activity a ON a.id = judged.request_activity_id
 			 WHERE judged.request_activity_id = $2 FOR UPDATE OF judged`, asOf, l.Request).Scan(&still, &evidence); err != nil {
 			return fmt.Errorf("activities: rechecking a settled verdict that lost its evidence: %w", err)

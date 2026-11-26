@@ -98,7 +98,10 @@ function backendFor(
   opts: {
     sets?: ReturnType<typeof corpus>[];
     documents?: ReturnType<typeof document>[];
-    refuse?: Partial<Record<"archive" | "upload" | "delete", () => Response>>;
+    refuse?: Partial<
+      Record<"create" | "archive" | "upload" | "delete", () => Response>
+    >;
+    maxDocumentBytes?: number;
   } = {},
 ) {
   const posts: string[] = [];
@@ -111,6 +114,11 @@ function backendFor(
         input instanceof Request ? input : new Request(String(input), init);
       if (req.url.endsWith("/v1/me")) {
         return jsonResponse(meFixture({ allow }));
+      }
+      if (req.url.endsWith("/installation/settings")) {
+        return jsonResponse({
+          max_knowledge_document_bytes: opts.maxDocumentBytes,
+        });
       }
       if (req.url.includes("/knowledge/documents/")) {
         deletes.push(req.url);
@@ -129,6 +137,7 @@ function backendFor(
       if (req.url.includes("/knowledge/corpora")) {
         if (req.method === "POST") {
           posts.push(req.url);
+          if (opts.refuse?.create) return opts.refuse.create();
           return jsonResponse(corpus(), 201);
         }
         if (req.method === "DELETE") {
@@ -321,7 +330,8 @@ describe("KnowledgeCard", () => {
   });
 
   it("refuses to create a set without both a name and a topic statement", async () => {
-    vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
+    const backend = backendFor(ADMIN);
+    vi.stubGlobal("fetch", backend.fetchMock);
     const user = userEvent.setup();
     render(<KnowledgeCard />);
 
@@ -330,18 +340,53 @@ describe("KnowledgeCard", () => {
     );
     const dialog = within(await screen.findByRole("dialog"));
     const create = dialog.getByRole("button", { name: "Create" });
-    expect(create).toBeDisabled();
+    const topic = dialog.getByLabelText(/what this set covers/i);
 
     await user.type(dialog.getByLabelText(/^name/i), "Handbook");
     // Still refused: a set with no topic statement has nothing to quote back
     // when it refuses a question, which is the one moment it is read.
-    expect(create).toBeDisabled();
+    await user.click(create);
+    expect(dialog.getByText("What this set covers is required.")).toBeVisible();
+    expect(topic).toHaveFocus();
+    expect(backend.posts).toHaveLength(0);
 
+    await user.type(topic, "How the product is operated.");
+    await user.click(create);
+    await waitFor(() => expect(backend.posts).toHaveLength(1));
+  });
+
+  it("says on the name field that another set has the name", async () => {
+    const backend = backendFor(ADMIN, {
+      refuse: {
+        create: () =>
+          jsonResponse(
+            { status: 409, code: "name_taken", detail: "name taken" },
+            409,
+          ),
+      },
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "New document set" }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    const name = dialog.getByLabelText(/^name/i);
+    expect(name).toHaveAttribute("data-character-limit", "120");
+    await user.type(name, "Handbook");
     await user.type(
       dialog.getByLabelText(/what this set covers/i),
       "How the product is operated.",
     );
-    expect(create).toBeEnabled();
+    await user.click(dialog.getByRole("button", { name: "Create" }));
+
+    await waitFor(() =>
+      expect(name).toHaveAccessibleDescription(
+        "A document set with this name already exists. Choose another name.",
+      ),
+    );
   });
 
   it("asks before archiving a set, and sends nothing until the reader agrees", async () => {
@@ -434,6 +479,124 @@ describe("KnowledgeCard", () => {
     expect(
       await screen.findByRole("button", { name: /add 2 documents/i }),
     ).toBeTruthy();
+  });
+
+  it("refuses a file over the limit, and an empty one, as soon as they are dropped", async () => {
+    const backend = backendFor(ADMIN, { maxDocumentBytes: 5_000_000 });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<KnowledgeCard />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    await userEvent.upload(await screen.findByLabelText(/add document/i), [
+      new File([new Uint8Array(6_500_000)], "big.txt", { type: "text/plain" }),
+      new File([], "empty.txt", { type: "text/plain" }),
+      new File(["# Notes"], "notes.md", { type: "text/markdown" }),
+    ]);
+
+    expect(
+      await screen.findByText(
+        "big.txt: The file exceeds 5 MB, the limit on this installation. Choose a smaller file.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "empty.txt: The file is empty, so there is nothing to add. Choose a file that has content.",
+      ),
+    ).toBeInTheDocument();
+    // Only the file that can be added is held, and nothing was sent.
+    expect(
+      screen.getByRole("button", { name: "Add document" }),
+    ).not.toBeDisabled();
+    expect(screen.getByText("notes.md")).toBeInTheDocument();
+    expect(backend.posts).toHaveLength(0);
+
+    // Sending the rest keeps naming the files the drop refused.
+    await userEvent.click(screen.getByRole("button", { name: "Add document" }));
+    await waitFor(() => expect(backend.posts).toHaveLength(1));
+    expect(screen.getByText(/^big\.txt: The file exceeds/)).toBeInTheDocument();
+  });
+
+  it("clears a refused file from the drop zone once the server has said why", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, {
+        refuse: {
+          upload: () =>
+            jsonResponse(
+              {
+                type: "about:blank",
+                title: "Unsupported media type",
+                status: 415,
+                code: "unsupported_media_type",
+                detail:
+                  "Word files are not supported. Save it as plain text, Markdown, CSV or JSON first.",
+              },
+              415,
+            ),
+        },
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    await user.upload(
+      await screen.findByLabelText(/add document/i),
+      new File(["PK"], "contract.docx", { type: "" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Add document" }));
+
+    expect(
+      await screen.findByText(
+        "contract.docx: Word files are not supported. Save it as plain text, Markdown, CSV or JSON first.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add document" })).toBeDisabled();
+    expect(
+      screen.getByText("Drop a text file here, or select one"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps a file the server could not take just now, for a retry", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, {
+        refuse: {
+          upload: () =>
+            jsonResponse(
+              {
+                type: "about:blank",
+                title: "Service unavailable",
+                status: 503,
+                code: "service_unavailable",
+                detail: "Try again in a moment.",
+              },
+              503,
+            ),
+        },
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    await user.upload(
+      await screen.findByLabelText(/add document/i),
+      new File(["# Notes"], "notes.md", { type: "text/markdown" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Add document" }));
+
+    expect(await screen.findByText(/^notes\.md: /)).toBeInTheDocument();
+    expect(screen.getByText("notes.md")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add document" }),
+    ).not.toBeDisabled();
   });
 
   it("says what a document may be before one is chosen", async () => {

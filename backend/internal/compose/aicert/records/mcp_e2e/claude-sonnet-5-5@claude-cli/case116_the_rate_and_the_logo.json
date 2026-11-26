@@ -12,13 +12,85 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": true,
+  "stamp": {
+    "scenario": "40988d62fbd40cec",
+    "tools": "1ea43f61b0c7232e",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "1796d51361de08d5",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T05:52:03Z",
+    "graded_commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "graded_at": "2026-11-25T05:52:03Z"
+  },
   "usage": {
-    "input_tokens": 16,
-    "output_tokens": 2253,
-    "cache_creation_input_tokens": 8664,
-    "cache_read_input_tokens": 484027,
+    "input_tokens": 14,
+    "output_tokens": 1680,
+    "cache_creation_input_tokens": 9225,
+    "cache_read_input_tokens": 509496,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1056
+    "cost_usd": 0.1047
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_settings",
+        "describe_router_actions",
+        "list_fx_rates",
+        "read_workspace",
+        "set_fx_rate",
+        "upload_company_logo"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_settings",
+        "describe_router_actions",
+        "list_fx_rates",
+        "read_workspace",
+        "set_fx_rate",
+        "upload_company_logo"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "turns": {
+      "median": 5,
+      "min": 5,
+      "max": 5
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 259367.5,
+      "min": 222638,
+      "max": 296097
+    },
+    "output_tokens": {
+      "median": 840,
+      "min": 821,
+      "max": 859
+    },
+    "duration_ms": {
+      "median": 8698,
+      "min": 7926,
+      "max": 9470
+    }
   }
 }

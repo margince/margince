@@ -100,9 +100,16 @@ const NOTHING_WAITS: Waits = {
   returned: 0,
   upcoming: 0,
 };
+const DEFAULT_WAITS: Waits = {
+  waiting: 3,
+  blocked: 1,
+  returned: 1,
+  upcoming: 4,
+};
+
 const summary = (
   workflow: "handoff" | "qualification",
-  waits: Waits = { waiting: 3, blocked: 1, returned: 1, upcoming: 4 },
+  waits: Waits = DEFAULT_WAITS,
 ) =>
   json({
     as_of: week.clock,
@@ -453,6 +460,8 @@ export const OVERVIEW_SCENARIOS = {
               target_comparison: {
                 status: "fx_missing",
                 target_metric: "bookings_won",
+                target: 80_000_000,
+                won: 42_000_000,
               },
             }),
           ],

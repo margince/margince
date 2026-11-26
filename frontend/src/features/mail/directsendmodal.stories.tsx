@@ -14,7 +14,14 @@ const review: components["schemas"]["CommunicationReview"] = {
   state: "needs_repair",
   kind: "single",
   reason_code: "no_marketing_consent",
-  refusals: [],
+  refusals: [
+    {
+      address: "alex@example.test",
+      reason_code: "no_compatible_evidence",
+      category: "requested_followup",
+      sending_entity_name: "Example Company",
+    },
+  ],
   warning: {
     version: "override-v2",
     text:
@@ -55,4 +62,43 @@ export const WithNoServedWarning: Story = {
     onClose: () => {},
     review: { ...review, warning: undefined },
   },
+};
+
+// A message held in the scheduled list: the sender may also pick a later
+// moment, and the decision waits for it.
+export const OfferingALaterMoment: Story = {
+  args: { open: true, onClose: () => {}, review, laterZone: "Europe/Berlin" },
+};
+
+export const AsItOpensPhone: Story = { ...AsItOpens, tags: ["uat-phone"] };
+
+export const MissingCompanyFooter: Story = {
+  args: {
+    open: true,
+    onClose: () => {},
+    review: {
+      ...review,
+      assessment_revision: "footer-review",
+      refusals: [
+        {
+          ...review.refusals[0],
+          address: "alex@example.test",
+          reason_code: "no_compatible_evidence",
+          footer_findings: [
+            {
+              kind: "objection_route",
+              language: "vi",
+              missing_means: ["phone"],
+            },
+          ],
+          footer_preview: ["Example Company\n123 Example Street"],
+        },
+      ],
+    },
+  },
+};
+
+export const MissingCompanyFooterPhone: Story = {
+  ...MissingCompanyFooter,
+  tags: ["uat-phone"],
 };

@@ -28,8 +28,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// seedOverride writes one live standing override the way the door
-// (consent.Store.Allow) does, naming the subject by contact or lead id.
+// seedOverride writes one live standing override, naming the subject by
+// contact or lead id.
 func seedOverride(ctx context.Context, t *testing.T, conn execer, contact, lead *ids.UUID) {
 	t.Helper()
 	mustExec(ctx, t, conn, `
@@ -128,7 +128,7 @@ func TestRetentionAnonymizeDeletesTheContactsOverride(t *testing.T) {
 		 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text)`, contact, user)
 	seedOverride(ctx, t, tx, &contact.UUID, nil)
 
-	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{payloads: noPayloads{t: t}}); err != nil {
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{}); err != nil {
 		t.Fatalf("anonymizing the contact: %v", err)
 	}
 
@@ -249,7 +249,7 @@ func TestRetentionAnonymizeDeletesAMergedPredecessorsOverride(t *testing.T) {
 		 VALUES ($1, 'Hedda Duplicate', 'manual', 'user:'||$2::text, $3, now())`, predecessor, user, contact)
 	seedOverride(ctx, t, tx, &predecessor.UUID, nil)
 
-	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{payloads: noPayloads{t: t}}); err != nil {
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{}); err != nil {
 		t.Fatalf("anonymizing the contact: %v", err)
 	}
 
@@ -285,7 +285,7 @@ func TestRetentionAnonymizeKeepsAMergedPredecessorsSuppression(t *testing.T) {
 		INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
 		VALUES ($1, 'marketing_objection', 'operator_ui', 'human:x', 'subject')`, predecessor)
 
-	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{payloads: noPayloads{t: t}}); err != nil {
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{}); err != nil {
 		t.Fatalf("anonymizing the contact: %v", err)
 	}
 
@@ -317,7 +317,10 @@ func TestRetentionAnonymizePinsOnlyActiveStops(t *testing.T) {
 	mustExec(ctx, t, tx,
 		`INSERT INTO contact (id, full_name, source, captured_by)
 		 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text)`, contact, user)
-	for _, address := range []string{"hedda@anon.test", "hedda.home@anon.test"} {
+	// Addresses of this test alone: the count below reads the whole table, and
+	// another test may leave a stop on a shared address.
+	work, home := "hedda-"+contact.String()+"@anon.test", "hedda.home-"+contact.String()+"@anon.test"
+	for _, address := range []string{work, home} {
 		mustExec(ctx, t, tx,
 			`INSERT INTO contact_email (contact_id, email, source, captured_by)
 			 VALUES ($1, $2, 'manual', 'user:'||$3::text)`, contact, address, user)
@@ -328,18 +331,19 @@ func TestRetentionAnonymizePinsOnlyActiveStops(t *testing.T) {
 		       ($1, 'marketing_objection', 'operator_ui', 'human:x', 'subject', NULL)`, contact)
 	mustExec(ctx, t, tx, `
 		INSERT INTO communication_suppression (contact_id, address, kind, source, captured_by, decided_by_level, revoked_at)
-		VALUES ($1, 'hedda@anon.test', 'subject_request', 'operator_ui', 'human:x', 'user', now())`, contact)
+		VALUES ($1, $2, 'subject_request', 'operator_ui', 'human:x', 'user', now())`, contact, work)
 
-	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{payloads: noPayloads{t: t}}); err != nil {
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{}); err != nil {
 		t.Fatalf("anonymizing the contact: %v", err)
 	}
 
 	var liveOnAddresses, liftedWithAddress, liftedKept int
 	if err := tx.QueryRow(ctx, `
-		SELECT count(*) FILTER (WHERE revoked_at IS NULL AND contact_id IS NULL AND address_hash IS NOT NULL),
-		       count(*) FILTER (WHERE revoked_at IS NOT NULL AND address IS NOT NULL),
+		SELECT count(*) FILTER (WHERE revoked_at IS NULL AND contact_id IS NULL AND address_hash = ANY($2)),
+		       count(*) FILTER (WHERE revoked_at IS NOT NULL AND address IN ($3, $4)),
 		       count(*) FILTER (WHERE revoked_at IS NOT NULL AND contact_id = $1)
-		  FROM communication_suppression`, contact).Scan(&liveOnAddresses, &liftedWithAddress, &liftedKept); err != nil {
+		  FROM communication_suppression`, contact,
+		[]string{storekit.SuppressionHash(work), storekit.SuppressionHash(home)}, work, home).Scan(&liveOnAddresses, &liftedWithAddress, &liftedKept); err != nil {
 		t.Fatalf("counting the stops: %v", err)
 	}
 	if liveOnAddresses != 2 || liftedWithAddress != 0 || liftedKept != 2 {

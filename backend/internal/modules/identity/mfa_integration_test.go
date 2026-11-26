@@ -26,6 +26,7 @@ import (
 
 func (e *revocationEnv) withVault() {
 	e.svc.WithVault(keyvault.NewMemory())
+	e.svc.challengeEpochKey = stubMFASigner{}.KeyEpoch
 }
 
 // atInstant pins the service clock, so which 30-second TOTP step a code lands

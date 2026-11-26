@@ -3,7 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { jsonResponse, StoryProviders } from "../../testing/story-utils";
+import {
+  emptyListAnswer,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { TeamExceptionsPanel } from "./worklist.exceptions";
 
 // WHAT IS GOING WRONG on this lead's team — the rows, worst first.
@@ -98,7 +102,7 @@ function stubExceptions(answer: () => Promise<Response>) {
         user: { id: LENA, display_name: "Lena Fischer" },
       });
     }
-    return jsonResponse({ data: [] });
+    return emptyListAnswer(input);
   }) as typeof fetch;
 }
 

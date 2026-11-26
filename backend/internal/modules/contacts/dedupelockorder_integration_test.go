@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -111,10 +112,9 @@ func (e *dedupeEnv) waitForWaitersOrDone(t *testing.T, h *heldCreate, n int, don
 	}
 }
 
-// countWaiters counts the backends in this test database waiting on a lock,
-// directly behind the held create or behind a writer queued after it. The
-// connection is held only for the probe, so the writers keep the pool. The
-// statistics snapshot is cleared on that same connection first.
+// countWaiters counts the backends queued behind the held create, directly or
+// behind a writer queued after it. The connection is held only for the probe,
+// so the writers keep the pool.
 func countWaiters(ctx context.Context, t *testing.T, pool *pgxpool.Pool, pid int) int {
 	t.Helper()
 	conn, err := pool.Acquire(ctx)
@@ -122,16 +122,11 @@ func countWaiters(ctx context.Context, t *testing.T, pool *pgxpool.Pool, pid int
 		t.Fatalf("acquiring the probe connection: %v", err)
 	}
 	defer conn.Release()
-	if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-		t.Fatalf("clearing the statistics snapshot: %v", err)
+	queued, err := testdb.QueuedBehind(ctx, conn, int32(pid))
+	if err != nil {
+		t.Fatalf("probing the lock queue: %v", err)
 	}
-	var waiting int
-	if err := conn.QueryRow(ctx, `
-		SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND cardinality(pg_blocking_pids(pid)) > 0
-		   AND pid <> $1`, pid).Scan(&waiting); err != nil {
-		t.Fatalf("probing for waiters: %v", err)
-	}
-	return waiting
+	return queued
 }
 
 // inBackground runs one writer and hands its error back.

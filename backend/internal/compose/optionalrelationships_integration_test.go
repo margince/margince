@@ -27,6 +27,54 @@ import (
 )
 
 func TestRealWorklistKeepsRecordedSilenceOptionalAndHonorsTheReadersChoice(t *testing.T) {
+	quiet := seedQuietRelationship(t)
+	e, reader, read, contact := quiet.e, quiet.reader, quiet.read, quiet.contact
+	initial := read(reader)
+	if initial.OptionalRelationships == nil || len(*initial.OptionalRelationships) != 1 || (*initial.OptionalRelationships)[0].Id != ids.UUID(contact.Id).String() {
+		t.Fatalf("real scoped optional read lost the recorded contact: %+v", initial.OptionalRelationships)
+	}
+	for _, row := range initial.Queue {
+		if row.Source == "relationship_decay" {
+			t.Fatal("silence became responsible work")
+		}
+	}
+	if err := e.Activities.PinWorklistRow(reader, activities.WorklistRowRef{Source: "relationship_decay", RowID: ids.UUID(contact.Id).String()}); err != nil {
+		t.Fatal(err)
+	}
+	chosen := read(reader)
+	found := false
+	if chosen.Focus != nil {
+		for _, row := range chosen.Focus.Items {
+			if row.Source == "relationship_decay" {
+				found = true
+				if row.Level != (*initial.OptionalRelationships)[0].Level {
+					t.Fatalf("choice became urgency: %+v", row)
+				}
+			}
+		}
+	}
+	if !found || chosen.OptionalRelationships == nil || len(*chosen.OptionalRelationships) != 0 {
+		t.Fatalf("real pin did not choose the contact: %+v", chosen.Focus)
+	}
+	other := read(e.As(e.Rep2, []ids.UUID{e.Team2}, integration.AdminPerms))
+	for _, row := range other.Queue {
+		if row.Source == "relationship_decay" {
+			t.Fatal("reader choice leaked to another seat")
+		}
+	}
+}
+
+// quietRelationship is one contact whose mail went quiet sixty days ago, read
+// through the real Worklist handler.
+type quietRelationship struct {
+	e       *integration.Env
+	reader  context.Context
+	read    func(context.Context) crmcontracts.Worklist
+	contact crmcontracts.Contact
+}
+
+func seedQuietRelationship(t *testing.T) quietRelationship {
+	t.Helper()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	now := quietLaneNow
@@ -71,37 +119,5 @@ func TestRealWorklistKeepsRecordedSilenceOptionalAndHonorsTheReadersChoice(t *te
 		}
 		return result
 	}
-	initial := read(reader)
-	if initial.OptionalRelationships == nil || len(*initial.OptionalRelationships) != 1 || (*initial.OptionalRelationships)[0].Id != ids.UUID(contact.Id).String() {
-		t.Fatalf("real scoped optional read lost the recorded contact: %+v", initial.OptionalRelationships)
-	}
-	for _, row := range initial.Queue {
-		if row.Source == "relationship_decay" {
-			t.Fatal("silence became responsible work")
-		}
-	}
-	if err := e.Activities.PinWorklistRow(reader, activities.WorklistRowRef{Source: "relationship_decay", RowID: ids.UUID(contact.Id).String()}); err != nil {
-		t.Fatal(err)
-	}
-	chosen := read(reader)
-	found := false
-	if chosen.Focus != nil {
-		for _, row := range chosen.Focus.Items {
-			if row.Source == "relationship_decay" {
-				found = true
-				if row.Level != (*initial.OptionalRelationships)[0].Level {
-					t.Fatalf("choice became urgency: %+v", row)
-				}
-			}
-		}
-	}
-	if !found || chosen.OptionalRelationships == nil || len(*chosen.OptionalRelationships) != 0 {
-		t.Fatalf("real pin did not choose the contact: %+v", chosen.Focus)
-	}
-	other := read(e.As(e.Rep2, []ids.UUID{e.Team2}, integration.AdminPerms))
-	for _, row := range other.Queue {
-		if row.Source == "relationship_decay" {
-			t.Fatal("reader choice leaked to another seat")
-		}
-	}
+	return quietRelationship{e: e, reader: reader, read: read, contact: contact}
 }

@@ -34,6 +34,8 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -218,8 +220,14 @@ func (w noActivityReminder) Plan(ctx context.Context, ev workflow.Event) (workfl
 	if err != nil {
 		return workflow.Effect{}, err
 	}
-	subject := fmt.Sprintf("Check in — no activity since %s", anchor.Format(time.DateOnly))
-	return anchorReminderTaskEffect(ctx, w.ex, ev, subject, w)
+	day := anchor.Format(time.DateOnly)
+	ctx = systemtext.WithMessage(ctx, &systemtext.Message{Version: 1, Subject: systemtext.Sentence("automation.no_activity", systemtext.Date(day))})
+	return anchorReminderTaskEffect(ctx, w.ex, ev, taskWords{
+		subject: fmt.Sprintf(systemtext.Copy("automation.no_activity", textlang.English), day),
+		why: func(record string) *systemtext.Component {
+			return systemtext.Sentence("automation.why.no_activity", systemtext.Text(record), systemtext.Date(day))
+		},
+	}, w)
 }
 
 func (w noActivityReminder) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
@@ -307,8 +315,18 @@ func (w checkInCadence) Plan(ctx context.Context, ev workflow.Event) (workflow.E
 	if err != nil {
 		return workflow.Effect{}, err
 	}
-	subject := fmt.Sprintf("Time for a check-in — last touched %s", anchor.Format(time.DateOnly))
-	return anchorReminderTaskEffect(ctx, w.ex, ev, subject, w)
+	days, err := checkInCadenceDays(ev.Params)
+	if err != nil {
+		return workflow.Effect{}, err
+	}
+	day := anchor.Format(time.DateOnly)
+	ctx = systemtext.WithMessage(ctx, &systemtext.Message{Version: 1, Subject: systemtext.Sentence("automation.check_in", systemtext.Date(day))})
+	return anchorReminderTaskEffect(ctx, w.ex, ev, taskWords{
+		subject: fmt.Sprintf(systemtext.Copy("automation.check_in", textlang.English), day),
+		why: func(record string) *systemtext.Component {
+			return systemtext.Sentence("automation.why.check_in", systemtext.Text(record), systemtext.Date(day), systemtext.Count(int64(days)))
+		},
+	}, w)
 }
 
 func (w checkInCadence) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
@@ -448,11 +466,18 @@ func (w renewalReminder) Plan(ctx context.Context, ev workflow.Event) (workflow.
 	if err != nil {
 		return workflow.Effect{}, err
 	}
-	subject := fmt.Sprintf("Renewal coming up — %s", anchor.Format(time.DateOnly))
+	day := anchor.Format(time.DateOnly)
+	ctx = systemtext.WithMessage(ctx, &systemtext.Message{Version: 1, Subject: systemtext.Sentence("automation.renewal", systemtext.Date(day))})
+	words := taskWords{
+		subject: fmt.Sprintf(systemtext.Copy("automation.renewal", textlang.English), day),
+		why: func(record string) *systemtext.Component {
+			return systemtext.Sentence("automation.why.renewal", systemtext.Text(record), systemtext.Date(day))
+		},
+	}
 	// Due AT the firing, not three days out like the quiet-account reminders:
 	// the renewal this warns about can be today, so a horizon would file the
 	// task after the date it exists to get ahead of.
-	return ownedTaskEffectNoKey(ctx, w.ex, ev, subject, ev.OccurredAt)
+	return configuredTaskEffect(ctx, w.ex, ev, words, ev.OccurredAt)
 }
 
 func (w renewalReminder) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {

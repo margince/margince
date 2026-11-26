@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/assurancetools"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -270,7 +271,7 @@ func TestAChangeDuringAPassKeepsItsResultOutOfDate(t *testing.T) {
 		e.deliver(t, e.editDeal(t, e.faulted, 3600000))
 		return subjects, err
 	}
-	if _, err := e.scanner(duringRead).Scan(e.passCtx(), e.at, nil); err != nil {
+	if _, err := e.scanner(duringRead).Scan(e.passCtx(), e.at); err != nil {
 		t.Fatalf("the pass: %v", err)
 	}
 	if f := e.freshness(t); f.ChangedDeals != 1 {
@@ -289,8 +290,8 @@ func TestAPassThatMissedASourceKeepsTheReadingOutOfDate(t *testing.T) {
 			offerCoverage(e.at),
 		}
 	}
-	scanner := assurance.NewScanner(e.store, AssuranceSubjects, mailUnread, AssuranceConfig())
-	result, err := scanner.Scan(e.passCtx(), e.at.Add(time.Minute), nil)
+	scanner := assurance.NewScanner(e.store, AssuranceSubjects, mailUnread, assurance.DefaultConfig())
+	result, err := scanner.Scan(e.passCtx(), e.at.Add(time.Minute))
 	if err != nil || result.Status != assurance.StatusIncomplete || result.EligibleDeals == 0 {
 		t.Fatalf("the pass = %+v, %v; want an incomplete run that read the deals", result, err)
 	}
@@ -306,7 +307,7 @@ func TestAFailedPassKeepsTheReadingOutOfDate(t *testing.T) {
 	unreadable := func(context.Context, pgx.Tx, time.Time, []assurance.SourceCoverage) ([]assurance.Subject, error) {
 		return nil, errors.New("the deals could not be read")
 	}
-	result, err := e.scanner(unreadable).Scan(e.passCtx(), e.at.Add(time.Minute), nil)
+	result, err := e.scanner(unreadable).Scan(e.passCtx(), e.at.Add(time.Minute))
 	if err != nil || result.Status != assurance.StatusIncomplete {
 		t.Fatalf("the failed pass = %+v, %v; want an incomplete run", result, err)
 	}
@@ -329,12 +330,12 @@ func TestReadingFreshnessRunsNoPass(t *testing.T) {
 
 func (e *freshnessEnv) scan(t *testing.T) error {
 	t.Helper()
-	_, err := assuranceScanner(e.Pool, e.store).Scan(e.passCtx(), e.at, nil)
+	_, err := AssuranceScanner(e.Pool, e.store).Scan(e.passCtx(), e.at)
 	return err
 }
 
 func (e *freshnessEnv) scanner(subjects assurance.SubjectsFunc) *assurance.Scanner {
-	return assurance.NewScanner(e.store, subjects, AssuranceCoverage, AssuranceConfig())
+	return assurance.NewScanner(e.store, subjects, AssuranceCoverage, assurance.DefaultConfig())
 }
 
 func (e *freshnessEnv) passCtx() context.Context {
@@ -374,7 +375,7 @@ func TestTheToolMarksAnEditedDealsFindingsOutOfDate(t *testing.T) {
 	e := setupFreshness(t)
 	e.deliver(t, e.editDeal(t, e.faulted, 3900000))
 
-	raw, err := inputChecksToolReader(e.Pool)(e.Admin(), agents.InputChecksArgs{})
+	raw, err := assurancetools.InputChecksReader(assurance.NewStore(InstallationDB(e.Pool)), AssuranceExceptionsIn)(e.Admin(), agents.InputChecksArgs{})
 	if err != nil {
 		t.Fatalf("list_input_checks: %v", err)
 	}

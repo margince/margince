@@ -1,13 +1,23 @@
-import { loadLocale } from "./src/i18n/catalogs";
 import { afterEach, beforeEach, vi } from "vitest";
 import { restoreClipboardStubs } from "./src/design-system/clipboard-testing";
 import { disarmHoverIntent } from "./src/design-system/hoverintent-testing";
+import { loadLocale } from "./src/i18n/catalogs";
+import { settleFirstScreen } from "./src/lib/journeymarks";
 import { forgetListAddresses } from "./src/lib/listreturn";
 import { fetchTheNetwork } from "./src/testing/no-network";
-import { takeUnroutedSessionProbes } from "./src/testing/unrouted-session";
+import {
+  quietEmptyListAnswers,
+  takeEmptyListAnswers,
+  takeUnroutedSessionProbes,
+} from "./src/testing/unrouted-session";
 import { ASYNC_UTIL_TIMEOUT_MS } from "./vitest.budget";
 
 await Promise.all([loadLocale("en"), loadLocale("de"), loadLocale("vi")]);
+
+quietEmptyListAnswers();
+
+// A test renders one surface at a time; none waits on Home's first paint.
+settleFirstScreen();
 
 // Every waiter that states no timeout gets the one per-waiter budget
 // vitest.budget.ts derives. vitest has no setting for `vi.waitFor`'s default, so
@@ -165,6 +175,19 @@ if (typeof window !== "undefined") {
     } as unknown as typeof window.ResizeObserver;
   }
 
+  // Neither test DOM has the popover methods. A floating layer calls
+  // showPopover() to reach the top layer, which a test DOM never paints, so
+  // doing nothing is the faithful stand-in.
+  if (!window.HTMLElement.prototype.showPopover) {
+    window.HTMLElement.prototype.showPopover = () => {};
+    window.HTMLElement.prototype.hidePopover = () => {};
+  }
+  // jsdom's own sheet hides each [popover] the no-op above never opens, and
+  // outranks a plain author rule. base.css shows a mounted one, so this wins.
+  const popoverShown = document.createElement("style");
+  popoverShown.textContent = "[popover]{display:block !important}";
+  document.head.append(popoverShown);
+
   // The Margince Core draws its liquid on a WebGL canvas; jsdom has no GL
   // context. Returning null is the same signal a browser without WebGL gives,
   // and the Core has a REQUIRED CSS rendering of every state for exactly that
@@ -260,6 +283,19 @@ globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
 // any suite that imports it, and a guard that skips where it thinks the defect
 // cannot be is how a census stops seeing its subject.
 //
+// The guessed routes are cleared before each case. They print only for a
+// failing case, after every afterEach, so a throwing hook cannot leak them.
+beforeEach(({ onTestFailed }) => {
+  takeEmptyListAnswers();
+  onTestFailed(() => {
+    const answered = takeEmptyListAnswers();
+    if (answered.length === 0) return;
+    console.error(
+      `the fetch stub answered ${answered.join(", ")} with an empty list because no route was given; if the failure reads a body that is not a list, route it.`,
+    );
+  });
+});
+
 // Read AFTER the case rather than watched during it, because the probe can fire
 // from a render the case kicked off and never awaited — which is exactly the
 // case that would otherwise pass.

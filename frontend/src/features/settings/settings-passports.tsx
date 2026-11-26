@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { PassportAreasDrawer } from "../../components/passport-areas";
 import { usePassportRevoke } from "../../components/passport-revoke";
@@ -28,7 +30,8 @@ import { QueryStates } from "../../design-system/querystates";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useEndedRows } from "../../lib/ended-rows";
-import { usePassports } from "../../lib/passports.queries";
+import { passportName, usePassports } from "../../lib/passports.queries";
+import { unwrap } from "../../lib/problem";
 import {
   PassportUsageLine,
   usePassportUsageDetail,
@@ -84,6 +87,18 @@ export function PassportCard() {
     focusAfter: passportAnchor,
     onRevoked: (id) => keep(id),
   });
+  // A revoked passport a chat app minted still refuses its chat user. Releasing
+  // it lets that user's next call mint a fresh passport.
+  const allowAgain = useMutation({
+    mutationFn: async (id: string) => {
+      unwrap(
+        await api.DELETE("/passports/{id}/app-binding", {
+          params: { path: { id } },
+        }),
+      );
+    },
+    onSuccess: () => list.refetch(),
+  });
 
   return (
     <Panel
@@ -104,6 +119,7 @@ export function PassportCard() {
           passports={shown}
           reachable={reachable}
           onRevoke={revoke.ask}
+          onAllowAgain={(id) => allowAgain.mutate(id)}
           onChangeAreas={setChangingAreas}
         />
       ) : list.isSuccess && hidden.length > 0 ? null : (
@@ -139,7 +155,7 @@ export function PassportCard() {
           key={changingAreas.id}
           subject={{
             id: changingAreas.id,
-            name: changingAreas.label,
+            name: passportName(changingAreas) ?? t("settings.passportUnnamed"),
             areas: changingAreas.areas,
           }}
           reachable={reachable}
@@ -155,11 +171,13 @@ function PassportTable({
   passports,
   reachable,
   onRevoke,
+  onAllowAgain,
   onChangeAreas,
 }: Readonly<{
   passports: readonly PassportSummary[];
   reachable: readonly WorkArea[];
-  onRevoke: (id: string) => void;
+  onRevoke: (id: string, name: string) => void;
+  onAllowAgain: (id: string) => void;
   onChangeAreas: (passport: PassportSummary) => void;
 }>) {
   const t = useT();
@@ -168,9 +186,9 @@ function PassportTable({
   // the server, and the drawer says so.
   const [now] = useState(() => Date.now());
   const areas = offersWorkAreas(reachable);
-  const usageDetail = usePassportUsageDetail<PassportSummary>(
-    (passport) => passport.label,
-  );
+  const nameOf = (passport: PassportSummary) =>
+    passportName(passport) ?? t("settings.passportUnnamed");
+  const usageDetail = usePassportUsageDetail<PassportSummary>(nameOf);
   const columns: DataTableColumn<PassportSummary>[] = [
     {
       key: "name",
@@ -179,7 +197,11 @@ function PassportTable({
       fold: "title",
       render: (passport) => (
         <span className="agents-name-usage">
-          <PassportName passport={passport} caption={dates.caption(passport)} />
+          <PassportName
+            passport={passport}
+            name={nameOf(passport)}
+            caption={dates.caption(passport)}
+          />
           <PassportUsageLine passport={passport} />
         </span>
       ),
@@ -227,15 +249,28 @@ function PassportTable({
       align: "end",
       fold: "end",
       render: (passport) =>
-        passport.revoked_at == null && (
+        passport.revoked_at != null ? (
+          passport.app_bound && (
+            <span className="cell-actions">
+              <Button
+                aria-label={t("settings.allowAgainNamed", {
+                  name: nameOf(passport),
+                })}
+                onClick={() => onAllowAgain(passport.id)}
+              >
+                {t("settings.allowAgain")}
+              </Button>
+            </span>
+          )
+        ) : (
           <span className="cell-actions">
             <OverflowMenu
-              label={t("table.rowActions", { name: passport.label })}
+              label={t("table.rowActions", { name: nameOf(passport) })}
             >
               {areas && isLive(passport, now) && (
                 <Button
                   aria-label={t("passportAreas.openNamed", {
-                    name: passport.label,
+                    name: nameOf(passport),
                   })}
                   aria-haspopup="dialog"
                   onClick={() => onChangeAreas(passport)}
@@ -245,9 +280,11 @@ function PassportTable({
               )}
               <Button
                 variant="danger"
-                aria-label={t("settings.revokeNamed", { name: passport.label })}
+                aria-label={t("settings.revokeNamed", {
+                  name: nameOf(passport),
+                })}
                 aria-haspopup="dialog"
-                onClick={() => onRevoke(passport.id)}
+                onClick={() => onRevoke(passport.id, nameOf(passport))}
               >
                 {t("settings.revoke")}
               </Button>
@@ -273,8 +310,9 @@ function PassportTable({
 // revoked passport is struck, never dimmed, so it keeps the AA contrast floor.
 function PassportName({
   passport,
+  name,
   caption,
-}: Readonly<{ passport: PassportSummary; caption: string }>) {
+}: Readonly<{ passport: PassportSummary; name: string; caption: string }>) {
   const t = useT();
   const revoked = passport.revoked_at != null;
   return (
@@ -284,9 +322,9 @@ function PassportName({
           className={
             revoked ? "agents-name-text agents-ended" : "agents-name-text"
           }
-          title={passport.label}
+          title={name}
         >
-          {passport.label}
+          {name}
         </span>
         {revoked && <Badge tone="danger">{t("settings.revoked")}</Badge>}
       </span>

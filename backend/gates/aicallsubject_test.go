@@ -61,9 +61,21 @@ var namesItsSubject = map[string]subjectClaim{
 		"internal/compose/capturedealtopic.go",
 		"the captured mail whose subject and body are the request",
 	},
-	"internal/compose/readerrendering/service.go:Render": {
+	"internal/compose/readerrendering/service.go:RenderPart": {
 		"internal/compose/readerrendering/service.go",
 		"the activity whose subject and body are the request",
+	},
+	"internal/compose/rewrite/service.go:Rewrite": {
+		"internal/compose/rewrite/service.go",
+		"the record the words on screen are written on, which every rewrite names; the rep's words are the request",
+	},
+	"internal/compose/chattasks/reader.go:Settle": {
+		"internal/compose/chattasks/reader.go",
+		"the filed chat message whose text is the request, beside the open tasks on its record",
+	},
+	"internal/compose/chatsync/summary.go:summarise": {
+		"internal/compose/chatsync/summary.go",
+		"the deal or project whose linked channel's talk is the request",
 	},
 	"internal/compose/transcriptpropose.go:ask": {
 		"internal/compose/transcriptproposerun.go",
@@ -150,6 +162,7 @@ var namesItsSubject = map[string]subjectClaim{
 // namesNoSubject: the call is about no single record, and the reason is what
 // stops the next reader adding one.
 var namesNoSubject = gatekit.Waive(map[string]string{
+	"internal/compose/searchdata.go:answerSearchData":           "a typed question and reader catalogs; no CRM record is loaded before planning, so there is no single record to cite",
 	"internal/compose/captureclassify.go:ask":                   "one call labels a BATCH of unread messages. The batch is the unit the economics are built on, and a citation naming one of its rows would be wrong about the others",
 	"internal/compose/owedclassify.go:ask":                      "one call judges many messages at once, as the classifier above does; a citation naming one row would be wrong about the rest",
 	"internal/compose/tagsuggestpass.go:ask":                    "one call reads a batch of captured items against the tag vocabulary; a citation naming one item would be wrong about the rest",
@@ -160,6 +173,7 @@ var namesNoSubject = gatekit.Waive(map[string]string{
 	"internal/compose/fxrefresh.go:extract":                     "a published exchange-rate page. No record, and no personal data to erase",
 	"internal/compose/salesassessmentservice.go:write":          "a report's measured figures over a population, which is many records by construction, and no_payload keeps the call out of capture",
 	"internal/compose/reportsetupservice.go:ProposeSetup":       "a description the reader typed and the catalog they may choose from; no record is read, so there is none to cite",
+	"internal/compose/goalproposal/service.go:propose":          "monthly sums of one seller's closed revenue, which is many deals by construction; the text carries no name, id or address",
 	"internal/compose/filterproposal.go:ProposeFilter":          "a sentence the reader typed and the workspace's filter vocabulary; no record is read, so there is none to cite",
 	"internal/compose/sitereaddebug.go:CompleteValidated":       "a recording WRAPPER rather than a site: it forwards the caller's context unchanged, so whatever subject the caller named travels through it",
 	"internal/compose/sitereaddebug.go:debugTriage":             "the operator debug lane, run against a URL before any record is chosen",

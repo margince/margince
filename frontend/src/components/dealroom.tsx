@@ -27,6 +27,13 @@ export const FINISHED_STATES: ReadonlySet<DealRoomState> = new Set([
   "archived",
 ]);
 
+// Whether the room still takes an end date. An expired room does: its end has
+// passed, and a later end makes it read its stored state again. Closed and
+// archived rooms take none.
+export function takesEndDate(state: DealRoomState): boolean {
+  return state === "expired" || !FINISHED_STATES.has(state);
+}
+
 // Each room state's chip label. Keyed by the contract's own closed union rather
 // than by string, so a state the contract adds fails the typecheck here — a
 // Record<string, …> would compile and render the bare machine word to a rep.

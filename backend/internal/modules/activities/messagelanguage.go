@@ -29,7 +29,7 @@ func languageInsertFragment(in LogActivityInput, base []any) (col, holder string
 // email keeps the label its capture gave it.
 func stampsLanguage(kind string) bool {
 	switch crmcontracts.ActivityKind(kind) {
-	case crmcontracts.ActivityKindNote, crmcontracts.ActivityKindMeeting, crmcontracts.ActivityKindCall:
+	case crmcontracts.ActivityKindNote, crmcontracts.ActivityKindMeeting, crmcontracts.ActivityKindCall, crmcontracts.ActivityKindTask:
 		return true
 	default:
 		return false

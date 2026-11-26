@@ -81,7 +81,7 @@ describe("the finance card is absent only where FIN-AC-3 says so", () => {
       // loading skeleton too, so asserting on it would pass before the read
       // lands — and would then prove only that the lifecycle set said no,
       // which is the set's own truth table restated.
-      expect(await screen.findByText("€186,420.00")).toBeTruthy();
+      expect(await screen.findByText("€186,420")).toBeTruthy();
     },
   );
 
@@ -90,7 +90,7 @@ describe("the finance card is absent only where FIN-AC-3 says so", () => {
   it("renders when the lifecycle is not known", async () => {
     stub();
     render(<CompanyFinanceCard companyId="o-1" />);
-    expect(await screen.findByText("€186,420.00")).toBeTruthy();
+    expect(await screen.findByText("€186,420")).toBeTruthy();
   });
 
   // FIN-AC-3's second half: a former customer's figures are history, and the
@@ -115,7 +115,7 @@ describe("the finance card is absent only where FIN-AC-3 says so", () => {
   it("leaves a current customer's card unqualified", async () => {
     stub();
     render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
-    expect(await screen.findByText("€186,420.00")).toBeTruthy();
+    expect(await screen.findByText("€186,420")).toBeTruthy();
     expect(screen.getByText("Finance")).toBeTruthy();
     expect(screen.queryByText("Finance · historical")).toBeNull();
   });
@@ -156,6 +156,41 @@ describe("how late an invoice was, counted in whole days", () => {
   });
 });
 
+describe("an invoice opens as the source's own PDF", () => {
+  const invoice: FinanceInvoice = {
+    id: "01a1c3c9-d637-773d-b73d-6a84193bb1ea",
+    number: "INV-9",
+    issued_at: "2026-07-01",
+    status: "open",
+    currency: "EUR",
+    gross_minor: 100_000,
+    open_minor: 100_000,
+  };
+
+  it("links the number to the PDF when the source serves documents", async () => {
+    stub({ ...CONNECTED, recent_invoices: [invoice], invoice_documents: true });
+    render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
+    const link = await screen.findByRole("link", {
+      name: "Open invoice INV-9 as PDF",
+    });
+    expect(link.getAttribute("href")).toBe(
+      `/v1/finance/invoices/${invoice.id}/pdf`,
+    );
+    expect(link.getAttribute("target")).toBe("_blank");
+  });
+
+  it("shows the number alone when the source serves none", async () => {
+    stub({
+      ...CONNECTED,
+      recent_invoices: [invoice],
+      invoice_documents: false,
+    });
+    render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
+    expect(await screen.findByText("INV-9")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /INV-9/ })).toBeNull();
+  });
+});
+
 describe("the two readings the card draws as shapes", () => {
   function withSummary(patch: Partial<FinanceSummary>) {
     stub({ ...CONNECTED, ...patch });
@@ -184,8 +219,8 @@ describe("the two readings the card draws as shapes", () => {
       overdue: { amount_minor: 100_000, currency: "EUR" },
     });
     expect(await screen.findByText("25% of open balance.")).toBeTruthy();
-    expect(screen.getByText("Overdue €1,000.00")).toBeTruthy();
-    expect(screen.getByText("Open €4,000.00")).toBeTruthy();
+    expect(screen.getByText("Overdue €1,000")).toBeTruthy();
+    expect(screen.getByText("Open €4,000")).toBeTruthy();
     const meter = screen.getByLabelText("Overdue share of the open balance");
     expect(meter.getAttribute("aria-valuenow")).toBe("100000");
     expect(meter.getAttribute("aria-valuemax")).toBe("400000");
@@ -209,7 +244,7 @@ describe("the two readings the card draws as shapes", () => {
       open_balance: { amount_minor: 400_000, currency: "EUR" },
       overdue: { amount_minor: 100_000, currency: "USD" },
     });
-    expect(await screen.findByText("€186,420.00")).toBeTruthy();
+    expect(await screen.findByText("€186,420")).toBeTruthy();
     expect(
       screen.queryByLabelText("Overdue share of the open balance"),
     ).toBeNull();
@@ -223,11 +258,42 @@ describe("the two readings the card draws as shapes", () => {
       open_balance: { amount_minor: 100_000, currency: "EUR" },
       overdue: { amount_minor: 115_000, currency: "EUR" },
     });
-    expect(await screen.findByText("€1,150.00")).toBeTruthy();
+    expect(await screen.findByText("€1,150")).toBeTruthy();
     expect(screen.queryByText(/% of everything open/)).toBeNull();
     expect(
       screen.queryByLabelText("Overdue share of the open balance"),
     ).toBeNull();
+  });
+
+  it("draws overdue money in the danger tone, and a zero in the plain one", async () => {
+    withSummary({
+      open_balance: { amount_minor: 400_000, currency: "EUR" },
+      overdue: { amount_minor: 100_000, currency: "EUR" },
+      last_synced_at: "2026-11-02T09:00:00Z",
+    });
+    const late = await screen.findByText("€1,000");
+    expect(late.classList.contains("fin-amount-hero")).toBe(true);
+    cleanup();
+    withSummary({
+      open_balance: { amount_minor: 400_000, currency: "EUR" },
+      overdue: { amount_minor: 0, currency: "EUR" },
+    });
+    const none = await screen.findByText("€0");
+    expect(none.classList.contains("fin-amount")).toBe(true);
+    expect(none.classList.contains("fin-amount-hero")).toBe(false);
+  });
+
+  it("draws overdue money from a stale sync in the plain tone", async () => {
+    // The panel dates it already; leading with it at full size would call a
+    // figure that may be paid since a current debt.
+    withSummary({
+      state: "stale",
+      open_balance: { amount_minor: 400_000, currency: "EUR" },
+      overdue: { amount_minor: 100_000, currency: "EUR" },
+      last_synced_at: "2026-11-02T09:00:00Z",
+    });
+    const late = await screen.findByText("€1,000");
+    expect(late.classList.contains("fin-amount-hero")).toBe(false);
   });
 
   it("draws no bar when nothing is open to be a share of", async () => {
@@ -235,7 +301,7 @@ describe("the two readings the card draws as shapes", () => {
       open_balance: { amount_minor: 0, currency: "EUR" },
       overdue: { amount_minor: 0, currency: "EUR" },
     });
-    expect(await screen.findByText("€186,420.00")).toBeTruthy();
+    expect(await screen.findByText("€186,420")).toBeTruthy();
     expect(
       screen.queryByLabelText("Overdue share of the open balance"),
     ).toBeNull();
@@ -249,7 +315,7 @@ describe("the card offers no way to connect a source it cannot connect", () => {
     const { provider: _unnamed, ...figuresWithoutSource } = CONNECTED;
     stub(figuresWithoutSource);
     render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
-    expect(await screen.findByText("€186,420.00")).toBeTruthy();
+    expect(await screen.findByText("€186,420")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /connect/i })).toBeNull();
   });
 
@@ -260,5 +326,29 @@ describe("the card offers no way to connect a source it cannot connect", () => {
       await screen.findByText(/No accounting system connected/),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: /connect/i })).toBeNull();
+  });
+});
+
+describe("the card names its accounting source the way a reader knows it", () => {
+  it("says the source's name, never its key", async () => {
+    stub({
+      ...CONNECTED,
+      provider_name: "Demo accounting",
+      last_synced_at: "2026-11-02T09:00:00Z",
+    });
+    render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
+    expect(
+      await screen.findByText(/^From Demo accounting · synced/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/offline_demo/)).toBeNull();
+  });
+
+  it("names no source when the source declares no name", async () => {
+    stub(CONNECTED);
+    render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
+    expect(
+      await screen.findByText("From your accounting system · not yet synced"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/offline_demo/)).toBeNull();
   });
 });

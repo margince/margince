@@ -5,9 +5,7 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"hash"
 	"maps"
 	"slices"
 	"strings"
@@ -18,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -25,9 +24,7 @@ import (
 // customDimension is one reportable custom field as a report may group and
 // filter by it.
 type customDimension struct {
-	label   string
-	typ     string
-	options []string
+	fieldcatalog.ReportableColumn
 	// company says the field is the deal's company's, so a count over it owes
 	// the company's row scope as well as the deal's.
 	company bool
@@ -36,9 +33,8 @@ type customDimension struct {
 // describe names the field in the vocabulary: its label, and the value shape
 // and choices a builder offers for it.
 func (d customDimension) describe(field analyticsquery.Field) analyticsquery.Field {
-	field.Label = d.label
-	field.Options = d.options
-	if d.typ == fieldcatalog.TypeBoolean {
+	field.Label, field.Options, field.OptionLabels = d.Label, d.Options, d.OptionLabels
+	if d.Type == fieldcatalog.TypeBoolean {
 		field.Shape = analyticsquery.ShapeBoolean
 	}
 	return field
@@ -82,6 +78,23 @@ func analyticsCatalog(ctx context.Context, tx pgx.Tx) (map[string]reportSpec, er
 	return out, nil
 }
 
+// dimensionLinkType is the name a report groups deals by their typed links under.
+const dimensionLinkType = "link_type"
+
+// init gives every deal population the link types a deal holds as a dimension
+// and a filter, because a report's dimension is always one too.
+// The expression reads only links to other live deals, so the deal read right
+// the report already requires covers both ends.
+func init() {
+	for _, spec := range prebuiltReports {
+		if spec.entity == datasource.EntityDeal && spec.table == tableDeal {
+			expr := storekit.DealLinkTypesExpr(colRowID)
+			spec.dimensions[dimensionLinkType] = expr
+			spec.filters[dimensionLinkType] = expr
+		}
+	}
+}
+
 // withCustomDimensions copies a deal spec and adds each column as a dimension
 // and a filter. The maps are copied: every request shares the prebuilt catalog.
 //
@@ -95,7 +108,7 @@ func withCustomDimensions(spec reportSpec, cols reportableColumns) reportSpec {
 	add := func(name, expr string, col fieldcatalog.ReportableColumn, company bool) {
 		spec.dimensions[name] = expr
 		spec.filters[name] = expr
-		spec.customFields[expr] = customDimension{label: col.Label, typ: col.Type, options: col.Options, company: company}
+		spec.customFields[expr] = customDimension{ReportableColumn: col, company: company}
 	}
 	for _, col := range cols.deal {
 		add(col.Name, "t."+pgx.Identifier{col.Name}.Sanitize(), col, false)
@@ -252,63 +265,11 @@ func analyticsCustomFieldsOf(entity analyticsquery.Entity) *[]crmcontracts.Analy
 		}
 		out = append(out, crmcontracts.AnalyticsCustomField{
 			Name: name, Label: field.Label, Type: typ, Options: options, Object: object,
-			Records: coverage.Records, WithValue: coverage.WithValue,
+			Records: coverage.Records, WithValue: coverage.WithValue, OptionLabels: &field.OptionLabels,
 		})
 	}
 	if out == nil {
 		return nil
 	}
 	return &out
-}
-
-// describeCustomFields names each custom dimension for a model, which has no
-// other way to learn what an installation's cf_ column means. An administrator
-// typed the labels and choices, so each is JSON-quoted. A comma or a line break
-// inside one then cannot read as a second choice or a new line.
-func describeCustomFields(out *strings.Builder, entity analyticsquery.Entity) {
-	header := false
-	for _, name := range entity.FieldNames(analyticsquery.KindDimension) {
-		field := entity.Fields[name]
-		if field.Label == "" {
-			continue
-		}
-		if !header {
-			out.WriteString("  custom fields, each with the label and choices an administrator gave it:\n")
-			header = true
-		}
-		choices := field.Options
-		if field.Shape == analyticsquery.ShapeBoolean {
-			choices = []string{jsonTrue, jsonFalse}
-		}
-		fmt.Fprintf(out, "    %s %s: %s", name, jsonText(field.Label), jsonText(choices))
-		if strings.HasPrefix(name, analyticsquery.CompanyCustomFieldPrefix) {
-			out.WriteString(", the deal's company's field")
-		}
-		if field.Coverage != nil {
-			fmt.Fprintf(out, ", held by %d of %d live deals you can read", field.Coverage.WithValue, field.Coverage.Records)
-		}
-		out.WriteString("\n")
-	}
-}
-
-// writeCustomMeaning adds a custom dimension's label and choices to the schema
-// digest, so a renamed field or changed choice moves the version. A built-in
-// field writes nothing, which keeps every existing version as it was.
-func writeCustomMeaning(sum hash.Hash, field analyticsquery.Field) {
-	if field.Label == "" {
-		return
-	}
-	sum.Write([]byte(jsonText(field.Label) + jsonText(field.Options)))
-}
-
-// jsonText is v as JSON, with < > & left as typed, since a model reads it and
-// no browser does. A string or a slice of strings always encodes.
-func jsonText[T string | []string](v T) string {
-	var out strings.Builder
-	enc := json.NewEncoder(&out)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(v); err != nil {
-		return ""
-	}
-	return strings.TrimSuffix(out.String(), "\n")
 }

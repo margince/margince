@@ -1,21 +1,28 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Suspense, useState } from "react";
+import { type ReactNode, Suspense, useState } from "react";
 
 import { lazy } from "../i18n/lazy";
 import { AuthProbeError, type AuthProbeKind } from "../lib/session";
 import { AuthSplash } from "./bootsplash";
+import { TrialEndedScreen } from "./trialended";
 
 // Split off: the setup carries the QR encoder, which the sign-in surface must not download.
-const ForcedMfaScreen = lazy(async () => ({
-  default: (await import("../features/sign-in/forcedmfa")).ForcedMfaScreen,
-}));
+const ForcedMfaScreen = lazy(
+  async () => ({
+    default: (await import("../features/sign-in/forcedmfa")).ForcedMfaScreen,
+  }),
+  "essential",
+);
 
-const ForcedPasswordChangeScreen = lazy(async () => ({
-  default: (await import("../features/sign-in/forcedpassword"))
-    .ForcedPasswordChangeScreen,
-}));
+const ForcedPasswordChangeScreen = lazy(
+  async () => ({
+    default: (await import("../features/sign-in/forcedpassword"))
+      .ForcedPasswordChangeScreen,
+  }),
+  "essential",
+);
 
 type ConfinedKind = Extract<
   AuthProbeKind,
@@ -83,6 +90,32 @@ export function useConfinement(
     setHeld(null);
   };
   return kind === null ? null : { kind, onResolved };
+}
+
+/**
+ * The one screen a signed-in seat is held to, or null when it reaches the app.
+ * First an account confined until it does one thing. Then a locked
+ * installation, by an ended trial or a lapsed license: no screen can do its
+ * work, and this one says why.
+ */
+export function lockScreen(
+  confinement: ReturnType<typeof useConfinement>,
+  refusal: unknown,
+  me: Readonly<{ trial_ended?: boolean; license_lapsed?: boolean }> | undefined,
+): ReactNode {
+  if (confinement) {
+    return <ConfinedAccountScreen {...confinement} />;
+  }
+  if (refusal !== null) {
+    return null;
+  }
+  if (me?.license_lapsed === true) {
+    return <TrialEndedScreen reason="license" />;
+  }
+  if (me?.trial_ended === true) {
+    return <TrialEndedScreen reason="trial" />;
+  }
+  return null;
 }
 
 /** The boundary's answer to an account confined until it does one thing. */

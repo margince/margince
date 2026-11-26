@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -26,17 +27,17 @@ func (s *Sink) meetingOfOwnEventID(ctx context.Context, tx pgx.Tx, key connector
 	if may, err := s.identityMayCancel(ctx, tx, key); err != nil || !may {
 		return ids.ActivityID{}, false, err
 	}
-	keys := providerMessageKeysSQL("$1", "$2", "$3")
+	keys := storekit.ProviderMessageKeysSQL("$1", "$2", "$4", "$3")
 	var own ids.ActivityID
 	err := tx.QueryRow(ctx, `SELECT a.id FROM activity a JOIN capture_import i ON i.activity_id=a.id AND i.user_id=$1
  WHERE i.provider_message_ids @> `+keys+` AND cardinality(`+keys+`) > 0
  AND a.kind='meeting' AND a.archived_at IS NULL AND a.restricted_at IS NULL
- ORDER BY a.id LIMIT 1 FOR UPDATE OF a`, actorUserID(ctx), key.SourceSystem, key.SourceID).Scan(&own)
+ ORDER BY a.id LIMIT 1`, actorUserID(ctx), key.SourceSystem, key.SourceID, runConnection(ctx)).Scan(&own)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.ActivityID{}, false, nil
 	}
 	if err != nil {
 		return ids.ActivityID{}, false, fmt.Errorf("capture: finding the meeting a removed calendar event was delivered as: %w", err)
 	}
-	return own, true, nil
+	return lockedMeetingForSeat(ctx, tx, own)
 }

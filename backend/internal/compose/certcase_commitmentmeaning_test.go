@@ -14,7 +14,7 @@ import (
 func TestTranscriptCertificationGradesCompletedWorkAsNonAction(t *testing.T) {
 	c := transcriptProposeCase{lines: []string{"Mira: I sent the revised scope."}, expected: []transcriptProposeExpectation{{Line: 1, Optional: true, Meaning: &commitmentMeaning{State: "completed", DeadlinePrecision: "none"}}}}
 	for _, state := range []string{"completed", "open", "unclear", "request"} {
-		trace := aitasks.Trace{Output: fmt.Sprintf(`{"proposals":[{"summary":"Send scope","owner":"Mira","promiser_ref":"","due_date":"","source_lines":[1],"confidence":0.99,"commitment":{"state":%q,"condition":"","deadline_precision":"none","deadline_quote":""}}]}`, state)}
+		trace := aitasks.Trace{Output: fmt.Sprintf(`{"proposals":[{"summary":"Send scope","owner":"Mira","promiser_ref":"","due_date":"","source_lines":[1],"confidence":0.99,"commitment":{"state":%q,"condition":"","deadline_precision":"none","deadline_quote":""}}],"meeting_summary":{"key_points":[{"text":"The call","source_lines":[1]}],"next_steps":[]}}`, state)}
 		outcome := c.Evaluate(trace)
 		if (outcome.Result == aitasks.OutcomeAccepted) != (state == "completed") {
 			t.Fatalf("%s: %+v", state, outcome)
@@ -113,7 +113,7 @@ func TestMeaningQuotesKeepRequiredEvidenceWithinTheirSourceWords(t *testing.T) {
 func TestTranscriptCertificationAcceptsQuoteExpansionButNotInventedWords(t *testing.T) {
 	c := transcriptProposeCase{lines: []string{"Mira: If the budget is approved, I will send the draft during next week."}, expected: []transcriptProposeExpectation{{Line: 1, Optional: true, Meaning: &commitmentMeaning{State: "conditional", Condition: "the budget is approved", DeadlinePrecision: "range", DeadlineQuote: "next week"}}}}
 	for _, condition := range []string{"If the budget is approved", "When the budget is approved"} {
-		trace := aitasks.Trace{Output: fmt.Sprintf(`{"proposals":[{"summary":"Send draft","owner":"Mira","promiser_ref":"","due_date":"","source_lines":[1],"confidence":0.9,"commitment":{"state":"conditional","condition":%q,"deadline_precision":"range","deadline_quote":"during next week"}}]}`, condition)}
+		trace := aitasks.Trace{Output: fmt.Sprintf(`{"proposals":[{"summary":"Send draft","owner":"Mira","promiser_ref":"","due_date":"","source_lines":[1],"confidence":0.9,"commitment":{"state":"conditional","condition":%q,"deadline_precision":"range","deadline_quote":"during next week"}}],"meeting_summary":{"key_points":[{"text":"The call","source_lines":[1]}],"next_steps":[]}}`, condition)}
 		outcome := c.Evaluate(trace)
 		if (outcome.Result == aitasks.OutcomeAccepted) != (condition == "If the budget is approved") {
 			t.Fatalf("%s: %+v", condition, outcome)

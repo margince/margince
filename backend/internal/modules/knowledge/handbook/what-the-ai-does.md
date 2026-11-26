@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/design-system/provenance.tsx frontend/src/design-system/readerrendering.tsx backend/internal/compose/readerrendering frontend/src/app/ai-activity.ts frontend/src/app/agentrail.tsx frontend/src/features/voice-knowledge/documentextraction.tsx backend/internal/modules/aiactivity backend/internal/modules/ai backend/internal/platform/providerhealthstore backend/internal/compose/projecthealthscan.go -->
+<!-- describes: frontend/src/components/logactivity.polish.tsx backend/internal/compose/rewrite frontend/src/design-system/provenance.tsx frontend/src/design-system/readerrendering.tsx backend/internal/compose/readerrendering frontend/src/app/ai-activity.ts frontend/src/app/agentrail.tsx frontend/src/features/voice-knowledge/documentextraction.tsx backend/internal/modules/aiactivity backend/internal/modules/ai backend/internal/platform/providerhealthstore backend/internal/compose/projecthealthscan.go frontend/src/design-system/transcriptread.tsx backend/internal/compose/transcriptsummary -->
 # What the AI does, and what it does not
 
 What the AI makes for you, and how to read it. The rules that limit it (the
@@ -11,20 +11,38 @@ two tiers, what waits for a human, passports and allowances) are on
 ### What does the AI do in Margince?
 The AI in Margince drafts emails, reads deal documents for deal fields, and fills in company records from the web. It answers questions from a document set you filed, and ranks your Morning brief during the night.
 
-Everything it suggests carries its evidence. Changes to your records either wait as an approval, or appear as an automatic change. You can turn off each kind of automatic change in **Settings → AI assistants**, on the **Agent rules** tab under **For developers**.
+Everything it suggests carries its evidence. Changes to your records either wait as an approval, or appear as an automatic change. You can turn off each kind of automatic change in **Settings → AI assistants**, under **Your agent**.
 Also called: AI features, assistant, copilot, what can Margince AI do.
 
 ### Can the AI send email on my behalf?
-Inside the app, no: **Draft email** in the email composer writes a draft, and only you press **Send**. An outside agent you connected can send as you, at once, if it holds the **Send messages** permission. The screen where you allow that says it "sends messages as you, without asking first".
+Inside the app, no: **Draft email** in the email composer writes a draft, and only you press **Send**. An outside agent with **Send messages** permission can carry out your request to send without another click in Margince. If you did not ask it to send, it must ask you first. Permission alone does not approve a message; Margince cannot read the outside conversation. When Margince runs on its own, it stages sends for a human decision.
 
 Every send still needs recorded consent for its purpose. The Morning brief agent that runs during the night can never send.
 Also called: auto-send, send without asking, AI emails customers.
+
+### What happens when a deal has no next step?
+Each night, Margince checks open deals that had a call, email or meeting in the last two days. A deal with no open task and no booked meeting gets a follow-up task on its owner's list, due in 3 days. When the customer's email came last and Margince can write the reply, it drafts one instead. That draft waits for your approval.
+
+A task you completed or archived does not come back for the same conversation. A deal nobody owns, or whose owner has left, gets no task.
+Also called: overnight follow-up, follow-up task, no next step.
 
 ### How do I draft an email with AI?
 To have Margince draft an email, open the composer from a contact's page and choose **Draft email**. The button on the page reads **Email**, or **Write** where there are several channels. The composer is where you confirm: nothing goes out until you press **Send**.
 
 Check and edit the draft, fill in **Reason for contact** when it asks, then choose **Send**; nothing asks again. The AI never adds a sign-off; you set your signature in **Settings → Account**.
 Also called: AI writer, write a reply, compose with AI.
+
+### Can the AI make a task or note I typed read clearly?
+Yes. In **Log activity** and **Add task**, once you have typed a **Subject** or **Details**, choose **Polish wording**. The AI writes them again so they read clearly. It keeps the language you wrote in, and names, numbers, dates and links stay as they were.
+
+**Undo** brings your own words back until you change the new ones. A saved entry with AI words shows **AI-assisted** in History. With no AI model connected, or on a record whose contact asked that their data not be processed, the button says why. A transcript is never changed.
+Also called: fix my wording, rewrite a note, clean up a task.
+
+### Does the AI write a summary of a meeting transcript?
+Yes. When you log a meeting with a transcript, or choose **Read transcript** on it, the AI writes a short summary onto the meeting. It lists the key points and the next steps, in the language the meeting was held in. Each point names the transcript lines it comes from.
+
+History shows the summary above the transcript, marked **AI-assisted**. The transcript is never changed. If a reading cannot write a summary, the meeting keeps the one it had, and the reading says "No summary was written this time."
+Also called: meeting summary, call summary, meeting notes.
 
 ### How do I get the AI to read a document for deal fields?
 To fill deal fields from a file, open the company's **Documents** tab and file the document on a deal with **Add document**. Choose **A deal**, not **This company**. Then choose **Show extracted fields** on that document, and **Read this file**.
@@ -33,9 +51,17 @@ Margince shows each field it found with the text it read it from. Choose **Accep
 Also called: extract from contract, read a PDF, parse an offer.
 
 ### Can I read a note or an email in my own language?
-Yes. Under a note, email, meeting or call written in another language, choose **Show in my language**. Margince shows what the text says in the language you set for yourself. Names, amounts, dates, links, promises and open questions stay as they were. It is marked as written by AI, and **Show original** brings the original back.
+Yes. Under a task, note, email, meeting or call written in another language, choose **Show in my language**. Margince shows what the text says in the language you set for yourself. Names, amounts, dates, links, promises and open questions stay as they were. It is marked as written by AI, and **Show original** brings the original back.
 
 The button also shows when Margince cannot tell which language a text is in. If the text is already in your language, it says so. Nothing is saved: the version in your language is for you, and nobody else sees it. A text that is too long is refused with that reason; read the original instead.
+
+A task the AI generated can show in your language automatically when it becomes visible. This
+uses the same tool and keeps the original task as it was.
+
+Product-written task text,
+notices and proposal text use your display language when Margince can tell where they came from. Names and
+quoted messages stay as written. Older text without this record keeps its original wording.
+
 Also called: translation, show in English, read in German.
 
 ### Which language does the AI write in?
@@ -78,6 +104,15 @@ out and marked "omitted (stated, but not clearly enough to accept)".
 Note that a document filed on **a deal** can be read for deal fields; one filed
 on **the company** cannot.
 
+**Reading a filed chat against your tasks.** When you file a chat screenshot,
+the AI reads it against your open tasks on that record. It marks a task done, or
+moves it to the day the chat names, only when the chat clearly settles it. The
+change shows in **Done for you** with **Undo**. See
+[Documents and files](documents-and-files.md).
+
+**Saying why.** When an agent changes a field on a record, it must say why. Its
+line in **Done for you** shows that reason as the agent wrote it.
+
 **Filling in a record from the web.** Reading a company's site, matching a
 LinkedIn connection, filling in a new company. Every one of these shows a card
 for you to check, instead of writing right into the record.
@@ -92,8 +127,8 @@ An agent can ask a document set for you if its passport has **Use AI and buy dat
 
 **The brief during the night.** The Morning brief looks at your companies during
 the night and ranks what most needs your first hour. If it found nothing, it
-says so. It runs only if you turned on **Let Margince prepare the Morning brief
-overnight** in **Settings → Connections**. It can read and write but never send.
+says so. It runs only if you turned on **Prepare my Morning brief overnight** in
+**Settings → Account**. It can read and write but never send.
 
 When the night pass has something to say about a ranked deal, it writes it on
 the item itself, beside the rank. Every finding names a deal that is already in
@@ -145,7 +180,7 @@ Where Margince can say who put a value there, it does. The trust marks are:
 - "Source not recorded": when nobody knows where it came from
 
 ## What your agent can set up, and what stays yours
-An agent acting for you can set up pipelines and open stages, custom fields and automations, and change an existing web form. Creating a web form stays yours. It can change price and tax sheets, and your own name, language, hours and voice.
+An agent acting for you can set up pipelines and open stages, custom fields and automations, and create or change a web form. It never sees a web form's secret: choose **Make a new secret** on the form to see one. It can change price and tax sheets, and your own name, language, hours and voice.
 
 It can upload a logo, a vCard or your LinkedIn export. A vCard from your agent fills blanks and replaces nothing a contact already holds. It asks you first where its tool says so. That covers a custom field, a removal, a change to your name and a rule it turns on.
 
@@ -165,8 +200,9 @@ These stay with you, in the app, because they would give it more than you want t
 
 The risk sweep during the night looks only at the open deals you own. Nobody
 sweeps the deals of a colleague who has not turned it on. On a quiet deal it
-writes at most one risk note a night. That note does not count as activity, so
-the deal stays in the list of slipping deals.
+writes at most one risk note a night. The note's text says what the risk is and
+which records show it, and its tag names the agent, not you. That note does not
+count as activity, so the deal stays in the list of slipping deals.
 
 While the AI in Margince works for you, you can see it in the agent panel
 (**Open agent panel**, under **Running now**). These kinds of work show there:
@@ -216,10 +252,11 @@ the evidence behind them. The reasons are how likely a win is, the money, the
 timing, how quickly things move, and how warm the contact is.
 
 The **AI** group in Settings holds four pages: **AI usage**, **AI models**,
-**AI call log** and **Automations**.
+**AI call log**. **Automations** is in the **Data** group.
 
-In **Settings → AI assistants** you connect your AI tool. Under **For developers**
-there, you create your own passports on **API keys** and switch **Automatic changes** on or off on **Agent rules**.
+In **Settings → AI assistants** you connect your AI tool, and switch **Automatic changes**
+on or off under **Your agent**. Under **For developers** there, you create your own
+passports on **Passports (API keys)** and read the **Agent rules**.
 
 The full record of actions is in **Settings → Audit log**: every action, with the
 human, agent or connected system that did it.

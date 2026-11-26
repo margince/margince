@@ -5,6 +5,7 @@ package identity
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -34,6 +35,24 @@ func parseDocument(t *testing.T, document string) (dcrRequest, *dcrRefusal) {
 		t.Fatalf("test document is not JSON: %v", err)
 	}
 	return parseDCR(members)
+}
+
+func TestRegistrationNamesUseTheSharedCharacterBound(t *testing.T) {
+	for _, size := range []int{maxAgentClientNameRunes, maxAgentClientNameRunes + 1} {
+		name := strings.Repeat("界", size)
+		document := strings.Replace(thirdPartyRegistration, "Le Chat", name, 1)
+		_, refusal := parseDocument(t, document)
+		if size == maxAgentClientNameRunes && refusal != nil {
+			t.Fatalf("name at the character bound: %+v", refusal)
+		}
+		if size > maxAgentClientNameRunes && (refusal == nil || refusal.code != oauthErrInvalidClientMetadata || refusal.member != "client_name") {
+			t.Fatalf("oversized name refusal = %+v", refusal)
+		}
+	}
+	req, refusal := parseDocument(t, strings.Replace(thirdPartyRegistration, "Le Chat", "  Le Chat  ", 1))
+	if refusal != nil || req.ClientName != "Le Chat" {
+		t.Fatalf("normalized registration = %+v, refusal %+v", req, refusal)
+	}
 }
 
 func TestRegistrationIgnoresMetadataItDoesNotUnderstand(t *testing.T) {
@@ -234,5 +253,34 @@ func TestRegistrationRefusalNamesTheMemberAndNotTheValue(t *testing.T) {
 	}
 	if refusal.member != "redirect_uris" || strings.Contains(refusal.member, "secret") {
 		t.Errorf("member = %q, want redirect_uris", refusal.member)
+	}
+}
+
+// A client that registers itself takes no more redirect URIs than an admin may
+// give one. The two ways a client comes to exist have one bound.
+func TestSelfRegistrationTakesNoMoreRedirectURIsThanAnAdminMay(t *testing.T) {
+	for _, count := range []int{maxAgentClientRedirects, maxAgentClientRedirects + 1} {
+		uris := make([]string, count)
+		for i := range uris {
+			uris[i] = fmt.Sprintf("https://c.example/cb/%d", i)
+		}
+		listed, err := json.Marshal(uris)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, refusal := parseDocument(t, `{"client_name":"x","redirect_uris":`+string(listed)+`}`)
+		_, _, adminErr := validAgentClientInput(RegisterAgentClientInput{Name: "x", RedirectURIs: uris})
+		if count <= maxAgentClientRedirects {
+			if refusal != nil || adminErr != nil {
+				t.Fatalf("%d redirect URIs: self-registration %+v, admin %v; want both accepted", count, refusal, adminErr)
+			}
+			continue
+		}
+		if refusal == nil || refusal.code != oauthErrInvalidRedirectURI || refusal.member != "redirect_uris" {
+			t.Errorf("%d redirect URIs: self-registration refusal = %+v, want invalid_redirect_uri on redirect_uris", count, refusal)
+		}
+		if adminErr == nil {
+			t.Errorf("%d redirect URIs: the admin path accepted them", count)
+		}
 	}
 }

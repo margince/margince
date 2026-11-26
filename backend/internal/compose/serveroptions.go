@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -52,6 +53,7 @@ func WithOperatorMail(m mailer.Mailer) Option {
 		// The relay still transmits it, one layer down, as the controller seam.
 		s.controllerRelay = newMailerRelay(m)
 		s.rewireConfirmationLane(pool)
+		s.erasureReturnHandlers = s.WithMail(m)
 	}
 }
 
@@ -83,7 +85,27 @@ func WithMCPResource(resource string) Option {
 // WithMCPInputStateKey lets a tool ask the user in the chat, signing each
 // question with the deployment's HMAC key. Without one no tool asks.
 func WithMCPInputStateKey(key string) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.mcpInputStateKey = key }
+	return func(s *Server, _ *pgxpool.Pool) { s.mcpDoor.inputStateKey = key }
+}
+
+// mcpDoorSettings sign the questions a tool asks in the chat and spend each
+// answer and confirm code once. callLog records each call when it is set.
+type mcpDoorSettings struct {
+	inputStateKey string
+	replayGuard   agents.ReplayGuard
+	callLog       agents.CallLog
+}
+
+// WithMCPCallLog records every /mcp exchange in log.
+func WithMCPCallLog(log agents.CallLog) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.mcpDoor.callLog = log }
+}
+
+// WithMCPReplayGuard spends each confirm code and each answered chat question
+// once. Without it no tool asks in the chat, and a call that waits for its own
+// user stages into the approval inbox.
+func WithMCPReplayGuard(guard agents.ReplayGuard) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.mcpDoor.replayGuard = guard }
 }
 
 // WithMCPConnector turns the remote MCP connector on: the /mcp transport,
@@ -135,7 +157,7 @@ func WithBlobstore(store blobstore.Store) Option {
 		// object store has no restore, and disclosing the stanza instead would
 		// answer Art. 15 with an address the subject cannot resolve.
 		s.consentHandlers = s.WithSubjectAccessAssembler(
-			newSubjectAccessAssembler(InstallationDB(pool)).withBlobstore(store))
+			newSubjectAccessAssembler(InstallationDB(pool), ExtensionData()).withBlobstore(store))
 		s.captureConfig.Blob = store
 		s.activitiesHandlers = s.activitiesHandlers.WithBlobstore(store)
 		s.dealsHandlers = s.dealsHandlers.WithBlobstore(store)
@@ -145,11 +167,10 @@ func WithBlobstore(store blobstore.Store) Option {
 		s.knowledgeHandlers = knowledgeWithBlobstore(s.knowledgeHandlers, store)
 		// Erasure must reach the attachment bytes, not only the rows, so the
 		// DSR erase path gets a blob-aware eraser (Art. 17).
-		s.consentHandlers = s.WithEraser(ComposedEraser(pool, store, nil))
+		s.consentHandlers = s.WithEraser(ComposedEraser(pool, store))
 		// The controller's release on the retention surface is an erasure too,
 		// and reaches the same bytes.
 		s.privacyHandlers = s.privacyHandlers.WithBlobstore(store)
-		s.rewirePrivacyVault(pool)
 		// The data reset sweeps the same bytes for a whole workspace. Set here
 		// as well as read in WithDataReset so neither option order leaves the
 		// reset silently unable to reach the object store.
@@ -247,6 +268,7 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// the option orders where keyvault happens to run last, which nothing
 		// holds.
 		s.connectorAppHandlers.store = connectorApps.WithUnitApps(composedUnitApp)
+		s.apps = s.connectorAppHandlers.store
 		// And the connect transport resolves the STORED app per request, so an
 		// app set through Settings works without restarting the api. The worker
 		// resolves it the same way for the sync poll's token refresh, which is
@@ -390,6 +412,8 @@ func WithPublicBaseURL(base string) Option {
 		// to whoever holds it.
 		s.confirmLinkBase = base
 		s.rewireConfirmationLane(pool)
+		// The erasure return link lifts an erasure, so it too is bound here.
+		s.erasureReturnHandlers = s.WithLinkBase(base)
 		// Reported to an operator, never enforced: the boot and send guards
 		// are what refuse an unusable origin, and a readiness check here
 		// would deadlock a rollout on its own ingress.

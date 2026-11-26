@@ -1,0 +1,6 @@
+{
+  "verb": "list_channel_connections",
+  "checks": [
+    "channel_connection.read"
+  ]
+}

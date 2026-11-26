@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -63,6 +64,14 @@ func (f *listRuleFixture) author() context.Context {
 func (f *listRuleFixture) rule(t *testing.T, key string, params map[string]any) ids.AutomationID {
 	t.Helper()
 	params["list_id"] = f.list.String()
+	if key == "list_membership_task" {
+		if _, set := params["task_title"]; !set {
+			params["task_title"] = "Follow up with this customer"
+		}
+		if _, set := params["recipient"]; !set {
+			params["recipient"] = "record_owner"
+		}
+	}
 	created, err := f.rules.Create(f.author(), automation.CreateAutomationInput{Key: key, Name: key, Params: params})
 	if err != nil {
 		t.Fatalf("author %s: %v", key, err)
@@ -76,7 +85,7 @@ func (f *listRuleFixture) rule(t *testing.T, key string, params map[string]any) 
 
 // deliver hands the newest event of eventType about the list to the engine,
 // and answers false when there is none.
-func (f *listRuleFixture) deliver(t *testing.T, eventType string) bool {
+func (f *listRuleFixture) deliver(t *testing.T, eventType string, clock ...time.Time) bool {
 	t.Helper()
 	var raw []byte
 	err := f.e.Pool.QueryRow(context.Background(), `SELECT coalesce((SELECT envelope::text FROM event_outbox
@@ -91,6 +100,9 @@ func (f *listRuleFixture) deliver(t *testing.T, eventType string) bool {
 	var env kevents.Envelope
 	if err := json.Unmarshal(raw, &env); err != nil {
 		t.Fatal(err)
+	}
+	if len(clock) > 0 {
+		env.OccurredAt = clock[0]
 	}
 	if err := f.engine.HandleEvent(context.Background(), env); err != nil {
 		t.Fatalf("the engine refused %s: %v", eventType, err)
@@ -164,7 +176,7 @@ func TestALeaveRuleFiresOnlyForRecordsThatLeft(t *testing.T) {
 		t.Fatalf("one record left and one joined, and a leave rule fired %d runs, want 1", n)
 	}
 	if n := f.e.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id = a.id
-		WHERE a.subject = 'Left a Live List' AND l.contact_id = $1`, goes); n != 1 {
+		WHERE a.subject = 'Follow up with this customer' AND l.contact_id = $1`, goes); n != 1 {
 		t.Fatalf("the contact that left has %d follow-up tasks, want 1", n)
 	}
 	if n := f.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE contact_id = $1`, stays); n != 0 {
@@ -414,7 +426,7 @@ func TestAFollowUpTaskNamesNoPrivateList(t *testing.T) {
 	f.deliver(t, "list.evaluated")
 
 	if n := f.e.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id = a.id
-		WHERE l.contact_id = $1 AND a.subject = 'Joined a Live List'`, joins); n != 1 {
+		WHERE l.contact_id = $1 AND a.subject = 'Follow up with this customer'`, joins); n != 1 {
 		t.Fatalf("the contact that joined has %d neutral follow-up tasks, want 1", n)
 	}
 	if n := f.e.WsCount(t, `SELECT count(*) FROM activity WHERE subject LIKE '%secret targets%' OR body LIKE '%secret targets%'`); n != 0 {

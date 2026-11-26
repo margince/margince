@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
-import { noticeAction } from "./noticeaction";
+import { noticeAction, noticeKindAction } from "./noticeaction";
 
 describe("manual privacy review destinations", () => {
   it("opens the retained uploaded file through the authorized download endpoint", () => {
@@ -30,5 +30,51 @@ describe("manual privacy review destinations", () => {
     expect(noticeAction({ type, id: "retained-template" })?.href).toBe(
       routeHash(settingsHref("company", tab)),
     );
+  });
+});
+
+it("opens a retained-review notice at its signature instead of the reader's own settings", () => {
+  const action = noticeAction({
+    type: "retained_email_signature",
+    id: "retained-signature",
+  });
+  expect(action?.href).toContain("signature_review=retained-signature");
+  expect(action?.href).toContain("privacy");
+  expect(action?.href).not.toContain("account");
+});
+
+it("opens an approval-history review on the audit log narrowed to that approval", () => {
+  const action = noticeAction({ type: "approval_history", id: "approval-id" });
+  expect(action?.href).toContain("settings/audit");
+  expect(action?.href).toContain("entity_type=approval");
+  expect(action?.href).toContain("entity_id=approval-id");
+});
+
+describe("a notice about a unit's own record", () => {
+  const target = { type: "ext:rooms:room", id: "room-id" };
+
+  it("opens the unit's screen at the view the kind declared", () => {
+    const action = noticeAction(target, [
+      { name: "ext:rooms:room", view: "room-page" },
+    ]);
+    expect(action?.href).toContain("#/ext/rooms/room-page?");
+    expect(action?.href).toContain("record_id=room-id");
+    expect(action?.label).toBe("notifications.action.openExtensionRecord");
+  });
+
+  it("opens the unit's screen when the directory has not named a view", () => {
+    expect(noticeAction(target)?.href).toMatch(/^#\/ext\/rooms\?/);
+  });
+});
+
+describe("notices about no record", () => {
+  it("sends a colleague named on a booking link to Settings, Meetings", () => {
+    expect(noticeKindAction("meeting_team_request")).toEqual({
+      href: routeHash(settingsHref("meetings")),
+      label: "scheduling.settings",
+    });
+  });
+  it("offers nothing for a kind with no screen to answer it", () => {
+    expect(noticeKindAction("capture_backlog_stalled")).toBeUndefined();
   });
 });

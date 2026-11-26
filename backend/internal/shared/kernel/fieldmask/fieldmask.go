@@ -72,7 +72,8 @@ func DealBaseValueInputs() []string {
 
 // derivedColumns maps a stored column computed from maskable fields to those
 // fields. Such a column is no mask's subject and never a wire field name, so it
-// is kept out of withheldWith. A reader printing raw columns asks DerivedInputs.
+// is kept out of withheldWith. A reader printing raw columns asks DerivedInputs,
+// and a reader printing stored images asks DerivedFrom.
 var derivedColumns = map[string]map[string][]string{
 	Deal: {
 		"amount_minor_base": DealBaseValueInputs(),
@@ -86,6 +87,20 @@ var derivedColumns = map[string]map[string][]string{
 func DerivedInputs(object, column string) ([]string, bool) {
 	inputs, ok := derivedColumns[object][column]
 	return inputs, ok
+}
+
+// DerivedFrom answers, sorted, the object's stored columns computed from any
+// of the withheld fields. An audit image carries those columns under their own
+// names, so a trail withholds them beside the fields they are computed from.
+func DerivedFrom(object string, withheld []string) []string {
+	var out []string
+	for column, inputs := range derivedColumns[object] {
+		if slices.ContainsFunc(inputs, func(input string) bool { return slices.Contains(withheld, input) }) {
+			out = append(out, column)
+		}
+	}
+	slices.Sort(out)
+	return out
 }
 
 // Maskable is the sorted set of fields an administrator may name on the

@@ -1,0 +1,10 @@
+{
+  "verb": "delete_lead_origin",
+  "checks": [
+    "custom_field.delete",
+    "lead.read"
+  ],
+  "takes": [
+    "lead_origin"
+  ]
+}

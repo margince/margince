@@ -86,6 +86,8 @@ type TraceRow struct {
 	Counterparty string
 	Subject      string
 	OccurredAt   time.Time
+	// Filing is who filed the mail on its deal, when anyone did.
+	Filing *Filing
 }
 
 // TraceWindow is the answer both reads give.
@@ -194,7 +196,7 @@ func (s *TraceStore) readPage(ctx context.Context, tx pgx.Tx, scope traceScope,
 	addArg := func(v any) int { args = append(args, v); return len(args) }
 	where := traceWhere(scope, addArg)
 	if cursor != nil && *cursor != "" {
-		decoded, err := storekit.DecodeCursor(*cursor)
+		decoded, err := storekit.DecodeCursor("capture_traces", *cursor)
 		if err != nil {
 			return nil, "", err
 		}
@@ -248,7 +250,7 @@ func finishTracePage(items []TraceRow, n int) ([]TraceRow, string, error) {
 		return items, "", nil
 	}
 	last := items[n-1]
-	next, err := storekit.EncodeCursor(last.OccurredAt, last.ID)
+	next, err := storekit.EncodeCursor("capture_traces", last.OccurredAt, last.ID)
 	if err != nil {
 		return nil, "", err
 	}
@@ -263,7 +265,7 @@ func finishTracePage(items []TraceRow, n int) ([]TraceRow, string, error) {
 // member comparing the two would be right to trust neither.
 const traceRowColumns = `t.id, t.stage, t.connector, t.outcome, ` + settledOutcome + `, coalesce(t.reason, ''), t.activity_id,
 		       d.status, coalesce(d.kind, ''), d.resolved_at,
-		       coalesce(t.counterparty, ''), coalesce(t.subject, ''), t.occurred_at`
+		       coalesce(t.counterparty, ''), coalesce(t.subject, ''), t.occurred_at, t.filing`
 
 // settledOutcome is the bucket a message counts under NOW: the outcome the
 // pipeline recorded, unless the sender's question has since been answered.
@@ -378,7 +380,7 @@ func scanTraceRow(rows pgx.Rows) (TraceRow, error) {
 	var status, kind *string
 	var resolvedAt *time.Time
 	if err := rows.Scan(&row.ID, &row.Stage, &row.Connector, &row.Outcome, &row.OutcomeNow, &row.Reason, &row.ActivityID,
-		&status, &kind, &resolvedAt, &row.Counterparty, &row.Subject, &row.OccurredAt); err != nil {
+		&status, &kind, &resolvedAt, &row.Counterparty, &row.Subject, &row.OccurredAt, &row.Filing); err != nil {
 		return TraceRow{}, fmt.Errorf("capture: reading the trace page: %w", err)
 	}
 	if status != nil {

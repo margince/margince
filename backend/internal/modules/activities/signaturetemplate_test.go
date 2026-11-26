@@ -65,26 +65,26 @@ func TestATemplateSignOffLandsInTheMarkupPart(t *testing.T) {
 }
 
 // {logo} is the workspace logo embedded by content id, and only when there is
-// one. Any other image, a remote one above all, is dropped.
-func TestTheLogoPlaceholderEmbedsTheWorkspaceLogoAndNothingRemote(t *testing.T) {
+// one. A sender's https image stays beside it; an http image is dropped.
+func TestTheLogoPlaceholderEmbedsTheWorkspaceLogoBesideTheSendersHttpsImage(t *testing.T) {
 	t.Parallel()
-	template := `<p>{logo}<img src="https://tracker.example/pixel.png">{name}</p>`
+	template := `<p>{logo}<img src="https://cdn.example/logo.png" width="96"><img src="http://plain.example/pixel.png">{name}</p>`
 	with, _, err := renderSignatureTemplate(template, signatureValues{Name: "Anna", HasLogo: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(with, `src="cid:signature-logo@margince"`) {
-		t.Errorf("markup %q lacks the embedded logo", with)
+	if !strings.Contains(with, `src="cid:signature-logo@margince"`) || !strings.Contains(with, `<img src="https://cdn.example/logo.png" width="96">`) {
+		t.Errorf("markup %q lacks the embedded logo or the sender's https image", with)
 	}
-	if strings.Contains(with, "tracker.example") {
-		t.Errorf("markup %q kept a remote image", with)
+	if strings.Contains(with, "plain.example") {
+		t.Errorf("markup %q kept an http image", with)
 	}
 	without, _, err := renderSignatureTemplate(template, signatureValues{Name: "Anna"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(without, "<img") {
-		t.Errorf("markup %q shows an image though the workspace has no logo", without)
+	if strings.Contains(without, "cid:") {
+		t.Errorf("markup %q embeds a logo though the workspace has none", without)
 	}
 }
 
@@ -159,12 +159,12 @@ func TestPersonalMarkupUsesTheSignaturePolicyWithoutExpandingPlaceholders(t *tes
 	if sign.Kind != SignOffSignature || sign.Text != "Personal\n{name} {title} {phone} {logo}TeamLink" {
 		t.Fatalf("sign = %+v", sign)
 	}
-	for _, forbidden := range []string{"Company", "Saved plain text", "onclick", "javascript:", "tracker.test", "<script", "bad()", "background"} {
+	for _, forbidden := range []string{"Company", "Saved plain text", "onclick", "javascript:", "<script", "bad()", "background"} {
 		if strings.Contains(sign.HTML, forbidden) {
 			t.Errorf("markup kept %q: %s", forbidden, sign.HTML)
 		}
 	}
-	for _, kept := range []string{"<b>Personal</b>", "<i>{name}</i>", "<u>{title}</u>", `style="color:#2a7;font-size:12px"`} {
+	for _, kept := range []string{"<b>Personal</b>", "<i>{name}</i>", "<u>{title}</u>", `style="color:#2a7;font-size:12px"`, `<img src="https://tracker.test/pixel">`} {
 		if !strings.Contains(sign.HTML, kept) {
 			t.Errorf("markup lacks %q: %s", kept, sign.HTML)
 		}
@@ -259,12 +259,12 @@ func TestPastedSignatureBlocksKeepTheirReadableBoundaries(t *testing.T) {
 		"<div>Mira Voss</div><div>Head of Sales</div><table><tr><td>+49 711</td><td>mira@example.com</td></tr></table>",
 		"<h2>Mira Voss</h2><table><tr><td><p>Head of Sales</p></td></tr><tr><td>+49 711</td><td>mira@example.com</td></tr></table>",
 	} {
-		markup, text, err := signatureMarkup(source)
+		markup, text, err := sanitizeSignature(source)
 		if err != nil {
 			t.Fatal(err)
 		}
 		want := "Mira Voss\nHead of Sales\n+49 711 mira@example.com"
-		if text != want || !strings.Contains(markup, "<br>") {
+		if text != want || !strings.Contains(markup, "<td>+49 711</td>") {
 			t.Fatalf("markup=%q text=%q, want %q", markup, text, want)
 		}
 	}
@@ -272,7 +272,7 @@ func TestPastedSignatureBlocksKeepTheirReadableBoundaries(t *testing.T) {
 
 func TestSignatureTextKeepsLinkDestinationsAndMarkupKeepsTextVisible(t *testing.T) {
 	t.Parallel()
-	markup, text, err := signatureMarkup(`<span style="color:transparent">Mira</span><br><a href="https://calendar.example/mira">Book a call</a><br><a href="mailto:mira@example.com">mira@example.com</a><img src="data:image/png;base64,AAAA">`)
+	markup, text, err := sanitizeSignature(`<span style="color:transparent">Mira</span><br><a href="https://calendar.example/mira">Book a call</a><br><a href="mailto:mira@example.com">mira@example.com</a><img src="data:image/png;base64,AAAA">`)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,0 +1,14 @@
+{
+  "tool": "change_attention",
+  "action": "unpin_row",
+  "verb": "unpin_worklist_row",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

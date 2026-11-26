@@ -11,6 +11,7 @@ import {
   STORAGE_KEYS,
   writeStored,
 } from "../../lib/storage";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import {
   failedApprovalRow,
   readingsDay,
@@ -299,10 +300,10 @@ it("opens a deal row on why it needs attention", async () => {
   await user.click(
     await screen.findByRole("button", { name: en["brief.focus.context"] }),
   );
-  const details = await screen.findByRole("dialog", {
-    name: en["brief.focus.context"],
-  });
-  expect(within(details).getByText(en["worklist.why.title"])).toBeTruthy();
+  const details = await screen.findByRole("dialog");
+  expect(
+    await within(details).findByText(en["worklist.why.title"]),
+  ).toBeTruthy();
   expect(
     within(details).getByText(en["worklist.because.approved_and_failed"]),
   ).toBeTruthy();
@@ -373,11 +374,9 @@ it("opens a follow-up on the conversation it waits on", async () => {
   await user.click(
     await screen.findByRole("button", { name: en["brief.focus.context"] }),
   );
-  const details = await screen.findByRole("dialog", {
-    name: en["brief.focus.context"],
-  });
+  const details = await screen.findByRole("dialog");
   expect(
-    within(details).getByText(en["worklist.pane.conversation"]),
+    await within(details).findByText(en["worklist.pane.conversation"]),
   ).toBeTruthy();
   expect(
     await within(details).findByText("Attached is the quote for both phases."),
@@ -468,12 +467,12 @@ it("counts a closed drawer over the reader's own queue from Home's one read", as
   ]);
 });
 
-it("reads the day once when Home opens with the drawer open", async () => {
+it("reads Home's shape for Home and the queue for an open drawer", async () => {
   window.location.hash = "#/home?queue=1";
-  const views: (string | null)[] = [];
+  const shapes: (string | null)[] = [];
   stubApi({
     "GET /worklist": (_body, query) => {
-      views.push(query.get("view"));
+      shapes.push(query.get("shape"));
       return jsonResponse(readingsDay({}, [taskRow("t", "Call Weber")]));
     },
   });
@@ -481,7 +480,9 @@ it("reads the day once when Home opens with the drawer open", async () => {
 
   await screen.findByRole("dialog", { name: en["brief.queue.title"] });
   await screen.findAllByText("Call Weber");
-  expect(views, "Home and its drawer each read the day").toEqual(["today"]);
+  await waitFor(() => expect(shapes).toHaveLength(2));
+  expect(shapes).toContain("home");
+  expect(shapes).toContain(null);
 });
 
 it("keeps a closed drawer's count on Home's live read after the drawer was open", async () => {
@@ -516,7 +517,7 @@ it("keeps a closed drawer's count on Home's live read after the drawer was open"
   await user.click(screen.getByRole("button", { name: /close/i }));
   tasks = 9;
   await client.refetchQueries({
-    queryKey: ["worklist", "mine", "all", "", "today"],
+    queryKey: ["worklist", "mine", "all", "", "today", "home"],
     exact: true,
   });
 
@@ -546,7 +547,8 @@ it.each(["failed", "bounded", "scope"])(
     const { client } = render(<BriefScreen />);
     await waitFor(() =>
       expect(
-        client.getQueryState(["worklist", "mine", "all", "", "today"])?.status,
+        client.getQueryState(["worklist", "mine", "all", "", "today", "home"])
+          ?.status,
       ).toBe("success"),
     );
     // The tabs draw the same "42+", so the way into the queue agrees with them.
@@ -587,7 +589,9 @@ it("keeps optional reconnections reachable in the real Home queue drawer", async
   expect(
     await within(drawer).findByText(en["worklist.relationships.optional"]),
   ).toBeVisible();
-  expect(within(drawer).getByText("Demo reconnection")).toBeVisible();
+  expect(
+    within(drawer).getByText("No recent contact with Demo reconnection"),
+  ).toBeVisible();
 });
 
 it("reads optional reconnections only when the reader opens them", async () => {
@@ -623,7 +627,9 @@ it("reads optional reconnections only when the reader opens them", async () => {
   });
   expect(asked).not.toContain("include");
   await userEvent.click(show);
-  expect(await within(drawer).findByText("Quiet buyer")).toBeVisible();
+  expect(
+    await within(drawer).findByText("No recent contact with Quiet buyer"),
+  ).toBeVisible();
   expect(asked.filter((value) => value === "include")).toHaveLength(1);
 });
 
@@ -683,7 +689,13 @@ it("snoozes the Home task before a slow day refresh and pins the next click to i
       return jsonResponse(task());
     },
   });
-  const { client } = render(<BriefScreen />);
+  // The reader's zone, so the wall time the snooze keeps is the same on
+  // every machine. 16:00 in Berlin summer time is 15:00Z once winter time starts.
+  const { client } = render(
+    <ViewerZoneProvider zone="Europe/Berlin">
+      <BriefScreen />
+    </ViewerZoneProvider>,
+  );
   await user.click(
     await screen.findByRole("button", { name: en["brief.focus.context"] }),
   );
@@ -701,11 +713,11 @@ it("snoozes the Home task before a slow day refresh and pins the next click to i
   await waitFor(() =>
     expect(within(card).queryByText(en["worklist.overdue"])).toBeNull(),
   );
-  expect(dueAt).toBe("2026-11-06T14:00:00.000Z");
+  expect(dueAt).toBe("2026-11-06T15:00:00.000Z");
   expect(client.isFetching({ queryKey: ["worklist"] })).toBeGreaterThan(0);
   const cached = client.getQueryData<{
     pages: components["schemas"]["Worklist"][];
-  }>(["worklist", "mine", "all", "", "today"]);
+  }>(["worklist", "mine", "all", "", "today", "home"]);
   expect(cached?.pages[0]?.focus?.items[0]?.due_at).toBe(dueAt);
   expect(cached?.pages[0]?.focus?.items[0]?.version).toBe(2);
   await user.click(snooze);
@@ -718,7 +730,7 @@ it("snoozes the Home task before a slow day refresh and pins the next click to i
         : [],
     );
   expect(sentVersions).toEqual(["1", "2"]);
-  expect(dueAt).toBe("2026-11-07T14:00:00.000Z");
+  expect(dueAt).toBe("2026-11-07T15:00:00.000Z");
   releaseDay(jsonResponse(day));
   vi.useRealTimers();
 });

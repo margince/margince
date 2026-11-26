@@ -24,6 +24,9 @@ type MailCapture interface {
 	// RecheckSeatsTx makes these members' connections due, so the next sweep
 	// asks again whether they may capture.
 	RecheckSeatsTx(ctx context.Context, tx pgx.Tx, userIDs []ids.UUID) error
+	// SharedMailboxesReadByTx names the shared mailboxes whose mail this team
+	// reads, disconnected ones included.
+	SharedMailboxesReadByTx(ctx context.Context, tx pgx.Tx, team ids.UUID) ([]string, error)
 }
 
 // WithMailCapture connects role changes to the mailboxes they affect. Without

@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "ai_budget_preview",
+  "verb": "preview_ai_budget",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

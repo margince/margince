@@ -61,7 +61,8 @@ type WaitingReply struct {
 	HasOpenDeal bool
 	// OwedVerdict is the classifier's judgement of whether this message asks
 	// its recipient side for something: OwedVerdictAsksUs, OwedVerdictInformsUs
-	// or empty for unjudged.
+	// or empty for unjudged. An asks_us that does not stand
+	// (storekit.AsksUsClause) is empty.
 	//
 	// Empty is not a third verdict. An unjudged message ranks exactly as it did
 	// before the column existed, because a classifier that has not run, has run
@@ -132,6 +133,16 @@ type WaitingReply struct {
 	// SenderIsMachine is the message's sender_is_machine stamp: a sending
 	// system wrote it, by mailidentity.InboundFromSendingSystem.
 	SenderIsMachine bool
+	// JudgeWithheld says no model will judge this unjudged message: it is held
+	// for a protecting reason, or private while PrivateMailRequests is off.
+	// OwnerWroteOnThread, set only beside it, says the seat that owes the reply
+	// sent mail on its conversation before it arrived. The queue trusts that in
+	// place of a verdict.
+	JudgeWithheld      bool
+	OwnerWroteOnThread bool
+	// threadWriters are the seats whose earlier mail on the thread the reader
+	// may read, from which OwnerWroteOnThread is decided once the owner is.
+	threadWriters []ids.UUID
 }
 
 // WaitingScanCap bounds the work one read does. Beyond this the answer is
@@ -255,7 +266,8 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before W
 	err := s.readWaitingQueue(ctx, asOf, seats, waitingShape{drawsRows: true},
 		func(slots waitingSlots, arg func(any) int) string {
 			slots.values[waitingKeysetSlot] = olderThan(before, arg)
-			return "SELECT waiting.*, " + directMailSeatsSQL(slots.identities) + " FROM (" + fmt.Sprintf(waitingRepliesSQL, slots.values...) +
+			slots.values[waitingCapSlot] = waitingLimitSQL(arg, WaitingScanCap)
+			return "SELECT waiting.*, " + mailAnswerersSQL(slots.identities) + " FROM (" + fmt.Sprintf(waitingRepliesSQL, slots.values...) +
 				") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at DESC, waiting.id DESC"
 		},
 		func(rows pgx.Rows) (err error) {
@@ -295,7 +307,7 @@ func (s *Store) queryWaitingQueue(
 	if err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, statement(slots, arg), planEachBind(args)...)
+	rows, err := tx.Query(ctx, statement(slots, arg), planEachBind(ctx, args)...)
 	if err != nil {
 		return err
 	}
@@ -369,23 +381,23 @@ func (s *Store) ownDomainList(ctx context.Context, tx pgx.Tx) ([]string, error) 
 	return domains, nil
 }
 
-// ownDomainSenderSQL is "this message came from one of our own domains" under
-// a caller's activity alias, with the placeholder holding Set's folded domains.
-// The waiting queue and the response reading share it so they agree on who is
-// waiting. It compares the sender's folded domain, never the address, so it
+// ownDomainSenderAtSQL is "this message came from one of our own domains" under
+// a caller's activity alias. domains names the placeholder that holds Set's
+// folded domains. The waiting queue, the response reading and
+// invitationNeverOwedSQL share it so they agree on who is a colleague. It compares the sender's folded domain, never the address, so it
 // agrees with the reply path's owndomain.Set.Covers. An unfolded row stays in
 // the queue as an outside sender.
 //
 // Held by: TestEveryOwnDomainComparisonInSQLReadsFoldedDomains
 // (backend/gates/owndomainpredicate_test.go)
-func ownDomainSenderSQL(alias string, domainArg int) string {
+func ownDomainSenderAtSQL(alias, domains string) string {
 	return fmt.Sprintf(`EXISTS (
 	         SELECT 1 FROM activity_participant ours
 	          WHERE ours.activity_id = %[1]s.id
 	            AND ours.role = 'from'
 	            AND EXISTS (
-	                  SELECT 1 FROM unnest($%[2]d::text[]) AS own(domain)
-	                   WHERE %[3]s))`, alias, domainArg, owndomain.CoversSQL("ours.address_domain_folded", "own.domain"))
+	                  SELECT 1 FROM unnest(%[2]s::text[]) AS own(domain)
+	                   WHERE %[3]s))`, alias, domains, owndomain.CoversSQL("ours.address_domain_folded", "own.domain"))
 }
 
 func scanWaitingReply(record pgx.Row) (WaitingReply, error) {
@@ -394,7 +406,8 @@ func scanWaitingReply(record pgx.Row) (WaitingReply, error) {
 		&row.ContactID, &row.CompanyID, &row.DealID,
 		&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
 		&row.Engaged, &row.OwnerID, &row.OwnerKnown, &row.Threaded, &row.ThreadKey, &row.ChannelProvider,
-		&row.MeetingBookedAt, &row.SenderWasStranger, &row.BccOnly, &row.ForeignLink, &row.SenderIsMachine)
+		&row.MeetingBookedAt, &row.SenderWasStranger, &row.BccOnly, &row.ForeignLink, &row.SenderIsMachine,
+		&row.JudgeWithheld, &row.threadWriters)
 	if !row.OwnerKnown {
 		row.OwnerID = ids.Nil
 	}

@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -62,7 +63,7 @@ func seedWithdrawalCredential(
 		INSERT INTO withdrawal_credential
 		  (token_hash, address, contact_id, scope, issued_at, expires_at)
 		VALUES ($1, $2, $3, $4, now(), now() + interval '730 days')`,
-		"hash-"+ids.NewV7().String(), "subject@example.test", contact.UUID, scope); err != nil {
+		storekit.TokenHash(ids.NewV7().String()), "subject@example.test", contact.UUID, scope); err != nil {
 		t.Fatalf("seeding the withdrawal credential: %v", err)
 	}
 }

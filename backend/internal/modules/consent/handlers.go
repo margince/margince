@@ -5,7 +5,6 @@ package consent
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -88,6 +87,13 @@ func (h Handlers) WithInstallationName(r InstallationNameReader) Handlers {
 	return h
 }
 
+// WithClock sets the clock every store reading of now goes through. All copies
+// share that store, so the clock holds across later With* copies.
+func (h Handlers) WithClock(now func() time.Time) Handlers {
+	h.store.now = now
+	return h
+}
+
 // WithEraser returns a copy wired to the erase path.
 func (h Handlers) WithEraser(e Eraser) Handlers {
 	h.eraser = e
@@ -138,7 +144,11 @@ func (h Handlers) CreateConsentPurpose(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	requiresDOI := req.RequiresDoubleOptIn != nil && *req.RequiresDoubleOptIn
-	purpose, err := h.store.CreatePurpose(r.Context(), req.Key, req.Label, requiresDOI)
+	frequency := ""
+	if req.Frequency != nil {
+		frequency = string(*req.Frequency)
+	}
+	purpose, err := h.store.CreatePurpose(r.Context(), req.Key, req.Label, requiresDOI, frequency)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -195,7 +205,7 @@ func (h Handlers) RecordConsent(w http.ResponseWriter, r *http.Request, id crmco
 // evidence only because the data subject completed it from their own mailbox,
 // and an endpoint that handed the token back would let one operator close both
 // halves of that round trip — which is what this one used to do.
-func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.IssueDoubleOptInParams) {
 	var req crmcontracts.IssueDoubleOptInJSONRequestBody
 	if !httperr.Decode(w, r, &req) {
 		return
@@ -208,8 +218,12 @@ func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id cr
 	}
 	// No expected address: this door names a CONTACT, and the mint derives the
 	// mailbox from their record. There is no second address to disagree with.
+	language := ""
+	if req.Language != nil {
+		language = string(*req.Language)
+	}
 	issued, err := h.store.IssueConsentLink(r.Context(),
-		pathID[ids.ContactKind](id), ids.From[ids.PurposeKind](ids.UUID(req.PurposeId)), "")
+		pathID[ids.ContactKind](id), ids.From[ids.PurposeKind](ids.UUID(req.PurposeId)), "", language)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -251,6 +265,7 @@ func (h Handlers) SuppressContact(w http.ResponseWriter, r *http.Request, id crm
 	if req.Reason != nil {
 		in.Reason = *req.Reason
 	}
+	in.ReceivedAt = req.ReceivedAt
 	if err := h.store.Suppress(r.Context(), in); err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -259,36 +274,6 @@ func (h Handlers) SuppressContact(w http.ResponseWriter, r *http.Request, id crm
 	// caller to read a suppression list from the write door rather than from
 	// the contact's own consent view.
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// AllowContact serves POST /contacts/{id}/consent/allow: a rep vouching that a
-// machine-level refusal for one category may be overruled for this contact.
-//
-// Wire-only, matching SuppressContact: the store owns the category vocabulary,
-// takes the authority from the session and decides whether this caller may
-// write about this subject — none of which belongs at this layer.
-func (h Handlers) AllowContact(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	var req crmcontracts.AllowContactJSONRequestBody
-	if !httperr.Decode(w, r, &req) {
-		return
-	}
-	overrideID, err := h.store.Allow(r.Context(), AllowInput{
-		ContactID: ids.From[ids.ContactKind](ids.UUID(id)),
-		Category:  string(req.Category),
-		Reason:    req.Reason,
-	})
-	if err != nil {
-		writeConsentErr(w, r, err)
-		return
-	}
-	// 201 WITH THE ID, where SuppressContact answers 204. The revoke door takes
-	// this id in its path and nothing lists a contact's standing vouches, so a
-	// caller handed nothing here could never take back what they just recorded.
-	// consent.override_recorded carries it as well, but an event reaches a
-	// consumer holding a subscription — not the caller who made this request.
-	httperr.WriteJSON(w, http.StatusCreated, crmcontracts.RecordedOverride{
-		OverrideId: openapi_types.UUID(overrideID),
-	})
 }
 
 // LiftSuppression serves POST /contacts/{id}/consent/suppress/{suppressionId}/lift:
@@ -319,6 +304,27 @@ func (h Handlers) LiftSuppression(
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// LiftContactRestriction serves POST
+// /contacts/{id}/consent/suppress/{suppressionId}/lift-restriction: an admin
+// queuing the notice whose sending lifts a restriction of processing.
+func (h Handlers) LiftContactRestriction(
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, suppressionID openapi_types.UUID,
+) {
+	var req crmcontracts.LiftContactRestrictionJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := h.store.RequestRestrictionLift(r.Context(), LiftInput{
+		ContactID:     ids.From[ids.ContactKind](ids.UUID(id)),
+		SuppressionID: ids.UUID(suppressionID),
+		Reason:        req.Reason,
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+}
+
 // RevokeOverride serves POST /contacts/{id}/consent/allow/{overrideId}/revoke:
 // somebody taking back a standing vouch their level may revoke.
 //
@@ -345,76 +351,32 @@ func (h Handlers) RevokeOverride(
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// RecordQualifyingEvent serves POST /contacts/{id}/consent/qualifying-events: the
-// one lawful basis nothing can derive, written down by the contact who was
-// there. The store owns the rules; this is wire-only.
-func (h Handlers) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	var req crmcontracts.RecordQualifyingEventRequest
-	if !httperr.Decode(w, r, &req) {
-		return
-	}
-	recorded, err := h.store.RecordQualifyingEvent(r.Context(), pathID[ids.ContactKind](id), RecordQualifyingEventInput{
-		Kind:         string(req.Kind),
-		Note:         req.Note,
-		OccurredAt:   req.OccurredAt,
-		AsksForQuote: req.AsksForQuote != nil && *req.AsksForQuote,
-	})
-	if err != nil {
-		writeConsentErr(w, r, err)
-		return
-	}
-	recordedID, err := ids.Parse(recorded.ID)
-	if err != nil {
-		writeConsentErr(w, r, fmt.Errorf("consent: the recorded exchange has no id: %w", err))
-		return
-	}
-	out := crmcontracts.QualifyingEventRecord{
-		Id:           openapi_types.UUID(recordedID),
-		Kind:         crmcontracts.QualifyingEventRecordKind(recorded.Kind),
-		OccurredAt:   recorded.OccurredAt,
-		AsksForQuote: recorded.AsksForQuote,
-		Retracted:    recorded.Retracted,
-	}
-	if recorded.Note != "" {
-		note := recorded.Note
-		out.Note = &note
-	}
-	httperr.WriteJSON(w, http.StatusCreated, out)
-}
-
-// RetractQualifyingEvent serves POST
-// /contacts/{id}/consent/qualifying-events/{event_id}/retract. Wire-only.
-func (h Handlers) RetractQualifyingEvent(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, eventID openapi_types.UUID) {
-	if err := h.store.RetractQualifyingEvent(r.Context(), pathID[ids.ContactKind](id), ids.UUID(eventID)); err != nil {
-		writeConsentErr(w, r, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
 func writeConsentErr(w http.ResponseWriter, r *http.Request, err error) {
 	httperr.Write(w, r, err)
 }
 
 func wirePurpose(p Purpose) crmcontracts.ConsentPurpose {
 	class := crmcontracts.ConsentPurposeClass(p.Class)
+	frequency := crmcontracts.ConsentPurposeFrequency(p.Frequency)
 	return crmcontracts.ConsentPurpose{
 		Id:                  openapi_types.UUID(p.ID.UUID),
 		Key:                 p.Key,
 		Label:               p.Label,
 		RequiresDoubleOptIn: &p.RequiresDoubleOptIn,
 		Class:               &class,
+		Frequency:           &frequency,
 		CreatedAt:           p.CreatedAt,
 	}
 }
 
 func wireState(st State) crmcontracts.ContactConsentState {
 	out := crmcontracts.ContactConsentState{
-		PurposeId:              openapi_types.UUID(st.PurposeID.UUID),
-		State:                  crmcontracts.ContactConsentStateState(st.State),
-		LawfulBasis:            st.LawfulBasis,
-		DoubleOptInConfirmedAt: st.DoubleOptInConfirmedAt,
-		UpdatedAt:              st.UpdatedAt,
+		PurposeId:                openapi_types.UUID(st.PurposeID.UUID),
+		State:                    crmcontracts.ContactConsentStateState(st.State),
+		LawfulBasis:              st.LawfulBasis,
+		DoubleOptInConfirmedAt:   st.DoubleOptInConfirmedAt,
+		ConfirmationPendingUntil: st.ConfirmationPendingUntil,
+		UpdatedAt:                st.UpdatedAt,
 	}
 	if st.PurposeKey != "" {
 		out.PurposeKey = &st.PurposeKey

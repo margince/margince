@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "activate_home_repair",
+  "verb": "activate_home_repair",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

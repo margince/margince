@@ -11,6 +11,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // CreateTask is the one door that knows a task is an activity of kind `task`.
@@ -60,7 +61,7 @@ func TaskInputFrom(req crmcontracts.CreateTaskRequest) (LogActivityInput, error)
 // by a patch of an existing task alike: the trimmed text, and never blank.
 func taskSubject(raw string) (string, error) {
 	subject := strings.TrimSpace(raw)
-	if subject == "" {
+	if !values.HasVisibleText(subject) {
 		return "", &RequiredFieldError{Field: fieldSubject}
 	}
 	return subject, nil
@@ -79,7 +80,9 @@ func activityOfTask(req crmcontracts.CreateTaskRequest) (crmcontracts.CreateActi
 		RequestActivityId: req.RequestActivityId,
 		SourceActivityId:  req.SourceActivityId,
 		DueAt:             req.DueAt,
+		DueIntent:         req.DueIntent,
 		DueHasTime:        req.DueHasTime,
+		TaskType:          req.TaskType,
 		AssigneeId:        req.AssigneeId,
 		Source:            req.Source,
 	}

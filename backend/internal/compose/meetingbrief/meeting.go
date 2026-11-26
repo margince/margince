@@ -20,7 +20,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -127,7 +129,7 @@ func (a attendeeRow) firstTime() bool { return a.LastTouch == nil }
 // It narrows the attendees' last-touch dates only when the meeting itself is
 // filed under no project: a filed meeting's own project wins, and a request
 // that disagrees with it is refused by resolveScope after this read.
-func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUID, requested *ids.ProjectID, now time.Time) (meeting, error) {
+func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUID, requested *ids.ProjectID, now time.Time, language string) (meeting, error) {
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activityID); err != nil {
 		return meeting{}, err
 	}
@@ -135,10 +137,10 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(activityID)
 	requestedPos := arg(nullableProject(requested))
-	// A last touch is contact we had: a past meeting nobody called off, not a
-	// call that reached nobody (relstrength.HadContactSQL).
+	// A last touch is an exchange as the contact page counts it, so the arc and
+	// the attendee line read one rule (relstrength.InteractionCountsAtSQL).
 	nowAt := fmt.Sprintf("$%d", arg(now))
-	happened := occurredday.HappenedSQL("pa", nowAt) + " AND " + relstrength.HadContactSQL("pa", nowAt)
+	happened := relstrength.InteractionCountsAtSQL("pa", nowAt)
 	clauses, err := roomClauses(ctx, arg)
 	if err != nil {
 		return meeting{}, err
@@ -152,8 +154,10 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	var attendees []byte
 	var project projectRow
 	var projectID *ids.UUID
+	// The brief's own language, as the sentences around the stage are.
+	stageName := labeltranslation.SQLIn(language, "s.name", "s.name_translations", arg)
 	err = tx.QueryRow(ctx, fmt.Sprintf(meetingQuery, clauses.deal, clauses.contact, idPos, clauses.touch, clauses.seat, clauses.project, requestedPos,
-		clauses.amount, happened), args...).
+		clauses.amount, happened, stageName), args...).
 		Scan(&out.ID, &out.StartsAt, &out.DateOnly, &subject,
 			&dealID, &deal.Name, &stage, &deal.AmountMinor, &currency, &deal.CloseDate,
 			&projectID, &project.Name, &project.Key, &project.Phase, &project.TargetEndDate,
@@ -203,7 +207,7 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 // last_touch is the newest conversation with that attendee that has happened
 // by now. The first-time flag reads it: null means we have never exchanged
 // anything with them, which is "you have not met".
-const meetingQuery = `
+var meetingQuery = `
 	SELECT a.id, a.occurred_at, a.occurred_precision = 'day', a.subject,
 	       d.id, COALESCE(d.name, ''), d.stage_name, d.amount_minor, d.currency, d.expected_close_date,
 	       pr.id, COALESCE(pr.name, ''), COALESCE(pr.key, ''), COALESCE(pr.phase, ''), pr.target_end_date,
@@ -220,7 +224,7 @@ const meetingQuery = `
 	                    WHERE pp.contact_id = p.id AND pa.archived_at IS NULL
 	                      AND pa.id <> a.id AND pa.occurred_at <= a.occurred_at -- occurred_at raw: a touch before this meeting, an ordering of rows
 	                      AND %[9]s
-	                      AND pa.audience = 'workspace'
+	                      AND ` + auth.WorkspaceAudienceSQL("pa") + `
 	                      AND %[4]s
 	                      -- Workspace-visible messages only. A brief is read by
 	                      -- colleagues who were not on the mail, and a last-touch
@@ -254,7 +258,7 @@ const meetingQuery = `
 	                WHERE ap.activity_id = a.id AND ap.contact_id IS NOT NULL) parts
 	         JOIN contact p ON p.id = parts.contact_id AND p.archived_at IS NULL
 	         LEFT JOIN relationship r ON r.contact_id = p.id AND r.deal_id = d.id
-	              AND r.kind = 'deal_stakeholder' AND r.archived_at IS NULL
+	              AND ` + dealseat.CurrentSQL("r") + `
 	              AND %[5]s
 	         WHERE %[2]s
 	       ), '[]'::json)
@@ -271,7 +275,7 @@ const meetingQuery = `
 	  -- an unaliased expression as a placeholder name. The outer select reads the
 	  -- amount from this derived table, so without the alias a masked caller gets a
 	  -- column-not-found error rather than a withheld figure.
-	  SELECT dd.id, dd.name, s.name AS stage_name, %[8]s AS amount_minor, dd.currency, dd.expected_close_date
+	  SELECT dd.id, dd.name, %[10]s AS stage_name, %[8]s AS amount_minor, dd.currency, dd.expected_close_date
 	  FROM activity_link dl
 	  JOIN deal dd ON dd.id = dl.deal_id AND dd.archived_at IS NULL
 	  LEFT JOIN stage s ON s.id = dd.stage_id

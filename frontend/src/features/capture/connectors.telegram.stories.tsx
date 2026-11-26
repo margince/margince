@@ -9,7 +9,8 @@ import {
   StoryProviders,
   stubWithSession,
 } from "../../testing/story-utils";
-import { TelegramConnectorsPanel } from "./connectors.telegram";
+import type { BotProvider } from "./botcopy";
+import { WorkspaceBotPanel } from "./connectors.telegram";
 
 // The workspace's Telegram bot on Integrations. Every story but the read-only
 // one draws an administrator's view, so the verbs its layout is judged with show.
@@ -19,12 +20,12 @@ function stubAsBotManager(routes: RouteMap) {
   });
 }
 
-const meta: Meta<typeof TelegramConnectorsPanel> = {
+const meta: Meta<typeof WorkspaceBotPanel> = {
   title: "Settings/Data/Integrations/Telegram bot",
-  component: TelegramConnectorsPanel,
+  component: WorkspaceBotPanel,
 };
 export default meta;
-type Story = StoryObj<typeof TelegramConnectorsPanel>;
+type Story = StoryObj<typeof WorkspaceBotPanel>;
 
 // Three states. No bot yet shows the connect verb. Live bots get a row each. A
 // deployment with no credential store to seal a token in answers 503, a
@@ -32,6 +33,7 @@ type Story = StoryObj<typeof TelegramConnectorsPanel>;
 function telegramStory(
   channels: unknown[] | null,
   stub: (routes: RouteMap) => void = stubAsBotManager,
+  provider: BotProvider = "telegram",
 ) {
   return routeStory(
     () =>
@@ -39,18 +41,20 @@ function telegramStory(
         ? jsonResponse({ code: "channel_credentials_not_configured" }, 503)
         : jsonResponse({ data: channels }),
     stub,
+    provider,
   );
 }
 
 function routeStory(
   answer: RouteMap[string],
   stub: (routes: RouteMap) => void = stubAsBotManager,
+  provider: BotProvider = "telegram",
 ) {
   return () => {
     stub({ "GET /channel-connections": answer });
     return (
       <StoryProviders>
-        <TelegramConnectorsPanel />
+        <WorkspaceBotPanel provider={provider} />
       </StoryProviders>
     );
   };
@@ -123,4 +127,22 @@ export const TelegramLoading: Story = {
 // The read refused: the shared failure plate with its retry, not a callout.
 export const TelegramLoadFailed: Story = {
   render: routeStory(() => jsonResponse({ code: "internal" }, 500)),
+};
+
+const chatBot = {
+  ...salesBot,
+  id: "018f3a1b-0000-7000-8000-0000000000d3",
+  provider: "dispact",
+  channelId: "team-acme",
+  channelLabel: "margince",
+  address: "https://chat.example.com",
+};
+
+// The Dispact panel beside it reads the same list and draws only its own bot.
+export const DispactNoBotYet: Story = {
+  render: telegramStory([salesBot], stubAsBotManager, "dispact"),
+};
+
+export const DispactConnected: Story = {
+  render: telegramStory([salesBot, chatBot], stubAsBotManager, "dispact"),
 };

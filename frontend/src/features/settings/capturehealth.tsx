@@ -354,6 +354,7 @@ function CaptureHealthBody({
       />
       <CaptureConnectionsHealth
         rows={health.connection_concerns ?? []}
+        shared={health.shared_mailbox_concerns ?? []}
         zone={zone}
       />
     </>

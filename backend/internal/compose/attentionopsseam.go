@@ -144,11 +144,12 @@ func (c bookingGrantCalendar) Blocker(ctx context.Context, host ids.UserID, prov
 }
 
 func (b attentionBookingHealth) BookingConcerns(ctx context.Context) ([]attention.BookingConcern, error) {
-	concern, paused, err := b.store.BookingPageConcern(ctx)
-	if err != nil || !paused {
-		return nil, err
+	concerns, err := b.store.BookingPageConcerns(ctx)
+	out := make([]attention.BookingConcern, 0, len(concerns))
+	for _, concern := range concerns {
+		out = append(out, attention.BookingConcern{PageID: concern.PageID, Blocker: string(concern.Blocker), Title: concern.Title})
 	}
-	return []attention.BookingConcern{{PageID: concern.PageID, Blocker: string(concern.Blocker)}}, nil
+	return out, err
 }
 
 // attentionAIWork binds the AI-work-health lane to the same projection the
@@ -293,15 +294,16 @@ func (a attentionNotices) Unread(ctx context.Context, limit int) ([]attention.Un
 			}
 		}
 		out = append(out, attention.UnreadNotice{
-			ApprovalID: notice.ApprovalID,
-			ID:         notice.ID,
-			Origin:     notice.Origin,
-			Kind:       notice.Kind,
-			Subject:    notice.Subject,
-			Body:       notice.Body,
-			TargetType: notice.Target.Type,
-			TargetID:   notice.Target.ID,
-			CreatedAt:  notice.CreatedAt,
+			ApprovalID:    notice.ApprovalID,
+			ID:            notice.ID,
+			Origin:        notice.Origin,
+			Kind:          notice.Kind,
+			Subject:       notice.Subject,
+			SystemDisplay: notice.SystemDisplay,
+			Body:          notice.Body,
+			TargetType:    notice.Target.Type,
+			TargetID:      notice.Target.ID,
+			CreatedAt:     notice.CreatedAt,
 		})
 	}
 	return out, nil

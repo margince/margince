@@ -29,7 +29,10 @@ export const FIELD_ROWS = new Map([
 // Design-system controls that draw their own label and are not form rows.
 export const NOT_ROWS = new Map([
   ["ChipValueList", "picks a list filter's values"],
-  ["Toolbar", "a list's search box, a label around its input in the toolbar"],
+  [
+    "ListSearch",
+    "a list's search box, a label around its input in the toolbar",
+  ],
 ]);
 const rowKeys = [...FIELD_ROWS].map(([name, file]) => primitiveKey(file, name));
 export const keyIs = (n: ts.Node, key: string) => {

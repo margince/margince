@@ -7,8 +7,9 @@ import { ifMatch } from "../../api/version";
 import type { CommunicationContext } from "../../lib/compose-context";
 import { throwProblem } from "../../lib/problem";
 import type { ChosenFile } from "./composeattachments";
+import { countriesOnMessage, type RecipientCountry } from "./composecountries";
 import type { RelinkKind } from "./composerelink";
-import { scheduleFields } from "./composeschedule";
+import { type ScheduleFields, scheduleFields } from "./composeschedule";
 
 // The saved draft's calls to the server, and the anchor and cache key they
 // share. The hook that decides when to make them is composesaveddraft.tsx.
@@ -34,6 +35,11 @@ export type SavedDraftFields = Readonly<{
   context: CommunicationContext | "";
   /** The send-later moment as the composer holds it: wall-clock text. */
   sendAt: string;
+  sendSchedule?: ScheduleFields;
+  /** The reason typed for sending past a refusal; private to the author. */
+  overrideExplanation?: string;
+  /** The countries stated for recipients; `null` is one cleared. */
+  recipientCountries?: readonly RecipientCountry[];
   // Where an agent drafted it, so a restore files the send there rather than
   // wherever the composer was opened.
   //
@@ -59,17 +65,23 @@ export function groundedFiling(grounding: SavedDraftFields["grounding"]): {
   return { dealId: first("deal"), projectId: first("project") };
 }
 
-// A reply keeps its draft on the message it answers, a new message on the
-// record it was started from. A channel reply keeps none: the draft is a mail's
-// fields, and a chat message has no subject or addressee to hold.
+// A reply keeps its draft on the message it answers, a forward on the message
+// it carries. A new message keeps it on the record it was started from. A
+// channel reply keeps none: a chat message has no subject or addressee to hold.
+// Nor does a message a caller wrote in advance, such as a meeting proposal. It
+// is not the rep's draft for that record, and would replace it.
 export function savedDraftAnchor(input: {
   answering: string | undefined;
+  forwarding?: string;
+  prefilled?: boolean;
   entityType: RelinkKind;
   entityId: string;
   isChannelReply: boolean;
 }): SavedDraftAnchor | null {
   if (input.isChannelReply) return null;
   if (input.answering) return { type: "activity", id: input.answering };
+  if (input.forwarding) return { type: "forward", id: input.forwarding };
+  if (input.prefilled) return null;
   return input.entityId ? { type: input.entityType, id: input.entityId } : null;
 }
 
@@ -141,8 +153,13 @@ export async function writeDraft(ask: SaveAsk): Promise<MailDraft> {
     html_body: ask.fields.html.trim() === "" ? null : ask.fields.html,
     attachment_ids: ask.fields.files.map((file) => file.id),
     communication_context: ask.fields.context || undefined,
-    ...scheduleFields(ask.fields.sendAt),
+    ...scheduleFields(ask.fields.sendAt, ask.fields.sendSchedule),
     editor_state: ask.fields.editorState,
+    override_explanation: ask.fields.overrideExplanation || undefined,
+    recipient_countries: countriesOnMessage(
+      ask.fields.recipientCountries ?? [],
+      [...ask.fields.to, ...ask.fields.cc, ...ask.fields.bcc],
+    ),
   };
   const keepalive =
     ask.keepalive === true &&

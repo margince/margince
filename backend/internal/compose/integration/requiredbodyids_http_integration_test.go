@@ -70,7 +70,7 @@ type requiredIDFixtures struct {
 func seedRequiredIDFixtures(t *testing.T, e *apptest.AppEnv) requiredIDFixtures {
 	t.Helper()
 	var out requiredIDFixtures
-	out.contact = createAndID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Merge Source"})
+	out.contact = createAndID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Merge Source"})
 	out.company = createAndID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Merge Company"})
 	out.activity = createAndID(t, e, "/v1/activities", AnyMap{
 		"kind": "note", "body": "relink probe",
@@ -161,13 +161,17 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 			supplied: AnyMap{"name": "Orphan stage", "position": 9, "pipeline_id": absent},
 			field:    "pipeline_id",
 		},
+		// A merge answers an unseen survivor with the bare 409, so a missing one
+		// answers 409 too (recordmerge.Screen).
 		"MergeContactJSONBody.target_id": {
 			method: "POST", path: "/v1/contacts/" + f.contact + "/merge",
 			omitted: AnyMap{}, supplied: AnyMap{"target_id": absent}, field: "target_id",
+			suppliedStatus: http.StatusConflict,
 		},
 		"MergeCompanyJSONBody.target_id": {
 			method: "POST", path: "/v1/companies/" + f.company + "/merge",
 			omitted: AnyMap{}, supplied: AnyMap{"target_id": absent}, field: "target_id",
+			suppliedStatus: http.StatusConflict,
 		},
 		"RelinkActivityJSONBody.entity_id": {
 			method: "POST", path: "/v1/activities/" + f.activity + "/relink",

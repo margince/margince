@@ -100,8 +100,8 @@ func TestTheSendingEntityPicksTheDataProtectionCountry(t *testing.T) {
 		t.Fatal(err)
 	}
 	branch := ids.NewV7()
-	e.exec(t, `INSERT INTO legal_entity (id, display_name, legal_name, country, captured_by)
-		VALUES ($1, 'Branch', 'Branch Ltd', 'vn', 'human:x')`, branch)
+	e.exec(t, `INSERT INTO legal_entity (id, display_name, legal_name, country, jurisdiction, captured_by)
+		VALUES ($1, 'Branch', 'Branch Ltd', 'fr', 'vn', 'human:x')`, branch)
 
 	for _, tc := range []struct {
 		name   string
@@ -110,7 +110,7 @@ func TestTheSendingEntityPicksTheDataProtectionCountry(t *testing.T) {
 	}{
 		{"no entity", ids.Nil, "de"},
 		{"the default entity", defaultEntity, "de"},
-		{"the vn entity", branch, "vn"},
+		{"an entity registered in fr under vn law", branch, "vn"},
 	} {
 		var got jurisdiction.Code
 		if err := store.db.Tx(e.ctx, func(tx pgx.Tx) error {
@@ -131,7 +131,7 @@ func TestTheSendingEntityPicksTheDataProtectionCountry(t *testing.T) {
 // objection route on advertising (marketing).
 func TestDisclosuresFollowTheirOwnSelectors(t *testing.T) {
 	e := setupChannelConsent(t)
-	messagingrules.Register(messagingrules.Rules{
+	testMessagingRules(t, messagingrules.Rules{
 		Jurisdiction: "zj", Version: 1,
 		Disclosures: []messagingrules.Disclosure{
 			{Kind: messagingrules.ControllerIdentity},

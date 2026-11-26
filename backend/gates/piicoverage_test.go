@@ -180,8 +180,10 @@ var piiTables = map[string]piiHandling{
 	"activity": {
 		erasureWrite: true,
 		sarRead:      true,
+		sarWithholds: []string{"system_text"},
 		retentionErasures: []string{
 			"body = NULL",
+			"system_text = @system_text",
 			"raw = NULL",
 			// The tombstone is part of the erasure, not decoration beside it:
 			// the row keeps saying a meeting happened while saying nothing
@@ -318,15 +320,13 @@ var piiTables = map[string]piiHandling{
 	// subject's own words held outside the message. It goes when the body goes,
 	// and the contact foreign key cannot do it: Art. 17 anonymizes that
 	// row in place, so nothing cascades.
-	//
-	// Neither sarRead nor sarForbidden, deliberately and temporarily. Whether
-	// an Art. 15 package returns a colleague's or an agent's READING of the
-	// subject's words as well as the words is a product and legal call, and it
-	// is open — until it is answered, declaring either here would assert a
-	// decision nobody has made. Registered unflagged means a future SAR query
-	// over this table passes this gate silently, which is the cost of leaving
-	// it open and is named here so the next reader is not surprised by it.
-	"conversation_claim": {erasureWrite: true},
+	// Art. 15 returns the reading with the words; who wrote it is a colleague's
+	// data, so the three user columns stay out.
+	"conversation_claim": {
+		erasureWrite: true,
+		sarRead:      true,
+		sarWithholds: []string{"captured_by", "corrected_by_user_id", "taken_by_user_id"},
+	},
 	// A stage-evidence snippet quotes the message a claim about a deal was read
 	// from, so it goes when the message's text goes. The row stays.
 	//
@@ -334,6 +334,10 @@ var piiTables = map[string]piiHandling{
 	// agreed or proposed, and how sure the writer was, is a conclusion drawn
 	// from what the subject wrote.
 	"deal_stage_evidence": {erasureWrite: true, sarRead: true},
+	// A legal review's note and comments are colleagues' free text about a deal
+	// and can name its stakeholders. Erasure clears the text and keeps the row,
+	// whose outcome settles the deal's stage gate.
+	"legal_review": {erasureWrite: true, sarRead: true},
 	// A handoff names the subject it was about, and its note is what one seat
 	// wrote about them to another. The judgement — accepted, or refused for this
 	// reason — is a decision contacts made about that contact, the same holding
@@ -523,12 +527,14 @@ var piiTables = map[string]piiHandling{
 // privacy's own TestEveryPromisedTableIsActuallyAssembled asks that half, from
 // the only package that can call sarSections.
 var sarAssemblyFiles = []string{
+	"internal/modules/privacy/saraudithistory.go",
 	"internal/modules/privacy/raworiginalsubjects.go",
 	"internal/modules/privacy/sarretainedcopies.go",
 	"internal/modules/privacy/sarreporting.go",
 	"internal/modules/privacy/reportingquestions.go",
 	"internal/modules/privacy/reportingbindings.go",
 	"internal/modules/privacy/sar.go",
+	"internal/modules/privacy/sarrows.go",
 	"internal/modules/privacy/sarsections.go",
 	"internal/modules/privacy/sarrequestproofs.go",
 	// What this installation CONCLUDED about the subject's correspondence —
@@ -537,6 +543,7 @@ var sarAssemblyFiles = []string{
 	// chapter left off this list is a PII table the census reports as
 	// unexported while the export carries it.
 	"internal/modules/privacy/sarjudgements.go",
+	"internal/modules/privacy/sarlegalreview.go",
 	"internal/modules/privacy/sarcommunication.go",
 	"internal/modules/privacy/sarconsentlinks.go",
 	"internal/modules/privacy/sarmessages.go",
@@ -629,6 +636,11 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 			for _, table := range sqlWriteTargets(lit) {
 				writes[table] = true
 			}
+		}
+	}
+	for _, stmt := range declaredErasureStatements(t) {
+		for _, table := range sqlWriteTargets(stmt) {
+			writes[table] = true
 		}
 	}
 	// Each swept table keeps the text of the sweep statements that write it, so

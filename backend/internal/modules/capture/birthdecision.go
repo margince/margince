@@ -158,7 +158,7 @@ func decideBirthTx(
 	// posture_at_import, so the import contribution would re-pin the row to
 	// `participants` after any later widening (activities' contributionOf), and a
 	// meeting that got filed against a workspace record would never open.
-	if fields.Kind != kindEmail && !memberBound {
+	if _, onSeat := chatSeatOf(ctx); fields.Kind != kindEmail && !memberBound && !onSeat {
 		return birthDecision{}, nil
 	}
 
@@ -185,11 +185,10 @@ func decideBirthTx(
 		decision = decision.hold(audienceReasonConfidentialMarker)
 	}
 
-	// Steps 4 and 5 and no further for a chat. Both read capture_connection —
-	// the mailbox that delivered the message, its posture and the verdicts taken
-	// against its threads — and a channel transport has no row in it. Giving one
-	// a posture of its own is a product question about what a member may ask of
-	// their own transport, not a gap to fill in with mail's answer.
+	// A chat has no thread verdict to inherit, and its seat or pin answers step 5.
+	if _, onSeat := chatSeatOf(ctx); fields.memberOwned || onSeat {
+		return chatPostureTx(ctx, tx, decision, fields.pinnedPosture)
+	}
 	if fields.Kind != kindEmail {
 		return decision, nil
 	}
@@ -236,7 +235,7 @@ func decideBirthTx(
 		// stricter already decided. It outlives any one counterparty hold, so a
 		// widening that did not know about it would publish mail from a mailbox
 		// that never asked for its mail to be shared.
-		decision = decision.hold(audienceReasonPosture)
+		decision = decision.hold(postureReason(ctx))
 		decision.posture = posture
 		return decision, nil
 	}
@@ -283,12 +282,9 @@ func standingHoldsTx(
 }
 
 // Settled holds apply to every sibling; pending has not judged the conversation.
+// The shared rule also controls sibling stamps and reader authorization.
 func holdingVerdict(status string) bool {
-	switch status {
-	case VerdictHeld, VerdictUnsure, VerdictHeldByOwner:
-		return true
-	}
-	return false
+	return ClosesOpenMessages(status)
 }
 
 // mailboxPostureTx reads the posture of the connection that DELIVERED this
@@ -306,6 +302,11 @@ func holdingVerdict(status string) bool {
 // what they want mid-sync, and a message whose provenance the product cannot
 // establish is the last one to publish on a guess.
 func mailboxPostureTx(ctx context.Context, tx pgx.Tx) (string, error) {
+	if shared, ok := sharedMailboxOf(ctx); ok {
+		return storekit.RememberCaptureFact(ctx, tx, mailboxPostureMemo+shared.String(), func() (string, error) {
+			return connectionPostureTx(ctx, tx, sharedConnection(shared))
+		})
+	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
 		return PostureHeld, nil
@@ -316,8 +317,13 @@ func mailboxPostureTx(ctx context.Context, tx pgx.Tx) (string, error) {
 		// posture from.
 		return PostureHeld, nil
 	}
-	return mailboxPostureForTx(ctx, tx, actor.UserID, provider)
+	return storekit.RememberCaptureFact(ctx, tx, mailboxPostureMemo+actor.UserID.String()+":"+provider, func() (string, error) {
+		return mailboxPostureForTx(ctx, tx, actor.UserID, provider)
+	})
 }
+
+// mailboxPostureMemo prefixes one mailbox's sharing setting in a transaction's memo.
+const mailboxPostureMemo = storekit.CaptureFactsMemo + "mailbox_posture:"
 
 // mailboxPostureForTx reads one named mailbox's posture.
 //
@@ -335,11 +341,18 @@ func mailboxPostureForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, provider
 	if user == ids.Nil || provider == "" {
 		return PostureHeld, nil
 	}
+	connection, ok, err := seatMailboxTx(ctx, tx, user, provider)
+	if err != nil || !ok {
+		return PostureHeld, err
+	}
+	return connectionPostureTx(ctx, tx, memberConnection(user, connection))
+}
+
+// connectionPostureTx reads the posture of the one live connection match
+// names.
+func connectionPostureTx(ctx context.Context, tx pgx.Tx, match connectionMatch) (string, error) {
 	var posture string
-	err := tx.QueryRow(ctx, `
-		SELECT mail_posture FROM capture_connection
-		 WHERE user_id = $1 AND provider = $2 AND archived_at IS NULL`,
-		user, provider).Scan(&posture)
+	err := tx.QueryRow(ctx, `SELECT mail_posture FROM capture_connection WHERE `+match.where+` AND archived_at IS NULL`, match.args...).Scan(&posture)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return PostureHeld, nil

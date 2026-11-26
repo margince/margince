@@ -1,0 +1,12 @@
+{
+  "verb": "search_report_evidence",
+  "checks": [
+    "activity.read",
+    "activity.read,deal.read,lead.read,project.read",
+    "installation_settings.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "report_run"
+  ]
+}

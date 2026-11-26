@@ -13,9 +13,12 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/privacyreview"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -26,8 +29,8 @@ func TestErasureExplainsMissingReviewerAndRollsBack(t *testing.T) {
 	subject := e.SeedContact(t, "Anna Berg", nil)
 	company := e.SeedCompany(t, "Review company", nil)
 	e.WsExec(t, `UPDATE company SET description='Anna Berg is mentioned here' WHERE id=$1`, company)
-	err := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure")
-	var refusal *privacyReviewUnavailableError
+	err := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure")
+	var refusal *privacyreview.UnavailableError
 	if !errors.As(err, &refusal) || !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("missing reviewer must explain a conflict: %v", err)
 	}
@@ -52,7 +55,7 @@ func TestErasureFlagsCompanyTemplatesWithoutChangingThem(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
+	if err := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.WsScalar(t, `SELECT signature_template FROM legal_entity WHERE id=$1`, entity.ID); got != "<p>Anna Berg</p>" {
@@ -70,14 +73,23 @@ func TestErasureFlagsCompanyTemplatesWithoutChangingThem(t *testing.T) {
 
 func TestErasureFlagsAnInactiveMembersSignatureWithoutOpeningTheControllersOwn(t *testing.T) {
 	e := integration.Setup(t)
-	e.WsExec(t, `INSERT INTO role_assignment(user_id,role_id) SELECT $1,id FROM role WHERE key='admin'`, e.AdminUser)
-	subject, signature := e.SeedContact(t, "Anna Berg", nil), ids.NewV7()
-	e.WsExec(t, `INSERT INTO email_signature(id,owner_id,body) VALUES($1,$2,'Anna Berg')`, signature, e.Rep1)
-	e.WsExec(t, `UPDATE app_user SET status='deactivated' WHERE id=$1`, e.Rep1)
-	if err := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
+	memberManagerFor(t, e)
+	subject := e.SeedContact(t, "Anna Berg", nil)
+	store := contacts.NewStore(InstallationDB(e.Pool))
+	if _, err := store.SaveMyEmailSignature(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms), contacts.SaveSignatureInput{Body: "Anna Berg"}); err != nil {
 		t.Fatal(err)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM notice WHERE kind='privacy_review_required' AND recipient_user_id=$1 AND target_type IS NULL AND body LIKE '%'||$2::uuid::text||'%' AND body LIKE '%'||$3::uuid::text||'%'`, e.AdminUser, signature, e.Rep1); n != 1 {
+	var signature ids.UUID
+	if err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
+		return tx.QueryRow(e.Admin(), `SELECT id FROM email_signature WHERE owner_id=$1`, e.Rep1).Scan(&signature)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	deactivateSignatureOwner(t, e)
+	if err := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
+		t.Fatal(err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM notice WHERE kind='privacy_review_required' AND recipient_user_id=$1 AND target_type='retained_email_signature' AND target_id=$2`, e.AdminUser, signature); n != 1 {
 		t.Fatalf("inactive signature review count=%d", n)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM notice WHERE kind='privacy_review_required' AND recipient_user_id=$1`, e.Rep1); n != 0 {
@@ -85,7 +97,7 @@ func TestErasureFlagsAnInactiveMembersSignatureWithoutOpeningTheControllersOwn(t
 	}
 }
 
-func TestMarkerCorrectionDefersAWriteConflictWithoutAbortingItsTransaction(t *testing.T) {
+func TestMarkerCorrectionReportsAWriteConflictWithoutAbortingItsTransaction(t *testing.T) {
 	e := integration.Setup(t)
 	record := legacyWeeklyCopies(t, e, "")
 	contact, company := e.SeedContact(t, "Ordinary contact", nil), e.SeedCompany(t, "Ordinary company", nil)
@@ -96,11 +108,11 @@ func TestMarkerCorrectionDefersAWriteConflictWithoutAbortingItsTransaction(t *te
 		}
 		return database.WithWorkspaceTx(ctx, e.Pool, func(cleanup pgx.Tx) error {
 			page, err := privacy.RedactMarkedWeeklyAuditPageTx(ctx, cleanup, ids.UUID{}, ids.NewV7(), 200, nil)
-			if err != nil {
-				return err
+			if !storekit.IsLockTimeout(err) {
+				t.Fatalf("a busy table lock must return a lock timeout, got %v", err)
 			}
-			if page.Changed != 0 {
-				t.Fatalf("changed %d records while CRM write holds a lock", page.Changed)
+			if page.Changed != 0 || len(page.Scanned) != 0 {
+				t.Fatalf("busy table lock moved the cursor over %d records and changed %d", len(page.Scanned), page.Changed)
 			}
 			if _, err := business.Exec(ctx, `UPDATE company SET legal_hold=false WHERE id=$1`, company); err != nil {
 				return err
@@ -123,7 +135,7 @@ func TestMarkerCorrectionDefersAWriteConflictWithoutAbortingItsTransaction(t *te
 	}
 }
 
-func TestMarkerCorrectionDefersAReadLockOnARightsRequest(t *testing.T) {
+func TestMarkerCorrectionReportsAReadLockOnARightsRequest(t *testing.T) {
 	e := integration.Setup(t)
 	request := legacyRequestAuditCopies(t, e)
 	company := e.SeedCompany(t, "Ordinary company", nil)
@@ -138,11 +150,8 @@ func TestMarkerCorrectionDefersAReadLockOnARightsRequest(t *testing.T) {
 				return err
 			}
 			page, err := privacy.RedactRetiredRequestAuditPageTx(ctx, cleanup, ids.UUID{}, ids.NewV7(), privacy.MarkerAuditPageSize, nil)
-			if err != nil {
-				return err
-			}
-			if page.Changed != 0 {
-				t.Fatal("changed a request another transaction is using")
+			if !storekit.IsLockTimeout(err) || page.Changed != 0 || len(page.Scanned) != 0 {
+				t.Fatalf("a busy record lock must return a lock timeout and no progress, got %v, %d scanned, %d changed", err, len(page.Scanned), page.Changed)
 			}
 			return nil
 		}); err != nil {
@@ -156,5 +165,30 @@ func TestMarkerCorrectionDefersAReadLockOnARightsRequest(t *testing.T) {
 	runMachineAddressTask(ctx, t, e, markedAuditRedactionDataTask())
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='data_subject_request' AND entity_id=$1 AND after->>'email'='private@example.test'`, request); n != 0 {
 		t.Fatalf("retry kept %d images", n)
+	}
+}
+
+func TestAReadSeatCannotBeTheControllerForErasureOrMissedReceipts(t *testing.T) {
+	e := integration.Setup(t)
+	memberManagerFor(t, e)
+	e.WsExec(t, `UPDATE app_user SET seat_type='read' WHERE id=$1`, e.AdminUser)
+	subject := e.SeedContact(t, "Anna Berg", nil)
+	company := e.SeedCompany(t, "Review company", nil)
+	e.WsExec(t, `UPDATE company SET description='Anna Berg is mentioned here' WHERE id=$1`, company)
+	err := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure")
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("read-only controller accepted erasure: %v", err)
+	}
+	if name := e.WsScalar(t, `SELECT full_name FROM contact WHERE id=$1`, subject); name != "Anna Berg" {
+		t.Fatalf("partial erasure: %s", name)
+	}
+	err = e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
+		return (receiptAlarm{db: e.DB()}).RaiseMissedReceiptTx(e.Admin(), tx, consent.MissedReceipt{SubjectType: "contact", SubjectID: subject, MessageID: ids.NewV7().String(), Reason: consent.MissedReceiptNoAddress})
+	})
+	if !errors.Is(err, errNoReceiptOperator) {
+		t.Fatalf("read-only receipt controller accepted: %v", err)
+	}
+	if count := e.WsCount(t, `SELECT count(*) FROM notice WHERE kind IN ('privacy_review_required','optout_receipt_missed')`); count != 0 {
+		t.Fatalf("ineligible operator received %d notices", count)
 	}
 }

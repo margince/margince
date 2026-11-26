@@ -1,0 +1,15 @@
+{
+  "tool": "run_research",
+  "action": "start_search_reindex",
+  "verb": "start_search_reindex",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

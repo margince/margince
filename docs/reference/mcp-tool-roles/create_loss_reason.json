@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "create_loss_reason",
+  "verb": "create_loss_reason",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

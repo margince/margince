@@ -42,6 +42,7 @@ const ROOM = {
   deal_id: "deal-1",
   title: "Brandt Automotive — retrofit programme",
   state: "live",
+  writable: true,
   source: "manual",
   version: 3,
   created_at: "2026-08-22T09:00:00Z",
@@ -87,12 +88,17 @@ function jsonResponse(body: unknown) {
 function stubApi(
   room: DealRoom,
   participants: readonly Participant[] | undefined,
+  mayUpdate = true,
 ) {
   vi.stubGlobal("fetch", (input: Request) => {
     const path = new URL(input.url).pathname;
     if (path.endsWith("/me")) {
       return Promise.resolve(
-        jsonResponse(meFixture({ allow: { deal_room: ["read", "update"] } })),
+        jsonResponse(
+          meFixture({
+            allow: { deal_room: mayUpdate ? ["read", "update"] : ["read"] },
+          }),
+        ),
       );
     }
     if (path.endsWith("/participants")) {
@@ -111,11 +117,14 @@ const render = (ui: ReactNode) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+  return {
+    ...rtlRender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{ui}</LocaleProvider>
+      </QueryClientProvider>,
+    ),
+    client,
+  };
 };
 
 it("names the room, marks it live, and counts who is in it", async () => {
@@ -205,4 +214,118 @@ it("ends access on the day picked from the calendar", async () => {
   await waitFor(() =>
     expect(sent).toEqual([{ expires_at: "2026-09-28T23:59:59.000Z" }]),
   );
+});
+
+it("asks an editor to replace an unavailable steward through the existing room editor", async () => {
+  const user = userEvent.setup();
+  stubApi({ ...ROOM, needs_steward: true }, []);
+  render(<DealRoomPage dealId="deal-1" />);
+  expect(await screen.findByText("New contact needed")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Manage room" }));
+  const dialog = await screen.findByRole("dialog", { name: "Manage room" });
+  expect(
+    within(dialog).getByRole("combobox", { name: "Your contact" }),
+  ).toHaveTextContent("No active contact");
+});
+
+it("keeps a staffed room free of a replacement prompt", async () => {
+  stubApi({ ...ROOM, needs_steward: false }, []);
+  render(<DealRoomPage dealId="deal-1" />);
+  await screen.findByRole("heading", { name: ROOM.title });
+  expect(screen.queryByText("New contact needed")).not.toBeInTheDocument();
+});
+
+it("does not ask a reader without room edit access to replace the steward", async () => {
+  stubApi({ ...ROOM, needs_steward: true }, [], false);
+  render(<DealRoomPage dealId="deal-1" />);
+  await screen.findByRole("heading", { name: ROOM.title });
+  expect(screen.queryByText("New contact needed")).not.toBeInTheDocument();
+});
+
+it("clears the replacement prompt after saving an active colleague", async () => {
+  const user = userEvent.setup();
+  const room = {
+    ...ROOM,
+    needs_steward: true,
+    steward_user_id: "former-steward",
+  };
+  stubApi(room, []);
+  const read = globalThis.fetch;
+  const changes: unknown[] = [];
+  vi.stubGlobal("fetch", async (input: Request) => {
+    const path = new URL(input.url).pathname;
+    if (input.method === "PATCH" && path.endsWith("/deal-rooms/room-1")) {
+      changes.push(await input.json());
+      expect(input.headers.get("If-Match")).toBe("3");
+      room.steward_user_id = "next-steward";
+      room.needs_steward = false;
+      room.version = 9;
+      return jsonResponse(room);
+    }
+    if (path.endsWith("/users")) {
+      return jsonResponse({
+        data: [
+          {
+            id: "agent-seat",
+            display_name: "AI Colleague",
+            status: "active",
+            is_agent: true,
+          },
+          {
+            id: "next-steward",
+            display_name: "Alex Colleague",
+            status: "active",
+            is_agent: false,
+          },
+        ],
+        page: {},
+      });
+    }
+    return read(input);
+  });
+  const { client } = render(<DealRoomPage dealId="deal-1" />);
+  await user.click(await screen.findByRole("button", { name: "Manage room" }));
+  const dialog = await screen.findByRole("dialog", { name: "Manage room" });
+  await user.click(
+    within(dialog).getByRole("combobox", { name: "Your contact" }),
+  );
+  expect(
+    screen.queryByRole("option", { name: "AI Colleague" }),
+  ).not.toBeInTheDocument();
+  await user.click(
+    await screen.findByRole("option", { name: "Alex Colleague" }),
+  );
+  room.version = 8;
+  await client.invalidateQueries({ queryKey: ["deal-rooms", "deal-1"] });
+  await user.click(
+    within(dialog).getByRole("button", { name: "Save changes" }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("dialog", { name: "Manage room" }),
+    ).not.toBeInTheDocument(),
+  );
+  await waitFor(() =>
+    expect(screen.queryByText("New contact needed")).not.toBeInTheDocument(),
+  );
+  expect(changes).toEqual([
+    {
+      title: ROOM.title,
+      welcome_message: null,
+      steward_user_id: "next-steward",
+    },
+  ]);
+});
+
+it.each<{ name: string; room: DealRoom }>([
+  {
+    name: "a deal the reader cannot change",
+    room: { ...ROOM, writable: false },
+  },
+  { name: "a finished room", room: { ...ROOM, state: "closed" } },
+])("does not ask for a new contact on $name", async ({ room }) => {
+  stubApi({ ...room, needs_steward: true }, []);
+  render(<DealRoomPage dealId="deal-1" />);
+  await screen.findByRole("heading", { name: ROOM.title });
+  expect(screen.queryByText("New contact needed")).not.toBeInTheDocument();
 });

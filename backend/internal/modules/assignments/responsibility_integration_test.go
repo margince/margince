@@ -15,6 +15,7 @@ package assignments
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -51,7 +52,7 @@ func (e *roleEnv) seedColleague(t *testing.T, name string) ids.UUID {
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, $3)`,
-		id, name+"-"+id.String()+"@responsibility.test", name); err != nil {
+		id, strings.ToLower(name)+"-"+id.String()+"@responsibility.test", name); err != nil {
 		t.Fatal(err)
 	}
 	return id
@@ -257,8 +258,8 @@ func TestAnArchivedAccountTakesNoNewResponsibility(t *testing.T) {
 	}
 }
 
-// An invited colleague can be given a responsibility before their first
-// sign-in; a suspended one cannot. The picker offers the same split.
+// API compatibility keeps invited colleagues assignable before their first
+// sign-in. Suspended colleagues cannot take on a responsibility.
 func TestAnInvitedColleagueTakesAResponsibilityAndASuspendedOneDoesNot(t *testing.T) {
 	e := setupRoleEnv(t)
 	ctx := e.actingAs(e.admin, companyCRUD, principal.RowScopeAll)

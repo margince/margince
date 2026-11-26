@@ -1,0 +1,13 @@
+{
+  "verb": "apply_legacy_loss_reasons",
+  "checks": [
+    "custom_field.read",
+    "custom_field.update",
+    "data_task.read",
+    "data_task.update",
+    "deal.read"
+  ],
+  "takes": [
+    "loss_mapping"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "tool": "read_details",
+  "action": "lead_score",
+  "verb": "explain_lead_score",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

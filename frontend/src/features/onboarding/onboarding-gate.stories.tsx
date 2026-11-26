@@ -171,6 +171,23 @@ export const AtRest: Story = {
   ),
 };
 
+// The reader skipped the AI step: no website can be read, so the manual
+// interview leads and the key is one press back.
+export const WithoutAModel: Story = {
+  render: () => (
+    <Surface>
+      <OnboardingGate
+        name="Lars"
+        running={false}
+        configuredModel={MODEL}
+        onSubmit={noAction}
+        onManual={noAction}
+        onAddModel={noAction}
+      />
+    </Surface>
+  ),
+};
+
 export const Anonymous: Story = {
   render: () => (
     <Surface>

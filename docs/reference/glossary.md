@@ -14,12 +14,18 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Antigravity | Google's AI coding tool, which can connect to Margince. |
 | Apache | The Apache License 2.0, which each release becomes after two years. |
 | API | The HTTP interface the server offers, defined in `backend/api/crm.yaml`. |
+| Arabic | The Arabic script, written from right to left. |
 | backend | The Go server code under `backend/`. |
 | Beschäftigteninformation | The German notice each employee gets before their mailbox is read (Art. 13 GDPR). |
+| breakdown | A count of one population split by one field, which an extension can add. |
 | BUSL | The Business Source License 1.1, the license Margince uses. |
+| capability | A core feature an extension can ask to use, such as its AI models or file store. |
+| challenge | A check a WAF puts to the browser in the app's place, which only a page load can pass. |
 | changelog | A file listing the changes of each release, which this repository does not keep. |
+| Chinese | The Chinese script and the languages written in it. |
 | CI | Continuous integration: the checks GitHub runs on every pull request. |
 | CIMD | Client ID Metadata Document: an AI tool's ID that is the URL of a file describing it. |
+| CLDR | The Unicode Common Locale Data Repository, whose zone files map IANA zones to Windows zones. |
 | CLS | Cumulative Layout Shift: how far content moves on screen while a page loads. |
 | Compose | Docker Compose, which starts Postgres and Redis for local work. |
 | Conventional | Conventional Commits, a format for commit messages. |
@@ -29,11 +35,16 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | CRM | Customer relationship management: software for contacts, companies and deals. |
 | CSV | Comma-separated values, a plain text format for tables. |
 | Cursor | An AI code editor, which can connect to Margince. |
+| Cyrillic | The alphabet of Russian, Ukrainian, Bulgarian and Serbian. |
 | de | The language code for German, as a setting value. |
 | dev | The development mode of a local install, set by `MARGINCE_ENV`. |
 | Diátaxis | A way to sort docs into tutorials, how-to guides, reference and explanation. |
+| Dispact | A team chat a company hosts itself, where a deal or project can have its own channel. |
 | dmy | The date order day, month, year, as a setting value. |
+| Doc | One Google Docs file, such as the notes Google Meet writes for a meeting. |
+| Docs | Google Docs, the Google editor where Meet writes meeting notes and transcripts. |
 | Docker | The container tool used to run the local stack and the images. |
+| Drive | Google Drive, where a Google account keeps its files. |
 | English | The language the docs and the source catalog are written in. |
 | entity | A legal entity: one of the companies an installation trades as, each with its own name and address. |
 | EU | The European Union, whose laws several pages refer to. |
@@ -45,28 +56,38 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Gmail | Google's mail service, one of the mailboxes Margince connects to. |
 | Go | The programming language of the server. |
 | Google | The company behind Gmail and the Gemini models. |
+| grace | The grace period: the time after a licence expires in which Margince still runs. |
 | Gradion | The company that builds Margince and licenses it. |
+| Greek | The Greek alphabet and the language written in it. |
 | handoff | An SDR passing a prospect to an account executive, who accepts or returns it. |
 | handoffs | SDRs passing prospects to account executives, who accept or return them. |
+| Hebrew | The Hebrew script, written from right to left. |
 | HNSW | A vector index type, Hierarchical Navigable Small World, that Margince does not use. |
 | HTTPS | HTTP over an encrypted connection. |
 | identity | Who sent a privacy request; closing one records how that was checked. |
 | IMAP | The standard protocol for reading mail from a mail server. |
 | incoming | An incoming webhook: the address a chat tool gives for posting into a channel. |
+| Italian | Of Italy, as in Italian law, whose pack is in `extensions/eu`. |
+| Japanese | The Japanese language and the scripts it is written in. |
 | JPEG | A common photo file format, saved as .jpg or .jpeg. |
 | Jurisdiction | The settings page where an admin chooses the law an installation follows. |
+| Korean | Of the Republic of Korea, as in Korean law, whose pack is in `extensions/apac`. |
 | Langdock | A service that serves OpenAI, Gemini and Claude models on one key. |
+| Latin | The Latin alphabet, which English, German and Vietnamese are written in. |
 | Launchpad | The Ubuntu project service that records each package Ubuntu publishes. |
 | LICENSE | The file at the repository root that holds the license text. |
 | LinkedIn | The professional network whose contact export Margince can import. |
 | locale | The date or time format of the reader's language, as a setting value. |
+| Lumo | Proton's AI assistant, which connects to Margince through its desktop app. |
 | macOS | Apple's desktop operating system. |
 | Margince | The CRM this repository builds. |
+| mask | A field permission that hides one field of a record from a role. |
 | Material | Google's Material Symbols icon set, the source of the web app's filled status marks. |
 | MCP | Model Context Protocol: how an AI agent connects to Margince's tools. |
 | mdy | The date order month, day, year, as a setting value. |
 | Microsoft | The company behind Microsoft 365 mail and calendars. |
 | milestone | A GitHub group of issues planned for one month, named `YYYY-MM`. |
+| multi-select | A custom field type that holds several choices at once. |
 | Node | Node.js, the JavaScript runtime the web app's tools run on. |
 | Ollama | A tool that runs language models on your own machine. |
 | OpenDocument | The open file format for text, tables and slides. |
@@ -83,7 +104,9 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | React | The JavaScript library the web app is built with. |
 | Redis | The in-memory store Margince uses as its event bus. |
 | REST | The style of HTTP API Margince offers next to MCP. |
+| restriction | A hold a contact may ask for that stops processing of their data (GDPR Art. 18). |
 | RTF | Rich Text Format, a document format most word processors read. |
+| SDK | A software development kit: a library a program uses to drive a tool, as the Claude Agent SDK drives Claude Code. |
 | Shift | The key held while pressing another, as in Page Up/Down by year in `Calendar`. |
 | skill | A folder an AI tool loads to learn a task, led by a `SKILL.md` file. |
 | Slack | A team chat tool where an incoming webhook can post messages. |
@@ -95,12 +118,14 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | terminal | The window where you type commands, such as `claude` or `codex`. |
 | Typeform | An online form tool that can send each answer to a webhook address. |
 | Ubuntu | The Linux distribution the CI image is built on, pinned to 24.04. |
+| Unicode | The consortium that publishes the Unicode text standard and the CLDR data. |
 | UTF | The Unicode text encoding family, as in UTF-8. |
 | VAT | Value added tax, and the tax number a company is registered under. |
 | vi | The language code for Vietnamese, as a setting value. |
 | Visual | Part of the name Visual Studio, Microsoft's code editor, which can connect to Margince. |
 | Vite | The build and dev server tool for the web app. |
 | vLLM | A server that runs language models on your own machines. |
+| WAF | A web application firewall: a filter at the edge that can answer a request in the app's place. |
 | Webflow | A website builder whose forms can send each entry to a webhook address. |
 | webhook | A message one tool sends to another tool's address when a chosen event happens. |
 | WebP | A modern image file format, saved as .webp. |
@@ -108,9 +133,30 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Windows | Microsoft's desktop operating system. |
 | Worklist | The app's list of tasks and items that need a user's action. |
 | worktree | A second git checkout of the repository with its own branch. |
+| WSL | Windows Subsystem for Linux, which runs a Linux system on Windows. |
 | ymd | The date order year, month, day, as a setting value. |
 | Zapier | An automation tool that can start a task when a webhook arrives. |
 | ZIP | A file format that packs many files into one. |
+
+## Words for AI in Margince
+
+AI works with Margince in two ways, and each thing in them has one word. A page for clients uses the
+word in the first column. A page for builders may keep the word in the last column, as long as its
+first use names the plain word.
+
+| Say this | It means | Not for clients | Builders may still say |
+|---|---|---|---|
+| Margince AI | The AI inside the product: its features, and the night helpers. | the AI runtime, the model runtime | AI task, router |
+| the night helpers | The scheduled agents of Margince AI that work while the team sleeps. | Surface B | agent runner |
+| your AI assistant | An AI tool that a user connects to Margince over MCP. | AI tool, outside agent, MCP client, Surface A | agent, for rights and passports |
+| feature | One kind of work Margince AI does. | "feature" for a place | task |
+| place | One spot in the product where a feature calls a model. | site, invocation site | call site |
+| job | One everyday errand an assistant does in our tests. | case, use case, scenario | scenario file |
+| test case | One example with a known right answer, for a feature. | scenario | scenario file |
+| try | One run of a test case or a job. | run | run |
+| model setup | Which model does which kind of work. | preset, binding, routing | preset (the file), binding (the stored setting) |
+| grade | Ready, usable with care, not reliable yet, or not tested. | band, verdict, certified | the three stored values |
+| test result | The stored outcome of a test, for one feature and one model, or one job and one assistant. | record, verdict file | record, verdict |
 
 ## Names without a meaning yet
 
@@ -132,14 +178,14 @@ write its meaning, and delete it here. A name new to the docs goes in the table,
 `DSFA`, `DSGVO`, `DSL`, `DSN`, `DSNs`, `DSR`, `DTO`, `EAV`, `Edge`, `Einwilligung`, `embeddings`,
 `Empfangsbestätigung`, `Enterprise`, `Entra`, `entrypoint`, `enum`, `env`, `ERP`, `Esc`, `Escape`, `ETag`,
 `EUR`, `European`, `evaluator`, `Excel`, `Exchange`, `FAQ`, `Fastmail`, `favicons`, `FE`, `Firefox`,
-`Flash-Lite`, `Fonts`, `forbidigo`, `frontend`, `FX`, `GB`, `GBP`, `gcal`, `GCM`,
+`Flash-Lite`, `forbidigo`, `frontend`, `FX`, `GB`, `GBP`, `gcal`, `GCM`,
 `Geist`, `Gemini`, `Gemma`, `GGUF`, `GH`, `GiB`, `gitignored`, `gitleaks`, `glob`, `go-arch-lint`,
 `GoBD`, `gofmt`, `golangci`, `golangci-lint`, `gosec`, `govulncheck`, `GPL`, `GPT`, `GPU`, `Graph`, `graphcal`,
-`grep`, `Groq`, `GUC`, `Haiku`, `Handelsbrief`, `HardPass`, `HGB`, `HMAC`, `HMAC-SHA`, `HTML`, `HTTP`, `Hà`,
+`grep`, `Groq`, `GUC`, `Handelsbrief`, `HardPass`, `HGB`, `HMAC`, `HMAC-SHA`, `HTML`, `HTTP`, `Hà`,
 `IAM`, `IANA`, `ICP`, `ID`, `id`, `idempotency`, `Idempotency-Key`, `IDs`, `IMAPS`, `Impressum`, `Insights`,
 `Inspector`, `IP`, `iPhone`, `ISO`, `Jev`, `jq`, `jsdom`, `JSON`, `JSON-LD`, `JSON-RPC`, `JSONL`,
 `JSONPath`, `K`, `KB`, `Kev`, `Keychain`, `keyvault`, `Laya`, `lcov`, `Levenshtein`, `libpq`, `Linux`,
-`LiteLLM`, `LLM`, `LOC`, `localhost`, `lockfile`, `London`, `Mac`, `MAJOR`, `Makefile`, `Markdown`,
+`LiteLLM`, `LLM`, `LOC`, `lockfile`, `London`, `Mac`, `MAJOR`, `Makefile`, `Markdown`,
 `markdown`, `MB`, `Meet`, `MFA`, `MiB`, `micro-USD`, `middleware`, `MIME`, `Minh`, `MinIO`, `Ministral`,
 `MINOR`, `Mistral`, `MIT`, `MLX`, `MoE`, `MRL`, `ms`, `mtime`, `MX`, `NAT`,
 `Nebius`, `Nemo`, `NFC`, `NL`, `non-match`, `nonce`, `NormalizedRecord`, `Novita`, `npm`, `Nr`,

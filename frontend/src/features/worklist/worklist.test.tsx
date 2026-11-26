@@ -92,9 +92,35 @@ describe("what the ranked queue tells a reader", () => {
     renderWorklist();
 
     // Eight rows reading the same sentence cannot be ordered or chosen between.
-    // The name is already on the row; only the title discarded it.
+    // Each row's chip line names its lead, so the two read apart.
+    expect(await screen.findByText("Katrin Seibert")).toBeTruthy();
+    expect(
+      screen.getByText("Philipp Hartwig").closest(".task-meta"),
+    ).not.toBeNull();
+  });
+
+  // A brief item's chip line withholds its record, so the title keeps it.
+  it("keeps a brief item's record in its title", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "b1",
+            source: "brief_item",
+            title: "Follow up with the new lead",
+            subject: {
+              type: "lead",
+              id: "01a05500-0000-7000-8000-000000000003",
+              label: "Katrin Seibert",
+            },
+          }),
+        ],
+        summary: { urgent: 0, due: 1, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
     expect(await screen.findByText(/Katrin Seibert/)).toBeTruthy();
-    expect(screen.getByText(/Philipp Hartwig/)).toBeTruthy();
   });
 
   // The server sends the deal's name in `detail` — the title has nowhere to
@@ -640,7 +666,7 @@ describe("a lead still owed its first reply", () => {
     );
     renderWorklist();
 
-    await screen.findByText("Weber GmbH");
+    await screen.findByText("Get back to new lead Weber GmbH");
     // The category badge, and the reason — both from the catalog, so an
     // unregistered kind renders its raw key here and fails visibly.
     expect(screen.getByText(en["worklist.category.leads"])).toBeTruthy();
@@ -667,7 +693,9 @@ describe("a lead still owed its first reply", () => {
     stub(day({ queue: [leadRow()] }));
     renderWorklist();
 
-    const link = await screen.findByRole("link", { name: "Weber GmbH" });
+    const link = await screen.findByRole("link", {
+      name: "Get back to new lead Weber GmbH",
+    });
     expect(link.getAttribute("href")).toBe(
       "/#/leads/11111111-2222-4333-8444-555555555555",
     );
@@ -680,7 +708,7 @@ describe("a lead still owed its first reply", () => {
     stub(day({ queue: [leadRow()] }));
     renderWorklist();
 
-    await screen.findByText("Weber GmbH");
+    await screen.findByText("Get back to new lead Weber GmbH");
     await user.click(
       screen.getByRole("button", { name: en["worklist.filter.leads"] }),
     );

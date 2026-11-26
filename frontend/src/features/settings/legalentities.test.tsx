@@ -40,6 +40,7 @@ const VIENNA = entity("le-vienna", {
   display_name: "Acme Wien",
   legal_name: "Acme Wien GmbH",
   country: "at",
+  jurisdiction: "at",
   version: 4,
   address: { city: "Wien" },
 });
@@ -79,11 +80,24 @@ function backend(
     if (request.url.endsWith("/me")) {
       return jsonResponse(meFixture({ allow }));
     }
+    if (request.url.endsWith("/installation/jurisdiction")) {
+      return jsonResponse({
+        selected: "de",
+        available: [{ code: "at" }, { code: "de" }],
+        deadlines: [],
+        documents: [],
+      });
+    }
     const refusal = Object.entries(refuse).find(([path]) =>
       request.url.endsWith(path),
     );
     if (refusal && request.method !== "GET") {
-      return jsonResponse(refusal[1], 409);
+      const answer = refusal[1];
+      const status =
+        "status" in answer && typeof answer.status === "number"
+          ? answer.status
+          : 409;
+      return jsonResponse(answer, status);
     }
     if (request.method === "POST" && request.url.endsWith("/legal-entities")) {
       return jsonResponse(entity("le-new", JSON.parse(raw)), 201);
@@ -141,6 +155,66 @@ it("lists the default entity alone, named after the company and marked default",
   ).toBeNull();
 });
 
+it("shows an admin a further entity that names no jurisdiction, and not the default one", async () => {
+  vi.stubGlobal(
+    "fetch",
+    backend(READER, [
+      ...DEFAULT_ONLY,
+      VIENNA,
+      entity("le-branch", { display_name: "Acme Branch" }),
+    ]),
+  );
+  render(<LegalEntitiesCard />);
+  const gap = en["legalEntities.jurisdictionMissing"];
+  const branch = await screen.findByTestId("legal-entity-le-branch");
+  expect(within(branch).getByText(gap)).toBeInTheDocument();
+  expect(
+    within(screen.getByTestId("legal-entity-le-default")).queryByText(gap),
+  ).toBeNull();
+  const vienna = screen.getByTestId("legal-entity-le-vienna");
+  expect(within(vienna).queryByText(gap)).toBeNull();
+  expect(within(vienna).getByText("AT")).toBeInTheDocument();
+});
+
+it("flags a jurisdiction the build offers no pack for, as a copied address country can be", async () => {
+  vi.stubGlobal(
+    "fetch",
+    backend(READER, [
+      ...DEFAULT_ONLY,
+      entity("le-paris", { display_name: "Acme Paris", jurisdiction: "fr" }),
+    ]),
+  );
+  render(<LegalEntitiesCard />);
+  const paris = await screen.findByTestId("legal-entity-le-paris");
+  expect(
+    await within(paris).findByText(en["legalEntities.jurisdictionMissing"]),
+  ).toBeInTheDocument();
+});
+
+it("lists each entity's jurisdiction beside its country, the default's being the installation's", async () => {
+  vi.stubGlobal(
+    "fetch",
+    backend(READER, [
+      ...DEFAULT_ONLY,
+      { ...VIENNA, country: "fr", jurisdiction: "at" },
+    ]),
+  );
+  render(<LegalEntitiesCard />);
+  expect(
+    await screen.findByRole("columnheader", {
+      name: en["legalEntities.colJurisdiction"],
+    }),
+  ).toBeInTheDocument();
+  const vienna = await screen.findByTestId("legal-entity-le-vienna");
+  expect(within(vienna).getByText("FR")).toBeInTheDocument();
+  expect(within(vienna).getByText("Austria")).toBeInTheDocument();
+  expect(
+    await within(screen.getByTestId("legal-entity-le-default")).findByText(
+      "Germany",
+    ),
+  ).toBeInTheDocument();
+});
+
 it("names the default entity of an undescribed company in words", async () => {
   vi.stubGlobal(
     "fetch",
@@ -153,7 +227,7 @@ it("names the default entity of an undescribed company in words", async () => {
   ).toBeInTheDocument();
 });
 
-it("describes a further entity with its name, legal name and country", async () => {
+it("describes a further entity with its name, legal name, country and jurisdiction", async () => {
   const user = userEvent.setup();
   const calls: Call[] = [];
   vi.stubGlobal("fetch", backend(ADMIN, DEFAULT_ONLY, calls));
@@ -169,6 +243,11 @@ it("describes a further entity with its name, legal name and country", async () 
     user,
     within(dialog).getByRole("combobox", { name: /Country/ }),
     "Austria",
+  );
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: /Jurisdiction/ }),
+    "Germany",
   );
   await user.click(
     within(dialog).getByRole("button", {
@@ -186,6 +265,7 @@ it("describes a further entity with its name, legal name and country", async () 
             display_name: "Wien",
             legal_name: "Wien GmbH",
             country: "at",
+            jurisdiction: "de",
           }),
     ),
   ).toBe(true);
@@ -249,6 +329,27 @@ it("saves only the fields an edit changed, on the version it read", async () => 
   });
 });
 
+it("sends a changed jurisdiction and nothing else", async () => {
+  const user = userEvent.setup();
+  const calls: Call[] = [];
+  vi.stubGlobal("fetch", backend(ADMIN, [...DEFAULT_ONLY, VIENNA], calls));
+  render(<LegalEntitiesCard />);
+  await rowVerb(user, "Acme Wien", en["legalEntities.edit"]);
+  const dialog = await screen.findByRole("dialog");
+  await pickOption(
+    user,
+    await within(dialog).findByRole("combobox", { name: /Jurisdiction/ }),
+    "Germany",
+  );
+  await user.click(
+    within(dialog).getByRole("button", { name: en["legalEntities.save"] }),
+  );
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(calls.find((call) => call.method === "PATCH")?.body).toEqual({
+    jurisdiction: "de",
+  });
+});
+
 it("offers the default only the fields it keeps itself", async () => {
   const user = userEvent.setup();
   vi.stubGlobal("fetch", backend(ADMIN, DEFAULT_ONLY));
@@ -272,9 +373,16 @@ it("offers the default only the fields it keeps itself", async () => {
       name: en["legalEntities.signatureTemplate"],
     }),
   ).toBeNull();
+  // Its law is the installation's jurisdiction, shown and never edited here.
   expect(
-    within(dialog).getByRole("combobox", { name: /Country/ }),
-  ).toHaveTextContent(en["legalEntities.countryInstallation"]);
+    within(dialog).queryByRole("combobox", { name: /Country/ }),
+  ).toBeNull();
+  expect(
+    within(dialog).queryByRole("combobox", { name: /Jurisdiction/ }),
+  ).toBeNull();
+  expect(
+    await within(dialog).findByText(/The default company follows/),
+  ).toBeInTheDocument();
 });
 
 it("never offers to archive the default entity", async () => {
@@ -407,4 +515,202 @@ it("holds Save and the close while a logo write is out", async () => {
   await user.click(save);
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(calls.find((call) => call.method === "PATCH")?.ifMatch).toBe("5");
+});
+
+function fieldFault(field: string, code: string, extra: object = {}) {
+  return {
+    title: "Validation failed",
+    status: 422,
+    code: "validation_error",
+    detail: `${field} is wrong`,
+    details: {
+      errors: [{ field, code, message: `${field} is wrong`, ...extra }],
+    },
+  };
+}
+
+async function openNewEntity(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    await screen.findByRole("button", { name: en["legalEntities.addOpen"] }),
+  );
+  return screen.findByRole("dialog");
+}
+
+it("says on each blank required field what it needs, focuses the first and sends nothing", async () => {
+  const user = userEvent.setup();
+  const calls: Call[] = [];
+  vi.stubGlobal("fetch", backend(ADMIN, DEFAULT_ONLY, calls));
+  render(<LegalEntitiesCard />);
+  const dialog = await openNewEntity(user);
+  const [name, legal] = within(dialog).getAllByRole("textbox");
+  await user.type(name as HTMLElement, "   ");
+  await user.type(legal as HTMLElement, "Wien GmbH");
+  await user.click(
+    within(dialog).getByRole("button", {
+      name: en["legalEntities.addConfirm"],
+    }),
+  );
+  expect(await within(dialog).findByText("Name is required.")).toBeVisible();
+  expect(within(dialog).getByText("Country is required.")).toBeVisible();
+  expect(within(dialog).getByText("Jurisdiction is required.")).toBeVisible();
+  await waitFor(() => expect(name).toHaveFocus());
+  expect(name).toHaveAttribute("aria-invalid", "true");
+  expect(legal).not.toHaveAttribute("aria-invalid");
+  expect(calls.some((call) => call.method === "POST")).toBe(false);
+
+  await user.type(name as HTMLElement, "Wien");
+  expect(within(dialog).queryByText("Name is required.")).toBeNull();
+  expect(within(dialog).getByText("Country is required.")).toBeVisible();
+});
+
+it("puts a refusal the server names on its field, by the field's label", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal(
+    "fetch",
+    backend(ADMIN, DEFAULT_ONLY, [], {
+      "/legal-entities": fieldFault("legal_name", "too_long", { max: 200 }),
+    }),
+  );
+  render(<LegalEntitiesCard />);
+  const dialog = await openNewEntity(user);
+  const [name, legal] = within(dialog).getAllByRole("textbox");
+  await user.type(name as HTMLElement, "Wien");
+  await user.type(legal as HTMLElement, "Wien GmbH");
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: /Country/ }),
+    "Austria",
+  );
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: /Jurisdiction/ }),
+    "Germany",
+  );
+  await user.click(
+    within(dialog).getByRole("button", {
+      name: en["legalEntities.addConfirm"],
+    }),
+  );
+  expect(
+    await within(dialog).findByText("Legal name: at most 200 characters."),
+  ).toBeVisible();
+  await waitFor(() => expect(legal).toHaveFocus());
+  expect(within(dialog).queryByText("legal_name is wrong")).toBeNull();
+});
+
+it("says on the name field that another entity has the name", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal(
+    "fetch",
+    backend(ADMIN, DEFAULT_ONLY, [], {
+      "/legal-entities": {
+        title: "Conflict",
+        status: 409,
+        code: "legal_entity_name_taken",
+        detail: "another live legal entity already has this name",
+      },
+    }),
+  );
+  render(<LegalEntitiesCard />);
+  const dialog = await openNewEntity(user);
+  const [name, legal] = within(dialog).getAllByRole("textbox");
+  await user.type(name as HTMLElement, "Acme");
+  await user.type(legal as HTMLElement, "Acme GmbH");
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: /Country/ }),
+    "Austria",
+  );
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: /Jurisdiction/ }),
+    "Germany",
+  );
+  await user.click(
+    within(dialog).getByRole("button", {
+      name: en["legalEntities.addConfirm"],
+    }),
+  );
+  expect(
+    await within(dialog).findByText(en["legalEntities.nameTaken"]),
+  ).toBeVisible();
+  expect(name).toHaveAttribute("aria-invalid", "true");
+  await waitFor(() => expect(name).toHaveFocus());
+});
+
+it("puts an edit's refused IBAN on the IBAN field", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal(
+    "fetch",
+    backend(ADMIN, [...DEFAULT_ONLY, VIENNA], [], {
+      "/legal-entities/le-vienna": fieldFault("iban", "invalid_iban"),
+    }),
+  );
+  render(<LegalEntitiesCard />);
+  await rowVerb(user, "Acme Wien", en["legalEntities.edit"]);
+  const dialog = await screen.findByRole("dialog");
+  const iban = within(dialog).getByRole("textbox", {
+    name: en["legalEntities.iban"],
+  });
+  await user.type(iban, "AT00");
+  await user.click(
+    within(dialog).getByRole("button", { name: en["legalEntities.save"] }),
+  );
+  expect(
+    await within(dialog).findByText(en["legalEntities.invalidIban"]),
+  ).toBeVisible();
+  await waitFor(() => expect(iban).toHaveFocus());
+});
+
+it("closes an unchanged entity whose stored name is blank, and sends nothing", async () => {
+  const user = userEvent.setup();
+  const calls: Call[] = [];
+  vi.stubGlobal(
+    "fetch",
+    backend(
+      ADMIN,
+      [...DEFAULT_ONLY, entity("le-legacy", { legal_name: "Legacy GmbH" })],
+      calls,
+    ),
+  );
+  render(<LegalEntitiesCard />);
+  await rowVerb(
+    user,
+    en["legalEntities.defaultUnnamed"],
+    en["legalEntities.edit"],
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.click(
+    within(dialog).getByRole("button", { name: en["legalEntities.save"] }),
+  );
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(calls.some((call) => call.method === "PATCH")).toBe(false);
+});
+
+it("puts a refusal the decoder names under offering on its field", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal(
+    "fetch",
+    backend(ADMIN, [...DEFAULT_ONLY, VIENNA], [], {
+      "/legal-entities/le-vienna": fieldFault("offering.icp", "too_long", {
+        max: 2000,
+      }),
+    }),
+  );
+  render(<LegalEntitiesCard />);
+  await rowVerb(user, "Acme Wien", en["legalEntities.edit"]);
+  const dialog = await screen.findByRole("dialog");
+  const icp = within(dialog).getByRole("textbox", {
+    name: en["legalEntities.icp"],
+  });
+  await user.type(icp, "Mid-size utilities");
+  await user.click(
+    within(dialog).getByRole("button", { name: en["legalEntities.save"] }),
+  );
+  expect(
+    await within(dialog).findByText(
+      `${en["legalEntities.icp"]}: at most 2,000 characters.`,
+    ),
+  ).toBeVisible();
+  await waitFor(() => expect(icp).toHaveFocus());
 });

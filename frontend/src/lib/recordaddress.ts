@@ -111,6 +111,11 @@ export function restoreRecordAddress(): void {
 export const CONSENT_PATH = "/consent";
 const CONSENT_ROUTE = /^#\/oauth-consent(?:[/?]|$)/;
 
+/** True on the OAuth consent screen, where a popup's opener must survive. */
+export function isConsentAddress(pathname: string, hash: string): boolean {
+  return pathname === CONSENT_PATH && CONSENT_ROUTE.test(hash);
+}
+
 // Keep the hash router while making the record identity visible to preview fetchers.
 export function publishRecordAddress(): void {
   const { pathname, search, hash } = globalThis.location;

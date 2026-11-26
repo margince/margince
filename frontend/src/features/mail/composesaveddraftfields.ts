@@ -4,7 +4,11 @@
 import type { components } from "../../api/schema";
 import { paragraphsFrom } from "../../design-system/richtext";
 import { localDateTimeValue } from "../../format/calendarday";
+import { stable } from "../../format/collate";
+import { addressKey } from "../../lib/addresskey";
+import { distinctAddressLines } from "./composeaddresslist";
 import type { ChosenFile } from "./composeattachments";
+import { countriesOnMessage, sameCountries } from "./composecountries";
 import type { Grounding } from "./composedraftcall";
 import type { ComposeFields } from "./composefields";
 import {
@@ -12,23 +16,28 @@ import {
   type MailDraft,
   type SavedDraftFields,
 } from "./composesaveddraftcalls";
+import { sameScheduleSource, scheduleSourceOf } from "./composeschedule";
 
 /** What the composer holds that a saved draft keeps. */
 export function savedFieldsOf(
   fields: ComposeFields,
   files: readonly ChosenFile[],
   filing: Partial<Grounding> | null,
+  overrideExplanation = "",
 ): SavedDraftFields {
   return {
+    overrideExplanation,
     to: fields.to,
     cc: fields.cc,
     bcc: fields.bcc,
+    recipientCountries: fields.countries.stated,
     subject: fields.subject,
     body: fields.body,
     html: fields.html,
     files,
     context: fields.context,
     sendAt: fields.sendAt,
+    sendSchedule: fields.sendSchedule,
     editorState: {
       ...fields.editorState,
       filing: selectedFiling(filing),
@@ -48,9 +57,7 @@ function selectedFiling(filing: Partial<Grounding> | null) {
 /** What a saved draft puts back in the composer. */
 export function fieldsOfDraft(draft: MailDraft): SavedDraftFields {
   return {
-    to: draft.to,
-    cc: draft.cc,
-    bcc: draft.bcc,
+    ...distinctAddressLines(draft),
     subject: draft.subject,
     body: draft.body,
     html: draft.html_body ?? paragraphsFrom(draft.body),
@@ -60,7 +67,14 @@ export function fieldsOfDraft(draft: MailDraft): SavedDraftFields {
       byteSize: file.byte_size,
     })),
     context: draft.communication_context ?? "",
-    sendAt: draft.scheduled_at ? localDateTimeValue(draft.scheduled_at) : "",
+    overrideExplanation: draft.override_explanation ?? "",
+    recipientCountries: draft.recipient_countries ?? [],
+    sendAt:
+      draft.scheduled_intent?.wall_clock ??
+      (draft.scheduled_at && draft.scheduled_tz
+        ? localDateTimeValue(draft.scheduled_at, draft.scheduled_tz)
+        : ""),
+    sendSchedule: scheduleSourceOf(draft),
     editorState: draft.editor_state,
     grounding: (draft.grounding ?? []).map((ground) => ({
       type: ground.anchor_type,
@@ -79,7 +93,7 @@ const filingKeys = (fields: SavedDraftFields) =>
     selectedFiling(groundedFiling(fields.grounding))
   )
     .map((ground) => `${ground.anchor_type}:${ground.anchor_id}`)
-    .sort();
+    .sort(stable);
 
 function sameEditorState(
   a: SavedDraftFields["editorState"],
@@ -91,7 +105,8 @@ function sameEditorState(
     (a?.ai_disclosure ?? "") === (b?.ai_disclosure ?? "") &&
     a?.voice_profile_version === b?.voice_profile_version &&
     (a?.voice_degraded ?? false) === (b?.voice_degraded ?? false) &&
-    (a?.served_body ?? "") === (b?.served_body ?? "")
+    (a?.served_body ?? "") === (b?.served_body ?? "") &&
+    a?.language === b?.language
   );
 }
 
@@ -100,12 +115,18 @@ const idsOf = (files: readonly ChosenFile[]) => files.map((file) => file.id);
 // Mirrors the server's canonical address (`canonicalAddresses`, activities):
 // trimmed, lower case, blanks dropped.
 const canonical = (line: readonly string[]) =>
-  line
-    .map((address) => address.trim().toLowerCase())
-    .filter((address) => address !== "");
+  line.map(addressKey).filter((address) => address !== "");
 
 const sameLine = (a: readonly string[], b: readonly string[]) =>
   sameList(canonical(a), canonical(b));
+
+// Only statements about addresses on the draft count, as the server keeps only those.
+const onDraft = (fields: SavedDraftFields) =>
+  countriesOnMessage(fields.recipientCountries ?? [], [
+    ...fields.to,
+    ...fields.cc,
+    ...fields.bcc,
+  ]);
 
 export function sameFields(a: SavedDraftFields, b: SavedDraftFields): boolean {
   return (
@@ -117,7 +138,10 @@ export function sameFields(a: SavedDraftFields, b: SavedDraftFields): boolean {
     a.html === b.html &&
     sameList(idsOf(a.files), idsOf(b.files)) &&
     a.context === b.context &&
+    (a.overrideExplanation ?? "") === (b.overrideExplanation ?? "") &&
+    sameCountries(onDraft(a), onDraft(b)) &&
     a.sendAt === b.sendAt &&
+    sameScheduleSource(a.sendSchedule, b.sendSchedule) &&
     sameList(filingKeys(a), filingKeys(b)) &&
     sameEditorState(a.editorState, b.editorState)
   );

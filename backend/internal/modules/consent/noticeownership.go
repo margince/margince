@@ -187,6 +187,9 @@ func (s *Store) setNoticeCaseOwner(ctx context.Context, id ids.UUID, owner ids.U
 	}
 	var out NoticeCase
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := requireCaseAssignee(ctx, tx, owner, fieldOwner); err != nil {
+			return err
+		}
 		current, err := lockNoticeCase(ctx, tx, id)
 		if err != nil {
 			return err

@@ -1,0 +1,6 @@
+{
+  "verb": "backfill_employment_import",
+  "checks": [
+    "admin"
+  ]
+}

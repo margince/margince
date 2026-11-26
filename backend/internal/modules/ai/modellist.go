@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -78,7 +79,9 @@ func getListBody(
 	if err := authorize(req); err != nil {
 		return nil, fmt.Errorf("ai: %s: %w", vendor, err)
 	}
-	resp, err := noRedirect(httpc).Do(req)
+	// Go keeps x-api-key and x-goog-api-key across a host change, so a 3xx
+	// would hand the key to another host. A list endpoint never redirects.
+	resp, err := netguard.NoRedirect(httpc).Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("ai: %s: %w", vendor, err)
 	}
@@ -165,28 +168,6 @@ func (e *listStatusError) Error() string {
 // invitation.
 const listBodyLimit = 4 << 20
 
-// noRedirect is the caller's client with redirects refused.
-//
-// Go strips the headers IT knows to be sensitive across a host change —
-// Authorization, Cookie — and it has never heard of `x-api-key` or
-// `x-goog-api-key`. Anthropic and Gemini authenticate with exactly those, so a
-// vendor answering 302 to another host would be handed the customer's own
-// credential by a client that believed it was being careful.
-//
-// Refused rather than stripped: a 3xx from a model vendor's list endpoint is not
-// a thing that happens in normal operation, and the caller already treats any
-// non-200 as "this vendor did not answer". A copy of the client rather than a
-// change to `newOutboundClient`, because that one also carries streaming
-// completions, where a redirect a vendor genuinely uses would become an outage —
-// a wider change than a review of this surface should make.
-func noRedirect(httpc *http.Client) *http.Client {
-	safe := *httpc
-	safe.CheckRedirect = func(*http.Request, []*http.Request) error {
-		return http.ErrUseLastResponse
-	}
-	return &safe
-}
-
 // ---- anthropic ----
 
 // ListModels reports the Messages API's own catalog (GET /v1/models), which is
@@ -230,7 +211,7 @@ func (c *anthropicClient) ListModels(ctx context.Context) ([]model.Info, error) 
 // that needs the distinction filters on a STATED lane and therefore offers
 // these on the chat lanes only.
 func (c *openaiClient) ListModels(ctx context.Context) ([]model.Info, error) {
-	return openAIWireModels(ctx, c.http, "openai", c.baseURL, c.apiKey)
+	return openAIWireModels(ctx, c.http, "openai", c.baseURL+"/v1/models", bearerAuthorizer(c.apiKey))
 }
 
 // ---- openai_compatible and vllm ----
@@ -243,7 +224,18 @@ func (c *openaiClient) ListModels(ctx context.Context) ([]model.Info, error) {
 // calls against, and a second price arriving by a different route is two
 // answers to one question that drift the first time either moves.
 func (c *openAICompatClient) ListModels(ctx context.Context) ([]model.Info, error) {
-	return openAIWireModels(ctx, c.http, "openai-compat", c.baseURL, c.apiKey)
+	return openAIWireModels(ctx, c.http, "openai-compat", c.modelsURL(), c.authorize)
+}
+
+// bearerAuthorizer sends apiKey as a bearer token, or nothing when it is empty.
+// A local vLLM takes no auth.
+func bearerAuthorizer(apiKey string) func(*http.Request) error {
+	return func(r *http.Request) error {
+		if apiKey != "" {
+			r.Header.Set("Authorization", "Bearer "+apiKey)
+		}
+		return nil
+	}
 }
 
 // openAIWireModels is the shared GET /v1/models round-trip: the native OpenAI
@@ -252,7 +244,8 @@ func (c *openAICompatClient) ListModels(ctx context.Context) ([]model.Info, erro
 func openAIWireModels(
 	ctx context.Context,
 	httpc *http.Client,
-	vendor, baseURL, apiKey string,
+	vendor, endpoint string,
+	authorize func(*http.Request) error,
 ) ([]model.Info, error) {
 	var out struct {
 		Data []struct {
@@ -260,14 +253,7 @@ func openAIWireModels(
 			Name string `json:"name"`
 		} `json:"data"`
 	}
-	raw, err := getListBody(ctx, httpc, vendor, baseURL+"/v1/models", func(r *http.Request) error {
-		// Empty on a local vLLM, which takes no auth — the same condition the
-		// adapter's own post() applies.
-		if apiKey != "" {
-			r.Header.Set("Authorization", "Bearer "+apiKey)
-		}
-		return nil
-	})
+	raw, err := getListBody(ctx, httpc, vendor, endpoint, authorize)
 	if err != nil {
 		return nil, err
 	}

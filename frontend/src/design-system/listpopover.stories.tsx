@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
+import { type ComponentProps, useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
+import { Button } from "./atoms";
 import { ListPopover, type ListPopoverOption } from "./listpopover";
 
 const COLLEAGUES: readonly ListPopoverOption[] = [
@@ -14,9 +15,16 @@ const COLLEAGUES: readonly ListPopoverOption[] = [
   { id: "u-5", name: "Mira Hoffmann", hint: "Operations" },
 ];
 
+// The meta's args are the trigger's; the caller-opened mode has stories of its own.
+function Triggered(
+  props: Extract<ComponentProps<typeof ListPopover>, { opener?: undefined }>,
+) {
+  return <ListPopover {...props} />;
+}
+
 const meta = {
   title: "Components/Overlays and layering/List popover",
-  component: ListPopover,
+  component: Triggered,
   parameters: { layout: "padded" },
   args: {
     label: "Assign owner",
@@ -26,7 +34,7 @@ const meta = {
     selected: "u-2",
     onPick: (_: ListPopoverOption, done: () => void) => done(),
   },
-} satisfies Meta<typeof ListPopover>;
+} satisfies Meta<typeof Triggered>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -55,6 +63,26 @@ export const SearchingPending: Story = {
     await open(context);
     await userEvent.type(page().getByRole("combobox"), "ann");
     await page().findByText("Searching…");
+  },
+};
+
+// A short list the caller already holds (an account's contacts) answers the
+// empty search, so the panel opens on it before a word is typed.
+export const ListedOnOpen: Story = {
+  args: {
+    options: undefined,
+    selected: undefined,
+    search: async (term: string) =>
+      COLLEAGUES.filter((colleague) =>
+        colleague.name.toLowerCase().includes(term.toLowerCase()),
+      ),
+    listOnOpen: true,
+  },
+  play: async (context) => {
+    await open(context);
+    await expect(
+      await page().findByRole("option", { name: /Anna Weber/ }),
+    ).toBeVisible();
   },
 };
 
@@ -133,4 +161,55 @@ export const PhoneSheetLongList: Story = {
 export const Dark: Story = {
   globals: { theme: "dark" },
   play: open,
+};
+
+// Opened by a control elsewhere, as a section's Edit link opens it.
+// With no trigger of its own, it is the sheet at every width.
+function OpenedByCaller() {
+  const [open, setOpen] = useState(false);
+  const [owner, setOwner] = useState("Otto Fischer");
+  return (
+    <p>
+      Owner: {owner}{" "}
+      <Button variant="link" onClick={() => setOpen(true)}>
+        Edit
+      </Button>
+      <ListPopover
+        opener="caller"
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Change owner"
+        searchLabel="Search colleagues"
+        options={COLLEAGUES}
+        onPick={(option, done) => {
+          setOwner(option.name);
+          done();
+        }}
+      />
+    </p>
+  );
+}
+
+async function pickThroughCaller(context: { canvasElement: HTMLElement }) {
+  const canvas = within(context.canvasElement);
+  const edit = canvas.getByRole("button", { name: "Edit" });
+  await userEvent.click(edit);
+  const sheet = await page().findByRole("dialog", { name: "Change owner" });
+  await expect(sheet).toHaveAttribute("aria-modal", "true");
+  await userEvent.click(page().getByRole("option", { name: /Anna Weber/ }));
+  await canvas.findByText(/Owner: Anna Weber/);
+  await expect(page().queryByRole("dialog")).toBeNull();
+  await expect(edit).toBe(document.activeElement);
+}
+
+export const OpenedByCallerDesktop: Story = {
+  render: () => <OpenedByCaller />,
+  play: pickThroughCaller,
+};
+
+export const OpenedByCallerPhone: Story = {
+  render: () => <OpenedByCaller />,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: pickThroughCaller,
 };

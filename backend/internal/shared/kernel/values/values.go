@@ -18,6 +18,11 @@ type ParseError struct {
 	Field   string
 	Code    string
 	Message string
+	// Max is the limit a too_long refusal names; zero states none.
+	Max int
 }
 
 func (e *ParseError) Error() string { return e.Field + ": " + e.Message }
+
+// FieldMax is the limit the refusal names.
+func (e *ParseError) FieldMax() int { return e.Max }

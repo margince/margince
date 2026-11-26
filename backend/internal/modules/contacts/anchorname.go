@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -64,8 +63,8 @@ func (s *Store) followAnchorNameTx(ctx context.Context, tx pgx.Tx, companyID ids
 	if err := requireAnchorRenamer(ctx); err != nil {
 		return err
 	}
-	if code, why := values.CompanyNameFault(name); code != "" {
-		return httperr.Validation(fieldDisplayName, code, why)
+	if refused := values.CompanyNameFault(fieldDisplayName, name); refused != nil {
+		return refused
 	}
 	if s.renameInstallation == nil {
 		return errInstallationRenameUnwired

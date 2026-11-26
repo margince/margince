@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { recordNamesRoutes } from "../../testing/recordnames.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -39,7 +40,7 @@ const company: Company = {
   linkedin_url: LINKEDIN,
   phone: "+49 89 1234567",
   email: "info@brandt.example",
-  lifecycle: "customer",
+  status: "customer",
   captured_by: "human:u1",
   source: "manual",
   version: 1,
@@ -61,14 +62,13 @@ function Details({
   edit = { canEdit: true },
 }: Readonly<{ record?: Company; edit?: Edit }>) {
   installFetchStub({
+    ...recordNamesRoutes({ company: { [PARENT]: "Brandt Holding AG" } }),
     "GET /me": meRoute({ company: ["read", "update"] }),
     "GET /companies": () =>
       jsonResponse({
         data: [{ id: PARENT, display_name: "Brandt Holding AG" }],
         page: { has_more: false, next_cursor: null },
       }),
-    [`GET /records/company/${record.id}/tags`]: () =>
-      jsonResponse({ data: [], withheld: false }),
   });
   return (
     <StoryProviders>

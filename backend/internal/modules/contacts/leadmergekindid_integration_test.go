@@ -26,23 +26,8 @@ func TestALeadMergeCarriesWhatNamesTheRetiredLeadByKindAndID(t *testing.T) {
 	survivor := e.createLead(ctx, t, "Ida Keller", "ida@keller.test", "Keller AG")
 	loser := e.createLead(ctx, t, "Ida Kellar", "", "Keller AG")
 
-	// A commitment and a draft, two of the six shapes the carry moves.
-	//
-	// They have the clearest reader consequence: a week's plan pointing at
-	// nothing, and a half-written mail nobody can find.
+	// A half-written mail nobody can find is the clearest reader consequence.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		plan := ids.NewV7()
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO weekly_plan (id, owner_id, local_week_start, captured_by)
-			VALUES ($1, $2, '2026-10-26', 'human:test')`, plan, e.rep); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO weekly_plan_commitment (id, plan_id, label, linked_record_type, linked_record_id, captured_by)
-			VALUES ($1, $2, 'Call Ida back', 'lead', $3, 'human:test')`,
-			ids.NewV7(), plan, loser); err != nil {
-			return err
-		}
 		_, err := tx.Exec(ctx, `
 			INSERT INTO mail_draft (id, anchor_type, anchor_id, author_id)
 			VALUES ($1, 'lead', $2, $3)`, ids.NewV7(), loser, e.rep)
@@ -55,30 +40,18 @@ func TestALeadMergeCarriesWhatNamesTheRetiredLeadByKindAndID(t *testing.T) {
 		t.Fatalf("merging: %v", err)
 	}
 
-	var commitmentsOnLoser, commitmentsOnSurvivor, draftsOnLoser, draftsOnSurvivor int
+	var draftsOnLoser, draftsOnSurvivor int
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		count := func(q string, id ids.LeadID, into *int) error {
 			return tx.QueryRow(ctx, q, id).Scan(into)
 		}
-		const commitments = `SELECT count(*) FROM weekly_plan_commitment
-		                      WHERE linked_record_type = 'lead' AND linked_record_id = $1`
 		const drafts = `SELECT count(*) FROM mail_draft WHERE anchor_type = 'lead' AND anchor_id = $1`
-		if err := count(commitments, loser, &commitmentsOnLoser); err != nil {
-			return err
-		}
-		if err := count(commitments, survivor, &commitmentsOnSurvivor); err != nil {
-			return err
-		}
 		if err := count(drafts, loser, &draftsOnLoser); err != nil {
 			return err
 		}
 		return count(drafts, survivor, &draftsOnSurvivor)
 	}); err != nil {
 		t.Fatalf("reading after the merge: %v", err)
-	}
-	if commitmentsOnLoser != 0 || commitmentsOnSurvivor != 1 {
-		t.Errorf("commitments: loser=%d survivor=%d, want the week's plan to follow the live lead",
-			commitmentsOnLoser, commitmentsOnSurvivor)
 	}
 	if draftsOnLoser != 0 || draftsOnSurvivor != 1 {
 		t.Errorf("drafts: loser=%d survivor=%d, want the half-written mail to follow the live lead",

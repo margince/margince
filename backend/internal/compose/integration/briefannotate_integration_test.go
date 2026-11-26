@@ -15,9 +15,11 @@ package integration
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // annotatedBrief adds the annotation fields to what the e2e suite already reads.
@@ -226,12 +228,8 @@ func TestProseBeyondTheCeilingIsRefusedWithSomethingActionable(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	seedRunWithItems(t, e)
 
-	long := make([]byte, 601)
-	for i := range long {
-		long[i] = 'x'
-	}
 	status := e.Call(t, "PUT", "/v1/brief/annotations", AnyMap{
-		"narrative": string(long),
+		"narrative": strings.Repeat("x", values.TextNoteCharacters+1),
 		"items":     []AnyMap{},
 	}, nil, nil)
 	// 422 rather than a driver error surfacing as a failed run: an agent can

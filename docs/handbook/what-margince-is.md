@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/app/nav.ts frontend/src/app/palette.tsx frontend/src/app/palettesearch.ts frontend/src/app/paletterecents.ts frontend/src/app/paletterecents.reader.ts frontend/src/app/paletterecents.storage.ts frontend/src/features/voice-knowledge/search.tsx backend/internal/modules/search -->
+<!-- describes: frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/palette.tsx frontend/src/app/palettesearch.ts frontend/src/app/paletterecents.ts frontend/src/app/paletterecents.reader.ts frontend/src/app/paletterecents.storage.ts frontend/src/features/voice-knowledge/search.tsx backend/internal/modules/search frontend/src/lib/keymap.ts frontend/src/lib/keyguard.ts frontend/src/app/palettehotkey.ts -->
 # What Margince is
 
 Margince is a CRM. It is one place for the contacts you sell to, the companies
@@ -92,7 +92,7 @@ sits on its own at the top. Under it the screens are in three groups:
 
 - **Records**: **Contacts**, **Companies**, **Leads**, **Deals**
 - **Work**: **Projects**, **Filters and views**
-- **Insights**: **Analytics**
+- **Insights**: **Analytics**, **My progress** (**Team progress** for a manager), **Sales goals**
 
 Settings is not in the sidebar: it is in the account menu at the top right. The
 **Deals** row is the pipeline board; there is no separate Pipeline row. The
@@ -102,9 +102,9 @@ The sidebar has no counts or badges. The Worklist on Home shows those numbers.
 
 ### How do I get around the app?
 To get around Margince, use the sidebar on the left. Or press ⌘K (Ctrl+K on Windows and Linux) to open the command palette, and type where you want to go.
-1. Choose a screen in the sidebar: **Home**, then **Contacts**, **Companies**, **Leads**, **Deals**, **Projects**, **Filters and views** and **Analytics**.
+1. Choose a screen in the sidebar, from **Home** at the top to **Sales goals** at the foot.
 2. Open **Settings** from the account menu at the top right.
-3. To hide the sidebar, choose **Collapse sidebar**, or press ⌘B (Ctrl+B).
+3. To hide the sidebar, choose **Collapse sidebar** at the foot of the sidebar, or press ⌘B (Ctrl+B). On a window from `701px` to `1024px`, the sidebar starts narrow until you choose **Expand sidebar**.
 
 On a phone the sidebar turns into a bar at the foot of the screen. It holds **Home**, **Contacts**, **Deals**, the agent between them, and **More** for everything else.
 Also called: navigation, menu, nav bar.
@@ -114,33 +114,54 @@ Each Margince screen sits in one place in the sidebar, and you reach a few anoth
 - Contacts, companies, leads and deals: the **Records** group.
 - Projects, and saved filters and exports: the **Work** group, under **Projects** and **Filters and views**.
 - Reports and the forecast: **Analytics**, under **Insights**.
+- Results against your sales goal, and the goals: **My progress** (**Team progress** for a manager) and **Sales goals**, under **Insights**.
 - The Worklist, tasks and approvals: **Home**.
 - The pipeline: the **Deals** row, which is the board.
 - Settings: the account menu at the top right, not the sidebar.
 - Scheduled messages, offers and search results: no sidebar row. Open them from the command palette (⌘K).
 
+### Why is a part of Margince, such as Leads or Deals, missing?
+A part of Margince missing from the sidebar for everyone was turned off by whoever runs your Margince. They can turn off **Home**, **Contacts**, **Companies**, **Leads**, **Deals**, **Projects**, **Filters** or **Analytics** in the configuration file. A part that is off leaves the sidebar, the API and your AI tools. Its records and role grants stay, and come back when it is turned on again.
+Also called: leads page gone, deals menu missing, feature turned off.
+
+### How do I see the last message on a contact, company or deal?
+To see the last word on a record in Margince, open it and look under the verdict on its **How it stands** card. **Latest** shows the newest note, call, meeting notes or message, who wrote it and when. **Open in History** opens it on the timeline.
+Also called: last message, most recent note, last update, last contact.
+
 ### How do I search for something?
 To search Margince, click the search field **Search or ask Margince** in the top bar, or press ⌘K (Ctrl+K), and start typing.
-1. Type a name, company, deal or any other word. Matches appear as you type, a few of each kind, under headings such as **Companies**, **Contacts** and **Emails**.
+1. Type a name, company, deal or any other word. Matches appear as you type, a few of each kind, under headings such as **Companies**, **Contacts** and **Emails**. A deal shows its amount, close date and stage. A lead or project shows its status, and a contact shows when you were last in touch.
+   To see more of one kind, choose it in the **Show only** bar under the box. Each kind there shows how many matches it found.
 2. Choose a result to open it, or choose **See all results for “…”** to open the full **Search results** page.
 3. On that page, **Show all** beside a kind, or **Show only**, lists every match of that kind.
 
-With the search box empty, **Recent** lists up to eight searches you ran and records you opened from the box, newest first. Choose a search to put its words back in the box, or choose a record to open it. The list stays in this browser until you sign out. **Clear** erases it. A record appears only while you can still read it, under its current name.
+With the search box empty, **Recent** lists up to eight searches you ran and records you opened from the box, newest first. A record you opened from a search is saved as the record alone. Choose a search to put its words back in the box, or choose a record to open it. The list stays in this browser until you sign out. **Clear** erases it. A record appears only while you can still read it, under its current name.
 
 With an empty box, Enter opens the newest recent item once the list has been checked.
 
 For a typed search, Enter opens the row you moved to with the arrow keys. If you have not moved, Enter opens a screen or action that matches what you typed. If there is none, it opens a record whose whole name you typed, and if there is none, the **Search results** page. So Enter on part of a name shows the results instead of opening the first one.
 
-If nothing matches, the palette says **No matches.** If record search fails, it says **Search failed**, and the screen commands still work.
+At the end of the list, **Ask your documents** puts your words to your documents instead.
+
+If no screen, action or record matches, the palette says **No matches for “…”.** and offers no results page. If record search fails, it says **Search failed**, and the screen commands still work. If one kind of record could not be searched in time, the palette and the **Search results** page still show the other kinds. They add one line naming that kind, such as “Emails and activities could not be searched for this word in time.” Adding another word helps.
 Also called: find, look up, global search.
 
 **Search results** are in groups by kind: Contacts, Companies, Deals, Leads,
-Projects, Products, Offer templates, Emails, Activities and Tags. Each kind
+Projects, Products, Offer templates, Emails, Activities and Tags. Emails and
+activities share one **Show only** choice, **Emails and activities**. Each kind
 shows its best few matches, so a company stays on the page, whatever the number of emails that
 name it. A company's name also finds the contacts who work there now, each with
 the line **Works at** and the company's name. They come after the contacts whose
 own name matched. A result that came from a connected system is marked **From a
 connected system**.
+
+An email is found by its subject and by the words its sender wrote. An email quoted under a reply
+does not find it. Three cases still find an email through quoted text:
+
+- A reply written between the quoted lines is searched whole.
+- An email whose subject starts with `Fwd:`, `FW:` or `WG:` is found by the email it forwards. Older
+  mail quoted under that one does not find it.
+- An email stored before this rule keeps its earlier search words until Margince has gone through it.
 
 When nothing matches, the **Search results** page offers **Did you mean:** with up to five
 names that are written close to what you typed. It lists only names you may open.
@@ -148,22 +169,54 @@ names that are written close to what you typed. It lists only names you may open
 ### What is the command palette?
 The command palette is the Margince box that finds any screen, action, setting or record from one place. It opens over the page you are on, and its empty field reads **Search or ask Margince**.
 
-Each row carries a badge. **Screen** marks a sidebar screen, and **Action** marks something it does (**New deal**, **Booking page**). **Record** marks a record that matches what you typed.
-It also lists every settings page you may open, and **Scheduled messages**. It knows other words for a page: "price" finds **Products and offers**, and "password" finds **Account**.
-Its first row is always **Ask your documents**.
+A badge marks each screen and action. **Screen** marks a sidebar screen, and **Action** marks something it does (**New deal**, **Booking page**, **Keyboard shortcuts**). A record that matches what you typed sits under the heading of its kind, such as **Contacts**, and carries no badge.
+
+It also lists every settings page you may open, and **Scheduled messages**. It knows other words for a page: "price" finds **Products and offers**, "password" or "dark mode" finds **Account**, and "reports" or "forecast" finds **Analytics**.
 
 ### How do I open the command palette?
-To open the Margince command palette, press ⌘K on a Mac or Ctrl+K on Windows and Linux. It works from any screen while no dialog is open.
-You can also click the search field **Search or ask Margince** in the top bar.
-Press ⌘K again, or Esc, to close it.
+To open the Margince command palette, press ⌘K on a Mac or Ctrl+K on Windows and Linux. It works from any screen while no dialog or menu is open.
+You can also click the search field **Search or ask Margince** in the top bar, or press /.
+Press ⌘K again, or Esc, to close it. Back, or a move to another page, closes it too.
 Also called: quick search, command menu, Cmd K, Ctrl K, keyboard shortcut.
+
+### What keyboard shortcuts does Margince have?
+Margince has keyboard shortcuts for search, for moving between pages and for work on a record. Press `?` to see the full list, while single-key shortcuts are on and you are not typing in a field. The account menu always opens it, under **Help and feedback** → **Keyboard shortcuts**, and so does **Keyboard shortcuts** in the command palette.
+
+On Windows and Linux, press Ctrl where this list says ⌘.
+
+| Keys | What they do |
+|---|---|
+| `⌘K` or `/` | **Open search** |
+| `?` | **Show keyboard shortcuts** |
+| `C` | **Create record**. On a list such as Contacts, it opens the form for a new record of that kind. On any other page, it opens search with the **New …** actions. |
+| `G`, then a key | **Go to** a page: `G` then `C` for Contacts, `G` then `D` for Deals, `G` then `S` for Settings. Point at a page in the sidebar to see its key. |
+| `N` | **Log activity**, on a record |
+| `T` | **Add task**, on a record |
+| `M` | **Write message**, on a record |
+| `⌘↵` | **Save multi-line field** in a record field with many lines that you edit, **Send email** in the email editor, or **Submit dialog** in a dialog that holds a form |
+| `⌘B` | **Show or hide sidebar** |
+| `Esc` | **Close dialog or menu** |
+
+A shortcut that is one key, with no ⌘ or Ctrl, never acts while you type in a field. It also does nothing while a dialog or menu is open.
+
+`N`, `T` and `M` act only where the record shows the same button and you may use it. On a contact, `M` opens the button that writes to them, such as **Email** or **Message on …**. A project has no such button, so `M` does nothing there.
+To turn off the shortcuts that are one key, see [Your own settings](your-own-settings.md#how-do-i-turn-off-single-key-shortcuts).
+Also called: keys, shortcut list, keyboard, key for a page.
 
 ### Where is the handbook, and how do I ask it a question?
 To ask the Margince handbook a question, type it into **Search or ask Margince** in the top bar and press Enter. You can also open it with ⌘K (Ctrl+K).
-1. A question such as "How do I change my time zone?" gets the row **Ask Margince: "…"** at the top. Enter asks it.
+1. A question such as "How do I change my time zone?" gets the row **Ask the handbook: "…"** at the top. Enter asks it.
 2. The answer shows above the records that match. It names the set it came from, and its numbers open the handbook page at the quoted line.
 3. When the answer is a settings page you may open, **Open Settings → …** takes you there.
 The handbook is in English, so questions in English work best.
+Questions about CRM data, such as "How many deals did I win this month?", offer **Ask CRM data**.
+
+The answer uses the same figures as Analytics and the same records the reader can open. It names
+its source and period. Use **Open in Analytics** to check a figure, or open a record in the answer.
+
+When the data cannot answer the question, the handbook is asked. A question neither can answer
+still offers Analytics.
+
 Also called: help, FAQ, knowledge base, ask Margince.
 
 When the handbook does not cover a question, Margince asks your company's default document set next and says so. When neither covers it, you get **Not covered by this set** instead of a guess. To ask one set of your choice, choose **Ask your documents** under the search field. Pick a **Document set**, type in **Your question** and choose **Ask**.
@@ -173,7 +226,7 @@ To ask about one company, open the company and use its **Ask about this company*
 Also called: company summary, meeting prep, what's going on with this account.
 
 ### Where is the Ask box?
-The Margince Ask box is the search field **Search or ask Margince** in the top bar: type a question and press Enter. **Ask your documents**, the first row of the command palette (⌘K), opens a dialog where you pick the document set yourself.
+The Margince Ask box is the search field **Search or ask Margince** in the top bar: type a question and press Enter. **Ask your documents**, the last row of the command palette (⌘K), opens a dialog where you pick the document set yourself.
 That dialog answers from the one set you pick. It is the **Margince handbook** that comes with every installation, or a set filed under Settings → **Knowledge**.
 On a company page there is a second, separate panel, **Ask about this company**, with its own **Ask Margince** questions about that one company.
 If the dialog says **No document sets**, there is nothing filed to search yet.
@@ -253,8 +306,19 @@ Its license is BUSL-1.1, and you get the source.
 
 ### Is there a Margince mobile app?
 There is no Margince app to get from an app store. Margince runs in the browser on a phone as well as on a computer. On a phone, a bar at the foot of the screen holds **Home**, **Contacts** and **Deals**, the agent between them, and **More** for everything else.
-Dragging deal cards on the board does not work on touch screens; use the deal's **Stage** ladder instead.
+Dragging deal cards on the board does not work on touch screens; use the card's **…** menu or the deal's **Stage** ladder instead.
 Also called: iPhone app, Android app, phone app, use Margince on mobile.
+
+### What does a list show on a phone?
+On a phone or a narrow window, most record lists show each record in two lines. Line 1 has the company's logo or a picture made from the contact's or lead's name, its name and at most one mark. Line 2 has a few facts, and a fact the record does not have is left out.
+- **Contacts**: job title and employer, with no mark.
+- **Companies**: the website, and the lifecycle as the mark.
+- **Leads**: the company, next task and due date, and the status as the mark.
+- **Projects**: the customer, and the phase as the mark.
+- **Deals** table: the company, stage and close date, and the amount as the mark.
+- **Partners**: the kinds and certification, and the stage as the mark.
+The other columns are not shown. Open the record to see everything, or use a wider window. On these lists **View** has no **Columns** step, so your columns do not change these rows. Other tables, such as the members of a list, show every column, each value with its label.
+Also called: mobile list, small screen, phone layout.
 
 ## Where to go next
 

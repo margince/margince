@@ -97,16 +97,25 @@ func startMemServer(t *testing.T, n int) (addr string, user *imapmemserver.User)
 // duration of the test, returning the address to dial.
 func listenMem(t *testing.T, mem *imapmemserver.Server) string {
 	t.Helper()
+	return listenMemWith(t, mem, imapserver.Options{}, nil)
+}
+
+// listenMemWith serves the store with the given capabilities and wire log. wrap,
+// when set, steers each session; the auth policy stays the one every test uses.
+func listenMemWith(t *testing.T, mem *imapmemserver.Server, opts imapserver.Options, wrap func(imapserver.Session) imapserver.Session) string {
+	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := imapserver.New(&imapserver.Options{
-		NewSession: func(*imapserver.Conn) (imapserver.Session, *imapserver.GreetingData, error) {
-			return mem.NewSession(), nil, nil
-		},
-		InsecureAuth: true,
-	})
+	opts.NewSession = func(*imapserver.Conn) (imapserver.Session, *imapserver.GreetingData, error) {
+		if wrap != nil {
+			return wrap(mem.NewSession()), nil, nil
+		}
+		return mem.NewSession(), nil, nil
+	}
+	opts.InsecureAuth = true
+	srv := imapserver.New(&opts)
 	go func() {
 		//craft:ignore swallowed-errors the listener closes at test end; Serve's shutdown error is the expected exit
 		_ = srv.Serve(ln)

@@ -159,10 +159,7 @@ func teamsByID(ctx context.Context, tx pgx.Tx, teamIDs []ids.UUID) ([]teamRow, e
 		return nil, nil
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT t.id, t.name,
-		       (SELECT count(*) FROM team_membership m JOIN app_user u ON u.id = m.user_id AND `+LiveMemberSQL("u")+`
-		         WHERE m.team_id = t.id),
-		       t.created_at
+		SELECT `+teamColumns+`
 		  FROM team t WHERE t.id = ANY($1) AND t.archived_at IS NULL ORDER BY t.name`, teamIDs)
 	if err != nil {
 		return nil, err
@@ -170,8 +167,8 @@ func teamsByID(ctx context.Context, tx pgx.Tx, teamIDs []ids.UUID) ([]teamRow, e
 	defer rows.Close()
 	var out []teamRow
 	for rows.Next() {
-		var t teamRow
-		if err := rows.Scan(&t.ID, &t.Name, &t.MemberCount, &t.CreatedAt); err != nil {
+		t, err := scanTeam(rows)
+		if err != nil {
 			return nil, err
 		}
 		out = append(out, t)

@@ -1,0 +1,7 @@
+{
+  "verb": "invite_user",
+  "checks": [
+    "user_admin.create",
+    "user_admin.create|update"
+  ]
+}

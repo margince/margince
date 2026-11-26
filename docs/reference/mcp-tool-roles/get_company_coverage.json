@@ -1,0 +1,14 @@
+{
+  "tool": "read_reports",
+  "action": "company_coverage",
+  "verb": "get_company_coverage",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

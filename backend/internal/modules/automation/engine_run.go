@@ -57,6 +57,19 @@ func isClockTrigger(h workflow.Handler) bool {
 // terminal reason on the `detail` column (rundetail.go) — a run history
 // that only shows successes hides exactly the runs a human needs to see.
 func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev workflow.Event) error {
+	if e.fence == nil {
+		return e.runUnfenced(ctx, h, ev)
+	}
+	err := e.fence.Within(ctx, h.Spec(), ev, func(bound context.Context) error {
+		return e.runUnfenced(bound, h, ev)
+	})
+	if declined, ok := errors.AsType[*workflow.DeclinedError](err); ok {
+		return e.recordSkipReason(ctx, h, ev, declined.Reason)
+	}
+	return err
+}
+
+func (e *WorkflowEngine) runUnfenced(ctx context.Context, h workflow.Handler, ev workflow.Event) error {
 	if stop, err := e.stopIfSetterLapsed(ctx, ev); stop || err != nil {
 		if err != nil {
 			return err
@@ -68,21 +81,16 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 		return e.recordFailedBeforeApply(ctx, h, ev, "matching the trigger: "+sanitizedReason(err), err)
 	}
 	if !matched {
-		if isClockTrigger(h) {
-			// A clock trigger's key is the anchor that makes its condition
-			// true, so the key already exists while the condition is still
-			// false. Recording a non-match here would claim that anchor key
-			// (ON CONFLICT DO NOTHING), and the real firing when the anchor
-			// finally matches would find the row taken and silently never run.
-			// A coarse-pre-filter reject is pre-filter noise, not a
-			// user-meaningful skip — do not persist it.
+		if isClockTrigger(h) || h.Spec().IgnoreUnmatchedEvents {
+			// A later event or scan can qualify for the same source key.
+			// Keeping the key free lets that later firing claim the occurrence.
 			return nil
 		}
 		return e.recordSkip(ctx, h, ev)
 	}
 	effect, err := h.Plan(ctx, ev)
 	if err != nil {
-		if declined, ok := errors.AsType[declinedFiring](err); ok {
+		if declined, ok := errors.AsType[*workflow.DeclinedError](err); ok {
 			// A matched trigger whose Plan found nothing to act on (e.g. a
 			// stage_change_notify on an ownerless deal — no recipient to name).
 			// This is a skip, not a failure: nothing went wrong and a
@@ -91,10 +99,16 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 			// the bus entry unacked and re-delivering forever (no dead-letter
 			// store yet — platform/events/subscriber.go), poisoning every
 			// sibling handler dispatched off the same event.
-			return e.recordSkipReason(ctx, h, ev, declined.reason)
+			return e.recordSkipReason(ctx, h, ev, declined.Reason)
 		}
 		return e.recordFailedBeforeApply(ctx, h, ev, "planning the effect: "+sanitizedReason(err), err)
 	}
+	return e.gateAndApply(ctx, h, ev, effect)
+}
+
+// gateAndApply runs a planned effect past the owner's grants and audience,
+// claims the run, and applies it.
+func (e *WorkflowEngine) gateAndApply(ctx context.Context, h workflow.Handler, ev workflow.Event, effect workflow.Effect) error {
 	plannedJSON, err := json.Marshal(effect.Actions)
 	if err != nil {
 		return e.recordFailedBeforeApply(ctx, h, ev, "encoding the planned actions: "+sanitizedReason(err), err)
@@ -138,11 +152,16 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 		}
 		return e.passedOverForLapsedSetter(ctx, h, ev)
 	}
-	claimed, err := e.claimRun(ctx, h, ev, plannedJSON, "applied", nil)
+	claimed, err := e.claimRunForApply(ctx, h, ev, plannedJSON)
 	if err != nil || !claimed {
 		return err
 	}
+	return e.applyClaimed(ctx, h, ev, effect)
+}
 
+// applyClaimed applies the effect of a run this firing claimed, and records
+// the outcome before any apply error surfaces.
+func (e *WorkflowEngine) applyClaimed(ctx context.Context, h workflow.Handler, ev workflow.Event, effect workflow.Effect) error {
 	// Stamped after the claim rather than in Plan: the effect-level dedupe
 	// (applyCreate) is the ENGINE's obligation, and a handler cannot be
 	// trusted to remember it — every Plan that forgot would silently
@@ -252,20 +271,14 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 			// `null` over a column that has read SQL NULL for those runs since
 			// they existed — a shape change on a shared path, for no gain.
 			if len(result.Applied) == 0 {
-				_, err := tx.Exec(ctx, `
-					UPDATE workflow_run SET status = 'requires_approval', detail = $3
-					WHERE handler = $1 AND idempotency_key = $2`,
-					h.Spec().Name, runKey(h, ev), detail)
+				_, err := tx.Exec(ctx, runOutcomeSQL[outcomeStaged], h.Spec().Name, runKey(h, ev), detail)
 				return err
 			}
 			appliedJSON, err := json.Marshal(result.Applied)
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE workflow_run SET status = 'requires_approval', detail = $3, applied = $4
-				WHERE handler = $1 AND idempotency_key = $2`,
-				h.Spec().Name, runKey(h, ev), detail, appliedJSON)
+			_, err = tx.Exec(ctx, runOutcomeSQL[outcomeStagedWithApplied], h.Spec().Name, runKey(h, ev), detail, appliedJSON)
 			return err
 		case errors.Is(applyErr, ErrNoNotificationTransport):
 			// Matched and would have delivered, but no Notifier was wired
@@ -278,9 +291,7 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE workflow_run SET status = 'skipped', detail = $3
-				WHERE handler = $1 AND idempotency_key = $2`, h.Spec().Name, runKey(h, ev), detail)
+			_, err = tx.Exec(ctx, runOutcomeSQL[outcomeSkipped], h.Spec().Name, runKey(h, ev), detail)
 			return err
 		case errors.As(applyErr, &declinedApply):
 			// The handler looked and found nothing to act on — an unroutable
@@ -297,27 +308,21 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE workflow_run SET status = 'skipped', detail = $3
-				WHERE handler = $1 AND idempotency_key = $2`, h.Spec().Name, runKey(h, ev), detail)
+			_, err = tx.Exec(ctx, runOutcomeSQL[outcomeSkipped], h.Spec().Name, runKey(h, ev), detail)
 			return err
 		case applyErr != nil:
-			detail, err := reasonDetail(sanitizedReason(applyErr))
+			detail, err := failureDetail(sanitizedReason(applyErr), !WriteRefused(applyErr))
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE workflow_run SET status = 'failed', detail = $3
-				WHERE handler = $1 AND idempotency_key = $2`, h.Spec().Name, runKey(h, ev), detail)
+			_, err = tx.Exec(ctx, runOutcomeSQL[outcomeFailed], h.Spec().Name, runKey(h, ev), detail)
 			return err
 		default:
 			appliedJSON, err := json.Marshal(result.Applied)
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE workflow_run SET applied = $3
-				WHERE handler = $1 AND idempotency_key = $2`, h.Spec().Name, runKey(h, ev), appliedJSON)
+			_, err = tx.Exec(ctx, runOutcomeSQL[outcomeApplied], h.Spec().Name, runKey(h, ev), appliedJSON)
 			return err
 		}
 	})
@@ -337,13 +342,32 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 // is NOT NULL; a silently-wrong provenance is the honest-hard-case this
 // column guards against).
 func (e *WorkflowEngine) claimRun(ctx context.Context, h workflow.Handler, ev workflow.Event, planned []byte, status string, detail []byte) (bool, error) {
+	return e.insertRun(ctx, h, ev, planned, status, detail, false)
+}
+
+// applyRetryWindow bounds how long after its first attempt a failed apply may
+// be taken over by a redelivery. The bus redelivers without limit, so a
+// permanent fault must stop re-running and wait for an operator.
+const applyRetryWindow = "1 hour"
+
+// claimRunForApply claims the run before Apply, like claimRun.
+// When the handler declares a replay safe, a run whose Apply failed with a
+// fault that was not a refusal is claimed again. A redelivery then retries the failed notice.
+func (e *WorkflowEngine) claimRunForApply(ctx context.Context, h workflow.Handler, ev workflow.Event, planned []byte) (bool, error) {
+	return e.insertRun(ctx, h, ev, planned, runStatusApplied, nil, h.Spec().ReplaysAfterFailedApply)
+}
+
+// insertRun claims the (handler, key) row. With reclaim set, a row whose Apply
+// failed and was recorded retryable is taken over inside the window.
+// A refusal would answer the same way again, so it stays terminal.
+func (e *WorkflowEngine) insertRun(ctx context.Context, h workflow.Handler, ev workflow.Event, planned []byte, status string, detail []byte, reclaim bool) (bool, error) {
+	args := []any{h.Spec().Name, runKey(h, ev), ev.ID, planned, status, detail}
+	if reclaim {
+		args = append(args, applyRetryWindow)
+	}
 	claimed := false
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
-			INSERT INTO workflow_run (handler, idempotency_key, trigger_event, planned, status, detail)
-			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (handler, idempotency_key) DO NOTHING`,
-			h.Spec().Name, runKey(h, ev), ev.ID, planned, status, detail)
+		tag, err := tx.Exec(ctx, claimRunSQL(reclaim), args...)
 		if err != nil {
 			return err
 		}
@@ -388,11 +412,8 @@ func (e *WorkflowEngine) recordSkip(ctx context.Context, h workflow.Handler, ev 
 	return e.recordSkipReason(ctx, h, ev, "the trigger event did not satisfy this automation's conditions")
 }
 
-// recordSkipReason is the shared body behind both skip paths — a Match-false
-// non-match (recordSkip) and a Plan-declined firing (runOne's declinedFiring
-// branch) — landing a durable 'skipped' run carrying the caller's reason. A
-// system handler (no automation instance, ev.AutomationID nil) has no run
-// history to read its skips, so recording one would only accrete rows.
+// Unmatched events and declined plans keep their reason in history.
+// System handlers have no instance history, so their skips need no row.
 func (e *WorkflowEngine) recordSkipReason(ctx context.Context, h workflow.Handler, ev workflow.Event, reason string) error {
 	if ev.AutomationID == ids.Nil {
 		return nil
@@ -404,18 +425,6 @@ func (e *WorkflowEngine) recordSkipReason(ctx context.Context, h workflow.Handle
 	_, err = e.claimRun(ctx, h, ev, emptyPlan, runSkipped, detail)
 	return err
 }
-
-// declinedFiring is a Plan's honest "the trigger matched, but this specific
-// record gives this automation nothing to do" — distinct from both a failure
-// (something went wrong) and a Match-false non-match (the trigger itself did
-// not apply). runOne records it as a 'skipped' run and never surfaces it, so
-// the firing neither poisons the bus entry nor fabricates a phantom effect.
-type declinedFiring struct{ reason string }
-
-func (d declinedFiring) Error() string { return d.reason }
-
-// declineFiring builds the skip a Plan returns to decline acting on a record.
-func declineFiring(reason string) error { return declinedFiring{reason: reason} }
 
 // sanitizedReason renders a client-safe failure reason for
 // workflow_run.detail, never the error's own message. Anyone with

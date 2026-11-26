@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "forecast_assurance_preview",
+  "verb": "preview_forecast_assurance",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops"
+  ],
+  "refused_for": [
+    "read_only",
+    "rep"
+  ]
+}

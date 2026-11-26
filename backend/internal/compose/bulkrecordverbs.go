@@ -39,9 +39,9 @@ type bulkWriters struct {
 func (e *bulkEngine) admitVerb(ctx context.Context, change *bulkChange) (principal.Action, error) {
 	rule, ownerArchives := auth.ArchiveRuleFor(string(change.recordType))
 	switch {
-	case change.verb == crmcontracts.BulkVerbArchive && ownerArchives && change.undo == nil:
-		// Each row's archive asks the record's archive rule, which admits an
-		// owner without the delete grant. Bringing one back still asks delete.
+	case change.verb == crmcontracts.BulkVerbArchive && ownerArchives:
+		// Each row's archive, and its undo's restore, asks the record's archive
+		// rule, which admits an owner without the delete grant.
 		return principal.ActionRead, auth.RequireArchiveGrant(ctx, rule)
 	case change.verb == crmcontracts.BulkVerbArchive:
 		return principal.ActionDelete, nil
@@ -250,7 +250,7 @@ func taskRequestFor(change bulkChange, record openapi_types.UUID) crmcontracts.C
 		EntityType crmcontracts.CreateTaskRequestLinksEntityType `json:"entity_type"`
 	}{{EntityId: record, EntityType: crmcontracts.CreateTaskRequestLinksEntityType(change.recordType)}}
 	return crmcontracts.CreateTaskRequest{
-		Subject: change.task.Subject, DueAt: change.task.DueAt, AssigneeId: change.task.AssigneeId,
+		Subject: change.task.Subject, DueAt: change.task.DueAt, DueIntent: change.task.DueIntent, AssigneeId: change.task.AssigneeId,
 		Links: &links, Source: "manual",
 	}
 }

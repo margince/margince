@@ -1,0 +1,153 @@
+{
+  "task": "corpus_ask",
+  "provider": "gemini",
+  "served_model": "gemini-3.8-flash",
+  "env_class": "cloud_frontier",
+  "prompt_version": "pd2fb4cfc27cfd0afbc37aca6efe39cc5",
+  "corpus_version": "v1",
+  "verdict": "certified",
+  "runs": 15,
+  "passed": 15,
+  "reliability": 1,
+  "reported_accepted": 15,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": null,
+  "judge_score_p50": 96,
+  "judge_score_min": 88,
+  "latency_p50": 4505,
+  "latency_p95": 77150,
+  "mean_tokens": 2239,
+  "mean_tokens_in": 2143,
+  "mean_tokens_out": 96,
+  "mean_cached_tokens": 0,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 1967,
+  "judge_served_model": "claude-sonnet-5-5",
+  "judge_provider": "claude_cli",
+  "self_judged": false,
+  "served_identity_source": "response",
+  "wire_rule": "gemini-wire-5",
+  "thinking_level": "low",
+  "ran_at": "2026-11-22T21:48:31Z",
+  "scenarios": [
+    {
+      "scenario": "corpus_ask_returns_nothing_when_the_passages_do_not_answer",
+      "site": "corpus_ask",
+      "stamp": "f1538f0d5e22f8d4da07a4c20779523b9c807db928a3c581c84706f11692c0fa45f08c299812219e2b4e61ee6f05b817d32cb383a0c80aeb5112cf84aab51ddca49fc4bfcb07dbcd3688b02891246a21e16132d9e6dbf206ed6fa046911391f5",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        97,
+        96,
+        97
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "corpus_ask_returns_nothing_when_the_only_passage_does_not_answer",
+      "site": "corpus_ask",
+      "stamp": "8c684307257130b724772a8308291b6c1ddfdd0a98d8afb326d9c5f560353681e6fd002419e28cae2f346f3a019ed99fbf455c036ad0a58a7a72d178536e5d1777924184c082797568a5ba8fefd2c2864df0636f99d694c8d867259bf82aea5a",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        96,
+        97,
+        96
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "corpus_ask_returns_nothing_when_the_passages_are_about_the_subject_but_not_the_question",
+      "site": "corpus_ask",
+      "stamp": "6efe61da162809fd4a370dd3e817162dbcc8e10e96cbed89c9ff7053f0dd87fe03be7f7d7088a4175d6e96aa50dc52a3deb93036a3a3692cc8ce4367a365d576d4fdcf8d7f7ede89dac2399388252fbbfb57c21c1f2496e16fe317f971335dab",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        96,
+        96,
+        96
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "corpus_ask_answers_only_from_the_passage_that_says_it",
+      "site": "corpus_ask",
+      "stamp": "910380329237ab7b1bf158e2c50dd91e466dfa2d6573643851d436594cc976ed82764fc33b65455cba233de782842cdc08b4f309d30995f49b776b49382954879b5d75f353bad3db4e2b8573f4dc63ebe9e787f9d4a3c2c405388aff3798d635",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        96,
+        96,
+        97
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "corpus_ask_answers_the_same_question_once_the_passage_that_states_it_is_present",
+      "site": "corpus_ask",
+      "stamp": "633f23b4ded101f13829df8619dd8fd13a7ae7dd3db68f49808a4f8586e4ec76538de892b161c10e4212126491922a6a41307f2c301a397685c178bd0a778ec9af1a44c5ee2ecc5dc2a7f7f3ff8d3723c1018129f78b13e4fb0542270f1b76cf",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        88,
+        90,
+        90
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

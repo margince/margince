@@ -96,7 +96,16 @@ bytes. The plain secret and the root key never reach a log.
 A host a tenant gives must never reach the installation's own network. The guard checks the IP *after* the DNS
 answer, so DNS cannot be used to pass it.
 - `RefusePrivate(network, address, rawConn)`: a `net.Dialer.Control`; `PublicIP(ip) bool`.
+- `NoRedirect(client) *http.Client`: a copy of the client that never follows a redirect; `RefuseRedirect` is the same rule as a `CheckRedirect`.
 - **Use it when:** you build an HTTP client that fetches a URL a tenant gave. Set `Dialer.Control = netguard.RefusePrivate`.
+  Use `NoRedirect` when a request carries a secret or a body that must not reach a host you did not name.
+
+### `platform/googlejwt`: Google service-account assertions
+Reads a Google service-account key file and signs the assertion that the Google token endpoint turns into an
+access token. A key that names another token endpoint is refused.
+- `ParseServiceAccount(keyFile) (ServiceAccount, error)` (→ `ErrInvalidKey`); `ServiceAccount.Assertion(Claims) (string, error)`.
+- `Claims{Scope, Subject, IssuedAt, TTL}`: an empty `Subject` acts as the service account. A user's address acts for that user, if a Workspace admin allows it.
+- **Use it when:** you call a Google API with a service account. Do not sign the assertion yourself.
 
 ### `platform/ratelimit`: fixed-window limit, one limit over all copies of a process
 For endpoints that need no sign-in (password guessing, workspace bootstrap), and to slow down a surface
@@ -226,7 +235,7 @@ on the module behind it.
 | `workflow` | `Handler { Spec; Match; Plan }` | the seam for work the product does on its own: typed trigger + result + idempotency key + risk tier; runs go on the job queue |
 | `extraction` | `ExtractedField` (a type, no interface) | the shape of one field read from a document: it points to its words, or it is empty with a reason, never a guess. The activities store keeps it and the document reader in compose makes it |
 | `fieldcatalog` | `Reader { ActiveColumns }` | how record stores learn the active `cf_*` custom-field columns per object (built by: the `Service` of `customfields`) without importing the module |
-| `jurisdiction` | `Pack { Code; Retention }` + `Register`/`For`/`Applicable` | country `packs` built in at compile time (for example `extensions/de`); core never names a country |
+| `jurisdiction` | `Pack { Code; Retention }` + `Register`/`For`/`Applicable` | country `packs` built in at compile time (for example `extensions/eu`); core never names a country |
 
 **Use a ports interface when:** code above a seam needs a module's work without importing it.
 

@@ -57,8 +57,8 @@ import (
 // a failing gate: the gate's message says to clear the column, or to say here
 // why it stays.
 var erasureColumnBaseline = map[string][]string{
-	// Raw originals are deleted in full after their positive subject match is recorded.
-	// The preparatory metadata write leaves these columns for that deletion.
+	"legal_review": {"captured_by", "packet", "status"},
+	// Raw originals are deleted in full after their positive subject match is recorded; the preparatory metadata write leaves these columns for that deletion.
 	"raw_capture": {"parts_slim_outcome", "payload", "source_id", "source_system"},
 	// Audit identity and authority remain immutable when retained payloads are removed.
 	"audit_log": {"action", "actor_id", "actor_type", "authorization_rule", "entity_type"},
@@ -78,8 +78,8 @@ var erasureColumnBaseline = map[string][]string{
 	// The hash identifies the promise; the version and actor identify its reader.
 	// Retained work needs this provenance after the summary and quotation are cleared.
 	"activity_commitment_admission": {"locator", "rule_version", "captured_by"},
-	// Metric/type enums, generated UUID grouping and opaque context/contribution hashes contain no subject prose.
-	"report_edition_contribution": {"group_key", "metric", "source_type", "context_id", "contribution_key"},
+	// Metric/type enums and opaque context/contribution hashes contain no subject prose.
+	"report_edition_contribution": {"metric", "source_type", "context_id", "contribution_key"},
 	// Closed publication access class (private/team/workspace), never subject-authored content.
 	"report_edition": {"publication_audience"},
 	// A revision's selection is the report's public structure: metrics, period,
@@ -98,7 +98,7 @@ var erasureColumnBaseline = map[string][]string{
 	// redaction leaves it standing. What it DOES clear on this table is the
 	// recipient address and the subject link, which is the identifying half.
 	"communication_decision": {
-		"basis",
+		"basis", "country_source",
 		// Two values, both this repository's own: the engine allowed the
 		// message, or a named human decided a refused one goes anyway. It says
 		// nothing about the subject — it says what the CONTROLLER did — and
@@ -130,7 +130,7 @@ var erasureColumnBaseline = map[string][]string{
 		// the recipient's is not read at all. Clearing it would leave a sent
 		// message with no record of the law it was judged under, which is the
 		// accountability half Art. 5(2) requires the erasure to keep.
-		"ruleset_codes",
+		"ruleset_codes", "ruleset_digest",
 		// The sending legal entity's country code: the controller's
 		// jurisdiction, never the subject's, kept for the same reason.
 		"data_protection_country",
@@ -163,7 +163,7 @@ var erasureColumnBaseline = map[string][]string{
 		// not, and clearing audience_reason would break the audience decision on
 		// a row whose content is already gone.
 		"audience_reason",
-		"capture_label",
+		"capture_label", "due_zone", "meeting_zone", "remind_zone", // a zone is an IANA name beside a chosen clock
 		// One of two words this repository defines, saying whether the message
 		// asked its recipient side for something. Neither is anything the
 		// subject wrote nor anything written about them — it is a reading OF the
@@ -174,6 +174,9 @@ var erasureColumnBaseline = map[string][]string{
 		// One of the eight iCalendar method words RFC 5546 defines, enforced by
 		// a CHECK. Nothing the subject wrote beyond which scheduling act it was.
 		"calendar_method",
+		// The event's iCalendar UID, a key the organizer's calendar made, kept
+		// as the redaction keeps a mail's message-id: it names no subject.
+		"calendar_uid",
 		// One of four words, enforced by a CHECK: how much of
 		// the mail's text the parser decoded. Nothing the subject wrote.
 		"body_completeness",
@@ -194,7 +197,7 @@ var erasureColumnBaseline = map[string][]string{
 		"channel_provider",
 		"direction",
 		"kind",
-		"meeting_status",
+		"meeting_status", "task_type",
 		// How a call ended: a closed list (reached, voicemail, ...) about
 		// the call, never words the subject wrote, so erasure has nothing to
 		// clear here.
@@ -239,8 +242,8 @@ var erasureColumnBaseline = map[string][]string{
 		// anything a subject wrote or anything written about them, so the
 		// Art. 17 scrub leaves them standing.
 		//
-		// payload_ref is deliberately NOT here: erasure_payloads.go clears it,
-		// after destroying the vault material the reference names.
+		// Names vault material, nothing a subject wrote; the sweep clears it.
+		"payload_ref",
 		"sender_kind",
 		"template_key",
 		"bounce_kind",
@@ -286,9 +289,9 @@ var erasureColumnBaseline = map[string][]string{
 	},
 	"contact": {
 		"captured_by",
-		// A closed vocabulary and the principal that chose it; neither holds
-		// anything a subject wrote.
-		"relationship_mark",
+		// Closed vocabularies and the principals that set or cleared them; none
+		// holds anything a subject wrote.
+		"quarantine_cleared_by", "quarantine_reason", "relationship_mark",
 		"relationship_mark_set_by",
 		"source",
 		// Which system the record was imported FROM — a system's name, not the
@@ -574,7 +577,7 @@ func cascadeStatements(t *testing.T, consts map[string]string) []string {
 			})
 		}
 	}
-	return out
+	return append(out, declaredErasureStatements(t)...)
 }
 
 // executedSQL answers the argument a pgx call EXECUTES, if the node is one.

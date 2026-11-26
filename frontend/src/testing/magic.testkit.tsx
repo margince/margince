@@ -14,7 +14,9 @@ import { type RenderResult, render } from "@testing-library/react";
 import { vi } from "vitest";
 import { MagicPanel } from "../features/sign-in/magic";
 import { type Locale, LocaleProvider } from "../i18n";
-import type { MagicLine, MagicReceipt } from "../lib/magic.queries";
+import type { MagicReceipt } from "../lib/magic.queries";
+import { ViewerZoneProvider } from "../lib/viewerzone";
+import { meFixture } from "./mefixture";
 
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -66,57 +68,27 @@ export function renderMagic(
     defaultOptions: { queries: { retry: false } },
   }),
   visible: Parameters<typeof MagicPanel>[0] = {},
+  zone?: string,
 ): RenderResult {
+  // The panel reads only for a reader with deal read.
+  if (!client.getQueryData(["me"]))
+    client.setQueryData(
+      ["me"],
+      meFixture({ allow: { deal: ["read", "update"] } }),
+    );
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>
-        <MagicPanel {...visible} />
+        {zone ? (
+          <ViewerZoneProvider zone={zone}>
+            <MagicPanel {...visible} />
+          </ViewerZoneProvider>
+        ) : (
+          <MagicPanel {...visible} />
+        )}
       </LocaleProvider>
     </QueryClientProvider>,
   );
 }
 
-/**
- * The quietest receipt the server can send: every lane present and empty.
- *
- * Every field the contract marks required is here, so a case overriding one
- * lane still describes a payload production could produce — a fixture missing
- * `totals` or `sources_unavailable` would test a shape no server sends.
- */
-export function receipt(over: Partial<MagicReceipt> = {}): MagicReceipt {
-  const done = over.done ?? [];
-  const needsYou = over.needs_you ?? [];
-  const failed = over.could_not_complete ?? [];
-  const watching = over.watching ?? [];
-  return {
-    as_of: "2026-09-13T08:00:00Z",
-    since: "2026-09-12T08:00:00Z",
-    done,
-    needs_you: needsYou,
-    could_not_complete: failed,
-    watching,
-    // The server counts what it draws, so a case's totals are its lanes'.
-    totals: {
-      done: done.length,
-      needs_you: needsYou.length,
-      could_not_complete: failed.length,
-      watching: watching.length,
-    },
-    not_shown: [],
-    sources_unavailable: [],
-    ...over,
-  };
-}
-
-/** One line, in the `done` lane unless a case says otherwise. */
-export function line(over: Partial<MagicLine> = {}): MagicLine {
-  return {
-    id: "00000000-0000-7000-8000-000000000001",
-    occurred_at: "2026-09-13T07:30:00Z",
-    lane: "done",
-    summary: { key: "magic.action.advance_stage" },
-    actor: { type: "agent", id: "runner" },
-    undo: { undoable: false, reason: "not_a_replayable_verb" },
-    ...over,
-  };
-}
+export { line, receipt } from "./magic.fixtures";

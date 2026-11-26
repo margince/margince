@@ -43,6 +43,9 @@ func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	if !res.Supported {
 		return res, nil
 	}
+	if res, err = settlePackBasisTx(ctx, tx, subject, res); err != nil {
+		return resolution{}, err
+	}
 	// The ground goes on the record BEFORE the message is permitted on it.
 	// A basis written afterwards would be describing a send that already
 	// happened, and one never written at all is the gap that made the
@@ -127,6 +130,7 @@ func allowOn(d commsauthz.Decision, res resolution) commsauthz.Decision {
 	d.Verdict = commsauthz.VerdictAllow
 	d.ReasonCode = commsauthz.ReasonAllowed
 	d.Basis = res.Basis
+	d.LawfulBasisMissing = res.BasisMissing
 	return d
 }
 
@@ -206,24 +210,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
 	}
-	// ONLY EVIDENCE THIS CALLER WAS SHOWN TO HOLD travels any further.
-	//
-	// refuseUnreadableEvidence runs inside validate, and validate runs only for
-	// arm 3 of resolution — the thread and live-deal arms answer before it. So
-	// a message allowed by one of those two carries evidence ids nobody has
-	// checked this caller may see, and writing them to the decision row would
-	// hand them to the transmit phase. That phase runs under the system
-	// principal, for which auth.Require returns nil, so an unchecked id there
-	// becomes an authorization the sender could never have obtained: name any
-	// invoice in the installation, get allowed by an open deal at staging, and
-	// have the invoice arm allow it at transmit.
-	//
-	// EvidenceChecked is the resolution's own record of having passed that
-	// check, so what reaches the row is the intersection of "named" and
-	// "readable by the contact who named it".
-	if res.EvidenceChecked {
-		d.Evidence = req.Evidence
-	}
+	d = withCheckedEvidence(d, req, res)
 	if res.Supported {
 		// The claim first, because the record bearing out a category is not the
 		// same as the caller having named it. A sender who says "this is
@@ -277,7 +264,26 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	// TestAnUnsupportedClaimIsRecordedButNeverResolvedTo, which is what that
 	// test's own comment records.
 	d.Requested = res.Category
-	return g.legacyVerdictFor(ctx, tx, subject.ID, subject.Country, req.LegacyPurposeKey, req.Context, res, d, stops, req.SendingEntity)
+	claimed, purposeKey, err := verdictQuestion(ctx, tx, req, res)
+	if err != nil {
+		return commsauthz.Decision{}, nil, err
+	}
+	return g.legacyVerdictFor(ctx, tx, subject.ID, subject.Country, purposeKey, claimed, res, d, stops, req.SendingEntity, phase)
+}
+
+// verdictQuestion is the claim and purpose key an unsupported resolution puts
+// to the consent verdict. An offer is asked as marketing. Its purpose counts
+// only when it is a marketing one, because a correspondence key would let the
+// verdict allow the offer on a recent exchange.
+func verdictQuestion(ctx context.Context, tx pgx.Tx, req commsauthz.Request, res resolution) (commsauthz.Category, string, error) {
+	if !res.ReadAsOffer {
+		return req.Context, req.LegacyPurposeKey, nil
+	}
+	purpose, defined, err := purposeRowFor(ctx, tx, req.LegacyPurposeKey)
+	if err != nil || !defined || purpose.Class != ClassMarketing {
+		return commsauthz.CategoryMarketing, "", err
+	}
+	return commsauthz.CategoryMarketing, req.LegacyPurposeKey, nil
 }
 
 // legacyVerdictFor answers on the old purpose model when the record supports no
@@ -293,7 +299,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 // caller's suppression re-check needs it to tell a narrow row that binds this
 // purpose from one that binds some OTHER marketing purpose, which
 // suppressionBinds cannot do from the category alone.
-func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string, country RecipientCountry, purposeKey string, claimed commsauthz.Category, res resolution, d commsauthz.Decision, stops []liveStop, entity ids.UUID) (commsauthz.Decision, *ids.UUID, error) {
+func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string, country RecipientCountry, purposeKey string, claimed commsauthz.Category, res resolution, d commsauthz.Decision, stops []liveStop, entity ids.UUID, phase commsauthz.Phase) (commsauthz.Decision, *ids.UUID, error) {
 	if unsupportedClaimAwaitsAnswer(claimed, purposeKey) {
 		d.Verdict = commsauthz.VerdictReview
 		d.ReasonCode = res.Reason
@@ -358,7 +364,7 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 	}
 
 	w := packRulesFor(country)
-	marketing := MarketingContext{Exception: w.marketingException, SendingEntity: entity}
+	marketing := w.marketingContext(entity)
 	now := time.Now()
 	verdict, err := VerdictForRecipient(ctx, tx, contactID, d.Recipient.Email, purpose, now.Add(-w.reply), now, marketing)
 	if err != nil {
@@ -401,9 +407,11 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 		// leave that ground unrecorded. fromPurpose is the category this arm
 		// resolves to and purposeID the purpose it resolved through, so the
 		// test is the one applySuppression will apply.
-		if err := stampDerivedBasis(ctx, tx, contactID, verdict,
-			suppressionBindsAny(stops, fromPurpose, &purposeID)); err != nil {
-			return commsauthz.Decision{}, nil, err
+		if phase == commsauthz.PhaseStaging {
+			if err := stampDerivedBasis(ctx, tx, contactID, verdict,
+				suppressionBindsAny(stops, fromPurpose, &purposeID)); err != nil {
+				return commsauthz.Decision{}, nil, err
+			}
 		}
 		d.Verdict = commsauthz.VerdictAllow
 		d.ReasonCode = commsauthz.ReasonAllowed
@@ -411,6 +419,11 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 		if verdict.ExistingCustomer != nil {
 			d.Basis = commsauthz.BasisExistingCustomerException
 			d.ExistingCustomer = verdict.ExistingCustomer
+		}
+		// No lawful-basis value names "allowed until refused", so the row
+		// records none and its reason code says why the send was allowed.
+		if verdict.ReasonCode == ReasonOptOutAllowed {
+			d.Basis, d.ReasonCode = "", commsauthz.ReasonOptOutAllowed
 		}
 	case VerdictBlocked:
 		d.Verdict = commsauthz.VerdictDeny
@@ -424,4 +437,12 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 		d.ReasonCode = res.Reason
 	}
 	return d, &purposeID, nil
+}
+
+func withCheckedEvidence(d commsauthz.Decision, req commsauthz.Request, res resolution) commsauthz.Decision {
+	// Unchecked record IDs must not acquire the worker's broader read scope.
+	if res.EvidenceChecked {
+		d.Evidence = req.Evidence
+	}
+	return d
 }

@@ -59,6 +59,11 @@ export const OpenedOnACall: Story = {
     );
   },
 };
+export const OpenedOnACallPhone: Story = {
+  ...OpenedOnACall,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
 
 export const CallTranscript: Story = {
   ...OpenedOnACall,
@@ -78,6 +83,58 @@ export const CallTranscript: Story = {
 };
 export const CallTranscriptDark: Story = {
   ...CallTranscript,
+  globals: { theme: "dark" },
+};
+
+// A conversation held on a chat app, logged by hand: the Message kind asks which
+// registered chat app carried it before Log is enabled.
+export const LoggedMessage: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": admin(),
+      "GET /channel-providers": () =>
+        jsonResponse({
+          data: [
+            {
+              provider: "linkedin",
+              label: "LinkedIn",
+              credential_model: "workspace_bot",
+              supplies_transport: false,
+              attachments: { max_bytes: 0, max_count: 0 },
+            },
+            {
+              provider: "whatsapp",
+              label: "WhatsApp",
+              credential_model: "workspace_bot",
+              supplies_transport: false,
+              attachments: { max_bytes: 0, max_count: 0 },
+            },
+          ],
+        }),
+    });
+    return (
+      <StoryProviders>
+        <LogActivity entityType="contact" entityId="p1" />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByLabelText(en["log.kind"]));
+    await userEvent.click(
+      await within(document.body).findByRole("option", {
+        name: en["log.kindMessage"],
+      }),
+    );
+    await pickOption(
+      userEvent.setup(),
+      canvas.getByLabelText(`${en["log.channel"]} *`),
+      "WhatsApp",
+    );
+  },
+};
+export const LoggedMessageDark: Story = {
+  ...LoggedMessage,
   globals: { theme: "dark" },
 };
 
@@ -243,6 +300,14 @@ export const WithCustomFieldsDark: Story = {
 
 // A meeting logged on a record where a booked meeting still owes its outcome.
 // The form asks whether this is that meeting's record, Yes by default.
+// Two hours ago, or the start of today when that is still yesterday, so the
+// meeting is on the form's day whenever the story renders.
+function earlierToday(): Date {
+  const midnight = new Date();
+  midnight.setHours(0, 0, 0, 0);
+  return new Date(Math.max(midnight.getTime(), Date.now() - 2 * 3_600_000));
+}
+
 function openMeeting(calendarManaged: boolean) {
   return () =>
     jsonResponse({
@@ -251,7 +316,7 @@ function openMeeting(calendarManaged: boolean) {
           id: "m-1",
           kind: "meeting",
           subject: "Quarterly review",
-          occurred_at: new Date(Date.now() - 2 * 3_600_000).toISOString(),
+          occurred_at: earlierToday().toISOString(),
           occurred_precision: "instant",
           meeting_status: "booked",
           awaiting_outcome: true,

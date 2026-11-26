@@ -57,7 +57,7 @@ func TestFactsOnlyRefreshNeverCallsTheModelEvenWhenTheRequestChanges(t *testing.
 	at := time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC)
 	now := at.Add(time.Hour)
 	lane := &requestReviewModel{}
-	service := dealstatus.NewService(e.Pool, deals.NewStore(e.DB(), deals.Installation{}), store, dealrooms.NewStore(e.DB()), func() time.Time { return now }).WithLane(lane, "test")
+	service := dealstatus.NewService(e.Pool, deals.NewStore(e.DB(), deals.Installation{}), store, dealrooms.NewStore(e.DB()), func() time.Time { return now }).WithLane(lane, func() string { return "test" })
 	subject, direction := "Please send slots", "inbound"
 	source, _, err := store.LogActivity(ctx, activities.LogActivityInput{Kind: "email", Subject: &subject, Direction: &direction, ThreadKey: "facts-request", OccurredAt: &at, Source: "test", Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: dealID}}})
 	if err != nil {
@@ -100,11 +100,13 @@ func TestFactsOnlyRefreshNeverCallsTheModelEvenWhenTheRequestChanges(t *testing.
 		t.Fatal("completion did not refresh without model work")
 	}
 	assertCachedRequestMove(ctx, t, service, dealID, "")
-	if _, err := service.Get(ctx, ids.From[ids.DealKind](dealID), true); err != nil {
+	// An ordinary read, not a forced one: the facts-only card skipped the model,
+	// so it must not stand in for the card that asks it.
+	if _, err := service.Get(ctx, ids.From[ids.DealKind](dealID), false); err != nil {
 		t.Fatal(err)
 	}
 	if lane.calls == 0 {
-		t.Fatal("test never connected the real model boundary")
+		t.Fatal("an ordinary read served the facts-only card instead of asking the model")
 	}
 }
 

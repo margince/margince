@@ -53,18 +53,24 @@ func RekeyKeptStopsPageTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit 
 	}
 	page, err := readStoredValues(ctx, tx, `SELECT id, address_hash FROM communication_suppression
 		WHERE address_hash IS NOT NULL AND address_key_id IS NULL AND id > @after
-		ORDER BY id LIMIT @limit FOR UPDATE`, after, limit)
+		ORDER BY id LIMIT @limit`, after, limit)
 	if err != nil {
 		return nil, fmt.Errorf("consent: reading unkeyed stops: %w", err)
 	}
 	rekeyed := make([]string, len(page))
+	oldHashes := make([]string, len(page))
 	for i, stop := range page {
+		oldHashes[i] = stop.value
 		rekeyed[i], _ = storekit.RekeySuppressionHash(stop.value)
+	}
+	if err := storekit.LockStopAddresses(ctx, tx, nil, append(oldHashes, rekeyed...)); err != nil {
+		return nil, err
 	}
 	if _, err := tx.Exec(ctx, `UPDATE communication_suppression s
 		SET address_hash = u.hash, address_key_id = @key
-		FROM unnest(@ids::uuid[], @hashes::text[]) AS u(id, hash) WHERE s.id = u.id`,
-		pgx.StrictNamedArgs{"ids": storedIDs(page), "hashes": rekeyed, fieldKey: *keyID}); err != nil {
+		FROM unnest(@ids::uuid[], @hashes::text[], @old_hashes::text[]) AS u(id, hash, old_hash)
+ WHERE s.id = u.id AND s.address_hash = u.old_hash AND s.address_key_id IS NULL`,
+		pgx.StrictNamedArgs{"ids": storedIDs(page), "hashes": rekeyed, "old_hashes": oldHashes, fieldKey: *keyID}); err != nil {
 		return nil, fmt.Errorf("consent: re-keying stops: %w", err)
 	}
 	return storedIDs(page), nil

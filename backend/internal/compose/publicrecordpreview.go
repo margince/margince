@@ -5,19 +5,24 @@ package compose
 
 import (
 	"bytes"
+	"fmt"
 	"html/template"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/readerlocale"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const publicRecordPreviewPrefix = "/v1/public/record-previews/"
@@ -60,22 +65,31 @@ func publicRecordPreviews(s Server, svc *identity.Service) func(http.Handler) ht
 			}
 			ctx := principal.WithWorkspaceID(r.Context(), workspace.UUID)
 			ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:public_record_preview"})
+			masked, err := svc.MaskedByAnyRole(ctx, fieldmask.Deal)
+			if err != nil {
+				s.writeRecordPreview(w, r, fallback, err)
+				return
+			}
+			ctx = withCardWithheld(ctx, fieldmask.Withheld(fieldmask.Deal, masked))
 			s.GetPublicRecordPreview(w, r.WithContext(ctx), parts[0], crmcontracts.Id(id))
 		})
 	}
 }
 
 type recordPreview struct {
-	Title   string
-	Summary string
-	Href    string
+	kind, name     string
+	genericSummary bool
+	Title          string
+	Summary        string
+	Href           string
 }
 
 // previewCard is the escaped HTML a link-preview fetcher reads in place of the
 // app shell. Record cards and booking pages share it. Each caller names its own
-// site and link text, so a record card says Margince and a booking page names
-// only the host's company. html/template escapes every field.
+// site, icon and link text, so a record card says Margince and a booking page
+// names only the host's company. html/template escapes every field.
 type previewCard struct {
+	Locale  textlang.Lang
 	Title   string
 	Summary string
 	// SiteName fills og:site_name; empty omits it.
@@ -86,6 +100,9 @@ type previewCard struct {
 	// text-only card.
 	Image    string
 	ImageAlt string
+	// Icon is the tab icon. Empty gives a blank one, so the browser never
+	// falls back to the app's own /favicon.ico.
+	Icon string
 	// Href is where the page's script sends a browser that reached the card.
 	Href     string
 	LinkText string
@@ -93,13 +110,28 @@ type previewCard struct {
 
 // recordPreviewCard keeps the record card's Margince branding: the card advertises
 // the app the record lives in.
-func recordPreviewCard(preview recordPreview) previewCard {
-	return previewCard{Title: preview.Title, Summary: preview.Summary, SiteName: "Margince", Href: preview.Href, LinkText: "Open in Margince"}
+func recordPreviewCard(preview recordPreview, locales ...textlang.Lang) previewCard {
+	language := textlang.English
+	if len(locales) > 0 {
+		language = locales[0]
+	}
+	if preview.kind != "" {
+		label := systemtext.Copy("preview."+preview.kind, language)
+		name := preview.name
+		if name == "" {
+			name = label
+		}
+		preview.Title = fmt.Sprintf(systemtext.Copy("preview.record_title", language), label, name)
+		if preview.genericSummary {
+			preview.Summary = fmt.Sprintf(systemtext.Copy("preview.record_empty", language), label)
+		}
+	}
+	return previewCard{Title: preview.Title, Summary: preview.Summary, SiteName: "Margince", Icon: "/icon.svg", Href: preview.Href, LinkText: systemtext.Copy("preview.open_record", language)}
 }
 
 var previewCardHTML = template.Must(template.New("preview-card").Parse(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{.Title}}</title>{{if .Canonical}}<link rel="canonical" href="{{.Canonical}}">{{end}}{{if .Summary}}<meta property="og:type" content="website">{{if .SiteName}}<meta property="og:site_name" content="{{.SiteName}}">{{end}}
+<html lang="{{.Locale}}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title><link rel="icon" href="{{if .Icon}}{{.Icon}}{{else}}data:,{{end}}">{{if .Canonical}}<link rel="canonical" href="{{.Canonical}}">{{end}}{{if .Summary}}<meta property="og:type" content="website">{{if .SiteName}}<meta property="og:site_name" content="{{.SiteName}}">{{end}}
 <meta property="og:title" content="{{.Title}}"><meta property="og:description" content="{{.Summary}}">{{if .Canonical}}<meta property="og:url" content="{{.Canonical}}">{{end}}
 {{if .Image}}<meta property="og:image" content="{{.Image}}"><meta property="og:image:alt" content="{{.ImageAlt}}"><meta name="twitter:image" content="{{.Image}}">
 {{end}}<meta name="description" content="{{.Summary}}"><meta name="twitter:card" content="summary">
@@ -118,13 +150,16 @@ func (s Server) GetPublicRecordPreview(w http.ResponseWriter, r *http.Request, k
 }
 
 func (s Server) writeRecordPreview(w http.ResponseWriter, r *http.Request, preview recordPreview, cause error) {
-	s.writePreviewCard(w, r, recordPreviewCard(preview), "record", cause)
+	s.writePreviewCard(w, r, recordPreviewCard(preview, readerlocale.Anonymous(r)), "record", cause)
 }
 
 // writePreviewCard answers GET and HEAD with the card. A cause sets the status
 // it classifies to; the card still renders, so a browser that reached it
 // still gets its link onward.
 func (s Server) writePreviewCard(w http.ResponseWriter, r *http.Request, card previewCard, kind string, cause error) {
+	card.Locale = readerlocale.Anonymous(r)
+	w.Header().Add("Vary", "Accept-Language")
+	w.Header().Add("Vary", "X-Margince-Display-Locale")
 	status := http.StatusOK
 	if cause != nil {
 		status = http.StatusInternalServerError

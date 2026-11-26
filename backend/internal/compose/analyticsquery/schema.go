@@ -22,7 +22,10 @@ import "sort"
 type Field struct {
 	// Unpriced is the trusted row expression counting amounts without conversion.
 	Unpriced string
-	Name     string
+	// PartialSum makes a sum over this field add the amounts that convert.
+	// The entity's coverage says what it leaves out. Unpriced alone withholds the group.
+	PartialSum bool
+	Name       string
 	// Expr is the SQL the compiler renders. It comes from the spec catalog and
 	// never from a request; nothing a caller sends reaches this string.
 	Expr string
@@ -30,6 +33,13 @@ type Field struct {
 	// question with no answer, and refusing it at plan time beats a Postgres
 	// error the caller cannot act on.
 	Kind FieldKind
+	// Predicate is the whole clause for a field matched against a SET, with
+	// one %s for the bound value's reference.
+	//
+	// Where it is set the compiler renders it in place of Expr and an
+	// operator. One declaration then serves both engines, so this door cannot
+	// answer equality while the report engine asks the set.
+	Predicate string
 	// Shape is what the column holds, which decides the spellings a filter
 	// against it can carry. Its zero value is text, which is the safe default
 	// in the one direction that matters: a text column given a number refuses
@@ -46,6 +56,9 @@ type Field struct {
 	// of values. Offered, not enforced: a record may still hold a choice an
 	// administrator has since removed.
 	Options []string
+	// OptionLabels names each option in the reader's language, where an
+	// administrator gave it a name; a missing option reads as itself.
+	OptionLabels map[string]string
 	// Coverage is how many records hold a value in a field the installation
 	// defined. Nil where nobody counted, which every question run leaves it.
 	Coverage *Coverage
@@ -81,6 +94,8 @@ const (
 	ShapeNumber ColumnShape = "number"
 	// ShapeBoolean is a yes-or-no column: true and "true" alike.
 	ShapeBoolean ColumnShape = "boolean"
+	// ShapeID is a column of record ids: only a canonical UUID's text binds.
+	ShapeID ColumnShape = "id"
 )
 
 // FieldKind is what a field holds.
@@ -110,10 +125,27 @@ type Entity struct {
 	// deals, live activities. Carried so a generic query over an entity
 	// answers the same population the prebuilt report does.
 	BaseWhere string
-	Fields    map[string]Field
+	// Rows is BaseWhere in plain words. A model then knows which entity holds the
+	// rows a question counts, when the name only says how they are grouped.
+	Rows   string
+	Fields map[string]Field
 	// Contributor is the seat each row is credited to, "" when the entity
 	// names none. The plan counts the seats behind each group from it.
 	Contributor string
+	// Coverage says how a group's partial sums state what they leave out. Nil
+	// where no field of the entity has one.
+	Coverage *MoneyCoverage
+}
+
+// MoneyCoverage is the trusted SQL that counts, per group, the deals a partial
+// sum leaves out. Those are the deals with no amount and those with no rate.
+type MoneyCoverage struct {
+	// Value is the deal's amount in the base currency, null when its currency has no rate.
+	Value string
+	// Amount is the deal's own amount, which is null when no amount was entered.
+	Amount string
+	// Currency is the deal's currency, listed for the deals with no rate.
+	Currency string
 }
 
 // Schema is the whole vocabulary, for one caller.
@@ -152,6 +184,28 @@ func (e Entity) FieldNames(kind FieldKind) []string {
 	sort.Strings(out)
 	return out
 }
+
+// Money names each measure that is an amount and the currency it is in, as
+// the schema the browser reads states it. A field with no currency is a number.
+func (e Entity) Money() map[string]string {
+	out := map[string]string{}
+	for name, field := range e.Fields {
+		switch {
+		case field.Kind != KindMeasure:
+		case field.Currency != nil:
+			out[name] = MoneyRowCurrency
+		case field.Unpriced != "":
+			out[name] = MoneyBaseCurrency
+		}
+	}
+	return out
+}
+
+// The currencies Money names.
+const (
+	MoneyRowCurrency  = "row_currency"
+	MoneyBaseCurrency = "base_currency"
+)
 
 // FilterableNames lists every field a filter may name, in a stable order.
 //

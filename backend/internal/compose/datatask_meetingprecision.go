@@ -11,6 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // meetingHistoryPrecisionDataTask records the precision of the meeting
@@ -20,7 +21,7 @@ import (
 func meetingHistoryPrecisionDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1793336397_meeting_history_precision", Version: 1,
-		Title:    "Recording which restored meeting times are exact",
+		Title:    systemtext.Literal("datatask.title.core.1793336397_meeting_history_precision"),
 		Requires: []string{"core/1793336397"},
 		Steps: []datatask.Step{{
 			Name: "prove_restored_instants", Limit: 500, MinLimit: 10,

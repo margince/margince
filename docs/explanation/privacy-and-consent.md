@@ -1,22 +1,16 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/consent backend/internal/modules/privacy backend/internal/shared/ports/commsauthz backend/internal/shared/ports/jurisdiction backend/internal/compose/jobs_privacyretention.go backend/internal/compose/siteleadnotice.go extensions/de -->
+<!-- describes: backend/internal/modules/consent backend/internal/modules/privacy backend/internal/shared/ports/commsauthz backend/internal/shared/ports/jurisdiction backend/internal/compose/jobs_privacyretention.go backend/internal/compose/siteleadnotice.go extensions/eu extensions/apac -->
 # Privacy, consent & the GDPR engines
 
 ## The authorization engine (`consent`)
 
-`consent` owns two things a reader can take for one. **Consent** is a subject's answer to a question
-about a purpose: the catalog, each contact's current state, and an **add-only proof log**.
-**Authorization** is whether one message may go. That is a different question, and it mostly has a different answer. Most mail goes out on a contract, on a reply to a thread the subject
-started, or on a legal duty, not on consent.
+`consent` records each lead or contact's answer about a purpose and keeps an **add-only proof log**.
+It also checks whether one message may go. Most mail rests on a contract, a reply to a thread
+the subject started, or a legal duty. The engine works out the message's **category**, checks
+its **proof**, and records a **decision** per recipient:
 
-The engine answers the second question. It works out a **category** from what the send is, checks
-the **proof** that category needs, and records a **decision** per recipient saying why:
-
-- **The server works out the category.** The caller does not name it. A closed set of names
-  (`reply_to_inbound`, `invoice_or_payment`, `marketing`, `security_notice`, … in
-  `internal/shared/ports/commsauthz`) comes from the message's own source. That source is its
-  thread, the records it links and the template it uses. A caller can offer a category but cannot
-  make one up.
+- **The server checks the category.** A caller can claim a category from
+  `internal/shared/ports/commsauthz`. The engine needs proof from the thread, linked records or template.
 
   The send paths refuse a claim to any **subject-serving** category: a security or privacy
   notice, an opt-out, a note that confirms consent or a record. So only the installation
@@ -31,8 +25,7 @@ the **proof** that category needs, and records a **decision** per recipient sayi
   recipient. The row holds the category, the verdict, the reason, the basis and a fingerprint of the
   words. So "why could this message go" is one query, not a search through old mail.
 
-  (The proof
-  itself goes into `communication_basis`, not on the decision row.) A message that reaches a provider
+  The proof itself goes into `communication_basis`, not on the decision row. A message that reaches a provider
   always has both rows. The second sees a withdrawal, a bounce or an edit to the words that comes
   in between the two.
 
@@ -41,16 +34,22 @@ the **proof** that category needs, and records a **decision** per recipient sayi
 - A request stays with the record it was made on. A merge binds each request on either record to
   that record's addresses (`recorded_for_addresses`). After a wrong merge, one human's request does
   not cover the other's addresses.
+- Supporting proof stays with the company that received the request or logged the exchange.
+  Moving a user to another company does not move that proof. A source must still be live and
+  visible to the sender. An open deal alone does not prove that the subject asked for a follow-up.
+  A fact with no company on record can count for the only company, which must be the default. With more than one
+  company on file, its scope needs a human check before it can allow a send.
+- The composer reuses proof on file. A user can record what was agreed and when for the recipient,
+  sending company and deal. This grants no marketing consent and sends no message. The engine checks again.
+  A lead stays a lead; when made a contact, its exchange keeps its addresses and sending company.
 - **Withdrawals and stops are separate, and both bind.** An unsubscribe is a consent withdrawal. The
   engine reads it **by class** ("has the subject stopped this kind of message"). That is because a category worked out from
   proof may carry no purpose key to match. `communication_suppression` records the other stops: an
   Article 21 objection, a legal limit on use, a subject's request to stop, a hard bounce. No stop
   ends by itself, and no mode turns either one off.
-- **A user may override a refused send.** The override stands separate from consent.
-  `communication_override` (`consent.Allow`) records a standing statement per category. It says a
-  refusal by the machine for want of proof may be set to one side for one contact. It covers the category
-  the engine gave the send, and only that one. So an override for `marketing` says nothing about
-  `customer_service`.
+- A `communication_override` row lets a refused send through for one contact, category and
+  sending company. No route records a new one, and the rows on file count until revoked. A row
+  grants no consent, and each message gets its own check.
 
   It turns nothing absolute. `Decision.CanBeOverruledByCategory` asks the question only for a
   reading by the machine that is not absolute and that has a category. The `absoluteDenials` below
@@ -61,18 +60,17 @@ the **proof** that category needs, and records a **decision** per recipient sayi
   absolute, but the request named a purpose key the engine does not know. So there is no category,
   and an override per category has nothing to answer. The fix there is to send again with a purpose the engine knows.
 
-  The user must write a reason. A stop may pass on a phone call alone, but an override is the user's own
-  call, and the record must say why. Only a caller whose authority level `CanRevoke` the level the
-  override holds may revoke it (`consent.RevokeOverride`). That is `CanOverrule` plus one step,
-  because no human authority sits above admin. Without it, an override an admin recorded would have no
-  seat that could take it back. `lift.go` keeps the `CanOverrule` test, which asks for more, for a stop, where not
-  sending is the safe side.
+  The user must write a reason. The consent panel lists live exceptions by category and company.
+  It shows the first author and date only while saved source rows prove them. If the source is
+  gone or its mark is missing, the panel says it is unknown.
 
-  An override lives on through a merge, on the contact that is kept (`consent.CarryOverridesTx`). It
-  keeps its first `decided_by_level` and its reason, so a merge cannot drop its authority
-  level. So a revoke reaches every copy a merge made of it, from the old ID the caller holds.
-  Each copy is reported as lifted on the stream that carried its record. An override left standing
-  under an ID that the user who made it does not know would go on allowing the send.
+  An admin with access to change the contact can revoke an exception with a reason
+  (`consent.RevokeOverride`). The list uses the same access check as that write. It is paged,
+  so older exceptions stay in reach.
+
+  A merge copies the override to the contact that is kept (`consent.CarryOverridesTx`). Each copy
+  keeps the company, reason and first `decided_by_level`. A revoke with any copy's ID reaches
+  every copy. Each contact's stream names the copies it took back.
 
   Article 17 erasure and the retention sweep delete it with the rest of the contact's consent
   record. A standing "write to them all the same" must not live longer than its contact. Article 15 subject
@@ -118,8 +116,6 @@ state write that skips its proof.
 
 ## What a refusal leaves behind
 
-A refusal leaves two records behind, and they answer different questions.
-
 **A review is the refused message.** It can still go on. `communication_review` holds one send
 attempt that stopped. Where the attempt carried a mail payload and the hold worked, the review points
 at the held `scheduled_send` that holds it. Resuming works from there.
@@ -134,9 +130,8 @@ The refusal keeps the status and code it already holds (a consent refusal stays
 the status. The ID adds a handle a machine can act on. So an agent that gets a refusal can hand the
 question to a human, not only report text.
 
-States name what is needed, not who is blocked.
-`needs_context` is a fact about the message and stays true for every reader. "Waiting for
-Anna" stops being true when Anna leaves:
+States name what is needed, not who is blocked. `needs_context` is a fact about the message and
+stays true for every reader. "Waiting for Anna" stops being true when Anna leaves:
 
 | State | What it means |
 |---|---|
@@ -152,6 +147,9 @@ of the message. A review can be read by the user who started it, or by a user wh
 about a named subject exists is itself something to keep private. A principal that is neither a user
 nor a user's agent is refused before the query runs.
 
+The exception dialog shows each refused address, its purpose, company and reason. A new review or
+warning version starts with its check box empty.
+
 **An instruction overrides one refusal, by name.** It is a named user sending one refused message all
 the same. At times the installation has a reason the engine cannot see. It may be a contract clause, a legal
 duty, or a subject who asked in a meeting nobody logged. `communication_instruction` records that decision.
@@ -166,56 +164,57 @@ That is `deny`, or `review` where the refusal is a reading by the machine. The r
 `execution_authority='instruction'` beside it. So a query can tell a message that is never refused
 from one that is refused and sent all the same.
 
-**Open problem: the cap misses directed recipients.** `advertisingMessagesReceived` counts transmit
-decisions with `verdict='allow'`, and the row for a recipient a user directed through does not have
-that verdict. An allowed recipient on the same envelope still counts. So a send to both kinds is
-counted for some of its recipients and not for others. So an installation under a legal cap can
-go over it through such sends without the count moving. The column the query would need is
-already on the row; nothing reads it yet.
+The legal cap counts mail sent and mail about to go out. It joins each delivery to its transmit
+check, including a send made under an instruction. A parked message does not use the allowance.
+The count is per address, so one recipient's delivery cannot consume another's allowance.
 
-Using an instruction checks four things. Each is a different way the record could end up telling of
-something that never happened:
+Using an instruction checks these facts:
 
-- **The decision is still live.** Revoked, out of date and already used are three different reasons
-  the same row allows nothing now.
+- **The decision is still live.** A revoked decision, one marked expired or one already used
+  allows no send.
 - **It is this message.** An instruction is made against one review, and that review holds one
   message.
-- **The message has not changed**, where there is a fingerprint to check. The sender confirmed they would send
-  that subject and body. An edit after that is a message nobody signed for. Some
-  instructions are not held back: one with no fingerprint, or one against a review whose held message
-  could not be read. Holding it back would refuse a send for a reason nobody can act on.
+- **The scope still fits.** New instructions freeze the recipients, sender, purpose, attachments
+  and other message context. A change to that scope needs a new decision.
+- **The wording is approved**, where there is a fingerprint to check. After an approved send fails,
+  the sender may confirm a small edit keeps its meaning. They must have given the original approval; [Sending mail](../handbook/sending-mail.md) names the allowed edits. The original approval stays
+  fixed; the edited message has a separate fingerprint. Other edits need a new decision.
+  Older instructions with no fingerprint keep their existing send behavior, but cannot keep approval through this edit.
 - **It is used once.** The row moves to `consumed` and names its delivery inside the same transaction
   that stages the message. So a retry, a double click or a job delivered twice cannot use it twice.
+
+An old facts window does not by itself ask for another statement. Each retry checks current
+support and stops. The original author, approval, scope and dates stay on the record.
 
 Directing a send answers to `communication_exception`, its own RBAC object, not a part of
 consent's settings. The two are different authorities. Consent's settings decide who may change the
 rules. This decides who may act against the answer those rules gave about one contact. An
 installation that handed over the first has not handed over the second with it.
 
-The check is `requireAUserOrTheirAgent` plus the grant, so a connector cannot make one. A user's agent
-carries out the user's own decision on `send_outbound`, with the `send` scope, and asks first.
-`directed_by` names the user who took it on and `directed_by_agent` names the agent.
+The check is `requireAHumanAtTheKeyboard` plus the grant, so only the user takes the decision, in a
+session. The route is human-only, and no agent or connector records one. `directed_by` names the user.
+`directed_by_agent` is never written; older rows may carry it.
 
-Every role that sends mail holds the grant: `rep`, `manager`, `management` and `admin`. The grant
-alone does not say which refusals a seat may send past. Each refusal reason declares what can
-resolve it in `commsauthz.RemediesFor`.
+Every role that sends mail holds the grant: `rep`, `manager`, `management` and `admin`. Only the
+message's author may direct it, since it sends from their mailbox (`heldreason.RefuseAnotherSeat`).
+Anyone else gets 403 and no `direct_send`. The grant alone does not say which refusals a seat may
+send past. Each refusal reason declares what can resolve it in `commsauthz.RemediesFor`.
 
-- A reason that lists the plain exception can be sent past by any holder of the grant. Missing
-  evidence is one such reason. It does not replace a required marketing basis.
-- A hard bounce, an opt-in not yet confirmed or an unknown recipient needs a fix. A rep exception cannot answer them.
-- An unknown purpose or a claim that conflicts with the record needs a corrected request.
 - A contact's own stop lists nothing, so nobody sends past it, an admin included. That covers an
   objection, a withdrawal, a limit on processing and a request to stop. It also covers a quote that
   rests on a request alone when the contact opted out of marketing after that request
   (`opted_out_after_request`). A request recorded after the opt-out carries the quote again.
-- Some packs list nothing either. A pack that sets `ConsentOnly` (Vietnam does)
-  turns marketing without consent into `marketing_consent_required`. No exception and no standing
-  override answers it. Nobody sends past a pack's limit on advertising mail
-  (`frequency_cap_reached`); it clears with time.
+- Every other policy refusal lists the plain exception, so the author can send one message past it
+  with a recorded reason. That includes a missing marketing basis, `marketing_consent_required`,
+  `frequency_cap_reached` and an opt-in not yet confirmed. Consent rows and the verdict stay as they were.
+- A hard bounce and a recipient that resolves to no single contact list nothing. No decision makes
+  a dead address accept mail, and an unresolved recipient was never checked for its stops.
+- A decision sends the reasons its user was shown (`shown_reasons`); a changed review is stale.
 
 `Review.DirectableBy` is the check both `DirectSend` and a refusal's actions ask.
-Staging and the transmit check ask `DecisionSet.ExceptionMayAnswer` again.
-A new stop leaves the direction not used. A new grant lets the held message go
+Staging and the transmit check ask `DecisionSet.ExceptionMayAnswer` and
+`instructionStillAnswers` again. A refusal the review did not show, or a stop or withdrawal
+recorded after the decision, leaves the direction not used. A new grant lets the held message go
 on that basis and records no exception instruction.
 
 A contact can be written to about a thread when three things hold:
@@ -229,7 +228,7 @@ counts either. So a seat cannot make this ground by copying the contact.
 
 The rule reads the thread key and records its basis against that thread. So it never becomes
 standing permission for the contact. It never supports a message the sender calls marketing.
-`copiedOnThisMatter` holds the whole rule.
+`copiedOnThisMatter` holds the whole rule. A follow-up the contact asked for rests on a message they wrote; [who sent a received message](relationship-graph.md#who-sent-a-received-message) says how the record names that author.
 
 An open deal the contact is a stakeholder on supports a follow-up only when the record shows them
 asking about that deal (`requestedNegotiation`). That is mail they wrote or a meeting they joined,
@@ -315,14 +314,13 @@ counts transmit decisions since the process started, labelled by verdict, catego
 labels are those three and nothing else. The recipient is not a field of the count and must never
 become one. A metrics endpoint is the last place a subject's address should show.
 
-**A report shows where engine and gate disagree.** `DisagreementReportSince` reads that per
-category from the verdicts already recorded on every transmit row. A daily sweep runs it, so nobody
-has to ask for it. It decides nothing and writes no domain row.
+**A report shows where engine and gate disagree.** `DisagreementReportSince` reads that per category
+from the verdicts already recorded on every transmit row. A daily sweep runs it, so nobody has to
+ask for it. It decides nothing and writes no domain row.
 
-To enforce is a setting a human
-changes after reading the report. A pass that turned a category itself would be a second authority
-over what may be sent. Since every category ships enforcing, the report is how someone notices a
-category refusing mail the old gate would have allowed.
+To enforce is a setting a human changes after reading the report. A pass that turned a category
+itself would be a second authority over what may be sent. Since every category ships enforcing, the
+report is how someone notices a category refusing mail the old gate would have allowed.
 
 ## The privacy engines (`privacy`)
 
@@ -335,6 +333,10 @@ into consent's handlers.
   outbox copies ([what stays](erasure-leftovers.md)). Audit IDs, actors, actions and times stay fixed.
   One transaction per subject records the proof and audit marker. A subject under `legal_hold` cannot be erased.
 
+  The erasure queues each object key no other row names in its transaction. The hourly
+  `stored_object_reap` deletes it once 24 hours old (`ProvisionalObjectGrace`), for up to 4 minutes
+  a run. So files go within 25 hours, and the rest of a long queue an hour later.
+
   Background tasks use earlier proofs and stored links to clear old copies while keeping later
   edits and held content. Request references go after their linked copies.
 
@@ -342,20 +344,20 @@ into consent's handlers.
   can match the wrong copy. Closed requests whose identifiers the machine retired match too. Any hold, a case with
   `dispute_open` set, or a conflicting CRM write defers these fixes. Nightly retention retries them.
 
-  Full names and addresses are removed from notes without contact or lead links. Other text stays.
-  Restricted or held notes, possible name matches, descriptions, signatures and matching uploaded
-  files get a notice for a human review. Files and search copies are kept as they are. Possible text
-  matches do not go into subject exports. If no one can review them, an admin must restore review
-  access before retrying.
+  Full names and addresses are removed from notes without a contact or lead link. Other text stays.
+  Held notes, name matches, shared text, signatures and matched uploads get a notice for human review.
+  Files and search copies stay as they are. Possible matches stay out of subject exports.
+  An admin must restore review access before retrying when no reviewer can read the record.
 - **The suppression list** hashes each erased address and handle. Capture, import and typed creates
   refuse a later match. Public booking can still create one; refusal there would reveal erasures.
 - **Article 15 subject access** (`AssembleSAR`) requires `contact.delete` and full row scope.
-  One audited export (`action=export`) includes the subject's records, channels, deals, leads,
-  activities, attachments and consent. It also includes raw capture, field sources, kept audit
-  payloads, linked room comments, introduction notes and other kept copies. Private mailbox content stays hidden.
-- **The daily retention check** (`RetentionService.EvaluateInstallation`) runs as one River job per
-  workspace. The `privacy_retention` dispatcher in `cmd/worker` starts it every `24h` by default.
-  Each enabled policy takes its single action in one audited transaction per overdue record.
+  One audited export (`action=export`) includes the subject's records, mail, consent and kept copies.
+  Held mail can supply the subject's verdict and party facts; its content audience still applies.
+  The contact who made the link gets their role and state, with the target's notes and id left out.
+  Each weekly-plan audit image must prove its own subject link; a later link proves no earlier label.
+  Private mailbox content stays hidden.
+- **The daily retention check** runs as the `privacy_retention` River job every `24h` by default.
+  `RetentionService.EvaluateInstallation` applies each policy in one audited write per overdue record.
 
   Each workspace's failure stays on its own job. Held records and activities linked to held
   contacts, companies or deals are kept as they are. An unknown policy scope is skipped with a logged error.
@@ -402,9 +404,9 @@ reason that stands alone. A waiver with no reason, or an out-of-date one, fails 
 
 ## What an erasure reaches in the AI telemetry, and what it does not
 
-With payload capture turned on (`ai.capture_payloads`, opt-in), `ai_call_payload` holds the request
-and response of every model call. For a reading of a meeting transcript, that request **is** the
-transcript. That makes it the longest copy of someone's words this product holds.
+With payload capture on (`ai.capture_payloads`, opt-in), `ai_call_payload` holds each model call's
+request and response, unless [ai-egress.md](../reference/ai-egress.md) says it is not kept. A reading
+of a meeting transcript sends the transcript, so that is the longest copy of someone's words here.
 
 An erasure reaches that table two ways, and they cover different calls.
 
@@ -428,13 +430,13 @@ record, or is listed as owing one.
 ## The installation's jurisdiction
 
 An installation runs under one jurisdiction, stored as `installation.country`. It comes from
-`workspace.country` in `margince.yaml`, from the setup claim, or from the Jurisdiction settings page. Packs are extensions (`extensions/de`, `extensions/vn`), built in through the
-`ports/jurisdiction` seam; see [extensibility.md](extensibility.md). Core code never names a
+`workspace.country` in `margince.yaml`, from the setup claim, or from the Jurisdiction settings page. Packs are extensions (`extensions/eu`, `extensions/apac`, `extensions/us`), built in through the
+`ports/jurisdiction` seam; see [extensibility.md](extensibility.md), and [messaging-policy-packs.md](messaging-policy-packs.md) for where their rules are read. Core code never names a
 jurisdiction.
 
-The selected pack is the jurisdiction of the installation's default legal entity. It decides the retention
-floor and the request deadlines. Messaging rules are chosen by two other selectors, one per message
-recipient (see [Which rules a send follows](#which-rules-a-send-follows)).
+The selected pack is the default legal entity's jurisdiction, its only one. Someone acting uses their own
+entity (`legal_entity_member`, else the default); a record nobody acts on uses its owner's
+(`consent/recordentity.go`). Messaging rules: [Which rules a send follows](#which-rules-a-send-follows).
 
 - With no jurisdiction set, requests get one calendar month (GDPR Art. 12(3)). Retention keeps the
   longest floor of every compiled-in pack, so a new release exposes no mail that was kept safe the day
@@ -453,24 +455,24 @@ it down.
 
 `consent/ruleselectors.go` holds two selectors. Each recipient of a message is put to them on their own.
 
-- **Marketing rules follow the recipient's jurisdiction.** They set the advertising cap, the
-  advertising label on the subject, how to object, the receipt for an opt-out, and the follow-up
-  windows. The jurisdiction is the first `address_country` the record states: the contact's own, then
-  that of their current primary employer. A lead takes the one of the company it is filed under. A
-  free-text value that is not a two-letter code is skipped.
-- **Data protection follows the sending legal entity's jurisdiction.** This covers the controller
-  identity and privacy contact at the foot of the mail. `storekit.LegalEntityOf` reads the sending
-  user's membership; none, or an archived entity, gives `installation.country`. A further entity
-  puts its own legal name and address in the foot. Staging stores the entity.
+- **Marketing rules follow the recipient's jurisdiction**: the advertising cap and label, how to
+  object, the opt-out receipt and the marketing exception. A jurisdiction a human stated for the message
+  wins; else the contact's `address_country`, then their primary employer's, or a lead's company's.
+- **Data protection follows the sending legal entity's jurisdiction**: the controller, its legal
+  name and address, and the privacy contact in the foot. `storekit.LegalEntityOf` reads the sending
+  user's membership; none, or an archived entity, gives `installation.country`. Staging stores the entity.
+  A recipient pack that sets `data-protection-follows-recipient` takes disclosures and deadlines.
+- **The legal basis follows both, the stricter winning**, and its warning cites both laws (see
+  [messaging-policy-packs.md](messaging-policy-packs.md#which-country-judges-a-recipient)).
 
-A recipient whose record states no jurisdiction, or one no pack covers, gets the baseline: no pack
-duties. Marketing still needs consent, because the verdict asks for it everywhere, and the send path
-adds the unsubscribe link in every case. The email domain, the jurisdiction of the user who sends
-and the least strict pack never stand in for the recipient's jurisdiction.
+A recipient whose record states no jurisdiction, or one no pack covers, has no recipient pack
+duties. The sending entity's pack alone judges the legal basis. Marketing still needs consent, as
+the verdict asks for it everywhere, and the send path always adds the unsubscribe link. The email
+domain, the jurisdiction of the user who sends and the least strict pack never stand in for the recipient's.
 
-Each decision row records its recipient's ruleset (`ruleset_codes`, `ruleset_version`) and the
-`data_protection_country` of the user who sends. `CheckMessage` reads the codes back, so the advertising label is
-owed if any recipient's pack asks for it. One message goes to every recipient, so its foot carries
+Each decision row records its recipient's ruleset (`ruleset_codes`, `ruleset_version`, and a compiled
+pack's `ruleset_digest`) and the `data_protection_country` of the user who sends. Preview and staging refuse an advertising subject without a recipient's label (`subject_label_missing`).
+They also refuse recipients whose packs fix different labels (`subject_labels_conflict`); no exception passes either. `CheckMessage` parks a delivery that got past them at transmit; all three ask `subjectLabelCheck` in `internal/modules/consent/requirements.go`. One message goes to every recipient, so its foot carries
 each recipient's marketing duties.
 
 ### Request deadlines
@@ -567,13 +569,11 @@ language. Its link opens the same disclosure page.
 A notice mail under a statutory hold stays until the hold ends. Ending a hold
 clears the delivery the same way an erasure does, which empties its recipients.
 
-The lane stays closed until a reviewed wording is named. `siteLeadNoticeReviewed`
-holds the `privacy_notice` version that passed legal review, and zero means none
-has. Staging, the check before a decision and the accept step all ask
-`siteLeadLaneRefusal`.
-`TestSiteLeadCaptureOpensOnlyWithAReviewedNotice` fails when the accept path
-stops calling the notice step. It also fails when the reviewed version is not the
-version the build sends.
+The lane stays closed until a reviewed wording is named. `siteLeadNoticeReviewed` holds the
+`privacy_notice` version that passed legal review, and zero means none has. Staging, the check
+before a decision and the accept step all ask `siteLeadLaneRefusal`.
+`TestSiteLeadCaptureOpensOnlyWithAReviewedNotice` fails when the accept path stops calling the
+notice step. It also fails when the reviewed version is not the version the build sends.
 
 ## Mail from the contact
 
@@ -617,4 +617,4 @@ Later mail capture and data tasks keep a user's confirmed source decision.
 | Decision counters | `internal/modules/consent/decisioncounter.go`, exported by `internal/compose/authzmetrics.go` |
 | The engine-and-gate report | `internal/modules/consent/authorizedisagreement.go`, run daily by `internal/compose/authzdisagreement.go` |
 | Cross-store agreement | `backend/gates/tableownershipwaivers_test.go` |
-| Jurisdiction packs | `internal/shared/ports/jurisdiction/`, `extensions/de/` |
+| Jurisdiction packs | `internal/shared/ports/jurisdiction/`, `extensions/eu/`, `extensions/apac/` |

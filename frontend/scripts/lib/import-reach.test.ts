@@ -9,6 +9,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { stable } from "../../src/format/collate";
 import {
   edgesOf,
   importPathTo,
@@ -49,7 +50,7 @@ describe("the import walk the split gates share", () => {
       write(name);
     }
 
-    expect(named(productionModulesUnder(dir))?.sort()).toEqual([
+    expect(named(productionModulesUnder(dir))?.sort(stable)).toEqual([
       "a.ts",
       "b.tsx",
       "nested/c.tsx",
@@ -109,8 +110,10 @@ describe("the import walk the split gates share", () => {
     }
     const expected = modules.map((name) => `${name}.ts`);
 
-    expect(named(edgesOf(at("forms.tsx"), "all"))?.sort()).toEqual(expected);
-    expect(named(edgesOf(at("forms.tsx"), "scanned"))?.sort()).toEqual(
+    expect(named(edgesOf(at("forms.tsx"), "all"))?.sort(stable)).toEqual(
+      expected,
+    );
+    expect(named(edgesOf(at("forms.tsx"), "scanned"))?.sort(stable)).toEqual(
       expected,
     );
   });

@@ -9,6 +9,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -22,13 +23,13 @@ func TestCommitmentReferencesKeepSameNamedParticipantsDistinct(t *testing.T) {
 		To:   []crmcontracts.EmailParty{{ContactId: &contact, DisplayName: &name}},
 	})
 	for _, ref := range []string{"seat:" + seat.String(), "contact:" + contact.String()} {
-		got, ok := referencedPromiser(ref, parties)
+		got, ok := commitmentparty.Referenced(ref, parties)
 		if !ok || got.Ref != ref {
 			t.Fatalf("reference %q resolved to %+v, %v", ref, got, ok)
 		}
 	}
 	for _, ref := range []string{"", "Alex", "seat:" + ids.NewV7().String()} {
-		if _, ok := referencedPromiser(ref, parties); ok {
+		if _, ok := commitmentparty.Referenced(ref, parties); ok {
 			t.Fatalf("unverified reference %q resolved", ref)
 		}
 	}
@@ -56,11 +57,11 @@ func TestParticipantPromptDoesNotAddUnquotedAddresses(t *testing.T) {
 		{Ref: "seat:one", Role: "attendee", Name: "Mira Chen", Address: "mira@example.test"},
 		{Ref: "contact:two", Role: "attendee", Name: "Mira Chen", Address: "buyer@example.test"},
 	}
-	prompt := commitmentPartyPrompt(parties, "Mira Chen: I will send pricing.", commitmentPartyRefs(parties))
+	prompt := commitmentPartyPrompt(parties, "Mira Chen: I will send pricing.", commitmentparty.Refs(parties))
 	if strings.Contains(prompt, "@") || !strings.Contains(prompt, "Mira Chen") {
 		t.Fatalf("unquoted address exported or name omitted: %s", prompt)
 	}
-	prompt = commitmentPartyPrompt(parties, "MIRA@example.test: I will send pricing.", commitmentPartyRefs(parties))
+	prompt = commitmentPartyPrompt(parties, "MIRA@example.test: I will send pricing.", commitmentparty.Refs(parties))
 	if !strings.Contains(prompt, "mira@example.test") || strings.Contains(prompt, "buyer@example.test") {
 		t.Fatalf("quoted identity was not minimized: %s", prompt)
 	}
@@ -76,7 +77,7 @@ func TestAParticipantIsListedAndReadBackByItsShortRef(t *testing.T) {
 		{Role: "to", Name: "Unverified Sender"},
 		{Ref: "contact:" + contact.String(), Role: "to", Name: "Pat Buyer", Contact: &contact},
 	}
-	refs := commitmentPartyRefs(parties)
+	refs := commitmentparty.Refs(parties)
 	prompt := commitmentPartyPrompt(parties, "", refs)
 	if strings.Contains(prompt, "seat:") || strings.Contains(prompt, "contact:") {
 		t.Fatalf("a record key reached the participant list:\n%s", prompt)
@@ -87,15 +88,6 @@ func TestAParticipantIsListedAndReadBackByItsShortRef(t *testing.T) {
 	// The kind is the only sign of who may receive a promise.
 	if !strings.Contains(prompt, `"" "" "to" "Unverified Sender"`) {
 		t.Errorf("an unverified sender was listed with a ref or a kind:\n%s", prompt)
-	}
-	if got := partyKey(refs, "p2"); got != parties[2].Ref {
-		t.Errorf("p2 reads back to %q, want %q", got, parties[2].Ref)
-	}
-	if got := partyKey(refs, "p3"); got != "p3" {
-		t.Errorf("an unminted ref reads back to %q; it must stay as written for the validator to refuse", got)
-	}
-	if got := partyKeys(refs, nil); got != nil {
-		t.Errorf("an omitted recipient list became %v; omitted and empty mean different things", got)
 	}
 }
 

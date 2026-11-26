@@ -11,6 +11,9 @@ package capture
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -38,45 +41,140 @@ type MeetingDocument struct {
 // syncing it twice, record each document once.
 const meetingDocumentSystem = "meeting"
 
+// The two ends of a meeting document's address, around its file id.
+const (
+	meetingDocumentURLPrefix = "https://docs.google.com/document/d/"
+	meetingDocumentURLSuffix = "/edit"
+)
+
+// driveFileID is the shape of a Drive file id. Anything else is refused, so
+// the document address built from it cannot point anywhere but at that file.
+var driveFileID = regexp.MustCompile(`^[A-Za-z0-9_-]{10,200}$`)
+
+// IsDriveFileID reports whether id has the shape of a Drive file id.
+func IsDriveFileID(id string) bool {
+	return driveFileID.MatchString(id)
+}
+
 // meetingDocumentURL is the address of a Google Doc, built from its file id.
 // Built rather than taken from the event, so one document has one address and
 // one row however the provider spelled its link.
 func meetingDocumentURL(fileID string) string {
-	return "https://docs.google.com/document/d/" + fileID + "/edit"
+	return meetingDocumentURLPrefix + fileID + meetingDocumentURLSuffix
+}
+
+// meetingDocumentFileID is the file id in an address meetingDocumentURL built.
+// Any other address answers false.
+func meetingDocumentFileID(address string) (string, bool) {
+	rest, prefixed := strings.CutPrefix(address, meetingDocumentURLPrefix)
+	id, suffixed := strings.CutSuffix(rest, meetingDocumentURLSuffix)
+	if !prefixed || !suffixed || !IsDriveFileID(id) {
+		return "", false
+	}
+	return id, true
 }
 
 // recordMeetingDocuments writes a link row on the meeting for each notes or
-// transcript document the event lists. It runs when the meeting is first
-// captured and on every later sync of it, because Google attaches the notes
-// after the meeting ends.
+// transcript document the event lists. It runs on every sync of the meeting,
+// because Google attaches the notes after the meeting ends. A later sync of an
+// event that lists all its documents archives the rows of those taken off it.
+// It brings back such a row once the Doc is listed again. The notes reader
+// then opens only a Doc the meeting carries now.
 //
-// On a later sync a new row is a change to a meeting already announced, so it
-// is audited on the meeting and announced as activity.updated. On the first
-// capture the meeting's own activity.captured covers it. No keeper wired means
-// no rows, as for mail.
+// A Doc counts only when the organizer is on a trusted own domain. A shared
+// webmail domain is never one, so an outsider on the seat's own webmail
+// cannot attach notes. A later change is audited on the meeting and announced
+// as activity.updated; on the first capture activity.captured covers it.
 func (s *Sink) recordMeetingDocuments(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, later bool,
 ) error {
 	fields, ok := rec.Fields.(ActivityFields)
-	if !ok || fields.Kind != meetingKind || len(fields.MeetingDocuments) == 0 || s.files == nil {
+	if !ok || fields.Kind != meetingKind || s.files == nil {
 		return nil
 	}
-	links := make([]MailLink, 0, len(fields.MeetingDocuments))
-	for _, doc := range fields.MeetingDocuments {
-		links = append(links, MailLink{URL: meetingDocumentURL(doc.FileID), Text: doc.Title})
+	links, listed := meetingDocumentLinks(fields)
+	if len(links) > 0 {
+		trusted, err := organizerTrustedTx(ctx, tx, rec)
+		if err != nil {
+			return err
+		}
+		if !trusted {
+			links, listed = nil, nil
+		}
 	}
 	from := FileSource{
 		System: meetingDocumentSystem, MessageID: id.String(), CapturedBy: rec.CapturedBy, Category: fileCategoryFor(fields),
 	}
-	added, err := s.files.RecordLinks(ctx, tx, id, from, links)
-	if err != nil {
-		return fmt.Errorf("capture: recording a meeting's notes documents: %w", err)
+	var change meetingDocumentChange
+	var err error
+	if len(links) > 0 {
+		if change.added, err = s.files.RecordLinks(ctx, tx, id, from, links); err != nil {
+			return fmt.Errorf("capture: recording a meeting's notes documents: %w", err)
+		}
 	}
-	if !later || added == 0 {
+	if later && fields.MeetingDocumentsListed {
+		if change.removed, err = s.files.RetireLinks(ctx, tx, id, from, listed); err != nil {
+			return fmt.Errorf("capture: archiving the notes documents taken off a meeting: %w", err)
+		}
+		if change.restored, err = s.files.RestoreLinks(ctx, tx, id, from, listed); err != nil {
+			return fmt.Errorf("capture: restoring the notes documents listed on a meeting again: %w", err)
+		}
+	}
+	if !later {
 		return nil
 	}
-	auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "activity", id.UUID,
-		map[string]any{"meeting_documents_added": added}, nil)
+	return change.announceTx(ctx, tx, id)
+}
+
+// meetingDocumentLinks are the link rows the event's documents become, and
+// their addresses.
+func meetingDocumentLinks(fields ActivityFields) ([]MailLink, []string) {
+	links := make([]MailLink, 0, len(fields.MeetingDocuments))
+	addresses := make([]string, 0, len(fields.MeetingDocuments))
+	for _, doc := range fields.MeetingDocuments {
+		address := meetingDocumentURL(doc.FileID)
+		links = append(links, MailLink{URL: address, Text: doc.Title})
+		addresses = append(addresses, address)
+	}
+	return links, addresses
+}
+
+// organizerTrustedTx reports whether the meeting's organizer is on one of the
+// workspace's trusted own domains. Capture gives that answer everywhere it
+// asks "is this our company".
+func organizerTrustedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {
+	for _, party := range slices.Concat(rec.Participants, rec.WithheldParties) {
+		if party.Role != connector.ParticipantRoleOrganizer {
+			continue
+		}
+		trusted, err := TrustedOwnDomainsTx(ctx, tx)
+		if err != nil {
+			return false, fmt.Errorf("capture: reading the trusted own domains: %w", err)
+		}
+		return trusted.Covers(party.Email), nil
+	}
+	return false, nil
+}
+
+// meetingDocumentChange counts what one later sync changed on a meeting's
+// notes links.
+type meetingDocumentChange struct {
+	added, removed, restored int
+}
+
+// announceTx audits and announces a change on the meeting, when there is one.
+func (c meetingDocumentChange) announceTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
+	if c.added+c.removed+c.restored == 0 {
+		return nil
+	}
+	after := map[string]any{"meeting_documents_added": c.added}
+	if c.removed > 0 {
+		after["meeting_documents_removed"] = c.removed
+	}
+	if c.restored > 0 {
+		after["meeting_documents_restored"] = c.restored
+	}
+	auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "activity", id.UUID, after, nil)
 	if err != nil {
 		return fmt.Errorf("capture: auditing a meeting's notes documents: %w", err)
 	}

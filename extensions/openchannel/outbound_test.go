@@ -16,7 +16,7 @@ import (
 
 // attemptRow scripts one row of outboundColumns, in that order.
 func attemptRow(id, key string, attempt int, outcome, class string) []any {
-	return []any{id, key, attempt, "acct-77", outcome, class, signedAt}
+	return []any{id, key, attempt, outcome, class, signedAt}
 }
 
 // The listing reports the CALLER's own endpoint. The entries say who this member

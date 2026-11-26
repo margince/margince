@@ -4,7 +4,9 @@
 package dbmigrate
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"sort"
 
 	"github.com/margince/margince/backend/pkg/extension"
@@ -55,7 +57,40 @@ func ExtensionNamespaces(exts []extension.Extension) ([]Namespace, error) {
 		if len(loaded) == 0 {
 			return nil, fmt.Errorf("pgmigrate: extension %q embeds %s/ but it holds no NNNN_name.up.sql/.down.sql pair — a declared-but-empty layer reads as a schema that applied, so leave Migrations nil for a unit that owns no tables", e.Name, extension.MigrationsDir)
 		}
-		namespaces = append(namespaces, Namespace{Name: namespace, Migrations: loaded})
+		pairs, err := extensionRenumbers(e, namespace)
+		if err != nil {
+			return nil, err
+		}
+		source := make(map[string]Migration, len(loaded))
+		for _, migration := range loaded {
+			source[migration.Version] = migration
+		}
+		for _, pair := range pairs {
+			if _, err := renumberSource(namespace, pair, source); err != nil {
+				return nil, err
+			}
+		}
+		namespaces = append(namespaces, Namespace{Name: namespace, Migrations: loaded, Renumbered: pairs})
 	}
 	return namespaces, nil
+}
+
+func extensionRenumbers(unit extension.Extension, namespace string) ([]Renumber, error) {
+	body, err := fs.ReadFile(unit.Migrations, extension.MigrationsDir+"/renumbered.txt")
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("reading extension %s migration renumbers: %w", unit.Name, err)
+	}
+	declared, err := ParseRenumbers(string(body))
+	if err != nil {
+		return nil, fmt.Errorf("extension %s: %w", unit.Name, err)
+	}
+	for name := range declared {
+		if name != namespace {
+			return nil, fmt.Errorf("extension %s declares renumbers for another namespace %s", unit.Name, name)
+		}
+	}
+	return declared[namespace], nil
 }

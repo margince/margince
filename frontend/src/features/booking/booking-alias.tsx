@@ -10,7 +10,11 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { problemFieldErrorsOf, unwrap } from "../../lib/problem";
+import {
+  faultSentenceFor,
+  problemFieldErrorsOf,
+  unwrap,
+} from "../../lib/problem";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 
@@ -46,7 +50,7 @@ function aliasError(t: Translator, error: unknown): string | undefined {
   const problem = problemFieldErrorsOf(error).find((p) => p.field === "alias");
   if (!problem) return undefined;
   const key = ALIAS_ERRORS[problem.code];
-  return key ? t(key) : problem.message;
+  return key ? t(key) : faultSentenceFor(problem, t);
 }
 
 function useSaveAlias() {

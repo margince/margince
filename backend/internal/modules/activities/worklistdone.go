@@ -13,6 +13,8 @@ package activities
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -53,18 +55,18 @@ func (s *Store) MarkWorklistRowsDone(ctx context.Context, rows []WorklistRowRef)
 			if err != nil {
 				return err
 			}
-			return judgeInTx(ctx, tx, id, capturedBy, s.writeReaderState(id, stateHandled, nil, "", nil, shape))
+			return judgeInTx(ctx, tx, id, capturedBy, s.writeReaderState(id, stateHandled, nil, "", nil, shape, nil))
 		}
 		// done_at moves forward on a second press. A row that came back and is
 		// marked done again holds until its subject moves after the new press.
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		query := sprintf(`
-			INSERT INTO worklist_done (reader_id, source, row_id, done_at, set_by)
-			VALUES ($%[1]d, $%[2]d, $%[3]d, $%[4]d, $%[5]d)
+			INSERT INTO worklist_done (reader_id, source, row_id, done_at)
+			VALUES ($%[1]d, $%[2]d, $%[3]d, $%[4]d)
 			ON CONFLICT (reader_id, source, row_id)
-			DO UPDATE SET done_at = EXCLUDED.done_at, set_by = EXCLUDED.set_by`,
-			arg(reader), arg(row.Source), arg(row.RowID), arg(s.now().UTC()), arg(capturedBy))
+			DO UPDATE SET done_at = EXCLUDED.done_at`,
+			arg(reader), arg(row.Source), arg(row.RowID), arg(s.now().UTC()))
 		if _, err := tx.Exec(ctx, query, args...); err != nil {
 			return fmt.Errorf("activities: marking a worklist row done: %w", err)
 		}
@@ -147,6 +149,81 @@ func (s *Store) DoneRows(ctx context.Context, tx pgx.Tx, among []WorklistRowRef)
 	return out, nil
 }
 
+// WorklistRowsAlreadyDone names which of these rows this reader has put down.
+// A row kept on its activity is done when the reader's state there is handled;
+// any other row is done when worklist_done holds it.
+//
+// No object grant, as DoneRows: it reads the caller's own choices and nothing else.
+func (s *Store) WorklistRowsAlreadyDone(ctx context.Context, rows []WorklistRowRef) (map[WorklistRowRef]bool, error) {
+	reader, err := pinReader(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var done map[WorklistRowRef]bool
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		done, err = s.alreadyDoneIn(ctx, tx, reader, rows)
+		return err
+	})
+	return done, err
+}
+
+func (s *Store) alreadyDoneIn(ctx context.Context, tx pgx.Tx, reader ids.UUID, rows []WorklistRowRef) (map[WorklistRowRef]bool, error) {
+	done := map[WorklistRowRef]bool{}
+	onActivity := map[ids.UUID][]WorklistRowRef{}
+	var elsewhere []WorklistRowRef
+	for _, row := range rows {
+		_, backed := doneOnActivity[crmcontracts.WorklistItemSource(row.Source)]
+		id, err := ids.Parse(row.RowID)
+		switch {
+		case !backed:
+			elsewhere = append(elsewhere, row)
+		case err == nil:
+			onActivity[id] = append(onActivity[id], row)
+		}
+	}
+	if len(elsewhere) > 0 {
+		at, err := s.DoneRows(ctx, tx, elsewhere)
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range elsewhere {
+			_, done[row] = at[row]
+		}
+	}
+	if len(onActivity) == 0 {
+		return done, nil
+	}
+	handled, err := s.handledByReader(ctx, tx, reader, slices.Collect(maps.Keys(onActivity)))
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range handled {
+		for _, row := range onActivity[id] {
+			done[row] = true
+		}
+	}
+	return done, nil
+}
+
+// handledByReader is which of these activities this reader has marked handled.
+func (s *Store) handledByReader(ctx context.Context, tx pgx.Tx, reader ids.UUID, activityIDs []ids.UUID) ([]ids.UUID, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	query := sprintf(`
+		SELECT activity_id FROM activity_reader_state
+		 WHERE reader_id = $%[1]d AND state = $%[2]d AND activity_id = ANY($%[3]d::uuid[])`,
+		arg(reader), arg(stateHandled), arg(activityIDs))
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading the messages a reader marked done: %w", err)
+	}
+	handled, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading the messages a reader marked done: %w", err)
+	}
+	return handled, nil
+}
+
 // judgeRows is the gate both Done writes take: a human reader, a well-formed
 // batch with each row once, and one transaction for all of it.
 //
@@ -210,11 +287,11 @@ func distinctRows(rows []WorklistRowRef) []WorklistRowRef {
 // could carry, the same two checks a pin makes.
 func validRowRef(row WorklistRowRef) error {
 	if !crmcontracts.WorklistItemSource(row.Source).Valid() {
-		return fmt.Errorf("activities: %q is not a lane this queue produces: %w",
+		return fmt.Errorf("%q is not a lane this queue produces: %w",
 			row.Source, apperrors.ErrInvalidArgument)
 	}
 	if row.RowID == "" || len(row.RowID) > maxPinnedRowIDLen {
-		return fmt.Errorf("activities: a row's id is 1 to %d characters: %w",
+		return fmt.Errorf("a row's id is 1 to %d characters: %w",
 			maxPinnedRowIDLen, apperrors.ErrInvalidArgument)
 	}
 	return nil
@@ -224,7 +301,7 @@ func validRowRef(row WorklistRowRef) error {
 func activityRow(row WorklistRowRef) (ids.ActivityID, error) {
 	parsed, err := ids.Parse(row.RowID)
 	if err != nil {
-		return ids.ActivityID{}, fmt.Errorf("activities: a %s row is named by its activity id: %w",
+		return ids.ActivityID{}, fmt.Errorf("a %s row is named by its activity id: %w",
 			row.Source, apperrors.ErrInvalidArgument)
 	}
 	return ids.From[ids.ActivityKind](parsed), nil

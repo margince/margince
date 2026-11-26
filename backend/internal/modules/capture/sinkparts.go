@@ -53,6 +53,8 @@ const fieldDroppedParts = "dropped_parts"
 type FileKeeper interface {
 	// Stage writes each file's bytes to object storage.
 	Stage(ctx context.Context, files []CapturedFile) ([]StagedFile, error)
+	// Discard deletes the bytes Stage wrote for files no row ended up naming.
+	Discard(ctx context.Context, staged []StagedFile) error
 	// Record writes the rows, inside the transaction that captured the message.
 	Record(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 		from FileSource, staged []StagedFile) error
@@ -60,11 +62,29 @@ type FileKeeper interface {
 	// with no bytes stored: the name, size and type, and nothing to open.
 	RecordWithheld(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 		from FileSource, files []CapturedFile) error
+	// RecordCopiedWithheld writes a row naming each file a copied-only message
+	// carried, with no bytes. It keeps the fingerprint that proves a later
+	// addressed arrival carries the same file.
+	RecordCopiedWithheld(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+		from FileSource, files []CapturedFile) error
+	// AdoptWithheld gives rows that name a file without bytes the bytes this
+	// arrival carries, and reports how many it gave. It stages nothing when no
+	// row is waiting.
+	AdoptWithheld(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+		from FileSource, files []CapturedFile) (int, error)
 	// RecordLinks writes a row for each document link a message carried, with
 	// no bytes: the address and the text it was shown under.
 	// It answers how many rows are new; a link already recorded is not.
 	RecordLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 		from FileSource, links []MailLink) (int, error)
+	// RetireLinks archives the live link rows from source that are not at
+	// one of the kept addresses, and answers how many it archived.
+	RetireLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+		from FileSource, kept []string) (int, error)
+	// RestoreLinks brings back the link rows from source at a listed address
+	// that RetireLinks archived, and answers how many it brought back.
+	RestoreLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+		from FileSource, listed []string) (int, error)
 	// Stored names where each staged file's bytes now live, so the stored
 	// original can point at the objects instead of carrying the bytes.
 	Stored(staged []StagedFile) ([]StoredFile, error)
@@ -177,8 +197,9 @@ func (s *Sink) stageParts(ctx context.Context, rec connector.NormalizedRecord) (
 	workspace, ok := principal.WorkspaceID(ctx)
 	if !ok || workspace == (ids.UUID{}) {
 		return nil, fmt.Errorf(
-			"capture: a message's files cannot be stored without a bound workspace: %w",
-			apperrors.ErrPermissionDenied)
+			"a message's files cannot be stored without a bound workspace: %w",
+			apperrors.ErrPermissionDenied,
+		)
 	}
 	staged, err := s.files.Stage(ctx, files)
 	if err != nil {
@@ -220,20 +241,37 @@ func (s *Sink) recordParts(
 	return nil
 }
 
-// keepParts stores a new activity's files, or for a private message names them
-// on rows without bytes, and returns the record without the parts it withheld.
+// keepParts stores a new activity's files, and returns the record without the
+// parts it withheld.
+//
+// Two kinds of message keep their files as names with no bytes behind them: a
+// private thread, and one no seat here was addressed on.
 func (s *Sink) keepParts(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	rec connector.NormalizedRecord, fields ActivityFields,
 ) (connector.NormalizedRecord, []StagedFile, error) {
-	private, verdict, err := messageIsPrivateTx(ctx, tx, rec, fields)
+	private, verdict, err := capturedMessageIsPrivateTx(ctx, tx, rec, fields)
 	if err != nil {
 		return rec, nil, err
 	}
+	// Only a message carrying something asks. copiedOnlyTx reads the owner
+	// identities, and a mail with no parts has nothing to withhold either way.
+	copied := false
+	if !private && len(rec.Parts) > 0 {
+		if copied, err = copiedOnlyTx(ctx, tx, fields); err != nil {
+			return rec, nil, err
+		}
+	}
 	var withheldParts []connector.Part
-	if private {
-		rec, withheldParts = stripPersonalParts(rec)
+	switch {
+	case private:
+		rec, withheldParts = stripParts(rec)
 		if err := s.personalPartsWithheld(ctx, tx, rec, len(withheldParts), verdict); err != nil {
+			return rec, nil, err
+		}
+	case copied:
+		rec, withheldParts = stripParts(rec)
+		if err := s.copiedPartsWithheld(ctx, tx, rec, len(withheldParts)); err != nil {
 			return rec, nil, err
 		}
 	}
@@ -244,23 +282,34 @@ func (s *Sink) keepParts(
 	if err := s.recordParts(ctx, tx, activityID, rec, fields, staged); err != nil {
 		return rec, nil, err
 	}
-	if err := s.recordWithheldParts(ctx, tx, activityID, rec, fields, withheldParts); err != nil {
+	if err := s.recordWithheldParts(
+		ctx, tx, activityID, rec, fields, withheldParts, copied,
+	); err != nil {
 		return rec, nil, err
 	}
 	return rec, staged, s.recordLinks(ctx, tx, activityID, rec, fields)
 }
 
-// recordWithheldParts names the files a private message carried, on rows with
-// no bytes behind them, so its owner still sees what was attached.
+// recordWithheldParts names the files a withholding message carried, on rows
+// with no bytes behind them, so its owner still sees what was attached.
+//
+// A copied-only row keeps the files' fingerprints and a private one does not.
+// The fingerprint proves a later addressed arrival carries the same file. A
+// private thread owes no such proof: nobody is waiting for its bytes.
 func (s *Sink) recordWithheldParts(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
-	rec connector.NormalizedRecord, fields ActivityFields, parts []connector.Part,
+	rec connector.NormalizedRecord, fields ActivityFields,
+	parts []connector.Part, copied bool,
 ) error {
 	if len(parts) == 0 || s.files == nil {
 		return nil
 	}
-	if err := s.files.RecordWithheld(ctx, tx, activityID, fileSourceFor(rec, fields), capturedFilesOf(parts)); err != nil {
-		return fmt.Errorf("capture: naming the files a private message carried: %w", err)
+	record := s.files.RecordWithheld
+	if copied {
+		record = s.files.RecordCopiedWithheld
+	}
+	if err := record(ctx, tx, activityID, fileSourceFor(rec, fields), capturedFilesOf(parts)); err != nil {
+		return fmt.Errorf("capture: naming the files a withholding message carried: %w", err)
 	}
 	return nil
 }
@@ -304,6 +353,19 @@ type retryFileKeeper struct {
 	FileKeeper
 	fingerprints []capturedFileFingerprint
 	staged       []StagedFile
+	// recorded says the current attempt's transaction named the staged files.
+	recorded bool
+	// committing says the current attempt's work ended and its commit was sent,
+	// so a failure may still have committed it.
+	committing bool
+	// superseded are files staged for this record and then replaced, which no
+	// row can name.
+	superseded []StagedFile
+}
+
+func (k *retryFileKeeper) Record(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, from FileSource, staged []StagedFile) error {
+	k.recorded = true
+	return k.FileKeeper.Record(ctx, tx, activityID, from, staged)
 }
 
 func (k *retryFileKeeper) Stage(ctx context.Context, files []CapturedFile) ([]StagedFile, error) {
@@ -318,8 +380,17 @@ func (k *retryFileKeeper) Stage(ctx context.Context, files []CapturedFile) ([]St
 	if err != nil {
 		return nil, err
 	}
+	k.superseded = append(k.superseded, k.staged...)
 	k.fingerprints, k.staged = fingerprints, staged
 	return staged, nil
+}
+
+// unnamed is what this capture staged that its committed transaction named nowhere.
+func (k *retryFileKeeper) unnamed() []StagedFile {
+	if k.recorded {
+		return k.superseded
+	}
+	return append(slices.Clip(k.superseded), k.staged...)
 }
 
 func (s *Sink) withRetryFileStage() *Sink {

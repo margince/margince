@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // errNoMailboxGrantorBound names the one impossible case a staging-failure
@@ -68,9 +69,10 @@ func (w *vcardIngestWorker) recordStagingFailure(ctx context.Context, activity i
 		return errNoMailboxGrantorBound
 	}
 	_, err := notices.NewStore(InstallationDB(w.pool)).Create(ctx, notices.NewNotice{
-		Recipient: ids.From[ids.UserKind](actor.UserID),
-		Kind:      noticeKindVCardStagingFailed,
-		Subject:   "A card attached to your mail could not be reviewed",
+		Recipient:  ids.From[ids.UserKind](actor.UserID),
+		Kind:       noticeKindVCardStagingFailed,
+		Subject:    systemtext.Literal("vcard.failure.subject"),
+		SystemText: &systemtext.Message{Version: 1, Subject: systemtext.Sentence("vcard.failure.subject"), Body: systemtext.Sentence("vcard.failure.body")},
 		// Never "reopen the message" or another phrase implying this notice
 		// links to it: an activity subject deliberately resolves to no href
 		// (worklist.copy.ts's subjectHref, "an activity resolves to nothing on
@@ -79,10 +81,7 @@ func (w *vcardIngestWorker) recordStagingFailure(ctx context.Context, activity i
 		// later retry may already have staged the same card, with nothing that
 		// withdraws this notice to say so; "if you don't see it" is the phrasing
 		// that reads true under both outcomes.
-		Body: "A card resembling an existing contact was attached to a message in your mailbox, " +
-			"and proposing it for your review may have failed. If you don't see this contact in " +
-			"your pending reviews, re-send the card and import it through Import cards on the " +
-			"contact list to retry.",
+		Body: systemtext.Literal("vcard.failure.body"),
 		// Keyed on the CARD's own content, not its position in the batch: the
 		// entries a retry re-reads are ordered by the attachment rows'
 		// created_at (liveCardKeys), which a concurrent archive or a new

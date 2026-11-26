@@ -14,6 +14,7 @@ package compose
 
 import (
 	"fmt"
+	"github.com/margince/margince/backend/internal/compose/extingress"
 
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -38,7 +39,7 @@ func preflightIngress(e extension.Extension) error {
 		}
 		seen[source.System] = true
 	}
-	return nil
+	return extingress.RefusePinWithoutMemberChannel(e.Ingress, e.Channels)
 }
 
 // preflightJobs validates one unit's scheduled jobs through the same published
@@ -134,7 +135,15 @@ func preflightSurfaces(e extension.Extension) error {
 	if err := preflightEntries(e); err != nil {
 		return err
 	}
-	return preflightPanels(e)
+	if err := preflightPanels(e); err != nil {
+		return err
+	}
+	if e.App != nil {
+		if err := e.App.Validate(e.Name); err != nil {
+			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+		}
+	}
+	return nil
 }
 
 // preflightPanels validates one unit's panels through the published
@@ -176,6 +185,9 @@ func preflightEntryObjects(exts []extension.Extension, verbs []extension.Verb) e
 			if !gated[e.Name][panel.Object] {
 				return fmt.Errorf("compose: extension %q: its panel in slot %q is gated on %q, which none of the unit's operations gates on", e.Name, panel.Slot, panel.Object)
 			}
+		}
+		if e.App != nil && !gated[e.Name][e.App.Object] {
+			return fmt.Errorf("compose: extension %q: its app is gated on %q, which none of the unit's operations gates on", e.Name, e.App.Object)
 		}
 	}
 	return nil

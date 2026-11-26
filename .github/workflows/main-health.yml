@@ -58,12 +58,36 @@ jobs:
   # The no-database half of the merge gate, run against main's tip unconditionally.
   # Unconditionally is the whole point: the classifier that makes a pull request
   # cheap is exactly what let a docs-only commit report green over a broken tree.
+  #
+  # Split over one runner per leg, as ci.yml's deterministic-gates and
+  # backend-lint split it. On one runner the legs shared four cores, and
+  # internal/compose and ./gates ran past their test timeouts.
+  # TestMainHealthSplitsTheCheckLegsAsCIDoes holds the split to ci.yml's.
   gates:
-    name: backend gate (main)
+    name: backend gate (main, ${{ matrix.part }})
     timeout-minutes: 45
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: unit
+            legs: test-cached test-extensions
+            tree-gates: "on"
+          - part: gates
+            legs: test-uncached
+            tree-gates: "off"
+          - part: solo
+            legs: test-solo
+            tree-gates: "off"
+          - part: lint-baseline
+            legs: lint-base vet arch-lint
+            tree-gates: "off"
+          - part: lint-strict
+            legs: lint-strict lint-untagged lint-modules
+            tree-gates: "off"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -87,7 +111,8 @@ jobs:
         uses: ./.github/actions/gate-binaries
         with:
           # A dispatch from another branch would save an entry only it can read.
-          save: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && 'true' || 'false' }}
+          # One leg saves, so four runners do not race for the same key.
+          save: ${{ matrix.part == 'unit' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && 'true' || 'false' }}
       - name: Backend merge gate (make check-backend)
         working-directory: .
         env:
@@ -102,7 +127,8 @@ jobs:
           # scanner cannot load is not an absent measurement to it — it is a
           # measurement of zero.
           EXT_COVER_OUT: ${{ github.workspace }}/backend/coverage-extensions.out
-        run: make check-backend
+          GATES_GOMEMLIMIT: 6GiB
+        run: make check-backend CHECK_LEGS="${{ matrix.legs }}" CHECK_TREE_GATES="${{ matrix.tree-gates }}"
       # `error`, not ci.yml's `ignore`. There the artifact is optional because a
       # frontend-only pull request legitimately never runs this job; here the
       # gate above is unconditional, so no file means `test-extensions` produced
@@ -112,6 +138,7 @@ jobs:
       # reads lane results, all of them successful) — main's analysis frozen with
       # nobody told, which is the failure this whole change is about.
       - name: Upload extension coverage
+        if: ${{ matrix.part == 'unit' }}
         uses: ./.github/actions/upload-artifact-retried
         with:
           name: go-coverage-extensions
@@ -124,6 +151,10 @@ jobs:
   # DELETE trigger, a foreign key with no visibility decision — so a health check
   # without a database would have missed every one of them.
   integration:
+    # The shards read the run's jobs to learn whether a re-run builds again.
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/_lane-integration.yml
 
   # The SPA lane, called rather than copied, for two reasons that arrived
@@ -170,8 +201,8 @@ jobs:
           persist-credentials: false
       # No version input: the pin is package.json's "packageManager", which pnpm
       # and corepack read too. A second one here is refused as a mismatch.
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: pnpm
@@ -354,6 +385,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           MAIN_GATES_RESULT: ${{ needs.gates.result }}
           MAIN_INTEGRATION_RESULT: ${{ needs.integration.result }}
           MAIN_FRONTEND_RESULT: ${{ needs.frontend.result }}

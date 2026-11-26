@@ -11,8 +11,10 @@ import { Panel, PanelRow } from "../../design-system/panel";
 import { badgeTone } from "../../design-system/readingtone";
 import { useNow } from "../../format/now";
 import { useLocale, useT } from "../../i18n";
+import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
+import { AutoKeptLine, LooksKeptLine } from "./claimlookskept";
 import { TakenOverLine, TakeOverPromiseButton } from "./claimtakeover";
 import { omitted } from "./contact360";
 import { ContactClaimsReview, claimsForReview } from "./contactclaimsreview";
@@ -86,13 +88,17 @@ export function ContactCommitmentsCard({
 // The line under a promise, and below it who took the promise over or the
 // verb that lets the reader take it.
 function loopSub(row: Row, contactId: string): ReactNode {
-  if (!row.takenBy && !row.takeable) {
+  if (!row.takenBy && !row.takeable && !row.looksKept && !row.autoKept) {
     return row.sub;
   }
   return (
     <>
       {row.sub}
       {row.takenBy && <TakenOverLine takenBy={row.takenBy} />}
+      {row.autoKept && <AutoKeptLine id={row.key} autoKept={row.autoKept} />}
+      {row.looksKept && (
+        <LooksKeptLine id={row.key} looksKept={row.looksKept} />
+      )}
       {row.takeable && (
         <TakeOverPromiseButton id={row.key} contactId={contactId} />
       )}
@@ -109,7 +115,11 @@ export function ContactDealCard({
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const card = dealCard(view, t, locale, readerZone);
+  const disabled = useHiddenCoreFeatures();
   const title = t("contact.card.dealTitle", { name: firstName });
+  if (disabled.includes("deals")) {
+    return null;
+  }
   if (card.state !== "deal") {
     return (
       <OverviewCard
@@ -141,6 +151,7 @@ export function ContactDealCard({
           title={
             <Button
               variant="link"
+              align="start"
               className="pe-card-open"
               onClick={() => navigate({ screen: "deals", id: card.dealId })}
             >
@@ -190,11 +201,16 @@ export function ContactUnderstandingCard({
  * to dismiss one that got it wrong. The Research tab draws it, where
  * Understanding's "Correct something" leads.
  */
-export function ContactClaimReadings({ view }: Readonly<{ view: Contact360 }>) {
-  const t = useT();
-  const open = omitted(view, "claims")
+/** The claims still open for a verdict; none where the section was withheld. */
+export function openClaims(view: Contact360) {
+  return omitted(view, "claims")
     ? []
     : (view.claims ?? []).filter((claim) => claim.status === "open");
+}
+
+export function ContactClaimReadings({ view }: Readonly<{ view: Contact360 }>) {
+  const t = useT();
+  const open = openClaims(view);
   if (open.length === 0) {
     return null;
   }

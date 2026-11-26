@@ -1,0 +1,7 @@
+{
+  "verb": "list_forecast_shares",
+  "checks": [
+    "forecast.create",
+    "forecast.read"
+  ]
+}

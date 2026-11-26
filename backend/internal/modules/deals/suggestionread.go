@@ -37,11 +37,11 @@ import (
 // Under the system principal it is the liveness rule alone, which is how the
 // superseding pass reads it: one spelling of "this suggestion still stands".
 //
-// Every caller names deal_suggestion "s" in its outer query.
+// alias names the deal_suggestion row in the caller's outer query.
 //
 // readable is empty, or names activity ids that already passed the content
 // gate, covering what SuggestionEvidenceActivitiesSQL selects for these rows.
-func suggestionVisibleClause(ctx context.Context, arg func(any) int, readable string) (string, error) {
+func suggestionVisibleClause(ctx context.Context, alias string, arg func(any) int, readable string) (string, error) {
 	if err := requireSuggestionRead(ctx); err != nil {
 		return "", err
 	}
@@ -86,7 +86,7 @@ func suggestionVisibleClause(ctx context.Context, arg func(any) int, readable st
 	           UNION ALL SELECT `+storekit.CitedActivityID("cite")+` FROM signal es, jsonb_array_elements(es.evidence) cite
 	            WHERE e.kind = 'signal' AND es.id = e.signal_id AND cite->>'source_type' = 'activity') need(id)
 	         WHERE NOT EXISTS (%[4]s)))))`,
-		"s", orTrue(company), orTrue(signal), passes, activityGranted, signalGranted), nil
+		pgx.Identifier{alias}.Sanitize(), orTrue(company), orTrue(signal), passes, activityGranted, signalGranted), nil
 }
 
 // SuggestionEvidenceActivitiesSQL selects the activities the named suggestions
@@ -188,6 +188,12 @@ type suggestionCursor struct {
 	ID        ids.UUID  `json:"id"`
 }
 
+// SuggestionPositionAfter is the list position just past the suggestion with
+// this creation time and id. A read with it as Cursor resumes after that row.
+func SuggestionPositionAfter(createdAt time.Time, id ids.UUID) (string, error) {
+	return storekit.EncodeOpaque(suggestionCursor{CreatedAt: createdAt, ID: id})
+}
+
 const suggestionColumns = `s.id, s.kind, s.state, s.company_id, c.display_name, s.pipeline_id,
 	       s.proposed_stage_id, s.name_hint, s.proposed_amount_minor, s.currency,
 	       s.proposed_close_date, s.confidence::float8, s.created_at, c.owner_id, s.version`
@@ -246,7 +252,7 @@ func (s *Store) ListSuggestions(ctx context.Context, in SuggestionQuery) ([]Sugg
 	if len(out) > in.Limit {
 		out = out[:in.Limit]
 		last := out[len(out)-1]
-		if next, err = storekit.EncodeOpaque(suggestionCursor{CreatedAt: last.CreatedAt, ID: last.ID}); err != nil {
+		if next, err = SuggestionPositionAfter(last.CreatedAt, last.ID); err != nil {
 			return nil, "", fmt.Errorf("deals: encoding the suggestion cursor: %w", err)
 		}
 	}
@@ -279,7 +285,7 @@ func (s *Store) CountOpenSuggestions(ctx context.Context, in SuggestionQuery) (i
 // openSuggestionWhere is the one filter the list and the count share, so a
 // count is never of rows the list would not show. Every caller joins company c.
 func openSuggestionWhere(ctx context.Context, in SuggestionQuery, arg func(any) int) (string, error) {
-	visible, err := suggestionVisibleClause(ctx, arg, "")
+	visible, err := suggestionVisibleClause(ctx, "s", arg, "")
 	if err != nil {
 		return "", err
 	}
@@ -326,7 +332,7 @@ func (s *Store) GetSuggestion(ctx context.Context, id ids.UUID) (Suggestion, err
 // row for the rest of the transaction.
 func readVisibleSuggestionTx(ctx context.Context, tx pgx.Tx, id ids.UUID, lock bool) (Suggestion, error) {
 	args := []any{id}
-	visible, err := suggestionVisibleClause(ctx,
+	visible, err := suggestionVisibleClause(ctx, "s",
 		func(v any) int { args = append(args, v); return len(args) }, "")
 	if err != nil {
 		return Suggestion{}, err
@@ -365,7 +371,7 @@ func attachEvidence(ctx context.Context, tx pgx.Tx, list []Suggestion) error {
 		suggestionIDs = append(suggestionIDs, s.ID)
 	}
 	args := []any{suggestionIDs}
-	visible, err := suggestionVisibleClause(ctx,
+	visible, err := suggestionVisibleClause(ctx, "s",
 		func(v any) int { args = append(args, v); return len(args) }, "")
 	if err != nil {
 		return err
@@ -398,12 +404,13 @@ func attachEvidence(ctx context.Context, tx pgx.Tx, list []Suggestion) error {
 	return rows.Err()
 }
 
-// ReadableSuggestionClause shares the suggestion reader's evidence authorization with projections.
-func ReadableSuggestionClause(ctx context.Context, arg func(any) int) (string, error) {
+// ReadableSuggestionClause shares the suggestion reader's evidence authorization
+// with projections, over the deal_suggestion row alias.
+func ReadableSuggestionClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
 	if !auth.ReadGranted(ctx, "deal") || !auth.ReadGranted(ctx, "company") {
 		return "false", nil
 	}
-	return suggestionVisibleClause(ctx, arg, "")
+	return suggestionVisibleClause(ctx, alias, arg, "")
 }
 
 // ReadableSuggestionClauseWithin is ReadableSuggestionClause for a statement
@@ -412,5 +419,5 @@ func ReadableSuggestionClauseWithin(ctx context.Context, arg func(any) int, read
 	if !auth.ReadGranted(ctx, "deal") || !auth.ReadGranted(ctx, "company") {
 		return "false", nil
 	}
-	return suggestionVisibleClause(ctx, arg, readable)
+	return suggestionVisibleClause(ctx, "s", arg, readable)
 }

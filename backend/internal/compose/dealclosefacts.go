@@ -10,9 +10,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -28,7 +30,12 @@ type closeFacts struct {
 	// reply keeps a deal open without its content reaching any report.
 	anyProgressAt *time.Time
 	refusalAt     *time.Time
-	// waitUntil is the day the customer asked us to wait until; meetingAhead
+	// refusal is the newest message judged a refusal; zero when none was.
+	refusal ids.UUID
+	// replyOwed is a current customer request on the deal that nobody has
+	// settled, whether or not we replied on its thread.
+	replyOwed bool
+	// waitUntil is the instant the wait ends (deals.PauseEndsSQL); meetingAhead
 	// is a meeting still to come that a customer guest accepted.
 	waitUntil    *time.Time
 	meetingAhead bool
@@ -59,9 +66,8 @@ var closeFactsSQL = `
 	           AND a.origin = $4 AND starts_with(a.captured_by, $5) AND a.created_at > u.undone_at),
 	       (SELECT max(a.occurred_at) FROM activity a JOIN activity_link al ON al.activity_id = a.id
 	         WHERE al.deal_id = d.id AND a.archived_at IS NULL AND %[1]s),
-	       (SELECT max(a.occurred_at) FROM activity a JOIN activity_link al ON al.activity_id = a.id
-	         WHERE al.deal_id = d.id AND a.archived_at IS NULL AND %[2]s),
-	       d.wait_until,
+	       refusal.id, refusal.occurred_at,
+	       ` + deals.PauseEndsSQL("d") + `,
 	       EXISTS (SELECT 1 FROM activity a JOIN activity_link al ON al.activity_id = a.id
 	                WHERE al.deal_id = d.id AND a.archived_at IS NULL AND a.kind = 'meeting' AND %[3]s
 	                  AND EXISTS (SELECT 1 FROM activity_participant p
@@ -71,6 +77,9 @@ var closeFactsSQL = `
 	  FROM deal d
 	  LEFT JOIN LATERAL (SELECT max(c.reversed_at) AS undone_at FROM deal_correction c
 	                      WHERE c.deal_id = d.id AND c.correction = $3) u ON true
+	  LEFT JOIN LATERAL (SELECT a.id, a.occurred_at FROM activity a JOIN activity_link al ON al.activity_id = a.id
+	                      WHERE al.deal_id = d.id AND a.archived_at IS NULL AND %[2]s
+	                      ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1) refusal ON true
 	 WHERE d.id::text = ANY($1)`
 
 func closeFactsFor(
@@ -80,8 +89,25 @@ func closeFactsFor(
 	for _, subject := range subjects {
 		dealIDs = append(dealIDs, subject.DealID)
 	}
-	query := fmt.Sprintf(closeFactsSQL, customerProgressAnyAudienceSQL("a", "$2"), customerRefusalAnyAudienceSQL("a", "$2"),
-		relstrength.MeetingAheadSQL("a", "$2"), dealMailboxesAnyAudienceSQL("d"))
+	out, err := closeFactsRead(ctx, tx, now, dealIDs)
+	if err != nil {
+		return nil, err
+	}
+	owed, err := repliesOwed(ctx, tx, now, dealIDs)
+	if err != nil {
+		return nil, err
+	}
+	for deal, f := range out {
+		f.replyOwed = owed[deal]
+		out[deal] = f
+	}
+	return out, nil
+}
+
+func closeFactsRead(ctx context.Context, tx pgx.Tx, now time.Time, dealIDs []string) (map[string]closeFacts, error) {
+	keptOpen := relstrength.DealKeptOpenSQL("a", "al.deal_id")
+	query := fmt.Sprintf(closeFactsSQL, customerProgressAnyAudienceSQL("a", keptOpen, "$2"), customerRefusalAnyAudienceSQL("a", "al.deal_id", "$2"),
+		dealMeetingAheadSQL("a", keptOpen, "$2"), dealMailboxesAnyAudienceSQL("d"))
 	rows, err := tx.Query(ctx, query, dealIDs, now, deals.CloseLostCorrection,
 		activities.OriginHuman, principal.HumanIDPrefix)
 	if err != nil {
@@ -92,11 +118,47 @@ func closeFactsFor(
 	for rows.Next() {
 		var deal string
 		var f closeFacts
-		if err := rows.Scan(&deal, &f.undoneAt, &f.workedAt, &f.anyProgressAt, &f.refusalAt,
+		var refusal *ids.UUID
+		if err := rows.Scan(&deal, &f.undoneAt, &f.workedAt, &f.anyProgressAt, &refusal, &f.refusalAt,
 			&f.waitUntil, &f.meetingAhead, &f.mailboxes); err != nil {
 			return nil, fmt.Errorf("compose: reading what keeps a deal open: %w", err)
+		}
+		if refusal != nil {
+			f.refusal = *refusal
 		}
 		out[deal] = f
 	}
 	return out, rows.Err()
+}
+
+// repliesOwed reports, per deal, whether a customer request is still open. It
+// reads the deal card's current requests over mail of every audience: the
+// close reads only that a request is open.
+//
+// It reads as the sweep, not as the caller. The re-check under the row lock
+// runs as the owner's agent, which cannot list a colleague's private thread.
+func repliesOwed(ctx context.Context, tx pgx.Tx, now time.Time, dealIDs []string) (map[string]bool, error) {
+	parsed := make([]ids.UUID, 0, len(dealIDs))
+	for _, raw := range dealIDs {
+		if id, err := ids.Parse(raw); err == nil {
+			parsed = append(parsed, id)
+		}
+	}
+	if len(parsed) == 0 {
+		return map[string]bool{}, nil
+	}
+	one := 1
+	mail := string(crmcontracts.ActivityKindEmail)
+	sweep := principal.SystemActing(ctx, closeDateSweepActor)
+	current, err := activities.ListActivitiesByDealTx(sweep, tx, parsed, activities.ListActivitiesInput{
+		Kind: &mail, Limit: &one, RequestCurrentAsOf: &now,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading whether a deal is owed a reply: %w", err)
+	}
+	out := make(map[string]bool, len(current))
+	for deal, list := range current {
+		out[deal.String()] = len(list.Activities) > 0
+	}
+	return out, nil
 }

@@ -155,6 +155,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
   it.each([
     ["webhooks", "Webhooks"],
     ["telegram", "Telegram bot"],
+    ["shared-mailboxes", "Shared mailboxes"],
   ])("renders %s on its own Integrations tab", async (tab, heading) => {
     vi.stubGlobal(
       "fetch",

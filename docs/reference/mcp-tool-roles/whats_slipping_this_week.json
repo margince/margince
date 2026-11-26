@@ -1,0 +1,14 @@
+{
+  "tool": "read_attention",
+  "action": "slipping",
+  "verb": "whats_slipping_this_week",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

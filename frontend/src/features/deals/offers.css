@@ -25,10 +25,18 @@
   width: 110px;
 }
 
+/* A line's billing stacks in its cell, so a recurring line grows down. */
+.offers-line-billing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Tops in line, as `.form-row` has them: a field's error line grows below it. */
 .offers-new-line {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: var(--space-2);
   margin-top: var(--space-2);
 }
@@ -46,4 +54,10 @@
 
 .offers-add-line {
   margin-top: var(--space-6);
+}
+
+/* An intro or terms text keeps the line breaks its author typed. */
+.offers-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

@@ -1,0 +1,18 @@
+{
+  "tool": "read_details",
+  "action": "contact_consent",
+  "verb": "get_contact_consent",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

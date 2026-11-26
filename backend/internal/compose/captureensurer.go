@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -82,8 +83,11 @@ type contactsEnsurer struct {
 	log *slog.Logger
 }
 
-func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.EnsureRequest) (capture.EnsureOutcome, error) {
-	res, err := p.store.EnsureCounterparty(ctx, contacts.EnsureCounterpartyInput{
+// EnsureCounterpartyTx runs the ensure on the caller's transaction. What
+// reaches past it (the domain read, the reply promotion, the vendor-mark lift)
+// waits in AfterCommit, so a fault there never rolls back the records.
+func (p contactsEnsurer) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in capture.EnsureRequest) (capture.EnsureOutcome, error) {
+	res, err := p.store.EnsureCounterpartyTx(ctx, tx, contacts.EnsureCounterpartyInput{
 		HoldAuthority:   in.HoldAuthority,
 		Admission:       in.Admission,
 		Email:           in.Email,
@@ -95,6 +99,9 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 		CapturedBy:      in.CapturedBy,
 		SuppressCompany: in.SuppressCompany,
 		Replied:         in.Replied,
+		LinkOnly:        in.LinkOnly,
+		ReaderTeam:      in.ReaderTeam,
+		ReaderAuthority: identity.ReadAuthorityTx,
 		// The SINK's ensure, which runs while the sender is still unjudged.
 		// Owner-scoped until something says otherwise; the verdict path is the
 		// only caller that asks for the workspace.
@@ -112,10 +119,20 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 	if err != nil {
 		return capture.EnsureOutcome{}, err
 	}
-	// The sender is a lead. Filing and its qualify task committed in the ensure.
+	// The sender is a lead. Filing and its qualify task are in the ensure.
 	if !res.LeadID.IsZero() {
 		return capture.EnsureOutcome{}, nil
 	}
+	return capture.EnsureOutcome{
+		ContactCreated: res.ContactCreated,
+		ContactID:      res.ContactID.UUID,
+		CompanyQueued:  res.TriagePending,
+		QueuedDomain:   res.TriageDomain,
+		AfterCommit:    func(ctx context.Context) { p.afterEnsure(ctx, in, res) },
+	}, nil
+}
+
+func (p contactsEnsurer) afterEnsure(ctx context.Context, in capture.EnsureRequest, res contacts.EnsureCounterpartyResult) {
 	// The ensure left this domain's company question open. Nothing is
 	// created until it is answered, so queueing the read that answers it is not
 	// an optimization here — it is the rest of the work.
@@ -128,12 +145,6 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 	if !res.ContactCreated {
 		p.liftVendorMark(ctx, in.Email, res.ContactID)
 	}
-	return capture.EnsureOutcome{
-		ContactCreated: res.ContactCreated,
-		ContactID:      res.ContactID.UUID,
-		CompanyQueued:  res.TriagePending,
-		QueuedDomain:   res.TriageDomain,
-	}, nil
 }
 
 // promoteOnReply publishes the contact a reply came from when the only thing

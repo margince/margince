@@ -5,26 +5,28 @@ package webforms
 
 import (
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
+	"mime"
 	"net/http"
-	"strings"
+	"strconv"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // errBodyTooLarge refuses a post over MaxBody.
 var errBodyTooLarge = errors.New("the submission is larger than a form post can be")
 
-// defaultThanks is the thank-you text for a form with no message of its own.
-const defaultThanks = "Thank you. Your message has been received."
-
 // SubmitWebForm implements (POST /public/forms/{form_key}).
 func (h Handlers) SubmitWebForm(w http.ResponseWriter, r *http.Request, formKey string) {
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxBody))
 	if err != nil {
-		h.answerRefusal(w, r, errBodyTooLarge)
+		h.AnswerRefusal(w, r, errBodyTooLarge)
 		return
 	}
 	receipt, err := h.intake.Submit(r.Context(), Arrival{
@@ -32,7 +34,7 @@ func (h Handlers) SubmitWebForm(w http.ResponseWriter, r *http.Request, formKey 
 	})
 	allowReading(w, receipt.AllowOrigin)
 	if err != nil {
-		h.answerRefusal(w, r, err)
+		h.AnswerRefusal(w, r, err)
 		return
 	}
 	if !wantsPage(r) {
@@ -45,38 +47,61 @@ func (h Handlers) SubmitWebForm(w http.ResponseWriter, r *http.Request, formKey 
 		http.Redirect(w, r, *receipt.RedirectURL, http.StatusSeeOther)
 		return
 	}
-	message := defaultThanks
+	message := systemtext.Copy("webform.thanks", systemtext.Locale(r.Context()))
 	if receipt.Message != nil {
 		message = *receipt.Message
 	}
 	h.writePage(w, r, http.StatusOK, message)
 }
 
-// answerRefusal writes a refusal as JSON for a script, or as a page for a
-// plain form post. The page names the reason only where the visitor can fix
-// it: a missing email, an unticked consent.
-func (h Handlers) answerRefusal(w http.ResponseWriter, r *http.Request, err error) {
+// AnswerRefusal writes a refusal as JSON for a script, or as a page for a
+// plain form post. The page is in the language the edge bound for the
+// visitor, and names the reason only where the visitor can act on it.
+func (h Handlers) AnswerRefusal(w http.ResponseWriter, r *http.Request, err error) {
 	if !wantsPage(r) {
 		writeErr(w, r, err)
 		return
 	}
-	status, message := http.StatusInternalServerError, "This form could not be sent right now."
+	status := http.StatusInternalServerError
 	if fault, ok := httperr.Classify(refusal(err)); ok {
 		status = fault.Status
+		if fault.RetryAfterSeconds > 0 {
+			w.Header().Set("Retry-After", strconv.Itoa(fault.RetryAfterSeconds))
+		}
 	}
-	if bad, ok := errors.AsType[*BadInputError](err); ok && (bad.Field == fieldEmail || bad.Field == fieldConsent) {
-		message = "This form could not be sent: " + bad.Reason + ". Please go back and try again."
-	}
-	h.writePage(w, r, status, message)
+	h.writePage(w, r, status, refusalWords(err, systemtext.Locale(r.Context())))
 }
 
-// ServePreflight answers a browser's CORS preflight for a form's address. A
-// website on the form's list may post with any Content-Type; any other
-// website gets no CORS headers, so its browser refuses to send.
-func (h Handlers) ServePreflight(w http.ResponseWriter, r *http.Request, formKey string) {
-	f, err := h.store.PublicForm(r.Context(), formKey)
+// refusalWords is the visitor's sentence for a refusal. The English reason a
+// script reads never reaches the page.
+func refusalWords(err error, lang textlang.Lang) string {
+	if bad, ok := errors.AsType[*BadInputError](err); ok {
+		switch bad.Field {
+		case fieldEmail:
+			return systemtext.Copy("webform.needs_email", lang)
+		case fieldConsent:
+			return systemtext.Copy("webform.needs_consent", lang)
+		}
+	}
+	if throttled, ok := errors.AsType[*throttledError](err); ok {
+		return fmt.Sprintf(systemtext.Copy("webform.too_many", lang), throttled.wait)
+	}
+	switch {
+	case errors.Is(err, ErrPaused):
+		return systemtext.Copy("webform.paused", lang)
+	case errors.Is(err, apperrors.ErrNotFound):
+		return systemtext.Copy("webform.gone", lang)
+	}
+	return systemtext.Copy("webform.unavailable_now", lang)
+}
+
+// ServePreflight answers a browser's CORS preflight for f, the form the
+// throttle resolved. A website on the form's list may post with any
+// Content-Type; any other website gets no CORS headers, so its browser refuses
+// to send. A key that names no form resolves to a zero Form, which allows none.
+func (h Handlers) ServePreflight(w http.ResponseWriter, r *http.Request, f Form) {
 	origin := r.Header.Get("Origin")
-	if err == nil && f.AllowsOrigin(origin) {
+	if f.AllowsOrigin(origin) {
 		allowReading(w, origin)
 		w.Header().Set("Access-Control-Allow-Methods", http.MethodPost)
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -94,18 +119,22 @@ func allowReading(w http.ResponseWriter, origin string) {
 	}
 }
 
-// wantsPage reports a plain HTML form post: a browser navigating, which reads
-// a page or follows a redirect, rather than a script reading JSON.
+// wantsPage reports a plain HTML form post: a browser sending a form body that
+// ranks a page at least as high as JSON. It reads a page or follows a
+// redirect, where a script reads JSON.
 func wantsPage(r *http.Request) bool {
-	return strings.Contains(r.Header.Get("Accept"), "text/html") &&
-		!strings.HasPrefix(r.Header.Get("Content-Type"), "application/json")
+	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil || (mediaType != "application/x-www-form-urlencoded" && mediaType != "multipart/form-data") {
+		return false
+	}
+	return httperr.PrefersHTML(r.Header.Get("Accept"))
 }
 
 var pageTemplate = template.Must(template.New("page").Parse(`<!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex"><title>{{.}}</title>
+<html lang="{{.Lang}}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>{{.Message}}</title>
 <style>body{font:16px/1.5 system-ui,sans-serif;max-width:32rem;margin:4rem auto;padding:0 1rem;color:#1f2933}</style>
-</head><body><p>{{.}}</p></body></html>`))
+</head><body><p>{{.Message}}</p></body></html>`))
 
 // writePage renders the message through html/template. An admin's success
 // message or a reason about the visitor's input is text, never markup. The
@@ -115,7 +144,8 @@ func (h Handlers) writePage(w http.ResponseWriter, r *http.Request, status int, 
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(status)
-	if err := pageTemplate.Execute(w, message); err != nil {
+	page := struct{ Lang, Message string }{Lang: string(systemtext.Locale(r.Context())), Message: message}
+	if err := pageTemplate.Execute(w, page); err != nil {
 		h.store.log.DebugContext(r.Context(), "webforms: writing the response page failed; the visitor's connection is gone", "err", err)
 	}
 }

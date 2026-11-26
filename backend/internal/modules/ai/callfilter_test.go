@@ -20,12 +20,13 @@ import (
 // never returns is a filter that always matches nothing.
 func TestTheOutcomeBucketsAreTheContractEnum(t *testing.T) {
 	var buckets []string
-	for _, match := range regexp.MustCompile(`(?:THEN|ELSE) '([a-z]+)'`).FindAllStringSubmatch(callOutcomeSQL(1, 2), -1) {
+	for _, match := range regexp.MustCompile(`(?:THEN|ELSE) '([a-z]+)'`).FindAllStringSubmatch(callOutcomeSQL(1, 2, 3), -1) {
 		buckets = append(buckets, match[1])
 	}
 	enum := []string{
 		string(crmcontracts.AiCallOutcomeAnswered), string(crmcontracts.AiCallOutcomeFallback),
 		string(crmcontracts.AiCallOutcomeDeclined), string(crmcontracts.AiCallOutcomeFailed),
+		string(crmcontracts.AiCallOutcomeCanceled),
 	}
 	if len(buckets) != len(enum) {
 		t.Fatalf("the SQL names %d buckets %v, the contract %d", len(buckets), buckets, len(enum))
@@ -81,11 +82,11 @@ func TestTheCallReadCarriesEveryParameter(t *testing.T) {
 func TestTheCallFilterBindsEachValueOnce(t *testing.T) {
 	query := newCallQuery()
 	where := CallListFilter{Task: "enrich", Model: "m", Query: " 50%_off ", Outcome: "failed"}.where(query)
-	if got, want := len(query.args), 6; got != want {
+	if got, want := len(query.args), 7; got != want {
 		t.Fatalf("%d arguments, want %d", got, want)
 	}
-	if query.args[5] != `%50\%\_off%` {
-		t.Errorf("search pattern %q", query.args[5])
+	if query.args[6] != `%50\%\_off%` {
+		t.Errorf("search pattern %q", query.args[6])
 	}
 	for n := 3; n <= 6; n++ {
 		if !regexp.MustCompile(`\$` + string(rune('0'+n)) + `\b`).MatchString(where) {

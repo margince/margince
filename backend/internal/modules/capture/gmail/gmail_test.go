@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -44,6 +45,7 @@ type fakeAPI struct {
 	labelsErr          error
 	spam               map[string]bool // ids Gmail filed under the SPAM label
 	trash              map[string]bool // ids Gmail filed under the TRASH label
+	unlabeled          map[string]bool // ids Gmail lists with no label at all
 	gone               map[string]bool
 	historyCalls       int
 	listCalls          int
@@ -121,6 +123,11 @@ func (f *fakeAPI) GetRaw(_ context.Context, _, id string) (Message, error) {
 	}
 	if f.trash[id] {
 		msg.Labels = append(msg.Labels, trashLabelID)
+	}
+	// Gmail files delivered mail somewhere; only a test that asks for it gets
+	// the label-less shape of a scheduled send.
+	if len(msg.Labels) == 0 && !f.unlabeled[id] {
+		msg.Labels = []string{"INBOX"}
 	}
 	return msg, nil
 }
@@ -515,6 +522,57 @@ func TestSyncStillCapturesTheSendThatFollowsTheDraft(t *testing.T) {
 	}
 }
 
+// A message scheduled with "Schedule send" has not been sent. Gmail lists it
+// with no label at all. Once Gmail sends it, it is filed under SENT and the
+// same id is captured once.
+func TestSyncCapturesAScheduledSendOnlyOnceGmailSendsIt(t *testing.T) {
+	const scheduled = "sch1@mail.gmail.com"
+	api := &fakeAPI{
+		email:     owner,
+		historyID: "12345",
+		recent:    []string{scheduled},
+		raws:      map[string][]byte{scheduled: rawMsg(scheduled, owner)},
+		unlabeled: map[string]bool{scheduled: true},
+	}
+	c := New(fakeOAuth{access: "access-1"}, api)
+	sink := &recordingSink{}
+	if _, err := c.Sync(context.Background(), authBytes(t), nil, sink); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(sink.recs) != 0 {
+		t.Fatalf("captured %d records before Gmail sent it, want 0", len(sink.recs))
+	}
+
+	api.unlabeled = nil
+	api.sent = map[string]bool{scheduled: true}
+	if _, err := c.Sync(context.Background(), authBytes(t), nil, sink); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(sink.recs) != 1 || sink.recs[0].Source != "gmail:"+scheduled {
+		t.Fatalf("captured %+v after the send, want the one sent message", sink.recs)
+	}
+}
+
+// Inbound mail with no label, such as mail a filter archived, is still mail.
+func TestSyncCapturesUnlabelledInboundMail(t *testing.T) {
+	const archived = "a1@mail.gmail.com"
+	api := &fakeAPI{
+		email:     owner,
+		historyID: "12345",
+		recent:    []string{archived},
+		raws:      map[string][]byte{archived: rawMsg(archived, "alice@acme.com")},
+		unlabeled: map[string]bool{archived: true},
+	}
+	c := New(fakeOAuth{access: "access-1"}, api)
+	sink := &recordingSink{}
+	if _, err := c.Sync(context.Background(), authBytes(t), nil, sink); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(sink.recs) != 1 {
+		t.Fatalf("captured %d records, want 1", len(sink.recs))
+	}
+}
+
 // TestSyncRefusesAMessageLabelledSpamOrTrashAfterItWasListed.
 //
 // messages.list already asks Gmail to leave spam and trash out, so an id that
@@ -697,5 +755,43 @@ func TestSyncKeepsItsWatermarkWhenDeletionFails(t *testing.T) {
 	cursor, err := New(fakeOAuth{access: "token"}, api).Sync(context.Background(), authBytes(t), []byte(`{"history_id":"12345"}`), &failingRemover{})
 	if err == nil || len(cursor) != 0 {
 		t.Fatalf("failed removal advanced cursor: %s err=%v", cursor, err)
+	}
+}
+
+// lostCursors records what a sync reports through connector.RecordLostCursor.
+type lostCursors struct{ readFrom []time.Time }
+
+func (l *lostCursors) CheckpointSync(context.Context, connector.Cursor) error { return nil }
+
+func (l *lostCursors) RecordLostCursor(_ context.Context, readFrom time.Time) error {
+	l.readFrom = append(l.readFrom, readFrom)
+	return nil
+}
+
+func TestAFullListAfterALostCursorReportsTheMailLeftOut(t *testing.T) {
+	api := &fakeAPI{email: owner, historyID: "55555", historyErr: ErrHistoryGone, raws: map[string][]byte{}}
+	for i := range backfillWindow {
+		id := "m" + strconv.Itoa(i) + "@mail.gmail.com"
+		api.recent = append(api.recent, id)
+		api.raws[id] = rawMsg(id, "alice@acme.com")
+	}
+	prior, _ := json.Marshal(cursorState{HistoryID: "1"})
+
+	reported := &lostCursors{}
+	ctx := connector.WithSyncCheckpointer(context.Background(), reported)
+	if _, err := New(fakeOAuth{access: "access-1"}, api).Sync(ctx, authBytes(t), prior, &recordingSink{}); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(reported.readFrom) != 1 {
+		t.Fatalf("the sync reported %d lost cursors, want 1", len(reported.readFrom))
+	}
+
+	_, err := New(fakeOAuth{access: "access-1"}, api).Sync(context.Background(), authBytes(t), prior, &recordingSink{})
+	if !errors.Is(err, connector.ErrNoLostCursorRecorder) {
+		t.Fatalf("a sync nobody records a lost cursor for → %v, want a refusal", err)
+	}
+	// A first sync has no cursor to lose, however much mail it lists.
+	if _, err := New(fakeOAuth{access: "access-1"}, api).Sync(context.Background(), authBytes(t), nil, &recordingSink{}); err != nil {
+		t.Fatalf("a first sync: %v", err)
 	}
 }

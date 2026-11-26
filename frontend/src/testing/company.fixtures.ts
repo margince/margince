@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { meFixture } from "./mefixture";
+import { meFixture, READS_RECORDS } from "./mefixture";
 
 type Company = components["schemas"]["Company"];
 type Company360 = components["schemas"]["Company360"];
@@ -206,6 +206,9 @@ export type BackstopOptions = Readonly<{
   // page is the composer's or their mail client's. None unless a suite is
   // about writing to somebody.
   connectors?: unknown;
+  // The company types installed extensions declare: none unless a suite is
+  // about showing or filtering on one.
+  companyTypes?: unknown;
 }>;
 
 export function backstopAnswer(
@@ -229,6 +232,9 @@ export function backstopAnswer(
   }
   if (pathname.endsWith("/connectors")) {
     return jsonResponse(options?.connectors ?? { data: [] });
+  }
+  if (pathname.endsWith("/company-types")) {
+    return jsonResponse({ data: options?.companyTypes ?? [] });
   }
   if (pathname.endsWith("/activities/latest-inbound")) {
     return jsonResponse({ data: [] });
@@ -266,6 +272,7 @@ export async function withSession(answer: Response): Promise<Response> {
   return jsonResponse(
     meFixture({
       allow: {
+        ...READS_RECORDS,
         company: ["read", "create", "update", "delete"],
         deal: ["read", "create", "update"],
         relationship: ["read", "create", "update", "delete"],

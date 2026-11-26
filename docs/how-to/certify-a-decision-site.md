@@ -1,7 +1,7 @@
 <!-- prose:plain -->
 # Certify a decision site
 
-A `decisions:` lane answers every site its local-only rule lets in, as soon as the config binds it.
+A `decisions:` lane answers every site with a decision form, as soon as the config binds it.
 Like the rung of any other task's ladder, it needs no certification row to serve. Certification is
 **advisory**. It measures how often a (task, site, provider, model) binding is right, against graded
 scenarios. Then it writes a record to the generated table
@@ -49,9 +49,7 @@ config meets. The LLM part runs as it would without the lane, and writes its usu
 asks the lane each scenario whose site has a decision form, `RUNS` times, with no judge. The answer is a
 closed label, so the gate of the site and the label the scenario expects grade it.
 
-A lane that is not local never gets a `local_only` task, such as the two capture verdicts. Certify
-those sites with a `jev_compatible` lane on a self-hosted server, at a loopback or private-range
-address. Against OpenRouter or `jev`, every run falls back and the record reads `not_supported`.
+The routing profile and provider bindings decide where text goes. The `sovereign` profile refuses cloud providers.
 
 ## 2. Read the decision record
 
@@ -83,13 +81,14 @@ make gen
 ```
 
 This writes a row into `decisioncert_gen.go` for each decision record that is certified and whose
-scenario stamps match this build. A comment on the row gives the path of the record. Generate the
+scenario stamps match this build. A row also needs at least 15 kept answers (`DecisionMinKept`). A comment on the row gives the path of the record. Generate the
 certification page again too
 (`cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert`).
 Then commit the record, the table and the page together.
 
 The lane answers the site whether this row exists or not. The row changes only what the certification
-page, and a later admin screen, report about the binding.
+page and the start-up log report about the binding. With no row, the API and worker warn at start and
+at each routing save.
 
 ## 4. When the site changes: certify again or drop
 

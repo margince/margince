@@ -11,6 +11,8 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -21,7 +23,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -34,17 +38,13 @@ const extensionNoticesPerMinute = 60
 // spam, and an outage of the shared counter must not lift it.
 var extensionNotices = ratelimit.New("extension-notice", ratelimit.FailClosed, extensionNoticesPerMinute, time.Minute)
 
-// noticeRecords are the record types a notice may be about: the identity tables
-// a reader opens by id.
-var noticeRecords = map[string]bool{string(recordTypeContact): true, string(recordTypeCompany): true, string(recordTypeDeal): true}
-
 //nolint:ireturn // returning the published repo IS the seam: a unit holds extension.NoticeRepo, never a core type.
 func (c extensionCore) Notices() extension.NoticeRepo { return extensionNoticeDoor{core: c} }
 
 type extensionNoticeDoor struct{ core extensionCore }
 
 // validateNotice refuses what the contract does not admit before any query runs.
-func validateNotice(in extension.NoticeRequest) error {
+func validateNotice(unit string, in extension.NoticeRequest) error {
 	if (in.Member == "") == (in.Role == "") {
 		return fmt.Errorf("%w: name exactly one of member and role", extension.ErrInvalid)
 	}
@@ -53,8 +53,8 @@ func validateNotice(in extension.NoticeRequest) error {
 			return fmt.Errorf("%w: member is not an id", extension.ErrInvalid)
 		}
 	}
-	if !noticeRecords[in.Record.Type] {
-		return fmt.Errorf("%w: record type must be contact, company or deal", extension.ErrInvalid)
+	if types := extension.NoticeRecordTypes(); !slices.Contains(types, in.Record.Type) && !recordkinds.DeclaredBy(unit, in.Record.Type) {
+		return fmt.Errorf("%w: record type must be %s, or a record kind this unit declared", extension.ErrInvalid, strings.Join(types, ", "))
 	}
 	if _, err := ids.Parse(in.Record.ID); err != nil {
 		return fmt.Errorf("%w: record id is not an id", extension.ErrInvalid)
@@ -69,7 +69,7 @@ func validateNotice(in extension.NoticeRequest) error {
 // the record. The caller must be able to open it too, so a unit cannot use the
 // door to learn which records exist.
 func (d extensionNoticeDoor) Send(ctx context.Context, in extension.NoticeRequest) (extension.NoticeSent, error) {
-	if err := d.core.refuseUnattended(); err != nil {
+	if err := d.refuseWithoutActor(in); err != nil {
 		return extension.NoticeSent{}, err
 	}
 	ctx, err := d.core.invocationCtx(ctx)
@@ -79,27 +79,107 @@ func (d extensionNoticeDoor) Send(ctx context.Context, in extension.NoticeReques
 	if !extensionNotices.Allow(d.core.unit) {
 		return extension.NoticeSent{}, extension.ErrRateLimited
 	}
-	if err := validateNotice(in); err != nil {
+	if err := validateNotice(d.core.unit, in); err != nil {
 		return extension.NoticeSent{}, err
 	}
 	record, _ := ids.Parse(in.Record.ID)
-	// A caller without read on the type is told ErrNotFound, like one who cannot
-	// see the row. Either way the unit learns nothing about the record.
-	seen, err := auth.VisibleTo(ctx, d.core.tx, in.Record.Type, record)
-	if err != nil {
-		return extension.NoticeSent{}, portRefusal(err)
-	}
-	if !seen {
-		return extension.NoticeSent{}, extension.ErrNotFound
-	}
-	if err := auth.EnsureVisibleLive(ctx, d.core.tx, in.Record.Type, record); err != nil {
-		return extension.NoticeSent{}, portRefusal(err)
+	if d.core.unattended {
+		if err := d.actingMemberCanOpen(ctx, in, record); err != nil {
+			return extension.NoticeSent{}, err
+		}
+	} else if err := d.callerCanOpen(ctx, in.Record.Type, record); err != nil {
+		return extension.NoticeSent{}, err
 	}
 	sent, err := d.deliver(ctx, in, record)
 	if err != nil {
 		return extension.NoticeSent{}, portRefusal(err)
 	}
 	return extension.NoticeSent{Recipients: sent}, nil
+}
+
+// refuseWithoutActor ties every send to an actor. Only a bus delivery may send
+// with no caller, and then it acts as the unit's service member, or as the
+// member ActAs names. A send with a caller acts as that caller and names nobody
+// else.
+func (d extensionNoticeDoor) refuseWithoutActor(in extension.NoticeRequest) error {
+	if !d.core.unattended {
+		if in.ActAs != "" {
+			return fmt.Errorf("%w: ActAs is for a send with no caller; this one runs as its caller", extension.ErrInvalid)
+		}
+		return nil
+	}
+	if !d.core.notifies {
+		return d.core.refuseUnattended()
+	}
+	return nil
+}
+
+// actingMemberCanOpen is the sender's boundary for an unattended send. With no
+// ActAs the sender is the unit's service member, which stays when a colleague
+// leaves. It reads no record, so only the recipients' rights bound that send.
+// A named member must be active and have connected the unit, and the record
+// must open under their rights. A refusal gives only its class.
+func (d extensionNoticeDoor) actingMemberCanOpen(ctx context.Context, in extension.NoticeRequest, record ids.UUID) error {
+	if in.ActAs == "" {
+		return d.requireServiceMember(ctx)
+	}
+	member, err := unitID(string(in.ActAs), "ActAs")
+	if err != nil {
+		return err
+	}
+	consented, err := memberConnectedTx(ctx, d.core.tx, d.core.unit, member)
+	if err != nil {
+		return portRefusal(err)
+	}
+	if !consented {
+		return fmt.Errorf("%w: ActAs names a member who has not connected this unit or who has left", extension.ErrForbidden)
+	}
+	seat, err := identity.SeatActor(ctx, d.core.tx, member)
+	if err != nil {
+		return extension.ErrForbidden
+	}
+	if !auth.Allows(principal.WithActor(ctx, seat), in.Record.Type, principal.ActionRead) {
+		return extension.ErrNotFound
+	}
+	if err := auth.EnsureVisibleLive(principal.WithActor(ctx, seat), d.core.tx, in.Record.Type, record); err != nil {
+		return extension.ErrNotFound
+	}
+	return nil
+}
+
+// requireServiceMember refuses a send from a unit whose operator declared no
+// live service member. The unit has no actor then, and an actor is the rule.
+func (d extensionNoticeDoor) requireServiceMember(ctx context.Context) error {
+	var found bool
+	err := d.core.tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM app_user u WHERE u.service_extension = $1 AND `+workforce.LiveMemberSQL("u")+`)`,
+		d.core.unit).Scan(&found)
+	if err != nil {
+		return portRefusal(err)
+	}
+	if !found {
+		return fmt.Errorf("%w: a notice sent with no caller needs the unit's service member, and none is declared", extension.ErrForbidden)
+	}
+	return nil
+}
+
+// callerCanOpen refuses a record the caller may not see. A caller without read
+// on the type is told ErrNotFound, like one who cannot see the row. Either way
+// the unit learns nothing about the record. Each recipient's own rights are
+// still judged in deliver, so a record nobody may open reaches nobody and
+// answers zero.
+func (d extensionNoticeDoor) callerCanOpen(ctx context.Context, recordType string, record ids.UUID) error {
+	seen, err := auth.VisibleTo(ctx, d.core.tx, recordType, record)
+	if err != nil {
+		return portRefusal(err)
+	}
+	if !seen {
+		return extension.ErrNotFound
+	}
+	if err := auth.EnsureVisibleLive(ctx, d.core.tx, recordType, record); err != nil {
+		return portRefusal(err)
+	}
+	return nil
 }
 
 func (d extensionNoticeDoor) deliver(ctx context.Context, in extension.NoticeRequest, record ids.UUID) (int, error) {
@@ -114,7 +194,7 @@ func (d extensionNoticeDoor) deliver(ctx context.Context, in extension.NoticeReq
 		if err != nil {
 			return 0, err
 		}
-		if !seat.Permissions.Allows(in.Record.Type, principal.ActionRead) {
+		if !auth.Allows(principal.WithActor(ctx, seat), in.Record.Type, principal.ActionRead) {
 			continue
 		}
 		// The recipient's own row scope, judged now. A notice is a pointer, and
@@ -127,11 +207,12 @@ func (d extensionNoticeDoor) deliver(ctx context.Context, in extension.NoticeReq
 			dedupe = "extension:" + d.core.unit + ":" + in.Key
 		}
 		_, written, err := store.CreateTxNew(ctx, d.core.tx, notices.NewNotice{
-			Recipient: ids.From[ids.UserKind](user),
-			Kind:      notices.KindExtension,
-			Subject:   in.Subject,
-			DedupeKey: dedupe,
-			Target:    notices.Target{Type: in.Record.Type, ID: record},
+			SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, "")},
+			Recipient:  ids.From[ids.UserKind](user),
+			Kind:       notices.KindExtension,
+			Subject:    in.Subject,
+			DedupeKey:  dedupe,
+			Target:     notices.Target{Type: noticeTargetType(in.Record.Type), ID: record},
 		})
 		if err != nil {
 			return 0, err
@@ -164,4 +245,13 @@ func noticeCandidates(ctx context.Context, tx pgx.Tx, in extension.NoticeRequest
 		return nil, fmt.Errorf("compose: resolving the recipients of a notice: %w", err)
 	}
 	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+}
+
+// noticeTargetType is the type a notice stores. The notices table names an
+// extension kind by its object, `ext_<unit>_<kind>`, and refuses the wire form.
+func noticeTargetType(recordType string) string {
+	if declared, ok := recordkinds.Lookup(recordType); ok {
+		return declared.Object
+	}
+	return recordType
 }

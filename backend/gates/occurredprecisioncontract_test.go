@@ -54,12 +54,20 @@ const storedClock = "stored clock without a precision column, issue #8910"
 // place, each with the reason. Keyed "<spec> <schema path>.<property>" as the
 // census prints it.
 var precisionlessTimes = gatekit.Waive(map[string]string{
+	"api/crm.yaml CustomerPayments.last_synced_at":                        "when the accounting import finished; always an instant, never an activity date",
+	"api/crm.yaml LicenseTrial.ends_at":                                   "when an unlicensed installation's trial ends, a server instant derived from the workspace's creation, not an activity time",
+	"api/crm.yaml EmailCalendarChange.ends_at":                            "a meeting's end, read with the same starts_precision: an all-day meeting's end is a date as its start is",
+	"api/crm.yaml EmailCalendarBefore.ends_at":                            "the earlier send's end, read with the same starts_precision as EmailCalendarChange.ends_at",
 	"api/crm.yaml MarginceChangeBundle.latest_at":                         "when Margince last changed the deal, the correction row's own write instant, not an activity time",
 	"api/crm.yaml ReportingForecastBasis.call_at":                         "when a manager submitted a forecast call, the call row's exact write instant",
+	"api/crm.yaml SalesProgress.planned_valued_at":                        "the evaluation instant the open deals were converted at, not an activity time",
 	"api/crm.yaml AssessNoticeSource.obtained_at":                         "The privacy user enters a source date; this does not copy a captured activity timestamp.",
 	"api/crm.yaml NoticeCase.source_obtained_at":                          "The saved human source date is used for a calendar deadline, without an activity timestamp or its precision.",
 	"api/crm.yaml NoticeCaseReview.source_obtained_at":                    "This view reads the same human source date as NoticeCase, not a captured activity timestamp.",
+	"api/crm.yaml ContactConfirmedSource.source_obtained_at":              "The contact page reads the same human source date as NoticeCase, not a captured activity timestamp.",
 	"api/crm.yaml HealthFinding.first_observed_at":                        "when operational evidence first recorded a condition, not an activity time",
+	"api/crm.yaml OptOutRecordStop.stopped_at":                            "when a stop took effect, the suppression row's own write instant",
+	"api/crm.yaml OptOutReceiptRecord.sent_at":                            "when the provider accepted a controller receipt, the delivery row's own instant",
 	"api/crm.yaml SalesInitiative.launch_at":                              "when a manager launched the initiative, the row's own instant",
 	"api/crm.yaml ReportingContext.initiative_launch_at":                  "the same launch instant, named on the report frame",
 	"api/crm.yaml JobHealthGroup.first_at":                                "the first retained job execution instant",
@@ -75,6 +83,7 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml AutomationRun.occurred_at":                              "when an automation ran, the run's own instant",
 	"api/crm.yaml CaptureConnection.last_synced_at":                       "when a mailbox sync last ran, the sync's own instant",
 	"api/crm.yaml CaptureConnectionConcern.last_success_at":               "when this mailbox last synced successfully, the observer's clock",
+	"api/crm.yaml CaptureSharedMailboxConcern.last_success_at":            "when this shared mailbox last synced successfully, the observer's clock",
 	"api/crm.yaml CaptureConnection.last_success_at":                      "when this mailbox last synced successfully, the observer's clock",
 	"api/crm.yaml MailCaptureCoverage.last_success_at":                    "a successful sync checkpoint, not the time of a mail activity",
 	"api/crm.yaml CaptureSweepHealth.last_succeeded_at":                   "when a capture pass last finished, the pass's own instant",
@@ -133,6 +142,7 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml Contact.last_activity_at":                          storedClock,
 	"api/crm.yaml Deal.last_activity_at":                             storedClock,
 	"api/crm.yaml Project.last_activity_at":                          storedClock,
+	"api/crm.yaml SearchHitStanding.last_activity_at":                storedClock,
 	"api/crm.yaml Project360Rollups.last_activity_at":                storedClock,
 	"api/crm.yaml Company360Project.last_activity_at":                storedClock,
 	"api/crm.yaml TeamWeeklyStaleDeal.last_activity_at":              storedClock,
@@ -142,6 +152,7 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml ContactNetworkColleague.last_inbound_at":           storedClock,
 	"api/crm.yaml ContactNetworkColleague.last_outbound_at":          storedClock,
 	"api/crm.yaml Company360Route.last_interaction_at":               storedClock,
+	"api/crm.yaml DormancyReading.last_activity_at":                  storedClock,
 	"api/crm.yaml Partner.last_contact_at":                           storedClock,
 	"api/crm.yaml MorningBriefItemLineage.returned_with_activity_at": storedClock,
 	"api/crm.yaml StageEvidence.observed_at":                         storedClock,
@@ -178,13 +189,16 @@ const (
 // instantTimeNames are the names that are never an activity's time, wherever a
 // schema declares them, each with the reason.
 var instantTimeNames = gatekit.Waive(map[string]string{
+	"handling_cutover_at": "server timestamp of the policy conversion, not an activity occurrence",
+	"example_due_at":      "computed deadline for the preview receipt time and selected local-day policy",
 	"expected_updated_at": rowStamp,
+	"queued_at":           rowStamp,
 	"enrolled_at":         "server timestamp of source enrollment, never an activity occurrence",
 	"opened_at":           actStamp, "enabled_at": actStamp, "suspended_at": actStamp,
 	"created_at": rowStamp, "updated_at": rowStamp, "archived_at": rowStamp, "restricted_at": rowStamp,
 	"content_erased_at": rowStamp, "superseded_at": rowStamp, "revoked_at": rowStamp,
 	"activated_at": rowStamp, "partner_accepted_at": rowStamp, "added_at": rowStamp, "entered_at": rowStamp,
-	"captured_at": rowStamp, "recorded_at": rowStamp, "set_at": rowStamp, "changed_at": rowStamp,
+	"saved_at": rowStamp, "captured_at": rowStamp, "recorded_at": rowStamp, "set_at": rowStamp, "changed_at": rowStamp,
 	"corrected_at": rowStamp, "effective_at": rowStamp, "latest_captured_at": rowStamp, "value_captured_at": rowStamp,
 
 	"generated_at": runStamp, "computed_at": runStamp, "evaluated_at": runStamp, "checked_at": runStamp,
@@ -197,7 +211,7 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 	"expires_at": aheadStamp, "credential_expires_at": aheadStamp, "watch_expires_at": aheadStamp, "deletes_at": aheadStamp,
 	"next_attempt_at": aheadStamp, "next_retry_at": aheadStamp, "next_pass_at": aheadStamp, "next_capture_at": aheadStamp,
 	"next_sync_due_at": aheadStamp, "next_due_at": aheadStamp, "intended_due_at": aheadStamp, "resets_at": aheadStamp,
-	"resumes_at": aheadStamp, "agent_window_next_starts_at": aheadStamp, "agent_window_resets_at": aheadStamp,
+	"wait_ends_at": aheadStamp, "resumes_at": aheadStamp, "agent_window_next_starts_at": aheadStamp, "agent_window_resets_at": aheadStamp,
 	"scheduled_at": aheadStamp, "remind_at": aheadStamp, "due_at": aheadStamp, "next_step_due_at": aheadStamp,
 	"next_task_due_at": aheadStamp, "sla_deadline_at": aheadStamp, "next_expiry_at": aheadStamp,
 
@@ -208,7 +222,7 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 	"paid_at": actStamp, "disposed_at": actStamp, "signed_in_at": actStamp, "visited_at": actStamp,
 	"previous_visit_at": actStamp, "baseline_at": actStamp, "asked_at": actStamp,
 	"name_dropped_at": actStamp, "responded_at": actStamp, "renewed_at": actStamp,
-	"link_requested_at": actStamp, "double_opt_in_confirmed_at": actStamp, "state_at": actStamp,
+	"link_requested_at": actStamp, "double_opt_in_confirmed_at": actStamp, "confirmed_at": actStamp, "state_at": actStamp,
 	"refuted_at": actStamp, "left_at": actStamp, "received_at": actStamp, "acquired_at": actStamp, "done_at": actStamp,
 
 	"started_at": spanStamp, "ended_at": spanStamp, "start_at": spanStamp, "end_at": spanStamp,

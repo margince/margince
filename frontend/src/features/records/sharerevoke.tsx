@@ -5,13 +5,16 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch } from "../../api/version";
+import { accessLabel } from "../../components/share.parts";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useT } from "../../i18n";
+import { isEntityKind } from "../../lib/entity";
 import {
   problemCodeOf,
   problemMessageOf,
   throwProblem,
 } from "../../lib/problem";
+import { invalidateRecord } from "../../lib/recordwritekeys";
 
 // The share screen's refusal wording and its revoke dialog.
 
@@ -43,18 +46,25 @@ export function shareRefusalMessage(
 // The version the reader saw rides the revoke, so a grant re-asserted since
 // (a new level, expiry or reason) is refused instead of removed unseen.
 export function RevokeGrantDialog({
-  grant,
+  grants,
+  revoking,
   grantsKey,
+  recordName,
   onClose,
   returnFocusTo,
 }: {
-  grant: RecordGrant | null;
+  // Looked up in the current list, not kept from the press. A list re-read
+  // after a refusal then sends its newer version.
+  grants: readonly RecordGrant[] | undefined;
+  revoking: Readonly<{ id: string; subjectName: string }> | null;
   grantsKey: readonly unknown[];
+  recordName: string;
   onClose: () => void;
   returnFocusTo: () => HTMLElement | null;
 }) {
   const t = useT();
   const queryClient = useQueryClient();
+  const grant = grants?.find((held) => held.id === revoking?.id) ?? null;
   const revoke = useMutation({
     mutationFn: async (held: RecordGrant) => {
       const { error } = await api.DELETE("/record-grants/{id}", {
@@ -67,8 +77,12 @@ export function RevokeGrantDialog({
         throwProblem(error);
       }
     },
-    onSuccess: () => {
+    onSuccess: (_done, held) => {
       queryClient.invalidateQueries({ queryKey: grantsKey });
+      // A share the reader held may have been what let them change the record.
+      if (isEntityKind(held.record_type)) {
+        void invalidateRecord(queryClient, held.record_type, held.record_id);
+      }
       onClose();
     },
     onError: (error) => {
@@ -97,7 +111,15 @@ export function RevokeGrantDialog({
       pending={revoke.isPending}
       error={revoke.isError ? shareRefusalMessage(revoke.error, t) : null}
     >
-      <p>{t("share.revokeConfirm")}</p>
+      {grant && revoking && (
+        <p>
+          {t("share.revokeConfirm", {
+            name: revoking.subjectName,
+            access: accessLabel(grant.access, t),
+            record: recordName,
+          })}
+        </p>
+      )}
     </ConfirmModal>
   );
 }

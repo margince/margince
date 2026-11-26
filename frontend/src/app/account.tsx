@@ -4,7 +4,9 @@ import { Avatar, Button } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
+import { buildRelease } from "../lib/buildrelease";
 import { useMe } from "../lib/session";
+import { useShortcutHandler } from "../lib/shortcuts";
 import { identityOf } from "./accountidentity";
 import { usePopoverDismiss } from "./popover";
 import "./account.css";
@@ -27,22 +29,45 @@ const ShortcutsDialog = lazy(
   CardBoundary,
 );
 
+const AboutMarginceDialog = lazy(
+  async () => ({
+    default: (await import("../components/aboutmargince")).AboutMarginceDialog,
+  }),
+  "complete",
+  CardBoundary,
+);
+
+type DialogState = "unopened" | "open" | "closed";
+
 /**
  * The account menu owns settings, appearance, the booking link, help and
- * feedback with the keyboard shortcuts, and sign-out. At phone width it also
- * carries the setup reminder.
+ * feedback with the keyboard shortcuts and About Margince, and sign-out. At
+ * phone width it also carries the setup reminder.
  */
-export function AccountMenu() {
+export function AccountMenu({
+  current = false,
+}: Readonly<{
+  /** The page on screen is one this menu leads to, and nothing else says so. */
+  current?: boolean;
+}>) {
   const t = useT();
   const me = useMe();
   const [open, setOpen] = useState(false);
-  const [shortcuts, setShortcuts] = useState<"unopened" | "open" | "closed">(
-    "unopened",
-  );
+  const [fromEnd, setFromEnd] = useState(false);
+  const [shortcuts, setShortcuts] = useState<DialogState>("unopened");
+  const [about, setAbout] = useState<DialogState>("unopened");
+  // From Help, focus returns to the trigger; from `?`, to wherever the key was pressed.
+  const [fromHelp, setFromHelp] = useState(false);
+  useShortcutHandler("shortcuts", () => {
+    setFromHelp(false);
+    setShortcuts("open");
+  });
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const spokenId = useId();
   const menuId = useId();
+  const faceId = useId();
+  const nameId = useId();
 
   /**
    * Close, and put focus back where it can be used.
@@ -84,24 +109,33 @@ export function AccountMenu() {
         iconOnly
         className="account-trigger"
         ref={trigger}
-        // WCAG 2.5.3 (Label in Name) binds only printed text, and the chip's
-        // initials are hidden, so it prints none. It is named by what it does.
-        aria-label={t("shell.accountAria")}
+        // WCAG 2.5.3 (Label in Name): the name starts with whatever the chip
+        // prints, read off the chip itself, so a painted photo adds nothing.
+        aria-labelledby={identity.label ? `${faceId} ${nameId}` : nameId}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-current={current ? "page" : undefined}
         aria-controls={open ? menuId : undefined}
-        // With no room to print who is signed in, the sentence is carried for a
-        // screen reader and clipped for the eye. It is wired as the DESCRIPTION
-        // rather than left to be read in flow, because `aria-label` above
-        // replaces the button's contents for name computation and would
-        // otherwise silence it. The `title` is the pointer's version of the same
-        // sentence, and never the accessible name.
+        // Who is signed in, for a screen reader: a description, because the name
+        // above leaves it out. The `title` is the pointer's copy, never the name.
         aria-describedby={identity.spoken ? spokenId : undefined}
         title={identity.spoken || undefined}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          setFromEnd(false);
+          setOpen((current) => !current);
+        }}
+        // The menu button's keys: Down opens on the first row, Up on the last.
+        onKeyDown={(event) => {
+          if (open || (event.key !== "ArrowDown" && event.key !== "ArrowUp")) {
+            return;
+          }
+          event.preventDefault();
+          setFromEnd(event.key === "ArrowUp");
+          setOpen(true);
+        }}
       >
         {identity.label ? (
-          <span className="account-face" aria-hidden="true">
+          <span className="account-face" id={faceId} aria-hidden="true">
             <Avatar
               identity={identity.id}
               name={identity.label}
@@ -111,6 +145,9 @@ export function AccountMenu() {
         ) : (
           <UserRound aria-hidden />
         )}
+        <span id={nameId} hidden>
+          {t("shell.accountAria")}
+        </span>
         {identity.spoken && (
           <span className="sr-only" id={spokenId}>
             {identity.spoken}
@@ -123,11 +160,17 @@ export function AccountMenu() {
             identity={identity}
             id={menuId}
             panel={menu}
+            fromEnd={fromEnd}
             onDismiss={dismiss}
             onFocusLost={closeFromLostFocus}
             onShortcuts={() => {
               dismiss();
+              setFromHelp(true);
               setShortcuts("open");
+            }}
+            onAbout={() => {
+              dismiss();
+              setAbout("open");
             }}
           />
         </Suspense>
@@ -139,6 +182,16 @@ export function AccountMenu() {
           <ShortcutsDialog
             open={shortcuts === "open"}
             onClose={() => setShortcuts("closed")}
+            returnFocusTo={() => (fromHelp ? trigger.current : null)}
+          />
+        </Suspense>
+      )}
+      {about !== "unopened" && (
+        <Suspense fallback={null}>
+          <AboutMarginceDialog
+            build={buildRelease()}
+            open={about === "open"}
+            onClose={() => setAbout("closed")}
             returnFocusTo={() => trigger.current}
           />
         </Suspense>

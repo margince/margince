@@ -23,6 +23,12 @@ import (
 // deal status card is the first such caller; this verb exists so its
 // catalog, and an agent's, can say create_task and mean it.
 
+// ProjectLinkRefused is what each verb on the activity create path says of a
+// project link, since the activity store refuses an agent's with this code.
+const ProjectLinkRefused = "A project is REFUSED here (project_filing_needs_approval), because filing there " +
+	"marks commercial correspondence: add it afterwards with relink, which stages an approval that waits " +
+	"for the user's yes before it takes effect."
+
 const followUpSourceDescription = `"A non-task source, including email or message. Caller and assignee need access to the source content. Empty links inherit its visible links; its audience is preserved. This does not accept a request."`
 
 type createTask struct {
@@ -37,6 +43,7 @@ type taskFields struct {
 	Body             *string         `json:"body,omitempty"`
 	DueAt            *string         `json:"due_at,omitempty"`
 	DueHasTime       *bool           `json:"due_has_time,omitempty"`
+	TaskType         *string         `json:"task_type,omitempty"`
 	AssigneeID       *string         `json:"assignee_id,omitempty"`
 	Links            json.RawMessage `json:"links,omitempty"`
 	// Source is the REST door's provenance field. The tool stamps its own and
@@ -48,28 +55,34 @@ type taskFields struct {
 func (t createTask) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "create_task", Title: "Create a task", Version: toolVersionV1,
-		Description:   createTaskCopy.render(),
-		Instead:       createTaskCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		Description:       createTaskCopy.render(),
+		Instead:           createTaskCopy.Instead,
+		RequiredScope:     principal.ScopeWrite, Tier: mcp.TierAutoExecute,
 		Unlisted:  true,
 		OpenAPIOp: "createTask",
 		// Terse on purpose: the listing rides every run under a token ceiling,
 		// and log_activity's schema already explains links and timestamps.
-		InputSchema: schema(`{"type":"object","required":["subject"],"properties":{
-			"subject":{"type":"string"},"body":{"type":"string"},
+		InputSchema: schema(`{"type":"object","required":["subject","body"],"properties":{
+			"subject":{"type":"string"},"body":{"type":"string","description":"Why the task exists, first: who said or did what, on which record, and when. The human reads it as the task's reason."},
 			"source_activity_id":{"type":"string","format":"uuid","description":` + followUpSourceDescription + `},
 			"due_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"due_has_time":{"type":"boolean","description":"True when due_at is an agreed time of day, such as a callback hour; the reminder is then set to it. Leave out for a day."},
+			"task_type":{"type":"string","enum":["reply","reach_out","meet","review","decide","do"],"description":"The work it asks for; it decides the one button the task shows. reply answers a message the way it came in, reach_out contacts someone by email or phone, do is work outside Margince."},
 			"assignee_id":{"type":"string","format":"uuid","description":"Defaults to the human you act for."},
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
-				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false}}},
+				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
+				"description":"Every record the task is about. ` + ProjectLinkRefused + `"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),
 	}
 }
 
 func (t createTask) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	if err := requireTaskReason(in); err != nil {
+		return nil, err
+	}
 	fields, err := TaskAsActivity(in)
 	if err != nil {
 		return nil, err
@@ -83,6 +96,21 @@ func (t createTask) Handle(ctx context.Context, in json.RawMessage) (json.RawMes
 		return nil, err
 	}
 	return readBack(ctx, t.p, ref)
+}
+
+// requireTaskReason refuses an agent's task that says no why. Its reader was
+// not there, so the reason is the part of it they need.
+func requireTaskReason(in json.RawMessage) error {
+	var args struct {
+		Body *string `json:"body"`
+	}
+	if err := json.Unmarshal(in, &args); err != nil {
+		return &BadArgsError{Cause: err}
+	}
+	if args.Body == nil || strings.TrimSpace(*args.Body) == "" {
+		return &BadArgsError{Cause: errors.New("body is required: say why the task exists, naming who said or did what and on which record")}
+	}
+	return nil
 }
 
 // TaskAsActivity is the fold: the verb's arguments as the activity body, with
@@ -110,6 +138,9 @@ func TaskAsActivity(in json.RawMessage) (json.RawMessage, error) {
 	}
 	if args.DueHasTime != nil {
 		body["due_has_time"] = *args.DueHasTime
+	}
+	if args.TaskType != nil {
+		body["task_type"] = *args.TaskType
 	}
 	if args.AssigneeID != nil {
 		body["assignee_id"] = *args.AssigneeID

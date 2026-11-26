@@ -1,13 +1,15 @@
 import type { paths } from "@composition/schema";
 import createClient from "openapi-fetch";
+import { effectiveDisplayLocale } from "../i18n/locale";
 import {
   ConnectivityError,
   connectivityNow,
   reportReached,
   reportUnreached,
 } from "../lib/connectivity";
-import { readStored, STORAGE_KEYS } from "../lib/storage";
+import { EmptySuccessError } from "../lib/problem";
 import { beginModelCall, endModelCall } from "./model-inflight";
+import { withRequestReference } from "./requestreference";
 
 // The ONE API seam (architecture/01: the frontend depends on the generated
 // contract, never Go internals). Types come from src/api/schema.d.ts —
@@ -29,14 +31,6 @@ import { beginModelCall, endModelCall } from "./model-inflight";
 // One installation serves one company (ADR-0061): the server
 // resolves its singleton company itself — the client sends no tenant
 // selector, only the session cookie.
-
-// The reader's language, read from where the shell stores it. Sent on every
-// request as Accept-Language so a server-side writer — the model-written
-// briefs — answers in the language the reader is reading, rather than making
-// them translate a summary they asked for.
-function readerLanguage(): string | undefined {
-  return readStored(STORAGE_KEYS.locale) ?? undefined;
-}
 
 // How long a request may stay open before this client stops waiting for it.
 //
@@ -170,12 +164,11 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
   }, timeoutMs);
   // Read as the request leaves: a device offline then sent nothing at all.
   const unsent = connectivityNow() === "offline";
+  let response: Response;
   try {
-    const response = await globalThis.fetch(request, {
+    response = await globalThis.fetch(request, {
       signal: deadline.signal,
     });
-    reportAnswer(response, request);
-    return withGatewayProblem(response, request);
   } catch (failure) {
     throw reportFailure(failure, request, deadline.signal, unsent);
   } finally {
@@ -183,6 +176,23 @@ async function fetchWithDeadline(request: Request): Promise<Response> {
     // from holding the page awake, and — on a request that failed for its own
     // reasons — from aborting a controller nobody is listening to any more.
     globalThis.clearTimeout(expiry);
+  }
+  reportAnswer(response, request);
+  refuseForeignReadAnswer(response, request);
+  return withRequestReference(withGatewayProblem(response, request));
+}
+
+// The success statuses no read in the contract answers with; client.test.ts
+// derives that from crm.yaml. A read answered with one heard an intermediary.
+const NO_READ_ANSWERS = new Set([202, 205]);
+
+// An intermediary can answer a read with a challenge, such as a bodiless 202.
+// openapi-fetch reads that as no data and no error, so it is refused here.
+// It runs after the request's try block: the connection answered, so this is
+// no outage.
+function refuseForeignReadAnswer(response: Response, request: Request): void {
+  if (request.method === "GET" && NO_READ_ANSWERS.has(response.status)) {
+    throw new EmptySuccessError(response.status);
   }
 }
 
@@ -260,8 +270,11 @@ const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
   "POST /deals/{id}/role-proposals": "always",
   "POST /filters/propose": "always",
   "POST /activities/{id}/reader-rendering": "on-miss",
+  "POST /rewrites": "always",
   "POST /analytics/assessment": "on-miss",
   "POST /analytics/setup-proposal": "always",
+  "POST /analytics/progress/summary": "on-miss",
+  "POST /analytics/sales-goals/{owner_id}/{year}/proposed-months": "always",
   "POST /knowledge/corpora/{id}/ask": "always",
   "POST /leads/{id}/draft-email": "always",
   "POST /offers/{id}/regenerate": "always",
@@ -401,9 +414,9 @@ export const api = createClient<paths>({
   credentials: "include",
   // resolve the CURRENT global fetch per call (test stubs, SW interception)
   fetch: (request) => {
-    const language = readerLanguage();
-    if (language && !request.headers.has("Accept-Language")) {
-      request.headers.set("Accept-Language", language);
+    const language = effectiveDisplayLocale();
+    if (language && !request.headers.has("X-Margince-Display-Locale")) {
+      request.headers.set("X-Margince-Display-Locale", language);
     }
     // The chrome learns the agent is working HERE, where it is already known,
     // rather than on the next poll of the activity feed seconds later.

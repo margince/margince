@@ -26,7 +26,7 @@ BASELINE="${CLOCK_DRIFT_BASELINE:-${RUNNER_TEMP:-${TMPDIR:-/tmp}}/clock-drift-ba
 SHORTFALL_TOLERANCE_SECONDS=600
 
 usage() {
-	echo "usage: $0 move <days> | assert <days> | restore <days>" >&2
+	echo "usage: $0 move <days> | assert <days> | restore <days> | run <days> <slice>" >&2
 	exit 2
 }
 
@@ -72,11 +72,10 @@ move() {
 	local days real
 	days=$(days "$1")
 	real=$(date -u +%s)
+	# Record recovery before mutation: an interrupted move must still restore.
+	printf '%s\n' "$real" >"$BASELINE"
 	sudo timedatectl set-ntp false
 	sudo date -s "+${days} days" >/dev/null
-	# Written only once the jump has taken, so the file's EXISTENCE is the
-	# evidence that there is something to undo.
-	printf '%s\n' "$real" >"$BASELINE"
 	assert "$days"
 }
 
@@ -110,29 +109,82 @@ assert() {
 # leave the machine however long the suite took in the past. It re-proves the
 # shift first: a baseline can outlive a jump a time service undid, and
 # subtracting from a clock nobody moved poisons the runner from the other side.
+#
+# Each failure returns its own status: run from an exit trap, a bare `return`
+# reports the status from before the trap in bash 5.
 restore() {
 	local days short
 	days=$(days "$1")
 	if [[ ! -r "$BASELINE" ]]; then
 		echo "clock-drift-host: no baseline, so the clock was never moved — leaving it where it is."
-		sudo timedatectl set-ntp true
+		sudo timedatectl set-ntp true || return $?
 		return 0
 	fi
-	short=$(shortfall "$days")
-	rm -f "$BASELINE"
+	short=$(shortfall "$days") || return $?
 	if [[ "$short" -gt "$SHORTFALL_TOLERANCE_SECONDS" ]]; then
 		echo "clock-drift-host: the clock is already back (${short}s short of the offset) — leaving it alone."
-		sudo timedatectl set-ntp true
+		sudo timedatectl set-ntp true || return $?
+		rm -f "$BASELINE" || return $?
 		return 0
 	fi
-	sudo date -s "-${days} days" >/dev/null
-	sudo timedatectl set-ntp true
+	sudo date -s "-${days} days" >/dev/null || return $?
+	sudo timedatectl set-ntp true || return $?
+	rm -f "$BASELINE" || return $?
 	echo "clock-drift-host: clock restored, time sync back on."
+}
+
+# The runner's TLS credentials also expire at the shifted date. Restore in the
+# same shell, before returning control to its agent, even on failure or a hang.
+finish_run() {
+	local status="$1" offset="$2"
+	trap - EXIT INT TERM
+	if ! restore "$offset"; then
+		echo "clock-drift-host: restoration failed; recovery baseline retained." >&2
+		[[ "$status" -ne 0 ]] || status=1
+	fi
+	exit "$status"
+}
+
+# The most one slice may run at the moved clock. Each slice is its own job, and
+# a runner whose clock is moved stops renewing its job lock: the first renewal
+# that fails retries only until the lock's expiry plus five minutes, read
+# against the moved local clock, which is already 200 days past. Runs that kept
+# the clock moved were dropped about an hour after the job started, so a slice
+# and its setup stay well inside that.
+SLICE_BUDGET=30m
+
+# run_shifted runs ONE slice at the moved clock and puts the clock back.
+run_shifted() {
+	local offset="$1" slice="$2" status=0 window
+	offset=$(days "$offset")
+	export BACKEND_CLOCK_SKEW="machine:$offset"
+	command -v timeout >/dev/null || { echo "clock-drift-host: GNU timeout is required." >&2; exit 1; }
+	# Checked before the jump, so a misspelt slice moves no clock.
+	if ! grep -Fxq -- "$slice" <<<"$(./scripts/backend-clock-drift.sh slices)"; then
+		echo "clock-drift-host: $slice is not a suite slice; see scripts/backend-clock-drift.sh slices." >&2
+		exit 2
+	fi
+	# Expanded now: offset is local and already validated as digits, and a
+	# newer bash drops a function's locals before it runs an exit trap.
+	trap "finish_run \"\$?\" $offset" EXIT
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
+	move "$offset"
+	# A relative timer survives wall-clock changes.
+	BACKEND_CLOCK_SLICE="$slice" timeout --signal=TERM --kill-after=30s "$SLICE_BUDGET" make backend-clock-drift || status=$?
+	# Read before the restore: the shortfall is negative by the time the slice ran.
+	window=$((-$(shortfall "$offset")))
+	echo "clock-drift-host: slice ${slice} ran ${window}s at the moved clock."
+	if [[ "$status" -eq 124 ]]; then
+		echo "clock-drift-host: slice ${slice} exceeded its ${SLICE_BUDGET} shifted-clock budget; it gave no verdict." >&2
+	fi
+	exit "$status"
 }
 
 case "${1:-}" in
 move) [[ $# -eq 2 ]] || usage; move "$2" ;;
 assert) [[ $# -eq 2 ]] || usage; assert "$2" ;;
 restore) [[ $# -eq 2 ]] || usage; restore "$2" ;;
+run) [[ $# -eq 3 ]] || usage; run_shifted "$2" "$3" ;;
 *) usage ;;
 esac

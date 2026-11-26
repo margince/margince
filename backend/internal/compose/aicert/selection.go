@@ -62,19 +62,32 @@ func ladderForTask(role string, binding ai.ProviderConfig, profile ai.Profile, t
 			role, binding.Provider, binding.Model, profile, err,
 		)
 	}
-	// The embed lane is bound to the same model because the ROUTER requires one,
-	// not because certification embeds anything: this lane drives chat tasks and
-	// never calls it. The retired routing file carried an embeddings binding for
-	// the same structural reason and it went equally unexercised. It reaches no
-	// record — buildRecord takes the profile, not the config.
-	cfg := ai.RoutingConfig{
+	doc := ladderDocument(binding, profile, tiers)
+	// Finalized as a stored document is, so the lanes' hosts and pins resolve
+	// from the providers block as they do in production. Keys come from the
+	// environment, because a binding names providers and never credentials.
+	cfg, err := ai.FromStored(doc, config.FromOS)
+	if err != nil {
+		return ai.RoutingConfig{}, fmt.Errorf("aicert: the %s binding %s:%s under profile %s: %w",
+			role, binding.Provider, binding.Model, profile, err)
+	}
+	return cfg, nil
+}
+
+// ladderDocument is the routing a run certifies, written like the shipped
+// presets. The host and pins sit once in the providers block, and no lane
+// repeats them.
+//
+// The embed lane is bound to the same model because the router requires one,
+// not because certification embeds anything. It carries the provider and model
+// only: a chat tier's input, thinking level and sort are refused on that lane.
+func ladderDocument(binding ai.ProviderConfig, profile ai.Profile, tiers map[ai.Tier]ai.ProviderConfig) ai.RoutingConfig {
+	embeddings := ai.ProviderConfig{Provider: binding.Provider, Model: binding.Model, Location: binding.Location}
+	return ai.StoredShape(ai.RoutingConfig{
 		Profile:    profile,
 		Tiers:      tiers,
-		Embeddings: ai.EmbeddingsConfig{ProviderConfig: binding},
-	}
-	// The keys come from the environment exactly as the retired routing file's
-	// did: a binding names providers and never their credentials.
-	return cfg.WithKeys(config.FromOS), nil
+		Embeddings: ai.EmbeddingsConfig{ProviderConfig: embeddings},
+	})
 }
 
 // groupByTask buckets scenarios by their Task field, keeping only tasks

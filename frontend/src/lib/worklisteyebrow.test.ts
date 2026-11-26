@@ -39,6 +39,15 @@ describe("the word above a queue row", () => {
     ).toBe("worklist.signal.closing_soon");
   });
 
+  it("calls an invitation an invitation, not a waiting customer", () => {
+    const invite = row({
+      source: "customer_waiting",
+      category: "customer_waiting",
+      email_summary: { calendar_invitation: { response: "needs_action" } },
+    } as Partial<WorklistItem>);
+    expect(eyebrowKeyFor(invite)).toBe("email.invitation.badge");
+  });
+
   it("keeps the category on every other row", () => {
     expect(eyebrowKeyFor(row({ category: "customer_waiting" }))).toBe(
       "worklist.category.customer_waiting",

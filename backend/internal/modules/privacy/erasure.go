@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -48,9 +49,9 @@ const evidenceKeyRetentionAction = "retention_action"
 // once so the tombstones a supervisory authority reads use one vocabulary.
 const (
 	evidenceKeyCause = "cause"
-	// The four causes a collateral tombstone can carry. An Art. 17 erasure of
-	// a subject; a retention sweep clearing a record on its own schedule; a
-	// controller ending a restriction; hidden noise mail destroyed.
+	// The causes a collateral tombstone can carry: an Art. 17 erasure, a
+	// retention sweep on its own schedule, a controller ending a restriction,
+	// hidden noise mail destroyed, and a controller's archive review.
 	causeContactErasure = "contact_erasure"
 	causeRetention      = "retention"
 	// causeControllerRelease is the third: a restriction a controller ended by
@@ -60,9 +61,12 @@ const (
 	causeControllerRelease = "controller_release"
 	// causeNoiseDisposition is the capture sweep destroying hidden noise mail.
 	causeNoiseDisposition = "noise_disposition"
-	evidenceKeyClass      = "class"
-	evidenceKeyBasis      = "basis"
-	evidenceKeyReason     = "reason"
+	// causeArchiveReview is a controller deleting archived records that no
+	// longer serve the archive's purpose.
+	causeArchiveReview = "archive_review"
+	evidenceKeyClass   = "class"
+	evidenceKeyBasis   = "basis"
+	evidenceKeyReason  = "reason"
 )
 
 // EraseContact removes the subject's PII in ONE transaction: contact row
@@ -88,17 +92,23 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 // A replay of "dsr:<id>" runs the cascade again, which is idempotent and
 // erases what was written since. It certifies once: the first tombstone stays
 // the only one, and its account is the answer.
+func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erasureaccount.Account, error) {
+	return e.runContactErasure(ctx, contactID, reason, nil)
+}
+
+// runContactErasure runs the cascade. keep, when set, can refuse it before
+// anything is destroyed.
 //
 //nolint:gocognit,cyclop // the rename added no branch: this body is what it was under the old noun.
-func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erased erasureaccount.Account, err error) {
+func (e *Eraser) runContactErasure(ctx context.Context, contactID ids.UUID, reason string, keep erasureKeep) (erased erasureaccount.Account, err error) {
+	ctx = originalstore.Bind(corefeatures.RetainedDataContext(ctx), e.db, e.blob)
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return erasureaccount.Account{}, err
 	}
-	ctx = originalstore.Bind(ctx, e.db, e.blob)
 	subject := ids.From[ids.ContactKind](contactID)
 	err = e.withPreparedOriginalErasure(ctx, subject, func(raw pgx.Tx, prepared originalMatches) error {
 		tx := newTallyTx(raw)
-		floor, err := e.erasableUnderFloor(ctx, tx, subject)
+		floor, err := e.admitErasure(ctx, tx, subject, keep)
 		if err != nil {
 			return err
 		}
@@ -150,7 +160,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		// hold the subject's address and the body before any activity exists, so
 		// nothing above this line can reach them — and a scheduled one would
 		// otherwise fire the morning after this erasure certified the data destroyed.
-		if err := redactUnsentMessages(ctx, tx, reason, subject, leadsWiped, emails, e.payloads); err != nil {
+		if err := redactUnsentMessages(ctx, tx, reason, subject, leadsWiped, emails); err != nil {
 			return err
 		}
 		// And the ones nobody has DECIDED yet, one step earlier in the same life
@@ -173,17 +183,16 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		}
 		// Where the subject's name stands inside somebody else's working record:
 		// an automation's run, a colleague's voice sample or weekly plan
-		// (erasure_commitments.go).
+		// (erasure_declared.go).
 		if err := e.redactWorkingRecords(ctx, tx, subject, keys); err != nil {
 			return err
 		}
 		if err := e.flagManualSubjectMentions(ctx, tx, subject, keys); err != nil {
 			return err
 		}
-		// Purge the subject's attachment bytes and rows together, inside the
-		// transaction (objects first). A failure here — including a
-		// misconfigured store — rolls the whole erasure back, so it stays
-		// retryable and never commits a half-erasure.
+		// Delete the subject's attachment rows and queue their objects for the
+		// stored-object reap, both inside the transaction. A failure here,
+		// including no configured store, rolls the whole erasure back.
 		if err := e.eraseAttachments(ctx, tx, reason, causeContactErasure, subjectAttachmentsWhere, subject, floorCurrent, floorCarried); err != nil {
 			return err
 		}
@@ -195,7 +204,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err != nil {
 			return err
 		}
-		if err := e.scrubDeliveryCopies(ctx, tx, subject, leadsWiped); err != nil {
+		if err := e.scrubCopiesOutsideCore(ctx, tx, subject, reason, leadsWiped, activitiesRedacted); err != nil {
 			return err
 		}
 		erased, err = certifyErasure(ctx, tx, subject, reason, identities, tx.uncounted(), contactErasureCounts{
@@ -306,10 +315,7 @@ func anonymizeSubjectRows(
 		contactID).Scan(&keptHashes, &keptKey); err != nil {
 		return nil, fmt.Errorf("privacy: reading the anonymized address hashes: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO erasure_suppression (kind, value_hash, key_id)
-		SELECT 'email', kept, $2 FROM unnest($1::text[]) AS kept
-		ON CONFLICT DO NOTHING`, keptHashes, keptKey); err != nil {
+	if err := armSuppression(ctx, tx, "email", keptHashes, keptKey); err != nil {
 		return nil, fmt.Errorf("privacy: keeping the anonymized addresses on the erasure list: %w", err)
 	}
 	// Only a row that still holds something is written. An already-anonymised
@@ -323,6 +329,7 @@ func anonymizeSubjectRows(
 		       OR address_line1 IS NOT NULL OR address_line2 IS NOT NULL OR address_city IS NOT NULL
 		       OR address_region IS NOT NULL OR address_postal_code IS NOT NULL
 		       OR address_country IS NOT NULL OR source_author_name IS NOT NULL
+		       OR greeting_register IS NOT NULL
 		       OR anonymized_address_hashes IS NOT NULL OR archived_at IS NULL%s
 		  FROM contact WHERE id = $1`, anyColumnHeld(contactCustom)), contactID, erasedName).Scan(&holds); err != nil {
 		return nil, err
@@ -333,7 +340,8 @@ func anonymizeSubjectRows(
 		  title = NULL, photo_object_key = NULL, photo_origin = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
-		  source_author_name = NULL, anonymized_address_hashes = NULL, anonymized_address_key_id = NULL,
+		  source_author_name = NULL, greeting_register = NULL,
+		  anonymized_address_hashes = NULL, anonymized_address_key_id = NULL,
 		  archived_at = coalesce(archived_at, now())%s
 		WHERE id = $1`, nullColumnAssignments(contactCustom)), contactID, erasedName); err != nil {
 			return nil, err
@@ -365,7 +373,7 @@ func anonymizeSubjectRows(
 	if _, err := tx.Exec(ctx, `DELETE FROM privacy_notice_case WHERE contact_id = $1`, contactID); err != nil {
 		return nil, fmt.Errorf("privacy: destroying the subject's notice cases: %w", err)
 	}
-	wiped, err := anonymizeLeadTwins(ctx, tx, contactID, emails)
+	wiped, err := wipeTwinsAndOriginals(ctx, tx, contactID, emails)
 	if err != nil {
 		return nil, err
 	}
@@ -386,9 +394,7 @@ func anonymizeSubjectRows(
 }
 
 // purgeContactDerivedRows deletes what the system DERIVED about the subject and
-// keyed on their contact id.
-//
-// The five tables share a posture that makes them one step rather than five:
+// keyed on their contact id. The five tables share a posture that makes them one step rather than five:
 // none is anonymizable. An embedding is an opaque vector of the text, a
 // provenance row says where a now-erased field came from, an enrichment row
 // holds the subject's title and employer with the verbatim sentence it was
@@ -418,6 +424,9 @@ func purgeContactDerivedRows(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM ai_feedback WHERE subject_type = 'contact' AND subject_id = $1`, contactID); err != nil {
+		return err
+	}
+	if err := deleteSubjectRecordLinks(ctx, tx, contactID.UUID); err != nil {
 		return err
 	}
 	return purgeProvidedValues(ctx, tx, subjects)

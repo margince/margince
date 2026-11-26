@@ -60,6 +60,7 @@ func setupRecency(t *testing.T) *recencyEnv {
 	if err := testdb.EnsureSchema(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
+	emptyDatabase(t)
 	e := &recencyEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7()}
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)
@@ -109,7 +110,7 @@ func (e *recencyEnv) seedQuietDeal(t *testing.T, buyerSpoke time.Time) ids.UUID 
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`,
 		stage, pipeline)
 	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'Quiet renewal', 'open', $2, $3, $4, 'seed', 'system')`,
+		VALUES ($1, 'Quiet renewal', 'open', $2, $3, $4, 'manual', 'system')`,
 		deal, e.rep, pipeline, stage)
 
 	buyer := ids.NewV7()

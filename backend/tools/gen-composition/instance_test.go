@@ -77,7 +77,7 @@ func TestSameCommitMatchesAFullHashWithAPseudoVersionsRevision(t *testing.T) {
 func writeInstanceGoMod(t *testing.T, body string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "go.mod")
-	if err := os.WriteFile(path, []byte("module example.com/acme\n\ngo 1.27.3\n\n"+body), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("module example.com/acme\n\ngo 1.27.4\n\n"+body), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	return path
@@ -112,7 +112,7 @@ func TestCoreModulesAreNeverExtensions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(units) != 1 || units[0].name != "notes" {
+	if len(units) != 1 || units[0].Name != "notes" {
 		t.Fatalf("units = %+v, want only notes: core's own modules required directly are not extensions", units)
 	}
 }

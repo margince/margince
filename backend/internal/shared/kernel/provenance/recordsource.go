@@ -3,7 +3,10 @@
 
 package provenance
 
-import "slices"
+import (
+	"slices"
+	"strings"
+)
 
 // RecordSourceManual is the one spelling a record carries when someone using
 // this product wrote it — through a form or through an assistant, which are the
@@ -11,7 +14,74 @@ import "slices"
 // passport's answer, and who walked through it is captured_by's.
 //
 // Held by: TestNoGoSourceLiteralSpellsARetiredWord (backend/gates/recordsourcespelling_test.go)
-const RecordSourceManual = "manual"
+const RecordSourceManual RecordSource = "manual"
+
+// RecordSource names the channel constants as one set for the schema gates. It
+// is an alias, so a channel is a plain string wherever a source is written.
+type RecordSource = string
+
+// The other channels a record arrives by. Which system and which id inside it
+// are source_system and source_id's to say, never this column's.
+//
+// Held by: TestTheRecordSourceVocabularyIsTheCatalogsCheck (backend/gates/recordsourcevocabulary_test.go)
+const (
+	// RecordSourceImport is a record loaded from another system's export or feed.
+	RecordSourceImport RecordSource = "import"
+	// RecordSourceCapture is a record read out of a connected mailbox, calendar or chat.
+	RecordSourceCapture RecordSource = "capture"
+	// RecordSourceAPI is a record an integration wrote through the public API.
+	RecordSourceAPI RecordSource = "api"
+	// RecordSourceAutomation is a record the product's own rules or agents opened.
+	RecordSourceAutomation RecordSource = "automation"
+	// RecordSourceWebform is a record a visitor's website form submitted.
+	RecordSourceWebform RecordSource = "webform"
+)
+
+var recordSources = []string{
+	RecordSourceAPI, RecordSourceAutomation, RecordSourceCapture,
+	RecordSourceImport, RecordSourceManual, RecordSourceWebform,
+}
+
+// RecordSources lists the channels a constrained record table accepts, sorted.
+func RecordSources() []string { return slices.Clone(recordSources) }
+
+// RecordSourceError refuses a source outside the list on a create wire. It is
+// caller-fixable, so every surface answers it as a 422 naming the field.
+type RecordSourceError struct {
+	// ChannelOnly marks a wire that takes no source_system and no source_id,
+	// so the message does not send the caller to fields it cannot set.
+	ChannelOnly bool
+}
+
+func (e *RecordSourceError) Error() string {
+	listed := "source must be one of " + strings.Join(recordSources, ", ")
+	if e.ChannelOnly {
+		return listed + "; send manual for a member and api for an integration"
+	}
+	return listed + "; name the other system in source_system and its id in source_id"
+}
+
+// FieldFault states the refusal for the HTTP mapper and the tool surface alike.
+func (e *RecordSourceError) FieldFault() (field, code, message string) {
+	return "source", "invalid_source", e.Error()
+}
+
+// AdmitRecordChannel is AdmitRecordSource for a wire that carries the channel
+// alone, such as a signal's.
+func AdmitRecordChannel(source string) error {
+	if !slices.Contains(recordSources, source) {
+		return &RecordSourceError{ChannelOnly: true}
+	}
+	return nil
+}
+
+// AdmitRecordSource refuses a source the record tables' CHECK would refuse.
+func AdmitRecordSource(source string) error {
+	if !slices.Contains(recordSources, source) {
+		return &RecordSourceError{}
+	}
+	return nil
+}
 
 // retiredRecordSourceSpellings are refused as a record's source: `ui` names a
 // screen and `mcp` a transport, and neither names an origin, which is the one
@@ -24,4 +94,17 @@ var retiredRecordSourceSpellings = []string{"mcp", "ui"}
 // than two copies that drift.
 func RetiredRecordSourceSpellings() []string {
 	return slices.Clone(retiredRecordSourceSpellings)
+}
+
+// ListedRecordSourceSQL is the test the record tables' CHECK makes, as a SQL
+// expression over column. column is a compile-time SQL expression.
+func ListedRecordSourceSQL(column string) string {
+	return column + " IN ('" + strings.Join(recordSources, "', '") + "')"
+}
+
+// LegacyRecordSourceChannelSQL names the channel of a source written before
+// the list was fixed, through the database's own mapping. column is a
+// compile-time SQL expression.
+func LegacyRecordSourceChannelSQL(column string) string {
+	return "record_source_channel(" + column + ")"
 }

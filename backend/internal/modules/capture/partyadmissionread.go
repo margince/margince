@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -53,15 +54,33 @@ func partyAdmissionOwner(ctx context.Context, tx pgx.Tx, activity ids.ActivityID
 	return owners[0], nil
 }
 
+// meetingPartyEligibleSQL holds a party row to what a calendar said: some seat
+// whose roster lists it attended. A row a member relinked keeps its seats for
+// the answers. Its contact is the member's choice, so it is no evidence.
 func meetingPartyEligibleSQL(activity, party string) string {
+	return meetingPartySaidSQL(party) + `
+ AND EXISTS (SELECT 1 FROM unnest(` + storekit.RosterSeatsSQL(party) + `) AS listing(seat) WHERE ` + rosterSeatAttendedSQL(activity, "listing.seat") + `)`
+}
+
+// meetingPartyListedBySQL is meetingPartyEligibleSQL for the roster of one seat.
+func meetingPartyListedBySQL(activity, party, seat string) string {
+	return meetingPartySaidSQL(party) + ` AND ` + storekit.RosterListsSQL(party, seat) + ` AND ` + rosterSeatAttendedSQL(activity, seat)
+}
+
+func meetingPartySaidSQL(party string) string {
 	return party + `.role IN ('attendee','organizer') AND coalesce(` + party + `.response,'')<>'declined'
- AND NOT ` + party + `.past_party_cap AND ` + party + `.roster_seat IS NOT NULL
- AND EXISTS (SELECT 1 FROM activity_participant owner
- WHERE owner.activity_id=` + activity + `.id AND owner.roster_seat=` + party + `.roster_seat
- AND owner.user_id=` + party + `.roster_seat AND NOT owner.past_party_cap
+ AND NOT ` + party + `.past_party_cap AND ` + party + `.relinked_at IS NULL`
+}
+
+// rosterSeatAttendedSQL holds when seat organized or accepted the meeting on
+// its own calendar, and did not keep that calendar's copy private.
+func rosterSeatAttendedSQL(activity, seat string) string {
+	return `EXISTS (SELECT 1 FROM activity_participant owner
+ WHERE owner.activity_id=` + activity + `.id AND ` + storekit.RosterListsSQL("owner", seat) + `
+ AND owner.user_id=` + seat + ` AND NOT owner.past_party_cap
  AND ` + auth.ParticipantStandsSQL("owner", activity) + `
  AND (owner.role='organizer' OR owner.response='accepted'))
- AND NOT EXISTS(SELECT 1 FROM capture_party_source private_source WHERE private_source.activity_id=` + activity + `.id AND private_source.user_id=` + party + `.roster_seat AND private_source.admission_blocked)`
+ AND NOT EXISTS(SELECT 1 FROM capture_party_source private_source WHERE private_source.activity_id=` + activity + `.id AND private_source.user_id=` + seat + ` AND private_source.admission_blocked)`
 }
 
 func eligibleAdmissionPartiesTx(ctx context.Context, tx pgx.Tx, activity ids.ActivityID, source partySource, includeResolved bool) ([]admissionParty, error) {
@@ -84,8 +103,8 @@ func eligibleAdmissionPartiesTx(ctx context.Context, tx pgx.Tx, activity ids.Act
  AND ps.provider=` + providerArg + ` AND ps.sent_by_owner AND lower(p.address)=ANY(ps.recipients))
  OR (` + governedArg + `::boolean AND EXISTS (SELECT 1 FROM comms_outbound delivery
  WHERE delivery.activity_id=a.id AND delivery.user_id=` + userArg + ` AND ` + sentUserMailSQL("delivery") + ` AND EXISTS (SELECT 1 FROM jsonb_array_elements_text(delivery.recipients || delivery.cc) recipient(address) WHERE lower(recipient.address)=lower(p.address))))))
- OR (a.kind='meeting' AND p.roster_seat=` + userArg + `
- AND coalesce(a.meeting_status,'') NOT IN ('no_show','canceled') AND ` + meetingPartyEligibleSQL("a", "p") + `))
+ OR (a.kind='meeting'
+ AND coalesce(a.meeting_status,'') NOT IN ('no_show','canceled') AND ` + meetingPartyListedBySQL("a", "p", userArg) + `))
  ORDER BY 1,2`
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {

@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { sourceFileAt } from "../../scripts/lib/source-tree";
+import { stable } from "../format/collate";
 import { en } from "../i18n/en";
 import { undoRefusalKey, undoRefusalsNamed } from "./historyundo";
 
@@ -65,7 +66,7 @@ describe("undo refusals", () => {
   it("has a sentence for every refusal the server can return", () => {
     const wordless = refusalsInContract()
       .filter((reason) => undoRefusalKey(reason) === undefined)
-      .sort();
+      .sort(stable);
     expect(
       wordless,
       `refusals with no sentence: ${wordless.join(", ")}`,
@@ -79,7 +80,7 @@ describe("undo refusals", () => {
     const declared = new Set(refusalsInContract());
     const orphans = undoRefusalsNamed()
       .filter((reason) => !declared.has(reason))
-      .sort();
+      .sort(stable);
     expect(
       orphans,
       `sentences for unnamed refusals: ${orphans.join(", ")}`,

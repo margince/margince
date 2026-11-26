@@ -23,5 +23,5 @@ func memberIdentitySetSQL(position int) string {
 }
 
 func memberAuthorshipSQL(alias string, memberPosition int, arg func(any) int) string {
-	return fmt.Sprintf(`EXISTS (SELECT 1 FROM (%s) author_identity WHERE %s.captured_by LIKE $%d || author_identity.id::text)`, memberIdentitySQL(memberPosition), alias, arg("%:"))
+	return fmt.Sprintf(`%s.captured_by LIKE ANY (ARRAY(SELECT $%d || author_identity.id::text FROM (%s) author_identity))`, alias, arg("%:"), memberIdentitySQL(memberPosition))
 }

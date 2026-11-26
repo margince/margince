@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -45,7 +46,8 @@ func dealWithHiddenCompany(t *testing.T, e *Env) (collections.CreateListInput, i
 	companyID := ids.From[ids.CompanyKind](company)
 	// Created by the capturer, the one seat that may name the company.
 	deal, err := e.Deals.CreateDeal(e.As(e.Rep1, []ids.UUID{e.Team1}, dealListPerms()), deals.CreateDealInput{
-		Name: "Deal on a hidden account", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
+		Source: "manual",
+		Name:   "Deal on a hidden account", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -170,7 +172,7 @@ func TestErasureTakesEveryAnonymizedLeadOffItsShortlists(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), ids.UUID(subject.Id), "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), ids.UUID(subject.Id), "test"); err != nil {
 		t.Fatalf("erase: %v", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM list_member WHERE entity_id = $1`, leadID); n != 0 {

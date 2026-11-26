@@ -3,7 +3,11 @@
 
 package ai
 
-import "time"
+import (
+	"time"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+)
 
 // Lane is what a model is FOR: the chat tiers, or the embeddings lane. It rides
 // the price sheet because the priced row is the one that must exist for a model
@@ -158,7 +162,7 @@ type DayCost struct {
 // effective is the day every seeded row's effective_date carries — the
 // caller's "as of" anchor (typically the day the seed runs).
 func SeedModelRates(effective time.Time) []ModelRate {
-	day := effective.UTC().Truncate(24 * time.Hour)
+	day := storekit.AsDate(effective)
 	rates := vendorSheetRates(day)
 	rates = append(rates, brokerSheetRates(day)...)
 	return append(rates, localZeroRates(day)...)
@@ -223,6 +227,10 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// uses — Anthropic prices per model family regardless of snapshot
 		// date, so the undated family's sheet price applies verbatim.
 		rateOn(day, providerAnthropic, "claude-haiku-4-5-20251001", 1_000_000, 5_000_000, 100_000, 1_250_000),
+		// The 5.5 family, per Anthropic's pricing page: Haiku bills a prompt over 100k at the upper band.
+		rateOn(day, providerAnthropic, "claude-sonnet-5-5", 2_000_000, 10_000_000, 100_000, 2_500_000),
+		withLongContext(rateOn(day, providerAnthropic, "claude-haiku-5-5", 100_000, 500_000, 10_000, 125_000),
+			100_000, 500_000, 2_500_000, 50_000, 625_000),
 
 		// Gemini: cache read = 0.1x input; Gemini's implicit context caching
 		// carries no separate write charge. Prices are
@@ -237,7 +245,11 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// 3.6-flash is priced at half the 3.5 rate through 2026-12-31 and at the 3.5
 		// rate from 2027-01-01; the step is an effective-dated row an operator adds.
 		rateOn(day, providerGemini, "gemini-3.6-flash", 750_000, 3_750_000, 75_000, 0),
+		// 3.8-flash follows the same step: half rate through 2026-12-31, then
+		// $1.50/$7.50 with a $0.15 cache read; the step is an operator's row too.
+		rateOn(day, providerGemini, "gemini-3.8-flash", 750_000, 3_750_000, 75_000, 0),
 		rateOn(day, providerGemini, "gemini-3.1-flash-lite", 250_000, 1_500_000, 25_000, 0),
+		rateOn(day, providerGemini, "gemini-3.5-flash-lite", 300_000, 2_500_000, 30_000, 0),
 		// gemini-3.1-pro-preview is the example file's frontier binding. It is
 		// the only Gemini model here whose rate varies with prompt size
 		// (verified 2026-08-12). It costs $2.00/$12.00 per MTok up to 200k
@@ -272,7 +284,9 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// OPERATOR CONFIRMATION against the Vertex sheet for the bound location.
 		rateOn(day, providerGeminiVertex, "gemini-3.5-flash", 1_500_000, 9_000_000, 150_000, 0),
 		rateOn(day, providerGeminiVertex, "gemini-3.6-flash", 750_000, 3_750_000, 75_000, 0),
+		rateOn(day, providerGeminiVertex, "gemini-3.8-flash", 750_000, 3_750_000, 75_000, 0),
 		rateOn(day, providerGeminiVertex, "gemini-3.1-flash-lite", 250_000, 1_500_000, 25_000, 0),
+		rateOn(day, providerGeminiVertex, "gemini-3.5-flash-lite", 300_000, 2_500_000, 30_000, 0),
 		withLongContext(rateOn(day, providerGeminiVertex, "gemini-3.1-pro-preview", 2_000_000, 12_000_000, 200_000, 0),
 			200_000, 4_000_000, 18_000_000, 400_000, 0),
 		embedOn(day, providerGeminiVertex, "gemini-embedding-001", 150_000),
@@ -282,6 +296,8 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// it carries the same row until a release is priced apart.
 		decideOn(day, providerJev, "jev-1.13.0", 42_000),
 		decideOn(day, providerJev, "jev-latest", 42_000),
+		// Google's Decisions API page, read 2026-11-14: $0.10 per MTok input, output free.
+		decideOn(day, providerGeminiDecision, geminiDecisionModel, 100_000),
 	}
 }
 

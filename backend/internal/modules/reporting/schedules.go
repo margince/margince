@@ -61,7 +61,13 @@ func (s *Service) reportRevision(ctx context.Context, tx pgx.Tx, report crmcontr
 	if revision < 1 || revision > report.Revision {
 		return crmcontracts.ReportingSelection{}, 0, apperrors.ErrNotFound
 	}
-	return s.revisionSelection(ctx, tx, ids.UUID(report.Id), revision)
+	selection, framework, err := s.revisionSelection(ctx, tx, ids.UUID(report.Id), revision)
+	// Only a drafted report's first revision holds no metric, and nothing is
+	// evaluated, scheduled or frozen from it.
+	if err == nil && len(selection.Metrics) == 0 {
+		return selection, framework, invalid("this revision holds no charts; publish the report's draft first")
+	}
+	return selection, framework, err
 }
 
 func (s *Service) validateSchedule(ctx context.Context, tx pgx.Tx, report crmcontracts.ReportingReport, in crmcontracts.ReportingScheduleInput) error {

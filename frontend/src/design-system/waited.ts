@@ -24,3 +24,18 @@ export function useWaited(delayMs: number | undefined): boolean {
   }, [delayMs]);
   return waited;
 }
+
+/** Whether `waiting` has held for `delayMs` without a break. */
+export function useWaitedWhile(waiting: boolean, delayMs: number): boolean {
+  const [waited, setWaited] = useState(false);
+  // Reset in render, not in an effect, so the next wait has no frame of a stale true.
+  if (!waiting && waited) {
+    setWaited(false);
+  }
+  useEffect(() => {
+    if (!waiting) return;
+    const timer = setTimeout(() => setWaited(true), delayMs);
+    return () => clearTimeout(timer);
+  }, [waiting, delayMs]);
+  return waiting && waited;
+}

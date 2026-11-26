@@ -33,7 +33,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/bearer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -143,7 +142,7 @@ func (s *AnalyticsShareStore) Issue(
 	if err != nil {
 		return Share{}, "", err
 	}
-	raw, digest, err := bearer.Mint()
+	raw, digest, err := storekit.MintToken()
 	if err != nil {
 		return Share{}, "", err
 	}
@@ -326,7 +325,7 @@ func (s *AnalyticsShareStore) Resolve(
 	out, err := scanShare(tx.QueryRow(ctx, `
 		SELECT `+shareColumns+`
 		FROM analytics_share
-		WHERE token_hash = $1`, bearer.Digest(rawToken)))
+		WHERE token_hash = $1`, storekit.TokenHash(rawToken)))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Share{}, apperrors.ErrNotFound
 	}
@@ -374,7 +373,7 @@ func (s *AnalyticsShareStore) Revoke(ctx context.Context, tx pgx.Tx, id ids.UUID
 	var revoked time.Time
 	err = tx.QueryRow(ctx, `
 		UPDATE analytics_share
-		SET revoked_at = COALESCE(revoked_at, $2), version = version + 1, updated_at = now()
+		SET revoked_at = COALESCE(revoked_at, $2)
 		WHERE id = $1 AND created_by = $3
 		RETURNING revoked_at`, id, s.now(), actor.UserID).Scan(&revoked)
 	if errors.Is(err, pgx.ErrNoRows) {

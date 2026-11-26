@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -127,6 +128,24 @@ export const NeverConsulted: Story = {
       "GET /me": CAN_WRITE,
       [ROUTE]: () => jsonResponse({ title: "not found" }, 404),
       [ASK]: () => new Response(null, { status: 202 }),
+    });
+    return inRow(NUMBER);
+  },
+};
+
+/** An installation that consults no register: the receipt still reads, and no
+ * check is offered that could only be refused. */
+export const NoRegisterConsulted: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            allow: { company: ["read", "update"] },
+            settingsAvailability: { vat_register: false },
+          }),
+        ),
+      [ROUTE]: () => jsonResponse(CHECKED),
     });
     return inRow(NUMBER);
   },

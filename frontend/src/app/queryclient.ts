@@ -1,19 +1,31 @@
 import {
   MutationCache,
   onlineManager,
+  type Query,
   QueryCache,
   QueryClient,
   type QueryKey,
 } from "@tanstack/react-query";
 import { ENTITY_NAME_KEY } from "../components/entityref.queries";
-import { isRecordRead, isTimelineRead } from "../lib/activitykeys";
+import {
+  isRecordRead,
+  isTimelineRead,
+  isTranscriptReadingRead,
+} from "../lib/activitykeys";
 import {
   ConnectivityError,
   connectivityNow,
   subscribeConnectivity,
 } from "../lib/connectivity";
-import { logUnexpectedError, ProblemError } from "../lib/problem";
+import { refreshTrialLock } from "../lib/license-posture";
+import {
+  logUnexpectedError,
+  ProblemError,
+  problemCodeOf,
+  refusalShown,
+} from "../lib/problem";
 import { INSTALLATION_SETTINGS_KEY } from "../lib/uploadlimit";
+import { SEND_PERMISSION_KEY } from "../lib/usesendpermission";
 import {
   HOME_DAY_FRESH_MS,
   isHomeDayRead,
@@ -59,7 +71,8 @@ export function liveOnReturn(query: {
   return (
     (isLiveRead(query.queryKey) ||
       isInstallationRead(query.queryKey) ||
-      isTimelineRead(query.queryKey)) &&
+      isTimelineRead(query.queryKey) ||
+      isTranscriptReadingRead(query.queryKey)) &&
     "always"
   );
 }
@@ -76,10 +89,11 @@ function isInstallationRead(key: QueryKey): boolean {
 }
 
 // A live work read is read again on every mount, so a screen never opens on an
-// answer fetched before it. The answer the shell prefetched for the screen being
-// opened (app/homeprefetch.ts) serves that mount while under a second old.
+// answer fetched before it. The exception is the answer the shell prefetched
+// for the screen being opened (app/homeprefetch.ts). It serves that mount for
+// as long as a slow load takes to reach it, or each read is sent a second time.
 // Home's day is the exception: it is read again only once HOME_DAY_FRESH_MS old.
-export const LIVE_ANSWER_CURRENT_MS = 1_000;
+export const LIVE_ANSWER_CURRENT_MS = 10_000;
 
 const prefetchedAnswers = new Map<string, number>();
 
@@ -146,18 +160,6 @@ function problemStatusOf(error: unknown): number | null {
   return typeof problem.status === "number" ? problem.status : null;
 }
 
-// The RFC-7807 `code` a failure carries, on the same terms as the status above.
-function problemCodeOf(error: unknown): string | null {
-  if (!(error instanceof ProblemError)) {
-    return null;
-  }
-  const problem = error.problem;
-  if (typeof problem !== "object" || problem === null || !("code" in problem)) {
-    return null;
-  }
-  return typeof problem.code === "string" ? problem.code : null;
-}
-
 // FE-PARAM-2: retry a server error that the server may yet recover from —
 // never a client error, and never a refusal it has already settled.
 export function retryQuery(failureCount: number, error: Error): boolean {
@@ -198,10 +200,13 @@ export function retryQuery(failureCount: number, error: Error): boolean {
 // the surface whose query failed renders its own error state, and a second,
 // global one would talk over it. An outage is not reported per read: the
 // connectivity banner already states it, once.
-function reportQueryError(error: Error): void {
-  if (!(error instanceof ConnectivityError)) {
-    console.error("margince: query failed", error);
-  }
+function reportQueryError(
+  error: Error,
+  query: Query<unknown, unknown, unknown, QueryKey>,
+): void {
+  if (error instanceof ConnectivityError) return;
+  if (refusalShown(query.meta, error)) return;
+  console.error("margince: query failed", error);
 }
 
 // A write can rename the record it touches, and the chrome around the reader is
@@ -234,6 +239,14 @@ function refreshRecordHistory(client: QueryClient): void {
     predicate: (query) =>
       query.queryKey[0] === "record-history" ||
       query.queryKey[0] === "field-history",
+  });
+}
+
+// A transcript's reading shows words drawn from it. An erasure deletes the
+// reading on the server, so any successful write re-reads the mounted ones.
+function refreshTranscriptReadings(client: QueryClient): void {
+  client.invalidateQueries({
+    predicate: (query) => isTranscriptReadingRead(query.queryKey),
   });
 }
 
@@ -296,11 +309,27 @@ export function createQueryClient(): QueryClient {
     // words, and a refusal a form renders field by field is a routine answer
     // to a mutation, not a fault anyone should open a console for.
     mutationCache: new MutationCache({
-      onError: logUnexpectedError,
+      onError: (error) => {
+        logUnexpectedError(error);
+        // The installation locked under an open session: show the lock now,
+        // not at the next read of /me.
+        const code = problemCodeOf(error);
+        if (code === "trial_ended" || code === "license_lapsed") {
+          refreshTrialLock(client);
+        }
+      },
       onSuccess: () => {
         refreshNamedReferences(client);
         refreshRecordHistory(client);
         refreshRecordAccess(client);
+        refreshTranscriptReadings(client);
+        // A write can revoke the facts a mounted message relies on.
+        client
+          .cancelQueries({ queryKey: SEND_PERMISSION_KEY })
+          .then(() =>
+            client.invalidateQueries({ queryKey: SEND_PERMISSION_KEY }),
+          )
+          .catch(logUnexpectedError);
       },
     }),
   });

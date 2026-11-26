@@ -1,0 +1,12 @@
+{
+  "verb": "regenerate_offer",
+  "checks": [
+    "company.read",
+    "offer.create",
+    "offer.update"
+  ],
+  "takes": [
+    "offer",
+    "sent_offer"
+  ]
+}

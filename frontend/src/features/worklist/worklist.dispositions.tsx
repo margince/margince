@@ -20,8 +20,10 @@ import { SwipeRow } from "../../design-system/swiperow";
 import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../../i18n";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useFoldedViewport } from "../../lib/viewport";
-import { useMarkRowsDone } from "./worklist.donequeries";
+import { calendarSnooze } from "./snoozetime";
+import { doneFailure, useMarkRowsDone } from "./worklist.donequeries";
 import {
   type ReopenCondition,
   useClearDisposition,
@@ -100,6 +102,7 @@ type T = ReturnType<typeof useT>;
 // width and hands the same `put` to the gesture where there is not. Two copies
 // of this mutation is how one placement keeps working after the other stops.
 export function usePutDown(item: WorklistItem) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const toast = useToast();
@@ -164,8 +167,12 @@ export function usePutDown(item: WorklistItem) {
                   ),
           },
         }),
-      onError: () =>
-        toast.show(t("worklist.disposition.failed"), { tone: "danger" }),
+      onError: (error: unknown) => {
+        const failure = handled
+          ? doneFailure(error)
+          : ({ key: "worklist.disposition.failed", tone: "danger" } as const);
+        toast.show(t(failure.key), { tone: failure.tone });
+      },
       // Settled either way, so a refusal releases the row rather than leaving
       // it unanswerable until the reader reloads.
       onSettled: () => {
@@ -179,13 +186,14 @@ export function usePutDown(item: WorklistItem) {
     set.mutate(
       {
         activityId: item.id,
+        source: item.source,
         disposition,
         ...(disposition === "snooze"
           ? event
             ? { reopenOn: event }
             : {
                 reopenOn: "time" as const,
-                snoozedUntil: snoozeUntil(days).toISOString(),
+                ...calendarSnooze(Date.now(), days ?? SNOOZE_DAYS, readerZone),
               }
           : {}),
       },
@@ -462,15 +470,4 @@ function doneText(
   return translatePlural(locale, "worklist.disposition.doneSnooze", span, {
     value: formatNumber(span, locale),
   });
-}
-
-// When a snooze lifts.
-//
-// Computed at the press rather than held in state: a page left open overnight
-// would otherwise snooze until a moment that has already passed, and the server
-// would refuse it with a validation error the reader cannot act on.
-function snoozeUntil(days: number = SNOOZE_DAYS): Date {
-  const until = new Date();
-  until.setDate(until.getDate() + days);
-  return until;
 }

@@ -29,6 +29,10 @@ func (s *unreachableStore) peek(string, time.Duration, time.Time) (int, error) {
 }
 func (s *unreachableStore) forget(string) error { return errUnreachable }
 
+func (s *unreachableStore) hold(string, int64, time.Duration, time.Time) error { return errUnreachable }
+
+func (s *unreachableStore) held(string, time.Time) (int64, error) { return 0, errUnreachable }
+
 // unreachable builds a registry whose shared store is bound and broken, which
 // is the state a Redis outage puts every limiter in this process into.
 func unreachable() (*Registry, *unreachableStore) {

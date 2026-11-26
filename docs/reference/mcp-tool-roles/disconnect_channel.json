@@ -1,0 +1,15 @@
+{
+  "tool": "change_capture",
+  "action": "disconnect_channel",
+  "verb": "disconnect_channel",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

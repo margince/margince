@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -33,7 +34,7 @@ func TestPinningAMessageClearsTheStageEvidenceQuotingIt(t *testing.T) {
 		t.Fatal(err)
 	}
 	controller := controllerCtx(e, principal.ObjectGrant{Read: true, Update: true})
-	if err := privacy.NewEraser(e.DB()).PinToFloor(controller, pinned, reason); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).PinToFloor(controller, pinned, reason); err != nil {
 		t.Fatalf("PinToFloor → %v", err)
 	}
 

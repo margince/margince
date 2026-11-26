@@ -49,6 +49,12 @@ class FromCodexTest(unittest.TestCase):
         self.assertEqual((counted["input_tokens"], counted["cache_read_input_tokens"]), (102413 - 86784, 86784))
         self.assertIsNone(cost)
 
+    def test_turns_are_unmeasured_since_codex_reports_no_count_of_requests(self):
+        _code, out, _raw = convert(sample())
+        effort = check.read_effort(out)
+        self.assertNotIn("turns", effort)
+        self.assertEqual(effort["calls"], 1)
+
     def test_the_offered_tools_are_the_lanes_own_listing(self):
         _code, _out, raw = convert(sample())
         self.assertIn('"status": "listed-by-lane"', raw)
@@ -123,6 +129,20 @@ class FromCodexTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("permission denied", raw)
 
+
+    def test_a_call_the_server_refused_is_an_error_though_codex_drops_is_error(self):
+        # codex 0.171 for a tools/call answered with isError: true.
+        lines = sample()
+        lines.insert(2, json.dumps({"type": "item.completed", "item": {
+            "id": "item_7", "type": "mcp_tool_call", "server": transcript.SERVER, "tool": "list_pipelines",
+            "arguments": {}, "result": {"content": [{"type": "text", "text": "refused: not allowed"}],
+                                        "structured_content": None},
+            "error": None, "status": "failed"}}))
+        _code, out, _raw = convert(lines)
+        self.assertEqual(check.read_effort(out)["refused"], 1)
+        run = check.read_run(out)
+        self.assertEqual([name.rsplit("__", 1)[-1] for name, _args in run.refused], ["list_pipelines"])
+        self.assertEqual(len(run.worked), 1)
 
 
 class CodexArgumentsTest(unittest.TestCase):
@@ -241,6 +261,14 @@ class RunCodexTest(unittest.TestCase):
         self.run_codex()
         argv = self.seen()["argv"]
         for feature in ("plugins", "hooks", "memories"):
+            self.assertIn(f"features.{feature}=false", argv)
+
+    def test_every_agent_spawning_tool_is_forced_off(self):
+        # A run measured on a Codex session that delegated to a sub-agent does
+        # not measure the model answering this lane's tools.
+        self.run_codex()
+        argv = self.seen()["argv"]
+        for feature in ("multi_agent", "collaboration_modes"):
             self.assertIn(f"features.{feature}=false", argv)
 
     def test_a_login_codex_refreshed_goes_back_to_the_operator(self):

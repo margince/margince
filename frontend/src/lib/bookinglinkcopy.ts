@@ -18,16 +18,12 @@ function retryShare(failures: number, error: Error): boolean {
 }
 
 /**
- * Copies the host's booking link and tells the server the page was shared.
- * Home warns a host about a paused page only once it was used, and a copied
- * link counts as use. The copy itself already worked, so a mark that still
- * fails after its retries is logged and never shown.
+ * Tells the server the host's page was shared. Home warns a host about a
+ * paused page only once it was used, and a copied link counts as use. The
+ * copy itself already worked, so a mark that still fails after its retries is
+ * logged and never shown.
  */
-export function useCopyBookingLink(
-  url: string,
-  labels: CopyLabels,
-  onCopied?: () => void,
-) {
+export function useMarkBookingShared(): () => void {
   const share = useMutation({
     mutationFn: async () => {
       unwrap(await api.POST("/scheduling/profile/shared"));
@@ -37,8 +33,18 @@ export function useCopyBookingLink(
       console.warn("booking link share was not recorded", reason);
     },
   });
+  return () => share.mutate();
+}
+
+/** Copies one of the host's booking links and marks the page shared. */
+export function useCopyBookingLink(
+  url: string,
+  labels: CopyLabels,
+  onCopied?: () => void,
+) {
+  const markShared = useMarkBookingShared();
   return useClipboardCopy(url, labels, () => {
     onCopied?.();
-    share.mutate();
+    markShared();
   });
 }

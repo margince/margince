@@ -1,0 +1,15 @@
+{
+  "tool": "change_reports",
+  "action": "create_initiative",
+  "verb": "create_sales_initiative",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager"
+  ],
+  "refused_for": [
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

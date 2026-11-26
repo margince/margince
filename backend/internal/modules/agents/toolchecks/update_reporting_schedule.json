@@ -1,0 +1,12 @@
+{
+  "verb": "update_reporting_schedule",
+  "checks": [
+    "installation_settings.read",
+    "report_definition.read",
+    "report_schedule.read",
+    "report_schedule.update"
+  ],
+  "takes": [
+    "report_schedule"
+  ]
+}

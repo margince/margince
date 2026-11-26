@@ -46,7 +46,7 @@ function searchPage(hits: readonly unknown[]) {
 async function lookUpSender({ canvasElement }: { canvasElement: HTMLElement }) {
   const canvas = within(canvasElement);
   const user = userEvent.setup();
-  await user.type(canvas.getByLabelText("Sender"), "bettina@brandt.example");
+  await user.type(canvas.getByLabelText(/^Sender/), "bettina@brandt.example");
   await user.click(canvas.getByRole("button", { name: "Look up" }));
 }
 
@@ -68,8 +68,8 @@ function story(routes: RouteMap) {
   };
 }
 
-// Nothing looked up yet: the chrome, the lookup control with its submit
-// disabled on an empty field, and the isolation footer.
+// Nothing looked up yet: the chrome, the lookup control, and the isolation
+// footer.
 export const Resting: Story = { render: story({}) };
 
 // A recognized sender: the mini record, with the way through to the full 360.

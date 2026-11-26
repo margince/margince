@@ -12,11 +12,6 @@ import (
 
 // LoadZone resolves an IANA zone name to a *time.Location, wrapping the failure
 // with the name so an operator sees which zone did not resolve.
-//
-// The one place the installation's zone STRING becomes a location: WorkspaceDay
-// and the boundary helpers all take the *time.Location it returns, so every
-// module that derives a day loads the zone the same way and reports an
-// unresolvable one in the same words.
 func LoadZone(name string) (*time.Location, error) {
 	loc, err := time.LoadLocation(name)
 	if err != nil {

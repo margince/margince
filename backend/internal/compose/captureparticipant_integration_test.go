@@ -345,11 +345,11 @@ func TestRelinkRepointsOnlyTheContactItDisplaced(t *testing.T) {
 		t.Fatalf("reading participants back: %v", err)
 	}
 
-	// Roles too, and exactly two rows — the repointed one and the untouched
-	// one. A repoint that ADDED the corrected contact while keeping the
-	// displaced row would leave three and still pass a membership check, as
-	// would one that moved the right contact into the wrong role.
-	want := map[ids.UUID]string{corrected: "from", unlinked: "cc"}
+	// Roles too, and two rows: the repointed one and the untouched one.
+	// A repoint that added the corrected contact and kept the displaced row
+	// leaves three. A membership check passes on that, and on a wrong role.
+	// The displaced sender is carried as a copy: only a proof names the author.
+	want := map[ids.UUID]string{corrected: "cc", unlinked: "cc"}
 	if len(got) != len(want) {
 		t.Errorf("%d participants after the relink, want %d — the displaced row was "+
 			"added to rather than replaced", len(got), len(want))
@@ -364,8 +364,8 @@ func TestRelinkRepointsOnlyTheContactItDisplaced(t *testing.T) {
 				"somebody who was never linked, and now names a contact who was never " +
 				"in the conversation")
 		case gotRole != role:
-			t.Errorf("participant %s has role %q, want %q — a repoint must not change "+
-				"who sent and who was copied", contact, gotRole, role)
+			t.Errorf("participant %s has role %q, want %q — a repoint carries a sender "+
+				"as a copy, and a copy as a copy", contact, gotRole, role)
 		}
 	}
 	if _, ok := got[linked]; ok {

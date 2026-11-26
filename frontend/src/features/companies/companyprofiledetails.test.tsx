@@ -5,6 +5,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { CompanyProfileDetails } from "./companyprofiledetails";
 import {
   company,
@@ -29,13 +30,13 @@ const writableSeat = () =>
   jsonResponse({
     user: { id: "u-1", display_name: "Mira Voss" },
     authorization: {
-      objects: { company: { update: true } },
+      objects: { company: { read: true, update: true } },
       seat_type: "full",
     },
   });
 
 describe("CompanyProfileDetails", () => {
-  it("draws the eight fields the details column leaves out, set or not", async () => {
+  it("draws the seven fields the details column leaves out, set or not", async () => {
     stub();
     render(
       <CompanyProfileDetails
@@ -63,7 +64,6 @@ describe("CompanyProfileDetails", () => {
       en["create.phone"],
       en["create.email"],
       en["co.profileField.registered_address"],
-      en["tags.panelTitle"],
     ]) {
       expect(panel && within(panel).getByText(label)).toBeVisible();
     }
@@ -113,6 +113,9 @@ describe("CompanyProfileDetails", () => {
   it("keeps the parent company a link to its record, and edits it from the bubble", async () => {
     const user = userEvent.setup();
     stub({
+      "/records/references": (request) =>
+        companyNamesAnswer(request.url, { "o-9": "Brandt Holding" }) ??
+        jsonResponse({ data: [] }),
       "/me": writableSeat,
       "/companies": () =>
         jsonResponse({
@@ -173,6 +176,38 @@ describe("CompanyProfileDetails", () => {
     await waitFor(() =>
       expect(patchBody).toMatchObject({ email: "info@brandt.example" }),
     );
+  });
+
+  it("refuses an address with no @ in the app's words and sends nothing", async () => {
+    const methods: string[] = [];
+    stub({
+      "/me": writableSeat,
+      "/companies/o-1": (request) => {
+        methods.push(request.method);
+        return jsonResponse(company);
+      },
+    });
+    render(
+      <CompanyProfileDetails
+        company={{ ...company, email: null }}
+        edit={EDITABLE}
+        {...NO_FIELDS}
+      />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: new RegExp(`^Change ${en["create.email"]}`),
+      }),
+    );
+    const box = screen.getByRole("textbox", { name: en["create.email"] });
+    await userEvent.type(box, "keine-mail{Enter}");
+
+    expect(
+      await screen.findByText("Enter an email address for Email."),
+    ).toBeInTheDocument();
+    expect(box).toHaveAttribute("aria-invalid", "true");
+    expect(methods).not.toContain("PATCH");
   });
 
   // No register answers for a postal address, so the VAT verdict mark belongs

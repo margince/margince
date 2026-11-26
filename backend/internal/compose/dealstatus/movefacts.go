@@ -52,7 +52,7 @@ func (s *Service) moveDeals(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, 
 	if err != nil {
 		return nil, err
 	}
-	lang := string(identity.BaseLanguageForRecord(ctx, tx))
+	lang, say := string(identity.BaseLanguageForRecord(ctx, tx)), string(identity.ReaderLanguageForRecord(ctx, tx))
 	limit := 200
 	in := deals.ListDealsInput{IDs: dealIDs, Limit: &limit}
 	out := map[ids.UUID]facts{}
@@ -62,7 +62,7 @@ func (s *Service) moveDeals(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, 
 			return nil, err
 		}
 		for _, deal := range page {
-			out[ids.UUID(deal.Id)] = facts{deal: deal, now: now, loc: loc, lang: lang, contactChecked: true}
+			out[ids.UUID(deal.Id)] = facts{deal: deal, now: now, loc: loc, lang: lang, say: say, contactChecked: true}
 		}
 		if !next.HasMore {
 			return out, nil

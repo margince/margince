@@ -11,6 +11,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -49,9 +50,19 @@ func (r approvalPreviewReader) appendMailSignature(ctx context.Context, approval
 		*out.Details = append(*out.Details, previewDetail("signature_text", sign.Text))
 	}
 	if sign.HTML != "" {
-		*out.Details = append(*out.Details, previewDetail("signature_html", sign.HTML))
+		*out.Details = append(*out.Details, previewDetail("signature_html", r.signatureMarkup(ctx, sign.HTML)))
 	}
 	return nil
+}
+
+// signatureMarkup draws the sign-off's https images only for one approval's
+// own read. A list builds every row's preview at once, so it shows each image
+// as its box and fetches nothing. Built on every read and never stored.
+func (r approvalPreviewReader) signatureMarkup(ctx context.Context, markup string) string {
+	if r.signatureImages == nil || !approvals.ReadsOneApproval(ctx) {
+		return activities.RemoteImagePlaceholders(markup)
+	}
+	return r.signatureImages.Inline(ctx, markup)
 }
 
 func (r approvalPreviewReader) appendMailPresentation(ctx context.Context, approval crmcontracts.Approval, origin activities.SendOrigin, links []activities.ActivityLinkInput, in activities.SendEmailInput, out *crmcontracts.ApprovalPreview) error {

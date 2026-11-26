@@ -4,18 +4,34 @@
    independent of the app shell's chrome. Tokens only (make ds-purity). */
 
 .pref-page {
-  min-height: 100%;
+  min-height: 100vh;
+  /* In the shell's flex-column scroller, an explicit min-height is also the
+     shrink floor. A long page would then run past its band. */
+  flex-shrink: 0;
   display: flex;
   justify-content: center;
+  align-items: safe center;
   /* Twice the top at the bottom: the save bar sticks 16px off the floor, so
      the page has to clear it below the last row. */
-  padding: var(--space-12) var(--space-5) calc(var(--space-12) * 2);
+  padding: var(--space-12) var(--pageGutter) calc(var(--space-12) * 2);
   background: var(--bgInset);
+}
+@supports (min-height: 100dvh) {
+  .pref-page {
+    min-height: 100dvh;
+  }
 }
 
 .pref-center {
   width: 100%;
   max-width: var(--settingsColumn);
+}
+
+/* PublicPage sets this while the centred column glides to where a height change put it. */
+@media (prefers-reduced-motion: no-preference) {
+  .pref-center[data-gliding] {
+    transition: transform var(--dur-move) var(--ease-in-out);
+  }
 }
 
 .pref-header p {
@@ -63,6 +79,11 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+/* The purpose name wraps instead, because a badge cut to "Al…" names no state. */
+.pref-row-head > .badge {
+  flex: none;
 }
 
 .pref-label {
@@ -141,7 +162,6 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  corner-shape: round;
   color: var(--successText);
   background: var(--successBg);
 }
@@ -187,4 +207,8 @@
 
 .pref-check:not(:has(input:disabled)):hover {
   background: var(--bgInset);
+}
+
+.unsub-error {
+  margin-top: var(--space-4);
 }

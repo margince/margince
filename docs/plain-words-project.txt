@@ -68,7 +68,6 @@ anti
 any
 anyone
 anything
-anyway
 anywhere
 apart
 app
@@ -646,7 +645,6 @@ gone
 good
 got
 govern
-graded
 grader
 gradient
 grammar
@@ -1046,7 +1044,6 @@ other
 otherwise
 our
 out
-outage
 outbound
 outbox
 outcome
@@ -1193,7 +1190,6 @@ provenance
 provider
 provisional
 proxy
-pseudo
 public
 pull
 pulse
@@ -1215,7 +1211,6 @@ quick
 quiet
 quotation
 quote
-r
 radio
 radius
 rail
@@ -1351,7 +1346,6 @@ section
 secure
 security
 see
-seems
 seen
 segment
 seldom
@@ -1381,7 +1375,6 @@ setting's
 settle
 setup
 seven
-seventh
 several
 shacl
 shadow
@@ -1425,7 +1418,6 @@ slot
 slots
 slow
 small
-smooth
 snapshot
 so
 soft
@@ -1458,7 +1450,6 @@ split
 spread
 spreads
 square
-squircle
 sso
 stack
 stage
@@ -1514,7 +1505,6 @@ suggestions
 suite
 sum
 summary
-superellipse
 support
 suppress
 sure
@@ -1647,7 +1637,6 @@ unix
 unknown
 unless
 unlink
-unlisted
 unpinned
 unrestricted
 unsaved

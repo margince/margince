@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
@@ -110,7 +111,7 @@ func (e *BriefEngine) ClaimMailAttemptTx(ctx context.Context, tx pgx.Tx, runID i
 		if err != nil {
 			return err
 		}
-		attempt.Run.Items, err = readRunItems(ctx, tx, runID)
+		attempt.Run.Items, err = readRunItems(ctx, tx, runID, now)
 		if err != nil {
 			return err
 		}
@@ -204,10 +205,10 @@ func (e *BriefEngine) LastMailedBefore(ctx context.Context, now time.Time) (*tim
 // installation-level fact across every rep, the way the candidate query beside
 // it does, and it runs inside that pass's transaction rather than opening a
 // second one that could see a different set of runs.
-func RunsAwaitingMail(ctx context.Context, tx pgx.Tx, day time.Time) ([]BriefRun, error) {
+func RunsAwaitingMail(ctx context.Context, tx pgx.Tx, now time.Time) ([]BriefRun, error) {
 	rows, err := tx.Query(ctx, runSelect+`
-		WHERE local_day = $1 AND mail_attempted_at IS NULL
-		ORDER BY user_id`, day)
+		WHERE local_day = `+occurredday.DaySQL(occurredday.Personal, "$1", "user_id")+` AND mail_attempted_at IS NULL
+		ORDER BY user_id`, now)
 	if err != nil {
 		return nil, fmt.Errorf("brief: listing the runs still owed a message: %w", err)
 	}
@@ -229,7 +230,7 @@ func RunsAwaitingMail(ctx context.Context, tx pgx.Tx, day time.Time) ([]BriefRun
 	// loop, since a second query on the same transaction cannot run while the
 	// first one's rows are open.
 	for i := range runs {
-		runs[i].Items, err = readRunItems(ctx, tx, runs[i].ID)
+		runs[i].Items, err = readRunItems(ctx, tx, runs[i].ID, now)
 		if err != nil {
 			return nil, err
 		}

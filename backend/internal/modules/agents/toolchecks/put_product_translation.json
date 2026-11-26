@@ -1,0 +1,9 @@
+{
+  "verb": "put_product_translation",
+  "checks": [
+    "product.update"
+  ],
+  "takes": [
+    "product"
+  ]
+}

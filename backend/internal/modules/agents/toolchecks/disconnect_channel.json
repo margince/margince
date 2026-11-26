@@ -1,0 +1,9 @@
+{
+  "verb": "disconnect_channel",
+  "checks": [
+    "channel_connection.delete"
+  ],
+  "takes": [
+    "live_channel"
+  ]
+}

@@ -23,6 +23,9 @@ CI sets `CHECK_BASE_REF` to the base branch. So strict lint, `comment-budget`, t
 the migration check judge only what the pull request adds to `develop`. Into `main` they judge what it adds
 to `main`, so the nightly pull request judges all of `develop`'s new code.
 
+A local run picks the base the same way: `scripts/check-base-ref.sh` names `origin/develop` or `origin/main`,
+whichever the branch was cut from. Set `CHECK_BASE_REF` to choose it yourself.
+
 Everything else runs as it does for `main`: the Go build and gates, lint, craftsmanship, the license and
 secret scans, the extension lane and the frontend lane. `ci` stays the required check.
 
@@ -34,7 +37,7 @@ CodeRabbit review; the nightly `develop` into `main` pull request does.
 ```sh
 git switch -c <type>/<slug> origin/develop
 # work, then the smallest lane, then:
-make check CHECK_BASE_REF=origin/develop
+make check
 FE_UAT_BASE_REF=origin/develop make fe-uat # for a frontend change
 git push -u origin <type>/<slug>
 gh pr create --base develop

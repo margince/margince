@@ -16,7 +16,8 @@
 #      - the `t-mono` class, anywhere, comments included (a figure takes t-num);
 #      - a `font-family` / `font` declaration naming a mono family on any other
 #        rule, and a custom property carrying one other than the `--fontFamilyMono`
-#        token in design-system/tokens.css;
+#        token in design-system/tokens.css. The `font-family` descriptor of a
+#        `@font-face` names the face it declares, so it dresses nothing;
 #      - a mono family inside a quoted TS/TSX string (an inline fontFamily, a
 #        style string, a constant) unless that string is itself a code rule.
 #
@@ -92,7 +93,7 @@ strip_allowed() {
 while IFS= read -r hit; do
   # A declaration whose value starts on the next line matches nothing here, and
   # under pipefail that no-match would end the whole gate with a bare exit 1.
-  value=$(echo "$hit" | grep -oE "font-family\s*:[^;]+" | head -1 || true)
+  value=$(echo "$hit" | grep -oE "font-family\s*:[^;]+" | sed -n 1p || true)
   [[ -z "$value" ]] && continue
   stripped=$(echo "$value" | strip_allowed)
   while :; do
@@ -192,6 +193,7 @@ function judge(   decl, prop, value) {
   prop = decl; sub(/[ \t]*:.*/, "", prop)
   value = decl; sub(/^[^:]*:/, "", value)
   if (!is_mono(value)) return
+  if (prop == "font-family" && face[depth]) return
   if (prop ~ /^--/) {
     if (prop == "--fontFamilyMono" && FILENAME ~ /design-system\/tokens\.css$/) return
     printf "%s:%d: %s carries a mono family — the one code-face token is --fontFamilyMono in tokens.css\n", FILENAME, declline, prop
@@ -199,7 +201,7 @@ function judge(   decl, prop, value) {
     printf "%s:%d: %s names a mono family on a rule that does not dress code, pre, samp or .code-block\n", FILENAME, declline, prop
   }
 }
-FNR == 1 { depth = 0; code[0] = 0; buf = ""; incomment = 0 }
+FNR == 1 { depth = 0; code[0] = 0; face[0] = 0; buf = ""; incomment = 0 }
 {
   line = decomment($0)
   for (i = 1; i <= length(line); i++) {
@@ -208,6 +210,7 @@ FNR == 1 { depth = 0; code[0] = 0; buf = ""; incomment = 0 }
       prelude = buf
       gsub(/^[ \t]+|[ \t]+$/, "", prelude)
       code[depth + 1] = (prelude ~ /^@/) ? code[depth] : list_verdict(prelude, code[depth])
+      face[depth + 1] = (tolower(prelude) == "@font-face")
       depth++
       buf = ""
     } else if (ch == ";" || ch == "}") {

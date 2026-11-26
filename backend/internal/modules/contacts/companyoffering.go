@@ -87,7 +87,7 @@ func readOffering(ctx context.Context, tx pgx.Tx, offering OfferingSelector) (re
 	return readOfferingResult{company: company, id: defaultID, name: company.DisplayName}, nil
 }
 
-// readEntityOffering builds the Company-shaped input assembleCompanyContext
+// readEntityOffering builds the Company-shaped input AssembleCompanyContext
 // reads from a live further entity. The default entity and an archived or
 // unknown one answer ErrNotFound: the default's offering is the anchor's.
 func readEntityOffering(ctx context.Context, tx pgx.Tx, id ids.LegalEntityID) (readOfferingResult, error) {

@@ -33,7 +33,7 @@ const AdoptKeyDomain = "domain"
 const MaxRelinkActivities = 50
 
 // landableKinds are the kinds a source may declare.
-var landableKinds = []RecordKind{KindActivity, KindCompany, KindDeal}
+var landableKinds = []RecordKind{KindActivity, KindCompany, KindDeal, KindSignal}
 
 // uuidShape is the spelling of an id a deal names its pipeline and stage by.
 var uuidShape = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
@@ -74,9 +74,18 @@ type DealFields struct {
 	StageID    string
 	// LostReason is why the deal was lost; only read on a move to a lost stage.
 	LostReason string
+	// CompanyID is the core id of the company the deal belongs to, set when the
+	// deal is born. A later record never moves a deal to another company, and a
+	// company the acting member cannot see is refused.
+	CompanyID string
 	// AmountMinor is the deal value in the smallest unit of Currency.
 	AmountMinor *int64
 	Currency    string
+	// CustomFields are the values of the installation's custom deal fields the
+	// unit offers, keyed by the field's `cf_` column name. A key no active field
+	// takes is refused. Like the amount, a value a user last edited is left as
+	// it is and named in Result.Withheld.
+	CustomFields map[string]any
 	// RelinkActivities has the same meaning as on CompanyFields.
 	RelinkActivities []string
 }
@@ -90,6 +99,8 @@ func (r Record) Kind() RecordKind {
 		return KindCompany
 	case r.Deal != nil:
 		return KindDeal
+	case r.Signal != nil:
+		return KindSignal
 	}
 	return KindActivity
 }
@@ -97,14 +108,23 @@ func (r Record) Kind() RecordKind {
 // validatePayload holds the shape rules of a company or deal record. An
 // activity record is held to the activity grammar instead.
 func (r Record) validatePayload() error {
-	if r.Company != nil && r.Deal != nil {
-		return errors.New("extension: a record carries a company or a deal, not both")
+	payloads := 0
+	for _, set := range []bool{r.Company != nil, r.Deal != nil, r.Signal != nil} {
+		if set {
+			payloads++
+		}
+	}
+	if payloads > 1 {
+		return errors.New("extension: a record carries a company, a deal or a signal, not several")
 	}
 	if r.Activity != (ActivityFields{}) {
 		return fmt.Errorf("extension: a %s record carries no activity", r.Kind())
 	}
-	if r.Company != nil {
+	switch r.Kind() {
+	case KindCompany:
 		return r.Company.validate()
+	case KindSignal:
+		return r.Signal.validate()
 	}
 	return r.Deal.validate()
 }
@@ -136,7 +156,30 @@ func (d DealFields) validate() error {
 	case !uuidShape.MatchString(d.PipelineID), !uuidShape.MatchString(d.StageID):
 		return errors.New("extension: a deal names its pipeline and stage by their ids")
 	}
+	if d.CompanyID != "" && !uuidShape.MatchString(d.CompanyID) {
+		return errors.New("extension: a deal names its company by its id")
+	}
+	if err := validateCustomFieldKeys(d.CustomFields); err != nil {
+		return err
+	}
 	return validateRelinkKeys(d.RelinkActivities)
+}
+
+// MaxLandedCustomFields caps the custom fields one landed record carries.
+const MaxLandedCustomFields = 50
+
+var customFieldKey = regexp.MustCompile(`^cf_[a-z0-9_]{1,60}$`)
+
+func validateCustomFieldKeys(values map[string]any) error {
+	if len(values) > MaxLandedCustomFields {
+		return fmt.Errorf("extension: the record offers %d custom fields, over the cap of %d", len(values), MaxLandedCustomFields)
+	}
+	for key := range values {
+		if !customFieldKey.MatchString(key) {
+			return fmt.Errorf("extension: %q is not a custom field column; name it as cf_ and lower snake_case", key)
+		}
+	}
+	return nil
 }
 
 func validateRelinkKeys(keys []string) error {

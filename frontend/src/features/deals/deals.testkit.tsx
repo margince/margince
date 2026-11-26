@@ -17,10 +17,10 @@ export function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-export const render = (ui: ReactNode): RenderResult => {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+export const render = (
+  ui: ReactNode,
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+): RenderResult => {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -38,6 +38,20 @@ export const render = (ui: ReactNode): RenderResult => {
     </QueryClientProvider>,
   );
 };
+
+// Drops a deal on a stage column the way the board's drag does. The test DOM
+// carries no drag-and-drop, so the drop handler is dispatched directly.
+export function dropOnStage(stageId: string, dealId = "d1") {
+  const drop = new Event("drop", { bubbles: true });
+  Object.assign(drop, {
+    dataTransfer: { getData: () => dealId, setData: () => undefined },
+  });
+  const column = document.querySelector(`[data-stage="${stageId}"]`);
+  if (!column) {
+    throw new Error(`no column for stage ${stageId}`);
+  }
+  column.dispatchEvent(drop);
+}
 
 export type Stage = components["schemas"]["Stage"];
 
@@ -172,8 +186,9 @@ export function stubBackend(
     stageTotalsRows?: Record<string, unknown>[];
     stageTotalsAsOf?: string;
     stageTotalsTimezone?: string;
-    // Answers the totals report with this status and a problem body instead.
+    // Answers the totals report with this status and problem code instead.
     stageTotalsStatus?: number;
+    stageTotalsCode?: string;
     onStageTotalsBody?: (body: unknown) => void;
     savedViews?: Record<string, unknown>[];
     onCreateView?: (body: unknown) => void;
@@ -192,7 +207,11 @@ export function stubBackend(
     const method = request ? request.method : (init?.method ?? "GET");
     // The deal's products, in the list-and-tag shape the card reads. Without
     // this the deal's own route answers it with the deal record.
-    if (/\/deals\/[^/]+\/products$/.test(new URL(url, "http://x").pathname)) {
+    if (
+      /\/deals\/[^/]+\/products$/.test(
+        new URL(url, "https://deals.invalid").pathname,
+      )
+    ) {
       return jsonResponse({ data: [], tag: "empty" });
     }
     if (method === "GET" && url.includes("/commitments")) {
@@ -286,7 +305,11 @@ export function stubBackend(
       opts.onStageTotalsBody?.(body);
       if (opts.stageTotalsStatus) {
         return jsonResponse(
-          { status: opts.stageTotalsStatus, title: "Forbidden" },
+          {
+            status: opts.stageTotalsStatus,
+            title: "Forbidden",
+            code: opts.stageTotalsCode,
+          },
           opts.stageTotalsStatus,
         );
       }

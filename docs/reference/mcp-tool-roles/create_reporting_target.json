@@ -1,0 +1,15 @@
+{
+  "tool": "change_reports",
+  "action": "create_target",
+  "verb": "create_reporting_target",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager"
+  ],
+  "refused_for": [
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

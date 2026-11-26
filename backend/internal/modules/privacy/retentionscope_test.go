@@ -24,9 +24,9 @@ import (
 // resolves to must be the one the evaluator keys its selector by.
 func TestParseRetentionScopeResolvesEveryAuthorableScope(t *testing.T) {
 	authorable := AuthorableScopes()
-	if len(authorable) != len(retentionSelectors) {
-		t.Fatalf("AuthorableScopes() has %d entries, want one per selector (%d)",
-			len(authorable), len(retentionSelectors))
+	if len(authorable) != len(authorableKeys()) {
+		t.Fatalf("AuthorableScopes() has %d entries, want one per stage key (%d)",
+			len(authorable), len(authorableKeys()))
 	}
 
 	for _, wire := range authorable {
@@ -35,8 +35,8 @@ func TestParseRetentionScopeResolvesEveryAuthorableScope(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ParseRetentionScope(%q) refused a scope it advertises as authorable: %v", wire, err)
 			}
-			if _, known := retentionSelectors[scope.selectorKey()]; !known {
-				t.Errorf("scope %q resolved to selector key %q, which the evaluator has no selector for",
+			if !slices.Contains(authorableKeys(), scope.selectorKey()) {
+				t.Errorf("scope %q resolved to key %q, which the evaluator has no stage for",
 					wire, scope.selectorKey())
 			}
 			// The wire spelling has to survive the round trip, or the screen and
@@ -64,10 +64,11 @@ func TestParseRetentionScopeSplitsObjectTypeFromCategory(t *testing.T) {
 		"raw_capture":                {ObjectType: "raw_capture"},
 		"deal_risk_day":              {ObjectType: "deal_risk_day"},
 		"report_edition":             {ObjectType: "report_edition"},
+		"extension":                  {ObjectType: "extension"},
 	}
-	if len(cases) != len(retentionSelectors) {
-		t.Fatalf("this table covers %d scopes, the selector table has %d — a new selector needs its pair pinned here",
-			len(cases), len(retentionSelectors))
+	if len(cases) != len(authorableKeys()) {
+		t.Fatalf("this table covers %d scopes, the evaluator has %d — a new stage needs its pair pinned here",
+			len(cases), len(authorableKeys()))
 	}
 
 	for wire, want := range cases {
@@ -157,11 +158,11 @@ func TestParseRetentionScopeRefusesAnUnservableScope(t *testing.T) {
 }
 
 // TestAuthorableScopesIsTheSelectorTableInWireSpelling derives the expectation
-// from the selector table itself: adding a selector widens the vocabulary with
-// no second list to remember, and this test keeps passing only because it
-// re-derives rather than restates.
+// from the selector table and the extension stage's key. Adding a selector
+// widens the vocabulary with no second list to remember. This test keeps
+// passing only because it re-derives rather than restates.
 func TestAuthorableScopesIsTheSelectorTableInWireSpelling(t *testing.T) {
-	want := make([]string, 0, len(retentionSelectors))
+	want := []string{strings.TrimSuffix(extensionScopeKey, "/")}
 	for key := range retentionSelectors {
 		want = append(want, strings.TrimSuffix(key, "/"))
 	}
@@ -237,6 +238,7 @@ func TestTheContractEnumAndTheSelectorTableAreTheSameSet(t *testing.T) {
 		crmcontracts.RetentionScopeRawCapture,
 		crmcontracts.RetentionScopeDealRiskDay,
 		crmcontracts.RetentionScopeReportEdition,
+		crmcontracts.RetentionScopeExtension,
 	}
 	if len(enumMembers) != len(authorable) {
 		t.Fatalf("the contract enum has %d members and the selector table %d — "+

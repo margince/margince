@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { ComponentProps } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import type {
   BoardDeal,
@@ -14,6 +15,7 @@ import {
 } from "../../testing/story-utils";
 import type { StageColumnRead } from "./dealboard.queries";
 import { DealPipelineBoard } from "./dealpipelineboard";
+import type { Deal, Stage } from "./deals";
 import { StageColumnFoot } from "./deals.board";
 
 // The deals board with the screen's half of every card: the verbs, and the
@@ -33,6 +35,7 @@ function deal(extra: Partial<BoardDeal> & Pick<BoardDeal, "id" | "name">) {
     ).toISOString(),
     measuredAt: Date.parse("2026-09-15T12:00:00Z"),
     owner: { id: "u-1", name: "Dana Albers" },
+    probabilityPct: 40,
     ...extra,
   } satisfies BoardDeal;
 }
@@ -57,6 +60,7 @@ const proposal: BoardMoneyColumn = {
       companyId: "o-2",
       valueMinor: 4_800_000,
       closeDate: "2027-03-14",
+      probabilityPct: 75,
       owner: { id: "u-2", name: "Jonas Ritter" },
       lastEmail: lastEmailAgo(5 * 60 * 60 * 1000, "outbound"),
     }),
@@ -78,9 +82,52 @@ const proposal: BoardMoneyColumn = {
   ],
 };
 
+// The pipeline the board's cards stand in, in position order, and the wire row
+// behind each card, which is what its menu reads.
+const pipelineStages: Stage[] = (
+  [
+    ["discovery", "Discovery", "open"],
+    ["proposal", "Proposal", "open"],
+    ["negotiation", "Negotiation", "open"],
+    ["won", "Won", "won"],
+    ["lost", "Lost", "lost"],
+  ] as const
+).map(([id, name, semantic], position) => ({
+  id,
+  pipeline_id: "sales",
+  name,
+  position,
+  semantic,
+  win_probability: 40,
+}));
+
+const cardMenu: ComponentProps<typeof DealPipelineBoard>["menu"] = {
+  deals: proposal.deals.map(
+    (card): Deal => ({
+      id: card.id,
+      name: card.name,
+      pipeline_id: "sales",
+      stage_id: "proposal",
+      status: "open",
+      source: "manual",
+      captured_by: "human:u-1",
+      writable: true,
+      archivable: true,
+      version: 1,
+      created_at: "2026-09-01T09:00:00Z",
+      updated_at: "2026-09-01T09:00:00Z",
+    }),
+  ),
+  stages: pipelineStages,
+  onAdvance: () => Promise.resolve(true),
+};
+
 function board() {
   installFetchStub({
-    "GET /me": meRoute({ activity: ["read", "create"] }),
+    "GET /me": meRoute({
+      activity: ["read", "create"],
+      deal: ["read", "update", "delete"],
+    }),
     "GET /deals/d-1/status": () =>
       jsonResponse({
         deal_id: "d-1",
@@ -114,6 +161,7 @@ function board() {
           columns={[proposal]}
           cardHref={(each) => `#/deals/${each.id}`}
           zone="Europe/Berlin"
+          menu={cardMenu}
         />
       </WriteToProvider>
     </StoryProviders>
@@ -150,6 +198,34 @@ export const SummaryOpenDark: Story = {
   globals: { theme: "dark" },
   render: board,
   play: openSummary,
+};
+
+// The way to move a deal with no pointer to drag it by.
+const openCardMenu: Story["play"] = async ({ canvasElement }) => {
+  const canvas = within(canvasElement);
+  const trigger = await canvas.findByRole("button", {
+    name: "More actions for ERP connector, phase 2",
+  });
+  await userEvent.click(trigger);
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    await within(canvasElement.ownerDocument.body).findByRole("button", {
+      name: "Move to Negotiation",
+    }),
+  ).toBeVisible();
+};
+
+export const CardMenuOpen: Story = { render: board, play: openCardMenu };
+export const CardMenuOpenDark: Story = {
+  globals: { theme: "dark" },
+  render: board,
+  play: openCardMenu,
+};
+export const CardMenuOpenPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: board,
+  play: openCardMenu,
 };
 
 // A column's own read, as the board's foot draws it under that column's cards.

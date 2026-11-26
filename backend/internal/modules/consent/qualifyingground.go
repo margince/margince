@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -54,15 +55,19 @@ import (
 //
 // address names the recipient the event must cover (requestCoversSQL); nil asks
 // about the contact as a whole, which only the legacy verdict does.
-func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time, address *string) (QualifyingEvent, eventSource, error) {
-	event, found, err := recordedQualifyingEvent(ctx, tx, contactID, since, asOf, address)
+func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time, address *string, entity ids.UUID) (QualifyingEvent, eventSource, error) {
+	entity, err := evidenceEntity(ctx, tx, entity)
+	if err != nil {
+		return QualifyingEvent{}, sourceNone, err
+	}
+	event, found, err := recordedQualifyingEvent(ctx, tx, contactID, since, asOf, address, entity)
 	if err != nil {
 		return QualifyingEvent{}, sourceNone, err
 	}
 	if found {
 		return event, sourceRecorded, nil
 	}
-	event, found, err = inboundQualifyingEvent(ctx, tx, contactID, since)
+	event, found, err = inboundQualifyingEvent(ctx, tx, subjectRef{Kind: entityContact, ID: contactID, Address: deref(address)}, since, entity)
 	if err != nil {
 		return QualifyingEvent{}, sourceNone, err
 	}
@@ -74,7 +79,7 @@ func latestQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, sin
 	// order costs nothing: each arm answers about a different record, so at most
 	// one of them describes any given fact, and reaching this one means neither
 	// a human nor the mail timeline had already answered.
-	event, found, err = meetingQualifyingEvent(ctx, tx, contactID, since, asOf)
+	event, found, err = meetingQualifyingEvent(ctx, tx, contactID, since, asOf, entity)
 	if err != nil {
 		return QualifyingEvent{}, sourceNone, err
 	}
@@ -177,35 +182,59 @@ const (
 func stampQualifyingEvent(
 	ctx context.Context, tx pgx.Tx, contactID string, event QualifyingEvent, source, capturedBy string,
 ) error {
-	_, err := tx.Exec(ctx, `
-		INSERT INTO consent_qualifying_event
-			(contact_id, kind, source_entity_type, source_entity_id,
-			 occurred_at, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		ON CONFLICT (contact_id, source_entity_type, source_entity_id)
-		  WHERE source_entity_id IS NOT NULL
-		  DO NOTHING`,
-		contactID, event.Kind, event.SourceEntityType, event.SourceEntityID,
-		event.OccurredAt, source, capturedBy)
+	entities, found, err := qualifyingSourceEntities(ctx, tx, event)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return nil
+	}
+	_, err = tx.Exec(ctx, `
+ INSERT INTO consent_qualifying_event
+ (contact_id,kind,source_entity_type,source_entity_id,occurred_at,source,captured_by,recorded_for_entities)
+ VALUES (@subject,@kind,@source_type,@source_id,@occurred,@source,@actor,@entities)
+ ON CONFLICT (contact_id,source_entity_type,source_entity_id) WHERE source_entity_id IS NOT NULL
+ DO UPDATE SET recorded_for_entities=ARRAY(SELECT DISTINCT unnest(
+ coalesce(consent_qualifying_event.recorded_for_entities,'{}'::uuid[]) || EXCLUDED.recorded_for_entities) ORDER BY 1)
+ WHERE NOT EXCLUDED.recorded_for_entities <@ coalesce(consent_qualifying_event.recorded_for_entities,'{}'::uuid[])`,
+		pgx.StrictNamedArgs{
+			fieldSubject: contactID, fieldKind: event.Kind, "source_type": event.SourceEntityType,
+			"source_id": event.SourceEntityID, exchangeOccurredArg: event.OccurredAt, carrySourceArg: source,
+			exchangeActorArg: capturedBy, "entities": entities,
+		})
 	return err
 }
 
-// recordedQualifyingEvent reads a recorded qualifying-event row, whichever writer
-// left it: a human, their passport agent, an integration, the transmit path or a booking.
-// A row dated after asOf does not count yet: older derived stamps carry a booked
-// meeting's future start.
-func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time, address *string) (QualifyingEvent, bool, error) {
+// Human statements and booking inquiries are recorded facts. Inferred events
+// are re-read from their source so a cached decision cannot outlive a correction.
+func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time, address *string, entity ids.UUID) (QualifyingEvent, bool, error) {
+	sub, known, err := qualifyingSubjectRef(subjectRef{Kind: entityContact, ID: contactID})
+	if err != nil || !known {
+		return QualifyingEvent{}, false, err
+	}
+	return recordedSubjectQualifyingEvent(ctx, tx, sub, since, asOf, address, entity)
+}
+
+func recordedSubjectQualifyingEvent(ctx context.Context, tx pgx.Tx, sub subject, since, asOf time.Time, address *string, entity ids.UUID) (QualifyingEvent, bool, error) {
+	column := pgx.Identifier{sub.column}.Sanitize()
 	var event QualifyingEvent
 	var id string
 	var sourceType, sourceID, note *string
 	var args []any
 	arg := func(value any) string { args = append(args, value); return storekit.SQLf("$%d", len(args)) }
-	contact, from, until, addr := arg(contactID), arg(since), arg(asOf), arg(address)
-	err := tx.QueryRow(ctx, `
+	contact, from, until, addr := arg(sub.id), arg(since), arg(asOf), arg(address)
+	entityArg := arg(entity)
+	qualification, err := recordedQualificationSQL(ctx, "q", &args)
+	if err != nil {
+		return QualifyingEvent{}, false, err
+	}
+	err = tx.QueryRow(ctx, `
 		SELECT id, kind, occurred_at, source_entity_type, source_entity_id, note
-		FROM consent_qualifying_event
-		WHERE contact_id = `+contact+` AND occurred_at >= `+from+` AND occurred_at <= `+until+` AND retracted_at IS NULL
+		FROM consent_qualifying_event q
+		WHERE `+column+` = `+contact+` AND occurred_at >= `+from+` AND occurred_at <= `+until+` AND retracted_at IS NULL
 		  AND (`+addr+`::text IS NULL OR `+requestCoversSQL("recorded_for_addresses", addr)+`)
+		  AND `+recordedEntitiesSQL("recorded_for_entities", entityArg)+`
+          AND `+qualification+`
 		ORDER BY occurred_at DESC
 		LIMIT 1`, args...).Scan(&id, &event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -239,35 +268,42 @@ func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, s
 // somebody else wrote is not the subject initiating correspondence, and
 // counting it would let anyone manufacture a lawful basis for writing to a
 // third party by putting them in Cc. So the participant row has to name them as
-// the author too, which is the same test authorizeevidence.go applies for the
-// same reason (authorIsTheSubject).
+// the author too, through the shared authorIsTheSubject rule. It names them by
+// record, or by address or channel account on a row that names no record.
 //
 // Both halves are load-bearing. Without the link this would count a message
 // nobody filed under the contact; without the authorship test it counts one they
 // merely received. Capture files a message under every participant it resolves
 // (capture/sinkmaillinks.go), so the link alone stopped meaning authorship the
 // moment a cc'd contact could be filed under.
-func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time) (QualifyingEvent, bool, error) {
+func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, subject subjectRef, since time.Time, entity ids.UUID) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
 	var activityID string
-	err := tx.QueryRow(ctx, `
+	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, since, entity}
+	entityArg := storekit.SQLf("$%d", len(args))
+	visible, err := activityEvidenceSQL(ctx, entityArg, &args)
+	if err != nil {
+		return QualifyingEvent{}, false, err
+	}
+	err = tx.QueryRow(ctx, `
 		SELECT a.id, a.occurred_at
 		FROM activity a
-		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
+		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $2::uuid
 		JOIN activity_participant p ON p.activity_id = a.id
-		     AND p.role = 'from' AND p.contact_id = $1::uuid
 		WHERE a.direction = 'inbound' AND a.archived_at IS NULL
-		  AND `+occurredday.FromSQL("a", "$2")+`
+		  AND `+authorIsTheSubject+`
+		  AND `+occurredday.FromSQL("a", "$6")+`
+		  AND `+visible+`
 		ORDER BY a.occurred_at DESC
-		LIMIT 1`, contactID, since).Scan(&activityID, &event.OccurredAt)
+		LIMIT 1`, args...).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}
 	if err != nil {
 		return QualifyingEvent{}, false, fmt.Errorf("read the inbound qualifying message: %w", err)
 	}
-	event.Kind = "inbound_message"
-	event.SourceEntityType = "activity"
+	event.Kind = kindInboundMessage
+	event.SourceEntityType = entityActivity
 	event.SourceEntityID = activityID
 	return event, true, nil
 }
@@ -331,17 +367,24 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 // message belongs on somebody's record, and being copied on somebody else's mail
 // initiates nothing. Attendance carries no such ambiguity: every attendee of a
 // meeting a connector captured is a party to it.
-func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time) (QualifyingEvent, bool, error) {
+func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since, asOf time.Time, entity ids.UUID) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
 	var activityID string
-	err := tx.QueryRow(ctx, `
+	args := []any{contactID, since, asOf, entity}
+	entityArg := storekit.SQLf("$%d", len(args))
+	visible, err := activityEvidenceSQL(ctx, entityArg, &args)
+	if err != nil {
+		return QualifyingEvent{}, false, err
+	}
+	err = tx.QueryRow(ctx, `
 		SELECT a.id, a.occurred_at
 		FROM activity a
-		JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid
+		JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid AND p.relinked_at IS NULL
 		WHERE `+capturedMeetingSQL("$3")+`
 		  AND `+occurredday.FromSQL("a", "$2")+`
+		  AND `+visible+`
 		ORDER BY a.occurred_at DESC
-		LIMIT 1`, contactID, since, asOf).Scan(&activityID, &event.OccurredAt)
+		LIMIT 1`, args...).Scan(&activityID, &event.OccurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}
@@ -349,7 +392,7 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 		return QualifyingEvent{}, false, fmt.Errorf("read the qualifying meeting: %w", err)
 	}
 	event.Kind = KindMeeting
-	event.SourceEntityType = "activity"
+	event.SourceEntityType = entityActivity
 	event.SourceEntityID = activityID
 	return event, true, nil
 }
@@ -360,8 +403,39 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 // meeting a rep typed by hand is not evidence of anything the contact did.
 // meetingQualifyingEvent and requestedNegotiation both read this one rule.
 func capturedMeetingSQL(asOf string) string {
+	// A caller matching the subject on a participant row also guards
+	// `p.relinked_at IS NULL`: a relinked row is a member's edit, not attendance.
 	return `a.kind = 'meeting' AND a.archived_at IS NULL
 		  AND a.counterparty_email IS NULL
 		  AND a.captured_by LIKE 'connector:%'
 		  AND ` + relstrength.MeetingInTouchSQL("a", asOf)
+}
+
+// agreedAppointment reports whether the subject accepted or organised a
+// calendar meeting still to come that nobody called off. A message about moving
+// it continues something they agreed to. A named meeting must be that meeting;
+// with none named, any such meeting answers. A hand-typed meeting, and a
+// participant a relink moved onto them, show nothing they agreed to.
+func agreedAppointment(ctx context.Context, tx pgx.Tx, contactID string, named *ids.UUID, asOf time.Time, entity ids.UUID) (bool, error) {
+	args := []any{contactID, asOf, entity, named}
+	visible, err := activityEvidenceSQL(ctx, "$3", &args)
+	if err != nil {
+		return false, err
+	}
+	var found bool
+	err = tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM activity a
+		  JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid
+		       AND (p.response = 'accepted' OR p.role = 'organizer') AND p.relinked_at IS NULL
+		  WHERE a.kind = 'meeting' AND a.archived_at IS NULL
+		    AND a.counterparty_email IS NULL
+		    AND a.captured_by LIKE 'connector:%'
+		    AND `+relstrength.MeetingAheadSQL("a", "$2")+`
+		    AND ($4::uuid IS NULL OR a.id = $4::uuid)
+		    AND `+visible+`)`, args...).Scan(&found)
+	if err != nil {
+		return false, fmt.Errorf("read the agreed appointment: %w", err)
+	}
+	return found, nil
 }

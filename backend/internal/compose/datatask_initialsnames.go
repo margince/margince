@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // initialsNamesDataTask shows an initials-only address as its local part ("dv"
@@ -23,7 +24,7 @@ import (
 func initialsNamesDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792896243_initials_display_names", Version: 1,
-		Title: "Showing initials-only addresses as they are instead of a made-up name",
+		Title: systemtext.Literal("datatask.title.core.1792896243_initials_display_names"),
 		Steps: []datatask.Step{{
 			Name: "contacts", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

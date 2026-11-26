@@ -87,6 +87,8 @@ const (
 	// outcomeRoleCannotCapture lands a consent whose human lost the role to
 	// capture between starting it and coming back; an admin fixes it.
 	outcomeRoleCannotCapture = "role_cannot_capture"
+	// outcomeOtherAccount lands a reconnect refused for naming another account.
+	outcomeOtherAccount = "other_account"
 )
 
 // writeConnectorUnavailable answers a connect request this deployment cannot
@@ -108,7 +110,7 @@ func writeConnectorUnavailable(w http.ResponseWriter, r *http.Request, provider 
 // happened to reuse one of those code names must not be answered with Google's
 // remedy.
 func disabledProviderAPI(provider string, err error) bool {
-	if provider != providerGmail && provider != providerGcal {
+	if provider != providerGmail && provider != providerGcal && provider != providerGdocs {
 		return false
 	}
 	return googleconn.Misconfigured(err)

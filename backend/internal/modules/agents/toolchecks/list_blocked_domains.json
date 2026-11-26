@@ -1,0 +1,6 @@
+{
+  "verb": "list_blocked_domains",
+  "checks": [
+    "company.read"
+  ]
+}

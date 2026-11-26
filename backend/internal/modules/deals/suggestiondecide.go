@@ -23,11 +23,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-// dealScoutSource is the provenance of a deal opened from a suggestion.
 const dismissReasonNotADeal = "not_a_deal"
 
+// dealScoutSource stamps the fields a model wrote on a deal opened from a suggestion.
 const dealScoutSource = "agent:dealscout"
 
 // SuggestionEffects are the writes an acceptance makes outside this module:
@@ -284,7 +285,7 @@ func (s *Store) acceptedDealInput(ctx context.Context, tx pgx.Tx, current Sugges
 	birth := CreateDealInput{
 		Name: name, AmountMinor: amount, Currency: currency,
 		PipelineID: pipelineID, StageID: stageID, CompanyID: &company,
-		Source: dealScoutSource, ExpectedClose: current.CloseDate,
+		Source: provenance.RecordSourceAutomation, ExpectedClose: current.CloseDate,
 		CloseDateProvisional: current.CloseDate != nil,
 	}
 	if in.CloseDate != nil {
@@ -382,14 +383,10 @@ func (s *Store) linkInSavepoint(ctx context.Context, tx pgx.Tx, activityID, deal
 // recordDecision moves an open suggestion to its decided state, with the
 // audit row and the event in the same transaction.
 func recordDecision(ctx context.Context, tx pgx.Tx, id ids.UUID, state string, dealID *ids.UUID, reasons ...string) error {
-	actor, err := storekit.Actor(ctx)
-	if err != nil {
-		return err
-	}
 	tag, err := tx.Exec(ctx, `
-		UPDATE deal_suggestion SET state = $2, accepted_deal_id = $3, decided_by = $4, decided_at = now()
+		UPDATE deal_suggestion SET state = $2, accepted_deal_id = $3, decided_at = now()
 		 WHERE id = $1 AND state = 'open'`,
-		id, state, dealID, storekit.UUIDOrNil(actor.UserID))
+		id, state, dealID)
 	if err != nil {
 		return fmt.Errorf("deals: recording the decision: %w", err)
 	}

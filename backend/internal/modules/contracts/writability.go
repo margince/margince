@@ -3,26 +3,13 @@
 
 package contracts
 
-// Contract write authority, inherited from the same anchor visibility.go
-// derives sight from — and inherited in BOTH directions, which is the whole
-// point of this file.
-//
-// A contract carries no owner_id, so every gate it has is its anchor's. The
-// visibility clause answers "may this caller SEE the agreement", and until this
-// file existed it was also the only thing standing in front of a patch, an
-// archive, a status change, a cancellation and a renewal. A manual grant widens
-// visibility at either access level (that is what makes a `read` share useful),
-// so a colleague handed read on a deal could rewrite, cancel and archive every
-// agreement hanging off it (#1373).
-//
-// The anchor rule is visibility.go's, restated once here rather than re-derived:
-// a contract WITH a deal is judged by that deal, and one without is judged by
-// its company. Widening a deal-anchored contract to its company would hand
-// a caller agreements attached to deals they cannot see; narrowing it to both
-// would refuse a legitimate editor who holds only the deal.
+// Read sharing never grants write authority. Contract writes use the same
+// effective anchor as reads and require write access to that anchor.
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -30,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -82,28 +70,30 @@ func writableContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf ti
 	return existing, nil
 }
 
-// ensureAnchorWritable applies the write-authority probe to whichever record
-// the contract inherits from.
-//
-// It asks for authority and NOT for liveness, and that is deliberate rather
-// than the omission it looks like next to its siblings elsewhere. The liveness
-// is already spent: writableContract reads through readContract, which composes
-// VisibleClause, whose two anchor arms both carry archived_at IS NULL. A caller
-// who cannot read a contract on an archived anchor cannot reach this probe at
-// all, so repeating the filter here would guard nothing a human can do.
-//
-// The write therefore AGREES with the read rather than being stricter than it.
-// Making it stricter would separate the two for a caller unbounded on BOTH
-// anchors, which today is the system principal, and one question answered by
-// two gates is how the next reader ends up unable to tell which is
-// authoritative.
+// ensureAnchorWritable requires write access to the effective anchor;
+// a read share alone never grants it.
 func ensureAnchorWritable(ctx context.Context, tx pgx.Tx, contract crmcontracts.Contract) error {
-	if contract.DealId != nil {
-		return auth.EnsureWritable(ctx, tx, dealTable, ids.UUID(*contract.DealId))
-	}
-	anchor, err := anchorOf(contract)
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	clause, err := auth.ContractVisibleClause(ctx, "c", arg)
 	if err != nil {
 		return err
 	}
-	return auth.EnsureWritable(ctx, tx, companyTable, anchor)
+	kindSQL, idSQL := auth.ContractAnchorSQL("c", "d")
+	query := fmt.Sprintf(`SELECT %s, %s FROM contract c LEFT JOIN deal d ON d.id = c.deal_id
+  WHERE c.id = $%d AND %s`, kindSQL, idSQL, arg(contract.Id), clause)
+	var anchor string
+	var anchorID ids.UUID
+	if err := tx.QueryRow(ctx, query, args...).Scan(&anchor, &anchorID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		return err
+	}
+	if anchor == companyTable {
+		if _, err := anchorOf(contract); err != nil {
+			return err
+		}
+	}
+	return auth.EnsureWritable(ctx, tx, anchor, anchorID)
 }

@@ -1,10 +1,11 @@
 import type { Locale, Translator } from "../i18n";
+import { handScaledUnit } from "./compactscale";
 import { calendarDaysBetween } from "./format.dates";
+import { numberFormat } from "./formatters";
 // The presentation edge (architecture/10 §1–3): everything here formats
 // ALREADY-stored values — minor units, UTC instants, IR-provided base
 // aggregates. No FX math, no live rate calls, no calendar arithmetic, and
 // locale never flows back into storage. format.test.ts pins each rule.
-import { INTL_LOCALE } from "./intllocale";
 import { minorUnitDigits, toMajorUnits } from "./minorunits";
 import { formatMoneyOrWord, MONEY_ABSENT } from "./moneyword";
 
@@ -12,10 +13,12 @@ export {
   assertIanaZone,
   calendarDaysBetween,
   displayDay,
+  formatAgreedClock,
   formatDate,
   formatDateAbbrev,
   formatDateAbbrevRange,
   formatDateTime,
+  formatDateTimeAbbrev,
   formatDayLong,
   formatDayMonth,
   formatDayMonthNearYear,
@@ -31,6 +34,7 @@ export {
   weekdayInitial,
 } from "./format.dates";
 export { INTL_LOCALE } from "./intllocale";
+export { formatFinePercent, formatPercent } from "./percent";
 
 // Money arrives as integer minor units + ISO currency (data-semantics §1).
 // The only transformation is the currency's minor-unit scaling — display,
@@ -50,7 +54,7 @@ export function formatMoney(
   locale: Locale,
 ): string {
   const digits = minorUnitDigits(currency);
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "currency",
     currency,
     minimumFractionDigits: digits,
@@ -71,7 +75,7 @@ export function formatMoneyWhole(
   if (!Number.isInteger(major)) {
     return formatMoney(amountMinor, currency, locale);
   }
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "currency",
     currency,
     maximumFractionDigits: 0,
@@ -142,18 +146,12 @@ export function formatMoneyCompact(
   if (!abbreviated && !Number.isInteger(major)) {
     return formatMoney(amountMinor, currency, locale);
   }
-  const vietnameseCompact = locale === "vi" && abbreviated;
-  const scale =
-    Math.abs(major) >= 1_000_000_000
-      ? 1_000_000_000
-      : Math.abs(major) >= 1_000_000
-        ? 1_000_000
-        : 1_000;
-  const unit = scale === 1_000 ? "K" : scale === 1_000_000 ? " triệu" : " tỷ";
-  const formatter = new Intl.NumberFormat(INTL_LOCALE[locale], {
+  const scaled = handScaledUnit(major, locale);
+  const unit = abbreviated ? scaled.unit : undefined;
+  const formatter = numberFormat(locale, {
     style: "currency",
     currency,
-    notation: abbreviated && !vietnameseCompact ? "compact" : "standard",
+    notation: abbreviated && unit === undefined ? "compact" : "standard",
     // Spelled out: the currency style starts the minimum at the currency's own
     // digits, so a maximum of 1 alone always prints one digit ("€420.0k").
     minimumFractionDigits: 0,
@@ -166,8 +164,8 @@ export function formatMoneyCompact(
     // not reach; truncating drops digits but never adds any.
     roundingMode: "trunc",
   });
-  if (!vietnameseCompact) return formatter.format(major);
-  const parts = formatter.formatToParts(major / scale);
+  if (unit === undefined) return formatter.format(major);
+  const parts = formatter.formatToParts(major / scaled.scale);
   const lastDigit = parts.reduce(
     (last, part, index) =>
       part.type === "integer" || part.type === "fraction" ? index : last,
@@ -211,7 +209,7 @@ export function formatUsdPerMTok(price: string, locale: Locale): string {
     value === 0
       ? 2
       : Math.min(6, Math.max(2, Math.ceil(-Math.log10(Math.abs(value)))));
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: digits,
@@ -219,56 +217,25 @@ export function formatUsdPerMTok(price: string, locale: Locale): string {
   }).format(value);
 }
 
-/**
- * A share of a whole where the FRACTION matters: "0.4 %", "12.0 %".
- *
- * `formatPercent` rounds to whole numbers, which is right for progress. It is
- * wrong for a rate held to a threshold below one percent — a transition sitting
- * at 0.4% undone would print "0%" and read as flawless, which is the rounding
- * that flatters exactly where flattery is dangerous.
- *
- * Zero is still "0 %": nothing went wrong is a whole fact, and "0.0 %" claims a
- * measurement where there is simply nothing to measure.
- */
-export function formatFinePercent(fraction: number, locale: Locale): string {
-  if (fraction === 0) {
-    return formatPercent(0, locale);
-  }
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
-    style: "percent",
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  }).format(fraction);
-}
-
-export function formatNumber(value: number, locale: Locale): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale]).format(value);
+export function formatNumber(
+  value: number,
+  locale: Locale,
+  maximumFractionDigits?: number,
+): string {
+  return numberFormat(locale, {
+    maximumFractionDigits,
+  }).format(value);
 }
 
 // A measured span in hours, to one decimal and in the reader's unit word: a
 // median first response of 3.5 hours reads "3.5 hr", "3,5 Std." or "3,5 giờ".
 export function formatHours(hours: number, locale: Locale): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "unit",
     unit: "hour",
     unitDisplay: "short",
     maximumFractionDigits: 1,
   }).format(hours);
-}
-
-/**
- * A share of a whole as a whole-number percentage: "42%", or "42 %" for a
- * German reader, whose typography puts a space before the sign.
- *
- * Whole numbers only, because what this labels is progress — a ring, a chip —
- * where "41.7%" claims a precision a count of scanned messages does not have.
- * A rate that carries a real fraction is `formatFinePercent`'s job.
- */
-export function formatPercent(fraction: number, locale: Locale): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
-    style: "percent",
-    maximumFractionDigits: 0,
-  }).format(fraction);
 }
 
 /**
@@ -286,7 +253,7 @@ export function formatSignedNumber(value: number, locale: Locale): string {
   if (value === 0) {
     return "±0";
   }
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     signDisplay: "always",
   }).format(value);
 }
@@ -310,7 +277,7 @@ export function formatSignedMoney(
   locale: Locale,
 ): string {
   const digits = minorUnitDigits(currency);
-  const formatted = new Intl.NumberFormat(INTL_LOCALE[locale], {
+  const formatted = numberFormat(locale, {
     style: "currency",
     currency,
     minimumFractionDigits: digits,
@@ -374,7 +341,7 @@ export function formatDecimal(
   locale: Locale,
   fractionDigits: number,
 ): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
   }).format(value);
@@ -387,7 +354,7 @@ export function formatDecimal(
 // the short English one never inflects ("98 byte").
 export function formatBytes(bytes: number, locale: Locale): string {
   const [value, unit] = byteScale(bytes);
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "unit",
     unit,
     unitDisplay: unit === "byte" ? "long" : "short",
@@ -405,34 +372,7 @@ function byteScale(bytes: number): [number, "byte" | "kilobyte" | "megabyte"] {
   return [bytes, "byte"];
 }
 
-/**
- * relativeDays reads a timestamp the way a contact says it: today, yesterday,
- * or "N days".
- *
- * `never` is reserved for a read that HAPPENED and found nothing — the caller
- * decides that by passing null only when the section was readable. A withheld
- * section is not "never"; it is unknown, and its card says so.
- *
- * It lives here because three screens wanted it and each wrote its own: two
- * private copies in contactstrip.tsx and contactrail.tsx, byte-equivalent and
- * both counting milliseconds. format.ts's own INTL_LOCALE comment had been
- * pointing at this gap since it was written — "exported because a relative-time
- * formatter needs the same mapping".
- */
-export function relativeDays(
-  at: string | null | undefined,
-  t: Translator,
-  locale: Locale,
-  zone: string,
-  now: Date = new Date(),
-): string {
-  if (!at) {
-    return t("contact.strip.never");
-  }
-  return daysAgoText(calendarDaysBetween(new Date(at), now, zone), t, locale);
-}
-
-/** A count of dates since a moment, as relativeDays says it. */
+/** A count of calendar days since a moment, said the way a contact says it. */
 export function daysAgoText(
   days: number,
   t: Translator,
@@ -456,7 +396,7 @@ export function daysAgoText(
 export function formatDuration(ms: number, locale: Locale): string {
   const days = Math.floor(ms / 86_400_000);
   const hours = Math.floor((ms % 86_400_000) / 3_600_000);
-  const unit = new Intl.NumberFormat(INTL_LOCALE[locale], {
+  const unit = numberFormat(locale, {
     style: "unit",
     unit: "day",
     unitDisplay: "narrow",
@@ -464,7 +404,7 @@ export function formatDuration(ms: number, locale: Locale): string {
   if (days >= 1) {
     return unit.format(days);
   }
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "unit",
     unit: "hour",
     unitDisplay: "narrow",
@@ -483,7 +423,7 @@ export function formatAge(
     calendarDaysBetween(new Date(at), new Date(now), zone),
   );
   const hours = Math.max(0, Math.floor((now - Date.parse(at)) / 3_600_000));
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "unit",
     unit: days > 0 ? "day" : "hour",
     unitDisplay: "narrow",
@@ -496,4 +436,5 @@ export {
   formatAnalyticsMoneyOrAbsent,
   formatAnalyticsNumber,
   formatAnalyticsPercent,
+  formatAnalyticsPercentPoints,
 } from "./format.analytics";

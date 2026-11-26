@@ -14,30 +14,35 @@ import (
 
 // Column is one column's guide. It holds the mapping step's name for the
 // column, what goes in it and an example. It also says whether a row that
-// creates a record needs the column.
+// creates a record needs the column. Aliases are other names exports give it.
 type Column struct {
 	Description, Example, Label langcopy.Phrase
 	RequiredOnNew               bool
+	Aliases                     []string
 }
+
+// legacyCompanyNameHeader is the German header older export files carry for a
+// company name, kept as an alias so those files still map their column.
+const legacyCompanyNameHeader = "Firmenname"
 
 // Columns is the guide of every core import target, keyed by target or by
 // "object.target" where one object's column means something else.
 var Columns = withLabels(withActivityColumns(map[string]Column{
 	"ref": {Description: langcopy.Phrase{
 		En: "Your own key for this row: the ID from your old CRM, or any text you choose. Upload again with the same ref and source name, and Margince updates the record instead of making a second one. Other files use it to link to this row.",
-		De: "Dein eigener Schlüssel für diese Zeile: die ID aus deinem alten CRM oder ein beliebiger Text. Lädst du mit derselben Ref und demselben Quellnamen erneut hoch, aktualisiert Margince den Datensatz, statt einen zweiten anzulegen. Andere Dateien verknüpfen über diesen Wert mit dieser Zeile.",
+		De: "Dein eigener Schlüssel für diese Zeile: die ID aus deinem alten CRM oder ein beliebiger Text. Lädst du mit derselben Ref und demselben Quellnamen erneut hoch, aktualisiert Margince den Datensatz, statt einen zweiten zu erstellen. Andere Dateien verknüpfen über diesen Wert mit dieser Zeile.",
 		Vi: "Khóa riêng của bạn cho dòng này: ID từ CRM cũ, hoặc văn bản bất kỳ bạn chọn. Tải lên lại với cùng ref và tên nguồn, Margince sẽ cập nhật hồ sơ thay vì tạo hồ sơ thứ hai. Các tệp khác dùng giá trị này để liên kết tới dòng này.",
 	}, Example: same("12345 · CO-0042 · acme")},
 	"id": {Description: langcopy.Phrase{
 		En: "The company's Margince ID, from an export of Margince. A row with an ID updates that company and never creates one.",
-		De: "Die Margince-ID des Unternehmens aus einem Export von Margince. Eine Zeile mit ID aktualisiert dieses Unternehmen und legt nie ein neues an.",
+		De: "Die Margince-ID des Unternehmens aus einem Export von Margince. Eine Zeile mit ID aktualisiert dieses Unternehmen und erstellt nie ein neues.",
 		Vi: "ID Margince của công ty, lấy từ tệp xuất của Margince. Dòng có ID sẽ cập nhật công ty đó và không bao giờ tạo công ty mới.",
 	}, Example: same("0192f3a4-5b6c-7d8e-9f00-112233445566")},
 	"company.display_name": {Description: langcopy.Phrase{
 		En: "The company's display name. Used to find an existing company when the row has no ref.",
 		De: "Der Anzeigename des Unternehmens. Hat die Zeile keine Ref, wird damit ein vorhandenes Unternehmen gesucht.",
 		Vi: "Tên hiển thị của công ty. Dùng để tìm công ty đã có khi dòng không có ref.",
-	}, Example: same("Acme GmbH"), RequiredOnNew: true},
+	}, Example: same("Acme GmbH"), RequiredOnNew: true, Aliases: []string{"Name", legacyCompanyNameHeader}},
 	"legal_name": {Description: langcopy.Phrase{
 		En: "The registered legal name, if it differs from the display name.",
 		De: "Der eingetragene rechtliche Name, falls er vom Anzeigenamen abweicht.",
@@ -52,7 +57,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "Number of employees, as one of the bands Margince uses.",
 		De: "Anzahl der Beschäftigten als eine der Größenklassen, die Margince verwendet.",
 		Vi: "Số nhân viên, theo một trong các nhóm quy mô Margince dùng.",
-	}, Example: same("1-10 · 11-50 · 51-200")},
+	}, Example: same("1-10 · 11-50 · 51-200"), Aliases: []string{"Employees", "Mitarbeitende", "Số nhân viên", "Number of employees", "Anzahl Mitarbeiter", "Beschäftigtenzahl"}},
 	"description": {Description: langcopy.Phrase{
 		En: "A short description of the company.",
 		De: "Eine kurze Beschreibung des Unternehmens.",
@@ -62,7 +67,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "The company's web domain, without https:// or www. Contacts can link to a company by its domain.",
 		De: "Die Webdomain des Unternehmens, ohne https:// und www. Kontakte können über die Domain mit einem Unternehmen verknüpft werden.",
 		Vi: "Tên miền web của công ty, không có https:// hay www. Liên hệ có thể liên kết tới công ty qua tên miền.",
-	}, Example: same("acme.com")},
+	}, Example: same("acme.com"), Aliases: []string{"Website", "Webseite", "Web"}},
 	"company.linkedin_url": {Description: langcopy.Phrase{
 		En: "The full address of the company's LinkedIn page.",
 		De: "Die vollständige Adresse der LinkedIn-Seite des Unternehmens.",
@@ -75,7 +80,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 	}, Example: same("https://www.linkedin.com/in/jo-tran")},
 	"author": {Description: langcopy.Phrase{
 		En: "Who wrote the record in the system the file comes from, as written there. When it is the email of a Margince user, the record names that user. Written only when a row creates a record.",
-		De: "Wer den Datensatz im Quellsystem verfasst hat, so wie es dort steht. Ist es die E-Mail-Adresse eines Mitglieds, nennt der Datensatz dieses Mitglied. Wird nur geschrieben, wenn eine Zeile einen Datensatz anlegt.",
+		De: "Wer den Datensatz im Quellsystem verfasst hat, so wie es dort steht. Ist es die E-Mail-Adresse eines Mitglieds, nennt der Datensatz dieses Mitglied. Wird nur geschrieben, wenn eine Zeile einen Datensatz erstellt.",
 		Vi: "Người đã viết hồ sơ trong hệ thống nguồn, giữ nguyên như ở đó. Nếu là email của một thành viên Margince, hồ sơ sẽ ghi tên thành viên đó. Chỉ được ghi khi dòng tạo hồ sơ mới.",
 	}, Example: same("mai@yourcompany.com · Mai Nguyen")},
 	"owner_email": {Description: langcopy.Phrase{
@@ -85,14 +90,14 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 	}, Example: same("mai@yourcompany.com")},
 	"tags": {Description: langcopy.Phrase{
 		En: "Tags, separated by semicolons. Tags that do not exist yet are created, and the import preview lists them.",
-		De: "Tags, durch Semikolons getrennt. Noch nicht vorhandene Tags werden angelegt, und die Importvorschau listet sie auf.",
+		De: "Tags, durch Semikolons getrennt. Noch nicht vorhandene Tags werden erstellt, und die Importvorschau listet sie auf.",
 		Vi: "Thẻ, phân cách bằng dấu chấm phẩy. Thẻ chưa có sẽ được tạo, và bản xem trước lần nhập liệt kê các thẻ này.",
 	}, Example: same("Partner; DACH")},
 	"address.line1": {Description: langcopy.Phrase{
 		En: "Street and house number. A whole address here, with no other address column, is split into its parts.",
 		De: "Straße und Hausnummer. Eine ganze Adresse hier, ohne weitere Adressspalte, wird in ihre Teile aufgeteilt.",
 		Vi: "Số nhà và tên đường. Một địa chỉ đầy đủ ở đây, khi không có cột địa chỉ nào khác, được tách thành các phần.",
-	}, Example: same("Hauptstraße 5")},
+	}, Example: same("Hauptstraße 5"), Aliases: []string{"Address", "Adresse", "Street", "Straße"}},
 	"address.line2": {Description: langcopy.Phrase{
 		En: "A second address line: building, floor or suite.",
 		De: "Zweite Adresszeile: Gebäude, Etage oder Büro.",
@@ -132,7 +137,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "The whole name in one cell, when you do not have it split.",
 		De: "Der ganze Name in einer Zelle, wenn er nicht aufgeteilt vorliegt.",
 		Vi: "Họ tên đầy đủ trong một ô, khi chưa tách riêng.",
-	}, Example: same("Jo Tran")},
+	}, Example: same("Jo Tran"), Aliases: []string{"Name"}},
 	"email": {Description: langcopy.Phrase{
 		En: "Email address. Used to find an existing contact or lead when the row has no ref, so uploading again does not make duplicates.",
 		De: "E-Mail-Adresse. Hat die Zeile keine Ref, wird damit ein vorhandener Kontakt oder Lead gesucht, sodass erneutes Hochladen keine Duplikate erzeugt.",
@@ -142,7 +147,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "Phone number with its country code.",
 		De: "Telefonnummer mit Ländervorwahl.",
 		Vi: "Số điện thoại kèm mã quốc gia.",
-	}, Example: same("+49 30 1234567")},
+	}, Example: same("+49 30 1234567"), Aliases: []string{"Phone number", "Telephone", "Telefonnummer"}},
 	"company.email": {Description: langcopy.Phrase{
 		En: "The company's general address, such as info@. It is stored on the company and never finds or creates a contact.",
 		De: "Die allgemeine Adresse des Unternehmens, etwa info@. Sie wird beim Unternehmen gespeichert und findet oder erzeugt nie einen Kontakt.",
@@ -150,14 +155,14 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 	}, Example: same("info@acme.com")},
 	"title": {Description: langcopy.Phrase{
 		En: "Job title.",
-		De: "Berufsbezeichnung.",
+		De: "Jobtitel.",
 		Vi: "Chức danh.",
-	}, Example: langcopy.Phrase{En: "Head of Purchasing", De: "Leitung Einkauf", Vi: "Trưởng phòng mua hàng"}},
+	}, Example: langcopy.Phrase{En: "Head of Purchasing", De: "Leitung Einkauf", Vi: "Trưởng phòng mua hàng"}, Aliases: []string{"Position"}},
 	"company_name": {Description: langcopy.Phrase{
 		En: "The company the lead works for, as text. A lead links to no company record.",
 		De: "Das Unternehmen, für das der Lead arbeitet, als Text. Ein Lead ist mit keinem Unternehmen verknüpft.",
 		Vi: "Công ty nơi lead làm việc, dạng văn bản. Lead không liên kết với hồ sơ công ty nào.",
-	}, Example: same("Acme")},
+	}, Example: same("Acme"), Aliases: []string{"Company", legacyCompanyNameHeader}},
 	"lead.status": {Description: langcopy.Phrase{
 		En: "Where the lead stands: new, contacted or engaged. Leave it empty for new. A lead is qualified or disqualified in Margince, so a file cannot set those.",
 		De: "Wo der Lead steht: new, contacted oder engaged. Leer bedeutet new. Ein Lead wird in Margince qualifiziert oder disqualifiziert, daher kann eine Datei das nicht setzen.",
@@ -174,10 +179,10 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		Vi: "Ghi chú ngắn bên cạnh nguồn gốc, ví dụ sự kiện hoặc ai đã giới thiệu lead. Lead đã có ghi chú thì giữ nguyên.",
 	}, Example: same("Berlin summit")},
 	"contact.company_name": {Description: langcopy.Phrase{
-		En: "The company this contact works for, by its exact name. Exactly one company must carry the name, or no link is made and the import preview says why.",
-		De: "Das Unternehmen, für das dieser Kontakt arbeitet, mit seinem genauen Namen. Genau ein Unternehmen muss diesen Namen tragen, sonst wird keine Verknüpfung angelegt, und die Importvorschau nennt den Grund.",
-		Vi: "Công ty nơi liên hệ này làm việc, theo đúng tên. Phải có đúng một công ty mang tên này, nếu không sẽ không tạo liên kết và bản xem trước lần nhập nêu lý do.",
-	}, Example: same("Acme GmbH")},
+		En: "The company this contact works for, by its name. The import links the company with that name, or creates one if none matches, and the import preview says when it will create one.",
+		De: "Das Unternehmen, für das dieser Kontakt arbeitet, mit seinem Namen. Der Import verknüpft das Unternehmen mit diesem Namen oder erstellt eines, wenn keines passt, und die Importvorschau sagt, wann sie eines erstellt.",
+		Vi: "Công ty nơi liên hệ này làm việc, theo tên. Lần nhập liên kết công ty có tên này, hoặc tạo công ty mới nếu không có công ty nào khớp, và bản xem trước lần nhập cho biết khi nào sẽ tạo.",
+	}, Example: same("Acme GmbH"), Aliases: []string{"Company", legacyCompanyNameHeader}},
 	"company_ref": {Description: langcopy.Phrase{
 		En: "The company this contact works for: the company's ref in this upload or an earlier one, its domain, its exact name, or its Margince ID. If none matches, the import preview reports a broken link.",
 		De: "Das Unternehmen, für das dieser Kontakt arbeitet: die Ref des Unternehmens aus diesem oder einem früheren Import, seine Domain, sein genauer Name oder seine Margince-ID. Passt nichts, meldet die Importvorschau eine fehlerhafte Verknüpfung.",
@@ -187,7 +192,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "Your own key for this deal, such as the deal's ID in your old CRM. Every deal row needs one, because two deals may share a name. Upload again with the same ref and source name, and Margince updates the deal.",
 		De: "Dein eigener Schlüssel für diesen Deal, etwa die ID des Deals in deinem alten CRM. Jede Deal-Zeile braucht einen, denn zwei Deals können denselben Namen tragen. Lädst du mit derselben Ref und demselben Quellnamen erneut hoch, aktualisiert Margince den Deal.",
 		Vi: "Khóa riêng của bạn cho deal này, chẳng hạn ID của deal trong CRM cũ. Mỗi dòng deal đều cần khóa này, vì hai deal có thể trùng tên. Tải lên lại với cùng ref và tên nguồn, Margince sẽ cập nhật deal.",
-	}, Example: same("D-1001"), RequiredOnNew: true},
+	}, Example: same("D-1001")},
 	"deal.name": {Description: langcopy.Phrase{
 		En: "The deal's name.",
 		De: "Der Name des Deals.",
@@ -195,14 +200,14 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 	}, Example: langcopy.Phrase{En: "Acme pumps renewal", De: "Acme Pumpen Verlängerung", Vi: "Gia hạn máy bơm Acme"}, RequiredOnNew: true},
 	"pipeline": {Description: langcopy.Phrase{
 		En: "The pipeline's name, as Margince spells it; case does not matter. Leave it empty to use the default pipeline.",
-		De: "Der Name der Pipeline, wie Margince ihn schreibt; Groß- und Kleinschreibung zählt nicht. Leer lassen, um die Standard-Pipeline zu nutzen.",
+		De: "Der Name der Pipeline, wie Margince ihn schreibt. Groß- und Kleinschreibung zählt nicht. Leer lassen, um die Standard-Pipeline zu nutzen.",
 		Vi: "Tên pipeline, đúng như Margince ghi; không phân biệt chữ hoa, chữ thường. Để trống để dùng pipeline mặc định.",
 	}, Example: same("Sales")},
 	"stage": {Description: langcopy.Phrase{
 		En: "The stage's name in that pipeline; case does not matter. A won or lost stage imports the deal as closed.",
-		De: "Der Name der Phase in dieser Pipeline; Groß- und Kleinschreibung zählt nicht. Mit einer gewonnenen oder verlorenen Phase wird der Deal als abgeschlossen importiert.",
+		De: "Der Name der Phase in dieser Pipeline. Groß- und Kleinschreibung zählt nicht. Mit einer gewonnenen oder verlorenen Phase wird der Deal als abgeschlossen importiert.",
 		Vi: "Tên giai đoạn trong pipeline đó; không phân biệt chữ hoa, chữ thường. Giai đoạn thắng hoặc thua sẽ nhập deal ở trạng thái đã đóng.",
-	}, Example: same("Qualified")},
+	}, Example: same("Qualified"), RequiredOnNew: true},
 	"amount": {Description: langcopy.Phrase{
 		En: "The deal's value as a plain number with a dot for decimals, with no currency sign and no thousands separator. Needs a currency.",
 		De: "Der Wert des Deals als einfache Zahl mit Punkt als Dezimaltrennzeichen, ohne Währungszeichen und ohne Tausendertrennzeichen. Braucht eine Währung.",
@@ -235,7 +240,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 	}, Example: langcopy.Phrase{En: "Three pumps and a service contract", De: "Drei Pumpen und ein Wartungsvertrag", Vi: "Ba máy bơm và một hợp đồng bảo trì"}},
 	"lost_reason": {Description: langcopy.Phrase{
 		En: "Why a lost deal was lost. Needed when the stage is lost; written only when the row creates the deal.",
-		De: "Warum ein verlorener Deal verloren ging. Nötig, wenn die Phase verloren ist; wird nur geschrieben, wenn die Zeile den Deal anlegt.",
+		De: "Warum ein verlorener Deal verloren ging. Nötig, wenn die Phase verloren ist. Wird nur geschrieben, wenn die Zeile den Deal erstellt.",
 		Vi: "Lý do deal bị thua. Bắt buộc khi giai đoạn là thua; chỉ được ghi khi dòng tạo deal mới.",
 	}, Example: langcopy.Phrase{En: "Chose a cheaper supplier", De: "Günstigeren Anbieter gewählt", Vi: "Chọn nhà cung cấp rẻ hơn"}},
 }))
@@ -273,6 +278,16 @@ var Custom = map[string]Column{
 		De: "Ein benutzerdefiniertes Feld. Einer oder mehrere der erlaubten Werte des Felds, durch Semikolons getrennt.",
 		Vi: "Trường tùy chỉnh. Một hoặc nhiều giá trị cho phép của trường, phân cách bằng dấu chấm phẩy.",
 	}, Example: same("A; B")},
+	fieldcatalog.TypeRecord: {Description: langcopy.Phrase{
+		En: "A custom field. The id of a record of the kind the field points at.",
+		De: "Ein benutzerdefiniertes Feld. Die ID eines Datensatzes der Art, auf die das Feld verweist.",
+		Vi: "Trường tùy chỉnh. Mã của một bản ghi thuộc loại mà trường trỏ tới.",
+	}, Example: same("0f9e8d7c-6b5a-4c3d-8e2f-1a0b9c8d7e6f")},
+	fieldcatalog.TypeURL: {Description: langcopy.Phrase{
+		En: "A custom field. A web address that starts with http:// or https://.",
+		De: "Ein benutzerdefiniertes Feld. Eine Webadresse, die mit http:// oder https:// beginnt.",
+		Vi: "Trường tùy chỉnh. Một địa chỉ web bắt đầu bằng http:// hoặc https://.",
+	}, Example: same("https://example.com/offer")},
 	fieldcatalog.TypeBoolean: {Description: langcopy.Phrase{
 		En: "A custom field. Yes or no: true, yes or 1, or false, no or 0.",
 		De: "Ein benutzerdefiniertes Feld. Ja oder nein: true, yes oder 1, oder false, no oder 0.",
@@ -284,7 +299,7 @@ var Custom = map[string]Column{
 var KeyRules = []langcopy.Phrase{
 	{
 		En: "A row is known by its ref and the import's source name. Upload a file again with the same refs and source name, and its records are updated, not made twice.",
-		De: "Eine Zeile wird an ihrer Ref und am Quellnamen des Imports erkannt. Lädst du eine Datei mit denselben Refs und demselben Quellnamen erneut hoch, werden ihre Datensätze aktualisiert statt doppelt angelegt.",
+		De: "Eine Zeile wird an ihrer Ref und am Quellnamen des Imports erkannt. Lädst du eine Datei mit denselben Refs und demselben Quellnamen erneut hoch, werden ihre Datensätze aktualisiert statt doppelt erstellt.",
 		Vi: "Mỗi dòng được nhận biết qua ref và tên nguồn của lần nhập. Tải lên lại tệp với cùng ref và tên nguồn, hồ sơ sẽ được cập nhật chứ không bị tạo hai lần.",
 	},
 	{
@@ -312,7 +327,7 @@ func same(text string) langcopy.Phrase {
 
 // Template is the README's own text, beside the column guides.
 var Template = struct {
-	Title, Optional, Order, Keys, Allowed, Pipelines, SizeLimit, Formulas, Example, Required langcopy.Phrase
+	Title, Optional, Order, Keys, Allowed, Pipelines, SizeLimit, Formulas, Example, Required, KeyColumns langcopy.Phrase
 }{
 	Title: langcopy.Phrase{
 		En: "Margince import template (%s)",
@@ -343,5 +358,10 @@ var Template = struct {
 		Vi: "Ứng dụng bảng tính có thể đổi nội dung ô: giá trị bắt đầu bằng =, + hoặc @, hay bằng dấu trừ, có thể chạy như công thức, còn số dài hoặc ngày có thể bị đổi định dạng. Lưu dạng CSV UTF-8 và kiểm tra các ô đó trước khi tải lên.",
 	},
 	Example:  langcopy.Phrase{En: "Example: %s", De: "Beispiel: %s", Vi: "Ví dụ: %s"},
-	Required: langcopy.Phrase{En: "needed on a new row", De: "beim Anlegen nötig", Vi: "bắt buộc khi tạo mới"},
+	Required: langcopy.Phrase{En: "needed on a new row", De: "beim Erstellen nötig", Vi: "bắt buộc khi tạo mới"},
+	KeyColumns: langcopy.Phrase{
+		En: "The file needs one of these columns, to tell its rows apart: %s",
+		De: "Die Datei braucht eine dieser Spalten, um ihre Zeilen zu unterscheiden: %s",
+		Vi: "Tệp cần một trong các cột này để phân biệt các dòng: %s",
+	},
 }

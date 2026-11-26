@@ -11,7 +11,9 @@ package privacy
 
 import (
 	"context"
+	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -32,11 +34,11 @@ func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, 
 	sections = append(sections, sarReportingSections(pkg), sarQuestionSection(pkg, contactID, emails), sarBindingSection(pkg, contactID, emails))
 	sections = append(sections, sarRecordSections(pkg, contactID, leads)...)
 	sections = append(sections, sarMessagingSections(pkg, contactID, emails, leads)...)
-	sections = append(sections, sarConsentSections(pkg)...)
+	sections = append(sections, sarConsentSections(pkg, contactID, emails, leads)...)
 	sections = append(sections, sarRequestSections(pkg, contactID)...)
 	sections = append(sections, sarConsentLinkSections(pkg)...)
 	sections = append(sections, sarCommunicationSections(pkg, emails, leads, identities)...)
-	sections = append(sections, sarJudgementSections(pkg, authored)...)
+	sections = append(sections, sarJudgementSections(pkg, contactID, authored)...)
 	return append(sections, sarProvenanceSections(pkg, contactID, external)...), nil
 }
 
@@ -141,8 +143,8 @@ func sarRecordSections(pkg *SARPackage, contactID ids.ContactID, leads []ids.UUI
 		{&pkg.Relationships, `SELECT kind, company_id, deal_id, role, started_at, ended_at
 		   FROM relationship WHERE contact_id = $1 AND archived_at IS NULL`, nil},
 		{&pkg.Deals, `SELECT d.id, d.name, d.status, d.amount_minor, d.currency
-		   FROM deal d JOIN relationship r ON r.deal_id = d.id
-		   WHERE r.kind = 'deal_stakeholder' AND r.contact_id = $1 AND r.archived_at IS NULL`, nil},
+		   FROM deal d WHERE d.id IN (` + subjectLiveDealIDsSQL + `)`, nil},
+		sarLegalReviewSection(pkg),
 		{
 			&pkg.Leads, `SELECT l.id, l.full_name, l.email, l.title, l.company_name, l.status, l.created_at
 		   FROM lead l
@@ -200,7 +202,7 @@ func sarRecordSections(pkg *SARPackage, contactID ids.ContactID, leads []ids.UUI
 
 // sarContentDisclosed is the export's one rule for whether an activity's (alias
 // `a`) own content travels: only workspace-audience mail.
-const sarContentDisclosed = `a.audience = 'workspace'`
+var sarContentDisclosed = `` + auth.WorkspaceAudienceSQL("a") + ``
 
 // sarRawCaptureLink correlates one raw_capture row to the activities read from
 // it. The clause below asks it four times, twice to decide disclosure and twice
@@ -212,7 +214,7 @@ var sarRawCaptureLink = storekit.StoredOriginalSQL("a", "rc")
 
 // sarConsentSections gather the per-purpose consent state and the proof log
 // behind it — what the subject agreed to, and every change of mind on record.
-func sarConsentSections(pkg *SARPackage) []sarSection {
+func sarConsentSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) []sarSection {
 	return []sarSection{
 		{&pkg.Consent, `SELECT cp.key AS purpose, pc.state, pc.lawful_basis, pc.captured_at
 		   FROM contact_consent pc JOIN consent_purpose cp ON cp.id = pc.purpose_id
@@ -261,9 +263,7 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		// short answer. Aliased rather than renamed in the output because every
 		// other section here reports "when we wrote it down" as captured_at, and
 		// the export is read by the subject, not by us.
-		{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, created_at AS captured_at
-		   FROM consent_qualifying_event
-		   WHERE contact_id = $1`, nil},
+		sarQualifyingEventSection(pkg, contactID, emails, leads),
 		{&pkg.ConfirmSubmissions, `SELECT kind, field, proposed_value, submitted_at, resolution, resolved_at
 		   FROM contact_confirm_submission
 		   WHERE contact_id = $1`, nil},
@@ -403,7 +403,7 @@ func sarProvenanceSections(pkg *SARPackage, contactID ids.ContactID, external []
 		                 AND ` + rawEmailMatchSQL("rc.payload", "pe.email") + `)
  OR EXISTS (SELECT 1 FROM contact_channel_identity pci WHERE pci.contact_id = $1
  AND ` + rawChannelMatchSQL("rc.payload", "rc.source_system", "pci.provider", "pci.channel_user_id") + `)
- OR rc.id = ANY(` + externalIDs + `)`, rawArgs},
+ OR rc.id = ANY(` + externalIDs + `) OR rc.id IN (` + linkedOriginalsSQL("contact_id", "$1", false) + `)`, rawArgs},
 		{&pkg.FieldOrigins, `SELECT fp.field_name, fp.source, fp.captured_by, fp.captured_at, fp.confidence, fp.evidence_ref
 		   FROM field_provenance fp
 		   WHERE fp.object_type = 'contact' AND fp.object_id = $1`, nil},
@@ -423,10 +423,11 @@ func sarProvenanceSections(pkg *SARPackage, contactID ids.ContactID, external []
 		// value alone would tell the subject their title is X while the row
 		// also holds that it used to say Y until a message dated Z replaced it,
 		// which is precisely the sort of held-but-unstated fact Art. 15 owes.
+		// signature_support travels too: it holds the lines each mail quoted.
 		{&pkg.EnrichedFields, `SELECT ppf.field, ppf.value, ppf.value_key, ppf.evidence_snippet, ppf.source_ref,
 		          ppf.confidence, ppf.source, ppf.captured_by, ppf.updated_at,
 		          ppf.observed_at, ppf.superseded_value, ppf.superseded_captured_by,
-		          ppf.superseded_observed_at
+		          ppf.superseded_observed_at, ppf.signature_support
 		   FROM contact_profile_field ppf
 		   WHERE ppf.contact_id = $1`, nil},
 		// claim_key is exported as it stands: it is a hash of the claim's
@@ -489,4 +490,11 @@ func sarProvenanceSections(pkg *SARPackage, contactID ids.ContactID, external []
 		   FROM provider_run pr
 		   WHERE pr.contact_id = $1`, nil},
 	}
+}
+
+func sarQualifyingEventSection(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) sarSection {
+	args := []any{contactID.UUID, leads, lowercased(emails)}
+	bind := strings.Split(storekit.Placeholders(args), ",")
+	return sarSection{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, created_at AS captured_at
+	 FROM consent_qualifying_event WHERE contact_id = ` + bind[0] + ` OR lead_id = ANY(` + bind[1] + `) OR ` + recordedRequestAddressScope(bind[2]), args}
 }

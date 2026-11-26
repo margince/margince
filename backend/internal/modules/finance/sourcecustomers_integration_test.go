@@ -40,7 +40,7 @@ func (a *sourceAdmin) syncDirectory(t *testing.T) {
 func (a *sourceAdmin) seedCompany(t *testing.T, name string, owner *ids.UUID) ids.CompanyID {
 	t.Helper()
 	id := ids.New[ids.CompanyKind]()
-	a.ownerExec(t, `INSERT INTO company (id, display_name, lifecycle, source, captured_by, owner_id)
+	a.ownerExec(t, `INSERT INTO company (id, display_name, status, source, captured_by, owner_id)
 		VALUES ($1, $2, 'customer', 'manual', 'human:test', $3)`, id, name, owner)
 	return id
 }
@@ -131,7 +131,8 @@ func TestTheDirectoryPagesInNameOrderAndNamesTheLinkedCompany(t *testing.T) {
 }
 
 // Relinking moves the customer, linking it where it already is writes nothing,
-// and unlinking takes it off. Each change is one audit row.
+// and unlinking takes it off. A move archives the old link and makes a new one,
+// two audit rows, because a link never changes its company.
 func TestLinkingMovesACustomerAndUnlinkingTakesItOff(t *testing.T) {
 	a := setupSourceAdmin(t)
 	a.syncDirectory(t)
@@ -160,8 +161,8 @@ func TestLinkingMovesACustomerAndUnlinkingTakesItOff(t *testing.T) {
 		t.Errorf("BETA-02 is still on %q after the unlink", got)
 	}
 	expect(t, a.unlink(ctx, "BETA-02"), http.StatusNoContent, "")
-	if got := linkAudits(); got != 3 {
-		t.Errorf("%d link audit rows, want create, update and archive", got)
+	if got := linkAudits(); got != 4 {
+		t.Errorf("%d link audit rows, want create, archive and create for the move, and archive", got)
 	}
 }
 

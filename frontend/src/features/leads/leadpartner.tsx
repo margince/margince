@@ -7,9 +7,9 @@ import type {
   CreateField,
   CreateFieldOption,
 } from "../../components/create.fields";
+import { EntityRef } from "../../components/entityref";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { InlineChoice } from "../../design-system/inlinechoice";
 import type { DetailRow } from "../../design-system/recorddetails";
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
@@ -18,7 +18,7 @@ import { leadWriteKeys } from "../../lib/leadkeys";
 import { usePartnerCompanyOptions } from "../../lib/partnerstages.queries";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
-import type { Lead, LeadWriter } from "./leads";
+import type { Lead } from "./leads";
 
 type Translate = ReturnType<typeof useT>;
 
@@ -36,12 +36,25 @@ export function useLeadPartnerOptions(): CreateFieldOption[] | undefined {
   return granted ? options : undefined;
 }
 
-/** A referring partner's name, or its id when the options do not hold it. */
-export function leadPartnerName(
-  partners: readonly CreateFieldOption[] | undefined,
-  id: string,
-): string {
-  return partners?.find((option) => option.value === id)?.label ?? id;
+/**
+ * A referring partner's name. The options hold only live partners, so one
+ * that is archived, or past the options' page, is named by its own read.
+ */
+export function LeadPartnerName({
+  partners,
+  id,
+}: Readonly<{
+  partners: readonly CreateFieldOption[] | undefined;
+  id: string;
+}>) {
+  return (
+    <EntityRef
+      kind="company"
+      id={id}
+      name={partners?.find((option) => option.value === id)?.label}
+      asText
+    />
+  );
 }
 
 /**
@@ -99,11 +112,7 @@ function AcceptForPartner({ lead }: Readonly<{ lead: Lead }>) {
  * The "Referred by partner" row, drawn once the installation has a partner or
  * the lead already names one. A lead accepted for its partner keeps it.
  */
-export function useLeadPartnerRow(
-  lead: Lead,
-  writer: Pick<LeadWriter, "readOnly" | "readOnlyReason">,
-  onSave: (next: string) => Promise<void>,
-): DetailRow | null {
+export function useLeadPartnerRow(lead: Lead): DetailRow | null {
   const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
@@ -119,23 +128,11 @@ export function useLeadPartnerRow(
     empty: !lead.partner_company_id,
     value: (
       <>
-        <InlineChoice
-          label={t("lead.partner")}
-          hideLabel
-          value={lead.partner_company_id ?? ""}
-          options={[
-            { value: "", label: t("lead.partnerNone") },
-            ...(options ?? []),
-          ]}
-          render={(value) =>
-            value === "" ? t("field.unset") : leadPartnerName(options, value)
-          }
-          canEdit={!writer.readOnly && !accepted}
-          readOnlyReason={
-            accepted ? t("lead.partnerAcceptedKept") : writer.readOnlyReason
-          }
-          onSave={onSave}
-        />
+        {lead.partner_company_id ? (
+          <LeadPartnerName partners={options} id={lead.partner_company_id} />
+        ) : (
+          t("field.unset")
+        )}
         {accepted ? (
           <span className="t-caption">
             {t("lead.partnerAccepted", {

@@ -1,4 +1,4 @@
-import { QueryErrorResetBoundary } from "@tanstack/react-query";
+import { QueryErrorResetBoundary, useQueryClient } from "@tanstack/react-query";
 import { Component, type ReactNode } from "react";
 import { Button, EmptyState } from "../design-system/atoms";
 import { useT } from "../i18n";
@@ -19,10 +19,16 @@ import "./errorboundary.css";
 // The fallback never shows the thrown error. A render throw is a defect in
 // this app, not a message from the server: its text names our internals, and
 // the reader cannot act on it. What they can act on is here.
-function RenderFailure({ onRetry }: Readonly<{ onRetry: () => void }>) {
+function RenderFailure({
+  onRetry,
+  inShell,
+}: Readonly<{ onRetry: () => void; inShell: boolean }>) {
   const t = useT();
   return (
-    <div className="wrap narrow" role="alert">
+    <div
+      className={`wrap narrow ${inShell ? "errorboundary-screen" : "errorboundary-page"}`}
+      role="alert"
+    >
       <EmptyState>
         <p>{t("app.errorTitle")}</p>
         <p>{t("app.errorBody")}</p>
@@ -38,7 +44,11 @@ function RenderFailure({ onRetry }: Readonly<{ onRetry: () => void }>) {
   );
 }
 
-type BoundaryProps = Readonly<{ onReset: () => void; children: ReactNode }>;
+type BoundaryProps = Readonly<{
+  onReset: () => void;
+  inShell: boolean;
+  children: ReactNode;
+}>;
 type BoundaryState = Readonly<{ failed: boolean; error?: unknown }>;
 
 // React reports a caught error to the console with its component stack on its
@@ -70,26 +80,35 @@ class RenderErrorBoundary extends Component<BoundaryProps, BoundaryState> {
 
   render(): ReactNode {
     if (this.state.failed) {
-      return <RenderFailure onRetry={this.retry} />;
+      return (
+        <RenderFailure onRetry={this.retry} inShell={this.props.inShell} />
+      );
     }
     return this.props.children;
   }
 }
 
-// Wraps the routed shell, paired with the query cache's reset boundary so the
-// retry clears the failures the cache is holding as well as the boundary's own
-// state.
-export function AppErrorBoundary({
+// Paired with the query cache's reset boundary.
+//
+// The reset reaches only a query that throws into render. A view more often
+// throws on a cached success, which a remount draws again before any refetch.
+// So Retry drops every answer nobody watches, the failed view's among them.
+// Only what the view mounts again is fetched, and the shell keeps its own.
+function ResettingBoundary({
   children,
   onReset,
-}: Readonly<{ children: ReactNode; onReset?: () => void }>) {
+  inShell,
+}: Readonly<{ children: ReactNode; onReset?: () => void; inShell: boolean }>) {
+  const client = useQueryClient();
   return (
     <QueryErrorResetBoundary>
       {({ reset }) => (
         <RenderErrorBoundary
+          inShell={inShell}
           onReset={() => {
             resetLocaleFailures();
             reset();
+            void client.resetQueries({ type: "inactive" });
             onReset?.();
           }}
         >
@@ -98,4 +117,26 @@ export function AppErrorBoundary({
       )}
     </QueryErrorResetBoundary>
   );
+}
+
+// The last resort, around the whole app: it catches what the shell itself
+// throws, and there is no rail or top bar left to keep.
+export function AppErrorBoundary({
+  children,
+  onReset,
+}: Readonly<{ children: ReactNode; onReset?: () => void }>) {
+  return (
+    <ResettingBoundary onReset={onReset} inShell={false}>
+      {children}
+    </ResettingBoundary>
+  );
+}
+
+// Around the routed screen inside the shell, so a screen's throw costs the
+// reader that screen and the rail still takes them elsewhere. Key it by the
+// route: a new address mounts a fresh boundary and drops the failure.
+export function ScreenErrorBoundary({
+  children,
+}: Readonly<{ children: ReactNode }>) {
+  return <ResettingBoundary inShell>{children}</ResettingBoundary>;
 }

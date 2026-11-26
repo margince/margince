@@ -43,6 +43,12 @@ type Plan struct {
 	// that could only be applied when somebody happened to request a count
 	// would be a floor that a caller turns off by not asking.
 	CountColumn int
+	// CoverageColumn is the position of the first of the three coverage terms
+	// that follow the measures, or 0 when no measure is a partial sum. The row
+	// count always comes first, so a real position is never 0.
+	CoverageColumn int
+	// Covered names the measures whose sums add only the deals that convert.
+	Covered []string
 	// ExcludedSQL counts the rows this query's FILTERS removed from the
 	// population, with ExcludedArgs as its own bind list.
 	//
@@ -132,6 +138,11 @@ func Compile(q Query, schema Schema, scope ScopeClauses) (Plan, error) {
 	}
 	selects = append(selects, measureSelects...)
 	columns = append(columns, measureColumns...)
+	coverageColumn, covered := 0, partialSumAliases(entity, q.Measures)
+	if len(covered) > 0 {
+		coverageColumn = len(selects)
+		selects = append(selects, coverageTerms(entity)...)
+	}
 
 	where, err := whereClauses(entity, q.Filters, bind)
 	if err != nil {
@@ -165,6 +176,7 @@ func Compile(q Query, schema Schema, scope ScopeClauses) (Plan, error) {
 		SQL: sql, Args: args, Columns: columns,
 		PopulationWhere: slices.Clone(where), PopulationArgs: populationArgs,
 		GroupCount: groupCount, CountColumn: countColumn,
+		CoverageColumn: coverageColumn, Covered: covered,
 		ContributorsSQL: contributorsSQL, ContributorsArgs: contributorsArgs,
 	}
 	plan.ExcludedSQL, plan.ExcludedArgs, err = excludedCount(entity, q, scope)
@@ -282,10 +294,30 @@ func aggregateSQL(entity Entity, m Measure) (string, error) {
 	if m.Fn == Median || m.Fn == P75 {
 		rendered = PercentileExpr(field.Expr, m.Fn)
 	}
+	if field.PartialSum && m.Fn == Sum {
+		return moneytotal.PartialSumSQL(rendered), nil
+	}
 	if field.Unpriced != "" && foldsValues[m.Fn] {
 		rendered = moneytotal.CompleteAggregateSQL(rendered, "sum("+field.Unpriced+")", m.Fn == Sum)
 	}
 	return rendered, nil
+}
+
+// partialSumAliases names the measures that are sums adding only the deals
+// that convert.
+func partialSumAliases(entity Entity, measures []Measure) []string {
+	var names []string
+	for _, m := range measures {
+		if field, ok := entity.Lookup(m.Field); ok && field.PartialSum && m.Fn == Sum {
+			names = append(names, measureName(m))
+		}
+	}
+	return names
+}
+
+// coverageTerms qualify a group's partial sums, over the same rows, with the counts reports use.
+func coverageTerms(entity Entity) []string {
+	return moneytotal.CoverageTerms(entity.Coverage.Value, entity.Coverage.Amount, entity.Coverage.Currency, "TRUE")
 }
 
 // PercentileExpr renders a percentile over a TRUSTED schema expression. Both
@@ -343,6 +375,20 @@ func whereClauses(entity Entity, filters []Filter, arg func(any) string) ([]stri
 				return nil, err
 			}
 			out = append(out, clause)
+			continue
+		}
+		if field.Predicate != "" {
+			// A set holds the value or it does not, so no other comparison
+			// means anything here. Answering one of them against the single
+			// listing value is the defect this replaces.
+			if f.Op != OpEq {
+				return nil, &RefusalError{
+					Kind:    RefusalUnsupported,
+					Message: fmt.Sprintf("%s holds a set, which %s cannot compare", f.Field, f.Op),
+					Suggest: fmt.Sprintf("filter %s with %s", f.Field, OpEq),
+				}
+			}
+			out = append(out, fmt.Sprintf(field.Predicate, arg(f.Value)))
 			continue
 		}
 		form := filterSQL[f.Op]

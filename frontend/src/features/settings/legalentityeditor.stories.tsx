@@ -39,6 +39,7 @@ const VIENNA: LegalEntity = {
   display_name: "Acme Wien",
   legal_name: "Acme Wien GmbH",
   country: "at",
+  jurisdiction: "at",
   member_count: 3,
   address: { line1: "Kärntner Ring 12", postal_code: "1010", city: "Wien" },
   vat_id: "ATU12345678",
@@ -63,17 +64,30 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const editor = (entity: LegalEntity) => () => (
-  <StoryProviders>
-    <EditEntityDialog entity={entity} onClose={() => undefined} />
-  </StoryProviders>
-);
+// The installation follows the de pack; at and de are compiled in.
+const JURISDICTION = {
+  selected: "de",
+  available: [{ code: "at" }, { code: "de" }],
+  deadlines: [],
+  documents: [],
+};
+
+const editor = (entity: LegalEntity) => () => {
+  installFetchStub({
+    "GET /installation/jurisdiction": () => jsonResponse(JURISDICTION),
+  });
+  return (
+    <StoryProviders>
+      <EditEntityDialog entity={entity} onClose={() => undefined} />
+    </StoryProviders>
+  );
+};
 
 // Every field a further entity describes, its logo among them.
 export const FurtherEntity: Story = { render: editor(VIENNA) };
 
-// The default keeps only its country, language, bank details and imprint; the
-// rest is the company profile's.
+// The default keeps only its language, bank details and imprint, and shows the
+// installation's jurisdiction; the rest is the company profile's.
 export const DefaultEntity: Story = { render: editor(DEFAULT) };
 
 export const FurtherEntityDark: Story = {

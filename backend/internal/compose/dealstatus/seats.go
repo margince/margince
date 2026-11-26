@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -28,8 +29,8 @@ type Seat struct {
 	// not read them, which is the same case that leaves Name empty.
 	ContactID ids.UUID
 	// Attachable says this reader may FILE WORK against the contact, which is
-	// a different grant from reading them: a share marked read-only lets
-	// somebody see a contact and not add to their record
+	// a different grant from reading them. A reader sees a contact another
+	// team owns, or one shared read-only, and may not add to their record
 	// (auth.EnsureAttachTarget). A move that links a task to a contact the
 	// reader may not attach to is a button that fails after the click, so the
 	// link is withheld and the advice is offered without it.
@@ -89,7 +90,7 @@ func namedRole(seats []Seat, role string) (Seat, bool) {
 	var unnamed Seat
 	var found bool
 	for _, s := range seats {
-		if s.Role != role {
+		if dealrole.Recorded(s.Role) != role {
 			continue
 		}
 		if s.Name != "" {

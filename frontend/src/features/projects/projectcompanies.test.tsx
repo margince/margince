@@ -45,6 +45,11 @@ describe("the companies on a project", () => {
     display_name: "netcare",
     role: "customer",
   };
+  const relay = {
+    company_id: "01a02be9-2293-75d2-9dd2-3027d9b63dc3",
+    display_name: "relay",
+    role: "partner",
+  };
 
   it("links a company to an address the router answers", () => {
     renderSection([netcare]);
@@ -65,17 +70,31 @@ describe("the companies on a project", () => {
     }
   });
 
-  // Every card carries the same "Detach" item, so the name has to say which
-  // company it takes off.
-  it("names the company on each card's detach item", async () => {
+  // Every card's menu looks the same, so its name says which company it is
+  // for. It takes the link off with Remove, as the other link rows do.
+  it("names the company on each card's menu, which holds Remove", async () => {
     const user = userEvent.setup();
+    renderSection([netcare, relay], false);
+
+    await user.click(
+      screen.getByRole("button", { name: "More actions for netcare" }),
+    );
+
+    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Remove" }));
+    expect(
+      screen.getByRole("button", { name: "Remove company" }),
+    ).toBeInTheDocument();
+  });
+
+  // The server refuses to take off a project's last company, so its card
+  // offers no verb that could only end in that refusal.
+  it("offers no detach on the only company", () => {
     renderSection([netcare], false);
 
-    await user.click(screen.getByRole("button", { name: "More actions" }));
-
     expect(
-      screen.getByRole("button", { name: "Detach netcare" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /^More actions/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("names each company's role in the reader's language", () => {

@@ -1,0 +1,15 @@
+{
+  "tool": "change_compliance",
+  "action": "pin_activity_to_floor",
+  "verb": "pin_activity_to_floor",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

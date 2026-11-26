@@ -29,7 +29,7 @@ import (
 // own user id and requires deal-read, so no scoping is added or re-decided
 // here.
 func briefReader(pool *pgxpool.Pool) agents.BriefReader {
-	engine := briefs.NewBriefEngine(pool, contacts.NewStore(InstallationDB(pool)))
+	engine := briefs.NewBriefEngine(pool, contacts.NewStore(InstallationDB(pool))).WithWinChances(chances.WinChances)
 	return func(ctx context.Context) (agents.ReadBriefResult, error) {
 		// The instant is the read's own, exactly as the HTTP handler passes it:
 		// LatestRun resolves snoozes against it, so a run read now is what the
@@ -38,7 +38,9 @@ func briefReader(pool *pgxpool.Pool) agents.BriefReader {
 		if err != nil {
 			return agents.ReadBriefResult{}, err
 		}
-		return briefRunToTool(run), nil
+		result := briefRunToTool(run)
+		engine.RecordShown(ctx, run)
+		return result, nil
 	}
 }
 
@@ -51,7 +53,7 @@ func briefReader(pool *pgxpool.Pool) agents.BriefReader {
 // decided here, because a seam that re-derived any of it would be a second
 // answer to a question the store already answers.
 func briefAnnotator(pool *pgxpool.Pool) agents.BriefAnnotator {
-	engine := briefs.NewBriefEngine(pool, contacts.NewStore(InstallationDB(pool)))
+	engine := briefs.NewBriefEngine(pool, contacts.NewStore(InstallationDB(pool))).WithWinChances(chances.WinChances)
 	return func(ctx context.Context, in agents.AnnotateBriefArgs) error {
 		items := make([]briefs.ItemAnnotation, 0, len(in.Items))
 		for _, item := range in.Items {
@@ -83,10 +85,11 @@ func briefRunToTool(run briefs.BriefRun) agents.ReadBriefResult {
 			// are different facts, and only one of them can be true here —
 			// the brief's own evidence-or-omit rule means an item without
 			// evidence was never queued.
-			EvidenceIDs:  append(make([]ids.UUID, 0, len(item.EvidenceIDs)), item.EvidenceIDs...),
-			SnoozedUntil: item.SnoozedUntil,
-			ReopenOn:     item.ReopenOn,
-			ReopenRef:    item.ReopenRef,
+			EvidenceIDs:   append(make([]ids.UUID, 0, len(item.EvidenceIDs)), item.EvidenceIDs...),
+			SnoozedUntil:  item.SnoozedUntil,
+			SnoozedIntent: item.SnoozedIntent,
+			ReopenOn:      item.ReopenOn,
+			ReopenRef:     item.ReopenRef,
 		})
 	}
 	return agents.ReadBriefResult{

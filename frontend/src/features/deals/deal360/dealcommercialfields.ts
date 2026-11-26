@@ -1,8 +1,12 @@
 import type { components } from "../../../api/schema";
 import type { CreateField } from "../../../components/create";
+import {
+  DEAL_MOTION_LABEL,
+  DEAL_PRIORITY_LABEL,
+  withUnset,
+} from "../../../format/dealvocab";
 import type { MessageKey } from "../../../i18n/en";
-
-type UpdateDealRequest = components["schemas"]["UpdateDealRequest"];
+import { acquisitionOptions } from "../../../lib/acquisitionsources.queries";
 
 type AcquisitionSource = components["schemas"]["AcquisitionSource"];
 
@@ -67,83 +71,9 @@ export function dealCommercialFields(
   ];
 }
 
-/**
- * The pickable channels: the empty answer, every active entry, and the deal's
- * own stored entry when that one has since been retired.
- */
-export function acquisitionOptions(
-  t: (k: MessageKey) => string,
-  sources: AcquisitionSource[],
-  current?: string | null,
-): { value: string; label: string }[] {
-  const options = [{ value: "", label: t("deal.acquisitionUnset") }];
-  for (const source of sources) {
-    if (source.active || source.key === current) {
-      options.push({ value: source.key, label: source.label });
-    }
-  }
-  // A key the catalog no longer lists at all — deleted out from under the deal,
-  // or not yet loaded. Shown as itself rather than dropped, because dropping it
-  // makes the select read as empty and the next save clears a value the reader
-  // never touched.
-  if (current && !sources.some((source) => source.key === current)) {
-    options.push({ value: current, label: current });
-  }
-  return options;
-}
+export const MOTION_OPTIONS = withUnset(DEAL_MOTION_LABEL, "deal.motionUnset");
 
-// The two commercial enums the form may send, narrowed exactly as the partner
-// attribution above is: the wire types are closed vocabularies, and a string
-// off a select is not one until something checks it. An unrecognised value —
-// including the empty option — becomes null, which is the wire's way of saying
-// nobody answered.
-export function commercialMotion(
-  v: string,
-): UpdateDealRequest["commercial_motion"] {
-  switch (v) {
-    case "new_business":
-      return "new_business";
-    case "renewal":
-      return "renewal";
-    case "upsell":
-      return "upsell";
-    case "cross_sell":
-      return "cross_sell";
-    case "expansion":
-      return "expansion";
-    case "existing_business":
-      return "existing_business";
-    default:
-      return null;
-  }
-}
-
-export function dealPriority(v: string): UpdateDealRequest["priority"] {
-  switch (v) {
-    case "low":
-      return "low";
-    case "medium":
-      return "medium";
-    case "high":
-      return "high";
-    default:
-      return null;
-  }
-}
-
-export const MOTION_OPTIONS: { value: string; label: MessageKey }[] = [
-  { value: "", label: "deal.motionUnset" },
-  { value: "new_business", label: "deal.motionNewBusiness" },
-  { value: "renewal", label: "deal.motionRenewal" },
-  { value: "upsell", label: "deal.motionUpsell" },
-  { value: "cross_sell", label: "deal.motionCrossSell" },
-  { value: "expansion", label: "deal.motionExpansion" },
-  { value: "existing_business", label: "deal.motionExistingBusiness" },
-];
-
-export const PRIORITY_OPTIONS: { value: string; label: MessageKey }[] = [
-  { value: "", label: "deal.priorityUnset" },
-  { value: "high", label: "deal.priorityHigh" },
-  { value: "medium", label: "deal.priorityMedium" },
-  { value: "low", label: "deal.priorityLow" },
-];
+export const PRIORITY_OPTIONS = withUnset(
+  DEAL_PRIORITY_LABEL,
+  "deal.priorityUnset",
+);

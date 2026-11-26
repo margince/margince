@@ -16,10 +16,23 @@
 // their props and nothing else, and folding this in as a `variant` would put
 // two unrelated layouts behind one name for the sake of one shared signature.
 
-import { type ReactNode, useRef } from "react";
+import { ChevronDown } from "lucide-react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { useT } from "../i18n";
-import { OptionCount } from "./atoms";
-import { type ClippedEdges, useClippedEdges } from "./scrollregion";
+import { offsetShowingStrip, stripPlace } from "../lib/reveal";
+import {
+  dropKeptPlace,
+  keepPlaceOnNextMove,
+  seekScrollTop,
+} from "../lib/scrollmemory";
+import { Button, OptionCount } from "./atoms";
+import { OverflowMenu } from "./overflowmenu";
+import { useFocusKeptOnFold, useFoldedTabs } from "./recordtabs.fold";
+import {
+  type ClippedEdges,
+  clippedClass,
+  useClippedEdges,
+} from "./scrollregion";
 import "./recordtabs.css";
 
 // What every strip carries, whatever it chooses between.
@@ -36,6 +49,8 @@ type RecordTabsCommon<Option extends string> = Readonly<{
   // reader announces "Contacts 10" rather than leaving it to a sighted reader
   // alone.
   counts?: Partial<Record<Option, number>>;
+  // What a tab's count counts, where the tab's name does not say it.
+  countLabels?: Partial<Record<Option, string>>;
   // Something waits behind this tab that nobody has taken up — a lookup never
   // run, an answer never read. A dot rather than a figure, because the thing
   // waiting has no count: it is a state, and the surface behind the tab says it
@@ -57,6 +72,9 @@ type RecordTabsCommon<Option extends string> = Readonly<{
 type RecordTabsChoice<Option extends string> = Readonly<{
   options: readonly Option[];
   onChange: (next: Option) => void;
+  // A record's tabs: a press keeps the reader's offset in the page pane, or
+  // raises it just enough to show the strip. Elsewhere a new tab opens at top.
+  keepPlace?: boolean;
 }>;
 
 // A record read in ONE body: the lone tab names the page the reader is already
@@ -70,6 +88,7 @@ type RecordTabsChoice<Option extends string> = Readonly<{
 type RecordTabsLone<Option extends string> = Readonly<{
   options: readonly [Option];
   onChange?: never;
+  keepPlace?: never;
 }>;
 
 /**
@@ -92,18 +111,74 @@ export function RecordTabs<Option extends string>({
   onChange,
   labels,
   counts,
+  countLabels,
   marks,
   label,
   trailing,
+  keepPlace,
 }: RecordTabsCommon<Option> &
   (RecordTabsChoice<Option> | RecordTabsLone<Option>)) {
   const t = useT();
   const stripRef = useRef<HTMLFieldSetElement>(null);
   const edges = useClippedEdges(stripRef);
+  // A lone body has nothing to fold, and a strip without a handler has nowhere
+  // to send a folded tab.
+  const { folded, least } = useFoldedTabs(
+    stripRef,
+    onChange ? options : [],
+    value,
+  );
+  const keepFocus = useFocusKeptOnFold(stripRef, folded, value);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const pressed = useRef<{
+    option: Option;
+    place: { pane: HTMLElement; below: number };
+  } | null>(null);
+  const valueShown = useRef(value);
+  // After the commit, not at the press. The new tab can change what stands
+  // above the strip, and its body can be too short for the offset.
+  useEffect(() => {
+    // Only a change of tab spends the press. A press can land before this
+    // effect's first run, which must leave it for the run after.
+    if (valueShown.current === value) return;
+    valueShown.current = value;
+    const press = pressed.current;
+    pressed.current = null;
+    const strip = rowRef.current;
+    if (press?.option !== value || !strip) return;
+    const { pane, below } = press.place;
+    return seekScrollTop(pane, offsetShowingStrip(pane, strip, below));
+  }, [value]);
+  const choose = (option: Option) => {
+    const place =
+      keepPlace && option !== value && rowRef.current
+        ? stripPlace(rowRef.current)
+        : null;
+    pressed.current = place && { option, place };
+    if (place) keepPlaceOnNextMove();
+    const before = globalThis.location.hash;
+    onChange?.(option);
+    // A tab kept in state moves no address, so no move would spend the mark.
+    if (place && globalThis.location.hash === before) dropKeptPlace();
+  };
+  const tabBody = (option: Option) => {
+    const count = counts?.[option];
+    return (
+      <>
+        {labels[option]}
+        {count !== undefined && (
+          <OptionCount count={count} label={countLabels?.[option]} />
+        )}
+        {marks?.[option] && (
+          <span className="recordtabs-mark" aria-hidden="true" />
+        )}
+      </>
+    );
+  };
 
   return (
     <div className="recordtabs">
-      <div className="recordtabs-row">
+      <div className="recordtabs-row" ref={rowRef}>
         {/* A fieldset, like every other group of controls here: a tablist
             would promise arrow-key navigation between the tabs and panels
             wired to them by id, and these are buttons that route to a page.
@@ -112,39 +187,64 @@ export function RecordTabs<Option extends string>({
         <fieldset
           ref={stripRef}
           className={stripClass(edges)}
+          // Below this the trailing control wraps under the strip, because
+          // folding cannot make the strip narrower than its open tab and More.
+          style={least > 0 ? { minInlineSize: least } : undefined}
           aria-label={label ?? t("record.tabs")}
+          {...keepFocus}
         >
-          {options.map((option) => {
-            const count = counts?.[option];
-            const body = (
-              <>
-                {labels[option]}
-                {count !== undefined && <OptionCount count={count} />}
-                {marks?.[option] && (
-                  <span className="recordtabs-mark" aria-hidden="true" />
-                )}
-              </>
-            );
-            // No handler is the lone-body shape above, and there the tab is
-            // where the reader already stands: `aria-current` says so on
-            // something that cannot be pressed, rather than `aria-pressed` on
-            // a button that would answer nothing.
-            return onChange === undefined ? (
-              <span key={option} className="recordtabs-tab" aria-current="page">
-                {body}
-              </span>
-            ) : (
-              <button
-                key={option}
-                type="button"
-                className="recordtabs-tab"
-                aria-pressed={option === value}
-                onClick={() => onChange(option)}
+          {options
+            .filter((option) => !folded.includes(option))
+            .map((option) =>
+              // No handler is the lone-body shape above. There the tab is
+              // where the reader stands, so `aria-current` marks it. A button
+              // with `aria-pressed` would answer nothing.
+              onChange === undefined ? (
+                <span
+                  key={option}
+                  className="recordtabs-tab"
+                  aria-current="page"
+                >
+                  {tabBody(option)}
+                </span>
+              ) : (
+                <button
+                  key={option}
+                  type="button"
+                  className="recordtabs-tab"
+                  data-tab={option}
+                  aria-pressed={option === value}
+                  onClick={() => choose(option)}
+                >
+                  {tabBody(option)}
+                </button>
+              ),
+            )}
+          {/* Drawn even when nothing folds, unseen, so the strip knows how
+              much room the control takes before it needs it. */}
+          {onChange !== undefined && (
+            <span
+              className="recordtabs-more"
+              data-idle={folded.length === 0 || undefined}
+              aria-hidden={folded.length === 0 || undefined}
+            >
+              {/* A new menu once nothing folds, so one left open closes
+                  with its last entry instead of trapping focus. */}
+              <OverflowMenu
+                key={folded.length === 0 ? "idle" : "folded"}
+                label={t("record.tabs.moreLabel")}
+                text={t("record.tabs.more")}
+                icon={<ChevronDown aria-hidden="true" />}
+                align="start"
               >
-                {body}
-              </button>
-            );
-          })}
+                {folded.map((option) => (
+                  <Button key={option} onClick={() => choose(option)}>
+                    {tabBody(option)}
+                  </Button>
+                ))}
+              </OverflowMenu>
+            </span>
+          )}
         </fieldset>
         {trailing != null && (
           <div className="recordtabs-trailing">{trailing}</div>
@@ -157,11 +257,5 @@ export function RecordTabs<Option extends string>({
 // The strip hides its scrollbar, so an end that hides tabs fades instead. A tab
 // cut at that edge then reads as one of more, not as the last.
 function stripClass(edges: ClippedEdges) {
-  return [
-    "recordtabs-strip",
-    edges.start ? "is-clipped-start" : "",
-    edges.end ? "is-clipped-end" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  return clippedClass("recordtabs-strip", edges);
 }

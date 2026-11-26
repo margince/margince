@@ -52,6 +52,7 @@ const employer: NonNullable<components["schemas"]["HistoryEdge"]> = {
   other_entity_type: "company",
   other_entity_id: "company-9",
   other_label: "Employer GmbH",
+  role: "cto",
 };
 
 // A link created between this contact and a company. The images are the EDGE's
@@ -76,6 +77,15 @@ function servingHistory(
 ) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
+    const asked = new URL(url);
+    if (asked.pathname === "/v1/records/references") {
+      expect(asked.searchParams.get("kind")).toBe("company");
+      expect(asked.searchParams.getAll("id")).toEqual(["company-9"]);
+      if (!onOtherLookup) {
+        throw new Error(`unexpected endpoint lookup: ${url}`);
+      }
+      return onOtherLookup();
+    }
     if (new URL(url).pathname.startsWith("/v1/companies")) {
       if (!onOtherLookup) {
         throw new Error(`unexpected endpoint lookup: ${url}`);
@@ -264,6 +274,7 @@ describe("a link's columns never reach a pair's face", () => {
       other_entity_type: "company",
       other_entity_id: "11111111-1111-1111-1111-111111111111",
       other_label: "Employer GmbH",
+      role: "cto",
     },
   };
   const linkReversed: AuditHistoryEntry = {

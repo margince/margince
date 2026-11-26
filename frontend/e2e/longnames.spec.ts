@@ -96,6 +96,8 @@ async function openCompaniesWithLongNames(page: Page, width: number) {
           display_name,
           archived_at:
             display_name === ARCHIVED_NAME ? "2026-06-20T09:00:00Z" : null,
+          status: "customer",
+          website_url: `https://www.brandt-${i}.example`,
         })),
       ),
     });
@@ -155,7 +157,7 @@ for (const width of [768, 1024, 1440]) {
   });
 }
 
-test("the companies list wraps a long name in its card at 390px", async ({
+test("the companies list wraps a long name inside its phone row at 390px", async ({
   page,
 }) => {
   await openCompaniesWithLongNames(page, 390);
@@ -163,21 +165,40 @@ test("the companies list wraps a long name in its card at 390px", async ({
     const verdict = await nameCell(page, name);
     expect(verdict.truncated, `${name} shows whole`).toBe(false);
     expect(verdict.past, `${name} inside its cell`).toBeLessThanOrEqual(0.5);
-    const overlap = await page
-      .locator("tr", { hasText: name })
-      .evaluate((row) => {
-        const heading = row.querySelector("td.lt-identity .lt-identity-row");
-        const field = [
-          ...row.querySelectorAll("td.lt-identity ~ td:not(.lt-rowmenu)"),
-        ].find((td) => td.getClientRects().length > 0);
-        return heading && field
-          ? heading.getBoundingClientRect().bottom -
-              field.getBoundingClientRect().top
-          : null;
-      });
-    expect(overlap, `${name} clear of the field below`).toBeLessThanOrEqual(
-      0.5,
+    const row = page.locator("tr", { hasText: name });
+    await expect(row.locator('td[data-phone="caption"]')).toBeVisible();
+    const lines = await row.evaluate((tr) => {
+      const box = (selector: string) =>
+        tr.querySelector(selector)?.getBoundingClientRect() ?? null;
+      return {
+        rowBox: tr.getBoundingClientRect(),
+        name: box("td.lt-identity strong"),
+        end: box('td[data-phone="end"]'),
+        caption: box('td[data-phone="caption"]'),
+      };
+    });
+    const { rowBox, name: words, end, caption } = lines;
+    if (!words || !end || !caption) {
+      throw new Error(`${name} lacks its name, end item or caption`);
+    }
+    expect(
+      words.right,
+      `${name} wraps before the end item`,
+    ).toBeLessThanOrEqual(end.left + 0.5);
+    expect(end.right, `${name}'s end item inside its row`).toBeLessThanOrEqual(
+      rowBox.right + 0.5,
     );
+    expect(end.top, `${name}'s end item on line one`).toBeLessThan(
+      words.bottom,
+    );
+    expect(
+      caption.top,
+      `${name}'s caption under the name`,
+    ).toBeGreaterThanOrEqual(words.bottom - 0.5);
+    expect(
+      Math.abs(caption.left - words.left),
+      `${name}'s caption starts under the name`,
+    ).toBeLessThanOrEqual(0.5);
   }
   expect(
     await archivedBadgeCut(page),

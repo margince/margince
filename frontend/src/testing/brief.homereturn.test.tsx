@@ -3,8 +3,7 @@ import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { BriefFeed } from "../features/brief/brief.feed";
 import type { WorklistItem } from "../features/worklist/worklist.queries";
-import { WorklistReturnLink } from "../features/worklist/worklist.return";
-import { en } from "../i18n/en";
+import { worklistReturnHref } from "../features/worklist/worklist.return";
 import { readingsDay, taskRow } from "./brief.fixtures";
 import { render, stubApi } from "./brief.testkit";
 
@@ -27,14 +26,8 @@ it("opens a record from Home's own list with the way back to the Worklist", asyn
     (await screen.findByRole("link", { name: "Weber" })).getAttribute("href") ??
     "";
   expect(href).toBe("/#/contacts/c-1?from=worklist");
-  cleanup();
 
-  window.location.hash = new URL(href, location.href).hash;
-  render(<WorklistReturnLink />);
-
-  expect(
-    screen
-      .getByRole("link", { name: en["brief.queue.back"] })
-      .getAttribute("href"),
-  ).toBe("/#/home?queue=1");
+  expect(worklistReturnHref(new URL(href, location.href).hash)).toBe(
+    "#/home?queue=1",
+  );
 });

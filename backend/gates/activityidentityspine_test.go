@@ -25,7 +25,7 @@ package gates
 // What this CANNOT see, stated so nobody reads more into a pass than is here:
 // it proves the call exists, not that the caller obeys the answer. A door that
 // resolves an identity and then inserts anyway passes. The integration tests in
-// internal/compose/importthencapture_integration_test.go are what cover the
+// internal/compose/integration/importthencapture_integration_test.go are what cover the
 // obeying, and they are mutation-checked against the resolve's removal.
 
 import (

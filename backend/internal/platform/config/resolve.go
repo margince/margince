@@ -45,12 +45,17 @@ func resolve(s Any, layers []layer, readFile func(string) ([]byte, error), geten
 	if _, err := parseChecked(s, ""); err == nil {
 		return resolved{origin: Origin{Source: SourceUnset}}, nil
 	}
-	return resolved{}, fmt.Errorf("%s: required", s.Env())
+	name := s.Env()
+	if name == "" {
+		name = s.Key()
+	}
+	return resolved{}, fmt.Errorf("%s: required", name)
 }
 
 func resolveText(s Any, l layer, text string, refs refReaders) (resolved, error) {
 	origin := Origin{Source: l.source, Name: l.names[s.Key()], File: l.file}
 	fault := func(err error) error { return fmt.Errorf("%s (%s): %w", origin.Name, l.source, err) }
+	declared := text
 	if s.Secret() && declaredNone(text) {
 		return resolveNone(s, origin, fault)
 	}
@@ -68,7 +73,7 @@ func resolveText(s Any, l layer, text string, refs refReaders) (resolved, error)
 	if err != nil {
 		return resolved{}, fault(err)
 	}
-	return resolved{value: v, origin: origin, set: true}, nil
+	return resolved{value: v, origin: origin, set: true, secretFile: secretFileOf(s, declared, origin)}, nil
 }
 
 // resolveNode refuses a literal secret in YAML: a file that is read, copied
@@ -105,7 +110,7 @@ func resolveNode(s Any, l layer, node *yaml.Node, refs refReaders) (resolved, er
 	if err != nil {
 		return resolved{}, fault(err)
 	}
-	return resolved{value: v, origin: origin, set: true}, nil
+	return resolved{value: v, origin: origin, set: true, secretFile: secretFileOf(s, node.Value, origin)}, nil
 }
 
 // resolveNone is a secret declared absent: the empty value, marked so a

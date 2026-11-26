@@ -56,23 +56,22 @@ func (s *Store) MeetingPreparations(ctx context.Context, meetingIDs []ids.UUID) 
 // revision the meeting has moved past is refused, so an old screen cannot
 // confirm a meeting that changed under it.
 func (s *Store) ConfirmMeetingReady(ctx context.Context, id ids.ActivityID, revision string) (MeetingPreparation, error) {
-	return s.changeReadiness(ctx, id, revision, func(tx pgx.Tx, attendee ids.UUID, current meetingFacts, by string) (bool, error) {
+	return s.changeReadiness(ctx, id, revision, func(tx pgx.Tx, attendee ids.UUID, current meetingFacts) (bool, error) {
 		if current.revision != revision {
-			return false, fmt.Errorf("activities: the meeting changed since its preparation was read: %w", apperrors.ErrVersionSkew)
+			return false, fmt.Errorf("the meeting changed since its preparation was read: %w", apperrors.ErrVersionSkew)
 		}
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO meeting_readiness (attendee_id, activity_id, revision, starts_at, starts_on_day,
-			                               agenda_fingerprint, participants_fingerprint, captured_by, confirmed_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			                               agenda_fingerprint, participants_fingerprint)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			ON CONFLICT (attendee_id, activity_id) DO UPDATE
 			   SET revision = EXCLUDED.revision,
 			       starts_at = EXCLUDED.starts_at, starts_on_day = EXCLUDED.starts_on_day,
 			       agenda_fingerprint = EXCLUDED.agenda_fingerprint,
-			       participants_fingerprint = EXCLUDED.participants_fingerprint,
-			       captured_by = EXCLUDED.captured_by, confirmed_at = EXCLUDED.confirmed_at
+			       participants_fingerprint = EXCLUDED.participants_fingerprint
 			 WHERE meeting_readiness.revision <> EXCLUDED.revision`,
 			attendee, id, revision, current.facts.StartsAt, current.facts.StartsOnDay,
-			current.facts.Agenda, current.facts.Participants, by, s.now().UTC())
+			current.facts.Agenda, current.facts.Participants)
 		if err != nil {
 			return false, fmt.Errorf("activities: recording that the attendee is ready: %w", err)
 		}
@@ -84,7 +83,7 @@ func (s *Store) ConfirmMeetingReady(ctx context.Context, id ids.ActivityID, revi
 // confirmation only while it is still the one given at revision. The undo of
 // an old press cannot take back a newer confirmation.
 func (s *Store) WithdrawMeetingReady(ctx context.Context, id ids.ActivityID, revision string) (MeetingPreparation, error) {
-	return s.changeReadiness(ctx, id, revision, func(tx pgx.Tx, attendee ids.UUID, _ meetingFacts, _ string) (bool, error) {
+	return s.changeReadiness(ctx, id, revision, func(tx pgx.Tx, attendee ids.UUID, _ meetingFacts) (bool, error) {
 		tag, err := tx.Exec(ctx,
 			`DELETE FROM meeting_readiness WHERE attendee_id = $1 AND activity_id = $2 AND revision = $3`,
 			attendee, id, revision)
@@ -102,7 +101,7 @@ const (
 )
 
 // readinessWrite changes the attendee's row and reports whether it did.
-type readinessWrite func(tx pgx.Tx, attendee ids.UUID, current meetingFacts, capturedBy string) (bool, error)
+type readinessWrite func(tx pgx.Tx, attendee ids.UUID, current meetingFacts) (bool, error)
 
 // changeReadiness is the gate and the write shape both readiness verbs share.
 // The caller must read the meeting's content and attend it. A change lands
@@ -123,10 +122,6 @@ func (s *Store) changeReadiness(
 	if err != nil {
 		return MeetingPreparation{}, err
 	}
-	by, err := storekit.CapturedBy(ctx)
-	if err != nil {
-		return MeetingPreparation{}, err
-	}
 	var out MeetingPreparation
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureActivityContentVisibleLive(ctx, tx, id.UUID); err != nil {
@@ -136,7 +131,7 @@ func (s *Store) changeReadiness(
 		if err != nil {
 			return err
 		}
-		changed, err := write(tx, attendee, current, by)
+		changed, err := write(tx, attendee, current)
 		if err != nil {
 			return err
 		}

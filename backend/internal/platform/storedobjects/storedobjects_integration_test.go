@@ -72,6 +72,33 @@ func TestAnUndeclaredKindIsRefused(t *testing.T) {
 	}
 }
 
+func TestAnAdoptedScanCannotRetireANewerIntent(t *testing.T) {
+	ctx, pool := ledgerEnv(t)
+	ledger := storedobjects.NewLedger(database.BindTo(pool, workspaceOf(ctx)))
+	key := "ws/attachment/" + ids.NewV7().String()
+	if err := ledger.Record(ctx, storedobjects.KindAttachment, key); err != nil {
+		t.Fatal(err)
+	}
+	age(ctx, t, pool, key, 2*storedobjects.ProvisionalObjectGrace)
+	pending := storedobjects.Provisional{Key: key, RecordedAt: provisionalSince(ctx, t, pool, key)}
+	if err := ledger.Record(ctx, storedobjects.KindAttachment, key); err != nil {
+		t.Fatal(err)
+	}
+	if err := ledger.Retire(systemCtx(ctx), pending); err != nil {
+		t.Fatal(err)
+	}
+	if !holds(ctx, t, pool, key) {
+		t.Fatal("an old reference check erased the newer cleanup intent")
+	}
+	pending.RecordedAt = provisionalSince(ctx, t, pool, key)
+	if err := ledger.Retire(systemCtx(ctx), pending); err != nil {
+		t.Fatal(err)
+	}
+	if holds(ctx, t, pool, key) {
+		t.Fatal("the current adopted intent was not retired")
+	}
+}
+
 // What is declared is what comes back, and clearing it on the caller's transaction
 // takes it away.
 func TestADeclarationSurvivesUntilItIsCleared(t *testing.T) {
@@ -126,7 +153,7 @@ func TestTheSweepsReadsRefuseASeat(t *testing.T) {
 	if _, err := ledger.ListProvisional(ctx, time.Now().UTC(), 10); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("ListProvisional as a seat = %v, want permission denied", err)
 	}
-	if err := ledger.Retire(ctx, "ws/attachment/x"); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if err := ledger.Retire(ctx, storedobjects.Provisional{Key: "ws/attachment/x"}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("Retire as a seat = %v, want permission denied", err)
 	}
 }

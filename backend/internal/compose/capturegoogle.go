@@ -14,10 +14,13 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/gmailsignature"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
+	"github.com/margince/margince/backend/internal/modules/capture/gdocs"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
@@ -94,11 +97,12 @@ func (c GmailConfig) Enabled() bool { return c.canConnect() }
 func (c GmailConfig) TransportMountable() bool { return c.canSignState() }
 
 //nolint:ireturn // returns the gmail.OAuth seam by design (a fakeable interface)
-func newGmailOAuth(c GmailConfig) gmail.OAuth {
+func newGmailOAuth(c GmailConfig, tokens *oauthflow.TokenCache) gmail.OAuth {
 	return gmail.NewOAuth(gmail.OAuthConfig{
 		ClientID:     c.ClientID,
 		ClientSecret: c.ClientSecret,
 		Scopes:       gmailScopes,
+		Tokens:       tokens,
 	})
 }
 
@@ -108,6 +112,17 @@ func newGmailOAuth(c GmailConfig) gmail.OAuth {
 //nolint:ireturn // returns the gcal.OAuth seam by design (a fakeable interface)
 func newGcalOAuth(c GmailConfig) gcal.OAuth {
 	return gcal.NewOAuth(gcal.OAuthConfig{
+		ClientID:     c.ClientID,
+		ClientSecret: c.ClientSecret,
+	})
+}
+
+// newGdocsOAuth builds the Google Docs connector's OAuth client on Gmail's app,
+// as its own grant.
+//
+//nolint:ireturn // returns the gdocs.OAuth seam by design (a fakeable interface)
+func newGdocsOAuth(c GmailConfig) gdocs.OAuth {
+	return gdocs.NewOAuth(gdocs.OAuthConfig{
 		ClientID:     c.ClientID,
 		ClientSecret: c.ClientSecret,
 	})
@@ -133,8 +148,10 @@ func newCaptureRegistryWithGoogle(
 	reg := NewCaptureRegistry(pool, vault, cfg)
 	if appReachable(resolve, c.canSync()) {
 		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPIWithQuota(nil, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota)).
-			WithBounceSink(newBounceSink(pool)))
+			WithBackfillTuning(cfg.historyTuning()).
+			WithBounceSink(newBounceSink(pool)).WithSharedMailboxes(gmail.SharedAuthConfig{}))
 		reg.Register(gcal.New(newGcalAuthorizer(resolve, c), gcal.NewAPI(nil, "")))
+		reg.Register(gdocs.New(newGdocsAuthorizer(resolve, c), gdocs.NewOwner(nil, "")).WithDocs(gdocs.NewDocsAPI(nil, "")))
 	}
 	return reg
 }
@@ -160,7 +177,7 @@ func CaptureSyncRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig
 	// silently, which reads as an empty inbox rather than as a broken one.
 	google, microsoft := newConnectorAppResolvers(pool, vault, log)
 	reg := newCaptureRegistryWithGoogle(pool, vault, google, c, cfg)
-	registerMicrosoftConnectors(reg, microsoft, g, pool)
+	registerMicrosoftConnectors(reg, microsoft, g, pool, cfg.historyTuning())
 	return reg
 }
 
@@ -184,6 +201,7 @@ var googleBackedConnectors = []struct {
 }{
 	{crmcontracts.ConnectorAppRedirectUriPurposeMailboxConnect, providerGmail},
 	{crmcontracts.ConnectorAppRedirectUriPurposeCalendarConnect, providerGcal},
+	{crmcontracts.ConnectorAppRedirectUriPurposeDocumentsConnect, providerGdocs},
 }
 
 // WithGmailCapture mounts the Gmail and Google Calendar connect flow on the
@@ -220,13 +238,11 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		// deployment's origins rather than of anything the operator has yet
 		// configured, and it is not derivable from the sign-in one — that rides a
 		// different base on a split deployment.
-		// BOTH connectors, under the keys their own routes are served on. Gmail
-		// and Calendar are separate flows sharing one Google app, so an operator
-		// who registers only one gets redirect_uri_mismatch on the other — and
-		// the key is `gmail`/`gcal`, never the `google` the sign-in route uses.
-		// A SLICE, not a map: this list is a contract array an operator reads
-		// top to bottom, and Go randomizes map iteration — the two connector
-		// rows would swap places between boots of the same binary.
+		// Every connector, under the keys its own routes are served on. Gmail,
+		// Calendar and Docs are separate flows sharing one Google app.
+		// An operator who registers only one gets redirect_uri_mismatch on the
+		// others. The key is `gmail`/`gcal`/`gdocs`, never the sign-in `google`. A SLICE, not a map: this list is a contract array
+		// an operator reads top to bottom, and Go randomizes map iteration.
 		for _, connector := range googleBackedConnectors {
 			if uri := connectorCallbackURL(c.APIBaseURL, c.PublicBaseURL, connector.provider); uri != "" {
 				s.addRedirectURI(capture.AppProviderGoogle, connector.purpose, uri)
@@ -258,17 +274,22 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		var (
 			gmailOAuth gmail.OAuth
 			gcalOAuth  gcal.OAuth
+			gdocsOAuth gdocs.OAuth
 		)
 		if c.canSync() {
-			gmailOAuth, gcalOAuth = newGmailOAuth(c), newGcalOAuth(c)
+			gmailOAuth, gcalOAuth, gdocsOAuth = newGmailOAuth(c, nil), newGcalOAuth(c), newGdocsOAuth(c)
 		}
+		registry := newCaptureRegistryWithGoogle(pool, s.vault, s.googleAppResolver, c, cfg)
+		s.ImportHandlers = gmailsignature.ImportHandlers{Source: registry}
 		s.connectorHandlers = connectorHandlers{
-			registry:      newCaptureRegistryWithGoogle(pool, s.vault, s.googleAppResolver, c, cfg),
+			registry:      registry,
 			authority:     identity.NewService(pool),
 			oauth:         gmailOAuth,
 			gmailAPI:      gmail.NewAPIWithQuota(nil, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota),
 			gcalOAuth:     gcalOAuth,
 			gcalAPI:       gcal.NewAPI(nil, ""),
+			gdocsOAuth:    gdocsOAuth,
+			gdocsOwner:    gdocs.NewOwner(nil, ""),
 			signer:        newStateSigner([]byte(c.StateKey)),
 			publicBaseURL: c.PublicBaseURL,
 			apiBaseURL:    c.APIBaseURL,

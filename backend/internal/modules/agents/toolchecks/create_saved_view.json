@@ -1,0 +1,6 @@
+{
+  "verb": "create_saved_view",
+  "checks": [
+    "saved_view.create"
+  ]
+}

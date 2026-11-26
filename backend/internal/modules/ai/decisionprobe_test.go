@@ -24,7 +24,11 @@ type scriptedHost struct {
 }
 
 func (h *scriptedHost) RoundTrip(r *http.Request) (*http.Response, error) {
-	h.asked = append(h.asked, r.Method+" "+r.URL.String()+" auth="+r.Header.Get("Authorization"))
+	asked := r.Method + " " + r.URL.String() + " auth=" + r.Header.Get("Authorization")
+	if key := r.Header.Get("x-goog-api-key"); key != "" {
+		asked += " goog=" + key
+	}
+	h.asked = append(h.asked, asked)
 	status, body := h.answer(r)
 	return &http.Response{
 		StatusCode: status, Body: io.NopCloser(strings.NewReader(body)),
@@ -172,6 +176,42 @@ func TestDecisionModelsComeFromWhereEachHostPublishesThem(t *testing.T) {
 	}
 	if _, listed, err := self.decisionModels(context.Background(), providerJevCompatible); listed || err != nil {
 		t.Fatalf("a self-hosted server publishes no list: listed=%v err=%v", listed, err)
+	}
+}
+
+// Google answers a bad key with 400, so a decision POST cannot tell a refused
+// key from a refused body. Its model list can, and costs nothing.
+func TestGooglesDecisionKeyIsTestedOnItsModelList(t *testing.T) {
+	host := &scriptedHost{t: t, answer: func(*http.Request) (int, string) { return http.StatusOK, `{"models":[]}` }}
+	got := probeProviderKey(context.Background(), RoutingConfig{Profile: ProfileCloudFrontier}, providerGeminiDecision,
+		cloudKeyFor(providerGeminiDecision, "gk"), host.probes())
+	if !got.OK || got.Unconfirmed || got.Counted {
+		t.Fatalf("a listed Google key is a confirmed pass with no count: %+v", got)
+	}
+	want := "GET https://generativelanguage.googleapis.com/v1beta/models?pageSize=1 auth= goog=gk"
+	if len(host.asked) != 1 || host.asked[0] != want {
+		t.Fatalf("asked %v, want [%s]", host.asked, want)
+	}
+
+	refused := &scriptedHost{t: t, answer: func(*http.Request) (int, string) {
+		return http.StatusBadRequest, `{"error":{"code":400,"details":[{"reason":"API_KEY_INVALID"}]}}`
+	}}
+	got = probeProviderKey(context.Background(), RoutingConfig{Profile: ProfileCloudFrontier}, providerGeminiDecision,
+		cloudKeyFor(providerGeminiDecision, "bad"), refused.probes())
+	if got.OK || got.Reason != KeyTestAuthFailed {
+		t.Fatalf("Google's API_KEY_INVALID is auth_failed: %+v", got)
+	}
+}
+
+func TestGooglesDecisionModelIsOfferedWithoutACall(t *testing.T) {
+	client, err := selectDeciderOn(DecisionsConfig{Provider: providerGeminiDecision},
+		cloudKeyFor(providerGeminiDecision, "gk"), &http.Client{Transport: refuseDial{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	models, listed, err := client.decisionModels(context.Background(), providerGeminiDecision)
+	if err != nil || !listed || len(models) != 1 || models[0].ID != geminiDecisionModel || models[0].Lane != "decisions" {
+		t.Fatalf("got %+v listed=%v err=%v", models, listed, err)
 	}
 }
 

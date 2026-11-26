@@ -1,0 +1,18 @@
+{
+  "tool": "change_access",
+  "action": "offer_ownership",
+  "verb": "offer_ownership_transfer",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

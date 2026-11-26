@@ -5,6 +5,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -32,11 +33,6 @@ import (
 // recorded gap is one the owner can ask for again.
 const anchorBinds = 3 * 31 * 24 * time.Hour
 
-// syncStart answers where this sync reads from, and records a gap when the
-// held anchor has stopped binding.
-//
-// Called before the pull, in the transaction that persists the anchor. A first
-// attempt and its retries then agree even when the first never returns.
 // anchorStart is where a first sync reads from, and whether the anchor it was
 // handed had stopped binding.
 type anchorStart struct {
@@ -61,17 +57,26 @@ func chooseAnchor(held *time.Time, window, now time.Time) anchorStart {
 	return anchorStart{from: window, lapsed: true}
 }
 
+// syncStart answers where this sync reads from, and records a gap when the
+// held anchor has stopped binding.
+//
+// Called before the pull, in the transaction that persists the anchor. A first
+// attempt and its retries then agree even when the first never returns.
 func (r *Registry) syncStart(
-	ctx context.Context, connectionID ids.UUID, generation int,
-	d connector.Descriptor, cursor connector.Cursor, now time.Time,
+	ctx context.Context, snapshot *syncSnapshot, held *time.Time,
+	d connector.Descriptor, now time.Time,
 ) (time.Time, error) {
 	// An anchor answers where a first sync starts. Once a watermark stands, the
 	// cursor says where to read from. Holding one past that costs two writes a
 	// sync and hands the bounded re-anchor a point months old.
-	if d.FirstSyncWindow <= 0 || len(cursor) > 0 {
+	if d.FirstSyncWindow <= 0 || (len(snapshot.prior) > 0 && held == nil) {
 		return time.Time{}, nil
 	}
 	window := now.Add(-d.FirstSyncWindow)
+	if len(snapshot.prior) > 0 {
+		return r.resumeAnchor(ctx, snapshot, *held, window, now)
+	}
+	connectionID, generation := snapshot.id, snapshot.generation
 
 	var from time.Time
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -151,6 +156,86 @@ func recordUnreadPeriod(
 	return tag.RowsAffected() == 1, nil
 }
 
+// NarrowSyncAnchor records from..to as unread and moves a held anchor to to,
+// in one transaction under the fence every write of this sync carries.
+//
+// A connector calls it when the span from its anchor holds more mail than one
+// round can read. The retry then reads from to, and the owner can import the
+// rest. With no held anchor, as on a re-anchor after a lost watermark, only the
+// unread span is recorded.
+func (c *syncCheckpointer) NarrowSyncAnchor(ctx context.Context, from, to time.Time) error {
+	if !from.Before(to) {
+		return fmt.Errorf("a narrowed anchor must move later, not from %s to %s: %w",
+			from.UTC().Format(time.RFC3339), to.UTC().Format(time.RFC3339), apperrors.ErrInvalidArgument)
+	}
+	args := c.snapshot.args()
+	args["to"] = to
+	return c.registry.db.Tx(ctx, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `UPDATE capture_connection
+			SET sync_anchor = CASE WHEN sync_anchor < @to THEN @to ELSE sync_anchor END
+			WHERE `+syncSnapshotMatch, args)
+		if err != nil {
+			return fmt.Errorf("capture: moving the narrowed sync anchor: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return errSyncSuperseded
+		}
+		recorded, err := recordUnreadPeriod(ctx, tx, c.snapshot.id, c.snapshot.generation, from, to)
+		if err != nil {
+			return err
+		}
+		if !recorded {
+			return errSyncSuperseded
+		}
+		return nil
+	})
+}
+
+// RecordLostCursor records as unread the mail between the connection's last
+// successful sync and readFrom, where a sync that lost its cursor read again.
+// The lost cursor was good at that success, so nothing later was read through it.
+func (c *syncCheckpointer) RecordLostCursor(ctx context.Context, readFrom time.Time) error {
+	if readFrom.IsZero() {
+		readFrom = c.registry.now()
+	}
+	return c.registry.db.Tx(ctx, func(tx pgx.Tx) error {
+		var lastGood *time.Time
+		err := tx.QueryRow(ctx, `SELECT last_success_at FROM capture_sync_state WHERE connection_id = $1`,
+			c.snapshot.id).Scan(&lastGood)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("capture: reading when a lost cursor was last good: %w", err)
+		}
+		if lastGood == nil {
+			return nil
+		}
+		// A superseded sync records nothing here, and its cursor write declines on the same fence.
+		_, err = recordUnreadPeriod(ctx, tx, c.snapshot.id, c.snapshot.generation, *lastGood, readFrom)
+		return err
+	})
+}
+
+// settleUnreadPeriodTx shrinks the connection's unread period by what a
+// finished history import read, and clears it when nothing is left.
+//
+// The import reads from its after_date to when it was asked for. So it covers
+// the period only when it was asked for after the period ended. The rest of the
+// period, older than the import reached, stays for the owner to import.
+func settleUnreadPeriodTx(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) error {
+	_, err := tx.Exec(ctx, `
+		UPDATE capture_connection c
+		   SET unread_from = CASE WHEN run.since <= c.unread_from THEN NULL ELSE c.unread_from END,
+		       unread_to   = CASE WHEN run.since <= c.unread_from THEN NULL ELSE LEAST(c.unread_to, run.since) END
+		  FROM (SELECT connection_id, after_date::timestamp AT TIME ZONE 'UTC' AS since, created_at
+		          FROM capture_backfill WHERE id = $1) run
+		 WHERE c.id = run.connection_id AND c.archived_at IS NULL
+		   AND c.unread_from IS NOT NULL AND run.created_at >= c.unread_to`,
+		backfillID)
+	if err != nil {
+		return fmt.Errorf("capture: settling the unread period an import read: %w", err)
+	}
+	return nil
+}
+
 // releaseSyncAnchor drops the held anchor once a sync has stored a watermark.
 // From then the cursor says where to read and a held anchor would only be a
 // stale answer to a question nobody asks.
@@ -175,7 +260,7 @@ func releaseSyncAnchor(
 	// decline means the row changed under an open transaction.
 	if tag.RowsAffected() != 1 {
 		return fmt.Errorf(
-			"capture: the watermark was stored and its anchor was not released: %w",
+			"the watermark was stored and its anchor was not released: %w",
 			apperrors.ErrConflict)
 	}
 	return nil

@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import { Button, Field, TextInput } from "../../design-system/atoms";
-import { DataTable } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
 import { MoneyInput } from "../../design-system/moneyinput";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -10,32 +9,33 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
-import { formatMoney } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
-import { labelFor } from "../../lib/labelfor";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useFieldFaults } from "../../design-system/savepage";
+import { typedNumberFault, typedNumberOrNaN } from "../../format/decimalinput";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import {
+  type FieldLabels,
+  moneyLimit,
+  percentLimit,
+  problemCodeOf,
+  problemMessageOf,
+  refusalSentences,
+  unwrap,
+} from "../../lib/problem";
 import {
   EMPTY_LINE_BILLING,
   type LineBilling,
   lineBillingBody,
   OfferLineBillingFields,
 } from "./offerlinebilling";
-import { NewLineRates } from "./offerlinerates";
+import { discountFault, NewLineRates, taxRateFault } from "./offerlinerates";
 import type {
   Offer,
-  OfferLineItem,
   OfferLineItemInput,
   UpdateOfferLineItemRequest,
 } from "./offers";
-import {
-  DescriptionCell,
-  NumericCell,
-  UnitCell,
-  UnitPriceCell,
-} from "./offers.cells";
-import { searchProductCandidates } from "./products";
+import { EditableLineTable, useLineRefusals } from "./offers.linetable";
+import { useProductCandidateSearch } from "./products";
 import { isUnnamedOtherUnit, storedUnitOf, UnitPicker } from "./productunit";
-import { TAX_CATEGORY_LABEL } from "./taxcategory";
 
 const EMPTY_NEW_LINE = {
   description: "",
@@ -48,14 +48,6 @@ const EMPTY_NEW_LINE = {
 
 type NewLineState = typeof EMPTY_NEW_LINE;
 
-// An ungrounded (price_grounded === false) line has no price input anywhere
-// below: grounding a price is a server/AI concern, not something a human
-// free-types over. It stays ungrounded until a regenerate
-// re-grounds it, or the human removes it and re-adds it with a price.
-function UnpricedCaption({ label }: Readonly<{ label: string }>) {
-  return <span className="t-caption">{label}</span>;
-}
-
 // The line-item editor. Server-driven totals (P11) govern every mutation:
 // add, edit and remove all return the full updated Offer, with line_items and
 // net, tax and gross recomputed. This component only passes that response to
@@ -67,15 +59,45 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   const [newLine, setNewLine] = useState<NewLineState>(EMPTY_NEW_LINE);
   const [billing, setBilling] = useState<LineBilling>(EMPTY_LINE_BILLING);
   const [priceTouched, setPriceTouched] = useState(false);
+  const [priceRefused, setPriceRefused] = useState(false);
+  // Remounts the price box after an add, so a free line's "0.00" goes too.
+  const [added, setAdded] = useState(0);
   // Set by an Add that found "Other" with no unit typed; any unit change clears it.
   const [unitRefused, setUnitRefused] = useState(false);
   const [product, setProduct] = useState<RecordPickerCandidate | null>(null);
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const labels = lineLabels(offer.currency, locale, t);
+  const searchProducts = useProductCandidateSearch();
+  const refusals = useLineRefusals();
+  const edit = (field: string, change: Partial<NewLineState>) => {
+    setNewLine((prev) => ({ ...prev, ...change }));
+    faults.edited(field);
+  };
+
+  // Whether the Add line form cannot be sent yet. Each refusal shows under its
+  // own field, and a refused price box already says why.
+  const refusesAdd = () => {
+    if (isUnnamedOtherUnit(newLine.unit)) {
+      setUnitRefused(true);
+      return true;
+    }
+    const found = new Map(figureFaults(newLine, locale, t));
+    if (!priceRefused && !priceTouched && !product) {
+      found.set("unit_price_minor", t("offer.unitPriceRequired"));
+    }
+    return faults.show(found) || priceRefused;
+  };
 
   const applyOffer = (updated: Offer) => {
     queryClient.setQueryData(["offer", offer.id], updated);
   };
 
+  // One scope per offer: the line writes carry no version, so the server
+  // keeps whichever request lands last. Running them in send order keeps the
+  // newest draft the last write and each answer newer than the one before.
+  const lineWrites = { id: `offer-lines:${offer.id}` };
   const addMutation = useMutation({
+    scope: lineWrites,
     mutationFn: async (input: OfferLineItemInput) => {
       return unwrap(
         await api.POST("/offers/{id}/line-items", {
@@ -87,7 +109,9 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
     onSuccess: (data) => {
       applyOffer(data);
       setNewLine(EMPTY_NEW_LINE);
+      setBilling(EMPTY_LINE_BILLING);
       setPriceTouched(false);
+      setAdded((count) => count + 1);
       setProduct(null);
     },
   });
@@ -96,6 +120,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   // header-level Offer PATCH, a line item's own `version` is not a
   // precondition the API accepts, and the generated client refuses one.
   const updateMutation = useMutation({
+    scope: lineWrites,
     mutationFn: async (variables: {
       lineItemId: string;
       patch: UpdateOfferLineItemRequest;
@@ -107,12 +132,22 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         }),
       );
     },
-    onSuccess: (data) => {
+    onSuccess: (data, { lineItemId }) => {
       applyOffer(data);
+      refusals.settle(lineItemId);
+    },
+    onError: (error, { lineItemId }) => {
+      refusals.refuse(
+        lineItemId,
+        problemCodeOf(error) === "conflict"
+          ? t("offer.positionTaken")
+          : problemMessageOf(error, t, undefined, labels),
+      );
     },
   });
 
   const removeMutation = useMutation({
+    scope: lineWrites,
     mutationFn: async (lineItemId: string) => {
       return unwrap(
         await api.DELETE("/offers/{id}/line-items/{lineItemId}", {
@@ -120,154 +155,42 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         }),
       );
     },
-    onSuccess: (data) => {
+    onSuccess: (data, lineItemId) => {
       applyOffer(data);
+      refusals.settle(lineItemId);
+    },
+    onError: (error, lineItemId) => {
+      refusals.refuse(lineItemId, problemMessageOf(error, t));
     },
   });
 
-  const activeError =
-    addMutation.error ?? updateMutation.error ?? removeMutation.error;
-  const errorMessage = activeError ? problemMessageOf(activeError, t) : null;
-
-  const saveLine =
-    (lineItemId: string) => (patch: UpdateOfferLineItemRequest) => {
-      updateMutation.mutate({ lineItemId, patch });
-    };
-
-  const columns = [
-    {
-      key: "position",
-      header: t("offer.position"),
-      render: (line: OfferLineItem) => (
-        <NumericCell
-          value={line.position}
-          step="1"
-          width={60}
-          testId={`line-position-${line.id}`}
-          onSave={(num) => saveLine(line.id)({ position: num })}
-        />
-      ),
-    },
-    {
-      key: "description",
-      header: t("offer.description"),
-      render: (line: OfferLineItem) => (
-        <DescriptionCell line={line} onSave={saveLine(line.id)} />
-      ),
-    },
-    {
-      key: "unit",
-      header: t("offer.unit"),
-      render: (line: OfferLineItem) => (
-        <UnitCell line={line} onSave={saveLine(line.id)} />
-      ),
-    },
-    {
-      key: "quantity",
-      header: t("offer.quantity"),
-      render: (line: OfferLineItem) => (
-        <NumericCell
-          value={line.quantity}
-          step="0.001"
-          width={90}
-          testId={`line-quantity-${line.id}`}
-          onSave={(num) => saveLine(line.id)({ quantity: num })}
-        />
-      ),
-    },
-    {
-      key: "unitPrice",
-      header: t("offer.unitPrice"),
-      render: (line: OfferLineItem) =>
-        line.price_grounded === false ? (
-          <UnpricedCaption label={t("offer.unpriced")} />
-        ) : (
-          <UnitPriceCell
-            line={line}
-            currency={offer.currency}
-            onSave={saveLine(line.id)}
-          />
-        ),
-    },
-    {
-      key: "discountPct",
-      header: t("offer.discountPct"),
-      render: (line: OfferLineItem) => (
-        <NumericCell
-          value={line.discount_pct}
-          step="0.01"
-          width={90}
-          testId={`line-discount-${line.id}`}
-          onSave={(num) => saveLine(line.id)({ discount_pct: num })}
-        />
-      ),
-    },
-    {
-      key: "taxRate",
-      header: t("offer.taxRate"),
-      render: (line: OfferLineItem) => (
-        <>
-          <NumericCell
-            value={line.tax_rate}
-            step="0.01"
-            width={90}
-            testId={`line-tax-rate-${line.id}`}
-            onSave={(num) => saveLine(line.id)({ tax_rate: num })}
-          />
-          {line.tax_category && (
-            <span
-              className="t-caption"
-              data-testid={`line-tax-category-${line.id}`}
-            >
-              {t(labelFor(TAX_CATEGORY_LABEL, line.tax_category))}
-            </span>
-          )}
-        </>
-      ),
-    },
-    {
-      key: "lineTotal",
-      header: t("offer.lineTotal"),
-      render: (line: OfferLineItem) =>
-        line.price_grounded === false ? (
-          <UnpricedCaption label={t("offer.unpriced")} />
-        ) : (
-          <span className="t-num">
-            {formatMoney(line.line_total_minor, offer.currency, locale)}
-          </span>
-        ),
-    },
-    {
-      key: "remove",
-      header: "",
-      render: (line: OfferLineItem) => (
-        <Button
-          data-testid={`remove-line-${line.id}`}
-          disabled={removeMutation.isPending}
-          onClick={() => removeMutation.mutate(line.id)}
-        >
-          {t("offer.removeLine")}
-        </Button>
-      ),
-    },
-  ];
+  // A refused field shows under that field; the rest of the refusal shows here.
+  const addRefusal = addMutation.isError
+    ? refusalSentences(addMutation.error, t, labels).rest
+    : null;
 
   return (
     <Panel title={t("offer.lines")}>
       <PanelBody>
-        <DataTable
-          label={t("offer.lines")}
-          columns={columns}
-          rows={offer.line_items}
-          rowKey={(line) => `${line.id}:${line.version ?? 0}`}
+        <EditableLineTable
+          offer={offer}
+          refusals={refusals}
+          onSave={(lineItemId, patch) =>
+            updateMutation.mutateAsync({ lineItemId, patch })
+          }
+          onRemove={(lineItemId) => removeMutation.mutate(lineItemId)}
+          removing={removeMutation.isPending}
         />
       </PanelBody>
       {/* Its own body, so the seam divides the lines that exist from the one
           being written. */}
       <PanelBody>
         <span className="t-label">{t("offer.addLine")}</span>
-        <div className="offers-new-line">
-          <Field label={t("offer.description")}>
+        <div ref={faultsRoot} className="offers-new-line">
+          <Field
+            label={t("offer.description")}
+            error={faults.of("description")}
+          >
             {(control) => (
               <TextInput
                 {...control}
@@ -275,17 +198,16 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
                 className="offers-line-description"
                 value={newLine.description}
                 onChange={(event) =>
-                  setNewLine((prev) => ({
-                    ...prev,
-                    description: event.target.value,
-                  }))
+                  edit("description", { description: event.target.value })
                 }
               />
             )}
           </Field>
           <Field
             label={t("offer.unit")}
-            error={unitRefused ? t("product.unitOtherRequired") : undefined}
+            error={
+              unitRefused ? t("product.unitOtherRequired") : faults.of("unit")
+            }
           >
             {(control) => (
               <UnitPicker
@@ -295,44 +217,60 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
                 value={newLine.unit}
                 onChange={(unit) => {
                   setUnitRefused(false);
-                  setNewLine((prev) => ({ ...prev, unit }));
+                  edit("unit", { unit });
                 }}
               />
             )}
           </Field>
-          <Field label={t("offer.quantity")}>
+          <Field
+            label={t("offer.quantity")}
+            error={
+              typedNumberFault(newLine.quantity, locale, t) ??
+              faults.of("quantity")
+            }
+          >
             {(control) => (
               <input
                 {...control}
                 data-testid="new-line-quantity"
-                type="number"
-                step="0.001"
+                inputMode="decimal"
                 className="input offers-line-quantity"
                 value={newLine.quantity}
                 onChange={(event) =>
-                  setNewLine((prev) => ({
-                    ...prev,
-                    quantity: event.target.value,
-                  }))
+                  edit("quantity", { quantity: event.target.value })
                 }
               />
             )}
           </Field>
-          <Field label={t("offer.unitPrice")}>
+          <Field
+            label={t("offer.unitPrice")}
+            error={faults.of("unit_price_minor")}
+          >
             {(control) => (
               <MoneyInput
                 {...control}
+                key={added}
                 data-testid="new-line-unit-price"
                 currency={offer.currency}
+                onRefusedChange={setPriceRefused}
                 valueMinor={newLine.unit_price_minor}
+                blankWhenZero={!priceTouched}
                 onChangeMinor={(minor) => {
                   setPriceTouched(true);
-                  setNewLine((prev) => ({ ...prev, unit_price_minor: minor }));
+                  edit("unit_price_minor", { unit_price_minor: minor });
                 }}
               />
             )}
           </Field>
-          <NewLineRates value={newLine} onChange={setNewLine} />
+          <NewLineRates
+            value={newLine}
+            onChange={setNewLine}
+            refused={{
+              discount_pct: faults.of("discount_pct"),
+              tax_rate: faults.of("tax_rate"),
+            }}
+            onEdited={faults.edited}
+          />
           <OfferLineBillingFields value={billing} onChange={setBilling} />
         </div>
         <div className="offers-new-line-product">
@@ -340,9 +278,12 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
             <span className="t-label">{t("offer.pickProduct")}</span>
             <RecordPicker
               label={t("offer.pickProduct")}
-              searchTargets={searchProductCandidates}
+              searchTargets={searchProducts}
               selected={product}
-              onPick={setProduct}
+              onPick={(picked) => {
+                faults.edited("unit_price_minor");
+                setProduct(picked);
+              }}
             />
             {product && (
               <p className="t-caption">
@@ -353,40 +294,85 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
           <Button
             variant="primary"
             data-testid="add-line"
-            disabled={addMutation.isPending}
+            pending={addMutation.isPending}
             className="offers-add-line"
             onClick={() => {
-              if (isUnnamedOtherUnit(newLine.unit)) {
-                setUnitRefused(true);
+              if (refusesAdd()) {
                 return;
               }
-              addMutation.mutate({
-                product_id: product?.id ?? undefined,
-                description: newLine.description || undefined,
-                unit:
-                  storedUnitOf(newLine.unit.choice, newLine.unit.other) ||
-                  undefined,
-                quantity: Number(newLine.quantity),
-                unit_price_minor: priceTouched
-                  ? newLine.unit_price_minor
-                  : undefined,
-                discount_pct:
-                  newLine.discount_pct === ""
-                    ? undefined
-                    : Number(newLine.discount_pct),
-                tax_rate:
-                  newLine.tax_rate === ""
-                    ? undefined
-                    : Number(newLine.tax_rate),
-                ...lineBillingBody(billing),
-              });
+              addMutation.mutate(
+                {
+                  product_id: product?.id ?? undefined,
+                  description: newLine.description || undefined,
+                  unit:
+                    storedUnitOf(newLine.unit.choice, newLine.unit.other) ||
+                    undefined,
+                  ...newLineFigures(newLine, locale),
+                  unit_price_minor: priceTouched
+                    ? newLine.unit_price_minor
+                    : undefined,
+                  ...lineBillingBody(billing),
+                },
+                {
+                  onError: (error) =>
+                    faults.show(refusalSentences(error, t, labels).byField),
+                },
+              );
             }}
           >
             {t("offer.addLine")}
           </Button>
         </div>
-        {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
+        {addRefusal && <ErrorLine>{addRefusal}</ErrorLine>}
       </PanelBody>
     </Panel>
   );
+}
+
+function figureFaults(
+  line: NewLineState,
+  locale: Locale,
+  t: Translator,
+): ReadonlyMap<string, string> {
+  const faults = [
+    ["quantity", typedNumberFault(line.quantity, locale, t)],
+    ["discount_pct", discountFault(line.discount_pct, locale, t)],
+    ["tax_rate", taxRateFault(line.tax_rate, locale, t)],
+  ] as const;
+  return new Map(
+    faults.flatMap(([field, fault]) => (fault ? [[field, fault]] : [])),
+  );
+}
+
+// A line's fields as a refusal names them, with bounds in the reader's unit.
+function lineLabels(
+  currency: string,
+  locale: Locale,
+  t: Translator,
+): FieldLabels {
+  const percent = percentLimit(locale);
+  return {
+    description: t("offer.description"),
+    unit: t("offer.unit"),
+    quantity: t("offer.quantity"),
+    position: t("offer.position"),
+    unit_price_minor: {
+      label: t("offer.unitPrice"),
+      limit: moneyLimit(currency, locale),
+    },
+    discount_pct: { label: t("offer.discountPct"), limit: percent },
+    tax_rate: { label: t("offer.taxRate"), limit: percent },
+  };
+}
+
+// An empty discount or tax rate is left out, so the stored default applies.
+function newLineFigures(line: NewLineState, locale: Locale) {
+  const optional = (text: string) =>
+    text === "" ? undefined : typedNumberOrNaN(text, locale);
+  return {
+    quantity:
+      line.quantity.trim() === "" ? 0 : typedNumberOrNaN(line.quantity, locale),
+    discount_pct: optional(line.discount_pct),
+    tax_rate: optional(line.tax_rate),
+  };
 }

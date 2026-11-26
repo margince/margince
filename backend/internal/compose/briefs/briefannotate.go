@@ -36,16 +36,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
-
-// MaxAnnotationRunes bounds one piece of annotation prose.
-//
-// It matches the CHECK constraint the migration puts on both columns, and it is
-// checked HERE as well so an over-long annotation is a refusal the agent can
-// read and shorten rather than a driver error surfacing as a failed run. Two
-// spellings of one bound is the cost; a run dying on a constraint violation at
-// 2am with no actionable message is what it buys.
-const MaxAnnotationRunes = 600
 
 // ItemAnnotation is one finding: what the night learned about one queued deal,
 // and the evidence it is drawn from.
@@ -88,7 +80,7 @@ func (e *BriefEngine) AnnotateCurrentRun(ctx context.Context, ann Annotation, no
 	}
 
 	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		day, _, err := LocalDayAt(ctx, tx, now)
+		day, err := localDay(ctx, tx, userID, now)
 		if err != nil {
 			return err
 		}
@@ -178,7 +170,7 @@ func (e *BriefEngine) annotateItem(ctx context.Context, tx pgx.Tx, runID ids.UUI
 	if err := auth.EnsureVisible(ctx, tx, "deal", dealID); err != nil {
 		return err
 	}
-	if err := citationsWithin(ann, evidence); err != nil {
+	if err := CitationsWithin(ann, evidence); err != nil {
 		return err
 	}
 
@@ -192,7 +184,7 @@ func (e *BriefEngine) annotateItem(ctx context.Context, tx pgx.Tx, runID ids.UUI
 	return err
 }
 
-// citationsWithin refuses a finding that is not grounded in what the run
+// CitationsWithin refuses a finding that is not grounded in what the run
 // actually recorded for that item.
 //
 // A FINDING MUST CITE SOMETHING. An empty citation list is not "a claim with no
@@ -206,7 +198,7 @@ func (e *BriefEngine) annotateItem(ctx context.Context, tx pgx.Tx, runID ids.UUI
 // whose unverifiable citations were silently pruned still reads to the rep as
 // grounded — the prose still says "he wrote yesterday" — and the pruning is
 // invisible to everyone including the agent that would need to correct it.
-func citationsWithin(ann ItemAnnotation, evidence []ids.UUID) error {
+func CitationsWithin(ann ItemAnnotation, evidence []ids.UUID) error {
 	if len(ann.CitedEvidence) == 0 {
 		return httperr.Validation("cited_evidence", "required",
 			fmt.Sprintf("item %s carries a finding that cites nothing; "+
@@ -263,7 +255,7 @@ func writeRunNarrative(
 
 // validate bounds what a model may write before any of it reaches a statement.
 func (a Annotation) validate() error {
-	if err := boundProse("narrative", a.Narrative); err != nil {
+	if err := httperr.RequireWithin("narrative", a.Narrative, values.TextNoteCharacters); err != nil {
 		return err
 	}
 	seen := make(map[ids.UUID]bool, len(a.Items))
@@ -279,20 +271,9 @@ func (a Annotation) validate() error {
 				fmt.Sprintf("item %s is annotated twice", item.ItemID))
 		}
 		seen[item.ItemID] = true
-		if err := boundProse("finding", item.Finding); err != nil {
+		if err := httperr.RequireWithin("finding", item.Finding, values.TextLineCharacters); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-// boundProse refuses text past the column's own ceiling, in runes rather than
-// bytes: the constraint counts characters, and a German sentence full of
-// umlauts would otherwise be refused by the database after passing here.
-func boundProse(field, text string) error {
-	if n := len([]rune(text)); n > MaxAnnotationRunes {
-		return httperr.Validation(field, "too_long",
-			fmt.Sprintf("%s is %d characters, over the %d allowed", field, n, MaxAnnotationRunes))
 	}
 	return nil
 }

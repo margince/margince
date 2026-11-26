@@ -30,6 +30,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
@@ -43,12 +44,12 @@ func setupErasureDSR(t *testing.T, e *Env, subjectRef string) (consent.Handlers,
 	t.Helper()
 	store := consent.NewStore(e.DB())
 	created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
-		Kind: "erasure", SubjectRef: subjectRef, DueAt: new(time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)),
+		Kind: "erasure", SubjectRef: subjectRef, ReceivedAt: new(time.Date(2026, 8, 21, 0, 0, 0, 0, time.UTC)), DueAt: new(time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatalf("creating erasure DSR: %v", err)
 	}
-	h := consent.NewHandlers(e.DB()).WithEraser(privacy.NewEraser(e.DB()))
+	h := consent.NewHandlers(e.DB()).WithEraser(privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities))
 	return h, store, created.ID
 }
 
@@ -191,7 +192,7 @@ func TestAnErasureOfAnAlreadyErasedContactAnswersNothingHeld(t *testing.T) {
 	contactID := e.SeedContact(t, "Already Erased", nil)
 	// Wired as production wires it: an object store and nothing in it for this
 	// contact. A store that holds nothing for the subject destroys nothing.
-	eraser := privacy.NewEraser(e.DB()).WithBlobstore(blobstore.NewMemory())
+	eraser := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).WithBlobstore(blobstore.NewMemory())
 	if _, err := eraser.EraseContactCounted(e.Admin(), contactID, "test:earlier erasure"); err != nil {
 		t.Fatalf("the earlier erasure: %v", err)
 	}
@@ -273,13 +274,13 @@ func TestFulfillErasureHoldsTheRequestLockedAcrossTheErase(t *testing.T) {
 
 	store := consent.NewStore(e.DB())
 	created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
-		Kind: "erasure", SubjectRef: contactID.String(), DueAt: new(time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)),
+		Kind: "erasure", SubjectRef: contactID.String(), ReceivedAt: new(time.Date(2026, 8, 21, 0, 0, 0, 0, time.UTC)), DueAt: new(time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC)),
 	})
 	if err != nil {
 		t.Fatalf("creating erasure DSR: %v", err)
 	}
 	gate := &gatedEraser{
-		inner:   privacy.NewEraser(e.DB()),
+		inner:   privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities),
 		entered: make(chan struct{}),
 		release: make(chan struct{}),
 	}

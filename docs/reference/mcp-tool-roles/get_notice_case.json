@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "notice_case",
+  "verb": "get_notice_case",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

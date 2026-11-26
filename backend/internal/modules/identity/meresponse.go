@@ -14,6 +14,7 @@ package identity
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -43,7 +44,10 @@ func TeamWeekOf(ctx context.Context) crmcontracts.TeamWeekReach {
 func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeResponse {
 	adminPasswordLink := h.canIssuePasswordLink(ctx, id)
 	confirmRequests := h.canRequestConfirmation(ctx, id)
-	reportingAvailable := true
+	readerContext := actorCtx(ctx, id)
+	readerRendering := h.readerRenderingAvailable && auth.RequireHuman(readerContext) == nil && auth.Require(readerContext, "activity", principal.ActionRead) == nil
+	reportingAvailable := h.coreFeatures.Enabled(crmcontracts.CoreFeatureAnalytics)
+	disabledFeatures := h.coreFeatures.Disabled()
 	roles := id.Roles
 	if roles == nil {
 		roles = []string{}
@@ -52,6 +56,7 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 	for i, t := range id.Teams {
 		teams[i] = openapi_types.UUID(t.UUID)
 	}
+	trialEnded, licenseLapsed := h.lockForMe(ctx)
 	return crmcontracts.MeResponse{
 		User: crmcontracts.User{
 			Id:           openapi_types.UUID(id.UserID.UUID),
@@ -72,26 +77,72 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			TimezoneChosen: timezoneChosenFlag(id.Timezone, id.TimezoneChosen),
 			TimezoneSetBy:  id.TimezoneSetBy,
 		},
-		Roles:                   roles,
-		Teams:                   teams,
-		TeamWeek:                new(TeamWeekOf(actorCtx(ctx, id))),
-		WorkspaceName:           id.WorkspaceName,
-		NonProduction:           h.nonProduction,
-		DataResetAvailable:      &h.dataResetAvailable,
-		AdminPasswordLink:       adminPasswordLink,
-		ConfirmRequestsSendable: &confirmRequests,
+		Roles:                    roles,
+		Teams:                    teams,
+		TeamWeek:                 new(TeamWeekOf(actorCtx(ctx, id))),
+		WorkspaceName:            id.WorkspaceName,
+		NonProduction:            h.nonProduction,
+		DataResetAvailable:       &h.dataResetAvailable,
+		AdminPasswordLink:        adminPasswordLink,
+		ConfirmRequestsSendable:  &confirmRequests,
+		ReaderRenderingAvailable: &readerRendering,
+		TrialEnded:               trialEnded,
+		LicenseLapsed:            licenseLapsed,
 		Authorization: &crmcontracts.Authorization{
 			SeatType: contractSeatType(id.SeatType),
 			Objects:  contractObjectGrants(id.Permissions.Objects),
 			RowScope: contractRowScope(id.Permissions.RowScope),
 		},
 		SettingsAvailability: &crmcontracts.SettingsAvailability{
+			DisabledFeatures: &disabledFeatures,
 			CompanyContext:   h.companyContextAvailable,
 			EmbeddingReindex: h.EmbedReindexAvailable(),
 			Lists:            &h.listsAvailable,
 			Reporting:        &reportingAvailable,
+			VatRegister:      &h.vatRegisterAvailable,
 		},
 	}
+}
+
+// heldRoleNames names each of the caller's live roles by key. Nil when the
+// caller holds none, so /me omits it.
+func (s *Service) heldRoleNames(ctx context.Context, held []string) (*map[string]string, error) {
+	if len(held) == 0 {
+		return nil, nil //nolint:nilnil // no role to name, which /me says by omitting it
+	}
+	live, err := s.liveRoleNames(ctx)
+	if err != nil {
+		return nil, err
+	}
+	names := namesOfRoles(live, held)
+	return &names, nil
+}
+
+// liveRoleNames is the name an admin gave each live role, keyed by role key.
+// It skips the role directory's own gate: a name is shown only beside a role
+// key the reader was already allowed to see.
+func (s *Service) liveRoleNames(ctx context.Context) (map[string]string, error) {
+	names := map[string]string{}
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		live, err := liveRolesTx(ctx, tx)
+		for _, r := range live {
+			names[r.key] = r.name
+		}
+		return err
+	})
+	return names, err
+}
+
+// namesOfRoles picks from live the name of each held role. A held key that
+// names no live role is left out, and a client shows it by its key.
+func namesOfRoles(live map[string]string, held []string) map[string]string {
+	names := make(map[string]string, len(held))
+	for _, key := range held {
+		if name, ok := live[key]; ok {
+			names[key] = name
+		}
+	}
+	return names
 }
 
 // optionalString omits an empty value rather than sending it.

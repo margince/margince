@@ -49,7 +49,8 @@ func TestRetiringAFieldALiveListFiltersOnNamesTheListAndKeepsItEvaluating(t *tes
 	}
 	col := field.ColumnName
 	if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
-		"full_name": "Gold Member", "source": "manual", col: "gold",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Gold Member", "source": "manual", col: "gold",
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}

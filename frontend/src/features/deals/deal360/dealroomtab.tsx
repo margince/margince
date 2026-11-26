@@ -30,32 +30,42 @@ import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { ErrorLine } from "../../../design-system/errorline";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { QueryStates } from "../../../design-system/querystates";
-import { useT } from "../../../i18n";
-import { useCanWrite } from "../../../lib/capability";
-import { problemMessageOf, unwrap } from "../../../lib/problem";
+import { useFieldFaults } from "../../../design-system/savepage";
+import { useLocale, useT } from "../../../i18n";
+import { useCanWrite, useCanWriteRecord } from "../../../lib/capability";
+import { blankRequired, problemMessageOf, unwrap } from "../../../lib/problem";
+import { TEXT_LIMITS } from "../../../lib/textlimits_gen";
 import { buyerLink, DealRoomAccess } from "../dealroomaccess";
 import { InviteDialog } from "../dealroomaccess.dialogs";
 import { DealRoomConversation } from "../dealroomconversation";
 import { RoomBrief } from "./dealroombrief";
-import { RoomBand, RoomSetup, StateAction, StateBanner } from "./dealroomdeck";
+import {
+  RoomBand,
+  RoomSetup,
+  StateAction,
+  StateBanner,
+  StewardNotice,
+} from "./dealroomdeck";
 import { ManageRoomDialog } from "./dealroommanage";
 import "./dealroomtab.css";
 
 type DealRoom = components["schemas"]["DealRoom"];
 
 /**
- * DealRoomTab is the record's own door into the room: the same reading and
- * editable text the room's own page draws, without the page's identity band
- * or its verbs. A deal with no room yet gets the one control that opens one.
+ * DealRoomTab is the record's own door into the room. It draws the room
+ * page's reading and editable text, without its identity band or verbs.
+ * A deal with no room yet offers to open one. Only a reader who may write the
+ * deal gets that offer, because opening a room is a write on the deal.
  */
 export function DealRoomTab({
   dealId,
   dealName,
-}: Readonly<{ dealId: string; dealName: string }>) {
+  dealWritable,
+}: Readonly<{ dealId: string; dealName: string; dealWritable: boolean }>) {
   const t = useT();
   const roomQuery = useDealRoom(dealId);
   const room = roomQuery.data?.data?.[0];
-  const mayWrite = useCanWrite("deal_room", "update");
+  const mayWrite = useCanWriteRecord("deal_room", room);
   const [inviting, setInviting] = useState(false);
   // The invite dialog sits outside the reading. The setup list can go away and
   // a reload of the room can fail, and the issued link stays either way.
@@ -72,7 +82,7 @@ export function DealRoomTab({
             mayWrite={mayWrite}
             onInvite={() => setInviting(true)}
           />
-        ) : roomQuery.isSuccess ? (
+        ) : roomQuery.isSuccess && dealWritable ? (
           <OpenRoomCard dealId={dealId} dealName={dealName} />
         ) : null}
       </QueryStates>
@@ -125,6 +135,12 @@ function RoomReading({
         }
       />
       {mayWrite && !finished ? (
+        <StewardNotice
+          room={room}
+          action={<Button onClick={manage}>{t("roompage.manage")}</Button>}
+        />
+      ) : null}
+      {mayWrite && !finished ? (
         <RoomSetup room={room} onEditText={manage} onInvite={onInvite} />
       ) : null}
       <RoomBrief roomId={room.id} />
@@ -144,13 +160,14 @@ function RoomReading({
   );
 }
 
-// Title and welcome text, edited in place. Editorial: reaches the buyer at
-// the next publish, and the changes list below says so.
 export function RoomText({
   room,
   refusal,
 }: Readonly<{ room: DealRoom; refusal: string | undefined }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const titleLabel = t("roompage.text.titleLabel");
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(room.title);
   const [welcome, setWelcome] = useState(room.welcome_message ?? "");
@@ -179,14 +196,18 @@ export function RoomText({
   return (
     <Panel title={t("roompage.text.title")}>
       <PanelBody>
-        <div className="form-stack">
-          <Field label={t("roompage.text.titleLabel")}>
+        <div className="form-stack" ref={faultsRoot}>
+          <Field label={titleLabel} required error={faults.of("title")}>
             {(control) => (
               <TextInput
                 {...control}
                 value={title}
+                maxLength={TEXT_LIMITS.label}
                 disabled={refusal !== undefined}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  faults.edited("title");
+                }}
               />
             )}
           </Field>
@@ -206,15 +227,19 @@ export function RoomText({
           ) : (
             <div className="card-actions">
               <Button
-                disabled={!dirty || title.trim() === ""}
+                disabled={!dirty}
                 pending={save.isPending}
-                onClick={() =>
+                onClick={() => {
+                  const blank = blankRequired(locale, {
+                    title: [titleLabel, title],
+                  });
+                  if (faults.show(blank)) return;
                   save.mutate({
                     title: title.trim(),
                     welcome: welcome.trim(),
                     version: requireVersion(room.version),
-                  })
-                }
+                  });
+                }}
               >
                 {t("access.save")}
               </Button>
@@ -234,6 +259,9 @@ function OpenRoomCard({
   dealName,
 }: Readonly<{ dealId: string; dealName: string }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const titleLabel = t("room.create.titleLabel");
   const mayCreate = useCanWrite("deal_room", "create");
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState(false);
@@ -282,24 +310,36 @@ function OpenRoomCard({
       </PanelBody>
       <ConfirmModal
         open={creating}
-        onClose={() => setCreating(false)}
+        onClose={() => {
+          setCreating(false);
+          faults.show(new Map());
+        }}
         title={t("room.create.open")}
         intent="form"
         confirmLabel={t("room.create.confirm")}
-        confirmDisabled={title.trim() === ""}
+        bodyRef={faultsRoot}
         pending={create.isPending}
         error={create.isError ? problemMessageOf(create.error, t) : null}
-        onConfirm={() => create.mutate(title.trim())}
+        onConfirm={() => {
+          const blank = blankRequired(locale, { title: [titleLabel, title] });
+          if (!faults.show(blank)) create.mutate(title.trim());
+        }}
       >
         <Field
-          label={t("room.create.titleLabel")}
+          label={titleLabel}
           hint={t("room.create.titleHint")}
+          required
+          error={faults.of("title")}
         >
           {(control) => (
             <TextInput
               {...control}
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              maxLength={TEXT_LIMITS.label}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                faults.edited("title");
+              }}
             />
           )}
         </Field>

@@ -91,6 +91,8 @@ const CANONICAL_ORDER = [
   "Projects",
   "Filters and views",
   "Analytics",
+  "My progress",
+  "Sales goals",
 ];
 
 // The rows of whatever level the panel is showing — the destinations, or a
@@ -115,6 +117,8 @@ const OFF_BAR = [
   "Projects",
   "Filters and views",
   "Analytics",
+  "My progress",
+  "Sales goals",
 ];
 
 const linksIn = (selector: string) => {
@@ -149,12 +153,16 @@ function mountShellStyles(): HTMLStyleElement {
 // A row that is not in the rail at all is not the same thing as a hidden one,
 // and must not read as one: the head keeps its elements and the level takes
 // their space.
-function railDisplay(container: HTMLElement, selector: string): string {
+function railStyle(
+  container: HTMLElement,
+  selector: string,
+  property: "display" | "visibility" = "display",
+): string {
   const node = container.querySelector(selector);
   if (!node) {
     throw new Error(`${selector} is missing from the rail entirely`);
   }
-  return getComputedStyle(node).display;
+  return getComputedStyle(node)[property];
 }
 
 describe("WorkspaceRail (AC-shell-1/2)", () => {
@@ -182,23 +190,20 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(navGroupNames()).toEqual(["Records", "Work", "Insights"]);
   });
 
-  // Collapsed, a group label has no word to show — 56px carries a glyph and not
-  // a label — so it is not drawn, and the break between two groups is what says
-  // where one ends. It stays in the DOCUMENT either way: what a screen reader
-  // walks does not depend on how wide the reader left the panel.
-  //
-  // Asserted as a COMPARISON of the two states rather than as one absolute, for
-  // the reason the brand head's own pair gives: two independent expectations
-  // would both pass against a label that had quietly stopped being drawn in
-  // either state.
+  // Collapsed, a group label folds away hidden; it stays in the document to
+  // name its group. The two states are compared, so neither can pass alone.
   it("draws the group labels expanded and not collapsed", () => {
     shellStyles = mountShellStyles();
     const expanded = render(<WorkspaceRail route={{ screen: "home" }} />);
     const collapsed = render(
       <WorkspaceRail route={{ screen: "home" }} collapsed />,
     );
-    expect(railDisplay(expanded.container, ".navheading")).not.toBe("none");
-    expect(railDisplay(collapsed.container, ".navheading")).toBe("none");
+    expect(railStyle(expanded.container, ".navheading", "visibility")).not.toBe(
+      "hidden",
+    );
+    expect(railStyle(collapsed.container, ".navheading", "visibility")).toBe(
+      "hidden",
+    );
     // Both panels still publish all three, whichever width they are at.
     for (const rail of [expanded, collapsed]) {
       expect(
@@ -218,14 +223,8 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(active[0].getAttribute("aria-label")).toBe("Deals");
   });
 
-  // Settings is not a destination and no longer has a door here, so a route the
-  // destinations do not hold — the settings screen itself, a composed unit's screen —
-  // leaves every row quiet rather than lighting one that does not lead there. It
-  // is the top bar's trail that says where the reader is on those routes
-  // (topbar.test.tsx); what the rail promises is that it never claims a page it
-  // is not showing. A RENDER assertion on purpose: the route→activeId half is a
-  // string that resolves to a rendered element or to nothing at all, and a
-  // data-level test reads identically either way.
+  // A route the destinations do not hold lights no row, and More holds no way
+  // there. The account menu claims it (topbar.tsx).
   it.each([
     ["a settings route", { screen: "settings" }],
     ["a composed unit's screen", { screen: "ext", id: "notes" }],
@@ -234,9 +233,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     (_case, route) => {
       render(<WorkspaceRail route={route} />);
       expect(levelLabels()).toEqual(CANONICAL_ORDER);
-      expect(document.querySelectorAll('[aria-current="page"]')).toHaveLength(
-        0,
-      );
+      expect(document.querySelectorAll("[aria-current]")).toHaveLength(0);
     },
   );
 
@@ -266,7 +263,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
 
     deals.focus();
     const tip = await screen.findByRole("tooltip");
-    expect(tip.textContent).toBe("Deals");
+    expect(tip.textContent).toBe("Deals · G then D");
 
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("tooltip")).toBeNull();
@@ -288,7 +285,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     act(() => {
       vi.advanceTimersByTime(500);
     });
-    expect(screen.getByRole("tooltip").textContent).toBe("Deals");
+    expect(screen.getByRole("tooltip").textContent).toBe("Deals · G then D");
     const heard = vi.fn();
     globalThis.addEventListener("keydown", heard);
 
@@ -455,7 +452,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     // The top bar carries the company's mark at this width, so the menu does not.
     expect(container.querySelector(".railmenu .railhead")).toBeNull();
     expect(container.querySelector(".accountrows")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Account$/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /account$/i })).toBeNull();
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
   });
 
@@ -736,9 +733,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
       />,
     );
     for (const part of parts) {
-      expect(railDisplay(plain.container, part)).not.toBe("none");
-      expect(railDisplay(leveled.container, part)).toBe(
-        railDisplay(plain.container, part),
+      expect(railStyle(plain.container, part)).not.toBe("none");
+      expect(railStyle(leveled.container, part)).toBe(
+        railStyle(plain.container, part),
       );
     }
   });
@@ -762,9 +759,9 @@ describe("Rail levels (a section's entries as the second level)", () => {
       />,
     );
     for (const part of parts) {
-      expect(railDisplay(plain.container, part)).not.toBe("none");
-      expect(railDisplay(leveled.container, part)).toBe(
-        railDisplay(plain.container, part),
+      expect(railStyle(plain.container, part)).not.toBe("none");
+      expect(railStyle(leveled.container, part)).toBe(
+        railStyle(plain.container, part),
       );
     }
   });

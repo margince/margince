@@ -56,6 +56,7 @@ export function archivedContactRoutes(): RouteMap {
             contact: ["read", "update"],
             activity: ["create"],
             lead: ["create", "read"],
+            list: ["read", "update"],
           },
           settingsAvailability: { lists: true },
         }),

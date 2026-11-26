@@ -1,0 +1,10 @@
+{
+  "verb": "decide_commission_entry",
+  "checks": [
+    "commission.update",
+    "deal.read"
+  ],
+  "takes": [
+    "commission_entry"
+  ]
+}

@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -135,5 +136,34 @@ func TestAVaultRefusalLeavesTheReferenceStanding(t *testing.T) {
 	// not strand the others.
 	if ref := payloadRef(t, p, ordinary); ref != "" {
 		t.Errorf("payload_ref = %q on the ordinary row — one refusal stranded the batch", ref)
+	}
+}
+
+// A failed read of the missed-receipt retries does not stop the pass. The
+// retry and its count are best effort, and expired material must still go.
+func TestAFailedMissedReceiptReadStillDestroysExpiredMaterial(t *testing.T) {
+	p := setupPreflight(t)
+	now := clocktest.Now(t).UTC()
+	id := plantExpiredPayload(t, p, "vault-ref-expired", now.Add(-time.Hour))
+	// The owed-receipt retries and their aged-out count both read system_log.
+	if _, err := p.Owner.Exec(context.Background(), `REVOKE SELECT ON system_log FROM margince_app`); err != nil {
+		t.Fatalf("taking away the read of the missed-receipt log: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := p.Owner.Exec(context.Background(), `GRANT SELECT ON system_log TO margince_app`); err != nil {
+			t.Errorf("giving back the read of the missed-receipt log: %v", err)
+		}
+	})
+
+	vault := &recordingVault{}
+	if err := compose.DriveControllerPayloadSweepForTest(
+		context.Background(), p.Pool, vault, now); err != nil {
+		t.Fatalf("the sweep failed: %v", err)
+	}
+	if len(vault.deleted) != 1 || vault.deleted[0] != "vault-ref-expired" {
+		t.Errorf("vault was asked to destroy %v, want the expired material once", vault.deleted)
+	}
+	if ref := payloadRef(t, p, id); ref != "" {
+		t.Errorf("payload_ref is still %q after the sweep", ref)
 	}
 }

@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatDateTime } from "../../format/format";
 import {
   jsonResponse,
   line,
@@ -59,9 +60,15 @@ const RECORDS = {
   page: { has_more: false, total: 2 },
 };
 
+const FIELDS_CHANGED = {
+  key: "magic.action.fields_changed",
+  values: { fields: "industry" },
+};
+
 function stubOpenedLine(
   records: unknown = RECORDS,
   handled: () => Response = () => jsonResponse({ data: [] }),
+  summary: { key: string; values?: Record<string, string> } = FIELDS_CHANGED,
 ) {
   vi.stubGlobal(
     "fetch",
@@ -82,10 +89,7 @@ function stubOpenedLine(
           receipt({
             done: [
               line({
-                summary: {
-                  key: "magic.action.fields_changed",
-                  values: { fields: "industry" },
-                },
+                summary,
                 entity: {
                   type: "company",
                   id: "00000000-0000-7000-8000-0000000000c1",
@@ -110,6 +114,22 @@ function stubOpenedLine(
 }
 
 describe("a done line standing for many records", () => {
+  it("dates each record on the reader's own clock", async () => {
+    stubOpenedLine();
+    renderMagic("en", undefined, {}, "Asia/Tokyo");
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "View 2 changes" }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByText("GEM");
+    const stamp = dialog.querySelector('time[datetime="2026-09-13T07:30:00Z"]');
+    expect(stamp?.textContent).toBe(
+      formatDateTime("2026-09-13T07:30:00Z", "en", "Asia/Tokyo"),
+    );
+  });
+
   it("opens to each record, what changed on it, and its own undo", async () => {
     stubOpenedLine();
     renderMagic();
@@ -139,6 +159,36 @@ describe("a done line standing for many records", () => {
         .find((url) => url.includes(`/magic/lines/${LINE}/records`));
       expect(opened).toContain("since=");
     });
+  });
+
+  it("says what a create did, and nothing about a write the reader may not make", async () => {
+    const saved = (n: number) => ({
+      audit_id: `00000000-0000-7000-8000-0000000000b${n}`,
+      occurred_at: "2026-09-13T07:30:00Z",
+      entity: {
+        type: "activity",
+        id: `00000000-0000-7000-8000-0000000000d${n}`,
+        label: `Offer ${n}`,
+      },
+      changes: [],
+      undo: { undoable: false, reason: "not_writable_by_caller" },
+    });
+    stubOpenedLine(
+      { data: [saved(1), saved(2)], page: { has_more: false, total: 2 } },
+      undefined,
+      { key: "magic.action.create_activity_email" },
+    );
+    renderMagic();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "View 2 changes" }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByText("Offer 1")).toBeTruthy();
+    expect(within(dialog).getAllByText("Saved an email")).toHaveLength(2);
+    expect(within(dialog).queryByRole("button", { name: "Undo" })).toBeNull();
+    expect(within(dialog).queryByText(/permission/)).toBeNull();
   });
 
   it("never opens a decision line through the audit records read", async () => {
@@ -227,8 +277,8 @@ describe("a done line's opener", () => {
   });
 });
 
-describe("a grouped record with a reviewed change", () => {
-  it("keeps the review verbs its receipt offers on its own", async () => {
+describe("a grouped record with a deal change", () => {
+  it("keeps the Undo its receipt offers on its own, and asks for no review", async () => {
     stubOpenedLine(reviewedRecords(), () =>
       jsonResponse({
         as_of: "2026-09-13T08:00:00Z",
@@ -239,23 +289,9 @@ describe("a grouped record with a reviewed change", () => {
     const dialog = await openTheLine();
 
     expect(
-      await within(dialog).findAllByRole("button", { name: "Mark reviewed" }),
+      await within(dialog).findAllByRole("button", { name: "Undo" }),
     ).toHaveLength(2);
-    expect(
-      within(dialog).getAllByRole("button", { name: "Undo" }),
-    ).toHaveLength(2);
-  });
-
-  it("offers no review verb off a receipts read that failed", async () => {
-    stubOpenedLine(reviewedRecords(), () =>
-      jsonResponse({ title: "Unavailable" }, 503),
-    );
-    const dialog = await openTheLine();
-
-    expect(await within(dialog).findByText("Deal 1")).toBeTruthy();
-    expect(
-      within(dialog).queryByRole("button", { name: "Mark reviewed" }),
-    ).toBeNull();
+    expect(within(dialog).queryByText(/review/i)).toBeNull();
   });
 });
 

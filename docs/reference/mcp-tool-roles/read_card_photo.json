@@ -1,0 +1,15 @@
+{
+  "tool": "run_research",
+  "action": "read_card_photo",
+  "verb": "read_card_photo",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

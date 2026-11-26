@@ -267,6 +267,16 @@ func TestSQLValue_RoundTrip(t *testing.T) {
 			wire: "red", wantBind: "red",
 			scanned: "red", wantWire: "red",
 		},
+		{
+			name: "record", typ: fieldcatalog.TypeRecord,
+			wire: "0f9e8d7c-6b5a-4c3d-8e2f-1a0b9c8d7e6f", wantBind: "0f9e8d7c-6b5a-4c3d-8e2f-1a0b9c8d7e6f",
+			scanned: "0f9e8d7c-6b5a-4c3d-8e2f-1a0b9c8d7e6f", wantWire: "0f9e8d7c-6b5a-4c3d-8e2f-1a0b9c8d7e6f",
+		},
+		{
+			name: "url", typ: fieldcatalog.TypeURL,
+			wire: "https://example.com/offer", wantBind: "https://example.com/offer",
+			scanned: "https://example.com/offer", wantWire: "https://example.com/offer",
+		},
 	}
 	// The case table is hand-written, so what it covers is derived rather than
 	// trusted: a seventh catalog type with no case here would leave this test
@@ -326,6 +336,10 @@ func TestSQLValue_DropOnMismatch(t *testing.T) {
 		{"boolean given a string", fieldcatalog.TypeBoolean, "true"},
 		{"text given a number", fieldcatalog.TypeText, float64(1)},
 		{"picklist given a number", fieldcatalog.TypePicklist, float64(1)},
+		{"url given a script", fieldcatalog.TypeURL, "javascript:alert(1)"},
+		{"url given a data address", fieldcatalog.TypeURL, "data:text/html,<b>x</b>"},
+		{"url given no scheme", fieldcatalog.TypeURL, "example.com/offer"},
+		{"url given a number", fieldcatalog.TypeURL, float64(1)},
 		{"unknown type", "unknown", "anything"},
 	}
 	for _, c := range cases {

@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/platform/outbound"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -38,9 +39,7 @@ func Request(ctx context.Context, client *http.Client, token, method, address st
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Prefer", `outlook.timezone="UTC", IdType="ImmutableId"`)
-	bounded := *client
-	bounded.CheckRedirect = func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }
-	resp, err := bounded.Do(req)
+	resp, err := netguard.NoRedirect(client).Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("calendar: request failed: %w", connector.ErrUnreachable)
 	}

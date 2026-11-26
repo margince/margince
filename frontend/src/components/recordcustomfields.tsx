@@ -11,6 +11,7 @@ import {
   useCustomFieldDisplay,
   useObjectCustomFields,
 } from "./customfields.form";
+import { KindRecordName } from "./kindrecordname";
 import { saveRecordEdit } from "./recordedit";
 import { RecordFields } from "./recordfields";
 import type { FieldRecord } from "./recordfieldtypes";
@@ -83,9 +84,15 @@ function readings(
     const display = read(field, record[field.column_name]);
     if (!display) continue;
     displayValues[field.column_name] = display;
+    if (field.type === "record" && field.options?.[0]) {
+      renderValues[field.column_name] = (
+        <KindRecordName kind={field.options[0]} id={display} />
+      );
+      continue;
+    }
     const href = customFieldHref(display);
     // Not a picklist: InlineChoice holds no link inside its pill.
-    if (href && field.type === "text")
+    if (href && (field.type === "text" || field.type === "url"))
       renderValues[field.column_name] = (
         <OffsiteLink href={href}>{display}</OffsiteLink>
       );

@@ -225,6 +225,10 @@ export const plantedSettled = (
   return rule.settle(rule.corpus(tree), tree);
 };
 
+// git is looked up only in the system directories, never in a PATH entry a
+// checkout or a shell profile could prepend. Linux CI and macOS both keep git there.
+const SYSTEM_PATH = "/usr/bin:/bin";
+
 /**
  * The files git knows under the same roots, by the same pattern, from the
  * repository root: what the walk must equal. Untracked files that are not
@@ -242,7 +246,12 @@ export function gitListedFiles(): string[] {
       "frontend",
       "extensions",
     ],
-    { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+    {
+      cwd: repoRoot,
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+      env: { ...process.env, PATH: SYSTEM_PATH },
+    },
   );
   return listed
     .split("\n")

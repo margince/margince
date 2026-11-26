@@ -1,0 +1,11 @@
+{
+  "verb": "resend_member_invite",
+  "checks": [
+    "user_admin.create|update",
+    "user_admin.update"
+  ],
+  "takes": [
+    "invited_user",
+    "user"
+  ]
+}

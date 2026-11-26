@@ -2,10 +2,17 @@ import { useMutation } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { useT } from "../../i18n";
-import { useRecordWriteRefusal } from "../../lib/capability";
 import { useClaimRecord } from "../../lib/claimrecord";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { useKindWriteRefusal } from "../../lib/writerefusal";
 import type { Lead, UpdateLeadRequest } from "./leads";
+
+/** The lead as the reader saw it when the writing control opened. */
+type LeadAsOpened = Readonly<{
+  version?: number;
+  owner_id?: unknown;
+  archived_at?: unknown;
+}>;
 
 /**
  * One write's variables: what to change, and the record it is changing.
@@ -29,10 +36,7 @@ export function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
   // refuses every control here by one fact, derived once. A per-control test
   // misses the control that had to remember on its own. The sentence travels
   // with the answer, so each refused control can say which fact it was.
-  const readOnlyReason = useRecordWriteRefusal("lead", lead, {
-    archived: t("lead.terminalReadOnly"),
-    notYours: t("lead.notYoursToChange"),
-  });
+  const readOnlyReason = useKindWriteRefusal("lead", lead);
   const readOnly = Boolean(readOnlyReason);
   const send = async ({ body, version, archived }: LeadWrite) => {
     // The last word on a terminal lead, in one place rather than per control.
@@ -57,7 +61,7 @@ export function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
     mutationFn: send,
     onSuccess: onChanged,
   });
-  // The owner dialog states its own refusal, so its writes stay out of the
+  // The owner list states its own refusal, so its writes stay out of the
   // page band that reads `patch`.
   const reassign = useMutation({
     mutationKey: ["lead-edit", id],
@@ -71,19 +75,25 @@ export function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
   });
 
   // Stamps a write with the version and closure of the lead it was made against.
-  const write = (body: UpdateLeadRequest, from: Lead): LeadWrite => ({
+  const write = (body: UpdateLeadRequest, from: LeadAsOpened): LeadWrite => ({
     body,
     version: requireVersion(from.version),
     archived: Boolean(from.archived_at),
   });
-  const save = (body: UpdateLeadRequest) => patch.mutate(write(body, lead));
-  // `from` is the lead as the dialog opened on it. Taking an unowned lead is a
-  // claim, not a patch: the write arm refuses an ownerless row.
-  const assign = (ownerId: string, from: Lead, meId: string | undefined) =>
+  const save = (
+    body: UpdateLeadRequest,
+    options?: Readonly<{ onSuccess?: () => void }>,
+  ) => patch.mutate(write(body, lead), options);
+  // Taking an unowned lead is a claim, not a patch: the write arm refuses an
+  // ownerless row.
+  const assign = (
+    ownerId: string,
+    from: LeadAsOpened,
+    meId: string | undefined,
+  ) =>
     !from.owner_id && ownerId === meId
       ? claim.mutateAsync(from.version)
       : reassign.mutateAsync(write({ owner_id: ownerId }, from));
-  const assigning = reassign.isPending || claim.isPending;
 
-  return { patch, readOnly, readOnlyReason, save, assign, assigning };
+  return { patch, readOnly, readOnlyReason, save, assign };
 }

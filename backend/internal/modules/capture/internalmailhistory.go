@@ -59,7 +59,7 @@ func internalMailHistoryPreviewTx(ctx context.Context, tx pgx.Tx, connection ids
 		return nil, err
 	}
 	for _, source := range policy.Sources {
-		if source.ConnectionID != connection || source.OwnerUserID != owner.UUID || source.HistorySince == nil {
+		if source.ConnectionID != connection || !sameInternalMailOwner(source.OwnerUserID, &owner.UUID) || source.HistorySince == nil {
 			continue
 		}
 		current, err := internalMailSourceCurrentTx(ctx, tx, source)
@@ -146,7 +146,7 @@ func (r *Registry) internalMailHistoryPreview(ctx context.Context, connection id
 	if len(preview.admission.Containers) == 0 {
 		return preview, nil
 	}
-	folders, _, err := r.ListContainers(ctx, preview.admission.Provider, owner)
+	folders, _, err := r.ListContainers(ctx, Mailbox{Provider: preview.admission.Provider, ID: preview.admission.ConnectionID}, owner)
 	if err != nil {
 		return nil, err
 	}

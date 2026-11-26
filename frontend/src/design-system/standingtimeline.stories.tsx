@@ -190,6 +190,54 @@ export const LongProject: Story = {
   },
 };
 
+/** Six years from a target end to today: one grid line per year, named by it. */
+export const SeveralYears: Story = {
+  args: {
+    label: "Brandt rollout over time",
+    asOf: "2026-11-16T09:00:00Z",
+    events: [
+      {
+        key: "e",
+        at: "2020-11-15",
+        title: "Target end",
+        sub: "15 Nov 2020",
+        kind: "end",
+      },
+      {
+        key: "o",
+        at: "2026-11-16",
+        title: "Opened",
+        sub: "16 Nov · by Lena",
+        kind: "done",
+      },
+    ],
+  },
+};
+
+/** A month axis across New Year: the first line and January name the year. */
+export const AcrossNewYear: Story = {
+  args: {
+    label: "Brandt rollout over time",
+    asOf: "2027-02-10T09:00:00Z",
+    events: [
+      {
+        key: "k",
+        at: "2026-10-03",
+        title: "Kickoff",
+        sub: "3 Oct 2026",
+        kind: "done",
+      },
+      {
+        key: "r",
+        at: "2027-02-10",
+        title: "Review",
+        sub: "10 Feb · last update",
+        kind: "last",
+      },
+    ],
+  },
+};
+
 /** Five events in one week: the canvas opens rows under the three rather
  *  than print one label on another. */
 export const Crowded: Story = {
@@ -272,6 +320,25 @@ export const WithMarks: Story = {
   },
 };
 
+/** Only logged items, the oldest from before the last quarter: the line opens
+ *  wide enough to show it. */
+export const OnlyOldMarks: Story = {
+  args: {
+    label: "Dana Reyes over time",
+    asOf: "2026-08-13T09:00:00Z",
+    events: [],
+    marks: [
+      mark("1", "2026-01-12", "12 Jan", "email", "Intro", "theirs"),
+      mark("2", "2026-07-20", "20 Jul", "call", "Catch-up call", "ours"),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole("button", { name: "Email, 12 Jan" }),
+    ).toBeTruthy();
+  },
+};
+
 /** The same account with its close years out: the close sits past a break
  *  that names its month and year, so the recent months keep their room. */
 export const FarClose: Story = {
@@ -287,6 +354,52 @@ export const FarClose: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       within(canvasElement).getByText("August 2029"),
+    ).toBeInTheDocument();
+  },
+};
+
+// The account's deal decided on 5 Aug, before the day it was read: the close
+// carries its outcome and stands as a flag.
+const decided = (outcome: "won" | "lost", title: string): TimelineEvent[] => [
+  ...company.filter((event) => !["w", "c"].includes(event.key)),
+  {
+    key: "c",
+    at: "2026-08-05T15:00:00Z",
+    title,
+    sub: "5 Aug",
+    kind: "end",
+    outcome,
+  },
+];
+
+/** A won deal: a green flag on the day it was won. */
+export const Won: Story = {
+  args: {
+    label: "Fleet retrofit over time",
+    asOf: "2026-08-13T09:00:00Z",
+    events: decided("won", "Won"),
+    marks: [
+      mark("1", "2026-07-08", "8 Jul", "email", "Revised offer", "ours"),
+      mark("2", "2026-08-04", "4 Aug", "email", "Signed order", "theirs"),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      canvasElement.querySelector('[data-outcome="won"]'),
+    ).toBeInTheDocument();
+  },
+};
+
+/** A lost deal: the same flag in grey, so a loss reads calmly. */
+export const Lost: Story = {
+  args: {
+    label: "Fleet retrofit over time",
+    asOf: "2026-08-13T09:00:00Z",
+    events: decided("lost", "Lost"),
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      canvasElement.querySelector('[data-outcome="lost"]'),
     ).toBeInTheDocument();
   },
 };

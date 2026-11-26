@@ -4,10 +4,13 @@
 package compose
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 )
 
 func TestPublicRecordPreviewRejectsPathsBeforeBindingAPrincipal(t *testing.T) {
@@ -41,5 +44,24 @@ func TestUnavailableRecordPreviewStillOpensProtectedApp(t *testing.T) {
 	}
 	if strings.Contains(body.String(), `property="og:title"`) {
 		t.Fatal("unavailable card advertises record metadata")
+	}
+}
+
+// The card prints a deal field only when it carries the installation's masks
+// and none of them withholds that field.
+func TestACardWithholdsWhatAnyRoleMasksAndEverythingWithoutTheMasks(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		ctx      context.Context
+		withheld bool
+	}{
+		"masks unknown":     {ctx: context.Background(), withheld: true},
+		"no role masks it":  {ctx: withCardWithheld(context.Background(), nil), withheld: false},
+		"a role masks it":   {ctx: withCardWithheld(context.Background(), []string{fieldmask.DealCompanyID}), withheld: true},
+		"another is masked": {ctx: withCardWithheld(context.Background(), []string{fieldmask.DealAmountMinor}), withheld: false},
+	} {
+		if got := cardWithholds(tc.ctx, fieldmask.DealCompanyID); got != tc.withheld {
+			t.Errorf("%s: cardWithholds(company_id) = %v, want %v", name, got, tc.withheld)
+		}
 	}
 }

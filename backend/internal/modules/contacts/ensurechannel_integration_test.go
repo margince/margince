@@ -180,6 +180,24 @@ func TestEnsureChannelCounterpartyWritesNoEmailRowWithoutOne(t *testing.T) {
 	}
 }
 
+// An outside address still becomes one, so the refusal above cannot be read as
+// refusing every channel counterparty.
+func TestEnsureChannelCounterpartyStillTakesAnOutsideAddress(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.asChannelConnector()
+	ci := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "880401", Username: "outsider"}
+	in := e.channelEnsureInput(ctx, t, ci, "An Outsider")
+	in.CorroboratingEmail = "outsider@customer.example"
+
+	res, err := e.store.EnsureChannelCounterparty(ctx, in)
+	if err != nil {
+		t.Fatalf("an outside address was refused: %v", err)
+	}
+	if res.ContactID.IsZero() {
+		t.Error("an outside address made no contact")
+	}
+}
+
 func TestEnsureChannelCounterpartyRespectsTheSuppressionLedger(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()

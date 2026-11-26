@@ -76,6 +76,8 @@ describe("ImapConnectForm", () => {
         max_messages: 50,
       },
     });
+    // Sending is opt-in: left unticked, the connection stays read-only.
+    expect(calls[0].body).not.toHaveProperty("imap.smtp");
     await waitFor(() => expect(onConnected).toHaveBeenCalled());
   });
 
@@ -135,10 +137,9 @@ describe("ImapConnectForm", () => {
     });
     render(<ImapConnectForm open onClose={() => {}} />);
     await user.click(screen.getByRole("button", { name: "Connect" }));
-    expect(
-      screen.getByText("Required: IMAP server, Email address, App password"),
-    ).toBeInTheDocument();
-    expect(screen.getAllByText("Required fields")).toHaveLength(3);
+    for (const field of ["IMAP server", "Email address", "App password"]) {
+      expect(screen.getByText(`${field} is required.`)).toBeInTheDocument();
+    }
     expect(calls).toHaveLength(0);
   });
 
@@ -157,8 +158,13 @@ describe("ImapConnectForm", () => {
     await user.clear(port);
     await user.type(port, "70000");
     await user.click(screen.getByRole("button", { name: "Connect" }));
-    expect(screen.getByText("Out of range: Port")).toBeInTheDocument();
-    expect(screen.getByText("From 1 to 65535")).toBeInTheDocument();
+    expect(screen.getByLabelText("Port")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(
+      screen.getByText("Port must be from 1 to 65535."),
+    ).toBeInTheDocument();
     expect(calls).toHaveLength(0);
   });
 
@@ -173,5 +179,210 @@ describe("ImapConnectForm", () => {
     await user.click(screen.getByRole("button", { name: "Connect" }));
     await screen.findByText(/could not be reached/i);
     expect(screen.getByLabelText("App password *")).toHaveValue("");
+  });
+
+  it("says why the password is empty after a refusal, without marking it missing", async () => {
+    const user = userEvent.setup();
+    installFetchStub({
+      "POST /connectors/imap/connect": () =>
+        jsonResponse({ code: "imap_unreachable", detail: "unreachable" }, 502),
+    });
+    render(<ImapConnectForm open onClose={() => {}} />);
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await screen.findByText(/could not be reached/i);
+
+    const secret = screen.getByLabelText("App password *");
+    expect(secret).not.toHaveAttribute("aria-invalid", "true");
+    expect(
+      screen.getByText(/Emptied after the failed attempt/),
+    ).toBeInTheDocument();
+  });
+
+  it("drops the server's refusal once a field changes or a new press is refused", async () => {
+    const user = userEvent.setup();
+    installFetchStub({
+      "POST /connectors/imap/connect": () =>
+        jsonResponse({ code: "imap_unreachable", detail: "unreachable" }, 502),
+    });
+    render(<ImapConnectForm open onClose={() => {}} />);
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await screen.findByText(/could not be reached/i);
+
+    const port = screen.getByLabelText("Port");
+    await user.clear(port);
+    await user.type(port, "0");
+    expect(screen.queryByText(/could not be reached/i)).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    expect(screen.queryByText(/could not be reached/i)).toBeNull();
+    expect(screen.getByLabelText("Port")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
+  it("drops the server's refusal once an outgoing-server field changes", async () => {
+    const user = userEvent.setup();
+    installFetchStub({
+      "POST /connectors/imap/connect": () =>
+        jsonResponse({ code: "imap_unreachable", detail: "unreachable" }, 502),
+    });
+    render(<ImapConnectForm open onClose={() => {}} />);
+    await fillValidForm(user);
+    await user.click(screen.getByLabelText(/Send from this mailbox/));
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await screen.findByText(/could not be reached/i);
+
+    await user.type(screen.getByLabelText("SMTP port"), "587");
+    expect(screen.queryByText(/could not be reached/i)).toBeNull();
+  });
+
+  it("drops the server's refusal once Send from this mailbox is toggled", async () => {
+    const user = userEvent.setup();
+    installFetchStub({
+      "POST /connectors/imap/connect": () =>
+        jsonResponse({ code: "imap_unreachable", detail: "unreachable" }, 502),
+    });
+    render(<ImapConnectForm open onClose={() => {}} />);
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await screen.findByText(/could not be reached/i);
+
+    await user.click(screen.getByLabelText(/Send from this mailbox/));
+    expect(screen.queryByText(/could not be reached/i)).toBeNull();
+  });
+
+  it("asks for the server name only when a web address is pasted", async () => {
+    const user = userEvent.setup();
+    const calls: unknown[] = [];
+    installFetchStub({
+      "POST /connectors/imap/connect": (body) => {
+        calls.push(body);
+        return jsonResponse({}, 500);
+      },
+    });
+    render(<ImapConnectForm open onClose={() => {}} />);
+    await fillValidForm(user);
+    const host = screen.getByLabelText("IMAP server *");
+    await user.clear(host);
+    await user.type(host, "https://imap.example.com/path");
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    expect(
+      screen.getByText("Enter the server name only, such as imap.example.com."),
+    ).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
+  });
+
+  it("turns sending on with the outgoing server's settings and their defaults", async () => {
+    const user = userEvent.setup();
+    const calls: unknown[] = [];
+    installFetchStub({
+      "POST /connectors/imap/connect": (body) => {
+        calls.push(body);
+        return jsonResponse({
+          connection: { id: "c1", provider: "imap", status: "connected" },
+        });
+      },
+    });
+    render(<ImapConnectForm open onClose={() => {}} />);
+    await fillValidForm(user);
+    await user.click(screen.getByLabelText(/Send from this mailbox/));
+    // An empty server field falls back to the IMAP server, which it shows.
+    expect(screen.getByLabelText("SMTP server")).toHaveAttribute(
+      "placeholder",
+      "mail.example.org",
+    );
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await waitFor(() => expect(calls.length).toBe(1));
+    expect(calls[0]).toMatchObject({
+      imap: { smtp: { port: 465, security: "tls" } },
+    });
+    expect(calls[0]).not.toHaveProperty("imap.smtp.host");
+  });
+
+  it("sends a typed outgoing server and port as written", async () => {
+    const user = userEvent.setup();
+    const calls: unknown[] = [];
+    installFetchStub({
+      "POST /connectors/imap/connect": (body) => {
+        calls.push(body);
+        return jsonResponse({
+          connection: { id: "c1", provider: "imap", status: "connected" },
+        });
+      },
+    });
+    render(<ImapConnectForm open onClose={() => {}} />);
+    await fillValidForm(user);
+    await user.click(screen.getByLabelText(/Send from this mailbox/));
+    await user.type(screen.getByLabelText("SMTP server"), " smtp.example.org ");
+    await user.type(screen.getByLabelText("SMTP port"), "2525");
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await waitFor(() => expect(calls.length).toBe(1));
+    expect(calls[0]).toMatchObject({
+      imap: { smtp: { host: "smtp.example.org", port: 2525 } },
+    });
+  });
+
+  it("names an out-of-range SMTP port only while sending is on", async () => {
+    const user = userEvent.setup();
+    const calls: unknown[] = [];
+    installFetchStub({
+      "POST /connectors/imap/connect": (body) => {
+        calls.push(body);
+        return jsonResponse({}, 500);
+      },
+    });
+    render(<ImapConnectForm open onClose={() => {}} />);
+    await fillValidForm(user);
+    await user.click(screen.getByLabelText(/Send from this mailbox/));
+    await user.type(screen.getByLabelText("SMTP port"), "0");
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    expect(
+      screen.getByText("SMTP port must be from 1 to 65535."),
+    ).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
+  });
+
+  it("names a refused outgoing login apart from a refused mailbox login", async () => {
+    const user = userEvent.setup();
+    installFetchStub({
+      "POST /connectors/imap/connect": () =>
+        jsonResponse({ code: "smtp_login_rejected", detail: "rejected" }, 422),
+    });
+    render(<ImapConnectForm open onClose={() => {}} />);
+    await fillValidForm(user);
+    await user.click(screen.getByLabelText(/Send from this mailbox/));
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    expect(
+      await screen.findByText(/The SMTP server rejected this login/),
+    ).toBeInTheDocument();
+  });
+
+  it("invalidates the shared connectors query so every roster shows the new connection", async () => {
+    const user = userEvent.setup();
+    installFetchStub({
+      "POST /connectors/imap/connect": () =>
+        jsonResponse({
+          connection: { id: "c1", provider: "imap", status: "connected" },
+        }),
+    });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+    rtlRender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ImapConnectForm open onClose={() => {}} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: "Connect" }));
+    await waitFor(() =>
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["connectors"] }),
+    );
   });
 });

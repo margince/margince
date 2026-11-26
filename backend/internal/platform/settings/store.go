@@ -86,10 +86,32 @@ func (s *Store) RawStored(ctx context.Context, key string) (json.RawMessage, boo
 	// transaction helper across both keeps the store honest about needing a
 	// resolved principal — a settings read with no workspace bound is a caller
 	// that has not authenticated, which the gate above should be judging.
+
+	// A hit opens no transaction, so the workspace check of WithWorkspaceTx is
+	// made here. A hit and a miss then refuse alike.
+	if _, ok := principal.WorkspaceID(ctx); !ok {
+		return nil, false, fmt.Errorf("settings: reading %s: %w", key, database.ErrNoWorkspace)
+	}
+	read := func() (json.RawMessage, bool, error) {
+		var raw json.RawMessage
+		var found bool
+		err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+			var err error
+			raw, found, err = storedValue(ctx, tx, key, "")
+			return err
+		})
+		return raw, found, err
+	}
 	var raw json.RawMessage
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT value FROM setting WHERE key = $1`, key).Scan(&raw)
-	})
+	var found bool
+	if c := cacheFor(s.pool); c != nil && def.Cacheable() {
+		raw, found, err = c.read(key, read)
+	} else {
+		raw, found, err = read()
+	}
+	if err == nil && !found {
+		err = pgx.ErrNoRows
+	}
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		// Unset is not missing: the registered default IS the value until a
@@ -207,6 +229,8 @@ func (s *Store) SetRawTxReceipt(ctx context.Context, tx pgx.Tx, key string, next
 			key, next); err != nil {
 			return WriteReceipt{}, fmt.Errorf("settings: writing %s: %w", key, err)
 		}
+		database.Forget(tx, ValueMemoKey(key))
+		forgetCachedWith(tx, key)
 		// Through the entry's own image, so a setting holding the address of a
 		// secret is redacted here rather than at each writer — there is only one
 		// writer today, and the next one would not know to.
@@ -262,6 +286,9 @@ func LockForWrite(ctx context.Context, tx pgx.Tx, key string) error {
 	if _, err := tx.Exec(ctx, `SELECT 1 FROM setting WHERE key = $1 FOR UPDATE`, key); err != nil {
 		return fmt.Errorf("settings: locking the %s row for write: %w", key, err)
 	}
+	// A value this transaction read before the lock may predate another
+	// writer's commit, so the writer reads the row again.
+	database.Forget(tx, ValueMemoKey(key))
 	return nil
 }
 
@@ -304,13 +331,12 @@ func readTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T], lock string) (T,
 	if err := RequireRead(ctx, e); err != nil {
 		return zero, err
 	}
-	var raw json.RawMessage
-	err := tx.QueryRow(ctx, `SELECT value FROM setting WHERE key = $1`+lock, e.Key()).Scan(&raw)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return zero, UnsetValue{Setting: e.Key()}
-	}
+	raw, found, err := storedValue(ctx, tx, e.Key(), lock)
 	if err != nil {
 		return zero, fmt.Errorf("settings: reading %s: %w", e.Key(), err)
+	}
+	if !found {
+		return zero, UnsetValue{Setting: e.Key()}
 	}
 	var out T
 	if err := json.Unmarshal(raw, &out); err != nil {
@@ -340,7 +366,7 @@ func RequireWrite(ctx context.Context, def Definition) error {
 func (s *Store) lookup(key string) (Definition, error) { //nolint:ireturn // returns the type-erased Definition by design — the registry holds entries of many value types, and the concrete Entry[T] cannot be named without the type parameter the caller is looking up
 	def, ok := s.reg.byKey[key]
 	if !ok {
-		return nil, fmt.Errorf("settings: %s is not a registered setting: %w", key, apperrors.ErrNotFound)
+		return nil, fmt.Errorf("%s is not a registered setting: %w", key, apperrors.ErrNotFound)
 	}
 	return def, nil
 }
@@ -393,13 +419,12 @@ func hasRow(ctx context.Context, tx pgx.Tx, key string) (bool, error) {
 // declared default so the audit row's "before" is the value that was actually
 // in effect — not an empty stand-in that would misreport the first change.
 func currentJSON(ctx context.Context, tx pgx.Tx, def Definition) (json.RawMessage, error) {
-	var raw json.RawMessage
-	err := tx.QueryRow(ctx, `SELECT value FROM setting WHERE key = $1`, def.Key()).Scan(&raw)
+	raw, found, err := storedValue(ctx, tx, def.Key(), "")
 	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		return def.DefaultJSON()
 	case err != nil:
 		return nil, fmt.Errorf("settings: reading %s before write: %w", def.Key(), err)
+	case !found:
+		return def.DefaultJSON()
 	}
 	return raw, nil
 }
@@ -430,21 +455,6 @@ func GetTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, error) {
 		return zero, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
 	}
 	return out, nil
-}
-
-// GetStoredTx is GetTx that also reports whether a row stands behind the
-// value, for a reader whose answer differs when nobody chose one.
-func GetStoredTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, bool, error) {
-	var zero T
-	if err := RequireRead(ctx, e); err != nil {
-		return zero, false, err
-	}
-	stored, err := hasRow(ctx, tx, e.Key())
-	if err != nil {
-		return zero, false, err
-	}
-	out, err := GetTx(ctx, tx, e)
-	return out, stored, err
 }
 
 // RequireTx reads a setting inside a transaction the caller already holds, for

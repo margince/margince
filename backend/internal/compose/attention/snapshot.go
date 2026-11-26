@@ -21,7 +21,7 @@ import (
 // the feed without standing a database up.
 type Snapshots interface {
 	// InSnapshot runs fn against one snapshot every read beneath it joins.
-	InSnapshot(ctx context.Context, fn func(context.Context) error) error
+	InSnapshot(ctx context.Context, read string, fn func(context.Context) error) error
 	// Detached answers a ctx with no snapshot on it, for the one write a
 	// composed read makes. The caller says why at its call site.
 	Detached(ctx context.Context) context.Context
@@ -48,7 +48,7 @@ func (s *Service) inSnapshot(ctx context.Context, read string, fn func(context.C
 		if s.snapshots == nil {
 			return fn(ctx)
 		}
-		return s.snapshots.InSnapshot(ctx, fn)
+		return s.snapshots.InSnapshot(ctx, read, fn)
 	})
 }
 
@@ -64,12 +64,17 @@ func (s *Service) detached(ctx context.Context) context.Context {
 // unavailable source rather than as its own failure. Every producer of a
 // failed WorklistSourceUnavailable reads through it, because a lane that
 // errors on the shared snapshot without it aborts every read that follows.
-// budget is laneBudget, or what is left of it for a lane read in parts.
-func (s *Service) degradable(ctx context.Context, budget time.Duration, fn func(context.Context) error) error {
+// budget is laneBudget, or what is left of it for a lane read in parts. lane
+// names the lane on /metrics when it is dropped.
+func (s *Service) degradable(ctx context.Context, lane string, budget time.Duration, fn func(context.Context) error) error {
+	var err error
 	if s.snapshots == nil {
-		return fn(ctx)
+		err = fn(ctx)
+	} else {
+		err = s.snapshots.Degradable(ctx, budget, fn)
 	}
-	return s.snapshots.Degradable(ctx, budget, fn)
+	countLaneFailure(ctx, lane, err)
+	return err
 }
 
 // laneFailureLevel is the level a lane the page named as unavailable is logged

@@ -6,7 +6,7 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 
 ## weekly_plan
 
-12 columns · primary key `(id)` · referenced by 1 foreign key
+11 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -20,7 +20,6 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 | `status` | `text`, default `'open'::text` | yes | `closed` once the weekly job has settled the week and frozen its outcome into the review. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**
@@ -41,17 +40,18 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 
 **Indexes**
 
-- `idx_weekly_plan_owner`: `btree (owner_id, local_week_start DESC)`
 - `uq_weekly_plan_owner_week`: `unique, btree (owner_id, local_week_start)`
 - `weekly_plan_pkey`: `unique, btree (id)`
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"risks": 2000, "status": 20000, "captured_by": 20000, "capacity_note": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"capacity_note":2000,"captured_by":20000,"risks":2000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"risks": 2000, "status": 20000, "captured_by": 20000, "capacity_note": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"capacity_note":2000,"captured_by":20000,"risks":2000,"status":20000}')`
 - `weekly_plan_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.status = 'open'))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 
 ## weekly_plan_commitment
 
-23 columns · primary key `(id)` · referenced by 0 foreign keys
+22 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -76,7 +76,6 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 | `state` | `text`, default `'open'::text` | yes | `missed` is written by the week's close over a commitment left open; a rep settles their own as done or dropped. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**
@@ -123,4 +122,6 @@ The 2 tables owned by `weeklyplan`, as the migrations build them. [Back to the e
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"label": 500, "state": 20000, "captured_by": 20000, "help_requested": 2000, "manager_response": 2000, "linked_record_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"help_requested":2000,"label":500,"linked_record_type":20000,"manager_response":2000,"state":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 500, "state": 20000, "captured_by": 20000, "help_requested": 2000, "manager_response": 2000, "linked_record_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"help_requested":2000,"label":500,"linked_record_type":20000,"manager_response":2000,"state":20000}')`
 - `trg_weekly_plan_commitment_linked_keys`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_weekly_plan_commitment_linked_keys()`

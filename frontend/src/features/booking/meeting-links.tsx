@@ -7,17 +7,21 @@ import type { components } from "../../api/schema";
 import { Button, EmptyState, OverflowMenu } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { CellStack } from "../../design-system/cellstack";
+import { CopyAction } from "../../design-system/clipboardcopy";
 import { DataTable } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
 import { Switch } from "../../design-system/switch";
-import { formatNumber } from "../../format/format";
+import { formatNumber, identifierNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../../lib/booking-video";
-import { useCopyBookingLink } from "../../lib/bookinglinkcopy";
+import {
+  useCopyBookingLink,
+  useMarkBookingShared,
+} from "../../lib/bookinglinkcopy";
 import { navigate } from "../../lib/router";
 import {
   bookingPagePaused,
@@ -116,34 +120,22 @@ export function BookingLinksCard({ profile }: Readonly<{ profile: Profile }>) {
           bleed
           fold
           label={t("scheduling.linksTitle")}
-          rows={[
-            ...new Set([
-              profile.duration_minutes,
-              ...(profile.offered_lengths ?? []),
-            ]),
-          ].map((minutes) => ({
-            ...profile,
-            duration_minutes: minutes,
-            public_url:
-              minutes === profile.duration_minutes
-                ? profile.public_url
-                : profile.public_url
-                  ? `${profile.public_url}?l=${minutes}`
-                  : undefined,
-          }))}
-          rowKey={(row) => `${row.slug}-${row.duration_minutes}`}
+          rows={[profile]}
+          rowKey={(row) => row.slug ?? ""}
           columns={[
             {
               key: "link",
               header: t("scheduling.col.link"),
               grow: true,
               fold: "title",
-              render: (row) => <LinkCell profile={row} />,
+              render: (row) => (
+                <LinkCell profile={row} main={bookingLengths(row).length > 1} />
+              ),
             },
             {
               key: "length",
               header: t("scheduling.col.length"),
-              render: (row) => <LengthCell minutes={row.duration_minutes} />,
+              render: (row) => <LengthCell profile={row} />,
             },
             {
               key: "video",
@@ -222,13 +214,32 @@ function videoText(t: Translator, profile: Profile): string {
   return VIDEO_APP_NAME[PROVIDER_VIDEO_APP[profile.provider]];
 }
 
-function LinkCell({ profile }: Readonly<{ profile: Profile }>) {
+// The lengths the main link offers its guest, its default first, as the
+// server's bookingLengths lists them. The host profile's offered_lengths is
+// the list of extras a save writes, so it cannot carry the default too.
+function bookingLengths(profile: Profile): number[] {
+  return [
+    ...new Set([profile.duration_minutes, ...(profile.offered_lengths ?? [])]),
+  ];
+}
+
+// Beside a main link that offers several lengths, the link's own address
+// names its default length.
+function LinkCell({
+  profile,
+  main,
+}: Readonly<{ profile: Profile; main: boolean }>) {
   const t = useT();
   return (
     <CellStack>
-      <span className="t-name">
-        {profile.title}{" "}
-        <span className="t-caption">{t("scheduling.mainLink")}</span>
+      <span className="t-name meeting-link-title">
+        {profile.title}
+        {main && (
+          <>
+            {" "}
+            <span className="t-caption">{t("scheduling.mainLink")}</span>
+          </>
+        )}
       </span>
       <span className="t-caption meeting-link-url">
         {profile.public_url ?? t("scheduling.publicUrlMissing")}
@@ -237,12 +248,45 @@ function LinkCell({ profile }: Readonly<{ profile: Profile }>) {
   );
 }
 
-function LengthCell({ minutes }: Readonly<{ minutes: number }>) {
+// The link that opens the main page at one of its extra lengths.
+function lengthLink(publicUrl: string, minutes: number): string {
+  const link = new URL(publicUrl);
+  link.searchParams.set("l", identifierNumber(minutes));
+  return link.href;
+}
+
+// Every length the main link offers. An extra length keeps a link of its own
+// (?l=N) that opens the page at that length, so a host can still share it.
+function LengthCell({ profile }: Readonly<{ profile: Profile }>) {
+  const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  return plural("scheduling.minutes", minutes, {
-    count: formatNumber(minutes, locale),
-  });
+  const markShared = useMarkBookingShared();
+  return (
+    <CellStack>
+      {bookingLengths(profile).map((minutes) => {
+        const length = plural("scheduling.minutes", minutes, {
+          count: formatNumber(minutes, locale),
+        });
+        return (
+          <span key={minutes}>
+            {length}
+            {minutes !== profile.duration_minutes && profile.public_url && (
+              <CopyAction
+                text={lengthLink(profile.public_url, minutes)}
+                labels={{
+                  copy: t("scheduling.copyLengthLink", { length }),
+                  copied: t("scheduling.copied"),
+                  remedy: t("scheduling.copyFallback"),
+                }}
+                onCopied={markShared}
+              />
+            )}
+          </span>
+        );
+      })}
+    </CellStack>
+  );
 }
 
 function RowStatus({
@@ -258,6 +302,11 @@ function LinkActions({
   onReplace,
 }: Readonly<{ profile: Profile; onEdit: () => void; onReplace: () => void }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const length = plural("scheduling.minutes", profile.duration_minutes, {
+    count: formatNumber(profile.duration_minutes, locale),
+  });
   const copy = useCopyBookingLink(profile.public_url ?? "", {
     copy: t("scheduling.copyLink"),
     copied: t("scheduling.copied"),
@@ -270,7 +319,9 @@ function LinkActions({
         {copy.label}
       </Button>
       <OverflowMenu
-        label={t("scheduling.linkActions", { name: profile.title })}
+        label={t("scheduling.linkActions", {
+          name: `${profile.title}, ${length}`,
+        })}
       >
         <Button onClick={onEdit}>{t("scheduling.editLink")}</Button>
         <Button onClick={() => navigate({ screen: "book", id: "preview" })}>

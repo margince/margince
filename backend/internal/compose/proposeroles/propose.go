@@ -131,7 +131,20 @@ func Request(dealName string, candidates []Candidate) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: Schema(),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       candidateSubjects(candidates),
 	}
+}
+
+// candidateSubjects are the candidates and every message quoted for them.
+func candidateSubjects(candidates []Candidate) *model.Subjects {
+	var contacts, activities []string
+	for _, candidate := range candidates {
+		contacts = append(contacts, candidate.ContactID)
+		for _, message := range candidate.Messages {
+			activities = append(activities, message.ActivityID)
+		}
+	}
+	return model.SubjectsOf(contacts, activities)
 }
 
 // Schema is the shape the model must answer in.

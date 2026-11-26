@@ -141,8 +141,8 @@ func collectUnitTables(name, dir string) (tableNames []string, present bool, err
 			// applied in the tree — silence, not a partial apply.
 			return nil, false, fmt.Errorf("extensions/%s: %s/%s/ is a directory — the migrations layer is a flat set of .sql files, and a nested one would never be applied", name, migrationsLayer, e.Name())
 		}
-		if !strings.HasSuffix(e.Name(), ".sql") {
-			return nil, false, fmt.Errorf("extensions/%s: %s/%s is not a .sql file — the migrations layer holds NNNN_name.up.sql / .down.sql pairs and nothing else", name, migrationsLayer, e.Name())
+		if e.Name() != "renumbered.txt" && !strings.HasSuffix(e.Name(), ".sql") {
+			return nil, false, fmt.Errorf("extensions/%s: %s/%s is not a .sql file — the migrations layer holds NNNN_name.up.sql / .down.sql pairs and renumbered.txt", name, migrationsLayer, e.Name())
 		}
 		// Same reason as the api layer's: os.ReadFile on a FIFO blocks until
 		// something writes, so a non-regular entry hangs composition rather

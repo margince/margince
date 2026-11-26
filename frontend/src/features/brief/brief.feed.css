@@ -33,7 +33,6 @@
   min-inline-size: var(--space-5);
   padding: 0 var(--space-2);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
   color: var(--accentText);
   text-align: center;
@@ -61,6 +60,9 @@
   padding: var(--space-4) var(--space-5) var(--space-4) var(--space-3);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-rest);
+}
+.brief-task-ask {
+  grid-column: 2;
 }
 .brief-task-tick {
   display: grid;
@@ -110,18 +112,6 @@
   overflow: hidden;
   font: var(--fontBody);
   color: var(--textSecondary);
-}
-/* The state stands at the far end of the chips' line. */
-.brief-task-status {
-  margin-inline-start: auto;
-}
-.brief-task-meta {
-  align-self: stretch;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin-block-start: var(--space-2);
 }
 
 /* ── The card in hand ─────────────────────────────────────────────────────
@@ -180,9 +170,9 @@
     --brief-ring-angle: 360deg;
   }
 }
+/* A rise without a fade, as the day block it stands in (brief.css). */
 @keyframes brief-card-open {
   from {
-    opacity: 0.6;
     transform: translateY(var(--space-1));
   }
 }
@@ -240,7 +230,7 @@
 .brief-triage-lead-head > .heading {
   order: 1;
 }
-.brief-triage-lead-head > .brief-task-meta {
+.brief-triage-lead-head > .task-meta {
   order: 3;
   margin: 0;
 }
@@ -257,6 +247,11 @@
 .brief-triage-lead .worklist-row-verdict {
   order: 2;
   font: var(--fontBodyLarge);
+}
+/* What a decision proposes, under the line that asks for it. */
+.brief-triage-lead .worklist-row-proposal {
+  order: 2;
+  align-self: stretch;
 }
 .brief-triage-lead .emailentry {
   order: 5;
@@ -315,11 +310,60 @@
 .brief-triage-lead .emailentry__marks {
   display: none;
 }
+/* A caption hidden above still counts as a sibling, so here a dot follows a
+   fact only where a shown one comes after it. */
+.brief-triage-lead .worklist-row-facts-line > *::after {
+  content: none;
+}
+.brief-triage-lead
+  .worklist-row-facts-line
+  > :not(.worklist-row-about, .worklist-row-when):has(
+    ~ :not(.worklist-row-about, .worklist-row-when)
+  )::after {
+  content: "·" / "";
+  margin-inline-start: var(--space-2);
+}
+
+/* Next task ends the title line, apart from the verbs that answer the task. */
+.brief-triage-title {
+  order: 1;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  inline-size: 100%;
+}
+.brief-triage-title > .heading {
+  min-width: 0;
+}
+/* Outranks the title's own link ink: this is a way on, not the task's name. */
+.brief-triage-lead .btn.btn-link.brief-triage-next {
+  flex: none;
+  margin-inline-start: auto;
+  font: var(--fontBody);
+  color: var(--accentText);
+}
 
 /* THE NAME OF THE ROW IN HAND, one rung over the cards behind it. */
 .brief-triage-lead p.worklist-row-title {
   margin: 0;
   font: var(--fontHeadingSmall);
+  inline-size: 100%;
+  flex-wrap: nowrap;
+  align-items: baseline;
+}
+.brief-triage-lead p.worklist-row-title > * {
+  min-width: 0;
+}
+/* A state badge keeps its word; the name beside it gives way instead. */
+.brief-triage-lead p.worklist-row-title > .badge {
+  flex: none;
+}
+/* A phone has no room for name, badge and way on in one line: the badge and
+   Next task go under the name. */
+@media (max-width: 480px) {
+  .brief-triage-lead p.worklist-row-title {
+    flex-wrap: wrap;
+  }
 }
 .brief-triage-lead p.worklist-row-title,
 .brief-triage-lead-head > .heading {
@@ -385,13 +429,26 @@
   .brief-triage-lead {
     padding-inline-end: var(--space-4);
   }
+  /* Two lines on purpose: the ways in above, the answer and the menu below,
+     so a verb never wraps alone onto a line of its own. */
+  .brief-triage-lead
+  .worklist-row-acts:has(
+    > :not(.btn-primary, .btn-ai, .overflow-menu)
+  )::before {
+    content: "";
+    order: 1;
+    flex-basis: 100%;
+  }
+  .brief-triage-lead .worklist-row-acts > .btn-primary,
+  .brief-triage-lead .worklist-row-acts > .btn-ai {
+    flex-grow: 1;
+  }
 }
 
 /* The tick is round, as a to-do's is; the verb under it is the house glyph. */
 .brief-task-tick .icon-action .btn.btn-icon {
   border-color: transparent;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: none;
   box-shadow: none;
 }
@@ -407,5 +464,89 @@
 @media (max-width: 700px) {
   .brief-triage-lead {
     padding: var(--padCard);
+  }
+}
+
+/* On the open card the deal cards lead the verb row, and their two verbs join
+   it, so Link email to deal is the row's last and only filled verb. */
+.brief-triage-lead .which-deal-choice,
+.brief-triage-lead .which-deal-verbs {
+  display: contents;
+}
+.brief-triage-lead .which-deal-choice > fieldset {
+  order: -2;
+  flex-basis: 100%;
+}
+.brief-triage-lead .which-deal-verbs > .btn-primary {
+  order: 2;
+}
+
+/* ── A clear morning ──────────────────────────────────────────────────────
+ * One quiet card: a tick that draws once, the word, and when Margince last
+ * looked. Motion is stroke and scale only, and stops for reduced motion. */
+.brief-caughtup {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-10) var(--space-8) var(--space-8);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-rest);
+  text-align: center;
+}
+/* The tick sits on two quiet rings, all drawn in one SVG. */
+.brief-caughtup-mark {
+  inline-size: calc(var(--space-16) + var(--space-8));
+  block-size: calc(var(--space-16) + var(--space-8));
+  margin-block-end: var(--space-2);
+  overflow: visible;
+  animation: brief-caughtup-ring var(--dur-enter) var(--ease-out) both;
+}
+.brief-caughtup-halo {
+  fill: color-mix(in srgb, var(--accentLight) 25%, transparent);
+}
+.brief-caughtup-ring {
+  fill: color-mix(in srgb, var(--accentLight) 55%, transparent);
+}
+.brief-caughtup-disc {
+  fill: var(--accentLight);
+}
+.brief-caughtup-tick {
+  fill: none;
+  stroke: var(--accentText);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: brief-caughtup-draw var(--dur-enter) var(--ease-out)
+    calc(var(--dur-enter) / 2) forwards;
+}
+.brief-caughtup-line {
+  margin: 0;
+  max-inline-size: 52ch;
+  font: var(--fontBody);
+  color: var(--textSecondary);
+  text-wrap: pretty;
+}
+@keyframes brief-caughtup-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes brief-caughtup-ring {
+  from {
+    scale: 0.92;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brief-caughtup-mark,
+  .brief-caughtup-tick {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+@media (max-width: 640px) {
+  .brief-caughtup {
+    padding: var(--space-8) var(--space-5) var(--space-6);
   }
 }

@@ -16,14 +16,19 @@ import (
 	"github.com/margince/margince/backend/migrations"
 )
 
-const companyLifecycleCheck = "company_lifecycle_check"
+// The check carries its old name through 1793390426, and the column rename
+// later gives it the name the head schema has.
+const (
+	companyLifecycleCheck = "company_lifecycle_check"
+	companyStatusCheck    = "company_status_check"
+)
 
-func lifecycleCheck(t *testing.T, conn *pgx.Conn) (validated bool, definition string) {
+func lifecycleCheck(t *testing.T, conn *pgx.Conn, name string) (validated bool, definition string) {
 	t.Helper()
 	if err := conn.QueryRow(context.Background(), `
 		SELECT convalidated, pg_get_constraintdef(oid) FROM pg_constraint
-		 WHERE conname = $1`, companyLifecycleCheck).Scan(&validated, &definition); err != nil {
-		t.Fatalf("reading %s: %v", companyLifecycleCheck, err)
+		 WHERE conname = $1`, name).Scan(&validated, &definition); err != nil {
+		t.Fatalf("reading %s: %v", name, err)
 	}
 	return validated, definition
 }
@@ -34,12 +39,12 @@ func TestAFreshDatabaseAcceptsOnboardingAndLive(t *testing.T) {
 	headSchema(t, conn)
 	for _, stage := range []string{"onboarding", "live"} {
 		if _, err := conn.Exec(context.Background(), `
-			INSERT INTO company (display_name, lifecycle, source, captured_by)
+			INSERT INTO company (display_name, status, source, captured_by)
 			VALUES ($1, $2, 'manual', 'test')`, "Fresh "+stage, stage); err != nil {
 			t.Errorf("a fresh database refused a %s company: %v", stage, err)
 		}
 	}
-	if validated, _ := lifecycleCheck(t, conn); !validated {
+	if validated, _ := lifecycleCheck(t, conn, companyStatusCheck); !validated {
 		t.Error("the lifecycle check on a fresh database is NOT VALID")
 	}
 }
@@ -50,7 +55,7 @@ func TestTheLifecycleDownMovesOnboardingAndLiveToCustomer(t *testing.T) {
 	resetSchema(t, conn)
 	ctx := context.Background()
 
-	core, err := migrations.Core()
+	core, err := migrations.CoreHistory()
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
@@ -84,7 +89,7 @@ func TestTheLifecycleDownMovesOnboardingAndLiveToCustomer(t *testing.T) {
 	}
 	// The rollback re-adds the old check NOT VALID rather than scan the table
 	// under its lock; every row already satisfies it, so a VALIDATE succeeds.
-	_, definition := lifecycleCheck(t, conn)
+	_, definition := lifecycleCheck(t, conn, companyLifecycleCheck)
 	if _, err := conn.Exec(ctx, `ALTER TABLE company VALIDATE CONSTRAINT company_lifecycle_check`); err != nil {
 		t.Errorf("a row the rollback left breaks the old check: %v", err)
 	}
@@ -95,7 +100,7 @@ func TestTheLifecycleDownMovesOnboardingAndLiveToCustomer(t *testing.T) {
 	if _, err := dbmigrate.Up(ctx, conn, through); err != nil {
 		t.Fatalf("up again after the rollback: %v", err)
 	}
-	if validated, definition := lifecycleCheck(t, conn); !validated || !strings.Contains(definition, "onboarding") {
+	if validated, definition := lifecycleCheck(t, conn, companyLifecycleCheck); !validated || !strings.Contains(definition, "onboarding") {
 		t.Errorf("after the round trip the check reads validated=%v %s", validated, definition)
 	}
 }

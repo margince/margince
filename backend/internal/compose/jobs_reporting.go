@@ -10,6 +10,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -25,12 +27,16 @@ func (ReportScheduleSweepArgs) Kind() string { return "report_schedule_sweep" }
 func (ReportScheduleSweepArgs) FleetWide() {}
 
 type reportScheduleSweepWorker struct {
-	pool *pgxpool.Pool
-	now  func() time.Time
+	features corefeatures.Availability
+	pool     *pgxpool.Pool
+	now      func() time.Time
 }
 
 func (w *reportScheduleSweepWorker) Work(ctx context.Context, _ *river.Job[ReportScheduleSweepArgs]) error {
-	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.sweepWorkspace))
+	if !w.features.Enabled(crmcontracts.CoreFeatureAnalytics) {
+		return nil
+	}
+	return jobs.FaultContext(ctx, runPerWorkspace(w.features.Context(ctx), w.pool, w.sweepWorkspace))
 }
 
 func (w *reportScheduleSweepWorker) sweepWorkspace(ctx context.Context, workspace ids.UUID) error {

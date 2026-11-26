@@ -35,6 +35,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -74,7 +75,7 @@ func TestAQualificationInFlightHoldsItsCorrespondence(t *testing.T) {
 
 	erased := make(chan error, 1)
 	go func() {
-		erased <- privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test")
+		erased <- privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test")
 	}()
 
 	// Wait until the erasure is genuinely PARKED behind the stamp, asked of

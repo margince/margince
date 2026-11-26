@@ -67,21 +67,22 @@ func BaseCurrencyLock(settingKey string) func(context.Context, pgx.Tx) (currency
 // "immutable" tells them only that they may not. ADR-0085 §7 requires the
 // refusal to name that count.
 //
-// A priced rate sheet is REPAIRABLE. Each `fx_rate` row records the base it
-// converts INTO, and changing the base does not rewrite them — a USD→EUR rate
-// cannot be restated as a USD→CHF one, so the sheet would go on being served
-// beside a base it does not convert to. Clearing the sheet lifts this one, and
-// the reason says so.
+// A priced rate sheet is repairable. Each `fx_rate` row records the base it
+// converts into, and changing the base does not rewrite them. A USD→EUR rate
+// cannot be restated as a USD→CHF one. The sheet would go on being served beside
+// a base it does not convert to. Removing every currency from the sheet lifts
+// this one, and the reason says so. Only live rows count: a removed or corrected
+// row is kept for the figures that used it and prices nothing now.
 //
 // Runs inside the caller's write transaction, so the answer cannot go stale
 // between the check and the write it guards.
 func lockFacts(ctx context.Context, tx pgx.Tx, settingKey string) (currencylock.Lock, bool, error) {
-	converted, err := frozenRateCount(ctx, tx)
+	frozen, converted, err := frozenRateCount(ctx, tx)
 	if err != nil {
 		return currencylock.Lock{}, false, err
 	}
 	if converted > 0 {
-		return currencylock.Lock{Reason: currencylock.RatesFrozen, Count: converted}, true, nil
+		return currencylock.Lock{Reason: currencylock.RatesFrozen, Count: converted, Frozen: frozen}, true, nil
 	}
 	priced, base, err := ratesPricedAgainstBase(ctx, tx, settingKey)
 	if err != nil {
@@ -94,23 +95,26 @@ func lockFacts(ctx context.Context, tx pgx.Tx, settingKey string) (currencylock.
 }
 
 // frozenRateCount counts the records whose worth is already expressed against
-// the current base. One is enough to freeze it; the count exists for the reason.
-func frozenRateCount(ctx context.Context, tx pgx.Tx) (int, error) {
+// the current base, per table and in total. One is enough to freeze it; the
+// counts exist for the reason, which names each table that counted.
+func frozenRateCount(ctx context.Context, tx pgx.Tx) ([]currencylock.Counted, int, error) {
 	total := 0
+	counted := make([]currencylock.Counted, 0, len(frozenRateTables))
 	for _, table := range frozenRateTables {
 		var n int
 		// The table name comes from the package-level list above, never from a
 		// caller, so the interpolation carries nothing a request chose.
 		if err := tx.QueryRow(ctx,
 			`SELECT count(*) FROM `+table+` WHERE fx_rate_to_base IS NOT NULL`).Scan(&n); err != nil {
-			return 0, fmt.Errorf("counting %s rows with a frozen conversion rate: %w", table, err)
+			return nil, 0, fmt.Errorf("counting %s rows with a frozen conversion rate: %w", table, err)
 		}
+		counted = append(counted, currencylock.Counted{Table: table, Count: n})
 		total += n
 	}
-	return total, nil
+	return counted, total, nil
 }
 
-// ratesPricedAgainstBase counts the sheet rows converting into the base the
+// ratesPricedAgainstBase counts the sheet currencies converting into the base the
 // installation currently holds, and returns that base so the reason can name
 // it. The base is "" when no setting row holds one.
 //
@@ -138,14 +142,14 @@ func ratesPricedAgainstBase(ctx context.Context, tx pgx.Tx, settingKey string) (
 		// question "is anything priced against the outgoing base" cannot be
 		// answered more narrowly, and the safe answer is the conservative one.
 		var priced int
-		if err := tx.QueryRow(ctx, `SELECT count(*) FROM fx_rate`).Scan(&priced); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT count(DISTINCT from_currency) FROM fx_rate WHERE `+RateVersionSQL("", "")).Scan(&priced); err != nil {
 			return 0, "", fmt.Errorf("counting rates on the sheet: %w", err)
 		}
 		return priced, "", nil
 	}
 	var priced int
 	if err := tx.QueryRow(ctx,
-		`SELECT count(*) FROM fx_rate WHERE to_currency = $1`, *base).Scan(&priced); err != nil {
+		`SELECT count(DISTINCT from_currency) FROM fx_rate WHERE to_currency = $1 AND `+RateVersionSQL("", ""), *base).Scan(&priced); err != nil {
 		return 0, "", fmt.Errorf("counting rates priced against the current base: %w", err)
 	}
 	return priced, *base, nil

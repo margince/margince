@@ -5,6 +5,7 @@ import type { components } from "../../api/schema";
 import type { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
+import { displayedSubject } from "../../lib/systemdisplay";
 
 type Activity = components["schemas"]["Activity"];
 type ActivityKind = Activity["kind"];
@@ -31,5 +32,8 @@ export function activityHeadline(
   activity: Activity,
   t: ReturnType<typeof useT>,
 ): string {
-  return activity.subject?.trim() || t(labelFor(KIND_LABELS, activity.kind));
+  return (
+    displayedSubject(activity)?.trim() ||
+    t(labelFor(KIND_LABELS, activity.kind))
+  );
 }

@@ -33,8 +33,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/initiatives"
 	"github.com/margince/margince/backend/internal/modules/introductions"
-	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -63,6 +64,8 @@ func setupCarry(t *testing.T) *carryEnv {
 		e: e, admin: e.Admin(), consent: consentStore, intros: intros, grants: grants,
 		contacts: contacts.NewStore(e.DB()).WithStopCarrier(consentStore).
 			WithSatelliteCarriers(consentStore, intros).WithGrantCarrier(grants).
+			WithSignalCarrier(signals.CarryResolutionsTx).
+			WithInitiativeCarrier(initiatives.CarryLeadMergeTx).
 			WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx),
 	}
 	c.admin = c.asker()
@@ -148,7 +151,7 @@ func (c *carryEnv) purpose(t *testing.T, key string, doubleOptIn bool) ids.Purpo
 	if err == nil {
 		return id
 	}
-	created, err := c.consent.CreatePurpose(c.admin, key, key, doubleOptIn)
+	created, err := c.consent.CreatePurpose(c.admin, key, key, doubleOptIn, "")
 	if err != nil {
 		t.Fatalf("creating purpose %s: %v", key, err)
 	}
@@ -315,9 +318,10 @@ func TestALinkToAnAddressLeftBehindOpensTheSurvivorsPageForThatAddress(t *testin
 	}
 }
 
-// A confirm link answers only for a live subject, so one left on the retired
-// record was dead. Carried, the answer lands on the survivor.
-func TestAMergedContactsConfirmLinkAnswersOnTheSurvivor(t *testing.T) {
+// A confirm link was mailed for one record. A merge expires it and moves the
+// row, so an answer through it acts on nothing. The contact asks for a new link,
+// and the old one never answers for the survivor.
+func TestAConfirmLinkMailedToTheRetiredContactCannotActOnTheSurvivor(t *testing.T) {
 	c := setupCarry(t)
 	integration.ApplyRiverSchema(t)
 	lane := confirmLaneStore(t, c.e)
@@ -328,24 +332,19 @@ func TestAMergedContactsConfirmLinkAnswersOnTheSurvivor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("issuing the confirm link: %v", err)
 	}
-
-	scope, previewErr := c.contacts.PreviewMergeSurvivorship(c.admin, "contact", retired.UUID, survivor.UUID, nil, nil)
-	if previewErr != nil {
-		t.Fatal(previewErr)
-	}
-	if len(scope.ConsentLinks.Confirmations) != 1 || scope.ConsentLinks.Confirmations[0].Address != "confirm@carry.test" {
-		t.Fatalf("carried links preview = %+v", scope)
-	}
 	c.merge(t, retired, survivor)
 
 	if _, err := lane.SubmitConfirmation(c.admin, issued.Token, consent.ConfirmSubmission{
 		MarketingChoice: "withdrawn", MarketingWording: "No news, thank you.",
-	}); err != nil {
-		t.Fatalf("answering through the carried link: %v", err)
+	}); err == nil {
+		t.Fatal("an answer through a link mailed to the retired contact was accepted after the merge")
 	}
 	if n := c.count(t, `SELECT count(*) FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2 AND state = 'withdrawn'`,
-		survivor, marketing); n != 1 {
-		t.Fatalf("the survivor holds %d withdrawn marketing row(s) after answering through the carried link, want 1", n)
+		survivor, marketing); n != 0 {
+		t.Fatalf("the survivor holds %d withdrawn marketing row(s) from a link mailed to the retired contact, want 0", n)
+	}
+	if n := c.count(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND evidence->'expired' ? 'confirm_token'`, survivor); n != 1 {
+		t.Errorf("%d audit rows on the survivor record the expired link, want 1", n)
 	}
 }
 
@@ -384,9 +383,15 @@ func TestAMergeCarriesQualifyingEventsWithoutDoublingOne(t *testing.T) {
 	pipeline, stage, _ := integration.DealFixture(t, c.e)
 	deal := c.e.SeedDeal(t, "Consent evidence", pipeline, stage, &c.e.Rep1)
 	if err := c.e.DB().Tx(c.admin, func(tx pgx.Tx) error {
-		return consent.RecordDerivedQualifyingEvent(c.admin, tx, retired.String(), consent.QualifyingEvent{
-			Kind: "active_deal", SourceEntityType: "deal", SourceEntityID: deal.String(), OccurredAt: time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC),
-		}, "human:"+c.e.AdminUser.String())
+		// The retired deal kind remains in historical rows but has no current writer.
+		_, err := tx.Exec(c.admin, `INSERT INTO consent_qualifying_event
+ (contact_id,kind,source_entity_type,source_entity_id,occurred_at,source,captured_by)
+ VALUES (@contact,'active_deal','deal',@deal,@when,'derived',@actor)`,
+			pgx.StrictNamedArgs{
+				"contact": retired, "deal": deal,
+				"when": time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC), "actor": "human:" + c.e.AdminUser.String(),
+			})
+		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -457,13 +462,13 @@ func TestAMergeCarriesDoubleOptInHistory(t *testing.T) {
 	c := setupCarry(t)
 	retired := c.contactAt(t, "DOI Retired", "doi@carry.test")
 	survivor := c.contactAt(t, "DOI Survivor", "doi-survivor@carry.test")
-	purpose, err := c.consent.CreatePurpose(c.admin, "doi_carry_newsletter", "Newsletter", true)
+	purpose, err := c.consent.CreatePurpose(c.admin, "doi_carry_newsletter", "Newsletter", true, "")
 	if err != nil {
 		t.Fatalf("creating the purpose: %v", err)
 	}
 	if _, err := c.e.Pool.Exec(context.Background(), `
 		INSERT INTO consent_doi_token (contact_id, purpose_id, token_hash, expires_at)
-		VALUES ($1, $2, 'doi-carry-hash', now() + interval '1 day')`, retired, purpose.ID); err != nil {
+		VALUES ($1, $2, encode(sha256('doi-carry-hash'), 'hex'), now() + interval '1 day')`, retired, purpose.ID); err != nil {
 		t.Fatal(err)
 	}
 
@@ -585,7 +590,7 @@ func TestErasingTheSurvivorErasesWhatTheMergeCarried(t *testing.T) {
 	c.preferenceLink(t, "erase@carry.test")
 	c.merge(t, retired, survivor)
 
-	if err := privacy.NewEraser(c.e.DB()).EraseContact(c.admin, survivor.UUID, "subject request"); err != nil {
+	if err := eraserWithGraph(c.e.DB()).EraseContact(c.admin, survivor.UUID, "subject request"); err != nil {
 		t.Fatalf("erasing the survivor: %v", err)
 	}
 

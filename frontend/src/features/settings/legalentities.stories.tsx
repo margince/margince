@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -36,6 +37,7 @@ const VIENNA = entity("le-vienna", {
   display_name: "Acme Wien",
   legal_name: "Acme Wien GmbH",
   country: "at",
+  jurisdiction: "at",
   member_count: 3,
   address: { line1: "Kärntner Ring 12", postal_code: "1010", city: "Wien" },
   vat_id: "ATU12345678",
@@ -48,6 +50,14 @@ const VIENNA = entity("le-vienna", {
   imprint: "Acme Wien GmbH, Kärntner Ring 12, 1010 Wien",
 });
 
+// The installation follows the de pack; at and de are compiled in.
+const JURISDICTION = {
+  selected: "de",
+  available: [{ code: "at" }, { code: "de" }],
+  deadlines: [],
+  documents: [],
+};
+
 const ADMIN = { legal_entity: ["read", "create", "update", "delete"] } as const;
 const READER = { legal_entity: ["read"] } as const;
 
@@ -56,6 +66,7 @@ function story(allow: Parameters<typeof meRoute>[0], rows: object[]) {
     installFetchStub({
       "GET /me": meRoute(allow),
       "GET /legal-entities": () => jsonResponse({ data: rows }),
+      "GET /installation/jurisdiction": () => jsonResponse(JURISDICTION),
     });
     return (
       <StoryProviders>
@@ -89,4 +100,24 @@ export const TwoEntitiesPhone: Story = {
 export const TwoEntitiesDark: Story = {
   globals: { theme: "dark" },
   render: story(ADMIN, [DEFAULT, VIENNA]),
+};
+
+// The new-entity dialog pressed with a blank name and no country: each field
+// says what it needs, and the name takes focus.
+export const NewEntityRefused: Story = {
+  render: story(ADMIN, [DEFAULT]),
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await page.findByRole("button", { name: "New legal entity" }),
+    );
+    const dialog = within(await page.findByRole("dialog"));
+    await userEvent.type(
+      dialog.getByRole("textbox", { name: "Legal name" }),
+      "Acme Wien GmbH",
+    );
+    await userEvent.click(
+      dialog.getByRole("button", { name: "Add legal entity" }),
+    );
+  },
 };

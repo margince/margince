@@ -25,7 +25,8 @@ func (w dealWatch) pricedDeal(t *testing.T) ids.UUID {
 	t.Helper()
 	amount, currency := int64(4_800_000), "EUR"
 	deal, err := w.Deals.CreateDeal(w.Admin(), deals.CreateDealInput{
-		Name: "Platform licence", PipelineID: w.pipeline, StageID: w.stage,
+		Source: "manual",
+		Name:   "Platform licence", PipelineID: w.pipeline, StageID: w.stage,
 		AmountMinor: &amount, Currency: &currency,
 	})
 	if err != nil {

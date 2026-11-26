@@ -1,0 +1,9 @@
+{
+  "verb": "archive_exit_criterion",
+  "checks": [
+    "pipeline.update"
+  ],
+  "takes": [
+    "exit_criterion"
+  ]
+}

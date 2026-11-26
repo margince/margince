@@ -14,13 +14,88 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": true,
+  "stamp": {
+    "scenario": "d27e96ea330020e6",
+    "tools": "c5bb9b7f8af233aa",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "1796d51361de08d5",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T06:03:53Z",
+    "graded_commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "graded_at": "2026-11-25T06:03:53Z"
+  },
   "usage": {
-    "input_tokens": 18,
-    "output_tokens": 4184,
-    "cache_creation_input_tokens": 28972,
-    "cache_read_input_tokens": 573301,
+    "input_tokens": 20,
+    "output_tokens": 4726,
+    "cache_creation_input_tokens": 29307,
+    "cache_read_input_tokens": 740996,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.2151
+    "cost_usd": 0.2386
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "list_records",
+        "prep_for_meeting",
+        "read_context",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "list_records",
+        "prep_for_meeting",
+        "read_context",
+        "read_record",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 10.5,
+      "min": 10,
+      "max": 11
+    },
+    "turns": {
+      "median": 11.5,
+      "min": 11,
+      "max": 12
+    },
+    "refused": {
+      "median": 3,
+      "min": 3,
+      "max": 3
+    },
+    "prompt_tokens": {
+      "median": 385161.5,
+      "min": 384561,
+      "max": 385762
+    },
+    "output_tokens": {
+      "median": 2363,
+      "min": 2199,
+      "max": 2527
+    },
+    "duration_ms": {
+      "median": 21776.5,
+      "min": 21749,
+      "max": 21804
+    }
   }
 }

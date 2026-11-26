@@ -30,13 +30,13 @@ import {
   unwrap,
 } from "../../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../../lib/reportingfigures";
-import { searchProductCandidates } from "../products";
+import { useProductCandidateSearch } from "../products";
+import { DealLinesEditor } from "./deallines";
 import {
   type DealCommercial,
-  DealLinesEditor,
   DealLinesTotal,
   useDealLines,
-} from "./deallines";
+} from "./deallinestotal";
 
 type DealProduct = components["schemas"]["DealProduct"];
 type DealProductList = components["schemas"]["DealProductListResponse"];
@@ -77,6 +77,7 @@ export function DealProductsCard({
   currency,
   typedAmount,
   refusedReasonId,
+  canWrite,
 }: Readonly<{
   dealId: string;
   // Amounts are written in the deal's currency. A deal nobody priced takes
@@ -86,6 +87,8 @@ export function DealProductsCard({
   typedAmount: string | null;
   // The page's sentence about why the deal takes no changes, when it does not.
   refusedReasonId?: string;
+  // Whether this reader may write the deal. One who may not is offered no edit.
+  canWrite: boolean;
 }>) {
   const t = useT();
   const [editing, setEditing] = useState<"split" | "lines" | null>(null);
@@ -114,11 +117,13 @@ export function DealProductsCard({
       <OverviewCard
         title={title}
         action={
-          <DealProductsActions
-            state={state}
-            refusedReasonId={refusedReasonId}
-            onEdit={setEditing}
-          />
+          canWrite && (
+            <DealProductsActions
+              state={state}
+              refusedReasonId={refusedReasonId}
+              onEdit={setEditing}
+            />
+          )
         }
         empty={linesMode ? t("deal.lines.empty") : t("deal.products.empty")}
         foot={state && linesMode ? <DealLinesTotal state={state} /> : undefined}
@@ -271,6 +276,7 @@ export function DealProductsEditor({
   onClose: () => void;
 }>) {
   const t = useT();
+  const searchProducts = useProductCandidateSearch();
   const client = useQueryClient();
   // The set the list was seeded from. Its tag is the save's precondition, and
   // it moves only when the editor reseeds, never when the card rerenders.
@@ -384,7 +390,7 @@ export function DealProductsEditor({
       )}
       <RecordPicker
         label={t("deal.products.add")}
-        searchTargets={searchProductCandidates}
+        searchTargets={searchProducts}
         unavailableReason={(candidate) =>
           listed.has(candidate.id)
             ? t("deal.products.alreadyListed")

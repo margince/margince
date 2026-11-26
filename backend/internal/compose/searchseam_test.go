@@ -17,18 +17,37 @@ var searchTypesNotOffered = gatekit.Waive(map[string]string{
 	"tag": "read_record cannot read a tag; read_tags is the door to the tag vocabulary",
 })
 
+// searchRouteTypes are the core types GET /v1/search lists for its `types`
+// filter. The contract lists them as an extensible enum beside the pattern that
+// admits the kinds extensions declare, which no tool enumerates.
+func searchRouteTypes(t *testing.T) []string {
+	t.Helper()
+	for _, param := range loadContract(t).Paths.Find("/search").Get.Parameters {
+		if param.Value.Name != "types" {
+			continue
+		}
+		var types []string
+		listed, ok := param.Value.Schema.Value.Items.Value.Extensions["x-extensible-enum"].([]any)
+		if !ok {
+			break
+		}
+		for _, entry := range listed {
+			name, isName := entry.(string)
+			if !isName {
+				t.Fatalf("GET /v1/search lists a type that is not a name: %v", entry)
+			}
+			types = append(types, name)
+		}
+		return types
+	}
+	t.Fatal("GET /v1/search lists no types, so nothing is compared")
+	return nil
+}
+
 // search_records takes every type GET /v1/search takes, but the ones it names
 // a reason for. A type the route gains is then offered, or its absence argued.
 func TestSearchRecordsTakesEverySearchTypeButTheOnesItArgues(t *testing.T) {
-	var routeTypes []string
-	for _, enum := range queryEnumTable["GET /v1/search"] {
-		if enum.Name == "types" {
-			routeTypes = enum.Values
-		}
-	}
-	if len(routeTypes) == 0 {
-		t.Fatal("GET /v1/search declares no types enum, so nothing is compared")
-	}
+	routeTypes := searchRouteTypes(t)
 	spec, ok := NewRegistry(nil, SendPath{}).Spec("search_records")
 	if !ok {
 		t.Fatal("search_records is not registered")

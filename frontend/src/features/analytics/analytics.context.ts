@@ -1,9 +1,8 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { ANALYTICS_CONTEXT_KEY } from "../../lib/analyticskeys";
-import { unwrap } from "../../lib/problem";
+import type { Translator } from "../../i18n";
+import { analyticsContextOptions } from "../../lib/analyticscontext";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 
 export type AnalyticsContext = components["schemas"]["AnalyticsContext"];
@@ -21,19 +20,7 @@ export type AnalyticsSelection = {
   readonly scope: AnalyticsScope;
 };
 
-/**
- * The caller's frame, read once.
- *
- * The server decides which population this colleague measures by default and
- * which ones they may choose; nothing here recreates that policy. A screen
- * asking the question itself would be a second answer, and the two would
- * disagree the first time somebody's grants changed.
- */
-export const analyticsContextOptions = queryOptions({
-  queryKey: ANALYTICS_CONTEXT_KEY,
-  queryFn: async ({ signal }) =>
-    unwrap(await api.GET("/analytics/context", { signal })),
-});
+export { analyticsContextOptions };
 
 export function useAnalyticsContext() {
   return useQuery(analyticsContextOptions);
@@ -134,4 +121,19 @@ export function writableScope(
  */
 export function scopeKey(scope: Pick<AnalyticsScope, "kind" | "id">): string {
   return scope.id ? `${scope.kind}:${scope.id}` : scope.kind;
+}
+
+/**
+ * The name a reader sees for a population. The server sends one fixed label
+ * for the whole company, so the client names it in the reader's language. A
+ * team or a seller keeps its own name. Null where the server sent none.
+ */
+export function scopeName(
+  scope: Readonly<{ kind: string; label?: string | null }>,
+  t: Translator,
+): string | null {
+  if (scope.kind === "workspace") {
+    return t("analytics.scope.workspace");
+  }
+  return scope.label ?? null;
 }

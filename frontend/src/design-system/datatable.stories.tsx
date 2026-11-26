@@ -237,6 +237,20 @@ export const InAPanel: Story = {
   ),
 };
 
+// `selectedKey`: the list picks what the pane beside it shows, and marks it.
+export const RowAsPicker: Story = {
+  render: () => (
+    <DataTable
+      label="Deals"
+      columns={DEAL_COLUMNS}
+      rows={DEMO_DEALS}
+      rowKey={(deal) => deal.id}
+      selectedKey={DEMO_DEALS[1]?.id}
+      onRowClick={() => undefined}
+    />
+  ),
+};
+
 // A hand-drawn table bleeds through `TableScroll` the same way, and one too wide
 // for its pane scrolls sideways inside it.
 export const WideInAPanel: Story = {

@@ -16,6 +16,17 @@ verbose: false # Enable verbose output (default: false)
 # `allow` rather than in ignore-packages, which is for things that only ever run
 # in CI. Admitting it is a maintainer decision, taken deliberately rather than to
 # clear a red build.
+#
+# Unicode-3.0 is here for the Unicode CLDR zone files copied into
+# backend/internal/modules/capture/graphcal/data/ and
+# backend/internal/platform/cldrzone/data/, which are built into the product. It is permissive in the same way as MIT: notice and disclaimer only.
+#
+# OFL-1.1 is here for the UI fonts the frontend bundles (@fontsource/geist,
+# geist-mono and outfit). It lets them ship with any software. It asks that the
+# licence travel with the fonts, which the notices do, that the fonts are not
+# sold on their own, and that a modified font drops the original name. The
+# maintainers admitted it on 2026-11-13 so that no reader's browser asks
+# Google for the product's type (#11426).
 allow:
   - Apache-2.0
   - MIT
@@ -28,11 +39,13 @@ allow:
   - BSL-1.0
   - BlueOak-1.0.0
   - MPL-2.0
+  - OFL-1.1
   - PostgreSQL
   - CC0-1.0
   - CC-BY-4.0
   - Python-2.0
   - Unlicense
+  - Unicode-3.0
   - BUSL-1.1
 
 # First-party components carry no third-party license to gate. The scan now
@@ -71,6 +84,24 @@ ignore-packages:
   # Globbed so calling a second workflow is covered on the day it happens rather
   # than the day it turns the gate red.
   - ./.github/workflows/* # first-party reusable workflows (BUSL-1.1, same as the repo)
+  # The SPDX 3.0.1 JSON schema that `make sbom-validate` reads. It is a copied
+  # validation input, never built into or shipped with the product, under
+  # Community-Spec-1.0. That licence stays out of `allow`; third-party-files.txt
+  # records the file, and `make third-party-files` checks its licence against
+  # copied-file-licenses below.
+  - sbom-schemas/spdx-3.0.1/spdx-3.0.1.schema.json # copied SPDX schema, Community-Spec-1.0, never shipped
+
+# Licences accepted for the copied files third-party-files.txt records. grant
+# does not read this key; scripts/third_party_files.py does. A copied file's
+# licence is checked against this list only. A licence here that is not in
+# `allow` is accepted for no package, so its copied file must also be named
+# in ignore-packages.
+copied-file-licenses:
+  - Apache-2.0
+  - MIT
+  - Community-Spec-1.0
+  - Unicode-3.0
+  - OFL-1.1 # the offer PDF's font; admitted in `allow` above for the UI fonts
 
 require-license: true # When true, deny packages with no detected licenses
 require-known-license: true

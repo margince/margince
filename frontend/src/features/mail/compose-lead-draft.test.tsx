@@ -14,13 +14,14 @@ import {
   writeMessage,
 } from "../../design-system/richtext-testing";
 import { LocaleProvider } from "../../i18n";
-import { draftButton } from "../../testing/composedraft.testkit";
+import { draftButton, redraft } from "../../testing/composedraft.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
+import { REWRITE_ROUTE, rewrittenBody } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // Drafting to a LEAD.
 //
@@ -119,11 +120,12 @@ afterEach(() => {
 
 describe("drafting to a lead", () => {
   it("asks the lead's own endpoint and fills the fields", async () => {
+    const user = userEvent.setup();
     const sent = stubRoutes({
       "POST /leads/l-1/draft-email": () => jsonResponse(LEAD_DRAFT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Follow up on our discussion"
         entityType="lead"
         entityId="l-1"
@@ -133,7 +135,7 @@ describe("drafting to a lead", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
 
     expect(
       await screen.findByDisplayValue("Following up on your pricing question"),
@@ -148,11 +150,12 @@ describe("drafting to a lead", () => {
   });
 
   it("carries the reader's own steering and nothing else", async () => {
+    const user = userEvent.setup();
     const sent = stubRoutes({
       "POST /leads/l-1/draft-email": () => jsonResponse(LEAD_DRAFT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="lead"
         entityId="l-1"
         recordAddress="dung.ly@newsky.example"
@@ -162,11 +165,11 @@ describe("drafting to a lead", () => {
     );
 
     draftButton();
-    await userEvent.type(
+    await user.type(
       screen.getByPlaceholderText(/Purpose of the email|Purpose of the reply/),
       "shorter",
     );
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
     await screen.findByDisplayValue("Following up on your pricing question");
 
     const call = sent.find((c) => c.key === "POST /leads/l-1/draft-email");
@@ -176,18 +179,19 @@ describe("drafting to a lead", () => {
   });
 
   it("rewrites the lead draft on screen, and revises a rep's edit when asked again", async () => {
+    const user = userEvent.setup();
     const first = { ...LEAD_DRAFT, body: "Hi Dung, what 40 seats cost." };
-    const second = { ...LEAD_DRAFT, body: "Hi Dung, short." };
     const third = { ...LEAD_DRAFT, body: "Hi Dung, short, with your line." };
-    const answers = [first, second, third];
+    const answers = [first, third];
     let call = 0;
     const sent = stubRoutes({
       "POST /leads/l-1/draft-email": () =>
         jsonResponse(answers[Math.min(call++, answers.length - 1)]),
+      [REWRITE_ROUTE]: () => rewrittenBody("Hi Dung, short."),
       "PUT /mail-drafts": () => new Response(null, { status: 204 }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Follow up on our discussion"
         entityType="lead"
         entityId="l-1"
@@ -197,32 +201,32 @@ describe("drafting to a lead", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe(first.body));
-    await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
-    await waitFor(() => expect(messageText("Body")).toBe(second.body));
-
-    const calls = sent.filter((c) => c.key === "POST /leads/l-1/draft-email");
-    expect(calls[1]?.body).toMatchObject({ rewrite_of: first.body });
+    await user.click(screen.getByRole("button", { name: "Shorter" }));
+    await waitFor(() => expect(messageText("Body")).toBe("Hi Dung, short."));
+    expect(sent.find((c) => c.key === REWRITE_ROUTE)?.body).toMatchObject({
+      verb: "shorter",
+      body: first.body,
+      about: { entity_type: "lead", entity_id: "l-1" },
+    });
 
     writeMessage("Body", "Hi Dung, short. My own line.");
-    await userEvent.click(
-      screen.getByRole("button", { name: "Change the ask" }),
-    );
-    await userEvent.click(draftButton());
+    await redraft(user);
     await waitFor(() => expect(messageText("Body")).toBe(third.body));
     const again = sent.filter((c) => c.key === "POST /leads/l-1/draft-email");
-    expect(again[2]?.body).toMatchObject({
+    expect(again[1]?.body).toMatchObject({
       rewrite_of: "Hi Dung, short. My own line.",
     });
   });
 
   it("discloses a model-written draft", async () => {
+    const user = userEvent.setup();
     stubRoutes({
       "POST /leads/l-1/draft-email": () => jsonResponse(LEAD_DRAFT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Follow up on our discussion"
         entityType="lead"
         entityId="l-1"
@@ -232,11 +236,41 @@ describe("drafting to a lead", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
 
     expect(
       await screen.findByRole("heading", { name: "AI-assisted draft" }),
     ).toBeTruthy();
+  });
+
+  it("says a template wrote a lead draft the model could not", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "POST /leads/l-1/draft-email": () =>
+        jsonResponse({
+          ...LEAD_DRAFT,
+          generated_by: "deterministic",
+          ai_generated: false,
+          ai_disclosure: null,
+        }),
+    });
+    render(
+      <ComposeWindow
+        intent="Follow up on our discussion"
+        entityType="lead"
+        entityId="l-1"
+        recordAddress="dung.ly@newsky.example"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await user.click(draftButton());
+
+    expect(
+      await screen.findByText("AI could not write this draft"),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Shorter" })).toBeNull();
   });
 
   // A deployment running no model answers 501, and the composer says so rather
@@ -247,11 +281,12 @@ describe("drafting to a lead", () => {
   // to "unavailable" without asking anything, so a test reading only the words
   // would pass over a tree where drafting to a lead does not work at all.
   it("says drafting is unavailable when the deployment runs no model", async () => {
+    const user = userEvent.setup();
     const sent = stubRoutes({
       "POST /leads/l-1/draft-email": () => jsonResponse({}, 501),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Follow up on our discussion"
         entityType="lead"
         entityId="l-1"
@@ -261,7 +296,7 @@ describe("drafting to a lead", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
 
     await waitFor(() =>
       expect(screen.getByText(/AI drafting is unavailable/i)).toBeTruthy(),

@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -439,7 +440,7 @@ func TestCompany360NextMeetingParticipantsHideACapturePrivateContact(t *testing.
 		e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role)
 			VALUES ($1, $2, 'attendee')`, meeting, contact)
 	}
-	// The visible contact ALSO holds a second role. uq_activity_participant is
+	// The visible contact holds a second role too. uq_activity_participant_identity is
 	// unique on (activity, role, contact), so one contact legitimately has several
 	// rows on one meeting — a captured mail makes its sender both `from` and
 	// `attendee`. Without this the fixture has one row per contact and cannot
@@ -862,7 +863,10 @@ func TestCompany360NextMeetingNamesColleaguesAndAddresses(t *testing.T) {
 		t.Fatalf("deactivating the seat: %v", err)
 	}
 	e.WsExec(t, `UPDATE activity_participant SET address = 'ines@northwind.test' WHERE activity_id = $1 AND contact_id = $2`, meeting, buyer)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, 'INES@northwind.test', 'attendee')`, meeting)
+	testdb.WithParticipantAddressCheckLifted(t, func(tx pgx.Tx) error {
+		_, err := tx.Exec(t.Context(), `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, 'INES@northwind.test', 'attendee')`, meeting)
+		return err
+	})
 
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 	view, err := svc.Assemble(reader, ids.From[ids.CompanyKind](company))

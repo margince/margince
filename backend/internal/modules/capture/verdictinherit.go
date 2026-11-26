@@ -24,17 +24,18 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // The verdict states a thread's ledger row can be in.
 const (
-	VerdictPending       = "pending"
-	VerdictCleared       = "cleared"
-	VerdictHeld          = "held"
-	VerdictUnsure        = "unsure"
-	VerdictSharedByOwner = "shared_by_owner"
-	VerdictHeldByOwner   = "held_by_owner"
+	VerdictPending       = threadverdict.Pending
+	VerdictCleared       = threadverdict.Cleared
+	VerdictHeld          = threadverdict.Held
+	VerdictUnsure        = threadverdict.Unsure
+	VerdictSharedByOwner = threadverdict.SharedByOwner
+	VerdictHeldByOwner   = threadverdict.HeldByOwner
 )
 
 // ThreadKindPersonal is the confidentiality verdict for a thread that is the
@@ -46,46 +47,11 @@ const (
 // and the column belongs to this module. Every other kind — legal, personnel,
 // an explicit confidentiality marking — is business the workspace conducts
 // privately, whose parties are genuine contacts.
-const ThreadKindPersonal = "personal"
+const ThreadKindPersonal = threadverdict.KindPersonal
 
-// threadKindExplicitlyConfidential is the classifier's answer for a thread whose
-// own text asks for confidence. Spelled here only to be translated away — see
-// rowReasonForKind.
-const threadKindExplicitlyConfidential = "explicitly_confidential"
-
-// verdictReasonGeneric mirrors activities.ReasonVerdict, which this module may
-// not import.
-const verdictReasonGeneric = "verdict"
-
-// rowReasonForKind is the word a verdict's kind carries onto the message row.
-//
-// Every kind travels as itself, so a held message says what held it: `legal`,
-// `personnel` and `security_incident` all reach the reader that way. One does
-// not.
-//
-// `explicitly_confidential` is the classifier's name for "the text asks for
-// confidence", and it is ALSO the reason the sink writes when a SENDER marked
-// the subject line. Those look alike and behave nothing alike: the activities
-// derivation carries the sink's reason among the holds that survive an opening
-// verdict, because a contact marked that message and no model overrules a
-// contact. A model's own answer belongs in no such set — it is a judgement, and
-// the seat whose mail it is may disagree with it.
-//
-// Sharing one word made a model verdict unclearable. A rep whose ordinary deal
-// thread was judged confidential pressed Share; the ledger recorded
-// `shared_by_owner`, the derivation ran, read `explicitly_confidential` off the
-// row, treated it as the sender's own marking and left the message held. The
-// share worked and the hold ignored it, with nothing on screen to say why.
-//
-// So a classifier's version becomes the generic `verdict`, which holds exactly
-// as firmly and clears when its owner says so. The sink's marker keeps the word
-// and keeps its standing.
-func rowReasonForKind(kind string) string {
-	if kind == threadKindExplicitlyConfidential {
-		return verdictReasonGeneric
-	}
-	return kind
-}
+// A classifier's confidentiality judgement is separate from a sender's explicit marking.
+// The sender's marking remains binding when an owner shares the thread.
+func rowReasonForKind(kind string) string { return threadverdict.ReasonForKind(kind) }
 
 // inheritedVerdictTx answers the verdict status this message takes from its
 // thread, or "" when it takes none and the posture decides.
@@ -100,14 +66,15 @@ func rowReasonForKind(kind string) string {
 // answer and no reason at all to doubt a holding one.
 func inheritedVerdictTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (string, error) {
 	user := actorUserID(ctx)
-	if user == ids.Nil || rec.ThreadKey == "" {
+	thread := verdictThread(rec)
+	if user == ids.Nil || thread == "" {
 		return "", nil
 	}
 	var status string
 	var seen []string
 	err := tx.QueryRow(ctx, `
 		SELECT status, seen_addresses FROM capture_thread_verdict
-		 WHERE thread_key = $1 AND user_id = $2`, rec.ThreadKey, user).Scan(&status, &seen)
+		 WHERE thread_key = $1 AND user_id = $2`, thread, user).Scan(&status, &seen)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return "", nil
@@ -119,9 +86,10 @@ func inheritedVerdictTx(ctx context.Context, tx pgx.Tx, rec connector.Normalized
 	if err != nil {
 		return "", err
 	}
-	switch status {
-	case VerdictPending, VerdictHeld, VerdictUnsure, VerdictHeldByOwner:
+	if threadverdict.HoldsMessages(status) {
 		return status, nil
+	}
+	switch status {
 	case VerdictCleared, VerdictSharedByOwner:
 		if senderWasSeen(rec, seen) && !recordCarriesDocument(rec) {
 			return status, nil
@@ -129,7 +97,7 @@ func inheritedVerdictTx(ctx context.Context, tx pgx.Tx, rec connector.Normalized
 		// A party the verdict never saw, or a document it never read. Re-open
 		// the ledger rather than inheriting either way, and let the posture hold
 		// the message until the classifier has looked at it.
-		if err := reopenClearedThreadTx(ctx, tx, rec.ThreadKey); err != nil {
+		if err := reopenClearedThreadTx(ctx, tx, thread); err != nil {
 			return "", err
 		}
 		return applicableThreadVerdictTx(ctx, tx, VerdictPending)

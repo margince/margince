@@ -37,6 +37,7 @@ import (
 	"syscall"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -65,74 +66,70 @@ var technicalFaults = []technicalFault{
 		// as interrupted, not as a host that did not resolve.
 		match:    isInterrupted,
 		class:    "interrupted",
-		sentence: "the job's work was cancelled before it finished",
-		remedy:   "At a worker shutdown, nothing to do: the attempt is retried. A job interrupted at every shutdown runs longer than the worker's drain window, and the window (with the termination grace period around it) is what to raise. A job cancelled on purpose stays cancelled.",
+		sentence: systemtext.Literal("jobs.interrupted.sentence"),
+		remedy:   systemtext.Literal("jobs.interrupted.remedy"),
 	},
 	{
 		// After isInterrupted, so a job cancelled under a live statement keeps
 		// its own class. A statement the server stopped reaches here either way.
 		match:    isStatementStopped,
 		class:    "statement_stopped",
-		sentence: "the database stopped a statement before it answered",
-		remedy: "Most often the work is too much for one statement. No job binds its own " +
-			"budget, so the ceiling that stopped it is the pool's statement_timeout: narrow the " +
-			"statement, or bind the job's own with database.BoundStatement. An operator " +
-			"cancelling a backend reads the same way, and so does a worker's own shutdown " +
-			"reaching the server first.",
+		sentence: systemtext.Literal("jobs.statement_stopped.sentence"),
+		remedy:   systemtext.Literal("jobs.statement_stopped.remedy"),
 	},
 	{
 		match:    isDNSFailure,
 		class:    "host_unresolved",
-		sentence: "the provider's host name did not resolve",
-		remedy:   "Check the installation's DNS resolver and, if the host is right, whether the provider has retired it. A name that resolves nowhere does not fix itself on retry.",
+		sentence: systemtext.Literal("jobs.host_unresolved.sentence"),
+		remedy:   systemtext.Literal("jobs.host_unresolved.remedy"),
 	},
 	{
 		match:    isTLSFailure,
 		class:    "tls_refused",
-		sentence: "the TLS handshake with the provider did not complete",
-		remedy:   "Check the installation's clock and its trust store first — an expired certificate and a wrong system time look identical from here — then whether an inspecting proxy sits in front of this connection.",
+		sentence: systemtext.Literal("jobs.tls_refused.sentence"),
+		remedy:   systemtext.Literal("jobs.tls_refused.remedy"),
 	},
 	{
 		match:    isConnectionRefused,
 		class:    "connection_refused",
-		sentence: "the provider refused the connection",
-		remedy:   "Nothing to re-queue yet: the port answered and said no. Check whether the provider is in a maintenance window and whether this installation's egress address is allowed.",
+		sentence: systemtext.Literal("jobs.connection_refused.sentence"),
+		remedy:   systemtext.Literal("jobs.connection_refused.remedy"),
 	},
 	{
 		match:    isTimeout,
 		class:    "provider_timed_out",
-		sentence: "the provider did not answer in time",
-		remedy:   "Retry normally. Persistent timeouts against one provider mean either their outage or a route that cannot carry this volume, and the run's own cadence is the next thing to look at.",
+		sentence: systemtext.Literal("jobs.provider_timed_out.sentence"),
+		remedy:   systemtext.Literal("jobs.provider_timed_out.remedy"),
 	},
 	{
 		match:    providerStatusIn(401, 403),
 		class:    "provider_rejected_credential",
-		sentence: "the provider rejected this installation's credential",
-		remedy:   "Re-authorise the connection. A revoked token, a changed password and a withdrawn app grant all arrive exactly here.",
+		sentence: systemtext.Literal("jobs.provider_rejected_credential.sentence"),
+		remedy:   systemtext.Literal("jobs.provider_rejected_credential.remedy"),
 	},
 	{
 		match:    providerServerError,
 		class:    "provider_server_error",
-		sentence: "the provider answered with a server error",
-		remedy:   "Theirs to fix. Retry is correct and the run does it; a day of these is a status page to read rather than a change to make here.",
+		sentence: systemtext.Literal("jobs.provider_server_error.sentence"),
+		remedy:   systemtext.Literal("jobs.provider_server_error.remedy"),
 	},
 	{
 		match:    siteRefused,
 		class:    "site_refused_the_read",
-		sentence: "the website refused the read",
-		remedy:   "Bot protection or a rate limit on the site's side; the read is retried later. Nothing to change here, and the company's own site-read record says the same.",
+		sentence: systemtext.Literal("jobs.site_refused_the_read.sentence"),
+		remedy:   systemtext.Literal("jobs.site_refused_the_read.remedy"),
 	},
 	{
 		match:    siteServerError,
 		class:    "site_server_error",
-		sentence: "the website answered with a server error",
-		remedy:   "Theirs to fix. The read is retried later.",
+		sentence: systemtext.Literal("jobs.site_server_error.sentence"),
+		remedy:   systemtext.Literal("jobs.site_server_error.remedy"),
 	},
 	{
 		match:    siteAnswerNotRetried,
 		class:    "site_page_unreadable",
-		sentence: "the website would not serve that page",
-		remedy:   "The site moved, removed or closed it. The company's domain may need correcting; retrying does not help.",
+		sentence: systemtext.Literal("jobs.site_page_unreadable.sentence"),
+		remedy:   systemtext.Literal("jobs.site_page_unreadable.remedy"),
 	},
 }
 

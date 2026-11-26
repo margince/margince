@@ -25,21 +25,24 @@ import (
 // unowned flag is the one the answer's own figures pass.
 func scopeHoldsDeals(
 	ctx context.Context, tx pgx.Tx, requested RequestedScope, unowned unownedPopulation,
-) (bool, error) {
+) (*bool, error) {
+	if !auth.ReadGranted(ctx, tableDeal) {
+		return nil, nil //nolint:nilnil // absence means the deal population is unavailable
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 
 	where := []string{sqlUnnarrowed}
 	rowScope, err := auth.ScopeClauseFor(ctx, tableDeal, "d", arg)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	if rowScope != "" {
 		where = append(where, rowScope)
 	}
 	_, population, err := AnalyticsPopulationClause(ctx, tx, requested, "d", arg, unowned)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	if population != "" {
 		where = append(where, population)
@@ -48,7 +51,7 @@ func scopeHoldsDeals(
 	err = tx.QueryRow(ctx,
 		`SELECT EXISTS (SELECT 1 FROM deal d WHERE `+strings.Join(where, " AND ")+`)`, args...).Scan(&holds)
 	if err != nil {
-		return false, fmt.Errorf("compose: asking whether the scope holds deals: %w", err)
+		return nil, fmt.Errorf("compose: asking whether the scope holds deals: %w", err)
 	}
-	return holds, nil
+	return &holds, nil
 }

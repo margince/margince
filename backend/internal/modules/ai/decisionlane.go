@@ -70,11 +70,7 @@ const (
 	exampleSelfHostedDecisionEndpoint = "http://127.0.0.1:8767/v1/systemone"
 )
 
-// isLocal reports whether the lane's inference stays on infrastructure the
-// customer controls: a local adapter always, an endpoint-local one exactly
-// when its base_url's host is the customer's own. The local-only rule and the
-// routing preview both read this one answer, so the preview cannot promise a
-// lane the runtime then skips.
+// Sovereign routing and its preview share the endpoint's locality check.
 func (lane DecisionsConfig) isLocal() bool {
 	d, _ := providerByName(lane.Provider)
 	if d.local {

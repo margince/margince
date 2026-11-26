@@ -1,0 +1,9 @@
+{
+  "verb": "list_intro_requests",
+  "checks": [
+    "introduction.read"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

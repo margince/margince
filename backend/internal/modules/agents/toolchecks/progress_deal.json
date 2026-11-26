@@ -1,0 +1,14 @@
+{
+  "verb": "progress_deal",
+  "checks": [
+    "company.read",
+    "deal.read",
+    "deal.update",
+    "installation_settings.read",
+    "project.read"
+  ],
+  "takes": [
+    "deal",
+    "open_stage"
+  ]
+}

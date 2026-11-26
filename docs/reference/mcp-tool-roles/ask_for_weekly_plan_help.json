@@ -1,0 +1,15 @@
+{
+  "tool": "change_attention",
+  "action": "ask_for_help",
+  "verb": "ask_for_weekly_plan_help",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

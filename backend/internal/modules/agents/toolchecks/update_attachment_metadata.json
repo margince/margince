@@ -1,0 +1,9 @@
+{
+  "verb": "update_attachment_metadata",
+  "checks": [
+    "company.update"
+  ],
+  "takes": [
+    "attachment"
+  ]
+}

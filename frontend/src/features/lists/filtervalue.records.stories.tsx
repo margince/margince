@@ -3,10 +3,13 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
+import { translate } from "../../i18n";
 import type { LeafValue } from "../../lib/segmentpredicate";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { ChosenRecords, SearchedRecordValue } from "./filtervalue.records";
@@ -29,6 +32,7 @@ function Searching({
       value={value}
       onChange={setValue}
       label="Value, filter 1"
+      placeholder={translate("en", "filters.pickCompany")}
     />
   );
 }
@@ -36,9 +40,17 @@ function Searching({
 function searchStory(many: boolean, start: LeafValue) {
   return () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+      }),
       "GET /companies": () =>
         jsonResponse({
-          data: [{ id: "c-1", display_name: "Brandt Maschinenbau" }],
+          data: [
+            { id: "c-1", display_name: "Brandt Maschinenbau" },
+            { id: "c-2", display_name: "Brandt Logistik" },
+          ],
           page: { next_cursor: null, has_more: false },
         }),
     });
@@ -52,6 +64,17 @@ function searchStory(many: boolean, start: LeafValue) {
 
 // Nothing typed yet: the box says what it is for.
 export const CompanySearch: Story = { render: searchStory(false, "") };
+
+// The answers in the suggestion list under the box; the arrows walk it.
+export const CompanySuggestions: Story = {
+  render: searchStory(false, ""),
+  play: async ({ canvasElement }) => {
+    const box = within(canvasElement).getByRole("combobox");
+    await userEvent.type(box, "Brandt");
+    const list = await within(document.body).findByRole("listbox");
+    await expect(within(list).getAllByRole("option")).toHaveLength(2);
+  },
+};
 
 // A list clause keeps its box open under what it already holds.
 export const ManyCompanies: Story = {

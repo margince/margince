@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/socialplatform"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -80,7 +81,7 @@ func NormalizeContactLinkedInURL(raw string) (string, error) {
 	if _, isProfile := linkedInProfileSlug(normalized); !isProfile {
 		return "", &values.ParseError{
 			Field: linkedinURLField, Code: "linkedin_url_not_profile",
-			Message: "a contact's LinkedIn is a profile URL like https://www.linkedin.com/in/<name>",
+			Message: "a contact's LinkedIn is a profile URL like " + socialplatform.LinkedInProfileExample,
 		}
 	}
 	u, err := url.Parse(normalized)
@@ -100,12 +101,28 @@ const linkedInProfilePrefix = "/in/"
 // same profile as /in/sam.
 func linkedInProfileSlug(normalized string) (string, bool) {
 	_, path, ok := splitLinkedInHostPath(normalized)
-	if !ok {
+	if !ok || hasDotSegment(path) {
 		return "", false
 	}
 	rest, isProfile := strings.CutPrefix(path, linkedInProfilePrefix)
 	slug, _, _ := strings.Cut(rest, "/")
 	return slug, isProfile && slug != ""
+}
+
+// hasDotSegment reports a "." or ".." segment, spelled out or percent-encoded.
+// A browser resolves /in/../company/acme to a company page, so no such path is
+// a profile, whatever its first segment reads.
+func hasDotSegment(escapedPath string) bool {
+	path, err := url.PathUnescape(escapedPath)
+	if err != nil {
+		return true
+	}
+	for segment := range strings.SplitSeq(path, "/") {
+		if segment == "." || segment == ".." {
+			return true
+		}
+	}
+	return false
 }
 
 // LinkedInSlotHosts are the hosts a value has to be on before this product will

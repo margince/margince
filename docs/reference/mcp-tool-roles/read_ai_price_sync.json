@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "ai_price_sync",
+  "verb": "read_ai_price_sync",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

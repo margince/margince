@@ -192,6 +192,14 @@ func traceEntryResponse(row TraceRow) crmcontracts.CaptureTraceEntry {
 		Subject:      nullableString(row.Subject),
 		OccurredAt:   row.OccurredAt,
 	}
+	if row.Filing != nil {
+		entry.Filing = &crmcontracts.CaptureTraceFiling{
+			Actor:  row.Filing.Actor,
+			Hook:   (*crmcontracts.CaptureTraceFilingHook)(nullableString(row.Filing.Hook)),
+			Result: crmcontracts.CaptureTraceFilingResult(row.Filing.Result),
+			Reason: nullableString(row.Filing.Reason),
+		}
+	}
 	if row.Resolution != nil {
 		entry.Resolution = &crmcontracts.CaptureTraceResolution{
 			Status:     crmcontracts.CaptureTraceResolutionStatus(row.Resolution.Status),

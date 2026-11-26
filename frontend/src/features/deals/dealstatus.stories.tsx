@@ -1,30 +1,61 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { expectNextBarHoldsItsText } from "../../testing/nextbarchecks";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { UNBROKEN_SUBJECT } from "../../testing/unbrokentext";
 import { DealStatusCardPanel } from "./dealstatus";
 
 type WrittenBy = components["schemas"]["WrittenBy"];
-type Situation = "task" | "request" | "covered";
+type Situation = "task" | "request" | "covered" | "replied";
 
-function panel(writer: WrittenBy, situation: Situation = "task") {
-  const request = situation !== "task";
+// Our reply after the request is the newest message on its thread, so the
+// move opens the reminder and the bar offers Done.
+const replied = {
+  next: {
+    action: "open_task",
+    reason:
+      "You replied 3 days ago. If nothing more is owed, mark the reminder done.",
+    arguments: { activity_id: "demo-reminder" },
+    evidence: [
+      {
+        activity_id: "demo-mail",
+        text: "Request: Meeting slots",
+      },
+    ],
+  },
+  our_reply: {
+    request_activity_id: "demo-mail",
+    replied_at: "2026-09-02T17:00:00Z",
+    replied_precision: "instant",
+    by_reader: true,
+    reminder_id: "demo-reminder",
+    reminder_version: 2,
+  },
+};
+
+function panel(
+  writer: WrittenBy,
+  situation: Situation = "task",
+  subject = "Meeting slots",
+) {
+  const request = situation !== "task" && situation !== "replied";
   const next = request
     ? {
         action: situation === "covered" ? "draft_email" : "create_task",
         reason:
           situation === "covered"
             ? "This request already has a reminder. The reply still needs to be handled."
-            : "Review whether this conversation needs a follow-up: Meeting slots",
+            : `Review whether this conversation needs a follow-up: ${subject}`,
         arguments:
           situation === "covered"
             ? {}
             : {
-                subject: "Meeting slots",
+                subject,
                 source: "manual",
                 request_activity_id: "demo-mail",
               },
@@ -71,6 +102,7 @@ function panel(writer: WrittenBy, situation: Situation = "task") {
           },
           verdict: { standing: "live", because: { sentences: [] } },
           next,
+          ...(situation === "replied" ? replied : {}),
           ...(situation === "covered"
             ? { reply_to: "demo-mail", request_basis: next.basis }
             : {}),
@@ -117,3 +149,24 @@ export const RequestAlreadyCoveredDark: Story = {
   ...RequestAlreadyCovered,
   globals: { theme: "dark" },
 };
+
+export const RepliedOffersDone: Story = {
+  render: panel("deterministic", "replied"),
+};
+export const RepliedOffersDoneDark: Story = {
+  ...RepliedOffersDone,
+  globals: { theme: "dark" },
+};
+
+// A buyer's subject with no space in it wraps inside the bar, clear of its verbs.
+const unbroken: Story = {
+  render: panel("deterministic", "request", UNBROKEN_SUBJECT),
+  play: ({ canvasElement }) =>
+    expectNextBarHoldsItsText(canvasElement, UNBROKEN_SUBJECT),
+};
+export const UnbrokenSubjectPhone: Story = {
+  ...unbroken,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+export const UnbrokenSubjectWide: Story = { ...unbroken, tags: ["uat-wide"] };

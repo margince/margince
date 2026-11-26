@@ -235,6 +235,9 @@ const (
 	edgeSubjectColumns   = `e.edge_kind, e.other_type, e.other_id, e.other_label`
 	noEdgeSubjectColumns = `NULL::text AS edge_kind, NULL::text AS other_type,
 			NULL::uuid AS other_id, NULL::text AS other_label`
+	// sideFieldColumn is the window's fifth trailing column: the company field a
+	// sidecar row was about, NULL on every other row.
+	noSideFieldColumn = `, NULL::text AS side_field`
 )
 
 // scanEdgeAuditRow decodes one window row: the shared audit projection, then the
@@ -244,11 +247,12 @@ const (
 // marker there is — the audit row's own entity_type is not projected, because
 // the branch it arrived on already answers what it was about.
 func scanEdgeAuditRow(src auditRowScanner, r *recordAuditRow) error {
-	var kind, otherType, otherLabel *string
+	var kind, otherType, otherLabel, sideField *string
 	var otherID *ids.UUID
-	if err := scanRecordAuditRowWith(src, r, &kind, &otherType, &otherID, &otherLabel); err != nil {
+	if err := scanRecordAuditRowWith(src, r, &kind, &otherType, &otherID, &otherLabel, &sideField); err != nil {
 		return err
 	}
+	r.sideField = sideField
 	if otherType == nil || otherID == nil {
 		return nil
 	}
@@ -275,7 +279,7 @@ func scanEdgeAuditRow(src auditRowScanner, r *recordAuditRow) error {
 // conds are the boundary and cursor predicates, aliased on `a` so both branches
 // take them verbatim — a keyset applied to one arm and not the other would page
 // the two timelines at different speeds.
-func recordHistoryWindowSQL(typePos, idPos, fetchPos int, conds []string, edgeCTE string) string {
+func recordHistoryWindowSQL(typePos, idPos, fetchPos int, conds []string, edgeCTE, sideCTE string) string {
 	keyset, edgeWhere := "", ""
 	if len(conds) > 0 {
 		keyset = " AND " + strings.Join(conds, " AND ")
@@ -283,53 +287,80 @@ func recordHistoryWindowSQL(typePos, idPos, fetchPos int, conds []string, edgeCT
 	}
 	own := fmt.Sprintf(`
 			SELECT`+recordAuditColumns+`,
-				`+noEdgeSubjectColumns+`
+				`+noEdgeSubjectColumns+noSideFieldColumn+`
 			FROM audit_log a`+auditattribution.ActorNameJoins+auditattribution.AgentClientNameJoin+`
 			WHERE a.entity_type = $%d AND a.entity_id = $%d%s
 			ORDER BY a.occurred_at DESC, a.id DESC
 			LIMIT $%d`, typePos, idPos, keyset, fetchPos)
-	if edgeCTE == "" {
-		return own
-	}
-	edges := fmt.Sprintf(`
+	var ctes, arms []string
+	arms = append(arms, own)
+	if edgeCTE != "" {
+		ctes = append(ctes, edgeCTE)
+		arms = append(arms, fmt.Sprintf(`
 			SELECT`+recordAuditColumns+`,
-				`+edgeSubjectColumns+`
+				`+edgeSubjectColumns+noSideFieldColumn+`
 			FROM edge e
 			JOIN audit_log a ON a.entity_type = '`+EdgeEntityType+`' AND a.entity_id = e.rel_id`+
-		auditattribution.ActorNameJoins+auditattribution.AgentClientNameJoin+`%s
+			auditattribution.ActorNameJoins+auditattribution.AgentClientNameJoin+`%s
 			ORDER BY a.occurred_at DESC, a.id DESC
-			LIMIT $%d`, edgeWhere, fetchPos)
+			LIMIT $%d`, edgeWhere, fetchPos))
+	}
+	if sideCTE != "" {
+		ctes = append(ctes, sideCTE)
+		arms = append(arms, sidecarArmSQL(conds, fetchPos))
+	}
+	if len(ctes) == 0 {
+		return own
+	}
 	return fmt.Sprintf(`
 		WITH %s
-		SELECT * FROM ((%s)
-			UNION ALL
-			(%s)) AS spine
+		SELECT * FROM (%s) AS spine
 		ORDER BY occurred_at DESC, id DESC
-		LIMIT $%d`, edgeCTE, own, edges, fetchPos)
+		LIMIT $%d`, strings.Join(ctes, ",\n\t\t"), "("+strings.Join(arms, ")\n\t\t\tUNION ALL\n\t\t\t(")+")", fetchPos)
 }
 
 // HistoryEdge is the edge a history line was about, as the wire declares it: the
 // kind, and the OTHER end named and identified so a reader can go and look at
 // it. Nil on every row that changed a field of the record itself.
 //
-// It carries no field diff and never will. role, the dates and the
-// primary-employer flag belong to the LINK rather than to either record it
-// joins, so projecting them as the record's own fields would invent fields the
-// record does not have — which is the same reason edge rows never enter field
-// history.
+// It carries no field diff: the link's columns are not the record's fields, so
+// edge rows never enter field history. Only the role and the changed field
+// names travel.
 type HistoryEdge struct {
 	Kind            string
 	OtherEntityType string
 	OtherEntityID   ids.UUID
 	OtherLabel      *string
+	// Role is the role the link was made or changed to, and PreviousRole the one
+	// it replaced. Both come from the entity-masked images the line's sentence is
+	// phrased from, so a reader who cannot see a field is not told it here.
+	Role         *string
+	PreviousRole *string
+	// ChangedFields names the link fields an update moved, sorted.
+	ChangedFields []string
 }
 
 // historyEdgeOf renders the scanned subject for a caller outside this package.
-func historyEdgeOf(edge edgeSubject) HistoryEdge {
-	return HistoryEdge{
+// before and after are the MASKED images, the same ones edgeSummary reads.
+func historyEdgeOf(edge edgeSubject, action string, before, after map[string]any) HistoryEdge {
+	out := HistoryEdge{
 		Kind:            edge.kind,
 		OtherEntityType: edge.otherType,
 		OtherEntityID:   edge.otherID,
 		OtherLabel:      edge.otherLabel,
 	}
+	if role := edgeRoleOf(after); role != "" {
+		out.Role = &role
+	}
+	if action == actionUpdate {
+		out.ChangedFields = edgeChangedFieldNames(after)
+		// The after image holds only what moved, so a role key there means the role
+		// changed, to nothing included.
+		if _, moved := after[relationshipRoleImageKey]; moved {
+			if prev := edgeRoleOf(before); prev != "" {
+				out.PreviousRole = &prev
+			}
+		}
+	}
+	return out
 }

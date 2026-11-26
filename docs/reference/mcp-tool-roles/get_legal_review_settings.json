@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "legal_review_settings",
+  "verb": "get_legal_review_settings",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

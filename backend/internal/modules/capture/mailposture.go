@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -80,36 +79,31 @@ func (e *SharedPostureNotAllowedError) FieldFault() (field, code, message string
 // rather than in the handler because the posture is also settable at grant, and
 // a check in one transport would leave the other open.
 func (r *Registry) SetMailPosture(
-	ctx context.Context, name, posture string, applyToHistory bool,
+	ctx context.Context, mb Mailbox, posture string, applyToHistory bool,
 ) (ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
-		return ConnectionView{}, fmt.Errorf("capture: only a user or their agent sets a mailbox's posture: %w", apperrors.ErrPermissionDenied)
+		return ConnectionView{}, fmt.Errorf("only a user or their agent sets a mailbox's posture: %w", apperrors.ErrPermissionDenied)
 	}
 	if !validPosture(posture) {
 		return ConnectionView{}, &InvalidPostureError{Posture: posture}
 	}
+	name := mb.Provider
 	if _, ok := r.connectors[name]; !ok {
 		return ConnectionView{}, ErrNoConnection
 	}
+	match, err := r.resolveMemberMailbox(ctx, actor.UserID, mb)
+	if err != nil {
+		return ConnectionView{}, err
+	}
 
 	var before string
-	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := refuseSharedWithoutOptInTx(ctx, tx, posture); err != nil {
 			return err
 		}
-		// The prior answer comes out of the same statement that replaces it, so
-		// the audit row's before-image is the row as it actually stood rather
-		// than a value read separately that something else could have moved in
-		// between.
-		row := tx.QueryRow(ctx, `
-			UPDATE capture_connection
-			   SET mail_posture = $3
-			 WHERE user_id = $1 AND provider = $2 AND archived_at IS NULL
-			RETURNING (SELECT c.mail_posture
-			             FROM capture_connection c WHERE c.id = capture_connection.id)`,
-			actor.UserID, name, posture)
-		if err := row.Scan(&before); err != nil {
+		var err error
+		if before, err = replacePostureTx(ctx, tx, match, posture); err != nil {
 			return err
 		}
 		// Audit-only, like every other capture-configuration change beside it:
@@ -129,7 +123,7 @@ func (r *Registry) SetMailPosture(
 		// Bounded per pass, looped here. A mailbox with a year of history has
 		// tens of thousands of import rows, and the batch is what keeps this
 		// from holding locks across all of them while captures wait.
-		return r.narrowHistoryTo(ctx, tx, actor.UserID, posture)
+		return r.narrowHistoryTo(ctx, tx, seatImporter(actor.UserID), posture)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ConnectionView{}, ErrNoConnection
@@ -137,10 +131,10 @@ func (r *Registry) SetMailPosture(
 	if err != nil {
 		return ConnectionView{}, fmt.Errorf("capture: setting the mailbox's posture: %w", err)
 	}
-	return r.connectionFor(ctx, name)
+	return r.connectionFor(ctx, match.id)
 }
 
-// narrowHistoryTo applies one posture to the mail this seat already imported,
+// narrowHistoryTo applies one posture to the mail an importer already brought in,
 // batch by batch, until nothing is left to do.
 //
 // The loop ends when a pass claims nothing, which holds only while the batch
@@ -152,17 +146,17 @@ func (r *Registry) SetMailPosture(
 // to do than the one before. That fails on the first repeat instead of after a
 // ceiling nobody would wait out, and it names the posture and the count, which
 // is what somebody debugging it needs.
-func (r *Registry) narrowHistoryTo(ctx context.Context, tx pgx.Tx, seat ids.UUID, posture string) error {
+func (r *Registry) narrowHistoryTo(ctx context.Context, tx pgx.Tx, by importer, posture string) error {
 	remaining := -1
 	for {
-		moved, err := NarrowHistoryTx(ctx, tx, seat, posture, r.sink.recomputeAudience)
+		moved, err := narrowHistoryTx(ctx, tx, by, posture, r.sink.recomputeAudience)
 		if err != nil {
 			return err
 		}
 		if moved == 0 {
 			return nil
 		}
-		left, err := NarrowRemainingTx(ctx, tx, seat, posture)
+		left, err := narrowRemainingTx(ctx, tx, by, posture)
 		if err != nil {
 			return err
 		}
@@ -173,6 +167,27 @@ func (r *Registry) narrowHistoryTo(ctx context.Context, tx pgx.Tx, seat ids.UUID
 		}
 		remaining = left
 	}
+}
+
+// replacePostureTx sets the posture of the one live connection match names,
+// and answers the posture it replaced. pgx.ErrNoRows means match names none.
+//
+// The prior answer comes out of the same statement that replaces it, so the
+// audit row's before-image is the row as it actually stood.
+func replacePostureTx(ctx context.Context, tx pgx.Tx, match connectionMatch, posture string) (string, error) {
+	var before string
+	placeholder, args := match.with(posture)
+	err := tx.QueryRow(ctx, `
+		UPDATE capture_connection
+		   SET mail_posture = `+placeholder+`
+		 WHERE `+match.where+` AND archived_at IS NULL
+		RETURNING (SELECT c.mail_posture
+		             FROM capture_connection c WHERE c.id = capture_connection.id)`,
+		args...).Scan(&before)
+	if err != nil {
+		return before, err
+	}
+	return before, storekit.CaptureFactsChanged(ctx, tx)
 }
 
 // refuseSharedWithoutOptInTx is the workspace gate on `shared`.
@@ -199,4 +214,32 @@ func refuseSharedWithoutOptInTx(ctx context.Context, tx pgx.Tx, posture string) 
 // carrying only the posture would not say which one this row is about.
 func mailPostureImage(provider, posture string) map[string]any {
 	return map[string]any{auditKeyProvider: provider, auditKeyPosture: posture}
+}
+
+// MailboxSettings is what the mail-posture route asks of one mailbox.
+type MailboxSettings struct {
+	// Posture is nil when the request leaves it as it is.
+	Posture        *string
+	ApplyToHistory bool
+	DefaultSender  bool
+}
+
+// SetMailboxSettings applies a posture, the default-sender mark, or both. A
+// request asking neither is refused.
+func (r *Registry) SetMailboxSettings(ctx context.Context, mb Mailbox, asked MailboxSettings) (ConnectionView, error) {
+	posture, applyToHistory, defaultSender := asked.Posture, asked.ApplyToHistory, asked.DefaultSender
+	if posture == nil && !defaultSender {
+		return ConnectionView{}, fmt.Errorf("send a posture, default_sender, or both: %w", apperrors.ErrInvalidArgument)
+	}
+	var view ConnectionView
+	if posture != nil {
+		var err error
+		if view, err = r.SetMailPosture(ctx, mb, *posture, applyToHistory); err != nil {
+			return view, err
+		}
+	}
+	if defaultSender {
+		return r.SetDefaultSender(ctx, mb)
+	}
+	return view, nil
 }

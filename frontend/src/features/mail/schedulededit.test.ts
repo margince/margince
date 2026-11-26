@@ -3,6 +3,7 @@
 
 import { expect, it } from "vitest";
 import { browserZone } from "../../format/timezone";
+import { scheduleFields } from "./composeschedule";
 import {
   dropsOperatorReason,
   editSeedOf,
@@ -29,6 +30,21 @@ const SEND: ScheduledSend = {
   created_at: "2026-08-20T09:00:00Z",
   updated_at: "2026-08-20T09:00:00Z",
 };
+
+it("seeds each recipient once, where it first stands in To, Cc, Bcc", () => {
+  expect(
+    editSeedOf({
+      ...SEND,
+      to: ["ceo@acme.test", "CEO@acme.test"],
+      cc: ["Ceo@Acme.test", "cfo@acme.test"],
+      bcc: ["cfo@acme.test", "boss@acme.test"],
+    }),
+  ).toMatchObject({
+    to: ["ceo@acme.test"],
+    cc: ["cfo@acme.test"],
+    bcc: ["boss@acme.test"],
+  });
+});
 
 it("seeds the composer from the first link and the grounding links after it", () => {
   expect(editSeedOf(SEND)).toMatchObject({
@@ -116,3 +132,58 @@ it("counts the files the send would refuse, none when the read names none", () =
   expect(unavailableFilesOf(SEND)).toBe(0);
   expect(unavailableFilesOf({ ...SEND, attachments_unavailable: 2 })).toBe(2);
 });
+
+it("keeps the chosen clock and zone when only a scheduled message's words change", () => {
+  const intent = {
+    wall_clock: "2026-10-25T02:30:00.123456",
+    timezone: "Europe/Berlin",
+  };
+  const seed = editSeedOf({
+    ...SEND,
+    scheduled_intent: intent,
+    scheduled_tz: intent.timezone,
+  });
+  expect(seed?.sendAt).toBe(intent.wall_clock);
+  expect(
+    scheduleFields(seed?.sendAt ?? "", seed?.sendSchedule, "Pacific/Auckland"),
+  ).toEqual({
+    scheduled_at: SEND.scheduled_at,
+    scheduled_tz: intent.timezone,
+    scheduled_intent: intent,
+  });
+});
+
+it("does not invent a local-time choice when an older scheduled message is edited", () => {
+  const seed = editSeedOf({ ...SEND, scheduled_tz: "Europe/Berlin" });
+  expect(seed?.sendAt).toBe("2026-09-01T09:00");
+  expect(
+    scheduleFields(seed?.sendAt ?? "", seed?.sendSchedule, "Pacific/Auckland"),
+  ).toEqual({
+    scheduled_at: SEND.scheduled_at,
+    scheduled_tz: "Europe/Berlin",
+  });
+});
+
+it("removes the whole saved schedule when its clock is cleared", () => {
+  expect(
+    scheduleFields("", {
+      scheduled_at: SEND.scheduled_at,
+      scheduled_tz: SEND.scheduled_tz,
+    }),
+  ).toEqual({});
+});
+
+it.each([
+  ["2026-03-29T02:30", "Europe/Berlin", "2026-03-29T01:00:00.000Z"],
+  ["2026-10-25T02:30", "Europe/Berlin", "2026-10-25T00:30:00.000Z"],
+  ["2011-12-30T12:00", "Pacific/Apia", "2011-12-30T10:00:00.000Z"],
+])(
+  "keeps the chosen %s in %s through a clock change",
+  (wall_clock, timezone, instant) => {
+    expect(scheduleFields(wall_clock, undefined, timezone)).toEqual({
+      scheduled_at: instant,
+      scheduled_tz: timezone,
+      scheduled_intent: { wall_clock, timezone },
+    });
+  },
+);

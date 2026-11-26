@@ -8,6 +8,7 @@
 import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import ts from "typescript";
+import { classMeetings, withMeetings } from "../../scripts/lib/class-meetings";
 import {
   alternativesOf,
   classesOf,
@@ -44,12 +45,20 @@ import {
   written,
 } from "../../scripts/lib/surface-sheets";
 import { blocks, resolve } from "../../src/design-system/tokens-testing";
+import { stable } from "../../src/format/collate";
 import type { CensusFile, CensusRule } from "../tree";
 import { sheetRules } from "../tree";
 
 // A rule outside surfaces.css that names a rung or paints a member overrules
 // the ladder. The ledger lists the ones still standing; the ceiling only falls.
-const LEDGER_CEILING = { spellings: 76, states: 6 };
+const LEDGER_CEILING = { spellings: 0, states: 6 };
+
+const FLOOR = 900;
+
+const meetingsOf = (corpus: readonly CensusFile[]) =>
+  corpus
+    .filter(isScript)
+    .flatMap((file) => classMeetings(file.path, file.text));
 
 const ledgerPath = join(here, "surfaces.ledger.txt");
 export const tokensPath = join(here, "tokens.css");
@@ -166,6 +175,9 @@ function ledger(): { spellings: string[]; states: string[] } {
 // A rule touches a member when its subject may be that element: it names the
 // member's class, or a classless member's element in its context.
 function touches(rule: Written, member: Written): boolean {
+  if (rule.type !== "" && member.type !== "" && rule.type !== member.type) {
+    return false;
+  }
   if (member.own.size === 0) {
     return rule.type === member.type && within(member.context, rule.context);
   }
@@ -204,6 +216,9 @@ function keepsTheGround(layer: string): boolean {
 type Paint = { allowed: boolean; resetsColour: boolean };
 
 function paintOf({ property, value }: Declaration): Paint | undefined {
+  if (property === "--ground") {
+    return { allowed: value === "inherit", resetsColour: false };
+  }
   if (!/^background(?:-color|-image)?$/.test(property)) return undefined;
   const layers = splitTopLevel(value, ",");
   if (property === "background-color") {
@@ -294,7 +309,7 @@ export function memberPaints(
       )
       .map((paint) => paint.line);
   });
-  return [...new Set(found)].sort();
+  return [...new Set(found)].sort(stable);
 }
 
 /** Every ladder class no sheet but surfaces.css styles. */
@@ -362,6 +377,9 @@ export const rule: CensusRule = {
       ...(corpus.filter(isScript).length > 500
         ? []
         : ["fewer than 500 scripts were read"]),
+      ...(meetingsOf(corpus).length > FLOOR
+        ? []
+        : [`only ${meetingsOf(corpus).length} class lists were read`]),
       ...(sheetRules(sheets).some((one) => !readsEveryCombination(one.selector))
         ? []
         : ["no selector past the cap was read"]),
@@ -375,7 +393,7 @@ export const rule: CensusRule = {
       ...corpus
         .filter(isScript)
         .flatMap((file) => scriptSpellings(file.path, file.text)),
-    ].sort();
+    ].sort(stable);
     return [
       ...all
         .filter(
@@ -393,7 +411,14 @@ export const rule: CensusRule = {
         "spellings",
       ),
       ...againstLedger(
-        memberPaints(all, MEMBERS),
+        memberPaints(
+          all,
+          withMeetings(
+            MEMBERS,
+            meetingsOf(corpus),
+            new Set(all.flatMap((one) => [...classesOf(one.selector)])),
+          ),
+        ),
         kept.states,
         LEDGER_CEILING.states,
         "states",

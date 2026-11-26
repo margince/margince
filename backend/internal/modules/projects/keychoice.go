@@ -1,0 +1,139 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package projects
+
+// Which keys a project may carry. A chosen key and a suggested key pass one
+// refusal, so the form never suggests a key it would refuse.
+
+import (
+	"context"
+	"fmt"
+	"slices"
+	"strings"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/projectkey"
+)
+
+// subjectWords are words senders put in square brackets: gateway tags,
+// everyday labels and two foreign reply markers. The other reply and forward
+// markers come from mailsubject. A key spelled as one would misfile mail.
+var subjectWords = map[string]bool{
+	"sv": true, "tl": true, "ext": true, "extern": true, "external": true, "internal": true,
+	"intern": true, "spam": true, "junk": true, "suspicious": true, "phishing": true,
+	"warning": true, "caution": true, "secure": true, "encrypt": true, "encrypted": true,
+	"confidential": true, "vertraulich": true, "private": true, "privat": true,
+	"public": true, "urgent": true, "dringend": true, "important": true, "wichtig": true,
+	"fyi": true, "update": true, "status": true, "notice": true, "alert": true, "reminder": true, "action": true,
+	"todo": true, "draft": true, "entwurf": true, "test": true, "request": true,
+	"question": true, "frage": true, "offer": true, "angebot": true, "invoice": true,
+	"rechnung": true, "order": true, "auftrag": true, "contract": true, "vertrag": true,
+	"meeting": true, "termin": true, "call": true, "project": true, "projekt": true,
+	"new": true, "neu": true, "ok": true, "yes": true, "no": true, "ja": true,
+	"nein": true, "the": true, "and": true, "for": true, "und": true, "der": true,
+	"die": true, "das": true, "mit": true, "von": true,
+}
+
+// ProjectKeyRefusedError maps to 422: a key this project may not carry, with
+// the reason the creator can act on.
+type ProjectKeyRefusedError struct {
+	Code    string
+	Message string
+}
+
+func (e *ProjectKeyRefusedError) Error() string { return e.Message }
+
+// FieldFault places the refusal on the key field of the New project form.
+func (e *ProjectKeyRefusedError) FieldFault() (field, code, message string) {
+	return projectKeyField, e.Code, e.Message
+}
+
+// keyTaken says only "not available". Uniqueness holds across the workspace,
+// so a project the caller cannot read also holds keys.
+func keyTaken(key string) error {
+	return &ProjectKeyRefusedError{
+		Code:    "key_taken",
+		Message: fmt.Sprintf("the key %s is not available; choose another key", key),
+	}
+}
+
+// normalizeChosenKey answers the key as stored: trimmed and upper case, the
+// spelling every minted key has, so two projects never differ by case alone.
+func normalizeChosenKey(raw string) (string, error) {
+	key := strings.ToUpper(strings.TrimSpace(raw))
+	// Refused here with a reason, before the INSERT's constraint net.
+	if !projectkey.Shaped(key) {
+		return "", &ProjectKeyShapeError{}
+	}
+	return key, nil
+}
+
+// refuseChosenKey holds a typed key to the word refusal and to uniqueness
+// among live projects. normalizeChosenKey has already checked its shape.
+func refuseChosenKey(ctx context.Context, tx pgx.Tx, key string) error {
+	if err := keyWordRefusal(ctx, tx, key); err != nil {
+		return err
+	}
+	var taken bool
+	// Unscoped, as the uniqueness index it answers for is: a key a hidden
+	// project holds is still a key this one cannot have.
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM project WHERE lower(key) = lower($1) AND archived_at IS NULL)`,
+		key).Scan(&taken); err != nil {
+		return fmt.Errorf("check whether the key %s is taken: %w", key, err)
+	}
+	if taken {
+		return keyTaken(key)
+	}
+	return nil
+}
+
+// keyWordRefusal answers a *ProjectKeyRefusedError when a key would misfile
+// mail: a word senders bracket in subjects, or a word of a colleague's name.
+// Agent seats are left out because nobody writes an agent's name in a subject.
+func keyWordRefusal(ctx context.Context, tx pgx.Tx, key string) error {
+	if lower := strings.ToLower(key); subjectWords[lower] || slices.Contains(mailsubject.PrefixWords(), lower) {
+		return &ProjectKeyRefusedError{
+			Code:    "key_is_common_word",
+			Message: fmt.Sprintf("%s is a word often put in brackets in subject lines, so mail that is not about this project would be filed under it; choose another key", key),
+		}
+	}
+	var named bool
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS (
+		   SELECT 1 FROM app_user
+		    WHERE NOT is_agent
+		      AND (lower($1) = ANY (regexp_split_to_array(lower(f_unaccent(display_name)), '[^a-z0-9]+'))
+		           OR lower($1) = lower(f_unaccent(greeting_name))))`,
+		key).Scan(&named); err != nil {
+		return fmt.Errorf("check the key %s against colleagues' names: %w", key, err)
+	}
+	if named {
+		return &ProjectKeyRefusedError{
+			Code:    "key_is_colleague_name",
+			Message: fmt.Sprintf("%s is a colleague's name, so mail that only mentions them would be filed under this project; choose another key", key),
+		}
+	}
+	return nil
+}
+
+// PreviewProjectKey answers the key a project of this name would get now.
+// It runs the mint the create runs, so the form never computes a key itself.
+// A create that lands before the save can still move the number on.
+func (s *Store) PreviewProjectKey(ctx context.Context, name string) (string, error) {
+	if err := auth.Require(ctx, projectObject, principal.ActionCreate); err != nil {
+		return "", err
+	}
+	var key string
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		key, err = mintProjectKey(ctx, tx, name, nil)
+		return err
+	})
+	return key, err
+}

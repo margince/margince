@@ -91,7 +91,7 @@ func (e *Engine) runBatch(ctx context.Context, tx pgx.Tx, picked selection) erro
 	}
 	if p.TaskVersion != picked.task.Version {
 		p.Cursor, p.Scanned, p.Changed, p.Batches = nil, 0, 0, 0
-		p.Estimate, p.EstimatedAt = nil, nil
+		p.Estimate, p.EstimatedAt, p.Action = nil, nil, nil
 		p.BatchLimit = picked.step.Limit
 		p.TaskVersion = picked.task.Version
 	}
@@ -129,7 +129,8 @@ func (e *Engine) runBatch(ctx context.Context, tx pgx.Tx, picked selection) erro
 }
 
 func validateBatch(in Progress, out BatchOut) error {
-	if out.Scanned < 0 || out.Changed < 0 || out.Changed > out.Scanned || out.Scanned > in.BatchLimit {
+	if out.Scanned < 0 || out.Changed < 0 || out.Changed > out.Scanned || out.Scanned > in.BatchLimit ||
+		(out.Action != nil && len(out.Action.Records) > out.Scanned) {
 		return errors.New("data task batch exceeded its declared bound")
 	}
 	if len(out.Cursor) > 0 && !json.Valid(out.Cursor) {
@@ -146,17 +147,21 @@ func (e *Engine) commitProgress(ctx context.Context, tx pgx.Tx, p Progress, out 
 	if out.Done {
 		status = Done
 	}
+	action, err := mergeAction(p.Action, out.Action)
+	if err != nil {
+		return err
+	}
 	tag, err := tx.Exec(ctx, `UPDATE data_task_run SET task_version = @revision, status = @status,
  cursor = @cursor, batch_limit = @limit, scanned = @scanned, changed = @changed, batches = @batches,
  estimate = @estimate, estimate_capped = @capped, estimated_at = @estimated,
- consecutive_failures = 0, last_error_class = NULL, next_attempt_at = NULL,
+ consecutive_failures = 0, last_error_class = NULL, next_attempt_at = NULL, action_needed = @action,
  last_progress_at = @now, updated_at = @now, version = version + 1
  WHERE task_id = @task AND step = @step AND version = @version`,
 		pgx.NamedArgs{
 			"revision": p.TaskVersion, paramStatus: status, "cursor": out.Cursor,
 			paramLimit: p.BatchLimit, "scanned": p.Scanned + int64(out.Scanned), "changed": p.Changed + int64(out.Changed),
 			"batches": p.Batches + 1, paramEstimate: p.Estimate, paramCapped: p.EstimateCapped, "estimated": p.EstimatedAt,
-			paramNow: e.now(), paramTask: p.TaskID, paramStep: p.Step, paramVersion: p.Version,
+			"action": action, paramNow: e.now(), paramTask: p.TaskID, paramStep: p.Step, paramVersion: p.Version,
 		})
 	if err != nil {
 		return err

@@ -1,74 +1,74 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import {
   type ActivityGate,
   useActivityGate,
+  writableTarget,
 } from "../../components/activitygate";
 import { ArchiveAction } from "../../components/archive";
-import {
-  type ObjectCustomFields,
-  useObjectCustomFields,
-} from "../../components/customfields.form";
-import { EditAction } from "../../components/edit";
 import { useRailRename } from "../../components/railfield";
-import { useOwnerPicker } from "../../components/recordowners";
-import { RecordTeam } from "../../components/recordteam";
+import { useFieldsDialog } from "../../components/sectionedit";
 import {
   snoozedDueAt,
   TaskCompleteCheck,
   TaskQuickActions,
   useTaskUpdate,
 } from "../../components/taskactions";
+import {
+  currentDueFields,
+  useMoveTask,
+} from "../../components/taskduedatepick";
+import { TaskWriteFailure } from "../../components/taskwritefailure";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
-import { useActivity } from "../../lib/activityread";
 import { useCan } from "../../lib/capability";
+import { archivedContactRow } from "../../lib/contact.queries";
+import { catalogOfRecord } from "../../lib/customfields.logic";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
-import { NewDealAction } from "../companies/companyactions";
+import { useShortcut } from "../../lib/shortcuts";
+import { useArchiveRefusal } from "../../lib/writerefusal";
 import { ShareAction } from "../records/share";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
-import { project360Key } from "./project360.key";
+import { useProjectScreenReads } from "./project360.reads";
 import { useProjectVerbRefusal } from "./project360.refusal";
-import { ProjectCompanies } from "./projectcompanies";
+import {
+  type ArchivedHistory,
+  ArchivedProjectPage,
+  isMissingProject,
+  ProjectNotFound,
+} from "./projectarchived";
 import {
   ProjectDetails,
   ProjectSharedPill,
   ProjectSubtitle,
 } from "./projectdetails";
-import { ProjectDocuments } from "./projectdocuments";
-import { ProjectDrawer } from "./projectdrawer";
 import type { ProjectHealthAssessment } from "./projecthealth.queries";
 import { ProjectHealthModal } from "./projecthealthmodal";
 import { type LogDrawer, ProjectLogVerbs } from "./projectlogverbs";
+import { ProjectNewDeal } from "./projectnewdeal";
 import { ProjectNext } from "./projectnext";
 import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal } from "./projectphase";
 import { ProjectKeyChip } from "./projects";
-import {
-  mapProjectUpdate,
-  PHASE_LABEL,
-  type Project,
-  type ProjectPhase,
-  projectEditRecord,
-  projectFields,
-} from "./projects.form";
-import { type Project360, StakeholdersCard } from "./projectsections";
+import { PHASE_LABEL, type Project, type ProjectPhase } from "./projects.form";
+import type { Commitment, Project360 } from "./projectsections";
 import { nextCommitment } from "./projectstanding";
 import { ProjectStanding } from "./projectstandingcard";
 import { ProjectTabs } from "./projecttabs";
 import "./projects.css";
+import { RecordGone } from "../../components/recordgone";
+import { ViewOnly } from "../../components/viewonly";
 import { useViewerZone } from "../../lib/viewerzone";
-import { ProjectHistory, ProjectLatestInbound } from "./project360.chronology";
+import { ProjectLatestInbound } from "./project360.chronology";
+import { type ProjectDrawerKind, ProjectDrawers } from "./project360.drawers";
 import { ProjectCards } from "./projectcards";
 import { useProjectEdit } from "./projectedit";
 
@@ -78,34 +78,38 @@ import { useProjectEdit } from "./projectedit";
 // full history, the files, the companies and contacts on it) opens in a drawer.
 // `sections_omitted` marks what a card cannot show: a section the reader's role
 // cannot read says so instead of drawing an empty list.
-
-export function useProject360(id: string) {
-  return useQuery({
-    queryKey: project360Key(id),
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/projects/{id}/360", {
-          params: { path: { id } },
-        }),
-      );
-    },
-  });
-}
-
-export function ProjectScreen({ id }: Readonly<{ id: string }>) {
+export function ProjectScreen({
+  id,
+  archivedHistory,
+}: Readonly<{ id: string; archivedHistory?: ArchivedHistory }>) {
   const t = useT();
-  const view = useProject360(id);
+  const { view, row } = useProjectScreenReads(id);
+  const archived = archivedContactRow(row);
+  // A disabled row keeps its last error, so a 360 that answers since then wins.
+  const missing = view.isError && row.isError && isMissingProject(row.error);
+  if (archived || missing) {
+    return (
+      <div className="wrap">
+        {archived ? (
+          <ArchivedProjectPage project={archived} history={archivedHistory} />
+        ) : (
+          <ProjectNotFound />
+        )}
+      </div>
+    );
+  }
   return (
     <div className="wrap">
-      <QueryGate query={view} pendingLabel={t("nav.projects")}>
+      <QueryGate
+        query={view}
+        pendingLabel={t("nav.projects")}
+        gone={<RecordGone kind="project" />}
+      >
         {(data) => <ProjectPage view={data} />}
       </QueryGate>
     </div>
   );
 }
-
-// The drawers the page opens; "tasks" is the history narrowed to tasks.
-type ProjectDrawerKind = "history" | "tasks" | "documents" | "contacts";
 
 function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const t = useT();
@@ -120,6 +124,9 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // control describes itself by pointing at the same explanation.
   const readOnlyReason = useProjectVerbRefusal(project);
   const readOnly = Boolean(readOnlyReason);
+  // Logging files an activity under the project rather than changing it, so
+  // only the archive refuses it here; the activity grant decides the rest.
+  const logRefusedId = project.archived_at ? readOnlyReasonId : undefined;
   // The task detail and the health dialog are owned here rather than by the
   // cards. One modal per page, so two cards cannot both put one on screen.
   const [openTask, setOpenTask] = useState<string | null>(null);
@@ -131,18 +138,19 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // /activities/{id}, which asks activity:update and the activity's own row
   // authority, whatever the reader may do to the project.
   const canUpdateTask = useCan("activity", "update");
-  // Read here as well as in the details. The schema request then runs beside
-  // the project's rather than after it, and both share its one cache entry.
-  const cf = useObjectCustomFields("project");
   const nextVerbs = useNextTaskVerbs(view, taskUpdate, canUpdateTask);
   // Log in the strip and Add task in the menu open one drawer. The page holds
   // that drawer and the gate both verbs read.
-  const activity = useActivityGate();
+  const activity = useActivityGate("project", writableTarget(project));
   const [logDrawer, setLogDrawer] = useState<LogDrawer>(null);
-  const rename = useRailRename(
-    useProjectEdit(project),
-    "name",
-    t("project.name"),
+  const edit = useProjectEdit(project);
+  const rename = useRailRename(edit, "name", t("project.name"));
+  const editAll = useFieldsDialog(
+    edit,
+    t("project.edit"),
+    edit.fields,
+    edit.canEdit,
+    catalogOfRecord("project"),
   );
   return (
     <RecordView
@@ -159,13 +167,19 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           <Badge>{t(labelFor(PHASE_LABEL, project.phase))}</Badge>
           {project.key && <ProjectKeyChip projectKey={project.key} dense />}
           <ProjectSharedPill projectId={project.id} />
+          <ViewOnly
+            kind="project"
+            record={project}
+            name={project.name}
+            reasonId={readOnlyReasonId}
+          />
         </>
       }
       actions={
         <>
           <ProjectLogVerbs
             projectId={project.id}
-            refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+            refusedReasonId={logRefusedId}
             activity={activity}
             drawer={logDrawer}
             onDrawer={setLogDrawer}
@@ -173,9 +187,11 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           <ProjectActions
             project={project}
             refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+            logRefusedId={logRefusedId}
             activity={activity}
             onAddTask={() => setLogDrawer("task")}
-            cf={cf}
+            onEdit={editAll.start}
+            editWaiting={editAll.waiting}
             health={view.health?.current}
             onOpen={setDrawer}
             onHealth={setHealthEdit}
@@ -184,9 +200,9 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       }
       tabs={<ProjectTabs />}
       band={
-        // One sentence and nothing else: why this record takes no changes, so
-        // every control it refuses points at it.
-        readOnlyReason ? (
+        // Why an archived project takes no changes, so every control it
+        // refuses points at it. A live one says so in the View only pill.
+        readOnlyReason && project.archived_at ? (
           <p id={readOnlyReasonId}>{readOnlyReason}</p>
         ) : undefined
       }
@@ -203,26 +219,19 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       />
       <ProjectCards
         view={view}
+        canEdit={!readOnly}
         newDeal={
           // New Deal from here binds the deal to this project. Binding is held
           // to project write authority rather than deal permission alone.
           // Winning the deal later advances the project's phase without
           // re-checking, so `EnsureAttachable` proves the authority at the
           // moment of attaching.
-          !readOnly &&
-          project.company_id && (
-            <NewDealAction
-              companyId={project.company_id}
-              companyName={view.company?.name ?? project.name}
-              projectId={project.id}
-              link
-            />
-          )
+          !readOnly && <ProjectNewDeal view={view} />
         }
         tick={
           canUpdateTask
-            ? (activityId) => (
-                <CommitmentTick activityId={activityId} update={taskUpdate} />
+            ? (commitment) => (
+                <CommitmentTick commitment={commitment} update={taskUpdate} />
               )
             : undefined
         }
@@ -236,52 +245,19 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         to={moveTo}
         onClose={() => setMoveTo(null)}
       />
+      {editAll.element}
       <ProjectHealthModal
         open={healthEdit !== null}
         onClose={() => setHealthEdit(null)}
         projectId={project.id}
         correcting={healthEdit && healthEdit !== "new" ? healthEdit : undefined}
       />
-      <ProjectDrawer
-        open={drawer === "history" || drawer === "tasks"}
-        title={t("record.fullHistory")}
+      <ProjectDrawers
+        view={view}
+        drawer={drawer}
+        readOnly={readOnly}
         onClose={() => setDrawer(null)}
-      >
-        <ProjectHistory
-          view={view}
-          kind={drawer === "tasks" ? "task" : undefined}
-        />
-      </ProjectDrawer>
-      <ProjectDrawer
-        open={drawer === "documents"}
-        title={t("project.documents.title")}
-        onClose={() => setDrawer(null)}
-      >
-        <ProjectDocuments view={view} />
-      </ProjectDrawer>
-      <ProjectDrawer
-        open={drawer === "contacts"}
-        title={t("project.more.contacts")}
-        onClose={() => setDrawer(null)}
-      >
-        <div className="project-drawer-stack">
-          <ProjectCompanies
-            projectId={project.id}
-            companies={project.companies}
-            readOnly={readOnly}
-          />
-          <RecordTeam
-            recordType="project"
-            recordId={project.id}
-            readOnly={readOnly}
-          />
-          <StakeholdersCard
-            view={view}
-            projectId={project.id}
-            readOnly={readOnly}
-          />
-        </div>
-      </ProjectDrawer>
+      />
       {openTask && (
         <TaskDetailModal
           activityId={openTask}
@@ -294,61 +270,72 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   );
 }
 
-// A commitment carries no row version, and a task write must name one. So
-// the verbs read their task whole first and offer themselves once they have.
+// The verbs write the task at the version the commitment row carries.
 function useNextTaskVerbs(
   view: Project360,
   update: ReturnType<typeof useTaskUpdate>,
   enabled: boolean,
 ) {
   const zone = useViewerZone();
+  const move = useMoveTask(update);
   const next = nextCommitment(view);
-  const task = useActivity(next?.activityId, enabled).data;
-  if (!next || !task) {
+  if (!next || !enabled) {
     return {};
   }
   return {
     // No due date here: the bar draws its own Snooze beside Done.
     action: (
-      <TaskQuickActions
-        activityId={next.activityId}
-        version={task.version}
-        dueAt={null}
-        update={update}
-      />
+      <>
+        <TaskQuickActions
+          activityId={next.activityId}
+          version={next.version}
+          dueAt={null}
+          update={update}
+        />
+        <TaskWriteFailure taskId={next.activityId} update={update} />
+      </>
     ),
     snooze: next.dueAt
       ? {
           onSnooze: () => {
-            const nextDue = snoozedDueAt(next.dueAt, task.due_has_time, zone);
+            const nextDue = snoozedDueAt(
+              next.dueAt,
+              next.dueHasTime,
+              zone,
+              new Date(),
+              next.dueIntent,
+            );
             if (nextDue)
-              update.mutate({
+              void move({
                 id: next.activityId,
-                version: task.version,
-                body: nextDue,
+                version: next.version,
+                to: nextDue,
+                back: currentDueFields(
+                  next.dueAt,
+                  next.dueHasTime,
+                  zone,
+                  next.dueIntent,
+                ),
               });
           },
-          pending: update.isPending && update.variables?.id === next.activityId,
+          pending: update.isPending,
         }
       : undefined,
   };
 }
 
 function CommitmentTick({
-  activityId,
+  commitment,
   update,
 }: Readonly<{
-  activityId: string;
+  commitment: Commitment;
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
-  const task = useActivity(activityId).data;
-  if (!task) {
-    return null;
-  }
   return (
     <TaskCompleteCheck
-      activityId={activityId}
-      version={task.version}
+      activityId={commitment.activity_id}
+      subject={commitment.subject}
+      version={commitment.version}
       update={update}
     />
   );
@@ -362,69 +349,52 @@ function CommitmentTick({
 function ProjectActions({
   project,
   refusedReasonId,
+  logRefusedId,
   activity,
   onAddTask,
-  cf,
+  onEdit,
+  editWaiting,
   health,
   onOpen,
   onHealth,
 }: Readonly<{
   project: Project;
   refusedReasonId?: string;
+  // Add task's own refusal, which only the archive sets; see the page.
+  logRefusedId?: string;
   activity: ActivityGate;
   onAddTask: () => void;
-  cf: ObjectCustomFields;
+  onEdit: () => void;
+  // The edit is open but holds its dialog for the custom-field catalog.
+  editWaiting: boolean;
   // The reading that stands, which Correct reading corrects.
   health?: ProjectHealthAssessment;
   onOpen: (drawer: ProjectDrawerKind) => void;
   onHealth: (edit: ProjectHealthAssessment | "new") => void;
 }>) {
   const t = useT();
-  const owner = useOwnerPicker(project.owner_id);
+  const archiveRefusal = useArchiveRefusal("project");
+  const taskRefusedId = logRefusedId ?? activity.refusedId;
+  const taskKeys = useShortcut(
+    "record.addTask",
+    onAddTask,
+    !activity.pending && !taskRefusedId,
+  );
   return (
     <OverflowMenu label={t("record.moreActions")} word={t("record.verb.more")}>
       {/* First: the most frequent verb in the menu. */}
       <Button
         disabled={activity.pending}
-        reasonId={refusedReasonId ?? activity.refusedId}
+        reasonId={taskRefusedId}
         onClick={onAddTask}
+        aria-keyshortcuts={taskKeys}
       >
         {t("log.addTask")}
       </Button>
       {/* Worded: a bare pencil among sentences names nothing to a reader. */}
-      <EditAction<Project>
-        labelled
-        disabledReasonId={refusedReasonId}
-        label={t("project.edit")}
-        savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
-        fields={[
-          ...projectFields(t, {
-            owner,
-            mode: "edit",
-          }),
-          ...cf.formFields,
-        ]}
-        record={{ ...projectEditRecord(project), ...cf.recordSlice(project) }}
-        update={async (values, _rows, opened) => {
-          return unwrap(
-            await api.PATCH("/projects/{id}", {
-              params: {
-                path: { id: project.id },
-                ...ifMatch(requireVersion(opened?.version)),
-              },
-              // Diffed against what the form opened on. No cf_ column is clearable, so a
-              // snapshot diff would send every untouched empty one as a clear and the
-              // save would be refused.
-              body: {
-                ...mapProjectUpdate(values),
-                ...cf.toPatch(values, opened ?? {}),
-              },
-            }),
-          );
-        }}
-        invalidate="projects"
-        recordKey="project"
-      />
+      <Button reasonId={refusedReasonId} onClick={onEdit} pending={editWaiting}>
+        {t("project.edit")}
+      </Button>
       <ShareAction
         recordType="project"
         recordId={project.id}
@@ -453,6 +423,7 @@ function ProjectActions({
           verb a reader cannot walk back does not sit in the routine run. */}
       <ArchiveAction
         requires={{ object: "project", action: "delete" }}
+        refusedReason={archiveRefusal}
         disabledReasonId={refusedReasonId}
         label={t("project.archive")}
         confirmText={t("project.archiveConfirm")}
@@ -472,7 +443,7 @@ function ProjectActions({
         }}
         invalidate="projects"
         recordKey="project"
-        onArchived={() => navigate({ screen: "projects" })}
+        onArchived={(from) => from.closeOnto({ screen: "projects" })}
       />
     </OverflowMenu>
   );

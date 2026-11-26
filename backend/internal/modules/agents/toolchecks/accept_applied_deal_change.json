@@ -1,0 +1,10 @@
+{
+  "verb": "accept_applied_deal_change",
+  "checks": [
+    "deal.update"
+  ],
+  "takes": [
+    "auto_moved_deal",
+    "deal"
+  ]
+}

@@ -236,38 +236,6 @@ func TestServedCallsNeverSpendThePeerFailureCeiling(t *testing.T) {
 	}
 }
 
-// TestAuthenticatedCallsSpendOnlyTheirOwnPassportBudget proves the two
-// buckets do not bleed into each other: a served call must not consume the
-// pre-auth failure budget its shared egress IP holds, and one connector's
-// volume must not throttle another's.
-func TestAuthenticatedCallsSpendOnlyTheirOwnPassportBudget(t *testing.T) {
-	const egress, other = "160.79.104.11", "160.79.104.12"
-	clock := newStepClock()
-	edge := mcpEdge(answering(http.StatusOK), newMCPLimitersWithClock(clock.now), "https://crm.example.com")
-
-	for i := 1; i <= 240; i++ {
-		if got := serveStatus(edge, mcpRequest(http.MethodPost, "passport-a", egress)); got != http.StatusOK {
-			t.Fatalf("authenticated call %d → %d, want 200 within the budget", i, got)
-		}
-	}
-	if got := serveStatus(edge, mcpRequest(http.MethodPost, "passport-a", egress)); got != http.StatusTooManyRequests {
-		t.Fatalf("the 241st authenticated call → %d, want 429", got)
-	}
-	// Same egress range, different passport: the key is the credential, so
-	// one busy connector cannot spend another's budget.
-	if got := serveStatus(edge, mcpRequest(http.MethodPost, "passport-b", other)); got != http.StatusOK {
-		t.Fatalf("a second passport → %d, want 200", got)
-	}
-	// 240 served calls from one IP cost nothing from the failure budget.
-	if got := serveStatus(edge, mcpRequest(http.MethodPost, "", egress)); got != http.StatusOK {
-		t.Fatalf("an unauthenticated call after 240 served ones → %d, want the pre-auth budget untouched", got)
-	}
-	clock.advanceWindow()
-	if got := serveStatus(edge, mcpRequest(http.MethodPost, "passport-a", egress)); got != http.StatusOK {
-		t.Fatalf("after the window → %d, want the budget to have reopened (200)", got)
-	}
-}
-
 // TestStreamOpensGetTheirOwnTighterBudget pins the GET row: a stream is
 // cheap to ask for and expensive to hold, so it is bounded separately from
 // call volume — and it is metered whatever the transport answers a GET with
@@ -291,7 +259,7 @@ func TestStreamOpensGetTheirOwnTighterBudget(t *testing.T) {
 	}
 }
 
-// A refused call says when to come back, for each of the three ceilings. A
+// A refused call says when to come back, for each edge ceiling. A
 // client then needs no guessed backoff.
 func TestEveryMCPCeilingAnswersWithItsWait(t *testing.T) {
 	const peer = "160.79.104.11"
@@ -303,7 +271,6 @@ func TestEveryMCPCeilingAnswersWithItsWait(t *testing.T) {
 		spend  int
 		limit  string
 	}{
-		{"tool calls", http.MethodPost, "passport-a", http.StatusOK, 240, "240"},
 		{"stream opens", http.MethodGet, "passport-a", http.StatusOK, 30, "30"},
 		{"rejected credentials", http.MethodPost, "forged", http.StatusUnauthorized, 60, ""},
 	}

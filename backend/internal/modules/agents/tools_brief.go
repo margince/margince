@@ -30,6 +30,7 @@ import (
 	"encoding/json"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -43,13 +44,9 @@ import (
 // read-model and the home route never blocks on assembly (B-E05.3b), and an
 // agent asking what the queue says must not be the thing that changes it.
 //
-// ONE thing behind this read does write, and it is worth stating rather than
-// discovering: the engine resolves snoozes as it reads, so an item whose snooze
-// has expired flips back to actionable in the read's own transaction (A77). It
-// is the same entry point the human's own home route calls, the flip is decided
-// by the clock rather than by the caller, and reading twice changes nothing the
-// first read did not — but it does mean an agent's read can be what materializes
-// a state the contact then sees.
+// The read judges snoozes at its own instant and changes no row (A77). Once the
+// result is built, the brief's open is recorded in a transaction of its own,
+// as GET /v1/brief records it.
 type BriefReader func(ctx context.Context) (ReadBriefResult, error)
 
 // RegisterBriefTool joins read_brief to the surface once a reader exists — the
@@ -142,7 +139,8 @@ type BriefItem struct {
 	EvidenceIDs []ids.UUID `json:"evidence_ids"`
 	// SnoozedUntil is when a snoozed item re-surfaces, and is absent unless the
 	// item is snoozed waiting on the clock.
-	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
+	SnoozedUntil  *time.Time               `json:"snoozed_until,omitempty"`
+	SnoozedIntent *crmcontracts.IntentTime `json:"snoozed_intent,omitempty"`
 	// ReopenOn is what a snoozed item is waiting for: the clock, a reply, or a
 	// meeting being over. SERVED rather than withheld, and served BECAUSE
 	// SnoozedUntil is: without it a snooze with no moment reads as a snooze
@@ -198,9 +196,10 @@ type readBrief struct {
 func (t readBrief) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "read_brief", Title: "Read the morning brief", Version: toolVersionV1,
-		Description:   readBriefCopy.render(),
-		Instead:       readBriefCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		Description:       readBriefCopy.render(),
+		Instead:           readBriefCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		Unlisted:  true,
 		OpenAPIOp: "getMorningBrief",
 		// No arguments. The brief a caller may read is the one belonging to the
@@ -321,8 +320,9 @@ type annotateBrief struct {
 func (t annotateBrief) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "annotate_brief", Title: "Write findings onto the morning brief", Version: toolVersionV1,
-		Description: annotateBriefCopy.render(),
-		Instead:     annotateBriefCopy.Instead,
+		ProductMadeAnswer: true,
+		Description:       annotateBriefCopy.render(),
+		Instead:           annotateBriefCopy.Instead,
 		// Write, because it changes a row a reader reads. TierAutoExecute
 		// because there is nothing here for a human to approve in the moment:
 		// the write is confined to prose on that contact's own brief, it is

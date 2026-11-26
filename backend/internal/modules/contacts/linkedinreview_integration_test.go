@@ -181,7 +181,7 @@ func TestReachCountsConnectionsPerAccountAndSaysWhatItCannotShow(t *testing.T) {
 	e.employ(t, andreas, company)
 	e.importAndMatch(t)
 
-	reach, err := e.store.MyLinkedInReach(e.as(), nil)
+	reach, err := e.store.MyLinkedInReach(e.as(), nil, "")
 	if err != nil {
 		t.Fatalf("reading reach: %v", err)
 	}

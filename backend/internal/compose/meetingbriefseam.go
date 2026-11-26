@@ -114,12 +114,17 @@ func agentBriefLine(sentence crmcontracts.CompanyBriefSentence) agents.MeetingBr
 // deterministic floor. A composition with no server has no instance to diverge
 // from; this is the only one, and the api role still passes its own.
 func newMeetingBriefService(db *database.DB) *meetingbrief.Service {
-	pool := db.Pool()
 	contactsStore := contacts.NewStore(db)
-	view := contact360.NewService(pool, contactsStore, deals.NewStore(db, DealsInstallation()), ProjectsStore(pool),
+	return meetingbrief.NewService(db.Pool(), newContact360Service(db, contactsStore), contactsStore, time.Now).
+		WithEmailSummaries(activities.NewStore(db))
+}
+
+// newContact360Service composes the contact 360 for a role with no server to
+// borrow it from.
+func newContact360Service(db *database.DB, contactsStore *contacts.Store) *contact360.Service {
+	pool := db.Pool()
+	return contact360.NewService(pool, contactsStore, deals.NewStore(db, DealsInstallation()), ProjectsStore(pool),
 		consent.NewStore(db),
 		comms.NewStore(db, time.Now, activities.NewStore(db)),
 		ai.NewFeedbackStore(db), time.Now).WithMailCoverage(mailCaptureCoverageReader(db))
-	return meetingbrief.NewService(pool, view, contactsStore, time.Now).
-		WithEmailSummaries(activities.NewStore(db))
 }

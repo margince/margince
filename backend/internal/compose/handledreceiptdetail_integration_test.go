@@ -21,6 +21,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -29,6 +30,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // appliedUnderPolicy decides a staged proposal the way the auto-apply sweep
@@ -135,6 +138,11 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 	})
 	agentCard := e.stageDateCard(agent, t, agentDeal, ids.UUID(message.Id), moved)
 	appliedUnderPolicy(reader, t, e.Pool, e.svc, agentCard, e.Rep1)
+	// An approved agent staging is no receipt until the agent repeats its call.
+	hash := e.WsScalar(t, `SELECT diff_hash FROM approval WHERE id = $1`, agentCard.UUID)
+	if _, _, err := e.svc.Redeem(agent, agentCard, deals.CloseDateCorrectionKind, hash); err != nil {
+		t.Fatalf("the agent repeating its call: %v", err)
+	}
 
 	handled, err := newAttentionService(e.Pool, e.svc, time.Now).HandledForYou(reader, nil)
 	if err != nil {
@@ -155,8 +163,11 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 	if change, leaked := changeOf(correction, "close_date_provisional"); leaked {
 		t.Errorf("the correction lists close_date_provisional: %+v", change)
 	}
-	if correction.SourceRecord != nil {
-		t.Errorf("a correction cites no message, and names %+v", correction.SourceRecord)
+	if correction.SourceRecord != nil || correction.SourceOccurredAt != nil {
+		t.Errorf("a correction cites no message, and names %+v at %v", correction.SourceRecord, correction.SourceOccurredAt)
+	}
+	if correction.ReasonKind == nil || *correction.ReasonKind != crmcontracts.ReceiptReasonKindRule {
+		t.Errorf("the sweep's correction says its reason is %v, want a rule", correction.ReasonKind)
 	}
 
 	decided := receiptByID(t, handled, card.UUID)
@@ -178,6 +189,45 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 	if decided.SourceRecord == nil || ids.UUID(decided.SourceRecord.Id) != ids.UUID(message.Id) ||
 		decided.SourceRecord.Label == nil || *decided.SourceRecord.Label != subject {
 		t.Errorf("the card's source reads %+v, want the call it was read from", decided.SourceRecord)
+	}
+	if decided.SourceOccurredAt == nil || !decided.SourceOccurredAt.Equal(message.OccurredAt) {
+		t.Errorf("the card's source happened at %v, want the call's own time %v", decided.SourceOccurredAt, message.OccurredAt)
+	}
+	if decided.ReasonKind != nil {
+		t.Errorf("an approval says its reason is %q, want no kind", *decided.ReasonKind)
+	}
+}
+
+// A verdict change names the message it read and when that came, apart from
+// when Margince acted. Home and the deal agree, and call the reason an inference.
+func TestAVerdictReceiptNamesTheMessageItReadAndWhenItCame(t *testing.T) {
+	v := setupDealVerdict(t)
+	v.run(t)
+	reader := v.As(v.Rep1, []ids.UUID{v.Team1}, integration.AdminPerms)
+	now, h := clocktest.Now(t), newMarginceChangeHandlers(v.Pool)
+	handled, err := newAttentionService(v.Pool, approvals.NewService(v.DB()), func() time.Time { return now }).HandledForYou(reader, nil)
+	rows, _, readErr := h.deals.DealChanges(reader, ids.From[ids.DealKind](v.deal), nil, 10, deals.DealChangeFilter{})
+	onDeal, drawErr := h.changeReceipts(reader, rows)
+	if err != nil || readErr != nil || drawErr != nil {
+		t.Fatal(err, readErr, drawErr)
+	}
+	verdicts := 0
+	for _, receipt := range slices.Concat(handled.Receipts, onDeal) {
+		if receipt.Subject == nil || ids.UUID(receipt.Subject.Id) != v.deal {
+			continue
+		}
+		verdicts++
+		if at := receipt.SourceOccurredAt; receipt.SourceRecord == nil || receipt.SourceRecord.Id.String() != v.note ||
+			at == nil || !at.Equal(v.now) || at.Equal(receipt.OccurredAt) {
+			t.Errorf("%s names the source %+v at %v (acted %v), want the buyer's message at %v", receipt.Kind, receipt.SourceRecord, at, receipt.OccurredAt, v.now)
+		}
+		if precision, kind := receipt.SourceOccurredPrecision, receipt.ReasonKind; precision == nil || *precision != crmcontracts.OccurredPrecisionOccurredPrecisionInstant ||
+			kind == nil || *kind != crmcontracts.ReceiptReasonKindInference {
+			t.Errorf("%s gives its source precision %v and its reason kind %v, want an instant and an inference", receipt.Kind, precision, kind)
+		}
+	}
+	if verdicts != 6 {
+		t.Fatalf("Home and the deal carry %d changes on the deal, want the verdict's three on each", verdicts)
 	}
 }
 
@@ -219,17 +269,20 @@ func TestATruncatedPageContinuesWhereItStopped(t *testing.T) {
 	e := setupCloseDate(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	now := clocktest.Now(t)
-	subject := "Renewal call"
-	message, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{Kind: "call", Subject: &subject, Source: "manual"})
-	if err != nil {
-		t.Fatal(err)
-	}
 	moved := today().AddDate(0, 0, 45)
-	applied := func(name string) ids.ApprovalID {
+	applied := func(name string) ids.UUID {
 		deal := e.seedSweepDeal(t, name, e.late, new(95), new(30), 1)
-		card := e.stageDateCard(ctx, t, deal, ids.UUID(message.Id), moved)
-		appliedUnderPolicy(ctx, t, e.Pool, e.svc, card, e.Rep1)
-		return card
+		actor := "system:paging:" + name
+		if _, err := e.Deals.UpdateDeal(principal.SystemActing(ctx, actor), ids.From[ids.DealKind](deal), deals.UpdateDealInput{ExpectedClose: &moved}); err != nil {
+			t.Fatal(err)
+		}
+		var audit ids.UUID
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			return tx.QueryRow(ctx, `SELECT id FROM audit_log WHERE entity_type='deal' AND entity_id=@deal AND actor_id=@actor AND action='update' ORDER BY occurred_at DESC,id DESC LIMIT 1`, pgx.NamedArgs{"deal": deal, "actor": actor}).Scan(&audit)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return audit
 	}
 	for i := range 55 {
 		applied(fmt.Sprintf("Paged project %02d", i))
@@ -260,7 +313,7 @@ func TestATruncatedPageContinuesWhereItStopped(t *testing.T) {
 			t.Errorf("receipt %s is on both pages", id)
 		}
 		seen[id] = true
-		if id == late.UUID {
+		if id == late {
 			t.Error("a receipt that landed after the first page shifted the second")
 		}
 		if receipt.Actor == nil {
@@ -274,5 +327,96 @@ func TestATruncatedPageContinuesWhereItStopped(t *testing.T) {
 		t.Fatal("a cursor this server never minted was read as a page")
 	} else if _, malformed := errors.AsType[*storekit.MalformedCursorError](err); !malformed {
 		t.Fatalf("a cursor this server never minted answered %v, want the malformed-cursor refusal", err)
+	}
+}
+
+// verdictOnAMeeting runs the verdict pass on a deal that cites a captured
+// meeting. Then the calendar moves that meeting to a later day.
+func verdictOnAMeeting(t *testing.T) (*dealVerdictEnv, time.Time) {
+	t.Helper()
+	v := setupDealVerdict(t)
+	signing := v.now.AddDate(0, 2, 0).Format(time.DateOnly)
+	ref, err := calendarSink(v.Env).Upsert(calendarOwnerCtx(v.Env, v.AdminUser), connector.NormalizedRecord{
+		EntityType: "activity", NaturalKey: meetingKey,
+		Fields: capture.ActivityFields{
+			Kind: "meeting", Subject: "Board call", OccurredAt: v.now,
+			Body: "Meeting notes: the board agreed we sign on " + signing + " for 45,000 EUR a year.",
+		},
+		Links:  []datasource.EntityRef{{Type: "deal", ID: v.deal}},
+		Source: calendarSystem + ":" + calendarEvent, CapturedBy: "connector:" + calendarSystem,
+		Raw: []byte(`{"id":"` + calendarEvent + `"}`),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.note = ref.ID.String()
+	v.run(t)
+	moved := v.now.AddDate(0, 0, 9)
+	if err := movingCalendarSink(v.Env).MoveMeeting(calendarOwnerCtx(v.Env, v.AdminUser), meetingKey,
+		connector.MeetingSlot{Start: moved, AllDay: true}); err != nil {
+		t.Fatal(err)
+	}
+	if got := readMeetingStart(t, v.Env, ref.ID); got.Equal(v.now) {
+		t.Fatal("the calendar did not move the cited meeting")
+	}
+	return v, moved
+}
+
+// verdictReceiptSources answers each verdict receipt's source date on Home.
+func verdictReceiptSources(t *testing.T, v *dealVerdictEnv) []crmcontracts.Receipt {
+	t.Helper()
+	reader := v.As(v.Rep1, []ids.UUID{v.Team1}, integration.AdminPerms)
+	now := clocktest.Now(t)
+	handled, err := newAttentionService(v.Pool, approvals.NewService(v.DB()), func() time.Time { return now }).HandledForYou(reader, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []crmcontracts.Receipt
+	for _, receipt := range handled.Receipts {
+		if receipt.Subject != nil && ids.UUID(receipt.Subject.Id) == v.deal {
+			out = append(out, receipt)
+		}
+	}
+	if len(out) == 0 {
+		t.Fatal("Home carries no verdict change on the deal")
+	}
+	return out
+}
+
+// A meeting moved after Margince acted on it leaves the receipt dated as the
+// evidence was then. That is the meeting's first start, an instant.
+func TestAReceiptKeepsTheDateOfTheMeetingItActedOn(t *testing.T) {
+	v, _ := verdictOnAMeeting(t)
+	for _, receipt := range verdictReceiptSources(t, v) {
+		at, precision := receipt.SourceOccurredAt, receipt.SourceOccurredPrecision
+		if receipt.SourceRecord == nil || receipt.SourceRecord.Id.String() != v.note || at == nil || !at.Equal(v.now) ||
+			precision == nil || *precision != crmcontracts.OccurredPrecisionOccurredPrecisionInstant {
+			t.Errorf("%s names %+v at %v (%v), want the meeting at its first start %v, an instant",
+				receipt.Kind, receipt.SourceRecord, at, precision, v.now)
+		}
+	}
+}
+
+// A correction written before the dates were recorded reads the meeting's
+// live date. The UPDATE strips the record the real writer wrote, which
+// audit_log refuses unless its guard trigger is off for that one statement.
+func TestAnOlderReceiptReadsTheMeetingsLiveDate(t *testing.T) {
+	v, moved := verdictOnAMeeting(t)
+	owner, ctx := integration.OwnerConn(t), context.Background()
+	if err := pgx.BeginFunc(ctx, owner, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `ALTER TABLE audit_log DISABLE TRIGGER trg_audit_no_mutate;
+			UPDATE audit_log SET evidence = evidence - '`+deals.CitedMomentsEvidenceKey+`'
+			 WHERE entity_type = 'deal' AND entity_id = '`+v.deal.String()+`' AND evidence ? '`+deals.CitedMomentsEvidenceKey+`';
+			ALTER TABLE audit_log ENABLE TRIGGER trg_audit_no_mutate`)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, receipt := range verdictReceiptSources(t, v) {
+		at, precision := receipt.SourceOccurredAt, receipt.SourceOccurredPrecision
+		if at == nil || at.Format(time.DateOnly) != moved.Format(time.DateOnly) ||
+			precision == nil || *precision != crmcontracts.OccurredPrecisionOccurredPrecisionDay {
+			t.Errorf("%s dates its source %v (%v), want the meeting's live day %s", receipt.Kind, at, precision, moved.Format(time.DateOnly))
+		}
 	}
 }

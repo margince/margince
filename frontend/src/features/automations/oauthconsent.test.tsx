@@ -11,6 +11,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { stable } from "../../format/collate";
 import { LocaleProvider } from "../../i18n";
 import { locationDouble } from "../../testing/locationdouble";
 import { OAuthConsent } from "./oauthconsent";
@@ -400,6 +401,17 @@ describe("OAuthConsent", () => {
     expect(posted.body.get("consent")).toBe(NONCE);
   });
 
+  it("reads Deny before Authorize, each in a form of its own", async () => {
+    renderConsent({ scopes: ["read"] });
+    const deny = await screen.findByRole("button", { name: /deny access/i });
+    const authorize = screen.getByRole("button", { name: /authorize/i });
+    expect(
+      deny.compareDocumentPosition(authorize) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(deny.closest("form")).not.toBe(authorize.closest("form"));
+  });
+
   it("discloses a self-renewing connection", async () => {
     renderConsent({ offline: true, scopes: ["read"] });
     expect(
@@ -453,6 +465,55 @@ describe("OAuthConsent — what a refused consent is handed back", () => {
   });
 });
 
+describe("OAuthConsent — one pane on the sign-in surface", () => {
+  const refused = (code: string) => () => {
+    globalThis.location.hash = hashWithError(code);
+    stubConsentUnavailable();
+  };
+  it.each<[string, () => void, RegExp]>([
+    [
+      "the prompt",
+      () =>
+        stubConsent({
+          client_name: "Claude",
+          offline: true,
+          scopes: ["read"],
+          areas: ["business"],
+        }),
+      /deny access/i,
+    ],
+    ["invalid_request", refused("invalid_request"), /back to margince/i],
+    ["method_off", refused("method_off"), /back to margince/i],
+    ["stale_consent", refused("stale_consent"), /back to margince/i],
+  ])(
+    "holds %s in one pane, with the legal line outside it",
+    async (_, arrange, lastAction) => {
+      arrange();
+      render(<OAuthConsent />);
+      const action = await screen.findByRole("button", { name: lastAction });
+      const panes = document.querySelectorAll(".auth-surface .card");
+      expect(panes).toHaveLength(1);
+      expect(panes[0]).toContainElement(
+        screen.getByRole("heading", { level: 1 }),
+      );
+      expect(panes[0]).toContainElement(action);
+      expect(panes[0]).not.toContainElement(
+        screen.getByRole("link", { name: "Privacy" }),
+      );
+    },
+  );
+
+  it("holds the reconnecting notice in the same pane", async () => {
+    globalThis.location.hash = hashWithoutNonce();
+    stubSession(false);
+    render(<OAuthConsent />);
+    const notice = await screen.findByText("Reconnecting…");
+    const panes = document.querySelectorAll(".auth-surface .card");
+    expect(panes).toHaveLength(1);
+    expect(panes[0]).toContainElement(notice);
+  });
+});
+
 describe("OAuthConsent — a way of connecting the admin turned off", () => {
   it("says the tool cannot connect and who can change that, with no form", async () => {
     globalThis.location.hash = hashWithError("method_off");
@@ -502,7 +563,9 @@ describe("OAuthConsent — re-entering after sign-in", () => {
     // A fresh nonce is only ever minted server-side, so replaying an absent
     // one is not on offer.
     expect(reentered.has("consent")).toBe(false);
-    expect([...reentered.keys()].sort()).toEqual([...AUTHORIZE_KEYS].sort());
+    expect([...reentered.keys()].sort(stable)).toEqual(
+      [...AUTHORIZE_KEYS].sort(stable),
+    );
     expect(reentered.get("resource")).toBe(RESOURCE);
   });
 

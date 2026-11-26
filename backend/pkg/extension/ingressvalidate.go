@@ -31,7 +31,16 @@ func (r Record) Validate() error {
 	if r.Kind() != KindActivity {
 		return r.validateOtherKind()
 	}
-	if err := refuse(RefusalActivity, r.Activity.validate()); err != nil {
+	if err := refuse(RefusalActivity, r.Activity.validate(r.OccurredPrecision == PrecisionUnknown)); err != nil {
+		return err
+	}
+	if err := refuse(RefusalActivity, r.validatePrecision()); err != nil {
+		return err
+	}
+	if err := refuse(RefusalActivity, r.validateSubject()); err != nil {
+		return err
+	}
+	if err := refuse(RefusalActivity, r.validateParts()); err != nil {
 		return err
 	}
 	if err := refuse(RefusalAddresses, r.validateAddresses()); err != nil {
@@ -55,6 +64,9 @@ func (r Record) Validate() error {
 // validateOtherKind is Validate for a company or a deal, which carry none of an
 // activity's counterparty, address or roster.
 func (r Record) validateOtherKind() error {
+	if r.ChosenSubject != nil || r.OccurredPrecision != "" || len(r.Parts) > 0 || len(r.PartDrops) > 0 {
+		return refuse(RefusalActivity, fmt.Errorf("extension: a %s record carries no chosen subject, occurred precision or files — those belong to an activity", r.Kind()))
+	}
 	if err := refuse(RefusalActivity, r.validatePayload()); err != nil {
 		return err
 	}
@@ -215,7 +227,7 @@ func (c ChannelIdentity) validate() error {
 	return nil
 }
 
-func (a ActivityFields) validate() error {
+func (a ActivityFields) validate(timeMayBeUnknown bool) error {
 	if strings.TrimSpace(a.Kind) == "" {
 		return errors.New("extension: the activity names no kind")
 	}
@@ -225,11 +237,64 @@ func (a ActivityFields) validate() error {
 	if utf8.RuneCountInString(a.Body) > MaxBodyRunes {
 		return fmt.Errorf("extension: the body is over the %d-rune cap", MaxBodyRunes)
 	}
-	if a.OccurredAt.IsZero() {
+	if a.OccurredAt.IsZero() && !timeMayBeUnknown {
 		return errors.New("extension: the activity has no occurred-at — a timeline ordered by when a poll noticed is a timeline of this system's own scheduling")
 	}
 	if a.Direction != "" && a.Direction != DirectionInbound && a.Direction != DirectionOutbound {
 		return fmt.Errorf("extension: %q is not a direction (%q, %q, or empty)", a.Direction, DirectionInbound, DirectionOutbound)
+	}
+	if a.Kind != ActivityKindTask && (a.AssigneeID != "" || !a.DueAt.IsZero()) {
+		return fmt.Errorf("extension: only a %q carries an assignee or a due date, and this activity is a %q", ActivityKindTask, a.Kind)
+	}
+	if a.AssigneeID != "" && !uuidGrammar.MatchString(string(a.AssigneeID)) {
+		return errors.New("extension: the assignee is not a canonical user id")
+	}
+	return nil
+}
+
+// validateSubject holds a chosen subject to its grammar. Whether the member may
+// see it is the core's check, made against their live authority.
+func (r Record) validateSubject() error {
+	if r.ChosenSubject == nil {
+		return nil
+	}
+	return r.ChosenSubject.validate()
+}
+
+// maxPartDrops bounds the breadcrumbs a record may carry. A drop is a count per
+// reason, so more than a handful of reasons is a unit inventing them.
+const maxPartDrops = 8
+
+// validateParts holds the files a record carries to the published inbound
+// bounds. A unit cannot ask the core to keep more than mail may carry.
+func (r Record) validateParts() error {
+	if len(r.Parts) > MaxInboundFiles {
+		return fmt.Errorf("extension: the record carries %d files, over the cap of %d", len(r.Parts), MaxInboundFiles)
+	}
+	seen := make(map[int]bool, len(r.Parts))
+	total := 0
+	for _, part := range r.Parts {
+		switch {
+		case part.Ordinal < 0 || seen[part.Ordinal]:
+			return errors.New("extension: a file's ordinal is negative or repeats — it is what a retry is recognised by, so each file needs its own, stable between pulls")
+		case len(part.Body) == 0:
+			return errors.New("extension: a file carries no bytes")
+		case len(part.Body) > MaxInboundFileBytes:
+			return fmt.Errorf("extension: a file is %d bytes, over the cap of %d", len(part.Body), MaxInboundFileBytes)
+		}
+		seen[part.Ordinal] = true
+		total += len(part.Body)
+	}
+	if total > MaxInboundMessageBytes {
+		return fmt.Errorf("extension: the record's files total %d bytes, over the cap of %d", total, MaxInboundMessageBytes)
+	}
+	if len(r.PartDrops) > maxPartDrops {
+		return fmt.Errorf("extension: the record names %d drop reasons, over the cap of %d", len(r.PartDrops), maxPartDrops)
+	}
+	for _, drop := range r.PartDrops {
+		if drop.Count <= 0 || strings.TrimSpace(drop.Reason) == "" || utf8.RuneCountInString(drop.Reason) > MaxDisplayNameRunes {
+			return errors.New("extension: a file drop names no reason or no count, or a reason over the display-name cap")
+		}
 	}
 	return nil
 }

@@ -5,7 +5,14 @@ import { useCallback, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import type { ProjectScope } from "../../design-system/projectpicker";
 import { paragraphsFrom } from "../../design-system/richtext";
+import type { Locale } from "../../i18n/locale";
 import type { CommunicationContext } from "../../lib/compose-context";
+import { useViewerZone } from "../../lib/viewerzone";
+import { useFromMailbox } from "./compose.from";
+import {
+  type RecipientCountry,
+  useRecipientCountries,
+} from "./composecountries";
 import type { DraftProvenance, DraftUnavailable } from "./composedraftcall";
 import {
   type DraftMarks,
@@ -14,8 +21,10 @@ import {
   oneKeystroke,
   plainText,
 } from "./composedraftmarks";
+import { chosenLanguage, editorStateOf } from "./composeeditorstate";
 import type { AddressLine } from "./composehead";
 import type { SavedDraftFields } from "./composesaveddraftcalls";
+import { type ScheduleFields, scheduleFields } from "./composeschedule";
 import type { EditSeed } from "./schedulededit";
 
 type DraftReason = components["schemas"]["AccountDraftReason"];
@@ -51,14 +60,18 @@ export type FieldsSnapshot = Readonly<{
   body: string;
   html: string;
   intent: string;
+  draftedIntent: string;
   context: CommunicationContext | "";
   sendAt: string;
+  sendSchedule?: ScheduleFields;
   provenance: DraftProvenance | null;
   draftRef: string | null;
   servedBody: string;
   dealId: string;
   reasoning: DraftReason[];
   scope: ProjectScope | undefined;
+  language: Locale | null;
+  recipientCountries?: readonly RecipientCountry[];
 }>;
 
 export function emptyFields(): FieldsSnapshot {
@@ -71,6 +84,7 @@ export function emptyFields(): FieldsSnapshot {
     body: "",
     html: "",
     intent: "",
+    draftedIntent: "",
     context: "",
     sendAt: "",
     provenance: null,
@@ -79,6 +93,7 @@ export function emptyFields(): FieldsSnapshot {
     dealId: "",
     reasoning: [],
     scope: undefined,
+    language: null,
   };
 }
 
@@ -126,6 +141,7 @@ export function useComposeFields({
   edit?: EditSeed;
 }>) {
   const [to, setTo] = useState<string[]>(edit?.to ?? []);
+  const countries = useRecipientCountries(edit?.recipientCountries);
   const [cc, setCc] = useState<string[]>(edit?.cc ?? []);
   // Copy rows holding a value may not be hidden, so they stay open once opened.
   const [bcc, setBcc] = useState<string[]>(edit?.bcc ?? []);
@@ -141,22 +157,45 @@ export function useComposeFields({
     () =>
       edit?.html ?? (initialMessage ? paragraphsFrom(initialMessage.body) : ""),
   );
-  const [intent, setIntent] = useState(askedIntent ?? "");
+  const asked = askedIntent ?? "";
+  const [intent, setIntent] = useState(asked);
+  // The purpose the words on screen were last drafted to. A rewrite verb keeps
+  // it, since it rewrites the words without reading the purpose.
+  const [draftedIntent, setDraftedIntent] = useState(asked);
   // Keyed on the caller's ask, so a second moment action replaces the reason
   // the first one seeded.
-  const [seededIntent, setSeededIntent] = useState(askedIntent ?? "");
-  if ((askedIntent ?? "") !== seededIntent) {
-    setSeededIntent(askedIntent ?? "");
-    setIntent(askedIntent ?? "");
+  const [seededIntent, setSeededIntent] = useState(asked);
+  if (asked !== seededIntent) {
+    setSeededIntent(asked);
+    setIntent(asked);
   }
   // What this message is, when the record does not say. Empty until the
   // reader answers, and never asked on a reply (see contextFor).
   const [context, setContext] = useState<CommunicationContext | "">(
     edit?.context ?? initialReason ?? "",
   );
+  // The meeting a drafted reason rests on, when the draft was written from it.
+  const [meetingEvidence, setMeetingEvidence] = useState<string | undefined>();
+  // The reason came from a drafting instruction, so a later one may replace it.
+  const [reasonFromDraft, setReasonFromDraft] = useState(false);
   // The send-later moment as datetime-local text in the rep's zone. It
   // becomes an instant at submit (see scheduleFields).
-  const [sendAt, setSendAt] = useState(edit?.sendAt ?? "");
+  const [sendAt, setSendAtValue] = useState(edit?.sendAt ?? "");
+  const [sendSchedule, setSendSchedule] = useState<ScheduleFields | undefined>(
+    edit?.sendSchedule,
+  );
+  const readerZone = useViewerZone();
+  const scheduleZone =
+    sendSchedule?.scheduled_intent?.timezone ??
+    sendSchedule?.scheduled_tz ??
+    readerZone;
+  const setSendAt = useCallback(
+    (local: string) => {
+      setSendAtValue(local);
+      setSendSchedule(scheduleFields(local, undefined, scheduleZone));
+    },
+    [scheduleZone],
+  );
   const [provenance, setProvenance] = useState<DraftProvenance | null>(null);
   // The served draft the body came from, so the server can tell a sent draft
   // from a rewritten one. It may only name the text on screen.
@@ -165,6 +204,8 @@ export function useComposeFields({
   );
   // The words as the model last served them; a rewrite may replace only these.
   const [servedBody, setServedBody] = useState("");
+  // The draft language the rep picked; null leaves it to the correspondence.
+  const [language, setLanguage] = useState<Locale | null>(null);
   // Two non-error outcomes kept out of react-query's error channel, so the
   // form stays usable when the model or mailer is not configured (501).
   const [draftUnavailable, setDraftUnavailable] =
@@ -229,13 +270,20 @@ export function useComposeFields({
           provenance,
           reasoning: account.reasoning,
           scope: account.scope,
+          language,
+          draftedIntent,
         }
       : null;
+  // An emptied body sets the marks aside, and the choice stays for the next draft.
   const applyMarks = (marks: DraftMarks | null) => {
     setDraftRef(marks?.draftRef ?? null);
     setProvenance(marks?.provenance ?? null);
     account.setReasoning(marks?.reasoning ?? []);
     account.setScope(marks?.scope);
+    // The reader's own words keep the purpose: Redraft needs drafted words.
+    if (!marks) return;
+    setLanguage(marks.language);
+    setDraftedIntent(marks.draftedIntent);
   };
 
   const editBody = (next: Readonly<{ html: string; text: string }>) => {
@@ -271,7 +319,14 @@ export function useComposeFields({
   // may still bring the words back, so the disclosure waits for them.
   const clearRejected = () => {
     const rejected: DraftMarks | null = provenance
-      ? { draftRef: null, provenance, reasoning: [], scope: undefined }
+      ? {
+          draftRef: null,
+          provenance,
+          reasoning: [],
+          scope: undefined,
+          language,
+          draftedIntent,
+        }
       : null;
     memory.current.remember(body, rejected);
     parked.current = rejected;
@@ -285,6 +340,7 @@ export function useComposeFields({
     forgetMarks();
     forgetRefusals();
     setTo([...saved.to]);
+    countries.restore(saved.recipientCountries);
     setCc([...saved.cc]);
     setBcc([...saved.bcc]);
     if (saved.cc.length + saved.bcc.length > 0) setCopiesOpen(true);
@@ -292,10 +348,18 @@ export function useComposeFields({
     setBody(saved.body);
     setHtml(saved.html);
     setContext(saved.context);
-    setSendAt(saved.sendAt);
+    setMeetingEvidence(undefined);
+    setReasonFromDraft(false);
+    setSendAtValue(saved.sendAt);
+    setSendSchedule(saved.sendSchedule);
     const state = saved.editorState;
-    setIntent(state?.intent ?? "");
+    const savedIntent = state?.intent ?? "";
+    setIntent(savedIntent);
+    // The saved state does not carry the drafted purpose, so a restored
+    // purpose counts as the one its words were drafted to.
+    setDraftedIntent(savedIntent);
     setServedBody(state?.served_body ?? "");
+    setLanguage(chosenLanguage(state?.language));
     setDraftRef(null);
     setProvenance(
       state?.ai_generated
@@ -318,14 +382,18 @@ export function useComposeFields({
     body,
     html,
     intent,
+    draftedIntent,
     context,
     sendAt,
+    sendSchedule,
     provenance,
     draftRef,
     servedBody,
     dealId: account.dealId,
     reasoning: account.reasoning,
     scope: account.scope,
+    language,
+    recipientCountries: countries.stated,
   });
 
   const load = (next: FieldsSnapshot) => {
@@ -334,6 +402,7 @@ export function useComposeFields({
     forgetMarks();
     forgetRefusals();
     setTo(next.to);
+    countries.restore(next.recipientCountries);
     setCc(next.cc);
     setBcc(next.bcc);
     setCopiesOpen(next.copiesOpen);
@@ -341,20 +410,26 @@ export function useComposeFields({
     setBody(next.body);
     setHtml(next.html);
     setIntent(next.intent);
+    setDraftedIntent(next.draftedIntent);
     setContext(next.context);
-    setSendAt(next.sendAt);
+    setMeetingEvidence(undefined);
+    setReasonFromDraft(false);
+    setSendAtValue(next.sendAt);
+    setSendSchedule(next.sendSchedule);
     setProvenance(next.provenance);
     setDraftRef(next.draftRef);
     setServedBody(next.servedBody);
     account.setReasoning(next.reasoning);
     account.setScope(next.scope);
+    setLanguage(next.language);
     setDraftUnavailable(null);
   };
 
   return {
-    editorState: editorStateOf({ intent, provenance, servedBody }),
+    editorState: editorStateOf({ intent, provenance, servedBody, language }),
     to,
     setTo,
+    countries,
     cc,
     setCc,
     bcc,
@@ -363,13 +438,22 @@ export function useComposeFields({
     openCopies: () => setCopiesOpen(true),
     subject,
     setSubject,
+    from: useFromMailbox(),
     body,
     html,
     intent,
     setIntent,
+    draftedIntent,
+    setDraftedIntent,
     context,
     setContext,
+    meetingEvidence,
+    setMeetingEvidence,
+    reasonFromDraft,
+    setReasonFromDraft,
     sendAt,
+    sendSchedule,
+    scheduleControl: { sendAt, timezone: scheduleZone },
     setSendAt,
     provenance,
     setProvenance,
@@ -377,6 +461,8 @@ export function useComposeFields({
     setDraftRef,
     servedBody,
     setServedBody,
+    language,
+    setLanguage,
     draftUnavailable,
     setDraftUnavailable,
     sendUnavailable,
@@ -401,17 +487,3 @@ export function useComposeFields({
 }
 
 export type ComposeFields = ReturnType<typeof useComposeFields>;
-
-function editorStateOf(
-  fields: Pick<FieldsSnapshot, "intent" | "provenance" | "servedBody">,
-): components["schemas"]["MailDraftEditorState"] {
-  return {
-    intent: fields.intent,
-    ai_generated: fields.provenance?.ai_generated ?? false,
-    ai_disclosure: fields.provenance?.ai_disclosure ?? undefined,
-    voice_profile_version:
-      fields.provenance?.voice_profile_version ?? undefined,
-    voice_degraded: fields.provenance?.voice_degraded ?? false,
-    served_body: fields.servedBody,
-  };
-}

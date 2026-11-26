@@ -10,6 +10,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -58,14 +59,8 @@ func start(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	return run(ctx, args, stdout, stderr)
 }
 
-func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
-	if len(args) == 0 {
-		return errors.New("usage: migrate <up|down|reset-password|setup-token|recreate-db|drop-db|db-exists|workspace-exists|drill-start|drill-finish|data-tasks> --dsn <dsn> [--steps n] [--email <address>] [--name <db>] [--template <db>] [--statement-timeout <duration>] [--by <name>] [--restored-to <time>] [--drill <id>] [--outcome passed|failed] [--note <text>]")
-	}
+func runMigration(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	direction := args[0]
-	if direction == "data-tasks" {
-		return runDataTasks(ctx, args[1:], stdout, stderr)
-	}
 
 	fs := flag.NewFlagSet("migrate", flag.ContinueOnError)
 	// The usage text goes where the caller says, so a test can assert what it
@@ -128,44 +123,37 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 
-	switch direction {
-	case "up":
-		// Only the verbs that APPLY migrations take the ceiling. recreate-db copies
-		// a template and drop-db waits for sessions to end; both are legitimately
-		// long and neither holds a lock a product write queues behind, so a
-		// migration budget would refuse them for no gain.
-		if err := boundStatementHold(ctx, conn, *statementTimeout); err != nil {
-			return err
-		}
-		exts, err := dbmigrate.ExtensionNamespaces(composition.Extensions())
-		if err != nil {
-			return err
-		}
-		return up(ctx, conn, resolved, core, custom, exts, *statementTimeout, stdout)
-	case "down":
-		if err := boundStatementHold(ctx, conn, *statementTimeout); err != nil {
-			return err
-		}
-		return down(ctx, conn, core, custom, *steps, stdout)
-	case "reset-password":
-		return resetPassword(ctx, conn, *email, os.Stdin, stdout)
-	case "recreate-db":
-		return recreateDB(ctx, conn, *name, *template, stdout)
-	case "drop-db":
-		return dropDB(ctx, conn, *name, stdout)
-	case "db-exists":
-		return dbExists(ctx, conn, *name, stdout)
-	case "workspace-exists":
-		return workspaceExists(ctx, conn, stdout)
-	case "setup-token":
-		return rotateSetupToken(ctx, resolved, stdout)
-	case "drill-start":
-		return drillStart(ctx, resolved, drill, stdout)
-	case "drill-finish":
-		return drillFinish(ctx, resolved, drill, stdout)
-	default:
+	commands := map[string]func() error{
+		"up": func() error {
+			if err := boundStatementHold(ctx, conn, *statementTimeout); err != nil {
+				return err
+			}
+			exts, err := dbmigrate.ExtensionNamespaces(composition.Extensions())
+			if err != nil {
+				return err
+			}
+			return up(ctx, conn, resolved, core, custom, exts, *statementTimeout, stdout)
+		},
+		"down": func() error {
+			if err := boundStatementHold(ctx, conn, *statementTimeout); err != nil {
+				return err
+			}
+			return down(ctx, conn, core, custom, *steps, stdout)
+		},
+		"reset-password":   func() error { return resetPassword(ctx, conn, *email, os.Stdin, stdout) },
+		"recreate-db":      func() error { return recreateDB(ctx, conn, *name, *template, stdout) },
+		"drop-db":          func() error { return dropDB(ctx, conn, *name, stdout) },
+		"db-exists":        func() error { return dbExists(ctx, conn, *name, stdout) },
+		"workspace-exists": func() error { return workspaceExists(ctx, conn, stdout) },
+		"setup-token":      func() error { return rotateSetupToken(ctx, resolved, stdout) },
+		"drill-start":      func() error { return drillStart(ctx, resolved, drill, stdout) },
+		"drill-finish":     func() error { return drillFinish(ctx, resolved, drill, stdout) },
+	}
+	command, ok := commands[direction]
+	if !ok {
 		return fmt.Errorf("migrate: unknown direction %q (want up, down, reset-password, setup-token, recreate-db, drop-db, db-exists, workspace-exists, drill-start or drill-finish)", direction)
 	}
+	return command()
 }
 
 // up applies the embedded SQL namespaces and the composed extension set's,
@@ -210,9 +198,14 @@ func up(ctx context.Context, conn *pgx.Conn, dsn string, core, custom dbmigrate.
 	if err := reportExtensionNamespaces(exts, stdout); err != nil {
 		return err
 	}
-	applied, err := dbmigrate.Up(ctx, conn, append([]dbmigrate.Namespace{core, custom}, exts...)...)
+	report, err := dbmigrate.UpWithReport(ctx, conn, append([]dbmigrate.Namespace{core, custom}, exts...)...)
 	if err != nil {
 		return err
+	}
+	if report.Reconciled > 0 {
+		if _, err := fmt.Fprintf(stdout, "moved %d renumbered migration(s) to their current version in the ledger\n", report.Reconciled); err != nil {
+			return fmt.Errorf("migrate up: writing the reconcile count: %w", err)
+		}
 	}
 	// No REQUEST ceiling — River's own migrator and the index below are DDL, and
 	// this is the role that runs it — but the MIGRATION ceiling still applies.
@@ -233,7 +226,7 @@ func up(ctx context.Context, conn *pgx.Conn, dsn string, core, custom dbmigrate.
 	if _, err := riverPool.Exec(ctx, riverWorkspaceArgIndex); err != nil {
 		return fmt.Errorf("migrate: creating the river workspace-arg index: %w", err)
 	}
-	if _, err := fmt.Fprintf(stdout, upSummaryFormat, applied, riverApplied); err != nil {
+	if _, err := fmt.Fprintf(stdout, upSummaryFormat, report.Applied, riverApplied); err != nil {
 		return fmt.Errorf("migrate up: writing the confirmation: %w", err)
 	}
 	return nil
@@ -479,4 +472,15 @@ func readPassword(stdin io.Reader, stdout io.Writer) (string, error) {
 		return "", fmt.Errorf("migrate reset-password: reading the new password: %w", err)
 	}
 	return strings.TrimRight(line, "\r\n"), nil
+}
+
+func writeExtensionManifest(args []string, stdout io.Writer) error {
+	if len(args) != 0 {
+		return errors.New("extension-manifest takes no arguments")
+	}
+	namespaces, err := dbmigrate.ExtensionNamespaces(composition.Extensions())
+	if err != nil {
+		return err
+	}
+	return json.NewEncoder(stdout).Encode(namespaces)
 }

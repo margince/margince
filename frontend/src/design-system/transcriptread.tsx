@@ -10,16 +10,22 @@ import type { components } from "../api/schema";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { showsAMessage, TASK_QUEUE_KEY } from "../lib/activitykeys";
+import {
+  showsAMessage,
+  TASK_QUEUE_KEY,
+  transcriptReadLatestKey,
+} from "../lib/activitykeys";
 import { labelFor } from "../lib/labelfor";
 import { throwProblem, unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
 import { worklistKey } from "../lib/workkeys";
 import { Badge, Button, Card, EmptyState, Skeleton } from "./atoms";
 import { Callout } from "./callout";
+import { ModelWorkError, useConnectAiGate } from "./connectai";
 import { ErrorLine } from "./errorline";
 import { AutonomyDot } from "./trust";
 import "./transcriptread.css";
+import { approvalQuery } from "../lib/approvalread";
 
 type Activity = components["schemas"]["Activity"];
 type TranscriptReadReport = components["schemas"]["TranscriptReadReport"];
@@ -64,6 +70,24 @@ function TranscriptReadOutcome({
       </Callout>
     );
   }
+  // A refused summary leaves the meeting's earlier one in place, and the box
+  // says this reading wrote none.
+  return (
+    <>
+      <TranscriptReadFound report={report} detail={detail} />
+      {report.summary_refused && (
+        <p className="t-caption">{t("transcriptread.summaryRefused")}</p>
+      )}
+    </>
+  );
+}
+
+// What a done reading found: the proposals it staged, or the empty answer.
+function TranscriptReadFound({
+  report,
+  detail,
+}: Readonly<{ report: TranscriptReadReport; detail?: string | null }>) {
+  const t = useT();
   if (report.proposal_ids.length === 0) {
     // A reading that stated nothing is the EMPTY arm of the same switch whose
     // other arm lists the proposals — a fact about the transcript, not
@@ -102,10 +126,11 @@ function ownProposals(report: TranscriptReadReport): string[] {
 // watched the task appear, came back to a card still saying one was waiting.
 // Nothing was wrong with the number; the sentence was about a different fact.
 //
-// The decisions are read where they actually live, one authorised read per
-// staged approval, keyed ["approval", id] — the key approvalrow already
-// invalidates when a decision lands, so accepting from the worklist refreshes
-// this card without a reload.
+// The decisions are read where they actually live: one authorised read per
+// staged approval, through `approvalQuery`.
+//
+// That is the key approvalrow invalidates when a decision lands, so accepting
+// from the worklist refreshes this card without a reload.
 //
 // A hook cannot sit under a changing early return, which is why this is its own
 // component: the parent returns before it for a failed or empty reading.
@@ -115,14 +140,7 @@ function TranscriptReadProposals({ ids }: Readonly<{ ids: string[] }>) {
   const { locale } = useLocale();
   const decisions = useQueries({
     queries: ids.map((id) => ({
-      queryKey: ["approval", id],
-      queryFn: async () => {
-        return unwrap(
-          await api.GET("/approvals/{id}", {
-            params: { path: { id } },
-          }),
-        );
-      },
+      ...approvalQuery(id),
       // A decided approval does not un-decide, and this card is often on
       // screen while the rep works elsewhere in the record.
       staleTime: 10_000,
@@ -271,12 +289,26 @@ function TranscriptReadBody({
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const status = report.status;
+  const readId = report.read_id;
   const previous = useRef(status);
   useEffect(() => {
     const wasWorking =
       previous.current === "queued" || previous.current === "running";
     previous.current = status;
-    if (!(wasWorking && status === "done")) {
+    if (status !== "done") {
+      return;
+    }
+    if (!wasWorking) {
+      // A reading first seen done may have finished after the shared latest
+      // read was fetched, and that read carries the summary.
+      const latest = queryClient.getQueryData<TranscriptReadReport | null>(
+        transcriptReadLatestKey(activityId),
+      );
+      if (latest?.read_id !== readId || latest.status !== "done") {
+        queryClient.invalidateQueries({
+          queryKey: transcriptReadLatestKey(activityId),
+        });
+      }
       return;
     }
     // The reading wrote tasks and findings onto records this card is not told
@@ -286,7 +318,10 @@ function TranscriptReadBody({
     queryClient.invalidateQueries({ queryKey: TASK_QUEUE_KEY });
     queryClient.invalidateQueries({ queryKey: worklistKey });
     queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
-  }, [status, queryClient, activityId]);
+    queryClient.invalidateQueries({
+      queryKey: transcriptReadLatestKey(activityId),
+    });
+  }, [status, readId, queryClient, activityId]);
 
   return (
     <div className="transcript-reading">
@@ -308,10 +343,9 @@ function TranscriptReadBody({
 }
 
 /**
- * TranscriptReadCard offers one reading of one transcript (S-E04.3): the model
- * reads the normalized lines and stages every next step the conversation
- * STATES as a 🟡 proposal, citing the lines it read them from. Nothing reaches
- * the timeline until a human confirms in the inbox.
+ * TranscriptReadCard offers one reading of one transcript. The model
+ * reads the next steps the conversation STATES, each citing its lines. A staged
+ * proposal waits for a human to confirm it. The summary is shown at once.
  *
  * 422 (this activity carries no transcript) and 501 (no model configured)
  * surface their honest cause rather than a generic failure.
@@ -327,23 +361,9 @@ export function TranscriptReadCard({
   // transcript nobody had read would look exactly like one whose reading
   // failed. 404 is the honest "never read" and leaves the card offering a
   // first reading.
-  const latest = useQuery({
-    queryKey: ["transcript-read-latest", activityId],
-    queryFn: async () => {
-      const { data, error, response } = await api.GET(
-        "/activities/{id}/transcript-proposals/latest",
-        { params: { path: { id: activityId } } },
-      );
-      if (response.status === 404) {
-        return null;
-      }
-      if (error) {
-        throwProblem(error);
-      }
-      return data ?? null;
-    },
-  });
+  const latest = useLatestTranscriptRead(activityId);
   const shownReadId = readId ?? latest.data?.read_id ?? null;
+  const aiGate = useConnectAiGate(`transcript-ai-${activityId}`);
   const start = useMutation({
     mutationFn: async () => {
       const { data, error, response } = await api.POST(
@@ -369,7 +389,7 @@ export function TranscriptReadCard({
       // "never read" that a rep who navigates away and back inside the window
       // still sees.
       queryClient.invalidateQueries({
-        queryKey: ["transcript-read-latest", activityId],
+        queryKey: transcriptReadLatestKey(activityId),
       });
     },
   });
@@ -381,6 +401,7 @@ export function TranscriptReadCard({
         <Button
           pending={start.isPending}
           busyLabel={t("transcriptread.starting")}
+          reasonId={aiGate.reasonId}
           onClick={() => start.mutate()}
         >
           {t("transcriptread.cta")}
@@ -393,10 +414,32 @@ export function TranscriptReadCard({
           not KNOW whether this transcript has been read. Saying so beats an
           empty card, which reads as a confident "not yet". */}
       <ErrorLine error={latest.error} />
-      <ErrorLine error={start.error} />
+      {aiGate.notice}
+      <ModelWorkError error={start.error} />
       {shownReadId && (
         <TranscriptReadPanel activityId={activityId} readId={shownReadId} />
       )}
     </Card>
   );
+}
+
+// The newest reading of one transcript. The summary above the transcript and
+// the reading card below it share this one fetch.
+export function useLatestTranscriptRead(activityId: string) {
+  return useQuery({
+    queryKey: transcriptReadLatestKey(activityId),
+    queryFn: async () => {
+      const { data, error, response } = await api.GET(
+        "/activities/{id}/transcript-proposals/latest",
+        { params: { path: { id: activityId } } },
+      );
+      if (response.status === 404) {
+        return null;
+      }
+      if (error) {
+        throwProblem(error);
+      }
+      return data ?? null;
+    },
+  });
 }

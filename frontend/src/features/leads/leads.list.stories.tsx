@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, screen, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { playOpenView } from "../../testing/listview.play";
+import { phoneRow } from "../../testing/phonerow";
 import {
   installFetchStub,
   jsonResponse,
@@ -55,10 +56,11 @@ const MANAGER: { roles?: string[]; seat?: "full" | "read" } = {
 function leads(
   rows: Lead[],
   identity: { roles?: string[]; seat?: "full" | "read" } = MANAGER,
+  startCreating = false,
 ) {
   return () => {
     installFetchStub({
-      "GET /me": meRoute({ lead: ["read", "update"] }, identity),
+      "GET /me": meRoute({ lead: ["read", "update", "create"] }, identity),
       "GET /leads": () =>
         jsonResponse({ data: rows, page: { next_cursor: null } }),
       "GET /leads/settings": () =>
@@ -67,7 +69,7 @@ function leads(
     });
     return (
       <StoryProviders>
-        <LeadsScreen />
+        <LeadsScreen startCreating={startCreating} />
       </StoryProviders>
     );
   };
@@ -112,6 +114,16 @@ export const RepOpensOnTheirOwn: Story = {
 /** Nobody has routed a lead here yet. An empty queue is a real state and says
  *  so, rather than drawing a table with no rows. */
 export const EmptyQueue: Story = { render: leads([]) };
+
+/** `#/leads/new`: the queue with its create form open, as `C` opens it. */
+export const CreateFormOpen: Story = {
+  render: leads([lead()], MANAGER, true),
+  play: async () => {
+    await expect(
+      await screen.findByRole("dialog", { name: "New lead" }),
+    ).toBeInTheDocument();
+  },
+};
 
 /** Four-digit scores: the width at which de-DE first groups, read down one
  *  column. */
@@ -175,11 +187,59 @@ export const LongNames: Story = {
   ]),
 };
 
-/** At 390px the table becomes a list of cards and the score has to stay beside
- *  the name it belongs to. */
+// A worked lead, and one known only by its address with nothing on it yet.
+const phoneQueue = [
+  lead({
+    status: "engaged",
+    sla_state: "breached",
+    next_task_subject: "Send the price sheet",
+    next_task_due_at: "2026-09-03T09:00:00Z",
+    open_task_count: 2,
+  }),
+  lead({
+    id: "l-2",
+    full_name: null,
+    email: "fleet@voss-logistics.example",
+    company_name: null,
+    status: "new",
+  }),
+];
+
+/** Each name leads with the lead's monogram, an address standing in for a missing name. */
+export const Monograms: Story = {
+  render: leads(phoneQueue),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const named = phoneRow(await canvas.findByText("Jonas Petersen"));
+    await expect(named.identity.querySelector(".avatar")).toHaveTextContent(
+      "JP",
+    );
+    const unnamed = phoneRow(canvas.getByText("fleet@voss-logistics.example"));
+    await expect(unnamed.identity.querySelector(".avatar")).toHaveTextContent(
+      "FV",
+    );
+  },
+};
+
+/** At 390px line one ends in the status and its SLA state; under it the
+ *  company, the next task and its due day, each only when there is one. */
 export const Phone: Story = {
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: leads([lead({ score: 1204 }), lead({ id: "l-2", score: 58 })]),
+  render: leads(phoneQueue),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const worked = phoneRow(await canvas.findByText("Jonas Petersen"));
+    await expect(worked.end).toEqual(["EngagedOverdue"]);
+    await expect(worked.caption.slice(0, 2)).toEqual([
+      "Brandt Automotive GmbH",
+      "Send the price sheet",
+    ]);
+    await expect(worked.caption).toHaveLength(3);
+    const fresh = phoneRow(canvas.getByText("fleet@voss-logistics.example"));
+    await expect([fresh.end, fresh.caption]).toEqual([["New"], []]);
+  },
 };
 
 /** The read in flight: placeholder rows under a toolbar that is already

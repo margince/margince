@@ -4,16 +4,27 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  renderHook,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { useShortcutDispatcher } from "../lib/shortcuts";
 import { meFixture } from "../testing/mefixture";
+
+// A seat that may book, so the menu carries its booking link.
+const BOOKER = { allow: { activity: ["read", "create"] } } as const;
+
 import { AccountMenu } from "./account";
 
 // The bundle's releases are compiled in, and every local build leaves them
 // empty. Getters over a hoisted value let each case set the releases it needs.
-const bundle = vi.hoisted(() => ({ release: "", core: "" }));
+const bundle = vi.hoisted(() => ({ release: "", core: "", revision: "" }));
 vi.mock("../lib/release", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/release")>();
   return {
@@ -23,6 +34,9 @@ vi.mock("../lib/release", async (importOriginal) => {
     },
     get CORE_RELEASE() {
       return bundle.core;
+    },
+    get BUILD_REVISION() {
+      return bundle.revision;
     },
   };
 });
@@ -40,13 +54,14 @@ afterEach(() => {
   document.removeEventListener("click", stayHere, { capture: true });
   bundle.release = "";
   bundle.core = "";
+  bundle.revision = "";
 });
 
 function renderMenu() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  client.setQueryData(["me"], meFixture());
+  client.setQueryData(["me"], meFixture(BOOKER));
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -56,7 +71,7 @@ function renderMenu() {
   );
 }
 
-const trigger = () => screen.getByRole("button", { name: "Account" });
+const trigger = () => screen.getByRole("button", { name: "TU Account" });
 const row = (name: string | RegExp) => screen.getByRole("menuitem", { name });
 const helpMenu = () => screen.getByRole("menu", { name: "Help and feedback" });
 const helpItem = (name: string | RegExp) =>
@@ -96,11 +111,11 @@ describe("Help and feedback", () => {
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(helpItem(/^Request a feature/));
     await user.keyboard("{End}");
-    expect(document.activeElement).toBe(helpItem(/^Web app licenses/));
+    expect(document.activeElement).toBe(helpItem("About Margince"));
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(helpItem(/^Report a problem/));
     await user.keyboard("{ArrowUp}");
-    expect(document.activeElement).toBe(helpItem(/^Web app licenses/));
+    expect(document.activeElement).toBe(helpItem("About Margince"));
     await user.keyboard("{Home}");
     expect(document.activeElement).toBe(helpItem(/^Report a problem/));
     // The walk stayed inside: the account menu's own tabstop did not move.
@@ -137,6 +152,7 @@ describe("Help and feedback", () => {
     const user = userEvent.setup();
     renderMenu();
     await user.click(trigger());
+    await screen.findByRole("menu", { name: "Account" });
     expect(row("Help and feedback")).toHaveAttribute("aria-haspopup", "menu");
     expect(row("Theme")).not.toHaveAttribute("aria-haspopup");
   });
@@ -195,6 +211,23 @@ describe("Help and feedback", () => {
     },
   );
 
+  it.each([
+    ["0123456789abcdef", "&commit=0123456"],
+    ["dev", ""],
+  ])(
+    "names the revision of an unstamped build only when known (%j)",
+    async (revision, query) => {
+      bundle.revision = revision;
+      const user = userEvent.setup();
+      renderMenu();
+      await openHelp(user);
+      expect(helpItem(/^Report a problem/)).toHaveAttribute(
+        "href",
+        `https://github.com/margince/margince/issues/new?template=bug_report.yml${query}`,
+      );
+    },
+  );
+
   it("closes the whole menu when a link is chosen", async () => {
     const user = userEvent.setup();
     renderMenu();
@@ -208,7 +241,7 @@ describe("Help and feedback", () => {
     const user = userEvent.setup();
     renderMenu();
     await openHelpByKeyboard(user);
-    await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}");
+    await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}");
     expect(document.activeElement).toBe(helpItem("Keyboard shortcuts"));
 
     await user.keyboard("{Enter}");
@@ -226,97 +259,105 @@ describe("Help and feedback", () => {
   });
 });
 
-describe("the build at the foot of Help and feedback", () => {
-  it.each(["", "dev"])(
-    "says Development build when nothing is stamped (%j)",
-    async (release) => {
-      bundle.release = release;
-      const user = userEvent.setup();
-      renderMenu();
-      await openHelp(user);
-      const build = within(helpMenu()).getByText("Development build");
-      expect(build.closest("[role=menuitem]")).toBeNull();
-      expect(screen.queryByText(/^Version/)).toBeNull();
-    },
-  );
+describe("the shortcuts dialog on ?", () => {
+  // One dialog, whichever way it opens: Help and the key reach the same instance.
+  it("opens the dialog Help opens, and hands focus back where the key was pressed", async () => {
+    const user = userEvent.setup();
+    renderHook(() => useShortcutDispatcher());
+    renderMenu();
+    render(<button type="button">On the page</button>);
+    const page = screen.getByRole("button", { name: "On the page" });
+    page.focus();
 
-  // A statement, not a row. The keyboard walk ends on the last link above it.
-  it("names a stamped release, outside the menu's items", async () => {
-    bundle.release = "v1.4.0";
+    await user.keyboard("?");
+    await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    await user.keyboard("{Escape}");
+    expect(document.activeElement).toBe(page);
+  });
+});
+
+describe("About Margince at the foot of Help and feedback", () => {
+  it("is the last item, with no separator before it, and says it opens a dialog", async () => {
     const user = userEvent.setup();
     renderMenu();
-    await openHelpByKeyboard(user);
+    await openHelp(user);
+    const about = helpItem("About Margince");
+    expect(about).toHaveAttribute("aria-haspopup", "dialog");
+    expect(within(helpMenu()).getAllByRole("menuitem").at(-1)).toBe(about);
+    expect(about.previousElementSibling).toBe(helpItem("Keyboard shortcuts"));
+    expect(helpMenu().querySelector("hr")).toBeNull();
+  });
 
-    const version = within(helpMenu()).getByText("Version v1.4.0");
-    expect(version.closest("[role=menuitem]")).toBeNull();
+  it("lists the places off the app first, then the rows that stay in it", async () => {
+    const user = userEvent.setup();
+    renderMenu();
+    await openHelp(user);
     expect(
-      within(helpMenu()).getAllByRole("menuitem").at(-1)?.textContent,
-    ).toMatch(/^Web app licenses/);
-    await user.keyboard("{End}");
-    expect(document.activeElement).toBe(helpItem(/^Web app licenses/));
+      within(helpMenu())
+        .getAllByRole("menuitem")
+        .map((item) => item.textContent?.replace(" (Opens in a new tab)", "")),
+    ).toEqual([
+      "Report a problem",
+      "Request a feature",
+      "Help and resources",
+      "Release notes",
+      "Keyboard shortcuts",
+      "About Margince",
+    ]);
   });
 
-  it("names the instance and the core release on an instance build", async () => {
-    bundle.release = "v0.4.1";
-    bundle.core = "v0.0.5";
-    const user = userEvent.setup();
-    renderMenu();
-    await openHelp(user);
-    expect(within(helpMenu()).getByText("Instance v0.4.1")).toBeInTheDocument();
-    expect(within(helpMenu()).getByText("Core v0.0.5")).toBeInTheDocument();
-    expect(screen.queryByText(/^Version/)).toBeNull();
-  });
-
-  // Equal values are still two facts about two repositories.
-  it("keeps both lines when the instance and core releases are equal", async () => {
-    bundle.release = "v0.4.1";
-    bundle.core = "v0.4.1";
-    const user = userEvent.setup();
-    renderMenu();
-    await openHelp(user);
-    expect(screen.getByText("Instance v0.4.1")).toBeInTheDocument();
-    expect(screen.getByText("Core v0.4.1")).toBeInTheDocument();
-  });
-
-  it.each(["", "dev"])(
-    "an instance build with an unstamped instance release (%j) names only the core",
-    async (release) => {
-      bundle.release = release;
-      bundle.core = "v0.0.5";
-      const user = userEvent.setup();
-      renderMenu();
-      await openHelp(user);
-      expect(screen.getByText("Core v0.0.5")).toBeInTheDocument();
-      expect(screen.queryByText(/^Instance/)).toBeNull();
-      expect(screen.queryByText("Development build")).toBeNull();
-    },
-  );
-
-  // "dev" is what a plain docker build stamps, so it is no core release.
-  it('treats a core release of "dev" as a core-only build', async () => {
-    bundle.release = "v1.4.0";
-    bundle.core = "dev";
-    const user = userEvent.setup();
-    renderMenu();
-    await openHelp(user);
-    expect(screen.getByText("Version v1.4.0")).toBeInTheDocument();
-    expect(screen.queryByText(/^Core/)).toBeNull();
-  });
-
-  it("is not in the account menu itself", async () => {
+  it("names no version in the menu", async () => {
     bundle.release = "v1.4.0";
     const user = userEvent.setup();
     renderMenu();
-    await user.click(trigger());
-    expect(screen.queryByText("Version v1.4.0")).toBeNull();
+    await openHelp(user);
+    expect(within(helpMenu()).queryByText(/v1\.4\.0/)).toBeNull();
   });
-  it("offers web app licenses without a settings grant", async () => {
+
+  it("leaves the licenses to About", async () => {
+    const user = userEvent.setup();
+    renderMenu();
+    await openHelp(user);
+    expect(
+      within(helpMenu()).queryByRole("menuitem", { name: /licenses/i }),
+    ).toBeNull();
+  });
+
+  it("opens the About dialog from the keyboard on its version, and hands focus back to the trigger", async () => {
+    bundle.release = "v1.4.0";
+    bundle.revision = "0123456789abcdef0123456789abcdef01234567";
     const user = userEvent.setup();
     renderMenu();
     await openHelpByKeyboard(user);
-    const link = helpItem(/^Web app licenses/);
-    expect(link).toHaveAttribute("href", "/licenses/THIRD-PARTY-NOTICES.txt");
-    expect(link).toHaveAttribute("target", "_blank");
-    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    await user.keyboard("{End}");
+    expect(document.activeElement).toBe(helpItem("About Margince"));
+
+    await user.keyboard("{Enter}");
+    const dialog = await screen.findByRole("dialog", {
+      name: "About Margince",
+    });
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.activeElement).toBe(
+      within(dialog).getByRole("button", { name: /^v1\.4\.0 · 0123456 / }),
+    );
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "About Margince" })).toBeNull();
+    expect(document.activeElement).toBe(trigger());
+  });
+
+  it("opens the About dialog on a click", async () => {
+    const user = userEvent.setup();
+    renderMenu();
+    await openHelp(user);
+    await user.click(helpItem("About Margince"));
+    const dialog = await screen.findByRole("dialog", {
+      name: "About Margince",
+    });
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(
+      within(dialog).getByRole("button", { name: /^Development build / }),
+    ).toBeVisible();
   });
 });

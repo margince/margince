@@ -4,6 +4,7 @@
 package privacy
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -11,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/originalstore"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 const (
@@ -19,6 +21,8 @@ const (
 	sqlArgEmails  = "emails"
 	sqlArgLead    = "lead"
 	sqlArgKey     = "key"
+	sqlArgContact = "contact"
+	sqlArgKind    = "kind"
 )
 
 func rawEmailMatchSQL(payload, email string) string {
@@ -75,4 +79,77 @@ func externalOriginalCandidateSQL(scope rawSubjectScope, args pgx.NamedArgs) str
 		}
 	}
 	return `payload_object IS NOT NULL AND (` + strings.Join(clauses, ` OR `) + `)`
+}
+
+// linkedOriginalsSQL selects the raw_capture ids of originals whose activity is
+// filed on one record through activity_link. The column is contact_id or
+// lead_id, and subject is the SQL for the record id, such as "$1".
+//
+// A member who chose the record for a message bound no identity to it. The
+// original may name no address or account the hint arms could find. The link
+// is then the only evidence of whom the message is about.
+//
+// Export and disclosure read every such original. Erasure reads the ones it may
+// destroy. A legal hold on the activity keeps its original. So does another
+// activity that names the original without being filed on this record alone.
+// A message filed on a second live subject is one.
+func linkedOriginalsSQL(column, subject string, erasing bool) string {
+	query := `SELECT a.raw_capture_id FROM activity a JOIN activity_link l ON l.activity_id = a.id
+	  WHERE l.` + column + ` = ` + subject + ` AND a.raw_capture_id IS NOT NULL`
+	if !erasing {
+		return query
+	}
+	return query + notTransitivelyHeld("a.id") + `
+	    AND NOT EXISTS (SELECT 1 FROM activity o WHERE o.raw_capture_id = a.raw_capture_id
+	      AND (NOT EXISTS (SELECT 1 FROM activity_link ol WHERE ol.activity_id = o.id AND ol.` + column + ` = ` + subject + `)
+	        OR ` + otherLiveSubjectSQL("contact_id", column, subject) + `
+	        OR ` + otherLiveSubjectSQL("lead_id", column, subject) + `))`
+}
+
+// otherLiveSubjectSQL is true when the activity o is also filed on a record of
+// this kind that was not erased. An archived record still holds its link and
+// its export, so only an erasure tombstone releases the original. For the kind
+// being erased that means another record.
+func otherLiveSubjectSQL(kind, column, subject string) string {
+	differs := ""
+	if kind == column {
+		differs = ` AND xl.` + kind + ` <> ` + subject
+	}
+	table := strings.TrimSuffix(kind, "_id")
+	return `EXISTS (SELECT 1 FROM activity_link xl JOIN ` + table + ` s ON s.id = xl.` + kind + `
+	          WHERE xl.activity_id = o.id` + differs + ` AND NOT EXISTS (SELECT 1 FROM audit_log t
+	            WHERE t.entity_type = '` + table + `' AND t.entity_id = s.id AND t.action = ANY(ARRAY['` + actionErase + `','anonymize` + `'])))`
+}
+
+// deleteLinkedOriginalsTx destroys the originals of messages filed on one record.
+func deleteLinkedOriginalsTx(ctx context.Context, tx pgx.Tx, column string, record ids.UUID) (int64, error) {
+	return deleteRawOriginalsTx(ctx, tx, `r.id IN (`+linkedOriginalsSQL(column, "@linked_subject::uuid", true)+`)`,
+		pgx.NamedArgs{"linked_subject": record.String()})
+}
+
+// deleteSubjectOriginalsTx destroys the originals tied to a contact without an
+// address: those tagged with the contact, and those of messages filed on it by
+// choice.
+func deleteSubjectOriginalsTx(ctx context.Context, tx pgx.Tx, contact ids.ContactID) (int64, error) {
+	tagged, err := deleteRawOriginalsTx(ctx, tx,
+		`r.payload_object @> jsonb_build_object('matched_subjects', jsonb_build_array(@subject::text))`,
+		pgx.NamedArgs{sqlArgSubject: contact.String()})
+	if err != nil {
+		return 0, err
+	}
+	linked, err := deleteLinkedOriginalsTx(ctx, tx, "contact_id", contact.UUID)
+	return tagged + linked, err
+}
+
+// wipeTwinsAndOriginals anonymizes the subject's lead twins and
+// destroys the originals of messages filed on them by choice.
+func wipeTwinsAndOriginals(ctx context.Context, tx pgx.Tx, contact ids.ContactID, emails []string) ([]ids.UUID, error) {
+	wiped, err := anonymizeLeadTwins(ctx, tx, contact, emails)
+	for _, lead := range wiped {
+		if err != nil {
+			break
+		}
+		_, err = deleteLinkedOriginalsTx(ctx, tx, "lead_id", lead)
+	}
+	return wiped, err
 }

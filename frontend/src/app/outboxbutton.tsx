@@ -8,8 +8,10 @@ import {
   SCHEDULED_SCREEN,
   useScheduledSends,
 } from "../features/mail/scheduledqueue";
+import { formatBadgeCount } from "../format/badgecount";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useFirstScreenSettled } from "../lib/journeymarks";
 import { navigate } from "../lib/router";
 import "./outboxbutton.css";
 
@@ -20,7 +22,12 @@ import "./outboxbutton.css";
 // It draws nothing until the queue answers, and nothing when the read fails.
 // A clock that cannot say what it holds would be a second place to be wrong.
 
+/** The outbox's count, read once the first screen's day is on screen. */
 export function OutboxButton() {
+  return useFirstScreenSettled() ? <Outbox /> : null;
+}
+
+function Outbox() {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -59,7 +66,7 @@ export function OutboxButton() {
           <span className="outbox-count">
             {/* A held message will not send itself, so it changes the colour. */}
             <Badge variant="primary" tone={held > 0 ? "warning" : "accent"}>
-              {formatNumber(total, locale)}
+              {formatBadgeCount(total, locale)}
             </Badge>
           </span>
         )}

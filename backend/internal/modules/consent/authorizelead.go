@@ -159,9 +159,8 @@ func (g *Gate) decideLeadAt(ctx context.Context, tx pgx.Tx, r connector.Recipien
 	// reviewcontext.go).
 	decided.PurposeID = sendPurpose
 	decided = applySuppression(decided, stops, sendPurpose)
-	// NO OVERRIDE ARM, unlike decideOne: nothing writes a lead vouch, so there is
-	// none to read. What keeps that true, and what owes a change beside this one
-	// the day it stops being, is overridesubject_test.go.
+	// No override arm, unlike decideOne: no door records a vouch, so no lead
+	// vouch exists to read.
 	return decided, nil
 }
 
@@ -173,8 +172,6 @@ func (g *Gate) decideLeadAt(ctx context.Context, tx pgx.Tx, r connector.Recipien
 // purpose-key arm below has read one off the record — for the same reason
 // decideResolved returns it on the contact path.
 func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase, leadID string, stops []liveStop, country RecipientCountry) (commsauthz.Decision, *ids.UUID, error) {
-	purposeKey := req.LegacyPurposeKey
-
 	// The evidence arms, before any purpose key is consulted, through the same
 	// helper the contact arm uses so the basis is recorded the same way.
 	//
@@ -186,11 +183,12 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 	address, channelProvider, channelUserID := recipientSubjectAddress(r)
 	res, err := g.resolveAndRecord(ctx, tx, req, subjectRef{
 		Kind: entityLead, ID: leadID, Address: address,
-		ChannelProvider: channelProvider, ChannelUserID: channelUserID, Country: country,
+		ChannelProvider: channelProvider, ChannelUserID: channelUserID, Country: country, SendingEntity: req.SendingEntity,
 	}, phase, stops)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
 	}
+	d = withCheckedEvidence(d, req, res)
 	if res.Supported {
 		var denied bool
 		d, denied = putClaimToEvidence(d, req.Context, res.Category)
@@ -206,7 +204,7 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 		stopped, err := withdrawalCovers(ctx, tx,
 			subjectRef{
 				Kind: entityLead, ID: leadID, Address: address,
-				ChannelProvider: channelProvider, ChannelUserID: channelUserID, Country: country,
+				ChannelProvider: channelProvider, ChannelUserID: channelUserID, Country: country, SendingEntity: req.SendingEntity,
 			}, res.Category)
 		if err != nil {
 			return commsauthz.Decision{}, nil, err
@@ -220,7 +218,11 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 		return allowOn(d, res), nil, nil
 	}
 
-	if unsupportedClaimAwaitsAnswer(req.Context, purposeKey) {
+	claimed, purposeKey, err := verdictQuestion(ctx, tx, req, res)
+	if err != nil {
+		return commsauthz.Decision{}, nil, err
+	}
+	if unsupportedClaimAwaitsAnswer(claimed, purposeKey) {
 		d.Verdict = commsauthz.VerdictReview
 		d.ReasonCode = res.Reason
 		return d, nil, nil
@@ -253,6 +255,9 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 	d.ReasonCode, err = leadRefusalReason(ctx, tx, leadID, purpose)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
+	}
+	if d.ReasonCode != commsauthz.ReasonConsentWithdrawn && purpose.Class == ClassMarketing && packRulesFor(country).optOut {
+		d.Verdict, d.ReasonCode = commsauthz.VerdictAllow, commsauthz.ReasonOptOutAllowed
 	}
 	return d, &purposeID, nil
 }
@@ -298,7 +303,7 @@ func resolveLead(ctx context.Context, tx pgx.Tx, r connector.Recipient) (string,
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM lead
-		 WHERE lower(email) = lower($1) AND archived_at IS NULL
+		 WHERE `+sameAddressSQL("email", "$1")+` AND archived_at IS NULL
 		 LIMIT 2`, r.Email)
 	if err != nil {
 		return "", false, fmt.Errorf("consent: resolve the lead: %w", err)
@@ -330,32 +335,25 @@ func resolveLead(ctx context.Context, tx pgx.Tx, r connector.Recipient) (string,
 // of its stops was made from. Anything else is refused, so the pin can only
 // narrow who a message is about, never reach somebody new.
 func (g *Gate) decidePinnedLead(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase, country RecipientCountry) (commsauthz.Decision, error) {
-	lead := req.Evidence.LeadID
-	var holds bool
-	if r.Channel == nil {
-		if err := tx.QueryRow(ctx, `
-			SELECT EXISTS (
-			    SELECT 1 FROM lead l
-			     WHERE l.id = $1 AND l.archived_at IS NULL AND lower(l.email) = lower($2)
-			) OR EXISTS (
-			    SELECT 1 FROM communication_suppression s
-			      JOIN lead l ON l.id = s.lead_id AND l.archived_at IS NULL
-			     WHERE s.lead_id = $1 AND lower(s.address) = lower($2)
-			)`, lead, r.Email).Scan(&holds); err != nil {
-			return commsauthz.Decision{}, fmt.Errorf("consent: reading whether the lead holds this address: %w", err)
-		}
-	}
-	if !holds {
-		d.Verdict = commsauthz.VerdictDeny
-		d.ReasonCode = commsauthz.ReasonNoSubject
-		return d, nil
-	}
-	decided, err := g.decideLeadAt(ctx, tx, r, req, d, phase, country, lead.String())
+	subject, found, err := pinnedSubjectTx(ctx, tx, req.Evidence.LeadID, r)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
-	// The pin travels to transmit on the staged evidence, so both phases decide
-	// about the same lead.
-	decided.Evidence.LeadID = lead
-	return decided, nil
+	if !found {
+		d.Verdict, d.ReasonCode = commsauthz.VerdictDeny, commsauthz.ReasonNoSubject
+		return d, nil
+	}
+	pin := req.Evidence.LeadID
+	var decided commsauthz.Decision
+	if subject.Kind == entityContact {
+		req.Evidence.LeadID = ids.Nil
+		decided, err = g.decideContactAt(ctx, tx, r, req, d, phase, country, subject.ID)
+	} else {
+		decided, err = g.decideLeadAt(ctx, tx, r, req, d, phase, country, subject.ID)
+	}
+	if err != nil {
+		return commsauthz.Decision{}, err
+	}
+	decided.Evidence.LeadID = pin
+	return requireConsentWhereNothingStandsIn(decided, country), nil
 }

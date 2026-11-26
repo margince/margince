@@ -15,6 +15,64 @@ info:
     coverage gate that walks the subscribable set.
 components:
   schemas:
+    InternalEventSdrHandoffCreated:
+      type: object
+      x-event-type: sdr_handoff.created
+      x-entity-type: sdr_handoff
+      description: A prospect handoff was recorded.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventSdrHandoffUpdated:
+      type: object
+      x-event-type: sdr_handoff.updated
+      x-entity-type: sdr_handoff
+      description: A prospect handoff changed without changing its original authorship.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventRecordAssignmentCreated:
+      type: object
+      x-event-type: record_assignment.created
+      x-entity-type: record_assignment
+      description: A record responsibility was assigned.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventRecordAssignmentUpdated:
+      type: object
+      x-event-type: record_assignment.updated
+      x-entity-type: record_assignment
+      description: A record responsibility changed.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventRecordAssignmentArchived:
+      type: object
+      x-event-type: record_assignment.archived
+      x-entity-type: record_assignment
+      description: A record responsibility ended and remains in history.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventInstructionWordingCorrected:
+      type: object
+      x-event-type: communication_instruction.updated
+      x-entity-type: communication_instruction
+      description: The original approver attested that a wording correction preserves meaning.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventScheduledWordingCorrected:
+      type: object
+      x-event-type: scheduled_send.updated
+      x-entity-type: scheduled_send
+      description: A held message retained its approval after an attested spelling or punctuation correction.
+      required: [version]
+      properties:
+        version: { type: integer, format: int64 }
+      additionalProperties: false
+
     InternalEventInternalMailHistoryCreated:
       type: object
       x-event-type: internal_mail_history.created
@@ -26,6 +84,20 @@ components:
         backfill_id: { type: string, format: uuid }
         received_after: { type: string, format: date-time }
         received_before: { type: string, format: date-time }
+      additionalProperties: false
+
+    InternalEventSharedMailboxChanged:
+      type: object
+      x-event-type: shared_mailbox.changed
+      x-entity-type: capture_connection
+      x-version: 1
+      description: >-
+        An admin connected, reconnected or disconnected a shared mailbox, changed who reads it or
+        its backup owner, or started or continued its history import.
+        Addresses, readers and credentials are omitted; consumers re-read the connection.
+      required: [change]
+      properties:
+        change: { type: string, enum: [connected, reconnected, readers_changed, visibility_changed, backup_owner_changed, disconnected, history_import_started] }
       additionalProperties: false
 
     InternalEventCaptureSettingsUpdated:
@@ -254,6 +326,21 @@ components:
           type: integer
           minimum: 0
           description: How much the occurrence handled, in quantity_unit.
+        processed:
+          type: integer
+          minimum: 0
+          description: >-
+            How much of its work a LIVE occurrence has finished so far, in the
+            unit its source counts (a website read counts pages). Absent while
+            unknown, which is not zero. Never the settled quantity: a settled
+            event carries none.
+        total:
+          type: integer
+          minimum: 1
+          description: >-
+            How much the occurrence expects to finish in all, in the unit of
+            processed. Absent while the source does not know its length, and a
+            ceiling it might stop short of is not a length.
         quantity_unit:
           type: string
           enum: [messages, records, contacts, documents]
@@ -318,9 +405,9 @@ components:
           type: integer
           minimum: 0
           description: >-
-            How many items the run held when it was opened, AFTER expired
-            snoozes resurfaced — what the rep actually saw, not what the night
-            ranked. Zero is a real and interesting reading: a quiet morning
+            How many items the GET /v1/brief response showed, with an expired
+            snooze counted as back — what the rep actually saw, not what the
+            night ranked. Zero is a real and interesting reading: a quiet morning
             that was still opened.
         unread:
           type: integer
@@ -363,42 +450,6 @@ components:
       description: >-
         A rep dismissed a suggestion for the whole workspace. The company is
         suggested again only on evidence newer than the dismissal.
-      additionalProperties: false
-    InternalEventLegalReviewRequested:
-      type: object
-      x-event-type: legal_review.requested
-      x-entity-type: ""
-      description: >-
-        A deal's side asked legal to review the deal. Entity-less, which keeps
-        it off the subscribable set: the review's note and pack are for holders
-        of the legal_review grant, and no webhook consumer can be held to that.
-        The deal and the review stay on the audit row the emit points at.
-      required:
-        - has_note
-      properties:
-        has_note:
-          type: boolean
-          description: Whether the request carries a note for legal.
-      additionalProperties: false
-    InternalEventLegalReviewDecided:
-      type: object
-      x-event-type: legal_review.decided
-      x-entity-type: ""
-      description: >-
-        Legal answered a request. An approval has already settled the deal's
-        legal_reviewed criteria in the same transaction, so no consumer has to.
-      required:
-        - outcome
-      properties:
-        outcome:
-          type: string
-          description: approved or changes_needed.
-      additionalProperties: false
-    InternalEventLegalReviewWithdrawn:
-      type: object
-      x-event-type: legal_review.withdrawn
-      x-entity-type: ""
-      description: The deal's side took back an open request.
       additionalProperties: false
     InternalEventTagSuggestionCreated:
       type: object

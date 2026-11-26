@@ -1,0 +1,18 @@
+{
+  "tool": "read_details",
+  "action": "link_candidates",
+  "verb": "list_company_link_candidates",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

@@ -1,9 +1,7 @@
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import { sourceFileAt } from "../../scripts/lib/source-tree";
+import { stable } from "../format/collate";
 import { en } from "../i18n/en";
+import { fieldsARecordUpdateWrites } from "../testing/updatebodies";
 import {
   historyFieldLabel,
   historyFieldLabelKey,
@@ -26,112 +24,13 @@ import {
 // It reads the generated types rather than the six Go stores for the same
 // reason the client does: the contract is the seam between the two trees.
 
-const schemaPath = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "api",
-  "schema.d.ts",
-);
-
-function schemaSource(): ts.SourceFile {
-  return sourceFileAt(schemaPath);
-}
-
-// The property of one named type in the contract, wherever it is declared.
-function propertyOf(
-  source: ts.SourceFile,
-  owner: string,
-  property: string,
-): ts.PropertySignature | undefined {
-  let found: ts.PropertySignature | undefined;
-  const walk = (node: ts.Node) => {
-    if (
-      ts.isPropertySignature(node) &&
-      ts.isIdentifier(node.name) &&
-      node.name.text === owner &&
-      node.type
-    ) {
-      for (const member of membersOf(node.type)) {
-        if (ts.isIdentifier(member.name) && member.name.text === property) {
-          found = member;
-        }
-      }
-    }
-    ts.forEachChild(node, walk);
-  };
-  walk(source);
-  return found;
-}
-
-function membersOf(node: ts.TypeNode): ts.PropertySignature[] {
-  if (ts.isIntersectionTypeNode(node)) {
-    return node.types.flatMap(membersOf);
-  }
-  if (!ts.isTypeLiteralNode(node)) {
-    return [];
-  }
-  return node.members.filter(ts.isPropertySignature);
-}
-
-// The record types a field-history row can be ABOUT — the contract's own
-// closed enum, so a type added upstream widens this corpus rather than
-// slipping past it.
-function recordTypesInHistory(source: ts.SourceFile): string[] {
-  const entityType = propertyOf(source, "FieldHistoryEntry", "entity_type");
-  const declared = entityType?.type;
-  if (!declared || !ts.isUnionTypeNode(declared)) {
-    return [];
-  }
-  return declared.types
-    .filter(ts.isLiteralTypeNode)
-    .map((member) => member.literal)
-    .filter(ts.isStringLiteral)
-    .map((literal) => literal.text);
-}
-
-// Body fields that tell the update what else to do and are never a column it
-// writes, so no history row can name them.
-// deal_filing uses the relink audit instead of changing an activity column.
-const INSTRUCTIONS = new Set(["convert_lead_ids", "deal_filing"]);
-
-function updateBodyName(recordType: string): string {
-  return `Update${recordType[0].toUpperCase()}${recordType.slice(1)}Request`;
-}
-
-function fieldsARecordUpdateWrites(): Map<string, string[]> {
-  const source = schemaSource();
-  const byType = new Map<string, string[]>();
-  for (const recordType of recordTypesInHistory(source)) {
-    const body = updateBodyName(recordType);
-    let fields: string[] = [];
-    const walk = (node: ts.Node) => {
-      if (
-        ts.isPropertySignature(node) &&
-        ts.isIdentifier(node.name) &&
-        node.name.text === body &&
-        node.type
-      ) {
-        fields = membersOf(node.type)
-          .map((member) => member.name)
-          .filter(ts.isIdentifier)
-          .map((name) => name.text)
-          .filter((name) => !INSTRUCTIONS.has(name));
-      }
-      ts.forEachChild(node, walk);
-    };
-    walk(source);
-    byType.set(recordType, fields);
-  }
-  return byType;
-}
-
 describe("history field labels", () => {
   // Under-recognition is the one way this gate could break in silence: a
   // narrowed walk reads a smaller contract, finds nothing to check and passes.
   // So the corpus is proved to be a real one before it is used.
   it("finds every record type's update body in the contract", () => {
     const byType = fieldsARecordUpdateWrites();
-    expect([...byType.keys()].sort()).toEqual([
+    expect([...byType.keys()].sort(stable)).toEqual([
       "activity",
       "company",
       "contact",
@@ -149,7 +48,7 @@ describe("history field labels", () => {
     const unnamed = [...fieldsARecordUpdateWrites().values()]
       .flat()
       .filter((field) => historyFieldLabelKey(field) === undefined)
-      .sort();
+      .sort(stable);
     expect(unnamed, `fields with no label key: ${unnamed.join(", ")}`).toEqual(
       [],
     );
@@ -160,9 +59,15 @@ describe("history field labels", () => {
   // renamed column keeps looking covered while the new spelling renders raw.
   it("has no word for a field no record update writes", () => {
     const written = new Set([...fieldsARecordUpdateWrites().values()].flat());
+    // A renamed column keeps its word while audit rows written before the
+    // rename still carry the old key; each entry names the column it became.
+    const renamedBefore = new Map([["lifecycle", "status"]]);
+    for (const [old, now] of renamedBefore) {
+      expect(written.has(now), `${old} was renamed to ${now}`).toBe(true);
+    }
     const orphans = historyFieldLabelled()
-      .filter((field) => !written.has(field))
-      .sort();
+      .filter((field) => !written.has(field) && !renamedBefore.has(field))
+      .sort(stable);
     expect(
       orphans,
       `labels for unwritten fields: ${orphans.join(", ")}`,
@@ -175,6 +80,15 @@ describe("history field labels", () => {
     );
     expect(historyFieldLabel("win_probability_set_by", (k) => en[k])).toBe(
       en["history.field.win_probability_set_by"],
+    );
+  });
+
+  it("names each stored address column with the Address dialog's word", () => {
+    expect(historyFieldLabel("address_line1", (k) => en[k])).toBe(
+      "Street and number",
+    );
+    expect(historyFieldLabel("address_postal_code", (k) => en[k])).toBe(
+      "Postal code",
     );
   });
 
@@ -240,6 +154,20 @@ describe("synthetic AuditEvent field labels", () => {
     expect(historyFieldLabel("lifted_by", (k) => en[k])).toBe("Lifted by");
     expect(historyFieldLabel("lifted_by_level", (k) => en[k])).toBe(
       "Lifted at level",
+    );
+  });
+});
+
+describe("company profile field labels", () => {
+  it("names every profile field the company history can show as the profile tab does", () => {
+    expect(historyFieldLabel("register_vat", (k) => en[k])).toBe(
+      "Register / VAT ID",
+    );
+    expect(historyFieldLabel("registered_address", (k) => en[k])).toBe(
+      "Registered address",
+    );
+    expect(historyFieldLabel("icp", (k) => en[k])).toBe(
+      "Ideal customer profile",
     );
   });
 });

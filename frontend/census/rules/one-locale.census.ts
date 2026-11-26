@@ -26,6 +26,7 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
+import { stable } from "../../src/format/collate";
 import { type CensusFile, type CensusRule, frontendRoot } from "../tree";
 
 /**
@@ -43,7 +44,7 @@ export function intlFormatters(): string[] {
           .supportedLocalesOf === "function"
       );
     })
-    .sort();
+    .sort(stable);
 }
 
 /**
@@ -165,7 +166,7 @@ function namesTheMapping(
  * `Intl.DateTimeFormat().resolvedOptions()` asks which zone the runtime is in
  * and renders nothing. The zone-by-purpose rule owns that question.
  */
-function isZoneLookup(node: ts.Node): boolean {
+export function isZoneLookup(node: ts.Node): boolean {
   const parent = node.parent;
   return (
     parent !== undefined &&
@@ -174,53 +175,89 @@ function isZoneLookup(node: ts.Node): boolean {
   );
 }
 
-/**
- * The local names bound to an Intl formatter, by destructure, declaration or
- * assignment. A call through one is judged like a direct call.
- */
-function intlAliases(
-  parsed: ts.SourceFile,
-  formatters: readonly string[],
-): Set<string> {
-  const aliases = new Set<string>();
-  const isIntl = (node: ts.Expression): boolean =>
-    ts.isIdentifier(node) && node.text === "Intl";
+/** The local names bound to the `Intl` namespace and to its formatters. */
+export type IntlBindings = Readonly<{
+  namespaces: ReadonlySet<string>;
+  formatters: ReadonlySet<string>;
+}>;
+
+// `Intl` itself, a name bound to it, or the global's own property.
+function namesIntl(node: ts.Expression, namespaces: ReadonlySet<string>) {
+  return (
+    (ts.isIdentifier(node) && namespaces.has(node.text)) ||
+    (ts.isPropertyAccessExpression(node) && node.name.text === "Intl")
+  );
+}
+
+/** Each local name a declaration or assignment binds to `value`. */
+function bindingsOf(parsed: ts.SourceFile) {
+  const found: { name: string; value: ts.Expression }[] = [];
   const walk = (node: ts.Node): void => {
     if (
       ts.isBinaryExpression(node) &&
       node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
       ts.isIdentifier(node.left)
     ) {
-      const member = memberOfIntl(node.right, isIntl);
-      if (member !== undefined && formatters.includes(member)) {
-        aliases.add(node.left.text);
-      }
+      found.push({ name: node.left.text, value: node.right });
     }
-    if (ts.isVariableDeclaration(node) && node.initializer !== undefined) {
-      const init = node.initializer;
-      if (ts.isObjectBindingPattern(node.name) && isIntl(init)) {
-        for (const element of node.name.elements) {
-          const source = element.propertyName ?? element.name;
-          if (
-            ts.isIdentifier(source) &&
-            formatters.includes(source.text) &&
-            ts.isIdentifier(element.name)
-          ) {
-            aliases.add(element.name.text);
-          }
-        }
-      }
-      if (ts.isIdentifier(node.name)) {
-        const member = memberOfIntl(init, isIntl);
-        if (member !== undefined && formatters.includes(member)) {
-          aliases.add(node.name.text);
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer !== undefined
+    ) {
+      found.push({ name: node.name.text, value: node.initializer });
+    }
+    node.forEachChild(walk);
+  };
+  walk(parsed);
+  return found;
+}
+
+/**
+ * The local names bound to `Intl` or to one of its formatters, by destructure,
+ * declaration or assignment. A call through one is judged like a direct call.
+ */
+export function intlAliases(
+  parsed: ts.SourceFile,
+  formatters: readonly string[],
+): IntlBindings {
+  const bound = bindingsOf(parsed);
+  // A name bound to a name bound to Intl is Intl too, so repeat to a fixpoint.
+  const namespaces = new Set(["Intl"]);
+  for (let size = 0; size !== namespaces.size; ) {
+    size = namespaces.size;
+    for (const { name, value } of bound) {
+      if (namesIntl(value, namespaces)) namespaces.add(name);
+    }
+  }
+  const isIntl = (node: ts.Expression) => namesIntl(node, namespaces);
+  const aliases = new Set<string>();
+  for (const { name, value } of bound) {
+    const member = memberOfIntl(value, isIntl);
+    if (member !== undefined && formatters.includes(member)) aliases.add(name);
+  }
+  const walk = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isObjectBindingPattern(node.name) &&
+      node.initializer !== undefined &&
+      isIntl(node.initializer)
+    ) {
+      for (const element of node.name.elements) {
+        const source = element.propertyName ?? element.name;
+        if (
+          ts.isIdentifier(source) &&
+          formatters.includes(source.text) &&
+          ts.isIdentifier(element.name)
+        ) {
+          aliases.add(element.name.text);
         }
       }
     }
     node.forEachChild(walk);
   };
   walk(parsed);
-  return aliases;
+  return { namespaces, formatters: aliases };
 }
 
 /** The `Intl` member this expression names, by either spelling. */
@@ -242,17 +279,16 @@ function memberOfIntl(
 }
 
 /** The Intl formatter a callee reaches: `Intl.X`, `Intl["X"]` or an alias. */
-function formatterReached(
+export function formatterReached(
   callee: ts.Expression,
   formatters: readonly string[],
-  aliases: ReadonlySet<string>,
+  bindings: IntlBindings,
 ): string | undefined {
-  if (ts.isIdentifier(callee) && aliases.has(callee.text)) {
+  if (ts.isIdentifier(callee) && bindings.formatters.has(callee.text)) {
     return callee.text;
   }
-  const member = memberOfIntl(
-    callee,
-    (candidate) => ts.isIdentifier(candidate) && candidate.text === "Intl",
+  const member = memberOfIntl(callee, (candidate) =>
+    namesIntl(candidate, bindings.namespaces),
   );
   return member !== undefined && formatters.includes(member)
     ? member
@@ -331,20 +367,8 @@ export function findingsIn(
 // that pins a locale to make an expectation writable.
 const pinnedLocales: { file: string; why: string }[] = [
   {
-    file: "format/address.ts",
-    why: "countryBeyondCity names a country code in EVERY locale this build speaks to compare it with a city, whichever language the city was typed in. The names are matched, never shown.",
-  },
-  {
-    file: "format/format.dates.ts",
-    why: "hourInZone reads an hour back as a number. The output is never shown, so the pinned tag fixes the parsing and not the wording.",
-  },
-  {
-    file: "format/calendarday.ts",
-    why: "Both sites format in en-CA to COMPUTE, never to render: en-CA yields ISO-8601 YYYY-MM-DD, which is what makes the string comparable and parseable back into parts. A reader's locale here would be a defect — the bucketing would read 'yesterday' because an ICU format changed under it.",
-  },
-  {
-    file: "format/timezone.ts",
-    why: "zoneOffsetMs formats in en-US with hourCycle h23 to READ an instant's wall clock back as numbers and derive a zone offset from it. The output is parsed, never shown, so a locale that varied would change the arithmetic rather than the wording. assertIanaZone builds a formatter only to make Intl reject an unknown zone, and shows nothing.",
+    file: "format/formatters.ts",
+    why: "pinnedDateTimeFormat builds the en-CA and en-US formatters whose output calendarday.ts and timezone.ts read back as numbers and never show. graphemeSegmenter passes no locale, because Unicode grapheme clusters are the same in every locale.",
   },
   {
     file: "features/sign-in/fiscalyear.test.ts",
@@ -441,7 +465,7 @@ export const rule: CensusRule = {
       ...all
         .filter(({ file }) => !pinned.has(file))
         .map(({ file, line, text }) => `${file}:${line}: ${text}`)
-        .sort(),
+        .sort(stable),
       // An entry whose last pinned site is gone is a standing permission.
       ...pinnedLocales
         .filter(({ file }) => !covered.has(file))
@@ -454,7 +478,7 @@ export const rule: CensusRule = {
   advice:
     "A count goes through formatNumber; a date through formatDate, " +
     "formatDateAbbrev, formatDayMonth or formatDateTime; money through " +
-    "formatMoney. A rendering none of those covers builds its formatter with " +
-    "INTL_LOCALE[locale]. A file that must pin a locale earns an entry in " +
+    "formatMoney. A rendering none of those covers asks src/format/formatters.ts " +
+    "for its formatter. A file that must pin a locale earns an entry in " +
     "pinnedLocales with its reason.",
 };

@@ -32,6 +32,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
@@ -113,6 +114,14 @@ type EnsureCounterpartyInput struct {
 	// CapturedBy. A contact that already exists is never marked here: the
 	// decision that made it, or whoever edited it, stands.
 	RelationshipMark relationshipmark.Mark
+
+	// LinkOnly files the activity under a record the address already names,
+	// for a mailbox no seat owns. It creates nothing unless OwnerID is set.
+	LinkOnly bool
+	// ReaderTeam reads the mailbox a link-only ensure files for, and
+	// ReaderAuthority reads each member's authority to ask what they may read.
+	ReaderTeam      ids.UUID
+	ReaderAuthority MemberAuthority
 }
 
 // EnsureCounterpartyResult reports what the ensure did — every flag maps to
@@ -228,6 +237,14 @@ func (s *Store) ensureCapturedCounterparty(ctx context.Context, tx pgx.Tx, in En
 	if seats.Covers(in.Email, in.OwnerID) {
 		return EnsureCounterpartyResult{}, ErrCounterpartyIsSeat
 	}
+	if in.LinkOnly {
+		// A link-only ensure carries an owner only when the ladder said create
+		// for a shared mailbox's backup owner, and then only an unnamed address mints.
+		linked, named, err := s.linkExistingCounterparty(ctx, tx, in)
+		if err != nil || named || in.OwnerID.IsZero() {
+			return linked, err
+		}
+	}
 	if err := s.ensureContact(ctx, tx, in, &res); err != nil {
 		return EnsureCounterpartyResult{}, err
 	}
@@ -307,6 +324,9 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 	}
 	parsed := ParseContactName(in.DisplayName, in.Email)
 	name := parsed.Full
+	// The sign is judged on the address's own domain, so a caller's Domain
+	// field cannot raise or hide one.
+	sign := impersonationSign(in.DisplayName, owndomain.OfAddress(in.Email))
 	// The workspace's own consumer-mail list travels with the candidate: the
 	// employer-agreement term must judge a shared domain the same way capture
 	// does, or an admin's carve-out would hold on one side and not the other.
@@ -353,12 +373,10 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 				return err
 			}
 		}
-		if quarantineSuspect(in.DisplayName, in.Domain) {
-			// The header carries an impersonation tell. A new record would be
-			// created quarantined for review; an EXISTING one has no such
-			// label to wear, so the only safe answer is to learn nothing from
-			// this message. The activity is still captured either way.
-			return nil
+		if sign != "" {
+			// Nothing is learned from a message that shows a sign. It labels a
+			// contact with no verdict yet, and the activity is captured either way.
+			return raiseImpersonationWarningTx(ctx, tx, match.ContactID, sign)
 		}
 		return fillMissingContactName(ctx, tx, match.ContactID, parsed, res)
 	}
@@ -368,18 +386,18 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		return acqErr
 	}
 	id, err := createContact(ctx, tx, s, match, ContactSpec{
-		CaptureEmployer: &in,
-		EmployerResult:  res,
-		FullName:        name,
-		FirstName:       nameColumn(parsed.First),
-		LastName:        nameColumn(parsed.Last),
-		OwnerID:         ownerFromUUID(&in.OwnerID),
-		Visibility:      visibilityFor(in.OwnerScoped),
-		Narrowing:       narrowingFor(in.OwnerScoped, in.NarrowedBecause),
-		Quarantined:     quarantineSuspect(in.DisplayName, in.Domain),
-		Emails:          []ContactEmailInput{{Email: in.Email, EmailType: emailTypeWork, IsPrimary: true}},
-		Source:          in.Source,
-		CapturedBy:      in.CapturedBy,
+		CaptureEmployer:  &in,
+		EmployerResult:   res,
+		FullName:         name,
+		FirstName:        nameColumn(parsed.First),
+		LastName:         nameColumn(parsed.Last),
+		OwnerID:          ownerFromUUID(&in.OwnerID),
+		Visibility:       visibilityFor(in.OwnerScoped),
+		Narrowing:        narrowingFor(in.OwnerScoped, in.NarrowedBecause),
+		QuarantineReason: sign,
+		Emails:           []ContactEmailInput{{Email: in.Email, EmailType: emailTypeWork, IsPrimary: true}},
+		Source:           in.Source,
+		CapturedBy:       in.CapturedBy,
 
 		RelationshipMark:      in.RelationshipMark,
 		RelationshipMarkSetBy: markSetBy(in.RelationshipMark, in.CapturedBy),
@@ -390,8 +408,8 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		// vocabulary's strongest claim on a cold prospect's file.
 		//
 		// The TIME comes from the earliest message this counterparty is a party
-		// to, not from this write: the sink runs after the capture commits and
-		// the verdict path can run days later. See acquiredwhen.go.
+		// to, not from this write. A later message, or the verdict path days
+		// later, can be what creates the record. See acquiredwhen.go.
 		Acquisition: acquisitionFromCapture(ctx, tx, acquired, in.Email, in.ActivityID),
 	})
 	if err != nil {
@@ -433,22 +451,28 @@ func (s *Store) linkActivityToContact(ctx context.Context, tx pgx.Tx, activityID
 	// An archived survivor is still the right subject: the message happened,
 	// and this call's caller logs faults rather than failing the capture, so
 	// refusing here would drop the link silently rather than loudly.
+	// One statement resolves the redirect under its lock and writes the link,
+	// so a capture pays one round trip for both.
 	var canonical ids.ContactID
-	if err := tx.QueryRow(ctx,
-		`SELECT coalesce(merged_into_id, id) FROM contact WHERE id = $1 FOR UPDATE`,
-		contactID).Scan(&canonical); err != nil {
-		return fmt.Errorf("contacts: resolving the contact this activity belongs to: %w", err)
+	if err := tx.QueryRow(ctx, `
+		WITH canonical AS (
+		  SELECT coalesce(merged_into_id, id) AS id FROM contact WHERE id = $2 FOR UPDATE),
+		linked AS (
+		  INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		  SELECT $1, 'contact', canonical.id FROM canonical
+		   WHERE NOT EXISTS (
+		     SELECT 1 FROM activity_link l
+		      WHERE l.activity_id = $1 AND l.entity_type = 'contact' AND l.contact_id = canonical.id))
+		SELECT id FROM canonical`,
+		activityID, contactID).Scan(&canonical); err != nil {
+		return fmt.Errorf("contacts: linking activity to its contact: %w", err)
 	}
 	contactID = canonical
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_link (activity_id, entity_type, contact_id)
-		SELECT $1, 'contact', $2
-		WHERE NOT EXISTS (
-			SELECT 1 FROM activity_link WHERE activity_id = $1 AND entity_type = 'contact' AND contact_id = $2)`,
-		activityID, contactID); err != nil {
-		return fmt.Errorf("contacts: linking activity to contact: %w", err)
+	if err := nameContactAmongParticipants(ctx, tx, activityID, contactID); err != nil {
+		return err
 	}
-	return nameContactAmongParticipants(ctx, tx, activityID, contactID)
+	_, err := s.stampProvenSenders(ctx, tx, []ids.UUID{activityID.UUID}, contactID)
+	return err
 }
 
 func resolveCapturedContact(ctx context.Context, tx pgx.Tx, candidate ContactCandidate, email string) (ContactResolution, ids.LeadID, error) {

@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "response_metrics",
+  "verb": "get_response_metrics",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only"
+  ],
+  "refused_for": [
+    "rep"
+  ]
+}

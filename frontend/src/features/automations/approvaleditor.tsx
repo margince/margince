@@ -1,51 +1,33 @@
-import { useQuery } from "@tanstack/react-query";
-import { useId } from "react";
-import { api } from "../../api/client";
-import { ActionRow } from "../../design-system/actionrow";
-import { AppLink } from "../../design-system/applink";
+import { type ReactNode, useRef } from "react";
+import { useAssignableUserOptions } from "../../components/assigneepicker";
 import {
-  SummaryFields,
-  summaryPartsWithout,
-  summarySentence,
-} from "../../design-system/approvalsummary";
+  RosterFailedLine,
+  useRosterPartial,
+  useRosterPartialHint,
+} from "../../components/entityref";
+import {
+  type AssignedRecord,
+  assignedRecord,
+} from "../../components/recordassignments.queries";
+import { ActionRow } from "../../design-system/actionrow";
 import {
   Button,
-  Disclosure,
   Field,
-  Modal,
+  type FieldControl,
   Textarea,
   TextInput,
 } from "../../design-system/atoms";
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
-import { DecisionEvidence } from "../../design-system/decisioncard.content";
-import {
-  decisionEvidence,
-  withoutRepeatedLead,
-} from "../../design-system/decisioncard.payload";
-import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
-import { Heading } from "../../design-system/heading";
+import { RecordFormDialog } from "../../design-system/recordformdialog";
+import { focusFirstRefused } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { isRealCalendarDay } from "../../format/calendarday";
-import { formatDateTime } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { approvalHref } from "../../lib/approvalhref";
-import { summaryWords } from "../../lib/approvalpreviewfields";
-import type { Approval } from "../../lib/approvals.queries";
-import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
-import {
-  EDITABLE_FIELDS,
-  type EditableField,
-  humanizeKind,
-} from "./approvalkind";
-import { useApprovalNames } from "./approvalresponsibility";
-import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
+import { type EditableField, humanizeKind } from "./approvalkind";
 import "./approvalrow.css";
-import { QueryGate } from "../../design-system/querystates";
-import { unwrap } from "../../lib/problem";
-import { useViewerZone } from "../../lib/viewerzone";
 import "../../design-system/querystates.css";
 
 // The two slots an ApprovalRow hands to `DecisionCard`: the "view everything"
@@ -54,266 +36,17 @@ import "../../design-system/querystates.css";
 // proposal, the other rewrites the part of it this installation lets a contact
 // change — and the row is already the longest thing on the surface.
 
-/**
- * What the inline editor offers for one proposal.
- *
- * The default is every string field as a text box, which is the right shape
- * for a payload whose values are prose. A kind that declares an EDITABLE_FIELDS
- * policy gets exactly the fields it named, in the shape it named them —
- * identifiers and enums are not prose, and offering them as free text asks a
- * reader to type their way into a refusal.
- */
-export function editableStrings(
-  kind: string,
-  change: Record<string, unknown>,
-): EditableField[] {
-  if (kind === "commitment_task" && typeof change.existing_task_id === "string")
-    return [];
-  // Own-property only: `kind` is a wire string, and a value named `constructor`
-  // would otherwise find a function on Object's prototype, pass the truthy
-  // check, and crash the queue on .filter instead of falling back to the
-  // generic editor.
-  const declared = Object.hasOwn(EDITABLE_FIELDS, kind)
-    ? EDITABLE_FIELDS[kind]
-    : undefined;
-  if (declared) {
-    // A declared field the payload does not carry is skipped rather than
-    // rendered empty: an editor offering a field that is not in the change
-    // would ADD it on approve, and the server reads an added path as a
-    // retargeted edit.
-    return declared.filter((entry) => typeof change[entry.field] === "string");
-  }
-  return Object.entries(change)
-    .filter((entry): entry is [string, string] => typeof entry[1] === "string")
-    .map(([field]) => ({ field, as: "text" }) as const);
-}
-
-/**
- * AC-2: the row's "view everything" affordance — the proposal's own fields, the
- * evidence behind them and the timestamps the summary/evidence-chip row
- * necessarily elides.
- */
-export function ApprovalDetailModal({
-  approvalId,
-  open,
-  onClose,
-}: Readonly<{ approvalId: string; open: boolean; onClose: () => void }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  // An approval is a thing the reader must act on, so its timestamps belong on
-  // the reader's own clock rather than the record's.
-  const zone = useViewerZone();
-  const headingId = useId();
-  const detail = useQuery({
-    queryKey: ["approval", approvalId],
-    enabled: open,
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/approvals/{id}", {
-          params: { path: { id: approvalId } },
-        }),
-      );
-    },
-  });
-  return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId} intent="drawer">
-      <DrawerHead>
-        <Heading size="large" id={headingId} className="t-h2">
-          {t("decision.detail")}
-        </Heading>
-      </DrawerHead>
-      <DrawerBody>
-        {open && (
-          <QueryGate query={detail} pendingLabel={t("decision.detailLoading")}>
-            {(approval) => (
-              <>
-                <ApprovalDetailBody
-                  approval={approval}
-                  locale={locale}
-                  zone={zone}
-                />
-                {/* A pending request is answered on its decision card; the
-                    detail only reads it. */}
-                {approval.status === "pending" && (
-                  <AppLink
-                    href={approvalHref(approval.id)}
-                    className="link-button"
-                    onClick={onClose}
-                  >
-                    {t("decision.openToDecide")}
-                  </AppLink>
-                )}
-              </>
-            )}
-          </QueryGate>
-        )}
-      </DrawerBody>
-    </Modal>
-  );
-}
-
-/**
- * What "view everything" shows.
- *
- * Ordered the way a reader reads a decision rather than the way the row is
- * stored: the sentence saying what is being asked, then what the proposal says
- * in named fields, then when it was asked, then the quoted evidence behind it.
- *
- * The summary leads and used to be absent entirely. It is the one field the
- * server documents as prose ("the sentence a human reads before deciding"), and
- * a dialog that opened on `deal_id` while omitting it was showing the reader
- * everything except the question.
- *
- * Only the raw payload stays behind the disclosure, and only for a kind that has
- * already said what its fields mean — there it is reference material for
- * somebody checking what the server actually staged. The target version and the
- * `agent:<id>` that proposed it are gone from this surface entirely: neither
- * names a contact or describes a change, so a reader can do nothing with them,
- * and one click away rather than zero does not make them useful.
- */
-function ApprovalDetailBody({
-  approval,
-  locale,
-  zone,
-}: Readonly<{
-  approval: Approval;
-  locale: ReturnType<typeof useLocale>["locale"];
-  zone: string;
-}>) {
-  const t = useT();
-  const change = (approval.proposed_change ?? {}) as Record<string, unknown>;
-  const approvalNames = useApprovalNames([approval]);
-  const readerZone = useViewerZone();
-  const display = resolveDisplay(
-    approval.kind,
-    change,
-    t,
-    stagedDayFormatter(locale, readerZone),
-    approvalNames,
-    approval.requested_decider_id,
-    approval.assignee_inactive,
-    approval.preview,
-    locale,
-    readerZone,
-  );
-  const sentence = summarySentence(approval);
-  const named = withoutRepeatedLead(display, sentence).filter(
-    (entry) => entry.value !== null,
-  );
-  // The raw payload is shown ONCE, and where it goes says what it is. A kind
-  // that named its fields has already told the reader what the proposal says,
-  // so the keys behind that are reference material; a kind that named none has
-  // nothing else to show, so they are the content.
-  const rawPayload = <RawPayload change={change} />;
-  return (
-    <div className="form-stack">
-      {sentence && <p className="t-body">{sentence}</p>}
-      <SummaryFields
-        parts={summaryPartsWithout(
-          approval.summary_parts,
-          new Set(named.map((entry) => entry.field)),
-        )}
-        words={summaryWords(t)}
-      />
-      <ApprovalTarget approval={approval} />
-      <ApprovalDecider approval={approval} />
-      {named.length > 0
-        ? named.map((entry) => (
-            <FieldLine
-              key={entry.field}
-              name={entry.label}
-              value={entry.value ?? ""}
-            />
-          ))
-        : rawPayload}
-      {askedOn(approval, locale, zone, t).map(([label, value]) => (
-        <FieldLine key={label} name={label} value={value} />
-      ))}
-      <DecisionEvidence
-        evidence={decisionEvidence(approval)}
-        collapsed={false}
-      />
-      {named.length > 0 && (
-        <Disclosure summary={t("decision.detailTechnical")}>
-          <div className="form-stack">{rawPayload}</div>
-        </Disclosure>
-      )}
-    </div>
-  );
-}
-
-// The payload as the wire spells it. A nested document prints as its JSON
-// rather than as "[object Object]".
-function RawPayload({
-  change,
-}: Readonly<{ change: Readonly<Record<string, unknown>> }>) {
-  return (
-    <>
-      {Object.entries(change).map(([key, value]) => (
-        <FieldLine
-          key={key}
-          name={key}
-          value={typeof value === "string" ? value : JSON.stringify(value)}
-        />
-      ))}
-    </>
-  );
-}
-
-/**
- * When the question was raised, and when it was settled.
- *
- * These two used to sit behind the technical disclosure, labelled `created_at`
- * and `decided_at` beside a uuid. They are not technical: how long a proposal
- * has been waiting is one of the few things on this dialog a reader actually
- * weighs, and it was filed with the debugging material because it arrived on
- * the wire next to it.
- *
- * The rest of that block is gone from this surface rather than moved. A target
- * version and a `proposed_by` of `agent:<id>` name no contact and describe no
- * change — there is nothing a reader can do with either, and putting them one
- * click away rather than zero does not make them useful.
- */
-function askedOn(
-  approval: Approval,
-  locale: ReturnType<typeof useLocale>["locale"],
-  zone: string,
-  t: ReturnType<typeof useT>,
-): [string, string][] {
-  const asked: [string, string][] = [
-    [
-      t("decision.detailAsked"),
-      formatDateTime(approval.created_at, locale, zone),
-    ],
-  ];
-  if (approval.decided_at) {
-    asked.push([
-      t("decision.detailDecided"),
-      formatDateTime(approval.decided_at, locale, zone),
-    ]);
-  }
-  return asked;
-}
-
-// One label over one value, set as prose whether the value is a contact's own
-// words or a uuid the wire spells.
-function FieldLine({ name, value }: Readonly<{ name: string; value: string }>) {
-  return (
-    <div className="field">
-      <span className="t-label">{name}</span>
-      <p className="approval-detail-value t-body">{value}</p>
-    </div>
-  );
-}
-
 /** Outcomes that keep the row mounted. Already-decided is not one: its refetch
- *  unmounts the row, so `useDecisionSink` says it at screen level. */
+ *  unmounts the row, so the screen says it. */
 export function DecideOutcome({
   decide,
   skewKey,
   alreadyDecided,
   onReRead,
+  shown = true,
 }: Readonly<{
+  /** False while a dialog over the card draws the same outcome itself. */
+  shown?: boolean;
   decide: { isError: boolean; error: unknown };
   skewKey: MessageKey | null;
   alreadyDecided: boolean;
@@ -321,6 +54,7 @@ export function DecideOutcome({
 }>) {
   const t = useT();
   const generic = decide.isError && !skewKey && !alreadyDecided;
+  if (!shown) return null;
   return (
     <>
       {generic && <ErrorLine error={decide.error} />}
@@ -333,6 +67,10 @@ export function DecideOutcome({
       )}
     </>
   );
+}
+
+function isBlank(value: string | undefined): boolean {
+  return (value ?? "").trim() === "";
 }
 
 /**
@@ -360,19 +98,9 @@ export function editableSeed(entry: EditableField, staged: unknown): string {
   return entry.as === "date" && !isRealCalendarDay(staged) ? "" : staged;
 }
 
-/**
- * The inline staged-draft editor: the string fields of the proposed_change, in
- * the shape the kind declared for them, going up as `edited_payload`.
- *
- * It is handed to the card as its `editor` slot rather than living inside the
- * primitive, and that boundary is the point: an edit re-enters the admission
- * gate from scratch on the server (re-tiered, re-RBAC'd, new diff_hash —
- * ADR-0036), so what it may offer is a question about THIS kind and this
- * contract, which is screen knowledge. The card knows how to draw a decision;
- * it does not know what this installation lets a contact change.
- */
-export function StagedEditor({
+function useStagedParts({
   disabled,
+  required = [],
   acceptLabel,
   fields,
   draft,
@@ -380,8 +108,77 @@ export function StagedEditor({
   pending,
   onApprove,
   onCancel,
-}: Readonly<{
+  records,
+}: StagedEditorProps) {
+  const t = useT();
+  const blank = required.some((field) => isBlank(draft[field]));
+  const root = useRef<HTMLDivElement>(null);
+  const fieldControls = (
+    <>
+      {fields.map((entry) =>
+        entry.as === "doer" ? (
+          <DoerField
+            key={entry.field}
+            records={records}
+            label={entry.label ? t(entry.label) : entry.field}
+            value={draft[entry.field] ?? ""}
+            onChange={(value) => onChange(entry.field, value)}
+          />
+        ) : (
+          <Field
+            key={entry.field}
+            label={entry.label ? t(entry.label) : entry.field}
+            required={required.includes(entry.field)}
+            error={
+              required.includes(entry.field) && isBlank(draft[entry.field])
+                ? t("decision.fieldRequired")
+                : undefined
+            }
+          >
+            {(control) => (
+              <EditorControl
+                entry={entry}
+                control={control}
+                value={draft[entry.field] ?? ""}
+                onChange={(value) => onChange(entry.field, value)}
+              />
+            )}
+          </Field>
+        ),
+      )}
+    </>
+  );
+  const approve = (
+    <Button
+      variant="primary"
+      pending={pending}
+      disabled={disabled}
+      onClick={(event) => {
+        // Each blank required field already says so; the press goes there.
+        if (blank) {
+          focusFirstRefused(root.current);
+        } else if (!refuseUnreadableField(event.currentTarget)) {
+          onApprove();
+        }
+      }}
+    >
+      {acceptLabel ?? t("decision.approveEdited")}
+    </Button>
+  );
+  const cancel = (
+    <Button disabled={pending} onClick={onCancel}>
+      {t("deals.cancel")}
+    </Button>
+  );
+  return { root, fieldControls, approve, cancel };
+}
+
+type StagedEditorProps = Readonly<{
+  /** The records the proposed work is about; their named colleagues lead the doer picker. */
+  records?: readonly AssignedRecord[];
   disabled?: boolean;
+  /** Fields that may not be sent blank. */
+  required?: readonly string[];
   acceptLabel?: string;
   fields: readonly EditableField[];
   draft: Record<string, string>;
@@ -389,83 +186,224 @@ export function StagedEditor({
   pending: boolean;
   onApprove: () => void;
   onCancel: () => void;
-}>) {
-  const t = useT();
+}>;
+
+/**
+ * The staged-draft editor: the string fields of the proposed_change, in
+ * the shape the kind declared for them, going up as `edited_payload`.
+ *
+ * It is handed to the card as its `editor` slot, not built into the card.
+ * The server admits an edit again from scratch (new tier, RBAC and diff_hash).
+ * What it may offer is screen knowledge of the kind; the card only draws a
+ * decision.
+ */
+export function StagedEditor(props: StagedEditorProps) {
+  const { root, fieldControls, approve, cancel } = useStagedParts(props);
   return (
-    <div className="form-stack approval-editor" data-date-scope>
-      {fields.map((entry) => (
-        <Field
-          key={entry.field}
-          label={entry.label ? t(entry.label) : entry.field}
-        >
-          {(control) =>
-            entry.as === "choice" ? (
-              <Select
-                {...control}
-                options={entry.options.map((option) => {
-                  // The VALUE stays the wire enum — it is what gets submitted.
-                  // Only what the reader sees is translated, and an option the
-                  // kind declared no label for degrades to its own words rather
-                  // than to an identifier.
-                  const label = entry.optionLabels?.[option];
-                  return {
-                    value: option,
-                    label: label ? t(label) : humanizeKind(option),
-                  };
-                })}
-                value={draft[entry.field] ?? ""}
-                onChange={(value) => onChange(entry.field, value)}
-              />
-            ) : entry.as === "date" ? (
-              <DateInput
-                {...control}
-                // A staged date that is not a day shows as an empty box the
-                // reader can fill, not as text the field would refuse.
-                value={isoOrBlank(draft[entry.field])}
-                onChange={(event) => onChange(entry.field, event.target.value)}
-              />
-            ) : entry.as === "textarea" ? (
-              <Textarea
-                {...control}
-                rows={12}
-                value={draft[entry.field] ?? ""}
-                onChange={(event) => onChange(entry.field, event.target.value)}
-              />
-            ) : (
-              <TextInput
-                {...control}
-                value={draft[entry.field] ?? ""}
-                onChange={(event) => onChange(entry.field, event.target.value)}
-              />
-            )
-          }
-        </Field>
-      ))}
+    <div className="form-stack approval-editor" data-date-scope ref={root}>
+      {fieldControls}
       <ActionRow
         primary={
           /* The edited approve is the same write as the plain one and was the
              one path with no gate at all, so a second press sent a second
              verdict. */
-          <Button
-            variant="primary"
-            pending={pending}
-            disabled={disabled}
-            onClick={(event) => {
-              if (!refuseUnreadableField(event.currentTarget)) {
-                onApprove();
-              }
-            }}
-          >
-            {acceptLabel ?? t("decision.approveEdited")}
-          </Button>
+          approve
         }
       >
         {/* Cancel keeps its word: leaving the editor without a verdict is not a
             verb any glyph says, and an X here would be read as Reject. */}
-        <Button disabled={pending} onClick={onCancel}>
-          {t("deals.cancel")}
-        </Button>
+        {cancel}
       </ActionRow>
     </div>
   );
+}
+
+/**
+ * The staged-draft editor in the app's one form dialog. The caller mounts it
+ * only while editing, so each opening starts from the draft the caller seeds.
+ * `outcome` is the decision's refusal, drawn inside because the dialog covers
+ * the card that would otherwise show it.
+ */
+export function StagedEditDialog({
+  unsaved,
+  outcome,
+  returnFocusTo,
+  ...editor
+}: StagedEditorProps &
+  Readonly<{
+    /** Typed text the dialog's Escape, X and backdrop must ask about. */
+    unsaved: boolean;
+    outcome?: ReactNode;
+    returnFocusTo?: () => HTMLElement | null;
+  }>) {
+  const t = useT();
+  const { root, fieldControls, approve, cancel } = useStagedParts(editor);
+  return (
+    <RecordFormDialog
+      open
+      title={t("trust.edit")}
+      onClose={editor.onCancel}
+      fieldCount={editor.fields.length}
+      unsaved={unsaved}
+      closeDisabled={editor.pending}
+      returnFocusTo={returnFocusTo}
+      form={
+        <div className="form-stack approval-editor" data-date-scope ref={root}>
+          {fieldControls}
+          {outcome}
+        </div>
+      }
+      actions={
+        <>
+          {cancel}
+          {approve}
+        </>
+      }
+    />
+  );
+}
+
+/**
+ * Who does the accepted work: the reader by default, or a colleague. Agent
+ * seats are left out, and a failed or partial roster says so, as in every
+ * picker that hands work to somebody (`TaskAssigneeField`).
+ */
+function DoerField({
+  label,
+  value,
+  onChange,
+  records,
+}: Readonly<{
+  records?: readonly AssignedRecord[];
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+}>) {
+  const t = useT();
+  const { options, roster } = useAssignableUserOptions(true, records);
+  const partialHint = useRosterPartialHint(useRosterPartial("user", true));
+  return (
+    <>
+      <Field label={label} hint={partialHint}>
+        {(control) => (
+          <Select
+            {...control}
+            options={[{ value: "", label: t("approval.doerMe") }, ...options]}
+            value={value}
+            onChange={onChange}
+          />
+        )}
+      </Field>
+      <RosterFailedLine kind="user" roster={roster} />
+    </>
+  );
+}
+
+/** One staged field's control, in the shape its kind declared. */
+function EditorControl({
+  entry,
+  control,
+  value,
+  onChange,
+}: Readonly<{
+  entry: EditableField;
+  control: FieldControl;
+  value: string;
+  onChange: (next: string) => void;
+}>) {
+  switch (entry.as) {
+    case "choice":
+      return (
+        <ChoiceSelect
+          entry={entry}
+          control={control}
+          value={value}
+          onChange={onChange}
+        />
+      );
+    case "date":
+      // A staged date that is not a day shows as an empty box the reader can
+      // fill, not as text the field would refuse.
+      return (
+        <DateInput
+          {...control}
+          value={isoOrBlank(value)}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      );
+    case "textarea":
+      return (
+        <Textarea
+          {...control}
+          rows={12}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      );
+    default:
+      return (
+        <TextInput
+          {...control}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      );
+  }
+}
+
+/**
+ * A wire enum offered by its labels. The VALUE stays the enum, which is what
+ * gets submitted; an option with no label degrades to its own words.
+ */
+function ChoiceSelect({
+  entry,
+  control,
+  value,
+  onChange,
+}: Readonly<{
+  entry: Extract<EditableField, { as: "choice" }>;
+  control: FieldControl;
+  value: string;
+  onChange: (next: string) => void;
+}>) {
+  const t = useT();
+  return (
+    <Select
+      {...control}
+      options={entry.options.map((option) => {
+        const label = entry.optionLabels?.[option];
+        return {
+          value: option,
+          label: label ? t(label) : humanizeKind(option),
+        };
+      })}
+      value={value}
+      onChange={onChange}
+    />
+  );
+}
+
+/**
+ * The records a promise or follow-up card is about: a promise's links, or a
+ * follow-up's deal. Link entries carry the server's field names.
+ */
+export function cardRecords(
+  change: Readonly<Record<string, unknown>> | undefined,
+): AssignedRecord[] {
+  const links = Array.isArray(change?.links) ? change.links : [];
+  const linked = links.flatMap((link: unknown) =>
+    typeof link === "object" &&
+    link !== null &&
+    "EntityType" in link &&
+    "EntityID" in link &&
+    typeof link.EntityType === "string" &&
+    typeof link.EntityID === "string"
+      ? assignedRecord(link.EntityType, link.EntityID)
+      : [],
+  );
+  const deal =
+    typeof change?.deal_id === "string"
+      ? assignedRecord("deal", change.deal_id)
+      : [];
+  return [...linked, ...deal];
 }

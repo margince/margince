@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -23,7 +24,7 @@ type Store struct {
 	db *database.DB
 	// catalog is the fieldcatalog seam (custom-field columns); nil means no
 	// catalog is wired and every read/write runs core-columns-only.
-	catalog fieldcatalog.Reader
+	catalog storekit.FieldCatalog
 	// clock is the "today" a phase transition is stamped against; injected so
 	// duration folding is deterministic in tests.
 	clock func() time.Time
@@ -32,6 +33,10 @@ type Store struct {
 	// relationship table a project's companies ride on.
 	attachCompany    AttachCompany
 	projectCompanies ProjectCompanies
+	projectCustomers ProjectCustomers
+	// checkDeal and attachDeal link the deal a project comes from (dealseam.go).
+	checkDeal  CheckDeal
+	attachDeal AttachDeal
 }
 
 // NewStore binds the store to the pool every tenant query runs through.
@@ -44,17 +49,23 @@ func NewStore(db *database.DB) *Store {
 		db: db, clock: time.Now,
 		attachCompany:    refusingAttachCompany(),
 		projectCompanies: refusingProjectCompanies(),
+		projectCustomers: refusingProjectCustomers(),
+		checkDeal:        refusingCheckDeal(),
+		attachDeal:       refusingAttachDeal(),
 	}
 }
 
 // WithCompanyEdges wires the seams that put a company on a project and read the
 // companies back. Compose binds them to modules/contacts, which owns the table.
-func (s *Store) WithCompanyEdges(attach AttachCompany, list ProjectCompanies) *Store {
+func (s *Store) WithCompanyEdges(attach AttachCompany, list ProjectCompanies, customers ProjectCustomers) *Store {
 	if attach != nil {
 		s.attachCompany = attach
 	}
 	if list != nil {
 		s.projectCompanies = list
+	}
+	if customers != nil {
+		s.projectCustomers = customers
 	}
 	return s
 }
@@ -62,7 +73,7 @@ func (s *Store) WithCompanyEdges(attach AttachCompany, list ProjectCompanies) *S
 // WithFieldCatalog wires the custom-field seam. Without it the store runs
 // core-columns-only, which is the honest answer for an installation that has
 // declared no custom fields.
-func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
+func (s *Store) WithFieldCatalog(catalog storekit.FieldCatalog) *Store {
 	s.catalog = catalog
 	return s
 }
@@ -90,6 +101,15 @@ func (s *Store) catalogColumns(ctx context.Context) ([]fieldcatalog.Column, erro
 		return nil, nil
 	}
 	return s.catalog.ActiveColumns(ctx, projectObject)
+}
+
+// catalogColumnsIn is catalogColumns on the transaction the store's entry point
+// opened, so no second connection is taken.
+func (s *Store) catalogColumnsIn(ctx context.Context, tx pgx.Tx) ([]fieldcatalog.Column, error) {
+	if s.catalog == nil {
+		return nil, nil
+	}
+	return s.catalog.ActiveColumnsIn(ctx, tx, projectObject)
 }
 
 // CustomColumns is the catalog's answer, carried from a caller that had to

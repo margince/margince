@@ -1,0 +1,6 @@
+{
+  "verb": "list_available_models",
+  "checks": [
+    "ai_routing.read"
+  ]
+}

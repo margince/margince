@@ -29,8 +29,9 @@ import {
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { downloadBytes, filenameFromDisposition } from "../../lib/download";
+import { useHealthScope } from "../../lib/healthscope";
+import { LISTS_KEY } from "../../lib/listkeys";
 import {
-  LISTS_KEY,
   type List,
   type ListMember,
   type ListRecordType,
@@ -112,11 +113,12 @@ export function isMemberSource(type: ListRecordType): type is MemberSource {
  * A list of a type the record lists do not serve reads nothing.
  */
 function useListMembers(list: List, source: MemberSource | undefined) {
+  const readerScope = useHealthScope();
   const members = useInfiniteQuery({
-    queryKey: ["lists", "members", list.id, list.version],
+    queryKey: ["lists", "members", list.id, list.version, readerScope ?? ""],
     initialPageParam: FIRST_PAGE,
     queryFn:
-      source === undefined
+      source === undefined || readerScope === undefined
         ? skipToken
         : ({ pageParam }) =>
             listedPage(source, list.id, pageParam ?? undefined),

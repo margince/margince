@@ -333,3 +333,40 @@ func TestASuppressionClearsTheQuestionsContext(t *testing.T) {
 		t.Fatal("a refused domain still says its site was never read")
 	}
 }
+
+// A question's sender is read by the shared sender rule. After the address
+// moves on, a row naming the former holder keeps naming them, and a bare row
+// names nobody.
+func TestAQuestionNamesTheSenderOfAMovedAddressByTheSenderRule(t *testing.T) {
+	for _, attributed := range []bool{true, false} {
+		e := setupDedupe(t)
+		ctx := e.as()
+		former := e.openTriageFirst(ctx, t, "anna@moved.test", "Anna Former", "moved.test")
+		if _, err := e.store.ResolveUnreadableDomainTriage(ctx, ResolveDomainTriageInput{Domain: "moved.test"}); err != nil {
+			t.Fatal(err)
+		}
+		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+			if _, err := tx.Exec(ctx, `UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`, former.ContactID); err != nil {
+				return err
+			}
+			_, err := tx.Exec(ctx, `
+				WITH holder AS (INSERT INTO contact (full_name, owner_id, visibility, source, captured_by)
+				  VALUES ('New Holder', $2, 'workspace', 'manual', 'human:seed') RETURNING id),
+				address AS (INSERT INTO contact_email (contact_id, email, source, captured_by)
+				  SELECT id, 'anna@moved.test', 'manual', 'human:seed' FROM holder)
+				UPDATE activity_participant SET contact_id = CASE WHEN $3 THEN $1::uuid END
+				 WHERE role = 'from' AND address = 'anna@moved.test'`, former.ContactID, e.rep, attributed)
+			return err
+		}); err != nil {
+			t.Fatalf("moving the address: %v", err)
+		}
+
+		got := e.questionAbout(ctx, t, "moved.test").Context
+		if attributed && (got.ContactCount != 1 || len(got.Contacts) != 1 || got.Contacts[0].ID != former.ContactID) {
+			t.Fatalf("attributed: context = %+v, want the former holder %v named", got, former.ContactID)
+		}
+		if !attributed && (got.ContactCount != 0 || got.SenderAddress != "anna@moved.test") {
+			t.Fatalf("bare: context = %+v, want the address and no contact", got)
+		}
+	}
+}

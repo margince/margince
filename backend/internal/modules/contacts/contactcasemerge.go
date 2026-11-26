@@ -35,7 +35,7 @@ func (s *Store) executeCaseMerge(ctx context.Context, tx pgx.Tx, plan caseMergeP
 		if id == plan.survivor.ID {
 			continue
 		}
-		_, carry, err := s.mergeContactCarryingTx(ctx, tx, ids.From[ids.ContactKind](id), plan.survivorID(), nil, active)
+		_, carry, err := s.mergeContactCarryingTx(ctx, tx, ids.From[ids.ContactKind](id), plan.survivorID(), nil, active, plan.prefer)
 		if err != nil {
 			return crmcontracts.ContactCaseOutcome{}, err
 		}
@@ -48,7 +48,7 @@ func (s *Store) executeCaseMerge(ctx context.Context, tx pgx.Tx, plan caseMergeP
 	if _, err := storekit.AuditEventWithEvidence(ctx, tx, "merge", contactEntity, plan.survivor.ID, nil,
 		map[string]any{"merge_case": map[string]any{
 			"members": plan.selected, "survivor": plan.survivor.ID, "chosen_owner": plan.owner,
-			"shares": out.Shares, "mode": plan.mode, "policy": plan.policy,
+			"shares": out.Shares, "mode": plan.mode, "policy": plan.policy, "prefer": plan.prefer,
 		}}); err != nil {
 		return crmcontracts.ContactCaseOutcome{}, fmt.Errorf("contacts: recording the case merge: %w", err)
 	}
@@ -91,7 +91,7 @@ func (s *Store) handOverSurvivor(ctx context.Context, tx pgx.Tx, plan caseMergeP
 		return err
 	}
 	owner := ids.From[ids.UserKind](plan.owner)
-	if _, err := s.updateContactInTx(ctx, tx, plan.survivorID(), UpdateContactInput{OwnerID: &owner}, active); err != nil {
+	if _, err := s.writeContactInTx(ctx, tx, plan.survivorID(), UpdateContactInput{OwnerID: &owner}, active); err != nil {
 		return fmt.Errorf("contacts: handing the survivor to its owner: %w", err)
 	}
 	carry, err := s.carryOwnerAccessTx(ctx, tx, plan.survivorID(), &plan.owner, previous, ids.Nil)

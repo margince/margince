@@ -30,9 +30,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -197,8 +197,9 @@ func (s *ProjectHealthScan) judge(ctx context.Context, candidate healthCandidate
 			return err
 		}
 		_, err = s.notices.CreateTx(ctx, tx, notices.NewNotice{
-			Recipient: ids.From[ids.UserKind](*owner),
-			Kind:      notices.KindProjectHealthAI,
+			Recipient:  ids.From[ids.UserKind](*owner),
+			Kind:       notices.KindProjectHealthAI,
+			SystemText: projectNoticeMetadata(candidate.Name, finding),
 			// The name is cut, not the subject: the store caps the subject, and
 			// a long name would push the state word off its end.
 			Subject: fmt.Sprintf(words.noticeSubject,
@@ -215,16 +216,17 @@ func (s *ProjectHealthScan) judge(ctx context.Context, candidate healthCandidate
 // hasOverdueTask answers whether an open task filed under the project is past
 // its due date. Tasks the product minted for itself are left out, because a
 // reminder nobody promised is no commitment that slipped. The sweep is ordered
-// soonest due first, undated last, so the first task alone answers.
+// slipped first, so the first task alone answers.
 func (s *ProjectHealthScan) hasOverdueTask(ctx context.Context, tx pgx.Tx, id ids.ProjectID, now time.Time) (bool, error) {
 	entityType := string(datasource.RecordProject)
 	tasks, _, err := s.activities.ListOpenTasksTx(ctx, tx, activities.ListOpenTasksInput{
 		AsOf: now, EntityType: &entityType, EntityID: &id.UUID, Limit: 1, ExcludeSystemMinted: true,
+		MostRecentlySlippedFirst: true,
 	})
 	if err != nil {
 		return false, err
 	}
-	return len(tasks) > 0 && deadline.Passed(tasks[0].DueAt, now), nil
+	return len(tasks) > 0 && tasks[0].Overdue, nil
 }
 
 // projectHealthFinding is what the two rules say of one project.
@@ -259,4 +261,28 @@ func (f projectHealthFinding) reason(words projectHealthCopy) string {
 	default:
 		return words.active
 	}
+}
+
+func projectNoticeMetadata(name string, finding projectHealthFinding) *systemtext.Message {
+	state := "project.onTrack"
+	switch finding.state() {
+	case crmcontracts.ProjectHealthStateOffTrack:
+		state = "project.offTrack"
+	case crmcontracts.ProjectHealthStateAtRisk:
+		state = "project.atRisk"
+	}
+	reason := "project.active"
+	var args []systemtext.Argument
+	switch {
+	case finding.Quiet && finding.Overdue:
+		reason = "project.quietAndOverdue"
+	case finding.Quiet:
+		reason = "project.quiet"
+	case finding.Overdue:
+		reason = "project.overdue"
+	}
+	if finding.Quiet {
+		args = []systemtext.Argument{systemtext.Count(projects.DefaultProjectQuietDays)}
+	}
+	return &systemtext.Message{Version: 1, Subject: systemtext.Sentence("project.noticeSubject", systemtext.Text(textcut.Runes(name, projectHealthNameBound)), systemtext.MessageArgument(state)), Body: systemtext.Sequence(systemtext.Sentence(reason, args...), systemtext.Sentence("project.noticeUndo"))}
 }

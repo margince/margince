@@ -1,0 +1,15 @@
+{
+  "tool": "change_state",
+  "action": "decide_commission",
+  "verb": "decide_commission_entry",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops"
+  ],
+  "refused_for": [
+    "read_only",
+    "rep"
+  ]
+}

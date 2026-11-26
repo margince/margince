@@ -5,15 +5,18 @@ package identity
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// loadFieldMasks reads the columns the principal's roles withhold — the
-// union over every role held, additive like the grants: a role that masks a
-// field masks it for the seat, whatever another role says.
+// loadFieldMasks reads the columns the principal's roles withhold. It is the
+// union over every role held: a role that masks a field masks it for the seat.
+// roleDocumentsSQL answers the same per seat, and
+// TestASeatWithTwoRolesHoldsTheUnionOfTheirMasks holds the two together.
 func loadFieldMasks(ctx context.Context, tx pgx.Tx, roleKeys []string) ([]principal.FieldMask, error) {
 	if len(roleKeys) == 0 {
 		return nil, nil
@@ -34,4 +37,26 @@ func loadFieldMasks(ctx context.Context, tx pgx.Tx, roleKeys []string) ([]princi
 		masks = append(masks, m)
 	}
 	return masks, rows.Err()
+}
+
+// MaskedByAnyRole answers the fields of the object that some role in the
+// installation masks, under any condition. A reader with no role, such as an
+// anonymous link card, may be the most masked seat, so all of them hold.
+func (s *Service) MaskedByAnyRole(ctx context.Context, object string) ([]string, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return nil, err
+	}
+	var fields []string
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT DISTINCT field FROM field_mask WHERE object = $1 ORDER BY field`, object)
+		if err != nil {
+			return err
+		}
+		fields, err = pgx.CollectRows(rows, pgx.RowTo[string])
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("identity: reading the masks on %s: %w", object, err)
+	}
+	return fields, nil
 }

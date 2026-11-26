@@ -1,0 +1,94 @@
+{
+  "scenario": "case30_a_word_for_it",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "c7c03d1509ae993d",
+    "tools": "c6923e5baf76a2f8",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "5dfb7ceebe8ce1b1607ab3992fb9d36b3ac8208f",
+    "ran_at": "2026-11-25T07:11:29Z",
+    "graded_commit": "8d1a2e3f3d0e19ca67b1a23f47f3c2d8686628c3",
+    "graded_at": "2026-11-25T10:46:52Z"
+  },
+  "usage": {
+    "input_tokens": 44006,
+    "output_tokens": 13896,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 93680,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "apply_tag",
+        "change_tags",
+        "create_tag",
+        "find_records",
+        "get_record_tags",
+        "list_tags",
+        "read_tags",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "apply_tag",
+        "change_tags",
+        "create_tag",
+        "find_records",
+        "list_tags",
+        "read_tags",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 11.5,
+      "min": 10,
+      "max": 13
+    },
+    "turns": {
+      "median": 5,
+      "min": 5,
+      "max": 5
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 68843,
+      "min": 67302,
+      "max": 70384
+    },
+    "output_tokens": {
+      "median": 6948,
+      "min": 6543,
+      "max": 7353
+    }
+  }
+}

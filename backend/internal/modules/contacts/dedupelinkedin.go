@@ -26,6 +26,9 @@ const linkedInLaneSource = "linkedin_profile"
 // under /in/, lower case. A localized host, a trailing slash, a query or a
 // deeper path names the same profile. A company or school page names none.
 //
+// storekit.LinkedInProfileKeySQL is the same key in SQL, and
+// TestTheLinkedInProfileKeyAgreesInGoAndSQL holds the two to one answer.
+//
 // It matches more loosely than the lead and contact identity key, which
 // compares the stored URL as written. That key routes a record and may not guess.
 // This lane only asks a human, so a near spelling is worth the question.
@@ -36,15 +39,6 @@ func linkedInProfileKey(handle string) (string, bool) {
 	}
 	slug, ok := linkedInProfileSlug(normalized)
 	return strings.ToLower(slug), ok
-}
-
-// linkedInProfileKeySQL is linkedInProfileKey over a stored handle, NULL when
-// the handle names no profile. idx_contact_social_linkedin_profile indexes the
-// same expression. TestTheLinkedInProfileKeyAgreesInGoAndSQL holds the two to
-// one answer.
-func linkedInProfileKeySQL(expr string) string {
-	return storekit.SQLf(
-		`substring(lower(%s) from '^(?:https?://)?(?:[a-z0-9-]+\.)*linkedin\.com/in/([^/?#]+)')`, expr)
 }
 
 // fileLinkedInTwinsAtWrite files the pairs of a LinkedIn handle a write just
@@ -82,7 +76,7 @@ func fileLinkedInTwins(ctx context.Context, tx pgx.Tx, contact ids.ContactID, ha
 		SELECT s.contact_id, s.handle
 		  FROM contact_social s
 		  JOIN contact c ON c.id = s.contact_id AND c.archived_at IS NULL
-		 WHERE s.platform = '`+SocialLinkedIn+`' AND `+linkedInProfileKeySQL("s.handle")+` = $1
+		 WHERE s.platform = '`+SocialLinkedIn+`' AND `+storekit.LinkedInProfileKeySQL("s.handle")+` = $1
 		   AND s.contact_id <> $2
 		 ORDER BY s.contact_id`, key, contact)
 	if err != nil {

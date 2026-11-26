@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/meetingrosters"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
@@ -20,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -28,22 +30,19 @@ import (
 // meeting's outside guests, from the stored Google Calendar event, as the seat
 // whose calendar stamps the meeting. A stored answer only fills an empty one.
 func meetingGuestAnswersDataTask(pool *pgxpool.Pool) datatask.Task {
-	db := InstallationDB(pool)
+	inWorkspace := installationContext(pool)
 	authority := identity.NewService(pool)
 	return datatask.Task{
 		ID: "core/1793003497_meeting_guest_answers", Version: 2,
-		Title: "Recording what calendar guests answered", Requires: []string{"core/1793003496"},
+		Title: systemtext.Literal("datatask.title.core.1793003497_meeting_guest_answers"), Requires: []string{"core/1793003496"},
 		Steps: []datatask.Step{{
 			Name: "fill_guest_answers", Limit: 100, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
 			Estimate: estimateStoredCalendarOriginals,
 			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-				if _, bound := principal.WorkspaceID(ctx); !bound {
-					ws, err := db.Workspace(ctx)
-					if err != nil {
-						return datatask.BatchOut{}, err
-					}
-					ctx = principal.WithWorkspaceID(ctx, ws.UUID)
+				ctx, err := inWorkspace(ctx)
+				if err != nil {
+					return datatask.BatchOut{}, err
 				}
 				return fillGuestAnswersBatch(ctx, tx, authority, in)
 			},
@@ -116,7 +115,7 @@ func fillAnswersFromOriginal(
 	if err != nil || !found {
 		return false, err
 	}
-	seat, stamps, err := stampingCalendarSeat(ctx, tx, meeting, calendar)
+	seat, stamps, err := meetingrosters.StampingSeat(ctx, tx, meeting, sourceGCal, calendar)
 	if err != nil || !stamps {
 		return false, err
 	}

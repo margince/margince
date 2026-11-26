@@ -24,15 +24,16 @@ const worklistAgeOutDays = 30
 // pinner names stays regardless, because a pin is someone keeping it on purpose.
 // So does a task whose reminder is due for that user: they asked to be reminded.
 //
-// pinner is a SQL expression, not a value: the reader's own placeholder for the
-// day's page, the assignee column for the team board that counts their day.
-func worklistAgeOutClause(asOf time.Time, pinner, identities string, arg func(any) int) string {
-	floor := arg(asOf.AddDate(0, 0, -worklistAgeOutDays))
-	return storekit.CurrentTaskClause("a", asOf, identities, arg) + " AND " + sprintf(`(a.kind <> 'task' OR `+storekit.TaskDueSQL("a")+` IS NULL OR `+storekit.TaskDueSQL("a")+` >= $%d
+// dayZone is the SQL zone the 30 days count in (storekit.DayZoneSQL), the list's
+// own. pinner is a SQL expression, not a value: the reader's own placeholder
+// for the day's page, the assignee column for the team board.
+func worklistAgeOutClause(asOf time.Time, pinner, identities, dayZone string, arg func(any) int) string {
+	floor := sprintf("$%d", arg(asOf.AddDate(0, 0, -worklistAgeOutDays)))
+	return storekit.CurrentTaskClause("a", asOf, identities, arg) + " AND " + sprintf(`(a.kind <> 'task' OR `+storekit.TaskDueSQL("a")+` IS NULL OR `+storekit.TaskDueFromInSQL("a", floor, dayZone)+`
 		OR `+humanReopenedTaskSQL("a")+`
 		OR (%s, a.id::text) IN (SELECT reader_id, row_id FROM %s wp WHERE wp.source = $%d)
 		OR %s)`,
-		floor, pinner, auth.EffectiveWorklistPinsSQL(arg), arg(string(crmcontracts.WorklistItemSourceTask)),
+		pinner, auth.EffectiveWorklistPinsSQL(arg), arg(string(crmcontracts.WorklistItemSourceTask)),
 		dueReminderClause("a", pinner, asOf, arg))
 }
 
@@ -56,6 +57,6 @@ func worklistClauses(in ListActivitiesInput, reader ids.UUID, arg func(any) int)
 	pinner := sprintf("$%d", arg(reader))
 	return []string{
 		auth.LiveIntakeTaskClause("a"),
-		worklistAgeOutClause(*in.WorklistAsOf, pinner, sprintf("$%d::jsonb", arg(in.mailIdentities)), arg),
+		worklistAgeOutClause(*in.WorklistAsOf, pinner, sprintf("$%d::jsonb", arg(in.mailIdentities)), storekit.DayZoneSQL(in.DayZone, arg), arg),
 	}
 }

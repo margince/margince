@@ -186,6 +186,12 @@ export function CompanyContextCard() {
     },
   });
 
+  // Each opening starts clean: a refusal from the last one is not this one's.
+  const openEditor = (fact: keyof CompanyInput) => {
+    save.reset();
+    setEditing(fact);
+  };
+
   const startRefresh = useMutation({
     // The website arrives as the mutation's VARIABLE rather than being read off
     // `form` through this closure, and that is a correctness fix rather than a
@@ -312,14 +318,8 @@ export function CompanyContextCard() {
   // whole point of that handler is to carry the read rather than re-read it.
   const read = siteRead.data;
 
-  // An unsaved edit, and the window's own question about leaving with one.
-  //
-  // The draft outlives the dialog on purpose — dismissing the dialog does not
-  // destroy what was typed, and reopening Edit shows it again — which means a
-  // card whose dialog is closed can still be holding a change nobody has
-  // committed. Compared against what the server SAID rather than against the
-  // object it said it in, for the same reason the seed effect above does: every
-  // refetch mints a new object and none of them is an edit.
+  // Compared against what the server SAID, as the seed effect does: a refetch
+  // mints a new object and is no edit.
   const stored = company.data ? profileInput(company.data) : null;
   const dirty =
     form !== null &&
@@ -350,7 +350,7 @@ export function CompanyContextCard() {
         canEdit={canEdit}
         readOnly={readOnly}
         saved={save.isSuccess}
-        onEdit={setEditing}
+        onEdit={openEditor}
       />
       {form && (
         <CompanySourceCard
@@ -358,7 +358,7 @@ export function CompanyContextCard() {
           canEdit={canEdit}
           refreshing={startRefresh.isPending}
           failure={refreshFailure}
-          onEdit={() => setEditing("website")}
+          onEdit={() => openEditor("website")}
           onRefresh={() => startRefresh.mutate(form.website ?? "")}
         />
       )}
@@ -367,9 +367,14 @@ export function CompanyContextCard() {
           form={form}
           focus={editing}
           pending={save.isPending}
-          error={save.isError ? companySaveMessage(save.error, t) : null}
+          error={save.error}
+          refusedAt={save.isError ? save.submittedAt : undefined}
+          dirty={dirty}
           onChange={setForm}
-          onClose={() => setEditing(null)}
+          onClose={() => {
+            setForm(stored);
+            setEditing(null);
+          }}
           onSubmit={() => save.mutate(trimCompanyInput(form))}
         />
       )}

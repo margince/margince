@@ -79,7 +79,7 @@ func TestAnotherReaderSeesCoverageWithoutReadingAPrivateReminder(t *testing.T) {
 
 func TestConflictingNoiseLabelStaysReviewableWithoutAutomaticAssignment(t *testing.T) {
 	e := setupLoad(t)
-	id := seedEmailRequest(t, e, "Please confirm the schedule", "noise", OwedVerdictAsksUs)
+	id := seedEmailRequest(t, e, "Please confirm the schedule", "other", OwedVerdictAsksUs)
 	store := storeKnowing(e)
 	at := requestInstant.Add(time.Hour)
 	if err := store.CaptureEmailRequests(asClassifier(e), at); err != nil {
@@ -152,6 +152,9 @@ func TestAcceptanceKeepsTheClassifierVerdictAndHonorsTheTaskText(t *testing.T) {
 	if _, err := store.SetAudience(reader, ids.From[ids.ActivityKind](id), SetAudienceInput{Audience: "selected", Members: []AudienceMember{{SubjectType: "user", SubjectID: e.rep}}}); err != nil {
 		t.Fatal(err)
 	}
+	// The importing mailbox is the connector boundary. A reminder out of
+	// private mail goes only to a seat the mail reached.
+	e.exec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, id, e.rep)
 	title, body := "Send three slots", "Check the calendar first"
 	task, _, err := store.LogActivity(reader, LogActivityInput{Kind: "task", RequestActivityID: &id, Subject: &title, Body: &body, Source: "manual"})
 	if err != nil {

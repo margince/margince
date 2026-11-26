@@ -1,0 +1,6 @@
+{
+  "verb": "open_data_subject_request",
+  "checks": [
+    "privacy_request.update"
+  ]
+}

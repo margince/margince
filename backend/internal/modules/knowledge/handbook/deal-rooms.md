@@ -26,6 +26,7 @@ To share a Deal Room with a buyer in Margince, open the deal's **Deal Room** tab
 2. Under **Permissions**, choose **Read-only** ("Can read the documents and comments.") or **Read and comment** ("Can also ask questions and reply.").
 3. Click **Invite**. The **Invitation link** is shown; click **Copy link** and send it to the buyer.
 Each buyer needs an invitation of their own: the link is personal and works once, on one device.
+After that, the buyer stays signed in on that browser for 7 days.
 Also called: invite a customer, give the client access, send the room link.
 
 ### Is the deal room link emailed to the buyer?
@@ -58,7 +59,7 @@ To pause or close a Deal Room in Margince, open the deal's **Deal Room** tab and
    - **Closed**: "Buyers can still read. Nothing new can be added."
 2. Set **Access ends on**: "Leave empty for no end date. The day is read in UTC."
 3. Click **Save changes**.
-A paused room also shows **Resume** in the notice on the tab. A closed, expired or archived room cannot be changed here: "This room has ended. Its shared content is kept as a record."
+A paused room also shows **Resume** in the notice on the tab. A closed or archived room cannot be changed here: "This room has ended. Its shared content is kept as a record."
 Without permission to change Deal Rooms, **Manage room** is not shown.
 Also called: stop sharing, lock the room, expire the room.
 
@@ -68,6 +69,12 @@ To change what a buyer reads first in Margince, open the deal's **Deal Room** ta
 - **Welcome message** is "The first paragraph a buyer reads."
 - **Your contact** is "The colleague a buyer turns to."
 Click **Save changes**. "Changes reach buyers the next time they open the room."
+
+If no active colleague is named as the buyer's contact, the room's editors see **New contact needed**.
+Open **Manage room** and choose an active colleague under **Your contact**.
+
+The buyer's page no longer names the colleague who left. Access to the room and its questions stays as it was.
+
 Also called: rename the room, edit the welcome text, change the buyer's contact.
 
 ### What does the deal room tab show?
@@ -134,6 +141,11 @@ or say anything more. They read the *live* room, so a file you later archive
 on the deal stops being there too.
 
 Nobody sets **Expired**. A room expires the moment its access end date passes.
+This holds for a paused or closed room too, and you and the buyer see the same state.
+An expired room cannot be paused or closed. To open it again, set a later end date.
+
+Once a room has expired, you can open a new Deal Room on the deal. From then on,
+the old room cannot take an end date later than the moment the new room opened.
 
 You can still **revoke somebody** from a closed room, on its page. So you can
 remove someone from a room that holds your signed contract, months after the
@@ -143,7 +155,7 @@ deal closed.
 
 A Deal Room's end date is set in **Access ends on**, under **Manage room**:
 access stops on that day. Setting one in the past takes effect at once. That is how you cut access
-short without ending the room.
+short without ending the room. A later date lets buyers in again.
 
 One thing to know: the date is read in **UTC**, not in your own time zone. If
 you are west of UTC, you lose part of that last day.
@@ -154,17 +166,29 @@ Buyers are invited to a Deal Room one address at a time. Each buyer gets a
 **personal link** that works once, on one device, and every buyer
 needs an invitation of their own.
 
+Once a buyer has opened their link, that browser keeps them signed in for
+7 days. They can close the tab and open the room page again later. A used
+link still shows "This link no longer works". **Sign out** on the buyer page
+ends access at once, which matters on a shared computer. Revoking the buyer
+or archiving the room also ends it on their next click.
+
+A paused room still shows no content, and a closed room stays read-only. One
+browser holds one room at a time, so a second room's link replaces the first.
+A tab still showing the first room then asks the buyer to open the page again.
+
 A buyer who loses their link can ask for a new one from the room's sign-in
 page, with **Request new link**. The answer is always the same: "If that
 address was invited, a new link is on its way." The request always reaches you.
+
 But a new link is only mailed where the installation can send mail. If not,
 the Access panel shows "Asked for a new link {when}. Issue one and send it
-yourself."
+yourself." The note goes away once you issue a new link, or once the buyer
+is back in the room.
 
 ### What a buyer sees, and what they never see
 A buyer in a Deal Room sees the room's title and welcome, its documents and its
-threads. They see the steward's name ("Your contact: {steward}.") and **their
-own** participant record.
+threads. They see the steward's name under **Your contact**, and **their own**
+participant record.
 
 A buyer never sees the deal, the company, the amount, any other participant, or
 anything else in your CRM.
@@ -197,8 +221,12 @@ last seen, and "Documents downloaded: {count}".
 Closing, winning or losing the deal **does not change its Deal Room**. The room
 keeps working until you pause, close or expire it.
 
-**Archiving the deal** blocks the one action that gives access back: you cannot
-resume a paused room on an archived deal. Pause and close, which take access
+**Removing a colleague** from the workspace is not held up by a room they are
+the contact of once that room has expired. If you later give that room a later
+end date, it loses its contact and asks you to name a new one.
+
+**Archiving the deal** blocks the actions that give access back. You cannot
+resume a paused room or set a later end date on an archived deal. Pause and close, which take access
 away, still work.
 
 **Erasing a contact** removes and revokes their seat. It also deletes their

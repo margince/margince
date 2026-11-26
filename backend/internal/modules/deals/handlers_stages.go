@@ -9,6 +9,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -89,6 +90,9 @@ func (h Handlers) UpdateStage(w http.ResponseWriter, r *http.Request, id crmcont
 		Position:       req.Position,
 		WinProbability: req.WinProbability,
 		IfVersion:      ifVersion,
+	}
+	if req.NameTranslations != nil {
+		in.NameTranslations = labeltranslation.FromWire(req.NameTranslations)
 	}
 	if req.Semantic != nil {
 		semantic := string(*req.Semantic)

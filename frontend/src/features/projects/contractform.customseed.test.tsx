@@ -50,6 +50,7 @@ function contract(id: string, over: Record<string, unknown>): Contract {
     title: `MSA ${id}`,
     status: "active",
     under_contract: true,
+    term_state: "in_force",
     auto_renew: false,
     value_basis: "total",
     version: 1,

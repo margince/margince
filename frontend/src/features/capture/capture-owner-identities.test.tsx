@@ -159,7 +159,7 @@ it("says what an address must look like when the server refuses it", async () =>
     ),
   ).toBeTruthy();
   await user.type(
-    screen.getByRole("textbox", { name: en["ownerIdentities.valueLabel"] }),
+    screen.getByRole("textbox", { name: /^Address or domain/ }),
     "not an address",
   );
   await user.click(
@@ -170,6 +170,28 @@ it("says what an address must look like when the server refuses it", async () =>
     await screen.findByText(en["captureValue.refusedAddress"]),
   ).toBeTruthy();
   expect(screen.queryByText(/give one email address/)).toBeNull();
+});
+
+it("says the address is required when declared empty, and sends nothing", async () => {
+  const posted = vi.fn(() => jsonResponse({}, 201));
+  installFetchStub({
+    "GET /me": meRoute({}),
+    "GET /capture/owner-identities": () => jsonResponse({ data: [] }),
+    "POST /capture/owner-identities": posted,
+  });
+  render(<OwnerIdentitiesCard />);
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: en["ownerIdentities.add"] }),
+  );
+  await user.click(
+    screen.getByRole("button", { name: en["ownerIdentities.confirm"] }),
+  );
+  expect(screen.getByText("Address or domain is required.")).toBeTruthy();
+  expect(document.activeElement).toBe(
+    screen.getByRole("textbox", { name: /^Address or domain/ }),
+  );
+  expect(posted).not.toHaveBeenCalled();
 });
 
 it("offers the add verb while the addresses are still loading", async () => {
@@ -236,6 +258,7 @@ it.each([
   [404, "not_found", "ownerIdentities.restoreGone"],
   [409, "removal_moved_on", "ownerIdentities.restoreMovedOn"],
   [409, "identity_declared_again", "ownerIdentities.restoreDeclaredAgain"],
+  [409, "domain_needs_confirmation", "ownerIdentities.restoreOnFile"],
 ] as const)(
   "words a %i %s refusal of the Undo for the reader",
   async (status, code, copy) => {
@@ -299,4 +322,141 @@ it("returns focus to the add verb once the last address is gone", async () => {
   expect(await screen.findByTestId("owner-identities-empty")).toBeTruthy();
   const add = screen.getByRole("button", { name: en["ownerIdentities.add"] });
   await waitFor(() => expect(document.activeElement).toBe(add));
+});
+
+const QUESTION = {
+  code: "domain_needs_confirmation",
+  status: 409,
+  detail: "demo.test is already on file",
+  details: { domain: "demo.test", role: "company", company_name: "Demo GmbH" },
+};
+
+// A value already on file is asked about, and only the yes sends `confirm`.
+it("asks before storing a customer's domain and resends it with confirm", async () => {
+  const bodies: unknown[] = [];
+  installFetchStub({
+    "GET /me": meRoute({}),
+    "GET /capture/owner-identities": () => jsonResponse({ data: [] }),
+    "POST /capture/owner-identities": (body) => {
+      bodies.push(body);
+      const confirmed =
+        typeof body === "object" && body !== null && "confirm" in body;
+      return confirmed
+        ? jsonResponse(identity({ kind: "domain", value: "demo.test" }), 201)
+        : jsonResponse(QUESTION, 409);
+    },
+  });
+  render(<OwnerIdentitiesCard />);
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole("button", { name: en["ownerIdentities.add"] }),
+  );
+  await user.click(
+    screen.getByRole("button", { name: en["ownerIdentities.kind.domain"] }),
+  );
+  await user.type(
+    screen.getByRole("textbox", { name: /^Address or domain/ }),
+    "demo.test",
+  );
+  await user.click(
+    screen.getByRole("button", { name: en["ownerIdentities.confirm"] }),
+  );
+
+  expect(
+    await screen.findByText(
+      "demo.test is the domain of Demo GmbH. Mail with it will no longer be captured. Add anyway?",
+    ),
+  ).toBeTruthy();
+  expect(bodies).toHaveLength(1);
+
+  await user.click(
+    screen.getByRole("button", { name: en["captureValue.addAnyway"] }),
+  );
+  await waitFor(() => expect(bodies).toHaveLength(2));
+  expect(bodies[1]).toMatchObject({
+    kind: "domain",
+    value: "demo.test",
+    confirm: true,
+  });
+});
+
+it("asks about a contact's address in its own words", async () => {
+  installFetchStub({
+    "GET /me": meRoute({}),
+    "GET /capture/owner-identities": () => jsonResponse({ data: [] }),
+    "POST /capture/owner-identities": () =>
+      jsonResponse(
+        {
+          ...QUESTION,
+          details: { domain: "alice@demo.test", role: "contact_address" },
+        },
+        409,
+      ),
+  });
+  render(<OwnerIdentitiesCard />);
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole("button", { name: en["ownerIdentities.add"] }),
+  );
+  await user.type(
+    screen.getByRole("textbox", { name: /^Address or domain/ }),
+    "alice@demo.test",
+  );
+  await user.click(
+    screen.getByRole("button", { name: en["ownerIdentities.confirm"] }),
+  );
+
+  expect(
+    await screen.findByText(
+      "alice@demo.test is a contact’s address. Mail with it will no longer be captured. Add anyway?",
+    ),
+  ).toBeTruthy();
+});
+
+it("says a consumer mail domain cannot be a whole domain, and offers no way around it", async () => {
+  installFetchStub({
+    "GET /me": meRoute({}),
+    "GET /capture/owner-identities": () => jsonResponse({ data: [] }),
+    "POST /capture/owner-identities": () =>
+      jsonResponse(
+        {
+          code: "validation_error",
+          status: 422,
+          detail: "gmail.com is a consumer mail domain",
+          details: {
+            errors: [
+              {
+                field: "value",
+                code: "consumer_mail_domain",
+                message: "gmail.com is a consumer mail domain",
+              },
+            ],
+          },
+        },
+        422,
+      ),
+  });
+  render(<OwnerIdentitiesCard />);
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole("button", { name: en["ownerIdentities.add"] }),
+  );
+  await user.click(
+    screen.getByRole("button", { name: en["ownerIdentities.kind.domain"] }),
+  );
+  await user.type(
+    screen.getByRole("textbox", { name: /^Address or domain/ }),
+    "gmail.com",
+  );
+  await user.click(
+    screen.getByRole("button", { name: en["ownerIdentities.confirm"] }),
+  );
+
+  expect(await screen.findByText(en["captureValue.consumerMail"])).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: en["captureValue.addAnyway"] }),
+  ).toBeNull();
 });

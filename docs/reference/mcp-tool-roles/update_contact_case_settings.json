@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "update_duplicate_settings",
+  "verb": "update_contact_case_settings",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

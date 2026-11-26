@@ -14,7 +14,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -92,15 +91,6 @@ type UpdateLeadSourceInput struct {
 	Intent    *SourceIntent
 	SortOrder *int
 	Active    *bool
-}
-
-var nonKeyRunes = regexp.MustCompile(`[^a-z0-9]+`)
-
-// deriveSourceKey turns "Trade show" into "trade_show" — the stable stored
-// value behind a label that may later be renamed.
-func deriveSourceKey(label string) string {
-	key := nonKeyRunes.ReplaceAllString(strings.ToLower(strings.TrimSpace(label)), "_")
-	return strings.Trim(key, "_")
 }
 
 // leadSourceColumns renders the select list. lead_count carries the caller's
@@ -241,7 +231,7 @@ func (s *Store) CreateLeadSource(ctx context.Context, in CreateLeadSourceInput) 
 	}
 	key := strings.TrimSpace(in.Key)
 	if key == "" {
-		key = deriveSourceKey(label)
+		key = values.CatalogKey(label)
 	}
 	if key == "" || key != strings.ToLower(key) {
 		return crmcontracts.LeadSource{}, &values.ParseError{Field: leadOriginKeyField, Code: codeInvalidKey, Message: "key must be a non-empty lowercase value"}

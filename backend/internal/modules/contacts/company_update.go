@@ -10,6 +10,8 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -17,7 +19,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -55,9 +56,9 @@ type UpdateCompanyInput struct {
 	// add missing, archive removed, flip is_primary). nil leaves domains
 	// untouched; an empty slice clears them.
 	Domains *[]CompanyDomainInput
-	// Lifecycle, when non-nil, moves where the account stands with us
+	// Status, when non-nil, moves where the account stands with us
 	// (ADR-0079/A124). nil leaves it untouched.
-	Lifecycle *string
+	Status *string
 	// Phone and Email, when non-nil, set or (when empty) clear the main number
 	// and the general address. nil leaves them untouched.
 	Phone *string
@@ -71,6 +72,9 @@ type UpdateCompanyInput struct {
 	// clears them, except that 'partner' cannot be dropped while the partner
 	// extension row lives.
 	RelationshipTypes *[]string
+	// ExtensionRelationshipTypes is RelationshipTypes for the `ext:<unit>:<type>`
+	// values; each half is replaced without touching the other.
+	ExtensionRelationshipTypes *[]string
 	// CustomFields carries the request body's cf_* keys. A key no active catalog
 	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
@@ -86,73 +90,102 @@ func (s *Store) UpdateCompany(ctx context.Context, id ids.CompanyID, in UpdateCo
 	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	active, err := s.activeColumns(ctx, "company")
-	if err != nil {
-		return crmcontracts.Company{}, err
-	}
 	var out crmcontracts.Company
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, "company")
+		if err != nil {
+			return err
+		}
 		out, err = s.updateCompanyInTx(ctx, tx, id, in, active)
 		return err
 	})
 	return out, err
 }
 
-// updateCompanyInTx is the edit itself: the locks it owes, the patch it
-// stages, the write, and the record of what the write did. It answers with the
-// row as it now stands.
+// ReplaceUnitCompanyTypesTx sets the extension types one unit holds on a company,
+// on the caller's transaction, and leaves every other unit's types alone. The
+// prefix is `ext:<unit>:`, so the colon keeps `ext:a:` from matching `ext:a-b:`.
+// The edit is the ordinary one: grant, row scope, audit and event are
+// UpdateCompany's.
+func (s *Store) ReplaceUnitCompanyTypesTx(
+	ctx context.Context, tx pgx.Tx, id ids.CompanyID, prefix string, values []string, active CustomColumns,
+) (crmcontracts.Company, error) {
+	if err := auth.Require(ctx, companyEntity, principal.ActionUpdate); err != nil {
+		return crmcontracts.Company{}, err
+	}
+	// Lock the row before reading the set, so two writers take turns and
+	// neither loses the other's types.
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM company WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, id); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("lock company for type edit: %w", err)
+	}
+	all, err := readLiveRelationshipTypes(ctx, tx, id)
+	if err != nil {
+		return crmcontracts.Company{}, err
+	}
+	_, held := splitRelationshipTypes(all)
+	desired := slices.DeleteFunc(held, func(v string) bool { return strings.HasPrefix(v, prefix) })
+	desired = append(desired, values...)
+	return s.updateCompanyInTx(ctx, tx, id, UpdateCompanyInput{ExtensionRelationshipTypes: &desired}, active.cols)
+}
+
+// updateCompanyInTx is the edit, then the company as it now stands.
 func (s *Store) updateCompanyInTx(
 	ctx context.Context, tx pgx.Tx, id ids.CompanyID, in UpdateCompanyInput, active []fieldcatalog.Column,
 ) (crmcontracts.Company, error) {
-	if err := auth.EnsureChangeable(ctx, tx, "company", id.UUID); err != nil {
-		return crmcontracts.Company{}, err
-	}
-	if err := lockCompanyNameWritesForEdit(ctx, tx, in); err != nil {
-		return crmcontracts.Company{}, err
-	}
-	current, err := readCompanyRow(ctx, tx, id, storekit.LiveOnly, active)
+	edit, err := s.writeCompanyInTx(ctx, tx, id, in, active)
 	if err != nil {
-		return crmcontracts.Company{}, fmt.Errorf("read company before update: %w", err)
-	}
-	if err := refuseUnreadableCompany(current, in); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	if err := checkCompanyDescription(in.Description); err != nil {
-		return crmcontracts.Company{}, err
+	if !edit.changed {
+		return withCompanyCreator(ctx, tx, edit.current)
 	}
-	if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
-		return crmcontracts.Company{}, err
+	out, err := readCompany(ctx, tx, id, storekit.LiveOnly, active)
+	if err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("read updated company: %w", err)
+	}
+	return out, nil
+}
+
+// writeCompanyInTx is the edit itself: the locks it owes, the patch it stages,
+// the write, and the record of what the write did. It reads nothing back for a
+// caller.
+//
+//gate:parent-version-door
+func (s *Store) writeCompanyInTx(
+	ctx context.Context, tx pgx.Tx, id ids.CompanyID, in UpdateCompanyInput, active []fieldcatalog.Column,
+) (recordEdit[crmcontracts.Company], error) {
+	var none recordEdit[crmcontracts.Company]
+	current, err := readCompanyToEdit(ctx, tx, id, in, active)
+	if err != nil {
+		return none, err
 	}
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 	p, err := buildCompanyPatch(ctx, tx, current, in)
 	if err != nil {
-		return crmcontracts.Company{}, err
+		return none, err
 	}
-	// A stale version answers 409 before a refused custom field answers 422.
-	if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
-		return crmcontracts.Company{}, err
+	// A stale version answers 409 before a refused custom field answers 422,
+	// and an edit that changes nothing still answers it.
+	if err := storekit.EnsureVersionMatches(current.Version, in.IfVersion); err != nil {
+		return none, err
 	}
 	if err := stageAdoptedSource(ctx, tx, id, p, in.AdoptSource); err != nil {
-		return crmcontracts.Company{}, err
+		return none, err
 	}
-	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
-		return crmcontracts.Company{}, err
+	if err := storekit.SetCustomFieldPatchIn(ctx, tx, p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+		return none, err
 	}
 
-	by, err := stageCompanyReplaceSets(ctx, tx, id, current, in, p)
+	by, err := s.stageCompanyReplaceSets(ctx, tx, id, current, in, p)
 	if err != nil {
-		return crmcontracts.Company{}, err
+		return none, err
 	}
 	if p.Empty() {
-		if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
-			return crmcontracts.Company{}, err
-		}
-		return withCompanyCreator(ctx, tx, current)
+		return recordEdit[crmcontracts.Company]{current: current}, nil
 	}
 	if in.Visibility != nil {
 		if err := refuseStaleCompanyVisibility(ctx, tx, id, current); err != nil {
-			return crmcontracts.Company{}, err
+			return none, err
 		}
 	}
 	// MOVED, not merely set. Re-sending the same name is not a re-authoring.
@@ -163,33 +196,14 @@ func (s *Store) updateCompanyInTx(
 		p.SetStamp("name_source", nameSourceHuman)
 	}
 	if err := p.ApplyGuarded(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
-		if constraint, ok := storekit.CheckViolation(err); ok && constraint == "company_owner_private_names_its_owner" {
-			return crmcontracts.Company{}, &RequiredFieldError{Field: filterOwnerID}
-		}
-		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companyLinkedInKey {
-			return crmcontracts.Company{}, &DuplicateCompanyLinkedInError{URL: deref(in.LinkedInURL)}
-		}
-		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companySourceKey {
-			return crmcontracts.Company{}, fmt.Errorf("a company with this source_system and source_id already exists: %w", apperrors.ErrConflict)
-		}
-		return crmcontracts.Company{}, fmt.Errorf("apply company patch: %w", err)
+		return none, companyPatchRefusal(err, in)
 	}
-	if err := s.relocateIfAddressMoved(ctx, tx, id, p); err != nil {
-		return crmcontracts.Company{}, err
+	if err := s.followCompanyWrite(ctx, tx, id, p, in, by); err != nil {
+		return none, err
 	}
-	if err := recordCompanyUpdate(ctx, tx, id, p, in, by); err != nil {
-		return crmcontracts.Company{}, err
-	}
-	if _, renamed := p.Moved()[fieldDisplayName]; renamed {
-		if err := s.followAnchorNameTx(ctx, tx, id); err != nil {
-			return crmcontracts.Company{}, err
-		}
-	}
-	out, err := readCompany(ctx, tx, id, storekit.LiveOnly, active)
-	if err != nil {
-		return crmcontracts.Company{}, fmt.Errorf("read updated company: %w", err)
-	}
-	return out, s.followShareOwnerTx(ctx, tx, entityCompany, id.UUID, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
+	owner := ownerAfterEdit(p, (*ids.UUID)(current.OwnerId), in.OwnerID)
+	return recordEdit[crmcontracts.Company]{current: current, changed: true},
+		s.followShareOwnerTx(ctx, tx, entityCompany, id.UUID, (*ids.UUID)(current.OwnerId), owner)
 }
 
 // recordCompanyUpdate is everything the write OWES once it has landed: the
@@ -219,8 +233,7 @@ func recordCompanyUpdate(
 	if err != nil {
 		return fmt.Errorf("audit company update: %w", err)
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-		crmcontracts.PublicEventCompanyUpdated{ChangedFields: after}); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, companyUpdatedEvent(after)); err != nil {
 		return fmt.Errorf("emit company.updated: %w", err)
 	}
 	return nil
@@ -316,10 +329,10 @@ func stampEditedDescriptionAuthor(ctx context.Context, tx pgx.Tx, id ids.Company
 // the audit row records the transition — the same shape as UpdateContact/social.
 // It answers with the captured-by principal those reconciles stamp, empty when
 // the edit touches neither set.
-func stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
+func (s *Store) stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 	current crmcontracts.Company, in UpdateCompanyInput, p *storekit.Patch,
 ) (string, error) {
-	if in.RelationshipTypes == nil && in.Domains == nil {
+	if in.RelationshipTypes == nil && in.ExtensionRelationshipTypes == nil && in.Domains == nil {
 		return "", nil
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -333,28 +346,19 @@ func stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 		}
 		*in.RelationshipTypes = deduped
 	}
-	if in.Domains != nil {
-		if err := parseCompanyDomains(*in.Domains); err != nil {
-			return "", err
-		}
-		// Collapse hosts that normalize to the same domain so the probe,
-		// reconcile, and audit-after all see one row per host.
-		*in.Domains = dedupeDomains(*in.Domains)
-		if err := ensureCompanyDomainsUnclaimedExcept(ctx, tx, id, *in.Domains); err != nil {
-			return "", err
-		}
-		// And elect the primary HERE, for the same reason and on the same
-		// slice. The reconcile elects one either way, but on a copy — so an
-		// election left to it lands on the row while the audit after-image,
-		// built from this slice, still reports the domain as ordinary. The
-		// trail would then say a company has no primary domain while the row
-		// says it does, and is_primary is exactly what admits that company to
-		// the website read the trail exists to explain.
-		live, err := livePrimaryDomain(ctx, tx, id)
+	if in.ExtensionRelationshipTypes != nil {
+		live, err := readLiveRelationshipTypes(ctx, tx, id)
 		if err != nil {
 			return "", err
 		}
-		*in.Domains = electPrimary(*in.Domains, live)
+		deduped, err := dedupeExtensionRelationshipTypes(*in.ExtensionRelationshipTypes, live)
+		if err != nil {
+			return "", err
+		}
+		*in.ExtensionRelationshipTypes = deduped
+	}
+	if err := s.stageCompanyDomains(ctx, tx, id, in); err != nil {
+		return "", err
 	}
 	changed, err := companyReplaceSetsChanged(ctx, tx, id, in)
 	if err != nil {
@@ -369,8 +373,39 @@ func stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 	return by, nil
 }
 
+// stageCompanyDomains parses, de-duplicates and vets a domain replace-set in place,
+// so the probe, the reconcile and the audit image all see the same slice.
+func (s *Store) stageCompanyDomains(ctx context.Context, tx pgx.Tx, id ids.CompanyID, in UpdateCompanyInput) error {
+	if in.Domains == nil {
+		return nil
+	}
+	if err := parseCompanyDomains(*in.Domains); err != nil {
+		return err
+	}
+	// One row per host for the probe, the reconcile and the audit image.
+	*in.Domains = dedupeDomains(*in.Domains)
+	if err := ensureCompanyDomainsUnclaimedExcept(ctx, tx, id, *in.Domains); err != nil {
+		return err
+	}
+	if err := s.refuseConsumerCompanyDomains(ctx, tx, id, *in.Domains); err != nil {
+		return err
+	}
+	// Elect the primary on this slice, so the audit after-image names the
+	// primary the reconcile writes.
+	live, err := livePrimaryDomain(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	*in.Domains = electPrimary(*in.Domains, live)
+	return nil
+}
+
 // reconcileCompanyReplaceSets lands the two replace-sets on the row the patch just
 // wrote and records each transition in the audit images the caller commits.
+//
+// Its callers have already applied the patch, which moved the version.
+//
+//gate:parent-version-door
 func reconcileCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyID, by string,
 	in UpdateCompanyInput, before, after map[string]any,
 ) error {
@@ -379,16 +414,23 @@ func reconcileCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.CompanyI
 		if err != nil {
 			return err
 		}
-		before["domains"] = domainsBefore
-		after["domains"] = domainSummaries(*in.Domains)
+		recordDomains(before, after, domainsBefore, domainSummaries(*in.Domains))
 	}
 	if in.RelationshipTypes != nil {
-		typesBefore, err := reconcileCompanyRelationshipTypes(ctx, tx, id, "manual", by, *in.RelationshipTypes)
+		typesBefore, err := reconcileCompanyRelationshipTypes(ctx, tx, id, "manual", by, *in.RelationshipTypes, false)
 		if err != nil {
 			return err
 		}
 		before["relationship_types"] = typesBefore
 		after["relationship_types"] = *in.RelationshipTypes
+	}
+	if in.ExtensionRelationshipTypes != nil {
+		typesBefore, err := reconcileCompanyRelationshipTypes(ctx, tx, id, "manual", by, *in.ExtensionRelationshipTypes, true)
+		if err != nil {
+			return err
+		}
+		before["extension_relationship_types"] = typesBefore
+		after["extension_relationship_types"] = *in.ExtensionRelationshipTypes
 	}
 	return nil
 }

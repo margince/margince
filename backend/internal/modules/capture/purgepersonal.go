@@ -13,6 +13,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -87,13 +88,9 @@ func PersonalPurgeScope(seatCol string) string {
 		   AND NOT EXISTS (
 		     SELECT 1 FROM activity_link l
 		      WHERE l.activity_id = a.id AND l.contact_id IS NOT NULL)
-		   -- Writing to an address is the T1 signal that they are a real
-		   -- counterparty, and it is the recovery path: reply to a wrongly
-		   -- judged sender and this sweep lets go.
-		   AND NOT EXISTS (
-		     SELECT 1 FROM activity c
-		      WHERE c.counterparty_email = p.email
-		        AND c.direction = 'outbound' AND c.counterparty_outbound_attested)
+		   -- A reply does not save personal mail: one answer to a doctor, by
+		   -- the seat or a colleague, must not keep it forever. A wrongly judged
+		   -- sender is recovered by a contact link or a business override.
 		   -- The forward bound. counterparty_email comes off an unauthenticated
 		   -- From header, so without this one forged message judged personal
 		   -- destroys every later mail the REAL owner of that address sends —
@@ -121,7 +118,7 @@ func PersonalPurgeScope(seatCol string) string {
 // request: both call sites pass a compile-time literal.
 func personalPurgeDue(seatCol string) string {
 	return `p.status = 'noise' AND p.kind = 'personal'
-		   AND p.resolved_at IS NOT NULL
+		   AND ` + latestResolvedSenderVerdict("p") + `
 		   AND ` + PersonalPurgeDeadline("$1", "$2") + ` <= now()
 		   AND ` + PersonalPurgeScope(seatCol)
 }
@@ -155,16 +152,15 @@ func personalPurgeDue(seatCol string) string {
 // That is List-Unsubscribe corroboration, which is evidence a message is BULK.
 // Personal mail is the opposite kind of thing and carries no such header, so
 // requiring it here would refuse every message this sweep exists for. The
-// evidence that replaces it is the scope above — inbound, connector-captured,
-// unlinked, never written to, inside the verdict's reach — plus a window four
-// times longer when no human confirmed the verdict.
+// scope above replaces it: inbound, connector-captured, unlinked, and inside
+// the verdict's reach. A verdict no human confirmed also waits four times as long.
 //
-// Read-only, and shaped like SelectPurgeSubjectTx so a preview and the sweep
-// itself get the same answer: the statutory shield is a COLUMN rather than a
-// filter, because an owner told their mail is gone must not find it still
-// there.
+// Read-only. Unlike SelectPurgeSubjectTx the shields are a filter here, so the
+// batch limit counts only mail the sweep may destroy. Otherwise a seat whose
+// oldest due mail is all held would spend every batch on it. CountPersonalKeptTx
+// reports what the shields keep, so the receipt does not depend on the batch.
 func SelectPersonalPurgeTx(
-	ctx context.Context, tx pgx.Tx, user ids.UUID, windows PersonalPurgeWindows, floor StatutoryFloor, limit int,
+	ctx context.Context, tx pgx.Tx, user ids.UUID, windows PersonalPurgeWindows, floor StatutoryFloor, limit int, activities ...ids.UUID,
 ) (PurgeSubject, error) {
 	var subject PurgeSubject
 	if user == ids.Nil || limit <= 0 {
@@ -178,15 +174,20 @@ func SelectPersonalPurgeTx(
 	// contributes a variable number of arguments ahead of it.
 	args = append(args, limit)
 	limitAt := "$" + strconv.Itoa(len(args))
+	selected := ""
+	if len(activities) > 0 {
+		args = append(args, activities)
+		selected = " AND a.id = ANY($" + strconv.Itoa(len(args)) + ")"
+	}
 	rows, err := tx.Query(ctx, `
-		SELECT a.id,
-		       `+withheldReason(shielded, floor.shieldedAs())+` AS withheld,
-		       `+importersOfActivity+` AS importers
+		SELECT a.id, '' AS withheld, `+importersOfActivity+` AS importers
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $3
 		  JOIN capture_pending_counterparty p
 		    ON p.email = a.counterparty_email AND p.owner_id = $3
 		 WHERE `+personalPurgeDue("$3")+`
+		   AND a.restricted_at IS NULL
+		   AND NOT `+personalKeptByShield(shielded)+selected+`
 		 ORDER BY a.id
 		 LIMIT `+limitAt, args...)
 	if err != nil {
@@ -252,4 +253,24 @@ func SeatsWithPersonalMailDueTx(
 		return nil, fmt.Errorf("capture: listing seats with personal mail due: %w", err)
 	}
 	return out, nil
+}
+
+// LockPersonalPurgeSenderTx takes the sender locks before the activity lock.
+// The final selector runs after that lock and keeps these until commit.
+func LockPersonalPurgeSenderTx(ctx context.Context, tx pgx.Tx, user, activity ids.UUID) error {
+	var address string
+	err := tx.QueryRow(ctx, `SELECT coalesce(counterparty_email, '') FROM activity WHERE id = @id AND restricted_at IS NULL`, pgx.NamedArgs{"id": activity}).Scan(&address)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("capture: reading a personal purge sender: %w", err)
+	}
+	if address == "" {
+		return nil
+	}
+	if err := storekit.LockSeatAddressChecks(ctx, tx, address); err != nil {
+		return err
+	}
+	return lockSenderDecisionTx(ctx, tx, user, address)
 }

@@ -3,6 +3,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
 import { analyticsContextOptions } from "../features/analytics/analytics.context";
 import { reportingCatalogOptions } from "../features/analytics/reporting.queries";
+import { stable } from "../format/collate";
 import { sessionOptions } from "../lib/session";
 import { meFixture } from "../testing/mefixture";
 import { prefetchAnalytics } from "./analytics-prefetch";
@@ -39,7 +40,7 @@ it("shares the authenticated reads with the screen's query options", async () =>
   });
   const cache = client();
   await prefetchAnalytics(cache);
-  expect(paths.sort()).toEqual([
+  expect(paths.sort(stable)).toEqual([
     "/v1/analytics/context",
     "/v1/analytics/framework",
     "/v1/analytics/metrics",
@@ -67,7 +68,7 @@ it("does not read protected catalogs, pipelines or company for an ungranted seat
     return Response.json({ data: [] });
   });
   await prefetchAnalytics(cache);
-  expect(paths.sort()).toEqual([
+  expect(paths.sort(stable)).toEqual([
     "/v1/analytics/context",
     "/v1/company/context/capabilities",
     "/v1/installation/settings",

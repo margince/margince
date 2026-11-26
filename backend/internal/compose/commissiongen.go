@@ -71,8 +71,7 @@ func NewCommissionGen(pool *pgxpool.Pool, ledger *commissions.Store, partner *co
 // answers nil, so the group keeps flowing rather than wedging on somebody
 // else's traffic.
 func (g *CommissionGen) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Entity.ID == ids.Nil || env.Entity.Type != commissionEntityDeal ||
-		env.Type != deals.EventDealStageChanged {
+	if !events.CommissionsTypes.Has(env.Type) || env.Entity.ID == ids.Nil || env.Entity.Type != commissionEntityDeal {
 		return nil
 	}
 	moved, err := deals.DecodeStageChanged(env.Payload)
@@ -141,10 +140,10 @@ func (g *CommissionGen) accrue(ctx context.Context, env events.Envelope, moved d
 			"deal", env.Entity.ID.String(),
 			"attribution", *moved.PartnerAttribution, "tier_set", tier != nil)
 		return nil
-	case err != nil:
-		return err
 	}
-	return nil
+	// The ledger reads archived deals and partners, so ErrNotFound means the
+	// deal or the partner no longer exists. No retry finds it.
+	return events.UnactionableIfGone(err, "deal", env.Entity.ID)
 }
 
 // reverse voids whatever live entry the undone win produced.

@@ -63,6 +63,8 @@ type IntroRequest struct {
 // less than the model would make "which wrote this" a question about content
 // rather than about phrasing.
 type introFacts struct {
+	// subjects are the contacts whose data the draft carries.
+	subjects  []ids.UUID
 	colleague string
 	// greeting is the colleague's chosen greeting name, empty when they chose
 	// none; colleagueGreeting decides what the draft actually opens with.
@@ -105,7 +107,7 @@ func (s *Service) IntroRequestDraft(
 	if asker, ok := principal.Actor(ctx); ok &&
 		req.ViaUserID == ids.From[ids.UserKind](asker.UserID) {
 		return crmcontracts.CompanyEmailDraft{}, fmt.Errorf(
-			"company360: an introduction is asked of somebody else: %w",
+			"an introduction is asked of somebody else: %w",
 			apperrors.ErrInvalidArgument)
 	}
 	// The custom-field catalog BEFORE the transaction opens. It takes a
@@ -121,7 +123,7 @@ func (s *Service) IntroRequestDraft(
 	}
 	if req.Function != nil {
 		return crmcontracts.CompanyEmailDraft{}, fmt.Errorf(
-			"company360: a function narrows an ask with no contact named, and this one names a contact: %w",
+			"a function narrows an ask with no contact named, and this one names a contact: %w",
 			apperrors.ErrInvalidArgument)
 	}
 	var facts introFacts
@@ -171,6 +173,7 @@ func (s *Service) introFactsFor(
 		return introFacts{}, err
 	}
 	facts := introFacts{
+		subjects:  []ids.UUID{req.ContactID.UUID},
 		colleague: route.DisplayName,
 		greeting:  greeting,
 		contact:   who.fullName,

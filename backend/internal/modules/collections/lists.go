@@ -21,8 +21,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 type Store struct {
@@ -40,6 +42,8 @@ type Store struct {
 	// dealAmount is a deal's worth in the base currency, as SQL over alias t.
 	// The rate sheet belongs to deals and the rule to compose, which injects it.
 	dealAmount string
+	// winChance renders the win chance of every deal; see WithWinChance.
+	winChance func(ctx context.Context, tx pgx.Tx, deal string, arg func(any) int) (string, error)
 	// baseCurrencyOf reads the installation's base currency; identity owns it.
 	baseCurrencyOf func(ctx context.Context, tx pgx.Tx) (string, error)
 	// ruleUses reads the active automation rules that watch or write a list;
@@ -106,6 +110,18 @@ var memberEntityTables = func() map[string]bool {
 	}
 	return m
 }()
+
+// acceptsEntityType answers whether a tag or a list may point at a type. It
+// takes a core record type or a kind an extension declared. A declared kind
+// has the `ext:<unit>:<kind>` form. The check reads the registry, because a
+// list would close the set again.
+func acceptsEntityType(entityType string) bool {
+	if memberEntityTables[entityType] {
+		return true
+	}
+	_, declared := recordkinds.Lookup(entityType)
+	return declared
+}
 
 // entityTypeField names the input every polymorphic refusal on this surface
 // points at.
@@ -329,10 +345,10 @@ func (s *Store) CreateList(ctx context.Context, in CreateListInput) (listRow, er
 // or none on a Live List, a filter the engine cannot compile, an unknown
 // sharing setting.
 func (s *Store) checkNewList(ctx context.Context, in *CreateListInput) error {
-	if strings.TrimSpace(in.Name) == "" {
+	if !values.HasVisibleText(in.Name) {
 		return &BadInputError{Field: nameField, Reason: "a list needs a name"}
 	}
-	if !memberEntityTables[in.EntityType] {
+	if !acceptsEntityType(in.EntityType) || kindUnavailable(ctx, in.EntityType) {
 		return &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
 	}
 	if in.ListType == "" {
@@ -469,11 +485,16 @@ func ensureListVisible(ctx context.Context, tx pgx.Tx, id ids.ListID) error {
 type BadInputError struct {
 	Field  string
 	Reason string
+	// Code is the contract's name for the refusal; empty is the general `invalid`.
+	Code string
 }
 
 func (e *BadInputError) Error() string { return "collections: " + e.Field + ": " + e.Reason }
 
 // FieldFault names the list or tag argument that was rejected.
 func (e *BadInputError) FieldFault() (field, code, message string) {
+	if e.Code != "" {
+		return e.Field, e.Code, e.Reason
+	}
 	return e.Field, "invalid", e.Reason
 }

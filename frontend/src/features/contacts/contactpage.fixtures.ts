@@ -302,3 +302,76 @@ export const chatConversation: View = {
   },
   conversation_memory: [],
 };
+
+// Dana with a work and a personal address and two numbers, the way a buyer who
+// gives out her mobile reads.
+const handle = { contact_id: "p-1", source: "manual", captured_by: "human:u1" };
+export const manyHandles: View = {
+  ...populated,
+  contact: {
+    ...populated.contact,
+    emails: [
+      {
+        ...handle,
+        id: "pe-1",
+        email: "dana@brandt.example",
+        email_type: "work",
+        is_primary: true,
+        position: 0,
+      },
+      {
+        ...handle,
+        id: "pe-2",
+        email: "dana.buyer@gmail.example",
+        email_type: "personal",
+        is_primary: false,
+        position: 1,
+      },
+    ],
+    phones: [
+      {
+        ...handle,
+        id: "pp-1",
+        phone: "+493012345678",
+        phone_type: "work",
+        is_primary: true,
+        position: 0,
+      },
+      {
+        ...handle,
+        id: "pp-2",
+        phone: "+491701234567",
+        phone_type: "mobile",
+        is_primary: false,
+        position: 1,
+      },
+    ],
+  },
+};
+
+// Four addresses: the column keeps two and folds the rest.
+export const foldedHandles: View = {
+  ...manyHandles,
+  contact: {
+    ...manyHandles.contact,
+    emails: [
+      ...(manyHandles.contact.emails ?? []),
+      {
+        ...handle,
+        id: "pe-3",
+        email: "d.buyer@brandt-fleet.example",
+        email_type: "work",
+        is_primary: false,
+        position: 2,
+      },
+      {
+        ...handle,
+        id: "pe-4",
+        email: "dana@voss.example",
+        email_type: "other",
+        is_primary: false,
+        position: 3,
+      },
+    ],
+  },
+};

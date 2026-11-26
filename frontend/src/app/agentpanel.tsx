@@ -1,14 +1,23 @@
-import { type ReactNode, type RefObject, useId } from "react";
+import {
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useId,
+  useRef,
+} from "react";
 import { AppLink } from "../design-system/applink";
 import { Heading } from "../design-system/heading";
-import type { MarginceCoreState } from "../design-system/margince-core";
-import { formatMoney, formatNumber } from "../format/format";
+import {
+  MarginceCoreScene,
+  type MarginceCoreState,
+} from "../design-system/margince-core";
+import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { useCan } from "../lib/capability";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
 import type { PanelFrame } from "./agentpanelframe";
+import { STATE_WORD, spendFigure } from "./agentrail-copy";
 import { EdgeLightSetting } from "./agentrail-edgelight";
 import { RailLine } from "./agentrail-line";
 import type { AiActivityItem, AiCall, Signals, Spend } from "./agentrail-reads";
@@ -16,31 +25,8 @@ import { Recap, RuntimeFacts } from "./agentrecap";
 import { PANEL_HEADING } from "./ai-activity-lines";
 import { type SpokenLine, speak } from "./ai-activity-speak";
 
-/**
- * Where the whole trace lives, and where a model gets bound. Same page.
- *
- * The catalog splits that page into four, and this link belongs on
- * `model-calls`, because the rail's "full log" is the call list. It moves there
- * in the change that splits the cards. Pointing at it now would land a reader
- * on Account, because the screen still renders the combined entry.
- */
-const AI_SETTINGS_HREF = routeHash(settingsHref("usage"));
-
-/**
- * The state in a word, under the agent's name.
- *
- * The Core's own vocabulary is five machine words. Printed raw, a panel opened
- * on a broken installation would say "error" at a reader in the product's own
- * voice. This is that vocabulary in the reader's language. It is total over the
- * states the Core knows, so a sixth one cannot arrive unnamed.
- */
-const STATE_WORD: Readonly<Record<MarginceCoreState, MessageKey>> = {
-  idle: "agent.state.idle",
-  ingest: "agent.state.ingest",
-  working: "agent.state.working",
-  warning: "agent.state.warning",
-  error: "agent.state.error",
-};
+// The rail's "full log" is the call list, on its own Settings page.
+const AI_CALL_LOG_HREF = routeHash(settingsHref("model-calls"));
 
 /**
  * One titled part of the report: a labelled region with its own heading. So the
@@ -119,6 +105,27 @@ function RunSection({
 }
 
 /**
+ * Frees the Core's GL context in `host` when its canvas leaves the page. Past
+ * the browser's limit the oldest context is lost, and that is the rail's.
+ */
+function useFreesCoreContext(host: RefObject<HTMLElement | null>): void {
+  useEffect(() => {
+    const canvas = host.current?.querySelector("canvas");
+    return () => {
+      // A tick later: a StrictMode remount keeps the canvas, and so its context.
+      globalThis.setTimeout(() => {
+        if (canvas && !canvas.isConnected) {
+          canvas
+            .getContext("webgl2")
+            ?.getExtension("WEBGL_lose_context")
+            ?.loseContext();
+        }
+      }, 0);
+    };
+  }, [host]);
+}
+
+/**
  * Who is reporting, how it is, and what it has cost.
  *
  * One title, and it is the agent's name. Whose report it is stays fixed while
@@ -133,35 +140,55 @@ function RunSection({
  */
 function PanelHead({
   state,
+  progress,
   name,
   line,
   spend,
+  entry,
 }: Readonly<{
   state: MarginceCoreState;
+  progress?: number;
   name: string;
   line: SpokenLine;
   spend: Spend;
+  entry: RefObject<HTMLHeadingElement | null>;
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const head = useRef<HTMLElement>(null);
+  useFreesCoreContext(head);
   return (
-    <header className="arphead">
-      {/* No orb here. The card in the rail already carries one, and a second
-          Core a few pixels away is the same object drawn at another size
-          against another ground: the two never quite agree, and a reader who
-          sees them disagree stops trusting either. The state's own word and
-          tone carry it instead. */}
-      <p className="arpstate t-caption">
-        <i aria-hidden="true" />
-        {t(STATE_WORD[state])}
-      </p>
-      {spend.allowed && spend.minor !== undefined && (
-        <p className="arpmoney t-caption t-num">
-          <b>{formatMoney(spend.minor, spend.currency, locale)}</b>{" "}
-          {t("agent.thisMonth")}
+    <header className="arphead" ref={head}>
+      {/* The panel mounts only while open, so this Core and its GL context
+          exist only then. */}
+      <MarginceCoreScene
+        state={state}
+        feed={false}
+        progress={progress}
+        size="md"
+        className="arporb"
+      />
+      {/* One wrapping row: where the two do not fit side by side, the figure
+          drops under the state rather than breaking the state's words. */}
+      <div className="arpmeta">
+        <p className="arpstate t-caption">
+          <i aria-hidden="true" />
+          {t(STATE_WORD[state])}
         </p>
-      )}
-      <Heading size="medium" as="h2" className="arptitle">
+        {spend.allowed && spend.minor !== undefined && (
+          <p className="arpmoney t-caption t-num">
+            <b>{spendFigure(spend.minor, spend.currency, locale)}</b>{" "}
+            {t("agent.thisMonth")}
+          </p>
+        )}
+      </div>
+      <Heading
+        size="medium"
+        as="h2"
+        className="arptitle"
+        tabIndex={-1}
+        ref={entry}
+      >
         {name}
       </Heading>
       <p className="arpsaying">
@@ -185,6 +212,7 @@ function PanelHead({
  */
 export function AgentPanel({
   state,
+  progress,
   line,
   running,
   unnamed,
@@ -193,9 +221,13 @@ export function AgentPanel({
   model,
   spend,
   panel,
+  focusMovedOn,
   frame,
+  id,
 }: Readonly<{
   state: MarginceCoreState;
+  /** The import's share the rail's orb rings, so the two orbs agree. */
+  progress?: number;
   /** The same line the card carries, so the two never disagree. */
   line: SpokenLine;
   /** The scheduled runs the server reports as live. */
@@ -207,18 +239,33 @@ export function AgentPanel({
   model: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>;
   spend: Spend;
   panel: RefObject<HTMLElement | null>;
+  /** Set once focus lands outside the panel after the press that opened it. */
+  focusMovedOn: RefObject<boolean>;
   frame: PanelFrame;
+  /** What the orb's `aria-controls` names. */
+  id: string;
 }>) {
   const { locale } = useLocale();
   const t = useT();
-  // The log opens Settings, which serves the AI usage page only to a seat that
+  // The log opens Settings, which serves the AI call log only to a seat that
   // may read diagnostics. A link a rep cannot follow is a dead end, so it is
   // not offered.
   const mayOpenLog = useCan("ai_diagnostics", "read");
+  // Only a press opens the panel. It mounts after its frame is measured and its
+  // code has loaded, so focus moves in here rather than at the press. A reader
+  // who moved focus elsewhere meanwhile keeps it there. The title, not the first
+  // link: that is a record the live line happens to name.
+  const entry = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (!focusMovedOn.current) {
+      entry.current?.focus();
+    }
+  }, [focusMovedOn]);
   return (
     <section
       className="arpanel"
       ref={panel}
+      id={id}
       aria-label={t("agent.panel.label")}
       style={{
         left: frame.left,
@@ -228,16 +275,24 @@ export function AgentPanel({
         maxHeight: frame.maxHeight,
       }}
     >
-      <PanelHead state={state} name={signals.name} line={line} spend={spend} />
-
-      {/* Above the counts: a run happening this second outranks a queue that
+      <PanelHead
+        state={state}
+        progress={progress}
+        name={signals.name}
+        line={line}
+        spend={spend}
+        entry={entry}
+      />
+      {/* The head stays in view; only what it reports on scrolls. */}
+      <div className="arpbody">
+        {/* Above the counts: a run happening this second outranks a queue that
           has been waiting since yesterday. Only live work is listed here. What
           settled belongs to the recap further down, so an occurrence is in one
           section or the other, never both. The section is absent when its
           list is, rather than drawn empty. */}
-      <RunSection items={running} unnamed={unnamed} />
+        <RunSection items={running} unnamed={unnamed} />
 
-      {/* Three cases, and the third is the doctrine of this surface: a count
+        {/* Three cases, and the third is the doctrine of this surface: a count
           nobody has read differs from a count of zero.
 
           Absent when the read has not answered or this seat may not make it.
@@ -248,71 +303,67 @@ export function AgentPanel({
 
           A read that answered zero is different, and it earns the sentence:
           the agent looked, and there is nothing waiting. */}
-      {signals.waiting !== undefined && (
-        <PanelSection title={t("agent.panel.needsYou")}>
-          {signals.waiting === 0 ? (
-            // A quiet line rather than a dashed plate. Before anyone read its
-            // words, the plate said "a tile failed to load". That is the
-            // opposite of what an all-clear is for.
-            //
-            // Its own sentence, not the resting line's. That line says "Nothing
-            // needs you" in the head of this same panel. One surface saying the
-            // same four words twice reads as assembled rather than written.
-            <p className="arnone t-caption">
-              {t("agent.panel.nothingWaiting")}
-            </p>
-          ) : (
-            <div className="artiles">
-              {/* The tile leads with the number a reader scans for. Its name
+        {signals.waiting !== undefined && (
+          <PanelSection title={t("agent.panel.needsYou")}>
+            {signals.waiting === 0 ? (
+              // A plain line: a dashed plate reads as a tile that failed to load.
+              // Its own words: the head may already rest on the all-clear.
+              <p className="arnone t-caption">
+                {t("agent.panel.nothingWaiting")}
+              </p>
+            ) : (
+              <div className="artiles">
+                {/* The tile leads with the number a reader scans for. Its name
                   leads with the label, because "10" alone names nothing. */}
-              <AppLink
-                className="arbox artile"
-                href="#/worklist"
-                aria-label={`${t("agent.panel.decisions")} ${formatNumber(signals.waiting, locale)}`}
-              >
-                <b>{formatNumber(signals.waiting, locale)}</b>
-                <span>{t("agent.panel.decisions")}</span>
+                <AppLink
+                  className="arbox artile"
+                  href="#/worklist"
+                  aria-label={`${t("agent.panel.decisions")} ${formatNumber(signals.waiting, locale)}`}
+                >
+                  <b>{formatNumber(signals.waiting, locale)}</b>
+                  <span>{t("agent.panel.decisions")}</span>
+                </AppLink>
+              </div>
+            )}
+          </PanelSection>
+        )}
+
+        <PanelSection
+          title={t("agent.panel.recent")}
+          action={
+            // A verb, beside the title rather than inside it. Inside the heading,
+            // it took the heading's weight and read as a second title.
+            mayOpenLog ? (
+              <AppLink className="link-button" href={AI_CALL_LOG_HREF}>
+                {t("agent.panel.fullLog")}
               </AppLink>
-            </div>
-          )}
+            ) : undefined
+          }
+        >
+          <Recap settled={settled} />
         </PanelSection>
-      )}
 
-      <PanelSection
-        title={t("agent.panel.recent")}
-        action={
-          // A verb, beside the title rather than inside it. Inside the heading,
-          // it took the heading's weight and read as a second title.
-          mayOpenLog ? (
-            <AppLink className="link-button" href={AI_SETTINGS_HREF}>
-              {t("agent.panel.fullLog")}
-            </AppLink>
-          ) : undefined
-        }
-      >
-        <Recap settled={settled} />
-      </PanelSection>
+        <PanelSection title={t("agent.panel.runtime")} className="arstrip">
+          <RuntimeFacts
+            offline={signals.offline}
+            model={model}
+            ai={signals.ai}
+            license={signals.license}
+            licenseLine={signals.licenseLine}
+          />
+        </PanelSection>
 
-      <PanelSection title={t("agent.panel.runtime")} className="arstrip">
-        <RuntimeFacts
-          offline={signals.offline}
-          model={model}
-          ai={signals.ai}
-          license={signals.license}
-          licenseLine={signals.licenseLine}
-        />
-      </PanelSection>
-
-      {/* The one thing on this panel that changes anything, under everything
+        {/* The one thing on this panel that changes anything, under everything
           that reports: a control above the report it is about would be read as
           part of the report. */}
-      <EdgeLightSetting />
+        <EdgeLightSetting />
 
-      {/* Last, and the only line here no read produced: the agent reaches no
+        {/* Last, and the only line here no read produced: the agent reaches no
           further than this reader does, whatever the rows above managed to
           answer. A footnote because it is a standing promise rather than news.
           Held by AC-shell-8. */}
-      <p className="arclaim t-caption">{t("shell.agent.scope")}</p>
+        <p className="arclaim t-caption">{t("shell.agent.scope")}</p>
+      </div>
     </section>
   );
 }

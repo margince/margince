@@ -18,7 +18,7 @@ func TestFollowUpReconcileGroundsOnlyOnAHeldMeeting(t *testing.T) {
 		if err := e.reconcile(); err != nil {
 			t.Fatal(err)
 		}
-		if got := e.pendingFollowUps(t, unreported); got != 0 {
+		if got := e.followUps(t, unreported); got != 0 {
 			t.Errorf("a past meeting with status %q staged %d follow-ups, want none", status, got)
 		}
 	}
@@ -28,7 +28,7 @@ func TestFollowUpReconcileGroundsOnlyOnAHeldMeeting(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	if _, proposal := e.followUpApproval(t, held); proposal.EvidenceKind != "meeting" {
-		t.Errorf("the follow-up cites a %q, want the held meeting", proposal.EvidenceKind)
+	if _, kind, _ := e.followUpEvidence(t, held); kind != "meeting" {
+		t.Errorf("the follow-up cites a %q, want the held meeting", kind)
 	}
 }

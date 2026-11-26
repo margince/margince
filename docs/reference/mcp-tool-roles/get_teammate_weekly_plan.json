@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "teammate_weekly_plan",
+  "verb": "get_teammate_weekly_plan",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only"
+  ],
+  "refused_for": [
+    "rep"
+  ]
+}

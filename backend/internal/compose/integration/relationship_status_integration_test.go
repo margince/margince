@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -116,7 +117,7 @@ func TestASecondaryCurrentJobAgreesAcrossCompanyReaders(t *testing.T) {
 	var coworker struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Second colleague", "source": "manual"}, nil, &coworker); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Second colleague", "source": "manual"}, nil, &coworker); status != http.StatusCreated {
 		t.Fatal(status)
 	}
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{"kind": "employment", "contact_id": coworker.ID, "company_id": e.companyID, "source": "manual"}, nil, nil); status != http.StatusCreated {
@@ -177,7 +178,7 @@ func TestTheToolSurfaceRefusesAnUnknownEmploymentStatus(t *testing.T) {
 		args string
 	}{
 		{"create_record", fmt.Sprintf(`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,"source":"manual","employment_status":"unknown"}}`, contact, company)},
-		{"update_record", fmt.Sprintf(`{"record_type":"relationship","id":%q,"fields":{"employment_status":"unknown"}}`, edge)},
+		{"update_record", fmt.Sprintf(`{"why":"A test asks for this change.","record_type":"relationship","id":%q,"fields":{"employment_status":"unknown"}}`, edge)},
 	} {
 		_, err := registry.Invoke(agent, request.tool, json.RawMessage(request.args))
 		if err == nil || !strings.Contains(err.Error(), "employment_status") {

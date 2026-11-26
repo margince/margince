@@ -1,0 +1,9 @@
+{
+  "verb": "reopen_withheld_domain",
+  "checks": [
+    "company.update"
+  ],
+  "takes": [
+    "withheld_domain"
+  ]
+}

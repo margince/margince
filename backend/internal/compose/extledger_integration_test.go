@@ -32,6 +32,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/unitsql/unitsqltest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -70,16 +71,12 @@ func auditedRow(t *testing.T, e *extRuntimeEnv, entityID ids.UUID) (auditID ids.
 // core supplies the actor, the workspace, the attribution and the trace.
 func TestAUnitsOwnWriteLandsAsARowALedgerRowAndAnEvent(t *testing.T) {
 	e := setupExtRuntime(t)
+	unitsqltest.ScratchTable(t, probeTable)
 	rt, ctx := e.runtime("alpha")
 	rowID := ids.NewV7()
 
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-		// A write that stands in for the unit's own table, which arrives with
-		// the demo unit; what this suite is about is the ledger row beside it.
-		// app_user rather than workspace since ADR-0091 retired workspace.slug
-		// — see TestRuntimeTxCommitsAndRollsBack for why a core table is the
-		// stand-in at all.
-		if _, err := tx.Exec(ctx, `UPDATE app_user SET display_name = $1 WHERE id = $2`, "ledger-probe", e.Rep1); err != nil {
+		if _, err := tx.Exec(ctx, probeUpsert, "ledger-probe", e.Rep1); err != nil {
 			return err
 		}
 		return tx.Record(ctx,

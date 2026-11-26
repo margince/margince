@@ -1,0 +1,89 @@
+{
+  "scenario": "case70_clear_my_notices",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "b1519291c1be3c4c",
+    "tools": "75e7e48d92fb8ad7",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "5dfb7ceebe8ce1b1607ab3992fb9d36b3ac8208f",
+    "ran_at": "2026-11-25T06:59:49Z",
+    "graded_commit": "8d1a2e3f3d0e19ca67b1a23f47f3c2d8686628c3",
+    "graded_at": "2026-11-25T10:49:08Z"
+  },
+  "usage": {
+    "input_tokens": 32722,
+    "output_tokens": 3541,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 69140,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_attention",
+        "describe_router_actions",
+        "get_worklist",
+        "mark_all_notices_read",
+        "read_workspace",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_attention",
+        "describe_router_actions",
+        "get_worklist",
+        "mark_all_notices_read",
+        "read_workspace"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3.5,
+      "min": 3,
+      "max": 4
+    },
+    "turns": {
+      "median": 5,
+      "min": 5,
+      "max": 5
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 50931,
+      "min": 47798,
+      "max": 54064
+    },
+    "output_tokens": {
+      "median": 1770.5,
+      "min": 1767,
+      "max": 1774
+    }
+  }
+}

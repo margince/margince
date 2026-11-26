@@ -57,6 +57,10 @@ type Subscriber struct {
 	// stream in a single call (subscriberbatch.go). handler remains the
 	// per-entry path it falls back to.
 	batchHandler BatchHandler
+	// paused, when it answers true, holds the group: nothing is read, so
+	// nothing is handled or acked, and the entries wait in the stream.
+	paused     func(context.Context) bool
+	pauseEvery time.Duration
 }
 
 // NewSubscriber wires a handler to a consumer group. The consumer name is
@@ -73,6 +77,8 @@ func NewSubscriber(rdb *redis.Client, group kevents.Group, handler Handler, log 
 		block:    2 * time.Second,
 		minIdle:  5 * time.Minute,
 		batch:    64,
+		// How often a held group asks again whether to resume.
+		pauseEvery: time.Minute,
 	}
 }
 
@@ -84,6 +90,13 @@ func (s *Subscriber) WithMinIdle(d time.Duration) *Subscriber {
 	if d > 0 {
 		s.minIdle = d
 	}
+	return s
+}
+
+// WithPause holds the group while paused answers true, asking again every
+// minute. A nil paused never holds it.
+func (s *Subscriber) WithPause(paused func(context.Context) bool) *Subscriber {
+	s.paused = paused
 	return s
 }
 
@@ -102,7 +115,14 @@ func (s *Subscriber) Run(ctx context.Context) error {
 	}
 
 	for ctx.Err() == nil {
-		s.reclaim(ctx)
+		if s.held(ctx) {
+			s.wait(ctx, s.pauseEvery)
+			continue
+		}
+		// The reclaim pass can run many pages, so the hold may begin during it.
+		if s.reclaim(ctx); s.held(ctx) {
+			continue
+		}
 
 		res, err := s.rdb.XReadGroup(ctx, &redis.XReadGroupArgs{
 			Group:    s.group.Name,
@@ -147,12 +167,22 @@ func (s *Subscriber) Run(ctx context.Context) error {
 	return ctx.Err()
 }
 
+// held reports whether WithPause's check holds the group now.
+func (s *Subscriber) held(ctx context.Context) bool {
+	return s.paused != nil && s.paused(ctx)
+}
+
 // backoff pauses briefly for a retryable transport failure, or returns
 // immediately once ctx is done.
 func (s *Subscriber) backoff(ctx context.Context) {
+	s.wait(ctx, time.Second)
+}
+
+// wait returns after d, or at once when ctx is done.
+func (s *Subscriber) wait(ctx context.Context, d time.Duration) {
 	select {
 	case <-ctx.Done():
-	case <-time.After(time.Second):
+	case <-time.After(d):
 	}
 }
 
@@ -179,6 +209,10 @@ func (s *Subscriber) reclaim(ctx context.Context) {
 	for _, stream := range s.group.Streams {
 		start := "0-0"
 		for {
+			// A held pass stops between pages; what it leaves stays pending for the next.
+			if s.held(ctx) {
+				return
+			}
 			claimed, next, err := s.rdb.XAutoClaim(ctx, &redis.XAutoClaimArgs{
 				Stream:   stream,
 				Group:    s.group.Name,
@@ -202,23 +236,36 @@ func (s *Subscriber) reclaim(ctx context.Context) {
 	}
 }
 
-// deliver decodes, dispatches, and acks one entry. A structurally invalid
-// entry is acked away with a loud log: it can never succeed, and leaving
-// it pending would poison the reclaim pass forever (the per-group
-// dead-letter store is B-EP04.15, not built yet).
-func (s *Subscriber) deliver(ctx context.Context, stream string, entry redis.XMessage) {
-	env, err := decodeEnvelope(entry)
-	if err != nil {
-		s.log.Error("bus: dropping undecodable entry", "stream", stream, "entry", entry.ID, "error", err)
-		s.ack(ctx, stream, entry.ID)
-		return
+// screen decodes the entries of one read and acks, in one XACK, every entry the
+// handler must not see. A structurally invalid entry is acked away with a loud
+// log: it can never succeed, and leaving it pending would poison the reclaim
+// pass forever. What is left goes to the handler, envelope beside entry.
+func (s *Subscriber) screen(ctx context.Context, stream string, entries []redis.XMessage) ([]redis.XMessage, []kevents.Envelope) {
+	kept := make([]redis.XMessage, 0, len(entries))
+	envs := make([]kevents.Envelope, 0, len(entries))
+	var dropped []string
+	for _, entry := range entries {
+		env, err := decodeEnvelope(entry)
+		if err != nil {
+			s.log.Error("bus: dropping undecodable entry", "stream", stream, "entry", entry.ID, "error", err)
+			dropped = append(dropped, entry.ID)
+			continue
+		}
+		if s.leavesOut(env) {
+			dropped = append(dropped, entry.ID)
+			continue
+		}
+		kept = append(kept, entry)
+		envs = append(envs, env)
 	}
-
-	if s.leavesOut(env) {
-		s.ack(ctx, stream, entry.ID)
-		return
+	if len(dropped) > 0 {
+		s.ack(ctx, stream, dropped...)
 	}
+	return kept, envs
+}
 
+// handle runs the handler on one screened entry and acks it once it succeeded.
+func (s *Subscriber) handle(ctx context.Context, stream string, entry redis.XMessage, env kevents.Envelope) {
 	if err := s.handler(ctx, env); err != nil {
 		if errors.Is(err, kevents.ErrUnactionable) {
 			// Acked, not retried: the subject is gone and no later pass finds
@@ -240,18 +287,18 @@ func (s *Subscriber) deliver(ctx context.Context, stream string, entry redis.XMe
 	s.ack(ctx, stream, entry.ID)
 }
 
-// leavesOut reports whether the group's policy is to leave an event unhandled:
-// one an import wrote, for a group that does not react to history. It is still
-// acknowledged, so it is not redelivered.
+// leavesOut reports whether the group leaves an event unhandled. That is a type
+// its handler does not act on, or an import for a group that ignores history.
+// It is acked before Dedupe runs, so it leaves no mark and is not redelivered.
 func (s *Subscriber) leavesOut(env kevents.Envelope) bool {
-	return kevents.SkipsImported(s.group.Name) && kevents.IsImported(env)
+	return !s.group.Types.Has(env.Type) || kevents.SkipsImported(s.group.Name) && kevents.IsImported(env)
 }
 
-func (s *Subscriber) ack(ctx context.Context, stream, entryID string) {
-	if err := s.rdb.XAck(ctx, stream, s.group.Name, entryID).Err(); err != nil && ctx.Err() == nil {
-		// The handler already ran; a lost ack means one redelivery, which
-		// Dedupe absorbs. Log so a systematic ack failure is visible.
-		s.log.Warn("bus: XACK failed; entry will re-deliver", "stream", stream, "entry", entryID, "error", err)
+func (s *Subscriber) ack(ctx context.Context, stream string, entryIDs ...string) {
+	if err := s.rdb.XAck(ctx, stream, s.group.Name, entryIDs...).Err(); err != nil && ctx.Err() == nil {
+		// A lost ack means one redelivery, which Dedupe absorbs. Log so a
+		// systematic ack failure is visible.
+		s.log.Warn("bus: XACK failed; entries will re-deliver", "stream", stream, "entries", entryIDs, "error", err)
 	}
 }
 

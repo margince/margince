@@ -5,7 +5,6 @@ import { useId, useState } from "react";
 import { rowsOf } from "../../api/rows";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { KeyCode } from "../../design-system/keyedname";
 import { NameDialog, nameRefusal } from "../../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { PanelNotices } from "../../design-system/panelnotices";
@@ -26,7 +25,7 @@ import {
   useCreateAcquisitionSource,
   useUpdateAcquisitionSource,
 } from "../../lib/acquisitionsources.queries";
-import { problemMessageOf } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { useVocabGrants, vocabMenuColumn } from "../leads/leadvocab.rows";
 
 function sourceColumns({
@@ -135,14 +134,10 @@ export function AcquisitionSourcesCard() {
   const [namingOpen, setNamingOpen] = useState(false);
   const sources = rowsOf(query.data);
   const write = naming.mode === "rename" ? rename : create;
-  // A rename cannot collide: only the key is unique, and it never changes.
-  const refused =
-    naming.mode === "rename"
-      ? {
-          problem: rename.isError ? problemMessageOf(rename.error, t) : null,
-          nameProblem: null,
-        }
-      : nameRefusal(create.error, t, "acqSources.duplicate");
+  const refused = nameRefusal(write.error, t, {
+    label: t("acqSources.addLabel"),
+    duplicate: "acqSources.duplicate",
+  });
   const open = (next: Naming) => {
     create.reset();
     rename.reset();
@@ -220,7 +215,6 @@ export function AcquisitionSourcesCard() {
         )}
         label={t("acqSources.addLabel")}
         initial={naming.mode === "rename" ? naming.source.label : ""}
-        hint={naming.mode === "rename" && <KeyCode code={naming.source.key} />}
         confirmLabel={t(
           naming.mode === "rename"
             ? "leadSources.renameSave"
@@ -229,6 +223,7 @@ export function AcquisitionSourcesCard() {
         pending={write.isPending}
         problem={refused.problem}
         nameProblem={refused.nameProblem}
+        maxLength={TEXT_LIMITS.label}
         onSave={(label) => {
           if (naming.mode === "rename") {
             rename.mutate(

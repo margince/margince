@@ -19,10 +19,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// A passport has the same functionality on both doors. So each path and query
-// parameter of an agent route is an argument of its x-mcp-tool verb, top level
-// or under filters. Paging is the one exception: MCP keeps smaller pages, and
-// a cursor reaches the same records.
+// A passport has the same functionality on both doors. Each path and query parameter
+// of an agent route is an argument of its x-mcp-tool verb, top level or under filters.
+// Paging is the one exception: MCP keeps smaller pages, and a cursor reaches the same records.
 func TestEveryAgentRouteParameterIsAnArgumentOfItsVerb(t *testing.T) {
 	registry := NewRegistry(nil, SendPath{})
 	arguments := map[string]map[string]bool{}
@@ -227,9 +226,10 @@ func routeParameters(t *testing.T) map[string][]routeParameter {
 		t.Fatalf("reading the contract: %v", err)
 	}
 	type parameter struct {
-		Ref  string `yaml:"$ref"`
-		Name string `yaml:"name"`
-		In   string `yaml:"in"`
+		Ref    string `yaml:"$ref"`
+		Name   string `yaml:"name"`
+		In     string `yaml:"in"`
+		Hidden bool   `yaml:"x-agent-hidden"` //nolint:tagliatelle // the contract's extension key, not ours to rename
 	}
 	var doc struct {
 		Paths      map[string]map[string]yaml.Node `yaml:"paths"`
@@ -275,7 +275,7 @@ func routeParameters(t *testing.T) map[string][]routeParameter {
 			byRoute[route] = []routeParameter{}
 			for _, p := range append(slices.Clone(shared.Parameters), op.Parameters...) {
 				p = resolve(p)
-				if (p.In == "path" || p.In == "query") && !slices.Contains(pagingParameters, p.Name) {
+				if (p.In == "path" || p.In == "query") && !p.Hidden && !slices.Contains(pagingParameters, p.Name) {
 					byRoute[route] = append(byRoute[route], routeParameter{name: p.Name, in: p.In})
 				}
 			}
@@ -293,8 +293,13 @@ var spelledOtherwiseByItsVerb = map[string]string{
 	"GET /v1/analytics/evaluate#scope_id":        "id",
 	"GET /v1/analytics/evidence#scope_kind":      "kind",
 	"GET /v1/analytics/evidence#scope_id":        "id",
+	"GET /v1/analytics/evidence#close_start_at":  "close_interval",
+	"GET /v1/analytics/evidence#close_end_at":    "close_interval",
+	"GET /v1/analytics/evaluate#close_start_at":  "close_interval",
+	"GET /v1/analytics/evaluate#close_end_at":    "close_interval",
 	"GET /v1/analytics/editions/compare#left_id": "id",
 	"GET /v1/search#types":                       "record_types",
+	"GET /v1/approvals#target":                   "targets",
 }
 
 // answeredByAnotherVerb are route parameters whose question an agent asks
@@ -302,6 +307,8 @@ var spelledOtherwiseByItsVerb = map[string]string{
 var answeredByAnotherVerb = gatekit.Waive(map[string]string{
 	"GET /v1/companies#id": "a screen's batch read of companies it holds ids for; an agent reads each by id " +
 		"through read_record (gates/seamfilters_test.go rules it out of list_records)",
+	"GET /v1/activities#collapse_copies": "list_records collapses mailbox copies itself whenever it lists one record's " +
+		"timeline (activities/provider.go); an unscoped list keeps every copy, as export and sync do",
 })
 
 // parameterGapsPendingParity are the route parameters no verb takes yet, as

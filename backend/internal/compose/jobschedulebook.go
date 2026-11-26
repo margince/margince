@@ -4,8 +4,10 @@
 package compose
 
 // The schedules an admin sets. A {setting: …} cadence in api/jobs.yaml names
-// the setting its interval is read from; this book holds the interval each one
-// currently has, and moves a running schedule when an admin changes it.
+// the setting its interval is read from. This book holds the interval each one
+// currently has, and moves a running schedule when an admin changes it. It
+// also holds the installation's time zone, which clock-time extension jobs
+// (compose/clocktime) count in, and moves those jobs when the zone changes.
 
 import (
 	"context"
@@ -18,12 +20,16 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/clocktime"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // scheduleReadActor attributes the worker's reads of its own schedules.
@@ -47,6 +53,9 @@ func (l *liveInterval) get() time.Duration { return time.Duration(l.nanos.Load()
 type tracked struct {
 	setting string
 	job     *river.PeriodicJob
+	// catchUp is the job's schedule when the book has run history, re-armed
+	// when a changed cadence hands the job back to River.
+	catchUp *catchUpSchedule
 }
 
 // ScheduleBook is the interval every setting-driven schedule currently runs at,
@@ -58,6 +67,15 @@ type ScheduleBook struct {
 	// pending holds the settings whose kinds River refused to take back, so
 	// each check re-registers them until it succeeds, whatever the value.
 	pending map[string]bool
+	// lastRuns and spread are what CatchUpFrom gave the book (jobcatchup.go).
+	// A nil lastRuns means no history, and the passes keep RunOnStart.
+	lastRuns map[string]time.Time
+	spread   time.Duration
+	// zone is the installation's time zone, which clock-time passes count in.
+	// Nil reads as UTC.
+	zone atomic.Pointer[time.Location]
+	// clock is what clock-time passes read as now; nil reads the real clock.
+	clock func() time.Time
 }
 
 // newScheduleBook seeds the book from the values read, one per setting key.
@@ -124,7 +142,13 @@ func ReadSchedules(ctx context.Context, pool *pgxpool.Pool) (*ScheduleBook, erro
 	if err != nil {
 		return nil, err
 	}
-	return newScheduleBook(values), nil
+	zone, err := readInstallationZone(ctx, pool)
+	if err != nil {
+		return nil, err
+	}
+	book := newScheduleBook(values)
+	book.zone.Store(zone)
+	return book, nil
 }
 
 func readScheduleValues(ctx context.Context, pool *pgxpool.Pool) (map[string]time.Duration, error) {
@@ -214,9 +238,9 @@ func (b *ScheduleBook) schedule(spec jobs.Spec, args river.JobArgs, opts *river.
 	if !known {
 		panic("compose: " + spec.Kind + " schedules from " + spec.Cadence.Setting + ", which this book was not read for")
 	}
-	job := river.NewPeriodicJob(live, func() (river.JobArgs, *river.InsertOpts) { return args, opts },
-		&river.PeriodicJobOpts{ID: spec.Kind, RunOnStart: true})
-	b.kinds[spec.Kind] = tracked{setting: spec.Cadence.Setting, job: job}
+	job, catchUp := b.periodicJob(spec.Kind, spec.Kind, live,
+		func() (river.JobArgs, *river.InsertOpts) { return args, opts })
+	b.kinds[spec.Kind] = tracked{setting: spec.Cadence.Setting, job: job, catchUp: catchUp}
 	return job, live.get() > 0
 }
 
@@ -266,6 +290,9 @@ func (b *ScheduleBook) reregister(key string, runner periodicRegistry) error {
 		if b.intervals[key].get() <= 0 {
 			continue
 		}
+		if entry.catchUp != nil {
+			entry.catchUp.rearm()
+		}
 		if err := runner.AddPeriodic(entry.job); err != nil {
 			return fmt.Errorf("compose: rescheduling %s: %w", kind, err)
 		}
@@ -293,5 +320,94 @@ func (b *ScheduleBook) Watch(ctx context.Context, pool *pgxpool.Pool, runner per
 		if err := b.apply(values, runner); err != nil {
 			log.WarnContext(ctx, "schedules: a changed schedule could not be put back on the runner; that job is off until the next check retries it", "err", err)
 		}
+		zone, err := readInstallationZone(ctx, pool)
+		if err != nil {
+			log.WarnContext(ctx, "schedules: could not read the installation's time zone; clock-time jobs keep the zone they run in", "err", err)
+			continue
+		}
+		if err := b.applyZone(zone, runner); err != nil {
+			log.WarnContext(ctx, "schedules: a clock-time job could not be moved to the new time zone; it is off until the next check retries it", "err", err)
+		}
 	}
+}
+
+// runsAtClockTimes reports whether a schedule's runs belong to fixed clock
+// times. Such a pass never runs early at a start: only a missed slot is
+// caught up.
+func runsAtClockTimes(every river.PeriodicSchedule) bool {
+	_, ok := every.(clocktime.Schedule)
+	return ok
+}
+
+// zoneScheduleKey tracks the clock-time kinds in the book, so a changed time
+// zone moves them the way a changed setting moves an interval.
+var zoneScheduleKey = identity.Timezone.Key()
+
+// location is the zone clock-time passes count in, UTC until one is read.
+func (b *ScheduleBook) location() *time.Location {
+	if zone := b.zone.Load(); zone != nil {
+		return zone
+	}
+	return time.UTC
+}
+
+// now is the book's clock, utcNow unless a test set one.
+func (b *ScheduleBook) now() time.Time {
+	if b.clock != nil {
+		return b.clock()
+	}
+	return utcNow()
+}
+
+// scheduleClockTime builds a clock-time pass and records it under the zone.
+func (b *ScheduleBook) scheduleClockTime(kind string, at extension.TimeOfDay, ctor river.PeriodicJobConstructor) *river.PeriodicJob {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	job, catchUp := b.periodicJob(kind, kind, clocktime.Schedule{At: at, Zone: b.location, Now: b.now}, ctor)
+	b.kinds[kind] = tracked{setting: zoneScheduleKey, job: job, catchUp: catchUp}
+	return job
+}
+
+// applyZone moves every clock-time pass to a changed zone. It hands each back
+// to River without a catch-up, so the move itself runs nothing. The next run
+// is the next slot in the new zone.
+func (b *ScheduleBook) applyZone(zone *time.Location, runner periodicRegistry) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if zone.String() == b.location().String() && !b.pending[zoneScheduleKey] {
+		return nil
+	}
+	b.zone.Store(zone)
+	for _, kind := range slices.Sorted(maps.Keys(b.kinds)) {
+		entry := b.kinds[kind]
+		if entry.setting != zoneScheduleKey {
+			continue
+		}
+		runner.RemovePeriodic(kind)
+		if err := runner.AddPeriodic(entry.job); err != nil {
+			b.pending[zoneScheduleKey] = true
+			return err
+		}
+	}
+	delete(b.pending, zoneScheduleKey)
+	return nil
+}
+
+// readInstallationZone is the zone clock-time passes count in. An installation
+// not yet provisioned counts in UTC, the setting's default.
+func readInstallationZone(ctx context.Context, pool *pgxpool.Pool) (*time.Location, error) {
+	ws, err := singletonWorkspace(ctx, pool)
+	if err != nil {
+		return nil, err
+	}
+	if ws.IsZero() {
+		return time.UTC, nil
+	}
+	readCtx := bootCtx(ctx, ws, scheduleReadActor)
+	var zone *time.Location
+	err = database.WithWorkspaceTx(readCtx, pool, func(tx pgx.Tx) (err error) {
+		zone, err = identity.ZoneAppliedTx(readCtx, tx)
+		return err
+	})
+	return zone, err
 }

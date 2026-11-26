@@ -27,7 +27,7 @@ func (r *Registry) CalendarFor(ctx context.Context, host ids.UserID, provider st
 	var legacy []byte
 	var scopes []string
 	var generation int
-	args := []any{host, provider}
+	args := []any{host, provider, nil}
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT id, credential_ref, auth, provider_scopes, generation FROM capture_connection`+sendableConnection,
 			args...).Scan(&id, &ref, &legacy, &scopes, &generation)
@@ -72,10 +72,19 @@ func calendarProviderNames() []string {
 	return slices.Sorted(maps.Keys(calendarWriteScopes))
 }
 
+// CalendarProviders are the providers a seat may connect a calendar through.
+func CalendarProviders() []string { return calendarProviderNames() }
+
 // CalendarWriteGranted says whether a connection's granted scopes let it write
 // events on provider's calendar. It is the one read-only detector.
 func CalendarWriteGranted(provider string, scopes []string) bool {
-	for _, grant := range calendarWriteScopes[provider] {
+	return scopeGranted(calendarWriteScopes, provider, scopes)
+}
+
+// scopeGranted says whether scopes hold any grant the table lists for
+// provider. Every capability decided by an OAuth grant reads it.
+func scopeGranted(grants map[string][]string, provider string, scopes []string) bool {
+	for _, grant := range grants[provider] {
 		if slices.Contains(scopes, grant) {
 			return true
 		}

@@ -1,0 +1,11 @@
+{
+  "verb": "download_offer_pdf",
+  "checks": [
+    "company.read",
+    "offer.read"
+  ],
+  "takes": [
+    "offer",
+    "rendered_offer"
+  ]
+}

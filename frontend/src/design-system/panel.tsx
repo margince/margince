@@ -9,8 +9,10 @@ import {
   useId,
   useRef,
 } from "react";
+import { useT } from "../i18n";
 import { opensRow } from "../lib/linkclick";
 import { Heading, type HeadingElement } from "./heading";
+import { InfoTip } from "./infotip";
 import {
   type SectionDetail,
   type SectionState,
@@ -55,10 +57,21 @@ export function usePanelEdge(): RefObject<HTMLElement | null> | null {
   return useContext(PanelEdge);
 }
 
+// Panels set on one shared ground open with flat heads, as sections of a sheet
+// rather than cards. An agent's panel keeps its band: the band says who wrote it.
+const FlatHeads = createContext(false);
+export const FlatPanelHeads = FlatHeads.Provider;
+
+// The level a panel title takes when its caller names none. A frame with its
+// own h2, such as a chapter, sets 3 for every panel inside it.
+const TitleLevel = createContext<2 | 3>(2);
+export const PanelTitleLevel = TitleLevel.Provider;
+
 // The head holds a title and its verbs, never a description; padded text goes
 // in `PanelBody` and edge-to-edge rows in `PanelRow`, as siblings.
 export function Panel({
   title,
+  help,
   titleAction,
   tone,
   titleLevel,
@@ -69,6 +82,9 @@ export function Panel({
   className,
 }: Readonly<{
   title?: ReactNode;
+  // What the section shows, where its data comes from and what the reader can
+  // do with it, behind a "?" beside the title. Not a description line.
+  help?: string;
   // Rendered right-aligned in the header, beside the title — a badge, a
   // button, a count. Absent leaves the title alone in its row.
   titleAction?: ReactNode;
@@ -135,6 +151,9 @@ export function Panel({
   // chosen not to name, and a nameless region in the list is worse than none.
   const titleId = useId();
   const edge = useRef<HTMLElement>(null);
+  const sheet = useContext(FlatHeads);
+  const defaultLevel = useContext(TitleLevel);
+  const flat = flatHead || (sheet && tone !== "ai");
   return (
     <section
       ref={edge}
@@ -146,20 +165,21 @@ export function Panel({
       <PanelEdge.Provider value={edge}>
         {title && (
           <header
-            className={flatHead ? "panel-head panel-head-flat" : "panel-head"}
+            className={flat ? "panel-head panel-head-flat" : "panel-head"}
           >
             {/* The title is the row's far-end push: it absorbs the free space, so
               a titleAction lands at the end of the band whatever the title's
               length. */}
             <Heading
-              size={flatHead ? "small" : "medium"}
-              as={TITLE_ELEMENT[titleLevel ?? 2]}
+              size={flat ? "small" : "medium"}
+              as={TITLE_ELEMENT[titleLevel ?? defaultLevel]}
               className="panel-title"
               id={titleId}
               tabIndex={-1}
             >
               {title}
             </Heading>
+            {help && <SectionHelp help={help} />}
             {titleAction}
           </header>
         )}
@@ -169,6 +189,13 @@ export function Panel({
       </PanelEdge.Provider>
     </section>
   );
+}
+
+// SectionHelp is the "?" beside a section's title. It sits inside the region
+// the title names, so "About this section" is heard in that section.
+export function SectionHelp({ help }: Readonly<{ help: string }>) {
+  const t = useT();
+  return <InfoTip mark="help" label={t("section.help")} text={help} />;
 }
 
 // PanelPlate is the recessed plate inside a panel, inset from its edges: what

@@ -4,8 +4,11 @@
 package reporting
 
 import (
+	"cmp"
 	"context"
 	"crypto/subtle"
+	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/snapshotreads"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -79,6 +83,10 @@ func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontra
 	if err := s.validateSelection(ctx, selection); err != nil {
 		return Evaluation{}, err
 	}
+	// The metrics, the targets and the owner names resolve the same named
+	// subjects; their live-subject reads are answered once in this snapshot.
+	ctx, release := snapshotreads.Open(ctx, tx)
+	defer release()
 	out, err := s.evaluator.Evaluate(ctx, tx, selection, framework, at)
 	if err != nil {
 		return Evaluation{}, err
@@ -178,12 +186,10 @@ func evidencePage(frame crmcontracts.ReportingContext, facts []Fact, metric crmc
 		offset = parsed
 	}
 	limit = max(1, min(limit, 100))
+	week := evidenceWeek(frame, group)
 	matched := 0
 	for _, fact := range facts {
-		if fact.Metric != metric || fact.ContextID != contextID || !evidenceGroup(frame, fact, group) {
-			continue
-		}
-		if through != nil && (fact.At() == nil || !fact.At().Before(*through)) {
+		if !evidenceMatches(fact, metric, contextID, group, through, week) {
 			continue
 		}
 		matched++
@@ -196,29 +202,70 @@ func evidencePage(frame crmcontracts.ReportingContext, facts []Fact, metric crmc
 			out.Truncated = true
 			break
 		}
-		row := fact.Row
-		if fact.EvidenceAt != nil {
-			row.OccurredAt = fact.EvidenceAt
-		}
-		if fact.OwnerLabel != "" && !fact.OwnerWithheld && !row.Restricted {
-			row.OwnerLabel = &fact.OwnerLabel
-		}
-		if fact.StageLabel != "" && !row.Restricted {
-			row.StageLabel = &fact.StageLabel
-		}
-		if fact.OwnerWithheld || row.Restricted {
-			row.OwnerId = nil
-			row.OwnerLabel = nil
-		}
-		if row.Restricted {
-			row.StageLabel = nil
-		}
-		out.Rows = append(out.Rows, row)
+		out.Rows = append(out.Rows, evidenceRow(fact))
 	}
 	return out, nil
 }
 
-func evidenceGroup(frame crmcontracts.ReportingContext, fact Fact, group string) bool {
+func evidenceMatches(fact Fact, metric crmcontracts.ReportingMetricID, contextID, group string, through *time.Time, week evidenceWeekSpan) bool {
+	if fact.Metric != metric || fact.ContextID != contextID || !evidenceGroup(fact, group, week) {
+		return false
+	}
+	return through == nil || (fact.At() != nil && fact.At().Before(*through))
+}
+
+// largestNamedEvidence answers the rows behind a reading that name their record
+// and its owner to the reader. A restricted or withheld row names no owner, so
+// it never takes a place. Rows rank by value, then by record id.
+func largestNamedEvidence(frame crmcontracts.ReportingContext, facts []Fact, ref crmcontracts.ReportingEvidenceRef, limit int) []crmcontracts.ReportingEvidenceRow {
+	group := textOrEmpty(ref.GroupKey)
+	week := evidenceWeek(frame, group)
+	rows := []crmcontracts.ReportingEvidenceRow{}
+	for _, fact := range facts {
+		if !evidenceMatches(fact, ref.Metric, ref.ContextId, group, ref.Through, week) {
+			continue
+		}
+		if row := evidenceRow(fact); row.SourceId != nil && row.OwnerId != nil {
+			rows = append(rows, row)
+		}
+	}
+	slices.SortFunc(rows, func(a, b crmcontracts.ReportingEvidenceRow) int {
+		if byValue := cmp.Compare(evidenceValue(b), evidenceValue(a)); byValue != 0 {
+			return byValue
+		}
+		return strings.Compare(a.SourceId.String(), b.SourceId.String())
+	})
+	return rows[:min(len(rows), limit)]
+}
+
+func evidenceValue(row crmcontracts.ReportingEvidenceRow) float64 {
+	if row.Value == nil {
+		return math.Inf(-1)
+	}
+	return *row.Value
+}
+
+// evidenceRow shows one fact as a row, withholding what the reader may not
+// see. It copies the labels, so the scan over the facts allocates nothing.
+func evidenceRow(fact Fact) crmcontracts.ReportingEvidenceRow {
+	row := fact.Row
+	if fact.EvidenceAt != nil {
+		row.OccurredAt = fact.EvidenceAt
+	}
+	if fact.OwnerWithheld || row.Restricted {
+		row.OwnerId, row.OwnerLabel = nil, nil
+	} else if owner := fact.OwnerLabel; owner != "" {
+		row.OwnerLabel = &owner
+	}
+	if row.Restricted {
+		row.StageLabel = nil
+	} else if stage := fact.StageLabel; stage != "" {
+		row.StageLabel = &stage
+	}
+	return row
+}
+
+func evidenceGroup(fact Fact, group string, week evidenceWeekSpan) bool {
 	if group == "" {
 		return true
 	}
@@ -230,19 +277,47 @@ func evidenceGroup(frame crmcontracts.ReportingContext, fact Fact, group string)
 	if after, ok := strings.CutPrefix(group, "stage:"); ok {
 		return fact.StageID == after || fact.GroupKey == group
 	}
+	// A source's group names its leads and, by one more component, each outcome
+	// under it. The origin is escaped, so a further colon is another source.
+	if strings.HasPrefix(group, "source:") {
+		outcome, under := strings.CutPrefix(fact.GroupKey, group+":")
+		return fact.GroupKey == group || (under && !strings.Contains(outcome, ":"))
+	}
 	if strings.HasPrefix(group, "week:") && fact.At() != nil {
-		zone, err := time.LoadLocation(frame.Timezone)
-		if err != nil {
-			return false
-		}
-		start, err := time.ParseInLocation(time.DateOnly, strings.TrimPrefix(group, "week:"), zone)
-		if err != nil {
-			return false
-		}
-		days := 7 - (int(start.Weekday())+6)%7
-		return !fact.At().Before(start) && fact.At().Before(start.AddDate(0, 0, days))
+		return week.valid && !fact.At().Before(week.start) && fact.At().Before(week.end)
 	}
 	return fact.GroupKey == group
+}
+
+// evidenceWeekSpan is the local calendar span a "week:" group names. A group
+// that is not a week, or names a bad date or zone, has no valid span.
+type evidenceWeekSpan struct {
+	start, end time.Time
+	valid      bool
+}
+
+// evidenceWeek reads the week a group names once per page, not once per fact:
+// loading the zone reads its rules from disk.
+func evidenceWeek(frame crmcontracts.ReportingContext, group string) evidenceWeekSpan {
+	date, weekly := strings.CutPrefix(group, "week:")
+	if !weekly {
+		return evidenceWeekSpan{}
+	}
+	zone, err := time.LoadLocation(frame.Timezone)
+	if err != nil {
+		return evidenceWeekSpan{}
+	}
+	start, err := time.ParseInLocation(time.DateOnly, date, zone)
+	if err != nil {
+		return evidenceWeekSpan{}
+	}
+	return evidenceWeekSpan{start: start, end: WeekEnd(start), valid: true}
+}
+
+// WeekEnd is the local midnight of the Monday after start, so a week a period
+// opens midweek is short. Weekly charts and their evidence both cut weeks here.
+func WeekEnd(start time.Time) time.Time {
+	return start.AddDate(0, 0, 7-(int(start.Weekday())+6)%7)
 }
 
 func (s *Service) checkedEvaluation(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, expectation EvidenceExpectation) (Evaluation, error) {
@@ -282,3 +357,56 @@ func (s *Service) EvaluatedReceipt(ctx context.Context, selection crmcontracts.R
 	})
 	return out, err
 }
+
+// EvaluateWithLargestEvidence evaluates a selection, or checks the receipt the
+// reader saw, and answers the largest rows behind one metric's reading from
+// that same snapshot. An empty metric, or one the selection does not read, has
+// no rows.
+func (s *Service) EvaluateWithLargestEvidence(ctx context.Context, selection crmcontracts.ReportingSelection, receipt *EvidenceExpectation, metric crmcontracts.ReportingMetricID, limit int) (crmcontracts.ReportingEvaluation, []crmcontracts.ReportingEvidenceRow, error) {
+	if err := auth.Require(ctx, "report_definition", principal.ActionRead); err != nil {
+		return crmcontracts.ReportingEvaluation{}, nil, err
+	}
+	var evaluation Evaluation
+	var evidence []crmcontracts.ReportingEvidenceRow
+	err := s.store.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
+		var err error
+		if receipt != nil {
+			evaluation, err = s.checkedEvaluation(ctx, tx, selection, *receipt)
+		} else {
+			evaluation, err = s.EvaluateFactsTx(ctx, tx, selection)
+		}
+		if err != nil || metric == "" {
+			return err
+		}
+		for _, reading := range evaluation.Result.Metrics {
+			if reading.Id == metric {
+				evidence = largestNamedEvidence(evaluation.Result.Context, evaluation.Facts, reading.Evidence, limit)
+			}
+		}
+		return err
+	})
+	return evaluation.Result, evidence, err
+}
+
+// EvaluateFactsTx evaluates a selection and keeps the facts behind it. A
+// reading that splits the figure by month, owner or category then adds up the
+// rows Analytics counted.
+func (s *Service) EvaluateFactsTx(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection) (Evaluation, error) {
+	if err := auth.Require(ctx, "report_definition", principal.ActionRead); err != nil {
+		return Evaluation{}, err
+	}
+	framework, err := s.framework(ctx, tx)
+	if err != nil {
+		return Evaluation{}, err
+	}
+	return s.evaluateSelection(ctx, tx, selection, framework)
+}
+
+// Calendar reads the installation's reporting zone, currency and fiscal start.
+func (s *Service) Calendar(ctx context.Context, tx pgx.Tx) (Calendar, error) {
+	return s.calendar(ctx, tx)
+}
+
+// Now is the service clock, so a reading built beside it cuts off where its
+// evaluation does.
+func (s *Service) Now() time.Time { return s.now() }

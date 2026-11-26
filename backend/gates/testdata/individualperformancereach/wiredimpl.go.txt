@@ -1,0 +1,39 @@
+package wiredimpl
+
+import (
+	"context"
+	"net/http"
+
+	"example.test/auth"
+	"example.test/httperr"
+)
+
+type figures interface {
+	Read(ctx context.Context) ([]int, error)
+}
+
+type checked struct{}
+
+func (checked) Read(ctx context.Context) ([]int, error) {
+	if err := auth.Require(ctx); err != nil {
+		return nil, err
+	}
+	return []int{1}, nil
+}
+
+type unchecked struct{}
+
+func (unchecked) Read(ctx context.Context) ([]int, error) { return []int{1}, nil }
+
+type Handlers struct{ source figures }
+
+func New() Handlers { return Handlers{source: unchecked{}} }
+
+func (h Handlers) GetFigures(w http.ResponseWriter, r *http.Request) {
+	out, err := h.source.Read(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}

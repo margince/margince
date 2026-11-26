@@ -30,6 +30,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/proposalstage"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -41,6 +42,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // stageEvidenceReadActor is what the audit trail names as the writer of these
@@ -58,9 +60,11 @@ type StageEvidenceReader struct {
 	pool  *pgxpool.Pool
 	deals *deals.Store
 	own   deals.OwnDomainReader
-	brain completer
-	now   func() time.Time
-	log   *slog.Logger
+	// proposals raises the question to move a deal to the proposal stage.
+	proposals *proposalstage.Suggester
+	brain     completer
+	now       func() time.Time
+	log       *slog.Logger
 }
 
 // NewStageEvidenceReader builds the engine over the pool and one model lane.
@@ -70,6 +74,7 @@ func NewStageEvidenceReader(
 ) *StageEvidenceReader {
 	return &StageEvidenceReader{
 		pool: pool, deals: store, own: own, brain: brain, now: now, log: log,
+		proposals: proposalstage.New(InstallationDB(pool), NewApprovalsService(InstallationDB(pool))),
 	}
 }
 
@@ -102,7 +107,7 @@ func (r *StageEvidenceReader) Read(
 	// reaches these payloads through the deal it names. No label: this reading
 	// is queued from an activity and never loads the deal's name, and a second
 	// query for one would spend a round trip on a word the rail can do without.
-	claims, err := r.ask(ai.WithSubject(actorCtx, dealID.Ref(), ""), criteria, facts.spans)
+	claims, err := r.ask(ai.WithSubject(actorCtx, dealID.Ref(), ""), activityID, criteria, facts.spans)
 	if err != nil {
 		return 0, err
 	}
@@ -124,6 +129,10 @@ type stageEvidenceReadFacts struct {
 	// at write time would let a criterion archived in between turn a valid
 	// claim into a refusal, or worse, match a key somebody had reused.
 	byKey map[string]ids.ExitCriterionID
+	// proposalAsked says the reading also asked whether a proposal is
+	// attached. That answer is not a criterion of the stage: it raises the
+	// move question and writes nothing to the ledger.
+	proposalAsked bool
 }
 
 // gather reads the deal's criteria and the activity's text in ONE transaction,
@@ -156,10 +165,17 @@ func (r *StageEvidenceReader) gather(
 		facts.activityID = activityID
 		facts.spans = []stageEvidenceSpan{{SourceID: activityID.String(), Lines: text}}
 		criteria, facts.byKey, err = r.criteriaOf(ctx, tx, dealID)
+		if err != nil && !errors.Is(err, errNothingToRead) {
+			return err
+		}
+		facts.proposalAsked, err = proposalstage.QuestionFor(ctx, tx, authorship, activityID)
 		return err
 	})
 	if err != nil {
 		return facts, nil, err
+	}
+	if facts.proposalAsked {
+		criteria = append(criteria, stageEvidenceCriterion{Key: deals.ProposalSentCriterionKey, Label: proposalstage.SentLabel})
 	}
 	if len(criteria) == 0 {
 		return facts, nil, errNothingToRead
@@ -192,6 +208,11 @@ func (r *StageEvidenceReader) criteriaOf(
 		if deals.CriterionKind(c.Kind) == deals.CriterionLegalReviewed {
 			continue
 		}
+		// The reserved key is never a stage criterion's: a stored one is not
+		// offered, so its claims cannot be taken for the proposal question.
+		if c.Key == deals.ProposalSentCriterionKey {
+			continue
+		}
 		criterion := stageEvidenceCriterion{Key: c.Key, Label: c.Label}
 		if c.Hint != nil {
 			criterion.Hint = *c.Hint
@@ -209,9 +230,10 @@ func (r *StageEvidenceReader) criteriaOf(
 // reading of a later message can settle the same criterion, and faulting the
 // job would re-ask the same question of the same words on every retry.
 func (r *StageEvidenceReader) ask(
-	ctx context.Context, criteria []stageEvidenceCriterion, spans []stageEvidenceSpan,
+	ctx context.Context, activity ids.UUID, criteria []stageEvidenceCriterion, spans []stageEvidenceSpan,
 ) ([]stageEvidenceClaim, error) {
 	req := stageEvidenceRequest(criteria, spans, identity.BaseLanguageForPrompt(ctx, r.pool))
+	req.Subjects = model.AboutActivities(activity)
 	validate := stageEvidenceValid(criteria, spans)
 	resp, err := ai.Ask(ctx, r.brain, req, validate)
 	if err != nil {
@@ -255,6 +277,13 @@ func (r *StageEvidenceReader) record(
 	written := 0
 	for _, claim := range claims {
 		if claim.Confidence < stageEvidenceFloor {
+			continue
+		}
+		if claim.CriterionKey == deals.ProposalSentCriterionKey {
+			asked := facts.proposalAsked && claim.Met == stageEvidenceMet
+			if err := r.proposals.FromReading(ctx, dealID, facts.activityID, asked, claim.Quote); err != nil {
+				return written, err
+			}
 			continue
 		}
 		landed, err := r.write(ctx, dealID, facts, claim)

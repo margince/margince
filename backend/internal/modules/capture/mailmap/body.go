@@ -7,6 +7,7 @@ package mailmap
 // whether a calendar payload was among them.
 
 import (
+	"bytes"
 	"io"
 	"strings"
 
@@ -14,7 +15,8 @@ import (
 	"github.com/emersion/go-message/mail"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/capture/htmltext"
+	"github.com/margince/margince/backend/internal/platform/htmltext"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // extractText returns the message's plain-text body, its link hosts and the
@@ -32,6 +34,10 @@ func extractText(root *message.Entity) walkedBody {
 	walk.files.settle()
 	text, completeness := walk.text(), walk.completeness()
 	links, linksCut := walkLinks(walk.plain, walk.html)
+	forwarded := walk.forwardedOriginal()
+	if forwarded == nil {
+		forwarded = inlineForward(text)
+	}
 	if text == "" {
 		// A forward as attachment says nothing of its own; the original does.
 		// Its words are the original's, not the sender's, and the completeness
@@ -49,7 +55,7 @@ func extractText(root *message.Entity) walkedBody {
 	return walkedBody{
 		text: text, links: links, linksCut: linksCut,
 		parts: walk.files.parts, drops: walk.files.drops(), calendar: walk.calendar,
-		completeness: completeness,
+		completeness: completeness, forwarded: forwarded,
 	}
 }
 
@@ -63,6 +69,8 @@ type walkedBody struct {
 	drops        []PartDrop
 	calendar     calendarPart
 	completeness capture.BodyCompleteness
+	// forwarded is the original the mail forwards, held apart from its author.
+	forwarded *connector.ForwardedOriginal
 }
 
 // bodyText is the text a mail is read by: its plain part, or its HTML rendered
@@ -80,10 +88,22 @@ func bodyText(plain, html string) (text string, cut bool) {
 // A calendar payload arrives by three routes: an unnamed inline part (the shape
 // Google sends), a named inline part, and a declared attachment. All three are
 // the same evidence — an invitation — so all three set the flag AND hand their
-// bytes to the collector. The unnamed route did neither for the file until the
-// order in readInlinePart put the collector ahead of the body read.
+// bytes to the collector. application/ics is the same payload under another
+// declared type.
 func isCalendarType(contentType string) bool {
-	return strings.HasPrefix(strings.ToLower(contentType), "text/calendar")
+	declared := strings.ToLower(strings.TrimSpace(contentType))
+	return strings.HasPrefix(declared, "text/calendar") || strings.HasPrefix(declared, "application/ics")
+}
+
+// isOctetCalendar is a calendar file sent under the generic binary type, as
+// some clients attach one. Only a .ics name whose bytes open a VCALENDAR counts.
+func isOctetCalendar(contentType, name string, body []byte) bool {
+	declared := strings.ToLower(strings.TrimSpace(contentType))
+	if !strings.HasPrefix(declared, "application/octet-stream") || !strings.HasSuffix(strings.ToLower(name), ".ics") {
+		return false
+	}
+	head := bytes.TrimLeft(bytes.TrimPrefix(body[:min(len(body), 64)], []byte("\uFEFF")), " \t\r\n")
+	return len(head) >= len("BEGIN:VCALENDAR") && bytes.EqualFold(head[:len("BEGIN:VCALENDAR")], []byte("BEGIN:VCALENDAR"))
 }
 
 // contentTyped is a part header, attachment or inline alike.
@@ -124,7 +144,7 @@ func readInlinePart(
 	// sender chose how to render it, not whether we keep it.
 	if name := inlineFilename(inline); name != "" {
 		files.takeInline(inline, name, body)
-		if isCalendarType(contentType) {
+		if isCalendarType(contentType) || isOctetCalendar(contentType, name, files.justAdmitted()) {
 			calendar.see(params, files.justAdmitted())
 		}
 		return true

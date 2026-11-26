@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -58,6 +59,11 @@ func readEmailAccess(
 	// The reason is content: it describes what the message is about. It travels
 	// only with a message the caller may read, which is the branch this is in.
 	out.Explanation = activity.AudienceReason
+	mailboxes, err := readSharedMailboxes(ctx, tx, id)
+	if err != nil {
+		return crmcontracts.EmailAccess{}, false, err
+	}
+	out.SharedMailboxes = &mailboxes
 
 	imported, err := activityWasImported(ctx, tx, id)
 	if err != nil {
@@ -191,4 +197,30 @@ func readSelectedMembers(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]c
 		})
 	}
 	return out, rows.Err()
+}
+
+// readSharedMailboxes names each shared mailbox that imported the message and
+// the team it reads through. It is said beside the reason because "in a shared
+// mailbox" alone leaves a reader asking which one, and whom it lets in.
+// A disconnected mailbox is still named: its history stays with its readers.
+func readSharedMailboxes(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]crmcontracts.EmailSharedMailbox, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT box.account_label, reader.id, reader.name
+		  FROM capture_import imported
+		  JOIN capture_connection box ON box.id = imported.connection_id
+		  JOIN team reader ON `+auth.SharedMailboxOfTeamSQL("box", "reader.id")+`
+		 WHERE imported.activity_id = $1 AND imported.user_id IS NULL
+		 ORDER BY box.account_label`, id.UUID)
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading the shared mailboxes of a message: %w", err)
+	}
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.EmailSharedMailbox, error) {
+		var box crmcontracts.EmailSharedMailbox
+		var team ids.UUID
+		if err := row.Scan(&box.Address, &team, &box.ReaderTeamName); err != nil {
+			return box, err
+		}
+		box.ReaderTeamId = openapi_types.UUID(team)
+		return box, nil
+	})
 }

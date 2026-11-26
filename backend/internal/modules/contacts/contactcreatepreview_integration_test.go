@@ -300,9 +300,10 @@ func TestALinkedInProfileALeadHoldsIsIdentityInAnySpelling(t *testing.T) {
 	if held := leadHeldRefusal(t, err); held.Field != fieldSocialLinkedIn || len(held.LeadIDs) != 1 || held.LeadIDs[0] != leadID {
 		t.Fatalf("a lead's profile in another spelling: %+v", held)
 	}
-	// A bare handle is stored as typed and names nobody.
-	if _, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "Sam Handle", Source: "manual", Social: map[string]any{SocialLinkedIn: "sam-profile"}}); err != nil {
-		t.Fatalf("a handle that is no profile URL: %v", err)
+	// A bare handle is no profile link, so the slot refuses it.
+	var parseErr *values.ParseError
+	if _, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "Sam Handle", Source: "manual", Social: map[string]any{SocialLinkedIn: "sam-profile"}}); !errors.As(err, &parseErr) || parseErr.Code != "linkedin_url_not_linkedin" {
+		t.Fatalf("a handle that is no profile URL: %v, want linkedin_url_not_linkedin", err)
 	}
 	in.ConvertLeadIDs = []ids.LeadID{leadID}
 	contact, err := e.store.CreateContact(ctx, in)

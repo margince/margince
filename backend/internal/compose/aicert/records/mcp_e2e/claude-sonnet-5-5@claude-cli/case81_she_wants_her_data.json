@@ -11,13 +11,85 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": true,
+  "stamp": {
+    "scenario": "d59f7145fc42c7d3",
+    "tools": "b6d0437868763a72",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "1796d51361de08d5",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T06:10:15Z",
+    "graded_commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "graded_at": "2026-11-25T06:10:15Z"
+  },
   "usage": {
-    "input_tokens": 20,
-    "output_tokens": 3005,
-    "cache_creation_input_tokens": 7976,
-    "cache_read_input_tokens": 608805,
+    "input_tokens": 14,
+    "output_tokens": 1537,
+    "cache_creation_input_tokens": 8500,
+    "cache_read_input_tokens": 510972,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1229
+    "cost_usd": 0.1005
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_compliance",
+        "describe_router_actions",
+        "find_records",
+        "open_data_subject_request",
+        "read_workspace",
+        "resolve_entities"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_compliance",
+        "describe_router_actions",
+        "find_records",
+        "open_data_subject_request",
+        "read_workspace",
+        "resolve_entities"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3.5,
+      "min": 3,
+      "max": 4
+    },
+    "turns": {
+      "median": 4.5,
+      "min": 4,
+      "max": 5
+    },
+    "refused": {
+      "median": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 259743,
+      "min": 222901,
+      "max": 296585
+    },
+    "output_tokens": {
+      "median": 768.5,
+      "min": 748,
+      "max": 789
+    },
+    "duration_ms": {
+      "median": 9269,
+      "min": 8505,
+      "max": 10033
+    }
   }
 }

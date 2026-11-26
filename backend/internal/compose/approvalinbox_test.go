@@ -26,7 +26,7 @@ func stagedFixture() crmcontracts.Approval {
 		Id: openapi_types.UUID(ids.NewV7()), Kind: "archive_record", Status: "pending",
 		ProposedBy: "agent:test", CreatedAt: time.Now(), Summary: &summary,
 		TargetEntityType: &target, TargetEntityId: &targetID,
-		ProposedChange: &change, Evidence: &[]crmcontracts.ApprovalEvidence{snippet},
+		ProposedChange: &change, Evidence: &[]crmcontracts.ApprovalEvidence{snippet}, AwaitingAgent: new(true),
 	}
 }
 
@@ -45,8 +45,8 @@ func TestTheListingCarriesTheSummaryAndNotTheStagedDocument(t *testing.T) {
 		t.Errorf("the listing carries evidence: %v", listed.Evidence)
 	}
 	read := stagedActionFrom(stagedFixture(), true)
-	if len(read.ProposedChange) == 0 || len(read.Evidence) == 0 {
-		t.Error("read_approval answered without the change or the evidence it was formed on")
+	if len(read.ProposedChange) == 0 || len(read.Evidence) == 0 || !read.AwaitingAgent {
+		t.Error("read_approval answered without the change, the evidence it was formed on, or whether it awaits its agent")
 	}
 }
 
@@ -158,14 +158,18 @@ func TestEveryReleasableKindSaysWhetherItsReleaseSends(t *testing.T) {
 		"capture_counterparty": true, "company_name_promotion": true, "linkedin_match": true,
 		"vcard_create":     true,
 		"lifecycle_change": true, "assign_owner": true, "close_date_correction": true,
-		"deal_follow_up": true, "commitment_task": true,
+		"deal_follow_up": true, "commitment_task": true, "employer_change": true,
 		"fx_rate_proposal": true,
+		// Accepting moves one deal to a later stage and puts nothing on the wire.
+		"deal_proposal_stage": true,
 		// A captured record that collided with a lead already here: accepting
 		// folds the message's fields onto that lead. It writes one record and
 		// puts nothing on the wire.
 		"merge_records": true,
-		// Accepting a share request writes one record grant.
-		"contact_share": true,
+		// Accepting a share or edit access request writes one record grant.
+		"contact_share": true, "edit_access": true,
+		// Writes one task's due date.
+		"task_due_date": true,
 		// Moves a record and its open work to a colleague.
 		"ownership_transfer": true,
 	}

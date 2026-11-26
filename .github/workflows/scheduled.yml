@@ -42,14 +42,19 @@ name: scheduled
 #                        mid-market, and a row measured below it renders
 #                        `inconclusive`, never `within budget`. Weekly is the
 #                        honest cadence for a budget nobody merges against —
-#                        drift nobody looks for is drift nobody finds. SMB only:
-#                        mid-market does not finish inside a CI budget (see
-#                        bench-perf-check), and an alarm that cannot finish files
-#                        a breach it never measured.
+#                        drift nobody looks for is drift nobody finds. Two jobs,
+#                        one per tier: SMB is the drift alarm; mid-market is where
+#                        the SLO binds and enforces the same budgets, which five
+#                        runner measurements showed hold.
 #
 #   vendor live        — one real call to each data vendor, daily. The offline
 #                        tests read a recording of the vendor's API, which stays
 #                        green when the vendor changes it.
+#
+#   home growth        — Home's reads as the bench mail grows a year per step,
+#                        nightly. It fits how a read grows and fails when one is
+#                        predicted to reach 10 s within the horizon. Too slow
+#                        for a merge gate, and growth is a calendar question.
 #
 #   role sweep         — every MCP tool and action called as every seeded role,
 #                        weekly. It takes longer than a merge-gate shard allows,
@@ -59,11 +64,14 @@ name: scheduled
 #   slop trend         — the slop scores and the comment numbers, once a week,
 #                        beside last week's. Not a verdict: the comment checks
 #                        judge only added lines, and this is what shows whether
-#                        the rest of the tree gets better.
+#                        the rest of the tree gets better. It also prints how
+#                        many AI certification grades are stale or absent.
 #
-# The three weekly measurements also RECORD what they measured. records-pr
-# proposes those records as one pull request and never writes to main: a
-# record is published when a human reviews and merges it.
+# The weekly perf measurements also RECORD what they measured. The records job
+# (_records.yml) proposes them as a pull request and never writes to main: a
+# record is published when a human reviews and merges it. The MCP use cases a
+# model drives are not here: they cost tokens, so mcp-sweep.yml runs them only
+# when a maintainer starts it.
 #
 # One more job earns its place here for the same reason rather than the same
 # question. reap-caches is maintenance, not a verdict on main — but the state it
@@ -88,11 +96,11 @@ on:
   workflow_dispatch:
     inputs:
       perf:
-        description: "Also run and record the PERF budgets (SMB tier and mobile; mid-market is by hand, `make bench-perf`)"
+        description: "Also run and record the PERF budgets (SMB tier and mobile) and measure mid-market once"
         type: boolean
         default: false
-      llm:
-        description: "Also run and record the use cases against a real model (COSTS TOKENS; needs CLAUDE_CODE_OAUTH_TOKEN)"
+      perf_measure:
+        description: "Measure PERF-3/PERF-7 on the mid-market tier on five runners and print each p95 in the job summary (nothing recorded)"
         type: boolean
         default: false
       trend:
@@ -100,7 +108,11 @@ on:
         type: boolean
         default: false
       roles:
-        description: "Also run the MCP role sweep (`make test-roles`, about an hour on a runner)"
+        description: "Also run the MCP role sweep (`make test-roles`, about ten minutes on a runner)"
+        type: boolean
+        default: false
+      growth:
+        description: "Also run the Home growth bench (`make bench-growth`, the nightly size)"
         type: boolean
         default: false
 
@@ -206,6 +218,16 @@ jobs:
               printf '%s' "$body" | jq -r \
                 '.projectStatus.conditions[]? | select(.status != "OK")
                  | "  failing: \(.metricKey) \(.comparator) \(.errorThreshold) (actual \(.actualValue))"'
+              # A rating names no finding, and whoever triages the issue may have
+              # no dashboard access, so the log names each finding behind it.
+              # A failed listing still leaves the gate red.
+              echo "open security and reliability findings in new code on main:"
+              curl -fsS --connect-timeout 10 --max-time 60 \
+                -H "Authorization: Bearer $SONAR_TOKEN" \
+                "https://sonarcloud.io/api/issues/search?componentKeys=$PROJECT_KEY&branch=main&inNewCodePeriod=true&issueStatuses=OPEN,CONFIRMED&impactSoftwareQualities=SECURITY,RELIABILITY&ps=100" \
+                | jq -r '.issues[]
+                  | "  \([.impacts[]? | "\(.softwareQuality)/\(.severity)"] | join(",")) \(.rule) \(.component | sub("^[^:]*:"; "")):\(.line // "-") \(.message)"' \
+                || echo "  could not list the findings; open the project's issues on SonarCloud" >&2
               exit 1
               ;;
             *)
@@ -257,20 +279,47 @@ jobs:
   # scripts/clock-drift-host.sh says why no other shift reaches both Go and
   # Postgres.
   #
-  # Order matters: checkout, module download, the gate binaries and the compose
-  # pull all finish at the real date, because a 200-day jump expires the TLS
-  # certificates they verify. Only then does the clock move.
-  backend-clock-drift:
+  # One job per suite slice. A runner whose clock is moved stops renewing its
+  # job lock, and GitHub drops it about an hour after the job started, so no
+  # runner may live that long; scripts/clock-drift-host.sh says why.
+  backend-clock-drift-slices:
     # The DAILY cadence, spelled per job: a job with no `if` runs on every
     # trigger the workflow has, so the weekly perf cron would run this too.
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
-    name: backend clock drift (main, +200 days)
+    name: backend clock drift slices (main)
     runs-on: ubuntu-latest
-    # This runs the integration lane too, on one
-    # runner rather than across the shards ci.yml splits it into.
-    timeout-minutes: 90
+    timeout-minutes: 5
     permissions:
       contents: read
+    outputs:
+      matrix: ${{ steps.list.outputs.matrix }}
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: List the suite slices
+        id: list
+        run: echo "matrix=$(./scripts/backend-clock-drift.sh matrix)" >> "$GITHUB_OUTPUT"
+
+  # Order matters: checkout, module download, the gate binaries and the compose
+  # pull all finish at the real date, because a 200-day jump expires the TLS
+  # certificates they verify. Only then does the clock move.
+  backend-clock-drift-slice:
+    needs: backend-clock-drift-slices
+    name: backend clock drift ${{ matrix.slice }} (main, +200 days)
+    runs-on: ubuntu-latest
+    # Setup plus clock-drift-host.sh's 30-minute slice budget and its 30 s kill
+    # grace, well short of the hour after which a moved runner is dropped.
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.backend-clock-drift-slices.outputs.matrix) }}
     env:
       BACKEND_CLOCK_SKEW: machine:200
     defaults:
@@ -303,21 +352,77 @@ jobs:
       # package that reads as a finding about the tree.
       - name: Fetch what only the tagged tests import
         run: make -C backend fetch-test-deps
-      # Every step that needs the network has finished by here.
-      # The offset comes from BACKEND_CLOCK_SKEW rather than being spelled again.
-      # The restore below is the copy that matters: raising the skew here and
-      # leaving a literal there hands the runner back with its clock in the
-      # past, which is the poisoning that step exists to prevent.
-      - name: Move the runner's clock forward
-        run: ./scripts/clock-drift-host.sh move "${BACKEND_CLOCK_SKEW##*:}"
-      - name: The backend suites at the moved clock
-        run: make backend-clock-drift
-      # The clock goes back even when the suites failed. A runner handed back to
+      # Keep the clock jump, the slice and recovery in one shell: the runner's
+      # control-plane credentials must be valid before it starts another step.
+      # The verdict file says `calendar` only on the line
+      # scripts/backend-clock-drift.sh prints after the suites failed under a
+      # shift it proved still in force, and no file means no verdict.
+      - name: The slice at the moved clock
+        env:
+          SLICE: ${{ matrix.slice }}
+          VERDICT: ${{ runner.temp }}/clock-drift-verdict/${{ matrix.key }}
+        run: |
+          set -o pipefail
+          mkdir -p "$(dirname "$VERDICT")"
+          if ./scripts/clock-drift-host.sh run "${BACKEND_CLOCK_SKEW##*:}" "$SLICE" 2>&1 | tee clock-drift.log; then
+            echo pass > "$VERDICT"
+            exit 0
+          fi
+          if grep -q '^backend-clock-drift: the suites failed at ' clock-drift.log; then
+            echo calendar > "$VERDICT"
+          fi
+          exit 1
+      # The clock goes back even when the slice failed. A runner handed back to
       # the pool 200 days ahead poisons whatever runs on it next, and that
       # failure would surface in someone else's lane with nothing to point at.
       - name: Restore the clock
         if: always()
         run: ./scripts/clock-drift-host.sh restore "${BACKEND_CLOCK_SKEW##*:}"
+      # After the restore, because the upload verifies certificates.
+      - name: Keep the slice's verdict
+        if: always()
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: clock-drift-verdict-${{ matrix.key }}
+          path: ${{ runner.temp }}/clock-drift-verdict/
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # One verdict for the report: every slice passed, a suite failed at the moved
+  # clock (outcome=calendar), or a slice gave none.
+  backend-clock-drift:
+    needs: [backend-clock-drift-slices, backend-clock-drift-slice]
+    if: >-
+      !cancelled()
+      && (github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *')
+    name: backend clock drift (main, +200 days)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      outcome: ${{ steps.verdict.outputs.outcome }}
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: clock-drift-verdict-*
+          path: ${{ runner.temp }}/clock-drift-verdict
+          merge-multiple: true
+      - name: Combine the slice verdicts
+        id: verdict
+        run: |
+          status=0
+          ./scripts/backend-clock-drift.sh verdict "$RUNNER_TEMP/clock-drift-verdict" || status=$?
+          if [ "$status" -eq 1 ]; then
+            echo "outcome=calendar" >> "$GITHUB_OUTPUT"
+          fi
+          exit "$status"
 
   # PERF-3/PERF-7 on the SMB tier, weekly. It is the only job here gated on a
   # cadence rather than running every time the workflow fires: the daily lane
@@ -328,7 +433,7 @@ jobs:
   #
   # It records through `make bench-perf`, the target run by hand, so the
   # weekly number and a by-hand one are one measurement. The record is written
-  # before the gate, so a breach is proposed too; records-pr carries it to a
+  # before the gate, so a breach is proposed too; the records job carries it to a
   # pull request, never to main.
   perf-budgets:
     name: perf budgets (PERF-3/PERF-7, SMB tier)
@@ -338,9 +443,8 @@ jobs:
     runs-on: ubuntu-latest
     # The SMB tier measures in under a minute on a fast machine; 30 leaves room
     # for a slow runner and for the seed, without letting a hung one sit until
-    # the six-hour default. Mid-market is deliberately not here — see
-    # bench-perf-check in backend/Makefile for why a job that cannot finish is
-    # worse than no job.
+    # the six-hour default. Mid-market has its own job, perf-mid-market, because
+    # its seed is two orders of magnitude larger.
     #
     # The target's own `go test -timeout` is 20m, DERIVED from this rather than
     # equal to it: checkout, setup-go, the cache restore and `db-up` all spend
@@ -407,95 +511,36 @@ jobs:
           retention-days: 30
           if-no-files-found: ignore
 
-  # The six deck use cases, driven by a REAL assistant.
+  # PERF-3/PERF-7 on the mid-market tier, where the PERF-7 SLO binds. It runs
+  # `make bench-perf-check`, which writes no record and proposes no pull request.
+  # A measured breach reaches the reporter the way the SMB one does.
   #
-  # WEEKLY, and gated on a secret that may not exist. This is the half the Go
-  # suite in integration/e2e/usecases/ cannot answer: those tests pin the
-  # payloads, the refusals and the legibility fields, and they would all stay
-  # green while the product became unusable to a model. The only way to learn
-  # whether an assistant can drive this surface and say something TRUE is to
-  # have one try.
-  #
-  # It costs real tokens, which is why it is weekly and not per-merge, and why
-  # it shares the Monday cron with perf-budgets rather than the daily one.
-  #
-  # NOT DETERMINISTIC, by construction. Each scenario runs three times and
-  # passes at two, because one bad run out of three is the weather and two is a
-  # defect. A job that demanded 3/3 would be red most weeks and would teach
-  # everyone to ignore it.
-  #
-  # The secret is CLAUDE_CODE_OAUTH_TOKEN — a subscription token minted by
-  # `claude setup-token`, which is the credential the Claude CLI accepts for a
-  # subscription outside an interactive login. Know what that means before
-  # re-pointing it: the lane bills one human's subscription, and anybody with
-  # write access can spend it by dispatching this workflow. The runner also
-  # accepts ANTHROPIC_API_KEY, and a Console key billed to the project is the
-  # better answer the day there is one — but this job supplies exactly one
-  # credential either way, for the reason given at the step. If the secret is
-  # absent the job SKIPS rather than fails: a lane nobody has funded yet must
-  # not turn main red every Monday, and a skipped job says "not configured"
-  # where a red one says "broken".
-  llm-use-cases:
-    name: use cases, driven by a model (weekly)
+  # The budgets are the shared Perf3Budget and Perf7Budget. Five runs on
+  # runners measured the PERF-3 p95 at 147 to 186 ms against 200 ms, so they
+  # hold with little room. BENCH_PERF_GATE below is the line that lets a breach
+  # fail the job. A dispatch with `perf_measure` always measures only, on five
+  # runners at once, so the spread between runners can be read again.
+  perf-mid-market:
+    name: perf budgets (PERF-3/PERF-7, mid-market tier, run ${{ matrix.run }})
     outputs:
-      outcome: ${{ steps.lane.outputs.outcome }}
-    # Same Monday cron as perf-budgets. A dispatch runs it only when asked, so
-    # somebody re-checking govulncheck by hand does not spend tokens.
-    if: >-
-      (github.event.schedule == '0 2 * * 1'
-        || (github.event_name == 'workflow_dispatch' && inputs.llm))
+      outcome: ${{ steps.bench.outputs.outcome }}
+    if: github.event.schedule == '0 2 * * 1' || (github.event_name == 'workflow_dispatch' && (inputs.perf || inputs.perf_measure))
     runs-on: ubuntu-latest
-    # Eighteen model calls, plus a database rebuild between the runs of each
-    # write scenario. Locally the sweep takes about 25 minutes; 60 leaves room
-    # for a slow runner and a slow model without letting a hung one sit until
-    # the six-hour default.
+    # The go test budget (45m) sits inside this, with room for checkout, the cache
+    # restore and `db-up`, for the reason given on perf-budgets.
     timeout-minutes: 60
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        run: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.perf_measure && '[1,2,3,4,5]' || '[1]') }}
+    env:
+      BENCH_PERF_GATE: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # The lane reaches the app through the FRONTEND port — dev_app_base_url
-      # returns Vite's, and its /v1 and /mcp proxy is what the assistant talks
-      # to. So a job that only exercises the API still needs the frontend
-      # installed and running. Worth knowing before anyone tries to trim it:
-      # the saving is not available without changing what the lane connects to.
-      # The secret gate, and it is a STEP rather than a job-level `if` because a
-      # job condition cannot read `secrets` — GitHub does not expose that context
-      # to `jobs.<id>.if`, so a job guarded on it would evaluate the secret to an
-      # empty string and skip forever, including after somebody adds it.
-      # Checked here, where the context exists, and reported as a skip rather
-      # than a failure: an unfunded lane must not turn main red every Monday.
-      - name: Is the model lane funded?
-        id: funded
-        env:
-          KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-        run: |
-          if [ -z "${KEY:-}" ]; then
-            echo "configured=no" >> "$GITHUB_OUTPUT"
-            {
-              echo "### The model-driven use cases did not run"
-              echo
-              echo "\`CLAUDE_CODE_OAUTH_TOKEN\` is not set for this repository, so there"
-              echo "is nothing to drive the assistant with. This is a SKIP, not a failure:"
-              echo "the lane costs real tokens and nobody has funded it yet."
-              echo
-              echo "To turn it on, add the secret: a subscription token from"
-              echo "\`claude setup-token\`. It bills the account that minted it, and"
-              echo "anybody with write access can spend it by dispatching this workflow."
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "configured=yes" >> "$GITHUB_OUTPUT"
-          fi
-      # No version input: the pin is package.json's "packageManager", which pnpm
-      # and corepack read too. A second one here is refused as a mismatch.
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod
@@ -503,94 +548,42 @@ jobs:
       - name: Restore the Go build cache
         uses: ./.github/actions/go-build-cache
         with:
-          flavor: plain
-      - name: Install the frontend
-        if: steps.funded.outputs.configured == 'yes'
-        working-directory: .
-        # --ignore-scripts (githubactions:S6505): no lifecycle scripts run at
-        # install; esbuild ships prebuilt platform binaries as optional deps.
-        run: pnpm install --frozen-lockfile --ignore-scripts
-      - name: Install the Claude CLI
-        if: steps.funded.outputs.configured == 'yes'
-        uses: ./.github/actions/install-claude-cli
-        with:
-          version: 2.1.236
+          flavor: integration
       - name: Start the dev infra stack (compose + app role)
-        if: steps.funded.outputs.configured == 'yes'
         working-directory: .
         run: make db-up
-      # The step separates "the model answered badly" from "the lane could not
-      # run", because the job result cannot: a missing CLI, a stack that will
-      # not boot, a seed that fails, or a credential the MCP endpoint rejects
-      # all reach the reporter as `failure`. Filing "the assistant is answering
-      # wrongly" for any of those sends somebody reading transcripts for a
-      # defect that is not there — which is exactly what happened on this lane's
-      # first local run, where a passport destroyed by a database rebuild
-      # presented itself as six scenarios of unhelpful model behaviour.
-      #
-      # The distinction is taken from the runner's own words: it prints
-      # "scenarios: N passed, M failed" only once every scenario has actually
-      # been driven. No such line means the lane never got that far.
-      #
-      # Exactly ONE credential reaches the CLI. Adding ANTHROPIC_API_KEY beside
-      # the token would not be a fallback: the CLI ranks the key above the
-      # token, so the token would go unused, and a stale key would then fail
-      # every run while the summary above named the token as what funds it.
-      - name: The six use cases (MARGINCE_E2E_LLM=1 make e2e-llm)
-        id: lane
-        if: steps.funded.outputs.configured == 'yes'
+      # Breach and lane failure are told apart as on perf-budgets: only the
+      # harness's own "search: perfbench:" message is a measured breach.
+      - name: PERF-3/PERF-7 on the mid-market tier
+        id: bench
         working-directory: .
         env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          MARGINCE_E2E_LLM: "1"
-          E2E_LLM_SLUG: ci
-          # The subscription token above is the only credential this job holds,
-          # and only the claude CLI can spend it.
-          E2E_LLM_CANDIDATE: claude
-          E2E_LLM_VIA: cli
-          # No embedding key reaches this runner, so search_context ranks by
-          # word overlap; the verdicts it writes say `search: lexical`.
-          E2E_LLM_ALLOW_LEXICAL: "1"
+          MEASURE_ONLY: ${{ inputs.perf_measure }}
         run: |
           set -o pipefail
-          if make e2e-llm 2>&1 | tee llm.log; then
+          if [ "$MEASURE_ONLY" = "true" ]; then BENCH_PERF_GATE=0; fi
+          if make bench-perf-check BENCH_PERF_CHECK_TIER=mid_market BENCH_PERF_CHECK_TIMEOUT=45m 2>&1 | tee bench.log; then
             echo "outcome=ok" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if grep -q "^scenarios: " llm.log; then
-            echo "outcome=scenario-failed" >> "$GITHUB_OUTPUT"
+          if grep -q "search: perfbench:" bench.log; then
+            echo "outcome=breach" >> "$GITHUB_OUTPUT"
           else
             echo "outcome=lane-failed" >> "$GITHUB_OUTPUT"
           fi
           exit 1
-      # The transcripts are the finding. A verdict line says case 6 failed; only
-      # the transcript says the assistant quoted the record correctly and then
-      # repeated a note's wrong month in its own voice. Kept for 30 days, which
-      # outlives the next two runs — long enough to compare a regression against
-      # the week it appeared.
-      - name: Keep the run transcripts
-        if: always() && steps.funded.outputs.configured == 'yes'
-        uses: ./.github/actions/upload-artifact-retried
-        with:
-          name: e2e-llm-transcripts
-          path: e2e/llm/records/
-          retention-days: 30
-          # ERROR, not warn. An empty records/ means the lane never drove a
-          # scenario, and the first CI run passed this step while uploading
-          # nothing — a green step on top of a job that had already failed 30
-          # seconds in. The absence of transcripts is itself the finding.
-          if-no-files-found: error
-      # The verdicts land in the committed records tree, in the folder the route
-      # names, and each says how it was measured (route, search mode). The whole
-      # tree goes up; records keeps only the verdicts this run rewrote.
-      - name: Keep the run verdicts
-        if: always() && steps.funded.outputs.configured == 'yes'
-        uses: ./.github/actions/upload-artifact-retried
-        with:
-          name: e2e-llm-verdicts
-          path: backend/internal/compose/aicert/records/mcp_e2e/
-          retention-days: 30
-          if-no-files-found: warn
+      - name: Report the p95 of this run
+        if: always()
+        working-directory: .
+        run: |
+          {
+            echo "### mid-market tier, run ${{ matrix.run }}"
+            echo
+            echo "| query | p50 | p95 | p99 | budget |"
+            echo "|---|---|---|---|---|"
+            sed -nE 's/.*perfbench \[[a-z_]+\]: ([a-z_0-9]+) p50=([^ ]+) p95=([^ ]+) p99=([^ ]+) \(budget ([^,]+),.*/| \1 | \2 | \3 | \4 | \5 |/p' bench.log
+            grep -h "gate not enforced" bench.log || true
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # PERF-1's PERCEIVED budget (MOBILE-AC-2), the browser half of what
   # perf-budgets measures over HTTP.
@@ -603,7 +596,7 @@ jobs:
   # as the other.
   #
   # It records through `make bench-mobile`, the target run by hand, and
-  # records-pr proposes the record as a pull request, as for perf-budgets.
+  # the records job proposes the record as a pull request, as for perf-budgets.
   #
   # Why this budget is schedulable when the acceptance lane's unthrottled
   # assertion was not: the Fast-3G profile's per-request latency dominates
@@ -638,8 +631,8 @@ jobs:
           persist-credentials: false
       # No version input: the pin is package.json's "packageManager", which pnpm
       # and corepack read too. A second one here is refused as a mismatch.
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: pnpm
@@ -714,8 +707,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: pnpm
@@ -723,6 +716,18 @@ jobs:
       # craft scores TypeScript with the frontend's own compiler.
       - name: Install the frontend packages
         run: cd frontend && pnpm install --frozen-lockfile
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      # What a paid sweep owes, as a number in the run's summary, beside the other
+      # weekly trend. It reports and never fails: the sweep is a maintainer's
+      # choice and costs money.
+      - name: Count the AI grades that are stale or absent
+        run: |
+          set -euo pipefail
+          cd backend
+          go run ./internal/compose/aicert/reportcmd -totals 2>/dev/null | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Fetch last week's numbers
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -765,8 +770,8 @@ jobs:
           persist-credentials: false
       # No version input: the pin is package.json's "packageManager", which pnpm
       # and corepack read too. A second one here is refused as a mismatch.
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: pnpm
@@ -788,8 +793,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: pnpm
@@ -887,8 +892,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # A step, not a job `if`, because `jobs.<id>.if` cannot read `secrets`
-      # (see llm-use-cases). No key is "not checked", which is no verdict.
+      # A step, not a job `if`, because `jobs.<id>.if` cannot read `secrets`.
+      # No key is "not checked", which is no verdict.
       - name: Is there a Surfe key?
         id: funded
         env:
@@ -957,203 +962,35 @@ jobs:
           esac
           exit "$status"
 
-  # Lays what the three weekly measurements recorded over the run's own tree
-  # and renders the pages those records feed. It runs the tree's generators, so
-  # it holds no write token; records-pr pushes the patch it hands over.
+  # The speed records the weekly perf jobs measured, proposed as a pull request
+  # by the records unit that mcp-sweep.yml shares. !cancelled(), because a
+  # measurement that failed may still have recorded: a breach is recorded
+  # before its gate fails.
   records:
-    name: render the weekly records
-    needs: [perf-budgets, perf-mobile, llm-use-cases]
-    # !cancelled(), because a measurement that failed may still have recorded:
-    # a breach is recorded before its gate fails.
+    name: the speed records
+    needs: [perf-budgets, perf-mobile]
     if: >-
       !cancelled()
       && (needs.perf-budgets.result != 'skipped'
-        || needs['perf-mobile'].result != 'skipped'
-        || needs['llm-use-cases'].result != 'skipped')
-    outputs:
-      parts: ${{ steps.render.outputs.parts }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+        || needs['perf-mobile'].result != 'skipped')
     permissions:
       contents: read
-    defaults:
-      run:
-        working-directory: .
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
-      - name: Restore the Go build cache
-        uses: ./.github/actions/go-build-cache
-        with:
-          flavor: plain
-      # By pattern, not by name: a job that never uploaded is a part that did
-      # not record, and a download by name would fail the parts that did.
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          pattern: bench-*-record
-          path: docs/reference/perfbench
-          merge-multiple: true
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          pattern: e2e-llm-verdicts
-          path: backend/internal/compose/aicert/records/mcp_e2e
-          merge-multiple: true
-      # A part counts as recorded only when its file differs from the tree, so
-      # the committed file uploaded by a run that measured nothing adds nothing.
-      - name: Render the pages the records feed
-        id: render
-        env:
-          PATCH: ${{ runner.temp }}/records.patch
-        run: |
-          set -euo pipefail
-          perfbench=docs/reference/perfbench
-          verdicts=backend/internal/compose/aicert/records/mcp_e2e
-          parts=""
-          for part in "perf:$perfbench/bench-perf.json" "mobile:$perfbench/bench-mobile.json" "llm:$verdicts"; do
-            if [ -n "$(git status --porcelain -- "${part#*:}")" ]; then
-              parts="$parts ${part%%:*}"
-            fi
-          done
-          parts="${parts# }"
-          echo "recorded: ${parts:-nothing}"
-          if [ -z "$parts" ]; then
-            exit 0
-          fi
-          case " $parts " in *" perf "* | *" mobile "*) make perfdoc ;; esac
-          case " $parts " in
-          *" llm "*)
-            (cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished \
-              -update-mcp-tool-coverage -count=1)
-            ;;
-          esac
-          git add -A -- docs/reference "$verdicts" e2e/llm
-          git diff --cached --binary >"$PATCH"
-          git diff --cached --stat
-          echo "parts=$parts" >> "$GITHUB_OUTPUT"
-      - name: Keep the patch
-        if: steps.render.outputs.parts != ''
-        uses: ./.github/actions/upload-artifact-retried
-        with:
-          name: scheduled-records
-          path: ${{ runner.temp }}/records.patch
-          retention-days: 30
-
-  # Opens the pull request that publishes the records. It never pushes to main:
-  # a human publishes a record by reviewing and merging this pull request.
-  #
-  # The default token, because the repository holds no bot token for pull
-  # requests. A pull request that token opens starts no workflow, so the body
-  # tells the reviewer how to start CI. Only from main: a dispatch on another
-  # branch measures and renders, and proposes nothing.
-  records-pr:
-    name: propose the weekly records
-    needs: [records, perf-budgets, perf-mobile, llm-use-cases]
-    if: >-
-      !cancelled()
-      && needs.records.outputs.parts != ''
-      && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-      pull-requests: write
-    defaults:
-      run:
-        working-directory: .
-    steps:
-      # The credential persists here and nowhere else in this file: the push
-      # below is the one write this workflow makes to the repository.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: scheduled-records
-          path: ${{ runner.temp }}/records
-      - name: Commit the records and open the pull request
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PATCH: ${{ runner.temp }}/records/records.patch
-          BODY: ${{ runner.temp }}/records-body.md
-          PARTS: ${{ needs.records.outputs.parts }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          RUN_ID: ${{ github.run_id }}
-          BASE: ${{ github.event.repository.default_branch }}
-          PERF_RESULT: ${{ needs.perf-budgets.result }}
-          PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}
-          MOBILE_RESULT: ${{ needs['perf-mobile'].result }}
-          MOBILE_OUTCOME: ${{ needs['perf-mobile'].outputs.outcome }}
-          LLM_RESULT: ${{ needs['llm-use-cases'].result }}
-          LLM_OUTCOME: ${{ needs['llm-use-cases'].outputs.outcome }}
-        run: |
-          set -euo pipefail
-          day="$(date -u +%F)"
-          branch="bench/scheduled-$day-$RUN_ID"
-          verdicts=backend/internal/compose/aicert/records/mcp_e2e
-          git apply --index "$PATCH"
-
-          # part <label> <key> <result> <outcome> <how it was measured>
-          part() {
-            if [[ " $PARTS " == *" $2 "* ]]; then
-              printf -- "- **%s**: recorded. %s Job result \`%s\`, outcome \`%s\`.\n" "$1" "$5" "$3" "${4:-none}"
-            else
-              printf -- "- **%s**: NOT recorded. Job result \`%s\`, outcome \`%s\`; the run log says why.\n" "$1" "$3" "${4:-none}"
-            fi
-          }
-          # Read from the verdicts themselves, so the body cannot claim a route
-          # or a search mode the records do not carry.
-          routes="$(git diff --cached --name-only -- "$verdicts" | cut -d/ -f7 | sort -u | paste -sd, -)"
-          search="$(git diff --cached --name-only --diff-filter=AM -- "$verdicts" |
-            xargs -r jq -r '.search // "unknown"' | sort -u | paste -sd, -)"
-          {
-            echo "## What"
-            echo
-            echo "What the weekly scheduled run measured on \`$GITHUB_SHA\`, with the pages the"
-            echo "records feed rendered again by their own generators. Run: $RUN_URL"
-            echo
-            part "PERF-3/PERF-7" perf "$PERF_RESULT" "$PERF_OUTCOME" \
-              "\`make bench-perf BENCH_PERF_TIER=smb\`, the SMB tier; a PERF-7 row measured below mid-market renders \`inconclusive\`."
-            part "MOBILE-AC-2" mobile "$MOBILE_RESULT" "$MOBILE_OUTCOME" \
-              "\`make bench-mobile\`, Playwright Chromium on a throttled Fast-3G profile at 390px."
-            part "Use cases driven by a model" llm "$LLM_RESULT" "$LLM_OUTCOME" \
-              "\`make e2e-llm\` over \`${routes:-none}\`, search \`${search:-none}\`."
-            echo
-            echo "Runner: GitHub-hosted \`${ImageOS:-unknown}\`, image \`${ImageVersion:-unknown}\`,"
-            echo "\`$RUNNER_ARCH\`. Each record names the machine it was measured on."
-            echo
-            echo "## Why"
-            echo
-            echo "A record reaches \`main\` only when a maintainer merges it. Compare the numbers with the"
-            echo "record they replace, and close this pull request to keep the old ones."
-            echo
-            echo "## How verified"
-            echo
-            echo "The default workflow token opened this pull request, so no workflow ran on it."
-            echo "Close and reopen it to start CI before you merge."
-            echo
-            echo "Closes: none"
-          } >"$BODY"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c "$branch"
-          git commit -q -m "chore(records): weekly measurements of $day"
-          # --force, because a re-run of this job replaces the branch it pushed.
-          git push --force origin "$branch"
-          existing="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
-          if [ -n "$existing" ]; then
-            gh pr edit "$existing" --body-file "$BODY"
-          else
-            gh pr create --base "$BASE" --head "$branch" \
-              --title "chore(records): weekly measurements of $day" --body-file "$BODY"
-          fi
+    uses: ./.github/workflows/_records.yml
+    with:
+      part: speed
+      how: >-
+        PERF-3/PERF-7: `make bench-perf BENCH_PERF_TIER=smb`, the SMB tier; a PERF-7 row
+        measured below mid-market renders `inconclusive`. Job result `${{ needs.perf-budgets.result }}`,
+        outcome `${{ needs.perf-budgets.outputs.outcome || 'none' }}`. MOBILE-AC-2: `make bench-mobile`,
+        Playwright Chromium on a throttled Fast-3G profile at 390px. Job result
+        `${{ needs['perf-mobile'].result }}`, outcome `${{ needs['perf-mobile'].outputs.outcome || 'none' }}`.
+    secrets:
+      RECORDS_APP_CLIENT_ID: ${{ secrets.RECORDS_APP_CLIENT_ID }}
+      RECORDS_APP_PRIVATE_KEY: ${{ secrets.RECORDS_APP_PRIVATE_KEY }}
 
   # The MCP role sweep, weekly. Every tool and action is called as every seeded
-  # role, and the answers must equal the committed mcp-tool-roles.json and
-  # toolchecks.json. It outgrew a merge-gate shard, so the per-PR lane checks the
+  # role, and the answers must equal the committed mcp-tool-roles/ and
+  # toolchecks/ folders. It outgrew a merge-gate shard, so the per-PR lane checks the
   # committed matrix against the registry and the listing, and this measures it.
   role-sweep:
     name: MCP role sweep (weekly)
@@ -1186,12 +1023,59 @@ jobs:
       - name: The role sweep
         run: make test-roles
 
+  # Home's growth bench, on the nightly cron. The step tells a measured breach
+  # from a lane that never got to measure, as perf-budgets does: only the
+  # test's own breach line says a budget broke.
+  home-growth:
+    name: home growth bench (nightly)
+    outputs:
+      outcome: ${{ steps.bench.outputs.outcome }}
+    if: github.event.schedule == '0 1 * * *' || (github.event_name == 'workflow_dispatch' && inputs.growth)
+    runs-on: ubuntu-latest
+    # The target's go-test timeout is 45 minutes; this leaves room for setup.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: integration
+      - name: Start the dev infra stack (compose + app role)
+        run: make db-up
+      - name: Home growth bench
+        id: bench
+        env:
+          MARGINCE_BENCH_GROWTH_STEPS: "4"
+        run: |
+          set -o pipefail
+          if make bench-growth BENCH_GROWTH_TIMEOUT=45m 2>&1 | tee growth.log; then
+            echo "outcome=ok" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if grep -q "home-growth: breach" growth.log; then
+            echo "outcome=breach" >> "$GITHUB_OUTPUT"
+          else
+            echo "outcome=lane-failed" >> "$GITHUB_OUTPUT"
+          fi
+          exit 1
+
   # The one job holding `issues: write`, and it runs no build code — the same
   # permission isolation sbom.yml's signing job uses. It must RUN when an upstream
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, records, records-pr, reap-caches, slop-trend, vendor-live, role-sweep]
+    needs: [vuln, quality-gate, renovate-liveness, backend-clock-drift-slices, backend-clock-drift-slice, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mid-market, perf-mobile, records, reap-caches, slop-trend, vendor-live, role-sweep, home-growth]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -1202,8 +1086,12 @@ jobs:
     # daily cron, and a skipped check is the absence of a verdict. The reporter
     # reads it as neither red nor green, which is only true if it arrives as
     # `skipped` rather than being turned into one by this expression.
+    #
+    # Only a run on the default branch files or closes an issue about main: a
+    # dispatch on another branch measured that branch, not main.
     if: >-
       !cancelled()
+      && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1227,6 +1115,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           VULN_RESULT: ${{ needs.vuln.result }}
           GATE_RESULT: ${{ needs.quality-gate.result }}
           GATE_STATUS: ${{ needs.quality-gate.outputs.status }}
@@ -1235,19 +1124,23 @@ jobs:
           RENOVATE_OUTCOME: ${{ needs['renovate-liveness'].outputs.outcome }}
           CLOCK_RESULT: ${{ needs['fe-clock-drift'].result }}
           BACKEND_CLOCK_RESULT: ${{ needs['backend-clock-drift'].result }}
+          BACKEND_CLOCK_OUTCOME: ${{ needs['backend-clock-drift'].outputs.outcome }}
           STORIES_RESULT: ${{ needs['fe-all-stories'].result }}
           PERF_RESULT: ${{ needs.perf-budgets.result }}
           PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}
+          PERF_MEASURE_ONLY: ${{ inputs.perf_measure }}
+          PERF_MM_RESULT: ${{ needs['perf-mid-market'].result }}
+          PERF_MM_OUTCOME: ${{ needs['perf-mid-market'].outputs.outcome }}
           MOBILE_RESULT: ${{ needs['perf-mobile'].result }}
           MOBILE_OUTCOME: ${{ needs['perf-mobile'].outputs.outcome }}
-          LLM_RESULT: ${{ needs['llm-use-cases'].result }}
-          LLM_OUTCOME: ${{ needs['llm-use-cases'].outputs.outcome }}
-          RECORDS_RESULT: ${{ needs.records.result }}
-          RECORDS_PR_RESULT: ${{ needs['records-pr'].result }}
+          SPEED_RECORDS_RESULT: ${{ needs.records.result }}
+          SPEED_RECORDS_PR_RESULT: ${{ needs.records.outputs.proposed }}
           CACHE_RESULT: ${{ needs.reap-caches.result }}
           TREND_RESULT: ${{ needs['slop-trend'].result }}
           VENDOR_LIVE_RESULT: ${{ needs['vendor-live'].result }}
           VENDOR_LIVE_OUTCOME: ${{ needs['vendor-live'].outputs.outcome }}
           VENDOR_LIVE_DETAIL: ${{ needs['vendor-live'].outputs.detail }}
           ROLE_SWEEP_RESULT: ${{ needs['role-sweep'].result }}
+          GROWTH_RESULT: ${{ needs['home-growth'].result }}
+          GROWTH_OUTCOME: ${{ needs['home-growth'].outputs.outcome }}
         run: ./scripts/scheduled-report.sh

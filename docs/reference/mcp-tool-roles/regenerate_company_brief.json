@@ -1,0 +1,18 @@
+{
+  "tool": "run_research",
+  "action": "refresh_company_brief",
+  "verb": "regenerate_company_brief",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

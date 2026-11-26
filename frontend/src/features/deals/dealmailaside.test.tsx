@@ -115,6 +115,7 @@ describe("DealMailAside", () => {
     expect(url.searchParams.get("entity_id")).toBe("d1");
     expect(url.searchParams.getAll("kind")).toEqual(["email"]);
     expect(url.searchParams.get("limit")).toBe("3");
+    expect(url.searchParams.get("collapse_copies")).toBe("true");
   });
 
   // A `day` mail knows its date and no hour, so the line says which day.

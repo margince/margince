@@ -24,6 +24,8 @@ import (
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
 // every write rides the storekit audit+outbox shape in one transaction.
 type Store struct {
+	meetingNotesAccess MeetingNotesAccessReader
+	inquiryAssignment  InquiryAssignment
 	identityProver     AddressProver
 	dealFilingResolver DealFilingResolver
 	taskRecommendation TaskRecommendation
@@ -67,6 +69,9 @@ type Store struct {
 	// carry. Nil means none are appended, which is what every send did before
 	// the seam existed (WithDisclosures).
 	disclosures DisclosureResolver
+	// draftContent checks an advertising draft against its recipients'
+	// content rules. Nil checks nothing (WithDraftContent).
+	draftContent DraftContentChecker
 	// publicBaseURL is the canonical scheme+host the tokenized unsubscribe
 	// link resolves to — configured at boot, never taken from the request
 	// (WithPublicBaseURL wires it).
@@ -133,11 +138,15 @@ type Store struct {
 	// invitationAttention tells a host, in the parking transaction, that their
 	// invitations wait for them.
 	invitationAttention InvitationAttention
+	// teamRequests tells a colleague named on a booking link; nil tells nobody.
+	teamRequests TeamRequestNotice
 }
 
-// LeadQualifyTasks writes the follow-up for a booking filed on a lead.
+// LeadQualifyTasks writes the follow-up for a booking or a held meeting filed
+// on a lead.
 type LeadQualifyTasks interface {
 	FileLeadBookingTx(context.Context, pgx.Tx, ids.LeadID, ids.UUID) error
+	FileLeadMeetingHeldTx(context.Context, pgx.Tx, ids.LeadID, ids.UUID) error
 }
 
 // WithLeadQualifyTasks wires the booking follow-up writer.

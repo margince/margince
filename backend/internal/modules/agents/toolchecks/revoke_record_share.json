@@ -1,0 +1,9 @@
+{
+  "verb": "revoke_record_share",
+  "checks": [
+    "company.update"
+  ],
+  "takes": [
+    "record_grant"
+  ]
+}

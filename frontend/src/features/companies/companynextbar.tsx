@@ -2,8 +2,10 @@ import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
 import { taskLine, useTaskHolder } from "../../components/taskassignee";
+import { taskDueOnDay, taskDueZone } from "../../format/calendarday";
 import { formatDueCompact } from "../../format/format.dates";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { type LatePromise, latePromise } from "../../lib/latepromise";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { taskDetail } from "../../lib/taskdetail";
@@ -54,11 +56,18 @@ export function nextBarLateness(
   view: Company360,
   zone: string,
   words: Words,
+  companyZone: string = zone,
 ): LatePromise | undefined {
   const task = nextBarTask(view);
-  return task?.due_at
-    ? latePromise(task.due_at, view.as_of, zone, "task", words)
-    : undefined;
+  if (!task?.due_at) return undefined;
+  const dayZone = taskDueZone(task.due_has_time, zone, companyZone);
+  return latePromise(
+    taskDueOnDay(task.due_at, task.due_has_time, task.due_intent, dayZone),
+    view.as_of,
+    dayZone,
+    "task",
+    words,
+  );
 }
 
 /**
@@ -101,6 +110,7 @@ export function CompanyNextBar({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
+  const companyZone = useCompanyZone();
   const { deferOf } = useCompanySetAside(view.company.id);
   const fallback = momentFallbackVerb({
     view,
@@ -114,7 +124,7 @@ export function CompanyNextBar({
       ? view.moment
       : undefined;
   const task = nextBarTask(view);
-  const said = nextBarLateness(view, zone, { t, plural, locale });
+  const said = nextBarLateness(view, zone, { t, plural, locale }, companyZone);
   const lateTag = said && { label: said.badge, tone: "danger" as const };
   // The bar's task is the account's, not the reader's: its line names who holds it.
   const holder = useTaskHolder(task?.assignee_id, task?.assignee_name);
@@ -134,9 +144,11 @@ export function CompanyNextBar({
               id: step.activity_id,
               subject: step.subject,
               dueAt: step.due_at,
+              dueHasTime: step.due_has_time,
+              dueIntent: step.due_intent,
               overdue: step.overdue,
             })),
-            { t, plural, locale, zone },
+            { t, plural, locale, zone, companyZone },
             count,
             onOpenTask,
           ),
@@ -182,6 +194,7 @@ export function CompanyNextBar({
                 task.due_has_time,
                 locale,
                 zone,
+                task.due_intent,
               ),
             })
           : undefined,

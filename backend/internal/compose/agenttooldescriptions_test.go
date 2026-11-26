@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -184,128 +185,30 @@ func TestTheOperatorConsoleServesTheTextAnMCPClientIsServed(t *testing.T) {
 	}
 }
 
-// What every step pays before its transcript — the frame, the tool listing and
-// the step schema, runner.FixedStepCost — may take at most
-// listingBudgetNumerator/listingBudgetDenominator of the runner's prompt
-// ceiling. Elision never touches any of the three — only the transcript gives
-// way — so a catalog that grew past this would not overflow, it would quietly
-// leave the run less and less room for the observations it is reasoning over.
-// The history below measured the listing alone.
+// Every step first pays runner.FixedStepCost: the frame, the tool listing and the
+// step schema. That may take at most
+// listingBudgetNumerator/listingBudgetDenominator of the runner's prompt ceiling.
+// Elision never shortens those three, so a growing catalog would leave the run
+// less room for the observations it reasons over.
 //
-// It was 1/2, and the comment there said half was "generous next to where the
-// surface sits today". That stopped being true at 33 tools: the catalog reached
-// ~11,900 tokens against a 12,000 bound, and the two tools after it did not fit.
-//
-// Raised to 5/8 rather than answered by trimming copy, and the choice is worth
-// stating because the cheaper option is the wrong one. What is in these
-// descriptions is the ONE thing measured to move tool selection — A2 took
-// gemini from 0.80 to 0.87 by making tools say what they are for, and took one
-// restraint scenario from 0/3 to 3/3 on a single sentence. Cutting that to fit a
-// fraction chosen when the catalog was smaller would trade a measured gain for
-// an unmeasured one. 5/8 still leaves 9,000 tokens for the goal and the
-// transcript, which is a working run.
-//
-// Scope-filtering the listing did NOT earn 1/2 back, and the arithmetic belongs
-// here because the intuition runs the other way. A run is now offered only what
-// its passport admits, which cuts the typical run hard — a read-scoped one
-// renders ~5,200 tokens rather than ~12,745. But this measures the WHOLE catalog
-// deliberately: an all-scope passport is a legitimate configuration, it is
-// offered every tool, and at 35 tools that is still ~12,745 — past 1/2 (12,000).
-// Re-pointing this at a narrower principal would lower the bound by measuring
-// something smaller than the worst case, which is the same failure as raising
-// one to fit and harder to see afterwards.
-//
-// So this stays a ceiling on growth against the all-scope run, and it is closer
-// than it looks. The listing is O(catalog): the next few tools reach 5/8 too,
-// and what scope filtering leaves behind is mostly schemas, which are half the
-// bytes. Deferring those is a protocol change — a model needs the schema to CALL
-// a tool — so it wants its own decision rather than being reached for the next
-// time this bound is hit.
-//
-// Publishing the per-record_type write vocabulary as a document rather than
-// reciting it in two tool descriptions bought most of the room back: the listing
-// measures ~12,132 tokens against the 15,000 bound, ~2,868 of headroom where
-// there was ~1,355. That is a measurement and not a constant — descriptions move
-// with every change that touches one — so treat it as the order of the headroom.
-// What is asserted below is the bound.
-//
-// The room is deliberately NOT spent by lowering the fraction here. It is what
-// the next tools are for, and re-tightening the bound in the change that creates
-// the room would spend it before anyone can argue for how.
-//
-// RAISED to 2/3 on 2026-08-21, with the measurement that argues for it.
-//
-// 5/8 was set when the listing measured ~12,132 against 15,000. Four tools
-// later — whoami, list_colleagues, apply_tag, remove_tag, each answering a
-// question the surface previously could not — it measures ~15,377, and the
-// last three changes each paid for themselves by cutting prose the tools
-// needed: an alias nobody could discover, a language rule trimmed to one
-// clause, four tag verbs cut to two. That is the bound spending features
-// rather than bounding growth.
-//
-// The repeated-boilerplate wins were taken first, and they were real:
-// retryKeyProperty prints once per mutating tool (eighteen), approval_id's
-// description ten times, timestampNote eight. Trimming those three bought
-// ~200 tokens between them. What is left is per-tool schema, which is the
-// tool, and prose already cut to the bone.
-//
-// 2/3 of 24,000 is 16,000 — the run still keeps a third of its window, and the
-// ~600 tokens this adds is the room the next verb needs rather than a licence
-// to stop counting. What has NOT changed is that the listing is O(catalog):
-// the honest next answer is scope-filtering or deferring schemas, both of them
-// protocol decisions, and both still ahead of us.
-//
-// RAISED to 17/24 on 2026-08-22, with the measurement that argues for it.
-//
-// 2/3 was set when the listing measured ~15,377. One tool later —
-// read_project_360, the project page read under the same per-section gates
-// the HTTP route applies, and a read the surface owed because every one of
-// its parts was already agent-readable — it measured ~15,997 before the tool
-// and ~16,160 after it, against 16,000.
-//
-// The bound is per declared agent, not global, because no run is offered the
-// whole catalog: each scheduled agent declares its tools in api/ai-tasks.yaml,
-// compose refuses to assemble one that does not, the runner refuses a Job with
-// no Tools, and no file outside the three sanctioned ones may build a Job.
-//
-// So the fraction bounds a DECLARED agent's step, and the fattest agent that
-// runs is well inside it. The figures are not written here, because every change
-// to a description moves them: docs/reference/agent-tool-budget.md is
-// regenerated from the served surface and is the place that carries them.
-//
-// The fraction itself is deliberately UNCHANGED at 17/24. Re-tightening it in
-// the change that creates the room would spend the room before anyone can argue
-// for how — the same objection this comment has made twice already.
+// The bound is per declared agent: each scheduled agent declares its tools in
+// api/ai-tasks.yaml, and no run is offered the whole catalog. Description copy is
+// the one thing measured to move tool selection, so it is not trimmed to fit.
+// docs/reference/agent-tool-budget.md carries the current figures.
 const (
-	listingBudgetNumerator   = 17
-	listingBudgetDenominator = 24
+	listingBudgetNumerator   = 1
+	listingBudgetDenominator = 2
 )
 
-// oneToolBudgetNumerator/Denominator bound a SINGLE tool's rendered entry.
-//
-// The two bounds above ration the listing as a whole, and neither of them is
-// what actually moves: between 2026-09-03 and 2026-09-06 the catalog grew 1,809
-// tokens, and 707 of that was existing tools getting fatter — run_report alone
-// took +153 across six changes that each appended one more aggregate to the
-// same sentence. No individual change was worth objecting to and nothing
-// counted them together, which is what a whole-catalog floor 7,000 tokens away
-// cannot see.
-//
-// 1/32 of the window. The fraction is not a judgement about how much a tool
-// deserves — it is set just above the fattest tool the surface ships, so the
-// bound is a ratchet on the ONE tool that is drifting rather than a budget
-// every tool is invited to spend up to.
-//
-// WHEN THIS FIRES, the answer is not a bigger fraction. It is the move this
-// tree has already made twice and measured both times: publish the enumeration
-// as a document and have the description name it. run_report's own vocabulary
-// went that way (reportvocabularydoc.go) and so did the per-record_type write
-// fields, and the second one bought back 18% of the whole listing. A tool that
-// cannot be answered that way is a tool worth splitting, and either is a better
-// conversation than raising this by one thirty-second.
+// oneToolBudgetNumerator/Denominator bound one tool's rendered entry: a
+// ratchet set just above the fattest non-router tool, not a share every tool
+// may spend. A description that names what each argument accepts is worth its
+// tokens. Models that met an undescribed argument went looking outside the
+// surface for the answer. When this fires, publish a long enumeration as a
+// document and name it, or split the tool.
 const (
 	oneToolBudgetNumerator   = 1
-	oneToolBudgetDenominator = 32
+	oneToolBudgetDenominator = 16
 )
 
 // Every written description rides in every step of the window of every agent
@@ -577,5 +480,96 @@ func TestEverySchemaIsValidJSONAndArrivesCompacted(t *testing.T) {
 				"the difference is whitespace, and it rides every prompt",
 				spec.Name, len(spec.InputSchema), compact.Len())
 		}
+	}
+}
+
+// routerActionField is the argument a listed router picks its action by.
+const routerActionField = "action"
+
+// undescribedActions names each action of a router that no line of its served
+// action description opens with, as "<action>: what it does". The actions are
+// the registry's, so an action added to a router is checked without a list here.
+func undescribedActions(t *testing.T, spec mcp.ToolSpec) []string {
+	t.Helper()
+	var schema struct {
+		Properties map[string]struct {
+			Description string `json:"description"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatalf("reading %s's input schema: %v", spec.Name, err)
+	}
+	described := schema.Properties[routerActionField].Description
+	var missing []string
+	for _, a := range spec.Actions {
+		line := regexp.MustCompile(`(?m)(^|; )` + regexp.QuoteMeta(a.Action) + `: \S`)
+		if !line.MatchString(described) {
+			missing = append(missing, a.Action)
+		}
+	}
+	return missing
+}
+
+// A model that sees an action only as a name in the enum guesses what it does,
+// or goes looking outside the server. Every listed router therefore says, for
+// each action, what it does, in the description a client is served.
+func TestEveryRouterActionHasALineInItsServedDescription(t *testing.T) {
+	var routers, actions int
+	for _, spec := range servedSurface(t).ListedSpecs() {
+		if spec.Unlisted || spec.ActionField != routerActionField {
+			continue
+		}
+		routers++
+		actions += len(spec.Actions)
+		if missing := undescribedActions(t, spec); len(missing) > 0 {
+			t.Errorf("%s serves action %s with no line of its own in the action description; "+
+				"each action's line comes from the verb it runs, so give that verb a purpose or summary",
+				spec.Name, strings.Join(missing, ", "))
+		}
+	}
+	if routers == 0 || actions == 0 {
+		t.Fatalf("read %d router(s) and %d action(s) off the served listing, so nothing here was checked", routers, actions)
+	}
+}
+
+// The check is worth having only if it fires: a served router with one line
+// taken out must be named with that action.
+func TestTheRouterActionLineCheckNamesTheActionWhoseLineIsGone(t *testing.T) {
+	idx := slices.IndexFunc(servedSurface(t).ListedSpecs(), func(spec mcp.ToolSpec) bool {
+		return !spec.Unlisted && spec.ActionField == routerActionField && len(spec.Actions) > 1
+	})
+	if idx < 0 {
+		t.Fatal("no listed router takes more than one action, so the check cannot be shown to fire")
+	}
+	spec := servedSurface(t).ListedSpecs()[idx]
+	gone := spec.Actions[len(spec.Actions)-1].Action
+	var schema struct {
+		Properties map[string]map[string]json.RawMessage `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatalf("reading %s's input schema: %v", spec.Name, err)
+	}
+	var text string
+	if err := json.Unmarshal(schema.Properties[routerActionField]["description"], &text); err != nil {
+		t.Fatalf("reading %s's action description: %v", spec.Name, err)
+	}
+	var kept []string
+	for line := range strings.SplitSeq(text, "\n") {
+		if !strings.HasPrefix(line, gone+": ") {
+			kept = append(kept, line)
+		}
+	}
+	description, err := json.Marshal(strings.Join(kept, "\n"))
+	if err != nil {
+		t.Fatalf("writing the doctored description: %v", err)
+	}
+	schema.Properties[routerActionField]["description"] = description
+	doctored, err := json.Marshal(schema)
+	if err != nil {
+		t.Fatalf("writing the doctored schema: %v", err)
+	}
+	spec.InputSchema = doctored
+	if missing := undescribedActions(t, spec); !slices.Equal(missing, []string{gone}) {
+		t.Errorf("with %s's line for %s taken out, the check named %v", spec.Name, gone, missing)
 	}
 }

@@ -50,7 +50,7 @@ type callQuery struct {
 
 func newCallQuery() *callQuery {
 	query := &callQuery{}
-	query.outcome = callOutcomeSQL(query.arg(declinedSentinels), query.arg(servedSentinels))
+	query.outcome = callOutcomeSQL(query.arg(declinedSentinels), query.arg(servedSentinels), query.arg(sentinelCanceled))
 	return query
 }
 
@@ -61,16 +61,18 @@ func (query *callQuery) arg(value any) int {
 }
 
 // callOutcomeSQL buckets a terminal row `c` joined to its logical call `lc`.
-// A declined call is a model that decided not to answer; any other sentinel
-// whose answer never reached the caller is failed. A decision model that fell
-// back is the first attempt, so it is not counted as a retry.
-func callOutcomeSQL(declined, served int) string {
+// A declined call is a model that decided not to answer. A canceled one is a
+// caller that stopped waiting. Any other sentinel whose answer never reached
+// the caller is failed. A decision model that fell back is the first attempt,
+// so it is not counted as a retry.
+func callOutcomeSQL(declined, served, canceled int) string {
 	return storekit.SQLf(`CASE
 	WHEN NULLIF(c.error_sentinel, '') = ANY($%[1]d) THEN 'declined'
+	WHEN c.error_sentinel = $%[3]d THEN 'canceled'
 	WHEN NULLIF(c.error_sentinel, '') IS NOT NULL AND NOT (c.error_sentinel = ANY($%[2]d)) THEN 'failed'
 	WHEN c.degraded OR (lc.decision_attempted AND c.kind <> 'decision')
 	  OR c.attempt - CASE WHEN lc.decision_attempted THEN 1 ELSE 0 END > 1 THEN 'fallback'
-	ELSE 'answered' END`, declined, served)
+	ELSE 'answered' END`, declined, served, canceled)
 }
 
 // where is the filter's `WHERE` clause over the terminal rows.

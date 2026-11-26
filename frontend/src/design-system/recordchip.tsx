@@ -46,8 +46,8 @@ export function RecordChip({
           <CalendarClock size={size === "large" ? 14 : 13} />
         </span>
       ) : (
-        // The label names the chip; the initials would only say it twice.
-        <span className="record-chip-avatar" aria-hidden="true">
+        // Not hidden: the name holds what the chip prints (WCAG 2.5.3).
+        <span className="record-chip-avatar">
           <Avatar name={label} identity={identity} />
         </span>
       )}

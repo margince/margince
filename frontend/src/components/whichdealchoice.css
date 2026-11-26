@@ -1,0 +1,11 @@
+/* The deal cards take the step's whole width; the verbs sit under them. */
+.which-deal-choice {
+  display: grid;
+  flex-basis: 100%;
+  gap: var(--space-3);
+}
+.which-deal-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+}

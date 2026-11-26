@@ -46,11 +46,14 @@ The 2 tables owned by `webhooks`, as the migrations build them. [Back to the ent
 - `idx_webhook_delivery_body_kept`: `btree (id) WHERE ((payload_pruned_at IS NULL) AND (payload <> '') AND (status = ANY (ARRAY['delivered', 'dead_lettered', 'visibility_revoked'])))`
 - `idx_webhook_delivery_by_subscription`: `btree (subscription_id, created_at DESC)`
 - `idx_webhook_delivery_due`: `btree (next_retry_at) WHERE (status = 'retrying')`
+- `idx_webhook_delivery_pending`: `btree (created_at) WHERE (status = 'pending')`
 - `webhook_delivery_dedupe_key`: `unique, btree (subscription_id, event_id)`
 - `webhook_delivery_pkey`: `unique, btree (id)`
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "event_type": 20000, "entity_type": 20000, "content_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"content_type":20000,"entity_type":20000,"event_type":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "event_type": 20000, "entity_type": 20000, "content_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"content_type":20000,"entity_type":20000,"event_type":20000,"status":20000}')`
 - `trg_webhook_delivery_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## webhook_subscription
@@ -94,5 +97,7 @@ The 2 tables owned by `webhooks`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"state": 20000, "target_url": 20000, "event_types": 20000, "body_template": 20000, "body_content_type": 20000, "signing_secret_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"body_content_type":20000,"body_template":20000,"event_types":20000,"signing_secret_ref":20000,"state":20000,"target_url":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "target_url": 20000, "event_types": 20000, "body_template": 20000, "body_content_type": 20000, "signing_secret_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"body_content_type":20000,"body_template":20000,"event_types":20000,"signing_secret_ref":20000,"state":20000,"target_url":20000}')`
 - `trg_webhook_subscription_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 - `webhook_subscription_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state = 'active')))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`

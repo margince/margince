@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
+import { phoneRow } from "../../testing/phonerow";
 import {
   installFetchStub,
   jsonResponse,
@@ -35,10 +36,56 @@ const anna = {
   version: 1,
 };
 
+// A title and an employer, an employer alone, and neither.
+const team = [
+  {
+    ...anna,
+    primary_email: "anna.weber@brandt.example",
+    employer: { company_id: "o-1", company_name: "Brandt Automotive" },
+  },
+  {
+    ...anna,
+    id: "p-2",
+    full_name: "Jonas Keller",
+    title: null,
+    employer: { company_id: "o-1", company_name: "Brandt Automotive" },
+  },
+  { ...anna, id: "p-3", full_name: "Mira Hoang", title: null },
+];
+
+function renderTeam() {
+  installFetchStub({
+    "GET /me": meRoute({ contact: ["read", "update"] }),
+    "GET /contacts": () =>
+      jsonResponse({
+        data: team,
+        page: { next_cursor: null, has_more: false },
+      }),
+  });
+  return (
+    <StoryProviders>
+      <ContactsScreen />
+    </StoryProviders>
+  );
+}
+
+/** Each name leads with the contact's monogram; the title stays beside it. */
 export const ContactsList: Story = {
+  render: renderTeam,
+  play: async ({ canvasElement }) => {
+    const { identity } = phoneRow(
+      await within(canvasElement).findByText("Anna Weber"),
+    );
+    await expect(identity.querySelector(".avatar")).toHaveTextContent("AW");
+    await expect(identity).toHaveTextContent("· Head of Procurement");
+  },
+};
+
+/** `#/contacts/new`: the list with its create form open, as `C` opens it. */
+export const CreateFormOpen: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({ contact: ["read", "update"] }),
+      "GET /me": meRoute({ contact: ["read", "create"] }),
       "GET /contacts": () =>
         jsonResponse({
           data: [anna],
@@ -47,9 +94,14 @@ export const ContactsList: Story = {
     });
     return (
       <StoryProviders>
-        <ContactsScreen />
+        <ContactsScreen startCreating />
       </StoryProviders>
     );
+  },
+  play: async () => {
+    await expect(
+      await screen.findByRole("dialog", { name: "New contact" }),
+    ).toBeInTheDocument();
   },
 };
 
@@ -86,11 +138,62 @@ export const ContactsListCopyAddress: Story = {
   },
 };
 
-/** The phone card keeps the address and its copy glyph on one line. */
-export const ContactsListCopyAddressPhone: Story = {
-  ...ContactsListCopyAddress,
+/** Each address's copy glyph waits for its row: only the hovered row shows one. */
+export const ContactsListCopyOnRowHover: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "update"] }),
+      "GET /contacts": () =>
+        jsonResponse({
+          data: [
+            { ...anna, primary_email: "anna.weber@brandt.example" },
+            {
+              ...anna,
+              id: "p-2",
+              full_name: "Jonas Keller",
+              primary_email: "jonas.keller@brandt.example",
+            },
+            {
+              ...anna,
+              id: "p-3",
+              full_name: "Mira Hoang",
+              primary_email: "mira.hoang@brandt.example",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ContactsScreen />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    const address = await screen.findByText("jonas.keller@brandt.example");
+    await userEvent.hover(address);
+  },
+};
+
+/** On a phone the title leaves the name for line two, ahead of the employer. */
+export const ContactsListPhone: Story = {
+  render: renderTeam,
+  parameters: { layout: "fullscreen" },
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const anna = phoneRow(await canvas.findByText("Anna Weber"));
+    await expect(anna.identity).not.toHaveTextContent("Head of Procurement");
+    await expect(anna.caption).toEqual([
+      "Head of Procurement",
+      "Brandt Automotive",
+    ]);
+    await expect(phoneRow(canvas.getByText("Jonas Keller")).caption).toEqual([
+      "Brandt Automotive",
+    ]);
+    await expect(phoneRow(canvas.getByText("Mira Hoang")).caption).toEqual([]);
+  },
 };
 
 // The list stories below are all about what the TABLE shows, so they share one

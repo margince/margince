@@ -185,7 +185,10 @@ func (s *Store) RecordContext(
 	// age limit there, so it has none here either (requestAnswersClaim). A send
 	// that named no claim is judged on the windowed legacy reading.
 	if !requestAnswersClaim(in.Kind, commsauthz.Category(refusal.Requested)) {
-		if err := s.refuseAnExchangeTooOldToCount(ctx, in.SubjectID, in.OccurredAt); err != nil {
+		if refusal.SubjectKind == "" {
+			refusal.SubjectKind = entityContact
+		}
+		if err := s.refuseSubjectExchangeTooOld(ctx, ruleSubject{Kind: refusal.SubjectKind, ID: in.SubjectID.String()}, in.OccurredAt); err != nil {
 			return Review{}, err
 		}
 	}
@@ -202,15 +205,29 @@ func (s *Store) RecordContext(
 // recordFaceToFaceTx, the writer the source review shares. A statement against
 // a message about a deal is about that deal, so the next message reuses it.
 func (s *Store) recordStatement(ctx context.Context, in RecordContextInput, refusal RefusedRecipient) error {
+	entity := refusal.SendingEntity
+	if entity == nil {
+		entity = new(ids.UUID)
+	}
+	if refusal.SubjectKind == entityLead {
+		_, err := s.RecordLeadQualifyingEvent(ctx, ids.From[ids.LeadKind](in.SubjectID.UUID), RecordQualifyingEventInput{
+			Kind: in.Kind, Note: in.Note, OccurredAt: in.OccurredAt,
+			AsksForQuote: in.Kind == KindRequestedBySubject && refusal.claim() == commsauthz.CategoryPrecontractQuote,
+			AboutDeal:    refusal.dealID(), sendingEntity: entity,
+		})
+		return err
+	}
 	if in.Kind == kindInPerson {
 		if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 			return s.recordFaceToFaceTx(ctx, tx, in.SubjectID, faceToFaceMeeting{
-				note: in.Note, met: in.OccurredAt, aboutDeal: refusal.dealID(),
+				note: in.Note, met: in.OccurredAt, aboutDeal: refusal.dealID(), entity: entity,
 			})
 		}); err != nil {
 			return err
 		}
-		return s.settleSourceReviewsByMeeting(ctx, in)
+		return s.settleSourceReviewsByMeeting(ctx, in, faceToFaceMeeting{
+			note: in.Note, met: in.OccurredAt, aboutDeal: refusal.dealID(), entity: entity,
+		})
 	}
 	// A request stated against a refused quote is a request for that quote.
 	_, err := s.RecordQualifyingEvent(ctx, in.SubjectID, RecordQualifyingEventInput{
@@ -219,7 +236,8 @@ func (s *Store) recordStatement(ctx context.Context, in RecordContextInput, refu
 		OccurredAt: in.OccurredAt,
 		AsksForQuote: in.Kind == KindRequestedBySubject &&
 			refusal.claim() == commsauthz.CategoryPrecontractQuote,
-		AboutDeal: refusal.dealID(),
+		AboutDeal:     refusal.dealID(),
+		sendingEntity: entity,
 	})
 	return err
 }
@@ -232,7 +250,7 @@ func mayChangeNoticeCases(ctx context.Context) bool {
 // settleSourceReviewsByMeeting settles the contact's open source reviews with
 // the meeting, through AssessNoticeSource and its gate. A caller without the
 // notice-case grant leaves them for the privacy officer.
-func (s *Store) settleSourceReviewsByMeeting(ctx context.Context, in RecordContextInput) error {
+func (s *Store) settleSourceReviewsByMeeting(ctx context.Context, in RecordContextInput, meeting faceToFaceMeeting) error {
 	if !mayChangeNoticeCases(ctx) {
 		return nil
 	}
@@ -253,7 +271,7 @@ func (s *Store) settleSourceReviewsByMeeting(ctx context.Context, in RecordConte
 	}
 	for _, review := range reviews {
 		if _, err := s.AssessNoticeSource(ctx, review, SourceAssessment{
-			Kind: faceToFaceSource, MetInPerson: true, ObtainedAt: &met, Note: in.Note, Now: now,
+			Kind: faceToFaceSource, MetInPerson: true, ObtainedAt: &met, Note: in.Note, Now: now, meeting: &meeting,
 		}); err != nil {
 			return err
 		}
@@ -286,12 +304,18 @@ func requestAnswersClaim(kind string, claim commsauthz.Category) bool {
 // under the authority of a refusal about another.
 func refusalNaming(review Review, subject ids.ContactID) (RefusedRecipient, bool) {
 	want := subject.String()
-	for _, r := range review.Refusals {
-		if r.SubjectID == want {
-			return r, true
+	var found RefusedRecipient
+	matched := false
+	for _, refusal := range review.Refusals {
+		if refusal.SubjectID != want {
+			continue
 		}
+		if matched && found.SubjectKind != refusal.SubjectKind {
+			return RefusedRecipient{}, false
+		}
+		found, matched = refusal, true
 	}
-	return RefusedRecipient{}, false
+	return found, matched
 }
 
 // HeldSubjectsForReview lists the contacts a review was refused for, so a caller
@@ -320,12 +344,12 @@ func HeldSubjectsForReview(review Review) []ids.ContactID {
 // rep whose evidence has aged out is not making a mistake — the fact is true
 // and no longer supports an unprompted message — and the next move is a
 // recorded exception, not a differently worded sentence.
-func (s *Store) refuseAnExchangeTooOldToCount(ctx context.Context, subject ids.ContactID, occurredAt time.Time) error {
+func (s *Store) refuseSubjectExchangeTooOld(ctx context.Context, subject ruleSubject, occurredAt time.Time) error {
 	var counts bool
 	var window time.Duration
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		counts, window, err = exchangeStillCountsTx(ctx, tx, subject, occurredAt, s.now())
+		counts, window, err = subjectExchangeStillCountsTx(ctx, tx, subject, occurredAt, s.now())
 		return err
 	}); err != nil {
 		return err

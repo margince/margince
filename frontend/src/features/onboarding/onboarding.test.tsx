@@ -15,6 +15,7 @@ import {
   SLOWEST_MEASURED_TEST_MS,
 } from "../../../vitest.budget";
 import type { components } from "../../api/schema";
+import { stable } from "../../format/collate";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
@@ -686,13 +687,12 @@ describe("the mandatory company minimum", () => {
     await skipManual();
     await skipManual();
     await skipManual();
-    expect(
-      (
-        screen.getByRole("button", {
-          name: /Next question/,
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
+    const answer = screen.getByRole("textbox");
+    await userEvent.click(
+      screen.getByRole("button", { name: /Next question/ }),
+    );
+    expect(screen.getByText("This field is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(answer);
     expect(requestTo(calls, "/company", "PUT")).toBeUndefined();
   });
 
@@ -764,6 +764,6 @@ describe("the onboarding draft payload", () => {
     // nothing for: it is the address a read starts from, not a profile fact.
     const serialized = Object.keys(onboardingDraftPayload(EMPTY_DRAFT.values));
 
-    expect([...collected].sort()).toEqual(serialized.sort());
+    expect([...collected].sort(stable)).toEqual(serialized.sort(stable));
   });
 });

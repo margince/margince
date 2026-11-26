@@ -3,15 +3,18 @@
 
 package deals
 
-// The inbox line the follow-up pass writes when it stages a proposal.
+// The words the follow-up pass and the stage policy write onto records.
 //
-// An approval's summary is shared-record text: stored once and read by every
-// seat, so it follows the installation's base language, resolved when the
-// proposal is staged. Rows already stored keep the words they were written in.
+// They are shared-record text: stored once and read by every seat, so they
+// follow the installation's base language, resolved when they are written.
+// Rows already stored keep the words they were written in.
 
 import (
 	"context"
+	"time"
 
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
@@ -19,10 +22,6 @@ import (
 // summaryCopy is one language's set. Every field is required, and the census
 // (summarycopy_test.go) refuses a partial set.
 type summaryCopy struct {
-	// draftFollowUp asks for a follow-up on a touched deal. %q is the deal's
-	// name, then %s the interaction kind (an identifier, untranslated) and %s
-	// its date, in that order.
-	draftFollowUp string
 	// followUpSubject titles the drafted task. %s is the deal's name.
 	followUpSubject string
 	// followUpBody grounds the task in the exchange it answers: %s the
@@ -57,10 +56,9 @@ type summaryCopy struct {
 // textlang.Shipped and ask this map directly.
 var summaryByLang = map[textlang.Lang]summaryCopy{
 	textlang.English: {
-		draftFollowUp:      "Draft a follow-up on %q — the %s on %s left no next step planned",
-		followUpSubject:    "Follow up on %s",
-		followUpBody:       "Follow up on the %s from %s. No next step is on the timeline yet.",
-		followUpBodyQuoted: "Follow up on the %s “%s” from %s. No next step is on the timeline yet.",
+		followUpSubject:    systemtext.Copy("deals.followUpSubject", textlang.English),
+		followUpBody:       systemtext.Copy("deals.followUpBody", textlang.English),
+		followUpBodyQuoted: systemtext.Copy("deals.followUpBodyQuoted", textlang.English),
 
 		stageAutoApply:        "every exit criterion is settled by the other side's own words, and this transition has been measured long enough to move itself",
 		stageAllSettled:       "every exit criterion for this stage is settled",
@@ -80,10 +78,9 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		protectedRecently:     "this deal is protected from automatic moves right now",
 	},
 	textlang.German: {
-		draftFollowUp:      "Entwirf ein Follow-up zu %q: Nach dem Austausch (%s) am %s ist kein nächster Schritt geplant.",
-		followUpSubject:    "Follow-up zu %s",
-		followUpBody:       "Follow-up zum Austausch (%s) vom %s. Im Verlauf steht noch kein nächster Schritt.",
-		followUpBodyQuoted: "Follow-up zum Austausch (%s) „%s“ vom %s. Im Verlauf steht noch kein nächster Schritt.",
+		followUpSubject:    systemtext.Copy("deals.followUpSubject", textlang.German),
+		followUpBody:       systemtext.Copy("deals.followUpBody", textlang.German),
+		followUpBodyQuoted: systemtext.Copy("deals.followUpBodyQuoted", textlang.German),
 
 		stageAutoApply:        "jedes Austrittskriterium ist durch die eigenen Worte der Gegenseite erfüllt, und dieser Übergang wurde lange genug gemessen, um den Deal selbst zu verschieben",
 		stageAllSettled:       "jedes Austrittskriterium dieser Phase ist erfüllt",
@@ -103,10 +100,9 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		protectedRecently:     "dieser Deal ist derzeit vor automatischen Phasenwechseln geschützt",
 	},
 	textlang.Vietnamese: {
-		draftFollowUp:      "Soạn một follow-up cho %q: sau tương tác (%s) vào ngày %s chưa có bước tiếp theo nào được lên kế hoạch.",
-		followUpSubject:    "Follow-up cho %s",
-		followUpBody:       "Follow-up cho tương tác (%s) vào ngày %s. Dòng thời gian chưa có bước tiếp theo nào.",
-		followUpBodyQuoted: "Follow-up cho tương tác (%s) “%s” vào ngày %s. Dòng thời gian chưa có bước tiếp theo nào.",
+		followUpSubject:    systemtext.Copy("deals.followUpSubject", textlang.Vietnamese),
+		followUpBody:       systemtext.Copy("deals.followUpBody", textlang.Vietnamese),
+		followUpBodyQuoted: systemtext.Copy("deals.followUpBodyQuoted", textlang.Vietnamese),
 
 		stageAutoApply:        "mọi tiêu chí rời giai đoạn đều đã được xác nhận bằng chính lời của phía bên kia, và bước chuyển này đã được đo lường đủ lâu để tự thực hiện",
 		stageAllSettled:       "mọi tiêu chí rời giai đoạn này đều đã được đáp ứng",
@@ -132,6 +128,20 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 // row, and a sentence in English beats no sentence.
 func summaryIn(ctx context.Context, language baselanguage.Resolver) summaryCopy {
 	return summaryFor(language.Resolve(ctx))
+}
+
+// followUpWords is a follow-up's sentences and the way their language writes a
+// day. A reader sees the day in the sentence, so it is "9 Nov 2026" and never
+// the ISO form a machine reads.
+type followUpWords struct {
+	said summaryCopy
+	day  func(time.Time) string
+}
+
+// followUpWordsIn resolves the installation's base language once, for both.
+func followUpWordsIn(ctx context.Context, language baselanguage.Resolver) followUpWords {
+	lang := language.Resolve(ctx)
+	return followUpWords{said: summaryFor(lang), day: mailcopy.For(string(lang)).Date}
 }
 
 // summaryFor is summaryIn for a caller that already holds the language.

@@ -1,0 +1,9 @@
+{
+  "verb": "visit_list",
+  "checks": [
+    "list.read"
+  ],
+  "takes": [
+    "list"
+  ]
+}

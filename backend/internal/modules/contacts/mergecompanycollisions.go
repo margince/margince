@@ -75,19 +75,6 @@ func moveCompanySingletons(ctx context.Context, tx pgx.Tx, sourceID, targetID id
 	return nil
 }
 
-// moveCompanyFinanceMapping re-homes every "this external customer is that
-// company" mapping, live or archived, onto the survivor. A company may hold
-// several accounting customers, so the loser's live mappings join the
-// survivor's, and the next sync moves their invoices with them.
-func moveCompanyFinanceMapping(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
-	if _, err := tx.Exec(ctx,
-		`UPDATE finance_customer_link SET company_id = $2 WHERE company_id = $1`,
-		sourceID, targetID); err != nil {
-		return fmt.Errorf("move the finance customer mappings: %w", err)
-	}
-	return nil
-}
-
 // moveCompanySiteReads re-homes the reads of the company's own website.
 //
 // Only one read per (company, seed_url) may be in flight, so a source read

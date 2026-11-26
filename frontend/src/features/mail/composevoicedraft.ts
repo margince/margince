@@ -5,22 +5,27 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
+import type { Locale } from "../../i18n/locale";
 import {
   problemCodeOf,
+  problemFieldErrorsOf,
   problemMessageOf,
   throwProblem,
 } from "../../lib/problem";
+import type { RewriteVerb } from "../../lib/rewrites";
 import type { ComposeThread } from "./composeanchor";
 import type { DraftAsk, FollowUp } from "./composedraftcall";
 
 import {
   draftingSubject,
-  fillFromDraft,
   keptTag,
+  modelWrote,
+  servedUntouched,
   useDraftMutation,
 } from "./composedraftcall";
 import type { DraftNeed, PendingAction } from "./composedraftcontext";
+import { fillFromDraft } from "./composedraftfill";
 import type { ComposeFields } from "./composefields";
 import type { RelinkKind } from "./composerelink";
 
@@ -78,7 +83,7 @@ function draftNeed(
 // A 404 on a reply is the anchor being gone: the activity read still answers
 // 200 for an archived row. Without an anchor, a 404 means the record is gone.
 function draftErrorOf(
-  draft: Readonly<{ isError: boolean; error: unknown }>,
+  draft: Readonly<{ isError: boolean; error: unknown; variables?: DraftAsk }>,
   anchorFailed: boolean,
   answering: string | undefined,
   t: ReturnType<typeof useT>,
@@ -88,6 +93,13 @@ function draftErrorOf(
   }
   if (!draft.isError) {
     return null;
+  }
+  // The rewrite path's own length refusal reads as the composer's, not a fault.
+  const tooLong = problemFieldErrorsOf(draft.error).some(
+    (fault) => fault.code === "too_long",
+  );
+  if (draft.variables?.verb && tooLong) {
+    return t("compose.rewriteTooLong");
   }
   if (answering && problemCodeOf(draft.error) === "not_found") {
     return t("compose.anchorGone");
@@ -131,6 +143,7 @@ export function useVoiceDraft({
   sourceBlocked?: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const { account, draftEpoch, body, html, intent } = fields;
   const { recipientId } = recipient;
 
@@ -144,9 +157,15 @@ export function useVoiceDraft({
     });
   };
 
-  // The last draft that reached the body, so it arrives as a model's words do.
-  // A draft the rep's own words held back never shows.
+  // The last model draft that reached the body, so it arrives as a model's
+  // words do. A held-back draft never shows, nor words no model wrote.
   const [drafted, setDrafted] = useState<string | null>(null);
+  // The words on screen before the last rewrite verb, and the words it left.
+  // Undo brings them back while the rewrite's words still stand.
+  const [rewritten, setRewritten] = useState<{
+    before: Readonly<{ text: string; html: string }>;
+    after: string;
+  } | null>(null);
 
   const draft = useDraftMutation({
     entityId,
@@ -156,7 +175,8 @@ export function useVoiceDraft({
         subject: fields.subject,
         body,
         toEmpty: fields.to.length === 0,
-        rewrite: ask.instruction !== undefined || result.revised === true,
+        copies: [...fields.cc, ...fields.bcc],
+        rewrite: ask.rewrite === true || result.revised === true,
         setSubject: fields.setSubject,
         setBody: fields.adoptDraftedBody,
         setServedBody: fields.setServedBody,
@@ -165,11 +185,28 @@ export function useVoiceDraft({
         setProvenance: fields.setProvenance,
         setReasoning: account.setReasoning,
         setScope: account.setScope,
+        fromInstruction: !ask.verb,
+        context: fields.context,
+        reasonFromDraft: fields.reasonFromDraft,
+        setContext: fields.setContext,
+        setMeetingEvidence: fields.setMeetingEvidence,
+        setReasonFromDraft: fields.setReasonFromDraft,
       });
       // The rep's words stood in the way, so say the new draft was dropped.
       fields.setDraftKept(!written);
       if (written) {
-        setDrafted(result.draft.body);
+        // A pick counts once its words are on screen; a kept body keeps its own.
+        if (ask.language) fields.setLanguage(ask.language);
+        if (!ask.verb) fields.setDraftedIntent(ask.intent);
+        setDrafted(modelWrote(result.draft) ? result.draft.body : null);
+        setRewritten(
+          ask.verb
+            ? {
+                before: { text: ask.body, html: ask.html },
+                after: result.draft.body,
+              }
+            : null,
+        );
       }
       revealDraftedBody();
     },
@@ -237,19 +274,31 @@ export function useVoiceDraft({
   // While a rejection is in flight, nothing else may act on its draft. The
   // text stays frozen, so a returned reference names the words on screen.
   const rejectionInFlight = discard.isPending;
-  const ask = (instruction?: string): DraftAsk => ({
-    activityId: answering,
-    subject: draftingSubject(fields.subject),
-    entityType,
-    entityId,
-    followUp,
-    intent,
-    epoch: draftEpoch.current,
-    body,
-    html,
-    grounding: { ...account.grounding, recipientId, projectId },
-    ...(instruction === undefined ? {} : { instruction }),
-  });
+  const ask = (
+    turn: Readonly<{ verb?: RewriteVerb; language?: Locale }> = {},
+  ): DraftAsk => {
+    const language = turn.language ?? fields.language;
+    return {
+      activityId: answering,
+      subject: draftingSubject(fields.subject),
+      entityType,
+      entityId,
+      followUp,
+      intent,
+      epoch: draftEpoch.current,
+      body,
+      html,
+      grounding: { ...account.grounding, recipientId, projectId },
+      ...(turn.verb === undefined ? {} : { verb: turn.verb, reader: locale }),
+      ...(language ? { language } : {}),
+      // A pick replaces only the model's untouched words. Over the rep's own
+      // words it waits for a model revision.
+      rewrite:
+        turn.verb !== undefined ||
+        (turn.language !== undefined &&
+          servedUntouched({ text: body, html, served: fields.servedBody })),
+    };
+  };
   const control: PendingAction = {
     run: () => draft.mutate(ask()),
     pending: draft.isPending,
@@ -278,7 +327,17 @@ export function useVoiceDraft({
     drafted,
     need: draftNeed(groundable, recipient),
     // A rewrite replaces the body, so it waits for any draft in flight.
-    rewrite: (instruction: string) => draft.mutate(ask(instruction)),
+    rewrite: (verb: RewriteVerb) => draft.mutate(ask({ verb })),
+    // An edit of the words, back to the ones the rep had: their marks return too.
+    undoRewrite:
+      rewritten && body === rewritten.after && !draft.isPending
+        ? () => {
+            fields.editBody(rewritten.before);
+            setRewritten(null);
+          }
+        : null,
+    // The words on screen, written again in another language under the same ask.
+    relanguage: (language: Locale) => draft.mutate(ask({ language })),
   };
 }
 

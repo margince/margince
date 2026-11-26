@@ -81,6 +81,7 @@ export const SettledRecords: Story = {
 };
 function Panel() {
   const panel = useRef<HTMLElement>(null);
+  const focusMovedOn = useRef(false);
   return (
     <AgentPanel
       state="idle"
@@ -101,7 +102,9 @@ function Panel() {
       model={{ allowed: false, calls: [] }}
       spend={{ allowed: false, minor: undefined, currency: "EUR" }}
       panel={panel}
+      focusMovedOn={focusMovedOn}
       frame={{ left: 12, bottom: 12, width: 420, maxHeight: 700 }}
+      id="agent-panel"
     />
   );
 }

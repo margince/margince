@@ -63,12 +63,15 @@ const auditKeyExclusion = "capture_exclusion"
 
 // Exclusion is one rule as stored.
 type Exclusion struct {
-	ID        ids.UUID
-	Scope     string
-	UserID    *ids.UUID
-	Kind      string
-	Value     string
-	CreatedAt time.Time
+	ID     ids.UUID
+	Scope  string
+	UserID *ids.UUID
+	Kind   string
+	Value  string
+	// ConnectionID is the mailbox a member's container rule was picked from;
+	// nil for every other rule.
+	ConnectionID *ids.UUID
+	CreatedAt    time.Time
 	// CreatedByName is the member who added the rule, nil for a non-human
 	// creator or one no longer active.
 	CreatedByName *string
@@ -76,22 +79,50 @@ type Exclusion struct {
 
 // exclusionColumns is what List and Add answer, with the creator named the way
 // the audit trail names a human actor.
-var exclusionColumns = `e.id, e.scope, e.user_id, e.kind, e.value, e.created_at, u.display_name
+var exclusionColumns = `e.id, e.scope, e.user_id, e.kind, e.value, e.connection_id, e.created_at, u.display_name
 	  FROM e LEFT JOIN app_user u
 	    ON e.created_by = 'human:' || u.id::text AND ` + workforce.LiveMemberSQL("u")
 
 func scanExclusion(row pgx.Row, e *Exclusion) error {
-	return row.Scan(&e.ID, &e.Scope, &e.UserID, &e.Kind, &e.Value, &e.CreatedAt, &e.CreatedByName)
+	return row.Scan(&e.ID, &e.Scope, &e.UserID, &e.Kind, &e.Value, &e.ConnectionID, &e.CreatedAt, &e.CreatedByName)
+}
+
+// ruleMailboxTx answers the mailbox a member's container rule names: the
+// one connection asked for, or their only mailbox of the rule's provider. A
+// label id means nothing in another mailbox, so the rule never names none.
+// A provider-defined container means the same in each of them. It names no
+// mailbox, the zero id, as every other rule does.
+func ruleMailboxTx(ctx context.Context, tx pgx.Tx, user *ids.UUID, kind, value string, connection ids.UUID) (ids.UUID, error) {
+	if kind != ExclusionKindContainer || user == nil || IsProviderDefinedContainer(value) {
+		return ids.Nil, nil
+	}
+	provider, _, _ := strings.Cut(value, ":")
+	id, err := memberMailboxTx(ctx, tx, *user, Mailbox{Provider: provider, ID: connection})
+	if errors.Is(err, ErrNoConnection) {
+		return ids.Nil, &InvalidExclusionError{Field: "connection_id", Reason: "the folder belongs to a mailbox you have not connected"}
+	}
+	return id, err
 }
 
 // ExclusionStore reads and writes the exclusion lists.
 type ExclusionStore struct {
 	db *database.DB
+	// beforeRemove runs inside a removal, with the rule's purge lock held.
+	// Compose supplies it, because the purge receipts live there and this
+	// module cannot import compose.
+	beforeRemove func(ctx context.Context, tx pgx.Tx, id ids.UUID) error
 }
 
 // NewExclusionStore builds the store over the app pool.
 func NewExclusionStore(db *database.DB) *ExclusionStore {
 	return &ExclusionStore{db: db}
+}
+
+// WithRemovalRepair sets the step a removal runs, under the rule's purge lock,
+// before it deletes the rule.
+func (s *ExclusionStore) WithRemovalRepair(f func(ctx context.Context, tx pgx.Tx, id ids.UUID) error) *ExclusionStore {
+	s.beforeRemove = f
+	return s
 }
 
 // List answers the workspace's rules and the caller's own: a reader learns
@@ -107,7 +138,7 @@ func (s *ExclusionStore) List(ctx context.Context) ([]Exclusion, error) {
 	var out []Exclusion
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			WITH e AS (SELECT id, scope, user_id, kind, value, created_at, created_by
+			WITH e AS (SELECT id, scope, user_id, kind, value, connection_id, created_at, created_by
 			              FROM capture_exclusion WHERE scope = 'workspace' OR user_id = $1)
 			SELECT `+exclusionColumns+`
 			 ORDER BY e.scope, e.kind, e.value`, actor.UserID)
@@ -130,7 +161,7 @@ func (s *ExclusionStore) List(ctx context.Context) ([]Exclusion, error) {
 // Add records one rule. A workspace rule takes the capture-settings update
 // grant (admin/ops); a user rule takes only a user or their agent, and names the
 // caller. Idempotent on the folded value: re-adding answers the existing row.
-func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string) (Exclusion, error) {
+func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string, connection ids.UUID) (Exclusion, error) {
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return Exclusion{}, err
 	}
@@ -178,20 +209,24 @@ func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string) (Excl
 	}
 	var out Exclusion
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		mailbox, err := ruleMailboxTx(ctx, tx, userID, kind, value, connection)
+		if err != nil {
+			return err
+		}
 		if err := scanExclusion(tx.QueryRow(ctx, `
 			WITH e AS (
-			  INSERT INTO capture_exclusion (scope, user_id, kind, value, created_by)
-			  VALUES ($1, $2, $3, $4, $5)
-			  ON CONFLICT (scope, user_id, kind, value)
+			  INSERT INTO capture_exclusion (scope, user_id, kind, value, connection_id, created_by)
+			  VALUES ($1, $2, $3, $4, NULLIF($6::uuid, '00000000-0000-0000-0000-000000000000'), $5)
+			  ON CONFLICT (scope, user_id, kind, value, connection_id)
 			    DO UPDATE SET value = EXCLUDED.value, created_by = `+fmt.Sprintf(agentDecisionTakeoverSQL, "capture_exclusion")+`
-			  RETURNING id, scope, user_id, kind, value, created_at, created_by)
+			  RETURNING id, scope, user_id, kind, value, connection_id, created_at, created_by)
 			SELECT `+exclusionColumns,
-			scope, userID, kind, value, actor.ID), &out); err != nil {
+			scope, userID, kind, value, actor.ID, mailbox), &out); err != nil {
 			return fmt.Errorf("capture: adding an exclusion: %w", err)
 		}
 		// Audit-only, like the own-domain list beside it: this is capture
 		// configuration, and the closed event catalog carries no type for it.
-		_, err := storekit.AuditEvent(ctx, tx, "update", captureSettingsObject, storekit.MustWorkspace(ctx),
+		_, err = storekit.AuditEvent(ctx, tx, "update", captureSettingsObject, storekit.MustWorkspace(ctx),
 			exclusionAuditImage(out))
 		return err
 	})
@@ -229,6 +264,16 @@ func (s *ExclusionStore) Remove(ctx context.Context, id ids.UUID) error {
 		}
 		if err := refuseAgentOverAUsersDecision(actor, &createdBy, "this exclusion"); err != nil {
 			return err
+		}
+		// Wait for a running purge of this rule, then certify its runs. After
+		// the delete nothing could say which rule their rows belong to.
+		if err := storekit.LockPurgeSubjectTx(ctx, tx, id); err != nil {
+			return err
+		}
+		if s.beforeRemove != nil {
+			if err := s.beforeRemove(ctx, tx, id); err != nil {
+				return err
+			}
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM capture_exclusion WHERE id = $1`, id); err != nil {
 			return fmt.Errorf("capture: removing an exclusion: %w", err)

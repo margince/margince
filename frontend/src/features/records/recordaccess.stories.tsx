@@ -52,10 +52,12 @@ function Access({
   contact,
   seat = "full",
   patchStatus = 200,
+  locale,
 }: Readonly<{
   contact: Contact;
   seat?: "full" | "read";
   patchStatus?: number;
+  locale?: "de";
 }>) {
   installFetchStub({
     "GET /me": meRoute(MAY_WRITE, { seat }),
@@ -71,7 +73,7 @@ function Access({
       ),
   });
   return (
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       {/* The header's row of marks, so the chip is seen at the height and
           interval it keeps beside the standing badge. */}
       <IdentityLine separator="space">
@@ -113,8 +115,8 @@ export const PrivateToTheReader: Story = {
 
 /** A private contact open to a colleague it was shared with. The chip says
  *  the same "Private", never "Only you", and the sentence names the owner and
- *  why this reader can see it. The row is not theirs to write, so the switch
- *  gives way to the page's own refusal. */
+ *  why this reader can see it. The row is not theirs to write, so there is no
+ *  switch; the head's View only pill says why. */
 export const PrivateToAColleague: Story = {
   render: () => (
     <Access
@@ -129,8 +131,8 @@ export const PrivateToAColleague: Story = {
   play: openChip,
 };
 
-/** A read seat: the row would take the write, the seat will not, and the
- *  panel says so rather than offering a switch the server refuses. */
+/** A read seat: the row would take the write, the seat will not, so the panel
+ *  offers no switch the server refuses; the View only pill says why. */
 export const ReadOnlySeat: Story = {
   render: () => (
     <Access contact={{ ...base, visibility: "workspace" }} seat="read" />
@@ -196,6 +198,13 @@ export const Phone: Story = {
   tags: ["uat-phone"],
   render: () => <Access contact={{ ...base, visibility: "owner" }} />,
   play: openChip,
+};
+
+/** The chip says the audience in the words of its choices, the longest in German. */
+export const GermanOnlyTheOwner: Story = {
+  render: () => (
+    <Access contact={{ ...base, visibility: "owner" }} locale="de" />
+  ),
 };
 
 const account: Company = {

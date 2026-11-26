@@ -75,8 +75,11 @@ issue to label.
 - `claim: main-red`: a session is already fixing this red on `main`. It sits on a draft pull request
   whose body lists the failing lanes and tests it covers. The list matters because `main` is often
   red for two reasons at once that have nothing to do with each other. A claim that names one of
-  them leaves the other free for someone to take. Check for a claim before you look into a failure
-  you did not cause. If no claim covers yours, open one before you start a fix.
+  them leaves the other free for someone to take.
+
+  The watcher claims a red `main`, so leave a failure you did not cause to it. Open a claim yourself
+  only when the red blocks your merge and, 30 minutes after it showed, no claim names its tests.
+  Then open it before you start a fix.
 
   The steps, and
   when someone may take over an old claim, are in
@@ -93,6 +96,15 @@ planned. It does not say what a release needs.
 - `release: blocker`: the next plain tag waits until this issue is closed. `release-tag.yml` refuses
   the tag while an open issue carries it. The label names no version: an issue still open when a
   release ships blocks the one after it. The maintainer who plans the release sets it.
+
+## Records
+
+This label also goes on a **pull request**. `scheduled.yml` and `mcp-sweep.yml` open one pull
+request for each record they measured, and put this label on it.
+
+- `records: proposed`: a measurement put up for review. That is the weekly speed records, or the
+  MCP use-case verdicts of a run started by hand. It goes to the maintainer that the `RECORDS_OWNER` repository variable names.
+  That maintainer compares the record with the one it replaces, then merges or closes the pull request.
 
 ## Provenance
 

@@ -163,13 +163,12 @@ func newOutboundClient(provider string) *http.Client {
 // Nor does it strip anything when only the SCHEME changes, so an https endpoint
 // redirecting to http sends the same key in clear.
 //
-// Scoped to the hop that leaks rather than refused outright, which is where this
-// differs from modellist.go's noRedirect. That one covers a list endpoint where
-// a 3xx never happens in normal operation, and its comment declines to make the
-// wider change here because this client also carries streaming completions,
-// where a redirect a vendor genuinely uses would become an outage. A same-host
-// redirect that keeps its scheme carries the key nowhere new, so it is followed;
-// the two hops that move a credential are the two that are refused.
+// Scoped to the hop that leaks rather than refused outright. The list call in
+// modellist.go refuses every redirect, because a list endpoint never sends one.
+// This client also carries streaming completions, where refusing a redirect a
+// vendor really uses would be an outage. A same-host redirect that keeps its
+// scheme carries the key nowhere new, so it is followed. Only the two hops
+// that move a credential are refused.
 func refuseOffHostRedirect(req *http.Request, via []*http.Request) error {
 	previous := via[len(via)-1]
 	if !strings.EqualFold(req.URL.Hostname(), previous.URL.Hostname()) {

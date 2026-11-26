@@ -5,16 +5,21 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { dueInstant } from "../format/calendarday";
+import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
-import { MeetingOutcome } from "./meetingoutcome";
+import { meFixture } from "../testing/mefixture";
+import { MeetingOutcome, RecordMeetingOutcome } from "./meetingoutcome";
 import { writeMeetingOutcome } from "./taskactions.rowwrites";
 
 // The real writer, watched: the dialog must write through it, so a meeting's
@@ -36,11 +41,13 @@ type Sent = {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.clearAllMocks();
+  vi.useRealTimers();
 });
 
 // Records every request the card makes, and answers a PATCH as the server
 // does: with the meeting at its next version.
-function stubServer(sent: Sent[]) {
+function stubServer(sent: Sent[], meetingStatus: string | null = "booked") {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -52,6 +59,14 @@ function stubServer(sent: Sent[]) {
         ifMatch: request.headers.get("If-Match"),
         body: text === "" ? undefined : JSON.parse(text),
       });
+      if (request.method === "GET" && request.url.endsWith("/me")) {
+        return new Response(
+          JSON.stringify(
+            meFixture({ allow: { activity: ["read", "update"] } }),
+          ),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
       if (request.method === "GET") {
         return new Response(
           JSON.stringify({
@@ -61,7 +76,7 @@ function stubServer(sent: Sent[]) {
             body: "Agenda",
             occurred_at: "2026-07-06T09:00:00Z",
             occurred_precision: "instant",
-            meeting_status: "booked",
+            meeting_status: meetingStatus,
             version: 7,
             writable: true,
             offers_email: false,
@@ -79,7 +94,17 @@ function stubServer(sent: Sent[]) {
   );
 }
 
-function renderCard() {
+function renderCard(
+  card: ReactNode = (
+    <MeetingOutcome
+      id={MEETING_ID}
+      version={7}
+      title="Site visit"
+      invalidateKeys={[]}
+      cancellable
+    />
+  ),
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -87,13 +112,7 @@ function renderCard() {
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ToastProvider>
-          <MeetingOutcome
-            id={MEETING_ID}
-            version={7}
-            title="Site visit"
-            invalidateKeys={[]}
-            cancellable
-          />
+          {card}
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
@@ -102,17 +121,39 @@ function renderCard() {
 }
 
 describe("MeetingOutcome", () => {
-  it("records It happened in one press, at the meeting's version, with no dialog", async () => {
+  // The choice records what happened; "Details" below it is the notes.
+  it("names the Held or No-show choice for what it records", async () => {
+    const user = userEvent.setup();
+    stubServer([]);
+    renderCard();
+
+    await user.click(screen.getByRole("button", { name: /Add notes/ }));
+    const dialog = await screen.findByRole("dialog");
+
+    expect(
+      await within(dialog).findByRole("combobox", { name: "What happened" }),
+    ).toBeTruthy();
+  });
+
+  it("records held without a task when the next step is skipped", async () => {
+    const user = userEvent.setup();
     const sent: Sent[] = [];
     stubServer(sent);
     renderCard();
 
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "It happened: Site visit" }),
     );
 
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByRole("heading", { name: "How did it go?" }),
+    ).toBeTruthy();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Skip next step" }),
+    );
     expect(await screen.findByText("Meeting outcome recorded")).toBeTruthy();
-    expect(sent).toEqual([
+    expect(sent.filter((request) => request.method === "PATCH")).toEqual([
       {
         method: "PATCH",
         url: `/v1/activities/${MEETING_ID}`,
@@ -134,14 +175,15 @@ describe("MeetingOutcome", () => {
   });
 
   it("saves the notes dialog through the one outcome writer", async () => {
+    const user = userEvent.setup();
     const sent: Sent[] = [];
     stubServer(sent);
     renderCard();
 
-    await userEvent.click(screen.getByRole("button", { name: /Add notes/ }));
+    await user.click(screen.getByRole("button", { name: /Add notes/ }));
     const dialog = await screen.findByRole("dialog");
     await screen.findByDisplayValue("Site visit");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Log" }));
+    await user.click(within(dialog).getByRole("button", { name: "Log" }));
 
     await waitFor(() => expect(writeMeetingOutcome).toHaveBeenCalledTimes(1));
     expect(vi.mocked(writeMeetingOutcome).mock.calls[0]?.[0]).toMatchObject({
@@ -158,5 +200,303 @@ describe("MeetingOutcome", () => {
       subject: "Site visit",
       body: "Agenda",
     });
+  });
+  it("submits a typed next step through the same held outcome write", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-07-06T09:00:00Z"));
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent);
+    renderCard();
+    await user.click(
+      screen.getByRole("button", { name: "It happened: Site visit" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("checkbox", { name: "Add a follow-up task" }),
+    );
+    expect(
+      within(dialog)
+        .getByRole("button", { name: "Log" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    fireEvent.change(
+      within(dialog).getByRole("textbox", { name: "Next step" }),
+      { target: { value: "Send revised quote" } },
+    );
+    const dueBox = within(dialog).getByRole("textbox", { name: "Due date" });
+    const dueField = dueBox.parentElement;
+    if (!dueField) throw new Error("expected due date inside its field");
+    await user.click(
+      within(dueField).getByRole("button", { name: /^Choose date/ }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Friday, 10 July 2026" }),
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(sent.filter((request) => request.method === "PATCH")).toHaveLength(
+        1,
+      ),
+    );
+    const writes = sent.filter((request) => request.method !== "GET");
+    expect(writes).toEqual([
+      {
+        method: "PATCH",
+        url: `/v1/activities/${MEETING_ID}`,
+        ifMatch: "7",
+        body: {
+          meeting_status: "held",
+          follow_up_task: {
+            subject: "Send revised quote",
+            body: null,
+            due_at: dueInstant("2026-07-10", browserZone()),
+            due_has_time: false,
+            due_intent: {
+              wall_clock: "2026-07-10T23:59:59",
+              timezone: browserZone(),
+            },
+          },
+        },
+      },
+    ]);
+  });
+
+  it("saves notes typed into It happened in the same held write", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent);
+    renderCard();
+
+    await user.click(
+      screen.getByRole("button", { name: "It happened: Site visit" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const notes = await within(dialog).findByRole("textbox", {
+      name: "Notes",
+    });
+    await user.clear(notes);
+    await user.type(notes, "Budget approved");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Skip next step" }),
+    );
+
+    expect(await screen.findByText("Meeting outcome recorded")).toBeTruthy();
+    expect(
+      sent.filter((request) => request.method === "PATCH").map((r) => r.body),
+    ).toEqual([{ meeting_status: "held", body: "Budget approved" }]);
+  });
+
+  it("says what Did not happen recorded and Undo writes the meeting back at the cancel's version", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent);
+    renderCard();
+
+    await user.click(
+      screen.getByRole("button", { name: "Did not happen: Site visit" }),
+    );
+    expect(
+      await screen.findByText("Marked as not held (canceled)."),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    await waitFor(() =>
+      expect(sent.filter((r) => r.method === "PATCH")).toHaveLength(2),
+    );
+    expect(
+      sent
+        .filter((request) => request.method === "PATCH")
+        .map((r) => [r.ifMatch, r.body]),
+    ).toEqual([
+      ["7", { meeting_status: "canceled" }],
+      ["8", { meeting_status: "booked" }],
+    ]);
+  });
+
+  it("Undo clears the status when the meeting had none before the cancel", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent, null);
+    renderCard();
+
+    await user.click(
+      screen.getByRole("button", { name: "Did not happen: Site visit" }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Undo" }));
+
+    await waitFor(() =>
+      expect(sent.filter((r) => r.method === "PATCH")).toHaveLength(2),
+    );
+    expect(
+      sent.filter((r) => r.method === "PATCH").map((r) => [r.ifMatch, r.body]),
+    ).toEqual([
+      ["7", { meeting_status: "canceled" }],
+      ["8", { meeting_status: null }],
+    ]);
+  });
+
+  it("takes the prior status from the surface that knows it, without a read", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent, "booked");
+    renderCard(
+      <MeetingOutcome
+        id={MEETING_ID}
+        version={7}
+        title="Site visit"
+        invalidateKeys={[]}
+        cancellable
+        priorStatus={null}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Did not happen: Site visit" }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Undo" }));
+
+    await waitFor(() =>
+      expect(sent.filter((r) => r.method === "PATCH")).toHaveLength(2),
+    );
+    expect(sent.some((r) => r.method === "GET")).toBe(false);
+    expect(sent.filter((r) => r.method === "PATCH")[1]?.body).toEqual({
+      meeting_status: null,
+    });
+  });
+
+  it("says the meeting changed when the Undo is refused as stale", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent);
+    renderCard();
+    await user.click(
+      screen.getByRole("button", { name: "Did not happen: Site visit" }),
+    );
+    const undo = await screen.findByRole("button", { name: "Undo" });
+    const answer = vi.mocked(fetch).getMockImplementation();
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      const request = input instanceof Request ? input : null;
+      if (request?.method === "PATCH") {
+        return new Response(
+          JSON.stringify({ code: "version_skew", title: "Conflict" }),
+          {
+            status: 409,
+            headers: { "content-type": "application/problem+json" },
+          },
+        );
+      }
+      return (answer as typeof fetch)(input, init);
+    });
+    await user.click(undo);
+
+    expect(
+      await screen.findByText(/changed after you opened it/i),
+    ).toBeTruthy();
+  });
+
+  it("spins only Did not happen while its write runs", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
+    renderCard();
+
+    await user.click(
+      screen.getByRole("button", { name: "Did not happen: Site visit" }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "Did not happen: Site visit" })
+          .getAttribute("aria-busy"),
+      ).toBe("true"),
+    );
+    for (const name of ["It happened: Site visit", "Add notes to Site visit"]) {
+      expect(
+        screen.getByRole("button", { name }).getAttribute("aria-busy"),
+      ).not.toBe("true");
+    }
+  });
+
+  it("lets a held meeting take its notes the day after, without answering it again", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent, "held");
+    renderCard(
+      <RecordMeetingOutcome
+        activity={{
+          id: MEETING_ID,
+          kind: "meeting",
+          subject: "Site visit",
+          body: "Agenda",
+          occurred_at: "2026-07-06T09:00:00Z",
+          occurred_precision: "instant",
+          meeting_status: "held",
+          awaiting_outcome: false,
+          is_done: false,
+          created_at: "2026-07-06T09:00:00Z",
+          updated_at: "2026-07-06T09:00:00Z",
+          version: 7,
+          writable: true,
+          offers_email: false,
+          source: "manual",
+          captured_by: "human:u1",
+        }}
+        invalidateKeys={[]}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Edit notes on Site visit" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const notes = await within(dialog).findByRole("textbox", {
+      name: "Notes",
+    });
+    await user.clear(notes);
+    await user.type(notes, "Budget approved");
+    await user.click(within(dialog).getByRole("button", { name: "Log" }));
+
+    expect(await screen.findByText("Notes saved")).toBeTruthy();
+    expect(sent.filter((request) => request.method === "PATCH")).toEqual([
+      {
+        method: "PATCH",
+        url: `/v1/activities/${MEETING_ID}`,
+        ifMatch: "7",
+        body: { body: "Budget approved" },
+      },
+    ]);
+  });
+
+  it("holds the notes still while their save runs, so no typed word is dropped", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent);
+    const answered = vi.mocked(fetch).getMockImplementation();
+    vi.mocked(fetch).mockImplementation((input, init) => {
+      const request = input instanceof Request ? input : new Request(input);
+      return request.method === "PATCH"
+        ? new Promise<Response>(() => undefined)
+        : (answered?.(input, init) ?? Promise.reject(new Error("unstubbed")));
+    });
+    renderCard();
+
+    await user.click(
+      screen.getByRole("button", { name: "It happened: Site visit" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const notes = await within(dialog).findByRole("textbox", {
+      name: "Notes",
+    });
+    await user.click(
+      within(dialog).getByRole("button", { name: "Skip next step" }),
+    );
+
+    await waitFor(() =>
+      expect(notes.getAttribute("aria-disabled")).toBe("true"),
+    );
   });
 });

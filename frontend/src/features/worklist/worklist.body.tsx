@@ -1,25 +1,23 @@
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { rosterOwnerNaming } from "../../components/entityref";
-import { Badge, Button } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
 import { PageZones } from "../../design-system/pagezones";
-import { Panel } from "../../design-system/panel";
 import { ScrollSentinel } from "../../design-system/scrollsentinel";
 import { useT } from "../../i18n";
+import { lazy } from "../../i18n/lazy";
 import { useMemberNames } from "../../lib/membernames";
 import type { WorklistView } from "../../lib/worklistviews";
-import {
-  bandSections,
-  canReportEmptyBands,
-  unbandedRows,
-} from "./worklist.bands";
 import { TeamBoard } from "./worklist.board";
-import { useWorklistPicks, WorklistBulkBar } from "./worklist.bulkdone";
-import { clearSentence } from "./worklist.clear";
-import { TeamExceptionsPanel } from "./worklist.exceptions";
+import {
+  useWorklistPicks,
+  WorklistBulkBar,
+  WorklistSelect,
+} from "./worklist.bulkdone";
+import { clearSentence, offersDecisions } from "./worklist.clear";
+import { CoachControl, coachableDeals } from "./worklist.coach";
 import { HandledForYouPanel } from "./worklist.handled";
 import { WorklistHeader } from "./worklist.header";
-import { HiddenBacklogPanel } from "./worklist.hidden";
-import { CoachControl } from "./worklist.manager";
+import { LinkSuggestionsPanel } from "./worklist.linksuggestions";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import type {
   Worklist,
@@ -30,19 +28,31 @@ import type {
 } from "./worklist.queries";
 import {
   NOTHING_IN_HAND,
-  QueueRows,
   type RowContext,
   rowInHand,
+  TodayPanel,
   ViewPanel,
 } from "./worklist.queue";
-import { QueueBand } from "./worklist.queuebands";
 import { WorklistReadings } from "./worklist.readings";
 import { OptionalRelationships } from "./worklist.relationships";
 import { rowIdentity } from "./worklist.rowidentity";
 import { TeamMarginceChangesPanel } from "./worklist.teamchanges";
 import { DayUnread, dayPartlyRead } from "./worklist.unread";
 import { UpcomingSection } from "./worklist.upcoming";
+import { decisionsWaiting } from "./worklist.views";
 import { WalkNotice } from "./worklist.walknotice";
+
+// A lead's guardrail below the day, loaded only for a reader who opens "all",
+// so Home's first load does not carry it.
+const HiddenBacklogPanel = lazy(async () => ({
+  default: (await import("./worklist.hidden")).HiddenBacklogPanel,
+}));
+
+// Only a lead sees the team oversight, below the day, so Home's first paint
+// does not carry it.
+const TeamOversight = lazy(async () => ({
+  default: (await import("./worklist.gap")).TeamOversight,
+}));
 
 export function WorklistBody({
   embedded = false,
@@ -152,6 +162,7 @@ export function WorklistBody({
       <div className="worklist-columns">
         <div className="worklist-lanes">
           <WorklistHeader
+            embedded={embedded}
             day={day}
             loaded={queue}
             scope={scope}
@@ -182,11 +193,16 @@ export function WorklistBody({
           behind a disclosure they were a rule and a word of chrome standing
           between the head and the queue the drawer exists to show. */}
           {!embedded && <WorklistReadings day={day} onLane={onFilter} />}
-          {/* The reason a lead opened somebody else's day, at the head of that
-          day in every state. Placed below, the block would move as its own form
-          opened, and a lead would read three panels of that morning first. Only
-          on a named queue. */}
-          {owner !== "" && <CoachControl owner={owner} name={colleague} />}
+          {/* A lead's note heads a named queue, so opening its form does not
+          move the panels below it. */}
+          {owner !== "" && (
+            <CoachControl
+              key={owner}
+              owner={owner}
+              name={colleague}
+              deals={coachableDeals(queue)}
+            />
+          )}
           {/* What has moved since the reader started paging. An offer to refresh
           rather than a fault: the day on screen is correct, it is simply no
           longer complete. */}
@@ -219,7 +235,15 @@ export function WorklistBody({
                 t,
                 hasMore,
                 view,
+                decisionsWaiting(day),
               )}
+              onOpenDecisions={decisionsOffer(day, queue, {
+                hasMore,
+                filter,
+                colleague,
+                view,
+                onView,
+              })}
             />
           ) : (
             // The queue, and beside it what the selected row is about.
@@ -249,41 +273,20 @@ export function WorklistBody({
               label={t("worklist.pane.title")}
               queue={
                 view !== "today" ? (
-                  <ViewPanel view={view} items={queue} rows={rowProps} />
+                  <ViewPanel
+                    view={view}
+                    items={queue}
+                    rows={rowProps}
+                    select={<WorklistSelect selection={selection} />}
+                  />
                 ) : (
-                  <Panel
-                    // Indigo, the band the Brief's Focus panel wears and a
-                    // record's "what needs you today" pane before it. These rows
-                    // are the agent's reading of the day: what it ranked and what
-                    // it prepared. Indigo is the one claim the product makes about
-                    // who did that. The same panel is drawn on this page and in
-                    // the queue drawer, so the claim reads the same in both.
-                    tone="ai"
-                    title={t("worklist.queue")}
-                    titleAction={
-                      <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
-                    }
-                  >
-                    {/* The headings come from the SERVER's band list, in its draw
-                  order, rather than from the rows — which is the only way a
-                  band holding nothing can say so. Ranks are still counted over
-                  the whole queue, so a row's number is its place on the page
-                  and not its place within its heading. */}
-                    {bandSections(day, queue).map((section) => (
-                      <QueueBand
-                        key={section.band}
-                        section={section}
-                        canReportEmpty={canReportEmptyBands(hasMore)}
-                        rows={QueueRows}
-                        rowProps={rowProps}
-                      />
-                    ))}
-                    {/* Rows an older server sent with no band. Real work, drawn under
-                  no heading rather than dropped to keep the sections tidy. */}
-                    {unbandedRows(queue).length > 0 && (
-                      <QueueRows items={unbandedRows(queue)} {...rowProps} />
-                    )}
-                  </Panel>
+                  <TodayPanel
+                    day={day}
+                    items={queue}
+                    hasMore={hasMore}
+                    rows={rowProps}
+                    select={<WorklistSelect selection={selection} />}
+                  />
                 )
               }
             />
@@ -323,11 +326,36 @@ export function WorklistBody({
           acts above it are safe to take, and a receipt folded shut is one
           nobody checks. */}
           <OptionalRelationships day={day} owner={owner} scope={scope} />
+          <LinkSuggestionsPanel />
           <HandledForYouPanel />
         </div>
       </div>
     </>
   );
+}
+
+// The way from an empty Today to the decisions waiting, or nothing to offer.
+function decisionsOffer(
+  day: Worklist,
+  queue: readonly WorklistItem[],
+  at: {
+    hasMore: boolean;
+    filter: WorklistFilter;
+    colleague: string | null;
+    view: WorklistView;
+    onView: (next: WorklistView) => void;
+  },
+): (() => void) | undefined {
+  return offersDecisions(
+    dayPartlyRead(day, queue),
+    at.hasMore,
+    at.filter,
+    at.colleague,
+    at.view,
+    decisionsWaiting(day),
+  )
+    ? () => at.onView("decisions")
+    : undefined;
 }
 
 // A view with no rows says so in one line. An empty Decisions view keeps its
@@ -336,10 +364,22 @@ function EmptyView({
   view,
   rows,
   sentence,
-}: Readonly<{ view: WorklistView; rows: RowContext; sentence: string }>) {
+  onOpenDecisions,
+}: Readonly<{
+  view: WorklistView;
+  rows: RowContext;
+  sentence: string;
+  onOpenDecisions?: () => void;
+}>) {
+  const t = useT();
   return (
     <>
       <p className="t-body worklist-clear">{sentence}</p>
+      {onOpenDecisions && (
+        <Button onClick={onOpenDecisions}>
+          {t("worklist.clearDecisionsOpen")}
+        </Button>
+      )}
       {view !== "today" && <ViewPanel view={view} items={[]} rows={rows} />}
     </>
   );
@@ -367,11 +407,17 @@ function ScopePanels({
   const wide = scope !== "mine" && scope !== "unassigned" && leads;
   return (
     <>
-      {wide && <TeamExceptionsPanel enabled={leads} onOwner={onOwnerDay} />}
+      {wide && (
+        <Suspense fallback={null}>
+          <TeamOversight scope={scope} enabled={leads} onOwner={onOwnerDay} />
+        </Suspense>
+      )}
       {wide && <TeamMarginceChangesPanel enabled={leads} />}
       {wide && <TeamBoard onOwner={onOwnerDay} onUnassigned={onUnassigned} />}
       {scope === "all" && (
-        <HiddenBacklogPanel enabled={leads} onOpenEmail={onOpenEmail} />
+        <Suspense fallback={null}>
+          <HiddenBacklogPanel enabled={leads} onOpenEmail={onOpenEmail} />
+        </Suspense>
       )}
     </>
   );

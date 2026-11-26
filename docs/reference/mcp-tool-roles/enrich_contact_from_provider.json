@@ -1,0 +1,19 @@
+{
+  "tool": "run_research",
+  "action": "enrich_contact_from_provider",
+  "verb": "enrich_contact_from_provider",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

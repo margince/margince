@@ -4,12 +4,14 @@
 package ai
 
 // The decision wire: a structured state and typed questions in, a calibrated
-// answer per question out. TypeSafe's own API, a broker's decisions endpoint
-// and a self-hosted server answer the same shape, so one client serves them
-// all, posting to the binding's endpoint as written.
+// answer per question out. TypeSafe's own API, a broker, a self-hosted server
+// and Google's Decisions API answer the same shape. So one client serves them
+// all, posting to the binding's endpoint as written. Google spells the request
+// and its key differently, and the dialect says which.
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -41,6 +43,24 @@ type decisionWireRequest struct {
 	Questions map[string]decisionWireQuestion `json:"questions"`
 }
 
+// geminiDecisionRequest is Google's spelling: the state goes as `input` text,
+// which the API reads as the content the questions are about.
+type geminiDecisionRequest struct {
+	Model     string                          `json:"model"`
+	Input     string                          `json:"input"`
+	Questions map[string]decisionWireQuestion `json:"questions"`
+}
+
+// decisionDialect is which spelling of the decision wire an adapter speaks.
+type decisionDialect uint8
+
+const (
+	// dialectJev sends `state` as JSON under a bearer key.
+	dialectJev decisionDialect = iota
+	// dialectGemini sends `input` text under Google's x-goog-api-key header.
+	dialectGemini
+)
+
 type decisionWireAnswer struct {
 	Choice        string             `json:"choice"`
 	Confidence    float64            `json:"confidence"`
@@ -48,15 +68,17 @@ type decisionWireAnswer struct {
 }
 
 // decisionWireResponse is the fields read off an answer. A hosted endpoint
-// names the served snapshot in `model` and the serving vendor in `provider`; a
-// self-hosted server may echo the checkpoint and name no provider, and add
-// fields of its own that nothing here reads.
+// names the served snapshot in `model` and the serving vendor in `provider`.
+// A self-hosted server may echo the checkpoint, name no provider, and add
+// fields nothing here reads. Google names neither, and counts input as
+// `total_input_tokens` where the Jev wire says `input_tokens`.
 type decisionWireResponse struct {
 	Model    string                        `json:"model"`
 	Provider string                        `json:"provider"`
 	Answers  map[string]decisionWireAnswer `json:"answers"`
 	Usage    struct {
-		InputTokens int `json:"input_tokens"`
+		InputTokens      int `json:"input_tokens"`
+		TotalInputTokens int `json:"total_input_tokens"`
 	} `json:"usage"`
 }
 
@@ -66,12 +88,13 @@ type decisionClient struct {
 	// url is the full decision endpoint, posted to as written.
 	url string
 	// apiKey is the adapter's credential; empty when it holds none, and then
-	// no Authorization header is sent.
-	apiKey string
+	// no key header is sent.
+	apiKey  string
+	dialect decisionDialect
 }
 
 func (c *decisionClient) Decide(ctx context.Context, req decision.Request) (decision.Response, error) {
-	body, err := json.Marshal(decisionToWire(req))
+	body, err := c.encode(req)
 	if err != nil {
 		return decision.Response{}, fmt.Errorf("ai: decision: encode request: %w", err)
 	}
@@ -80,10 +103,8 @@ func (c *decisionClient) Decide(ctx context.Context, req decision.Request) (deci
 		return decision.Response{}, fmt.Errorf("ai: decision: build request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
-	if c.apiKey != "" {
-		httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
-	}
-	resp, err := sendModelRequest(c.http, httpReq)
+	c.authorize(httpReq)
+	resp, err := c.http.Do(httpReq)
 	if err != nil {
 		return decision.Response{}, fmt.Errorf("ai: decision: %w", err)
 	}
@@ -99,12 +120,34 @@ func (c *decisionClient) Decide(ctx context.Context, req decision.Request) (deci
 	return decisionFromWire(wire), nil
 }
 
-func decisionToWire(req decision.Request) decisionWireRequest {
+// encode spells req in the client's dialect.
+func (c *decisionClient) encode(req decision.Request) ([]byte, error) {
+	questions := wireQuestions(req)
+	if c.dialect == dialectGemini {
+		return json.Marshal(geminiDecisionRequest{Model: req.Model, Input: string(req.State), Questions: questions})
+	}
+	return json.Marshal(decisionWireRequest{Model: req.Model, State: req.State, Questions: questions})
+}
+
+func wireQuestions(req decision.Request) map[string]decisionWireQuestion {
 	questions := make(map[string]decisionWireQuestion, len(req.Questions))
 	for name, q := range req.Questions {
 		questions[name] = decisionWireQuestion{Type: string(q.Type), Instructions: q.Instructions, Criteria: q.Criteria}
 	}
-	return decisionWireRequest{Model: req.Model, State: req.State, Questions: questions}
+	return questions
+}
+
+// authorize signs a request with the held key in the dialect's header. Google's
+// header is one Go keeps across a redirect, which newOutboundClient refuses
+// off-host, and getListBody refuses outright.
+func (c *decisionClient) authorize(r *http.Request) {
+	switch {
+	case c.apiKey == "":
+	case c.dialect == dialectJev:
+		r.Header.Set("Authorization", "Bearer "+c.apiKey)
+	case c.dialect == dialectGemini:
+		r.Header.Set("x-goog-api-key", c.apiKey)
+	}
 }
 
 func decisionFromWire(wire decisionWireResponse) decision.Response {
@@ -113,7 +156,7 @@ func decisionFromWire(wire decisionWireResponse) decision.Response {
 		answers[name] = decision.Answer{Choice: a.Choice, Confidence: a.Confidence, Probabilities: a.Probabilities}
 	}
 	return decision.Response{
-		Answers: answers, InputTokens: wire.Usage.InputTokens,
+		Answers: answers, InputTokens: cmp.Or(wire.Usage.InputTokens, wire.Usage.TotalInputTokens),
 		ServedModel: wire.Model, ServedProvider: wire.Provider,
 	}
 }

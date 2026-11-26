@@ -4,6 +4,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseSource } from "../../scripts/lib/source-tree";
+import { stable } from "../../src/format/collate";
 import { e2eDir, plantedFindings, srcDir } from "../tree";
 import {
   declaredIn,
@@ -94,7 +95,7 @@ describe("what a stylesheet declares", () => {
        .real { color: red; }`,
     );
 
-    expect([...declared].sort()).toEqual(["icon", "real"]);
+    expect([...declared].sort(stable)).toEqual(["icon", "real"]);
   });
 
   it("reads a selector nested inside a rule or a breakpoint", () => {
@@ -103,7 +104,7 @@ describe("what a stylesheet declares", () => {
        .card { &.is-open { color: red; } }`,
     );
 
-    expect([...declared].sort()).toEqual(["card", "is-open", "wide"]);
+    expect([...declared].sort(stable)).toEqual(["card", "is-open", "wide"]);
   });
 });
 

@@ -1,0 +1,6 @@
+{
+  "verb": "list_ai_model_rates",
+  "checks": [
+    "ai_model_rate.read"
+  ]
+}

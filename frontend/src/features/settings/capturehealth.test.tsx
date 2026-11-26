@@ -309,9 +309,21 @@ it("lists concerned connections without message details", async () => {
             last_success_at: "2026-09-15T09:30:00Z",
           },
         ],
+        shared_mailbox_concerns: [
+          {
+            connection_id: "00000000-0000-7000-8000-000000000003",
+            provider: "imap",
+            account_label: "sales@example.test",
+            concern: "connection_error",
+            since: "2026-09-15T09:30:00Z",
+            last_success_at: null,
+          },
+        ],
       }),
   });
   render(<CaptureHealthCard />);
   expect(await screen.findByText("mailbox@example.test")).toBeTruthy();
+  expect(await screen.findByText("Shared mailbox")).toBeTruthy();
+  expect(screen.getByText("sales@example.test")).toBeTruthy();
   expect(screen.getByText("Sync has stopped")).toBeTruthy();
 });

@@ -50,7 +50,9 @@ func (a approvalsAdapter) StageCall(ctx context.Context, in agents.StageRequest)
 		CoTargetType:   in.CoTargetType,
 		CoTargetID:     in.CoTargetID,
 		Summary:        in.Summary,
+		SystemText:     in.SystemText,
 		SummaryParts:   in.SummaryParts,
+		Why:            approvals.Grounds{Text: in.Why},
 	})
 }
 
@@ -90,10 +92,12 @@ func (a approvalsAdapter) StageVolumeRelease(ctx context.Context, in agents.Volu
 		return ids.ApprovalID{}, false, fmt.Errorf("compose: hashing a step-up proposal: %w", err)
 	}
 	return a.svc.StageUnlessDeclined(ctx, approvals.StageInput{
+		Why:            approvals.HeadlineSaysWhy,
 		Kind:           approvals.KindVolumeRelease,
 		ProposedChange: payload,
 		DiffHash:       diffHash,
 		Summary:        in.Summary,
+		SystemText:     in.SystemText,
 		JoinPending:    true,
 		Identity:       identity,
 	})
@@ -105,6 +109,20 @@ func (a approvalsAdapter) Redeem(ctx context.Context, approvalID ids.ApprovalID,
 
 func (a approvalsAdapter) RedeemRecords(ctx context.Context, approvalID ids.ApprovalID, tool, diffHash string) (auth.ReleasedRecordPins, error) {
 	return a.svc.RedeemRecords(ctx, approvalID, tool, diffHash)
+}
+
+// The registry asks for this by type assertion, so the compiler holds the
+// adapter to the exact signature.
+var _ agents.RecordPinner = approvalsAdapter{}
+
+// PinRecords answers the pins a staging would take, for a call confirmed in the
+// conversation instead of staged.
+func (a approvalsAdapter) PinRecords(ctx context.Context, in agents.StageRequest) (auth.ReleasedRecordPins, error) {
+	return a.svc.PinRecords(ctx, approvals.StageInput{
+		Kind: in.Tool, ProposedChange: in.ProposedChange, DiffHash: in.DiffHash,
+		TargetType: in.TargetType, TargetID: in.TargetID,
+		CoTargetType: in.CoTargetType, CoTargetID: in.CoTargetID,
+	})
 }
 
 // State answers a polling MCP task whether a human has decided yet. The

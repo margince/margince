@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "report_vocabulary",
+  "verb": "describe_report_vocabulary",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

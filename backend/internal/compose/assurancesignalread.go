@@ -114,7 +114,7 @@ func findingBaseValues(ctx context.Context, tx pgx.Tx, found []assurance.Excepti
 		return out, nil
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT fa.id, `+deals.BaseValueSQL("CURRENT_DATE", installationBaseCurrencySQL, "fa")+`
+		SELECT fa.id, `+deals.BaseValueSQL("now()", installationBaseCurrencySQL, "fa")+`
 		FROM (SELECT f.id, f.amount_minor, NULLIF(f.currency, '') AS currency, NULL::bigint AS amount_minor_base
 		      FROM unnest($1::uuid[], $2::bigint[], $3::text[]) AS f(id, amount_minor, currency)) fa`,
 		keys, amounts, currencies)

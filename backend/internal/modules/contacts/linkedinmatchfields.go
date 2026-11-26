@@ -113,7 +113,7 @@ func linkedInOfferColumns(ctx context.Context, arg func(any) int) (string, error
 // as `cur`. uq_rel_current_primary_employer keeps it to one row.
 var linkedInCurrentEmploymentJoin = `
 	LEFT JOIN LATERAL (SELECT r.id, r.company_id FROM relationship r
-	                    WHERE r.contact_id = p.id AND ` + employment.CurrentPrimarySlotSQL("r") + `) cur ON true`
+	                    WHERE r.contact_id = p.id AND ` + employment.LiveCurrentPrimarySQL("r") + `) cur ON true`
 
 // scanLinkedInOffer reads what linkedInOfferColumns selected into the card's
 // fields, with each box at its staged default.
@@ -223,7 +223,7 @@ func checkStagedEmployer(ctx context.Context, tx pgx.Tx, contactID ids.UUID, f L
 	}
 	var current *ids.UUID
 	err = tx.QueryRow(ctx, `SELECT r.id FROM relationship r WHERE r.contact_id = $1 AND `+
-		employment.CurrentPrimarySlotSQL("r"), contactID).Scan(&current)
+		employment.LiveCurrentPrimarySQL("r"), contactID).Scan(&current)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("contacts: reading the employment an accepted match would replace: %w", err)
 	}
@@ -273,7 +273,7 @@ func (s *Store) writeLinkedInMatchFields(ctx context.Context, tx pgx.Tx, in Link
 	stamp := []storekit.FieldStamp{{Field: fieldTitle, EvidenceRef: &evidence}}
 	if f.UseAsTitle && f.Position != "" && f.Position != f.ContactTitle {
 		contact := ids.ContactID{UUID: in.ContactID}
-		if _, err := s.updateContactInTx(ctx, tx, contact, UpdateContactInput{Title: &f.Position}, in.Columns.cols); err != nil {
+		if _, err := s.writeContactInTx(ctx, tx, contact, UpdateContactInput{Title: &f.Position}, in.Columns.cols); err != nil {
 			return out, err
 		}
 		if err := storekit.StampFields(ctx, tx, entityContact, in.ContactID, provenance.LinkedInExportSource, capturedBy, stamp); err != nil {
@@ -284,7 +284,7 @@ func (s *Store) writeLinkedInMatchFields(ctx context.Context, tx pgx.Tx, in Link
 	if !f.UseAsEmployer {
 		return out, nil
 	}
-	edge, roleWritten, err := s.employFromExport(ctx, tx, in.ContactID, *f.EmployerCompanyID, f.Position)
+	edge, roleWritten, err := s.employAt(ctx, tx, in.ContactID, *f.EmployerCompanyID, f.Position, provenance.LinkedInExportSource)
 	if err != nil || edge == ids.Nil {
 		return out, err
 	}
@@ -323,21 +323,21 @@ func liveEmploymentAt(ctx context.Context, tx pgx.Tx, contactID, companyID ids.U
 	return &live, nil
 }
 
-// employFromExport makes the placed company the contact's current primary
-// employer. It returns the edge that now holds the slot, or ids.Nil when
-// nothing changed. An employment the contact already holds there is promoted.
-// It takes the position as its role only when it has none, because the card
-// never showed that role, and it keeps the edge's author. Otherwise the edge
+// employAt makes the company the contact's current primary employer. It
+// returns the edge that now holds the slot, or ids.Nil when nothing changed.
+// An employment the contact already holds there is promoted. It takes the
+// position as its role only when it has none, because the card never showed
+// that role, and it keeps the edge's author. Otherwise the edge
 // is created. Either writer demotes the primary edge it replaces.
-func (s *Store) employFromExport(
-	ctx context.Context, tx pgx.Tx, contactID, companyID ids.UUID, position string,
+func (s *Store) employAt(
+	ctx context.Context, tx pgx.Tx, contactID, companyID ids.UUID, position, source string,
 ) (edge ids.UUID, roleWritten bool, err error) {
 	live, err := liveEmploymentAt(ctx, tx, contactID, companyID)
 	if err != nil {
 		return ids.Nil, false, err
 	}
 	if live == nil {
-		created, err := s.CreateRelationshipTx(ctx, tx, employmentFromExport(contactID, companyID, position))
+		created, err := s.CreateRelationshipTx(ctx, tx, employmentAt(contactID, companyID, position, source))
 		return created.ID, err == nil && position != "", err
 	}
 	// updateRelationshipInTx expects its caller to hold relationship:update.
@@ -355,15 +355,15 @@ func (s *Store) employFromExport(
 	return live.id, patch.Role != nil, nil
 }
 
-// employmentFromExport is the edge "Use as employer" creates: the contact's
-// current primary employment at the placed company, with the export's position
-// as its role. The create demotes the primary edge it replaces.
-func employmentFromExport(contactID, companyID ids.UUID, position string) CreateRelationshipInput {
+// employmentAt is the edge employAt creates: the contact's current primary
+// employment at the company, with the position as its role. The create demotes
+// the primary edge it replaces.
+func employmentAt(contactID, companyID ids.UUID, position, source string) CreateRelationshipInput {
 	primary := true
 	contact, company := ids.ContactID{UUID: contactID}, ids.CompanyID{UUID: companyID}
 	in := CreateRelationshipInput{
 		Kind: employmentKind, ContactID: &contact, CompanyID: &company,
-		IsCurrentPrimary: &primary, Source: provenance.LinkedInExportSource,
+		IsCurrentPrimary: &primary, Source: source,
 	}
 	if position != "" {
 		in.Role = &position

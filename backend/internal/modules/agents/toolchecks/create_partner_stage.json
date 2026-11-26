@@ -1,0 +1,6 @@
+{
+  "verb": "create_partner_stage",
+  "checks": [
+    "custom_field.create"
+  ]
+}

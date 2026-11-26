@@ -38,7 +38,7 @@ func answerTrace(answer decision.Answer) *DecisionAnswer {
 func (r *Router) newDecisionTrace(ctx context.Context, task Task, lane routeMeta) Call {
 	trace := Call{
 		Task: task, Kind: callKindDecision, Tier: TierDecideLane,
-		Provider: lane.provider, ModelID: lane.model, CacheOff: r.cacheOff,
+		Provider: lane.provider, ModelID: lane.model,
 	}
 	withAmbientIdentity(ctx, &trace)
 	return trace
@@ -50,7 +50,7 @@ func (r *Router) finalizeDecisionAttempt(ctx context.Context, lc *logicalCall, t
 	dreq decision.Request, resp decision.Response, callErr error, start time.Time,
 ) {
 	trace.LatencyMS = r.now().Sub(start).Milliseconds()
-	trace.ErrorSentinel = classifyError(callErr)
+	trace.ErrorSentinel = sentinelFor(ctx, callErr)
 	trace.TokensIn = resp.InputTokens
 	trace.ServedModel, trace.ServedIdentitySource = servedIdentity(trace.Provider, trace.ModelID, resp.ServedModel)
 	// A report or nothing, as on a completion row: an absent provider means
@@ -75,11 +75,11 @@ func (r *Router) finalizeDecisionAttempt(ctx context.Context, lc *logicalCall, t
 // document then passes the stripper again, as buildPayload's does, because
 // the questions are text too.
 func (r *Router) buildDecisionPayload(ctx context.Context, dreq decision.Request, resp decision.Response) (*Payload, error) {
-	budget := captureBudget{remaining: maxCapturedRequestRunes}
+	budget := r.newCaptureBudget()
 	reqDoc, err := json.Marshal(struct {
 		State     string                          `json:"state"`
 		Questions map[string]decisionWireQuestion `json:"questions"`
-	}{budget.take(string(dreq.State)), decisionToWire(dreq).Questions})
+	}{budget.take(string(dreq.State)), wireQuestions(dreq)})
 	if err != nil {
 		return nil, fmt.Errorf("ai: marshal decision capture request: %w", err)
 	}

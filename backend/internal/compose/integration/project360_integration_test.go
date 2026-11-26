@@ -21,6 +21,7 @@ package integration
 //     itself refuses.
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"slices"
@@ -33,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -83,7 +85,8 @@ func seedProject360(t *testing.T, e *Env) project360Fixture {
 	currency := "EUR"
 	companyID := companyIDOf(company)
 	deal, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "ERP licences", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
+		Source: "manual",
+		Name:   "ERP licences", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 		ProjectID: &project, AmountMinor: &amount, Currency: &currency, OwnerID: userIDPtr(&e.Rep1),
 	})
 	if err != nil {
@@ -96,13 +99,17 @@ func seedProject360(t *testing.T, e *Env) project360Fixture {
 		t.Fatalf("seat the stakeholder: %v", err)
 	}
 
-	log := func(kind, subject string, due *time.Time, links ...activities.ActivityLinkInput) {
+	logAs := func(ctx context.Context, kind, subject string, due *time.Time, links ...activities.ActivityLinkInput) {
 		t.Helper()
-		if _, _, err := e.Activities.LogActivity(admin, activities.LogActivityInput{
+		if _, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
 			Kind: kind, Subject: &subject, DueAt: due, Links: links,
 		}); err != nil {
 			t.Fatalf("log %q: %v", subject, err)
 		}
+	}
+	log := func(kind, subject string, due *time.Time, links ...activities.ActivityLinkInput) {
+		t.Helper()
+		logAs(admin, kind, subject, due, links...)
 	}
 	onProject := activities.ActivityLinkInput{EntityType: "project", EntityID: project.UUID}
 	for i := range 26 {
@@ -110,7 +117,10 @@ func seedProject360(t *testing.T, e *Env) project360Fixture {
 	}
 	yesterday := time.Now().UTC().Add(-24 * time.Hour)
 	log("task", "Send the revised SOW", &yesterday, onProject)
-	log("note", "Pricing call", nil, activities.ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(deal.Id)})
+	// An agent files no project unattended, so its note on the deal stays off
+	// the project that a member's note would inherit.
+	logAs(e.AgentFor(t, e.AdminUser, nil, AdminPerms), "note", "Pricing call", nil,
+		activities.ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(deal.Id)})
 	log("email", "Invoice question", nil, activities.ActivityLinkInput{EntityType: "contact", EntityID: contact})
 	log("email", "Rack decommissioning", nil,
 		activities.ActivityLinkInput{EntityType: "contact", EntityID: contact},
@@ -150,6 +160,7 @@ func TestProject360AssemblesEverySectionFromTheRealWriters(t *testing.T) {
 	assertProject360History(t, page, now)
 	assertProject360Collections(t, page, f)
 	assertProject360Counts(t, page)
+	assertCommitmentCarriesItsTaskVersion(t, e, page)
 }
 
 // The history is the two rows the writers appended, and the fold measures
@@ -175,6 +186,23 @@ func assertProject360History(t *testing.T, page crmcontracts.Project360, now tim
 		durations[0].Phase != projects.PhaseInitiative || durations[0].Seconds != wantInitiative || durations[0].Current ||
 		durations[1].Phase != "pursuing" || durations[1].Seconds != wantPursuing || !durations[1].Current {
 		t.Errorf("phase_durations = %+v, want initiative=%ds then pursuing=%ds (current)", durations, wantInitiative, wantPursuing)
+	}
+}
+
+// A commitment carries the task row's version, which the page's Done and
+// Snooze send, so the page reads no task before writing one.
+func assertCommitmentCarriesItsTaskVersion(t *testing.T, e *Env, page crmcontracts.Project360) {
+	t.Helper()
+	if page.Commitments == nil || len(page.Commitments.Data) != 1 {
+		t.Fatalf("commitments = %+v, want the one task", page.Commitments)
+	}
+	row := page.Commitments.Data[0]
+	var stored int64
+	if err := e.Pool.QueryRow(context.Background(), `SELECT version FROM activity WHERE id = $1`, row.ActivityId).Scan(&stored); err != nil {
+		t.Fatalf("reading the task's version: %v", err)
+	}
+	if row.Version != stored {
+		t.Errorf("commitment version = %d, want the task row's %d", row.Version, stored)
 	}
 }
 
@@ -330,5 +358,27 @@ func TestProject360OmitsTheCompanyForACallerWithoutThatGrant(t *testing.T) {
 	}
 	if page.Deals == nil || page.Activities == nil || page.PhaseHistory == nil {
 		t.Error("the rest of the page must still be served")
+	}
+}
+
+func TestProject360ReadsAProjectWithNoCustomerAsHavingNone(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	project := seedProject(admin, t, e, "Partner-only work", company, &e.Rep1).ID
+	if _, err := e.Contacts.SetProjectCompany(admin, contacts.SetProjectCompanyInput{
+		ProjectID: project, CompanyID: companyIDOf(company), Role: "partner",
+	}); err != nil {
+		t.Fatalf("make the only company a partner: %v", err)
+	}
+	page, err := project360Service(e, clocktest.Now(t)).Assemble(admin, project)
+	if err != nil {
+		t.Fatalf("assemble a project with no customer: %v", err)
+	}
+	if page.Company != nil || page.Project.CompanyId != nil {
+		t.Errorf("company = %+v, company_id = %v, want none", page.Company, page.Project.CompanyId)
+	}
+	if slices.Contains(page.SectionsOmitted, crmcontracts.Project360SectionCompany) {
+		t.Errorf("sections_omitted = %v: a missing customer is not a withheld one", page.SectionsOmitted)
 	}
 }

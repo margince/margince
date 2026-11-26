@@ -22,7 +22,8 @@ import (
 const internalMailAuthorizationField = "internal_mail_authorization"
 
 // MarkInternalMailTx retains the capture authorization and audience restriction across later imports and links.
-func MarkInternalMailTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, authorization json.RawMessage) error {
+// connection and generation name the mailbox the capturing run syncs.
+func MarkInternalMailTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, authorization json.RawMessage, connection ids.UUID, generation int) error {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return err
 	}
@@ -30,7 +31,7 @@ func MarkInternalMailTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, autho
 	if err != nil {
 		return err
 	}
-	if actor.Type != principal.PrincipalConnector || actor.UserID.IsZero() {
+	if actor.Type != principal.PrincipalConnector || !authorizationNamesActor(authorization, actor.UserID, connection, generation) {
 		return apperrors.ErrPermissionDenied
 	}
 	if err := auth.EnsureActivityVisible(ctx, tx, id.UUID); err != nil {
@@ -72,13 +73,37 @@ func MarkInternalMailTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, autho
 	})
 }
 
+// authorizationNamesActor holds a connector to its own source: the mailbox
+// connection and generation it syncs. A seat's sync also needs its owner's
+// source, and a shared mailbox's sync, which acts for nobody, a null owner.
+func authorizationNamesActor(authorization json.RawMessage, user, connection ids.UUID, generation int) bool {
+	var source struct {
+		Connection ids.UUID  `json:"connection_id"`
+		Generation *int      `json:"generation"`
+		Owner      *ids.UUID `json:"owner_user_id"`
+	}
+	if err := json.Unmarshal(authorization, &source); err != nil {
+		return false
+	}
+	if connection.IsZero() || source.Connection != connection || source.Generation == nil || *source.Generation != generation {
+		return false
+	}
+	if source.Owner == nil {
+		return user.IsZero()
+	}
+	return !user.IsZero() && *source.Owner == user
+}
+
 func authorizeAudienceWriteTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in SetAudienceInput, members []AudienceMember, held bool) (bool, string, error) {
 	var internalMail bool
 	if err := tx.QueryRow(ctx, `SELECT internal_mail_authorization IS NOT NULL FROM activity WHERE id = $1`, id).Scan(&internalMail); err != nil {
 		return false, "", err
 	}
 	if !internalMail {
-		return false, ReasonManual, auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held)
+		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+			return false, "", err
+		}
+		return false, ReasonManual, refuseTranscriptAudienceTx(ctx, tx, id, in)
 	}
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, id.UUID); err != nil {
 		return false, "", err

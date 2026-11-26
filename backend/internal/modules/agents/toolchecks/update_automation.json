@@ -1,0 +1,9 @@
+{
+  "verb": "update_automation",
+  "checks": [
+    "automation.update"
+  ],
+  "takes": [
+    "automation"
+  ]
+}

@@ -26,16 +26,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // linkedInMatchKind is the staging kind. One per suggested match, not one per
@@ -125,6 +128,9 @@ func linkedInMatchStager(pool *pgxpool.Pool) func(context.Context) error {
 // as every other pass over these rows does — so a contact outside their row
 // scope never becomes a proposal they can see.
 func StageLinkedInMatches(ctx context.Context, pool *pgxpool.Pool, svc *approvals.Service, store *contacts.Store) (int, error) {
+	if err := withdrawStaleLinkedInMatches(ctx, pool); err != nil {
+		return 0, err
+	}
 	pending, err := store.PendingLinkedInMatches(ctx)
 	if err != nil {
 		return 0, err
@@ -141,11 +147,28 @@ func StageLinkedInMatches(ctx context.Context, pool *pgxpool.Pool, svc *approval
 // the bounded one: proposing the member's entire outstanding set instead would
 // run once per contact event and only ever rejoin rows that already exist.
 func StageLinkedInMatchesForContact(ctx context.Context, pool *pgxpool.Pool, svc *approvals.Service, store *contacts.Store, contact ids.UUID) (int, error) {
+	if err := withdrawStaleLinkedInMatches(ctx, pool); err != nil {
+		return 0, err
+	}
 	pending, err := store.PendingLinkedInMatchesForContact(ctx, contact)
 	if err != nil {
 		return 0, err
 	}
 	return stagePendingLinkedInMatches(ctx, pool, svc, store, pending)
+}
+
+// withdrawStaleLinkedInMatches retires the caller's pending cards whose pair is
+// no longer a live suggestion. It runs before staging, so a live pair never
+// joins a dead card.
+func withdrawStaleLinkedInMatches(ctx context.Context, pool *pgxpool.Pool) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID == ids.Nil {
+		return apperrors.ErrPermissionDenied
+	}
+	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		_, err := approvals.WithdrawStaleLinkedInMatchesInTx(ctx, tx, linkedInMatchKind, actor.UserID)
+		return err
+	})
 }
 
 // stagePendingLinkedInMatches turns the candidates a match produced into
@@ -221,6 +244,7 @@ func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, said app
 	// then stage" leaves open — a human rejecting between the two would have
 	// the same question re-asked immediately.
 	_, proposed, err := svc.StageUnlessDeclined(ctx, approvals.StageInput{
+		Why:            approvals.HeadlineSaysWhy,
 		Kind:           linkedInMatchKind,
 		ProposedChange: canonical,
 		DiffHash:       hash,
@@ -230,6 +254,7 @@ func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, said app
 		JoinPending:    true,
 		Summary: fmt.Sprintf(said.linkedInLooksLike,
 			m.ConnectionName, employerOrPlaceholder(said, m.ConnectionCompany), m.ContactName),
+		SystemText: &systemtext.Message{Version: 1, Subject: systemtext.Sentence("approval.linkedInLooksLike", systemtext.Text(m.ConnectionName), employerArgument(m.ConnectionCompany), systemtext.Text(m.ContactName))},
 	})
 	if errors.Is(err, approvals.ErrNoDecider) {
 		return false, nil
@@ -373,4 +398,11 @@ func linkedInMatchAcceptEffect(svc *approvals.Service, store *contacts.Store) ap
 			return store.ApplyLinkedInMatchTx(ctx, tx, apply)
 		})
 	}
+}
+
+func employerArgument(company string) systemtext.Argument {
+	if strings.TrimSpace(company) == "" {
+		return systemtext.MessageArgument("approval.unnamedEmployer")
+	}
+	return systemtext.Text(company)
 }

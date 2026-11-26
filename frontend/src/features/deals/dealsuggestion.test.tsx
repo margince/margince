@@ -319,7 +319,7 @@ describe("a suggestion's card", () => {
         suggestion={{ ...suggestion, owner_id: "account-owner" }}
       />,
     );
-    expect(screen.getByText(/Account owner:/)).toBeTruthy();
+    expect(screen.getByText(/Company owner:/)).toBeTruthy();
     expect(await screen.findByText("Mira Chen")).toBeTruthy();
   });
 

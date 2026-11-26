@@ -17,12 +17,13 @@ import {
 } from "../../design-system/richtext-testing";
 import { LocaleProvider } from "../../i18n";
 import { draftButton } from "../../testing/composedraft.testkit";
+import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 type Activity = components["schemas"]["Activity"];
 function email(
@@ -103,6 +104,7 @@ function setup(
       if (path === "/activities/a2") return json(second);
       if (path === "/activities")
         return json({ data: [anchor, second], page: { has_more: false } });
+      if (path === "/connectors") return json(CONNECTED_ROSTER);
       if (path === "/voice-profiles") return json({ data: [] });
       return json({});
     }),
@@ -110,7 +112,7 @@ function setup(
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ComposeModal
+        <ComposeWindow
           activityId={activityId}
           entityType="contact"
           entityId="c1"
@@ -302,7 +304,8 @@ it("frees Send once a switch leaves the reply whose Cc held refused text", async
   await pick(user, /Re: Delivery/);
   await screen.findByDisplayValue("Re: Delivery");
 
-  expect(send().disabled).toBe(false);
+  // The new thread is checked first; its answer frees Send.
+  await waitFor(() => expect(send().disabled).toBe(false));
   expect(screen.queryByText(/Not an email address/)).toBeNull();
 });
 
@@ -373,6 +376,7 @@ it("retries a failed selected-message read before enabling reply drafting", asyn
 });
 
 it("keeps withheld thread entries unreadable and unavailable as reply targets", async () => {
+  const user = userEvent.setup();
   setup(
     undefined,
     undefined,
@@ -380,7 +384,7 @@ it("keeps withheld thread entries unreadable and unavailable as reply targets", 
     "a2",
   );
   await screen.findByDisplayValue("Re: Delivery");
-  const menu = await threadMenu(userEvent.setup());
+  const menu = await threadMenu(user);
   const held = within(await menu.findByRole("listitem", { name: /Pricing/ }));
   expect(held.queryByRole("button")).toBeNull();
   expect(held.queryByText(/Full text/)).toBeNull();

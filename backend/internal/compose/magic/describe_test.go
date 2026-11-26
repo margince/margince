@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -83,6 +84,20 @@ func TestAFieldChangeNamesTheFieldsAndTheSource(t *testing.T) {
 	}
 	if line.Reason == nil || line.Reason.Key != "magic.why.site_read" || (*line.Reason.Values)["site"] != "studiolegal.de" {
 		t.Fatalf("reason %v, want the site it was read on", line.Reason)
+	}
+}
+
+// An agent's change says why in the agent's own words, the reason it had to
+// give for the write.
+func TestAnAgentsFieldChangeGivesTheReasonItStated(t *testing.T) {
+	line, _, ok := lineOf(unmasked(t), auditRow("agent:deepread",
+		`{"title": "Analyst"}`, `{"title": "CTO"}`,
+		`{"stated_reason": "Her signature on 14 Nov names her CTO."}`, clocktest.Now(t)))
+	if !ok {
+		t.Fatal("a field change was not shown")
+	}
+	if line.Reason == nil || line.Reason.Key != "magic.why.stated" || (*line.Reason.Values)["why"] != "Her signature on 14 Nov names her CTO." {
+		t.Fatalf("reason %v, want the reason the agent gave", line.Reason)
 	}
 }
 
@@ -367,6 +382,21 @@ func TestOnlyAnUpdateNeedsItsImagesToBeDescribedAndGrouped(t *testing.T) {
 			if keyWith != keyWithout {
 				t.Errorf("%s on %s groups as %q with images and %q without", action, entityType, keyWith, keyWithout)
 			}
+		}
+	}
+}
+
+// A saved activity is named by its kind; an unknown kind keeps the general sentence.
+func TestACreatedActivityIsNamedByItsKind(t *testing.T) {
+	for kind, want := range map[string]string{
+		"email":   "magic.action.create_activity_email",
+		"meeting": "magic.action.create_activity_meeting",
+		"fax":     "magic.action.create_activity",
+	} {
+		row := auditRow("connector:gmail", "", "", "", whenStaged)
+		row.Action, row.EntityType, row.ActivityKind = actionCreate, typeActivity, &kind
+		if d, ok := describe(row); !ok || d.summary.Key != want {
+			t.Errorf("%s: summary = %q (described %v), want %q", kind, d.summary.Key, ok, want)
 		}
 	}
 }

@@ -23,7 +23,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -46,7 +45,7 @@ func erasedSubject(t *testing.T) *integration.Env {
 	if err != nil {
 		t.Fatalf("creating the subject: %v", err)
 	}
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), ids.UUID(contact.Id), "Art. 17 request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), ids.UUID(contact.Id), "Art. 17 request"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 	return e

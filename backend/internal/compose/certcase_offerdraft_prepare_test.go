@@ -99,7 +99,7 @@ func TestOfferDraftCaseRefusesAnUnreachableExpectation(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := offerDraftCases{}.Prepare(offerDraftFixtureJSON(t, offerDraftDealFixture()), tc.expected)
+			_, err := offerDraftCases{}.Prepare(fixtureJSON(t, offerDraftDealFixture()), tc.expected)
 			if err == nil {
 				t.Fatal("an unreachable expectation prepared")
 			}
@@ -117,7 +117,7 @@ func TestOfferDraftCasePreparesALineNetOfWholeRateCardUnits(t *testing.T) {
 		offerDraftSupportSource: {LineNetMinor: new(int64(15000)), PriceGrounded: true},
 	})
 
-	_, err := offerDraftCases{}.Prepare(offerDraftFixtureJSON(t, offerDraftDealFixture()), expected)
+	_, err := offerDraftCases{}.Prepare(fixtureJSON(t, offerDraftDealFixture()), expected)
 	if err != nil {
 		t.Fatalf("three support plans did not prepare as a line net: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestOfferDraftCasePreparesADealWithNothingCaptured(t *testing.T) {
 	f.ContextItems = nil
 	f.RateCard = nil
 
-	_, err := offerDraftCases{}.Prepare(offerDraftFixtureJSON(t, f), json.RawMessage(`{}`))
+	_, err := offerDraftCases{}.Prepare(fixtureJSON(t, f), json.RawMessage(`{}`))
 	if err != nil {
 		t.Fatalf("a scenario whose right answer is an empty draft did not prepare: %v", err)
 	}
@@ -189,7 +189,7 @@ func TestOfferDraftCaseRefusesAFixtureTheOrchestratorCouldNotHandIt(t *testing.T
 			f := offerDraftDealFixture()
 			tc.mutate(&f)
 
-			_, err := offerDraftCases{}.Prepare(offerDraftFixtureJSON(t, f), offerDraftKickoffExpected(t))
+			_, err := offerDraftCases{}.Prepare(fixtureJSON(t, f), offerDraftKickoffExpected(t))
 
 			if err == nil {
 				t.Fatal("a fixture the orchestrator could not hand this call prepared")

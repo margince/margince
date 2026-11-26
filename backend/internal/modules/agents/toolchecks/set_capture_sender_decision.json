@@ -1,0 +1,6 @@
+{
+  "verb": "set_capture_sender_decision",
+  "checks": [
+    "contact.create"
+  ]
+}

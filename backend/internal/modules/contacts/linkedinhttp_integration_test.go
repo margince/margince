@@ -51,3 +51,22 @@ func TestPatchingAContactToACompanyPageIsRefused(t *testing.T) {
 		t.Fatalf("a refused patch left %d social rows (err %v)", stored, err)
 	}
 }
+
+func TestACompanyCreatedOverTheWireKeepsItsLinkedInPage(t *testing.T) {
+	e := setupDedupe(t)
+	h := Handlers{store: e.store}
+	create := func(linkedin string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		h.CreateCompany(rec, httptest.NewRequestWithContext(e.as(), http.MethodPost, "/v1/companies",
+			strings.NewReader(`{"display_name":"Wire Co","source":"manual","linkedin_url":"`+linkedin+`"}`)),
+			crmcontracts.CreateCompanyParams{})
+		return rec
+	}
+	rec := create("https://linkedin.com/company/wire-co/")
+	if rec.Code != http.StatusCreated || !strings.Contains(rec.Body.String(), `"linkedin_url":"https://linkedin.com/company/wire-co"`) {
+		t.Fatalf("create with a company page answered %d %s, want 201 with the page stored normalised", rec.Code, rec.Body.String())
+	}
+	if rec := create("https://www.linkedin.com/in/someone"); rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("create with a profile link answered %d %s, want 422 as on update", rec.Code, rec.Body.String())
+	}
+}

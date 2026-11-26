@@ -23,6 +23,7 @@ import {
   type QuestionDraft,
   retarget,
 } from "./analytics.questions.draft";
+import { NO_MONEY } from "./analytics.questions.money";
 import {
   type AnalyticsEntity,
   analyticsFieldLabel,
@@ -140,7 +141,7 @@ export function QuestionBuilder({
   const plural = usePlural();
   const { locale } = useLocale();
   const entity = entities.find((candidate) => candidate.name === draft.entity);
-  const problem = draftProblem(draft, baseCurrency);
+  const problem = draftProblem(draft, baseCurrency, entity?.money ?? NO_MONEY);
   const reason = problem ? t(problem) : undefined;
   const reasonId = useId();
   const population = [...entities]
@@ -473,6 +474,7 @@ function FilterRow({
             type={controlType(entity, filter.field)}
             references={fieldReference(filter.field)}
             options={customFieldOf(entity, filter.field)?.options}
+            optionLabels={customFieldOf(entity, filter.field)?.option_labels}
             op={controlOp}
             value={filter.value}
             onChange={(value) => onChange({ ...filter, value })}

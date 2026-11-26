@@ -16,7 +16,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -262,7 +261,7 @@ func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
-	// The first form save fills the empty header line from the summary.
+	// The offer and the independently edited description have separate writers.
 	saved, err := store.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme GmbH",
 		Website:     new("https://acme.example"),
@@ -281,8 +280,8 @@ func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 		}
 		return description
 	}
-	if got := readDescription(); got == nil || *got != "Revenue operations software" {
-		t.Fatalf("description after the first form save = %v, want the typed summary", got)
+	if got := readDescription(); got != nil {
+		t.Fatalf("offer form save wrote a description: %v", got)
 	}
 
 	// The header's inline edit is the one editor of a standing value.
@@ -305,7 +304,7 @@ func TestFormResaveDoesNotClobberAHeaderDescriptionEdit(t *testing.T) {
 	}
 }
 
-func TestAcceptedOfferSummaryWritesTheDescriptionColumn(t *testing.T) {
+func TestAcceptedOfferSummaryRefreshesOnlyTheProfile(t *testing.T) {
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
 	base := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
@@ -314,8 +313,6 @@ func TestAcceptedOfferSummaryWritesTheDescriptionColumn(t *testing.T) {
 		UserID: e.Rep1, OnBehalfOf: e.Rep1, Permissions: integration.AdminPerms,
 	})
 
-	// The header renders company.description; an accepted offer_summary is
-	// the one-sentence answer, so the apply writes the column.
 	companyID, err := store.ApplyColdStartProfile(agent, contacts.ApplyColdStartProfileInput{
 		SourceURL: "https://summarized.example",
 		Fields: []contacts.ColdStartFieldInput{{
@@ -338,16 +335,10 @@ func TestAcceptedOfferSummaryWritesTheDescriptionColumn(t *testing.T) {
 		return description
 	}
 	got := readDescription()
-	if got == nil || *got != "Revenue operations software for mid-market manufacturers" {
-		t.Fatalf("description after accept = %v, want the accepted offer_summary", got)
+	if got != nil {
+		t.Fatalf("accepted offer summary wrote a description: %v", got)
 	}
 
-	// A later accept carries the site's newer copy onto the column as well as
-	// onto the evidence row. Nobody typed the standing value — one automated
-	// read replaces another, which is what lets a re-crawl correct a summary
-	// that has gone stale, or one an agent wrote from a meeting transcript.
-	// A value a CONTACT authored is held instead, and the form-resave case
-	// above is the assertion that keeps that half honest.
 	if _, err := store.ApplyColdStartProfile(agent, contacts.ApplyColdStartProfileInput{
 		SourceURL: "https://summarized.example",
 		Fields: []contacts.ColdStartFieldInput{{
@@ -357,8 +348,8 @@ func TestAcceptedOfferSummaryWritesTheDescriptionColumn(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("second ApplyColdStartProfile: %v", err)
 	}
-	if got := readDescription(); got == nil || *got != "A different sentence entirely" {
-		t.Fatalf("description after re-accept = %v, want the site's newer sentence", got)
+	if got := readDescription(); got != nil {
+		t.Fatalf("reaccepted offer summary wrote a description: %v", got)
 	}
 	var evidenceValue string
 	if err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool, func(tx pgx.Tx) error {
@@ -373,19 +364,8 @@ func TestAcceptedOfferSummaryWritesTheDescriptionColumn(t *testing.T) {
 	}
 }
 
-// What an overlong summary does to the header line it renders into.
-//
-// `offer_summary` is what an installation says about what it sells and the
-// contract takes 2000 characters of it; `company_description_length` caps
-// the header at 500. The header is one RENDERING of the summary, so a value too
-// long for the line is a value to shorten — not a write to drop, which is what
-// used to happen: the summary saved, the header stayed blank, and nothing said
-// why to the caller, the audit trail or the operator.
-//
-// Both shapes, because the cut is a rule and not just a length. Spelled in
-// multibyte characters so a byte-counting cut fails this test: the CHECK counts
-// characters, and a byte cut would refuse text the column accepts.
-func TestAnOverlongOfferSummaryFillsTheHeaderWithItsFirstLine(t *testing.T) {
+// The profile preserves the complete multibyte summary at the document limit.
+func TestAnOfferSummaryAtTheDocumentLimitStaysInTheProfile(t *testing.T) {
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB()).WithInstallationRenamer(installationRenamer(e.Pool))
 	base := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
@@ -422,48 +402,13 @@ func TestAnOverlongOfferSummaryFillsTheHeaderWithItsFirstLine(t *testing.T) {
 		return description, evidenceValue
 	}
 
-	// One 501-character word: there is no boundary to cut at, and a bounded
-	// value still beats an empty one.
-	unbroken := strings.Repeat("ü", 501)
-	description, evidenceValue := apply(t, "https://unbroken.example", unbroken)
-	if description == nil {
-		t.Fatal("a 501-character summary left the header NULL — the fill it is too long for is the one a reader sees, and dropping it is the silence this replaced")
+	atCap := strings.Repeat("ü", contacts.CompanyDescriptionMax)
+	description, evidenceValue := apply(t, "https://atcap.example", atCap)
+	if description != nil {
+		t.Error("a summary at the document limit was duplicated into the description")
 	}
-	if got := utf8.RuneCountInString(*description); got != 500 {
-		t.Errorf("the header line is %d characters; want the 500 the column admits", got)
-	}
-	if evidenceValue != unbroken {
-		t.Error("the evidence row lost the accepted summary — the header is a rendering of it, and shortening the rendering may not shorten the record")
-	}
-
-	// The same length in words, chosen so the hard 500-rune cut lands INSIDE a
-	// word — a phrase whose repeat happens to end on 500 would pass whether the
-	// boundary rule ran or not. The assertion is then the RULE rather than a
-	// second copy of the arithmetic: the line stops on a boundary the summary
-	// itself has, so no word is cut in half.
-	spoken := strings.Repeat("Wörter ", 100)
-	description, _ = apply(t, "https://spoken.example", spoken)
-	if description == nil {
-		t.Fatal("a long spoken summary left the header NULL")
-	}
-	line := *description
-	if count := utf8.RuneCountInString(line); count > 500 || count == 0 {
-		t.Errorf("the header line is %d characters; want a non-empty line within the 500 the column admits", count)
-	}
-	rest, isPrefix := strings.CutPrefix(spoken, line)
-	if !isPrefix {
-		t.Fatalf("the header line %q is not the start of the summary it renders", line)
-	}
-	if next, _ := utf8.DecodeRuneInString(rest); next != ' ' {
-		t.Errorf("the line stops mid-word, before %q — a word cut in half reads as a bug where a clean stop reads as a summary", rest[:min(20, len(rest))])
-	}
-
-	// At the cap the value passes through untouched: the shortening is for what
-	// does not fit, and a summary that fits is not a summary to edit.
-	atCap := strings.Repeat("ü", 500)
-	description, _ = apply(t, "https://atcap.example", atCap)
-	if description == nil || *description != atCap {
-		t.Error("a summary of exactly 500 characters should reach the header unchanged")
+	if evidenceValue != atCap {
+		t.Error("the evidence row lost the accepted summary")
 	}
 }
 

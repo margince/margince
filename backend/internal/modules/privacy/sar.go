@@ -5,6 +5,7 @@ package privacy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"strings"
@@ -12,8 +13,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -59,6 +62,9 @@ type SARPackage struct {
 	Attachments         []map[string]any `json:"attachments"`
 	Consent             []map[string]any `json:"consent"`
 	ConsentEvents       []map[string]any `json:"consent_events"`
+	// The declared personal columns of extension rows that name the contact, a
+	// lead twin or one of their activities.
+	ExtensionData []map[string]any `json:"extension_data"`
 	// The deterministic thing on the record that made business correspondence
 	// lawful, which the consent state alone does not say.
 	ConsentQualifyingEvents []map[string]any `json:"consent_qualifying_events"`
@@ -149,11 +155,19 @@ type SARPackage struct {
 	// about somebody that they would have no other way to discover.
 	RequestSettlements   []map[string]any `json:"request_settlements"`
 	CommitmentAdmissions []map[string]any `json:"commitment_admissions"`
+	// LegalReviews is each request to legal about a deal the subject holds a stake
+	// in, with the requester's note and the reviewer's comments.
+	LegalReviews []map[string]any `json:"legal_reviews"`
 	// StageEvidence is what a model or a record concluded about a deal from the
 	// subject's messages. It carries the quoted words, whether they agreed or
 	// proposed, and how sure the writer was. Owed on ReplyJudgements' ground, because it
 	// is a conclusion drawn from what they wrote.
 	StageEvidence []map[string]any `json:"stage_evidence"`
+	// ConversationClaims is what a colleague or a model read out of a message
+	// about the subject: a promise, a question, an objection. Each row carries
+	// the reading next to the quoted words and is marked derived. So the subject
+	// can tell what they wrote from what we concluded. Who wrote it stays out.
+	ConversationClaims []map[string]any `json:"conversation_claims"`
 	// Handoffs is each time this contact was passed from one seat to another as a
 	// prospect, what was decided, and why. Art. 15 owes it twice over: the note
 	// is what one colleague wrote ABOUT them, and the decision is one colleagues
@@ -219,38 +233,22 @@ type SARPackage struct {
 	StagedMessages []map[string]any `json:"staged_messages"`
 }
 
-// AssembleSAR builds the package. It is a privileged read: the caller must be
-// a human holding the contact.delete grant (the same trust level erasure needs)
-// over an unbounded row scope — see the checks below.
+// AssembleSAR builds the package. It is a privileged read, admitted by
+// requireSARAssembler at the trust level erasure needs.
+//
+// It serves no extension table. Production callers use AssembleSARWithExtensions.
 func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) (SARPackage, error) {
-	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
+	return AssembleSARWithExtensions(ctx, db, contactID, extprivacy.Registry{})
+}
+
+// AssembleSARWithExtensions is AssembleSAR that also serves the declared
+// personal columns of the extension tables the registry names.
+func AssembleSARWithExtensions(
+	ctx context.Context, db *database.DB, contactID ids.ContactID, registry extprivacy.Registry,
+) (SARPackage, error) {
+	ctx = corefeatures.RetainedDataContext(ctx)
+	if err := requireSARAssembler(ctx); err != nil {
 		return SARPackage{}, err
-	}
-	// Human-only, for the reason the grant above cannot express: an agent
-	// acting under a passport carries the granting human's live grants, so an
-	// admin's read-scoped passport would otherwise assemble a subject's entire
-	// Art. 15 package — every activity, capture row, correction and outbound
-	// message.
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return SARPackage{}, fmt.Errorf("human-only subject-access assembly: %w", apperrors.ErrPermissionDenied)
-	}
-	// The assembly deliberately crosses the caller's row scope — Art. 15 owes
-	// the subject everything held, not the slice one rep may see — so a bounded
-	// caller cannot run it. Scope is the second condition, not a stand-in for
-	// authority: the contact.delete grant above is what limits this to the roles
-	// trusted with erasure, and it is what keeps read_only out.
-	//
-	// Together those two admit MORE than admin: the seeded defaults give
-	// contact.delete and row scope `all` to ops and management as well. That is
-	// this function's contract — the erasure trust level — and callers that owe
-	// a narrower one gate before they get here. The subject-request route does:
-	// it reads the request through the queue's own admin-only gate first, which
-	// TestTheQueueGateIsWhatKeepsTheExportAdminOnly pins from both sides. A
-	// future caller assembling from a contact id alone would be reachable by two
-	// more roles, and would need its own gate.
-	if !auth.Unbounded(actor) {
-		return SARPackage{}, apperrors.ErrPermissionDenied
 	}
 	var pkg SARPackage
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
@@ -306,13 +304,39 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 		if err := appendActivityCustomValues(ctx, tx, pkg.Activities); err != nil {
 			return err
 		}
+		// A failed read ends the transaction through the joined error below, so
+		// no audit entry outlives an export that did not finish.
+		var extensionErr error
+		pkg.ExtensionData, extensionErr = exportExtensionRows(ctx, tx, registry, contactID, leads, pkg.Activities)
 
 		_, err = storekit.Audit(ctx, tx, "export", "contact", contactID.UUID, nil, map[string]any{
 			"kind": "sar", "activities": len(pkg.Activities), "raw_rows": len(pkg.RawCapture),
 		})
-		return err
+		return errors.Join(extensionErr, err)
 	})
 	return pkg, err
+}
+
+// requireSARAssembler admits the callers trusted to assemble a subject's whole
+// package: a human with the contact.delete grant over an unbounded row scope.
+func requireSARAssembler(ctx context.Context) error {
+	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
+		return err
+	}
+	// An agent under a passport carries the granting human's grants, so the
+	// grant alone would let an admin's read-scoped passport export a subject.
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalHuman {
+		return fmt.Errorf("human-only subject-access assembly: %w", apperrors.ErrPermissionDenied)
+	}
+	// Art. 15 owes the subject everything held, so the read crosses row scope.
+	// This admits ops and management as well as admin (the erasure trust level).
+	// The subject-request route narrows it to admin through the queue's own gate,
+	// which TestTheQueueGateIsWhatKeepsTheExportAdminOnly pins.
+	if !auth.Unbounded(actor) {
+		return apperrors.ErrPermissionDenied
+	}
+	return nil
 }
 
 // sarSubjectQuery is the subject's own row as the export hands it over. The
@@ -321,7 +345,7 @@ const sarSubjectQuery = `
 	SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
 	       (SELECT jsonb_object_agg(ps.platform, ps.handle) FROM contact_social ps WHERE ps.contact_id = p.id) AS social,
 	       p.address_line1, p.address_line2, p.address_city, p.address_region, p.address_postal_code, p.address_country,
-	       p.source, p.created_at
+	       p.source, p.source_system, p.created_at
 	FROM contact p WHERE p.id = $1`
 
 // appendSubjectCustomValues merges the subject's stored cf_ values into
@@ -352,55 +376,6 @@ type sarSection struct {
 	query string
 	// args replaces the default single contact-id argument.
 	args []any
-}
-
-// rowMaps runs one query and returns each row as column→value.
-func rowMaps(ctx context.Context, tx pgx.Tx, query string, args ...any) ([]map[string]any, error) {
-	rows, err := tx.Query(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []map[string]any{}
-	for rows.Next() {
-		values, err := rows.Values()
-		if err != nil {
-			return nil, err
-		}
-		row := make(map[string]any, len(values))
-		for i, field := range rows.FieldDescriptions() {
-			row[field.Name] = readableValue(values[i])
-		}
-		out = append(out, row)
-	}
-	return out, rows.Err()
-}
-
-// readableValue renders one column value as the document's reader needs it.
-//
-// A uuid column arrives from pgx as [16]byte, and encoding/json has one
-// rendering for a byte ARRAY: sixteen numbers. Nothing is lost — the bytes are
-// the id — but the document this builds is what a data subject receives under
-// Art. 15, and `[1,160,94,189,…]` is not something a contact can read, act on,
-// or quote back when they dispute it.
-//
-// Fixed HERE rather than at the two columns that showed it, because those two
-// are not a property of those columns: every map-shaped section is built by
-// this loop, so the next uuid column added to any of the twenty-six arrives
-// with the same defect. TestTheSubjectAccessPackageIsReadable holds it.
-//
-// Anything else is passed through untouched. This is a rendering decision about
-// one Go type that JSON has no good answer for, not a place to reinterpret what
-// the database returned — a uuid[] column would arrive as [][16]byte and want
-// the same treatment, and gets it in the change that adds one rather than as an
-// arm nothing exercises.
-//
-//craft:ignore naked-any a column value IS any by construction — pgx's rows.Values() returns []any, and this rewrites one of those in place. A concrete parameter would mean deciding the column's type before reading it, which is the thing the caller cannot do.
-func readableValue(value any) any {
-	if raw, isUUID := value.([16]byte); isUUID {
-		return ids.UUID(raw).String()
-	}
-	return value
 }
 
 // subjectReach reads the two things beyond a contact id that identify the
@@ -436,12 +411,9 @@ func subjectReach(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]st
 	// promotions loses the lead-keyed proof A6 leaves on the lead.
 	// A lead never promoted but holding one of the subject's addresses is
 	// theirs too. The Leads section exports it, so its history comes with it.
-	rows, err := tx.Query(ctx, `
-		SELECT id FROM lead
-		 WHERE promoted_contact_id = $1
-		    OR promoted_contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)
-		    OR email = ANY($2::text[])`,
-		contactID.UUID, loweredAddresses(emails))
+	args := []any{contactID.UUID, loweredAddresses(emails)}
+	bind := strings.Split(storekit.Placeholders(args), ",")
+	rows, err := tx.Query(ctx, `SELECT id FROM lead WHERE `+leadTwinOf(bind[0], bind[1]), args...)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("reading the subject's lead twins for the export: %w", err)
 	}

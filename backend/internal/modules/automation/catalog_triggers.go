@@ -35,6 +35,7 @@ const (
 	eventDealStageChanged = "deal.stage_changed"
 	eventEngagementReply  = "engagement.reply"
 	eventActivityCaptured = "activity.captured"
+	eventActivityUpdated  = "activity.updated"
 	eventLeadCreated      = "lead.created"
 	eventListEvaluated    = "list.evaluated"
 	eventListArchived     = "list.archived"

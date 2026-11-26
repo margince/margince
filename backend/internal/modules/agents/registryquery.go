@@ -68,7 +68,7 @@ func (r *Registry) RecordTypeOfCall(name string, args json.RawMessage) string {
 	if !ok {
 		return ""
 	}
-	typed, isTyped := t.(recordTypedTool)
+	typed, isTyped := t.(interface{ RecordTypeOf(json.RawMessage) string })
 	if !isTyped {
 		return ""
 	}
@@ -152,14 +152,11 @@ func outsideToolName(c rune) bool {
 // Gated and the tool gate admits this caller. Each description names a routed
 // verb by the router action this listing offers.
 func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
-	all := r.Specs()
+	all := r.availableSpecs(r.Specs())
 	out := make([]mcp.ToolSpec, 0, len(all))
 	for _, spec := range all {
-		if spec.Unlisted || !invocableByCaller(ctx, spec) {
-			continue
-		}
-		if granted, ok := r.grantedTo(ctx, spec); ok {
-			out = append(out, r.asSeenBy(ctx, granted))
+		if offered, ok := r.offeredSpec(ctx, spec); ok {
+			out = append(out, offered)
 		}
 	}
 	words := listerOf(out)
@@ -171,11 +168,33 @@ func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	return out
 }
 
+// offeredSpec is one available spec as Offered shows it to this caller, and
+// false when Offered leaves it out.
+func (r *Registry) offeredSpec(ctx context.Context, spec mcp.ToolSpec) (mcp.ToolSpec, bool) {
+	if spec.Unlisted || !invocableByCaller(ctx, spec) {
+		return spec, false
+	}
+	granted, ok := r.grantedTo(ctx, spec)
+	if !ok {
+		return spec, false
+	}
+	return r.asSeenBy(ctx, granted), true
+}
+
+// OnSurface reports whether name is on the public MCP surface for this caller:
+// a listed tool or router, or a Gated tool the gate admits. A router's target
+// and a superseded tool are not. It decides nothing about the caller's grants,
+// which each tool's gate holds.
+func (r *Registry) OnSurface(ctx context.Context, name string) bool {
+	spec, ok := r.Spec(name)
+	return ok && (!spec.Unlisted || r.gateAdmits(ctx, spec))
+}
+
 // Runnable is what a Surface-B run may choose among: every tool this caller may
 // invoke, offered on the external listing or not. A scheduled agent's allowlist
 // narrows it to the verbs that agent names, each with its own full copy.
 func (r *Registry) Runnable(ctx context.Context) []mcp.ToolSpec {
-	all := r.Specs()
+	all := r.availableSpecs(r.Specs())
 	out := make([]mcp.ToolSpec, 0, len(all))
 	for _, spec := range all {
 		if !spec.Gated && invocableByCaller(ctx, spec) {
@@ -194,7 +213,7 @@ func (r *Registry) asSeenBy(ctx context.Context, spec mcp.ToolSpec) mcp.ToolSpec
 		return spec
 	}
 	if len(spec.Actions) == 0 {
-		if tier := auth.TierFor(p, spec); tier != spec.Tier {
+		if tier := auth.TierFor(ctx, p, spec); tier != spec.Tier {
 			spec.Tier, spec.TierResolver = tier, nil
 		}
 		return spec
@@ -203,7 +222,7 @@ func (r *Registry) asSeenBy(ctx context.Context, spec mcp.ToolSpec) mcp.ToolSpec
 	agree := true
 	for i, action := range spec.Actions {
 		if verb, registered := r.Spec(action.Verb); registered {
-			action.Tier = auth.TierFor(p, verb)
+			action.Tier = auth.TierFor(ctx, p, verb)
 		}
 		actions[i] = action
 		agree = agree && action.Tier == actions[0].Tier

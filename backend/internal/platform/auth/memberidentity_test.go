@@ -17,7 +17,7 @@ func TestMemberAuthorshipBindsItsPatternOutsideTheSQL(t *testing.T) {
 	if len(args) != 2 || args[1] != "%:" {
 		t.Fatalf("authorship arguments = %v", args)
 	}
-	if strings.Contains(clause, "%") || !strings.Contains(clause, "a.captured_by LIKE $2 || author_identity.id::text") {
+	if strings.Contains(clause, "%") || !strings.Contains(clause, "a.captured_by LIKE ANY (ARRAY(SELECT $2 || author_identity.id::text FROM (SELECT unnest(member_identity_family($1::uuid)) AS id) author_identity))") {
 		t.Fatalf("authorship interpolates its pattern into SQL: %s", clause)
 	}
 }

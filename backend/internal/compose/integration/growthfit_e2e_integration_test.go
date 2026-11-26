@@ -37,6 +37,7 @@ type growthFitResponse struct {
 	BandCappedReason *string `json:"band_capped_reason"`
 	NextStep         *string `json:"next_step"`
 	GeneratedBy      string  `json:"generated_by"`
+	ServedFrom       string  `json:"served_from"`
 	DataCompleteness struct {
 		Present  int      `json:"present"`
 		Expected int      `json:"expected"`
@@ -172,7 +173,8 @@ func TestTheGrowthFitCacheRowIsKeyedToTheReaderWhoAskedForIt(t *testing.T) {
 func cachedGrowthFitReaders(t *testing.T, e *apptest.AppEnv, companyID string) []ids.UUID {
 	t.Helper()
 	rows, err := e.Owner.Query(context.Background(),
-		`SELECT user_id FROM company_growth_fit WHERE company_id = $1 ORDER BY user_id`, companyID)
+		`SELECT user_id FROM generated_summary
+		  WHERE kind = 'company_growth_fit' AND company_id = $1 ORDER BY user_id`, companyID)
 	if err != nil {
 		t.Fatalf("reading the cached growth-fit rows: %v", err)
 	}
@@ -213,6 +215,10 @@ func TestAnIndustryTheCompanyShowsIsNotListedAsMissing(t *testing.T) {
 	if again := cachedGrowthFitGeneratedAt(t, e, companyID); !again.Equal(generatedAt) {
 		t.Error("a read with no write between re-assessed, so the cache is not serving")
 	}
+	if before.ServedFrom != "generated" || cached.ServedFrom != "cache" {
+		t.Errorf("served_from = %q then %q, want the first read generated and the second from the cache",
+			before.ServedFrom, cached.ServedFrom)
+	}
 
 	var company struct {
 		Version int64 `json:"version"`
@@ -237,13 +243,17 @@ func TestAnIndustryTheCompanyShowsIsNotListedAsMissing(t *testing.T) {
 	if rewritten := cachedGrowthFitGeneratedAt(t, e, companyID); !rewritten.After(generatedAt) {
 		t.Error("the patch did not change the fingerprint, so the read served the old assessment")
 	}
+	if after.ServedFrom != "generated" {
+		t.Errorf("served_from after the patch = %q, want generated", after.ServedFrom)
+	}
 }
 
 func cachedGrowthFitGeneratedAt(t *testing.T, e *apptest.AppEnv, companyID string) time.Time {
 	t.Helper()
 	var at time.Time
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT max(generated_at) FROM company_growth_fit WHERE company_id = $1`, companyID).Scan(&at); err != nil {
+		`SELECT max(generated_at) FROM generated_summary
+		  WHERE kind = 'company_growth_fit' AND company_id = $1`, companyID).Scan(&at); err != nil {
 		t.Fatalf("reading the cached assessment's age: %v", err)
 	}
 	return at
@@ -337,10 +347,10 @@ func giveTheCachedRowToAnotherReader(t *testing.T, e *apptest.AppEnv, companyID 
 		t.Fatalf("create the other reader: %v", err)
 	}
 	tag, err := e.Owner.Exec(context.Background(),
-		`UPDATE company_growth_fit
+		`UPDATE generated_summary
 		    SET user_id = $1,
 		        payload = jsonb_set(payload, '{band}', to_jsonb($2::text))
-		  WHERE company_id = $3 AND user_id = $4`,
+		  WHERE kind = 'company_growth_fit' AND company_id = $3 AND user_id = $4`,
 		other, otherReadersBand, companyID, acting)
 	if err != nil {
 		t.Fatalf("hand the cached row to the other reader: %v", err)

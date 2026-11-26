@@ -239,28 +239,3 @@ export const hierarchyRollup = {
     period_month: "2026-07",
   },
 };
-
-// The Brief digest card destructures a MorningDigest.
-export const digest = {
-  date: "2026-07-13",
-  generated_at: "2026-07-13T05:00:00Z",
-  capture: {
-    messages_synced: 24,
-    activities_created: 18,
-    contacts_created: 3,
-    companies_created: 1,
-  },
-  review: {
-    dedupe_open: 2,
-    approvals_pending: 1,
-    classify: { commitments: 4, meetings: 2, noise: 9 },
-  },
-  connectors: [
-    {
-      provider: "gmail",
-      status: "connected",
-      last_synced_at: "2026-07-13T04:55:00Z",
-      last_sync_error_class: null,
-    },
-  ],
-};

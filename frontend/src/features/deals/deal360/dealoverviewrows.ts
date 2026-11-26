@@ -7,7 +7,7 @@ import { formatDayMonth, formatMoneyOrAbsent } from "../../../format/format";
 import { offerStatusLabel } from "../../../format/offerstatus";
 import type { Locale, Translator } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
-import { isGapRisk } from "./dealcommittee";
+import { committeeContacts, isGapRisk } from "./dealcommittee";
 
 type Activity = components["schemas"]["Activity"];
 type Offer = components["schemas"]["Offer"];
@@ -98,10 +98,11 @@ export function committeeRows(
   roleLabel: (role: string) => string,
   wroteOn?: SeatWroteOn,
 ): Readonly<{ seats: CommitteeSeatRow[]; gaps: CommitteeGapRow[] }> {
-  const stakeholders = coverage?.stakeholders ?? [];
-  const seats = stakeholders.map((seat) => {
+  const contacts = committeeContacts(coverage?.stakeholders ?? []);
+  const seats = contacts.map((seat) => {
+    const roles = seat.roles.map(roleLabel).filter(Boolean);
     const words = {
-      role: seat.role ? roleLabel(seat.role) : t("deal.committee.noRole"),
+      role: roles.length > 0 ? roles.join(", ") : t("deal.committee.noRole"),
       engagement: t(
         seat.engaged
           ? "deal.committee.legendEngaged"
@@ -127,7 +128,12 @@ export function committeeRows(
   // The committee dim counts gaps with the same predicate, so the rows and the
   // dim agree.
   const gaps = (coverage?.risks ?? []).filter(isGapRisk).map((risk, index) => {
-    const seat = missingSeat(risk.kind, stakeholders.length);
+    // An older server judged at a floor of two and sends no threshold.
+    const seat = missingSeat(
+      risk.kind,
+      contacts.length,
+      coverage?.max_engaged_seats ?? 1,
+    );
     return {
       key: `${risk.kind}-${index}`,
       kind: risk.kind,
@@ -138,15 +144,13 @@ export function committeeRows(
   return { seats, gaps };
 }
 
-// The floor `single_threaded_theirs` holds engaged contacts to. It mirrors
-// network.ReportThreadingFloor, and frontendthreadingfloor_test.go holds both equal.
-const THREADING_FLOOR = 2;
-
-// The seat a gap rule finds missing. Fewer than two engaged is a missing
-// contact while the deal seats fewer than two, and a missing exchange past that.
+// The seat a gap rule finds missing. A deal with no more seats than the
+// published threshold allows engaged is missing a contact; past that it is
+// missing an exchange. "A second" holds only at the default threshold of one.
 function missingSeat(
   kind: DealCoverageRisk["kind"],
   seatCount: number,
+  maxEngaged: number,
 ): Readonly<{ title: MessageKey; role?: string }> {
   if (kind === "coverage_gap") {
     return { title: "deal.committee.missing.champion", role: "champion" };
@@ -154,10 +158,17 @@ function missingSeat(
   if (seatCount === 0) {
     return { title: "deal.committee.missing.firstContact" };
   }
+  const second = maxEngaged === 1;
+  if (seatCount > maxEngaged) {
+    return {
+      title: second
+        ? "deal.committee.missing.secondEngaged"
+        : "deal.committee.missing.anotherEngaged",
+    };
+  }
   return {
-    title:
-      seatCount < THREADING_FLOOR
-        ? "deal.committee.missing.secondContact"
-        : "deal.committee.missing.secondEngaged",
+    title: second
+      ? "deal.committee.missing.secondContact"
+      : "deal.committee.missing.anotherContact",
   };
 }

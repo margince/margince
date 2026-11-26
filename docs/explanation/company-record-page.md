@@ -103,7 +103,8 @@ under their own subheads, never mixed.
 
 `GET /companies/{id}/brief` (and `POST` for a rewrite a user asks for) still serves a brief, and is
 **deprecated**: no screen renders it. It stays because `POST …/ask` is served from the same handlers and
-the same assembly. It lives in `internal/compose/companybrief`, and owns one table, `company_brief`.
+the same assembly. It lives in `internal/compose/companybrief`. Its cache is a `company_brief` row of
+`generated_summary`, the table that `internal/platform/generatedsummary` owns.
 
 **Built as the caller.** The input of the brief comes from running the 360 itself, as the principal that
 asked, inside the normal gates. The `Assembler` seam is injected, not imported. So the package uses one
@@ -141,6 +142,12 @@ over the same inputs (`companybrief/deterministic.go`).
   renders and acts the same, no matter which path wrote it.
 - `generated_by` names which one it was, because a reader who decides how much to trust a sentence needs
   to know.
+
+A floor written because the lane failed is served but not cached, so the next read that reaches the
+model asks it again. A read kept from the lane also serves its floor without caching it. A
+deployment with no model lane caches its floor until the fingerprint changes. A forced rewrite that
+fails keeps the model's brief only when the cached fingerprint matches: the facts, the routing
+version and the language.
 
 The prompt treats every activity subject and body as **untrusted quoted data**, behind a
 nonce fence. That data is quoted between delimiter strings that are made new each time. So text inside it cannot pass as
@@ -242,7 +249,7 @@ The moment fires on **owed promises only**, and leads the page in the Next bar a
 so the list never repeats it. The list has two sources: the suggestions (or the scan's findings) first,
 then the moves made by hand. One rule stops the page disagreeing with itself:
 
-- **The quiet card claims only what it read.** It says *"Nothing is owed to this account"*, never
+- **The quiet card claims only what it read.** It says *"Nothing is owed to this company"*, never
   "nothing needs you today". The second would be a claim about work it did not look at, in the payload
   that holds the rows that say the opposite. Every client reads it, the tool surface too, so the bound sits
   on the server.
@@ -304,6 +311,16 @@ input.
 - A reader who never opens an account never pays for it. And a busy inbox does not read the account
   again on every message.
 
+**One open per page load.** Each `GET` and `POST` assembles the whole account before it answers, which
+takes seconds. So the page sends one request for an open. Every consumer of `useAccountScan` shares the
+`POST`, and the `GET` waits for its answer. After that, `GET` serves the poll and the refresh after a
+change on the record.
+
+The shared open lives in the query cache, so sign-out drops it. A `POST` that answers after sign-out,
+or after a change marked the scan for a new read, does not write its answer. The server does not share
+work between requests. Two opens at once still queue one read, because the
+queue write refuses a second read while one is live.
+
 **The row is the carrier.** `company_scan` holds one row per (reader, account). It holds the read in
 flight: the `status` in the vocabulary of the AI activity rail, and the attempt. It also holds the
 timestamp fields that carry the lease, and `next_attempt_at` for a budget deferral. It also holds the last findings that settled. Those
@@ -333,6 +350,22 @@ Then the merged list replaces the own rows of the 360. The foot says who wrote t
 exchanges were read over how many days (`read.window_days`), and how many open deals. It says that the account has moved since (where it has), or why the model
 did not write them.
 
+A scan that is still running, or that failed, holds no other part of the page. The tabs and links work
+the whole time (`companyscan.test.tsx`).
+
+## The dossier and the growth fit: stored or written
+
+The dossier and the growth fit are stored per reader. A stored one answers in well under a second, and
+a missing or stale one is written on the request, in several seconds. The answer says which one it
+was in `served_from`: `cache` or `generated`. A refresh that the AI budget refused, answered with the
+stored reading, is `cache`. Count the two apart when you measure these reads, because a model call takes
+far longer than a stored read.
+
+The panel cannot know which one it gets until the answer is there. So it uses the grace that the AI activity rail uses
+(`CACHE_ANSWER_GRACE_MS`, one second). Under it the wait is a plain load. Past it the panel says the
+reading is being written (`companyassembly.tsx`). Once the answer is there, a stored reading shows when it
+was written, and a new one says it was written just now.
+
 ## The state strip and health
 
 A single relationship score over the account's contacts would let one contact who writes often speak for
@@ -341,7 +374,7 @@ instead.
 
 **The state strip** is the three values the overview leads with.
 
-- The *account* half (lifecycle, relationship types) needs no grant beyond the company the caller already
+- The *account* half (status, relationship types) needs no grant beyond the company the caller already
   read. Each other value needs its own grant.
 - *Engagement* (last inbound, last outbound, a state worked out from them) needs the timeline grant.
   *Commercial* (open count, stalled count) needs the deal grant. The *signal* slot holds the worst thing
@@ -440,10 +473,10 @@ slot.
 ### The installation's second mark
 
 The record above shows one picture. The installation's own company stores two. The sidebar head draws
-only a **square icon**, open or closed. A wordmark scaled into its `40px` square is a row of lines nobody
+only a **square icon**, open or closed. A wordmark scaled into its `32px` square is a row of lines nobody
 can read. The wide lockup is kept for the places that draw a company as a full lockup.
 
-The icon is a second pair of columns on the same row (`logo_icon_object_key`, `logo_icon_origin`). It is
+The icon is a second pair of columns on the same row (`logo_icon_object_key`, `logo_icon_source`). It is
 read back as `CompanyProfile.logo_icon_url`, and served from `GET /companies/{id}/logo/icon` under the
 rules above. It is encoded again the same way, with the same headers. It gives the same 404 for missing,
 hidden and not existing.
@@ -514,7 +547,7 @@ Graph details beyond the card (the strength model, the warm intro resolver, our 
 
 ## View state is not record fact
 
-Three tables behind this page live in a `compose` subpackage each, and all three are written **without an audit
+Three tables behind this page are written by this page's packages, and all three are written **without an audit
 row or outbox event**. This is the ruling for saved views. The waivers in `backend/gates/moduleaudits_test.go` hold the missing
 audit row, and `backend/gates/tableownerregistry_test.go` names each owner:
 
@@ -522,7 +555,7 @@ audit row, and `backend/gates/tableownerregistry_test.go` names each owner:
 |---|---|---|
 | `user_record_view` | `internal/compose/company360` | the visit baseline per user |
 | `suggestion_dismissal` | `internal/compose/company360` | the rep's "not this, not now" |
-| `company_brief` | `internal/compose/companybrief` | the brief cache per user |
+| `generated_summary` | `internal/platform/generatedsummary` | the brief cache per user, with the other generated summaries |
 
 This is the exception to the shape in [write-backbone.md](write-backbone.md) (domain row + `audit_log` +
 `event_outbox`), and it is small by the way it is built.

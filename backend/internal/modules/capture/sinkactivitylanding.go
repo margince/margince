@@ -6,6 +6,7 @@ package capture
 import (
 	"context"
 	"encoding/json"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -28,6 +29,8 @@ type captureAttempt struct {
 	duplicateFields json.RawMessage
 	dropped         string
 	admission       admissionNote
+	ensured         mailEnsure
+	ladder          ladderInCapture
 }
 
 func (s *Sink) landActivityTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields, owner ids.UUID) (activityLanding, error) {
@@ -37,6 +40,9 @@ func (s *Sink) landActivityTx(ctx context.Context, tx pgx.Tx, rec connector.Norm
 		return landed, err
 	}
 	// The privacy check must inspect the provider copy after resolving its owner.
+	if ctx, err = withMessagePrivacyTx(ctx, tx, rec, fields); err != nil {
+		return landed, err
+	}
 	ctx, deferred := s.deferOriginal(ctx, rec)
 	if !deferred {
 		if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
@@ -45,6 +51,10 @@ func (s *Sink) landActivityTx(ctx context.Context, tx pgx.Tx, rec connector.Norm
 	}
 	if internalMailAdmitted(ctx) {
 		rec.Links = nil
+	} else if chosen := rec.Counterparty.ChosenSubject(); chosen != nil {
+		// The chosen subject is filed on like any link: probed under the acting
+		// member's scope in this transaction, and counted by the audience gates.
+		rec.Links = append(slices.Clone(rec.Links), *chosen)
 	}
 	landed.ref, landed.created, landed.decision, err = s.captureActivity(ctx, tx, rec, fields)
 	if err != nil {

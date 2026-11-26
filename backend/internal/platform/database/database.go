@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -20,6 +21,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// Closing a connection returns the planner memory its backend retains.
+// Lifetime jitter spreads replanning across the pool.
+const (
+	DefaultConnLifetime = 10 * time.Minute
+	DefaultConnIdleTime = 5 * time.Minute
 )
 
 // PoolConfig is what a pool of this product IS: the operational limits, the
@@ -44,40 +52,29 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	}
 	// ParseConfig already applied any pool_* DSN parameters; only fill
 	// the ones the DSN left unset.
-	if !strings.Contains(dsn, "pool_max_conns") {
+	if !namesDSNParam(dsn, "pool_max_conns") {
 		cfg.MaxConns = 16
 	}
-	if !strings.Contains(dsn, "pool_min_conns") {
+	if !namesDSNParam(dsn, "pool_min_conns") {
 		cfg.MinConns = 2
 	}
-	// A backend keeps its plan memory until the connection closes. Jitter
-	// spreads the closes; its name contains the lifetime's, so it is cut first.
-	if !strings.Contains(strings.ReplaceAll(dsn, "pool_max_conn_lifetime_jitter", ""), "pool_max_conn_lifetime") {
-		cfg.MaxConnLifetime = 10 * time.Minute
+	if !namesDSNParam(dsn, "pool_max_conn_lifetime") {
+		cfg.MaxConnLifetime = DefaultConnLifetime
 	}
-	if !strings.Contains(dsn, "pool_max_conn_lifetime_jitter") {
-		cfg.MaxConnLifetimeJitter = 2 * time.Minute
+	// Jitter spreads the closes, so the pool never replaces every backend at once.
+	if !namesDSNParam(dsn, "pool_max_conn_lifetime_jitter") {
+		cfg.MaxConnLifetimeJitter = cfg.MaxConnLifetime / 5
 	}
-	if !strings.Contains(dsn, "pool_max_conn_idle_time") {
-		cfg.MaxConnIdleTime = 5 * time.Minute
+	if !namesDSNParam(dsn, "pool_max_conn_idle_time") {
+		cfg.MaxConnIdleTime = DefaultConnIdleTime
 	}
-	if !strings.Contains(dsn, "pool_health_check_period") {
+	if !namesDSNParam(dsn, "pool_health_check_period") {
 		cfg.HealthCheckPeriod = time.Minute
 	}
-	// JIT is off for this workload, and the row-scope predicates are why.
-	// Every list, search and timeline query composes the caller's
-	// visibility clause — nested EXISTS over contact, company, deal,
-	// activity_link and record_grant — which inflates the plan's ESTIMATED
-	// cost past jit_above_cost while the query itself stays an indexed
-	// OLTP read. Postgres then spends longer in LLVM than in the query:
-	// the /search union measured 12ms of work behind 475ms of JIT
-	// generation, inlining, optimization and emission.
-	//
-	// What crosses the threshold is the row-scope TIER, not data volume,
-	// so a rep pays it on a query an unbounded admin runs for free. JIT
-	// earns its keep on long analytical scans; this product runs none on
-	// the request path. A DSN that names jit itself still wins.
-	setRuntimeParam(cfg, dsn, "jit", "off")
+	// JIT is off: the row-scope predicates price a search statement past
+	// jit_above_cost, and compiling it cost seconds for 12ms of work. A DSN
+	// cannot turn it back on.
+	forceJITOff(cfg)
 	// Nothing else bounds how long one statement may hold a connection.
 	// http.Server's WriteTimeout ends the RESPONSE without cancelling the
 	// handler, so a query that has stopped making progress keeps its slot in a
@@ -124,13 +121,32 @@ func setSessionUTC(cfg *pgxpool.Config) {
 	cfg.ConnConfig.RuntimeParams["timezone"] = "UTC"
 }
 
+// forceJITOff sets jit=off on every connection and replaces a DSN's own
+// jit setting, whatever its spelling. It warns when the DSN asked for JIT, so
+// an operator who set it learns it was not applied.
+func forceJITOff(cfg *pgxpool.Config) {
+	if cfg.ConnConfig.RuntimeParams == nil {
+		cfg.ConnConfig.RuntimeParams = map[string]string{}
+	}
+	for name, value := range cfg.ConnConfig.RuntimeParams {
+		if !strings.EqualFold(name, "jit") {
+			continue
+		}
+		if !strings.EqualFold(value, "off") {
+			slog.Warn("the database DSN sets jit; the pool keeps jit=off, because row-scope predicates make JIT compile for seconds", "jit", value)
+		}
+		delete(cfg.ConnConfig.RuntimeParams, name)
+	}
+	cfg.ConnConfig.RuntimeParams["jit"] = "off"
+}
+
 // setRuntimeParam fills in a Postgres runtime parameter the DSN left unset.
 // Same rule as every pool limit above: an operator who named the parameter in
 // the DSN meant it, so a DSN-provided value always wins — including a zero,
 // which Postgres reads as no bound at all and is how a role that must not be
 // bounded says so.
 func setRuntimeParam(cfg *pgxpool.Config, dsn, name, value string) {
-	if strings.Contains(dsn, name) {
+	if namesDSNParam(dsn, name) {
 		return
 	}
 	if cfg.ConnConfig.RuntimeParams == nil {
@@ -237,19 +253,8 @@ func InWorkspaceTransaction(ctx context.Context) bool {
 // not the other, and nothing on the response said so. REPEATABLE READ is what
 // makes one assembled day one instant.
 //
-// NOT READ-ONLY, deliberately, and the reason is connection count rather than
-// permissiveness. These reads are not pure: the brief lane resurfaces expired
-// snoozes and records the open as it reads. Under a READ ONLY snapshot each
-// such write has to open a transaction of its own, which it can only do while
-// the snapshot is still held — so every request would hold TWO pooled
-// connections at once, and at MaxConns 16 that many concurrent readers all wait
-// on each other for a seventeenth. One transaction per request is the whole
-// point; a guard that forces a second connection defeats it.
-//
-// What the writes get instead is the page's own fate: they commit with the
-// assembled day or not at all. That is the better reading of all three of them
-// — a brief whose page never rendered was not opened, and a walk nobody was
-// shown does not need freezing.
+// Not opened read-only. A lane that still takes a row lock inside the read
+// would fail there.
 //
 // A write whose failure must NOT take the page down with it still takes
 // Detached below, because a joined statement that errors aborts the whole
@@ -265,6 +270,22 @@ func WithWorkspaceSnapshot(ctx context.Context, pool *pgxpool.Pool, fn func(cont
 		return fn(ctx)
 	}
 	return runTxWith(ctx, pool, pgx.TxOptions{IsoLevel: pgx.RepeatableRead}, func(tx pgx.Tx) error {
+		var snapshot pgx.Tx = newDeferredTx(tx)
+		return fn(context.WithValue(ctx, snapshotKey{}, snapshot))
+	})
+}
+
+// WithWorkspaceWriteTx runs fn in one read-committed transaction that every
+// store reached beneath it joins. Writes owned by several modules then commit or
+// roll back together. Nesting joins the outer transaction.
+func WithWorkspaceWriteTx(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context) error) error {
+	if _, ok := principal.WorkspaceID(ctx); !ok {
+		return ErrNoWorkspace
+	}
+	if _, joined := snapshotOf(ctx); joined {
+		return fn(ctx)
+	}
+	return runTxWith(ctx, pool, pgx.TxOptions{}, func(tx pgx.Tx) error {
 		return fn(context.WithValue(ctx, snapshotKey{}, tx))
 	})
 }
@@ -314,15 +335,16 @@ func runTxWith(ctx context.Context, pool *pgxpool.Pool, opts pgx.TxOptions, fn f
 	if err != nil {
 		return fmt.Errorf("pg: begin: %w", err)
 	}
-	// The deferred rollback only matters on the error path; after a
-	// successful Commit it answers ErrTxClosed by design, and on the error
-	// path the fn/commit error is the one the caller must see.
+	// The deferred rollback only matters on the error path. After a
+	// successful Commit it answers ErrTxClosed by design. On the error path
+	// the fn/commit error is the one the caller must see. It runs on the
+	// finishing context, so a request that timed out keeps its connection.
 	//craft:ignore swallowed-errors rollback after commit is a designed no-op; on the error path the fn error supersedes it
-	defer func() { _ = tx.Rollback(ctx) }()
+	defer func() { _ = rollbackDetached(ctx, tx) }()
 	defer openTxMemo(tx)()
 
 	if err := guardedTransaction(ctx, tx, fn); err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	return commitWhileAnswerable(ctx, tx)
 }

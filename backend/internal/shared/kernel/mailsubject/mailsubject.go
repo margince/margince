@@ -19,14 +19,15 @@ import (
 )
 
 // ReplyPrefixes are the ways a client marks a subject as a reply, in the
-// languages this product writes. Lower case, colon included.
+// languages this product writes. Lower case, colon included. "antwort:" is
+// left out: adding it means rebuilding the answered-check index.
 func ReplyPrefixes() []string {
 	return []string{"re:", "aw:", "antw:"}
 }
 
 // ForwardPrefixes are the ways a client marks a subject as a forward.
 func ForwardPrefixes() []string {
-	return []string{"fwd:", "wg:"}
+	return []string{"fwd:", "fw:", "wg:"}
 }
 
 // ReplyPrefixPattern matches any run of reply prefixes at the start of a
@@ -44,7 +45,40 @@ func ReplyPrefixPattern() string {
 var (
 	replyPrefixes = regexp.MustCompile(`(?i)` + ReplyPrefixPattern())
 	innerSpaces   = regexp.MustCompile(`\s+`)
+	anyPrefixes   = regexp.MustCompile(`^(\s*(` + strings.Join(PrefixWords(), "|") + `)\s*:)+\s*`)
+	outerForward  = regexp.MustCompile(`(?i)^[\s\x{00A0}]*(` + strings.Join(forwardWords(), "|") + `)[\s\x{00A0}]*:`)
 )
+
+// IsForward reports whether the subject's outermost prefix marks a forward.
+// Its spaces are the ASCII ones and U+00A0, as the browser's mirror reads them.
+// "Re: Fwd:" answers a forward, so it is a reply.
+func IsForward(subject string) bool {
+	return outerForward.MatchString(subject)
+}
+
+func forwardWords() []string {
+	words := make([]string, 0, len(ForwardPrefixes()))
+	for _, prefix := range ForwardPrefixes() {
+		words = append(words, strings.TrimSuffix(prefix, ":"))
+	}
+	return words
+}
+
+// PrefixWords are the reply and forward prefixes without their colon, for a
+// reader that matches whole words rather than a subject's start.
+func PrefixWords() []string {
+	var words []string
+	for _, prefix := range append(ReplyPrefixes(), ForwardPrefixes()...) {
+		words = append(words, strings.TrimSuffix(prefix, ":"))
+	}
+	return words
+}
+
+// Topic is Normalized with forward prefixes removed as well: the subject a
+// reply or a forward carries over from the message it answers.
+func Topic(subject string) string {
+	return Normalized(anyPrefixes.ReplaceAllString(Normalized(subject), ""))
+}
 
 // Normalized is a subject as the answer check compares it: reply prefixes and
 // outer spaces removed, inner runs of space folded, lower-cased. A forward

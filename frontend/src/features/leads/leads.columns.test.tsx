@@ -1,12 +1,25 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import type { CreateFieldOption } from "../../components/create.fields";
-import type { ListColumn } from "../../design-system/listtable";
+import { armHoverIntent } from "../../design-system/hoverintent-testing";
+import { type ListColumn, ListTable } from "../../design-system/listtable";
 import { LocaleProvider, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
+import { openViewStep } from "../../testing/listview.testkit";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
 import { leadColumns } from "./leads.columns";
 
 type Lead = components["schemas"]["Lead"];
@@ -50,6 +63,9 @@ function Cell({
   return <div data-testid="cell">{column.cell(row)}</div>;
 }
 
+// A reader who may open companies, so a linked company is named by its own name.
+const COMPANY_READER: GrantSpec = { lead: ["read"], company: ["read"] };
+
 // The cell sits in a clickable row, as the table draws it. A test can then see
 // whether a click inside the cell also opened the row.
 function renderCell(
@@ -62,6 +78,7 @@ function renderCell(
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ allow: COMPANY_READER }));
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -106,16 +123,23 @@ describe("the lead table's columns", () => {
   it("open a linked company under its own name, without opening the row", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify({
-              data: [{ id: "c-7", display_name: "Northwind Holding" }],
-              next_cursor: null,
-            }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          ),
-      ),
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input instanceof Request ? input.url : String(input);
+        const method =
+          input instanceof Request ? input.method : (init?.method ?? "GET");
+        const reference =
+          method === "GET"
+            ? companyNamesAnswer(url, { "c-7": "Northwind Holding" })
+            : null;
+        if (reference) return reference;
+        return new Response(
+          JSON.stringify({
+            data: [{ id: "c-7", display_name: "Northwind Holding" }],
+            next_cursor: null,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }),
     );
     const onRow = vi.fn();
     renderCell("company", { ...lead, company_id: "c-7" }, onRow);
@@ -135,9 +159,29 @@ describe("the lead table's columns", () => {
     ).not.toBeNull();
   });
 
-  it("no longer trail the company after the name as a caption", () => {
+  it("name the lead beside its monogram, with no company after it", () => {
     renderCell("name");
-    expect(screen.getByTestId("cell").textContent).toBe("Anna Example");
+    const cell = screen.getByTestId("cell");
+    expect(cell.querySelector(".avatar")).toHaveTextContent("AE");
+    expect(cell).toHaveTextContent(/^AEAnna Example$/);
+  });
+
+  it("draw no letters for a lead with neither name nor address", () => {
+    renderCell("name", { ...lead, full_name: null, email: null });
+    const cell = screen.getByTestId("cell");
+    expect(cell).toHaveTextContent(/^Unnamed lead$/);
+    expect(cell.querySelector(".avatar")).toBeEmptyDOMElement();
+  });
+
+  it("draw the monogram from the address a lead with no name shows", () => {
+    renderCell("name", {
+      ...lead,
+      full_name: null,
+      email: "ops@northwind.example",
+    });
+    const cell = screen.getByTestId("cell");
+    expect(cell).toHaveTextContent("ops@northwind.example");
+    expect(cell.querySelector(".avatar")).toHaveTextContent(/^ON$/);
   });
 
   it("show the tags a lead is filed under", () => {
@@ -225,5 +269,172 @@ describe("the referring partner column", () => {
     cleanup();
     renderCell("partner", lead, undefined, PARTNERS);
     expect(screen.getByTestId("cell").textContent).toBe("No partner");
+  });
+});
+
+describe("the lead score cell", () => {
+  it("shows the score alone, described by its reason, with no tab stop", () => {
+    renderCell("score", {
+      ...lead,
+      score: 72,
+      score_reason: "decision_maker_title",
+    });
+    const score = screen.getByText("72").closest(".readonly-value");
+    if (!(score instanceof HTMLElement)) throw new Error("no score anchor");
+    expect(score).toHaveAccessibleDescription("Decision-maker title");
+    expect(score).not.toHaveAttribute("tabindex");
+    expect(screen.getByText("Decision-maker title")).not.toBeVisible();
+  });
+
+  it("raises the reason as a tip once the pointer settles on the score", async () => {
+    const user = userEvent.setup();
+    armHoverIntent();
+    renderCell("score", { ...lead, score: 12 });
+    await user.hover(screen.getByText("12"));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("No signals");
+  });
+});
+
+describe("the lead table's default columns", () => {
+  function Table() {
+    const t = useT();
+    const zone = useCompanyZone();
+    return (
+      <ListTable
+        rows={[lead]}
+        columns={leadColumns(t, "en", zone, undefined, PARTNERS)}
+        rowKey={(row) => row.id}
+        unit="leads"
+      />
+    );
+  }
+
+  it("draws the columns a 1440px window fits and offers the rest under View", async () => {
+    const user = userEvent.setup();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <Table />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(
+      within(screen.getByRole("table"))
+        .getAllByRole("columnheader")
+        .map((cell) => cell.textContent),
+    ).toEqual([
+      "Name",
+      "Company",
+      "Score",
+      "Status",
+      "Next step",
+      "Owner",
+      "Created",
+    ]);
+    const score = document.querySelectorAll(".lt-table col")[2];
+    expect(score).toHaveStyle({ width: "80px" });
+    const step = within(await openViewStep(user, "Columns"));
+    for (const offered of [
+      "Last activity",
+      "Origin",
+      "Referred by partner",
+      "Tags",
+    ]) {
+      expect(step.getByRole("checkbox", { name: offered })).not.toBeChecked();
+    }
+  });
+});
+
+describe("a lead's row on a phone", () => {
+  function LeadTable({ rows }: Readonly<{ rows: readonly Lead[] }>) {
+    const t = useT();
+    const zone = useCompanyZone();
+    return (
+      <ListTable
+        rows={rows}
+        columns={leadColumns(t, "en", zone, undefined)}
+        rowKey={(row) => row.id}
+        unit="leads"
+      />
+    );
+  }
+
+  function renderTable(rows: readonly Lead[]) {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    client.setQueryData(["me"], meFixture({ allow: COMPANY_READER }));
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <LeadTable rows={rows} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  it("ends line one in the status and its SLA state, then company, next task and its due", async () => {
+    stubWindowWidth(390);
+    renderTable([
+      {
+        ...lead,
+        status: "engaged",
+        sla_state: "breached",
+        next_task_subject: "Send the price sheet",
+        next_task_due_at: "2026-07-03T09:00:00Z",
+        open_task_count: 2,
+      },
+    ]);
+    const row = await phoneRowOf("Anna Example");
+    expect(row.end).toEqual(["EngagedOverdue"]);
+    expect(row.caption).toHaveLength(3);
+    expect(row.caption.slice(0, 2)).toEqual([
+      "Northwind Traders",
+      "Send the price sheet",
+    ]);
+    expect(row.caption[2]).toMatch(/Jul/);
+    expect(row.row).not.toHaveTextContent("2 open tasks");
+  });
+
+  it("leaves out a missing company and next task, placeholder and due alike", async () => {
+    stubWindowWidth(390);
+    renderTable([
+      {
+        ...lead,
+        company_name: null,
+        next_task_subject: null,
+        next_task_due_at: "2026-07-03T09:00:00Z",
+      },
+    ]);
+    const row = await phoneRowOf("Anna Example");
+    expect(row.caption).toEqual([]);
+    expect(row.row).not.toHaveTextContent("No next step");
+  });
+
+  it("names a linked company as words, not as a second link in the row", async () => {
+    stubWindowWidth(390);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async (input: RequestInfo | URL) =>
+          companyNamesAnswer(
+            input instanceof Request ? input.url : String(input),
+            { "c-7": "Northwind Holding" },
+          ) ?? new Response("{}", { status: 404 }),
+      ),
+    );
+    renderTable([{ ...lead, company_id: "c-7" }]);
+    await screen.findByText("Northwind Holding");
+    const row = await phoneRowOf("Anna Example");
+    expect(row.caption).toEqual(["Northwind Holding"]);
+    expect(
+      screen.queryByRole("link", { name: "Northwind Holding" }),
+    ).toBeNull();
+  });
+
+  it("draws no due column on a wide screen", () => {
+    stubWindowWidth(1440);
+    renderTable([lead]);
+    expect(screen.queryByRole("columnheader", { name: "Due date" })).toBeNull();
   });
 });

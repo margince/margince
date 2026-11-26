@@ -113,18 +113,9 @@ func companyMessageChangeRequestFixture() onboardingCompanyMessageFixture {
 	return fixture
 }
 
-func companyMessageFixtureJSON(t *testing.T, f onboardingCompanyMessageFixture) json.RawMessage {
-	t.Helper()
-	raw, err := json.Marshal(f)
-	if err != nil {
-		t.Fatalf("encoding the fixture: %v", err)
-	}
-	return raw
-}
-
-// companyMessageExpectationJSON is what the corpus asserts, encoded as the
-// corpus will carry it — beside the fixture, never inside it.
-func companyMessageExpectationJSON(t *testing.T, kind string, changes map[string]string) json.RawMessage {
+// companyConversationExpectationJSON is what the corpus asserts, encoded as
+// the corpus carries it: beside the fixture, never inside it.
+func companyConversationExpectationJSON(t *testing.T, kind string, changes map[string]string) json.RawMessage {
 	t.Helper()
 	raw, err := json.Marshal(companyConversationExpectation{Kind: kind, Changes: changes})
 	if err != nil {
@@ -135,14 +126,14 @@ func companyMessageExpectationJSON(t *testing.T, kind string, changes map[string
 
 func companyMessageNameExpectation(t *testing.T) json.RawMessage {
 	t.Helper()
-	return companyMessageExpectationJSON(t, "correction", map[string]string{fieldDisplayName: "Acme Robotics"})
+	return companyConversationExpectationJSON(t, "correction", map[string]string{fieldDisplayName: "Acme Robotics"})
 }
 
 func runCompanyMessageCase(
 	t *testing.T, fixture onboardingCompanyMessageFixture, expected json.RawMessage, reply string,
 ) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
-	prepared, err := onboardingCompanyMessageCases{}.Prepare(companyMessageFixtureJSON(t, fixture), expected)
+	prepared, err := onboardingCompanyMessageCases{}.Prepare(fixtureJSON(t, fixture), expected)
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -206,7 +197,7 @@ func TestCompanyMessageCaseReportsWhatTheGateRefused(t *testing.T) {
 			// would accept this one too.
 			name:       "the clicked change, in the turn without the click",
 			fixture:    clickWithoutTheClick,
-			expected:   companyMessageExpectationJSON(t, "answer", nil),
+			expected:   companyConversationExpectationJSON(t, "answer", nil),
 			reply:      companyMessageLegalNameReply,
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: `proposes "legal_name" without an administrator change request`,
@@ -279,7 +270,7 @@ func TestCompanyMessageCaseSeparatesTheRightAnswerFromAWellFormedWrongOne(t *tes
 			// The clicked option, granted verbatim and to nothing else.
 			name:     "the change the administrator clicked",
 			fixture:  companyMessageClickFixture(),
-			expected: companyMessageExpectationJSON(t, "correction", map[string]string{fieldLegalName: "Acme Robotics GmbH"}),
+			expected: companyConversationExpectationJSON(t, "correction", map[string]string{fieldLegalName: "Acme Robotics GmbH"}),
 			reply:    companyMessageLegalNameReply,
 
 			wantResult: aitasks.OutcomeAccepted,
@@ -300,7 +291,7 @@ func TestCompanyMessageCaseSeparatesTheRightAnswerFromAWellFormedWrongOne(t *tes
 			// which grounded value was the right one.
 			name:       "a grounded change carrying the wrong value",
 			fixture:    companyMessageChangeRequestFixture(),
-			expected:   companyMessageExpectationJSON(t, "correction", map[string]string{fieldIndustry: "Robotics manufacturing"}),
+			expected:   companyConversationExpectationJSON(t, "correction", map[string]string{fieldIndustry: "Robotics manufacturing"}),
 			reply:      companyMessageUnaskedChangeReply,
 			wantResult: aitasks.OutcomeWrongAnswer,
 			wantDetail: "industry reads",
@@ -323,7 +314,7 @@ func TestCompanyMessageCaseSeparatesTheRightAnswerFromAWellFormedWrongOne(t *tes
 func TestCompanyMessageFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	always := map[string]bool{"message": true, "history": true, "conversation": true, "locale": true}
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(companyMessageFixtureJSON(t, companyMessageFixture()), &fields); err != nil {
+	if err := json.Unmarshal(fixtureJSON(t, companyMessageFixture()), &fields); err != nil {
 		t.Fatalf("decoding the fixture: %v", err)
 	}
 	for name := range fields {
@@ -339,7 +330,7 @@ func TestCompanyMessageFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	// The click is the one thing the path is given only sometimes, so it is the
 	// one key a fixture may add — and it may add nothing else.
 	var clicked map[string]json.RawMessage
-	if err := json.Unmarshal(companyMessageFixtureJSON(t, companyMessageClickFixture()), &clicked); err != nil {
+	if err := json.Unmarshal(fixtureJSON(t, companyMessageClickFixture()), &clicked); err != nil {
 		t.Fatalf("decoding the click fixture: %v", err)
 	}
 	for name := range clicked {

@@ -19,12 +19,20 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/margince/margince/backend/internal/compose/oidctoken"
+	"github.com/margince/margince/backend/internal/compose/oidctoken/oidctokentest"
 )
 
 const pushTestToken = "push-secret" // test fixture, not a credential
 
-func newOIDCPushHandler(rig *oidcTestRig) http.Handler {
-	spec := gmailPushSpec(nil, nil, pushTestToken, newTestVerifier(rig), slog.New(slog.DiscardHandler))
+func newOIDCPushHandler(rig *oidctokentest.Rig) http.Handler {
+	identity := GmailPushConfig{Audience: oidctokentest.Aud, ServiceAccount: oidctokentest.SA}.pushIdentity
+	verifier := oidctoken.NewGoogle(rig.JWKSURL(), identity).
+		WithHTTPClient(rig.Srv.Client()).
+		SetClock(func() time.Time { return rig.Base })
+	spec := gmailPushSpec(nil, nil, pushTestToken, verifier, slog.New(slog.DiscardHandler))
 	return Webhook(spec, slog.New(slog.DiscardHandler))
 }
 
@@ -39,7 +47,7 @@ func postPush(h http.Handler, token, bearer string) *httptest.ResponseRecorder {
 }
 
 func TestGmailPushOIDCGate(t *testing.T) {
-	rig := newOIDCTestRig(t)
+	rig := oidctokentest.NewRig(t)
 	h := newOIDCPushHandler(rig)
 
 	t.Run("wrong shared token is 401, same as any other chassis admission failure", func(t *testing.T) {
@@ -53,7 +61,7 @@ func TestGmailPushOIDCGate(t *testing.T) {
 		}
 	})
 	t.Run("token signed for another audience is 401", func(t *testing.T) {
-		forged := rig.mint(t, testKID, "", map[string]any{"aud": "https://elsewhere.example/hook"})
+		forged := rig.Mint(t, oidctokentest.KID, "", map[string]any{"aud": "https://elsewhere.example/hook"})
 		if rec := postPush(h, pushTestToken, forged); rec.Code != http.StatusUnauthorized {
 			t.Fatalf("status = %d, want 401", rec.Code)
 		}
@@ -62,7 +70,7 @@ func TestGmailPushOIDCGate(t *testing.T) {
 		// Past authentication, the garbage body must NOT invite Pub/Sub to
 		// redeliver — the same bytes would fail identically forever, so the
 		// chassis answers 2xx (Poison) instead of a 4xx.
-		rec := postPush(h, pushTestToken, rig.mint(t, testKID, "", nil))
+		rec := postPush(h, pushTestToken, rig.Mint(t, oidctokentest.KID, "", nil))
 		if rec.Code < 200 || rec.Code >= 300 {
 			t.Fatalf("status = %d, want 2xx (authenticated, poison body)", rec.Code)
 		}

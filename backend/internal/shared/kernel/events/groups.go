@@ -18,6 +18,9 @@ import "sort"
 type Group struct {
 	Name    string
 	Streams []string
+	// Types is what the handler acts on; the subscriber acks every other entry
+	// unread. The zero set takes every type on Streams.
+	Types TypeSet
 }
 
 // Groups returns the consumer groups with their subscribed streams —
@@ -38,12 +41,13 @@ func Groups() []Group {
 		return keys
 	}
 	return []Group{
-		{Name: "cg:ai-budget-resume", Streams: forEntities(aiBudgetStreamEntity)},
-		{Name: "cg:context-graph", Streams: forEntities(contactStreamEntity, companyStreamEntity, dealStreamEntity, activityStreamEntity, leadStreamEntity)},
+		{Name: "cg:ai-budget-resume", Streams: forEntities(aiBudgetStreamEntity), Types: AIBudgetResumeTypes},
+		{Name: "cg:context-graph", Streams: forEntities(contextGraphEntities...), Types: ContextGraphTypes},
 		// The interaction-edge projection (CG-DDL-1 / ADR-0078). Its OWN group
 		// rather than a second handler on cg:context-graph: a projection
 		// rebuild must not be able to stall embedding freshness, and the two
 		// have unrelated failure modes.
+		// No Types: the handler decides on entity type and payload, not event type.
 		{Name: "cg:graph-edge", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
 		// The audience-change corrector: when a human LIMITS a message after
 		// the derived models were built, the derived signals citing it narrow
@@ -52,11 +56,11 @@ func Groups() []Group {
 		// handler on cg:graph-edge for the same isolation reason: re-scoping
 		// signals must not be able to stall the edge projection, and vice
 		// versa.
-		{Name: "cg:audience-rescope", Streams: forEntities(activityStreamEntity)},
+		{Name: "cg:audience-rescope", Streams: forEntities(activityStreamEntity), Types: AudienceRescopeTypes},
 		// Empties a voice sample read from sent mail once that mail is
 		// archived, restricted, narrowed or marked confidential. The contact
 		// stream carries retention.restricted.
-		{Name: "cg:voice-copy-recheck", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
+		{Name: "cg:voice-copy-recheck", Streams: forEntities(activityStreamEntity, contactStreamEntity), Types: ActivityNarrowingTypes},
 		// The LinkedIn ghost matcher (ADR-0078 §8b). Its own group rather than
 		// a second handler on cg:graph-edge: that consumer lives in the search
 		// module and this call belongs to contacts, and a module never reaches
@@ -64,14 +68,16 @@ func Groups() []Group {
 		// a contact appearing is a chance to attach a ghost, and so is an
 		// account appearing, because employer resolution is what most ghosts
 		// are waiting on.
+		// No Types: the handler decides on entity type, not event type.
 		{Name: "cg:linkedin-match", Streams: forEntities(contactStreamEntity, companyStreamEntity)},
 
 		// Its own group rather than a second handler on cg:contact-auto-enrich:
 		// this repair attaches mail the workspace already holds to a record it
 		// already has, and must keep flowing when an enrichment that calls out
 		// to a model is slow or wedged.
-		{Name: "cg:cohort-promote", Streams: forEntities(contactStreamEntity)},
+		{Name: "cg:cohort-promote", Streams: forEntities(contactStreamEntity), Types: CohortPromoteTypes},
 		// Attribution resumes independently of cohort repair and enrichment failures.
+		// No Types: a refile follows any change to what a deal was filed from.
 		{Name: "cg:deal-refile", Streams: forEntities(dealStreamEntity, leadStreamEntity, contactStreamEntity, activityStreamEntity)},
 		// Turning a won deal into what its partner earned. Its own group
 		// because accrual is money: a projection rebuild or an embedding
@@ -79,10 +85,10 @@ func Groups() []Group {
 		// never look like a failure to index. It listens on the deal stream,
 		// where deal.stage_changed carries both the win and the reopen that
 		// reverses one.
-		{Name: "cg:commissions", Streams: forEntities(dealStreamEntity)},
+		{Name: "cg:commissions", Streams: forEntities(dealStreamEntity), Types: CommissionsTypes},
 		// Activating a partner on the first won deal it sourced. Its own group
 		// so an accrual that is wedged never holds an activation back.
-		{Name: "cg:partner-activation", Streams: forEntities(dealStreamEntity)},
+		{Name: "cg:partner-activation", Streams: forEntities(dealStreamEntity), Types: PartnerActivationTypes},
 		// Turning records that already settle something into stage evidence: a
 		// contract turning active, a buyer confirming a room version, a held
 		// meeting. Both streams, because contract.* and deal_room.* ride the
@@ -92,7 +98,7 @@ func Groups() []Group {
 		// accrues money and must never be stalled behind an evidence write,
 		// and evidence must keep flowing when an accrual is wedged. The two
 		// share a stream and nothing else.
-		{Name: "cg:stage-evidence", Streams: forEntities(dealStreamEntity, activityStreamEntity)},
+		{Name: "cg:stage-evidence", Streams: forEntities(dealStreamEntity, activityStreamEntity), Types: StageEvidenceTypes},
 		// How each proposed stage move was received, counted on the ledger the
 		// launch gate reads. The APPROVAL stream, because a verdict rides
 		// there — including `expired`, the window closing on a card nobody
@@ -103,12 +109,12 @@ func Groups() []Group {
 		// consumer WRITES the evidence a proposal rests on and this one counts
 		// what happened to the proposal, so a wedged extraction must not stop
 		// the measurement that says whether the feature may stay on.
-		{Name: "cg:approval-notice-retract", Streams: forEntities(approvalStreamEntity)},
+		{Name: "cg:approval-notice-retract", Streams: forEntities(approvalStreamEntity), Types: ApprovalNoticeRetractTypes},
 		// Holding a contact's queued marketing the moment they stop it. The
 		// CONTACT stream, where consent.suppressed and consent.changed ride.
 		// Its own group: a backlog behind any other contact consumer must not
 		// let a stopped message wait for its due time.
-		{Name: "cg:scheduled-send-stop", Streams: forEntities(contactStreamEntity)},
+		{Name: "cg:scheduled-send-stop", Streams: forEntities(contactStreamEntity), Types: ScheduledSendStopTypes},
 		// Telling the seats that could decide a staged proposal that it is
 		// waiting on them. The APPROVAL stream, where approval.requested
 		// rides.
@@ -119,7 +125,7 @@ func Groups() []Group {
 		// wedged measurement must never cost a colleague their notice, and a
 		// backlog of notices must never stall the ledger the launch gate
 		// reads.
-		{Name: "cg:approval-notify", Streams: forEntities(approvalStreamEntity)},
+		{Name: "cg:approval-notify", Streams: forEntities(approvalStreamEntity), Types: ApprovalNotifyTypes},
 		// Closing an introduction the contact answered. Its own group because
 		// the evidence is perishable in one direction: `replied` may only be
 		// reached from a captured message, so a lane wedged behind an
@@ -132,6 +138,7 @@ func Groups() []Group {
 		// message captured before its sender was a contact names nobody the
 		// activity arm can act on, and without the contact event that reply
 		// would be lost permanently while the ask read unanswered.
+		// No Types: any contact event can be the sender of an earlier reply.
 		{Name: "cg:intro-advance", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
 		// What the installation owes a contact it obtained without asking them.
 		// The contact stream opens the duty: it is decided from how the contact
@@ -140,19 +147,29 @@ func Groups() []Group {
 		// activity stream settles it: activity.captured is the contact's own
 		// mail arriving after a backfill minted them from our reply, which
 		// answers the unknown source the duty was opened for.
-		{Name: "cg:notice-case-open", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
+		{Name: "cg:notice-case-open", Streams: forEntities(activityStreamEntity, contactStreamEntity), Types: NoticeCaseOpenTypes},
 		// What happened in a Deal Room, written onto the deal's timeline. Its own
 		// group because a room's traffic is live and conversational while the
 		// projections above are batchy: a backlog of embeddings must not delay the
 		// note that says the buyer just asked something. It listens on the deal
 		// stream, where every deal_room event rides.
+		// No Types: the handler decides on the deal_room entity, not event type.
 		{Name: "cg:deal-room-timeline", Streams: forEntities(dealStreamEntity)},
+		// What happens on a deal, its project, offers, contracts and activities,
+		// posted into the record's linked chat channel. Its own group because a
+		// post is live talk a team waits on, and a projection backlog must not
+		// hold it. The contact stream carries retention.restricted, which takes
+		// a restricted activity back out of its post.
+		// No Types: the handler decides on the linked record type, not event type.
+		{Name: "cg:chat-links", Streams: forEntities(dealStreamEntity, activityStreamEntity, contactStreamEntity)},
 		// Marking the input check's last reading out of date when something it
 		// read changes. Deals and stages ride the deal stream, forecast calls
 		// the identity stream, and activities theirs. Buying signals ride the
 		// capture stream and their companies the company stream. Its own group
 		// because it only marks: a backlog anywhere else must not leave a
 		// changed deal reading as current.
+		// No Types yet: the marking set is the assurance module's, which this
+		// package cannot read. It pipelines its dedupe on the batch path instead.
 		{Name: "cg:assurance-freshness", Streams: forEntities(
 			dealStreamEntity, identityStreamEntity, activityStreamEntity, captureStreamEntity, companyStreamEntity)},
 		// A commitment and the task it became, settled together: a task marked
@@ -160,13 +177,13 @@ func Groups() []Group {
 		// activity stream carries the task's update and the contact stream the
 		// claim's change. Its own group because it writes on both sides, and a
 		// projection's backlog must not leave a kept commitment reading as owed.
-		{Name: "cg:commitment-settle", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
+		{Name: "cg:commitment-settle", Streams: forEntities(activityStreamEntity, contactStreamEntity), Types: CommitmentSettleTypes},
 		// The AI-activity projection (ai_task_run): what the rail and the
 		// activity feed read. Its own group because a projection backlog must
 		// not be able to stall anything that spends money or moves a record,
 		// and because it is the only group on the aitask stream — an
 		// all-stream group would carry this traffic for nothing.
-		{Name: "cg:ai-activity", Streams: forEntities(aiTaskStreamEntity)},
+		{Name: "cg:ai-activity", Streams: forEntities(aiTaskStreamEntity), Types: AIActivityTypes},
 		// Filling a contact from what their employer's site already published
 		// (ADR-0072 arc). Its own group for the same reason as the matcher
 		// above: the deep read fills a published contact DURING the crawl, so
@@ -174,7 +191,7 @@ func Groups() []Group {
 		// site said. It listens on the contact stream alone — the fill is
 		// keyed on the contact, and an account appearing enriches nobody
 		// until a contact is filed against it, which is itself a contact event.
-		{Name: "cg:contact-auto-enrich", Streams: forEntities(contactStreamEntity)},
+		{Name: "cg:contact-auto-enrich", Streams: forEntities(contactStreamEntity), Types: ContactAutoEnrichTypes},
 		// The prompt half of captured-company auto-enrich (ADR-0072
 		// arc): a company appearing or changing queues the workspace's
 		// enrich pass NOW instead of leaving a company created between two
@@ -186,7 +203,7 @@ func Groups() []Group {
 		// re-derives which companies are due from the database, so no
 		// other entity's event can make one due that this stream's events do
 		// not already announce.
-		{Name: "cg:company-auto-enrich", Streams: forEntities(companyStreamEntity)},
+		{Name: "cg:company-auto-enrich", Streams: forEntities(companyStreamEntity), Types: CompanyAutoEnrichTypes},
 		// Mail landing queues the signature-enrich pass, so a contact who wrote
 		// this morning is read now rather than tonight. Its own group rather
 		// than a second handler on an existing activity consumer: this one
@@ -200,22 +217,23 @@ func Groups() []Group {
 		// counterparty verdict mints them minutes later, and contact.created is
 		// the only notice that their first mail — the one carrying the signature
 		// block — has become readable.
-		{Name: "cg:capture-enrich", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
+		{Name: "cg:capture-enrich", Streams: forEntities(activityStreamEntity, contactStreamEntity), Types: CaptureEnrichTypes},
 		// A card attached to captured mail imports itself. Its own group beside
 		// the one above rather than a second handler on it, because the two do
 		// not fail alike: that one queues a MODEL-backed pass and this one
 		// PARSES a file, so a deployment with no model runs this and not that,
 		// and one cursor between them would tie the deterministic half to the
 		// budgeted half's retries.
-		{Name: "cg:vcard-ingest", Streams: forEntities(activityStreamEntity)},
+		{Name: "cg:vcard-ingest", Streams: forEntities(activityStreamEntity), Types: VCardIngestTypes},
 		// Automatic enrichment from a LICENSED provider (ADR-0101/PI-EVT-1).
 		// Its own group rather than a second handler on the pass above,
 		// because the two differ in what a failure costs: that one reads a
 		// page the workspace already crawled, this one SPENDS the customer's
 		// credits, and a consumer whose retries buy data must not share a
 		// cursor with one whose retries are free.
-		{Name: "cg:contact-data", Streams: forEntities(contactStreamEntity)},
-		{Name: "cg:overnight-agent", Streams: forEntities(activityStreamEntity, dealStreamEntity, leadStreamEntity, approvalStreamEntity)},
+		{Name: "cg:contact-data", Streams: forEntities(contactStreamEntity), Types: ContactDataTypes},
+		{Name: "cg:overnight-agent", Streams: forEntities(activityStreamEntity, dealStreamEntity, leadStreamEntity, approvalStreamEntity), Types: OvernightAgentTypes},
+		// No Types: a workflow trigger may name any event type.
 		{Name: "cg:workflows", Streams: all},
 		{Name: "cg:capture", Streams: forEntities(captureStreamEntity)},
 		{Name: "cg:flow-bridge", Streams: forEntities(contactStreamEntity, dealStreamEntity, activityStreamEntity)},

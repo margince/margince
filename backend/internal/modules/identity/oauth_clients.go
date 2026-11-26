@@ -21,18 +21,19 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/bearer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const (
-	maxAgentClientNameRunes = 120
+	maxAgentClientNameRunes = values.TextLabelCharacters
 	maxAgentClientRedirects = 10
 	createdViaAdmin         = "admin"
 	agentClientAuditEntity  = "oauth_client"
 	agentClientFieldName    = "name"
 	agentClientFieldURIs    = "redirect_uris"
+	agentClientFieldClient  = "client_name"
 	// agentClientTierSort names the cursor's leading key: admin rows and rows
 	// with a live connection (tier 0) list before the rest (tier 1).
 	agentClientTierSort = "tier"
@@ -136,6 +137,9 @@ func (s *Service) ListAgentClients(ctx context.Context, actor Identity, cursor *
 	return agentClientPage(clients, limit)
 }
 
+// agentClientCursorScope binds an agent-client cursor to this list.
+const agentClientCursorScope = "oauth_clients"
+
 type agentClientCursor struct {
 	tier      *int
 	createdAt *time.Time
@@ -146,7 +150,7 @@ func decodeAgentClientCursor(token *string) (agentClientCursor, error) {
 	if token == nil || *token == "" {
 		return agentClientCursor{}, nil
 	}
-	c, err := storekit.DecodeCursor(*token)
+	c, err := storekit.DecodeCursor(agentClientCursorScope, *token)
 	if err != nil {
 		return agentClientCursor{}, err
 	}
@@ -178,7 +182,7 @@ func agentClientPage(listed []listedClient, limit int) ([]AgentClient, storekit.
 	last := listed[limit-1]
 	key := strconv.Itoa(last.tier)
 	next, err := storekit.EncodeOpaque(storekit.Cursor{
-		CreatedAt: last.CreatedAt, ID: last.ID, SortField: agentClientTierSort, SortKey: &key,
+		Scope: agentClientCursorScope, CreatedAt: last.CreatedAt, ID: last.ID, SortField: agentClientTierSort, SortKey: &key,
 	})
 	if err != nil {
 		return nil, storekit.Page{}, err
@@ -203,7 +207,7 @@ func (s *Service) RegisterAgentClient(ctx context.Context, actor Identity, in Re
 	if err != nil {
 		return AgentClient{}, "", err
 	}
-	secret, hash, err := bearer.Mint()
+	secret, hash, err := storekit.MintToken()
 	if err != nil {
 		return AgentClient{}, "", err
 	}
@@ -216,7 +220,7 @@ func (s *Service) RegisterAgentClient(ctx context.Context, actor Identity, in Re
 			return err
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", agentClientAuditEntity, id, nil, map[string]any{
-			"client_name": name, agentClientFieldURIs: uris,
+			agentClientFieldClient: name, agentClientFieldURIs: uris,
 		}); err != nil {
 			return err
 		}
@@ -231,7 +235,7 @@ func (s *Service) RegisterAgentClient(ctx context.Context, actor Identity, in Re
 
 func validAgentClientInput(in RegisterAgentClientInput) (string, []string, error) {
 	name := strings.TrimSpace(in.Name)
-	if name == "" || utf8.RuneCountInString(name) > maxAgentClientNameRunes {
+	if !validAgentClientName(name) {
 		return "", nil, &InvalidAgentClientFieldError{
 			Field: agentClientFieldName, Code: "invalid_name",
 			Message: fmt.Sprintf("give the client a name of 1 to %d characters", maxAgentClientNameRunes),
@@ -250,13 +254,19 @@ func validAgentClientInput(in RegisterAgentClientInput) (string, []string, error
 			uris = append(uris, uri)
 		}
 	}
-	if len(uris) == 0 || len(uris) > maxAgentClientRedirects {
+	if len(uris) == 0 || !withinRedirectLimit(uris) {
 		return "", nil, &InvalidAgentClientFieldError{
 			Field: agentClientFieldURIs, Code: "redirect_uri_count",
 			Message: fmt.Sprintf("give 1 to %d redirect URIs", maxAgentClientRedirects),
 		}
 	}
 	return name, uris, nil
+}
+
+// withinRedirectLimit is the one bound on how many redirect URIs a client holds,
+// whether an admin typed them or the client registered itself.
+func withinRedirectLimit(uris []string) bool {
+	return len(uris) <= maxAgentClientRedirects
 }
 
 // RotateAgentClientSecret replaces an admin-registered client's secret. The old one
@@ -266,7 +276,7 @@ func (s *Service) RotateAgentClientSecret(ctx context.Context, actor Identity, i
 	if err != nil {
 		return "", err
 	}
-	raw, digest, err := bearer.Mint()
+	raw, digest, err := storekit.MintToken()
 	if err != nil {
 		return "", err
 	}
@@ -359,4 +369,8 @@ func auditAgentClientDisabled(ctx context.Context, tx pgx.Tx, id ids.UUID, disab
 		_, err = storekit.Audit(ctx, tx, "resume", agentClientAuditEntity, id, before, after)
 	}
 	return err
+}
+
+func validAgentClientName(name string) bool {
+	return strings.TrimSpace(name) != "" && utf8.RuneCountInString(name) <= maxAgentClientNameRunes
 }

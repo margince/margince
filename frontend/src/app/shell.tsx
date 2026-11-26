@@ -8,24 +8,40 @@ import {
 } from "react";
 import { PageAsideProvider } from "../components/pageaside";
 import { PageHeadSlot } from "../components/pageheadaction";
+import { PageWait, usePageWait } from "../design-system/pagewait";
 import { ComposeDockProvider } from "../features/mail/composedock";
-import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
+import {
+  SETTINGS_SCREEN,
+  useSettingsSection,
+} from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
-import { routeHash, useRoute } from "../lib/router";
+import { useFirstScreenSettled } from "../lib/journeymarks";
+import { routeIdentity } from "../lib/routeidentity";
+import {
+  parseHash,
+  type Route,
+  routeHash,
+  useLiveHash,
+  useRoute,
+} from "../lib/router";
+import { ShownAddressSink, type ShownScreen } from "../lib/screenaddress";
 import { useScrollMemory } from "../lib/scrollmemory";
+import { useShortcutDispatcher, useShortcutHandler } from "../lib/shortcuts";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
+import { PHONE_MAX_WIDTH, usePhoneViewport, widthMedia } from "../lib/viewport";
 import { AgentEdge } from "./agent-edge";
 import { CaptureChip } from "./capture-chip";
 import { CaptureHealthBanner } from "./capturehealthbanner";
 import { ConnectivityBanner } from "./connectivitybanner";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
-import { isSidebarChord } from "./hotkeys";
+import { InstallHint } from "./installhint";
 import { LicenseBanner } from "./licensebanner";
-import { type NavCounts, RAIL_LESS_SCREENS } from "./nav";
+import { type NavCounts, type NavSection, RAIL_LESS_SCREENS } from "./nav";
 import { NavWalkProvider, useNavWalk } from "./navlevel";
-import { useReadingColumn } from "./readingcolumn";
+import { usePagePath, withoutRecord } from "./pagemeta";
+import { isRecordPage, readingColumn } from "./readingcolumn";
 import { usePublishedScrollerHeight } from "./scrollerheight";
 import { TopBar } from "./topbar";
 import "./shell.css";
@@ -46,7 +62,7 @@ import "./shell.css";
 // which stands INSIDE the scroller and scrolls with the page because it belongs
 // to the document, and the agent, which floats at the column's foot.
 import { type RailProps, SettingsRail, WorkspaceRail } from "./shellrail";
-import { PageTitle, SettingsPageTitle, SettingsTopBar } from "./shelltitle";
+import { PageTitle, SettingsPageTitle } from "./shelltitle";
 
 export { SettingsRail, WorkspaceRail } from "./shellrail";
 export { PageTitle } from "./shelltitle";
@@ -59,11 +75,8 @@ export { PageTitle } from "./shelltitle";
 // prop stays because a deeper level declaring `badgeIds` needs this door.
 export type ShellCounts = NavCounts;
 
-// WCAG 2.4.1, Bypass Blocks. Every page in the product puts the same block ahead
-// of its content — up to twelve navigation rows and the agent in the sidebar,
-// then the strip's collapse control, trail, search, system-of-record
-// chip, approvals bell and account menu — and without this a keyboard reader
-// walked all of it again on every page they opened.
+// WCAG 2.4.1, Bypass Blocks. Every page puts the sidebar and the top bar ahead
+// of its content, and without this a keyboard reader walks them on every page.
 //
 // The destination is the SCROLLER, not the content column: the strip is the first
 // row of that column, so a skip that landed on `.main` put the reader in front of
@@ -92,66 +105,72 @@ function SkipToContent({
   );
 }
 
-// The work column's own classes. `main-gridded` is the capped reading column and
-// there is one measure for every page that keeps it (--pageColumn);
-// `main-record` adds nothing to that width and never appears without it — it
-// names the column's SCROLLER as a container, so the record's tab strip
-// measures the width content can use (shell.css, `container-name: work`).
-function mainClasses(gridded: boolean, griddedRecord: boolean): string {
-  if (!gridded) {
-    return "main";
+// The work column's own classes. `main-gridded` is the capped reading column.
+// `main-record` adds no width: it names the column's scroller as a container,
+// so the record's tab strip measures the width content can use (shell.css).
+const RAIL_FOLDS_MAX_WIDTH = 1024;
+
+// A stored choice wins; with none a tablet starts folded, and nothing is stored.
+function startsCollapsed(): boolean {
+  const stored = readStored(STORAGE_KEYS.sidebarCollapsed);
+  if (stored !== null) {
+    return stored === "1";
   }
-  return griddedRecord ? "main main-gridded main-record" : "main main-gridded";
+  const under = (width: number) =>
+    globalThis.matchMedia?.(widthMedia(width)).matches ?? false;
+  return under(RAIL_FOLDS_MAX_WIDTH) && !under(PHONE_MAX_WIDTH);
+}
+
+function mainClasses(gridded: boolean, record: boolean): string {
+  return ["main", gridded && "main-gridded", record && "main-record"]
+    .filter(Boolean)
+    .join(" ");
 }
 
 export function Shell({
   children,
   counts,
   onOpenSearch,
+  held = false,
 }: Readonly<{
   children: ReactNode;
   counts?: ShellCounts;
   onOpenSearch: () => void;
+  /** The onboarding gate holds the reader on the few pages it lets them see. */
+  held?: boolean;
 }>) {
-  const route = useRoute();
-  const railless = RAIL_LESS_SCREENS.has(route.screen);
-  // An extension unit's page is REACHED from settings and says so in its trail
-  // (`Settings / <unit>`), so it keeps the settings level in the sidebar. It did
-  // not: the rail fell back to the destinations, and following "Open" on a
-  // settings card swapped the whole sidebar out from under a reader whose URL
-  // and breadcrumb still said Settings. `activeRowFor` in app/nav.ts has always
-  // answered `settings` for a unit route; this is the other half of it.
-  //
-  // Conditioned on the descriptor RESOLVING, like the page title's own branch:
-  // `#/ext/nonesuch` is a genuinely unknown page and belongs to nothing.
-  const onUnitPage =
-    route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
-  const leveled = route.screen === SETTINGS_SCREEN || onUnitPage;
-  const { gridded, griddedRecord } = useReadingColumn(route);
-  const [collapsed, setCollapsed] = useState(
-    () => readStored(STORAGE_KEYS.sidebarCollapsed) === "1",
-  );
-  // What the sidebar's walk between levels remembers — where a walk OUT of a
-  // level returns to, and whether the level that arrives was asked for and takes
-  // focus. The shell holds it because the shell outlives every rail: the rail on
-  // a section route is a different component, mounted on the way in and gone
-  // again on the way out.
-  const walk = useNavWalk(route, !railless && !leveled);
+  const live = useRoute();
+  const liveHash = useLiveHash();
+  const [shown, setShown] = useState<ShownScreen | null>(null);
+  // The chrome names the page whose content is on screen. It lags the bar while
+  // the next page loads or a draft holds this one.
+  const route = shown ? parseHash(shown.address) : live;
+  const railless = RAIL_LESS_SCREENS.has(live.screen);
+  const leveled = isLeveled(route);
+  const { gridded, record } = readingColumn(route);
+  const waiting = usePageWait(shown?.pending ?? false);
+  const [collapsed, setCollapsed] = useState(startsCollapsed);
+  // What the sidebar's walk between levels remembers: where a walk out of a
+  // level returns to, and whether the arriving level takes focus. The shell
+  // holds it because it outlives every rail; a section route mounts another one.
+  const walk = useNavWalk(live, !railless && !isLeveled(live));
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   // A page opens at its top. The document never scrolls; the content column
   // does, and it is one element on every route, so it would carry the old offset.
   //
-  // Keyed by the ADDRESS, not by `route`: useRoute parses a fresh object every
-  // render, so a dependency on the object would re-run this on every keystroke a
-  // screen handles and fight a reader who has scrolled deliberately.
-  const address = routeHash(route);
-  // A new page opens at its top; a page the reader is returning to opens where
-  // they left it. Both live in lib/scrollmemory.ts. The second needs an identity
-  // for the history entry, which the browser does not give, and a retry while the
-  // column grows. A list restores its rows a moment after the address arrives,
-  // so a single assignment lands on a column still short and gets clamped.
-  useScrollMemory(scroller, address);
+  // Keyed by the ADDRESS the routed screen shows, not the bar: a screen held
+  // past a move is still the one in the column. The whole address, so Back
+  // between two entries that differ only in dials restores each.
+  const address = shown?.address ?? liveHash;
+  // A new page opens at its top and a page met again where it was left. Another
+  // tab of the record on screen keeps the reader's place.
+  useScrollMemory(scroller, address, { view: recordShown(address) });
+  const screen = (
+    <ShownAddressSink.Provider value={setShown}>
+      {children}
+    </ShownAddressSink.Provider>
+  );
   usePublishedScrollerHeight(scroller, railless ? "railless" : "workspace");
 
   const toggle = useCallback(() => {
@@ -162,32 +181,10 @@ export function Shell({
     });
   }, []);
 
-  // ⌘B / Ctrl B, the shortcut the toggle's own tooltip has advertised since the
-  // sidebar had a toggle — and which nothing bound, so the tooltip named a key
-  // that did nothing. Registered here because this is where the state lives.
-  // Ignored while a text field has focus: the same chord is bold in every editor
-  // on the platform, and a composer is exactly where a reader would reach for it.
-  useEffect(() => {
-    function onKeyDown(event: globalThis.KeyboardEvent) {
-      if (!isSidebarChord(event)) {
-        return;
-      }
-      // `instanceof` rather than an assertion: an event target is an
-      // `EventTarget`, and focus genuinely can sit on an SVGElement, which has
-      // no `isContentEditable` at all.
-      const target = event.target;
-      if (
-        target instanceof HTMLElement &&
-        (target.isContentEditable || /^(INPUT|TEXTAREA)$/.test(target.tagName))
-      ) {
-        return;
-      }
-      event.preventDefault();
-      toggle();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [toggle]);
+  // A phone has no sidebar to fold, and the stored fold would greet the desktop.
+  const phone = usePhoneViewport();
+  useShortcutHandler("sidebar", toggle, !phone);
+  useShortcutDispatcher();
 
   useEffect(() => {
     document.body.dataset.screen = route.screen;
@@ -208,9 +205,9 @@ export function Shell({
               request in flight and nothing else. Unlinked, because these
               routes carry no navigation and a reader mid-flow has a place to
               lose. */}
-          {route.screen === "onboarding" && <CaptureChip linked={false} />}
+          {live.screen === "onboarding" && <CaptureChip linked={false} />}
           <div className="scroll" ref={scroller}>
-            {children}
+            {screen}
           </div>
         </main>
       </div>
@@ -221,6 +218,7 @@ export function Shell({
     route,
     counts,
     collapsed,
+    onToggle: toggle,
   };
 
   return (
@@ -244,27 +242,21 @@ export function Shell({
               <WorkspaceRail {...railProps} />
             )}
           </NavWalkProvider>
-          <main className={mainClasses(gridded, griddedRecord)}>
-            {leveled ? (
-              <SettingsTopBar
-                route={route}
-                collapsed={collapsed}
-                onToggle={toggle}
-                onOpenSearch={onOpenSearch}
-              />
-            ) : (
-              <TopBar
-                route={route}
-                collapsed={collapsed}
-                onToggle={toggle}
-                onOpenSearch={onOpenSearch}
-              />
-            )}
-            <CaptureHealthBanner />
+          <main className={mainClasses(gridded, record)}>
+            <TopBar
+              route={route}
+              address={address}
+              onOpenSearch={onOpenSearch}
+              held={held}
+            />
+            <PageWait
+              waiting={waiting}
+              label={<ArrivingLabel key={routeHash(live)} route={live} />}
+            />
+            {/* Mounted from the start: it holds the outage watcher, and a
+                known offline state shows in the first paint. */}
             <ConnectivityBanner />
-            <EconomyBanner />
-            <EmbedReindexBanner />
-            <LicenseBanner />
+            <ShellBanners scroller={scroller} />
             {/* The import's gauge, floating bottom-centre of this column for as
             long as mail is arriving. Inside `.main` rather than beside the
             edge below, because it is positioned against the content column
@@ -274,14 +266,21 @@ export function Shell({
             its own, which is what tabIndex -1 buys. A reader who takes the skip
             lands here, past the strip, and the next Tab continues into the page's
             own controls. */}
-            <div className="scroll" ref={scroller} tabIndex={-1}>
+            {/* Busy here, not on `main`: the wait's status beside it must still
+                be read out. */}
+            <div
+              className="scroll"
+              ref={scroller}
+              tabIndex={-1}
+              aria-busy={waiting || undefined}
+            >
               {leveled ? (
                 <SettingsPageTitle route={route} actionSlot={setHeadSlot} />
               ) : (
                 <PageTitle route={route} actionSlot={setHeadSlot} />
               )}
               <PageHeadSlot.Provider value={headSlot}>
-                {children}
+                {screen}
               </PageHeadSlot.Provider>
             </div>
           </main>
@@ -299,3 +298,59 @@ export function Shell({
 
 export { navigate } from "../lib/router";
 export { useRoute };
+
+// Each banner makes its own read; they wait for the first screen's day.
+function ShellBanners({
+  scroller,
+}: Readonly<{ scroller: RefObject<HTMLElement | null> }>) {
+  if (!useFirstScreenSettled()) return null;
+  return (
+    <>
+      <CaptureHealthBanner />
+      <EconomyBanner />
+      <EmbedReindexBanner />
+      <LicenseBanner />
+      <InstallHint scroller={scroller} />
+    </>
+  );
+}
+
+// A unit's page is reached from settings, so it keeps the settings level.
+// `#/ext/nonesuch` resolves to no unit and is an unknown page.
+function isLeveled(route: Route): boolean {
+  const onUnitPage =
+    route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
+  return route.screen === SETTINGS_SCREEN || onUnitPage;
+}
+
+// Mounted only while the wait shows, so a quick move reads no names.
+function ArrivingLabel({ route }: Readonly<{ route: Route }>) {
+  return route.screen === SETTINGS_SCREEN ? (
+    <SettingsArrivingLabel route={route} />
+  ) : (
+    <PageArrivingLabel route={route} />
+  );
+}
+
+function SettingsArrivingLabel({ route }: Readonly<{ route: Route }>) {
+  const section = useSettingsSection(route);
+  return <PageArrivingLabel route={route} section={section} />;
+}
+
+// Named once, when the wait starts: a label that changed under it would be
+// read out twice. A record is named by its list, as on a phone.
+function PageArrivingLabel({
+  route,
+  section,
+}: Readonly<{ route: Route; section?: NavSection }>) {
+  const t = useT();
+  const [page] = usePagePath(withoutRecord(route), section);
+  const [label] = useState(() => t("shell.pageLoading", { page }));
+  return label;
+}
+
+// The record a record page shows, whichever tab and dials it has open.
+function recordShown(address: string): string | undefined {
+  const route = parseHash(address);
+  return isRecordPage(route) ? routeIdentity(route) : undefined;
+}

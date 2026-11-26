@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -73,7 +72,7 @@ func TestErasingOneConversationWithdrawsItsTasksAndPendingPromises(t *testing.T)
 	if got := e.WsCount(t, `SELECT count(*) FROM conversation_claim WHERE source_activity_id=$1`, source); got != 8 {
 		t.Fatalf("claims=%d, want 8", got)
 	}
-	if err := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
+	if err := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM activity WHERE source_activity_id=$1 AND kind='task' AND archived_at IS NOT NULL AND body IS NULL AND subject NOT LIKE '%report%'`, source); got != 3 {

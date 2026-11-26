@@ -13,13 +13,83 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": true,
+  "stamp": {
+    "scenario": "a762c5740ee12d9a",
+    "tools": "619e3d5a9b3afb4a",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "claude-haiku-5-5",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "1796d51361de08d5",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "ran_at": "2026-11-25T05:58:11Z",
+    "graded_commit": "85f521b0a8e383753f3d1cf2b46147ada28d8757",
+    "graded_at": "2026-11-25T05:58:11Z"
+  },
   "usage": {
     "input_tokens": 16,
-    "output_tokens": 1344,
-    "cache_creation_input_tokens": 4525,
-    "cache_read_input_tokens": 478600,
+    "output_tokens": 1331,
+    "cache_creation_input_tokens": 5657,
+    "cache_read_input_tokens": 581605,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.0794
+    "cost_usd": 0.0941
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_tags",
+        "list_tags",
+        "merge_tags",
+        "read_tags",
+        "update_tag"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_tags",
+        "list_tags",
+        "merge_tags",
+        "read_tags",
+        "update_tag"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3,
+      "min": 3,
+      "max": 3
+    },
+    "turns": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 293639,
+      "min": 293633,
+      "max": 293645
+    },
+    "output_tokens": {
+      "median": 665.5,
+      "min": 641,
+      "max": 690
+    },
+    "duration_ms": {
+      "median": 8616,
+      "min": 7973,
+      "max": 9259
+    }
   }
 }

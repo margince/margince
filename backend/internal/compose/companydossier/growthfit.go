@@ -90,7 +90,7 @@ var requiredInputs = []requiredInput{
 	{code: crmcontracts.GrowthFitInputIndustry, counts: industryKnown},
 	profileInput(crmcontracts.GrowthFitInputBuyingCenter, crmcontracts.CompanyProfileFieldFieldBuyingCenter),
 	profileInput(crmcontracts.GrowthFitInputBuyingIntents, crmcontracts.CompanyProfileFieldFieldBuyingIntents),
-	factInput(crmcontracts.GrowthFitInputEmployeeRange, crmcontracts.CompanyFactFieldEmployeeRange),
+	{code: crmcontracts.GrowthFitInputEmployeeRange, counts: employeesKnown},
 	factInput(crmcontracts.GrowthFitInputTechnology, crmcontracts.CompanyFactFieldTechnology),
 }
 
@@ -105,6 +105,15 @@ func industryKnown(in Input, now time.Time) (bool, time.Time) {
 		return true, time.Time{}
 	}
 	return freshProfileField(in, crmcontracts.CompanyProfileFieldFieldIndustry, now)
+}
+
+// employeesKnown is industryKnown for size: the company's own size band counts
+// with no expiry, and a site-read employee range counts while fresh.
+func employeesKnown(in Input, now time.Time) (bool, time.Time) {
+	if in.SizeBand != "" {
+		return true, time.Time{}
+	}
+	return freshFact(in, crmcontracts.CompanyFactFieldEmployeeRange, now)
 }
 
 // Offering is what this workspace knows about ITSELF, as the growth fit needs
@@ -152,9 +161,11 @@ func Completeness(in Input, now time.Time) crmcontracts.DataCompleteness {
 func completenessAt(in Input, now time.Time) (crmcontracts.DataCompleteness, time.Time) {
 	present := 0
 	missing := []crmcontracts.GrowthFitInput{}
+	inputs := make([]crmcontracts.GrowthFitInputState, 0, len(requiredInputs))
 	var earliest time.Time
 	for _, want := range requiredInputs {
 		counts, expires := want.counts(in, now)
+		inputs = append(inputs, crmcontracts.GrowthFitInputState{Input: want.code, Present: counts})
 		if !counts {
 			missing = append(missing, want.code)
 			continue
@@ -170,6 +181,8 @@ func completenessAt(in Input, now time.Time) (crmcontracts.DataCompleteness, tim
 	return crmcontracts.DataCompleteness{
 		Present:  present,
 		Expected: len(requiredInputs),
+		Needed:   neededOf(len(requiredInputs)),
+		Inputs:   inputs,
 		Missing:  &missing,
 	}, earliest
 }
@@ -405,9 +418,8 @@ func abstentionNextStep(why AbstentionReason) crmcontracts.GrowthFitNextStep {
 	return crmcontracts.GrowthFitNextStepConfigureModel
 }
 
-// aboveFloor cross-multiplies rather than dividing, so the comparison is exact
-// integer arithmetic: four of eight is exactly the floor and passes, three of
-// eight does not, and no rounding is entitled to an opinion about either.
+// aboveFloor compares against neededOf, which rounds in integers: four of
+// eight is the floor and passes, three of eight does not.
 func aboveFloor(c crmcontracts.DataCompleteness) bool {
 	if c.Expected <= 0 {
 		// An assembly that wants nothing cannot be complete enough to judge on.
@@ -415,7 +427,13 @@ func aboveFloor(c crmcontracts.DataCompleteness) bool {
 		// it abstains rather than dividing by zero if that ever changes.
 		return false
 	}
-	return c.Present*abstentionFloorDen >= c.Expected*abstentionFloorNum
+	return c.Present >= neededOf(c.Expected)
+}
+
+// neededOf is the fewest present inputs that clear the floor: the floor's
+// ratio of expected, rounded up, so the card's rule and the band agree.
+func neededOf(expected int) int {
+	return (expected*abstentionFloorNum + abstentionFloorDen - 1) / abstentionFloorDen
 }
 
 // gatherNextStep is the named thing to go and find that DOSS-AC-12 asks for.

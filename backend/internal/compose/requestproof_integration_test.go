@@ -208,7 +208,7 @@ func TestARetriedCloseStoresTheFirstErasuresAccount(t *testing.T) {
 	request := e.openRequest(t, "erasure", contact.String())
 	closing := `{"status":"fulfilled","identity_check":"id_document"}`
 
-	dying := consent.NewHandlers(e.DB()).WithEraser(failingAfterErase{inner: privacy.NewEraser(e.DB())})
+	dying := consent.NewHandlers(e.DB()).WithEraser(failingAfterErase{inner: eraserWithGraph(e.DB())})
 	if w := patchWith(e.Admin(), dying, request, closing); w.Code == http.StatusOK {
 		t.Fatalf("the dying close answered %d", w.Code)
 	}

@@ -5,8 +5,12 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../i18n";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  reportingLeadsEvaluation,
+  reportingSectionsCatalog,
+} from "../features/analytics/reporting.story-fixtures";
+import { type Locale, LocaleProvider } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
 import { type Command, CommandPalette } from "./palette";
@@ -97,11 +101,14 @@ function backend({
   allow = ASKER,
   sets = [HANDBOOK, DEFAULT],
   replies = {},
+  data = { outcome: "unsupported" },
   setsArrive = Promise.resolve(),
 }: {
   allow?: GrantSpec;
   sets?: unknown[];
   replies?: Record<string, unknown>;
+  // The answer of the CRM data reader.
+  data?: unknown;
   // Holds the set list back until it settles, as a slow network does.
   setsArrive?: Promise<void>;
 } = {}) {
@@ -113,6 +120,13 @@ function backend({
         input instanceof Request ? input : new Request(String(input), init);
       if (req.url.endsWith("/v1/me")) {
         return json(meFixture({ allow }));
+      }
+      if (req.url.endsWith("/v1/search/data-answer")) {
+        asked.push(`data:${(await req.json()).question}`);
+        return json(data);
+      }
+      if (req.url.endsWith("/v1/analytics/metrics")) {
+        return json(reportingSectionsCatalog);
       }
       if (req.url.includes("/ask")) {
         const id = req.url.split("/corpora/")[1]?.split("/")[0] ?? "";
@@ -152,13 +166,13 @@ const commands: Command[] = [
   },
 ];
 
-function renderPalette(onClose = () => {}) {
+function renderPalette(onClose = () => {}, locale: Locale = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
+      <LocaleProvider initial={locale}>
         <CommandPalette open onClose={onClose} commands={commands} />
       </LocaleProvider>
     </QueryClientProvider>,
@@ -169,20 +183,32 @@ function answerPanel() {
   return screen.findByRole("region", { name: "Answer from Margince" });
 }
 
+// The answer's lazy chunks load here, on the real clock. Under a case's fake clock
+// the import can stay unsettled after the case, and every later case waits on it.
+beforeAll(async () => {
+  await import("../features/voice-knowledge/corpusanswer");
+  await import("../features/voice-knowledge/citeddocument");
+  await import("./palettedata");
+});
+
 afterEach(() => {
   cleanup();
   window.location.hash = "";
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("asking the handbook from the search box", () => {
   it("asks a question on Enter and shows the answer with a button to its setting", async () => {
     const user = steppedClock();
-    const asked = backend();
+    // The cited page is Meetings, which opens only to a seat that may book.
+    const asked = backend({
+      allow: { ...ASKER, activity: ["read", "create"] },
+    });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
-    await screen.findByRole("button", {
-      name: /^Ask Margince: “How do I change my time zone\?”/,
+    await user.type(screen.getByRole("combobox"), QUESTION);
+    await screen.findByRole("option", {
+      name: /^Ask the handbook: “How do I change my time zone\?”/,
     });
     await user.keyboard("{Enter}");
     const panel = await answerPanel();
@@ -208,9 +234,9 @@ describe("asking the handbook from the search box", () => {
       }),
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
-    await screen.findByRole("button", {
-      name: /^Ask Margince: “How do I change my time zone\?”/,
+    await user.type(screen.getByRole("combobox"), QUESTION);
+    await screen.findByRole("option", {
+      name: /^Ask the handbook: “How do I change my time zone\?”/,
     });
     await user.keyboard("{Enter}");
     arrive();
@@ -228,11 +254,11 @@ describe("asking the handbook from the search box", () => {
       },
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     expect(await screen.findByText("Question not answered")).toBeVisible();
     expect(
-      screen.getByRole("button", {
+      screen.getByRole("option", {
         name: /^See all results for “How do I change my time zone\?”/,
       }),
     ).toBeVisible();
@@ -247,7 +273,7 @@ describe("asking the handbook from the search box", () => {
       },
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     const panel = await answerPanel();
     expect(within(panel).getByText("From Sales playbook")).toBeVisible();
@@ -258,7 +284,7 @@ describe("asking the handbook from the search box", () => {
     const user = steppedClock();
     const asked = backend();
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     await answerPanel();
     await user.keyboard("{Enter}");
@@ -276,8 +302,8 @@ describe("asking the handbook from the search box", () => {
       }),
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
-    await screen.findByRole("button", { name: /^Ask Margince:/ });
+    await user.type(screen.getByRole("combobox"), QUESTION);
+    await screen.findByRole("option", { name: /^Ask the handbook:/ });
     await user.keyboard("{Enter}");
     arrive();
     expect(await screen.findByText("No document sets")).toBeVisible();
@@ -288,11 +314,11 @@ describe("asking the handbook from the search box", () => {
     const user = steppedClock();
     backend();
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     await answerPanel();
     expect(
-      screen.getByRole("button", {
+      screen.getByRole("option", {
         name: /^See all results for “How do I change my time zone\?”/,
       }),
     ).toBeVisible();
@@ -311,7 +337,7 @@ describe("asking the handbook from the search box", () => {
       },
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     const panel = await answerPanel();
     expect(
@@ -332,7 +358,7 @@ describe("asking the handbook from the search box", () => {
       },
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     expect(await screen.findByText("Question not answered")).toBeVisible();
     expect(
@@ -354,7 +380,7 @@ describe("asking the handbook from the search box", () => {
       },
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     const panel = await answerPanel();
     expect(
@@ -376,7 +402,7 @@ describe("asking the handbook from the search box", () => {
       },
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     await answerPanel();
     expect(asked).toEqual([HANDBOOK_ID]);
@@ -392,7 +418,7 @@ describe("asking the handbook from the search box", () => {
       },
     });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     const panel = await answerPanel();
     expect(
@@ -404,10 +430,10 @@ describe("asking the handbook from the search box", () => {
     const user = steppedClock();
     backend();
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     await answerPanel();
-    await user.type(screen.getByRole("searchbox"), " now");
+    await user.type(screen.getByRole("combobox"), " now");
     expect(
       screen.queryByRole("region", { name: "Answer from Margince" }),
     ).toBeNull();
@@ -417,18 +443,20 @@ describe("asking the handbook from the search box", () => {
     const user = steppedClock();
     backend({ allow: {} });
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
-    await screen.findByRole("button", {
+    await user.type(screen.getByRole("combobox"), QUESTION);
+    await screen.findByRole("option", {
       name: /^See all results for “How do I change my time zone\?”/,
     });
-    expect(screen.queryByRole("button", { name: /^Ask Margince:/ })).toBeNull();
+    expect(
+      screen.queryByRole("option", { name: /^Ask the handbook:/ }),
+    ).toBeNull();
   });
 
   it("still goes to the results on Enter for a name", async () => {
     const user = steppedClock();
     const asked = backend();
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), "Acme GmbH");
+    await user.type(screen.getByRole("combobox"), "Acme GmbH");
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/search/Acme%20GmbH");
     expect(asked).toEqual([]);
@@ -438,7 +466,7 @@ describe("asking the handbook from the search box", () => {
     const user = steppedClock();
     backend();
     renderPalette();
-    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
     const panel = await answerPanel();
     await user.click(
@@ -448,4 +476,50 @@ describe("asking the handbook from the search box", () => {
     );
     expect(await within(panel).findByText("Your own settings")).toBeVisible();
   });
+});
+
+it("offers Analytics for a data question the handbook does not cover", async () => {
+  backend({
+    sets: [HANDBOOK],
+    replies: { [HANDBOOK_ID]: notCovered(HANDBOOK, "Not covered by this set") },
+  });
+  renderPalette();
+  const clock = steppedClock();
+  await clock.type(screen.getByRole("combobox"), "How many deals did I win?");
+  await clock.keyboard("{Enter}");
+  expect(
+    await screen.findByRole("button", { name: "Open in Analytics" }),
+  ).toBeVisible();
+  expect(screen.queryByText(/Ask an administrator or a colleague/)).toBeNull();
+});
+
+it("answers a Vietnamese data question with no question mark from the data reader", async () => {
+  const metric = reportingLeadsEvaluation.metrics[0];
+  if (!metric) throw new Error("fixture needs a metric");
+  const question = "tháng này tôi thắng bao nhiêu deal";
+  const asked = backend({
+    allow: { ...ASKER, installation_settings: ["read"], deal: ["read"] },
+    data: {
+      outcome: "answered",
+      count: true,
+      evaluation: {
+        ...reportingLeadsEvaluation,
+        metrics: [
+          { ...metric, coverage: { ...metric.coverage, eligible_count: 1234 } },
+        ],
+      },
+    },
+  });
+  renderPalette(() => {}, "vi");
+  const clock = steppedClock();
+  await clock.type(screen.getByRole("combobox"), question);
+  expect(
+    await screen.findByText(`Hỏi dữ liệu CRM: “${question}”`),
+  ).toBeVisible();
+  await clock.keyboard("{Enter}");
+  expect(await screen.findByText("1.234")).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Mở trong Phân tích" }),
+  ).toBeVisible();
+  expect(asked).toEqual([`data:${question}`]);
 });

@@ -1,0 +1,8 @@
+{
+  "verb": "explain_analytics_cell",
+  "checks": [
+    "activity.read",
+    "activity.read,deal.read,lead.read,project.read",
+    "installation_settings.read"
+  ]
+}

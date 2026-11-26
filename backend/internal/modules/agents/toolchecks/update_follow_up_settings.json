@@ -1,0 +1,6 @@
+{
+  "verb": "update_follow_up_settings",
+  "checks": [
+    "installation_settings.update"
+  ]
+}

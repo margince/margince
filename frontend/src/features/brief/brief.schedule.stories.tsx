@@ -9,23 +9,17 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { expectTextFits } from "../../testing/unbrokentext";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { SchedulePanel } from "./brief.schedule";
 
-// The two rail panels the morning is read alongside: what the day is booked
-// with, and what this rep owes.
+// External meetings, the rail's list of today's meetings with somebody from
+// outside, each saying who it is with. A read in flight and a read that failed
+// are facts about the request, so they keep the box and claim nothing.
 //
-// THE EMPTY FRAMES ARE THE POINT OF THIS FILE. A panel with nothing in it draws
-// nothing at all — no band, no hairline, no grey sentence — and the rail's own
-// quiet panel carries one line per silent source instead (see
-// `Shell/Home/Page`). Every OTHER state keeps the box: a read in flight and a
-// read that failed are facts about the request, and collapsing them would tell
-// a rep their morning was clear on the strength of an answer nobody received.
-//
-// So a story below that renders an empty frame is passing. Read each one in
-// BOTH themes with the toolbar's Theme control — every colour here is a
-// `color-mix()` of a canonical token, so a surface can be correct in light and
-// wrong in dark.
+// Read each story in both themes with the toolbar's Theme control. Every colour
+// here is a `color-mix()` of a canonical token. So a surface can be correct in
+// light and wrong in dark.
 
 /** A row the task lane would send: what this rep owes, with no time on it. */
 function taskRow(id: string, title: string): WorklistItem {
@@ -48,7 +42,7 @@ function panel(node: React.ReactNode) {
     installFetchStub({ "GET /me": meRoute({}) });
     return (
       <StoryProviders>
-        <div className="brief-rail" style={{ maxWidth: 320 }}>
+        <div className="brief-rail" style={{ maxWidth: 360 }}>
           {node}
         </div>
       </StoryProviders>
@@ -56,13 +50,46 @@ function panel(node: React.ReactNode) {
   };
 }
 
+/** A meeting whose row names whose page its brief is read on, and who it is with. */
+function withBrief(item: WorklistItem): WorklistItem {
+  return {
+    ...item,
+    with_contact: "c-1",
+    move: { action: "open_meeting_brief", activity_id: item.id },
+    contact: {
+      id: "c-1",
+      label: "Anna Weber",
+      employer: { company_id: "co-1", company_name: "Weber GmbH" },
+    },
+    room: { participants: [{ contact_id: "c-1", full_name: "Anna Weber" }] },
+  };
+}
+
 const BOOKED = readingsDay({}, [
-  meetingRow("m1", false, "2026-08-21T07:30:00Z"),
-  meetingRow("m2", true, "2026-08-21T13:00:00Z"),
+  withBrief(meetingRow("m1", false, "2026-08-21T07:30:00Z")),
+  withBrief(meetingRow("m2", true, "2026-08-21T13:00:00Z")),
   taskRow("t1", "Call Alice back"),
 ]);
 
+/** The last of `rows` ends inside the panel, so nothing is cut at its edge. */
+async function expectNoRowClipped(canvasElement: HTMLElement) {
+  const panel = canvasElement.querySelector(".rail-schedule");
+  const rows = canvasElement.querySelectorAll(".rail-schedule-row");
+  const last = rows.item(rows.length - 1);
+  await expect(panel).not.toBeNull();
+  await expect(last).not.toBeNull();
+  await expect(last.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+    (panel as HTMLElement).getBoundingClientRect().bottom,
+  );
+  await expect((panel as HTMLElement).scrollHeight).toBe(
+    (panel as HTMLElement).clientHeight,
+  );
+}
+
 const CLEAR = readingsDay({}, []);
+
+// Early on the day of BOOKED, before either meeting.
+const NOW = Date.parse("2026-08-21T06:50:00Z");
 
 const meta: Meta = {
   title: "Shell/Home/Schedule",
@@ -72,12 +99,33 @@ type Story = StoryObj;
 
 // ── Today's schedule ────────────────────────────────────────────────────────
 
-// A meeting the queue carries, at the hour it starts. The time is `due_at`:
-// `occurred_at` is when something HAPPENED, which a meeting still ahead of the
-// reader has no answer for. The badge rides WITH the title, so a meeting whose
-// name wraps keeps its warning attached to it.
+// Two external meetings at the hours they start, each naming the account and
+// the contact. The time is `due_at`: `occurred_at` is when something HAPPENED,
+// which a meeting still ahead of the reader has no answer for. The next one
+// adds how soon it starts and its brief, and otherwise looks like the other.
 export const Schedule: Story = {
-  render: panel(<SchedulePanel day={BOOKED} state="ready" />),
+  render: panel(
+    <SchedulePanel
+      day={BOOKED}
+      state="ready"
+      now={NOW}
+      onPrepareMeeting={() => undefined}
+    />,
+  ),
+  play: ({ canvasElement }) => expectNoRowClipped(canvasElement),
+};
+
+// Mid-morning: the first meeting is under way and the second is the next one,
+// with how soon it starts.
+export const ScheduleMidDay: Story = {
+  render: panel(
+    <SchedulePanel
+      day={BOOKED}
+      state="ready"
+      now={Date.parse("2026-08-21T11:40:00Z")}
+      onPrepareMeeting={() => undefined}
+    />,
+  ),
 };
 
 // A meeting known only by its date: its row draws no start time.
@@ -103,9 +151,80 @@ export const ScheduleDateOnlyMeeting: Story = {
   },
 };
 
-// Nothing booked: no panel. The line that says so is on the rail's quiet panel.
-export const ScheduleCollapsed: Story = {
-  render: panel(<SchedulePanel day={CLEAR} state="ready" />),
+// Nothing external booked: the panel says so, so the box never leaves the rail.
+// A day of meetings among colleagues reads the same, because the server's
+// meetings lane sends only meetings with somebody from outside on them. An
+// internal call and a colleague's booking through the reader's page never
+// arrive as rows.
+export const ScheduleClearDay: Story = {
+  render: panel(
+    <SchedulePanel
+      day={CLEAR}
+      state="ready"
+      now={NOW}
+      onPrepareMeeting={() => undefined}
+    />,
+  ),
+};
+
+// More contacts than the row names: the account, the first names as links, an
+// outside address, and how many more there are.
+export const MoreNamesThanFit: Story = {
+  render: panel(
+    <SchedulePanel
+      day={readingsDay({}, [
+        {
+          ...withBrief(meetingRow("m1", false, "2026-08-21T07:30:00Z")),
+          room: {
+            participants: [
+              { contact_id: "c-1", full_name: "Anna Weber" },
+              { contact_id: "c-2", full_name: "Charlotte Nguyen" },
+              { contact_id: "c-3", full_name: "Lena Hartmann" },
+            ],
+            other_participants: [
+              { kind: "colleague", name: "Rita Rep" },
+              { kind: "address", name: "procurement@weber.example" },
+            ],
+            participants_more: 4,
+          },
+        },
+      ])}
+      state="ready"
+      now={NOW}
+    />,
+  ),
+  play: async ({ canvasElement }) => {
+    const who = canvasElement.querySelector(".rail-schedule-attendees");
+    await expect(who?.querySelectorAll("a")).toHaveLength(4);
+    // A colleague is on every meeting here, so the row leaves them out.
+    await expect(who?.textContent).not.toContain("Rita Rep");
+  },
+};
+
+// A full day: every row keeps the same look, and the last one, badge and all,
+// ends inside the panel.
+export const LongList: Story = {
+  render: panel(
+    <SchedulePanel
+      day={readingsDay(
+        {},
+        [
+          "2026-08-21T07:30:00Z",
+          "2026-08-21T09:00:00Z",
+          "2026-08-21T10:30:00Z",
+          "2026-08-21T12:00:00Z",
+          "2026-08-21T14:00:00Z",
+          "2026-08-21T16:30:00Z",
+        ].map((at, index) =>
+          withBrief(meetingRow(`m${index}`, index % 2 === 0, at)),
+        ),
+      )}
+      state="ready"
+      now={NOW}
+      onPrepareMeeting={() => undefined}
+    />,
+  ),
+  play: ({ canvasElement }) => expectNoRowClipped(canvasElement),
 };
 
 // A meeting booked further out, which the CRM holds whatever the calendar
@@ -130,12 +249,105 @@ export const QuietDayNextMeeting: Story = {
   ),
 };
 
-// No calendar connected: the zero measured nothing, so the panel stays, leads
-// to where one connects, and still names the meeting booked by hand.
+// A title longer than the rail, and a crowded invite. The title wraps beside its
+// stop, and the attendees wrap as one sentence clear of the date gutter.
+const LONG_TITLE =
+  "Gradion – | 2nd demo for Document Management with the procurement team";
+
+export const LongTitleAndAttendees: Story = {
+  render: panel(
+    <>
+      <SchedulePanel
+        day={readingsDay({}, [
+          {
+            ...withBrief(meetingRow("m1", false, "2026-08-21T07:30:00Z")),
+            title: LONG_TITLE,
+          },
+        ])}
+        state="ready"
+        now={NOW}
+        onPrepareMeeting={() => undefined}
+        onOpenMeeting={() => undefined}
+      />
+      <SchedulePanel
+        day={{
+          ...CLEAR,
+          calendar: "connected",
+          next_meeting: {
+            ...NEXT_MEETING,
+            subject: LONG_TITLE,
+            participants: [
+              { contact_id: "c-1", full_name: "Anna Weber" },
+              { contact_id: "c-2", full_name: "Charlotte Nguyen" },
+              { contact_id: "c-3", full_name: "Lena Hartmann" },
+              { contact_id: "c-4", full_name: "Marcus Lindqvist" },
+            ],
+            other_participants: [
+              { kind: "address", name: "procurement@weber.example" },
+            ],
+            participants_more: 3,
+          },
+        }}
+        state="ready"
+        onOpenMeeting={() => undefined}
+      />
+    </>,
+  ),
+};
+
+const LONG_NAME = "Maximilian Konstantinopoulou-Wertheimer";
+
+export const LongAttendeeNamePhone: Story = {
+  render: panel(
+    <SchedulePanel
+      day={readingsDay({}, [
+        {
+          ...withBrief(meetingRow("m1", false, "2026-08-21T07:30:00Z")),
+          room: {
+            participants: [
+              { contact_id: "c-1", full_name: LONG_NAME },
+              { contact_id: "c-2", full_name: "Lena Hartmann" },
+            ],
+          },
+        },
+      ])}
+      state="ready"
+      now={NOW}
+    />,
+  ),
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const panelBox = canvasElement.querySelector(".rail-schedule");
+    if (!panelBox) throw new Error("no schedule panel");
+    const chip = (await canvas.findByText(LONG_NAME)).closest(".chip");
+    const short = canvas.getByText("Lena Hartmann").closest(".chip");
+    if (!chip || !short) throw new Error("an attendee is not a chip");
+    await expectTextFits(chip, panelBox.getBoundingClientRect());
+    await expect(chip.getBoundingClientRect().height).toBeGreaterThan(
+      short.getBoundingClientRect().height,
+    );
+  },
+};
+
+// No calendar connected: the panel says its meetings are Margince's own, leads
+// to where a calendar connects, and names the next meeting booked in Margince.
 export const CalendarNotConnected: Story = {
   render: panel(
     <SchedulePanel
       day={{ ...CLEAR, calendar: "not_connected", next_meeting: NEXT_MEETING }}
+      state="ready"
+    />,
+  ),
+};
+
+// No calendar connected on a day with a meeting logged in Margince: the same
+// sentence heads today's rows.
+export const CalendarNotConnectedWithMeeting: Story = {
+  render: panel(
+    <SchedulePanel
+      day={{ ...BOOKED, calendar: "not_connected" }}
       state="ready"
     />,
   ),

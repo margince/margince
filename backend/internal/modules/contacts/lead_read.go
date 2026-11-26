@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -25,6 +26,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -61,7 +64,7 @@ func leadNextTaskDueSQL(work string) string {
 	return `(SELECT ` + storekit.TaskDueSQL("a") + ` FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
 	     ` + auth.AudienceWorkspaceOnly("a") + `
-	   ORDER BY ` + storekit.TaskDueSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1)`
+	   ORDER BY ` + storekit.TaskDueOrderSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1)`
 }
 
 // leadLastActivitySQL is the last-touch clock. Like last_activity_of_contact, it
@@ -99,7 +102,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("lead") + `,
 	version, created_at, updated_at, archived_at,
-	routed_at, first_response_at,
+	routed_at, first_response_at, first_response_marked_by,
 	` + leadSourceLabelSQL + `, ` + leadWebFormNameSQL + `,
 	origin, origin_detail, ` + leadOriginLabelSQL + `,
 	disqualify_reason_id, disqualify_note,
@@ -120,10 +123,15 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	-- lead card every seat reads; the card names the next one its reader may
 	-- actually open. The count and the max beside them are aggregate markers
 	-- over all tasks and owe nothing.
-	(SELECT a.subject FROM activity_link l JOIN activity a ON a.id = l.activity_id
+	--
+	-- The descriptor rides with the subject so a task Margince wrote is named
+	-- in the reader's language, as History names it.
+	(SELECT jsonb_build_object('subject', a.subject, 'system_text', a.system_text,
+	          'due_has_time', a.due_has_time, 'due_intent', ` + storekit.IntentWireSQL("a", "due") + `)
+	   FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
 	     ` + auth.AudienceWorkspaceOnly("a") + `
-	   ORDER BY ` + storekit.TaskDueSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1),
+	   ORDER BY ` + storekit.TaskDueOrderSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1),
 	` + leadNextTaskDueSQL(work) + `,
 	(SELECT factor.value->>'factor'
 	   FROM LATERAL (
@@ -167,7 +175,7 @@ func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.A
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	l, err := scanLead(tx.QueryRow(ctx, q, args...), active, policy)
+	l, err := scanLead(tx.QueryRow(ctx, q, args...), active, policy, slaNow(ctx), systemtext.Locale(ctx))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Lead{}, apperrors.ErrNotFound
 	}
@@ -222,13 +230,35 @@ func withholdUnreadableSourceContacts(ctx context.Context, tx pgx.Tx, leads []cr
 	return nil
 }
 
+// leadRefs is the ids of the records a lead row points at, as scanned.
+type leadRefs struct {
+	owner, project, product, promoted, mergedInto, fromContact *ids.UUID
+	disqualifyReason, qualifiedDeal, company, partner          *ids.UUID
+}
+
+func (r leadRefs) applyTo(l *crmcontracts.Lead) {
+	l.OwnerId = uuidPtr(r.owner)
+	l.ProjectId = uuidPtr(r.project)
+	l.ProductId = uuidPtr(r.product)
+	l.PromotedContactId = uuidPtr(r.promoted)
+	// MergedIntoId tells a merged-away lead from a disqualified one: both are
+	// archived with no promoted contact. Without it the page says
+	// "Disqualified", which claims a human judged the lead not worth pursuing.
+	l.MergedIntoId = uuidPtr(r.mergedInto)
+	l.FromContactId = uuidPtr(r.fromContact)
+	l.CompanyId = uuidPtr(r.company)
+	l.PartnerCompanyId = uuidPtr(r.partner)
+	l.DisqualifyReasonId = uuidPtr(r.disqualifyReason)
+	l.QualifiedDealId = uuidPtr(r.qualifiedDeal)
+}
+
 // scanLead scans core + active custom columns, plus whatever trailing
 // expressions the caller selected — the list page appends the sort's
 // __cursor_key there, exactly as scanContact does.
-func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, extra ...any) (crmcontracts.Lead, error) {
+func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, now time.Time, reader textlang.Lang, extra ...any) (crmcontracts.Lead, error) {
 	var l crmcontracts.Lead
 	var id ids.UUID
-	var ownerID, projectID, productID, promotedContact, mergedInto, fromContact, disqualifyReason, qualifiedDeal, companyID, partnerCompany *ids.UUID
+	var refs leadRefs
 	var statusSetBy *string
 	var evidence []byte
 	var email *string
@@ -238,20 +268,20 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	var lastActivityPrecision *string
 	var hasInbound bool
 	var authorName, authorSeatName *string
-	var authorID *ids.UUID
-	var companyFacts []byte
+	var authorID, markedBy *ids.UUID
+	var companyFacts, nextTask []byte
 
 	dests := []any{
 		&id, &l.FullName, &email, &l.Phone, &l.Title, &l.CompanyName, &l.CandidateCompanyKey,
-		&l.LinkedinUrl, &status, &l.Score, &l.ScoreOverrideReason, &l.ScoreComputed, &ownerID, &projectID, &productID, &l.SourceSystem, &l.SourceId,
-		&promotedContact, &l.PromotedAt, &mergedInto, &fromContact, &l.Source, &l.CapturedBy,
+		&l.LinkedinUrl, &status, &l.Score, &l.ScoreOverrideReason, &l.ScoreComputed, &refs.owner, &refs.project, &refs.product, &l.SourceSystem, &l.SourceId,
+		&refs.promoted, &l.PromotedAt, &refs.mergedInto, &refs.fromContact, &l.Source, &l.CapturedBy,
 		&authorID, &authorName, &authorSeatName,
 		&version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
-		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &l.WebFormName, &l.Origin, &l.OriginDetail, &l.OriginLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
-		&statusSetBy, &qualifiedDeal, &evidence,
+		&l.RoutedAt, &l.FirstResponseAt, &markedBy, &l.SourceLabel, &l.WebFormName, &l.Origin, &l.OriginDetail, &l.OriginLabel, &refs.disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
+		&statusSetBy, &refs.qualifiedDeal, &evidence,
 		&l.LastActivityAt, &lastActivityPrecision, &openTasks,
-		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound, &companyID,
-		&l.Industry, &companyFacts, &partnerCompany, &l.PartnerAcceptedAt, &l.PartnerAcceptedBy,
+		&nextTask, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound, &refs.company,
+		&l.Industry, &companyFacts, &refs.partner, &l.PartnerAcceptedAt, &l.PartnerAcceptedBy,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -262,23 +292,14 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	}
 
 	l.Id = openapi_types.UUID(id)
-	l.OwnerId = uuidPtr(ownerID)
-	l.ProjectId = uuidPtr(projectID)
-	l.ProductId = uuidPtr(productID)
-	l.PromotedContactId = uuidPtr(promotedContact)
-	// What separates a merged-away lead from a disqualified one. Both are
-	// archived and neither carries a promoted_contact_id, so without this the
-	// page can only see that the lead ended — and it said "Disqualified",
-	// which claims a human judged the lead not worth pursuing.
-	l.MergedIntoId = uuidPtr(mergedInto)
-	l.FromContactId = uuidPtr(fromContact)
-	l.CompanyId = uuidPtr(companyID)
-	l.PartnerCompanyId = uuidPtr(partnerCompany)
+	l.FirstResponseMarkedBy = uuidPtr(markedBy)
+	refs.applyTo(&l)
 	if err := scanLeadCompanyFacts(&l, companyFacts); err != nil {
 		return l, err
 	}
-	l.DisqualifyReasonId = uuidPtr(disqualifyReason)
-	l.QualifiedDealId = uuidPtr(qualifiedDeal)
+	if err := nameNextTask(&l, nextTask, reader); err != nil {
+		return l, err
+	}
 	if statusSetBy != nil {
 		setBy := crmcontracts.LeadStatusSetBy(*statusSetBy)
 		l.StatusSetBy = &setBy
@@ -303,7 +324,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	if !hasInbound {
 		policy.enabled = false
 	}
-	l.SlaDeadlineAt, l.SlaState = leadSLAFields(policy, l.RoutedAt, l.CreatedAt, l.FirstResponseAt, l.ArchivedAt)
+	l.SlaDeadlineAt, l.SlaState = leadSLAFields(now, policy, l.RoutedAt, l.CreatedAt, l.FirstResponseAt, l.ArchivedAt)
 	l.Author = sourceAuthorOf(authorID, authorSeatName, authorName, l.SourceSystem)
 	l.ImportedFrom = provenance.ImportedFrom(l.SourceSystem)
 	return l, nil

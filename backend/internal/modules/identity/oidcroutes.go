@@ -9,6 +9,8 @@ package identity
 
 import (
 	"context"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
@@ -31,6 +33,35 @@ type OIDCRoutes struct {
 	// FailureURL is the SPA's neutral failure marker — where the callback
 	// sends the browser on refusal.
 	FailureURL string
+}
+
+// landingURL is where a completed sign-in goes. The consent screen sits on the
+// post-login page's origin, which is the SPA's even where the api has its own.
+func (r OIDCRoutes) landingURL(returnToConsent bool) string {
+	if !returnToConsent {
+		return r.PostLoginURL
+	}
+	return r.consentScreenURL()
+}
+
+// consentFailureURL is the consent screen with the marker FailureURL's route
+// carries, so the screen tells the reader the sign-in failed.
+func (r OIDCRoutes) consentFailureURL() string {
+	marker := ""
+	if u, err := url.Parse(r.FailureURL); err == nil {
+		if _, query, found := strings.Cut(u.Fragment, "?"); found {
+			marker = "?" + query
+		}
+	}
+	return r.consentScreenURL() + marker
+}
+
+func (r OIDCRoutes) consentScreenURL() string {
+	u, err := url.Parse(r.PostLoginURL)
+	if err != nil || u.Host == "" {
+		return ConsentScreenPath
+	}
+	return u.Scheme + "://" + u.Host + ConsentScreenPath
 }
 
 // SignInRedirectURI is the one place /auth/oidc/{provider}/callback's absolute

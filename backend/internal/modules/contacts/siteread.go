@@ -80,14 +80,13 @@ type SiteRead struct {
 	// attempt at the same read, and the AI-activity projection cannot order two
 	// events for one read on status alone. AttemptAt is what a live occurrence
 	// ages from; created_at is that instant for the first attempt only.
-	Attempt         int
-	AttemptAt       time.Time
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	StartedAt       *time.Time
-	FirstGroundedAt *time.Time
-	FinishedAt      *time.Time
-	ConfirmedAt     *time.Time
+	Attempt     int
+	AttemptAt   time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	StartedAt   *time.Time
+	FinishedAt  *time.Time
+	ConfirmedAt *time.Time
 }
 
 // SiteReadLegalEntity is one legal entity a legal notice states, with the
@@ -133,7 +132,7 @@ type SiteReadContact struct {
 const siteReadColumns = `id, company_id, target_kind, seed_url, status, status_code, status_detail, next_attempt_at, pages, skipped,
 	stopped_reason, fact_count, proposal_ids, requested_by, profile_fields, facts, contacts, legal_entities, warnings,
 	draft_version, proposal_hash, phase, pages_read, logo_object_key, logo_icon_object_key, attempt, attempt_at,
-	created_at, updated_at, started_at, first_grounded_at, finished_at, confirmed_at`
+	created_at, updated_at, started_at, finished_at, confirmed_at`
 
 // siteReadCompanyKey names the audit payload's company reference once (the goconst
 // pin): the same string in relationship.go is that file's column vocabulary —
@@ -279,27 +278,43 @@ func (s *Store) createOrJoinSiteRead(ctx context.Context, companyID *ids.Company
 	return out, joined, nil
 }
 
-// UpdateSiteReadProgress records the worker's live position — the phase
-// and how many pages have committed — on a still-running dossier, so the
-// SPA's poll shows movement during the crawl and the model call instead
-// of a silent 'running'. Best-effort by contract: a read that is no
-// longer running is simply not updated (the terminal write won), never
-// an error. No auth.Require, same rationale as BeginSiteRead.
-func (s *Store) UpdateSiteReadProgress(ctx context.Context, readID ids.UUID, phase string, pages []SiteReadPage) error {
+// UpdateSiteReadProgress records the phase and the committed page count on a
+// still-running dossier, so the SPA's poll shows movement during the crawl.
+// It is announced to the AI-activity projection in the same transaction, under
+// the lease the claim announced. A lease that is not positive is refused.
+// claimedAt is the claim BeginSiteRead handed this worker. A worker whose claim
+// was reclaimed presents an old one and changes nothing.
+// A read that is no longer running is not updated, and that is not an error:
+// the terminal write won. No auth.Require, same rationale as BeginSiteRead.
+func (s *Store) UpdateSiteReadProgress(ctx context.Context, readID ids.UUID, claimedAt time.Time, phase string, pages []SiteReadPage, lease time.Duration) error {
 	if phase != "crawling" && phase != "extracting" {
 		return fmt.Errorf("contacts: %q is not a site-read phase (crawling|extracting)", phase)
+	}
+	if lease <= 0 {
+		return errors.New("contacts: site-read progress lease must be positive")
+	}
+	if claimedAt.IsZero() {
+		return errors.New("contacts: site-read progress needs the claim it reports for")
 	}
 	pagesRaw, err := marshalSiteReadList(pages)
 	if err != nil {
 		return fmt.Errorf("contacts: progressive site-read pages: %w", err)
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `
+		updated, err := scanSiteRead(tx.QueryRow(ctx, `
 			UPDATE site_read SET phase = $2, pages = $3, pages_read = $4, updated_at = now()
-			WHERE id = $1 AND status = 'running'`, readID, phase, pagesRaw, len(pages)); err != nil {
+			WHERE id = $1 AND status = 'running' AND started_at = $5
+			RETURNING `+siteReadColumns, readID, phase, pagesRaw, len(pages), claimedAt))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
 			return fmt.Errorf("update site read progress: %w", err)
 		}
-		return nil
+		if updated.PagesRead == 0 {
+			return logSiteReadActivity(ctx, tx, updated, lease)
+		}
+		return logSiteReadProgress(ctx, tx, updated, lease)
 	})
 }
 
@@ -320,13 +335,11 @@ func (s *Store) UpdateSiteReadDraft(ctx context.Context, readID ids.UUID, facts 
 		return fmt.Errorf("contacts: progressive site-read legal entities: %w", err)
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		grounded := len(facts) > 0 || len(found) > 0 || len(entities) > 0
 		if _, err := tx.Exec(ctx, `UPDATE site_read
 			SET facts = $2, contacts = $3, legal_entities = $4, proposal_hash = $5,
 			    draft_version = draft_version + 1,
-			    first_grounded_at = CASE WHEN $6 THEN COALESCE(first_grounded_at, now()) ELSE first_grounded_at END,
 			    updated_at = now()
-			WHERE id = $1 AND status = 'running'`, readID, factsRaw, contactsRaw, entitiesRaw, proposalHash, grounded); err != nil {
+			WHERE id = $1 AND status = 'running'`, readID, factsRaw, contactsRaw, entitiesRaw, proposalHash); err != nil {
 			return fmt.Errorf("update progressive site-read draft: %w", err)
 		}
 		return nil
@@ -434,7 +447,7 @@ func scanSiteRead(row pgx.Row) (SiteRead, error) {
 		&sr.StoppedReason, &sr.FactCount, &sr.ProposalIDs, &sr.RequestedBy,
 		&profileRaw, &factsRaw, &contactsRaw, &entitiesRaw, &warningsRaw, &sr.DraftVersion, &sr.ProposalHash,
 		&sr.Phase, &sr.PagesRead, &sr.LogoObjectKey, &sr.LogoIconObjectKey, &sr.Attempt, &sr.AttemptAt,
-		&sr.CreatedAt, &sr.UpdatedAt, &sr.StartedAt, &sr.FirstGroundedAt, &sr.FinishedAt, &sr.ConfirmedAt); err != nil {
+		&sr.CreatedAt, &sr.UpdatedAt, &sr.StartedAt, &sr.FinishedAt, &sr.ConfirmedAt); err != nil {
 		return SiteRead{}, err
 	}
 	if err := json.Unmarshal(pagesRaw, &sr.Pages); err != nil {

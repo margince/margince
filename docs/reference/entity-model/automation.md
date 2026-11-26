@@ -6,16 +6,16 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 
 ## automation
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+16 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `action` | `jsonb` | yes |  |
 | `enabled` | `boolean`, default `false` | yes |  |
+| `enabled_from` | `timestamp with time zone` |  |  |
 | `key` | `text` | yes | The catalog type this instance is built from. |
 | `name` | `text` | yes |  |
-| `origin` | `text`, default `'catalog'::text` | yes | One of `catalog`, `agent_authored`. |
 | `owner_id` | `uuid` |  | The member the rule runs as. |
 | `params` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `paused_reason` | `text` |  | Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the agent that set the rule up no longer has a live passport or connection, whether revoked or expired. |
@@ -24,7 +24,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 | `trigger` | `jsonb` | yes |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone` |  | When the row last changed. Refreshed on every write. |
+| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**
@@ -36,7 +36,6 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 
 **Rules**
 
-- `automation_origin_check`: `CHECK ((origin = ANY (ARRAY['catalog', 'agent_authored'])))`
 - `automation_paused_reason_check`: `CHECK ((paused_reason = ANY (ARRAY['list_archived', 'list_invalid', 'list_unavailable', 'burst', 'passport_revoked'])))`
 - `automation_tier_check`: `CHECK ((tier = ANY (ARRAY['auto_execute', 'confirmation_required'])))`
 - `automation_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
@@ -49,10 +48,12 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 **Triggers**
 
 - `automation_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.enabled AND (new.archived_at IS NULL)))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "name": 120, "tier": 20000, "paused_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"name":120,"paused_reason":2000,"tier":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "name": 120, "tier": 20000, "paused_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"name":120,"paused_reason":2000,"tier":20000}')`
 
 ## automation_effect_claim
 
-6 columns · primary key `(id)` · referenced by 0 foreign keys
+7 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -61,6 +62,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 | `effect_fingerprint` | `text` | yes |  |
 | `handler` | `text` | yes |  |
 | `occurrence_key` | `text` | yes |  |
+| `planned` | `jsonb` |  |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Rules**
@@ -70,19 +72,22 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 **Indexes**
 
 - `automation_effect_claim_pkey`: `unique, btree (id)`
-- `automation_effect_claim_unapplied`: `btree (created_at) WHERE (applied_at IS NULL)`
 - `automation_effect_claim_unique`: `unique, btree (handler, occurrence_key, effect_fingerprint)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"handler": 20000, "occurrence_key": 20000, "effect_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"effect_fingerprint":20000,"handler":20000,"occurrence_key":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"handler": 20000, "occurrence_key": 20000, "effect_fingerprint": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"effect_fingerprint":20000,"handler":20000,"occurrence_key":20000}')`
 
 ## workflow_run
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `applied` | `jsonb` |  |  |
 | `detail` | `jsonb` |  |  |
-| `error` | `text` |  |  |
 | `handler` | `text` | yes |  |
 | `idempotency_key` | `text` | yes |  |
 | `planned` | `jsonb` | yes |  |
@@ -102,3 +107,8 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 - `workflow_run_pkey`: `unique, btree (id)`
 - `workflow_run_troubled`: `btree (created_at DESC, id DESC) WHERE (status = ANY (ARRAY['failed', 'blocked']))`
 - `workflow_run_unique`: `unique, btree (handler, idempotency_key)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "handler": 20000, "idempotency_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"handler":20000,"idempotency_key":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "handler": 20000, "idempotency_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"handler":20000,"idempotency_key":20000,"status":20000}')`

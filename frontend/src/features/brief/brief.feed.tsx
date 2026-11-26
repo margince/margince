@@ -18,16 +18,18 @@ import {
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
-import { CardPager } from "./brief.cardpager";
+import { CaughtUp } from "./brief.caughtup";
 import { Triage } from "./brief.focus";
 import { identity } from "./brief.focuslink";
 import { HomeListReturnScope } from "./brief.queue";
-import { laneUnread } from "./brief.readings.honesty";
+import { laneUnread, scopeWasCut } from "./brief.readings.honesty";
 import { waitingRows } from "./brief.sentence";
 import { HOME_DAY_TIMING } from "./elementtiming";
 
 import "../worklist/worklist.css";
 import { useViewerZone } from "../../lib/viewerzone";
+import { pillFigure } from "../../lib/worklistcounts";
+import { worklistLaneHref } from "../../lib/worklistrouting";
 import "./brief.feed.css";
 
 export function BriefFeed({
@@ -62,8 +64,13 @@ export function BriefFeed({
   const { at, choose } = useCardChoice(rows);
   const lead = rows[at];
   const partial = Boolean(
-    !day?.focus || day.readings?.more_available || laneUnread(day),
+    !day?.focus ||
+      day.readings?.more_available ||
+      laneUnread(day) ||
+      scopeWasCut(day),
   );
+  const shown =
+    state !== "ready" ? state : rows.length > 0 || partial ? "ready" : "empty";
   return (
     <section
       id="brief-today"
@@ -84,6 +91,7 @@ export function BriefFeed({
             </Badge>
           </AppLink>
         )}
+        <SystemBadge day={day} />
         {rows.length > 0 && (
           <span className="t-caption t-num brief-first-count">
             {formatNumber(rows.length, locale)}
@@ -106,37 +114,26 @@ export function BriefFeed({
         <Card as="div" className="brief-triage-lead brief-triage-pending">
           <PendingBody label={t("brief.feed.loading")} lines={6} />
         </Card>
+      ) : shown === "empty" && day ? (
+        <CaughtUp asOf={day.as_of} />
       ) : (
         <SurfaceState
-          state={
-            state !== "ready"
-              ? state
-              : rows.length > 0 || partial
-                ? "ready"
-                : "empty"
-          }
-          emptyLabel={t("brief.feed.clear")}
+          state={shown}
+          emptyLabel={t("brief.feed.caughtUp")}
           loadingLabel={t("brief.feed.loading")}
           detail={{ onRetry }}
         >
           {rows.length === 0 && partial && <p>{t("brief.feed.incomplete")}</p>}
           {lead && (
             <HomeListReturnScope>
-              <FeedPager
+              <Triage
                 rows={rows}
                 at={at}
-                choose={choose}
-                title={lead.title ?? ""}
-              >
-                <Triage
-                  rows={rows}
-                  at={at}
-                  lead={lead}
-                  onChoose={choose}
-                  onOpenEmail={setOpenEmail}
-                  onContext={onContext}
-                />
-              </FeedPager>
+                lead={lead}
+                onChoose={choose}
+                onOpenEmail={setOpenEmail}
+                onContext={onContext}
+              />
             </HomeListReturnScope>
           )}
         </SurfaceState>
@@ -169,28 +166,17 @@ function useCardChoice(rows: readonly WorklistItem[]) {
   };
 }
 
-function FeedPager({
-  rows,
-  at,
-  choose,
-  title,
-  children,
-}: Readonly<{
-  rows: readonly WorklistItem[];
-  at: number;
-  choose: (item: WorklistItem) => void;
-  title: string;
-  children: ReactNode;
-}>) {
-  const previous = rows[at - 1];
-  const next = rows[at + 1];
+// Stopped sources and automations take no card. The badge counts every row of
+// the System view it opens, so a bounce that holds a card is counted there too.
+function SystemBadge({ day }: Readonly<{ day: Worklist | undefined }>) {
+  const { locale } = useLocale();
+  const plural = usePlural();
+  const figure = day && pillFigure(day, "all", "system");
+  if (!figure || figure.count === 0) return null;
+  const count = `${formatNumber(figure.count, locale)}${figure.floor ? "+" : ""}`;
   return (
-    <CardPager
-      previous={previous ? () => choose(previous) : undefined}
-      next={next ? () => choose(next) : undefined}
-      title={title}
-    >
-      {children}
-    </CardPager>
+    <AppLink className="entity-link" href={worklistLaneHref("system")}>
+      <Badge>{plural("brief.agenda.system", figure.count, { count })}</Badge>
+    </AppLink>
   );
 }

@@ -39,7 +39,7 @@ func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profil
 	// scored it, and averaging that in reports the absence as a verdict. An
 	// all-ungraded task leaves both numbers at zero beside a not_supported
 	// verdict, which is what Verdict reaches for the same reason.
-	judgeP50, judgeMin, _ := judgeMedianAndMin(results)
+	judgeP50, judgeMin := pooledJudgeScores(results)
 
 	sortedLatencies := append([]int64(nil), acc.latencies...)
 	slices.Sort(sortedLatencies)
@@ -66,6 +66,7 @@ func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profil
 		Task:                 string(task),
 		Provider:             acc.provider,
 		ServedModel:          acc.servedModel,
+		WireRule:             ai.WireRule(acc.provider),
 		EnvClass:             string(profile),
 		PromptVersion:        promptVersion,
 		CorpusVersion:        corpusVersionV1,
@@ -78,8 +79,9 @@ func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profil
 		ReportedInvalid:      tally.invalid,
 		ReportedAbstained:    tally.abstained,
 		CertifiedScope:       acc.certifiedScope,
-		ContextApplied:       n > 0 && acc.contextServed == n,
+		ContextApplied:       acc.contextOwed > 0 && acc.contextServed == acc.contextOwed,
 		ContextScopes:        declaredCompanyContextScopes(task),
+		ContextOwed:          new(acc.contextOwed),
 		JudgeScoreP50:        judgeP50,
 		JudgeScoreMin:        judgeMin,
 		LatencyP50:           percentile(sortedLatencies, 0.50),

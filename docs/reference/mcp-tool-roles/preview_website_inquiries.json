@@ -1,0 +1,15 @@
+{
+  "tool": "read_details",
+  "action": "website_inquiry_preview",
+  "verb": "preview_website_inquiries",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

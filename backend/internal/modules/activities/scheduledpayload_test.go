@@ -19,7 +19,9 @@ package activities
 // here until it is carried.
 
 import (
+	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -48,8 +50,13 @@ func TestAScheduledSendCarriesEveryFieldOfItsInput(t *testing.T) {
 			ContractID:     ids.NewV7(),
 			ConsentEventID: ids.NewV7(),
 			BasisID:        ids.NewV7(),
+			RecipientCountries: []commsauthz.CountryOverride{
+				{Address: "buyer@example.test", Country: "at"},
+				{Address: "blind@example.test"},
+			},
 		},
-		SendingEntity: ids.NewV7(),
+		SendingEntity:  ids.NewV7(),
+		FromConnection: ids.NewV7(),
 	}
 
 	out, err := freezePayload(in).thaw()
@@ -80,6 +87,7 @@ func TestTheRoundTripFixtureLeavesNoFieldUnset(t *testing.T) {
 		OperatorReason:   "they asked at the fair",
 		Evidence:         commsauthz.Evidence{ActivityID: ids.NewV7()},
 		SendingEntity:    ids.NewV7(),
+		FromConnection:   ids.NewV7(),
 	}
 	v := reflect.ValueOf(in)
 	for i := range v.NumField() {
@@ -142,15 +150,61 @@ func TestAFreezeCarriesNothingAboutTheCallThatMadeIt(t *testing.T) {
 // all-zeroes UUID on the row, which reads as a record that exists.
 func TestAnUnnamedRecordDoesNotBecomeAZeroID(t *testing.T) {
 	frozen := freezePayload(SendEmailInput{Subject: "Hello"})
-	if frozen.Evidence != (frozenEvidence{}) {
+	if !reflect.DeepEqual(frozen.Evidence, frozenEvidence{}) {
 		t.Errorf("evidence = %+v, want every field empty when the caller named nothing", frozen.Evidence)
 	}
 	out, err := frozen.thaw()
 	if err != nil {
 		t.Fatalf("thawing: %v", err)
 	}
-	if out.Evidence != (commsauthz.Evidence{}) {
+	if !reflect.DeepEqual(out.Evidence, commsauthz.Evidence{}) {
 		t.Errorf("evidence = %+v, want zero after a round trip that named nothing", out.Evidence)
+	}
+}
+
+// The row keeps a cleared country apart from no statement, through the JSON
+// the column holds.
+func TestAFrozenRowKeepsAClearedCountryApartFromNone(t *testing.T) {
+	raw, err := json.Marshal(freezePayload(SendEmailInput{
+		Recipients: []string{"buyer@example.test", "other@example.test"},
+		Evidence: commsauthz.Evidence{RecipientCountries: []commsauthz.CountryOverride{
+			{Address: "buyer@example.test"},
+		}},
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"recipient_countries":[{"address":"buyer@example.test","country":null}]`) {
+		t.Fatalf("payload = %s, want the cleared country stored as null", raw)
+	}
+	var back scheduledPayload
+	if err := json.Unmarshal(raw, &back); err != nil {
+		t.Fatal(err)
+	}
+	out, err := back.thaw()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stated := out.Evidence.RecipientCountries
+	if len(stated) != 1 || stated[0].Address != "buyer@example.test" || !stated[0].Cleared() {
+		t.Errorf("thawed countries = %+v, want one cleared entry for buyer and none for other", stated)
+	}
+}
+
+// A version-2 row written before countries were frozen still fires, with no
+// country stated: the recipients keep the record's.
+func TestAPayloadWrittenBeforeCountriesThawsWithNone(t *testing.T) {
+	var payload scheduledPayload
+	if err := json.Unmarshal([]byte(`{"recipients":["buyer@example.test"],"subject":"Hi","body":"Hello",
+		"consent_purpose":"","evidence":{"deal_id":"`+ids.NewV7().String()+`"}}`), &payload); err != nil {
+		t.Fatal(err)
+	}
+	out, err := payload.thaw()
+	if err != nil {
+		t.Fatalf("an older payload no longer thaws: %v", err)
+	}
+	if out.Evidence.RecipientCountries != nil || out.Evidence.DealID.IsZero() {
+		t.Errorf("evidence = %+v, want the deal and no stated country", out.Evidence)
 	}
 }
 

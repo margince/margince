@@ -3,46 +3,16 @@
 
 package compose
 
-// The extension twin of the REST guarantee.
+// Extensions cannot use the compile-time ServerInterface check that core routes
+// have, so these two tests check it at run time, in both directions:
+//   - a declared verb with no registration answers 404;
+//   - a registration nothing declares is an endpoint no contract or doc knows.
 //
-// For a core operation, `var _ crmcontracts.ServerInterface = Server{}`
-// (server.go) makes "declared but not handled" a COMPILE error. Extensions
-// cannot have that: crmcontracts is generated from the base contract, which is
-// installation-independent by design, so an extension operation is never a
-// method on that interface. These two tests are the runtime equivalent, and
-// they exist as a PAIR because either alone is satisfied by a surface that is
-// wrong in the other direction:
-//
-//   - a declared verb with no registration is a route the merged contract
-//     publishes, the docs describe and a client generates a call for, which
-//     answers 404;
-//   - a registration nothing declares is a reachable authenticated endpoint no
-//     contract, no client type, no doc and no unit manifest knows about — so
-//     nothing asks an operator to resolve it either.
-//
-// Both are asserted against the SAME mounting the composition root performs
-// (MountExtensionRoutes on a real ServeMux), through the SAME two functions the
-// parent assertions use (unregisteredDeclarations, undeclaredRegistrations), so
-// the mutation subtests exercise the sweep rather than an equivalent loop.
-//
-// THE RESIDUAL, stated because the pair is weaker in one direction than in the
-// other and the difference is structural. Direction 1 is checkable outright: a
-// declaration is a value, and MountExtensionRoutes either mounted it or did not
-// — and the mux.Handler probe confirms the router really resolves it, not just
-// that a pattern was recorded. Direction 2 can only see what MountExtensionRoutes
-// REPORTS. A mux.Handle call whose pattern is never appended to the returned
-// slice is invisible to it, and extensionEdge itself does exactly that with
-// mux.Handle("/", next). So direction 2 holds "everything this seam admits to
-// mounting was declared", not "nothing else is mounted" — the latter is
-// uncheckable because a ServeMux cannot be enumerated. What closes the gap for
-// the one unreported registration that exists is
-// TestExtensionEdgeFallsThroughToTheCoreRouter, which asserts that "/" reaches
-// next rather than serving anything of its own.
-//
-// A third state sits between "declared" and "registered": a verb the contract
-// declares that no unit shipped behavior for. It is mounted and answers 501.
-// The sweep distinguishes it rather than collapsing it into either side — see
-// MountedRoute.
+// Both run the real MountExtensionRoutes on a real ServeMux through
+// unregisteredDeclarations and undeclaredRegistrations. The second direction
+// sees only the routes MountExtensionRoutes reports. Its one unreported route,
+// extensionEdge's "/", is held by TestExtensionEdgeFallsThroughToTheCoreRouter.
+// A declared verb no unit implements is mounted and answers 501 (MountedRoute).
 
 import (
 	"context"
@@ -340,7 +310,7 @@ func TestAnUndeclaredRouteCannotBeMounted(t *testing.T) {
 
 	for name, verb := range map[string]extension.Verb{
 		"a core route":                      outsideNamespace,
-		"a path template":                   templated,
+		"an id right after the unit":        templated,
 		"another unit's namespace":          otherUnit,
 		"a method outside the admitted set": unadmittedMethod,
 		"a read-scoped PUT":                 readScopedPut,

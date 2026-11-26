@@ -7,8 +7,10 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"testing"
 	"time"
 
@@ -16,11 +18,14 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func enqueueHealthFixtures(t *testing.T, e *apptest.AppEnv, n int) {
@@ -289,6 +294,12 @@ func TestHistoryKeepsCurrentRetriesBeyondTheFinishedRunWindow(t *testing.T) {
 func TestMissingRestoreEvidenceLeavesHealthIncomplete(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
+	// A company with no name is a footer gap an admin must close, which would
+	// read as attention rather than as missing evidence.
+	if _, err := e.Owner.Exec(t.Context(), `INSERT INTO company (display_name, is_anchor, source, captured_by)
+		VALUES ('Restore Test GmbH', true, 'manual', 'human:x')`); err != nil {
+		t.Fatal(err)
+	}
 	var report crmcontracts.SystemHealth
 	if status := e.Call(t, "GET", "/v1/admin/system-health", nil, nil, &report); status != http.StatusOK {
 		t.Fatalf("summary: %d", status)
@@ -381,4 +392,78 @@ func TestHistoryContinuationExcludesRunsFinishedAfterItsCutoff(t *testing.T) {
 	if len(next.Runs) != 0 || next.HasMore || len(next.Groups) != 1 || next.Groups[0].Count != 50 || !next.PopulationMayHaveChanged || !next.Cutoff.Equal(first.Cutoff) {
 		t.Fatalf("finished work crossed the reporting cutoff: %+v", next)
 	}
+}
+
+// The changes Home's receipt cannot place are a coverage fact, never a finding.
+// A seat without ai_diagnostics read is told nothing of them.
+func TestSystemHealthBreaksDownTheChangesHomeCannotPlace(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	ctx := principal.WithWorkspaceID(t.Context(), apptest.InstallationWorkspaceUUID(t.Context(), t, e.Pool))
+	ctx = principal.SystemActing(ctx, "catalog-sync")
+	store := deals.NewStore(e.DB(), installseam.Deals())
+	product, err := store.CreateProduct(ctx, deals.CreateProductInput{Name: "Support", UnitPriceMinor: 100, Currency: "EUR"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A product price change is upkeep and stays out; a pipeline rename is
+	// not, and is counted.
+	pipeline := ids.From[ids.PipelineKind](uuidOf(t, apptest.DiscoverSeededPipeline(t, e).PipelineID))
+	for i, price := range []int64{200, 300} {
+		if _, err := store.UpdateProduct(ctx, ids.From[ids.ProductKind](ids.UUID(product.Id)), deals.UpdateProductInput{UnitPriceMinor: &price}); err != nil {
+			t.Fatal(err)
+		}
+		name := fmt.Sprintf("Synced pipeline %d", i)
+		if _, err := store.UpdatePipeline(ctx, pipeline, deals.UpdatePipelineInput{Name: &name}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	source := unplacedSource(t, e)
+	want := []crmcontracts.HealthUnplacedChange{{EntityType: "pipeline", Action: "update", Count: 2}}
+	if source.Availability != "available" || source.Condition != "information" || source.Code != "unplaced_counted" ||
+		source.Count == nil || *source.Count != 2 || source.UnplacedChanges == nil || !slices.Equal(*source.UnplacedChanges, want) {
+		t.Fatalf("unplaced changes misreported: %+v", source)
+	}
+	if source.WindowStart == nil || source.WindowEnd == nil || source.WindowEnd.Sub(*source.WindowStart) != 7*24*time.Hour {
+		t.Fatalf("the source names no week-long window: %+v", source)
+	}
+
+	var role roleWire
+	if status := e.Call(t, "POST", "/v1/roles", map[string]string{"copy_from": "admin", "name": "No diagnostics"}, nil, &role); status != http.StatusCreated {
+		t.Fatalf("custom role: %d", status)
+	}
+	t.Cleanup(func() {
+		if _, err := e.Owner.Exec(context.Background(), `DELETE FROM field_mask WHERE role_key=$1`, role.Key); err != nil {
+			t.Error(err)
+		}
+	})
+	revoke := map[string]bool{"create": false, "read": false, "update": false, "delete": false}
+	if status := e.Call(t, "PATCH", "/v1/roles/"+role.Key+"/objects/ai_diagnostics", revoke, nil, nil); status != http.StatusOK {
+		t.Fatalf("revoke ai_diagnostics: %d", status)
+	}
+	assignSessionRole(t, e, role.Key)
+	if withheld := unplacedSource(t, e); withheld.Availability != "withheld" || withheld.Count != nil || withheld.UnplacedChanges != nil {
+		t.Fatalf("a seat without ai_diagnostics read was told the unplaced changes: %+v", withheld)
+	}
+}
+
+func unplacedSource(t *testing.T, e *apptest.AppEnv) crmcontracts.HealthSource {
+	t.Helper()
+	var report crmcontracts.SystemHealth
+	if status := e.Call(t, "GET", "/v1/admin/system-health", nil, nil, &report); status != http.StatusOK {
+		t.Fatalf("summary status %d", status)
+	}
+	for _, finding := range report.Findings {
+		if finding.Source == "unplaced" {
+			t.Fatalf("a coverage fact was raised as a finding: %+v", finding)
+		}
+	}
+	for _, source := range report.Sources {
+		if source.Id == "unplaced" {
+			return source
+		}
+	}
+	t.Fatal("unplaced source missing")
+	return crmcontracts.HealthSource{}
 }

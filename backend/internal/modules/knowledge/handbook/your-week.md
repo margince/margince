@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/brief/brief.weekly.tsx frontend/src/features/brief/brief.weekly.scorecard.tsx frontend/src/features/brief/brief.plan.tsx frontend/src/features/worklist/brief.teamplan.tsx backend/internal/compose/weekly backend/internal/modules/weeklyplan -->
+<!-- describes: frontend/src/features/brief/brief.weekly.tsx frontend/src/features/brief/brief.teamweekly.tsx frontend/src/features/brief/brief.weekly.scorecard.tsx frontend/src/features/brief/brief.plan.tsx frontend/src/features/worklist/brief.teamplan.tsx backend/internal/compose/weekly backend/internal/modules/weeklyplan -->
 # Your week
 
 The **Weekly** view of **Home** looks back on a closed week and plans the next one. The day,
@@ -16,8 +16,6 @@ report was frozen. At the end of the calendar week's line, the two arrows **Earl
 **Later week** step through the weeks that have a report. When Margince wrote about the week, a
 card first in the report holds those words, in your own language, marked as written by AI. The
 report's parts are:
-- **At a glance**: four figures. Deals won shows what they were worth; the other three show their
-  share as a bar. Each shows its change on the week before, where there is one.
 - **Closed deals**: the deals won and lost, each with what it closed at, and a bar of won against
   lost.
 - **Pipeline movement**: the deals that changed stage, and the stage each reached.
@@ -29,9 +27,11 @@ report's parts are:
 - **Figures**: **Scorecard and all figures** opens the scorecard, every figure beside the week
   before, and each other reading on a row of its own. The columns name the weeks by number, such as
   **Week 27** and **Week 26**. **How this is counted** opens what the figures rest on.
-- **Observations**: what worked in the week and what did not, where Margince found something.
+- **What the week taught**: what worked in the week and what did not, where Margince found something.
 
-**Closed deals**, **Pipeline movement** and **Observations** are left out when
+Beside the report, **The week in figures** shows a **Weeks** panel with **Won per week** bars and the list of weeks.
+
+**Closed deals**, **Pipeline movement** and **What the week taught** are left out when
 they hold nothing. **Forecast** and **Figures** are always there. The last line says when the next report
 comes.
 
@@ -90,23 +90,41 @@ Two rows appear only when a count is not complete:
 
 Margince cannot count deals touched by a deletion for the week. It lists them on their own.
 
-### Observations
+### What the week taught
 
-**Observations** holds at most four observations. Each names the deals it was read from,
+**What the week taught** holds at most four observations. Each names the deals it was read from,
 and each has a tag: **Positive outcome**, **Unsuccessful outcome**, **Pattern**, or **Experiment**.
 
 Each carries a warning: the observations show links in recorded work, and do not show what made the
 outcome happen.
 
-A week with no observation has no **Observations** part. Either the reading did not run, or there
+A week with no observation has no **What the week taught** part. Either the reading did not run, or there
 were fewer than three records to name, so no model was asked.
 
 An installation with no AI model set up still gets the whole review. It only never gets the
 observations or the written summary.
 
+## A team's week
+
+A team lead sees the week of each team they are on. A role that may watch over every team sees
+every team's week. On **Home → Weekly**, pick the team in **Whose week**; **My week** brings back your
+own. Others do not see **Whose week**.
+
+Margince writes a team's week on the Monday after it, from the weeks of its members, and marks it
+**Frozen**. It keeps the members the team had that week. It shows:
+- a line on the week, and how many members' weeks could not be read;
+- **Leads answered**, **Meetings with follow-up**, **Commitments kept**, **Won** and
+  **Members counted**;
+- the **Monday agenda**: one item per member, in the order to raise them. **Copy agenda** copies it.
+- **Week activity**, the forecast, **Deal value coverage** and **Record quality**.
+
+Pick any day in the date field to open the week it falls in. A team with no closed week yet says
+so. If you lose access to a team while the page is open, the page says that you can no longer
+open it.
+
 ## Planning a week
 
-**Plan for week {week}**, on **Home → Weekly**, is your plan for the week. It holds what you said
+The **Plan for this week** card, on **Home → Weekly**, is your plan for the week. Once you press **Plan week**, it takes the week's dates as its title, such as **Plan · 16 – 22 November**. It holds what you said
 you will do, and what you need to do it. A commitment with a **Due date** joins your Worklist and **Needs you**
 on that day, in the company's time zone. Done ones, ones due later and ones with no date stay out.
 

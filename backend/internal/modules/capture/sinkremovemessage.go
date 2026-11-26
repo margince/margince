@@ -65,6 +65,11 @@ func (s *Sink) RemoveMessage(ctx context.Context, key connector.NaturalKey) erro
 	if key.SourceSystem == "" || key.SourceID == "" {
 		return errors.New("capture: acting on a provider-side deletion needs a natural key")
 	}
+	// Anyone may delete in a shared mailbox, so its deletions remove nothing
+	// here and are not tracked.
+	if _, shared := sharedMailboxOf(ctx); shared {
+		return nil
+	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
 		// No seat on the context is a wiring fault, not a message to drop: a

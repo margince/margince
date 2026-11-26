@@ -27,10 +27,10 @@
 /* What is still ahead in the period sits on a faint ground of its own. */
 .trajectory-chart-ahead {
   fill: var(--bgInset);
-  opacity: 0.55;
+  opacity: 0.25;
 }
 .trajectory-chart-range {
-  fill: color-mix(in srgb, var(--accent) 14%, transparent);
+  fill: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 .trajectory-chart-range-label {
   fill: var(--accentText);
@@ -51,7 +51,7 @@
 }
 .trajectory-chart-area-top {
   stop-color: var(--accent);
-  stop-opacity: 0.2;
+  stop-opacity: 0.28;
 }
 .trajectory-chart-area-foot {
   stop-color: var(--accent);
@@ -60,7 +60,7 @@
 .trajectory-chart-line {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 2.5;
+  stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -93,10 +93,14 @@
   fill: var(--warningText);
   font: var(--fontBodySmall);
 }
+/* Today is the one point the reader stands on, so it carries a soft glow. */
 .trajectory-chart-now-dot {
   fill: var(--accent);
   stroke: var(--ground);
-  stroke-width: 3;
+  stroke-width: 4;
+  filter: drop-shadow(
+    0 0 6px color-mix(in srgb, var(--accent) 45%, transparent)
+  );
 }
 /* The target's name rides its rule at the plot's leading edge. */
 .trajectory-chart-target-name {

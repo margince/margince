@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { type Rule, selectorList } from "../../scripts/lib/css-rules";
 import { parseSource } from "../../scripts/lib/source-tree";
+import { stable } from "../../src/format/collate";
 import { frontendRoot, plantedFindings, srcDir } from "../tree";
 import {
   baseInked,
@@ -58,7 +59,7 @@ describe("text in a state colour", () => {
       ),
     ]);
     expect(probe.unread).toEqual([]);
-    expect([...probe.exact].sort()).toEqual(["a", "b", "c"]);
+    expect([...probe.exact].sort(stable)).toEqual(["a", "b", "c"]);
     expect(probe.prefixes).toEqual(["p-"]);
   });
 

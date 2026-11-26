@@ -3,8 +3,8 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
-import { ComposeModal } from "./compose";
 import { jsonResponse, render, stubRoutes } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 afterEach(() => {
   cleanup();
@@ -13,7 +13,6 @@ afterEach(() => {
 });
 
 it("restores the purpose and AI attribution without generating again", async () => {
-  const user = userEvent.setup();
   const body = "Hallo Dana, passt die neue Laufzeit für euch?";
   const sent = stubRoutes({
     "GET /mail-drafts": () =>
@@ -39,7 +38,7 @@ it("restores the purpose and AI attribution without generating again", async () 
       }),
   });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="p-1"
       contactId="p-1"
@@ -53,7 +52,6 @@ it("restores the purpose and AI attribution without generating again", async () 
   expect(
     await screen.findByRole("heading", { name: "AI-assisted draft" }),
   ).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Change the ask" }));
   expect(
     await screen.findByDisplayValue("Ask about the new term"),
   ).toBeTruthy();
@@ -71,7 +69,7 @@ it("passes the written subject with an explicit new-email generation", async () 
       }),
   });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="p-1"
       intent="Ask about renewal"
@@ -106,7 +104,7 @@ it("does not fill a draft that answered an earlier subject", async () => {
   });
   const sent = stubRoutes({ "POST /contacts/p-1/draft-email": () => pending });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="p-1"
       intent="Ask about renewal"
@@ -144,7 +142,7 @@ it("keeps a response when only the project tag changes", async () => {
   });
   const sent = stubRoutes({ "POST /contacts/p-1/draft-email": () => pending });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="p-1"
       intent="Ask about renewal"

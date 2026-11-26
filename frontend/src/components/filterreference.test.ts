@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../testing/mefixture";
 import { boundedReference, useReferenceOptions } from "./filterreference";
 
 // Each target reads a different surface and a different display column — a seat
@@ -32,6 +33,7 @@ function harness(body: unknown) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(QueryClientProvider, { client }, children);
   return { seen, wrapper };
@@ -129,6 +131,7 @@ describe("a read that fails", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    client.setQueryData(["me"], meFixture({ rowScope: "all" }));
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(QueryClientProvider, { client }, children);
 
@@ -179,6 +182,7 @@ function pagedHarness(rows: (index: number) => unknown, lastPage: number) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(QueryClientProvider, { client }, children);
   return { cursors, wrapper };
@@ -231,6 +235,44 @@ describe("the two targets that are the roster", () => {
 
     await waitFor(() => expect(result.current.partial).toBe(true));
     expect(result.current.options).toHaveLength(10);
+  });
+});
+
+describe("a target this module reads one page of", () => {
+  it.each([
+    [
+      "project",
+      (index: number) => ({ id: `pr-${index}`, name: `Rollout ${index}` }),
+    ],
+    [
+      "product",
+      (index: number) => ({ id: `pd-${index}`, name: `Licence ${index}` }),
+    ],
+  ] as const)(
+    "%s says the list stopped when more pages exist",
+    async (reference, row) => {
+      const { cursors, wrapper } = pagedHarness(row, 1);
+      const { result } = renderHook(() => useReferenceOptions(reference), {
+        wrapper,
+      });
+
+      await waitFor(() => expect(result.current.options).toHaveLength(1));
+      expect(cursors).toEqual([null]);
+      expect(result.current.partial).toBe(true);
+    },
+  );
+
+  it("calls a catalogue that fits one page whole", async () => {
+    const { wrapper } = pagedHarness(
+      (index) => ({ id: `pd-${index}`, name: `Licence ${index}` }),
+      0,
+    );
+    const { result } = renderHook(() => useReferenceOptions("product"), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.options).toHaveLength(1));
+    expect(result.current.partial).toBe(false);
   });
 });
 

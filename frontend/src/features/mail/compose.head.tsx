@@ -2,20 +2,22 @@ import type { ReactNode } from "react";
 import { Callout } from "../../design-system/callout";
 import { ProjectPicker, projectLabel } from "../../design-system/projectpicker";
 import { Switch } from "../../design-system/switch";
-import type { TokenSuggestion } from "../../design-system/tokeninput";
-import { INTL_LOCALE } from "../../format/format";
+import { listFormat } from "../../format/formatters";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useThreadProject } from "../../lib/activityfiling";
 import type { Transport } from "../../lib/contacttransports";
 import { useProjectRecord } from "../projects/projectrecord";
+import { FromMailboxRow } from "./compose.from";
 import { StaleThreadNotice } from "./compose.notices";
 import { colleagueMailboxesOf } from "./composeanchor";
+import type { RecipientCountries } from "./composecountries";
 import { RelatedFiling } from "./composedraftcontext";
 import type { ComposeFields } from "./composefields";
 import type { ComposeRecords } from "./composefiling";
 import {
   AddressBlock,
   type AddressLine,
+  type RecipientOffers,
   SubjectRow,
   TransportRow,
 } from "./composehead";
@@ -120,6 +122,8 @@ function MailOnlyFields({
   deadRecipients,
   filing,
   tagging,
+  marked,
+  countries,
 }: Readonly<{
   to: string[];
   onToChange: (next: string[]) => void;
@@ -131,7 +135,7 @@ function MailOnlyFields({
   copiesOpen: boolean;
   onOpenCopies: () => void;
   /** The addresses this record already knows, offered as the reader types. */
-  recipients: readonly TokenSuggestion[];
+  recipients: RecipientOffers;
   /** The reader has started typing a recipient, before any is committed. */
   onToEditing: () => void;
   refused: Readonly<Record<AddressLine, readonly string[]>>;
@@ -148,6 +152,8 @@ function MailOnlyFields({
   /** Which project the message files under, beside the subject it tags. */
   filing: ReactNode;
   tagging: ReactNode;
+  marked?: Readonly<{ values: ReadonlySet<string>; label: string }>;
+  countries?: RecipientCountries;
 }>) {
   const t = useT();
   return (
@@ -170,6 +176,8 @@ function MailOnlyFields({
         needTo={t("compose.emptyRecipients")}
         deadRecipients={deadRecipients}
         disabled={rejectionInFlight}
+        marked={marked}
+        countries={countries}
       />
       <SubjectRow
         subject={subject}
@@ -210,7 +218,7 @@ export function ReplyStandingNotice({
       <Callout kind="standing" title={t("compose.colleagueMailboxTitle")}>
         <p>
           {plural("compose.colleagueMailbox", seats.length, {
-            names: new Intl.ListFormat(INTL_LOCALE[locale], {
+            names: listFormat(locale, {
               style: "long",
               type: "conjunction",
             }).format(
@@ -274,6 +282,7 @@ export function ComposeHead({
   flagged,
   rejectionInFlight,
   onToEditing,
+  marked,
 }: Readonly<{
   fields: ComposeFields;
   savedDraft: ReturnType<typeof useSavedDraft>;
@@ -292,6 +301,8 @@ export function ComposeHead({
   flagged: ReadonlySet<MissingField>;
   rejectionInFlight: boolean;
   onToEditing: () => void;
+  /** Recipients a refused Send named, marked on their chips. */
+  marked?: Readonly<{ values: ReadonlySet<string>; label: string }>;
 }>) {
   const t = useT();
   const { account } = fields;
@@ -316,7 +327,15 @@ export function ComposeHead({
           filing field, so it is told what the conversation inherits. */}
       {dial.isChannelReply && <ChannelReplyFiling activityId={activityId} />}
       {!dial.isChannelReply && (
+        <FromMailboxRow
+          value={fields.from.connectionId}
+          onChange={fields.from.setConnectionId}
+        />
+      )}
+      {!dial.isChannelReply && (
         <MailOnlyFields
+          marked={marked}
+          countries={fields.countries}
           flagged={flagged}
           to={fields.to}
           onToChange={fields.setTo}

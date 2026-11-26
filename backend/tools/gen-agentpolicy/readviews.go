@@ -21,12 +21,22 @@ type queryParameter struct {
 	Name     string `yaml:"name"`
 	In       string `yaml:"in"`
 	Required bool   `yaml:"required"`
+	Style    string `yaml:"style"`
+	Explode  *bool  `yaml:"explode"`
 	Schema   struct {
-		Ref    string   `yaml:"$ref"`
-		Type   any      `yaml:"type"`
-		Enum   []string `yaml:"enum"`
-		Format string   `yaml:"format"`
+		Ref    string        `yaml:"$ref"`
+		Type   any           `yaml:"type"`
+		Enum   []string      `yaml:"enum"`
+		Format string        `yaml:"format"`
+		Items  *parameterSet `yaml:"items"`
 	} `yaml:"schema"`
+}
+
+// parameterSet is the schema of one member of an array parameter.
+type parameterSet struct {
+	Ref    string   `yaml:"$ref"`
+	Enum   []string `yaml:"enum"`
+	Format string   `yaml:"format"`
 }
 
 // viewQuery is one query parameter of a view's route: its JSON type, whether
@@ -53,6 +63,10 @@ type routeShape struct {
 	// answerSchema is its first 2xx answer's.
 	bodySchema   string
 	answerSchema string
+	// humanOnly names the body members only a human sets; agentValues the values
+	// an agent may send in a member.
+	humanOnly   []string
+	agentValues map[string][]string
 }
 
 // readViewQueries names the query parameters of each route read_view serves,
@@ -68,6 +82,9 @@ func readViewQueries(paths map[string]map[string]yaml.Node, shared map[string]qu
 	return out, err
 }
 
+// deprecatedSummaryPrefix opens the summary of a route-backed verb whose operation is deprecated.
+const deprecatedSummaryPrefix = "Deprecated: "
+
 // routeShapes reads the shape of every route a selected policy names.
 func routeShapes(paths map[string]map[string]yaml.Node, shared map[string]queryParameter,
 	schemas map[string]schemaNode, rawSchemas map[string]any, policies []policy, selected func(policy) bool,
@@ -81,6 +98,7 @@ func routeShapes(paths map[string]map[string]yaml.Node, shared map[string]queryP
 		path := strings.TrimPrefix(route, "/v1")
 		var op struct {
 			Summary     string           `yaml:"summary"`
+			Deprecated  bool             `yaml:"deprecated"`
 			Parameters  []queryParameter `yaml:"parameters"`
 			RequestBody yaml.Node        `yaml:"requestBody"`
 			Responses   yaml.Node        `yaml:"responses"`
@@ -98,12 +116,16 @@ func routeShapes(paths map[string]map[string]yaml.Node, shared map[string]queryP
 		}
 		op.Parameters = append(onPath, op.Parameters...)
 		shape := routeShape{queries: []viewQuery{}, body: op.RequestBody.Kind != 0, summary: strings.TrimSpace(op.Summary)}
+		// An in-process tool call never sees the route's deprecation header, so the summary carries it.
+		if op.Deprecated {
+			shape.summary = deprecatedSummaryPrefix + shape.summary
+		}
 		if rawSchemas != nil {
-			body, err := bodySchema(&op.RequestBody, rawSchemas)
+			body, marks, err := bodySchema(&op.RequestBody, rawSchemas)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", p.Route, err)
 			}
-			shape.bodySchema = body
+			shape.bodySchema, shape.humanOnly, shape.agentValues = body, marks.HumanOnly, marks.AgentValues
 			answer, err := answerSchema(op.Responses, rawSchemas)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", p.Route, err)
@@ -157,6 +179,27 @@ func queryOf(param queryParameter, schemas map[string]schemaNode) (viewQuery, er
 	query := viewQuery{name: param.Name, jsonType: jsonType, required: param.Required, enum: param.Schema.Enum, format: param.Schema.Format}
 	if component, ok := schemas[strings.TrimPrefix(param.Schema.Ref, "#/components/schemas/")]; ok && param.Schema.Ref != "" {
 		query.enum, query.format = component.Enum, component.Format
+	}
+	if jsonType != "array" {
+		return query, nil
+	}
+	// The door sends a list as one key per member: OpenAPI's form with explode,
+	// the default for a query parameter.
+	explode := param.Explode == nil || *param.Explode
+	if (param.Style != "" && param.Style != "form") || !explode {
+		return viewQuery{}, fmt.Errorf("parameter %s is a list the route reads as style %q explode %t, "+
+			"and the door sends a list only as one key per member (style form, explode true)",
+			param.Name, param.Style, explode)
+	}
+	if items := param.Schema.Items; items != nil {
+		query.enum, query.format = items.Enum, items.Format
+		if items.Ref != "" {
+			component, ok := schemas[strings.TrimPrefix(items.Ref, "#/components/schemas/")]
+			if !ok {
+				return viewQuery{}, fmt.Errorf("parameter %s names item schema %s, which components.schemas does not declare", param.Name, items.Ref)
+			}
+			query.enum, query.format = component.Enum, component.Format
+		}
 	}
 	return query, nil
 }
@@ -251,7 +294,14 @@ var routeVerbShapes = map[string]routeVerbShape{
 			}
 			b.WriteString(q.literal())
 		}
-		b.WriteString("}},\n")
+		b.WriteString("}")
+		if len(shape.humanOnly) > 0 {
+			fmt.Fprintf(&b, ", HumanOnly: %#v", shape.humanOnly)
+		}
+		if len(shape.agentValues) > 0 {
+			fmt.Fprintf(&b, ", AgentValues: %#v", shape.agentValues)
+		}
+		b.WriteString("},\n")
 	}
 	b.WriteString("}\n")
 	return b.String()

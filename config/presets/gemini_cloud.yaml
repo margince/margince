@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=../margince.schema.json
+# Model setup: Google Gemini
 # config/presets/gemini_cloud.yaml — every lane on Gemini, one credential.
 #
 # WHAT THIS PRESET IS NOT CERTIFIED FOR: it binds a model to every task, and the
@@ -32,11 +33,25 @@ seeds:
     tiers:
       local_small: { provider: gemini, model: gemini-3.1-flash-lite }
       cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
-      # thinking_level low: a prose site sends no schema, so without it
-      # gemini-3.6-flash thinks at its own default — measured at 4–8k reasoning
-      # tokens against the ~8k output cap, which cut one call in eight short.
-      premium:     { provider: gemini, model: gemini-3.6-flash, thinking_level: low }
-      frontier:    { provider: gemini, model: gemini-3.6-flash, thinking_level: low }
+      # thinking_level low: a prose site sends no schema, so without it a Flash
+      # model thinks at its own default — measured on gemini-3.6-flash at 4–8k
+      # reasoning tokens against the ~8k output cap, which cut one call in eight short.
+      premium:     { provider: gemini, model: gemini-3.8-flash, thinking_level: low }
+      frontier:    { provider: gemini, model: gemini-3.8-flash, thinking_level: low }
+    # Five tasks answer on premium first, where Flash certifies and
+    # Flash-Lite does not: the scheduled agents (on Flash-Lite a line planted
+    # in a CRM record reached their findings), search planning, the voice
+    # profile, rewrites (Flash-Lite turns a wish into a request and moves a
+    # deadline) and the growth fit (Flash-Lite reads a software vendor as an
+    # end user). Each pays premium tokens. Reply drafts stay on Flash-Lite
+    # first: there it is usable with care, and on Flash its account drafts
+    # fail two privacy cases.
+    task_ladders:
+      agent_loop: [premium, cheap_cloud]
+      nl_search: [premium, cheap_cloud]
+      voice_build: [premium, cheap_cloud]
+      rewrite: [premium, cheap_cloud]
+      growth_fit: [premium, cheap_cloud]
     # The embed lane rides the SAME provider as the tiers above, so this preset
     # needs one credential rather than two.
     #
@@ -58,3 +73,9 @@ seeds:
     # decisions:
     #   provider: jev
     #   model: jev-1.13.0
+    # Or Google's Decisions API, on the GEMINI_API_KEY this preset already
+    # needs, certified for all three decision sites (Developer API only, no
+    # EU hosting):
+    # decisions:
+    #   provider: gemini_decision
+    #   model: gemini-decision-1

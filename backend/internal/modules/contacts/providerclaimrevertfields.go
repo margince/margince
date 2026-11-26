@@ -98,12 +98,11 @@ func revertColumn(ctx context.Context, tx pgx.Tx, f appliedField) (bool, error) 
 // revertSocialHandle removes the profile link while it is still the row this
 // installation's purchase wrote.
 //
-// By ROW ID, not by value. contact_social carries no source column, and the
-// ordinary save path replaces every one of a contact's social rows — so a rep
-// who opened the record and pressed save owns a NEW row carrying the same
-// handle string. A value test cannot tell that row from ours and would delete
-// somebody's own work on the next "delete bought data". An id survives only
-// while nobody has saved.
+// By ROW ID, not by value. contact_social carries no source column. A save
+// replaces each social row it names. So a rep who saved the LinkedIn field
+// owns a new row carrying the same handle string. A value test
+// cannot tell that row from ours and would delete somebody's own work on the
+// next "delete bought data". An id survives only while nobody has saved.
 func revertSocialHandle(ctx context.Context, tx pgx.Tx, f appliedField) (bool, error) {
 	if err := auth.EnsureWritable(ctx, tx, entityContact, f.subject); err != nil {
 		return false, err
@@ -188,9 +187,5 @@ func archiveEmploymentEdge(ctx context.Context, tx pgx.Tx, f appliedField) (bool
 //
 // The caller already holds this row FOR UPDATE, so no second lock is taken.
 func touchRevertedContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID) error {
-	if _, err := tx.Exec(ctx,
-		`UPDATE contact SET updated_at = now() WHERE id = $1`, contactID); err != nil {
-		return fmt.Errorf("contacts: bumping the contact a revert changed: %w", err)
-	}
-	return nil
+	return touchChildSetParent(ctx, tx, contactEntity, contactID)
 }

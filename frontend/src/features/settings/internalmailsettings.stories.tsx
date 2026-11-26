@@ -20,6 +20,14 @@ const source: components["schemas"]["InternalMailSourceOption"] = {
   account_label: "operations@demo.test",
   owner_name: "Ana Fischer",
 };
+const shared: components["schemas"]["InternalMailSourceOption"] = {
+  connection_id: "33333333-3333-4333-8333-333333333333",
+  owner_user_id: null,
+  provider: "gmail",
+  generation: 1,
+  account_label: "desk@demo.test",
+  owner_name: "",
+};
 const enrolled = {
   ...source,
   containers: ["graph:AbCd"],
@@ -78,6 +86,20 @@ export const AccountChanged: Story = {
     enabled: true,
     sources: [enrolled],
     available_sources: [{ ...source, generation: 4 }],
+  }),
+};
+export const SharedMailboxSource: Story = {
+  render: story({
+    enabled: true,
+    sources: [
+      {
+        ...shared,
+        containers: [],
+        enrolled_at: "2026-01-01T00:00:00Z",
+        enrolled_by: "human:admin",
+      },
+    ],
+    available_sources: [source, shared],
   }),
 };
 export const NonAdministrator: Story = { render: story() };

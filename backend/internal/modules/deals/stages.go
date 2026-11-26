@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -29,7 +30,11 @@ import (
 // runes are dropped before the name is judged, so "\u200bAlpha" cannot sit beside
 // "Alpha" and read as a free name.
 func cleanLadderName(field, raw string) (string, error) {
-	return httperr.RequireNonBlank(field, values.WithoutZeroWidth(raw))
+	name, err := httperr.RequireNonBlank(field, values.WithoutZeroWidth(raw))
+	if err != nil {
+		return "", err
+	}
+	return name, httperr.RequireWithin(field, name, values.TextLabelCharacters)
 }
 
 type UpdatePipelineInput struct {
@@ -101,8 +106,8 @@ func writePipelineUpdate(ctx context.Context, tx pgx.Tx, lock storekit.RowLock,
 		}
 	}
 	if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
-		if storekit.IsUniqueViolation(err) {
-			return apperrors.ErrConflict
+		if refused := pipelineUniqueRefusal(err); refused != nil {
+			return refused
 		}
 		return fmt.Errorf("update pipeline: %w", err)
 	}
@@ -124,6 +129,8 @@ type CreateStageInput struct {
 	Position       int
 	Semantic       string
 	WinProbability *int
+	// NameTranslations is the name in further UI languages, nil for none.
+	NameTranslations map[string]string
 }
 
 func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontracts.Stage, error) {
@@ -147,39 +154,36 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 		return crmcontracts.Stage{}, err
 	}
 	in.Name = name
+	translations, err := labeltranslation.Normalize(stageNameTranslationsField, in.NameTranslations)
+	if err != nil {
+		return crmcontracts.Stage{}, err
+	}
 	probability := stageProbability(in.Semantic, in.WinProbability)
 	var out crmcontracts.Stage
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := holdLadderForAgent(ctx, tx, in.PipelineID); err != nil {
-			return err
-		}
 		// The pipeline row before the insert, as every ladder write takes it: a
 		// reorder holding it would otherwise wait on this insert's position
 		// while this insert waited on the pipeline.
 		if err := lockLadder(ctx, tx, in.PipelineID); err != nil {
 			return err
 		}
-		if err := refuseAgentOnTrustedLadder(ctx, tx, in.PipelineID); err != nil {
-			return err
-		}
 		var stageID ids.StageID
 		err := tx.QueryRow(ctx, `
-			INSERT INTO stage (pipeline_id, name, position, semantic, win_probability)
-			VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO stage (pipeline_id, name, position, semantic, win_probability, name_translations)
+			VALUES ($1, $2, $3, $4, $5, $6)
 			RETURNING id`,
-			in.PipelineID, in.Name, in.Position, in.Semantic, probability).Scan(&stageID)
+			in.PipelineID, in.Name, in.Position, in.Semantic, probability, translations).Scan(&stageID)
 		if err != nil {
-			if storekit.IsUniqueViolation(err) {
-				return stagePositionTaken(in.Position)
+			if refused := stageUniqueRefusal(err, &in.Name, &in.Position); refused != nil {
+				return refused
 			}
 			return fmt.Errorf("insert stage: %w", err)
 		}
 		if err := markLadderChanged(ctx, tx, in.PipelineID); err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, "create", "stage", stageID.UUID, nil, map[string]any{
-			"pipeline_id": in.PipelineID, "name": in.Name, stageSemanticField: in.Semantic,
-		})
+		auditID, err := storekit.Audit(ctx, tx, "create", "stage", stageID.UUID, nil,
+			stageCreateImage(in.PipelineID, in.Name, in.Semantic, translations))
 		if err != nil {
 			return fmt.Errorf("audit stage create: %w", err)
 		}
@@ -197,6 +201,15 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 		return nil
 	})
 	return out, err
+}
+
+// stageCreateImage is the audit image of a stage's creation, shared by every
+// writer that inserts a stage.
+func stageCreateImage(pipelineID ids.PipelineID, name, semantic string, translations map[string]string) map[string]any {
+	return map[string]any{
+		"pipeline_id": pipelineID, stageNameField: name, stageSemanticField: semantic,
+		stageNameTranslationsField: translations,
+	}
 }
 
 // stageCreatedPayload builds the stage.created wire payload from
@@ -246,12 +259,21 @@ func (s *Store) ListStages(ctx context.Context, pipelineID *ids.PipelineID, arch
 	return out, err
 }
 
+// stageNameTranslationsField is the column and the request field the
+// translated stage names travel in.
+const stageNameTranslationsField = "name_translations"
+
+// stageNameField is the key a stage's name travels under in an audit image.
+const stageNameField = "name"
+
 type UpdateStageInput struct {
-	Name           *string
-	Position       *int
-	Semantic       *string
-	WinProbability *int
-	IfVersion      *int64
+	// NameTranslations replaces the stored map when set.
+	NameTranslations map[string]string
+	Name             *string
+	Position         *int
+	Semantic         *string
+	WinProbability   *int
+	IfVersion        *int64
 }
 
 func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageInput) (crmcontracts.Stage, error) {
@@ -270,11 +292,15 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 		}
 		in.Name = &name
 	}
+	if in.NameTranslations != nil {
+		translations, err := labeltranslation.Normalize(stageNameTranslationsField, in.NameTranslations)
+		if err != nil {
+			return crmcontracts.Stage{}, err
+		}
+		in.NameTranslations = translations
+	}
 	var out crmcontracts.Stage
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := holdStagesLadderForAgent(ctx, tx, id); err != nil {
-			return err
-		}
 		// The pipeline row first, then the stage's own: a reorder and a
 		// removal both reshape this list, and taking the same row first
 		// on both paths is what keeps them queueing rather than
@@ -298,6 +324,9 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 		if err := refuseAgentSemanticChange(ctx, current.semantic, in.Semantic); err != nil {
 			return err
 		}
+		if err := refuseLastClosingStageRetype(ctx, tx, id, pipelineID, current.semantic, in.Semantic); err != nil {
+			return err
+		}
 		if err := refuseTerminalWithCriteria(ctx, tx, id, current.semantic, in.Semantic); err != nil {
 			return err
 		}
@@ -308,9 +337,6 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 			return err
 		}
 		if in.Position != nil && *in.Position != current.position {
-			if err := refuseAgentOnTrustedLadder(ctx, tx, pipelineID); err != nil {
-				return err
-			}
 			if err := refuseMovingAGatedLadder(ctx, tx, pipelineID); err != nil {
 				return err
 			}
@@ -341,11 +367,8 @@ func writeStageUpdate(ctx context.Context, tx pgx.Tx, lock storekit.RowLock,
 	id ids.StageID, pipelineID ids.PipelineID, patch *storekit.Patch, in UpdateStageInput,
 ) (ids.UUID, error) {
 	if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
-		if storekit.IsUniqueViolation(err) && in.Position != nil {
-			return ids.UUID{}, stagePositionTaken(*in.Position)
-		}
-		if storekit.IsUniqueViolation(err) {
-			return ids.UUID{}, apperrors.ErrConflict
+		if refused := stageUniqueRefusal(err, in.Name, in.Position); refused != nil {
+			return ids.UUID{}, refused
 		}
 		return ids.UUID{}, fmt.Errorf("update stage: %w", err)
 	}
@@ -368,7 +391,7 @@ func writeStageUpdate(ctx context.Context, tx pgx.Tx, lock storekit.RowLock,
 			return ids.UUID{}, fmt.Errorf("emit pipeline reorder: %w", err)
 		}
 	}
-	if in.Name != nil || in.Semantic != nil || in.WinProbability != nil {
+	if in.Name != nil || in.Semantic != nil || in.WinProbability != nil || in.NameTranslations != nil {
 		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, stageUpdatedPayload(pipelineID, in)); err != nil {
 			return ids.UUID{}, fmt.Errorf("emit stage update: %w", err)
 		}

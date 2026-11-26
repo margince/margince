@@ -1,0 +1,15 @@
+{
+  "tool": "change_compliance",
+  "action": "record_communication_context",
+  "verb": "record_communication_context",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

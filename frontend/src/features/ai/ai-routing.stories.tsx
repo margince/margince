@@ -251,6 +251,15 @@ export const SovereignProfile: Story = {
   }),
 };
 
+export const CloudProfile: Story = {
+  render: story({ ...BOUND, profile: "cloud_frontier" }),
+};
+
+// A profile the server admits and this bundle has no name for yet.
+export const UnnamedProfile: Story = {
+  render: story({ ...BOUND, profile: "regional_partner" }),
+};
+
 // Read but not change. The binding stays fully legible — an operator who must
 // ask somebody else to re-point a lane still needs to see where it points.
 export const ReadOnlySeat: Story = { render: story(BOUND, READER) };

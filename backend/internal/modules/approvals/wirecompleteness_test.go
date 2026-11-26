@@ -21,6 +21,7 @@ package approvals
 // generator runs.
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 	"testing"
@@ -40,12 +41,12 @@ const requiredApprovalFieldFloor = 5
 func TestApprovalCarriesTheStagedTargetVersion(t *testing.T) {
 	now := time.Date(2026, time.January, 2, 12, 0, 0, 0, time.UTC)
 	source := fullyPopulatedRow(t, now)
-	got := wire(source, now)
+	got := wire(context.Background(), source, now)
 	if got.TargetVersion == nil || int64(*got.TargetVersion) != *source.TargetVersion {
 		t.Fatalf("target version = %v, want %d", got.TargetVersion, *source.TargetVersion)
 	}
 	source.TargetVersion = nil
-	if got := wire(source, now); got.TargetVersion != nil {
+	if got := wire(context.Background(), source, now); got.TargetVersion != nil {
 		t.Fatalf("unpinned approval has target version %d", *got.TargetVersion)
 	}
 }
@@ -56,7 +57,7 @@ func TestEveryRequiredApprovalFieldIsAnswered(t *testing.T) {
 	// answer differently on a slow machine.
 	now := time.Date(2026, time.January, 2, 12, 0, 0, 0, time.UTC)
 	source := fullyPopulatedRow(t, now)
-	wired := reflect.ValueOf(wire(source, now))
+	wired := reflect.ValueOf(wire(context.Background(), source, now))
 
 	// Non-zero is not enough for the uuid-valued required field: an id taken
 	// from a neighbouring column would satisfy every zero-check here and name

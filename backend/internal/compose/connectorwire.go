@@ -28,6 +28,7 @@ func toContractConnection(v capture.ConnectionView) crmcontracts.CaptureConnecti
 		Scopes:         v.ProviderScopes,
 		WatchExpiresAt: v.WatchExpiresAt,
 		AccountLabel:   v.AccountLabel,
+		DefaultSender:  &v.DefaultSender,
 		// Carried as the pointer it is: null on the wire is this mailbox
 		// following the tenant default, not a field the read forgot.
 		SignatureEnrichEnabled: v.SignatureEnrichEnabled,

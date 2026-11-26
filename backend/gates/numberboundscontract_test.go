@@ -37,6 +37,8 @@ var untaggableBounds = gatekit.Waive(map[string]string{
 	"components.schemas.AiOpenRouterProvider.properties.preferred_max_latency.oneOf.0":                       "ai.nonNegative refuses a negative one when routing is saved",
 	"components.parameters.VoiceProfileVersionNumber.schema":                                                 "a path parameter; a number below 1 names no version and answers 404",
 	"paths./analytics/reports/{id}/revisions/{revision}/restore.parameters.1.schema":                         "a path parameter; a number below 1 names no revision and answers 404",
+	"components.schemas.SalesGoalMonths.items":                                                               "reporting.monthTotal refuses a month below zero before a draft is saved",
+	"paths./analytics/sales-goals/{owner_id}/{year}.parameters.1.schema":                                     "a path parameter; reporting.planForWrite refuses a year outside the range, and a read of one finds no plan",
 	"paths./contacts/{id}/research/save.post.responses.200.content.application/json.schema.properties.saved": "an inline response; no request decodes it",
 	// A property typed through a one-branch allOf keeps none of the referenced
 	// schema's tags, so these fields are named rather than declarations.

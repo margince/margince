@@ -47,10 +47,13 @@ describe("Avatar", () => {
       <Avatar name="Lena Hoffmann" identity="seat-1" photo={LOGO} />,
     );
     expect(meshOf(container)).toContain("--avatar-hue-a");
+    expect(container.textContent).toBe("LH");
     const img = document.querySelector("img");
     if (img) fireEvent.load(img);
     expect(meshOf(container)).toBeUndefined();
     expect(chipOf(container)).toContain("avatar-photo");
+    // A painted picture prints no initials.
+    expect(container.textContent).toBe("");
   });
 
   it("falls back to the monogram when the logo fails to load", () => {

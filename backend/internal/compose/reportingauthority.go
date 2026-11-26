@@ -12,6 +12,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -19,16 +20,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 type reportingAuthority struct{ users *identity.Service }
 
 func accountableHuman(ctx context.Context, users *identity.Service, workspace, user ids.UUID) (context.Context, error) {
-	rbac, seat, err := users.EffectiveAuthority(ctx, workspace, user)
+	member, err := authz.MemberPrincipal(ctx, users, workspace, user)
 	if err != nil {
 		return nil, err
 	}
-	human := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: seat, TeamIDs: rbac.TeamIDs, Permissions: rbac.Permissions})
+	human := principal.WithActor(ctx, member)
 	return principal.WithCorrelationID(human, ids.NewV7()), nil
 }
 
@@ -90,7 +92,8 @@ func readerMeasurableOwners(ctx context.Context, tx pgx.Tx) (reporting.Measurabl
 		return reporting.MeasurableOwners{}, err
 	}
 	if !allowed {
-		return reporting.MeasurableOwners{Members: []ids.UUID{actor.UserID}, IndividualOff: true}, nil
+		own, err := auth.OwnSeat(ctx)
+		return reporting.MeasurableOwners{Members: []ids.UUID{own}, IndividualOff: true}, err
 	}
 	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
 		return reporting.MeasurableOwners{Every: true}, nil
@@ -108,10 +111,11 @@ func (a reportingAuthority) MeasurableOwners(ctx context.Context, tx pgx.Tx, can
 		return nil, err
 	}
 	if !allowed {
-		candidates = slices.DeleteFunc(slices.Clone(candidates), func(id ids.UUID) bool { return !auth.MayMeasureSeat(ctx, false, id) })
-		if len(candidates) == 0 {
-			return nil, nil
+		own, err := auth.OwnSeat(ctx)
+		if err != nil || !slices.Contains(candidates, own) {
+			return nil, err
 		}
+		candidates = []ids.UUID{own}
 	}
 	return reportingMembersAmong(ctx, tx, crmcontracts.ReportingScope{}, candidates)
 }
@@ -179,7 +183,7 @@ func (a reportingAuthority) ValidateFramework(ctx context.Context, tx pgx.Tx, in
 		if err := reportingPipeline(ctx, tx, capture.PipelineId); err != nil {
 			return err
 		}
-		key := reportingCaptureKey(capture)
+		key := forecasting.CaptureContextKey(capture)
 		if contexts[key] {
 			return httperr.Validation("capture_contexts", "duplicate", "choose each capture context once")
 		}
@@ -213,7 +217,7 @@ func (a reportingAuthority) PublicationHuman(ctx context.Context, tx pgx.Tx, use
 	if err != nil {
 		return nil, err
 	}
-	human := principal.WithActor(auth.WithIndividualPerformance(ctx, allowed), principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: seat, TeamIDs: rbac.TeamIDs, Permissions: rbac.Permissions})
+	human := principal.WithActor(auth.WithIndividualPerformance(ctx, allowed), authz.HumanPrincipal(user, rbac, seat))
 	return principal.WithCorrelationID(human, ids.NewV7()), nil
 }
 

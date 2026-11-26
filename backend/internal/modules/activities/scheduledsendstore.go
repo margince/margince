@@ -11,8 +11,10 @@ package activities
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -49,7 +51,7 @@ const scheduledSendColumns = `
 	-- would be a second place for the two to disagree about one message. Reading
 	-- the delivery's own status cannot drift from it.
 	` + scheduledSendStatusExpr + ` AS status,
-	scheduled_at, scheduled_tz, origin_kind,
+	` + scheduleInstantSQL + ` AS scheduled_at, scheduled_tz, scheduled_wall, origin_kind,
 	anchor_activity_id, payload, scheduled_by, activity_id,
 	held_reason, version, created_at, updated_at, origin_links, also_links, payload_version, principal_kind`
 
@@ -58,23 +60,23 @@ func (s *Store) ListScheduledSends(ctx context.Context, status string) ([]Schedu
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	actor, err := storekit.Actor(ctx)
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	// The surrounding transaction only requires a workspace; this predicate is
+	// what narrows the read to the author.
+	own, err := ScheduledSendReadableSQL(ctx, "scheduled_send", arg)
 	if err != nil {
 		return nil, err
 	}
+	statusAt := arg(status)
 	var out []ScheduledSend
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// Scheduled mail is the SENDER's own: an unsent message's body and its
-		// blind-copy list are not workspace-readable the way a sent activity
-		// is. The scheduled_by predicate below is what narrows the read to the
-		// actor; the surrounding transaction only requires a workspace on the
-		// context, it does not filter rows on its own.
-		rows, err := tx.Query(ctx, `
+		rows, err := tx.Query(ctx, fmt.Sprintf(`
 			SELECT`+scheduledSendColumns+`
 			  FROM scheduled_send
-			 WHERE scheduled_by = $1 AND ($2 = '' OR `+scheduledSendStatusExpr+` = $2)
-			 ORDER BY scheduled_at ASC`,
-			actor.UserID, status)
+			 WHERE %s AND ($%[2]d = '' OR `+scheduledSendStatusExpr+` = $%[2]d)
+			 ORDER BY scheduled_at ASC`, own, statusAt),
+			args...)
 		if err != nil {
 			return fmt.Errorf("scheduled send: listing: %w", err)
 		}
@@ -151,8 +153,8 @@ func (s *Store) stampReviews(ctx context.Context, rows []ScheduledSend) {
 		return
 	}
 	for i := range rows {
-		if id, ok := reviews[rows[i].ID]; ok {
-			rows[i].ReviewID = id
+		if review, ok := reviews[rows[i].ID]; ok {
+			rows[i].ReviewID, rows[i].ReviewActions = review.ID, review.Actions
 		}
 	}
 }
@@ -175,20 +177,20 @@ func (s *Store) GetScheduledSend(ctx context.Context, id ids.UUID) (ScheduledSen
 	return one[0], nil
 }
 
-// readScheduledSendTx is the detail read inside a caller's transaction.
+// readScheduledSendTx is the detail read inside a caller's transaction, under
+// the list's own read rule.
 func readScheduledSendTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (ScheduledSend, error) {
-	actor, err := storekit.Actor(ctx)
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	own, err := ScheduledSendReadableSQL(ctx, "scheduled_send", arg)
 	if err != nil {
 		return ScheduledSend{}, err
 	}
-	return readScheduledSendForSeatTx(ctx, tx, id, actor.UserID)
-}
-
-func readScheduledSendForSeatTx(ctx context.Context, tx pgx.Tx, id, seat ids.UUID) (ScheduledSend, error) {
-	rows, err := tx.Query(ctx, `
+	query := fmt.Sprintf(`
 		SELECT`+scheduledSendColumns+`
 		  FROM scheduled_send
-		 WHERE id = @id AND scheduled_by = @seat`, pgx.NamedArgs{"id": id, "seat": seat})
+		 WHERE id = $%d AND %s`, arg(id), own)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return ScheduledSend{}, fmt.Errorf("scheduled send: reading: %w", err)
 	}
@@ -224,15 +226,19 @@ func (s *Store) RescheduleScheduledSend(ctx context.Context, id ids.UUID, sched 
 	if timer == nil {
 		return ScheduledSend{}, errNoScheduleTimer
 	}
-	if err := validateSchedule(sched, s.now()); err != nil {
+	sched, err := s.CheckLater(sched)
+	if err != nil {
 		return ScheduledSend{}, err
-	}
-	if !sched.At.After(s.now()) {
-		return ScheduledSend{}, &InvalidScheduleError{Field: FieldScheduledAt, Reason: "is in the past"}
 	}
 	current, err := s.GetScheduledSend(ctx, id)
 	if err != nil {
 		return ScheduledSend{}, err
+	}
+	// The version check below refuses a row that was held after this read.
+	if current.Status == ScheduledStatusHeld {
+		if err := mayReleaseHeld(ctx); err != nil {
+			return ScheduledSend{}, err
+		}
 	}
 
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
@@ -251,59 +257,57 @@ func (s *Store) RescheduleScheduledSend(ctx context.Context, id ids.UUID, sched 
 // decision and losing the work — which is the exact failure a held-message card
 // exists to prevent.
 func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sched SendSchedule, expectedVersion int64, current ScheduledSend, timer ScheduleTimer) error {
+	normalized, err := normalizeSchedule(sched)
+	if err != nil {
+		return err
+	}
+	sched = normalized
+	var keptWall *time.Time
+	var keptAt time.Time
 	{
 		// held_reason is cleared with the move: the row is pending again, and a
 		// stale reason would have the surface explain a hold that is over. The
 		// state-shape CHECK enforces the pairing, so this is not optional.
-		tag, err := tx.Exec(ctx, `
-			UPDATE scheduled_send
-			   SET scheduled_at = @at, scheduled_tz = @zone,
+		err := tx.QueryRow(ctx, `
+ UPDATE scheduled_send
+ SET (scheduled_wall,scheduled_tz,scheduled_at)=(
+  SELECT planned.wall_time,COALESCE(planned.timezone,@zone),planned.instant
+  FROM public.update_intent_time(scheduled_wall,scheduled_tz,scheduled_at,@wall::text::timestamp,@zone,@at) AS planned),
 			       payload = CASE WHEN held_reason = @replied
 			         THEN jsonb_set(payload, '{replies_reviewed_at}', to_jsonb(@reviewed::timestamptz))
 			         ELSE payload END,
 			       status = 'scheduled', held_reason = NULL,
 			       version = version + 1, updated_at = now()
-			 WHERE id = @id AND status IN ('scheduled','held') AND version = @version`, pgx.NamedArgs{
-			"at": sched.At.UTC(), "zone": sched.TZ, "id": id, "version": expectedVersion,
+			 WHERE id = @id AND status IN ('scheduled','held') AND version = @version
+ RETURNING scheduled_wall,scheduled_at`, pgx.NamedArgs{
+			"at": sched.At.UTC(), argZone: sched.TZ, argWall: sched.wallClock(), "id": id, fieldVersion: expectedVersion,
 			"replied": HeldRecipientReplied, "reviewed": s.now(),
-		})
+		}).Scan(&keptWall, &keptAt)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrVersionSkew
+		}
 		if err != nil {
 			return fmt.Errorf("scheduled send: moving the due moment: %w", err)
 		}
-		if tag.RowsAffected() == 0 {
-			// Either it fired, was cancelled, or somebody moved it first. All
-			// three are the same answer to this caller: the row you saw is not
-			// the row that is there.
-			return apperrors.ErrVersionSkew
-		}
 		if _, err := storekit.Audit(ctx, tx, "reschedule", "scheduled_send", id,
-			map[string]any{FieldScheduledAt: current.ScheduledAt, FieldScheduledTZ: current.ScheduledTZ},
-			map[string]any{FieldScheduledAt: sched.At.UTC(), FieldScheduledTZ: sched.TZ}); err != nil {
+			map[string]any{FieldScheduledAt: current.ScheduledAt, FieldScheduledTZ: current.ScheduledTZ, fieldScheduledIntent: current.IntentWire()},
+			map[string]any{FieldScheduledAt: keptAt, FieldScheduledTZ: sched.TZ, fieldScheduledIntent: (ScheduledSend{ScheduledWall: keptWall, ScheduledTZ: sched.TZ}).IntentWire()}); err != nil {
 			return err
 		}
 		// A FRESH timer for the new moment. The old one still wakes at the old
 		// time and finds a row whose due moment has moved, which it re-snoozes
 		// or ignores — the row is the schedule, the job is only an alarm.
 		// The rep answered the hold, so its card goes with it.
-		if err := s.resolveHeld(ctx, tx, id); err != nil {
+		if err := s.resolveHeld(ctx, tx, id, HeldResolvedByRep); err != nil {
 			return err
 		}
-		// THE REVIEW STAYS LIVE, and that is a decision this slice reversed
-		// after tracing where a rescheduled message actually goes.
-		//
-		// Closing it here reads right — nothing is sent now, and the row is
-		// 'scheduled' again — and it loses the refusal. The fire path holds a
-		// refused message (scheduledsendfire.go, holdInTx) and opens NO review:
-		// only the staging path does that, through RecordPendingReview, and a
-		// timer-driven refire never reaches it. So a message closed here and
-		// refused again at its new moment would sit held with nothing routable
-		// in front of anybody — the exact silence the review exists to end.
-		//
-		// Left live it stays honest instead: the decision really is still
-		// outstanding, the message really is still going out, and if it is
-		// refused again OpenReviewTx upserts on the live-intent index and
-		// refreshes this row's refusals rather than opening a rival.
-		return timer.ScheduleTx(ctx, tx, id, sched.At.UTC())
+		// A review whose decision is already recorded stays, and the fire at
+		// the new moment spends it. One nobody decided closes with the card;
+		// a refusal at the new moment opens a fresh one.
+		if err := s.closeReview(ctx, tx, id, ReviewOutcomeMoved); err != nil {
+			return err
+		}
+		return timer.ScheduleTx(ctx, tx, id, keptAt)
 	}
 }
 
@@ -346,7 +350,7 @@ func (s *Store) CancelInTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		}
 		// Answered, like the reschedule above: a cancelled message needs no
 		// decision, so its card must not outlive it.
-		if err := s.resolveHeld(ctx, tx, id); err != nil {
+		if err := s.resolveHeld(ctx, tx, id, HeldResolvedByRep); err != nil {
 			return err
 		}
 		// AND THE REVIEW, if this message was one a refusal froze. Cancelling
@@ -387,11 +391,11 @@ func (s *Store) closeReview(
 
 // resolveHeld clears the inbox card a hold raised, once the rep has acted on
 // the message. A surface with no notifier wired has nothing to clear.
-func (s *Store) resolveHeld(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+func (s *Store) resolveHeld(ctx context.Context, tx pgx.Tx, id ids.UUID, how HeldResolution) error {
 	if s.heldNotifier == nil {
 		return nil
 	}
-	return s.heldNotifier.ResolveHeldInTx(ctx, tx, id)
+	return s.heldNotifier.ResolveHeldInTx(ctx, tx, id, how)
 }
 
 // scanScheduledSend reads one row, thawing the payload for the fields the
@@ -410,7 +414,7 @@ func scanScheduledSend(rows pgx.Rows) (ScheduledSend, error) {
 		additionalLinks []byte
 	)
 	if err := rows.Scan(
-		&row.ID, &row.Status, &row.ScheduledAt, &row.ScheduledTZ, &row.OriginKind,
+		&row.ID, &row.Status, &row.ScheduledAt, &row.ScheduledTZ, &row.ScheduledWall, &row.OriginKind,
 		&anchor, &payloadRaw, &row.ScheduledBy, &activityID,
 		&heldReason, &row.Version, &row.CreatedAt, &row.UpdatedAt, &originLinks, &additionalLinks, &row.PayloadVersion, &row.PrincipalKind,
 	); err != nil {

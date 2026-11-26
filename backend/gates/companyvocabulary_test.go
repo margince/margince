@@ -107,14 +107,18 @@ var exempt = gatekit.Waive(map[string]string{
 	"docs/explanation/plain-words.txt": "the same, for the explanation pages",
 	"docs/reference/plain-words.txt":   "the same, for the reference pages",
 	"sbom-schemas":                     "a vendored SPDX schema, not ours to rename",
+	"MAINTAINERS.md": "github.com/orgs/ is GitHub's own path to the public roadmap project; " +
+		"the README links this page instead of the project, so only here does the path appear",
+	"backend/internal/modules/capture/graphcal/data/README.md": "unicode-org is the GitHub owner of " +
+		"the copied zone files, named in their source links",
+	"backend/internal/platform/cldrzone/data/README.md": "unicode-org is the GitHub owner of " +
+		"the copied zone list, named in its source link",
 	"backend/internal/modules/webforms/fields.go": "the field names website forms send, where organization " +
 		"is a common spelling of the company field the module reads",
 	"frontend/src/features/settings/webformsnippet.ts": "autocomplete=\"organization\" is the HTML autofill " +
 		"token for a company name, spelled as the HTML standard spells it",
 	".github/workflows/cla.yml": "a GitHub organisation — its members are the staff the CLA " +
 		"does not cover, not this record type",
-	".github/workflows/release.yml": "a GitHub organisation — the account a repository belongs " +
-		"to, not this record type",
 	"sonar-project.properties": "`sonar.organization` is the scanner's own mandatory property, " +
 		"naming the SonarCloud organisation this project is filed under. Renaming it does not " +
 		"fail the scan's quality gate — it stops the scan running at all, which is a different " +
@@ -123,14 +127,15 @@ var exempt = gatekit.Waive(map[string]string{
 	// Microsoft's authority alias: `companies` is a literal path segment at
 	// login.microsoftonline.com beside `common` and `consumers`, and renaming
 	// it stops sign-in working.
-	"backend/internal/compose/microsoftsignin.go":           "Microsoft's `companies` authority alias",
-	"backend/internal/compose/microsoftsignin_test.go":      "Microsoft's `companies` authority alias",
-	"backend/internal/compose/capturegraph.go":              "Microsoft's `common` authority, which admits any tenant",
-	"backend/internal/modules/capture/connectorapp.go":      "Microsoft's `companies` authority alias",
-	"backend/internal/modules/capture/connectorapp_test.go": "Microsoft's `companies` authority alias",
-	"backend/internal/modules/capture/graph/client.go":      "Microsoft's `common` authority, which admits any tenant",
-	"backend/cmd/api/config.go":                             "flag help for the Microsoft authority aliases",
-	"docs/reference/connectors-and-sign-in.md":              "the Microsoft authority aliases",
+	"backend/internal/compose/microsoftsignin.go":                  "Microsoft's `companies` authority alias",
+	"backend/internal/compose/microsoftsignin_test.go":             "Microsoft's `companies` authority alias",
+	"backend/internal/compose/capturegraph.go":                     "Microsoft's `common` authority, which admits any tenant",
+	"backend/internal/modules/capture/connectorapp.go":             "Microsoft's `companies` authority alias",
+	"backend/internal/modules/capture/connectorapp_test.go":        "Microsoft's `companies` authority alias",
+	"backend/internal/modules/capture/graph/client.go":             "Microsoft's `common` authority, which admits any tenant",
+	"backend/internal/modules/capture/graph/sharedmailbox_test.go": "Microsoft's multi-tenant authority aliases, which a shared mailbox's tenant must never be",
+	"backend/cmd/api/config.go":                                    "flag help for the Microsoft authority aliases",
+	"docs/reference/connectors-and-sign-in.md":                     "the Microsoft authority aliases",
 
 	"backend/internal/platform/licensecheck/host.go": "the licence payload's `company` key. The Go " +
 		"name is ours; the key belongs to whoever signs the licence, and renaming it would stop " +
@@ -155,9 +160,8 @@ var exempt = gatekit.Waive(map[string]string{
 	"backend/internal/modules/contacts/vcardarms.go":                            "vCard's ORG property (RFC 6350)",
 	"backend/internal/modules/contacts/vcardsourceliveness_integration_test.go": "vCard's ORG property (RFC 6350)",
 	"backend/internal/compose/vcardproposal_integration_test.go":                "vCard's ORG property (RFC 6350)",
-	"extensions/vn/vn.go": "an organisation in the ordinary sense — the party holding data and " +
+	"extensions/apac/README.md": "an organisation in the ordinary sense — the party holding data and " +
 		"the party advertising need not be the same one",
-	"extensions/vn/README.md": "the same sentence as vn.go",
 
 	"e2e/llm/testdata": "recorded model output — what a model actually said on a run, which " +
 		"editing would falsify",

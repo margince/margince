@@ -11,6 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 	"github.com/margince/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 // Pack codes in this file use ISO user-assigned codes (z*) unique per
@@ -163,6 +164,13 @@ func TestRegisterExtensionsRejectsAnInvalidUnitName(t *testing.T) {
 	}
 }
 
+func TestRegisterExtensionsRejectsAPrivacyTableOutsideTheUnitsNamespace(t *testing.T) {
+	err := RegisterExtensions(composableAll([]extension.Extension{{Name: "demo", Version: "0.0.1", Privacy: []privacy.Table{{Name: "ext_other_note"}}}}), nil, nil)
+	if err == nil || !strings.Contains(err.Error(), "ext_other_note") {
+		t.Fatalf("err = %v, want the namespace refusal", err)
+	}
+}
+
 func TestRegisterExtensionsRejectsADuplicateUnit(t *testing.T) {
 	err := RegisterExtensions(composableAll([]extension.Extension{
 		{Name: "twice", Version: "0.0.1"},
@@ -194,6 +202,20 @@ func TestRegisterExtensionsPreflightsDuplicateJurisdictions(t *testing.T) {
 	}
 	if _, ok := jurisdiction.For("zv"); ok {
 		t.Fatal("a duplicate-declared pack landed although the set was rejected")
+	}
+}
+
+func TestRegisterExtensionsRejectsABadNeed(t *testing.T) {
+	good := extension.Need{Capability: extension.CapabilityModels, Reason: "Summarises a thread."}
+	for name, needs := range map[string][]extension.Need{
+		"unknown capability": {{Capability: "vault", Reason: "Reads tokens."}},
+		"empty reason":       {{Capability: extension.CapabilityModels}},
+		"declared twice":     {good, good},
+	} {
+		err := RegisterExtensions(composableAll([]extension.Extension{{Name: "needy", Version: "0.0.1", Needs: needs}}), nil, nil)
+		if err == nil || !strings.Contains(err.Error(), `extension "needy"`) {
+			t.Errorf("%s: err = %v, want the boot to refuse the unit", name, err)
+		}
 	}
 }
 

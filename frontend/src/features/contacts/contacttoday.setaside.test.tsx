@@ -119,7 +119,9 @@ it("sets the moment aside, and the Undo puts it back", async () => {
 
   await screen.findByText(MOMENT.headline);
   await user.click(
-    screen.getByRole("button", { name: en["standing.next.snooze"] }),
+    screen.getByRole("button", {
+      name: en["worklist.disposition.verb.notNow"],
+    }),
   );
 
   await waitFor(() => expect(screen.queryByText(MOMENT.headline)).toBeNull());
@@ -136,4 +138,99 @@ it("sets the moment aside, and the Undo puts it back", async () => {
   const undo = new URL(undoUrls[0] ?? "", "https://margince.test");
   expect(undo.searchParams.get("claim_key")).toBe(MOMENT.claim_key);
   expect(undo.searchParams.get("evidence_fingerprint")).toBe("fp-quiet");
+});
+
+const WAITING: ContactMoment = {
+  ...MOMENT,
+  claim_key: "moment:awaiting_reply",
+  rule: "awaiting_reply",
+  headline: "Waiting for their reply",
+  done: { activity_id: "a-sent" },
+};
+
+function renderPage() {
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <Page />
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+it("marks our message done, and the Undo picks it back up", async () => {
+  let handled = false;
+  const sent: unknown[] = [];
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
+    "GET /contacts/p-1/360": () =>
+      jsonResponse(view(handled ? undefined : WAITING)),
+    "PUT /activities/a-sent/disposition": (body) => {
+      sent.push(body);
+      handled = true;
+      return new Response(null, { status: 204 });
+    },
+    "DELETE /activities/a-sent/disposition": () => {
+      handled = false;
+      return new Response(null, { status: 204 });
+    },
+  });
+  const routed = globalThis.fetch;
+  const undoUrls: string[] = [];
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = input instanceof Request ? input : null;
+    if ((request?.method ?? init?.method) === "DELETE") {
+      undoUrls.push(request ? request.url : String(input));
+    }
+    return routed(input, init);
+  });
+  renderPage();
+  const user = userEvent.setup();
+
+  await screen.findByText(WAITING.headline);
+  await user.click(
+    screen.getByRole("button", {
+      name: en["worklist.disposition.verb.handled"],
+    }),
+  );
+
+  await waitFor(() => expect(screen.queryByText(WAITING.headline)).toBeNull());
+  expect(sent).toEqual([{ disposition: "handled" }]);
+  await screen.findByText(en["contact.moment.doneToast"]);
+  await user.click(
+    await screen.findByRole("button", { name: en["common.undo"] }),
+  );
+
+  await screen.findByText(WAITING.headline);
+  const undo = new URL(undoUrls[0] ?? "", "https://margince.test");
+  expect(undo.pathname).toMatch(/\/activities\/a-sent\/disposition$/);
+  expect(undo.searchParams.get("scope")).toBe("mine");
+});
+
+it("offers no Done where the server named nothing a press would change", async () => {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
+    "GET /contacts/p-1/360": () =>
+      jsonResponse(view({ ...WAITING, done: undefined })),
+  });
+  renderPage();
+
+  await screen.findByText(WAITING.headline);
+  expect(
+    screen.queryByRole("button", {
+      name: en["worklist.disposition.verb.handled"],
+    }),
+  ).toBeNull();
+  expect(
+    screen.getByRole("button", {
+      name: en["worklist.disposition.verb.notNow"],
+    }),
+  ).not.toBeNull();
 });

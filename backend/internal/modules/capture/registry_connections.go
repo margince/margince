@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -42,9 +43,10 @@ var ErrConnectorCannotSend = errors.New("capture: this connector cannot transmit
 // and say why.
 var ErrConnectorNotConfigured = errors.New("capture: no connector for this provider is configured on this process role")
 
-// sendableConnection is the row predicate BOTH send-side lookups select on,
-// spelled once so the pre-flight and the transmission can never disagree about
-// which connections count as live.
+// sendableConnection is the row predicate both send-side lookups select on,
+// spelled once so the pre-flight and the transmission agree on what is live.
+// $3 names one connection. NULL asks for the member's default of the provider:
+// the one they marked, else the first they connected.
 //
 // The status filter is SyncOnce's, and for the same reason: 'error' is a
 // degraded connection, not a dead one, and reading it as "no mailbox" would
@@ -52,7 +54,8 @@ var ErrConnectorNotConfigured = errors.New("capture: no connector for this provi
 // 'reauth_required' mean there is nothing to send through.
 const sendableConnection = `
 	 WHERE user_id = $1 AND provider = $2
-	   AND status IN ('connected','error') AND archived_at IS NULL`
+	   AND status IN ('connected','error') AND archived_at IS NULL AND ($3::uuid IS NULL OR id = $3)
+	 ORDER BY default_sender DESC, created_at, id LIMIT 1`
 
 // GrantedScopesFor reports the scopes the PROVIDER says one user's live
 // connection holds — and resolves no credential.
@@ -67,7 +70,7 @@ func (r *Registry) GrantedScopesFor(ctx context.Context, userID ids.UserID, prov
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT provider_scopes FROM capture_connection`+sendableConnection,
-			userID, provider).Scan(&granted)
+			userID, provider, nil).Scan(&granted)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNoConnection
@@ -84,7 +87,7 @@ func (r *Registry) GrantedScopesFor(ctx context.Context, userID ids.UserID, prov
 func (r *Registry) ReconnectedSince(ctx context.Context, userID ids.UserID, provider string, since time.Time) (bool, error) {
 	var connected time.Time
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT connected_at FROM capture_connection`+sendableConnection, userID, provider).Scan(&connected)
+		return tx.QueryRow(ctx, `SELECT connected_at FROM capture_connection`+sendableConnection, userID, provider, nil).Scan(&connected)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
@@ -95,18 +98,41 @@ func (r *Registry) ReconnectedSince(ctx context.Context, userID ids.UserID, prov
 	return connected.After(since), nil
 }
 
-// SenderFor resolves the transmitting connection for one user and provider:
-// the connector's EmailSender seam, its unsealed credential, and the scopes
-// the PROVIDER says the grant holds. It is the send path's entry point, which
-// knows a user and a provider rather than a connection id.
-//
-// Everything this cannot answer is returned as the failure it is. Only the two
-// sentinels above are facts about the deployment; a vault outage or a database
-// timeout must never be mistaken for one, because the caller's response to a
-// fact is to stop trying.
+// SenderFor resolves the user's transmitting connection that mailbox names:
+// the EmailSender seam, its unsealed credential, and the provider's scopes. A
+// delivery staged before deliveries named a mailbox names the provider alone.
+// It goes out from the default.
 //
 //nolint:ireturn // returns the optional connector.EmailSender seam by design (the same posture Registry.connector takes for connector.Connector)
-func (r *Registry) SenderFor(ctx context.Context, userID ids.UserID, provider string) (connector.EmailSender, connector.Auth, []string, error) {
+func (r *Registry) SenderFor(ctx context.Context, userID ids.UserID, mailbox Mailbox) (connector.EmailSender, connector.Auth, []string, error) {
+	// Two-value form: EmailSender is optional (connector.go), so a capture-only
+	// connector is reported rather than silently treated as absent.
+	var sender connector.EmailSender
+	auth, granted, err := r.liveConnection(ctx, userID, mailbox, func(c connector.Connector) error {
+		var sends bool
+		if sender, sends = c.(connector.EmailSender); !sends {
+			return fmt.Errorf("capture: connector %q: %w", mailbox.Provider, ErrConnectorCannotSend)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return sender, auth, granted, nil
+}
+
+// liveConnection is the user's live connection to provider: its unsealed
+// credential and granted scopes. admit refuses a connector that lacks the
+// caller's capability before any credential is opened, so a permanent
+// refusal is never hidden behind a vault outage.
+//
+// Every failure is returned as it is. Only the two sentinels above are facts
+// about the deployment. A vault outage or a database timeout is never one,
+// because a caller stops trying on a fact.
+func (r *Registry) liveConnection(ctx context.Context, userID ids.UserID, mailbox Mailbox,
+	admit func(connector.Connector) error,
+) (connector.Auth, []string, error) {
+	provider := mailbox.Provider
 	var (
 		credentialRef *string
 		authBytes     []byte
@@ -115,32 +141,28 @@ func (r *Registry) SenderFor(ctx context.Context, userID ids.UserID, provider st
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT credential_ref, auth, provider_scopes FROM capture_connection`+sendableConnection,
-			userID, provider).Scan(&credentialRef, &authBytes, &granted)
+			userID, provider, mailboxIDArg(mailbox)).Scan(&credentialRef, &authBytes, &granted)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil, nil, ErrNoConnection
+		return nil, nil, ErrNoConnection
 	}
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("capture: resolving the sending connection: %w", err)
+		return nil, nil, fmt.Errorf("capture: resolving the user's connection: %w", err)
 	}
 	c, err := r.connector(provider)
 	if err != nil {
-		// The registry's only failure here is a provider this role did not
-		// compile in, and the send path must be able to tell that from an
-		// outage — see ErrConnectorNotConfigured.
-		return nil, nil, nil, fmt.Errorf("%w: %w", ErrConnectorNotConfigured, err)
+		// The only failure here is a provider this role did not compile in.
+		// The caller tells that from an outage by ErrConnectorNotConfigured.
+		return nil, nil, fmt.Errorf("%w: %w", ErrConnectorNotConfigured, err)
 	}
-	// Two-value form: EmailSender is optional (connector.go), so a capture-only
-	// connector is reported rather than silently treated as absent.
-	sender, sends := c.(connector.EmailSender)
-	if !sends {
-		return nil, nil, nil, fmt.Errorf("capture: connector %q: %w", provider, ErrConnectorCannotSend)
+	if err := admit(c); err != nil {
+		return nil, nil, err
 	}
 	auth, err := r.resolveCredential(ctx, credentialRef, authBytes)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	return sender, auth, granted, nil
+	return auth, granted, nil
 }
 
 // Connections lists the caller's own mailbox connections, for a user or their
@@ -152,17 +174,17 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([]ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
-		return nil, fmt.Errorf("capture: only a user or their agent lists their connections: %w", apperrors.ErrPermissionDenied)
+		return nil, fmt.Errorf("only a user or their agent lists their connections: %w", apperrors.ErrPermissionDenied)
 	}
 	var out []ConnectionView
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT c.id, c.provider, c.status, c.sync_cursor, c.watch_expires_at, c.provider_scopes,
-			       c.account_label, c.signature_enrich_enabled, c.mail_posture,
+			       c.account_label, c.signature_enrich_enabled, c.mail_posture, c.default_sender,
 			       c.history_baseline_date, c.history_baseline_tz, c.history_baseline_set_by, c.history_baseline_set_at,
 			       t.id, t.name, t.archived_at IS NOT NULL,
 			       s.last_synced_at, s.last_success_at, s.last_error_class, s.next_sync_at, s.failing_since,
- c.connected_at, c.silence_dismissed_since, s.last_delivery_at
+ c.connected_at, c.silence_dismissed_since, s.last_delivery_at, `+notesCalendarAccountSQL+`
 			FROM capture_connection c
 			LEFT JOIN capture_sync_state s ON s.connection_id = c.id
 			-- The word's own row, so the connection reports the name the
@@ -172,7 +194,7 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 			-- what saying so here prevents.
 			LEFT JOIN tag t ON t.id = c.context_tag_id
 			WHERE c.user_id = $1 AND c.archived_at IS NULL
-			ORDER BY c.provider`, actor.UserID)
+			ORDER BY c.provider, c.created_at, c.id`, actor.UserID)
 		if err != nil {
 			return err
 		}
@@ -184,10 +206,10 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 			var tagArchived *bool
 			var baseline historyBaselineColumns
 			if err := rows.Scan(&v.ID, &v.Provider, &v.Status, &v.Cursor, &v.WatchExpiresAt, &v.ProviderScopes,
-				&v.AccountLabel, &v.SignatureEnrichEnabled, &v.MailPosture,
+				&v.AccountLabel, &v.SignatureEnrichEnabled, &v.MailPosture, &v.DefaultSender,
 				&baseline.date, &baseline.timezone, &baseline.setBy, &baseline.setAt,
 				&tagID, &tagName, &tagArchived,
-				&v.LastSyncedAt, &v.LastSuccessAt, &v.LastErrorClass, &v.NextSyncDueAt, &v.FailingSince, &v.ConnectedAt, &v.SilenceDismissedSince, &v.LastDeliveryAt); err != nil {
+				&v.LastSyncedAt, &v.LastSuccessAt, &v.LastErrorClass, &v.NextSyncDueAt, &v.FailingSince, &v.ConnectedAt, &v.SilenceDismissedSince, &v.LastDeliveryAt, &v.CalendarAccountLabel); err != nil {
 				return err
 			}
 			v.ContextTag = contextTagOf(tagID, tagName, tagArchived)
@@ -222,10 +244,9 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 	return out, nil
 }
 
-// Disconnect disconnects the CALLING human's connection for provider name: the
-// status flips to 'disconnected' so the poller stops selecting it
-// (DueConnections filters on 'connected'|'error'), the legacy auth column is
-// cleared, and the sealed credential is destroyed. Already-captured activities
+// Disconnect disconnects the calling human's connection mb names. The status
+// flips to 'disconnected', so the poller stops selecting it. The legacy auth
+// column is cleared, and the sealed credential is destroyed. Already-captured activities
 // are retained; capture simply stops. Idempotent — a missing or
 // already-fully-disconnected connection is a no-op.
 //
@@ -235,18 +256,31 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 // retry predicate keys on 'credential_ref IS NOT NULL', so a half-finished
 // disconnect converges rather than orphaning the secret. Delete is idempotent
 // (keyvault contract), so the retry is safe.
-func (r *Registry) Disconnect(ctx context.Context, name string) error {
+func (r *Registry) Disconnect(ctx context.Context, mb Mailbox) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
-		return fmt.Errorf("capture: only a user or their agent disconnects a connector: %w", apperrors.ErrPermissionDenied)
+		return fmt.Errorf("only a user or their agent disconnects a connector: %w", apperrors.ErrPermissionDenied)
 	}
+	match, err := r.resolveMemberMailbox(ctx, actor.UserID, mb)
+	if errors.Is(err, ErrNoConnection) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return r.withdrawAndDestroy(ctx, mb.Provider, match)
+}
+
+// withdrawAndDestroy runs the three phases on the connection match names. Disconnect
+// is it for the caller's own mailbox, DisconnectShared for a shared one.
+func (r *Registry) withdrawAndDestroy(ctx context.Context, name string, match connectionMatch) error {
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {
 		return errors.New("capture: disconnect without a workspace in context")
 	}
 
 	// Phase 1: stop capture.
-	ref, err := r.withdrawConnection(ctx, actor.UserID, name)
+	ref, err := r.withdrawConnection(ctx, match, name)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// No row to flip: never connected, or already fully disconnected
@@ -284,11 +318,12 @@ func (r *Registry) Disconnect(ctx context.Context, name string) error {
 	// must not leave the row naming a blob that no longer exists.
 	refCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), keyvault.CleanupTimeout)
 	defer cancel()
+	placeholder, args := match.with(*ref)
 	return r.db.Tx(refCtx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(refCtx, `
 			UPDATE capture_connection SET credential_ref = NULL
-			 WHERE user_id = $1 AND provider = $2 AND credential_ref = $3`,
-			actor.UserID, name, *ref)
+			 WHERE `+match.where+` AND credential_ref = `+placeholder,
+			args...)
 		return err
 	})
 }
@@ -323,21 +358,24 @@ func (r *Registry) Disconnect(ctx context.Context, name string) error {
 // The row is read FOR UPDATE so the audit before-image is the status being
 // withdrawn from, and a concurrent reconnect serializes behind this one. The
 // seat-address claim lock on its label comes first, as for a connect.
-func (r *Registry) withdrawConnection(ctx context.Context, userID ids.UUID, name string) (*string, error) {
+func (r *Registry) withdrawConnection(ctx context.Context, match connectionMatch, name string) (*string, error) {
 	var ref *string
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockConnectionClaimsTx(ctx, tx, userID, name, nil); err != nil {
-			return err
+		// A shared mailbox's address is no seat's claim, so it takes no claim lock.
+		if !match.shared() {
+			if err := lockConnectionClaimsTx(ctx, tx, match.seat, match.id, nil); err != nil {
+				return err
+			}
 		}
 		var connID ids.UUID
 		var priorStatus string
 		var priorLabel *string
 		if err := tx.QueryRow(ctx, `
 			SELECT id, status, account_label FROM capture_connection
-			 WHERE user_id = $1 AND provider = $2
+			 WHERE `+match.where+`
 			   AND (status <> 'disconnected' OR credential_ref IS NOT NULL)
 			 FOR UPDATE`,
-			userID, name).Scan(&connID, &priorStatus, &priorLabel); err != nil {
+			match.args...).Scan(&connID, &priorStatus, &priorLabel); err != nil {
 			return err
 		}
 		// A row already 'disconnected' is a retry re-driving the cleanup the
@@ -364,9 +402,12 @@ func (r *Registry) withdrawConnection(ctx context.Context, userID ids.UUID, name
 			// reads as repeated human acts nobody performed is worse than no trail.
 			return nil
 		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		// Withdrawing a connector is a human's deliberate act over their own
 		// mailbox and is attributed like any other record mutation.
-		return auditLifecycle(ctx, tx, "archive", captureConnectionObject, connID,
+		return match.auditTx(ctx, tx, "archive", sharedChangeDisconnected, connID,
 			connectionAuditImage(name, priorStatus, priorLabel),
 			connectionAuditImage(name, "disconnected", priorLabel))
 	})
@@ -406,9 +447,9 @@ func (r *Registry) DueConnections(ctx context.Context, name string) ([]DueConnec
 			-- missing a row is that a former colleague's mail keeps arriving,
 			-- so the poll asks the question too. Same condition
 			-- seatLoginAddressTx reads one file over.
-			JOIN app_user u ON u.id = c.user_id
-			 AND `+workforce.LiveMemberSQL("u")+`
+			LEFT JOIN app_user u ON u.id = c.user_id AND `+workforce.LiveMemberSQL("u")+`
 			WHERE c.provider = $1 AND c.status IN ('connected','error') AND c.archived_at IS NULL
+			  AND (u.id IS NOT NULL OR `+sharedMailboxLiveSQL+`)
 			  AND COALESCE(s.next_sync_at, now()) <= now()`, name)
 		if err != nil {
 			return nil, err

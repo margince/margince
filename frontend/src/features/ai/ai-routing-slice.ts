@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { stable } from "../../format/collate";
 
 // One binding inside the routing document, addressed on its own.
 //
@@ -85,6 +86,6 @@ function canonical(binding: object | undefined): string {
   return JSON.stringify(
     Object.entries(binding)
       .filter(([, value]) => value !== undefined)
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+      .sort(([a], [b]) => stable(a, b)),
   );
 }

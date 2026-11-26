@@ -28,18 +28,23 @@ import (
 )
 
 type cancelAfterCreation struct {
-	delegate capture.CounterpartyEnsurer
-	cancel   func() error
-	created  ids.UUID
+	delegate  capture.CounterpartyEnsurer
+	cancel    func() error
+	cancelErr error
+	created   ids.UUID
 }
 
-func (c *cancelAfterCreation) EnsureCounterparty(ctx context.Context, in capture.EnsureRequest) (capture.EnsureOutcome, error) {
-	outcome, err := c.delegate.EnsureCounterparty(ctx, in)
+// EnsureCounterpartyTx cancels the import once the creation has committed.
+func (c *cancelAfterCreation) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in capture.EnsureRequest) (capture.EnsureOutcome, error) {
+	outcome, err := c.delegate.EnsureCounterpartyTx(ctx, tx, in)
 	if err == nil && outcome.ContactCreated {
-		c.created = outcome.ContactID
-		err = c.cancel()
+		c.created, outcome.AfterCommit = outcome.ContactID, cancelAfter(outcome.AfterCommit, func() { c.cancelErr = c.cancel() })
 	}
 	return outcome, err
+}
+
+func cancelAfter(hook func(context.Context), then func()) func(context.Context) {
+	return func(ctx context.Context) { hook(ctx); then() }
 }
 
 type singleRecordHistory struct {
@@ -80,12 +85,12 @@ func TestACommittedCreationIsCreditedAfterItsImportIsCancelled(t *testing.T) {
 	if _, err := registry.Connect(human, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatal(err)
 	}
-	run, err := registry.StartBackfill(human, "gmail", ids.From[ids.UserKind](e.AdminUser), 3, connector.BackfillEstimate{Messages: 1}, func(context.Context, pgx.Tx, ids.UUID) error { return nil })
+	run, err := registry.StartBackfill(human, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.AdminUser), 3, connector.BackfillEstimate{Messages: 1}, func(context.Context, pgx.Tx, ids.UUID) error { return nil })
 	if err != nil {
 		t.Fatal(err)
 	}
 	ensurer.cancel = func() error {
-		_, err := registry.CancelBackfill(human, "gmail", ids.From[ids.UserKind](e.AdminUser))
+		_, err := registry.CancelBackfill(human, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.AdminUser))
 		return err
 	}
 	if _, _, _, err := registry.RunBackfillStep(human, run.ID); err != nil && !errors.Is(err, apperrors.ErrConflict) {
@@ -93,6 +98,9 @@ func TestACommittedCreationIsCreditedAfterItsImportIsCancelled(t *testing.T) {
 	}
 	if ensurer.created == (ids.UUID{}) {
 		t.Fatal("fixture created no contact")
+	}
+	if ensurer.cancelErr != nil {
+		t.Fatalf("cancelling the import: %v", ensurer.cancelErr)
 	}
 	args := []any{ensurer.created}
 	if e.WsCount(t, fmt.Sprintf(`SELECT count(*) FROM contact WHERE id=$%d`, len(args)), args...) != 1 {

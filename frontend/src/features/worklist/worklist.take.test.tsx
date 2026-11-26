@@ -3,8 +3,9 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
@@ -56,6 +57,42 @@ function renderRow(item: WorklistItem) {
   );
 }
 
+// The Worklist drops a taken row from the Unassigned scope, which unmounts
+// its verbs. `leave` is how a test takes the row away mid-write.
+function LeavingRow({
+  item,
+  leaveWith,
+}: Readonly<{ item: WorklistItem; leaveWith: (leave: () => void) => void }>) {
+  const [shown, setShown] = useState(true);
+  leaveWith(() => setShown(false));
+  return shown ? (
+    <RowActs item={item} title="Send the quote" href={undefined} owner="" />
+  ) : null;
+}
+
+function renderLeavingRow(item: WorklistItem) {
+  let leave = () => {};
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <LeavingRow
+            item={item}
+            leaveWith={(fn) => {
+              leave = fn;
+            }}
+          />
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return () => act(() => leave());
+}
+
 function writesSent(fetched: ReturnType<typeof vi.fn>): Request[] {
   return fetched.mock.calls
     .map(([input]) => input)
@@ -84,6 +121,38 @@ describe("taking a task nobody holds", () => {
     expect(sent?.url).toContain("/activities/task-1");
     expect(sent?.headers.get("If-Match")).toBe("3");
     expect(await sent?.clone().json()).toEqual({ assignee_id: READER });
+  });
+
+  // The refetch after the write takes the row off the Unassigned list, so
+  // the button is gone before the write's promise settles.
+  it("confirms the take even when the row leaves the list first", async () => {
+    let leave = () => {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : undefined;
+        const url = String(request ? request.url : input);
+        if (request && request.method !== "GET") {
+          leave();
+          return jsonResponse({ id: "task-1", links: [] });
+        }
+        if (url.includes("/me")) {
+          return jsonResponse({ user: { id: READER, display_name: "Lena" } });
+        }
+        return jsonResponse({ data: [] });
+      }),
+    );
+    const user = userEvent.setup();
+    leave = renderLeavingRow(unheld());
+
+    await user.click(
+      await screen.findByRole("button", { name: en["worklist.take.action"] }),
+    );
+
+    expect(await screen.findByText(en["worklist.take.done"])).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["worklist.take.action"] }),
+    ).toBeNull();
   });
 
   it("says so when the take is refused", async () => {

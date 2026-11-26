@@ -1,0 +1,10 @@
+{
+  "verb": "reorder_stages",
+  "checks": [
+    "deal.read",
+    "pipeline.update"
+  ],
+  "takes": [
+    "pipeline"
+  ]
+}

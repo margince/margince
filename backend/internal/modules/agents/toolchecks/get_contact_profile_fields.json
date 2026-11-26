@@ -1,0 +1,9 @@
+{
+  "verb": "get_contact_profile_fields",
+  "checks": [
+    "contact.read"
+  ],
+  "takes": [
+    "contact"
+  ]
+}

@@ -25,6 +25,7 @@
 }
 
 .listpopover-list {
+  position: relative;
   min-block-size: 0;
   overflow-y: auto;
   overscroll-behavior: contain;

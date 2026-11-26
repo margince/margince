@@ -1,0 +1,15 @@
+{
+  "tool": "change_relationships",
+  "action": "backfill_employment_import",
+  "verb": "backfill_employment_import",
+  "allowed_for": [
+    "admin"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ]
+}

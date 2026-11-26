@@ -1,0 +1,10 @@
+{
+  "verb": "undo_meeting_ready",
+  "checks": [
+    "activity.read"
+  ],
+  "takes": [
+    "activity",
+    "ready_meeting"
+  ]
+}

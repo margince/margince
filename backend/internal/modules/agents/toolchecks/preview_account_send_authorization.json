@@ -1,0 +1,13 @@
+{
+  "verb": "preview_account_send_authorization",
+  "checks": [
+    "activity.create",
+    "company.create",
+    "company.read",
+    "contact.create",
+    "relationship.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

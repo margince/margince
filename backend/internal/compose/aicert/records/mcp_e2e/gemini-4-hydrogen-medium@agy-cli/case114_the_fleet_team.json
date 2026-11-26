@@ -1,0 +1,99 @@
+{
+  "scenario": "case114_the_fleet_team",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "4b8c594793654078",
+    "tools": "be33d27708b036b9",
+    "instructions": "4eab26d5fff0793f",
+    "judge": "",
+    "harness": "ae24b6799c8461d2",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "ran_at": "2026-11-25T07:50:46Z",
+    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
+    "graded_at": "2026-11-25T07:50:46Z"
+  },
+  "usage": {
+    "input_tokens": 56306,
+    "output_tokens": 9674,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 144839,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "add_team_member",
+        "change_access",
+        "create_team",
+        "describe_router_actions",
+        "find_records",
+        "list_colleagues",
+        "read_workspace",
+        "search_records",
+        "share_record",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "add_team_member",
+        "change_access",
+        "create_team",
+        "describe_router_actions",
+        "find_records",
+        "list_colleagues",
+        "read_workspace",
+        "search_records",
+        "share_record",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 9,
+      "min": 9,
+      "max": 9
+    },
+    "turns": {
+      "median": 6,
+      "min": 6,
+      "max": 6
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 100572.5,
+      "min": 92052,
+      "max": 109093
+    },
+    "output_tokens": {
+      "median": 4837,
+      "min": 4632,
+      "max": 5042
+    }
+  }
+}

@@ -31,6 +31,17 @@ describe("captureValueMessage", () => {
     );
   });
 
+  it("answers a wildcard domain the server cannot read with the catalog's sentence", () => {
+    const err = refusal(
+      "value",
+      "invalid_exclusion",
+      "*.example.test is not a usable domain name",
+    );
+    expect(captureValueMessage(err, "domain", t)).toBe(
+      en["captureValue.refusedDomain"],
+    );
+  });
+
   it("reads a domain with no dot as the same shape failure", () => {
     const err = refusal("value", "invalid_exclusion", "acme is not a domain");
     expect(captureValueMessage(err, "domain", t)).toBe(
@@ -85,5 +96,31 @@ describe("captureValueMessage", () => {
     expect(captureValueMessage(err, "address", t)).toBe(
       problemMessageOf(err, t),
     );
+  });
+
+  it("names the typed value when the shipped list already holds it", () => {
+    const err = refusal(
+      "domain",
+      "already_on_shipped_list",
+      "gmail.com is already on the shipped list",
+    );
+    expect(
+      captureValueMessage(
+        err,
+        "domain",
+        (key, params) => en[key].replace("{value}", params?.value ?? ""),
+        "gmail.com",
+      ),
+    ).toBe("gmail.com is already on the shipped list.");
+  });
+
+  // A company's domain list reads this through problemMessageOf, with no value.
+  it("answers a consumer mail domain with the catalog's sentence", () => {
+    const err = refusal(
+      "domains",
+      "consumer_mail_domain",
+      "gmail.com is a consumer mail domain and cannot be a company's domain",
+    );
+    expect(problemMessageOf(err, t)).toBe(en["captureValue.consumerMail"]);
   });
 });

@@ -103,3 +103,42 @@ func FieldOrigins(ctx context.Context, tx pgx.Tx, objectType string, objectID id
 	}
 	return out, nil
 }
+
+// AgentWrittenFieldsSQL lists, as a text[] expression, the fields of record
+// idExpr whose newest origin is an agent and that no later update names. An
+// edit by anyone takes the field over, so it stops reading as model-written.
+// objectType is a compile-time literal.
+func AgentWrittenFieldsSQL(objectType, idExpr string) string {
+	return `ARRAY(SELECT origin.field_name FROM (
+	   SELECT DISTINCT ON (field_name) field_name, captured_by, captured_at FROM field_provenance
+	    WHERE object_type = '` + objectType + `' AND object_id = ` + idExpr + `
+	    ORDER BY field_name, captured_at DESC, id DESC) origin
+	  WHERE origin.captured_by LIKE 'agent:%'
+	    AND NOT EXISTS (SELECT 1 FROM audit_log edit
+	          WHERE edit.entity_type = '` + objectType + `' AND edit.entity_id = ` + idExpr + `
+	            AND edit.action = 'update' AND edit.occurred_at > origin.captured_at
+	            AND edit.after ? origin.field_name)
+	  ORDER BY origin.field_name)`
+}
+
+// MoveFieldProvenance moves the provenance of the named fields from a
+// merged-away record to its survivor, and returns the rows it moved. A merge
+// calls it for the fields whose value the survivor took from the retired
+// record, so the origin travels with the value. Provenance of any other field
+// describes a value the merge did not keep, and stays.
+func MoveFieldProvenance(ctx context.Context, tx pgx.Tx, objectType string, from, to ids.UUID, fields []string) ([]ids.UUID, error) {
+	if len(fields) == 0 {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx, `UPDATE field_provenance SET object_id = $3
+		 WHERE object_type = $1 AND object_id = $2 AND field_name = ANY($4) RETURNING id`,
+		objectType, from, to, fields)
+	if err != nil {
+		return nil, fmt.Errorf("storekit: move field provenance: %w", err)
+	}
+	moved, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("storekit: move field provenance: %w", err)
+	}
+	return moved, nil
+}

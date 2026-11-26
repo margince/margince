@@ -5,6 +5,7 @@ import {
 import { formatNumber } from "../../format/format";
 import type { Locale, PluralTranslator, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { isUuid } from "../../lib/uuid";
 
 // Re-exported so the surfaces that read the map by name keep their import, and
 // so this file stays the one place a reader looks for approval-kind vocabulary.
@@ -31,6 +32,15 @@ export {
 // changed no existing surface.
 export type EditableField =
   | { readonly field: string; readonly as: "text"; readonly label?: MessageKey }
+  | {
+      readonly field: string;
+      /**
+       * The colleague who will do the work. Empty keeps it with whoever is
+       * accepting; the server checks the chosen colleague can hold tasks.
+       */
+      readonly as: "doer";
+      readonly label?: MessageKey;
+    }
   | {
       readonly field: string;
       /**
@@ -105,6 +115,19 @@ export const EDITABLE_FIELDS: Readonly<
   // rest names who gives and who receives, which the server will not let an
   // edit change.
   ownership_transfer: [],
+  // A share request is answered yes or no; its fields name the records.
+  contact_share: [],
+  // An edit access request is answered yes or no; its fields name the parties.
+  edit_access: [],
+  legal_review_request: [],
+  // An employer change is answered yes or no; the server refuses an edit.
+  employer_change: [],
+  // A proposal-stage question is answered yes or no; the stage is not retyped.
+  deal_proposal_stage: [],
+  // The owner keeps, changes or clears the captured day.
+  task_due_date: [
+    { field: "due_date", as: "date", label: "approval.field.due_date" },
+  ],
   held_draft: [
     { field: "subject", as: "text", label: "decision.draftSubject" },
     { field: "body", as: "textarea", label: "decision.draftBody" },
@@ -115,6 +138,15 @@ export const EDITABLE_FIELDS: Readonly<
   commitment_task: [
     { field: "summary", as: "text", label: "approval.field.step" },
     { field: "due_date", as: "date", label: "approval.field.due_date" },
+    { field: "doer_id", as: "doer", label: "approval.field.doer" },
+  ],
+  // The overnight follow-up task: its words, its day and who does it. The deal
+  // and the evidence are what the reader agrees to, not fields to retype.
+  deal_follow_up: [
+    { field: "subject", as: "text", label: "approval.field.task" },
+    { field: "body", as: "textarea", label: "approval.field.note" },
+    { field: "due_date", as: "date", label: "approval.field.due_date" },
+    { field: "doer_id", as: "doer", label: "approval.field.doer" },
   ],
   // The date is the entire question, and it is the only thing here a contact may
   // change. Undeclared, the generic editor offered every string in the payload:
@@ -135,6 +167,54 @@ export const EDITABLE_FIELDS: Readonly<
   // offered rather than each looking like a live field that quietly is not.
   vcard_create: [],
 };
+
+// What the inline editor offers for one proposal. The default is every string
+// field that is not a record id. A kind with an EDITABLE_FIELDS policy gets only
+// the fields it named, in the shape it named them.
+export function editableStrings(
+  kind: string,
+  change: Readonly<Record<string, unknown>>,
+): EditableField[] {
+  if (kind === "commitment_task" && typeof change.existing_task_id === "string")
+    return [];
+  // Own-property only: a kind spelled `constructor` must not find a prototype member.
+  const declared = Object.hasOwn(EDITABLE_FIELDS, kind)
+    ? EDITABLE_FIELDS[kind]
+    : undefined;
+  if (declared) {
+    // A field the payload lacks is skipped: offering it would add a path on
+    // approve, and the server refuses an added path.
+    return declared.filter((entry) => typeof change[entry.field] === "string");
+  }
+  // A record id is never prose, and the server refuses an edit that moves one.
+  return Object.entries(change)
+    .filter(
+      (entry): entry is [string, string] =>
+        typeof entry[1] === "string" && !isUuid(entry[1]),
+    )
+    .map(([field]) => ({ field, as: "text" }) as const);
+}
+
+// The fields of a staged mail that may not go out blank.
+export function requiredMailFields(
+  isMail: boolean,
+  fields: readonly EditableField[],
+): string[] {
+  return isMail
+    ? fields
+        .map((entry) => entry.field)
+        .filter((field) => field === "subject" || field === "body")
+    : [];
+}
+
+// An approval the reader can only answer yes or no offers no Edit, on every
+// surface that shows it.
+export function approvalEditable(
+  kind: string,
+  change: Readonly<Record<string, unknown>> | null | undefined,
+): boolean {
+  return editableStrings(kind, change ?? {}).length > 0;
+}
 
 // A rate proposal's apply re-reads the sheet, so its lost race is answered by
 // a fresh refresh rather than by staging the same proposal again.

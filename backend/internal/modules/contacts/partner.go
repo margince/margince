@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // livePartnerSQL renders "this company's partner programme is live" — a row
@@ -52,7 +53,7 @@ func visibleCompanySQL(ctx context.Context, alias string, arg func(any) int) (st
 const partnerColumns = `company_id, cert_status, partner_kinds, margin_tier,
 	certified_staff, retention_rate, relationship_stage, next_step, next_step_due_at,
 	served_segments, partner_fit_score, partner_fit_score_computed,
-	partner_fit_override_reason, relationship_health::text, last_contact_at,
+	partner_fit_override_reason,
 	version, created_at, updated_at, archived_at,
 	activated_at, activation_basis, activated_by, activation_lead_id, activation_deal_id`
 
@@ -70,16 +71,14 @@ type partnerRow struct {
 	// The ADR-0053 Commercial Judgement pair (formulas §17): a non-nil
 	// FitOverrideReason marks FitScore human-set; the machine value is then
 	// retained in FitScoreComputed instead of overwriting FitScore.
-	FitScore           *int16
-	FitScoreComputed   *int16
-	FitOverrideReason  *string
-	RelationshipHealth *string // numeric(3,2) rendered ::text — no float touches it
-	LastContactAt      *time.Time
-	Version            int64
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-	ArchivedAt         *time.Time
-	Activation         partnerActivation
+	FitScore          *int16
+	FitScoreComputed  *int16
+	FitOverrideReason *string
+	Version           int64
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	ArchivedAt        *time.Time
+	Activation        partnerActivation
 }
 
 // partnerActivation is the stamp that lets a partner stand on a stage meaning
@@ -97,7 +96,7 @@ func scanPartner(r pgx.Row) (partnerRow, error) {
 	err := r.Scan(&p.CompanyID, &p.CertStatus, &p.PartnerKinds, &p.MarginTier,
 		&p.CertifiedStaff, &p.RetentionRate, &p.RelationshipStage, &p.NextStep, &p.NextStepDueAt,
 		&p.ServedSegments, &p.FitScore, &p.FitScoreComputed, &p.FitOverrideReason,
-		&p.RelationshipHealth, &p.LastContactAt, &p.Version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt,
+		&p.Version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt,
 		&p.Activation.At, &p.Activation.Basis, &p.Activation.By, &p.Activation.LeadID, &p.Activation.DealID)
 	return p, err
 }
@@ -214,6 +213,10 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 		return crmcontracts.Partner{}, err
 	}
 	in.PartnerKinds = &kinds
+	nextStep, err := takePartnerNextStep(&in)
+	if err != nil {
+		return crmcontracts.Partner{}, err
+	}
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.Partner{}, err
@@ -267,26 +270,36 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 		if err != nil {
 			return err
 		}
-		if written.landed {
-			auditID, err := storekit.Audit(ctx, tx, "update", "company", in.CompanyID.UUID, written.before, written.after)
-			if err != nil {
-				return err
-			}
-			if err := storekit.EmitEvent(ctx, tx, auditID, in.CompanyID.UUID, crmcontracts.PublicEventCompanyUpdated{
-				ChangedFields: map[string]any{
-					eventKeyDelta: map[string]any{eventKeyPartner: map[string]any{
-						"role": legacyPartnerRole(kinds), "kinds": kinds, "cert_status": written.row.CertStatus,
-					}},
-				},
-			}); err != nil {
-				return err
-			}
+		if err := recordPartnerWrite(ctx, tx, in.CompanyID, kinds, written); err != nil {
+			return err
+		}
+		if err := s.writePartnerNextStepTx(ctx, tx, nextStep); err != nil {
+			return err
 		}
 		// The echo is a read: the writer's own role masks it like any other.
 		out, err = wirePartnerForCaller(ctx, tx, written.row)
 		return err
 	})
 	return out, err
+}
+
+// recordPartnerWrite writes the audit row and the company event for a partner
+// write that changed something, in the write's own transaction.
+func recordPartnerWrite(ctx context.Context, tx pgx.Tx, company ids.CompanyID, kinds []string, written partnerWrite) error {
+	if !written.landed {
+		return nil
+	}
+	auditID, err := storekit.Audit(ctx, tx, "update", "company", company.UUID, written.before, written.after)
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, company.UUID, crmcontracts.PublicEventCompanyUpdated{
+		ChangedFields: map[string]any{
+			eventKeyDelta: map[string]any{eventKeyPartner: map[string]any{
+				"role": legacyPartnerRole(kinds), eventKeyPartnerKinds: kinds, "cert_status": written.row.CertStatus,
+			}},
+		},
+	})
 }
 
 // resolvePartnerFit pre-reads the current row under the company lock — one
@@ -337,7 +350,7 @@ func upsertPartnerRow(ctx context.Context, tx pgx.Tx, up partnerUpsert) (partner
 		                     next_step_due_at, served_segments, partner_fit_score,
 		                     partner_fit_score_computed, partner_fit_override_reason, source, captured_by)
 		VALUES ($1, $2, coalesce($3, 'applied'), $4, coalesce($5, 0), $6,
-		        $16, $9, $10, $11, $12, $13, $14, 'manual', $7)
+		        $16, $9, $10, $11, $12, $13, $14, '`+provenance.RecordSourceManual+`', $7)
 		ON CONFLICT (company_id) DO UPDATE SET
 		  partner_kinds = EXCLUDED.partner_kinds,
 		  cert_status = coalesce($3, partner.cert_status),
@@ -392,6 +405,10 @@ func (s *Store) GetPartner(ctx context.Context, companyID ids.CompanyID) (crmcon
 // MarginTierOf answers what commercial tier a partner company is on, or
 // nil when it is not a partner or its tier was never set.
 //
+// An archived partner still answers its tier. A partner earns on a deal it
+// sourced, and archiving the company before the win is priced must not cancel
+// that.
+//
 // A narrow accessor rather than a use of GetPartner because the caller needs
 // exactly one field and no company read: the commission accrual prices a
 // win it was handed, it does not open the partner's record. It is still gated
@@ -414,7 +431,7 @@ func (s *Store) MarginTierOf(ctx context.Context, companyID ids.CompanyID) (*str
 	var tier *string
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx,
-			`SELECT margin_tier FROM partner WHERE company_id = $1 AND `+livePartnerSQL(""),
+			`SELECT margin_tier FROM partner WHERE company_id = $1`,
 			companyID).Scan(&tier)
 		if errors.Is(err, pgx.ErrNoRows) {
 			tier = nil

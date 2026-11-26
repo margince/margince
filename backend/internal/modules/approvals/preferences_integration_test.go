@@ -169,7 +169,7 @@ func TestAMixedBundleKeepsItsNonMuteableMembers(t *testing.T) {
 func TestASoleDecidersMutedProposalRemainsReachableAndExpiresNormally(t *testing.T) {
 	e := setupStaging(t)
 	target := newDealSeeder(t, e).deal(t)
-	reader := seatFor(e.ws, e.rep, tableDeal, objectActivity)
+	reader := seatFor(e.ws, e.rep, tableDeal, objectActivity, tableContact)
 	worker := principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()), principal.Principal{Type: principal.PrincipalSystem, ID: "system:follow-up", OnBehalfOf: e.rep})
 	id, err := e.svc.Stage(worker, StageInput{Kind: kindDealFollowUp, ProposedChange: []byte(`{"subject":"Call the buyer"}`), DiffHash: "personal-follow-up", TargetType: tableDeal, TargetID: target})
 	if err != nil {
@@ -182,7 +182,7 @@ func TestASoleDecidersMutedProposalRemainsReachableAndExpiresNormally(t *testing
 	if err != nil || len(rows) != 1 || rows[0].Status != "pending" {
 		t.Fatalf("sole-decider review: %v, %v", rows, err)
 	}
-	colleague := seatFor(e.ws, e.secondRep(t), tableDeal, objectActivity)
+	colleague := seatFor(e.ws, e.secondRep(t), tableDeal, objectActivity, tableContact)
 	rows, _, err = e.svc.ListWire(colleague, ListInput{IncludeMuted: true, Kind: new(kindDealFollowUp)})
 	if err != nil || len(rows) != 0 {
 		t.Fatalf("private proposal exposed to colleague: %v, %v", rows, err)

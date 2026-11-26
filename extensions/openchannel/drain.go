@@ -227,7 +227,7 @@ func markLanded(ctx context.Context, rt extension.Runtime, req queued, result ex
 			 )
 			 UPDATE `+inboundTable+`
 			    SET state = CASE WHEN EXISTS (SELECT 1 FROM consumed) THEN $5 ELSE $2 END,
-			        activity_id = nullif($3, '')::uuid,
+			        activity_id = nullif($3, '')::uuid, body = NULL,
 			        attempts = attempts + 1, last_error_class = NULL, updated_at = now()
 			  WHERE id = $1::uuid AND state = $4`,
 			req.id, stateLanded, result.Ref.ID, stateWaiting, stateWithdrawn)

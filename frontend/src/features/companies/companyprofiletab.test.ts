@@ -1,0 +1,48 @@
+import { describe, expect, it } from "vitest";
+import { emptyReason, repeatsDescription } from "./companyprofiletab";
+
+describe("repeatsDescription", () => {
+  const offer = [{ field: "offer_summary", value: "Bearings sold online. " }];
+
+  it("detects when the description repeats the offer", () => {
+    expect(
+      repeatsDescription("offer_summary", offer, "Bearings sold online."),
+    ).toBe(true);
+  });
+
+  it("keeps an offer the description does not repeat, and every other field", () => {
+    expect(
+      repeatsDescription("offer_summary", offer, "A family firm in Ulm."),
+    ).toBe(false);
+    expect(repeatsDescription("offer_summary", offer, null)).toBe(false);
+    expect(
+      repeatsDescription(
+        "icp",
+        [{ field: "icp", value: "Bearings sold online." }],
+        "Bearings sold online.",
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("emptyReason", () => {
+  it("says the website does not state it once a read finished", () => {
+    for (const status of ["done", "partial"] as const) {
+      expect(emptyReason(status)).toBe("co.narrative.notOnSite");
+    }
+  });
+
+  it("says the website was not read yet before a read finished", () => {
+    for (const status of [
+      null,
+      undefined,
+      "queued",
+      "deferred",
+      "running",
+      "failed",
+      "cancelled",
+    ] as const) {
+      expect(emptyReason(status)).toBe("co.narrative.notReadYet");
+    }
+  });
+});

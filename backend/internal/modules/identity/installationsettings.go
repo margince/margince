@@ -98,7 +98,7 @@ type InstallationPatch struct {
 	// RequireSSO switches the password path off for ordinary members (admins
 	// keep it as break-glass). A nil pointer leaves the policy unchanged.
 	RequireSSO *bool
-	// RequireMFA makes a second factor mandatory. A nil pointer leaves it
+	// RequireMFA makes a second factor mandatory for password sign-in. A nil pointer leaves it
 	// unchanged.
 	RequireMFA *bool
 	// OidcGroupRoleMap replaces the whole group→role grant map. A nil pointer
@@ -143,6 +143,8 @@ type InstallationSettingsStore struct {
 	// onCalendarChange runs inside the transaction that moves the reporting
 	// zone or the fiscal start, before either is written.
 	onCalendarChange CalendarChange
+	// onZoneChange runs in that transaction when the zone itself moves.
+	onZoneChange ZoneChange
 	// now dates a window change, which takes over at the next reset after it.
 	now func() time.Time
 }

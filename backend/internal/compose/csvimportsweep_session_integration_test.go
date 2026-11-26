@@ -79,8 +79,8 @@ func reapPastGrace(t *testing.T, e *integration.Env, blob blobstore.Store) {
 		t.Fatalf("reading the database clock: %v", err)
 	}
 	later := func() time.Time { return dbNow.Add(2 * storedobjects.ProvisionalObjectGrace) }
-	reaper := &storedObjectReapWorker{pool: e.Pool, blob: blob, log: slog.New(slog.DiscardHandler), now: later}
-	if err := reaper.reapWorkspace(context.Background(), e.WS); err != nil {
+	reaper := &storedObjectReapWorker{pool: e.Pool, blob: blob, log: slog.New(slog.DiscardHandler), now: later, batch: storedObjectReapBatch}
+	if err := reaper.reapWorkspace(context.Background(), e.WS, unbudgeted); err != nil {
 		t.Fatalf("reapWorkspace: %v", err)
 	}
 }

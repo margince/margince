@@ -15,13 +15,13 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/installtrial"
+	"github.com/margince/margince/backend/internal/compose/licensereport"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
@@ -31,18 +31,11 @@ import (
 // watcher that holds it. The caller starts the watcher's re-check loop and
 // wires its posture into whatever reports it.
 //
-// A serving role boots on a license or it does not boot. Three postures refuse
-// it — a license the bundled module will not honor, a module that could not run
-// at all, and, in production, no license configured — and the third is the one
-// the deployment posture decides: an installation that names itself
-// non-production through MARGINCE_ENV keeps running unlicensed, which is how
-// every development, test and CI process in this repository boots. MARGINCE_ENV
-// is fail-closed, so an installation that names nothing is production and is
-// held to a license.
-//
-// Both serving roles ask this question, and neither serves without an answer: an
-// api that refuses to boot beside a worker that shrugs would be a licensing
-// posture nobody could describe.
+// One posture refuses the boot: a module that could not run at all, which is a
+// fault in this build. A license the module refuses, or one past its expiry,
+// starts the role locked (installtrial.Lapsed), so every seat sees why. A
+// production installation without a license runs on its trial
+// (installtrial.Trial), and a development or test one runs unlicensed.
 func EnsureLicense(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, env runtimeenv.Environment) (*licensecheck.Watcher, error) {
 	// The SOURCE is handed over, not a token: the watcher re-reads it. A
 	// license.token_file renewed in place takes effect on the next re-check;
@@ -52,17 +45,14 @@ func EnsureLicense(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, va
 	// where there is none, so an installation that has sealed its token and
 	// dropped the variable keeps booting — and one whose vault it cannot open
 	// is told THAT, rather than being told it has no license.
-	source := SealedLicenseTokenSource(ctx, pool, vault, cfg, log)
+	source := SealedLicenseTokenSource(pool, vault, cfg, log)
 	watcher, err := licensecheck.NewWatcher(ctx, source, time.Now, log, env)
 	if err != nil {
 		// The setting to correct is named HERE, where the token's source is
 		// known: platform's check is handed a token, not a configuration file.
 		return nil, fmt.Errorf("%w — %s", err, correctTheToken(cfg))
 	}
-	if err := refuseUnlicensedProduction(watcher.Posture(), env); err != nil {
-		return nil, err
-	}
-	logLicensePosture(ctx, log, watcher.Posture(), licenseTokenOrigin(cfg, watcher.Posture()))
+	licensereport.LogPosture(ctx, log, watcher.Posture(), licenseTokenOrigin(cfg, watcher.Posture()), correctTheToken(cfg), env)
 	return watcher, nil
 }
 
@@ -101,51 +91,6 @@ func licenseTokenOrigin(cfg *config.Config, posture licensecheck.Posture) string
 	return "keyvault"
 }
 
-// refuseUnlicensedProduction stops a production boot that configured no license.
-//
-// The error says both halves, because the operator reading it is in one of two
-// situations that look identical from here: the installation is licensed and
-// lost its token reference in a redeploy, or it is a development installation
-// that never named itself one. Naming only the license would send the second
-// operator looking for a token they were never issued.
-func refuseUnlicensedProduction(posture licensecheck.Posture, env runtimeenv.Environment) error {
-	if posture.State != licensecheck.StateAbsent || env.IsNonProduction() {
-		return nil
-	}
-	return fmt.Errorf("no license is configured and this installation is production: "+
-		"point license.token (or %s) at the license token issued for this installation, "+
-		"or, if this is a development or test installation, set %s=%s",
-		LicenseToken.Env(), runtimeenv.EnvVar, runtimeenv.Development)
-}
-
-// logLicensePosture writes the one boot line an operator greps for. The module
-// version travels with it because a refused license and a stale bundled module
-// are different problems that read identically without it, and so does the
-// token's origin, because the environment outranks the deployment file and an
-// installation licensed from a variable should say so where somebody sees it.
-func logLicensePosture(ctx context.Context, log *slog.Logger, posture licensecheck.Posture, origin string) {
-	attrs := []any{"state", string(posture.State), "module", licensecheck.ModuleVersion(), "token_from", origin}
-	if posture.Issuer != "" && posture.Issuer != licensecheck.ProductionIssuer {
-		// A license minted by a non-production authority. Only a non-production
-		// installation accepts one, and an operator reading this log has to be
-		// able to tell such an installation from a licensed customer's.
-		attrs = append(attrs, "issuer", posture.Issuer)
-	}
-	if seats, ok := posture.Seats(); ok {
-		attrs = append(attrs, "seats", seats)
-	}
-	if posture.State == licensecheck.StateAbsent {
-		// Only a non-production installation reaches this line — production
-		// refused the boot above — and it is a warning rather than an info
-		// because the posture is worth noticing in a log that gets read: an
-		// installation running unlicensed is entitled to nothing, so nothing it
-		// does here proves what a licensed installation would do.
-		log.WarnContext(ctx, "no license configured; this non-production installation is running unlicensed", attrs...)
-		return
-	}
-	log.InfoContext(ctx, "license verified", attrs...)
-}
-
 // WithLicensePosture wires the resolved posture into everything this role does
 // with it: the /metrics section, the entitlement surface, and the ceiling seat
 // creation is held to. The function is read at scrape and call time rather than
@@ -154,28 +99,33 @@ func logLicensePosture(ctx context.Context, log *slog.Logger, posture licenseche
 func WithLicensePosture(posture func() licensecheck.Posture) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.licensePosture = posture
-		// The entitlement surface is built HERE rather than in the assembly, and
-		// the posture half: the assembly runs BEFORE the options, so a handler wired
-		// there would have captured a nil posture and answered 501 for the life of
-		// the process. One wiring point also means one answer to "does this role
-		// report entitlement at all" — a role that never applies this option serves
-		// no /metrics section and no entitlement surface, declared or absent in both.
-		//
-		// The seat COUNT is not rebuilt here. It came from the assembly, because it
-		// is a fact about app_user rows that holds whether or not a license was ever
-		// configured, and adding the posture is the only thing this option has to
-		// say about it. Spelling the store a second time would put one invariant in
-		// two places, and dropping it from that second literal — reasonably, on the
-		// grounds that the assembly already wired it — would take the entitlement
-		// surface down with it.
+		// Wired here, not in the assembly: the assembly runs before the options,
+		// so a handler built there would hold a nil posture and answer 501. The
+		// seat count stays the assembly's; withPosture only adds the posture.
 		s.licenseHandlers = s.withPosture(posture)
-		// The same posture reaches identity's seat writer as a ceiling, from the
-		// same call: a role that reports what a license grants must not be able to
-		// show an admin a number it does not hold them to. The posture is read at
-		// CALL time, so a license renewed in place raises the ceiling on the next
-		// re-check and one that lapses lowers it, without a restart — and nothing
-		// here touches a seat already in use, only the next one.
-		s.authHandlers = s.WithSeatCeiling(func() (int, bool) { return posture().Seats() })
+		// The same posture is the seat writer's ceiling, read at call time, so an
+		// admin is held to the number they are shown. A refused or removed license
+		// keeps the last valid one's ceiling (Posture.SeatCeiling).
+		s.authHandlers = s.WithSeatCeiling(func() (int, bool) { return posture().SeatCeiling() })
+	}
+}
+
+// WithInstallationTrial wires the trial into the admission doors, /me, the agent
+// tools and the entitlement read. posture is read at call time, so a key entered
+// later ends the trial.
+func WithInstallationTrial(env runtimeenv.Environment, posture func() licensecheck.Posture, now func() time.Time) Option {
+	return func(s *Server, pool *pgxpool.Pool) {
+		trial := installtrial.New(pool, env, posture, now)
+		s.authHandlers = s.WithInstallationLock(trial.Lock)
+		s.trial = trial
+	}
+}
+
+// WithLicenseRecheck wires the watcher's re-check into "Check now". It adds to
+// the handler the assembly built, so the seat count and posture stay.
+func WithLicenseRecheck(recheck func(context.Context) error) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.recheck = recheck
 	}
 }
 
@@ -183,36 +133,9 @@ func WithLicensePosture(posture func() licensecheck.Posture) Option {
 // posture writes nothing, the same "declared or absent" posture every other
 // section takes — a state gauge nobody resolved would read as an installation
 // that had been checked.
-//
-// The state is exposed as one series per state with a single 1, rather than a
-// number encoding the states, so a query can name what it is asking about and
-// adding a fourth state later does not silently change what an existing
-// dashboard's threshold means.
 func (s Server) writeLicenseMetrics(w io.Writer) {
 	if s.licensePosture == nil {
 		return
 	}
-	posture := s.licensePosture()
-	var section strings.Builder
-	section.WriteString("# HELP margince_license_posture Whether this installation's license verified against the bundled validation module.\n")
-	section.WriteString("# TYPE margince_license_posture gauge\n")
-	for _, state := range []licensecheck.State{licensecheck.StateValid, licensecheck.StateAbsent, licensecheck.StateRejected} {
-		value := 0
-		if state == posture.State {
-			value = 1
-		}
-		fmt.Fprintf(&section, "margince_license_posture{state=%s} %d\n", httpserver.Label(string(state)), value)
-	}
-	// Omitted rather than zeroed when the license caps nothing: a gauge reading
-	// zero seats is a license that permits none, which is the opposite of what an
-	// uncapped or unlicensed installation means.
-	if seats, ok := posture.Seats(); ok {
-		fmt.Fprintf(&section, "# HELP margince_license_seats Full seats the verified license grants.\n"+
-			"# TYPE margince_license_seats gauge\n"+
-			"margince_license_seats %d\n", seats)
-	}
-	// Assembled first and written once, so a refused write cannot leave half a
-	// gauge family in the exposition.
-	//craft:ignore swallowed-errors the renderer httpserver.Metrics takes for this section has no error return; the job section, which does, is a separate parameter that reports its own
-	httpserver.WriteLine(w, "%s", section.String())
+	licensereport.WriteMetrics(w, s.licensePosture())
 }

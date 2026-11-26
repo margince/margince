@@ -15,21 +15,24 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/tools/internal/agentmarks"
 )
 
 // maxBodyDepth bounds how deep a body schema's $refs are followed. A deeper or
 // recursive member is published as a bare object; the surface reads no $ref.
 const maxBodyDepth = 6
 
-// proseMembers are left out of a published body schema: the agent reads the
-// shape, and the words already reach it through the operation's summary.
+// proseMembers are left out of a published schema. A body field's own
+// description goes back on the field: the contract states there what a caller
+// may send (refWalk.fieldDocs).
 var proseMembers = map[string]bool{"description": true, "example": true, "examples": true, "x-go-type": true}
 
 // bodySchema is a route's JSON request body schema, $refs resolved, as one
-// compact JSON document; empty when the route takes no JSON body.
-func bodySchema(requestBody *yaml.Node, schemas map[string]any) (string, error) {
+// compact JSON document; empty when the route takes no JSON body. The schema is
+// narrowed as the skill's is (agentmarks.Narrow), so both offer one shape.
+func bodySchema(requestBody *yaml.Node, schemas map[string]any) (schema string, marks agentmarks.Marks, err error) {
 	if requestBody == nil || requestBody.Kind == 0 {
-		return "", nil
+		return "", agentmarks.Marks{}, nil
 	}
 	var body struct {
 		Content map[string]struct {
@@ -37,18 +40,23 @@ func bodySchema(requestBody *yaml.Node, schemas map[string]any) (string, error) 
 		} `yaml:"content"`
 	}
 	if err := requestBody.Decode(&body); err != nil {
-		return "", err
+		return "", agentmarks.Marks{}, err
 	}
 	media, ok := body.Content["application/json"]
 	if !ok {
-		return "", nil
+		return "", agentmarks.Marks{}, nil
 	}
-	resolved, err := resolveRefs(media.Schema, schemas, 0, map[string]bool{})
+	narrowed, marks, err := agentmarks.Narrow(media.Schema, schemas)
 	if err != nil {
-		return "", err
+		return "", agentmarks.Marks{}, err
+	}
+	walk := &refWalk{schemas: schemas, open: map[string]bool{}, fieldDocs: true}
+	resolved, err := walk.resolve(narrowed, 0)
+	if err != nil {
+		return "", agentmarks.Marks{}, err
 	}
 	out, err := json.Marshal(unmarked(resolved))
-	return string(out), err
+	return string(out), marks, err
 }
 
 // uploadField names the one binary field of a route's multipart body, and is
@@ -156,7 +164,7 @@ func answerSchema(responses yaml.Node, schemas map[string]any) (string, error) {
 		if !strings.HasPrefix(code, "2") || !ok {
 			continue
 		}
-		resolved, err := resolveRefs(media.Schema, schemas, 0, map[string]bool{})
+		resolved, err := (&refWalk{schemas: schemas, open: map[string]bool{}}).resolve(media.Schema, 0)
 		if err != nil {
 			return "", err
 		}
@@ -183,29 +191,73 @@ const nullableMarker = "x-nullable"
 //
 //craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
 func answered(node any) any {
+	return answeredUnder(node, "")
+}
+
+// answeredUnder walks a schema under the currency an enclosing object passes
+// down, by the rule the surface's walk follows. Only a required own currency
+// stops the inheritance. An optional one may be absent from an answer, so
+// the schema admits every display the answer can carry.
+//
+//craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
+func answeredUnder(node any, inherited string) any {
 	switch v := node.(type) {
 	case map[string]any:
 		props, _ := v["properties"].(map[string]any)
-		withDisplays(props)
+		withDisplays(props, inherited)
 		delete(v, nullableMarker)
-		for _, member := range v {
-			answered(member)
+		delete(v, agentmarks.HumanOnly)
+		delete(v, agentmarks.AgentValues)
+		below := values.CurrencyBelow(declared(props, values.ConvertedCurrency), required(v, values.AmountCurrency), inherited)
+		for key, member := range v {
+			switch {
+			case key == "properties" && props != nil:
+				for _, property := range props {
+					answeredUnder(property, below)
+				}
+			case key == "additionalProperties":
+				answeredUnder(member, below)
+			default:
+				answeredUnder(member, inherited)
+			}
 		}
 	case []any:
 		for _, member := range v {
-			answered(member)
+			answeredUnder(member, inherited)
 		}
 	}
 	return node
 }
 
-// withDisplays declares the `<name>_display` member the tool surface writes
-// beside each `<name>_minor` of an object that names its currency. It reads the
-// rule the surface writes it by, so a closed answer admits it.
+// declared is member when props declares it, else empty.
 //
 //craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
-func withDisplays(props map[string]any) {
-	if !slices.ContainsFunc(values.AmountCurrencyMembers(), func(member string) bool { return props[member] != nil }) {
+func declared(props map[string]any, member string) string {
+	if props[member] == nil {
+		return ""
+	}
+	return member
+}
+
+// required is member when schema lists it as required, else empty.
+//
+//craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
+func required(schema map[string]any, member string) string {
+	listed, _ := schema["required"].([]any)
+	if slices.Contains(listed, any(member)) {
+		return member
+	}
+	return ""
+}
+
+// withDisplays declares the `<name>_display` member the tool surface writes
+// beside each `<name>_minor` of an object that names its currency or sits
+// under an enclosing base_currency. It reads the rule the surface writes it
+// by, so a closed answer admits it.
+//
+//craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
+func withDisplays(props map[string]any, inherited string) {
+	if inherited == "" && !slices.ContainsFunc(values.AmountCurrencyMembers(), func(member string) bool { return props[member] != nil }) {
 		return
 	}
 	for name := range props {
@@ -235,23 +287,23 @@ func unmarked(node any) any {
 }
 
 //craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
-func resolveRefs(node any, schemas map[string]any, depth int, open map[string]bool) (any, error) {
+func (w *refWalk) resolve(node any, depth int) (any, error) {
 	switch v := node.(type) {
 	case map[string]any:
 		if ref, ok := v["$ref"].(string); ok {
 			name := strings.TrimPrefix(ref, "#/components/schemas/")
-			target, known := schemas[name]
+			target, known := w.schemas[name]
 			if !known {
 				return nil, fmt.Errorf("body names schema %s, which components.schemas does not declare", ref)
 			}
-			if depth >= maxBodyDepth || open[name] {
+			if depth >= maxBodyDepth || w.open[name] {
 				return map[string]any{"type": "object"}, nil
 			}
-			open[name] = true
-			defer delete(open, name)
-			return resolveRefs(target, schemas, depth+1, open)
+			w.open[name] = true
+			defer delete(w.open, name)
+			return w.resolve(target, depth+1)
 		}
-		if flat, combined, err := flattenCombinator(v, schemas, depth, open); combined {
+		if flat, combined, err := w.flattenCombinator(v, depth); combined {
 			return flat, err
 		}
 		out := make(map[string]any, len(v))
@@ -260,7 +312,7 @@ func resolveRefs(node any, schemas map[string]any, depth int, open map[string]bo
 				continue
 			}
 			if named, isProperties := member.(map[string]any); key == "properties" && isProperties {
-				resolved, err := resolveProperties(named, schemas, depth, open)
+				resolved, err := w.resolveProperties(named, depth)
 				if err != nil {
 					return nil, err
 				}
@@ -280,7 +332,7 @@ func resolveRefs(node any, schemas map[string]any, depth int, open map[string]bo
 				}
 				continue
 			}
-			resolved, err := resolveRefs(member, schemas, depth, open)
+			resolved, err := w.resolve(member, depth)
 			if err != nil {
 				return nil, err
 			}
@@ -290,7 +342,7 @@ func resolveRefs(node any, schemas map[string]any, depth int, open map[string]bo
 	case []any:
 		out := make([]any, len(v))
 		for i, member := range v {
-			resolved, err := resolveRefs(member, schemas, depth, open)
+			resolved, err := w.resolve(member, depth)
 			if err != nil {
 				return nil, err
 			}
@@ -301,28 +353,12 @@ func resolveRefs(node any, schemas map[string]any, depth int, open map[string]bo
 	return node, nil
 }
 
-// resolveProperties resolves a `properties` map, whose keys are field names and
-// so are never prose: a field may be called description.
-//
-//craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
-func resolveProperties(named map[string]any, schemas map[string]any, depth int, open map[string]bool) (map[string]any, error) {
-	out := make(map[string]any, len(named))
-	for field, member := range named {
-		resolved, err := resolveRefs(member, schemas, depth, open)
-		if err != nil {
-			return nil, err
-		}
-		out[field] = resolved
-	}
-	return out, nil
-}
-
 // flattenCombinator reads allOf, oneOf and anyOf, which the agent surface
 // refuses, as one plain schema. allOf merges its resolved members. oneOf and
 // anyOf keep their first member that is not null.
 //
 //craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
-func flattenCombinator(node map[string]any, schemas map[string]any, depth int, open map[string]bool) (any, bool, error) {
+func (w *refWalk) flattenCombinator(node map[string]any, depth int) (any, bool, error) {
 	for _, key := range []string{"allOf", "oneOf", "anyOf"} {
 		members, ok := node[key].([]any)
 		if !ok {
@@ -339,7 +375,7 @@ func flattenCombinator(node map[string]any, schemas map[string]any, depth int, o
 				merged[nullableMarker] = true
 				continue
 			}
-			resolved, err := resolveRefs(member, schemas, depth, open)
+			resolved, err := w.resolve(member, depth)
 			if err != nil {
 				return nil, true, err
 			}
@@ -348,7 +384,7 @@ func flattenCombinator(node map[string]any, schemas map[string]any, depth int, o
 				break
 			}
 		}
-		out, err := resolveRefs(merged, schemas, depth, open)
+		out, err := w.resolve(merged, depth)
 		return out, true, err
 	}
 	return nil, false, nil

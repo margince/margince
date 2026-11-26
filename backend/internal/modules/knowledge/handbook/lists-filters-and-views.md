@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/components/listquery.tsx frontend/src/design-system/listviewmenu.tsx frontend/src/design-system/listtoolbar.tsx frontend/src/components/listqueryviews.ts frontend/src/components/bulkverbs.tsx frontend/src/features/lists backend/internal/modules/collections backend/internal/modules/search/queryvocab.go backend/internal/compose/datatask_machineaddress.go frontend/src/features/contacts/contacts.tsx backend/internal/platform/auth/sharedwith.go -->
+<!-- describes: frontend/src/components/listquery.tsx frontend/src/design-system/listviewmenu.tsx frontend/src/design-system/listtoolbar.tsx frontend/src/design-system/listsearch.tsx frontend/src/components/listqueryviews.ts frontend/src/components/bulkverbs.tsx frontend/src/features/lists backend/internal/modules/collections backend/internal/modules/search/queryvocab.go backend/internal/compose/datatask_machineaddress.go frontend/src/features/contacts/contacts.tsx backend/internal/platform/auth/sharedwith.go frontend/src/features/records/recordlists.tsx frontend/src/components/addtoshortlist.tsx frontend/src/features/companies/companyrail.tsx frontend/src/features/contacts/contactrail.tsx frontend/src/features/deals/dealaside.tsx frontend/src/features/deals/deals.listtools.tsx frontend/src/features/deals/deals.rangefilters.tsx frontend/src/features/deals/deal360/dealfilterchips.ts frontend/src/features/leads/leaddetails.tsx -->
 # Lists, filters and views
 
 The list screens in Margince are **Contacts**, **Companies**, **Leads**, **Deals** and **Projects** in the sidebar. How to create and edit a single record is in [Contacts, companies, leads, deals and projects](records.md) and [Leads, deals and projects](leads-deals-and-projects.md).
@@ -18,22 +18,22 @@ What each list offers:
 
 | List | Search | Filters | Tabs | Table and board | Bulk actions |
 |---|---|---|---|---|---|
-| **Contacts** | name, or exact email | Owner, Team, Tags | All, Mine, Shared with me | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Companies** | name, or exact domain | Owner, Team, Company size, Tags, Lifecycle, Relationship type, Partner kinds, Relationship stage and Stage meaning (if you may see partners) | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Leads** | name, exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tags, **Industry**, **Country**, **Company size** | Mine, All, Unassigned, New and unassigned, New, Needs follow-up, Engaged, Hot, Overdue | both | Assign, Disqualify |
-| **Deals** | name or description | Owner, Team, Stage, Company, Tags, Stalled only, Partner-sourced, Forecast, Motion, Priority, Source, Partner | Newest | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Projects** | name or project key | Owner, Team, Phase | All, In delivery | table only | none |
+| **Contacts** | name or job title, or exact email | Owner, Team, Tags | All, Mine, Shared with me | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Companies** | name, legal name or industry, or exact domain | Owner, Team, **Company size**, Partner kinds, Relationship stage and Stage meaning (if you may see partners), Tags, Lifecycle, Relationship type, Activity | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Leads** | name, company name or job title, or exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tags, **Industry**, **Country**, **Company size** | Mine, All, Unassigned, New and unassigned, New, Contacted, Engaged, Hot, Overdue | both | Assign, Disqualify |
+| **Deals** | name or description | Owner, Team, Stage, Company, Tags, Close date, Value, Currency, **Country**, Status, Stalled only, Partner-sourced, Probability, Motion, Priority, Linked as, Source, Partner | All, Mine | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Projects** | name or project key | Owner, Team, Phase | All, Delivering | table only | none |
 
-**Response** on Leads shows only while a target for the first answer is turned on, and so does the **Overdue** tab. **Industry**, **Country** and **Company size** on Leads read the company the lead is linked to. A lead counts under its own typed **Industry** in three cases. It has no linked company, that company has no industry, or you cannot open that company. They show only if you may open companies. **Source** and **Partner** on Deals show only when there is something to pick.
+**Response** on Leads shows only while a target for the first answer is turned on, and so does the **Overdue** tab. **Industry**, **Country** and **Company size** on Leads read the company the lead is linked to. A lead counts under its own typed **Industry** in three cases. It has no linked company, that company has no industry, or you cannot open that company. They show only if you may open companies. On Deals, **Value** shows once your company has a main currency, and **Linked as**, **Source** and **Partner** only when there is something to pick.
 
 ## Searching and filtering a list
 ### How do I search a list?
 To search a list in Margince, open the list in the sidebar (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**). Type in the **Search** box at the left of the toolbar.
 1. Type part of a name. The list gets shorter as you type.
-2. Or type a whole email address (Contacts, Leads), domain (Companies), LinkedIn URL (Leads) or project key (Projects).
+2. Or type a whole word of a job title (Contacts, Leads), company name (Leads), legal name or industry (Companies). A whole email address (Contacts, Leads), domain (Companies), LinkedIn URL (Leads) or project key (Projects) finds its record too.
 3. Clear the box to see everything again.
 
-Also called: find a contact, look up a customer, search the table.
+Search also offers filters from the list’s filter options. Choose one to apply it and clear the text. It stays in the address and saved view, like a filter chosen through **View**. Arrow keys and Enter choose a filter. Enter with no choice keeps the text search; Escape closes the choices.
 
 ### How do I find a contact by email address?
 To find a contact by email address in Margince, open **Contacts** in the sidebar and paste the whole address into the **Search** box. It matches the exact address, in capitals or not.
@@ -57,7 +57,7 @@ On the **Mine** tab, an empty list says "No contacts owned by you." with **Show 
 Also called: reset filters, show everything again, remove filter.
 
 ### How do I see only my records, or the records I own?
-To see only the records you own in Margince, open **Contacts**, **Companies** or **Leads** and press the **Mine** tab in the header row. On **Deals** and **Projects**, press **View** → **Filters** → **Owner** → **Owned by you**.
+To see only the records you own in Margince, open **Contacts**, **Companies** or **Leads** and press the **Mine** tab in the header row. **Deals** has it too. On **Projects**, press **View** → **Filters** → **Owner** → **Owned by you**.
 1. The **Owner** filter lists **Owned by you**, then every active colleague by name, then **Unassigned**.
 2. **Leads** opens on **Mine** for a user who sees only their own leads. It opens on **All** for one who can see the team's or everyone's.
 Also called: my contacts, my deals, my accounts, assigned to me, owned by me.
@@ -97,7 +97,7 @@ Also called: contacts at an account, everyone at a customer, staff of a client.
 
 ### How do I filter a list by tag?
 To filter a list by tag in Margince, open **Contacts**, **Companies** or **Deals**, press **View** → **Filters** → **Tags**, and pick the tag.
-One tag at a time: a second tag takes the place of the first. **Any tag** takes the filter off. To see every record with a tag across all record types, open the tag's own page. Use the **Tags** panel on any record that has it.
+One tag at a time: a second tag takes the place of the first. **Any tag** takes the filter off. To see every record with a tag across all record types, open the tag's own page. A record shows its tags under **Tags**; see [Tags](records.md#tags).
 Also called: filter by label, show tagged records, segment by tag.
 
 ### Why are some contacts tagged `machine-address`?
@@ -105,9 +105,10 @@ Margince does not make a contact from an address that belongs to a sending syste
 Also called: contacts made from notification mail, automatic senders.
 
 ### How do I filter by date?
-**Deals** has a **Close date** filter, shown in the next question. The other lists have no date filter, so sort them by date.
-
-Last activity is the date of the newest email, chat message, meeting, call or note. A task never changes it. **Filters and views** has the date choices **is after**, **is on or after**, **is before** and **is on or before**. They show only for date custom fields your company has added, so created and expected close dates are not there.
+On **Deals**, use **View** → **Filters** → **Close date**, shown in the next question. The list screens have no other date filter, so sort them by date, or build a filter on **Filters and views**. Its date fields are **Created** (every type), **Last activity** (contacts, companies and deals), **Expected close** (deals) and date custom fields.
+1. Press **New filter**, pick the record type, press **Add condition** and pick a date field.
+2. Pick **is after**, **is on or after**, **is before** or **is on or before**. Give the value **On a date**, or as **Days ago** to count back from today.
+Last activity is the date of the newest email, chat message, meeting, call or note. A task never changes it, and neither does a newsletter.
 Also called: created this month, filter by created date, date range.
 
 ### How do I find deals closing this month?
@@ -132,24 +133,24 @@ The columns you can sort on each Margince list are:
 - **Contacts**: Name, Email, Company, Owner, Last activity, Created.
 - **Companies**: Company, Description, Website, Contacts, Open deals, Lifecycle, Owner, Last activity, Created.
 - **Leads**: Name, Score, Status, Next step, Last activity, Origin, Owner, Created.
-- **Deals**: Name, Company, via partner, Stage, Value, Expected close, Last signal, Status, Owner.
+- **Deals**: Name, Company, **Referring partner**, Stage, Value, Expected close, Last signal, Status, Owner.
 - **Projects**: Project name, Company, Phase, Owner, Last activity.
 **Owner** sorts by the owner's name, with unassigned records last. You cannot sort by **Tags**, **Relationship type** or **Last email**. You can still pick a hidden column under **View** → **Sort**.
 Also called: sort options, order by column.
 
 ### How do I switch between the table and the board?
 To switch between table and board in Margince, open **Deals** or **Leads**, press **View**, and pick **Table** or **Board** at the top of the panel.
-- **Deals** opens on **Board**: one column for each stage of the pipeline shown, and you drag a card to move the deal. See [The pipeline](the-pipeline.md).
+- **Deals** opens on **Board**: one column for each stage of the pipeline shown. You drag a card to move the deal, or open its **…** menu and choose where it goes. See [The pipeline](the-pipeline.md).
 - **Leads** opens on **Table**. Its **Board** has a column for each status, and you drag a card between New, Contacted and Engaged.
 Filters and search still work on the board. When every match of a search is in a column off screen, the board names those columns and moves to the first one. Ticking many rows, **Columns**, **Compact** and **Save view** are on the table only.
 Also called: kanban, pipeline view, list view, card view.
 
 ### How do I hide columns or make the table more compact?
-To choose columns or row size in a Margince list, press **View** → **Columns**, or press **View** and then **Compact**.
-1. Under **Columns**, untick a column to hide it. The name column always stays. On **Filters and views**, every field of the record type is here. Only the first six start ticked.
+To choose columns or row size in a Margince list, press **View** → **Columns**, or press **View** and then **Compact**. On record lists with two-line rows on a phone, **Columns** is offered on a computer only. See [What does a list show on a phone?](what-margince-is.md#what-does-a-list-show-on-a-phone).
+1. Under **Columns**, untick a column to hide it. The name column always stays. On **Filters and views**, every field of the record type is here. Only the first six start ticked. On **Companies**, **Description**, **Tags**, **Website** and **Contacts** start unticked. On **Leads**, **Last activity**, **Origin**, **Referred by partner** and **Tags** do.
 2. Press **View**, then **Compact**, to turn smaller rows On or Off.
 3. Drag the side of a column heading to make it wider or narrower. To move a column, drag the handle beside its name under **Columns**. With the keyboard, press ↑ or ↓ on the handle.
-Your browser keeps how wide each column is and the order of the columns for next time. Hidden columns and **Compact** are not saved in a view.
+For each list, your browser keeps how wide each column is, their order, which are hidden and **Compact**. Hidden columns and **Compact** are not saved in a view.
 Also called: add column, remove column, reorder columns, change table layout.
 
 ### How do I show more rows per page?
@@ -160,9 +161,8 @@ Also called: page size, see all records, load more.
 ## Archived records on a list
 
 ### How do I see archived records?
-To see archived records in Margince, open the list (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**). Press **View**, then press **Show archived**.
-
-Archived rows show with the live ones, with an **Archived** mark, until you press **Show archived** again. On **Leads**, disqualified and qualified leads are the archived ones. An archived record opens read-only, and **Undo** on its archive entry in its history brings back a contact, company or deal. See [Contacts, companies, leads, deals and projects](records.md).
+To see archived records in Margince, open the list (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**) and press **View** → **Show archived**.
+Archived rows show with the live ones, with an **Archived** mark, until you press **Show archived** again. On **Leads**, disqualified and qualified leads are the archived ones, and the **Status** filter set to **Qualified** or **Disqualified** lists them without **Show archived**. An archived record opens read-only, and **Undo** on its archive entry in its history brings back a contact, company or deal. See [Contacts, companies, leads, deals and projects](records.md).
 Also called: show deleted, find an archived contact, closed records, inactive.
 
 ## Views
@@ -197,7 +197,7 @@ Also called: remove a saved view, edit a view, change a view's name.
 Not the view itself: a saved view in Margince stays private to whoever saved it. To share the same filter, save it as a Live List.
 1. On **Filters and views**, open your saved view and choose **Save as Live List** under **⋯** next to its name. For a new filter, press **Save** and choose **Live List** under **Keep it as**.
 2. Give it a **Name**, and under **Who can find it** pick **A team** or **Everyone**.
-3. Press **Save list**. Your colleagues find it in the library under **Shared**.
+3. Press **Save list**. Your colleagues find it in the library under **Shared with me**.
 Each colleague sees only the records they could already see. Sharing a single record is not the same: see [Seats, roles and who can see what](seats-roles-and-access.md).
 Also called: team view, shared list, share a filter, share a segment.
 
@@ -205,7 +205,7 @@ Also called: team view, shared list, share a filter, share a segment.
 
 **Filters and views** in the sidebar (under **Work**) is the Margince screen for a filter that a list's toolbar cannot build. That means many rules, "any of" instead of "all of", groups inside groups, custom fields, and a colleague other than you. It covers **Contacts**, **Companies**, **Deals** and **Leads**. A filter runs again every time you look, so it always shows the matches of today.
 
-The screen opens on the library of every saved view and list you can use. You can narrow it by search and by record type. **Only me** holds your saved views and the lists only you can find. **Shared** holds the lists shared with a team or with everyone. With Lists off, one group, **Saved views**, holds your views.
+The screen opens on the library of every saved view and list you can use. You can narrow it by search and by record type. **Mine** holds your saved views and every list you own, whoever can find it. **Shared with me** holds the lists that someone else owns or that have no owner. With Lists off, one group, **Saved views**, holds your views.
 
 ### How do I build a filter?
 To build a detailed filter in Margince, open **Filters and views** in the sidebar. Press **New filter** and pick **Contacts**, **Companies**, **Deals** or **Leads**.
@@ -265,9 +265,9 @@ On **Leads**, pick the colleague under **Choose owner** and press **Assign**.
 Also called: bulk reassign, hand over accounts, transfer deals, a colleague left, reassign all their contacts.
 
 ### What can I do to several records at once?
-The bar for many rows on **Contacts**, **Companies** and **Deals** offers **Assign owner**, **Add tag**, **Remove tag**, **Create task**, **Add to Shortlist** and **Archive**. On **Deals** it also offers **Move to stage** (open stages only). On **Leads** it offers **Assign** and **Disqualify** (with a **Reason**).
+The bar for many rows on **Contacts**, **Companies** and **Deals** offers **Assign owner**, **Add tag**, **Remove tag**, **Create task**, **Add to Shortlist** and **Archive**. On **Deals** it also offers **Move to stage**: pick an open stage under **Pick a stage** and press **Move**. On **Leads** it offers **Assign** and **Disqualify** (with a **Reason**). **Add to Shortlist** shows only when there is a Shortlist of that record type you may change. Every change first shows what it will do. Your own company is never archived.
 
-**Add to Shortlist** shows only when there is a Shortlist of that record type you may change. Every change first shows what it will do; your own company is never archived. A change of more than 10 records shows a "Large change" warning. You cannot win or lose many deals at once. After a change, the message that says how many changed has an **Undo** button. You cannot change custom fields on many records at once.
+A change of more than 10 records shows a "Large change" warning. On **Leads**, **Assign** and **Disqualify** ask first and name how many leads change, with the same warning above 10. You cannot win or lose many deals at once or change custom fields on many records at once. After a change, the message that says how many changed has an **Undo** button, which opens a window where **Undo change** puts it back. **Disqualify** has no bulk **Undo**. **Move to stage** lists the deals it leaves alone first, and its **Undo** moves each deal back as a new move in the stage history.
 
 Also called: bulk actions, mass archive, bulk disqualify.
 
@@ -289,7 +289,7 @@ Also called: bulk task, follow up with many, mass follow-up.
 
 A list in Margince is a named set of one kind of record (contacts, companies, deals or leads) that you and your colleagues work from. There are two kinds. A **Live List** is a saved filter: its members are whatever matches the filter now. So records join it and leave it on their own as they change. A **Shortlist** is picked by hand: a record is on it because someone put it there, and it stays until someone takes it off.
 
-Lists live on **Filters and views**. A list only you can find is under **Only me**. A shared list is under **Shared**. It shows its kind, record type, how many members you can see and who can find it.
+Lists live on **Filters and views**. A list you own is under **Mine**, also when you share it. A list someone else owns is under **Shared with me**. It shows its kind, record type, how many members you can see and who can find it. A private list can be found by its owner and its steward. So its row reads **Only me**, **You and its steward**, **Its owner**, **Its steward** or **Its owner and steward**.
 
 ### How do I make a Live List?
 To make a Live List in Margince, build its filter on **Filters and views** → **New filter**. Press **Save** and choose **Live List** under **Keep it as**.
@@ -300,16 +300,16 @@ Also called: dynamic list, smart list, saved segment, audience.
 
 ### How do I start a Shortlist?
 To start a Shortlist in Margince, open **Filters and views** and press **New Shortlist** next to **New filter**.
-1. Type a **Name**, pick the **Record type**, and if you like say **What it is for**. **Who can find it** starts on **A team**; pick **Only me** to keep it to yourself.
+1. Type a **Name**, pick the **Record type**, and if you like say **What it is for**. **Who can find it** starts on **A team**; pick **Only me** to keep it to yourself. If you are in no team, it starts on **Only me**, and you cannot pick **A team**.
 2. Press **Create list**.
 3. Add records from a record's page: press **Add to Shortlist** and pick the Shortlist (or **A new Shortlist…**).
-Add a note under **Why (optional)** and press **Add**. To add many records at once, tick them on the list screen. Pick the Shortlist under **Add to Shortlist** in the bar for many rows.
+Add a note under **Why (optional)** and press **Add**. To add many records at once, tick them on the list screen. Pick the Shortlist under **Add to Shortlist** in the bar for many rows. On a contact, company, deal or lead page, **Lists** also holds **Add to Shortlist** and **All lists**.
 Also called: static list, hand-picked list, target list, account list.
 
 ### Who can find a list?
-Each list in Margince says **Who can find it**: **Only me**, **A team** (one of your teams, or all of the owner's teams) or **Everyone**. Change it with **Edit list** under **⋯** on the list's page.
-Sharing a list shows nobody a record they could not already see. Each reader sees only the members they may see, and **Records** on the list's page says how many that is ("12 companies"). So two colleagues can see different numbers on the same list. A contact, company, deal or lead page shows the lists that record is on under **Lists**, again only those you can find.
+Each list in Margince says **Who can find it**: **Only me**, **A team** (one of your teams, or all of the owner's teams) or **Everyone**. Change it with **Edit list** under **⋯** on the list's page. While you are in no team, a team list you own that names no team reaches only you and its steward. It then says **Only me**, or **You and its steward** if someone else looks after it.
 
+Sharing a list shows nobody a record they could not already see. Each reader sees only the members they may see, and **Records** on the list's page says how many that is ("12 companies"). So two colleagues can see different numbers on the same list. A contact, company, deal or lead page shows the lists that record is on under **Lists**, again only those you can find.
 Also called: share a list, list permissions, private list, team list.
 
 ### What is a list's steward?
@@ -322,9 +322,9 @@ Also called: list owner, who manages this list.
 A Margince list's page shows why each member is there, in its own columns.
 - On a Live List, each field the filter uses is a column with the member's value of today, such as "52 days ago". The first four are shown; **View** → **Columns** offers the rest. A value you may not see shows as **Hidden**.
 - On a Shortlist, **Added by**, **Added on** and **Note** say who picked the record, when, and why.
-To see why a record is not on a Live List, open the record's page. Under **Lists**, pick the list in **Check a Live List**. It shows each clause of the filter as **Met**, **Not met** or **No value to judge**, with the record's value of today. A value you may not see shows as "Value hidden from you".
+To see why a contact or deal is not on a Live List, open its page. On a contact, open the **Research** tab; on a deal, press **Edit details**. In the **Lists** card there, pick the list in **Check a Live List**. It shows each clause of the filter as **Met**, **Not met** or **No value to judge**, with the record's value of today. A value you may not see shows as "Value hidden from you".
 
-To take one record off a Shortlist, go to **Lists** on the record's page and press **Take off the Shortlist** next to it. It comes off at once. The toast "Taken off {name}" offers **Undo**. **Undo** puts the record back with its **Added by**, **Added on** and **Note**. To take many off, tick them on the list's page and use the bar for many rows.
+To take a contact or deal off a Shortlist, open the same **Lists** card and press **Take off the Shortlist** next to the list. It comes off at once. The toast "Taken off {name}" offers **Undo**. **Undo** puts the record back with its **Added by**, **Added on** and **Note**. To take many off, tick them on the list's page and use the bar for many rows.
 Also called: why is this contact here, why is this record missing, list membership reason.
 
 ### How often does a Live List update?
@@ -338,7 +338,7 @@ Also called: refresh a list, list sync, when does my list update.
 ### What changed on a list since my last visit?
 Margince keeps a note of when you last opened each list. In the **Filters and views** library, a Live List that changed since then shows "+3 / −1": three joined, one left. On a Live List's page, "Since your visit on" and the date give the same counts. They name the newest three records that joined and that left as links ("+2 more" for the rest), and say how often the filter changed. Each member that joined since your visit has a **New** mark.
 
-**What changed**, at the bottom of the list's page, is the full history. It shows who was added or taken off, and how. That can be by hand, in a change to many rows, by an automation, or because the record was archived or restored. It also shows each change to the list, and **Joined** and **Left** entries by **The 15-minute check**, with the date of its check. You see only the records you may see.
+**What changed**, at the bottom of the list's page, is the full history, and each entry names its record as a link. It shows who was added or taken off: by hand, in a change to many rows, by an automation, or by archive or restore. A change to the list says what changed, and a changed filter shows before and after. **Joined** and **Left** entries are by **The 15-minute check**, and an agent, a connector or a system task is named as such. You see only the records you may see.
 Also called: list history, list activity, who joined, who left, new members.
 
 ### How do I act on a list's members?
@@ -352,9 +352,9 @@ Also called: bulk edit a list, reassign everyone on a list, export a list.
 ### What does "Uses a retired field" mean on a list?
 A Live List's row in the library shows **Uses a retired field** when its filter names a custom field that has been archived. Its page says "This filter uses a retired field". The list still works on the values already stored, but nothing new is recorded in that field. Its steward should change the clause with **Edit filter** on the notice. Before you archive a custom field, Margince names the Live Lists that filter on it.
 
-In the library, **Filter no longer works** means a field the filter names has changed, so the filter cannot run. The list's page says "This filter no longer works". Its steward fixes it the same way, with **Edit filter**.
+In the library, **Filter no longer works** means a field the filter names has changed, so the filter cannot run. The list's page says "This filter no longer works". Its steward fixes it the same way, with **Edit filter**. **Records unavailable** means the extension that added the list's records was removed. The list shows no members and cannot be exported, and its page says "These records are unavailable". It works again once the extension is back.
 
-Also called: broken list, list warning, archived custom field.
+Also called: broken list, list warning, archived custom field, removed extension.
 
 ### How do I change a Live List's filter?
 To change which records a Margince Live List holds, open the list and press **Edit filter**. Or choose **Edit filter** under **⋯** on its row in the library. Its conditions open with a notice that names the list.
@@ -371,18 +371,18 @@ To change a list in Margince, open it, press **⋯** beside its name and choose 
 Also called: delete a list, rename a list, change who can see a list.
 
 ### Can an automation act on a Live List?
-Yes. **Settings** → **Automations** has three rules that watch a Live List:
-<!-- prose:allow bold quotes the rule names as Settings → Automations shows them -->
-- **Follow up when a record joins or leaves a Live List**: a task for the record's owner.
-<!-- prose:allow bold quotes the rule names as Settings → Automations shows them -->
-- **Tell me when a record joins or leaves a Live List**: a notice to you.
-<!-- prose:allow bold quotes the rule names as Settings → Automations shows them -->
-- **Add to a Shortlist when a record joins or leaves a Live List**.
+Yes. **Settings** → **Automations** has these rules that watch a Live List:
+- **Create a task when someone joins this list**: a task with your title for the colleague you choose.
+- **Tell me when this list changes**: a notice to the colleague named under **Authorized by**.
+- **Save matching records to a list**.
 1. Pick the Live List to watch, and choose whether the rule acts when a record joins, leaves, or either. For the Shortlist rule, pick a Shortlist of the same record type. A record already on it stays as it is. The follow-up task is due in 2 days unless you change it.
 2. The rule acts after the 15-minute check, once for each record you can see that joined or left.
 3. When one check moves more than 100 records, the rule acts on none of them and pauses itself.
 
 It also pauses when the list is archived, when its filter stops working, or when you can no longer find the list. A paused rule says why and stays paused until its owner starts it again. Restoring or fixing the list does not start it again. A rule cannot start again while its list is archived or its filter is broken. A follow-up task never names the list, because the list may be private.
+
+The first check of a Live List sets its starting members and makes no work. The first check after a filter change also makes no work. New rules skip records changed by an import. To include them, choose **Also act on records changed by imports**. A rule set up before this choice was added keeps its old setting until you review it.
+
 Also called: list trigger, when someone joins a list, list workflow.
 
 ### Why can I not find Lists?
@@ -396,5 +396,5 @@ To export records from Margince, build a filter on **Filters and views**. Press 
 1. Open **Filters and views**, press **New filter** and pick **Contacts**, **Companies**, **Deals** or **Leads**.
 2. Press **Add condition** and fill at least one condition. **Matching records** then shows, with **Export CSV** and **Export JSON** beside its count.
 3. Press **Export CSV** (opens in Excel) or **Export JSON**. An opened saved view shows them in the same place.
-Only records you can see are exported, and each export goes into the audit log. See [What is kept, what is destroyed](retention-exports-and-deletion.md). To export a Live List or a Shortlist, open it and press **Export CSV** beside its name.
+Only records you can see are exported, each export is logged, and Data import takes the CSV back. See [What is kept, what is destroyed](retention-exports-and-deletion.md). To export a Live List or a Shortlist, open it and press **Export CSV** beside its name.
 Also called: download a list, export to spreadsheet, extract contacts.

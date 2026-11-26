@@ -16,18 +16,17 @@ package compose
 import (
 	"context"
 	"errors"
-	"fmt"
-	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/sendmetrics"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -50,6 +49,8 @@ type commsStager struct {
 var (
 	_ activities.DeliveryStager        = commsStager{}
 	_ activities.ChannelDeliveryStager = commsStager{}
+	_ activities.HoldRefusalRecorder   = commsStager{}
+	_ activities.UnheldRefusalRecorder = commsStager{}
 )
 
 // DeliveryMachinery is the ONE delivery path in both the shapes a message can be
@@ -83,6 +84,7 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 	id, err := s.store.StageTx(ctx, tx, comms.StageInput{
 		ActivityID:      in.ActivityID,
 		Provider:        in.Provider,
+		ConnectionID:    in.ConnectionID,
 		MessageID:       in.MessageID,
 		Recipients:      in.Recipients,
 		Cc:              in.Cc,
@@ -97,10 +99,16 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 		InReplyTo:       in.InReplyTo,
 		References:      in.References,
 		ThreadKey:       in.ThreadKey,
+		AnswersActivity: in.AnswersActivity,
 		ListUnsubscribe: in.ListUnsubscribe,
 	})
 	if err != nil {
 		return err
+	}
+	if in.SplitFromThread != "" {
+		if err := capture.CarryThreadVerdictsTx(ctx, tx, in.SplitFromThread, in.ThreadKey); err != nil {
+			return err
+		}
 	}
 	// Why this was allowed to be queued, written before the job that will send
 	// it. In the same transaction as the activity, the delivery row, the audit
@@ -123,13 +131,17 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 	// resolved and spent inside this transaction, BEFORE the decision rows are
 	// written, because the authority is part of what each row records and
 	// those rows are never updated afterwards (migration 1788529047).
+	decisionStarted := time.Now()
 	set, instruction, err := s.authority.AuthorizeStagingWithDecisionTx(
 		ctx, tx, id, in.Authorization, in.ResumingIntentID,
 		consent.SendingDigest(in.AuthoredSubject, in.AuthoredBody, in.AuthoredHTML))
 	if err != nil {
 		return err
 	}
-	if refusal := refuseAtStaging(set); refusal != nil {
+	decided := time.Since(decisionStarted)
+	refusal := refuseAtStaging(set)
+	sendmetrics.ObserveDecision(ctx, in.ResumingIntentID, decided, refusal == nil)
+	if refusal != nil {
 		// A REFUSAL IS NOT ALWAYS THE END. If this message is being resumed
 		// from a held row, a named human may have read this very refusal and
 		// decided in writing that it goes anyway. That decision is spent here,
@@ -188,23 +200,10 @@ func (e *pendingReviewError) Error() string { return e.cause.Error() }
 // same 409 it always did rather than an unrecognised error.
 func (e *pendingReviewError) Unwrap() error { return e.cause }
 
-// RecordPendingReview turns a carried refusal into a durable review, AFTER the
-// transaction that refused has finished unwinding.
-//
-// Called on the way out rather than at the point of refusal, because the
-// staging call runs inside the caller's transaction and writing there would
-// either be rolled back with it or hold a second pool connection while the
-// first is still checked out.
-//
-// A FAILURE TO RECORD DOES NOT REPLACE THE REFUSAL. The send is refused either
-// way, and answering a storage fault instead would tell the rep their message
-// was fine and the database was not. The original refusal is what they need to
-// see; the missing review is an operator's problem, not theirs.
-// intentID names the held scheduled_send the sender froze this message into, so
-// the review binds to something a human can resume. It is zero when nothing was
-// held — a channel reply, or a hold that failed — and the review is then opened
-// without an intent, which is every review this module wrote before the holder
-// existed.
+// RecordPendingReview turns a carried refusal into a durable review after the
+// refusing transaction unwound (see activities.RefusalRecorder for why then).
+// A failure to record answers the refusal, never a storage fault. intentID is
+// the held message the review binds to, or zero when nothing was held.
 func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentID ids.UUID) error {
 	var pending *pendingReviewError
 	if !errors.As(err, &pending) {
@@ -217,23 +216,33 @@ func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentI
 	if recordErr != nil || review.ID.IsZero() {
 		return pending.cause
 	}
-	actions := actionsForRefusal(ctx, review)
-	var overrulable []consent.OverrulableRecipient
-	if slices.Contains(actions, "overrule") {
-		// A failed check offers nothing rather than failing the refusal the
-		// rep needs to read, as a failed review record does above.
-		found, err := s.authority.OverrulableBy(ctx, review)
-		if err != nil || len(found) == 0 {
-			actions = nil
-		} else {
-			overrulable = found
-		}
+	return s.authority.Refused(ctx, review, pending.set, pending.cause, actionsForRefusal(ctx, review))
+}
+
+// RecordReviewForHoldTx opens RecordPendingReview's review on the hold's
+// transaction, or replaces a stale approval's; a failure rolls the hold back.
+func (s commsStager) RecordReviewForHoldTx(ctx context.Context, tx pgx.Tx, refusal error, intentID ids.UUID) error {
+	if _, stale := errors.AsType[*consent.InstructionStaleError](refusal); stale {
+		return consent.SupersedeStaleDecisionTx(ctx, tx, intentID)
 	}
-	return &consent.SendRefusedError{
-		ReviewID: review.ID, Cause: pending.cause,
-		// Decided here, because this is where the principal is known.
-		Actions: actions, Overrulable: overrulable, Refusals: consent.BlockingRefusals(pending.set),
+	var pending *pendingReviewError
+	if !errors.As(refusal, &pending) || s.authority == nil {
+		return nil
 	}
+	if _, err := consent.OpenReviewTx(ctx, tx, pending.set, intentID); err != nil {
+		return err
+	}
+	return consent.RecordFooterHoldTx(ctx, tx, pending.set, intentID, true)
+}
+
+// RecordUnheldRefusalTx records why a background send stopped when nothing
+// holds it for review, as a meeting reminder that is dropped instead.
+func (s commsStager) RecordUnheldRefusalTx(ctx context.Context, tx pgx.Tx, refusal error) error {
+	var pending *pendingReviewError
+	if !errors.As(refusal, &pending) {
+		return nil
+	}
+	return consent.RecordFooterHoldTx(ctx, tx, pending.set, ids.UUID{}, true)
 }
 
 // StageChannelTx is the same staging for a channel reply: the channel-shaped row
@@ -280,27 +289,10 @@ func (s commsStager) StageChannelTx(ctx context.Context, tx pgx.Tx, in activitie
 	}, sendInsertOpts())
 }
 
-// refuseAtStaging stops a send while the rep is still at the keyboard, for the
-// two refusals that will not change between now and dispatch.
-//
-// The FIRST is an absolute denial — an Art. 21 objection, a processing
-// restriction, a hard bounce, marketing whose round trip never completed — which
-// no rollout mode may soften.
-//
-// The SECOND is a refusal under a category this installation ENFORCES. That arm
-// exists because the engine now decides those: the transmit phase would refuse
-// the same send anyway, so letting it stage buys nothing and costs two things.
-// The rep learns minutes or days later, from a parked row in an operator lane
-// rather than at the moment they pressed send. And the activity commits first,
-// carrying the outbound attestation that makes an address
-// correspondence-positive — so a message to somebody who may not receive it
-// would mint evidence of correspondence that never happened.
-//
-// A category still OBSERVING is let through, and that is not an oversight: the
-// engine's answer carries no authority there, the old gate decides, and blocking
-// on a difference nobody has reviewed would refuse legitimate mail. The mode
-// travels on each decision, so this asks the row rather than re-reading the
-// setting the engine has already applied.
+// refuseAtStaging stops a send at the keyboard for an absolute denial, which no
+// rollout mode softens, or a refusal under an enforced category. Transmit would
+// refuse that one anyway; staging it would commit an attestation for unsent mail.
+// A category still observing passes.
 func refuseAtStaging(set commsauthz.DecisionSet) error {
 	denied := set.Denied()
 	if len(denied) == 0 {
@@ -309,8 +301,7 @@ func refuseAtStaging(set commsauthz.DecisionSet) error {
 	if !set.HasAbsoluteDenial() && !anyEnforcedDenial(denied) {
 		return nil
 	}
-	return fmt.Errorf("consent: %d of %d recipients may not be written to (%s): %w",
-		len(denied), len(set.Decisions), denied[0].ReasonCode, apperrors.ErrConsentNotGranted)
+	return consent.StagingRefusal(set)
 }
 
 // anyEnforcedDenial reports whether a refusal was taken under a category this
@@ -328,8 +319,8 @@ func anyEnforcedDenial(denied []commsauthz.Decision) bool {
 // list is a real answer: the caller may only stop and report, and the review
 // reference still travels.
 func actionsForRefusal(ctx context.Context, review consent.Review) []string {
-	// Both moves resume the held message, so a refusal with none (a channel
-	// reply) offers neither.
+	// The directed send resumes the held message, so a refusal with none (a
+	// channel reply) offers nothing.
 	if review.IntentID.IsZero() {
 		return nil
 	}
@@ -337,14 +328,10 @@ func actionsForRefusal(ctx context.Context, review consent.Review) []string {
 	if !ok || !actor.HumanOrItsAgent() {
 		return nil
 	}
-	// Whoever may direct past every refusal directs the send. A human who may
-	// not can overrule what the engine lets a rep overrule, with their own reason.
-	// An agent has no overrule action.
+	// The one move is directing this one message past every refusal. A caller
+	// who may not gets the review reference alone.
 	if review.DirectableBy(ctx) {
-		return []string{"direct_send"}
+		return []string{consent.ActionDirectSend}
 	}
-	if actor.Type != principal.PrincipalHuman || len(review.Overrulable()) == 0 {
-		return nil
-	}
-	return []string{"overrule"}
+	return nil
 }

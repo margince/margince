@@ -10,6 +10,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"image"
+	"image/png"
 	"log/slog"
 	"os"
 	"strings"
@@ -58,7 +60,7 @@ func TestAnInvoiceMailCarryingASalarySheetStaysWithItsParticipants(t *testing.T)
 	blob := blobstore.NewMemory()
 	mail := seedHeldThreadMail(t, e, "thread-cost-plus", "billing@vendor.example", "Development Service - March")
 	// Stored as the sniffer stores every xlsx: application/zip.
-	file := captureMailDocument(t, e, blob, mail, "2026 03 Cost+ VER 2.xlsx", "application/zip", sheet)
+	file := e.CaptureMailFile(t, blob, mail, "2026 03 Cost+ VER 2.xlsx", "application/zip", sheet)
 	thread := seedThreadQuestion(t, e, "thread-cost-plus", mail)
 
 	brain := &salaryReadingBrain{}
@@ -96,7 +98,7 @@ func TestAnInvoiceMailWithoutTheSheetIsStillOpened(t *testing.T) {
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	mail := seedHeldThreadMail(t, e, "thread-invoice", "billing@vendor.example", "Invoice 1042")
-	captureMailDocument(t, e, blob, mail, "INV 1042.csv", "text/plain", []byte("Invoice,1042\nTotal,24800 EUR\n"))
+	e.CaptureMailFile(t, blob, mail, "INV 1042.csv", "text/plain", []byte("Invoice,1042\nTotal,24800 EUR\n"))
 	thread := seedThreadQuestion(t, e, "thread-invoice", mail)
 
 	brain := &salaryReadingBrain{}
@@ -120,7 +122,7 @@ func TestASalarySheetUnderANeutralNameIsStillRead(t *testing.T) {
 	}
 	blob := blobstore.NewMemory()
 	mail := seedHeldThreadMail(t, e, "thread-neutral-name", "billing@vendor.example", "Report")
-	captureMailDocument(t, e, blob, mail, "data.bin", "application/zip", sheet)
+	e.CaptureMailFile(t, blob, mail, "data.bin", "application/zip", sheet)
 	thread := seedThreadQuestion(t, e, "thread-neutral-name", mail)
 
 	engine := NewConfidentialityVerdictEngine(e.Pool, &salaryReadingBrain{}, slog.Default()).WithObjectStore(blob)
@@ -138,7 +140,7 @@ func TestAThreadWithDocumentsPastTheCapDoesNotOpen(t *testing.T) {
 	mail := seedHeldThreadMail(t, e, "thread-many-files", "billing@vendor.example", "Reports")
 	for i := range capture.MaxThreadDocuments + 1 {
 		name := "Report " + string(rune('A'+i)) + ".csv"
-		captureMailDocument(t, e, blob, mail, name, "text/plain", []byte("Report,"+name+"\nTotal,100 EUR\n"))
+		e.CaptureMailFile(t, blob, mail, name, "text/plain", []byte("Report,"+name+"\nTotal,100 EUR\n"))
 	}
 	thread := seedThreadQuestion(t, e, "thread-many-files", mail)
 
@@ -250,7 +252,7 @@ func TestAStaffInvoiceAndCostPlusSheetStayPrivateWhateverTheModelSays(t *testing
 			blob := blobstore.NewMemory()
 			mail := seedHeldThreadMail(t, e, "thread-staff-invoice", "finance@gradion.example", "[Northwind] Development Service - March 2026")
 			for filename, file := range files {
-				captureMailDocument(t, e, blob, mail, filename, file[0], []byte(file[1]))
+				e.CaptureMailFile(t, blob, mail, filename, file[0], []byte(file[1]))
 			}
 			thread := seedThreadQuestion(t, e, "thread-staff-invoice", mail)
 
@@ -278,7 +280,7 @@ func TestAScanUnderAPlainNameIsAskedButNeverOpened(t *testing.T) {
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	mail := seedHeldThreadMail(t, e, "thread-scanned-map", "office@gradion.example", "Directions to the venue")
-	captureMailDocument(t, e, blob, mail, "venue map.pdf", "application/pdf", scannedPDF(t))
+	e.CaptureMailFile(t, blob, mail, "venue map.pdf", "application/pdf", scannedPDF(t))
 	thread := seedThreadQuestion(t, e, "thread-scanned-map", mail)
 
 	brain := &alwaysOrdinaryBrain{}
@@ -304,7 +306,7 @@ func TestAnEarlierReplyCarryingASalarySheetIsNotOpenedWithItsThread(t *testing.T
 	first := seedHeldThreadMail(t, e, "thread-reply-sheet", "billing@vendor.example", "Invoice 1042")
 	thread := seedThreadQuestion(t, e, "thread-reply-sheet", first)
 	reply := seedHeldThreadMail(t, e, "thread-reply-sheet", "billing@vendor.example", "Re: Invoice 1042")
-	captureMailDocument(t, e, blob, reply, "Cost+.xlsx", "application/zip", sheet)
+	e.CaptureMailFile(t, blob, reply, "Cost+.xlsx", "application/zip", sheet)
 
 	brain := &salaryReadingBrain{}
 	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
@@ -331,5 +333,35 @@ func TestAnEarlierReplyCarryingASalarySheetIsNotOpenedWithItsThread(t *testing.T
 	}
 	if got := threadStatus(t, e, thread); got != capture.VerdictHeld {
 		t.Fatalf("thread status = %q, want held once the sheet is read", got)
+	}
+}
+
+func TestAnUnreadableImageCannotBeOpenedByAConfidentAnswer(t *testing.T) {
+	var picture bytes.Buffer
+	if err := png.Encode(&picture, image.NewRGBA(image.Rect(0, 0, 2, 2))); err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range []struct {
+		name, media string
+		raw         []byte
+	}{
+		{"image001.png", "image/png", picture.Bytes()},
+		{"diagram.svg", "image/svg+xml", []byte(`<svg xmlns="http://www.w3.org/2000/svg"><text>Demo picture</text></svg>`)},
+	} {
+		t.Run(file.name, func(t *testing.T) {
+			e := integration.Setup(t)
+			blob := blobstore.NewMemory()
+			mail := seedHeldThreadMail(t, e, "thread-unreadable-image", "buyer@example.test", "Documents")
+			e.CaptureMailFile(t, blob, mail, file.name, file.media, file.raw)
+			thread := seedThreadQuestion(t, e, "thread-unreadable-image", mail)
+			brain := &alwaysOrdinaryBrain{}
+			engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
+			if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+				t.Fatal(err)
+			}
+			if brain.asked != 1 || threadStatus(t, e, thread) != capture.VerdictUnsure || activityAudience(t, e, mail) != "participants" {
+				t.Fatalf("unreadable image: calls=%d status=%s audience=%s", brain.asked, threadStatus(t, e, thread), activityAudience(t, e, mail))
+			}
+		})
 	}
 }

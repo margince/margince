@@ -1,4 +1,6 @@
 /** @vitest-environment happy-dom */
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
   cleanup,
@@ -11,7 +13,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ProblemError } from "../lib/problem";
+import { meFixture } from "../testing/mefixture";
 import { Field } from "./atoms";
+import { SEARCH_DEBOUNCE_MS } from "./debouncedsearch";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 
 // RecordPicker is the debounced search→candidate-list→pick pattern that
@@ -53,6 +57,31 @@ describe("RecordPicker", () => {
       await screen.findByRole("button", { name: "New company" }),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Anna Weber" })).toBeNull();
+  });
+
+  it("says nothing about an empty default answer until a term is typed", async () => {
+    const searchTargets = vi.fn().mockResolvedValue([]);
+    rtlRender(
+      <RecordPicker
+        label="Search…"
+        searchOnFocus
+        searchTargets={searchTargets}
+        onPick={vi.fn()}
+      />,
+    );
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await user.click(screen.getByRole("searchbox"));
+      await act(() => vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS));
+      expect(searchTargets).toHaveBeenCalledWith("");
+      expect(screen.queryByText("No match")).toBeNull();
+      await user.type(screen.getByRole("searchbox"), "acme");
+      await act(() => vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS));
+      expect(screen.getByText("No match")).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("ignores a late default answer after the reader types a search", async () => {
@@ -251,7 +280,7 @@ describe("RecordPicker", () => {
     const user = userEvent.setup();
     const refused = new ProblemError({
       code: "permission_denied",
-      detail: "contact.update: permission denied",
+      detail: "your role does not grant update on contact",
     });
     rtlRender(
       <LocaleProvider initial="en">
@@ -514,4 +543,45 @@ describe("RecordPicker", () => {
     });
     expect(colleague.getAttribute("placeholder")).toBe("Find a colleague");
   });
+});
+
+describe("RecordPicker under a changing reader scope", () => {
+  it.each([
+    { from: "own", to: "all" },
+    { from: "all", to: "own" },
+  ] as const)(
+    "drops candidates read under the old row scope ($from to $to) and asks again",
+    async ({ from, to }) => {
+      const client = new QueryClient();
+      client.setQueryData(["me"], meFixture({ rowScope: from }));
+      const searchTargets = vi
+        .fn()
+        .mockResolvedValueOnce([candidates[0]])
+        .mockResolvedValueOnce([candidates[1]]);
+      rtlRender(
+        <QueryClientProvider client={client}>
+          <RecordPicker
+            label="Search…"
+            searchTargets={searchTargets}
+            onPick={() => {}}
+          />
+        </QueryClientProvider>,
+      );
+      const user = userEvent.setup();
+      await user.type(screen.getByRole("searchbox"), "a");
+      expect(
+        await screen.findByRole("button", { name: "Anna Weber" }),
+      ).toBeTruthy();
+
+      act(() => {
+        client.setQueryData(["me"], meFixture({ rowScope: to }));
+      });
+
+      expect(screen.queryByRole("button", { name: "Anna Weber" })).toBeNull();
+      expect(
+        await screen.findByRole("button", { name: "Otto Fischer" }),
+      ).toBeTruthy();
+      expect(searchTargets).toHaveBeenCalledTimes(2);
+    },
+  );
 });

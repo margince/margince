@@ -261,10 +261,10 @@ func seedOwedCommitmentSignal(t *testing.T, e *integration.Env, thread string, a
 	// record, and a commitment signal names the account it is owed on.
 	return integration.SeedIDRow(t, integration.OwnerConn(t), `INSERT INTO signal
 		(id, kind, source_channel, entity_type, entity_id, resolved_company_id,
-		 resolution_state, severity, summary, status, detected_at, source, captured_by, evidence)
+		 resolution_state, severity, summary, status, detected_at, source, source_system, captured_by, evidence)
 		VALUES ($1, 'commitment_made', 'derived', 'company', '`+company.String()+`',
 		        '`+company.String()+`', 'resolved', 'info', 'An old promise', 'open', '`+at+`',
-		        'signal-scan', 'system:signal-scan',
+		        'automation', 'signal-scan', 'system:signal-scan',
 		        jsonb_build_array(jsonb_build_object('source_type', 'activity',
 		                                             'source_id', '`+message.String()+`')))`)
 }
@@ -412,9 +412,8 @@ func TestAPrivatePromiseByItsInvitedOwnerIsTheirTask(t *testing.T) {
 
 // An AGENT seat cannot hold work or decide, and a promise naming one stages nothing.
 //
-// Its own case because an agent is refused by a different arm of the same check —
-// AgentAssigneeError rather than not-found — and a dispatcher reading only the
-// not-found answer would mint a task onto an agent seat that fails to move afterwards.
+// Its own case because an agent seat is otherwise live. A dispatcher asking only
+// whether the seat is active would mint a task onto it.
 func TestAPromiseNamingAnAgentSeatStagesNothing(t *testing.T) {
 	e, reply := seedMailedPromise(t, "active")
 	e.WsExec(t, `UPDATE app_user SET is_agent = true WHERE id = $1`, e.Rep2)

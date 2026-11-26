@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // aiCertDecision is one decision record as the document carries it. Binding's
@@ -27,9 +28,9 @@ type aiCertDecision struct {
 	Binding aiCertBindingRef `json:"binding"`
 	State   string           `json:"state"`
 	Verdict string           `json:"verdict"`
-	// Serves says whether the record earns a row in the generated table: the
-	// lane answers this site only when it does.
-	Serves           bool           `json:"serves"`
+	// CertifiedRow says whether the record earns a row in the generated table;
+	// a bound lane answers the site with or without one.
+	CertifiedRow     bool           `json:"certified_row"`
 	Runs             int            `json:"runs"`
 	Kept             int            `json:"kept"`
 	KeptWrong        int            `json:"kept_wrong"`
@@ -40,7 +41,7 @@ type aiCertDecision struct {
 }
 
 // buildAICertDecisions folds each decision row into the document, in the
-// order readiness yields them (the records' own load order). Serves is the
+// order readiness yields them (the records' own load order). CertifiedRow is the
 // row's own answer, the one the generator reads.
 func buildAICertDecisions(readiness []aicert.DecisionRow) []aiCertDecision {
 	decisions := []aiCertDecision{}
@@ -50,8 +51,8 @@ func buildAICertDecisions(readiness []aicert.DecisionRow) []aiCertDecision {
 			Task: rec.Task, Site: rec.Site,
 			Binding: aiCertBindingRef{Provider: rec.Provider, Model: rec.Model, Env: rec.EnvClass},
 			State:   row.Status(), Verdict: rec.Verdict,
-			Serves: row.Serves(),
-			Runs:   rec.Runs, FallbackByReason: map[string]int{}, StaleReason: row.Standing.Reason(),
+			CertifiedRow: row.Certified(),
+			Runs:         rec.Runs, FallbackByReason: map[string]int{}, StaleReason: row.Standing.Reason(),
 		}
 		if stats := rec.Decision; stats != nil {
 			entry.Kept, entry.KeptWrong = stats.Kept, stats.KeptWrong
@@ -77,32 +78,32 @@ func decisionRecordKey(d aiCertDecision) string {
 func writeAICertDecisions(page *strings.Builder, decisions []aiCertDecision) {
 	page.WriteString("### Decision models\n\n")
 	page.WriteString("A decision model answers a site's closed question first. The site's LLM ladder\n")
-	page.WriteString("answers instead whenever the lane may not be asked (a local-only task), fails,\n")
+	page.WriteString("answers instead whenever the lane is unbound, fails,\n")
 	page.WriteString("or answers below the site's own floor. A decision record comes from a\n")
 	page.WriteString("`make e2e-ai ROUTING=` run whose config binds `decisions:`, and is certified\n")
 	page.WriteString("per site with no judge: `certified` means no answer the site kept was wrong in\n")
-	page.WriteString("any run, and at least one was kept. A bound lane serves every site whether or\n")
-	page.WriteString("not a record exists (advisory, not a runtime gate); *Serves* here means the\n")
-	page.WriteString("record itself is certified and not stale, which is what an operator should\n")
-	page.WriteString("trust the binding on. `make gen` writes those rows into\n")
+	page.WriteString("any run, and at least one was kept. A bound lane answers every site whether or\n")
+	page.WriteString("not a record exists (advisory, not a runtime gate). *Certified row* here means\n")
+	fmt.Fprintf(page, "the record is certified on at least %d kept answers and not stale. An operator\n", ai.DecisionMinKept)
+	page.WriteString("trusts the binding on such a row. `make gen` writes those rows into\n")
 	page.WriteString("`internal/modules/ai/decisioncert_gen.go`.\n\n")
 	if len(decisions) == 0 {
 		page.WriteString("No decision record is committed, so no site has a measured verdict.\n\n")
 		return
 	}
-	page.WriteString("| Site | Binding | State | Verdict | Serves | Runs | Kept | Kept wrong | Fallback rate | Fallbacks by reason | Served pass rate |\n")
+	page.WriteString("| Site | Binding | State | Verdict | Certified row | Runs | Kept | Kept wrong | Fallback rate | Fallbacks by reason | Served pass rate |\n")
 	page.WriteString("|---|---|---|---|---|---:|---:|---:|---:|---|---:|\n")
 	for _, d := range decisions {
-		serves := "no"
-		if d.Serves {
-			serves = "yes"
+		certifiedRow := "no"
+		if d.CertifiedRow {
+			certifiedRow = "yes"
 		}
 		state := "`" + d.State + "`"
 		if d.StaleReason != "" {
 			state += ": " + d.StaleReason
 		}
 		fmt.Fprintf(page, "| `%s/%s` | `%s` | %s | `%s` | %s | %d | %d | %d | %.2f | %s | %.2f |\n",
-			d.Task, d.Site, d.Binding.label(), state, d.Verdict, serves, d.Runs, d.Kept, d.KeptWrong,
+			d.Task, d.Site, d.Binding.label(), state, d.Verdict, certifiedRow, d.Runs, d.Kept, d.KeptWrong,
 			d.FallbackRate, fallbackReasonsCell(d.FallbackByReason), d.ServedPassRate)
 	}
 	page.WriteString("\n")
@@ -125,16 +126,16 @@ func fallbackReasonsCell(byReason map[string]int) string {
 	return strings.Join(cells, ", ")
 }
 
-// A decision record reaches the page with its numbers and whether it serves: a
-// certified current one does, and a stale one says why it does not.
-func TestTheDecisionSectionShowsEachRecordAndWhetherItServes(t *testing.T) {
+// A decision record reaches the page with its numbers and whether it earns a
+// certified row. A certified current one does; a stale one says why not.
+func TestTheDecisionSectionShowsEachRecordAndWhetherItEarnsARow(t *testing.T) {
 	stats := &aicert.DecisionStats{
-		Kept: 14, KeptCorrect: 14, Fallbacks: 1, FallbackRate: 1.0 / 15,
+		Kept: 15, KeptCorrect: 15, Fallbacks: 1, FallbackRate: 1.0 / 16,
 		FallbackByReason: map[string]int{"below_floor": 1}, ServedPassRate: 1,
 	}
 	current := aicert.Record{
 		Task: "site_triage", Kind: aicert.KindDecision, Site: "triage", Provider: "jev_compatible",
-		Model: "typesafe/jev-1.13", EnvClass: "cloud_frontier", Verdict: aicert.VerdictCertified, Runs: 15,
+		Model: "typesafe/jev-1.13", EnvClass: "cloud_frontier", Verdict: aicert.VerdictCertified, Runs: 16,
 		Decision: stats, Scenarios: []aicert.ScenarioRecord{{Scenario: "a", Site: "triage", Stamp: "s-a"}},
 	}
 	stale := current
@@ -147,14 +148,14 @@ func TestTheDecisionSectionShowsEachRecordAndWhetherItServes(t *testing.T) {
 		}},
 	}
 	decisions := buildAICertDecisions(readiness)
-	if len(decisions) != 2 || !decisions[0].Serves || decisions[1].Serves || decisions[1].State != aicert.StatusStale {
-		t.Fatalf("decisions = %+v, want the current record serving and the stale one stale", decisions)
+	if len(decisions) != 2 || !decisions[0].CertifiedRow || decisions[1].CertifiedRow || decisions[1].State != aicert.StatusStale {
+		t.Fatalf("decisions = %+v, want the current record certified and the stale one stale", decisions)
 	}
 
 	var page strings.Builder
 	writeAICertDecisions(&page, decisions)
 	for _, want := range []string{
-		"| `site_triage/triage` | `jev_compatible · typesafe/jev-1.13 · cloud_frontier` | `current` | `certified` | yes | 15 | 14 | 0 | 0.07 | `below_floor` 1 | 1.00 |",
+		"| `site_triage/triage` | `jev_compatible · typesafe/jev-1.13 · cloud_frontier` | `current` | `certified` | yes | 16 | 15 | 0 | 0.06 | `below_floor` 1 | 1.00 |",
 		"`stale`: the prompt this build sends changed under scenario a",
 	} {
 		if !strings.Contains(page.String(), want) {

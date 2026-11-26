@@ -42,15 +42,14 @@ func redactLinkedHistoricalPage(ctx context.Context, tx pgx.Tx, after, until ids
 	if err != nil {
 		return HistoricalAuditPage{}, err
 	}
-	entries, err := legacyAuditEntries(ctx, tx, after, until, limit)
+	entries, err := legacyAuditEntries(ctx, tx, after, until, limit, legacyAuditKinds(), identitiesOnly)
 	if err != nil {
 		return HistoricalAuditPage{}, err
 	}
 	page := HistoricalAuditPage{}
 	for _, entry := range entries {
 		page.Scanned = append(page.Scanned, entry.id)
-		identity := entry.kind == rightsRequestEntity && entry.action == actionCreate
-		if !entry.needed || identity != identitiesOnly {
+		if !entry.needed {
 			continue
 		}
 		changed, err := redactLinkedHistoricalEntry(ctx, tx, entry, floor)
@@ -64,16 +63,29 @@ func redactLinkedHistoricalPage(ctx context.Context, tx pgx.Tx, after, until ids
 	return page, nil
 }
 
-func legacyAuditEntries(ctx context.Context, tx pgx.Tx, after, until ids.UUID, limit int) ([]legacyAuditEntry, error) {
+// legacyAuditEntries pages over the audit rows of the given entity types.
+// identities picks the request-create rows; false takes the rest.
+func legacyAuditEntries(ctx context.Context, tx pgx.Tx, after, until ids.UUID, limit int, kinds []string, identities bool) ([]legacyAuditEntry, error) {
+	// Spelled as plain equalities for the identity pass, so it can read the
+	// request rows through idx_audit_entity.
+	split := `NOT (history.entity_type=@request_entity AND history.action=@create)`
+	if identities {
+		split = `history.entity_type=@request_entity AND history.action=@create`
+	}
 	rows, err := tx.Query(ctx, `SELECT history.id,history.entity_type,history.entity_id,history.action,history.actor_type,history.actor_id,history.occurred_at,
  NOT(history.action=ANY(@verbs))
  AND NOT EXISTS(SELECT 1 FROM audit_log own WHERE own.entity_type=history.entity_type AND own.entity_id=history.entity_id
-  AND own.action=ANY(@verbs) AND own.before IS NULL AND own.after IS NULL
-  AND (own.evidence ? 'cause' OR own.evidence ? 'retention_action' OR own.evidence ? 'emails_suppressed')) AND (
+  AND `+storekit.PhysicalErasureCertificateSQL("own", "@verbs")+`) AND (
  `+storekit.AuditRedactionNeededSQL+`
  OR EXISTS(SELECT 1 FROM event_outbox retained WHERE retained.envelope->'trace'->>'audit_log_id'=history.id::text))
- FROM audit_log history WHERE history.id>@after AND history.id<@until ORDER BY history.id LIMIT @limit`,
-		pgx.StrictNamedArgs{"verbs": storekit.AuditRedactionActions(), "after": after, "until": until, auditPageLimitParameter: limit})
+ FROM audit_log history WHERE history.id>@after AND history.id<@until
+ AND history.entity_type=ANY(@entity_kinds)
+ AND `+split+`
+ ORDER BY history.id LIMIT @limit`,
+		pgx.StrictNamedArgs{
+			"verbs": storekit.AuditRedactionActions(), "after": after, "until": until, auditPageLimitParameter: limit,
+			"entity_kinds": kinds, "request_entity": rightsRequestEntity, actionCreate: actionCreate,
+		})
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +101,12 @@ func redactLinkedHistoricalEntry(ctx context.Context, tx pgx.Tx, entry legacyAud
 	if err != nil || !found {
 		return false, err
 	}
+	return correctLinkedHistoricalEntry(ctx, tx, entry, match, floor)
+}
+
+// correctLinkedHistoricalEntry redacts one entry whose erased subject is proved,
+// unless that subject is held.
+func correctLinkedHistoricalEntry(ctx context.Context, tx pgx.Tx, entry legacyAuditEntry, match legacyAuditMatch, floor FloorPolicy) (bool, error) {
 	held, err := historicalAuditUnderHold(ctx, tx, entry.id, match.kind, match.entity, floor)
 	if err != nil || held {
 		return false, err
@@ -119,6 +137,5 @@ func legacyAuditSubject(ctx context.Context, tx pgx.Tx, entry legacyAuditEntry) 
 	return match, err == nil, err
 }
 
-const legacyPrivacyBoundary = `erasure.action=ANY(@verbs) AND erasure.before IS NULL AND erasure.after IS NULL
- AND (erasure.evidence ? 'cause' OR erasure.evidence ? 'retention_action' OR erasure.evidence ? 'emails_suppressed')
+var legacyPrivacyBoundary = storekit.PhysicalErasureCertificateSQL("erasure", "@verbs") + `
  AND (@occurred,@audit) <= (erasure.occurred_at,erasure.id)`

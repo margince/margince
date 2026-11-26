@@ -2,7 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { meFixture } from "../../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import {
   type Company360,
   company,
@@ -135,7 +135,7 @@ describe("company view — withheld sections", () => {
         health: undefined,
         sections_omitted: ["health"],
         state_strip: {
-          account: { lifecycle: "prospect", relationship_types: [] },
+          account: { status: "prospect", relationship_types: [] },
         },
       }),
     );
@@ -160,7 +160,7 @@ describe("company view — withheld sections", () => {
       view({
         health: {},
         state_strip: {
-          account: { lifecycle: "prospect", relationship_types: [] },
+          account: { status: "prospect", relationship_types: [] },
         },
       }),
     );
@@ -329,7 +329,9 @@ describe("company view — a section still loading is not one that failed", () =
           return jsonResponse(view());
         }
         if (pathname.endsWith("/v1/me")) {
-          return jsonResponse(meFixture({ allow: { company: ["read"] } }));
+          return jsonResponse(
+            meFixture({ allow: { ...READS_RECORDS, company: ["read"] } }),
+          );
         }
         if (pathname.endsWith("/companies/o-1")) {
           return jsonResponse(company);

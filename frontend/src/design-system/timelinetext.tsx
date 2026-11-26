@@ -52,7 +52,7 @@ export function TimelineText({
   entry,
 }: Readonly<{
   text: string;
-  entry: Pick<TimelineEntry, "kind" | "transcript">;
+  entry: Pick<TimelineEntry, "kind" | "transcript" | "subject">;
 }>) {
   const t = useT();
   const email = entry.kind === "email";
@@ -63,8 +63,8 @@ export function TimelineText({
   // The tail is what the reader is spared. `trimmed` is what the row shows and
   // what the clamp measures, so the split must happen before that effect.
   const parts = useMemo(
-    () => (email ? splitEmailBody(text) : null),
-    [email, text],
+    () => (email ? splitEmailBody(text, entry.subject ?? "") : null),
+    [email, text, entry.subject],
   );
   const trimmed = parts
     ? [parts.header, parts.main].filter(Boolean).join("\n\n")
@@ -125,6 +125,7 @@ const RENDERED_KINDS: ReadonlySet<TimelineEntry["kind"]> = new Set([
   "note",
   "meeting",
   "call",
+  "task",
 ]);
 
 /**
@@ -136,7 +137,10 @@ export function TimelineBody({
   entry,
 }: Readonly<{
   body: string;
-  entry: Pick<TimelineEntry, "id" | "kind" | "transcript" | "language">;
+  entry: Pick<
+    TimelineEntry,
+    "id" | "kind" | "transcript" | "language" | "sourceVersion" | "subject"
+  >;
 }>) {
   const text = <TimelineText text={body} entry={entry} />;
   if (!RENDERED_KINDS.has(entry.kind)) {
@@ -144,7 +148,9 @@ export function TimelineBody({
   }
   return (
     <ReaderRendering
+      key={`${entry.id}:${entry.sourceVersion}`}
       activityId={entry.id}
+      sourceVersion={entry.sourceVersion}
       language={entry.language}
       note={writtenAsMarkdown(entry)}
     >

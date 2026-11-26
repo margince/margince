@@ -1,0 +1,9 @@
+{
+  "verb": "set_weekly_plan_commitment_state",
+  "checks": [
+    "weekly_plan.update"
+  ],
+  "takes": [
+    "commitment"
+  ]
+}

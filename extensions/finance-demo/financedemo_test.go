@@ -54,6 +54,16 @@ func TestTheDeclarationIsAValidFinanceSource(t *testing.T) {
 	}
 }
 
+func TestTheDeclaredRecordKindIsValidForThisUnit(t *testing.T) {
+	ext := New()
+	if len(ext.RecordKinds) != 1 {
+		t.Fatalf("declares %d record kinds, want 1", len(ext.RecordKinds))
+	}
+	if err := ext.RecordKinds[0].Validate(ext.Name); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestTheDeclarationIsAValidOAuthApp(t *testing.T) {
 	apps := New().OAuthApps
 	if len(apps) != 1 {
@@ -197,4 +207,31 @@ func TestTheCreditNoteReducesAnInvoiceInTheLedger(t *testing.T) {
 			t.Fatal("no credit note; the negative term is never exercised")
 		}
 	})
+}
+
+func TestOnlyAnUnpaidUndisputedInvoiceStatesReminders(t *testing.T) {
+	reminded := 0
+	eachLedger(t, func(t *testing.T, ledger accounting.Ledger) {
+		for _, inv := range ledger.Invoices {
+			if inv.CreditsExternalID != "" {
+				if inv.DunningLevel != nil {
+					t.Fatalf("credit note %s states a dunning level", inv.ExternalID)
+				}
+				continue
+			}
+			if inv.DunningLevel == nil {
+				t.Fatalf("invoice %s states no dunning level", inv.ExternalID)
+			}
+			settled := inv.FullyPaidAt != nil || inv.Disputed
+			if settled && *inv.DunningLevel != 0 {
+				t.Fatalf("invoice %s is paid or disputed and states %d reminders", inv.ExternalID, *inv.DunningLevel)
+			}
+			if !settled && *inv.DunningLevel > 0 {
+				reminded++
+			}
+		}
+	})
+	if reminded == 0 {
+		t.Fatal("no generated invoice states a reminder; the company warning never shows a dunning level")
+	}
 }

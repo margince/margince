@@ -218,7 +218,7 @@ type Request struct {
 	// company-context block. They are trace metadata, never provider inputs.
 	ContextBytes          int
 	ContextTokensEstimate int
-	// IncludeCompanyContext opts into a conditional policy; compose clears it before routing.
+	// IncludeCompanyContext opts into a conditional context policy; compose clears it.
 	IncludeCompanyContext bool
 	// CompanyContextOffering names the legal entity whose offering the context describes; empty is the main one.
 	CompanyContextOffering string
@@ -248,6 +248,7 @@ type Request struct {
 	// capable adapter maps them to its wire; one that cannot carry a given MIME
 	// returns ErrAttachmentUnsupported (never a silent drop).
 	Attachments []Attachment
+	Subjects    *Subjects
 }
 
 type Message struct {
@@ -261,21 +262,6 @@ type ToolDef struct {
 	Name        string
 	Description string
 	InputSchema []byte // JSON Schema
-}
-
-// SchemaRelaxed, SchemaUnenforced and SchemaDropped are the values of
-// Response.SchemaDowngrade besides the empty "held as written".
-const (
-	SchemaRelaxed    = "relaxed"
-	SchemaUnenforced = "unenforced"
-	SchemaDropped    = "dropped"
-)
-
-// SchemaDowngrades lists the values Response.SchemaDowngrade may carry, the
-// empty "held as written" first, for a caller that walks them rather than
-// naming each one and missing the next.
-func SchemaDowngrades() []string {
-	return []string{"", SchemaRelaxed, SchemaUnenforced, SchemaDropped}
 }
 
 type Response struct {
@@ -305,22 +291,6 @@ type Response struct {
 	// counted inside InputTokens above, so this is a breakdown, never
 	// additive on its own. 0 when the provider reports none.
 	CacheWriteTokens int
-	// SchemaDowngrade says the request's ResponseSchema was not enforced as
-	// written: SchemaRelaxed when bounds the vendor's decoder cannot hold were
-	// moved into descriptions (the shape is enforced, those bounds are not),
-	// SchemaUnenforced when the whole schema was sent but without the flag that
-	// asks the endpoint to hold to it (an OpenAI-wire `strict: false`), leaving
-	// enforcement to the endpoint rather than the request — OpenAI reads it as
-	// guidance, a vLLM host constrains decoding anyway — SchemaDropped when
-	// the vendor could hold no form of it and the completion was unconstrained.
-	// Empty when the schema went as given or there was none. The caller's
-	// validator checks the whole schema either way; this is how the call record
-	// says which answers generation did not hold.
-	//
-	// A call that failed after its schema was decided carries the same value on
-	// its error, through a `SchemaDowngrade() string` method, so the record of a
-	// failed call says what was sent too.
-	SchemaDowngrade string
 	// ProviderMetadata carries vendor-only outputs namespaced by provider key
 	// (e.g. {"openai":{"response_id":"…"}} for session logging).
 	ProviderMetadata map[string]json.RawMessage
@@ -412,7 +382,7 @@ type SecretStripper interface {
 	Strip(ctx context.Context, payload []byte) (stripped []byte, report StripReport, err error)
 }
 
-// StripReport says what was removed, for the audit trail.
+// StripReport says what was removed.
 type StripReport struct {
 	Findings int
 	Kinds    []string
@@ -451,11 +421,9 @@ type Capabilities struct {
 // only refuse. A caller type-asserts and treats a non-implementer as "this
 // vendor publishes no list" rather than as a failure.
 //
-// It answers AVAILABILITY, never price. The price sheet is its own
-// effective-dated record and stays the authority on cost for anything reached
-// through a stored binding, so a second price arriving here would drift the
-// first time either moved. A model the sheet cannot price is bindable and
-// reports UNPRICED, which is honest.
+// It answers AVAILABILITY, never price. The price sheet is its own record and
+// the authority on cost, so a second price here would drift from it. A model
+// the sheet cannot price is still bindable.
 type Lister interface {
 	// ListModels reports what the vendor serves, newest first where the vendor
 	// dates its models and in the vendor's own order where it does not.

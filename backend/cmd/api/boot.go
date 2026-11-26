@@ -13,13 +13,17 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/extensionegress"
+	"github.com/margince/margince/backend/internal/compose/installtrial"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -31,6 +35,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/platform/providerhealthstore"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
+	"github.com/margince/margince/backend/internal/platform/replayguard"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -66,6 +72,7 @@ func boundPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 		pool.Close()
 		return nil, err
 	}
+	settings.EnableCache(pool)
 	return pool, nil
 }
 
@@ -164,7 +171,7 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 			return deployconfig.Bootstrap{}, nil, fmt.Errorf("api: %w", err)
 		}
 	}
-	compose.BindExtensionEgress(cfg.posture)
+	extensionegress.Bind(cfg.posture)
 	if err := compose.EnsureInstallation(ctx, pool, logger, bootstrap); err != nil {
 		return deployconfig.Bootstrap{}, nil, err
 	}
@@ -188,14 +195,9 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 	if err != nil {
 		return deployconfig.Bootstrap{}, nil, err
 	}
-	// The re-check runs on the process context — the signal context main built —
-	// so it lives exactly as long as this role serves and needs no stop of its
-	// own. What cancellation actually ends is the WAIT between ticks: wazero is
-	// built without WithCloseOnContextDone, so a check already inside the module
-	// runs to completion whatever happens to the context. That is why the loop
-	// holds nothing open and answers nobody — there is no work here for a
-	// shutdown to interrupt safely, only a reading the process was about to stop
-	// reporting.
+	// The re-check loop runs on the process context, the signal context main
+	// built, so it lives as long as this role serves. Cancellation ends the wait
+	// between ticks. A check already running ends at its own budget instead.
 	go license.RunRecheck(ctx)
 	return bootstrap, license, nil
 }
@@ -249,6 +251,7 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 		// `uploads` section UploadLimitsFrom resolves the compiled-in defaults,
 		// so this stays the one place the numbers are decided.
 		compose.WithUploadLimits(compose.UploadLimitsFrom(cfg.settings)),
+		compose.WithWebFormThrottle(webforms.ThrottleLimitsFrom(cfg.settings)),
 	}
 	reset, err := newResetLane(allowDataReset, pool, rdb, logger)
 	if err != nil {
@@ -258,12 +261,13 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 	// /me carries both facts, from two options, because they are two facts: the
 	// deployment posture, and whether the reset exists here at all.
 	opts = append(opts, compose.WithNonProduction(cfg.posture), compose.WithDataResetAvailable(allowDataReset))
-	// Gate 1: the connector's whole route group — /mcp, the authorization
-	// server and both discovery documents — exists only when the deployment
-	// declared it. The boot check in bindInstallation already proved the
-	// canonical base URL those routes advertise.
+	// Gate 1: /mcp, its OAuth server, discovery and Dispact call tokens exist only
+	// when declared. bindInstallation already proved the base URL they advertise.
 	if cfg.mcpConnector {
-		opts = append(opts, compose.WithMCPConnector(), compose.WithClientRegistrationLimit(cfg.clientRegistration))
+		opts = append(opts, compose.WithMCPConnector(), compose.WithClientRegistrationLimit(cfg.clientRegistration),
+			compose.WithUnusedClientLimit(config.Val(cfg.settings, ps.MCPUnusedClientLimit)),
+			compose.WithDispactCalls(replayguard.New(rdb), cfg.posture.IsNonProduction()),
+			compose.WithMCPReplayGuard(replayguard.New(rdb)))
 	}
 
 	passwordOpts, err := passwordResetOptions(ctx, cfg.settings, pool, vault, cfg.publicBaseURL, logger, stdout)
@@ -298,12 +302,11 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 
 // sharedRedisClient opens the ONE raw-Redis handle this role holds, plus the
 // close func the caller defers for the process lifetime. Two surfaces share it:
-// the agent volume meter and the
-// non-production data reset, which purges the streams and announces itself over
-// the same connection. Sharing is the point — a second client would be a second
-// connection to the same server for no gain — and it is deliberately NOT the
-// inline relay's client, which a split deployment (--inline-relay=false) does
-// not build at all.
+// the agent volume meter and the non-production data reset, which purges the
+// streams and announces itself over the same connection. A second client would
+// be a second connection to the same server for no gain. It is not the inline
+// relay's client, which a split deployment (--inline-relay=false) does not
+// build at all.
 //
 // A LAZY client (no boot ping): a split-deployment api that cannot reach Redis
 // must still boot. A reset then reports the unreachable bus as the error it is,
@@ -353,12 +356,12 @@ func agentVolumeOptions(volumeMeter *agentvolume.Meter) []compose.Option {
 // inlineRelayLane runs the outbox relay in this process unless the deployment
 // split it out to cmd/worker (--inline-relay=false). The returned stop is a
 // no-op in that split case, so the caller stops one lane either way.
-func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, logger *slog.Logger, stdout io.Writer) ([]compose.Option, func(), error) {
+func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, license *licensecheck.Watcher, logger *slog.Logger, stdout io.Writer) ([]compose.Option, func(), error) {
 	if !cfg.inlineRelay {
-		// No inline relay to stop: cmd/worker is running it.
 		return nil, func() {}, nil
 	}
-	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.webhookKey, cfg.publicBaseURL, logger)
+	paused := installtrial.New(pool, cfg.posture, license.Posture, time.Now).Paused(logger)
+	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.webhookKey, cfg.publicBaseURL, paused, logger)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -381,7 +384,7 @@ func modelSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploycon
 	// /readyz AI line all consume the same *compose.ModelPath rather than
 	// each running their own copy of the declared-routing/--ai-fake/
 	// neither switch (and, with it, their own Router, cache and budget).
-	modelPath, aiState, assistantProfile, routingVersion, err := resolveModelPath(
+	modelPath, aiState, assistantProfile, err := resolveModelPath(
 		ctx, modelPathSpecFrom(cfg, bootstrap), pool, logger,
 	)
 	if err != nil {
@@ -389,7 +392,7 @@ func modelSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploycon
 	}
 	modelPath.SetCompanyContextEnabled(compose.CompanyContextTasks(cfg.settings))
 	opts := []compose.Option{compose.WithAiPayloadCaptureFlag(config.Val(cfg.settings, ps.CapturePayloads))}
-	opts = append(opts, coldStartOptions(modelPath, routingVersion)...)
+	opts = append(opts, coldStartOptions(modelPath)...)
 	opts = append(opts, offerDraftOptions(pool, modelPath)...)
 	opts = append(opts, compose.WithAssistantProfile(aiState, assistantProfile))
 	// Unconditional, like the worker's: the counters belong to the PROCESS, not
@@ -430,7 +433,7 @@ func modelAndHandoffOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 		return nil, nil, err
 	}
 	handoffOpts, err := workerHandoffOptions(pool, logger, modelPath,
-		queueGates{vatCheck: cfg.vatCheckBaseURL, geocode: cfg.geocodeBaseURL})
+		queueGates{vatCheck: cfg.vatCheckBaseURL, geocode: cfg.geocodeBaseURL, privateChat: cfg.posture.IsNonProduction()})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -472,6 +475,8 @@ func workerHandoffOptions(
 		// An approved import commits, and an undo reverses, in the worker: the
 		// move and its job are one transaction, so the 202 means work is queued.
 		compose.WithImportJobs(sendInserter),
+		// After WithChannelSurface, so a Dispact bot connects beside Telegram.
+		compose.WithChatLinks(sendInserter, gates.privateChat, chatSummaryLane(modelPath)),
 	}
 
 	enqueueOpts, err := jobEnqueueOptions(pool, logger, modelPath, gates)
